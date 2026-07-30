@@ -72,6 +72,67 @@ export const test_combat_firearm_volley = (): void => {
       first.some((event) => event.outcome === "miss") &&
       deterministicSamples,
   );
+  const exactVector = resolveFirearmVolley({
+    model: model([
+      profile({
+        ...musket(),
+        misfireProbability: 0,
+      }),
+    ]),
+    profile: "line-infantry",
+    weapon: "musket",
+    seed: 99,
+    shooters: [
+      { id: "certain-hit", distance: 0 },
+      { id: "out-of-range", distance: 301 },
+      { id: "reloading", distance: 50, elapsedSinceLastShot: 1 },
+    ],
+  });
+  TestValidator.equals(
+    "volley event vector preserves slot domains and state fields",
+    exactVector,
+    [
+      {
+        kind: "firearm-shot",
+        shooter: "certain-hit",
+        weapon: "musket",
+        slot: 0,
+        distance: 0,
+        accuracyProbability: 1,
+        misfireSample: seededValue(99, 0, 0x6d697366),
+        accuracySample: seededValue(99, 0, 0x61636375),
+        outcome: "hit",
+        reloadRemainingSeconds: 0,
+        muzzleVelocity: 305,
+      },
+      {
+        kind: "firearm-shot",
+        shooter: "out-of-range",
+        weapon: "musket",
+        slot: 1,
+        distance: 301,
+        accuracyProbability: 0,
+        misfireSample: seededValue(99, 1, 0x6d697366),
+        accuracySample: seededValue(99, 1, 0x61636375),
+        outcome: "miss",
+        reloadRemainingSeconds: 0,
+        muzzleVelocity: 305,
+      },
+      {
+        kind: "firearm-shot",
+        shooter: "reloading",
+        weapon: "musket",
+        slot: 2,
+        distance: 50,
+        accuracyProbability: 0.75,
+        misfireSample: null,
+        accuracySample: null,
+        outcome: "reloading",
+        reloadRemainingSeconds: 19,
+        muzzleVelocity: 305,
+      },
+    ],
+  );
 
   const stateCases = resolveFirearmVolley({
     model: model([
@@ -119,10 +180,7 @@ export const test_combat_firearm_volley = (): void => {
   TestValidator.predicate(
     "trait lookup reads typed data and never infers from a name",
     shooter?.weapons[0]?.id === "musket" &&
-      findProfileTrait(
-        { ...profile(), traits: [{ kind: "locomotor" }] },
-        "shooter",
-      ) === null,
+      findProfileTrait({ ...profile(), traits: [] }, "shooter") === null,
   );
 
   const invalidWeaponMutations: Array<Partial<IAutoMovieFirearm>> = [
@@ -219,6 +277,17 @@ export const test_combat_firearm_volley = (): void => {
         ...input,
         shooters: [
           { id: "elapsed", distance: 1, elapsedSinceLastShot: Number.NaN },
+        ],
+      }),
+    () =>
+      resolveFirearmVolley({
+        ...input,
+        shooters: [
+          {
+            id: "explicit-infinite-elapsed",
+            distance: 1,
+            elapsedSinceLastShot: Number.POSITIVE_INFINITY,
+          },
         ],
       }),
   ];

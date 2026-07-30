@@ -943,11 +943,14 @@ const SANDBOX_BOOTSTRAP = `
     const radians = (instanceSet.facingDeg * Math.PI) / 180;
     const cosine = Math.cos(radians);
     const sine = Math.sin(radians);
+    const scaleRatio = seededValue(
+      instanceSet.seed,
+      slot,
+      0x7363616c,
+    );
     const scale =
-      instanceSet.variation.scale.min +
-      (instanceSet.variation.scale.max -
-        instanceSet.variation.scale.min) *
-        seededValue(instanceSet.seed, slot, 0x7363616c);
+      instanceSet.variation.scale.min * (1 - scaleRatio) +
+      instanceSet.variation.scale.max * scaleRatio;
     const paletteIndex = Math.min(
       instanceSet.variation.palette.length - 1,
       Math.floor(
@@ -957,10 +960,18 @@ const SANDBOX_BOOTSTRAP = `
     );
     const traits = {};
     instanceSet.variation.traits.forEach((trait, index) => {
-      traits[trait.name] =
-        trait.min +
-        (trait.max - trait.min) *
-          seededValue(instanceSet.seed, slot, index, 0x74726169);
+      const ratio = seededValue(
+        instanceSet.seed,
+        slot,
+        index,
+        0x74726169,
+      );
+      Object.defineProperty(traits, trait.name, {
+        configurable: true,
+        enumerable: true,
+        value: trait.min * (1 - ratio) + trait.max * ratio,
+        writable: true,
+      });
     });
     return freeze({
       slot,

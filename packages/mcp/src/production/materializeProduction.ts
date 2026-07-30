@@ -223,10 +223,11 @@ export const materializeInstanceSlot = (
   const cosine = Math.cos(radians);
   const sine = Math.sin(radians);
   const scaleSample = seededValue(instanceSet.seed, slot, 0x7363616c);
-  const scale =
-    instanceSet.variation.scale.min +
-    (instanceSet.variation.scale.max - instanceSet.variation.scale.min) *
-      scaleSample;
+  const scale = stableInterpolate(
+    instanceSet.variation.scale.min,
+    instanceSet.variation.scale.max,
+    scaleSample,
+  );
   const paletteIndex = Math.min(
     instanceSet.variation.palette.length - 1,
     Math.floor(
@@ -234,33 +235,47 @@ export const materializeInstanceSlot = (
         instanceSet.variation.palette.length,
     ),
   );
+  const position =
+    instanceSet.layout.kind === "along-route"
+      ? {
+          x: point.x,
+          y: instanceSet.anchor.y,
+          z: point.z,
+        }
+      : {
+          x: instanceSet.anchor.x + point.x * cosine + point.z * sine,
+          y: instanceSet.anchor.y,
+          z: instanceSet.anchor.z - point.x * sine + point.z * cosine,
+        };
+  const traits = Object.fromEntries(
+    instanceSet.variation.traits.map((trait, index) => [
+      trait.name,
+      stableInterpolate(
+        trait.min,
+        trait.max,
+        seededValue(instanceSet.seed, slot, index, 0x74726169),
+      ),
+    ]),
+  );
+  const palette = instanceSet.variation.palette[paletteIndex];
+  if (
+    [position.x, position.y, position.z, scale, ...Object.values(traits)].some(
+      (value) => Number.isFinite(value) === false,
+    ) ||
+    palette === undefined
+  )
+    throw new RangeError(
+      `Instance set "${instanceSet.id}" slot ${slot} derived non-finite variation or an empty palette.`,
+    );
   return {
     slot,
     node: `instance:${instanceSet.id}:slot:${String(slot).padStart(6, "0")}`,
     modelRecipe: instanceSet.modelRecipe,
-    position:
-      instanceSet.layout.kind === "along-route"
-        ? {
-            x: point.x,
-            y: instanceSet.anchor.y,
-            z: point.z,
-          }
-        : {
-            x: instanceSet.anchor.x + point.x * cosine + point.z * sine,
-            y: instanceSet.anchor.y,
-            z: instanceSet.anchor.z - point.x * sine + point.z * cosine,
-          },
+    position,
     facingDeg: instanceSet.facingDeg,
     scale,
-    palette: instanceSet.variation.palette[paletteIndex]!,
-    traits: Object.fromEntries(
-      instanceSet.variation.traits.map((trait, index) => [
-        trait.name,
-        trait.min +
-          (trait.max - trait.min) *
-            seededValue(instanceSet.seed, slot, index, 0x74726169),
-      ]),
-    ),
+    palette,
+    traits,
   };
 };
 
@@ -441,6 +456,21 @@ export const materializeCompiledShot = (props: {
       };
       source.scene.nodes.push(node);
       nodes.set(node.id, node);
+    }
+  }
+  for (const instanceSet of Object.values(props.instanceSetRuntime ?? {})) {
+    const ordinaryPrefix = `instance:${instanceSet.id}:slot:`;
+    for (const node of source.scene.nodes) {
+      if (node.id.startsWith(ordinaryPrefix) === false) continue;
+      const suffix = node.id.slice(ordinaryPrefix.length);
+      const slot = Number(suffix);
+      if (
+        /^\d{6}$/.test(suffix) &&
+        Number.isSafeInteger(slot) &&
+        slot >= 0 &&
+        slot < instanceSet.count
+      )
+        collisions.push(node.id);
     }
   }
   const modelByRuntimeId = new Map(
@@ -655,6 +685,10 @@ const localInstancePoint = (
     };
   });
   const total = segments.reduce((sum, segment) => sum + segment.length, 0);
+  if (Number.isFinite(total) === false || total <= 0)
+    throw new RangeError(
+      `Instance set "${instanceSet.id}" route "${layout.route}" must have finite non-zero length.`,
+    );
   let remaining = ((slot + 0.5) / instanceSet.count) * total;
   const segment =
     segments.find((candidate) => {
@@ -722,6 +756,9 @@ const summarizeInstanceRange = (
 
 const stableMeanStep = (mean: number, value: number, count: number): number =>
   mean * ((count - 1) / count) + value / count;
+
+const stableInterpolate = (from: number, to: number, ratio: number): number =>
+  from * (1 - ratio) + to * ratio;
 
 /**
  * Content digest for one LOD tier's model-recipe reference.

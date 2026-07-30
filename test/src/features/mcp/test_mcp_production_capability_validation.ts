@@ -5,6 +5,7 @@ import {
   IAutoMovieWorldDesign,
 } from "@automovie/interface";
 import {
+  AUTOMOVIE_MAX_GENERAL_INSTANCES,
   IAutoMovieProductionDesignGraph,
   materializeProductionModels,
   validateAutoMovieProductionGraph,
@@ -126,6 +127,11 @@ const codes = (value: IAutoMovieProductionDesignGraph): Set<string> =>
     ),
   );
 
+const messages = (value: IAutoMovieProductionDesignGraph): string[] =>
+  validateAutoMovieProductionGraph(value).map(
+    (diagnostic) => diagnostic.message,
+  );
+
 /** Design lint validates typed traits and compact general-instance contracts. */
 export const test_mcp_production_capability_validation = (): void => {
   const model = {
@@ -182,8 +188,6 @@ export const test_mcp_production_capability_validation = (): void => {
     id: "",
     name: "",
     traits: [
-      { kind: "locomotor" },
-      { kind: "locomotor" },
       { kind: "mountable", seats: 0, payloadMass: 0 },
       {
         kind: "destructible",
@@ -300,5 +304,143 @@ export const test_mcp_production_capability_validation = (): void => {
       invalidInstances.has("design-collection-empty") &&
       invalidInstances.has("design-color-invalid") &&
       invalidInstances.has("design-duplicate-id"),
+  );
+
+  const derivedRangeMessages = [
+    ...messages(
+      graph(model, {
+        ...world,
+        routes: [
+          {
+            id: "overflow",
+            waypoints: [
+              { x: -Number.MAX_VALUE, z: 0 },
+              { x: Number.MAX_VALUE, z: 0 },
+            ],
+            allowedFormationWidth: 1,
+          },
+        ],
+        instanceSets: [],
+      }),
+    ),
+    ...messages(
+      graph(model, {
+        ...world,
+        instanceSets: [
+          {
+            ...instances(),
+            id: "wide-grid",
+            layout: {
+              kind: "grid",
+              rows: 1,
+              columns: 100,
+              spacing: { x: 1_000_000_000, z: 1 },
+            },
+          },
+          {
+            ...instances(),
+            id: "edge-scatter",
+            anchor: { x: 1_000_000_000, y: 0, z: 0 },
+            layout: { kind: "scatter", radius: 1 },
+          },
+          {
+            ...instances(),
+            id: "edge-route",
+            layout: {
+              kind: "along-route",
+              route: "edge",
+              lateralJitter: 1,
+            },
+          },
+          {
+            ...instances(),
+            id: "trait-overflow",
+            variation: {
+              ...instances().variation,
+              traits: [
+                {
+                  name: "overflow",
+                  min: -Number.MAX_VALUE,
+                  max: Number.MAX_VALUE,
+                },
+              ],
+            },
+          },
+        ],
+        routes: [
+          ...world.routes,
+          {
+            id: "edge",
+            waypoints: [
+              { x: 999_999_999.5, z: 0 },
+              { x: 999_999_999, z: 1 },
+            ],
+            allowedFormationWidth: 1,
+          },
+        ],
+      }),
+    ),
+  ];
+  TestValidator.predicate(
+    "route accumulation, layout extents, jitter and trait interpolation stay finite",
+    [
+      "finite non-zero total length",
+      "Instance grid derives coordinates",
+      "Instance scatter derives coordinates",
+      "can jitter beyond the supported world coordinate limit",
+      "overflow.min",
+      "overflow.max",
+    ].every((message) =>
+      derivedRangeMessages.some((candidate) => candidate.includes(message)),
+    ),
+  );
+
+  const excessiveCount = codes(
+    graph(model, {
+      ...world,
+      instanceSets: Array.from({ length: 3 }, (_, index) => ({
+        ...instances(),
+        id: `large-${index}`,
+        count: 100_000,
+        layout: {
+          kind: "grid" as const,
+          rows: 1_000,
+          columns: 100,
+          spacing: { x: 1, z: 1 },
+        },
+      })),
+    }),
+  );
+  const excessiveBuffer = codes(
+    graph(model, {
+      ...world,
+      instanceSets: [
+        {
+          ...instances(),
+          id: "attribute-heavy",
+          count: 100_000,
+          layout: {
+            kind: "grid",
+            rows: 1_000,
+            columns: 100,
+            spacing: { x: 1, z: 1 },
+          },
+          variation: {
+            ...instances().variation,
+            traits: Array.from({ length: 100 }, (_, index) => ({
+              name: `trait-${index}`,
+              min: 0,
+              max: 1,
+            })),
+          },
+        },
+      ],
+    }),
+  );
+  TestValidator.predicate(
+    "aggregate general-instance count and buffer budgets fail independently",
+    AUTOMOVIE_MAX_GENERAL_INSTANCES === 250_000 &&
+      excessiveCount.has("design-range-invalid") &&
+      excessiveBuffer.has("design-budget-exceeded"),
   );
 };

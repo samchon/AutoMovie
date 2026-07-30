@@ -40,6 +40,7 @@ const instanceSet = (
     traits: [
       { name: "pace", min: 0.5, max: 1.5 },
       { name: "windPhase", min: 0, max: 1 },
+      { name: "__proto__", min: 2, max: 3 },
     ],
   },
 });
@@ -96,7 +97,10 @@ export const test_mcp_production_instances = (): void => {
           slot.scale <= 1.2 &&
           slot.palette.startsWith("#") &&
           slot.traits.pace! >= 0.5 &&
-          slot.traits.pace! <= 1.5,
+          slot.traits.pace! <= 1.5 &&
+          Object.hasOwn(slot.traits, "__proto__") &&
+          slot.traits.__proto__! >= 2 &&
+          slot.traits.__proto__! <= 3,
       ) &&
       routeSlots.every(
         (slot) => slot.position.x >= -10 && slot.position.x <= 10,
@@ -107,6 +111,44 @@ export const test_mcp_production_instances = (): void => {
   );
   TestValidator.error("missing along-route geometry is refused", () =>
     materializeInstanceSlot(alongRoute, { routes: [] }, 0),
+  );
+  TestValidator.error("non-finite route accumulation is refused", () =>
+    materializeInstanceSlot(
+      alongRoute,
+      {
+        routes: [
+          {
+            ...route,
+            waypoints: [
+              { x: -Number.MAX_VALUE, z: 0 },
+              { x: Number.MAX_VALUE, z: 0 },
+            ],
+          },
+        ],
+      },
+      0,
+    ),
+  );
+  const extremeTraitSlot = materializeInstanceSlot(
+    {
+      ...grid,
+      variation: {
+        ...grid.variation,
+        traits: [
+          {
+            name: "extreme",
+            min: -Number.MAX_VALUE,
+            max: Number.MAX_VALUE,
+          },
+        ],
+      },
+    },
+    world,
+    0,
+  );
+  TestValidator.predicate(
+    "overflow-safe interpolation retains a finite direct slot",
+    Number.isFinite(extremeTraitSlot.traits.extreme),
   );
 
   const recipes = new Map([[modelRecipe().id, modelRecipe()]]);
@@ -149,10 +191,18 @@ export const test_mcp_production_instances = (): void => {
       source.replace(
         "): IAutoMovieShotSourceOutput => {",
         `): IAutoMovieShotSourceOutput => {
-  const sampledInstance = context.engine.instanceSlot("civilians", 0);
-  if (JSON.stringify(sampledInstance) !== ${JSON.stringify(
+  const sampledGrid = context.engine.instanceSlot("civilians", 0);
+  const sampledScatter = context.engine.instanceSlot("trees", 0);
+  const sampledRoute = context.engine.instanceSlot("roadside", 0);
+  if (JSON.stringify(sampledGrid) !== ${JSON.stringify(
     JSON.stringify(gridSlots[0]),
-  )}) throw new Error("instance oracle diverged");`,
+  )}) throw new Error("grid instance oracle diverged");
+  if (JSON.stringify(sampledScatter) !== ${JSON.stringify(
+    JSON.stringify(scatterSlots[0]),
+  )}) throw new Error("scatter instance oracle diverged");
+  if (JSON.stringify(sampledRoute) !== ${JSON.stringify(
+    JSON.stringify(routeSlots[0]),
+  )}) throw new Error("route instance oracle diverged");`,
       ),
     );
     const output = new AutoMovieProductionCompiler(project).compile({

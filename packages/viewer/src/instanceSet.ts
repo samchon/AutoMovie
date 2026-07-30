@@ -54,12 +54,16 @@ export const buildInstancedInstanceSet = (input: {
         throw new Error(
           `Instance set "${input.instanceSet.id}" LOD "${lod.tier}" references missing runtime model "${lod.model}".`,
         );
+      const representation = flattenInstancedModel(
+        model,
+        `Instance set "${input.instanceSet.id}" LOD "${lod.tier}"`,
+      );
       return [
         lod.tier,
-        flattenInstancedModel(
-          model,
-          `Instance set "${input.instanceSet.id}" LOD "${lod.tier}"`,
-        ),
+        {
+          ...representation,
+          materials: representation.materials.map(exactPaletteMaterial),
+        },
       ] as const;
     }),
   );
@@ -201,10 +205,11 @@ export const regenerateInstanceSlot = (
   const radians = THREE.MathUtils.degToRad(instanceSet.facingDeg);
   const cosine = Math.cos(radians);
   const sine = Math.sin(radians);
-  const scale =
-    instanceSet.variation.scale.min +
-    (instanceSet.variation.scale.max - instanceSet.variation.scale.min) *
-      seededValue(instanceSet.seed, slot, 0x7363616c);
+  const scale = stableInterpolate(
+    instanceSet.variation.scale.min,
+    instanceSet.variation.scale.max,
+    seededValue(instanceSet.seed, slot, 0x7363616c),
+  );
   const paletteIndex = Math.min(
     instanceSet.variation.palette.length - 1,
     Math.floor(
@@ -230,9 +235,11 @@ export const regenerateInstanceSlot = (
     traits: Object.fromEntries(
       instanceSet.variation.traits.map((trait, index) => [
         trait.name,
-        trait.min +
-          (trait.max - trait.min) *
-            seededValue(instanceSet.seed, slot, index, 0x74726169),
+        stableInterpolate(
+          trait.min,
+          trait.max,
+          seededValue(instanceSet.seed, slot, index, 0x74726169),
+        ),
       ]),
     ),
   };
@@ -333,3 +340,19 @@ const boundsRadius = (
 
 const vector = (value: { x: number; y: number; z: number }): THREE.Vector3 =>
   new THREE.Vector3(value.x, value.y, value.z);
+
+const stableInterpolate = (from: number, to: number, ratio: number): number =>
+  from * (1 - ratio) + to * ratio;
+
+/**
+ * Instance colors multiply the material's diffuse color in Three.js. General
+ * instance palettes are exact overrides, so cloned instance-only materials use
+ * white as the neutral multiplier while retaining roughness and other
+ * channels.
+ */
+const exactPaletteMaterial = (material: THREE.Material): THREE.Material => {
+  const clone = material.clone();
+  if ("color" in clone && clone.color instanceof THREE.Color)
+    clone.color.set(0xffffff);
+  return clone;
+};

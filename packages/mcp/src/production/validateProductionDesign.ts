@@ -1,3 +1,4 @@
+import { validateProfileCapabilities } from "@automovie/engine";
 import {
   IAutoMovieAcceptanceScenario,
   IAutoMovieDiagnostic,
@@ -402,7 +403,15 @@ export const validateAutoMovieProductionGraph = (
           `Surface "${surface.id}" has ${surface.polygon.length} polygon points. Add at least three points in setWorldDesign.`,
         );
       for (const point of surface.polygon)
-        finite2(diagnostics, point, "world", file, "surface.polygon");
+        bounded2(
+          diagnostics,
+          point,
+          -AUTOMOVIE_WORLD_COORDINATE_LIMIT,
+          AUTOMOVIE_WORLD_COORDINATE_LIMIT,
+          "world",
+          file,
+          "surface.polygon",
+        );
       if (isSimpleNonDegeneratePolygon(surface.polygon) === false)
         invalid(
           diagnostics,
@@ -462,26 +471,33 @@ export const validateAutoMovieProductionGraph = (
         "route.allowedFormationWidth",
       );
       for (const point of route.waypoints)
-        finite2(diagnostics, point, "world", file, "route.waypoints");
-      if (
-        route.waypoints
-          .slice(1)
-          .reduce(
-            (length, point, index) =>
-              length +
-              Math.hypot(
-                point.x - route.waypoints[index]!.x,
-                point.z - route.waypoints[index]!.z,
-              ),
-            0,
-          ) <= 0
-      )
+        bounded2(
+          diagnostics,
+          point,
+          -AUTOMOVIE_WORLD_COORDINATE_LIMIT,
+          AUTOMOVIE_WORLD_COORDINATE_LIMIT,
+          "world",
+          file,
+          "route.waypoints",
+        );
+      const routeLength = route.waypoints
+        .slice(1)
+        .reduce(
+          (length, point, index) =>
+            length +
+            Math.hypot(
+              point.x - route.waypoints[index]!.x,
+              point.z - route.waypoints[index]!.z,
+            ),
+          0,
+        );
+      if (Number.isFinite(routeLength) === false || routeLength <= 0)
         invalid(
           diagnostics,
           "design-route-invalid",
           "world",
           file,
-          `Route "${route.id}" must contain at least one non-zero segment. Correct its waypoints in setWorldDesign.`,
+          `Route "${route.id}" must have finite non-zero total length within the supported world. Correct its waypoints in setWorldDesign.`,
         );
     }
     validateInstanceSets(diagnostics, graph, routeIds, file);
@@ -1555,6 +1571,24 @@ const validateModelProfiles = (
   target: string,
   file: string,
 ): void => {
+  const validation = validateProfileCapabilities({ profiles });
+  if (validation.success === false) {
+    for (const violation of validation.violations)
+      invalid(
+        diagnostics,
+        violation.kind === "range"
+          ? "design-range-invalid"
+          : violation.expected.includes("unique")
+            ? "design-capability-duplicate"
+            : violation.expected.includes("non-blank")
+              ? "design-text-empty"
+              : "design-capability-invalid",
+        target,
+        file,
+        `${violation.path}: ${violation.expected}. Correct the typed profile data before setModelRecipe.`,
+      );
+    return;
+  }
   const profileIds = new Set<string>();
   for (const profile of profiles) {
     unique(diagnostics, profileIds, profile.id, target, file, "profiles");
@@ -1570,17 +1604,6 @@ const validateModelProfiles = (
           `Profile "${profile.id}" repeats ${trait.kind}. Keep one typed trait of each kind.`,
         );
       traitKinds.add(trait.kind);
-      if (trait.kind === "locomotor") {
-        if ((profile.gaits ?? []).length === 0)
-          invalid(
-            diagnostics,
-            "design-capability-invalid",
-            target,
-            file,
-            `Profile "${profile.id}" claims locomotor without a declared gait. Add profile.gaits or remove the trait.`,
-          );
-        continue;
-      }
       if (trait.kind === "mountable") {
         integer(
           diagnostics,
@@ -1908,9 +1931,29 @@ const validateInstanceSets = (
           file,
           `Instance grid capacity ${layout.rows * layout.columns} is below count ${instanceSet.count}. Increase rows or columns.`,
         );
-    } else if (layout.kind === "scatter")
+      const radius = Math.hypot(
+        ((layout.columns - 1) * layout.spacing.x) / 2,
+        (layout.rows - 1) * layout.spacing.z,
+      );
+      validateInstanceHorizontalExtent(
+        diagnostics,
+        instanceSet.anchor,
+        radius,
+        target,
+        file,
+        "grid",
+      );
+    } else if (layout.kind === "scatter") {
       positive(diagnostics, layout.radius, target, file, "layout.radius");
-    else {
+      validateInstanceHorizontalExtent(
+        diagnostics,
+        instanceSet.anchor,
+        layout.radius,
+        target,
+        file,
+        "scatter",
+      );
+    } else {
       text(diagnostics, layout.route, target, file, "layout.route");
       if (routeIds.has(layout.route) === false)
         missing(
@@ -1929,6 +1972,26 @@ const validateInstanceSets = (
         file,
         "layout.lateralJitter",
       );
+      const route = graph.world?.routes.find(
+        (candidate) => candidate.id === layout.route,
+      );
+      if (
+        route !== undefined &&
+        route.waypoints.some(
+          (point) =>
+            Math.abs(point.x) + layout.lateralJitter >
+              AUTOMOVIE_WORLD_COORDINATE_LIMIT ||
+            Math.abs(point.z) + layout.lateralJitter >
+              AUTOMOVIE_WORLD_COORDINATE_LIMIT,
+        )
+      )
+        invalid(
+          diagnostics,
+          "design-range-invalid",
+          target,
+          file,
+          `Along-route instance set "${instanceSet.id}" can jitter beyond the supported world coordinate limit. Reduce lateralJitter or move the route inward.`,
+        );
     }
     boundedRange(
       diagnostics,
@@ -1973,8 +2036,24 @@ const validateInstanceSets = (
         file,
         "variation.traits",
       );
-      finite(diagnostics, trait.min, target, file, `${trait.name}.min`);
-      finite(diagnostics, trait.max, target, file, `${trait.name}.max`);
+      bounded(
+        diagnostics,
+        trait.min,
+        -AUTOMOVIE_WORLD_COORDINATE_LIMIT,
+        AUTOMOVIE_WORLD_COORDINATE_LIMIT,
+        target,
+        file,
+        `${trait.name}.min`,
+      );
+      bounded(
+        diagnostics,
+        trait.max,
+        -AUTOMOVIE_WORLD_COORDINATE_LIMIT,
+        AUTOMOVIE_WORLD_COORDINATE_LIMIT,
+        target,
+        file,
+        `${trait.name}.max`,
+      );
       if (trait.min > trait.max)
         invalid(
           diagnostics,
@@ -2139,6 +2218,28 @@ const validateFormationLayout = (
         "layout.seed",
       );
   }
+};
+
+const validateInstanceHorizontalExtent = (
+  diagnostics: IAutoMovieDiagnostic[],
+  anchor: { x: number; z: number },
+  radius: number,
+  target: string,
+  file: string,
+  layout: string,
+): void => {
+  if (
+    Number.isFinite(radius) === false ||
+    Math.abs(anchor.x) + radius > AUTOMOVIE_WORLD_COORDINATE_LIMIT ||
+    Math.abs(anchor.z) + radius > AUTOMOVIE_WORLD_COORDINATE_LIMIT
+  )
+    invalid(
+      diagnostics,
+      "design-range-invalid",
+      target,
+      file,
+      `Instance ${layout} derives coordinates beyond the supported world limit. Reduce its extent or move its anchor inward.`,
+    );
 };
 
 const invalid = (
@@ -2465,15 +2566,17 @@ const boundedVector = (
   bounded(diagnostics, value.z, min, max, target, file, `${field}.z`);
 };
 
-const finite2 = (
+const bounded2 = (
   diagnostics: IAutoMovieDiagnostic[],
   value: { x: number; z: number },
+  min: number,
+  max: number,
   target: string,
   file: string,
   field: string,
 ): void => {
-  finite(diagnostics, value.x, target, file, `${field}.x`);
-  finite(diagnostics, value.z, target, file, `${field}.z`);
+  bounded(diagnostics, value.x, min, max, target, file, `${field}.x`);
+  bounded(diagnostics, value.z, min, max, target, file, `${field}.z`);
 };
 
 const compareDiagnostics = (

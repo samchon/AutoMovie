@@ -102,12 +102,6 @@ export interface IAutoMovieImpactBody {
   penetrability: number;
 }
 
-/** Profile trait proving that its body can locomote with declared gaits. */
-export interface IAutoMovieLocomotorTrait {
-  /** Trait discriminator. */
-  kind: "locomotor";
-}
-
 /** Profile trait proving that its body can operate typed weapons. */
 export interface IAutoMovieShooterTrait {
   /** Trait discriminator. */
@@ -138,7 +132,6 @@ export interface IAutoMovieDestructibleTrait {
 
 /** Declarative profile capabilities; every variant is data, never code. */
 export type IAutoMovieProfileTrait =
-  | IAutoMovieLocomotorTrait
   | IAutoMovieShooterTrait
   | IAutoMovieMountableTrait
   | IAutoMovieDestructibleTrait;

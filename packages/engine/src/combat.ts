@@ -111,9 +111,9 @@ export const resolveFirearmVolley = (
       throw new Error(
         `Firearm volley accuracyMultiplier for "${member.id}" must be finite and non-negative.`,
       );
-    const elapsed = member.elapsedSinceLastShot ?? Number.POSITIVE_INFINITY;
+    const elapsed = member.elapsedSinceLastShot;
     if (
-      elapsed !== Number.POSITIVE_INFINITY &&
+      elapsed !== undefined &&
       (Number.isFinite(elapsed) === false || elapsed < 0)
     )
       throw new Error(
@@ -123,7 +123,10 @@ export const resolveFirearmVolley = (
       member.distance > weapon.effectiveRange
         ? 0
         : clamp01(interpolateAccuracy(weapon, member.distance) * multiplier);
-    const reloadRemainingSeconds = Math.max(0, weapon.reloadSeconds - elapsed);
+    const reloadRemainingSeconds = Math.max(
+      0,
+      weapon.reloadSeconds - (elapsed ?? Number.POSITIVE_INFINITY),
+    );
     if (reloadRemainingSeconds > 0)
       return {
         kind: "firearm-shot",

@@ -19,6 +19,15 @@ Primitive-prop width, height, and depth are 0.001–100 m; radius is 0.001–50 
 
 Capability declarations are narrower than the string-shaped field suggests. Today only `stickman` accepts `signal`; the coding-agent source still authors and validates the actual signaling motion, while every other archetype uses an empty capability list. Bone attachment names are currently accepted only when that bone is present on the compiler-owned stickman skeleton, and the foundation materializer does not create attached scene nodes for them. The server refuses an unknown declaration rather than pretending it was implemented.
 
+Typed engine capabilities live in `profiles`, separately from the legacy
+recipe-level string labels. `profile.gaits` proves locomotion. A `shooter` trait
+owns a non-empty unique inventory of firearm, cannon, or melee data;
+`mountable` owns seats and payload mass; `destructible` owns durability and an
+impact body. Firearm accuracy distances are strictly increasing, cannon
+ammunition kinds are unique, and every physical scalar is bounded by design
+lint and the same public engine validator. A name such as `musket` or
+`artillery` never grants a verb by convention.
+
 Primitive props are static and always materialize without a skeleton. Do not send `rigged`; the validator refuses it until a deterministic prop-rig schema, compiler binding, and viewer path exist.
 
 LOD is a reference graph emitted in the generated contract. `hero`, `near`, and `far` entries name recipes, with increasing distance limits and one final unbounded tier where appropriate. The scaffold viewer automatically selects anonymous formation `near` and `far` tiers from camera distance, representative projected contribution, and hysteresis. Named heroes remain explicit objects, and ordinary non-formation nodes keep their source-selected runtime model. Do not expand a formation into one model recipe per soldier. Ordinary members share a recipe; only intentional hero slots become named actors.

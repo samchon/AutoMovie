@@ -45,7 +45,8 @@ export interface IAutoMovieProfile {
    *
    * Omitted is equivalent to an empty list. An engine verb must find the
    * matching trait here; model names and free-form capability labels never
-   * grant permission.
+   * grant permission. Locomotion remains the existing `gaits` capability and is
+   * not duplicated as a second trait marker.
    */
   traits?: IAutoMovieProfileTrait[];
 

@@ -10,8 +10,9 @@ import type {
  * Evidence-backed musket capability data for an agent-owned line-fire drill.
  *
  * The source observations and target-geometry caveats live in
- * `docs/research/napoleonic-line-battle.md`; projects should replace the
- * scenario-level misfire rate when their weather, weapon, or supply changes.
+ * `docs/historical-notes.md#starter-line-battle-values`; projects should
+ * replace the scenario-level misfire rate when their weather, weapon, or supply
+ * changes.
  */
 export const lineInfantryProfile = (): IAutoMovieProfile => ({
   id: "line-infantry",

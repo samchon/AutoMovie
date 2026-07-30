@@ -82,6 +82,30 @@ export const test_world_kit = (): void => {
     routes: [route],
     landmarks: [landmark],
   });
+  const raisedBlock = worldBlock({
+    id: "raised",
+    kind: "building",
+    base: { x: 0, y: 1, z: 0 },
+    size: { x: 2, y: 2, z: 2 },
+    color: "#665544",
+  });
+  const platform = worldTerrain({
+    id: "platform",
+    polygon: [
+      { x: -2, z: -2 },
+      { x: 2, z: -2 },
+      { x: 2, z: 2 },
+      { x: -2, z: 2 },
+    ],
+    height: 1,
+    walkable: true,
+  });
+  assertWorldPlacements({
+    blocks: [raisedBlock],
+    surfaces: [ground, platform],
+    routes: [],
+    landmarks: [],
+  });
   const grid = worldGrid(instanceBase(), {
     kind: "grid",
     rows: 3,
@@ -177,6 +201,33 @@ export const test_world_kit = (): void => {
           },
         ],
         surfaces: [ground],
+        routes: [],
+        landmarks: [],
+      }),
+    () =>
+      assertWorldPlacements({
+        blocks: [
+          worldBlock({
+            id: "overhang",
+            kind: "building",
+            base: { x: 0, y: 0, z: 0 },
+            size: { x: 4, y: 2, z: 4 },
+            color: "#ffffff",
+          }),
+        ],
+        surfaces: [
+          worldTerrain({
+            id: "tiny-support",
+            polygon: [
+              { x: -0.5, z: -0.5 },
+              { x: 0.5, z: -0.5 },
+              { x: 0.5, z: 0.5 },
+              { x: -0.5, z: 0.5 },
+            ],
+            height: 0,
+            walkable: true,
+          }),
+        ],
         routes: [],
         landmarks: [],
       }),

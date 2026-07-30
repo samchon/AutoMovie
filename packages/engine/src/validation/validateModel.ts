@@ -15,6 +15,7 @@ import {
 import { convexHull2D } from "../math/hull";
 import { swingConeAngle } from "../rom/swingCone";
 import { appendMeshTopology } from "./validateMeshTopology";
+import { validateProfileCapabilities } from "./validateProfileCapabilities";
 import { validateTransformScalars } from "./validateTransformScalars";
 import { ViolationCollector } from "./violation";
 
@@ -169,6 +170,15 @@ export const validateModel = (props: {
   });
 
   if (model.body !== null) validateBody(model.body, `${path}.body`, collector);
+
+  const profileValidation = validateProfileCapabilities({
+    profiles: model.profiles ?? [],
+  });
+  collector.items.push(
+    ...(profileValidation.success
+      ? (profileValidation.warnings ?? [])
+      : profileValidation.violations),
+  );
 
   const affordances = model.affordances ?? null;
   if (affordances !== null) {

@@ -28,7 +28,7 @@ export const test_viewer_instance_set = (): void => {
       radius: 0.6,
       height: 3,
     },
-    palette: { foliage: "#ffffff" },
+    palette: { foliage: "#804020" },
     lod: [{ tier: "near", maxDistance: null, recipe: "tree" }],
     capabilities: [],
     attachments: [],
@@ -49,7 +49,10 @@ export const test_viewer_instance_set = (): void => {
     variation: {
       scale: { min: 0.8, max: 1.2 },
       palette: ["#335522", "#557733"],
-      traits: [{ name: "wind", min: 0, max: 1 }],
+      traits: [
+        { name: "wind", min: 0, max: 1 },
+        { name: "__proto__", min: 2, max: 3 },
+      ],
     },
   };
   const world: IAutoMovieWorldDesign = {
@@ -72,6 +75,9 @@ export const test_viewer_instance_set = (): void => {
   );
   const compilerSlot = materializeInstanceSlot(design, world, 17);
   const viewerSlot = regenerateInstanceSlot(compiled, 17);
+  const firstSlot = materializeInstanceSlot(design, world, 0);
+  const firstColor = new THREE.Color();
+  meshes[0]?.getColorAt(0, firstColor);
   TestValidator.predicate(
     "viewer batches preserve compiler slot, scale, palette and trait streams",
     JSON.stringify(compilerSlot) === JSON.stringify(viewerSlot) &&
@@ -81,9 +87,21 @@ export const test_viewer_instance_set = (): void => {
           mesh.count > 0 &&
           mesh.instanceColor?.count === mesh.count &&
           mesh.geometry.getAttribute("automovieTrait0")?.count === mesh.count &&
+          mesh.geometry.getAttribute("automovieTrait1")?.count === mesh.count &&
           mesh.userData.automovieTraitNames[0] === "wind" &&
-          mesh.frustumCulled === false,
-      ),
+          mesh.userData.automovieTraitNames[1] === "__proto__" &&
+          mesh.frustumCulled === false &&
+          (Array.isArray(mesh.material)
+            ? mesh.material
+            : [mesh.material]
+          ).every(
+            (material) =>
+              "color" in material &&
+              material.color instanceof THREE.Color &&
+              material.color.getHex() === 0xffffff,
+          ),
+      ) &&
+      firstColor.getHexString() === firstSlot.palette.slice(1),
   );
 
   const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 500);

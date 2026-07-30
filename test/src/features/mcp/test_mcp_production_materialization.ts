@@ -1,6 +1,7 @@
 import {
   IAutoMovieCompiledShotSource,
   IAutoMovieFormationMotion,
+  IAutoMovieInstanceSetDesign,
   IAutoMovieModelRecipe,
   IAutoMovieShotSourceOutput,
 } from "@automovie/interface";
@@ -11,6 +12,7 @@ import {
   AutoMovieProductionProject,
   materializeCompiledFormation,
   materializeCompiledFormationInventory,
+  materializeCompiledInstanceSetInventory,
   materializeCompiledShot,
   materializeFormationInventory,
   materializeFormationSlot,
@@ -29,6 +31,7 @@ import {
   modelRecipe,
   productionFixture,
   shotContract,
+  worldDesign,
 } from "./productionFixtures";
 
 const recipe = (
@@ -62,8 +65,9 @@ const recipe = (
  * 2. Line, column, wedge, one-member arc, and seeded scatter layouts produce
  *    stable slots, hero identities, anchors, and facing.
  * 3. Shot materialization adds missing slots, repositions an existing hero,
- *    reports ordinary-slot collisions, and remains safe when a referenced
- *    formation, inventory, model, or source-only model is absent.
+ *    reports formation/general-instance ordinary-slot collisions, and remains
+ *    safe when a referenced formation, inventory, model, or source-only model
+ *    is absent.
  * 4. A source omitting both optional cue arrays materializes empty effect and
  *    formation-motion streams instead of leaking undefined into compiled data.
  */
@@ -293,6 +297,28 @@ export const test_mcp_production_materialization = (): void => {
     const runtimeModels = materializeProductionModels(
       new Map([[modelRecipe().id, modelRecipe()]]),
     );
+    const generalInstances: IAutoMovieInstanceSetDesign = {
+      id: "trees",
+      modelRecipe: modelRecipe().id,
+      count: 2,
+      layout: { kind: "scatter", radius: 2 },
+      anchor: { x: 0, y: 0, z: 0 },
+      facingDeg: 0,
+      seed: 9,
+      variation: {
+        scale: { min: 0.9, max: 1.1 },
+        palette: ["#335522"],
+        traits: [],
+      },
+    };
+    const instanceWorld = {
+      ...worldDesign(),
+      instanceSets: [generalInstances],
+    };
+    const instanceSetRuntime = materializeCompiledInstanceSetInventory(
+      instanceWorld,
+      new Map([[modelRecipe().id, modelRecipe()]]),
+    );
     const heroSource = structuredClone(source);
     heroSource.scene.nodes.push({
       ...heroSource.scene.nodes[0]!,
@@ -434,6 +460,20 @@ export const test_mcp_production_materialization = (): void => {
       runtimeModels,
       source: collisionSource,
     });
+    const instanceCollisionSource = structuredClone(source);
+    instanceCollisionSource.scene.nodes.push({
+      ...instanceCollisionSource.scene.nodes[0]!,
+      id: "instance:trees:slot:000001",
+    });
+    const instanceCollision = materializeCompiledShot({
+      contract: shotContract(),
+      formations: new Map(),
+      instanceSetRuntime,
+      modelRecipes: new Map([[modelRecipe().id, modelRecipe()]]),
+      runtimeModels,
+      world: instanceWorld,
+      source: instanceCollisionSource,
+    });
     const absentFormation = materializeCompiledShot({
       contract,
       formations: new Map(),
@@ -471,6 +511,7 @@ export const test_mcp_production_materialization = (): void => {
           (node) => node.id !== "formation:line:slot:000001",
         ) &&
         collision.collisions.includes("formation:line:slot:000001") &&
+        instanceCollision.collisions.includes("instance:trees:slot:000001") &&
         absentFormation.value.scene.nodes.length ===
           source.scene.nodes.length &&
         absentModel.value.scene.nodes.length === source.scene.nodes.length &&

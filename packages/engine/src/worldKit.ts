@@ -206,23 +206,10 @@ export const assertWorldPlacements = (input: {
           `World blocks "${input.blocks[left]!.id}" and "${input.blocks[right]!.id}" overlap.`,
         );
   for (const block of input.blocks) {
-    const surface = input.surfaces.find((candidate) =>
-      insidePolygon(
-        {
-          x: block.node.transform.translation.x,
-          z: block.node.transform.translation.z,
-        },
-        candidate.polygon,
-      ),
-    );
-    const height =
-      surface === undefined
-        ? null
-        : worldSurfaceHeight(surface, {
-            x: block.node.transform.translation.x,
-            z: block.node.transform.translation.z,
-          });
-    if (height === null || Math.abs(height - block.bounds.min.y) > 1e-6)
+    if (
+      input.surfaces.some((surface) => surfaceSupportsBlock(surface, block)) ===
+      false
+    )
       throw new Error(
         `World block "${block.id}" floats or lacks a supporting surface at its base.`,
       );
@@ -310,6 +297,94 @@ const insidePolygon = (
       inside = !inside;
   }
   return inside;
+};
+
+const surfaceSupportsBlock = (
+  surface: IAutoMovieWorldSurface,
+  block: IAutoMovieWorldBlock,
+): boolean => {
+  const footprint = [
+    { x: block.bounds.min.x, z: block.bounds.min.z },
+    { x: block.bounds.max.x, z: block.bounds.min.z },
+    { x: block.bounds.max.x, z: block.bounds.max.z },
+    { x: block.bounds.min.x, z: block.bounds.max.z },
+  ];
+  if (
+    footprint.some(
+      (point) =>
+        insideOrOnPolygon(point, surface.polygon) === false ||
+        Math.abs(worldSurfaceHeight(surface, point) - block.bounds.min.y) >
+          1e-6,
+    )
+  )
+    return false;
+
+  // Four contained corners are insufficient for a concave surface whose notch
+  // cuts through the block. A simple polygon has no holes, so a notch must
+  // either put one of its vertices inside the rectangle or properly cross a
+  // footprint edge.
+  if (
+    surface.polygon.some(
+      (point) =>
+        point.x > block.bounds.min.x &&
+        point.x < block.bounds.max.x &&
+        point.z > block.bounds.min.z &&
+        point.z < block.bounds.max.z,
+    )
+  )
+    return false;
+  for (let index = 0; index < footprint.length; ++index) {
+    const blockFrom = footprint[index]!;
+    const blockTo = footprint[(index + 1) % footprint.length]!;
+    for (
+      let surfaceIndex = 0;
+      surfaceIndex < surface.polygon.length;
+      ++surfaceIndex
+    )
+      if (
+        segmentsProperlyIntersect(
+          blockFrom,
+          blockTo,
+          surface.polygon[surfaceIndex]!,
+          surface.polygon[(surfaceIndex + 1) % surface.polygon.length]!,
+        )
+      )
+        return false;
+  }
+  return true;
+};
+
+const insideOrOnPolygon = (
+  point: { x: number; z: number },
+  polygon: IAutoMovieWorldSurface["polygon"],
+): boolean =>
+  polygon.some(
+    (current, index) =>
+      pointSegmentDistance(
+        point,
+        current,
+        polygon[(index + 1) % polygon.length]!,
+      ) <= 1e-9,
+  ) || insidePolygon(point, polygon);
+
+const segmentsProperlyIntersect = (
+  leftFrom: { x: number; z: number },
+  leftTo: { x: number; z: number },
+  rightFrom: { x: number; z: number },
+  rightTo: { x: number; z: number },
+): boolean => {
+  const orient = (
+    origin: { x: number; z: number },
+    first: { x: number; z: number },
+    second: { x: number; z: number },
+  ): number =>
+    (first.x - origin.x) * (second.z - origin.z) -
+    (first.z - origin.z) * (second.x - origin.x);
+  const leftA = orient(leftFrom, leftTo, rightFrom);
+  const leftB = orient(leftFrom, leftTo, rightTo);
+  const rightA = orient(rightFrom, rightTo, leftFrom);
+  const rightB = orient(rightFrom, rightTo, leftTo);
+  return leftA * leftB < -Number.EPSILON && rightA * rightB < -Number.EPSILON;
 };
 
 const segmentIntersectsBounds = (
