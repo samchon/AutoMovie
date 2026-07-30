@@ -388,6 +388,8 @@ export function test_lint_plugin_walking_skeleton(): void {
         "export const AUTOMOVIE_IMPLEMENT_ME゜ = 10;",
         "export const \\u{61}AUTOMOVIE_IMPLEMENT_ME = 11;",
         "export const AUTOMOVIE_IMPLEMENT_ME\\u{61} = 12;",
+        "export const ፪AUTOMOVIE_IMPLEMENT_ME = 13;",
+        "export const AUTOMOVIE_IMPLEMENT_ME፰ = 14;",
         "",
       ].join("\n"),
     },
@@ -497,6 +499,73 @@ export function test_lint_plugin_walking_skeleton(): void {
     mixedEvidence,
     "A bad linked witness and a good project-owned witness must prove presence independent of file-pattern order.",
   );
+  const reversedEvidence = runFixture({
+    name: "state-good-file-bad-link",
+    lintConfig: presenceConfigWithFiles([
+      ".automovie/screenplay/*.json",
+      ".automovie/linked/*.json",
+    ]),
+    files: {
+      ".automovie/link-target/index.json": "[]\n",
+      ".automovie/screenplay/index.json": "[]\n",
+      ".automovie/shots/shot-1.json": "[]\n",
+      "src/index.ts": "export {};\n",
+    },
+    mutate: (directory) =>
+      linkDirectory(
+        path.join(directory, ".automovie", "link-target"),
+        path.join(directory, ".automovie", "linked"),
+      ),
+  });
+  assertSucceeded(
+    reversedEvidence,
+    "A good project-owned witness must prove presence before a later bad linked witness is inspected.",
+  );
+
+  const recursiveGlob = runFixture({
+    name: "state-recursive-glob",
+    lintConfig: presenceConfigWithFiles([".automovie/**/screenplay/*.json"]),
+    files: {
+      ".automovie/nested/screenplay/index.json": "[]\n",
+      ".automovie/shots/shot-1.json": "[]\n",
+      "src/index.ts": "export {};\n",
+    },
+  });
+  assertSucceeded(
+    recursiveGlob,
+    "A recursive glob must retain the real nested parent while proving its complete resident path spelling.",
+  );
+
+  let hardLinkCaseInsensitive = false;
+  const completeSpelling = runFixture({
+    name: "state-complete-case-spelling",
+    lintConfig: presenceConfigWithFiles([".automovie/screenplay/B*B.json"]),
+    files: {
+      ".automovie/screenplay/aa.json": "[]\n",
+      ".automovie/shots/shot-1.json": "[]\n",
+      "src/index.ts": "export {};\n",
+    },
+    mutate: (directory) => {
+      const screenplay = path.join(directory, ".automovie", "screenplay");
+      const resident = path.join(screenplay, "aa.json");
+      hardLinkCaseInsensitive = fs.existsSync(path.join(screenplay, "BB.json"));
+      if (hardLinkCaseInsensitive === false) {
+        fs.linkSync(resident, path.join(screenplay, "Ba.json"));
+        fs.linkSync(resident, path.join(screenplay, "aB.json"));
+      }
+    },
+  });
+  if (hardLinkCaseInsensitive)
+    assertSucceeded(
+      completeSpelling,
+      "A complete alternate spelling that resolves to the resident file must match on a case-insensitive filesystem.",
+    );
+  else
+    assertFailedWith(
+      completeSpelling,
+      "State slot 'shot-contracts' is present while required upstream slot 'screenplay-index' is absent.",
+      "Independent hard links for partial case substitutions must not prove that the complete glob spelling exists.",
+    );
 
   const linkedAncestor = runFixture({
     name: "state-linked-ancestor",

@@ -284,8 +284,15 @@ func projectGlobPresent(root string, pattern string) (bool, string) {
 			}
 			candidateSegments := strings.Split(filepath.ToSlash(relative), "/")
 			patternSegments := strings.Split(pattern, "/")
-			if matchProjectGlob(root, patternSegments, candidateSegments) ||
-				matchProjectGlobPrefix(root, patternSegments, candidateSegments) {
+			matched, matchError := matchProjectGlobOrPrefix(
+				root,
+				patternSegments,
+				candidateSegments,
+			)
+			if matchError != nil {
+				problems = append(problems, matchError.Error())
+			}
+			if matched {
 				problems = append(problems, err.Error())
 			}
 			if entry != nil && entry.IsDir() {
@@ -304,8 +311,15 @@ func projectGlobPresent(root string, pattern string) (bool, string) {
 		if entry.Type()&os.ModeSymlink != 0 {
 			patternSegments := strings.Split(pattern, "/")
 			candidateSegments := strings.Split(candidate, "/")
-			if matchProjectGlob(root, patternSegments, candidateSegments) ||
-				matchProjectGlobPrefix(root, patternSegments, candidateSegments) {
+			matched, matchError := matchProjectGlobOrPrefix(
+				root,
+				patternSegments,
+				candidateSegments,
+			)
+			if matchError != nil {
+				problems = append(problems, matchError.Error())
+			}
+			if matched {
 				problems = append(
 					problems,
 					(&symlinkPresenceError{path: candidate}).Error(),
@@ -318,11 +332,15 @@ func projectGlobPresent(root string, pattern string) (bool, string) {
 		}
 		info, infoError := entry.Info()
 		if infoError != nil {
-			if matchProjectGlob(
+			matched, matchError := matchProjectGlob(
 				root,
 				strings.Split(pattern, "/"),
 				strings.Split(candidate, "/"),
-			) {
+			)
+			if matchError != nil {
+				problems = append(problems, matchError.Error())
+			}
+			if matched {
 				problems = append(problems, infoError.Error())
 			}
 			return nil
@@ -330,11 +348,16 @@ func projectGlobPresent(root string, pattern string) (bool, string) {
 		if !info.Mode().IsRegular() {
 			return nil
 		}
-		if matchProjectGlob(
+		matched, matchError := matchProjectGlob(
 			root,
 			strings.Split(pattern, "/"),
 			strings.Split(candidate, "/"),
-		) {
+		)
+		if matchError != nil {
+			problems = append(problems, matchError.Error())
+			return nil
+		}
+		if matched {
 			found = true
 			return fs.SkipAll
 		}
@@ -402,8 +425,35 @@ func hasWindowsDrivePrefix(value string) bool {
 		value[1] == ':'
 }
 
-func matchProjectGlob(root string, pattern []string, candidate []string) bool {
+func matchProjectGlob(
+	root string,
+	pattern []string,
+	candidate []string,
+) (bool, error) {
 	return matchProjectGlobAt(root, nil, pattern, candidate)
+}
+
+func matchProjectGlobOrPrefix(
+	root string,
+	pattern []string,
+	candidate []string,
+) (bool, error) {
+	matched, matchError := matchProjectGlob(root, pattern, candidate)
+	if matched {
+		return true, nil
+	}
+	prefixMatched, prefixError := matchProjectGlobPrefix(
+		root,
+		pattern,
+		candidate,
+	)
+	if prefixMatched {
+		return true, nil
+	}
+	if matchError != nil {
+		return false, matchError
+	}
+	return false, prefixError
 }
 
 func matchProjectGlobAt(
@@ -411,32 +461,54 @@ func matchProjectGlobAt(
 	parent []string,
 	pattern []string,
 	candidate []string,
-) bool {
+) (bool, error) {
 	if len(pattern) == 0 {
-		return len(candidate) == 0
+		return len(candidate) == 0, nil
 	}
 	if pattern[0] == "**" {
-		return matchProjectGlobAt(root, parent, pattern[1:], candidate) ||
-			len(candidate) != 0 && matchProjectGlobAt(
-				root,
-				appendProjectSegment(parent, candidate[0]),
-				pattern,
-				candidate[1:],
-			)
+		zeroMatched, zeroError := matchProjectGlobAt(
+			root,
+			parent,
+			pattern[1:],
+			candidate,
+		)
+		if zeroMatched {
+			return true, nil
+		}
+		if len(candidate) == 0 {
+			return false, zeroError
+		}
+		nestedMatched, nestedError := matchProjectGlobAt(
+			root,
+			appendProjectSegment(parent, candidate[0]),
+			pattern,
+			candidate[1:],
+		)
+		if nestedMatched {
+			return true, nil
+		}
+		if zeroError != nil {
+			return false, zeroError
+		}
+		return false, nestedError
 	}
 	if len(candidate) == 0 {
-		return false
+		return false, nil
 	}
 	directory := filepath.Join(
 		append([]string{root}, filepath.FromSlash(strings.Join(parent, "/")))...,
 	)
-	return matchProjectSegment(
+	segmentMatched, segmentError := matchProjectSegment(
 		[]rune(pattern[0]),
 		[]rune(candidate[0]),
 		directory,
 		candidate[0],
-		0,
-	) && matchProjectGlobAt(
+		nil,
+	)
+	if segmentMatched == false {
+		return false, segmentError
+	}
+	return matchProjectGlobAt(
 		root,
 		appendProjectSegment(parent, candidate[0]),
 		pattern[1:],
@@ -448,7 +520,7 @@ func matchProjectGlobPrefix(
 	root string,
 	pattern []string,
 	candidate []string,
-) bool {
+) (bool, error) {
 	return matchProjectGlobPrefixAt(root, nil, pattern, candidate)
 }
 
@@ -457,32 +529,51 @@ func matchProjectGlobPrefixAt(
 	parent []string,
 	pattern []string,
 	candidate []string,
-) bool {
+) (bool, error) {
 	if len(candidate) == 0 {
-		return len(pattern) != 0
+		return len(pattern) != 0, nil
 	}
 	if len(pattern) == 0 {
-		return false
+		return false, nil
 	}
 	if pattern[0] == "**" {
-		return matchProjectGlobPrefixAt(root, parent, pattern[1:], candidate) ||
-			matchProjectGlobPrefixAt(
-				root,
-				appendProjectSegment(parent, candidate[0]),
-				pattern,
-				candidate[1:],
-			)
+		zeroMatched, zeroError := matchProjectGlobPrefixAt(
+			root,
+			parent,
+			pattern[1:],
+			candidate,
+		)
+		if zeroMatched {
+			return true, nil
+		}
+		nestedMatched, nestedError := matchProjectGlobPrefixAt(
+			root,
+			appendProjectSegment(parent, candidate[0]),
+			pattern,
+			candidate[1:],
+		)
+		if nestedMatched {
+			return true, nil
+		}
+		if zeroError != nil {
+			return false, zeroError
+		}
+		return false, nestedError
 	}
 	directory := filepath.Join(
 		append([]string{root}, filepath.FromSlash(strings.Join(parent, "/")))...,
 	)
-	return matchProjectSegment(
+	segmentMatched, segmentError := matchProjectSegment(
 		[]rune(pattern[0]),
 		[]rune(candidate[0]),
 		directory,
 		candidate[0],
-		0,
-	) && matchProjectGlobPrefixAt(
+		nil,
+	)
+	if segmentMatched == false {
+		return false, segmentError
+	}
+	return matchProjectGlobPrefixAt(
 		root,
 		appendProjectSegment(parent, candidate[0]),
 		pattern[1:],
@@ -502,69 +593,92 @@ func matchProjectSegment(
 	candidate []rune,
 	directory string,
 	resident string,
-	offset int,
-) bool {
+	spelling []rune,
+) (bool, error) {
 	if len(pattern) == 0 {
-		return len(candidate) == 0
+		if len(candidate) != 0 {
+			return false, nil
+		}
+		return equalProjectPathSpelling(
+			directory,
+			resident,
+			string(spelling),
+		)
 	}
 	if pattern[0] == '*' {
-		return matchProjectSegment(
+		zeroMatched, zeroError := matchProjectSegment(
 			pattern[1:],
 			candidate,
 			directory,
 			resident,
-			offset,
-		) || len(candidate) != 0 && matchProjectSegment(
+			spelling,
+		)
+		if zeroMatched {
+			return true, nil
+		}
+		if len(candidate) == 0 {
+			return false, zeroError
+		}
+		nestedMatched, nestedError := matchProjectSegment(
 			pattern,
 			candidate[1:],
 			directory,
 			resident,
-			offset+1,
+			appendProjectRune(spelling, candidate[0]),
 		)
+		if nestedMatched {
+			return true, nil
+		}
+		if zeroError != nil {
+			return false, zeroError
+		}
+		return false, nestedError
 	}
 	if len(candidate) == 0 {
-		return false
+		return false, nil
 	}
-	return (pattern[0] == '?' ||
-		equalProjectPathRune(
-			directory,
-			resident,
-			offset,
-			pattern[0],
-			candidate[0],
-		)) &&
-		matchProjectSegment(
-			pattern[1:],
-			candidate[1:],
-			directory,
-			resident,
-			offset+1,
-		)
+	spellingRune := pattern[0]
+	if spellingRune == '?' {
+		spellingRune = candidate[0]
+	}
+	return matchProjectSegment(
+		pattern[1:],
+		candidate[1:],
+		directory,
+		resident,
+		appendProjectRune(spelling, spellingRune),
+	)
 }
 
-func equalProjectPathRune(
+func appendProjectRune(spelling []rune, value rune) []rune {
+	next := make([]rune, len(spelling)+1)
+	copy(next, spelling)
+	next[len(spelling)] = value
+	return next
+}
+
+func equalProjectPathSpelling(
 	directory string,
 	resident string,
-	offset int,
-	left rune,
-	right rune,
-) bool {
-	if left == right {
-		return true
+	alternative string,
+) (bool, error) {
+	if alternative == resident {
+		return true, nil
 	}
 	actual, actualError := os.Lstat(filepath.Join(directory, resident))
 	if actualError != nil {
-		return false
+		return false, actualError
 	}
-	alternative := []rune(resident)
-	if offset < 0 || offset >= len(alternative) {
-		return false
-	}
-	alternative[offset] = left
 	replacement, replacementError := os.Lstat(
-		filepath.Join(directory, string(alternative)),
+		filepath.Join(directory, alternative),
 	)
-	return replacementError == nil && os.SameFile(actual, replacement)
+	if replacementError != nil {
+		if os.IsNotExist(replacementError) {
+			return false, nil
+		}
+		return false, replacementError
+	}
+	return os.SameFile(actual, replacement), nil
 }
 
 func init() {

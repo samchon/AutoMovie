@@ -78,7 +78,7 @@ func isIdentifierContinue(value rune) bool {
 		unicode.Is(unicode.Pc, value) ||
 		value == '\u00b7' ||
 		value == '\u0387' ||
-		value == '\u1369' ||
+		value >= '\u1369' && value <= '\u1371' ||
 		value == '\u19da' ||
 		value == '\u2118' ||
 		value == '\u212e' ||
