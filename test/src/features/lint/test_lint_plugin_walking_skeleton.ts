@@ -216,10 +216,12 @@ const runScaffoldLint = (props: {
 const runFixture = (props: {
   files: Record<string, string>;
   lintConfig: string;
+  mutate?: (directory: string) => void;
   name: string;
 }): IRunResult => {
   const fixture = createFixture(props);
   try {
+    props.mutate?.(fixture.directory);
     return runCheck(fixture.directory);
   } finally {
     fixture.cleanup();
@@ -263,6 +265,35 @@ const presenceConfig = [
   "};",
   "",
 ].join("\n");
+
+const presenceConfigWithFiles = (files: readonly string[]): string =>
+  [
+    'import { automovie } from "@automovie/lint";',
+    "",
+    "export default {",
+    "  plugins: { automovie },",
+    "  rules: {",
+    '    "automovie/state-presence": [',
+    '      "error",',
+    "      {",
+    "        slots: [",
+    "          {",
+    '            name: "screenplay-index",',
+    `            files: ${JSON.stringify(files)},`,
+    "            requires: [],",
+    "          },",
+    "          {",
+    '            name: "shot-contracts",',
+    '            files: [".automovie/shots/*.json"],',
+    '            requires: ["screenplay-index"],',
+    "          },",
+    "        ],",
+    "      },",
+    "    ],",
+    "  },",
+    "};",
+    "",
+  ].join("\n");
 
 const assertSucceeded = (result: IRunResult, because: string): void => {
   if (result.status === 0) return;
@@ -351,6 +382,12 @@ export function test_lint_plugin_walking_skeleton(): void {
         "export const a·AUTOMOVIE_IMPLEMENT_ME = 4;",
         "export const AUTOMOVIE_IMPLEMENT_ME\\u0061 = 5;",
         "export const \\u0061AUTOMOVIE_IMPLEMENT_ME = 6;",
+        "export const ℘AUTOMOVIE_IMPLEMENT_ME = 7;",
+        "export const AUTOMOVIE_IMPLEMENT_ME℮ = 8;",
+        "export const ゛AUTOMOVIE_IMPLEMENT_ME = 9;",
+        "export const AUTOMOVIE_IMPLEMENT_ME゜ = 10;",
+        "export const \\u{61}AUTOMOVIE_IMPLEMENT_ME = 11;",
+        "export const AUTOMOVIE_IMPLEMENT_ME\\u{61} = 12;",
         "",
       ].join("\n"),
     },
@@ -409,5 +446,75 @@ export function test_lint_plugin_walking_skeleton(): void {
   assertSucceeded(
     ordered,
     "Present upstream and downstream slots must pass even when both records are valid empty arrays.",
+  );
+
+  let caseInsensitive = false;
+  const caseSpelling = runFixture({
+    name: "state-filesystem-case",
+    lintConfig: presenceConfigWithFiles([".automovie/SCREENPLAY/INDEX.*"]),
+    files: {
+      ".automovie/screenplay/index.json": "[]\n",
+      ".automovie/shots/shot-1.json": "[]\n",
+      "src/index.ts": "export {};\n",
+    },
+    mutate: (directory) => {
+      caseInsensitive = fs.existsSync(
+        path.join(directory, ".automovie", "SCREENPLAY", "INDEX.JSON"),
+      );
+    },
+  });
+  if (caseInsensitive)
+    assertSucceeded(
+      caseSpelling,
+      "A differently cased glob must follow a case-insensitive filesystem.",
+    );
+  else
+    assertFailedWith(
+      caseSpelling,
+      "State slot 'shot-contracts' is present while required upstream slot 'screenplay-index' is absent.",
+      "A differently cased glob must remain absent on a case-sensitive filesystem.",
+    );
+
+  const mixedEvidence = runFixture({
+    name: "state-bad-link-good-file",
+    lintConfig: presenceConfigWithFiles([
+      ".automovie/linked/*.json",
+      ".automovie/screenplay/*.json",
+    ]),
+    files: {
+      ".automovie/link-target/index.json": "[]\n",
+      ".automovie/screenplay/index.json": "[]\n",
+      ".automovie/shots/shot-1.json": "[]\n",
+      "src/index.ts": "export {};\n",
+    },
+    mutate: (directory) =>
+      linkDirectory(
+        path.join(directory, ".automovie", "link-target"),
+        path.join(directory, ".automovie", "linked"),
+      ),
+  });
+  assertSucceeded(
+    mixedEvidence,
+    "A bad linked witness and a good project-owned witness must prove presence independent of file-pattern order.",
+  );
+
+  const linkedAncestor = runFixture({
+    name: "state-linked-ancestor",
+    lintConfig: presenceConfig,
+    files: {
+      ".automovie/link-target/shot-1.json": "[]\n",
+      ".automovie/screenplay/index.json": "[]\n",
+      "src/index.ts": "export {};\n",
+    },
+    mutate: (directory) =>
+      linkDirectory(
+        path.join(directory, ".automovie", "link-target"),
+        path.join(directory, ".automovie", "shots"),
+      ),
+  });
+  assertFailedWith(
+    linkedAncestor,
+    "crosses symbolic link '.automovie/shots'",
+    "A linked ancestor of a glob candidate must remain unknown rather than count as project-owned state.",
   );
 }

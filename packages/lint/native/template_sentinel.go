@@ -79,7 +79,11 @@ func isIdentifierContinue(value rune) bool {
 		value == '\u00b7' ||
 		value == '\u0387' ||
 		value == '\u1369' ||
-		value == '\u19da'
+		value == '\u19da' ||
+		value == '\u2118' ||
+		value == '\u212e' ||
+		value == '\u309b' ||
+		value == '\u309c'
 }
 
 func identifierEscapeStartsAt(content string, start int) bool {
