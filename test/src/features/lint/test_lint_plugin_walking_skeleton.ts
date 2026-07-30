@@ -399,21 +399,29 @@ export function test_lint_plugin_walking_skeleton(): void {
     "A sentinel substring inside a valid TypeScript identifier is not the exact placeholder token.",
   );
 
-  const identifierRangeOutside = runFixture({
-    name: "sentinel-identifier-range-outside",
+  const identifierRangeBefore = runFixture({
+    name: "sentinel-identifier-range-before",
     lintConfig: sentinelConfig,
     files: {
-      "src/index.ts": [
-        'export const before = "፨AUTOMOVIE_IMPLEMENT_ME";',
-        'export const after = "AUTOMOVIE_IMPLEMENT_ME፲";',
-        "",
-      ].join("\n"),
+      "src/index.ts": 'export const before = "፨AUTOMOVIE_IMPLEMENT_ME";\n',
     },
   });
   assertFailedWith(
-    identifierRangeOutside,
+    identifierRangeBefore,
     "Template sentinel 'AUTOMOVIE_IMPLEMENT_ME' remains in compiled source.",
-    "Code points immediately outside Other_ID_Continue must not hide the exact sentinel.",
+    "U+1368 immediately below Other_ID_Continue must not hide the exact sentinel.",
+  );
+  const identifierRangeAfter = runFixture({
+    name: "sentinel-identifier-range-after",
+    lintConfig: sentinelConfig,
+    files: {
+      "src/index.ts": 'export const after = "AUTOMOVIE_IMPLEMENT_ME፲";\n',
+    },
+  });
+  assertFailedWith(
+    identifierRangeAfter,
+    "Template sentinel 'AUTOMOVIE_IMPLEMENT_ME' remains in compiled source.",
+    "U+1372 immediately above Other_ID_Continue must not hide the exact sentinel.",
   );
 
   const sentinel = runFixture({

@@ -78,3 +78,25 @@ jobs:
       - name: Report Exact Coverage Gaps
         if: failure()
         run: node internals/report-coverage-gaps.mjs
+
+  Windows:
+    # NTFS supplies the case-insensitive path-identity half of the lint
+    # contributor contract; Ubuntu retains the case-sensitive twin above.
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+      - uses: pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66ddda # v4.1.0
+
+      - name: Install Dependencies
+        run: pnpm install
+
+      - name: Run Tests with 100% Coverage Gate
+        run: pnpm coverage
+        working-directory: test
+
+      - name: Report Exact Coverage Gaps
+        if: failure()
+        run: node internals/report-coverage-gaps.mjs
