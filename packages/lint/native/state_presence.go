@@ -241,11 +241,8 @@ func projectGlobPresent(root string, pattern string) (bool, string) {
 			return relativeError
 		}
 		candidate := filepath.ToSlash(relative)
-		for _, pattern := range normalized {
-			if matchProjectGlob(strings.Split(pattern, "/"), strings.Split(candidate, "/")) {
-				found = true
-				break
-			}
+		if matchProjectGlob(strings.Split(pattern, "/"), strings.Split(candidate, "/")) {
+			found = true
 		}
 		return nil
 	})

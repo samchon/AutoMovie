@@ -1,3 +1,4 @@
+import { renderScaffold, writeFiles } from "@automovie/cli";
 import { type SpawnSyncReturns, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
@@ -32,6 +33,24 @@ const linkDirectory = (source: string, destination: string): void => {
 
 const dependencyRoot = (name: string): string =>
   path.dirname(require.resolve(`${name}/package.json`));
+
+const workspacePackageRoot = (name: string): string | null => {
+  if (name.startsWith("@automovie/") === false) return null;
+  const root = path.join(repositoryRoot, "packages", name.slice(11));
+  return fs.existsSync(path.join(root, "package.json")) ? root : null;
+};
+
+const linkDependencies = (
+  directory: string,
+  names: readonly string[],
+): void => {
+  const modules = path.join(directory, "node_modules");
+  for (const name of names)
+    linkDirectory(
+      workspacePackageRoot(name) ?? dependencyRoot(name),
+      path.join(modules, ...name.split("/")),
+    );
+};
 
 const createFixture = (props: {
   files: Record<string, string>;
@@ -81,17 +100,12 @@ const createFixture = (props: {
   for (const [relative, content] of Object.entries(props.files))
     write(relative, content);
 
-  const modules = path.join(directory, "node_modules");
-  linkDirectory(
-    path.join(repositoryRoot, "packages", "lint"),
-    path.join(modules, "@automovie", "lint"),
-  );
-  linkDirectory(
-    dependencyRoot("@ttsc/lint"),
-    path.join(modules, "@ttsc", "lint"),
-  );
-  linkDirectory(dependencyRoot("ttsc"), path.join(modules, "ttsc"));
-  linkDirectory(dependencyRoot("typescript"), path.join(modules, "typescript"));
+  linkDependencies(directory, [
+    "@automovie/lint",
+    "@ttsc/lint",
+    "ttsc",
+    "typescript",
+  ]);
 
   return {
     directory,
@@ -108,6 +122,31 @@ const createFixture = (props: {
           // Windows can retain a toolchain handle briefly after child exit.
         }
     },
+  };
+};
+
+const createScaffoldFixture = (name: string): IFixture => {
+  const directory = fs.mkdtempSync(
+    path.join(os.tmpdir(), `automovie-lint-scaffold-${name}-`),
+  );
+  const files = renderScaffold({ name: `lint-${name}` });
+  writeFiles(directory, files);
+  const manifest = JSON.parse(files["package.json"]!) as {
+    dependencies: Record<string, string>;
+    devDependencies: Record<string, string>;
+  };
+  linkDependencies(directory, [
+    ...Object.keys(manifest.dependencies),
+    ...Object.keys(manifest.devDependencies),
+  ]);
+  return {
+    directory,
+    cleanup: () =>
+      fs.rmSync(directory, {
+        force: true,
+        maxRetries: 3,
+        recursive: true,
+      }),
   };
 };
 
@@ -133,6 +172,37 @@ const runCheck = (directory: string): IRunResult => {
     output: `${result.stdout ?? ""}${result.stderr ?? ""}`,
     status: result.status,
   };
+};
+
+const runScaffoldLint = (props: {
+  mutate?: (directory: string) => void;
+  name: string;
+}): IRunResult => {
+  const fixture = createScaffoldFixture(props.name);
+  try {
+    props.mutate?.(fixture.directory);
+    const result: SpawnSyncReturns<string> = spawnSync(
+      process.platform === "win32" ? "pnpm.cmd" : "pnpm",
+      ["lint"],
+      {
+        cwd: fixture.directory,
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          PATH: `${path.join(repositoryRoot, "node_modules", ".bin")}${path.delimiter}${process.env.PATH ?? ""}`,
+          TTSC_CACHE_DIR: pluginCache,
+        },
+        maxBuffer: 16 * 1024 * 1024,
+        timeout: 900_000,
+      },
+    );
+    return {
+      output: `${result.stdout ?? ""}${result.stderr ?? ""}`,
+      status: result.status,
+    };
+  } finally {
+    fixture.cleanup();
+  }
 };
 
 const runFixture = (props: {
@@ -218,6 +288,27 @@ const assertFailedWith = (
  * remain green.
  */
 export function test_lint_plugin_walking_skeleton(): void {
+  const scaffold = runScaffoldLint({ name: "clean" });
+  assertSucceeded(
+    scaffold,
+    "The shipped scaffold's ordinary pnpm lint command must stay green before resident records exist.",
+  );
+
+  const scaffoldSentinel = runScaffoldLint({
+    name: "sentinel",
+    mutate: (directory) =>
+      fs.writeFileSync(
+        path.join(directory, "src", "sentinel.ts"),
+        'export const status = "AUTOMOVIE_IMPLEMENT_ME";\n',
+        "utf8",
+      ),
+  });
+  assertFailedWith(
+    scaffoldSentinel,
+    "Template sentinel 'AUTOMOVIE_IMPLEMENT_ME' remains in compiled source.",
+    "The shipped scaffold's ordinary pnpm lint command must invoke the registered walking-skeleton rule.",
+  );
+
   const empty = runFixture({
     name: "empty",
     lintConfig: sentinelConfig,
