@@ -324,13 +324,97 @@ export const test_mcp_production_namespaces = (): void => {
       incarnationFixture.root,
       "fixture-film",
     );
+    const staleReads = [
+      () => stale.readTrackedStateFile("revision.json"),
+      () => stale.trackedStatePath("revision.json"),
+      () => stale.generatedRoot(),
+      () => stale.readGeneratedFile("missing.bin"),
+      () => stale.renderRoot(),
+      () => stale.readRenderFile("missing.bin"),
+      () =>
+        stale.reviewPath({
+          kind: "design",
+          design: { kind: "production" },
+        }),
+    ];
     TestValidator.predicate(
-      "a stale handle cannot cross delete and same-id recreation",
+      "every production-scoped read and path rejects same-id recreation",
       recreated.summary().productionId === "fixture-film" &&
-        throws(() => stale.summary(), "deleted or recreated"),
+        throws(() => stale.summary(), "deleted or recreated") &&
+        staleReads.every((read) => throws(read, "deleted or recreated")),
     );
   } finally {
     incarnationFixture.dispose();
+  }
+
+  const protoFixture = productionFixture();
+  try {
+    AutoMovieProductionProject.open(protoFixture.root);
+    const erasing = AutoMovieProductionProject.open(
+      protoFixture.root,
+      "__proto__",
+    );
+    const stale = AutoMovieProductionProject.open(
+      protoFixture.root,
+      "__proto__",
+    );
+    const registryBefore = JSON.parse(
+      fs.readFileSync(
+        path.join(protoFixture.root, ".automovie/productions.json"),
+        "utf8",
+      ),
+    ) as { incarnations: Record<string, string> };
+    erasing.eraseProduction("exercise prototype-key incarnation fencing");
+    const recreated = AutoMovieProductionProject.open(
+      protoFixture.root,
+      "__proto__",
+    );
+    TestValidator.predicate(
+      "prototype-named production receives an own ABA incarnation",
+      Object.hasOwn(registryBefore.incarnations, "__proto__") &&
+        recreated.summary().productionId === "__proto__" &&
+        throws(() => stale.generatedRoot(), "deleted or recreated"),
+    );
+  } finally {
+    protoFixture.dispose();
+  }
+
+  const replacementFixture = productionFixture();
+  try {
+    const alpha = AutoMovieProductionProject.open(replacementFixture.root);
+    const beta = AutoMovieProductionProject.open(
+      replacementFixture.root,
+      "beta",
+    );
+    const alphaDesignRoot = path.join(
+      replacementFixture.root,
+      ".automovie/design/fixture-film",
+    );
+    const betaDesignRoot = path.join(
+      replacementFixture.root,
+      ".automovie/design/beta",
+    );
+    const parkedBetaDesignRoot = `${betaDesignRoot}.parked`;
+    fs.renameSync(betaDesignRoot, parkedBetaDesignRoot);
+    try {
+      fs.symlinkSync(
+        alphaDesignRoot,
+        betaDesignRoot,
+        process.platform === "win32" ? "junction" : "dir",
+      );
+      TestValidator.predicate(
+        "an opened handle rejects a later internal namespace alias",
+        throws(
+          () => beta.design({ kind: "production" }),
+          "changed physical identity",
+        ) && alpha.summary().productionId === "fixture-film",
+      );
+    } finally {
+      if (lstatLink(betaDesignRoot)) fs.unlinkSync(betaDesignRoot);
+      fs.renameSync(parkedBetaDesignRoot, betaDesignRoot);
+    }
+  } finally {
+    replacementFixture.dispose();
   }
 
   const auditFixture = productionFixture();
@@ -354,5 +438,13 @@ export const test_mcp_production_namespaces = (): void => {
   } finally {
     auditFixture.dispose();
     fs.rmSync(externalAudit, { force: true, recursive: true });
+  }
+};
+
+const lstatLink = (file: string): boolean => {
+  try {
+    return fs.lstatSync(file).isSymbolicLink();
+  } catch {
+    return false;
   }
 };

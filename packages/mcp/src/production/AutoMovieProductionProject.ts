@@ -124,6 +124,8 @@ export class AutoMovieProductionProject {
   private readonly initialized_: boolean;
   private readonly incarnation_: string;
   private readonly productionIncarnation_: string;
+  private productionNamespaceAncestries_: readonly IPhysicalDirectoryAncestry[] =
+    [];
   private manifest_: IAutoMovieProductionManifest & Record<string, unknown>;
   private lastReadRevision_: number;
   private deleted_ = false;
@@ -215,6 +217,10 @@ export class AutoMovieProductionProject {
       this.mkdirOwned(this.resolveOwnedDirectory(directory));
     this.mkdirOwned(this.generatedRoot());
     this.mkdirOwned(this.renderRoot());
+    this.productionNamespaceAncestries_ =
+      this.productionNamespaceDirectories().map((directory) =>
+        acquirePhysicalDirectoryAncestry(this.rootReal, directory),
+      );
     validateRealOwnershipLayout(
       this.rootReal,
       this.root,
@@ -305,14 +311,27 @@ export class AutoMovieProductionProject {
     this.preflightProductionNamespace(productionId);
     if (registry.productions.includes(productionId) === false) {
       registry.productions.push(productionId);
-      registry.incarnations[productionId] = randomUUID();
-    } else if (registry.incarnations[productionId] === undefined)
-      registry.incarnations[productionId] = randomUUID();
+      setProductionIncarnation(
+        registry.incarnations,
+        productionId,
+        randomUUID(),
+      );
+    } else if (
+      productionIncarnationOf(registry.incarnations, productionId) === undefined
+    )
+      setProductionIncarnation(
+        registry.incarnations,
+        productionId,
+        randomUUID(),
+      );
     registry.productions.sort(compareCodeUnits);
     const legacy = registry.layoutVersion !== 1;
     this.writeOwnedJsonAtomic(this.registryPath, registry);
     return {
-      incarnation: registry.incarnations[productionId]!,
+      incarnation: productionIncarnationOf(
+        registry.incarnations,
+        productionId,
+      )!,
       legacy,
       productionId,
     };
@@ -391,42 +410,127 @@ export class AutoMovieProductionProject {
       source: string;
       destination: string;
       temporary: string;
+      identity: string;
+      destinationParent?: IPhysicalDirectoryAncestry;
     }> = [];
     const published: typeof staged = [];
+    const temporaryAncestry = acquirePhysicalDirectoryAncestry(
+      this.rootReal,
+      temporary,
+    );
+    let registryPublished = false;
+    const assertMigrationFence = (): void => {
+      this.assertProjectRootIdentity();
+      this.assertStateRootIdentity();
+      assertPhysicalDirectoryAncestry(temporaryAncestry);
+    };
+    const assertResidentMove = (file: string, identity: string): void => {
+      assertPhysicalDirectoryAncestors(
+        this.rootReal,
+        path.dirname(file),
+        false,
+      );
+      const linked = lstatOrNull(file);
+      if (
+        linked === null ||
+        linked.isSymbolicLink() ||
+        fileIdentityKey(fs.statSync(file, { bigint: true })) !== identity
+      )
+        throw new AutoMovieProductionInputRaceError(
+          `Legacy migration entry "${file}" changed physical identity. No stale-path rollback may touch its replacement.`,
+        );
+    };
     try {
       for (const [index, move] of moves.entries()) {
+        assertMigrationFence();
+        assertPhysicalDirectoryAncestors(
+          this.rootReal,
+          path.dirname(move.source),
+          false,
+        );
         const state = lstatOrNull(move.source);
         if (state === null) continue;
         if (state.isSymbolicLink())
           throw new Error(
             `Legacy production path "${move.source}" is a symlink or junction. Replace it with project-owned files before migration.`,
           );
+        const identity = fileIdentityKey(
+          fs.statSync(move.source, { bigint: true }),
+        );
         const stagedPath = path.join(temporary, String(index).padStart(2, "0"));
         fs.renameSync(move.source, stagedPath);
-        staged.push({ ...move, temporary: stagedPath });
+        assertResidentMove(stagedPath, identity);
+        staged.push({ ...move, temporary: stagedPath, identity });
       }
       for (const move of staged) {
+        assertMigrationFence();
+        assertResidentMove(move.temporary, move.identity);
         if (lstatOrNull(move.destination) !== null)
           throw new Error(
             `Legacy production path "${move.source}" conflicts with namespaced destination "${move.destination}". Keep one authoritative copy before reopening the project.`,
           );
         this.mkdirOwned(path.dirname(move.destination));
+        move.destinationParent = acquirePhysicalDirectoryAncestry(
+          this.rootReal,
+          path.dirname(move.destination),
+        );
         fs.renameSync(move.temporary, move.destination);
+        assertPhysicalDirectoryAncestry(move.destinationParent);
+        assertResidentMove(move.destination, move.identity);
         published.push(move);
+      }
+      assertMigrationFence();
+      for (const move of published) {
+        assertPhysicalDirectoryAncestry(move.destinationParent!);
+        assertResidentMove(move.destination, move.identity);
       }
       const registry = validateProductionRegistry(
         readOwnedJson(this.rootReal, this.registryPath),
         this.registryPath,
       );
       registry.layoutVersion = 1;
-      this.writeOwnedJsonAtomic(this.registryPath, registry);
+      writeAtomic(
+        this.registryPath,
+        Buffer.from(serializeJson(registry), "utf8"),
+        assertMigrationFence,
+        () => {
+          registryPublished = true;
+        },
+      );
     } catch (error) {
-      for (const move of [...published].reverse())
-        if (
-          lstatOrNull(move.destination) !== null &&
-          lstatOrNull(move.temporary) === null
-        )
+      if (registryPublished)
+        throw new AggregateError(
+          [error],
+          "Legacy migration data and registry were committed. No rollback was attempted after the registry commit point.",
+        );
+      try {
+        assertMigrationFence();
+        for (const move of published) {
+          assertPhysicalDirectoryAncestry(move.destinationParent!);
+          assertResidentMove(move.destination, move.identity);
+        }
+        for (const move of staged)
+          if (published.includes(move) === false)
+            assertResidentMove(move.temporary, move.identity);
+      } catch (identityError) {
+        throw new AggregateError(
+          [error, identityError],
+          "Legacy migration stopped after an owned namespace changed physical identity. No stale-path rollback was attempted.",
+        );
+      }
+      for (const move of [...published].reverse()) {
+        assertPhysicalDirectoryAncestry(move.destinationParent!);
+        assertResidentMove(move.destination, move.identity);
+        if (lstatOrNull(move.temporary) === null)
           fs.renameSync(move.destination, move.temporary);
+        assertResidentMove(move.temporary, move.identity);
+        if (
+          path.dirname(move.destination) === move.source &&
+          lstatOrNull(move.source)?.isDirectory() === true &&
+          fs.readdirSync(move.source).length === 0
+        )
+          fs.rmdirSync(move.source);
+      }
       for (const move of [...staged].reverse()) {
         const existing = lstatOrNull(move.source);
         if (
@@ -438,17 +542,21 @@ export class AutoMovieProductionProject {
           lstatOrNull(move.source) === null &&
           lstatOrNull(move.temporary) !== null
         ) {
-          fs.mkdirSync(path.dirname(move.source), { recursive: true });
+          this.mkdirOwned(path.dirname(move.source));
+          assertResidentMove(move.temporary, move.identity);
           fs.renameSync(move.temporary, move.source);
+          assertResidentMove(move.source, move.identity);
         }
       }
       throw error;
     } finally {
-      if (
-        lstatOrNull(temporary)?.isDirectory() === true &&
-        fs.readdirSync(temporary).length === 0
-      )
-        fs.rmdirSync(temporary);
+      try {
+        assertPhysicalDirectoryAncestry(temporaryAncestry);
+        if (fs.readdirSync(temporary).length === 0)
+          fs.rmdirSync(temporary);
+      } catch {
+        // A replacement temporary root is not ours to inspect or remove.
+      }
     }
     this.assertProjectRootIdentity();
   }
@@ -906,7 +1014,7 @@ export class AutoMovieProductionProject {
       this.automovieRoot,
       `.erase-${this.productionSegment}-${randomUUID()}`,
     );
-    const moved: Array<{ from: string; to: string }> = [];
+    const moved: Array<{ from: string; to: string; identity: string }> = [];
     const auditPath = path.join(
       this.automovieRoot,
       "audit",
@@ -914,11 +1022,47 @@ export class AutoMovieProductionProject {
       `${this.productionSegment}-${randomUUID()}.json`,
     );
     let erased = false;
+    let registryPublished = false;
     let remaining: string[] = [];
+    let quarantineAncestry: IPhysicalDirectoryAncestry | null = null;
+    let auditParentAncestry: IPhysicalDirectoryAncestry | null = null;
+    let sourceParentAncestries: readonly IPhysicalDirectoryAncestry[] = [];
+    let auditIdentity: string | null = null;
+    let productionStateIdentity: string | null = null;
+    const assertResidentEntry = (file: string, identity: string): void => {
+      assertPhysicalDirectoryAncestors(
+        this.rootReal,
+        path.dirname(file),
+        false,
+      );
+      const linked = lstatOrNull(file);
+      if (
+        linked === null ||
+        linked.isSymbolicLink() ||
+        fileIdentityKey(fs.statSync(file, { bigint: true })) !== identity
+      )
+        throw new AutoMovieProductionInputRaceError(
+          `Production erase entry "${file}" changed physical identity. No stale-path cleanup may touch its replacement.`,
+        );
+    };
+    const assertEraseFence = (): void => {
+      assertProductionRootNamespaceLease(lease);
+      this.assertProjectRootIdentity();
+      this.assertStateRootIdentity();
+      if (quarantineAncestry !== null)
+        assertPhysicalDirectoryAncestry(quarantineAncestry);
+      if (auditParentAncestry !== null)
+        assertPhysicalDirectoryAncestry(auditParentAncestry);
+      for (const ancestry of sourceParentAncestries)
+        assertPhysicalDirectoryAncestry(ancestry);
+    };
     try {
       token = acquireCommitLock(this.lockPath);
       assertProductionRootNamespaceLease(lease);
       this.assertIncarnation();
+      productionStateIdentity = fileIdentityKey(
+        fs.statSync(this.productionStateRoot, { bigint: true }),
+      );
       const registry = validateProductionRegistry(
         readOwnedJson(this.rootReal, this.registryPath),
         this.registryPath,
@@ -929,13 +1073,27 @@ export class AutoMovieProductionProject {
           productionId: this.productionId,
           remaining: registry.productions,
         };
-      this.mkdirOwned(quarantine);
-      for (const source of [
+      const sources = [
         this.productionDesignRoot,
         this.reviewRoot,
         this.generatedRoot(),
         this.renderRoot(),
-      ]) {
+      ];
+      this.mkdirOwned(quarantine);
+      quarantineAncestry = acquirePhysicalDirectoryAncestry(
+        this.rootReal,
+        quarantine,
+      );
+      this.mkdirOwned(path.dirname(auditPath));
+      auditParentAncestry = acquirePhysicalDirectoryAncestry(
+        this.rootReal,
+        path.dirname(auditPath),
+      );
+      sourceParentAncestries = sources.map((source) =>
+        acquirePhysicalDirectoryAncestry(this.rootReal, path.dirname(source)),
+      );
+      for (const source of sources) {
+        assertEraseFence();
         const state = lstatOrNull(source);
         if (state === null) continue;
         if (
@@ -946,57 +1104,141 @@ export class AutoMovieProductionProject {
           throw new Error(
             `Production erase refused unsafe namespace "${source}". Replace links and reopen before retrying.`,
           );
+        const identity = fileIdentityKey(fs.statSync(source, { bigint: true }));
         const destination = path.join(
           quarantine,
           String(moved.length).padStart(2, "0"),
         );
         fs.renameSync(source, destination);
-        moved.push({ from: source, to: destination });
+        assertResidentEntry(destination, identity);
+        moved.push({ from: source, to: destination, identity });
       }
       remaining = registry.productions.filter(
         (production) => production !== this.productionId,
       );
-      this.mkdirOwned(path.dirname(auditPath));
-      this.writeOwnedJsonAtomic(auditPath, {
-        version: 1,
-        productionId: this.productionId,
-        reason: reason.trim(),
-      });
-      this.writeOwnedJsonAtomic(this.registryPath, {
-        ...registry,
-        productions: remaining,
-        incarnations: Object.fromEntries(
-          Object.entries(registry.incarnations).filter(
-            ([production]) => production !== this.productionId,
-          ),
+      writeAtomic(
+        auditPath,
+        Buffer.from(
+          serializeJson({
+            version: 1,
+            productionId: this.productionId,
+            reason: reason.trim(),
+          }),
+          "utf8",
         ),
-      });
+        assertEraseFence,
+        () => {
+          auditIdentity = fileIdentityKey(
+            fs.statSync(auditPath, { bigint: true }),
+          );
+        },
+      );
+      writeAtomic(
+        this.registryPath,
+        Buffer.from(
+          serializeJson({
+            ...registry,
+            productions: remaining,
+            incarnations: Object.fromEntries(
+              Object.entries(registry.incarnations).filter(
+                ([production]) => production !== this.productionId,
+              ),
+            ),
+          }),
+          "utf8",
+        ),
+        assertEraseFence,
+        () => {
+          registryPublished = true;
+        },
+      );
       erased = true;
       this.deleted_ = true;
     } catch (error) {
-      for (const entry of moved.reverse())
-        if (
-          lstatOrNull(entry.from) === null &&
-          lstatOrNull(entry.to) !== null
-        ) {
-          fs.mkdirSync(path.dirname(entry.from), { recursive: true });
-          fs.renameSync(entry.to, entry.from);
+      if (registryPublished) {
+        erased = true;
+        this.deleted_ = true;
+      } else {
+        try {
+          assertEraseFence();
+          for (const entry of moved)
+            assertResidentEntry(entry.to, entry.identity);
+          if (auditIdentity !== null)
+            assertResidentEntry(auditPath, auditIdentity);
+        } catch (identityError) {
+          throw new AggregateError(
+            [error, identityError],
+            "Production erase stopped after an owned namespace changed physical identity. No stale-path rollback was attempted.",
+          );
         }
-      if (lstatOrNull(auditPath)?.isFile() === true) fs.rmSync(auditPath);
-      throw error;
+        const rollbackErrors: unknown[] = [];
+        for (const entry of [...moved].reverse())
+          try {
+            assertEraseFence();
+            assertResidentEntry(entry.to, entry.identity);
+            if (lstatOrNull(entry.from) !== null)
+              throw new AutoMovieProductionInputRaceError(
+                `Production erase source "${entry.from}" was replaced before rollback. The quarantined original was left untouched.`,
+              );
+            this.mkdirOwned(path.dirname(entry.from));
+            fs.renameSync(entry.to, entry.from);
+            assertResidentEntry(entry.from, entry.identity);
+          } catch (rollbackError) {
+            rollbackErrors.push(rollbackError);
+          }
+        if (auditIdentity !== null)
+          try {
+            assertEraseFence();
+            assertResidentEntry(auditPath, auditIdentity);
+            fs.rmSync(auditPath);
+          } catch (rollbackError) {
+            rollbackErrors.push(rollbackError);
+          }
+        if (rollbackErrors.length !== 0)
+          throw new AggregateError(
+            [error, ...rollbackErrors],
+            "Production erase failed and identity-fenced rollback was incomplete. Restore only the listed quarantined originals before retrying.",
+          );
+        throw error;
+      }
     } finally {
       try {
-        if (token !== null) releaseCommitLock(this.lockPath, token);
+        if (token !== null) {
+          const state = physicalDirectoryIdentityOrNull(
+            this.productionStateRoot,
+          );
+          if (
+            productionStateIdentity !== null &&
+            state !== null &&
+            directoryIdentityKey(state) === productionStateIdentity
+          )
+            releaseCommitLock(this.lockPath, token);
+          else releaseCommitLock(this.lockPath, token, { unlink: false });
+        }
         if (erased) {
+          if (quarantineAncestry === null || productionStateIdentity === null)
+            throw new AutoMovieProductionInputRaceError(
+              "Production erase committed without a resident quarantine fence. Preserve the namespace for manual recovery.",
+            );
+          assertPhysicalDirectoryAncestry(quarantineAncestry);
+          for (const entry of moved)
+            assertResidentEntry(entry.to, entry.identity);
+          assertResidentEntry(
+            this.productionStateRoot,
+            productionStateIdentity,
+          );
           const stateDestination = path.join(quarantine, "state");
-          if (lstatOrNull(this.productionStateRoot) !== null)
-            fs.renameSync(this.productionStateRoot, stateDestination);
+          fs.renameSync(this.productionStateRoot, stateDestination);
+          assertResidentEntry(stateDestination, productionStateIdentity);
           fs.rmSync(quarantine, { force: true, recursive: true });
-        } else if (
-          lstatOrNull(quarantine)?.isDirectory() === true &&
-          fs.readdirSync(quarantine).length === 0
-        )
-          fs.rmdirSync(quarantine);
+        } else if (quarantineAncestry !== null)
+          try {
+            assertPhysicalDirectoryAncestry(quarantineAncestry);
+            if (fs.readdirSync(quarantine).length === 0)
+              fs.rmdirSync(quarantine);
+          } catch {
+            // A replacement quarantine is not ours to inspect or remove.
+          }
       } finally {
         releaseProductionRootNamespace(lease);
       }
@@ -1068,7 +1310,7 @@ export class AutoMovieProductionProject {
 
   /** Read one active-production state file without following an escaping link. */
   public readTrackedStateFile(relativePath: string): Uint8Array | null {
-    this.assertProjectRootIdentity();
+    this.assertIncarnation();
     const file = this.trackedStatePath(relativePath);
     if (lstatOrNull(file) === null) return null;
     assertOwnedRegularFile(
@@ -1080,11 +1322,13 @@ export class AutoMovieProductionProject {
 
   /** Absolute path of one active-production tracked state record. */
   public trackedStatePath(relativePath: string): string {
+    this.assertIncarnation();
     return resolveInside(this.productionStateRoot, relativePath);
   }
 
   /** Project-relative path of the generated root. */
   public generatedRoot(): string {
+    this.assertIncarnation();
     return resolveInside(
       this.resolveOwnedDirectory(this.manifest_.generatedRoot),
       this.productionSegment,
@@ -1114,6 +1358,7 @@ export class AutoMovieProductionProject {
 
   /** Project-relative path of the render root. */
   public renderRoot(): string {
+    this.assertIncarnation();
     return resolveInside(
       this.resolveOwnedDirectory(this.manifest_.renderRoot),
       this.productionSegment,
@@ -1655,6 +1900,7 @@ export class AutoMovieProductionProject {
 
   /** Absolute path for a current review target. */
   public reviewPath(target: IAutoMovieReviewTarget): string {
+    this.assertIncarnation();
     switch (target.kind) {
       case "design": {
         const design = target.design;
@@ -1913,6 +2159,7 @@ export class AutoMovieProductionProject {
   }
 
   private assertIncarnation(): void {
+    this.assertProjectRootIdentity();
     this.assertStateRootIdentity();
     const current = validateIncarnation(
       readOwnedJson(this.rootReal, this.incarnationPath),
@@ -1929,11 +2176,35 @@ export class AutoMovieProductionProject {
     );
     if (
       registry.productions.includes(this.productionId) === false ||
-      registry.incarnations[this.productionId] !== this.productionIncarnation_
+      productionIncarnationOf(registry.incarnations, this.productionId) !==
+        this.productionIncarnation_
     )
       throw new AutoMovieProductionInputRaceError(
         `Production "${this.productionId}" was deleted or recreated. Discard this stale handle and open the current production namespace before reading or mutating it.`,
       );
+    this.assertProductionNamespaceIdentities();
+  }
+
+  private productionNamespaceDirectories(): string[] {
+    return [
+      this.sharedDesignRoot,
+      this.productionDesignRoot,
+      this.reviewRoot,
+      this.productionStateRoot,
+      resolveInside(
+        resolveInside(this.root, this.manifest_.generatedRoot),
+        this.productionSegment,
+      ),
+      resolveInside(
+        resolveInside(this.root, this.manifest_.renderRoot),
+        this.productionSegment,
+      ),
+    ];
+  }
+
+  private assertProductionNamespaceIdentities(): void {
+    for (const ancestry of this.productionNamespaceAncestries_)
+      assertPhysicalDirectoryAncestry(ancestry);
   }
 
   private assertStateRootIdentity(): void {
@@ -2423,8 +2694,29 @@ const validateProductionRegistry = (
     version: 1,
     layoutVersion: record.layoutVersion,
     productions: [...record.productions].sort(compareCodeUnits),
-    incarnations: { ...incarnationRecord },
+    incarnations: Object.fromEntries(Object.entries(incarnationRecord)),
   };
+};
+
+const productionIncarnationOf = (
+  incarnations: Record<string, string>,
+  productionId: string,
+): string | undefined =>
+  Object.hasOwn(incarnations, productionId)
+    ? incarnations[productionId]
+    : undefined;
+
+const setProductionIncarnation = (
+  incarnations: Record<string, string>,
+  productionId: string,
+  incarnation: string,
+): void => {
+  Object.defineProperty(incarnations, productionId, {
+    configurable: true,
+    enumerable: true,
+    value: incarnation,
+    writable: true,
+  });
 };
 
 const legacyProductionId = (
@@ -2875,6 +3167,7 @@ const writeAtomic = (
   file: string,
   content: Uint8Array,
   beforePublish: () => void = () => undefined,
+  afterPublish: () => void = () => undefined,
 ): void => {
   fs.mkdirSync(path.dirname(file), { recursive: true });
   const temporary = temporaryPath(file, "tmp");
@@ -2882,6 +3175,7 @@ const writeAtomic = (
     fs.writeFileSync(temporary, content);
     beforePublish();
     fs.renameSync(temporary, file);
+    afterPublish();
   } finally {
     fs.rmSync(temporary, { force: true });
   }
@@ -2977,7 +3271,7 @@ const acquirePhysicalDirectoryAncestry = (
     const identity = physicalDirectoryIdentityOrNull(current);
     if (identity === null)
       throw new Error(
-        `Render directory "${current}" is not a physical directory.`,
+        `Owned directory "${current}" is not a physical directory.`,
       );
     directories.push({
       path: current,
@@ -2999,7 +3293,7 @@ const assertPhysicalDirectoryAncestry = (
   });
   if (changed !== undefined)
     throw new Error(
-      `Render directory "${changed.path}" changed physical identity while evidence was read.`,
+      `Owned directory "${changed.path}" changed physical identity. Discard this stale project handle and reopen the physical production namespace.`,
     );
 };
 
