@@ -201,7 +201,7 @@ const assertFirearm = (
   model: string,
   profile: string,
 ): void => {
-  const invalidPositive: Array<[string, number]> = [
+  const invalidPositive: [string, number] | undefined = [
     ["reloadSeconds", weapon.reloadSeconds],
     ["effectiveRange", weapon.effectiveRange],
     ["muzzleVelocity", weapon.muzzleVelocity],

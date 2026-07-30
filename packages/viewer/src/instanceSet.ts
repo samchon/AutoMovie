@@ -1,8 +1,4 @@
-import {
-  intersectsPerspectiveFrustumSphere,
-  seededValue,
-  selectFormationLod,
-} from "@automovie/engine";
+import { seededValue, selectFormationLod } from "@automovie/engine";
 import {
   IAutoMovieCompiledFormationLod,
   IAutoMovieCompiledInstanceSet,
