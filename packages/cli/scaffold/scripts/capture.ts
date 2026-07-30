@@ -114,12 +114,7 @@ const capturePage = (
   input: Parameters<AutoMovieProductionFrameCapture>[0],
 ): Promise<CapturePage> => {
   const subject = capturePageSubject(input);
-  const key = JSON.stringify({
-    subject,
-    compileFingerprint: input.compileFingerprint,
-    width: input.width,
-    height: input.height,
-  });
+  const key = capturePageKey(input);
   const existing = session.pages.get(key);
   if (existing !== undefined) return existing;
   const pending = (async (): Promise<CapturePage> => {
@@ -251,6 +246,7 @@ export const captureProductionFrame: AutoMovieProductionFrameCapture = async (
       height: input.height!,
     };
   } catch (error) {
+    const key = capturePageKey(input);
     session.pages.delete(key);
     await resident.page.close();
     throw error;
@@ -270,3 +266,13 @@ const capturePageSubject = (
         elevationDeg: input.target.elevationDeg,
         pose: input.target.pose,
       };
+
+const capturePageKey = (
+  input: Parameters<AutoMovieProductionFrameCapture>[0],
+): string =>
+  JSON.stringify({
+    subject: capturePageSubject(input),
+    compileFingerprint: input.compileFingerprint,
+    width: input.width,
+    height: input.height,
+  });

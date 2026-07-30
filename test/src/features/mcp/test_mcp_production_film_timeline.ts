@@ -143,7 +143,8 @@ const filmWorksheet = (
                     : undefined);
                 const evidence = prepared.frames.find(
                   (candidate) =>
-                    candidate.shot === shot &&
+                    candidate.target.kind === "shot" &&
+                    candidate.target.id === shot &&
                     candidate.reviewFrame === scenarioCriterion.frame &&
                     candidate.pass === scenarioCriterion.pass,
                 )!;
