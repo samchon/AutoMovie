@@ -98,7 +98,7 @@ export class AutoMovieProductionOracleService {
         target: request.query,
         path: generatedManifestPath,
         message:
-          "No current compile exists. Run compileProject scope source before queryGeometry.",
+          "No current compile exists. Run the scaffold source compile command before using the geometry API.",
       });
     const freshness = this.freshnessDiagnostic(generated);
     if (freshness !== null)
@@ -779,7 +779,7 @@ export class AutoMovieProductionOracleService {
     const generated = this.project.generatedManifest();
     if (generated === null)
       throw new Error(
-        "previewFrame requires a current source compile. Run compileProject before requesting pixels.",
+        "captureFrame requires a current source compile. Run the scaffold compile command before requesting pixels.",
       );
     const freshness = this.freshnessDiagnostic(generated);
     if (freshness !== null)
@@ -792,7 +792,7 @@ export class AutoMovieProductionOracleService {
     const production = graph.production;
     if (production === null)
       throw new Error(
-        "previewFrame requires production frame format. Call setProductionDesign and compileProject.",
+        "captureFrame requires a production frame format. Create the tracked production design record and run the scaffold compile command.",
       );
     const pass = input.pass ?? "beauty";
     const width = input.width ?? production.frameFormat.width;
@@ -811,7 +811,7 @@ export class AutoMovieProductionOracleService {
       return previewFailure(
         generated.inputFingerprint,
         "preview-input-invalid",
-        `Preview time must be non-negative; dimensions must be positive integers no larger than the validated ${production.frameFormat.width}x${production.frameFormat.height} production frame. Correct previewFrame input.`,
+        `Capture time must be non-negative; dimensions must be positive integers no larger than the validated ${production.frameFormat.width}x${production.frameFormat.height} production frame. Correct captureFrame input.`,
       );
     let duration: number | undefined;
     let requestedTime = input.time;
@@ -866,7 +866,7 @@ export class AutoMovieProductionOracleService {
       return previewFailure(
         generated.inputFingerprint,
         "preview-target-missing",
-        `Target "${input.target.kind}:${input.target.id}" is absent from current compiler-owned output. Correct the target or compile its source before previewFrame.`,
+        `Target "${input.target.kind}:${input.target.id}" is absent from current compiler-owned output. Correct the target or compile its source before captureFrame.`,
       );
     if (requestedTime > duration)
       return previewFailure(
@@ -907,7 +907,7 @@ export class AutoMovieProductionOracleService {
         "capture-failed",
         `${
           error instanceof Error ? error.message : String(error)
-        }. Correct the preview host and retry previewFrame.`,
+        }. Correct the capture host and retry captureFrame.`,
       );
     }
     const captureInputsCurrent = (): boolean => {
@@ -1092,7 +1092,7 @@ export class AutoMovieProductionOracleService {
         phase: "compile",
         target: "generated-manifest",
         path: generatedManifestPath,
-        message: `Generated input ${generated.inputFingerprint} differs from current ${status.compiler.inputFingerprint}. Run compileProject before requesting oracle evidence.`,
+        message: `Generated input ${generated.inputFingerprint} differs from current ${status.compiler.inputFingerprint}. Run the scaffold compile command before requesting oracle evidence.`,
       };
     const error = status.diagnostics.find(
       (diagnostic) => diagnostic.category === "error",
@@ -1104,7 +1104,7 @@ export class AutoMovieProductionOracleService {
         phase: "compile",
         target: "generated-manifest",
         path: generatedManifestPath,
-        message: `Current source does not pass the read-only compiler gate${error === undefined ? "" : `: ${error.message}`}. Correct it and run compileProject before requesting oracle evidence.`,
+        message: `Current source does not pass the read-only compiler gate${error === undefined ? "" : `: ${error.message}`}. Correct it and run the scaffold compile command before requesting oracle evidence.`,
       };
     return null;
   }
@@ -1124,13 +1124,13 @@ const readCompiledShots = (
     const bytes = project.readGeneratedFile(entry.path);
     if (digestAutoMovieBytes(bytes) !== entry.digest)
       throw new Error(
-        `Generated shot "${entry.path}" changed after compiler freshness validation. Run compileProject before requesting oracle evidence.`,
+        `Generated shot "${entry.path}" changed after compiler freshness validation. Run the scaffold compile command before requesting oracle evidence.`,
       );
     const raw = JSON.parse(Buffer.from(bytes).toString("utf8")) as unknown;
     const validation = typia.validateEquals<IAutoMovieCompiledShotSource>(raw);
     if (validation.success === false)
       throw new Error(
-        `Generated shot "${entry.path}" is invalid. Run compileProject after correcting source.`,
+        `Generated shot "${entry.path}" is invalid. Run the scaffold compile command after correcting source.`,
       );
     output.set(validation.data.shot.id, validation.data);
   }

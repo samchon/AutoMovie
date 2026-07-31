@@ -1,11 +1,13 @@
 #!/usr/bin/env node
-import { createAutoMovieProductionMcpServer } from "@automovie/mcp";
+import { createAutoMovieMcpServer } from "@automovie/mcp";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 
+import config from "../automovie.config";
 import { captureProductionFrame } from "./capture";
 
-const server = createAutoMovieProductionMcpServer({
+const server = createAutoMovieMcpServer({
   projectRoot: process.cwd(),
+  productionId: config.productionId,
   capture: captureProductionFrame,
 });
 await server.connect(new StdioServerTransport());

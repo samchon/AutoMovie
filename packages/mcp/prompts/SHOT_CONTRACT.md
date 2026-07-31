@@ -1,6 +1,6 @@
 # Shot Contract
 
-`setShotContract` says what a shot must accomplish and which source export implements it. It never stores dense keyframes or an action list.
+A tracked shot contract says what a shot must accomplish and which source export implements it. It never stores dense keyframes or an action list.
 
 Bind one project-relative TypeScript module and named export. Declare duration, participants, opening and closing named states, camera readability, semantic events, and review frames. Duration must equal an integer production frame count divided by fps; event windows and review times must lie inside it. Formation participants must reference current formation designs.
 

@@ -1,7 +1,7 @@
 import type {
   AutoMovieContentDigest,
   AutoMovieGuidePass,
-  IAutoMoviePreviewFrameOutput,
+  IAutoMovieCaptureFrame,
   IAutoMovieProductionDeliverable,
   IAutoMovieProductionMediaProbe,
   IAutoMovieProductionRenderManifest,
@@ -23,6 +23,8 @@ import {
   canonicalAutoMovieCaptureRuntimeIdentity,
   digestAutoMovieBytes,
   encodeAutoMoviePathSegment,
+  inspectAutoMovieProduction,
+  openAutoMovieProduction,
   planProductionRenderGc,
   planProductionRenderJob,
   probeProductionMedia,
@@ -203,11 +205,9 @@ const sourceFingerprint = (): AutoMovieContentDigest => {
   return checked.compiler.inputFingerprint;
 };
 
-const captureReviewEvidence = async (): Promise<
-  IAutoMoviePreviewFrameOutput[]
-> => {
+const captureReviewEvidence = async (): Promise<IAutoMovieCaptureFrame[]> => {
   const app = productionApplication();
-  const compiled = app.compileProject({ scope: "source" });
+  const compiled = productionServices().compiler.compile({ scope: "source" });
   if (compiled.success === false)
     throw new Error(
       `Source compilation failed before review capture: ${JSON.stringify(
@@ -222,7 +222,7 @@ const captureReviewEvidence = async (): Promise<
     project,
     compiled.compiler.inputFingerprint,
   );
-  const frames: IAutoMoviePreviewFrameOutput[] = [];
+  const frames: IAutoMovieCaptureFrame[] = [];
   for (const segment of timeline.segments) {
     const contract = graph.shots.get(segment.shot);
     if (contract === undefined)
@@ -236,10 +236,14 @@ const captureReviewEvidence = async (): Promise<
     ))
       for (const pass of request.passes)
         frames.push(
-          await app.previewFrame({
-            target: { kind: "shot", id: segment.shot },
-            time: request.time,
-            pass,
+          await app.captureFrame({
+            target: {
+              kind: "shot",
+              productionId,
+              id: segment.shot,
+              time: request.time,
+              pass,
+            },
           }),
         );
   }
@@ -254,8 +258,7 @@ const captureReviewEvidence = async (): Promise<
 };
 
 const currentPlan = async (): Promise<IAutoMovieProductionRenderJobPlan> => {
-  const app = productionApplication();
-  const compiled = app.compileProject({ scope: "source" });
+  const compiled = productionServices().compiler.compile({ scope: "source" });
   if (compiled.success === false)
     throw new Error(
       `Source compilation failed before render planning: ${JSON.stringify(
@@ -730,8 +733,7 @@ const releaseOwnedChunkClaim = (
 };
 
 const finalize = async (plan: IAutoMovieProductionRenderJobPlan) => {
-  const app = productionApplication();
-  const inspection = app.inspectProject({});
+  const inspection = inspectAutoMovieProduction(productionServices());
   const incompleteReviews = inspection.reviews.entries.filter(
     (entry) => entry.state !== "complete",
   );
@@ -961,7 +963,7 @@ const finalize = async (plan: IAutoMovieProductionRenderJobPlan) => {
     },
     expectedRevision: project.revision(),
   });
-  const final = productionApplication().compileProject({ scope: "final" });
+  const final = productionServices().compiler.compile({ scope: "final" });
   if (final.success === false)
     throw new Error(
       `Parser-verified publication committed at revision ${revision}, but final compilation rejected it: ${JSON.stringify(final.diagnostics)}`,
@@ -1383,14 +1385,20 @@ const hasVisiblePixelVariance = (png: PNG): boolean => {
 const productionApplication = (): AutoMovieApplication => {
   const app = new AutoMovieApplication({
     projectRoot: root,
+    productionId,
     capture: captureProductionFrame,
   });
   app.getGuideDocument({ name: "AUTOMOVIE_OVERALL" });
-  app.getGuideDocument({ name: "COMPILATION" });
   app.getGuideDocument({ name: "PRODUCTION_RENDER" });
-  app.openProject({ root, productionId });
   return app;
 };
+
+const productionServices = () =>
+  openAutoMovieProduction({
+    projectRoot: root,
+    productionId,
+    capture: captureProductionFrame,
+  });
 
 const readPlan = (): IAutoMovieProductionRenderJobPlan => {
   if (fs.existsSync(planPath) === false)
@@ -1527,9 +1535,8 @@ const renderGarbageCollection = (apply: boolean) => {
   const project = AutoMovieProductionProject.open(root, productionId);
   const renderRoot = project.renderRoot();
   const reviewBundles = new Set(
-    productionApplication()
-      .inspectProject({})
-      .reviews.entries.flatMap((entry) => {
+    inspectAutoMovieProduction(productionServices()).reviews.entries.flatMap(
+      (entry) => {
         const review = project.review(entry.target);
         return (
           review?.checks.flatMap((check) =>
@@ -1538,7 +1545,8 @@ const renderGarbageCollection = (apply: boolean) => {
             ),
           ) ?? []
         );
-      }),
+      },
+    ),
   );
   const manifestPath = path.join(productionStateRoot, "render-manifest.json");
   const publicationPaths = new Set(

@@ -1,6 +1,6 @@
 # Compilation
 
-`compileProject` is an atomic fence with four scopes.
+The non-MCP compiler is an atomic fence with four scopes. Invoke it through the scaffold compile command or `compileAutoMovieProduction`.
 
 - `design`: validate manifest, design shape, ranges, identity, and references without reading source or materializing derived files.
 - `source`: additionally materialize primitive models, compact formation runtimes, and bounded fixed-step effect streams; bind and execute shot source; validate scenes, actor/object/formation motions, effect cues, and shots; derive contract realizations; and enforce generated ownership.

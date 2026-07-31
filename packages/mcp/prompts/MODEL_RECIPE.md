@@ -1,18 +1,18 @@
 # Model Recipe
 
-`setModelRecipe` stores a bounded primitive recipe. It does not accept a free-form mesh graph.
+A tracked model recipe record stores one bounded primitive recipe. It does not accept a free-form mesh graph.
 
 Pick a supported archetype and only its documented scalar parameters. The compiler rejects unknown keys and out-of-range values; this prevents the recipe map from becoming an escape hatch back to arbitrary JSON. The foundation compiler accepts exactly one named palette color per recipe and applies it to every primitive part; use separate recipes when silhouettes need distinct colors. Capabilities are bounded semantic declarations visible to source and review, and attachments name sockets on bones that the generated skeleton actually contains.
 
 The current parameter contract is exact:
 
-| archetype | required parameters |
-| --- | --- |
-| `stickman` | `height` 0.5–3 m, `headRadius` 0.05–0.5 m, `limbRadius` 0.01–0.25 m |
-| `horse` | `length` 0.5–4 m, `height` 0.5–3 m, `legLength` 0.2–2 m |
-| `artillery` | `barrelLength` 0.2–8 m, `wheelRadius` 0.1–3 m, `gauge` 0.2–5 m |
-| `flag` | `width` 0.1–10 m, `height` 0.1–10 m, `poleHeight` 0.2–20 m |
-| `weapon` | `length` 0.05–8 m, `thickness` 0.001–1 m |
+| archetype        | required parameters                                                                                                                                                  |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `stickman`       | `height` 0.5–3 m, `headRadius` 0.05–0.5 m, `limbRadius` 0.01–0.25 m                                                                                                  |
+| `horse`          | `length` 0.5–4 m, `height` 0.5–3 m, `legLength` 0.2–2 m                                                                                                              |
+| `artillery`      | `barrelLength` 0.2–8 m, `wheelRadius` 0.1–3 m, `gauge` 0.2–5 m                                                                                                       |
+| `flag`           | `width` 0.1–10 m, `height` 0.1–10 m, `poleHeight` 0.2–20 m                                                                                                           |
+| `weapon`         | `length` 0.05–8 m, `thickness` 0.001–1 m                                                                                                                             |
 | `primitive-prop` | `shape` plus dimensions: `box` width/height/depth, `sphere` radius, `capsule` radius/height, `cylinder` radius/height, `cone` radius/height, or `plane` width/depth. |
 
 Primitive-prop width, height, and depth are 0.001–100 m; radius is 0.001–50 m. Do not include dimensions unused by the selected shape. Material colors are six-digit `#RRGGBB`. LOD tiers are unique and ordered `hero`, `near`, `far`; finite maximum distances are positive and strictly increasing, and only the final tier may use `null`.

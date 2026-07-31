@@ -1,5 +1,6 @@
 import {
   IAutoMovieAcceptanceScenario,
+  IAutoMovieAssetManifest,
   IAutoMovieDesignMutationConsequences,
   IAutoMovieDesignMutationOutput,
   IAutoMovieDesignTarget,
@@ -12,6 +13,8 @@ import {
   IAutoMovieProductionRenderManifest,
   IAutoMovieProductionRenderReceipt,
   IAutoMovieRenderBundleManifest,
+  IAutoMovieRepaintReceipt,
+  IAutoMovieRepaintRuntimeIdentity,
   IAutoMovieReviewTarget,
   IAutoMovieScreenplayIndex,
   IAutoMovieShotContract,
@@ -27,11 +30,19 @@ import { acquireCommitLock, releaseCommitLock } from "../project/commitLock";
 import { parseAutoMovieCaptureRuntimeIdentity } from "./captureRuntimeIdentity";
 import {
   canonicalAutoMovieJsonBytes,
+  canonicalizeAutoMovieJson,
   compareCodeUnits,
   digestAutoMovieBytes,
   encodeAutoMoviePathSegment,
 } from "./contentIdentity";
 import { probeProductionMedia } from "./probeProductionMedia";
+import {
+  canonicalAutoMovieRepaintRuntimeIdentity,
+  productionRepaintOutputPath,
+  productionRepaintReceiptPath,
+  productionRepaintStructuralControls,
+  productionSourceRenderFingerprint,
+} from "./renditionIdentity";
 import {
   IAutoMovieProductionRootNamespaceLease,
   acquireOrCreateProductionRootNamespace,
@@ -272,9 +283,7 @@ export class AutoMovieProductionProject {
       productionId !== undefined &&
       (productionId.trim().length === 0 || productionId.trim() !== productionId)
     )
-      throw new Error(
-        "openProject productionId must be a trimmed non-empty stable id.",
-      );
+      throw new Error("Production id must be a trimmed non-empty stable id.");
     if (productionId !== undefined) validateProductionId(productionId);
     if (
       registry.layoutVersion === 0 &&
@@ -290,7 +299,7 @@ export class AutoMovieProductionProject {
         productionId = registry.productions[0]!;
       else if (registry.productions.length > 1)
         throw new Error(
-          `Project "${this.root}" contains ${registry.productions.length} productions. Call openProject with one productionId from: ${registry.productions.join(", ")}.`,
+          `Project "${this.root}" contains ${registry.productions.length} productions. Configure the host with one productionId from: ${registry.productions.join(", ")}.`,
         );
       else productionId = legacyId ?? this.manifest_.projectId;
     }
@@ -569,7 +578,7 @@ export class AutoMovieProductionProject {
     const root = path.resolve(rootDirectory);
     if (path.parse(root).root === root)
       throw new Error(
-        `AutoMovie production root "${root}" is a filesystem root. Choose a dedicated project directory in openProject.`,
+        `AutoMovie production root "${root}" is a filesystem root. Configure the host with a dedicated project directory.`,
       );
     const lease = acquireOrCreateProductionRootNamespace(root);
     try {
@@ -644,7 +653,7 @@ export class AutoMovieProductionProject {
         const linked = fs.lstatSync(absolute);
         if (linked.isSymbolicLink())
           throw new Error(
-            `Declared content path "${relativeToRoot(this.root, absolute)}" is a symlink or junction. Replace it with physical project content before compileProject.`,
+            `Declared content path "${relativeToRoot(this.root, absolute)}" is a symlink or junction. Replace it with physical project content before compilation.`,
           );
         if (linked.isDirectory()) visit(absolute, physicalRoot, source, render);
         else if (linked.isFile()) {
@@ -679,12 +688,12 @@ export class AutoMovieProductionProject {
         linked.isDirectory() === false
       )
         throw new Error(
-          `Declared content root "${relativeRoot}" must be a physical project directory before compileProject.`,
+          `Declared content root "${relativeRoot}" must be a physical project directory before compilation.`,
         );
       const physicalRoot = fs.realpathSync(absolute);
       if (isInside(this.rootReal, physicalRoot) === false)
         throw new Error(
-          `Declared content root "${relativeRoot}" escapes the production project through a directory junction. Move it into a physical project directory before compileProject.`,
+          `Declared content root "${relativeRoot}" escapes the production project through a directory junction. Move it into a physical project directory before compilation.`,
         );
       visit(absolute, physicalRoot, source, render);
     }
@@ -697,12 +706,12 @@ export class AutoMovieProductionProject {
       }
       if (linked.isSymbolicLink() || linked.isFile() === false)
         throw new Error(
-          `Declared content file "${relativeFile}" must be a physical regular file before compileProject.`,
+          `Declared content file "${relativeFile}" must be a physical regular file before compilation.`,
         );
       const real = fs.realpathSync(absolute);
       if (isInside(this.rootReal, real) === false)
         throw new Error(
-          `Declared content file "${relativeFile}" escapes the production project through a directory junction. Move it into a physical project directory before compileProject.`,
+          `Declared content file "${relativeFile}" escapes the production project through a directory junction. Move it into a physical project directory before compilation.`,
         );
       setInput(
         normalizeSlash(relativeFile),
@@ -720,12 +729,12 @@ export class AutoMovieProductionProject {
       else {
         if (linked.isSymbolicLink() || linked.isFile() === false)
           throw new Error(
-            `Declared asset manifest "${relativeFile}" must be a physical regular file before compileProject.`,
+            `Declared asset manifest "${relativeFile}" must be a physical regular file before compilation.`,
           );
         const real = fs.realpathSync(absolute);
         if (isInside(this.rootReal, real) === false)
           throw new Error(
-            `Declared asset manifest "${relativeFile}" escapes the production project through a junction. Move it into the physical .automovie directory before compileProject.`,
+            `Declared asset manifest "${relativeFile}" escapes the production project through a junction. Move it into the physical .automovie directory before compilation.`,
           );
         setInput(
           normalizeSlash(relativeFile),
@@ -969,7 +978,7 @@ export class AutoMovieProductionProject {
           phase: "design" as const,
           target: targetKey(target),
           path: relativeToRoot(this.root, this.designPath(target)),
-          message: `${reference} still references this design. Update that artifact before eraseDesignArtifact.`,
+          message: `${reference} still references this design. Update that artifact before removing the design record.`,
         })),
       };
     const nextRevision = this.lastReadRevision_ + 1;
@@ -1280,7 +1289,7 @@ export class AutoMovieProductionProject {
     if (fs.existsSync(file) === false)
       throw new AutoMovieProductionSourcePathError(
         "missing",
-        `Source "${relativePath}" does not exist. Create it under a configured source root before compileProject.`,
+        `Source "${relativePath}" does not exist. Create it under a configured source root before compilation.`,
       );
     const real = fs.realpathSync(file);
     if (this.isInSourceRoot(real) === false)
@@ -1368,12 +1377,12 @@ export class AutoMovieProductionProject {
       throw new Error(`Generated file "${relativePath}" does not exist.`);
     if (linked.isSymbolicLink())
       throw new Error(
-        `Generated file "${relativePath}" is a symlink or junction. Remove that link before compileProject.`,
+        `Generated file "${relativePath}" is a symlink or junction. Remove that link before compilation.`,
       );
     const real = fs.realpathSync(file);
     if (isInside(fs.realpathSync(root), real) === false)
       throw new Error(
-        `Generated file "${relativePath}" escapes the compiler-owned root through a symlink or junction. Remove that link before compileProject.`,
+        `Generated file "${relativePath}" escapes the compiler-owned root through a symlink or junction. Remove that link before compilation.`,
       );
     if (linked.isFile() === false)
       throw new Error(`Generated path "${relativePath}" is not a file.`);
@@ -1475,6 +1484,176 @@ export class AutoMovieProductionProject {
       } satisfies IAutoMovieRenderBundleReceipt),
     });
     return this.commitFiles(writes, inputCurrent);
+  }
+
+  /** Atomically commit one parsed repaint clip and its immutable receipt. */
+  public commitRepaintRendition(
+    receipt: IAutoMovieRepaintReceipt,
+    bytes: Uint8Array,
+    inputCurrent?: () => boolean,
+  ): number {
+    const validation = typia.validateEquals<IAutoMovieRepaintReceipt>(receipt);
+    if (validation.success === false)
+      throw new Error("Repaint receipt does not match its strict v1 schema.");
+    if (
+      receipt.parameters.prompt.trim().length === 0 ||
+      Number.isSafeInteger(receipt.parameters.seed) === false ||
+      Number.isFinite(receipt.parameters.strength) === false ||
+      receipt.parameters.strength < 0 ||
+      receipt.parameters.strength > 1 ||
+      Object.values(receipt.parameters.controls ?? {}).some(
+        (value) =>
+          typeof value === "number" && Number.isFinite(value) === false,
+      ) ||
+      receipt.controls.length === 0
+    )
+      throw new Error(
+        "Repaint receipt requires a non-blank prompt, safe-integer seed, strength in [0, 1], finite scalar controls, and at least one structural pass.",
+      );
+    const generated = this.generatedManifest();
+    if (
+      generated === null ||
+      generated.inputFingerprint !== receipt.compileFingerprint
+    )
+      throw new AutoMovieProductionInputRaceError(
+        "Repaint receipt does not target the current compiler input.",
+      );
+    const sourceManifest = this.verifiedRenderManifest(
+      resolveInside(
+        this.renderRoot(),
+        path.join(...receipt.sourceBundle.split("/"), "manifest.json"),
+      ),
+    );
+    if (
+      sourceManifest === null ||
+      sourceManifest.target.kind !== "shot" ||
+      sourceManifest.target.id !== receipt.shot ||
+      sourceManifest.compileFingerprint !== receipt.compileFingerprint ||
+      productionSourceRenderFingerprint({
+        manifest: sourceManifest,
+        frames: sourceManifest.frames,
+      }) !== receipt.sourceRenderFingerprint ||
+      canonicalizeAutoMovieJson(
+        productionRepaintStructuralControls(sourceManifest),
+      ) !== canonicalizeAutoMovieJson(receipt.controls)
+    )
+      throw new Error(
+        "Repaint receipt source bundle, shot, compile, fingerprint, or structural controls differ from verified deterministic evidence.",
+      );
+    let runtimeIdentity: unknown;
+    try {
+      runtimeIdentity = JSON.parse(receipt.adapterIdentity);
+    } catch {
+      throw new Error("Repaint adapter identity is not canonical JSON.");
+    }
+    const runtimeValidation =
+      typia.validateEquals<IAutoMovieRepaintRuntimeIdentity>(runtimeIdentity);
+    if (
+      runtimeValidation.success === false ||
+      canonicalAutoMovieRepaintRuntimeIdentity(runtimeValidation.data) !==
+        receipt.adapterIdentity
+    )
+      throw new Error(
+        "Repaint adapter identity is incomplete or not canonical.",
+      );
+    this.validateRepaintReferences(receipt);
+    const expected = productionRepaintOutputPath({
+      shot: receipt.shot,
+      sourceRenderFingerprint: receipt.sourceRenderFingerprint,
+      adapterIdentity: receipt.adapterIdentity,
+      parameters: receipt.parameters,
+      references: receipt.references,
+      outputDigest: receipt.output.digest,
+    });
+    if (
+      receipt.productionId !== this.productionId ||
+      receipt.output.path !== expected ||
+      receipt.output.digest !== digestAutoMovieBytes(bytes) ||
+      receipt.output.bytes !== bytes.length
+    )
+      throw new Error(
+        "Repaint receipt production, content-addressed path, digest, or byte count differs from resident output.",
+      );
+    const probe = probeProductionMedia({
+      kind: "feature",
+      mediaType: "video/mp4",
+      bytes,
+    });
+    if (
+      probe.kind !== "video" ||
+      canonicalizeAutoMovieJson(probe) !==
+        canonicalizeAutoMovieJson(receipt.output.probe)
+    )
+      throw new Error(
+        "Repaint receipt media facts differ from a fresh parse of resident output bytes.",
+      );
+    const output = resolveInside(this.renderRoot(), receipt.output.path);
+    const tracked = path.join(
+      this.productionStateRoot,
+      ...productionRepaintReceiptPath(receipt.output.path).split("/"),
+    );
+    return this.commitFiles(
+      [
+        { path: output, content: bytes },
+        { path: tracked, content: serializeJson(receipt) },
+      ],
+      inputCurrent,
+    );
+  }
+
+  /** Verify every repaint reference against current declared asset bytes. */
+  private validateRepaintReferences(receipt: IAutoMovieRepaintReceipt): void {
+    const assetManifest = this.manifest_.assetManifest;
+    const inputs = this.contentInputs();
+    const manifestInput =
+      assetManifest === undefined
+        ? undefined
+        : inputs.find((input) => input.path === assetManifest);
+    if (manifestInput?.bytes === null || manifestInput === undefined)
+      throw new Error(
+        "Repaint receipt references require the current declared asset manifest.",
+      );
+    let decoded: unknown;
+    try {
+      decoded = JSON.parse(Buffer.from(manifestInput.bytes).toString("utf8"));
+    } catch {
+      throw new Error("Repaint asset manifest is not valid JSON.");
+    }
+    const validation = typia.validateEquals<IAutoMovieAssetManifest>(decoded);
+    if (validation.success === false)
+      throw new Error(
+        "Repaint asset manifest does not match its strict schema.",
+      );
+    const seen = new Set<string>();
+    if (receipt.references.length === 0)
+      throw new Error("Repaint receipt requires at least one fixed reference.");
+    for (const reference of receipt.references) {
+      const key = `${reference.role}\0${reference.path}`;
+      const record = validation.data.assets.find(
+        (asset) => asset.path === reference.path,
+      );
+      const resident = inputs.find(
+        (input) => input.path === reference.path && input.bytes !== null,
+      );
+      if (
+        seen.has(key) ||
+        record === undefined ||
+        resident?.bytes === null ||
+        resident === undefined ||
+        record.digest !== reference.digest ||
+        digestAutoMovieBytes(resident.bytes) !== reference.digest ||
+        record.uses.some(
+          (use) =>
+            use.production === this.productionId &&
+            use.consumer.kind === "rendition-reference" &&
+            use.consumer.id === receipt.shot,
+        ) === false
+      )
+        throw new Error(
+          `Repaint reference "${reference.role}:${reference.path}" is duplicate, absent, byte-stale, or not registered to shot "${receipt.shot}".`,
+        );
+      seen.add(key);
+    }
   }
 
   /**
@@ -2063,7 +2242,7 @@ export class AutoMovieProductionProject {
         ...diagnostic,
         code: "design-downstream-invalidated",
         category: "warning" as const,
-        message: `${diagnostic.message} This staged mutation was accepted so the dependent artifact can be updated next; compileProject remains blocked until it is corrected.`,
+        message: `${diagnostic.message} This staged mutation was accepted so the dependent artifact can be updated next; compilation remains blocked until it is corrected.`,
       }));
     const content = serializeJson(value);
     const revision = this.commitFiles(

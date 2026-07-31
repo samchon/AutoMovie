@@ -4,7 +4,7 @@ The external coding agent reviews; AutoMovie verifies evidence and freshness. Th
 
 1. Call `prepareReview` for exactly one asset, shot, sequence, film, legacy design, or legacy source target.
 2. Inspect the returned required criteria, current selectors, frames, and compiler-derived outcomes.
-3. For visual targets, actually open the returned PNG frames. Required evidence must be captured at the exact production width, height, FPS, and review time; smaller thumbnails help iteration but cannot discharge review. Asset preparation names the mandatory isolated views: rest-pose beauty at 0/90/180/270 degrees, a 65-degree top outline, and a rigged model's ROM-extremes beauty view. Use the exact asset target printed by each missing-evidence diagnostic. Formation and fog/smoke/dust claims need current beauty plus the structural pass named by the criterion, not an oracle summary alone. Capture missing passes with `previewFrame`.
+3. For visual targets, actually open the returned PNG frames. Required evidence must be captured at the exact production width, height, FPS, and review time; smaller thumbnails help iteration but cannot discharge review. Asset preparation names the mandatory isolated views: rest-pose beauty at 0/90/180/270 degrees, a 65-degree top outline, and a rigged model's ROM-extremes beauty view. Use the exact asset target printed by each missing-evidence diagnostic. Formation and fog/smoke/dust claims need current beauty plus the structural pass named by the criterion, not an oracle summary alone. Capture missing passes with `captureFrame`.
 4. Write criterion-specific observations and quote current design pointer, source line, frame digest/region, diagnostic, or exact outcome.
 5. List actionable corrections before setting `complete`.
 6. Submit. Fix rejected selectors or contradictions and repeat.
@@ -17,4 +17,4 @@ Only compiled shots that consume a model activate its asset-review obligation. A
 
 Design and source checks must cite a distinct current selector for each criterion; repeating one convenient line or JSON value across the checklist is refused. The source checklist covers binding, determinism, engine enforcement, and boundary behavior. Repository test execution remains the coding agent and CI's job. Corrections describe the next edit; correction feedback never authorizes deleting the artifact.
 
-Mutation never deletes old reviews. Their fingerprints stop matching and `inspectProject` reports `stale`, preserving the audit trail while making review/final compile fail until the target is re-examined.
+Mutation never deletes old reviews. Their fingerprints stop matching and `inspectAutoMovieProduction` reports `stale`, preserving the audit trail while making review/final compile fail until the target is re-examined.

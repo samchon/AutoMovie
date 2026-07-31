@@ -69,9 +69,10 @@ The sample review queue is deliberately incomplete. Open the PNG printed by
 `preview`, read `PRODUCTION_REVIEW` through MCP, and review current evidence.
 
 Register `automovie.mcp.jsonc` with your coding agent. Its first call is
-`getGuideDocument({name:"AUTOMOVIE_OVERALL"})`, then `openProject` with this
-repository root. Full render, chunk resume, encode, and final publication are
-project CLI jobs, not free-form MCP shell tools:
+`getGuideDocument({name:"AUTOMOVIE_OVERALL"})`. `scripts/mcp.ts` fixes this
+repository root and production id at host startup; tool payloads never switch
+workspaces. Full render, chunk resume, encode, and final publication are project
+CLI jobs, not free-form MCP shell tools:
 
 ```sh
 npx automovie render plan

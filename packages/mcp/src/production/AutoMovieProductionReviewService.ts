@@ -1899,7 +1899,7 @@ const currentAssetFrames = (
         path: normalizeSlash(path.relative(project.root, file)),
         message: `${
           error instanceof Error ? error.message : String(error)
-        }. Recreate this asset view through previewFrame.`,
+        }. Recreate this asset view through captureFrame.`,
       });
     }
   }
@@ -1911,7 +1911,7 @@ const currentAssetFrames = (
         phase: "review",
         target: `${reviewTargetKey(target)}:${requirement.id}`,
         path: null,
-        message: `Required asset view "${requirement.id}" has no current verified PNG. Call previewFrame with target {kind:"asset", id:"${target.id}", angleDeg:${requirement.angleDeg}, elevationDeg:${requirement.elevationDeg}, pose:"${requirement.pose}"}, time:${requirement.angleDeg / 30}, pass:"${requirement.pass}" at the exact production raster.`,
+        message: `Required asset view "${requirement.id}" has no current verified PNG. Call captureFrame with {target:{kind:"asset", id:"${target.id}", angleDeg:${requirement.angleDeg}, elevationDeg:${requirement.elevationDeg}, pose:"${requirement.pose}", pass:"${requirement.pass}"}} at the exact production raster.`,
       });
   return frames.sort((left, right) =>
     compareCodeUnits(left.reviewFrame, right.reviewFrame),
@@ -1958,7 +1958,7 @@ const currentFrames = (
       target: reviewTargetKey(target),
       path: generatedManifestPath,
       message:
-        "Generated output is not a clean compile of current design and source. Run compileProject before using any frame as review evidence.",
+        "Generated output is not a clean compile of current design and source. Run the scaffold compile command before using any frame as review evidence.",
     });
     return [];
   }
@@ -2015,7 +2015,7 @@ const currentFrames = (
       phase: "render",
       target: normalizeSlash(path.relative(project.root, entry.path)),
       path: normalizeSlash(path.relative(project.root, entry.path)),
-      message: `Render bundle manifest is invalid: ${entry.error}. Recreate the bundle through previewFrame.`,
+      message: `Render bundle manifest is invalid: ${entry.error}. Recreate the bundle through captureFrame.`,
     });
   const legacyEntries =
     target.kind === "shot"
@@ -2035,7 +2035,7 @@ const currentFrames = (
       target: normalizeSlash(path.relative(project.root, entry.path)),
       path: normalizeSlash(path.relative(project.root, entry.path)),
       message:
-        "This legacy v2 render bundle is retained as historical output but is not current review evidence. Recapture required frames through previewFrame; a current v3 bundle supersedes this warning without deleting history.",
+        "This legacy v2 render bundle is retained as historical output but is not current review evidence. Recapture required frames through captureFrame; a current v3 bundle supersedes this warning without deleting history.",
     });
   const manifestEntries =
     target.kind === "shot"
@@ -2060,7 +2060,7 @@ const currentFrames = (
         target: bundle,
         path: normalizeSlash(path.relative(project.root, manifestPath)),
         message:
-          "This manifest is not at the canonical content-addressed path or lacks the matching MCP render receipt. Recreate it through previewFrame.",
+          "This manifest is not at the canonical content-addressed path or lacks the matching MCP render receipt. Recreate it through captureFrame.",
       });
       continue;
     }
@@ -2164,7 +2164,7 @@ const currentFrames = (
           path: normalizeSlash(path.relative(project.root, file)),
           message: `${
             error instanceof Error ? error.message : String(error)
-          }. Recreate this frame through previewFrame.`,
+          }. Recreate this frame through captureFrame.`,
         });
       }
     }
@@ -2186,7 +2186,7 @@ const currentFrames = (
         phase: "review",
         target: `${requirement.shot}:${requirement.frame}:${requirement.pass}`,
         path: null,
-        message: `Required review frame "${requirement.frame}" for shot "${requirement.shot}" at ${requirement.time}s pass "${requirement.pass}" has no current verified PNG. Call previewFrame for that exact shot, time, and pass.`,
+        message: `Required review frame "${requirement.frame}" for shot "${requirement.shot}" at ${requirement.time}s pass "${requirement.pass}" has no current verified PNG. Call captureFrame for that exact production, shot, time, and pass.`,
       });
   return frames.sort(
     (left, right) =>

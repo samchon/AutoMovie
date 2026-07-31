@@ -139,7 +139,7 @@ export const validateAutoMovieProductionGraph = (
         "design-range-invalid",
         target,
         file,
-        `frameFormat width times height exceeds ${AUTOMOVIE_MAX_FRAME_PIXELS} pixels. Reduce the exact production raster so previewFrame can capture required review evidence.`,
+        `frameFormat width times height exceeds ${AUTOMOVIE_MAX_FRAME_PIXELS} pixels. Reduce the exact production raster so captureFrame can produce required review evidence.`,
       );
     positive(
       diagnostics,
@@ -163,7 +163,7 @@ export const validateAutoMovieProductionGraph = (
         "design-frame-clock-invalid",
         target,
         file,
-        `targetRuntimeSeconds must land on the ${graph.production.frameFormat.fps}fps production clock. Choose an exact integer frame count divided by fps in setProductionDesign.`,
+        `targetRuntimeSeconds must land on the ${graph.production.frameFormat.fps}fps production clock. Choose an exact integer frame count divided by fps in the tracked production design record.`,
       );
     if (graph.production.artDirection.palette.length === 0)
       invalid(
@@ -171,7 +171,7 @@ export const validateAutoMovieProductionGraph = (
         "design-collection-empty",
         target,
         file,
-        "artDirection.palette must contain at least one color. Add a visual palette in setProductionDesign.",
+        "artDirection.palette must contain at least one color. Add a visual palette in the tracked production design record.",
       );
     uniqueTextValues(
       diagnostics,
@@ -232,7 +232,7 @@ export const validateAutoMovieProductionGraph = (
         "design-identity-mismatch",
         target,
         file,
-        `Model file identity is "${id}" but value id is "${model.id}". Rewrite the model with setModelRecipe using one matching id.`,
+        `Model file identity is "${id}" but value id is "${model.id}". Rewrite the model as a tracked model recipe using one matching id.`,
       );
     if (model.asset !== undefined)
       text(diagnostics, model.asset, target, file, "asset");
@@ -245,7 +245,7 @@ export const validateAutoMovieProductionGraph = (
         "design-collection-empty",
         target,
         file,
-        "palette must contain one named #RRGGBB material color. Add it in setModelRecipe.",
+        "palette must contain one named #RRGGBB material color. Add it in the tracked model recipe record.",
       );
     else if (paletteSize > 1)
       invalid(
@@ -262,7 +262,7 @@ export const validateAutoMovieProductionGraph = (
         "design-collection-empty",
         target,
         file,
-        "lod must contain at least one representation. Add a hero, near, or far tier in setModelRecipe.",
+        "lod must contain at least one representation. Add a hero, near, or far tier in the tracked model recipe record.",
       );
     let previousDistance = 0;
     let previousTier = -1;
@@ -275,7 +275,7 @@ export const validateAutoMovieProductionGraph = (
           "model-lod-order-invalid",
           target,
           file,
-          `LOD tier "${lod.tier}" is out of near-to-far order. Order unique tiers as hero, near, then far in setModelRecipe.`,
+          `LOD tier "${lod.tier}" is out of near-to-far order. Order unique tiers as hero, near, then far in the tracked model recipe record.`,
         );
       previousTier = tier;
       if (lod.maxDistance === null) {
@@ -285,7 +285,7 @@ export const validateAutoMovieProductionGraph = (
             "model-lod-order-invalid",
             target,
             file,
-            `Unbounded LOD tier "${lod.tier}" is not final. Move it to the end or give it a finite maxDistance in setModelRecipe.`,
+            `Unbounded LOD tier "${lod.tier}" is not final. Move it to the end or give it a finite maxDistance in the tracked model recipe record.`,
           );
       } else {
         positive(diagnostics, lod.maxDistance, target, file, "lod.maxDistance");
@@ -298,7 +298,7 @@ export const validateAutoMovieProductionGraph = (
             "model-lod-order-invalid",
             target,
             file,
-            `LOD maxDistance ${lod.maxDistance} is not above prior distance ${previousDistance}. Increase it in setModelRecipe.`,
+            `LOD maxDistance ${lod.maxDistance} is not above prior distance ${previousDistance}. Increase it in the tracked model recipe record.`,
           );
         previousDistance = lod.maxDistance;
       }
@@ -308,7 +308,7 @@ export const validateAutoMovieProductionGraph = (
           target,
           file,
           `LOD recipe "${lod.recipe}"`,
-          `setModelRecipe for "${lod.recipe}" or change ${id}.lod`,
+          `Create or correct the model recipe record for "${lod.recipe}" or change ${id}.lod`,
         );
     }
     for (const [name, color] of Object.entries(model.palette)) {
@@ -320,7 +320,7 @@ export const validateAutoMovieProductionGraph = (
           "design-color-invalid",
           target,
           file,
-          `Palette color "${color}" is not a six-digit hexadecimal sRGB color. Use #RRGGBB in setModelRecipe.`,
+          `Palette color "${color}" is not a six-digit hexadecimal sRGB color. Use #RRGGBB in the tracked model recipe record.`,
         );
     }
     uniqueTextValues(
@@ -338,7 +338,7 @@ export const validateAutoMovieProductionGraph = (
           "design-capability-unsupported",
           target,
           file,
-          `Model capability "${capability}" is not implemented for archetype "${model.archetype}". Remove the claim or implement and register its deterministic source/runtime binding before compileProject.`,
+          `Model capability "${capability}" is not implemented for archetype "${model.archetype}". Remove the claim or implement and register its deterministic source/runtime binding before compilation.`,
         );
     const attachmentIds = new Set<string>();
     for (const attachment of model.attachments) {
@@ -409,7 +409,7 @@ export const validateAutoMovieProductionGraph = (
           "design-range-invalid",
           "world",
           file,
-          `Surface "${surface.id}" has ${surface.polygon.length} polygon points. Add at least three points in setWorldDesign.`,
+          `Surface "${surface.id}" has ${surface.polygon.length} polygon points. Add at least three points in the tracked world design record.`,
         );
       for (const point of surface.polygon)
         bounded2(
@@ -427,7 +427,7 @@ export const validateAutoMovieProductionGraph = (
           "design-polygon-invalid",
           "world",
           file,
-          `Surface "${surface.id}" must use distinct finite vertices forming one non-self-intersecting polygon with non-zero area. Correct surface.polygon in setWorldDesign.`,
+          `Surface "${surface.id}" must use distinct finite vertices forming one non-self-intersecting polygon with non-zero area. Correct surface.polygon in the tracked world design record.`,
         );
       if (surface.height.kind === "constant")
         finite(
@@ -470,7 +470,7 @@ export const validateAutoMovieProductionGraph = (
           "design-range-invalid",
           "world",
           file,
-          `Route "${route.id}" has ${route.waypoints.length} waypoints. Add at least two waypoints in setWorldDesign.`,
+          `Route "${route.id}" has ${route.waypoints.length} waypoints. Add at least two waypoints in the tracked world design record.`,
         );
       positive(
         diagnostics,
@@ -506,7 +506,7 @@ export const validateAutoMovieProductionGraph = (
           "design-route-invalid",
           "world",
           file,
-          `Route "${route.id}" must have finite non-zero total length within the supported world. Correct its waypoints in setWorldDesign.`,
+          `Route "${route.id}" must have finite non-zero total length within the supported world. Correct its waypoints in the tracked world design record.`,
         );
     }
     validateInstanceSets(diagnostics, graph, routeIds, file);
@@ -704,7 +704,7 @@ export const validateAutoMovieProductionGraph = (
           "design-range-invalid",
           "world",
           file,
-          `Effect zone "${zone.id}" bounds are empty or inverted. Fix bounds in setWorldDesign.`,
+          `Effect zone "${zone.id}" bounds are empty or inverted. Fix bounds in the tracked world design record.`,
         );
       integer(
         diagnostics,
@@ -824,7 +824,7 @@ export const validateAutoMovieProductionGraph = (
         "design-identity-mismatch",
         target,
         file,
-        `Formation file identity is "${id}" but value id is "${formation.id}". Rewrite it with setFormationDesign using one matching id.`,
+        `Formation file identity is "${id}" but value id is "${formation.id}". Rewrite it as a tracked formation design using one matching id.`,
       );
     if (graph.models.has(formation.modelRecipe) === false)
       missing(
@@ -832,7 +832,7 @@ export const validateAutoMovieProductionGraph = (
         target,
         file,
         `model recipe "${formation.modelRecipe}"`,
-        `setModelRecipe for "${formation.modelRecipe}" or change ${id}.modelRecipe`,
+        `Create or correct the model recipe record for "${formation.modelRecipe}" or change ${id}.modelRecipe`,
       );
     integer(
       diagnostics,
@@ -899,7 +899,7 @@ export const validateAutoMovieProductionGraph = (
           "design-range-invalid",
           target,
           file,
-          `Hero slot ${hero.slot} is outside formation count ${formation.count}. Fix heroOverrides in setFormationDesign.`,
+          `Hero slot ${hero.slot} is outside formation count ${formation.count}. Fix heroOverrides in the tracked formation design record.`,
         );
       if (slots.has(hero.slot))
         invalid(
@@ -907,7 +907,7 @@ export const validateAutoMovieProductionGraph = (
           "design-duplicate-id",
           target,
           file,
-          `Hero slot ${hero.slot} is duplicated. Keep each slot once in setFormationDesign.`,
+          `Hero slot ${hero.slot} is duplicated. Keep each slot once in the tracked formation design record.`,
         );
       slots.add(hero.slot);
       text(diagnostics, hero.actor, target, file, "heroOverrides.actor");
@@ -917,7 +917,7 @@ export const validateAutoMovieProductionGraph = (
           "design-duplicate-id",
           target,
           file,
-          `Hero actor "${hero.actor}" is assigned to more than one slot. Keep each actor identity once in setFormationDesign.`,
+          `Hero actor "${hero.actor}" is assigned to more than one slot. Keep each actor identity once in the tracked formation design record.`,
         );
       actors.add(hero.actor);
     }
@@ -934,7 +934,7 @@ export const validateAutoMovieProductionGraph = (
         "design-identity-mismatch",
         target,
         file,
-        `Shot file identity is "${id}" but value id is "${shot.id}". Rewrite it with setShotContract using one matching id.`,
+        `Shot file identity is "${id}" but value id is "${shot.id}". Rewrite it as a tracked shot contract using one matching id.`,
       );
     text(diagnostics, shot.beat, target, file, "beat");
     text(diagnostics, shot.source.module, target, file, "source.module");
@@ -956,7 +956,7 @@ export const validateAutoMovieProductionGraph = (
         "design-source-path-invalid",
         target,
         file,
-        `Source module "${shot.source.module}" is not one canonical project-relative POSIX TypeScript path. Remove absolute or drive roots, backslashes, empty or dot segments, and use a .ts, .tsx, .mts, or .cts extension before setShotContract.`,
+        `Source module "${shot.source.module}" is not one canonical project-relative POSIX TypeScript path. Remove absolute or drive roots, backslashes, empty or dot segments, and use a .ts, .tsx, .mts, or .cts extension before writing the shot contract record.`,
       );
     const foldedSourceModule = shot.source.module.toLowerCase();
     const priorSourceModule = sourceModuleSpellings.get(foldedSourceModule);
@@ -1000,7 +1000,7 @@ export const validateAutoMovieProductionGraph = (
         "design-frame-clock-invalid",
         target,
         file,
-        `Shot "${id}" durationSeconds is off the ${graph.production.frameFormat.fps}fps production clock. Choose an exact integer frame count divided by fps in setShotContract.`,
+        `Shot "${id}" durationSeconds is off the ${graph.production.frameFormat.fps}fps production clock. Choose an exact integer frame count divided by fps in the tracked shot contract record.`,
       );
     const participantIds = new Set<string>();
     for (const participant of shot.participants) {
@@ -1012,7 +1012,7 @@ export const validateAutoMovieProductionGraph = (
           "design-duplicate-id",
           target,
           file,
-          `Participant "${participantKey}" is duplicated. Keep each participant once in setShotContract.`,
+          `Participant "${participantKey}" is duplicated. Keep each participant once in the tracked shot contract record.`,
         );
       participantIds.add(participantKey);
       if (
@@ -1024,7 +1024,7 @@ export const validateAutoMovieProductionGraph = (
           target,
           file,
           `formation "${participant.id}"`,
-          `setFormationDesign for "${participant.id}" or remove it from ${id}.participants`,
+          `Create or correct the formation design record for "${participant.id}" or remove it from ${id}.participants`,
         );
     }
     const formationHeroOwners = new Map<string, string>();
@@ -1075,7 +1075,7 @@ export const validateAutoMovieProductionGraph = (
         "design-collection-empty",
         target,
         file,
-        `Shot "${id}" must name at least one required camera subject. Add one in setShotContract.`,
+        `Shot "${id}" must name at least one required camera subject. Add one in the tracked shot contract record.`,
       );
     if (
       Number.isFinite(shot.camera.maxOcclusionRatio) === false ||
@@ -1087,7 +1087,7 @@ export const validateAutoMovieProductionGraph = (
         "design-range-invalid",
         target,
         file,
-        `Camera maxOcclusionRatio must be between 0 and 1. Fix ${id}.camera in setShotContract.`,
+        `Camera maxOcclusionRatio must be between 0 and 1. Fix ${id}.camera in the tracked shot contract record.`,
       );
     const events = new Set<string>();
     for (const event of shot.events) {
@@ -1105,7 +1105,7 @@ export const validateAutoMovieProductionGraph = (
           "design-collection-empty",
           target,
           file,
-          `Event "${event.id}" must name at least one subject. Add one in setShotContract.`,
+          `Event "${event.id}" must name at least one subject. Add one in the tracked shot contract record.`,
         );
       validatePredicates(
         diagnostics,
@@ -1127,7 +1127,7 @@ export const validateAutoMovieProductionGraph = (
           "design-range-invalid",
           target,
           file,
-          `Event "${event.id}" has a window outside shot duration. Fix ${id}.events in setShotContract.`,
+          `Event "${event.id}" has a window outside shot duration. Fix ${id}.events in the tracked shot contract record.`,
         );
     }
     const frames = new Set<string>();
@@ -1137,7 +1137,7 @@ export const validateAutoMovieProductionGraph = (
         "design-collection-empty",
         target,
         file,
-        `Shot "${id}" must declare at least one exact review frame and pass. Add reviewFrames in setShotContract so visual review has a reachable evidence target.`,
+        `Shot "${id}" must declare at least one exact review frame and pass. Add reviewFrames in the tracked shot contract record so visual review has a reachable evidence target.`,
       );
     for (const frame of shot.reviewFrames) {
       unique(diagnostics, frames, frame.id, target, file, "reviewFrames");
@@ -1151,7 +1151,7 @@ export const validateAutoMovieProductionGraph = (
           "design-range-invalid",
           target,
           file,
-          `Review frame "${frame.id}" time is outside shot duration. Fix ${id}.reviewFrames in setShotContract.`,
+          `Review frame "${frame.id}" time is outside shot duration. Fix ${id}.reviewFrames in the tracked shot contract record.`,
         );
       else if (
         graph.production !== null &&
@@ -1163,7 +1163,7 @@ export const validateAutoMovieProductionGraph = (
           "design-frame-clock-invalid",
           target,
           file,
-          `Review frame "${frame.id}" is off the ${graph.production.frameFormat.fps}fps production clock. Snap its time to an exact frame in setShotContract.`,
+          `Review frame "${frame.id}" is off the ${graph.production.frameFormat.fps}fps production clock. Snap its time to an exact frame in the tracked shot contract record.`,
         );
       if (new Set(frame.passes).size !== frame.passes.length)
         invalid(
@@ -1171,7 +1171,7 @@ export const validateAutoMovieProductionGraph = (
           "design-duplicate-id",
           target,
           file,
-          `Review frame "${frame.id}" repeats a pass. Keep each pass once in setShotContract.`,
+          `Review frame "${frame.id}" repeats a pass. Keep each pass once in the tracked shot contract record.`,
         );
       if (frame.passes.length === 0)
         invalid(
@@ -1179,7 +1179,7 @@ export const validateAutoMovieProductionGraph = (
           "design-collection-empty",
           target,
           file,
-          `Review frame "${frame.id}" must request at least one pass. Add a pass in setShotContract.`,
+          `Review frame "${frame.id}" must request at least one pass. Add a pass in the tracked shot contract record.`,
         );
     }
   }
@@ -1195,7 +1195,7 @@ export const validateAutoMovieProductionGraph = (
         "design-identity-mismatch",
         target,
         file,
-        `Acceptance file identity is "${id}" but value id is "${acceptance.id}". Rewrite it with setAcceptanceScenario using one matching id.`,
+        `Acceptance file identity is "${id}" but value id is "${acceptance.id}". Rewrite it as a tracked acceptance record using one matching id.`,
       );
     const criterion = acceptance.criterion;
     if (criterion.kind === "frame" || criterion.kind === "event")
@@ -1214,7 +1214,7 @@ export const validateAutoMovieProductionGraph = (
           target,
           file,
           `shot "${acceptance.target.id}"`,
-          `setShotContract for "${acceptance.target.id}" or change ${id}.target`,
+          `Create or correct the shot contract record for "${acceptance.target.id}" or change ${id}.target`,
         );
       else {
         if (
@@ -1267,7 +1267,7 @@ export const validateAutoMovieProductionGraph = (
               target,
               file,
               `criterion shot "${criterion.shot}"`,
-              `setShotContract for "${criterion.shot}" or change ${id}.criterion.shot`,
+              `Create or correct the shot contract record for "${criterion.shot}" or change ${id}.criterion.shot`,
             );
           else
             validateAcceptanceCriterionAgainstShot(
@@ -1290,7 +1290,7 @@ export const validateAutoMovieProductionGraph = (
         "design-range-invalid",
         target,
         file,
-        `Metric value must be finite. Fix ${id}.criterion in setAcceptanceScenario.`,
+        `Metric value must be finite. Fix ${id}.criterion in the tracked acceptance record.`,
       );
   }
   return diagnostics.sort(compareDiagnostics);
@@ -1510,7 +1510,7 @@ const validateModelParameters = (
         "model-parameter-missing",
         target,
         file,
-        `Required parameter "${key}" is missing for ${model.archetype}. Add it in setModelRecipe.`,
+        `Required parameter "${key}" is missing for ${model.archetype}. Add it in the tracked model recipe record.`,
       );
   const primitiveShape =
     model.archetype === "primitive-prop" &&
@@ -1526,7 +1526,7 @@ const validateModelParameters = (
       "model-parameter-invalid",
       target,
       file,
-      `Primitive-prop shape "${primitiveShape}" is unsupported. Use box, sphere, capsule, cylinder, cone, or plane in setModelRecipe.`,
+      `Primitive-prop shape "${primitiveShape}" is unsupported. Use box, sphere, capsule, cylinder, cone, or plane in the tracked model recipe record.`,
     );
   const primitiveKeys =
     primitiveShape === null ||
@@ -1544,7 +1544,7 @@ const validateModelParameters = (
         "model-parameter-unsupported",
         target,
         file,
-        `Parameter "${key}" is unsupported for ${model.archetype}. Remove it from setModelRecipe.`,
+        `Parameter "${key}" is unsupported for ${model.archetype}. Remove it from the tracked model recipe record.`,
       );
       continue;
     }
@@ -1554,7 +1554,7 @@ const validateModelParameters = (
         "model-parameter-invalid",
         target,
         file,
-        `Parameter "${key}" must be ${rule[0]}. Fix it in setModelRecipe.`,
+        `Parameter "${key}" must be ${rule[0]}. Fix it in the tracked model recipe record.`,
       );
       continue;
     }
@@ -1569,7 +1569,7 @@ const validateModelParameters = (
         "model-parameter-invalid",
         target,
         file,
-        `Parameter "${key}" is outside its supported range. Fix it in setModelRecipe.`,
+        `Parameter "${key}" is outside its supported range. Fix it in the tracked model recipe record.`,
       );
   }
 };
@@ -1594,7 +1594,7 @@ const validateModelProfiles = (
               : "design-capability-invalid",
         target,
         file,
-        `${violation.path}: ${violation.expected}. Correct the typed profile data before setModelRecipe.`,
+        `${violation.path}: ${violation.expected}. Correct the typed profile data before writing the model recipe record.`,
       );
     return;
   }
@@ -1879,7 +1879,7 @@ const validateInstanceSets = (
         target,
         file,
         `model recipe "${instanceSet.modelRecipe}"`,
-        `setModelRecipe for "${instanceSet.modelRecipe}" or change ${instanceSet.id}.modelRecipe`,
+        `Create or correct the model recipe record for "${instanceSet.modelRecipe}" or change ${instanceSet.id}.modelRecipe`,
       );
     integer(
       diagnostics,
@@ -2155,7 +2155,7 @@ const validateFormationLayout = (
         "design-range-invalid",
         target,
         file,
-        `Layout capacity ${layout.ranks * layout.files} is below count ${formation.count}. Fix layout in setFormationDesign.`,
+        `Layout capacity ${layout.ranks * layout.files} is below count ${formation.count}. Fix layout in the tracked formation design record.`,
       );
   } else if (layout.kind === "wedge") {
     bounded(
@@ -2191,7 +2191,7 @@ const validateFormationLayout = (
         "design-range-invalid",
         target,
         file,
-        `Wedge depth ${layout.depth} materializes ${layout.depth * layout.depth} slots, below count ${formation.count}. Increase layout.depth in setFormationDesign.`,
+        `Wedge depth ${layout.depth} materializes ${layout.depth * layout.depth} slots, below count ${formation.count}. Increase layout.depth in the tracked formation design record.`,
       );
   } else {
     bounded(
@@ -2214,7 +2214,7 @@ const validateFormationLayout = (
         "design-range-invalid",
         target,
         file,
-        `Arc degrees must be above 0 and at most 360. Fix layout in setFormationDesign.`,
+        `Arc degrees must be above 0 and at most 360. Fix layout in the tracked formation design record.`,
       );
     if (layout.kind === "scatter")
       integer(
@@ -2387,7 +2387,7 @@ const validatePredicates = (
           target,
           file,
           `formation "${value.id}"`,
-          `setFormationDesign for "${value.id}" or correct ${path}`,
+          `Create or correct the formation design record for "${value.id}" or correct ${path}`,
         );
       if (
         value.kind === "landmark" &&
@@ -2399,7 +2399,7 @@ const validatePredicates = (
           target,
           file,
           `landmark "${value.id}"`,
-          `add that landmark with setWorldDesign or correct ${path}`,
+          `add that landmark to the tracked world design record or correct ${path}`,
         );
     }
   };

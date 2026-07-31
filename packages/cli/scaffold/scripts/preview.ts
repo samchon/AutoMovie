@@ -42,19 +42,20 @@ const height =
     : Number(options.get("--height"));
 const app = new AutoMovieApplication({
   projectRoot: process.cwd(),
+  productionId: config.productionId,
   capture: captureProductionFrame,
 });
 app.getGuideDocument({ name: "AUTOMOVIE_OVERALL" });
 app.getGuideDocument({ name: "PRODUCTION_RENDER" });
-app.openProject({
-  root: process.cwd(),
-  productionId: config.productionId,
-});
 try {
-  const output = await app.previewFrame({
-    target: { kind: "shot", id: shot },
-    time,
-    pass,
+  const output = await app.captureFrame({
+    target: {
+      kind: "shot",
+      productionId: config.productionId,
+      id: shot,
+      time,
+      pass,
+    },
     width,
     height,
   });

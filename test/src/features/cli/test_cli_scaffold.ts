@@ -178,6 +178,7 @@ export const test_cli_scaffold = (): void => {
     "the starter separates owned source and enforces review in read-only lint",
     files["AGENTS.md"]!.includes("Never edit `generated`") &&
       files[".gitignore"]!.includes("generated/") &&
+      files["scripts/compile.ts"]!.includes("compileAutoMovieProduction") &&
       files["scripts/compile.ts"]!.includes('scope: "source"') &&
       files["scripts/lint.ts"]!.includes('scope: "review"') &&
       files["README.md"]!.includes("fails while any design, source,") &&
@@ -188,7 +189,10 @@ export const test_cli_scaffold = (): void => {
   TestValidator.predicate(
     "the local MCP host owns actual frame capture",
     files["automovie.mcp.jsonc"]!.includes("scripts/mcp.ts") &&
+      files["scripts/mcp.ts"]!.includes("createAutoMovieMcpServer") &&
       files["scripts/mcp.ts"]!.includes("captureProductionFrame") &&
+      files["scripts/preview.ts"]!.includes("captureFrame") &&
+      files["scripts/preview.ts"]!.includes("previewFrame") === false &&
       files["scripts/capture.ts"]!.includes('locator("#view").screenshot') &&
       pkg.includes('"three":') &&
       files["scripts/capture.ts"]!.includes('dedupe: ["three"]') &&

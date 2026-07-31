@@ -33,6 +33,12 @@ export type IAutoMovieAssetConsumer =
       kind: "model-recipe";
       /** Exact model recipe id. */
       id: string;
+    }
+  | {
+      /** Fixed style or character reference consumed by one repaint shot. */
+      kind: "rendition-reference";
+      /** Exact shot id. */
+      id: string;
     };
 
 /** One downstream purpose that makes an asset part of one production. */

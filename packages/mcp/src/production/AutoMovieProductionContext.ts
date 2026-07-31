@@ -3,12 +3,15 @@ import {
   AutoMovieProductionGuideName,
   IAutoMovieCompileProjectOutput,
 } from "@automovie/interface";
-import path from "node:path";
 
 import { AutoMovieProductionCompiler } from "./AutoMovieProductionCompiler";
 import { AutoMovieProductionOracleService } from "./AutoMovieProductionOracleService";
 import { AutoMovieProductionProject } from "./AutoMovieProductionProject";
 import { AutoMovieProductionReviewService } from "./AutoMovieProductionReviewService";
+import {
+  findAutoMovieProjectRoot,
+  openAutoMovieProduction,
+} from "./openAutoMovieProduction";
 
 /** Active services for one resident production repository. */
 export interface IAutoMovieProductionServices {
@@ -24,29 +27,19 @@ export interface IAutoMovieProductionServices {
   compileStatus: () => IAutoMovieCompileProjectOutput;
 }
 
-/**
- * One production activation and whether this exact call initialized its
- * manifest.
- */
-export interface IAutoMovieProductionActivation {
-  /** Active resident services. */
-  services: IAutoMovieProductionServices;
-  /** True only when this call created the format-v2 manifest. */
-  initialized: boolean;
-}
-
 /** Session context: guide reads, fixed root and current production services. */
 export class AutoMovieProductionContext {
   private readonly guides = new Set<AutoMovieProductionGuideName>();
-  private readonly fixedRoot: string | null;
-  private active: IAutoMovieProductionServices | null = null;
+  private readonly root: string;
+  private readonly services = new Map<string, IAutoMovieProductionServices>();
 
   public constructor(
     private readonly capture?: AutoMovieProductionFrameCapture,
     projectRoot?: string,
+    private readonly defaultProductionId?: string,
   ) {
-    this.fixedRoot =
-      projectRoot === undefined ? null : path.resolve(projectRoot);
+    validateProductionId(defaultProductionId);
+    this.root = findAutoMovieProjectRoot(projectRoot);
   }
 
   /** Record delivery of one exact guide. */
@@ -54,64 +47,35 @@ export class AutoMovieProductionContext {
     this.guides.add(name);
   }
 
-  /** Require a guide before a mutating or specialized operation. */
-  public requireGuide(
-    name: AutoMovieProductionGuideName,
-    operation: string,
-  ): void {
-    if (this.guides.has(name)) return;
-    throw new Error(
-      `${operation} requires its guide first. Call getGuideDocument({ name: "${name}" }) and then retry.`,
-    );
+  /** Whether one exact guide received session credit. */
+  public hasGuide(name: AutoMovieProductionGuideName): boolean {
+    return this.guides.has(name);
   }
 
-  /** Activate or reopen one production inside a project root. */
-  public activate(
-    rootInput: string,
-    productionId?: string,
-  ): IAutoMovieProductionActivation {
-    const root = path.resolve(rootInput);
-    if (this.fixedRoot !== null && path.relative(this.fixedRoot, root) !== "")
-      throw new Error(
-        `This MCP host is fixed to "${this.fixedRoot}". Open that root instead of model-controlled path "${root}".`,
-      );
-    if (
-      this.active !== null &&
-      this.active.project.root === root &&
-      (this.active.project.productionId === productionId ||
-        (productionId === undefined &&
-          this.active.project.productionIds().length === 1))
-    )
-      return { services: this.active, initialized: false };
-    const project = AutoMovieProductionProject.open(root, productionId);
-    const statusCompiler = new AutoMovieProductionCompiler(project);
-    const review = new AutoMovieProductionReviewService(project, () =>
-      statusCompiler.lint({ scope: "source" }),
-    );
-    const compiler = new AutoMovieProductionCompiler(
-      project,
-      (status, snapshot) => review.queue(status, snapshot),
-    );
-    this.active = {
-      project,
-      review,
-      compiler,
-      compileStatus: () => statusCompiler.lint({ scope: "source" }),
-      oracle: new AutoMovieProductionOracleService(project, this.capture, () =>
-        statusCompiler.lint({ scope: "source" }),
-      ),
-    };
-    return {
-      services: this.active,
-      initialized: project.summary().initialized,
-    };
-  }
-
-  /** Require an active resident project. */
-  public require(operation: string): IAutoMovieProductionServices {
-    if (this.active !== null) return this.active;
-    throw new Error(
-      `${operation} requires an active production repository. Call openProject({ root }) first.`,
-    );
+  /** Resolve one production under the immutable host root. */
+  public forProduction(productionId?: string): IAutoMovieProductionServices {
+    validateProductionId(productionId);
+    const selected = productionId ?? this.defaultProductionId;
+    const key = selected ?? "";
+    const retained = this.services.get(key);
+    if (retained !== undefined) return retained;
+    const opened = openAutoMovieProduction({
+      projectRoot: this.root,
+      productionId: selected,
+      capture: this.capture,
+    });
+    this.services.set(opened.project.productionId, opened);
+    if (selected === undefined) this.services.set("", opened);
+    return opened;
   }
 }
+
+const validateProductionId = (productionId: string | undefined): void => {
+  if (
+    productionId !== undefined &&
+    (productionId.trim().length === 0 || productionId.trim() !== productionId)
+  )
+    throw new Error(
+      "Host productionId must be a trimmed non-empty production namespace.",
+    );
+};

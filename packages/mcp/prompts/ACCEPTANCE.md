@@ -1,6 +1,6 @@
 # Acceptance Scenarios
 
-`setAcceptanceScenario` makes an observable contract addressable.
+A tracked acceptance record makes an observable contract addressable.
 
 Frame criteria name a review-frame id and pass. Event criteria name a semantic event. A frame or event criterion targeting the whole film must also name its owning `shot`; shot-local ids are not assumed globally unique. The current deterministic metric is `runtime-seconds`; physics and occlusion remain explicit geometry or frame-review questions until their operands and measurement protocols are defined.
 

@@ -764,7 +764,7 @@ const stableInterpolate = (from: number, to: number, ratio: number): number =>
  * Content digest for one LOD tier's model-recipe reference.
  *
  * The design gate refuses an absent recipe and a non-finite parameter alike, so
- * neither reaches a compiled production through `setModelRecipe`. The
+ * neither reaches a compiled production through a tracked model recipe. The
  * materializer still answers for both the bounded way it answers a malformed
  * projection proxy: a reference that cannot be canonically encoded digests a
  * marker naming what the tier pointed at, instead of letting a canonical-JSON

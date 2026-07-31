@@ -1,6 +1,6 @@
 # World Design
 
-`setWorldDesign` stores queryable space: landmarks, surfaces, and routes. Visible set meshes remain source or assets.
+The tracked world design record stores queryable space: landmarks, surfaces, and routes. Visible set meshes remain source or assets.
 
 Coordinates are right-handed, Y-up, in meters. Surface polygons live in XZ and carry either a constant height or a plane. Mark walkability honestly. Routes are named centerlines with a formation-width limit; they are not pre-baked motion. Landmarks give tactics and camera queries stable names.
 
@@ -21,4 +21,4 @@ surface, blocked routes, and unreachable landmarks. It evaluates every
 candidate support surface, so an overlapping lower ground plane cannot hide the
 platform that actually supports a block.
 
-Validate terrain and choreography with `queryGeometry` instead of estimating from prose. A shot source should use the injected ground oracle rather than duplicating its own unrelated height formula.
+Validate terrain and choreography with the programmatic engine geometry API instead of estimating from prose. A shot source should use the injected ground oracle rather than duplicating its own unrelated height formula.

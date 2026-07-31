@@ -104,6 +104,34 @@ export interface IAutoMovieGeneratedManifest {
   files: IAutoMovieGeneratedFile[];
 }
 
+/** Compiler-owned registry of targets that evidence tools may resolve. */
+export interface IAutoMovieProductionRegistryManifest {
+  /** Registry format. */
+  version: 2;
+  /** Compiler protocol that produced this registry. */
+  compiler: string;
+  /** Exact production namespace. */
+  productionId: string;
+  /** Current aggregate compiler input fingerprint. */
+  inputFingerprint: AutoMovieContentDigest;
+  /** Built model/asset targets with their generated paths. */
+  assets: Array<{
+    /** Exact model recipe id. */
+    id: string;
+    /** Compiler-owned generated model path. */
+    path: string;
+  }>;
+  /** Built shot targets with their generated paths. */
+  shots: Array<{
+    /** Exact shot registration id. */
+    id: string;
+    /** Compiler-owned generated shot path. */
+    path: string;
+  }>;
+  /** Current compiler-owned film id, or null before film materialization. */
+  film: string | null;
+}
+
 /** One byte-exact file proving a final production deliverable. */
 export interface IAutoMovieProductionDeliverableFile {
   /** Render-root-relative regular file path. */
@@ -921,11 +949,44 @@ export interface IAutoMovieProductionDesignInventory {
   acceptance: string[];
 }
 
+/** One discovered renderer-owned evidence bundle. */
+export interface IAutoMovieProductionRenderStatus {
+  /** Project-relative bundle manifest. */
+  path: string;
+  /** Whether the bundle matches current target-local inputs. */
+  current: boolean;
+}
+
+/** Compact project status for CLI and lint consumers. */
+export interface IAutoMovieProductionInspection {
+  /** Current project revision. */
+  revision: number;
+  /** Typed design inventory. */
+  design: IAutoMovieProductionDesignInventory;
+  /** Coding-agent and compiler ownership status. */
+  source: {
+    /** Bound source modules that currently exist. */
+    bound: string[];
+    /** Bound source modules that are missing or unsafe. */
+    missing: string[];
+    /** Files under generated absent from its manifest. */
+    unownedGenerated: string[];
+  };
+  /** Current structural and ownership diagnostics. */
+  diagnostics: IAutoMovieDiagnostic[];
+  /** Current review ledger projection. */
+  reviews: IAutoMovieReviewQueue;
+  /** Discovered render manifests. */
+  renders: IAutoMovieProductionRenderStatus[];
+  /** Ordered concrete corrections. */
+  nextActions: IAutoMovieProductionNextAction[];
+}
+
 /** One action that moves the production toward a clean compile. */
 export interface IAutoMovieProductionNextAction {
   /** Owning surface. */
   owner: "design" | "source" | "compile" | "review" | "render";
-  /** Exact MCP method or coding-agent command to run. */
+  /** Exact package API or coding-agent command to run. */
   action: string;
   /** Exact target or artifact to correct. */
   target: string;

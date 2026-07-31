@@ -74,12 +74,12 @@ export const parseAutoMovieFilmTimeline = (
     entry === undefined
   )
     throw new Error(
-      "Canonical film timeline is missing or changed after compilation. Run compileProject scope source.",
+      "Canonical film timeline is missing or changed after compilation. Run the scaffold source compile command.",
     );
   const bytes = artifact.read(entry.path);
   if (digestAutoMovieBytes(bytes) !== entry.digest)
     throw new Error(
-      "Canonical film timeline bytes differ from the generated manifest. Run compileProject scope source.",
+      "Canonical film timeline bytes differ from the generated manifest. Run the scaffold source compile command.",
     );
   const validation = typia.validateEquals<IAutoMovieFilmTimeline>(
     JSON.parse(Buffer.from(bytes).toString("utf8")) as unknown,
@@ -89,7 +89,7 @@ export const parseAutoMovieFilmTimeline = (
     validation.data.inputFingerprint !== artifact.fingerprint
   )
     throw new Error(
-      "Canonical film timeline is invalid or stale. Run compileProject scope source.",
+      "Canonical film timeline is invalid or stale. Run the scaffold source compile command.",
     );
   return validation.data;
 };
