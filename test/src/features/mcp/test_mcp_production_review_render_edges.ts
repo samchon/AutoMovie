@@ -64,13 +64,27 @@ export const test_mcp_production_review_render_edges =
         height: 2,
       });
       const smallPrepared = review.prepare({ target });
+      const smallThumbnailContract =
+        smallPreview.captured &&
+        smallPrepared.frames.length === 0 &&
+        smallPrepared.diagnostics.some(
+          (diagnostic) => diagnostic.code === "render-frame-invalid",
+        );
+      if (smallThumbnailContract === false)
+        throw new Error(
+          `Review thumbnail contract failed:\n${JSON.stringify(
+            {
+              preview: smallPreview,
+              preparedFrames: smallPrepared.frames,
+              reviewDiagnostics: smallPrepared.diagnostics,
+            },
+            null,
+            2,
+          )}`,
+        );
       TestValidator.predicate(
         "a decodable thumbnail remains previewable but cannot satisfy production review",
-        smallPreview.captured &&
-          smallPrepared.frames.length === 0 &&
-          smallPrepared.diagnostics.some(
-            (diagnostic) => diagnostic.code === "render-frame-invalid",
-          ),
+        smallThumbnailContract,
       );
       fs.rmSync(path.join(fixture.root, smallPreview.renderBundle!), {
         recursive: true,
