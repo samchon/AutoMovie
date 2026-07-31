@@ -38,7 +38,13 @@ const linkDirectory = (source: string, destination: string): void => {
 };
 
 const dependencyRoot = (name: string): string => {
-  let directory = path.dirname(require.resolve(name));
+  let entry: string;
+  try {
+    entry = require.resolve(name);
+  } catch {
+    entry = require.resolve(`${name}/package.json`);
+  }
+  let directory = path.dirname(entry);
   for (;;) {
     const manifest = path.join(directory, "package.json");
     if (fs.existsSync(manifest)) {

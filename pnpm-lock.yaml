@@ -557,6 +557,9 @@ importers:
       '@nestia/e2e':
         specifier: catalog:samchon
         version: 12.1.0
+      '@pixiv/three-vrm':
+        specifier: catalog:three
+        version: 3.5.3(three@0.169.0)
       create-automovie:
         specifier: workspace:^
         version: link:../packages/create-automovie
