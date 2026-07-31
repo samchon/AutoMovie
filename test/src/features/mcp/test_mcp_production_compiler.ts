@@ -1812,8 +1812,12 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     const missingSkeleton = compiler.compile({ scope: "source" });
     const missingSkeletonIsRejected = missingSkeleton.diagnostics.some(
       (item) =>
-        item.code === "engine-validation-failed" &&
-        item.message.includes("missing skeleton"),
+        item.code === "performance-invalid" &&
+        item.phase === "source" &&
+        item.target === "shot:opening" &&
+        item.message.includes(
+          'motion skeleton "missing-skeleton" does not match target skeleton "automovie:skeleton:sentinel"',
+        ),
     );
     if (missingSkeletonIsRejected === false)
       throw new Error(
@@ -1824,7 +1828,7 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
         )}`,
       );
     TestValidator.predicate(
-      "motion skeleton references are compiler gates",
+      "motion skeleton mismatches are source performance gates",
       missingSkeletonIsRejected,
     );
     fs.writeFileSync(sourcePath, original);
