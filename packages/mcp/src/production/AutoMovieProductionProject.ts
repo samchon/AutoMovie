@@ -541,10 +541,13 @@ export class AutoMovieProductionProject {
     try {
       for (const [index, move] of moves.entries()) {
         assertMigrationFence();
+        // A fresh project has no legacy tree to migrate. Permit that missing
+        // tail while still rejecting every existing linked/non-directory
+        // ancestor before the source itself is inspected.
         assertPhysicalDirectoryAncestors(
           this.rootReal,
           path.dirname(move.source),
-          false,
+          true,
         );
         const state = lstatOrNull(move.source);
         if (state === null) continue;
