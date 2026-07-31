@@ -14,6 +14,7 @@ import {
   AutoMovieHumanoidBone,
   IAutoMovieAssetManifest,
   IAutoMovieAssetProvenance,
+  IAutoMovieBeatEndState,
   IAutoMovieCompileProjectInput,
   IAutoMovieCompileProjectOutput,
   IAutoMovieCompiledContractRealization,
@@ -43,6 +44,7 @@ import {
   IAutoMovieShotContract,
   IAutoMovieShotSourceOutput,
   IAutoMovieVector3,
+  IAutoMovieVideoEdit,
   IAutoMovieWorldDesign,
 } from "@automovie/interface";
 import fs from "node:fs";
@@ -232,6 +234,7 @@ export class AutoMovieProductionCompiler {
         externalModels,
       );
     }
+    const shotSources = new Map<string, Uint8Array>();
     for (const [id, contract] of graph.shots) {
       if (input.scope === "design") {
         sourceFields.push({
@@ -256,56 +259,12 @@ export class AutoMovieProductionCompiler {
         continue;
       }
       const normalized = normalizeAutoMovieSource(source);
+      shotSources.set(id, normalized);
       sourceFields.push({
         role: `source:${id}`,
         kind: "typescript",
         payload: normalized,
       });
-      if (designReady === false) continue;
-      const result = compileShotSource({
-        id,
-        path: contract.source.module,
-        exportName: contract.source.export,
-        source: Buffer.from(normalized).toString("utf8"),
-        context: {
-          contract,
-          models: Object.fromEntries(graph.models),
-          world: graph.world!,
-          formations: Object.fromEntries(graph.formations),
-          runtimeModels: Object.fromEntries(runtimeModels),
-          formationRuntime,
-          instanceSetRuntime,
-          frameFormat: graph.production!.frameFormat,
-        },
-      });
-      diagnostics.push(...result.diagnostics);
-      if (result.value !== null) {
-        const materialized = materializeCompiledShot({
-          contract,
-          formations: graph.formations,
-          formationRuntime,
-          instanceSetRuntime,
-          modelRecipes: graph.models,
-          runtimeModels,
-          world: graph.world!,
-          fps: graph.production!.frameFormat.fps,
-          source: result.value,
-        });
-        const realized = realizeShotContract({
-          contract,
-          production: graph.production,
-          world: graph.world,
-          formations: graph.formations,
-          compiled: materialized.value,
-          collisions: materialized.collisions,
-        });
-        diagnostics.push(
-          ...validateCompiledShot(contract, materialized.value),
-          ...realized.diagnostics,
-        );
-        compiled.set(id, materialized.value);
-        realizations.set(id, realized.realization);
-      }
     }
     if (input.scope === "design")
       sourceFields.push({
@@ -332,22 +291,106 @@ export class AutoMovieProductionCompiler {
           payload: new Uint8Array(),
         });
       }
-    let compiledFilm: ICompiledFilmDraft | null = null;
+    let filmContext: IAutoMovieFilmBuildContext | null = null;
+    let filmEditSource: ICompileDeterministicSourceResult<IAutoMovieFilmEdit> | null =
+      null;
     if (
       input.scope !== "design" &&
       designReady &&
       filmSource !== null &&
       contentInputs !== undefined
     ) {
-      const context: IAutoMovieFilmBuildContext = {
+      filmContext = {
         production: graph.production!,
         shots: Object.fromEntries(graph.shots),
         assets: declaredAssets,
         effectZones: graph.world!.effectZones,
       };
-      const film = compileFilmSource({
+      filmEditSource = compileFilmEditSource({
         source: Buffer.from(filmSource).toString("utf8"),
-        context,
+        context: filmContext,
+      });
+    }
+
+    if (input.scope !== "design" && designReady) {
+      let previousVideo: ICompiledVideoClosing | null = null;
+      for (const entry of shotCompileOrder(
+        graph.shots,
+        filmEditSource?.value ?? null,
+      )) {
+        const normalized = shotSources.get(entry.id);
+        let closing: IAutoMovieBeatEndState | null = null;
+        if (normalized !== undefined) {
+          const previous =
+            previousVideo !== null &&
+            entry.placement !== null &&
+            fullHardCutBoundary(
+              previousVideo,
+              entry,
+              graph.production!.frameFormat.fps,
+            )
+              ? previousVideo.closing
+              : null;
+          const result = compileShotSource({
+            id: entry.id,
+            path: entry.contract.source.module,
+            exportName: entry.contract.source.export,
+            source: Buffer.from(normalized).toString("utf8"),
+            context: {
+              contract: entry.contract,
+              models: Object.fromEntries(graph.models),
+              world: graph.world!,
+              formations: Object.fromEntries(graph.formations),
+              runtimeModels: Object.fromEntries(runtimeModels),
+              formationRuntime,
+              instanceSetRuntime,
+              frameFormat: graph.production!.frameFormat,
+            },
+            previous,
+          });
+          diagnostics.push(...result.diagnostics);
+          closing = result.closing;
+          if (result.value !== null) {
+            const materialized = materializeCompiledShot({
+              contract: entry.contract,
+              formations: graph.formations,
+              formationRuntime,
+              instanceSetRuntime,
+              modelRecipes: graph.models,
+              runtimeModels,
+              world: graph.world!,
+              fps: graph.production!.frameFormat.fps,
+              source: result.value,
+            });
+            const realized = realizeShotContract({
+              contract: entry.contract,
+              production: graph.production,
+              world: graph.world,
+              formations: graph.formations,
+              compiled: materialized.value,
+              collisions: materialized.collisions,
+            });
+            diagnostics.push(
+              ...validateCompiledShot(entry.contract, materialized.value),
+              ...realized.diagnostics,
+            );
+            compiled.set(entry.id, materialized.value);
+            realizations.set(entry.id, realized.realization);
+          }
+        }
+        if (entry.placement !== null)
+          previousVideo = {
+            ...entry,
+            closing,
+          };
+      }
+    }
+
+    let compiledFilm: ICompiledFilmDraft | null = null;
+    if (filmContext !== null && filmEditSource !== null) {
+      const film = compileFilmSource({
+        source: filmEditSource,
+        context: filmContext,
         contracts: graph.shots,
         compiled,
         realizations,
@@ -714,12 +757,82 @@ interface ICompileShotSourceProps {
       "width" | "height"
     >;
   };
+  /** Prior full-shot closing state at the authoritative hard-cut boundary. */
+  previous: IAutoMovieBeatEndState | null;
 }
 
 interface ICompileShotSourceResult {
   value: IAutoMovieShotSourceOutput | null;
+  /** Closing state available to the next full hard-cut shot, on success. */
+  closing: IAutoMovieBeatEndState | null;
   diagnostics: IAutoMovieDiagnostic[];
 }
+
+/** One unique shot in authoritative film order, or an unplaced graph remainder. */
+interface IShotCompileEntry {
+  id: string;
+  contract: IAutoMovieShotContract;
+  placement: IAutoMovieVideoEdit | null;
+  placementIndex: number | null;
+}
+
+/** The immediately preceding placed shot and its successfully measured closing. */
+interface ICompiledVideoClosing extends IShotCompileEntry {
+  placement: IAutoMovieVideoEdit;
+  placementIndex: number;
+  closing: IAutoMovieBeatEndState | null;
+}
+
+/**
+ * Compile placed shots in film order, then every remaining graph shot in its
+ * stable design order so omitted/unaccounted sources keep their diagnostics.
+ */
+const shotCompileOrder = (
+  contracts: ReadonlyMap<string, IAutoMovieShotContract>,
+  edit: IAutoMovieFilmEdit | null,
+): IShotCompileEntry[] => {
+  const ordered: IShotCompileEntry[] = [];
+  const placed = new Set<string>();
+  edit?.tracks.video.forEach((placement, placementIndex) => {
+    const contract = contracts.get(placement.shot);
+    if (contract === undefined || placed.has(placement.shot)) return;
+    placed.add(placement.shot);
+    ordered.push({
+      id: placement.shot,
+      contract,
+      placement,
+      placementIndex,
+    });
+  });
+  for (const [id, contract] of contracts)
+    if (placed.has(id) === false)
+      ordered.push({ id, contract, placement: null, placementIndex: null });
+  return ordered;
+};
+
+/** Convert an already shape-validated authored film time to its raw frame. */
+const rawFilmFrame = (
+  time: IAutoMovieVideoEdit["sourceIn"],
+  fps: number,
+): number => ("frame" in time ? time.frame : time.seconds * fps);
+
+/**
+ * A full beat-end snapshot is authoritative only across adjacent hard cuts that
+ * play the previous source through its end and start the next at frame 0.
+ */
+const fullHardCutBoundary = (
+  previous: ICompiledVideoClosing,
+  current: IShotCompileEntry,
+  fps: number,
+): boolean =>
+  current.placement !== null &&
+  current.placementIndex !== null &&
+  current.placementIndex === previous.placementIndex + 1 &&
+  previous.placement.transitionOut.kind === "cut" &&
+  current.placement.transitionIn.kind === "cut" &&
+  rawFilmFrame(previous.placement.sourceOut, fps) ===
+    previous.contract.durationSeconds * fps &&
+  rawFilmFrame(current.placement.sourceIn, fps) === 0;
 
 interface ICompileDeterministicSourceProps<T> {
   target: string;
@@ -1143,7 +1256,7 @@ const compileShotSource = (
     validate: (input) =>
       typia.validateEquals<IAutoMovieProductionShotProgram>(input),
   });
-  if (program.value === null) return program;
+  if (program.value === null) return { ...program, closing: null };
 
   const runtime = actorRuntimeOf(
     program.value,
@@ -1154,6 +1267,7 @@ const compileShotSource = (
   if (runtime.diagnostics.length !== 0)
     return {
       value: null,
+      closing: null,
       diagnostics: [...program.diagnostics, ...runtime.diagnostics],
     };
   const shot = defineShot(props.id, {
@@ -1184,11 +1298,13 @@ const compileShotSource = (
       formationDesigns: new Map(Object.entries(props.context.formations)),
       formations: Object.values(props.context.formationRuntime),
       models: Object.values(props.context.runtimeModels),
+      previous: props.previous,
     },
   });
   if (compiled.success === false)
     return {
       value: null,
+      closing: null,
       diagnostics: [
         ...program.diagnostics,
         ...compiled.diagnostics.map(
@@ -1209,6 +1325,7 @@ const compileShotSource = (
       formationMotions: structuredClone(program.value.formationMotions ?? []),
       effectCues: structuredClone(program.value.effectCues ?? []),
     },
+    closing: compiled.continuity.closing,
     diagnostics: program.diagnostics,
   };
 };
@@ -1550,17 +1667,19 @@ interface ICompiledFilmDraft {
 }
 
 interface ICompileFilmSourceProps {
-  source: string;
+  source: ICompileDeterministicSourceResult<IAutoMovieFilmEdit>;
   context: IAutoMovieFilmBuildContext;
   contracts: ReadonlyMap<string, IAutoMovieShotContract>;
   compiled: ReadonlyMap<string, IAutoMovieCompiledShotSource>;
   realizations: ReadonlyMap<string, IAutoMovieCompiledContractRealization>;
 }
 
-const compileFilmSource = (
-  props: ICompileFilmSourceProps,
-): ICompileDeterministicSourceResult<ICompiledFilmDraft> => {
-  const source = compileDeterministicSource<IAutoMovieFilmEdit>({
+/** Evaluate the deterministic film module once, before ordered shot compile. */
+const compileFilmEditSource = (props: {
+  source: string;
+  context: IAutoMovieFilmBuildContext;
+}): ICompileDeterministicSourceResult<IAutoMovieFilmEdit> =>
+  compileDeterministicSource<IAutoMovieFilmEdit>({
     target: "film",
     label: "film edit",
     path: FILM_SOURCE_PATH,
@@ -1569,6 +1688,11 @@ const compileFilmSource = (
     context: props.context,
     validate: (input) => typia.validateEquals<IAutoMovieFilmEdit>(input),
   });
+
+const compileFilmSource = (
+  props: ICompileFilmSourceProps,
+): ICompileDeterministicSourceResult<ICompiledFilmDraft> => {
+  const source = props.source;
   if (source.value === null)
     return { value: null, diagnostics: source.diagnostics };
   const diagnostics = [...source.diagnostics];
