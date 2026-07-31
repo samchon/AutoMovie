@@ -57,7 +57,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
     project.setWorldDesign(routedWorld);
     project.setFormationDesign({
       ...formationDesign(),
-      heroOverrides: [{ slot: 0, actor: "sentinel" }],
+      heroOverrides: [{ slot: 1, actor: "sentinel" }],
     });
     setProductionFixtureShotContract(project, {
       ...shotContract(),
