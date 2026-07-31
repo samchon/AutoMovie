@@ -113,10 +113,10 @@ const program = (context, moving) => {
     blocking: {
       beat: context.contract.beat,
       analysis: "The root must remain continuous at the cut.",
-      rationale: "A fixed full shot exposes any reset.",
+      rationale: "A fixed wide shot exposes any reset across the full move.",
       actors: [{ node: "sentinel", beats: "continues from the prior mark" }],
       camera: {
-        framing: "full",
+        framing: "wide",
         move: "static",
         on: { kind: "node", node: "sentinel" },
       },
@@ -147,7 +147,7 @@ const program = (context, moving) => {
           actor: "camera",
           start: 0,
           duration: "auto",
-          framing: "full",
+          framing: "wide",
           move: "static",
           on: { kind: "node", node: "sentinel" },
         },
