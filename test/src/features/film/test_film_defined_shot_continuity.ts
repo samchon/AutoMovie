@@ -172,17 +172,18 @@ const compileWalk = (props: {
  */
 export const test_film_defined_shot_continuity = (): void => {
   const rig = createSkeleton();
-  // Bend the fixture leg at rest while keeping its foot on the model ground.
-  // Its two segment lengths now total about 1.21 m rather than the straight
+  // Bend the fixture leg at rest and lower its foot 2 cm into the contact band.
+  // Its two segment lengths now total about 1.22 m rather than the straight
   // 0.9 m hip-to-ground height, giving the ground-IK solve enough reach to hold
-  // the same pin through both short steps as the root climbs the ramp.
+  // the same pin through both short steps while the downhill foot remains in
+  // default-tolerance contact as the root climbs the ramp.
   rig.bones.find((bone) => bone.bone === "leftLowerLeg")!.rest.translation.z =
     0.4;
   rig.bones.push({
     bone: "leftFoot",
     parent: "leftLowerLeg",
     rest: {
-      translation: { x: 0, y: -0.5, z: -0.4 },
+      translation: { x: 0, y: -0.52, z: -0.4 },
       rotation: { x: 0, y: 0, z: 0, w: 1 },
       scale: { x: 1, y: 1, z: 1 },
     },
@@ -286,37 +287,48 @@ export const test_film_defined_shot_continuity = (): void => {
     })),
     space: slopeSpace,
   });
+  const slopeFirstTarget = {
+    x: 3.25,
+    y: rampGround(3.25, 4),
+    z: 4,
+  };
   const slopeFirst = compileWalk({
     id: "SB-PLANT-SLOPE-A",
     rig,
     stage: slopeStage,
-    target: { x: 3.25, y: rampGround(3.25, 4), z: 4 },
+    target: slopeFirstTarget,
     duration: 1,
   });
+  const slopeFirstActor =
+    slopeFirst.success === false
+      ? null
+      : slopeFirst.continuity.closing.actors.find(
+          (actor) => actor.node === "knightA",
+        )!;
   TestValidator.predicate(
-    "a translated and rotated gait produces a ramp plant",
+    "a translated and rotated gait reaches its ramp target and plant",
     slopeFirst.success &&
-      slopeFirst.continuity.closing.actors
-        .find((actor) => actor.node === "knightA")
-        ?.footPlants?.some((plant) => plant.foot === "leftFoot") === true,
+      slopeFirstActor !== null &&
+      vclose(slopeFirstActor.transform.translation, slopeFirstTarget, 1e-9) &&
+      slopeFirstActor.footPlants?.some((plant) => plant.foot === "leftFoot") ===
+        true,
   );
   if (slopeFirst.success === false) return;
-  const slopeActor = slopeFirst.continuity.closing.actors.find(
-    (actor) => actor.node === "knightA",
-  )!;
+  const slopeActor = slopeFirstActor!;
   const slopePin = slopeActor.footPlants!.find(
     (plant) => plant.foot === "leftFoot",
   )!.position;
   const slopeSecondX = slopeActor.transform.translation.x + 0.25;
+  const slopeSecondTarget = {
+    x: slopeSecondX,
+    y: rampGround(slopeSecondX, slopeActor.transform.translation.z),
+    z: slopeActor.transform.translation.z,
+  };
   const slopeSecond = compileWalk({
     id: "SB-PLANT-SLOPE-B",
     rig,
     stage: slopeStage,
-    target: {
-      x: slopeSecondX,
-      y: rampGround(slopeSecondX, slopeActor.transform.translation.z),
-      z: slopeActor.transform.translation.z,
-    },
+    target: slopeSecondTarget,
     previous: slopeFirst.continuity.closing,
     duration: 1,
   });
@@ -329,6 +341,12 @@ export const test_film_defined_shot_continuity = (): void => {
       ? null
       : slopeSecond.source.motions.find(
           (motion) => (motion.gaitCycle ?? null) !== null,
+        )!;
+  const slopeSecondActor =
+    slopeSecond.success === false
+      ? null
+      : slopeSecond.continuity.closing.actors.find(
+          (actor) => actor.node === "knightA",
         )!;
   const slopeSecondFoot =
     slopeSecondNode === null || slopeSecondMotion === null
@@ -346,6 +364,14 @@ export const test_film_defined_shot_continuity = (): void => {
     "ramp world height and the next opening share the same plant authority",
     Math.abs(slopePin.y - rampGround(slopePin.x, slopePin.z)) <= 1e-6 &&
       slopeSecond.success &&
+      slopeSecondNode !== null &&
+      vclose(
+        slopeSecondNode.transform.translation,
+        slopeActor.transform.translation,
+        1e-9,
+      ) &&
+      slopeSecondActor !== null &&
+      vclose(slopeSecondActor.transform.translation, slopeSecondTarget, 1e-9) &&
       slopeSecondFoot !== null &&
       vclose(slopeSecondFoot, slopePin, 1e-4),
   );
