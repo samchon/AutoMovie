@@ -695,30 +695,32 @@ export const test_film_defined_shot_continuity = (): void => {
   const closingRider = compiled.continuity.closing.actors.find(
     (actor) => actor.node === "knightB",
   );
+  const actual = {
+    sceneX: compiled.source.scene.nodes.find((node) => node.id === "knightA")
+      ?.transform.translation.x,
+    armFlexion: compiled.source.scene.nodes
+      .find((node) => node.id === "knightA")
+      ?.pose?.joints.some(
+        (entry) => entry.bone === "leftLowerArm" && entry.flexion === 30,
+      ),
+    duration: compiled.source.motions[0]?.duration,
+    gaitPhase: compiled.source.motions[0]?.gaitCycle?.phaseAt,
+    rootVelocityZ: openingActor?.rootVelocity?.z,
+    footPlantX: openingActor?.footPlants?.[0]?.position.x,
+    mountParent: closingRider?.mount?.parent,
+  };
+  const expected: typeof actual = {
+    sceneX: 3,
+    armFlexion: true,
+    duration: 2,
+    gaitPhase: 0.4,
+    rootVelocityZ: 2,
+    footPlantX: 3.1,
+    mountParent: "knightA",
+  };
   TestValidator.equals(
     "all prior simulation channels reach the next compiled opening",
-    {
-      sceneX: compiled.source.scene.nodes.find((node) => node.id === "knightA")
-        ?.transform.translation.x,
-      armFlexion: compiled.source.scene.nodes
-        .find((node) => node.id === "knightA")
-        ?.pose?.joints.some(
-          (entry) => entry.bone === "leftLowerArm" && entry.flexion === 30,
-        ),
-      duration: compiled.source.motions[0]?.duration,
-      gaitPhase: compiled.source.motions[0]?.gaitCycle?.phaseAt,
-      rootVelocityZ: openingActor?.rootVelocity?.z,
-      footPlantX: openingActor?.footPlants?.[0]?.position.x,
-      mountParent: closingRider?.mount?.parent,
-    },
-    {
-      sceneX: 3,
-      armFlexion: true,
-      duration: 2,
-      gaitPhase: 0.4,
-      rootVelocityZ: 2,
-      footPlantX: 3.1,
-      mountParent: "knightA",
-    },
+    expected,
+    actual,
   );
 };
