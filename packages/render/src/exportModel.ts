@@ -2,6 +2,14 @@ import { tessellate } from "@automovie/engine";
 import { IAutoMovieModel, IAutoMovieTransform } from "@automovie/interface";
 import type { Material, Node } from "@gltf-transform/core";
 
+// Preserve a native ESM import through this package's CommonJS TypeScript
+// emit. A written `import()` is downlevelled to `require()`, which selects
+// glTF Transform's CommonJS bridge and cannot load its ESM-only dependency.
+const importGltfTransformCore = new Function(
+  "specifier",
+  "return import(specifier);",
+) as (specifier: string) => Promise<typeof import("@gltf-transform/core")>;
+
 /**
  * Serialize an {@link IAutoMovieModel} AST into a binary glTF (`.glb`) byte
  * buffer: the **export** half of automovie's glTF round-trip (ingest is the
@@ -34,7 +42,9 @@ import type { Material, Node } from "@gltf-transform/core";
 export const exportModelToGLB = async (
   model: IAutoMovieModel,
 ): Promise<Uint8Array> => {
-  const { Document, NodeIO } = await import("@gltf-transform/core");
+  const { Document, NodeIO } = await importGltfTransformCore(
+    "@gltf-transform/core",
+  );
   const doc = new Document();
   const buffer = doc.createBuffer();
   const scene = doc.createScene(model.name ?? model.id);
