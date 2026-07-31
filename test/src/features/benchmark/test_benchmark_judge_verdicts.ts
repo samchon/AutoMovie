@@ -294,6 +294,7 @@ export const test_benchmark_judge_verdicts = (): void => {
   const otherFrames = draft.frames.filter((frame) => frame !== mask);
   const invalidMask = {
     ...mask,
+    path: "evidence/frames/opening-mask-invalid-a.png",
     width: 640,
     bytes: 1,
     probeValid: false,
@@ -321,6 +322,7 @@ export const test_benchmark_judge_verdicts = (): void => {
 
   const secondInvalidMask = {
     ...invalidMask,
+    path: "evidence/frames/opening-mask-invalid-b.png",
     bytes: 2,
   };
   const invalidRetries = [

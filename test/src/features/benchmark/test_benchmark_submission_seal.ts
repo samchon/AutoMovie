@@ -246,7 +246,7 @@ export const test_benchmark_submission_seal = (): void => {
             adapterIdentity: "nominal-capability-label",
           },
         }),
-      "canonical runtime-v1 JSON",
+      "not canonical JSON",
     ) &&
       throws(
         () =>
