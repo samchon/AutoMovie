@@ -589,6 +589,16 @@ export const test_mcp_production_project = (): void => {
           (target) => target.kind === "sequence" && target.id === "SEQ-SIGNAL",
         ),
     );
+    const refusedRepaint = project.setProductionDesign(
+      productionDesign({ visualDelivery: "repainted" }),
+    );
+    TestValidator.predicate(
+      "refused delivery mutations retain only current review targets",
+      refusedRepaint.accepted === false &&
+        refusedRepaint.consequences.staleReviews.some(
+          (target) => target.kind === "rendition",
+        ) === false,
+    );
     const repaintedProduction = productionDesign({
       visualDelivery: "repainted",
     });
@@ -604,12 +614,27 @@ export const test_mcp_production_project = (): void => {
       id: "second",
       beat: "second repaint consequence",
     });
+    const movedSequenceShot = shotContract();
+    movedSequenceShot.id = "second";
+    movedSequenceShot.beat = "second moved sequence consequence";
+    movedSequenceShot.evidence = [
+      {
+        reason: "This shot now realizes the screenplay's answering action.",
+        scene: "SCN-002",
+      },
+    ];
+    const movedSequenceShotMutation =
+      project.setShotContract(movedSequenceShot);
     const repaintedAcceptance = acceptanceScenarios()[0]!;
     if (repaintedAcceptance.criterion.kind === "frame")
       repaintedAcceptance.criterion.expectation +=
         " The selected rendition remains readable.";
     const repaintedAcceptanceMutation =
       project.setAcceptanceScenario(repaintedAcceptance);
+    const movedAcceptanceMutation = project.setAcceptanceScenario({
+      ...repaintedAcceptance,
+      target: { kind: "shot", id: "second" },
+    });
     const modelMutation = project.setModelRecipe(modelRecipe());
     const formationMutation = project.setFormationDesign({
       ...formationDesign(),
@@ -633,8 +658,32 @@ export const test_mcp_production_project = (): void => {
         repaintedShotMutation.consequences.staleReviews.some(
           (target) => target.kind === "sequence" && target.id === "SEQ-ANSWER",
         ) === false &&
+        movedSequenceShotMutation.consequences.staleReviews.some(
+          (target) => target.kind === "sequence" && target.id === "SEQ-SIGNAL",
+        ) &&
+        movedSequenceShotMutation.consequences.staleReviews.some(
+          (target) => target.kind === "sequence" && target.id === "SEQ-ANSWER",
+        ) &&
         repaintedAcceptanceMutation.consequences.staleReviews.some(
           (target) => target.kind === "rendition" && target.id === "opening",
+        ) &&
+        movedAcceptanceMutation.consequences.staleReviews.some(
+          (target) => target.kind === "shot" && target.id === "opening",
+        ) &&
+        movedAcceptanceMutation.consequences.staleReviews.some(
+          (target) => target.kind === "shot" && target.id === "second",
+        ) &&
+        movedAcceptanceMutation.consequences.staleReviews.some(
+          (target) => target.kind === "rendition" && target.id === "opening",
+        ) &&
+        movedAcceptanceMutation.consequences.staleReviews.some(
+          (target) => target.kind === "rendition" && target.id === "second",
+        ) &&
+        movedAcceptanceMutation.consequences.staleReviews.some(
+          (target) => target.kind === "sequence" && target.id === "SEQ-SIGNAL",
+        ) &&
+        movedAcceptanceMutation.consequences.staleReviews.some(
+          (target) => target.kind === "sequence" && target.id === "SEQ-ANSWER",
         ) &&
         modelMutation.consequences.staleReviews.some(
           (target) => target.kind === "rendition" && target.id === "opening",
@@ -650,6 +699,15 @@ export const test_mcp_production_project = (): void => {
           kind: "shot",
           id: "second",
         }).accepted,
+    );
+    const movedReviewKeys =
+      movedSequenceShotMutation.consequences.staleReviews.map((target) =>
+        JSON.stringify(target),
+      );
+    TestValidator.equals(
+      "merged review consequences remain unique and code-unit sorted",
+      movedReviewKeys,
+      [...new Set(movedReviewKeys)].sort(),
     );
     project.setShotContract(shotContract());
     TestValidator.predicate(

@@ -2416,7 +2416,7 @@ export class AutoMovieProductionProject {
     const generatedPaths =
       this.loadGeneratedManifest()?.files.map((file) => file.path) ?? [];
     const screenplay = this.screenplayIndex();
-    let consequences = consequencesOf(
+    const consequences = consequencesOf(
       graph,
       target,
       generatedPaths,
@@ -2463,7 +2463,12 @@ export class AutoMovieProductionProject {
         ],
       };
     const next = replaceDesign(graph, target, value);
-    consequences = consequencesOf(next, target, generatedPaths, screenplay);
+    const nextConsequences = consequencesOf(
+      next,
+      target,
+      generatedPaths,
+      screenplay,
+    );
     const nextDiagnostics = validateAutoMovieProductionGraph(
       next,
       this.productionId,
@@ -2509,7 +2514,11 @@ export class AutoMovieProductionProject {
       revision,
       target,
       fingerprint: digestAutoMovieBytes(Buffer.from(content, "utf8")),
-      consequences,
+      consequences: mergeMutationConsequences(
+        consequences,
+        nextConsequences,
+        next.production?.visualDelivery === "repainted",
+      ),
       diagnostics: downstreamDiagnostics,
     };
   }
@@ -3679,6 +3688,28 @@ const affectedSequenceIds = (
     })
     .map((sequence) => sequence.id)
     .sort(compareCodeUnits);
+};
+
+const mergeMutationConsequences = (
+  current: IAutoMovieDesignMutationConsequences,
+  next: IAutoMovieDesignMutationConsequences,
+  includeRenditions: boolean,
+): IAutoMovieDesignMutationConsequences => {
+  const staleReviews = new Map<string, IAutoMovieReviewTarget>();
+  for (const target of [...current.staleReviews, ...next.staleReviews])
+    if (target.kind !== "rendition" || includeRenditions)
+      staleReviews.set(reviewConsequenceKey(target), target);
+  return {
+    staleReviews: [...staleReviews.values()].sort((left, right) =>
+      compareCodeUnits(reviewConsequenceKey(left), reviewConsequenceKey(right)),
+    ),
+    staleRenders: [
+      ...new Set([...current.staleRenders, ...next.staleRenders]),
+    ].sort(compareCodeUnits),
+    removedGenerated: [
+      ...new Set([...current.removedGenerated, ...next.removedGenerated]),
+    ].sort(compareCodeUnits),
+  };
 };
 
 const modelRecipeDependsOn = (
