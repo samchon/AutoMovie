@@ -114,6 +114,24 @@ export const test_benchmark_runner = async (): Promise<void> => {
       digest: string;
       entries: Array<{ kind: string; path: string }>;
     }>(path.join(output.archive, "project-tree.json"));
+    const toolSessions = readJson<
+      Array<{
+        provenance: string;
+        session: IAutoMovieBenchmarkMcpSession | null;
+        error: string | null;
+      }>
+    >(path.join(output.archive, "tool-sessions.json"));
+    const liveObservation = toolSessions.find(
+      (session) => session.provenance === "@automovie/mcp:workspace",
+    );
+    if (liveObservation?.session === null || liveObservation === undefined)
+      throw new Error(
+        `Live MCP inventory probe failed: ${
+          liveObservation === undefined
+            ? "current observation is absent"
+            : (liveObservation.error ?? "probe supplied no error detail")
+        }`,
+      );
     const replay = replayAutoMovieBenchmarkTrace(
       fs.readFileSync(path.join(output.archive, "trace/oracle.jsonl.gz")),
     );
@@ -150,9 +168,10 @@ export const test_benchmark_runner = async (): Promise<void> => {
             file.path.startsWith("evidence/deliverables/"),
         ) &&
         output.toolInventory.surfaces.length === 2 &&
+        liveObservation.session.tools.length === 5 &&
         output.toolInventory.surfaces.find(
           (surface) => surface.surface === "five-tool",
-        )?.tools === 5 &&
+        )?.tools === liveObservation.session.tools.length &&
         output.toolInventory.comparisons.length === 1 &&
         fs.existsSync(path.join(output.archive, "tool-sessions.json")) &&
         submission.inventoryDigest.startsWith("sha256:") &&
