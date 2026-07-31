@@ -250,32 +250,40 @@ export const test_film_defined_shot_continuity = (): void => {
       )?.footPlants === null,
   );
 
+  const slopeSpace = {
+    id: "rising-ground",
+    surfaces: [
+      {
+        id: "ramp",
+        kind: "ramp",
+        polygon: [
+          { x: 0, y: 0, z: 0 },
+          { x: 8, y: 0, z: 0 },
+          { x: 8, y: 0, z: 8 },
+          { x: 0, y: 0, z: 8 },
+        ],
+        anchor: { x: 0, y: 0, z: 0 },
+        rampTo: { x: 8, y: 0.4, z: 0 },
+      },
+    ],
+    walkable: ["ramp"],
+  } satisfies NonNullable<ReturnType<typeof makeStagingWrite>["space"]>;
+  const rampGround = spaceGround(slopeSpace);
   const slopeStage = makeStagingWrite({
-    actors: groundedStage.actors,
-    space: {
-      id: "rising-ground",
-      surfaces: [
-        {
-          id: "ramp",
-          kind: "ramp",
-          polygon: [
-            { x: 0, y: 0, z: 0 },
-            { x: 8, y: 0, z: 0 },
-            { x: 8, y: 0, z: 8 },
-            { x: 0, y: 0, z: 8 },
-          ],
-          anchor: { x: 0, y: 0, z: 0 },
-          rampTo: { x: 8, y: 0.4, z: 0 },
-        },
-      ],
-      walkable: ["ramp"],
-    },
+    actors: groundedStage.actors.map((actor) => ({
+      ...actor,
+      position: {
+        ...actor.position,
+        y: rampGround(actor.position.x, actor.position.z),
+      },
+    })),
+    space: slopeSpace,
   });
   const slopeFirst = compileWalk({
     id: "SB-PLANT-SLOPE-A",
     rig,
     stage: slopeStage,
-    target: { x: 3.5, y: 0, z: 4 },
+    target: { x: 3.5, y: rampGround(3.5, 4), z: 4 },
     duration: 1,
   });
   TestValidator.predicate(
@@ -326,7 +334,6 @@ export const test_film_defined_shot_continuity = (): void => {
             )!.worldPosition,
           ),
         );
-  const rampGround = spaceGround(slopeStage.space!);
   TestValidator.predicate(
     "ramp world height and the next opening share the same plant authority",
     Math.abs(slopePin.y - rampGround(slopePin.x, slopePin.z)) <= 1e-6 &&
