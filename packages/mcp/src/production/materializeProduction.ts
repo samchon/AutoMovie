@@ -48,6 +48,14 @@ export { productionRuntimeModelId, productionRuntimeSkeletonId };
 export interface IAutoMovieExternalModelRuntimeBinding {
   /** Manifest-owned final render asset. */
   asset: string;
+  /** Fixed normalization profile proved by ingest. */
+  profile: NonNullable<IAutoMovieModel["imported"]>["profile"];
+  /** Exact model LOD identities retained for host selection. */
+  lod: NonNullable<IAutoMovieModel["imported"]>["lod"];
+  /** Compiler-sealed model, sidecar and proxy digest closure. */
+  assets: NonNullable<IAutoMovieModel["imported"]>["assets"];
+  /** Ingest/VRM-owned normalized bone mapping. */
+  humanoidBones: NonNullable<IAutoMovieModel["imported"]>["humanoidBones"];
   /** Exact collision primitive used by engine geometry and mass queries. */
   collision: IAutoMovieGeneratedCollisionProxy;
   /** Exact measurement envelope used by projection and distance queries. */
@@ -57,9 +65,10 @@ export interface IAutoMovieExternalModelRuntimeBinding {
 /**
  * Materialize every bounded model recipe into deterministic proxy data.
  *
- * External appearances keep the recipe skeleton/capabilities, replace visible
- * primitive parts with the registered collision proxy for engine semantics, and
- * bind the final manifest-owned mesh through `origin` and `asset`.
+ * External appearances keep only a recipe skeleton proved by ingest mapping,
+ * drop unproved semantic profiles, replace visible primitive parts with the
+ * registered collision proxy for engine semantics, and bind the final
+ * manifest-owned mesh plus its closed byte ledger.
  */
 export const materializeProductionModels = (
   recipes: ReadonlyMap<string, IAutoMovieModelRecipe>,
@@ -849,6 +858,13 @@ const materializeModel = (
     name: `imported recipe ${recipe.id}`,
     origin: "imported",
     asset: external.asset,
+    profiles: [],
+    imported: {
+      profile: external.profile,
+      lod: structuredClone(external.lod),
+      assets: structuredClone(external.assets),
+      humanoidBones: structuredClone(external.humanoidBones),
+    },
     parts: [
       {
         id: "registered-collision-proxy",

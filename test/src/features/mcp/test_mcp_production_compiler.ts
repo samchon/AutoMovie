@@ -35,31 +35,84 @@ import {
 } from "./productionMediaFixtures";
 
 const minimalExternalModelJson = (): string => {
-  const positions = Buffer.alloc(9 * Float32Array.BYTES_PER_ELEMENT);
+  const vertexCount = 15;
+  const positions = Buffer.alloc(
+    vertexCount * 3 * Float32Array.BYTES_PER_ELEMENT,
+  );
   [0, 0, 0, 1, 0, 0, 0, 1, 0].forEach((value, index) =>
     positions.writeFloatLE(value, index * Float32Array.BYTES_PER_ELEMENT),
   );
+  const joints = Buffer.alloc(vertexCount * 4);
+  const weights = Buffer.alloc(vertexCount * 4);
+  for (let vertex = 0; vertex < vertexCount; ++vertex) {
+    joints[vertex * 4] = Math.min(vertex, 12);
+    weights[vertex * 4] = 255;
+  }
+  const payload = Buffer.concat([positions, joints, weights]);
   return JSON.stringify({
     asset: { version: "2.0" },
     buffers: [
       {
-        byteLength: positions.length,
-        uri: `data:application/octet-stream;base64,${positions.toString("base64")}`,
+        byteLength: payload.length,
+        uri: `data:application/octet-stream;base64,${payload.toString("base64")}`,
       },
     ],
-    bufferViews: [{ buffer: 0, byteLength: positions.length }],
+    bufferViews: [
+      { buffer: 0, byteOffset: 0, byteLength: positions.length },
+      { buffer: 0, byteOffset: positions.length, byteLength: joints.length },
+      {
+        buffer: 0,
+        byteOffset: positions.length + joints.length,
+        byteLength: weights.length,
+      },
+    ],
     accessors: [
       {
         bufferView: 0,
         componentType: 5126,
-        count: 3,
+        count: vertexCount,
         type: "VEC3",
         min: [0, 0, 0],
         max: [1, 1, 0],
       },
+      {
+        bufferView: 1,
+        componentType: 5121,
+        count: vertexCount,
+        type: "VEC4",
+      },
+      {
+        bufferView: 2,
+        componentType: 5121,
+        normalized: true,
+        count: vertexCount,
+        type: "VEC4",
+      },
     ],
-    meshes: [{ primitives: [{ attributes: { POSITION: 0 } }] }],
-    nodes: [{ mesh: 0, name: "RegisteredTriangle" }],
+    meshes: [
+      {
+        primitives: [
+          { attributes: { POSITION: 0, JOINTS_0: 1, WEIGHTS_0: 2 } },
+        ],
+      },
+    ],
+    nodes: [
+      { mesh: 0, skin: 0, name: "RegisteredTriangle" },
+      { name: "Hips" },
+      { name: "Spine" },
+      { name: "Head" },
+      { name: "LeftArm" },
+      { name: "LeftForeArm" },
+      { name: "LeftHand" },
+      { name: "RightArm" },
+      { name: "RightForeArm" },
+      { name: "RightHand" },
+      { name: "LeftUpLeg" },
+      { name: "LeftLeg" },
+      { name: "RightUpLeg" },
+      { name: "RightLeg" },
+    ],
+    skins: [{ joints: Array.from({ length: 13 }, (_, index) => index + 1) }],
     scenes: [{ nodes: [0] }],
     scene: 0,
   });
@@ -401,7 +454,7 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
         },
       ],
       model: {
-        ingestProfile: "gltf-static-v1",
+        ingestProfile: "gltf-humanoid-v1",
         lod: [
           {
             level: "hero" as const,
@@ -663,6 +716,20 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
               ],
       })),
     } satisfies IAutoMovieAssetManifest;
+    const staticRigBinding = assetCodes({
+      ...activeAudioManifest,
+      assets: activeAudioManifest.assets.map((asset) =>
+        asset.path === modelAsset.path
+          ? {
+              ...asset,
+              model: {
+                ...modelAsset.model,
+                ingestProfile: "gltf-static-v1",
+              },
+            }
+          : asset,
+      ),
+    });
     const exactActiveUse = assetCodes(activeAudioManifest);
     const externalCompile = compiler.compile({ scope: "source" });
     const importedRuntime = JSON.parse(
@@ -757,10 +824,23 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
         unboundModelSidecar.has("asset-model-resource-unbound") &&
         emptyGeneratedProxy.has("asset-manifest-invalid") &&
         blankModelAsset.has("design-text-empty") &&
+        staticRigBinding.has("asset-model-rig-incompatible") &&
         [...exactActiveUse].every((code) => !code.startsWith("asset-")) &&
         externalCompile.success &&
         importedRuntime.origin === "imported" &&
         importedRuntime.asset === modelAsset.path &&
+        importedRuntime.profiles?.length === 0 &&
+        importedRuntime.imported?.profile === "gltf-humanoid-v1" &&
+        importedRuntime.imported.humanoidBones.some(
+          (mapping) => mapping.bone === "hips" && mapping.node === 1,
+        ) &&
+        importedRuntime.imported.humanoidBones.every(
+          (mapping) => mapping.weighted,
+        ) &&
+        importedRuntime.imported.assets.some(
+          (entry) =>
+            entry.path === modelAsset.path && entry.digest === modelDigest,
+        ) &&
         importedRuntime.parts.length === 1 &&
         importedRuntime.parts[0]?.id === "registered-collision-proxy" &&
         wrongProductionUse.has("film-audio-cue-invalid") &&

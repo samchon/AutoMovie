@@ -13,4 +13,9 @@ Collision proxies are generated `capsule-v1` or `box-v1` shapes; measurement
 proxies are generated `box-v1` or `humanoid-landmarks-v1` envelopes. All
 parameters are explicit positive meters. A proxy may instead cite a registered
 version-1 JSON proxy asset. Register every external glTF buffer or image
-sidecar too: the compiler and local viewer serve only byte-exact ledger entries.
+sidecar too. Sidecars and non-hero LODs use `model-resource` with the hero model
+path as consumer id; JSON proxies use `model-proxy`. The compiler validates
+payload ranges and rig/profile compatibility and seals one digest closure. The
+viewer serves only that closure and uses authoritative VRM or ingested glTF
+humanoid mappings. External models are refused for anonymous formation and
+instance-set members until imported-mesh instancing is supported.

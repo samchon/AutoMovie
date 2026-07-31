@@ -8,7 +8,8 @@ import type { Plugin } from "vite";
  *
  * This middleware gives compiler-owned output an explicit no-cache route and
  * exposes only shots, models, the film timeline, and digest-matching physical
- * asset-ledger entries without opening arbitrary project files.
+ * assets present in a current compiled model closure without opening arbitrary
+ * project files.
  */
 export const generatedShotPlugin = (
   projectRoot: string,
@@ -28,7 +29,7 @@ export const generatedShotPlugin = (
       }
       if (asset !== null) {
         try {
-          const bytes = readRegisteredAsset(projectRoot, asset);
+          const bytes = readRegisteredAsset(projectRoot, productionId, asset);
           response.statusCode = 200;
           response.setHeader("Content-Type", assetMediaType(asset));
           response.setHeader("Cache-Control", "no-store");
@@ -164,6 +165,7 @@ const viewerAssetRoute = (url: string | undefined): string | null => {
 
 const readRegisteredAsset = (
   projectRoot: string,
+  productionId: string,
   assetPath: string,
 ): Buffer => {
   const ownership = JSON.parse(
@@ -171,7 +173,7 @@ const readRegisteredAsset = (
       path.join(projectRoot, ".automovie", "manifest.json"),
       "utf8",
     ),
-  ) as { assetManifest?: unknown };
+  ) as { assetManifest?: unknown; generatedRoot?: unknown };
   if (
     typeof ownership.assetManifest !== "string" ||
     ownership.assetManifest.trim() === "" ||
@@ -200,6 +202,15 @@ const readRegisteredAsset = (
   );
   if (record === undefined)
     throw new Error("asset is not registered in the byte ledger");
+  const compiledDigest = readCompiledAssetClosure(
+    projectRoot,
+    productionId,
+    ownership.generatedRoot,
+  ).get(assetPath);
+  if (compiledDigest === undefined || compiledDigest !== record.digest)
+    throw new Error(
+      "asset is not in the current compiler-sealed viewer closure",
+    );
   const file = path.resolve(projectRoot, ...assetPath.split("/"));
   const relative = path.relative(path.resolve(projectRoot), file);
   if (
@@ -218,6 +229,69 @@ const readRegisteredAsset = (
   if (record.digest !== digest)
     throw new Error("asset bytes do not match registered digest");
   return bytes;
+};
+
+const readCompiledAssetClosure = (
+  projectRoot: string,
+  productionId: string,
+  generatedRootValue: unknown,
+): Map<string, string> => {
+  if (
+    typeof generatedRootValue !== "string" ||
+    generatedRootValue.trim().length === 0 ||
+    productionId.trim().length === 0 ||
+    productionId !== productionId.trim()
+  )
+    throw new Error("invalid compiled asset closure owner");
+  const projectReal = fs.realpathSync(projectRoot);
+  const modelsRoot = path.resolve(
+    projectRoot,
+    generatedRootValue,
+    encodePathSegment(productionId),
+    "models",
+  );
+  const modelsStatus = fs.lstatSync(modelsRoot);
+  const modelsReal = fs.realpathSync(modelsRoot);
+  if (
+    modelsStatus.isSymbolicLink() ||
+    modelsStatus.isDirectory() === false ||
+    isInside(projectReal, modelsReal) === false
+  )
+    throw new Error("compiled model root is not a physical project directory");
+  const closure = new Map<string, string>();
+  for (const entry of fs.readdirSync(modelsReal, { withFileTypes: true })) {
+    if (
+      entry.isFile() === false ||
+      entry.isSymbolicLink() ||
+      path.extname(entry.name).toLowerCase() !== ".json"
+    )
+      continue;
+    const file = path.join(modelsReal, entry.name);
+    const fileReal = fs.realpathSync(file);
+    if (isInside(modelsReal, fileReal) === false)
+      throw new Error("compiled model artifact escapes its owned directory");
+    const model = JSON.parse(fs.readFileSync(fileReal, "utf8")) as {
+      imported?: { assets?: unknown };
+    };
+    if (model.imported === undefined) continue;
+    if (Array.isArray(model.imported.assets) === false)
+      throw new Error("imported model has no sealed asset closure");
+    for (const value of model.imported.assets) {
+      if (
+        value === null ||
+        typeof value !== "object" ||
+        typeof (value as { path?: unknown }).path !== "string" ||
+        typeof (value as { digest?: unknown }).digest !== "string"
+      )
+        throw new Error("imported model has an invalid asset closure entry");
+      const item = value as { path: string; digest: string };
+      const prior = closure.get(item.path);
+      if (prior !== undefined && prior !== item.digest)
+        throw new Error("compiled asset closure has conflicting digests");
+      closure.set(item.path, item.digest);
+    }
+  }
+  return closure;
 };
 
 const assertPhysicalPath = (

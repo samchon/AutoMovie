@@ -437,8 +437,11 @@ func (asset assetProvenanceRecord) ModelLOD() []struct {
 var assetDigestPattern = regexp.MustCompile(`^sha256:[0-9a-f]{64}$`)
 
 var assetConsumerKind = map[string]bool{
-	"audio-cue":    true,
-	"model-recipe": true,
+	"audio-cue":           true,
+	"model-recipe":        true,
+	"model-resource":      true,
+	"model-proxy":         true,
+	"rendition-reference": true,
 }
 
 var assetModelLODLevel = map[string]int{

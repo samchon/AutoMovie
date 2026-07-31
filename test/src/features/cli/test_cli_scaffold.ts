@@ -364,13 +364,19 @@ export const test_cli_scaffold = (): void => {
       files["scripts/generatedShotPlugin.ts"]!.includes(
         'const prefix = "/__automovie/assets/"',
       ) &&
+      files["scripts/generatedShotPlugin.ts"]!.includes(
+        "readCompiledAssetClosure",
+      ) &&
       files["viewer/src/main.ts"]!.includes('await import("./film")') &&
       files["viewer/src/film.ts"]!.includes("renderCrossDissolveFrames") &&
       files["viewer/src/film.ts"]!.includes('pass !== "beauty"') &&
       files["viewer/src/loadCompiledModel.ts"]!.includes("GLTFLoader") &&
+      files["viewer/src/loadCompiledModel.ts"]!.includes("VRMLoaderPlugin") &&
+      files["viewer/src/loadCompiledModel.ts"]!.includes("rotateVRM0") &&
       files["viewer/src/loadCompiledModel.ts"]!.includes(
         "createImportedModelObject",
       ) &&
+      files["package.json"]!.includes('"@pixiv/three-vrm": "^3"') &&
       files["viewer/src/asset.ts"]!.includes('finiteParameter("angle")') &&
       files["viewer/src/main.ts"]!.includes('from "three"') === false,
   );

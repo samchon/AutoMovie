@@ -35,6 +35,18 @@ export type IAutoMovieAssetConsumer =
       id: string;
     }
   | {
+      /** Sidecar or LOD bytes owned by one external-model asset. */
+      kind: "model-resource";
+      /** Exact path of the owning hero model asset. */
+      id: string;
+    }
+  | {
+      /** Byte-authored deterministic proxy owned by one external model. */
+      kind: "model-proxy";
+      /** Exact path of the owning hero model asset. */
+      id: string;
+    }
+  | {
       /** Fixed style or character reference consumed by one repaint shot. */
       kind: "rendition-reference";
       /** Exact shot id. */

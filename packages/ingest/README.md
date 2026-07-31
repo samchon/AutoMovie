@@ -2,10 +2,12 @@
 
 `inspectAutoMovieExternalModelBytes` is the synchronous production compiler
 boundary for registered glTF 2.0, GLB 2.0, and VRM bytes. It validates a closed
-ingest profile, structural indices, render-mesh presence, and container
-integrity, then returns every non-data buffer/image URI that must be bound to a
-content-addressed asset record. It does not load files or infer missing
-sidecars.
+ingest profile, container chunks, buffer/accessor payload ranges, render-mesh
+presence, and authoritative normalized humanoid mappings. The compiler supplies
+exact sidecar bytes to the synchronous resolver; missing or short payloads are
+rejected, and the result identifies the closed buffer/image dependency set. It
+does not load files, infer missing sidecars, or guess a humanoid mapping after
+ingest.
 
 `@automovie/ingest`는 외부 glTF/GLB 자산을 AutoMovie 코어의 노드 그래프와 클립으로 들여오는 헤드리스 수입(ingestion) 패키지다.
 

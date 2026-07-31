@@ -9,13 +9,24 @@ export const test_inspect_external_model_bytes = (): void => {
     path: "public/models/actor.gltf",
     bytes: gltf,
     profile: "gltf-static-v1",
+    resolveResource: (uri) =>
+      uri === "actor.bin"
+        ? modelPayload()
+        : uri === "actor.png"
+          ? Buffer.from([1])
+          : null,
   });
   TestValidator.equals("glTF inventory")(inspection)({
+    profile: "gltf-static-v1",
     format: "gltf",
     version: "2.0",
     counts: { nodes: 2, meshes: 1, skins: 1, animations: 0 },
     extensions: [],
-    externalResources: ["actor.bin", "actor.png"],
+    resources: [
+      { uri: "actor.bin", kind: "buffer", byteLength: 60 },
+      { uri: "actor.png", kind: "image", byteLength: null },
+    ],
+    humanoidBones: [],
   });
 
   const vrm = glb({
@@ -34,6 +45,12 @@ export const test_inspect_external_model_bytes = (): void => {
       path: "public/models/actor.vrm",
       bytes: vrm,
       profile: "vrm-humanoid-v1",
+      resolveResource: (uri) =>
+        uri === "actor.bin"
+          ? modelPayload()
+          : uri === "actor.png"
+            ? Buffer.from([1])
+            : null,
     }).format === "vrm",
   );
   TestValidator.predicate(
@@ -42,7 +59,16 @@ export const test_inspect_external_model_bytes = (): void => {
       path: "public/models/actor.gltf",
       bytes: gltf,
       profile: "gltf-humanoid-v1",
-    }).counts.skins === 1,
+      resolveResource: (uri) =>
+        uri === "actor.bin"
+          ? modelPayload()
+          : uri === "actor.png"
+            ? Buffer.from([1])
+            : null,
+    }).humanoidBones.some(
+      (mapping) =>
+        mapping.bone === "hips" && mapping.node === 1 && mapping.weighted,
+    ),
   );
   TestValidator.predicate(
     "malformed bytes, unsupported profiles and missing rigs are refused",
@@ -72,6 +98,37 @@ export const test_inspect_external_model_bytes = (): void => {
             }),
           ),
           profile: "gltf-humanoid-v1",
+          resolveResource: (uri) =>
+            uri === "actor.bin" ? modelPayload() : Buffer.from([1]),
+        }),
+      ) &&
+      throws(() =>
+        inspectAutoMovieExternalModelBytes({
+          path: "public/models/actor.gltf",
+          bytes: gltf,
+          profile: "gltf-static-v1",
+          resolveResource: (uri) =>
+            uri === "actor.bin" ? Buffer.alloc(1) : Buffer.from([1]),
+        }),
+      ) &&
+      throws(() =>
+        inspectAutoMovieExternalModelBytes({
+          path: "public/models/actor.glb",
+          bytes: glb({
+            ...source,
+            buffers: [{ byteLength: 60 }],
+            images: [],
+          }),
+          profile: "gltf-static-v1",
+        }),
+      ) &&
+      throws(() =>
+        inspectAutoMovieExternalModelBytes({
+          path: "public/models/actor.gltf",
+          bytes: gltf,
+          profile: "gltf-humanoid-v1",
+          resolveResource: (uri) =>
+            uri === "actor.bin" ? Buffer.alloc(60) : Buffer.from([1]),
         }),
       ),
   );
@@ -79,8 +136,12 @@ export const test_inspect_external_model_bytes = (): void => {
 
 const modelDocument = () => ({
   asset: { version: "2.0" },
-  buffers: [{ byteLength: 36, uri: "actor.bin" }],
-  bufferViews: [{ buffer: 0, byteLength: 36 }],
+  buffers: [{ byteLength: 60, uri: "actor.bin" }],
+  bufferViews: [
+    { buffer: 0, byteOffset: 0, byteLength: 36 },
+    { buffer: 0, byteOffset: 36, byteLength: 12 },
+    { buffer: 0, byteOffset: 48, byteLength: 12 },
+  ],
   accessors: [
     {
       bufferView: 0,
@@ -88,13 +149,36 @@ const modelDocument = () => ({
       count: 3,
       type: "VEC3",
     },
+    {
+      bufferView: 1,
+      componentType: 5121,
+      count: 3,
+      type: "VEC4",
+    },
+    {
+      bufferView: 2,
+      componentType: 5121,
+      normalized: true,
+      count: 3,
+      type: "VEC4",
+    },
   ],
   images: [{ uri: "actor.png" }],
-  meshes: [{ primitives: [{ attributes: { POSITION: 0 } }] }],
-  nodes: [{ mesh: 0, name: "Actor" }, { name: "Hips" }],
+  meshes: [
+    {
+      primitives: [{ attributes: { POSITION: 0, JOINTS_0: 1, WEIGHTS_0: 2 } }],
+    },
+  ],
+  nodes: [{ mesh: 0, skin: 0, name: "Actor" }, { name: "Hips" }],
   skins: [{ joints: [1] }],
   scenes: [{ nodes: [0, 1] }],
 });
+
+const modelPayload = (): Buffer => {
+  const bytes = Buffer.alloc(60);
+  for (let vertex = 0; vertex < 3; ++vertex) bytes[48 + vertex * 4] = 255;
+  return bytes;
+};
 
 const glb = (document: object): Buffer => {
   const source = Buffer.from(JSON.stringify(document), "utf8");

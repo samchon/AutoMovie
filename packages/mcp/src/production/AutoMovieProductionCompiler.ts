@@ -7,6 +7,7 @@ import {
 import { inspectAutoMovieExternalModelBytes } from "@automovie/ingest";
 import {
   AutoMovieContentDigest,
+  AutoMovieHumanoidBone,
   IAutoMovieAssetManifest,
   IAutoMovieAssetProvenance,
   IAutoMovieCompileProjectInput,
@@ -24,6 +25,7 @@ import {
   IAutoMovieGeneratedMeasurementProxy,
   IAutoMovieMaterializedFile,
   IAutoMovieModelProxyAsset,
+  IAutoMovieModelRecipe,
   IAutoMovieProductionManifest,
   IAutoMovieProductionMediaProbe,
   IAutoMovieProductionRenderManifest,
@@ -2447,9 +2449,10 @@ const compilerAssetInventory = (
       "Asset entries must be in unique canonical path order. Sort them by code unit and remove duplicates before compiling.",
     );
   const activeConsumerAssets = new Map<string, string>();
+  const consumedModelResources = new Set<string>();
   const externalByAsset = new Map<
     string,
-    Omit<IAutoMovieExternalModelRuntimeBinding, "asset">
+    Omit<IAutoMovieExternalModelRuntimeBinding, "asset" | "lod">
   >();
   for (const asset of validation.data.assets) {
     const folded = asset.path.toLowerCase();
@@ -2518,15 +2521,25 @@ const compilerAssetInventory = (
     for (const use of activeUses) {
       const key = `${use.consumer.kind}\0${use.consumer.id}`;
       const priorAsset = activeConsumerAssets.get(key);
-      if (seenUses.has(key) || priorAsset !== undefined)
+      const exclusive =
+        use.consumer.kind !== "model-resource" &&
+        use.consumer.kind !== "model-proxy";
+      if (seenUses.has(key) || (exclusive && priorAsset !== undefined))
         diagnostic(
           "asset-use-duplicate",
           asset.path,
           `Asset "${asset.path}" repeats active consumer ${use.consumer.kind} "${use.consumer.id}"${priorAsset === undefined ? "" : ` already owned by "${priorAsset}"`}. Keep one reasoned use per production consumer.`,
         );
       seenUses.add(key);
-      activeConsumerAssets.set(key, asset.path);
-      if (assetConsumerExists(graph, asset.path, use.consumer) === false)
+      if (exclusive) activeConsumerAssets.set(key, asset.path);
+      if (
+        assetConsumerExists(
+          graph,
+          validation.data.assets,
+          asset.path,
+          use.consumer,
+        ) === false
+      )
         diagnostic(
           "asset-use-dangling",
           asset.path,
@@ -2551,6 +2564,25 @@ const compilerAssetInventory = (
           asset.path,
           `Model asset "${asset.path}" has duplicate/out-of-order LOD "${lod.level}" or points to non-model manifest asset "${lod.asset}". Keep unique hero/near/far levels in order and ground each in model bytes.`,
         );
+      if (
+        lod.level !== "hero" &&
+        (target === undefined ||
+          hasActiveAssetUse(
+            validation.data.assets.find(
+              (candidate) => candidate.path === target,
+            ),
+            productionId,
+            "model-resource",
+            asset.path,
+          ) === false)
+      )
+        diagnostic(
+          "asset-model-resource-unbound",
+          asset.path,
+          `LOD "${lod.level}" asset "${lod.asset}" is not authorized as a model-resource of "${asset.path}" in production "${productionId}".`,
+        );
+      else if (lod.level !== "hero" && target !== undefined)
+        consumedModelResources.add(`${asset.path}\0${target}`);
       levels.add(lod.level);
       priorLevel = Math.max(priorLevel, order);
     }
@@ -2565,31 +2597,55 @@ const compilerAssetInventory = (
       );
     const resident = content.get(asset.path);
     let ingested = false;
+    let inspection:
+      | ReturnType<typeof inspectAutoMovieExternalModelBytes>
+      | undefined;
+    const closure = new Map<string, AutoMovieContentDigest>();
+    closure.set(asset.path, asset.digest);
     if (resident?.bytes !== null && resident !== undefined)
       try {
-        const inspection = inspectAutoMovieExternalModelBytes({
+        inspection = inspectAutoMovieExternalModelBytes({
           path: asset.path,
           bytes: resident.bytes,
           profile: asset.model.ingestProfile,
-        });
-        for (const uri of inspection.externalResources) {
-          const resource = externalModelResourcePath(asset.path, uri);
-          const resourceRecord = validation.data.assets.find(
-            (candidate) => candidate.path === resource,
-          );
-          const resourceInput = content.get(resource);
-          if (
-            resourceRecord === undefined ||
-            resourceInput?.bytes === null ||
-            resourceInput === undefined ||
-            resourceRecord.digest !== digestAutoMovieBytes(resourceInput.bytes)
-          )
-            diagnostic(
-              "asset-model-resource-unbound",
-              asset.path,
-              `External model "${asset.path}" references sidecar "${uri}", but resolved project asset "${resource}" is absent or byte-stale in the manifest. Register every fixed buffer and image dependency.`,
+          resolveResource: (uri) => {
+            const resource = externalModelResourcePath(asset.path, uri);
+            const resourceRecord = validation.data.assets.find(
+              (candidate) => candidate.path === resource,
             );
-        }
+            const resourceInput = content.get(resource);
+            if (
+              resourceRecord === undefined ||
+              resourceInput?.bytes === null ||
+              resourceInput === undefined ||
+              resourceRecord.digest !==
+                digestAutoMovieBytes(resourceInput.bytes)
+            ) {
+              diagnostic(
+                "asset-model-resource-unbound",
+                asset.path,
+                `External model "${asset.path}" references sidecar "${uri}", but resolved project asset "${resource}" is absent or byte-stale in the manifest.`,
+              );
+              return null;
+            }
+            if (
+              hasActiveAssetUse(
+                resourceRecord,
+                productionId,
+                "model-resource",
+                asset.path,
+              ) === false
+            )
+              diagnostic(
+                "asset-model-resource-unbound",
+                asset.path,
+                `External model sidecar "${resource}" is not authorized as a model-resource of "${asset.path}" in production "${productionId}".`,
+              );
+            else consumedModelResources.add(`${asset.path}\0${resource}`);
+            closure.set(resource, resourceRecord.digest);
+            return resourceInput.bytes;
+          },
+        });
         ingested = diagnostics.length === diagnosticCount;
       } catch (error) {
         diagnostic(
@@ -2603,6 +2659,7 @@ const compilerAssetInventory = (
       reference: asset.model.collisionProxy,
       records: validation.data.assets,
       content,
+      productionId,
       diagnostic,
     });
     const measurement = resolveExternalMeasurementProxy({
@@ -2610,8 +2667,20 @@ const compilerAssetInventory = (
       reference: asset.model.measurementProxy,
       records: validation.data.assets,
       content,
+      productionId,
       diagnostic,
     });
+    for (const reference of [
+      asset.model.collisionProxy,
+      asset.model.measurementProxy,
+    ])
+      if (reference.kind === "asset") {
+        const proxyRecord = validation.data.assets.find(
+          (candidate) => candidate.path === reference.asset,
+        );
+        if (proxyRecord !== undefined)
+          closure.set(proxyRecord.path, proxyRecord.digest);
+      }
     if (
       ingested &&
       resident?.bytes !== null &&
@@ -2620,10 +2689,32 @@ const compilerAssetInventory = (
       isCanonicalAssetPath(asset.path) &&
       diagnostics.length === diagnosticCount &&
       collision !== null &&
-      measurement !== null
+      measurement !== null &&
+      inspection !== undefined
     )
-      externalByAsset.set(asset.path, { collision, measurement });
+      externalByAsset.set(asset.path, {
+        profile: inspection.profile,
+        humanoidBones: inspection.humanoidBones,
+        assets: [...closure]
+          .map(([path, digest]) => ({ path, digest }))
+          .sort((left, right) => compareCodeUnits(left.path, right.path)),
+        collision,
+        measurement,
+      });
   }
+  for (const resource of validation.data.assets)
+    for (const use of resource.uses)
+      if (
+        use.production === productionId &&
+        use.consumer.kind === "model-resource" &&
+        consumedModelResources.has(`${use.consumer.id}\0${resource.path}`) ===
+          false
+      )
+        diagnostic(
+          "asset-use-dangling",
+          resource.path,
+          `Asset "${resource.path}" is authorized as a model-resource of "${use.consumer.id}" but is not an actual LOD, buffer, or image dependency of that model.`,
+        );
   const externalModels = new Map<
     string,
     IAutoMovieExternalModelRuntimeBinding
@@ -2654,9 +2745,78 @@ const compilerAssetInventory = (
       record !== undefined &&
       record.model !== undefined &&
       external !== undefined
-    )
-      externalModels.set(id, { asset: model.asset, ...external });
+    ) {
+      const levels = record.model.lod.flatMap((lod) => {
+        const levelRecord = validation.data.assets.find(
+          (candidate) => candidate.path === lod.asset,
+        );
+        const level = externalByAsset.get(lod.asset);
+        return levelRecord === undefined || level === undefined
+          ? []
+          : [
+              {
+                level: lod.level,
+                asset: lod.asset,
+                digest: levelRecord.digest,
+                profile: level.profile,
+                humanoidBones: level.humanoidBones,
+              },
+            ];
+      });
+      const generatedHasSkeleton = model.archetype === "stickman";
+      const levelProfiles = new Set(levels.map((level) => level.profile));
+      if (
+        levels.length !== record.model.lod.length ||
+        levelProfiles.size !== 1 ||
+        levelProfiles.has(external.profile) === false
+      )
+        diagnostic(
+          "asset-model-lod-incompatible",
+          model.asset,
+          `Model recipe "${id}" requires every declared LOD to pass the same fixed ingest profile as its hero asset.`,
+        );
+      else if ((external.profile === "gltf-static-v1") === generatedHasSkeleton)
+        diagnostic(
+          "asset-model-rig-incompatible",
+          model.asset,
+          `Model recipe "${id}" and ingest profile "${external.profile}" disagree on whether the runtime is articulated. Bind static assets only to skeleton-free recipes and humanoid assets only to articulated recipes.`,
+        );
+      else if (
+        generatedHasSkeleton &&
+        levels.some((level) =>
+          requiredRecipeBones(model).some(
+            (bone) =>
+              level.humanoidBones.some(
+                (mapping) => mapping.bone === bone && mapping.weighted,
+              ) === false,
+          ),
+        )
+      )
+        diagnostic(
+          "asset-model-rig-incompatible",
+          model.asset,
+          `Model recipe "${id}" requires normalized, visibly weighted skeleton bones that at least one ingested LOD does not prove.`,
+        );
+      else {
+        const assets = new Map(
+          levels.flatMap((level) =>
+            externalByAsset
+              .get(level.asset)!
+              .assets.map((entry) => [entry.path, entry.digest] as const),
+          ),
+        );
+        externalModels.set(id, {
+          asset: model.asset,
+          ...external,
+          lod: levels,
+          assets: [...assets]
+            .map(([path, digest]) => ({ path, digest }))
+            .sort((left, right) => compareCodeUnits(left.path, right.path)),
+        });
+      }
+    }
   }
+  refuseUnsupportedExternalInstancing(graph, externalModels, diagnostic);
   return {
     assets,
     records: validation.data.assets,
@@ -2670,6 +2830,7 @@ const resolveExternalCollisionProxy = (props: {
   reference: NonNullable<IAutoMovieAssetProvenance["model"]>["collisionProxy"];
   records: readonly IAutoMovieAssetProvenance[];
   content: ReadonlyMap<string, IAutoMovieProductionContentInput>;
+  productionId: string;
   diagnostic: (code: string, target: string, message: string) => void;
 }): IAutoMovieGeneratedCollisionProxy | null => {
   const proxy =
@@ -2681,6 +2842,7 @@ const resolveExternalCollisionProxy = (props: {
             reference: props.reference,
             records: props.records,
             content: props.content,
+            productionId: props.productionId,
           },
           "collision",
         );
@@ -2708,6 +2870,7 @@ const resolveExternalMeasurementProxy = (props: {
   >["measurementProxy"];
   records: readonly IAutoMovieAssetProvenance[];
   content: ReadonlyMap<string, IAutoMovieProductionContentInput>;
+  productionId: string;
   diagnostic: (code: string, target: string, message: string) => void;
 }): IAutoMovieGeneratedMeasurementProxy | null => {
   const proxy =
@@ -2719,6 +2882,7 @@ const resolveExternalMeasurementProxy = (props: {
             reference: props.reference,
             records: props.records,
             content: props.content,
+            productionId: props.productionId,
           },
           "measurement",
         );
@@ -2749,6 +2913,7 @@ const readExternalProxyAsset = <Kind extends "collision" | "measurement">(
     reference: { kind: "asset"; asset: string };
     records: readonly IAutoMovieAssetProvenance[];
     content: ReadonlyMap<string, IAutoMovieProductionContentInput>;
+    productionId: string;
   },
   kind: Kind,
 ): NonNullable<IAutoMovieModelProxyAsset[Kind]> | null => {
@@ -2761,7 +2926,13 @@ const readExternalProxyAsset = <Kind extends "collision" | "measurement">(
     record === undefined ||
     input?.bytes === null ||
     input === undefined ||
-    record.digest !== digestAutoMovieBytes(input.bytes)
+    record.digest !== digestAutoMovieBytes(input.bytes) ||
+    hasActiveAssetUse(
+      record,
+      props.productionId,
+      "model-proxy",
+      props.owner,
+    ) === false
   )
     return null;
   try {
@@ -2837,6 +3008,7 @@ const assetProcessingStepIncomplete = (
 
 const assetConsumerExists = (
   graph: IAutoMovieProductionDesignGraph,
+  records: readonly IAutoMovieAssetProvenance[],
   assetPath: string,
   consumer: IAutoMovieAssetProvenance["uses"][number]["consumer"],
 ): boolean => {
@@ -2845,9 +3017,90 @@ const assetConsumerExists = (
       return true;
     case "model-recipe":
       return graph.models.get(consumer.id)?.asset === assetPath;
+    case "model-resource": {
+      const owner = records.find((record) => record.path === consumer.id);
+      return (
+        owner?.model !== undefined &&
+        assetPath !== owner.path &&
+        [...graph.models.values()].some((model) => model.asset === owner.path)
+      );
+    }
+    case "model-proxy": {
+      const owner = records.find((record) => record.path === consumer.id);
+      return (
+        owner?.model !== undefined &&
+        [owner.model.collisionProxy, owner.model.measurementProxy].some(
+          (reference) =>
+            reference.kind === "asset" && reference.asset === assetPath,
+        )
+      );
+    }
     case "rendition-reference":
       return graph.shots.has(consumer.id);
   }
+};
+
+const hasActiveAssetUse = (
+  record: IAutoMovieAssetProvenance | undefined,
+  productionId: string,
+  kind: "model-resource" | "model-proxy",
+  owner: string,
+): boolean =>
+  record?.uses.some(
+    (use) =>
+      use.production === productionId &&
+      use.consumer.kind === kind &&
+      use.consumer.id === owner,
+  ) === true;
+
+const requiredRecipeBones = (
+  model: IAutoMovieModelRecipe,
+): AutoMovieHumanoidBone[] =>
+  model.archetype === "stickman"
+    ? [
+        "hips",
+        "spine",
+        "head",
+        "leftUpperArm",
+        "leftLowerArm",
+        "leftHand",
+        "rightUpperArm",
+        "rightLowerArm",
+        "rightHand",
+        "leftUpperLeg",
+        "leftLowerLeg",
+        "rightUpperLeg",
+        "rightLowerLeg",
+      ]
+    : [];
+
+const refuseUnsupportedExternalInstancing = (
+  graph: IAutoMovieProductionDesignGraph,
+  externalModels: ReadonlyMap<string, IAutoMovieExternalModelRuntimeBinding>,
+  diagnostic: (code: string, target: string, message: string) => void,
+): void => {
+  for (const formation of graph.formations.values()) {
+    const recipes = [
+      formation.modelRecipe,
+      ...(graph.models
+        .get(formation.modelRecipe)
+        ?.lod.filter((lod) => lod.tier !== "hero")
+        .map((lod) => lod.recipe) ?? []),
+    ];
+    if (recipes.some((recipe) => externalModels.has(recipe)))
+      diagnostic(
+        "asset-model-instancing-unsupported",
+        formation.id,
+        `Formation "${formation.id}" selects a registered external model for anonymous members, but imported-mesh instancing is not yet supported. Use generated anonymous tiers or named hero nodes.`,
+      );
+  }
+  for (const instanceSet of graph.world?.instanceSets ?? [])
+    if (externalModels.has(instanceSet.modelRecipe))
+      diagnostic(
+        "asset-model-instancing-unsupported",
+        instanceSet.id,
+        `Instance set "${instanceSet.id}" selects registered external model "${instanceSet.modelRecipe}", but imported-mesh instancing is not yet supported. Use a generated recipe or named nodes.`,
+      );
 };
 
 const validateCompiledAssetUses = (

@@ -75,6 +75,7 @@ const versions = {
   libopusWasm: catalogVersion("media", "libopus-wasm"),
   mp4box: catalogVersion("media", "mp4box"),
   mcpSdk: catalogVersion("modelcontextprotocol", "@modelcontextprotocol/sdk"),
+  threeVrm: catalogVersion("three", "@pixiv/three-vrm"),
   playwright: catalogVersion("media", "playwright"),
   pngjs: catalogVersion("media", "pngjs"),
   pngjsTypes: catalogVersion("media", "@types/pngjs"),
