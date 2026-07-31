@@ -60,37 +60,58 @@ const workspacePackages = new Map(
   }),
 );
 
-const findPackageFile = (dependency, requesterFile) => {
-  const workspace = workspacePackages.get(dependency);
-  if (workspace !== undefined) return workspace.file;
+const productionDependenciesOf = (manifest) => ({
+  ...manifest.dependencies,
+  ...manifest.optionalDependencies,
+  ...manifest.peerDependencies,
+});
+
+const packageFileFrom = (dependency, requesterFile) => {
   const requester = createRequire(
     path.join(path.dirname(requesterFile), "__automovie_license_policy__.cjs"),
   );
+  let resolved;
   try {
-    return requester.resolve(`${dependency}/package.json`);
+    resolved = requester.resolve(dependency);
   } catch {
-    let current;
     try {
-      current = path.dirname(requester.resolve(dependency));
+      resolved = requester.resolve(`${dependency}/package.json`);
     } catch {
-      throw new Error(
-        `Cannot resolve production dependency ${dependency} from ${requesterFile}.`,
-      );
+      return null;
     }
-    for (;;) {
-      const candidate = path.join(current, "package.json");
-      if (fs.existsSync(candidate)) {
-        const manifest = readJson(candidate);
-        if (manifest.name === dependency) return candidate;
-      }
-      const parent = path.dirname(current);
-      if (parent === current) break;
-      current = parent;
-    }
-    throw new Error(
-      `Cannot resolve production dependency ${dependency} from ${requesterFile}.`,
-    );
   }
+  let current = fs.statSync(resolved).isDirectory()
+    ? resolved
+    : path.dirname(resolved);
+  for (;;) {
+    const candidate = path.join(current, "package.json");
+    if (fs.existsSync(candidate)) {
+      const manifest = readJson(candidate);
+      if (manifest.name === dependency) return candidate;
+    }
+    const parent = path.dirname(current);
+    if (parent === current) return null;
+    current = parent;
+  }
+};
+
+const findPackageFile = (dependency, requesterFile) => {
+  const workspace = workspacePackages.get(dependency);
+  if (workspace !== undefined) return workspace.file;
+  const direct = packageFileFrom(dependency, requesterFile);
+  if (direct !== null) return direct;
+  for (const { file, manifest } of workspacePackages.values()) {
+    if (
+      file === requesterFile ||
+      Object.hasOwn(productionDependenciesOf(manifest), dependency) === false
+    )
+      continue;
+    const installed = packageFileFrom(dependency, file);
+    if (installed !== null) return installed;
+  }
+  throw new Error(
+    `Cannot resolve production dependency ${dependency} from ${requesterFile}.`,
+  );
 };
 
 const tokenizeSpdx = (expression) => {
@@ -196,11 +217,7 @@ const inspect = (file) => {
     );
   }
 
-  const dependencies = {
-    ...manifest.dependencies,
-    ...manifest.optionalDependencies,
-    ...manifest.peerDependencies,
-  };
+  const dependencies = productionDependenciesOf(manifest);
   for (const dependency of Object.keys(dependencies).sort()) {
     try {
       inspect(findPackageFile(dependency, realFile));
