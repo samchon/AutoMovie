@@ -502,9 +502,18 @@ export const test_mcp_production_review = async (): Promise<void> => {
       secondProject,
       (status, snapshot) => secondReview.queue(status, snapshot),
     );
+    const secondCompiled = secondCompiler.compile({ scope: "source" });
+    if (secondCompiled.success === false)
+      throw new Error(
+        `Second-production consumer compile failed:\n${JSON.stringify(
+          secondCompiled.diagnostics,
+          null,
+          2,
+        )}`,
+      );
     TestValidator.predicate(
       "the second production materializes its own consumer",
-      secondCompiler.compile({ scope: "source" }).success,
+      secondCompiled.success,
     );
     const secondOracle = new AutoMovieProductionOracleService(
       secondProject,
