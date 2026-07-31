@@ -287,15 +287,16 @@ export const test_cli_project_state = (): void => {
         ),
     );
 
-    let manifestCalls = 0;
     AutoMovieProductionProject.prototype.generatedManifest = () => {
-      ++manifestCalls;
-      if (manifestCalls === 1) throw new Error("manifest unreadable");
-      return structuredClone(generatedManifest);
+      throw new Error("manifest unreadable");
     };
-    const invalidManifest = loadAutoMovieProjectState({ root: fixture.root });
-    AutoMovieProductionProject.prototype.generatedManifest =
-      generatedManifestMethod;
+    let invalidManifest: ReturnType<typeof loadAutoMovieProjectState>;
+    try {
+      invalidManifest = loadAutoMovieProjectState({ root: fixture.root });
+    } finally {
+      AutoMovieProductionProject.prototype.generatedManifest =
+        generatedManifestMethod;
+    }
     TestValidator.predicate(
       "a malformed ownership manifest is stale rather than missing",
       invalidManifest.freshness.status === "stale" &&
