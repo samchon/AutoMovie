@@ -512,24 +512,41 @@ export const test_mcp_production_application = async (): Promise<void> => {
         pass: "beauty",
       },
     });
+    const capturesAreCurrentAndIsolated =
+      missing.captured === false &&
+      missing.diagnostics[0]?.code === "capture-target-missing" &&
+      firstBeauty.captured &&
+      firstPose.captured &&
+      assetTurntable.captured &&
+      secondBeauty.captured &&
+      firstBeauty.receipt?.productionId === "fixture-film" &&
+      assetTurntable.receipt?.productionId === "fixture-film" &&
+      assetTurntable.receipt?.target.kind === "asset" &&
+      assetTurntable.receipt.target.id === "sentinel" &&
+      assetTurntable.receipt.target.angleDeg === 90 &&
+      assetTurntable.receipt.outputDigest === assetTurntable.frame?.digest &&
+      secondBeauty.receipt?.productionId === "second-film" &&
+      firstBeauty.receipt?.bundle !== secondBeauty.receipt?.bundle &&
+      capturedProductionIds.includes("fixture-film") &&
+      capturedProductionIds.includes("second-film");
+    if (capturesAreCurrentAndIsolated === false)
+      throw new Error(
+        `Capture isolation matrix failed:\n${JSON.stringify(
+          {
+            missing,
+            firstBeauty,
+            firstPose,
+            assetTurntable,
+            secondBeauty,
+            capturedProductionIds,
+          },
+          null,
+          2,
+        )}`,
+      );
     TestValidator.predicate(
       "capture resolves only current registry ids and isolates two productions",
-      missing.captured === false &&
-        missing.diagnostics[0]?.code === "capture-target-missing" &&
-        firstBeauty.captured &&
-        firstPose.captured &&
-        assetTurntable.captured &&
-        secondBeauty.captured &&
-        firstBeauty.receipt?.productionId === "fixture-film" &&
-        assetTurntable.receipt?.productionId === "fixture-film" &&
-        assetTurntable.receipt?.target.kind === "asset" &&
-        assetTurntable.receipt.target.id === "sentinel" &&
-        assetTurntable.receipt.target.angleDeg === 90 &&
-        assetTurntable.receipt.outputDigest === assetTurntable.frame?.digest &&
-        secondBeauty.receipt?.productionId === "second-film" &&
-        firstBeauty.receipt?.bundle !== secondBeauty.receipt?.bundle &&
-        capturedProductionIds.includes("fixture-film") &&
-        capturedProductionIds.includes("second-film"),
+      capturesAreCurrentAndIsolated,
     );
     TestValidator.equals(
       "only the production guide allowlist is served",
