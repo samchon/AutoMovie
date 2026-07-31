@@ -51,18 +51,41 @@ const unauditedScaffoldDependencies = (): string[] => {
       ...Object.keys(manifest.peerDependencies ?? {}),
     ]),
   );
+  const scaffoldFile = path.join(
+    ROOT,
+    "packages",
+    "cli",
+    "scaffold",
+    "package.json",
+  );
   const scaffold = JSON.parse(
-    fs.readFileSync(
-      path.join(ROOT, "packages", "cli", "scaffold", "package.json"),
-      "utf8",
-    ),
+    fs.readFileSync(scaffoldFile, "utf8"),
   ) as IPackageManifest;
-  return Object.keys(scaffold.dependencies ?? {})
-    .filter(
-      (dependency) =>
+  return Object.entries(scaffold.dependencies ?? {})
+    .filter(([dependency, specifier]) => {
+      if (specifier.startsWith("file:")) {
+        const localManifest = path.join(
+          path.resolve(
+            path.dirname(scaffoldFile),
+            specifier.slice("file:".length),
+          ),
+          "package.json",
+        );
+        return (
+          fs.existsSync(localManifest) === false ||
+          (
+            JSON.parse(fs.readFileSync(localManifest, "utf8")) as {
+              name?: string;
+            }
+          ).name !== dependency
+        );
+      }
+      return (
         workspaceNames.has(dependency) === false &&
-        productionDependencies.has(dependency) === false,
-    )
+        productionDependencies.has(dependency) === false
+      );
+    })
+    .map(([dependency]) => dependency)
     .sort(compareCodeUnits);
 };
 
@@ -89,6 +112,9 @@ const invalidSharpCapabilityWall = (): string[] => {
     fs.readFileSync(path.join(wallRoot, "package.json"), "utf8"),
   ) as IPackageManifest;
   return [
+    ...(scaffold.dependencies?.sharp === "file:vendor/sharp-disabled"
+      ? []
+      : ["scaffold direct dependency"]),
     ...(scaffold.overrides?.["@huggingface/transformers"]?.sharp ===
     "file:vendor/sharp-disabled"
       ? []
@@ -187,8 +213,9 @@ const check = (root: string) =>
  *    dependencies fail closed while allowed SPDX expressions pass.
  * 2. Wildcard exports that map `dependency/package.json` to an internal mode
  *    marker and import-only exports both resolve the licensed root manifest.
- * 3. A shipped scaffold is itself audited and can resolve only dependencies
- *    declared and installed by another audited production workspace root.
+ * 3. A shipped scaffold is itself audited and can resolve dependencies either from
+ *    another audited production workspace root or a declared local `file:`
+ *    package, including that package's own license and identity.
  * 4. Another workspace cannot hide missing direct optional, optional-peer, or
  *    external transitive edges with its own same-named installed dependency.
  * 5. Node built-ins need no package license while npm aliases audit their physical
@@ -317,6 +344,46 @@ export const test_workspace_license_policy = (): void => {
       }),
     );
     const resolvedTemplate = check(root);
+    const localDependency = path.join(scaffold, "vendor", "local-dependency");
+    fs.mkdirSync(localDependency, { recursive: true });
+    fs.writeFileSync(
+      path.join(localDependency, "package.json"),
+      JSON.stringify({
+        name: "local-dependency",
+        version: "1.0.0",
+        license: "GPL-3.0-only",
+      }),
+    );
+    fs.writeFileSync(
+      path.join(scaffold, "package.json"),
+      JSON.stringify({
+        name: "shipped-scaffold",
+        version: "1.0.0",
+        license: "MIT",
+        dependencies: {
+          "local-dependency": "file:vendor/local-dependency",
+        },
+      }),
+    );
+    const disallowedLocalTemplate = check(root);
+    fs.writeFileSync(
+      path.join(localDependency, "package.json"),
+      JSON.stringify({
+        name: "local-dependency",
+        version: "1.0.0",
+        license: "MIT",
+      }),
+    );
+    const resolvedLocalTemplate = check(root);
+    fs.writeFileSync(
+      path.join(localDependency, "package.json"),
+      JSON.stringify({
+        name: "wrong-local-identity",
+        version: "1.0.0",
+        license: "MIT",
+      }),
+    );
+    const mismatchedLocalTemplate = check(root);
     fs.writeFileSync(
       path.join(root, "package.json"),
       JSON.stringify({
@@ -424,6 +491,11 @@ export const test_workspace_license_policy = (): void => {
         unownedTemplate.stderr.includes("unowned-template") &&
         missingTemplate.status === 1 &&
         missingTemplate.stderr.includes("absent-template") &&
+        disallowedLocalTemplate.status === 1 &&
+        disallowedLocalTemplate.stderr.includes("GPL-3.0-only") &&
+        resolvedLocalTemplate.status === 0 &&
+        mismatchedLocalTemplate.status === 1 &&
+        mismatchedLocalTemplate.stderr.includes("local-dependency") &&
         missingWorkspaceOptionals.status === 1 &&
         missingWorkspaceOptionals.stderr.includes("shared-optional") &&
         missingWorkspaceOptionals.stderr.includes("shared-peer") &&

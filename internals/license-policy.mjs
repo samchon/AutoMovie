@@ -88,6 +88,20 @@ const dependencyIdentityOf = (dependency, requesterFile) => {
   return alias?.[1] ?? dependency;
 };
 
+const filePackageFileFrom = (dependency, requesterFile) => {
+  const manifest = readJson(requesterFile);
+  const specifier = productionDependenciesOf(manifest)[dependency];
+  if (typeof specifier !== "string" || specifier.startsWith("file:") === false)
+    return undefined;
+  const candidate = path.join(
+    path.resolve(path.dirname(requesterFile), specifier.slice("file:".length)),
+    "package.json",
+  );
+  if (fs.existsSync(candidate) === false) return null;
+  const dependencyManifest = readJson(candidate);
+  return dependencyManifest.name === dependency ? candidate : null;
+};
+
 const packageFileFrom = (dependency, requesterFile) => {
   const identity = dependencyIdentityOf(dependency, requesterFile);
   const requester = createRequire(
@@ -126,6 +140,13 @@ const packageFileFrom = (dependency, requesterFile) => {
 };
 
 const findPackageFile = (dependency, requesterFile) => {
+  const localFile = filePackageFileFrom(dependency, requesterFile);
+  if (localFile !== undefined) {
+    if (localFile !== null) return localFile;
+    throw new Error(
+      `Cannot resolve production dependency ${dependency} from ${requesterFile}.`,
+    );
+  }
   const workspace = workspacePackages.get(dependency);
   if (workspace !== undefined) return workspace.file;
   if (requesterFile === scaffoldPackageFile) {
