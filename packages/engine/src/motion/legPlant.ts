@@ -281,7 +281,7 @@ export const fitChainToTarget = (props: {
     return score;
   };
   const canFinish = (): boolean =>
-    best.residual <= PLANT_RESIDUAL_EPSILON &&
+    plantResidualBucket(best.residual) === 0 &&
     (props.referencePose === undefined ||
       best.continuity <= PLANT_CONTINUITY_EPSILON);
 
@@ -389,14 +389,16 @@ interface IPlantCandidateScore {
   continuity: number;
 }
 
+const plantResidualBucket = (residual: number): number =>
+  Math.floor(residual / PLANT_RESIDUAL_EPSILON);
+
 /** Residual buckets are ordered first; continuity breaks equivalent pins. */
 const comparePlantCandidate = (
   left: IPlantCandidateScore,
   right: IPlantCandidateScore,
 ): number => {
   const residualOrder =
-    Math.floor(left.residual / PLANT_RESIDUAL_EPSILON) -
-    Math.floor(right.residual / PLANT_RESIDUAL_EPSILON);
+    plantResidualBucket(left.residual) - plantResidualBucket(right.residual);
   if (residualOrder !== 0) return residualOrder;
   const continuityOrder = left.continuity - right.continuity;
   return continuityOrder === 0
