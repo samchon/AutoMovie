@@ -1180,7 +1180,7 @@ export default {
     "enforce packaged starter lint review gate",
     "npm run lint",
     starterDir,
-    "review-",
+    "has no citing acceptance scenario passed by a shot/film review",
     900_000,
   );
   run("test packaged starter", "npm test", starterDir);
