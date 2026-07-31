@@ -12,6 +12,7 @@ import { decomposeJointRotation } from "../kinematics/decomposeJointRotation";
 import {
   DEFAULT_JOINT_AXES,
   IAutoMovieJointAxes,
+  jointToQuaternion,
   normalizeJointAxes,
 } from "../kinematics/jointToQuaternion";
 import {
@@ -66,23 +67,32 @@ export const rekeyPlantedFeet = (props: {
   targets: ReadonlyArray<ReadonlyMap<AutoMovieHumanoidBone, IAutoMovieVector3>>;
 }): IAutoMovieKeyframe[] => {
   const topology = indexSkeletonTopology(props.skeleton);
-  return props.times.map((time, index) => ({
-    time,
-    pose: {
-      skeleton: props.poses[index]!.pose.skeleton,
-      root: props.poses[index]!.pose.root,
+  const keyframes: IAutoMovieKeyframe[] = [];
+  let prior: IAutoMoviePose | undefined;
+  props.times.forEach((time, index) => {
+    const sampled = props.poses[index]!;
+    const pose: IAutoMoviePose = {
+      skeleton: sampled.pose.skeleton,
+      root: sampled.pose.root,
       joints: plantedJoints(
         props.skeleton,
-        props.poses[index]!.pose,
+        sampled.pose,
         props.legs,
         props.targets[index]!,
         topology,
+        prior,
       ),
-    },
-    expression: props.poses[index]!.expression,
-    easing: "linear" as const,
-    bezier: null,
-  }));
+    };
+    keyframes.push({
+      time,
+      pose,
+      expression: sampled.expression,
+      easing: "linear",
+      bezier: null,
+    });
+    prior = pose;
+  });
+  return keyframes;
 };
 
 /** Wrap the corrected keyframes + plants as the pass result. */
@@ -143,37 +153,51 @@ export const fitChainToTarget = (props: {
   topology: IAutoMovieSkeletonTopology;
   jointAxes?: Partial<Record<AutoMovieHumanoidBone, IAutoMovieJointAxes>>;
   restFrames?: Partial<Record<AutoMovieHumanoidBone, IAutoMovieRestFrame>>;
+  /** Prior corrected pose used only to stabilize equal-residual bend branches. */
+  referencePose?: IAutoMoviePose;
 }): IAutoMoviePose => {
-  const resolve = (pose: IAutoMoviePose): ReturnType<typeof resolveBoneMap> =>
-    resolveBoneMap(
-      props.skeleton,
-      pose,
-      props.topology,
-      props.jointAxes,
-      props.restFrames,
-    );
+  const prepared = prepareChainPlant(props);
+  if (prepared === null) return props.pose;
   const solve = (
     bendNormal?: IAutoMovieVector3,
-  ): ReturnType<typeof solveChainPlant> =>
-    solveChainPlant({
-      ...props,
+  ): ReturnType<typeof solvePreparedChainPlant> =>
+    solvePreparedChainPlant({
+      prepared,
+      target: props.target,
       bendNormal,
+      jointAxes: props.jointAxes,
+      restFrames: props.restFrames,
     });
 
   const pole = solve();
   if (pole === null) return props.pose;
-  const residual = (pose: IAutoMoviePose): number =>
-    Vector3.length(
-      Vector3.subtract(
-        resolve(pose).get(props.chain.effector)!.worldPosition,
-        props.target,
-      ),
-    );
-  let best: { pose: IAutoMoviePose; residual: number } = {
+  const authored = resolveBoneMap(
+    props.skeleton,
+    props.pose,
+    props.topology,
+    props.jointAxes,
+    props.restFrames,
+  ).get(props.chain.effector)!.worldPosition;
+  const distance = (position: IAutoMovieVector3): number =>
+    Vector3.length(Vector3.subtract(position, props.target));
+  let best: {
+    derived: boolean;
+    pose: IAutoMoviePose;
+    residual: number;
+    continuity: number;
+  } = {
+    derived: false,
     pose: props.pose,
-    residual: residual(props.pose),
+    residual: distance(authored),
+    continuity: 0,
   };
+  const reference = props.referencePose ?? props.pose;
+  const referenceAngles = new Map(
+    reference.joints.map((joint) => [joint.bone, joint] as const),
+  );
   const consider = (solved: NonNullable<ReturnType<typeof solve>>): number => {
+    const upper = clampJointToSkeleton(solved.upper, props.skeleton);
+    const lower = clampJointToSkeleton(solved.lower, props.skeleton);
     const candidate: IAutoMoviePose = {
       ...props.pose,
       joints: [
@@ -182,17 +206,41 @@ export const fitChainToTarget = (props: {
             joint.bone !== props.chain.upper &&
             joint.bone !== props.chain.lower,
         ),
-        clampJointToSkeleton(solved.upper, props.skeleton),
-        clampJointToSkeleton(solved.lower, props.skeleton),
+        upper,
+        lower,
       ],
     };
-    const candidateResidual = residual(candidate);
-    if (candidateResidual < best.residual)
-      best = { pose: candidate, residual: candidateResidual };
+    const candidateResidual = distance(
+      resolvedPreparedEffector({
+        prepared,
+        upper,
+        lower,
+        jointAxes: props.jointAxes,
+        restFrames: props.restFrames,
+      }),
+    );
+    const continuity =
+      jointPoseDistance(upper, referenceAngles.get(upper.bone)) +
+      jointPoseDistance(lower, referenceAngles.get(lower.bone));
+    if (
+      candidateResidual < best.residual - PLANT_RESIDUAL_EPSILON ||
+      (best.derived &&
+        Math.abs(candidateResidual - best.residual) <= PLANT_RESIDUAL_EPSILON &&
+        continuity < best.continuity)
+    )
+      best = {
+        derived: true,
+        pose: candidate,
+        residual: candidateResidual,
+        continuity,
+      };
     return candidateResidual;
   };
 
-  const upper = resolve(props.pose).get(props.chain.upper)!;
+  consider(pole);
+  if (best.residual <= PLANT_RESIDUAL_EPSILON) return best.pose;
+
+  const upper = prepared.upper;
   const reachAxis = Vector3.normalize(
     Vector3.subtract(props.target, upper.worldPosition),
   );
@@ -213,23 +261,53 @@ export const fitChainToTarget = (props: {
     );
 
   const segments = 32;
-  let sweep = { angle: 0, residual: Number.POSITIVE_INFINITY };
+  const sweep: Array<{ angle: number; residual: number }> = [];
   for (let index = 0; index < segments; ++index) {
     const angle = (2 * Math.PI * index) / segments;
     const candidateResidual = consider(solve(normalAt(angle))!);
-    if (candidateResidual < sweep.residual)
-      sweep = { angle, residual: candidateResidual };
+    sweep.push({ angle, residual: candidateResidual });
+    if (best.residual <= PLANT_RESIDUAL_EPSILON) return best.pose;
   }
-  let step = (2 * Math.PI) / segments;
-  for (let iteration = 0; iteration < 12; ++iteration) {
-    step /= 2;
-    for (const angle of [sweep.angle - step, sweep.angle + step]) {
-      const candidateResidual = consider(solve(normalAt(angle))!);
-      if (candidateResidual < sweep.residual)
-        sweep = { angle, residual: candidateResidual };
+  const minima = sweep.filter(
+    (entry, index) =>
+      entry.residual <= sweep[(index + segments - 1) % segments]!.residual &&
+      entry.residual <= sweep[(index + 1) % segments]!.residual &&
+      (entry.residual < sweep[(index + segments - 1) % segments]!.residual ||
+        entry.residual < sweep[(index + 1) % segments]!.residual),
+  );
+  for (const minimum of minima) {
+    let center = minimum;
+    let step = (2 * Math.PI) / segments;
+    for (let iteration = 0; iteration < 10; ++iteration) {
+      step /= 2;
+      for (const angle of [center.angle - step, center.angle + step]) {
+        const candidate = {
+          angle,
+          residual: consider(solve(normalAt(angle))!),
+        };
+        if (candidate.residual < center.residual) center = candidate;
+        if (best.residual <= PLANT_RESIDUAL_EPSILON) return best.pose;
+      }
     }
   }
   return best.pose;
+};
+
+const PLANT_RESIDUAL_EPSILON = 1e-7;
+
+const jointPoseDistance = (
+  joint: IAutoMovieJointPose,
+  reference: IAutoMovieJointPose | undefined,
+): number => {
+  const distance = (value: number | null, prior: number | null): number => {
+    const delta = (value ?? 0) - (prior ?? 0);
+    return delta * delta;
+  };
+  return (
+    distance(joint.flexion, reference?.flexion ?? null) +
+    distance(joint.abduction, reference?.abduction ?? null) +
+    distance(joint.twist, reference?.twist ?? null)
+  );
 };
 
 /**
@@ -243,6 +321,7 @@ const plantedJoints = (
   legs: readonly IAutoMovieFootLeg[],
   targets: ReadonlyMap<AutoMovieHumanoidBone, IAutoMovieVector3>,
   topology: IAutoMovieSkeletonTopology,
+  referencePose?: IAutoMoviePose,
 ): IAutoMovieJointPose[] => {
   let joints = pose.joints;
   for (const leg of legs) {
@@ -254,6 +333,7 @@ const plantedJoints = (
       chain: { effector: leg.foot, upper: leg.upper, lower: leg.lower },
       target,
       topology,
+      referencePose,
     });
     joints = fitted.joints;
   }
@@ -306,6 +386,38 @@ export const solveChainPlant = (props: {
   lower: IAutoMovieJointPose;
   hinge: IAutoMovieVector3;
 } | null => {
+  const prepared = prepareChainPlant(props);
+  return prepared === null
+    ? null
+    : solvePreparedChainPlant({
+        prepared,
+        target: props.target,
+        bendNormal: props.bendNormal,
+        jointAxes: props.jointAxes,
+        restFrames: props.restFrames,
+      });
+};
+
+interface IPreparedChainPlant {
+  chain: IAutoMoviePlantChain;
+  upper: IAutoMovieResolvedBone;
+  lower: IAutoMovieResolvedBone;
+  end: IAutoMovieVector3;
+  hinge: IAutoMovieVector3;
+  lowerOffset: IAutoMovieVector3;
+  lowerRotation: ReturnType<typeof Quaternion.identity>;
+  effectorOffset: IAutoMovieVector3;
+}
+
+/** Resolve the pose-invariant chain data once for a bend-plane search. */
+const prepareChainPlant = (props: {
+  skeleton: IAutoMovieSkeleton;
+  pose: IAutoMoviePose;
+  chain: IAutoMoviePlantChain;
+  topology: IAutoMovieSkeletonTopology;
+  jointAxes?: Partial<Record<AutoMovieHumanoidBone, IAutoMovieJointAxes>>;
+  restFrames?: Partial<Record<AutoMovieHumanoidBone, IAutoMovieRestFrame>>;
+}): IPreparedChainPlant | null => {
   const { chain } = props;
   // The limb at rest under the current parent pose: zero its own articulation
   // so the recovered world rotations carry the torso pose but not the limb's.
@@ -329,16 +441,13 @@ export const solveChainPlant = (props: {
   if (upper === undefined || lower === undefined || effector === undefined)
     return null;
 
-  const articulation = twoBoneChainArticulation({
+  const upperInverse = Quaternion.inverse(upper.worldRotation);
+  const lowerInverse = Quaternion.inverse(lower.worldRotation);
+  return {
+    chain,
     upper,
     lower,
     end: effector.worldPosition,
-    target: props.target,
-    bendNormal: props.bendNormal,
-  });
-  if (articulation === null) return null;
-
-  return {
     hinge: Quaternion.rotateVector(
       lower.worldRotation,
       normalizeJointAxes(
@@ -346,6 +455,43 @@ export const solveChainPlant = (props: {
         "solveChainPlant axes",
       ).flexion,
     ),
+    lowerOffset: Quaternion.rotateVector(
+      upperInverse,
+      Vector3.subtract(lower.worldPosition, upper.worldPosition),
+    ),
+    lowerRotation: Quaternion.multiply(upperInverse, lower.worldRotation),
+    effectorOffset: Quaternion.rotateVector(
+      lowerInverse,
+      Vector3.subtract(effector.worldPosition, lower.worldPosition),
+    ),
+  };
+};
+
+/** Solve one bend normal against chain data prepared once per target. */
+const solvePreparedChainPlant = (props: {
+  prepared: IPreparedChainPlant;
+  target: IAutoMovieVector3;
+  jointAxes?: Partial<Record<AutoMovieHumanoidBone, IAutoMovieJointAxes>>;
+  restFrames?: Partial<Record<AutoMovieHumanoidBone, IAutoMovieRestFrame>>;
+  bendNormal?: IAutoMovieVector3;
+}): {
+  upper: IAutoMovieJointPose;
+  lower: IAutoMovieJointPose;
+  hinge: IAutoMovieVector3;
+} | null => {
+  const { chain, upper, lower } = props.prepared;
+
+  const articulation = twoBoneChainArticulation({
+    upper,
+    lower,
+    end: props.prepared.end,
+    target: props.target,
+    bendNormal: props.bendNormal,
+  });
+  if (articulation === null) return null;
+
+  return {
+    hinge: props.prepared.hinge,
     upper: {
       bone: chain.upper,
       ...decomposeJointRotation(
@@ -363,4 +509,38 @@ export const solveChainPlant = (props: {
       ),
     },
   };
+};
+
+/** FK only the prepared chain after its two candidate joints are clamped. */
+const resolvedPreparedEffector = (props: {
+  prepared: IPreparedChainPlant;
+  upper: IAutoMovieJointPose;
+  lower: IAutoMovieJointPose;
+  jointAxes?: Partial<Record<AutoMovieHumanoidBone, IAutoMovieJointAxes>>;
+  restFrames?: Partial<Record<AutoMovieHumanoidBone, IAutoMovieRestFrame>>;
+}): IAutoMovieVector3 => {
+  const upperRotation = Quaternion.multiply(
+    props.prepared.upper.worldRotation,
+    jointToQuaternion(
+      props.upper,
+      props.jointAxes?.[props.prepared.chain.upper],
+      props.restFrames?.[props.prepared.chain.upper],
+    ),
+  );
+  const lowerPosition = Vector3.add(
+    props.prepared.upper.worldPosition,
+    Quaternion.rotateVector(upperRotation, props.prepared.lowerOffset),
+  );
+  const lowerRotation = Quaternion.multiply(
+    Quaternion.multiply(upperRotation, props.prepared.lowerRotation),
+    jointToQuaternion(
+      props.lower,
+      props.jointAxes?.[props.prepared.chain.lower],
+      props.restFrames?.[props.prepared.chain.lower],
+    ),
+  );
+  return Vector3.add(
+    lowerPosition,
+    Quaternion.rotateVector(lowerRotation, props.prepared.effectorOffset),
+  );
 };

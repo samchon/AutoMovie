@@ -262,9 +262,11 @@ export const preserveRetargetContacts = (props: {
     AutoMovieHumanoidBone,
     { residual: number; index: number }
   >();
-  const keyframes = frames.map((kf, index) =>
-    correctFrame({
-      keyframe: kf,
+  const keyframes: IAutoMovieKeyframe[] = [];
+  let referencePose: IAutoMoviePose | undefined;
+  frames.forEach((keyframe, index) => {
+    const corrected = correctFrame({
+      keyframe,
       index,
       pins: pins[index]!,
       chains,
@@ -273,8 +275,11 @@ export const preserveRetargetContacts = (props: {
       jointAxes: props.targetJointAxes,
       restFrames: props.targetRestFrames,
       worst,
-    }),
-  );
+      referencePose,
+    });
+    keyframes.push(corrected);
+    referencePose = corrected.pose;
+  });
 
   const budget = tolerance * props.rootScale;
   for (const [effector, entry] of worst)
@@ -312,6 +317,7 @@ const correctFrame = (props: {
   jointAxes: Partial<Record<AutoMovieHumanoidBone, IAutoMovieJointAxes>>;
   restFrames: Partial<Record<AutoMovieHumanoidBone, IAutoMovieRestFrame>>;
   worst: Map<AutoMovieHumanoidBone, { residual: number; index: number }>;
+  referencePose?: IAutoMoviePose;
 }): IAutoMovieKeyframe => {
   if (props.pins.size === 0) return props.keyframe;
 
@@ -338,6 +344,7 @@ const correctFrame = (props: {
       topology: props.topology,
       jointAxes: props.jointAxes,
       restFrames: props.restFrames,
+      referencePose: props.referencePose,
     });
     if (fitted === pose) continue;
     pose = fitted;
