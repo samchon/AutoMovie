@@ -982,6 +982,7 @@ export class AutoMovieProductionProject {
           graph,
           { kind: "production" },
           this.loadGeneratedManifest()?.files.map((file) => file.path) ?? [],
+          this.screenplayIndex(),
         ),
         diagnostics: [
           {
@@ -1073,6 +1074,7 @@ export class AutoMovieProductionProject {
       graph,
       target,
       this.loadGeneratedManifest()?.files.map((file) => file.path) ?? [],
+      this.screenplayIndex(),
     );
     if (current === null)
       return {
@@ -2413,7 +2415,13 @@ export class AutoMovieProductionProject {
     const graph = this.loadGraph();
     const generatedPaths =
       this.loadGeneratedManifest()?.files.map((file) => file.path) ?? [];
-    let consequences = consequencesOf(graph, target, generatedPaths);
+    const screenplay = this.screenplayIndex();
+    let consequences = consequencesOf(
+      graph,
+      target,
+      generatedPaths,
+      screenplay,
+    );
     const previousDiagnostics = new Set(
       validateAutoMovieProductionGraph(graph, this.productionId).map(
         diagnosticIdentity,
@@ -2455,7 +2463,7 @@ export class AutoMovieProductionProject {
         ],
       };
     const next = replaceDesign(graph, target, value);
-    consequences = consequencesOf(next, target, generatedPaths);
+    consequences = consequencesOf(next, target, generatedPaths, screenplay);
     const nextDiagnostics = validateAutoMovieProductionGraph(
       next,
       this.productionId,
@@ -3523,6 +3531,7 @@ const consequencesOf = (
   graph: IAutoMovieProductionDesignGraph,
   target: IAutoMovieDesignTarget,
   generatedPaths: readonly string[],
+  screenplay: IAutoMovieScreenplayIndex | null,
 ): IAutoMovieDesignMutationConsequences => {
   const staleReviews = new Map<string, IAutoMovieReviewTarget>();
   const addReview = (review: IAutoMovieReviewTarget): void => {
@@ -3615,7 +3624,13 @@ const consequencesOf = (
           kind: "design",
           design: { kind: "acceptance", id },
         });
-  for (const id of affectedShots) addReview({ kind: "shot", id });
+  for (const id of affectedShots) {
+    addReview({ kind: "shot", id });
+    if (graph.production?.visualDelivery === "repainted")
+      addReview({ kind: "rendition", id });
+  }
+  for (const id of affectedSequenceIds(graph, screenplay, affectedShots))
+    addReview({ kind: "sequence", id });
   addReview({
     kind: "film",
     id: graph.production?.id ?? "film",
@@ -3638,6 +3653,32 @@ const consequencesOf = (
     staleRenders,
     removedGenerated: [...generatedPaths].sort(compareCodeUnits),
   };
+};
+
+const affectedSequenceIds = (
+  graph: IAutoMovieProductionDesignGraph,
+  screenplay: IAutoMovieScreenplayIndex | null,
+  affectedShots: ReadonlySet<string>,
+): string[] => {
+  if (screenplay === null || affectedShots.size === 0) return [];
+  const affectedScenes = new Set(
+    [...affectedShots].flatMap(
+      (id) =>
+        graph.shots.get(id)?.evidence?.map((evidence) => evidence.scene) ?? [],
+    ),
+  );
+  return screenplay.treatment.sequences
+    .filter((sequence) => {
+      const beats = new Set(sequence.beats.map((beat) => beat.text));
+      return screenplay.screenplay.scenes.some(
+        (scene) =>
+          scene.status === "active" &&
+          affectedScenes.has(scene.id) &&
+          scene.covers.some((coverage) => beats.has(coverage.beat)),
+      );
+    })
+    .map((sequence) => sequence.id)
+    .sort(compareCodeUnits);
 };
 
 const modelRecipeDependsOn = (

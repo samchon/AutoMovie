@@ -575,19 +575,77 @@ export const test_mcp_production_project = (): void => {
         ) &&
         acceptanceMutation.consequences.staleReviews.some(
           (target) => target.kind === "shot" && target.id === "second",
-        ) === false,
+        ) === false &&
+        secondShotMutation.consequences.staleReviews.some(
+          (target) => target.kind === "sequence" && target.id === "SEQ-SIGNAL",
+        ) &&
+        secondShotMutation.consequences.staleReviews.some(
+          (target) => target.kind === "sequence" && target.id === "SEQ-ANSWER",
+        ) === false &&
+        secondShotMutation.consequences.staleReviews.some(
+          (target) => target.kind === "rendition",
+        ) === false &&
+        acceptanceMutation.consequences.staleReviews.some(
+          (target) => target.kind === "sequence" && target.id === "SEQ-SIGNAL",
+        ),
     );
+    const repaintedProduction = productionDesign({
+      visualDelivery: "repainted",
+    });
+    repaintedProduction.deliverables = repaintedProduction.deliverables.map(
+      (deliverable) => ({
+        ...deliverable,
+        required: deliverable.kind === "feature",
+      }),
+    );
+    const productionMutation = project.setProductionDesign(repaintedProduction);
+    const repaintedShotMutation = project.setShotContract({
+      ...shotContract(),
+      id: "second",
+      beat: "second repaint consequence",
+    });
+    const repaintedAcceptance = acceptanceScenarios()[0]!;
+    if (repaintedAcceptance.criterion.kind === "frame")
+      repaintedAcceptance.criterion.expectation +=
+        " The selected rendition remains readable.";
+    const repaintedAcceptanceMutation =
+      project.setAcceptanceScenario(repaintedAcceptance);
     const modelMutation = project.setModelRecipe(modelRecipe());
+    const formationMutation = project.setFormationDesign({
+      ...formationDesign(),
+      facingDeg: 1,
+    });
     const worldMutation = project.setWorldDesign(worldDesign());
-    const productionMutation = project.setProductionDesign(productionDesign());
     TestValidator.predicate(
-      "mutation consequences identify dependent shot and film",
+      "mutation consequences identify exact sequence and rendition review dependencies",
       modelMutation.consequences.staleRenders.includes("shot:opening") &&
         modelMutation.consequences.staleRenders.includes("shot:second") &&
         worldMutation.consequences.staleReviews.some(
           (target) => target.kind === "film",
         ) &&
         productionMutation.consequences.staleRenders.length > 0 &&
+        repaintedShotMutation.consequences.staleReviews.some(
+          (target) => target.kind === "rendition" && target.id === "second",
+        ) &&
+        repaintedShotMutation.consequences.staleReviews.some(
+          (target) => target.kind === "sequence" && target.id === "SEQ-SIGNAL",
+        ) &&
+        repaintedShotMutation.consequences.staleReviews.some(
+          (target) => target.kind === "sequence" && target.id === "SEQ-ANSWER",
+        ) === false &&
+        repaintedAcceptanceMutation.consequences.staleReviews.some(
+          (target) => target.kind === "rendition" && target.id === "opening",
+        ) &&
+        modelMutation.consequences.staleReviews.some(
+          (target) => target.kind === "rendition" && target.id === "opening",
+        ) &&
+        formationMutation.consequences.staleReviews.some(
+          (target) => target.kind === "rendition" && target.id === "opening",
+        ) &&
+        worldMutation.consequences.staleReviews.some(
+          (target) => target.kind === "sequence" && target.id === "SEQ-SIGNAL",
+        ) &&
+        project.setProductionDesign(productionDesign()).accepted &&
         project.eraseDesignArtifact({
           kind: "shot",
           id: "second",
