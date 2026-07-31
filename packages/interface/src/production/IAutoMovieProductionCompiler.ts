@@ -221,6 +221,18 @@ export type IAutoMovieProductionMediaProbe =
       firstCueSeconds: number;
       /** Latest parsed cue end in seconds. */
       lastCueSeconds: number;
+    }
+  | {
+      /** Parsed deterministic sound evidence JSON. */
+      kind: "sound-evidence";
+      /** Number of semantic events in the sound plan. */
+      eventCount: number;
+      /** Number of locally synthesized dialogue receipts. */
+      dialogueCount: number;
+      /** Number of samples outside [-1, 1] in the final PCM. */
+      clippingSamples: number;
+      /** Whether every semantic event passed the frame-alignment gate. */
+      eventAlignmentPassed: boolean;
     };
 
 /** One file record independently derived by the renderer-owned receipt gate. */

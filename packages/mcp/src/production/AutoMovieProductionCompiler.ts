@@ -3365,19 +3365,27 @@ const appendDeliverableTimelineDiagnostics = (
         ),
       );
   } else {
-    const audio = probes.length === 1 ? probes[0] : null;
+    const audio = probes.filter((probe) => probe.kind === "audio");
+    const rasters = probes.filter((probe) => probe.kind === "png");
+    const evidence = probes.filter((probe) => probe.kind === "sound-evidence");
     if (
-      audio?.kind !== "audio" ||
-      frameClockClose(audio.runtimeSeconds, production.targetRuntimeSeconds) ===
-        false ||
-      deliverable.codec !== audio.codec ||
-      deliverable.runtimeSeconds !== audio.runtimeSeconds
+      audio.length !== 1 ||
+      rasters.length !== 2 ||
+      evidence.length !== 1 ||
+      frameClockClose(
+        audio[0]!.runtimeSeconds,
+        production.targetRuntimeSeconds,
+      ) === false ||
+      deliverable.codec !== audio[0]!.codec ||
+      deliverable.runtimeSeconds !== audio[0]!.runtimeSeconds ||
+      evidence[0]!.clippingSamples !== 0 ||
+      evidence[0]!.eventAlignmentPassed === false
     )
       diagnostics.push(
         renderDeliverableDiagnostic(
           "render-deliverable-media-mismatch",
           deliverable.id,
-          `Audio deliverable "${deliverable.id}" must be one parsed audio/mp4 track with current production runtime and matching codec metadata.`,
+          `Audio deliverable "${deliverable.id}" must own one exact-runtime parsed audio/mp4 track, waveform and spectrogram PNGs, and parser-verified zero-clipping event-alignment evidence.`,
         ),
       );
   }

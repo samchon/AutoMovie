@@ -5,5 +5,6 @@ export * from "./IAutoMovieProductionDesign";
 export * from "./IAutoMovieProductionOracle";
 export * from "./IAutoMovieProductionReview";
 export * from "./IAutoMovieProductionRendition";
+export * from "./IAutoMovieProductionSound";
 export * from "./IAutoMovieScreenplayIndex";
 export * from "./application";

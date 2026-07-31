@@ -14,7 +14,8 @@ export const probeProductionMedia = (props: {
 }): IAutoMovieProductionMediaProbe => {
   if (
     props.kind === "preview" ||
-    (props.kind === "guide-pass" && props.mediaType === "image/png")
+    ((props.kind === "guide-pass" || props.kind === "audio-mix") &&
+      props.mediaType === "image/png")
   ) {
     if (props.mediaType !== "image/png")
       throw new Error(
@@ -22,6 +23,51 @@ export const probeProductionMedia = (props: {
       );
     const png = PNG.sync.read(Buffer.from(props.bytes));
     return { kind: "png", width: png.width, height: png.height };
+  }
+  if (props.kind === "audio-mix" && props.mediaType === "application/json") {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(
+        new TextDecoder("utf-8", { fatal: true }).decode(props.bytes),
+      );
+    } catch {
+      throw new Error("Sound evidence bytes are not valid UTF-8 JSON.");
+    }
+    const evidence = parsed as Partial<{
+      version: number;
+      plan: { events: unknown[] };
+      analysis: {
+        clippingSamples: number;
+        eventAlignment: Array<{ passed: boolean }>;
+      };
+      tts: unknown[];
+    }>;
+    if (
+      evidence.version !== 1 ||
+      Array.isArray(evidence.plan?.events) === false ||
+      Number.isSafeInteger(evidence.analysis?.clippingSamples) === false ||
+      evidence.analysis!.clippingSamples < 0 ||
+      Array.isArray(evidence.analysis?.eventAlignment) === false ||
+      Array.isArray(evidence.tts) === false
+    )
+      throw new Error(
+        "Sound evidence JSON lacks a versioned plan, analysis, and TTS receipt list.",
+      );
+    if (
+      evidence.analysis!.eventAlignment.length !== evidence.plan!.events.length
+    )
+      throw new Error(
+        "Sound evidence event analysis does not cover every planned event.",
+      );
+    return {
+      kind: "sound-evidence",
+      eventCount: evidence.plan!.events.length,
+      dialogueCount: evidence.tts.length,
+      clippingSamples: evidence.analysis!.clippingSamples,
+      eventAlignmentPassed: evidence.analysis!.eventAlignment.every(
+        (event) => event.passed === true,
+      ),
+    };
   }
   if (props.kind === "captions") {
     if (props.mediaType !== "text/vtt")
@@ -109,7 +155,48 @@ export const probeProductionMedia = (props: {
       throw new Error(
         `MP4 contains ${movie.videoTracks.length} video tracks; exactly one is required.`,
       );
-    return probeVideoTrack(props.bytes, parsed.file, movie.videoTracks[0]!);
+    if (movie.tracks.length !== (props.kind === "feature" ? 2 : 1))
+      throw new Error(
+        `${props.kind} MP4 contains ${movie.tracks.length} total tracks; exactly ${props.kind === "feature" ? 2 : 1} are required.`,
+      );
+    if (props.kind === "feature" && movie.audioTracks.length !== 1)
+      throw new Error(
+        `Feature MP4 contains ${movie.audioTracks.length} audio tracks; exactly one is required.`,
+      );
+    if (props.kind === "guide-pass" && movie.audioTracks.length !== 0)
+      throw new Error(
+        `Guide-pass MP4 contains ${movie.audioTracks.length} audio tracks; none are allowed.`,
+      );
+    const video = probeVideoTrack(
+      props.bytes,
+      parsed.file,
+      movie.videoTracks[0]!,
+    );
+    if (props.kind === "feature") {
+      const audio = probeAudioTrack(
+        props.bytes,
+        parsed.file,
+        movie.audioTracks[0]!,
+      );
+      const videoTrack = movie.videoTracks[0]!;
+      const audioTrack = movie.audioTracks[0]!;
+      if (
+        BigInt(videoTrack.duration) * BigInt(audioTrack.timescale) !==
+        BigInt(audioTrack.duration) * BigInt(videoTrack.timescale)
+      )
+        throw new Error(
+          "Feature MP4 video and audio tracks do not have exactly equal runtimes.",
+        );
+      if (
+        audio.channels !== 2 ||
+        audio.sampleRate !== 48_000 ||
+        /^(opus|mp4a)(?:\.|$)/i.test(audio.codec) === false
+      )
+        throw new Error(
+          `Feature MP4 audio must be 48 kHz stereo Opus or AAC, but parsed ${audio.codec}, ${audio.sampleRate} Hz, ${audio.channels} channels.`,
+        );
+    }
+    return video;
   }
   if (props.mediaType !== "audio/mp4")
     throw new Error(
@@ -123,7 +210,18 @@ export const probeProductionMedia = (props: {
     throw new Error(
       `MP4 contains ${movie.audioTracks.length} audio tracks; exactly one is required.`,
     );
-  const track = movie.audioTracks[0]!;
+  if (movie.tracks.length !== 1)
+    throw new Error(
+      `Audio-mix MP4 contains ${movie.tracks.length} total tracks; exactly one is required.`,
+    );
+  return probeAudioTrack(props.bytes, parsed.file, movie.audioTracks[0]!);
+};
+
+const probeAudioTrack = (
+  bytes: Uint8Array,
+  file: ReturnType<typeof createFile>,
+  track: Track,
+): Extract<IAutoMovieProductionMediaProbe, { kind: "audio" }> => {
   const audio = track.audio;
   if (
     audio === undefined ||
@@ -134,7 +232,7 @@ export const probeProductionMedia = (props: {
     throw new Error(
       "MP4 audio track lacks codec, duration, or channel metadata.",
     );
-  verifySampleStorage(props.bytes, parsed.file, track);
+  verifySampleStorage(bytes, file, track);
   return {
     kind: "audio",
     container: "mp4",

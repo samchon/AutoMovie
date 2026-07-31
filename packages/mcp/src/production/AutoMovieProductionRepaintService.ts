@@ -223,7 +223,7 @@ export class AutoMovieProductionRepaintService {
         generated.runtimeIdentity,
       );
       probe = probeProductionMedia({
-        kind: "feature",
+        kind: "guide-pass",
         mediaType: generated.mediaType,
         bytes: generated.bytes,
       });

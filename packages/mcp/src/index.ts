@@ -15,6 +15,7 @@ export * from "./production/contentIdentity";
 export * from "./production/filmTimeline";
 export * from "./production/materializeProduction";
 export * from "./production/probeProductionMedia";
+export * from "./production/muxProductionFeatureMp4";
 export * from "./production/productionPublicationSnapshot";
 export * from "./production/productionRenderJob";
 export * from "./production/productionRenderGc";

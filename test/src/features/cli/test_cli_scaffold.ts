@@ -164,6 +164,10 @@ export const test_cli_scaffold = (): void => {
       pkg.includes(
         `"h264-mp4-encoder": "${AUTOMOVIE_TEMPLATE_VERSIONS.h264Mp4Encoder}"`,
       ) &&
+      pkg.includes(`"kokoro-js": "${AUTOMOVIE_TEMPLATE_VERSIONS.kokoroJs}"`) &&
+      pkg.includes(
+        `"libopus-wasm": "${AUTOMOVIE_TEMPLATE_VERSIONS.libopusWasm}"`,
+      ) &&
       pkg.includes(`"mp4box": "${AUTOMOVIE_TEMPLATE_VERSIONS.mp4box}"`) &&
       pkg.includes(
         `"playwright": "${AUTOMOVIE_TEMPLATE_VERSIONS.playwright}"`,
@@ -279,6 +283,14 @@ export const test_cli_scaffold = (): void => {
       files["scripts/render.ts"]!.includes("runProductionRenderJob") &&
       files["scripts/render.ts"]!.includes("commitProductionPublication") &&
       files["scripts/render.ts"]!.includes("probeProductionMedia") &&
+      files["scripts/render.ts"]!.includes("deriveProductionSoundPlan") &&
+      files["scripts/render.ts"]!.includes("KokoroTTS.from_pretrained") &&
+      files["scripts/render.ts"]!.includes("KOKORO_MODEL_REVISION") &&
+      files["scripts/render.ts"]!.includes("productionSoundRuntimeIdentity") &&
+      files["scripts/render.ts"]!.includes("encodeProductionOpus") &&
+      files["scripts/render.ts"]!.includes("muxProductionFeatureMp4") &&
+      files["scripts/render.ts"]!.includes('"waveform.png"') &&
+      files["scripts/render.ts"]!.includes('"spectrogram.png"') &&
       files["scripts/render.ts"]!.includes('process.argv.indexOf("--tier")') &&
       files["scripts/render.ts"]!.includes("productionRenderLayersForPass") &&
       files["scripts/render.ts"]!.includes("renderGarbageCollection") &&

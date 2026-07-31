@@ -1586,7 +1586,7 @@ export class AutoMovieProductionProject {
         "Repaint receipt production, content-addressed path, digest, or byte count differs from resident output.",
       );
     const probe = probeProductionMedia({
-      kind: "feature",
+      kind: "guide-pass",
       mediaType: "video/mp4",
       bytes,
     });

@@ -1,10 +1,21 @@
+import {
+  deriveProductionSoundPlan,
+  productionPhonemesToVisemes,
+  productionSoundSpectrogram,
+  productionSoundWaveform,
+  renderProductionSound,
+} from "@automovie/engine";
 import type {
   AutoMovieContentDigest,
   AutoMovieGuidePass,
   IAutoMovieCaptureFrame,
+  IAutoMovieCompiledShotSource,
   IAutoMovieProductionDeliverable,
   IAutoMovieProductionMediaProbe,
   IAutoMovieProductionRenderManifest,
+  IAutoMovieProductionSoundAnalysis,
+  IAutoMovieProductionSoundPlan,
+  IAutoMovieProductionTtsReceipt,
   IAutoMovieReviewTarget,
 } from "@automovie/interface";
 import {
@@ -24,6 +35,7 @@ import {
   digestAutoMovieBytes,
   encodeAutoMoviePathSegment,
   inspectAutoMovieProduction,
+  muxProductionFeatureMp4,
   openAutoMovieProduction,
   planProductionRenderGc,
   planProductionRenderJob,
@@ -41,7 +53,7 @@ import {
   verifyProductionRenderJobPlan,
 } from "@automovie/mcp";
 import * as HME from "h264-mp4-encoder";
-import { createFile } from "mp4box";
+import { BoxParser, createFile } from "mp4box";
 import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import { createRequire } from "node:module";
@@ -79,6 +91,10 @@ const planPath = path.join(stateRoot, "plan.json");
 const action = process.argv[2] ?? "all";
 const require = createRequire(import.meta.url);
 const heldChunkLocks = new Map<string, { path: string; token: string }>();
+const KOKORO_MODEL = "onnx-community/Kokoro-82M-v1.0-ONNX" as const;
+const KOKORO_MODEL_REVISION =
+  "1939ad2a8e416c0acfeecc08a694d14ef25f2231" as const;
+const KOKORO_VOICE = "af_heart";
 
 interface IRenderChunkLockOwner {
   chunk: AutoMovieContentDigest;
@@ -363,8 +379,8 @@ const renderSourceDigest = (
 ): AutoMovieContentDigest =>
   digestAutoMovieBytes(
     Buffer.from(
-      JSON.stringify(
-        project
+      JSON.stringify({
+        content: project
           .contentInputs()
           .filter((input) => {
             const audio = new Set(
@@ -377,10 +393,71 @@ const renderSourceDigest = (
             digest:
               input.bytes === null ? null : digestAutoMovieBytes(input.bytes),
           })),
-      ),
+        soundRuntime: productionSoundRuntimeIdentity(),
+      }),
       "utf8",
     ),
   );
+
+const productionSoundRuntimeIdentity = () => ({
+  protocol: "automovie.production-sound.v1",
+  sampleRate: 48_000,
+  channels: 2,
+  opus: {
+    ...resolvedPackageIdentity("libopus-wasm"),
+    bitrate: 128_000,
+    complexity: 10,
+    vbr: false,
+    frameSize: 960,
+  },
+  mux: resolvedPackageIdentity("mp4box"),
+  evidencePng: resolvedPackageIdentity("pngjs"),
+  tts: {
+    ...resolvedPackageIdentity("kokoro-js"),
+    model: KOKORO_MODEL,
+    modelRevision: KOKORO_MODEL_REVISION,
+    dtype: "q8",
+    device: "wasm",
+    voice: KOKORO_VOICE,
+    speed: 1,
+  },
+});
+
+const resolvedPackageIdentity = (
+  packageName: string,
+): {
+  package: string;
+  version: string;
+  entryDigest: AutoMovieContentDigest;
+} => {
+  const entry = require.resolve(packageName);
+  let directory = path.dirname(entry);
+  for (;;) {
+    const manifest = path.join(directory, "package.json");
+    if (fs.existsSync(manifest)) {
+      const parsed = JSON.parse(fs.readFileSync(manifest, "utf8")) as Partial<{
+        name: string;
+        version: string;
+      }>;
+      if (
+        parsed.name === packageName &&
+        typeof parsed.version === "string" &&
+        parsed.version.length > 0
+      )
+        return {
+          package: packageName,
+          version: parsed.version,
+          entryDigest: digestAutoMovieBytes(fs.readFileSync(entry)),
+        };
+    }
+    const parent = path.dirname(directory);
+    if (parent === directory)
+      throw new Error(
+        `Resolved package "${packageName}" has no matching package.json ancestor.`,
+      );
+    directory = parent;
+  }
+};
 
 const renderShotFingerprints = (
   project: AutoMovieProductionProject,
@@ -780,6 +857,9 @@ const finalize = async (plan: IAutoMovieProductionRenderJobPlan) => {
     compileFingerprint: plan.compileFingerprint,
     deliverables: [],
   };
+  let soundPromise: Promise<IProductionSoundBundle> | undefined;
+  const currentSound = (): Promise<IProductionSoundBundle> =>
+    (soundPromise ??= produceProductionSound(project, plan));
   const publicationSegment = renderPublicationFingerprint(plan).slice(7);
   for (const deliverable of graph.production.deliverables) {
     const owned = new Map<string, Uint8Array>();
@@ -796,9 +876,11 @@ const finalize = async (plan: IAutoMovieProductionRenderJobPlan) => {
       continue;
     }
     if (deliverable.kind === "feature") {
+      const video = await encodeChunkFrames(plan, deliverableChunks);
+      const sound = await currentSound();
       owned.set(
         "feature.mp4",
-        await encodeChunkFrames(plan, deliverableChunks),
+        muxProductionFeatureMp4({ video, audio: sound.audio }),
       );
     } else if (deliverable.kind === "guide-pass") {
       const passes = [...new Set(deliverableChunks.map((chunk) => chunk.pass))];
@@ -834,11 +916,26 @@ const finalize = async (plan: IAutoMovieProductionRenderJobPlan) => {
       } else
         owned.set("captions.vtt", Buffer.from(plan.tracks.captions, "utf8"));
     } else if (deliverable.kind === "audio-mix") {
-      if (plan.tracks.audio.some((cue) => cue.gain !== 0))
-        throw new Error(
-          "The scaffold audio adapter currently accepts zero-gain guide stems only. Supply a package-owned PCM/AAC adapter before requiring audible mix output.",
-        );
-      owned.set("audio.mp4", deterministicSilentAudio(plan));
+      const sound = await currentSound();
+      owned.set("audio.mp4", sound.audio);
+      owned.set("waveform.png", sound.waveform);
+      owned.set("spectrogram.png", sound.spectrogram);
+      owned.set(
+        "evidence.json",
+        Buffer.from(
+          `${JSON.stringify(
+            {
+              version: 1,
+              plan: sound.plan,
+              analysis: sound.analysis,
+              tts: sound.tts,
+            },
+            null,
+            2,
+          )}\n`,
+          "utf8",
+        ),
+      );
     } else {
       const timeline = readAutoMovieFilmTimeline(
         project,
@@ -889,11 +986,13 @@ const finalize = async (plan: IAutoMovieProductionRenderJobPlan) => {
       const mediaType =
         deliverable.kind === "captions"
           ? "text/vtt"
-          : deliverable.kind === "preview" || name.endsWith(".png")
-            ? "image/png"
-            : deliverable.kind === "audio-mix"
-              ? "audio/mp4"
-              : "video/mp4";
+          : name.endsWith(".json")
+            ? "application/json"
+            : deliverable.kind === "preview" || name.endsWith(".png")
+              ? "image/png"
+              : deliverable.kind === "audio-mix"
+                ? "audio/mp4"
+                : "video/mp4";
       const probe = probeProductionMedia({
         kind: deliverable.kind,
         mediaType,
@@ -1245,44 +1344,333 @@ const encodePngFrames = async (
   return output;
 };
 
-const deterministicSilentAudio = (
-  plan: IAutoMovieProductionRenderJobPlan,
-): Uint8Array => {
-  // Raw AAC-LC silence access units at 48 kHz stereo. The container duration is
-  // exact even when the final access unit is shorter than 1024 samples.
-  const sampleRate = 48_000;
-  const total = Math.round(
-    (plan.totalFrames / plan.frameFormat.fps) * sampleRate,
+interface IProductionSoundBundle {
+  plan: IAutoMovieProductionSoundPlan;
+  analysis: IAutoMovieProductionSoundAnalysis;
+  tts: IAutoMovieProductionTtsReceipt[];
+  audio: Uint8Array;
+  waveform: Uint8Array;
+  spectrogram: Uint8Array;
+}
+
+interface IKokoroCacheRecord {
+  version: 1;
+  cacheKey: AutoMovieContentDigest;
+  model: "onnx-community/Kokoro-82M-v1.0-ONNX";
+  modelRevision: "1939ad2a8e416c0acfeecc08a694d14ef25f2231";
+  voice: string;
+  sourceSampleRate: number;
+  sourceSamples: number;
+  pcmDigest: AutoMovieContentDigest;
+  phonemes: string;
+}
+
+interface IKokoroRuntime {
+  stream(
+    text: string,
+    options: { voice: string; speed: number },
+  ): AsyncIterable<{
+    text: string;
+    phonemes: string;
+    audio: { audio: Float32Array; sampling_rate: number };
+  }>;
+}
+
+const produceProductionSound = async (
+  project: AutoMovieProductionProject,
+  renderPlan: IAutoMovieProductionRenderJobPlan,
+): Promise<IProductionSoundBundle> => {
+  const timeline = readAutoMovieFilmTimeline(
+    project,
+    renderPlan.compileFingerprint,
   );
+  const graph = project.graph();
+  const compiled = new Map<string, IAutoMovieCompiledShotSource>();
+  for (const shot of new Set(timeline.segments.map((segment) => segment.shot)))
+    compiled.set(
+      shot,
+      JSON.parse(
+        Buffer.from(
+          project.readGeneratedFile(
+            `shots/${encodeAutoMoviePathSegment(shot)}.json`,
+          ),
+        ).toString("utf8"),
+      ) as IAutoMovieCompiledShotSource,
+    );
+  const soundPlan = deriveProductionSoundPlan({
+    timeline,
+    contracts: graph.shots,
+    compiled,
+  });
+  if (
+    soundPlan.totalFrames !== renderPlan.totalFrames ||
+    soundPlan.fps !== renderPlan.frameFormat.fps
+  )
+    throw new Error(
+      "Sound plan and render plan do not share the exact film frame clock.",
+    );
+  const synthesized = await synthesizeProductionDialogue(soundPlan);
+  const rendered = renderProductionSound({
+    plan: soundPlan,
+    dialogue: synthesized.pcm,
+  });
+  if (
+    rendered.analysis.clippingSamples !== 0 ||
+    rendered.analysis.eventAlignment.some((event) => event.passed === false)
+  )
+    throw new Error(
+      "Final sound failed clipping or semantic event/frame alignment gates.",
+    );
+  const waveform = productionSoundWaveform(rendered.pcm);
+  const spectrogram = productionSoundSpectrogram(rendered.pcm);
+  return {
+    plan: soundPlan,
+    analysis: rendered.analysis,
+    tts: synthesized.receipts,
+    audio: await encodeProductionOpus(rendered.pcm),
+    waveform: encodeSoundRaster(waveform),
+    spectrogram: encodeSoundRaster(spectrogram),
+  };
+};
+
+const synthesizeProductionDialogue = async (
+  plan: IAutoMovieProductionSoundPlan,
+): Promise<{
+  pcm: Map<string, Float32Array>;
+  receipts: IAutoMovieProductionTtsReceipt[];
+}> => {
+  const pcm = new Map<string, Float32Array>();
+  const receipts: IAutoMovieProductionTtsReceipt[] = [];
+  const cacheRoot = path.join(productionStateRoot, "audio-cache", "kokoro");
+  let runtime: Promise<IKokoroRuntime> | undefined;
+  const currentRuntime = (): Promise<IKokoroRuntime> =>
+    (runtime ??= import("kokoro-js").then(async ({ KokoroTTS }) => {
+      const loaded = await KokoroTTS.from_pretrained(KOKORO_MODEL, {
+        dtype: "q8",
+        device: "wasm",
+        revision: KOKORO_MODEL_REVISION,
+      });
+      return loaded as unknown as IKokoroRuntime;
+    }));
+  for (const line of plan.dialogue) {
+    const cacheKey = digestAutoMovieBytes(
+      Buffer.from(
+        JSON.stringify({
+          version: 1,
+          model: KOKORO_MODEL,
+          modelRevision: KOKORO_MODEL_REVISION,
+          dtype: "q8",
+          device: "wasm",
+          voice: KOKORO_VOICE,
+          speed: 1,
+          text: line.text.normalize("NFKC"),
+          language: line.language.normalize("NFKC"),
+          speaker: line.speaker?.normalize("NFKC") ?? null,
+        }),
+        "utf8",
+      ),
+    );
+    const stem = cacheKey.slice(7);
+    const pcmPath = path.join(cacheRoot, `${stem}.f32`);
+    const receiptPath = path.join(cacheRoot, `${stem}.json`);
+    let cached:
+      | { record: IKokoroCacheRecord; samples: Float32Array }
+      | undefined;
+    try {
+      if (fs.existsSync(pcmPath) && fs.existsSync(receiptPath)) {
+        const record = readRendererJson<IKokoroCacheRecord>(
+          productionStateRoot,
+          receiptPath,
+        );
+        const bytes = readAutoMovieProductionOwnedFile({
+          root: productionStateRoot,
+          directory: cacheRoot,
+          relative: path.basename(pcmPath),
+        });
+        if (
+          record.version === 1 &&
+          record.cacheKey === cacheKey &&
+          record.model === KOKORO_MODEL &&
+          record.modelRevision === KOKORO_MODEL_REVISION &&
+          record.voice === KOKORO_VOICE &&
+          Number.isSafeInteger(record.sourceSampleRate) &&
+          record.sourceSampleRate > 0 &&
+          Number.isSafeInteger(record.sourceSamples) &&
+          record.sourceSamples > 0 &&
+          typeof record.phonemes === "string" &&
+          record.sourceSamples * Float32Array.BYTES_PER_ELEMENT ===
+            bytes.length &&
+          record.pcmDigest === digestAutoMovieBytes(bytes)
+        )
+          cached = {
+            record,
+            samples: new Float32Array(Uint8Array.from(bytes).buffer),
+          };
+      }
+    } catch {
+      cached = undefined;
+    }
+    if (cached === undefined) {
+      const chunks: Float32Array[] = [];
+      const phonemes: string[] = [];
+      let sourceSampleRate: number | undefined;
+      for await (const chunk of (await currentRuntime()).stream(line.text, {
+        voice: KOKORO_VOICE,
+        speed: 1,
+      })) {
+        if (
+          Number.isSafeInteger(chunk.audio.sampling_rate) === false ||
+          chunk.audio.sampling_rate <= 0
+        )
+          throw new Error(
+            `Kokoro line "${line.id}" returned an invalid PCM sample rate.`,
+          );
+        if (
+          sourceSampleRate !== undefined &&
+          sourceSampleRate !== chunk.audio.sampling_rate
+        )
+          throw new Error(
+            `Kokoro line "${line.id}" changed PCM sample rate mid-stream.`,
+          );
+        sourceSampleRate = chunk.audio.sampling_rate;
+        chunks.push(Float32Array.from(chunk.audio.audio));
+        phonemes.push(chunk.phonemes);
+      }
+      if (sourceSampleRate === undefined || chunks.length === 0)
+        throw new Error(`Kokoro synthesized no PCM for line "${line.id}".`);
+      const samples = concatenateFloat32(chunks);
+      const bytes = new Uint8Array(
+        samples.buffer,
+        samples.byteOffset,
+        samples.byteLength,
+      );
+      const record: IKokoroCacheRecord = {
+        version: 1,
+        cacheKey,
+        model: KOKORO_MODEL,
+        modelRevision: KOKORO_MODEL_REVISION,
+        voice: KOKORO_VOICE,
+        sourceSampleRate,
+        sourceSamples: samples.length,
+        pcmDigest: digestAutoMovieBytes(bytes),
+        phonemes: phonemes.join(""),
+      };
+      writeFileAtomic(pcmPath, bytes);
+      writeJsonAtomic(receiptPath, record);
+      cached = { record, samples };
+    }
+    pcm.set(line.id, cached.samples);
+    receipts.push({
+      ...cached.record,
+      line: line.id,
+      visemes: productionPhonemesToVisemes({
+        phonemes: cached.record.phonemes,
+        startFrame: line.startFrame,
+        endFrame: line.endFrame,
+      }),
+    });
+  }
+  return { pcm, receipts };
+};
+
+const encodeProductionOpus = async (pcm: Float32Array): Promise<Uint8Array> => {
+  if (pcm.length === 0 || pcm.length % 2 !== 0)
+    throw new Error("Opus encoding requires non-empty interleaved stereo PCM.");
+  const { createEncoder } = await import("libopus-wasm");
+  const encoder = await createEncoder({
+    bitrate: 128_000,
+    complexity: 10,
+    vbr: false,
+  });
+  if (
+    encoder.frameSize !== 960 ||
+    encoder.channels !== 2 ||
+    encoder.sampleRate !== 48_000
+  ) {
+    encoder.free();
+    throw new Error(
+      "Pinned Opus runtime no longer exposes the required 48 kHz stereo 20 ms profile.",
+    );
+  }
+  const sampleFrames = pcm.length / 2;
+  const packets: Array<{ bytes: Uint8Array; duration: number; dts: number }> =
+    [];
+  try {
+    for (let dts = 0; dts < sampleFrames; dts += encoder.frameSize) {
+      const frame = new Float32Array(encoder.frameSize * encoder.channels);
+      frame.set(
+        pcm.subarray(
+          dts * encoder.channels,
+          Math.min(pcm.length, (dts + encoder.frameSize) * encoder.channels),
+        ),
+      );
+      packets.push({
+        bytes: Uint8Array.from(encoder.encodeFloat(frame)),
+        duration: Math.min(encoder.frameSize, sampleFrames - dts),
+        dts,
+      });
+    }
+  } finally {
+    encoder.free();
+  }
+  const description = new BoxParser.box.dOps();
+  description.Version = 0;
+  description.OutputChannelCount = 2;
+  description.PreSkip = 0;
+  description.InputSampleRate = 48_000;
+  description.OutputGain = 0;
+  description.ChannelMappingFamily = 0;
+  description.StreamCount = 1;
+  description.CoupledCount = 1;
+  description.ChannelMapping = [];
   const file = createFile();
   file.init({
-    brands: ["isom", "iso2", "mp41"],
-    timescale: sampleRate,
-    duration: total,
+    brands: ["isom", "iso2", "mp41", "Opus"],
+    timescale: 48_000,
+    duration: sampleFrames,
   });
   const track = file.addTrack({
-    type: "mp4a",
+    type: "Opus",
     hdlr: "soun",
-    name: "AutoMovie deterministic silence",
-    timescale: sampleRate,
-    media_duration: total,
-    duration: total,
-    samplerate: sampleRate,
+    name: "AutoMovie deterministic Opus mix",
+    timescale: 48_000,
+    media_duration: sampleFrames,
+    duration: sampleFrames,
+    samplerate: 48_000,
     channel_count: 2,
     samplesize: 16,
+    description_boxes: [description],
   });
-  for (let dts = 0; dts < total; dts += 1_024)
-    file.addSample(
-      track,
-      Uint8Array.from([0x21, 0x10, 0x04, 0x60, 0x8c, 0x1c]),
-      {
-        duration: Math.min(1_024, total - dts),
-        dts,
-        cts: dts,
-        is_sync: true,
-      },
-    );
+  for (const packet of packets)
+    file.addSample(track, packet.bytes, {
+      duration: packet.duration,
+      dts: packet.dts,
+      cts: packet.dts,
+      is_sync: true,
+    });
   return new Uint8Array(file.getBuffer().buffer);
+};
+
+const encodeSoundRaster = (raster: {
+  width: number;
+  height: number;
+  rgba: Uint8Array;
+}): Uint8Array => {
+  const png = new PNG({ width: raster.width, height: raster.height });
+  png.data = Buffer.from(raster.rgba);
+  return PNG.sync.write(png);
+};
+
+const concatenateFloat32 = (chunks: readonly Float32Array[]): Float32Array => {
+  const output = new Float32Array(
+    chunks.reduce((total, chunk) => total + chunk.length, 0),
+  );
+  let offset = 0;
+  for (const chunk of chunks) {
+    output.set(chunk, offset);
+    offset += chunk.length;
+  }
+  return output;
 };
 
 const assertDeliverableProbe = (
@@ -1328,6 +1716,16 @@ const assertDeliverableProbe = (
     if (probe.kind !== "webvtt" || probe.lastCueSeconds > runtimeSeconds)
       throw new Error(
         "Caption output is empty, malformed, unordered, or outside the production timeline.",
+      );
+    return;
+  }
+  if (probe.kind === "png" || probe.kind === "sound-evidence") {
+    if (
+      probe.kind === "sound-evidence" &&
+      (probe.clippingSamples !== 0 || probe.eventAlignmentPassed === false)
+    )
+      throw new Error(
+        "Sound evidence reports clipping or a semantic event outside its frame gate.",
       );
     return;
   }

@@ -69,6 +69,8 @@ const versions = {
   mcp: packageVersion("packages/mcp"),
   viewer: packageVersion("packages/viewer"),
   h264Mp4Encoder: catalogVersion("media", "h264-mp4-encoder"),
+  kokoroJs: catalogVersion("media", "kokoro-js"),
+  libopusWasm: catalogVersion("media", "libopus-wasm"),
   mp4box: catalogVersion("media", "mp4box"),
   mcpSdk: catalogVersion("modelcontextprotocol", "@modelcontextprotocol/sdk"),
   playwright: catalogVersion("media", "playwright"),

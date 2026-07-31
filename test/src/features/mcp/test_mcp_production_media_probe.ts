@@ -1,4 +1,4 @@
-import { probeProductionMedia } from "@automovie/mcp";
+import { muxProductionFeatureMp4, probeProductionMedia } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
 
 import {
@@ -6,6 +6,7 @@ import {
   productionH264Mp4,
   productionInterframeH264Mp4,
   productionMpeg4Part2Mp4,
+  productionOpusMp4,
   productionPng,
   productionWebVtt,
 } from "./productionMediaFixtures";
@@ -60,6 +61,78 @@ export const test_mcp_production_media_probe = async (): Promise<void> => {
         }),
       "unrecognised content",
     ),
+  );
+  const soundEvidence = Buffer.from(
+    JSON.stringify({
+      version: 1,
+      plan: { events: [{ id: "volley" }] },
+      analysis: {
+        clippingSamples: 0,
+        eventAlignment: [{ passed: true }],
+      },
+      tts: [{ line: "captain" }],
+    }),
+  );
+  TestValidator.equals(
+    "sound evidence derives event, dialogue, clipping and alignment facts",
+    probeProductionMedia({
+      kind: "audio-mix",
+      mediaType: "application/json",
+      bytes: soundEvidence,
+    }),
+    {
+      kind: "sound-evidence",
+      eventCount: 1,
+      dialogueCount: 1,
+      clippingSamples: 0,
+      eventAlignmentPassed: true,
+    },
+  );
+  TestValidator.predicate(
+    "sound evidence must be UTF-8 JSON with complete event analysis",
+    refused(
+      () =>
+        probeProductionMedia({
+          kind: "audio-mix",
+          mediaType: "application/json",
+          bytes: Buffer.from([0xc3]),
+        }),
+      "UTF-8 JSON",
+    ) &&
+      refused(
+        () =>
+          probeProductionMedia({
+            kind: "audio-mix",
+            mediaType: "application/json",
+            bytes: Buffer.from(
+              JSON.stringify({
+                version: 1,
+                plan: { events: [{}] },
+                analysis: { clippingSamples: 0, eventAlignment: [] },
+                tts: [],
+              }),
+            ),
+          }),
+        "does not cover",
+      ) &&
+      refused(
+        () =>
+          probeProductionMedia({
+            kind: "audio-mix",
+            mediaType: "application/json",
+            bytes: Buffer.from("{}"),
+          }),
+        "lacks a versioned plan",
+      ),
+  );
+  TestValidator.equals(
+    "audio-mix PNG evidence is decoded as a raster",
+    probeProductionMedia({
+      kind: "audio-mix",
+      mediaType: "image/png",
+      bytes: png,
+    }),
+    { kind: "png", width: 16, height: 8 },
   );
 
   const vtt = productionWebVtt();
@@ -289,21 +362,71 @@ export const test_mcp_production_media_probe = async (): Promise<void> => {
     fps: 24,
     frameCount: 4,
   });
-  const feature = probeProductionMedia({
-    kind: "feature",
+  const videoProbe = probeProductionMedia({
+    kind: "guide-pass",
     mediaType: "video/mp4",
     bytes: video,
   });
   TestValidator.predicate(
     "the feature probe derives H.264 geometry and frame timing",
+    videoProbe.kind === "video" &&
+      videoProbe.container === "mp4" &&
+      videoProbe.codec === "h264" &&
+      videoProbe.width === 16 &&
+      videoProbe.height === 16 &&
+      videoProbe.frameCount === 4 &&
+      videoProbe.fps === 24 &&
+      Math.abs(videoProbe.runtimeSeconds - 4 / 24) < 1e-9,
+  );
+  const featureBytes = muxProductionFeatureMp4({
+    video,
+    audio: productionOpusMp4(8_000),
+  });
+  const feature = probeProductionMedia({
+    kind: "feature",
+    mediaType: "video/mp4",
+    bytes: featureBytes,
+  });
+  TestValidator.predicate(
+    "a feature requires and preserves exact-runtime H.264 plus stereo Opus",
     feature.kind === "video" &&
-      feature.container === "mp4" &&
-      feature.codec === "h264" &&
-      feature.width === 16 &&
-      feature.height === 16 &&
       feature.frameCount === 4 &&
       feature.fps === 24 &&
       Math.abs(feature.runtimeSeconds - 4 / 24) < 1e-9,
+  );
+  TestValidator.predicate(
+    "video-only MP4 cannot satisfy the final feature contract",
+    refused(
+      () =>
+        probeProductionMedia({
+          kind: "feature",
+          mediaType: "video/mp4",
+          bytes: video,
+        }),
+      "exactly 2",
+    ),
+  );
+  TestValidator.predicate(
+    "feature mux refuses unequal track clocks",
+    refused(
+      () =>
+        muxProductionFeatureMp4({
+          video,
+          audio: productionOpusMp4(7_999),
+        }),
+      "exactly equal",
+    ),
+  );
+  TestValidator.predicate(
+    "feature mux refuses a non-48-kHz-stereo final audio track",
+    refused(
+      () =>
+        muxProductionFeatureMp4({
+          video,
+          audio: productionOpusMp4(8_000, 1),
+        }),
+      "48 kHz stereo",
+    ),
   );
   TestValidator.predicate(
     "guide passes use the same decoded video contract",
@@ -432,7 +555,7 @@ export const test_mcp_production_media_probe = async (): Promise<void> => {
     refused(
       () =>
         probeProductionMedia({
-          kind: "feature",
+          kind: "guide-pass",
           mediaType: "video/mp4",
           bytes: escapedSamples,
         }),
@@ -447,7 +570,7 @@ export const test_mcp_production_media_probe = async (): Promise<void> => {
     refused(
       () =>
         probeProductionMedia({
-          kind: "feature",
+          kind: "guide-pass",
           mediaType: "video/mp4",
           bytes: zeroVideoClock,
         }),
@@ -462,7 +585,7 @@ export const test_mcp_production_media_probe = async (): Promise<void> => {
     refused(
       () =>
         probeProductionMedia({
-          kind: "feature",
+          kind: "guide-pass",
           mediaType: "video/mp4",
           bytes: zeroSampleDuration,
         }),
@@ -477,7 +600,7 @@ export const test_mcp_production_media_probe = async (): Promise<void> => {
     refused(
       () =>
         probeProductionMedia({
-          kind: "feature",
+          kind: "guide-pass",
           mediaType: "video/mp4",
           bytes: noSyncSample,
         }),
@@ -496,7 +619,7 @@ export const test_mcp_production_media_probe = async (): Promise<void> => {
     refused(
       () =>
         probeProductionMedia({
-          kind: "feature",
+          kind: "guide-pass",
           mediaType: "video/mp4",
           bytes: unbackedSamples,
         }),
@@ -508,7 +631,7 @@ export const test_mcp_production_media_probe = async (): Promise<void> => {
     refused(
       () =>
         probeProductionMedia({
-          kind: "feature",
+          kind: "guide-pass",
           mediaType: "video/mp4",
           bytes: productionMpeg4Part2Mp4(),
         }),

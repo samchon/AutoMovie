@@ -102,6 +102,16 @@ never sweep candidates.
 Guide-pass publication includes both its MP4 and authenticated
 `frames/<pass>/frame_XXXXXXXX.png` control images.
 
+Finalization derives semantic sound effects from compiled shot events, samples
+their emitters relative to the active camera, mixes authored score cues and
+caption-timed dialogue at 48 kHz stereo, and encodes deterministic Opus without
+a host `ffmpeg`. Dialogue uses the local Kokoro ONNX/WASM adapter and caches each
+normalized line by content, model, voice, and inference settings, so changing
+one line invalidates only that line. The audio deliverable owns `audio.mp4`,
+waveform and spectrogram PNGs, and parser-verified clipping/event-alignment
+evidence. The feature MP4 muxes that exact audio with H.264 video; final media
+probing refuses video-only feature output or unequal A/V runtimes.
+
 `status`, `verify`, and `finalize` re-run the package-owned capture, actual
 graphics, declared render-source, and encoder identity preflight. They may
 launch Chromium; any identity change marks the stored chunks stale instead of

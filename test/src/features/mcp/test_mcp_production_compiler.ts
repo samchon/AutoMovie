@@ -10,6 +10,7 @@ import {
   canonicalizeAutoMovieJson,
   compareCodeUnits,
   digestAutoMovieBytes,
+  muxProductionFeatureMp4,
   probeProductionMedia,
 } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
@@ -29,6 +30,7 @@ import {
 import {
   productionAudioMp4,
   productionH264Mp4,
+  productionOpusMp4,
 } from "./productionMediaFixtures";
 
 const diagnosticCodes = (
@@ -2142,11 +2144,17 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
       requiredProduction.targetRuntimeSeconds *
         requiredProduction.frameFormat.fps,
     );
-    const featureBytes = await productionH264Mp4({
+    const featureVideoBytes = await productionH264Mp4({
       width: requiredProduction.frameFormat.width,
       height: requiredProduction.frameFormat.height,
       fps: requiredProduction.frameFormat.fps,
       frameCount: featureFrameCount,
+    });
+    const featureBytes = muxProductionFeatureMp4({
+      video: featureVideoBytes,
+      audio: productionOpusMp4(
+        Math.round(requiredProduction.targetRuntimeSeconds * 48_000),
+      ),
     });
     fs.mkdirSync(path.join(fixture.root, "renders/fixture-film/deliverables"), {
       recursive: true,
@@ -2441,6 +2449,30 @@ export const film = {
         mediaType: medium.mediaType,
       };
     };
+    const edgeSoundEvidenceFile = (id: string) => {
+      const bytes = Buffer.from(
+        JSON.stringify({
+          version: 1,
+          plan: { events: [] },
+          analysis: { clippingSamples: 0, eventAlignment: [] },
+          tts: [],
+        }),
+      );
+      const relative = `deliverables/final-edges/${id}.json`;
+      const absolute = path.join(
+        fixture.root,
+        "renders",
+        "fixture-film",
+        relative,
+      );
+      fs.writeFileSync(absolute, bytes);
+      return {
+        path: relative,
+        digest: digestAutoMovieBytes(bytes),
+        bytes: bytes.length,
+        mediaType: "application/json",
+      };
+    };
     const validRendered = (
       id: string,
       kind: RenderedDeliverable["kind"],
@@ -2454,7 +2486,15 @@ export const film = {
       return {
         id,
         kind,
-        files: [edgeFile(id, kind)],
+        files:
+          kind === "audio-mix"
+            ? [
+                edgeFile(id, kind),
+                edgeFile(`${id}-waveform`, "preview"),
+                edgeFile(`${id}-spectrogram`, "preview"),
+                edgeSoundEvidenceFile(`${id}-evidence`),
+              ]
+            : [edgeFile(id, kind)],
         runtimeSeconds: timed ? edgeProduction.targetRuntimeSeconds : null,
         frameCount: framed
           ? Math.round(

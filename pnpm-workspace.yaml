@@ -29,6 +29,8 @@ catalogs:
   media:
     gifenc: ^1.0.3
     h264-mp4-encoder: ^1.0.12
+    kokoro-js: ^1.2.1
+    libopus-wasm: ^0.2.0
     mp4box: ^2.4.1
     playwright: ^1.60.0
     playwright-core: ^1.60.0

@@ -16,3 +16,4 @@ export * from "./worldKit";
 export * from "./space";
 export * from "./validation";
 export * from "./productionIdentity";
+export * from "./sound";

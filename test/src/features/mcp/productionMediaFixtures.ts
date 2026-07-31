@@ -1,4 +1,5 @@
 import * as HME from "h264-mp4-encoder";
+import { BoxParser, createFile } from "mp4box";
 import { PNG } from "pngjs";
 
 /** Encode a small real H.264/MP4 stream without relying on a host ffmpeg. */
@@ -74,6 +75,48 @@ export const productionAudioMp4 = (): Uint8Array =>
     ].join(""),
     "base64",
   );
+
+/** Encode parser-valid 48 kHz stereo Opus silence at an exact track duration. */
+export const productionOpusMp4 = (
+  sampleFrames: number,
+  channels: 1 | 2 = 2,
+): Uint8Array => {
+  const description = new BoxParser.box.dOps();
+  description.Version = 0;
+  description.OutputChannelCount = channels;
+  description.PreSkip = 0;
+  description.InputSampleRate = 48_000;
+  description.OutputGain = 0;
+  description.ChannelMappingFamily = 0;
+  description.StreamCount = 1;
+  description.CoupledCount = channels - 1;
+  description.ChannelMapping = [];
+  const file = createFile();
+  file.init({
+    brands: ["isom", "iso2", "mp41", "Opus"],
+    timescale: 48_000,
+    duration: sampleFrames,
+  });
+  const track = file.addTrack({
+    type: "Opus",
+    hdlr: "soun",
+    timescale: 48_000,
+    media_duration: sampleFrames,
+    duration: sampleFrames,
+    samplerate: 48_000,
+    channel_count: channels,
+    samplesize: 16,
+    description_boxes: [description],
+  });
+  for (let dts = 0; dts < sampleFrames; dts += 960)
+    file.addSample(track, Uint8Array.from([0xf8, 0xff, 0xfe]), {
+      duration: Math.min(960, sampleFrames - dts),
+      dts,
+      cts: dts,
+      is_sync: true,
+    });
+  return new Uint8Array(file.getBuffer().buffer);
+};
 
 /** One actual MPEG-4 Part 2 video track used to reject non-AVC MP4. */
 export const productionMpeg4Part2Mp4 = (): Uint8Array =>
