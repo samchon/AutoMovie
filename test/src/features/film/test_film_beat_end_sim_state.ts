@@ -104,7 +104,8 @@ const plant = (
  * 4. A held actor: gaitPhase, rootVelocity, footPlants, and mount all null.
  * 5. Plants carry the latest active run per foot: a run beginning exactly at the
  *    cut supersedes an earlier overlapping run, a run ending exactly at the cut
- *    remains active, and past/future runs are filtered.
+ *    remains active, equal starts go to the later input, and past/future runs
+ *    are filtered.
  * 6. No plant entry for a node, an empty entry, and an entry with only past/future
  *    runs all yield null.
  * 7. A staged mount is carried onto its rider; unmounted actors get null.
@@ -163,7 +164,9 @@ export const test_film_beat_end_sim_state = (): void => {
           plant("leftFoot", 2, 3),
           plant("leftFoot", 1.2, 1, 2.1),
           plant("leftFoot", 0.1, 8),
-          plant("rightFoot", 1.6, 2),
+          plant("rightFoot", 1.6, 7),
+          plant("rightFoot", 2, 4, 2),
+          plant("rightFoot", 2, 2, 2),
           plant("rightFoot", 99, 9),
         ],
       },
@@ -182,7 +185,7 @@ export const test_film_beat_end_sim_state = (): void => {
   TestValidator.equals(
     "latest active plant per foot carried with inclusive cut bounds",
     hero.footPlants,
-    [plant("leftFoot", 2, 3), plant("rightFoot", 1.6, 2)],
+    [plant("leftFoot", 2, 3), plant("rightFoot", 2, 2, 2)],
   );
   TestValidator.equals("mount carried to its rider", hero.mount, {
     parent: "horse",

@@ -5,6 +5,7 @@ import {
   compileDefinedShot,
   defineShot,
   makeActorSynthesizer,
+  resolveBeatEnd,
   resolvePose,
   sampleMotion,
 } from "@automovie/engine";
@@ -243,6 +244,61 @@ export const test_film_defined_shot_continuity = (): void => {
           motion.loop === false &&
           (motion.gaitCycle ?? null) !== null,
       ),
+  );
+
+  const stalePin = {
+    foot: "leftFoot" as const,
+    start: 0,
+    end: 0.25,
+    position: { x: 100, y: 0, z: 100 },
+  };
+  const staleClosing = resolveBeatEnd({
+    beat: "beat-1",
+    scene: first.source.scene,
+    shot: first.source.shot,
+    motions: first.source.motions,
+    plants: [{ node: "knightA", plants: [stalePin] }],
+  });
+  const afterStale = compileWalk({
+    id: "SB-PLANT-STALE",
+    rig,
+    stage: groundedStage,
+    target: {
+      x: firstActor.transform.translation.x + 1,
+      y: firstActor.transform.translation.y,
+      z: firstActor.transform.translation.z,
+    },
+    previous: staleClosing,
+  });
+  const afterStaleNode =
+    afterStale.success === false
+      ? null
+      : afterStale.source.scene.nodes.find((node) => node.id === "knightA")!;
+  const afterStaleMotion =
+    afterStale.success === false
+      ? null
+      : afterStale.source.motions.find(
+          (motion) => (motion.gaitCycle ?? null) !== null,
+        )!;
+  const afterStaleFoot =
+    afterStaleNode === null || afterStaleMotion === null
+      ? null
+      : Vector3.add(
+          afterStaleNode.transform.translation,
+          Quaternion.rotateVector(
+            afterStaleNode.transform.rotation,
+            resolvePose(sampleMotion(afterStaleMotion, 0).pose, rig).find(
+              (bone) => bone.bone === "leftFoot",
+            )!.worldPosition,
+          ),
+        );
+  TestValidator.predicate(
+    "a plant that ended before the cut never becomes the next opening pin",
+    staleClosing.actors.find((actor) => actor.node === "knightA")
+      ?.footPlants === null &&
+      afterStale.success &&
+      afterStaleFoot !== null &&
+      vclose(afterStaleFoot, stalePin.position, 1e-4) === false,
   );
 
   const velocityRig = createSkeleton();
