@@ -20,6 +20,7 @@ import {
 import { IAutoMovieActionSynthesizer } from "../perform/compilePerformance";
 import { IAutoMovieCollisionResponse } from "../physics/collisionResponse";
 import { IAutoMovieRestFrame } from "../rom/restFrame";
+import { compareCodeUnits } from "../text/compareCodeUnits";
 import { blockBeat } from "./blockBeat";
 import { performShot } from "./performShot";
 import { realizeShotContract } from "./realizeShotContract";
@@ -559,7 +560,7 @@ const canonicalAdviceValue = (value: unknown): unknown => {
   if (typeof value !== "object" || value === null) return value;
   return Object.fromEntries(
     Object.keys(value)
-      .sort()
+      .sort(compareCodeUnits)
       .map((key) => [
         key,
         canonicalAdviceValue((value as Record<string, unknown>)[key]),
