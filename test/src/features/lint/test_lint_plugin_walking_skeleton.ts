@@ -1,4 +1,9 @@
 import { renderScaffold, writeFiles } from "@automovie/cli";
+import type {
+  IAutoMovieAcceptanceScenario,
+  IAutoMovieReviewEvidence,
+  IAutoMovieStoredReview,
+} from "@automovie/interface";
 import { type SpawnSyncReturns, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import fs from "node:fs";
@@ -464,7 +469,32 @@ const screenplayConfig = [
   '        formations: [".automovie/design/*/formations/*.json"],',
   '        worlds: [".automovie/design/*/world.json"],',
   '        realizations: ["generated/*/realizations/*.json"],',
-  '        reviews: [".automovie/reviews/*/shots/*.json", ".automovie/reviews/*/film/*.json"],',
+  '        reviews: [".automovie/reviews/*/shots/*.json", ".automovie/reviews/*/film/*.json", ".automovie/reviews/*/films/*.json"],',
+  "      },",
+  "    ],",
+  "  },",
+  "};",
+  "",
+].join("\n");
+
+const legacyScreenplayConfig = [
+  'import { automovie } from "@automovie/lint";',
+  "",
+  "export default {",
+  "  plugins: { automovie },",
+  "  rules: {",
+  '    "automovie/screenplay-contract": [',
+  '      "error",',
+  "      {",
+  '        indexes: [".automovie/design/screenplay/index.json"],',
+  '        documents: ["docs/**/*.md"],',
+  '        shots: [".automovie/design/shots/*.json"],',
+  '        acceptance: [".automovie/design/acceptance/*.json"],',
+  '        models: [".automovie/design/models/*.json"],',
+  '        formations: [".automovie/design/formations/*.json"],',
+  '        worlds: [".automovie/design/world.json"],',
+  '        realizations: ["generated/realizations/*.json"],',
+  '        reviews: [".automovie/reviews/shots/*.json", ".automovie/reviews/film/*.json", ".automovie/reviews/films/*.json"],',
   "      },",
   "    ],",
   "  },",
@@ -747,13 +777,14 @@ const screenplayFiles = (
   return files;
 };
 
-/** Replace nominal shot acceptance with one film-owned acceptance review. */
+/** Replace nominal shot acceptance with one current film acceptance review. */
 const filmReviewScreenplayFiles = (
+  layout: "legacy" | "namespaced",
   directory: "film" | "films",
 ): Record<string, string> => {
   const files = screenplayFiles("valid");
   delete files[".automovie/reviews/film/shots/shot-1.json"];
-  files[".automovie/design/film/acceptance/accept-1.json"] = JSON.stringify({
+  const acceptance: IAutoMovieAcceptanceScenario = {
     id: "accept-1",
     evidence: [
       {
@@ -762,20 +793,75 @@ const filmReviewScreenplayFiles = (
       },
     ],
     target: { kind: "film", id: "film" },
-    criterion: { kind: "frame", shot: "shot-1" },
-  });
-  files[`.automovie/reviews/film/${directory}/film.json`] = JSON.stringify({
-    complete: true,
+    criterion: {
+      kind: "frame",
+      shot: "shot-1",
+      frame: "beauty",
+      pass: "beauty",
+      expectation: "The final film preserves the authored signal.",
+    },
+    required: true,
+  };
+  files[".automovie/design/film/acceptance/accept-1.json"] =
+    JSON.stringify(acceptance);
+  const frameEvidence: IAutoMovieReviewEvidence = {
+    kind: "frame",
+    target: { kind: "shot", id: "shot-1" },
+    reviewFrame: "beauty",
+    bundle: "generated/film/renders/shot-1",
+    frame: 0,
+    time: 0,
+    pass: "beauty",
+    digest:
+      "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  };
+  const review: IAutoMovieStoredReview = {
+    version: 1,
     target: { kind: "film", id: "film" },
+    fingerprint:
+      "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    observations: "The completed film preserves the authored signal.",
     checks: [
+      ...["narrative-completion", "tone-consistency", "delivery-readiness"].map(
+        (criterion) => ({
+          criterion,
+          verdict: "pass" as const,
+          observation: `${criterion} is visible in the current film frames.`,
+          evidence: [frameEvidence],
+        }),
+      ),
       {
         criterion: "acceptance-scenarios",
         verdict: "pass",
+        observation: "The required signal scenario passes on current evidence.",
+        evidence: [
+          frameEvidence,
+          {
+            kind: "acceptance",
+            scenario: "accept-1",
+            exactValue: acceptance,
+          },
+        ],
         acceptanceScenarios: ["accept-1"],
       },
     ],
-  });
-  return files;
+    corrections: [],
+    completionBasis:
+      "narrative-completion, tone-consistency, delivery-readiness, acceptance-scenarios",
+    complete: true,
+  };
+  files[`.automovie/reviews/film/${directory}/film.json`] =
+    JSON.stringify(review);
+  if (layout === "namespaced") return files;
+  return Object.fromEntries(
+    Object.entries(files).map(([file, content]) => [
+      file
+        .replace(".automovie/design/film/", ".automovie/design/")
+        .replace(".automovie/reviews/film/", ".automovie/reviews/")
+        .replace("generated/film/realizations/", "generated/realizations/"),
+      content,
+    ]),
+  );
 };
 
 const assertSucceeded = (result: IRunResult, because: string): void => {
@@ -1014,7 +1100,7 @@ export function test_lint_plugin_walking_skeleton(): void {
   const filmReview = runFixture({
     name: "screenplay-film-review",
     lintConfig: screenplayConfig,
-    files: filmReviewScreenplayFiles("film"),
+    files: filmReviewScreenplayFiles("namespaced", "film"),
   });
   assertSucceeded(
     filmReview,
@@ -1024,12 +1110,33 @@ export function test_lint_plugin_walking_skeleton(): void {
   const pluralFilmReview = runFixture({
     name: "screenplay-plural-film-review",
     lintConfig: screenplayConfig,
-    files: filmReviewScreenplayFiles("films"),
+    files: filmReviewScreenplayFiles("namespaced", "films"),
   });
   assertFailedWith(
     pluralFilmReview,
     "A completed design review is not observation.",
     "A plural films directory is not runtime-owned evidence and must not discharge acceptance.",
+  );
+
+  const legacyFilmReview = runFixture({
+    name: "screenplay-legacy-film-review",
+    lintConfig: legacyScreenplayConfig,
+    files: filmReviewScreenplayFiles("legacy", "film"),
+  });
+  assertSucceeded(
+    legacyFilmReview,
+    "A current review in the runtime-owned legacy singular film directory must discharge film-target acceptance.",
+  );
+
+  const legacyPluralFilmReview = runFixture({
+    name: "screenplay-legacy-plural-film-review",
+    lintConfig: legacyScreenplayConfig,
+    files: filmReviewScreenplayFiles("legacy", "films"),
+  });
+  assertFailedWith(
+    legacyPluralFilmReview,
+    "A completed design review is not observation.",
+    "A legacy plural films directory is not runtime-owned evidence and must not discharge acceptance.",
   );
 
   const uncoveredBeat = runFixture({

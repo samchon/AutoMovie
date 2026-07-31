@@ -472,10 +472,17 @@ func checkScreenplayIndex(
 	if owner != ".automovie/design" {
 		segment := strings.TrimPrefix(owner, ".automovie/design/")
 		realizationPrefix = "generated/" + segment + "/realizations/"
-		ownedReviews = screenplayOwnedFiles(
-			root,
-			".automovie/reviews/"+segment+"/",
-			reviewFiles,
+		ownedReviews = append(
+			screenplayOwnedFiles(
+				root,
+				".automovie/reviews/"+segment+"/shots/",
+				reviewFiles,
+			),
+			screenplayOwnedFiles(
+				root,
+				".automovie/reviews/"+segment+"/film/",
+				reviewFiles,
+			)...,
 		)
 	}
 	ownedRealizations := screenplayOwnedFiles(
