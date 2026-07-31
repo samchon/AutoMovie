@@ -2213,7 +2213,7 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
       [
         "unreadable-camera",
         "contract-realization-failed",
-        "  output.stage.cameras[0]!.position.x = 100;",
+        '  output.performance.draft[1]!.on = { kind: "point", point: { x: 100, y: 0, z: 0 } };',
       ],
     ] as const) {
       fs.writeFileSync(sourcePath, mutateSourceOutput(mutation));
