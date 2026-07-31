@@ -724,10 +724,16 @@ export const test_mcp_production_project = (): void => {
 
     const first = AutoMovieProductionProject.open(fixture.root);
     const stale = AutoMovieProductionProject.open(fixture.root);
-    first.setWorldDesign(worldDesign());
+    const staleRevision = stale.revision();
+    const concurrentDesign = productionDesign({
+      title: "fixture-film concurrent revision",
+    });
+    const concurrentMutation = first.setProductionDesign(concurrentDesign);
     TestValidator.predicate(
       "optimistic revision rejects stale resident writers",
-      throws(() => stale.setProductionDesign(productionDesign())),
+      concurrentMutation.accepted &&
+        concurrentMutation.revision > staleRevision &&
+        throws(() => stale.setProductionDesign(productionDesign())),
     );
 
     const compiler = new AutoMovieProductionCompiler(
