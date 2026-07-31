@@ -162,7 +162,7 @@ export namespace IAutoMoviePerformedShot {
     /** The synthesised per-actor clips, keyed by scene-node id. */
     motions: Record<string, IAutoMovieMotion>;
 
-    /** Ground-IK stance runs produced while resuming prior opening plants. */
+    /** Ground-IK stance runs produced for gait or resumed opening plants. */
     plants: Array<{
       /** Scene node owning these world-space plant runs. */
       node: string;
@@ -249,6 +249,13 @@ export namespace IAutoMoviePerformedShot {
  * for the same child this beat overrides its mount; a mount emits no
  * grab/attach/detach/release events (it is standing scene state, not a per-shot
  * pickup). A mount onto a rig-less parent or an absent bone is a violation.
+ *
+ * Locomotion and gait-bearing actor motions pass through {@link plantStanceFeet}
+ * before ROM and artifact validation. A first stride therefore emits the
+ * world-space plant facts a later beat can resume; an existing opening plant is
+ * converted into model space for the solve and back into scene world space
+ * exactly once at this boundary. Static non-gait clips keep their authored key
+ * grid.
  *
  * @param props.skeleton Rig lookup for ROM validation; return null for a node
  *   that has no skeleton (its clip skips ROM).
@@ -1428,12 +1435,30 @@ export const performShot = (props: {
   const compiled = compilePerformance(stageActions, synthesizeOnce);
   const motions = compiled.performances;
   const plants: IAutoMoviePerformedShot.ISuccess["plants"] = [];
-  for (const actor of previous?.actors ?? []) {
-    if (actor.footPlants === null) continue;
-    const motion = motions[actor.node];
-    const rig = skeleton(actor.node);
-    const node = staged.scene.nodes.find((entry) => entry.id === actor.node);
-    if (motion === undefined || rig === null || node === undefined) continue;
+  const previousByNode = new Map(
+    (previous?.actors ?? []).map((actor) => [actor.node, actor]),
+  );
+  // A first stride must create the plant state a later stride can resume.
+  // Restrict the pass to authored locomotion, retained gait metadata, or an
+  // existing pin so static gesture/hold clips keep their authored key grid.
+  const locomotingNodes = new Set(
+    stageActions
+      .filter((action) => action.verb === "locomote")
+      .flatMap(actionActors),
+  );
+  for (const [actor, motion] of Object.entries(motions).sort(([x], [y]) =>
+    compareCodeUnits(x, y),
+  )) {
+    const priorPlants = previousByNode.get(actor)?.footPlants ?? null;
+    if (
+      priorPlants === null &&
+      locomotingNodes.has(actor) === false &&
+      (motion.gaitCycle ?? null) === null
+    )
+      continue;
+    const rig = skeleton(actor);
+    const node = staged.scene.nodes.find((entry) => entry.id === actor);
+    if (rig === null || node === undefined) continue;
     const inverse = Quaternion.inverse(node.transform.rotation);
     const toModelPoint = (point: IAutoMovieVector3): IAutoMovieVector3 =>
       Quaternion.rotateVector(
@@ -1448,14 +1473,14 @@ export const performShot = (props: {
     const planted = plantStanceFeet({
       skeleton: rig,
       motion,
-      openingPlants: actor.footPlants.map((plant) => ({
+      openingPlants: (priorPlants ?? []).map((plant) => ({
         foot: plant.foot,
         position: toModelPoint(plant.position),
       })),
     });
-    motions[actor.node] = planted.motion;
+    motions[actor] = planted.motion;
     plants.push({
-      node: actor.node,
+      node: actor,
       plants: planted.plants.map((plant) => ({
         ...plant,
         position: toWorldPoint(plant.position),

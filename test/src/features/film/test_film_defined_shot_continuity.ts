@@ -1,13 +1,19 @@
 import {
   IAutoMovieActorContext,
+  Quaternion,
+  Vector3,
   compileDefinedShot,
   defineShot,
   makeActorSynthesizer,
+  resolvePose,
+  sampleMotion,
 } from "@automovie/engine";
 import {
   IAutoMovieBeatEndState,
+  IAutoMovieDefinedShotContract,
   IAutoMovieGait,
   IAutoMovieShotProgram,
+  IAutoMovieSkeleton,
   IAutoMovieVector3,
 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
@@ -19,6 +25,7 @@ import {
   makeStagingWrite,
 } from "../internal/filmFixtures";
 import { createSkeleton, joint, makePose } from "../internal/fixtures";
+import { vclose } from "../internal/predicates";
 
 const WALK: IAutoMovieGait = {
   name: "walk",
@@ -31,6 +38,105 @@ const WALK: IAutoMovieGait = {
       amplitude: 12,
     },
   ],
+};
+
+const walkingProgram = (
+  stage: ReturnType<typeof makeStagingWrite>,
+  target: IAutoMovieVector3,
+): IAutoMovieShotProgram => ({
+  actors: [{ node: "knightA", model: "knightA", speed: 1, eyeHeight: 1.6 }],
+  script: makeScriptWrite(),
+  stage,
+  blocking: makeBlockingWrite({
+    actors: [{ node: "knightA", beats: "continues one grounded stride" }],
+    duration: 1,
+  }),
+  performance: makePerformanceWrite({
+    draft: [
+      {
+        verb: "locomote",
+        actor: "knightA",
+        start: 0,
+        duration: "auto",
+        gait: "walk",
+        to: { kind: "point", point: target },
+      },
+      {
+        verb: "frame",
+        actor: "cam-main",
+        start: 0,
+        duration: "auto",
+        framing: "medium",
+        move: "static",
+        on: { kind: "node", node: "knightA" },
+      },
+    ],
+    revise: { review: "The planted stride remains readable.", final: null },
+    duration: 1,
+  }),
+  eventSamples: [],
+});
+
+const walkingContract = (): IAutoMovieDefinedShotContract => ({
+  beat: "beat-1",
+  durationSeconds: 1,
+  participants: [{ kind: "actor", id: "knightA" }],
+  opening: [],
+  closing: [],
+  camera: {
+    intent: "Keep the grounded walker readable.",
+    requiredSubjects: ["knightA"],
+    maxOcclusionRatio: 0.2,
+  },
+  events: [],
+  reviewFrames: [{ id: "middle", time: 0.5, passes: ["beauty"] }],
+});
+
+/** Compile one grounded gait shot against the shared rig. */
+const compileWalk = (props: {
+  id: string;
+  rig: IAutoMovieSkeleton;
+  stage: ReturnType<typeof makeStagingWrite>;
+  target: IAutoMovieVector3;
+  previous?: IAutoMovieBeatEndState;
+}) => {
+  const contexts = new Map<string, IAutoMovieActorContext>([
+    [
+      "knightA",
+      {
+        skeleton: props.rig.id,
+        rig: props.rig,
+        gaits: [WALK],
+        position: props.stage.actors[0]!.position,
+        speed: 1,
+        facingDeg: props.stage.actors[0]!.facingDeg,
+        eyeHeight: 1.6,
+        restPose: makePose([]),
+      },
+    ],
+  ]);
+  const nodes = new Map<string, IAutoMovieVector3>([
+    ...props.stage.actors.map((actor) => [actor.node, actor.position] as const),
+    ...props.stage.cameras.map(
+      (camera) => [camera.node, camera.position] as const,
+    ),
+  ]);
+  return compileDefinedShot({
+    shot: defineShot(props.id, {
+      scene: props.stage.scene.id,
+      contract: walkingContract(),
+      build: () => walkingProgram(props.stage, props.target),
+    }),
+    context: undefined,
+    runtime: {
+      synthesize: makeActorSynthesizer(contexts, nodes),
+      skeleton: (node) => (node === "knightA" ? props.rig : null),
+      hasActorContext: (node) => node === "knightA",
+      gaits: (node) => (node === "knightA" ? ["walk"] : undefined),
+      frameFormat: { width: 1920, height: 1080 },
+      previous: props.previous,
+    },
+  });
 };
 
 /**
@@ -52,6 +158,82 @@ export const test_film_defined_shot_continuity = (): void => {
     },
     constraint: null,
   });
+  const groundedStage = makeStagingWrite({
+    actors: [
+      {
+        node: "knightA",
+        position: { x: 3, y: 0, z: 4 },
+        facingDeg: 90,
+      },
+      {
+        node: "knightB",
+        position: { x: 3, y: 0, z: 4.7 },
+        facingDeg: 270,
+      },
+    ],
+  });
+  const first = compileWalk({
+    id: "SB-PLANT-A",
+    rig,
+    stage: groundedStage,
+    target: { x: 3.01, y: 0, z: 4 },
+  });
+  TestValidator.predicate(
+    "a first gait shot produces its own ground-IK plant seed",
+    first.success &&
+      first.continuity.closing.actors
+        .find((actor) => actor.node === "knightA")
+        ?.footPlants?.some((plant) => plant.foot === "leftFoot") === true,
+  );
+  if (first.success === false) return;
+  const firstActor = first.continuity.closing.actors.find(
+    (actor) => actor.node === "knightA",
+  )!;
+  const firstPin = firstActor.footPlants!.find(
+    (plant) => plant.foot === "leftFoot",
+  )!.position;
+  const second = compileWalk({
+    id: "SB-PLANT-B",
+    rig,
+    stage: groundedStage,
+    target: {
+      x: firstActor.transform.translation.x + 0.01,
+      y: firstActor.transform.translation.y,
+      z: firstActor.transform.translation.z,
+    },
+    previous: first.continuity.closing,
+  });
+  TestValidator.predicate(
+    "the next shot compiles from the first shot's generated plant",
+    second.success,
+  );
+  if (second.success === false) return;
+  const secondNode = second.source.scene.nodes.find(
+    (node) => node.id === "knightA",
+  )!;
+  const secondMotion = second.source.motions.find(
+    (motion) => (motion.gaitCycle ?? null) !== null,
+  )!;
+  const secondFoot = resolvePose(sampleMotion(secondMotion, 0).pose, rig).find(
+    (bone) => bone.bone === "leftFoot",
+  )!.worldPosition;
+  const secondWorldFoot = Vector3.add(
+    secondNode.transform.translation,
+    Quaternion.rotateVector(secondNode.transform.rotation, secondFoot),
+  );
+  TestValidator.predicate(
+    "translated and rotated handoff preserves the same world foot pin",
+    vclose(secondWorldFoot, firstPin, 1e-4) &&
+      second.source.motions.every(
+        (motion) =>
+          motion.id.length !== 0 &&
+          motion.skeleton === rig.id &&
+          motion.duration === 1 &&
+          motion.loop === false &&
+          (motion.gaitCycle ?? null) !== null,
+      ),
+  );
+
   const stage = makeStagingWrite();
   const program: IAutoMovieShotProgram = {
     actors: [{ node: "knightA", model: "knightA", speed: 0.5, eyeHeight: 1.6 }],
