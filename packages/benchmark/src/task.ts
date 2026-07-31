@@ -30,8 +30,14 @@ export const AUTOMOVIE_BENCHMARK_DELIVERY_PREFIX = "delivery:";
 /** Corpus tier, which fixes the runtime budget one task may consume. */
 export type AutoMovieBenchmarkTier = "short" | "medium" | "long";
 
-/** MCP surface one submission was produced through. */
+/**
+ * MCP surface one submission was produced through.
+ *
+ * `five-tool` is current. The other values remain readable for archived
+ * comparison runs and must not be removed when their servers retire.
+ */
 export type AutoMovieBenchmarkSurface =
+  | "five-tool"
   | "production"
   | "legacy-compact"
   | "legacy-granular";

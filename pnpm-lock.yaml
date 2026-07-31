@@ -149,6 +149,28 @@ importers:
         specifier: catalog:typescript
         version: 7.0.2
 
+  packages/benchmark-runner:
+    dependencies:
+      '@automovie/benchmark':
+        specifier: workspace:^
+        version: link:../benchmark
+    devDependencies:
+      '@ttsc/lint':
+        specifier: catalog:typescript
+        version: 0.23.0
+      '@types/node':
+        specifier: catalog:utils
+        version: 22.19.20
+      rimraf:
+        specifier: catalog:utils
+        version: 6.1.3
+      ttsc:
+        specifier: catalog:typescript
+        version: 0.23.0
+      typescript:
+        specifier: catalog:typescript
+        version: 7.0.2
+
   packages/cli:
     dependencies:
       '@automovie/engine':
@@ -469,6 +491,9 @@ importers:
       '@automovie/benchmark':
         specifier: workspace:^
         version: link:../packages/benchmark
+      '@automovie/benchmark-runner':
+        specifier: workspace:^
+        version: link:../packages/benchmark-runner
       '@automovie/cli':
         specifier: workspace:^
         version: link:../packages/cli

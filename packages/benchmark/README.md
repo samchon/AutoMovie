@@ -1,5 +1,20 @@
 # `@automovie/benchmark`
 
+## Scenario registry and execution boundary
+
+`listAutoMovieBenchmarkScenarios` and `getAutoMovieBenchmarkScenario` expose
+the validated task-id corpus without running an agent or touching the
+filesystem. The corpus contains the original Austerlitz signal slice and the
+deterministic one-minute teaser, five-minute volley exchange, and twenty-minute
+battle-film milestones. Every entry reproduces exact brief bytes, a versioned
+task law, and reference/empty/mutant calibration anchors.
+
+External execution belongs to the separate `@automovie/benchmark-runner`
+package. It prepares an out-of-repository project, drives an injected agent or
+process adapter, seals the result, invokes this package's judge, and archives
+the trace, taxonomy verdict, report, and measured old/new MCP tool inventories.
+This package remains pure law and scoring.
+
 `@automovie/benchmark`는 automovie가 만든 영화를 **같은 법으로 언제든 다시 판정**하기 위한 순수 계약·adapter·judge 패키지다.
 
 이 패키지는 agent를 실행하지 않고, 브라우저나 encoder를 소유하지 않으며, 파일 시스템도 건드리지 않는다. 외부 runner가 실제 MCP surface를 몰아 만든 산출물을 **불변 submission**으로 봉인하고, versioned task law에 대해 **deterministic verdict**를 낸다. 미학·서사처럼 기계가 판정할 수 없는 축은 rubric verdict로 분리해 점수에 섞지 않는다.
