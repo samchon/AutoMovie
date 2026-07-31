@@ -228,7 +228,9 @@ export const test_cli_scaffold = (): void => {
       files["scripts/mcp.ts"]!.includes("process.cwd()") === false &&
       files["scripts/preview.ts"]!.includes("captureFrame") &&
       files["scripts/preview.ts"]!.includes("previewFrame") === false &&
-      files["scripts/capture.ts"]!.includes('locator("#view").screenshot') &&
+      /\.locator\("#view"\)\s*\.screenshot\(\{ type: "png" \}\)/.test(
+        files["scripts/capture.ts"]!,
+      ) &&
       pkg.includes('"three":') &&
       files["scripts/capture.ts"]!.includes('dedupe: ["three"]') &&
       files["vite.config.ts"]!.includes('dedupe: ["three"]') &&
