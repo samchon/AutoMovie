@@ -31,6 +31,7 @@ const pluginCache = path.join(
 const DEPENDENCY_PUBLIC_ENTRIES: Readonly<Record<string, string>> = {
   "@modelcontextprotocol/sdk": "@modelcontextprotocol/sdk/server/stdio.js",
 };
+const IMPORT_ONLY_DEPENDENCIES = new Set(["libopus-wasm"]);
 
 const linkDirectory = (source: string, destination: string): void => {
   fs.mkdirSync(path.dirname(destination), { recursive: true });
@@ -41,13 +42,36 @@ const linkDirectory = (source: string, destination: string): void => {
   );
 };
 
+const installedDependencyRoot = (name: string): string | null => {
+  for (const modules of require.resolve.paths(name) ?? []) {
+    const directory = path.join(modules, ...name.split("/"));
+    const manifest = path.join(directory, "package.json");
+    if (fs.existsSync(manifest) === false) continue;
+    const parsed = JSON.parse(fs.readFileSync(manifest, "utf8")) as {
+      name?: unknown;
+    };
+    if (parsed.name === name) return fs.realpathSync(directory);
+  }
+  return null;
+};
+
 const dependencyRoot = (name: string): string => {
   let entry: string;
   try {
     entry = require.resolve(DEPENDENCY_PUBLIC_ENTRIES[name] ?? name);
   } catch (error) {
-    if (name.startsWith("@types/") === false) throw error;
-    entry = require.resolve(`${name}/package.json`);
+    if (
+      name.startsWith("@types/") === false &&
+      IMPORT_ONLY_DEPENDENCIES.has(name) === false
+    )
+      throw error;
+    // Type-only packages and import-only ESM packages can be installed without
+    // exposing any entry to CommonJS `require.resolve`. Locate those packages
+    // through Node's own module search roots, but still require the manifest's
+    // declared name to match before linking the directory.
+    const installed = installedDependencyRoot(name);
+    if (installed !== null) return installed;
+    throw error;
   }
   let directory = path.dirname(entry);
   for (;;) {
