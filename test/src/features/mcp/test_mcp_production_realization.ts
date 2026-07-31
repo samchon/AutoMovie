@@ -593,7 +593,7 @@ export const test_mcp_production_realization = (): void => {
             {
               kind: "joint-angle",
               actor: "sentinel",
-              bone: "rightFoot",
+              bone: "rightLowerLeg",
               axis: "twist",
               operator: "==",
               value: 0,
