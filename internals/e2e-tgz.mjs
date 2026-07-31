@@ -1033,7 +1033,7 @@ if (state.generated.registry.productionId.length === 0 || distance !== 5)
   );
   run(
     "typecheck packaged CLI state-reader export",
-    "npm exec -- tsc --ignoreConfig --noEmit --target ES2022 --module NodeNext --moduleResolution NodeNext --skipLibCheck verify-packaged-state-reader.ts",
+    "npm exec -- tsc --ignoreConfig --noEmit --target ES2022 --module NodeNext --moduleResolution NodeNext --types node --skipLibCheck verify-packaged-state-reader.ts",
     starterDir,
   );
   const stateReaderRuntimeProbePath = join(
