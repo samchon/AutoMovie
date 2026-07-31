@@ -322,8 +322,14 @@ export const test_workspace_public_contracts = (): void => {
   TestValidator.equals(
     "package manifests advertise the current product and ownership boundaries",
     {
-      root: rootPackage,
-      interface: interfacePackage,
+      root: {
+        description: rootPackage.description,
+        keywords: rootPackage.keywords,
+      },
+      interface: {
+        description: interfacePackage.description,
+        keywords: interfacePackage.keywords,
+      },
       mcp: {
         description: mcpPackage.description,
         keywords: mcpPackage.keywords,
