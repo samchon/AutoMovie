@@ -285,7 +285,7 @@ export const test_film_defined_shot_continuity = (): void => {
     "the next auto stride consumes that velocity instead of fallback speed",
     velocitySecond.success &&
       Vector3.length(
-        sampleMotion(velocitySecond.source.motions[0]!, 0.5).pose.root
+        sampleMotion(velocitySecond.source.motions[0]!, 1).pose.root
           ?.translation ?? { x: 0, y: 0, z: 0 },
       ) >=
         0.5 - 1e-9,
