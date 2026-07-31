@@ -595,6 +595,17 @@ export class AutoMovieProductionProject {
     }
   }
 
+  /** Read registered production ids without creating project state. */
+  public static registeredProductionIds(rootDirectory: string): string[] {
+    const root = path.resolve(rootDirectory);
+    const rootReal = fs.realpathSync(root);
+    const registryPath = path.join(root, ".automovie", "productions.json");
+    return validateProductionRegistry(
+      readOwnedJson(rootReal, registryPath),
+      registryPath,
+    ).productions;
+  }
+
   /** Current manifest with unknown future fields preserved. */
   public manifest(): IAutoMovieProductionManifest {
     this.refreshRevision();

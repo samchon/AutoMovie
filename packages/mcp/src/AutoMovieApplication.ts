@@ -92,10 +92,25 @@ export class AutoMovieApplication {
           ),
         ],
       };
-    const productionId =
-      props.target.productionId ??
-      this.context.forProduction().project.productionId;
-    const services = this.context.forProduction(productionId);
+    let services: ReturnType<AutoMovieProductionContext["forProduction"]>;
+    try {
+      services = this.context.forProduction(props.target.productionId);
+    } catch (error) {
+      return {
+        captured: false,
+        productionId: props.target.productionId ?? "",
+        reviewTarget: null,
+        receipt: null,
+        frame: null,
+        diagnostics: [
+          diagnostic(
+            "capture-production-unregistered",
+            props.target.id,
+            error instanceof Error ? error.message : String(error),
+          ),
+        ],
+      };
+    }
     const failure = (
       code: string,
       message: string,
@@ -290,7 +305,24 @@ export class AutoMovieApplication {
           ),
         ],
       };
-    const services = this.context.forProduction(props.productionId);
+    let services: ReturnType<AutoMovieProductionContext["forProduction"]>;
+    try {
+      services = this.context.forProduction(props.productionId);
+    } catch (error) {
+      return {
+        repainted: false,
+        productionId: props.productionId,
+        shot: props.shot,
+        receipt: null,
+        diagnostics: [
+          diagnostic(
+            "repaint-production-unregistered",
+            props.shot,
+            error instanceof Error ? error.message : String(error),
+          ),
+        ],
+      };
+    }
     return this.repaintService.repaint(services, props);
   }
 

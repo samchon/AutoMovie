@@ -14,6 +14,7 @@ import {
   AutoMovieProductionProject,
   compileAutoMovieProduction,
   createAutoMovieMcpServer,
+  digestAutoMovieBytes,
   inspectAutoMovieProduction,
   openAutoMovieProduction,
 } from "@automovie/mcp";
@@ -57,10 +58,43 @@ const rejected = async (
   }
 };
 
+const directorySnapshot = (root: string): string[] => {
+  const entries: string[] = [];
+  const visit = (directory: string): void => {
+    for (const entry of fs
+      .readdirSync(directory, { withFileTypes: true })
+      .sort((left, right) => left.name.localeCompare(right.name))) {
+      const absolute = path.join(directory, entry.name);
+      const relative = path.relative(root, absolute).split(path.sep).join("/");
+      if (entry.isDirectory()) {
+        entries.push(`directory:${relative}`);
+        visit(absolute);
+      } else
+        entries.push(
+          `file:${relative}:${digestAutoMovieBytes(fs.readFileSync(absolute))}`,
+        );
+    }
+  };
+  visit(root);
+  return entries;
+};
+
 /** The public MCP boundary is exactly knowledge, evidence, and judgment. */
 export const test_mcp_production_application = async (): Promise<void> => {
   const fixture = productionFixture();
   try {
+    const productionPath = path.join(
+      fixture.root,
+      ".automovie/design/production.json",
+    );
+    const production = JSON.parse(
+      fs.readFileSync(productionPath, "utf8"),
+    ) as ReturnType<typeof productionDesign>;
+    production.frameFormat.fps = 2;
+    fs.writeFileSync(
+      productionPath,
+      `${JSON.stringify(production, null, 2)}\n`,
+    );
     const assetManifestPath = path.join(fixture.root, ".automovie/assets.json");
     const assetManifest = JSON.parse(
       fs.readFileSync(assetManifestPath, "utf8"),
@@ -71,9 +105,50 @@ export const test_mcp_production_application = async (): Promise<void> => {
       consumer: { kind: "rendition-reference", id: "opening" },
       reason: "Fixed style reference for the opening shot rendition.",
     });
+    const restrictedReference = structuredClone(reference);
+    restrictedReference.path = "public/audio/non-rendition-reference-stem.json";
+    restrictedReference.uses = [
+      {
+        production: "fixture-film",
+        consumer: { kind: "audio-cue", id: "restricted-guide" },
+        reason: "Audio-only guide stem that repaint must never disclose.",
+      },
+      {
+        production: "second-film",
+        consumer: { kind: "audio-cue", id: "restricted-guide" },
+        reason: "Second production reuses the same audio-only guide stem.",
+      },
+    ];
+    assetManifest.assets.push(restrictedReference);
+    assetManifest.assets.sort((left, right) =>
+      left.path < right.path ? -1 : left.path > right.path ? 1 : 0,
+    );
+    fs.copyFileSync(
+      path.join(fixture.root, reference.path),
+      path.join(fixture.root, restrictedReference.path),
+    );
     fs.writeFileSync(
       assetManifestPath,
       `${JSON.stringify(assetManifest, null, 2)}\n`,
+    );
+    const filmPath = path.join(fixture.root, "src/film.ts");
+    fs.writeFileSync(
+      filmPath,
+      fs.readFileSync(filmPath, "utf8").replace(
+        "audio: [],",
+        `audio: [{
+          id: "restricted-guide",
+          asset: "public/audio/non-rendition-reference-stem.json",
+          sourceDuration: { seconds: 11.5 },
+          sourceOffset: { frame: 0 },
+          start: { frame: 0 },
+          duration: { seconds: 6 },
+          gain: 0,
+          fadeIn: { frame: 0 },
+          fadeOut: { frame: 0 },
+          bus: "ambience",
+        }],`,
+      ),
     );
 
     const capturedProductionIds: string[] = [];
@@ -180,6 +255,36 @@ export const test_mcp_production_application = async (): Promise<void> => {
         ) === false,
     );
     application.getGuideDocument({ name: "PRODUCTION_RENDER" });
+    const stateRoot = path.join(fixture.root, ".automovie");
+    const stateRegistryPath = path.join(stateRoot, "productions.json");
+    const registryBeforeUnknown = fs.readFileSync(stateRegistryPath);
+    const revisionBeforeUnknown = first.project.revision();
+    const treeBeforeUnknown = directorySnapshot(stateRoot);
+    const unknownProductionCapture = await application.captureFrame({
+      target: {
+        kind: "shot",
+        productionId: "typo-film",
+        id: "opening",
+        time: 0,
+      },
+    });
+    const unknownProductionRepaint = await application.repaintShot({
+      productionId: "typo-film",
+      shot: "opening",
+      references: [{ role: "style", path: reference.path }],
+      parameters: { prompt: "Preserve the signal.", seed: 17, strength: 0.8 },
+    });
+    TestValidator.predicate(
+      "unknown production ids are read-only refusals",
+      unknownProductionCapture.diagnostics[0]?.code ===
+        "capture-production-unregistered" &&
+        unknownProductionRepaint.diagnostics[0]?.code ===
+          "repaint-production-unregistered" &&
+        fs.readFileSync(stateRegistryPath).equals(registryBeforeUnknown) &&
+        first.project.revision() === revisionBeforeUnknown &&
+        JSON.stringify(directorySnapshot(stateRoot)) ===
+          JSON.stringify(treeBeforeUnknown),
+    );
     const unknownGuide = await rejected(async () =>
       application.getGuideDocument({
         name: "RETIRED_GUIDE" as IAutoMovieGetGuideDocument.IProps["name"],
@@ -337,30 +442,90 @@ export const test_mcp_production_application = async (): Promise<void> => {
         ),
     );
 
-    const renditionBytes = await productionH264Mp4({
+    const frameGrid: IAutoMovieCaptureFrame[] = [firstBeauty, firstPose];
+    for (let index = 1; index < 12; ++index)
+      for (const pass of ["beauty", "pose"] as const)
+        frameGrid.push(
+          await application.captureFrame({
+            target: {
+              kind: "shot",
+              productionId: "fixture-film",
+              id: "opening",
+              time: index / 2,
+              pass,
+            },
+          }),
+        );
+    TestValidator.predicate(
+      "repaint source evidence covers every beauty and structural frame",
+      frameGrid.length === 24 && frameGrid.every((capture) => capture.captured),
+    );
+
+    const shortRenditionBytes = await productionH264Mp4({
       width: 16,
       height: 16,
       fps: 2,
       frameCount: 2,
     });
+    const renditionBytes = await productionH264Mp4({
+      width: 16,
+      height: 16,
+      fps: 2,
+      frameCount: 12,
+    });
+    let repaintAdapterCalls = 0;
     const repainting = new AutoMovieApplication({
       projectRoot: fixture.root,
       productionId: "fixture-film",
       capture,
-      repaint: async (_input) => ({
-        bytes: renditionBytes,
-        mediaType: "video/mp4",
-        runtimeIdentity: {
-          protocolVersion: "automovie.repaint-runtime.v1",
-          provider: "fixture",
-          model: "fixture-video",
-          version: "1",
-          execution: "local",
-        },
-      }),
+      repaint: async (input) => {
+        ++repaintAdapterCalls;
+        return {
+          bytes:
+            input.parameters.prompt === "Return a short clip."
+              ? shortRenditionBytes
+              : renditionBytes,
+          mediaType: "video/mp4",
+          runtimeIdentity: {
+            protocolVersion: "automovie.repaint-runtime.v1",
+            provider: "fixture",
+            model: "fixture-video",
+            version: "1",
+            execution: "local",
+          },
+        };
+      },
     });
     repainting.getGuideDocument({ name: "AUTOMOVIE_OVERALL" });
     repainting.getGuideDocument({ name: "PRODUCTION_RENDER" });
+    const restricted = await repainting.repaintShot({
+      productionId: "fixture-film",
+      shot: "opening",
+      references: [{ role: "style", path: restrictedReference.path }],
+      parameters: {
+        prompt: "Do not send this asset.",
+        seed: 17,
+        strength: 0.8,
+      },
+    });
+    TestValidator.predicate(
+      "non-rendition asset bytes are refused before adapter disclosure",
+      restricted.repainted === false &&
+        restricted.diagnostics[0]?.code === "repaint-reference-invalid" &&
+        repaintAdapterCalls === 0,
+    );
+    const shortRendition = await repainting.repaintShot({
+      productionId: "fixture-film",
+      shot: "opening",
+      references: [{ role: "style", path: reference.path }],
+      parameters: { prompt: "Return a short clip.", seed: 17, strength: 0.8 },
+    });
+    TestValidator.predicate(
+      "repaint output must match exact shot raster, clock and frame count",
+      shortRendition.repainted === false &&
+        shortRendition.diagnostics[0]?.code === "repaint-output-invalid" &&
+        repaintAdapterCalls === 1,
+    );
     const repainted = await repainting.repaintShot({
       productionId: "fixture-film",
       shot: "opening",
@@ -376,6 +541,7 @@ export const test_mcp_production_application = async (): Promise<void> => {
         repainted.receipt.references[0]?.digest === reference.digest &&
         repainted.receipt.adapterIdentity.includes("fixture-video") &&
         repainted.receipt.output.digest.startsWith("sha256:") &&
+        repaintAdapterCalls === 2 &&
         fs.existsSync(
           path.join(
             fixture.root,

@@ -71,6 +71,21 @@ export class AutoMovieProductionRepaintService {
         "repaint-target-missing",
         `Shot "${input.shot}" is absent from the current compiler registry. Correct the registration or compile the source that defines it.`,
       );
+    const graph = services.project.graph();
+    const production = graph.production;
+    const shot = graph.shots.get(input.shot);
+    if (production === null || shot === undefined)
+      return failure(
+        "repaint-target-missing",
+        `Shot "${input.shot}" has no current production frame contract. Correct the tracked design and compile before repaint.`,
+      );
+    const expectedOutput = {
+      width: production.frameFormat.width,
+      height: production.frameFormat.height,
+      fps: production.frameFormat.fps,
+      frameCount: Math.round(shot.durationSeconds * production.frameFormat.fps),
+      runtimeSeconds: shot.durationSeconds,
+    };
     if (
       input.parameters.prompt.trim().length === 0 ||
       Number.isSafeInteger(input.parameters.seed) === false ||
@@ -93,6 +108,7 @@ export class AutoMovieProductionRepaintService {
         services,
         input.shot,
         registry.inputFingerprint,
+        expectedOutput,
       );
     } catch (error) {
       return failure(
@@ -211,8 +227,17 @@ export class AutoMovieProductionRepaintService {
         mediaType: generated.mediaType,
         bytes: generated.bytes,
       });
-      if (probe.kind !== "video")
-        throw new Error("the adapter output is not a parsed video track");
+      if (
+        probe.kind !== "video" ||
+        probe.width !== expectedOutput.width ||
+        probe.height !== expectedOutput.height ||
+        probe.frameCount !== expectedOutput.frameCount ||
+        Math.abs(probe.fps - expectedOutput.fps) > 1e-9 ||
+        Math.abs(probe.runtimeSeconds - expectedOutput.runtimeSeconds) > 1e-9
+      )
+        throw new Error(
+          `the adapter output does not match the exact ${expectedOutput.width}x${expectedOutput.height}, ${expectedOutput.fps}fps, ${expectedOutput.frameCount}-frame shot contract`,
+        );
     } catch (error) {
       return failure(
         "repaint-output-invalid",
@@ -290,18 +315,52 @@ const currentShotSource = (
   services: IAutoMovieProductionServices,
   shot: string,
   compileFingerprint: AutoMovieContentDigest,
+  expected: {
+    width: number;
+    height: number;
+    fps: number;
+    frameCount: number;
+  },
 ): ICurrentShotSource | null => {
   const candidates = physicalFiles(services.project.renderRoot())
     .filter((file) => path.basename(file) === "manifest.json")
     .flatMap((manifestPath): ICurrentShotSource[] => {
       const manifest = services.project.verifiedRenderManifest(manifestPath);
+      const frames =
+        manifest?.frames.filter(
+          (frame) => frame.index >= 0 && frame.index < expected.frameCount,
+        ) ?? [];
+      const structuralPasses = [
+        "depth",
+        "mask",
+        "normal",
+        "outline",
+        "pose",
+      ] as const;
       if (
         manifest === null ||
         manifest.compileFingerprint !== compileFingerprint ||
         manifest.target.kind !== "shot" ||
         manifest.target.id !== shot ||
-        manifest.frames.some((frame) => frame.pass === "beauty") === false ||
-        manifest.frames.some((frame) => frame.pass !== "beauty") === false
+        manifest.renderSpec.frameFormat.width !== expected.width ||
+        manifest.renderSpec.frameFormat.height !== expected.height ||
+        manifest.renderSpec.frameFormat.fps !== expected.fps ||
+        Array.from({ length: expected.frameCount }, (_, index) => index).some(
+          (index) =>
+            frames.some(
+              (frame) => frame.index === index && frame.pass === "beauty",
+            ) === false,
+        ) ||
+        structuralPasses.some((pass) =>
+          Array.from(
+            { length: expected.frameCount },
+            (_, index) => index,
+          ).every((index) =>
+            frames.some(
+              (frame) => frame.index === index && frame.pass === pass,
+            ),
+          ),
+        ) === false
       )
         return [];
       return [
@@ -314,7 +373,7 @@ const currentShotSource = (
             ),
           ),
           manifest,
-          frames: manifest.frames,
+          frames,
         },
       ];
     })
@@ -396,7 +455,10 @@ const resolveReferences = (
       resident?.bytes === null ||
       resident === undefined ||
       record.uses.some(
-        (use) => use.production === services.project.productionId,
+        (use) =>
+          use.production === services.project.productionId &&
+          use.consumer.kind === "rendition-reference" &&
+          use.consumer.id === input.shot,
       ) === false ||
       digestAutoMovieBytes(resident.bytes) !== record.digest
     )
@@ -404,7 +466,7 @@ const resolveReferences = (
         diagnostic: diagnostic(
           "repaint-reference-invalid",
           input.shot,
-          `Reference "${reference.role}:${reference.path}" is duplicate, absent, byte-stale, or not used by production "${services.project.productionId}". Correct the asset manifest and compile before repaint.`,
+          `Reference "${reference.role}:${reference.path}" is duplicate, absent, byte-stale, or not registered as a rendition-reference for shot "${input.shot}". Correct the asset manifest and compile before repaint.`,
         ),
       };
     seen.add(key);

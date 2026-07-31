@@ -55,9 +55,24 @@ export class AutoMovieProductionContext {
   /** Resolve one production under the immutable host root. */
   public forProduction(productionId?: string): IAutoMovieProductionServices {
     validateProductionId(productionId);
-    const selected = productionId ?? this.defaultProductionId;
-    const key = selected ?? "";
-    const retained = this.services.get(key);
+    const registered = AutoMovieProductionProject.registeredProductionIds(
+      this.root,
+    );
+    let selected = productionId ?? this.defaultProductionId;
+    if (selected === undefined) {
+      if (registered.length !== 1)
+        throw new Error(
+          registered.length === 0
+            ? "The project has no registered production. Create and compile one through the non-MCP project API before requesting evidence."
+            : `The project has ${registered.length} registered productions. Configure one productionId from: ${registered.join(", ")}.`,
+        );
+      selected = registered[0]!;
+    }
+    if (registered.includes(selected) === false)
+      throw new Error(
+        `Production "${selected}" is not registered. Choose one current productionId from: ${registered.join(", ")}.`,
+      );
+    const retained = this.services.get(selected);
     if (retained !== undefined) return retained;
     const opened = openAutoMovieProduction({
       projectRoot: this.root,
@@ -65,7 +80,6 @@ export class AutoMovieProductionContext {
       capture: this.capture,
     });
     this.services.set(opened.project.productionId, opened);
-    if (selected === undefined) this.services.set("", opened);
     return opened;
   }
 }
