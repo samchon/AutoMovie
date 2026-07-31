@@ -132,6 +132,9 @@ export const test_workspace_public_contracts = (): void => {
     bin: Record<string, string>;
     publishConfig: { bin: Record<string, string> };
   };
+  const testPackage = JSON.parse(readPackageFile("test", "package.json")) as {
+    scripts: { coverage: string };
+  };
   const authoringContract = readPackageFile(
     "packages",
     "interface",
@@ -471,6 +474,10 @@ export const test_workspace_public_contracts = (): void => {
         tgzE2e.match(
           /AutoMovieLegacyApplication|tools\.length === (?:4|15)|name: "(?:execute|openProject|nextSteps|compileProject|queryGeometry|previewFrame)"|app\.(?:openProject|inspectProject|compileProject|queryGeometry)/g,
         ) ?? [],
+      retiredCoverageExcludes:
+        testPackage.scripts.coverage.match(
+          /bin-(?:granular|production)\.ts/g,
+        ) ?? [],
     },
     {
       sources: [],
@@ -481,6 +488,7 @@ export const test_workspace_public_contracts = (): void => {
       retiredNamesInReadme: [],
       packedTools: mcpToolGuideKeys,
       retiredNamesInTgzE2e: [],
+      retiredCoverageExcludes: [],
     },
   );
   TestValidator.equals(
