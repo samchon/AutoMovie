@@ -39,6 +39,7 @@ import {
 import { resolveTargetPoint } from "../perform/resolveTargetPoint";
 import { scenePlacements } from "../perform/scenePlacements";
 import { IAutoMovieRestFrame } from "../rom/restFrame";
+import { spaceGround } from "../space/surfaces";
 import { compareCodeUnits } from "../text/compareCodeUnits";
 import { validateMotion } from "../validation/validateMotion";
 import { validateShotArtifact } from "../validation/validateShotArtifact";
@@ -254,8 +255,10 @@ export namespace IAutoMoviePerformedShot {
  * before ROM and artifact validation. A first stride therefore emits the
  * world-space plant facts a later beat can resume; an existing opening plant is
  * converted into model space for the solve and back into scene world space
- * exactly once at this boundary. Static non-gait clips keep their authored key
- * grid.
+ * exactly once at this boundary. When staging supplies a scene space, its world
+ * surface height is transformed into the actor's model frame for contact and
+ * pinning; otherwise the legacy model-space y=0 plane remains. Static non-gait
+ * clips keep their authored key grid.
  *
  * @param props.skeleton Rig lookup for ROM validation; return null for a node
  *   that has no skeleton (its clip skips ROM).
@@ -1438,6 +1441,8 @@ export const performShot = (props: {
   const previousByNode = new Map(
     (previous?.actors ?? []).map((actor) => [actor.node, actor]),
   );
+  const sceneSpace = staged.scene.space ?? null;
+  const worldGround = sceneSpace === null ? null : spaceGround(sceneSpace);
   // A first stride must create the plant state a later stride can resume.
   // Restrict the pass to actual gait-bearing output or an existing pin so a
   // custom locomotion synthesizer without gait/contact data, and every static
@@ -1446,8 +1451,7 @@ export const performShot = (props: {
     compareCodeUnits(x, y),
   )) {
     const priorPlants = previousByNode.get(actor)?.footPlants ?? null;
-    if (priorPlants === null && (motion.gaitCycle ?? null) === null)
-      continue;
+    if (priorPlants === null && (motion.gaitCycle ?? null) === null) continue;
     const rig = skeleton(actor);
     const node = staged.scene.nodes.find((entry) => entry.id === actor);
     if (rig === null || node === undefined) continue;
@@ -1462,9 +1466,21 @@ export const performShot = (props: {
         node.transform.translation,
         Quaternion.rotateVector(node.transform.rotation, point),
       );
+    const modelGround =
+      worldGround === null
+        ? null
+        : (x: number, z: number): number => {
+            const plan = toWorldPoint({ x, y: 0, z });
+            return toModelPoint({
+              x: plan.x,
+              y: worldGround(plan.x, plan.z),
+              z: plan.z,
+            }).y;
+          };
     const planted = plantStanceFeet({
       skeleton: rig,
       motion,
+      ...(modelGround === null ? {} : { groundY: modelGround }),
       openingPlants: (priorPlants ?? []).map((plant) => ({
         foot: plant.foot,
         position: toModelPoint(plant.position),

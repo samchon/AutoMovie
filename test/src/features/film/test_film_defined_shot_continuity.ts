@@ -198,6 +198,46 @@ export const test_film_defined_shot_continuity = (): void => {
         ?.footPlants?.some((plant) => plant.foot === "leftFoot") === true,
   );
   if (first.success === false) return;
+
+  const airborneStage = makeStagingWrite({
+    actors: groundedStage.actors.map((actor) => ({
+      ...actor,
+      position: { ...actor.position, y: 1 },
+    })),
+    space: {
+      id: "flat-ground",
+      surfaces: [
+        {
+          id: "floor",
+          kind: "floor",
+          polygon: [
+            { x: 0, y: 0, z: 0 },
+            { x: 8, y: 0, z: 0 },
+            { x: 8, y: 0, z: 8 },
+            { x: 0, y: 0, z: 8 },
+          ],
+          anchor: { x: 0, y: 0, z: 0 },
+          rampTo: null,
+        },
+      ],
+      walkable: ["floor"],
+    },
+  });
+  const airborne = compileWalk({
+    id: "SB-PLANT-AIRBORNE",
+    rig,
+    stage: airborneStage,
+    target: { x: 4, y: 1, z: 4 },
+  });
+  TestValidator.predicate(
+    "scene space prevents a model-plane false plant above world ground",
+    airborne.success &&
+      airborne.source.scene.space?.id === "flat-ground" &&
+      airborne.continuity.closing.actors.find(
+        (actor) => actor.node === "knightA",
+      )?.footPlants === null,
+  );
+
   const firstActor = first.continuity.closing.actors.find(
     (actor) => actor.node === "knightA",
   )!;
