@@ -1946,7 +1946,7 @@ export class AutoMovieProductionProject {
         return null;
       const receiptBytes = this.readTrackedStateFile(
         relativeToRoot(
-          this.automovieRoot,
+          this.productionStateRoot,
           this.renderReceiptPath(relativeBundle),
         ),
       );
