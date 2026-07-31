@@ -742,6 +742,26 @@ export const test_mcp_production_application = async (): Promise<void> => {
       completionBasis: sourcePrepared.requiredCriteria.join(", "),
       complete: true,
     });
+    if (sourceReview.accepted === false || sourceReview.state !== "complete")
+      throw new Error(
+        `Deterministic repaint-source review failed:\n${JSON.stringify(
+          {
+            prepared: {
+              criteria: sourcePrepared.requiredCriteria,
+              frames: sourcePrepared.frames.map((frame) => ({
+                reviewFrame: frame.reviewFrame,
+                time: frame.time,
+                pass: frame.pass,
+                digest: frame.digest,
+              })),
+              diagnostics: sourcePrepared.diagnostics,
+            },
+            submitted: sourceReview,
+          },
+          null,
+          2,
+        )}`,
+      );
     TestValidator.predicate(
       "repaint requires and records a current completed deterministic source review",
       sourceReview.accepted && sourceReview.state === "complete",
