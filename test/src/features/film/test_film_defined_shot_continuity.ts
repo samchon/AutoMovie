@@ -187,7 +187,7 @@ export const test_film_defined_shot_continuity = (): void => {
     id: "SB-PLANT-A",
     rig,
     stage: groundedStage,
-    target: { x: 3.01, y: 0, z: 4 },
+    target: { x: 4, y: 0, z: 4 },
   });
   TestValidator.predicate(
     "a first gait shot produces its own ground-IK plant seed",
@@ -208,7 +208,7 @@ export const test_film_defined_shot_continuity = (): void => {
     rig,
     stage: groundedStage,
     target: {
-      x: firstActor.transform.translation.x + 0.01,
+      x: firstActor.transform.translation.x + 1,
       y: firstActor.transform.translation.y,
       z: firstActor.transform.translation.z,
     },

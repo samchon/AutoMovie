@@ -1439,22 +1439,14 @@ export const performShot = (props: {
     (previous?.actors ?? []).map((actor) => [actor.node, actor]),
   );
   // A first stride must create the plant state a later stride can resume.
-  // Restrict the pass to authored locomotion, retained gait metadata, or an
-  // existing pin so static gesture/hold clips keep their authored key grid.
-  const locomotingNodes = new Set(
-    stageActions
-      .filter((action) => action.verb === "locomote")
-      .flatMap(actionActors),
-  );
+  // Restrict the pass to actual gait-bearing output or an existing pin so a
+  // custom locomotion synthesizer without gait/contact data, and every static
+  // gesture/hold clip, keep their authored key grid.
   for (const [actor, motion] of Object.entries(motions).sort(([x], [y]) =>
     compareCodeUnits(x, y),
   )) {
     const priorPlants = previousByNode.get(actor)?.footPlants ?? null;
-    if (
-      priorPlants === null &&
-      locomotingNodes.has(actor) === false &&
-      (motion.gaitCycle ?? null) === null
-    )
+    if (priorPlants === null && (motion.gaitCycle ?? null) === null)
       continue;
     const rig = skeleton(actor);
     const node = staged.scene.nodes.find((entry) => entry.id === actor);
@@ -1478,6 +1470,10 @@ export const performShot = (props: {
         position: toModelPoint(plant.position),
       })),
     });
+    // A rig may have no recognized foot effectors. In that case this pass has
+    // established no authority: preserve the authored clip and do not shadow
+    // host-provided plant measurements (or their duplicate diagnostics).
+    if (planted.plants.length === 0) continue;
     motions[actor] = planted.motion;
     plants.push({
       node: actor,
