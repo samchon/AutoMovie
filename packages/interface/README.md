@@ -20,7 +20,7 @@ vegetation, props, and debris. Grid, disk-scatter, and route layouts retain
 only count, seed, model reference, and bounded variation law. Compiled slots
 derive stable scale, palette, and numeric traits without expanding scene nodes.
 
-automovie의 타입 허브. 캐릭터·사물의 형상·포즈·모션·표정·머티리얼·씬을 기술하는 모든 AST 구조체의 단일 진실 공급원이다. LLM이 보는 structured-output 스키마가 곧 이 패키지의 타입이다.
+automovie의 타입 허브. 캐릭터·사물의 형상·포즈·모션·표정·머티리얼·씬과 production 증거 계약을 기술하는 모든 AST 구조체의 단일 진실 공급원이다. 코딩 에이전트는 이 타입을 tracked TypeScript에서 직접 소비하며, MCP에는 그중 정확한 다섯 도구 계약만 반영된다.
 
 런타임 의존은 없다. `typia`도, `three.js`도 없다. 순수 타입 선언만 담는다. 제약은 필드 JSDoc으로 문서화하고 `@automovie/engine`의 런타임 검증기가 강제한다. 빌드 도구(`ttsc`/`typescript`/`rimraf`/`@ttsc/lint`)는 devDependency일 뿐이다.
 
@@ -61,9 +61,9 @@ automovie는 **glTF / VRM 규약**을 따른다.
 | `material/`   | PBR 머티리얼                                                                                                                                                                                                     |
 | `scene/`      | 씬그래프: 모델/카메라/조명 배치                                                                                                                                                                                  |
 | `cinematics/` | 촬영·편집: 샷·카메라 인텐트·커버리지(대체 앵글 테이크), 시퀀스·전환·트림, 렌더 스펙, 인터랙션 이벤트, 포즈 키포인트, 가이드 패스                                                                                 |
-| `harness/`    | 엔진이 직접 소비하는 액션 콜·타겟과 stage/block/perform 데이터 계약. 공개 MCP application 표면이 아니라 코드 저작·직접 링크 호환 어휘                                                                            |
+| `harness/`    | 저수준 액션 콜·타겟·beat-end 엔진 어휘와 레거시 slate/context 호환 타입. 현재 stage/block/perform 입력은 `authoring/`이 소유하며 이 폴더의 Request/Application 모양은 MCP 표면이 아님                                          |
 | `validation/` | 검증 봉투 + 제약 위반 리포트 (engine ↔ harness 계약)                                                                                                                                                             |
 
-> 코드 저작의 정본은 `authoring/`이며 `@automovie/engine`의 `defineShot`이 이를 실행한다. `harness/`의 액션·stage/block/perform 타입은 엔진 입력으로 남지만 MCP 도구가 아니며, 외부 에이전트는 tracked TypeScript에서 이를 저작한다.
+> 코드 저작의 정본은 `authoring/`이며 `@automovie/engine`의 `defineShot`이 이를 실행한다. `harness/`에서 엔진이 계속 소비하는 것은 action/target/beat-end 같은 저수준 어휘뿐이며, 외부 에이전트는 이를 tracked TypeScript 안에서 사용한다.
 
 타입 하나하나의 의미·단위·범위는 필드 JSDoc이 정본이다. 왜 그렇게 나뉘었는지는 위의 네이밍 컨벤션과 도메인 폴더 표가 담고 있다.

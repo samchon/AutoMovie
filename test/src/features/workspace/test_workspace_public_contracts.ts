@@ -104,6 +104,12 @@ export const test_workspace_public_contracts = (): void => {
   const engineReadme = readPackageFile("packages", "engine", "README.md");
   const interfaceReadme = readPackageFile("packages", "interface", "README.md");
   const mcpReadme = readPackageFile("packages", "mcp", "README.md");
+  const mcpApplication = readPackageFile(
+    "packages",
+    "mcp",
+    "src",
+    "AutoMovieApplication.ts",
+  );
   const mcpPackage = JSON.parse(
     readPackageFile("packages", "mcp", "package.json"),
   ) as {
@@ -277,22 +283,62 @@ export const test_workspace_public_contracts = (): void => {
       rootReadme.includes("Coding-agent-native deterministic filmmaking"),
       rootReadme.includes('`visualDelivery: "deterministic"`'),
       rootReadme.includes('`visualDelivery: "repainted"`'),
+      rootReadme.includes(
+        "Design, source, asset, shot, sequence, optional rendition, and film reviews",
+      ),
+      rootReadme.includes("default, zero-configuration path"),
+      rootReadme.includes("optional host-adapter lane"),
+      rootReadme.includes("immutable provenance receipt"),
       rootReadme.includes("MCP has no design setter, compiler, renderer"),
       interfaceReadme.includes("다섯 MCP 지식·증거·리뷰 계약"),
-      interfaceReadme.includes("MCP 도구가 아니며"),
+      interfaceReadme.includes("MCP에는 그중 정확한 다섯 도구 계약만 반영"),
       engineReadme.includes("이 엔진의 두 번째 저작 API가 아니다"),
       engineReadme.includes("npx create-automovie <dir>"),
     ],
-    [true, true, true, true, true, true, true, true],
+    [true, true, true, true, true, true, true, true, true, true, true, true],
   );
   TestValidator.equals(
     "public entry READMEs reject retired MCP authoring and diffusion-only claims",
     [rootReadme, interfaceReadme, engineReadme]
       .join("\n")
       .match(
-        /An MCP server for deterministic motion-control video|MCP motion authoring surface|not a replacement for diffusion|MCP surface is the product boundary|16개 MCP|3단 MCP 표면|슬레이트 상태·트랜잭션|enact가 그 다리|npx automovie start <dir>/g,
+        /An MCP server for deterministic motion-control video|MCP motion authoring surface|not a replacement for diffusion|MCP surface is the product boundary|structured-output 스키마가 곧|16개 MCP|3단 MCP 표면|stage\/block\/perform 데이터 계약|슬레이트 상태·트랜잭션|enact가 그 다리|npx automovie start <dir>/g,
       ) ?? [],
     [],
+  );
+  const mcpMethods = [
+    ...mcpApplication.matchAll(
+      /^  public (?:async )?([a-z][A-Za-z0-9]*)\s*\(/gm,
+    ),
+  ]
+    .map((match) => match[1]!)
+    .filter((name) => name !== "constructor")
+    .sort(compareCodeUnits);
+  const mcpToolGuideKeys = [
+    ...mcpApplication
+      .match(
+        /export const AUTOMOVIE_TOOL_GUIDES = \{([\s\S]*?)\n\} as const/,
+      )![1]!
+      .matchAll(/^  ([a-z][A-Za-z0-9]*):/gm),
+  ]
+    .map((match) => match[1]!)
+    .sort(compareCodeUnits);
+  TestValidator.equals(
+    "public README tool tables derive their complete surface from the application",
+    {
+      methods: mcpMethods,
+      guides: mcpToolGuideKeys,
+      tables: [rootReadme, mcpReadme].map((document) =>
+        [...document.matchAll(/^\| `([a-z][A-Za-z0-9]*)`\s+\|/gm)]
+          .map((match) => match[1]!)
+          .sort(compareCodeUnits),
+      ),
+    },
+    {
+      methods: mcpToolGuideKeys,
+      guides: mcpToolGuideKeys,
+      tables: [mcpToolGuideKeys, mcpToolGuideKeys],
+    },
   );
   TestValidator.equals(
     "retired MCP application families and binaries stay absent",
