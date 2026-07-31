@@ -266,6 +266,9 @@ export const test_mcp_production_review = async (): Promise<void> => {
   try {
     const project = AutoMovieProductionProject.open(fixture.root);
     const review = new AutoMovieProductionReviewService(project);
+    const reviewFrameFormat = project.graph().production?.frameFormat;
+    if (reviewFrameFormat === undefined)
+      throw new Error("review fixture has no production frame format");
     const optionalAcceptance = {
       ...acceptanceScenarios()[0]!,
       id: "optional-opening-note",
@@ -445,8 +448,8 @@ export const test_mcp_production_review = async (): Promise<void> => {
             target: { kind: "asset", id: "sentinel", ...view },
             time: 0,
             pass: view.pass,
-            width: 16,
-            height: 16,
+            width: reviewFrameFormat.width,
+            height: reviewFrameFormat.height,
           })
         ).captured,
       );
@@ -528,8 +531,8 @@ export const test_mcp_production_review = async (): Promise<void> => {
             target: { kind: "asset", id: "sentinel", ...view },
             time: 0,
             pass: view.pass,
-            width: 16,
-            height: 16,
+            width: reviewFrameFormat.width,
+            height: reviewFrameFormat.height,
           })
         ).captured,
       );
@@ -593,8 +596,8 @@ export const test_mcp_production_review = async (): Promise<void> => {
             target: { kind: "shot", id: "opening" },
             time: 2,
             pass,
-            width: 16,
-            height: 16,
+            width: reviewFrameFormat.width,
+            height: reviewFrameFormat.height,
           })
         ).captured,
       );
@@ -1792,8 +1795,8 @@ export const test_mcp_production_review = async (): Promise<void> => {
         target: { kind: "shot", id: "opening" },
         time: 2,
         pass,
-        width: 16,
-        height: 16,
+        width: reviewFrameFormat.width,
+        height: reviewFrameFormat.height,
       });
     const noRequiredPrepared = review.prepare({ target: shotTarget });
     const noRequiredSheet = worksheet(project, noRequiredPrepared);
