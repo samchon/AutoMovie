@@ -172,15 +172,17 @@ const compileWalk = (props: {
  */
 export const test_film_defined_shot_continuity = (): void => {
   const rig = createSkeleton();
-  // Give the otherwise fully extended fixture leg 2 cm of reach slack. A root
-  // that correctly climbs the ramp must be able to keep its stance foot on the
-  // lower point behind it; the old zero-slack leg only contacted because ramp
-  // locomotion incorrectly left the root below the rising ground.
+  // Bend the fixture leg at rest while keeping its foot on the model ground.
+  // Its two segment lengths now total about 1.21 m rather than the straight
+  // 0.9 m hip-to-ground height, giving the ground-IK solve enough reach to hold
+  // the same pin through both short steps as the root climbs the ramp.
+  rig.bones.find((bone) => bone.bone === "leftLowerLeg")!.rest.translation.z =
+    0.4;
   rig.bones.push({
     bone: "leftFoot",
     parent: "leftLowerLeg",
     rest: {
-      translation: { x: 0, y: -0.52, z: 0 },
+      translation: { x: 0, y: -0.5, z: -0.4 },
       rotation: { x: 0, y: 0, z: 0, w: 1 },
       scale: { x: 1, y: 1, z: 1 },
     },
@@ -204,7 +206,8 @@ export const test_film_defined_shot_continuity = (): void => {
     id: "SB-PLANT-A",
     rig,
     stage: groundedStage,
-    target: { x: 4, y: 0, z: 4 },
+    target: { x: 3.25, y: 0, z: 4 },
+    duration: 1,
   });
   TestValidator.predicate(
     "a first gait shot produces its own ground-IK plant seed",
@@ -287,7 +290,7 @@ export const test_film_defined_shot_continuity = (): void => {
     id: "SB-PLANT-SLOPE-A",
     rig,
     stage: slopeStage,
-    target: { x: 3.5, y: rampGround(3.5, 4), z: 4 },
+    target: { x: 3.25, y: rampGround(3.25, 4), z: 4 },
     duration: 1,
   });
   TestValidator.predicate(
@@ -304,7 +307,7 @@ export const test_film_defined_shot_continuity = (): void => {
   const slopePin = slopeActor.footPlants!.find(
     (plant) => plant.foot === "leftFoot",
   )!.position;
-  const slopeSecondX = slopeActor.transform.translation.x + 0.5;
+  const slopeSecondX = slopeActor.transform.translation.x + 0.25;
   const slopeSecond = compileWalk({
     id: "SB-PLANT-SLOPE-B",
     rig,
@@ -358,11 +361,12 @@ export const test_film_defined_shot_continuity = (): void => {
     rig,
     stage: groundedStage,
     target: {
-      x: firstActor.transform.translation.x + 1,
+      x: firstActor.transform.translation.x + 0.25,
       y: firstActor.transform.translation.y,
       z: firstActor.transform.translation.z,
     },
     previous: first.continuity.closing,
+    duration: 1,
   });
   TestValidator.predicate(
     "the next shot compiles from the first shot's generated plant",
@@ -413,11 +417,12 @@ export const test_film_defined_shot_continuity = (): void => {
     rig,
     stage: groundedStage,
     target: {
-      x: firstActor.transform.translation.x + 1,
+      x: firstActor.transform.translation.x + 0.25,
       y: firstActor.transform.translation.y,
       z: firstActor.transform.translation.z,
     },
     previous: staleClosing,
+    duration: 1,
   });
   const afterStaleNode =
     afterStale.success === false
