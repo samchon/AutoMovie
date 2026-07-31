@@ -280,12 +280,11 @@ const instancePoint = (
   });
   const total = segments.reduce((sum, segment) => sum + segment.length, 0);
   let remaining = ((slot + 0.5) / instanceSet.count) * total;
-  const segment =
-    segments.find((candidate) => {
-      if (remaining <= candidate.length) return true;
-      remaining -= candidate.length;
-      return false;
-    }) ?? segments.at(-1)!;
+  const segment = (segments.find((candidate) => {
+    if (remaining <= candidate.length) return true;
+    remaining -= candidate.length;
+    return false;
+  }) ?? segments.at(-1))!;
   const ratio =
     segment.length === 0 ? 0 : Math.min(1, remaining / segment.length);
   const tangentX = segment.right.x - segment.left.x;
