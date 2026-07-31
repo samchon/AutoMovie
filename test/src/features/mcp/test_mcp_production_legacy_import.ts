@@ -113,9 +113,13 @@ const equalFiles = (
     Buffer.from(right.get(file) ?? []).equals(Buffer.from(bytes)),
   );
 
-const createEmptyOwnedRoots = (root: string): void => {
-  for (const directory of ["src", "generated", "renders"])
-    fs.mkdirSync(path.join(root, directory));
+const createMissingOwnedRoots = (
+  root: string,
+  plan: IAutoMovieLegacyImportPlan,
+): void => {
+  for (const baseline of plan.rollbackBaseline)
+    if (baseline.existed === false)
+      fs.mkdirSync(path.join(root, baseline.path));
 };
 
 const rejectsTamperedRollbackBaseline = (
@@ -234,7 +238,7 @@ export const test_mcp_production_legacy_import = (): void => {
     const importer = new AutoMovieLegacyImporter(untouched.root);
     const plan = importer.plan();
     importer.apply();
-    createEmptyOwnedRoots(untouched.root);
+    createMissingOwnedRoots(untouched.root, plan);
     const rolledBack = importer.rollback();
     TestValidator.predicate(
       "rollback removes only untouched import state and empty owned roots",
@@ -242,7 +246,9 @@ export const test_mcp_production_legacy_import = (): void => {
         fs.existsSync(path.join(untouched.root, ".automovie")) === false &&
         fs.existsSync(path.join(untouched.root, "src")) === false &&
         fs.existsSync(path.join(untouched.root, "generated")) === false &&
-        fs.existsSync(path.join(untouched.root, "renders")) === false &&
+        plan.rollbackBaseline.find((baseline) => baseline.path === "renders")
+          ?.existed === true &&
+        fs.existsSync(path.join(untouched.root, "renders")) &&
         equalFiles(before, legacyFiles(untouched.root)) &&
         throws(() => importer.rollback(), "Nothing was rolled back"),
     );
@@ -632,8 +638,9 @@ export const test_mcp_production_legacy_import = (): void => {
   const rollbackFailure = createLegacy();
   try {
     const importer = new AutoMovieLegacyImporter(rollbackFailure.root);
+    const plan = importer.plan();
     importer.apply();
-    createEmptyOwnedRoots(rollbackFailure.root);
+    createMissingOwnedRoots(rollbackFailure.root, plan);
     const nativeRmdir = fs.rmdirSync;
     const nativeMkdir = fs.mkdirSync;
     const nativeWrite = fs.writeFileSync;
@@ -727,8 +734,9 @@ export const test_mcp_production_legacy_import = (): void => {
   const parkedRollbackRoot = `${rollbackRootSwap.root}-parked`;
   try {
     const importer = new AutoMovieLegacyImporter(rollbackRootSwap.root);
+    const plan = importer.plan();
     importer.apply();
-    createEmptyOwnedRoots(rollbackRootSwap.root);
+    createMissingOwnedRoots(rollbackRootSwap.root, plan);
     const nativeRmdir = fs.rmdirSync;
     let swapped = false;
     fs.rmdirSync = ((directory: fs.PathLike): void => {
@@ -763,8 +771,9 @@ export const test_mcp_production_legacy_import = (): void => {
   const incompleteRestoration = createLegacy();
   try {
     const importer = new AutoMovieLegacyImporter(incompleteRestoration.root);
+    const plan = importer.plan();
     importer.apply();
-    createEmptyOwnedRoots(incompleteRestoration.root);
+    createMissingOwnedRoots(incompleteRestoration.root, plan);
     const stateRoot = path.join(incompleteRestoration.root, ".automovie");
     const nativeRmdir = fs.rmdirSync;
     const nativeRename = fs.renameSync;
@@ -822,8 +831,9 @@ export const test_mcp_production_legacy_import = (): void => {
   const preservedQuarantine = createLegacy();
   try {
     const importer = new AutoMovieLegacyImporter(preservedQuarantine.root);
+    const plan = importer.plan();
     importer.apply();
-    createEmptyOwnedRoots(preservedQuarantine.root);
+    createMissingOwnedRoots(preservedQuarantine.root, plan);
     const stateRoot = path.join(preservedQuarantine.root, ".automovie");
     const nativeRmdir = fs.rmdirSync;
     const nativeRename = fs.renameSync;
