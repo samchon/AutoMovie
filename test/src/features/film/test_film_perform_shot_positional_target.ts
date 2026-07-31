@@ -313,8 +313,9 @@ const CAMERA_BY_VERB: ReadonlyArray<readonly [string, IAutoMovieActionCall]> = [
  * 7. Camera-as-TARGET does not loosen camera-as-ACTOR: a gesture performed by a
  *    camera is still refused at `.actor`.
  * 8. Locomote refuses broken absolute node/group/bone/point destinations at `.to`,
- *    resolves a live bone at `action.start`, and preserves the explicit
- *    relative direction/offscreen in-place fallback.
+ *    refuses vertical-only ground travel, resolves a live bone at
+ *    `action.start`, and preserves the explicit relative direction/offscreen
+ *    in-place fallback.
  */
 export const test_film_perform_shot_positional_target = (): void => {
   const perform = performing();
@@ -581,6 +582,31 @@ export const test_film_perform_shot_positional_target = (): void => {
       "$input.draft[0].to",
       "finite x/y/z coordinates",
     ),
+  );
+  TestValidator.predicate(
+    "locomote refuses a vertical-only ground destination at its target",
+    says(
+      perform([
+        locomote({
+          kind: "point",
+          point: { x: 0, y: 1, z: 0 },
+        }),
+      ]),
+      "$input.draft[0].to",
+      'actor "knightA"',
+      "vertical-only destination",
+      "walkable ground point",
+    ),
+  );
+  TestValidator.equals(
+    "locomote may step in place at its exact current ground point",
+    perform([
+      locomote({
+        kind: "point",
+        point: { x: 0, y: 0, z: 0 },
+      }),
+    ]).success,
+    true,
   );
   for (const [label, target] of [
     ["node", { kind: "node", node: "altar" }],

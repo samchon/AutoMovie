@@ -21,7 +21,7 @@ import { holdMotion } from "../motion/arrange";
 import { ease } from "../motion/easing";
 import { gaitMotion } from "../motion/gait";
 import { gestureMotion } from "../motion/gesture";
-import { locomoteMotion } from "../motion/locomote";
+import { LOCOMOTE_GROUND_EPSILON, locomoteMotion } from "../motion/locomote";
 import { reactMotion } from "../motion/react";
 import { sampleMotion } from "../motion/sampleMotion";
 import { timeScaleMotion } from "../motion/timeScale";
@@ -556,13 +556,14 @@ export const makeActorSynthesizer = (
       const local = toModelSpace(dest, staticFrame);
       const distance = Math.hypot(local.x, local.z);
       const travelDistance = Math.hypot(local.x, local.y, local.z);
-      if (travelDistance < 1e-6) return fitDeclaredSpan(cycle, action.duration); // already there → step in place
+      if (travelDistance < LOCOMOTE_GROUND_EPSILON)
+        return fitDeclaredSpan(cycle, action.duration); // already there → step in place
       // A gait cannot realize a purely vertical displacement. Returning null
       // makes the performance gate report the unsupported ground destination;
       // pretending it is "already there" would silently leave the actor at
       // the wrong height, while carrying it vertically would turn a walk into
       // an elevator. The same epsilon prevents an unbounded slope ratio.
-      if (distance < 1e-6) return null;
+      if (distance < LOCOMOTE_GROUND_EPSILON) return null;
       // A locomote destination is the ground point the actor must actually
       // reach, including a ramp's rise. Keep gait cadence governed by the XZ
       // distance (the actor profile's speed is its ground speed), but carry the

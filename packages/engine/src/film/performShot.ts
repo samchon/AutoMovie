@@ -24,6 +24,7 @@ import {
 import { armChainFault } from "../kinematics/armChainFault";
 import { Quaternion } from "../math/Quaternion";
 import { Vector3 } from "../math/Vector3";
+import { LOCOMOTE_GROUND_EPSILON } from "../motion/locomote";
 import { plantStanceFeet } from "../motion/plantFeet";
 import { sampleMotion } from "../motion/sampleMotion";
 import { actionRegion } from "../perform/actionRegion";
@@ -773,14 +774,33 @@ export const performShot = (props: {
         const relative =
           isRecord(action.to) &&
           (action.to.kind === "direction" || action.to.kind === "offscreen");
-        if (!relative)
-          resolvePositionalTarget(
+        if (!relative) {
+          const destination = resolvePositionalTarget(
             action.to,
             `${base}[${i}].to`,
             "locomote target",
             "a locomote destination",
             action.start,
           );
+          if (destination !== null)
+            for (const actor of actors.filter((candidate) =>
+              nodeIds.has(candidate),
+            )) {
+              const origin = nodePositions.get(actor)!;
+              const xz = Math.hypot(
+                destination.x - origin.x,
+                destination.z - origin.z,
+              );
+              const y = Math.abs(destination.y - origin.y);
+              if (xz < LOCOMOTE_GROUND_EPSILON && y >= LOCOMOTE_GROUND_EPSILON)
+                out.push(
+                  "range",
+                  `${base}[${i}].to`,
+                  `actor "${actor}" cannot locomote to a vertical-only destination (${y} m height change with ${xz} m XZ travel); choose a walkable ground point with horizontal travel or use another action verb`,
+                  action.to,
+                );
+            }
+        }
       } else if (action.verb === "launch") {
         // The projectile is a scene object, so it must be staged (its placed
         // position is where the flight begins), and the aim must resolve to a
