@@ -41,7 +41,8 @@ const dependencyRoot = (name: string): string => {
   let entry: string;
   try {
     entry = require.resolve(name);
-  } catch {
+  } catch (error) {
+    if (name.startsWith("@types/") === false) throw error;
     entry = require.resolve(`${name}/package.json`);
   }
   let directory = path.dirname(entry);
