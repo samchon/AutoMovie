@@ -8,6 +8,7 @@ import {
   resolveBeatEnd,
   resolvePose,
   sampleMotion,
+  spaceGround,
 } from "@automovie/engine";
 import {
   IAutoMovieBeatEndState,
@@ -157,6 +158,11 @@ const compileWalk = (props: {
  * The prior root/facing/pose/mount become the staged opening, gait phase seeds
  * the next cycle, horizontal root velocity becomes the auto-locomotion speed,
  * and a stance beginning at frame zero reuses the prior world foot pin.
+ *
+ * Scenarios include a flat legacy ground handoff, an airborne actor that must
+ * not plant merely because its model foot is at y=0, and a translated,
+ * 90-degree-facing actor whose plant is measured on a non-zero ramp and reused
+ * by the next shot in the same world coordinates.
  */
 export const test_film_defined_shot_continuity = (): void => {
   const rig = createSkeleton();
@@ -236,6 +242,91 @@ export const test_film_defined_shot_continuity = (): void => {
       airborne.continuity.closing.actors.find(
         (actor) => actor.node === "knightA",
       )?.footPlants === null,
+  );
+
+  const slopeStage = makeStagingWrite({
+    actors: groundedStage.actors,
+    space: {
+      id: "rising-ground",
+      surfaces: [
+        {
+          id: "ramp",
+          kind: "ramp",
+          polygon: [
+            { x: 0, y: 0, z: 0 },
+            { x: 8, y: 0, z: 0 },
+            { x: 8, y: 0, z: 8 },
+            { x: 0, y: 0, z: 8 },
+          ],
+          anchor: { x: 0, y: 0, z: 0 },
+          rampTo: { x: 8, y: 0.4, z: 0 },
+        },
+      ],
+      walkable: ["ramp"],
+    },
+  });
+  const slopeFirst = compileWalk({
+    id: "SB-PLANT-SLOPE-A",
+    rig,
+    stage: slopeStage,
+    target: { x: 3.5, y: 0, z: 4 },
+    duration: 1,
+  });
+  TestValidator.predicate(
+    "a translated and rotated gait produces a ramp plant",
+    slopeFirst.success &&
+      slopeFirst.continuity.closing.actors
+        .find((actor) => actor.node === "knightA")
+        ?.footPlants?.some((plant) => plant.foot === "leftFoot") === true,
+  );
+  if (slopeFirst.success === false) return;
+  const slopeActor = slopeFirst.continuity.closing.actors.find(
+    (actor) => actor.node === "knightA",
+  )!;
+  const slopePin = slopeActor.footPlants!.find(
+    (plant) => plant.foot === "leftFoot",
+  )!.position;
+  const slopeSecond = compileWalk({
+    id: "SB-PLANT-SLOPE-B",
+    rig,
+    stage: slopeStage,
+    target: {
+      x: slopeActor.transform.translation.x + 0.5,
+      y: slopeActor.transform.translation.y,
+      z: slopeActor.transform.translation.z,
+    },
+    previous: slopeFirst.continuity.closing,
+    duration: 1,
+  });
+  const slopeSecondNode =
+    slopeSecond.success === false
+      ? null
+      : slopeSecond.source.scene.nodes.find((node) => node.id === "knightA")!;
+  const slopeSecondMotion =
+    slopeSecond.success === false
+      ? null
+      : slopeSecond.source.motions.find(
+          (motion) => (motion.gaitCycle ?? null) !== null,
+        )!;
+  const slopeSecondFoot =
+    slopeSecondNode === null || slopeSecondMotion === null
+      ? null
+      : Vector3.add(
+          slopeSecondNode.transform.translation,
+          Quaternion.rotateVector(
+            slopeSecondNode.transform.rotation,
+            resolvePose(sampleMotion(slopeSecondMotion, 0).pose, rig).find(
+              (bone) => bone.bone === "leftFoot",
+            )!.worldPosition,
+          ),
+        );
+  const rampGround = spaceGround(slopeStage.space!);
+  TestValidator.predicate(
+    "ramp world height and the next opening share the same plant authority",
+    Math.abs(slopePin.y - rampGround(slopePin.x, slopePin.z)) <= 1e-6 &&
+      slopeSecond.success &&
+      slopeSecondFoot !== null &&
+      vclose(slopeSecondFoot, slopePin, 1e-4),
   );
 
   const firstActor = first.continuity.closing.actors.find(

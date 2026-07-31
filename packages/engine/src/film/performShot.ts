@@ -258,7 +258,9 @@ export namespace IAutoMoviePerformedShot {
  * exactly once at this boundary. When staging supplies a scene space, its world
  * surface height is transformed into the actor's model frame for contact and
  * pinning; otherwise the legacy model-space y=0 plane remains. Static non-gait
- * clips keep their authored key grid.
+ * clips keep their authored key grid. This conversion reads the unit-scale,
+ * yaw-only actor transform {@link stageScene} emits; `staged` is that validated
+ * stage result, not an arbitrary fabricated scene graph.
  *
  * @param props.skeleton Rig lookup for ROM validation; return null for a node
  *   that has no skeleton (its clip skips ROM).
