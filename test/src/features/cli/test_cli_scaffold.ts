@@ -7,6 +7,7 @@ import {
 } from "@automovie/cli";
 import { TestValidator } from "@nestia/e2e";
 import * as fs from "node:fs";
+import { createRequire } from "node:module";
 import * as os from "node:os";
 import * as path from "node:path";
 
@@ -17,6 +18,16 @@ const throws = (fn: () => unknown): boolean => {
     return false;
   } catch {
     return true;
+  }
+};
+
+/** True when `fn` throws an Error containing `message`. */
+const throwsWith = (fn: () => unknown, message: string): boolean => {
+  try {
+    fn();
+    return false;
+  } catch (error) {
+    return error instanceof Error && error.message.includes(message);
   }
 };
 
@@ -130,6 +141,9 @@ export const test_cli_scaffold = (): void => {
       "src/shots/opening.ts",
       "test/opening.test.ts",
       "tsconfig.json",
+      "vendor/sharp-disabled/LICENSE",
+      "vendor/sharp-disabled/index.cjs",
+      "vendor/sharp-disabled/package.json",
       "viewer/index.html",
       "viewer/src/asset.ts",
       "viewer/src/film.ts",
@@ -184,7 +198,8 @@ export const test_cli_scaffold = (): void => {
       pkg.includes(
         `"@types/pngjs": "${AUTOMOVIE_TEMPLATE_VERSIONS.pngjsTypes}"`,
       ) &&
-      pkg.includes(`"three": "${AUTOMOVIE_TEMPLATE_VERSIONS.three}"`),
+      pkg.includes(`"three": "${AUTOMOVIE_TEMPLATE_VERSIONS.three}"`) &&
+      pkg.includes('"sharp": "file:vendor/sharp-disabled"'),
   );
   TestValidator.predicate(
     "the starter separates owned source and enforces review in read-only lint",
@@ -523,6 +538,9 @@ export const test_cli_scaffold = (): void => {
         "src/shots/opening.ts",
         "test/opening.test.ts",
         "tsconfig.json",
+        "vendor/sharp-disabled/LICENSE",
+        "vendor/sharp-disabled/index.cjs",
+        "vendor/sharp-disabled/package.json",
         "viewer/index.html",
         "viewer/src/asset.ts",
         "viewer/src/film.ts",
@@ -537,6 +555,13 @@ export const test_cli_scaffold = (): void => {
     TestValidator.predicate(
       "the written tree matches the rendered keys on disk",
       Object.keys(files).every((key) => fs.existsSync(path.join(target, key))),
+    );
+    const sharpWall = createRequire(__filename)(
+      path.join(target, "vendor", "sharp-disabled", "index.cjs"),
+    ) as () => never;
+    TestValidator.predicate(
+      "the local Sharp replacement fails explicitly outside the TTS surface",
+      throwsWith(sharpWall, "text/audio path only"),
     );
     TestValidator.predicate(
       "a non-empty target is refused without force",

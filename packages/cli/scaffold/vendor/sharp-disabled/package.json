@@ -1,0 +1,9 @@
+{
+  "name": "sharp",
+  "version": "0.0.0-automovie-tts-only",
+  "description": "AutoMovie TTS-only capability wall for Transformers.js image processing.",
+  "main": "index.cjs",
+  "exports": "./index.cjs",
+  "license": "MIT",
+  "private": true
+}

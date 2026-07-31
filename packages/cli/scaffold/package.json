@@ -5,6 +5,11 @@
   "version": "0.1.0",
   "license": "MIT",
   "description": "An AutoMovie coding-agent production repository.",
+  "overrides": {
+    "@huggingface/transformers": {
+      "sharp": "file:vendor/sharp-disabled"
+    }
+  },
   "scripts": {
     "capture:doctor": "tsx scripts/capture-doctor.ts",
     "capture:install": "tsx scripts/capture-install.ts",

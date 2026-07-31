@@ -150,7 +150,11 @@ their emitters relative to the active camera, mixes authored score cues and
 caption-timed dialogue at 48 kHz stereo, and encodes deterministic Opus without
 a host `ffmpeg`. Dialogue uses the local Kokoro ONNX/WASM adapter and caches each
 normalized line by content, model, voice, and inference settings, so changing
-one line invalidates only that line. The audio deliverable owns `audio.mp4`,
+one line invalidates only that line. The project overrides Transformers.js's
+Node-only Sharp image dependency with the bundled TTS capability wall: Kokoro's
+text/audio path remains local, while an accidental image-pipeline call fails
+explicitly instead of installing a non-permissive native image payload. The
+audio deliverable owns `audio.mp4`,
 waveform and spectrogram PNGs, and parser-verified clipping/event-alignment
 evidence. The feature MP4 muxes that exact audio with H.264 video; final media
 probing refuses video-only feature output or unequal A/V runtimes.

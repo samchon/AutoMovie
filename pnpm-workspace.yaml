@@ -2,6 +2,9 @@ packages:
   - packages/*
   - test
 
+overrides:
+  "@huggingface/transformers>sharp": "file:packages/cli/scaffold/vendor/sharp-disabled"
+
 catalogs:
   samchon:
     typia: &typia ^13.2.0

@@ -15,9 +15,18 @@ interface IDependencyFixtureOptions {
 
 interface IPackageManifest {
   dependencies?: Record<string, string>;
+  license?: string;
   name: string;
   optionalDependencies?: Record<string, string>;
   peerDependencies?: Record<string, string>;
+}
+
+interface IScaffoldPackageManifest extends IPackageManifest {
+  overrides?: {
+    "@huggingface/transformers"?: {
+      sharp?: string;
+    };
+  };
 }
 
 /** Scaffold dependencies without one installed production owner. */
@@ -55,6 +64,41 @@ const unauditedScaffoldDependencies = (): string[] => {
         productionDependencies.has(dependency) === false,
     )
     .sort();
+};
+
+/** Drift in the local permissive-only Transformers.js image capability wall. */
+const invalidSharpCapabilityWall = (): string[] => {
+  const scaffold = JSON.parse(
+    fs.readFileSync(
+      path.join(ROOT, "packages", "cli", "scaffold", "package.json"),
+      "utf8",
+    ),
+  ) as IScaffoldPackageManifest;
+  const wallRoot = path.join(
+    ROOT,
+    "packages",
+    "cli",
+    "scaffold",
+    "vendor",
+    "sharp-disabled",
+  );
+  const wall = JSON.parse(
+    fs.readFileSync(path.join(wallRoot, "package.json"), "utf8"),
+  ) as IPackageManifest;
+  return [
+    ...(scaffold.overrides?.["@huggingface/transformers"]?.sharp ===
+    "file:vendor/sharp-disabled"
+      ? []
+      : ["scaffold override"]),
+    ...(wall.name === "sharp" && wall.license === "MIT"
+      ? []
+      : ["replacement identity"]),
+    ...(fs
+      .readFileSync(path.join(wallRoot, "index.cjs"), "utf8")
+      .includes("text/audio path only")
+      ? []
+      : ["capability-wall error"]),
+  ];
 };
 
 /** Write a tiny installed production dependency with a selected license. */
@@ -151,6 +195,11 @@ export const test_workspace_license_policy = (): void => {
   TestValidator.equals(
     "every shipped scaffold runtime dependency has an audited production owner",
     unauditedScaffoldDependencies(),
+    [],
+  );
+  TestValidator.equals(
+    "the Kokoro graph replaces Sharp with a local permissive capability wall",
+    invalidSharpCapabilityWall(),
     [],
   );
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-license-"));
