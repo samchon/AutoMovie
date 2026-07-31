@@ -107,7 +107,19 @@ const filmWorksheet = (
       );
     })
     .sort((left, right) => left.id.localeCompare(right.id));
-  const frame = prepared.frames[0]!;
+  const frame = prepared.frames[0];
+  if (frame === undefined)
+    throw new Error(
+      `Film worksheet requires current prepared frame evidence:\n${JSON.stringify(
+        {
+          target: prepared.target,
+          diagnostics: prepared.diagnostics,
+          outcomes: prepared.outcomes,
+        },
+        null,
+        2,
+      )}`,
+    );
   const frameEvidence = {
     kind: "frame" as const,
     target: frame.target,
