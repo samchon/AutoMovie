@@ -2,6 +2,7 @@ import {
   AutoMovieContentDigest,
   AutoMovieGuidePass,
   IAutoMovieProductionDeliverable,
+  IAutoMovieRepaintRuntimeIdentity,
 } from "@automovie/interface";
 import typia from "typia";
 
@@ -15,6 +16,7 @@ import {
   AutoMovieBenchmarkSurface,
   IAutoMovieBenchmarkTask,
   IAutoMovieBenchmarkVersions,
+  canonicalBenchmarkJson,
   digestBenchmarkValue,
   validateAutoMovieBenchmarkTask,
 } from "./task";
@@ -403,6 +405,48 @@ const assertEvidencePaths = (
     );
 };
 
+/** Refuse nominal repaint labels that do not describe one exact host runtime. */
+const assertRepaintEvidence = (
+  draft: IAutoMovieBenchmarkSubmissionDraft,
+): void => {
+  if (
+    draft.repaint.status !== "not-produced" &&
+    draft.repaint.status !== "verified"
+  )
+    return;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(draft.repaint.adapterIdentity);
+  } catch {
+    throw new Error(
+      "Invalid AutoMovie benchmark submission: repaint adapter identity is not canonical JSON.",
+    );
+  }
+  const validation =
+    typia.validateEquals<IAutoMovieRepaintRuntimeIdentity>(parsed);
+  if (
+    validation.success === false ||
+    validation.data.protocolVersion !== "automovie.repaint-runtime.v1" ||
+    validation.data.provider.trim().length === 0 ||
+    validation.data.model.trim().length === 0 ||
+    validation.data.version.trim().length === 0 ||
+    canonicalBenchmarkJson(validation.data) !== draft.repaint.adapterIdentity
+  )
+    throw new Error(
+      "Invalid AutoMovie benchmark submission: repaint adapter identity must be canonical runtime-v1 JSON with non-blank provider, model, and version.",
+    );
+  if (
+    draft.repaint.status === "verified" &&
+    (draft.repaint.shots.length === 0 ||
+      draft.repaint.shots.some((shot) => shot.shot.trim().length === 0) ||
+      new Set(draft.repaint.shots.map((shot) => shot.shot)).size !==
+        draft.repaint.shots.length)
+  )
+    throw new Error(
+      "Invalid AutoMovie benchmark submission: verified repaint evidence requires unique non-blank shot receipts.",
+    );
+};
+
 /**
  * Validate one archived run, resolve its lifecycle, and seal it.
  *
@@ -424,6 +468,7 @@ export const sealAutoMovieBenchmarkSubmission = (
     );
   assertNumericClaims(draft);
   assertEvidencePaths(draft);
+  assertRepaintEvidence(draft);
   const sealed: IAutoMovieBenchmarkSubmissionDraft = {
     ...draft,
     lifecycle: resolveAutoMovieBenchmarkLifecycle(draft.lifecycle),
@@ -456,6 +501,7 @@ const assertAutoMovieBenchmarkSubmissionIntegrity = (
   const { runId, ...draft } = validation.data;
   assertNumericClaims(draft);
   assertEvidencePaths(draft);
+  assertRepaintEvidence(draft);
   const canonicalLifecycle = resolveAutoMovieBenchmarkLifecycle(
     draft.lifecycle,
   );

@@ -63,6 +63,22 @@ export const test_mcp_production_design_validation = (): void => {
     [],
   );
   TestValidator.predicate(
+    "repainted delivery requires one non-optional feature",
+    validateAutoMovieProductionGraph({
+      ...valid,
+      production: {
+        ...productionDesign(),
+        visualDelivery: "repainted",
+        deliverables: [
+          { id: "preview", kind: "preview", required: true },
+          { id: "optional-feature", kind: "feature", required: false },
+        ],
+      },
+    }).some(
+      (diagnostic) => diagnostic.code === "design-repaint-feature-required",
+    ),
+  );
+  TestValidator.predicate(
     "duplicate shot style intent is diagnosed at its own field",
     validateAutoMovieProductionGraph({
       ...valid,

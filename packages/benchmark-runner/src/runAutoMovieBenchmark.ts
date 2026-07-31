@@ -29,7 +29,11 @@ import {
   sealAutoMovieBenchmarkSubmission,
   validateAutoMovieBenchmarkTask,
 } from "@automovie/benchmark";
-import { probeProductionMedia } from "@automovie/mcp";
+import type { IAutoMovieRepaintRuntimeIdentity } from "@automovie/interface";
+import {
+  canonicalAutoMovieRepaintRuntimeIdentity,
+  probeProductionMedia,
+} from "@automovie/mcp";
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
@@ -142,7 +146,7 @@ export interface IAutoMovieBenchmarkCollectorContext {
   stdout: string;
   stderr: string;
   /** Host-owned repaint runtime identity, present only for that lane. */
-  repaintRuntime?: { adapterIdentity: string };
+  repaintRuntime?: IAutoMovieRepaintRuntimeIdentity;
 }
 
 /**
@@ -182,7 +186,7 @@ export interface IAutoMovieBenchmarkRunInput {
   /** Optional measured retired/comparison surfaces. */
   inventoryBaselines?: readonly IAutoMovieBenchmarkMcpTarget[];
   /** Structured host-owned repaint runtime available to the optional lane. */
-  repaintRuntime?: { adapterIdentity: string };
+  repaintRuntime?: IAutoMovieRepaintRuntimeIdentity;
   /** External agent/process adapter. */
   agent: AutoMovieBenchmarkAgent;
   /** Trusted receipt collector invoked only after the agent exits. */
@@ -401,13 +405,10 @@ export const runAutoMovieBenchmark = async (
     throw new Error(
       `Benchmark scenario "${scenario.taskId}" does not support lane "${input.lane}". Choose one of: ${scenario.lanes.join(", ")}.`,
     );
-  if (
-    input.repaintRuntime !== undefined &&
-    input.repaintRuntime.adapterIdentity.trim().length === 0
-  )
-    throw new Error(
-      "Benchmark repaintRuntime requires a non-blank host-owned adapter identity.",
-    );
+  const repaintAdapterIdentity =
+    input.repaintRuntime === undefined
+      ? undefined
+      : canonicalAutoMovieRepaintRuntimeIdentity(input.repaintRuntime);
   const task = scenario.task();
   const taskDigest = validateAutoMovieBenchmarkTask(task);
   const mcpTargets = [input.mcpTarget, ...(input.inventoryBaselines ?? [])];
@@ -475,7 +476,15 @@ export const runAutoMovieBenchmark = async (
     lane: input.lane,
   });
 
-  let incident: IAutoMovieBenchmarkInfraIncident | null = null;
+  let incident: IAutoMovieBenchmarkInfraIncident | null =
+    input.lane === "repaint" && input.repaintRuntime === undefined
+      ? {
+          kind: "repaint-adapter-unavailable",
+          gate: "capture-runtime",
+          detail:
+            "The optional repaint lane has no host-owned repaint adapter. Configure that capability or run the deterministic lane.",
+        }
+      : null;
   let result: IAutoMovieBenchmarkAgentResult = {
     stdout: "",
     stderr: "",
@@ -492,16 +501,17 @@ export const runAutoMovieBenchmark = async (
       entry.provenance === input.mcpTarget.provenance,
   )!;
   if (currentObservation.session === null) {
-    incident = {
-      kind: "harness-error",
-      gate: "mcp-handshake",
-      detail: currentObservation.error!,
-    };
+    if (incident === null)
+      incident = {
+        kind: "harness-error",
+        gate: "mcp-handshake",
+        detail: currentObservation.error!,
+      };
     trace.append({
       kind: "gate",
       gate: "mcp-handshake",
       status: "fail",
-      detail: incident.detail,
+      detail: currentObservation.error!,
     });
   } else
     trace.append({
@@ -518,18 +528,6 @@ export const runAutoMovieBenchmark = async (
       kind: "harness-error",
       gate: "mcp-handshake",
       detail: `Comparison MCP target "${failedComparison.provenance}" failed: ${failedComparison.error}`,
-    };
-
-  if (
-    incident === null &&
-    input.lane === "repaint" &&
-    input.repaintRuntime === undefined
-  )
-    incident = {
-      kind: "repaint-adapter-unavailable",
-      gate: "capture-runtime",
-      detail:
-        "The optional repaint lane has no host-owned repaint adapter. Configure that capability or run the deterministic lane.",
     };
 
   if (incident === null) {
@@ -589,9 +587,8 @@ export const runAutoMovieBenchmark = async (
       assertCollectedEvidence(evidence);
       if (
         evidence.repaint !== undefined &&
-        input.repaintRuntime !== undefined &&
-        evidence.repaint.adapterIdentity !==
-          input.repaintRuntime.adapterIdentity
+        repaintAdapterIdentity !== undefined &&
+        evidence.repaint.adapterIdentity !== repaintAdapterIdentity
       )
         throw new Error(
           "Collected repaint evidence cites a different adapter than the host runtime.",
@@ -750,11 +747,11 @@ export const runAutoMovieBenchmark = async (
     repaint:
       input.lane === "deterministic"
         ? { status: "not-requested" }
-        : incident?.kind === "repaint-adapter-unavailable"
+        : input.repaintRuntime === undefined
           ? { status: "unavailable" }
           : (evidence.repaint ?? {
               status: "not-produced",
-              adapterIdentity: input.repaintRuntime!.adapterIdentity,
+              adapterIdentity: repaintAdapterIdentity!,
             }),
     incident,
   });

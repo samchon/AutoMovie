@@ -231,6 +231,19 @@ export const validateAutoMovieProductionGraph = (
           `Deliverable "${deliverable.id}:${deliverable.kind}" cannot own structural pass "${deliverable.pass}". Remove pass or change the deliverable to guide-pass.`,
         );
     }
+    if (
+      graph.production.visualDelivery === "repainted" &&
+      graph.production.deliverables.some(
+        (deliverable) => deliverable.kind === "feature" && deliverable.required,
+      ) === false
+    )
+      invalid(
+        diagnostics,
+        "design-repaint-feature-required",
+        target,
+        file,
+        'visualDelivery "repainted" requires at least one required feature deliverable. A nominal repaint selection cannot ship only deterministic previews, guides, audio, or omitted optional features.',
+      );
   }
 
   for (const [id, model] of graph.models) {

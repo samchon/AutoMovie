@@ -66,10 +66,7 @@ import {
   materializeCompiledShot,
   materializeProductionModels,
 } from "./materializeProduction";
-import {
-  assertProductionFeatureUsesRenditionVideo,
-  conformProductionRenditionVideoMp4,
-} from "./muxProductionFeatureMp4";
+import { assertProductionFeatureUsesRenditionClips } from "./muxProductionFeatureMp4";
 import { probeProductionMedia } from "./probeProductionMedia";
 import {
   IAutoMovieProductionDesignGraph,
@@ -77,7 +74,7 @@ import {
 } from "./validateProductionDesign";
 
 /** Production compiler protocol embedded in generated manifests. */
-export const AUTOMOVIE_PRODUCTION_COMPILER_PROTOCOL = "automovie.compiler.v6";
+export const AUTOMOVIE_PRODUCTION_COMPILER_PROTOCOL = "automovie.compiler.v7";
 
 const FILM_SOURCE_PATH = "src/film.ts";
 const FILM_SOURCE_EXPORT = "film";
@@ -3777,7 +3774,17 @@ const appendRenditionDeliveryDiagnostics = (
   reviews: IAutoMovieReviewQueue,
   deliverable: IAutoMovieProductionRenderManifest["deliverables"][number],
 ): void => {
-  if (deliverable.kind !== "feature") return;
+  if (deliverable.kind !== "feature") {
+    if (deliverable.rendition !== undefined)
+      diagnostics.push(
+        renderDeliverableDiagnostic(
+          "render-rendition-provenance-invalid",
+          deliverable.id,
+          "Only feature delivery may claim repaint rendition provenance.",
+        ),
+      );
+    return;
+  }
   if (production.visualDelivery !== "repainted") {
     if (deliverable.rendition !== undefined)
       diagnostics.push(
@@ -3883,7 +3890,8 @@ const appendRenditionDeliveryDiagnostics = (
     );
     if (feature === undefined)
       throw new Error("Feature manifest has no video/mp4 output.");
-    const renditionVideo = conformProductionRenditionVideoMp4({
+    assertProductionFeatureUsesRenditionClips({
+      feature: project.readRenderFile(feature.path),
       timeline,
       clips: new Map(
         shots.map(
@@ -3894,10 +3902,6 @@ const appendRenditionDeliveryDiagnostics = (
             ] as const,
         ),
       ),
-    });
-    assertProductionFeatureUsesRenditionVideo({
-      feature: project.readRenderFile(feature.path),
-      renditionVideo,
     });
   } catch (error) {
     diagnostics.push(

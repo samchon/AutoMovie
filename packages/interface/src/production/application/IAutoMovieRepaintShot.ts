@@ -44,7 +44,7 @@ export interface IAutoMovieRepaintRuntimeIdentity {
 /** Immutable provenance for one accepted repaint rendition. */
 export interface IAutoMovieRepaintReceipt {
   /** Receipt format. */
-  version: 1;
+  version: 2;
   /** Owning production namespace. */
   productionId: string;
   /** Exact compiled shot id. */
@@ -55,6 +55,8 @@ export interface IAutoMovieRepaintReceipt {
   sourceRenderFingerprint: AutoMovieContentDigest;
   /** Current completed deterministic shot-review fingerprint. */
   sourceReviewFingerprint: AutoMovieContentDigest;
+  /** Host-generated identity of this repaint invocation. */
+  attemptId: string;
   /** Content-addressed deterministic source bundle. */
   sourceBundle: string;
   /** Structural passes supplied to the adapter. */

@@ -758,6 +758,7 @@ export const test_mcp_production_application = async (): Promise<void> => {
           true &&
         repainted.receipt.sourceReviewFingerprint ===
           sourceReview.fingerprint &&
+        repainted.receipt.attemptId.length === 36 &&
         repainted.receipt.controls.some((control) => control.pass === "pose") &&
         repainted.receipt.references[0]?.digest === reference.digest &&
         repainted.receipt.adapterIdentity.includes("fixture-video") &&
@@ -800,7 +801,7 @@ export const test_mcp_production_application = async (): Promise<void> => {
       shot: "opening",
       references: [{ role: "style", path: reference.path }],
       parameters: {
-        prompt: "Preserve the signal with warmer light.",
+        prompt: "Preserve the signal.",
         seed: 17,
         strength: 0.8,
       },
@@ -808,13 +809,25 @@ export const test_mcp_production_application = async (): Promise<void> => {
     const rerolledReview = repainting.prepareReview({
       target: { kind: "rendition", id: "opening" },
     });
+    const repaintFilmReview = repainting.prepareReview({
+      target: { kind: "film", id: "fixture-film" },
+    });
     TestValidator.predicate(
-      "a reroll atomically selects one new rendition and stales prior review identity",
+      "even an identical-byte reroll selects a new attempt and stales prior review identity",
       rerolled.repainted &&
+        rerolled.receipt?.attemptId !== acceptedReceipt?.attemptId &&
         rerolled.receipt?.output.path !== acceptedReceipt?.output.path &&
         rerolledReview.fingerprint !== renditionReview.fingerprint &&
         rerolledReview.renditions.length === 1 &&
         rerolledReview.renditions[0]?.path === rerolled.receipt?.output.path,
+    );
+    TestValidator.predicate(
+      "film review preflights the selected repaint cut before approval",
+      repaintFilmReview.renditions.length === 1 &&
+        repaintFilmReview.diagnostics.some(
+          (diagnostic) =>
+            diagnostic.code === "review-rendition-delivery-invalid",
+        ) === false,
     );
     const activeRenditionPath = first.project.trackedStatePath(
       "renditions/active/opening.json",

@@ -112,7 +112,7 @@ export const test_benchmark_judge_verdicts = (): void => {
       repaint: {
         status: "verified",
         adapterIdentity:
-          '{"model":"fixture","protocolVersion":"automovie.repaint-runtime.v1"}',
+          '{"execution":"local","model":"fixture","protocolVersion":"automovie.repaint-runtime.v1","provider":"fixture","version":"1"}',
         shots: [
           {
             shot: "opening",

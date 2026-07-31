@@ -43,7 +43,8 @@ export interface IAutoMovieProductionDesign {
    *
    * Deterministic delivery uses compiler/render output directly. Repainted
    * delivery keeps that output as technical truth and additionally requires a
-   * receipt-bound rendition review for every delivered shot.
+   * required feature plus a receipt-bound rendition review for every delivered
+   * shot.
    */
   visualDelivery: "deterministic" | "repainted";
   /** Deterministic frame clock and raster format. */

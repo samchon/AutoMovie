@@ -86,6 +86,7 @@ export const productionRepaintStructuralControls = (
 export const productionRepaintOutputPath = (props: {
   shot: string;
   sourceRenderFingerprint: AutoMovieContentDigest;
+  attemptId: string;
   adapterIdentity: string;
   parameters: IAutoMovieRepaintParameters;
   references: readonly {
@@ -97,7 +98,8 @@ export const productionRepaintOutputPath = (props: {
 }): string => {
   const request = digestAutoMovieBytes(
     canonicalAutoMovieJsonBytes({
-      protocol: "automovie.repaint-request.v1",
+      protocol: "automovie.repaint-request.v2",
+      attemptId: props.attemptId,
       adapterIdentity: props.adapterIdentity,
       parameters: props.parameters,
       references: props.references,

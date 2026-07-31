@@ -5,6 +5,7 @@ import {
 import {
   IAutoMovieProductionRenderChunkReceipt,
   IAutoMovieProductionRenderJobPlan,
+  assertProductionFeatureUsesRenditionClips,
   assertProductionFeatureUsesRenditionVideo,
   canonicalProductionWebVtt,
   conformProductionRenditionVideoMp4,
@@ -290,6 +291,11 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
       bytes: conformedRepaint,
     }).kind === "video" &&
       (() => {
+        assertProductionFeatureUsesRenditionClips({
+          feature: conformedRepaint,
+          timeline: repaintTimeline,
+          clips: repaintClips,
+        });
         assertProductionFeatureUsesRenditionVideo({
           feature: conformedRepaint,
           renditionVideo: conformedRepaint,

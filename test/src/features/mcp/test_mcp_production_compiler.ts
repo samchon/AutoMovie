@@ -32,6 +32,7 @@ import {
   productionAudioMp4,
   productionH264Mp4,
   productionOpusMp4,
+  productionPng,
 } from "./productionMediaFixtures";
 
 const minimalExternalModelJson = (): string => {
@@ -2274,6 +2275,11 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
           kind: "feature" as const,
           required: true,
         },
+        {
+          id: "optional-preview" as const,
+          kind: "preview" as const,
+          required: false,
+        },
       ],
     };
     project.setProductionDesign(requiredProduction);
@@ -2341,6 +2347,15 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     fs.writeFileSync(
       path.join(fixture.root, "renders", "fixture-film", fakeFeaturePath),
       fakeFeatureBytes,
+    );
+    const previewPath = "deliverables/optional-preview.png";
+    const optionalPreviewBytes = productionPng(
+      requiredProduction.frameFormat.width,
+      requiredProduction.frameFormat.height,
+    );
+    fs.writeFileSync(
+      path.join(fixture.root, "renders", "fixture-film", previewPath),
+      optionalPreviewBytes,
     );
     const currentFingerprint = unsafeRender.compiler.inputFingerprint;
     const completeRenderManifest = {
@@ -2432,6 +2447,34 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
       featureBytes,
     );
     project.commitProductionRenderManifest(completeRenderManifest);
+    project.commitProductionRenderManifest({
+      ...completeRenderManifest,
+      deliverables: [
+        ...completeRenderManifest.deliverables,
+        {
+          id: "optional-preview",
+          kind: "preview",
+          files: [
+            {
+              path: previewPath,
+              digest: digestAutoMovieBytes(optionalPreviewBytes),
+              bytes: optionalPreviewBytes.length,
+              mediaType: "image/png",
+            },
+          ],
+          runtimeSeconds: null,
+          frameCount: null,
+          codec: null,
+          rendition: {
+            kind: "repainted",
+            shots: [],
+            aggregateReviews: [],
+          },
+        },
+      ],
+    });
+    const nominalPreviewRendition = finalCompiler.compile({ scope: "final" });
+    project.commitProductionRenderManifest(completeRenderManifest);
     TestValidator.predicate(
       "final compile requires an aggregate deliverable manifest",
       diagnosticCodes(missingRender).has("render-deliverable-missing"),
@@ -2473,6 +2516,12 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
       "final compile accepts complete byte-exact aggregate deliverables",
       fakeMediaCommitRefused &&
         finalCompiler.compile({ scope: "final" }).success,
+    );
+    TestValidator.predicate(
+      "non-feature outputs cannot carry nominal repaint provenance",
+      diagnosticCodes(nominalPreviewRendition).has(
+        "render-rendition-provenance-invalid",
+      ),
     );
     const edgeAudioBytes = productionOpusMp4(48_000);
     const edgeAudioProbe = probeProductionMedia({

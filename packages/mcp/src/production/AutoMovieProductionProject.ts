@@ -35,6 +35,7 @@ import {
   digestAutoMovieBytes,
   encodeAutoMoviePathSegment,
 } from "./contentIdentity";
+import { assertProductionRenditionClipDelivery } from "./muxProductionFeatureMp4";
 import { probeProductionMedia } from "./probeProductionMedia";
 import {
   canonicalAutoMovieRepaintRuntimeIdentity,
@@ -1708,6 +1709,9 @@ export class AutoMovieProductionProject {
     bytes: Uint8Array,
   ): void {
     if (
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu.test(
+        receipt.attemptId,
+      ) === false ||
       receipt.parameters.prompt.trim().length === 0 ||
       Number.isSafeInteger(receipt.parameters.seed) === false ||
       Number.isFinite(receipt.parameters.strength) === false ||
@@ -1775,6 +1779,7 @@ export class AutoMovieProductionProject {
     const expected = productionRepaintOutputPath({
       shot: receipt.shot,
       sourceRenderFingerprint: receipt.sourceRenderFingerprint,
+      attemptId: receipt.attemptId,
       adapterIdentity: receipt.adapterIdentity,
       parameters: receipt.parameters,
       references: receipt.references,
@@ -1795,16 +1800,15 @@ export class AutoMovieProductionProject {
     const graph = this.graph();
     const production = graph.production;
     const shot = graph.shots.get(receipt.shot);
-    const expectedFrameCount =
-      production === null || shot === undefined
-        ? null
-        : Math.round(shot.durationSeconds * production.frameFormat.fps);
+    if (production === null || shot === undefined)
+      throw new Error("Stored repaint media target is stale.");
+    const expectedFrameCount = Math.round(
+      shot.durationSeconds * production.frameFormat.fps,
+    );
     if (
       probe.kind !== "video" ||
       canonicalizeAutoMovieJson(probe) !==
         canonicalizeAutoMovieJson(receipt.output.probe) ||
-      production === null ||
-      shot === undefined ||
       probe.width !== production.frameFormat.width ||
       probe.height !== production.frameFormat.height ||
       Math.abs(probe.fps - production.frameFormat.fps) > 1e-9 ||
@@ -1812,6 +1816,15 @@ export class AutoMovieProductionProject {
       Math.abs(probe.runtimeSeconds - shot.durationSeconds) > 1e-9
     )
       throw new Error("Stored repaint media facts are stale.");
+    assertProductionRenditionClipDelivery({
+      bytes,
+      shot: receipt.shot,
+      width: production.frameFormat.width,
+      height: production.frameFormat.height,
+      fps: production.frameFormat.fps,
+      frameCount: expectedFrameCount,
+      runtimeSeconds: shot.durationSeconds,
+    });
   }
 
   /** Verify every repaint reference against current declared asset bytes. */

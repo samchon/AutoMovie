@@ -336,6 +336,23 @@ export const test_benchmark_runner = async (): Promise<void> => {
       agent: unreachableAgent,
       collect: collectCompleteEvidence,
     });
+    const unavailableRepaintWithBadProbe = await runAutoMovieBenchmark({
+      taskId: current.taskId,
+      lane: "repaint",
+      campaign: "mcp-failure",
+      runRoot: root,
+      repositoryRoot,
+      identity,
+      mcpTarget: {
+        surface: "five-tool",
+        provenance: "broken-repaint-server",
+        probe: async () => {
+          throw new Error("initialize refused");
+        },
+      },
+      agent: unreachableAgent,
+      collect: collectCompleteEvidence,
+    });
     TestValidator.predicate(
       "a failed live MCP handshake is runner-owned infrastructure evidence",
       badProbe.verdict.outcome === "infra-excluded" &&
@@ -343,6 +360,15 @@ export const test_benchmark_runner = async (): Promise<void> => {
         readJson<{ mcp: { protocolVersion: string } }>(
           path.join(badProbe.archive, "submission.json"),
         ).mcp.protocolVersion === "unavailable",
+    );
+    TestValidator.predicate(
+      "a missing repaint runtime remains archiveable when MCP handshake also fails",
+      unavailableRepaintWithBadProbe.verdict.outcome === "infra-excluded" &&
+        unavailableRepaintWithBadProbe.verdict.incident.kind ===
+          "repaint-adapter-unavailable" &&
+        readJson<{ repaint: { status: string } }>(
+          path.join(unavailableRepaintWithBadProbe.archive, "submission.json"),
+        ).repaint.status === "unavailable",
     );
 
     await exerciseCandidateEvidenceBoundary(

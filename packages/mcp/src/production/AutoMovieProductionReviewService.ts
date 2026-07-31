@@ -55,6 +55,7 @@ import {
   parseAutoMovieFilmTimeline,
   selectAutoMovieFilmReviewFrames,
 } from "./filmTimeline";
+import { assertProductionRenditionTimelineDelivery } from "./muxProductionFeatureMp4";
 import { productionRenderTargetFingerprint } from "./renderIdentity";
 import { isProductionFrameTime } from "./validateProductionDesign";
 
@@ -271,6 +272,19 @@ export class AutoMovieProductionReviewService {
       diagnostics,
       context,
     );
+    if (
+      input.target.kind === "film" &&
+      graph.production?.visualDelivery === "repainted" &&
+      compileStatus !== null
+    )
+      appendRenditionDeliveryReviewDiagnostic(
+        diagnostics,
+        this.project,
+        input.target.id,
+        compileStatus,
+        renditions,
+        context,
+      );
     if (input.target.kind === "rendition" && compileStatus !== null) {
       const sourceTarget: IAutoMovieReviewTarget = {
         kind: "shot",
@@ -2167,6 +2181,58 @@ const currentRenditions = (
     parameters: receipt.parameters,
     probe: receipt.output.probe,
   }));
+};
+
+/** Surface cross-shot delivery incompatibility before a film can be approved. */
+const appendRenditionDeliveryReviewDiagnostic = (
+  diagnostics: IAutoMovieDiagnostic[],
+  project: AutoMovieProductionProject,
+  film: string,
+  compileStatus: IAutoMovieCompileProjectOutput,
+  renditions: readonly IAutoMovieRenditionEvidenceReference[],
+  context?: IReviewReadContext,
+): void => {
+  const generated = currentGeneratedManifest(project, context);
+  if (
+    generated === null ||
+    compileStatus.success === false ||
+    compileStatus.compiler.inputFingerprint !== generated.inputFingerprint
+  )
+    return;
+  try {
+    const timeline = currentFilmTimeline(
+      project,
+      generated.inputFingerprint,
+      context,
+    );
+    const shots = [
+      ...new Set(timeline.segments.map((segment) => segment.shot)),
+    ];
+    const byShot = new Map(
+      renditions.map((rendition) => [rendition.shot, rendition] as const),
+    );
+    if (shots.some((shot) => byShot.has(shot) === false)) return;
+    assertProductionRenditionTimelineDelivery({
+      timeline,
+      clips: new Map(
+        shots.map((shot) => {
+          const rendition = byShot.get(shot)!;
+          return [shot, project.readRenderFile(rendition.path)] as const;
+        }),
+      ),
+    });
+  } catch (error) {
+    diagnostics.push({
+      code: "review-rendition-delivery-invalid",
+      category: "error",
+      phase: "review",
+      target: `film:${film}`,
+      path: null,
+      message: `${
+        error instanceof Error ? error.message : String(error)
+      } Correct the film edit or repaint clips before completing film review; final delivery never falls back to deterministic pixels.`,
+    });
+  }
 };
 
 const currentFrames = (

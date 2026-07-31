@@ -7,6 +7,7 @@ import {
   IAutoMovieRepaintReceipt,
   IAutoMovieRepaintShot,
 } from "@automovie/interface";
+import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import typia from "typia";
@@ -19,6 +20,7 @@ import {
   compareCodeUnits,
   digestAutoMovieBytes,
 } from "./contentIdentity";
+import { assertProductionRenditionClipDelivery } from "./muxProductionFeatureMp4";
 import { probeProductionMedia } from "./probeProductionMedia";
 import { readAutoMovieProductionRegistry } from "./productionRegistry";
 import {
@@ -120,6 +122,7 @@ export class AutoMovieProductionRepaintService {
         `Shot "${input.shot}" must have a current completed deterministic source review before repaint. Inspect and approve the current source frames, then retry.`,
       );
     const sourceReviewFingerprint = sourceReview.fingerprint;
+    const attemptId = randomUUID();
     let resolvedSource: ICurrentShotSource | null;
     try {
       resolvedSource = currentShotSource(
@@ -267,6 +270,11 @@ export class AutoMovieProductionRepaintService {
         throw new Error(
           `the adapter output does not match the exact ${expectedOutput.width}x${expectedOutput.height}, ${expectedOutput.fps}fps, ${expectedOutput.frameCount}-frame shot contract`,
         );
+      assertProductionRenditionClipDelivery({
+        bytes: generated.bytes,
+        shot: input.shot,
+        ...expectedOutput,
+      });
     } catch (error) {
       return failure(
         "repaint-output-invalid",
@@ -286,18 +294,20 @@ export class AutoMovieProductionRepaintService {
     const outputPath = productionRepaintOutputPath({
       shot: input.shot,
       sourceRenderFingerprint,
+      attemptId,
       adapterIdentity,
       parameters: input.parameters,
       references: referenceReceipts,
       outputDigest,
     });
     const receipt: IAutoMovieRepaintReceipt = {
-      version: 1,
+      version: 2,
       productionId: services.project.productionId,
       shot: input.shot,
       compileFingerprint: registry.inputFingerprint,
       sourceRenderFingerprint,
       sourceReviewFingerprint,
+      attemptId,
       sourceBundle: source.bundle,
       controls: productionRepaintStructuralControls(source.manifest),
       references: referenceReceipts,

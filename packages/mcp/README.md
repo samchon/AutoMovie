@@ -49,7 +49,9 @@ Then read the exact contract guides named by the tool refusal. `repaintShot`
 always requires its contract guide, then dynamically requires
 `DIFFUSION_ENHANCE` only after the selected production's typed
 `visualDelivery` is `repainted`. Deterministic delivery returns a concrete
-policy refusal without requesting diffusion knowledge.
+policy refusal without requesting diffusion knowledge. Repainted design
+requires a non-optional feature deliverable; final review preflights the current
+cut and selected clip presentation before delivery can be approved.
 
 ## Non-MCP runtime
 

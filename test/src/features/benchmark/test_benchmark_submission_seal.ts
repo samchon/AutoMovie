@@ -232,6 +232,37 @@ export const test_benchmark_submission_seal = (): void => {
         "owned more than once",
       ),
   );
+  const repaintAdapterIdentity =
+    '{"execution":"local","model":"fixture","protocolVersion":"automovie.repaint-runtime.v1","provider":"fixture","version":"1"}';
+  TestValidator.predicate(
+    "repaint evidence requires canonical structured runtime identity and concrete shot receipts",
+    throws(
+      () =>
+        sealAutoMovieBenchmarkSubmission({
+          ...draft,
+          lane: "repaint",
+          repaint: {
+            status: "not-produced",
+            adapterIdentity: "nominal-capability-label",
+          },
+        }),
+      "canonical runtime-v1 JSON",
+    ) &&
+      throws(
+        () =>
+          sealAutoMovieBenchmarkSubmission({
+            ...draft,
+            lane: "repaint",
+            repaint: {
+              status: "verified",
+              adapterIdentity: repaintAdapterIdentity,
+              shots: [],
+              featureDigest: draft.deliverables[0]!.digest,
+            },
+          }),
+        "unique non-blank shot receipts",
+      ),
+  );
 
   const reloaded = JSON.parse(
     JSON.stringify(reference),
