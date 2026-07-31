@@ -118,6 +118,9 @@ const rotationDistance = (
  *    same rig tables used by FK.
  * 3. Two exact mirrored pins use quaternion geodesic continuity to select the
  *    branch matching the prior corrected pose instead of the first pole.
+ * 4. An authored pose already exact on the opposite branch still yields to the
+ *    equal-residual prior branch rather than triggering an authored early
+ *    exit.
  */
 export const test_motion_plant_bend_basis = (): void => {
   const cases = [
@@ -233,6 +236,14 @@ export const test_motion_plant_bend_basis = (): void => {
     topology: exactTopology,
     referencePose: reference,
   });
+  const authoredExact = fitChainToTarget({
+    skeleton: exactSkeleton,
+    pose: pole,
+    chain: CHAIN,
+    target: exactTarget,
+    topology: exactTopology,
+    referencePose: reference,
+  });
   const resolved = resolvePose(continuous, exactSkeleton).find(
     (bone) => bone.bone === CHAIN.effector,
   )!.worldPosition;
@@ -241,6 +252,7 @@ export const test_motion_plant_bend_basis = (): void => {
     distance(resolved, exactTarget) <= 1e-7 &&
       rotationDistance(continuous, reference) <= 1e-12 &&
       rotationDistance(continuous, reference) <
-        rotationDistance(pole, reference),
+        rotationDistance(pole, reference) &&
+      rotationDistance(authoredExact, reference) <= 1e-12,
   );
 };

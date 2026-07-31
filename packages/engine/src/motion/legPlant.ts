@@ -132,8 +132,9 @@ export const resolveBoneMap = (
 /**
  * Fit one two-bone chain onto a world-space target without leaving the rig's
  * effective ROM. The authored pose and a deterministic bend-plane search are
- * compared by the effector position they actually produce after clamping; a
- * candidate is accepted only when it improves on the current pose.
+ * compared by the effector position they actually produce after clamping. A
+ * candidate is accepted only when it improves the current residual bucket, or
+ * when it preserves that bucket while moving closer to an explicit prior pose.
  *
  * This is the shared contact policy for ground planting and retargeting. A
  * world-down pole alone can lower a hinge joint into abduction/twist that its
@@ -190,21 +191,47 @@ export const fitChainToTarget = (props: {
   ).get(props.chain.effector)!.worldPosition;
   const distance = (position: IAutoMovieVector3): number =>
     Vector3.length(Vector3.subtract(position, props.target));
-  let best: {
-    derived: boolean;
-    pose: IAutoMoviePose;
-    residual: number;
-    continuity: number;
-  } = {
-    derived: false,
-    pose: props.pose,
-    residual: distance(authored),
-    continuity: 0,
-  };
   const reference = props.referencePose ?? props.pose;
   const referenceAngles = new Map(
     reference.joints.map((joint) => [joint.bone, joint] as const),
   );
+  const authoredAngles = new Map(
+    props.pose.joints.map((joint) => [joint.bone, joint] as const),
+  );
+  const rotationDistance = (
+    bone: AutoMovieHumanoidBone,
+    candidate: IAutoMovieJointPose | undefined,
+  ): number =>
+    jointRotationDistance(
+      candidate ?? {
+        bone,
+        flexion: null,
+        abduction: null,
+        twist: null,
+      },
+      referenceAngles.get(bone),
+      props.jointAxes?.[bone],
+      props.restFrames?.[bone],
+    );
+  let best: {
+    pose: IAutoMoviePose;
+    residual: number;
+    continuity: number;
+  } = {
+    pose: props.pose,
+    residual: distance(authored),
+    continuity:
+      props.referencePose === undefined
+        ? 0
+        : rotationDistance(
+            props.chain.upper,
+            authoredAngles.get(props.chain.upper),
+          ) +
+          rotationDistance(
+            props.chain.lower,
+            authoredAngles.get(props.chain.lower),
+          ),
+  };
   const consider = (
     solved: NonNullable<ReturnType<typeof solve>>,
   ): IPlantCandidateScore => {
@@ -245,12 +272,8 @@ export const fitChainToTarget = (props: {
         props.restFrames?.[lower.bone],
       );
     const score = { residual: candidateResidual, continuity };
-    if (
-      candidateResidual < best.residual - PLANT_RESIDUAL_EPSILON ||
-      (best.derived && comparePlantCandidate(score, best) < 0)
-    )
+    if (comparePlantCandidate(score, best) < 0)
       best = {
-        derived: true,
         pose: candidate,
         residual: candidateResidual,
         continuity,
@@ -371,9 +394,14 @@ const comparePlantCandidate = (
   left: IPlantCandidateScore,
   right: IPlantCandidateScore,
 ): number => {
-  if (left.residual < right.residual - PLANT_RESIDUAL_EPSILON) return -1;
-  if (left.residual > right.residual + PLANT_RESIDUAL_EPSILON) return 1;
-  return left.continuity - right.continuity;
+  const residualOrder =
+    Math.floor(left.residual / PLANT_RESIDUAL_EPSILON) -
+    Math.floor(right.residual / PLANT_RESIDUAL_EPSILON);
+  if (residualOrder !== 0) return residualOrder;
+  const continuityOrder = left.continuity - right.continuity;
+  return continuityOrder === 0
+    ? left.residual - right.residual
+    : continuityOrder;
 };
 
 /** Sign-insensitive geodesic distance between two joint rotations. */

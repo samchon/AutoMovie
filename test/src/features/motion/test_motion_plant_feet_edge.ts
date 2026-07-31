@@ -107,6 +107,31 @@ const branchedLeg: IAutoMovieSkeleton = {
   ],
 };
 
+// The lower leg and its foot form a separate root-reachable branch from the
+// declared upper leg, so the first ancestry edge is invalid.
+const splitLeg: IAutoMovieSkeleton = {
+  id: "split-leg",
+  bones: [
+    bone("hips", null, t(0, 0.8, 0)),
+    bone("leftUpperLeg", "hips", t(0, 0, 0)),
+    bone("leftLowerLeg", "hips", t(0, -0.4, 0)),
+    bone("leftFoot", "leftLowerLeg", t(0, -0.4, 0)),
+  ],
+};
+
+// A fixed intermediate descendant is legal: the prepared relative transform
+// includes it even though the declared upper and lower are not direct parent.
+const indirectLeg: IAutoMovieSkeleton = {
+  id: "indirect-leg",
+  bones: [
+    bone("hips", null, t(0, 0.8, 0)),
+    bone("leftUpperLeg", "hips", t(0, 0, 0)),
+    bone("leftToes", "leftUpperLeg", t(0, -0.2, 0)),
+    bone("leftLowerLeg", "leftToes", t(0, -0.2, 0)),
+    bone("leftFoot", "leftLowerLeg", t(0, -0.4, 0)),
+  ],
+};
+
 /**
  * Degenerate legs are skipped rather than crashed, and an unreachable pin
  * extends the leg fully toward it without producing NaN.
@@ -121,7 +146,9 @@ const branchedLeg: IAutoMovieSkeleton = {
  *    (no NaN), on the reachable shell.
  * 5. A root-reachable but branched pseudo-chain is left untouched because the fast
  *    chain FK requires lower and effector descendant ancestry.
- * 6. A non-positive sample rate throws.
+ * 6. A lower/effector branch separated from the declared upper is likewise left
+ *    untouched, while a valid indirect descendant chain is still solved.
+ * 7. A non-positive sample rate throws.
  */
 export const test_motion_plant_feet_edge = (): void => {
   TestValidator.equals(
@@ -180,6 +207,33 @@ export const test_motion_plant_feet_edge = (): void => {
       branched.motion.keyframes.every((keyframe) =>
         keyframe.pose.joints.every(
           (joint) => joint.bone !== LEG.upper && joint.bone !== LEG.lower,
+        ),
+      ),
+  );
+  const split = plantStanceFeet({
+    skeleton: splitLeg,
+    motion: staticMotion("split-leg", 0.25),
+    legs: [LEG],
+    sampleRate: 8,
+  });
+  const indirect = plantStanceFeet({
+    skeleton: indirectLeg,
+    motion: staticMotion("indirect-leg", 0.25),
+    legs: [LEG],
+    sampleRate: 8,
+  });
+  TestValidator.predicate(
+    "both ancestry edges are enforced without rejecting indirect descendants",
+    split.plants.length === 1 &&
+      split.motion.keyframes.every((keyframe) =>
+        keyframe.pose.joints.every(
+          (joint) => joint.bone !== LEG.upper && joint.bone !== LEG.lower,
+        ),
+      ) &&
+      indirect.plants.length === 1 &&
+      indirect.motion.keyframes.some((keyframe) =>
+        keyframe.pose.joints.some(
+          (joint) => joint.bone === LEG.upper || joint.bone === LEG.lower,
         ),
       ),
   );
