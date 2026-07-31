@@ -38,32 +38,32 @@ automovie는 **glTF / VRM 규약**을 따른다.
 
 - 인터페이스: `IAutoMovie*` (예: `IAutoMoviePose`).
 - 열거형·이름공간: `AutoMovie*` (예: `AutoMovieHumanoidBone`, `AutoMovieEasing`).
-- production MCP 도구: `IAutoMovieX.IProps` 입력과 `IAutoMovieX` 결과를 한 계약 쌍으로 둔다. canonical `AutoMovieApplication`의 공개 메서드는 이 쌍만 노출한다.
+- production MCP 도구: `IAutoMovieX.IProps` 입력과 `IAutoMovieX` 결과를 한 계약 쌍으로 둔다. canonical `AutoMovieApplication`은 가이드, 캡처, 선택적 repaint, 준비된 리뷰, 리뷰 제출의 다섯 계약만 노출한다.
 - discriminated union 판별자 필드에는 `/** Discriminator. */`.
 - optional `T?` 대신 `T | null` + JSDoc으로 null 의미 명시.
 - **타입은 러프하게.** 원시값은 `string`/`number`를 **그대로** 쓴다. `AutoMovieUuid = string`, `AutoMovieNormalized = number` 같은 **원시 래퍼 별칭을 만들지 않는다.** 수치 범위·배열 최소길이·ID 포맷 같은 제약도 타입에 박지 않는다(typia `tags` 미사용). 인터페이스는 데이터의 **모양**만 정하고, 의미·범위·단위는 필드 JSDoc으로 문서화한다. 실제 제약 강제와 `// ❌` 피드백은 `@automovie/engine`의 런타임 검증기가 책임진다(이게 automovie의 차별점인 ROM 검증이 사는 곳). 닫힌 union(본명·표정 preset·이징 등 `AutoMovie*` 열거형)만이 "잘못된 값이 구조적으로 불가능"을 보장한다. 이건 래퍼가 아니라 허용값 집합 정의라서 유지한다.
 
 ## 도메인 폴더
 
-| 폴더 | 내용 |
-|---|---|
-| `core/` | 씬그래프·애니메이션 기반: 노드(`IAutoMovieNode`, `AutoMovieNodeKind`), 트랙·클립·채널(`IAutoMovieTrack`, `IAutoMovieChannel`, 값 타입·보간·한계), 드라이버·드리븐 커브, `IAutoMovieNamedId`, `IAutoMovieProfile` |
-| `geometry/` | 3D 수학 원시 (`IAutoMovieVector3`, `IAutoMovieQuaternion`, `IAutoMovieEuler`, `IAutoMovieTransform`) |
-| `color/` | 색 (`IAutoMovieColor`) |
-| `model/` | **3D 모델**: 프리미티브/메쉬 형상(`AutoMoviePrimitiveShape`, `IAutoMovieMesh`, `IAutoMovieGeometry`), 파트(`IAutoMovieModelPart`), 모델(`IAutoMovieModel`). 스켈레톤 유무로 캐릭터/사물 통합 |
-| `skeleton/` | 휴머노이드 본 열거형, 스켈레톤·본·관절 제약(ROM) 타입 |
-| `pose/` | 정적 포즈: 휴머노이드 의미 각도 |
-| `authoring/` | 코드 저작 정본: stage, blocking, performance, forge/review/edit 계획과 하나의 등록된 shot program |
-| `production/` | 코딩 에이전트 제작 계약: asset provenance 원장, 대본 scene/beat/catalog/lock 인덱스, `application/`의 16개 MCP 입력·결과 쌍, 설계, 컴파일 소유권, 기하 질의, 증거 기반 리뷰, 렌더 번들 |
-| `expression/` | 표정: ARKit 52 채널, VRM expression preset |
-| `face/` | **Dormant boundary**: 결정 001 이후 보존만 하는 face/head 파라미터 문서. 현재 motion-first 하니스의 주 저작 표면은 아니며, face editor 재개 시 호환 자산으로 쓴다. |
-| `motion/` | 시간 모션: 키프레임 + 이징 |
-| `material/` | PBR 머티리얼 |
-| `scene/` | 씬그래프: 모델/카메라/조명 배치 |
-| `cinematics/` | 촬영·편집: 샷·카메라 인텐트·커버리지(대체 앵글 테이크), 시퀀스·전환·트림, 렌더 스펙, 인터랙션 이벤트, 포즈 키포인트, 가이드 패스 |
-| `harness/` | 전환기 함수호출 호환 타입: 액션 콜·타겟과 기존 application write 모양. #1428에서 남은 3단 MCP 표면과 함께 제거 |
-| `validation/` | 검증 봉투 + 제약 위반 리포트 (engine ↔ harness 계약) |
+| 폴더          | 내용                                                                                                                                                                                                             |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `core/`       | 씬그래프·애니메이션 기반: 노드(`IAutoMovieNode`, `AutoMovieNodeKind`), 트랙·클립·채널(`IAutoMovieTrack`, `IAutoMovieChannel`, 값 타입·보간·한계), 드라이버·드리븐 커브, `IAutoMovieNamedId`, `IAutoMovieProfile` |
+| `geometry/`   | 3D 수학 원시 (`IAutoMovieVector3`, `IAutoMovieQuaternion`, `IAutoMovieEuler`, `IAutoMovieTransform`)                                                                                                             |
+| `color/`      | 색 (`IAutoMovieColor`)                                                                                                                                                                                           |
+| `model/`      | **3D 모델**: 프리미티브/메쉬 형상(`AutoMoviePrimitiveShape`, `IAutoMovieMesh`, `IAutoMovieGeometry`), 파트(`IAutoMovieModelPart`), 모델(`IAutoMovieModel`). 스켈레톤 유무로 캐릭터/사물 통합                     |
+| `skeleton/`   | 휴머노이드 본 열거형, 스켈레톤·본·관절 제약(ROM) 타입                                                                                                                                                            |
+| `pose/`       | 정적 포즈: 휴머노이드 의미 각도                                                                                                                                                                                  |
+| `authoring/`  | 코드 저작 정본: stage, blocking, performance, forge/review/edit 계획과 하나의 등록된 shot program                                                                                                                |
+| `production/` | 코딩 에이전트 제작 계약: asset provenance 원장, 대본 scene/beat/catalog/lock 인덱스, 다섯 MCP 지식·증거·리뷰 계약, 설계, 컴파일 소유권, 기하 질의, 렌더·배송 번들                                                |
+| `expression/` | 표정: ARKit 52 채널, VRM expression preset                                                                                                                                                                       |
+| `face/`       | **Dormant boundary**: 결정 001 이후 보존만 하는 face/head 파라미터 문서. 현재 motion-first 하니스의 주 저작 표면은 아니며, face editor 재개 시 호환 자산으로 쓴다.                                               |
+| `motion/`     | 시간 모션: 키프레임 + 이징                                                                                                                                                                                       |
+| `material/`   | PBR 머티리얼                                                                                                                                                                                                     |
+| `scene/`      | 씬그래프: 모델/카메라/조명 배치                                                                                                                                                                                  |
+| `cinematics/` | 촬영·편집: 샷·카메라 인텐트·커버리지(대체 앵글 테이크), 시퀀스·전환·트림, 렌더 스펙, 인터랙션 이벤트, 포즈 키포인트, 가이드 패스                                                                                 |
+| `harness/`    | 엔진이 직접 소비하는 액션 콜·타겟과 stage/block/perform 데이터 계약. 공개 MCP application 표면이 아니라 코드 저작·직접 링크 호환 어휘                                                                            |
+| `validation/` | 검증 봉투 + 제약 위반 리포트 (engine ↔ harness 계약)                                                                                                                                                             |
 
-> 코드 저작의 정본은 `authoring/`이며 `@automovie/engine`의 `defineShot`이 이를 실행한다. 남은 `harness/` application write 모양은 #1428의 3단 MCP 전환이 끝날 때 삭제할 호환 표면이다.
+> 코드 저작의 정본은 `authoring/`이며 `@automovie/engine`의 `defineShot`이 이를 실행한다. `harness/`의 액션·stage/block/perform 타입은 엔진 입력으로 남지만 MCP 도구가 아니며, 외부 에이전트는 tracked TypeScript에서 이를 저작한다.
 
 타입 하나하나의 의미·단위·범위는 필드 JSDoc이 정본이다. 왜 그렇게 나뉘었는지는 위의 네이밍 컨벤션과 도메인 폴더 표가 담고 있다.

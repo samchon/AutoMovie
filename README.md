@@ -1,119 +1,112 @@
 # AutoMovie
 
-**An MCP server for deterministic motion-control video.**
+**Coding-agent-native deterministic filmmaking.**
 
-AutoMovie is a Model Context Protocol server that lets an external agent create simple 3D scenes, move them correctly over time, and render long control videos that diffusion systems can use as guidance.
+AutoMovie lets a user scaffold a production repository and direct a coding
+agent in natural language. The agent writes screenplay prose, typed design
+records, TypeScript performances, tests, and assets. AutoMovie compiles and
+renders those tracked inputs deterministically, then binds visual review and
+delivery to the exact bytes that were produced.
 
-The output may look like stick figures, blocks, arrows, props, cameras, and rough stages. That is intentional. AutoMovie's job is not to be the final image. Its job is to provide the motion, staging, timing, depth, silhouettes, and camera path that a generative video pass can follow.
+The result is a cheap, controllable, and reproducible alternative to asking a
+diffusion model to invent an entire video. A fixed asset is performed by
+agent-authored code and rendered by a deterministic engine, so the same inputs
+produce the same motion, staging, timing, camera, and media.
 
-## The Bet
+## The contract
 
-Diffusion video is good at appearance.
+AutoMovie is built around one evidence chain:
 
-Extended structure is the weak point. Characters drift, bodies change, props disappear, camera intent decays, and long videos have to be stitched from shorter generations.
+1. Treatment and screenplay establish stable scenes and dramatic promises.
+2. Typed production, world, model, formation, shot, and acceptance records state
+   the machine-checkable contract.
+3. Agent-owned TypeScript realizes shots with the same public engine that the
+   compiler validates.
+4. Compilation measures geometry, continuity, film grammar, physics advice, and
+   source ownership instead of trusting echoed ids.
+5. Project-owned capture binds actual pixels to compiler and runtime identity.
+6. Asset, shot, sequence, rendition, and film review bind judgment to current
+   evidence.
+7. Rendering and `verify` publish only current, receipt-backed deliverables.
 
-AutoMovie puts the structure outside the diffusion model.
+This division keeps creative judgment with the user and coding agent while
+making technical claims reproducible and machine-verifiable.
 
-Instead of asking a model to invent every frame from scratch, AutoMovie creates a deterministic guide video first:
+## Product boundary
 
-- where each actor is,
-- what each body is doing,
-- where props move,
-- when impacts happen,
-- how the camera frames the scene,
-- how long the scene lasts,
-- what depth, masks, outlines, and pose hints should exist per frame.
+The coding agent owns `src`, `docs`, `test`, and `public`. It writes ordinary
+files and runs ordinary package commands. AutoMovie owns bounded design state,
+compiler output, review records, render receipts, and content-addressed delivery
+artifacts.
 
-Then a diffusion workflow can stylize that guide. The generative model paints over a stable performance instead of hallucinating the performance itself.
+The MCP server is deliberately narrow. It exposes exactly five tools for facts
+that a normal coding channel cannot carry safely:
 
-## What AutoMovie Is
+| Tool               | Responsibility                                                           |
+| ------------------ | ------------------------------------------------------------------------ |
+| `getGuideDocument` | serve one packaged guide and record session read credit                  |
+| `captureFrame`     | produce and receipt an actual shot or asset PNG through the host adapter |
+| `repaintShot`      | optionally derive and receipt a structure-preserving visual rendition    |
+| `prepareReview`    | derive the current evidence-bound review worksheet                       |
+| `submitReview`     | validate and store a verdict-last review                                 |
 
-AutoMovie is an MCP-driven motion generator and control-video engine.
+MCP has no design setter, compiler, renderer, status query, geometry query,
+project switcher, or internal LLM. Package and scaffold commands provide those
+deterministic operations, while [`@automovie/engine`](./packages/engine) and
+[`@automovie/interface`](./packages/interface) remain directly importable for
+code-native work.
 
-It is designed for simple, code-made 3D objects:
+## Delivery modes
 
-- stick figures,
-- block characters,
-- primitive props,
-- rough stages,
-- simple lights,
-- deterministic cameras.
+`visualDelivery: "deterministic"` ships compiler and renderer output directly.
+It is the default, zero-configuration path and does not depend on a diffusion
+service.
 
-Those objects can be animated for seconds, minutes, or hours because the source of truth is structured data and math, not a sampled video model. The rendered control video can then be split into shorter diffusion chunks while keeping the same underlying timeline.
+`visualDelivery: "repainted"` is an optional host-adapter lane. The deterministic
+shot remains technical truth; its completed review must precede repaint. The
+derived MP4 receives an immutable provenance receipt and a separate rendition
+review, and final sequence and film review cite the selected rendition. AutoMovie
+verifies those resident bytes and their provenance rather than claiming that a
+non-deterministic model can reproduce them.
 
-The MCP surface is the product boundary: an agent asks for staged scenes, blocked movement, generated actors, cuts, validation, and renderable guide output; the deterministic engine computes and rejects invalid requests.
+## Start a production
 
-There are two ways to drive it, and both are first-class. **MCP** ([`@automovie/mcp`](./packages/mcp)) is the orchestration door: an agent works the evidence and review loop over stdio. **Direct linking** is the code-native door: import [`@automovie/engine`](./packages/engine) and [`@automovie/interface`](./packages/interface) and program against the types themselves. Ordinary Node scripts can load digest-verified current project state through [`@automovie/cli`](./packages/cli) and pass it directly to pure engine functions without an MCP session. Motion authoring is, at the limit, a coding activity, so a coding agent may reach for either. Scaffold a starter with `npx create-automovie <dir>`.
+```bash
+npx create-automovie <dir>
+cd <dir>
+npm install
+npm run capture:install
+npm run capture:doctor
+npm run build
+npm test
+npm run preview -- --shot opening --time 2 --pass beauty
+npm run review:status
+```
 
-## What AutoMovie Is Not
-
-AutoMovie is not a character creator.
-
-It is not trying to solve realistic human modeling, final-quality faces, hair, clothes, or production art. Those remain separate problems.
-
-AutoMovie is also not a replacement for diffusion. It is the layer before diffusion: the low-cost deterministic rehearsal that tells diffusion what should happen.
-
-## How It Works
-
-AutoMovie uses structured scene and motion data instead of pixels as its first language.
-
-An agent can describe a small stage: actors, props, poses, actions, camera moves, timing, and cuts. The engine validates the description, resolves the motion, and renders the result the same way every time.
-
-If a pose asks an elbow or knee to move outside its allowed range, the engine rejects it with a concrete violation. If a prop is attached to a hand, the prop follows the computed hand frame. If an arrow is launched, its path is calculated as motion data, not painted frame by frame.
-
-The important property is reproducibility. A long sequence can be regenerated, inspected, corrected, and used again as a control source.
-
-## Why This Direction Works
-
-The useful version is narrow:
-
-1. Build only simple 3D objects in code.
-2. Generate reliable long-form motion and camera control.
-3. Render guide passes such as pose, depth, masks, outlines, and flat shaded video.
-4. Let diffusion handle final visual style in shorter controlled chunks.
-
-This keeps AutoMovie inside the part of the problem that code can do well.
-
-## Current Status
-
-The deterministic core is working.
-
-AutoMovie already has a broad internal vocabulary for models, skeletons, poses, motion, expressions, scenes, cameras, cuts, validation, and playback. The engine can resolve poses, sample motion, enforce joint limits, move props, calculate projectiles, assemble shots, and render browser demos.
-
-The project is early. The most important unfinished work is completing the MCP motion authoring surface, then exporting the right guide passes for diffusion workflows.
+The generated README explains the complete tracked-authoring, compile, capture,
+review, render, and verification loop. Review-bound commands intentionally stop
+when evidence is missing or stale. The local viewer renders compiler-owned
+output; an arbitrary screenshot cannot satisfy a review.
 
 ## Packages
 
 | Package                                                      | Purpose                                                                                                                             |
 | ------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
-| [`@automovie/interface`](./packages/interface)               | Shared data shapes for scenes, models, skeletons, poses, motion, cameras, cuts, and validation.                                     |
-| [`@automovie/engine`](./packages/engine)                     | Deterministic math and motion engine: posing, kinematics, constraints, actions, physics, playback, and shot assembly.               |
-| [`@automovie/viewer`](./packages/viewer)                     | Three.js viewer for drawing engine output. It is a viewer, not an editor.                                                           |
-| [`@automovie/render`](./packages/render)                     | Headless render planning, model export, and video export helpers.                                                                   |
-| [`@automovie/ingest`](./packages/ingest)                     | glTF/GLB ingestion into AutoMovie's core graph and clip data.                                                                       |
+| [`@automovie/interface`](./packages/interface)               | Shared data contracts for authoring, production design, generated output, evidence, review, and delivery.                           |
+| [`@automovie/engine`](./packages/engine)                     | Deterministic motion, geometry, physics, film-grammar, validation, and shot-realization engine.                                     |
+| [`@automovie/viewer`](./packages/viewer)                     | Three.js viewer for compiler-owned scenes, shots, films, review views, and imported models.                                         |
+| [`@automovie/render`](./packages/render)                     | Render planning, deterministic frame evaluation, and video export helpers.                                                          |
+| [`@automovie/ingest`](./packages/ingest)                     | Digest-bound glTF, GLB, and VRM inspection for registered external models.                                                          |
 | [`@automovie/face`](./packages/face)                         | Parametric face, head, hair, and fitting geometry retained behind an explicit dormant boundary.                                     |
-| [`@automovie/lint`](./packages/lint)                         | Compiler-integrated contracts for asset provenance, screenplay evidence, state residency, and scaffold sentinels.                   |
-| [`@automovie/mcp`](./packages/mcp)                           | MCP surface for external agents to drive parts of the deterministic motion engine.                                                  |
-| [`@automovie/cli`](./packages/cli)                           | The `automovie` binary plus the transport-free project-state reader for current compile fingerprints and typed generated artifacts. |
-| [`create-automovie`](./packages/create-automovie)            | The package-manager-native one-command project creator.                                                                             |
-| [`@automovie/playground`](./packages/playground)             | Browser demos for inspecting motion, props, cameras, and simple characters.                                                         |
-| [`@automovie/benchmark`](./packages/benchmark)               | Versioned movie task law, immutable run submissions, and the deterministic oracle judge that scores them.                           |
-| [`@automovie/benchmark-runner`](./packages/benchmark-runner) | External-agent execution, trusted evidence collection, live MCP inventory measurement, and content-addressed benchmark archives.    |
+| [`@automovie/lint`](./packages/lint)                         | Compiler-integrated contracts for asset provenance, screenplay evidence, state residency, review freshness, and scaffold sentinels. |
+| [`@automovie/mcp`](./packages/mcp)                           | Five-tool knowledge, host-evidence, optional repaint, and verdict-last review boundary.                                             |
+| [`@automovie/cli`](./packages/cli)                           | Project scaffold, migration, verification, and transport-free access to current compiler-owned state.                               |
+| [`create-automovie`](./packages/create-automovie)            | Package-manager-native one-command project creator.                                                                                 |
+| [`@automovie/playground`](./packages/playground)             | Browser demonstrations for inspecting deterministic models, motion, cameras, and imported assets.                                   |
+| [`@automovie/benchmark`](./packages/benchmark)               | Versioned movie task law, immutable submissions, and deterministic benchmark judgment.                                              |
+| [`@automovie/benchmark-runner`](./packages/benchmark-runner) | External-agent execution, trusted evidence collection, live MCP inventory measurement, and content-addressed archives.              |
 
-## Next Work
-
-The next useful version of AutoMovie should focus on:
-
-- making the MCP tools cover the practical motion-generation loop,
-- keeping generated models simple and robust,
-- exporting diffusion-friendly guide passes,
-- supporting long timelines through deterministic chunking,
-- improving camera, staging, and action grammar,
-- keeping visual demos verifiable in the browser.
-
-Studio-grade character creation is not the active product surface.
-
-## Try It
+## Repository development
 
 ```bash
 pnpm install
@@ -126,7 +119,7 @@ Requirements:
 - Node.js 22 or newer
 - pnpm 10
 
-For browser demos:
+Run the playground with:
 
 ```bash
 pnpm --filter @automovie/playground dev

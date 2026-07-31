@@ -87,16 +87,17 @@ const unmentionedModules = (pkg: string, document: string): string[] =>
  * 6. No package entry document points into `.wiki/`, which is gitignored: it ships
  *    in no tarball and exists in no clone, so such a pointer is dead for every
  *    reader who is not the author on the machine that wrote it.
- * 7. The mcp README's two surface counts equal the surface, derived from the
- *    application and gateway prototypes rather than restated here (#1402).
- *    Naming the numbers in this list would put them back in a place someone has
- *    to remember to change, which is the drift the assertion exists for.
+ * 7. The mcp README names the exact five-tool evidence surface and the sole
+ *    published binary while retired application families remain absent.
  * 8. The performance stage's JSDoc names real verbs only.
  * 9. The region contract documents the `fullBody` locomote default and
  *    content-aware layering -- both asserted PRESENT, both with the pre-#1383
  *    sentence they replaced asserted absent. The text is flattened across
  *    whitespace AND asterisks first, because a JSDoc continuation prefix would
  *    otherwise land mid-sentence.
+ * 10. The root, interface, and engine READMEs teach coding-agent-owned files,
+ *     deterministic delivery, and the narrow MCP evidence boundary without the
+ *     retired authoring application or diffusion-only product claims (#1443).
  */
 export const test_workspace_public_contracts = (): void => {
   const rootReadme = readPackageFile("README.md");
@@ -269,6 +270,29 @@ export const test_workspace_public_contracts = (): void => {
       mcpReadme.includes("repaintShot"),
     ],
     [true, true, true],
+  );
+  TestValidator.equals(
+    "public entry READMEs teach the coding-agent and five-tool product contract",
+    [
+      rootReadme.includes("Coding-agent-native deterministic filmmaking"),
+      rootReadme.includes('`visualDelivery: "deterministic"`'),
+      rootReadme.includes('`visualDelivery: "repainted"`'),
+      rootReadme.includes("MCP has no design setter, compiler, renderer"),
+      interfaceReadme.includes("다섯 MCP 지식·증거·리뷰 계약"),
+      interfaceReadme.includes("MCP 도구가 아니며"),
+      engineReadme.includes("이 엔진의 두 번째 저작 API가 아니다"),
+      engineReadme.includes("npx create-automovie <dir>"),
+    ],
+    [true, true, true, true, true, true, true, true],
+  );
+  TestValidator.equals(
+    "public entry READMEs reject retired MCP authoring and diffusion-only claims",
+    [rootReadme, interfaceReadme, engineReadme]
+      .join("\n")
+      .match(
+        /An MCP server for deterministic motion-control video|MCP motion authoring surface|not a replacement for diffusion|MCP surface is the product boundary|16개 MCP|3단 MCP 표면|슬레이트 상태·트랜잭션|enact가 그 다리|npx automovie start <dir>/g,
+      ) ?? [],
+    [],
   );
   TestValidator.equals(
     "retired MCP application families and binaries stay absent",
