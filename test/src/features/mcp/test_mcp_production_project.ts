@@ -636,6 +636,8 @@ export const test_mcp_production_project = (): void => {
       ...repaintedAcceptance,
       target: { kind: "shot", id: "second" },
     });
+    const restoredAcceptanceMutation =
+      project.setAcceptanceScenario(repaintedAcceptance);
     const modelMutation = project.setModelRecipe(modelRecipe());
     const formationMutation = project.setFormationDesign({
       ...formationDesign(),
@@ -686,6 +688,7 @@ export const test_mcp_production_project = (): void => {
         movedAcceptanceMutation.consequences.staleReviews.some(
           (target) => target.kind === "sequence" && target.id === "SEQ-ANSWER",
         ) &&
+        restoredAcceptanceMutation.accepted &&
         modelMutation.consequences.staleReviews.some(
           (target) => target.kind === "rendition" && target.id === "opening",
         ) &&
