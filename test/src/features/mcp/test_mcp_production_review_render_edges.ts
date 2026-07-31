@@ -389,9 +389,12 @@ export const test_mcp_production_review_render_edges =
                     assetInvalidManifest.message.length >
                       "Render bundle manifest is invalid: . Recreate the bundle through captureFrame."
                         .length,
-                  preservesRecaptureGuidance:
-                    assetInvalidManifest.message.endsWith(
+                  preservesRecaptureAndSafetyGuidance:
+                    assetInvalidManifest.message.includes(
                       ". Recreate the bundle through captureFrame.",
+                    ) &&
+                    assetInvalidManifest.message.endsWith(
+                      "Correction feedback does not authorize deleting the artifact.",
                     ),
                 },
           sameAsShot:
@@ -409,7 +412,7 @@ export const test_mcp_production_review_render_edges =
             target: malformedManifestPath,
             path: malformedManifestPath,
             preservesValidationEvidence: true,
-            preservesRecaptureGuidance: true,
+            preservesRecaptureAndSafetyGuidance: true,
           },
           sameAsShot: true,
           preservesMissingViews: true,
