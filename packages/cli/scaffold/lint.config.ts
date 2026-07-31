@@ -1,3 +1,4 @@
+/// <reference types="node" />
 import type {} from "@automovie/lint";
 import type { ITtscLintConfig, ITtscLintPlugin } from "@ttsc/lint";
 import { createRequire } from "node:module";

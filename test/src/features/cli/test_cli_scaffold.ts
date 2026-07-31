@@ -203,6 +203,9 @@ export const test_cli_scaffold = (): void => {
       pkg.includes(
         `"@types/pngjs": "${AUTOMOVIE_TEMPLATE_VERSIONS.pngjsTypes}"`,
       ) &&
+      pkg.includes(
+        `"@types/node": "${AUTOMOVIE_TEMPLATE_VERSIONS.nodeTypes}"`,
+      ) &&
       pkg.includes(`"three": "${AUTOMOVIE_TEMPLATE_VERSIONS.three}"`) &&
       pkg.includes('"sharp": "file:vendor/sharp-disabled"'),
   );
@@ -429,9 +432,10 @@ export const test_cli_scaffold = (): void => {
   );
   TestValidator.predicate(
     "the starter ships the correctness lint ruleset",
-    files["lint.config.ts"]!.includes(
-      '"typescript/switch-exhaustiveness-check": "error"',
-    ) &&
+    files["lint.config.ts"]!.startsWith('/// <reference types="node" />\n') &&
+      files["lint.config.ts"]!.includes(
+        '"typescript/switch-exhaustiveness-check": "error"',
+      ) &&
       files["lint.config.ts"]!.includes('"typescript/no-explicit-any"') &&
       files["lint.config.ts"]!.includes(
         '"automovie/template-sentinel": "error"',
