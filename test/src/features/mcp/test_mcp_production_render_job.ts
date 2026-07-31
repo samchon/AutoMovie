@@ -293,6 +293,22 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
   if (mediaData < 0)
     throw new Error("Conformed repaint has no media data box.");
   mismatchedRepaint[mediaData + 4] ^= 1;
+  const nonSyncDependencyMismatch = Buffer.from(conformedRepaint);
+  const firstTrackRun = nonSyncDependencyMismatch.indexOf("trun");
+  const secondTrackRun = nonSyncDependencyMismatch.indexOf(
+    "trun",
+    firstTrackRun + 4,
+  );
+  const secondSampleFlags = secondTrackRun + 24;
+  if (
+    firstTrackRun < 0 ||
+    secondTrackRun < 0 ||
+    nonSyncDependencyMismatch.readUInt32BE(secondSampleFlags) !== 0x00010000
+  )
+    throw new Error(
+      "Conformed repaint has no canonical non-sync second-sample flags.",
+    );
+  nonSyncDependencyMismatch.writeUInt32BE(0x02010000, secondSampleFlags);
   let sampleDifference = "";
   try {
     assertProductionFeatureUsesRenditionClips({
@@ -356,6 +372,12 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
       sampleDifferenceDetails.flags.match === true &&
       sampleDifferenceDetails.sampleDescriptionMatches === true &&
       sampleDifferenceDetails.payload.firstDifferingActualByte === 0 &&
+      throws(() =>
+        assertProductionFeatureUsesRenditionVideo({
+          feature: nonSyncDependencyMismatch,
+          renditionVideo: conformedRepaint,
+        }),
+      ) &&
       throws(() =>
         conformProductionRenditionVideoMp4({
           timeline: {
