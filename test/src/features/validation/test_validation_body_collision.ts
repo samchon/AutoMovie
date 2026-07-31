@@ -2,7 +2,7 @@ import { detectBodyCollision } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import { staticActor } from "../internal/collision";
-import { vclose } from "../internal/predicates";
+import { validationHasNoWarnings, vclose } from "../internal/predicates";
 
 const warningCount = (r: ReturnType<typeof detectBodyCollision>): number =>
   r.validation.success === true ? (r.validation.warnings?.length ?? 0) : -1;
@@ -68,7 +68,10 @@ export const test_validation_body_collision = (): void => {
     }),
   });
   TestValidator.equals("apart succeeds", apart.validation.success, true);
-  TestValidator.equals("apart has no warnings", warningCount(apart), 0);
+  TestValidator.predicate(
+    "apart has no warnings",
+    validationHasNoWarnings("apart body collision", apart.validation),
+  );
   TestValidator.equals("apart has no events", apart.events.length, 0);
   TestValidator.equals("apart has no response", apart.response, null);
 };

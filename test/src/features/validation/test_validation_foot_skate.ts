@@ -12,8 +12,8 @@ import {
   hasViolation,
   hasWarning,
   nclose,
+  validationHasNoWarnings,
   violationCount,
-  warningCount,
 } from "../internal/predicates";
 
 const restAt = (x: number, y: number, z: number): IAutoMovieTransform => ({
@@ -125,10 +125,9 @@ export const test_validation_foot_skate = (): void => {
     sampleRate: 2,
     physicsIntent: "moonwalk",
   });
-  TestValidator.equals(
+  TestValidator.predicate(
     "acknowledged skate is clean",
-    acknowledged.success === true && warningCount(acknowledged),
-    0,
+    validationHasNoWarnings("acknowledged foot skate", acknowledged),
   );
 
   TestValidator.equals(

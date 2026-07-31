@@ -8,7 +8,11 @@ import {
 import { TestValidator } from "@nestia/e2e";
 
 import { IDENTITY_TRANSFORM } from "../internal/fixtures";
-import { hasViolation, hasWarning, warningCount } from "../internal/predicates";
+import {
+  hasViolation,
+  hasWarning,
+  validationHasNoWarnings,
+} from "../internal/predicates";
 
 const FORWARD: IAutoMovieVector3 = { x: 0, y: 0, z: 1 };
 
@@ -139,7 +143,10 @@ export const test_validation_continuity = (): void => {
     opening: state([actor({ node: "hero", x: 3 })]),
     positionTolerance: 5,
   });
-  TestValidator.equals("tolerance suppresses drift", warningCount(tolerant), 0);
+  TestValidator.predicate(
+    "tolerance suppresses drift",
+    validationHasNoWarnings("tolerant continuity", tolerant),
+  );
 
   // 7. nonsensical tolerances are range errors that short-circuit.
   const badPos = validateContinuity({

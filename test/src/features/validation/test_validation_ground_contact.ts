@@ -12,6 +12,7 @@ import {
   hasViolation,
   hasWarning,
   nclose,
+  validationHasNoWarnings,
   warningCount,
 } from "../internal/predicates";
 
@@ -113,10 +114,9 @@ export const test_validation_ground_contact = (): void => {
     sampleRate: 4,
     physicsIntent: "phasing",
   });
-  TestValidator.equals(
+  TestValidator.predicate(
     "acknowledged penetration is clean",
-    acknowledged.success === true && warningCount(acknowledged),
-    0,
+    validationHasNoWarnings("acknowledged ground contact", acknowledged),
   );
 
   const grazing = makeMotion([key(0, 0), key(0.5, -0.02), key(1, 0)], 1);

@@ -1,7 +1,11 @@
 import { retargetHumanoidMotion } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
-import { hasViolation, nclose, warningCount } from "../internal/predicates";
+import {
+  hasViolation,
+  nclose,
+  validationHasNoWarnings,
+} from "../internal/predicates";
 import {
   keyframeWorld,
   proportionedRig,
@@ -54,10 +58,9 @@ export const test_motion_retarget_contact_airborne = (): void => {
     jumped.motion.keyframes[1]!.pose.joints,
     [],
   );
-  TestValidator.equals(
+  TestValidator.predicate(
     "a reachable grounded contact reports no warning",
-    warningCount(jumped.validation),
-    0,
+    validationHasNoWarnings("reachable grounded contact", jumped.validation),
   );
 
   // 2. no contact anywhere: identical to carrying the angles verbatim.
@@ -81,10 +84,9 @@ export const test_motion_retarget_contact_airborne = (): void => {
     ungrounded.motion,
     carried.motion,
   );
-  TestValidator.equals(
+  TestValidator.predicate(
     "no contact means nothing to warn about",
-    warningCount(ungrounded.validation),
-    0,
+    validationHasNoWarnings("ungrounded retarget", ungrounded.validation),
   );
 
   // 3. a single-keyframe clip fails validation instead of crashing the pass.

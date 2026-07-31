@@ -12,8 +12,8 @@ import {
   hasViolation,
   hasWarning,
   nclose,
+  validationHasNoWarnings,
   violationCount,
-  warningCount,
 } from "../internal/predicates";
 
 const restAt = (x: number, y: number, z: number): IAutoMovieTransform => ({
@@ -135,10 +135,9 @@ export const test_validation_self_intersection = (): void => {
     sampleRate: 1,
     physicsIntent: "grapple",
   });
-  TestValidator.equals(
+  TestValidator.predicate(
     "acknowledged self-intersection is clean",
-    acknowledged.success === true && warningCount(acknowledged),
-    0,
+    validationHasNoWarnings("acknowledged self-intersection", acknowledged),
   );
 
   const clearSkeleton = skeleton(1);

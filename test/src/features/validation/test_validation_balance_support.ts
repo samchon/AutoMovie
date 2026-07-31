@@ -12,8 +12,8 @@ import {
   hasViolation,
   hasWarning,
   nclose,
+  validationHasNoWarnings,
   violationCount,
-  warningCount,
 } from "../internal/predicates";
 
 const restAt = (x: number, y: number, z: number): IAutoMovieTransform => ({
@@ -156,10 +156,9 @@ export const test_validation_balance_support = (): void => {
     sampleRate: 1,
     physicsIntent: "wire-fu",
   });
-  TestValidator.equals(
+  TestValidator.predicate(
     "acknowledged imbalance is clean",
-    acknowledged.success === true && warningCount(acknowledged),
-    0,
+    validationHasNoWarnings("acknowledged imbalance", acknowledged),
   );
 
   TestValidator.equals(
@@ -275,10 +274,9 @@ export const test_validation_balance_support = (): void => {
     ],
     sampleRate: 1,
   });
-  TestValidator.equals(
+  TestValidator.predicate(
     "the single-hips proxy misses the same lean (pelvis stays over the feet)",
-    leanHips.success === true && warningCount(leanHips),
-    0,
+    validationHasNoWarnings("single-hips balance proxy", leanHips),
   );
 
   const insidePolygon = skeleton(0, 0.2);

@@ -8,7 +8,11 @@ import {
 import { TestValidator } from "@nestia/e2e";
 
 import { makeMotion } from "../internal/fixtures";
-import { hasViolation, hasWarning, warningCount } from "../internal/predicates";
+import {
+  hasViolation,
+  hasWarning,
+  validationHasNoWarnings,
+} from "../internal/predicates";
 
 const restAt = (x: number, y: number, z: number): IAutoMovieTransform => ({
   translation: { x, y, z },
@@ -109,10 +113,9 @@ export const test_validation_ground_contact_capsule = (): void => {
     capsules: [{ from: "hips", to: "chest", radius: 0.2 }],
     sampleRate: 1,
   });
-  TestValidator.equals(
+  TestValidator.predicate(
     "a capsule above the ground raises no warning",
-    clear.success === true && warningCount(clear),
-    0,
+    validationHasNoWarnings("clear ground capsule", clear),
   );
 
   const reversed = validateGroundContact({
@@ -136,10 +139,9 @@ export const test_validation_ground_contact_capsule = (): void => {
     sampleRate: 1,
     physicsIntent: "phasing",
   });
-  TestValidator.equals(
+  TestValidator.predicate(
     "physicsIntent suppresses the capsule warning",
-    acknowledged.success === true && warningCount(acknowledged),
-    0,
+    validationHasNoWarnings("acknowledged ground capsule", acknowledged),
   );
 
   const bad = validateGroundContact({

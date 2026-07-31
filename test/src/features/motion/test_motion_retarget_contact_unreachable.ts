@@ -1,7 +1,12 @@
 import { retargetHumanoidMotion } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
-import { hasWarning, vclose, warningCount } from "../internal/predicates";
+import {
+  hasWarning,
+  validationHasNoWarnings,
+  vclose,
+  warningCount,
+} from "../internal/predicates";
 import {
   keyframeWorld,
   mapped,
@@ -113,9 +118,8 @@ export const test_motion_retarget_contact_unreachable = (): void => {
     contacts: { tolerance: 0.5 },
   });
   if (tolerant.motion === null) throw new Error("tolerant retarget failed");
-  TestValidator.equals(
+  TestValidator.predicate(
     "a wider contact budget stops reporting the same residual",
-    warningCount(tolerant.validation),
-    0,
+    validationHasNoWarnings("tolerant retarget contact", tolerant.validation),
   );
 };
