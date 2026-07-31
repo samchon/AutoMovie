@@ -43,7 +43,7 @@ const expectErrorMessage = (
 // A clean CI checkout starts this fixture through ttsx, so initialize includes
 // the MCP project's cold typecheck and source-dependency emit. Keep the live
 // protocol probe bounded without treating that compile as a 30-second request.
-const SOURCE_MCP_TIMEOUT_MS = 120_000;
+const SOURCE_MCP_STARTUP_TIMEOUT_MS = 120_000;
 
 const completeLifecycle = (): IAutoMovieBenchmarkGateResult[] => [
   { gate: "packaged-install", status: "pass", detail: "Packages installed." },
@@ -85,7 +85,8 @@ export const test_benchmark_runner = async (): Promise<void> => {
       path.join(repositoryRoot, "packages/mcp/tsconfig.json"),
       path.join(repositoryRoot, "packages/mcp/src/bin.ts"),
     ],
-    timeoutMs: SOURCE_MCP_TIMEOUT_MS,
+    timeoutMs: 30_000,
+    startupTimeoutMs: SOURCE_MCP_STARTUP_TIMEOUT_MS,
   });
   const archivedBaseline = {
     surface: "legacy-compact" as const,
@@ -749,6 +750,18 @@ const exerciseInputAndFilesystemFences = async (
         timeoutMs: 0,
       }),
     "positive safe-integer timeoutMs",
+  );
+  expectErrorMessage(
+    "process MCP targets require a positive startup timeout",
+    () =>
+      createProcessAutoMovieBenchmarkMcpTarget({
+        surface: "five-tool",
+        provenance: "target",
+        command: "mcp",
+        timeoutMs: 1,
+        startupTimeoutMs: 0,
+      }),
+    "startupTimeoutMs",
   );
 
   const linkedRoot = path.join(root, "linked-repository");

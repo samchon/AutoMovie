@@ -45,8 +45,10 @@ export interface IAutoMovieBenchmarkProcessMcpTargetInput {
   args?: readonly string[];
   /** Additional non-secret environment variables. */
   env?: Readonly<Record<string, string>>;
-  /** Initialize and tools/list timeout in milliseconds. */
+  /** Ordinary MCP request timeout in milliseconds. */
   timeoutMs: number;
+  /** Initialize timeout including process startup. Defaults to `timeoutMs`. */
+  startupTimeoutMs?: number;
 }
 
 /**
@@ -59,14 +61,17 @@ export interface IAutoMovieBenchmarkProcessMcpTargetInput {
 export const createProcessAutoMovieBenchmarkMcpTarget = (
   input: IAutoMovieBenchmarkProcessMcpTargetInput,
 ): IAutoMovieBenchmarkMcpTarget => {
+  const startupTimeoutMs = input.startupTimeoutMs ?? input.timeoutMs;
   if (
     input.command.trim().length === 0 ||
     input.provenance.trim().length === 0 ||
     Number.isSafeInteger(input.timeoutMs) === false ||
-    input.timeoutMs <= 0
+    input.timeoutMs <= 0 ||
+    Number.isSafeInteger(startupTimeoutMs) === false ||
+    startupTimeoutMs <= 0
   )
     throw new Error(
-      "Benchmark MCP target needs non-blank command/provenance and a positive safe-integer timeoutMs.",
+      "Benchmark MCP target needs non-blank command/provenance, a positive safe-integer timeoutMs and, when supplied, startupTimeoutMs.",
     );
   return {
     surface: input.surface,
@@ -93,7 +98,7 @@ export const createProcessAutoMovieBenchmarkMcpTarget = (
         stderr += chunk.toString();
       });
       try {
-        await client.connect(transport, { timeout: input.timeoutMs });
+        await client.connect(transport, { timeout: startupTimeoutMs });
         const server = client.getServerVersion();
         const listed = await client.listTools(undefined, {
           timeout: input.timeoutMs,
