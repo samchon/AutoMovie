@@ -149,12 +149,15 @@ const runJson = (label, executable, args, cwd) => {
 
 const CLIENT_SOURCE = `
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import {
+  StdioClientTransport,
+  getDefaultEnvironment,
+} from "@modelcontextprotocol/sdk/client/stdio.js";
 import {
   createProcessAutoMovieBenchmarkAgent,
   snapshotAutoMovieBenchmarkProject,
 } from "@automovie/benchmark-runner";
-import { existsSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
 const assert = (name, condition, detail) => {
@@ -173,16 +176,16 @@ assert(
 );
 
 const bin = path.resolve("node_modules/@automovie/mcp/lib/bin.js");
-const granularBin = path.resolve(
-  "node_modules/@automovie/mcp/lib/bin-granular.js",
+const projectRoot = path.resolve("mcp-host");
+mkdirSync(projectRoot, { recursive: true });
+writeFileSync(
+  path.join(projectRoot, "automovie.config.ts"),
+  "export default {};",
 );
-const productionBin = path.resolve(
-  "node_modules/@automovie/mcp/lib/bin-production.js",
-);
-const projectRoot = path.resolve("automovie-project");
 const transport = new StdioClientTransport({
   command: process.execPath,
   args: [bin],
+  env: { ...getDefaultEnvironment(), AUTOMOVIE_PROJECT_ROOT: projectRoot },
   stderr: "pipe",
 });
 const client = new Client({ name: "automovie-tgz-e2e", version: "0.0.0" });
@@ -204,17 +207,19 @@ try {
   );
 
   const { tools } = await client.listTools();
+  const toolNames = tools.map((tool) => tool.name).sort();
+  const expectedTools = [
+    "captureFrame",
+    "getGuideDocument",
+    "prepareReview",
+    "repaintShot",
+    "submitReview",
+  ];
   assert(
-    "tool-count",
-    tools.length === 4,
-    \`expected 4 compact tools, got \${tools.length}\`,
+    "five-tool-surface",
+    JSON.stringify(toolNames) === JSON.stringify(expectedTools),
+    \`expected \${expectedTools.join(", ")}, got \${toolNames.join(", ")}\`,
   );
-  for (const name of ["execute", "getGuideDocument", "openProject", "nextSteps"])
-    assert(
-      \`tool-present:\${name}\`,
-      tools.some((tool) => tool.name === name),
-      "tool missing from tools/list",
-    );
   const overflowing = tools.filter(
     (tool) => (tool.description ?? "").length > 1023,
   );
@@ -234,164 +239,19 @@ try {
     guide.isError !== true && guideText.length >= 1000,
     \`isError=\${guide.isError} length=\${guideText.length} (guide corpus missing from the pack?)\`,
   );
-
-  const open = await client.callTool({
-    name: "openProject",
-    arguments: { root: projectRoot },
-  });
-  assert(
-    "open-project",
-    open.isError !== true,
-    (open.content?.[0]?.text ?? "").slice(0, 300),
-  );
-  for (const entry of [
-    "automovie.json",
-    "assets",
-    "beatEnds",
-    "models",
-    "props",
-    "renders",
-    "scenes",
-    "shots",
-  ])
-    assert(
-      \`resident-structure:\${entry}\`,
-      existsSync(path.join(projectRoot, entry)),
-      "openProject did not create the resident project entry",
-    );
-
-  const next = await client.callTool({ name: "nextSteps", arguments: {} });
-  const nextText = next.content?.[0]?.text ?? "";
-  assert(
-    "next-steps",
-    next.isError !== true && nextText.length > 0,
-    nextText.slice(0, 300),
-  );
-
-  const slate = await client.callTool({
-    name: "execute",
-    arguments: { call: { operation: "getSlate", input: {} } },
-  });
-  const slateResult = slate.structuredContent?.result;
-  assert(
-    "execute-operation",
-    slate.isError !== true &&
-      slateResult?.operation === "getSlate" &&
-      slateResult.output?.slate !== undefined,
-    (slate.content?.[0]?.text ?? "").slice(0, 300),
-  );
 } finally {
   await client.close();
 }
 
-assert(
-  "granular-bin-target",
-  existsSync(granularBin),
-  "the compatibility binary is missing",
-);
-const granularTransport = new StdioClientTransport({
-  command: process.execPath,
-  args: [granularBin],
-  stderr: "pipe",
-});
-const granular = new Client({
-  name: "automovie-tgz-e2e-granular",
-  version: "0.0.0",
-});
-await granular.connect(granularTransport);
-try {
-  const { tools } = await granular.listTools();
-  // Derived from the packed package rather than compared with a number kept
-  // here by hand. The granular surface is one tool per application method, so
-  // that is the property to assert; a literal only records what the count was
-  // on the day someone last remembered to change it (#1393, #1402). The trade
-  // is deliberate: a literal would also have caught a packaging step that lost
-  // methods from the built library, which this cannot, since both sides would
-  // shrink together. That case is covered in-repo by test_mcp_stdio_roundtrip,
-  // which pins the whole granular name inventory, and by assertBuild.
-  const { AutoMovieLegacyApplication } = await import("@automovie/mcp");
-  const operations = Object.getOwnPropertyNames(
-    AutoMovieLegacyApplication.prototype,
-  ).filter((name) => name !== "constructor");
-  assert(
-    "granular-tool-count",
-    tools.length === operations.length,
-    \`expected one granular tool per application method (\${operations.length}), got \${tools.length}\`,
-  );
-  for (const name of ["stage", "perform", "cut"])
-    assert(
-      \`granular-tool-present:\${name}\`,
-      tools.some((tool) => tool.name === name),
-      "tool missing from compatibility tools/list",
-    );
-} finally {
-  await granular.close();
-}
-
-assert(
-  "production-bin-target",
-  existsSync(productionBin),
-  "the coding-agent production binary is missing",
-);
-const productionTransport = new StdioClientTransport({
-  command: process.execPath,
-  args: [productionBin],
-  stderr: "pipe",
-});
-const production = new Client({
-  name: "automovie-tgz-e2e-production",
-  version: "0.0.0",
-});
-await production.connect(productionTransport);
-try {
-  const { tools } = await production.listTools();
-  assert(
-    "production-tool-count",
-    tools.length === 15,
-    \`expected 15 production tools, got \${tools.length}\`,
-  );
-  for (const name of [
-    "getGuideDocument",
-    "openProject",
-    "compileProject",
-    "queryGeometry",
-    "previewFrame",
-    "submitReview",
-  ])
-    assert(
-      \`production-tool-present:\${name}\`,
-      tools.some((tool) => tool.name === name),
-      "tool missing from production tools/list",
-    );
-  const guide = await production.callTool({
-    name: "getGuideDocument",
-    arguments: { name: "AUTOMOVIE_OVERALL" },
-  });
-  assert(
-    "production-guide",
-    guide.isError !== true,
-    (guide.content?.[0]?.text ?? "").slice(0, 300),
-  );
-  const opened = await production.callTool({
-    name: "openProject",
-    arguments: { root: path.resolve(".") },
-  });
-  assert(
-    "production-open-project",
-    opened.isError !== true &&
-      existsSync(path.resolve(".automovie/manifest.json")),
-    (opened.content?.[0]?.text ?? "").slice(0, 300),
-  );
-} finally {
-  await production.close();
-}
 `;
 
 const STARTER_VERIFY_SOURCE = `
 import {
+  AUTOMOVIE_REVIEW_GUIDES,
   AutoMovieApplication,
-  AutoMovieProductionProject,
   digestAutoMovieBytes,
+  inspectAutoMovieProduction,
+  openAutoMovieProduction,
   parseAutoMovieCaptureRuntimeIdentity,
 } from "@automovie/mcp";
 import fs from "node:fs";
@@ -638,13 +498,12 @@ assert(
 
 const app = new AutoMovieApplication({ projectRoot: root });
 app.getGuideDocument({ name: "AUTOMOVIE_OVERALL" });
-app.getGuideDocument({ name: "COMPILATION" });
-app.getGuideDocument({ name: "GEOMETRY" });
-app.getGuideDocument({ name: "PRODUCTION_REVIEW" });
-app.openProject({ root });
-const project = AutoMovieProductionProject.open(root);
+for (const name of new Set(Object.values(AUTOMOVIE_REVIEW_GUIDES)))
+  app.getGuideDocument({ name });
+const services = openAutoMovieProduction({ projectRoot: root });
+const project = services.project;
 const graph = project.graph();
-const formationSummary = app.queryGeometry({
+const formationSummary = services.oracle.query({
   request: {
     query: "formation",
     formation: "army",
@@ -669,7 +528,7 @@ assert(
     ),
   JSON.stringify(formationSummary),
 );
-const effectSummary = app.queryGeometry({
+const effectSummary = services.oracle.query({
   request: {
     query: "effect",
     zone: "signal-smoke",
@@ -702,7 +561,7 @@ assert(
 );
 const phase = process.argv[2];
 if (phase === "review") {
-  const before = app.inspectProject({});
+  const before = inspectAutoMovieProduction(services);
   assert(
     "starter-review-gate-is-enforced",
     before.reviews.entries.some((entry) => entry.state !== "complete"),
@@ -729,7 +588,7 @@ if (phase === "review") {
       JSON.stringify(submitted.diagnostics),
     );
   }
-  const reviewed = app.compileProject({ scope: "review" });
+  const reviewed = services.compiler.compile({ scope: "review" });
   assert(
     "starter-review-compile-gate",
     reviewed.success &&
@@ -802,7 +661,7 @@ if (phase === "review") {
         11.5,
     JSON.stringify(aggregate),
   );
-  const final = app.compileProject({ scope: "final" });
+  const final = services.compiler.compile({ scope: "final" });
   assert(
     "starter-final-compile",
     final.success &&
@@ -816,7 +675,7 @@ if (phase === "review") {
   const tampered = Buffer.from(original);
   tampered[0] ^= 0xff;
   fs.writeFileSync(deliverablePath, tampered);
-  const rejected = app.compileProject({ scope: "final" });
+  const rejected = services.compiler.compile({ scope: "final" });
   assert(
     "starter-final-ledger-tamper-gate",
     rejected.success === false &&
@@ -826,7 +685,7 @@ if (phase === "review") {
     JSON.stringify(rejected.diagnostics),
   );
   fs.writeFileSync(deliverablePath, original);
-  const restored = app.compileProject({ scope: "final" });
+  const restored = services.compiler.compile({ scope: "final" });
   assert(
     "starter-final-ledger-restored",
     restored.success,
@@ -901,37 +760,19 @@ try {
       `packed artifact is missing the creator bin target: ${creatorBinTarget}`,
     );
   console.log("✓ bin-target: lib/bin.js present in the installed package");
-  const granularBinTarget = join(
-    projectDir,
-    "node_modules",
-    "@automovie",
-    "mcp",
-    "lib",
-    "bin-granular.js",
-  );
-  if (!existsSync(granularBinTarget))
-    fail(
-      `packed artifact is missing the granular bin target: ${granularBinTarget}`,
+  for (const retired of ["bin-granular.js", "bin-production.js"]) {
+    const target = join(
+      projectDir,
+      "node_modules",
+      "@automovie",
+      "mcp",
+      "lib",
+      retired,
     );
-  console.log(
-    "✓ granular-bin-target: lib/bin-granular.js present in the installed package",
-  );
-
-  const productionBinTarget = join(
-    projectDir,
-    "node_modules",
-    "@automovie",
-    "mcp",
-    "lib",
-    "bin-production.js",
-  );
-  if (!existsSync(productionBinTarget))
-    fail(
-      `packed artifact is missing the production bin target: ${productionBinTarget}`,
-    );
-  console.log(
-    "production-bin-target: lib/bin-production.js present in the installed package",
-  );
+    if (existsSync(target))
+      fail(`packed artifact unexpectedly contains retired bin: ${target}`);
+  }
+  console.log("✓ retired-bin-targets: compatibility bins are absent");
 
   // 4. Drive the packaged server as a real MCP client. The client runs with
   //    the fresh project as cwd so @modelcontextprotocol/sdk resolves from

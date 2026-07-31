@@ -101,6 +101,8 @@ const unmentionedModules = (pkg: string, document: string): string[] =>
  * 11. Root, interface, and MCP package manifests advertise that same current
  *     product boundary instead of the retired structured-output authoring
  *     engine (#1444).
+ * 12. The packed-tarball client drives that same five-tool surface and keeps the
+ *     removed compatibility servers and MCP-owned coding operations out.
  */
 export const test_workspace_public_contracts = (): void => {
   const rootReadme = readPackageFile("README.md");
@@ -113,6 +115,7 @@ export const test_workspace_public_contracts = (): void => {
     "src",
     "AutoMovieApplication.ts",
   );
+  const tgzE2e = readPackageFile("internals", "e2e-tgz.mjs");
   type PackageMetadata = {
     description: string;
     keywords: string[];
@@ -398,6 +401,13 @@ export const test_workspace_public_contracts = (): void => {
   ]
     .map((match) => match[1]!)
     .sort(compareCodeUnits);
+  const packedToolNames = [
+    ...tgzE2e
+      .match(/const expectedTools = \[([\s\S]*?)\n  \];/)![1]!
+      .matchAll(/^    "([a-z][A-Za-z0-9]*)",$/gm),
+  ]
+    .map((match) => match[1]!)
+    .sort(compareCodeUnits);
   TestValidator.equals(
     "public README tool tables derive their complete surface from the application",
     {
@@ -456,6 +466,11 @@ export const test_workspace_public_contracts = (): void => {
         mcpReadme.match(
           /openProject|inspectProject|compileProject|queryGeometry|previewFrame|automovie-mcp-(?:legacy|production|granular)/g,
         ) ?? [],
+      packedTools: packedToolNames,
+      retiredNamesInTgzE2e:
+        tgzE2e.match(
+          /AutoMovieLegacyApplication|tools\.length === (?:4|15)|name: "(?:execute|openProject|nextSteps|compileProject|queryGeometry|previewFrame)"|app\.(?:openProject|inspectProject|compileProject|queryGeometry)/g,
+        ) ?? [],
     },
     {
       sources: [],
@@ -464,6 +479,8 @@ export const test_workspace_public_contracts = (): void => {
       bins: { "automovie-mcp": "lib/bin.js" },
       publishedBins: { "automovie-mcp": "lib/bin.js" },
       retiredNamesInReadme: [],
+      packedTools: mcpToolGuideKeys,
+      retiredNamesInTgzE2e: [],
     },
   );
   TestValidator.equals(
