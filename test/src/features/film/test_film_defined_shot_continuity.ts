@@ -43,8 +43,10 @@ const WALK: IAutoMovieGait = {
 const walkingProgram = (
   stage: ReturnType<typeof makeStagingWrite>,
   target: IAutoMovieVector3,
+  speed: number,
+  duration: number | "auto",
 ): IAutoMovieShotProgram => ({
-  actors: [{ node: "knightA", model: "knightA", speed: 1, eyeHeight: 1.6 }],
+  actors: [{ node: "knightA", model: "knightA", speed, eyeHeight: 1.6 }],
   script: makeScriptWrite(),
   stage,
   blocking: makeBlockingWrite({
@@ -57,7 +59,7 @@ const walkingProgram = (
         verb: "locomote",
         actor: "knightA",
         start: 0,
-        duration: "auto",
+        duration,
         gait: "walk",
         to: { kind: "point", point: target },
       },
@@ -99,7 +101,10 @@ const compileWalk = (props: {
   stage: ReturnType<typeof makeStagingWrite>;
   target: IAutoMovieVector3;
   previous?: IAutoMovieBeatEndState;
+  speed?: number;
+  duration?: number | "auto";
 }) => {
+  const speed = props.speed ?? 1;
   const contexts = new Map<string, IAutoMovieActorContext>([
     [
       "knightA",
@@ -108,7 +113,7 @@ const compileWalk = (props: {
         rig: props.rig,
         gaits: [WALK],
         position: props.stage.actors[0]!.position,
-        speed: 1,
+        speed,
         facingDeg: props.stage.actors[0]!.facingDeg,
         eyeHeight: 1.6,
         restPose: makePose([]),
@@ -125,7 +130,13 @@ const compileWalk = (props: {
     shot: defineShot(props.id, {
       scene: props.stage.scene.id,
       contract: walkingContract(),
-      build: () => walkingProgram(props.stage, props.target),
+      build: () =>
+        walkingProgram(
+          props.stage,
+          props.target,
+          speed,
+          props.duration ?? "auto",
+        ),
     }),
     context: undefined,
     runtime: {
@@ -232,6 +243,52 @@ export const test_film_defined_shot_continuity = (): void => {
           motion.loop === false &&
           (motion.gaitCycle ?? null) !== null,
       ),
+  );
+
+  const velocityRig = createSkeleton();
+  const velocityFirst = compileWalk({
+    id: "SB-VELOCITY-A",
+    rig: velocityRig,
+    stage: groundedStage,
+    target: { x: 4, y: 0, z: 4 },
+    speed: 0.25,
+    duration: 1,
+  });
+  TestValidator.predicate(
+    "a moving first shot produces incoming world velocity at its exact cut",
+    velocityFirst.success &&
+      vclose(
+        velocityFirst.continuity.closing.actors.find(
+          (actor) => actor.node === "knightA",
+        )?.rootVelocity ?? { x: 0, y: 0, z: 0 },
+        { x: 1, y: 0, z: 0 },
+        1e-6,
+      ),
+  );
+  if (velocityFirst.success === false) return;
+  const velocityActor = velocityFirst.continuity.closing.actors.find(
+    (actor) => actor.node === "knightA",
+  )!;
+  const velocitySecond = compileWalk({
+    id: "SB-VELOCITY-B",
+    rig: velocityRig,
+    stage: groundedStage,
+    target: {
+      x: velocityActor.transform.translation.x + 0.5,
+      y: velocityActor.transform.translation.y,
+      z: velocityActor.transform.translation.z,
+    },
+    previous: velocityFirst.continuity.closing,
+    speed: 0.25,
+  });
+  TestValidator.predicate(
+    "the next auto stride consumes that velocity instead of fallback speed",
+    velocitySecond.success &&
+      Vector3.length(
+        sampleMotion(velocitySecond.source.motions[0]!, 0.5).pose.root
+          ?.translation ?? { x: 0, y: 0, z: 0 },
+      ) >=
+        0.5 - 1e-9,
   );
 
   const stage = makeStagingWrite();

@@ -72,9 +72,9 @@ export interface IAutoMovieBeatEndActorState {
 
   /**
    * World-space root velocity at beat end in m/s, finite-differenced over the
-   * clip's last instants, or `null` for a held/static actor. A clamped
-   * (non-looping) clip that has already reached its end holds its last pose, so
-   * its velocity is zero.
+   * clip's last instants, or `null` for a held/static actor. At the exact clip
+   * end this is the incoming left-hand velocity at the cut; a non-looping clip
+   * sampled strictly after its end holds its last pose at zero velocity.
    */
   rootVelocity: IAutoMovieVector3 | null;
 

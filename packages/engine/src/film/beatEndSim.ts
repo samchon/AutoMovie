@@ -107,8 +107,10 @@ const modPositive = (value: number, period: number): number =>
  * it: within a cycle the window is the trailing {@link VELOCITY_DT}; in the
  * cycle's opening instants it shrinks to `[0, phase]`; and exactly on the seam
  * the cycle's closing stretch is measured with the clip clamped (un-looped) so
- * sampling `duration` does not wrap to the cycle start. A clamped clip that has
- * already reached its end holds its last pose: zero velocity.
+ * sampling `duration` does not wrap to the cycle start. A non-looping clip
+ * sampled exactly at its end uses that same incoming left-hand window for the
+ * cut; only a sample after the clip has ended holds its last pose at zero
+ * velocity.
  */
 export const rootVelocityOf = (
   node: IAutoMovieSceneNode,
@@ -125,8 +127,8 @@ export const rootVelocityOf = (
     return velocityOver(node, clamped, start, clip.duration);
   }
 
-  if (localTime >= clip.duration) return { x: 0, y: 0, z: 0 };
-  const t1 = Math.max(localTime, 0);
+  if (localTime > clip.duration) return { x: 0, y: 0, z: 0 };
+  const t1 = Math.min(Math.max(localTime, 0), clip.duration);
   return velocityOver(node, clip, Math.max(0, t1 - VELOCITY_DT), t1);
 };
 

@@ -97,20 +97,21 @@ const plant = (
  *
  * 1. A non-looping clip mid-flight (0.5 s of 1 s): gaitPhase null (no cycle),
  *    rootVelocity = the clip's true 2 m/s.
- * 2. The same clip past its end (2 s ≥ 1 s): it clamps and holds (zero velocity,
- *    still no phase).
- * 3. A held actor: gaitPhase, rootVelocity, footPlants, and mount all null.
- * 4. Plants carry the latest run per foot at/before beat end: a later left-foot
+ * 2. At the exact 1 s cut, the non-looping clip keeps its incoming 2 m/s left-hand
+ *    velocity.
+ * 3. The same clip past its end (2 s > 1 s) clamps and holds at zero velocity.
+ * 4. A held actor: gaitPhase, rootVelocity, footPlants, and mount all null.
+ * 5. Plants carry the latest run per foot at/before beat end: a later left-foot
  *    run supersedes an earlier one even listed first, a not-yet-started run is
  *    filtered, and a foot's only run is kept.
- * 5. No plant entry for a node, and an entry with zero applicable runs, both yield
+ * 6. No plant entry for a node, and an entry with zero applicable runs, both yield
  *    null.
- * 6. A staged mount is carried onto its rider; unmounted actors get null.
- * 7. Duplicated plant/mount node entries throw loudly.
- * 8. A degenerate zero-duration looping clip has no cycle to resume (null phase,
+ * 7. A staged mount is carried onto its rider; unmounted actors get null.
+ * 8. Duplicated plant/mount node entries throw loudly.
+ * 9. A degenerate zero-duration looping clip has no cycle to resume (null phase,
  *    zero velocity) instead of dividing by its empty period.
- * 9. A performance that starts exactly at shot end (local time 0) has an empty
- *    velocity window: zero, not NaN.
+ * 10. A performance that starts exactly at shot end (local time 0) has an empty
+ *     velocity window: zero, not NaN.
  */
 export const test_film_beat_end_sim_state = (): void => {
   const flight = resolveBeatEnd({
@@ -123,6 +124,17 @@ export const test_film_beat_end_sim_state = (): void => {
   TestValidator.predicate(
     "one-shot velocity mid-flight",
     vclose(flight.rootVelocity!, { x: 2, y: 0, z: 0 }, 1e-9),
+  );
+
+  const atCut = resolveBeatEnd({
+    beat: "beat-1",
+    scene,
+    shot: shotOf(1),
+    motions: [dash],
+  }).actors[0]!;
+  TestValidator.predicate(
+    "one-shot velocity at the exact cut uses the incoming left derivative",
+    vclose(atCut.rootVelocity!, { x: 2, y: 0, z: 0 }, 1e-9),
   );
 
   const ended = resolveBeatEnd({
