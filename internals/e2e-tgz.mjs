@@ -807,10 +807,11 @@ try {
   process.stdout.write(client.stdout ?? "");
 
   // 5. Generate and exercise the production repository using only the packed
-  // CLI and runtime tarballs. The first render must be blocked by missing
-  // reviews after it creates evidence. An external-agent worksheet then
-  // completes every current target, the second render reaches final compile,
-  // and a byte tamper proves the delivery ledger is enforced.
+  // CLI and runtime tarballs. The proxy render creates review evidence and the
+  // immutable proxy publication; the following final render must be blocked
+  // by missing reviews. An external-agent worksheet then completes every
+  // current target, the resumed final render reaches final compile, and a byte
+  // tamper proves the delivery ledger is enforced.
   const cliBin = join(
     projectDir,
     "node_modules",
@@ -1184,11 +1185,16 @@ export default {
     900_000,
   );
   run("test packaged starter", "npm test", starterDir);
-  runExpectedFailure(
-    "enforce packaged starter proxy review gate",
+  run(
+    "publish packaged starter proxy review evidence",
     "npm run render -- all --tier proxy",
     starterDir,
-    "review-",
+  );
+  runExpectedFailure(
+    "enforce packaged starter final review gate",
+    "npm run render -- all --tier final",
+    starterDir,
+    "Final publication is review-blocked by",
   );
   writeFileSync(
     join(starterDir, "verify-packaged-starter.mjs"),
@@ -1230,7 +1236,14 @@ PNG.sync.read = function (input) {
         .join(" "),
     },
   );
-  const renderStateRoot = join(starterDir, ".automovie", "render-job");
+  const renderStateRoot = join(
+    starterDir,
+    ".automovie",
+    "productions",
+    String(starterProduction.id),
+    "render-job",
+    "final",
+  );
   const renderPlanPath = join(renderStateRoot, "plan.json");
   const renderPlanText = readFileSync(renderPlanPath, "utf8");
   const tamperedRenderPlan = JSON.parse(renderPlanText);
