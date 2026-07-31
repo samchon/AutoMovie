@@ -2360,6 +2360,7 @@ export class AutoMovieProductionProject {
   }
 
   private loadScreenplayIndex(): IAutoMovieScreenplayIndex | null {
+    this.assertIncarnation();
     const file = path.join(this.productionDesignRoot, "screenplay/index.json");
     if (lstatOrNull(file) === null) return null;
     return readOwnedTypedJson(

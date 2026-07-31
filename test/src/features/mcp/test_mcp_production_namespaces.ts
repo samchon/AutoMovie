@@ -382,11 +382,27 @@ export const test_mcp_production_namespaces = (): void => {
           design: { kind: "production" },
         }),
     ];
+    const staleMutations = [
+      () =>
+        stale.setProductionDesign({
+          ...productionDesign(),
+          id: "wrong-production",
+        }),
+      () => stale.setWorldDesign({} as never),
+      () =>
+        stale.eraseDesignArtifact({
+          kind: "model",
+          id: "absent",
+        }),
+    ];
     TestValidator.predicate(
-      "every production-scoped read and path rejects same-id recreation",
+      "every production-scoped read, path and mutation rejects same-id recreation",
       recreated.summary().productionId === "fixture-film" &&
         throws(() => stale.summary(), "deleted or recreated") &&
-        staleReads.every((read) => throws(read, "deleted or recreated")),
+        staleReads.every((read) => throws(read, "deleted or recreated")) &&
+        staleMutations.every((mutate) =>
+          throws(mutate, "deleted or recreated"),
+        ),
     );
   } finally {
     incarnationFixture.dispose();
