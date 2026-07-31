@@ -681,26 +681,44 @@ export const test_film_defined_shot_continuity = (): void => {
       previous,
     },
   });
-  TestValidator.predicate(
+  if (compiled.success === false)
+    throw new Error(
+      `Final continuity shot compilation failed:\n${JSON.stringify(
+        compiled.diagnostics,
+        null,
+        2,
+      )}`,
+    );
+  const openingActor = compiled.continuity.opening.actors.find(
+    (actor) => actor.node === "knightA",
+  );
+  const closingRider = compiled.continuity.closing.actors.find(
+    (actor) => actor.node === "knightB",
+  );
+  TestValidator.equals(
     "all prior simulation channels reach the next compiled opening",
-    compiled.success &&
-      compiled.source.scene.nodes.find((node) => node.id === "knightA")
-        ?.transform.translation.x === 3 &&
-      compiled.source.scene.nodes
+    {
+      sceneX: compiled.source.scene.nodes.find((node) => node.id === "knightA")
+        ?.transform.translation.x,
+      armFlexion: compiled.source.scene.nodes
         .find((node) => node.id === "knightA")
         ?.pose?.joints.some(
           (entry) => entry.bone === "leftLowerArm" && entry.flexion === 30,
-        ) === true &&
-      compiled.source.motions[0]?.duration === 2 &&
-      compiled.source.motions[0]?.gaitCycle?.phaseAt === 0.4 &&
-      compiled.continuity.opening.actors.find(
-        (actor) => actor.node === "knightA",
-      )?.rootVelocity?.z === 2 &&
-      compiled.continuity.opening.actors.find(
-        (actor) => actor.node === "knightA",
-      )?.footPlants?.[0]?.position.x === 3.1 &&
-      compiled.continuity.closing.actors.find(
-        (actor) => actor.node === "knightB",
-      )?.mount?.parent === "knightA",
+        ),
+      duration: compiled.source.motions[0]?.duration,
+      gaitPhase: compiled.source.motions[0]?.gaitCycle?.phaseAt,
+      rootVelocityZ: openingActor?.rootVelocity?.z,
+      footPlantX: openingActor?.footPlants?.[0]?.position.x,
+      mountParent: closingRider?.mount?.parent,
+    },
+    {
+      sceneX: 3,
+      armFlexion: true,
+      duration: 2,
+      gaitPhase: 0.4,
+      rootVelocityZ: 2,
+      footPlantX: 3.1,
+      mountParent: "knightA",
+    },
   );
 };
