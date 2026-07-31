@@ -15,7 +15,7 @@
     "capture:install": "tsx scripts/capture-install.ts",
     "build": "npm run compile",
     "compile": "tsx scripts/compile.ts",
-    "lint": "ttsc --noEmit -p tsconfig.json && tsx scripts/lint.ts",
+    "lint": "ttsc --noEmit -p tsconfig.json && ttsx -P tsconfig.json scripts/lint.ts",
     "preview": "tsx scripts/preview.ts",
     "review:status": "tsx scripts/review-status.ts",
     "render": "tsx scripts/render.ts",

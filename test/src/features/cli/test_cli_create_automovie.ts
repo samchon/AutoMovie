@@ -28,7 +28,8 @@ export const test_cli_create_automovie = (): void => {
       "one creator call writes every project workflow without hidden installs",
       status === 0 &&
         pkg.scripts?.build === "npm run compile" &&
-        typeof pkg.scripts?.lint === "string" &&
+        pkg.scripts?.lint ===
+          "ttsc --noEmit -p tsconfig.json && ttsx -P tsconfig.json scripts/lint.ts" &&
         pkg.scripts?.verify === "tsx scripts/verify.ts" &&
         typeof pkg.scripts?.render === "string" &&
         typeof pkg.scripts?.viewer === "string" &&
