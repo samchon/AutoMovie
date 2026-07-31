@@ -1193,6 +1193,10 @@ export class AutoMovieProductionProject {
     let sourceParentAncestries: readonly IPhysicalDirectoryAncestry[] = [];
     let auditIdentity: string | null = null;
     let productionStateIdentity: string | null = null;
+    let committedEraseFence: {
+      quarantine: IPhysicalDirectoryAncestry;
+      state: string;
+    } | null = null;
     const assertResidentEntry = (file: string, identity: string): void => {
       assertPhysicalDirectoryAncestors(
         this.rootReal,
@@ -1219,6 +1223,18 @@ export class AutoMovieProductionProject {
         assertPhysicalDirectoryAncestry(auditParentAncestry);
       for (const ancestry of sourceParentAncestries)
         assertPhysicalDirectoryAncestry(ancestry);
+    };
+    const markErased = (): void => {
+      this.deleted_ = true;
+      if (quarantineAncestry === null || productionStateIdentity === null)
+        throw new AutoMovieProductionInputRaceError(
+          "Production erase committed without a resident quarantine fence. Preserve the namespace for manual recovery.",
+        );
+      erased = true;
+      committedEraseFence = {
+        quarantine: quarantineAncestry,
+        state: productionStateIdentity,
+      };
     };
     try {
       token = acquireCommitLock(this.lockPath);
@@ -1316,13 +1332,10 @@ export class AutoMovieProductionProject {
           registryPublished = true;
         },
       );
-      erased = true;
-      this.deleted_ = true;
+      markErased();
     } catch (error) {
-      if (registryPublished) {
-        erased = true;
-        this.deleted_ = true;
-      } else {
+      if (registryPublished) markErased();
+      else {
         try {
           assertEraseFence();
           for (const entry of moved)
@@ -1379,23 +1392,19 @@ export class AutoMovieProductionProject {
             releaseCommitLock(this.lockPath, token);
           else releaseCommitLock(this.lockPath, token, { unlink: false });
         }
-        if (erased) {
-          if (quarantineAncestry === null || productionStateIdentity === null)
-            throw new AutoMovieProductionInputRaceError(
-              "Production erase committed without a resident quarantine fence. Preserve the namespace for manual recovery.",
-            );
-          assertPhysicalDirectoryAncestry(quarantineAncestry);
+        if (committedEraseFence !== null) {
+          assertPhysicalDirectoryAncestry(committedEraseFence.quarantine);
           for (const entry of moved)
             assertResidentEntry(entry.to, entry.identity);
           assertResidentEntry(
             this.productionStateRoot,
-            productionStateIdentity,
+            committedEraseFence.state,
           );
           const stateDestination = path.join(quarantine, "state");
           fs.renameSync(this.productionStateRoot, stateDestination);
-          assertResidentEntry(stateDestination, productionStateIdentity);
+          assertResidentEntry(stateDestination, committedEraseFence.state);
           fs.rmSync(quarantine, { force: true, recursive: true });
-        } else if (quarantineAncestry !== null)
+        } else if (registryPublished === false && quarantineAncestry !== null)
           try {
             assertPhysicalDirectoryAncestry(quarantineAncestry);
             if (fs.readdirSync(quarantine).length === 0)
