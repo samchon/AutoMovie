@@ -64,21 +64,32 @@ export const test_inspect_external_model_bytes = (): void => {
             : null,
     }).format === "vrm",
   );
+  const inspectStaticGlb = (paddingByte: number) =>
+    inspectAutoMovieExternalModelBytes({
+      path: "public/models/actor.glb",
+      bytes: glb(source, paddingByte),
+      profile: "gltf-static-v1",
+      resolveResource: (uri) =>
+        uri === "actor.bin"
+          ? modelPayload()
+          : uri === "actor.png"
+            ? Buffer.from([1])
+            : null,
+    });
+  TestValidator.equals(
+    "GLB JSON chunks accept mandatory space padding",
+    inspectStaticGlb(0x20).format,
+    "glb",
+  );
+  let nulPaddingError: string | null = null;
+  try {
+    inspectStaticGlb(0x00);
+  } catch (error) {
+    nulPaddingError = error instanceof Error ? error.message : String(error);
+  }
   TestValidator.predicate(
     "GLB JSON chunks reject NUL instead of mandatory space padding",
-    throws(() =>
-      inspectAutoMovieExternalModelBytes({
-        path: "public/models/actor.glb",
-        bytes: glb(source, 0x00),
-        profile: "gltf-static-v1",
-        resolveResource: (uri) =>
-          uri === "actor.bin"
-            ? modelPayload()
-            : uri === "actor.png"
-              ? Buffer.from([1])
-              : null,
-      }),
-    ),
+    nulPaddingError?.startsWith("External model JSON is invalid:") === true,
   );
   TestValidator.predicate(
     "humanoid glTF profile resolves a skin joint",
