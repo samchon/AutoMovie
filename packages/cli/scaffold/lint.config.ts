@@ -1,5 +1,15 @@
-import { automovie } from "@automovie/lint";
-import type { ITtscLintConfig } from "@ttsc/lint";
+import type {} from "@automovie/lint";
+import type { ITtscLintConfig, ITtscLintPlugin } from "@ttsc/lint";
+import { createRequire } from "node:module";
+import path from "node:path";
+
+const require = createRequire(import.meta.url);
+const automovie = {
+  source: path.join(
+    path.dirname(require.resolve("@automovie/lint/package.json")),
+    "native",
+  ),
+} satisfies ITtscLintPlugin;
 
 /**
  * `@ttsc/lint` config for this automovie project, applied automatically by
