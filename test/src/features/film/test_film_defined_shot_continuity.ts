@@ -54,7 +54,7 @@ const walkingProgram = (
   });
   blocking.camera.framing = "full";
   blocking.rationale =
-    "full static keeps the grounded actor root readable throughout the stride.";
+    "full static keeps the required actor root readable throughout the stride.";
   return {
     actors: [{ node: "knightA", model: "knightA", speed, eyeHeight: 1.6 }],
     script: makeScriptWrite(),
