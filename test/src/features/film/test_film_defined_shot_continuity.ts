@@ -220,7 +220,7 @@ export const test_film_defined_shot_continuity = (): void => {
   if (first.success === false)
     throw new Error(
       `First gait shot compilation failed:\n${JSON.stringify(
-        first.violations,
+        first.diagnostics,
         null,
         2,
       )}`,
