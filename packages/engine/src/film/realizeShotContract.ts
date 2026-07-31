@@ -25,6 +25,10 @@ import { projectToNdc, resolveCameraAt } from "./cameraProjection";
 /** Derive and validate contract outcomes from actual compiled artifacts. */
 export const realizeShotContract = (props: {
   contract: IAutoMovieShotContract;
+  /**
+   * Full production design for compiler-materialized output. `null` marks the
+   * direct source-stage pass, before compiler-owned formation heroes exist.
+   */
   production: IAutoMovieProductionDesign | null;
   /** Direct authoring raster when no production design object exists. */
   frameFormat?: Pick<
@@ -147,7 +151,7 @@ export const realizeShotContract = (props: {
         const node = nodes.get(hero.actor);
         return node === undefined ? [] : [{ hero, node }];
       }) ?? [];
-    const passed =
+    const compactPassed =
       design !== undefined &&
       formation !== undefined &&
       formation.count === design.count &&
@@ -161,16 +165,29 @@ export const realizeShotContract = (props: {
             formation.chunks
               .slice(0, index)
               .reduce((sum, previous) => sum + previous.count, 0),
-      ) &&
-      heroes.length === formation.heroes.length &&
-      heroes.every(({ hero, node }) => {
-        return (
-          vectorClose(node.transform.translation, hero.transform.translation) &&
-          quaternionClose(node.transform.rotation, hero.transform.rotation) &&
-          vectorClose(node.transform.scale, hero.transform.scale) &&
-          node.model === productionRuntimeModelId(design.modelRecipe)
-        );
-      });
+      );
+    // Shot source owns choreography but not promoted hero nodes. The MCP
+    // compiler adds or corrects those nodes only after compileDefinedShot has
+    // returned its source, then invokes this realization again with the full
+    // production. Requiring heroes during the direct/source pass makes that
+    // materialization unreachable for every formation with an override.
+    const materializedHeroesPassed =
+      props.production === null ||
+      (design !== undefined &&
+        formation !== undefined &&
+        heroes.length === formation.heroes.length &&
+        heroes.every(({ hero, node }) => {
+          return (
+            vectorClose(
+              node.transform.translation,
+              hero.transform.translation,
+            ) &&
+            quaternionClose(node.transform.rotation, hero.transform.rotation) &&
+            vectorClose(node.transform.scale, hero.transform.scale) &&
+            node.model === productionRuntimeModelId(design.modelRecipe)
+          );
+        }));
+    const passed = compactPassed && materializedHeroesPassed;
     if (passed === false)
       fail(
         `formation "${participant.id}"`,

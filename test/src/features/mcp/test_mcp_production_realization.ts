@@ -9,6 +9,7 @@ import {
 import {
   AutoMovieProductionCompiler,
   AutoMovieProductionProject,
+  materializeCompiledFormation,
   materializeCompiledShot,
   materializeProductionModels,
 } from "@automovie/mcp";
@@ -92,6 +93,32 @@ export const test_mcp_production_realization = (): void => {
     const formations = new Map([[formation.id, formation]]);
     const runtimeModels = materializeProductionModels(
       new Map([[modelRecipe().id, modelRecipe()]]),
+    );
+    const sourceStageContract: IAutoMovieShotContract = {
+      ...shotContract(),
+      participants: [
+        ...shotContract().participants,
+        { kind: "formation", id: formation.id },
+      ],
+    };
+    const sourceStageOutcome = realizeShotContract({
+      contract: sourceStageContract,
+      production: null,
+      frameFormat: productionDesign().frameFormat,
+      world: worldDesign(),
+      formations,
+      compiled: {
+        ...structuredClone(base),
+        formations: [materializeCompiledFormation(formation)],
+      },
+      collisions: [],
+    });
+    TestValidator.predicate(
+      "source-stage formation realization precedes compiler-owned hero nodes",
+      sourceStageOutcome.diagnostics.length === 0 &&
+        sourceStageOutcome.realization.formations.some(
+          (item) => item.id === formation.id && item.passed,
+        ),
     );
     const {
       models: _baseModels,
