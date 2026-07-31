@@ -98,7 +98,9 @@ const door: IAutoMovieActionTarget = { kind: "node", node: "door" };
  * 1. `locomote` to a resolvable point travels the gait that far at the actor's
  *    speed (a non-looping clip whose length is the covered cycles); a turned
  *    actor's travel is baked in model space so it reaches the world destination
- *    once the renderer applies its staged facing.
+ *    once the renderer applies its staged facing. A destination above or below
+ *    the actor carries that rise while gait cadence remains governed by XZ
+ *    ground distance.
  * 2. `locomote` to a relative target (no positional point), or to its own spot,
  *    steps in place: the looping one-cycle gait.
  * 3. An unmatched gait, a non-synthesised verb, and an unknown actor → null.
@@ -151,6 +153,24 @@ export const test_perform_actor_synthesizer = (): void => {
   TestValidator.predicate(
     "a turned actor's baked travel, under its facing, reaches the world destination",
     vclose(rendered, worldDest, 1e-9),
+  );
+
+  // 1c. ramp travel preserves the destination height without lengthening the
+  // gait clock: profile speed is measured over the XZ ground plan.
+  const rampDest: IAutoMovieVector3 = { x: 0, y: 0.4, z: 5 };
+  const rampTrip = synth(
+    locomote("walk", { kind: "point", point: rampDest }),
+    "hero",
+  )!;
+  const rampRoot = sampleMotion(rampTrip, rampTrip.duration).pose.root!
+    .translation;
+  TestValidator.predicate(
+    "ramp locomotion arrives at the complete ground point",
+    vclose(rampRoot, rampDest, 1e-9),
+  );
+  TestValidator.predicate(
+    "ramp locomotion keeps the ground-distance gait clock",
+    nclose(rampTrip.duration, 5),
   );
 
   // 2a. relative target → step in place (looping one-cycle gait)

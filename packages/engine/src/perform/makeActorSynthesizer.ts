@@ -556,13 +556,22 @@ export const makeActorSynthesizer = (
       const local = toModelSpace(dest, staticFrame);
       const distance = Math.hypot(local.x, local.z);
       if (distance < 1e-6) return fitDeclaredSpan(cycle, action.duration); // already there → step in place
+      // A locomote destination is the ground point the actor must actually
+      // reach, including a ramp's rise. Keep gait cadence governed by the XZ
+      // distance (the actor profile's speed is its ground speed), but carry the
+      // complete displacement through locomoteMotion. Scaling the 3D speed by
+      // the same slope ratio leaves distance / speed, cycle count, and duration
+      // identical to the planar walk while making the baked root arrive at the
+      // authored Y instead of silently discarding it (#1473).
+      const travelDistance = Math.hypot(local.x, local.y, local.z);
+      const travelSpeed = ctx.speed * (travelDistance / distance);
       return fitDeclaredSpan(
         locomoteMotion(
           `${actor}:${action.gait}:travel`,
           cycle,
-          distance,
-          ctx.speed,
-          { x: local.x, y: 0, z: local.z },
+          travelDistance,
+          travelSpeed,
+          local,
           action.faceTravel === true,
         ),
         action.duration,
