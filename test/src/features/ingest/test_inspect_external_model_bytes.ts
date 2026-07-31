@@ -16,7 +16,7 @@ export const test_inspect_external_model_bytes = (): void => {
           ? Buffer.from([1])
           : null,
   });
-  TestValidator.equals("glTF inventory")(inspection)({
+  TestValidator.equals("glTF inventory", inspection, {
     profile: "gltf-static-v1",
     format: "gltf",
     version: "2.0",

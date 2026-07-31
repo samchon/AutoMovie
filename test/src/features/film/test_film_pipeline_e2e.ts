@@ -87,7 +87,6 @@ export const test_film_pipeline_e2e = (): void => {
 
   const cut = cutSequence(
     {
-      type: "write",
       sequence: { id: "seq-duel", name: "duel at dawn" },
       fps: 24,
       entries: [

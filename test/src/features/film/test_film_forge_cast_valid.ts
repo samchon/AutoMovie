@@ -24,7 +24,6 @@ import {
 export const test_film_forge_cast_valid = (): void => {
   const script = makeScriptWrite();
   const forged = forgeCast(script, {
-    type: "write",
     entries: [forgeEntry("knightB")],
   });
   TestValidator.equals("success", forged.success, true);

@@ -659,12 +659,13 @@ const validateWorksheet = (
         "A visual target cannot complete without a verified current frame. Capture and cite one required frame.",
       );
     if (input.target.kind === "asset") {
+      const targetId = input.target.id;
       const cited = new Set(
         input.checks.flatMap((check) =>
           check.evidence.flatMap((evidence) =>
             evidence.kind === "frame" &&
             evidence.target.kind === "asset" &&
-            evidence.target.id === input.target.id
+            evidence.target.id === targetId
               ? [evidence.reviewFrame]
               : [],
           ),
@@ -2007,11 +2008,12 @@ const currentAssetFrames = (
   for (const entry of entries) {
     const manifest = project.verifiedRenderManifest(entry.path);
     if (manifest === null || manifest.target.kind !== "asset") continue;
+    const manifestTarget = manifest.target;
     const requirement = required.find(
       (item) =>
-        item.angleDeg === manifest.target.angleDeg &&
-        item.elevationDeg === manifest.target.elevationDeg &&
-        item.pose === manifest.target.pose &&
+        item.angleDeg === manifestTarget.angleDeg &&
+        item.elevationDeg === manifestTarget.elevationDeg &&
+        item.pose === manifestTarget.pose &&
         covered.has(item.id) === false,
     );
     if (requirement === undefined) continue;

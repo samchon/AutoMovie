@@ -4,6 +4,7 @@ import {
   mixSeed,
   productionRuntimeModelId,
   productionRuntimeSkeletonId,
+  seededValue,
 } from "@automovie/engine";
 import {
   AutoMovieContentDigest,
@@ -364,6 +365,7 @@ export const materializeCompiledInstanceSet = (
     instanceSet.count,
   );
   const recipe = recipes.get(instanceSet.modelRecipe);
+  const layout = instanceSet.layout;
   const sourceLod = recipe?.lod ?? [];
   const lod = (
     sourceLod.length === 0
@@ -385,13 +387,11 @@ export const materializeCompiledInstanceSet = (
     id: instanceSet.id,
     count: instanceSet.count,
     modelRecipe: instanceSet.modelRecipe,
-    layout: structuredClone(instanceSet.layout),
+    layout: structuredClone(layout),
     route:
-      instanceSet.layout.kind === "along-route"
+      layout.kind === "along-route"
         ? structuredClone(
-            world.routes.find(
-              (route) => route.id === instanceSet.layout.route,
-            ) ?? null,
+            world.routes.find((route) => route.id === layout.route) ?? null,
           )
         : null,
     anchor: structuredClone(instanceSet.anchor),

@@ -33,7 +33,7 @@ import {
 /** Optional host repaint orchestration and immutable rendition provenance. */
 export class AutoMovieProductionRepaintService {
   public constructor(
-    private readonly repaint?: AutoMovieProductionShotRepaint,
+    private readonly adapter?: AutoMovieProductionShotRepaint,
   ) {}
 
   /** Repaint one current shot from verified deterministic controls. */
@@ -48,7 +48,7 @@ export class AutoMovieProductionRepaintService {
       receipt: null,
       diagnostics: [diagnostic(code, input.shot, message)],
     });
-    if (this.repaint === undefined)
+    if (this.adapter === undefined)
       return failure(
         "repaint-host-unavailable",
         "This MCP host has no repaint adapter. Configure createAutoMovieMcpServer({ repaint }) with a local model or API adapter that implements AutoMovieProductionShotRepaint, then restart the host and retry. AutoMovie will not fabricate diffusion output.",
@@ -208,7 +208,7 @@ export class AutoMovieProductionRepaintService {
     };
     let generated: Awaited<ReturnType<AutoMovieProductionShotRepaint>>;
     try {
-      generated = await this.repaint({
+      generated = await this.adapter({
         projectRoot: services.project.root,
         productionId: services.project.productionId,
         compileFingerprint: registry.inputFingerprint,

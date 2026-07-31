@@ -15,6 +15,14 @@ import {
 } from "@automovie/benchmark";
 import { TestValidator } from "@nestia/e2e";
 
+import { throwsError } from "../internal/predicates";
+
+const expectErrorMessage = (
+  title: string,
+  task: () => unknown,
+  message: string,
+): void => TestValidator.predicate(title, throwsError(task, message));
+
 /** Registry, demo milestones, calibration, and measured surface inventory. */
 export const test_benchmark_scenario_registry = (): void => {
   const scenarios = listAutoMovieBenchmarkScenarios();
@@ -60,18 +68,18 @@ export const test_benchmark_scenario_registry = (): void => {
           scenario.anchors(),
         ).every((result) => result.inside),
     );
-  TestValidator.error(
+  expectErrorMessage(
     "an unknown task names the complete registry",
     () => getAutoMovieBenchmarkScenario("short/missing"),
     "Choose one of: long/austerlitz-battle-film, medium/austerlitz-volley-exchange, short/austerlitz-signal, short/austerlitz-teaser",
   );
   const teaser = getAutoMovieBenchmarkScenario("short/austerlitz-teaser");
-  TestValidator.error(
+  expectErrorMessage(
     "scenario registries refuse duplicate task ids",
     () => createAutoMovieBenchmarkScenarioRegistry([teaser, teaser]),
     'Duplicate benchmark task id "short/austerlitz-teaser"',
   );
-  TestValidator.error(
+  expectErrorMessage(
     "scenario registries bind the entry id to its reproduced law",
     () =>
       createAutoMovieBenchmarkScenarioRegistry([
@@ -85,7 +93,7 @@ export const test_benchmark_scenario_registry = (): void => {
       ]),
     "does not reproduce its registered task id and brief bytes",
   );
-  TestValidator.error(
+  expectErrorMessage(
     "scenario registries bind exact brief bytes to the law digest",
     () =>
       createAutoMovieBenchmarkScenarioRegistry([
@@ -93,12 +101,12 @@ export const test_benchmark_scenario_registry = (): void => {
       ]),
     "does not reproduce its registered task id and brief bytes",
   );
-  TestValidator.error(
+  expectErrorMessage(
     "scenario registries require a delivery lane",
     () => createAutoMovieBenchmarkScenarioRegistry([{ ...teaser, lanes: [] }]),
     "at least one unique delivery lane",
   );
-  TestValidator.error(
+  expectErrorMessage(
     "scenario registries refuse duplicate delivery lanes",
     () =>
       createAutoMovieBenchmarkScenarioRegistry([
@@ -106,7 +114,7 @@ export const test_benchmark_scenario_registry = (): void => {
       ]),
     "at least one unique delivery lane",
   );
-  TestValidator.error(
+  expectErrorMessage(
     "scenario registries refuse unknown delivery lanes",
     () =>
       createAutoMovieBenchmarkScenarioRegistry([
@@ -135,12 +143,12 @@ export const test_benchmark_scenario_registry = (): void => {
       inventory.comparisons[0]!.added.includes("captureFrame") &&
       inventory.comparisons[0]!.removed.includes("compile"),
   );
-  TestValidator.error(
+  expectErrorMessage(
     "inventory reports require one measured handshake",
     () => reportAutoMovieBenchmarkToolInventory([]),
     "at least one measured MCP handshake",
   );
-  TestValidator.error(
+  expectErrorMessage(
     "one inventory report refuses duplicate surface measurements",
     () =>
       reportAutoMovieBenchmarkToolInventory([
@@ -149,7 +157,7 @@ export const test_benchmark_scenario_registry = (): void => {
       ]),
     'Tool inventory repeats surface "five-tool"',
   );
-  TestValidator.error(
+  expectErrorMessage(
     "inventory reports refuse blank advertised tool names",
     () =>
       reportAutoMovieBenchmarkToolInventory([
@@ -163,7 +171,7 @@ export const test_benchmark_scenario_registry = (): void => {
       ]),
     "blank or untrimmed tool name",
   );
-  TestValidator.error(
+  expectErrorMessage(
     "inventory reports refuse untrimmed advertised tool names",
     () =>
       reportAutoMovieBenchmarkToolInventory([
@@ -177,7 +185,7 @@ export const test_benchmark_scenario_registry = (): void => {
       ]),
     "blank or untrimmed tool name",
   );
-  TestValidator.error(
+  expectErrorMessage(
     "inventory reports refuse invalid measured byte budgets",
     () =>
       reportAutoMovieBenchmarkToolInventory([
@@ -191,7 +199,7 @@ export const test_benchmark_scenario_registry = (): void => {
       ]),
     "negative or non-integer byte budget",
   );
-  TestValidator.error(
+  expectErrorMessage(
     "inventory reports refuse fractional measured byte budgets",
     () =>
       reportAutoMovieBenchmarkToolInventory([
@@ -205,7 +213,7 @@ export const test_benchmark_scenario_registry = (): void => {
       ]),
     "negative or non-integer byte budget",
   );
-  TestValidator.error(
+  expectErrorMessage(
     "inventory reports validate schema bytes independently",
     () =>
       reportAutoMovieBenchmarkToolInventory([
@@ -219,7 +227,7 @@ export const test_benchmark_scenario_registry = (): void => {
       ]),
     "negative or non-integer byte budget",
   );
-  TestValidator.error(
+  expectErrorMessage(
     "inventory reports refuse repeated advertised tool names",
     () =>
       reportAutoMovieBenchmarkToolInventory([

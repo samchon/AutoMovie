@@ -389,7 +389,7 @@ export const test_workspace_public_contracts = (): void => {
   );
   const mcpMethods = [
     ...mcpApplication.matchAll(
-      /^  public (?:async )?([a-z][A-Za-z0-9]*)\s*\(/gm,
+      /^\u0020{2}public (?:async )?([a-z][A-Za-z0-9]*)\s*\(/gm,
     ),
   ]
     .map((match) => match[1]!)
@@ -400,14 +400,14 @@ export const test_workspace_public_contracts = (): void => {
       .match(
         /export const AUTOMOVIE_TOOL_GUIDES = \{([\s\S]*?)\n\} as const/,
       )![1]!
-      .matchAll(/^  ([a-z][A-Za-z0-9]*):/gm),
+      .matchAll(/^\u0020{2}([a-z][A-Za-z0-9]*):/gm),
   ]
     .map((match) => match[1]!)
     .sort(compareCodeUnits);
   const packedToolNames = [
     ...tgzE2e
-      .match(/const expectedTools = \[([\s\S]*?)\n  \];/)![1]!
-      .matchAll(/^    "([a-z][A-Za-z0-9]*)",$/gm),
+      .match(/const expectedTools = \[([\s\S]*?)\n\u0020{2}\];/)![1]!
+      .matchAll(/^\u0020{4}"([a-z][A-Za-z0-9]*)",$/gm),
   ]
     .map((match) => match[1]!)
     .sort(compareCodeUnits);

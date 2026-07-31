@@ -204,11 +204,13 @@ const assertFirearm = (
   model: string,
   profile: string,
 ): void => {
-  const invalidPositive: [string, number] | undefined = [
-    ["reloadSeconds", weapon.reloadSeconds],
-    ["effectiveRange", weapon.effectiveRange],
-    ["muzzleVelocity", weapon.muzzleVelocity],
-  ].find(([, value]) => Number.isFinite(value) === false || value <= 0);
+  const invalidPositive = (
+    [
+      ["reloadSeconds", weapon.reloadSeconds],
+      ["effectiveRange", weapon.effectiveRange],
+      ["muzzleVelocity", weapon.muzzleVelocity],
+    ] satisfies Array<[string, number]>
+  ).find(([, value]) => Number.isFinite(value) === false || value <= 0);
   if (invalidPositive !== undefined)
     throw new Error(
       `Model "${model}" profile "${profile}" firearm "${weapon.id}" ${invalidPositive[0]} must be finite and positive.`,

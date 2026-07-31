@@ -11,6 +11,10 @@ import {
   IAutoMovieFilmTimeline,
   IAutoMovieShotContract,
 } from "@automovie/interface";
+import {
+  materializeCompiledFormation,
+  materializeCompiledInstanceSet,
+} from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
 
 const digest =
@@ -109,6 +113,8 @@ const compiled = (): IAutoMovieCompiledShotSource =>
     effectCues: [],
     shot: {
       id: "volley-shot",
+      name: null,
+      scene: "scene",
       duration: 3,
       camera: "camera",
       cameraMotion: null,
@@ -136,21 +142,57 @@ const compiled = (): IAutoMovieCompiledShotSource =>
     },
     models: [],
     formations: [
-      {
+      materializeCompiledFormation({
         id: "formation",
-        centroid: { x: -4, y: 0, z: -6 },
+        modelRecipe: "formation-model",
+        count: 1,
+        layout: {
+          kind: "line",
+          ranks: 1,
+          files: 1,
+          spacing: { lateral: 1, depth: 1 },
+        },
         anchor: { x: -4, y: 0, z: -6 },
         facingDeg: 0,
-      },
+        seed: 1,
+        capabilities: ["advance"],
+        heroOverrides: [],
+      }),
     ],
     instanceSets: [
-      {
-        id: "instances",
-        centroid: { x: 0, y: 0, z: -8 },
-      },
+      materializeCompiledInstanceSet(
+        {
+          id: "instances",
+          modelRecipe: "instance-model",
+          count: 1,
+          layout: {
+            kind: "grid",
+            rows: 1,
+            columns: 1,
+            spacing: { x: 1, z: 1 },
+          },
+          anchor: { x: 0, y: 0, z: -8 },
+          facingDeg: 0,
+          seed: 1,
+          variation: {
+            scale: { min: 1, max: 1 },
+            palette: ["#ffffff"],
+            traits: [],
+          },
+        },
+        {
+          id: "world",
+          units: "meter",
+          landmarks: [],
+          surfaces: [],
+          routes: [],
+          effectRecipes: [],
+          effectZones: [],
+        },
+      ),
     ],
     effects: [],
-  }) as IAutoMovieCompiledShotSource;
+  }) satisfies IAutoMovieCompiledShotSource;
 
 const timeline = (): IAutoMovieFilmTimeline =>
   ({

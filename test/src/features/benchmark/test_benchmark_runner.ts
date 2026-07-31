@@ -25,12 +25,19 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+import { throwsError } from "../internal/predicates";
 import {
   productionH264Mp4,
   productionOpusMp4,
   productionPng,
   productionWebVtt,
 } from "../mcp/productionMediaFixtures";
+
+const expectErrorMessage = (
+  title: string,
+  task: () => unknown,
+  message: string,
+): void => TestValidator.predicate(title, throwsError(task, message));
 
 const completeLifecycle = (): IAutoMovieBenchmarkGateResult[] => [
   { gate: "packaged-install", status: "pass", detail: "Packages installed." },
@@ -645,7 +652,7 @@ const exerciseInputAndFilesystemFences = async (
       project: root,
     }),
   );
-  TestValidator.error(
+  expectErrorMessage(
     "process MCP targets validate command and timeout",
     () =>
       createProcessAutoMovieBenchmarkMcpTarget({
@@ -656,7 +663,7 @@ const exerciseInputAndFilesystemFences = async (
       }),
     "non-blank command/provenance",
   );
-  TestValidator.error(
+  expectErrorMessage(
     "process MCP targets validate provenance",
     () =>
       createProcessAutoMovieBenchmarkMcpTarget({
@@ -667,7 +674,7 @@ const exerciseInputAndFilesystemFences = async (
       }),
     "non-blank command/provenance",
   );
-  TestValidator.error(
+  expectErrorMessage(
     "process MCP targets require an integer timeout",
     () =>
       createProcessAutoMovieBenchmarkMcpTarget({
@@ -678,7 +685,7 @@ const exerciseInputAndFilesystemFences = async (
       }),
     "positive safe-integer timeoutMs",
   );
-  TestValidator.error(
+  expectErrorMessage(
     "process MCP targets require a positive timeout",
     () =>
       createProcessAutoMovieBenchmarkMcpTarget({
@@ -801,7 +808,7 @@ process.stdin.on("end", () => {
     timeoutMs: 10,
   });
   const timeoutFailure = await rejected(() => timeout(context));
-  TestValidator.error(
+  expectErrorMessage(
     "process adapters validate command",
     () =>
       createProcessAutoMovieBenchmarkAgent({
@@ -810,7 +817,7 @@ process.stdin.on("end", () => {
       }),
     "non-blank command",
   );
-  TestValidator.error(
+  expectErrorMessage(
     "process adapters validate integer timeout",
     () =>
       createProcessAutoMovieBenchmarkAgent({
@@ -819,7 +826,7 @@ process.stdin.on("end", () => {
       }),
     "positive safe-integer timeoutMs",
   );
-  TestValidator.error(
+  expectErrorMessage(
     "process adapters require a positive timeout",
     () =>
       createProcessAutoMovieBenchmarkAgent({
@@ -883,7 +890,7 @@ const exerciseProviderAdapters = async (root: string): Promise<void> => {
     mcp: { command: "mcp" },
     timeoutMs: 1,
   });
-  TestValidator.error(
+  expectErrorMessage(
     "provider adapters validate provider commands",
     () =>
       createCodexAutoMovieBenchmarkAgent({
@@ -893,7 +900,7 @@ const exerciseProviderAdapters = async (root: string): Promise<void> => {
       }),
     "non-blank provider/MCP commands",
   );
-  TestValidator.error(
+  expectErrorMessage(
     "provider adapters validate MCP commands and timeout",
     () =>
       createCodexAutoMovieBenchmarkAgent({
@@ -903,7 +910,7 @@ const exerciseProviderAdapters = async (root: string): Promise<void> => {
       }),
     "non-blank provider/MCP commands",
   );
-  TestValidator.error(
+  expectErrorMessage(
     "provider adapters require an integer timeout",
     () =>
       createCodexAutoMovieBenchmarkAgent({
@@ -913,7 +920,7 @@ const exerciseProviderAdapters = async (root: string): Promise<void> => {
       }),
     "positive safe-integer timeoutMs",
   );
-  TestValidator.error(
+  expectErrorMessage(
     "provider adapters require a positive timeout",
     () =>
       createCodexAutoMovieBenchmarkAgent({
@@ -923,7 +930,7 @@ const exerciseProviderAdapters = async (root: string): Promise<void> => {
       }),
     "positive safe-integer timeoutMs",
   );
-  TestValidator.error(
+  expectErrorMessage(
     "provider adapters refuse non-portable environment keys",
     () =>
       createClaudeCodeAutoMovieBenchmarkAgent({

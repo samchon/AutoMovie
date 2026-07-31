@@ -1281,7 +1281,12 @@ const compileShotSource = (
     validate: (input) =>
       typia.validateEquals<IAutoMovieProductionShotProgram>(input),
   });
-  if (program.value === null) return { ...program, closing: null };
+  if (program.value === null)
+    return {
+      value: null,
+      closing: null,
+      diagnostics: program.diagnostics,
+    };
 
   const runtime = actorRuntimeOf(
     program.value,

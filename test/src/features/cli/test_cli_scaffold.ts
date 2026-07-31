@@ -221,7 +221,7 @@ export const test_cli_scaffold = (): void => {
   TestValidator.predicate(
     "the local MCP host owns actual frame capture",
     files[".mcp.json"]!.includes("scripts/mcp.ts") &&
-      files[".mcp.json"]!.includes("${CLAUDE_PROJECT_DIR:-.}") &&
+      files[".mcp.json"]!.includes("$" + "{CLAUDE_PROJECT_DIR:-.}") &&
       files["scripts/mcp.ts"]!.includes("createAutoMovieMcpServer") &&
       files["scripts/mcp.ts"]!.includes("captureProductionFrame") &&
       files["scripts/mcp.ts"]!.includes("fileURLToPath(import.meta.url)") &&
@@ -336,7 +336,7 @@ export const test_cli_scaffold = (): void => {
       files["scripts/render.ts"]!.includes("assertNoLiveRenderWorkers") &&
       files["scripts/render.ts"]!.includes("captureGcPhysicalAncestry") &&
       files["scripts/render.ts"]!.includes("project.review(entry.target)") &&
-      files["scripts/render.ts"]!.includes("frames/${passes[0]}/frame_") &&
+      files["scripts/render.ts"]!.includes("frames/$" + "{passes[0]}/frame_") &&
       files["automovie.config.ts"]!.includes('kind: "proxy"') &&
       files["automovie.config.ts"]!.includes('kind: "final"') &&
       files["scripts/render.ts"]!.includes(
@@ -358,7 +358,7 @@ export const test_cli_scaffold = (): void => {
       files[".claude/settings.json"]!.includes('"matcher": "*"') &&
       files[".claude/settings.json"]!.includes('"command": "node"') &&
       files[".claude/settings.json"]!.includes(
-        '"${CLAUDE_PROJECT_DIR}/.claude/hooks/guard-automovie-owned.mjs"',
+        '"$' + '{CLAUDE_PROJECT_DIR}/.claude/hooks/guard-automovie-owned.mjs"',
       ) &&
       files[".claude/hooks/guard-automovie-owned.mjs"]!.includes(
         "npm run compile",

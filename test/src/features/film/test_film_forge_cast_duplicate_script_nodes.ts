@@ -29,7 +29,7 @@ export const test_film_forge_cast_duplicate_script_nodes = (): void => {
         },
       ],
     }),
-    { type: "write", entries: [forgeEntry("knightA")] },
+    { entries: [forgeEntry("knightA")] },
   );
 
   TestValidator.equals(

@@ -63,8 +63,11 @@ const unauditedScaffoldDependencies = (): string[] => {
         workspaceNames.has(dependency) === false &&
         productionDependencies.has(dependency) === false,
     )
-    .sort();
+    .sort(compareCodeUnits);
 };
+
+const compareCodeUnits = (left: string, right: string): number =>
+  left < right ? -1 : left > right ? 1 : 0;
 
 /** Drift in the local permissive-only Transformers.js image capability wall. */
 const invalidSharpCapabilityWall = (): string[] => {

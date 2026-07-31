@@ -8,7 +8,7 @@ import {
 import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
 import path from "node:path";
-import ts from "typescript";
+import ts from "typescript-compiler";
 
 /** Pin the guide corpus as an executable contract rather than loose prose. */
 export const test_mcp_guide_corpus = (): void => {
@@ -49,8 +49,9 @@ export const test_mcp_guide_corpus = (): void => {
     AUTOMOVIE_TOOL_GUIDES.captureFrame.includes("CAPTURE_FRAME") &&
       AUTOMOVIE_TOOL_GUIDES.repaintShot.includes("REPAINT_SHOT") &&
       AUTOMOVIE_REPAINT_GUIDE === "DIFFUSION_ENHANCE" &&
-      AUTOMOVIE_TOOL_GUIDES.repaintShot.includes(AUTOMOVIE_REPAINT_GUIDE) ===
-        false &&
+      new Set<string>(AUTOMOVIE_TOOL_GUIDES.repaintShot).has(
+        AUTOMOVIE_REPAINT_GUIDE,
+      ) === false &&
       AUTOMOVIE_TOOL_GUIDES.prepareReview.includes("AUTOMOVIE_OVERALL") &&
       AUTOMOVIE_TOOL_GUIDES.submitReview.includes("AUTOMOVIE_OVERALL") &&
       Object.values(AUTOMOVIE_REVIEW_GUIDES).every(

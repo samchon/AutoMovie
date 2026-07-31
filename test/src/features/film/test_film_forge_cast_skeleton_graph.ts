@@ -38,7 +38,6 @@ const b = (
  */
 export const test_film_forge_cast_skeleton_graph = (): void => {
   const broken = forgeCast(makeScriptWrite(), {
-    type: "write",
     entries: [
       forgeEntry("knightB", {
         skeleton: {
@@ -74,7 +73,6 @@ export const test_film_forge_cast_skeleton_graph = (): void => {
   }
 
   const cyclic = forgeCast(makeScriptWrite(), {
-    type: "write",
     entries: [
       forgeEntry("knightB", {
         skeleton: {
@@ -98,7 +96,6 @@ export const test_film_forge_cast_skeleton_graph = (): void => {
   );
 
   const doubled = forgeCast(makeScriptWrite(), {
-    type: "write",
     entries: [
       forgeEntry("knightB", {
         skeleton: {

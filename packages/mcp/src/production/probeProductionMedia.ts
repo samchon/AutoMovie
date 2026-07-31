@@ -341,7 +341,7 @@ const probeVideoTrack = (
   bytes: Uint8Array,
   file: ReturnType<typeof createFile>,
   track: Track,
-): IAutoMovieProductionMediaProbe => {
+): Extract<IAutoMovieProductionMediaProbe, { kind: "video" }> => {
   if (/^(avc1|avc3)(?:\.|$)/i.test(track.codec) === false)
     throw new Error(
       `MP4 video codec "${track.codec}" is not an H.264/AVC sample entry.`,

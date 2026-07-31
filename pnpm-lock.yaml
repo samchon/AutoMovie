@@ -166,6 +166,9 @@ importers:
       '@automovie/benchmark':
         specifier: workspace:^
         version: link:../benchmark
+      '@automovie/interface':
+        specifier: workspace:^
+        version: link:../interface
       '@automovie/mcp':
         specifier: workspace:^
         version: link:../mcp
@@ -606,6 +609,9 @@ importers:
       typescript:
         specifier: catalog:typescript
         version: 7.0.2
+      typescript-compiler:
+        specifier: npm:typescript@5.9.3
+        version: typescript@5.9.3
       vite:
         specifier: catalog:vite
         version: 5.4.21(@types/node@22.19.20)

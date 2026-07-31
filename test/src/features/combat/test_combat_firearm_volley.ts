@@ -55,9 +55,10 @@ export const test_combat_firearm_volley = (): void => {
   };
   const first = resolveFirearmVolley(input);
   const second = resolveFirearmVolley(structuredClone(input));
+  const repeatedSamples = [seededValue(1, 2, 3), seededValue(1, 2, 3)];
   const deterministicSamples =
-    seededValue(1, 2, 3) === seededValue(1, 2, 3) &&
-    seededValue(1, 2, 3) !== seededValue(1 + 4_294_967_296, 2, 3);
+    repeatedSamples[0] === repeatedSamples[1] &&
+    repeatedSamples[0] !== seededValue(1 + 4_294_967_296, 2, 3);
   TestValidator.predicate(
     "a 500-member volley is reproducible, ordered, and inspectable",
     first.length === 500 &&

@@ -305,10 +305,14 @@ export const test_cli_project_state = (): void => {
     );
 
     const compilerLint = AutoMovieProductionCompiler.prototype.lint;
+    const nonError = (function* (): Generator<never, never, never> {
+      return undefined as never;
+    })();
     let compilerCalls = 0;
     AutoMovieProductionCompiler.prototype.lint = function (input) {
       ++compilerCalls;
-      if (compilerCalls === 1) throw "lint unavailable";
+      if (compilerCalls === 1)
+        return nonError.throw("lint unavailable") as never;
       return compilerLint.call(this, input);
     };
     const unavailableStatus = loadAutoMovieProjectState({

@@ -28,7 +28,6 @@ const NOTE: IAutoMovieReviewNote = {
  */
 export const test_film_review_shot = (): void => {
   const passed = reviewShot(makeScriptWrite(), {
-    type: "write",
     beat: "beat-1",
     observations: "the strike lands, the camera catches it, weight reads.",
     verdict: "pass",
@@ -39,7 +38,6 @@ export const test_film_review_shot = (): void => {
     TestValidator.equals("pass carries no backlog", passed.notes, []);
 
   const revised = reviewShot(makeScriptWrite(), {
-    type: "write",
     beat: "beat-1",
     observations: "the strike connects but the footing slides.",
     verdict: "revise",
@@ -50,7 +48,6 @@ export const test_film_review_shot = (): void => {
     TestValidator.equals("revise carries the backlog", revised.notes, [NOTE]);
 
   const empty = reviewShot(makeScriptWrite(), {
-    type: "write",
     beat: "beat-1",
     observations: "something is off.",
     verdict: "revise",
@@ -62,7 +59,6 @@ export const test_film_review_shot = (): void => {
   );
 
   const contradicted = reviewShot(makeScriptWrite(), {
-    type: "write",
     beat: "beat-1",
     observations: "fine, mostly.",
     verdict: "pass",
@@ -75,7 +71,6 @@ export const test_film_review_shot = (): void => {
   );
 
   const misfiled = reviewShot(makeScriptWrite(), {
-    type: "write",
     beat: "beat-99",
     observations: "reviewing the wrong reel.",
     verdict: "revise",

@@ -707,7 +707,7 @@ export const test_mcp_production_project = (): void => {
     TestValidator.equals(
       "merged review consequences remain unique and code-unit sorted",
       movedReviewKeys,
-      [...new Set(movedReviewKeys)].sort(),
+      [...new Set(movedReviewKeys)].sort(compareCodeUnits),
     );
     project.setShotContract(shotContract());
     TestValidator.predicate(

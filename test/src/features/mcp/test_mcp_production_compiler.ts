@@ -30,7 +30,6 @@ import {
   worldDesign,
 } from "./productionFixtures";
 import {
-  productionAudioMp4,
   productionH264Mp4,
   productionOpusMp4,
   productionPng,

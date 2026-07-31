@@ -117,7 +117,7 @@ export const createAutoMovieBenchmarkScenarioRegistry = (
     );
   return Object.freeze({
     list,
-    get: (taskId) => {
+    get: (taskId: string) => {
       const scenario = indexed.get(taskId);
       if (scenario !== undefined) return scenario;
       throw new Error(

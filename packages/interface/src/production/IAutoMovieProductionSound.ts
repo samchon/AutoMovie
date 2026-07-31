@@ -1,6 +1,8 @@
-import { AutoMovieContentDigest } from "../core/AutoMovieContentDigest";
 import { IAutoMovieVector3 } from "../geometry/IAutoMovieVector3";
-import { IAutoMovieShotEventContract } from "./IAutoMovieProductionDesign";
+import {
+  AutoMovieContentDigest,
+  IAutoMovieShotEventContract,
+} from "./IAutoMovieProductionDesign";
 
 /** One semantic event lowered from the compiled film edit into audible space. */
 export interface IAutoMovieProductionSoundEvent {

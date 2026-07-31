@@ -136,7 +136,6 @@ export const test_film_playback_cursor = (): void => {
     "cutSequence accepts a full-overlap dissolve (equal adjacent starts)",
     cutSequence(
       {
-        type: "write",
         sequence: { id: "overlap", name: "overlap" },
         fps: 24,
         entries: overlapSequence.shots,

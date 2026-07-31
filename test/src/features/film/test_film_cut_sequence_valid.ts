@@ -31,7 +31,6 @@ const shot = (id: string, duration: number): IAutoMovieShot => ({
 export const test_film_cut_sequence_valid = (): void => {
   const cut = cutSequence(
     {
-      type: "write",
       sequence: { id: "seq-duel", name: "the duel" },
       fps: 24,
       entries: [

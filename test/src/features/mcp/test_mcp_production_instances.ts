@@ -91,17 +91,22 @@ export const test_mcp_production_instances = (): void => {
       routeSlots.length === 12 &&
       JSON.stringify(scatterSlots) === JSON.stringify(repeatedScatter) &&
       JSON.stringify(scatterSlots) !== JSON.stringify(highWordScatter) &&
-      gridSlots.every(
-        (slot) =>
+      gridSlots.every((slot) => {
+        const prototypeTrait = Object.getOwnPropertyDescriptor(
+          slot.traits,
+          "__proto__",
+        )?.value;
+        return (
           slot.scale >= 0.8 &&
           slot.scale <= 1.2 &&
           slot.palette.startsWith("#") &&
           slot.traits.pace! >= 0.5 &&
           slot.traits.pace! <= 1.5 &&
-          Object.hasOwn(slot.traits, "__proto__") &&
-          slot.traits.__proto__! >= 2 &&
-          slot.traits.__proto__! <= 3,
-      ) &&
+          typeof prototypeTrait === "number" &&
+          prototypeTrait >= 2 &&
+          prototypeTrait <= 3
+        );
+      }) &&
       routeSlots.every(
         (slot) => slot.position.x >= -10 && slot.position.x <= 10,
       ),

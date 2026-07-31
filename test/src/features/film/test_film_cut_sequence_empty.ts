@@ -16,7 +16,6 @@ import { hasViolation } from "../internal/predicates";
 export const test_film_cut_sequence_empty = (): void => {
   const cut = cutSequence(
     {
-      type: "write",
       sequence: { id: "seq-empty", name: "nothing" },
       fps: 0,
       entries: [],
