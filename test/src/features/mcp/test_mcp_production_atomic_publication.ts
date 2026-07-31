@@ -517,10 +517,19 @@ export const test_mcp_production_atomic_publication = (): void => {
     );
 
     const stateRoot = path.join(fixture.root, ".automovie");
+    const productionStateRoot = path.dirname(manifestPath);
+    const productionStateRelative = path.relative(
+      stateRoot,
+      productionStateRoot,
+    );
     const parkedStateRoot = path.join(fixture.root, ".automovie-parked");
     const replacementStateRoot = path.join(
       fixture.root,
       ".automovie-replacement",
+    );
+    const replacementProductionStateRoot = path.join(
+      replacementStateRoot,
+      productionStateRelative,
     );
     fs.cpSync(stateRoot, replacementStateRoot, { recursive: true });
     fs.writeFileSync(
@@ -534,11 +543,11 @@ export const test_mcp_production_atomic_publication = (): void => {
       `${JSON.stringify({ replacement: "receipt" }, null, 2)}\n`,
     );
     fs.writeFileSync(
-      path.join(replacementStateRoot, "render-manifest.json"),
+      path.join(replacementProductionStateRoot, "render-manifest.json"),
       replacementManifest,
     );
     fs.writeFileSync(
-      path.join(replacementStateRoot, "render-manifest-receipt.json"),
+      path.join(replacementProductionStateRoot, "render-manifest-receipt.json"),
       replacementReceipt,
     );
     const incarnationSnapshot = productionPublicationInputFingerprint(project);
@@ -566,10 +575,12 @@ export const test_mcp_production_atomic_publication = (): void => {
       incarnationSwapped &&
         incarnationSwapRejected &&
         fs
-          .readFileSync(path.join(stateRoot, "render-manifest.json"))
+          .readFileSync(path.join(productionStateRoot, "render-manifest.json"))
           .equals(replacementManifest) &&
         fs
-          .readFileSync(path.join(stateRoot, "render-manifest-receipt.json"))
+          .readFileSync(
+            path.join(productionStateRoot, "render-manifest-receipt.json"),
+          )
           .equals(replacementReceipt),
     );
 
@@ -600,7 +611,7 @@ export const test_mcp_production_atomic_publication = (): void => {
         if (
           lockRootSwapped === false &&
           path.resolve(String(file)) ===
-            path.resolve(path.join(stateRoot, "revision.lock"))
+            path.resolve(path.join(productionStateRoot, "revision.lock"))
         ) {
           fs.renameSync(stateRoot, lockRaceParked);
           fs.renameSync(lockRaceReplacement, stateRoot);
@@ -633,7 +644,8 @@ export const test_mcp_production_atomic_publication = (): void => {
       "state replacement during lock acquisition does not retain this attempt's lock",
       lockRootSwapped &&
         lockRaceRejected &&
-        fs.existsSync(path.join(stateRoot, "revision.lock")) === false,
+        fs.existsSync(path.join(productionStateRoot, "revision.lock")) ===
+          false,
     );
 
     const missingStateProject = AutoMovieProductionProject.open(fixture.root);
@@ -654,7 +666,8 @@ export const test_mcp_production_atomic_publication = (): void => {
     TestValidator.predicate(
       "an absent opened state root is rejected before lock acquisition",
       missingStateRejected &&
-        fs.existsSync(path.join(stateRoot, "revision.lock")) === false,
+        fs.existsSync(path.join(productionStateRoot, "revision.lock")) ===
+          false,
     );
 
     const rollbackRaceProject = AutoMovieProductionProject.open(fixture.root);
@@ -671,17 +684,21 @@ export const test_mcp_production_atomic_publication = (): void => {
       fixture.root,
       ".automovie-rollback-race-replacement",
     );
+    const rollbackProductionStateRoot = path.join(
+      rollbackRaceReplacement,
+      productionStateRelative,
+    );
     fs.cpSync(stateRoot, rollbackRaceReplacement, { recursive: true });
     fs.writeFileSync(
       path.join(rollbackRaceReplacement, "incarnation.json"),
       `${JSON.stringify({ version: 1, id: randomUUID() }, null, 2)}\n`,
     );
     fs.writeFileSync(
-      path.join(rollbackRaceReplacement, "render-manifest.json"),
+      path.join(rollbackProductionStateRoot, "render-manifest.json"),
       replacementManifest,
     );
     fs.writeFileSync(
-      path.join(rollbackRaceReplacement, "render-manifest-receipt.json"),
+      path.join(rollbackProductionStateRoot, "render-manifest-receipt.json"),
       replacementReceipt,
     );
     const residentMkdirSync = fs.mkdirSync;
@@ -700,7 +717,7 @@ export const test_mcp_production_atomic_publication = (): void => {
         if (
           rollbackStarted &&
           rollbackRootSwapped === false &&
-          path.resolve(String(directory)) === path.resolve(stateRoot)
+          path.resolve(String(directory)) === path.resolve(productionStateRoot)
         ) {
           fs.renameSync(stateRoot, rollbackRaceParked);
           fs.renameSync(rollbackRaceReplacement, stateRoot);
@@ -732,12 +749,15 @@ export const test_mcp_production_atomic_publication = (): void => {
       rollbackRootSwapped &&
         rollbackRaceRejected &&
         fs
-          .readFileSync(path.join(stateRoot, "render-manifest.json"))
+          .readFileSync(path.join(productionStateRoot, "render-manifest.json"))
           .equals(replacementManifest) &&
         fs
-          .readFileSync(path.join(stateRoot, "render-manifest-receipt.json"))
+          .readFileSync(
+            path.join(productionStateRoot, "render-manifest-receipt.json"),
+          )
           .equals(replacementReceipt) &&
-        fs.existsSync(path.join(stateRoot, "revision.lock")) === false,
+        fs.existsSync(path.join(productionStateRoot, "revision.lock")) ===
+          false,
     );
   } finally {
     fixture.dispose();
