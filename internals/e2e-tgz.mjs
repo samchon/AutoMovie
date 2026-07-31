@@ -1061,8 +1061,6 @@ if (
     "node verify-packaged-state-reader.mjs",
     starterDir,
   );
-  const packagedLintConfigPath = join(starterDir, "lint.config.ts");
-  const packagedLintConfig = readFileSync(packagedLintConfigPath, "utf8");
   const packagedSentinelPath = join(
     starterDir,
     "src",
@@ -1083,51 +1081,97 @@ if (
   } finally {
     rmSync(packagedSentinelPath, { force: true });
   }
-  const packagedPresenceRoot = join(starterDir, ".automovie", "lint-probe");
+  const packagedPresenceProject = join(starterDir, "lint-presence-probe");
+  const packagedPresenceRoot = join(packagedPresenceProject, ".automovie");
+  mkdirSync(join(packagedPresenceProject, "src"), { recursive: true });
   mkdirSync(packagedPresenceRoot);
-  writeFileSync(join(packagedPresenceRoot, "downstream.json"), "[]\n");
   writeFileSync(
-    packagedLintConfigPath,
-    packagedLintConfig.replace(
-      '"automovie/template-sentinel": "error",',
-      `"automovie/template-sentinel": "error",
+    join(packagedPresenceProject, "package.json"),
+    `${JSON.stringify({ private: true, type: "module" }, null, 2)}\n`,
+  );
+  writeFileSync(
+    join(packagedPresenceProject, "tsconfig.json"),
+    `${JSON.stringify(
+      {
+        compilerOptions: {
+          module: "nodenext",
+          moduleResolution: "nodenext",
+          noEmit: true,
+          plugins: [{ transform: "@ttsc/lint" }],
+          skipLibCheck: true,
+          strict: true,
+          target: "esnext",
+        },
+        include: ["src", "lint.config.ts"],
+      },
+      null,
+      2,
+    )}\n`,
+  );
+  writeFileSync(
+    join(packagedPresenceProject, "lint.config.ts"),
+    `import { automovie } from "@automovie/lint";
+
+export default {
+  plugins: { automovie },
+  rules: {
     "automovie/state-presence": [
       "error",
       {
         slots: [
           {
             name: "upstream",
-            files: [".automovie/lint-probe/upstream.json"],
+            files: [".automovie/upstream.json"],
             requires: [],
           },
           {
             name: "downstream",
-            files: [".automovie/lint-probe/downstream.json"],
+            files: [".automovie/downstream.json"],
             requires: ["upstream"],
           },
         ],
       },
-    ],`,
-    ),
+    ],
+  },
+};
+`,
   );
+  writeFileSync(
+    join(packagedPresenceProject, "src", "index.ts"),
+    "export {};\n",
+  );
+  writeFileSync(join(packagedPresenceRoot, "downstream.json"), "[]\n");
+  const packagedTtsc = join(
+    starterDir,
+    "node_modules",
+    "ttsc",
+    "lib",
+    "launcher",
+    "ttsc.js",
+  );
+  const packagedPresenceCommand = `"${process.execPath}" "${packagedTtsc}" check -p tsconfig.json`;
   try {
     runExpectedFailure(
       "fire packaged state-presence contributor",
-      "npm exec -- ttsc --noEmit -p tsconfig.json",
-      starterDir,
+      packagedPresenceCommand,
+      packagedPresenceProject,
       "State slot 'downstream' is present while required upstream slot 'upstream' is absent.",
       900_000,
     );
     writeFileSync(join(packagedPresenceRoot, "upstream.json"), "[]\n");
     run(
       "silence packaged state-presence contributor with resident upstream",
-      "npm exec -- ttsc --noEmit -p tsconfig.json",
-      starterDir,
+      packagedPresenceCommand,
+      packagedPresenceProject,
       900_000,
     );
   } finally {
-    writeFileSync(packagedLintConfigPath, packagedLintConfig);
-    rmSync(packagedPresenceRoot, { force: true, recursive: true });
+    rmSync(packagedPresenceProject, {
+      force: true,
+      maxRetries: 3,
+      recursive: true,
+      retryDelay: 100,
+    });
   }
   // A fresh @ttsc/lint install builds its source plugin with Go once per
   // cache key. Cold Windows and CI caches can legitimately exceed the ordinary
