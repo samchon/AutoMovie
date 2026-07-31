@@ -95,6 +95,10 @@ export const test_mcp_production_application = async (): Promise<void> => {
     ) as ReturnType<typeof productionDesign>;
     production.frameFormat.fps = 2;
     production.visualDelivery = "repainted";
+    production.deliverables = production.deliverables.map((deliverable) => ({
+      ...deliverable,
+      required: deliverable.kind === "feature",
+    }));
     fs.writeFileSync(
       productionPath,
       `${JSON.stringify(production, null, 2)}\n`,
