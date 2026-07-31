@@ -1224,14 +1224,14 @@ export class AutoMovieProductionProject {
       for (const ancestry of sourceParentAncestries)
         assertPhysicalDirectoryAncestry(ancestry);
     };
-    const markErased = (): void => {
+    const markErased = (): NonNullable<typeof committedEraseFence> => {
       this.deleted_ = true;
       if (quarantineAncestry === null || productionStateIdentity === null)
         throw new AutoMovieProductionInputRaceError(
           "Production erase committed without a resident quarantine fence. Preserve the namespace for manual recovery.",
         );
       erased = true;
-      committedEraseFence = {
+      return {
         quarantine: quarantineAncestry,
         state: productionStateIdentity,
       };
@@ -1332,9 +1332,9 @@ export class AutoMovieProductionProject {
           registryPublished = true;
         },
       );
-      markErased();
+      committedEraseFence = markErased();
     } catch (error) {
-      if (registryPublished) markErased();
+      if (registryPublished) committedEraseFence = markErased();
       else {
         try {
           assertEraseFence();
