@@ -733,7 +733,34 @@ export const test_mcp_production_project = (): void => {
       "optimistic revision rejects stale resident writers",
       concurrentMutation.accepted &&
         concurrentMutation.revision > staleRevision &&
-        throws(() => stale.setProductionDesign(productionDesign())),
+        throws(
+          () => stale.setProductionDesign(productionDesign()),
+          "Production revision changed",
+        ),
+    );
+    const staleEraser = AutoMovieProductionProject.open(fixture.root);
+    const staleEraseRevision = staleEraser.revision();
+    const removableFormation = {
+      ...formationDesign(),
+      id: "stale-erase",
+    };
+    const formationAddition = first.setFormationDesign(removableFormation);
+    TestValidator.predicate(
+      "optimistic revision rejects stale resident erasers",
+      formationAddition.accepted &&
+        formationAddition.revision > staleEraseRevision &&
+        throws(
+          () =>
+            staleEraser.eraseDesignArtifact({
+              kind: "formation",
+              id: removableFormation.id,
+            }),
+          "Production revision changed",
+        ) &&
+        AutoMovieProductionProject.open(fixture.root).eraseDesignArtifact({
+          kind: "formation",
+          id: removableFormation.id,
+        }).accepted,
     );
 
     const compiler = new AutoMovieProductionCompiler(

@@ -1001,7 +1001,7 @@ export class AutoMovieProductionProject {
           graph,
           { kind: "production" },
           this.loadGeneratedManifest()?.files.map((file) => file.path) ?? [],
-          this.screenplayIndex(),
+          this.loadScreenplayIndex(),
         ),
         diagnostics: [
           {
@@ -1087,13 +1087,14 @@ export class AutoMovieProductionProject {
   ): IAutoMovieDesignMutationOutput {
     if (reason.trim().length === 0)
       throw new Error("Design erase audit reason must not be blank.");
+    const expectedRevision = this.lastReadRevision_;
     const graph = this.loadGraph();
     const current = designFromGraph(graph, target);
     const consequences = consequencesOf(
       graph,
       target,
       this.loadGeneratedManifest()?.files.map((file) => file.path) ?? [],
-      this.screenplayIndex(),
+      this.loadScreenplayIndex(),
     );
     if (current === null)
       return {
@@ -1130,7 +1131,7 @@ export class AutoMovieProductionProject {
           message: `${reference} still references this design. Update that artifact before removing the design record.`,
         })),
       };
-    const nextRevision = this.lastReadRevision_ + 1;
+    const nextRevision = expectedRevision + 1;
     const revision = this.commitFiles(
       [
         { path: this.designPath(target), content: null },
@@ -1164,7 +1165,7 @@ export class AutoMovieProductionProject {
         },
       ],
       undefined,
-      this.lastReadRevision_,
+      expectedRevision,
       undefined,
       true,
       isSharedDesign(target),
@@ -2355,6 +2356,10 @@ export class AutoMovieProductionProject {
   /** Read the current production's optional screenplay/treatment index. */
   public screenplayIndex(): IAutoMovieScreenplayIndex | null {
     this.refreshRevision();
+    return this.loadScreenplayIndex();
+  }
+
+  private loadScreenplayIndex(): IAutoMovieScreenplayIndex | null {
     const file = path.join(this.productionDesignRoot, "screenplay/index.json");
     if (lstatOrNull(file) === null) return null;
     return readOwnedTypedJson(
@@ -2440,10 +2445,11 @@ export class AutoMovieProductionProject {
     value: unknown,
     validation: IValidation<unknown>,
   ): IAutoMovieDesignMutationOutput {
+    const expectedRevision = this.lastReadRevision_;
     const graph = this.loadGraph();
     const generatedPaths =
       this.loadGeneratedManifest()?.files.map((file) => file.path) ?? [];
-    const screenplay = this.screenplayIndex();
+    const screenplay = this.loadScreenplayIndex();
     const consequences = consequencesOf(
       graph,
       target,
@@ -2532,7 +2538,7 @@ export class AutoMovieProductionProject {
     const revision = this.commitFiles(
       [{ path: this.designPath(target), content }],
       undefined,
-      this.lastReadRevision_,
+      expectedRevision,
       undefined,
       true,
       isSharedDesign(target),
