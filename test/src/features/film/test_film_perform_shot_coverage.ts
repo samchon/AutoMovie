@@ -1,6 +1,6 @@
 import { performShot, stageScene } from "@automovie/engine";
 import {
-  IAutoMovieBlockingApplication,
+  IAutoMovieBlockingCoverage,
   IAutoMovieCameraIntent,
 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
@@ -20,7 +20,7 @@ import {
   violationCount,
 } from "../internal/predicates";
 
-type ICoverage = IAutoMovieBlockingApplication.ICoverageIntent;
+type ICoverage = IAutoMovieBlockingCoverage;
 
 /**
  * The duel staged with three cameras on the aim height (y = 0.864) at 2 m, each

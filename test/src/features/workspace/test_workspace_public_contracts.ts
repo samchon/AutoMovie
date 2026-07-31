@@ -116,12 +116,12 @@ export const test_workspace_public_contracts = (): void => {
     bin: Record<string, string>;
     publishConfig: { bin: Record<string, string> };
   };
-  const performanceApplication = readPackageFile(
+  const authoringContract = readPackageFile(
     "packages",
     "interface",
     "src",
-    "harness",
-    "IAutoMoviePerformanceApplication.ts",
+    "authoring",
+    "IAutoMovieAuthoring.ts",
   );
   const actionCall = readPackageFile(
     "packages",
@@ -161,7 +161,7 @@ export const test_workspace_public_contracts = (): void => {
     engineReadme,
     interfaceReadme,
     mcpReadme,
-    performanceApplication,
+    authoringContract,
     actionCall,
     bodyRegion,
     violationKind,
@@ -341,7 +341,7 @@ export const test_workspace_public_contracts = (): void => {
     },
   );
   TestValidator.equals(
-    "retired MCP application families and binaries stay absent",
+    "retired MCP and interface application families and binaries stay absent",
     {
       sources: [
         "AutoMovieLegacyApplication.ts",
@@ -354,6 +354,27 @@ export const test_workspace_public_contracts = (): void => {
       ].filter((file) =>
         fs.existsSync(path.join(ROOT, "packages", "mcp", "src", file)),
       ),
+      interfaceApplications: [
+        "IAutoMovieScriptApplication.ts",
+        "IAutoMovieForgeApplication.ts",
+        "IAutoMovieStagingApplication.ts",
+        "IAutoMovieBlockingApplication.ts",
+        "IAutoMoviePerformanceApplication.ts",
+        "IAutoMovieReviewApplication.ts",
+        "IAutoMovieAssembleApplication.ts",
+      ].filter((file) =>
+        fs.existsSync(
+          path.join(ROOT, "packages", "interface", "src", "harness", file),
+        ),
+      ),
+      interfaceApplicationExports:
+        readPackageFile(
+          "packages",
+          "interface",
+          "src",
+          "harness",
+          "index.ts",
+        ).match(/IAutoMovie\w+Application/g) ?? [],
       bins: mcpPackage.bin,
       publishedBins: mcpPackage.publishConfig.bin,
       retiredNamesInReadme:
@@ -363,6 +384,8 @@ export const test_workspace_public_contracts = (): void => {
     },
     {
       sources: [],
+      interfaceApplications: [],
+      interfaceApplicationExports: [],
       bins: { "automovie-mcp": "lib/bin.js" },
       publishedBins: { "automovie-mcp": "lib/bin.js" },
       retiredNamesInReadme: [],
@@ -370,7 +393,7 @@ export const test_workspace_public_contracts = (): void => {
   );
   TestValidator.equals(
     "the performance stage names real verbs only",
-    performanceApplication.includes("walkTo"),
+    authoringContract.includes("walkTo"),
     false,
   );
   TestValidator.equals(

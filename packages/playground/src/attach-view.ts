@@ -11,10 +11,10 @@ import {
 import {
   IAutoMovieModel,
   IAutoMovieMotion,
-  IAutoMoviePerformanceApplication,
-  IAutoMovieScriptApplication,
+  IAutoMoviePerformance,
+  IAutoMovieScript,
   IAutoMovieShot,
-  IAutoMovieStagingApplication,
+  IAutoMovieStage,
   IAutoMovieVector3,
 } from "@automovie/interface";
 import {
@@ -76,8 +76,7 @@ const bladeModel: IAutoMovieModel = {
 };
 
 // ── the stage payloads ───────────────────────────────────────────────────────
-const script: IAutoMovieScriptApplication.IWrite = {
-  type: "write",
+const script: IAutoMovieScript = {
   logline: "A figure walks the floor, blade in hand.",
   theme: "a prop rides the hand",
   cast: [
@@ -94,8 +93,7 @@ const script: IAutoMovieScriptApplication.IWrite = {
   ],
 };
 
-const staging: IAutoMovieStagingApplication.IWrite = {
-  type: "write",
+const staging: IAutoMovieStage = {
   scene: { id: "scene-carry", name: "the carry" },
   plan: "the walker starts near and crosses to far along +Z, facing +Z; the blade is nocked in the left hand; a side-on camera reads the crossing.",
   actors: [
@@ -120,8 +118,7 @@ const staging: IAutoMovieStagingApplication.IWrite = {
   ],
 };
 
-const performance: IAutoMoviePerformanceApplication.IWrite = {
-  type: "write",
+const performance: IAutoMoviePerformance = {
   beat: "carry",
   plan: "the walker crosses the floor; the blade is attached to its left hand for the whole shot.",
   draft: [
@@ -200,7 +197,6 @@ const motionsByShot = new Map<string, Record<string, IAutoMovieMotion>>([
 
 const cut = cutSequence(
   {
-    type: "write",
     sequence: { id: "seq-carry", name: "the carry" },
     fps: 30,
     entries: shots.map((s) => ({ shot: s.id, trim: null, transition: null })),

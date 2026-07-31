@@ -5,7 +5,7 @@ import {
 } from "@automovie/engine";
 import {
   IAutoMovieActionCall,
-  IAutoMovieBlockingApplication,
+  IAutoMovieBlockingCoverage,
   IAutoMovieScene,
 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
@@ -19,7 +19,7 @@ import {
 } from "../internal/filmFixtures";
 import { createSkeleton } from "../internal/fixtures";
 
-type ICoverage = IAutoMovieBlockingApplication.ICoverageIntent;
+type ICoverage = IAutoMovieBlockingCoverage;
 
 const script = makeScriptWrite();
 

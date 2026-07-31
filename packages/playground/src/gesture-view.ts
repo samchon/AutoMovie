@@ -10,10 +10,10 @@ import {
 } from "@automovie/engine";
 import {
   IAutoMovieMotion,
-  IAutoMoviePerformanceApplication,
-  IAutoMovieScriptApplication,
+  IAutoMoviePerformance,
+  IAutoMovieScript,
   IAutoMovieShot,
-  IAutoMovieStagingApplication,
+  IAutoMovieStage,
   IAutoMovieVector3,
 } from "@automovie/interface";
 import { AutoMoviePlayer, buildModel, mountViewer } from "@automovie/viewer";
@@ -28,8 +28,7 @@ import { DEFAULT_STICKMAN, buildStickman } from "./stickman";
 // the player is handed HUMANOID_REST_FRAME so it reads those angles up. Engine-
 // authored, ROM-safe, deterministic via renderAt(t).
 
-const script: IAutoMovieScriptApplication.IWrite = {
-  type: "write",
+const script: IAutoMovieScript = {
   logline: "A figure jumps, then celebrates.",
   theme: "a coil, a leap, and a cheer",
   cast: [{ node: "jumper", character: "the jumper", modelRef: "stickman" }],
@@ -43,8 +42,7 @@ const script: IAutoMovieScriptApplication.IWrite = {
   ],
 };
 
-const staging: IAutoMovieStagingApplication.IWrite = {
-  type: "write",
+const staging: IAutoMovieStage = {
   scene: { id: "scene-leap", name: "the leap" },
   plan: "the jumper stands centre, facing +Z; a side-on camera reads the vertical arc.",
   actors: [{ node: "jumper", position: { x: 0, y: 0, z: 0 }, facingDeg: 0 }],
@@ -66,8 +64,7 @@ const staging: IAutoMovieStagingApplication.IWrite = {
   ],
 };
 
-const performance: IAutoMoviePerformanceApplication.IWrite = {
-  type: "write",
+const performance: IAutoMoviePerformance = {
   beat: "leap",
   plan: "two jumps back to back, then both arms thrown up in a cheer.",
   draft: [
@@ -150,7 +147,6 @@ const motionsByShot = new Map<string, Record<string, IAutoMovieMotion>>([
 
 const cut = cutSequence(
   {
-    type: "write",
     sequence: { id: "seq-leap", name: "the leap" },
     fps: 30,
     entries: shots.map((s) => ({ shot: s.id, trim: null, transition: null })),

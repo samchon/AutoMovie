@@ -12,13 +12,13 @@ import {
 import {
   AutoMovieGuidePass,
   AutoMoviePrimitiveShape,
-  IAutoMovieBlockingApplication,
+  IAutoMovieBlocking,
   IAutoMovieModel,
   IAutoMovieMotion,
-  IAutoMoviePerformanceApplication,
-  IAutoMovieScriptApplication,
+  IAutoMoviePerformance,
+  IAutoMovieScript,
   IAutoMovieShot,
-  IAutoMovieStagingApplication,
+  IAutoMovieStage,
   IAutoMovieVector3,
 } from "@automovie/interface";
 import { type IAutoMovieSequenceRenderFrame } from "@automovie/render";
@@ -40,16 +40,15 @@ import * as THREE from "three";
 
 import { DEFAULT_STICKMAN, buildStickman } from "./stickman";
 
-// The film pipeline end to end, on screen: the same stage payloads the LLM
-// harness will emit (script → staging → blocking → performance → assemble),
+// The film pipeline end to end, on screen: the same tracked TypeScript values
+// a coding agent authors (script → staging → blocking → performance → assemble),
 // consumed by the engine's film compilers, played back through the sequence
 // resolver: real gait travel, a follow camera compiled from a `frame` verb,
 // a hard cut onto an orbiting close-up. Deterministic via `renderAt(t)`, so
 // capture-shots.mjs bakes the identical film every run.
 
-// ── the stage payloads (what the LLM will author; fixtures here) ─────────────
-const script: IAutoMovieScriptApplication.IWrite = {
-  type: "write",
+// ── the coding-agent-authored stage values ──────────────────────────────────
+const script: IAutoMovieScript = {
   logline: "A pursuer closes the distance; the one waiting never turns.",
   theme: "inevitability at walking pace",
   cast: [
@@ -72,8 +71,7 @@ const script: IAutoMovieScriptApplication.IWrite = {
   ],
 };
 
-const staging: IAutoMovieStagingApplication.IWrite = {
-  type: "write",
+const staging: IAutoMovieStage = {
   scene: { id: "scene-pursuit", name: "the pursuit" },
   plan: "walker starts 2.95 m behind the waiter, both facing +Z; a 12 × 10 m floor carries the walk, a low wall closes the far side; the camera stands side-on and follows the walker in.",
   actors: [
@@ -137,9 +135,8 @@ const staging: IAutoMovieStagingApplication.IWrite = {
   ],
 };
 
-const blockings: IAutoMovieBlockingApplication.IWrite[] = [
+const blockings: IAutoMovieBlocking[] = [
   {
-    type: "write",
     beat: "approach",
     analysis: "the distance itself is the drama: the walk must read whole.",
     rationale:
@@ -160,7 +157,6 @@ const blockings: IAutoMovieBlockingApplication.IWrite[] = [
     duration: 3,
   },
   {
-    type: "write",
     beat: "face-off",
     analysis: "stillness after motion: the circle asks who moves first.",
     rationale:
@@ -178,9 +174,8 @@ const blockings: IAutoMovieBlockingApplication.IWrite[] = [
   },
 ];
 
-const performances: IAutoMoviePerformanceApplication.IWrite[] = [
+const performances: IAutoMoviePerformance[] = [
   {
-    type: "write",
     beat: "approach",
     plan: "one locomote covers the whole beat; the head tracks the waiter; the camera follows.",
     draft: [
@@ -217,7 +212,6 @@ const performances: IAutoMoviePerformanceApplication.IWrite[] = [
     duration: 3,
   },
   {
-    type: "write",
     beat: "face-off",
     plan: "both hold; the camera orbits the waiter in close.",
     draft: [
@@ -368,7 +362,6 @@ performances.forEach((performance, i) => {
 
 const cut = cutSequence(
   {
-    type: "write",
     sequence: { id: "seq-pursuit", name: "the pursuit" },
     fps: 30,
     entries: shots.map((s, i) => ({

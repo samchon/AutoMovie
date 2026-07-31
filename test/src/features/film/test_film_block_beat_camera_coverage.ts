@@ -1,5 +1,5 @@
 import { blockBeat, stageScene } from "@automovie/engine";
-import { IAutoMovieBlockingApplication } from "@automovie/interface";
+import { IAutoMovieBlockingCoverage } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import {
@@ -9,7 +9,7 @@ import {
 } from "../internal/filmFixtures";
 import { hasViolation, violationCount } from "../internal/predicates";
 
-type ICoverage = IAutoMovieBlockingApplication.ICoverageIntent;
+type ICoverage = IAutoMovieBlockingCoverage;
 
 /** One valid coverage intent: the side camera holds a medium static on knightB. */
 const coverage = (over: Partial<ICoverage> = {}): ICoverage => ({

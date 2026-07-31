@@ -1,7 +1,7 @@
 import { performShot, stageScene } from "@automovie/engine";
 import {
   IAutoMovieActionCall,
-  IAutoMoviePerformanceApplication,
+  IAutoMoviePerformance,
 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
@@ -25,7 +25,7 @@ const gesture = (
   ...partial,
 });
 
-const run = (partial: Partial<IAutoMoviePerformanceApplication.IWrite>) => {
+const run = (partial: Partial<IAutoMoviePerformance>) => {
   const staged = stageScene(makeScriptWrite(), makeStagingWrite());
   if (staged.success !== true) throw new Error("staging must succeed");
   return performShot({

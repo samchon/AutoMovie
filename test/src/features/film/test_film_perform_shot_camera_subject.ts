@@ -6,7 +6,8 @@ import {
 import {
   IAutoMovieActionCall,
   IAutoMovieActionTarget,
-  IAutoMovieBlockingApplication,
+  IAutoMovieBlocking,
+  IAutoMovieBlockingCoverage,
   IAutoMovieVector3,
 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
@@ -28,7 +29,7 @@ import {
 } from "../internal/fixtures";
 import { vclose, violationCount } from "../internal/predicates";
 
-type ICoverage = IAutoMovieBlockingApplication.ICoverageIntent;
+type ICoverage = IAutoMovieBlockingCoverage;
 
 /**
  * A pose marching the root `x` metres along model +X. The elbow rides along
@@ -142,10 +143,7 @@ const frame = (
 });
 
 /** A blocking whose hero intent matches the `frame` fixture above. */
-const blockingWith = (
-  coverage: ICoverage[],
-): IAutoMovieBlockingApplication.IWrite => ({
-  type: "write",
+const blockingWith = (coverage: ICoverage[]): IAutoMovieBlocking => ({
   beat: "beat-1",
   analysis: "the loose must read as aimed at the lens.",
   rationale: "a wide follow keeps the flight and the impact in frame.",
