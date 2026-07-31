@@ -146,14 +146,24 @@ export const resolveBoneMap = (
  * @author Samchon
  */
 export const fitChainToTarget = (props: {
+  /** Rig whose ROM and rest transforms constrain the solve. */
   skeleton: IAutoMovieSkeleton;
+  /** Current authored pose; returned unchanged when no candidate improves it. */
   pose: IAutoMoviePose;
+  /** Ordered root, mid, and end-effector bones of one descendant chain. */
   chain: IAutoMoviePlantChain;
+  /** World-space position the end effector should reach. */
   target: IAutoMovieVector3;
+  /** Pre-indexed topology belonging to `skeleton`. */
   topology: IAutoMovieSkeletonTopology;
+  /** Optional clinical axes used consistently by IK, ROM, and FK. */
   jointAxes?: Partial<Record<AutoMovieHumanoidBone, IAutoMovieJointAxes>>;
+  /** Optional clinical rest frames used consistently by IK, ROM, and FK. */
   restFrames?: Partial<Record<AutoMovieHumanoidBone, IAutoMovieRestFrame>>;
-  /** Prior corrected pose used only to stabilize equal-residual bend branches. */
+  /**
+   * Prior corrected pose used only to stabilize equal-residual bend branches;
+   * its root and non-chain joints do not replace the current pose.
+   */
   referencePose?: IAutoMoviePose;
 }): IAutoMoviePose => {
   const prepared = prepareChainPlant(props);
@@ -195,7 +205,9 @@ export const fitChainToTarget = (props: {
   const referenceAngles = new Map(
     reference.joints.map((joint) => [joint.bone, joint] as const),
   );
-  const consider = (solved: NonNullable<ReturnType<typeof solve>>): number => {
+  const consider = (
+    solved: NonNullable<ReturnType<typeof solve>>,
+  ): IPlantCandidateScore => {
     const upper = clampJointToSkeleton(solved.upper, props.skeleton);
     const lower = clampJointToSkeleton(solved.lower, props.skeleton);
     const candidate: IAutoMoviePose = {
@@ -220,13 +232,22 @@ export const fitChainToTarget = (props: {
       }),
     );
     const continuity =
-      jointPoseDistance(upper, referenceAngles.get(upper.bone)) +
-      jointPoseDistance(lower, referenceAngles.get(lower.bone));
+      jointRotationDistance(
+        upper,
+        referenceAngles.get(upper.bone),
+        props.jointAxes?.[upper.bone],
+        props.restFrames?.[upper.bone],
+      ) +
+      jointRotationDistance(
+        lower,
+        referenceAngles.get(lower.bone),
+        props.jointAxes?.[lower.bone],
+        props.restFrames?.[lower.bone],
+      );
+    const score = { residual: candidateResidual, continuity };
     if (
       candidateResidual < best.residual - PLANT_RESIDUAL_EPSILON ||
-      (best.derived &&
-        Math.abs(candidateResidual - best.residual) <= PLANT_RESIDUAL_EPSILON &&
-        continuity < best.continuity)
+      (best.derived && comparePlantCandidate(score, best) < 0)
     )
       best = {
         derived: true,
@@ -234,11 +255,15 @@ export const fitChainToTarget = (props: {
         residual: candidateResidual,
         continuity,
       };
-    return candidateResidual;
+    return score;
   };
+  const canFinish = (): boolean =>
+    best.residual <= PLANT_RESIDUAL_EPSILON &&
+    (props.referencePose === undefined ||
+      best.continuity <= PLANT_CONTINUITY_EPSILON);
 
   consider(pole);
-  if (best.residual <= PLANT_RESIDUAL_EPSILON) return best.pose;
+  if (canFinish()) return best.pose;
 
   const upper = prepared.upper;
   const reachAxis = Vector3.normalize(
@@ -260,21 +285,61 @@ export const fitChainToTarget = (props: {
       Vector3.scale(secondary, Math.sin(angle)),
     );
 
+  if (props.referencePose !== undefined) {
+    const referenceJoints = [props.chain.upper, props.chain.lower].map(
+      (bone): IAutoMovieJointPose =>
+        referenceAngles.get(bone) ?? {
+          bone,
+          flexion: null,
+          abduction: null,
+          twist: null,
+        },
+    );
+    const referenceLower = resolveBoneMap(
+      props.skeleton,
+      {
+        ...props.pose,
+        joints: [
+          ...props.pose.joints.filter(
+            (joint) =>
+              joint.bone !== props.chain.upper &&
+              joint.bone !== props.chain.lower,
+          ),
+          ...referenceJoints,
+        ],
+      },
+      props.topology,
+      props.jointAxes,
+      props.restFrames,
+    ).get(props.chain.lower)!;
+    const referenceNormal = Vector3.cross(
+      reachAxis,
+      Vector3.subtract(referenceLower.worldPosition, upper.worldPosition),
+    );
+    if (Vector3.length(referenceNormal) >= 1e-6) {
+      consider(solve(Vector3.normalize(referenceNormal))!);
+      if (canFinish()) return best.pose;
+    }
+  }
+
   const segments = 32;
-  const sweep: Array<{ angle: number; residual: number }> = [];
+  const sweep: Array<{ angle: number } & IPlantCandidateScore> = [];
   for (let index = 0; index < segments; ++index) {
     const angle = (2 * Math.PI * index) / segments;
-    const candidateResidual = consider(solve(normalAt(angle))!);
-    sweep.push({ angle, residual: candidateResidual });
-    if (best.residual <= PLANT_RESIDUAL_EPSILON) return best.pose;
+    sweep.push({ angle, ...consider(solve(normalAt(angle))!) });
+    if (canFinish()) return best.pose;
   }
-  const minima = sweep.filter(
-    (entry, index) =>
-      entry.residual <= sweep[(index + segments - 1) % segments]!.residual &&
-      entry.residual <= sweep[(index + 1) % segments]!.residual &&
-      (entry.residual < sweep[(index + segments - 1) % segments]!.residual ||
-        entry.residual < sweep[(index + 1) % segments]!.residual),
-  );
+  const minima = sweep.filter((entry, index) => {
+    const previous = sweep[(index + segments - 1) % segments]!;
+    const next = sweep[(index + 1) % segments]!;
+    const previousOrder = comparePlantCandidate(entry, previous);
+    const nextOrder = comparePlantCandidate(entry, next);
+    return (
+      previousOrder <= 0 &&
+      nextOrder <= 0 &&
+      (previousOrder < 0 || nextOrder < 0)
+    );
+  });
   for (const minimum of minima) {
     let center = minimum;
     let step = (2 * Math.PI) / segments;
@@ -283,10 +348,10 @@ export const fitChainToTarget = (props: {
       for (const angle of [center.angle - step, center.angle + step]) {
         const candidate = {
           angle,
-          residual: consider(solve(normalAt(angle))!),
+          ...consider(solve(normalAt(angle))!),
         };
-        if (candidate.residual < center.residual) center = candidate;
-        if (best.residual <= PLANT_RESIDUAL_EPSILON) return best.pose;
+        if (comparePlantCandidate(candidate, center) < 0) center = candidate;
+        if (canFinish()) return best.pose;
       }
     }
   }
@@ -294,20 +359,56 @@ export const fitChainToTarget = (props: {
 };
 
 const PLANT_RESIDUAL_EPSILON = 1e-7;
+const PLANT_CONTINUITY_EPSILON = 1e-12;
 
-const jointPoseDistance = (
+interface IPlantCandidateScore {
+  residual: number;
+  continuity: number;
+}
+
+/** Residual buckets are ordered first; continuity breaks equivalent pins. */
+const comparePlantCandidate = (
+  left: IPlantCandidateScore,
+  right: IPlantCandidateScore,
+): number => {
+  if (left.residual < right.residual - PLANT_RESIDUAL_EPSILON) return -1;
+  if (left.residual > right.residual + PLANT_RESIDUAL_EPSILON) return 1;
+  return left.continuity - right.continuity;
+};
+
+/** Sign-insensitive geodesic distance between two joint rotations. */
+const jointRotationDistance = (
   joint: IAutoMovieJointPose,
   reference: IAutoMovieJointPose | undefined,
+  axes: IAutoMovieJointAxes | undefined,
+  restFrame: IAutoMovieRestFrame | undefined,
 ): number => {
-  const distance = (value: number | null, prior: number | null): number => {
-    const delta = (value ?? 0) - (prior ?? 0);
-    return delta * delta;
-  };
-  return (
-    distance(joint.flexion, reference?.flexion ?? null) +
-    distance(joint.abduction, reference?.abduction ?? null) +
-    distance(joint.twist, reference?.twist ?? null)
+  const candidate = Quaternion.normalize(
+    jointToQuaternion(joint, axes, restFrame),
   );
+  const prior = Quaternion.normalize(
+    jointToQuaternion(
+      reference ?? {
+        bone: joint.bone,
+        flexion: null,
+        abduction: null,
+        twist: null,
+      },
+      axes,
+      restFrame,
+    ),
+  );
+  const dot = Math.min(
+    1,
+    Math.abs(
+      candidate.x * prior.x +
+        candidate.y * prior.y +
+        candidate.z * prior.z +
+        candidate.w * prior.w,
+    ),
+  );
+  const angle = 2 * Math.acos(dot);
+  return angle * angle;
 };
 
 /**
@@ -440,6 +541,11 @@ const prepareChainPlant = (props: {
   const effector = map.get(chain.effector);
   if (upper === undefined || lower === undefined || effector === undefined)
     return null;
+  if (
+    isDescendant(props.topology, chain.upper, chain.lower) === false ||
+    isDescendant(props.topology, chain.lower, chain.effector) === false
+  )
+    return null;
 
   const upperInverse = Quaternion.inverse(upper.worldRotation);
   const lowerInverse = Quaternion.inverse(lower.worldRotation);
@@ -466,6 +572,18 @@ const prepareChainPlant = (props: {
     ),
   };
 };
+
+/** Whether a reachable bone sits strictly below another in the rig tree. */
+const isDescendant = (
+  topology: IAutoMovieSkeletonTopology,
+  ancestor: AutoMovieHumanoidBone,
+  descendant: AutoMovieHumanoidBone,
+): boolean =>
+  (topology.childrenByParent.get(ancestor) ?? []).some(
+    (child) =>
+      child.bone === descendant ||
+      isDescendant(topology, child.bone, descendant),
+  );
 
 /** Solve one bend normal against chain data prepared once per target. */
 const solvePreparedChainPlant = (props: {

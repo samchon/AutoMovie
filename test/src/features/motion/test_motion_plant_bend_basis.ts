@@ -2,6 +2,7 @@ import {
   IAutoMoviePlantChain,
   fitChainToTarget,
   indexSkeletonTopology,
+  jointToQuaternion,
   resolvePose,
 } from "@automovie/engine";
 import {
@@ -73,18 +74,50 @@ const skeleton = (
 const distance = (a: IAutoMovieVector3, b: IAutoMovieVector3): number =>
   Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z);
 
+const rotationDistance = (
+  pose: IAutoMoviePose,
+  reference: IAutoMoviePose,
+): number => {
+  const joints = new Map(pose.joints.map((joint) => [joint.bone, joint]));
+  return reference.joints.reduce((total, prior) => {
+    const candidate = jointToQuaternion(
+      joints.get(prior.bone) ?? {
+        bone: prior.bone,
+        flexion: null,
+        abduction: null,
+        twist: null,
+      },
+    );
+    const expected = jointToQuaternion(prior);
+    const dot = Math.min(
+      1,
+      Math.abs(
+        candidate.x * expected.x +
+          candidate.y * expected.y +
+          candidate.z * expected.z +
+          candidate.w * expected.w,
+      ),
+    );
+    const angle = 2 * Math.acos(dot);
+    return total + angle * angle;
+  }, 0);
+};
+
 /**
  * Bend-basis construction remains finite when the declared hinge is parallel to
  * the reach axis, including the vertical case where the world-down fallback is
  * parallel too.
  *
- * The first rig reaches along +X with the default +X lower flexion axis, taking
- * the first orthogonal fallback. The second reaches down with a custom
- * world-down flexion axis, taking both fallbacks before +Z supplies the basis.
- * Its mirrored/non-neutral rest frame also proves the selected clinical angles
- * round-trip through the same rig tables used by FK. In both cases ROM clamping
- * may make the pin imperfect, but the search must stay finite and never make
- * the authored residual worse.
+ * Scenarios:
+ *
+ * 1. A rig reaches along +X with the default +X lower flexion axis, taking the
+ *    first orthogonal fallback.
+ * 2. A rig reaches down with a custom world-down flexion axis, taking both
+ *    fallbacks before +Z supplies the basis. Its mirrored/non-neutral rest
+ *    frame also proves that the selected clinical angles round-trip through the
+ *    same rig tables used by FK.
+ * 3. Two exact mirrored pins use quaternion geodesic continuity to select the
+ *    branch matching the prior corrected pose instead of the first pole.
  */
 export const test_motion_plant_bend_basis = (): void => {
   const cases = [
@@ -150,7 +183,64 @@ export const test_motion_plant_bend_basis = (): void => {
       Number.isFinite(afterPosition.x) &&
         Number.isFinite(afterPosition.y) &&
         Number.isFinite(afterPosition.z) &&
-        after <= before + 1e-9,
+        fitted !== pose &&
+        after < before - 1e-9,
     );
   }
+
+  const exactSkeleton = skeleton(
+    "exact-continuity",
+    { x: 0, y: -1, z: 0 },
+    { x: 0, y: -1, z: 0 },
+  );
+  const exactPose: IAutoMoviePose = {
+    skeleton: exactSkeleton.id,
+    root: transform({ x: 0, y: 0, z: 0 }),
+    joints: [],
+  };
+  const halfBend = (Math.acos(0.75) * 180) / Math.PI;
+  const reference: IAutoMoviePose = {
+    ...exactPose,
+    joints: [
+      {
+        bone: CHAIN.upper,
+        flexion: halfBend,
+        abduction: 0,
+        twist: 0,
+      },
+      {
+        bone: CHAIN.lower,
+        flexion: -2 * halfBend,
+        abduction: null,
+        twist: null,
+      },
+    ],
+  };
+  const exactTarget = { x: 0, y: -1.5, z: 0 };
+  const exactTopology = indexSkeletonTopology(exactSkeleton);
+  const pole = fitChainToTarget({
+    skeleton: exactSkeleton,
+    pose: exactPose,
+    chain: CHAIN,
+    target: exactTarget,
+    topology: exactTopology,
+  });
+  const continuous = fitChainToTarget({
+    skeleton: exactSkeleton,
+    pose: exactPose,
+    chain: CHAIN,
+    target: exactTarget,
+    topology: exactTopology,
+    referencePose: reference,
+  });
+  const resolved = resolvePose(continuous, exactSkeleton).find(
+    (bone) => bone.bone === CHAIN.effector,
+  )!.worldPosition;
+  TestValidator.predicate(
+    "equal-residual exact pin preserves the prior quaternion branch",
+    distance(resolved, exactTarget) <= 1e-7 &&
+      rotationDistance(continuous, reference) <= 1e-12 &&
+      rotationDistance(continuous, reference) <
+        rotationDistance(pole, reference),
+  );
 };
