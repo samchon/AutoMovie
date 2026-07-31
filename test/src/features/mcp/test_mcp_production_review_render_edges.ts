@@ -351,21 +351,66 @@ export const test_mcp_production_review_render_edges =
       );
       fs.mkdirSync(malformedDirectory, { recursive: true });
       fs.writeFileSync(path.join(malformedDirectory, "manifest.json"), "{bad");
-      TestValidator.predicate(
-        "malformed bundle manifests are explicit",
-        review
-          .prepare({ target })
-          .diagnostics.some((item) => item.code === "render-bundle-invalid"),
+      const malformedShotPrepared = review.prepare({ target });
+      const malformedAssetPrepared = review.prepare({
+        target: { kind: "asset", id: "sentinel" },
+      });
+      const malformedManifestPath =
+        "renders/fixture-film/review-malformed/manifest.json";
+      const shotInvalidManifest = malformedShotPrepared.diagnostics.find(
+        (item) =>
+          item.code === "render-bundle-invalid" &&
+          item.path === malformedManifestPath,
       );
-      TestValidator.predicate(
-        "malformed bundle manifests are explicit during asset review",
-        review
-          .prepare({ target: { kind: "asset", id: "sentinel" } })
-          .diagnostics.some(
-            (item) =>
-              item.code === "render-bundle-invalid" &&
-              item.path?.endsWith("review-malformed/manifest.json") === true,
+      const assetInvalidManifest = malformedAssetPrepared.diagnostics.find(
+        (item) =>
+          item.code === "render-bundle-invalid" &&
+          item.path === malformedManifestPath,
+      );
+      TestValidator.equals(
+        "malformed bundle manifests retain exact diagnostics during asset review",
+        {
+          assetDiagnostic:
+            assetInvalidManifest === undefined
+              ? null
+              : {
+                  code: assetInvalidManifest.code,
+                  category: assetInvalidManifest.category,
+                  phase: assetInvalidManifest.phase,
+                  target: assetInvalidManifest.target,
+                  path: assetInvalidManifest.path,
+                  preservesValidationEvidence:
+                    assetInvalidManifest.message.startsWith(
+                      "Render bundle manifest is invalid: ",
+                    ) &&
+                    assetInvalidManifest.message.length >
+                      "Render bundle manifest is invalid: . Recreate the bundle through captureFrame."
+                        .length,
+                  preservesRecaptureGuidance:
+                    assetInvalidManifest.message.endsWith(
+                      ". Recreate the bundle through captureFrame.",
+                    ),
+                },
+          sameAsShot:
+            JSON.stringify(assetInvalidManifest) ===
+            JSON.stringify(shotInvalidManifest),
+          preservesMissingViews: malformedAssetPrepared.diagnostics.some(
+            (item) => item.code === "review-evidence-missing",
           ),
+        },
+        {
+          assetDiagnostic: {
+            code: "render-bundle-invalid",
+            category: "error",
+            phase: "render",
+            target: malformedManifestPath,
+            path: malformedManifestPath,
+            preservesValidationEvidence: true,
+            preservesRecaptureGuidance: true,
+          },
+          sameAsShot: true,
+          preservesMissingViews: true,
+        },
       );
       fs.rmSync(malformedDirectory, { recursive: true, force: true });
 

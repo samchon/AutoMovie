@@ -1998,15 +1998,11 @@ const currentAssetFrames = (
   const frames: IAutoMovieFrameEvidenceReference[] = [];
   const inventory =
     context?.renderInventory ?? collectRenderManifestInventory(project);
-  for (const entry of inventory.invalid)
-    diagnostics.push({
-      code: "render-bundle-invalid",
-      category: "error",
-      phase: "render",
-      target: normalizeSlash(path.relative(project.root, entry.path)),
-      path: normalizeSlash(path.relative(project.root, entry.path)),
-      message: `Render bundle manifest is invalid: ${entry.error}. Recreate the bundle through captureFrame.`,
-    });
+  appendInvalidRenderManifestDiagnostics(
+    project,
+    diagnostics,
+    inventory.invalid,
+  );
   const entries = inventory.all
     .filter(
       (entry) =>
@@ -2336,15 +2332,11 @@ const currentFrames = (
   const covered = new Set<string>();
   const inventory =
     context?.renderInventory ?? collectRenderManifestInventory(project);
-  for (const entry of inventory.invalid)
-    diagnostics.push({
-      code: "render-bundle-invalid",
-      category: "error",
-      phase: "render",
-      target: normalizeSlash(path.relative(project.root, entry.path)),
-      path: normalizeSlash(path.relative(project.root, entry.path)),
-      message: `Render bundle manifest is invalid: ${entry.error}. Recreate the bundle through captureFrame.`,
-    });
+  appendInvalidRenderManifestDiagnostics(
+    project,
+    diagnostics,
+    inventory.invalid,
+  );
   const legacyEntries =
     target.kind === "shot"
       ? inventory.legacy.filter(
@@ -2841,6 +2833,26 @@ const readJsonIfPresent = (
     ) as unknown;
   } catch (error) {
     return { invalidJson: String(error) };
+  }
+};
+
+const appendInvalidRenderManifestDiagnostics = (
+  project: AutoMovieProductionProject,
+  diagnostics: IAutoMovieDiagnostic[],
+  entries: readonly IInvalidRenderManifestInventoryEntry[],
+): void => {
+  for (const entry of entries) {
+    const relativePath = normalizeSlash(
+      path.relative(project.root, entry.path),
+    );
+    diagnostics.push({
+      code: "render-bundle-invalid",
+      category: "error",
+      phase: "render",
+      target: relativePath,
+      path: relativePath,
+      message: `Render bundle manifest is invalid: ${entry.error}. Recreate the bundle through captureFrame.`,
+    });
   }
 };
 
