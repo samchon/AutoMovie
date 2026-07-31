@@ -611,11 +611,21 @@ export const test_mcp_production_realization = (): void => {
       compiled: brokenCompiled,
       collisions: [],
     });
+    const missingOperandPredicates =
+      missingOperandsOutcome.realization.opening[0]?.predicates ?? [];
     TestValidator.predicate(
       "missing selector operands produce null measured values",
-      missingOperandsOutcome.realization.opening[0]?.predicates.every(
-        (item) => item.actual === null && item.passed === false,
-      ) === true,
+      ([0, 1, 2, 3, 4, 6] as const).every((index) => {
+        const item = missingOperandPredicates[index];
+        return item?.actual === null && item.passed === false;
+      }),
+    );
+    TestValidator.predicate(
+      "node transforms and omitted joint channels remain measurable",
+      missingOperandPredicates[5]?.actual === 2 &&
+        missingOperandPredicates[5].passed === false &&
+        missingOperandPredicates[7]?.actual === 0 &&
+        missingOperandPredicates[7].passed === true,
     );
   } finally {
     fixture.dispose();
