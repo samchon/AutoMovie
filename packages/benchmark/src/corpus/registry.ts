@@ -1,5 +1,6 @@
 import { IAutoMovieBenchmarkAnchors } from "../calibration";
 import {
+  AutoMovieBenchmarkLane,
   IAutoMovieBenchmarkTask,
   compareBenchmarkCodeUnits,
   digestAutoMovieBenchmarkText,
@@ -32,6 +33,8 @@ export interface IAutoMovieBenchmarkScenario {
   task: () => IAutoMovieBenchmarkTask;
   /** Fresh calibration anchors for the task law. */
   anchors: () => IAutoMovieBenchmarkAnchors;
+  /** Supported delivery experiments for this task law. */
+  lanes: readonly AutoMovieBenchmarkLane[];
 }
 
 const scenarios = [
@@ -40,24 +43,28 @@ const scenarios = [
     brief: AUSTERLITZ_SIGNAL_BRIEF,
     task: austerlitzSignalTask,
     anchors: austerlitzSignalAnchors,
+    lanes: ["deterministic"],
   },
   {
     taskId: "short/austerlitz-teaser",
     brief: AUSTERLITZ_TEASER_BRIEF,
     task: austerlitzTeaserTask,
     anchors: austerlitzTeaserAnchors,
+    lanes: ["deterministic", "repaint"],
   },
   {
     taskId: "medium/austerlitz-volley-exchange",
     brief: AUSTERLITZ_VOLLEY_EXCHANGE_BRIEF,
     task: austerlitzVolleyExchangeTask,
     anchors: austerlitzVolleyExchangeAnchors,
+    lanes: ["deterministic", "repaint"],
   },
   {
     taskId: "long/austerlitz-battle-film",
     brief: AUSTERLITZ_BATTLE_FILM_BRIEF,
     task: austerlitzBattleFilmTask,
     anchors: austerlitzBattleFilmAnchors,
+    lanes: ["deterministic", "repaint"],
   },
 ] as const satisfies readonly IAutoMovieBenchmarkScenario[];
 
@@ -86,7 +93,23 @@ export const createAutoMovieBenchmarkScenarioRegistry = (
       throw new Error(
         `Benchmark scenario "${scenario.taskId}" does not reproduce its registered task id and brief bytes.`,
       );
-    indexed.set(scenario.taskId, Object.freeze({ ...scenario }));
+    if (
+      scenario.lanes.length === 0 ||
+      new Set(scenario.lanes).size !== scenario.lanes.length ||
+      scenario.lanes.some(
+        (lane) => lane !== "deterministic" && lane !== "repaint",
+      )
+    )
+      throw new Error(
+        `Benchmark scenario "${scenario.taskId}" needs at least one unique delivery lane from the supported set.`,
+      );
+    indexed.set(
+      scenario.taskId,
+      Object.freeze({
+        ...scenario,
+        lanes: Object.freeze([...scenario.lanes]),
+      }),
+    );
   }
   const list = (): IAutoMovieBenchmarkScenario[] =>
     [...indexed.values()].sort((left, right) =>

@@ -30,6 +30,9 @@ export const AUTOMOVIE_BENCHMARK_DELIVERY_PREFIX = "delivery:";
 /** Corpus tier, which fixes the runtime budget one task may consume. */
 export type AutoMovieBenchmarkTier = "short" | "medium" | "long";
 
+/** Visual-delivery experiment one scenario run selected. */
+export type AutoMovieBenchmarkLane = "deterministic" | "repaint";
+
 /**
  * MCP surface one submission was produced through.
  *

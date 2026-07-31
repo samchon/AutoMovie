@@ -11,6 +11,7 @@ import {
   resolveAutoMovieBenchmarkLifecycle,
 } from "./lifecycle";
 import {
+  AutoMovieBenchmarkLane,
   AutoMovieBenchmarkSurface,
   IAutoMovieBenchmarkTask,
   IAutoMovieBenchmarkVersions,
@@ -20,7 +21,7 @@ import {
 
 /** Submission schema every archived run carries. */
 export const AUTOMOVIE_BENCHMARK_SUBMISSION_PROTOCOL =
-  "automovie.benchmark.submission.v1";
+  "automovie.benchmark.submission.v2";
 
 /** One packaged artifact the candidate installed from. */
 export interface IAutoMovieBenchmarkArtifact {
@@ -92,6 +93,8 @@ export interface IAutoMovieBenchmarkSourceEdit {
 
 /** One actual captured frame the run produced. */
 export interface IAutoMovieBenchmarkCapturedFrame {
+  /** Archive-relative resident PNG path. */
+  path: string;
   /** Compiler-owned shot id. */
   shot: string;
   /** Non-negative finite shot-local capture time in seconds. */
@@ -112,6 +115,8 @@ export interface IAutoMovieBenchmarkCapturedFrame {
 
 /** One published deliverable file and its parser receipt. */
 export interface IAutoMovieBenchmarkDeliveredFile {
+  /** Archive-relative resident output path. */
+  path: string;
   /** Deliverable id that owns the file. */
   deliverable: string;
   /** Deliverable class. */
@@ -170,6 +175,8 @@ export interface IAutoMovieBenchmarkSubmissionDraft {
   briefDigest: AutoMovieContentDigest;
   /** Surface the candidate drove. */
   surface: AutoMovieBenchmarkSurface;
+  /** Deterministic baseline or optional repaint experiment. */
+  lane: AutoMovieBenchmarkLane;
   /** Packaged repository state. */
   repository: IAutoMovieBenchmarkRepository;
   /** External client identity. */
@@ -178,6 +185,8 @@ export interface IAutoMovieBenchmarkSubmissionDraft {
   mcp: IAutoMovieBenchmarkMcpSession;
   /** Digest of the complete transcript and tool-result stream. */
   transcriptDigest: AutoMovieContentDigest;
+  /** Digest of runner-observed MCP sessions and their target provenance. */
+  inventoryDigest: AutoMovieContentDigest;
   /** Every source edit the run made. */
   edits: IAutoMovieBenchmarkSourceEdit[];
   /** Digest of the final project tree. */
@@ -309,6 +318,48 @@ const assertNumericClaims = (
   );
 };
 
+/** Refuse evidence addresses that cannot resolve inside one immutable archive. */
+const assertEvidencePaths = (
+  draft: IAutoMovieBenchmarkSubmissionDraft,
+): void => {
+  const entries = [
+    ...draft.frames.map((frame) => ({
+      path: frame.path,
+      prefix: "evidence/frames/",
+    })),
+    ...draft.deliverables.map((file) => ({
+      path: file.path,
+      prefix: "evidence/deliverables/",
+    })),
+  ];
+  const invalid = entries.find(
+    (entry) =>
+      entry.path.startsWith(entry.prefix) === false ||
+      entry.path.includes("\\") ||
+      entry.path
+        .split("/")
+        .some(
+          (segment) =>
+            segment.length === 0 ||
+            segment === "." ||
+            segment === ".." ||
+            segment.includes("\0"),
+        ),
+  );
+  if (invalid !== undefined)
+    throw new Error(
+      `Invalid AutoMovie benchmark submission: evidence path "${invalid.path}" must be a normalized archive-relative path below "${invalid.prefix}".`,
+    );
+  const duplicate = entries.find(
+    (entry, index) =>
+      entries.findIndex((candidate) => candidate.path === entry.path) !== index,
+  );
+  if (duplicate !== undefined)
+    throw new Error(
+      `Invalid AutoMovie benchmark submission: evidence path "${duplicate.path}" is owned more than once.`,
+    );
+};
+
 /**
  * Validate one archived run, resolve its lifecycle, and seal it.
  *
@@ -329,6 +380,7 @@ export const sealAutoMovieBenchmarkSubmission = (
         .join("; ")}.`,
     );
   assertNumericClaims(draft);
+  assertEvidencePaths(draft);
   const sealed: IAutoMovieBenchmarkSubmissionDraft = {
     ...draft,
     lifecycle: resolveAutoMovieBenchmarkLifecycle(draft.lifecycle),
@@ -360,6 +412,7 @@ const assertAutoMovieBenchmarkSubmissionIntegrity = (
     );
   const { runId, ...draft } = validation.data;
   assertNumericClaims(draft);
+  assertEvidencePaths(draft);
   const canonicalLifecycle = resolveAutoMovieBenchmarkLifecycle(
     draft.lifecycle,
   );
@@ -475,6 +528,7 @@ export const benchmarkComparisonDrift = (
         right.versions.scenarioHelper,
       ],
       ["briefDigest", left.briefDigest, right.briefDigest],
+      ["lane", left.lane, right.lane],
       ["commit", left.repository.commit, right.repository.commit],
       ["dirty", left.repository.dirty, right.repository.dirty],
       [

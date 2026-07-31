@@ -43,7 +43,13 @@ export const test_benchmark_scenario_registry = (): void => {
       austerlitzVolleyExchangeTask().delivery.minRuntimeSeconds === 285 &&
       austerlitzBattleFilmTask().delivery.minRuntimeSeconds === 1_140 &&
       austerlitzTeaserDraft().surface === "five-tool" &&
-      scenarios.every((scenario) => Object.isFrozen(scenario)),
+      getAutoMovieBenchmarkScenario("short/austerlitz-teaser").lanes.join(
+        ",",
+      ) === "deterministic,repaint" &&
+      scenarios.every(
+        (scenario) =>
+          Object.isFrozen(scenario) && Object.isFrozen(scenario.lanes),
+      ),
   );
   for (const scenario of scenarios)
     TestValidator.predicate(
@@ -86,6 +92,30 @@ export const test_benchmark_scenario_registry = (): void => {
         { ...teaser, brief: `${teaser.brief}\nchanged` },
       ]),
     "does not reproduce its registered task id and brief bytes",
+  );
+  TestValidator.error(
+    "scenario registries require a delivery lane",
+    () => createAutoMovieBenchmarkScenarioRegistry([{ ...teaser, lanes: [] }]),
+    "at least one unique delivery lane",
+  );
+  TestValidator.error(
+    "scenario registries refuse duplicate delivery lanes",
+    () =>
+      createAutoMovieBenchmarkScenarioRegistry([
+        { ...teaser, lanes: ["deterministic", "deterministic"] },
+      ]),
+    "at least one unique delivery lane",
+  );
+  TestValidator.error(
+    "scenario registries refuse unknown delivery lanes",
+    () =>
+      createAutoMovieBenchmarkScenarioRegistry([
+        {
+          ...teaser,
+          lanes: ["deterministic", "unknown"],
+        } as unknown as typeof teaser,
+      ]),
+    "supported set",
   );
 
   const oldSession = austerlitzSignalDraft("legacy-compact").mcp;

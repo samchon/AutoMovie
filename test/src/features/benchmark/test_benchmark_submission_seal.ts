@@ -196,6 +196,40 @@ export const test_benchmark_submission_seal = (): void => {
             ],
           }),
         "non-negative finite number",
+      ) &&
+      [
+        "evidence\\frames\\escape.png",
+        "evidence/frames/folder\\escape.png",
+        "evidence/frames//escape.png",
+        "evidence/frames/./escape.png",
+        "evidence/frames/../escape.png",
+        "evidence/frames/\0escape.png",
+      ].every((evidencePath) =>
+        throws(
+          () =>
+            sealAutoMovieBenchmarkSubmission({
+              ...draft,
+              frames: [
+                {
+                  ...draft.frames[0]!,
+                  path: evidencePath,
+                },
+                ...draft.frames.slice(1),
+              ],
+            }),
+          "normalized archive-relative path",
+        ),
+      ) &&
+      throws(
+        () =>
+          sealAutoMovieBenchmarkSubmission({
+            ...draft,
+            frames: [
+              draft.frames[0]!,
+              { ...draft.frames[1]!, path: draft.frames[0]!.path },
+            ],
+          }),
+        "owned more than once",
       ),
   );
 
@@ -351,6 +385,17 @@ export const test_benchmark_submission_seal = (): void => {
     ["surface: both submissions drove production"],
   );
   const legacyDraft = austerlitzSignalDraft("legacy-compact");
+  TestValidator.equals(
+    "comparison drift separates deterministic and repaint delivery lanes",
+    benchmarkComparisonDrift(
+      production!,
+      sealAutoMovieBenchmarkSubmission({
+        ...legacyDraft,
+        lane: "repaint",
+      }),
+    ),
+    ["lane: deterministic vs repaint"],
+  );
   const changedArtifacts = [
     {
       ...legacyDraft.repository.artifacts[0]!,

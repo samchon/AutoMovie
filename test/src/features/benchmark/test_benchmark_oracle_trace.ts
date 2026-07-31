@@ -16,9 +16,10 @@ const events = (): IAutoMovieBenchmarkTraceEvent[] => [
     sequence: 0,
     atMs: 0,
     kind: "run-start",
-    runId: digest("1"),
+    executionId: digest("1"),
     taskId: "short/austerlitz-signal",
     surface: "production",
+    lane: "deterministic",
   },
   {
     sequence: 1,
@@ -49,10 +50,16 @@ const events = (): IAutoMovieBenchmarkTraceEvent[] => [
   },
   {
     sequence: 4,
-    atMs: 3_000,
+    atMs: 2_800,
     kind: "verdict",
     outcome: "scored",
     filmScore: 1,
+  },
+  {
+    sequence: 5,
+    atMs: 3_000,
+    kind: "run-seal",
+    runId: digest("5"),
   },
 ];
 
@@ -110,9 +117,9 @@ export const test_benchmark_oracle_trace = (): void => {
     gzipSync(
       Buffer.from(
         `${all
-          .slice(0, 4)
+          .slice(0, 5)
           .map((event) => canonicalBenchmarkJson(event))
-          .join("\n")}\n${canonicalBenchmarkJson(all[4]!).slice(0, 20)}`,
+          .join("\n")}\n${canonicalBenchmarkJson(all[5]!).slice(0, 20)}`,
         "utf8",
       ),
     ),
@@ -291,6 +298,6 @@ export const test_benchmark_oracle_trace = (): void => {
   TestValidator.equals(
     "archived event kinds are reported in code-unit order",
     benchmarkTraceKinds(all),
-    ["capture", "gate", "mcp-call", "run-start", "verdict"],
+    ["capture", "gate", "mcp-call", "run-seal", "run-start", "verdict"],
   );
 };

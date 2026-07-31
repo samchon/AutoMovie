@@ -9,10 +9,17 @@ deterministic one-minute teaser, five-minute volley exchange, and twenty-minute
 battle-film milestones. Every entry reproduces exact brief bytes, a versioned
 task law, and reference/empty/mutant calibration anchors.
 
+Each milestone declares its delivery lanes. `deterministic` is the mandatory
+zero-config baseline; `repaint` is an optional experiment that preserves the
+same deterministic originals and requires a runner-owned adapter capability.
+Submissions bind the selected lane, raw MCP inventory digest, and
+archive-relative resident frame/deliverable paths into their run identity.
+
 External execution belongs to the separate `@automovie/benchmark-runner`
 package. It prepares an out-of-repository project, drives an injected agent or
-process adapter, seals the result, invokes this package's judge, and archives
-the trace, taxonomy verdict, report, and measured old/new MCP tool inventories.
+process adapter, collects trusted resident evidence, seals the result, invokes
+this package's judge, and archives the trace, taxonomy verdict, report, and
+measured old/new MCP tool inventories.
 This package remains pure law and scoring.
 
 `@automovie/benchmark`는 automovie가 만든 영화를 **같은 법으로 언제든 다시 판정**하기 위한 순수 계약·adapter·judge 패키지다.

@@ -154,6 +154,12 @@ importers:
       '@automovie/benchmark':
         specifier: workspace:^
         version: link:../benchmark
+      '@automovie/mcp':
+        specifier: workspace:^
+        version: link:../mcp
+      '@modelcontextprotocol/sdk':
+        specifier: catalog:modelcontextprotocol
+        version: 1.29.0(zod@4.4.3)
     devDependencies:
       '@ttsc/lint':
         specifier: catalog:typescript

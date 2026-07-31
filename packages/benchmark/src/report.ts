@@ -6,6 +6,7 @@ import {
   IAutoMovieBenchmarkVerdict,
 } from "./judge";
 import {
+  AutoMovieBenchmarkLane,
   AutoMovieBenchmarkSurface,
   benchmarkVersionDrift,
   compareBenchmarkCodeUnits,
@@ -34,10 +35,12 @@ export interface IAutoMovieBenchmarkRubricVerdict {
   evidence: string[];
 }
 
-/** Aggregate outcome for one surface. */
+/** Aggregate outcome for one surface and delivery lane. */
 export interface IAutoMovieBenchmarkSurfaceReport {
   /** Surface the runs drove. */
   surface: AutoMovieBenchmarkSurface;
+  /** Deterministic baseline or optional repaint experiment. */
+  lane: AutoMovieBenchmarkLane;
   /** Runs measured against the law. */
   scored: number;
   /** Runs the candidate could not carry past a lifecycle gate. */
@@ -58,7 +61,7 @@ export interface IAutoMovieBenchmarkSurfaceReport {
 
 /** One benchmark report: measured film outcomes beside generation health. */
 export interface IAutoMovieBenchmarkReport {
-  /** Per-surface aggregates in code-unit surface order. */
+  /** Per-surface/lane aggregates in code-unit key order. */
   surfaces: IAutoMovieBenchmarkSurfaceReport[];
   /** Reviewed axes, carried beside the measured ones and never inside them. */
   rubric: IAutoMovieBenchmarkRubricVerdict[];
@@ -186,11 +189,19 @@ export const reportAutoMovieBenchmark = (
       );
   }
   const surfaces = [
-    ...new Set(verdicts.map((verdict) => verdict.surface)),
+    ...new Set(
+      verdicts.map((verdict) => `${verdict.surface}\u0000${verdict.lane}`),
+    ),
   ].sort(compareBenchmarkCodeUnits);
   return {
-    surfaces: surfaces.map((surface) => {
-      const owned = verdicts.filter((verdict) => verdict.surface === surface);
+    surfaces: surfaces.map((key) => {
+      const [surface, lane] = key.split("\u0000") as [
+        AutoMovieBenchmarkSurface,
+        AutoMovieBenchmarkLane,
+      ];
+      const owned = verdicts.filter(
+        (verdict) => verdict.surface === surface && verdict.lane === lane,
+      );
       const counted = owned.filter(
         (
           verdict,
@@ -201,6 +212,7 @@ export const reportAutoMovieBenchmark = (
       );
       return {
         surface,
+        lane,
         scored: owned.filter((verdict) => verdict.outcome === "scored").length,
         gateFailed: owned.filter((verdict) => verdict.outcome === "gate-failed")
           .length,
@@ -245,6 +257,9 @@ export const diffAutoMovieBenchmarkVerdicts = (
   after: IAutoMovieBenchmarkVerdict,
 ): IAutoMovieBenchmarkVerdictDiff => {
   const versionDrift = [
+    ...(before.lane === after.lane
+      ? []
+      : [`lane: ${before.lane} -> ${after.lane}`]),
     ...(before.taskDigest === after.taskDigest
       ? []
       : [`taskDigest: ${before.taskDigest} -> ${after.taskDigest}`]),

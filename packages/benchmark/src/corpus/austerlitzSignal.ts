@@ -218,6 +218,7 @@ export const austerlitzSignalDraft = (
   versions: { ...VERSIONS },
   briefDigest: digestAutoMovieBenchmarkText(AUSTERLITZ_SIGNAL_BRIEF),
   surface,
+  lane: "deterministic",
   repository: {
     commit: "0".repeat(40),
     dirty: false,
@@ -244,6 +245,7 @@ export const austerlitzSignalDraft = (
     ],
   },
   transcriptDigest: digest("transcript"),
+  inventoryDigest: digest("inventory"),
   edits: [
     {
       path: "src/shots/opening.ts",
@@ -263,6 +265,7 @@ export const austerlitzSignalDraft = (
   },
   frames: [
     {
+      path: "evidence/frames/opening-beauty.png",
       shot: "opening",
       timeSeconds: 2,
       pass: "beauty",
@@ -273,6 +276,7 @@ export const austerlitzSignalDraft = (
       probeValid: true,
     },
     {
+      path: "evidence/frames/opening-mask.png",
       shot: "opening",
       timeSeconds: 2,
       pass: "mask",
@@ -285,6 +289,7 @@ export const austerlitzSignalDraft = (
   ],
   deliverables: [
     {
+      path: "evidence/deliverables/feature.mp4",
       deliverable: "feature",
       kind: "feature",
       mediaType: "video/mp4",
@@ -294,6 +299,7 @@ export const austerlitzSignalDraft = (
       probeValid: true,
     },
     {
+      path: "evidence/deliverables/captions.vtt",
       deliverable: "captions",
       kind: "captions",
       mediaType: "text/vtt",
@@ -303,6 +309,7 @@ export const austerlitzSignalDraft = (
       probeValid: true,
     },
     {
+      path: "evidence/deliverables/audio.m4a",
       deliverable: "audio",
       kind: "audio-mix",
       mediaType: "audio/mp4",

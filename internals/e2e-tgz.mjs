@@ -6,7 +6,7 @@
 //
 // Run: pnpm run e2e:tgz
 //
-// Deliberately OUTSIDE the c8 coverage gate: it is slow (eight prepack
+// Deliberately OUTSIDE the c8 coverage gate: it is slow (ten prepack
 // builds plus an npm install) and needs registry network for third-party
 // dependencies such as @modelcontextprotocol/sdk.
 import { spawnSync } from "node:child_process";
@@ -32,10 +32,12 @@ const KEEP_STAGE = process.env.AUTOMOVIE_E2E_KEEP_STAGE === "1";
 // Interface first, CLI last: each runtime dependency packs before its consumer.
 const PACKAGES = [
   "interface",
+  "benchmark",
   "engine",
   "render",
   "viewer",
   "mcp",
+  "benchmark-runner",
   "lint",
   "cli",
   "create-automovie",
@@ -147,6 +149,10 @@ const runJson = (label, executable, args, cwd) => {
 const CLIENT_SOURCE = `
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import {
+  createProcessAutoMovieBenchmarkAgent,
+  snapshotAutoMovieBenchmarkProject,
+} from "@automovie/benchmark-runner";
 import { existsSync } from "node:fs";
 import path from "node:path";
 
@@ -157,6 +163,13 @@ const assert = (name, condition, detail) => {
   }
   console.log(\`✓ \${name}\`);
 };
+
+assert(
+  "benchmark-runner-public-entry",
+  typeof createProcessAutoMovieBenchmarkAgent === "function" &&
+    typeof snapshotAutoMovieBenchmarkProject === "function",
+  "the packed benchmark runner public entry is incomplete",
+);
 
 const bin = path.resolve("node_modules/@automovie/mcp/lib/bin.js");
 const granularBin = path.resolve(

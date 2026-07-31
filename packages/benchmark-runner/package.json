@@ -44,7 +44,9 @@
     }
   },
   "dependencies": {
-    "@automovie/benchmark": "workspace:^"
+    "@automovie/benchmark": "workspace:^",
+    "@automovie/mcp": "workspace:^",
+    "@modelcontextprotocol/sdk": "catalog:modelcontextprotocol"
   },
   "devDependencies": {
     "@types/node": "catalog:utils",

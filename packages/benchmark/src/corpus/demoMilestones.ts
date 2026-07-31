@@ -21,7 +21,10 @@ import {
 /** Exact one-minute zero-config deterministic demo brief. */
 export const AUSTERLITZ_TEASER_BRIEF = `# Austerlitz deterministic teaser
 
-Deliver a finished one-minute teaser at 24 fps without a repaint adapter.
+Deliver a finished one-minute teaser at 24 fps. The deterministic lane must use
+the original renderer without a repaint adapter. When the runner selects the
+optional repaint lane, preserve that deterministic original and also publish a
+reviewed repaint rendition from the same source shot.
 Before dawn on 2 December 1805, a French sentinel on the Pratzen Heights raises
 a signal. A 512-member allied column is already advancing below. The signal
 cuts to a French line presenting muskets and one synchronized volley whose
@@ -32,8 +35,10 @@ seconds.`;
 /** Exact five-minute deterministic volley-exchange demo brief. */
 export const AUSTERLITZ_VOLLEY_EXCHANGE_BRIEF = `# Austerlitz volley exchange
 
-Deliver a finished five-minute deterministic battle sequence at 24 fps without
-a repaint adapter. Establish the Pratzen slope, opposed French and Allied line
+Deliver a finished five-minute battle sequence at 24 fps. The deterministic
+lane must not use a repaint adapter. The optional repaint lane preserves the
+deterministic originals and adds reviewed renditions from those same shots.
+Establish the Pratzen slope, opposed French and Allied line
 formations, command relationships, and screen direction. Stage at least three
 ordered volley exchanges with registered muskets, measured event timing,
 formation motion, recoil, smoke, impact response, editorial coverage, captions,
@@ -44,8 +49,10 @@ distinct human reactions. Deliver a feature, captions, and audio mix between
 /** Exact twenty-minute zero-config deterministic full-film demo brief. */
 export const AUSTERLITZ_BATTLE_FILM_BRIEF = `# Austerlitz battle film
 
-Deliver a finished twenty-minute deterministic film at 24 fps without a
-repaint adapter. Build a screenplay ladder from pre-dawn uncertainty through
+Deliver a finished twenty-minute film at 24 fps. The deterministic lane must
+not use a repaint adapter. The optional repaint lane preserves deterministic
+originals and adds reviewed renditions from those same shots. Build a screenplay
+ladder from pre-dawn uncertainty through
 the Allied movement onto the Pratzen Heights, French counterstroke, line and
 artillery exchanges, crisis, and resolution. Use historically sourced object
 and line-battle contracts, multiple formations, authored hero reactions,
@@ -296,6 +303,7 @@ const draftOf = (
     versions: { ...task.versions },
     briefDigest: task.brief.digest,
     surface,
+    lane: "deterministic",
     repository: {
       commit: "0".repeat(40),
       dirty: false,
@@ -333,6 +341,7 @@ const draftOf = (
       ],
     },
     transcriptDigest: digest(`${task.taskId}:transcript`),
+    inventoryDigest: digest(`${task.taskId}:inventory`),
     edits: [
       {
         path: "src/film.ts",
@@ -353,6 +362,7 @@ const draftOf = (
     },
     frames: [
       {
+        path: `evidence/frames/${config.primaryShot}-beauty.png`,
         shot: config.primaryShot,
         timeSeconds: 2,
         pass: "beauty",
@@ -363,6 +373,7 @@ const draftOf = (
         probeValid: true,
       },
       {
+        path: `evidence/frames/${config.secondaryShot}-pose.png`,
         shot: config.secondaryShot,
         timeSeconds: 2,
         pass: "pose",
@@ -375,6 +386,7 @@ const draftOf = (
     ],
     deliverables: [
       {
+        path: "evidence/deliverables/feature.mp4",
         deliverable: "feature",
         kind: "feature",
         mediaType: "video/mp4",
@@ -384,6 +396,7 @@ const draftOf = (
         probeValid: true,
       },
       {
+        path: "evidence/deliverables/captions.vtt",
         deliverable: "captions",
         kind: "captions",
         mediaType: "text/vtt",
@@ -393,6 +406,7 @@ const draftOf = (
         probeValid: true,
       },
       {
+        path: "evidence/deliverables/audio.m4a",
         deliverable: "audio",
         kind: "audio-mix",
         mediaType: "audio/mp4",
