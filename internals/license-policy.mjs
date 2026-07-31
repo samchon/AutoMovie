@@ -1,5 +1,5 @@
 import fs from "node:fs";
-import { createRequire } from "node:module";
+import { builtinModules, createRequire } from "node:module";
 import path from "node:path";
 
 const args = process.argv.slice(2);
@@ -69,6 +69,10 @@ const workspacePackages = new Map(
     return [manifest.name, { file, manifest }];
   }),
 );
+const nodeBuiltin = Symbol("node-builtin");
+const nodeBuiltins = new Set(
+  builtinModules.flatMap((module) => [module, module.replace(/^node:/u, "")]),
+);
 
 const productionDependenciesOf = (manifest) => ({
   ...manifest.dependencies,
@@ -76,7 +80,16 @@ const productionDependenciesOf = (manifest) => ({
   ...manifest.peerDependencies,
 });
 
+const dependencyIdentityOf = (dependency, requesterFile) => {
+  const manifest = readJson(requesterFile);
+  const specifier = productionDependenciesOf(manifest)[dependency];
+  if (typeof specifier !== "string") return dependency;
+  const alias = /^npm:(@[^/]+\/[^@]+|[^@]+)@/u.exec(specifier);
+  return alias?.[1] ?? dependency;
+};
+
 const packageFileFrom = (dependency, requesterFile) => {
+  const identity = dependencyIdentityOf(dependency, requesterFile);
   const requester = createRequire(
     path.join(path.dirname(requesterFile), "__automovie_license_policy__.cjs"),
   );
@@ -84,7 +97,7 @@ const packageFileFrom = (dependency, requesterFile) => {
     const candidate = path.join(modules, dependency, "package.json");
     if (fs.existsSync(candidate) === false) continue;
     const manifest = readJson(candidate);
-    if (manifest.name === dependency) return candidate;
+    if (manifest.name === identity) return candidate;
   }
   let resolved;
   try {
@@ -96,6 +109,7 @@ const packageFileFrom = (dependency, requesterFile) => {
       return null;
     }
   }
+  if (nodeBuiltins.has(resolved)) return nodeBuiltin;
   let current = fs.statSync(resolved).isDirectory()
     ? resolved
     : path.dirname(resolved);
@@ -103,7 +117,7 @@ const packageFileFrom = (dependency, requesterFile) => {
     const candidate = path.join(current, "package.json");
     if (fs.existsSync(candidate)) {
       const manifest = readJson(candidate);
-      if (manifest.name === dependency) return candidate;
+      if (manifest.name === identity) return candidate;
     }
     const parent = path.dirname(current);
     if (parent === current) return null;
@@ -239,7 +253,8 @@ const inspect = (file) => {
   const dependencies = productionDependenciesOf(manifest);
   for (const dependency of Object.keys(dependencies).sort()) {
     try {
-      inspect(findPackageFile(dependency, realFile));
+      const dependencyFile = findPackageFile(dependency, realFile);
+      if (dependencyFile !== nodeBuiltin) inspect(dependencyFile);
     } catch (error) {
       const optional =
         Object.hasOwn(manifest.optionalDependencies ?? {}, dependency) ||

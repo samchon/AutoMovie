@@ -9,6 +9,7 @@ const POLICY_SCRIPT = path.join(ROOT, "internals", "license-policy.mjs");
 
 interface IDependencyFixtureOptions {
   dependencies?: Record<string, string>;
+  manifestName?: string;
   resolution?: "commonjs" | "export-map" | "import-only";
 }
 
@@ -70,7 +71,7 @@ const writeDependency = (
   fs.writeFileSync(
     path.join(dependency, "package.json"),
     JSON.stringify({
-      name,
+      name: options.manifestName ?? name,
       version: "1.0.0",
       ...(resolution === "export-map"
         ? {
@@ -143,6 +144,8 @@ const check = (root: string) =>
  *    declared and installed by another audited production workspace root.
  * 4. Another workspace cannot hide missing direct optional, optional-peer, or
  *    external transitive edges with its own same-named installed dependency.
+ * 5. Node built-ins need no package license while npm aliases audit their physical
+ *    target package manifest.
  */
 export const test_workspace_license_policy = (): void => {
   TestValidator.equals(
@@ -189,6 +192,22 @@ export const test_workspace_license_policy = (): void => {
       resolution: "import-only",
     });
     const importOnly = check(root);
+    fs.writeFileSync(
+      path.join(root, "package.json"),
+      JSON.stringify({
+        name: "license-fixture",
+        version: "1.0.0",
+        license: "MIT",
+        dependencies: {
+          buffer: "1.0.0",
+          "typescript-compiler": "npm:typescript@1.0.0",
+        },
+      }),
+    );
+    writeDependency(root, "typescript-compiler", "Apache-2.0", {
+      manifestName: "typescript",
+    });
+    const builtinAndAlias = check(root);
     fs.writeFileSync(
       path.join(root, "package.json"),
       JSON.stringify({
@@ -340,6 +359,7 @@ export const test_workspace_license_policy = (): void => {
         accepted.stdout.includes("policy passed") &&
         expression.status === 0 &&
         importOnly.status === 0 &&
+        builtinAndAlias.status === 0 &&
         missingOptional.status === 1 &&
         missingOptional.stderr.includes("absent-optional") &&
         missingOptional.stderr.includes("absent-peer") &&
