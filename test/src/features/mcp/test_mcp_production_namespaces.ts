@@ -90,16 +90,18 @@ export const test_mcp_production_namespaces = (): void => {
     fs.writeFileSync(sameNamedLegacyChild, "same-name-child");
     fs.writeFileSync(legacyRender, "render");
     const alpha = AutoMovieProductionProject.open(fixture.root);
+    const migratedSameNamedLegacyChild = path.join(
+      alpha.generatedRoot(),
+      "fixture-film/legacy-child.bin",
+    );
     TestValidator.predicate(
       "legacy outputs migrate without byte loss",
       fs.readFileSync(
         path.join(alpha.generatedRoot(), "legacy-generated.bin"),
         "utf8",
       ) === "generated" &&
-        fs.readFileSync(
-          path.join(alpha.generatedRoot(), "fixture-film/legacy-child.bin"),
-          "utf8",
-        ) === "same-name-child" &&
+        fs.readFileSync(migratedSameNamedLegacyChild, "utf8") ===
+          "same-name-child" &&
         fs.readFileSync(
           path.join(alpha.renderRoot(), "legacy-render.bin"),
           "utf8",
@@ -113,6 +115,7 @@ export const test_mcp_production_namespaces = (): void => {
         ) === '{"version":1}',
     );
     fs.rmSync(path.join(alpha.generatedRoot(), "legacy-generated.bin"));
+    fs.rmSync(migratedSameNamedLegacyChild);
     fs.rmSync(path.join(alpha.renderRoot(), "legacy-render.bin"));
     const beta = AutoMovieProductionProject.open(fixture.root, "beta");
     TestValidator.equals(
