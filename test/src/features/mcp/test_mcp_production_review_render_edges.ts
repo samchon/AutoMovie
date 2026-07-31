@@ -357,6 +357,16 @@ export const test_mcp_production_review_render_edges =
           .prepare({ target })
           .diagnostics.some((item) => item.code === "render-bundle-invalid"),
       );
+      TestValidator.predicate(
+        "malformed bundle manifests are explicit during asset review",
+        review
+          .prepare({ target: { kind: "asset", id: "sentinel" } })
+          .diagnostics.some(
+            (item) =>
+              item.code === "render-bundle-invalid" &&
+              item.path?.endsWith("review-malformed/manifest.json") === true,
+          ),
+      );
       fs.rmSync(malformedDirectory, { recursive: true, force: true });
 
       for (const [name, framePath] of [

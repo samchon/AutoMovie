@@ -1998,6 +1998,15 @@ const currentAssetFrames = (
   const frames: IAutoMovieFrameEvidenceReference[] = [];
   const inventory =
     context?.renderInventory ?? collectRenderManifestInventory(project);
+  for (const entry of inventory.invalid)
+    diagnostics.push({
+      code: "render-bundle-invalid",
+      category: "error",
+      phase: "render",
+      target: normalizeSlash(path.relative(project.root, entry.path)),
+      path: normalizeSlash(path.relative(project.root, entry.path)),
+      message: `Render bundle manifest is invalid: ${entry.error}. Recreate the bundle through captureFrame.`,
+    });
   const entries = inventory.all
     .filter(
       (entry) =>
