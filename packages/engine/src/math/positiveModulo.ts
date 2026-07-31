@@ -11,7 +11,8 @@
  */
 export const positiveModulo = (value: number, period: number): number => {
   const remainder = value % period;
-  return (remainder + period * Number(remainder < 0)) % period;
+  const normalized = remainder + period * Number(remainder < 0);
+  return normalized === period ? 0 : normalized;
 };
 
 /**
