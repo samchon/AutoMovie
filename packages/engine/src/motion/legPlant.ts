@@ -22,6 +22,8 @@ import {
 } from "../kinematics/resolvePose";
 import { twoBoneChainArticulation } from "../kinematics/twoBoneChainArticulation";
 import { Quaternion } from "../math/Quaternion";
+import { Vector3 } from "../math/Vector3";
+import { clampJointToSkeleton } from "../rom/clampPose";
 import { IAutoMovieRestFrame } from "../rom/restFrame";
 import {
   IAutoMovieFootLeg,
@@ -118,6 +120,83 @@ export const resolveBoneMap = (
   );
 
 /**
+ * Fit one two-bone chain onto a world-space target without leaving the rig's
+ * effective ROM. The authored pose and three deterministic IK bend planes are
+ * compared by the effector position they actually produce after clamping; a
+ * candidate is accepted only when it improves on the current pose.
+ *
+ * This is the shared contact policy for ground planting and retargeting. A
+ * world-down pole alone can lower a hinge joint into abduction/twist that its
+ * ROM immediately removes, while the opposite hinge branch can express the same
+ * contact as legal flexion. Keeping the original pose in the candidate set also
+ * makes an unreachable or constrained target non-destructive.
+ *
+ * @author Samchon
+ */
+export const fitChainToTarget = (props: {
+  skeleton: IAutoMovieSkeleton;
+  pose: IAutoMoviePose;
+  chain: IAutoMoviePlantChain;
+  target: IAutoMovieVector3;
+  topology: IAutoMovieSkeletonTopology;
+  jointAxes?: Partial<Record<AutoMovieHumanoidBone, IAutoMovieJointAxes>>;
+  restFrames?: Partial<Record<AutoMovieHumanoidBone, IAutoMovieRestFrame>>;
+}): IAutoMoviePose => {
+  const resolve = (pose: IAutoMoviePose): ReturnType<typeof resolveBoneMap> =>
+    resolveBoneMap(
+      props.skeleton,
+      pose,
+      props.topology,
+      props.jointAxes,
+      props.restFrames,
+    );
+  const solve = (
+    bendNormal?: IAutoMovieVector3,
+  ): ReturnType<typeof solveChainPlant> =>
+    solveChainPlant({
+      ...props,
+      bendNormal,
+    });
+
+  const pole = solve();
+  if (pole === null) return props.pose;
+  const residual = (pose: IAutoMoviePose): number =>
+    Vector3.length(
+      Vector3.subtract(
+        resolve(pose).get(props.chain.effector)!.worldPosition,
+        props.target,
+      ),
+    );
+  let best: { pose: IAutoMoviePose; residual: number } = {
+    pose: props.pose,
+    residual: residual(props.pose),
+  };
+
+  for (const solved of [
+    pole,
+    solve(pole.hinge)!,
+    solve(Vector3.scale(pole.hinge, -1))!,
+  ]) {
+    const candidate: IAutoMoviePose = {
+      ...props.pose,
+      joints: [
+        ...props.pose.joints.filter(
+          (joint) =>
+            joint.bone !== props.chain.upper &&
+            joint.bone !== props.chain.lower,
+        ),
+        clampJointToSkeleton(solved.upper, props.skeleton),
+        clampJointToSkeleton(solved.lower, props.skeleton),
+      ],
+    };
+    const candidateResidual = residual(candidate);
+    if (candidateResidual < best.residual)
+      best = { pose: candidate, residual: candidateResidual };
+  }
+  return best.pose;
+};
+
+/**
  * The frame's joints with every pinned leg re-solved onto its target: planted
  * legs get their {@link solveLegPlant} articulation, everything else is carried
  * through unchanged.
@@ -133,19 +212,14 @@ const plantedJoints = (
   for (const leg of legs) {
     const target = targets.get(leg.foot);
     if (target === undefined) continue;
-    const solved = solveChainPlant({
+    const fitted = fitChainToTarget({
       skeleton,
-      pose,
+      pose: { ...pose, joints },
       chain: { effector: leg.foot, upper: leg.upper, lower: leg.lower },
       target,
       topology,
     });
-    if (solved === null) continue;
-    joints = [
-      ...joints.filter((j) => j.bone !== leg.upper && j.bone !== leg.lower),
-      solved.upper,
-      solved.lower,
-    ];
+    joints = fitted.joints;
   }
   return joints;
 };

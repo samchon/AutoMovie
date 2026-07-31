@@ -4,6 +4,7 @@ import {
   sampleMotion,
   validateFootSkate,
   validateGroundContact,
+  validateMotion,
 } from "@automovie/engine";
 import {
   IAutoMovieMotion,
@@ -96,6 +97,8 @@ const footAt = (motion: IAutoMovieMotion, time: number) =>
  * 4. The planted foot's world XZ is constant across the run (the anti-skate
  *    property, numeric) and pinned to the stance-start contact.
  * 5. One stance run is reported for the whole clip, pinned at y = groundY.
+ * 6. Every IK-derived joint stays inside the skeleton's effective ROM and the
+ *    dense correction remains temporally coherent.
  */
 export const test_motion_plant_feet = (): void => {
   const contacts = [{ bone: "leftFoot", start: 0, end: 1 } as const];
@@ -167,5 +170,10 @@ export const test_motion_plant_feet = (): void => {
       nclose(planted.plants[0]!.start, 0) &&
       nclose(planted.plants[0]!.end, 1) &&
       nclose(planted.plants[0]!.position.y, 0),
+  );
+  TestValidator.equals(
+    "ground IK stays inside ROM without temporal branch jumps",
+    validateMotion({ motion: planted.motion, skeleton: legSkeleton }),
+    { success: true },
   );
 };
