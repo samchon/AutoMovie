@@ -69,7 +69,7 @@ const program = (context, moving) => {
       logline: "One actor crosses a hard cut without resetting.",
       theme: "continuity is measured state",
       cast: [
-        { node: "sentinel", character: "sentinel", modelRef: "sentinel" },
+        { node: "sentinel", character: "sentinel", modelRef: model.id },
       ],
       beats: [
         {
