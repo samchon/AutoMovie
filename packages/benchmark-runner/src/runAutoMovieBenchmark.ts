@@ -44,6 +44,12 @@ import {
   IAutoMovieBenchmarkMcpTarget,
 } from "./probeAutoMovieBenchmarkMcp";
 
+const BENCHMARK_WORKSPACE_MARKER = `/**
+ * Runner-owned workspace marker. Replace it during benchmark project bootstrap.
+ */
+export {};
+`;
+
 /** Candidate workspace and immutable law handed to an external agent. */
 export interface IAutoMovieBenchmarkAgentContext {
   /** Registered scenario selected by exact id. */
@@ -456,6 +462,11 @@ export const runAutoMovieBenchmark = async (
   const briefPath = path.join(candidateInput.real, "brief.md");
   fs.writeFileSync(taskPath, taskText);
   fs.writeFileSync(briefPath, scenario.brief);
+  fs.writeFileSync(
+    path.join(project.real, "automovie.config.ts"),
+    BENCHMARK_WORKSPACE_MARKER,
+    { flag: "wx" },
+  );
   const before = snapshotAutoMovieBenchmarkProject(project.real);
 
   const traceRoot = secureChildDirectory(pending, "trace", repository.real);

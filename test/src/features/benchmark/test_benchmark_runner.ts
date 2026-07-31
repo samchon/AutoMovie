@@ -114,6 +114,10 @@ export const test_benchmark_runner = async (): Promise<void> => {
       digest: string;
       entries: Array<{ kind: string; path: string }>;
     }>(path.join(output.archive, "project-tree.json"));
+    const workspaceMarker = fs.readFileSync(
+      path.join(output.archive, "project", "automovie.config.ts"),
+      "utf8",
+    );
     const toolSessions = readJson<
       Array<{
         provenance: string;
@@ -152,10 +156,21 @@ export const test_benchmark_runner = async (): Promise<void> => {
             entry.kind === "file" &&
             entry.path === "receipts/observations.json",
         ) &&
+        projectTree.entries.some(
+          (entry) =>
+            entry.kind === "file" && entry.path === "automovie.config.ts",
+        ) &&
+        workspaceMarker ===
+          `/**
+ * Runner-owned workspace marker. Replace it during benchmark project bootstrap.
+ */
+export {};
+` &&
         submission.edits.some(
           (edit) => edit.path === "receipts/observations.json",
         ) &&
         submission.edits.some((edit) => edit.path === "src/film.ts") &&
+        submission.edits.every((edit) => edit.path !== "automovie.config.ts") &&
         submission.edits.every((edit) => edit.path !== "nonexistent.ts") &&
         submission.frames.every(
           (frame) =>
