@@ -729,6 +729,25 @@ export class AutoMovieProductionProject {
     return structuredClone(this.manifest_);
   }
 
+  /** Read byte-exact project-wide records under the current state fence. */
+  public projectStateRecords(): {
+    incarnation: Uint8Array;
+    manifest: Uint8Array;
+  } {
+    this.assertIncarnation();
+    const read = (file: string): Uint8Array => {
+      assertOwnedRegularFile(
+        ownedRootReal(this.rootReal, this.automovieRoot),
+        file,
+      );
+      return fs.readFileSync(file);
+    };
+    return {
+      incarnation: read(this.incarnationPath),
+      manifest: read(this.manifestPath),
+    };
+  }
+
   /** Every registered production in this project. */
   public productionIds(): string[] {
     this.refreshRevision();
