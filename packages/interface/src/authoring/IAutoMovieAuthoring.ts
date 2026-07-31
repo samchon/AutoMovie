@@ -282,7 +282,7 @@ export type IAutoMovieDefinedShotContract = Omit<
  * module path, export name, and artifact identity without a second manifest
  * claiming what the source contains.
  */
-export interface IAutoMovieDefinedShot<Context = void> {
+export interface IAutoMovieDefinedShot<Context = undefined> {
   /** Stable shot id; the compiled artifact receives this exact identity. */
   id: string;
   /** Stable staged-scene id the builder must actually produce. */

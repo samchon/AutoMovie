@@ -9,6 +9,7 @@ import {
   AutoMovieProductionProject,
   acquireCommitLock,
   acquireProductionRootNamespace,
+  compareCodeUnits,
   digestAutoMovieBytes,
   productionRenderBundleRelativePath,
   productionRenderTargetFingerprint,
