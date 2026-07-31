@@ -1746,11 +1746,11 @@ const loadPinnedKokoroRuntime = async (
   ]);
   const previous = {
     cacheDir: env.cacheDir,
-    fetch: env.fetch,
+    fetch: globalThis.fetch,
   };
-  const fetcher = env.fetch ?? globalThis.fetch;
+  const fetcher = globalThis.fetch.bind(globalThis);
   env.cacheDir = modelCacheRoot;
-  env.fetch = async (input, init) => {
+  globalThis.fetch = async (input, init) => {
     const source =
       typeof input === "string"
         ? input
@@ -1793,7 +1793,7 @@ const loadPinnedKokoroRuntime = async (
     };
   } finally {
     env.cacheDir = previous.cacheDir;
-    env.fetch = previous.fetch;
+    globalThis.fetch = previous.fetch;
   }
 };
 
@@ -1896,8 +1896,11 @@ const encodeProductionOpus = async (pcm: Float32Array): Promise<Uint8Array> => {
   const codedSampleFrames =
     Math.ceil((sampleFrames + primingSamples) / encoder.frameSize) *
     encoder.frameSize;
-  const packets: Array<{ bytes: Uint8Array; duration: number; dts: number }> =
-    [];
+  const packets: Array<{
+    bytes: Uint8Array<ArrayBuffer>;
+    duration: number;
+    dts: number;
+  }> = [];
   try {
     for (let dts = 0; dts < codedSampleFrames; dts += encoder.frameSize) {
       const frame = new Float32Array(encoder.frameSize * encoder.channels);

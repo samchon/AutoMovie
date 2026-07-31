@@ -1,6 +1,8 @@
-import { resolveFirearmVolley } from "@automovie/engine";
+import {
+  type IAutoMovieFirearmEvent,
+  resolveFirearmVolley,
+} from "@automovie/engine";
 import type {
-  IAutoMovieFirearmEvent,
   IAutoMovieInstanceSetDesign,
   IAutoMovieModel,
   IAutoMovieProfile,
