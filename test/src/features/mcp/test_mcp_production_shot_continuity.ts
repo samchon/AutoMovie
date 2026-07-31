@@ -352,20 +352,42 @@ export const test_mcp_production_shot_continuity = async (): Promise<void> => {
       duration: { seconds: 0.5 },
     };
     const noCarryCases: Array<{
+      name: string;
       video: IAutoMovieFilmEdit["tracks"]["video"];
       runtime: number;
     }> = [
-      { video: previousTrim, runtime: 11 },
-      { video: currentTrim, runtime: 11 },
-      { video: dissolve, runtime: 11 },
-      { video: fade, runtime: 12 },
+      { name: "previous-trim", video: previousTrim, runtime: 11 },
+      { name: "current-trim", video: currentTrim, runtime: 11 },
+      { name: "dissolve", video: dissolve, runtime: 11 },
+      { name: "fade", video: fade, runtime: 12 },
     ];
+    const noCarryResults = noCarryCases.map(({ name, video, runtime }) => {
+      const boundary = compileFilm(video, runtime);
+      return { name, boundary, actualAnswerX: answerX(boundary) };
+    });
+    const failedNoCarry = noCarryResults.filter(
+      ({ boundary, actualAnswerX }) =>
+        boundary.success === false || actualAnswerX !== 0,
+    );
+    if (failedNoCarry.length !== 0)
+      throw new Error(
+        `No-carry continuity fixtures failed:\n${JSON.stringify(
+          failedNoCarry.map(({ name, boundary, actualAnswerX }) => ({
+            name,
+            diagnostics: boundary.diagnostics,
+            expectedAnswerX: 0,
+            actualAnswerX,
+          })),
+          null,
+          2,
+        )}`,
+      );
     TestValidator.predicate(
       "trimmed and non-cut boundaries do not apply the full closing snapshot",
-      noCarryCases.every(({ video, runtime }) => {
-        const boundary = compileFilm(video, runtime);
-        return boundary.success && answerX(boundary) === 0;
-      }),
+      noCarryResults.every(
+        ({ boundary, actualAnswerX }) =>
+          boundary.success && actualAnswerX === 0,
+      ),
     );
 
     const zeroOpeningAnswer = structuredClone(answer);
