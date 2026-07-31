@@ -12,7 +12,7 @@ import {
 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { warningCount } from "../internal/predicates";
+import { validationHasNoWarnings, warningCount } from "../internal/predicates";
 
 const t = (x: number, y: number, z: number): IAutoMovieTransform => ({
   translation: { x, y, z },
@@ -116,20 +116,21 @@ export const test_motion_path_plant_feet = (): void => {
     legs: [LEG],
     sampleRate: 24,
   });
-  TestValidator.equals(
+  TestValidator.predicate(
     "planted path walk has no foot-skate warning",
-    warningCount(
+    validationHasNoWarnings(
+      "planted path walk foot-skate",
       validateFootSkate({
         motion: planted.motion,
         skeleton: legSkeleton,
         contacts,
       }),
     ),
-    0,
   );
-  TestValidator.equals(
+  TestValidator.predicate(
     "planted path walk has no ground-contact warning",
-    warningCount(
+    validationHasNoWarnings(
+      "planted path walk ground-contact",
       validateGroundContact({
         motion: planted.motion,
         skeleton: legSkeleton,
@@ -138,6 +139,5 @@ export const test_motion_path_plant_feet = (): void => {
         tolerance: 1e-3,
       }),
     ),
-    0,
   );
 };

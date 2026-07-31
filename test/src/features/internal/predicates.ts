@@ -87,3 +87,17 @@ export const hasWarning = (
 /** Number of warnings on a successful validation (0 when it failed). */
 export const warningCount = (v: IAutoMovieValidation): number =>
   v.success === true ? (v.warnings ?? []).length : 0;
+
+/** Preserve one positive validation attempt's evidence when it is not clean. */
+export const validationHasNoWarnings = (
+  context: string,
+  validation: IAutoMovieValidation,
+): boolean => {
+  const clean =
+    validation.success === true && (validation.warnings ?? []).length === 0;
+  if (clean === false)
+    console.error(
+      `${context} validation:\n${JSON.stringify(validation, null, 2)}`,
+    );
+  return clean;
+};

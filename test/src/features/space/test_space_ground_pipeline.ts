@@ -14,7 +14,11 @@ import {
 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { nclose, warningCount } from "../internal/predicates";
+import {
+  nclose,
+  validationHasNoWarnings,
+  warningCount,
+} from "../internal/predicates";
 
 const t = (x: number, y: number, z: number): IAutoMovieTransform => ({
   translation: { x, y, z },
@@ -140,20 +144,21 @@ export const test_space_ground_pipeline = (): void => {
     tolerance: 0.05,
     legs: [{ foot: "leftFoot", upper: "leftUpperLeg", lower: "leftLowerLeg" }],
   });
-  TestValidator.equals(
+  TestValidator.predicate(
     "planted ramp climb has no foot-skate warning",
-    warningCount(
+    validationHasNoWarnings(
+      "planted ramp climb foot-skate",
       validateFootSkate({
         motion: planted.motion,
         skeleton: legSkeleton,
         contacts,
       }),
     ),
-    0,
   );
-  TestValidator.equals(
+  TestValidator.predicate(
     "planted ramp climb has no ground-contact warning on the space",
-    warningCount(
+    validationHasNoWarnings(
+      "planted ramp climb ground-contact",
       validateGroundContact({
         motion: planted.motion,
         skeleton: legSkeleton,
@@ -162,6 +167,5 @@ export const test_space_ground_pipeline = (): void => {
         tolerance: 1e-3,
       }),
     ),
-    0,
   );
 };
