@@ -63,6 +63,7 @@ import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { isDeepStrictEqual } from "node:util";
 import { PNG } from "pngjs";
 
@@ -95,6 +96,8 @@ const stateRoot = path.join(renderJobRoot, renderTier.kind);
 const planPath = path.join(stateRoot, "plan.json");
 const action = process.argv[2] ?? "all";
 const require = createRequire(import.meta.url);
+const resolveImportEntry = (packageName: string): string =>
+  fileURLToPath(import.meta.resolve(packageName));
 const heldChunkLocks = new Map<string, { path: string; token: string }>();
 const KOKORO_MODEL = "onnx-community/Kokoro-82M-v1.0-ONNX" as const;
 const KOKORO_MODEL_REVISION =
@@ -437,7 +440,7 @@ const resolvedPackageIdentity = (
   version: string;
   entryDigest: AutoMovieContentDigest;
 } => {
-  const entry = require.resolve(packageName);
+  const entry = resolveImportEntry(packageName);
   let directory = path.dirname(entry);
   for (;;) {
     const manifest = path.join(directory, "package.json");
@@ -467,7 +470,7 @@ const resolvedPackageIdentity = (
 };
 
 const resolvedPackageDirectory = (packageName: string): string => {
-  let directory = path.dirname(require.resolve(packageName));
+  let directory = path.dirname(resolveImportEntry(packageName));
   for (;;) {
     const manifest = path.join(directory, "package.json");
     if (fs.existsSync(manifest)) {
