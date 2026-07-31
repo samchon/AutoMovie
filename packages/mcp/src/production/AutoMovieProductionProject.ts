@@ -1748,6 +1748,15 @@ export class AutoMovieProductionProject {
       ) !== canonicalizeAutoMovieJson(receipt.controls)
     )
       throw new Error("Stored repaint receipt source evidence is stale.");
+    const sourceReview = this.review({ kind: "shot", id: receipt.shot });
+    if (
+      sourceReview === null ||
+      sourceReview.complete === false ||
+      sourceReview.fingerprint !== receipt.sourceReviewFingerprint
+    )
+      throw new Error(
+        "Stored repaint receipt is not bound to the current completed deterministic shot review.",
+      );
     let runtimeIdentity: unknown;
     try {
       runtimeIdentity = JSON.parse(receipt.adapterIdentity);
@@ -1783,10 +1792,24 @@ export class AutoMovieProductionProject {
       mediaType: "video/mp4",
       bytes,
     });
+    const graph = this.graph();
+    const production = graph.production;
+    const shot = graph.shots.get(receipt.shot);
+    const expectedFrameCount =
+      production === null || shot === undefined
+        ? null
+        : Math.round(shot.durationSeconds * production.frameFormat.fps);
     if (
       probe.kind !== "video" ||
       canonicalizeAutoMovieJson(probe) !==
-        canonicalizeAutoMovieJson(receipt.output.probe)
+        canonicalizeAutoMovieJson(receipt.output.probe) ||
+      production === null ||
+      shot === undefined ||
+      probe.width !== production.frameFormat.width ||
+      probe.height !== production.frameFormat.height ||
+      Math.abs(probe.fps - production.frameFormat.fps) > 1e-9 ||
+      probe.frameCount !== expectedFrameCount ||
+      Math.abs(probe.runtimeSeconds - shot.durationSeconds) > 1e-9
     )
       throw new Error("Stored repaint media facts are stale.");
   }
@@ -2346,6 +2369,12 @@ export class AutoMovieProductionProject {
         return path.join(
           this.reviewRoot,
           "shots",
+          `${encodeId(target.id)}.json`,
+        );
+      case "rendition":
+        return path.join(
+          this.reviewRoot,
+          "renditions",
           `${encodeId(target.id)}.json`,
         );
       case "sequence":

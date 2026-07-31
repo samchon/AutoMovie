@@ -13,9 +13,11 @@ import type {
   IAutoMovieProductionDeliverable,
   IAutoMovieProductionMediaProbe,
   IAutoMovieProductionRenderManifest,
+  IAutoMovieProductionRenditionDelivery,
   IAutoMovieProductionSoundAnalysis,
   IAutoMovieProductionSoundPlan,
   IAutoMovieProductionTtsReceipt,
+  IAutoMovieRepaintReceipt,
   IAutoMovieReviewTarget,
 } from "@automovie/interface";
 import {
@@ -32,6 +34,8 @@ import {
   type IAutoMovieProductionRenderRuntimeIdentity,
   type IAutoMovieProductionRenderTier,
   canonicalAutoMovieCaptureRuntimeIdentity,
+  canonicalAutoMovieJsonBytes,
+  conformProductionRenditionVideoMp4,
   digestAutoMovieBytes,
   encodeAutoMoviePathSegment,
   inspectAutoMovieProduction,
@@ -847,6 +851,21 @@ const finalize = async (plan: IAutoMovieProductionRenderJobPlan) => {
   if (graph.production === null)
     throw new Error("Production design disappeared before final publication.");
   if (plan.tier.kind === "final") assertMatchingProxyPublication(project, plan);
+  const timeline =
+    plan.tier.kind === "final" &&
+    graph.production.visualDelivery === "repainted"
+      ? readAutoMovieFilmTimeline(project, plan.compileFingerprint)
+      : null;
+  const renditionReceipts: Map<string, IAutoMovieRepaintReceipt> =
+    timeline === null
+      ? new Map()
+      : new Map(
+          project
+            .verifiedRepaintRenditions([
+              ...new Set(timeline.segments.map((segment) => segment.shot)),
+            ])
+            .map((receipt) => [receipt.shot, receipt] as const),
+        );
   const requiredVideo = new Set(
     graph.production.deliverables
       .filter(
@@ -896,13 +915,95 @@ const finalize = async (plan: IAutoMovieProductionRenderJobPlan) => {
         );
       continue;
     }
+    let rendition: IAutoMovieProductionRenditionDelivery | undefined;
     if (deliverable.kind === "feature") {
-      const video = await encodeChunkFrames(plan, deliverableChunks);
+      const video =
+        timeline === null
+          ? await encodeChunkFrames(plan, deliverableChunks)
+          : conformProductionRenditionVideoMp4({
+              timeline,
+              clips: new Map(
+                timeline.segments.map((segment) => {
+                  const receipt = renditionReceipts.get(segment.shot);
+                  if (receipt === undefined)
+                    throw new Error(
+                      `Repainted feature delivery is missing current receipt-bound output for shot "${segment.shot}".`,
+                    );
+                  return [
+                    segment.shot,
+                    project.readRenderFile(receipt.output.path),
+                  ] as const;
+                }),
+              ),
+            });
       const sound = await currentSound();
       owned.set(
         "feature.mp4",
         muxProductionFeatureMp4({ video, audio: sound.audio }),
       );
+      if (timeline !== null) {
+        const shots = [
+          ...new Set(timeline.segments.map((segment) => segment.shot)),
+        ];
+        rendition = {
+          kind: "repainted",
+          shots: shots.map((shot) => {
+            const receipt = renditionReceipts.get(shot);
+            const sourceReview = project.review({ kind: "shot", id: shot });
+            const renditionReview = project.review({
+              kind: "rendition",
+              id: shot,
+            });
+            if (
+              receipt === undefined ||
+              sourceReview === null ||
+              sourceReview.complete === false ||
+              sourceReview.fingerprint !== receipt.sourceReviewFingerprint ||
+              renditionReview === null ||
+              renditionReview.complete === false
+            )
+              throw new Error(
+                `Repainted feature delivery requires current completed source and rendition reviews for shot "${shot}".`,
+              );
+            return {
+              shot,
+              path: receipt.output.path,
+              digest: receipt.output.digest,
+              receiptDigest: digestAutoMovieBytes(
+                canonicalAutoMovieJsonBytes(receipt),
+              ),
+              sourceReviewFingerprint: sourceReview.fingerprint,
+              renditionReviewFingerprint: renditionReview.fingerprint,
+            };
+          }),
+          aggregateReviews: inspection.reviews.entries
+            .flatMap((entry) => {
+              if (
+                (entry.target.kind !== "sequence" &&
+                  entry.target.kind !== "film") ||
+                entry.state !== "complete"
+              )
+                return [];
+              const review = project.review(entry.target);
+              if (review === null || review.complete === false)
+                throw new Error(
+                  `Repainted feature delivery lost current ${reviewTargetLabel(entry.target)} review.`,
+                );
+              return [
+                {
+                  kind: entry.target.kind,
+                  id: entry.target.id,
+                  fingerprint: review.fingerprint,
+                },
+              ];
+            })
+            .sort(
+              (left, right) =>
+                compareCodeUnits(left.kind, right.kind) ||
+                compareCodeUnits(left.id, right.id),
+            ),
+        };
+      }
     } else if (deliverable.kind === "guide-pass") {
       const passes = [...new Set(deliverableChunks.map((chunk) => chunk.pass))];
       if (passes.length !== 1)
@@ -1050,6 +1151,7 @@ const finalize = async (plan: IAutoMovieProductionRenderJobPlan) => {
           : audio?.kind === "audio"
             ? audio.codec
             : null,
+      ...(rendition === undefined ? {} : { rendition }),
     });
   }
   if (plan.tier.kind === "proxy")

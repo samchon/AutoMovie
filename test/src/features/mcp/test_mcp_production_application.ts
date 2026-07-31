@@ -274,6 +274,7 @@ export const test_mcp_production_application = async (): Promise<void> => {
         reviewGated.includes('getGuideDocument({ name: "REVIEW_ASSET" })') &&
         AUTOMOVIE_REVIEW_GUIDES.asset === "REVIEW_ASSET" &&
         AUTOMOVIE_REVIEW_GUIDES.shot === "REVIEW_SHOT" &&
+        AUTOMOVIE_REVIEW_GUIDES.rendition === "REVIEW_SHOT" &&
         AUTOMOVIE_REVIEW_GUIDES.sequence === "REVIEW_SEQUENCE" &&
         AUTOMOVIE_REVIEW_GUIDES.film === "REVIEW_FILM" &&
         AUTOMOVIE_REVIEW_GUIDES.design === "REVIEW_DEPENDENCY" &&
@@ -284,6 +285,7 @@ export const test_mcp_production_application = async (): Promise<void> => {
       { kind: "design", design: { kind: "production" } },
       { kind: "source", path: "src/shots/opening.ts" },
       { kind: "shot", id: "opening" },
+      { kind: "rendition", id: "opening" },
       { kind: "sequence", id: "SEQ-SIGNAL" },
       { kind: "film", id: "fixture-film" },
     ];
@@ -645,6 +647,76 @@ export const test_mcp_production_application = async (): Promise<void> => {
     repainting.getGuideDocument({ name: "AUTOMOVIE_OVERALL" });
     repainting.getGuideDocument({ name: "REPAINT_SHOT" });
     repainting.getGuideDocument({ name: "DIFFUSION_ENHANCE" });
+    repainting.getGuideDocument({ name: "REVIEW_SHOT" });
+    const sourcePrepared = repainting.prepareReview({
+      target: { kind: "shot", id: "opening" },
+    });
+    const frameEvidence = (frame: (typeof sourcePrepared.frames)[number]) => ({
+      kind: "frame" as const,
+      target: frame.target,
+      reviewFrame: frame.reviewFrame,
+      bundle: frame.bundle,
+      frame: frame.frame,
+      time: frame.time,
+      pass: frame.pass,
+      digest: frame.digest,
+    });
+    const sourceAcceptance = [
+      ...first.project.graph().acceptance.values(),
+    ].filter(
+      (scenario) =>
+        scenario.required &&
+        scenario.target.kind === "shot" &&
+        scenario.target.id === "opening",
+    );
+    const sourceReview = repainting.submitReview({
+      target: sourcePrepared.target,
+      preparedFingerprint: sourcePrepared.fingerprint,
+      observations:
+        "The current deterministic source frames satisfy the shot contract.",
+      checks: sourcePrepared.requiredCriteria.map((criterion, index) => ({
+        criterion,
+        verdict: "pass",
+        observation: `${criterion} passes on current deterministic evidence.`,
+        evidence:
+          criterion === "acceptance-scenarios"
+            ? sourceAcceptance.flatMap((scenario) => {
+                const matching = sourcePrepared.frames.find(
+                  (frame) =>
+                    scenario.criterion.kind === "frame" &&
+                    frame.reviewFrame === scenario.criterion.frame &&
+                    frame.pass === scenario.criterion.pass,
+                );
+                return [
+                  ...(matching === undefined ? [] : [frameEvidence(matching)]),
+                  {
+                    kind: "acceptance" as const,
+                    scenario: scenario.id,
+                    exactValue: scenario,
+                  },
+                ];
+              })
+            : [
+                frameEvidence(
+                  sourcePrepared.frames[index % sourcePrepared.frames.length]!,
+                ),
+              ],
+        ...(criterion === "acceptance-scenarios"
+          ? {
+              acceptanceScenarios: sourceAcceptance.map(
+                (scenario) => scenario.id,
+              ),
+            }
+          : {}),
+      })),
+      corrections: [],
+      completionBasis: sourcePrepared.requiredCriteria.join(", "),
+      complete: true,
+    });
+    TestValidator.predicate(
+      "repaint requires and records a current completed deterministic source review",
+      sourceReview.accepted && sourceReview.state === "complete",
+    );
     const restricted = await repainting.repaintShot({
       productionId: "fixture-film",
       shot: "opening",
@@ -684,6 +756,8 @@ export const test_mcp_production_application = async (): Promise<void> => {
       repainted.repainted &&
         repainted.receipt?.sourceRenderFingerprint.startsWith("sha256:") ===
           true &&
+        repainted.receipt.sourceReviewFingerprint ===
+          sourceReview.fingerprint &&
         repainted.receipt.controls.some((control) => control.pass === "pose") &&
         repainted.receipt.references[0]?.digest === reference.digest &&
         repainted.receipt.adapterIdentity.includes("fixture-video") &&
@@ -700,20 +774,23 @@ export const test_mcp_production_application = async (): Promise<void> => {
     );
     repainting.getGuideDocument({ name: "REVIEW_SHOT" });
     const renditionReview = repainting.prepareReview({
-      target: { kind: "shot", id: "opening" },
+      target: { kind: "rendition", id: "opening" },
     });
     const acceptedReceipt = repainted.receipt;
     TestValidator.predicate(
       "repainted delivery enters separate receipt-bound review evidence",
-      renditionReview.renditions.some(
-        (rendition) =>
-          rendition.shot === "opening" &&
-          rendition.path === acceptedReceipt?.output.path &&
-          rendition.digest === acceptedReceipt?.output.digest &&
-          rendition.receiptDigest.startsWith("sha256:") &&
-          rendition.sourceRenderFingerprint ===
-            acceptedReceipt?.sourceRenderFingerprint,
-      ) &&
+      acceptedReceipt !== null &&
+        renditionReview.renditions.some(
+          (rendition) =>
+            rendition.shot === "opening" &&
+            rendition.path === acceptedReceipt.output.path &&
+            rendition.digest === acceptedReceipt.output.digest &&
+            rendition.receiptDigest.startsWith("sha256:") &&
+            rendition.sourceRenderFingerprint ===
+              acceptedReceipt.sourceRenderFingerprint &&
+            rendition.sourceReviewFingerprint ===
+              acceptedReceipt.sourceReviewFingerprint,
+        ) &&
         renditionReview.diagnostics.some(
           (diagnostic) => diagnostic.code === "review-rendition-missing",
         ) === false,
@@ -729,7 +806,7 @@ export const test_mcp_production_application = async (): Promise<void> => {
       },
     });
     const rerolledReview = repainting.prepareReview({
-      target: { kind: "shot", id: "opening" },
+      target: { kind: "rendition", id: "opening" },
     });
     TestValidator.predicate(
       "a reroll atomically selects one new rendition and stales prior review identity",
@@ -769,7 +846,7 @@ export const test_mcp_production_application = async (): Promise<void> => {
       fs.writeFileSync(activeRenditionPath, active);
       invalidRenditionReviews.push(
         repainting.prepareReview({
-          target: { kind: "shot", id: "opening" },
+          target: { kind: "rendition", id: "opening" },
         }),
       );
     }
@@ -781,7 +858,7 @@ export const test_mcp_production_application = async (): Promise<void> => {
     fs.writeFileSync(selectedReceiptPath, "{}\n");
     invalidRenditionReviews.push(
       repainting.prepareReview({
-        target: { kind: "shot", id: "opening" },
+        target: { kind: "rendition", id: "opening" },
       }),
     );
     const wrongShotReceipt = JSON.parse(
@@ -794,7 +871,7 @@ export const test_mcp_production_application = async (): Promise<void> => {
     );
     invalidRenditionReviews.push(
       repainting.prepareReview({
-        target: { kind: "shot", id: "opening" },
+        target: { kind: "rendition", id: "opening" },
       }),
     );
     fs.writeFileSync(selectedReceiptPath, selectedReceiptBytes);
@@ -808,7 +885,7 @@ export const test_mcp_production_application = async (): Promise<void> => {
       Buffer.concat([selectedOutputBytes, Buffer.from([0])]),
     );
     const changedOutputReview = repainting.prepareReview({
-      target: { kind: "shot", id: "opening" },
+      target: { kind: "rendition", id: "opening" },
     });
     invalidRenditionReviews.push(changedOutputReview);
     fs.writeFileSync(selectedOutputPath, selectedOutputBytes);
@@ -827,7 +904,7 @@ export const test_mcp_production_application = async (): Promise<void> => {
       ...rerolledReview.renditions[0]!,
     };
     const renditionWorksheet: IAutoMovieSubmitReview.IProps = {
-      target: { kind: "shot", id: "opening" },
+      target: { kind: "rendition", id: "opening" },
       preparedFingerprint: rerolledReview.fingerprint,
       observations: "The current selected rendition needs another pass.",
       checks: rerolledReview.requiredCriteria.map((criterion, index) => ({

@@ -158,6 +158,44 @@ export interface IAutoMovieProductionRenderedDeliverable {
   frameCount: number | null;
   /** Actual codec name, or null for unencoded text/image artifacts. */
   codec: string | null;
+  /**
+   * Repaint provenance when this feature was conformed from selected visual
+   * renditions. Absent for deterministic delivery and non-feature outputs.
+   */
+  rendition?: IAutoMovieProductionRenditionDelivery;
+}
+
+/** One selected repaint output and its independent review chain. */
+export interface IAutoMovieProductionRenditionDeliveryShot {
+  /** Exact compiled shot id. */
+  shot: string;
+  /** Render-root-relative immutable repaint output. */
+  path: string;
+  /** Exact current repaint output digest. */
+  digest: AutoMovieContentDigest;
+  /** Digest of the canonical immutable repaint receipt. */
+  receiptDigest: AutoMovieContentDigest;
+  /** Current completed deterministic source-shot review fingerprint. */
+  sourceReviewFingerprint: AutoMovieContentDigest;
+  /** Current completed visual-rendition review fingerprint. */
+  renditionReviewFingerprint: AutoMovieContentDigest;
+}
+
+/** Review and receipt provenance for one repainted feature delivery. */
+export interface IAutoMovieProductionRenditionDelivery {
+  /** Explicit selected visual layer. */
+  kind: "repainted";
+  /** Every shot rendition consumed by the current film timeline. */
+  shots: IAutoMovieProductionRenditionDeliveryShot[];
+  /** Current completed sequence and film reviews of the selected renditions. */
+  aggregateReviews: Array<{
+    /** Aggregate review class. */
+    kind: "sequence" | "film";
+    /** Exact sequence or film id. */
+    id: string;
+    /** Current completed review fingerprint. */
+    fingerprint: AutoMovieContentDigest;
+  }>;
 }
 
 /** Aggregate final-delivery ledger bound to one current compile. */
@@ -1114,6 +1152,12 @@ export type IAutoMovieReviewTarget =
       /** Compiled shot. */
       kind: "shot";
       /** Shot id. */
+      id: string;
+    }
+  | {
+      /** Receipt-bound visual rendition of one compiled shot. */
+      kind: "rendition";
+      /** Exact compiled shot id. */
       id: string;
     }
   | {

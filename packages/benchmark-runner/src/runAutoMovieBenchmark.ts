@@ -9,6 +9,7 @@ import {
   IAutoMovieBenchmarkGenerationHealth,
   IAutoMovieBenchmarkInfraIncident,
   IAutoMovieBenchmarkMcpSession,
+  IAutoMovieBenchmarkRepaintEvidence,
   IAutoMovieBenchmarkRepository,
   IAutoMovieBenchmarkRuntime,
   IAutoMovieBenchmarkScenario,
@@ -120,6 +121,11 @@ export interface IAutoMovieBenchmarkCollectedEvidence {
   finishedRuntimeSeconds: number | null;
   /** Direct receipt observations not otherwise synthesized by the runner. */
   trace: AutoMovieBenchmarkCollectedTraceEvent[];
+  /** Trusted repaint receipt/review evidence for the optional lane. */
+  repaint?: Extract<
+    IAutoMovieBenchmarkRepaintEvidence,
+    { status: "not-produced" | "verified" }
+  >;
 }
 
 /** Read-only context handed to the trusted evidence collector. */
@@ -135,6 +141,8 @@ export interface IAutoMovieBenchmarkCollectorContext {
   /** Exact client transcripts. */
   stdout: string;
   stderr: string;
+  /** Host-owned repaint runtime identity, present only for that lane. */
+  repaintRuntime?: { adapterIdentity: string };
 }
 
 /**
@@ -173,8 +181,8 @@ export interface IAutoMovieBenchmarkRunInput {
   mcpTarget: IAutoMovieBenchmarkMcpTarget;
   /** Optional measured retired/comparison surfaces. */
   inventoryBaselines?: readonly IAutoMovieBenchmarkMcpTarget[];
-  /** Host capabilities available to optional lanes. */
-  capabilities?: readonly "repaint"[];
+  /** Structured host-owned repaint runtime available to the optional lane. */
+  repaintRuntime?: { adapterIdentity: string };
   /** External agent/process adapter. */
   agent: AutoMovieBenchmarkAgent;
   /** Trusted receipt collector invoked only after the agent exits. */
@@ -393,6 +401,13 @@ export const runAutoMovieBenchmark = async (
     throw new Error(
       `Benchmark scenario "${scenario.taskId}" does not support lane "${input.lane}". Choose one of: ${scenario.lanes.join(", ")}.`,
     );
+  if (
+    input.repaintRuntime !== undefined &&
+    input.repaintRuntime.adapterIdentity.trim().length === 0
+  )
+    throw new Error(
+      "Benchmark repaintRuntime requires a non-blank host-owned adapter identity.",
+    );
   const task = scenario.task();
   const taskDigest = validateAutoMovieBenchmarkTask(task);
   const mcpTargets = [input.mcpTarget, ...(input.inventoryBaselines ?? [])];
@@ -508,10 +523,10 @@ export const runAutoMovieBenchmark = async (
   if (
     incident === null &&
     input.lane === "repaint" &&
-    input.capabilities?.includes("repaint") !== true
+    input.repaintRuntime === undefined
   )
     incident = {
-      kind: "harness-error",
+      kind: "repaint-adapter-unavailable",
       gate: "capture-runtime",
       detail:
         "The optional repaint lane has no host-owned repaint adapter. Configure that capability or run the deterministic lane.",
@@ -567,8 +582,20 @@ export const runAutoMovieBenchmark = async (
         mcp: currentObservation.session!,
         stdout: result.stdout,
         stderr: result.stderr,
+        ...(input.repaintRuntime === undefined
+          ? {}
+          : { repaintRuntime: structuredClone(input.repaintRuntime) }),
       });
       assertCollectedEvidence(evidence);
+      if (
+        evidence.repaint !== undefined &&
+        input.repaintRuntime !== undefined &&
+        evidence.repaint.adapterIdentity !==
+          input.repaintRuntime.adapterIdentity
+      )
+        throw new Error(
+          "Collected repaint evidence cites a different adapter than the host runtime.",
+        );
       for (const event of evidence.trace) trace.append(event);
     } catch (error) {
       if (error instanceof AutoMovieBenchmarkInfrastructureError) {
@@ -720,6 +747,15 @@ export const runAutoMovieBenchmark = async (
       ...structuredClone(result.generation),
     },
     runtime: structuredClone(input.identity.runtime),
+    repaint:
+      input.lane === "deterministic"
+        ? { status: "not-requested" }
+        : incident?.kind === "repaint-adapter-unavailable"
+          ? { status: "unavailable" }
+          : (evidence.repaint ?? {
+              status: "not-produced",
+              adapterIdentity: input.repaintRuntime!.adapterIdentity,
+            }),
     incident,
   });
   const verdict = judgeAutoMovieBenchmarkSubmission(task, submission);
@@ -1263,6 +1299,16 @@ const assertCollectedEvidence = (
   )
     throw new Error(
       "Benchmark collector returned an incomplete evidence inventory.",
+    );
+  if (
+    evidence.repaint?.status === "verified" &&
+    (evidence.repaint.adapterIdentity.trim().length === 0 ||
+      evidence.repaint.shots.length === 0 ||
+      new Set(evidence.repaint.shots.map((shot) => shot.shot)).size !==
+        evidence.repaint.shots.length)
+  )
+    throw new Error(
+      "Benchmark collector returned incomplete or duplicate repaint receipt evidence.",
     );
 };
 

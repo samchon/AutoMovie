@@ -313,6 +313,11 @@ export const test_benchmark_runner = async (): Promise<void> => {
           ).events.some((event) => event.kind === "incident"),
       ),
     );
+    TestValidator.predicate(
+      "missing repaint runtime is infrastructure-excluded with a dedicated class",
+      repaintExcluded.verdict.outcome === "infra-excluded" &&
+        repaintExcluded.verdict.incident.kind === "repaint-adapter-unavailable",
+    );
 
     const badProbe = await runAutoMovieBenchmark({
       taskId: current.taskId,

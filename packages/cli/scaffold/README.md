@@ -154,6 +154,11 @@ one line invalidates only that line. The audio deliverable owns `audio.mp4`,
 waveform and spectrogram PNGs, and parser-verified clipping/event-alignment
 evidence. The feature MP4 muxes that exact audio with H.264 video; final media
 probing refuses video-only feature output or unequal A/V runtimes.
+For `visualDelivery: "repainted"`, finalization conforms the exact active,
+reviewed repaint clips and records their receipt plus source/rendition/aggregate
+review fingerprints. The current conformer accepts full-shot, cut-only,
+presentation-order clips with one decoder configuration and fails explicitly
+for unsupported edits; it never substitutes deterministic feature pixels.
 
 `status`, `verify`, and `finalize` re-run the package-owned capture, actual
 graphics, declared render-source, and encoder identity preflight. They may

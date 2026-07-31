@@ -21,7 +21,7 @@ import {
 
 /** Submission schema every archived run carries. */
 export const AUTOMOVIE_BENCHMARK_SUBMISSION_PROTOCOL =
-  "automovie.benchmark.submission.v2";
+  "automovie.benchmark.submission.v3";
 
 /** One packaged artifact the candidate installed from. */
 export interface IAutoMovieBenchmarkArtifact {
@@ -161,6 +161,47 @@ export interface IAutoMovieBenchmarkRuntime {
   capture: string;
 }
 
+/** Runner-owned receipt evidence for one reviewed repaint shot. */
+export interface IAutoMovieBenchmarkRepaintShotEvidence {
+  /** Compiled shot id. */
+  shot: string;
+  /** Digest of the immutable repaint receipt. */
+  receiptDigest: AutoMovieContentDigest;
+  /** Digest of the exact repaint MP4 bytes. */
+  outputDigest: AutoMovieContentDigest;
+  /** Current completed deterministic source-review fingerprint. */
+  sourceReviewFingerprint: AutoMovieContentDigest;
+  /** Current completed rendition-review fingerprint. */
+  renditionReviewFingerprint: AutoMovieContentDigest;
+}
+
+/** Structured repaint runtime and delivery evidence observed by the runner. */
+export type IAutoMovieBenchmarkRepaintEvidence =
+  | {
+      /** Deterministic lane never requested an adapter. */
+      status: "not-requested";
+    }
+  | {
+      /** Requested repaint lane had no host-owned runtime. */
+      status: "unavailable";
+    }
+  | {
+      /** Runtime existed, but the candidate produced no verified delivery. */
+      status: "not-produced";
+      /** Canonical host-owned adapter/model identity. */
+      adapterIdentity: string;
+    }
+  | {
+      /** Current receipts, reviews, and final feature were all observed. */
+      status: "verified";
+      /** Canonical host-owned adapter/model identity. */
+      adapterIdentity: string;
+      /** Every repaint shot consumed by the delivered feature. */
+      shots: IAutoMovieBenchmarkRepaintShotEvidence[];
+      /** Digest of the final feature proven to consume these renditions. */
+      featureDigest: AutoMovieContentDigest;
+    };
+
 /** One immutable archived run, before its content-addressed identity. */
 export interface IAutoMovieBenchmarkSubmissionDraft {
   /** Submission schema. */
@@ -205,6 +246,8 @@ export interface IAutoMovieBenchmarkSubmissionDraft {
   generation: IAutoMovieBenchmarkGenerationHealth;
   /** Machine identity. */
   runtime: IAutoMovieBenchmarkRuntime;
+  /** Runner-observed optional repaint runtime and receipt chain. */
+  repaint: IAutoMovieBenchmarkRepaintEvidence;
   /** Infrastructure failure that removes the run from the denominator. */
   incident: IAutoMovieBenchmarkInfraIncident | null;
 }

@@ -94,6 +94,49 @@ export const test_benchmark_judge_verdicts = (): void => {
     reference.filmScore?.toFixed(4),
     "1.0000",
   );
+  const repaintWithoutEvidence = judgeAutoMovieBenchmarkSubmission(
+    task,
+    sealAutoMovieBenchmarkSubmission({
+      ...draft,
+      lane: "repaint",
+    }),
+  );
+  const featureDigest = draft.deliverables.find(
+    (file) => file.kind === "feature",
+  )!.digest;
+  const repaintWithEvidence = judgeAutoMovieBenchmarkSubmission(
+    task,
+    sealAutoMovieBenchmarkSubmission({
+      ...draft,
+      lane: "repaint",
+      repaint: {
+        status: "verified",
+        adapterIdentity:
+          '{"model":"fixture","protocolVersion":"automovie.repaint-runtime.v1"}',
+        shots: [
+          {
+            shot: "opening",
+            receiptDigest: featureDigest,
+            outputDigest: featureDigest,
+            sourceReviewFingerprint: featureDigest,
+            renditionReviewFingerprint: featureDigest,
+          },
+        ],
+        featureDigest,
+      },
+    }),
+  );
+  TestValidator.equals(
+    "repaint lane requires structured runtime, receipt, review, output, and feature evidence",
+    [
+      repaintWithoutEvidence.outcome,
+      repaintWithoutEvidence.outcome === "gate-failed"
+        ? repaintWithoutEvidence.failedGate
+        : null,
+      repaintWithEvidence.filmScore?.toFixed(4),
+    ],
+    ["gate-failed", "final-compile", "1.0000"],
+  );
   TestValidator.equals(
     "every axis reports the fraction of its own assertions that passed",
     reference.outcome === "scored"

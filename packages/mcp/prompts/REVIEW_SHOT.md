@@ -1,10 +1,10 @@
 # Shot Review Contract
 
-Read this guide before `prepareReview` or `submitReview` with target kind `shot`. Shot review is the frame-and-motion surface: inspect current receipt-backed frames at required review times together with source selectors and acceptance outcomes.
+Read this guide before `prepareReview` or `submitReview` with target kind `shot` or `rendition`. Shot review is the deterministic frame-and-motion surface; rendition review is the separate receipt-bound appearance surface.
 
 ## Prepare
 
-Call `prepareReview` for the exact compiled shot id. The worksheet fingerprint binds shot contract, source, dependencies, current compiler identity, render manifests, acceptance outcomes, and any current receipt-bound rendition. Any relevant edit or repaint reroll makes it stale. When production `visualDelivery` is `repainted`, open and watch the exact MP4 in `renditions`; preparation refuses completion until the shot has one current rendition, and submission must cite it as `kind:"rendition"` evidence in addition to deterministic frame truth.
+Call `prepareReview` with `kind:"shot"` first. Its fingerprint binds deterministic contract, source, dependencies, compiler identity, render manifests, and acceptance outcomes; repaint output does not stale this source judgment. Complete that review before calling `repaintShot`.
 
 The canonical criteria are:
 
@@ -16,6 +16,8 @@ The canonical criteria are:
 - `acceptance-scenarios`: every required current frame, event, and metric predicate passes.
 
 Watch the full interval, not only hero stills. Compare adjacent shots when the shot establishes or pays off eyeline, screen direction, pose, action, lighting, or sound continuity.
+
+For repainted delivery, call `prepareReview` again with `kind:"rendition"` after repaint. That worksheet binds the completed source-review fingerprint and one current immutable repaint receipt. Its criteria are visual fidelity to deterministic truth, temporal coherence, anatomy/artifact integrity, and fixed-reference consistency. Inspect and cite the exact `kind:"rendition"` evidence; rerolling stales this worksheet but not the source-shot review.
 
 ## Submit
 

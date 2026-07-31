@@ -39,10 +39,10 @@ Compare deterministic and repainted output side by side through the full interva
 - event and reaction timing;
 - exact raster, clock, duration, frame count, codec, and output integrity.
 
-The deterministic original remains the technical truth. The repaint receives a separate visual review because visual delivery changed. Open the exact `prepareReview.renditions[].path`, inspect the full interval, and cite that entry as `kind:"rendition"` evidence. Its output digest, canonical receipt digest, deterministic-source fingerprint, adapter identity, parameters, and fresh media probe are rechecked on submission; a deterministic frame cannot approve repainted appearance.
+The deterministic original remains the technical truth and its `shot` review must complete first. The repaint receives a separate `rendition` review because visual delivery changed. Open the exact `prepareReview.renditions[].path`, inspect the full interval, and cite that entry as `kind:"rendition"` evidence. Its output digest, canonical receipt digest, deterministic-source and source-review fingerprints, adapter identity, parameters, and fresh media probe are rechecked on submission; a deterministic frame cannot approve repainted appearance.
 
 ## Reroll discipline
 
-Every reroll is a new output, even when prompt, references, and seed are unchanged. Provider or runtime changes may also alter it. A new output digest invalidates prior rendition review. Keep fixed style and character references across rerolls, compare failures, commit only one accepted provenance chain, and run the exact visual review again.
+Every reroll is a new output, even when prompt, references, and seed are unchanged. Provider or runtime changes may also alter it. A new output digest invalidates the rendition, sequence, and film reviews while leaving the unchanged deterministic source review current. Keep fixed style and character references across rerolls, compare failures, commit only one accepted provenance chain, and run the exact visual review chain again.
 
 If current methods cannot preserve the required structure, deliver deterministic output or revise art direction. Never hide the limitation behind selective stills.

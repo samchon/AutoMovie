@@ -97,6 +97,9 @@ candidate-authored submission JSON is required.
 
 Every demo milestone supports the zero-config `deterministic` lane. The
 one-minute, five-minute, and twenty-minute milestones also register the
-optional `repaint` lane. That lane requires the host-owned `repaint` capability;
-when it is absent the runner publishes an `infra-excluded` verdict instead of
-pretending the candidate failed.
+optional `repaint` lane. Supply `repaintRuntime: { adapterIdentity }`; a nominal
+capability string is insufficient. The trusted collector must return verified
+shot receipt/output/source-review/rendition-review digests and the exact final
+feature digest. Without a host runtime the runner records
+`repaint-adapter-unavailable` and publishes `infra-excluded`; with a runtime but
+without the evidence chain, the judge refuses the completed lane.

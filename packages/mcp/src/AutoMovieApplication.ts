@@ -414,6 +414,7 @@ export const AUTOMOVIE_REVIEW_GUIDES = {
   design: "REVIEW_DEPENDENCY",
   source: "REVIEW_DEPENDENCY",
   shot: "REVIEW_SHOT",
+  rendition: "REVIEW_SHOT",
   sequence: "REVIEW_SEQUENCE",
   film: "REVIEW_FILM",
 } as const satisfies Record<

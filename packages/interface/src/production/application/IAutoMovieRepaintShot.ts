@@ -53,6 +53,8 @@ export interface IAutoMovieRepaintReceipt {
   compileFingerprint: AutoMovieContentDigest;
   /** Digest over deterministic source manifest and frame bytes. */
   sourceRenderFingerprint: AutoMovieContentDigest;
+  /** Current completed deterministic shot-review fingerprint. */
+  sourceReviewFingerprint: AutoMovieContentDigest;
   /** Content-addressed deterministic source bundle. */
   sourceBundle: string;
   /** Structural passes supplied to the adapter. */

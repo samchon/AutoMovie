@@ -5,7 +5,9 @@ import {
 import {
   IAutoMovieProductionRenderChunkReceipt,
   IAutoMovieProductionRenderJobPlan,
+  assertProductionFeatureUsesRenditionVideo,
   canonicalProductionWebVtt,
+  conformProductionRenditionVideoMp4,
   planProductionRenderGc,
   planProductionRenderJob,
   probeProductionMedia,
@@ -27,6 +29,7 @@ import {
   productionDesign,
   testCaptureRuntimeIdentity,
 } from "./productionFixtures";
+import { productionH264Mp4 } from "./productionMediaFixtures";
 
 const digest = (digit: string): AutoMovieContentDigest =>
   `sha256:${digit.repeat(64)}`;
@@ -240,6 +243,79 @@ const throws = (closure: () => unknown): boolean => {
  *    ancestors/files, non-files, and replacement races fail closed.
  */
 export const test_mcp_production_render_job = async (): Promise<void> => {
+  const repaintTimeline: IAutoMovieFilmTimeline = {
+    ...timeline(),
+    totalFrames: 4,
+    segments: ["opening", "answer"].map((shot, index) => ({
+      shot,
+      sourceInFrame: 0,
+      sourceOutFrame: 2,
+      startFrame: index * 2,
+      endFrame: index * 2 + 2,
+      headHandleFrames: 0,
+      tailHandleFrames: 0,
+      transitionIn: { kind: "cut" as const },
+      transitionOut: { kind: "cut" as const },
+    })),
+  };
+  const repaintClips = new Map<string, Uint8Array>([
+    [
+      "opening",
+      await productionH264Mp4({
+        width: 16,
+        height: 16,
+        fps: 2,
+        frameCount: 2,
+      }),
+    ],
+    [
+      "answer",
+      await productionH264Mp4({
+        width: 16,
+        height: 16,
+        fps: 2,
+        frameCount: 2,
+      }),
+    ],
+  ]);
+  const conformedRepaint = conformProductionRenditionVideoMp4({
+    timeline: repaintTimeline,
+    clips: repaintClips,
+  });
+  TestValidator.predicate(
+    "repaint conform preserves exact cut-only shot samples and rejects unsupported transitions",
+    probeProductionMedia({
+      kind: "guide-pass",
+      mediaType: "video/mp4",
+      bytes: conformedRepaint,
+    }).kind === "video" &&
+      (() => {
+        assertProductionFeatureUsesRenditionVideo({
+          feature: conformedRepaint,
+          renditionVideo: conformedRepaint,
+        });
+        return true;
+      })() &&
+      throws(() =>
+        conformProductionRenditionVideoMp4({
+          timeline: {
+            ...repaintTimeline,
+            segments: repaintTimeline.segments.map((segment, index) =>
+              index === 0
+                ? {
+                    ...segment,
+                    transitionOut: {
+                      kind: "fade" as const,
+                      durationFrames: 1,
+                    },
+                  }
+                : segment,
+            ),
+          },
+          clips: repaintClips,
+        }),
+      ),
+  );
   const renderPlan = plan();
   const proxyPlan = planProductionRenderJob({
     timeline: timeline(),

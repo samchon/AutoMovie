@@ -9,8 +9,8 @@ AutoMovie turns ordinary tracked screenplay, design, TypeScript, and configurati
 3. Author production, models, world, formations, shot contracts, acceptance scenarios, and TypeScript shot/film source in their tracked owners. Read the matching contract guide and handbook before editing.
 4. Run the scaffold compiler or lint command. Compilation, project-state loading, geometry, status, migration, rendering, and verification are ordinary package or CLI APIs, never MCP tools.
 5. Read `CAPTURE_FRAME`, then call `captureFrame` for current asset turntables or current shot pixels. `captured:false` is a refusal, not evidence.
-6. When production design declares visual delivery `repainted`, also read `REPAINT_SHOT` and `DIFFUSION_ENHANCE`, then call `repaintShot`. Deterministic delivery does not route through diffusion.
-7. Read the exact target guide before both `prepareReview` and `submitReview`: `REVIEW_ASSET`, `REVIEW_SHOT`, `REVIEW_SEQUENCE`, or `REVIEW_FILM`. Inspect every returned current evidence item yourself. Put the final boolean last.
+6. Review deterministic assets and shots first. When production design declares visual delivery `repainted`, complete the current `shot` review, read `REPAINT_SHOT` and `DIFFUSION_ENHANCE`, call `repaintShot`, then complete the separate `rendition` review. Deterministic delivery does not route through diffusion.
+7. Read the exact target guide before both `prepareReview` and `submitReview`: `REVIEW_ASSET`, `REVIEW_SHOT` (for `shot` and `rendition`), `REVIEW_SEQUENCE`, or `REVIEW_FILM`. Inspect every returned current evidence item yourself. Put the final boolean last.
 8. Render through the scaffold CLI only after current review gates pass. Verify receipts and media facts; never infer completion from an output path.
 
 The host fixes project root and default production at startup. No tool payload may activate another filesystem root. Registry identity is `production / artifact id / time-or-angle-and-pass / fingerprint`; all evidence must reopen through that identity.

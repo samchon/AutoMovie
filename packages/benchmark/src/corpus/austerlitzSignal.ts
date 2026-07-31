@@ -334,6 +334,7 @@ export const austerlitzSignalDraft = (
     toolchain: "node 22.15.0 / pnpm 10.6.4",
     capture: "automovie.capture-runtime.v1 chromium 148",
   },
+  repaint: { status: "not-requested" },
   incident: null,
 });
 

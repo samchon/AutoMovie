@@ -73,6 +73,8 @@ export interface IAutoMovieRenditionEvidenceReference {
   receiptDigest: AutoMovieContentDigest;
   /** Digest over the deterministic source manifest and frame bytes. */
   sourceRenderFingerprint: AutoMovieContentDigest;
+  /** Current completed deterministic shot-review fingerprint. */
+  sourceReviewFingerprint: AutoMovieContentDigest;
   /** Exact structural controls bound by the current receipt. */
   controls: Array<{
     /** Structural render pass. */
@@ -255,9 +257,9 @@ export interface IAutoMovieReviewCorrection {
 /** Request a current review worksheet for one target. */
 export interface IAutoMoviePrepareReviewInput {
   /**
-   * Exact current design, source, shot or film target. Shot and film targets
-   * require a current source compile and verified frame evidence before they
-   * can complete; repainted delivery also requires current rendition evidence.
+   * Exact current dependency, deterministic visual, rendition, or aggregate
+   * target. Deterministic visual targets require current frame evidence;
+   * rendition targets require a completed source review and current receipt.
    */
   target: IAutoMovieReviewTarget;
 }

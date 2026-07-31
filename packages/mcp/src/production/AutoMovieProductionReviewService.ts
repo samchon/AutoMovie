@@ -139,6 +139,12 @@ export const AUTOMOVIE_REVIEW_CRITERIA = {
     "representability",
     "acceptance-scenarios",
   ],
+  rendition: [
+    "visual-fidelity-to-source",
+    "temporal-coherence",
+    "anatomy-and-artifact-integrity",
+    "reference-consistency",
+  ],
   sequence: [
     "cross-shot-continuity",
     "rhythm-against-intent",
@@ -177,12 +183,14 @@ export class AutoMovieProductionReviewService {
       input.target.kind === "asset" ||
       input.target.kind === "source" ||
       input.target.kind === "shot" ||
+      input.target.kind === "rendition" ||
       input.target.kind === "sequence" ||
       input.target.kind === "film";
     const compileStatus = compileBound ? this.compileStatus() : null;
     const visual =
       input.target.kind === "asset" ||
       input.target.kind === "shot" ||
+      input.target.kind === "rendition" ||
       input.target.kind === "sequence" ||
       input.target.kind === "film";
     const context: IReviewReadContext | undefined = visual
@@ -263,6 +271,32 @@ export class AutoMovieProductionReviewService {
       diagnostics,
       context,
     );
+    if (input.target.kind === "rendition" && compileStatus !== null) {
+      const sourceTarget: IAutoMovieReviewTarget = {
+        kind: "shot",
+        id: input.target.id,
+      };
+      const currentSourceFingerprint = reviewFingerprint(
+        this.project,
+        sourceTarget,
+        compileStatus,
+        context,
+      );
+      const sourceReview = this.project.review(sourceTarget);
+      if (
+        sourceReview === null ||
+        sourceReview.fingerprint !== currentSourceFingerprint ||
+        sourceReview.complete === false
+      )
+        diagnostics.push({
+          code: "review-rendition-source-unapproved",
+          category: "error",
+          phase: "review",
+          target: reviewTargetKey(input.target),
+          path: targetPath(this.project, sourceTarget),
+          message: `Rendition review requires a current completed deterministic shot review for "${input.target.id}". Complete the source-shot review before reviewing repaint output.`,
+        });
+    }
     const outcomes = currentAcceptanceOutcomes(
       this.project,
       input.target,
@@ -272,6 +306,7 @@ export class AutoMovieProductionReviewService {
     );
     if (
       visualReviewTarget(input.target) &&
+      input.target.kind !== "rendition" &&
       frames.length === 0 &&
       diagnostics.some(
         (diagnostic) => diagnostic.code === "review-evidence-missing",
@@ -463,6 +498,7 @@ export class AutoMovieProductionReviewService {
               target.kind === "asset" ||
                 target.kind === "source" ||
                 target.kind === "shot" ||
+                target.kind === "rendition" ||
                 target.kind === "sequence" ||
                 target.kind === "film"
                 ? compileStatus
@@ -599,6 +635,7 @@ const validateWorksheet = (
       );
     if (
       visualReviewTarget(input.target) &&
+      input.target.kind !== "rendition" &&
       input.checks.some((check) =>
         check.evidence.some((evidence) => evidence.kind === "frame"),
       ) === false
@@ -1058,6 +1095,8 @@ const targetValueOf = (
   }
   const graph = project.graph();
   if (target.kind === "shot") return graph.shots.get(target.id) ?? null;
+  if (target.kind === "rendition")
+    return project.verifiedRepaintRenditions([target.id])[0] ?? null;
   if (target.kind === "sequence")
     return (
       project
@@ -1223,6 +1262,22 @@ const reviewFingerprint = (
       context,
     ))
       addJson(`outcome:${outcome.scenario}`, outcome);
+    fields.push(compilerField());
+  } else if (target.kind === "rendition") {
+    const shotTarget: IAutoMovieReviewTarget = {
+      kind: "shot",
+      id: target.id,
+    };
+    addJson("shot-contract", graph.shots.get(target.id) ?? null);
+    fields.push({
+      role: "source-shot-current",
+      kind: "digest",
+      payload: Buffer.from(
+        reviewFingerprint(project, shotTarget, compileStatus!, context),
+        "utf8",
+      ),
+    });
+    addJson("source-shot-review", project.review(shotTarget));
     for (const rendition of currentRenditions(project, target, [], context))
       addJson(`rendition:${rendition.path}`, rendition);
     fields.push(compilerField());
@@ -1249,7 +1304,29 @@ const reviewFingerprint = (
         ),
       });
       addJson(`shot-review:${id}`, project.review(shotTarget));
+      if (graph.production?.visualDelivery === "repainted") {
+        const renditionTarget: IAutoMovieReviewTarget = {
+          kind: "rendition",
+          id,
+        };
+        fields.push({
+          role: `rendition-current:${id}`,
+          kind: "digest",
+          payload: Buffer.from(
+            reviewFingerprint(
+              project,
+              renditionTarget,
+              compileStatus!,
+              context,
+            ),
+            "utf8",
+          ),
+        });
+        addJson(`rendition-review:${id}`, project.review(renditionTarget));
+      }
     }
+    for (const rendition of currentRenditions(project, target, [], context))
+      addJson(`rendition:${rendition.path}`, rendition);
     for (const frame of currentFrames(
       project,
       target,
@@ -1295,7 +1372,46 @@ const reviewFingerprint = (
         ),
       });
       addJson(`shot-review:${id}`, project.review(shotTarget));
+      if (graph.production?.visualDelivery === "repainted") {
+        const renditionTarget: IAutoMovieReviewTarget = {
+          kind: "rendition",
+          id,
+        };
+        fields.push({
+          role: `rendition-current:${id}`,
+          kind: "digest",
+          payload: Buffer.from(
+            reviewFingerprint(
+              project,
+              renditionTarget,
+              compileStatus!,
+              context,
+            ),
+            "utf8",
+          ),
+        });
+        addJson(`rendition-review:${id}`, project.review(renditionTarget));
+      }
     }
+    for (const sequence of project.screenplayIndex()?.treatment.sequences ??
+      []) {
+      if (sequenceShotIds(project, sequence.id).length === 0) continue;
+      const sequenceTarget: IAutoMovieReviewTarget = {
+        kind: "sequence",
+        id: sequence.id,
+      };
+      fields.push({
+        role: `sequence-current:${sequence.id}`,
+        kind: "digest",
+        payload: Buffer.from(
+          reviewFingerprint(project, sequenceTarget, compileStatus!, context),
+          "utf8",
+        ),
+      });
+      addJson(`sequence-review:${sequence.id}`, project.review(sequenceTarget));
+    }
+    for (const rendition of currentRenditions(project, target, [], context))
+      addJson(`rendition:${rendition.path}`, rendition);
     // Terminal deliverable bytes, manifest and parser receipt are published
     // after the review snapshot under one final compiler fence. They are
     // compiler-owned delivery evidence, not human/agent review input; binding
@@ -1372,6 +1488,8 @@ const reviewTargets = (
     targets.push({ kind: "design", design: { kind: "shot", id } });
     targets.push({ kind: "source", path: shot.source.module });
     targets.push({ kind: "shot", id });
+    if (graph.production?.visualDelivery === "repainted")
+      targets.push({ kind: "rendition", id });
   }
   for (const [id, acceptance] of graph.acceptance)
     if (acceptance.required)
@@ -1979,7 +2097,7 @@ const currentRenditions = (
   const graph = project.graph();
   if (
     graph.production?.visualDelivery !== "repainted" ||
-    (target.kind !== "shot" &&
+    (target.kind !== "rendition" &&
       target.kind !== "sequence" &&
       target.kind !== "film")
   )
@@ -2001,7 +2119,7 @@ const currentRenditions = (
       } catch {}
   }
   const shotIds =
-    target.kind === "shot"
+    target.kind === "rendition"
       ? [target.id]
       : target.kind === "sequence"
         ? sequenceShotIds(project, target.id)
@@ -2042,6 +2160,7 @@ const currentRenditions = (
     digest: receipt.output.digest,
     receiptDigest: digestAutoMovieBytes(canonicalAutoMovieJsonBytes(receipt)),
     sourceRenderFingerprint: receipt.sourceRenderFingerprint,
+    sourceReviewFingerprint: receipt.sourceReviewFingerprint,
     controls: receipt.controls,
     references: receipt.references,
     adapterIdentity: receipt.adapterIdentity,
@@ -2502,6 +2621,8 @@ const highRiskCriteria = (target: IAutoMovieReviewTarget): string[] => {
       return ["determinism", "engine-enforcement"];
     case "shot":
       return ["beat-fidelity", "representability"];
+    case "rendition":
+      return ["visual-fidelity-to-source", "anatomy-and-artifact-integrity"];
     case "sequence":
       return ["cross-shot-continuity", "spatial-model-maintenance"];
     case "film":
@@ -2577,6 +2698,7 @@ const reviewTargetKey = (target: IAutoMovieReviewTarget): string => {
   if (
     target.kind === "asset" ||
     target.kind === "shot" ||
+    target.kind === "rendition" ||
     target.kind === "sequence" ||
     target.kind === "film"
   )
@@ -2596,6 +2718,8 @@ const targetPath = (
     return `.automovie/design/shared/models/${encodeAutoMoviePathSegment(target.id)}.json`;
   if (target.kind === "shot")
     return `.automovie/design/${production}/shots/${encodeAutoMoviePathSegment(target.id)}.json`;
+  if (target.kind === "rendition")
+    return `.automovie/productions/${production}/renditions/active/${encodeAutoMoviePathSegment(target.id)}.json`;
   if (target.kind === "sequence")
     return `.automovie/design/${production}/screenplay/index.json`;
   if (target.kind === "film")
@@ -2619,10 +2743,11 @@ const visualReviewTarget = (
   target: IAutoMovieReviewTarget,
 ): target is Extract<
   IAutoMovieReviewTarget,
-  { kind: "asset" | "shot" | "sequence" | "film" }
+  { kind: "asset" | "shot" | "rendition" | "sequence" | "film" }
 > =>
   target.kind === "asset" ||
   target.kind === "shot" ||
+  target.kind === "rendition" ||
   target.kind === "sequence" ||
   target.kind === "film";
 

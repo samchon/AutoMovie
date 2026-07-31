@@ -58,6 +58,7 @@ import {
   fingerprintAutoMovieFields,
   normalizeAutoMovieSource,
 } from "./contentIdentity";
+import { readAutoMovieFilmTimeline } from "./filmTimeline";
 import {
   IAutoMovieExternalModelRuntimeBinding,
   materializeCompiledFormationInventory,
@@ -65,6 +66,10 @@ import {
   materializeCompiledShot,
   materializeProductionModels,
 } from "./materializeProduction";
+import {
+  assertProductionFeatureUsesRenditionVideo,
+  conformProductionRenditionVideoMp4,
+} from "./muxProductionFeatureMp4";
 import { probeProductionMedia } from "./probeProductionMedia";
 import {
   IAutoMovieProductionDesignGraph,
@@ -441,6 +446,7 @@ export class AutoMovieProductionCompiler {
           this.project,
           graph.production,
           inputFingerprint,
+          reviews,
         ),
       );
     diagnostics.sort(compareDiagnostics);
@@ -3488,6 +3494,7 @@ const finalDeliverableDiagnostics = (
   project: AutoMovieProductionProject,
   production: ReturnType<AutoMovieProductionProject["graph"]>["production"],
   inputFingerprint: AutoMovieContentDigest,
+  reviews: IAutoMovieReviewQueue,
 ): IAutoMovieDiagnostic[] => {
   if (production === null) return [];
   let bytes: Uint8Array | null;
@@ -3726,6 +3733,14 @@ const finalDeliverableDiagnostics = (
       deliverable,
       probes,
     );
+    appendRenditionDeliveryDiagnostics(
+      diagnostics,
+      project,
+      production,
+      inputFingerprint,
+      reviews,
+      deliverable,
+    );
   }
   for (const file of receipt.files)
     if (
@@ -3750,6 +3765,149 @@ const finalDeliverableDiagnostics = (
         ),
       );
   return diagnostics;
+};
+
+const appendRenditionDeliveryDiagnostics = (
+  diagnostics: IAutoMovieDiagnostic[],
+  project: AutoMovieProductionProject,
+  production: NonNullable<
+    ReturnType<AutoMovieProductionProject["graph"]>["production"]
+  >,
+  inputFingerprint: AutoMovieContentDigest,
+  reviews: IAutoMovieReviewQueue,
+  deliverable: IAutoMovieProductionRenderManifest["deliverables"][number],
+): void => {
+  if (deliverable.kind !== "feature") return;
+  if (production.visualDelivery !== "repainted") {
+    if (deliverable.rendition !== undefined)
+      diagnostics.push(
+        renderDeliverableDiagnostic(
+          "render-rendition-provenance-invalid",
+          deliverable.id,
+          "Deterministic feature delivery must not claim repaint rendition provenance.",
+        ),
+      );
+    return;
+  }
+  try {
+    const timeline = readAutoMovieFilmTimeline(project, inputFingerprint);
+    const shots = [
+      ...new Set(timeline.segments.map((segment) => segment.shot)),
+    ];
+    const receipts = new Map(
+      project
+        .verifiedRepaintRenditions(shots)
+        .map((receipt) => [receipt.shot, receipt] as const),
+    );
+    const currentReview = (
+      target: IAutoMovieReviewQueue["entries"][number]["target"],
+    ) => {
+      const entry = reviews.entries.find(
+        (candidate) =>
+          reviewTargetKey(candidate.target) === reviewTargetKey(target),
+      );
+      const stored = project.review(target);
+      if (
+        entry === undefined ||
+        entry.state !== "complete" ||
+        entry.currentFingerprint === null ||
+        entry.storedFingerprint !== entry.currentFingerprint ||
+        stored === null ||
+        stored.complete === false ||
+        stored.fingerprint !== entry.currentFingerprint
+      )
+        throw new Error(
+          `Review "${reviewTargetKey(target)}" is not current and complete.`,
+        );
+      return stored.fingerprint;
+    };
+    const expected = {
+      kind: "repainted" as const,
+      shots: shots.map((shot) => {
+        const receipt = receipts.get(shot);
+        if (receipt === undefined)
+          throw new Error(
+            `Shot "${shot}" has no current verified repaint receipt.`,
+          );
+        const sourceReviewFingerprint = currentReview({
+          kind: "shot",
+          id: shot,
+        });
+        if (receipt.sourceReviewFingerprint !== sourceReviewFingerprint)
+          throw new Error(
+            `Shot "${shot}" repaint receipt cites a different source review.`,
+          );
+        return {
+          shot,
+          path: receipt.output.path,
+          digest: receipt.output.digest,
+          receiptDigest: digestAutoMovieBytes(
+            canonicalAutoMovieJsonBytes(receipt),
+          ),
+          sourceReviewFingerprint,
+          renditionReviewFingerprint: currentReview({
+            kind: "rendition",
+            id: shot,
+          }),
+        };
+      }),
+      aggregateReviews: reviews.entries
+        .flatMap((entry) =>
+          entry.target.kind === "sequence" || entry.target.kind === "film"
+            ? [
+                {
+                  kind: entry.target.kind,
+                  id: entry.target.id,
+                  fingerprint: currentReview(entry.target),
+                },
+              ]
+            : [],
+        )
+        .sort(
+          (left, right) =>
+            compareCodeUnits(left.kind, right.kind) ||
+            compareCodeUnits(left.id, right.id),
+        ),
+    };
+    if (
+      deliverable.rendition === undefined ||
+      Buffer.from(canonicalAutoMovieJsonBytes(deliverable.rendition)).equals(
+        Buffer.from(canonicalAutoMovieJsonBytes(expected)),
+      ) === false
+    )
+      throw new Error(
+        "Feature manifest does not exactly cite the current receipt and review chain.",
+      );
+    const feature = deliverable.files.find(
+      (file) => file.mediaType === "video/mp4",
+    );
+    if (feature === undefined)
+      throw new Error("Feature manifest has no video/mp4 output.");
+    const renditionVideo = conformProductionRenditionVideoMp4({
+      timeline,
+      clips: new Map(
+        shots.map(
+          (shot) =>
+            [
+              shot,
+              project.readRenderFile(receipts.get(shot)!.output.path),
+            ] as const,
+        ),
+      ),
+    });
+    assertProductionFeatureUsesRenditionVideo({
+      feature: project.readRenderFile(feature.path),
+      renditionVideo,
+    });
+  } catch (error) {
+    diagnostics.push(
+      renderDeliverableDiagnostic(
+        "render-rendition-provenance-invalid",
+        deliverable.id,
+        `${errorMessage(error)} Re-finalize from current reviewed repaint receipts; deterministic fallback is not accepted for repainted delivery.`,
+      ),
+    );
+  }
 };
 
 const appendDeliverableTimelineDiagnostics = (
@@ -3961,6 +4119,7 @@ const reviewTargetKey = (
   if (
     target.kind === "asset" ||
     target.kind === "shot" ||
+    target.kind === "rendition" ||
     target.kind === "sequence" ||
     target.kind === "film"
   )

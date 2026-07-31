@@ -102,6 +102,24 @@ export class AutoMovieProductionRepaintService {
         "repaint-input-invalid",
         "repaintShot requires a non-blank prompt, safe-integer seed, strength in [0, 1], and at least one fixed style or character reference.",
       );
+    const sourceReviewTarget = { kind: "shot", id: input.shot } as const;
+    const preparedSourceReview = services.review.prepare({
+      target: sourceReviewTarget,
+    });
+    const sourceReview = services.project.review(sourceReviewTarget);
+    if (
+      preparedSourceReview.diagnostics.some(
+        (entry) => entry.category === "error",
+      ) ||
+      sourceReview === null ||
+      sourceReview.complete === false ||
+      sourceReview.fingerprint !== preparedSourceReview.fingerprint
+    )
+      return failure(
+        "repaint-source-review-incomplete",
+        `Shot "${input.shot}" must have a current completed deterministic source review before repaint. Inspect and approve the current source frames, then retry.`,
+      );
+    const sourceReviewFingerprint = sourceReview.fingerprint;
     let resolvedSource: ICurrentShotSource | null;
     try {
       resolvedSource = currentShotSource(
@@ -152,8 +170,19 @@ export class AutoMovieProductionRepaintService {
           source.manifestPath,
         );
         const currentReferences = resolveReferences(services, input);
+        const currentPreparedSourceReview = services.review.prepare({
+          target: sourceReviewTarget,
+        });
+        const currentSourceReview = services.project.review(sourceReviewTarget);
         return (
           canonicalizeAutoMovieJson(currentRegistry) === registryIdentity &&
+          currentPreparedSourceReview.diagnostics.some(
+            (entry) => entry.category === "error",
+          ) === false &&
+          currentSourceReview !== null &&
+          currentSourceReview.complete &&
+          currentSourceReview.fingerprint === sourceReviewFingerprint &&
+          currentPreparedSourceReview.fingerprint === sourceReviewFingerprint &&
           current !== null &&
           productionSourceRenderFingerprint({
             manifest: current,
@@ -268,6 +297,7 @@ export class AutoMovieProductionRepaintService {
       shot: input.shot,
       compileFingerprint: registry.inputFingerprint,
       sourceRenderFingerprint,
+      sourceReviewFingerprint,
       sourceBundle: source.bundle,
       controls: productionRepaintStructuralControls(source.manifest),
       references: referenceReceipts,

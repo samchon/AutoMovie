@@ -431,6 +431,7 @@ const draftOf = (
       toolchain: "node 22 / pnpm 10",
       capture: "automovie.capture-runtime.v1",
     },
+    repaint: { status: "not-requested" },
     incident: null,
   };
 };

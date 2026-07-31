@@ -338,6 +338,15 @@ export const judgeAutoMovieBenchmarkSubmission = (
       detail: blocking.detail,
       filmScore: 0,
     };
+  const repaintFailure = repaintEvidenceFailure(submission);
+  if (repaintFailure !== null)
+    return {
+      ...base,
+      outcome: "gate-failed",
+      failedGate: "final-compile",
+      detail: repaintFailure,
+      filmScore: 0,
+    };
   const assertions: IAutoMovieBenchmarkAssertionResult[] = [
     ...task.historicalLaw.map((assertion) =>
       judgeObservation("historical", assertion, submission.observations),
@@ -361,4 +370,29 @@ export const judgeAutoMovieBenchmarkSubmission = (
     axes,
     filmScore: axes.reduce((sum, axis) => sum + axis.weight * axis.score, 0),
   };
+};
+
+const repaintEvidenceFailure = (
+  submission: IAutoMovieBenchmarkSubmission,
+): string | null => {
+  if (submission.lane === "deterministic")
+    return submission.repaint.status === "not-requested"
+      ? null
+      : "Deterministic lane submission carries repaint runtime claims.";
+  if (submission.repaint.status !== "verified")
+    return "Completed repaint lane has no runner-verified adapter, receipt, output, and rendition-review chain.";
+  const repaint = submission.repaint;
+  const feature = submission.deliverables.find(
+    (file) => file.kind === "feature" && file.probeValid,
+  );
+  if (
+    repaint.adapterIdentity.trim().length === 0 ||
+    repaint.shots.length === 0 ||
+    new Set(repaint.shots.map((shot) => shot.shot)).size !==
+      repaint.shots.length ||
+    feature === undefined ||
+    feature.digest !== repaint.featureDigest
+  )
+    return "Repaint lane evidence is incomplete, duplicates a shot, or does not bind the delivered feature digest.";
+  return null;
 };
