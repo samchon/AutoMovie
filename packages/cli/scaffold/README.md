@@ -75,7 +75,8 @@ therefore produces a different content-addressed bundle; legacy v2 evidence
 must be recaptured.
 
 The sample review queue is deliberately incomplete. Open the PNG printed by
-`preview`, read `PRODUCTION_REVIEW` through MCP, and review current evidence.
+`preview`, read the exact `REVIEW_ASSET`, `REVIEW_SHOT`, `REVIEW_SEQUENCE`, or
+`REVIEW_FILM` contract through MCP, and review current evidence.
 
 ## Offline geometry measurements
 

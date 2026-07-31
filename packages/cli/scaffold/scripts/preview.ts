@@ -46,7 +46,7 @@ const app = new AutoMovieApplication({
   capture: captureProductionFrame,
 });
 app.getGuideDocument({ name: "AUTOMOVIE_OVERALL" });
-app.getGuideDocument({ name: "PRODUCTION_RENDER" });
+app.getGuideDocument({ name: "CAPTURE_FRAME" });
 try {
   const output = await app.captureFrame({
     target: {

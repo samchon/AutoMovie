@@ -6,6 +6,6 @@ Use `distance` for point, actor, and landmark separation; `reach` for a compact 
 
 The camera query reports the shot contract's `maxAllowedOcclusionRatio` beside `occlusionMeasured: false`; it does not pretend that root-point projection measures pixel occlusion or full-body framing. Judge those from current beauty, mask, depth, outline, or pose PNG evidence through the review tools.
 
-Compile source before querying. Select current ids from `inspectAutoMovieProduction(openAutoMovieProduction(...))`; do not guess. Treat a diagnostic as a failed measurement, not a numeric zero.
+Compile source before querying. Load and narrow current state with `loadAutoMovieProjectState` and `requireCurrentAutoMovieProjectState` from `@automovie/cli`, then select ids from its authenticated registry; do not guess. Treat a diagnostic as a failed measurement, not a numeric zero. The reader performs Node I/O and must stay outside shot and film build functions.
 
 The geometry oracle is intentionally compact. Source code remains the right place for loops, trajectory construction, choreography, and tests. Call the package API for facts the deterministic engine or current project knows better than prose.

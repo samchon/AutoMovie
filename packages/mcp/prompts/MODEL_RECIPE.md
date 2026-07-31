@@ -19,8 +19,8 @@ Primitive-prop width, height, and depth are 0.001–100 m; radius is 0.001–50 
 
 Capability declarations are narrower than the string-shaped field suggests. Today only `stickman` accepts `signal`; the coding-agent source still authors and validates the actual signaling motion, while every other archetype uses an empty capability list. Bone attachment names are currently accepted only when that bone is present on the compiler-owned stickman skeleton, and the foundation materializer does not create attached scene nodes for them. The server refuses an unknown declaration rather than pretending it was implemented.
 
-Typed engine capabilities live in `profiles`, separately from the legacy
-recipe-level string labels. `profile.gaits` proves locomotion. A `shooter` trait
+Typed engine capabilities live in `profiles`, separately from recipe-level
+string labels. `profile.gaits` proves locomotion. A `shooter` trait
 owns a non-empty unique inventory of firearm, cannon, or melee data;
 `mountable` owns seats and payload mass; `destructible` owns durability and an
 impact body. Firearm accuracy distances are strictly increasing, cannon

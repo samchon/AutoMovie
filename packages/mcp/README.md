@@ -37,7 +37,7 @@ Set `AUTOMOVIE_PROJECT_ROOT` and, for a multi-production repository, `AUTOMOVIE_
 
 ## Knowledge gate
 
-Every reflected method is present in `AUTOMOVIE_TOOL_GUIDES`, a `Record<keyof AutoMovieApplication, ...>`. Calling a gated tool before its documents are read throws a plain recovery script containing the missing `getGuideDocument` calls and partial-credit count. It is deliberately not a schema validation error.
+Every reflected method is present in `AUTOMOVIE_TOOL_GUIDES`, a `Record<keyof AutoMovieApplication, ...>`. Review calls add the exact target-specific guide from `AUTOMOVIE_REVIEW_GUIDES`. Calling a gated tool before its documents are read throws a plain recovery script containing the missing `getGuideDocument` calls and partial-credit count. It is deliberately not a schema validation error.
 
 Start with:
 
@@ -45,7 +45,9 @@ Start with:
 { "name": "AUTOMOVIE_OVERALL" }
 ```
 
-Then read the exact contract guide named by the tool refusal.
+Then read the exact contract guides named by the tool refusal. `repaintShot`
+requires `DIFFUSION_ENHANCE`; it is routed only for production designs whose
+visual delivery is `repainted`.
 
 ## Non-MCP runtime
 

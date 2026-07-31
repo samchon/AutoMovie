@@ -1990,7 +1990,7 @@ const productionApplication = (): AutoMovieApplication => {
     capture: captureProductionFrame,
   });
   app.getGuideDocument({ name: "AUTOMOVIE_OVERALL" });
-  app.getGuideDocument({ name: "PRODUCTION_RENDER" });
+  app.getGuideDocument({ name: "CAPTURE_FRAME" });
   return app;
 };
 

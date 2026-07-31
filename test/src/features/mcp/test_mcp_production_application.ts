@@ -9,6 +9,7 @@ import {
 } from "@automovie/interface";
 import {
   AUTOMOVIE_PRODUCTION_GUIDE_NAMES,
+  AUTOMOVIE_REVIEW_GUIDES,
   AUTOMOVIE_TOOL_GUIDES,
   AutoMovieApplication,
   AutoMovieProductionProject,
@@ -230,7 +231,7 @@ export const test_mcp_production_application = async (): Promise<void> => {
       "missing knowledge is a plain recovery script with partial credit",
       gated?.includes("0/2 required guides") === true &&
         gated.includes('getGuideDocument({ name: "AUTOMOVIE_OVERALL" })') &&
-        gated.includes('getGuideDocument({ name: "PRODUCTION_RENDER" })') &&
+        gated.includes('getGuideDocument({ name: "CAPTURE_FRAME" })') &&
         gated.includes("not a payload validation error"),
     );
     application.getGuideDocument({ name: "AUTOMOVIE_OVERALL" });
@@ -248,13 +249,29 @@ export const test_mcp_production_application = async (): Promise<void> => {
       "guide credit survives and the recovery script lists only missing reads",
       partiallyGated?.includes("1/2 required guides") === true &&
         partiallyGated.includes(
-          'getGuideDocument({ name: "PRODUCTION_RENDER" })',
+          'getGuideDocument({ name: "CAPTURE_FRAME" })',
         ) &&
         partiallyGated.includes(
           'getGuideDocument({ name: "AUTOMOVIE_OVERALL" })',
         ) === false,
     );
-    application.getGuideDocument({ name: "PRODUCTION_RENDER" });
+    application.getGuideDocument({ name: "CAPTURE_FRAME" });
+    const reviewGated = await rejected(async () =>
+      application.prepareReview({
+        target: { kind: "asset", id: "sentinel" },
+      }),
+    );
+    TestValidator.predicate(
+      "review knowledge is selected from the exact target surface",
+      reviewGated?.includes("1/2 required guides") === true &&
+        reviewGated.includes('getGuideDocument({ name: "REVIEW_ASSET" })') &&
+        AUTOMOVIE_REVIEW_GUIDES.asset === "REVIEW_ASSET" &&
+        AUTOMOVIE_REVIEW_GUIDES.shot === "REVIEW_SHOT" &&
+        AUTOMOVIE_REVIEW_GUIDES.sequence === "REVIEW_SEQUENCE" &&
+        AUTOMOVIE_REVIEW_GUIDES.film === "REVIEW_FILM" &&
+        AUTOMOVIE_REVIEW_GUIDES.design === "REVIEW_DEPENDENCY" &&
+        AUTOMOVIE_REVIEW_GUIDES.source === "REVIEW_DEPENDENCY",
+    );
     const stateRoot = path.join(fixture.root, ".automovie");
     const stateRegistryPath = path.join(stateRoot, "productions.json");
     const registryBeforeUnknown = fs.readFileSync(stateRegistryPath);
@@ -422,11 +439,30 @@ export const test_mcp_production_application = async (): Promise<void> => {
         "SOURCE_OWNERSHIP",
         "COMPILATION",
         "GEOMETRY",
-        "PRODUCTION_REVIEW",
-        "PRODUCTION_RENDER",
+        "CAPTURE_FRAME",
+        "REPAINT_SHOT",
+        "REVIEW_ASSET",
+        "REVIEW_SHOT",
+        "REVIEW_SEQUENCE",
+        "REVIEW_FILM",
+        "REVIEW_DEPENDENCY",
+        "SCREENPLAY_WRITING",
+        "CINEMATOGRAPHY",
+        "EDITING",
+        "OBJECT_RIGGING",
+        "WORLD_BUILDING",
+        "MOTION",
+        "BATTLE_SIM",
+        "SOUND_DESIGN",
+        "ASSET_SOURCING",
+        "DIFFUSION_ENHANCE",
+        "TYPESCRIPT",
+        "DEBUGGING",
       ],
     );
 
+    application.getGuideDocument({ name: "REPAINT_SHOT" });
+    application.getGuideDocument({ name: "DIFFUSION_ENHANCE" });
     const unavailable = await application.repaintShot({
       productionId: "fixture-film",
       shot: "opening",
@@ -497,7 +533,8 @@ export const test_mcp_production_application = async (): Promise<void> => {
       },
     });
     repainting.getGuideDocument({ name: "AUTOMOVIE_OVERALL" });
-    repainting.getGuideDocument({ name: "PRODUCTION_RENDER" });
+    repainting.getGuideDocument({ name: "REPAINT_SHOT" });
+    repainting.getGuideDocument({ name: "DIFFUSION_ENHANCE" });
     const restricted = await repainting.repaintShot({
       productionId: "fixture-film",
       shot: "opening",

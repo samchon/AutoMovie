@@ -8,6 +8,7 @@ import {
   IAutoMovieGetGuideDocument,
   IAutoMoviePrepareReview,
   IAutoMovieRepaintShot,
+  IAutoMovieReviewTarget,
   IAutoMovieSubmitReview,
 } from "@automovie/interface";
 import path from "node:path";
@@ -334,7 +335,7 @@ export class AutoMovieApplication {
   public prepareReview(
     props: IAutoMoviePrepareReview.IProps,
   ): IAutoMoviePrepareReview {
-    this.requireGuides("prepareReview");
+    this.requireGuides("prepareReview", reviewGuide(props.target));
     return this.context.forProduction().review.prepare(props);
   }
 
@@ -347,12 +348,18 @@ export class AutoMovieApplication {
   public submitReview(
     props: IAutoMovieSubmitReview.IProps,
   ): IAutoMovieSubmitReview {
-    this.requireGuides("submitReview");
+    this.requireGuides("submitReview", reviewGuide(props.target));
     return this.context.forProduction().review.submit(props);
   }
 
-  private requireGuides(tool: keyof AutoMovieApplication): void {
-    const required = AUTOMOVIE_TOOL_GUIDES[tool];
+  private requireGuides(
+    tool: keyof AutoMovieApplication,
+    targetGuide?: AutoMovieProductionGuideName,
+  ): void {
+    const required = [
+      ...AUTOMOVIE_TOOL_GUIDES[tool],
+      ...(targetGuide === undefined ? [] : [targetGuide]),
+    ];
     const missing = required.filter(
       (guide) => this.context.hasGuide(guide) === false,
     );
@@ -373,14 +380,31 @@ export class AutoMovieApplication {
 /** Compile-time-complete guide declaration for the entire reflected surface. */
 export const AUTOMOVIE_TOOL_GUIDES = {
   getGuideDocument: [],
-  captureFrame: ["AUTOMOVIE_OVERALL", "PRODUCTION_RENDER"],
-  repaintShot: ["AUTOMOVIE_OVERALL", "PRODUCTION_RENDER"],
-  prepareReview: ["AUTOMOVIE_OVERALL", "PRODUCTION_REVIEW"],
-  submitReview: ["AUTOMOVIE_OVERALL", "PRODUCTION_REVIEW"],
+  captureFrame: ["AUTOMOVIE_OVERALL", "CAPTURE_FRAME"],
+  repaintShot: ["AUTOMOVIE_OVERALL", "REPAINT_SHOT", "DIFFUSION_ENHANCE"],
+  prepareReview: ["AUTOMOVIE_OVERALL"],
+  submitReview: ["AUTOMOVIE_OVERALL"],
 } as const satisfies Record<
   keyof AutoMovieApplication,
   readonly AutoMovieProductionGuideName[]
 >;
+
+/** Target-specific review contract added to both review tools. */
+export const AUTOMOVIE_REVIEW_GUIDES = {
+  asset: "REVIEW_ASSET",
+  design: "REVIEW_DEPENDENCY",
+  source: "REVIEW_DEPENDENCY",
+  shot: "REVIEW_SHOT",
+  sequence: "REVIEW_SEQUENCE",
+  film: "REVIEW_FILM",
+} as const satisfies Record<
+  IAutoMovieReviewTarget["kind"],
+  AutoMovieProductionGuideName
+>;
+
+const reviewGuide = (
+  target: IAutoMovieReviewTarget,
+): AutoMovieProductionGuideName => AUTOMOVIE_REVIEW_GUIDES[target.kind];
 
 const diagnostic = (
   code: string,
