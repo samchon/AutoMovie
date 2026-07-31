@@ -33,7 +33,6 @@ import {
 export const test_cli_project_state = (): void => {
   const fixture = productionFixture();
   const sourcePath = path.join(fixture.root, "src/shots/opening.ts");
-  const originalSource = fs.readFileSync(sourcePath, "utf8");
   const formation = {
     ...formationDesign(),
     id: "army",
@@ -58,6 +57,7 @@ export const test_cli_project_state = (): void => {
       "state-reader formation contract updates design and source registration",
       setProductionFixtureShotContract(project, formationContract).accepted,
     );
+    const originalSource = fs.readFileSync(sourcePath, "utf8");
     const missing = loadAutoMovieProjectState({ root: fixture.root });
     TestValidator.predicate(
       "uncompiled project state is explicit",
