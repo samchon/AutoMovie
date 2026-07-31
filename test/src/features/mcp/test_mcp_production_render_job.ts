@@ -293,22 +293,23 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
   if (mediaData < 0)
     throw new Error("Conformed repaint has no media data box.");
   mismatchedRepaint[mediaData + 4] ^= 1;
-  const nonSyncDependencyMismatch = Buffer.from(conformedRepaint);
-  const firstTrackRun = nonSyncDependencyMismatch.indexOf("trun");
-  const secondTrackRun = nonSyncDependencyMismatch.indexOf(
-    "trun",
-    firstTrackRun + 4,
-  );
-  const secondSampleFlags = secondTrackRun + 24;
-  if (
-    firstTrackRun < 0 ||
-    secondTrackRun < 0 ||
-    nonSyncDependencyMismatch.readUInt32BE(secondSampleFlags) !== 0x00010000
-  )
+  const nonSyncRendition = Buffer.from(conformedRepaint);
+  const firstTrackRun = nonSyncRendition.indexOf("trun");
+  if (firstTrackRun < 0)
     throw new Error(
-      "Conformed repaint has no canonical non-sync second-sample flags.",
+      "Conformed repaint has no track-run sample flags for a dependency witness.",
     );
-  nonSyncDependencyMismatch.writeUInt32BE(0x02010000, secondSampleFlags);
+  const sampleFlags = firstTrackRun + 24;
+  if (sampleFlags + 4 > nonSyncRendition.length)
+    throw new Error("Conformed repaint has a truncated track-run sample.");
+  const originalSampleFlags = nonSyncRendition.readUInt32BE(sampleFlags);
+  if (originalSampleFlags !== 0x02000000 && originalSampleFlags !== 0x00010000)
+    throw new Error(
+      `Conformed repaint has unexpected canonical sample flags 0x${originalSampleFlags.toString(16)}.`,
+    );
+  nonSyncRendition.writeUInt32BE(0x00010000, sampleFlags);
+  const nonSyncDependencyMismatch = Buffer.from(nonSyncRendition);
+  nonSyncDependencyMismatch.writeUInt32BE(0x02010000, sampleFlags);
   let sampleDifference = "";
   try {
     assertProductionFeatureUsesRenditionClips({
@@ -375,7 +376,7 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
       throws(() =>
         assertProductionFeatureUsesRenditionVideo({
           feature: nonSyncDependencyMismatch,
-          renditionVideo: conformedRepaint,
+          renditionVideo: nonSyncRendition,
         }),
       ) &&
       throws(() =>
