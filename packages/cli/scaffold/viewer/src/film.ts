@@ -44,13 +44,15 @@ for (const shot of new Set(timeline.segments.map((segment) => segment.shot))) {
 const first = runtimes.values().next().value;
 if (first === undefined) throw new Error("Compiled film has no playable shot.");
 let frozen = false;
-let viewerRenderer: WebGLRenderer | undefined;
+const viewerRendererRef = {
+  current: undefined as WebGLRenderer | undefined,
+};
 const mounted = mountViewer(
   canvas,
   first.scene,
   first.camera,
   (elapsed) => {
-    if (frozen || viewerRenderer === undefined) return true;
+    if (frozen || viewerRendererRef.current === undefined) return true;
     renderFilm(elapsed % (timeline.totalFrames / timeline.fps), "beauty");
     return true;
   },
@@ -60,18 +62,18 @@ const mounted = mountViewer(
     preserveDrawingBuffer: true,
   },
 );
-viewerRenderer = mounted.renderer;
-viewerRenderer.setClearColor(0x11151b, 1);
+viewerRendererRef.current = mounted.renderer;
+viewerRendererRef.current.setClearColor(0x11151b, 1);
 
 const renderLayer = (layer: IFilmLayer, pass: AutoMovieGuidePass): string => {
   const runtime = runtimes.get(layer.shot);
   if (runtime === undefined)
     throw new Error(`Film layer references unavailable shot "${layer.shot}".`);
-  if (viewerRenderer === undefined)
-    throw new Error("Film renderer is not mounted.");
+  const renderer = viewerRendererRef.current;
+  if (renderer === undefined) throw new Error("Film renderer is not mounted.");
   runtime.camera.aspect = canvas.width / canvas.height;
   runtime.camera.updateProjectionMatrix();
-  return runtime.render(viewerRenderer, layer.sourceFrame / timeline.fps, pass);
+  return runtime.render(renderer, layer.sourceFrame / timeline.fps, pass);
 };
 
 function renderFilm(time: number, pass: AutoMovieGuidePass): void {
@@ -89,10 +91,11 @@ function renderFilm(time: number, pass: AutoMovieGuidePass): void {
     renderLayer(dominant, pass);
   } else {
     const [outgoing, incoming] = layers as [IFilmLayer, IFilmLayer];
-    if (viewerRenderer === undefined)
+    const renderer = viewerRendererRef.current;
+    if (renderer === undefined)
       throw new Error("Film renderer is not mounted.");
     renderCrossDissolveFrames(
-      viewerRenderer,
+      renderer,
       () => void renderLayer(outgoing, pass),
       () => void renderLayer(incoming, pass),
       incoming.weight,
