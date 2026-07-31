@@ -418,9 +418,15 @@ const worksheet = (project, prepared) => {
 };
 
 const root = process.cwd();
-const generated = readJson(path.join(root, ".automovie/generated-manifest.json"));
-const compiled = readJson(path.join(root, "generated/manifests/compile.json"));
-const manifests = namedFiles(path.join(root, "renders"), "manifest.json");
+const services = openAutoMovieProduction({ projectRoot: root });
+const project = services.project;
+const generated = project.generatedManifest();
+if (generated === null)
+  throw new Error("Packaged verifier requires current generated output.");
+const compiled = readJson(
+  path.join(project.generatedRoot(), "manifests", "compile.json"),
+);
+const manifests = namedFiles(project.renderRoot(), "manifest.json");
 const renderManifests = manifests
   .map((file) => ({ file, value: readJson(file) }))
   .filter((entry) => Array.isArray(entry.value.frames));
@@ -500,8 +506,6 @@ const app = new AutoMovieApplication({ projectRoot: root });
 app.getGuideDocument({ name: "AUTOMOVIE_OVERALL" });
 for (const name of new Set(Object.values(AUTOMOVIE_REVIEW_GUIDES)))
   app.getGuideDocument({ name });
-const services = openAutoMovieProduction({ projectRoot: root });
-const project = services.project;
 const graph = project.graph();
 const formationSummary = services.oracle.query({
   request: {
@@ -596,11 +600,11 @@ if (phase === "review") {
     JSON.stringify(reviewed.diagnostics),
   );
 } else if (phase === "final") {
-  const aggregatePath = path.join(root, ".automovie/render-manifest.json");
+  const aggregatePath = project.trackedStatePath("render-manifest.json");
   const aggregateBytes = fs.readFileSync(aggregatePath);
   const aggregate = JSON.parse(aggregateBytes.toString("utf8"));
   const receipt = readJson(
-    path.join(root, ".automovie/render-manifest-receipt.json"),
+    project.trackedStatePath("render-manifest-receipt.json"),
   );
   assert(
     "starter-aggregate-receipt",
@@ -670,7 +674,7 @@ if (phase === "review") {
   );
 
   const first = aggregate.deliverables[0].files[0];
-  const deliverablePath = path.join(root, "renders", first.path);
+  const deliverablePath = path.join(project.renderRoot(), first.path);
   const original = fs.readFileSync(deliverablePath);
   const tampered = Buffer.from(original);
   tampered[0] ^= 0xff;
