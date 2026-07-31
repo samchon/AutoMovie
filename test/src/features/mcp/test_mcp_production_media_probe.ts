@@ -52,7 +52,7 @@ export const test_mcp_production_media_probe = async (): Promise<void> => {
           mediaType: "image/jpeg",
           bytes: png,
         }),
-      "require image/png",
+      "requires image/png",
     ),
   );
   TestValidator.predicate(
