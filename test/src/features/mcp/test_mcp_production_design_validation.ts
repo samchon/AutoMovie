@@ -635,6 +635,7 @@ export const test_mcp_production_design_validation = (): void => {
       title: "",
       logline: "",
       targetRuntimeSeconds: 0,
+      visualDelivery: "unsupported" as "deterministic",
       frameFormat: {
         ...productionDesign().frameFormat,
         width: 15,
@@ -714,6 +715,7 @@ export const test_mcp_production_design_validation = (): void => {
       [
         "design-identity-mismatch",
         "design-range-invalid",
+        "design-enum-invalid",
         "design-duplicate-id",
         "design-collection-empty",
         "design-text-empty",

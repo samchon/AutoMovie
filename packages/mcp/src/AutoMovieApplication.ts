@@ -324,6 +324,21 @@ export class AutoMovieApplication {
         ],
       };
     }
+    if (services.project.graph().production?.visualDelivery !== "repainted")
+      return {
+        repainted: false,
+        productionId: props.productionId,
+        shot: props.shot,
+        receipt: null,
+        diagnostics: [
+          diagnostic(
+            "repaint-delivery-disabled",
+            props.shot,
+            'The current production design declares visualDelivery "deterministic". Change that tracked contract to "repainted", recompile current source, then read DIFFUSION_ENHANCE before requesting a rendition.',
+          ),
+        ],
+      };
+    this.requireGuides("repaintShot", AUTOMOVIE_REPAINT_GUIDE);
     return this.repaintService.repaint(services, props);
   }
 
@@ -381,13 +396,17 @@ export class AutoMovieApplication {
 export const AUTOMOVIE_TOOL_GUIDES = {
   getGuideDocument: [],
   captureFrame: ["AUTOMOVIE_OVERALL", "CAPTURE_FRAME"],
-  repaintShot: ["AUTOMOVIE_OVERALL", "REPAINT_SHOT", "DIFFUSION_ENHANCE"],
+  repaintShot: ["AUTOMOVIE_OVERALL", "REPAINT_SHOT"],
   prepareReview: ["AUTOMOVIE_OVERALL"],
   submitReview: ["AUTOMOVIE_OVERALL"],
 } as const satisfies Record<
   keyof AutoMovieApplication,
   readonly AutoMovieProductionGuideName[]
 >;
+
+/** Additional guide required only by productions declaring repaint delivery. */
+export const AUTOMOVIE_REPAINT_GUIDE =
+  "DIFFUSION_ENHANCE" as const satisfies AutoMovieProductionGuideName;
 
 /** Target-specific review contract added to both review tools. */
 export const AUTOMOVIE_REVIEW_GUIDES = {

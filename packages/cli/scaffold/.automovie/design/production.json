@@ -3,6 +3,7 @@
   "title": "{{name}}",
   "logline": "A primitive sentinel raises and answers a signal before a deterministic instanced army.",
   "targetRuntimeSeconds": 11.5,
+  "visualDelivery": "deterministic",
   "frameFormat": {
     "width": 1280,
     "height": 720,

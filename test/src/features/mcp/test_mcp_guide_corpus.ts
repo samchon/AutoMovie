@@ -1,11 +1,12 @@
 import {
   AUTOMOVIE_PRODUCTION_GUIDE_NAMES,
+  AUTOMOVIE_REPAINT_GUIDE,
   AUTOMOVIE_REVIEW_GUIDES,
   AUTOMOVIE_TOOL_GUIDES,
+  type AutoMovieGuideName,
 } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import ts from "typescript";
 
@@ -47,7 +48,9 @@ export const test_mcp_guide_corpus = (): void => {
     "every gate guide is linked to its actual tool declaration",
     AUTOMOVIE_TOOL_GUIDES.captureFrame.includes("CAPTURE_FRAME") &&
       AUTOMOVIE_TOOL_GUIDES.repaintShot.includes("REPAINT_SHOT") &&
-      AUTOMOVIE_TOOL_GUIDES.repaintShot.includes("DIFFUSION_ENHANCE") &&
+      AUTOMOVIE_REPAINT_GUIDE === "DIFFUSION_ENHANCE" &&
+      AUTOMOVIE_TOOL_GUIDES.repaintShot.includes(AUTOMOVIE_REPAINT_GUIDE) ===
+        false &&
       AUTOMOVIE_TOOL_GUIDES.prepareReview.includes("AUTOMOVIE_OVERALL") &&
       AUTOMOVIE_TOOL_GUIDES.submitReview.includes("AUTOMOVIE_OVERALL") &&
       Object.values(AUTOMOVIE_REVIEW_GUIDES).every(
@@ -101,6 +104,21 @@ export const test_mcp_guide_corpus = (): void => {
       `retired ${retired} guide file is absent`,
       fs.existsSync(path.join(promptRoot, `${retired}.md`)) === false,
     );
+  const canonicalDtoName: AutoMovieGuideName = "AUTOMOVIE_OVERALL";
+  const dtoSource = fs.readFileSync(
+    path.join(root, "packages/mcp/src/dto.ts"),
+    "utf8",
+  );
+  TestValidator.predicate(
+    "the public DTO aliases the canonical guide union without retired names",
+    canonicalDtoName === "AUTOMOVIE_OVERALL" &&
+      dtoSource.includes(
+        "export type AutoMovieGuideName = AutoMovieProductionGuideName;",
+      ) &&
+      ["STAGING", "BLOCKING", "PERFORMANCE", "FORGE", "REVIEW"].every(
+        (name) => dtoSource.includes(`| "${name}"`) === false,
+      ),
+  );
   for (const retiredCall of [
     "queryGeometry",
     "inspectProject",
@@ -146,8 +164,43 @@ const compileSnippets = (
     "the corpus carries compile-checked TypeScript recipes",
     snippets.length > 0,
   );
+  const scaffoldConfigPath = path.join(
+    root,
+    "packages/cli/scaffold/tsconfig.json",
+  );
+  const scaffoldConfig = ts.readConfigFile(scaffoldConfigPath, ts.sys.readFile);
+  if (scaffoldConfig.error !== undefined)
+    throw new Error(
+      ts.formatDiagnostic(scaffoldConfig.error, {
+        getCanonicalFileName: (name) => name,
+        getCurrentDirectory: () => root,
+        getNewLine: () => "\n",
+      }),
+    );
+  const parsed = ts.parseJsonConfigFileContent(
+    scaffoldConfig.config,
+    ts.sys,
+    path.dirname(scaffoldConfigPath),
+    {
+      noEmit: true,
+      rootDir: undefined,
+      baseUrl: undefined,
+      paths: undefined,
+    },
+    scaffoldConfigPath,
+  );
+  if (parsed.errors.length !== 0)
+    throw new Error(
+      ts.formatDiagnosticsWithColorAndContext(parsed.errors, {
+        getCanonicalFileName: (name) => name,
+        getCurrentDirectory: () => root,
+        getNewLine: () => "\n",
+      }),
+    );
+  const cache = path.join(root, "test/node_modules/.cache");
+  fs.mkdirSync(cache, { recursive: true });
   const temporary = fs.mkdtempSync(
-    path.join(os.tmpdir(), "automovie-guide-snippets-"),
+    path.join(cache, "automovie-guide-snippets-"),
   );
   try {
     for (const snippet of snippets) {
@@ -159,18 +212,11 @@ const compileSnippets = (
       const program = ts.createProgram({
         rootNames: [file],
         options: {
-          target: ts.ScriptTarget.ES2022,
-          module: ts.ModuleKind.CommonJS,
-          moduleResolution: ts.ModuleResolutionKind.Node10,
-          esModuleInterop: true,
-          strict: true,
+          ...parsed.options,
           noEmit: true,
-          skipLibCheck: true,
-          typeRoots: [path.join(root, "node_modules/@types")],
-          baseUrl: root,
-          paths: {
-            "@automovie/*": ["packages/*/src/index.ts"],
-          },
+          rootDir: undefined,
+          baseUrl: undefined,
+          paths: undefined,
         },
       });
       const diagnostics = ts.getPreEmitDiagnostics(program);

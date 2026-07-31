@@ -375,6 +375,7 @@ const createPlan = (
       legacy.slate.script?.logline.trim() ||
       "Legacy project import awaiting treatment reconstruction.",
     targetRuntimeSeconds,
+    visualDelivery: "deterministic",
     frameFormat: {
       width: 1280,
       height: 720,

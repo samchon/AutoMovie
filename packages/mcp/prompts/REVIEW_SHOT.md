@@ -4,7 +4,7 @@ Read this guide before `prepareReview` or `submitReview` with target kind `shot`
 
 ## Prepare
 
-Call `prepareReview` for the exact compiled shot id. The worksheet fingerprint binds shot contract, source, dependencies, current compiler identity, render manifests, and acceptance outcomes. Any relevant edit makes it stale.
+Call `prepareReview` for the exact compiled shot id. The worksheet fingerprint binds shot contract, source, dependencies, current compiler identity, render manifests, acceptance outcomes, and any current receipt-bound rendition. Any relevant edit or repaint reroll makes it stale. When production `visualDelivery` is `repainted`, open and watch the exact MP4 in `renditions`; preparation refuses completion until the shot has one current rendition, and submission must cite it as `kind:"rendition"` evidence in addition to deterministic frame truth.
 
 The canonical criteria are:
 

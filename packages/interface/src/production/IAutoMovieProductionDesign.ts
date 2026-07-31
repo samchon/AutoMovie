@@ -38,6 +38,14 @@ export interface IAutoMovieProductionDesign {
    * production frame clock.
    */
   targetRuntimeSeconds: number;
+  /**
+   * Final visual delivery layer.
+   *
+   * Deterministic delivery uses compiler/render output directly. Repainted
+   * delivery keeps that output as technical truth and additionally requires a
+   * receipt-bound rendition review for every delivered shot.
+   */
+  visualDelivery: "deterministic" | "repainted";
   /** Deterministic frame clock and raster format. */
   frameFormat: {
     /**

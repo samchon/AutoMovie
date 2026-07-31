@@ -14,6 +14,7 @@ import {
   IAutoMoviePrepareReviewInput,
   IAutoMoviePrepareReviewOutput,
   IAutoMovieRenderBundleManifest,
+  IAutoMovieRenditionEvidenceReference,
   IAutoMovieReviewCheck,
   IAutoMovieReviewEvidence,
   IAutoMovieReviewQueue,
@@ -100,6 +101,13 @@ interface IReviewReadContext {
   generatedManifest: IAutoMovieGeneratedManifest | undefined;
   generatedFiles: ReadonlyMap<string, Uint8Array> | undefined;
   renderTargetFingerprints: Map<string, AutoMovieContentDigest>;
+  repaintRenditions: Map<
+    string,
+    | ReturnType<
+        AutoMovieProductionProject["verifiedRepaintRenditions"]
+      >[number]
+    | null
+  >;
 }
 
 /** Required review criteria in their canonical submission order. */
@@ -150,9 +158,9 @@ export const AUTOMOVIE_REVIEW_CRITERIA = {
  * Evidence-bound review ledger driven by an external coding agent.
  *
  * The service never calls an LLM and never grades aesthetic prose. It verifies
- * target identity, exact selectors, actual current PNG bytes, checklist
- * coverage, self-consistency and fingerprint freshness, then stores the
- * external agent's worksheet as a tracked record.
+ * target identity, exact selectors, actual current PNG and repaint bytes,
+ * receipt provenance, checklist coverage, self-consistency and fingerprint
+ * freshness, then stores the external agent's worksheet as a tracked record.
  */
 export class AutoMovieProductionReviewService {
   public constructor(
@@ -185,6 +193,7 @@ export class AutoMovieProductionReviewService {
           generatedManifest: undefined,
           generatedFiles: undefined,
           renderTargetFingerprints: new Map(),
+          repaintRenditions: new Map(),
         }
       : undefined;
     return this.prepareWithStatus(input, compileStatus, context);
@@ -248,6 +257,12 @@ export class AutoMovieProductionReviewService {
       compileStatus!,
       context,
     );
+    const renditions = currentRenditions(
+      this.project,
+      input.target,
+      diagnostics,
+      context,
+    );
     const outcomes = currentAcceptanceOutcomes(
       this.project,
       input.target,
@@ -306,6 +321,7 @@ export class AutoMovieProductionReviewService {
       requiredCriteria: [...criteriaOf(input.target)],
       quotable,
       frames,
+      renditions,
       outcomes,
       diagnostics: safeDiagnostics,
     };
@@ -429,6 +445,7 @@ export class AutoMovieProductionReviewService {
       generatedManifest: snapshot?.generatedManifest,
       generatedFiles: snapshot?.generatedFiles,
       renderTargetFingerprints: new Map(),
+      repaintRenditions: new Map(),
     };
     const entries = reviewTargets(this.project, context).map((target) => {
       const currentFingerprint = reviewFingerprint(
@@ -609,6 +626,26 @@ const validateWorksheet = (
         add(
           "review-asset-view-coverage-incomplete",
           `A completed asset review must cite every required current view digest. Missing: ${missing.join(", ")}.`,
+        );
+    }
+    if (prepared.renditions.length !== 0) {
+      const requiredShots = [
+        ...new Set(prepared.renditions.map((rendition) => rendition.shot)),
+      ];
+      const citedShots = new Set(
+        input.checks.flatMap((check) =>
+          check.evidence.flatMap((evidence) =>
+            evidence.kind === "rendition" ? [evidence.shot] : [],
+          ),
+        ),
+      );
+      const missing = requiredShots.filter(
+        (shot) => citedShots.has(shot) === false,
+      );
+      if (missing.length !== 0)
+        add(
+          "review-rendition-coverage-incomplete",
+          `A completed repainted-delivery review must cite one current receipt-bound rendition for every addressed shot. Missing: ${missing.join(", ")}.`,
         );
     }
     for (const criterion of highRiskCriteria(input.target)) {
@@ -919,6 +956,19 @@ const validateEvidence = (
         "review-evidence-region-invalid",
         "frame region must be a non-empty integer rectangle inside the current image.",
       );
+  } else if (evidence.kind === "rendition") {
+    const { kind: _kind, ...submitted } = evidence;
+    if (
+      prepared.renditions.some(
+        (rendition) =>
+          canonicalizeAutoMovieJson(rendition) ===
+          canonicalizeAutoMovieJson(submitted),
+      ) === false
+    )
+      fail(
+        "review-evidence-stale",
+        "rendition evidence is not in the current byte- and receipt-verified inventory. Prepare and inspect the current repainted output.",
+      );
   } else if (evidence.kind === "diagnostic") {
     const diagnostic = prepared.diagnostics.find(
       (item) =>
@@ -1173,6 +1223,8 @@ const reviewFingerprint = (
       context,
     ))
       addJson(`outcome:${outcome.scenario}`, outcome);
+    for (const rendition of currentRenditions(project, target, [], context))
+      addJson(`rendition:${rendition.path}`, rendition);
     fields.push(compilerField());
   } else if (target.kind === "sequence") {
     const sequence = project
@@ -1916,6 +1968,86 @@ const currentAssetFrames = (
   return frames.sort((left, right) =>
     compareCodeUnits(left.reviewFrame, right.reviewFrame),
   );
+};
+
+const currentRenditions = (
+  project: AutoMovieProductionProject,
+  target: IAutoMovieReviewTarget,
+  diagnostics: IAutoMovieDiagnostic[],
+  context?: IReviewReadContext,
+): IAutoMovieRenditionEvidenceReference[] => {
+  const graph = project.graph();
+  if (
+    graph.production?.visualDelivery !== "repainted" ||
+    (target.kind !== "shot" &&
+      target.kind !== "sequence" &&
+      target.kind !== "film")
+  )
+    return [];
+  let filmShots: string[] = [];
+  if (target.kind === "film") {
+    const generated = currentGeneratedManifest(project, context);
+    if (generated !== null)
+      try {
+        filmShots = [
+          ...new Set(
+            currentFilmTimeline(
+              project,
+              generated.inputFingerprint,
+              context,
+            ).segments.map((segment) => segment.shot),
+          ),
+        ].sort(compareCodeUnits);
+      } catch {}
+  }
+  const shotIds =
+    target.kind === "shot"
+      ? [target.id]
+      : target.kind === "sequence"
+        ? sequenceShotIds(project, target.id)
+        : filmShots;
+  const required = new Set(shotIds);
+  const missingInventory =
+    context === undefined
+      ? shotIds
+      : shotIds.filter((shot) => context.repaintRenditions.has(shot) === false);
+  const verified = project.verifiedRepaintRenditions(missingInventory);
+  if (context !== undefined) {
+    const byShot = new Map(verified.map((receipt) => [receipt.shot, receipt]));
+    for (const shot of missingInventory)
+      context.repaintRenditions.set(shot, byShot.get(shot) ?? null);
+  }
+  const inventory =
+    context === undefined
+      ? verified
+      : shotIds.flatMap((shot) => {
+          const receipt = context.repaintRenditions.get(shot);
+          return receipt === undefined || receipt === null ? [] : [receipt];
+        });
+  const receipts = inventory.filter((receipt) => required.has(receipt.shot));
+  const covered = new Set(receipts.map((receipt) => receipt.shot));
+  for (const shot of shotIds)
+    if (covered.has(shot) === false)
+      diagnostics.push({
+        code: "review-rendition-missing",
+        category: "error",
+        phase: "review",
+        target: `${reviewTargetKey(target)}:${shot}`,
+        path: null,
+        message: `Production visualDelivery is "repainted", but shot "${shot}" has no current byte- and receipt-verified rendition. Run repaintShot for the current deterministic source, inspect its MP4, then prepare this review again.`,
+      });
+  return receipts.map((receipt) => ({
+    shot: receipt.shot,
+    path: receipt.output.path,
+    digest: receipt.output.digest,
+    receiptDigest: digestAutoMovieBytes(canonicalAutoMovieJsonBytes(receipt)),
+    sourceRenderFingerprint: receipt.sourceRenderFingerprint,
+    controls: receipt.controls,
+    references: receipt.references,
+    adapterIdentity: receipt.adapterIdentity,
+    parameters: receipt.parameters,
+    probe: receipt.output.probe,
+  }));
 };
 
 const currentFrames = (

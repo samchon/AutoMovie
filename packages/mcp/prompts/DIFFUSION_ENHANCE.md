@@ -39,7 +39,7 @@ Compare deterministic and repainted output side by side through the full interva
 - event and reaction timing;
 - exact raster, clock, duration, frame count, codec, and output integrity.
 
-The deterministic original remains the technical truth. The repaint receives a separate visual review because visual delivery changed. Cite the repaint receipt, not the deterministic frame, when approving repainted appearance.
+The deterministic original remains the technical truth. The repaint receives a separate visual review because visual delivery changed. Open the exact `prepareReview.renditions[].path`, inspect the full interval, and cite that entry as `kind:"rendition"` evidence. Its output digest, canonical receipt digest, deterministic-source fingerprint, adapter identity, parameters, and fresh media probe are rechecked on submission; a deterministic frame cannot approve repainted appearance.
 
 ## Reroll discipline
 

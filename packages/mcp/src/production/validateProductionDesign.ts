@@ -112,6 +112,17 @@ export const validateAutoMovieProductionGraph = (
       file,
       "targetRuntimeSeconds",
     );
+    if (
+      graph.production.visualDelivery !== "deterministic" &&
+      graph.production.visualDelivery !== "repainted"
+    )
+      invalid(
+        diagnostics,
+        "design-enum-invalid",
+        target,
+        file,
+        'visualDelivery must be either "deterministic" or "repainted". Choose the final visual delivery layer in the tracked production design record.',
+      );
     integer(
       diagnostics,
       graph.production.frameFormat.width,

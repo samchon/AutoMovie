@@ -260,6 +260,7 @@ export const test_mcp_production_legacy_import = (): void => {
     TestValidator.predicate(
       "an empty legacy project gets a one-frame conservative draft",
       plan.productionDraft.targetRuntimeSeconds === 1 / 30 &&
+        plan.productionDraft.visualDelivery === "deterministic" &&
         plan.shotContractDrafts.length === 0 &&
         plan.sourceTodos.length === 0,
     );

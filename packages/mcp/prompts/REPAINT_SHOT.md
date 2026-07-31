@@ -17,7 +17,7 @@ The prompt describes appearance while preserving registered subjects, camera, mo
 
 ## Success evidence
 
-`repainted:true` means output media was parsed, matched exact shot raster, clock, runtime and frame count, and committed atomically. The receipt binds:
+`repainted:true` means output media was parsed, matched exact shot raster, clock, runtime and frame count, and committed atomically together with the shot's active-rendition pointer. Older content-addressed outputs may remain for provenance, but only the active receipt enters review. The receipt binds:
 
 - compiler and deterministic source-render fingerprints;
 - ordered beauty source bundle and structural control-frame digests;
@@ -26,7 +26,7 @@ The prompt describes appearance while preserving registered subjects, camera, mo
 - exact prompt, seed, strength, and controls;
 - content-addressed output path, byte digest, length, and parsed media facts.
 
-Review the repaint itself with fresh visual evidence. A deterministic review does not automatically approve its rendition.
+Open and watch the committed MP4 itself, then prepare the addressed shot, sequence, or film review. For repainted delivery, `prepareReview.renditions` returns the current output path, output and receipt digests, deterministic-source fingerprint, structural controls, fixed references, adapter identity, parameters, and freshly parsed media facts. Cite that exact `kind:"rendition"` evidence when judging repainted appearance. A deterministic PNG review does not automatically approve its rendition.
 
 ## Refusal catalog
 

@@ -118,3 +118,11 @@ export const productionRepaintReceiptPath = (outputPath: string): string =>
     "renditions",
     `${digestAutoMovieBytes(Buffer.from(outputPath, "utf8")).slice(7)}.json`,
   );
+
+/** Tracked pointer selecting one current rendition receipt for a shot. */
+export const productionRepaintActiveReceiptPath = (shot: string): string =>
+  path.posix.join(
+    "renditions",
+    "active",
+    `${encodeAutoMoviePathSegment(shot)}.json`,
+  );

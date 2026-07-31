@@ -2,6 +2,7 @@ import { AutoMovieGuidePass } from "../cinematics";
 import {
   IAutoMovieCompiledContractRealization,
   IAutoMovieDiagnostic,
+  IAutoMovieProductionMediaProbe,
   IAutoMovieReviewTarget,
 } from "./IAutoMovieProductionCompiler";
 import {
@@ -9,6 +10,7 @@ import {
   IAutoMovieDesignTarget,
 } from "./IAutoMovieProductionDesign";
 import type { IAutoMovieRenderBundleManifest } from "./IAutoMovieProductionOracle";
+import type { IAutoMovieRepaintParameters } from "./application/IAutoMovieRepaintShot";
 
 /** A design or source selector that may be quoted in a review. */
 export type IAutoMovieReviewEvidenceSelector =
@@ -57,6 +59,42 @@ export interface IAutoMovieFrameEvidenceReference {
   width: number;
   /** Pixel height. */
   height: number;
+}
+
+/** One current receipt-bound repaint rendition available to visual review. */
+export interface IAutoMovieRenditionEvidenceReference {
+  /** Exact compiled shot id. */
+  shot: string;
+  /** Render-root-relative content-addressed MP4 path. */
+  path: string;
+  /** Exact current MP4 digest. */
+  digest: AutoMovieContentDigest;
+  /** Digest over the canonical immutable receipt. */
+  receiptDigest: AutoMovieContentDigest;
+  /** Digest over the deterministic source manifest and frame bytes. */
+  sourceRenderFingerprint: AutoMovieContentDigest;
+  /** Exact structural controls bound by the current receipt. */
+  controls: Array<{
+    /** Structural render pass. */
+    pass: Exclude<AutoMovieGuidePass, "beauty">;
+    /** Ordered deterministic source-frame digests. */
+    frameDigests: AutoMovieContentDigest[];
+  }>;
+  /** Exact fixed appearance references bound by the current receipt. */
+  references: Array<{
+    /** Style or character role. */
+    role: "style" | "character";
+    /** Project-relative asset-manifest path. */
+    path: string;
+    /** Current resident asset digest. */
+    digest: AutoMovieContentDigest;
+  }>;
+  /** Canonical repaint adapter/model identity. */
+  adapterIdentity: string;
+  /** Exact generation parameters recorded by the receipt. */
+  parameters: IAutoMovieRepaintParameters;
+  /** Parser-derived current output facts. */
+  probe: IAutoMovieProductionMediaProbe;
 }
 
 /** Current compiler/oracle outcome available to acceptance review. */
@@ -143,6 +181,10 @@ export type IAutoMovieReviewEvidence =
         height: number;
       };
     }
+  | ({
+      /** Current receipt-bound repaint rendition evidence. */
+      kind: "rendition";
+    } & IAutoMovieRenditionEvidenceReference)
   | {
       /** Current compiler diagnostic evidence. */
       kind: "diagnostic";
@@ -215,7 +257,7 @@ export interface IAutoMoviePrepareReviewInput {
   /**
    * Exact current design, source, shot or film target. Shot and film targets
    * require a current source compile and verified frame evidence before they
-   * can complete.
+   * can complete; repainted delivery also requires current rendition evidence.
    */
   target: IAutoMovieReviewTarget;
 }
@@ -235,6 +277,8 @@ export interface IAutoMoviePrepareReviewOutput {
   quotable: IAutoMovieReviewEvidenceSelector[];
   /** Current visual evidence inventory. */
   frames: IAutoMovieFrameEvidenceReference[];
+  /** Current receipt-bound repaint inventory, empty for deterministic delivery. */
+  renditions: IAutoMovieRenditionEvidenceReference[];
   /** Current compiler/oracle acceptance outcome inventory. */
   outcomes: IAutoMovieAcceptanceOutcomeReference[];
   /**
@@ -277,7 +321,8 @@ export interface IAutoMovieSubmitReviewInput {
   /**
    * Final declaration, deliberately last. True is accepted only when all
    * required criteria and acceptance scenarios pass on fresh evidence, visual
-   * targets cite a verified required frame, and no correction remains.
+   * targets cite a verified required frame, repainted targets cite every
+   * addressed rendition, and no correction remains.
    */
   complete: boolean;
 }

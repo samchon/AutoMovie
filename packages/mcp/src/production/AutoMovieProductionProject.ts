@@ -38,6 +38,7 @@ import {
 import { probeProductionMedia } from "./probeProductionMedia";
 import {
   canonicalAutoMovieRepaintRuntimeIdentity,
+  productionRepaintActiveReceiptPath,
   productionRepaintOutputPath,
   productionRepaintReceiptPath,
   productionRepaintStructuralControls,
@@ -89,6 +90,13 @@ export interface IAutoMovieProductionContentInput {
   render: boolean;
   /** Exact bytes, or null for one declared optional file that is absent. */
   bytes: Uint8Array | null;
+}
+
+interface IAutoMovieActiveRepaintReceipt {
+  version: 1;
+  shot: string;
+  receipt: string;
+  output: string;
 }
 
 /** A guarded production commit no longer matches its input snapshot. */
@@ -1615,6 +1623,90 @@ export class AutoMovieProductionProject {
     const validation = typia.validateEquals<IAutoMovieRepaintReceipt>(receipt);
     if (validation.success === false)
       throw new Error("Repaint receipt does not match its strict v1 schema.");
+    this.assertCurrentRepaintReceipt(receipt, bytes);
+    const output = resolveInside(this.renderRoot(), receipt.output.path);
+    const tracked = path.join(
+      this.productionStateRoot,
+      ...productionRepaintReceiptPath(receipt.output.path).split("/"),
+    );
+    const active = path.join(
+      this.productionStateRoot,
+      ...productionRepaintActiveReceiptPath(receipt.shot).split("/"),
+    );
+    return this.commitFiles(
+      [
+        { path: output, content: bytes },
+        { path: tracked, content: serializeJson(receipt) },
+        {
+          path: active,
+          content: serializeJson({
+            version: 1,
+            shot: receipt.shot,
+            receipt: productionRepaintReceiptPath(receipt.output.path),
+            output: receipt.output.path,
+          } satisfies IAutoMovieActiveRepaintReceipt),
+        },
+      ],
+      inputCurrent,
+    );
+  }
+
+  /**
+   * Re-read and verify every current repaint receipt and its resident MP4.
+   *
+   * Invalid, stale, linked, or forged records are omitted; review preparation
+   * treats an omitted required shot as missing rendition evidence.
+   */
+  public verifiedRepaintRenditions(
+    shots: readonly string[],
+  ): IAutoMovieRepaintReceipt[] {
+    this.refreshRevision();
+    const receipts: IAutoMovieRepaintReceipt[] = [];
+    for (const shot of [...new Set(shots)].sort(compareCodeUnits)) {
+      try {
+        const activePath = productionRepaintActiveReceiptPath(shot);
+        const activeBytes = this.readTrackedStateFile(activePath);
+        if (activeBytes === null) continue;
+        const pointerValidation =
+          typia.validateEquals<IAutoMovieActiveRepaintReceipt>(
+            JSON.parse(Buffer.from(activeBytes).toString("utf8")),
+          );
+        if (pointerValidation.success === false) continue;
+        const pointer = pointerValidation.data;
+        const bytes = this.readTrackedStateFile(pointer.receipt);
+        if (bytes === null) continue;
+        const validation = typia.validateEquals<IAutoMovieRepaintReceipt>(
+          JSON.parse(Buffer.from(bytes).toString("utf8")),
+        );
+        if (validation.success === false || validation.data.shot !== shot)
+          continue;
+        if (
+          canonicalizeAutoMovieJson(pointer) !==
+          canonicalizeAutoMovieJson({
+            version: 1,
+            shot,
+            receipt: productionRepaintReceiptPath(validation.data.output.path),
+            output: validation.data.output.path,
+          } satisfies IAutoMovieActiveRepaintReceipt)
+        )
+          continue;
+        const output = this.readRenderFile(validation.data.output.path);
+        this.assertCurrentRepaintReceipt(validation.data, output);
+        receipts.push(validation.data);
+      } catch {}
+    }
+    return receipts.sort(
+      (left, right) =>
+        compareCodeUnits(left.shot, right.shot) ||
+        compareCodeUnits(left.output.path, right.output.path),
+    );
+  }
+
+  /** Revalidate a stored repaint receipt against every current dependency. */
+  private assertCurrentRepaintReceipt(
+    receipt: IAutoMovieRepaintReceipt,
+    bytes: Uint8Array,
+  ): void {
     if (
       receipt.parameters.prompt.trim().length === 0 ||
       Number.isSafeInteger(receipt.parameters.seed) === false ||
@@ -1627,9 +1719,7 @@ export class AutoMovieProductionProject {
       ) ||
       receipt.controls.length === 0
     )
-      throw new Error(
-        "Repaint receipt requires a non-blank prompt, safe-integer seed, strength in [0, 1], finite scalar controls, and at least one structural pass.",
-      );
+      throw new Error("Stored repaint receipt parameters are invalid.");
     const generated = this.generatedManifest();
     if (
       generated === null ||
@@ -1657,14 +1747,12 @@ export class AutoMovieProductionProject {
         productionRepaintStructuralControls(sourceManifest),
       ) !== canonicalizeAutoMovieJson(receipt.controls)
     )
-      throw new Error(
-        "Repaint receipt source bundle, shot, compile, fingerprint, or structural controls differ from verified deterministic evidence.",
-      );
+      throw new Error("Stored repaint receipt source evidence is stale.");
     let runtimeIdentity: unknown;
     try {
       runtimeIdentity = JSON.parse(receipt.adapterIdentity);
     } catch {
-      throw new Error("Repaint adapter identity is not canonical JSON.");
+      throw new Error("Stored repaint adapter identity is not JSON.");
     }
     const runtimeValidation =
       typia.validateEquals<IAutoMovieRepaintRuntimeIdentity>(runtimeIdentity);
@@ -1673,9 +1761,7 @@ export class AutoMovieProductionProject {
       canonicalAutoMovieRepaintRuntimeIdentity(runtimeValidation.data) !==
         receipt.adapterIdentity
     )
-      throw new Error(
-        "Repaint adapter identity is incomplete or not canonical.",
-      );
+      throw new Error("Stored repaint adapter identity is invalid.");
     this.validateRepaintReferences(receipt);
     const expected = productionRepaintOutputPath({
       shot: receipt.shot,
@@ -1691,9 +1777,7 @@ export class AutoMovieProductionProject {
       receipt.output.digest !== digestAutoMovieBytes(bytes) ||
       receipt.output.bytes !== bytes.length
     )
-      throw new Error(
-        "Repaint receipt production, content-addressed path, digest, or byte count differs from resident output.",
-      );
+      throw new Error("Stored repaint output identity is invalid.");
     const probe = probeProductionMedia({
       kind: "guide-pass",
       mediaType: "video/mp4",
@@ -1704,21 +1788,7 @@ export class AutoMovieProductionProject {
       canonicalizeAutoMovieJson(probe) !==
         canonicalizeAutoMovieJson(receipt.output.probe)
     )
-      throw new Error(
-        "Repaint receipt media facts differ from a fresh parse of resident output bytes.",
-      );
-    const output = resolveInside(this.renderRoot(), receipt.output.path);
-    const tracked = path.join(
-      this.productionStateRoot,
-      ...productionRepaintReceiptPath(receipt.output.path).split("/"),
-    );
-    return this.commitFiles(
-      [
-        { path: output, content: bytes },
-        { path: tracked, content: serializeJson(receipt) },
-      ],
-      inputCurrent,
-    );
+      throw new Error("Stored repaint media facts are stale.");
   }
 
   /** Verify every repaint reference against current declared asset bytes. */

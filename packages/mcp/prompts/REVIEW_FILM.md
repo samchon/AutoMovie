@@ -4,7 +4,7 @@ Read this guide before `prepareReview` or `submitReview` with target kind `film`
 
 ## Prepare and inspect
 
-Call `prepareReview` for the exact film id after current sequences, audio, captions, rendition policy, and delivery artifacts exist. Inspect the whole work without skipping repeated or quiet passages, then revisit diagnostic points and high-risk transitions.
+Call `prepareReview` for the exact film id after current sequences, audio, captions, rendition policy, and delivery artifacts exist. Inspect the whole work without skipping repeated or quiet passages, then revisit diagnostic points and high-risk transitions. When visual delivery is repainted, open every shot MP4 returned in `renditions` and cite at least one current `kind:"rendition"` entry per shot. The server rechecks output bytes, receipt identity, deterministic source, references, adapter, parameters, and media facts; missing, stale, or uncited rendition evidence blocks terminal review.
 
 The canonical criteria are:
 

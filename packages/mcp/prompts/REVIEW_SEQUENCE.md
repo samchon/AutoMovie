@@ -4,7 +4,7 @@ Read this guide before `prepareReview` or `submitReview` with target kind `seque
 
 ## Prepare and inspect
 
-Call `prepareReview` for the exact treatment sequence id. Inspect current coverage and the temporal run, including incoming and outgoing transitions. Use the worksheet’s exact source selectors, verified frames, and acceptance outcomes.
+Call `prepareReview` for the exact treatment sequence id. Inspect current coverage and the temporal run, including incoming and outgoing transitions. Use the worksheet's exact source selectors, verified frames, and acceptance outcomes. For repainted delivery, also open every addressed MP4 in `renditions`, inspect both sides of each cut, and cite at least one current `kind:"rendition"` entry per shot; missing, stale, or uncited rendition receipts block completion.
 
 The canonical criteria are:
 

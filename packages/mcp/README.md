@@ -46,8 +46,10 @@ Start with:
 ```
 
 Then read the exact contract guides named by the tool refusal. `repaintShot`
-requires `DIFFUSION_ENHANCE`; it is routed only for production designs whose
-visual delivery is `repainted`.
+always requires its contract guide, then dynamically requires
+`DIFFUSION_ENHANCE` only after the selected production's typed
+`visualDelivery` is `repainted`. Deterministic delivery returns a concrete
+policy refusal without requesting diffusion knowledge.
 
 ## Non-MCP runtime
 
@@ -80,6 +82,6 @@ const status = inspectAutoMovieProduction(
 
 `captureFrame` resolves only ids in the current compiler-owned `manifests/compile.json`, delegates actual pixels to `AutoMovieProductionFrameCapture`, decodes the PNG, verifies dimensions and visible variance, and atomically commits a content-addressed render bundle and receipt.
 
-`repaintShot` is unavailable unless the host injects `AutoMovieProductionShotRepaint`. The adapter receives current beauty and structural-control pixels plus byte-verified manifest references. Accepted MP4 output is parsed and committed with a receipt binding compiler fingerprint, source render fingerprint, control digests, reference digests, adapter/model identity, parameters, and output digest.
+`repaintShot` is unavailable unless the host injects `AutoMovieProductionShotRepaint`. The adapter receives current beauty and structural-control pixels plus byte-verified manifest references. Accepted MP4 output is parsed and committed with a receipt binding compiler fingerprint, source render fingerprint, control digests, reference digests, adapter/model identity, parameters, and output digest. The same atomic commit selects that receipt as the shot's sole active rendition; a reroll replaces the pointer, not the immutable historical output.
 
-`prepareReview` and `submitReview` retain the four surfaces: asset, shot, sequence, and film. The reflected `submitReview` schema keeps `complete` last so evidence, checks, corrections, and completion basis are generated before the declaration.
+`prepareReview` and `submitReview` retain the four visual surfaces: asset, shot, sequence, and film. Repainted shot, sequence, and film worksheets additionally expose byte- and receipt-verified `renditions`; completion must cite one current rendition per addressed shot, and any reroll changes the review fingerprint. The reflected `submitReview` schema keeps `complete` last so evidence, checks, corrections, and completion basis are generated before the declaration.
