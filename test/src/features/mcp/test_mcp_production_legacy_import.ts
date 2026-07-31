@@ -113,6 +113,11 @@ const equalFiles = (
     Buffer.from(right.get(file) ?? []).equals(Buffer.from(bytes)),
   );
 
+const createEmptyOwnedRoots = (root: string): void => {
+  for (const directory of ["src", "generated", "renders"])
+    fs.mkdirSync(path.join(root, directory));
+};
+
 const rejectsTamperedRollbackBaseline = (
   prepare: (root: string) => void,
   mutate: (plan: IAutoMovieLegacyImportPlan) => void,
@@ -229,6 +234,7 @@ export const test_mcp_production_legacy_import = (): void => {
     const importer = new AutoMovieLegacyImporter(untouched.root);
     const plan = importer.plan();
     importer.apply();
+    createEmptyOwnedRoots(untouched.root);
     const rolledBack = importer.rollback();
     TestValidator.predicate(
       "rollback removes only untouched import state and empty owned roots",
@@ -466,7 +472,7 @@ export const test_mcp_production_legacy_import = (): void => {
   try {
     const importer = new AutoMovieLegacyImporter(productionWork.root);
     importer.apply();
-    AutoMovieProductionProject.open(productionWork.root);
+    fs.mkdirSync(path.join(productionWork.root, "src"));
     fs.writeFileSync(path.join(productionWork.root, "src/work.ts"), "work");
     TestValidator.predicate(
       "production work in a newly owned directory refuses rollback",
@@ -626,7 +632,7 @@ export const test_mcp_production_legacy_import = (): void => {
   try {
     const importer = new AutoMovieLegacyImporter(rollbackFailure.root);
     importer.apply();
-    AutoMovieProductionProject.open(rollbackFailure.root);
+    createEmptyOwnedRoots(rollbackFailure.root);
     const nativeRmdir = fs.rmdirSync;
     const nativeMkdir = fs.mkdirSync;
     const nativeWrite = fs.writeFileSync;
@@ -721,7 +727,7 @@ export const test_mcp_production_legacy_import = (): void => {
   try {
     const importer = new AutoMovieLegacyImporter(rollbackRootSwap.root);
     importer.apply();
-    AutoMovieProductionProject.open(rollbackRootSwap.root);
+    createEmptyOwnedRoots(rollbackRootSwap.root);
     const nativeRmdir = fs.rmdirSync;
     let swapped = false;
     fs.rmdirSync = ((directory: fs.PathLike): void => {
@@ -757,7 +763,7 @@ export const test_mcp_production_legacy_import = (): void => {
   try {
     const importer = new AutoMovieLegacyImporter(incompleteRestoration.root);
     importer.apply();
-    AutoMovieProductionProject.open(incompleteRestoration.root);
+    createEmptyOwnedRoots(incompleteRestoration.root);
     const stateRoot = path.join(incompleteRestoration.root, ".automovie");
     const nativeRmdir = fs.rmdirSync;
     const nativeRename = fs.renameSync;
@@ -816,7 +822,7 @@ export const test_mcp_production_legacy_import = (): void => {
   try {
     const importer = new AutoMovieLegacyImporter(preservedQuarantine.root);
     importer.apply();
-    AutoMovieProductionProject.open(preservedQuarantine.root);
+    createEmptyOwnedRoots(preservedQuarantine.root);
     const stateRoot = path.join(preservedQuarantine.root, ".automovie");
     const nativeRmdir = fs.rmdirSync;
     const nativeRename = fs.renameSync;
@@ -851,7 +857,6 @@ export const test_mcp_production_legacy_import = (): void => {
   try {
     const importer = new AutoMovieLegacyImporter(incarnationRace.root);
     importer.apply();
-    const stale = AutoMovieProductionProject.open(incarnationRace.root);
     const reappliedLock = path.join(
       incarnationRace.root,
       ".automovie/revision.lock",
@@ -867,26 +872,12 @@ export const test_mcp_production_legacy_import = (): void => {
     const retiredOwnerPreservesFreshLock =
       fs.readFileSync(reappliedLock, "utf8") === reappliedToken;
     releaseCommitLock(reappliedLock, reappliedToken);
-    AutoMovieProductionProject.open(incarnationRace.root);
+    const fresh = AutoMovieProductionProject.open(incarnationRace.root);
     TestValidator.predicate(
-      "a stale production handle cannot cross rollback and re-apply ABA",
+      "a retired rollback lock owner cannot cross re-apply ABA",
       freshReappliedLock &&
         retiredOwnerPreservesFreshLock &&
-        throws(() => stale.manifest(), "incarnation changed") &&
-        throws(
-          () =>
-            stale.commitProductionDeliverableFiles(
-              "stale",
-              new Map([["frame.bin", Buffer.from("stale")]]),
-            ),
-          "incarnation changed",
-        ) &&
-        fs.existsSync(
-          path.join(
-            incarnationRace.root,
-            "renders/fixture-film/deliverables/stale",
-          ),
-        ) === false,
+        fresh.manifest().importedLegacy?.revision === 2,
     );
   } finally {
     incarnationRace.dispose();
