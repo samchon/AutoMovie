@@ -267,6 +267,10 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
     const filmPath = path.join(fixture.root, "src/film.ts");
     const originalSource = fs.readFileSync(filmPath);
     const first = compiler.compile({ scope: "source" });
+    const firstSucceeded = productionCompileSucceeded(
+      "initial film timeline fixture",
+      first,
+    );
     const timelinePath = path.join(
       fixture.root,
       "generated/fixture-film/film-timeline.json",
@@ -284,9 +288,13 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
     const reopened = new AutoMovieProductionCompiler(
       AutoMovieProductionProject.open(fixture.root),
     ).compile({ scope: "source" });
+    const reopenedSucceeded = productionCompileSucceeded(
+      "reopened film timeline fixture",
+      reopened,
+    );
     TestValidator.predicate(
       "valid film materializes deterministic edit and timeline bytes",
-      first.success &&
+      firstSucceeded &&
         timeline.id === "fixture-film" &&
         timeline.totalFrames === 144 &&
         timeline.segments.length === 1 &&
@@ -297,7 +305,7 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
         compiledEdit.source.export === "film" &&
         compiledEdit.inputFingerprint === first.compiler.inputFingerprint &&
         timeline.inputFingerprint === first.compiler.inputFingerprint &&
-        reopened.success &&
+        reopenedSucceeded &&
         reopened.compiler.inputFingerprint ===
           first.compiler.inputFingerprint &&
         reopened.materialized.every((file) => file.status === "unchanged") &&
@@ -734,6 +742,10 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
     });
     writeEditSource(fixture.root, filmPath, twoShotEdit());
     const twoShot = compiler.compile({ scope: "source" });
+    const twoShotSucceeded = productionCompileSucceeded(
+      "two-shot film timeline",
+      twoShot,
+    );
     const twoShotTimeline = JSON.parse(
       fs.readFileSync(timelinePath, "utf8"),
     ) as IAutoMovieFilmTimeline;
@@ -742,7 +754,7 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
     });
     TestValidator.predicate(
       "cut, dissolve and fade law materializes an overlap without changing total frames",
-      twoShot.success &&
+      twoShotSucceeded &&
         twoShotTimeline.totalFrames === 276 &&
         twoShotTimeline.segments[0]?.transitionIn.kind === "cut" &&
         twoShotTimeline.segments[0]?.transitionOut.kind === "dissolve" &&
@@ -853,6 +865,10 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
     });
     writeEditSource(fixture.root, filmPath, omitted);
     const legalOmission = compiler.compile({ scope: "source" });
+    const legalOmissionSucceeded = productionCompileSucceeded(
+      "film omission",
+      legalOmission,
+    );
     const omissionReview = new AutoMovieProductionReviewService(
       project,
     ).prepare({
@@ -947,7 +963,7 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
     fs.writeFileSync(generatedManifestPath, JSON.stringify(currentManifest));
     TestValidator.predicate(
       "an explicit current-shot omission controls review evidence and shared timeline validation",
-      legalOmission.success &&
+      legalOmissionSucceeded &&
         validTimeline.omissions[0]?.shot === "answer" &&
         gapFrame.result === null &&
         gapFrame.diagnostics[0]?.message.includes("no owning video segment") &&
@@ -1058,6 +1074,10 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
     });
     writeEditSource(fixture.root, filmPath, trimmed);
     const legalTrim = compiler.compile({ scope: "source" });
+    const legalTrimSucceeded = productionCompileSucceeded(
+      "film trim",
+      legalTrim,
+    );
     const trimTimeline = JSON.parse(
       fs.readFileSync(timelinePath, "utf8"),
     ) as IAutoMovieFilmTimeline;
@@ -1099,7 +1119,7 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
     )?.acceptanceScenarios;
     TestValidator.predicate(
       "a legal trim uses one in-range fallback and submits exact half-open event coverage",
-      legalTrim.success &&
+      legalTrimSucceeded &&
         trimSelection.length === 1 &&
         trimSelection[0]?.id === "film-segment-entry" &&
         trimSelection[0]?.index === 72 &&

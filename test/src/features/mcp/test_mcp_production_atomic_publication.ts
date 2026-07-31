@@ -17,7 +17,11 @@ import fs from "node:fs";
 import path from "node:path";
 import { PNG } from "pngjs";
 
-import { productionFixture, testRendererIdentity } from "./productionFixtures";
+import {
+  productionCompileSucceeded,
+  productionFixture,
+  testRendererIdentity,
+} from "./productionFixtures";
 
 const image = (red: number): Uint8Array => {
   const png = new PNG({ width: 16, height: 16 });
@@ -99,7 +103,7 @@ export const test_mcp_production_atomic_publication = (): void => {
     });
     TestValidator.predicate(
       "atomic publication fixture compiles source",
-      compiled.success,
+      productionCompileSucceeded("atomic publication fixture", compiled),
     );
     const compileFingerprint = compiled.compiler.inputFingerprint;
     const publicationSnapshot = productionPublicationInputFingerprint(project);

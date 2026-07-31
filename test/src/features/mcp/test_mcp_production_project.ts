@@ -27,6 +27,7 @@ import {
   fixtureWorldDesign,
   formationDesign,
   modelRecipe,
+  productionCompileSucceeded,
   productionDesign,
   productionFixture,
   shotContract,
@@ -767,7 +768,10 @@ export const test_mcp_production_project = (): void => {
       AutoMovieProductionProject.open(fixture.root),
     );
     const compiled = compiler.compile({ scope: "source" });
-    TestValidator.predicate("project compiler fixture", compiled.success);
+    TestValidator.predicate(
+      "project compiler fixture",
+      productionCompileSucceeded("project compiler fixture", compiled),
+    );
     const linkedGenerated = productionFixture();
     const outsideGenerated = fs.mkdtempSync(
       path.join(os.tmpdir(), "automovie-generated-outside-"),
@@ -779,7 +783,10 @@ export const test_mcp_production_project = (): void => {
       const linkedCompiler = new AutoMovieProductionCompiler(linkedProject);
       TestValidator.predicate(
         "linked generated fixture compiles",
-        linkedCompiler.compile({ scope: "source" }).success,
+        productionCompileSucceeded(
+          "linked generated fixture",
+          linkedCompiler.compile({ scope: "source" }),
+        ),
       );
       const shotsRoot = path.join(linkedProject.generatedRoot(), "shots");
       fs.copyFileSync(

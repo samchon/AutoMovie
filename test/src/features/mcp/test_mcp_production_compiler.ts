@@ -194,7 +194,7 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     project.contentInputs = firstContentInputs;
     TestValidator.predicate(
       "starter source compiles from one shared snapshot and two commit guards",
-      first.success &&
+      productionCompileSucceeded("starter source fixture", first) &&
         firstContentReads === 3 &&
         first.materialized.some(
           (file) =>
@@ -751,7 +751,11 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     });
     const exactActiveUse = assetCodes(activeAudioManifest);
     const externalCompile = compiler.compile({ scope: "source" });
-    const importedRuntime = externalCompile.success
+    const externalCompileSucceeded = productionCompileSucceeded(
+      "external asset fixture",
+      externalCompile,
+    );
+    const importedRuntime = externalCompileSucceeded
       ? (JSON.parse(
           Buffer.from(
             project.readGeneratedFile(`models/${boundModel.id}.json`),
@@ -885,7 +889,7 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
       "exact active uses have no asset diagnostics": [...exactActiveUse].every(
         (code) => !code.startsWith("asset-"),
       ),
-      "external asset compile succeeds": externalCompile.success,
+      "external asset compile succeeds": externalCompileSucceeded,
       "imported runtime records imported origin":
         importedRuntime?.origin === "imported",
       "imported runtime records the source asset":
@@ -1000,7 +1004,10 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     ).compile({ scope: "source" });
     TestValidator.predicate(
       "successful compile derives its response queue exactly once before commit",
-      singleQueueCompile.success && singleQueueCalls === 1,
+      productionCompileSucceeded(
+        "single review-queue compile",
+        singleQueueCompile,
+      ) && singleQueueCalls === 1,
     );
     fs.writeFileSync(
       sourcePath,
@@ -1232,7 +1239,7 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     const compileDesignOnly = compiler.compile({ scope: "design" });
     TestValidator.predicate(
       "design scope never replaces current generated source output",
-      compileDesignOnly.success &&
+      productionCompileSucceeded("design-only compile", compileDesignOnly) &&
         compileDesignOnly.materialized.length === 0 &&
         fs.readFileSync(generatedManifestPath, "utf8") ===
           generatedBeforeDesignGate &&
@@ -1278,7 +1285,10 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     project.revision = residentRevision;
     TestValidator.predicate(
       "design-only success returns the fenced revision without a later read",
-      stableDesignOnly.success &&
+      productionCompileSucceeded(
+        "fenced design-only compile",
+        stableDesignOnly,
+      ) &&
         postFenceDesignReads === 5 &&
         postFenceDesignMutation === false,
     );
@@ -1380,7 +1390,7 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     const repaired = compiler.compile({ scope: "source" });
     TestValidator.predicate(
       "compile repairs a declared generated file",
-      repaired.success &&
+      productionCompileSucceeded("tampered generated repair", repaired) &&
         repaired.materialized.some(
           (file) =>
             file.path === "shots/opening.json" && file.status === "updated",
@@ -1401,7 +1411,7 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
         (item) =>
           item.code === "generated-tampered" && item.message.includes("null"),
       ) &&
-        recreated.success &&
+        productionCompileSucceeded("missing generated repair", recreated) &&
         recreated.materialized.some(
           (file) =>
             file.path === "shots/opening.json" && file.status === "created",
@@ -1415,7 +1425,10 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
       diagnosticCodes(missingOwnershipManifest).has(
         "generated-manifest-missing",
       ) &&
-        repairedOwnershipManifest.success &&
+        productionCompileSucceeded(
+          "missing ownership-manifest repair",
+          repairedOwnershipManifest,
+        ) &&
         repairedOwnershipManifest.diagnostics.some(
           (diagnostic) =>
             diagnostic.code === "generated-manifest-missing" &&
@@ -1873,8 +1886,10 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     const contentIndependentDesign = compiler.compile({ scope: "design" });
     TestValidator.predicate(
       "design scope does not read declared content or derive review fingerprints",
-      contentIndependentDesign.success &&
-        contentIndependentDesign.reviews.entries.length === 0,
+      productionCompileSucceeded(
+        "content-independent design compile",
+        contentIndependentDesign,
+      ) && contentIndependentDesign.reviews.entries.length === 0,
     );
     for (const failure of [
       new Error("declared content junction"),
@@ -2225,6 +2240,10 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
         }).accepted,
     );
     const materializedFormation = compiler.compile({ scope: "source" });
+    const formationCompileSucceeded = productionCompileSucceeded(
+      "formation materialization fixture",
+      materializedFormation,
+    );
     const formationShot = JSON.parse(
       fs.readFileSync(
         path.join(fixture.root, "generated/fixture-film/shots/opening.json"),
@@ -2251,7 +2270,7 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     };
     TestValidator.predicate(
       "formation count, compact anonymous runtime, hero identity and realization come from the compiler",
-      materializedFormation.success &&
+      formationCompileSucceeded &&
         formationShot.scene.nodes.some((node) => node.id === "captain") &&
         formationShot.scene.nodes.filter(
           (node) =>
@@ -2628,7 +2647,10 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     TestValidator.predicate(
       "final compile accepts complete byte-exact aggregate deliverables",
       fakeMediaCommitRefused &&
-        finalCompiler.compile({ scope: "final" }).success,
+        productionCompileSucceeded(
+          "byte-exact final deliverables",
+          finalCompiler.compile({ scope: "final" }),
+        ),
     );
     TestValidator.predicate(
       "non-feature outputs cannot carry nominal repaint provenance",

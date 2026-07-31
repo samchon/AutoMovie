@@ -15,6 +15,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import {
+  productionCompileSucceeded,
   productionFixture,
   shotContract,
   worldDesign,
@@ -48,7 +49,11 @@ export const test_mcp_production_effect = (): void => {
     const compile = new AutoMovieProductionCompiler(project).compile({
       scope: "source",
     });
-    const compiled = compile.success
+    const compileSucceeded = productionCompileSucceeded(
+      "effect fixture",
+      compile,
+    );
+    const compiled = compileSucceeded
       ? (JSON.parse(
           fs.readFileSync(
             path.join(
@@ -115,7 +120,7 @@ export const test_mcp_production_effect = (): void => {
     });
     TestValidator.predicate(
       "source cue becomes one current deterministic effect stream and oracle summary",
-      compile.success &&
+      compileSucceeded &&
         compiled?.effects.length === 1 &&
         compiled.effects[0]?.kind === "smoke" &&
         compiled.effects[0]?.event === "signal-raised" &&

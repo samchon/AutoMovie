@@ -595,7 +595,11 @@ export const test_mcp_production_materialization = (): void => {
       .replaceAll('"army"', `"${highCount.id}"`);
     fs.writeFileSync(openingSourcePath, openingSource);
     const highCountCompile = compiler.compile({ scope: "source" });
-    const highCountShot = highCountCompile.success
+    const highCountCompileSucceeded = productionCompileSucceeded(
+      "high-count formation fixture",
+      highCountCompile,
+    );
+    const highCountShot = highCountCompileSucceeded
       ? (JSON.parse(
           fs.readFileSync(
             path.join(
@@ -618,7 +622,7 @@ export const test_mcp_production_materialization = (): void => {
     });
     TestValidator.predicate(
       "shot sandbox regenerates a high slot and preserves one compact formation motion",
-      highCountCompile.success &&
+      highCountCompileSucceeded &&
         highCountShot?.formations[0]?.count === highCount.count &&
         highCountShot.scene.nodes.every(
           (node) =>

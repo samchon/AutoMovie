@@ -18,6 +18,7 @@ import path from "node:path";
 
 import {
   modelRecipe,
+  productionCompileSucceeded,
   productionFixture,
   worldDesign,
 } from "./productionFixtures";
@@ -213,6 +214,10 @@ export const test_mcp_production_instances = (): void => {
     const output = new AutoMovieProductionCompiler(project).compile({
       scope: "source",
     });
+    const outputSucceeded = productionCompileSucceeded(
+      "world instance fixture",
+      output,
+    );
     const compiled = JSON.parse(
       fs.readFileSync(
         path.join(fixture.root, "generated/fixture-film/shots/opening.json"),
@@ -221,7 +226,7 @@ export const test_mcp_production_instances = (): void => {
     ) as IAutoMovieCompiledShotSource;
     TestValidator.predicate(
       "compiler and sandbox oracle publish compact world instance runtimes",
-      output.success &&
+      outputSucceeded &&
         compiled.instanceSets.length === 3 &&
         compiled.instanceSets.find((item) => item.id === "civilians")?.count ===
           100 &&
