@@ -1271,13 +1271,47 @@ export const test_mcp_production_legacy_import = (): void => {
   try {
     fs.writeFileSync(path.join(collidingCase.root, "actors/Officer.txt"), "A");
     fs.writeFileSync(path.join(collidingCase.root, "actors/officer.txt"), "B");
-    TestValidator.predicate(
-      "portable legacy inventory refuses case-colliding paths",
-      throws(
-        () => new AutoMovieLegacyImporter(collidingCase.root).plan(),
-        "collide by case",
-      ),
-    );
+    const collidingActorDirectory = path.join(collidingCase.root, "actors");
+    const nativeReaddir = fs.readdirSync;
+    fs.readdirSync = ((
+      directory: fs.PathLike,
+      options?: { withFileTypes?: boolean },
+    ): fs.Dirent[] => {
+      const entries = Reflect.apply(nativeReaddir, fs, [
+        directory,
+        options,
+      ]) as fs.Dirent[];
+      if (
+        path.resolve(directory.toString()) === collidingActorDirectory &&
+        options?.withFileTypes === true
+      )
+        return [
+          ...entries.filter(
+            (entry) => entry.name.toLowerCase() !== "officer.txt",
+          ),
+          ...["Officer.txt", "officer.txt"].map(
+            (name) =>
+              ({
+                name,
+                isSymbolicLink: () => false,
+                isDirectory: () => false,
+                isFile: () => true,
+              }) as fs.Dirent,
+          ),
+        ];
+      return entries;
+    }) as typeof fs.readdirSync;
+    try {
+      TestValidator.predicate(
+        "portable legacy inventory refuses case-colliding paths",
+        throws(
+          () => new AutoMovieLegacyImporter(collidingCase.root).plan(),
+          "collide by case",
+        ),
+      );
+    } finally {
+      fs.readdirSync = nativeReaddir;
+    }
   } finally {
     collidingCase.dispose();
   }
