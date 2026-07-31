@@ -205,30 +205,42 @@ export const test_mcp_production_legacy_import = (): void => {
     const applied = importer.apply();
     const repeated = importer.apply();
     const production = AutoMovieProductionProject.open(fixture.root);
-    const repeatedAfterOpen = importer.apply();
     TestValidator.predicate(
-      "apply is atomic, idempotent, and production provenance reopens",
+      "apply is atomic and idempotent until production provenance reopens",
       applied.status === "applied" &&
         repeated.status === "unchanged" &&
-        repeatedAfterOpen.status === "unchanged" &&
         repeated.plan.fingerprint === plan.fingerprint &&
-        repeatedAfterOpen.plan.fingerprint === plan.fingerprint &&
         production.manifest().importedLegacy?.revision === 2 &&
         production.manifest().importedLegacy?.sourceRoot === "." &&
-        equalFiles(before, legacyFiles(fixture.root)),
+        equalFiles(before, legacyFiles(fixture.root)) &&
+        throws(
+          () => importer.apply(),
+          "already exists with a different or incomplete import",
+        ) &&
+        throws(() => importer.rollback(), "changed after import"),
     );
+  } finally {
+    fixture.dispose();
+  }
+
+  const untouched = createLegacy();
+  try {
+    const before = legacyFiles(untouched.root);
+    const importer = new AutoMovieLegacyImporter(untouched.root);
+    const plan = importer.plan();
+    importer.apply();
     const rolledBack = importer.rollback();
     TestValidator.predicate(
       "rollback removes only untouched import state and empty owned roots",
       rolledBack.fingerprint === plan.fingerprint &&
-        fs.existsSync(path.join(fixture.root, ".automovie")) === false &&
-        fs.existsSync(path.join(fixture.root, "src")) === false &&
-        fs.existsSync(path.join(fixture.root, "generated")) === false &&
-        equalFiles(before, legacyFiles(fixture.root)) &&
+        fs.existsSync(path.join(untouched.root, ".automovie")) === false &&
+        fs.existsSync(path.join(untouched.root, "src")) === false &&
+        fs.existsSync(path.join(untouched.root, "generated")) === false &&
+        equalFiles(before, legacyFiles(untouched.root)) &&
         throws(() => importer.rollback(), "Nothing was rolled back"),
     );
   } finally {
-    fixture.dispose();
+    untouched.dispose();
   }
 
   const actorless = createLegacy();
