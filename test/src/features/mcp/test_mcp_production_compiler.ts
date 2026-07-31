@@ -1809,15 +1809,23 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
         '    skeleton: "missing-skeleton",\n    duration:',
       ),
     );
+    const missingSkeleton = compiler.compile({ scope: "source" });
+    const missingSkeletonIsRejected = missingSkeleton.diagnostics.some(
+      (item) =>
+        item.code === "engine-validation-failed" &&
+        item.message.includes("missing skeleton"),
+    );
+    if (missingSkeletonIsRejected === false)
+      throw new Error(
+        `Missing-skeleton compile did not reach the expected engine gate:\n${JSON.stringify(
+          missingSkeleton.diagnostics,
+          null,
+          2,
+        )}`,
+      );
     TestValidator.predicate(
       "motion skeleton references are compiler gates",
-      compiler
-        .compile({ scope: "source" })
-        .diagnostics.some(
-          (item) =>
-            item.code === "engine-validation-failed" &&
-            item.message.includes("missing skeleton"),
-        ),
+      missingSkeletonIsRejected,
     );
     fs.writeFileSync(sourcePath, original);
 
