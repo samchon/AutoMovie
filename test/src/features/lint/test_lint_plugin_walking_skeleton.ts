@@ -28,6 +28,10 @@ const pluginCache = path.join(
   "automovie-lint-test",
 );
 
+const DEPENDENCY_PUBLIC_ENTRIES: Readonly<Record<string, string>> = {
+  "@modelcontextprotocol/sdk": "@modelcontextprotocol/sdk/server/stdio.js",
+};
+
 const linkDirectory = (source: string, destination: string): void => {
   fs.mkdirSync(path.dirname(destination), { recursive: true });
   fs.symlinkSync(
@@ -40,7 +44,7 @@ const linkDirectory = (source: string, destination: string): void => {
 const dependencyRoot = (name: string): string => {
   let entry: string;
   try {
-    entry = require.resolve(name);
+    entry = require.resolve(DEPENDENCY_PUBLIC_ENTRIES[name] ?? name);
   } catch (error) {
     if (name.startsWith("@types/") === false) throw error;
     entry = require.resolve(`${name}/package.json`);
