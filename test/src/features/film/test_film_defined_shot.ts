@@ -15,17 +15,24 @@ import {
 } from "../internal/filmFixtures";
 import { createSkeleton } from "../internal/fixtures";
 
-const program = (): IAutoMovieShotProgram => ({
-  actors: [
-    { node: "knightA", model: "knightA", speed: 1, eyeHeight: 1.6 },
-    { node: "knightB", model: "knightB", speed: 1, eyeHeight: 1.6 },
-  ],
-  script: makeScriptWrite(),
-  stage: makeStagingWrite(),
-  blocking: makeBlockingWrite(),
-  performance: makePerformanceWrite(),
-  eventSamples: [],
-});
+const program = (): IAutoMovieShotProgram => {
+  const blocking = makeBlockingWrite();
+  const performance = makePerformanceWrite();
+  blocking.camera.framing = "full";
+  for (const action of performance.draft)
+    if (action.verb === "frame") action.framing = "full";
+  return {
+    actors: [
+      { node: "knightA", model: "knightA", speed: 1, eyeHeight: 1.6 },
+      { node: "knightB", model: "knightB", speed: 1, eyeHeight: 1.6 },
+    ],
+    script: makeScriptWrite(),
+    stage: makeStagingWrite(),
+    blocking,
+    performance,
+    eventSamples: [],
+  };
+};
 
 /**
  * A registered source module drives the full film engine without MCP.

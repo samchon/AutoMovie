@@ -47,39 +47,43 @@ const walkingProgram = (
   target: IAutoMovieVector3,
   speed: number,
   duration: number | "auto",
-): IAutoMovieShotProgram => ({
-  actors: [{ node: "knightA", model: "knightA", speed, eyeHeight: 1.6 }],
-  script: makeScriptWrite(),
-  stage,
-  blocking: makeBlockingWrite({
+): IAutoMovieShotProgram => {
+  const blocking = makeBlockingWrite({
     actors: [{ node: "knightA", beats: "continues one grounded stride" }],
     duration: 1,
-  }),
-  performance: makePerformanceWrite({
-    draft: [
-      {
-        verb: "locomote",
-        actor: "knightA",
-        start: 0,
-        duration,
-        gait: "walk",
-        to: { kind: "point", point: target },
-      },
-      {
-        verb: "frame",
-        actor: "cam-main",
-        start: 0,
-        duration: "auto",
-        framing: "medium",
-        move: "static",
-        on: { kind: "node", node: "knightA" },
-      },
-    ],
-    revise: { review: "The planted stride remains readable.", final: null },
-    duration: 1,
-  }),
-  eventSamples: [],
-});
+  });
+  blocking.camera.framing = "full";
+  return {
+    actors: [{ node: "knightA", model: "knightA", speed, eyeHeight: 1.6 }],
+    script: makeScriptWrite(),
+    stage,
+    blocking,
+    performance: makePerformanceWrite({
+      draft: [
+        {
+          verb: "locomote",
+          actor: "knightA",
+          start: 0,
+          duration,
+          gait: "walk",
+          to: { kind: "point", point: target },
+        },
+        {
+          verb: "frame",
+          actor: "cam-main",
+          start: 0,
+          duration: "auto",
+          framing: "full",
+          move: "static",
+          on: { kind: "node", node: "knightA" },
+        },
+      ],
+      revise: { review: "The planted stride remains readable.", final: null },
+      duration: 1,
+    }),
+    eventSamples: [],
+  };
+};
 
 const walkingContract = (): IAutoMovieDefinedShotContract => ({
   beat: "beat-1",
@@ -479,17 +483,19 @@ export const test_film_defined_shot_continuity = (): void => {
   );
 
   const stage = makeStagingWrite();
+  const continuityBlocking = makeBlockingWrite({
+    actors: [
+      { node: "knightA", beats: "continues the established walk" },
+      { node: "knightB", beats: "rides the established mount" },
+    ],
+    duration: 2,
+  });
+  continuityBlocking.camera.framing = "full";
   const program: IAutoMovieShotProgram = {
     actors: [{ node: "knightA", model: "knightA", speed: 0.5, eyeHeight: 1.6 }],
     script: makeScriptWrite(),
     stage,
-    blocking: makeBlockingWrite({
-      actors: [
-        { node: "knightA", beats: "continues the established walk" },
-        { node: "knightB", beats: "rides the established mount" },
-      ],
-      duration: 2,
-    }),
+    blocking: continuityBlocking,
     performance: makePerformanceWrite({
       draft: [
         {
@@ -505,7 +511,7 @@ export const test_film_defined_shot_continuity = (): void => {
           actor: "cam-main",
           start: 0,
           duration: "auto",
-          framing: "medium",
+          framing: "full",
           move: "static",
           on: { kind: "node", node: "knightA" },
         },
