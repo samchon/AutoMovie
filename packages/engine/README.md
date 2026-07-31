@@ -126,6 +126,7 @@ automovie의 **결정론적 엔진**. `@automovie/interface`의 AST를 받아 �
 | `space/`      | 공간: 지면·standable surface, affordance 접촉                                                                                                       |
 | `text/`       | 결정적 문자열 비교(`compareCodeUnits`)                                                                                                              |
 | `validation/` | 티어별 검증 오케스트레이터 → `IAutoMovieValidation`                                                                                                 |
+| `sound/` | 완성 필름 타임라인의 결정론적 사운드 계획·렌더링, 음소-비짐 변환, 파형·스펙트로그램 증거 |
 
 ## 검증 티어 (현재 구현)
 
