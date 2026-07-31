@@ -210,6 +210,8 @@ export const test_cli_scaffold = (): void => {
       ) &&
       files["scripts/capture.ts"]!.includes("productionFrameCaptureMetrics") &&
       files["scripts/capture.ts"]!.includes("avoidedPageReloads") &&
+      files["scripts/capture.ts"]!.includes("capturesPerSecond") &&
+      files["scripts/capture.ts"]!.includes("input.productionId") &&
       files["scripts/capture-browser.ts"]!.includes(
         "PLAYWRIGHT_BROWSERS_PATH: browserStoragePath(projectRoot)",
       ) &&
@@ -276,6 +278,10 @@ export const test_cli_scaffold = (): void => {
       files["scripts/render.ts"]!.includes('process.argv.indexOf("--tier")') &&
       files["scripts/render.ts"]!.includes("productionRenderLayersForPass") &&
       files["scripts/render.ts"]!.includes("renderGarbageCollection") &&
+      files["scripts/render.ts"]!.includes("renderPublicationFingerprint") &&
+      files["scripts/render.ts"]!.includes("assertMatchingProxyPublication") &&
+      files["scripts/render.ts"]!.includes("assertNoLiveRenderWorkers") &&
+      files["scripts/render.ts"]!.includes("captureGcPhysicalAncestry") &&
       files["scripts/render.ts"]!.includes("project.review(entry.target)") &&
       files["scripts/render.ts"]!.includes("frames/${passes[0]}/frame_") &&
       files["automovie.config.ts"]!.includes('kind: "proxy"') &&

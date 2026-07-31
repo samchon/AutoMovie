@@ -29,6 +29,7 @@
     {
       "id": "starter-pose-guide",
       "kind": "guide-pass",
+      "pass": "pose",
       "required": true
     },
     {

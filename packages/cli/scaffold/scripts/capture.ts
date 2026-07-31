@@ -27,20 +27,24 @@ interface CapturePage {
 }
 
 let sessionPromise: Promise<CaptureSession> | null = null;
-let sessionRoot: string | null = null;
+let sessionIdentity: string | null = null;
 let captureMetrics = {
   pagesOpened: 0,
   navigations: 0,
   seeks: 0,
   captures: 0,
+  captureMilliseconds: 0,
 };
 
-const startSession = async (projectRoot: string): Promise<CaptureSession> => {
+const startSession = async (
+  projectRoot: string,
+  productionId: string,
+): Promise<CaptureSession> => {
   const server = await createServer({
     root: projectRoot,
     configFile: false,
     logLevel: "silent",
-    plugins: [generatedShotPlugin(projectRoot, config.productionId)],
+    plugins: [generatedShotPlugin(projectRoot, productionId)],
     resolve: { dedupe: ["three"] },
     server: { host: config.viewer.host, port: 0, strictPort: false },
   });
@@ -70,23 +74,29 @@ const startSession = async (projectRoot: string): Promise<CaptureSession> => {
   }
 };
 
-const captureSession = async (projectRoot: string): Promise<CaptureSession> => {
+const captureSession = async (
+  projectRoot: string,
+  productionId: string,
+): Promise<CaptureSession> => {
   const root = path.resolve(projectRoot);
-  if (sessionPromise !== null && sessionRoot === root) return sessionPromise;
+  const identity = `${root}\0${productionId}`;
+  if (sessionPromise !== null && sessionIdentity === identity)
+    return sessionPromise;
   await closeProductionFrameCapture();
-  sessionRoot = root;
+  sessionIdentity = identity;
   captureMetrics = {
     pagesOpened: 0,
     navigations: 0,
     seeks: 0,
     captures: 0,
+    captureMilliseconds: 0,
   };
-  sessionPromise = startSession(root);
+  sessionPromise = startSession(root, productionId);
   try {
     return await sessionPromise;
   } catch (error) {
     sessionPromise = null;
-    sessionRoot = null;
+    sessionIdentity = null;
     throw error;
   }
 };
@@ -96,6 +106,7 @@ export const productionFrameCaptureMetrics = (): Readonly<
   typeof captureMetrics & {
     avoidedPageReloads: number;
     capturesPerNavigation: number;
+    capturesPerSecond: number;
   }
 > => ({
   ...captureMetrics,
@@ -107,6 +118,10 @@ export const productionFrameCaptureMetrics = (): Readonly<
     captureMetrics.navigations === 0
       ? 0
       : captureMetrics.captures / captureMetrics.navigations,
+  capturesPerSecond:
+    captureMetrics.captureMilliseconds === 0
+      ? 0
+      : captureMetrics.captures / (captureMetrics.captureMilliseconds / 1_000),
 });
 
 const capturePage = (
@@ -196,7 +211,7 @@ const capturePage = (
 export const closeProductionFrameCapture = async (): Promise<void> => {
   const pending = sessionPromise;
   sessionPromise = null;
-  sessionRoot = null;
+  sessionIdentity = null;
   if (pending === null) return;
   try {
     const session = await pending;
@@ -210,7 +225,7 @@ export const closeProductionFrameCapture = async (): Promise<void> => {
 export const captureProductionFrame: AutoMovieProductionFrameCapture = async (
   input,
 ) => {
-  const session = await captureSession(input.projectRoot);
+  const session = await captureSession(input.projectRoot, input.productionId);
   const resident = await capturePage(session, input);
   const previous = resident.queue;
   let release = (): void => undefined;
@@ -219,6 +234,7 @@ export const captureProductionFrame: AutoMovieProductionFrameCapture = async (
   });
   resident.queue = previous.then(() => turn);
   await previous;
+  const captureStarted = process.hrtime.bigint();
   try {
     try {
       ++captureMetrics.seeks;
@@ -251,6 +267,8 @@ export const captureProductionFrame: AutoMovieProductionFrameCapture = async (
     await resident.page.close();
     throw error;
   } finally {
+    captureMetrics.captureMilliseconds +=
+      Number(process.hrtime.bigint() - captureStarted) / 1_000_000;
     release();
   }
 };
@@ -272,6 +290,7 @@ const capturePageKey = (
 ): string =>
   JSON.stringify({
     subject: capturePageSubject(input),
+    productionId: input.productionId,
     compileFingerprint: input.compileFingerprint,
     width: input.width,
     height: input.height,

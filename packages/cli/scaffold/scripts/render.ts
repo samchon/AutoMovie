@@ -592,6 +592,7 @@ const renderChunk = async (
     for (const layer of productionRenderLayersForPass(sample, chunk.pass)) {
       const captured = await captureProductionFrame({
         projectRoot: root,
+        productionId,
         compileFingerprint: plan.compileFingerprint,
         target: { kind: "shot", id: layer.shot },
         time: layer.sourceFrame / plan.sourceFrameFormat.fps,
@@ -745,6 +746,7 @@ const finalize = async (plan: IAutoMovieProductionRenderJobPlan) => {
   const graph = project.graph();
   if (graph.production === null)
     throw new Error("Production design disappeared before final publication.");
+  if (plan.tier.kind === "final") assertMatchingProxyPublication(project, plan);
   const requiredVideo = new Set(
     graph.production.deliverables
       .filter(
@@ -776,6 +778,7 @@ const finalize = async (plan: IAutoMovieProductionRenderJobPlan) => {
     compileFingerprint: plan.compileFingerprint,
     deliverables: [],
   };
+  const publicationSegment = renderPublicationFingerprint(plan).slice(7);
   for (const deliverable of graph.production.deliverables) {
     const owned = new Map<string, Uint8Array>();
     const deliverableChunks = plan.chunks.filter(
@@ -842,6 +845,7 @@ const finalize = async (plan: IAutoMovieProductionRenderJobPlan) => {
       const frame = sampleProductionRenderFrame(timeline, 0).layers.at(-1)!;
       const captured = await captureProductionFrame({
         projectRoot: root,
+        productionId,
         compileFingerprint: plan.compileFingerprint,
         target: { kind: "shot", id: frame.shot },
         time: frame.sourceFrame / timeline.fps,
@@ -876,7 +880,7 @@ const finalize = async (plan: IAutoMovieProductionRenderJobPlan) => {
       const relative = [
         "deliverables",
         plan.tier.kind,
-        plan.editFingerprint.slice(7),
+        publicationSegment,
         encodeAutoMoviePathSegment(deliverable.id),
         name,
       ].join("/");
@@ -972,19 +976,20 @@ const publishProxyTierBundle = (
   project: AutoMovieProductionProject,
 ) => {
   const renderRoot = project.renderRoot();
-  const bundle = ["deliverables", "proxy", plan.editFingerprint.slice(7)].join(
-    "/",
-  );
+  const publicationSegment = renderPublicationFingerprint(plan).slice(7);
+  const bundle = ["deliverables", "proxy", publicationSegment].join("/");
   const parent = ensurePhysicalDirectory(renderRoot, "deliverables/proxy");
-  const target = path.join(parent, plan.editFingerprint.slice(7));
+  const target = path.join(parent, publicationSegment);
   const manifestBytes = Buffer.from(
     `${JSON.stringify(
       {
         version: 1,
         tier: plan.tier,
+        publicationFingerprint: renderPublicationFingerprint(plan),
         compileFingerprint: plan.compileFingerprint,
         editFingerprint: plan.editFingerprint,
         frameFormat: plan.frameFormat,
+        sourceFrameFormat: plan.sourceFrameFormat,
         totalFrames: plan.totalFrames,
         manifest,
       },
@@ -993,7 +998,9 @@ const publishProxyTierBundle = (
     )}\n`,
     "utf8",
   );
-  const files = new Map<string, Uint8Array>([["manifest.json", manifestBytes]]);
+  const files = new Map<string, Uint8Array>([
+    ["publication.json", manifestBytes],
+  ]);
   for (const [relative, bytes] of publication) {
     if (relative.startsWith(`${bundle}/`) === false)
       throw new Error(
@@ -1007,7 +1014,7 @@ const publishProxyTierBundle = (
   }
   const candidate = path.join(
     parent,
-    `.${plan.editFingerprint.slice(7)}.${randomUUID()}.candidate`,
+    `.${publicationSegment}.${randomUUID()}.candidate`,
   );
   fs.mkdirSync(candidate);
   try {
@@ -1035,6 +1042,49 @@ const publishProxyTierBundle = (
   }
   assertPublishedProxyBundle(target, files);
   return { published: true, reused: false, bundle, manifest };
+};
+
+const assertMatchingProxyPublication = (
+  project: AutoMovieProductionProject,
+  plan: IAutoMovieProductionRenderJobPlan,
+): void => {
+  const proxyRoot = path.join(project.renderRoot(), "deliverables", "proxy");
+  if (fs.existsSync(proxyRoot) === false)
+    throw new Error(
+      "Final publication requires one immutable proxy publication of the same compiler-owned EDL. Finalize the proxy tier, review it, then finalize this plan.",
+    );
+  const matched = physicalFiles(proxyRoot)
+    .filter((file) => path.basename(file) === "publication.json")
+    .some((file) => {
+      try {
+        const receipt = JSON.parse(
+          Buffer.from(
+            readAutoMovieProductionOwnedFile({
+              root: project.renderRoot(),
+              directory: path.dirname(file),
+              relative: "publication.json",
+            }),
+          ).toString("utf8"),
+        ) as Partial<{
+          tier: IAutoMovieProductionRenderTier;
+          compileFingerprint: AutoMovieContentDigest;
+          editFingerprint: AutoMovieContentDigest;
+          sourceFrameFormat: IAutoMovieProductionRenderJobPlan["sourceFrameFormat"];
+        }>;
+        return (
+          receipt.tier?.kind === "proxy" &&
+          receipt.compileFingerprint === plan.compileFingerprint &&
+          receipt.editFingerprint === plan.editFingerprint &&
+          isDeepStrictEqual(receipt.sourceFrameFormat, plan.sourceFrameFormat)
+        );
+      } catch {
+        return false;
+      }
+    });
+  if (matched === false)
+    throw new Error(
+      "No immutable proxy publication matches this final plan's compile fingerprint, EDL fingerprint, and source frame format. Replan and finalize proxy before final conform.",
+    );
 };
 
 const assertPublishedProxyBundle = (
@@ -1418,6 +1468,7 @@ const renderRuntimeIdentity = async (props: {
 }): Promise<IAutoMovieProductionRenderRuntimeIdentity> => {
   const preflight = await captureProductionFrame({
     projectRoot: root,
+    productionId,
     compileFingerprint: props.compileFingerprint,
     target: { kind: "shot", id: props.first.shot },
     time: props.first.sourceFrame / props.timeline.fps,
@@ -1457,15 +1508,20 @@ const chunkDirectory = (digest: AutoMovieContentDigest): string =>
   path.join(stateRoot, "chunks", digest.slice(7));
 
 const renderGarbageCollection = (apply: boolean) => {
+  if (apply) assertNoLiveRenderWorkers();
+  const currentCompileFingerprint = sourceFingerprint();
   const plans = (["proxy", "final"] as const).flatMap((tier) => {
     const file = path.join(renderJobRoot, tier, "plan.json");
-    return fs.existsSync(file)
-      ? [
-          readRendererJson<IAutoMovieProductionRenderJobPlan>(
-            renderJobRoot,
-            file,
-          ),
-        ]
+    if (fs.existsSync(file) === false) return [];
+    const plan = readRendererJson<IAutoMovieProductionRenderJobPlan>(
+      renderJobRoot,
+      file,
+    );
+    const currentTier =
+      tier === "proxy" ? config.render.proxy : config.render.final;
+    return plan.compileFingerprint === currentCompileFingerprint &&
+      isDeepStrictEqual(plan.tier, currentTier)
+      ? [plan]
       : [];
   });
   const project = AutoMovieProductionProject.open(root, productionId);
@@ -1543,7 +1599,7 @@ const renderGarbageCollection = (apply: boolean) => {
           return (
             segments[0] === "deliverables" &&
             segments[1] === plan.tier.kind &&
-            segments[2] === plan.editFingerprint.slice(7)
+            segments[2] === renderPublicationFingerprint(plan).slice(7)
           );
         })
       )
@@ -1560,7 +1616,8 @@ const renderGarbageCollection = (apply: boolean) => {
     publicationPaths: [...publicationPaths],
     candidates,
   });
-  if (apply)
+  if (apply) {
+    const quarantines = new Map<string, string>();
     for (const candidate of plan.remove) {
       const target =
         candidate.kind === "publication"
@@ -1575,12 +1632,168 @@ const renderGarbageCollection = (apply: boolean) => {
           : path.resolve(renderJobRoot);
       if (target.startsWith(`${base}${path.sep}`) === false)
         throw new Error(`GC target "${target}" escapes renderer ownership.`);
-      const linked = fs.lstatSync(target);
-      if (linked.isSymbolicLink())
-        throw new Error(`GC refuses linked target "${target}".`);
-      fs.rmSync(target, { force: true, recursive: linked.isDirectory() });
+      const ancestry = captureGcPhysicalAncestry(base, target);
+      let quarantine = quarantines.get(base);
+      if (quarantine === undefined) {
+        quarantine = ensurePhysicalDirectory(
+          base,
+          `.gc-quarantine-${randomUUID()}`,
+        );
+        quarantines.set(base, quarantine);
+      }
+      assertGcPhysicalAncestry(base, target, ancestry);
+      const isolated = path.join(quarantine, randomUUID());
+      fs.renameSync(target, isolated);
+      const isolatedAncestry = captureGcPhysicalAncestry(base, isolated);
+      assertGcPhysicalAncestry(base, isolated, isolatedAncestry);
+      const linked = fs.lstatSync(isolated);
+      fs.rmSync(isolated, {
+        force: true,
+        recursive: linked.isDirectory(),
+      });
     }
+    for (const quarantine of quarantines.values())
+      if (fs.readdirSync(quarantine).length === 0) fs.rmdirSync(quarantine);
+  }
   return { applied: apply, ...plan };
+};
+
+const assertNoLiveRenderWorkers = (): void => {
+  for (const tier of ["proxy", "final"] as const) {
+    const tierRoot = path.join(renderJobRoot, tier);
+    const locks = path.join(tierRoot, "locks");
+    if (fs.existsSync(locks))
+      for (const file of physicalFiles(locks).filter((candidate) =>
+        candidate.endsWith(".lock"),
+      )) {
+        const owner = readJson<IRenderChunkLockOwner>(file);
+        if (Number.isSafeInteger(owner.pid) && processAlive(owner.pid))
+          throw new Error(
+            `Render GC --apply refuses live ${tier} worker ${owner.pid} at "${file}". Wait for that worker or stop it explicitly.`,
+          );
+      }
+    const attempts = path.join(tierRoot, "attempts");
+    if (fs.existsSync(attempts))
+      for (const file of physicalFiles(attempts).filter((candidate) =>
+        candidate.endsWith(".json"),
+      )) {
+        const attempt = readJson<{
+          state?: string;
+          pid?: number;
+        }>(file);
+        if (
+          attempt.state === "running" &&
+          Number.isSafeInteger(attempt.pid) &&
+          processAlive(attempt.pid!)
+        )
+          throw new Error(
+            `Render GC --apply refuses live ${tier} attempt ${attempt.pid} at "${file}". Wait for that worker or stop it explicitly.`,
+          );
+      }
+  }
+};
+
+const renderPublicationFingerprint = (
+  plan: IAutoMovieProductionRenderJobPlan,
+): AutoMovieContentDigest =>
+  digestAutoMovieBytes(
+    Buffer.from(
+      JSON.stringify({
+        protocol: "automovie.production-publication.v2",
+        productionId: plan.productionId,
+        compileFingerprint: plan.compileFingerprint,
+        editFingerprint: plan.editFingerprint,
+        runtimeIdentity: plan.runtimeIdentity,
+        tier: plan.tier,
+        sourceFrameFormat: plan.sourceFrameFormat,
+        frameFormat: plan.frameFormat,
+        totalFrames: plan.totalFrames,
+        chunkFrames: plan.chunkFrames,
+        chunks: plan.chunks.map((chunk) => ({
+          slot: chunk.slot,
+          id: chunk.id,
+          pass: chunk.pass,
+        })),
+        tracks: plan.tracks,
+      }),
+      "utf8",
+    ),
+  );
+
+interface IGcPhysicalIdentity {
+  path: string;
+  device: bigint;
+  inode: bigint;
+}
+
+const captureGcPhysicalAncestry = (
+  base: string,
+  target: string,
+): IGcPhysicalIdentity[] => {
+  const resolvedBase = path.resolve(base);
+  const resolvedTarget = path.resolve(target);
+  const relative = path.relative(resolvedBase, resolvedTarget);
+  if (
+    relative.length === 0 ||
+    relative === ".." ||
+    relative.startsWith(`..${path.sep}`) ||
+    path.isAbsolute(relative)
+  )
+    throw new Error(`GC target "${target}" escapes renderer ownership.`);
+  const baseLinked = fs.lstatSync(resolvedBase);
+  if (baseLinked.isSymbolicLink() || baseLinked.isDirectory() === false)
+    throw new Error(`GC base "${base}" is not a physical directory.`);
+  const baseReal = fs.realpathSync(resolvedBase);
+  const identities: IGcPhysicalIdentity[] = [];
+  let current = resolvedBase;
+  for (const segment of relative.split(path.sep)) {
+    current = path.join(current, segment);
+    const linked = fs.lstatSync(current);
+    if (linked.isSymbolicLink())
+      throw new Error(`GC refuses linked target ancestry "${current}".`);
+    const currentReal = fs.realpathSync(current);
+    const physicalRelative = path.relative(baseReal, currentReal);
+    if (
+      physicalRelative === ".." ||
+      physicalRelative.startsWith(`..${path.sep}`) ||
+      path.isAbsolute(physicalRelative)
+    )
+      throw new Error(
+        `GC target ancestry "${current}" is outside renderer ownership.`,
+      );
+    if (
+      current !== resolvedTarget &&
+      fs.statSync(current).isDirectory() === false
+    )
+      throw new Error(`GC ancestry "${current}" is not a directory.`);
+    const status = fs.statSync(currentReal, { bigint: true });
+    identities.push({
+      path: current,
+      device: status.dev,
+      inode: status.ino,
+    });
+  }
+  return identities;
+};
+
+const assertGcPhysicalAncestry = (
+  base: string,
+  target: string,
+  expected: readonly IGcPhysicalIdentity[],
+): void => {
+  const current = captureGcPhysicalAncestry(base, target);
+  if (
+    current.length !== expected.length ||
+    current.some(
+      (identity, index) =>
+        identity.path !== expected[index]!.path ||
+        identity.device !== expected[index]!.device ||
+        identity.inode !== expected[index]!.inode,
+    )
+  )
+    throw new Error(
+      `GC target "${target}" changed physical ancestry before quarantine.`,
+    );
 };
 
 const physicalBytes = (target: string): number => {

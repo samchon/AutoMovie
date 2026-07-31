@@ -264,7 +264,7 @@ export const planProductionRenderJob = (props: {
         `Audio cue "${cue.id}" lacks one digest-, format-, and duration-verified source asset.`,
       );
   }
-  const guidePasses = normalizeGuidePasses(props.guidePasses ?? ["pose"]);
+  const legacyGuidePasses = normalizeGuidePasses(props.guidePasses ?? ["pose"]);
   const editFingerprint = digestJson({
     protocol: "automovie.production-render-edit.v1",
     id: props.timeline.id,
@@ -294,7 +294,13 @@ export const planProductionRenderJob = (props: {
     if (deliverable.kind !== "feature" && deliverable.kind !== "guide-pass")
       continue;
     const passes: readonly AutoMovieGuidePass[] =
-      deliverable.kind === "feature" ? ["beauty"] : guidePasses;
+      deliverable.kind === "feature"
+        ? ["beauty"]
+        : normalizeGuidePasses(
+            deliverable.pass === undefined
+              ? legacyGuidePasses
+              : [deliverable.pass],
+          );
     for (const pass of passes)
       for (
         let frameStart = 0, index = 0;

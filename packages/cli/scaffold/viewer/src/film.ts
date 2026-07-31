@@ -69,6 +69,8 @@ const renderLayer = (layer: IFilmLayer, pass: AutoMovieGuidePass): string => {
     throw new Error(`Film layer references unavailable shot "${layer.shot}".`);
   if (viewerRenderer === undefined)
     throw new Error("Film renderer is not mounted.");
+  runtime.camera.aspect = canvas.width / canvas.height;
+  runtime.camera.updateProjectionMatrix();
   return runtime.render(viewerRenderer, layer.sourceFrame / timeline.fps, pass);
 };
 

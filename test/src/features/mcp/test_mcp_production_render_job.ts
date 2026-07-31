@@ -334,6 +334,39 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
     chunkFrames: 6,
     guidePasses: ["mask", "mask"],
   });
+  const typedGuides = planProductionRenderJob({
+    timeline: timeline(),
+    audioAssets: audioAssets(),
+    sourceFingerprints: sourceFingerprints(),
+    production: {
+      ...productionDesign({
+        id: "render-film",
+        targetRuntimeSeconds: 3,
+        frameFormat: {
+          width: 16,
+          height: 16,
+          fps: 2,
+          colorSpace: "srgb",
+        },
+      }),
+      deliverables: [
+        {
+          id: "depth-guide",
+          kind: "guide-pass",
+          pass: "depth",
+          required: true,
+        },
+        {
+          id: "normal-guide",
+          kind: "guide-pass",
+          pass: "normal",
+          required: true,
+        },
+      ],
+    },
+    runtimeIdentity: renderPlan.runtimeIdentity,
+    chunkFrames: 6,
+  });
   const booleanIdentityPlan = planProductionRenderJob({
     timeline: timeline(),
     audioAssets: audioAssets(),
@@ -410,6 +443,14 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
       partialPlan.chunks[1]?.frameEndExclusive === 6 &&
       explicitGuide.chunks.length === 1 &&
       explicitGuide.chunks[0]?.pass === "mask" &&
+      typedGuides.chunks.some(
+        (chunk) =>
+          chunk.deliverable === "depth-guide" && chunk.pass === "depth",
+      ) &&
+      typedGuides.chunks.some(
+        (chunk) =>
+          chunk.deliverable === "normal-guide" && chunk.pass === "normal",
+      ) &&
       booleanIdentityPlan.chunks.length === 1,
   );
   TestValidator.predicate(

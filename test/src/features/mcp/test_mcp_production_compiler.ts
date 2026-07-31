@@ -2729,10 +2729,11 @@ export const film = {
           "render-deliverable-incomplete",
           "render-deliverable-missing",
         ].every((code) => diagnosticCodes(semanticRender).has(code)) &&
-        semanticRender.diagnostics.every(
+        semanticRender.diagnostics.some(
           (diagnostic) =>
-            diagnostic.target !== "guide-controls" ||
-            diagnostic.code !== "render-deliverable-media-mismatch",
+            diagnostic.target === "guide-controls" &&
+            diagnostic.code === "render-deliverable-media-mismatch" &&
+            diagnostic.message.includes("continuous"),
         ) &&
         nonErrorRenderRead.diagnostics.some(
           (diagnostic) =>

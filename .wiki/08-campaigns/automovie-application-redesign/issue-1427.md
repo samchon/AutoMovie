@@ -19,8 +19,10 @@ Review lint emits `asset-review-missing`, `asset-review-stale`, `asset-review-re
 
 The isolated viewer accepts asset id, elevation, and pose in its page identity while azimuth is driven by deterministic seek time. This allows the four compass views to reuse one resident capture page without confusing rest and ROM evidence. Compile fingerprint is part of that resident-page identity so a long-lived MCP host cannot label a stale scene with a new compiler fingerprint.
 
+Capture requests also carry the active production id through the Oracle and CLI adapter. The resident browser session, generated-shot plugin, and page cache are therefore production-local even when one process opens multiple productions from the same project root.
+
 ## Verification contract
 
-Tests cover reflected schema order, current six-view rigged-asset preparation, completed asset queue state, stale state after recipe mutation, and restoration after rebuilding the original revision. Existing incomplete-review coverage continues to prove that a stored false verdict remains queued.
+Tests cover reflected schema order, current six-view rigged-asset preparation, completed asset queue state, stale state after recipe mutation, restoration after rebuilding the original revision, and production-id propagation through separate projects. Existing incomplete-review coverage continues to prove that a stored false verdict remains queued.
 
 Per campaign instruction, this implementation cycle does not run local tests or typechecks; CI owns executable validation.

@@ -380,6 +380,8 @@ export type AutoMovieProductionFrameCapture = (
   input: IAutoMoviePreviewFrameInput & {
     /** Active project root. */
     projectRoot: string;
+    /** Active production namespace inside the project. */
+    productionId: string;
     /** Current compile fingerprint. */
     compileFingerprint: AutoMovieContentDigest;
   },

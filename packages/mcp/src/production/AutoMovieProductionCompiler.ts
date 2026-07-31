@@ -3269,11 +3269,33 @@ const appendDeliverableTimelineDiagnostics = (
       deliverable.kind === "guide-pass"
         ? probes.filter((probe) => probe.kind === "png")
         : [];
+    const guideContract = production.deliverables.find(
+      (candidate) =>
+        candidate.id === deliverable.id && candidate.kind === "guide-pass",
+    );
+    const guidePass =
+      deliverable.kind === "guide-pass"
+        ? (guideContract?.pass ?? "pose")
+        : null;
+    const controlPaths =
+      guidePass === null
+        ? []
+        : deliverable.files
+            .filter((file) => file.mediaType === "image/png")
+            .map((file) => normalizeSlash(file.path));
+    const expectedControlPath = (frame: number): string =>
+      `frames/${guidePass}/frame_${String(frame).padStart(8, "0")}.png`;
     if (
       video?.kind !== "video" ||
       (deliverable.kind === "feature" && probes.length !== 1) ||
       (deliverable.kind === "guide-pass" &&
         (controls.length !== probes.length - 1 ||
+          controlPaths.length !== expectedFrames ||
+          controlPaths.some(
+            (control, index) =>
+              control !== expectedControlPath(index) &&
+              control.endsWith(`/${expectedControlPath(index)}`) === false,
+          ) ||
           controls.some(
             (probe) =>
               probe.width !== production.frameFormat.width ||
@@ -3293,7 +3315,7 @@ const appendDeliverableTimelineDiagnostics = (
         renderDeliverableDiagnostic(
           "render-deliverable-media-mismatch",
           deliverable.id,
-          `Deliverable "${deliverable.id}" must own one parsed ${production.frameFormat.width}x${production.frameFormat.height} H.264 MP4 at ${production.frameFormat.fps}fps with ${expectedFrames} resident samples and ${production.targetRuntimeSeconds}s runtime${deliverable.kind === "guide-pass" ? ", plus only same-raster PNG control frames" : ""}. Manifest strings cannot substitute for parser-derived media facts.`,
+          `Deliverable "${deliverable.id}" must own one parsed ${production.frameFormat.width}x${production.frameFormat.height} H.264 MP4 at ${production.frameFormat.fps}fps with ${expectedFrames} resident samples and ${production.targetRuntimeSeconds}s runtime${deliverable.kind === "guide-pass" ? `, plus exactly ${expectedFrames} continuous same-raster "${guidePass}" PNG controls` : ""}. Manifest strings cannot substitute for parser-derived media facts.`,
         ),
       );
   } else if (deliverable.kind === "preview") {

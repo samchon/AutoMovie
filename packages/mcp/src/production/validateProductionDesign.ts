@@ -202,7 +202,7 @@ export const validateAutoMovieProductionGraph = (
         file,
         "deliverables must contain at least one output. Add a required production deliverable.",
       );
-    for (const deliverable of graph.production.deliverables)
+    for (const deliverable of graph.production.deliverables) {
       unique(
         diagnostics,
         seenDeliverables,
@@ -211,6 +211,15 @@ export const validateAutoMovieProductionGraph = (
         file,
         "deliverables",
       );
+      if (deliverable.kind !== "guide-pass" && deliverable.pass !== undefined)
+        invalid(
+          diagnostics,
+          "design-deliverable-pass-invalid",
+          target,
+          file,
+          `Deliverable "${deliverable.id}:${deliverable.kind}" cannot own structural pass "${deliverable.pass}". Remove pass or change the deliverable to guide-pass.`,
+        );
+    }
   }
 
   for (const [id, model] of graph.models) {

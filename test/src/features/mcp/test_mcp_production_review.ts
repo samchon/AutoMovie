@@ -420,9 +420,11 @@ export const test_mcp_production_review = async (): Promise<void> => {
       completionBasis: "Visual evidence is missing.",
       complete: false,
     });
+    const capturedProductionIds: string[] = [];
     const oracle = new AutoMovieProductionOracleService(
       project,
       async (input) => {
+        capturedProductionIds.push(input.productionId);
         const width = input.width ?? 16;
         const height = input.height ?? 16;
         return {
@@ -505,6 +507,7 @@ export const test_mcp_production_review = async (): Promise<void> => {
     const secondOracle = new AutoMovieProductionOracleService(
       secondProject,
       async (input) => {
+        capturedProductionIds.push(input.productionId);
         const width = input.width ?? 16;
         const height = input.height ?? 16;
         return {
@@ -539,6 +542,8 @@ export const test_mcp_production_review = async (): Promise<void> => {
       secondAssetSubmitted.accepted &&
         secondAssetSubmitted.state === "complete" &&
         assetSubmitted.fingerprint !== secondAssetSubmitted.fingerprint &&
+        capturedProductionIds.includes("fixture-film") &&
+        capturedProductionIds.includes("second-film") &&
         project.reviewPath(assetPrepared.target) !==
           secondProject.reviewPath(secondAssetPrepared.target) &&
         project.review(assetPrepared.target)?.complete === true &&

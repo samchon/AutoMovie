@@ -898,6 +898,7 @@ export class AutoMovieProductionOracleService {
         width,
         height,
         projectRoot: this.project.root,
+        productionId: this.project.productionId,
         compileFingerprint: generated.inputFingerprint,
       });
     } catch (error) {
