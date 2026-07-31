@@ -8,6 +8,31 @@ import { travelMotion } from "./travel";
 /** Distance below which a ground-travel displacement is treated as zero. */
 export const LOCOMOTE_GROUND_EPSILON = 1e-6;
 
+/** Classify one requested root displacement under the ground-gait epsilon. */
+export const classifyLocomoteGroundDisplacement = (
+  displacement: IAutoMovieVector3,
+): {
+  groundDistance: number;
+  travelDistance: number;
+  alreadyThere: boolean;
+  verticalOnly: boolean;
+} => {
+  const groundDistance = Math.hypot(displacement.x, displacement.z);
+  const travelDistance = Math.hypot(
+    displacement.x,
+    displacement.y,
+    displacement.z,
+  );
+  const alreadyThere = travelDistance < LOCOMOTE_GROUND_EPSILON;
+  return {
+    groundDistance,
+    travelDistance,
+    alreadyThere,
+    verticalOnly:
+      alreadyThere === false && groundDistance < LOCOMOTE_GROUND_EPSILON,
+  };
+};
+
 const assertFiniteVector = (label: string, vector: IAutoMovieVector3): void => {
   if (!Number.isFinite(vector.x)) throw new Error(`${label}.x must be finite`);
   if (!Number.isFinite(vector.y)) throw new Error(`${label}.y must be finite`);

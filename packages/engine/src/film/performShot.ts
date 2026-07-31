@@ -24,7 +24,7 @@ import {
 import { armChainFault } from "../kinematics/armChainFault";
 import { Quaternion } from "../math/Quaternion";
 import { Vector3 } from "../math/Vector3";
-import { LOCOMOTE_GROUND_EPSILON } from "../motion/locomote";
+import { classifyLocomoteGroundDisplacement } from "../motion/locomote";
 import { plantStanceFeet } from "../motion/plantFeet";
 import { sampleMotion } from "../motion/sampleMotion";
 import { actionRegion } from "../perform/actionRegion";
@@ -479,6 +479,16 @@ export const performShot = (props: {
   const nodeRotations = new Map(
     staged.scene.nodes.map((n) => [n.id, n.transform.rotation]),
   );
+  // A direct performShot caller may pass validated previous state without
+  // restaging first. Match makeActorSynthesizer's previous-first runtime for
+  // both performer origins and positional actor targets; compileDefinedShot's
+  // already-resumed stage writes the same values again.
+  for (const actor of (previous?.actors ?? []).filter((candidate) =>
+    nodeIds.has(candidate.node),
+  )) {
+    nodePositions.set(actor.node, actor.transform.translation);
+    nodeRotations.set(actor.node, actor.transform.rotation);
+  }
 
   const resolvePositionalTarget = (
     target: unknown,
@@ -787,16 +797,16 @@ export const performShot = (props: {
               nodeIds.has(candidate),
             )) {
               const origin = nodePositions.get(actor)!;
-              const xz = Math.hypot(
-                destination.x - origin.x,
-                destination.z - origin.z,
-              );
-              const y = Math.abs(destination.y - origin.y);
-              if (xz < LOCOMOTE_GROUND_EPSILON && y >= LOCOMOTE_GROUND_EPSILON)
+              const displacement = classifyLocomoteGroundDisplacement({
+                x: destination.x - origin.x,
+                y: destination.y - origin.y,
+                z: destination.z - origin.z,
+              });
+              if (displacement.verticalOnly)
                 out.push(
                   "range",
                   `${base}[${i}].to`,
-                  `actor "${actor}" cannot locomote to a vertical-only destination (${y} m height change with ${xz} m XZ travel); choose a walkable ground point with horizontal travel or use another action verb`,
+                  `actor "${actor}" cannot locomote to a vertical-only destination (${Math.abs(destination.y - origin.y)} m height change with ${displacement.groundDistance} m XZ travel); choose a walkable ground point with horizontal travel or use another action verb`,
                   action.to,
                 );
             }

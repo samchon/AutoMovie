@@ -48,6 +48,7 @@ const staging = makeStagingWrite({
 /** One perform per probe, differing only in the draft under test. */
 const performing = (
   targetAt?: Parameters<typeof performShot>[0]["targetAt"],
+  previous?: Parameters<typeof performShot>[0]["previous"],
 ): ((draft: IAutoMovieActionCall[]) => IAutoMoviePerformedShot) => {
   const staged = stageScene(script, staging);
   if (staged.success !== true) throw new Error("staging fixture must succeed");
@@ -62,6 +63,7 @@ const performing = (
       synthesize: validSynthesizer,
       skeleton: () => createSkeleton(),
       targetAt,
+      previous,
     });
 };
 
@@ -598,12 +600,70 @@ export const test_film_perform_shot_positional_target = (): void => {
       "walkable ground point",
     ),
   );
+  TestValidator.predicate(
+    "locomote uses the full displacement at the shared epsilon boundary",
+    says(
+      perform([
+        locomote({
+          kind: "point",
+          point: { x: 0.8e-6, y: 0.8e-6, z: 0 },
+        }),
+      ]),
+      "$input.draft[0].to",
+      "vertical-only destination",
+    ),
+  );
   TestValidator.equals(
     "locomote may step in place at its exact current ground point",
     perform([
       locomote({
         kind: "point",
         point: { x: 0, y: 0, z: 0 },
+      }),
+    ]).success,
+    true,
+  );
+  const resumedPerform = performing(undefined, {
+    beat: "beat-0",
+    shot: "shot:beat-0",
+    actors: [
+      {
+        node: "knightA",
+        transform: {
+          translation: { x: 1, y: 1, z: 0 },
+          rotation: { x: 0, y: 0, z: 0, w: 1 },
+          scale: { x: 1, y: 1, z: 1 },
+        },
+        facing: { x: 0, y: 0, z: 1 },
+        pose: null,
+        motion: null,
+        localTime: 1,
+        gaitPhase: null,
+        rootVelocity: null,
+        footPlants: null,
+        mount: null,
+      },
+    ],
+  });
+  TestValidator.predicate(
+    "locomote diagnoses from the previous actor origin when it is supplied",
+    says(
+      resumedPerform([
+        locomote({
+          kind: "point",
+          point: { x: 1, y: 0, z: 0 },
+        }),
+      ]),
+      "$input.draft[0].to",
+      "vertical-only destination",
+    ),
+  );
+  TestValidator.equals(
+    "a resumed horizontal destination is not judged from stale staging",
+    resumedPerform([
+      locomote({
+        kind: "point",
+        point: { x: 0, y: 1, z: 0 },
       }),
     ]).success,
     true,
