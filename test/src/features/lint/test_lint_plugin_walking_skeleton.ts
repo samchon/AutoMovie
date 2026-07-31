@@ -28,6 +28,20 @@ const pluginCache = path.join(
   "automovie-lint-test",
 );
 
+/**
+ * Environment for a toolchain process that represents an independent user
+ * shell. The test suite itself runs through `ttsx`, whose source-runtime
+ * preload and manifest deliberately propagate to descendants through these
+ * variables. Letting them cross this fixture boundary makes the scaffold's own
+ * `tsx` loader collide with the outer synchronous module hook.
+ */
+const isolatedToolchainEnvironment = (): NodeJS.ProcessEnv => {
+  const environment = { ...process.env };
+  delete environment.NODE_OPTIONS;
+  delete environment.TTSX_RUNTIME_MANIFEST;
+  return environment;
+};
+
 const DEPENDENCY_PUBLIC_ENTRIES: Readonly<Record<string, string>> = {
   "@modelcontextprotocol/sdk": "@modelcontextprotocol/sdk/server/stdio.js",
 };
@@ -224,7 +238,10 @@ const runCheck = (directory: string): IRunResult => {
     {
       cwd: directory,
       encoding: "utf8",
-      env: { ...process.env, TTSC_CACHE_DIR: pluginCache },
+      env: {
+        ...isolatedToolchainEnvironment(),
+        TTSC_CACHE_DIR: pluginCache,
+      },
       maxBuffer: 16 * 1024 * 1024,
       timeout: 900_000,
     },
@@ -256,7 +273,7 @@ const runScaffoldLint = (props: {
         cwd: fixture.directory,
         encoding: "utf8",
         env: {
-          ...process.env,
+          ...isolatedToolchainEnvironment(),
           PATH: [
             path.join(repositoryRoot, "test", "node_modules", ".bin"),
             path.join(repositoryRoot, "node_modules", ".bin"),
