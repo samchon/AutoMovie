@@ -748,11 +748,13 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     });
     const exactActiveUse = assetCodes(activeAudioManifest);
     const externalCompile = compiler.compile({ scope: "source" });
-    const importedRuntime = JSON.parse(
-      Buffer.from(
-        project.readGeneratedFile(`models/${boundModel.id}.json`),
-      ).toString("utf8"),
-    ) as IAutoMovieModel;
+    const importedRuntime = externalCompile.success
+      ? (JSON.parse(
+          Buffer.from(
+            project.readGeneratedFile(`models/${boundModel.id}.json`),
+          ).toString("utf8"),
+        ) as IAutoMovieModel)
+      : null;
     const wrongProductionUse = assetCodes({
       ...activeAudioManifest,
       assets: activeAudioManifest.assets.map((asset) => ({
@@ -807,63 +809,128 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     fs.rmdirSync(path.dirname(modelPath));
     fs.writeFileSync(assetManifestPath, originalAssetManifest);
 
-    TestValidator.predicate(
-      "compiler binds asset references to a byte-exact licensed manifest",
-      driftedAsset.has("asset-digest-mismatch") &&
-        missingAssetManifest.has("asset-manifest-missing") &&
-        malformedAssetManifest.has("asset-manifest-invalid") &&
-        invalidAssetManifest.has("asset-manifest-invalid") &&
-        incompleteAssetManifest.has("asset-provenance-incomplete") &&
+    const assetCompilerContracts = {
+      "drifted bytes report asset-digest-mismatch": driftedAsset.has(
+        "asset-digest-mismatch",
+      ),
+      "missing manifest reports asset-manifest-missing":
+        missingAssetManifest.has("asset-manifest-missing"),
+      "malformed manifest reports asset-manifest-invalid":
+        malformedAssetManifest.has("asset-manifest-invalid"),
+      "invalid manifest reports asset-manifest-invalid":
+        invalidAssetManifest.has("asset-manifest-invalid"),
+      "incomplete provenance reports asset-provenance-incomplete":
+        incompleteAssetManifest.has("asset-provenance-incomplete"),
+      "every incomplete provenance field reports asset-provenance-incomplete":
         provenanceFieldFailures.every((codes) =>
           codes.has("asset-provenance-incomplete"),
-        ) &&
-        missingProcessing.has("asset-processing-missing") &&
-        nonCanonicalAsset.has("asset-path-invalid") &&
-        nonCanonicalAsset.has("asset-manifest-order") &&
-        invalidPathCodes.every((codes) => codes.has("asset-path-invalid")) &&
-        caseCollision.has("asset-path-invalid") &&
-        nonRenderAsset.has("asset-bytes-missing") &&
-        nullAssetBytes.has("asset-bytes-missing") &&
-        missingAssetBytes.has("asset-bytes-missing") &&
-        [...validModelAsset].every((code) => !code.startsWith("asset-")) &&
-        missingModelProvenance.has("asset-model-provenance-missing") &&
+        ),
+      "missing processing reports asset-processing-missing":
+        missingProcessing.has("asset-processing-missing"),
+      "non-canonical path reports asset-path-invalid":
+        nonCanonicalAsset.has("asset-path-invalid"),
+      "non-canonical manifest reports asset-manifest-order":
+        nonCanonicalAsset.has("asset-manifest-order"),
+      "every invalid path reports asset-path-invalid": invalidPathCodes.every(
+        (codes) => codes.has("asset-path-invalid"),
+      ),
+      "case collision reports asset-path-invalid":
+        caseCollision.has("asset-path-invalid"),
+      "source-only asset reports asset-bytes-missing": nonRenderAsset.has(
+        "asset-bytes-missing",
+      ),
+      "null asset bytes report asset-bytes-missing": nullAssetBytes.has(
+        "asset-bytes-missing",
+      ),
+      "missing asset bytes report asset-bytes-missing": missingAssetBytes.has(
+        "asset-bytes-missing",
+      ),
+      "valid model asset has no asset diagnostics": [...validModelAsset].every(
+        (code) => !code.startsWith("asset-"),
+      ),
+      "missing model provenance reports asset-model-provenance-missing":
+        missingModelProvenance.has("asset-model-provenance-missing"),
+      "every incomplete model decision reports asset-model-provenance-missing":
         incompleteModelDecisions.every((codes) =>
           codes.has("asset-model-provenance-missing"),
-        ) &&
-        danglingModelLod.has("asset-model-lod-dangling") &&
-        wrongTypeModelLod.has("asset-model-lod-dangling") &&
-        duplicateModelLod.has("asset-model-lod-dangling") &&
-        outOfOrderModelLod.has("asset-model-lod-dangling") &&
-        danglingModelProxy.has("asset-model-proxy-dangling") &&
-        danglingMeasurementProxy.has("asset-model-proxy-dangling") &&
-        invalidModelBytes.has("asset-model-ingest-invalid") &&
-        unboundModelSidecar.has("asset-model-resource-unbound") &&
-        emptyGeneratedProxy.has("asset-manifest-invalid") &&
-        blankModelAsset.has("design-text-empty") &&
-        staticRigBinding.has("asset-model-rig-incompatible") &&
-        [...exactActiveUse].every((code) => !code.startsWith("asset-")) &&
-        externalCompile.success &&
-        importedRuntime.origin === "imported" &&
-        importedRuntime.asset === modelAsset.path &&
-        importedRuntime.profiles?.length === 0 &&
-        importedRuntime.imported?.profile === "gltf-humanoid-v1" &&
-        importedRuntime.imported.humanoidBones.some(
+        ),
+      "dangling model LOD reports asset-model-lod-dangling":
+        danglingModelLod.has("asset-model-lod-dangling"),
+      "wrong-type model LOD reports asset-model-lod-dangling":
+        wrongTypeModelLod.has("asset-model-lod-dangling"),
+      "duplicate model LOD reports asset-model-lod-dangling":
+        duplicateModelLod.has("asset-model-lod-dangling"),
+      "out-of-order model LOD reports asset-model-lod-dangling":
+        outOfOrderModelLod.has("asset-model-lod-dangling"),
+      "dangling collision proxy reports asset-model-proxy-dangling":
+        danglingModelProxy.has("asset-model-proxy-dangling"),
+      "dangling measurement proxy reports asset-model-proxy-dangling":
+        danglingMeasurementProxy.has("asset-model-proxy-dangling"),
+      "invalid model bytes report asset-model-ingest-invalid":
+        invalidModelBytes.has("asset-model-ingest-invalid"),
+      "unbound model sidecar reports asset-model-resource-unbound":
+        unboundModelSidecar.has("asset-model-resource-unbound"),
+      "empty generated proxy reports asset-manifest-invalid":
+        emptyGeneratedProxy.has("asset-manifest-invalid"),
+      "blank model asset reports design-text-empty":
+        blankModelAsset.has("design-text-empty"),
+      "static rig binding reports asset-model-rig-incompatible":
+        staticRigBinding.has("asset-model-rig-incompatible"),
+      "exact active uses have no asset diagnostics": [...exactActiveUse].every(
+        (code) => !code.startsWith("asset-"),
+      ),
+      "external asset compile succeeds": externalCompile.success,
+      "imported runtime records imported origin":
+        importedRuntime?.origin === "imported",
+      "imported runtime records the source asset":
+        importedRuntime?.asset === modelAsset.path,
+      "imported runtime clears procedural profiles":
+        importedRuntime?.profiles?.length === 0,
+      "imported runtime records the ingest profile":
+        importedRuntime?.imported?.profile === "gltf-humanoid-v1",
+      "imported runtime maps the hips node":
+        importedRuntime?.imported?.humanoidBones.some(
           (mapping) => mapping.bone === "hips" && mapping.node === 1,
-        ) &&
-        importedRuntime.imported.humanoidBones.every(
+        ) === true,
+      "every imported humanoid bone is weighted":
+        importedRuntime?.imported?.humanoidBones.every(
           (mapping) => mapping.weighted,
-        ) &&
-        importedRuntime.imported.assets.some(
+        ) === true,
+      "imported runtime records the model digest":
+        importedRuntime?.imported?.assets.some(
           (entry) =>
             entry.path === modelAsset.path && entry.digest === modelDigest,
-        ) &&
-        importedRuntime.parts.length === 1 &&
-        importedRuntime.parts[0]?.id === "registered-collision-proxy" &&
-        wrongProductionUse.has("film-audio-cue-invalid") &&
-        wrongAudioConsumer.has("asset-use-stale") &&
-        wrongAudioConsumer.has("asset-use-missing") &&
-        duplicateActiveUse.has("asset-use-duplicate") &&
+        ) === true,
+      "imported runtime has one collision proxy":
+        importedRuntime?.parts.length === 1,
+      "imported runtime registers the collision proxy":
+        importedRuntime?.parts[0]?.id === "registered-collision-proxy",
+      "wrong-production use reports film-audio-cue-invalid":
+        wrongProductionUse.has("film-audio-cue-invalid"),
+      "wrong audio consumer reports asset-use-stale":
+        wrongAudioConsumer.has("asset-use-stale"),
+      "wrong audio consumer reports asset-use-missing":
+        wrongAudioConsumer.has("asset-use-missing"),
+      "duplicate active use reports asset-use-duplicate":
+        duplicateActiveUse.has("asset-use-duplicate"),
+      "dangling model consumer reports asset-use-dangling":
         danglingModelConsumer.has("asset-use-dangling"),
+    } satisfies Record<string, boolean>;
+    const failedAssetCompilerContracts = Object.entries(assetCompilerContracts)
+      .filter(([, accepted]) => accepted === false)
+      .map(([contract]) => `- ${contract}`);
+    if (failedAssetCompilerContracts.length !== 0)
+      throw new Error(
+        [
+          "Asset compiler contract failures:",
+          ...failedAssetCompilerContracts,
+          "External compile diagnostics:",
+          JSON.stringify(externalCompile.diagnostics, null, 2),
+        ].join("\n"),
+      );
+    TestValidator.predicate(
+      "compiler binds asset references to a byte-exact licensed manifest",
+      failedAssetCompilerContracts.length === 0,
     );
 
     const unmanifestedFixture = productionFixture();
