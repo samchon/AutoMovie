@@ -19,6 +19,8 @@ const program = (): IAutoMovieShotProgram => {
   const blocking = makeBlockingWrite();
   const performance = makePerformanceWrite();
   blocking.camera.framing = "full";
+  blocking.rationale =
+    "full static keeps both required actor roots readable throughout the duel.";
   for (const action of performance.draft)
     if (action.verb === "frame") action.framing = "full";
   return {

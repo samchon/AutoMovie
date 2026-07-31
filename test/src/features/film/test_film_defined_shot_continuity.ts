@@ -53,6 +53,8 @@ const walkingProgram = (
     duration: 1,
   });
   blocking.camera.framing = "full";
+  blocking.rationale =
+    "full static keeps the grounded actor root readable throughout the stride.";
   return {
     actors: [{ node: "knightA", model: "knightA", speed, eyeHeight: 1.6 }],
     script: makeScriptWrite(),
@@ -491,6 +493,8 @@ export const test_film_defined_shot_continuity = (): void => {
     duration: 2,
   });
   continuityBlocking.camera.framing = "full";
+  continuityBlocking.rationale =
+    "full static keeps the resumed walker root readable across the cut.";
   const program: IAutoMovieShotProgram = {
     actors: [{ node: "knightA", model: "knightA", speed: 0.5, eyeHeight: 1.6 }],
     script: makeScriptWrite(),
