@@ -55,15 +55,26 @@ export const test_motion_gait_phase = (): void => {
     phased.gaitCycle,
     { period: 1, phaseAt: 0.25 },
   );
+  const exactPhase = gaitMotion("g", "sk", GAIT, 4, 0.4);
   TestValidator.equals(
     "an already normalized phase keeps its exact identity",
-    gaitMotion("g", "sk", GAIT, 4, 0.4).gaitCycle,
+    exactPhase.gaitCycle,
     { period: 1, phaseAt: 0.4 },
+  );
+  TestValidator.equals(
+    "a whole-cycle sample keeps the exact opening pose",
+    exactPhase.keyframes[exactPhase.keyframes.length - 1]!.pose,
+    exactPhase.keyframes[0]!.pose,
   );
   TestValidator.equals(
     "a negative phase still wraps into the positive cycle",
     gaitMotion("g", "sk", GAIT, 4, -0.6).gaitCycle,
     { period: 1, phaseAt: 0.4 },
+  );
+  TestValidator.equals(
+    "a negative underflow wraps to the cycle opening",
+    gaitMotion("g", "sk", GAIT, 4, -Number.MIN_VALUE).gaitCycle,
+    { period: 1, phaseAt: 0 },
   );
 
   // 2. still a seamless loop.

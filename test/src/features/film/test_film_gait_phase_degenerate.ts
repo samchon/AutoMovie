@@ -55,11 +55,14 @@ const shot: IAutoMovieShot = {
   duration: 0.5,
 };
 
-const phaseOf = (gaitCycle: IAutoMovieGaitCycle): number | null =>
+const phaseOf = (
+  gaitCycle: IAutoMovieGaitCycle,
+  duration: number = shot.duration,
+): number | null =>
   resolveBeatEnd({
     beat: "beat-1",
     scene,
-    shot,
+    shot: { ...shot, duration },
     motions: [withCycle(gaitCycle)],
   }).actors.find((a) => a.node === "hero")!.gaitPhase;
 
@@ -79,6 +82,11 @@ export const test_film_gait_phase_degenerate = (): void => {
   TestValidator.equals(
     "an in-range carried phase stays exact at the opening instant",
     phaseOf({ period: 1, phaseAt: 0.4 }, 0),
+    0.4,
+  );
+  TestValidator.equals(
+    "a whole-cycle carry keeps the exact phase",
+    phaseOf({ period: 1, phaseAt: 0.4 }, 1),
     0.4,
   );
   const phase = phaseOf({ period: 0.8, phaseAt: 0.7 });

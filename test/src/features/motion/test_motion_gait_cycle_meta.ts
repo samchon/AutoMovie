@@ -107,6 +107,16 @@ export const test_motion_gait_cycle_meta = (): void => {
     ]).gaitCycle,
     { period: 0.8, phaseAt: 0.4 },
   );
+  TestValidator.equals(
+    "a whole-cycle placement keeps the exact phase",
+    arrangeMotion("whole-cycle", [
+      {
+        start: 1,
+        motion: { ...travel, gaitCycle: { period: 1, phaseAt: 0.4 } },
+      },
+    ]).gaitCycle,
+    { period: 1, phaseAt: 0.4 },
+  );
   const arrangedHoldLast = arrangeMotion("a2", [
     { start: 0, motion: travel },
     { start: 3, motion: oneShot() },

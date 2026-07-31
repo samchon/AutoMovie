@@ -8,7 +8,7 @@ import {
   IAutoMovieTransform,
 } from "@automovie/interface";
 
-import { positiveModulo } from "../math/positiveModulo";
+import { addPositiveModulo, positiveModulo } from "../math/positiveModulo";
 import { cubicBezierEasing, ease } from "./easing";
 
 const IDENTITY_ROOT: Pick<IAutoMovieTransform, "rotation" | "scale"> = {
@@ -186,15 +186,17 @@ export const gaitMotion = (
     throw new Error("gait period must be finite and positive");
   if (!Number.isFinite(phase)) throw new Error("gait phase must be finite");
   assertUniqueGaitAxes(gait.limbs);
+  const phaseAt = positiveModulo(phase, gait.period);
   const keyframes: IAutoMovieKeyframe[] = [];
   for (let i = 0; i <= samples; ++i) {
     const time = (i / samples) * gait.period;
+    const sampleTime = addPositiveModulo(phaseAt, time, gait.period);
     keyframes.push({
       time,
       pose: {
         skeleton,
-        root: gaitRoot(gait, time + phase),
-        joints: gaitJoints(gait.limbs, time + phase, gait.period),
+        root: gaitRoot(gait, sampleTime),
+        joints: gaitJoints(gait.limbs, sampleTime, gait.period),
       },
       expression: null,
       easing: "linear",
@@ -212,7 +214,7 @@ export const gaitMotion = (
     // period, and the NEXT beat's end-state records the true stride position.
     gaitCycle: {
       period: gait.period,
-      phaseAt: positiveModulo(phase, gait.period),
+      phaseAt,
     },
   };
 };
