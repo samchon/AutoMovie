@@ -1,6 +1,7 @@
 import {
   IAutoMovieCompiledShotSource,
   IAutoMovieDefinedShotContract,
+  IAutoMovieFilmEdit,
   IAutoMovieProductionDesign,
   IAutoMovieShotContract,
 } from "@automovie/interface";
@@ -175,12 +176,15 @@ export const answer = defineShot("answer", {
 /**
  * Production shot compilation follows the authored film, not design file order.
  *
- * The opening enact clip moves the sentinel root from x=0 to x=1. The answer
- * source deliberately stages x=0 and only asks for `hold`; at a full hard cut,
- * its generated scene must nevertheless begin at the opening shot's measured
- * x=1 closing. This exercises film-source evaluation, ordered source compile,
- * closing capture, and `compileDefinedShot.runtime.previous` in the real MCP
- * production compiler.
+ * Scenarios:
+ *
+ * 1. Film order overrides design filename order and carries the measured x=1
+ *    closing through a tolerant frame-grid hard cut.
+ * 2. Previous/current trims, dissolve and fade boundaries compile the answer at
+ *    its authored x=0 instead of applying a full-beat snapshot.
+ * 3. A failed predecessor source does not leak a prior closing into the answer.
+ * 4. A predecessor rejected after materialization likewise cannot seed the
+ *    successor, even though its direct `compileDefinedShot` step succeeded.
  */
 export const test_mcp_production_shot_continuity = async (): Promise<void> => {
   const fixture = productionFixture();
@@ -242,62 +246,202 @@ export const test_mcp_production_shot_continuity = async (): Promise<void> => {
 
     const sourcePath = path.join(fixture.root, sourceModule);
     fs.mkdirSync(path.dirname(sourcePath), { recursive: true });
-    fs.writeFileSync(sourcePath, continuitySource(opening, answer));
-    fs.writeFileSync(
-      path.join(fixture.root, "src/film.ts"),
-      `export const film = {
-  build(context) {
-    return {
-      id: context.production.id,
-      omissions: [],
-      tracks: {
-        video: [
-          {
-            shot: "opening",
-            sourceIn: { frame: 0 },
-            sourceOut: { seconds: 6 },
-            start: { frame: 0 },
-            handles: { head: { frame: 0 }, tail: { frame: 0 } },
-            transitionIn: { kind: "cut" },
-            transitionOut: { kind: "cut" },
-          },
-          {
-            shot: "answer",
-            sourceIn: { frame: 0 },
-            sourceOut: { seconds: 6 },
-            start: { seconds: 6 },
-            handles: { head: { frame: 0 }, tail: { frame: 0 } },
-            transitionIn: { kind: "cut" },
-            transitionOut: { kind: "cut" },
-          },
-        ],
-        audio: [],
-        captions: [],
-        effects: [],
-      },
-    };
-  },
-};
-`,
-    );
-
     const project = AutoMovieProductionProject.open(fixture.root);
-    const output = new AutoMovieProductionCompiler(project).compile({
-      scope: "source",
-    });
-    const answerSource =
+    const compiler = new AutoMovieProductionCompiler(project);
+    const filmPath = path.join(fixture.root, "src/film.ts");
+    const fullHardCut = (): IAutoMovieFilmEdit["tracks"]["video"] => [
+      {
+        shot: "opening",
+        sourceIn: { frame: 0 },
+        sourceOut: { seconds: 6 + Number.EPSILON * 4 },
+        start: { frame: 0 },
+        handles: { head: { frame: 0 }, tail: { frame: 0 } },
+        transitionIn: { kind: "cut" },
+        transitionOut: { kind: "cut" },
+      },
+      {
+        shot: "answer",
+        sourceIn: { frame: 0 },
+        sourceOut: { seconds: 6 },
+        start: { seconds: 6 },
+        handles: { head: { frame: 0 }, tail: { frame: 0 } },
+        transitionIn: { kind: "cut" },
+        transitionOut: { kind: "cut" },
+      },
+    ];
+    const compileFilm = (
+      video: IAutoMovieFilmEdit["tracks"]["video"],
+      targetRuntimeSeconds: number,
+      source: string = continuitySource(opening, answer),
+    ) => {
+      fs.writeFileSync(
+        productionPath,
+        `${JSON.stringify({ ...production, targetRuntimeSeconds }, null, 2)}\n`,
+      );
+      fs.writeFileSync(sourcePath, source);
+      fs.writeFileSync(
+        filmPath,
+        `export const film = { build() { return ${JSON.stringify({
+          id: production.id,
+          omissions: [],
+          tracks: { video, audio: [], captions: [], effects: [] },
+        })}; } };\n`,
+      );
+      return compiler.compile({ scope: "source" });
+    };
+    const answerX = (
+      output: ReturnType<AutoMovieProductionCompiler["compile"]>,
+    ): number | null =>
       output.success === false
         ? null
-        : (JSON.parse(
-            Buffer.from(
-              project.readGeneratedFile("shots/answer.json"),
-            ).toString("utf8"),
-          ) as IAutoMovieCompiledShotSource);
+        : ((
+            JSON.parse(
+              Buffer.from(
+                project.readGeneratedFile("shots/answer.json"),
+              ).toString("utf8"),
+            ) as IAutoMovieCompiledShotSource
+          ).scene.nodes.find((node) => node.id === "sentinel")?.transform
+            .translation.x ?? null);
+
+    const output = compileFilm(fullHardCut(), 12);
     TestValidator.predicate(
       "the production hard cut carries the previous measured root",
-      output.success &&
-        answerSource?.scene.nodes.find((node) => node.id === "sentinel")
-          ?.transform.translation.x === 1,
+      output.success && answerX(output) === 1,
+    );
+
+    const previousTrim = fullHardCut();
+    previousTrim[0]!.sourceOut = { seconds: 5 };
+    previousTrim[1]!.start = { seconds: 5 };
+    const currentTrim = fullHardCut();
+    currentTrim[0]!.sourceOut = { seconds: 6 };
+    currentTrim[1]!.sourceIn = { seconds: 1 };
+    const dissolve = fullHardCut();
+    dissolve[0]!.sourceOut = { seconds: 6 };
+    dissolve[0]!.handles.tail = { seconds: 1 };
+    dissolve[0]!.transitionOut = {
+      kind: "dissolve",
+      duration: { seconds: 1 },
+    };
+    dissolve[1]!.start = { seconds: 5 };
+    dissolve[1]!.handles.head = { seconds: 1 };
+    dissolve[1]!.transitionIn = {
+      kind: "dissolve",
+      duration: { seconds: 1 },
+    };
+    const fade = fullHardCut();
+    fade[0]!.sourceOut = { seconds: 6 };
+    fade[0]!.transitionOut = {
+      kind: "fade",
+      duration: { seconds: 0.5 },
+    };
+    fade[1]!.transitionIn = {
+      kind: "fade",
+      duration: { seconds: 0.5 },
+    };
+    const noCarryCases: Array<{
+      video: IAutoMovieFilmEdit["tracks"]["video"];
+      runtime: number;
+    }> = [
+      { video: previousTrim, runtime: 11 },
+      { video: currentTrim, runtime: 11 },
+      { video: dissolve, runtime: 11 },
+      { video: fade, runtime: 12 },
+    ];
+    TestValidator.predicate(
+      "trimmed and non-cut boundaries do not apply the full closing snapshot",
+      noCarryCases.every(({ video, runtime }) => {
+        const boundary = compileFilm(video, runtime);
+        return boundary.success && answerX(boundary) === 0;
+      }),
+    );
+
+    const zeroOpeningAnswer = structuredClone(answer);
+    zeroOpeningAnswer.opening = [
+      {
+        id: "authored-zero",
+        description: "Without a valid predecessor the authored mark remains.",
+        predicates: [
+          {
+            kind: "position",
+            subject: { kind: "node", id: "sentinel" },
+            axis: "x",
+            operator: "==",
+            value: 0,
+            tolerance: 0.001,
+          },
+        ],
+      },
+    ];
+    fs.writeFileSync(
+      path.join(shotRoot, "answer.json"),
+      `${JSON.stringify(zeroOpeningAnswer, null, 2)}\n`,
+    );
+    const failingOpeningSource = continuitySource(
+      opening,
+      zeroOpeningAnswer,
+    ).replace(
+      "build: (context) => program(context, true),",
+      'build: () => { throw new Error("opening source failure"); },',
+    );
+    const sourceFailure = compileFilm(fullHardCut(), 12, failingOpeningSource);
+    TestValidator.predicate(
+      "a failed predecessor source does not poison successor realization",
+      sourceFailure.success === false &&
+        sourceFailure.diagnostics.some(
+          (diagnostic) =>
+            diagnostic.code === "source-execution-failed" &&
+            diagnostic.target === "shot:opening",
+        ) &&
+        sourceFailure.diagnostics.every(
+          (diagnostic) =>
+            diagnostic.target !== "shot:answer" ||
+            diagnostic.code !== "contract-realization-failed",
+        ),
+    );
+
+    const invalidFormationSource = continuitySource(
+      opening,
+      zeroOpeningAnswer,
+    ).replace(
+      "    eventSamples: [],",
+      `    formationMotions: moving ? [{
+      id: "invalid-formation-motion",
+      formation: "ghost",
+      action: "advance",
+      start: 0,
+      end: context.contract.durationSeconds,
+      from: {
+        translation: { x: 0, y: 0, z: 0 },
+        facingOffsetDeg: 0,
+        spacingScale: { lateral: 1, depth: 1 },
+      },
+      to: {
+        translation: { x: 0, y: 0, z: 1 },
+        facingOffsetDeg: 0,
+        spacingScale: { lateral: 1, depth: 1 },
+      },
+      easing: "linear",
+    }] : [],
+    eventSamples: [],`,
+    );
+    const postMaterializationFailure = compileFilm(
+      fullHardCut(),
+      12,
+      invalidFormationSource,
+    );
+    TestValidator.predicate(
+      "a post-materialization failure cannot seed the successor",
+      postMaterializationFailure.success === false &&
+        postMaterializationFailure.diagnostics.some(
+          (diagnostic) =>
+            diagnostic.code === "engine-validation-failed" &&
+            diagnostic.target === "shot:opening",
+        ) &&
+        postMaterializationFailure.diagnostics.every(
+          (diagnostic) =>
+            diagnostic.target !== "shot:answer" ||
+            diagnostic.code !== "contract-realization-failed",
+        ),
     );
   } finally {
     fixture.dispose();

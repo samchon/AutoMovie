@@ -349,7 +349,6 @@ export class AutoMovieProductionCompiler {
             previous,
           });
           diagnostics.push(...result.diagnostics);
-          closing = result.closing;
           if (result.value !== null) {
             const materialized = materializeCompiledShot({
               contract: entry.contract,
@@ -370,17 +369,26 @@ export class AutoMovieProductionCompiler {
               compiled: materialized.value,
               collisions: materialized.collisions,
             });
-            diagnostics.push(
+            const postDiagnostics = [
               ...validateCompiledShot(entry.contract, materialized.value),
               ...realized.diagnostics,
-            );
+            ];
+            diagnostics.push(...postDiagnostics);
             compiled.set(entry.id, materialized.value);
             realizations.set(entry.id, realized.realization);
+            if (
+              postDiagnostics.every(
+                (diagnostic) => diagnostic.category !== "error",
+              )
+            )
+              closing = result.closing;
           }
         }
-        if (entry.placement !== null)
+        if (entry.placement !== null && entry.placementIndex !== null)
           previousVideo = {
             ...entry,
+            placement: entry.placement,
+            placementIndex: entry.placementIndex,
             closing,
           };
       }
@@ -810,11 +818,20 @@ const shotCompileOrder = (
   return ordered;
 };
 
-/** Convert an already shape-validated authored film time to its raw frame. */
-const rawFilmFrame = (
+/** Resolve an authored film time only when it lies on the production clock. */
+const resolvedFilmFrame = (
   time: IAutoMovieVideoEdit["sourceIn"],
   fps: number,
-): number => ("frame" in time ? time.frame : time.seconds * fps);
+): number | null => {
+  const raw = "frame" in time ? time.frame : time.seconds * fps;
+  const rounded = Math.round(raw);
+  return Number.isFinite(raw) &&
+    Number.isSafeInteger(rounded) &&
+    rounded >= 0 &&
+    Math.abs(raw - rounded) <= Number.EPSILON * 64 * Math.max(1, Math.abs(raw))
+    ? rounded
+    : null;
+};
 
 /**
  * A full beat-end snapshot is authoritative only across adjacent hard cuts that
@@ -824,15 +841,23 @@ const fullHardCutBoundary = (
   previous: ICompiledVideoClosing,
   current: IShotCompileEntry,
   fps: number,
-): boolean =>
-  current.placement !== null &&
-  current.placementIndex !== null &&
-  current.placementIndex === previous.placementIndex + 1 &&
-  previous.placement.transitionOut.kind === "cut" &&
-  current.placement.transitionIn.kind === "cut" &&
-  rawFilmFrame(previous.placement.sourceOut, fps) ===
-    previous.contract.durationSeconds * fps &&
-  rawFilmFrame(current.placement.sourceIn, fps) === 0;
+): boolean => {
+  if (current.placement === null || current.placementIndex === null)
+    return false;
+  const previousOut = resolvedFilmFrame(previous.placement.sourceOut, fps);
+  const previousDuration = resolvedFilmFrame(
+    { seconds: previous.contract.durationSeconds },
+    fps,
+  );
+  return (
+    current.placementIndex === previous.placementIndex + 1 &&
+    previous.placement.transitionOut.kind === "cut" &&
+    current.placement.transitionIn.kind === "cut" &&
+    previousOut !== null &&
+    previousOut === previousDuration &&
+    resolvedFilmFrame(current.placement.sourceIn, fps) === 0
+  );
+};
 
 interface ICompileDeterministicSourceProps<T> {
   target: string;
@@ -1298,7 +1323,7 @@ const compileShotSource = (
       formationDesigns: new Map(Object.entries(props.context.formations)),
       formations: Object.values(props.context.formationRuntime),
       models: Object.values(props.context.runtimeModels),
-      previous: props.previous,
+      previous: props.previous ?? undefined,
     },
   });
   if (compiled.success === false)
