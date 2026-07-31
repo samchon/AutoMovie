@@ -947,6 +947,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         time: 2,
       },
     });
+    generatedShot.scene.nodes[0]!.motion = generatedShot.motions[0]!.id;
     generatedShot.shot.performances = [];
     writeCorrupted(generatedShot);
     const missingPerformance = oracle.query({
