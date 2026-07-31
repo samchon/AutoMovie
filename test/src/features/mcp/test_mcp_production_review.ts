@@ -21,6 +21,7 @@ import {
   modelRecipe,
   productionDesign,
   productionFixture,
+  setProductionFixtureShotContract,
   shotContract,
   testCaptureRuntimeIdentity,
 } from "./productionFixtures";
@@ -372,7 +373,8 @@ export const test_mcp_production_review = async (): Promise<void> => {
     });
     TestValidator.predicate(
       "one physical frame may witness two distinct semantic review-frame ids",
-      project.setShotContract(aliasedReviewFrameShot).accepted,
+      setProductionFixtureShotContract(project, aliasedReviewFrameShot)
+        .accepted,
     );
     const compiler = new AutoMovieProductionCompiler(
       project,

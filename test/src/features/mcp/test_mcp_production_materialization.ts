@@ -30,6 +30,7 @@ import {
   formationDesign,
   modelRecipe,
   productionFixture,
+  setProductionFixtureShotContract,
   shotContract,
   worldDesign,
 } from "./productionFixtures";
@@ -571,7 +572,7 @@ export const test_mcp_production_materialization = (): void => {
         })(),
     );
     project.setFormationDesign(highCount);
-    project.setShotContract({
+    setProductionFixtureShotContract(project, {
       ...shotContract(),
       participants: [
         ...shotContract().participants,

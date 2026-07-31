@@ -13,7 +13,10 @@ import {
   IAutoMovieShotContract,
   IAutoMovieWorldDesign,
 } from "@automovie/interface";
-import { canonicalAutoMovieCaptureRuntimeIdentity } from "@automovie/mcp";
+import {
+  AutoMovieProductionProject,
+  canonicalAutoMovieCaptureRuntimeIdentity,
+} from "@automovie/mcp";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -48,8 +51,7 @@ export const productionFixture = (): {
     `${JSON.stringify(openingContract, null, 2)}\n`;
   files["src/shots/opening.ts"] = replaceScaffoldRegistrationContract({
     source: files["src/shots/opening.ts"]!,
-    registration: "OPENING_CONTRACT",
-    nextRegistration: "ANSWER_CONTRACT",
+    exportName: "opening",
     contract: definedShotContract(openingContract),
   });
   files[".automovie/design/world.json"] =
@@ -116,6 +118,17 @@ const definedShotContract = (
   return registration;
 };
 
+const SCAFFOLD_REGISTRATION_BOUNDARIES = {
+  opening: {
+    registration: "OPENING_CONTRACT",
+    nextDeclaration: "const ANSWER_CONTRACT: IAutoMovieDefinedShotContract = ",
+  },
+  answer: {
+    registration: "ANSWER_CONTRACT",
+    nextDeclaration: "const buildSignal = (",
+  },
+} as const;
+
 /**
  * Keep a sliced fixture's source-owned registration equal to its design.
  *
@@ -124,12 +137,12 @@ const definedShotContract = (
  */
 const replaceScaffoldRegistrationContract = (props: {
   source: string;
-  registration: string;
-  nextRegistration: string;
+  exportName: keyof typeof SCAFFOLD_REGISTRATION_BOUNDARIES;
   contract: Omit<IAutoMovieShotContract, "id" | "source">;
 }): string => {
-  const startMarker = `const ${props.registration}: IAutoMovieDefinedShotContract = `;
-  const endMarker = `\n\nconst ${props.nextRegistration}: IAutoMovieDefinedShotContract = `;
+  const boundary = SCAFFOLD_REGISTRATION_BOUNDARIES[props.exportName];
+  const startMarker = `const ${boundary.registration}: IAutoMovieDefinedShotContract = `;
+  const endMarker = `\n};\n\n${boundary.nextDeclaration}`;
   const start = props.source.indexOf(startMarker);
   const end =
     start === -1
@@ -142,13 +155,48 @@ const replaceScaffoldRegistrationContract = (props: {
     props.source.indexOf(endMarker, end + endMarker.length) !== -1
   )
     throw new Error(
-      `Scaffold source must contain exactly one ${props.registration} registration followed by ${props.nextRegistration}.`,
+      `Scaffold source must contain exactly one ${boundary.registration} registration followed immediately by ${boundary.nextDeclaration}.`,
     );
   return [
     props.source.slice(0, start + startMarker.length),
-    `${JSON.stringify(props.contract, null, 2)};`,
-    props.source.slice(end),
+    JSON.stringify(props.contract, null, 2),
+    props.source.slice(end + 2),
   ].join("");
+};
+
+/**
+ * Mutate one fixture contract and its source registration as one test action.
+ *
+ * Custom source modules remain test-owned; the shared starter module supports
+ * its two published exports and rejects any unexpected binding.
+ */
+export const setProductionFixtureShotContract = (
+  project: AutoMovieProductionProject,
+  contract: IAutoMovieShotContract,
+): ReturnType<AutoMovieProductionProject["setShotContract"]> => {
+  const result = project.setShotContract(contract);
+  if (
+    result.accepted === false ||
+    contract.source.module !== "src/shots/opening.ts"
+  )
+    return result;
+  if (
+    contract.source.export !== "opening" &&
+    contract.source.export !== "answer"
+  )
+    throw new Error(
+      `Fixture scaffold source has no supported "${contract.source.export}" registration.`,
+    );
+  const sourcePath = path.join(project.root, contract.source.module);
+  fs.writeFileSync(
+    sourcePath,
+    replaceScaffoldRegistrationContract({
+      source: fs.readFileSync(sourcePath, "utf8"),
+      exportName: contract.source.export,
+      contract: definedShotContract(contract),
+    }),
+  );
+  return result;
 };
 
 /** Starter production design with optional shallow overrides. */

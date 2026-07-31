@@ -18,6 +18,7 @@ import {
   formationDesign,
   productionDesign,
   productionFixture,
+  setProductionFixtureShotContract,
   shotContract,
   testCaptureRuntimeIdentity,
   worldDesign,
@@ -58,7 +59,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
       ...formationDesign(),
       heroOverrides: [{ slot: 0, actor: "sentinel" }],
     });
-    project.setShotContract({
+    setProductionFixtureShotContract(project, {
       ...shotContract(),
       participants: [
         { kind: "actor", id: "sentinel" },

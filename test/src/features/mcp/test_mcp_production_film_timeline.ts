@@ -28,6 +28,7 @@ import {
   fixtureWorldDesign,
   productionDesign,
   productionFixture,
+  setProductionFixtureShotContract,
   testCaptureRuntimeIdentity,
   worldDesign,
 } from "./productionFixtures";
@@ -691,7 +692,7 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
     project.setProductionDesign(
       productionDesign({ targetRuntimeSeconds: 11.5 }),
     );
-    project.setShotContract(answer);
+    setProductionFixtureShotContract(project, answer);
     project.setAcceptanceScenario({
       id: "film-runtime",
       target: { kind: "film", id: "fixture-film" },
@@ -806,7 +807,7 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
     const opening = structuredClone(project.graph().shots.get("opening")!);
     const openingWithoutClosing = structuredClone(opening);
     openingWithoutClosing.closing = [];
-    project.setShotContract(openingWithoutClosing);
+    setProductionFixtureShotContract(project, openingWithoutClosing);
     const trimmedOpeningBoundary = twoShotEdit();
     trimmedOpeningBoundary.tracks.video[1]!.sourceIn = { frame: 1 };
     writeEditSource(fixture.root, filmPath, trimmedOpeningBoundary);
@@ -816,10 +817,10 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
         "film-state-handoff-unverifiable",
       ),
     );
-    project.setShotContract(opening);
+    setProductionFixtureShotContract(project, opening);
     const mismatched = structuredClone(answer);
     mismatched.opening[0]!.predicates[0]!.value = 90;
-    project.setShotContract(mismatched);
+    setProductionFixtureShotContract(project, mismatched);
     writeEditSource(fixture.root, filmPath, twoShotEdit());
     TestValidator.predicate(
       "adjacent compiled opening and closing state predicates must match",
@@ -827,7 +828,7 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
         "film-state-handoff-mismatch",
       ),
     );
-    project.setShotContract(answer);
+    setProductionFixtureShotContract(project, answer);
     project.setProductionDesign(productionDesign({ targetRuntimeSeconds: 6 }));
     const omitted = baseEdit();
     omitted.omissions.push({
@@ -997,7 +998,7 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
         window: { from: 4, to: 6 },
       },
     );
-    project.setShotContract(openingWithBoundaryEvents);
+    setProductionFixtureShotContract(project, openingWithBoundaryEvents);
     project.setProductionDesign(productionDesign({ targetRuntimeSeconds: 2 }));
     project.setAcceptanceScenario({
       id: "film-runtime",

@@ -25,6 +25,7 @@ import {
   modelRecipe,
   productionDesign,
   productionFixture,
+  setProductionFixtureShotContract,
   shotContract,
   worldDesign,
 } from "./productionFixtures";
@@ -133,8 +134,11 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     source: _fixtureShotSource,
     ...fixtureRegistration
   } = shotContract();
-  const mutateSourceOutput = (mutation: string): string =>
-    original
+  const mutateSourceOutput = (
+    mutation: string,
+    source: string = original,
+  ): string =>
+    source
       .replace("  return {\n    actors:", "  const output = {\n    actors:")
       .replace(
         "\n  };\n};\n\n/** Opening source",
@@ -2113,7 +2117,7 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
           ...formationDesign(),
           modelRecipe: "formation-sentinel",
         }).accepted &&
-        project.setShotContract({
+        setProductionFixtureShotContract(project, {
           ...shotContract(),
           participants: [
             { kind: "actor", id: "sentinel" },
@@ -2167,6 +2171,7 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
             formation.passed,
         ),
     );
+    const formationSource = fs.readFileSync(sourcePath, "utf8");
     fs.writeFileSync(
       sourcePath,
       mutateSourceOutput(
@@ -2177,6 +2182,7 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
           "    position: { x: 0, y: 0, z: 0 },",
           "  }];",
         ].join("\n"),
+        formationSource,
       ),
     );
     TestValidator.predicate(
@@ -2185,7 +2191,7 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
         "contract-realization-failed",
       ),
     );
-    fs.writeFileSync(sourcePath, original);
+    fs.writeFileSync(sourcePath, formationSource);
     fs.rmSync(
       path.join(fixture.root, ".automovie/design/shared/formations/line.json"),
     );
@@ -2199,7 +2205,7 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
       ...formationDesign(),
       modelRecipe: "formation-sentinel",
     });
-    project.setShotContract(shotContract());
+    setProductionFixtureShotContract(project, shotContract());
     project.eraseDesignArtifact(
       { kind: "formation", id: "line" },
       "restore the one-shot compiler fixture after formation witness coverage",
