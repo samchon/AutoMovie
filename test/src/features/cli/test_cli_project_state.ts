@@ -22,6 +22,7 @@ import path from "node:path";
 import {
   formationDesign,
   productionFixture,
+  setProductionFixtureShotContract,
   shotContract,
 } from "../mcp/productionFixtures";
 
@@ -42,24 +43,21 @@ export const test_cli_project_state = (): void => {
     fixture.root,
     ".automovie/design/formations/army.json",
   );
+  const formationContract = {
+    ...shotContract(),
+    participants: [
+      ...shotContract().participants,
+      { kind: "formation" as const, id: "army" },
+    ],
+  };
   fs.mkdirSync(path.dirname(formationPath), { recursive: true });
   fs.writeFileSync(formationPath, `${JSON.stringify(formation, null, 2)}\n`);
-  fs.writeFileSync(
-    path.join(fixture.root, ".automovie/design/shots/opening.json"),
-    `${JSON.stringify(
-      {
-        ...shotContract(),
-        participants: [
-          ...shotContract().participants,
-          { kind: "formation", id: "army" },
-        ],
-      },
-      null,
-      2,
-    )}\n`,
-  );
   try {
     const project = AutoMovieProductionProject.open(fixture.root);
+    TestValidator.predicate(
+      "state-reader formation contract updates design and source registration",
+      setProductionFixtureShotContract(project, formationContract).accepted,
+    );
     const missing = loadAutoMovieProjectState({ root: fixture.root });
     TestValidator.predicate(
       "uncompiled project state is explicit",
