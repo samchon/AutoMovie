@@ -161,15 +161,44 @@ export const test_mcp_production_namespaces = (): void => {
     const betaCompiler = new AutoMovieProductionCompiler(beta);
     const alphaCompile = alphaCompiler.compile({ scope: "source" });
     const betaCompile = betaCompiler.compile({ scope: "source" });
+    const alphaManifest = alpha.generatedManifest();
+    const betaManifest = beta.generatedManifest();
+    const namespaceCompileContracts = {
+      "fixture-film compiles": alphaCompile.success,
+      "beta compiles": betaCompile.success,
+      "fixture-film manifest matches its compiler fingerprint":
+        alphaManifest?.inputFingerprint ===
+        alphaCompile.compiler.inputFingerprint,
+      "beta manifest matches its compiler fingerprint":
+        betaManifest?.inputFingerprint ===
+        betaCompile.compiler.inputFingerprint,
+      "production generated roots are disjoint":
+        alpha.generatedRoot() !== beta.generatedRoot(),
+    } satisfies Record<string, boolean>;
+    const failedNamespaceCompileContracts = Object.entries(
+      namespaceCompileContracts,
+    )
+      .filter(([, accepted]) => accepted === false)
+      .map(([contract]) => `- ${contract}`);
+    if (failedNamespaceCompileContracts.length !== 0)
+      throw new Error(
+        [
+          "Namespace compile contract failures:",
+          ...failedNamespaceCompileContracts,
+          "Production compile outputs:",
+          JSON.stringify(
+            {
+              "fixture-film": alphaCompile,
+              beta: betaCompile,
+            },
+            null,
+            2,
+          ),
+        ].join("\n"),
+      );
     TestValidator.predicate(
       "both productions compile into independent manifests",
-      alphaCompile.success &&
-        betaCompile.success &&
-        alpha.generatedManifest()?.inputFingerprint ===
-          alphaCompile.compiler.inputFingerprint &&
-        beta.generatedManifest()?.inputFingerprint ===
-          betaCompile.compiler.inputFingerprint &&
-        alpha.generatedRoot() !== beta.generatedRoot(),
+      failedNamespaceCompileContracts.length === 0,
     );
 
     alpha.commitProductionDeliverableFiles(
