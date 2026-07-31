@@ -2,7 +2,13 @@ node_modules/
 lib/
 dist/
 generated/
-.automovie/productions/
+.automovie/*
+!.automovie/manifest.json
+!.automovie/assets.json
+!.automovie/design/
+!.automovie/design/**
+!.automovie/reviews/
+!.automovie/reviews/**
 .automovie/capture/
 renders/*/
 *.log

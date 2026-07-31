@@ -39,7 +39,7 @@ requires WebGL, captures a canvas, and decodes the PNG.
 pnpm install
 pnpm capture:install
 pnpm capture:doctor
-pnpm compile
+pnpm build
 pnpm test
 pnpm preview -- --shot opening --time 2 --pass beauty
 pnpm review:status
@@ -131,6 +131,18 @@ queue and records, generated manifest and bytes, production manifest, exact
 design graph, and state incarnation with canonical structured fields. The
 staged final compiler gate recomputes that review queue from current render
 evidence; any change during the gate rolls the publication back.
+
+Run `pnpm verify` (or `npx automovie verify`) after publication to reopen the
+generated inventory, evidence-bound reviews, render receipts, and actual
+delivery bytes without modifying project state. It fails on damaged generated
+output, stale or forged receipts, and missing required deliverables.
+
+Claude Code loads `.claude/settings.json` and refuses direct `Edit`, `Write`, or
+`NotebookEdit` calls beneath compiler-owned generated output, render output,
+capture receipts, and production state. The refusal names the owning project
+command. The hook deliberately does nothing when `.automovie/manifest.json` is
+absent, so copying it outside an AutoMovie project does not claim unrelated
+files.
 
 The production viewer accepts `?film=1` for GPU cut/dissolve playback of the
 compiler-owned EDL, `?shot=<id>` for one shot, and

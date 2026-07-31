@@ -38,7 +38,8 @@ const captureCli = (args: readonly string[]): ICliResult => {
 };
 
 /**
- * The public CLI delegates bounded render actions to the current scaffold.
+ * The public CLI delegates bounded render and verification actions to the
+ * current scaffold.
  *
  * Scenarios:
  *
@@ -46,6 +47,7 @@ const captureCli = (args: readonly string[]): ICliResult => {
  * 2. A scaffold-local tsx entry receives the render script, action, and options in
  *    exact order.
  * 3. The public CLI propagates the child process exit status.
+ * 4. `verify` accepts no arguments and delegates the read-only final verifier.
  */
 export const test_cli_render = (): void => {
   const outside = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-cli-out-"));
@@ -58,6 +60,8 @@ export const test_cli_render = (): void => {
     const missingAction = captureCli(["render"]);
     const unknownAction = captureCli(["render", "unknown"]);
     const missingProject = captureCli(["render", "plan"]);
+    const missingVerify = captureCli(["verify"]);
+    const invalidVerify = captureCli(["verify", "--repair"]);
     fs.mkdirSync(path.join(outside, "scripts"), { recursive: true });
     fs.writeFileSync(
       path.join(outside, "scripts", "render.ts"),
@@ -72,15 +76,21 @@ export const test_cli_render = (): void => {
         unknownAction.stderr.includes("render needs one of") &&
         missingProject.status === 1 &&
         missingProject.stderr.includes("scaffolded project") &&
+        missingVerify.status === 1 &&
+        missingVerify.stderr.includes("scaffolded project") &&
+        invalidVerify.status === 1 &&
+        invalidVerify.stderr.includes("takes no arguments") &&
         missingTsx.status === 1 &&
         missingTsx.stderr.includes("scaffolded project"),
     );
 
     const script = path.join(project, "scripts", "render.ts");
+    const verifyScript = path.join(project, "scripts", "verify.ts");
     const tsx = path.join(project, "node_modules", "tsx", "dist", "cli.mjs");
     fs.mkdirSync(path.dirname(script), { recursive: true });
     fs.mkdirSync(path.dirname(tsx), { recursive: true });
     fs.writeFileSync(script, "// delegated scaffold render entry\n");
+    fs.writeFileSync(verifyScript, "// delegated scaffold verify entry\n");
     fs.writeFileSync(
       tsx,
       `import fs from "node:fs";
@@ -90,6 +100,8 @@ fs.writeFileSync(
 );
 if (process.argv[3] === "verify") process.exitCode = 7;
 if (process.argv[3] === "finalize") process.kill(process.pid, "SIGTERM");
+if (process.argv[2]?.endsWith("verify.ts"))
+  fs.writeFileSync("verify-call.json", JSON.stringify(process.argv.slice(2)));
 `,
     );
     process.chdir(project);
@@ -108,6 +120,10 @@ if (process.argv[3] === "finalize") process.kill(process.pid, "SIGTERM");
     const status = captureCli(["render", "status"]);
     const propagated = captureCli(["render", "verify"]);
     const signaled = captureCli(["render", "finalize"]);
+    const verified = captureCli(["verify"]);
+    const verifyCall = JSON.parse(
+      fs.readFileSync(path.join(project, "verify-call.json"), "utf8"),
+    ) as string[];
     TestValidator.predicate(
       "render CLI delegates exact argv and propagates child status",
       delegated.status === 0 &&
@@ -116,7 +132,10 @@ if (process.argv[3] === "finalize") process.kill(process.pid, "SIGTERM");
         planned.status === 0 &&
         status.status === 0 &&
         propagated.status === 7 &&
-        signaled.status === 1,
+        signaled.status === 1 &&
+        verified.status === 0 &&
+        path.resolve(verifyCall[0]!) === verifyScript &&
+        verifyCall.length === 1,
     );
   } finally {
     process.chdir(nativeCwd);

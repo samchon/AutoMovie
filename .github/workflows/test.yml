@@ -9,6 +9,7 @@ on:
       # editing this file alone must still build (#1397).
       - '.github/workflows/build.yml'
       - '.github/workflows/test.yml'
+      - '.github/license-policy.json'
       # Matched by SHAPE, mirroring build.yml. The suite reads more than `src`:
       # the per-package lint ruleset `ttsc` enforces before a scenario runs, the
       # generators whose output it asserts, the guide corpus `prepare` bakes
@@ -68,6 +69,9 @@ jobs:
       - name: Install Dependencies
         run: pnpm install
 
+      - name: Check Production Dependency Licenses
+        run: pnpm run license:check
+
       # The test program runs straight through ttsx (ttsc's tsgo runner, no
       # separate compile step). The coverage run executes every scenario and
       # fails if engine coverage drops below 100% on any metric.
@@ -92,6 +96,9 @@ jobs:
 
       - name: Install Dependencies
         run: pnpm install
+
+      - name: Check Production Dependency Licenses
+        run: pnpm run license:check
 
       - name: Run Tests with 100% Coverage Gate
         run: pnpm coverage

@@ -171,6 +171,28 @@ importers:
         specifier: catalog:typescript
         version: 7.0.2
 
+  packages/create-automovie:
+    dependencies:
+      '@automovie/cli':
+        specifier: workspace:^
+        version: link:../cli
+    devDependencies:
+      '@ttsc/lint':
+        specifier: catalog:typescript
+        version: 0.23.0
+      '@types/node':
+        specifier: catalog:utils
+        version: 22.19.20
+      rimraf:
+        specifier: catalog:utils
+        version: 6.1.3
+      ttsc:
+        specifier: catalog:typescript
+        version: 0.23.0
+      typescript:
+        specifier: catalog:typescript
+        version: 7.0.2
+
   packages/engine:
     dependencies:
       '@automovie/interface':
@@ -474,6 +496,9 @@ importers:
       '@nestia/e2e':
         specifier: catalog:samchon
         version: 12.1.0
+      create-automovie:
+        specifier: workspace:^
+        version: link:../packages/create-automovie
       h264-mp4-encoder:
         specifier: catalog:media
         version: 1.0.12

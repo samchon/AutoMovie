@@ -9,6 +9,7 @@ on:
       # file alone must still run the suite that reads it (#1397).
       - '.github/workflows/build.yml'
       - '.github/workflows/test.yml'
+      - '.github/license-policy.json'
       # Every build input a package can carry, by SHAPE rather than by name.
       # The previous list named `src`, `package.json`, and `tsconfig.json`, and
       # each input added afterwards (per-package lint rules, code generators,
@@ -69,6 +70,9 @@ jobs:
 
       - name: Install Dependencies
         run: pnpm install
+
+      - name: Check Production Dependency Licenses
+        run: pnpm run license:check
 
       # Formatting drifts silently without a gate: three separate topics in one
       # session each found the same three files unformatted on master and each

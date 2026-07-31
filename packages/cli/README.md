@@ -3,7 +3,7 @@
 Scaffold an [automovie](https://github.com/samchon/automovie) project.
 
 ```bash
-npx automovie start my-film
+npx create-automovie my-film
 npx automovie migrate legacy-film --dry-run
 npx automovie migrate legacy-film
 ```
@@ -34,12 +34,13 @@ the prose with JSON.
 pnpm install
 pnpm capture:install
 pnpm capture:doctor
-pnpm compile
+pnpm build
 pnpm test
 pnpm preview -- --shot opening --time 2 --pass beauty
 pnpm review:status
 # Complete the current evidence-bound MCP review, then:
 pnpm lint
+pnpm verify
 ```
 
 `pnpm compile` is the only command allowed to materialize `generated` output.
@@ -48,6 +49,12 @@ every current design, source, shot, and film review is complete. `preview`
 captures the project-owned viewer and records a frame tied to target-local
 generated/viewer inputs and the renderer identity; review cannot complete
 against an arbitrary or stale screenshot.
+
+`pnpm verify` is the read-only final gate. It reopens compiler-owned bytes,
+review state, render receipts, and delivery media and refuses damaged output or
+forged ownership claims. Claude Code receives a project hook that blocks direct
+writes to generated, render, capture, and production state while leaving
+authored design and review records writable.
 
 The default capture runtime is the Chromium build pinned to the starter's
 Playwright package. `capture:install` downloads it explicitly into
@@ -94,7 +101,9 @@ PNG bytes authenticated by that physical-path read.
 ## Usage
 
 ```
+npx create-automovie <directory> [--force]
 npx automovie start <directory> [--force]
+npx automovie verify
 npx automovie migrate <directory> [--dry-run | --rollback]
 ```
 

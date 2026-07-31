@@ -95,6 +95,8 @@ export const test_cli_scaffold = (): void => {
       ".automovie/design/world.json",
       ".automovie/manifest.json",
       ".automovie/reviews/README.md",
+      ".claude/hooks/guard-automovie-owned.mjs",
+      ".claude/settings.json",
       "AGENTS.md",
       "CLAUDE.md",
       "README.md",
@@ -122,6 +124,7 @@ export const test_cli_scaffold = (): void => {
       "scripts/preview.ts",
       "scripts/render.ts",
       "scripts/review-status.ts",
+      "scripts/verify.ts",
       "src/examples/lineBattle.ts",
       "src/film.ts",
       "src/shots/opening.ts",
@@ -311,7 +314,21 @@ export const test_cli_scaffold = (): void => {
       files["scripts/render.ts"]!.includes(
         "stagedReview.queue(status, compilerSnapshot)",
       ) &&
-      files[".gitignore"]!.includes(".automovie/productions/") &&
+      files[".gitignore"]!.includes(".automovie/*") &&
+      files[".gitignore"]!.includes("!.automovie/design/**") &&
+      files[".gitignore"]!.includes("!.automovie/reviews/**") &&
+      files["package.json"]!.includes('"build": "pnpm compile"') &&
+      files["package.json"]!.includes('"verify": "tsx scripts/verify.ts"') &&
+      files["scripts/verify.ts"]!.includes('.lint({ scope: "final" })') &&
+      files[".claude/settings.json"]!.includes(
+        '"matcher": "Edit|Write|NotebookEdit"',
+      ) &&
+      files[".claude/hooks/guard-automovie-owned.mjs"]!.includes(
+        "pnpm compile",
+      ) &&
+      files[".claude/hooks/guard-automovie-owned.mjs"]!.includes(
+        "process.exit(0)",
+      ) &&
       files[".automovie/design/production.json"]!.includes(
         '"id": "starter-feature"',
       ) &&
@@ -444,6 +461,8 @@ export const test_cli_scaffold = (): void => {
         ".automovie/design/world.json",
         ".automovie/manifest.json",
         ".automovie/reviews/README.md",
+        ".claude/hooks/guard-automovie-owned.mjs",
+        ".claude/settings.json",
         ".gitignore",
         "AGENTS.md",
         "CLAUDE.md",
@@ -471,6 +490,7 @@ export const test_cli_scaffold = (): void => {
         "scripts/preview.ts",
         "scripts/render.ts",
         "scripts/review-status.ts",
+        "scripts/verify.ts",
         "src/examples/lineBattle.ts",
         "src/film.ts",
         "src/shots/opening.ts",

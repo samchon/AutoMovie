@@ -7,6 +7,7 @@
   "scripts": {
     "capture:doctor": "tsx scripts/capture-doctor.ts",
     "capture:install": "tsx scripts/capture-install.ts",
+    "build": "pnpm compile",
     "compile": "tsx scripts/compile.ts",
     "lint": "ttsc --noEmit -p tsconfig.json && tsx scripts/lint.ts",
     "preview": "tsx scripts/preview.ts",
@@ -14,6 +15,7 @@
     "render": "tsx scripts/render.ts",
     "viewer": "vite --host 127.0.0.1",
     "test": "tsx test/opening.test.ts",
+    "verify": "tsx scripts/verify.ts",
     "format": "ttsc format -p tsconfig.json"
   },
   "dependencies": {

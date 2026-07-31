@@ -14,6 +14,8 @@ system Chrome or Edge must be selected explicitly in `automovie.config.ts`.
 Never edit `generated`; correct its owning source or design and compile. Never
 mark visual review complete without opening current bundle frames. A design,
 source, generated, or frame change makes dependent review stale by design.
+The project write hook also protects `renders`, capture receipts, and
+`.automovie/productions`; use the command named by its refusal.
 
 Write treatment and screenplay prose in `docs/{{name}}`. Keep exact treatment
 beats, `SCN-*` headings, catalogs, continuity claims, and downstream
