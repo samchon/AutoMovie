@@ -555,7 +555,14 @@ export const makeActorSynthesizer = (
       // destination; a turned actor would otherwise walk off its heading.
       const local = toModelSpace(dest, staticFrame);
       const distance = Math.hypot(local.x, local.z);
-      if (distance < 1e-6) return fitDeclaredSpan(cycle, action.duration); // already there → step in place
+      const travelDistance = Math.hypot(local.x, local.y, local.z);
+      if (travelDistance < 1e-6) return fitDeclaredSpan(cycle, action.duration); // already there → step in place
+      // A gait cannot realize a purely vertical displacement. Returning null
+      // makes the performance gate report the unsupported ground destination;
+      // pretending it is "already there" would silently leave the actor at
+      // the wrong height, while carrying it vertically would turn a walk into
+      // an elevator. The same epsilon prevents an unbounded slope ratio.
+      if (distance < 1e-6) return null;
       // A locomote destination is the ground point the actor must actually
       // reach, including a ramp's rise. Keep gait cadence governed by the XZ
       // distance (the actor profile's speed is its ground speed), but carry the
@@ -563,7 +570,6 @@ export const makeActorSynthesizer = (
       // the same slope ratio leaves distance / speed, cycle count, and duration
       // identical to the planar walk while making the baked root arrive at the
       // authored Y instead of silently discarding it (#1473).
-      const travelDistance = Math.hypot(local.x, local.y, local.z);
       const travelSpeed = ctx.speed * (travelDistance / distance);
       return fitDeclaredSpan(
         locomoteMotion(

@@ -102,7 +102,8 @@ const door: IAutoMovieActionTarget = { kind: "node", node: "door" };
  *    the actor carries that rise while gait cadence remains governed by XZ
  *    ground distance.
  * 2. `locomote` to a relative target (no positional point), or to its own spot,
- *    steps in place: the looping one-cycle gait.
+ *    steps in place: the looping one-cycle gait. A different height at the same
+ *    XZ is rejected because a ground gait cannot realize vertical-only travel.
  * 3. An unmatched gait, a non-synthesised verb, and an unknown actor → null.
  * 4. `hold` holds the rest pose; and a locomote+hold beat compiles end to end.
  * 5. `emote` produces an expression-only clip.
@@ -188,6 +189,17 @@ export const test_perform_actor_synthesizer = (): void => {
   // 2b. destination at the actor's own spot → also steps in place
   const here = synth(locomote("walk", { kind: "node", node: "here" }), "hero");
   TestValidator.equals("already-there steps in place", here!.id, "hero:walk");
+  TestValidator.equals(
+    "vertical-only ground travel is not silently treated as already there",
+    synth(
+      locomote("walk", {
+        kind: "point",
+        point: { x: 0, y: 1, z: 0 },
+      }),
+      "hero",
+    ),
+    null,
+  );
 
   // 3. null branches
   TestValidator.equals(
