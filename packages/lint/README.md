@@ -69,12 +69,18 @@ export default {
         slots: [
           {
             name: "screenplay-index",
-            files: [".automovie/productions/*/screenplay/index.json"],
+            files: [
+              ".automovie/design/screenplay/index.json",
+              ".automovie/design/*/screenplay/index.json",
+            ],
             requires: [],
           },
           {
             name: "shot-contracts",
-            files: [".automovie/productions/*/shots/*.json"],
+            files: [
+              ".automovie/design/shots/*.json",
+              ".automovie/design/*/shots/*.json",
+            ],
             requires: ["screenplay-index"],
           },
         ],
