@@ -38,6 +38,7 @@
     "libopus-wasm": "{{version:libopusWasm}}",
     "mp4box": "{{version:mp4box}}",
     "pngjs": "{{version:pngjs}}",
+    "sharp": "file:vendor/sharp-disabled",
     "three": "{{version:three}}"
   },
   "devDependencies": {
