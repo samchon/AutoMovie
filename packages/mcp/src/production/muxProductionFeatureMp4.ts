@@ -8,18 +8,19 @@ import {
 } from "mp4box";
 
 import { probeProductionMedia } from "./probeProductionMedia";
+import { trimProductionAudioPresentation } from "./trimProductionAudioPresentation";
 
 /** Mux one parser-verified H.264 stream and one exact-runtime audio stream. */
 export const muxProductionFeatureMp4 = (props: {
   video: Uint8Array;
   audio: Uint8Array;
 }): Uint8Array => {
-  probeProductionMedia({
+  const videoProbe = probeProductionMedia({
     kind: "guide-pass",
     mediaType: "video/mp4",
     bytes: props.video,
   });
-  probeProductionMedia({
+  const audioProbe = probeProductionMedia({
     kind: "audio-mix",
     mediaType: "audio/mp4",
     bytes: props.audio,
@@ -29,8 +30,9 @@ export const muxProductionFeatureMp4 = (props: {
   const videoTrack = video.movie.videoTracks[0]!;
   const audioTrack = audio.movie.audioTracks[0]!;
   if (
-    BigInt(videoTrack.duration) * BigInt(audioTrack.timescale) !==
-    BigInt(audioTrack.duration) * BigInt(videoTrack.timescale)
+    videoProbe.kind !== "video" ||
+    audioProbe.kind !== "audio" ||
+    videoProbe.runtimeSeconds !== audioProbe.runtimeSeconds
   )
     throw new Error(
       "Feature mux requires byte sources with exactly equal track runtimes.",
@@ -48,12 +50,22 @@ export const muxProductionFeatureMp4 = (props: {
     track: videoTrack,
     name: "AutoMovie H.264 feature",
   });
-  copyTrack({
+  const outputAudioTrack = copyTrack({
     output,
     source: audio.file,
     bytes: props.audio,
     track: audioTrack,
     name: "AutoMovie deterministic mix",
+  });
+  trimProductionAudioPresentation({
+    file: output,
+    track: outputAudioTrack,
+    mediaTimescale: audioTrack.timescale,
+    movieTimescale: videoTrack.timescale,
+    primingSamples: audioProbe.primingSamples,
+    presentationSamples: Math.round(
+      audioProbe.runtimeSeconds * audioProbe.sampleRate,
+    ),
   });
   const bytes = new Uint8Array(output.getBuffer().buffer);
   probeProductionMedia({
@@ -70,7 +82,7 @@ const copyTrack = (props: {
   bytes: Uint8Array;
   track: Track;
   name: string;
-}): void => {
+}): number => {
   const samples = props.source.getTrackSamplesInfo(props.track.id);
   const description = samples[0]!.description as {
     type: IsoFileOptions["type"];
@@ -104,6 +116,7 @@ const copyTrack = (props: {
       ),
       sampleOptions(sample),
     );
+  return id;
 };
 
 const sampleOptions = (

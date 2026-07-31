@@ -1,5 +1,10 @@
-import { muxProductionFeatureMp4, probeProductionMedia } from "@automovie/mcp";
+import {
+  muxProductionFeatureMp4,
+  probeProductionMedia,
+  trimProductionAudioPresentation,
+} from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
+import { createFile } from "mp4box";
 
 import {
   productionAudioMp4,
@@ -428,6 +433,116 @@ export const test_mcp_production_media_probe = async (): Promise<void> => {
       "48 kHz stereo",
     ),
   );
+  const editFile = createFile();
+  editFile.init({ brands: ["isom"], timescale: 48_000, duration: 960 });
+  const editTrack = editFile.addTrack({
+    type: "Opus",
+    hdlr: "soun",
+    timescale: 48_000,
+    media_duration: 960,
+    duration: 960,
+  });
+  TestValidator.predicate(
+    "audio presentation edits reject malformed clocks and duplicate edits",
+    refused(
+      () =>
+        trimProductionAudioPresentation({
+          file: editFile,
+          track: 0,
+          mediaTimescale: 48_000,
+          movieTimescale: 48_000,
+          primingSamples: 0,
+          presentationSamples: 960,
+        }),
+      "finite sample counts",
+    ) &&
+      refused(
+        () =>
+          trimProductionAudioPresentation({
+            file: editFile,
+            track: editTrack,
+            mediaTimescale: 48_000,
+            movieTimescale: 48_000,
+            primingSamples: -1,
+            presentationSamples: 960,
+          }),
+        "finite sample counts",
+      ) &&
+      refused(
+        () =>
+          trimProductionAudioPresentation({
+            file: editFile,
+            track: editTrack,
+            mediaTimescale: 3,
+            movieTimescale: 2,
+            primingSamples: 0,
+            presentationSamples: 1,
+          }),
+        "does not land",
+      ) &&
+      refused(
+        () =>
+          trimProductionAudioPresentation({
+            file: editFile,
+            track: editTrack + 1,
+            mediaTimescale: 48_000,
+            movieTimescale: 48_000,
+            primingSamples: 0,
+            presentationSamples: 960,
+          }),
+        "existing track",
+      ),
+  );
+  trimProductionAudioPresentation({
+    file: editFile,
+    track: editTrack,
+    mediaTimescale: 48_000,
+    movieTimescale: 48_000,
+    primingSamples: 312,
+    presentationSamples: 960,
+  });
+  TestValidator.predicate(
+    "audio presentation edits cannot be added twice",
+    refused(
+      () =>
+        trimProductionAudioPresentation({
+          file: editFile,
+          track: editTrack,
+          mediaTimescale: 48_000,
+          movieTimescale: 48_000,
+          primingSamples: 312,
+          presentationSamples: 960,
+        }),
+      "already has",
+    ),
+  );
+  const headerless = createFile();
+  headerless.init({ brands: ["isom"], timescale: 48_000, duration: 960 });
+  const headerlessTrack = headerless.addTrack({
+    type: "Opus",
+    hdlr: "soun",
+    timescale: 48_000,
+    media_duration: 960,
+    duration: 960,
+  });
+  Object.defineProperty(headerless, "getBox", {
+    value: () => undefined,
+  });
+  TestValidator.predicate(
+    "audio presentation edits require movie metadata",
+    refused(
+      () =>
+        trimProductionAudioPresentation({
+          file: headerless,
+          track: headerlessTrack,
+          mediaTimescale: 48_000,
+          movieTimescale: 48_000,
+          primingSamples: 0,
+          presentationSamples: 960,
+        }),
+      "movie header",
+    ),
+  );
   TestValidator.predicate(
     "guide passes use the same decoded video contract",
     probeProductionMedia({
@@ -639,20 +754,34 @@ export const test_mcp_production_media_probe = async (): Promise<void> => {
     ),
   );
 
-  const audio = productionAudioMp4();
+  const audio = productionOpusMp4(48_000);
   const audioProbe = probeProductionMedia({
     kind: "audio-mix",
     mediaType: "audio/mp4",
     bytes: audio,
   });
   TestValidator.predicate(
-    "the audio probe derives real codec, clock, channels and sample rate",
+    "the audio probe derives presentation clock, profile, packets and priming",
     audioProbe.kind === "audio" &&
       audioProbe.container === "mp4" &&
-      audioProbe.codec.length > 0 &&
-      audioProbe.runtimeSeconds > 0 &&
-      audioProbe.channels === 1 &&
-      audioProbe.sampleRate > 0,
+      audioProbe.codec.toLowerCase().startsWith("opus") &&
+      audioProbe.runtimeSeconds === 1 &&
+      audioProbe.channels === 2 &&
+      audioProbe.sampleRate === 48_000 &&
+      audioProbe.sampleCount > 0 &&
+      audioProbe.primingSamples === 312,
+  );
+  TestValidator.predicate(
+    "audio-mix rejects a resident mono AAC track",
+    refused(
+      () =>
+        probeProductionMedia({
+          kind: "audio-mix",
+          mediaType: "audio/mp4",
+          bytes: productionAudioMp4(),
+        }),
+      "48 kHz stereo",
+    ),
   );
   const zeroAudioClock = Buffer.from(audio);
   const audioMediaHeader = boxTypeOffset(zeroAudioClock, "mdhd");

@@ -1,6 +1,7 @@
 import {
   IAutoMovieCompiledShotSource,
   IAutoMovieFilmTimeline,
+  IAutoMovieProductionPhonemeChunk,
   IAutoMovieProductionSoundAnalysis,
   IAutoMovieProductionSoundPlan,
   IAutoMovieProductionViseme,
@@ -9,6 +10,7 @@ import {
 } from "@automovie/interface";
 
 import { resolveCameraAt } from "../film/cameraProjection";
+import { sampleFormationMotion, transformFormationPoint } from "../formation";
 import { Quaternion } from "../math/Quaternion";
 import { Vector3 } from "../math/Vector3";
 import { sampleClipSequence } from "../resolve/sampleClip";
@@ -113,6 +115,8 @@ export const deriveProductionSoundPlan = (props: {
       id: cue.id,
       startFrame: cue.startFrame,
       durationFrames: cue.durationFrames,
+      sourceOffsetFrame: cue.sourceOffsetFrame,
+      sourceDurationFrames: cue.sourceDurationFrames,
       gain: cue.gain,
       fadeInFrames: cue.fadeInFrames,
       fadeOutFrames: cue.fadeOutFrames,
@@ -168,18 +172,52 @@ export const renderProductionSound = (props: {
 
 /** Derive a bounded frame-normalized VRM mouth sequence from Kokoro phonemes. */
 export const productionPhonemesToVisemes = (props: {
-  phonemes: string;
+  chunks: readonly IAutoMovieProductionPhonemeChunk[];
+  sourceSamples: number;
   startFrame: number;
   endFrame: number;
 }): IAutoMovieProductionViseme[] => {
   const duration = props.endFrame - props.startFrame;
-  if (duration <= 0) return [];
-  const all = Array.from(props.phonemes.normalize("NFKC")).filter(
-    (token) => /\s/u.test(token) === false,
-  );
-  const stride = Math.max(1, Math.ceil(all.length / duration));
-  const tokens = all.filter((_token, index) => index % stride === 0);
-  if (tokens.length === 0)
+  if (duration <= 0 || props.sourceSamples <= 0) return [];
+  const output: IAutoMovieProductionViseme[] = [];
+  let cursor = props.startFrame;
+  for (const chunk of props.chunks) {
+    const tokens = Array.from(chunk.phonemes.normalize("NFKC")).filter(
+      (token) => /\s/u.test(token) === false,
+    );
+    if (tokens.length === 0) continue;
+    const chunkStart = Math.max(
+      cursor,
+      props.startFrame +
+        Math.floor((duration * chunk.startSample) / props.sourceSamples),
+    );
+    const chunkEnd =
+      props.startFrame +
+      Math.max(
+        1,
+        Math.ceil((duration * chunk.endSample) / props.sourceSamples),
+      );
+    const frames = Math.max(1, Math.min(props.endFrame, chunkEnd) - chunkStart);
+    if (chunkStart >= props.endFrame) {
+      const previous = output.at(-1);
+      if (previous !== undefined) previous.phoneme += tokens.join("");
+      continue;
+    }
+    const bins = Math.min(tokens.length, frames);
+    for (let index = 0; index < bins; ++index) {
+      const tokenStart = Math.floor((tokens.length * index) / bins);
+      const tokenEnd = Math.floor((tokens.length * (index + 1)) / bins);
+      const phonemes = tokens.slice(tokenStart, tokenEnd).join("");
+      output.push({
+        phoneme: phonemes,
+        viseme: phonemeViseme(tokens[tokenStart]!),
+        startFrame: chunkStart + Math.floor((frames * index) / bins),
+        endFrame: chunkStart + Math.floor((frames * (index + 1)) / bins),
+      });
+    }
+    cursor = chunkStart + frames;
+  }
+  if (output.length === 0)
     return [
       {
         phoneme: "",
@@ -188,14 +226,7 @@ export const productionPhonemesToVisemes = (props: {
         endFrame: props.endFrame,
       },
     ];
-  return tokens.map((phoneme, index) => ({
-    phoneme,
-    viseme: phonemeViseme(phoneme),
-    startFrame:
-      props.startFrame + Math.floor((duration * index) / tokens.length),
-    endFrame:
-      props.startFrame + Math.floor((duration * (index + 1)) / tokens.length),
-  }));
+  return output;
 };
 
 /** Draw sample extrema as deterministic waveform evidence. */
@@ -289,7 +320,19 @@ const resolveEmitter = (
     const formation = compiled.formations.find(
       (candidate) => candidate.id === subject,
     );
-    if (formation !== undefined) return [formation.centroid];
+    if (formation !== undefined)
+      return [
+        transformFormationPoint(
+          formation.centroid,
+          formation.anchor,
+          sampleFormationMotion(
+            compiled.formationMotions ?? [],
+            formation.id,
+            time,
+          ),
+          formation.facingDeg,
+        ),
+      ];
     const instances = compiled.instanceSets.find(
       (candidate) => candidate.id === subject,
     );
@@ -364,11 +407,12 @@ const mixCue = (
     index < length && start + index < pcm.length / 2;
     ++index
   ) {
-    const t = index / plan.sampleRate;
+    const source = frameToSample(plan, cue.sourceOffsetFrame) + index;
+    const t = source / plan.sampleRate;
     const fade =
       Math.min(1, fadeIn === 0 ? 1 : index / fadeIn) *
       Math.min(1, fadeOut === 0 ? 1 : (length - index) / fadeOut);
-    const noise = seededNoise(cue.seed, index);
+    const noise = seededNoise(cue.seed, source);
     const signal =
       cue.bus === "music"
         ? Math.sin(2 * Math.PI * 110 * t) * 0.18 +

@@ -86,7 +86,26 @@ const compiled = (): IAutoMovieCompiledShotSource =>
       lights: [],
     },
     motions: [],
-    formationMotions: [],
+    formationMotions: [
+      {
+        id: "formation-advance",
+        formation: "formation",
+        action: "advance",
+        start: 0,
+        end: 2,
+        from: {
+          translation: { x: 0, y: 0, z: 0 },
+          facingOffsetDeg: 0,
+          spacingScale: { lateral: 1, depth: 1 },
+        },
+        to: {
+          translation: { x: 10, y: 0, z: 0 },
+          facingOffsetDeg: 0,
+          spacingScale: { lateral: 1, depth: 1 },
+        },
+        easing: "linear",
+      },
+    ],
     effectCues: [],
     shot: {
       id: "volley-shot",
@@ -120,6 +139,8 @@ const compiled = (): IAutoMovieCompiledShotSource =>
       {
         id: "formation",
         centroid: { x: -4, y: 0, z: -6 },
+        anchor: { x: -4, y: 0, z: -6 },
+        facingDeg: 0,
       },
     ],
     instanceSets: [
@@ -209,6 +230,14 @@ export const test_film_production_sound = (): void => {
       plan.events.some((event) => event.pan < 0) &&
       plan.events.some((event) => event.pan === 0),
   );
+  const formationEvents = plan.events.filter(
+    (event) => event.event === "arrival" || event.event === "reveal",
+  );
+  TestValidator.predicate(
+    "formation emitters sample compact motion at each event time",
+    formationEvents[0]?.emitter.x === -1.75 &&
+      formationEvents[1]?.emitter.x === 2,
+  );
   const dialogue = new Map([["line", Float32Array.from([0.5])]]);
   const first = renderProductionSound({ plan, dialogue });
   const second = renderProductionSound({ plan, dialogue });
@@ -216,6 +245,22 @@ export const test_film_production_sound = (): void => {
     "the same sound plan produces byte-identical PCM",
     Buffer.from(first.pcm.buffer),
     Buffer.from(second.pcm.buffer),
+  );
+  const offsetTimeline = timeline();
+  offsetTimeline.tracks.audio[0]!.sourceOffsetFrame = 5;
+  const offsetPlan = deriveProductionSoundPlan({
+    timeline: offsetTimeline,
+    contracts: new Map([["volley-shot", contract()]]),
+    compiled: new Map([["volley-shot", source]]),
+  });
+  TestValidator.predicate(
+    "authored cue source offsets survive planning and change source-clock phase",
+    plan.cues[0]!.sourceOffsetFrame === 0 &&
+      plan.cues[0]!.sourceDurationFrames === 10 &&
+      offsetPlan.cues[0]!.sourceOffsetFrame === 5 &&
+      Buffer.from(
+        renderProductionSound({ plan: offsetPlan, dialogue }).pcm.buffer,
+      ).equals(Buffer.from(first.pcm.buffer)) === false,
   );
   TestValidator.predicate(
     "mixed sound is exact-runtime, audible, unclipped and event aligned",
@@ -239,7 +284,8 @@ export const test_film_production_sound = (): void => {
       ),
   );
   const visemes = productionPhonemesToVisemes({
-    phonemes: "a i u e o x",
+    chunks: [{ phonemes: "a i u e o x", startSample: 0, endSample: 600 }],
+    sourceSamples: 600,
     startFrame: 10,
     endFrame: 16,
   });
@@ -251,7 +297,8 @@ export const test_film_production_sound = (): void => {
   TestValidator.equals(
     "empty phonemes hold one neutral mouth target",
     productionPhonemesToVisemes({
-      phonemes: " ",
+      chunks: [{ phonemes: " ", startSample: 0, endSample: 20 }],
+      sourceSamples: 20,
       startFrame: 1,
       endFrame: 3,
     }),
@@ -267,11 +314,40 @@ export const test_film_production_sound = (): void => {
   TestValidator.equals(
     "non-positive dialogue windows have no visemes",
     productionPhonemesToVisemes({
-      phonemes: "a",
+      chunks: [{ phonemes: "a", startSample: 0, endSample: 20 }],
+      sourceSamples: 20,
       startFrame: 2,
       endFrame: 2,
     }),
     [],
+  );
+  TestValidator.equals(
+    "non-positive source clocks have no visemes",
+    productionPhonemesToVisemes({
+      chunks: [{ phonemes: "a", startSample: 0, endSample: 20 }],
+      sourceSamples: 0,
+      startFrame: 0,
+      endFrame: 2,
+    }),
+    [],
+  );
+  const chunkTimed = productionPhonemesToVisemes({
+    chunks: [
+      { phonemes: "a", startSample: 0, endSample: 100 },
+      { phonemes: "iueox", startSample: 100, endSample: 1_000 },
+    ],
+    sourceSamples: 1_000,
+    startFrame: 0,
+    endFrame: 4,
+  });
+  TestValidator.predicate(
+    "chunk sample clocks preserve timing and no phoneme token is discarded",
+    chunkTimed[0]?.endFrame === 1 &&
+      chunkTimed.every(
+        (item, index) =>
+          index === 0 || item.startFrame >= chunkTimed[index - 1]!.endFrame,
+      ) &&
+      chunkTimed.map((item) => item.phoneme).join("") === "aiueox",
   );
   const silence = renderProductionSound({
     plan: { ...plan, events: [], cues: [], dialogue: [] },

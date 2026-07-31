@@ -3376,6 +3376,10 @@ const appendDeliverableTimelineDiagnostics = (
         audio[0]!.runtimeSeconds,
         production.targetRuntimeSeconds,
       ) === false ||
+      audio[0]!.sampleCount <= 0 ||
+      audio[0]!.channels !== 2 ||
+      audio[0]!.sampleRate !== 48_000 ||
+      /^(opus|mp4a)(?:\.|$)/i.test(audio[0]!.codec) === false ||
       deliverable.codec !== audio[0]!.codec ||
       deliverable.runtimeSeconds !== audio[0]!.runtimeSeconds ||
       evidence[0]!.clippingSamples !== 0 ||

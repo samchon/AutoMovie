@@ -38,6 +38,10 @@ export interface IAutoMovieProductionSoundCue {
   startFrame: number;
   /** Exact cue duration in film frames. */
   durationFrames: number;
+  /** Source-asset frame at which this edit begins. */
+  sourceOffsetFrame: number;
+  /** Source-asset duration available to this edit. */
+  sourceDurationFrames: number;
   /** Authored linear gain. */
   gain: number;
   /** Exact fade-in duration in film frames. */
@@ -100,10 +104,20 @@ export interface IAutoMovieProductionViseme {
   endFrame: number;
 }
 
+/** One Kokoro stream chunk located on its model-native PCM clock. */
+export interface IAutoMovieProductionPhonemeChunk {
+  /** Chunk phonemes in synthesis order. */
+  phonemes: string;
+  /** Inclusive source-sample offset in the synthesized line. */
+  startSample: number;
+  /** Exclusive source-sample offset in the synthesized line. */
+  endSample: number;
+}
+
 /** Content-addressed receipt for one locally synthesized Kokoro line. */
 export interface IAutoMovieProductionTtsReceipt {
   /** Receipt schema. */
-  version: 1;
+  version: 2;
   /** Exact dialogue line id. */
   line: string;
   /** Content address over text, voice, model, and inference arguments. */
@@ -122,7 +136,16 @@ export interface IAutoMovieProductionTtsReceipt {
   pcmDigest: AutoMovieContentDigest;
   /** Kokoro phoneme stream joined in synthesis order. */
   phonemes: string;
-  /** Frame-normalized mouth targets derived from the same phoneme stream. */
+  /** Phoneme chunks on the exact model-native PCM clock. */
+  phonemeChunks: IAutoMovieProductionPhonemeChunk[];
+  /** Adapter, model-cache, and bundled-voice byte identity. */
+  runtimeAssets: Array<{
+    /** Stable package or revision-cache-relative asset name. */
+    path: string;
+    /** Digest of the exact bytes consumed by synthesis. */
+    digest: AutoMovieContentDigest;
+  }>;
+  /** Mouth targets derived from the same chunk sample clock. */
   visemes: IAutoMovieProductionViseme[];
 }
 

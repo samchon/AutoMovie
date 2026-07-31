@@ -68,6 +68,7 @@ const versions = {
   lint: packageVersion("packages/lint"),
   mcp: packageVersion("packages/mcp"),
   viewer: packageVersion("packages/viewer"),
+  huggingFaceTransformers: catalogVersion("media", "@huggingface/transformers"),
   h264Mp4Encoder: catalogVersion("media", "h264-mp4-encoder"),
   kokoroJs: catalogVersion("media", "kokoro-js"),
   libopusWasm: catalogVersion("media", "libopus-wasm"),

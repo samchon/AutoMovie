@@ -23,6 +23,7 @@
     "@automovie/interface": "{{version:interface}}",
     "@automovie/mcp": "{{version:mcp}}",
     "@automovie/viewer": "{{version:viewer}}",
+    "@huggingface/transformers": "{{version:huggingFaceTransformers}}",
     "@modelcontextprotocol/sdk": "{{version:mcpSdk}}",
     "h264-mp4-encoder": "{{version:h264Mp4Encoder}}",
     "kokoro-js": "{{version:kokoroJs}}",

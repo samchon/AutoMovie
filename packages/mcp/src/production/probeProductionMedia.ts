@@ -177,24 +177,13 @@ export const probeProductionMedia = (props: {
         props.bytes,
         parsed.file,
         movie.audioTracks[0]!,
+        movie,
       );
-      const videoTrack = movie.videoTracks[0]!;
-      const audioTrack = movie.audioTracks[0]!;
-      if (
-        BigInt(videoTrack.duration) * BigInt(audioTrack.timescale) !==
-        BigInt(audioTrack.duration) * BigInt(videoTrack.timescale)
-      )
+      if (video.runtimeSeconds !== audio.runtimeSeconds)
         throw new Error(
           "Feature MP4 video and audio tracks do not have exactly equal runtimes.",
         );
-      if (
-        audio.channels !== 2 ||
-        audio.sampleRate !== 48_000 ||
-        /^(opus|mp4a)(?:\.|$)/i.test(audio.codec) === false
-      )
-        throw new Error(
-          `Feature MP4 audio must be 48 kHz stereo Opus or AAC, but parsed ${audio.codec}, ${audio.sampleRate} Hz, ${audio.channels} channels.`,
-        );
+      assertProductionAudioProfile(audio, "Feature MP4");
     }
     return video;
   }
@@ -214,13 +203,21 @@ export const probeProductionMedia = (props: {
     throw new Error(
       `Audio-mix MP4 contains ${movie.tracks.length} total tracks; exactly one is required.`,
     );
-  return probeAudioTrack(props.bytes, parsed.file, movie.audioTracks[0]!);
+  const audio = probeAudioTrack(
+    props.bytes,
+    parsed.file,
+    movie.audioTracks[0]!,
+    movie,
+  );
+  assertProductionAudioProfile(audio, "Audio-mix MP4");
+  return audio;
 };
 
 const probeAudioTrack = (
   bytes: Uint8Array,
   file: ReturnType<typeof createFile>,
   track: Track,
+  movie: Movie,
 ): Extract<IAutoMovieProductionMediaProbe, { kind: "audio" }> => {
   const audio = track.audio;
   if (
@@ -232,15 +229,44 @@ const probeAudioTrack = (
     throw new Error(
       "MP4 audio track lacks codec, duration, or channel metadata.",
     );
-  verifySampleStorage(bytes, file, track);
+  const samples = verifySampleStorage(bytes, file, track);
+  const description = samples[0]!.description as {
+    boxes?: Array<{ type?: string; PreSkip?: number }>;
+  };
+  const primingSamples = /^(opus)(?:\.|$)/i.test(track.codec)
+    ? description.boxes?.find((box) => box.type === "dOps")?.PreSkip
+    : 0;
+  if (Number.isSafeInteger(primingSamples) === false || primingSamples! < 0)
+    throw new Error("Opus audio track lacks a finite dOps pre-skip.");
+  const presentationDuration =
+    track.movie_duration > 0 && movie.timescale > 0
+      ? track.movie_duration / movie.timescale
+      : track.duration / track.timescale;
   return {
     kind: "audio",
     container: "mp4",
     codec: track.codec,
-    runtimeSeconds: track.duration / track.timescale,
+    runtimeSeconds: presentationDuration,
     channels: audio.channel_count,
     sampleRate: audio.sample_rate,
+    sampleCount: samples.length,
+    primingSamples: primingSamples!,
   };
+};
+
+const assertProductionAudioProfile = (
+  audio: Extract<IAutoMovieProductionMediaProbe, { kind: "audio" }>,
+  label: string,
+): void => {
+  if (
+    audio.sampleCount <= 0 ||
+    audio.channels !== 2 ||
+    audio.sampleRate !== 48_000 ||
+    /^(opus|mp4a)(?:\.|$)/i.test(audio.codec) === false
+  )
+    throw new Error(
+      `${label} audio must contain resident 48 kHz stereo Opus or AAC packets, but parsed ${audio.sampleCount} samples of ${audio.codec}, ${audio.sampleRate} Hz, ${audio.channels} channels.`,
+    );
 };
 
 const parseWebVttCue = (line: string): { start: number; end: number } => {
@@ -365,6 +391,7 @@ const verifySampleStorage = (
 ): ReturnType<ReturnType<typeof createFile>["getTrackSamplesInfo"]> => {
   const samples = file.getTrackSamplesInfo(track.id);
   if (
+    samples.length === 0 ||
     samples.length !== track.nb_samples ||
     samples.some(
       (sample) =>

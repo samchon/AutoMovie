@@ -27,6 +27,7 @@ catalogs:
     vite: ^5.4.10
     esbuild: ^0.21.5
   media:
+    "@huggingface/transformers": ^3.8.1
     gifenc: ^1.0.3
     h264-mp4-encoder: ^1.0.12
     kokoro-js: ^1.2.1

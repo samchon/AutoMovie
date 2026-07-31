@@ -2301,7 +2301,7 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
       fakeMediaCommitRefused &&
         finalCompiler.compile({ scope: "final" }).success,
     );
-    const edgeAudioBytes = productionAudioMp4();
+    const edgeAudioBytes = productionOpusMp4(48_000);
     const edgeAudioProbe = probeProductionMedia({
       kind: "audio-mix",
       mediaType: "audio/mp4",

@@ -211,6 +211,10 @@ export type IAutoMovieProductionMediaProbe =
       channels: number;
       /** Actual audio sample rate. */
       sampleRate: number;
+      /** Number of non-empty resident coded packets. */
+      sampleCount: number;
+      /** Encoder priming discarded by the presentation timeline. */
+      primingSamples: number;
     }
   | {
       /** Parsed WebVTT text. */

@@ -49,6 +49,7 @@ import {
   runProductionRenderJob,
   sampleProductionRenderFrame,
   selectAutoMovieFilmReviewFrames,
+  trimProductionAudioPresentation,
   verifyProductionRenderChunkReceipt,
   verifyProductionRenderJobPlan,
 } from "@automovie/mcp";
@@ -414,6 +415,7 @@ const productionSoundRuntimeIdentity = () => ({
   evidencePng: resolvedPackageIdentity("pngjs"),
   tts: {
     ...resolvedPackageIdentity("kokoro-js"),
+    adapter: resolvedPackageIdentity("@huggingface/transformers"),
     model: KOKORO_MODEL,
     modelRevision: KOKORO_MODEL_REVISION,
     dtype: "q8",
@@ -449,6 +451,25 @@ const resolvedPackageIdentity = (
           version: parsed.version,
           entryDigest: digestAutoMovieBytes(fs.readFileSync(entry)),
         };
+    }
+    const parent = path.dirname(directory);
+    if (parent === directory)
+      throw new Error(
+        `Resolved package "${packageName}" has no matching package.json ancestor.`,
+      );
+    directory = parent;
+  }
+};
+
+const resolvedPackageDirectory = (packageName: string): string => {
+  let directory = path.dirname(require.resolve(packageName));
+  for (;;) {
+    const manifest = path.join(directory, "package.json");
+    if (fs.existsSync(manifest)) {
+      const parsed = JSON.parse(fs.readFileSync(manifest, "utf8")) as Partial<{
+        name: string;
+      }>;
+      if (parsed.name === packageName) return directory;
     }
     const parent = path.dirname(directory);
     if (parent === directory)
@@ -1354,7 +1375,7 @@ interface IProductionSoundBundle {
 }
 
 interface IKokoroCacheRecord {
-  version: 1;
+  version: 2;
   cacheKey: AutoMovieContentDigest;
   model: "onnx-community/Kokoro-82M-v1.0-ONNX";
   modelRevision: "1939ad2a8e416c0acfeecc08a694d14ef25f2231";
@@ -1363,6 +1384,8 @@ interface IKokoroCacheRecord {
   sourceSamples: number;
   pcmDigest: AutoMovieContentDigest;
   phonemes: string;
+  phonemeChunks: IAutoMovieProductionTtsReceipt["phonemeChunks"];
+  runtimeAssets: IAutoMovieProductionTtsReceipt["runtimeAssets"];
 }
 
 interface IKokoroRuntime {
@@ -1374,6 +1397,11 @@ interface IKokoroRuntime {
     phonemes: string;
     audio: { audio: Float32Array; sampling_rate: number };
   }>;
+}
+
+interface IKokoroLoadedRuntime {
+  runtime: IKokoroRuntime;
+  runtimeAssets: IAutoMovieProductionTtsReceipt["runtimeAssets"];
 }
 
 const produceProductionSound = async (
@@ -1442,21 +1470,30 @@ const synthesizeProductionDialogue = async (
   const pcm = new Map<string, Float32Array>();
   const receipts: IAutoMovieProductionTtsReceipt[] = [];
   const cacheRoot = path.join(productionStateRoot, "audio-cache", "kokoro");
-  let runtime: Promise<IKokoroRuntime> | undefined;
-  const currentRuntime = (): Promise<IKokoroRuntime> =>
-    (runtime ??= import("kokoro-js").then(async ({ KokoroTTS }) => {
-      const loaded = await KokoroTTS.from_pretrained(KOKORO_MODEL, {
-        dtype: "q8",
-        device: "wasm",
-        revision: KOKORO_MODEL_REVISION,
-      });
-      return loaded as unknown as IKokoroRuntime;
-    }));
+  const modelCacheRoot = path.join(
+    productionStateRoot,
+    "model-cache",
+    "kokoro",
+    KOKORO_MODEL_REVISION,
+  );
+  const baseRuntimeAssets = kokoroBaseRuntimeAssets();
+  let runtime: Promise<IKokoroLoadedRuntime> | undefined;
+  const currentRuntime = (): Promise<IKokoroLoadedRuntime> =>
+    (runtime ??= loadPinnedKokoroRuntime(modelCacheRoot, baseRuntimeAssets));
+  let runtimeAssets = [
+    ...baseRuntimeAssets,
+    ...kokoroModelCacheAssets(modelCacheRoot),
+  ];
+  if (
+    plan.dialogue.length > 0 &&
+    runtimeAssets.length === baseRuntimeAssets.length
+  )
+    runtimeAssets = (await currentRuntime()).runtimeAssets;
   for (const line of plan.dialogue) {
     const cacheKey = digestAutoMovieBytes(
       Buffer.from(
         JSON.stringify({
-          version: 1,
+          version: 2,
           model: KOKORO_MODEL,
           modelRevision: KOKORO_MODEL_REVISION,
           dtype: "q8",
@@ -1466,6 +1503,7 @@ const synthesizeProductionDialogue = async (
           text: line.text.normalize("NFKC"),
           language: line.language.normalize("NFKC"),
           speaker: line.speaker?.normalize("NFKC") ?? null,
+          runtimeAssets,
         }),
         "utf8",
       ),
@@ -1488,16 +1526,18 @@ const synthesizeProductionDialogue = async (
           relative: path.basename(pcmPath),
         });
         if (
-          record.version === 1 &&
+          record.version === 2 &&
           record.cacheKey === cacheKey &&
           record.model === KOKORO_MODEL &&
           record.modelRevision === KOKORO_MODEL_REVISION &&
           record.voice === KOKORO_VOICE &&
+          isDeepStrictEqual(record.runtimeAssets, runtimeAssets) &&
           Number.isSafeInteger(record.sourceSampleRate) &&
           record.sourceSampleRate > 0 &&
           Number.isSafeInteger(record.sourceSamples) &&
           record.sourceSamples > 0 &&
           typeof record.phonemes === "string" &&
+          validPhonemeChunks(record.phonemeChunks, record.sourceSamples) &&
           record.sourceSamples * Float32Array.BYTES_PER_ELEMENT ===
             bytes.length &&
           record.pcmDigest === digestAutoMovieBytes(bytes)
@@ -1513,11 +1553,16 @@ const synthesizeProductionDialogue = async (
     if (cached === undefined) {
       const chunks: Float32Array[] = [];
       const phonemes: string[] = [];
+      const phonemeChunks: IKokoroCacheRecord["phonemeChunks"] = [];
       let sourceSampleRate: number | undefined;
-      for await (const chunk of (await currentRuntime()).stream(line.text, {
-        voice: KOKORO_VOICE,
-        speed: 1,
-      })) {
+      let sourceOffset = 0;
+      for await (const chunk of (await currentRuntime()).runtime.stream(
+        line.text,
+        {
+          voice: KOKORO_VOICE,
+          speed: 1,
+        },
+      )) {
         if (
           Number.isSafeInteger(chunk.audio.sampling_rate) === false ||
           chunk.audio.sampling_rate <= 0
@@ -1533,8 +1578,19 @@ const synthesizeProductionDialogue = async (
             `Kokoro line "${line.id}" changed PCM sample rate mid-stream.`,
           );
         sourceSampleRate = chunk.audio.sampling_rate;
-        chunks.push(Float32Array.from(chunk.audio.audio));
+        const audio = Float32Array.from(chunk.audio.audio);
+        if (audio.length === 0)
+          throw new Error(
+            `Kokoro line "${line.id}" returned an empty PCM chunk.`,
+          );
+        chunks.push(audio);
         phonemes.push(chunk.phonemes);
+        phonemeChunks.push({
+          phonemes: chunk.phonemes,
+          startSample: sourceOffset,
+          endSample: sourceOffset + audio.length,
+        });
+        sourceOffset += audio.length;
       }
       if (sourceSampleRate === undefined || chunks.length === 0)
         throw new Error(`Kokoro synthesized no PCM for line "${line.id}".`);
@@ -1545,7 +1601,7 @@ const synthesizeProductionDialogue = async (
         samples.byteLength,
       );
       const record: IKokoroCacheRecord = {
-        version: 1,
+        version: 2,
         cacheKey,
         model: KOKORO_MODEL,
         modelRevision: KOKORO_MODEL_REVISION,
@@ -1554,6 +1610,8 @@ const synthesizeProductionDialogue = async (
         sourceSamples: samples.length,
         pcmDigest: digestAutoMovieBytes(bytes),
         phonemes: phonemes.join(""),
+        phonemeChunks,
+        runtimeAssets,
       };
       writeFileAtomic(pcmPath, bytes);
       writeJsonAtomic(receiptPath, record);
@@ -1564,7 +1622,8 @@ const synthesizeProductionDialogue = async (
       ...cached.record,
       line: line.id,
       visemes: productionPhonemesToVisemes({
-        phonemes: cached.record.phonemes,
+        chunks: cached.record.phonemeChunks,
+        sourceSamples: cached.record.sourceSamples,
         startFrame: line.startFrame,
         endFrame: line.endFrame,
       }),
@@ -1572,6 +1631,128 @@ const synthesizeProductionDialogue = async (
   }
   return { pcm, receipts };
 };
+
+const loadPinnedKokoroRuntime = async (
+  modelCacheRoot: string,
+  baseRuntimeAssets: IAutoMovieProductionTtsReceipt["runtimeAssets"],
+): Promise<IKokoroLoadedRuntime> => {
+  fs.mkdirSync(modelCacheRoot, { recursive: true });
+  const [{ KokoroTTS }, { env }] = await Promise.all([
+    import("kokoro-js"),
+    import("@huggingface/transformers"),
+  ]);
+  const previous = {
+    cacheDir: env.cacheDir,
+    fetch: env.fetch,
+  };
+  const fetcher = env.fetch ?? globalThis.fetch;
+  env.cacheDir = modelCacheRoot;
+  env.fetch = async (input, init) => {
+    const source =
+      typeof input === "string"
+        ? input
+        : input instanceof URL
+          ? input.href
+          : input.url;
+    const marker = `huggingface.co/${KOKORO_MODEL}/resolve/`;
+    const markerIndex = source.indexOf(marker);
+    if (markerIndex < 0) return fetcher(input, init);
+    const suffix = source.slice(markerIndex + marker.length);
+    const separator = suffix.indexOf("/");
+    if (separator < 0)
+      throw new Error(`Kokoro model URL has no asset path: ${source}`);
+    const pinned =
+      source.slice(0, markerIndex + marker.length) +
+      KOKORO_MODEL_REVISION +
+      suffix.slice(separator);
+    const request =
+      typeof input === "object" &&
+      input !== null &&
+      "url" in input &&
+      input instanceof Request
+        ? new Request(pinned, input)
+        : pinned;
+    return fetcher(request, init);
+  };
+  try {
+    const loaded = await KokoroTTS.from_pretrained(KOKORO_MODEL, {
+      dtype: "q8",
+      device: "wasm",
+    });
+    const modelAssets = kokoroModelCacheAssets(modelCacheRoot);
+    if (modelAssets.length === 0)
+      throw new Error(
+        "Pinned Kokoro load produced no revision-scoped model cache assets.",
+      );
+    return {
+      runtime: loaded as unknown as IKokoroRuntime,
+      runtimeAssets: [...baseRuntimeAssets, ...modelAssets],
+    };
+  } finally {
+    env.cacheDir = previous.cacheDir;
+    env.fetch = previous.fetch;
+  }
+};
+
+const kokoroBaseRuntimeAssets =
+  (): IAutoMovieProductionTtsReceipt["runtimeAssets"] => {
+    const kokoro = resolvedPackageIdentity("kokoro-js");
+    const transformers = resolvedPackageIdentity("@huggingface/transformers");
+    const voice = path.join(
+      resolvedPackageDirectory("kokoro-js"),
+      "voices",
+      `${KOKORO_VOICE}.bin`,
+    );
+    if (fs.existsSync(voice) === false)
+      throw new Error(`Kokoro voice asset is absent: ${voice}`);
+    return [
+      { path: "package:kokoro-js", digest: kokoro.entryDigest },
+      {
+        path: "package:@huggingface/transformers",
+        digest: transformers.entryDigest,
+      },
+      {
+        path: `voice:${KOKORO_VOICE}.bin`,
+        digest: digestAutoMovieBytes(fs.readFileSync(voice)),
+      },
+    ];
+  };
+
+const kokoroModelCacheAssets = (
+  modelCacheRoot: string,
+): IAutoMovieProductionTtsReceipt["runtimeAssets"] =>
+  fs.existsSync(modelCacheRoot)
+    ? listFiles(modelCacheRoot).map((file) => {
+        const relative = path
+          .relative(modelCacheRoot, file)
+          .split(path.sep)
+          .join("/");
+        return {
+          path: `model:${relative}`,
+          digest: digestAutoMovieBytes(
+            readRegularInside(modelCacheRoot, relative),
+          ),
+        };
+      })
+    : [];
+
+const validPhonemeChunks = (
+  chunks: unknown,
+  sourceSamples: number,
+): chunks is IKokoroCacheRecord["phonemeChunks"] =>
+  Array.isArray(chunks) &&
+  chunks.length > 0 &&
+  chunks.every(
+    (chunk, index) =>
+      typeof chunk === "object" &&
+      chunk !== null &&
+      typeof chunk.phonemes === "string" &&
+      Number.isSafeInteger(chunk.startSample) &&
+      Number.isSafeInteger(chunk.endSample) &&
+      chunk.startSample === (index === 0 ? 0 : chunks[index - 1]!.endSample) &&
+      chunk.endSample > chunk.startSample,
+  ) &&
+  chunks.at(-1)!.endSample === sourceSamples;
 
 const encodeProductionOpus = async (pcm: Float32Array): Promise<Uint8Array> => {
   if (pcm.length === 0 || pcm.length % 2 !== 0)
@@ -1592,11 +1773,25 @@ const encodeProductionOpus = async (pcm: Float32Array): Promise<Uint8Array> => {
       "Pinned Opus runtime no longer exposes the required 48 kHz stereo 20 ms profile.",
     );
   }
+  const primingSamples = encoder.getLookahead();
+  if (
+    Number.isSafeInteger(primingSamples) === false ||
+    primingSamples < 0 ||
+    primingSamples >= encoder.frameSize
+  ) {
+    encoder.free();
+    throw new Error(
+      "Pinned Opus runtime returned an invalid encoder lookahead.",
+    );
+  }
   const sampleFrames = pcm.length / 2;
+  const codedSampleFrames =
+    Math.ceil((sampleFrames + primingSamples) / encoder.frameSize) *
+    encoder.frameSize;
   const packets: Array<{ bytes: Uint8Array; duration: number; dts: number }> =
     [];
   try {
-    for (let dts = 0; dts < sampleFrames; dts += encoder.frameSize) {
+    for (let dts = 0; dts < codedSampleFrames; dts += encoder.frameSize) {
       const frame = new Float32Array(encoder.frameSize * encoder.channels);
       frame.set(
         pcm.subarray(
@@ -1606,7 +1801,7 @@ const encodeProductionOpus = async (pcm: Float32Array): Promise<Uint8Array> => {
       );
       packets.push({
         bytes: Uint8Array.from(encoder.encodeFloat(frame)),
-        duration: Math.min(encoder.frameSize, sampleFrames - dts),
+        duration: encoder.frameSize,
         dts,
       });
     }
@@ -1616,7 +1811,7 @@ const encodeProductionOpus = async (pcm: Float32Array): Promise<Uint8Array> => {
   const description = new BoxParser.box.dOps();
   description.Version = 0;
   description.OutputChannelCount = 2;
-  description.PreSkip = 0;
+  description.PreSkip = primingSamples;
   description.InputSampleRate = 48_000;
   description.OutputGain = 0;
   description.ChannelMappingFamily = 0;
@@ -1627,15 +1822,15 @@ const encodeProductionOpus = async (pcm: Float32Array): Promise<Uint8Array> => {
   file.init({
     brands: ["isom", "iso2", "mp41", "Opus"],
     timescale: 48_000,
-    duration: sampleFrames,
+    duration: codedSampleFrames,
   });
   const track = file.addTrack({
     type: "Opus",
     hdlr: "soun",
     name: "AutoMovie deterministic Opus mix",
     timescale: 48_000,
-    media_duration: sampleFrames,
-    duration: sampleFrames,
+    media_duration: codedSampleFrames,
+    duration: codedSampleFrames,
     samplerate: 48_000,
     channel_count: 2,
     samplesize: 16,
@@ -1648,6 +1843,14 @@ const encodeProductionOpus = async (pcm: Float32Array): Promise<Uint8Array> => {
       cts: packet.dts,
       is_sync: true,
     });
+  trimProductionAudioPresentation({
+    file,
+    track,
+    mediaTimescale: 48_000,
+    movieTimescale: 48_000,
+    primingSamples,
+    presentationSamples: sampleFrames,
+  });
   return new Uint8Array(file.getBuffer().buffer);
 };
 
