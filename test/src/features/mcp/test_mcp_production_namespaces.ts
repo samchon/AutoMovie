@@ -85,6 +85,7 @@ export const test_mcp_production_namespaces = (): void => {
     fs.mkdirSync(path.dirname(legacyGenerated), { recursive: true });
     fs.mkdirSync(path.dirname(sameNamedLegacyChild), { recursive: true });
     fs.mkdirSync(path.dirname(legacyRender), { recursive: true });
+    const originalLegacyScreenplay = fs.readFileSync(legacyScreenplay);
     fs.writeFileSync(legacyScreenplay, '{"version":1}');
     fs.writeFileSync(legacyGenerated, "generated");
     fs.writeFileSync(sameNamedLegacyChild, "same-name-child");
@@ -93,6 +94,10 @@ export const test_mcp_production_namespaces = (): void => {
     const migratedSameNamedLegacyChild = path.join(
       alpha.generatedRoot(),
       "fixture-film/legacy-child.bin",
+    );
+    const migratedScreenplay = path.join(
+      fixture.root,
+      ".automovie/design/fixture-film/screenplay/index.json",
     );
     TestValidator.predicate(
       "legacy outputs migrate without byte loss",
@@ -106,14 +111,9 @@ export const test_mcp_production_namespaces = (): void => {
           path.join(alpha.renderRoot(), "legacy-render.bin"),
           "utf8",
         ) === "render" &&
-        fs.readFileSync(
-          path.join(
-            fixture.root,
-            ".automovie/design/fixture-film/screenplay/index.json",
-          ),
-          "utf8",
-        ) === '{"version":1}',
+        fs.readFileSync(migratedScreenplay, "utf8") === '{"version":1}',
     );
+    fs.writeFileSync(migratedScreenplay, originalLegacyScreenplay);
     fs.rmSync(path.join(alpha.generatedRoot(), "legacy-generated.bin"));
     fs.rmSync(migratedSameNamedLegacyChild);
     fs.rmSync(path.join(alpha.renderRoot(), "legacy-render.bin"));
