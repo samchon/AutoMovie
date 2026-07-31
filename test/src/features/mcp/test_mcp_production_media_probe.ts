@@ -834,8 +834,13 @@ export const test_mcp_production_media_probe = async (): Promise<void> => {
       "video tracks; none are allowed",
     ),
   );
-  const trackless = Buffer.from(audio);
-  trackless.write("free", boxTypeOffset(trackless, "trak"), "ascii");
+  const tracklessFile = createFile();
+  tracklessFile.init({
+    brands: ["isom", "iso2", "mp41"],
+    timescale: 48_000,
+    duration: 48_000,
+  });
+  const trackless = new Uint8Array(tracklessFile.getBuffer().buffer);
   TestValidator.predicate(
     "an audio mix requires exactly one audio track",
     refused(
