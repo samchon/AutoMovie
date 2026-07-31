@@ -1,5 +1,6 @@
 import {
   IAutoMovieAssetManifest,
+  IAutoMovieModel,
   IAutoMovieProductionRenderManifest,
   IAutoMovieProductionRenderReceipt,
 } from "@automovie/interface";
@@ -32,6 +33,37 @@ import {
   productionH264Mp4,
   productionOpusMp4,
 } from "./productionMediaFixtures";
+
+const minimalExternalModelJson = (): string => {
+  const positions = Buffer.alloc(9 * Float32Array.BYTES_PER_ELEMENT);
+  [0, 0, 0, 1, 0, 0, 0, 1, 0].forEach((value, index) =>
+    positions.writeFloatLE(value, index * Float32Array.BYTES_PER_ELEMENT),
+  );
+  return JSON.stringify({
+    asset: { version: "2.0" },
+    buffers: [
+      {
+        byteLength: positions.length,
+        uri: `data:application/octet-stream;base64,${positions.toString("base64")}`,
+      },
+    ],
+    bufferViews: [{ buffer: 0, byteLength: positions.length }],
+    accessors: [
+      {
+        bufferView: 0,
+        componentType: 5126,
+        count: 3,
+        type: "VEC3",
+        min: [0, 0, 0],
+        max: [1, 1, 0],
+      },
+    ],
+    meshes: [{ primitives: [{ attributes: { POSITION: 0 } }] }],
+    nodes: [{ mesh: 0, name: "RegisteredTriangle" }],
+    scenes: [{ nodes: [0] }],
+    scene: 0,
+  });
+};
 
 const diagnosticCodes = (
   output: ReturnType<AutoMovieProductionCompiler["compile"]>,
@@ -344,16 +376,16 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     const missingAssetBytes = assetCodes(assetManifest);
     fs.writeFileSync(assetPath, originalAssetBytes);
 
-    const modelPath = path.join(fixture.root, "public/models/actor.glb");
-    const modelBytes = Buffer.from("external model");
+    const modelPath = path.join(fixture.root, "public/models/actor.gltf");
+    const modelBytes = Buffer.from(minimalExternalModelJson(), "utf8");
     fs.mkdirSync(path.dirname(modelPath), { recursive: true });
     fs.writeFileSync(modelPath, modelBytes);
     const modelDigest = digestAutoMovieBytes(modelBytes);
     const modelAsset = {
-      path: "public/models/actor.glb",
+      path: "public/models/actor.gltf",
       digest: modelDigest,
       original: {
-        url: "https://example.com/actor.glb",
+        url: "https://example.com/actor.gltf",
         digest: modelDigest,
       },
       license: {
@@ -369,11 +401,11 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
         },
       ],
       model: {
-        ingestProfile: "vrm-humanoid-v1",
+        ingestProfile: "gltf-static-v1",
         lod: [
           {
             level: "hero" as const,
-            asset: "public/models/actor.glb",
+            asset: "public/models/actor.gltf",
           },
         ],
         collisionProxy: {
@@ -384,7 +416,11 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
         measurementProxy: {
           kind: "generated" as const,
           recipe: "humanoid-landmarks-v1" as const,
-          parameters: { height: 1.8 },
+          parameters: {
+            height: 1.8,
+            shoulderWidth: 0.45,
+            hipWidth: 0.32,
+          },
         },
       },
     };
@@ -532,6 +568,49 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
           : asset,
       ),
     });
+    fs.writeFileSync(modelPath, "not glTF");
+    const invalidModelBytes = assetCodes({
+      ...validModelManifest,
+      assets: validModelManifest.assets.map((asset) =>
+        asset.path === modelAsset.path
+          ? { ...asset, digest: digestAutoMovieBytes(Buffer.from("not glTF")) }
+          : asset,
+      ),
+    });
+    fs.writeFileSync(modelPath, modelBytes);
+    const sidecarModel = JSON.parse(modelBytes.toString("utf8")) as {
+      buffers: Array<{ uri: string }>;
+    };
+    sidecarModel.buffers[0]!.uri = "actor.bin";
+    const sidecarBytes = Buffer.from(JSON.stringify(sidecarModel), "utf8");
+    fs.writeFileSync(modelPath, sidecarBytes);
+    const unboundModelSidecar = assetCodes({
+      ...validModelManifest,
+      assets: validModelManifest.assets.map((asset) =>
+        asset.path === modelAsset.path
+          ? { ...asset, digest: digestAutoMovieBytes(sidecarBytes) }
+          : asset,
+      ),
+    });
+    fs.writeFileSync(modelPath, modelBytes);
+    const emptyGeneratedProxy = assetCodes({
+      ...validModelManifest,
+      assets: validModelManifest.assets.map((asset) =>
+        asset.path === modelAsset.path
+          ? {
+              ...asset,
+              model: {
+                ...modelAsset.model,
+                collisionProxy: {
+                  kind: "generated",
+                  recipe: "capsule-v1",
+                  parameters: {},
+                },
+              },
+            }
+          : asset,
+      ),
+    });
     const filmPath = path.join(fixture.root, "src/film.ts");
     const originalFilmSource = fs.readFileSync(filmPath, "utf8");
     fs.writeFileSync(
@@ -585,6 +664,12 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
       })),
     } satisfies IAutoMovieAssetManifest;
     const exactActiveUse = assetCodes(activeAudioManifest);
+    const externalCompile = compiler.compile({ scope: "source" });
+    const importedRuntime = JSON.parse(
+      Buffer.from(
+        project.readGeneratedFile(`models/${boundModel.id}.json`),
+      ).toString("utf8"),
+    ) as IAutoMovieModel;
     const wrongProductionUse = assetCodes({
       ...activeAudioManifest,
       assets: activeAudioManifest.assets.map((asset) => ({
@@ -668,8 +753,16 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
         outOfOrderModelLod.has("asset-model-lod-dangling") &&
         danglingModelProxy.has("asset-model-proxy-dangling") &&
         danglingMeasurementProxy.has("asset-model-proxy-dangling") &&
+        invalidModelBytes.has("asset-model-ingest-invalid") &&
+        unboundModelSidecar.has("asset-model-resource-unbound") &&
+        emptyGeneratedProxy.has("asset-manifest-invalid") &&
         blankModelAsset.has("design-text-empty") &&
         [...exactActiveUse].every((code) => !code.startsWith("asset-")) &&
+        externalCompile.success &&
+        importedRuntime.origin === "imported" &&
+        importedRuntime.asset === modelAsset.path &&
+        importedRuntime.parts.length === 1 &&
+        importedRuntime.parts[0]?.id === "registered-collision-proxy" &&
         wrongProductionUse.has("film-audio-cue-invalid") &&
         wrongAudioConsumer.has("asset-use-stale") &&
         wrongAudioConsumer.has("asset-use-missing") &&

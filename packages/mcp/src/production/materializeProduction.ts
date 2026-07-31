@@ -13,6 +13,8 @@ import {
   IAutoMovieCompiledShotSource,
   IAutoMovieFormationDesign,
   IAutoMovieFormationSlot,
+  IAutoMovieGeneratedCollisionProxy,
+  IAutoMovieGeneratedMeasurementProxy,
   IAutoMovieInstanceSetDesign,
   IAutoMovieInstanceSlot,
   IAutoMovieModel,
@@ -42,14 +44,37 @@ export const AUTOMOVIE_FORMATION_MATRIX_BYTES =
 
 export { productionRuntimeModelId, productionRuntimeSkeletonId };
 
-/** Materialize every bounded model recipe into deterministic primitive data. */
+/** Compiler-resolved external appearance and deterministic proxy semantics. */
+export interface IAutoMovieExternalModelRuntimeBinding {
+  /** Manifest-owned final render asset. */
+  asset: string;
+  /** Exact collision primitive used by engine geometry and mass queries. */
+  collision: IAutoMovieGeneratedCollisionProxy;
+  /** Exact measurement envelope used by projection and distance queries. */
+  measurement: IAutoMovieGeneratedMeasurementProxy;
+}
+
+/**
+ * Materialize every bounded model recipe into deterministic proxy data.
+ *
+ * External appearances keep the recipe skeleton/capabilities, replace visible
+ * primitive parts with the registered collision proxy for engine semantics, and
+ * bind the final manifest-owned mesh through `origin` and `asset`.
+ */
 export const materializeProductionModels = (
   recipes: ReadonlyMap<string, IAutoMovieModelRecipe>,
+  externalModels: ReadonlyMap<
+    string,
+    IAutoMovieExternalModelRuntimeBinding
+  > = new Map(),
 ): ReadonlyMap<string, IAutoMovieModel> =>
   new Map(
     [...recipes]
       .sort(([left], [right]) => compareCodeUnits(left, right))
-      .map(([id, recipe]) => [id, materializeModel(recipe)] as const),
+      .map(
+        ([id, recipe]) =>
+          [id, materializeModel(recipe, externalModels.get(id))] as const,
+      ),
   );
 
 /** Materialize one compact formation into ordered world-space slots. */
@@ -80,13 +105,17 @@ export const materializeFormationInventory = (
 export const materializeCompiledFormationInventory = (
   formations: ReadonlyMap<string, IAutoMovieFormationDesign>,
   recipes: ReadonlyMap<string, IAutoMovieModelRecipe>,
+  externalModels: ReadonlyMap<
+    string,
+    IAutoMovieExternalModelRuntimeBinding
+  > = new Map(),
 ): Readonly<Record<string, IAutoMovieCompiledFormation>> =>
   Object.fromEntries(
     [...formations]
       .sort(([left], [right]) => compareCodeUnits(left, right))
       .map(([id, formation]) => [
         id,
-        materializeCompiledFormation(formation, recipes),
+        materializeCompiledFormation(formation, recipes, externalModels),
       ]),
   );
 
@@ -94,6 +123,10 @@ export const materializeCompiledFormationInventory = (
 export const materializeCompiledFormation = (
   formation: IAutoMovieFormationDesign,
   recipes: ReadonlyMap<string, IAutoMovieModelRecipe> = new Map(),
+  externalModels: ReadonlyMap<
+    string,
+    IAutoMovieExternalModelRuntimeBinding
+  > = new Map(),
 ): IAutoMovieCompiledFormation => {
   const heroes = new Set(formation.heroOverrides.map((hero) => hero.slot));
   const chunks = Array.from(
@@ -146,8 +179,14 @@ export const materializeCompiledFormation = (
       0.01,
       ...lod.map(
         (item) =>
-          recipeProjectionRadius(recipes.get(item.recipe)) ??
-          recipeProjectionRadius(recipe) ??
+          recipeProjectionRadius(
+            recipes.get(item.recipe),
+            externalModels.get(item.recipe),
+          ) ??
+          recipeProjectionRadius(
+            recipe,
+            externalModels.get(formation.modelRecipe),
+          ) ??
           0.5,
       ),
     ),
@@ -262,13 +301,22 @@ export const materializeInstanceSlots = (
 export const materializeCompiledInstanceSetInventory = (
   world: IAutoMovieWorldDesign,
   recipes: ReadonlyMap<string, IAutoMovieModelRecipe>,
+  externalModels: ReadonlyMap<
+    string,
+    IAutoMovieExternalModelRuntimeBinding
+  > = new Map(),
 ): Readonly<Record<string, IAutoMovieCompiledInstanceSet>> =>
   Object.fromEntries(
     [...(world.instanceSets ?? [])]
       .sort((left, right) => compareCodeUnits(left.id, right.id))
       .map((instanceSet) => [
         instanceSet.id,
-        materializeCompiledInstanceSet(instanceSet, world, recipes),
+        materializeCompiledInstanceSet(
+          instanceSet,
+          world,
+          recipes,
+          externalModels,
+        ),
       ]),
   );
 
@@ -277,6 +325,10 @@ export const materializeCompiledInstanceSet = (
   instanceSet: IAutoMovieInstanceSetDesign,
   world: IAutoMovieWorldDesign,
   recipes: ReadonlyMap<string, IAutoMovieModelRecipe> = new Map(),
+  externalModels: ReadonlyMap<
+    string,
+    IAutoMovieExternalModelRuntimeBinding
+  > = new Map(),
 ): IAutoMovieCompiledInstanceSet => {
   const chunks = Array.from(
     {
@@ -342,8 +394,14 @@ export const materializeCompiledInstanceSet = (
       0.01,
       ...lod.map(
         (item) =>
-          recipeProjectionRadius(recipes.get(item.recipe)) ??
-          recipeProjectionRadius(recipe) ??
+          recipeProjectionRadius(
+            recipes.get(item.recipe),
+            externalModels.get(item.recipe),
+          ) ??
+          recipeProjectionRadius(
+            recipe,
+            externalModels.get(instanceSet.modelRecipe),
+          ) ??
           0.5,
       ),
     ),
@@ -714,7 +772,22 @@ const lodRecipeDigest = (
 
 const recipeProjectionRadius = (
   recipe: IAutoMovieModelRecipe | undefined,
+  external: IAutoMovieExternalModelRuntimeBinding | undefined,
 ): number | null => {
+  if (external !== undefined)
+    return external.measurement.recipe === "box-v1"
+      ? Math.hypot(
+          external.measurement.parameters.width,
+          external.measurement.parameters.height,
+          external.measurement.parameters.depth,
+        ) / 2
+      : Math.hypot(
+          Math.max(
+            external.measurement.parameters.shoulderWidth,
+            external.measurement.parameters.hipWidth,
+          ),
+          external.measurement.parameters.height,
+        ) / 2;
   if (recipe === undefined) return null;
   const number = (key: string): number => {
     const value = recipe.parameters[key];
@@ -752,7 +825,46 @@ const recipeProjectionRadius = (
   }
 };
 
-const materializeModel = (recipe: IAutoMovieModelRecipe): IAutoMovieModel => {
+const materializeModel = (
+  recipe: IAutoMovieModelRecipe,
+  external: IAutoMovieExternalModelRuntimeBinding | undefined,
+): IAutoMovieModel => {
+  const generated = materializeGeneratedModel(recipe);
+  if (external === undefined) return generated;
+  const shape =
+    external.collision.recipe === "capsule-v1"
+      ? {
+          type: "capsule" as const,
+          radius: external.collision.parameters.radius,
+          height: external.collision.parameters.height,
+        }
+      : {
+          type: "box" as const,
+          width: external.collision.parameters.width,
+          height: external.collision.parameters.height,
+          depth: external.collision.parameters.depth,
+        };
+  return {
+    ...generated,
+    name: `imported recipe ${recipe.id}`,
+    origin: "imported",
+    asset: external.asset,
+    parts: [
+      {
+        id: "registered-collision-proxy",
+        name: "registered collision proxy",
+        geometry: { type: "primitive", shape },
+        material: generated.materials[0]?.id ?? null,
+        attachedBone: null,
+        transform: null,
+      },
+    ],
+  };
+};
+
+const materializeGeneratedModel = (
+  recipe: IAutoMovieModelRecipe,
+): IAutoMovieModel => {
   const material = materialOf(recipe);
   const base = {
     id: productionRuntimeModelId(recipe.id),

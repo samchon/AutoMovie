@@ -1,5 +1,10 @@
 # `@automovie/viewer`
 
+`mapImportedHumanoidBones` maps a loaded glTF/VRM scene onto a compiled
+proxy skeleton before `createImportedModelObject` wraps it. Production hosts
+therefore render and review the final registered mesh while engine validation
+continues to use deterministic proxy geometry and measurement data.
+
 `buildInstancedInstanceSet` and `regenerateInstanceSlot` render general crowd,
 vegetation, prop, and debris chunks with seeded scale, palette, numeric traits,
 frustum culling, and automatic LOD without scene-node expansion.

@@ -6,7 +6,7 @@
 //
 // Run: pnpm run e2e:tgz
 //
-// Deliberately OUTSIDE the c8 coverage gate: it is slow (ten prepack
+// Deliberately OUTSIDE the c8 coverage gate: it is slow (eleven prepack
 // builds plus an npm install) and needs registry network for third-party
 // dependencies such as @modelcontextprotocol/sdk.
 import { spawnSync } from "node:child_process";
@@ -36,6 +36,7 @@ const PACKAGES = [
   "engine",
   "render",
   "viewer",
+  "ingest",
   "mcp",
   "benchmark-runner",
   "lint",

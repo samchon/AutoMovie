@@ -133,6 +133,7 @@ export const test_cli_scaffold = (): void => {
       "viewer/index.html",
       "viewer/src/asset.ts",
       "viewer/src/film.ts",
+      "viewer/src/loadCompiledModel.ts",
       "viewer/src/main.ts",
       "viewer/src/shot.ts",
       "viewer/src/shotRuntime.ts",
@@ -360,9 +361,16 @@ export const test_cli_scaffold = (): void => {
       files["scripts/generatedShotPlugin.ts"]!.includes(
         'pathname === "/__automovie/film.json"',
       ) &&
+      files["scripts/generatedShotPlugin.ts"]!.includes(
+        'const prefix = "/__automovie/assets/"',
+      ) &&
       files["viewer/src/main.ts"]!.includes('await import("./film")') &&
       files["viewer/src/film.ts"]!.includes("renderCrossDissolveFrames") &&
       files["viewer/src/film.ts"]!.includes('pass !== "beauty"') &&
+      files["viewer/src/loadCompiledModel.ts"]!.includes("GLTFLoader") &&
+      files["viewer/src/loadCompiledModel.ts"]!.includes(
+        "createImportedModelObject",
+      ) &&
       files["viewer/src/asset.ts"]!.includes('finiteParameter("angle")') &&
       files["viewer/src/main.ts"]!.includes('from "three"') === false,
   );
@@ -509,6 +517,7 @@ export const test_cli_scaffold = (): void => {
         "viewer/index.html",
         "viewer/src/asset.ts",
         "viewer/src/film.ts",
+        "viewer/src/loadCompiledModel.ts",
         "viewer/src/main.ts",
         "viewer/src/shot.ts",
         "viewer/src/shotRuntime.ts",

@@ -17,7 +17,7 @@ if (response.ok === false)
   throw new Error(
     `Compiled shot "${shotId}" is unavailable (${response.status}). Run npm run compile.`,
   );
-const runtime = createCompiledShotRuntime(
+const runtime = await createCompiledShotRuntime(
   (await response.json()) as IAutoMovieCompiledShotSource,
 );
 const mounted = mountViewer(canvas, runtime.scene, runtime.camera, () => true, {

@@ -362,12 +362,32 @@ const assetProvenanceFiles = (
   if (variant === "missing-entry")
     files["public/assets/unrecorded.bin"] = "unrecorded\n";
   if (variant.startsWith("model-")) {
-    const modelBytes = "external model\n";
+    const modelBytes = JSON.stringify({
+      asset: { version: "2.0" },
+      buffers: [
+        {
+          byteLength: 36,
+          uri: "data:application/octet-stream;base64,AAAAAAAAAAAAAAAAAACAPwAAAAAAAAAAAAAAAAAAgD8AAAAA",
+        },
+      ],
+      bufferViews: [{ buffer: 0, byteLength: 36 }],
+      accessors: [
+        {
+          bufferView: 0,
+          componentType: 5126,
+          count: 3,
+          type: "VEC3",
+        },
+      ],
+      meshes: [{ primitives: [{ attributes: { POSITION: 0 } }] }],
+      nodes: [{ mesh: 0 }],
+      scenes: [{ nodes: [0] }],
+    });
     const model: Record<string, unknown> = {
-      path: "public/assets/actor.glb",
+      path: "public/assets/actor.gltf",
       digest: digest(modelBytes),
       original: {
-        url: "https://example.com/actor.glb",
+        url: "https://example.com/actor.gltf",
         digest: digest(modelBytes),
       },
       license: {
@@ -386,14 +406,14 @@ const assetProvenanceFiles = (
         ? {}
         : {
             model: {
-              ingestProfile: "vrm-humanoid-v1",
+              ingestProfile: "gltf-static-v1",
               lod:
                 variant === "model-lod-invalid"
                   ? [
-                      { level: "hero", asset: "public/assets/actor.glb" },
-                      { level: "hero", asset: "public/assets/actor.glb" },
+                      { level: "hero", asset: "public/assets/actor.gltf" },
+                      { level: "hero", asset: "public/assets/actor.gltf" },
                     ]
-                  : [{ level: "hero", asset: "public/assets/actor.glb" }],
+                  : [{ level: "hero", asset: "public/assets/actor.gltf" }],
               collisionProxy:
                 variant === "model-proxy-invalid"
                   ? {
@@ -408,7 +428,11 @@ const assetProvenanceFiles = (
               measurementProxy: {
                 kind: "generated",
                 recipe: "humanoid-landmarks-v1",
-                parameters: { height: 1.8 },
+                parameters: {
+                  height: 1.8,
+                  shoulderWidth: 0.45,
+                  hipWidth: 0.32,
+                },
               },
             },
           }),
@@ -418,7 +442,7 @@ const assetProvenanceFiles = (
       String(left.path) < String(right.path) ? -1 : 1,
     );
     files[".automovie/assets.json"] = JSON.stringify({ version: 1, assets });
-    files["public/assets/actor.glb"] = modelBytes;
+    files["public/assets/actor.gltf"] = modelBytes;
   }
   return files;
 };

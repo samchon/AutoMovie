@@ -36,7 +36,7 @@ for (const shot of new Set(timeline.segments.map((segment) => segment.shot))) {
     );
   runtimes.set(
     shot,
-    createCompiledShotRuntime(
+    await createCompiledShotRuntime(
       (await response.json()) as IAutoMovieCompiledShotSource,
     ),
   );

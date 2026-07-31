@@ -51,22 +51,75 @@ export interface IAutoMovieAssetUse {
   reason: string;
 }
 
-/** A deterministic proxy reference with no inferred fallback. */
-export type IAutoMovieModelProxyReference =
+/** Closed compiler-owned collision proxy parameters. */
+export type IAutoMovieGeneratedCollisionProxy =
+  | {
+      /** Capsule used by deterministic collision and mass queries. */
+      recipe: "capsule-v1";
+      /** Positive radius and cylindrical-body height in production meters. */
+      parameters: { radius: number; height: number };
+    }
+  | {
+      /** Axis-aligned box used by deterministic collision and mass queries. */
+      recipe: "box-v1";
+      /** Positive full extents in production meters. */
+      parameters: { width: number; height: number; depth: number };
+    };
+
+/** Closed compiler-owned measurement proxy parameters. */
+export type IAutoMovieGeneratedMeasurementProxy =
+  | {
+      /** Axis-aligned box used by distance and projected-size queries. */
+      recipe: "box-v1";
+      /** Positive full extents in production meters. */
+      parameters: { width: number; height: number; depth: number };
+    }
+  | {
+      /** Humanoid landmark envelope used by reach and stature queries. */
+      recipe: "humanoid-landmarks-v1";
+      /** Positive stature, shoulder width and hip width in production meters. */
+      parameters: {
+        height: number;
+        shoulderWidth: number;
+        hipWidth: number;
+      };
+    };
+
+/** A deterministic collision proxy reference with no inferred fallback. */
+export type IAutoMovieCollisionProxyReference =
   | {
       /** Manifest-owned proxy bytes. */
       kind: "asset";
-      /** Exact path of another asset entry in this manifest. */
+      /** Exact path of a typed JSON proxy asset in this manifest. */
       asset: string;
     }
-  | {
+  | ({
       /** Compiler-owned deterministic proxy recipe. */
       kind: "generated";
-      /** Closed supported recipe identity. */
-      recipe: "capsule-v1" | "box-v1" | "humanoid-landmarks-v1";
-      /** Explicit finite inputs to the selected recipe. */
-      parameters: Record<string, number>;
-    };
+    } & IAutoMovieGeneratedCollisionProxy);
+
+/** A deterministic measurement proxy reference with no inferred fallback. */
+export type IAutoMovieMeasurementProxyReference =
+  | {
+      /** Manifest-owned proxy bytes. */
+      kind: "asset";
+      /** Exact path of a typed JSON proxy asset in this manifest. */
+      asset: string;
+    }
+  | ({
+      /** Compiler-owned deterministic proxy recipe. */
+      kind: "generated";
+    } & IAutoMovieGeneratedMeasurementProxy);
+
+/** Manifest-owned deterministic proxy data. */
+export interface IAutoMovieModelProxyAsset {
+  /** Proxy asset schema. */
+  version: 1;
+  /** Optional collision shape when cited as a collision proxy. */
+  collision?: IAutoMovieGeneratedCollisionProxy;
+  /** Optional measurement envelope when cited as a measurement proxy. */
+  measurement?: IAutoMovieGeneratedMeasurementProxy;
+}
 
 /** Explicit ingest and proxy choices for an external 3D model. */
 export interface IAutoMovieExternalModelProvenance {
@@ -80,9 +133,9 @@ export interface IAutoMovieExternalModelProvenance {
     asset: string;
   }>;
   /** Chosen collision proxy; absence never falls back to mesh inference. */
-  collisionProxy: IAutoMovieModelProxyReference;
+  collisionProxy: IAutoMovieCollisionProxyReference;
   /** Chosen measurement proxy; absence never falls back to mesh inference. */
-  measurementProxy: IAutoMovieModelProxyReference;
+  measurementProxy: IAutoMovieMeasurementProxyReference;
 }
 
 /** Byte-exact provenance record for one project-owned distributable asset. */

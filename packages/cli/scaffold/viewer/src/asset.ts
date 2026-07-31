@@ -5,14 +5,10 @@ import {
   getConstraint,
 } from "@automovie/engine";
 import type { AutoMovieGuidePass, IAutoMovieModel } from "@automovie/interface";
-import {
-  applyPose,
-  applyRenderMode,
-  buildModel,
-  mountViewer,
-} from "@automovie/viewer";
+import { applyPose, applyRenderMode, mountViewer } from "@automovie/viewer";
 import * as THREE from "three";
 
+import { loadCompiledModel } from "./loadCompiledModel";
 import { viewerDocument } from "./viewerDocument";
 
 const { canvas, status } = viewerDocument();
@@ -28,7 +24,7 @@ if (response.ok === false)
     `Compiled model "${assetId}" is unavailable (${response.status}). Run npm run compile.`,
   );
 const model = (await response.json()) as IAutoMovieModel;
-const built = buildModel(model);
+const built = await loadCompiledModel(model);
 const pose = parameters.get("pose") ?? "rest";
 if (pose !== "rest" && pose !== "rom-extremes")
   throw new Error('?pose must be "rest" or "rom-extremes".');
@@ -92,7 +88,7 @@ function finiteParameter(name: string): number | null {
 
 function applyRomExtremes(
   source: IAutoMovieModel,
-  target: ReturnType<typeof buildModel>,
+  target: Awaited<ReturnType<typeof loadCompiledModel>>,
 ): void {
   if (source.skeleton === null)
     throw new Error(`Compiled model "${source.id}" has no skeleton.`);
@@ -123,9 +119,31 @@ function applyRomExtremes(
     HUMANOID_JOINT_AXES,
     HUMANOID_REST_FRAME,
   );
-  if (skipped.length !== 0)
+  const missingRequired = skipped.filter((bone) =>
+    REQUIRED_HUMANOID_BONES.has(bone),
+  );
+  if (missingRequired.length !== 0)
     throw new Error(
-      `Compiled model "${source.id}" did not map ROM bones: ${skipped.join(", ")}.`,
+      `Imported model "${source.id}" did not map required ROM bones: ${missingRequired.join(", ")}.`,
     );
   target.object.updateMatrixWorld(true);
 }
+
+const REQUIRED_HUMANOID_BONES = new Set([
+  "hips",
+  "spine",
+  "chest",
+  "head",
+  "leftUpperArm",
+  "leftLowerArm",
+  "leftHand",
+  "rightUpperArm",
+  "rightLowerArm",
+  "rightHand",
+  "leftUpperLeg",
+  "leftLowerLeg",
+  "leftFoot",
+  "rightUpperLeg",
+  "rightLowerLeg",
+  "rightFoot",
+]);

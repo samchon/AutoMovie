@@ -12,10 +12,11 @@ import {
   buildInstancedEffect,
   buildInstancedFormation,
   buildInstancedInstanceSet,
-  buildModel,
   buildScene,
 } from "@automovie/viewer";
 import type * as THREE from "three";
+
+import { loadCompiledModel } from "./loadCompiledModel";
 
 export interface IAutoMovieCompiledShotRuntime {
   id: string;
@@ -28,16 +29,18 @@ export interface IAutoMovieCompiledShotRuntime {
   ) => string;
 }
 
-export const createCompiledShotRuntime = (
+export const createCompiledShotRuntime = async (
   compiled: IAutoMovieCompiledShotSource,
-): IAutoMovieCompiledShotRuntime => {
+): Promise<IAutoMovieCompiledShotRuntime> => {
   const models = new Map(compiled.models.map((model) => [model.id, model]));
-  const built = compiled.scene.nodes.map((node) => {
-    const model = models.get(node.model);
-    if (model === undefined)
-      throw new Error(`Scene node "${node.id}" references "${node.model}".`);
-    return { node, model, object: buildModel(model) };
-  });
+  const built = await Promise.all(
+    compiled.scene.nodes.map(async (node) => {
+      const model = models.get(node.model);
+      if (model === undefined)
+        throw new Error(`Scene node "${node.id}" references "${node.model}".`);
+      return { node, model, object: await loadCompiledModel(model) };
+    }),
+  );
   let cursor = 0;
   const scene = buildScene(compiled.scene, (modelId) => {
     const candidate = built[cursor++];

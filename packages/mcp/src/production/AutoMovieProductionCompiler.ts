@@ -4,6 +4,7 @@ import {
   validateMotion,
   validateShotArtifact,
 } from "@automovie/engine";
+import { inspectAutoMovieExternalModelBytes } from "@automovie/ingest";
 import {
   AutoMovieContentDigest,
   IAutoMovieAssetManifest,
@@ -17,9 +18,12 @@ import {
   IAutoMovieFilmBuildContext,
   IAutoMovieFilmEdit,
   IAutoMovieFilmTimeline,
+  IAutoMovieGeneratedCollisionProxy,
   IAutoMovieGeneratedFile,
   IAutoMovieGeneratedManifest,
+  IAutoMovieGeneratedMeasurementProxy,
   IAutoMovieMaterializedFile,
+  IAutoMovieModelProxyAsset,
   IAutoMovieProductionManifest,
   IAutoMovieProductionMediaProbe,
   IAutoMovieProductionRenderManifest,
@@ -53,6 +57,7 @@ import {
   normalizeAutoMovieSource,
 } from "./contentIdentity";
 import {
+  IAutoMovieExternalModelRuntimeBinding,
   materializeCompiledFormationInventory,
   materializeCompiledInstanceSetInventory,
   materializeCompiledShot,
@@ -144,6 +149,43 @@ export class AutoMovieProductionCompiler {
       (diagnostic) => diagnostic.category !== "error",
     );
     const sourceFields: IAutoMovieFingerprintField[] = [];
+    const contentFields: IAutoMovieFingerprintField[] = [];
+    let contentInputs: IAutoMovieProductionContentInput[] | undefined;
+    let declaredAssets: string[] = [];
+    let assetRecords: IAutoMovieAssetProvenance[] = [];
+    let externalModels = new Map<
+      string,
+      IAutoMovieExternalModelRuntimeBinding
+    >();
+    if (input.scope !== "design")
+      try {
+        contentInputs = this.project.contentInputs();
+        contentFields.push(...contentFingerprintFields(contentInputs));
+        const assetInventory = compilerAssetInventory(
+          projectManifest.assetManifest,
+          contentInputs,
+          graph.production?.id ?? this.project.productionId,
+          graph,
+        );
+        diagnostics.push(...assetInventory.diagnostics);
+        declaredAssets = assetInventory.assets;
+        assetRecords = assetInventory.records;
+        externalModels = assetInventory.externalModels;
+      } catch (error) {
+        diagnostics.push({
+          code: "content-input-unsafe",
+          category: "error",
+          phase: "source",
+          target: "declared-content",
+          path: ".automovie/manifest.json",
+          message: `${errorMessage(error)} Correct contentRoots/contentFiles ownership before running the compiler.`,
+        });
+        contentFields.push({
+          role: "content:inventory",
+          kind: "unsafe",
+          payload: new Uint8Array(),
+        });
+      }
     const compiled = new Map<string, IAutoMovieCompiledShotSource>();
     const realizations = new Map<
       string,
@@ -162,14 +204,18 @@ export class AutoMovieProductionCompiler {
     let filmSource: Uint8Array | null = null;
     let filmSourceDigest: AutoMovieContentDigest | null = null;
     if (input.scope !== "design" && designReady) {
-      runtimeModels = new Map(materializeProductionModels(graph.models));
+      runtimeModels = new Map(
+        materializeProductionModels(graph.models, externalModels),
+      );
       formationRuntime = materializeCompiledFormationInventory(
         graph.formations,
         graph.models,
+        externalModels,
       );
       instanceSetRuntime = materializeCompiledInstanceSetInventory(
         graph.world!,
         graph.models,
+        externalModels,
       );
     }
     for (const [id, contract] of graph.shots) {
@@ -268,38 +314,6 @@ export class AutoMovieProductionCompiler {
         sourceFields.push({
           role: "source:film",
           kind: "absent",
-          payload: new Uint8Array(),
-        });
-      }
-    const contentFields: IAutoMovieFingerprintField[] = [];
-    let contentInputs: IAutoMovieProductionContentInput[] | undefined;
-    let declaredAssets: string[] = [];
-    let assetRecords: IAutoMovieAssetProvenance[] = [];
-    if (input.scope !== "design")
-      try {
-        contentInputs = this.project.contentInputs();
-        contentFields.push(...contentFingerprintFields(contentInputs));
-        const assetInventory = compilerAssetInventory(
-          projectManifest.assetManifest,
-          contentInputs,
-          graph.production?.id ?? this.project.productionId,
-          graph,
-        );
-        diagnostics.push(...assetInventory.diagnostics);
-        declaredAssets = assetInventory.assets;
-        assetRecords = assetInventory.records;
-      } catch (error) {
-        diagnostics.push({
-          code: "content-input-unsafe",
-          category: "error",
-          phase: "source",
-          target: "declared-content",
-          path: ".automovie/manifest.json",
-          message: `${errorMessage(error)} Correct contentRoots/contentFiles ownership before running the compiler.`,
-        });
-        contentFields.push({
-          role: "content:inventory",
-          kind: "unsafe",
           payload: new Uint8Array(),
         });
       }
@@ -2344,10 +2358,16 @@ const compilerAssetInventory = (
 ): {
   assets: string[];
   records: IAutoMovieAssetProvenance[];
+  externalModels: Map<string, IAutoMovieExternalModelRuntimeBinding>;
   diagnostics: IAutoMovieDiagnostic[];
 } => {
   if (manifestPath === undefined)
-    return { assets: [], records: [], diagnostics: [] };
+    return {
+      assets: [],
+      records: [],
+      externalModels: new Map(),
+      diagnostics: [],
+    };
   const diagnostics: IAutoMovieDiagnostic[] = [];
   const diagnostic = (code: string, target: string, message: string): void => {
     diagnostics.push({
@@ -2366,7 +2386,12 @@ const compilerAssetInventory = (
       "asset-manifest",
       `Production manifest declares "${manifestPath}", but that physical provenance ledger is absent. Restore it before compiling asset references.`,
     );
-    return { assets: [], records: [], diagnostics };
+    return {
+      assets: [],
+      records: [],
+      externalModels: new Map(),
+      diagnostics,
+    };
   }
 
   let decoded: unknown;
@@ -2378,7 +2403,12 @@ const compilerAssetInventory = (
       "asset-manifest",
       `Asset manifest is not valid JSON: ${errorMessage(error)}. Restore one IAutoMovieAssetManifest before compiling.`,
     );
-    return { assets: [], records: [], diagnostics };
+    return {
+      assets: [],
+      records: [],
+      externalModels: new Map(),
+      diagnostics,
+    };
   }
   const validation = typia.validateEquals<IAutoMovieAssetManifest>(decoded);
   if (validation.success === false) {
@@ -2389,7 +2419,12 @@ const compilerAssetInventory = (
         .map((error) => `${error.path}: ${error.expected}`)
         .join("; ")}. Correct the typed provenance ledger before compiling.`,
     );
-    return { assets: [], records: [], diagnostics };
+    return {
+      assets: [],
+      records: [],
+      externalModels: new Map(),
+      diagnostics,
+    };
   }
 
   const content = new Map(inputs.map((entry) => [entry.path, entry]));
@@ -2412,6 +2447,10 @@ const compilerAssetInventory = (
       "Asset entries must be in unique canonical path order. Sort them by code unit and remove duplicates before compiling.",
     );
   const activeConsumerAssets = new Map<string, string>();
+  const externalByAsset = new Map<
+    string,
+    Omit<IAutoMovieExternalModelRuntimeBinding, "asset">
+  >();
   for (const asset of validation.data.assets) {
     const folded = asset.path.toLowerCase();
     const prior = paths.get(folded);
@@ -2495,6 +2534,7 @@ const compilerAssetInventory = (
         );
     }
     if (asset.model === undefined) continue;
+    const diagnosticCount = diagnostics.length;
     let priorLevel = -1;
     const levels = new Set<string>();
     for (const lod of asset.model.lod) {
@@ -2514,23 +2554,80 @@ const compilerAssetInventory = (
       levels.add(lod.level);
       priorLevel = Math.max(priorLevel, order);
     }
-    for (const [name, proxy] of [
-      ["collision", asset.model.collisionProxy],
-      ["measurement", asset.model.measurementProxy],
-    ] as const)
-      if (
-        proxy.kind === "asset"
-          ? paths.has(proxy.asset.toLowerCase()) === false
-          : Object.values(proxy.parameters).some(
-              (value) => Number.isFinite(value) === false,
-            )
-      )
+    if (
+      asset.model.lod[0]?.level !== "hero" ||
+      asset.model.lod[0]?.asset !== asset.path
+    )
+      diagnostic(
+        "asset-model-lod-dangling",
+        asset.path,
+        `Model asset "${asset.path}" must bind its own exact bytes as the first hero LOD. Keep optional near/far members after that owned hero identity.`,
+      );
+    const resident = content.get(asset.path);
+    let ingested = false;
+    if (resident?.bytes !== null && resident !== undefined)
+      try {
+        const inspection = inspectAutoMovieExternalModelBytes({
+          path: asset.path,
+          bytes: resident.bytes,
+          profile: asset.model.ingestProfile,
+        });
+        for (const uri of inspection.externalResources) {
+          const resource = externalModelResourcePath(asset.path, uri);
+          const resourceRecord = validation.data.assets.find(
+            (candidate) => candidate.path === resource,
+          );
+          const resourceInput = content.get(resource);
+          if (
+            resourceRecord === undefined ||
+            resourceInput?.bytes === null ||
+            resourceInput === undefined ||
+            resourceRecord.digest !== digestAutoMovieBytes(resourceInput.bytes)
+          )
+            diagnostic(
+              "asset-model-resource-unbound",
+              asset.path,
+              `External model "${asset.path}" references sidecar "${uri}", but resolved project asset "${resource}" is absent or byte-stale in the manifest. Register every fixed buffer and image dependency.`,
+            );
+        }
+        ingested = diagnostics.length === diagnosticCount;
+      } catch (error) {
         diagnostic(
-          "asset-model-proxy-dangling",
+          "asset-model-ingest-invalid",
           asset.path,
-          `Model asset "${asset.path}" has a ${name} proxy that is not grounded in manifest bytes or finite generated-recipe parameters. Record an existing asset or a closed generated recipe.`,
+          `External model "${asset.path}" cannot be ingested with profile "${asset.model.ingestProfile}": ${errorMessage(error)} Restore valid fixed bytes or select the correct supported profile.`,
         );
+      }
+    const collision = resolveExternalCollisionProxy({
+      owner: asset.path,
+      reference: asset.model.collisionProxy,
+      records: validation.data.assets,
+      content,
+      diagnostic,
+    });
+    const measurement = resolveExternalMeasurementProxy({
+      owner: asset.path,
+      reference: asset.model.measurementProxy,
+      records: validation.data.assets,
+      content,
+      diagnostic,
+    });
+    if (
+      ingested &&
+      resident?.bytes !== null &&
+      resident !== undefined &&
+      asset.digest === digestAutoMovieBytes(resident.bytes) &&
+      isCanonicalAssetPath(asset.path) &&
+      diagnostics.length === diagnosticCount &&
+      collision !== null &&
+      measurement !== null
+    )
+      externalByAsset.set(asset.path, { collision, measurement });
   }
+  const externalModels = new Map<
+    string,
+    IAutoMovieExternalModelRuntimeBinding
+  >();
   for (const [id, model] of graph.models) {
     if (model.asset === undefined) continue;
     const record = validation.data.assets.find(
@@ -2552,8 +2649,179 @@ const compilerAssetInventory = (
         model.asset,
         `Model recipe "${id}" consumes "${model.asset}" without external-model provenance and one matching typed use for production "${productionId}". Register the exact model bytes, model decisions and model-recipe use.`,
       );
+    const external = externalByAsset.get(model.asset);
+    if (
+      record !== undefined &&
+      record.model !== undefined &&
+      external !== undefined
+    )
+      externalModels.set(id, { asset: model.asset, ...external });
   }
-  return { assets, records: validation.data.assets, diagnostics };
+  return {
+    assets,
+    records: validation.data.assets,
+    externalModels,
+    diagnostics,
+  };
+};
+
+const resolveExternalCollisionProxy = (props: {
+  owner: string;
+  reference: NonNullable<IAutoMovieAssetProvenance["model"]>["collisionProxy"];
+  records: readonly IAutoMovieAssetProvenance[];
+  content: ReadonlyMap<string, IAutoMovieProductionContentInput>;
+  diagnostic: (code: string, target: string, message: string) => void;
+}): IAutoMovieGeneratedCollisionProxy | null => {
+  const proxy =
+    props.reference.kind === "generated"
+      ? props.reference
+      : readExternalProxyAsset(
+          {
+            owner: props.owner,
+            reference: props.reference,
+            records: props.records,
+            content: props.content,
+          },
+          "collision",
+        );
+  if (
+    proxy === null ||
+    (proxy.recipe === "capsule-v1"
+      ? positiveFiniteValues(proxy.parameters, ["radius", "height"]) === false
+      : positiveFiniteValues(proxy.parameters, ["width", "height", "depth"]) ===
+        false)
+  ) {
+    props.diagnostic(
+      "asset-model-proxy-dangling",
+      props.owner,
+      `Model asset "${props.owner}" has no byte-grounded collision proxy with the exact positive parameters required by capsule-v1 or box-v1. Correct the explicit proxy decision; mesh inference is not a fallback.`,
+    );
+    return null;
+  }
+  return proxy;
+};
+
+const resolveExternalMeasurementProxy = (props: {
+  owner: string;
+  reference: NonNullable<
+    IAutoMovieAssetProvenance["model"]
+  >["measurementProxy"];
+  records: readonly IAutoMovieAssetProvenance[];
+  content: ReadonlyMap<string, IAutoMovieProductionContentInput>;
+  diagnostic: (code: string, target: string, message: string) => void;
+}): IAutoMovieGeneratedMeasurementProxy | null => {
+  const proxy =
+    props.reference.kind === "generated"
+      ? props.reference
+      : readExternalProxyAsset(
+          {
+            owner: props.owner,
+            reference: props.reference,
+            records: props.records,
+            content: props.content,
+          },
+          "measurement",
+        );
+  if (
+    proxy === null ||
+    (proxy.recipe === "box-v1"
+      ? positiveFiniteValues(proxy.parameters, ["width", "height", "depth"]) ===
+        false
+      : positiveFiniteValues(proxy.parameters, [
+          "height",
+          "shoulderWidth",
+          "hipWidth",
+        ]) === false)
+  ) {
+    props.diagnostic(
+      "asset-model-proxy-dangling",
+      props.owner,
+      `Model asset "${props.owner}" has no byte-grounded measurement proxy with the exact positive parameters required by box-v1 or humanoid-landmarks-v1. Correct the explicit proxy decision; mesh inference is not a fallback.`,
+    );
+    return null;
+  }
+  return proxy;
+};
+
+const readExternalProxyAsset = <Kind extends "collision" | "measurement">(
+  props: {
+    owner: string;
+    reference: { kind: "asset"; asset: string };
+    records: readonly IAutoMovieAssetProvenance[];
+    content: ReadonlyMap<string, IAutoMovieProductionContentInput>;
+  },
+  kind: Kind,
+): NonNullable<IAutoMovieModelProxyAsset[Kind]> | null => {
+  const record = props.records.find(
+    (candidate) => candidate.path === props.reference.asset,
+  );
+  const input = props.content.get(props.reference.asset);
+  if (
+    path.posix.extname(props.reference.asset).toLowerCase() !== ".json" ||
+    record === undefined ||
+    input?.bytes === null ||
+    input === undefined ||
+    record.digest !== digestAutoMovieBytes(input.bytes)
+  )
+    return null;
+  try {
+    const validation = typia.validateEquals<IAutoMovieModelProxyAsset>(
+      JSON.parse(Buffer.from(input.bytes).toString("utf8")),
+    );
+    if (validation.success === false) return null;
+    const selected = validation.data[kind];
+    return selected === undefined
+      ? null
+      : (selected as NonNullable<IAutoMovieModelProxyAsset[Kind]>);
+  } catch {
+    return null;
+  }
+};
+
+const positiveFiniteValues = (
+  values: Record<string, number>,
+  keys: readonly string[],
+): boolean =>
+  Object.keys(values).length === keys.length &&
+  keys.every(
+    (key) =>
+      Object.prototype.hasOwnProperty.call(values, key) &&
+      Number.isFinite(values[key]) &&
+      values[key]! > 0,
+  );
+
+const externalModelResourcePath = (modelPath: string, uri: string): string => {
+  if (
+    uri.includes("?") ||
+    uri.includes("#") ||
+    /^[A-Za-z][A-Za-z0-9+.-]*:/u.test(uri) ||
+    uri.startsWith("//")
+  )
+    throw new Error(
+      `Sidecar URI "${uri}" must be a plain project-relative asset path.`,
+    );
+  let decoded: string;
+  try {
+    decoded = decodeURIComponent(uri);
+  } catch {
+    throw new Error(`Sidecar URI "${uri}" is not valid percent-encoding.`);
+  }
+  if (
+    decoded.startsWith("/") ||
+    decoded.includes("\\") ||
+    decoded.includes("?") ||
+    decoded.includes("#") ||
+    /^[A-Za-z][A-Za-z0-9+.-]*:/u.test(decoded)
+  )
+    throw new Error(
+      `Sidecar URI "${uri}" must decode to one plain relative asset path.`,
+    );
+  const resolved = path.posix.join(path.posix.dirname(modelPath), decoded);
+  if (isCanonicalAssetPath(resolved) === false)
+    throw new Error(
+      `Sidecar URI "${uri}" escapes or aliases the project asset namespace.`,
+    );
+  return resolved;
 };
 
 const assetUseIncomplete = (

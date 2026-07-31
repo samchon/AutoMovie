@@ -68,6 +68,12 @@ type assetModelProxy struct {
 	Parameters map[string]float64 `json:"parameters"`
 }
 
+type assetModelProxyDocument struct {
+	Version     int              `json:"version"`
+	Collision   *assetModelProxy `json:"collision"`
+	Measurement *assetModelProxy `json:"measurement"`
+}
+
 type assetProvenanceRule struct{}
 
 func (assetProvenanceRule) Name() string { return assetProvenanceRuleName }
@@ -301,16 +307,41 @@ func checkAssetProvenanceManifest(
 			}
 		}
 		if asset.Model != nil {
+			if len(asset.Model.LOD) == 0 ||
+				asset.Model.LOD[0].Level != "hero" ||
+				asset.Model.LOD[0].Asset != asset.Path {
+				ctx.Report(
+					anchor + " model asset '" + asset.Path +
+						"' must bind its own exact bytes as the first hero LOD. Keep optional near/far members after that identity.",
+				)
+			}
 			for name, proxy := range map[string]assetModelProxy{
 				"collision":   asset.Model.CollisionProxy,
 				"measurement": asset.Model.MeasurementProxy,
 			} {
 				if proxy.Kind == "asset" {
-					if _, exists := entries[strings.ToLower(proxy.Asset)]; !exists {
+					target, exists := entries[strings.ToLower(proxy.Asset)]
+					file, physicalExists := physical[strings.ToLower(proxy.Asset)]
+					var document assetModelProxyDocument
+					problem := ""
+					if physicalExists {
+						problem = readScreenplayJSON(file, &document)
+					}
+					selected := document.Collision
+					if name == "measurement" {
+						selected = document.Measurement
+					}
+					if !exists ||
+						!physicalExists ||
+						strings.ToLower(filepath.Ext(target.Path)) != ".json" ||
+						problem != "" ||
+						document.Version != 1 ||
+						selected == nil ||
+						!validGeneratedAssetModelProxy(*selected, name) {
 						ctx.Report(
 							anchor + " model asset '" + asset.Path + "' " +
-								name + " proxy cites unknown manifest asset '" +
-								proxy.Asset + "'. Ground the proxy in the byte ledger.",
+								name + " proxy '" + proxy.Asset +
+								"' is not a byte-grounded version-1 JSON proxy with the required closed positive parameters.",
 						)
 					}
 				}
@@ -382,7 +413,7 @@ func validateAssetProvenanceRecord(
 				"collision":   asset.Model.CollisionProxy,
 				"measurement": asset.Model.MeasurementProxy,
 			} {
-				if !validAssetModelProxy(proxy) {
+				if !validAssetModelProxy(proxy, name) {
 					ctx.Report(
 						owner + " " + name +
 							" proxy is neither a manifest asset nor a supported generated recipe with finite parameters. Correct the explicit proxy decision and run lint again.",
@@ -422,17 +453,47 @@ var assetGeneratedProxyRecipe = map[string]bool{
 	"humanoid-landmarks-v1": true,
 }
 
-func validAssetModelProxy(proxy assetModelProxy) bool {
+func validAssetModelProxy(proxy assetModelProxy, kind string) bool {
 	if proxy.Kind == "asset" {
 		return strings.TrimSpace(proxy.Asset) != ""
 	}
-	if proxy.Kind != "generated" ||
-		!assetGeneratedProxyRecipe[proxy.Recipe] ||
+	return proxy.Kind == "generated" &&
+		validGeneratedAssetModelProxy(proxy, kind)
+}
+
+func validGeneratedAssetModelProxy(
+	proxy assetModelProxy,
+	kind string,
+) bool {
+	if !assetGeneratedProxyRecipe[proxy.Recipe] ||
 		proxy.Parameters == nil {
 		return false
 	}
-	for _, value := range proxy.Parameters {
-		if math.IsNaN(value) || math.IsInf(value, 0) {
+	var keys []string
+	if kind == "collision" {
+		if proxy.Recipe == "capsule-v1" {
+			keys = []string{"radius", "height"}
+		} else if proxy.Recipe == "box-v1" {
+			keys = []string{"width", "height", "depth"}
+		} else {
+			return false
+		}
+	} else if proxy.Recipe == "box-v1" {
+		keys = []string{"width", "height", "depth"}
+	} else if proxy.Recipe == "humanoid-landmarks-v1" {
+		keys = []string{"height", "shoulderWidth", "hipWidth"}
+	} else {
+		return false
+	}
+	if len(proxy.Parameters) != len(keys) {
+		return false
+	}
+	for _, key := range keys {
+		value, exists := proxy.Parameters[key]
+		if !exists ||
+			value <= 0 ||
+			math.IsNaN(value) ||
+			math.IsInf(value, 0) {
 			return false
 		}
 	}

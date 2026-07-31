@@ -1,5 +1,12 @@
 # `@automovie/ingest`
 
+`inspectAutoMovieExternalModelBytes` is the synchronous production compiler
+boundary for registered glTF 2.0, GLB 2.0, and VRM bytes. It validates a closed
+ingest profile, structural indices, render-mesh presence, and container
+integrity, then returns every non-data buffer/image URI that must be bound to a
+content-addressed asset record. It does not load files or infer missing
+sidecars.
+
 `@automovie/ingest`는 외부 glTF/GLB 자산을 AutoMovie 코어의 노드 그래프와 클립으로 들여오는 헤드리스 수입(ingestion) 패키지다.
 
 이 패키지는 `three.js`를 소유하지 않는다. `@gltf-transform/core`로 glTF/GLB 문서를 읽어, AutoMovie `interface`가 정의한 model AST·skeleton·clip으로 변환하는 결정론적 변환만 다룬다. 실제 렌더는 `viewer`/`playground`가, 계획은 `render`가 맡고, 이 패키지는 같은 입력이 같은 AST를 만들도록 고정한다.

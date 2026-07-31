@@ -43,6 +43,7 @@
   },
   "dependencies": {
     "@automovie/engine": "workspace:^",
+    "@automovie/ingest": "workspace:^",
     "@automovie/interface": "workspace:^",
     "@automovie/render": "workspace:^",
     "@modelcontextprotocol/sdk": "catalog:modelcontextprotocol",
