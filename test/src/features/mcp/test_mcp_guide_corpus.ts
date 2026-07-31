@@ -85,7 +85,9 @@ export const test_mcp_guide_corpus = (): void => {
       documents
         .get("DIFFUSION_ENHANCE")!
         .includes("search current official model cards") &&
-      documents.get("DIFFUSION_ENHANCE")!.includes("separate visual review") &&
+      documents
+        .get("DIFFUSION_ENHANCE")!
+        .includes("The repaint receives a separate `rendition` review") &&
       documents.get("REPAINT_SHOT")!.includes("visual delivery `repainted`"),
   );
 
