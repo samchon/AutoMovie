@@ -26,6 +26,7 @@ import { PNG } from "pngjs";
 
 import {
   fixtureWorldDesign,
+  productionCompileSucceeded,
   productionDesign,
   productionFixture,
   setProductionFixtureShotContract,
@@ -563,7 +564,10 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
     writeEditSource(fixture.root, filmPath, captioned);
     TestValidator.predicate(
       "a present non-blank caption speaker remains valid",
-      compiler.compile({ scope: "source" }).success,
+      productionCompileSucceeded(
+        "non-blank caption speaker",
+        compiler.compile({ scope: "source" }),
+      ),
     );
 
     project.setWorldDesign(worldDesign());

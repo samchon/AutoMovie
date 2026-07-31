@@ -29,6 +29,7 @@ import path from "node:path";
 import { PNG } from "pngjs";
 
 import {
+  productionCompileSucceeded,
   productionDesign,
   productionFixture,
   shotContract,
@@ -217,11 +218,14 @@ export const test_mcp_production_application = async (): Promise<void> => {
         }),
       ).accepted &&
         secondProject.setShotContract(shotContract()).accepted &&
-        openAutoMovieProduction({
-          projectRoot: fixture.root,
-          productionId: "second-film",
-          capture,
-        }).compiler.compile({ scope: "source" }).success,
+        productionCompileSucceeded(
+          "second production application fixture",
+          openAutoMovieProduction({
+            projectRoot: fixture.root,
+            productionId: "second-film",
+            capture,
+          }).compiler.compile({ scope: "source" }),
+        ),
     );
 
     const application = new AutoMovieApplication({

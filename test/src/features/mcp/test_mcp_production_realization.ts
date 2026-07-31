@@ -20,6 +20,7 @@ import path from "node:path";
 import {
   formationDesign,
   modelRecipe,
+  productionCompileSucceeded,
   productionDesign,
   productionFixture,
   shotContract,
@@ -47,7 +48,10 @@ export const test_mcp_production_realization = (): void => {
     const compiler = new AutoMovieProductionCompiler(project);
     TestValidator.predicate(
       "the base realization fixture compiles",
-      compiler.compile({ scope: "source" }).success,
+      productionCompileSucceeded(
+        "base realization fixture",
+        compiler.compile({ scope: "source" }),
+      ),
     );
     const base = JSON.parse(
       fs.readFileSync(

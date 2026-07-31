@@ -19,6 +19,7 @@ import { PNG } from "pngjs";
 
 import {
   fixtureWorldDesign,
+  productionCompileSucceeded,
   productionFixture,
   testCaptureRuntimeIdentity,
   testRendererIdentity,
@@ -43,7 +44,10 @@ export const test_mcp_production_review_render_edges =
       const compiler = new AutoMovieProductionCompiler(project);
       TestValidator.predicate(
         "render review fixture compiles",
-        compiler.compile({ scope: "source" }).success,
+        productionCompileSucceeded(
+          "render review fixture",
+          compiler.compile({ scope: "source" }),
+        ),
       );
       const oracle = new AutoMovieProductionOracleService(
         project,

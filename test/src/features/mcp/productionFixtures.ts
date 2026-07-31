@@ -14,12 +14,25 @@ import {
   IAutoMovieWorldDesign,
 } from "@automovie/interface";
 import {
+  AutoMovieProductionCompiler,
   AutoMovieProductionProject,
   canonicalAutoMovieCaptureRuntimeIdentity,
 } from "@automovie/mcp";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
+/** Preserve one compile attempt's diagnostics when a positive assertion fails. */
+export const productionCompileSucceeded = (
+  context: string,
+  output: ReturnType<AutoMovieProductionCompiler["compile"]>,
+): boolean => {
+  if (output.success === false)
+    console.error(
+      `${context} compile diagnostics:\n${JSON.stringify(output.diagnostics, null, 2)}`,
+    );
+  return output.success;
+};
 
 /** Render the published starter shape into a disposable production root. */
 export const productionFixture = (): {

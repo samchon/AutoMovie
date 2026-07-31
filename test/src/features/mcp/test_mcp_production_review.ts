@@ -19,6 +19,7 @@ import { PNG } from "pngjs";
 import {
   acceptanceScenarios,
   modelRecipe,
+  productionCompileSucceeded,
   productionDesign,
   productionFixture,
   setProductionFixtureShotContract,
@@ -381,7 +382,10 @@ export const test_mcp_production_review = async (): Promise<void> => {
       (status, snapshot) => review.queue(status, snapshot),
     );
     const compiledStatus = compiler.compile({ scope: "source" });
-    TestValidator.predicate("review fixture compiles", compiledStatus.success);
+    TestValidator.predicate(
+      "review fixture compiles",
+      productionCompileSucceeded("review fixture", compiledStatus),
+    );
     const missingVisual = review.prepare({
       target: { kind: "shot", id: "opening" },
     });
@@ -581,7 +585,10 @@ export const test_mcp_production_review = async (): Promise<void> => {
             (diagnostic) => diagnostic.code === "asset-review-stale",
           ) &&
         project.setModelRecipe(originalModel).accepted &&
-        compiler.compile({ scope: "source" }).success,
+        productionCompileSucceeded(
+          "restored reviewed model",
+          compiler.compile({ scope: "source" }),
+        ),
     );
     const thumbnail = await oracle.preview({
       target: { kind: "shot", id: "opening" },
@@ -1656,7 +1663,10 @@ export const test_mcp_production_review = async (): Promise<void> => {
     }
     TestValidator.predicate(
       "review compile gate passes only after the full queue",
-      compiler.compile({ scope: "review" }).success,
+      productionCompileSucceeded(
+        "full review queue",
+        compiler.compile({ scope: "review" }),
+      ),
     );
     const filmTarget = { kind: "film" as const, id: "fixture-film" };
     const storedShotReview = project.review(shotTarget)!;

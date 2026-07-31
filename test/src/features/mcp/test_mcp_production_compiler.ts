@@ -23,6 +23,7 @@ import { PNG } from "pngjs";
 import {
   formationDesign,
   modelRecipe,
+  productionCompileSucceeded,
   productionDesign,
   productionFixture,
   setProductionFixtureShotContract,
@@ -1456,7 +1457,10 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
       "a self-consistent forged generated manifest cannot redefine compiler truth",
       diagnosticCodes(forgedOwnership).has("generated-tampered") &&
         diagnosticCodes(forgedOwnership).has("generated-manifest-stale") &&
-        compiler.compile({ scope: "source" }).success,
+        productionCompileSucceeded(
+          "forged generated manifest recovery",
+          compiler.compile({ scope: "source" }),
+        ),
     );
     const stalePath = path.join(
       fixture.root,
@@ -1565,7 +1569,10 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     );
     TestValidator.predicate(
       "refused source traversal leaves the current source compilable",
-      compiler.compile({ scope: "source" }).success,
+      productionCompileSucceeded(
+        "refused source traversal recovery",
+        compiler.compile({ scope: "source" }),
+      ),
     );
 
     fs.writeFileSync(
@@ -1608,7 +1615,10 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     );
     TestValidator.predicate(
       "pure type-only imports remain valid coding-agent source",
-      compiler.compile({ scope: "source" }).success,
+      productionCompileSucceeded(
+        "type-only source import",
+        compiler.compile({ scope: "source" }),
+      ),
     );
     fs.writeFileSync(
       sourcePath,
@@ -1778,7 +1788,10 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     fs.writeFileSync(sourcePath, instrumented);
     TestValidator.predicate(
       "constant ground geometry is available in the source oracle",
-      compiler.compile({ scope: "source" }).success,
+      productionCompileSucceeded(
+        "constant ground geometry source oracle",
+        compiler.compile({ scope: "source" }),
+      ),
     );
     project.setWorldDesign({
       ...worldDesign(),
@@ -1797,7 +1810,10 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     fs.writeFileSync(sourcePath, instrumented);
     TestValidator.predicate(
       "explicit geometry helpers run in the frozen sandbox",
-      compiler.compile({ scope: "source" }).success,
+      productionCompileSucceeded(
+        "explicit geometry helper sandbox",
+        compiler.compile({ scope: "source" }),
+      ),
     );
     project.setWorldDesign(worldDesign());
     fs.writeFileSync(sourcePath, original);
