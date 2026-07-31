@@ -303,6 +303,23 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
   } catch (error) {
     sampleDifference = error instanceof Error ? error.message : String(error);
   }
+  const sampleDifferenceJson = sampleDifference.indexOf("{");
+  const sampleDifferenceDetails =
+    sampleDifferenceJson === -1
+      ? null
+      : (JSON.parse(sampleDifference.slice(sampleDifferenceJson)) as {
+          timing: {
+            actual: { duration: number; dts: number; cts: number };
+            expected: { duration: number; dts: number; cts: number };
+          };
+          flags: { match: boolean };
+          sampleDescriptionMatches: boolean;
+          payload: {
+            actualBytes: number;
+            expectedBytes: number;
+            firstDifferingActualByte: number;
+          };
+        });
   TestValidator.predicate(
     "repaint conform preserves exact cut-only shot samples and rejects incompatible clips or transitions",
     probeProductionMedia({
@@ -322,11 +339,15 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
         });
         return true;
       })() &&
-      sampleDifference.includes('"firstDifferingActualByte": 0') &&
-      sampleDifference.includes('"actualBytes":') &&
-      sampleDifference.includes('"expectedBytes":') &&
-      sampleDifference.includes('"flags":') &&
-      sampleDifference.includes('"sampleDescriptionMatches":') &&
+      sampleDifferenceDetails !== null &&
+      JSON.stringify(sampleDifferenceDetails.timing.actual) ===
+        JSON.stringify(sampleDifferenceDetails.timing.expected) &&
+      sampleDifferenceDetails.payload.actualBytes > 0 &&
+      sampleDifferenceDetails.payload.actualBytes ===
+        sampleDifferenceDetails.payload.expectedBytes &&
+      sampleDifferenceDetails.flags.match === true &&
+      sampleDifferenceDetails.sampleDescriptionMatches === true &&
+      sampleDifferenceDetails.payload.firstDifferingActualByte === 0 &&
       throws(() =>
         conformProductionRenditionVideoMp4({
           timeline: {
