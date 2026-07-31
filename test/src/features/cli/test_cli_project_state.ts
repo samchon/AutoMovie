@@ -38,10 +38,12 @@ export const test_cli_project_state = (): void => {
     id: "army",
     anchor: { x: 3, y: 0, z: -4 },
   };
-  fs.writeFileSync(
-    path.join(fixture.root, ".automovie/design/formations/army.json"),
-    `${JSON.stringify(formation, null, 2)}\n`,
+  const formationPath = path.join(
+    fixture.root,
+    ".automovie/design/formations/army.json",
   );
+  fs.mkdirSync(path.dirname(formationPath), { recursive: true });
+  fs.writeFileSync(formationPath, `${JSON.stringify(formation, null, 2)}\n`);
   fs.writeFileSync(
     path.join(fixture.root, ".automovie/design/shots/opening.json"),
     `${JSON.stringify(
