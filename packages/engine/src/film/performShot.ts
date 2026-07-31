@@ -306,7 +306,15 @@ export const performShot = (props: {
    * beat ladder to retain its `shot:${beat}` identity.
    */
   shotId?: string;
-  /** Prior verified beat state supplied to every action synthesizer call. */
+  /**
+   * Prior verified beat state supplied to every action synthesizer call.
+   *
+   * The caller owns resuming `staged` from this same state before entering the
+   * performance boundary, as `compileDefinedShot` does. This function keeps the
+   * staged scene as the one coordinate authority for rendering, targeting,
+   * ground conversion, and coupling; it does not partially restage lookup
+   * tables behind the scene's back.
+   */
   previous?: IAutoMovieBeatEndState | null;
 }): IAutoMoviePerformedShot => {
   const {
@@ -479,16 +487,6 @@ export const performShot = (props: {
   const nodeRotations = new Map(
     staged.scene.nodes.map((n) => [n.id, n.transform.rotation]),
   );
-  // A direct performShot caller may pass validated previous state without
-  // restaging first. Match makeActorSynthesizer's previous-first runtime for
-  // both performer origins and positional actor targets; compileDefinedShot's
-  // already-resumed stage writes the same values again.
-  for (const actor of (previous?.actors ?? []).filter((candidate) =>
-    nodeIds.has(candidate.node),
-  )) {
-    nodePositions.set(actor.node, actor.transform.translation);
-    nodeRotations.set(actor.node, actor.transform.rotation);
-  }
 
   const resolvePositionalTarget = (
     target: unknown,

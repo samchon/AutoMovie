@@ -6,6 +6,7 @@ import {
 import {
   IAutoMovieActionCall,
   IAutoMovieActionTarget,
+  IAutoMovieVector3,
 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
@@ -49,8 +50,21 @@ const staging = makeStagingWrite({
 const performing = (
   targetAt?: Parameters<typeof performShot>[0]["targetAt"],
   previous?: Parameters<typeof performShot>[0]["previous"],
+  actorPosition?: IAutoMovieVector3,
 ): ((draft: IAutoMovieActionCall[]) => IAutoMoviePerformedShot) => {
-  const staged = stageScene(script, staging);
+  const staged = stageScene(
+    script,
+    actorPosition === undefined
+      ? staging
+      : {
+          ...staging,
+          actors: staging.actors.map((actor) =>
+            actor.node === "knightA"
+              ? { ...actor, position: actorPosition }
+              : actor,
+          ),
+        },
+  );
   if (staged.success !== true) throw new Error("staging fixture must succeed");
   return (draft) =>
     performShot({
@@ -623,30 +637,34 @@ export const test_film_perform_shot_positional_target = (): void => {
     ]).success,
     true,
   );
-  const resumedPerform = performing(undefined, {
-    beat: "beat-0",
-    shot: "shot:beat-0",
-    actors: [
-      {
-        node: "knightA",
-        transform: {
-          translation: { x: 1, y: 1, z: 0 },
-          rotation: { x: 0, y: 0, z: 0, w: 1 },
-          scale: { x: 1, y: 1, z: 1 },
+  const resumedPerform = performing(
+    undefined,
+    {
+      beat: "beat-0",
+      shot: "shot:beat-0",
+      actors: [
+        {
+          node: "knightA",
+          transform: {
+            translation: { x: 1, y: 1, z: 0 },
+            rotation: { x: 0, y: 0, z: 0, w: 1 },
+            scale: { x: 1, y: 1, z: 1 },
+          },
+          facing: { x: 0, y: 0, z: 1 },
+          pose: null,
+          motion: null,
+          localTime: 1,
+          gaitPhase: null,
+          rootVelocity: null,
+          footPlants: null,
+          mount: null,
         },
-        facing: { x: 0, y: 0, z: 1 },
-        pose: null,
-        motion: null,
-        localTime: 1,
-        gaitPhase: null,
-        rootVelocity: null,
-        footPlants: null,
-        mount: null,
-      },
-    ],
-  });
+      ],
+    },
+    { x: 1, y: 1, z: 0 },
+  );
   TestValidator.predicate(
-    "locomote diagnoses from the previous actor origin when it is supplied",
+    "locomote diagnoses from the resumed staged actor origin",
     says(
       resumedPerform([
         locomote({
@@ -659,7 +677,7 @@ export const test_film_perform_shot_positional_target = (): void => {
     ),
   );
   TestValidator.equals(
-    "a resumed horizontal destination is not judged from stale staging",
+    "a resumed horizontal destination uses the same staged world frame",
     resumedPerform([
       locomote({
         kind: "point",

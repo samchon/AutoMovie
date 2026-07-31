@@ -172,11 +172,15 @@ const compileWalk = (props: {
  */
 export const test_film_defined_shot_continuity = (): void => {
   const rig = createSkeleton();
+  // Give the otherwise fully extended fixture leg 2 cm of reach slack. A root
+  // that correctly climbs the ramp must be able to keep its stance foot on the
+  // lower point behind it; the old zero-slack leg only contacted because ramp
+  // locomotion incorrectly left the root below the rising ground.
   rig.bones.push({
     bone: "leftFoot",
     parent: "leftLowerLeg",
     rest: {
-      translation: { x: 0, y: -0.5, z: 0 },
+      translation: { x: 0, y: -0.52, z: 0 },
       rotation: { x: 0, y: 0, z: 0, w: 1 },
       scale: { x: 1, y: 1, z: 1 },
     },
