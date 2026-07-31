@@ -258,6 +258,13 @@ export const test_mcp_production_realization = (): void => {
       runtimeModels,
       source,
     }).value;
+    const measuredCamera = materialized.scene.cameras.find(
+      (camera) => camera.id === materialized.shot.camera,
+    );
+    if (measuredCamera === undefined)
+      throw new Error("measured realization fixture has no camera");
+    measuredCamera.transform = transform(0, 0, 5);
+    materialized.shot.cameraMotion = null;
     const staticModel = materializeProductionModels(
       new Map([
         [
