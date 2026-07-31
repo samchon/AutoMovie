@@ -1,13 +1,16 @@
 import {
   IAutoMovieCompiledFormationLod,
+  IAutoMovieFormationDesign,
   IAutoMovieFormationMotion,
   IAutoMovieFormationMotionState,
+  IAutoMovieFormationSlot,
   IAutoMovieTransform,
   IAutoMovieVector3,
 } from "@automovie/interface";
 
 import { Quaternion } from "./math/Quaternion";
 import { Vector3 } from "./math/Vector3";
+import { seededValue } from "./math/random";
 
 /** Inputs to the deterministic automatic formation LOD selector. */
 export interface IAutoMovieFormationLodInput {
@@ -30,6 +33,48 @@ export interface IAutoMovieFormationLodSelection {
   /** Distance enlarged as projected contribution shrinks. */
   effectiveDistance: number;
 }
+
+/**
+ * Regenerate one exact source-designed formation slot in constant memory.
+ *
+ * The compiler and ordinary measurement scripts share this pure derivation so a
+ * slot queried from loaded project state is exactly the slot materialized into
+ * the compiled formation. No filesystem or project state is consulted.
+ */
+export const formationSlot = (
+  formation: IAutoMovieFormationDesign,
+  slot: number,
+): IAutoMovieFormationSlot => {
+  if (
+    Number.isSafeInteger(slot) === false ||
+    slot < 0 ||
+    slot >= formation.count
+  )
+    throw new RangeError(
+      `Formation "${formation.id}" slot ${slot} is outside 0..${formation.count - 1}.`,
+    );
+  const point = localFormationPoint(formation, slot);
+  const radians = (formation.facingDeg * Math.PI) / 180;
+  const cosine = Math.cos(radians);
+  const sine = Math.sin(radians);
+  const actor =
+    formation.heroOverrides.find((hero) => hero.slot === slot)?.actor ?? null;
+  return {
+    slot,
+    node:
+      actor ??
+      `formation:${formation.id}:slot:${String(slot).padStart(6, "0")}`,
+    actor,
+    modelRecipe: formation.modelRecipe,
+    position: {
+      x: formation.anchor.x + point.x * cosine + point.z * sine,
+      y: formation.anchor.y,
+      z: formation.anchor.z - point.x * sine + point.z * cosine,
+    },
+    facingDeg: formation.facingDeg,
+    motionPhase: seededValue(formation.seed, slot, 0x70686173),
+  };
+};
 
 /**
  * Select automatic formation LOD from distance and projected contribution.
@@ -178,6 +223,52 @@ export const composeFormationHeroTransform = (
   ),
   scale: { ...source.scale },
 });
+
+const localFormationPoint = (
+  formation: IAutoMovieFormationDesign,
+  slot: number,
+): { x: number; z: number } => {
+  const layout = formation.layout;
+  if (layout.kind === "line" || layout.kind === "column") {
+    const rank =
+      layout.kind === "line"
+        ? Math.floor(slot / layout.files)
+        : slot % layout.ranks;
+    const file =
+      layout.kind === "line"
+        ? slot % layout.files
+        : Math.floor(slot / layout.ranks);
+    return {
+      x: (file - (layout.files - 1) / 2) * layout.spacing.lateral,
+      z: rank * layout.spacing.depth,
+    };
+  }
+  if (layout.kind === "wedge") {
+    const row = Math.floor(Math.sqrt(slot));
+    const column = slot - row * row - row;
+    return {
+      x: column * layout.spacing.lateral,
+      z: row * layout.spacing.depth,
+    };
+  }
+  if (layout.kind === "arc") {
+    const ratio = formation.count === 1 ? 0.5 : slot / (formation.count - 1);
+    const degrees = (ratio - 0.5) * layout.arcDegrees;
+    const radians = (degrees * Math.PI) / 180;
+    return {
+      x: Math.sin(radians) * layout.radius,
+      z: Math.cos(radians) * layout.radius,
+    };
+  }
+  const radius =
+    Math.sqrt(seededValue(formation.seed, layout.seed, slot, 0)) *
+    layout.radius;
+  const angle = seededValue(formation.seed, layout.seed, slot, 1) * Math.PI * 2;
+  return {
+    x: Math.cos(angle) * radius,
+    z: Math.sin(angle) * radius,
+  };
+};
 
 const lerp = (from: number, to: number, progress: number): number =>
   from * (1 - progress) + to * progress;

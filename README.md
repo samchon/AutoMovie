@@ -43,7 +43,7 @@ Those objects can be animated for seconds, minutes, or hours because the source 
 
 The MCP surface is the product boundary: an agent asks for staged scenes, blocked movement, generated actors, cuts, validation, and renderable guide output; the deterministic engine computes and rejects invalid requests.
 
-There are two ways to drive it, and both are first-class. **MCP** ([`@automovie/mcp`](./packages/mcp)) is the orchestration door: an agent works the pipeline over stdio, with slate state, transactions, and the guided correction loop. **Direct linking** is the code-native door: import [`@automovie/engine`](./packages/engine) and [`@automovie/interface`](./packages/interface) and program against the types themselves, injecting a custom synthesizer into `performShot`. Motion authoring is, at the limit, a coding activity, so a coding agent may reach for either; the `enact` action bridges them, letting a clip you compute in code flow through the same engine the MCP tools use. Scaffold a starter with `npx create-automovie <dir>`.
+There are two ways to drive it, and both are first-class. **MCP** ([`@automovie/mcp`](./packages/mcp)) is the orchestration door: an agent works the evidence and review loop over stdio. **Direct linking** is the code-native door: import [`@automovie/engine`](./packages/engine) and [`@automovie/interface`](./packages/interface) and program against the types themselves. Ordinary Node scripts can load digest-verified current project state through [`@automovie/cli`](./packages/cli) and pass it directly to pure engine functions without an MCP session. Motion authoring is, at the limit, a coding activity, so a coding agent may reach for either. Scaffold a starter with `npx create-automovie <dir>`.
 
 ## What AutoMovie Is Not
 
@@ -84,20 +84,20 @@ The project is early. The most important unfinished work is completing the MCP m
 
 ## Packages
 
-| Package | Purpose |
-|---|---|
-| [`@automovie/interface`](./packages/interface) | Shared data shapes for scenes, models, skeletons, poses, motion, cameras, cuts, and validation. |
-| [`@automovie/engine`](./packages/engine) | Deterministic math and motion engine: posing, kinematics, constraints, actions, physics, playback, and shot assembly. |
-| [`@automovie/viewer`](./packages/viewer) | Three.js viewer for drawing engine output. It is a viewer, not an editor. |
-| [`@automovie/render`](./packages/render) | Headless render planning, model export, and video export helpers. |
-| [`@automovie/ingest`](./packages/ingest) | glTF/GLB ingestion into AutoMovie's core graph and clip data. |
-| [`@automovie/face`](./packages/face) | Parametric face, head, hair, and fitting geometry retained behind an explicit dormant boundary. |
-| [`@automovie/lint`](./packages/lint) | Compiler-integrated contracts for asset provenance, screenplay evidence, state residency, and scaffold sentinels. |
-| [`@automovie/mcp`](./packages/mcp) | MCP surface for external agents to drive parts of the deterministic motion engine. |
-| [`@automovie/cli`](./packages/cli) | The `automovie` binary: scaffolds a starter wired for both doors, MCP and direct linking. |
-| [`create-automovie`](./packages/create-automovie) | The package-manager-native one-command project creator. |
-| [`@automovie/playground`](./packages/playground) | Browser demos for inspecting motion, props, cameras, and simple characters. |
-| [`@automovie/benchmark`](./packages/benchmark) | Versioned movie task law, immutable run submissions, and the deterministic oracle judge that scores them. |
+| Package                                           | Purpose                                                                                                                             |
+| ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| [`@automovie/interface`](./packages/interface)    | Shared data shapes for scenes, models, skeletons, poses, motion, cameras, cuts, and validation.                                     |
+| [`@automovie/engine`](./packages/engine)          | Deterministic math and motion engine: posing, kinematics, constraints, actions, physics, playback, and shot assembly.               |
+| [`@automovie/viewer`](./packages/viewer)          | Three.js viewer for drawing engine output. It is a viewer, not an editor.                                                           |
+| [`@automovie/render`](./packages/render)          | Headless render planning, model export, and video export helpers.                                                                   |
+| [`@automovie/ingest`](./packages/ingest)          | glTF/GLB ingestion into AutoMovie's core graph and clip data.                                                                       |
+| [`@automovie/face`](./packages/face)              | Parametric face, head, hair, and fitting geometry retained behind an explicit dormant boundary.                                     |
+| [`@automovie/lint`](./packages/lint)              | Compiler-integrated contracts for asset provenance, screenplay evidence, state residency, and scaffold sentinels.                   |
+| [`@automovie/mcp`](./packages/mcp)                | MCP surface for external agents to drive parts of the deterministic motion engine.                                                  |
+| [`@automovie/cli`](./packages/cli)                | The `automovie` binary plus the transport-free project-state reader for current compile fingerprints and typed generated artifacts. |
+| [`create-automovie`](./packages/create-automovie) | The package-manager-native one-command project creator.                                                                             |
+| [`@automovie/playground`](./packages/playground)  | Browser demos for inspecting motion, props, cameras, and simple characters.                                                         |
+| [`@automovie/benchmark`](./packages/benchmark)    | Versioned movie task law, immutable run submissions, and the deterministic oracle judge that scores them.                           |
 
 ## Next Work
 

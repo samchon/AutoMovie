@@ -1,4 +1,5 @@
 export { run } from "./bin";
+export * from "./loadAutoMovieProjectState";
 export * from "./renderScaffold";
 export * from "./renderTemplate";
 export * from "./writeFiles";

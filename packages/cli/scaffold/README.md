@@ -77,6 +77,38 @@ must be recaptured.
 The sample review queue is deliberately incomplete. Open the PNG printed by
 `preview`, read `PRODUCTION_REVIEW` through MCP, and review current evidence.
 
+## Offline geometry measurements
+
+Measurement scripts and tests may load the current project snapshot without an
+MCP session:
+
+```ts
+import {
+  loadAutoMovieProjectState,
+  requireCurrentAutoMovieProjectState,
+} from "@automovie/cli";
+import { Vector3, formationSlot } from "@automovie/engine";
+
+const loaded = loadAutoMovieProjectState({ root: process.cwd() });
+const state = requireCurrentAutoMovieProjectState(loaded);
+const formation = state.generated.design.formations.get("army")!;
+const slot = formationSlot(formation, 31);
+const landmark = state.generated.design.world.landmarks[0]!;
+const meters = Vector3.length(
+  Vector3.subtract(slot.position, landmark.position),
+);
+```
+
+The loaded state includes the generated compile fingerprint, the fingerprint
+recomputed from current inputs, the project revision, and an explicit
+`current`, `stale`, or `missing` status. Always require current state before
+calling pure engine reach, distance, camera, or formation functions.
+
+The state reader performs filesystem I/O and is therefore forbidden inside
+shot and film `build` functions. Those functions run in the deterministic
+compiler sandbox. Keep the reader in standalone measurement scripts, tests, or
+offline diagnostics and pass only loaded typed values into engine functions.
+
 Claude Code loads the checked-in `.mcp.json` after one project approval. Other
 MCP clients can import the same project-bound command. Its first call is
 `getGuideDocument({name:"AUTOMOVIE_OVERALL"})`. `scripts/mcp.ts` fixes this

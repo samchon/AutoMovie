@@ -1,7 +1,7 @@
 {
   "name": "@automovie/cli",
   "version": "0.1.0",
-  "description": "Scaffold a coding-agent-first AutoMovie production repository.",
+  "description": "Scaffold and inspect a coding-agent-first AutoMovie production repository.",
   "main": "src/index.ts",
   "bin": {
     "automovie": "lib/bin.js"
@@ -21,6 +21,8 @@
   "keywords": [
     "automovie",
     "cli",
+    "sdk",
+    "project-state",
     "scaffold",
     "starter",
     "create"
@@ -31,14 +33,7 @@
     "type": "git",
     "url": "https://github.com/samchon/automovie"
   },
-  "files": [
-    "lib",
-    "src",
-    "scaffold",
-    "package.json",
-    "LICENSE",
-    "README.md"
-  ],
+  "files": ["lib", "src", "scaffold", "package.json", "LICENSE", "README.md"],
   "publishConfig": {
     "access": "public",
     "main": "lib/index.js",
@@ -55,7 +50,10 @@
     }
   },
   "dependencies": {
-    "@automovie/mcp": "workspace:^"
+    "@automovie/engine": "workspace:^",
+    "@automovie/interface": "workspace:^",
+    "@automovie/mcp": "workspace:^",
+    "typia": "catalog:samchon"
   },
   "devDependencies": {
     "@types/node": "catalog:utils",

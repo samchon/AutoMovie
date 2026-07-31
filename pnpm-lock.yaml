@@ -151,9 +151,18 @@ importers:
 
   packages/cli:
     dependencies:
+      '@automovie/engine':
+        specifier: workspace:^
+        version: link:../engine
+      '@automovie/interface':
+        specifier: workspace:^
+        version: link:../interface
       '@automovie/mcp':
         specifier: workspace:^
         version: link:../mcp
+      typia:
+        specifier: catalog:samchon
+        version: 13.2.0(@types/node@22.19.20)(ttsc@0.23.0)
     devDependencies:
       '@ttsc/lint':
         specifier: catalog:typescript

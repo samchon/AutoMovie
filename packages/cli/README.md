@@ -11,8 +11,8 @@ npx automovie migrate legacy-film
 Lays down a starter with both ways to drive the engine:
 
 - ordinary TypeScript source for treatment, shot, motion, effects, and tests;
-- a Claude-compatible **MCP** server config (`.mcp.json`) for deterministic compile,
-  geometry queries, actual-frame evidence, and review gates; and
+- a Claude-compatible **MCP** server config (`.mcp.json`) for actual-frame
+  evidence and review gates; and
 - a local viewer and Playwright capture path that render compiler-owned output.
 
 The coding agent owns `src`, `docs`, `test`, and `public`. AutoMovie owns bounded
@@ -138,5 +138,54 @@ output can be asserted in a test or written by another consumer:
 import { renderScaffold, writeFiles } from "@automovie/cli";
 
 const files = renderScaffold({ name: "my-film" }); // { "package.json": "...", ... }
-writeFiles("./my-film", files); // → written absolute paths
+writeFiles("./my-film", files);
 ```
+
+Ordinary Node scripts can also load the current tracked design and the last
+compiler-owned snapshot without starting an MCP server or client:
+
+```ts
+import {
+  loadAutoMovieProjectState,
+  requireCurrentAutoMovieProjectState,
+} from "@automovie/cli";
+import {
+  Vector3,
+  formationSlot,
+  reachPose,
+  sampleFormationMotion,
+  transformFormationPoint,
+} from "@automovie/engine";
+
+const loaded = loadAutoMovieProjectState({ root: process.cwd() });
+const state = requireCurrentAutoMovieProjectState(loaded);
+const shot = state.generated.shots.get("opening")!;
+const formation = state.generated.design.formations.get("army")!;
+const runtime = shot.formations.find((item) => item.id === formation.id)!;
+const base = formationSlot(formation, 31).position;
+const atTwoSeconds = transformFormationPoint(
+  base,
+  runtime.anchor,
+  sampleFormationMotion(shot.formationMotions, formation.id, 2),
+  runtime.facingDeg,
+);
+const landmark = state.generated.design.world.landmarks[0]!.position;
+const distance = Vector3.length(Vector3.subtract(atTwoSeconds, landmark));
+const actor = shot.scene.nodes.find((item) => item.id === "sentinel")!;
+const model = shot.models.find((item) => item.id === actor.model)!;
+const reach =
+  model.skeleton === null
+    ? null
+    : reachPose(model.skeleton, "right", { x: 0.5, y: 1.2, z: 0 });
+```
+
+`freshness` always carries the loaded compile fingerprint, the fingerprint
+recomputed from current source, the current project revision, diagnostics, and
+reader integrity problems. Use `requireCurrentAutoMovieProjectState` before
+measuring; it refuses both missing and stale output rather than letting a script
+quietly answer from an old compile.
+
+This API is an external I/O boundary. Never import or call it inside a shot or
+film `build` function: the compiler executes those functions in a deterministic
+no-I/O sandbox. Use it only from measurement scripts, tests, and offline
+diagnostics, then pass the loaded values to pure `@automovie/engine` functions.

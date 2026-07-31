@@ -4,8 +4,9 @@ Write creative and implementation work in `docs`, `src`, `test`, and declared
 assets. Do not translate normal code into giant MCP JSON calls.
 
 Read `AUTOMOVIE_OVERALL`, then the exact guide required by a production tool.
-Use MCP for bounded design, deterministic compile facts, geometry, actual PNG
-preview, and evidence-bound review.
+Use MCP for actual PNG evidence and evidence-bound review. For offline geometry,
+load current compiler-owned state through `loadAutoMovieProjectState`, require
+its freshness to be current, and pass its typed values to pure engine functions.
 
 Run `npm run capture:install` and `npm run capture:doctor` after dependency changes or
 before the first preview/render. Do not silently fall back to a machine browser;
@@ -30,4 +31,6 @@ measurement-proxy decisions. Never invent provenance or license terms.
 
 Keep time in seconds, space in right-handed Y-up meters, and randomness in
 explicit design seeds. Do not use wall clock, network, process, filesystem, or
-unseeded randomness inside shot build functions.
+unseeded randomness inside shot build functions. The project-state reader is a
+filesystem API and is forbidden inside shot or film build functions; use it
+only from standalone measurement scripts, tests, and offline diagnostics.
