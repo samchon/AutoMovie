@@ -1,6 +1,6 @@
 import type { IAutoMovieFilmTimeline } from "@automovie/interface";
-import type { Box } from "mp4box";
 import {
+  type Box,
   DataStream,
   IsoFileOptions,
   MP4BoxBuffer,
