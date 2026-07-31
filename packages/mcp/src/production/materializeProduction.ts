@@ -681,12 +681,11 @@ const localInstancePoint = (
       `Instance set "${instanceSet.id}" route "${layout.route}" must have finite non-zero length.`,
     );
   let remaining = ((slot + 0.5) / instanceSet.count) * total;
-  const segment =
-    segments.find((candidate) => {
-      if (remaining <= candidate.length) return true;
-      remaining -= candidate.length;
-      return false;
-    }) ?? segments.at(-1)!;
+  const segment = (segments.find((candidate) => {
+    if (remaining <= candidate.length) return true;
+    remaining -= candidate.length;
+    return false;
+  }) ?? segments.at(-1))!;
   const ratio =
     segment.length === 0 ? 0 : Math.min(1, remaining / segment.length);
   const tangent = {
