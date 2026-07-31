@@ -190,6 +190,8 @@ const check = (root: string) =>
  *    external transitive edges with its own same-named installed dependency.
  * 5. Node built-ins need no package license while npm aliases audit their physical
  *    target package manifest.
+ * 6. The shipped Kokoro graph redirects Transformers.js's Sharp edge to the
+ *    complete local MIT capability wall instead of a native LGPL package.
  */
 export const test_workspace_license_policy = (): void => {
   TestValidator.equals(

@@ -420,6 +420,7 @@ const productionSoundRuntimeIdentity = () => ({
   tts: {
     ...resolvedPackageIdentity("kokoro-js"),
     adapter: resolvedPackageIdentity("@huggingface/transformers"),
+    imageCapability: resolvedPackageIdentity("sharp"),
     model: KOKORO_MODEL,
     modelRevision: KOKORO_MODEL_REVISION,
     dtype: "q8",
@@ -1800,6 +1801,7 @@ const kokoroBaseRuntimeAssets =
   (): IAutoMovieProductionTtsReceipt["runtimeAssets"] => {
     const kokoro = resolvedPackageIdentity("kokoro-js");
     const transformers = resolvedPackageIdentity("@huggingface/transformers");
+    const imageCapability = resolvedPackageIdentity("sharp");
     const voice = path.join(
       resolvedPackageDirectory("kokoro-js"),
       "voices",
@@ -1812,6 +1814,10 @@ const kokoroBaseRuntimeAssets =
       {
         path: "package:@huggingface/transformers",
         digest: transformers.entryDigest,
+      },
+      {
+        path: "package:sharp-capability-wall",
+        digest: imageCapability.entryDigest,
       },
       {
         path: `voice:${KOKORO_VOICE}.bin`,

@@ -53,6 +53,9 @@ const throwsWith = (fn: () => unknown, message: string): boolean => {
  *    published `@automovie/cli` would ship no scaffold and `npx automovie
  *    start` would throw on install (#1155). Guards the packaging, which the
  *    in-repo render (workspace source) cannot.
+ * 6. The pinned Kokoro/Transformers graph ships its local MIT Sharp capability
+ *    wall, fingerprints that wall in sound cache identity and fails an image
+ *    call explicitly instead of loading a native LGPL payload.
  */
 export const test_cli_scaffold = (): void => {
   // 5. packaging guard: the scaffold dir must be a published `files` entry.
@@ -183,10 +186,12 @@ export const test_cli_scaffold = (): void => {
       pkg.includes(
         `"@huggingface/transformers": "${AUTOMOVIE_TEMPLATE_VERSIONS.huggingFaceTransformers}"`,
       ) &&
+      AUTOMOVIE_TEMPLATE_VERSIONS.huggingFaceTransformers === "3.8.1" &&
       pkg.includes(
         `"h264-mp4-encoder": "${AUTOMOVIE_TEMPLATE_VERSIONS.h264Mp4Encoder}"`,
       ) &&
       pkg.includes(`"kokoro-js": "${AUTOMOVIE_TEMPLATE_VERSIONS.kokoroJs}"`) &&
+      AUTOMOVIE_TEMPLATE_VERSIONS.kokoroJs === "1.2.1" &&
       pkg.includes(
         `"libopus-wasm": "${AUTOMOVIE_TEMPLATE_VERSIONS.libopusWasm}"`,
       ) &&
@@ -313,6 +318,12 @@ export const test_cli_scaffold = (): void => {
       files["scripts/render.ts"]!.includes("KokoroTTS.from_pretrained") &&
       files["scripts/render.ts"]!.includes("KOKORO_MODEL_REVISION") &&
       files["scripts/render.ts"]!.includes("productionSoundRuntimeIdentity") &&
+      files["scripts/render.ts"]!.includes(
+        'imageCapability: resolvedPackageIdentity("sharp")',
+      ) &&
+      files["scripts/render.ts"]!.includes(
+        'path: "package:sharp-capability-wall"',
+      ) &&
       files["scripts/render.ts"]!.includes("encodeProductionOpus") &&
       files["scripts/render.ts"]!.includes("muxProductionFeatureMp4") &&
       files["scripts/render.ts"]!.includes('"waveform.png"') &&
