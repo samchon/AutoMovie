@@ -1918,10 +1918,11 @@ export const test_mcp_production_project = (): void => {
   const replacedOwner = productionFixture();
   try {
     const ownerProject = AutoMovieProductionProject.open(replacedOwner.root);
-    fs.rmSync(ownerProject.renderRoot(), { recursive: true });
+    const ownerRenderRoot = ownerProject.renderRoot();
+    fs.rmSync(ownerRenderRoot, { recursive: true });
     fs.symlinkSync(
       path.join(replacedOwner.root, "viewer"),
-      ownerProject.renderRoot(),
+      ownerRenderRoot,
       "junction",
     );
     TestValidator.predicate(
