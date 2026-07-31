@@ -217,14 +217,24 @@ export const test_film_defined_shot_continuity = (): void => {
     target: { x: 3.25, y: 0, z: 4 },
     duration: 1,
   });
-  TestValidator.predicate(
-    "a first gait shot produces its own ground-IK plant seed",
-    first.success &&
-      first.continuity.closing.actors
-        .find((actor) => actor.node === "knightA")
-        ?.footPlants?.some((plant) => plant.foot === "leftFoot") === true,
+  if (first.success === false)
+    throw new Error(
+      `First gait shot compilation failed:\n${JSON.stringify(
+        first.violations,
+        null,
+        2,
+      )}`,
+    );
+  const firstPlantActor = first.continuity.closing.actors.find(
+    (actor) => actor.node === "knightA",
   );
-  if (first.success === false) return;
+  TestValidator.predicate(
+    `a first gait shot produces its own ground-IK plant seed; closing actor=${JSON.stringify(
+      firstPlantActor,
+    )}`,
+    firstPlantActor?.footPlants?.some((plant) => plant.foot === "leftFoot") ===
+      true,
+  );
 
   const airborneStage = makeStagingWrite({
     actors: groundedStage.actors.map((actor) => ({
