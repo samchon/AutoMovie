@@ -9,9 +9,11 @@ import {
   sampleFormationMotion,
   transformFormationPoint,
 } from "@automovie/engine";
+import { IAutoMovieGeneratedManifest } from "@automovie/interface";
 import {
   AutoMovieProductionCompiler,
   AutoMovieProductionProject,
+  digestAutoMovieBytes,
 } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
@@ -129,6 +131,237 @@ export const test_cli_project_state = (): void => {
         Math.abs(meters - Math.sqrt(34)) < 1e-12 &&
         left !== null &&
         JSON.stringify(left) === JSON.stringify(repeatedLeft),
+    );
+
+    const generatedManifest = project.generatedManifest()!;
+    const generatedManifestMethod =
+      AutoMovieProductionProject.prototype.generatedManifest;
+    const readGeneratedFileMethod =
+      AutoMovieProductionProject.prototype.readGeneratedFile;
+    const registryPath = "manifests/compile.json";
+    const registryBytes = project.readGeneratedFile(registryPath);
+    const registry = JSON.parse(
+      Buffer.from(registryBytes).toString("utf8"),
+    ) as {
+      productionId: string;
+      inputFingerprint: string;
+      assets: Array<{ id: string; path: string }>;
+      shots: Array<{ id: string; path: string }>;
+      film: string | null;
+    };
+    const withManifest = (
+      nextManifest: IAutoMovieGeneratedManifest,
+      replacements: ReadonlyMap<string, Uint8Array> = new Map(),
+    ): ReturnType<typeof loadAutoMovieProjectState> => {
+      AutoMovieProductionProject.prototype.generatedManifest = () =>
+        structuredClone(nextManifest);
+      AutoMovieProductionProject.prototype.readGeneratedFile = function (file) {
+        return (
+          replacements.get(file) ?? readGeneratedFileMethod.call(this, file)
+        );
+      };
+      try {
+        return loadAutoMovieProjectState({ root: fixture.root });
+      } finally {
+        AutoMovieProductionProject.prototype.generatedManifest =
+          generatedManifestMethod;
+        AutoMovieProductionProject.prototype.readGeneratedFile =
+          readGeneratedFileMethod;
+      }
+    };
+    const manifestWith = (
+      file: string,
+      bytes: Uint8Array,
+    ): IAutoMovieGeneratedManifest => ({
+      ...structuredClone(generatedManifest),
+      files: [
+        ...generatedManifest.files.filter((entry) => entry.path !== file),
+        {
+          ...generatedManifest.files[0]!,
+          path: file,
+          digest: digestAutoMovieBytes(bytes),
+        },
+      ],
+    });
+
+    const duplicateFile = withManifest({
+      ...structuredClone(generatedManifest),
+      files: [
+        ...generatedManifest.files,
+        structuredClone(generatedManifest.files[0]!),
+      ],
+    });
+    const unreadableFile = withManifest({
+      ...structuredClone(generatedManifest),
+      files: [
+        ...generatedManifest.files,
+        {
+          ...generatedManifest.files[0]!,
+          path: "contracts/models/unreadable.json",
+          digest: digestAutoMovieBytes(Buffer.from("{}")),
+        },
+      ],
+    });
+    const invalidJsonBytes = Buffer.from("{");
+    const invalidJson = withManifest(
+      manifestWith("contracts/models/invalid.json", invalidJsonBytes),
+      new Map([["contracts/models/invalid.json", invalidJsonBytes]]),
+    );
+    const modelContract = generatedManifest.files.find((file) =>
+      file.path.startsWith("contracts/models/"),
+    )!;
+    const duplicateModelBytes = project.readGeneratedFile(modelContract.path);
+    const duplicateModel = withManifest(
+      manifestWith("contracts/models/duplicate.json", duplicateModelBytes),
+      new Map([["contracts/models/duplicate.json", duplicateModelBytes]]),
+    );
+    const compiledShot = generatedManifest.files.find((file) =>
+      file.path.startsWith("shots/"),
+    )!;
+    const duplicateShotBytes = project.readGeneratedFile(compiledShot.path);
+    const duplicateShot = withManifest(
+      manifestWith("shots/duplicate.json", duplicateShotBytes),
+      new Map([["shots/duplicate.json", duplicateShotBytes]]),
+    );
+    TestValidator.predicate(
+      "ownership manifest and generated JSON boundaries are explicit",
+      duplicateFile.freshness.problems.some(
+        (problem) => problem.code === "generated-file-duplicate",
+      ) &&
+        unreadableFile.freshness.problems.some(
+          (problem) => problem.code === "generated-file-unreadable",
+        ) &&
+        invalidJson.freshness.problems.some(
+          (problem) => problem.code === "generated-json-invalid",
+        ) &&
+        duplicateModel.freshness.problems.some(
+          (problem) => problem.code === "generated-id-duplicate",
+        ) &&
+        duplicateShot.freshness.problems.some(
+          (problem) => problem.code === "generated-id-duplicate",
+        ),
+    );
+
+    const mismatchedRegistryBytes = Buffer.from(
+      JSON.stringify({
+        ...registry,
+        productionId: "other-production",
+        assets: registry.assets.map((asset, index) =>
+          index === 0 ? { ...asset, path: "models/missing.json" } : asset,
+        ),
+        shots: registry.shots.map((shot, index) =>
+          index === 0 ? { ...shot, path: "shots/missing.json" } : shot,
+        ),
+        film: null,
+      }),
+    );
+    const mismatchedRegistry = withManifest(
+      manifestWith(registryPath, mismatchedRegistryBytes),
+      new Map([[registryPath, mismatchedRegistryBytes]]),
+    );
+    const mismatchedFilmBytes = Buffer.from(
+      JSON.stringify({ ...registry, film: "other-film" }),
+    );
+    const mismatchedFilm = withManifest(
+      manifestWith(registryPath, mismatchedFilmBytes),
+      new Map([[registryPath, mismatchedFilmBytes]]),
+    );
+    const incomplete = withManifest({
+      ...structuredClone(generatedManifest),
+      files: generatedManifest.files.filter(
+        (file) => file.path !== "contracts/world.json",
+      ),
+    });
+    TestValidator.predicate(
+      "registry joins and required generated contracts fail closed",
+      mismatchedRegistry.freshness.problems.filter(
+        (problem) => problem.code === "generated-registry-mismatch",
+      ).length >= 4 &&
+        mismatchedFilm.freshness.problems.some(
+          (problem) =>
+            problem.code === "generated-registry-mismatch" &&
+            problem.path === "film-timeline.json",
+        ) &&
+        incomplete.freshness.problems.some(
+          (problem) => problem.code === "generated-state-incomplete",
+        ),
+    );
+
+    let manifestCalls = 0;
+    AutoMovieProductionProject.prototype.generatedManifest = () => {
+      ++manifestCalls;
+      if (manifestCalls === 1) throw new Error("manifest unreadable");
+      return structuredClone(generatedManifest);
+    };
+    const invalidManifest = loadAutoMovieProjectState({ root: fixture.root });
+    AutoMovieProductionProject.prototype.generatedManifest =
+      generatedManifestMethod;
+    TestValidator.predicate(
+      "a malformed ownership manifest is stale rather than missing",
+      invalidManifest.freshness.status === "stale" &&
+        invalidManifest.freshness.problems.some(
+          (problem) => problem.code === "generated-manifest-invalid",
+        ),
+    );
+
+    const compilerLint = AutoMovieProductionCompiler.prototype.lint;
+    let compilerCalls = 0;
+    AutoMovieProductionCompiler.prototype.lint = function (input) {
+      ++compilerCalls;
+      if (compilerCalls === 1) throw "lint unavailable";
+      return compilerLint.call(this, input);
+    };
+    const unavailableStatus = loadAutoMovieProjectState({
+      root: fixture.root,
+    });
+    AutoMovieProductionCompiler.prototype.lint = compilerLint;
+    const unsuccessfulOutput = compilerLint.call(
+      new AutoMovieProductionCompiler(project),
+      { scope: "source" },
+    );
+    AutoMovieProductionCompiler.prototype.lint = function () {
+      return { ...unsuccessfulOutput, success: false };
+    };
+    const invalidStatus = loadAutoMovieProjectState({ root: fixture.root });
+    AutoMovieProductionCompiler.prototype.lint = compilerLint;
+    TestValidator.predicate(
+      "unavailable and unsuccessful current compilation are distinguished",
+      unavailableStatus.freshness.problems.some(
+        (problem) =>
+          problem.code === "compile-status-unavailable" &&
+          problem.message === "lint unavailable",
+      ) &&
+        invalidStatus.freshness.problems.some(
+          (problem) => problem.code === "current-compile-invalid",
+        ),
+    );
+
+    const lint = AutoMovieProductionCompiler.prototype.lint;
+    let sourceRaceInjected = false;
+    AutoMovieProductionCompiler.prototype.lint = function (input) {
+      const output = lint.call(this, input);
+      if (sourceRaceInjected === false) {
+        sourceRaceInjected = true;
+        fs.appendFileSync(sourcePath, "\n// injected during state read\n");
+      }
+      return output;
+    };
+    let raced: ReturnType<typeof loadAutoMovieProjectState>;
+    try {
+      raced = loadAutoMovieProjectState({ root: fixture.root });
+    } finally {
+      AutoMovieProductionCompiler.prototype.lint = lint;
+      fs.writeFileSync(sourcePath, originalSource);
+    }
+    TestValidator.predicate(
+      "source changes between fingerprint fences cannot look current",
+      raced.freshness.status === "stale" &&
+        raced.freshness.problems.some(
+          (problem) => problem.code === "project-state-changed",
+        ) &&
+        raced.freshness.currentFingerprint !==
+          raced.freshness.compileFingerprint &&
+        refusesCurrent(raced),
     );
 
     fs.appendFileSync(sourcePath, "\n// stale reader fixture\n");

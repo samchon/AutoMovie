@@ -1159,6 +1159,53 @@ try {
     writeFileSync(captureConfigPath, captureConfigText);
   }
   run("compile packaged starter", "npm run compile", starterDir);
+  const stateReaderTypeProbePath = join(
+    starterDir,
+    "verify-packaged-state-reader.ts",
+  );
+  writeFileSync(
+    stateReaderTypeProbePath,
+    `import { loadAutoMovieProjectState, requireCurrentAutoMovieProjectState } from "@automovie/cli";
+import { Vector3 } from "@automovie/engine";
+
+const state = requireCurrentAutoMovieProjectState(
+  loadAutoMovieProjectState({ root: process.cwd() }),
+);
+const distance: number = Vector3.length({ x: 3, y: 4, z: 0 });
+if (state.generated.registry.productionId.length === 0 || distance !== 5)
+  throw new Error("packaged state reader or engine query failed");
+`,
+  );
+  run(
+    "typecheck packaged CLI state-reader export",
+    "npm exec -- tsc --noEmit --target ES2022 --module NodeNext --moduleResolution NodeNext --skipLibCheck verify-packaged-state-reader.ts",
+    starterDir,
+  );
+  const stateReaderRuntimeProbePath = join(
+    starterDir,
+    "verify-packaged-state-reader.mjs",
+  );
+  writeFileSync(
+    stateReaderRuntimeProbePath,
+    `import { loadAutoMovieProjectState, requireCurrentAutoMovieProjectState } from "@automovie/cli";
+import { Vector3 } from "@automovie/engine";
+
+const state = requireCurrentAutoMovieProjectState(
+  loadAutoMovieProjectState({ root: process.cwd() }),
+);
+if (
+  state.generated.registry.productionId !== state.productionId ||
+  state.generated.shots.size === 0 ||
+  Vector3.length({ x: 3, y: 4, z: 0 }) !== 5
+)
+  throw new Error("packaged state reader or engine query failed");
+`,
+  );
+  run(
+    "execute packaged CLI state-reader and engine query",
+    "node verify-packaged-state-reader.mjs",
+    starterDir,
+  );
   const packagedLintConfigPath = join(starterDir, "lint.config.ts");
   const packagedLintConfig = readFileSync(packagedLintConfigPath, "utf8");
   const packagedSentinelPath = join(

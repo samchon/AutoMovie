@@ -380,11 +380,29 @@ export const loadAutoMovieProjectState = (
       message: `Loaded compile fingerprint ${manifest.inputFingerprint} is stale against current fingerprint ${compileStatus.compiler.inputFingerprint}.`,
     });
 
+  let endingCompileStatus: IAutoMovieCompileProjectOutput | null = null;
+  let endingDesign: IAutoMovieProductionDesignGraph = design;
   try {
+    const endingRevisionBefore = project.revision();
+    const endingCompileStatusBefore = new AutoMovieProductionCompiler(
+      project,
+    ).lint({
+      scope: "source",
+    });
+    endingDesign = project.graph();
+    endingCompileStatus = new AutoMovieProductionCompiler(project).lint({
+      scope: "source",
+    });
     const endingManifest = project.generatedManifest();
+    const endingRevisionAfter = project.revision();
     if (
-      project.revision() !== revision ||
-      JSON.stringify(endingManifest) !== JSON.stringify(manifest)
+      endingRevisionBefore !== revision ||
+      endingRevisionAfter !== revision ||
+      JSON.stringify(endingManifest) !== JSON.stringify(manifest) ||
+      endingCompileStatusBefore.compiler.inputFingerprint !==
+        endingCompileStatus.compiler.inputFingerprint ||
+      endingCompileStatus.compiler.inputFingerprint !==
+        compileStatus?.compiler.inputFingerprint
     )
       problems.push({
         code: "project-state-changed",
@@ -412,11 +430,15 @@ export const loadAutoMovieProjectState = (
             ? "current"
             : "stale",
       compileFingerprint: manifest?.inputFingerprint ?? null,
-      currentFingerprint: compileStatus?.compiler.inputFingerprint ?? null,
-      diagnostics: compileStatus?.diagnostics ?? [],
+      currentFingerprint:
+        endingCompileStatus?.compiler.inputFingerprint ??
+        compileStatus?.compiler.inputFingerprint ??
+        null,
+      diagnostics:
+        endingCompileStatus?.diagnostics ?? compileStatus?.diagnostics ?? [],
       problems,
     },
-    design,
+    design: endingDesign,
     generated: {
       manifest,
       registry,
