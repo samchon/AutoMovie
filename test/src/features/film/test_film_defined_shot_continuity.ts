@@ -182,8 +182,8 @@ export const test_film_defined_shot_continuity = (): void => {
   // Bend the fixture leg at rest and lower its foot 2 cm into the contact band.
   // Its two segment lengths now total about 1.22 m rather than the straight
   // 0.9 m hip-to-ground height, giving the ground-IK solve enough reach to hold
-  // the same pin through both short steps while the downhill foot remains in
-  // default-tolerance contact as the root climbs the ramp.
+  // one pin through each stance and across the cut while the downhill foot
+  // remains in default-tolerance contact as the root climbs the ramp.
   rig.bones.find((bone) => bone.bone === "leftLowerLeg")!.rest.translation.z =
     0.4;
   rig.bones.push({
