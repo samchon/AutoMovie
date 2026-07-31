@@ -1,11 +1,11 @@
 import type { IAutoMovieFilmTimeline } from "@automovie/interface";
 import {
+  DataStream,
   IsoFileOptions,
   MP4BoxBuffer,
   Movie,
   Sample,
   Track,
-  boxEqual,
   createFile,
 } from "mp4box";
 
@@ -538,13 +538,26 @@ const sampleDescription = (
   return { type: description.type, boxes: description.boxes ?? [] };
 };
 
+/** Canonicalize a parsed sample-description box without parser object identity. */
+const serializeDescriptionBox = (
+  box: NonNullable<IsoFileOptions["description_boxes"]>[number],
+): Uint8Array => {
+  const stream = new DataStream();
+  box.write(stream);
+  return new Uint8Array(stream.buffer);
+};
+
 const sameSampleDescription = (
   left: ReturnType<typeof sampleDescription>,
   right: ReturnType<typeof sampleDescription>,
 ): boolean =>
   left.type === right.type &&
   left.boxes.length === right.boxes.length &&
-  left.boxes.every((box, index) => boxEqual(box, right.boxes[index]!));
+  left.boxes.every((box, index) => {
+    const leftBytes = serializeDescriptionBox(box);
+    const rightBytes = serializeDescriptionBox(right.boxes[index]!);
+    return Buffer.from(leftBytes).equals(Buffer.from(rightBytes));
+  });
 
 const copyTrack = (props: {
   output: ReturnType<typeof createFile>;

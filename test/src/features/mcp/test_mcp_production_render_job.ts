@@ -283,8 +283,13 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
     timeline: repaintTimeline,
     clips: repaintClips,
   });
+  const incompatibleAnswer = Buffer.from(repaintClips.get("answer")!);
+  const avcConfiguration = incompatibleAnswer.indexOf("avcC");
+  if (avcConfiguration < 0)
+    throw new Error("H.264 fixture has no AVC decoder configuration box.");
+  incompatibleAnswer[avcConfiguration + 6] ^= 1;
   TestValidator.predicate(
-    "repaint conform preserves exact cut-only shot samples and rejects unsupported transitions",
+    "repaint conform preserves exact cut-only shot samples and rejects incompatible clips or transitions",
     probeProductionMedia({
       kind: "guide-pass",
       mediaType: "video/mp4",
@@ -319,6 +324,12 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
             ),
           },
           clips: repaintClips,
+        }),
+      ) &&
+      throws(() =>
+        conformProductionRenditionVideoMp4({
+          timeline: repaintTimeline,
+          clips: new Map(repaintClips).set("answer", incompatibleAnswer),
         }),
       ),
   );
