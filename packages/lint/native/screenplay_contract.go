@@ -465,7 +465,7 @@ func checkScreenplayIndex(
 		),
 		screenplayOwnedFiles(
 			root,
-			".automovie/reviews/films/",
+			".automovie/reviews/film/",
 			reviewFiles,
 		)...,
 	)

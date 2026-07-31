@@ -464,7 +464,7 @@ const screenplayConfig = [
   '        formations: [".automovie/design/*/formations/*.json"],',
   '        worlds: [".automovie/design/*/world.json"],',
   '        realizations: ["generated/*/realizations/*.json"],',
-  '        reviews: [".automovie/reviews/*/shots/*.json"],',
+  '        reviews: [".automovie/reviews/*/shots/*.json", ".automovie/reviews/*/film/*.json"],',
   "      },",
   "    ],",
   "  },",
@@ -747,6 +747,37 @@ const screenplayFiles = (
   return files;
 };
 
+/** Replace nominal shot acceptance with one film-owned acceptance review. */
+const filmReviewScreenplayFiles = (
+  directory: "film" | "films",
+): Record<string, string> => {
+  const files = screenplayFiles("valid");
+  delete files[".automovie/reviews/film/shots/shot-1.json"];
+  files[".automovie/design/film/acceptance/accept-1.json"] = JSON.stringify({
+    id: "accept-1",
+    evidence: [
+      {
+        reason: "The finished film observes the authored signal.",
+        scene: "SCN-001",
+      },
+    ],
+    target: { kind: "film", id: "film" },
+    criterion: { kind: "frame", shot: "shot-1" },
+  });
+  files[`.automovie/reviews/film/${directory}/film.json`] = JSON.stringify({
+    complete: true,
+    target: { kind: "film", id: "film" },
+    checks: [
+      {
+        criterion: "acceptance-scenarios",
+        verdict: "pass",
+        acceptanceScenarios: ["accept-1"],
+      },
+    ],
+  });
+  return files;
+};
+
 const assertSucceeded = (result: IRunResult, because: string): void => {
   if (result.status === 0) return;
   throw new Error(
@@ -789,7 +820,8 @@ const assertFailedWith = (
  * 6. The screenplay project rule accepts a grounded locked ledger and diagnoses
  *    uncovered prose, missing headings, removed lock ids and dangling evidence,
  *    intent-only coverage, production-isolated proof, exact continuity proof,
- *    explicit design bindings and disposition/realization contradictions.
+ *    explicit design bindings, exact film-review path identity, and
+ *    disposition/realization contradictions.
  */
 export function test_lint_plugin_walking_skeleton(): void {
   const scaffold = runScaffoldLint({ name: "clean" });
@@ -977,6 +1009,27 @@ export function test_lint_plugin_walking_skeleton(): void {
   assertSucceeded(
     validScreenplay,
     "A grounded scene, passing compiled realization, completed acceptance and retained OMITTED tombstone must satisfy the screenplay ledger.",
+  );
+
+  const filmReview = runFixture({
+    name: "screenplay-film-review",
+    lintConfig: screenplayConfig,
+    files: filmReviewScreenplayFiles("film"),
+  });
+  assertSucceeded(
+    filmReview,
+    "A current review in the runtime-owned singular film directory must discharge film-target acceptance.",
+  );
+
+  const pluralFilmReview = runFixture({
+    name: "screenplay-plural-film-review",
+    lintConfig: screenplayConfig,
+    files: filmReviewScreenplayFiles("films"),
+  });
+  assertFailedWith(
+    pluralFilmReview,
+    "A completed design review is not observation.",
+    "A plural films directory is not runtime-owned evidence and must not discharge acceptance.",
   );
 
   const uncoveredBeat = runFixture({

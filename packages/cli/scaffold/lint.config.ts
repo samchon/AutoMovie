@@ -119,9 +119,9 @@ const config = {
         ],
         reviews: [
           ".automovie/reviews/shots/*.json",
-          ".automovie/reviews/films/*.json",
+          ".automovie/reviews/film/*.json",
           ".automovie/reviews/*/shots/*.json",
-          ".automovie/reviews/*/films/*.json",
+          ".automovie/reviews/*/film/*.json",
         ],
       },
     ],
