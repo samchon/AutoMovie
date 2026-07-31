@@ -178,13 +178,21 @@ export const test_mcp_production_application = async (): Promise<void> => {
       productionId: "fixture-film",
       capture,
     });
+    const firstCompile = compileAutoMovieProduction({
+      projectRoot: fixture.root,
+      productionId: "fixture-film",
+      scope: "source",
+    });
+    if (firstCompile.success === false)
+      throw new Error(
+        `The non-MCP compiler API failed its first registered production:\n${JSON.stringify(firstCompile.diagnostics, null, 2)}`,
+      );
+    const firstRegistry = AutoMovieProductionProject.registeredProductionIds(
+      fixture.root,
+    );
     TestValidator.predicate(
-      "the non-MCP compiler API publishes the first production registry",
-      compileAutoMovieProduction({
-        projectRoot: fixture.root,
-        productionId: "fixture-film",
-        scope: "source",
-      }).success,
+      "the non-MCP compiler API compiles the first registered production",
+      firstRegistry.length === 1 && firstRegistry[0] === "fixture-film",
     );
     TestValidator.predicate(
       "the non-MCP inspection API reports current compiled ownership",
