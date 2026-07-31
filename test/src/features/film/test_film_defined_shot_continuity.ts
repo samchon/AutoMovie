@@ -39,6 +39,12 @@ const WALK: IAutoMovieGait = {
       duty: 0.7,
       amplitude: 12,
     },
+    {
+      bone: "leftLowerLeg",
+      phase: 0,
+      duty: 0.7,
+      amplitude: 0,
+    },
   ],
 };
 
