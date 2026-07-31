@@ -7,32 +7,96 @@ import path from "node:path";
 const ROOT = path.resolve(__dirname, "../../../..");
 const POLICY_SCRIPT = path.join(ROOT, "internals", "license-policy.mjs");
 
+interface IDependencyFixtureOptions {
+  dependencies?: Record<string, string>;
+  resolution?: "commonjs" | "export-map" | "import-only";
+}
+
+interface IPackageManifest {
+  dependencies?: Record<string, string>;
+  name: string;
+  optionalDependencies?: Record<string, string>;
+  peerDependencies?: Record<string, string>;
+}
+
+/** Scaffold dependencies without one installed production owner. */
+const unauditedScaffoldDependencies = (): string[] => {
+  const packageFiles = [
+    path.join(ROOT, "package.json"),
+    path.join(ROOT, "test", "package.json"),
+    ...fs
+      .readdirSync(path.join(ROOT, "packages"), { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => path.join(ROOT, "packages", entry.name, "package.json"))
+      .filter(fs.existsSync),
+  ];
+  const manifests = packageFiles.map(
+    (file) => JSON.parse(fs.readFileSync(file, "utf8")) as IPackageManifest,
+  );
+  const workspaceNames = new Set(manifests.map((manifest) => manifest.name));
+  const productionDependencies = new Set(
+    manifests.flatMap((manifest) => [
+      ...Object.keys(manifest.dependencies ?? {}),
+      ...Object.keys(manifest.optionalDependencies ?? {}),
+      ...Object.keys(manifest.peerDependencies ?? {}),
+    ]),
+  );
+  const scaffold = JSON.parse(
+    fs.readFileSync(
+      path.join(ROOT, "packages", "cli", "scaffold", "package.json"),
+      "utf8",
+    ),
+  ) as IPackageManifest;
+  return Object.keys(scaffold.dependencies ?? {})
+    .filter(
+      (dependency) =>
+        workspaceNames.has(dependency) === false &&
+        productionDependencies.has(dependency) === false,
+    )
+    .sort();
+};
+
 /** Write a tiny installed production dependency with a selected license. */
 const writeDependency = (
   root: string,
   name: string,
   license: string,
-  internalManifest: boolean = false,
+  options: IDependencyFixtureOptions = {},
 ): void => {
   const dependency = path.join(root, "node_modules", name);
+  fs.rmSync(dependency, { force: true, recursive: true });
   fs.mkdirSync(dependency, { recursive: true });
+  const resolution = options.resolution ?? "commonjs";
   fs.writeFileSync(
     path.join(dependency, "package.json"),
     JSON.stringify({
       name,
       version: "1.0.0",
-      ...(internalManifest
+      ...(resolution === "export-map"
         ? {
             exports: {
               ".": "./dist/cjs/index.js",
               "./*": "./dist/cjs/*",
             },
           }
-        : { main: "index.js" }),
+        : resolution === "import-only"
+          ? {
+              type: "module",
+              exports: {
+                ".": {
+                  browser: "./dist/index.js",
+                  import: "./dist/index.js",
+                },
+              },
+            }
+          : { main: "index.js" }),
+      ...(options.dependencies === undefined
+        ? {}
+        : { dependencies: options.dependencies }),
       license,
     }),
   );
-  if (internalManifest) {
+  if (resolution === "export-map") {
     const distribution = path.join(dependency, "dist", "cjs");
     fs.mkdirSync(distribution, { recursive: true });
     fs.writeFileSync(
@@ -43,6 +107,10 @@ const writeDependency = (
       path.join(distribution, "index.js"),
       "module.exports = {};\n",
     );
+  } else if (resolution === "import-only") {
+    const distribution = path.join(dependency, "dist");
+    fs.mkdirSync(distribution, { recursive: true });
+    fs.writeFileSync(path.join(distribution, "index.js"), "export {};\n");
   } else
     fs.writeFileSync(
       path.join(dependency, "index.js"),
@@ -69,12 +137,19 @@ const check = (root: string) =>
  *
  * 1. A GPL license, a disallowed SPDX exception, and missing direct optional
  *    dependencies fail closed while allowed SPDX expressions pass.
- * 2. A wildcard export that maps `dependency/package.json` to an internal mode
- *    marker still resolves the named package's licensed root manifest.
- * 3. A shipped scaffold is itself audited, can resolve a dependency installed by
- *    another audited workspace root, and cannot name an absent dependency.
+ * 2. Wildcard exports that map `dependency/package.json` to an internal mode
+ *    marker and import-only exports both resolve the licensed root manifest.
+ * 3. A shipped scaffold is itself audited and can resolve only dependencies
+ *    declared and installed by another audited production workspace root.
+ * 4. Another workspace cannot hide missing direct optional, optional-peer, or
+ *    external transitive edges with its own same-named installed dependency.
  */
 export const test_workspace_license_policy = (): void => {
+  TestValidator.equals(
+    "every shipped scaffold runtime dependency has an audited production owner",
+    unauditedScaffoldDependencies(),
+    [],
+  );
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-license-"));
   try {
     fs.writeFileSync(
@@ -94,14 +169,26 @@ export const test_workspace_license_policy = (): void => {
       }),
     );
 
-    writeDependency(root, "dependency", "GPL-3.0-only", true);
+    writeDependency(root, "dependency", "GPL-3.0-only", {
+      resolution: "export-map",
+    });
     const rejected = check(root);
-    writeDependency(root, "dependency", "MIT WITH GPL-3.0-only", true);
+    writeDependency(root, "dependency", "MIT WITH GPL-3.0-only", {
+      resolution: "export-map",
+    });
     const disguised = check(root);
-    writeDependency(root, "dependency", "MIT", true);
+    writeDependency(root, "dependency", "MIT", {
+      resolution: "export-map",
+    });
     const accepted = check(root);
-    writeDependency(root, "dependency", "(MIT OR Apache-2.0)", true);
+    writeDependency(root, "dependency", "(MIT OR Apache-2.0)", {
+      resolution: "export-map",
+    });
     const expression = check(root);
+    writeDependency(root, "dependency", "MIT", {
+      resolution: "import-only",
+    });
+    const importOnly = check(root);
     fs.writeFileSync(
       path.join(root, "package.json"),
       JSON.stringify({
@@ -158,6 +245,27 @@ export const test_workspace_license_policy = (): void => {
     );
     const resolvedTemplate = check(root);
     fs.writeFileSync(
+      path.join(root, "package.json"),
+      JSON.stringify({
+        name: "license-fixture",
+        version: "1.0.0",
+        license: "MIT",
+        dependencies: { dependency: "1.0.0" },
+        devDependencies: { "unowned-template": "1.0.0" },
+      }),
+    );
+    writeDependency(root, "unowned-template", "MIT");
+    fs.writeFileSync(
+      path.join(scaffold, "package.json"),
+      JSON.stringify({
+        name: "shipped-scaffold",
+        version: "1.0.0",
+        license: "MIT",
+        dependencies: { "unowned-template": "{{version:unowned}}" },
+      }),
+    );
+    const unownedTemplate = check(root);
+    fs.writeFileSync(
       path.join(scaffold, "package.json"),
       JSON.stringify({
         name: "shipped-scaffold",
@@ -167,6 +275,61 @@ export const test_workspace_license_policy = (): void => {
       }),
     );
     const missingTemplate = check(root);
+    fs.writeFileSync(
+      path.join(scaffold, "package.json"),
+      JSON.stringify({
+        name: "shipped-scaffold",
+        version: "1.0.0",
+        license: "MIT",
+      }),
+    );
+    fs.writeFileSync(
+      path.join(audit, "package.json"),
+      JSON.stringify({
+        name: "audit-root",
+        version: "1.0.0",
+        license: "MIT",
+        dependencies: {
+          "shared-optional": "1.0.0",
+          "shared-peer": "1.0.0",
+          "template-dependency": "1.0.0",
+          "transitive-missing": "1.0.0",
+        },
+      }),
+    );
+    for (const dependency of [
+      "shared-optional",
+      "shared-peer",
+      "transitive-missing",
+    ])
+      writeDependency(audit, dependency, "MIT");
+    fs.writeFileSync(
+      path.join(root, "package.json"),
+      JSON.stringify({
+        name: "license-fixture",
+        version: "1.0.0",
+        license: "MIT",
+        dependencies: { dependency: "1.0.0" },
+        optionalDependencies: { "shared-optional": "1.0.0" },
+        peerDependencies: { "shared-peer": "1.0.0" },
+        peerDependenciesMeta: { "shared-peer": { optional: true } },
+      }),
+    );
+    writeDependency(root, "dependency", "MIT");
+    const missingWorkspaceOptionals = check(root);
+    fs.writeFileSync(
+      path.join(root, "package.json"),
+      JSON.stringify({
+        name: "license-fixture",
+        version: "1.0.0",
+        license: "MIT",
+        dependencies: { dependency: "1.0.0" },
+      }),
+    );
+    writeDependency(root, "dependency", "MIT", {
+      dependencies: { "transitive-missing": "1.0.0" },
+    });
+    const missingTransitive = check(root);
     TestValidator.predicate(
       "package identity, SPDX, optional, and shipped-template dependency boundaries fail closed",
       rejected.status === 1 &&
@@ -176,14 +339,22 @@ export const test_workspace_license_policy = (): void => {
         accepted.status === 0 &&
         accepted.stdout.includes("policy passed") &&
         expression.status === 0 &&
+        importOnly.status === 0 &&
         missingOptional.status === 1 &&
         missingOptional.stderr.includes("absent-optional") &&
         missingOptional.stderr.includes("absent-peer") &&
         shippedTemplate.status === 1 &&
         shippedTemplate.stderr.includes("shipped-scaffold") &&
         resolvedTemplate.status === 0 &&
+        unownedTemplate.status === 1 &&
+        unownedTemplate.stderr.includes("unowned-template") &&
         missingTemplate.status === 1 &&
-        missingTemplate.stderr.includes("absent-template"),
+        missingTemplate.stderr.includes("absent-template") &&
+        missingWorkspaceOptionals.status === 1 &&
+        missingWorkspaceOptionals.stderr.includes("shared-optional") &&
+        missingWorkspaceOptionals.stderr.includes("shared-peer") &&
+        missingTransitive.status === 1 &&
+        missingTransitive.stderr.includes("transitive-missing"),
     );
   } finally {
     fs.rmSync(root, { force: true, recursive: true });

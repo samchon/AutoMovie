@@ -53,6 +53,16 @@ const existingPackageFiles = packageFiles
   .filter(fs.existsSync)
   .map((file) => fs.realpathSync(file));
 const workspacePackageFiles = new Set(existingPackageFiles);
+const scaffoldCandidate = path.join(
+  root,
+  "packages",
+  "cli",
+  "scaffold",
+  "package.json",
+);
+const scaffoldPackageFile = fs.existsSync(scaffoldCandidate)
+  ? fs.realpathSync(scaffoldCandidate)
+  : null;
 const workspacePackages = new Map(
   existingPackageFiles.map((file) => {
     const manifest = readJson(file);
@@ -70,6 +80,12 @@ const packageFileFrom = (dependency, requesterFile) => {
   const requester = createRequire(
     path.join(path.dirname(requesterFile), "__automovie_license_policy__.cjs"),
   );
+  for (const modules of requester.resolve.paths(dependency) ?? []) {
+    const candidate = path.join(modules, dependency, "package.json");
+    if (fs.existsSync(candidate) === false) continue;
+    const manifest = readJson(candidate);
+    if (manifest.name === dependency) return candidate;
+  }
   let resolved;
   try {
     resolved = requester.resolve(dependency);
@@ -98,16 +114,19 @@ const packageFileFrom = (dependency, requesterFile) => {
 const findPackageFile = (dependency, requesterFile) => {
   const workspace = workspacePackages.get(dependency);
   if (workspace !== undefined) return workspace.file;
-  const direct = packageFileFrom(dependency, requesterFile);
-  if (direct !== null) return direct;
-  for (const { file, manifest } of workspacePackages.values()) {
-    if (
-      file === requesterFile ||
-      Object.hasOwn(productionDependenciesOf(manifest), dependency) === false
-    )
-      continue;
-    const installed = packageFileFrom(dependency, file);
-    if (installed !== null) return installed;
+  if (requesterFile === scaffoldPackageFile) {
+    for (const { file, manifest } of workspacePackages.values()) {
+      if (
+        file === requesterFile ||
+        Object.hasOwn(productionDependenciesOf(manifest), dependency) === false
+      )
+        continue;
+      const installed = packageFileFrom(dependency, file);
+      if (installed !== null) return installed;
+    }
+  } else {
+    const direct = packageFileFrom(dependency, requesterFile);
+    if (direct !== null) return direct;
   }
   throw new Error(
     `Cannot resolve production dependency ${dependency} from ${requesterFile}.`,
