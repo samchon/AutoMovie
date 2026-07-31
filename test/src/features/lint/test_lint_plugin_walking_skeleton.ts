@@ -242,9 +242,16 @@ const runScaffoldLint = (props: {
   const fixture = createScaffoldFixture(props.name);
   try {
     props.mutate?.(fixture.directory);
+    const invocation =
+      process.platform === "win32"
+        ? {
+            args: ["/d", "/s", "/c", "npm.cmd run lint"],
+            command: process.env.ComSpec ?? "cmd.exe",
+          }
+        : { args: ["run", "lint"], command: "npm" };
     const result: SpawnSyncReturns<string> = spawnSync(
-      process.platform === "win32" ? "npm.cmd" : "npm",
-      ["run", "lint"],
+      invocation.command,
+      invocation.args,
       {
         cwd: fixture.directory,
         encoding: "utf8",
@@ -259,10 +266,11 @@ const runScaffoldLint = (props: {
         },
         maxBuffer: 16 * 1024 * 1024,
         timeout: 900_000,
+        windowsHide: true,
       },
     );
     return {
-      output: `${result.stdout ?? ""}${result.stderr ?? ""}`,
+      output: `${result.stdout ?? ""}${result.stderr ?? ""}${String(result.error ?? "")}`,
       status: result.status,
     };
   } finally {
