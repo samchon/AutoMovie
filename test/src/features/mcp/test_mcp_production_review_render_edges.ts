@@ -502,6 +502,23 @@ export const test_mcp_production_review_render_edges =
           return bundle;
         },
       );
+      const staleAssetManifest: IAutoMovieRenderBundleManifest = {
+        ...mismatchedAssetBase,
+        targetFingerprint:
+          "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        renderSpec: {
+          ...mismatchedAssetBase.renderSpec,
+          target: "stale-other-asset",
+          crf: 18,
+        },
+      };
+      const staleAssetBundle =
+        productionRenderBundleRelativePath(staleAssetManifest);
+      project.commitRenderBundle(
+        staleAssetBundle,
+        new Map([["asset.png", mismatchedAssetBytes]]),
+        staleAssetManifest,
+      );
       const mismatchedAssetPaths = mismatchedAssetBundles.map((bundle) => ({
         target: path
           .relative(fixture.root, path.join(project.renderRoot(), bundle))
@@ -513,6 +530,12 @@ export const test_mcp_production_review_render_edges =
           )
           .replaceAll(path.sep, "/"),
       }));
+      const staleAssetManifestPath = path
+        .relative(
+          fixture.root,
+          path.join(project.renderRoot(), staleAssetBundle, "manifest.json"),
+        )
+        .replaceAll(path.sep, "/");
       const mismatchedAssetPrepared = review.prepare({
         target: { kind: "asset", id: "sentinel" },
       });
@@ -532,6 +555,21 @@ export const test_mcp_production_review_render_edges =
         {
           admittedFrames: mismatchedAssetPrepared.frames.length,
           diagnostics: mismatchedAssetDiagnostics,
+          missingViews: mismatchedAssetPrepared.diagnostics
+            .filter(
+              (diagnostic) => diagnostic.code === "review-evidence-missing",
+            )
+            .map((diagnostic) => diagnostic.target)
+            .sort(compareCodeUnits),
+          staleBundleAdmitted: mismatchedAssetPrepared.frames.some((frame) =>
+            frame.bundle.endsWith(staleAssetBundle),
+          ),
+          staleBundleReportedAsRenderSpecMismatch:
+            mismatchedAssetPrepared.diagnostics.some(
+              (diagnostic) =>
+                diagnostic.code === "render-frame-invalid" &&
+                diagnostic.path === staleAssetManifestPath,
+            ),
         },
         {
           admittedFrames: 0,
@@ -548,6 +586,16 @@ export const test_mcp_production_review_render_edges =
               message:
                 "This asset view does not match the current asset, production FPS, and exact production raster, so it cannot discharge review. Capture the required view again without width/height overrides before submitReview.",
             })),
+          missingViews: [
+            "asset:sentinel:rig-rom-extremes",
+            "asset:sentinel:top-outline",
+            "asset:sentinel:turntable-back",
+            "asset:sentinel:turntable-front",
+            "asset:sentinel:turntable-left",
+            "asset:sentinel:turntable-right",
+          ],
+          staleBundleAdmitted: false,
+          staleBundleReportedAsRenderSpecMismatch: false,
         },
       );
 
