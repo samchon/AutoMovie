@@ -231,7 +231,7 @@ export const test_workspace_public_contracts = (): void => {
   // primitives every other fold builds on) until the follow-up.
   TestValidator.equals(
     "the interface README's folder table matches the shipped folders",
-    [...interfaceReadme.matchAll(/^\| `([^`]+)\/` \|/gm)]
+    [...interfaceReadme.matchAll(/^\| `([^`]+)\/`[ \t]+\|/gm)]
       .map((row) => row[1]!)
       .sort(compareCodeUnits),
     fs
@@ -256,7 +256,7 @@ export const test_workspace_public_contracts = (): void => {
   );
   TestValidator.equals(
     "the engine README's module table matches the shipped folders",
-    [...engineReadme.matchAll(/^\| `([^`]+)\/` \|/gm)]
+    [...engineReadme.matchAll(/^\| `([^`]+)\/`[ \t]+\|/gm)]
       .map((row) => row[1]!)
       .sort(compareCodeUnits),
     directories("packages", "engine", "src"),
