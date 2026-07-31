@@ -609,11 +609,13 @@ const phonemeViseme = (
   phoneme: string,
 ): IAutoMovieProductionViseme["viseme"] => {
   const token = phoneme.toLocaleLowerCase("en-US");
-  if ("aɑɒæʌə".includes(token)) return "aa";
-  if ("iɪɨ".includes(token)) return "ih";
-  if ("uʊw".includes(token)) return "ou";
-  if ("eɛj".includes(token)) return "ee";
-  if ("oɔ".includes(token)) return "oh";
+  const matches = (characters: string): boolean =>
+    Array.from(token).some((character) => characters.includes(character));
+  if (matches("aɑɒæʌə")) return "aa";
+  if (matches("iɪɨ")) return "ih";
+  if (matches("uʊw")) return "ou";
+  if (matches("eɛj")) return "ee";
+  if (matches("oɔ")) return "oh";
   return "rest";
 };
 

@@ -337,6 +337,16 @@ export const test_film_production_sound = (): void => {
     ["aa", "ih", "ou", "ee", "oh", "rest"],
   );
   TestValidator.equals(
+    "case folding expansion preserves the matched vowel",
+    productionPhonemesToVisemes({
+      chunks: [{ phonemes: "İ", startSample: 0, endSample: 20 }],
+      sourceSamples: 20,
+      startFrame: 0,
+      endFrame: 1,
+    })[0]?.viseme,
+    "ih",
+  );
+  TestValidator.equals(
     "empty phonemes hold one neutral mouth target",
     productionPhonemesToVisemes({
       chunks: [{ phonemes: " ", startSample: 0, endSample: 20 }],
