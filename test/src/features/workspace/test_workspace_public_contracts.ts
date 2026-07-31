@@ -98,6 +98,9 @@ const unmentionedModules = (pkg: string, document: string): string[] =>
  * 10. The root, interface, and engine READMEs teach coding-agent-owned files,
  *     deterministic delivery, and the narrow MCP evidence boundary without the
  *     retired authoring application or diffusion-only product claims (#1443).
+ * 11. Root, interface, and MCP package manifests advertise that same current
+ *     product boundary instead of the retired structured-output authoring
+ *     engine (#1444).
  */
 export const test_workspace_public_contracts = (): void => {
   const rootReadme = readPackageFile("README.md");
@@ -110,9 +113,19 @@ export const test_workspace_public_contracts = (): void => {
     "src",
     "AutoMovieApplication.ts",
   );
+  type PackageMetadata = {
+    description: string;
+    keywords: string[];
+  };
+  const rootPackage = JSON.parse(
+    readPackageFile("package.json"),
+  ) as PackageMetadata;
+  const interfacePackage = JSON.parse(
+    readPackageFile("packages", "interface", "package.json"),
+  ) as PackageMetadata;
   const mcpPackage = JSON.parse(
     readPackageFile("packages", "mcp", "package.json"),
-  ) as {
+  ) as PackageMetadata & {
     bin: Record<string, string>;
     publishConfig: { bin: Record<string, string> };
   };
@@ -303,6 +316,62 @@ export const test_workspace_public_contracts = (): void => {
       .join("\n")
       .match(
         /An MCP server for deterministic motion-control video|MCP motion authoring surface|not a replacement for diffusion|MCP surface is the product boundary|structured-output 스키마가 곧|16개 MCP|3단 MCP 표면|stage\/block\/perform 데이터 계약|슬레이트 상태·트랜잭션|enact가 그 다리|npx automovie start <dir>/g,
+      ) ?? [],
+    [],
+  );
+  TestValidator.equals(
+    "package manifests advertise the current product and ownership boundaries",
+    {
+      root: rootPackage,
+      interface: interfacePackage,
+      mcp: {
+        description: mcpPackage.description,
+        keywords: mcpPackage.keywords,
+      },
+    },
+    {
+      root: {
+        description:
+          "Coding-agent-native deterministic filmmaking: tracked authoring, compilation, rendering, review, and delivery.",
+        keywords: [
+          "coding-agent",
+          "deterministic",
+          "filmmaking",
+          "animation",
+          "rendering",
+        ],
+      },
+      interface: {
+        description:
+          "AutoMovie type contracts for code-native authoring, deterministic film data, production evidence, review, and delivery.",
+        keywords: [
+          "animation",
+          "filmmaking",
+          "production",
+          "typescript",
+          "types",
+        ],
+      },
+      mcp: {
+        description:
+          "AutoMovie MCP boundary for session knowledge, host evidence, optional repaint receipts, and verdict-last review.",
+        keywords: [
+          "mcp",
+          "model-context-protocol",
+          "evidence",
+          "review",
+          "filmmaking",
+        ],
+      },
+    },
+  );
+  TestValidator.equals(
+    "package manifests reject retired structured-output motion-authoring claims",
+    [rootPackage, interfacePackage, mcpPackage]
+      .flatMap((manifest) => [manifest.description, ...manifest.keywords])
+      .join("\n")
+      .match(
+        /LLM structured-output|function-calling|structured-output|motion-control engine as Model Context Protocol tools/g,
       ) ?? [],
     [],
   );

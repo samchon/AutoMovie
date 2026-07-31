@@ -1,7 +1,7 @@
 {
   "name": "@automovie/interface",
   "version": "0.1.0",
-  "description": "automovie type definitions: skeleton, pose, motion, expression, material, scene AST",
+  "description": "AutoMovie type contracts for code-native authoring, deterministic film data, production evidence, review, and delivery.",
   "main": "src/index.ts",
   "exports": {
     ".": "./src/index.ts",
@@ -12,7 +12,7 @@
     "postbuild": "node ../../internals/config/assertBuild.js",
     "prepack": "pnpm run build"
   },
-  "keywords": [],
+  "keywords": ["animation", "filmmaking", "production", "typescript", "types"],
   "author": "Samchon",
   "license": "MIT",
   "repository": {
