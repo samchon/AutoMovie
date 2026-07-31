@@ -6,7 +6,7 @@ import {
 
 import config from "../automovie.config";
 
-const project = AutoMovieProductionProject.open(
+const project = AutoMovieProductionProject.openReadOnly(
   process.cwd(),
   config.productionId,
 );

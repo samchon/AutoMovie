@@ -11,7 +11,7 @@ npx automovie migrate legacy-film
 Lays down a starter with both ways to drive the engine:
 
 - ordinary TypeScript source for treatment, shot, motion, effects, and tests;
-- an **MCP** server config (`automovie.mcp.jsonc`) for deterministic compile,
+- a Claude-compatible **MCP** server config (`.mcp.json`) for deterministic compile,
   geometry queries, actual-frame evidence, and review gates; and
 - a local viewer and Playwright capture path that render compiler-owned output.
 
@@ -23,7 +23,7 @@ calls.
 
 Treatment and screenplay prose live under `docs/<production>/`. Their machine
 index lives at `.automovie/design/screenplay/index.json` before the first open
-and migrates into the selected production namespace. `pnpm lint` checks exact
+and migrates into the selected production namespace. `npm run lint` checks exact
 beat coverage, SCN headings and bodies, the permanent soft-lock ledger,
 catalog/continuity references, and realized scene coverage without replacing
 the prose with JSON.
@@ -31,30 +31,35 @@ the prose with JSON.
 ## Starter workflow
 
 ```bash
-pnpm install
-pnpm capture:install
-pnpm capture:doctor
-pnpm build
-pnpm test
-pnpm preview -- --shot opening --time 2 --pass beauty
-pnpm review:status
+npm install
+npm run capture:install
+npm run capture:doctor
+npm run build
+npm test
+npm run preview -- --shot opening --time 2 --pass beauty
+npm run review:status
 # Complete the current evidence-bound MCP review, then:
-pnpm lint
-pnpm verify
+npm run lint
+npm run verify
+npm run render -- all --tier proxy
+npm run viewer
 ```
 
-`pnpm compile` is the only command allowed to materialize `generated` output.
-`pnpm lint` is stricter: it reruns compilation without writing and fails until
+The viewer listens at `http://127.0.0.1:5173`. The initial review-bound
+commands may stop at their named gate until the starter evidence is reviewed.
+
+`npm run compile` is the only command allowed to materialize `generated` output.
+`npm run lint` is stricter: it reruns compilation without writing and fails until
 every current design, source, shot, and film review is complete. `preview`
 captures the project-owned viewer and records a frame tied to target-local
 generated/viewer inputs and the renderer identity; review cannot complete
 against an arbitrary or stale screenshot.
 
-`pnpm verify` is the read-only final gate. It reopens compiler-owned bytes,
+`npm run verify` is the read-only final gate. It reopens compiler-owned bytes,
 review state, render receipts, and delivery media and refuses damaged output or
-forged ownership claims. Claude Code receives a project hook that blocks direct
-writes to generated, render, capture, and production state while leaving
-authored design and review records writable.
+forged ownership claims. Claude Code receives a project hook that blocks direct,
+Bash, MCP, and symlink-aliased writes to generated, render, capture, and
+production state while leaving authored design and review records writable.
 
 The default capture runtime is the Chromium build pinned to the starter's
 Playwright package. `capture:install` downloads it explicitly into

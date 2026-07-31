@@ -9,7 +9,7 @@ Treatment and screenplay prose are under `docs/{{name}}`. Keep their exact
 beat and `SCN-*` identities aligned with
 `.automovie/design/screenplay/index.json`; once shots exist, retain locked
 numbers, use `OMITTED` tombstones for deletions, and alpha ids for insertions.
-`pnpm lint` checks those joins and requires compiled realization plus completed
+`npm run lint` checks those joins and requires compiled realization plus completed
 shot/film acceptance evidence for the same realized shot before an active scene
 leaves the coverage ledger. Catalog entries bind explicitly to shared model,
 formation, and world-landmark ids; continuity claims name the exact passing
@@ -36,14 +36,23 @@ executable path, and executable digest; the doctor launches that exact binary,
 requires WebGL, captures a canvas, and decodes the PNG.
 
 ```bash
-pnpm install
-pnpm capture:install
-pnpm capture:doctor
-pnpm build
-pnpm test
-pnpm preview -- --shot opening --time 2 --pass beauty
-pnpm review:status
+npm install
+npm run capture:install
+npm run capture:doctor
+npm run build
+npm test
+npm run lint
+npm run verify
+npm run preview -- --shot opening --time 2 --pass beauty
+npm run review:status
+npm run render -- all --tier proxy
+npm run viewer
 ```
+
+The viewer is available at `http://127.0.0.1:5173`. The starter intentionally
+ships with an incomplete review queue, so the first lint, verify, or finalization
+attempt may stop at a named review gate after proving the rest of the local
+pipeline. Complete those reviews through MCP, then repeat the same commands.
 
 Playwright's standard `HTTPS_PROXY`, `PLAYWRIGHT_DOWNLOAD_HOST`, and
 `PLAYWRIGHT_CHROMIUM_DOWNLOAD_HOST` variables support proxies and offline
@@ -68,7 +77,8 @@ must be recaptured.
 The sample review queue is deliberately incomplete. Open the PNG printed by
 `preview`, read `PRODUCTION_REVIEW` through MCP, and review current evidence.
 
-Register `automovie.mcp.jsonc` with your coding agent. Its first call is
+Claude Code loads the checked-in `.mcp.json` after one project approval. Other
+MCP clients can import the same project-bound command. Its first call is
 `getGuideDocument({name:"AUTOMOVIE_OVERALL"})`. `scripts/mcp.ts` fixes this
 repository root and production id at host startup; tool payloads never switch
 workspaces. Full render, chunk resume, encode, and final publication are project
@@ -123,7 +133,7 @@ own exact path. Interrupted pre-publication candidates are quarantined on the
 next run. Receipt reuse rejects linked state ancestors and files, and final
 encoding consumes the exact PNG bytes authenticated by that physical-path read.
 
-`pnpm render` is the convenience sequence: it captures current review evidence,
+`npm run render` is the convenience sequence: it captures current review evidence,
 reuses or renders current chunks, then attempts final publication. Finalize
 still fails closed until every current review is complete. Its terminal commit
 also fingerprints the revision, declared content, live evidence-bound review
@@ -132,17 +142,18 @@ design graph, and state incarnation with canonical structured fields. The
 staged final compiler gate recomputes that review queue from current render
 evidence; any change during the gate rolls the publication back.
 
-Run `pnpm verify` (or `npx automovie verify`) after publication to reopen the
+Run `npm run verify` (or `npx automovie verify`) after publication to reopen the
 generated inventory, evidence-bound reviews, render receipts, and actual
 delivery bytes without modifying project state. It fails on damaged generated
 output, stale or forged receipts, and missing required deliverables.
 
-Claude Code loads `.claude/settings.json` and refuses direct `Edit`, `Write`, or
-`NotebookEdit` calls beneath compiler-owned generated output, render output,
-capture receipts, and production state. The refusal names the owning project
-command. The hook deliberately does nothing when `.automovie/manifest.json` is
-absent, so copying it outside an AutoMovie project does not claim unrelated
-files.
+Claude Code loads `.claude/settings.json` and checks every `PreToolUse`,
+including direct edits, Bash, and MCP file tools, against compiler-owned
+generated output, render output, capture receipts, and production state.
+Nearest existing ancestors are resolved physically, so a symlink or junction
+cannot disguise an owned target. The refusal names the owning project command.
+The hook deliberately does nothing when `.automovie/manifest.json` is absent,
+so copying it outside an AutoMovie project does not claim unrelated files.
 
 The production viewer accepts `?film=1` for GPU cut/dissolve playback of the
 compiler-owned EDL, `?shot=<id>` for one shot, and
@@ -162,8 +173,8 @@ seek, and capture counts so throughput improvements remain measurable.
 - `generated`: compiler-owned; never edit
 - `renders`: content-addressed outputs; never pass an arbitrary screenshot as review evidence
 
-`pnpm lint` type-checks source and runs the production compiler through the
+`npm run lint` type-checks source and runs the production compiler through the
 review gate in read-only mode. It deliberately fails while any design, source,
-shot, or film review is missing, stale, revising, or incomplete. `pnpm compile`
+shot, or film review is missing, stale, revising, or incomplete. `npm run compile`
 is the narrower source gate and the only command that may update generated
 output.

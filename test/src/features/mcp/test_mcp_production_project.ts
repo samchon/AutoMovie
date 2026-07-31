@@ -23,6 +23,7 @@ import { PNG } from "pngjs";
 
 import {
   acceptanceScenarios,
+  fixtureWorldDesign,
   formationDesign,
   modelRecipe,
   productionDesign,
@@ -44,6 +45,33 @@ const throws = (closure: () => unknown, fragment?: string): boolean => {
   }
 };
 
+const snapshotTree = (root: string): string[] => {
+  const output: string[] = [];
+  const visit = (directory: string): void => {
+    for (const entry of fs
+      .readdirSync(directory, { withFileTypes: true })
+      .sort((left, right) =>
+        left.name < right.name ? -1 : left.name > right.name ? 1 : 0,
+      )) {
+      const absolute = path.join(directory, entry.name);
+      const relative = path.relative(root, absolute).split(path.sep).join("/");
+      if (entry.isDirectory()) {
+        output.push(`directory:${relative}`);
+        visit(absolute);
+      } else
+        output.push(
+          `${entry.isSymbolicLink() ? "link" : "file"}:${relative}:${
+            entry.isSymbolicLink()
+              ? fs.readlinkSync(absolute)
+              : digestAutoMovieBytes(fs.readFileSync(absolute))
+          }`,
+        );
+    }
+  };
+  visit(root);
+  return output;
+};
+
 /** The resident production store enforces path, revision and ownership rules. */
 export const test_mcp_production_project = (): void => {
   const fixture = productionFixture();
@@ -58,6 +86,25 @@ export const test_mcp_production_project = (): void => {
           path.join(fixture.root, "generated", "fixture-film") &&
         project.renderRoot() ===
           path.join(fixture.root, "renders", "fixture-film"),
+    );
+    const beforeReadOnly = snapshotTree(fixture.root);
+    const readOnly = AutoMovieProductionProject.openReadOnly(
+      fixture.root,
+      project.productionId,
+    );
+    const readOnlyLint = new AutoMovieProductionCompiler(readOnly).lint({
+      scope: "source",
+    });
+    TestValidator.predicate(
+      "read-only open and lint never create, migrate, repair, or mutate state",
+      typeof readOnlyLint.compiler.inputFingerprint === "string" &&
+        readOnly.productionId === project.productionId &&
+        throws(
+          () => readOnly.setWorldDesign(fixtureWorldDesign()),
+          "opened read-only",
+        ) &&
+        JSON.stringify(snapshotTree(fixture.root)) ===
+          JSON.stringify(beforeReadOnly),
     );
     const manifestCopy = project.manifest();
     manifestCopy.generatedRoot = "caller-mutated";

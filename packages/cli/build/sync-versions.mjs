@@ -63,6 +63,7 @@ const catalogVersion = (catalog, dep) => {
 };
 
 const versions = {
+  cli: packageVersion("packages/cli"),
   engine: packageVersion("packages/engine"),
   interface: packageVersion("packages/interface"),
   lint: packageVersion("packages/lint"),

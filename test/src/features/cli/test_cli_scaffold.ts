@@ -97,11 +97,11 @@ export const test_cli_scaffold = (): void => {
       ".automovie/reviews/README.md",
       ".claude/hooks/guard-automovie-owned.mjs",
       ".claude/settings.json",
+      ".mcp.json",
       "AGENTS.md",
       "CLAUDE.md",
       "README.md",
       "automovie.config.ts",
-      "automovie.mcp.jsonc",
       "docs/art-direction.md",
       "docs/historical-notes.md",
       "docs/demo-film/screenplay.md",
@@ -154,9 +154,10 @@ export const test_cli_scaffold = (): void => {
   );
   TestValidator.predicate(
     "the production package versions are catalog-synced",
-    pkg.includes(
-      `"@automovie/engine": "${AUTOMOVIE_TEMPLATE_VERSIONS.engine}"`,
-    ) &&
+    pkg.includes(`"@automovie/cli": "${AUTOMOVIE_TEMPLATE_VERSIONS.cli}"`) &&
+      pkg.includes(
+        `"@automovie/engine": "${AUTOMOVIE_TEMPLATE_VERSIONS.engine}"`,
+      ) &&
       pkg.includes(
         `"@automovie/lint": "${AUTOMOVIE_TEMPLATE_VERSIONS.lint}"`,
       ) &&
@@ -198,9 +199,12 @@ export const test_cli_scaffold = (): void => {
   );
   TestValidator.predicate(
     "the local MCP host owns actual frame capture",
-    files["automovie.mcp.jsonc"]!.includes("scripts/mcp.ts") &&
+    files[".mcp.json"]!.includes("scripts/mcp.ts") &&
+      files[".mcp.json"]!.includes("${CLAUDE_PROJECT_DIR:-.}") &&
       files["scripts/mcp.ts"]!.includes("createAutoMovieMcpServer") &&
       files["scripts/mcp.ts"]!.includes("captureProductionFrame") &&
+      files["scripts/mcp.ts"]!.includes("fileURLToPath(import.meta.url)") &&
+      files["scripts/mcp.ts"]!.includes("process.cwd()") === false &&
       files["scripts/preview.ts"]!.includes("captureFrame") &&
       files["scripts/preview.ts"]!.includes("previewFrame") === false &&
       files["scripts/capture.ts"]!.includes('locator("#view").screenshot') &&
@@ -281,7 +285,7 @@ export const test_cli_scaffold = (): void => {
         "satisfies AutoMovieCaptureBrowserConfig",
       ) &&
       files[".gitignore"]!.includes(".automovie/capture/") &&
-      files["README.md"]!.includes("pnpm capture:install") &&
+      files["README.md"]!.includes("npm run capture:install") &&
       files["README.md"]!.includes("PLAYWRIGHT_BROWSERS_PATH=0") &&
       files["scripts/render.ts"]!.includes(
         "await closeProductionFrameCapture()",
@@ -320,14 +324,17 @@ export const test_cli_scaffold = (): void => {
       files[".gitignore"]!.includes(".automovie/*") &&
       files[".gitignore"]!.includes("!.automovie/design/**") &&
       files[".gitignore"]!.includes("!.automovie/reviews/**") &&
-      files["package.json"]!.includes('"build": "pnpm compile"') &&
+      files["package.json"]!.includes('"build": "npm run compile"') &&
       files["package.json"]!.includes('"verify": "tsx scripts/verify.ts"') &&
       files["scripts/verify.ts"]!.includes('.lint({ scope: "final" })') &&
+      files["scripts/verify.ts"]!.includes("openReadOnly") &&
+      files[".claude/settings.json"]!.includes('"matcher": "*"') &&
+      files[".claude/settings.json"]!.includes('"command": "node"') &&
       files[".claude/settings.json"]!.includes(
-        '"matcher": "Edit|Write|NotebookEdit"',
+        '"${CLAUDE_PROJECT_DIR}/.claude/hooks/guard-automovie-owned.mjs"',
       ) &&
       files[".claude/hooks/guard-automovie-owned.mjs"]!.includes(
-        "pnpm compile",
+        "npm run compile",
       ) &&
       files[".claude/hooks/guard-automovie-owned.mjs"]!.includes(
         "process.exit(0)",
@@ -467,11 +474,11 @@ export const test_cli_scaffold = (): void => {
         ".claude/hooks/guard-automovie-owned.mjs",
         ".claude/settings.json",
         ".gitignore",
+        ".mcp.json",
         "AGENTS.md",
         "CLAUDE.md",
         "README.md",
         "automovie.config.ts",
-        "automovie.mcp.jsonc",
         "docs/art-direction.md",
         "docs/demo-film/screenplay.md",
         "docs/demo-film/treatment.md",

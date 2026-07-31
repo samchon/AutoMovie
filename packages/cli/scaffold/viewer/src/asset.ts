@@ -25,7 +25,7 @@ const response = await fetch(
 );
 if (response.ok === false)
   throw new Error(
-    `Compiled model "${assetId}" is unavailable (${response.status}). Run pnpm compile.`,
+    `Compiled model "${assetId}" is unavailable (${response.status}). Run npm run compile.`,
   );
 const model = (await response.json()) as IAutoMovieModel;
 const built = buildModel(model);

@@ -187,8 +187,8 @@ const runScaffoldLint = (props: {
   try {
     props.mutate?.(fixture.directory);
     const result: SpawnSyncReturns<string> = spawnSync(
-      process.platform === "win32" ? "pnpm.cmd" : "pnpm",
-      ["lint"],
+      process.platform === "win32" ? "npm.cmd" : "npm",
+      ["run", "lint"],
       {
         cwd: fixture.directory,
         encoding: "utf8",
@@ -751,8 +751,8 @@ const assertFailedWith = (
  *
  * Scenarios:
  *
- * 1. The rendered CLI scaffold runs its ordinary `pnpm lint` command both without
- *    resident design and with one exact sentinel.
+ * 1. The rendered CLI scaffold runs its ordinary `npm run lint` command both
+ *    without resident design and with one exact sentinel.
  * 2. A direct toolchain warm-up distinguishes zero diagnostics from a linker or
  *    compiler failure.
  * 3. Exact sentinel boundaries fire while `$` and Unicode TypeScript identifier
@@ -771,7 +771,7 @@ export function test_lint_plugin_walking_skeleton(): void {
   const scaffold = runScaffoldLint({ name: "clean" });
   assertSucceeded(
     scaffold,
-    "The shipped scaffold's ordinary pnpm lint command must stay green before resident records exist.",
+    "The shipped scaffold's ordinary npm run lint command must stay green before resident records exist.",
   );
 
   const scaffoldSentinel = runScaffoldLint({
@@ -786,7 +786,7 @@ export function test_lint_plugin_walking_skeleton(): void {
   assertFailedWith(
     scaffoldSentinel,
     "Template sentinel 'AUTOMOVIE_IMPLEMENT_ME' remains in compiled source.",
-    "The shipped scaffold's ordinary pnpm lint command must invoke the registered walking-skeleton rule.",
+    "The shipped scaffold's ordinary npm run lint command must invoke the registered walking-skeleton rule.",
   );
 
   const empty = runFixture({

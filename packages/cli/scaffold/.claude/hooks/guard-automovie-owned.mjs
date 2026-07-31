@@ -20,6 +20,37 @@ try {
   );
 }
 
+const canonical = (value) =>
+  process.platform === "win32" ? value.toLowerCase() : value;
+
+const physicalPath = (value) => {
+  try {
+    let current = path.resolve(value);
+    const missing = [];
+    while (fs.existsSync(current) === false) {
+      const parent = path.dirname(current);
+      if (parent === current) return path.resolve(value);
+      missing.unshift(path.basename(current));
+      current = parent;
+    }
+    return path.join(fs.realpathSync(current), ...missing);
+  } catch (error) {
+    block(
+      `cannot resolve the physical target ${JSON.stringify(value)}: ${
+        error instanceof Error ? error.message : String(error)
+      }.`,
+    );
+  }
+};
+
+const contains = (parent, child) => {
+  const parentKey = canonical(parent);
+  const childKey = canonical(child);
+  return (
+    childKey === parentKey || childKey.startsWith(`${parentKey}${path.sep}`)
+  );
+};
+
 const ownedRoot = (value, field, owner) => {
   if (
     typeof value !== "string" ||
@@ -35,21 +66,21 @@ const ownedRoot = (value, field, owner) => {
     path.isAbsolute(relative)
   )
     block(`${field} resolves outside the project.`);
-  return { absolute, owner };
+  return { absolute, physical: physicalPath(absolute), owner };
 };
 
 const owned = [
-  ownedRoot(manifest.generatedRoot, "generatedRoot", "pnpm compile"),
-  ownedRoot(manifest.renderRoot, "renderRoot", "pnpm render"),
+  ownedRoot(manifest.generatedRoot, "generatedRoot", "npm run compile"),
+  ownedRoot(manifest.renderRoot, "renderRoot", "npm run render"),
   ownedRoot(
     ".automovie/productions",
     "production state root",
-    "pnpm compile or pnpm render",
+    "npm run compile or npm run render",
   ),
   ownedRoot(
     ".automovie/capture",
     "capture state root",
-    "pnpm capture:install or pnpm preview",
+    "npm run capture:install or npm run preview",
   ),
 ];
 
@@ -63,23 +94,76 @@ try {
   block("the hook request is not valid JSON.");
 }
 
-const requestedPath =
-  payload?.tool_input?.file_path ?? payload?.tool_input?.notebook_path;
-if (typeof requestedPath !== "string" || requestedPath.trim().length === 0)
-  process.exit(0);
+const matchingOwner = (requestedPath) => {
+  if (typeof requestedPath !== "string" || requestedPath.trim().length === 0)
+    return undefined;
+  const absolute = path.isAbsolute(requestedPath)
+    ? path.resolve(requestedPath)
+    : path.resolve(root, requestedPath);
+  const physical = physicalPath(absolute);
+  return owned.find(
+    (entry) =>
+      contains(entry.absolute, absolute) || contains(entry.physical, physical),
+  );
+};
 
-const target = path.resolve(root, requestedPath);
-const canonical = (value) =>
-  process.platform === "win32" ? value.toLowerCase() : value;
-const targetKey = canonical(target);
+const blockPath = (requestedPath) => {
+  const entry = matchingOwner(requestedPath);
+  if (entry === undefined) return;
+  const absolute = path.isAbsolute(requestedPath)
+    ? path.resolve(requestedPath)
+    : path.resolve(root, requestedPath);
+  block(
+    `${path.relative(root, absolute)} is AutoMovie-owned; use ${entry.owner} instead of editing it.`,
+  );
+};
 
-for (const entry of owned) {
-  const rootKey = canonical(entry.absolute);
+const pathKeys =
+  /(?:^|_)(?:path|file|filename|directory|destination|target|root)$/iu;
+const inspectPaths = (value, key = "") => {
+  if (typeof value === "string") {
+    if (pathKeys.test(key)) blockPath(value);
+    return;
+  }
+  if (Array.isArray(value)) {
+    for (const entry of value) inspectPaths(entry, key);
+    return;
+  }
+  if (typeof value !== "object" || value === null) return;
+  for (const [childKey, child] of Object.entries(value))
+    inspectPaths(child, childKey);
+};
+
+const inspectBash = (command) => {
   if (
-    targetKey === rootKey ||
-    targetKey.startsWith(`${rootKey}${path.sep}`)
+    typeof command !== "string" ||
+    /(?:^|[\s;&|])(?:rm|del|erase|rmdir|mkdir|mv|move|cp|copy|touch|tee|sed|perl|python(?:3)?|node|powershell|pwsh|cmd|set-content|add-content|out-file|new-item|remove-item|move-item|copy-item)\b|(?:^|[^<])>{1,2}/iu.test(
+      command,
+    ) === false
   )
-    block(
-      `${path.relative(root, target)} is AutoMovie-owned; use ${entry.owner} instead of editing it.`,
-    );
-}
+    return;
+  const candidates = [
+    ...[...command.matchAll(/["']([^"']+)["']/gu)].map((match) => match[1]),
+    ...command.split(/[\s;&|<>]+/u),
+  ];
+  for (const candidate of candidates) {
+    const normalized = candidate
+      .replace(/^[([{,]+|[)\]},]+$/gu, "")
+      .replace(/^--?[^=]+=/u, "");
+    if (normalized.length > 0 && normalized.startsWith("-") === false)
+      blockPath(normalized);
+  }
+  const slashCommand = command.replaceAll("\\", "/");
+  for (const entry of owned) {
+    const relative = path.relative(root, entry.absolute).replaceAll("\\", "/");
+    if (
+      slashCommand.includes(`${relative}/`) ||
+      slashCommand.includes(`'${relative}'`) ||
+      slashCommand.includes(`"${relative}"`)
+    )
+      blockPath(relative);
+  }
+};
+
+if (payload?.tool_name === "Bash") inspectBash(payload?.tool_input?.command);
+else inspectPaths(payload?.tool_input);

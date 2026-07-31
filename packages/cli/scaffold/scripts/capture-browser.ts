@@ -159,7 +159,7 @@ const playwrightMetadata = (): IPlaywrightMetadata => {
     typeof browser.browserVersion !== "string"
   )
     throw new Error(
-      "Installed Playwright metadata is incomplete. Reinstall dependencies, then run pnpm capture:install.",
+      "Installed Playwright metadata is incomplete. Reinstall dependencies, then run npm run capture:install.",
     );
   return {
     packageVersion: packageJson.version,
@@ -208,7 +208,7 @@ const parseReceipt = (
       receipt.installSource !== "PLAYWRIGHT_CHROMIUM_DOWNLOAD_HOST")
   )
     throw new Error(
-      `Capture install receipt "${file}" is malformed. Run pnpm capture:install to replace it.`,
+      `Capture install receipt "${file}" is malformed. Run npm run capture:install to replace it.`,
     );
   return receipt as IAutoMovieCaptureInstallReceipt;
 };
@@ -217,7 +217,7 @@ const readReceipt = (projectRoot: string): IAutoMovieCaptureInstallReceipt => {
   const file = receiptPath(projectRoot);
   if (existsSync(file) === false)
     throw new Error(
-      `Package-owned Chromium is not installed for this project. Run pnpm capture:install, then pnpm capture:doctor.`,
+      `Package-owned Chromium is not installed for this project. Run npm run capture:install, then npm run capture:doctor.`,
     );
   try {
     return parseReceipt(
@@ -227,7 +227,7 @@ const readReceipt = (projectRoot: string): IAutoMovieCaptureInstallReceipt => {
   } catch (error) {
     if (error instanceof SyntaxError)
       throw new Error(
-        `Capture install receipt "${file}" is not valid JSON. Run pnpm capture:install to replace it.`,
+        `Capture install receipt "${file}" is not valid JSON. Run npm run capture:install to replace it.`,
       );
     throw error;
   }
@@ -270,7 +270,7 @@ export const installPackageOwnedChromium = async (
     throw new Error(
       `Playwright Chromium installation failed with status ${
         installed.status ?? "signal"
-      }. Check HTTPS_PROXY, PLAYWRIGHT_DOWNLOAD_HOST or PLAYWRIGHT_CHROMIUM_DOWNLOAD_HOST for your network or offline mirror, then retry pnpm capture:install.`,
+      }. Check HTTPS_PROXY, PLAYWRIGHT_DOWNLOAD_HOST or PLAYWRIGHT_CHROMIUM_DOWNLOAD_HOST for your network or offline mirror, then retry npm run capture:install.`,
     );
   const { chromium } = await loadPlaywright(projectRoot);
   const executablePath = chromium.executablePath();
@@ -279,7 +279,7 @@ export const installPackageOwnedChromium = async (
     statSync(executablePath).isFile() === false
   )
     throw new Error(
-      `Playwright reported no physical Chromium executable at "${executablePath}". Retry pnpm capture:install.`,
+      `Playwright reported no physical Chromium executable at "${executablePath}". Retry npm run capture:install.`,
     );
   const receipt: IAutoMovieCaptureInstallReceipt = {
     version: 1,
@@ -318,7 +318,7 @@ const packageOwnedProvenance = async (
     path.resolve(receipt.browser.executablePath) !== executablePath
   )
     throw new Error(
-      "The capture install receipt does not match the current Playwright package and browser revision. Run pnpm capture:install, then pnpm capture:doctor.",
+      "The capture install receipt does not match the current Playwright package and browser revision. Run npm run capture:install, then npm run capture:doctor.",
     );
   if (
     existsSync(executablePath) === false ||
@@ -326,7 +326,7 @@ const packageOwnedProvenance = async (
     (await digestFile(executablePath)) !== receipt.browser.executableDigest
   )
     throw new Error(
-      "The package-owned Chromium executable is missing or differs from its install receipt. Run pnpm capture:install, then pnpm capture:doctor.",
+      "The package-owned Chromium executable is missing or differs from its install receipt. Run npm run capture:install, then npm run capture:doctor.",
     );
   return receipt;
 };
@@ -382,7 +382,7 @@ export const launchCaptureBrowser = async (
     throw new Error(
       `Capture browser launch failed: ${
         error instanceof Error ? error.message : String(error)
-      } Run pnpm capture:install and pnpm capture:doctor. If Linux reports missing shared libraries, run pnpm exec playwright install-deps chromium; otherwise correct the explicit system-channel/configured-executable setting.`,
+      } Run npm run capture:install and npm run capture:doctor. If Linux reports missing shared libraries, run npx playwright install-deps chromium; otherwise correct the explicit system-channel/configured-executable setting.`,
     );
   }
   const browserVersion = browser.version();
@@ -392,7 +392,7 @@ export const launchCaptureBrowser = async (
   ) {
     await browser.close();
     throw new Error(
-      `Package-owned Chromium reported version "${browserVersion}", expected "${metadata.browser.browserVersion}". Run pnpm capture:install, then pnpm capture:doctor.`,
+      `Package-owned Chromium reported version "${browserVersion}", expected "${metadata.browser.browserVersion}". Run npm run capture:install, then npm run capture:doctor.`,
     );
   }
   return {
@@ -453,7 +453,7 @@ export const inspectCaptureGraphics = async (
     graphics.renderer.trim().length === 0
   )
     throw new Error(
-      "Capture WebGL is unavailable or did not report vendor and renderer. Run pnpm capture:doctor and inspect the backend/driver diagnostic.",
+      "Capture WebGL is unavailable or did not report vendor and renderer. Run npm run capture:doctor and inspect the backend/driver diagnostic.",
     );
   return {
     requestedBackend: REQUESTED_BACKEND,

@@ -118,6 +118,8 @@ if (process.argv[2]?.endsWith("verify.ts"))
     ) as string[];
     const planned = captureCli(["render", "plan"]);
     const status = captureCli(["render", "status"]);
+    const all = captureCli(["render", "all", "--tier", "proxy"]);
+    const gc = captureCli(["render", "gc", "--apply"]);
     const propagated = captureCli(["render", "verify"]);
     const signaled = captureCli(["render", "finalize"]);
     const verified = captureCli(["verify"]);
@@ -131,6 +133,8 @@ if (process.argv[2]?.endsWith("verify.ts"))
         call.slice(1).join(",") === "run,--deliverable,feature,--workers,3" &&
         planned.status === 0 &&
         status.status === 0 &&
+        all.status === 0 &&
+        gc.status === 0 &&
         propagated.status === 7 &&
         signaled.status === 1 &&
         verified.status === 0 &&

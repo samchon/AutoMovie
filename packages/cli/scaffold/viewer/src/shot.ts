@@ -15,7 +15,7 @@ const response = await fetch(
 );
 if (response.ok === false)
   throw new Error(
-    `Compiled shot "${shotId}" is unavailable (${response.status}). Run pnpm compile.`,
+    `Compiled shot "${shotId}" is unavailable (${response.status}). Run npm run compile.`,
   );
 const runtime = createCompiledShotRuntime(
   (await response.json()) as IAutoMovieCompiledShotSource,

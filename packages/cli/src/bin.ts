@@ -14,7 +14,7 @@ Usage:
   npx automovie start <directory> [--force]
   npx automovie verify
   npx automovie migrate <directory> [--dry-run | --rollback]
-  npx automovie render <plan|run|status|verify|finalize> [options]
+  npx automovie render <all|plan|run|status|verify|finalize|gc> [options]
 
 Commands:
   start <directory>   Create <directory> and lay down the starter template:
@@ -112,7 +112,8 @@ export const run = (argv: readonly string[]): number => {
         written
           .map((file) => `  ${path.relative(targetDir, file) || "."}`)
           .join("\n") +
-        `\n\nNext:\n  cd ${dir}\n  pnpm install\n  pnpm run compile\n  pnpm run preview -- 2 opening\n\n` +
+        `\n\nNext:\n  cd ${dir}\n  npm install\n  npm run capture:install\n  npm run capture:doctor\n  npm run build\n  npm run lint\n  npm run render -- all --tier proxy\n  npm run viewer\n\n` +
+        `Open http://127.0.0.1:5173 after the viewer starts.\n\n` +
         `README.md explains source ownership, MCP review gates, and the local viewer.\n`,
     );
     return 0;
@@ -131,10 +132,12 @@ const runProjectRender = (args: readonly string[]): number => {
     action !== "run" &&
     action !== "status" &&
     action !== "verify" &&
-    action !== "finalize"
+    action !== "finalize" &&
+    action !== "all" &&
+    action !== "gc"
   ) {
     process.stderr.write(
-      `render needs one of plan, run, status, verify, or finalize\n\n${USAGE}`,
+      `render needs one of all, plan, run, status, verify, finalize, or gc\n\n${USAGE}`,
     );
     return 1;
   }
@@ -150,7 +153,7 @@ const runProjectScript = (
   const tsx = path.join(root, "node_modules", "tsx", "dist", "cli.mjs");
   if (fs.existsSync(script) === false || fs.existsSync(tsx) === false) {
     process.stderr.write(
-      `The current project has no installed scripts/${scriptName} + tsx runtime. Run this command from a scaffolded project after pnpm install.\n`,
+      `The current project has no installed scripts/${scriptName} + tsx runtime. Run this command from a scaffolded project after npm install.\n`,
     );
     return 1;
   }

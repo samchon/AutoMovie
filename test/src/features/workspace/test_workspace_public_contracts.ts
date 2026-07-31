@@ -163,7 +163,7 @@ export const test_workspace_public_contracts = (): void => {
 
   TestValidator.equals(
     "the starter command names the published CLI binary",
-    rootReadme.includes("npx automovie start <dir>"),
+    rootReadme.includes("npx create-automovie <dir>"),
     true,
   );
   TestValidator.equals(
@@ -223,7 +223,7 @@ export const test_workspace_public_contracts = (): void => {
   // `perform/`, and the render and viewer tables missed five modules each.
   TestValidator.equals(
     "the root package table names every workspace package",
-    [...rootReadme.matchAll(/^\| \[`@automovie\/([a-z]+)`\]/gm)]
+    [...rootReadme.matchAll(/^\| \[`(?:(?:@automovie\/)?([a-z][a-z-]+))`\]/gm)]
       .map((row) => row[1]!)
       .sort(compareCodeUnits),
     directories("packages"),

@@ -3,11 +3,12 @@
   "private": true,
   "type": "module",
   "version": "0.1.0",
+  "license": "MIT",
   "description": "An AutoMovie coding-agent production repository.",
   "scripts": {
     "capture:doctor": "tsx scripts/capture-doctor.ts",
     "capture:install": "tsx scripts/capture-install.ts",
-    "build": "pnpm compile",
+    "build": "npm run compile",
     "compile": "tsx scripts/compile.ts",
     "lint": "ttsc --noEmit -p tsconfig.json && tsx scripts/lint.ts",
     "preview": "tsx scripts/preview.ts",
@@ -19,6 +20,7 @@
     "format": "ttsc format -p tsconfig.json"
   },
   "dependencies": {
+    "@automovie/cli": "{{version:cli}}",
     "@automovie/engine": "{{version:engine}}",
     "@automovie/interface": "{{version:interface}}",
     "@automovie/mcp": "{{version:mcp}}",

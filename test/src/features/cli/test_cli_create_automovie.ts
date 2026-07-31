@@ -27,13 +27,18 @@ export const test_cli_create_automovie = (): void => {
     TestValidator.predicate(
       "one creator call writes every project workflow without hidden installs",
       status === 0 &&
-        pkg.scripts?.build === "pnpm compile" &&
+        pkg.scripts?.build === "npm run compile" &&
         typeof pkg.scripts?.lint === "string" &&
         pkg.scripts?.verify === "tsx scripts/verify.ts" &&
         typeof pkg.scripts?.render === "string" &&
         typeof pkg.scripts?.viewer === "string" &&
         typeof pkg.scripts?.["capture:doctor"] === "string" &&
+        fs.existsSync(path.join(target, ".mcp.json")) &&
+        fs.existsSync(path.join(target, "automovie.mcp.jsonc")) === false &&
+        readme.includes("npm run lint") &&
+        readme.includes("npm run verify") &&
         readme.includes("render all --tier proxy") &&
+        readme.includes("http://127.0.0.1:5173") &&
         readme.includes("PLAYWRIGHT_DOWNLOAD_HOST") &&
         fs.existsSync(path.join(target, "node_modules")) === false &&
         fs.existsSync(path.join(target, ".automovie", "capture")) === false,

@@ -7,7 +7,7 @@ Read `AUTOMOVIE_OVERALL`, then the exact guide required by a production tool.
 Use MCP for bounded design, deterministic compile facts, geometry, actual PNG
 preview, and evidence-bound review.
 
-Run `pnpm capture:install` and `pnpm capture:doctor` after dependency changes or
+Run `npm run capture:install` and `npm run capture:doctor` after dependency changes or
 before the first preview/render. Do not silently fall back to a machine browser;
 system Chrome or Edge must be selected explicitly in `automovie.config.ts`.
 

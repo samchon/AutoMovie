@@ -22,7 +22,7 @@ const { canvas, status } = viewerDocument();
 const timelineResponse = await fetch("/__automovie/film.json");
 if (timelineResponse.ok === false)
   throw new Error(
-    `Compiled film is unavailable (${timelineResponse.status}). Run pnpm compile.`,
+    `Compiled film is unavailable (${timelineResponse.status}). Run npm run compile.`,
   );
 const timeline = (await timelineResponse.json()) as IAutoMovieFilmTimeline;
 const runtimes = new Map<string, IAutoMovieCompiledShotRuntime>();

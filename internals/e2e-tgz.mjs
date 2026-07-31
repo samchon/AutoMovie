@@ -6,7 +6,7 @@
 //
 // Run: pnpm run e2e:tgz
 //
-// Deliberately OUTSIDE the c8 coverage gate: it is slow (seven prepack
+// Deliberately OUTSIDE the c8 coverage gate: it is slow (eight prepack
 // builds plus an npm install) and needs registry network for third-party
 // dependencies such as @modelcontextprotocol/sdk.
 import { spawnSync } from "node:child_process";
@@ -38,7 +38,12 @@ const PACKAGES = [
   "mcp",
   "lint",
   "cli",
+  "create-automovie",
 ];
+const publishedPackageName = (name) =>
+  name === "create-automovie" ? name : `@automovie/${name}`;
+const tarballPrefix = (name) =>
+  name === "create-automovie" ? `${name}-` : `automovie-${name}-`;
 let tracePath = null;
 
 const fail = (message) => {
@@ -830,7 +835,7 @@ try {
   // 1. Pack the chain. prepack runs each package's full build.
   for (const name of PACKAGES)
     run(
-      `pack @automovie/${name}`,
+      `pack ${publishedPackageName(name)}`,
       `pnpm pack --pack-destination "${tarballDir}"`,
       resolve(REPO_ROOT, "packages", name),
     );
@@ -870,6 +875,17 @@ try {
   );
   if (!existsSync(binTarget))
     fail(`packed artifact is missing the bin target: ${binTarget}`);
+  const creatorBinTarget = join(
+    projectDir,
+    "node_modules",
+    "create-automovie",
+    "lib",
+    "bin.js",
+  );
+  if (!existsSync(creatorBinTarget))
+    fail(
+      `packed artifact is missing the creator bin target: ${creatorBinTarget}`,
+    );
   console.log("✓ bin-target: lib/bin.js present in the installed package");
   const granularBinTarget = join(
     projectDir,
@@ -998,13 +1014,13 @@ try {
     existsSync(join(legacyDir, ".automovie"))
   )
     fail("packaged legacy rollback did not restore the legacy-only tree");
-  // Keep the strict-layout probe outside the npm-hoisted fixture project.
+  // Keep the packaged-starter probe outside the fixture project.
   // Otherwise Node can climb to projectDir/node_modules and hide a missing
-  // production dependency from the pnpm-installed scaffold.
+  // production dependency from the separately installed scaffold.
   const starterDir = join(stage, "production-starter");
   run(
     "scaffold packaged production starter",
-    `node "${cliBin}" start "${starterDir}"`,
+    `node "${creatorBinTarget}" "${starterDir}"`,
     projectDir,
   );
   const starterProductionPath = join(
@@ -1026,34 +1042,35 @@ try {
     starterProductionPath,
     `${JSON.stringify(starterProduction, null, 2)}\n`,
   );
-  // Override every published `@automovie/*` range with its own tarball before
-  // installing. `pnpm add <tarball>` resolves the manifest it already has
-  // first, so the starter's registry ranges 404 outside the workspace before
-  // any tarball spec replaces them, and a transitive range (mcp's own
-  // dependency on render) is never replaced at all. An override covers direct
-  // and transitive alike, which keeps the probe offline and installs exactly
-  // the bytes this commit packed.
-  const runtimeTarballs = tarballs.filter(
-    (file) => file.startsWith("automovie-cli-") === false,
-  );
+  // Pin every published AutoMovie package to its sibling tarball. Direct
+  // entries make npm satisfy the packed packages' transitive semver ranges
+  // without reaching for unpublished workspace versions in the registry.
   const starterManifestPath = join(starterDir, "package.json");
   const starterManifest = JSON.parse(readFileSync(starterManifestPath, "utf8"));
-  starterManifest.pnpm = {
-    ...starterManifest.pnpm,
-    overrides: Object.fromEntries(
-      runtimeTarballs.map((file) => [
-        `@automovie/${PACKAGES.find((name) => file.startsWith(`automovie-${name}-`))}`,
-        `file:${join(tarballDir, file).replaceAll("\\", "/")}`,
-      ]),
-    ),
-  };
+  for (const name of PACKAGES.filter((entry) => entry !== "create-automovie")) {
+    const file = tarballs.find((entry) =>
+      entry.startsWith(tarballPrefix(name)),
+    );
+    if (file === undefined)
+      fail(`missing tarball for ${publishedPackageName(name)}`);
+    const packageName = publishedPackageName(name);
+    const specifier = `file:${join(tarballDir, file).replaceAll("\\", "/")}`;
+    if (Object.hasOwn(starterManifest.devDependencies ?? {}, packageName))
+      starterManifest.devDependencies[packageName] = specifier;
+    else starterManifest.dependencies[packageName] = specifier;
+  }
   writeFileSync(
     starterManifestPath,
     `${JSON.stringify(starterManifest, null, 2)}\n`,
   );
   run(
-    "install packaged starter dependencies with strict pnpm layout",
-    "pnpm install --ignore-workspace --prefer-offline --config.strict-peer-dependencies=false",
+    "install packaged starter dependencies with npm",
+    "npm install --prefer-offline --no-audit --no-fund",
+    starterDir,
+  );
+  run(
+    "invoke the packaged starter-local automovie binary",
+    "npm exec --offline -- automovie --help",
     starterDir,
   );
   if (process.env.CI === "true" && process.platform === "linux")
@@ -1065,7 +1082,7 @@ try {
     );
   run(
     "install packaged starter Chromium",
-    "pnpm capture:install",
+    "npm run capture:install",
     starterDir,
     900_000,
   );
@@ -1080,7 +1097,7 @@ try {
   writeFileSync(captureReceiptPath, "{bad");
   runExpectedFailure(
     "reject malformed packaged capture receipt",
-    "pnpm capture:doctor",
+    "npm run capture:doctor",
     starterDir,
     "not valid JSON",
   );
@@ -1100,7 +1117,7 @@ try {
   );
   runExpectedFailure(
     "reject stale packaged capture receipt",
-    "pnpm capture:doctor",
+    "npm run capture:doctor",
     starterDir,
     "does not match the current Playwright",
   );
@@ -1110,7 +1127,7 @@ try {
   try {
     runExpectedFailure(
       "diagnose missing packaged capture executable",
-      "pnpm capture:doctor",
+      "npm run capture:doctor",
       starterDir,
       "is missing or differs",
     );
@@ -1119,7 +1136,7 @@ try {
   }
   run(
     "doctor packaged starter capture runtime",
-    "pnpm capture:doctor",
+    "npm run capture:doctor",
     starterDir,
   );
   const captureConfigPath = join(starterDir, "automovie.config.ts");
@@ -1134,14 +1151,14 @@ try {
   try {
     runExpectedFailure(
       "reject invalid packaged capture config",
-      "pnpm capture:doctor",
+      "npm run capture:doctor",
       starterDir,
       "Invalid capture browser config",
     );
   } finally {
     writeFileSync(captureConfigPath, captureConfigText);
   }
-  run("compile packaged starter", "pnpm compile", starterDir);
+  run("compile packaged starter", "npm run compile", starterDir);
   const packagedLintConfigPath = join(starterDir, "lint.config.ts");
   const packagedLintConfig = readFileSync(packagedLintConfigPath, "utf8");
   const packagedSentinelPath = join(
@@ -1156,7 +1173,7 @@ try {
   try {
     runExpectedFailure(
       "fire packaged template-sentinel contributor",
-      "pnpm exec ttsc --noEmit -p tsconfig.json",
+      "npm exec -- ttsc --noEmit -p tsconfig.json",
       starterDir,
       "Template sentinel 'AUTOMOVIE_IMPLEMENT_ME' remains in compiled source.",
       900_000,
@@ -1194,7 +1211,7 @@ try {
   try {
     runExpectedFailure(
       "fire packaged state-presence contributor",
-      "pnpm exec ttsc --noEmit -p tsconfig.json",
+      "npm exec -- ttsc --noEmit -p tsconfig.json",
       starterDir,
       "State slot 'downstream' is present while required upstream slot 'upstream' is absent.",
       900_000,
@@ -1202,7 +1219,7 @@ try {
     writeFileSync(join(packagedPresenceRoot, "upstream.json"), "[]\n");
     run(
       "silence packaged state-presence contributor with resident upstream",
-      "pnpm exec ttsc --noEmit -p tsconfig.json",
+      "npm exec -- ttsc --noEmit -p tsconfig.json",
       starterDir,
       900_000,
     );
@@ -1215,15 +1232,15 @@ try {
   // five-minute command fence before TypeScript linting itself begins.
   runExpectedFailure(
     "enforce packaged starter lint review gate",
-    "pnpm lint",
+    "npm run lint",
     starterDir,
     "review-",
     900_000,
   );
-  run("test packaged starter", "pnpm test", starterDir);
+  run("test packaged starter", "npm test", starterDir);
   runExpectedFailure(
-    "enforce packaged starter review gate",
-    "pnpm render",
+    "enforce packaged starter proxy review gate",
+    "npm run render -- all --tier proxy",
     starterDir,
     "review-",
   );
@@ -1236,7 +1253,7 @@ try {
     "node verify-packaged-starter.mjs review",
     starterDir,
   );
-  run("lint reviewed packaged starter", "pnpm lint", starterDir, 900_000);
+  run("lint reviewed packaged starter", "npm run lint", starterDir, 900_000);
   const encoderFailureHookPath = join(starterDir, "fail-packaged-encoder.cjs");
   writeFileSync(
     encoderFailureHookPath,
@@ -1253,7 +1270,7 @@ PNG.sync.read = function (input) {
   );
   runExpectedFailure(
     "preserve packaged encoder consumer diagnostics",
-    "pnpm render finalize",
+    "npm run render -- finalize",
     starterDir,
     "automovie-encoder-consumer-sentinel",
     300_000,
@@ -1279,7 +1296,7 @@ PNG.sync.read = function (input) {
   try {
     runExpectedFailure(
       "reject tampered packaged render plan",
-      "pnpm render verify",
+      "npm run render -- verify",
       starterDir,
       "Stored render plan differs",
     );
@@ -1292,7 +1309,7 @@ PNG.sync.read = function (input) {
   try {
     runExpectedFailure(
       "reject stale packaged render runtime identity",
-      "pnpm render verify",
+      "npm run render -- verify",
       starterDir,
       "render runtime identity changed",
     );
@@ -1359,7 +1376,7 @@ PNG.sync.read = function (input) {
   );
   run(
     "resume interrupted packaged render through final compile",
-    "pnpm render",
+    "npm run render",
     starterDir,
   );
   const quarantine = readdirSync(join(renderStateRoot, "quarantine"));
@@ -1378,6 +1395,11 @@ PNG.sync.read = function (input) {
   run(
     "verify packaged starter pixels, final ledger and tamper gate",
     "node verify-packaged-starter.mjs final",
+    starterDir,
+  );
+  run(
+    "run the packaged read-only final verifier",
+    "npm run verify",
     starterDir,
   );
 

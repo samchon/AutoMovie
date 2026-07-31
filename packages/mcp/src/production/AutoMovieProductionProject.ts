@@ -133,6 +133,7 @@ export class AutoMovieProductionProject {
   private readonly revisionPath: string;
   private readonly lockPath: string;
   private readonly sharedLockPath: string;
+  private readonly readOnly_: boolean;
   private readonly initialized_: boolean;
   private readonly incarnation_: string;
   private readonly productionIncarnation_: string;
@@ -149,7 +150,9 @@ export class AutoMovieProductionProject {
       "device" | "inode"
     >,
     requestedProductionId?: string,
+    readOnly = false,
   ) {
+    this.readOnly_ = readOnly;
     this.rootReal = fs.realpathSync(root);
     this.rootDevice = rootIdentity.device;
     this.rootInode = rootIdentity.inode;
@@ -162,11 +165,22 @@ export class AutoMovieProductionProject {
       throw new Error(
         `Reserved AutoMovie state root "${this.automovieRoot}" is a symlink or junction. Replace it with a physical project directory before opening the project.`,
       );
-    this.mkdirOwned(this.automovieRoot);
+    if (
+      readOnly &&
+      (initialStateRoot === null || initialStateRoot.isDirectory() === false)
+    )
+      throw new Error(
+        `Reserved AutoMovie state root "${this.automovieRoot}" is missing or not a directory. Open a complete physical project before read-only verification.`,
+      );
+    if (readOnly === false) this.mkdirOwned(this.automovieRoot);
     const stateIdentity = fs.statSync(this.automovieRoot, { bigint: true });
     this.automovieIdentity = fileIdentityKey(stateIdentity);
     const incarnation = readOwnedJson(this.rootReal, this.incarnationPath);
     if (incarnation === undefined) {
+      if (readOnly)
+        throw new Error(
+          `Read-only verification requires existing state incarnation "${this.incarnationPath}". Run npm run compile once to initialize the project.`,
+        );
       this.incarnation_ = randomUUID();
       this.writeOwnedJsonAtomic(this.incarnationPath, {
         version: 1,
@@ -180,6 +194,10 @@ export class AutoMovieProductionProject {
     const existing = readOwnedJson(this.rootReal, this.manifestPath);
     this.initialized_ = existing === undefined;
     if (existing === undefined) {
+      if (readOnly)
+        throw new Error(
+          `Read-only verification requires existing manifest "${this.manifestPath}". Run npm run compile once to initialize the project.`,
+        );
       this.manifest_ = {
         formatVersion: 2,
         projectId: projectIdOf(root),
@@ -190,7 +208,9 @@ export class AutoMovieProductionProject {
       this.writeOwnedJsonAtomic(this.manifestPath, this.manifest_);
     } else this.manifest_ = validateManifest(existing, this.manifestPath);
     validateOwnershipLayout(this.root, this.manifest_, this.manifestPath);
-    const registration = this.activateProduction(requestedProductionId);
+    const registration = readOnly
+      ? this.readProductionRegistration(requestedProductionId)
+      : this.activateProduction(requestedProductionId);
     this.productionId = registration.productionId;
     this.productionIncarnation_ = registration.incarnation;
     this.productionSegment = encodeId(this.productionId);
@@ -213,22 +233,31 @@ export class AutoMovieProductionProject {
     this.revisionPath = path.join(this.productionStateRoot, "revision.json");
     this.lockPath = path.join(this.productionStateRoot, "revision.lock");
     this.sharedLockPath = path.join(this.automovieRoot, "shared-design.lock");
-    if (registration.legacy) this.migrateLegacyProductionLayout();
-    for (const directory of SHARED_DESIGN_DIRECTORIES)
-      this.mkdirOwned(path.join(this.sharedDesignRoot, directory));
-    for (const directory of PRODUCTION_DESIGN_DIRECTORIES)
-      this.mkdirOwned(path.join(this.productionDesignRoot, directory));
-    for (const directory of REVIEW_DIRECTORIES)
-      this.mkdirOwned(path.join(this.reviewRoot, directory));
-    this.mkdirOwned(path.join(this.productionStateRoot, "render-receipts"));
-    for (const directory of [
-      ...this.manifest_.sourceRoots,
-      this.manifest_.generatedRoot,
-      this.manifest_.renderRoot,
-    ])
-      this.mkdirOwned(this.resolveOwnedDirectory(directory));
-    this.mkdirOwned(this.generatedRoot());
-    this.mkdirOwned(this.renderRoot());
+    if (readOnly === false) {
+      if (registration.legacy) this.migrateLegacyProductionLayout();
+      for (const directory of SHARED_DESIGN_DIRECTORIES)
+        this.mkdirOwned(path.join(this.sharedDesignRoot, directory));
+      for (const directory of PRODUCTION_DESIGN_DIRECTORIES)
+        this.mkdirOwned(path.join(this.productionDesignRoot, directory));
+      for (const directory of REVIEW_DIRECTORIES)
+        this.mkdirOwned(path.join(this.reviewRoot, directory));
+      this.mkdirOwned(path.join(this.productionStateRoot, "render-receipts"));
+      for (const directory of [
+        ...this.manifest_.sourceRoots,
+        this.manifest_.generatedRoot,
+        this.manifest_.renderRoot,
+      ])
+        this.mkdirOwned(this.resolveOwnedDirectory(directory));
+      this.mkdirOwned(this.generatedRoot());
+      this.mkdirOwned(this.renderRoot());
+    } else
+      for (const directory of [
+        ...this.productionNamespaceDirectories(),
+        ...this.manifest_.sourceRoots.map((entry) =>
+          this.resolveOwnedDirectory(entry),
+        ),
+      ])
+        assertPhysicalDirectoryAncestors(this.rootReal, directory, false);
     this.productionNamespaceAncestries_ =
       this.productionNamespaceDirectories().map((directory) =>
         acquirePhysicalDirectoryAncestry(this.rootReal, directory),
@@ -243,6 +272,7 @@ export class AutoMovieProductionProject {
   }
 
   private mkdirOwned(directory: string): void {
+    this.assertWritable();
     this.assertProjectRootIdentity();
     assertPhysicalDirectoryAncestors(this.rootReal, directory, true);
     fs.mkdirSync(directory, {
@@ -252,7 +282,15 @@ export class AutoMovieProductionProject {
     this.assertProjectRootIdentity();
   }
 
+  private assertWritable(): void {
+    if (this.readOnly_)
+      throw new Error(
+        `Production "${this.productionId ?? "<opening>"}" was opened read-only and cannot mutate project state.`,
+      );
+  }
+
   private writeOwnedJsonAtomic(file: string, value: unknown): void {
+    this.assertWritable();
     this.assertProjectRootIdentity();
     assertPhysicalDirectoryAncestors(this.rootReal, path.dirname(file), false);
     assertOwnedRegularFile(this.rootReal, file);
@@ -345,6 +383,47 @@ export class AutoMovieProductionProject {
       legacy,
       productionId,
     };
+  }
+
+  private readProductionRegistration(requestedProductionId?: string): {
+    incarnation: string;
+    legacy: false;
+    productionId: string;
+  } {
+    const registry = validateProductionRegistry(
+      readOwnedJson(this.rootReal, this.registryPath),
+      this.registryPath,
+    );
+    if (registry.layoutVersion !== 1)
+      throw new Error(
+        `Read-only verification cannot migrate legacy production layout "${this.registryPath}". Run npm run compile once before verifying.`,
+      );
+    let productionId = requestedProductionId;
+    if (productionId === undefined) {
+      if (registry.productions.length !== 1)
+        throw new Error(
+          `Read-only verification requires one productionId; registered productions: ${registry.productions.join(", ") || "<none>"}.`,
+        );
+      productionId = registry.productions[0]!;
+    }
+    validateProductionId(productionId);
+    if (productionId.toLowerCase() === "shared")
+      throw new Error(
+        'Production id "shared" is reserved for project-level design assets.',
+      );
+    if (registry.productions.includes(productionId) === false)
+      throw new Error(
+        `Read-only verification cannot register missing production "${productionId}". Run npm run compile once to initialize it.`,
+      );
+    const incarnation = productionIncarnationOf(
+      registry.incarnations,
+      productionId,
+    );
+    if (incarnation === undefined)
+      throw new Error(
+        `Read-only verification requires an existing incarnation for production "${productionId}". Run npm run compile once to initialize it.`,
+      );
+    return { incarnation, legacy: false, productionId };
   }
 
   private preflightProductionNamespace(productionId: string): void {
@@ -587,6 +666,35 @@ export class AutoMovieProductionProject {
         lease.root,
         lease,
         productionId,
+      );
+      assertProductionRootNamespaceLease(lease);
+      return project;
+    } finally {
+      releaseProductionRootNamespace(lease);
+    }
+  }
+
+  /**
+   * Open one fully initialized production without creating, migrating, or
+   * repairing any project-resident path.
+   */
+  public static openReadOnly(
+    rootDirectory: string,
+    productionId?: string,
+  ): AutoMovieProductionProject {
+    const root = path.resolve(rootDirectory);
+    if (path.parse(root).root === root)
+      throw new Error(
+        `AutoMovie production root "${root}" is a filesystem root. Configure the host with a dedicated project directory.`,
+      );
+    const lease = acquireProductionRootNamespace(root);
+    try {
+      assertProductionRootNamespaceLease(lease);
+      const project = new AutoMovieProductionProject(
+        lease.root,
+        lease,
+        productionId,
+        true,
       );
       assertProductionRootNamespaceLease(lease);
       return project;
@@ -1050,6 +1158,7 @@ export class AutoMovieProductionProject {
     productionId: string;
     remaining: string[];
   } {
+    this.assertWritable();
     if (reason.trim().length === 0)
       throw new Error("Production erase audit reason must not be blank.");
     const lease = acquireProductionRootNamespace(this.root);
@@ -2077,6 +2186,17 @@ export class AutoMovieProductionProject {
     inputCurrent: () => boolean,
     expectedRevision: number = this.lastReadRevision_,
   ): number {
+    if (this.readOnly_) {
+      if (
+        expectedRevision !== this.lastReadRevision_ ||
+        inputCurrent() === false ||
+        this.revision() !== expectedRevision
+      )
+        throw new AutoMovieProductionInputRaceError(
+          "Production inputs changed during read-only snapshot confirmation.",
+        );
+      return expectedRevision;
+    }
     return this.commitFiles(
       () => [],
       inputCurrent,
@@ -2464,6 +2584,7 @@ export class AutoMovieProductionProject {
     publishEmptyRevision: boolean = true,
     sharedMutation: boolean = false,
   ): number {
+    this.assertWritable();
     const stage = (pending: readonly IStagedFile[]) =>
       pending.map((file) => ({
         path: file.path,

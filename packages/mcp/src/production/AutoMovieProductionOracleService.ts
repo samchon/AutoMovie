@@ -952,7 +952,7 @@ export class AutoMovieProductionOracleService {
       return previewFailure(
         generated.inputFingerprint,
         "capture-renderer-identity-invalid",
-        `${String(error)} Correct the capture adapter or run pnpm capture:install and pnpm capture:doctor before these pixels enter a render bundle.`,
+        `${String(error)} Correct the capture adapter or run npm run capture:install and npm run capture:doctor before these pixels enter a render bundle.`,
       );
     }
     if (
