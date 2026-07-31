@@ -128,6 +128,11 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
   const fixture = productionFixture();
   const sourcePath = path.join(fixture.root, "src/shots/opening.ts");
   const original = fs.readFileSync(sourcePath, "utf8");
+  const {
+    id: _fixtureShotId,
+    source: _fixtureShotSource,
+    ...fixtureRegistration
+  } = shotContract();
   const mutateSourceOutput = (mutation: string): string =>
     original
       .replace("  return {\n    actors:", "  const output = {\n    actors:")
@@ -146,6 +151,16 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     const compiler = new AutoMovieProductionCompiler(
       project,
       (status, snapshot) => review.queue(status, snapshot),
+    );
+    TestValidator.predicate(
+      "the sliced fixture keeps its source registration equal to its design",
+      original.includes(
+        `const OPENING_CONTRACT: IAutoMovieDefinedShotContract = ${JSON.stringify(
+          fixtureRegistration,
+          null,
+          2,
+        )};`,
+      ),
     );
 
     const designOnly = compiler.lint({ scope: "design" });

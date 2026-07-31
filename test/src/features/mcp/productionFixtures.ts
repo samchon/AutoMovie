@@ -25,6 +25,7 @@ export const productionFixture = (): {
 } => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-production-"));
   const files = renderScaffold({ name: "fixture-film" });
+  const openingContract = shotContract();
   const assetManifest = JSON.parse(
     files[".automovie/assets.json"]!,
   ) as IAutoMovieAssetManifest;
@@ -44,7 +45,13 @@ export const productionFixture = (): {
   ])
     delete files[file];
   files[".automovie/design/shots/opening.json"] =
-    `${JSON.stringify(shotContract(), null, 2)}\n`;
+    `${JSON.stringify(openingContract, null, 2)}\n`;
+  files["src/shots/opening.ts"] = replaceScaffoldRegistrationContract({
+    source: files["src/shots/opening.ts"]!,
+    registration: "OPENING_CONTRACT",
+    nextRegistration: "ANSWER_CONTRACT",
+    contract: definedShotContract(openingContract),
+  });
   files[".automovie/design/world.json"] =
     `${JSON.stringify(fixtureWorldDesign(), null, 2)}\n`;
   const openingBeauty = JSON.parse(
@@ -101,6 +108,48 @@ const scaffoldJson = <T>(relative: string): T =>
   JSON.parse(
     fs.readFileSync(path.resolve(scaffoldAssetDirectory(), relative), "utf8"),
   ) as T;
+
+const definedShotContract = (
+  contract: IAutoMovieShotContract,
+): Omit<IAutoMovieShotContract, "id" | "source"> => {
+  const { id: _id, source: _source, ...registration } = contract;
+  return registration;
+};
+
+/**
+ * Keep a sliced fixture's source-owned registration equal to its design.
+ *
+ * Exact markers make scaffold drift fail while constructing the fixture,
+ * instead of silently turning every downstream source compile into a mismatch.
+ */
+const replaceScaffoldRegistrationContract = (props: {
+  source: string;
+  registration: string;
+  nextRegistration: string;
+  contract: Omit<IAutoMovieShotContract, "id" | "source">;
+}): string => {
+  const startMarker = `const ${props.registration}: IAutoMovieDefinedShotContract = `;
+  const endMarker = `\n\nconst ${props.nextRegistration}: IAutoMovieDefinedShotContract = `;
+  const start = props.source.indexOf(startMarker);
+  const end =
+    start === -1
+      ? -1
+      : props.source.indexOf(endMarker, start + startMarker.length);
+  if (
+    start === -1 ||
+    end === -1 ||
+    props.source.indexOf(startMarker, start + startMarker.length) !== -1 ||
+    props.source.indexOf(endMarker, end + endMarker.length) !== -1
+  )
+    throw new Error(
+      `Scaffold source must contain exactly one ${props.registration} registration followed by ${props.nextRegistration}.`,
+    );
+  return [
+    props.source.slice(0, start + startMarker.length),
+    `${JSON.stringify(props.contract, null, 2)};`,
+    props.source.slice(end),
+  ].join("");
+};
 
 /** Starter production design with optional shallow overrides. */
 export const productionDesign = (
