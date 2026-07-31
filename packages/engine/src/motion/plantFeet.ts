@@ -117,6 +117,13 @@ export const plantStanceFeet = (props: {
   legs?: readonly IAutoMovieFootLeg[];
   /** Samples/second for detection and re-keying. Defaults to `24`. */
   sampleRate?: number;
+  /**
+   * Prior beat plants expressed in this motion's model frame.
+   *
+   * When a detected stance begins at the opening sample, its first pin resumes
+   * this authoritative position instead of deriving a nearby replacement.
+   */
+  openingPlants?: ReadonlyArray<Pick<IAutoMovieFootPlant, "foot" | "position">>;
 }): IAutoMoviePlantedFeet => {
   const groundAt = groundFunction(props.groundY ?? DEFAULT_GROUND_Y);
   const tolerance = props.tolerance ?? DEFAULT_TOLERANCE;
@@ -140,6 +147,9 @@ export const plantStanceFeet = (props: {
     times,
     groundAt,
     tolerance,
+    openingTargets: new Map(
+      (props.openingPlants ?? []).map((plant) => [plant.foot, plant.position]),
+    ),
   });
 
   const keyframes = rekeyPlantedFeet({

@@ -4,13 +4,15 @@ import {
   IAutoMovieCompiledContractRealization,
   IAutoMovieCompiledFormation,
   IAutoMovieConstraintViolation,
+  IAutoMovieDefinedShot,
   IAutoMovieFormationDesign,
   IAutoMovieModel,
   IAutoMovieProductionDesign,
-  IAutoMovieShotContract,
+  IAutoMovieShotDefinition,
   IAutoMovieShotProgram,
   IAutoMovieShotSourceOutput,
   IAutoMovieSkeleton,
+  IAutoMovieStage,
   IAutoMovieVector3,
   IAutoMovieWorldDesign,
 } from "@automovie/interface";
@@ -23,41 +25,6 @@ import { performShot } from "./performShot";
 import { realizeShotContract } from "./realizeShotContract";
 import { resolveBeatEnd, resolveBeatOpening } from "./resolveBeatEnd";
 import { stageScene } from "./stageScene";
-
-/** Contract fields embedded in a registered shot rather than a design pointer. */
-export type IAutoMovieDefinedShotContract = Omit<
-  IAutoMovieShotContract,
-  "id" | "source"
->;
-
-/**
- * A source-level shot registration.
- *
- * The export is the artifact: {@link id}, {@link scene}, the measurable contract
- * and the free TypeScript builder travel together. A repository lint can
- * therefore bind module path, named export and id without trusting a second
- * manifest to describe what the source supposedly exports.
- */
-export interface IAutoMovieDefinedShot<Context = void> {
-  /** Stable shot id; the compiled artifact receives this exact identity. */
-  id: string;
-  /** Stable staged-scene id the builder must actually produce. */
-  scene: string;
-  /** Required participants, states, events, coverage and review evidence. */
-  contract: IAutoMovieDefinedShotContract;
-  /** Free deterministic code that emits the typed engine program. */
-  build(context: Context): IAutoMovieShotProgram;
-}
-
-/** The source-authored half of {@link IAutoMovieDefinedShot}. */
-export interface IAutoMovieShotDefinition<Context> {
-  /** Stable staged-scene id the builder must actually produce. */
-  scene: string;
-  /** Required participants, states, events, coverage and review evidence. */
-  contract: IAutoMovieDefinedShotContract;
-  /** Free deterministic code that emits the typed engine program. */
-  build(context: Context): IAutoMovieShotProgram;
-}
 
 /**
  * Register one coding-agent-authored shot.
@@ -74,20 +41,52 @@ export const defineShot = <Context>(
 /**
  * One D010 physical suggestion carried as data.
  *
- * The engine never applies {@link response} by implication. The coding agent may
- * keep it pending, accept it, replace it with a modified response, or reject it
- * with rationale; the decision remains visible beside the build.
+ * The engine never applies {@link IAutoMovieShotPhysicsAdvice.proposal} by
+ * implication. The coding agent may keep it pending, accept it, replace it with
+ * a modified response, or reject it with rationale; the decision remains
+ * visible beside the build.
  */
-export interface IAutoMovieShotPhysicsAdvice {
+interface IAutoMovieShotPhysicsAdviceBase {
   /** Stable advice identity chosen by the shot code. */
   id: string;
   /** Engine-computed impact, push and optional ROM-bounded recoil. */
-  response: IAutoMovieCollisionResponse;
-  /** Explicit author disposition; null means the advice is still undecided. */
-  decision: "accepted" | "modified" | "rejected" | null;
-  /** Why the author accepted, changed or rejected the physical suggestion. */
-  rationale: string | null;
+  proposal: IAutoMovieCollisionResponse;
 }
+
+/** One explicit author disposition over an engine D010 proposal. */
+export type IAutoMovieShotPhysicsAdvice =
+  | (IAutoMovieShotPhysicsAdviceBase & {
+      /** The proposal has not been adjudicated yet. */
+      decision: null;
+      /** No response is selected while the decision is pending. */
+      selected: null;
+      /** Pending advice carries no invented rationale. */
+      rationale: null;
+    })
+  | (IAutoMovieShotPhysicsAdviceBase & {
+      /** The engine proposal is selected unchanged. */
+      decision: "accepted";
+      /** Exact selected response; validation requires it to equal proposal. */
+      selected: IAutoMovieCollisionResponse;
+      /** Non-blank author reason for accepting the suggestion. */
+      rationale: string;
+    })
+  | (IAutoMovieShotPhysicsAdviceBase & {
+      /** A source-authored replacement is selected. */
+      decision: "modified";
+      /** Replacement response, observably distinct from proposal. */
+      selected: IAutoMovieCollisionResponse;
+      /** Non-blank author reason for changing the suggestion. */
+      rationale: string;
+    })
+  | (IAutoMovieShotPhysicsAdviceBase & {
+      /** The suggestion is deliberately rejected. */
+      decision: "rejected";
+      /** Rejection applies no collision response. */
+      selected: null;
+      /** Non-blank author reason for rejecting the suggestion. */
+      rationale: string;
+    });
 
 /** Host-owned capabilities needed to turn thin verbs into dense motion. */
 export interface IAutoMovieShotRuntime {
@@ -272,11 +271,14 @@ export const compileDefinedShot = <Context>(props: {
     if (contract.length !== 0) return { success: false, diagnostics: contract };
 
     phase = "stage";
-    const staged = stageScene(program.script, program.stage);
-    if (staged.success === false)
+    const advice = validateAdvice(props.runtime.advice ?? []);
+    if (advice.length !== 0) return { success: false, diagnostics: advice };
+
+    const authoredStage = stageScene(program.script, program.stage);
+    if (authoredStage.success === false)
       return {
         success: false,
-        diagnostics: staged.violations.map((violation) =>
+        diagnostics: authoredStage.violations.map((violation) =>
           fromViolation("stage", "stage-invalid", violation),
         ),
       };
@@ -284,7 +286,7 @@ export const compileDefinedShot = <Context>(props: {
     phase = "blocking";
     const blocked = blockBeat(
       program.script,
-      staged,
+      authoredStage,
       program.blocking,
       props.runtime.previous,
     );
@@ -295,6 +297,23 @@ export const compileDefinedShot = <Context>(props: {
           fromViolation("blocking", "blocking-invalid", violation),
         ),
       };
+
+    phase = "stage";
+    const resumedStage =
+      blocked.previous === null
+        ? authoredStage
+        : stageScene(
+            program.script,
+            resumeStage(program.stage, blocked.previous),
+          );
+    if (resumedStage.success === false)
+      return {
+        success: false,
+        diagnostics: resumedStage.violations.map((violation) =>
+          fromViolation("stage", "stage-invalid", violation),
+        ),
+      };
+    const staged = resumePoses(resumedStage, blocked.previous);
 
     phase = "performance";
     const performed = performShot({
@@ -309,6 +328,7 @@ export const compileDefinedShot = <Context>(props: {
       gaits: props.runtime.gaits,
       blocking: blocked.blocking,
       shotId: props.shot.id,
+      previous: blocked.previous,
     });
     if (performed.success === false)
       return {
@@ -363,19 +383,28 @@ export const compileDefinedShot = <Context>(props: {
       };
 
     phase = "continuity";
+    const replantedNodes = new Set(performed.plants.map((entry) => entry.node));
     const continuityProps = {
       beat: props.shot.contract.beat,
       scene: staged.scene,
       shot: performed.shot,
       motions,
       mounts: staged.mounts,
-      plants: props.runtime.plants,
+      plants: [
+        ...(props.runtime.plants ?? []).filter(
+          (entry) => replantedNodes.has(entry.node) === false,
+        ),
+        ...performed.plants,
+      ],
     };
     return {
       success: true,
       source,
       continuity: {
-        opening: resolveBeatOpening(continuityProps),
+        opening: resumeOpeningSnapshot(
+          resolveBeatOpening(continuityProps),
+          blocked.previous,
+        ),
         closing: resolveBeatEnd(continuityProps),
       },
       realization: measured.realization,
@@ -398,6 +427,144 @@ export const compileDefinedShot = <Context>(props: {
       ],
     };
   }
+};
+
+/** Keep resumable simulation facts authoritative at the new opening instant. */
+const resumeOpeningSnapshot = (
+  opening: IAutoMovieBeatEndState,
+  previous: IAutoMovieBeatEndState | null,
+): IAutoMovieBeatEndState => {
+  if (previous === null) return opening;
+  const states = new Map(previous.actors.map((actor) => [actor.node, actor]));
+  return {
+    ...opening,
+    actors: opening.actors.map((actor) => {
+      const prior = states.get(actor.node);
+      return prior === undefined
+        ? actor
+        : {
+            ...actor,
+            gaitPhase: prior.gaitPhase,
+            rootVelocity: structuredClone(prior.rootVelocity),
+            footPlants: structuredClone(prior.footPlants),
+            mount: structuredClone(prior.mount),
+          };
+    }),
+  };
+};
+
+/** Resume root placement, facing, and persistent mounts before staging. */
+const resumeStage = (
+  stage: IAutoMovieStage,
+  previous: IAutoMovieBeatEndState,
+): IAutoMovieStage => {
+  const states = new Map(previous.actors.map((actor) => [actor.node, actor]));
+  return {
+    ...stage,
+    actors: stage.actors.map((actor) => {
+      const prior = states.get(actor.node);
+      return prior === undefined
+        ? actor
+        : {
+            ...actor,
+            position: structuredClone(prior.transform.translation),
+            facingDeg:
+              (Math.atan2(prior.facing.x, prior.facing.z) * 180) / Math.PI,
+            attach:
+              prior.mount === null ? undefined : structuredClone(prior.mount),
+          };
+    }),
+  };
+};
+
+/** Carry prior articulation onto the resumed scene's opening frame. */
+const resumePoses = (
+  staged: Extract<ReturnType<typeof stageScene>, { success: true }>,
+  previous: IAutoMovieBeatEndState | null,
+): Extract<ReturnType<typeof stageScene>, { success: true }> => {
+  if (previous === null) return staged;
+  const states = new Map(previous.actors.map((actor) => [actor.node, actor]));
+  return {
+    ...staged,
+    scene: {
+      ...staged.scene,
+      nodes: staged.scene.nodes.map((node) => {
+        const pose = states.get(node.id)?.pose;
+        return pose === undefined
+          ? node
+          : { ...node, pose: structuredClone(pose) };
+      }),
+    },
+  };
+};
+
+const validateAdvice = (
+  advice: readonly IAutoMovieShotPhysicsAdvice[],
+): IAutoMovieAuthoringDiagnostic[] => {
+  const diagnostics: IAutoMovieAuthoringDiagnostic[] = [];
+  const ids = new Map<string, number>();
+  advice.forEach((item, index) => {
+    const path = `$runtime.advice[${index}]`;
+    const first = ids.get(item.id);
+    if (item.id.trim().length === 0 || first !== undefined)
+      diagnostics.push({
+        code: "contract-mismatch",
+        phase: "performance",
+        path: `${path}.id`,
+        fact:
+          first === undefined
+            ? "The physics-advice id is blank."
+            : `Physics-advice id "${item.id}" duplicates ${`$runtime.advice[${first}].id`}.`,
+        impact:
+          "The selected D010 decision cannot be audited against one stable proposal.",
+        recovery:
+          "Give every advice item one non-blank id that is unique in this shot.",
+      });
+    else ids.set(item.id, index);
+
+    const rationaleValid =
+      typeof item.rationale === "string" && item.rationale.trim().length !== 0;
+    const proposalEqualsSelected =
+      item.selected !== null &&
+      JSON.stringify(canonicalAdviceValue(item.proposal)) ===
+        JSON.stringify(canonicalAdviceValue(item.selected));
+    const valid =
+      item.decision === null
+        ? item.selected === null && item.rationale === null
+        : item.decision === "accepted"
+          ? item.selected !== null && proposalEqualsSelected && rationaleValid
+          : item.decision === "modified"
+            ? item.selected !== null &&
+              proposalEqualsSelected === false &&
+              rationaleValid
+            : item.selected === null && rationaleValid;
+    if (valid === false)
+      diagnostics.push({
+        code: "contract-mismatch",
+        phase: "performance",
+        path,
+        fact: `D010 advice "${item.id}" has decision ${JSON.stringify(item.decision)}, selected ${item.selected === null ? "null" : "response data"}, and rationale ${JSON.stringify(item.rationale)}.`,
+        impact:
+          "The artifact cannot distinguish an unchanged proposal, an authored replacement, and a rejected physical suggestion.",
+        recovery:
+          "Keep pending selected/rationale null; copy proposal into selected for accepted; provide a different selected response for modified; or keep selected null for rejected. Every decided item needs a non-blank rationale.",
+      });
+  });
+  return diagnostics;
+};
+
+/** Compare response data by value rather than source object key insertion order. */
+const canonicalAdviceValue = (value: unknown): unknown => {
+  if (Array.isArray(value)) return value.map(canonicalAdviceValue);
+  if (typeof value !== "object" || value === null) return value;
+  return Object.fromEntries(
+    Object.keys(value)
+      .sort()
+      .map((key) => [
+        key,
+        canonicalAdviceValue((value as Record<string, unknown>)[key]),
+      ]),
+  );
 };
 
 const validateRegistration = <Context>(
@@ -474,6 +641,40 @@ const validateProgramContract = <Context>(
     shot.contract.durationSeconds,
     "Make performance.duration equal the registered contract duration.",
   );
+
+  const stagedActors = new Set(program.stage.actors.map((actor) => actor.node));
+  const actorFacts = new Map<string, number>();
+  program.actors.forEach((actor, index) => {
+    const path = `$program.actors[${index}]`;
+    const first = actorFacts.get(actor.node);
+    const invalid =
+      actor.node.trim().length === 0
+        ? "node is blank"
+        : first !== undefined
+          ? `node "${actor.node}" duplicates $program.actors[${first}].node`
+          : stagedActors.has(actor.node) === false
+            ? `node "${actor.node}" is absent from stage.actors`
+            : actor.model.trim().length === 0
+              ? "model is blank"
+              : Number.isFinite(actor.speed) === false || actor.speed <= 0
+                ? `speed is ${JSON.stringify(actor.speed)} instead of finite and above zero`
+                : Number.isFinite(actor.eyeHeight) === false ||
+                    actor.eyeHeight < 0
+                  ? `eyeHeight is ${JSON.stringify(actor.eyeHeight)} instead of finite and non-negative`
+                  : null;
+    if (invalid === null) actorFacts.set(actor.node, index);
+    else
+      diagnostics.push({
+        code: "contract-mismatch",
+        phase: "build",
+        path,
+        fact: `${path} ${invalid}.`,
+        impact:
+          "The host cannot bind this thin actor program to one measured staged runtime.",
+        recovery:
+          "Use one staged actor node and one non-blank compiler model id, then provide finite positive speed and finite non-negative eye height.",
+      });
+  });
 
   const samples = new Map<string, number>();
   program.eventSamples.forEach((sample, index) => {

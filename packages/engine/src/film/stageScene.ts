@@ -23,7 +23,7 @@ import { ViolationCollector } from "../validation/violation";
 import { lookRotation } from "./cameraMove";
 
 /**
- * Camera frustum bounds the staging schema does not ask the model for, the LLM
+ * Camera frustum bounds the staging schema does not ask source code for, the
  * decides placement and field of view, the engine owns the clip planes.
  */
 const CAMERA_NEAR = 0.1;
@@ -359,8 +359,8 @@ export namespace IAutoMovieStagedSet {
 /**
  * The STAGING consumer, fold the script's cast and the staging stage's
  * placements into the {@link IAutoMovieScene} every later stage performs into.
- * This is the first rung of the film pipeline (the workflow spine): LLM stage
- * payloads in, a validated engine artifact or a violation list out.
+ * This is the first rung of the film pipeline: coding-agent stage payloads in,
+ * a validated engine artifact or a violation list out.
  *
  * Referential integrity is the whole check: every placement must name a cast
  * member, every cast member must be placed (an unplaced character can never

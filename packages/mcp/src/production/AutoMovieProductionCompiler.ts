@@ -1,4 +1,8 @@
 import {
+  IAutoMovieActorContext,
+  compileDefinedShot,
+  defineShot,
+  makeActorSynthesizer,
   realizeShotContract,
   validateModel,
   validateMotion,
@@ -15,6 +19,7 @@ import {
   IAutoMovieCompiledContractRealization,
   IAutoMovieCompiledFilmEdit,
   IAutoMovieCompiledShotSource,
+  IAutoMovieDefinedShotContract,
   IAutoMovieDiagnostic,
   IAutoMovieFilmBuildContext,
   IAutoMovieFilmEdit,
@@ -24,15 +29,20 @@ import {
   IAutoMovieGeneratedManifest,
   IAutoMovieGeneratedMeasurementProxy,
   IAutoMovieMaterializedFile,
+  IAutoMovieModel,
   IAutoMovieModelProxyAsset,
   IAutoMovieModelRecipe,
+  IAutoMovieProductionDesign,
   IAutoMovieProductionManifest,
   IAutoMovieProductionMediaProbe,
   IAutoMovieProductionRenderManifest,
   IAutoMovieProductionRenderReceipt,
+  IAutoMovieProductionShotProgram,
   IAutoMovieReviewQueue,
+  IAutoMovieShotBuildContext,
   IAutoMovieShotContract,
   IAutoMovieShotSourceOutput,
+  IAutoMovieVector3,
   IAutoMovieWorldDesign,
 } from "@automovie/interface";
 import fs from "node:fs";
@@ -265,6 +275,7 @@ export class AutoMovieProductionCompiler {
           runtimeModels: Object.fromEntries(runtimeModels),
           formationRuntime,
           instanceSetRuntime,
+          frameFormat: graph.production!.frameFormat,
         },
       });
       diagnostics.push(...result.diagnostics);
@@ -692,12 +703,16 @@ interface ICompileShotSourceProps {
   source: string;
   context: {
     contract: IAutoMovieShotContract;
-    models: Readonly<Record<string, unknown>>;
+    models: IAutoMovieShotBuildContext["models"];
     world: IAutoMovieWorldDesign;
-    formations: Readonly<Record<string, unknown>>;
-    runtimeModels: Readonly<Record<string, unknown>>;
-    formationRuntime: Readonly<Record<string, unknown>>;
-    instanceSetRuntime: Readonly<Record<string, unknown>>;
+    formations: IAutoMovieShotBuildContext["formations"];
+    runtimeModels: IAutoMovieShotBuildContext["runtimeModels"];
+    formationRuntime: IAutoMovieShotBuildContext["formationRuntime"];
+    instanceSetRuntime: IAutoMovieShotBuildContext["instanceSetRuntime"];
+    frameFormat: Pick<
+      IAutoMovieProductionDesign["frameFormat"],
+      "width" | "height"
+    >;
   };
 }
 
@@ -713,14 +728,19 @@ interface ICompileDeterministicSourceProps<T> {
   exportName: string;
   source: string;
   context: unknown;
-  /** Expected defineShot registration id, when compiling one shot module. */
-  registrationId?: string;
+  /** Expected source-owned defineShot registration, for one shot module. */
+  registration?: {
+    id: string;
+    contract: IAutoMovieDefinedShotContract;
+  };
   validate(input: unknown): IValidation<T>;
 }
 
 interface ICompileDeterministicSourceResult<T> {
   value: T | null;
   diagnostics: IAutoMovieDiagnostic[];
+  /** Source-owned scene captured from a validated defineShot registration. */
+  registrationScene?: string;
 }
 
 const SANDBOX_BOOTSTRAP = `
@@ -760,7 +780,6 @@ const SANDBOX_BOOTSTRAP = `
     "Date",
     "Intl",
     "process",
-    "require",
     "fetch",
     "Promise",
     "queueMicrotask",
@@ -793,6 +812,25 @@ const SANDBOX_BOOTSTRAP = `
     }
     return value;
   };
+  const defineShot = (id, definition) =>
+    freeze({ id, ...definition });
+  const sourceModules = freeze({
+    "@automovie/engine": freeze({ defineShot: Object.freeze(defineShot) }),
+  });
+  Object.defineProperty(globalThis, "require", {
+    value: (specifier) => {
+      const selected = sourceModules[specifier];
+      if (selected === undefined)
+        throw new Error(
+          'Runtime module "' +
+            specifier +
+            '" is unavailable; deterministic shot source may import only defineShot from @automovie/engine.',
+        );
+      return selected;
+    },
+    writable: false,
+    configurable: false,
+  });
   const hypot = Math.hypot;
   const mixSeed = (seed, salt) => {
     const integer = Math.trunc(seed);
@@ -1093,15 +1131,224 @@ const SOURCE_INVOCATION = `
 
 const compileShotSource = (
   props: ICompileShotSourceProps,
-): ICompileShotSourceResult =>
-  compileDeterministicSource({
+): ICompileShotSourceResult => {
+  const program = compileDeterministicSource({
     ...props,
     target: `shot:${props.id}`,
-    label: "compiled shot",
-    registrationId: props.id,
+    label: "thin shot program",
+    registration: {
+      id: props.id,
+      contract: contractOfRegistration(props.context.contract),
+    },
     validate: (input) =>
-      typia.validateEquals<IAutoMovieShotSourceOutput>(input),
+      typia.validateEquals<IAutoMovieProductionShotProgram>(input),
   });
+  if (program.value === null) return program;
+
+  const runtime = actorRuntimeOf(
+    program.value,
+    props.context.runtimeModels,
+    `shot:${props.id}`,
+    props.path,
+  );
+  if (runtime.diagnostics.length !== 0)
+    return {
+      value: null,
+      diagnostics: [...program.diagnostics, ...runtime.diagnostics],
+    };
+  const shot = defineShot(props.id, {
+    scene: program.registrationScene!,
+    contract: contractOfRegistration(props.context.contract),
+    build: () => program.value!,
+  });
+  const clipById = new Map(
+    (program.value.clips ?? []).map((clip) => [clip.id, clip]),
+  );
+  const referenceSynthesizer = makeActorSynthesizer(
+    runtime.actors,
+    runtime.nodes,
+  );
+  const compiled = compileDefinedShot({
+    shot,
+    context: undefined,
+    runtime: {
+      synthesize: (action, actor, previous) =>
+        action.verb === "enact"
+          ? (clipById.get(action.clip) ?? null)
+          : referenceSynthesizer(action, actor, previous),
+      skeleton: (node) => runtime.models.get(node)?.skeleton ?? null,
+      hasActorContext: (node) => runtime.actors.has(node),
+      gaits: (node) => runtime.actors.get(node)?.gaits.map((gait) => gait.name),
+      frameFormat: props.context.frameFormat,
+      world: props.context.world,
+      formationDesigns: new Map(Object.entries(props.context.formations)),
+      formations: Object.values(props.context.formationRuntime),
+      models: Object.values(props.context.runtimeModels),
+    },
+  });
+  if (compiled.success === false)
+    return {
+      value: null,
+      diagnostics: [
+        ...program.diagnostics,
+        ...compiled.diagnostics.map(
+          (diagnostic): IAutoMovieDiagnostic => ({
+            code: diagnostic.code,
+            category: "error",
+            phase: "source",
+            target: `shot:${props.id}`,
+            path: props.path,
+            message: `${diagnostic.fact} ${diagnostic.impact} ${diagnostic.recovery}`,
+          }),
+        ),
+      ],
+    };
+  return {
+    value: {
+      ...compiled.source,
+      formationMotions: structuredClone(program.value.formationMotions ?? []),
+      effectCues: structuredClone(program.value.effectCues ?? []),
+    },
+    diagnostics: program.diagnostics,
+  };
+};
+
+const contractOfRegistration = (
+  contract: IAutoMovieShotContract,
+): IAutoMovieDefinedShotContract => {
+  const { id: _id, source: _source, ...registration } = contract;
+  return registration;
+};
+
+interface IShotActorRuntime {
+  actors: Map<string, IAutoMovieActorContext>;
+  nodes: Map<string, IAutoMovieVector3>;
+  models: Map<string, IAutoMovieModel>;
+  diagnostics: IAutoMovieDiagnostic[];
+}
+
+/** Bind a thin program's actor facts to compiler-owned runtime models. */
+const actorRuntimeOf = (
+  program: IAutoMovieProductionShotProgram,
+  runtimeModels: IAutoMovieShotBuildContext["runtimeModels"],
+  target = `shot:${program.blocking.beat}`,
+  sourcePath: string | null = null,
+): IShotActorRuntime => {
+  const diagnostics: IAutoMovieDiagnostic[] = [];
+  const actors = new Map<string, IAutoMovieActorContext>();
+  const models = new Map<string, IAutoMovieModel>();
+  const stageActors = new Map(
+    program.stage.actors.map((actor) => [actor.node, actor]),
+  );
+  program.actors.forEach((actor, index) => {
+    const path = `$program.actors[${index}]`;
+    const staged = stageActors.get(actor.node);
+    const model = runtimeModels[actor.model];
+    const gaitNames = new Set<string>();
+    const gaits =
+      model?.profiles
+        ?.flatMap((profile) => profile.gaits ?? [])
+        .filter((gait) => {
+          if (gaitNames.has(gait.name)) {
+            diagnostics.push({
+              code: "source-actor-runtime-invalid",
+              category: "error",
+              phase: "source",
+              target,
+              path: sourcePath,
+              message: `${path}.model "${actor.model}" supplies duplicate gait "${gait.name}". Keep each compiler-owned gait name unique before rebuilding this shot.`,
+            });
+            return false;
+          }
+          gaitNames.add(gait.name);
+          return true;
+        }) ?? [];
+    const fact = actors.has(actor.node)
+      ? `duplicates actor node "${actor.node}"`
+      : staged === undefined
+        ? `names actor node "${actor.node}" that is absent from stage.actors`
+        : model === undefined
+          ? `names unavailable runtime model "${actor.model}"`
+          : model.skeleton === null
+            ? `names rig-less runtime model "${actor.model}"`
+            : Number.isFinite(actor.speed) === false || actor.speed <= 0
+              ? `sets speed ${JSON.stringify(actor.speed)} instead of a finite value above zero`
+              : Number.isFinite(actor.eyeHeight) === false ||
+                  actor.eyeHeight < 0
+                ? `sets eyeHeight ${JSON.stringify(actor.eyeHeight)} instead of a finite non-negative value`
+                : null;
+    if (fact !== null) {
+      diagnostics.push({
+        code: "source-actor-runtime-invalid",
+        category: "error",
+        phase: "source",
+        target,
+        path: sourcePath,
+        message: `${path} ${fact}. Correct the node/model join or measured actor runtime fact; the compiler will not guess a rig, speed, or eye height.`,
+      });
+      return;
+    }
+    const boundModel = model!;
+    const boundSkeleton = boundModel.skeleton!;
+    const placement = staged!;
+    actors.set(actor.node, {
+      skeleton: boundSkeleton.id,
+      gaits,
+      position: placement.position,
+      speed: actor.speed,
+      facingDeg: placement.facingDeg,
+      eyeHeight: actor.eyeHeight,
+      restPose: {
+        skeleton: boundSkeleton.id,
+        root: null,
+        joints: [],
+      },
+      rig: boundSkeleton,
+    });
+    models.set(actor.node, boundModel);
+  });
+  const clips = new Map<string, number>();
+  (program.clips ?? []).forEach((clip, index) => {
+    const first = clips.get(clip.id);
+    if (clip.id.trim().length === 0 || first !== undefined)
+      diagnostics.push({
+        code: "source-clip-invalid",
+        category: "error",
+        phase: "source",
+        target,
+        path: sourcePath,
+        message:
+          first === undefined
+            ? `$program.clips[${index}].id is blank. Give every enact clip one stable non-blank id.`
+            : `$program.clips[${index}].id duplicates $program.clips[${first}].id "${clip.id}". Keep one authoritative clip per id.`,
+      });
+    else clips.set(clip.id, index);
+  });
+  const actions = program.performance.revise.final ?? program.performance.draft;
+  actions.forEach((action, index) => {
+    if (action.verb === "enact" && clips.has(action.clip) === false)
+      diagnostics.push({
+        code: "source-clip-invalid",
+        category: "error",
+        phase: "source",
+        target,
+        path: sourcePath,
+        message: `$program.performance action ${index} enacts absent clip "${action.clip}". Add that exact clip to program.clips or replace enact with a supported thin verb.`,
+      });
+  });
+  const nodes = new Map<string, IAutoMovieVector3>([
+    ...program.stage.actors.map(
+      (actor) => [actor.node, actor.position] as const,
+    ),
+    ...(program.stage.set ?? []).map(
+      (piece) => [piece.node, piece.position] as const,
+    ),
+    ...program.stage.cameras.map(
+      (camera) => [camera.node, camera.position] as const,
+    ),
+  ]);
+  return { actors, nodes, models, diagnostics };
+};
 
 const compileDeterministicSource = <T>(
   props: ICompileDeterministicSourceProps<T>,
@@ -1139,6 +1386,7 @@ const compileDeterministicSource = <T>(
       name: `automovie:${props.target}`,
     },
   );
+  let registrationScene: string | undefined;
   try {
     new vm.Script(SANDBOX_BOOTSTRAP, {
       filename: `${props.path}#sandbox`,
@@ -1168,20 +1416,45 @@ const compileDeterministicSource = <T>(
           },
         ],
       };
-    if (props.registrationId !== undefined) {
+    if (props.registration !== undefined) {
       sandbox.__automovieExportName = props.exportName;
       new vm.Script(
-        `globalThis.__automovieRegistrationId = (() => {
+        `globalThis.__automovieRegistrationJson = (() => {
            const candidate = module.exports[__automovieExportName]?.id;
-           return typeof candidate === "string" ? candidate : null;
+           const registered = module.exports[__automovieExportName];
+           return typeof candidate === "string"
+             ? JSON.stringify({
+                 id: candidate,
+                 scene: registered.scene,
+                 contract: registered.contract,
+               })
+             : null;
          })();
          delete globalThis.__automovieExportName;`,
         { filename: `${props.path}#registration` },
       ).runInContext(sandbox, { timeout: 1_000 });
-      const registrationId = sandbox.__automovieRegistrationId as unknown;
+      const registrationJson = sandbox.__automovieRegistrationJson as unknown;
+      const registration =
+        typeof registrationJson === "string"
+          ? (JSON.parse(registrationJson) as {
+              id?: unknown;
+              scene?: unknown;
+              contract?: unknown;
+            })
+          : null;
+      const contractMatches =
+        registration !== null &&
+        typeof registration.contract === "object" &&
+        registration.contract !== null &&
+        Buffer.from(canonicalAutoMovieJsonBytes(registration.contract)).equals(
+          Buffer.from(canonicalAutoMovieJsonBytes(props.registration.contract)),
+        );
       if (
-        typeof registrationId !== "string" ||
-        registrationId !== props.registrationId
+        registration === null ||
+        registration.id !== props.registration.id ||
+        typeof registration.scene !== "string" ||
+        registration.scene.trim().length === 0 ||
+        contractMatches === false
       )
         return {
           value: null,
@@ -1194,12 +1467,13 @@ const compileDeterministicSource = <T>(
               target: props.target,
               path: props.path,
               message:
-                typeof registrationId === "string"
-                  ? `Contract id "${props.registrationId}" points to export "${props.exportName}" in ${props.path}, but the source registered "${registrationId}". Change the contract pointer or registration so module path, named export and id identify one artifact.`
-                  : `Contract id "${props.registrationId}" points to export "${props.exportName}" in ${props.path}, but that export has no string id. Add id: "${props.registrationId}" to the exported IAutoMovieShotSource so module path, named export and id identify one artifact.`,
+                registration === null
+                  ? `Contract id "${props.registration.id}" points to export "${props.exportName}" in ${props.path}, but that export is not a defineShot registration. Export defineShot("${props.registration.id}", { scene, contract, build }) so module path, named export, id, and measurable contract identify one artifact.`
+                  : `Contract id "${props.registration.id}" points to export "${props.exportName}" in ${props.path}, but its registration has id ${JSON.stringify(registration.id)}, scene ${JSON.stringify(registration.scene)}, or a contract that differs from the design. Make the defineShot registration id and measurable contract exactly match the selected design contract, and keep scene non-blank.`,
             },
           ],
         };
+      registrationScene = registration.scene;
     }
     sandbox.__automovieContextJson = JSON.stringify(props.context);
     sandbox.__automovieExportName = props.exportName;
@@ -1242,7 +1516,7 @@ const compileDeterministicSource = <T>(
           ),
         ],
       };
-    return { value: validation.data, diagnostics };
+    return { value: validation.data, diagnostics, registrationScene };
   } catch (error) {
     const message =
       typeof error === "object" && error !== null && "message" in error
@@ -1938,7 +2212,8 @@ const inspectSource = (
       report("source-capability-forbidden", "async function");
     if (
       ts.isImportDeclaration(node) &&
-      importDeclarationHasRuntimeBinding(node)
+      importDeclarationHasRuntimeBinding(node) &&
+      isDefineShotImport(node) === false
     )
       report("source-import-unsupported", "runtime import");
     if (
@@ -1998,6 +2273,31 @@ const importDeclarationHasRuntimeBinding = (
   const bindings = clause.namedBindings!;
   if (ts.isNamespaceImport(bindings)) return true;
   return bindings.elements.some((element) => element.isTypeOnly === false);
+};
+
+/** The one deterministic runtime import exposed by the source VM. */
+const isDefineShotImport = (declaration: ts.ImportDeclaration): boolean => {
+  if (
+    ts.isStringLiteralLike(declaration.moduleSpecifier) === false ||
+    declaration.moduleSpecifier.text !== "@automovie/engine"
+  )
+    return false;
+  const clause = declaration.importClause;
+  if (
+    clause === undefined ||
+    clause.isTypeOnly ||
+    clause.name !== undefined ||
+    clause.namedBindings === undefined ||
+    ts.isNamedImports(clause.namedBindings) === false
+  )
+    return false;
+  const runtime = clause.namedBindings.elements.filter(
+    (element) => element.isTypeOnly === false,
+  );
+  if (runtime.length !== 1) return false;
+  return (
+    (runtime[0]!.propertyName?.text ?? runtime[0]!.name.text) === "defineShot"
+  );
 };
 
 const LOCALE_SENSITIVE_SOURCE_MEMBERS = new Set([

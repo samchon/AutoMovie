@@ -38,15 +38,9 @@ stage → block → perform pipeline directly in the engine, so a source module
 does not need an MCP application wrapper to produce a deterministic shot
 artifact.
 
-The returned runtime keeps the stage, blocking, performance, artifact,
-opening/closing continuity, independently measured participant/state/event/
-camera contract outcomes, ROM warnings, and D010 physics advice together. The
-host supplies current rig lookup and frame dimensions; a builder cannot pass by
-echoing its own contract ids.
-Physics advice is decision data: callers explicitly accept, modify, or reject
-it instead of the compiler silently applying it. `realizeShotContract` is also
-owned here so compiler and direct-link consumers lower the same production
-contract through the same engine path.
+The returned runtime contains the compiler-ready source artifact, opening/closing continuity, independently measured participant/state/event/camera outcomes, and D010 physics-advice decisions. The registered builder remains the source of the typed stage, blocking, and performance program; the host supplies current rig lookup and frame dimensions, and a builder cannot pass by echoing its own contract ids.
+
+Physics advice is a discriminated decision record: it preserves the original proposal separately from an accepted or modified selected response, while rejection selects nothing. `realizeShotContract` is also owned here so compiler and direct-link consumers lower the same production contract through the same engine path.
 
 ## Interaction events
 

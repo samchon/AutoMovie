@@ -4,12 +4,12 @@ AutoMovie source is ordinary tracked TypeScript compiled in a deterministic no-I
 
 ## Module shape
 
-Use stable named exports that match the design record’s source binding. Keep build functions pure: output depends only on the frozen context argument and imported deterministic package code. No filesystem, network, process environment, clock, randomness, global mutation, or host-specific path lookup belongs inside shot or film source.
+Use `defineShot(id, { scene, contract, build })` as the stable named export selected by the design record’s source binding. The shot VM permits that one runtime import from `@automovie/engine`; import package types with `import type`, and use deterministic geometry through `context.engine`. Keep build functions pure: output depends only on the frozen context and source-local deterministic code. No filesystem, network, process environment, clock, randomness, global mutation, or host-specific path lookup belongs inside shot or film source.
 
 This minimal helper is a real compile-checked example:
 
 ```ts
-import { IAutoMovieShotSource } from "@automovie/interface";
+import type { IAutoMovieShotSource } from "@automovie/interface";
 
 export const registeredShotId = (source: IAutoMovieShotSource): string =>
   source.id;

@@ -189,8 +189,8 @@ export const test_mcp_production_instances = (): void => {
     fs.writeFileSync(
       sourcePath,
       source.replace(
-        "): IAutoMovieShotSourceOutput => {",
-        `): IAutoMovieShotSourceOutput => {
+        "): IAutoMovieProductionShotProgram => {",
+        `): IAutoMovieProductionShotProgram => {
   const sampledGrid = context.engine.instanceSlot("civilians", 0);
   const sampledScatter = context.engine.instanceSlot("trees", 0);
   const sampledRoute = context.engine.instanceSlot("roadside", 0);

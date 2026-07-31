@@ -90,10 +90,7 @@ export const assemblePlantedFeet = (
   plants: IAutoMovieFootPlant[],
 ): IAutoMoviePlantedFeet => ({
   motion: {
-    id: motion.id,
-    skeleton: motion.skeleton,
-    duration: motion.duration,
-    loop: motion.loop,
+    ...motion,
     keyframes,
   },
   plants,

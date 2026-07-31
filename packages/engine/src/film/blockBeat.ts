@@ -48,9 +48,8 @@ export namespace IAutoMovieBlockedBeat {
     /**
      * The validated initial condition from the prior beat, or `null` for the
      * first beat (or when none was supplied). Surfaced so the performance stage
-     * can seed each actor's start position, facing, gait phase, velocity,
-     * plants, and mount from where the previous beat actually ended; full
-     * seeding into the action synthesizer is a follow-up.
+     * seeds each actor's start position, facing, articulation, gait phase,
+     * velocity, plants, and mount from where the previous beat actually ended.
      */
     previous: IAutoMovieBeatEndState | null;
   }

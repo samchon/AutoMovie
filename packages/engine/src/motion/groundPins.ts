@@ -53,6 +53,8 @@ export const pinStanceTargets = (props: {
   groundAt: (x: number, z: number) => number;
   /** Contact tolerance above the ground counted as stance. */
   tolerance: number;
+  /** Prior beat's authoritative opening pin per foot, in model space. */
+  openingTargets?: ReadonlyMap<AutoMovieHumanoidBone, IAutoMovieVector3>;
 }): {
   plants: IAutoMovieFootPlant[];
   targets: Array<Map<AutoMovieHumanoidBone, IAutoMovieVector3>>;
@@ -72,11 +74,16 @@ export const pinStanceTargets = (props: {
     });
     for (const run of stanceRuns(contact)) {
       const startFoot = resolved[run.start]!.get(leg.foot)!.worldPosition;
-      const target: IAutoMovieVector3 = {
-        x: startFoot.x,
-        y: groundAt(startFoot.x, startFoot.z),
-        z: startFoot.z,
-      };
+      const carried =
+        run.start === 0 ? props.openingTargets?.get(leg.foot) : undefined;
+      const target: IAutoMovieVector3 =
+        carried === undefined
+          ? {
+              x: startFoot.x,
+              y: groundAt(startFoot.x, startFoot.z),
+              z: startFoot.z,
+            }
+          : { ...carried };
       for (let f = run.start; f <= run.end; ++f)
         targets[f]!.set(leg.foot, target);
       plants.push({

@@ -13,6 +13,7 @@ import {
 } from "../harness/IAutoMovieSlate";
 import { IAutoMovieTimingAnchor } from "../harness/IAutoMovieTimingAnchor";
 import { IAutoMovieModel } from "../model/IAutoMovieModel";
+import { IAutoMovieShotContract } from "../production/IAutoMovieProductionDesign";
 import { IAutoMovieSpace } from "../scene/IAutoMovieSpace";
 
 /**
@@ -227,6 +228,14 @@ export interface IAutoMovieEditEntry {
 
 /** Context-free shot program returned by a registered source builder. */
 export interface IAutoMovieShotProgram {
+  /**
+   * Runtime facts for every articulated stage actor that performs a verb.
+   *
+   * Geometry and gait curves remain compiler-owned through {@link model}; the
+   * source states only the scale-dependent values a generic compiler cannot
+   * infer without guessing.
+   */
+  actors: IAutoMovieShotActorProgram[];
   /** Macro treatment containing the registered beat. */
   script: IAutoMovieScript;
   /** Set declaration whose scene id must equal the registration's scene. */
@@ -242,4 +251,54 @@ export interface IAutoMovieShotProgram {
     /** Shot-local measurement time in seconds. */
     time: number;
   }>;
+}
+
+/** Host-compilable runtime facts for one actor in a thin shot program. */
+export interface IAutoMovieShotActorProgram {
+  /** Staged actor node whose actions these facts support. */
+  node: string;
+  /** Compiler-owned runtime model id providing the skeleton and gait profiles. */
+  model: string;
+  /** Finite positive locomotion speed in world meters per second. */
+  speed: number;
+  /** Finite non-negative eye height above the staged root, in meters. */
+  eyeHeight: number;
+}
+
+/**
+ * Contract fields embedded in a shot registration rather than its source
+ * pointer.
+ */
+export type IAutoMovieDefinedShotContract = Omit<
+  IAutoMovieShotContract,
+  "id" | "source"
+>;
+
+/**
+ * One source-level shot registration.
+ *
+ * The export is the artifact: id, staged scene, measurable contract, and
+ * deterministic builder travel together so a repository compiler can bind
+ * module path, export name, and artifact identity without a second manifest
+ * claiming what the source contains.
+ */
+export interface IAutoMovieDefinedShot<Context = void> {
+  /** Stable shot id; the compiled artifact receives this exact identity. */
+  id: string;
+  /** Stable staged-scene id the builder must actually produce. */
+  scene: string;
+  /** Required participants, states, events, coverage, and review evidence. */
+  contract: IAutoMovieDefinedShotContract;
+  /** Free deterministic code that emits the typed engine program. */
+  build(context: Context): IAutoMovieShotProgram;
+}
+
+/** The source-authored half accepted by the engine's `defineShot` helper. */
+export interface IAutoMovieShotDefinition<Context> {
+  /** Stable staged-scene id the builder must actually produce. */
+  scene: string;
+  /** Required participants, states, events, coverage, and review evidence. */
+  contract: IAutoMovieDefinedShotContract;
+  /** Free deterministic code that emits the typed engine program. */
+  build(context: Context): IAutoMovieShotProgram;
 }

@@ -130,18 +130,15 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
   const original = fs.readFileSync(sourcePath, "utf8");
   const mutateSourceOutput = (mutation: string): string =>
     original
+      .replace("  return {\n    actors:", "  const output = {\n    actors:")
       .replace(
-        "  return {\n    eventSamples:",
-        "  const output = {\n    eventSamples:",
-      )
-      .replace(
-        "\n  };\n};\n\n/** Opening",
-        `\n  };\n${mutation}\n  return output;\n};\n\n/** Opening`,
+        "\n  };\n};\n\n/** Opening source",
+        `\n  };\n${mutation}\n  return output;\n};\n\n/** Opening source`,
       );
   const injectBuildSignal = (...statements: string[]): string =>
     original.replace(
-      "): IAutoMovieShotSourceOutput => {",
-      ["): IAutoMovieShotSourceOutput => {", ...statements].join("\n"),
+      "): IAutoMovieProductionShotProgram => {",
+      ["): IAutoMovieProductionShotProgram => {", ...statements].join("\n"),
     );
   try {
     const project = AutoMovieProductionProject.open(fixture.root);
@@ -1545,7 +1542,7 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     );
     fs.writeFileSync(
       sourcePath,
-      'export const opening = { id: "opening", build() { return Promise.resolve({}); } };\n',
+      injectBuildSignal("  return Promise.resolve({}) as never;"),
     );
     TestValidator.predicate(
       "async source is rejected",
@@ -1555,7 +1552,7 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     );
     fs.writeFileSync(
       sourcePath,
-      'export const opening = { id: "opening", build() { return { then() {} }; } };\n',
+      injectBuildSignal("  return { then() {} } as never;"),
     );
     TestValidator.predicate(
       "thenable source results are rejected even without the Promise global",
@@ -1576,7 +1573,7 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     for (const expression of ["{}", "undefined"]) {
       fs.writeFileSync(
         sourcePath,
-        `export const opening = { id: "opening", build() { return ${expression}; } };\n`,
+        injectBuildSignal(`  return ${expression} as never;`),
       );
       TestValidator.predicate(
         `structurally invalid source result ${expression} is rejected`,
@@ -1587,7 +1584,7 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     }
     fs.writeFileSync(
       sourcePath,
-      original.replace('id: "opening"', 'id: "another-shot"'),
+      original.replace('defineShot("opening"', 'defineShot("another-shot"'),
     );
     TestValidator.predicate(
       "registered export id is bound to contract module and export",
@@ -1595,7 +1592,10 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
         "source-registration-mismatch",
       ),
     );
-    fs.writeFileSync(sourcePath, original.replace('  id: "opening",', ""));
+    fs.writeFileSync(
+      sourcePath,
+      original.replace('defineShot("opening"', 'defineShot(""'),
+    );
     TestValidator.predicate(
       "registered source export requires an explicit string id",
       diagnosticCodes(compiler.compile({ scope: "source" })).has(
@@ -1604,8 +1604,15 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     );
     fs.writeFileSync(
       sourcePath,
-      'export const opening = { id: "opening", build() { throw "boom"; } };\n',
+      original.replace('scene: "opening-scene"', 'scene: "unregistered-scene"'),
     );
+    TestValidator.predicate(
+      "registered scene remains authoritative over the built stage",
+      diagnosticCodes(compiler.compile({ scope: "source" })).has(
+        "contract-mismatch",
+      ),
+    );
+    fs.writeFileSync(sourcePath, injectBuildSignal('  throw "boom";'));
     TestValidator.predicate(
       "source exceptions are isolated",
       diagnosticCodes(compiler.compile({ scope: "source" })).has(
@@ -1614,7 +1621,7 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     );
     fs.writeFileSync(
       sourcePath,
-      'export const opening = { id: "opening", build() { throw { message: "object boom" }; } };\n',
+      injectBuildSignal('  throw { message: "object boom" };'),
     );
     TestValidator.predicate(
       "object-shaped source exceptions retain their message",
@@ -1623,10 +1630,7 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
         .diagnostics.some((item) => item.message.includes("object boom")),
     );
     for (const expression of ["null", "{}"]) {
-      fs.writeFileSync(
-        sourcePath,
-        `export const opening = { id: "opening", build() { throw ${expression}; } };\n`,
-      );
+      fs.writeFileSync(sourcePath, injectBuildSignal(`  throw ${expression};`));
       TestValidator.predicate(
         `source exception ${expression} is stringified`,
         diagnosticCodes(compiler.compile({ scope: "source" })).has(
@@ -1634,10 +1638,7 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
         ),
       );
     }
-    fs.writeFileSync(
-      sourcePath,
-      'export const opening = { id: "opening", build() { while (true) {} } };\n',
-    );
+    fs.writeFileSync(sourcePath, injectBuildSignal("  while (true) {}"));
     TestValidator.predicate(
       "source execution has a hard timeout",
       diagnosticCodes(compiler.compile({ scope: "source" })).has(
@@ -1646,7 +1647,7 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     );
     const getterSource = mutateSourceOutput(
       [
-        '  Object.defineProperty(output, "shot", {',
+        '  Object.defineProperty(output, "eventSamples", {',
         "    get() { while (true) {} },",
         "  });",
       ].join("\n"),
@@ -1660,12 +1661,12 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     );
     fs.writeFileSync(
       sourcePath,
-      original.replace("model: model.id,", 'model: "absent-model",'),
+      original.replace('model: "sentinel",', 'model: "absent-model",'),
     );
     TestValidator.predicate(
       "compiled scenes cannot reference an absent model",
       diagnosticCodes(compiler.compile({ scope: "source" })).has(
-        "engine-validation-failed",
+        "source-actor-runtime-invalid",
       ),
     );
     fs.writeFileSync(sourcePath, "export const opening = { build: ( => 1 };\n");
@@ -2041,21 +2042,15 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     );
     project.readGeneratedFile = residentReadGenerated;
 
-    const durationNeedle = "duration: context.contract.durationSeconds,";
-    const durationIndex = original.lastIndexOf(durationNeedle);
-    const wrongIdentity = `${original
-      .slice(0, durationIndex)
-      .replace(
-        "id: context.contract.id,",
-        'id: "wrong-shot",',
-      )}duration: context.contract.durationSeconds - 1,${original.slice(
-      durationIndex + durationNeedle.length,
-    )}`;
+    const wrongIdentity = original.replace(
+      "duration: context.contract.durationSeconds,\n    },\n    eventSamples:",
+      "duration: context.contract.durationSeconds - 1,\n    },\n    eventSamples:",
+    );
     fs.writeFileSync(sourcePath, wrongIdentity);
     TestValidator.predicate(
       "compiled shot identity and duration are engine gates",
       diagnosticCodes(compiler.compile({ scope: "source" })).has(
-        "engine-validation-failed",
+        "contract-mismatch",
       ),
     );
     for (const [name, mutation] of [
@@ -2069,16 +2064,13 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
       ["missing-event-sample", "  output.eventSamples = [];"],
       [
         "false-opening-state",
-        "  output.motions[0]!.keyframes[0]!.pose.joints[0]!.abduction = 50;",
+        "  output.clips![0]!.keyframes[0]!.pose.joints[0]!.abduction = 50;",
       ],
       [
         "false-closing-state",
-        "  output.motions[0]!.keyframes[output.motions[0]!.keyframes.length - 1]!.pose.joints[0]!.abduction = 0;",
+        "  output.clips![0]!.keyframes[output.clips![0]!.keyframes.length - 1]!.pose.joints[0]!.abduction = 0;",
       ],
-      [
-        "unreadable-camera",
-        "  output.scene.cameras[0]!.transform.translation.x = 100;",
-      ],
+      ["unreadable-camera", "  output.stage.cameras[0]!.position.x = 100;"],
     ] as const) {
       fs.writeFileSync(sourcePath, mutateSourceOutput(mutation));
       const realizationOutput = compiler.compile({ scope: "source" });
@@ -2164,10 +2156,11 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
       sourcePath,
       mutateSourceOutput(
         [
-          "  output.scene.nodes.push({",
-          "    ...output.scene.nodes[0]!,",
-          '    id: "formation:line:slot:000001",',
-          "  });",
+          "  output.stage.set = [{",
+          '    node: "formation:line:slot:000001",',
+          '    model: "sentinel",',
+          "    position: { x: 0, y: 0, z: 0 },",
+          "  }];",
         ].join("\n"),
       ),
     );

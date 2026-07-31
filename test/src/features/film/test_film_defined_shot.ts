@@ -16,6 +16,10 @@ import {
 import { createSkeleton } from "../internal/fixtures";
 
 const program = (): IAutoMovieShotProgram => ({
+  actors: [
+    { node: "knightA", model: "knightA", speed: 1, eyeHeight: 1.6 },
+    { node: "knightB", model: "knightB", speed: 1, eyeHeight: 1.6 },
+  ],
   script: makeScriptWrite(),
   stage: makeStagingWrite(),
   blocking: makeBlockingWrite(),
@@ -81,8 +85,9 @@ export const test_film_defined_shot = (): void => {
       advice: [
         {
           id: "duel-contact",
-          response: advice,
+          proposal: advice,
           decision: null,
+          selected: null,
           rationale: null,
         },
       ],
@@ -109,7 +114,57 @@ export const test_film_defined_shot = (): void => {
     compiled.success &&
       compiled.advice[0]?.id === "duel-contact" &&
       compiled.advice[0].decision === null &&
-      compiled.advice[0].response.impact.impulse.z !== 0,
+      compiled.advice[0].proposal.impact.impulse.z !== 0 &&
+      compiled.advice[0].selected === null,
+  );
+
+  const modifiedResponse = structuredClone(advice);
+  modifiedResponse.push.flexion = (modifiedResponse.push.flexion ?? 0) + 1;
+  const decisions = compileDefinedShot({
+    shot,
+    context: undefined,
+    runtime: {
+      synthesize: validSynthesizer,
+      skeleton: () => createSkeleton(),
+      frameFormat: { width: 1920, height: 1080 },
+      advice: [
+        {
+          id: "accepted",
+          proposal: advice,
+          decision: "accepted",
+          selected: {
+            recoil: structuredClone(advice.recoil),
+            push: structuredClone(advice.push),
+            impact: structuredClone(advice.impact),
+          },
+          rationale: "The measured exchange serves the grounded hit.",
+        },
+        {
+          id: "modified",
+          proposal: advice,
+          decision: "modified",
+          selected: modifiedResponse,
+          rationale: "The stylized recoil needs one more degree.",
+        },
+        {
+          id: "rejected",
+          proposal: advice,
+          decision: "rejected",
+          selected: null,
+          rationale: "The contact is intentionally supernatural.",
+        },
+      ],
+    },
+  });
+  TestValidator.predicate(
+    "D010 accepted, modified, and rejected decisions remain distinguishable",
+    decisions.success &&
+      decisions.advice[0]?.decision === "accepted" &&
+      decisions.advice[1]?.decision === "modified" &&
+      decisions.advice[1].selected?.push.flexion ===
+        modifiedResponse.push.flexion &&
+      decisions.advice[2]?.decision === "rejected" &&
+      decisions.advice[2].selected === null,
   );
 
   const mismatched = compileDefinedShot({

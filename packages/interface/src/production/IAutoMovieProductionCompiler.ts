@@ -1,3 +1,7 @@
+import {
+  IAutoMovieDefinedShot,
+  IAutoMovieShotProgram,
+} from "../authoring/IAutoMovieAuthoring";
 import { IAutoMovieShot } from "../cinematics";
 import { IAutoMovieTransform, IAutoMovieVector3 } from "../geometry";
 import { IAutoMovieModel } from "../model";
@@ -862,7 +866,7 @@ export interface IAutoMovieCompiledEffect {
   digest: AutoMovieContentDigest;
 }
 
-/** Coding-agent output before compiler-owned models and formations are added. */
+/** Engine-compiled shot source before production materialization is added. */
 export interface IAutoMovieShotSourceOutput {
   /** Event sample times selected inside authoritative event windows. */
   eventSamples: Array<{
@@ -871,9 +875,9 @@ export interface IAutoMovieShotSourceOutput {
     /** Shot-local time at which the compiler evaluates its predicates. */
     time: number;
   }>;
-  /** Scene authored around compiler-owned runtime model ids. */
+  /** Scene derived by staging the source-authored program. */
   scene: IAutoMovieScene;
-  /** Sparse deterministic motions referenced by the shot. */
+  /** Deterministic motions synthesized and assembled by the engine. */
   motions: IAutoMovieMotion[];
   /**
    * Optional compact formation-level cues. The compiler materializes an empty
@@ -882,7 +886,7 @@ export interface IAutoMovieShotSourceOutput {
   formationMotions?: IAutoMovieFormationMotion[];
   /** Optional bounded shot-local deterministic effect cues. */
   effectCues?: IAutoMovieShotEffectCue[];
-  /** Compiled shot choreography. */
+  /** Engine-compiled shot choreography. */
   shot: IAutoMovieShot;
 }
 
@@ -975,16 +979,40 @@ export interface IAutoMovieCompiledContractRealization {
 
 /** Coding-agent-owned module export compiled in a deterministic sandbox. */
 export interface IAutoMovieShotSource {
+  /** Exact registered shot id selected by the design source pointer. */
+  id: IAutoMovieDefinedShot<IAutoMovieShotBuildContext>["id"];
+  /** Exact staged-scene id the returned program must author. */
+  scene: IAutoMovieDefinedShot<IAutoMovieShotBuildContext>["scene"];
+  /** Measurable source-owned contract, checked against the design contract. */
+  contract: IAutoMovieDefinedShot<IAutoMovieShotBuildContext>["contract"];
   /**
-   * Exact shot registration id.
+   * Build a thin stage/block/performance program.
    *
-   * The compiler compares this value with the design contract selected by the
-   * module path and named export, so source code cannot accidentally build a
-   * different shot under a valid pointer.
+   * The production host, not source code, supplies rig capabilities and runs
+   * the engine pipeline that lowers this program into scene, motion, and shot
+   * artifacts.
    */
-  id: string;
-  /** Build derived shot data from the frozen design context. */
-  build(context: IAutoMovieShotBuildContext): IAutoMovieShotSourceOutput;
+  build(context: IAutoMovieShotBuildContext): IAutoMovieProductionShotProgram;
+}
+
+/**
+ * Thin engine program plus production-only compact cues.
+ *
+ * Formation and effect cues remain declarative compiler inputs; dense actor
+ * motion, scene, and shot artifacts are deliberately absent.
+ */
+export interface IAutoMovieProductionShotProgram extends IAutoMovieShotProgram {
+  /**
+   * Optional source-computed clips cited only by explicit `enact` actions.
+   *
+   * The host still masks, layers, ROM-checks, and assembles these clips through
+   * `performShot`; they are not precompiled shot output.
+   */
+  clips?: IAutoMovieMotion[];
+  /** Optional compact formation-level cues. */
+  formationMotions?: IAutoMovieFormationMotion[];
+  /** Optional bounded shot-local deterministic effect cues. */
+  effectCues?: IAutoMovieShotEffectCue[];
 }
 
 /** Compact inventory returned by project inspection. */

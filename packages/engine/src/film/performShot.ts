@@ -2,6 +2,8 @@ import {
   AutoMovieHumanoidBone,
   IAutoMovieActionCall,
   IAutoMovieActionTarget,
+  IAutoMovieBeatEndFootPlant,
+  IAutoMovieBeatEndState,
   IAutoMovieBlocking,
   IAutoMovieBlockingCoverage,
   IAutoMovieCamera,
@@ -22,6 +24,7 @@ import {
 import { armChainFault } from "../kinematics/armChainFault";
 import { Quaternion } from "../math/Quaternion";
 import { Vector3 } from "../math/Vector3";
+import { plantStanceFeet } from "../motion/plantFeet";
 import { sampleMotion } from "../motion/sampleMotion";
 import { actionRegion } from "../perform/actionRegion";
 import { bodyRegionBones } from "../perform/bodyRegionBones";
@@ -158,6 +161,14 @@ export namespace IAutoMoviePerformedShot {
 
     /** The synthesised per-actor clips, keyed by scene-node id. */
     motions: Record<string, IAutoMovieMotion>;
+
+    /** Ground-IK stance runs produced while resuming prior opening plants. */
+    plants: Array<{
+      /** Scene node owning these world-space plant runs. */
+      node: string;
+      /** Current-shot stance runs carried into the next beat. */
+      plants: IAutoMovieBeatEndFootPlant[];
+    }>;
   }
 
   /** The action list contradicted the stage, or a compiled clip broke ROM. */
@@ -282,6 +293,8 @@ export const performShot = (props: {
    * beat ladder to retain its `shot:${beat}` identity.
    */
   shotId?: string;
+  /** Prior verified beat state supplied to every action synthesizer call. */
+  previous?: IAutoMovieBeatEndState | null;
 }): IAutoMoviePerformedShot => {
   const {
     script,
@@ -294,6 +307,7 @@ export const performShot = (props: {
     targetAt: resolveLiveTarget,
     gaits,
     blocking,
+    previous,
   } = props;
   const shotId = props.shotId ?? `shot:${performance.beat}`;
   const cameraClipScope = props.shotId ?? performance.beat;
@@ -305,7 +319,7 @@ export const performShot = (props: {
   const synthesizeOnce: IAutoMovieActionSynthesizer = (action, actor) => {
     const cachedByActor = synthesisCache.get(action);
     if (cachedByActor?.has(actor) === true) return cachedByActor.get(actor)!;
-    const motion = synthesize(action, actor);
+    const motion = synthesize(action, actor, previous);
     const byActor = cachedByActor ?? new Map<string, IAutoMovieMotion | null>();
     byActor.set(actor, motion);
     synthesisCache.set(action, byActor);
@@ -1413,6 +1427,41 @@ export const performShot = (props: {
 
   const compiled = compilePerformance(stageActions, synthesizeOnce);
   const motions = compiled.performances;
+  const plants: IAutoMoviePerformedShot.ISuccess["plants"] = [];
+  for (const actor of previous?.actors ?? []) {
+    if (actor.footPlants === null) continue;
+    const motion = motions[actor.node];
+    const rig = skeleton(actor.node);
+    const node = staged.scene.nodes.find((entry) => entry.id === actor.node);
+    if (motion === undefined || rig === null || node === undefined) continue;
+    const inverse = Quaternion.inverse(node.transform.rotation);
+    const toModelPoint = (point: IAutoMovieVector3): IAutoMovieVector3 =>
+      Quaternion.rotateVector(
+        inverse,
+        Vector3.subtract(point, node.transform.translation),
+      );
+    const toWorldPoint = (point: IAutoMovieVector3): IAutoMovieVector3 =>
+      Vector3.add(
+        node.transform.translation,
+        Quaternion.rotateVector(node.transform.rotation, point),
+      );
+    const planted = plantStanceFeet({
+      skeleton: rig,
+      motion,
+      openingPlants: actor.footPlants.map((plant) => ({
+        foot: plant.foot,
+        position: toModelPoint(plant.position),
+      })),
+    });
+    motions[actor.node] = planted.motion;
+    plants.push({
+      node: actor.node,
+      plants: planted.plants.map((plant) => ({
+        ...plant,
+        position: toWorldPoint(plant.position),
+      })),
+    });
+  }
 
   // An authored channel the compiler does not apply is REPORTED (#1349). The
   // region mask itself is deliberate, but it used to discard content in
@@ -1639,5 +1688,5 @@ export const performShot = (props: {
         .join("; ")}`,
     );
 
-  return { success: true, shot, motions };
+  return { success: true, shot, motions, plants };
 };

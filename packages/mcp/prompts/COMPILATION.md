@@ -3,7 +3,7 @@
 The non-MCP compiler is an atomic fence with four scopes. Invoke it through the scaffold compile command or `compileAutoMovieProduction`.
 
 - `design`: validate manifest, design shape, ranges, identity, and references without reading source or materializing derived files.
-- `source`: additionally materialize primitive models, compact formation runtimes, and bounded fixed-step effect streams; bind and execute shot source; validate scenes, actor/object/formation motions, effect cues, and shots; derive contract realizations; and enforce generated ownership.
+- `source`: additionally materialize primitive models and compact formation runtimes; bind each `defineShot` registration to its design contract; execute its thin stage/block/performance program through the host engine pipeline; validate actor/object/formation motion, bounded fixed-step effects, scenes, and shots; derive contract realizations; and enforce generated ownership.
 - `review`: additionally require every current design, source, shot, and film review to be complete and fresh.
 - `final`: additionally require a current aggregate render manifest and matching byte/media receipt. The ledger is mandatory even when every listed deliverable is optional; `required` controls which declared ids must be present, not whether final delivery needs provenance.
 

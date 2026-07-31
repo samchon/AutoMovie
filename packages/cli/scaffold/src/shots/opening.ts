@@ -1,24 +1,175 @@
+import { defineShot } from "@automovie/engine";
 import type {
+  IAutoMovieDefinedShotContract,
+  IAutoMovieProductionShotProgram,
   IAutoMovieShotBuildContext,
-  IAutoMovieShotSource,
-  IAutoMovieShotSourceOutput,
 } from "@automovie/interface";
 
-const transform = (
-  x: number,
-  y: number,
-  z: number,
-  rotation = { x: 0, y: 0, z: 0, w: 1 },
-) => ({
-  translation: { x, y, z },
-  rotation,
-  scale: { x: 1, y: 1, z: 1 },
-});
+const OPENING_CONTRACT: IAutoMovieDefinedShotContract = {
+  beat: "signal",
+  evidence: [
+    {
+      reason: "This shot realizes the screenplay's visible signal action.",
+      scene: "SCN-001",
+      claim: "signal-arm-readable",
+    },
+  ],
+  durationSeconds: 6,
+  participants: [
+    { kind: "actor", id: "sentinel" },
+    { kind: "formation", id: "army" },
+  ],
+  opening: [
+    {
+      id: "arm-lowered",
+      description: "The sentinel begins in a readable neutral stance.",
+      predicates: [
+        {
+          kind: "joint-angle",
+          actor: "sentinel",
+          bone: "leftUpperArm",
+          axis: "abduction",
+          operator: "==",
+          value: 0,
+          tolerance: 0.001,
+        },
+      ],
+    },
+  ],
+  closing: [
+    {
+      id: "signal-held",
+      description: "The raised arm holds the signal at the final frame.",
+      predicates: [
+        {
+          kind: "joint-angle",
+          actor: "sentinel",
+          bone: "leftUpperArm",
+          axis: "abduction",
+          operator: ">=",
+          value: 100,
+          tolerance: 0.001,
+        },
+      ],
+    },
+  ],
+  camera: {
+    intent:
+      "A full-body three-quarter view proves silhouette and pose-pass wiring.",
+    requiredSubjects: ["sentinel"],
+    maxOcclusionRatio: 0.05,
+  },
+  events: [
+    {
+      id: "signal-raised",
+      kind: "reveal",
+      window: { from: 1.5, to: 3 },
+      subjects: ["sentinel"],
+      predicates: [
+        {
+          kind: "joint-angle",
+          actor: "sentinel",
+          bone: "leftUpperArm",
+          axis: "abduction",
+          operator: ">=",
+          value: 100,
+          tolerance: 0.001,
+        },
+      ],
+    },
+  ],
+  reviewFrames: [
+    {
+      id: "signal-apex",
+      time: 2,
+      passes: ["beauty", "mask", "pose"],
+    },
+  ],
+};
+
+const ANSWER_CONTRACT: IAutoMovieDefinedShotContract = {
+  beat: "answer",
+  evidence: [
+    {
+      reason: "This shot realizes the screenplay's answering gesture.",
+      scene: "SCN-002",
+    },
+  ],
+  durationSeconds: 6,
+  participants: [{ kind: "actor", id: "sentinel" }],
+  opening: [
+    {
+      id: "signal-seen",
+      description:
+        "The answering shot begins from the established raised signal.",
+      predicates: [
+        {
+          kind: "joint-angle",
+          actor: "sentinel",
+          bone: "leftUpperArm",
+          axis: "abduction",
+          operator: ">=",
+          value: 100,
+          tolerance: 0.001,
+        },
+      ],
+    },
+  ],
+  closing: [
+    {
+      id: "answer-held",
+      description: "The signal remains legible through the second shot.",
+      predicates: [
+        {
+          kind: "joint-angle",
+          actor: "sentinel",
+          bone: "leftUpperArm",
+          axis: "abduction",
+          operator: ">=",
+          value: 100,
+          tolerance: 0.001,
+        },
+      ],
+    },
+  ],
+  camera: {
+    intent:
+      "A second full-body view proves that film rendering and review cannot stop after the opening shot.",
+    requiredSubjects: ["sentinel"],
+    maxOcclusionRatio: 0.05,
+  },
+  events: [
+    {
+      id: "signal-answered",
+      kind: "reveal",
+      window: { from: 3, to: 5 },
+      subjects: ["sentinel"],
+      predicates: [
+        {
+          kind: "joint-angle",
+          actor: "sentinel",
+          bone: "leftUpperArm",
+          axis: "abduction",
+          operator: ">=",
+          value: 100,
+          tolerance: 0.001,
+        },
+      ],
+    },
+  ],
+  reviewFrames: [
+    {
+      id: "signal-answer",
+      time: 4,
+      passes: ["beauty", "mask", "pose"],
+    },
+  ],
+};
 
 const buildSignal = (
   context: IAutoMovieShotBuildContext,
   openingAbduction: number,
-): IAutoMovieShotSourceOutput => {
+): IAutoMovieProductionShotProgram => {
   const model = context.runtimeModels.sentinel;
   if (model === undefined || model.skeleton === null)
     throw new Error(
@@ -90,42 +241,58 @@ const buildSignal = (
           ],
     gaitCycle: null,
   };
+  const sceneId = `${context.contract.id}-scene`;
   return {
-    eventSamples: context.contract.events.map((event) => ({
-      id: event.id,
-      time: (event.window.from + event.window.to) / 2,
-    })),
-    scene: {
-      id: `${context.contract.id}-scene`,
-      name: "starter signal ground",
-      nodes: [
+    actors: [
+      {
+        node: "sentinel",
+        model: "sentinel",
+        speed: 1.2,
+        eyeHeight: 1.62,
+      },
+    ],
+    script: {
+      logline: "A lone sentinel raises a signal and the field answers.",
+      theme: "one readable gesture changes the field",
+      cast: [
         {
-          id: "sentinel",
-          model: model.id,
-          transform: transform(0, 0, 0),
-          motion: motion.id,
-          pose: null,
+          node: "sentinel",
+          character: "the sentinel",
+          modelRef: "sentinel",
+        },
+      ],
+      beats: [
+        {
+          id: context.contract.beat,
+          name: context.contract.beat,
+          summary: "the sentinel holds the authored signal",
+          durationHint: context.contract.durationSeconds,
+        },
+      ],
+    },
+    stage: {
+      scene: { id: sceneId, name: "starter signal ground" },
+      plan: "The sentinel stands centered while a fixed camera reads the arm.",
+      actors: [
+        {
+          node: "sentinel",
+          position: { x: 0, y: 0, z: 0 },
+          facingDeg: 0,
         },
       ],
       cameras: [
         {
-          id: "camera",
-          transform: transform(0, 1.35, 4.8, {
-            x: -0.052336,
-            y: 0,
-            z: 0,
-            w: 0.99863,
-          }),
-          fovY: 38,
-          near: 0.1,
-          far: 100,
+          node: "camera",
+          position: { x: 0, y: 1.35, z: 4.8 },
+          lookAt: { kind: "node", node: "sentinel" },
+          fovDeg: 38,
         },
       ],
       lights: [
         {
-          id: "sun",
-          type: "directional",
-          transform: transform(2, 4, 3),
+          node: "sun",
+          role: "sun",
+          direction: { x: -0.4, y: -1, z: -0.6 },
           color: { r: 1, g: 0.92, b: 0.8, a: null, hex: "#fff5df" },
           intensity: 2.5,
         },
@@ -149,7 +316,50 @@ const buildSignal = (
         walkable: ["ground"],
       },
     },
-    motions: [motion],
+    blocking: {
+      beat: context.contract.beat,
+      analysis: "The signal arm and whole silhouette must remain readable.",
+      rationale: "One fixed full-body view proves the authored pose.",
+      actors: [{ node: "sentinel", beats: "raises and holds the signal arm" }],
+      camera: {
+        framing: "full",
+        move: "static",
+        on: { kind: "node", node: "sentinel" },
+      },
+      duration: context.contract.durationSeconds,
+    },
+    performance: {
+      beat: context.contract.beat,
+      plan: "Execute the source-computed signal clip under engine ROM gates.",
+      draft: [
+        {
+          verb: "enact",
+          actor: "sentinel",
+          start: 0,
+          duration: context.contract.durationSeconds,
+          clip: motion.id,
+        },
+        {
+          verb: "frame",
+          actor: "camera",
+          start: 0,
+          duration: "auto",
+          framing: "full",
+          move: "static",
+          on: { kind: "node", node: "sentinel" },
+        },
+      ],
+      revise: {
+        review: "The signal is readable and remains held at the final frame.",
+        final: null,
+      },
+      duration: context.contract.durationSeconds,
+    },
+    eventSamples: context.contract.events.map((event) => ({
+      id: event.id,
+      time: (event.window.from + event.window.to) / 2,
+    })),
+    clips: [motion],
     formationMotions: context.contract.participants.some(
       (participant) =>
         participant.kind === "formation" && participant.id === "army",
@@ -171,15 +381,10 @@ const buildSignal = (
               facingOffsetDeg: 4,
               spacingScale: { lateral: 1.05, depth: 0.95 },
             },
-            easing: "easeInOut" as const,
+            easing: "easeInOut",
           },
         ]
       : [],
-    // Both shots share this builder, so the smoke cue is emitted only where
-    // both halves it names exist: the world zone, and this contract's own
-    // `signal-raised` event. The answering shot declares `signal-answered`
-    // instead, and a cue naming an event its shot never realizes fails the
-    // compile rather than fading quietly.
     effectCues:
       context.world.effectZones.some((zone) => zone.id === "signal-smoke") &&
       context.contract.events.some((event) => event.id === "signal-raised")
@@ -194,31 +399,19 @@ const buildSignal = (
             },
           ]
         : [],
-    shot: {
-      id: context.contract.id,
-      name: "The signal",
-      scene: `${context.contract.id}-scene`,
-      camera: "camera",
-      cameraMotion: null,
-      performances: [{ node: "sentinel", motion: motion.id, startOffset: 0 }],
-      objectMotions: [],
-      lightMotions: [],
-      events: [],
-      cameraIntent: [],
-      coverage: [],
-      duration: context.contract.durationSeconds,
-    },
   };
 };
 
 /** Opening source proves a neutral-to-raised transition. */
-export const opening: IAutoMovieShotSource = {
-  id: "opening",
-  build: (context) => buildSignal(context, 0),
-};
+export const opening = defineShot("opening", {
+  scene: "opening-scene",
+  contract: OPENING_CONTRACT,
+  build: (context: IAutoMovieShotBuildContext) => buildSignal(context, 0),
+});
 
 /** Answer source begins from the raised state established by the first shot. */
-export const answer: IAutoMovieShotSource = {
-  id: "answer",
-  build: (context) => buildSignal(context, 110),
-};
+export const answer = defineShot("answer", {
+  scene: "answer-scene",
+  contract: ANSWER_CONTRACT,
+  build: (context: IAutoMovieShotBuildContext) => buildSignal(context, 110),
+});
