@@ -121,15 +121,17 @@ export const resolveBoneMap = (
 
 /**
  * Fit one two-bone chain onto a world-space target without leaving the rig's
- * effective ROM. The authored pose and three deterministic IK bend planes are
+ * effective ROM. The authored pose and a deterministic bend-plane search are
  * compared by the effector position they actually produce after clamping; a
  * candidate is accepted only when it improves on the current pose.
  *
  * This is the shared contact policy for ground planting and retargeting. A
  * world-down pole alone can lower a hinge joint into abduction/twist that its
- * ROM immediately removes, while the opposite hinge branch can express the same
- * contact as legal flexion. Keeping the original pose in the candidate set also
- * makes an unreachable or constrained target non-destructive.
+ * ROM immediately removes. A fixed rest-hinge plane is insufficient too: a hip
+ * ball joint rotates the knee's world hinge plane while reaching a lateral pin.
+ * Searching around the reach axis finds that rotated plane, while keeping the
+ * original pose in the candidate set makes an unreachable or constrained target
+ * non-destructive.
  *
  * @author Samchon
  */
@@ -171,12 +173,7 @@ export const fitChainToTarget = (props: {
     pose: props.pose,
     residual: residual(props.pose),
   };
-
-  for (const solved of [
-    pole,
-    solve(pole.hinge)!,
-    solve(Vector3.scale(pole.hinge, -1))!,
-  ]) {
+  const consider = (solved: NonNullable<ReturnType<typeof solve>>): number => {
     const candidate: IAutoMoviePose = {
       ...props.pose,
       joints: [
@@ -192,6 +189,45 @@ export const fitChainToTarget = (props: {
     const candidateResidual = residual(candidate);
     if (candidateResidual < best.residual)
       best = { pose: candidate, residual: candidateResidual };
+    return candidateResidual;
+  };
+
+  const upper = resolve(props.pose).get(props.chain.upper)!;
+  const reachAxis = Vector3.normalize(
+    Vector3.subtract(props.target, upper.worldPosition),
+  );
+  let primary = Vector3.subtract(
+    pole.hinge,
+    Vector3.scale(reachAxis, Vector3.dot(pole.hinge, reachAxis)),
+  );
+  if (Vector3.length(primary) < 1e-6)
+    primary = Vector3.cross(reachAxis, { x: 0, y: -1, z: 0 });
+  if (Vector3.length(primary) < 1e-6)
+    primary = Vector3.cross(reachAxis, { x: 0, y: 0, z: 1 });
+  primary = Vector3.normalize(primary);
+  const secondary = Vector3.normalize(Vector3.cross(reachAxis, primary));
+  const normalAt = (angle: number): IAutoMovieVector3 =>
+    Vector3.add(
+      Vector3.scale(primary, Math.cos(angle)),
+      Vector3.scale(secondary, Math.sin(angle)),
+    );
+
+  const segments = 32;
+  let sweep = { angle: 0, residual: Number.POSITIVE_INFINITY };
+  for (let index = 0; index < segments; ++index) {
+    const angle = (2 * Math.PI * index) / segments;
+    const candidateResidual = consider(solve(normalAt(angle))!);
+    if (candidateResidual < sweep.residual)
+      sweep = { angle, residual: candidateResidual };
+  }
+  let step = (2 * Math.PI) / segments;
+  for (let iteration = 0; iteration < 12; ++iteration) {
+    step /= 2;
+    for (const angle of [sweep.angle - step, sweep.angle + step]) {
+      const candidateResidual = consider(solve(normalAt(angle))!);
+      if (candidateResidual < sweep.residual)
+        sweep = { angle, residual: candidateResidual };
+    }
   }
   return best.pose;
 };
@@ -239,10 +275,9 @@ const plantedJoints = (
  * angles the same tables will re-read.
  *
  * The returned `hinge` is the mid joint's world flexion axis under that same
- * zeroed chain. A caller whose result must survive the joint's ROM re-solves
- * with `bendNormal: ±hinge`: a knee that declares `abduction`/`twist` immobile
- * can only articulate in its hinge plane, so a solve in any other plane leaves
- * exactly the components the ROM clamp zeroes out.
+ * zeroed chain. {@link fitChainToTarget} projects it onto the reach-normal plane
+ * and searches the full circle: a ball-joint parent can rotate the hinge's
+ * world plane while the mid joint remains legal flexion-only articulation.
  *
  * Returns `null` for a missing or degenerate chain.
  *
