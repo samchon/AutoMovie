@@ -288,6 +288,21 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
   if (avcConfiguration < 0)
     throw new Error("H.264 fixture has no AVC decoder configuration box.");
   incompatibleAnswer[avcConfiguration + 6] ^= 1;
+  const mismatchedRepaint = Buffer.from(conformedRepaint);
+  const mediaData = mismatchedRepaint.indexOf("mdat");
+  if (mediaData < 0)
+    throw new Error("Conformed repaint has no media data box.");
+  mismatchedRepaint[mediaData + 4] ^= 1;
+  let sampleDifference = "";
+  try {
+    assertProductionFeatureUsesRenditionClips({
+      feature: mismatchedRepaint,
+      timeline: repaintTimeline,
+      clips: repaintClips,
+    });
+  } catch (error) {
+    sampleDifference = error instanceof Error ? error.message : String(error);
+  }
   TestValidator.predicate(
     "repaint conform preserves exact cut-only shot samples and rejects incompatible clips or transitions",
     probeProductionMedia({
@@ -307,6 +322,11 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
         });
         return true;
       })() &&
+      sampleDifference.includes('"firstDifferingActualByte": 0') &&
+      sampleDifference.includes('"actualBytes":') &&
+      sampleDifference.includes('"expectedBytes":') &&
+      sampleDifference.includes('"flags":') &&
+      sampleDifference.includes('"sampleDescriptionMatches":') &&
       throws(() =>
         conformProductionRenditionVideoMp4({
           timeline: {

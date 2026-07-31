@@ -264,6 +264,7 @@ export const assertProductionFeatureUsesRenditionClips = (props: {
               flags: {
                 actual: sampleFlagRecord(actualSample),
                 expected: sampleFlagRecord(source),
+                match: sameSampleFlags(actualSample, source),
               },
               sampleDescriptionMatches: sameSampleDescription(
                 sampleDescription(actualSample),
@@ -272,15 +273,9 @@ export const assertProductionFeatureUsesRenditionClips = (props: {
               payload: {
                 actualBytes: actualBytes.length,
                 expectedBytes: sourceBytes.length,
-                firstDifferingOffset: (() => {
-                  const offset = actualBytes.findIndex(
-                    (value, byte) => value !== sourceBytes[byte],
-                  );
-                  if (offset >= 0) return offset;
-                  return actualBytes.length === sourceBytes.length
-                    ? null
-                    : Math.min(actualBytes.length, sourceBytes.length);
-                })(),
+                firstDifferingActualByte: actualBytes.findIndex(
+                  (value, byte) => value !== sourceBytes[byte],
+                ),
               },
             },
             null,
@@ -572,7 +567,6 @@ const sampleFlagRecord = (sample: Sample) => ({
   isDependedOn: sample.is_depended_on,
   hasRedundancy: sample.has_redundancy,
   degradationPriority: sample.degradation_priority,
-  subsamples: sample.subsamples ?? [],
 });
 
 const sampleDescription = (
