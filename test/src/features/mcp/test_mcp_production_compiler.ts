@@ -2186,32 +2186,43 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
         "contract-mismatch",
       ),
     );
-    for (const [name, mutation] of [
+    for (const [name, expectedCode, mutation] of [
       [
         "duplicate-invalid-event-sample",
+        "contract-mismatch",
         [
           "  output.eventSamples[0]!.time = 999;",
           "  output.eventSamples.push({ ...output.eventSamples[0]! });",
         ].join("\n"),
       ],
-      ["missing-event-sample", "  output.eventSamples = [];"],
+      [
+        "missing-event-sample",
+        "contract-mismatch",
+        "  output.eventSamples = [];",
+      ],
       [
         "false-opening-state",
+        "contract-realization-failed",
         "  output.clips![0]!.keyframes[0]!.pose.joints[0]!.abduction = 50;",
       ],
       [
         "false-closing-state",
+        "contract-realization-failed",
         "  output.clips![0]!.keyframes[output.clips![0]!.keyframes.length - 1]!.pose.joints[0]!.abduction = 0;",
       ],
-      ["unreadable-camera", "  output.stage.cameras[0]!.position.x = 100;"],
+      [
+        "unreadable-camera",
+        "contract-realization-failed",
+        "  output.stage.cameras[0]!.position.x = 100;",
+      ],
     ] as const) {
       fs.writeFileSync(sourcePath, mutateSourceOutput(mutation));
       const realizationOutput = compiler.compile({ scope: "source" });
       TestValidator.predicate(
-        `compiler-derived contract realization rejects ${name}: ${realizationOutput.diagnostics
+        `compiler rejects ${name} with ${expectedCode}: ${realizationOutput.diagnostics
           .map((diagnostic) => diagnostic.code)
           .join(",")}`,
-        diagnosticCodes(realizationOutput).has("contract-realization-failed"),
+        diagnosticCodes(realizationOutput).has(expectedCode),
       );
     }
     fs.writeFileSync(sourcePath, original);
