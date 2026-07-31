@@ -312,7 +312,11 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
             actual: { duration: number; dts: number; cts: number };
             expected: { duration: number; dts: number; cts: number };
           };
-          flags: { match: boolean };
+          flags: {
+            actual: { isSync: boolean; dependsOn: number };
+            expected: { isSync: boolean; dependsOn: number };
+            match: boolean;
+          };
           sampleDescriptionMatches: boolean;
           payload: {
             actualBytes: number;
@@ -345,6 +349,10 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
       sampleDifferenceDetails.payload.actualBytes > 0 &&
       sampleDifferenceDetails.payload.actualBytes ===
         sampleDifferenceDetails.payload.expectedBytes &&
+      sampleDifferenceDetails.flags.actual.isSync === true &&
+      sampleDifferenceDetails.flags.actual.dependsOn === 2 &&
+      sampleDifferenceDetails.flags.expected.isSync === true &&
+      sampleDifferenceDetails.flags.expected.dependsOn === 0 &&
       sampleDifferenceDetails.flags.match === true &&
       sampleDifferenceDetails.sampleDescriptionMatches === true &&
       sampleDifferenceDetails.payload.firstDifferingActualByte === 0 &&

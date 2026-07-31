@@ -552,12 +552,16 @@ const sameSampleTiming = (left: Sample, right: Sample): boolean =>
 const sameSampleFlags = (left: Sample, right: Sample): boolean =>
   left.is_sync === right.is_sync &&
   left.is_leading === right.is_leading &&
-  left.depends_on === right.depends_on &&
+  canonicalSampleDependsOn(left) === canonicalSampleDependsOn(right) &&
   left.is_depended_on === right.is_depended_on &&
   left.has_redundancy === right.has_redundancy &&
   left.degradation_priority === right.degradation_priority &&
   JSON.stringify(left.subsamples ?? []) ===
     JSON.stringify(right.subsamples ?? []);
+
+/** Treat an unspecified sync-sample dependency as its MP4Box canonical form. */
+const canonicalSampleDependsOn = (sample: Sample): number =>
+  sample.is_sync === true && sample.depends_on === 0 ? 2 : sample.depends_on;
 
 /** Bounded parser-visible flag evidence for one failed sample comparison. */
 const sampleFlagRecord = (sample: Sample) => ({
