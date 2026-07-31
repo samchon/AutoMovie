@@ -8,6 +8,11 @@ const ROOT = path.resolve(__dirname, "..", "..", "..", "..");
 
 const SHARED_CONFIG =
   'export { default } from "../../internals/config/lint.config";';
+const KNOWN_TTSC_PACKAGES = ["benchmark-runner", "create-automovie"];
+
+/** Does a shell build script invoke `ttsc` as a command? */
+const invokesTtsc = (script: string): boolean =>
+  /(?:^|&&\s*|\|\|\s*|;\s*)ttsc(?:\s|$)/u.test(script);
 
 /**
  * Every direct workspace package built through `ttsc` must load the shared lint
@@ -27,10 +32,15 @@ export const test_workspace_lint_configs = (): void => {
       const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8")) as {
         scripts?: { build?: string };
       };
-      return manifest.scripts?.build?.includes("ttsc") === true;
+      return invokesTtsc(manifest.scripts?.build ?? "");
     })
     .sort(compareCodeUnits);
 
+  TestValidator.equals(
+    "known ttsc package roots participate in lint config discovery",
+    KNOWN_TTSC_PACKAGES.filter((name) => ttscPackages.includes(name)),
+    KNOWN_TTSC_PACKAGES,
+  );
   TestValidator.equals(
     "ttsc workspace packages load the shared lint policy",
     ttscPackages.filter((name) => {
