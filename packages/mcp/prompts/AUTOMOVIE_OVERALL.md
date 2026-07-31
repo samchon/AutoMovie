@@ -4,7 +4,7 @@ AutoMovie turns ordinary tracked screenplay, design, TypeScript, and configurati
 
 ## Flow
 
-1. Read this constitution, then choose the next guide from Guide selection.
+1. Start with this constitution. Retrieve every later named guide by calling `getGuideDocument({ name: "EXACT_GUIDE_STEM" })`, then choose the next guide from Guide selection.
 2. Author the screenplay ladder: logline, treatment sequences and beats, then scene prose and its typed index. Read `SCREENPLAY_WRITING`.
 3. Author production, models, world, formations, shot contracts, acceptance scenarios, and TypeScript shot/film source in their tracked owners. Read the matching contract guide and handbook before editing.
 4. Run the scaffold compiler or lint command. Compilation, project-state loading, geometry, status, migration, rendering, and verification are ordinary package or CLI APIs, never MCP tools.
