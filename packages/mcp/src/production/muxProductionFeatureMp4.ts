@@ -1,4 +1,5 @@
 import type { IAutoMovieFilmTimeline } from "@automovie/interface";
+import type { Box } from "mp4box";
 import {
   DataStream,
   IsoFileOptions,
@@ -539,9 +540,7 @@ const sampleDescription = (
 };
 
 /** Canonicalize a parsed sample-description box without parser object identity. */
-const serializeDescriptionBox = (
-  box: NonNullable<IsoFileOptions["description_boxes"]>[number],
-): Uint8Array => {
+const serializeDescriptionBox = (box: Box): Uint8Array => {
   const stream = new DataStream();
   box.write(stream);
   return new Uint8Array(stream.buffer);
