@@ -684,7 +684,7 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
       fs.readFileSync(
         path.join(
           scaffoldAssetDirectory(),
-          ".automovie/design/fixture-film/shots/answer.json",
+          ".automovie/design/shots/answer.json",
         ),
         "utf8",
       ),
