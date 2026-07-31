@@ -1,7 +1,4 @@
 export * from "./math";
-export { Matrix4 } from "./math/Matrix4";
-export { Quaternion } from "./math/Quaternion";
-export { Vector3 } from "./math/Vector3";
 export * from "./text";
 export * from "./film";
 export * from "./kinematics";
