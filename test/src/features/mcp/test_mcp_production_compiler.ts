@@ -701,8 +701,10 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
       ),
     );
     const boundModel = project.graph().models.values().next().value!;
-    project.setModelRecipe({ ...boundModel, asset: " " });
-    const blankModelAsset = diagnosticCodes(compiler.lint({ scope: "design" }));
+    const blankModelAsset = project.setModelRecipe({
+      ...boundModel,
+      asset: " ",
+    });
     project.setModelRecipe({ ...boundModel, asset: modelAsset.path });
     const activeAudioManifest = {
       ...validModelManifest,
@@ -873,7 +875,10 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
       "empty generated proxy reports asset-manifest-invalid":
         emptyGeneratedProxy.has("asset-manifest-invalid"),
       "blank model asset reports design-text-empty":
-        blankModelAsset.has("design-text-empty"),
+        blankModelAsset.accepted === false &&
+        blankModelAsset.diagnostics.some(
+          (diagnostic) => diagnostic.code === "design-text-empty",
+        ),
       "static rig binding reports asset-model-rig-incompatible":
         staticRigBinding.has("asset-model-rig-incompatible"),
       "exact active uses have no asset diagnostics": [...exactActiveUse].every(
