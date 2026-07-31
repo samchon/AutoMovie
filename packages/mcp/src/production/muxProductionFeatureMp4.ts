@@ -247,7 +247,45 @@ export const assertProductionFeatureUsesRenditionClips = (props: {
         actualBytes.some((value, offset) => value !== sourceBytes[offset])
       )
         throw new Error(
-          `Feature video sample ${index} differs from the selected repaint timeline.`,
+          `Feature video sample ${index} differs from the selected repaint timeline:\n${JSON.stringify(
+            {
+              timing: {
+                actual: {
+                  duration: actualSample.duration,
+                  dts: actualSample.dts,
+                  cts: actualSample.cts,
+                },
+                expected: {
+                  duration: plan.sampleDuration,
+                  dts: (clipStart + dtsFrame) * plan.sampleDuration,
+                  cts: (clipStart + ctsFrame) * plan.sampleDuration,
+                },
+              },
+              flags: {
+                actual: sampleFlagRecord(actualSample),
+                expected: sampleFlagRecord(source),
+              },
+              sampleDescriptionMatches: sameSampleDescription(
+                sampleDescription(actualSample),
+                plan.description,
+              ),
+              payload: {
+                actualBytes: actualBytes.length,
+                expectedBytes: sourceBytes.length,
+                firstDifferingOffset: (() => {
+                  const offset = actualBytes.findIndex(
+                    (value, byte) => value !== sourceBytes[byte],
+                  );
+                  if (offset >= 0) return offset;
+                  return actualBytes.length === sourceBytes.length
+                    ? null
+                    : Math.min(actualBytes.length, sourceBytes.length);
+                })(),
+              },
+            },
+            null,
+            2,
+          )}`,
         );
       ++index;
     }
@@ -525,6 +563,17 @@ const sameSampleFlags = (left: Sample, right: Sample): boolean =>
   left.degradation_priority === right.degradation_priority &&
   JSON.stringify(left.subsamples ?? []) ===
     JSON.stringify(right.subsamples ?? []);
+
+/** Bounded parser-visible flag evidence for one failed sample comparison. */
+const sampleFlagRecord = (sample: Sample) => ({
+  isSync: sample.is_sync,
+  isLeading: sample.is_leading,
+  dependsOn: sample.depends_on,
+  isDependedOn: sample.is_depended_on,
+  hasRedundancy: sample.has_redundancy,
+  degradationPriority: sample.degradation_priority,
+  subsamples: sample.subsamples ?? [],
+});
 
 const sampleDescription = (
   sample: Sample,
