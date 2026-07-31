@@ -22,6 +22,7 @@ import {
 import { muxProductionFeatureMp4 } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
+import { createRequire } from "node:module";
 import os from "node:os";
 import path from "node:path";
 
@@ -65,11 +66,20 @@ export const test_benchmark_runner = async (): Promise<void> => {
     client: current.client,
     runtime: current.runtime,
   };
+  const ttsxEntry = path.join(
+    path.dirname(createRequire(__filename).resolve("ttsc/package.json")),
+    "lib/launcher/ttsx.js",
+  );
   const mcpTarget = createProcessAutoMovieBenchmarkMcpTarget({
     surface: "five-tool",
     provenance: "@automovie/mcp:workspace",
     command: process.execPath,
-    args: [path.join(repositoryRoot, "packages/mcp/lib/bin.js")],
+    args: [
+      ttsxEntry,
+      "-P",
+      path.join(repositoryRoot, "packages/mcp/tsconfig.json"),
+      path.join(repositoryRoot, "packages/mcp/src/bin.ts"),
+    ],
     timeoutMs: 30_000,
   });
   const archivedBaseline = {
