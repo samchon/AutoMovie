@@ -414,6 +414,143 @@ export const test_mcp_production_review_render_edges =
       );
       fs.rmSync(malformedDirectory, { recursive: true, force: true });
 
+      const mismatchedAssetBytes = png();
+      const mismatchedAssetTarget = {
+        kind: "asset" as const,
+        id: "sentinel",
+        angleDeg: 0,
+        elevationDeg: 15,
+        pose: "rest" as const,
+      };
+      const mismatchedAssetBase: IAutoMovieRenderBundleManifest = {
+        version: 3,
+        target: mismatchedAssetTarget,
+        compileFingerprint: project.generatedManifest()!.inputFingerprint,
+        rendererIdentity: testRendererIdentity(),
+        targetFingerprint: productionRenderTargetFingerprint(
+          project,
+          project.generatedManifest()!,
+          mismatchedAssetTarget,
+        ),
+        renderSpec: {
+          target: mismatchedAssetTarget.id,
+          frameFormat: { width: 16, height: 16, fps: 24 },
+          toneMapping: "none",
+          codec: "h264",
+          pixelFormat: "yuv420p",
+          crf: 17,
+        },
+        frames: [
+          {
+            index: 0,
+            time: 0,
+            pass: "beauty",
+            path: "asset.png",
+            digest: digestAutoMovieBytes(mismatchedAssetBytes),
+            width: 16,
+            height: 16,
+          },
+        ],
+      };
+      const mismatchedAssetManifests: IAutoMovieRenderBundleManifest[] = [
+        {
+          ...mismatchedAssetBase,
+          renderSpec: {
+            ...mismatchedAssetBase.renderSpec,
+            target: "another-asset",
+          },
+        },
+        {
+          ...mismatchedAssetBase,
+          renderSpec: {
+            ...mismatchedAssetBase.renderSpec,
+            frameFormat: {
+              ...mismatchedAssetBase.renderSpec.frameFormat,
+              fps: 12,
+            },
+          },
+        },
+        {
+          ...mismatchedAssetBase,
+          renderSpec: {
+            ...mismatchedAssetBase.renderSpec,
+            frameFormat: {
+              ...mismatchedAssetBase.renderSpec.frameFormat,
+              width: 15,
+            },
+          },
+        },
+        {
+          ...mismatchedAssetBase,
+          renderSpec: {
+            ...mismatchedAssetBase.renderSpec,
+            frameFormat: {
+              ...mismatchedAssetBase.renderSpec.frameFormat,
+              height: 15,
+            },
+          },
+        },
+      ];
+      const mismatchedAssetBundles = mismatchedAssetManifests.map(
+        (manifest) => {
+          const bundle = productionRenderBundleRelativePath(manifest);
+          project.commitRenderBundle(
+            bundle,
+            new Map([["asset.png", mismatchedAssetBytes]]),
+            manifest,
+          );
+          return bundle;
+        },
+      );
+      const mismatchedAssetPaths = mismatchedAssetBundles.map((bundle) => ({
+        target: path
+          .relative(fixture.root, path.join(project.renderRoot(), bundle))
+          .replaceAll(path.sep, "/"),
+        manifest: path
+          .relative(
+            fixture.root,
+            path.join(project.renderRoot(), bundle, "manifest.json"),
+          )
+          .replaceAll(path.sep, "/"),
+      }));
+      const mismatchedAssetPrepared = review.prepare({
+        target: { kind: "asset", id: "sentinel" },
+      });
+      const mismatchedAssetDiagnostics = mismatchedAssetPrepared.diagnostics
+        .filter(
+          (diagnostic) =>
+            diagnostic.path !== null &&
+            mismatchedAssetPaths.some(
+              (candidate) => candidate.manifest === diagnostic.path,
+            ),
+        )
+        .sort((left, right) =>
+          compareCodeUnits(left.path ?? "", right.path ?? ""),
+        );
+      TestValidator.equals(
+        "asset review rejects every mismatched renderer-owned render spec",
+        {
+          admittedFrames: mismatchedAssetPrepared.frames.length,
+          diagnostics: mismatchedAssetDiagnostics,
+        },
+        {
+          admittedFrames: 0,
+          diagnostics: mismatchedAssetPaths
+            .sort((left, right) =>
+              compareCodeUnits(left.manifest, right.manifest),
+            )
+            .map((candidate) => ({
+              code: "render-frame-invalid",
+              category: "warning",
+              phase: "render",
+              target: candidate.target,
+              path: candidate.manifest,
+              message:
+                "This asset view does not match the current asset, production FPS, and exact production raster, so it cannot discharge review. Capture the required view again without width/height overrides before submitReview.",
+            })),
+        },
+      );
+
       for (const [name, framePath] of [
         ["absolute", path.resolve(fixture.root, "outside.png")],
         ["escape", "../outside.png"],

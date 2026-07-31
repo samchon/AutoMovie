@@ -2024,17 +2024,33 @@ const currentAssetFrames = (
     if (requirement === undefined) continue;
     if (
       manifest.targetFingerprint !==
-        currentRenderTargetFingerprint(
-          project,
-          generated,
-          manifest.target,
-          context,
-        ) ||
+      currentRenderTargetFingerprint(
+        project,
+        generated,
+        manifest.target,
+        context,
+      )
+    )
+      continue;
+    const bundleRoot = path.dirname(entry.path);
+    const bundle = normalizeSlash(path.relative(project.root, bundleRoot));
+    if (
+      manifest.renderSpec.target !== manifest.target.id ||
       manifest.renderSpec.frameFormat.fps !== production.frameFormat.fps ||
       manifest.renderSpec.frameFormat.width !== production.frameFormat.width ||
       manifest.renderSpec.frameFormat.height !== production.frameFormat.height
-    )
+    ) {
+      diagnostics.push({
+        code: "render-frame-invalid",
+        category: "warning",
+        phase: "render",
+        target: bundle,
+        path: normalizeSlash(path.relative(project.root, entry.path)),
+        message:
+          "This asset view does not match the current asset, production FPS, and exact production raster, so it cannot discharge review. Capture the required view again without width/height overrides before submitReview.",
+      });
       continue;
+    }
     const expectedIndex = Math.round(
       (requirement.angleDeg / 30) * production.frameFormat.fps,
     );
@@ -2044,8 +2060,6 @@ const currentAssetFrames = (
         candidate.pass === requirement.pass,
     );
     if (frame === undefined) continue;
-    const bundleRoot = path.dirname(entry.path);
-    const bundle = normalizeSlash(path.relative(project.root, bundleRoot));
     let file = path.join(bundleRoot, frame.path);
     try {
       file = resolveInside(bundleRoot, frame.path);
