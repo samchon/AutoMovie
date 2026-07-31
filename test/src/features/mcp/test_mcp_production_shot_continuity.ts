@@ -304,9 +304,22 @@ export const test_mcp_production_shot_continuity = async (): Promise<void> => {
             .translation.x ?? null);
 
     const output = compileFilm(fullHardCut(), 12);
+    const carriedAnswerX = answerX(output);
+    if (output.success === false || carriedAnswerX !== 1)
+      throw new Error(
+        `Hard-cut continuity fixture failed:\n${JSON.stringify(
+          {
+            diagnostics: output.diagnostics,
+            expectedAnswerX: 1,
+            actualAnswerX: carriedAnswerX,
+          },
+          null,
+          2,
+        )}`,
+      );
     TestValidator.predicate(
       "the production hard cut carries the previous measured root",
-      output.success && answerX(output) === 1,
+      output.success && carriedAnswerX === 1,
     );
 
     const previousTrim = fullHardCut();
