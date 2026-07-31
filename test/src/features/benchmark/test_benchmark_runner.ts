@@ -40,6 +40,11 @@ const expectErrorMessage = (
   message: string,
 ): void => TestValidator.predicate(title, throwsError(task, message));
 
+// A clean CI checkout starts this fixture through ttsx, so initialize includes
+// the MCP project's cold typecheck and source-dependency emit. Keep the live
+// protocol probe bounded without treating that compile as a 30-second request.
+const SOURCE_MCP_TIMEOUT_MS = 120_000;
+
 const completeLifecycle = (): IAutoMovieBenchmarkGateResult[] => [
   { gate: "packaged-install", status: "pass", detail: "Packages installed." },
   { gate: "mcp-handshake", status: "pass", detail: "Ignored agent claim." },
@@ -80,7 +85,7 @@ export const test_benchmark_runner = async (): Promise<void> => {
       path.join(repositoryRoot, "packages/mcp/tsconfig.json"),
       path.join(repositoryRoot, "packages/mcp/src/bin.ts"),
     ],
-    timeoutMs: 30_000,
+    timeoutMs: SOURCE_MCP_TIMEOUT_MS,
   });
   const archivedBaseline = {
     surface: "legacy-compact" as const,
