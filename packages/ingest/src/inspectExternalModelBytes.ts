@@ -347,11 +347,7 @@ const decodeGlb = (
 
 const decodeJson = (bytes: Uint8Array): unknown => {
   try {
-    return JSON.parse(
-      new TextDecoder("utf-8", { fatal: true })
-        .decode(bytes)
-        .replace(/[\u0000\u0020]+$/u, ""),
-    );
+    return JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
   } catch (error) {
     throw new Error(
       `External model JSON is invalid: ${error instanceof Error ? error.message : String(error)}.`,
