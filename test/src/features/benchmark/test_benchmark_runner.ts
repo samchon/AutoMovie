@@ -405,7 +405,12 @@ export const test_benchmark_runner = async (): Promise<void> => {
     await exerciseProviderAdapters(root);
     exerciseSnapshotLink(root);
   } finally {
-    fs.rmSync(root, { force: true, recursive: true });
+    fs.rmSync(root, {
+      force: true,
+      maxRetries: 3,
+      recursive: true,
+      retryDelay: 100,
+    });
   }
 };
 
