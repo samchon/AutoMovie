@@ -1,7 +1,18 @@
 import { inspectAutoMovieExternalModelBytes } from "@automovie/ingest";
 import { TestValidator } from "@nestia/e2e";
 
-/** External model inspection binds exact containers, profiles and sidecars. */
+/**
+ * External model inspection binds exact containers, profiles and sidecars.
+ *
+ * Scenarios:
+ *
+ * 1. A JSON glTF resolves its exact inventory, sidecar bytes and static profile.
+ * 2. A VRM accepts mandatory space padding while a GLB rejects NUL padding,
+ *    pinning the glTF 2.0 JSON chunk boundary.
+ * 3. A humanoid glTF resolves a weighted skin joint.
+ * 4. Truncated containers, unknown profiles, absent rigs, short resources, missing
+ *    BIN payloads and unweighted humanoid joints are refused.
+ */
 export const test_inspect_external_model_bytes = (): void => {
   const source = modelDocument();
   const gltf = Buffer.from(JSON.stringify(source), "utf8");
@@ -52,6 +63,22 @@ export const test_inspect_external_model_bytes = (): void => {
             ? Buffer.from([1])
             : null,
     }).format === "vrm",
+  );
+  TestValidator.predicate(
+    "GLB JSON chunks reject NUL instead of mandatory space padding",
+    throws(() =>
+      inspectAutoMovieExternalModelBytes({
+        path: "public/models/actor.glb",
+        bytes: glb(source, 0x00),
+        profile: "gltf-static-v1",
+        resolveResource: (uri) =>
+          uri === "actor.bin"
+            ? modelPayload()
+            : uri === "actor.png"
+              ? Buffer.from([1])
+              : null,
+      }),
+    ),
   );
   TestValidator.predicate(
     "humanoid glTF profile resolves a skin joint",
@@ -180,10 +207,10 @@ const modelPayload = (): Buffer => {
   return bytes;
 };
 
-const glb = (document: object): Buffer => {
+const glb = (document: object, paddingByte = 0x20): Buffer => {
   const source = Buffer.from(JSON.stringify(document), "utf8");
-  const padding = (4 - (source.length % 4)) % 4;
-  const json = Buffer.concat([source, Buffer.alloc(padding, 0x20)]);
+  const padding = 4 - (source.length % 4);
+  const json = Buffer.concat([source, Buffer.alloc(padding, paddingByte)]);
   const output = Buffer.alloc(20 + json.length);
   output.writeUInt32LE(0x46546c67, 0);
   output.writeUInt32LE(2, 4);
