@@ -242,6 +242,7 @@ export const test_mcp_production_legacy_import = (): void => {
         fs.existsSync(path.join(untouched.root, ".automovie")) === false &&
         fs.existsSync(path.join(untouched.root, "src")) === false &&
         fs.existsSync(path.join(untouched.root, "generated")) === false &&
+        fs.existsSync(path.join(untouched.root, "renders")) === false &&
         equalFiles(before, legacyFiles(untouched.root)) &&
         throws(() => importer.rollback(), "Nothing was rolled back"),
     );
