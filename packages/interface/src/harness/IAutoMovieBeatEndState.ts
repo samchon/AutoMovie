@@ -79,9 +79,9 @@ export interface IAutoMovieBeatEndActorState {
   rootVelocity: IAutoMovieVector3 | null;
 
   /**
-   * The most recent stance plant per foot at beat end (from the ground-IK
-   * pass), or `null` when no plant data accompanied the shot. Ordered by first
-   * appearance of each foot in the pass output.
+   * The most recent stance plant per foot whose inclusive run contains the beat
+   * end (from the ground-IK pass), or `null` when no plant is active at that
+   * instant. Ordered by first appearance of each foot in the pass output.
    */
   footPlants: IAutoMovieBeatEndFootPlant[] | null;
 

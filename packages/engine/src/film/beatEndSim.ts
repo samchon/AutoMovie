@@ -133,9 +133,10 @@ export const rootVelocityOf = (
 };
 
 /**
- * The most recent stance plant per foot at/before `localTime`, the contact the
- * next beat should keep each foot on. Later entries win ties; `null` when no
- * plant data was supplied or none had started yet.
+ * The most recent stance plant per foot active at `localTime`, the contact the
+ * next beat should keep each foot on. Stance bounds are inclusive; later
+ * entries win equal-start ties. Returns `null` when no plant data was supplied
+ * or every run is past/future at the cut.
  */
 export const plantsAtEnd = (
   plants: readonly IAutoMovieBeatEndFootPlant[] | undefined,
@@ -147,7 +148,7 @@ export const plantsAtEnd = (
     IAutoMovieBeatEndFootPlant
   >();
   for (const plant of plants) {
-    if (plant.start > localTime) continue;
+    if (plant.start > localTime || plant.end < localTime) continue;
     const held = byFoot.get(plant.foot);
     if (held === undefined || plant.start >= held.start)
       byFoot.set(plant.foot, plant);
