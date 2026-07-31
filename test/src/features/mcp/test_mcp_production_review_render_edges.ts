@@ -1,4 +1,7 @@
-import { IAutoMovieRenderBundleManifest } from "@automovie/interface";
+import {
+  IAutoMovieDiagnostic,
+  IAutoMovieRenderBundleManifest,
+} from "@automovie/interface";
 import {
   AutoMovieProductionCompiler,
   AutoMovieProductionOracleService,
@@ -577,15 +580,18 @@ export const test_mcp_production_review_render_edges =
             .sort((left, right) =>
               compareCodeUnits(left.manifest, right.manifest),
             )
-            .map((candidate) => ({
-              code: "render-frame-invalid",
-              category: "warning",
-              phase: "render",
-              target: candidate.target,
-              path: candidate.manifest,
-              message:
-                "This asset view does not match the current asset, production FPS, and exact production raster, so it cannot discharge review. Capture the required view again without width/height overrides before submitReview.",
-            })),
+            .map(
+              (candidate) =>
+                ({
+                  code: "render-frame-invalid",
+                  category: "warning",
+                  phase: "render",
+                  target: candidate.target,
+                  path: candidate.manifest,
+                  message:
+                    "This asset view does not match the current asset, production FPS, and exact production raster, so it cannot discharge review. Capture the required view again without width/height overrides before submitReview.",
+                }) satisfies IAutoMovieDiagnostic,
+            ),
           missingViews: [
             "asset:sentinel:rig-rom-extremes",
             "asset:sentinel:top-outline",
