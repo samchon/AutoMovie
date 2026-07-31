@@ -258,7 +258,7 @@ const buildSignal = (
         {
           node: "sentinel",
           character: "the sentinel",
-          modelRef: "sentinel",
+          modelRef: model.id,
         },
       ],
       beats: [
