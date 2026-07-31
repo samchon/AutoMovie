@@ -763,6 +763,18 @@ const exerciseInputAndFilesystemFences = async (
       }),
     "startupTimeoutMs",
   );
+  expectErrorMessage(
+    "process MCP targets require an integer startup timeout",
+    () =>
+      createProcessAutoMovieBenchmarkMcpTarget({
+        surface: "five-tool",
+        provenance: "target",
+        command: "mcp",
+        timeoutMs: 1,
+        startupTimeoutMs: 1.5,
+      }),
+    "startupTimeoutMs",
+  );
 
   const linkedRoot = path.join(root, "linked-repository");
   fs.symlinkSync(
