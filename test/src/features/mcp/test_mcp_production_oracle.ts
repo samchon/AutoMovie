@@ -67,10 +67,16 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
       ],
     });
     const compiler = new AutoMovieProductionCompiler(project);
-    TestValidator.predicate(
-      "oracle fixture compiles",
-      compiler.compile({ scope: "source" }).success,
-    );
+    const initialCompile = compiler.compile({ scope: "source" });
+    if (initialCompile.success === false)
+      throw new Error(
+        `Oracle fixture compile failed:\n${JSON.stringify(
+          initialCompile.diagnostics,
+          null,
+          2,
+        )}`,
+      );
+    TestValidator.predicate("oracle fixture compiles", initialCompile.success);
     const oracle = new AutoMovieProductionOracleService(project);
     const filmFrame = oracle.query({
       request: { query: "film-time", at: { seconds: 2 } },
