@@ -300,13 +300,14 @@ export const test_film_defined_shot_continuity = (): void => {
   const slopePin = slopeActor.footPlants!.find(
     (plant) => plant.foot === "leftFoot",
   )!.position;
+  const slopeSecondX = slopeActor.transform.translation.x + 0.5;
   const slopeSecond = compileWalk({
     id: "SB-PLANT-SLOPE-B",
     rig,
     stage: slopeStage,
     target: {
-      x: slopeActor.transform.translation.x + 0.5,
-      y: slopeActor.transform.translation.y,
+      x: slopeSecondX,
+      y: rampGround(slopeSecondX, slopeActor.transform.translation.z),
       z: slopeActor.transform.translation.z,
     },
     previous: slopeFirst.continuity.closing,
