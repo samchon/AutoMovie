@@ -37,8 +37,24 @@ const linkDirectory = (source: string, destination: string): void => {
   );
 };
 
-const dependencyRoot = (name: string): string =>
-  path.dirname(require.resolve(`${name}/package.json`));
+const dependencyRoot = (name: string): string => {
+  let directory = path.dirname(require.resolve(name));
+  for (;;) {
+    const manifest = path.join(directory, "package.json");
+    if (fs.existsSync(manifest)) {
+      const parsed = JSON.parse(fs.readFileSync(manifest, "utf8")) as {
+        name?: unknown;
+      };
+      if (parsed.name === name) return directory;
+    }
+    const parent = path.dirname(directory);
+    if (parent === directory)
+      throw new Error(
+        `Resolved dependency "${name}" has no matching package.json ancestor.`,
+      );
+    directory = parent;
+  }
+};
 
 const workspacePackageRoot = (name: string): string | null => {
   if (name.startsWith("@automovie/") === false) return null;
