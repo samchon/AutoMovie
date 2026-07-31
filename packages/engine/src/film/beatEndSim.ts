@@ -8,6 +8,7 @@ import {
 
 import { Matrix4 } from "../math/Matrix4";
 import { Vector3 } from "../math/Vector3";
+import { positiveModulo } from "../math/positiveModulo";
 import { sampleMotion } from "../motion/sampleMotion";
 
 /**
@@ -88,16 +89,12 @@ export const gaitPhaseOf = (
   if (cycle !== null) {
     if (!Number.isFinite(cycle.period) || cycle.period <= 0) return null;
     if (!Number.isFinite(cycle.phaseAt)) return null;
-    return modPositive(cycle.phaseAt + localTime, cycle.period);
+    return positiveModulo(cycle.phaseAt + localTime, cycle.period);
   }
   if (!clip.loop) return null;
   if (clip.duration <= 0) return null;
   return wrapTime(localTime, clip.duration);
 };
-
-/** `value mod period` normalized into `[0, period)`. */
-const modPositive = (value: number, period: number): number =>
-  ((value % period) + period) % period;
 
 /**
  * World root velocity at `localTime`, finite-differenced over the clip's last

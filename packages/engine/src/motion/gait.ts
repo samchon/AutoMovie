@@ -8,6 +8,7 @@ import {
   IAutoMovieTransform,
 } from "@automovie/interface";
 
+import { positiveModulo } from "../math/positiveModulo";
 import { cubicBezierEasing, ease } from "./easing";
 
 const IDENTITY_ROOT: Pick<IAutoMovieTransform, "rotation" | "scale"> = {
@@ -16,7 +17,7 @@ const IDENTITY_ROOT: Pick<IAutoMovieTransform, "rotation" | "scale"> = {
 };
 
 /** Wrap a cycle position into `[0, 1)`. */
-const wrap01 = (x: number): number => ((x % 1) + 1) % 1;
+const wrap01 = (x: number): number => positiveModulo(x, 1);
 
 const gaitPhaseEase = (
   curve: IAutoMovieGaitLimb["stanceEasing"],
@@ -211,7 +212,7 @@ export const gaitMotion = (
     // period, and the NEXT beat's end-state records the true stride position.
     gaitCycle: {
       period: gait.period,
-      phaseAt: ((phase % gait.period) + gait.period) % gait.period,
+      phaseAt: positiveModulo(phase, gait.period),
     },
   };
 };

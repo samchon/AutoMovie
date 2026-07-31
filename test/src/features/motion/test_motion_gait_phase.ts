@@ -55,6 +55,16 @@ export const test_motion_gait_phase = (): void => {
     phased.gaitCycle,
     { period: 1, phaseAt: 0.25 },
   );
+  TestValidator.equals(
+    "an already normalized phase keeps its exact identity",
+    gaitMotion("g", "sk", GAIT, 4, 0.4).gaitCycle,
+    { period: 1, phaseAt: 0.4 },
+  );
+  TestValidator.equals(
+    "a negative phase still wraps into the positive cycle",
+    gaitMotion("g", "sk", GAIT, 4, -0.6).gaitCycle,
+    { period: 1, phaseAt: 0.4 },
+  );
 
   // 2. still a seamless loop.
   TestValidator.equals(

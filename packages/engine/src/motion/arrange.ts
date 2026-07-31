@@ -4,6 +4,8 @@ import {
   IAutoMoviePose,
 } from "@automovie/interface";
 
+import { positiveModulo } from "../math/positiveModulo";
+
 /** A motion clip placed at a start time on an actor's shot timeline. */
 export interface IAutoMoviePlacement {
   /** Seconds into the shot this clip begins. */
@@ -122,7 +124,7 @@ export const arrangeMotion = (
       ? null
       : {
           period: lastCycle.period,
-          phaseAt: modPositive(
+          phaseAt: positiveModulo(
             lastCycle.phaseAt - last!.start,
             lastCycle.period,
           ),
@@ -137,7 +139,3 @@ export const arrangeMotion = (
     gaitCycle,
   };
 };
-
-/** `value mod period` normalized into `[0, period)`. */
-const modPositive = (value: number, period: number): number =>
-  ((value % period) + period) % period;

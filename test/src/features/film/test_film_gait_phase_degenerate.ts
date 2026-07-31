@@ -76,6 +76,11 @@ const phaseOf = (gaitCycle: IAutoMovieGaitCycle): number | null =>
  * 3. A non-finite phaseAt answers null.
  */
 export const test_film_gait_phase_degenerate = (): void => {
+  TestValidator.equals(
+    "an in-range carried phase stays exact at the opening instant",
+    phaseOf({ period: 1, phaseAt: 0.4 }, 0),
+    0.4,
+  );
   const phase = phaseOf({ period: 0.8, phaseAt: 0.7 });
   TestValidator.predicate(
     "valid cycle: (0.7 + 0.5) mod 0.8 = 0.4",
