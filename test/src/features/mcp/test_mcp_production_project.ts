@@ -1184,6 +1184,47 @@ export const test_mcp_production_project = (): void => {
     fs.unlinkSync(renderFileLink);
     fs.rmSync(renderParentFile);
 
+    const crossApiIdentityFile = path.join(
+      ownerProject.renderRoot(),
+      "read-cross-api-identity.bin",
+    );
+    fs.writeFileSync(crossApiIdentityFile, "resident");
+    const nativeCrossApiStat = fs.statSync;
+    let divergentPathIdentityObserved = false;
+    fs.statSync = ((target: fs.PathLike, ...args: unknown[]): unknown => {
+      const status = Reflect.apply(nativeCrossApiStat, fs, [
+        target,
+        ...args,
+      ]) as fs.Stats | fs.BigIntStats;
+      if (
+        path.resolve(target.toString()) === path.resolve(crossApiIdentityFile)
+      ) {
+        divergentPathIdentityObserved = true;
+        return {
+          ...status,
+          ino:
+            typeof status.ino === "bigint"
+              ? status.ino + BigInt(1)
+              : status.ino + 1,
+        };
+      }
+      return status;
+    }) as typeof fs.statSync;
+    let crossApiIdentityRead = "";
+    try {
+      fs.statSync(crossApiIdentityFile, { bigint: true });
+      crossApiIdentityRead = Buffer.from(
+        ownerProject.readRenderFile("read-cross-api-identity.bin"),
+      ).toString("utf8");
+    } finally {
+      fs.statSync = nativeCrossApiStat;
+      fs.rmSync(crossApiIdentityFile);
+    }
+    TestValidator.predicate(
+      "render reads compare descriptor identities within one platform API domain",
+      divergentPathIdentityObserved && crossApiIdentityRead === "resident",
+    );
+
     const descriptorRace = (
       replacement: "directory" | "regular" | "symlink",
     ): boolean => {

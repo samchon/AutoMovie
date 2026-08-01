@@ -1594,11 +1594,16 @@ export class AutoMovieProductionProject {
             `Render file "${relativePath}" changed into a link or non-file while it was read.`,
           );
         const real = fs.realpathSync(file);
-        const resident = fs.statSync(real, { bigint: true });
-        if (fileIdentityKey(resident) !== fileIdentityKey(opened))
-          throw new Error(
-            `Render file "${relativePath}" changed physical identity inside the render root. Re-render it inside the owned output root.`,
-          );
+        const residentDescriptor = fs.openSync(real, "r");
+        try {
+          const resident = fs.fstatSync(residentDescriptor, { bigint: true });
+          if (fileIdentityKey(resident) !== fileIdentityKey(opened))
+            throw new Error(
+              `Render file "${relativePath}" changed physical identity inside the render root. Re-render it inside the owned output root.`,
+            );
+        } finally {
+          fs.closeSync(residentDescriptor);
+        }
       };
       assertResidentFile();
       const bytes = fs.readFileSync(descriptor);
