@@ -8,6 +8,7 @@ import {
 } from "@automovie/interface";
 
 import { Vector3 } from "../math/Vector3";
+import { getConstraint } from "../rom/humanoidRom";
 
 /** A reactive deflection (degrees) the impact pushes a joint toward. */
 export interface IAutoMovieRecoilPush {
@@ -107,8 +108,11 @@ export const impactRecoil = (
   const twist = readPushAxis("twist", push.twist);
 
   const joints: IAutoMovieJointPose[] = chain.map((bone, i) => {
+    const configured = skeleton.bones.find((entry) => entry.bone === bone);
     const constraint =
-      skeleton.bones.find((b) => b.bone === bone)?.constraint ?? null;
+      configured === undefined
+        ? null
+        : getConstraint(bone, configured.constraint);
     const k = Math.pow(falloff, i);
     return {
       bone,
