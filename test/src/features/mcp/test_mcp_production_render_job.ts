@@ -1684,17 +1684,51 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
     const replacement = path.join(frames, "replacement.png");
     fs.writeFileSync(replacement, "replacement");
     const nativeRead = fs.readFileSync;
+    const preserved = path.join(frames, "preserved.png");
+    let swapped = false;
+    fs.readFileSync = ((
+      file: fs.PathOrFileDescriptor,
+      ...args: unknown[]
+    ): unknown => {
+      if (
+        swapped === false &&
+        typeof file !== "number" &&
+        path.resolve(file.toString()) === resident
+      ) {
+        swapped = true;
+        fs.renameSync(resident, preserved);
+        fs.renameSync(replacement, resident);
+        try {
+          return Reflect.apply(nativeRead, fs, [file, ...args]) as unknown;
+        } finally {
+          fs.renameSync(resident, replacement);
+          fs.renameSync(preserved, resident);
+        }
+      }
+      return Reflect.apply(nativeRead, fs, [file, ...args]) as unknown;
+    }) as typeof fs.readFileSync;
+    try {
+      TestValidator.predicate(
+        "render-state reads bind bytes to the verified descriptor across a pathname swap",
+        Buffer.from(
+          readAutoMovieProductionOwnedFile({
+            root: ownedRoot,
+            directory: chunk,
+            relative: "frames/resident.png",
+          }),
+        ).toString("utf8") === "resident" && swapped === false,
+      );
+    } finally {
+      fs.readFileSync = nativeRead;
+    }
+
     let replaced = false;
     fs.readFileSync = ((
       file: fs.PathOrFileDescriptor,
       ...args: unknown[]
     ): unknown => {
       const bytes = Reflect.apply(nativeRead, fs, [file, ...args]) as unknown;
-      if (
-        replaced === false &&
-        typeof file !== "number" &&
-        path.resolve(file.toString()) === resident
-      ) {
+      if (replaced === false) {
         replaced = true;
         fs.rmSync(resident);
         fs.renameSync(replacement, resident);

@@ -756,28 +756,46 @@ export const readAutoMovieProductionOwnedFile = (props: {
   const identities: IProductionOwnedPathIdentity[] = directories.map(
     (file) => ({
       file,
-      directory: true,
       identity: productionOwnedDirectoryIdentity(file),
     }),
   );
-  identities.push({
-    file: target,
-    directory: false,
-    identity: productionOwnedFileIdentity(target),
-  });
-  const bytes = fs.readFileSync(target);
-  const changed = identities.find(
-    (expected) =>
-      expected.identity !==
-      (expected.directory
-        ? productionOwnedDirectoryIdentity(expected.file)
-        : productionOwnedFileIdentity(expected.file)),
-  );
-  if (changed !== undefined)
-    throw new Error(
-      `Render-state path "${changed.file}" changed physical identity while it was read.`,
+  productionOwnedFileIdentity(target);
+  const descriptor = fs.openSync(target, "r");
+  try {
+    const openedIdentity = productionOwnedDescriptorIdentity(
+      target,
+      descriptor,
     );
-  return bytes;
+    const assertResidentFile = (): void => {
+      const changed = identities.find(
+        (expected) =>
+          expected.identity !== productionOwnedDirectoryIdentity(expected.file),
+      );
+      if (changed !== undefined)
+        throw new Error(
+          `Render-state path "${changed.file}" changed physical identity while it was read.`,
+        );
+      productionOwnedFileIdentity(target);
+      const residentDescriptor = fs.openSync(target, "r");
+      try {
+        if (
+          productionOwnedDescriptorIdentity(target, residentDescriptor) !==
+          openedIdentity
+        )
+          throw new Error(
+            `Render-state path "${target}" changed physical identity while it was read.`,
+          );
+      } finally {
+        fs.closeSync(residentDescriptor);
+      }
+    };
+    assertResidentFile();
+    const bytes = fs.readFileSync(descriptor);
+    assertResidentFile();
+    return bytes;
+  } finally {
+    fs.closeSync(descriptor);
+  }
 };
 
 const frame = (
@@ -959,7 +977,6 @@ const compareCodeUnits = (left: string, right: string): number =>
 
 interface IProductionOwnedPathIdentity {
   file: string;
-  directory: boolean;
   identity: string;
 }
 
@@ -977,4 +994,14 @@ const productionOwnedFileIdentity = (file: string): string => {
   if (linked.isSymbolicLink() || linked.isFile() === false)
     throw new Error(`Render-state path "${file}" is not a physical file.`);
   return `${linked.dev}\0${linked.ino}`;
+};
+
+const productionOwnedDescriptorIdentity = (
+  file: string,
+  descriptor: number,
+): string => {
+  const opened = fs.fstatSync(descriptor, { bigint: true });
+  if (opened.isFile() === false)
+    throw new Error(`Render-state path "${file}" is not a physical file.`);
+  return `${opened.dev}\0${opened.ino}`;
 };
