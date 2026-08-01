@@ -53,9 +53,12 @@ const slateOf = (logline: string): IAutoMovieMcpWritableSlate => ({
  *    refusal/retry as well as explicit read synchronization.
  * 7. A missing manifest cannot advance the optimistic revision base and let a
  *    stale slate overwrite a concurrent winner after the manifest returns.
- * 8. Physical-root replacement after lock acquisition and during an atomic actor
- *    write stops before publish, leaves the replacement untouched, and never
- *    unlinks a copied resident token through the stale pathname.
+ * 8. The mutation-defense matrix proves ordinary temp cleanup, quarantine rename
+ *    failure, delete failure with successful/already-complete restore,
+ *    removal-time root replacement, lock-token clone preservation, and an
+ *    atomic-write root replacement without stale-path cleanup.
+ * 9. Retargeting a POSIX symlink or Windows junction ancestor during a write
+ *    cannot redirect a live handle away from its canonical physical root.
  */
 export const test_mcp_project_transactions = (): void => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-txn-"));
