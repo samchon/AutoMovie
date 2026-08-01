@@ -43,9 +43,12 @@ originals, trace, transcripts, inventory, and copied evidence are never exposed
 as candidate-writable paths. Before publication the runner reopens and hashes
 the staged project, transcripts, tool sessions, and every evidence file.
 Publication is committed only when the internal and campaign-sibling commit
-records are the same physical hard-linked file and bind the verified archive
-shape and bytes. A 64-hex directory without that sibling record is retained as
-uncommitted crash evidence and is never accepted as an immutable archive.
+records are the same physical hard-linked file and the record's full-content
+Merkle digest binds every archive path, link target, and regular-file byte. The
+sibling hard link is the single-writer publication's final operation; the
+runner performs no archive-path read after that commit point. A 64-hex
+directory without the sibling record is retained as uncommitted crash evidence
+and is never accepted as an immutable archive.
 
 ## Run Codex against the five-tool server
 

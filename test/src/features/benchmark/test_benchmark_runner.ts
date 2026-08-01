@@ -313,6 +313,17 @@ export {};
       agent,
       collect: collectCompleteEvidence,
     });
+    await exerciseArchivePublicationSealRaces({
+      taskId: current.taskId,
+      lane: "deterministic",
+      runRoot: root,
+      repositoryRoot,
+      identity,
+      mcpTarget,
+      inventoryBaselines: [archivedBaseline],
+      agent,
+      collect: collectCompleteEvidence,
+    });
     await exerciseArchiveShapeLinks({
       taskId: current.taskId,
       lane: "deterministic",
@@ -672,7 +683,9 @@ const exerciseArchiveCommitPointRaces = async (
     "late-tree",
     "late-byte",
     "record",
+    "record-content",
     "record-bytes",
+    "record-run",
     "commit-directory",
     "commit-link",
   ] as const) {
@@ -682,124 +695,139 @@ const exerciseArchiveCommitPointRaces = async (
       ".benchmarks",
       campaign,
     );
+    const output = await runAutoMovieBenchmark({ ...base, campaign });
+    const archive = output.archive;
+    const commitPath = path.join(
+      path.dirname(archive),
+      `.archive-${path.basename(archive)}.commit.json`,
+    );
+    const commitBytes = fs.readFileSync(commitPath);
+    if (phase === "tree")
+      fs.writeFileSync(
+        path.join(archive, "unexpected-entry.txt"),
+        "post-commit archive mutation",
+      );
+    else if (phase === "late-tree")
+      fs.mkdirSync(path.join(archive, "unexpected-empty-directory"));
+    else if (phase === "late-byte")
+      fs.writeFileSync(path.join(archive, "task.json"), "{}\n");
+    else if (phase === "record-bytes") fs.writeFileSync(commitPath, "{}\n");
+    else if (phase === "record-run") {
+      const record = JSON.parse(commitBytes.toString("utf8")) as {
+        runId: string;
+      };
+      record.runId = `sha256:${"0".repeat(64)}`;
+      fs.writeFileSync(commitPath, `${JSON.stringify(record)}\n`);
+    } else {
+      fs.unlinkSync(commitPath);
+      if (phase === "record") fs.writeFileSync(commitPath, commitBytes);
+      else if (phase === "record-content") fs.writeFileSync(commitPath, "{}\n");
+      else if (phase === "commit-directory") fs.mkdirSync(commitPath);
+      else
+        fs.symlinkSync(
+          archive,
+          commitPath,
+          process.platform === "win32" ? "junction" : "dir",
+        );
+    }
+    const message = await rejected(() =>
+      runAutoMovieBenchmark({ ...base, campaign }),
+    );
+    TestValidator.predicate(
+      `archive commit rejects a ${phase} resident mutation`,
+      message.includes(
+        phase === "late-byte"
+          ? "task law or brief changed"
+          : phase === "commit-directory" || phase === "commit-link"
+            ? "is not a physical file"
+            : "does not bind the resident content-addressed directory",
+      ),
+    );
+    fs.rmSync(campaignPath, { recursive: true, force: true });
+  }
+};
+
+const exerciseArchivePublicationSealRaces = async (
+  base: Omit<Parameters<typeof runAutoMovieBenchmark>[0], "campaign">,
+): Promise<void> => {
+  for (const phase of [
+    "content",
+    "publication-record",
+    "final-record",
+  ] as const) {
+    const campaign = `publication-seal-${phase}-race`;
+    const campaignPath = path.join(
+      path.resolve(base.runRoot),
+      ".benchmarks",
+      campaign,
+    );
     const nativeWrite = fs.writeFileSync;
-    const nativeLink = fs.linkSync;
     const nativeOpen = fs.openSync;
     const nativeRead = fs.readFileSync;
     let swapped = false;
     let commitPath: string | undefined;
     let commitDescriptor: number | undefined;
-    if (
-      phase === "tree" ||
-      phase === "commit-directory" ||
-      phase === "commit-link"
-    )
-      fs.linkSync = ((existingPath, newPath) => {
+    if (phase === "content")
+      fs.writeFileSync = ((
+        file: fs.PathOrFileDescriptor,
+        ...args: unknown[]
+      ): unknown => {
+        const output = Reflect.apply(nativeWrite, fs, [file, ...args]);
         if (
           swapped === false &&
-          /^\.archive-[0-9a-f]{64}\.commit\.json$/u.test(
-            path.basename(newPath.toString()),
-          )
+          typeof file !== "number" &&
+          path.basename(file.toString()) === ".archive-commit.json" &&
+          path
+            .basename(path.dirname(file.toString()))
+            .startsWith(".publishing-")
         ) {
-          commitPath = path.resolve(newPath.toString());
-          const archive = path.join(
-            path.dirname(commitPath),
-            path
-              .basename(commitPath)
-              .slice(".archive-".length, -".commit.json".length),
-          );
-          if (phase === "commit-directory") {
-            fs.mkdirSync(commitPath);
-            swapped = true;
-            return;
-          }
-          if (phase === "commit-link") {
-            fs.symlinkSync(
-              archive,
-              commitPath,
-              process.platform === "win32" ? "junction" : "dir",
-            );
-            swapped = true;
-            return;
-          }
-          const parked = `${archive}.precommit-parked`;
-          fs.renameSync(archive, parked);
-          fs.cpSync(parked, archive, {
-            recursive: true,
-            dereference: false,
-            verbatimSymlinks: true,
-          });
           nativeWrite(
-            path.join(archive, "unexpected-entry.txt"),
-            "uncommitted extra archive entry",
+            path.join(path.dirname(file.toString()), "unexpected-late-file"),
+            "late publication content",
           );
           swapped = true;
         }
-        nativeLink(existingPath, newPath);
-      }) as typeof fs.linkSync;
+        return output;
+      }) as typeof fs.writeFileSync;
     else {
       fs.openSync = ((file: fs.PathLike, ...args: unknown[]): number => {
-        if (
-          swapped === false &&
-          /^\.archive-[0-9a-f]{64}\.commit\.json$/u.test(
-            path.basename(file.toString()),
-          )
-        ) {
-          commitPath = path.resolve(file.toString());
-          if (phase === "late-tree") {
-            const archive = path.join(
-              path.dirname(commitPath),
-              path
-                .basename(commitPath)
-                .slice(".archive-".length, -".commit.json".length),
-            );
-            fs.mkdirSync(path.join(archive, "unexpected-empty-directory"));
-            swapped = true;
-          } else if (phase === "late-byte") {
-            const archive = path.join(
-              path.dirname(commitPath),
-              path
-                .basename(commitPath)
-                .slice(".archive-".length, -".commit.json".length),
-            );
-            nativeWrite(path.join(archive, "task.json"), "{}\n");
-            swapped = true;
-          }
-        }
+        const resolved = path.resolve(file.toString());
+        const parent = path.basename(path.dirname(resolved));
+        const matches =
+          path.basename(resolved) === ".archive-commit.json" &&
+          (phase === "publication-record"
+            ? parent.startsWith(".publishing-")
+            : /^[0-9a-f]{64}$/u.test(parent));
         const descriptor = Reflect.apply(nativeOpen, fs, [
           file,
           ...args,
         ]) as number;
         if (
-          (phase === "record" || phase === "record-bytes") &&
+          matches &&
           commitDescriptor === undefined &&
-          commitPath !== undefined &&
-          path.resolve(file.toString()) === commitPath
-        )
+          commitPath === undefined
+        ) {
+          commitPath = resolved;
           commitDescriptor = descriptor;
+        }
         return descriptor;
       }) as typeof fs.openSync;
-      if (phase === "record" || phase === "record-bytes")
-        fs.readFileSync = ((
-          file: fs.PathOrFileDescriptor,
-          ...args: unknown[]
-        ): unknown => {
-          const bytes = Reflect.apply(nativeRead, fs, [file, ...args]);
-          if (
-            swapped === false &&
-            typeof file === "number" &&
-            file === commitDescriptor &&
-            commitPath !== undefined
-          ) {
-            if (phase === "record") {
-              const parked = `${commitPath}.read-parked`;
-              fs.renameSync(commitPath, parked);
-              nativeWrite(commitPath, "{}\n");
-            } else nativeWrite(commitPath, "{}\n");
-            swapped = true;
-          }
-          return bytes;
-        }) as typeof fs.readFileSync;
+      fs.readFileSync = ((
+        file: fs.PathOrFileDescriptor,
+        ...args: unknown[]
+      ): unknown => {
+        const bytes = Reflect.apply(nativeRead, fs, [file, ...args]);
+        if (
+          swapped === false &&
+          typeof file === "number" &&
+          file === commitDescriptor &&
+          commitPath !== undefined
+        ) {
+          nativeWrite(commitPath, "{}\n");
+          swapped = true;
+        }
+        return bytes;
+      }) as typeof fs.readFileSync;
     }
     let message: string;
     try {
@@ -808,25 +836,16 @@ const exerciseArchiveCommitPointRaces = async (
       );
     } finally {
       fs.writeFileSync = nativeWrite;
-      fs.linkSync = nativeLink;
       fs.openSync = nativeOpen;
       fs.readFileSync = nativeRead;
     }
     TestValidator.predicate(
-      `archive commit rejects a ${phase} commit-point replacement`,
+      `archive publication rejects a ${phase} seal mutation`,
       swapped &&
         message.includes(
-          phase === "tree"
-            ? "does not bind the resident content-addressed directory"
-            : phase === "late-tree"
-              ? "does not bind the resident content-addressed directory"
-              : phase === "late-byte"
-                ? "task law or brief changed"
-                : phase === "record"
-                  ? "changed physical identity"
-                  : phase === "record-bytes"
-                    ? "does not bind the resident content-addressed directory"
-                    : "is not a physical file",
+          phase === "content"
+            ? "content changed while its publication record was prepared"
+            : "changed before publication",
         ),
     );
     fs.rmSync(campaignPath, { recursive: true, force: true });
