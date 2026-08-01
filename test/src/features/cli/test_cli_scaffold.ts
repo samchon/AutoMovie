@@ -1588,6 +1588,78 @@ export const test_cli_scaffold = (): void => {
     );
     fs.rmSync(renameBoundaryIsolated, { recursive: true, force: true });
     fs.rmSync(parkedRenameBoundaryGc, { recursive: true, force: true });
+    const gcPublicationFile = path.join(gcBase, "stale-publication.mp4");
+    const gcPublicationBytes = Buffer.from("stale publication bytes");
+    fs.writeFileSync(gcPublicationFile, gcPublicationBytes);
+    const gcPublicationSnapshot = renderGcModule.captureRenderGcTarget(
+      gcBase,
+      gcPublicationFile,
+    );
+    const gcPublicationNormalIsolated = path.join(
+      gcQuarantine,
+      "normal-publication",
+    );
+    renderGcModule.removeCapturedRenderGcTarget({
+      isolated: gcPublicationNormalIsolated,
+      quarantine: gcQuarantine,
+      snapshot: gcPublicationSnapshot,
+    });
+    TestValidator.predicate(
+      "render GC removes one exact inventoried publication file",
+      gcPublicationSnapshot.bytes === gcPublicationBytes.length &&
+        fs.existsSync(gcPublicationFile) === false &&
+        fs.existsSync(gcPublicationNormalIsolated) === false,
+    );
+    fs.writeFileSync(gcPublicationFile, gcPublicationBytes);
+    const gcPublicationBoundarySnapshot = renderGcModule.captureRenderGcTarget(
+      gcBase,
+      gcPublicationFile,
+    );
+    const parkedGcPublication = path.join(gcBase, "publication-original.mp4");
+    const gcPublicationBoundaryIsolated = path.join(
+      gcQuarantine,
+      "publication-boundary",
+    );
+    let gcPublicationBoundarySwapped = false;
+    mutableFs.renameSync = ((oldPath, newPath) => {
+      if (
+        gcPublicationBoundarySwapped === false &&
+        path.resolve(oldPath.toString()) === gcPublicationFile &&
+        path.resolve(newPath.toString()) === gcPublicationBoundaryIsolated
+      ) {
+        nativeGcRename(gcPublicationFile, parkedGcPublication);
+        fs.writeFileSync(gcPublicationFile, gcPublicationBytes);
+        gcPublicationBoundarySwapped = true;
+      }
+      nativeGcRename(oldPath, newPath);
+    }) as typeof fs.renameSync;
+    let gcPublicationBoundaryRejected = false;
+    try {
+      gcPublicationBoundaryRejected = throws(() =>
+        renderGcModule.removeCapturedRenderGcTarget({
+          isolated: gcPublicationBoundaryIsolated,
+          quarantine: gcQuarantine,
+          snapshot: gcPublicationBoundarySnapshot,
+        }),
+      );
+    } finally {
+      mutableFs.renameSync = nativeGcRename;
+    }
+    TestValidator.predicate(
+      "render GC preserves a publication file successor crossing rename",
+      gcPublicationBoundarySwapped &&
+        gcPublicationBoundaryRejected &&
+        fs.existsSync(gcPublicationFile) === false &&
+        fs.readFileSync(parkedGcPublication).equals(gcPublicationBytes) &&
+        fs
+          .readFileSync(gcPublicationBoundaryIsolated)
+          .equals(gcPublicationBytes) &&
+        renderGcModule.isRenderGcPreservedPath(
+          path.relative(gcBase, gcPublicationBoundaryIsolated),
+        ),
+    );
+    fs.rmSync(gcPublicationBoundaryIsolated, { force: true });
+    fs.rmSync(parkedGcPublication, { force: true });
     TestValidator.predicate(
       "a non-empty target is refused without force",
       throws(() => writeFiles(target, files)),
