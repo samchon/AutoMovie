@@ -751,7 +751,10 @@ export const test_cli_scaffold = (): void => {
           "application/json; charset=utf-8" &&
         positiveHeaders.get("Cache-Control") === "no-store",
     );
-    const mutableFs = createRequire(__filename)("node:fs") as typeof fs;
+    const mutableFs = createRequire(__filename)("node:fs") as {
+      lstatSync: typeof fs.lstatSync;
+      readdirSync: typeof fs.readdirSync;
+    };
     const nativeLstat = mutableFs.lstatSync;
     const shotsDirectory = path.dirname(artifact);
     const parkedShots = `${shotsDirectory}.parked`;
