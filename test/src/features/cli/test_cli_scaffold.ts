@@ -80,6 +80,8 @@ type GeneratedViewerMiddleware = (
  *    successors.
  * 10. Runtime package identity binds manifest, entry, and selected asset-tree bytes
  *     to one physical snapshot and rejects their successors.
+ * 11. Capture provenance descriptor-binds install receipts and keeps the exact
+ *     executable identity open across its launch boundary.
  */
 export const test_cli_scaffold = (): void => {
   // 5. packaging guard: the scaffold dir must be a published `files` entry.
@@ -198,6 +200,7 @@ export const test_cli_scaffold = (): void => {
       "scripts/capture-doctor.ts",
       "scripts/capture-install.ts",
       "scripts/capture.ts",
+      "scripts/captureExecutableSnapshot.ts",
       "scripts/compile.ts",
       "scripts/generatedShotPlugin.ts",
       "scripts/lint.ts",
@@ -351,7 +354,9 @@ export const test_cli_scaffold = (): void => {
       files["scripts/capture-browser.ts"]!.includes(
         'return import("playwright")',
       ) &&
-      files["scripts/capture-browser.ts"]!.includes("paths: [packageRoot]") &&
+      files["scripts/capture-browser.ts"]!.includes(
+        "paths: [playwright.root]",
+      ) &&
       files["scripts/capture-browser.ts"]!.includes('"--no-shell"') &&
       files["scripts/capture-browser.ts"]!.includes(
         'stdio: ["ignore", "pipe", "pipe"]',
@@ -366,7 +371,13 @@ export const test_cli_scaffold = (): void => {
         'context.getExtension("WEBGL_debug_renderer_info")',
       ) &&
       files["scripts/capture-browser.ts"]!.includes(
-        "executableDigest: await digestFile",
+        "executableDigest: executable.digest",
+      ) &&
+      files["scripts/capture-browser.ts"]!.includes(
+        "readAutoMovieProductionOwnedFile",
+      ) &&
+      files["scripts/capture-browser.ts"]!.includes(
+        "assertCaptureExecutable(executable)",
       ) &&
       files["scripts/capture-browser.ts"]!.includes(
         'config.source === "system-channel"',
@@ -659,6 +670,7 @@ export const test_cli_scaffold = (): void => {
         "scripts/capture-doctor.ts",
         "scripts/capture-install.ts",
         "scripts/capture.ts",
+        "scripts/captureExecutableSnapshot.ts",
         "scripts/compile.ts",
         "scripts/generatedShotPlugin.ts",
         "scripts/lint.ts",
@@ -1296,6 +1308,135 @@ export const test_cli_scaffold = (): void => {
     TestValidator.predicate(
       "runtime package identity rejects native asset inventory mutation",
       runtimeInventoryMutated && runtimeInventoryRaceRejected,
+    );
+    const captureExecutableModule = createRequire(__filename)(
+      path.join(scaffoldDir, "scripts", "captureExecutableSnapshot.ts"),
+    ) as {
+      assertCaptureExecutable: (snapshot: {
+        descriptor: number;
+        digest: string;
+        path: string;
+      }) => void;
+      closeCaptureExecutable: (snapshot: { descriptor: number }) => void;
+      openCaptureExecutable: (file: string) => {
+        descriptor: number;
+        digest: string;
+        path: string;
+      };
+    };
+    const captureExecutable = path.join(base, "capture-executable.bin");
+    const captureExecutableBytes = Buffer.from("capture executable bytes");
+    fs.writeFileSync(captureExecutable, captureExecutableBytes);
+    const captureSnapshot =
+      captureExecutableModule.openCaptureExecutable(captureExecutable);
+    let captureSnapshotAccepted = false;
+    try {
+      captureExecutableModule.assertCaptureExecutable(captureSnapshot);
+      captureSnapshotAccepted =
+        captureSnapshot.path === captureExecutable &&
+        captureSnapshot.digest === fixtureDigest(captureExecutableBytes);
+    } finally {
+      captureExecutableModule.closeCaptureExecutable(captureSnapshot);
+    }
+    TestValidator.predicate(
+      "capture executable snapshot preserves exact resident bytes and identity",
+      captureSnapshotAccepted,
+    );
+    const parkedCaptureExecutable = `${captureExecutable}.parked`;
+    let captureExecutableSwapped = false;
+    mutableFs.lstatSync = ((file, ...args: unknown[]): unknown => {
+      const status = Reflect.apply(nativeLstat, mutableFs, [file, ...args]);
+      if (
+        captureExecutableSwapped === false &&
+        path.resolve(file.toString()) === captureExecutable
+      ) {
+        fs.renameSync(captureExecutable, parkedCaptureExecutable);
+        fs.writeFileSync(captureExecutable, captureExecutableBytes);
+        captureExecutableSwapped = true;
+      }
+      return status;
+    }) as typeof fs.lstatSync;
+    let captureExecutableRaceRejected = false;
+    try {
+      captureExecutableRaceRejected = throws(() =>
+        captureExecutableModule.openCaptureExecutable(captureExecutable),
+      );
+    } finally {
+      mutableFs.lstatSync = nativeLstat;
+      if (fs.existsSync(parkedCaptureExecutable)) {
+        fs.rmSync(captureExecutable, { force: true });
+        fs.renameSync(parkedCaptureExecutable, captureExecutable);
+      }
+    }
+    TestValidator.predicate(
+      "capture executable snapshot rejects a byte-identical successor",
+      captureExecutableSwapped && captureExecutableRaceRejected,
+    );
+    const captureProject = path.join(base, "capture-project");
+    const captureReceipt = path.join(
+      captureProject,
+      ".automovie",
+      "capture",
+      "install-receipt.json",
+    );
+    const captureReceiptBytes = Buffer.from(
+      `${JSON.stringify({
+        version: 1,
+        playwright: { package: "playwright", version: "1.2.3" },
+        browser: {
+          product: "chromium",
+          revision: "123",
+          version: "123.0.0",
+          executablePath: captureExecutable,
+          executableDigest: fixtureDigest(captureExecutableBytes),
+        },
+        installSource: "playwright-cdn",
+      })}\n`,
+    );
+    fs.mkdirSync(path.dirname(captureReceipt), { recursive: true });
+    fs.writeFileSync(captureReceipt, captureReceiptBytes);
+    const captureBrowserModule = createRequire(__filename)(
+      path.join(scaffoldDir, "scripts", "capture-browser.ts"),
+    ) as {
+      readCaptureInstallReceipt: (projectRoot: string) => {
+        browser: { revision: string };
+        version: number;
+      };
+    };
+    TestValidator.predicate(
+      "capture install receipt is read through project-owned bytes",
+      captureBrowserModule.readCaptureInstallReceipt(captureProject).version ===
+        1,
+    );
+    const parkedCaptureReceipt = `${captureReceipt}.parked`;
+    let captureReceiptSwapped = false;
+    mutableFs.lstatSync = ((file, ...args: unknown[]): unknown => {
+      const status = Reflect.apply(nativeLstat, mutableFs, [file, ...args]);
+      if (
+        captureReceiptSwapped === false &&
+        path.resolve(file.toString()) === captureReceipt
+      ) {
+        fs.renameSync(captureReceipt, parkedCaptureReceipt);
+        fs.writeFileSync(captureReceipt, captureReceiptBytes);
+        captureReceiptSwapped = true;
+      }
+      return status;
+    }) as typeof fs.lstatSync;
+    let captureReceiptRaceRejected = false;
+    try {
+      captureReceiptRaceRejected = throws(() =>
+        captureBrowserModule.readCaptureInstallReceipt(captureProject),
+      );
+    } finally {
+      mutableFs.lstatSync = nativeLstat;
+      if (fs.existsSync(parkedCaptureReceipt)) {
+        fs.rmSync(captureReceipt, { force: true });
+        fs.renameSync(parkedCaptureReceipt, captureReceipt);
+      }
+    }
+    TestValidator.predicate(
+      "capture install receipt rejects a byte-identical successor",
+      captureReceiptSwapped && captureReceiptRaceRejected,
     );
     TestValidator.predicate(
       "a non-empty target is refused without force",

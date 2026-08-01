@@ -10,13 +10,20 @@ export type RuntimePackageAssetSelection =
   | { kind: "tree"; relative: string };
 
 export interface IRuntimePackageSnapshot {
-  assets: Array<{ digest: `sha256:${string}`; path: string }>;
+  assets: Array<{
+    bytes: Buffer;
+    digest: `sha256:${string}`;
+    path: string;
+  }>;
   entryDigest: `sha256:${string}`;
+  fingerprint: `sha256:${string}`;
   package: string;
+  root: string;
   version: string;
 }
 
 interface IPhysicalDirectory {
+  identity: string;
   path: string;
   real: string;
   version: string;
@@ -52,7 +59,7 @@ export const snapshotRuntimePackage = (props: {
   const trees: ITreeInventory[] = [];
   const assets = new Map<
     string,
-    { digest: `sha256:${string}`; path: string }
+    { bytes: Buffer; digest: `sha256:${string}`; path: string }
   >();
   for (const selection of props.assets ?? []) {
     const selected = ownedPath(located.root, selection.relative);
@@ -78,10 +85,28 @@ export const snapshotRuntimePackage = (props: {
   for (const file of files) assertPhysicalFile(file);
   for (const tree of trees) assertTree(located.root, tree);
   assertPhysicalDirectory(located.root, "runtime package root");
+  const fingerprint = digestAutoMovieBytes(
+    Buffer.from(
+      JSON.stringify({
+        files: files
+          .map((file) => ({
+            identity: file.identity,
+            path: path
+              .relative(located.root.real, file.path)
+              .replaceAll("\\", "/"),
+          }))
+          .sort((x, y) => compare(x.path, y.path)),
+        root: located.root.identity,
+        trees: trees.map(treeFingerprint).sort(compare),
+      }),
+    ),
+  );
   return {
     assets: [...assets.values()].sort((x, y) => compare(x.path, y.path)),
     entryDigest: digestAutoMovieBytes(entry.bytes),
+    fingerprint,
     package: props.packageName,
+    root: located.root.real,
     version: located.version,
   };
 };
@@ -156,12 +181,19 @@ const ownedPath = (root: IPhysicalDirectory, relative: string): string => {
 };
 
 const addAsset = (
-  output: Map<string, { digest: `sha256:${string}`; path: string }>,
+  output: Map<
+    string,
+    { bytes: Buffer; digest: `sha256:${string}`; path: string }
+  >,
   root: IPhysicalDirectory,
   file: IPhysicalFile,
 ): void => {
   const relative = path.relative(root.real, file.path).replaceAll("\\", "/");
-  const asset = { digest: digestAutoMovieBytes(file.bytes), path: relative };
+  const asset = {
+    bytes: file.bytes,
+    digest: digestAutoMovieBytes(file.bytes),
+    path: relative,
+  };
   const prior = output.get(relative);
   if (prior !== undefined && prior.digest !== asset.digest)
     throw new Error(`Runtime package asset "${relative}" is inconsistent.`);
@@ -313,7 +345,12 @@ const physicalDirectory = (
     version !== physicalVersion(linked)
   )
     throw new Error(`${label} "${namespacePath}" changed while resolved.`);
-  return { path: namespacePath, real, version };
+  return {
+    identity: `${status.dev}\0${status.ino}`,
+    path: namespacePath,
+    real,
+    version,
+  };
 };
 
 const assertPhysicalDirectory = (
@@ -321,7 +358,11 @@ const assertPhysicalDirectory = (
   label: string,
 ): void => {
   const current = physicalDirectory(expected.path, label);
-  if (current.real !== expected.real || current.version !== expected.version)
+  if (
+    current.identity !== expected.identity ||
+    current.real !== expected.real ||
+    current.version !== expected.version
+  )
     throw new Error(`${label} "${expected.path}" changed physical identity.`);
 };
 

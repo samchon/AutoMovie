@@ -33,7 +33,9 @@ Frame capture defaults to the Chromium build pinned to this project's Playwright
 version. Installation is explicit rather than a hidden dependency
 postinstall. The ignored receipt binds the package version, browser revision,
 executable path, and executable digest; the doctor launches that exact binary,
-requires WebGL, captures a canvas, and decodes the PNG.
+requires WebGL, captures a canvas, and decodes the PNG. Package metadata and
+the receipt are descriptor-bound snapshots, and the verified executable stays
+open and identity-checked through browser launch.
 
 ```bash
 npm install

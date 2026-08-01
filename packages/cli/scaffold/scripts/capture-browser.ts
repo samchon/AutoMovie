@@ -1,18 +1,17 @@
 import type { IAutoMovieCaptureRuntimeIdentity } from "@automovie/interface";
-import { createHash } from "node:crypto";
-import {
-  createReadStream,
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  renameSync,
-  rmSync,
-  statSync,
-  writeFileSync,
-} from "node:fs";
+import { readAutoMovieProductionOwnedFile } from "@automovie/mcp";
+import { mkdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 import type { Browser, Page } from "playwright";
+
+import {
+  type ICaptureExecutableSnapshot,
+  assertCaptureExecutable,
+  closeCaptureExecutable,
+  openCaptureExecutable,
+} from "./captureExecutableSnapshot";
+import { snapshotRuntimePackage } from "./runtimePackageSnapshot";
 
 export type AutoMovieCaptureBrowserConfig =
   | { source: "playwright-chromium" }
@@ -52,6 +51,7 @@ interface IPlaywrightMetadata {
   packageVersion: string;
   cliPath: string;
   browser: IPlaywrightBrowserRecord;
+  fingerprint: string;
 }
 
 export interface IAutoMovieCaptureBrowserSession {
@@ -133,27 +133,32 @@ const loadPlaywright = async (
 };
 
 const playwrightMetadata = (): IPlaywrightMetadata => {
-  const packagePath = require.resolve("playwright/package.json");
-  const packageRoot = path.dirname(packagePath);
-  const corePackagePath = require.resolve("playwright-core/package.json", {
-    paths: [packageRoot],
+  const playwright = snapshotRuntimePackage({
+    assets: [{ kind: "file", relative: "cli.js" }],
+    entry: require.resolve("playwright"),
+    packageName: "playwright",
   });
-  const packageJson = JSON.parse(readFileSync(packagePath, "utf8")) as {
-    version?: unknown;
-  };
-  const browsersJson = JSON.parse(
-    readFileSync(
-      path.join(path.dirname(corePackagePath), "browsers.json"),
-      "utf8",
-    ),
-  ) as {
+  const corePackagePath = require.resolve("playwright-core/package.json", {
+    paths: [playwright.root],
+  });
+  const core = snapshotRuntimePackage({
+    assets: [{ kind: "file", relative: "browsers.json" }],
+    entry: corePackagePath,
+    packageName: "playwright-core",
+  });
+  const cli = playwright.assets.find((asset) => asset.path === "cli.js");
+  const browsersFile = core.assets.find(
+    (asset) => asset.path === "browsers.json",
+  );
+  if (cli === undefined || browsersFile === undefined)
+    throw new Error("Installed Playwright package assets are incomplete.");
+  const browsersJson = JSON.parse(browsersFile.bytes.toString("utf8")) as {
     browsers?: IPlaywrightBrowserRecord[];
   };
   const browser = browsersJson.browsers?.find(
     (candidate) => candidate.name === BROWSER_NAME,
   );
   if (
-    typeof packageJson.version !== "string" ||
     browser === undefined ||
     typeof browser.revision !== "string" ||
     typeof browser.browserVersion !== "string"
@@ -162,21 +167,23 @@ const playwrightMetadata = (): IPlaywrightMetadata => {
       "Installed Playwright metadata is incomplete. Reinstall dependencies, then run npm run capture:install.",
     );
   return {
-    packageVersion: packageJson.version,
-    cliPath: path.join(packageRoot, "cli.js"),
+    packageVersion: playwright.version,
+    cliPath: path.join(playwright.root, cli.path),
     browser,
+    fingerprint: `${playwright.fingerprint}\0${core.fingerprint}`,
   };
 };
 
-const digestFile = async (file: string): Promise<`sha256:${string}`> => {
-  const hash = createHash("sha256");
-  await new Promise<void>((resolve, reject) => {
-    const stream = createReadStream(file);
-    stream.on("data", (chunk) => hash.update(chunk));
-    stream.on("error", reject);
-    stream.on("end", resolve);
-  });
-  return `sha256:${hash.digest("hex")}`;
+const assertPlaywrightMetadata = (expected: IPlaywrightMetadata): void => {
+  const current = playwrightMetadata();
+  if (
+    current.fingerprint !== expected.fingerprint ||
+    current.cliPath !== expected.cliPath ||
+    current.packageVersion !== expected.packageVersion ||
+    current.browser.revision !== expected.browser.revision ||
+    current.browser.browserVersion !== expected.browser.browserVersion
+  )
+    throw new Error("Installed Playwright metadata changed while it was used.");
 };
 
 const receiptPath = (projectRoot: string): string =>
@@ -213,15 +220,29 @@ const parseReceipt = (
   return receipt as IAutoMovieCaptureInstallReceipt;
 };
 
-const readReceipt = (projectRoot: string): IAutoMovieCaptureInstallReceipt => {
+export const readCaptureInstallReceipt = (
+  projectRoot: string,
+): IAutoMovieCaptureInstallReceipt => {
   const file = receiptPath(projectRoot);
-  if (existsSync(file) === false)
+  let bytes: Uint8Array | null;
+  try {
+    bytes = readAutoMovieProductionOwnedFile({
+      root: path.resolve(projectRoot),
+      directory: path.dirname(file),
+      relative: path.basename(file),
+      optional: true,
+    });
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+    bytes = null;
+  }
+  if (bytes === null)
     throw new Error(
       `Package-owned Chromium is not installed for this project. Run npm run capture:install, then npm run capture:doctor.`,
     );
   try {
     return parseReceipt(
-      JSON.parse(readFileSync(file, "utf8")) as unknown,
+      JSON.parse(Buffer.from(bytes).toString("utf8")) as unknown,
       file,
     );
   } catch (error) {
@@ -272,63 +293,82 @@ export const installPackageOwnedChromium = async (
         installed.status ?? "signal"
       }. Check HTTPS_PROXY, PLAYWRIGHT_DOWNLOAD_HOST or PLAYWRIGHT_CHROMIUM_DOWNLOAD_HOST for your network or offline mirror, then retry npm run capture:install.`,
     );
+  assertPlaywrightMetadata(metadata);
   const { chromium } = await loadPlaywright(projectRoot);
-  const executablePath = chromium.executablePath();
-  if (
-    existsSync(executablePath) === false ||
-    statSync(executablePath).isFile() === false
-  )
+  assertPlaywrightMetadata(metadata);
+  let executable: ICaptureExecutableSnapshot;
+  try {
+    executable = openCaptureExecutable(chromium.executablePath());
+  } catch {
     throw new Error(
-      `Playwright reported no physical Chromium executable at "${executablePath}". Retry npm run capture:install.`,
+      `Playwright reported no physical Chromium executable at "${chromium.executablePath()}". Retry npm run capture:install.`,
     );
-  const receipt: IAutoMovieCaptureInstallReceipt = {
-    version: 1,
-    playwright: {
-      package: "playwright",
-      version: metadata.packageVersion,
-    },
-    browser: {
-      product: "chromium",
-      revision: metadata.browser.revision,
-      version: metadata.browser.browserVersion,
-      executablePath: path.resolve(executablePath),
-      executableDigest: await digestFile(executablePath),
-    },
-    installSource: hasEnvironment("PLAYWRIGHT_CHROMIUM_DOWNLOAD_HOST")
-      ? "PLAYWRIGHT_CHROMIUM_DOWNLOAD_HOST"
-      : hasEnvironment("PLAYWRIGHT_DOWNLOAD_HOST")
-        ? "PLAYWRIGHT_DOWNLOAD_HOST"
-        : "playwright-cdn",
-  };
-  writeReceipt(projectRoot, receipt);
-  return receipt;
+  }
+  try {
+    const receipt: IAutoMovieCaptureInstallReceipt = {
+      version: 1,
+      playwright: {
+        package: "playwright",
+        version: metadata.packageVersion,
+      },
+      browser: {
+        product: "chromium",
+        revision: metadata.browser.revision,
+        version: metadata.browser.browserVersion,
+        executablePath: executable.path,
+        executableDigest: executable.digest,
+      },
+      installSource: hasEnvironment("PLAYWRIGHT_CHROMIUM_DOWNLOAD_HOST")
+        ? "PLAYWRIGHT_CHROMIUM_DOWNLOAD_HOST"
+        : hasEnvironment("PLAYWRIGHT_DOWNLOAD_HOST")
+          ? "PLAYWRIGHT_DOWNLOAD_HOST"
+          : "playwright-cdn",
+    };
+    assertCaptureExecutable(executable);
+    assertPlaywrightMetadata(metadata);
+    writeReceipt(projectRoot, receipt);
+    assertCaptureExecutable(executable);
+    assertPlaywrightMetadata(metadata);
+    return receipt;
+  } finally {
+    closeCaptureExecutable(executable);
+  }
 };
 
-const packageOwnedProvenance = async (
+const packageOwnedProvenance = (
   projectRoot: string,
-): Promise<IAutoMovieCaptureInstallReceipt> => {
-  const metadata = playwrightMetadata();
-  const receipt = readReceipt(projectRoot);
-  const { chromium } = await loadPlaywright(projectRoot);
-  const executablePath = path.resolve(chromium.executablePath());
+  metadata: IPlaywrightMetadata,
+  executablePath: string,
+): {
+  executable: ICaptureExecutableSnapshot;
+  receipt: IAutoMovieCaptureInstallReceipt;
+} => {
+  const receipt = readCaptureInstallReceipt(projectRoot);
+  const resolvedExecutable = path.resolve(executablePath);
   if (
     receipt.playwright.version !== metadata.packageVersion ||
     receipt.browser.revision !== metadata.browser.revision ||
     receipt.browser.version !== metadata.browser.browserVersion ||
-    path.resolve(receipt.browser.executablePath) !== executablePath
+    path.resolve(receipt.browser.executablePath) !== resolvedExecutable
   )
     throw new Error(
       "The capture install receipt does not match the current Playwright package and browser revision. Run npm run capture:install, then npm run capture:doctor.",
     );
-  if (
-    existsSync(executablePath) === false ||
-    statSync(executablePath).isFile() === false ||
-    (await digestFile(executablePath)) !== receipt.browser.executableDigest
-  )
+  let executable: ICaptureExecutableSnapshot;
+  try {
+    executable = openCaptureExecutable(resolvedExecutable);
+  } catch {
     throw new Error(
       "The package-owned Chromium executable is missing or differs from its install receipt. Run npm run capture:install, then npm run capture:doctor.",
     );
-  return receipt;
+  }
+  if (executable.digest !== receipt.browser.executableDigest) {
+    closeCaptureExecutable(executable);
+    throw new Error(
+      "The package-owned Chromium executable is missing or differs from its install receipt. Run npm run capture:install, then npm run capture:doctor.",
+    );
+  }
+  return { executable, receipt };
 };
 
 export const launchCaptureBrowser = async (
@@ -342,14 +382,21 @@ export const launchCaptureBrowser = async (
   let source: IAutoMovieCaptureRuntimeIdentity["browser"]["source"];
   let revision: string | null;
   let executableDigest: `sha256:${string}` | null;
+  let executable: ICaptureExecutableSnapshot | null = null;
   let launch: NonNullable<Parameters<typeof chromium.launch>[0]>;
   if (config.source === "playwright-chromium") {
-    const receipt = await packageOwnedProvenance(projectRoot);
+    const provenance = packageOwnedProvenance(
+      projectRoot,
+      metadata,
+      chromium.executablePath(),
+    );
+    const receipt = provenance.receipt;
+    executable = provenance.executable;
     product = "chromium";
     source = "package-owned";
     revision = receipt.browser.revision;
     executableDigest = receipt.browser.executableDigest;
-    launch = { executablePath: receipt.browser.executablePath };
+    launch = { executablePath: executable.path };
   } else if (config.source === "system-channel") {
     product = config.channel === "msedge" ? "msedge" : "chrome";
     source = "system-channel";
@@ -358,18 +405,25 @@ export const launchCaptureBrowser = async (
     launch = { channel: config.channel };
   } else {
     const executablePath = path.resolve(projectRoot, config.executablePath);
-    if (
-      existsSync(executablePath) === false ||
-      statSync(executablePath).isFile() === false
-    )
+    try {
+      executable = openCaptureExecutable(executablePath);
+    } catch {
       throw new Error(
         `Configured capture executable "${executablePath}" is not a physical file. Correct automovie.config.ts or install that executable.`,
       );
+    }
     product = config.product;
     source = "configured-executable";
     revision = null;
-    executableDigest = await digestFile(executablePath);
-    launch = { executablePath };
+    executableDigest = executable.digest;
+    launch = { executablePath: executable.path };
+  }
+  try {
+    assertPlaywrightMetadata(metadata);
+    if (executable !== null) assertCaptureExecutable(executable);
+  } catch (error) {
+    if (executable !== null) closeCaptureExecutable(executable);
+    throw error;
   }
   let browser: Browser;
   try {
@@ -379,47 +433,55 @@ export const launchCaptureBrowser = async (
       args: ["--use-angle=swiftshader"],
     });
   } catch (error) {
+    if (executable !== null) closeCaptureExecutable(executable);
     throw new Error(
       `Capture browser launch failed: ${
         error instanceof Error ? error.message : String(error)
       } Run npm run capture:install and npm run capture:doctor. If Linux reports missing shared libraries, run npx playwright install-deps chromium; otherwise correct the explicit system-channel/configured-executable setting.`,
     );
   }
-  const browserVersion = browser.version();
-  if (
-    source === "package-owned" &&
-    browserVersion !== metadata.browser.browserVersion
-  ) {
+  try {
+    assertPlaywrightMetadata(metadata);
+    if (executable !== null) assertCaptureExecutable(executable);
+    const browserVersion = browser.version();
+    if (
+      source === "package-owned" &&
+      browserVersion !== metadata.browser.browserVersion
+    )
+      throw new Error(
+        `Package-owned Chromium reported version "${browserVersion}", expected "${metadata.browser.browserVersion}". Run npm run capture:install, then npm run capture:doctor.`,
+      );
+    return {
+      browser,
+      runtime: {
+        protocolVersion: CAPTURE_PROTOCOL,
+        playwright: {
+          package: "playwright",
+          version: metadata.packageVersion,
+        },
+        browser: {
+          product,
+          version: browserVersion,
+          revision,
+          source,
+          executableDigest,
+        },
+        platform: {
+          os: process.platform,
+          arch: process.arch,
+        },
+        mode: {
+          headless: "chromium",
+          deviceScaleFactor: DEVICE_SCALE_FACTOR,
+        },
+      },
+    };
+  } catch (error) {
     await browser.close();
-    throw new Error(
-      `Package-owned Chromium reported version "${browserVersion}", expected "${metadata.browser.browserVersion}". Run npm run capture:install, then npm run capture:doctor.`,
-    );
+    throw error;
+  } finally {
+    if (executable !== null) closeCaptureExecutable(executable);
   }
-  return {
-    browser,
-    runtime: {
-      protocolVersion: CAPTURE_PROTOCOL,
-      playwright: {
-        package: "playwright",
-        version: metadata.packageVersion,
-      },
-      browser: {
-        product,
-        version: browserVersion,
-        revision,
-        source,
-        executableDigest,
-      },
-      platform: {
-        os: process.platform,
-        arch: process.arch,
-      },
-      mode: {
-        headless: "chromium",
-        deviceScaleFactor: DEVICE_SCALE_FACTOR,
-      },
-    },
-  };
 };
 
 export const inspectCaptureGraphics = async (
