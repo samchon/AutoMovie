@@ -85,6 +85,50 @@ export const test_mcp_commit_lock = (): void => {
       false,
     );
 
+    const releaseRacePath = path.join(dir, "release-race.lock");
+    const releaseRaceParked = `${releaseRacePath}.owner-parked`;
+    const releaseRaceToken = acquireCommitLock(releaseRacePath);
+    const foreignToken = "successor-session-token";
+    const nativeRename = fs.renameSync;
+    const nativeRm = fs.rmSync;
+    let releaseTargetSwapped = false;
+    const swapReleaseTarget = (): void => {
+      releaseTargetSwapped = true;
+      nativeRename(releaseRacePath, releaseRaceParked);
+      fs.writeFileSync(releaseRacePath, foreignToken);
+    };
+    fs.renameSync = ((oldPath, newPath) => {
+      if (
+        releaseTargetSwapped === false &&
+        path.resolve(oldPath.toString()) === path.resolve(releaseRacePath) &&
+        path.basename(newPath.toString()).startsWith(".automovie-lock-release-")
+      )
+        swapReleaseTarget();
+      return nativeRename(oldPath, newPath);
+    }) as typeof fs.renameSync;
+    fs.rmSync = ((target, ...args: unknown[]): void => {
+      if (
+        releaseTargetSwapped === false &&
+        path.resolve(target.toString()) === path.resolve(releaseRacePath)
+      )
+        swapReleaseTarget();
+      Reflect.apply(nativeRm, fs, [target, ...args]);
+    }) as typeof fs.rmSync;
+    try {
+      releaseCommitLock(releaseRacePath, releaseRaceToken);
+    } finally {
+      fs.renameSync = nativeRename;
+      fs.rmSync = nativeRm;
+    }
+    TestValidator.predicate(
+      "release cannot delete a foreign lock swapped in after owner verification",
+      releaseTargetSwapped &&
+        fs.existsSync(releaseRacePath) &&
+        fs.readFileSync(releaseRacePath, "utf8") === foreignToken,
+    );
+    nativeRm(releaseRacePath, { force: true });
+    nativeRm(releaseRaceParked, { force: true });
+
     // 4c. releasing an already-vanished lock is a no-op (no throw)
     releaseCommitLock(lockPath, token);
     TestValidator.equals(
