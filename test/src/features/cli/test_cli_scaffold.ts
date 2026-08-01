@@ -72,7 +72,8 @@ type GeneratedViewerMiddleware = (
  * 7. The generated viewer middleware binds one compiled artifact descriptor to the
  *    physical file identity it checked instead of serving a replacement.
  * 8. The registered asset route applies the same binding to ownership, closure,
- *    and final asset bytes, rejecting a byte-identical successor inode.
+ *    and final asset bytes, rejecting authorization successors and inventory
+ *    mutation before serving one descriptor-bound asset.
  * 9. Proxy publication verification accepts an exact physical bundle and rejects a
  *    byte-identical file successor after inventory observation.
  */
@@ -879,6 +880,112 @@ export const test_cli_scaffold = (): void => {
       "the generated viewer serves one ledger-and-closure-bound asset",
       positiveAssetResponse.statusCode === 200 &&
         positiveAssetResponse.body === assetBytes.toString("utf8"),
+    );
+    const requestRegisteredAsset = (): GeneratedViewerResponse => {
+      const response: GeneratedViewerResponse = {
+        body: "",
+        statusCode: 0,
+        end: (body) => {
+          response.body = Buffer.isBuffer(body)
+            ? body.toString("utf8")
+            : String(body ?? "");
+        },
+        setHeader: () => undefined,
+      };
+      middleware?.(
+        { url: "/__automovie/assets/public/audio/starter-tone.json" },
+        response,
+        () => undefined,
+      );
+      return response;
+    };
+    const ledger = path.join(target, ".automovie", "assets.json");
+    const ledgerBytes = fs.readFileSync(ledger);
+    const parkedLedger = `${ledger}.parked`;
+    let ledgerSwapped = false;
+    mutableFs.lstatSync = ((file, ...args: unknown[]): unknown => {
+      const status = Reflect.apply(nativeLstat, mutableFs, [file, ...args]);
+      if (ledgerSwapped === false && path.resolve(file.toString()) === ledger) {
+        fs.renameSync(ledger, parkedLedger);
+        fs.writeFileSync(ledger, ledgerBytes);
+        ledgerSwapped = true;
+      }
+      return status;
+    }) as typeof fs.lstatSync;
+    let ledgerResponse: GeneratedViewerResponse;
+    try {
+      ledgerResponse = requestRegisteredAsset();
+    } finally {
+      mutableFs.lstatSync = nativeLstat;
+      if (fs.existsSync(parkedLedger)) {
+        fs.rmSync(ledger, { force: true });
+        fs.renameSync(parkedLedger, ledger);
+      }
+    }
+    TestValidator.predicate(
+      "the generated viewer refuses a byte-identical asset ledger successor",
+      ledgerSwapped &&
+        ledgerResponse.statusCode === 400 &&
+        ledgerResponse.body === "invalid registered asset request",
+    );
+    const modelBytes = fs.readFileSync(model);
+    const parkedModel = `${model}.parked`;
+    let modelSwapped = false;
+    mutableFs.lstatSync = ((file, ...args: unknown[]): unknown => {
+      const status = Reflect.apply(nativeLstat, mutableFs, [file, ...args]);
+      if (modelSwapped === false && path.resolve(file.toString()) === model) {
+        fs.renameSync(model, parkedModel);
+        fs.writeFileSync(model, modelBytes);
+        modelSwapped = true;
+      }
+      return status;
+    }) as typeof fs.lstatSync;
+    let modelResponse: GeneratedViewerResponse;
+    try {
+      modelResponse = requestRegisteredAsset();
+    } finally {
+      mutableFs.lstatSync = nativeLstat;
+      if (fs.existsSync(parkedModel)) {
+        fs.rmSync(model, { force: true });
+        fs.renameSync(parkedModel, model);
+      }
+    }
+    TestValidator.predicate(
+      "the generated viewer refuses a byte-identical compiled model successor",
+      modelSwapped &&
+        modelResponse.statusCode === 400 &&
+        modelResponse.body === "invalid registered asset request",
+    );
+    const modelsDirectory = path.dirname(model);
+    const extraModel = path.join(modelsDirectory, "late-inventory.json");
+    const nativeReaddir = mutableFs.readdirSync;
+    let inventoryMutated = false;
+    mutableFs.readdirSync = ((directory, ...args: unknown[]): unknown => {
+      const entries = Reflect.apply(nativeReaddir, mutableFs, [
+        directory,
+        ...args,
+      ]);
+      if (
+        inventoryMutated === false &&
+        path.resolve(directory.toString()) === modelsDirectory
+      ) {
+        fs.writeFileSync(extraModel, '{"imported":{"assets":[]}}\n');
+        inventoryMutated = true;
+      }
+      return entries;
+    }) as typeof fs.readdirSync;
+    let inventoryResponse: GeneratedViewerResponse;
+    try {
+      inventoryResponse = requestRegisteredAsset();
+    } finally {
+      mutableFs.readdirSync = nativeReaddir;
+      fs.rmSync(extraModel, { force: true });
+    }
+    TestValidator.predicate(
+      "the generated viewer refuses compiled model inventory mutation",
+      inventoryMutated &&
+        inventoryResponse.statusCode === 400 &&
+        inventoryResponse.body === "invalid registered asset request",
     );
     const parkedAsset = `${asset}.parked`;
     let assetSwapped = false;

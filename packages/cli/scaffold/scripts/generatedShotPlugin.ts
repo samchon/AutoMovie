@@ -163,13 +163,57 @@ const readRegisteredAsset = (
   assetPath: string,
 ): Buffer => {
   const project = physicalDirectory(projectRoot, "viewer project root");
-  const ownership = JSON.parse(
-    readPhysicalFile(
-      project,
-      path.join(project.real, ".automovie"),
-      "manifest.json",
-    ).toString("utf8"),
-  ) as { assetManifest?: unknown; generatedRoot?: unknown };
+  const authorization = readAssetAuthorization(
+    project,
+    productionId,
+    assetPath,
+  );
+  const file = path.resolve(project.real, ...assetPath.split("/"));
+  const relative = path.relative(project.real, file);
+  if (
+    relative === "" ||
+    relative === ".." ||
+    relative.startsWith(`..${path.sep}`) ||
+    path.isAbsolute(relative)
+  )
+    throw new Error("asset escapes project");
+  const asset = readPhysicalFileSnapshot(
+    project,
+    path.dirname(file),
+    path.basename(file),
+  );
+  const digest = `sha256:${createHash("sha256")
+    .update(asset.bytes)
+    .digest("hex")}`;
+  if (authorization.registeredDigest !== digest)
+    throw new Error("asset bytes do not match registered digest");
+  assertAssetAuthorization(authorization);
+  const confirmed = readAssetAuthorization(project, productionId, assetPath);
+  if (
+    confirmed.fingerprint !== authorization.fingerprint ||
+    confirmed.registeredDigest !== authorization.registeredDigest
+  )
+    throw new Error("registered asset authorization changed while read");
+  assertAssetAuthorization(confirmed);
+  assertPhysicalFile(asset);
+  assertPhysicalDirectory(project, "viewer project root");
+  return asset.bytes;
+};
+
+const readAssetAuthorization = (
+  project: IPhysicalDirectory,
+  productionId: string,
+  assetPath: string,
+): IAssetAuthorization => {
+  const ownershipFile = readPhysicalFileSnapshot(
+    project,
+    path.join(project.real, ".automovie"),
+    "manifest.json",
+  );
+  const ownership = JSON.parse(ownershipFile.bytes.toString("utf8")) as {
+    assetManifest?: unknown;
+    generatedRoot?: unknown;
+  };
   if (
     typeof ownership.assetManifest !== "string" ||
     ownership.assetManifest.trim() === "" ||
@@ -179,13 +223,15 @@ const readRegisteredAsset = (
   const ledgerPath = path.resolve(project.real, ownership.assetManifest);
   if (isInside(project.real, ledgerPath) === false)
     throw new Error("asset manifest escapes project");
-  const ledger = JSON.parse(
-    readPhysicalFile(
-      project,
-      path.dirname(ledgerPath),
-      path.basename(ledgerPath),
-    ).toString("utf8"),
-  ) as { version?: unknown; assets?: unknown };
+  const ledgerFile = readPhysicalFileSnapshot(
+    project,
+    path.dirname(ledgerPath),
+    path.basename(ledgerPath),
+  );
+  const ledger = JSON.parse(ledgerFile.bytes.toString("utf8")) as {
+    version?: unknown;
+    assets?: unknown;
+  };
   if (ledger.version !== 1 || Array.isArray(ledger.assets) === false)
     throw new Error("invalid asset manifest");
   const record = ledger.assets.find(
@@ -199,41 +245,51 @@ const readRegisteredAsset = (
   );
   if (record === undefined)
     throw new Error("asset is not registered in the byte ledger");
-  const compiledDigest = readCompiledAssetClosure(
+  const compiled = readCompiledAssetClosure(
     project,
     productionId,
     ownership.generatedRoot,
-  ).get(assetPath);
+  );
+  const compiledDigest = compiled.closure.get(assetPath);
   if (compiledDigest === undefined || compiledDigest !== record.digest)
     throw new Error(
       "asset is not in the current compiler-sealed viewer closure",
     );
-  const file = path.resolve(project.real, ...assetPath.split("/"));
-  const relative = path.relative(project.real, file);
-  if (
-    relative === "" ||
-    relative === ".." ||
-    relative.startsWith(`..${path.sep}`) ||
-    path.isAbsolute(relative)
-  )
-    throw new Error("asset escapes project");
-  const bytes = readPhysicalFile(
+  const files = [ownershipFile, ledgerFile, ...compiled.files];
+  const fingerprint = createHash("sha256")
+    .update(
+      JSON.stringify({
+        files: files.map((file) => ({
+          digest: createHash("sha256").update(file.bytes).digest("hex"),
+          identity: file.identity,
+          path: path.relative(project.real, file.path),
+        })),
+        inventory: compiled.inventory,
+        models: {
+          path: path.relative(project.real, compiled.models.real),
+          version: compiled.models.version,
+        },
+        registeredDigest: record.digest,
+      }),
+    )
+    .digest("hex");
+  const authorization: IAssetAuthorization = {
+    files,
+    fingerprint,
+    inventory: compiled.inventory,
+    models: compiled.models,
     project,
-    path.dirname(file),
-    path.basename(file),
-  );
-  assertPhysicalDirectory(project, "viewer project root");
-  const digest = `sha256:${createHash("sha256").update(bytes).digest("hex")}`;
-  if (record.digest !== digest)
-    throw new Error("asset bytes do not match registered digest");
-  return bytes;
+    registeredDigest: record.digest,
+  };
+  assertAssetAuthorization(authorization);
+  return authorization;
 };
 
 const readCompiledAssetClosure = (
   project: IPhysicalDirectory,
   productionId: string,
   generatedRootValue: unknown,
-): Map<string, string> => {
+): ICompiledAssetClosure => {
   if (
     typeof generatedRootValue !== "string" ||
     generatedRootValue.trim().length === 0 ||
@@ -253,16 +309,14 @@ const readCompiledAssetClosure = (
   if (isInside(project.real, models.real) === false)
     throw new Error("compiled model root is not a physical project directory");
   const closure = new Map<string, string>();
-  for (const entry of fs.readdirSync(models.real, { withFileTypes: true })) {
-    if (
-      entry.isFile() === false ||
-      entry.isSymbolicLink() ||
-      path.extname(entry.name).toLowerCase() !== ".json"
-    )
-      continue;
-    const model = JSON.parse(
-      readPhysicalFile(project, models.real, entry.name).toString("utf8"),
-    ) as { imported?: { assets?: unknown } };
+  const inventory = compiledModelInventory(models);
+  const files: IPhysicalFileSnapshot[] = [];
+  for (const name of inventory) {
+    const file = readPhysicalFileSnapshot(project, models.real, name);
+    files.push(file);
+    const model = JSON.parse(file.bytes.toString("utf8")) as {
+      imported?: { assets?: unknown };
+    };
     if (model.imported === undefined) continue;
     if (Array.isArray(model.imported.assets) === false)
       throw new Error("imported model has no sealed asset closure");
@@ -281,9 +335,36 @@ const readCompiledAssetClosure = (
       closure.set(item.path, item.digest);
     }
   }
+  if (
+    JSON.stringify(compiledModelInventory(models)) !== JSON.stringify(inventory)
+  )
+    throw new Error("compiled model inventory changed while read");
   assertPhysicalDirectory(models, "compiled model root");
   assertPhysicalDirectory(project, "viewer project root");
-  return closure;
+  return { closure, files, inventory, models };
+};
+
+const compiledModelInventory = (models: IPhysicalDirectory): string[] =>
+  fs
+    .readdirSync(models.real, { withFileTypes: true })
+    .filter(
+      (entry) =>
+        entry.isFile() &&
+        entry.isSymbolicLink() === false &&
+        path.extname(entry.name).toLowerCase() === ".json",
+    )
+    .map((entry) => entry.name)
+    .sort((x, y) => (x < y ? -1 : x > y ? 1 : 0));
+
+const assertAssetAuthorization = (authorization: IAssetAuthorization): void => {
+  for (const file of authorization.files) assertPhysicalFile(file);
+  if (
+    JSON.stringify(compiledModelInventory(authorization.models)) !==
+    JSON.stringify(authorization.inventory)
+  )
+    throw new Error("compiled model inventory changed while authorized");
+  assertPhysicalDirectory(authorization.models, "compiled model root");
+  assertPhysicalDirectory(authorization.project, "viewer project root");
 };
 
 const assetMediaType = (assetPath: string): string => {
@@ -345,6 +426,30 @@ interface IPhysicalDirectory {
   inode: string;
   path: string;
   real: string;
+  version: string;
+}
+
+interface IPhysicalFileSnapshot {
+  bytes: Buffer;
+  directories: readonly IPhysicalDirectory[];
+  identity: string;
+  path: string;
+}
+
+interface ICompiledAssetClosure {
+  closure: Map<string, string>;
+  files: IPhysicalFileSnapshot[];
+  inventory: string[];
+  models: IPhysicalDirectory;
+}
+
+interface IAssetAuthorization {
+  files: readonly IPhysicalFileSnapshot[];
+  fingerprint: string;
+  inventory: readonly string[];
+  models: IPhysicalDirectory;
+  project: IPhysicalDirectory;
+  registeredDigest: string;
 }
 
 const physicalDirectory = (
@@ -357,10 +462,13 @@ const physicalDirectory = (
     throw new Error(`${label} is not a physical directory`);
   const real = fs.realpathSync(namespacePath);
   const status = fs.statSync(real, { bigint: true });
+  const linkedVersion = physicalVersion(linked);
+  const statusVersion = physicalVersion(status);
   if (
     status.isDirectory() === false ||
     status.dev !== linked.dev ||
-    status.ino !== linked.ino
+    status.ino !== linked.ino ||
+    statusVersion !== linkedVersion
   )
     throw new Error(`${label} is not a physical directory`);
   return {
@@ -368,6 +476,7 @@ const physicalDirectory = (
     inode: status.ino.toString(),
     path: namespacePath,
     real,
+    version: statusVersion,
   };
 };
 
@@ -379,7 +488,8 @@ const assertPhysicalDirectory = (
   if (
     current.device !== expected.device ||
     current.inode !== expected.inode ||
-    current.real !== expected.real
+    current.real !== expected.real ||
+    current.version !== expected.version
   )
     throw new Error(`${label} changed physical identity`);
 };
@@ -388,7 +498,13 @@ const readPhysicalFile = (
   root: IPhysicalDirectory,
   directory: string,
   name: string,
-): Buffer => {
+): Buffer => readPhysicalFileSnapshot(root, directory, name).bytes;
+
+const readPhysicalFileSnapshot = (
+  root: IPhysicalDirectory,
+  directory: string,
+  name: string,
+): IPhysicalFileSnapshot => {
   assertPhysicalDirectory(root, "viewer project root");
   const owner = path.resolve(directory);
   if (
@@ -413,28 +529,49 @@ const readPhysicalFile = (
   const linked = fs.lstatSync(file, { bigint: true });
   if (linked.isSymbolicLink() || linked.isFile() === false)
     throw new Error("viewer file is not one physical owned file");
+  const identity = physicalVersion(linked);
   const descriptor = fs.openSync(file, "r");
   try {
     const opened = fs.fstatSync(descriptor, { bigint: true });
     if (
       opened.isFile() === false ||
       opened.dev !== linked.dev ||
-      opened.ino !== linked.ino
+      opened.ino !== linked.ino ||
+      physicalVersion(opened) !== identity
     )
       throw new Error("viewer file changed physical identity before open");
     const bytes = fs.readFileSync(descriptor);
+    const completed = fs.fstatSync(descriptor, { bigint: true });
     const resident = fs.lstatSync(file, { bigint: true });
     if (
+      completed.isFile() === false ||
+      physicalVersion(completed) !== identity ||
       resident.isSymbolicLink() ||
       resident.isFile() === false ||
       resident.dev !== opened.dev ||
-      resident.ino !== opened.ino
+      resident.ino !== opened.ino ||
+      physicalVersion(resident) !== identity
     )
       throw new Error("viewer file changed physical identity while read");
     for (const identity of directories)
       assertPhysicalDirectory(identity, "viewer file ancestry");
-    return bytes;
+    return { bytes, directories, identity, path: file };
   } finally {
     fs.closeSync(descriptor);
   }
 };
+
+const assertPhysicalFile = (expected: IPhysicalFileSnapshot): void => {
+  const current = fs.lstatSync(expected.path, { bigint: true });
+  if (
+    current.isSymbolicLink() ||
+    current.isFile() === false ||
+    physicalVersion(current) !== expected.identity
+  )
+    throw new Error("viewer file changed physical identity after read");
+  for (const directory of expected.directories)
+    assertPhysicalDirectory(directory, "viewer file ancestry");
+};
+
+const physicalVersion = (status: fs.BigIntStats): string =>
+  `${status.dev}\0${status.ino}\0${status.size}\0${status.mtimeNs}\0${status.ctimeNs}`;
