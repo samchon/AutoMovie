@@ -53,10 +53,10 @@ const throwsWith = (fn: () => unknown, message: string): boolean => {
  *    published `@automovie/cli` would ship no scaffold and `npx automovie
  *    start` would throw on install (#1155). Guards the packaging, which the
  *    in-repo render (workspace source) cannot.
- * 6. The pinned Kokoro/Transformers graph installs its local MIT Sharp capability
- *    wall as both the renderer's direct dependency and the nested Transformers
- *    override, fingerprints that wall in sound cache identity and fails an
- *    image call explicitly instead of loading a native LGPL payload.
+ * 6. The pinned Kokoro/Transformers graph installs its Node CPU backend and local
+ *    MIT Sharp capability wall as direct dependencies, fingerprints both in
+ *    sound identity, and fails an image call explicitly instead of loading a
+ *    native LGPL payload.
  */
 export const test_cli_scaffold = (): void => {
   // 5. packaging guard: the scaffold dir must be a published `files` entry.
@@ -202,6 +202,10 @@ export const test_cli_scaffold = (): void => {
       ) &&
       pkg.includes(`"mp4box": "${AUTOMOVIE_TEMPLATE_VERSIONS.mp4box}"`) &&
       pkg.includes(
+        `"onnxruntime-node": "${AUTOMOVIE_TEMPLATE_VERSIONS.onnxruntimeNode}"`,
+      ) &&
+      AUTOMOVIE_TEMPLATE_VERSIONS.onnxruntimeNode === "1.21.0" &&
+      pkg.includes(
         `"playwright": "${AUTOMOVIE_TEMPLATE_VERSIONS.playwright}"`,
       ) &&
       pkg.includes(`"pngjs": "${AUTOMOVIE_TEMPLATE_VERSIONS.pngjs}"`) &&
@@ -333,7 +337,15 @@ export const test_cli_scaffold = (): void => {
       files["scripts/render.ts"]!.includes("deriveProductionSoundPlan") &&
       files["scripts/render.ts"]!.includes("KokoroTTS.from_pretrained") &&
       files["scripts/render.ts"]!.includes("KOKORO_MODEL_REVISION") &&
+      files["scripts/render.ts"]!.includes('KOKORO_DEVICE = "cpu"') &&
+      files["scripts/render.ts"]!.split("device: KOKORO_DEVICE").length === 4 &&
       files["scripts/render.ts"]!.includes("productionSoundRuntimeIdentity") &&
+      files["scripts/render.ts"]!.includes(
+        'backend: resolvedPackageIdentity("onnxruntime-node")',
+      ) &&
+      files["scripts/render.ts"]!.includes(
+        'path: "package:onnxruntime-node"',
+      ) &&
       files["scripts/render.ts"]!.includes(
         'imageCapability: resolvedPackageIdentity("sharp")',
       ) &&

@@ -103,6 +103,7 @@ const heldChunkLocks = new Map<string, { path: string; token: string }>();
 const KOKORO_MODEL = "onnx-community/Kokoro-82M-v1.0-ONNX" as const;
 const KOKORO_MODEL_REVISION =
   "1939ad2a8e416c0acfeecc08a694d14ef25f2231" as const;
+const KOKORO_DEVICE = "cpu" as const;
 const KOKORO_VOICE = "af_heart";
 
 interface IRenderChunkLockOwner {
@@ -424,11 +425,12 @@ const productionSoundRuntimeIdentity = () => ({
   tts: {
     ...resolvedPackageIdentity("kokoro-js"),
     adapter: resolvedPackageIdentity("@huggingface/transformers"),
+    backend: resolvedPackageIdentity("onnxruntime-node"),
     imageCapability: resolvedPackageIdentity("sharp"),
     model: KOKORO_MODEL,
     modelRevision: KOKORO_MODEL_REVISION,
     dtype: "q8",
-    device: "wasm",
+    device: KOKORO_DEVICE,
     voice: KOKORO_VOICE,
     speed: 1,
   },
@@ -1596,7 +1598,7 @@ const synthesizeProductionDialogue = async (
           model: KOKORO_MODEL,
           modelRevision: KOKORO_MODEL_REVISION,
           dtype: "q8",
-          device: "wasm",
+          device: KOKORO_DEVICE,
           voice: KOKORO_VOICE,
           speed: 1,
           text: line.text.normalize("NFKC"),
@@ -1776,7 +1778,7 @@ const loadPinnedKokoroRuntime = async (
   try {
     const loaded = await KokoroTTS.from_pretrained(KOKORO_MODEL, {
       dtype: "q8",
-      device: "wasm",
+      device: KOKORO_DEVICE,
     });
     const modelAssets = kokoroModelCacheAssets(modelCacheRoot);
     if (modelAssets.length === 0)
@@ -1797,6 +1799,7 @@ const kokoroBaseRuntimeAssets =
   (): IAutoMovieProductionTtsReceipt["runtimeAssets"] => {
     const kokoro = resolvedPackageIdentity("kokoro-js");
     const transformers = resolvedPackageIdentity("@huggingface/transformers");
+    const backend = resolvedPackageIdentity("onnxruntime-node");
     const imageCapability = resolvedPackageIdentity("sharp");
     const voice = path.join(
       resolvedPackageDirectory("kokoro-js"),
@@ -1810,6 +1813,10 @@ const kokoroBaseRuntimeAssets =
       {
         path: "package:@huggingface/transformers",
         digest: transformers.entryDigest,
+      },
+      {
+        path: "package:onnxruntime-node",
+        digest: backend.entryDigest,
       },
       {
         path: "package:sharp-capability-wall",

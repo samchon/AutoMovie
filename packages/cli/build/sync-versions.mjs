@@ -84,6 +84,7 @@ const versions = {
   kokoroJs: exactCatalogVersion("media", "kokoro-js"),
   libopusWasm: catalogVersion("media", "libopus-wasm"),
   mp4box: catalogVersion("media", "mp4box"),
+  onnxruntimeNode: exactCatalogVersion("media", "onnxruntime-node"),
   mcpSdk: catalogVersion("modelcontextprotocol", "@modelcontextprotocol/sdk"),
   threeVrm: catalogVersion("three", "@pixiv/three-vrm"),
   playwright: catalogVersion("media", "playwright"),

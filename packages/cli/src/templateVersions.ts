@@ -14,6 +14,7 @@ export const AUTOMOVIE_TEMPLATE_VERSIONS: Record<string, string> = {
   kokoroJs: "1.2.1",
   libopusWasm: "^0.2.0",
   mp4box: "^2.4.1",
+  onnxruntimeNode: "1.21.0",
   mcpSdk: "^1.29.0",
   threeVrm: "^3",
   playwright: "^1.60.0",

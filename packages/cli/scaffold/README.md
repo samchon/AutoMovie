@@ -147,7 +147,7 @@ Guide-pass publication includes both its MP4 and authenticated
 `frames/<pass>/frame_XXXXXXXX.png` control images.
 
 Finalization derives semantic sound effects from compiled shot events, samples their emitters relative to the active camera, mixes authored score cues and caption-timed dialogue at 48 kHz stereo, and encodes deterministic Opus without a host `ffmpeg`.
-Dialogue uses the local Kokoro ONNX/WASM adapter and caches each normalized line by content, model, voice, and inference settings, so changing one line invalidates only that line.
+Dialogue uses the local Kokoro ONNX Runtime CPU adapter and caches each normalized line by content, model, voice, and inference settings, so changing one line invalidates only that line.
 The project pins the verified Kokoro and Transformers.js versions and overrides Transformers.js's Node-only Sharp image dependency with the bundled TTS capability wall.
 Kokoro's text/audio path remains local, while an accidental image-pipeline call fails explicitly instead of installing a non-permissive native image payload.
 The audio deliverable owns `audio.mp4`, waveform and spectrogram PNGs, and parser-verified clipping/event-alignment evidence.

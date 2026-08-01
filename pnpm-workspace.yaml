@@ -36,6 +36,7 @@ catalogs:
     kokoro-js: ^1.2.1
     libopus-wasm: ^0.2.0
     mp4box: ^2.4.1
+    onnxruntime-node: 1.21.0
     playwright: ^1.60.0
     playwright-core: ^1.60.0
     pngjs: ^7.0.0
