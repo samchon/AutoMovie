@@ -1596,8 +1596,7 @@ export const test_mcp_production_review = async (): Promise<void> => {
     );
 
     const legacyBundleDirectory = path.join(
-      fixture.root,
-      "renders",
+      project.renderRoot(),
       "retained-v2-history",
     );
     const currentBundleManifest = JSON.parse(
@@ -1620,8 +1619,7 @@ export const test_mcp_production_review = async (): Promise<void> => {
       }),
     );
     const legacyFilmBundleDirectory = path.join(
-      fixture.root,
-      "renders",
+      project.renderRoot(),
       "retained-v2-film-history",
     );
     fs.mkdirSync(legacyFilmBundleDirectory, { recursive: true });
