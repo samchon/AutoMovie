@@ -885,6 +885,7 @@ export const test_mcp_production_application = async (): Promise<void> => {
     const rerolledReview = repainting.prepareReview({
       target: { kind: "rendition", id: "opening" },
     });
+    repainting.getGuideDocument({ name: "REVIEW_FILM" });
     const repaintFilmReview = repainting.prepareReview({
       target: { kind: "film", id: "fixture-film" },
     });

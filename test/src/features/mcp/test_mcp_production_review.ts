@@ -1391,8 +1391,10 @@ export const test_mcp_production_review = async (): Promise<void> => {
     const noVisualResult = review.submit(noVisualBasis);
     const highRiskNotApplicable = worksheet(project, shotPrepared);
     const highRiskCriterion = highRiskNotApplicable.checks.find(
-      (check) => check.criterion === "motion-and-grounding",
-    )!;
+      (check) => check.criterion === "beat-fidelity",
+    );
+    if (highRiskCriterion === undefined)
+      throw new Error("shot worksheet has no beat-fidelity criterion");
     highRiskCriterion.verdict = "not-applicable";
     const highRiskNotApplicableResult = review.submit(highRiskNotApplicable);
     const acceptanceCoverageMismatch = worksheet(project, shotPrepared);
