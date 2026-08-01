@@ -727,14 +727,30 @@ export const runProductionRenderJob = async (props: {
  * before the read and rechecked afterwards, so a replacement cannot turn a
  * verified content-addressed path into different resident bytes.
  */
-export const readAutoMovieProductionOwnedFile = (props: {
+export function readAutoMovieProductionOwnedFile(props: {
   /** Physical production ownership root. */
   root: string;
   /** Physical directory that owns the relative file. */
   directory: string;
   /** Strict descendant path below `directory`. */
   relative: string;
-}): Uint8Array => {
+  /** Return `null` only when the first target observation is absent. */
+  optional: true;
+}): Uint8Array | null;
+export function readAutoMovieProductionOwnedFile(props: {
+  /** Physical production ownership root. */
+  root: string;
+  /** Physical directory that owns the relative file. */
+  directory: string;
+  /** Strict descendant path below `directory`. */
+  relative: string;
+}): Uint8Array;
+export function readAutoMovieProductionOwnedFile(props: {
+  root: string;
+  directory: string;
+  relative: string;
+  optional?: boolean;
+}): Uint8Array | null {
   const root = path.resolve(props.root);
   const directory = path.resolve(props.directory);
   const target = path.resolve(directory, props.relative);
@@ -759,13 +775,27 @@ export const readAutoMovieProductionOwnedFile = (props: {
       identity: productionOwnedDirectoryIdentity(file),
     }),
   );
-  productionOwnedFileIdentity(target);
+  let linkedIdentity: string;
+  try {
+    linkedIdentity = productionOwnedFileIdentity(target);
+  } catch (error) {
+    if (
+      props.optional === true &&
+      (error as NodeJS.ErrnoException).code === "ENOENT"
+    )
+      return null;
+    throw error;
+  }
   const descriptor = fs.openSync(target, "r");
   try {
     const openedIdentity = productionOwnedDescriptorIdentity(
       target,
       descriptor,
     );
+    if (openedIdentity !== linkedIdentity)
+      throw new Error(
+        `Production-owned path "${target}" changed physical identity before it was opened.`,
+      );
     const assertResidentFile = (): void => {
       const changed = identities.find(
         (expected) =>
@@ -796,7 +826,7 @@ export const readAutoMovieProductionOwnedFile = (props: {
   } finally {
     fs.closeSync(descriptor);
   }
-};
+}
 
 const frame = (
   timeline: IAutoMovieFilmTimeline,

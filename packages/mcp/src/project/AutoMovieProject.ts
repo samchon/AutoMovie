@@ -798,10 +798,11 @@ class AutoMovieProjectRootError extends Error {
 const assertProjectRootDirectory = (root: string): void => {
   try {
     if (fs.existsSync(root)) {
-      if (!fs.statSync(root).isDirectory())
+      const status = fs.lstatSync(root);
+      if (status.isSymbolicLink() || status.isDirectory() === false)
         throw new AutoMovieProjectRootError(
           root,
-          "project root must be a directory",
+          "project root must be a directory, not a symbolic link, junction, or file",
         );
       return;
     }
@@ -1441,13 +1442,14 @@ const validatePropSlice = (
 };
 
 const readJson = <T>(root: string, file: string): T | null => {
-  if (!fs.existsSync(file)) return null;
   try {
     const bytes = readAutoMovieProductionOwnedFile({
       root,
       directory: path.dirname(file),
       relative: path.basename(file),
+      optional: true,
     });
+    if (bytes === null) return null;
     return JSON.parse(Buffer.from(bytes).toString("utf8")) as T;
   } catch (error) {
     // JSON.parse and Node's synchronous filesystem APIs throw Error objects.

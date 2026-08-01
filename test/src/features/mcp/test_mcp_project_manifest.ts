@@ -48,46 +48,62 @@ export const test_mcp_project_manifest = (): void => {
     )}\n`;
     fs.writeFileSync(manifestPath, withUnknown);
     const before = fs.readFileSync(manifestPath, "utf8");
-    const nativeManifestRead = fs.readFileSync;
+    const nativeManifestExists = fs.existsSync;
+    const nativeManifestLstat = fs.lstatSync;
     const parkedManifest = `${manifestPath}.read-parked`;
-    let manifestPathRead = false;
-    fs.readFileSync = ((
-      file: fs.PathOrFileDescriptor,
-      ...args: unknown[]
-    ): unknown => {
+    let manifestSwapBoundary: "exists" | "lstat" | null = null;
+    const swapManifest = (): void => {
+      fs.renameSync(manifestPath, parkedManifest);
+      fs.writeFileSync(
+        manifestPath,
+        `${JSON.stringify({
+          version: 1,
+          assets: ["models/transient.glb"],
+        })}\n`,
+      );
+    };
+    fs.existsSync = ((file: fs.PathLike): boolean => {
+      const exists = nativeManifestExists(file);
       if (
-        typeof file !== "number" &&
+        exists &&
+        manifestSwapBoundary === null &&
         path.resolve(file.toString()) === path.resolve(manifestPath)
       ) {
-        manifestPathRead = true;
-        fs.renameSync(manifestPath, parkedManifest);
-        fs.writeFileSync(
-          manifestPath,
-          `${JSON.stringify({
-            version: 1,
-            assets: ["models/transient.glb"],
-          })}\n`,
-        );
-        try {
-          return Reflect.apply(nativeManifestRead, fs, [file, ...args]);
-        } finally {
-          fs.rmSync(manifestPath);
-          fs.renameSync(parkedManifest, manifestPath);
-        }
+        manifestSwapBoundary = "exists";
+        swapManifest();
       }
-      return Reflect.apply(nativeManifestRead, fs, [file, ...args]);
-    }) as typeof fs.readFileSync;
-    const project = (() => {
-      try {
-        return AutoMovieProject.open(root);
-      } finally {
-        fs.readFileSync = nativeManifestRead;
-        if (fs.existsSync(parkedManifest)) {
-          fs.rmSync(manifestPath, { force: true });
-          fs.renameSync(parkedManifest, manifestPath);
-        }
+      return exists;
+    }) as typeof fs.existsSync;
+    fs.lstatSync = ((file, options) => {
+      const status = nativeManifestLstat(file, options);
+      if (
+        manifestSwapBoundary === null &&
+        path.resolve(file.toString()) === path.resolve(manifestPath)
+      ) {
+        manifestSwapBoundary = "lstat";
+        swapManifest();
       }
-    })();
+      return status;
+    }) as typeof fs.lstatSync;
+    let manifestSwapRejected = false;
+    try {
+      manifestSwapRejected = throwsError(
+        () => AutoMovieProject.open(root),
+        ["changed physical identity", "automovie.json"],
+      );
+    } finally {
+      fs.existsSync = nativeManifestExists;
+      fs.lstatSync = nativeManifestLstat;
+      if (nativeManifestExists(parkedManifest)) {
+        fs.rmSync(manifestPath, { force: true });
+        fs.renameSync(parkedManifest, manifestPath);
+      }
+    }
+    TestValidator.predicate(
+      "manifest reads reject replacement between first observation and descriptor open",
+      manifestSwapBoundary === "lstat" && manifestSwapRejected,
+    );
+    const project = AutoMovieProject.open(root);
     TestValidator.equals(
       "opening an existing project does not rewrite the manifest",
       fs.readFileSync(manifestPath, "utf8"),
@@ -97,11 +113,6 @@ export const test_mcp_project_manifest = (): void => {
       "the opened project sees the existing assets",
       project.assets,
       ["models/a.glb"],
-    );
-    TestValidator.equals(
-      "manifest bytes bind to the verified descriptor",
-      manifestPathRead,
-      false,
     );
 
     // 3. a real mutation rewrites the manifest but keeps the unknown field.
@@ -176,6 +187,24 @@ export const test_mcp_project_manifest = (): void => {
           ],
         ),
       );
+    }
+
+    const linkedRoot = `${root}-linked`;
+    fs.symlinkSync(
+      root,
+      linkedRoot,
+      process.platform === "win32" ? "junction" : "dir",
+    );
+    try {
+      TestValidator.predicate(
+        "project roots reject symlinks before creating resident state",
+        throwsError(
+          () => AutoMovieProject.open(linkedRoot),
+          ["AutoMovie project root", "symbolic link"],
+        ),
+      );
+    } finally {
+      fs.unlinkSync(linkedRoot);
     }
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
