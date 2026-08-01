@@ -32,6 +32,12 @@ import {
 } from "../dto";
 import { readAutoMovieProductionOwnedFile } from "../production/productionRenderJob";
 import {
+  acquireOrCreateProductionRootNamespace,
+  acquireProductionRootNamespace,
+  assertProductionRootNamespaceLease,
+  releaseProductionRootNamespace,
+} from "../production/rootNamespaceLock";
+import {
   validateSceneArtifact,
   validateSequenceArtifact,
 } from "../validators/artifacts";
@@ -102,7 +108,11 @@ export class AutoMovieProject {
    */
   private lastReadRevision_: number;
 
-  private constructor(public readonly root: string) {
+  private constructor(
+    public readonly root: string,
+    private readonly rootDevice: string,
+    private readonly rootInode: string,
+  ) {
     for (const dir of RESERVED_DIRS)
       fs.mkdirSync(path.join(root, dir), { recursive: true });
     this.lastReadRevision_ = this.readRevision();
@@ -128,66 +138,91 @@ export class AutoMovieProject {
    */
   public static open(rootDir: string): AutoMovieProject {
     const root = path.resolve(rootDir);
-    assertProjectRootDirectory(root);
-    return new AutoMovieProject(root);
+    const lease = (() => {
+      try {
+        return acquireOrCreateProductionRootNamespace(root);
+      } catch (error) {
+        const message = (error as Error).message;
+        throw new AutoMovieProjectRootError(
+          root,
+          message.includes("not a physical directory")
+            ? "project root must be a directory, not a symbolic link, junction, or file"
+            : message,
+        );
+      }
+    })();
+    try {
+      const project = new AutoMovieProject(root, lease.device, lease.inode);
+      assertProductionRootNamespaceLease(lease);
+      return project;
+    } finally {
+      releaseProductionRootNamespace(lease);
+    }
   }
 
   /** The stored slate assembled from the slice files (film excluded). */
   public storedSlate(): Omit<IAutoMovieMcpWritableSlate, "film"> {
-    this.lastReadRevision_ = this.readRevision();
-    const script = readValidatedJson<IAutoMovieScript>(
-      this.root,
-      this.slicePath("script.json"),
-      validateScriptSlice,
-    );
-    const scenes = this.readStagedScenes();
-    const shots = this.readKeyedSlices<IAutoMovieShot>(
-      "shots",
-      {
-        label: "shot id",
-        expected: shotIdOf,
-        actual: (shot) => shot.id,
-      },
-      (file, shot) => validateProjectValue(file, shot, validateShotSlice),
-    );
-    return {
-      script,
-      scenes,
-      shots,
-      beatEnds: this.readKeyedSlices<IAutoMovieBeatEndState>(
-        "beatEnds",
+    return this.withRootNamespace(() => {
+      this.lastReadRevision_ = this.readRevision();
+      const script = readValidatedJson<IAutoMovieScript>(
+        this.root,
+        this.slicePath("script.json"),
+        validateScriptSlice,
+      );
+      const scenes = this.readStagedScenes();
+      const shots = this.readKeyedSlices<IAutoMovieShot>(
+        "shots",
         {
-          label: "beat end",
-          expected: (beat) => beat,
-          actual: (end) => end.beat,
+          label: "shot id",
+          expected: shotIdOf,
+          actual: (shot) => shot.id,
         },
-        (file, beatEnd) =>
-          validateProjectValue(file, beatEnd, validateBeatEndSlice),
-      ),
-      notes:
-        readValidatedJson<IAutoMovieReviewNote[]>(
-          this.root,
-          this.slicePath("notes.json"),
-          validateNotesSlice,
-        ) ?? [],
-    };
+        (file, shot) => validateProjectValue(file, shot, validateShotSlice),
+      );
+      return {
+        script,
+        scenes,
+        shots,
+        beatEnds: this.readKeyedSlices<IAutoMovieBeatEndState>(
+          "beatEnds",
+          {
+            label: "beat end",
+            expected: (beat) => beat,
+            actual: (end) => end.beat,
+          },
+          (file, beatEnd) =>
+            validateProjectValue(file, beatEnd, validateBeatEndSlice),
+        ),
+        notes:
+          readValidatedJson<IAutoMovieReviewNote[]>(
+            this.root,
+            this.slicePath("notes.json"),
+            validateNotesSlice,
+          ) ?? [],
+      };
+    });
   }
 
   /** The full writable slate, including the film slice. */
   public writableSlate(): IAutoMovieMcpWritableSlate {
-    const stored = this.storedSlate();
-    return {
-      ...stored,
-      film: readValidatedJson<IAutoMovieSequence>(
-        this.root,
-        this.slicePath("film.json"),
-        (value, violations) =>
-          appendValidation(
-            violations,
-            validateSequenceArtifact(value as IAutoMovieSequence, stored.shots),
-          ),
-      ),
-    };
+    return this.withRootNamespace(() => {
+      const stored = this.storedSlate();
+      return {
+        ...stored,
+        film: readValidatedJson<IAutoMovieSequence>(
+          this.root,
+          this.slicePath("film.json"),
+          (value, violations) =>
+            appendValidation(
+              violations,
+              validateSequenceArtifact(
+                value as IAutoMovieSequence,
+                stored.shots,
+              ),
+            ),
+        ),
+      };
+    });
   }
 
   /**
@@ -297,21 +332,40 @@ export class AutoMovieProject {
    * byte lands.
    */
   private commitCycle(flush: () => void): void {
-    const token = acquireCommitLock(this.lockPath);
-    try {
-      const current = this.readRevision();
-      if (current !== this.lastReadRevision_) {
-        const base = this.lastReadRevision_;
-        this.lastReadRevision_ = current;
-        throw new Error(
-          `another session committed to this project (on-disk revision ${current}; this session last synchronized at ${base}); nothing was written, re-read the current state (getSlate / nextSteps) and re-issue the call from that truth`,
-        );
+    this.withRootNamespace(() => {
+      const token = acquireCommitLock(this.lockPath);
+      try {
+        const current = this.readRevision();
+        if (current !== this.lastReadRevision_) {
+          const base = this.lastReadRevision_;
+          this.lastReadRevision_ = current;
+          throw new Error(
+            `another session committed to this project (on-disk revision ${current}; this session last synchronized at ${base}); nothing was written, re-read the current state (getSlate / nextSteps) and re-issue the call from that truth`,
+          );
+        }
+        flush();
+        this.lastReadRevision_ = current + 1;
+        writeJsonAtomic(this.revisionPath, {
+          revision: this.lastReadRevision_,
+        });
+      } finally {
+        releaseCommitLock(this.lockPath, token);
       }
-      flush();
-      this.lastReadRevision_ = current + 1;
-      writeJsonAtomic(this.revisionPath, { revision: this.lastReadRevision_ });
+    });
+  }
+
+  private withRootNamespace<T>(task: () => T): T {
+    const lease = acquireProductionRootNamespace(this.root);
+    try {
+      if (lease.device !== this.rootDevice || lease.inode !== this.rootInode)
+        throw new Error(
+          `AutoMovie project root "${this.root}" changed physical identity. Discard this project handle and open the physical project again.`,
+        );
+      const result = task();
+      assertProductionRootNamespaceLease(lease);
+      return result;
     } finally {
-      releaseCommitLock(this.lockPath, token);
+      releaseProductionRootNamespace(lease);
     }
   }
 
@@ -336,16 +390,18 @@ export class AutoMovieProject {
 
   /** The stored prop specs, one per `props/<node>.json`, in filename order. */
   public storedProps(): IAutoMovieMcpPropSpec[] {
-    this.lastReadRevision_ = this.readRevision();
-    return this.readKeyedSlices<IAutoMovieMcpPropSpec>(
-      "props",
-      {
-        label: "prop node",
-        expected: (node) => node,
-        actual: (spec) => spec.node,
-      },
-      (file, spec) => validateProjectValue(file, spec, validatePropSlice),
-    );
+    return this.withRootNamespace(() => {
+      this.lastReadRevision_ = this.readRevision();
+      return this.readKeyedSlices<IAutoMovieMcpPropSpec>(
+        "props",
+        {
+          label: "prop node",
+          expected: (node) => node,
+          actual: (spec) => spec.node,
+        },
+        (file, spec) => validateProjectValue(file, spec, validatePropSlice),
+      );
+    });
   }
 
   /**
@@ -367,7 +423,7 @@ export class AutoMovieProject {
    * id match is the ordinary upsert, not a collision.
    */
   public propCaseCollision(node: string): string | null {
-    return this.sliceCaseCollision("props", node);
+    return this.withRootNamespace(() => this.sliceCaseCollision("props", node));
   }
 
   /**
@@ -378,11 +434,13 @@ export class AutoMovieProject {
    * `$slate.actors` with full precision.
    */
   public storedActors(): IAutoMovieMcpActorSpec[] {
-    this.lastReadRevision_ = this.readRevision();
-    return this.readKeyedSlices<IAutoMovieMcpActorSpec>("actors", {
-      label: "actor node",
-      expected: (node) => node,
-      actual: (spec) => spec.node,
+    return this.withRootNamespace(() => {
+      this.lastReadRevision_ = this.readRevision();
+      return this.readKeyedSlices<IAutoMovieMcpActorSpec>("actors", {
+        label: "actor node",
+        expected: (node) => node,
+        actual: (spec) => spec.node,
+      });
     });
   }
 
@@ -413,7 +471,9 @@ export class AutoMovieProject {
 
   /** The actor twin of {@link propCaseCollision} (#1093). */
   public actorCaseCollision(node: string): string | null {
-    return this.sliceCaseCollision("actors", node);
+    return this.withRootNamespace(() =>
+      this.sliceCaseCollision("actors", node),
+    );
   }
 
   /** Remove ONE stored actor context's file; the caller checks existence. */
@@ -489,20 +549,22 @@ export class AutoMovieProject {
 
   /** What the project holds: which slices exist, and the tracked assets. */
   public summary(): IAutoMovieMcpProjectSummary {
-    const slate = this.writableSlate();
-    return {
-      root: this.root,
-      script: slate.script !== null,
-      scene: slate.scenes.length !== 0,
-      shots: slate.shots.map((shot) => shot.id),
-      beatEnds: slate.beatEnds.map((end) => end.beat),
-      notes: slate.notes.length,
-      film: slate.film !== null,
-      props: this.storedProps().map((spec) => spec.node),
-      actors: this.storedActors().map((spec) => spec.node),
-      staleRenders: this.staleRenders(slate),
-      assets: this.assets,
-    };
+    return this.withRootNamespace(() => {
+      const slate = this.writableSlate();
+      return {
+        root: this.root,
+        script: slate.script !== null,
+        scene: slate.scenes.length !== 0,
+        shots: slate.shots.map((shot) => shot.id),
+        beatEnds: slate.beatEnds.map((end) => end.beat),
+        notes: slate.notes.length,
+        film: slate.film !== null,
+        props: this.storedProps().map((spec) => spec.node),
+        actors: this.storedActors().map((spec) => spec.node),
+        staleRenders: this.staleRenders(slate),
+        assets: this.assets,
+      };
+    });
   }
 
   /**
@@ -794,26 +856,6 @@ class AutoMovieProjectRootError extends Error {
     this.name = "AutoMovieProjectRootError";
   }
 }
-
-const assertProjectRootDirectory = (root: string): void => {
-  try {
-    if (fs.existsSync(root)) {
-      const status = fs.lstatSync(root);
-      if (status.isSymbolicLink() || status.isDirectory() === false)
-        throw new AutoMovieProjectRootError(
-          root,
-          "project root must be a directory, not a symbolic link, junction, or file",
-        );
-      return;
-    }
-    fs.mkdirSync(root, { recursive: true });
-  } catch (error) {
-    if (error instanceof AutoMovieProjectRootError) throw error;
-    // Node's synchronous filesystem APIs throw Error objects.
-    const detail = (error as Error).message;
-    throw new AutoMovieProjectRootError(root, detail);
-  }
-};
 
 const validateManifest = (file: string, value: unknown): IManifest => {
   if (!isRecord(value))

@@ -178,6 +178,31 @@ export const test_mcp_project_transactions = (): void => {
       JSON.parse(fs.readFileSync(revisionFile, "utf8")).revision,
       revAfterActors.revision,
     );
+
+    const parkedRoot = `${root}.owner-parked`;
+    fs.renameSync(root, parkedRoot);
+    fs.mkdirSync(root);
+    let replacementUntouched = false;
+    let replacedReadRejected = false;
+    let replacedMutationRejected = false;
+    try {
+      replacedReadRejected = throwsError(
+        () => a.writableSlate(),
+        ["root", "changed physical identity", "Discard this project handle"],
+      );
+      replacedMutationRejected = throwsError(
+        () => a.saveSlate(slateOf("must not enter replacement")),
+        ["root", "changed physical identity", "Discard this project handle"],
+      );
+      replacementUntouched = fs.readdirSync(root).length === 0;
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+      fs.renameSync(parkedRoot, root);
+    }
+    TestValidator.predicate(
+      "a live project handle never follows a replacement root namespace",
+      replacedReadRejected && replacedMutationRejected && replacementUntouched,
+    );
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
