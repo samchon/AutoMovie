@@ -1448,39 +1448,34 @@ const assertArchiveIdentity = (input: {
     input.pending.real,
     "benchmark archive staging",
   );
+  const readPending = (relative: string): Buffer => {
+    assertDirectoryIdentity(input.pending, "benchmark archive staging");
+    const bytes = readResidentFile(input.pending.real, relative);
+    assertDirectoryIdentity(input.pending, "benchmark archive staging");
+    return bytes;
+  };
   if (
-    fs.readFileSync(path.join(input.pending.real, "task.json"), "utf8") !==
-      input.taskText ||
-    fs.readFileSync(path.join(input.pending.real, "brief.md"), "utf8") !==
-      input.brief
+    readPending("task.json").toString("utf8") !== input.taskText ||
+    readPending("brief.md").toString("utf8") !== input.brief
   )
     throw new Error(
       "Runner-owned task law or brief changed before archive publication.",
     );
+  assertDirectoryIdentity(input.pending, "benchmark archive staging");
   const project = snapshotAutoMovieBenchmarkProject(
     path.join(input.pending.real, "project"),
   );
+  assertDirectoryIdentity(input.pending, "benchmark archive staging");
   if (project.digest !== input.projectTree.digest)
     throw new Error(
       "Staged project bytes changed after the runner sealed their tree digest.",
     );
-  const stdout = fs.readFileSync(
-    path.join(input.pending.real, "transcript", "stdout.txt"),
-    "utf8",
-  );
-  const stderr = fs.readFileSync(
-    path.join(input.pending.real, "transcript", "stderr.txt"),
-    "utf8",
-  );
+  const stdout = readPending("transcript/stdout.txt").toString("utf8");
+  const stderr = readPending("transcript/stderr.txt").toString("utf8");
   if (
     digestBenchmarkValue({ stdout, stderr }) !== input.transcriptDigest ||
     digestBenchmarkValue(
-      JSON.parse(
-        fs.readFileSync(
-          path.join(input.pending.real, "tool-sessions.json"),
-          "utf8",
-        ),
-      ) as unknown,
+      JSON.parse(readPending("tool-sessions.json").toString("utf8")) as unknown,
     ) !== input.submission.inventoryDigest ||
     digestBenchmarkValue(input.inventory) !== input.submission.inventoryDigest
   )
@@ -1491,7 +1486,7 @@ const assertArchiveIdentity = (input: {
     ...input.submission.frames,
     ...input.submission.deliverables,
   ]) {
-    const bytes = fs.readFileSync(path.join(input.pending.real, artifact.path));
+    const bytes = readPending(artifact.path);
     if (
       bytes.length !== artifact.bytes ||
       digestAutoMovieBenchmarkBytes(bytes) !== artifact.digest
@@ -1501,7 +1496,7 @@ const assertArchiveIdentity = (input: {
       );
   }
   const trace = replayAutoMovieBenchmarkTrace(
-    fs.readFileSync(path.join(input.pending.real, "trace", "oracle.jsonl.gz")),
+    readPending("trace/oracle.jsonl.gz"),
   );
   const start = trace.events[0];
   const seal = trace.events.at(-1);
@@ -1517,6 +1512,7 @@ const assertArchiveIdentity = (input: {
     throw new Error(
       "Runner-owned trace is truncated or does not bind its run endpoints to the sealed submission.",
     );
+  assertDirectoryIdentity(input.pending, "benchmark archive staging");
 };
 
 const tryRemoveTemporaryDirectory = (

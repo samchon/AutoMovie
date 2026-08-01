@@ -97,18 +97,59 @@ export const test_benchmark_runner = async (): Promise<void> => {
   };
   try {
     const agent = materializingAgent(current.generation);
-    const output = await runAutoMovieBenchmark({
-      taskId: current.taskId,
-      lane: "deterministic",
-      campaign: "redesign-cycle-1",
-      runRoot: root,
-      repositoryRoot,
-      identity,
-      mcpTarget,
-      inventoryBaselines: [archivedBaseline],
-      agent,
-      collect: collectCompleteEvidence,
-    });
+    const nativeArchiveRead = fs.readFileSync;
+    let archiveTaskPathRead = false;
+    let archiveTaskParked: string | null = null;
+    fs.readFileSync = ((
+      file: fs.PathOrFileDescriptor,
+      ...args: unknown[]
+    ): unknown => {
+      const resolved =
+        typeof file === "number" ? null : path.resolve(file.toString());
+      if (
+        resolved !== null &&
+        path.basename(resolved) === "task.json" &&
+        path.basename(path.dirname(resolved)).startsWith(".pending-")
+      ) {
+        archiveTaskPathRead = true;
+        const parked = `${resolved}.read-parked`;
+        archiveTaskParked = parked;
+        const resident = nativeArchiveRead(resolved);
+        fs.renameSync(resolved, parked);
+        fs.writeFileSync(resolved, resident);
+        try {
+          return Reflect.apply(nativeArchiveRead, fs, [file, ...args]);
+        } finally {
+          fs.rmSync(resolved);
+          fs.renameSync(parked, resolved);
+          archiveTaskParked = null;
+        }
+      }
+      return Reflect.apply(nativeArchiveRead, fs, [file, ...args]);
+    }) as typeof fs.readFileSync;
+    const output = await (async () => {
+      try {
+        return await runAutoMovieBenchmark({
+          taskId: current.taskId,
+          lane: "deterministic",
+          campaign: "redesign-cycle-1",
+          runRoot: root,
+          repositoryRoot,
+          identity,
+          mcpTarget,
+          inventoryBaselines: [archivedBaseline],
+          agent,
+          collect: collectCompleteEvidence,
+        });
+      } finally {
+        fs.readFileSync = nativeArchiveRead;
+        if (archiveTaskParked !== null && fs.existsSync(archiveTaskParked)) {
+          const resident = archiveTaskParked.slice(0, -".read-parked".length);
+          fs.rmSync(resident, { force: true });
+          fs.renameSync(archiveTaskParked, resident);
+        }
+      }
+    })();
     const submission = readJson<{
       treeDigest: string;
       transcriptDigest: string;
@@ -148,7 +189,8 @@ export const test_benchmark_runner = async (): Promise<void> => {
     );
     TestValidator.predicate(
       "one scenario id publishes runner-owned evidence and live MCP inventory",
-      output.verdict.outcome === "scored" &&
+      archiveTaskPathRead === false &&
+        output.verdict.outcome === "scored" &&
         output.verdict.filmScore === 1 &&
         replay.truncated === false &&
         replay.events[0]?.kind === "run-start" &&
