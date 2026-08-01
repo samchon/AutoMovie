@@ -596,7 +596,7 @@ export const test_mcp_production_review_render_edges =
                   target: candidate.target,
                   path: candidate.manifest,
                   message:
-                    "This asset view does not match the current asset, production FPS, and exact production raster, so it cannot discharge review. Capture the required view again without width/height overrides before submitReview.",
+                    "This asset view does not match the current asset, production FPS, and exact production raster, so it cannot discharge review. Capture the required view again without width/height overrides before submitReview. Correction feedback does not authorize deleting the artifact.",
                 }) satisfies IAutoMovieDiagnostic,
             ),
           missingViews: [
