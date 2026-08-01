@@ -4,6 +4,10 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+const mutableFs = fs as {
+  lstatSync: typeof fs.lstatSync;
+};
+
 /**
  * The commit lock is owner-identified and fail-closed (#1257/#1252): a release
  * deletes only this session's token, and age never authorizes a different
@@ -242,7 +246,7 @@ const exerciseRejectedSnapshots = (dir: string): void => {
     const nativeFstat = fs.fstatSync;
     let lstatCalls = 0;
     let fstatCalls = 0;
-    fs.lstatSync = ((target, options) => {
+    mutableFs.lstatSync = ((target, options) => {
       const status = nativeLstat(target, options);
       if (path.resolve(target.toString()) !== path.resolve(lockPath))
         return status;
@@ -261,7 +265,7 @@ const exerciseRejectedSnapshots = (dir: string): void => {
     try {
       releaseCommitLock(lockPath, token);
     } finally {
-      fs.lstatSync = nativeLstat;
+      mutableFs.lstatSync = nativeLstat;
       fs.fstatSync = nativeFstat;
     }
     TestValidator.equals(
@@ -353,7 +357,7 @@ const exerciseQuarantineRecovery = (dir: string): void => {
         });
       nativeCopy(source, destination, flags);
     }) as typeof fs.copyFileSync;
-    fs.lstatSync = ((target, options) => {
+    mutableFs.lstatSync = ((target, options) => {
       const status = nativeLstat(target, options);
       if (
         quarantine !== undefined &&
@@ -388,7 +392,7 @@ const exerciseQuarantineRecovery = (dir: string): void => {
       fs.linkSync = nativeLink;
       fs.copyFileSync = nativeCopy;
       fs.rmSync = nativeRm;
-      fs.lstatSync = nativeLstat;
+      mutableFs.lstatSync = nativeLstat;
     }
     const expectedResident =
       mode === "successor" ||
@@ -452,7 +456,7 @@ const exerciseReleaseFailures = (dir: string): void => {
   const snapshotToken = "release-snapshot-failure-token";
   fs.writeFileSync(snapshotPath, snapshotToken);
   const nativeLstat = fs.lstatSync;
-  fs.lstatSync = ((target, options) => {
+  mutableFs.lstatSync = ((target, options) => {
     if (path.resolve(target.toString()) === path.resolve(snapshotPath))
       throw new Error("initial snapshot failed");
     return nativeLstat(target, options);
@@ -460,7 +464,7 @@ const exerciseReleaseFailures = (dir: string): void => {
   try {
     releaseCommitLock(snapshotPath, snapshotToken);
   } finally {
-    fs.lstatSync = nativeLstat;
+    mutableFs.lstatSync = nativeLstat;
   }
   TestValidator.equals(
     "a failed initial snapshot leaves the owner lock resident",
