@@ -246,6 +246,7 @@ export const test_mcp_project_transactions = (): void => {
         path.basename(file.toString()).startsWith("cleanupFailure.json.tmp.")
       ) {
         failedTemp = path.resolve(file.toString());
+        Reflect.apply(nativeCleanupWrite, fs, [file, ...args]);
         throw Object.assign(new Error("actor temporary write failed"), {
           code: "EIO",
         });
