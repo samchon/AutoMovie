@@ -25,6 +25,7 @@ import {
   digestAutoMovieBytes,
   encodeAutoMoviePathSegment,
 } from "./contentIdentity";
+import { readAutoMovieProductionOwnedFile } from "./productionRenderJob";
 import {
   IAutoMovieProductionRootNamespaceLease,
   acquireProductionRootNamespace,
@@ -145,7 +146,8 @@ export class AutoMovieLegacyImporter {
           `Production state root "${stateRoot}" is not a physical directory. Remove the collision before applying the legacy import.`,
         );
       const prior = readJson<IAutoMovieLegacyImportPlan>(
-        path.join(stateRoot, IMPORT_PLAN_PATH),
+        stateRoot,
+        IMPORT_PLAN_PATH,
       );
       if (prior !== null && verifyAppliedImport(stateRoot, root, prior)) {
         const snapshot = readLegacySnapshot(root, lockToken);
@@ -227,7 +229,8 @@ export class AutoMovieLegacyImporter {
     try {
       assertProductionRootNamespaceLease(lease);
       const plan = readJson<IAutoMovieLegacyImportPlan>(
-        path.join(stateRoot, IMPORT_PLAN_PATH),
+        stateRoot,
+        IMPORT_PLAN_PATH,
       );
       const appliedState = readAppliedImportState(stateRoot, plan);
       if (
@@ -716,7 +719,7 @@ const collectDirectory = (
       directories?.push(child);
       collectDirectory(root, child, files, directories);
     } else if (entry.isFile())
-      files.set(child, fs.readFileSync(path.join(root, ...child.split("/"))));
+      files.set(child, readPhysicalFile(root, child, true)!);
     else
       throw new Error(
         `Legacy inventory path "${child}" is not a regular file or directory.`,
@@ -730,6 +733,7 @@ const readPhysicalFile = (
   required: boolean,
 ): Uint8Array | null => {
   let current = root;
+  let finalStatus: fs.Stats | null = null;
   for (const segment of relative.split("/")) {
     current = path.join(current, segment);
     const status = lstatOrNull(current);
@@ -742,10 +746,15 @@ const readPhysicalFile = (
       throw new Error(
         `Legacy project path "${current}" is a symlink or junction. Replace it with physical project content before import.`,
       );
+    finalStatus = status;
   }
-  if (fs.statSync(current).isFile() === false)
+  if (finalStatus?.isFile() !== true)
     throw new Error(`Legacy project path "${current}" is not a regular file.`);
-  return fs.readFileSync(current);
+  return readAutoMovieProductionOwnedFile({
+    root,
+    directory: root,
+    relative,
+  });
 };
 
 const validateLegacyManifest = (
@@ -1069,7 +1078,7 @@ const readAppliedImportState = (
 ): IAppliedImportState | null => {
   try {
     if (validatePlan(planValue) === false) return null;
-    const value = readJson<unknown>(path.join(stateRoot, IMPORT_STATE_PATH));
+    const value = readJson<unknown>(stateRoot, IMPORT_STATE_PATH);
     const validation = typia.validateEquals<IAppliedImportState>(value);
     if (
       validation.success === false ||
@@ -1119,12 +1128,20 @@ const parseJson = (bytes: Uint8Array, file: string): unknown => {
 
 class InvalidLegacyImportJsonError extends Error {}
 
-const readJson = <T>(file: string): T | null => {
+const readJson = <T>(root: string, relative: string): T | null => {
+  const file = path.join(root, ...relative.split("/"));
   const status = lstatOrNull(file);
   if (status === null) return null;
   if (status.isSymbolicLink() || status.isFile() === false)
     throw new Error(`Import state path "${file}" is not a physical file.`);
-  return parseJson(fs.readFileSync(file), file) as T;
+  return parseJson(
+    readAutoMovieProductionOwnedFile({
+      root,
+      directory: root,
+      relative,
+    }),
+    file,
+  ) as T;
 };
 
 const serializeJson = (value: unknown): Uint8Array =>

@@ -10,6 +10,7 @@ import {
   AutoMovieProject,
   IAutoMovieMcpWritableSlate,
   acquireCommitLock,
+  digestAutoMovieBytes,
   releaseCommitLock,
 } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
@@ -168,7 +169,27 @@ export const test_mcp_production_legacy_import = (): void => {
     const before = legacyFiles(fixture.root);
     const importer = new AutoMovieLegacyImporter(fixture.root);
     const nativePlanWrite = fs.writeFileSync;
+    const nativePlanRead = fs.readFileSync;
     const planLockPaths: string[] = [];
+    const planManifestPath = path.join(fixture.root, "automovie.json");
+    const planNestedPath = path.join(fixture.root, "actors/archive/README.txt");
+    const planManifestBytes = fs.readFileSync(planManifestPath);
+    const planNestedBytes = fs.readFileSync(planNestedPath);
+    const planReadTargets = new Map(
+      [
+        {
+          file: planManifestPath,
+          parked: `${planManifestPath}.read-parked`,
+          transient: Buffer.concat([planManifestBytes, Buffer.from(" ")]),
+        },
+        {
+          file: planNestedPath,
+          parked: `${planNestedPath}.read-parked`,
+          transient: Buffer.from("transient nested legacy bytes"),
+        },
+      ].map((target) => [path.resolve(target.file), target] as const),
+    );
+    const planPathReads = new Set<string>();
     fs.writeFileSync = ((
       file: fs.PathOrFileDescriptor,
       ...args: unknown[]
@@ -182,16 +203,44 @@ export const test_mcp_production_legacy_import = (): void => {
       )
         planLockPaths.push(path.resolve(file.toString()));
     }) as typeof fs.writeFileSync;
+    fs.readFileSync = ((
+      file: fs.PathOrFileDescriptor,
+      ...args: unknown[]
+    ): unknown => {
+      const resolved =
+        typeof file === "number" ? null : path.resolve(file.toString());
+      const target =
+        resolved === null ? undefined : planReadTargets.get(resolved);
+      if (target !== undefined) {
+        planPathReads.add(resolved!);
+        fs.renameSync(target.file, target.parked);
+        fs.writeFileSync(target.file, target.transient);
+        try {
+          return Reflect.apply(nativePlanRead, fs, [file, ...args]);
+        } finally {
+          fs.rmSync(target.file);
+          fs.renameSync(target.parked, target.file);
+        }
+      }
+      return Reflect.apply(nativePlanRead, fs, [file, ...args]);
+    }) as typeof fs.readFileSync;
     let plan: IAutoMovieLegacyImportPlan;
     try {
       plan = importer.plan();
     } finally {
+      fs.readFileSync = nativePlanRead;
       fs.writeFileSync = nativePlanWrite;
+      for (const target of planReadTargets.values())
+        if (fs.existsSync(target.parked)) {
+          fs.rmSync(target.file, { force: true });
+          fs.renameSync(target.parked, target.file);
+        }
     }
     TestValidator.predicate(
       "planning is read-only and captures drafts, source gaps, and exact bytes",
       equalFiles(before, legacyFiles(fixture.root)) &&
         fs.existsSync(path.join(fixture.root, ".automovie")) === false &&
+        planPathReads.size === 0 &&
         planLockPaths.length === 2 &&
         planLockPaths.every((file) => fs.existsSync(file) === false) &&
         plan.legacyRevision === 2 &&
@@ -200,6 +249,16 @@ export const test_mcp_production_legacy_import = (): void => {
         plan.sourceTodos[0]?.shot === shot.id &&
         plan.diagnostics.some(
           (diagnostic) => diagnostic.code === "legacy-source-unrecoverable",
+        ) &&
+        plan.inventory.some(
+          (entry) =>
+            entry.path === "automovie.json" &&
+            entry.digest === digestAutoMovieBytes(planManifestBytes),
+        ) &&
+        plan.inventory.some(
+          (entry) =>
+            entry.path === "actors/archive/README.txt" &&
+            entry.digest === digestAutoMovieBytes(planNestedBytes),
         ) &&
         plan.inventory.some(
           (entry) =>
@@ -212,12 +271,57 @@ export const test_mcp_production_legacy_import = (): void => {
         ),
     );
     const applied = importer.apply();
-    const repeated = importer.apply();
+    const appliedPlanPath = path.join(
+      fixture.root,
+      ".automovie/imports/legacy-v1/plan.json",
+    );
+    const appliedPlanBytes = fs.readFileSync(appliedPlanPath);
+    const appliedPlanParked = `${appliedPlanPath}.read-parked`;
+    const nativeAppliedPlanRead = fs.readFileSync;
+    let appliedPlanPathRead = false;
+    fs.readFileSync = ((
+      file: fs.PathOrFileDescriptor,
+      ...args: unknown[]
+    ): unknown => {
+      if (
+        typeof file !== "number" &&
+        path.resolve(file.toString()) === path.resolve(appliedPlanPath)
+      ) {
+        appliedPlanPathRead = true;
+        fs.renameSync(appliedPlanPath, appliedPlanParked);
+        fs.writeFileSync(
+          appliedPlanPath,
+          Buffer.concat([appliedPlanBytes, Buffer.from(" ")]),
+        );
+        try {
+          return Reflect.apply(nativeAppliedPlanRead, fs, [file, ...args]);
+        } finally {
+          fs.rmSync(appliedPlanPath);
+          fs.renameSync(appliedPlanParked, appliedPlanPath);
+        }
+      }
+      return Reflect.apply(nativeAppliedPlanRead, fs, [file, ...args]);
+    }) as typeof fs.readFileSync;
+    let repeated: ReturnType<AutoMovieLegacyImporter["apply"]> | null = null;
+    let repeatedRejected = false;
+    try {
+      repeated = importer.apply();
+    } catch {
+      repeatedRejected = true;
+    } finally {
+      fs.readFileSync = nativeAppliedPlanRead;
+      if (fs.existsSync(appliedPlanParked)) {
+        fs.rmSync(appliedPlanPath, { force: true });
+        fs.renameSync(appliedPlanParked, appliedPlanPath);
+      }
+    }
     const production = AutoMovieProductionProject.open(fixture.root);
     TestValidator.predicate(
       "apply is atomic and idempotent until production provenance reopens",
       applied.status === "applied" &&
-        repeated.status === "unchanged" &&
+        repeatedRejected === false &&
+        appliedPlanPathRead === false &&
+        repeated?.status === "unchanged" &&
         repeated.plan.fingerprint === plan.fingerprint &&
         production.manifest().importedLegacy?.revision === 2 &&
         production.manifest().importedLegacy?.sourceRoot === "." &&
@@ -1199,36 +1303,41 @@ export const test_mcp_production_legacy_import = (): void => {
   const revisionRace = createLegacy();
   try {
     const revisionPath = path.join(revisionRace.root, "revision.json");
-    const nativeRead = fs.readFileSync;
+    const revisionParked = `${revisionPath}.read-parked`;
+    const nativeOpen = fs.openSync;
     let changed = false;
-    fs.readFileSync = ((file: fs.PathOrFileDescriptor, ...args: unknown[]) => {
-      const output = Reflect.apply(nativeRead, fs, [file, ...args]) as unknown;
-      if (
-        changed === false &&
-        typeof file !== "number" &&
-        path.resolve(file.toString()) === revisionPath
-      ) {
+    fs.openSync = ((file: fs.PathLike, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, fs, [
+        file,
+        ...args,
+      ]) as number;
+      if (changed === false && path.resolve(file.toString()) === revisionPath) {
         changed = true;
-        const revision = JSON.parse(
-          Buffer.from(output as Uint8Array).toString("utf8"),
-        ) as { revision: number };
+        const revision = JSON.parse(fs.readFileSync(revisionPath, "utf8")) as {
+          revision: number;
+        };
+        fs.renameSync(revisionPath, revisionParked);
         fs.writeFileSync(
           revisionPath,
           `${JSON.stringify({ revision: revision.revision + 1 }, null, 2)}\n`,
         );
       }
-      return output;
-    }) as typeof fs.readFileSync;
+      return descriptor;
+    }) as typeof fs.openSync;
     try {
       TestValidator.predicate(
         "a changing resident revision cannot produce a mixed import plan",
         throws(
           () => new AutoMovieLegacyImporter(revisionRace.root).plan(),
-          "revision changed",
-        ),
+          "changed physical identity",
+        ) && changed,
       );
     } finally {
-      fs.readFileSync = nativeRead;
+      fs.openSync = nativeOpen;
+      if (fs.existsSync(revisionParked)) {
+        fs.rmSync(revisionPath, { force: true });
+        fs.renameSync(revisionParked, revisionPath);
+      }
     }
   } finally {
     revisionRace.dispose();
@@ -1417,16 +1526,15 @@ export const test_mcp_production_legacy_import = (): void => {
       const lockPath = path.join(changingLock.root, "revision.lock");
       const outsideLockPath = path.join(outsideLock, "revision.lock");
       fs.writeFileSync(outsideLockPath, "external-owner");
-      const nativeRead = fs.readFileSync;
+      const nativeOpen = fs.openSync;
       let changed = false;
-      fs.readFileSync = ((
-        file: fs.PathOrFileDescriptor,
-        ...args: unknown[]
-      ): unknown => {
-        const output = Reflect.apply(nativeRead, fs, [file, ...args]);
+      fs.openSync = ((file: fs.PathLike, ...args: unknown[]): number => {
+        const descriptor = Reflect.apply(nativeOpen, fs, [
+          file,
+          ...args,
+        ]) as number;
         if (
           changed === false &&
-          typeof file !== "number" &&
           path.resolve(file.toString()) === manifestPath
         ) {
           changed = true;
@@ -1437,18 +1545,18 @@ export const test_mcp_production_legacy_import = (): void => {
           else if (lockMutation === "foreign-token")
             fs.writeFileSync(lockPath, "external-owner");
         }
-        return output;
-      }) as typeof fs.readFileSync;
+        return descriptor;
+      }) as typeof fs.openSync;
       try {
         TestValidator.predicate(
           `resident lock mutation ${lockMutation} aborts legacy apply`,
           throws(
             () => new AutoMovieLegacyImporter(changingLock.root).apply(),
             "changed during import apply",
-          ),
+          ) && changed,
         );
       } finally {
-        fs.readFileSync = nativeRead;
+        fs.openSync = nativeOpen;
       }
     } finally {
       changingLock.dispose();
@@ -1464,24 +1572,29 @@ export const test_mcp_production_legacy_import = (): void => {
       mismatchedRollbackLock.root,
       ".automovie/revision.lock",
     );
-    const nativeRead = fs.readFileSync;
-    fs.readFileSync = ((
+    const nativeWrite = fs.writeFileSync;
+    let corrupted = false;
+    fs.writeFileSync = ((
       file: fs.PathOrFileDescriptor,
       ...args: unknown[]
-    ): unknown =>
-      typeof file !== "number" && path.resolve(file.toString()) === lockPath
-        ? Buffer.from("foreign-owner")
-        : Reflect.apply(nativeRead, fs, [
-            file,
-            ...args,
-          ])) as typeof fs.readFileSync;
+    ): void => {
+      Reflect.apply(nativeWrite, fs, [file, ...args]);
+      if (
+        corrupted === false &&
+        typeof file !== "number" &&
+        path.resolve(file.toString()) === lockPath
+      ) {
+        corrupted = true;
+        nativeWrite(lockPath, "foreign-owner");
+      }
+    }) as typeof fs.writeFileSync;
     try {
       TestValidator.predicate(
         "rollback verifies the exact resident lock token",
-        throws(() => importer.rollback(), "changed after import"),
+        throws(() => importer.rollback(), "changed after import") && corrupted,
       );
     } finally {
-      fs.readFileSync = nativeRead;
+      fs.writeFileSync = nativeWrite;
     }
   } finally {
     mismatchedRollbackLock.dispose();
