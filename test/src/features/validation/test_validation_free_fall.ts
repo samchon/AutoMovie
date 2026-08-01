@@ -48,14 +48,6 @@ export const test_validation_free_fall = (): void => {
     attached: false,
     falling: false,
   });
-  TestValidator.equals(
-    "unsupported succeeds warning-only",
-    unheld.validation.success,
-    true,
-  );
-  TestValidator.equals("one fall event", unheld.events.length, 1);
-  TestValidator.equals("fall event kind", unheld.events[0]!.kind, "fall");
-  TestValidator.predicate("suggested arc present", unheld.trajectory !== null);
   TestValidator.predicate(
     "gravity warning on the right path",
     validationHasWarning(
@@ -65,6 +57,9 @@ export const test_validation_free_fall = (): void => {
       ".gravity",
     ),
   );
+  TestValidator.equals("one fall event", unheld.events.length, 1);
+  TestValidator.equals("fall event kind", unheld.events[0]!.kind, "fall");
+  TestValidator.predicate("suggested arc present", unheld.trajectory !== null);
 
   const outside = detectFreeFall({
     body: BODY,

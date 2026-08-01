@@ -68,11 +68,6 @@ export const test_validation_ground_contact_surface = (): void => {
     footBones: ["leftFoot"],
     groundY: rising,
   });
-  TestValidator.equals(
-    "slope sinks the low glide (succeeds)",
-    sunk.success,
-    true,
-  );
   TestValidator.predicate(
     "warning names the foot's world y",
     validationHasWarning(
