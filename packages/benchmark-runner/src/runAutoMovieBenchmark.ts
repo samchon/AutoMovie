@@ -792,10 +792,6 @@ export const runAutoMovieBenchmark = async (
     filmScore: verdict.filmScore,
   });
   trace.append({ kind: "run-seal", runId: submission.runId });
-  writeArchiveIdentity(
-    path.join(pending.real, ".archive-commit.json"),
-    submission.runId,
-  );
 
   const archive = path.join(
     campaignRoot.real,
@@ -820,6 +816,12 @@ export const runAutoMovieBenchmark = async (
     report,
     toolInventory,
   });
+  const publicationShape = snapshotArchiveShape(publication.real);
+  writeArchiveCommit(
+    path.join(publication.real, ".archive-commit.json"),
+    submission.runId,
+    publicationShape.digest,
+  );
   if (fs.existsSync(archive) || fs.existsSync(archiveCommit)) {
     try {
       assertCommittedArchive({
@@ -835,6 +837,7 @@ export const runAutoMovieBenchmark = async (
         verdict,
         report,
         toolInventory,
+        shapeDigest: publicationShape.digest,
       });
     } finally {
       tryRemoveTemporaryDirectory(publication, campaignRoot);
@@ -845,12 +848,10 @@ export const runAutoMovieBenchmark = async (
     );
   }
   assertDirectoryIdentity(publication, "benchmark archive publication");
-  const publicationTree = snapshotAutoMovieBenchmarkProject(publication.real);
-  assertDirectoryIdentity(publication, "benchmark archive publication");
   assertDirectoryIdentity(campaignRoot, "benchmark campaign directory");
   fs.renameSync(publication.real, archive);
   movedDirectoryIdentity(publication, archive, "final archive");
-  writeArchiveCommit(archiveCommit, submission.runId, publicationTree.digest);
+  fs.linkSync(path.join(archive, ".archive-commit.json"), archiveCommit);
   const committed = assertCommittedArchive({
     archive,
     commit: archiveCommit,
@@ -864,6 +865,7 @@ export const runAutoMovieBenchmark = async (
     verdict,
     report,
     toolInventory,
+    shapeDigest: publicationShape.digest,
   });
   assertOutside(repository.real, committed.real, "final archive");
   tryRemoveTemporaryDirectory(work, campaignRoot);
@@ -1196,15 +1198,6 @@ const archiveCommitPath = (archive: string): string =>
     `.archive-${path.basename(archive)}.commit.json`,
   );
 
-const writeArchiveIdentity = (file: string, runId: string): void =>
-  fs.writeFileSync(file, archiveIdentityText(runId), { flag: "wx" });
-
-const archiveIdentityText = (runId: string): string =>
-  `${JSON.stringify({
-    protocol: "automovie.benchmark-archive-commit.v1",
-    runId,
-  })}\n`;
-
 const writeArchiveCommit = (
   file: string,
   runId: string,
@@ -1235,6 +1228,7 @@ const assertCommittedArchive = (input: {
   verdict: IAutoMovieBenchmarkVerdict;
   report: ReturnType<typeof reportAutoMovieBenchmark>;
   toolInventory: IAutoMovieBenchmarkToolInventoryReport;
+  shapeDigest: `sha256:${string}`;
 }): IDirectoryIdentity => {
   const archive = directoryIdentity(
     input.archive,
@@ -1257,20 +1251,114 @@ const assertCommittedArchive = (input: {
     report: input.report,
     toolInventory: input.toolInventory,
   });
-  const tree = snapshotAutoMovieBenchmarkProject(archive.real);
-  assertDirectoryIdentity(archive, "committed benchmark archive");
-  const commit = Buffer.from(
+  if (snapshotArchiveShape(archive.real).digest !== input.shapeDigest)
+    throw new Error(
+      `Benchmark archive commit "${input.commit}" does not bind the resident content-addressed directory.`,
+    );
+  const internal = path.join(archive.real, ".archive-commit.json");
+  const internalIdentity = archiveCommitFileIdentity(internal);
+  const siblingIdentity = archiveCommitFileIdentity(input.commit);
+  const internalCommit = Buffer.from(
+    readAutoMovieProductionOwnedFile({
+      root: archive.real,
+      directory: archive.real,
+      relative: ".archive-commit.json",
+    }),
+  ).toString("utf8");
+  const siblingCommit = Buffer.from(
     readAutoMovieProductionOwnedFile({
       root: path.dirname(input.commit),
       directory: path.dirname(input.commit),
       relative: path.basename(input.commit),
     }),
   ).toString("utf8");
-  if (commit !== archiveCommitText(input.submission.runId, tree.digest))
+  const expectedCommit = archiveCommitText(
+    input.submission.runId,
+    input.shapeDigest,
+  );
+  if (
+    internalIdentity !== siblingIdentity ||
+    internalCommit !== expectedCommit ||
+    siblingCommit !== expectedCommit ||
+    archiveCommitFileIdentity(internal) !== internalIdentity ||
+    archiveCommitFileIdentity(input.commit) !== siblingIdentity ||
+    snapshotArchiveShape(archive.real).digest !== input.shapeDigest
+  )
     throw new Error(
       `Benchmark archive commit "${input.commit}" does not bind the resident content-addressed directory.`,
     );
   return archive;
+};
+
+const archiveCommitFileIdentity = (file: string): string => {
+  const status = fs.lstatSync(file, { bigint: true });
+  if (status.isSymbolicLink() || status.isFile() === false)
+    throw new Error(
+      `Benchmark archive commit "${file}" is not a physical file.`,
+    );
+  return `${status.dev}\0${status.ino}`;
+};
+
+interface IArchiveShapeEntry {
+  kind: "directory" | "file" | "link";
+  path: string;
+  target?: string;
+}
+
+const snapshotArchiveShape = (
+  root: string,
+): {
+  entries: IArchiveShapeEntry[];
+  digest: `sha256:${string}`;
+} => {
+  const rootIdentity = directoryIdentity(root, "benchmark archive shape");
+  const entries: IArchiveShapeEntry[] = [];
+  const visit = (directory: string): void => {
+    const identity = directoryIdentity(
+      directory,
+      "benchmark archive directory",
+    );
+    for (const name of fs
+      .readdirSync(identity.real)
+      .sort(compareBenchmarkCodeUnits)) {
+      if (
+        identity.real === rootIdentity.real &&
+        name === ".archive-commit.json"
+      )
+        continue;
+      const absolute = path.join(identity.real, name);
+      const relative = slash(path.relative(rootIdentity.real, absolute));
+      const status = fs.lstatSync(absolute, { bigint: true });
+      if (status.isSymbolicLink()) {
+        const target = slash(fs.readlinkSync(absolute));
+        const resident = fs.lstatSync(absolute, { bigint: true });
+        if (
+          resident.isSymbolicLink() === false ||
+          resident.dev !== status.dev ||
+          resident.ino !== status.ino
+        )
+          throw new Error(
+            `Benchmark archive link "${relative}" changed physical identity while its target was recorded.`,
+          );
+        entries.push({ kind: "link", path: relative, target });
+      } else if (status.isDirectory()) {
+        entries.push({ kind: "directory", path: relative });
+        visit(absolute);
+      } else {
+        /* c8 ignore start -- sockets/devices are not portable archive fixtures */
+        if (status.isFile() === false)
+          throw new Error(
+            `Benchmark archive entry "${relative}" is not a regular file, directory, or unfollowed link.`,
+          );
+        /* c8 ignore stop */
+        entries.push({ kind: "file", path: relative });
+      }
+    }
+    assertDirectoryIdentity(identity, "benchmark archive directory");
+  };
+  visit(rootIdentity.real);
+  assertDirectoryIdentity(rootIdentity, "benchmark archive shape");
+  return { entries, digest: digestBenchmarkValue(entries) };
 };
 
 const secureChildDirectory = (
@@ -1641,7 +1729,6 @@ const assertArchiveIdentity = (input: {
       "Runner-owned task law or brief changed before archive publication.",
     );
   for (const [file, content] of [
-    [".archive-commit.json", archiveIdentityText(input.submission.runId)],
     ["project-tree.json", formatJson(input.projectTree)],
     ["submission.json", formatJson(input.submission)],
     ["verdict.json", formatJson(input.verdict)],

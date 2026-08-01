@@ -656,7 +656,7 @@ const exerciseArchivePublicationRaces = async (
 const exerciseArchiveCommitPointRaces = async (
   base: Omit<Parameters<typeof runAutoMovieBenchmark>[0], "campaign">,
 ): Promise<void> => {
-  for (const phase of ["tree", "record"] as const) {
+  for (const phase of ["tree", "late-tree", "record"] as const) {
     const campaign = `publication-commit-${phase}-race`;
     const campaignPath = path.join(
       path.resolve(base.runRoot),
@@ -664,25 +664,21 @@ const exerciseArchiveCommitPointRaces = async (
       campaign,
     );
     const nativeWrite = fs.writeFileSync;
+    const nativeLink = fs.linkSync;
     const nativeOpen = fs.openSync;
     const nativeRead = fs.readFileSync;
     let swapped = false;
     let commitPath: string | undefined;
     let commitDescriptor: number | undefined;
     if (phase === "tree")
-      fs.writeFileSync = ((
-        file: fs.PathOrFileDescriptor,
-        data: string | NodeJS.ArrayBufferView,
-        ...args: unknown[]
-      ): void => {
+      fs.linkSync = ((existingPath, newPath) => {
         if (
           swapped === false &&
-          typeof file !== "number" &&
           /^\.archive-[0-9a-f]{64}\.commit\.json$/u.test(
-            path.basename(file.toString()),
+            path.basename(newPath.toString()),
           )
         ) {
-          commitPath = path.resolve(file.toString());
+          commitPath = path.resolve(newPath.toString());
           const archive = path.join(
             path.dirname(commitPath),
             path
@@ -702,42 +698,60 @@ const exerciseArchiveCommitPointRaces = async (
           );
           swapped = true;
         }
-        Reflect.apply(nativeWrite, fs, [file, data, ...args]);
-      }) as typeof fs.writeFileSync;
+        nativeLink(existingPath, newPath);
+      }) as typeof fs.linkSync;
     else {
       fs.openSync = ((file: fs.PathLike, ...args: unknown[]): number => {
-        const descriptor = Reflect.apply(nativeOpen, fs, [
-          file,
-          ...args,
-        ]) as number;
         if (
+          swapped === false &&
           /^\.archive-[0-9a-f]{64}\.commit\.json$/u.test(
             path.basename(file.toString()),
           )
         ) {
           commitPath = path.resolve(file.toString());
-          commitDescriptor = descriptor;
+          if (phase === "late-tree") {
+            const archive = path.join(
+              path.dirname(commitPath),
+              path
+                .basename(commitPath)
+                .slice(".archive-".length, -".commit.json".length),
+            );
+            fs.mkdirSync(path.join(archive, "unexpected-empty-directory"));
+            swapped = true;
+          }
         }
+        const descriptor = Reflect.apply(nativeOpen, fs, [
+          file,
+          ...args,
+        ]) as number;
+        if (
+          phase === "record" &&
+          commitDescriptor === undefined &&
+          commitPath !== undefined &&
+          path.resolve(file.toString()) === commitPath
+        )
+          commitDescriptor = descriptor;
         return descriptor;
       }) as typeof fs.openSync;
-      fs.readFileSync = ((
-        file: fs.PathOrFileDescriptor,
-        ...args: unknown[]
-      ): unknown => {
-        const bytes = Reflect.apply(nativeRead, fs, [file, ...args]);
-        if (
-          swapped === false &&
-          typeof file === "number" &&
-          file === commitDescriptor &&
-          commitPath !== undefined
-        ) {
-          const parked = `${commitPath}.read-parked`;
-          fs.renameSync(commitPath, parked);
-          nativeWrite(commitPath, "{}\n");
-          swapped = true;
-        }
-        return bytes;
-      }) as typeof fs.readFileSync;
+      if (phase === "record")
+        fs.readFileSync = ((
+          file: fs.PathOrFileDescriptor,
+          ...args: unknown[]
+        ): unknown => {
+          const bytes = Reflect.apply(nativeRead, fs, [file, ...args]);
+          if (
+            swapped === false &&
+            typeof file === "number" &&
+            file === commitDescriptor &&
+            commitPath !== undefined
+          ) {
+            const parked = `${commitPath}.read-parked`;
+            fs.renameSync(commitPath, parked);
+            nativeWrite(commitPath, "{}\n");
+            swapped = true;
+          }
+          return bytes;
+        }) as typeof fs.readFileSync;
     }
     let message: string;
     try {
@@ -746,6 +760,7 @@ const exerciseArchiveCommitPointRaces = async (
       );
     } finally {
       fs.writeFileSync = nativeWrite;
+      fs.linkSync = nativeLink;
       fs.openSync = nativeOpen;
       fs.readFileSync = nativeRead;
     }
@@ -755,7 +770,9 @@ const exerciseArchiveCommitPointRaces = async (
         message.includes(
           phase === "tree"
             ? "does not bind the resident content-addressed directory"
-            : "changed physical identity",
+            : phase === "late-tree"
+              ? "does not bind the resident content-addressed directory"
+              : "changed physical identity",
         ),
     );
     fs.rmSync(campaignPath, { recursive: true, force: true });
