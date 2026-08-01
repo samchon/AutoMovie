@@ -43,7 +43,9 @@ const skeleton: IAutoMovieSkeleton = {
  * 2. `falloff` weakens the push down the chain, and a null-override canonical
  *    chest is clamped by the same default humanoid ROM `validatePose` uses.
  * 3. A bone absent from the skeleton has no constraint, so its axis is unclamped.
- * 4. The generated recoil pose passes the ordinary pose validator, proving the
+ * 4. A canonical elbow's immobile abduction axis is forced to rest, and a hip's
+ *    simultaneous flexion/abduction is pulled inside its live swing cone.
+ * 5. Every constrained recoil pose passes the ordinary pose validator, proving the
  *    producer and validator share one effective-ROM calculation.
  */
 export const test_physics_impact_recoil = (): void => {
@@ -101,6 +103,47 @@ export const test_physics_impact_recoil = (): void => {
   TestValidator.equals(
     "the generated recoil pose is legal under the same skeleton",
     validatePoseResult(pose, skeleton),
+    { success: true },
+  );
+
+  const elbowSkeleton: IAutoMovieSkeleton = {
+    id: "elbow-rig",
+    bones: [bone("leftLowerArm", null, null)],
+  };
+  const elbow = impactRecoil(
+    { abduction: 8 },
+    ["leftLowerArm"],
+    elbowSkeleton,
+    1,
+  );
+  TestValidator.equals(
+    "a canonical elbow cannot recoil along its immobile abduction axis",
+    elbow.joints[0]!.abduction,
+    0,
+  );
+  TestValidator.equals(
+    "the immobile-axis recoil is legal under the same skeleton",
+    validatePoseResult(elbow, elbowSkeleton),
+    { success: true },
+  );
+
+  const hipSkeleton: IAutoMovieSkeleton = {
+    id: "hip-rig",
+    bones: [bone("leftUpperLeg", null, null)],
+  };
+  const hip = impactRecoil(
+    { flexion: 120, abduction: 45 },
+    ["leftUpperLeg"],
+    hipSkeleton,
+    1,
+  );
+  TestValidator.predicate(
+    "a canonical hip recoil is pulled out of the box corner by its swing cone",
+    hip.joints[0]!.flexion! < 120 && hip.joints[0]!.abduction! < 45,
+  );
+  TestValidator.equals(
+    "the swing-coned recoil is legal under the same skeleton",
+    validatePoseResult(hip, hipSkeleton),
     { success: true },
   );
 };
