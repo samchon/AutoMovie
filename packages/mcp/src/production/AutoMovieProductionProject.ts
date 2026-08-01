@@ -2787,16 +2787,22 @@ export class AutoMovieProductionProject {
         previous: (() => {
           resolveInside(this.root, file.path);
           const ownerRoot = this.ownerRootFor(file.path);
-          assertRealAncestorInside(
-            ownedRootReal(this.rootReal, ownerRoot),
-            path.dirname(file.path),
-          );
+          const ownerRootReal = ownedRootReal(this.rootReal, ownerRoot);
+          assertRealAncestorInside(ownerRootReal, path.dirname(file.path));
           const linked = lstatOrNull(file.path);
           if (linked?.isSymbolicLink())
             throw new Error(
               `Owned target "${relativeToRoot(this.root, file.path)}" is a symlink or junction. Remove it before retrying the mutation.`,
             );
-          return linked === null ? null : fs.readFileSync(file.path);
+          return linked === null
+            ? null
+            : Buffer.from(
+                readAutoMovieProductionOwnedFile({
+                  root: ownerRootReal,
+                  directory: ownerRootReal,
+                  relative: path.relative(ownerRoot, file.path),
+                }),
+              );
         })(),
       }));
     const lazy = typeof files === "function" ? files : null;

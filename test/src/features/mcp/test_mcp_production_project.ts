@@ -1623,6 +1623,29 @@ export const test_mcp_production_project = (): void => {
     const frameBeforeFailure = fs.readFileSync(renderFramePath);
     const manifestBeforeFailure = fs.readFileSync(renderManifestPath);
     const revisionBeforeFailure = ownerProject.revision();
+    const nativeRollbackRead = fs.readFileSync;
+    const rollbackReadParked = `${renderFramePath}.rollback-read-parked`;
+    let rollbackPathRead = false;
+    fs.readFileSync = ((
+      target: fs.PathOrFileDescriptor,
+      ...args: unknown[]
+    ): unknown => {
+      if (
+        typeof target !== "number" &&
+        path.resolve(target.toString()) === path.resolve(renderFramePath)
+      ) {
+        rollbackPathRead = true;
+        fs.renameSync(renderFramePath, rollbackReadParked);
+        fs.writeFileSync(renderFramePath, "transient rollback baseline");
+        try {
+          return Reflect.apply(nativeRollbackRead, fs, [target, ...args]);
+        } finally {
+          fs.rmSync(renderFramePath);
+          fs.renameSync(rollbackReadParked, renderFramePath);
+        }
+      }
+      return Reflect.apply(nativeRollbackRead, fs, [target, ...args]);
+    }) as typeof fs.readFileSync;
     const renameSync = fs.renameSync;
     fs.renameSync = ((oldPath, newPath) => {
       if (String(newPath) === renderManifestPath)
@@ -1642,8 +1665,11 @@ export const test_mcp_production_project = (): void => {
             renderManifest,
           ),
         ) &&
-          fs.readFileSync(renderFramePath).equals(frameBeforeFailure) &&
-          fs.readFileSync(renderManifestPath).equals(manifestBeforeFailure) &&
+          rollbackPathRead === false &&
+          nativeRollbackRead(renderFramePath).equals(frameBeforeFailure) &&
+          nativeRollbackRead(renderManifestPath).equals(
+            manifestBeforeFailure,
+          ) &&
           fs.existsSync(
             path.join(ownerProject.renderRoot(), renderBundle, "new.bin"),
           ) === false &&
@@ -1651,6 +1677,11 @@ export const test_mcp_production_project = (): void => {
       );
     } finally {
       fs.renameSync = renameSync;
+      fs.readFileSync = nativeRollbackRead;
+      if (fs.existsSync(rollbackReadParked)) {
+        fs.rmSync(renderFramePath, { force: true });
+        fs.renameSync(rollbackReadParked, renderFramePath);
+      }
     }
     let renameFailures = 0;
     fs.renameSync = ((oldPath, newPath) => {
