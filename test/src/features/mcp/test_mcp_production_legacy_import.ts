@@ -1382,6 +1382,54 @@ export const test_mcp_production_legacy_import = (): void => {
     revisionRace.dispose();
   }
 
+  const revisionAfterReadRace = createLegacy();
+  try {
+    const revisionPath = path.join(revisionAfterReadRace.root, "revision.json");
+    const nativeOpen = fs.openSync;
+    const nativeClose = fs.closeSync;
+    let byteSourceDescriptor: number | null = null;
+    let changedAfterRead = false;
+    fs.openSync = ((file: fs.PathLike, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, fs, [
+        file,
+        ...args,
+      ]) as number;
+      if (
+        byteSourceDescriptor === null &&
+        path.resolve(file.toString()) === revisionPath
+      )
+        byteSourceDescriptor = descriptor;
+      return descriptor;
+    }) as typeof fs.openSync;
+    fs.closeSync = ((descriptor: number): void => {
+      nativeClose(descriptor);
+      if (changedAfterRead === false && descriptor === byteSourceDescriptor) {
+        changedAfterRead = true;
+        const revision = JSON.parse(fs.readFileSync(revisionPath, "utf8")) as {
+          revision: number;
+        };
+        fs.writeFileSync(
+          revisionPath,
+          `${JSON.stringify({ revision: revision.revision + 1 }, null, 2)}\n`,
+        );
+      }
+    }) as typeof fs.closeSync;
+    try {
+      TestValidator.predicate(
+        "a revision changed after its descriptor read cannot bless a mixed import plan",
+        throws(
+          () => new AutoMovieLegacyImporter(revisionAfterReadRace.root).plan(),
+          "revision changed",
+        ) && changedAfterRead,
+      );
+    } finally {
+      fs.openSync = nativeOpen;
+      fs.closeSync = nativeClose;
+    }
+  } finally {
+    revisionAfterReadRace.dispose();
+  }
+
   const invalidRollbackBaseline = createLegacy();
   try {
     fs.writeFileSync(path.join(invalidRollbackBaseline.root, "src"), "file");
