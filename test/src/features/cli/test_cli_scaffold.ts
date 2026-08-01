@@ -71,6 +71,8 @@ type GeneratedViewerMiddleware = (
  *    fails image calls explicitly instead of loading a native LGPL payload.
  * 7. The generated viewer middleware binds one compiled artifact descriptor to the
  *    physical file identity it checked instead of serving a replacement.
+ * 8. The registered asset route applies the same binding to ownership, closure,
+ *    and final asset bytes, rejecting a byte-identical successor inode.
  */
 export const test_cli_scaffold = (): void => {
   // 5. packaging guard: the scaffold dir must be a published `files` entry.
@@ -756,6 +758,65 @@ export const test_cli_scaffold = (): void => {
         artifactSwapped &&
         viewerResponse.statusCode === 400 &&
         viewerResponse.body === "invalid compiled viewer artifact request",
+    );
+    const asset = path.join(target, "public", "audio", "starter-tone.json");
+    const assetBytes = fs.readFileSync(asset);
+    const assetDigest =
+      "sha256:f7c7178b601f4b029ba3c56ab05f2bb5ab57f9d0da21fa35cd9292656c2c48aa";
+    const model = path.join(generatedRoot, "models", "asset-closure.json");
+    fs.mkdirSync(path.dirname(model), { recursive: true });
+    fs.writeFileSync(
+      model,
+      `${JSON.stringify({
+        imported: {
+          assets: [
+            {
+              path: "public/audio/starter-tone.json",
+              digest: assetDigest,
+            },
+          ],
+        },
+      })}\n`,
+    );
+    const parkedAsset = `${asset}.parked`;
+    let assetSwapped = false;
+    mutableFs.lstatSync = ((file, ...args: unknown[]): unknown => {
+      const status = Reflect.apply(nativeLstat, mutableFs, [file, ...args]);
+      if (assetSwapped === false && path.resolve(file.toString()) === asset) {
+        fs.renameSync(asset, parkedAsset);
+        fs.writeFileSync(asset, assetBytes);
+        assetSwapped = true;
+      }
+      return status;
+    }) as typeof fs.lstatSync;
+    const assetResponse: GeneratedViewerResponse = {
+      body: "",
+      statusCode: 0,
+      end: (body) => {
+        assetResponse.body = Buffer.isBuffer(body)
+          ? body.toString("utf8")
+          : String(body ?? "");
+      },
+      setHeader: () => undefined,
+    };
+    try {
+      middleware?.(
+        { url: "/__automovie/assets/public/audio/starter-tone.json" },
+        assetResponse,
+        () => undefined,
+      );
+    } finally {
+      mutableFs.lstatSync = nativeLstat;
+      if (fs.existsSync(parkedAsset)) {
+        fs.rmSync(asset, { force: true });
+        fs.renameSync(parkedAsset, asset);
+      }
+    }
+    TestValidator.predicate(
+      "the generated viewer refuses a byte-identical registered asset successor",
+      assetSwapped &&
+        assetResponse.statusCode === 400 &&
+        assetResponse.body === "invalid registered asset request",
     );
     TestValidator.predicate(
       "a non-empty target is refused without force",

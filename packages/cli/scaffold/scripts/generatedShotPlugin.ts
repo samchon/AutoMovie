@@ -162,11 +162,13 @@ const readRegisteredAsset = (
   productionId: string,
   assetPath: string,
 ): Buffer => {
+  const project = physicalDirectory(projectRoot, "viewer project root");
   const ownership = JSON.parse(
-    fs.readFileSync(
-      path.join(projectRoot, ".automovie", "manifest.json"),
-      "utf8",
-    ),
+    readPhysicalFile(
+      project,
+      path.join(project.real, ".automovie"),
+      "manifest.json",
+    ).toString("utf8"),
   ) as { assetManifest?: unknown; generatedRoot?: unknown };
   if (
     typeof ownership.assetManifest !== "string" ||
@@ -174,15 +176,16 @@ const readRegisteredAsset = (
     ownership.assetManifest !== ownership.assetManifest.trim()
   )
     throw new Error("project has no registered asset manifest");
-  const ledgerPath = path.resolve(projectRoot, ownership.assetManifest);
-  const projectReal = fs.realpathSync(projectRoot);
-  const ledgerReal = fs.realpathSync(ledgerPath);
-  if (isInside(projectReal, ledgerReal) === false)
+  const ledgerPath = path.resolve(project.real, ownership.assetManifest);
+  if (isInside(project.real, ledgerPath) === false)
     throw new Error("asset manifest escapes project");
-  const ledger = JSON.parse(fs.readFileSync(ledgerReal, "utf8")) as {
-    version?: unknown;
-    assets?: unknown;
-  };
+  const ledger = JSON.parse(
+    readPhysicalFile(
+      project,
+      path.dirname(ledgerPath),
+      path.basename(ledgerPath),
+    ).toString("utf8"),
+  ) as { version?: unknown; assets?: unknown };
   if (ledger.version !== 1 || Array.isArray(ledger.assets) === false)
     throw new Error("invalid asset manifest");
   const record = ledger.assets.find(
@@ -197,7 +200,7 @@ const readRegisteredAsset = (
   if (record === undefined)
     throw new Error("asset is not registered in the byte ledger");
   const compiledDigest = readCompiledAssetClosure(
-    projectRoot,
+    project,
     productionId,
     ownership.generatedRoot,
   ).get(assetPath);
@@ -205,8 +208,8 @@ const readRegisteredAsset = (
     throw new Error(
       "asset is not in the current compiler-sealed viewer closure",
     );
-  const file = path.resolve(projectRoot, ...assetPath.split("/"));
-  const relative = path.relative(path.resolve(projectRoot), file);
+  const file = path.resolve(project.real, ...assetPath.split("/"));
+  const relative = path.relative(project.real, file);
   if (
     relative === "" ||
     relative === ".." ||
@@ -214,11 +217,12 @@ const readRegisteredAsset = (
     path.isAbsolute(relative)
   )
     throw new Error("asset escapes project");
-  assertPhysicalPath(projectRoot, assetPath.split("/"));
-  const fileReal = fs.realpathSync(file);
-  if (isInside(projectReal, fileReal) === false)
-    throw new Error("asset physical path escapes project");
-  const bytes = fs.readFileSync(fileReal);
+  const bytes = readPhysicalFile(
+    project,
+    path.dirname(file),
+    path.basename(file),
+  );
+  assertPhysicalDirectory(project, "viewer project root");
   const digest = `sha256:${createHash("sha256").update(bytes).digest("hex")}`;
   if (record.digest !== digest)
     throw new Error("asset bytes do not match registered digest");
@@ -226,7 +230,7 @@ const readRegisteredAsset = (
 };
 
 const readCompiledAssetClosure = (
-  projectRoot: string,
+  project: IPhysicalDirectory,
   productionId: string,
   generatedRootValue: unknown,
 ): Map<string, string> => {
@@ -237,36 +241,28 @@ const readCompiledAssetClosure = (
     productionId !== productionId.trim()
   )
     throw new Error("invalid compiled asset closure owner");
-  const projectReal = fs.realpathSync(projectRoot);
   const modelsRoot = path.resolve(
-    projectRoot,
+    project.real,
     generatedRootValue,
     encodePathSegment(productionId),
     "models",
   );
-  const modelsStatus = fs.lstatSync(modelsRoot);
-  const modelsReal = fs.realpathSync(modelsRoot);
-  if (
-    modelsStatus.isSymbolicLink() ||
-    modelsStatus.isDirectory() === false ||
-    isInside(projectReal, modelsReal) === false
-  )
+  if (isInside(project.real, modelsRoot) === false)
+    throw new Error("compiled model root escapes project");
+  const models = physicalDirectory(modelsRoot, "compiled model root");
+  if (isInside(project.real, models.real) === false)
     throw new Error("compiled model root is not a physical project directory");
   const closure = new Map<string, string>();
-  for (const entry of fs.readdirSync(modelsReal, { withFileTypes: true })) {
+  for (const entry of fs.readdirSync(models.real, { withFileTypes: true })) {
     if (
       entry.isFile() === false ||
       entry.isSymbolicLink() ||
       path.extname(entry.name).toLowerCase() !== ".json"
     )
       continue;
-    const file = path.join(modelsReal, entry.name);
-    const fileReal = fs.realpathSync(file);
-    if (isInside(modelsReal, fileReal) === false)
-      throw new Error("compiled model artifact escapes its owned directory");
-    const model = JSON.parse(fs.readFileSync(fileReal, "utf8")) as {
-      imported?: { assets?: unknown };
-    };
+    const model = JSON.parse(
+      readPhysicalFile(project, models.real, entry.name).toString("utf8"),
+    ) as { imported?: { assets?: unknown } };
     if (model.imported === undefined) continue;
     if (Array.isArray(model.imported.assets) === false)
       throw new Error("imported model has no sealed asset closure");
@@ -285,25 +281,9 @@ const readCompiledAssetClosure = (
       closure.set(item.path, item.digest);
     }
   }
+  assertPhysicalDirectory(models, "compiled model root");
+  assertPhysicalDirectory(project, "viewer project root");
   return closure;
-};
-
-const assertPhysicalPath = (
-  root: string,
-  segments: readonly string[],
-): void => {
-  let cursor = path.resolve(root);
-  for (const [index, segment] of segments.entries()) {
-    cursor = path.join(cursor, segment);
-    const status = fs.lstatSync(cursor);
-    if (
-      status.isSymbolicLink() ||
-      (index === segments.length - 1
-        ? status.isFile() === false
-        : status.isDirectory() === false)
-    )
-      throw new Error("registered asset is not one physical project file");
-  }
 };
 
 const assetMediaType = (assetPath: string): string => {
