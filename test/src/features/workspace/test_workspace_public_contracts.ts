@@ -103,6 +103,8 @@ const unmentionedModules = (pkg: string, document: string): string[] =>
  *     engine (#1444).
  * 12. The packed-tarball client drives that same five-tool surface and keeps the
  *     removed compatibility servers and MCP-owned coding operations out.
+ * 13. The native render loader stays inside the 100% coverage gate through its
+ *     render source root, exact file include, and `.cjs` extension token.
  */
 export const test_workspace_public_contracts = (): void => {
   const rootReadme = readPackageFile("README.md");
