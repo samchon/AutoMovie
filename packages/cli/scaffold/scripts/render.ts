@@ -76,6 +76,11 @@ import {
   productionFrameCaptureMetrics,
 } from "./capture";
 import {
+  type IRenderGcTargetSnapshot,
+  captureRenderGcTarget,
+  removeCapturedRenderGcTarget,
+} from "./renderGcSnapshot";
+import {
   type IRuntimePackageSnapshot,
   type RuntimePackageAssetSelection,
   snapshotRuntimePackage,
@@ -2325,6 +2330,7 @@ const renderGarbageCollection = (apply: boolean) => {
       : [],
   );
   const candidates: IAutoMovieProductionRenderGcCandidate[] = [];
+  const candidateSnapshots = new Map<string, IRenderGcTargetSnapshot>();
   for (const tier of ["proxy", "final"] as const) {
     const chunks = path.join(renderJobRoot, tier, "chunks");
     if (fs.existsSync(chunks))
@@ -2337,12 +2343,16 @@ const renderGarbageCollection = (apply: boolean) => {
         )
           continue;
         const target = path.join(chunks, entry.name);
-        candidates.push({
+        const candidate: IAutoMovieProductionRenderGcCandidate = {
           path: `${tier}/chunks/${entry.name}`,
           kind: "chunk",
           digest: `sha256:${entry.name}`,
-          bytes: physicalBytes(target),
-        });
+          bytes: 0,
+        };
+        const snapshot = captureRenderGcTarget(renderJobRoot, target);
+        candidate.bytes = snapshot.bytes;
+        candidates.push(candidate);
+        candidateSnapshots.set(gcCandidateKey(candidate), snapshot);
       }
     const quarantineRoot = path.join(renderJobRoot, tier, "quarantine");
     if (fs.existsSync(quarantineRoot))
@@ -2351,12 +2361,16 @@ const renderGarbageCollection = (apply: boolean) => {
         .sort((left, right) => compareCodeUnits(left.name, right.name))) {
         if (entry.isSymbolicLink()) continue;
         const target = path.join(quarantineRoot, entry.name);
-        candidates.push({
+        const candidate: IAutoMovieProductionRenderGcCandidate = {
           path: `${tier}/quarantine/${entry.name}`,
           kind: "quarantine",
           digest: null,
-          bytes: physicalBytes(target),
-        });
+          bytes: 0,
+        };
+        const snapshot = captureRenderGcTarget(renderJobRoot, target);
+        candidate.bytes = snapshot.bytes;
+        candidates.push(candidate);
+        candidateSnapshots.set(gcCandidateKey(candidate), snapshot);
       }
   }
   if (fs.existsSync(renderRoot))
@@ -2376,12 +2390,16 @@ const renderGarbageCollection = (apply: boolean) => {
         })
       )
         publicationPaths.add(`publication/${relative}`);
-      candidates.push({
+      const candidate: IAutoMovieProductionRenderGcCandidate = {
         path: `publication/${relative}`,
         kind: "publication",
         digest: null,
-        bytes: fs.statSync(file).size,
-      });
+        bytes: 0,
+      };
+      const snapshot = captureRenderGcTarget(renderRoot, file);
+      candidate.bytes = snapshot.bytes;
+      candidates.push(candidate);
+      candidateSnapshots.set(gcCandidateKey(candidate), snapshot);
     }
   const plan = planProductionRenderGc({
     plans,
@@ -2404,7 +2422,15 @@ const renderGarbageCollection = (apply: boolean) => {
           : path.resolve(renderJobRoot);
       if (target.startsWith(`${base}${path.sep}`) === false)
         throw new Error(`GC target "${target}" escapes renderer ownership.`);
-      const ancestry = captureGcPhysicalAncestry(base, target);
+      const snapshot = candidateSnapshots.get(gcCandidateKey(candidate));
+      if (
+        snapshot === undefined ||
+        snapshot.target !== target ||
+        snapshot.base.path !== base
+      )
+        throw new Error(
+          `GC target "${target}" has no matching inventory snapshot.`,
+        );
       let quarantine = quarantines.get(base);
       if (quarantine === undefined) {
         quarantine = ensurePhysicalDirectory(
@@ -2413,15 +2439,11 @@ const renderGarbageCollection = (apply: boolean) => {
         );
         quarantines.set(base, quarantine);
       }
-      assertGcPhysicalAncestry(base, target, ancestry);
       const isolated = path.join(quarantine, randomUUID());
-      fs.renameSync(target, isolated);
-      const isolatedAncestry = captureGcPhysicalAncestry(base, isolated);
-      assertGcPhysicalAncestry(base, isolated, isolatedAncestry);
-      const linked = fs.lstatSync(isolated);
-      fs.rmSync(isolated, {
-        force: true,
-        recursive: linked.isDirectory(),
+      removeCapturedRenderGcTarget({
+        isolated,
+        quarantine,
+        snapshot,
       });
     }
     for (const quarantine of quarantines.values())
@@ -2429,6 +2451,10 @@ const renderGarbageCollection = (apply: boolean) => {
   }
   return { applied: apply, ...plan };
 };
+
+const gcCandidateKey = (
+  candidate: Pick<IAutoMovieProductionRenderGcCandidate, "kind" | "path">,
+): string => `${candidate.kind}\0${candidate.path}`;
 
 const assertNoLiveRenderWorkers = (): void => {
   for (const tier of ["proxy", "final"] as const) {
@@ -2491,99 +2517,6 @@ const renderPublicationFingerprint = (
       "utf8",
     ),
   );
-
-interface IGcPhysicalIdentity {
-  path: string;
-  device: bigint;
-  inode: bigint;
-}
-
-const captureGcPhysicalAncestry = (
-  base: string,
-  target: string,
-): IGcPhysicalIdentity[] => {
-  const resolvedBase = path.resolve(base);
-  const resolvedTarget = path.resolve(target);
-  const relative = path.relative(resolvedBase, resolvedTarget);
-  if (
-    relative.length === 0 ||
-    relative === ".." ||
-    relative.startsWith(`..${path.sep}`) ||
-    path.isAbsolute(relative)
-  )
-    throw new Error(`GC target "${target}" escapes renderer ownership.`);
-  const baseLinked = fs.lstatSync(resolvedBase);
-  if (baseLinked.isSymbolicLink() || baseLinked.isDirectory() === false)
-    throw new Error(`GC base "${base}" is not a physical directory.`);
-  const baseReal = fs.realpathSync(resolvedBase);
-  const identities: IGcPhysicalIdentity[] = [];
-  let current = resolvedBase;
-  for (const segment of relative.split(path.sep)) {
-    current = path.join(current, segment);
-    const linked = fs.lstatSync(current);
-    if (linked.isSymbolicLink())
-      throw new Error(`GC refuses linked target ancestry "${current}".`);
-    const currentReal = fs.realpathSync(current);
-    const physicalRelative = path.relative(baseReal, currentReal);
-    if (
-      physicalRelative === ".." ||
-      physicalRelative.startsWith(`..${path.sep}`) ||
-      path.isAbsolute(physicalRelative)
-    )
-      throw new Error(
-        `GC target ancestry "${current}" is outside renderer ownership.`,
-      );
-    if (
-      current !== resolvedTarget &&
-      fs.statSync(current).isDirectory() === false
-    )
-      throw new Error(`GC ancestry "${current}" is not a directory.`);
-    const status = fs.statSync(currentReal, { bigint: true });
-    identities.push({
-      path: current,
-      device: status.dev,
-      inode: status.ino,
-    });
-  }
-  return identities;
-};
-
-const assertGcPhysicalAncestry = (
-  base: string,
-  target: string,
-  expected: readonly IGcPhysicalIdentity[],
-): void => {
-  const current = captureGcPhysicalAncestry(base, target);
-  if (
-    current.length !== expected.length ||
-    current.some(
-      (identity, index) =>
-        identity.path !== expected[index]!.path ||
-        identity.device !== expected[index]!.device ||
-        identity.inode !== expected[index]!.inode,
-    )
-  )
-    throw new Error(
-      `GC target "${target}" changed physical ancestry before quarantine.`,
-    );
-};
-
-const physicalBytes = (target: string): number => {
-  const linked = fs.lstatSync(target);
-  if (linked.isSymbolicLink())
-    throw new Error(`Render GC refuses linked inventory "${target}".`);
-  if (linked.isFile()) return linked.size;
-  if (linked.isDirectory() === false)
-    throw new Error(
-      `Render GC inventory "${target}" is not a file or directory.`,
-    );
-  return fs
-    .readdirSync(target)
-    .reduce(
-      (total, child) => total + physicalBytes(path.join(target, child)),
-      0,
-    );
-};
 
 const physicalFiles = (directory: string): string[] => {
   const output: string[] = [];

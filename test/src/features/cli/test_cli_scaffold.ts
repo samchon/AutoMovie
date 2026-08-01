@@ -82,6 +82,8 @@ type GeneratedViewerMiddleware = (
  *     to one physical snapshot and rejects their successors.
  * 11. Capture provenance descriptor-binds install receipts and keeps the exact
  *     executable identity open across its launch boundary.
+ * 12. Render GC deletes only its inventoried physical candidate and restores a
+ *     successor that crosses the quarantine rename boundary.
  */
 export const test_cli_scaffold = (): void => {
   // 5. packaging guard: the scaffold dir must be a published `files` entry.
@@ -207,6 +209,7 @@ export const test_cli_scaffold = (): void => {
       "scripts/mcp.ts",
       "scripts/preview.ts",
       "scripts/render.ts",
+      "scripts/renderGcSnapshot.ts",
       "scripts/review-status.ts",
       "scripts/runtimePackageSnapshot.ts",
       "scripts/verify.ts",
@@ -456,10 +459,13 @@ export const test_cli_scaffold = (): void => {
       files["scripts/render.ts"]!.includes('process.argv.indexOf("--tier")') &&
       files["scripts/render.ts"]!.includes("productionRenderLayersForPass") &&
       files["scripts/render.ts"]!.includes("renderGarbageCollection") &&
+      files["scripts/render.ts"]!.includes("captureRenderGcTarget") &&
+      files["scripts/render.ts"]!.includes("removeCapturedRenderGcTarget") &&
       files["scripts/render.ts"]!.includes("renderPublicationFingerprint") &&
       files["scripts/render.ts"]!.includes("assertMatchingProxyPublication") &&
       files["scripts/render.ts"]!.includes("assertNoLiveRenderWorkers") &&
-      files["scripts/render.ts"]!.includes("captureGcPhysicalAncestry") &&
+      files["scripts/render.ts"]!.includes("captureGcPhysicalAncestry") ===
+        false &&
       files["scripts/render.ts"]!.includes("project.review(entry.target)") &&
       files["scripts/render.ts"]!.includes("frames/$" + "{passes[0]}/frame_") &&
       files["automovie.config.ts"]!.includes('kind: "proxy"') &&
@@ -677,6 +683,7 @@ export const test_cli_scaffold = (): void => {
         "scripts/mcp.ts",
         "scripts/preview.ts",
         "scripts/render.ts",
+        "scripts/renderGcSnapshot.ts",
         "scripts/review-status.ts",
         "scripts/runtimePackageSnapshot.ts",
         "scripts/verify.ts",
@@ -766,6 +773,7 @@ export const test_cli_scaffold = (): void => {
     const mutableFs = createRequire(__filename)("node:fs") as {
       lstatSync: typeof fs.lstatSync;
       readdirSync: typeof fs.readdirSync;
+      renameSync: typeof fs.renameSync;
     };
     const nativeLstat = mutableFs.lstatSync;
     const shotsDirectory = path.dirname(artifact);
@@ -1438,6 +1446,108 @@ export const test_cli_scaffold = (): void => {
       "capture install receipt rejects a byte-identical successor",
       captureReceiptSwapped && captureReceiptRaceRejected,
     );
+    const renderGcModule = createRequire(__filename)(
+      path.join(scaffoldDir, "scripts", "renderGcSnapshot.ts"),
+    ) as {
+      captureRenderGcTarget: (
+        base: string,
+        target: string,
+      ) => { bytes: number; target: string };
+      removeCapturedRenderGcTarget: (props: {
+        isolated: string;
+        quarantine: string;
+        snapshot: unknown;
+      }) => void;
+    };
+    const gcBase = path.join(base, "render-gc");
+    const gcTarget = path.join(gcBase, "stale-chunk");
+    const gcFile = path.join(gcTarget, "chunk.bin");
+    const gcQuarantine = path.join(gcBase, ".gc-quarantine-fixture");
+    const gcBytes = Buffer.from("stale chunk bytes");
+    const writeGcCandidate = (): void => {
+      fs.mkdirSync(gcTarget, { recursive: true });
+      fs.writeFileSync(gcFile, gcBytes);
+    };
+    fs.mkdirSync(gcQuarantine, { recursive: true });
+    writeGcCandidate();
+    const gcSnapshot = renderGcModule.captureRenderGcTarget(gcBase, gcTarget);
+    renderGcModule.removeCapturedRenderGcTarget({
+      isolated: path.join(gcQuarantine, "normal"),
+      quarantine: gcQuarantine,
+      snapshot: gcSnapshot,
+    });
+    TestValidator.predicate(
+      "render GC removes only one exact inventoried candidate",
+      gcSnapshot.bytes === gcBytes.length &&
+        fs.existsSync(gcTarget) === false &&
+        fs.existsSync(path.join(gcQuarantine, "normal")) === false,
+    );
+    writeGcCandidate();
+    const preRenameSnapshot = renderGcModule.captureRenderGcTarget(
+      gcBase,
+      gcTarget,
+    );
+    const parkedPreRenameGc = path.join(gcBase, "pre-rename-original");
+    fs.renameSync(gcTarget, parkedPreRenameGc);
+    writeGcCandidate();
+    const preRenameGcRejected = throws(() =>
+      renderGcModule.removeCapturedRenderGcTarget({
+        isolated: path.join(gcQuarantine, "pre-rename"),
+        quarantine: gcQuarantine,
+        snapshot: preRenameSnapshot,
+      }),
+    );
+    TestValidator.predicate(
+      "render GC refuses a successor installed before quarantine",
+      preRenameGcRejected &&
+        fs.existsSync(gcTarget) &&
+        fs.existsSync(parkedPreRenameGc),
+    );
+    fs.rmSync(gcTarget, { recursive: true, force: true });
+    fs.rmSync(parkedPreRenameGc, { recursive: true, force: true });
+    writeGcCandidate();
+    const renameBoundarySnapshot = renderGcModule.captureRenderGcTarget(
+      gcBase,
+      gcTarget,
+    );
+    const parkedRenameBoundaryGc = path.join(gcBase, "rename-original");
+    const renameBoundaryIsolated = path.join(gcQuarantine, "rename-boundary");
+    const nativeGcRename = mutableFs.renameSync;
+    let gcRenameBoundarySwapped = false;
+    mutableFs.renameSync = ((oldPath, newPath) => {
+      if (
+        gcRenameBoundarySwapped === false &&
+        path.resolve(oldPath.toString()) === gcTarget &&
+        path.resolve(newPath.toString()) === renameBoundaryIsolated
+      ) {
+        nativeGcRename(gcTarget, parkedRenameBoundaryGc);
+        writeGcCandidate();
+        gcRenameBoundarySwapped = true;
+      }
+      nativeGcRename(oldPath, newPath);
+    }) as typeof fs.renameSync;
+    let gcRenameBoundaryRejected = false;
+    try {
+      gcRenameBoundaryRejected = throws(() =>
+        renderGcModule.removeCapturedRenderGcTarget({
+          isolated: renameBoundaryIsolated,
+          quarantine: gcQuarantine,
+          snapshot: renameBoundarySnapshot,
+        }),
+      );
+    } finally {
+      mutableFs.renameSync = nativeGcRename;
+    }
+    TestValidator.predicate(
+      "render GC restores and preserves a successor crossing rename",
+      gcRenameBoundarySwapped &&
+        gcRenameBoundaryRejected &&
+        fs.readFileSync(gcFile).equals(gcBytes) &&
+        fs.existsSync(parkedRenameBoundaryGc) &&
+        fs.existsSync(renameBoundaryIsolated) === false,
+    );
+    fs.rmSync(gcTarget, { recursive: true, force: true });
+    fs.rmSync(parkedRenameBoundaryGc, { recursive: true, force: true });
     TestValidator.predicate(
       "a non-empty target is refused without force",
       throws(() => writeFiles(target, files)),
