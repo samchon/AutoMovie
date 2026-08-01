@@ -112,7 +112,7 @@ export const run = (argv: readonly string[]): number => {
         written
           .map((file) => `  ${path.relative(targetDir, file) || "."}`)
           .join("\n") +
-        `\n\nNext:\n  cd ${dir}\n  npm install\n  npm run capture:install\n  npm run capture:doctor\n  npm run build\n  npm run lint\n  npm run render -- all --tier proxy\n  npm run viewer\n\n` +
+        `\n\nNext:\n  cd ${dir}\n  npm install\n  npm run capture:install\n  npm run capture:doctor\n  npm run build\n  npm run lint:source\n  npm run lint\n  npm run render -- all --tier proxy\n  npm run viewer\n\n` +
         `Open http://127.0.0.1:5173 after the viewer starts.\n\n` +
         `README.md explains source ownership, MCP review gates, and the local viewer.\n`,
     );

@@ -14,7 +14,14 @@ import path from "node:path";
 export const test_cli_create_automovie = (): void => {
   const base = fs.mkdtempSync(path.join(os.tmpdir(), "create-automovie-"));
   const target = path.join(base, "my-film");
+  const nativeStdout = process.stdout.write;
+  let stdout = "";
   try {
+    process.stdout.write = ((chunk: string | Uint8Array): boolean => {
+      stdout +=
+        typeof chunk === "string" ? chunk : Buffer.from(chunk).toString("utf8");
+      return true;
+    }) as typeof process.stdout.write;
     const status = runCreateAutoMovie([
       process.execPath,
       "create-automovie",
@@ -37,8 +44,9 @@ export const test_cli_create_automovie = (): void => {
         typeof pkg.scripts?.["capture:doctor"] === "string" &&
         fs.existsSync(path.join(target, ".mcp.json")) &&
         fs.existsSync(path.join(target, "automovie.mcp.jsonc")) === false &&
-        readme.includes("npm run lint:source") &&
-        readme.includes("npm run lint") &&
+        readme.includes("\nnpm run lint:source\n") &&
+        readme.includes("\nnpm run lint\n") &&
+        stdout.includes("\n  npm run lint:source\n  npm run lint\n") &&
         readme.includes("npm run verify") &&
         readme.includes("render all --tier proxy") &&
         readme.includes("http://127.0.0.1:5173") &&
@@ -47,6 +55,7 @@ export const test_cli_create_automovie = (): void => {
         fs.existsSync(path.join(target, ".automovie", "capture")) === false,
     );
   } finally {
+    process.stdout.write = nativeStdout;
     fs.rmSync(base, { force: true, recursive: true });
   }
 };
