@@ -31,6 +31,19 @@ const throwsWith = (fn: () => unknown, message: string): boolean => {
   }
 };
 
+interface GeneratedViewerResponse {
+  body: string;
+  statusCode: number;
+  end: (body?: unknown) => void;
+  setHeader: (name: string, value: string) => void;
+}
+
+type GeneratedViewerMiddleware = (
+  request: { url?: string },
+  response: GeneratedViewerResponse,
+  next: () => void,
+) => void;
+
 /**
  * The `@automovie/cli` scaffolder renders the starter into an in-memory file
  * map and writes it out: the render/write split learned from the reference
@@ -56,6 +69,8 @@ const throwsWith = (fn: () => unknown, message: string): boolean => {
  * 6. The pinned Kokoro/Transformers graph installs and fingerprints its Node CPU
  *    backend without an unused CUDA download, while the local MIT Sharp wall
  *    fails image calls explicitly instead of loading a native LGPL payload.
+ * 7. The generated viewer middleware binds one compiled artifact descriptor to the
+ *    physical file identity it checked instead of serving a replacement.
  */
 export const test_cli_scaffold = (): void => {
   // 5. packaging guard: the scaffold dir must be a published `files` entry.
@@ -669,6 +684,78 @@ export const test_cli_scaffold = (): void => {
     TestValidator.predicate(
       "the local Sharp replacement fails explicitly outside the TTS surface",
       throwsWith(sharpWall, "text/audio path only"),
+    );
+    const generatedRoot = path.join(target, "generated", "demo-film");
+    const artifact = path.join(generatedRoot, "shots", "race.json");
+    fs.mkdirSync(path.dirname(artifact), { recursive: true });
+    fs.writeFileSync(artifact, '{"resident":true}\n');
+    const generatedModule = createRequire(__filename)(
+      path.join(target, "scripts", "generatedShotPlugin.ts"),
+    ) as {
+      generatedShotPlugin: (
+        root: string,
+        productionId: string,
+      ) => {
+        configureServer?: (server: {
+          middlewares: {
+            use: (handler: GeneratedViewerMiddleware) => void;
+          };
+        }) => void;
+      };
+    };
+    let middleware: GeneratedViewerMiddleware | undefined;
+    generatedModule.generatedShotPlugin(target, "demo-film").configureServer?.({
+      middlewares: {
+        use: (handler) => {
+          middleware = handler;
+        },
+      },
+    });
+    const mutableFs = createRequire(__filename)("node:fs") as typeof fs;
+    const nativeLstat = mutableFs.lstatSync;
+    const parkedArtifact = `${artifact}.parked`;
+    let artifactSwapped = false;
+    mutableFs.lstatSync = ((file, ...args: unknown[]): unknown => {
+      const status = Reflect.apply(nativeLstat, mutableFs, [file, ...args]);
+      if (
+        artifactSwapped === false &&
+        path.resolve(file.toString()) === artifact
+      ) {
+        fs.renameSync(artifact, parkedArtifact);
+        fs.writeFileSync(artifact, '{"replacement":true}\n');
+        artifactSwapped = true;
+      }
+      return status;
+    }) as typeof fs.lstatSync;
+    const viewerResponse: GeneratedViewerResponse = {
+      body: "",
+      statusCode: 0,
+      end: (body) => {
+        viewerResponse.body = Buffer.isBuffer(body)
+          ? body.toString("utf8")
+          : String(body ?? "");
+      },
+      setHeader: () => undefined,
+    };
+    try {
+      middleware?.(
+        { url: "/__automovie/shots/race.json" },
+        viewerResponse,
+        () => undefined,
+      );
+    } finally {
+      mutableFs.lstatSync = nativeLstat;
+      if (fs.existsSync(parkedArtifact)) {
+        fs.rmSync(artifact, { force: true });
+        fs.renameSync(parkedArtifact, artifact);
+      }
+    }
+    TestValidator.predicate(
+      "the generated viewer refuses an artifact replaced after linked identity",
+      middleware !== undefined &&
+        artifactSwapped &&
+        viewerResponse.statusCode === 400 &&
+        viewerResponse.body === "invalid compiled viewer artifact request",
     );
     TestValidator.predicate(
       "a non-empty target is refused without force",

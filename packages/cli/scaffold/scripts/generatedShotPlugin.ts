@@ -60,32 +60,30 @@ export const generatedShotPlugin = (
         return;
       }
       try {
+        const project = physicalDirectory(projectRoot, "viewer project root");
         const manifest = JSON.parse(
-          fs.readFileSync(
-            path.join(projectRoot, ".automovie", "manifest.json"),
-            "utf8",
-          ),
+          readPhysicalFile(
+            project,
+            path.join(project.real, ".automovie"),
+            "manifest.json",
+          ).toString("utf8"),
         ) as { generatedRoot?: unknown };
         if (
           typeof manifest.generatedRoot !== "string" ||
           manifest.generatedRoot.trim().length === 0
         )
           throw new Error("invalid generated root");
-        const projectReal = fs.realpathSync(projectRoot);
         if (
           productionId.trim().length === 0 ||
           productionId.trim() !== productionId
         )
           throw new Error("invalid production id");
         const generatedRoot = path.resolve(
-          projectRoot,
+          project.real,
           manifest.generatedRoot,
           encodePathSegment(productionId),
         );
-        const relativeRoot = path.relative(
-          path.resolve(projectRoot),
-          generatedRoot,
-        );
+        const relativeRoot = path.relative(project.real, generatedRoot);
         if (
           relativeRoot === "" ||
           relativeRoot === ".." ||
@@ -93,24 +91,20 @@ export const generatedShotPlugin = (
           path.isAbsolute(relativeRoot)
         )
           throw new Error("generated root escapes project");
-        const generatedStatus = fs.lstatSync(generatedRoot);
-        const generatedReal = fs.realpathSync(generatedRoot);
-        if (
-          generatedStatus.isSymbolicLink() ||
-          generatedStatus.isDirectory() === false ||
-          isInside(projectReal, generatedReal) === false
-        )
+        const generated = physicalDirectory(
+          generatedRoot,
+          "generated viewer root",
+        );
+        if (isInside(project.real, generated.real) === false)
           throw new Error("generated root is not a physical project directory");
-        const file = path.join(generatedReal, ...route);
-        const fileStatus = fs.lstatSync(file);
-        const fileReal = fs.realpathSync(file);
-        if (
-          fileStatus.isSymbolicLink() ||
-          fileStatus.isFile() === false ||
-          isInside(generatedReal, fileReal) === false
-        )
-          throw new Error("generated artifact is not a physical owned file");
-        const bytes = fs.readFileSync(fileReal);
+        const file = path.join(generated.real, ...route);
+        const bytes = readPhysicalFile(
+          project,
+          path.dirname(file),
+          path.basename(file),
+        );
+        assertPhysicalDirectory(generated, "generated viewer root");
+        assertPhysicalDirectory(project, "viewer project root");
         response.statusCode = 200;
         response.setHeader("Content-Type", "application/json; charset=utf-8");
         response.setHeader("Cache-Control", "no-store");
@@ -364,4 +358,92 @@ const isInside = (root: string, candidate: string): boolean => {
       relative !== ".." &&
       relative.startsWith(`..${path.sep}`) === false)
   );
+};
+
+interface IPhysicalDirectory {
+  device: string;
+  inode: string;
+  real: string;
+}
+
+const physicalDirectory = (
+  directory: string,
+  label: string,
+): IPhysicalDirectory => {
+  const linked = fs.lstatSync(directory, { bigint: true });
+  if (linked.isSymbolicLink() || linked.isDirectory() === false)
+    throw new Error(`${label} is not a physical directory`);
+  const real = fs.realpathSync(directory);
+  const status = fs.statSync(real, { bigint: true });
+  if (status.isDirectory() === false)
+    throw new Error(`${label} is not a physical directory`);
+  return {
+    device: status.dev.toString(),
+    inode: status.ino.toString(),
+    real,
+  };
+};
+
+const assertPhysicalDirectory = (
+  expected: IPhysicalDirectory,
+  label: string,
+): void => {
+  const current = physicalDirectory(expected.real, label);
+  if (
+    current.device !== expected.device ||
+    current.inode !== expected.inode ||
+    current.real !== expected.real
+  )
+    throw new Error(`${label} changed physical identity`);
+};
+
+const readPhysicalFile = (
+  root: IPhysicalDirectory,
+  directory: string,
+  name: string,
+): Buffer => {
+  const owner = path.resolve(directory);
+  if (
+    isInside(root.real, owner) === false ||
+    name.length === 0 ||
+    path.basename(name) !== name
+  )
+    throw new Error("viewer file escapes its physical owner");
+  const relativeOwner = path.relative(root.real, owner);
+  const directories = [root];
+  let cursor = root.real;
+  for (const segment of relativeOwner.length === 0
+    ? []
+    : relativeOwner.split(path.sep)) {
+    cursor = path.join(cursor, segment);
+    directories.push(physicalDirectory(cursor, "viewer file ancestry"));
+  }
+  const file = path.join(owner, name);
+  const linked = fs.lstatSync(file, { bigint: true });
+  if (linked.isSymbolicLink() || linked.isFile() === false)
+    throw new Error("viewer file is not one physical owned file");
+  const descriptor = fs.openSync(file, "r");
+  try {
+    const opened = fs.fstatSync(descriptor, { bigint: true });
+    if (
+      opened.isFile() === false ||
+      opened.dev !== linked.dev ||
+      opened.ino !== linked.ino
+    )
+      throw new Error("viewer file changed physical identity before open");
+    const bytes = fs.readFileSync(descriptor);
+    const resident = fs.lstatSync(file, { bigint: true });
+    if (
+      resident.isSymbolicLink() ||
+      resident.isFile() === false ||
+      resident.dev !== opened.dev ||
+      resident.ino !== opened.ino
+    )
+      throw new Error("viewer file changed physical identity while read");
+    for (const identity of directories)
+      assertPhysicalDirectory(identity, "viewer file ancestry");
+    return bytes;
+  } finally {
+    fs.closeSync(descriptor);
+  }
 };
