@@ -69,6 +69,22 @@ export const test_physics_impact_recoil_neutral_axis = (): void => {
     validatePoseResult(pose, skeleton),
     { success: true },
   );
+  const explicitZero = impactRecoil(
+    { flexion: 0 },
+    ["leftLowerArm"],
+    skeleton,
+    1,
+  );
+  TestValidator.equals(
+    "an explicit zero push uses the same resting representation",
+    explicitZero.joints[0]!.flexion,
+    null,
+  );
+  TestValidator.equals(
+    "the explicit-zero recoil remains legal",
+    validatePoseResult(explicitZero, skeleton),
+    { success: true },
+  );
 
   const pushed = impactRecoil(
     { flexion: 200, abduction: 1 },

@@ -1,4 +1,4 @@
-import { reactMotion } from "@automovie/engine";
+import { reactMotion, validateMotion } from "@automovie/engine";
 import {
   IAutoMovieBone,
   IAutoMovieSkeleton,
@@ -6,7 +6,7 @@ import {
 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { nclose } from "../internal/predicates";
+import { nclose, validationHasNoWarnings } from "../internal/predicates";
 
 const rest: IAutoMovieTransform = {
   translation: { x: 0, y: 0, z: 0 },
@@ -49,10 +49,10 @@ const throws = (task: () => void): boolean => {
  * Scenarios:
  *
  * 1. Three keyframes at 0, peak, duration; the skeleton id is carried.
- * 2. The flinch keyframe is the ROM-clamped recoil (a −200° push at the spine
- *    clamps to its −30° minimum), and an unconstrained bone (chest) takes the
- *    full attenuated push (−200 × 0.6).
- * 3. The clip starts and ends at the neutral rest pose.
+ * 2. The flinch keyframe is the effective-ROM recoil: the explicit spine clamps at
+ *    −30°, and a null-override canonical chest uses its default −20° minimum.
+ * 3. The clip starts and ends with `null` resting axes. A zero-excluding override
+ *    therefore validates across the whole rest → flinch → rest motion.
  * 4. Invalid explicit timing rejects: non-positive/NaN durations, and explicit
  *    peaks outside (0, duration).
  * 5. The DEFAULT peak scales to the duration: a 0.1 s quick flinch peaks at 0.04 s
@@ -85,21 +85,60 @@ export const test_motion_react = (): void => {
     nclose(sp(clip.keyframes[1]!.pose).flexion!, -30),
   );
   TestValidator.predicate(
-    "unconstrained chest takes the full attenuated push",
+    "null-override chest clamps to the default humanoid ROM minimum",
     nclose(
       clip.keyframes[1]!.pose.joints.find((x) => x.bone === "chest")!.flexion!,
-      -120,
+      -20,
     ),
   );
 
   // 3. starts and ends at rest
-  TestValidator.predicate(
+  TestValidator.equals(
     "starts at rest",
-    nclose(sp(clip.keyframes[0]!.pose).flexion!, 0),
+    sp(clip.keyframes[0]!.pose).flexion,
+    null,
+  );
+  TestValidator.equals(
+    "ends at rest",
+    sp(clip.keyframes[2]!.pose).flexion,
+    null,
   );
   TestValidator.predicate(
-    "ends at rest",
-    nclose(sp(clip.keyframes[2]!.pose).flexion!, 0),
+    "the effective-ROM react clip validates as a whole",
+    validationHasNoWarnings(
+      "effective-ROM react clip",
+      validateMotion({ motion: clip, skeleton }),
+    ),
+  );
+  const zeroExcludingSkeleton: IAutoMovieSkeleton = {
+    id: "zero-excluding-react-rig",
+    bones: [
+      bone("leftLowerArm", {
+        flexion: { min: 10, max: 145 },
+        abduction: { min: 5, max: 30 },
+        twist: null,
+      }),
+    ],
+  };
+  const zeroExcluding = reactMotion(
+    "zero-excluding",
+    zeroExcludingSkeleton,
+    { twist: 8 },
+    ["leftLowerArm"],
+    1,
+    0.2,
+  );
+  TestValidator.predicate(
+    "zero-excluding react rests at null and validates through its flinch",
+    zeroExcluding.keyframes[0]!.pose.joints[0]!.flexion === null &&
+      zeroExcluding.keyframes[2]!.pose.joints[0]!.abduction === null &&
+      validationHasNoWarnings(
+        "zero-excluding react clip",
+        validateMotion({
+          motion: zeroExcluding,
+          skeleton: zeroExcludingSkeleton,
+        }),
+      ),
   );
   // 4. invalid timing rejects before emitting non-increasing keyframes
   for (const duration of [Number.NaN, 0, -1])
