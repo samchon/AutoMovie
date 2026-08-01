@@ -49,7 +49,11 @@ const slateOf = (logline: string): IAutoMovieMcpWritableSlate => ({
  *    revision once (not once per actor) and both land together.
  * 5. A staging throw on any actor in the registry persists NOTHING and does not
  *    bump: the all-or-nothing guarantee the per-actor loop lacked.
- * 6. Physical-root replacement after lock acquisition and during an atomic actor
+ * 6. Two live asset registrars preserve both manifest entries through direct stale
+ *    refusal/retry as well as explicit read synchronization.
+ * 7. A missing manifest cannot advance the optimistic revision base and let a
+ *    stale slate overwrite a concurrent winner after the manifest returns.
+ * 8. Physical-root replacement after lock acquisition and during an atomic actor
  *    write stops before publish, leaves the replacement untouched, and never
  *    unlinks a copied resident token through the stale pathname.
  */
@@ -185,7 +189,14 @@ export const test_mcp_project_transactions = (): void => {
     const assetA = AutoMovieProject.open(root);
     const assetB = AutoMovieProject.open(root);
     assetA.registerAsset("models/asset-a.glb", Buffer.from("asset a"));
-    assetB.writableSlate();
+    TestValidator.predicate(
+      "a stale asset registrar is refused before writing",
+      throwsError(
+        () =>
+          assetB.registerAsset("models/asset-b.glb", Buffer.from("asset b")),
+        ["another session committed", "nothing was written"],
+      ) && fs.existsSync(path.join(root, "models", "asset-b.glb")) === false,
+    );
     assetB.registerAsset("models/asset-b.glb", Buffer.from("asset b"));
     TestValidator.equals(
       "a synchronized second handle preserves the first handle's asset",
@@ -196,6 +207,31 @@ export const test_mcp_project_transactions = (): void => {
       "summary exposes the current resident asset index",
       assetA.summary().assets,
       ["models/asset-a.glb", "models/asset-b.glb"],
+    );
+
+    const manifestRaceA = AutoMovieProject.open(root);
+    const manifestRaceB = AutoMovieProject.open(root);
+    const staleSlate = manifestRaceB.writableSlate();
+    manifestRaceA.saveSlate(slateOf("manifest race winner"));
+    const manifestFile = path.join(root, "automovie.json");
+    const parkedManifest = `${manifestFile}.parked`;
+    fs.renameSync(manifestFile, parkedManifest);
+    const missingManifestRejected = throwsError(
+      () => manifestRaceB.writableSlate(),
+      ["manifest", "disappeared from the resident project"],
+    );
+    fs.renameSync(parkedManifest, manifestFile);
+    const staleAfterManifestFailureRejected = throwsError(
+      () => manifestRaceB.saveSlate(staleSlate),
+      ["another session committed", "nothing was written"],
+    );
+    TestValidator.predicate(
+      "a failed manifest refresh cannot advance the stale slate base",
+      missingManifestRejected &&
+        staleAfterManifestFailureRejected &&
+        fs
+          .readFileSync(path.join(root, "script.json"), "utf8")
+          .includes("manifest race winner"),
     );
     a.writableSlate();
 

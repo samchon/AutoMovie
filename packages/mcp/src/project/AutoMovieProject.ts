@@ -353,8 +353,9 @@ export class AutoMovieProject {
         const current = this.readRevision();
         if (current !== this.lastReadRevision_) {
           const base = this.lastReadRevision_;
+          const manifest = this.readManifest();
           this.lastReadRevision_ = current;
-          this.manifest = this.readManifest();
+          this.manifest = manifest;
           throw new Error(
             `another session committed to this project (on-disk revision ${current}; this session last synchronized at ${base}); nothing was written, re-read the current state (getSlate / nextSteps) and re-issue the call from that truth`,
           );
@@ -423,8 +424,10 @@ export class AutoMovieProject {
   }
 
   private synchronizeResidentState(): void {
-    this.lastReadRevision_ = this.readRevision();
-    this.manifest = this.readManifest();
+    const revision = this.readRevision();
+    const manifest = this.readManifest();
+    this.lastReadRevision_ = revision;
+    this.manifest = manifest;
   }
 
   private get revisionPath(): string {
