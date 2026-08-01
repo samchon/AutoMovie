@@ -302,6 +302,17 @@ export {};
       agent,
       collect: collectCompleteEvidence,
     });
+    await exerciseArchiveCommitPointRaces({
+      taskId: current.taskId,
+      lane: "deterministic",
+      runRoot: root,
+      repositoryRoot,
+      identity,
+      mcpTarget,
+      inventoryBaselines: [archivedBaseline],
+      agent,
+      collect: collectCompleteEvidence,
+    });
 
     const gateFailed = await runAutoMovieBenchmark({
       taskId: current.taskId,
@@ -638,6 +649,115 @@ const exerciseArchivePublicationRaces = async (
     );
     if (parked !== undefined)
       fs.rmSync(parked, { recursive: true, force: true });
+    fs.rmSync(campaignPath, { recursive: true, force: true });
+  }
+};
+
+const exerciseArchiveCommitPointRaces = async (
+  base: Omit<Parameters<typeof runAutoMovieBenchmark>[0], "campaign">,
+): Promise<void> => {
+  for (const phase of ["tree", "record"] as const) {
+    const campaign = `publication-commit-${phase}-race`;
+    const campaignPath = path.join(
+      path.resolve(base.runRoot),
+      ".benchmarks",
+      campaign,
+    );
+    const nativeWrite = fs.writeFileSync;
+    const nativeOpen = fs.openSync;
+    const nativeRead = fs.readFileSync;
+    let swapped = false;
+    let commitPath: string | undefined;
+    let commitDescriptor: number | undefined;
+    if (phase === "tree")
+      fs.writeFileSync = ((
+        file: fs.PathOrFileDescriptor,
+        data: string | NodeJS.ArrayBufferView,
+        ...args: unknown[]
+      ): void => {
+        if (
+          swapped === false &&
+          typeof file !== "number" &&
+          /^\.archive-[0-9a-f]{64}\.commit\.json$/u.test(
+            path.basename(file.toString()),
+          )
+        ) {
+          commitPath = path.resolve(file.toString());
+          const archive = path.join(
+            path.dirname(commitPath),
+            path
+              .basename(commitPath)
+              .slice(".archive-".length, -".commit.json".length),
+          );
+          const parked = `${archive}.precommit-parked`;
+          fs.renameSync(archive, parked);
+          fs.cpSync(parked, archive, {
+            recursive: true,
+            dereference: false,
+            verbatimSymlinks: true,
+          });
+          nativeWrite(
+            path.join(archive, "unexpected-entry.txt"),
+            "uncommitted extra archive entry",
+          );
+          swapped = true;
+        }
+        Reflect.apply(nativeWrite, fs, [file, data, ...args]);
+      }) as typeof fs.writeFileSync;
+    else {
+      fs.openSync = ((file: fs.PathLike, ...args: unknown[]): number => {
+        const descriptor = Reflect.apply(nativeOpen, fs, [
+          file,
+          ...args,
+        ]) as number;
+        if (
+          /^\.archive-[0-9a-f]{64}\.commit\.json$/u.test(
+            path.basename(file.toString()),
+          )
+        ) {
+          commitPath = path.resolve(file.toString());
+          commitDescriptor = descriptor;
+        }
+        return descriptor;
+      }) as typeof fs.openSync;
+      fs.readFileSync = ((
+        file: fs.PathOrFileDescriptor,
+        ...args: unknown[]
+      ): unknown => {
+        const bytes = Reflect.apply(nativeRead, fs, [file, ...args]);
+        if (
+          swapped === false &&
+          typeof file === "number" &&
+          file === commitDescriptor &&
+          commitPath !== undefined
+        ) {
+          const parked = `${commitPath}.read-parked`;
+          fs.renameSync(commitPath, parked);
+          nativeWrite(commitPath, "{}\n");
+          swapped = true;
+        }
+        return bytes;
+      }) as typeof fs.readFileSync;
+    }
+    let message: string;
+    try {
+      message = await rejected(() =>
+        runAutoMovieBenchmark({ ...base, campaign }),
+      );
+    } finally {
+      fs.writeFileSync = nativeWrite;
+      fs.openSync = nativeOpen;
+      fs.readFileSync = nativeRead;
+    }
+    TestValidator.predicate(
+      `archive commit rejects a ${phase} commit-point replacement`,
+      swapped &&
+        message.includes(
+          phase === "tree"
+            ? "does not bind the resident content-addressed directory"
+            : "changed physical identity",
+        ),
+    );
     fs.rmSync(campaignPath, { recursive: true, force: true });
   }
 };

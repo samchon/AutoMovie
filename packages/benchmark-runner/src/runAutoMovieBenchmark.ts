@@ -792,7 +792,7 @@ export const runAutoMovieBenchmark = async (
     filmScore: verdict.filmScore,
   });
   trace.append({ kind: "run-seal", runId: submission.runId });
-  writeArchiveCommit(
+  writeArchiveIdentity(
     path.join(pending.real, ".archive-commit.json"),
     submission.runId,
   );
@@ -845,10 +845,12 @@ export const runAutoMovieBenchmark = async (
     );
   }
   assertDirectoryIdentity(publication, "benchmark archive publication");
+  const publicationTree = snapshotAutoMovieBenchmarkProject(publication.real);
+  assertDirectoryIdentity(publication, "benchmark archive publication");
   assertDirectoryIdentity(campaignRoot, "benchmark campaign directory");
   fs.renameSync(publication.real, archive);
   movedDirectoryIdentity(publication, archive, "final archive");
-  writeArchiveCommit(archiveCommit, submission.runId);
+  writeArchiveCommit(archiveCommit, submission.runId, publicationTree.digest);
   const committed = assertCommittedArchive({
     archive,
     commit: archiveCommit,
@@ -1194,13 +1196,30 @@ const archiveCommitPath = (archive: string): string =>
     `.archive-${path.basename(archive)}.commit.json`,
   );
 
-const writeArchiveCommit = (file: string, runId: string): void =>
-  fs.writeFileSync(file, archiveCommitText(runId), { flag: "wx" });
+const writeArchiveIdentity = (file: string, runId: string): void =>
+  fs.writeFileSync(file, archiveIdentityText(runId), { flag: "wx" });
 
-const archiveCommitText = (runId: string): string =>
+const archiveIdentityText = (runId: string): string =>
   `${JSON.stringify({
     protocol: "automovie.benchmark-archive-commit.v1",
     runId,
+  })}\n`;
+
+const writeArchiveCommit = (
+  file: string,
+  runId: string,
+  treeDigest: `sha256:${string}`,
+): void =>
+  fs.writeFileSync(file, archiveCommitText(runId, treeDigest), { flag: "wx" });
+
+const archiveCommitText = (
+  runId: string,
+  treeDigest: `sha256:${string}`,
+): string =>
+  `${JSON.stringify({
+    protocol: "automovie.benchmark-archive-publication.v1",
+    runId,
+    treeDigest,
   })}\n`;
 
 const assertCommittedArchive = (input: {
@@ -1225,17 +1244,6 @@ const assertCommittedArchive = (input: {
     throw new Error(
       `Benchmark archive "${input.archive}" is not committed; preserve it for diagnosis and remove it before retrying this run.`,
     );
-  const commit = Buffer.from(
-    readAutoMovieProductionOwnedFile({
-      root: path.dirname(input.commit),
-      directory: path.dirname(input.commit),
-      relative: path.basename(input.commit),
-    }),
-  ).toString("utf8");
-  if (commit !== archiveCommitText(input.submission.runId))
-    throw new Error(
-      `Benchmark archive commit "${input.commit}" does not bind the resident content-addressed directory.`,
-    );
   assertArchiveIdentity({
     pending: archive,
     repositoryRoot: input.repositoryRoot,
@@ -1249,6 +1257,19 @@ const assertCommittedArchive = (input: {
     report: input.report,
     toolInventory: input.toolInventory,
   });
+  const tree = snapshotAutoMovieBenchmarkProject(archive.real);
+  assertDirectoryIdentity(archive, "committed benchmark archive");
+  const commit = Buffer.from(
+    readAutoMovieProductionOwnedFile({
+      root: path.dirname(input.commit),
+      directory: path.dirname(input.commit),
+      relative: path.basename(input.commit),
+    }),
+  ).toString("utf8");
+  if (commit !== archiveCommitText(input.submission.runId, tree.digest))
+    throw new Error(
+      `Benchmark archive commit "${input.commit}" does not bind the resident content-addressed directory.`,
+    );
   return archive;
 };
 
@@ -1620,7 +1641,7 @@ const assertArchiveIdentity = (input: {
       "Runner-owned task law or brief changed before archive publication.",
     );
   for (const [file, content] of [
-    [".archive-commit.json", archiveCommitText(input.submission.runId)],
+    [".archive-commit.json", archiveIdentityText(input.submission.runId)],
     ["project-tree.json", formatJson(input.projectTree)],
     ["submission.json", formatJson(input.submission)],
     ["verdict.json", formatJson(input.verdict)],
