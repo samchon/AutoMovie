@@ -415,10 +415,15 @@ export const test_mcp_production_shot_continuity = async (): Promise<void> => {
         ],
       },
     ];
-    fs.writeFileSync(
-      path.join(shotRoot, "answer.json"),
-      `${JSON.stringify(zeroOpeningAnswer, null, 2)}\n`,
-    );
+    const zeroOpeningMutation = project.setShotContract(zeroOpeningAnswer);
+    if (zeroOpeningMutation.accepted === false)
+      throw new Error(
+        `Continuity fixture shot mutation failed:\n${JSON.stringify(
+          zeroOpeningMutation.diagnostics,
+          null,
+          2,
+        )}`,
+      );
     const failingOpeningSource = continuitySource(
       opening,
       zeroOpeningAnswer,
