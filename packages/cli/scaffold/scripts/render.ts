@@ -69,6 +69,7 @@ import { isDeepStrictEqual } from "node:util";
 import { PNG } from "pngjs";
 
 import config from "../automovie.config";
+import { assertPublishedProxyBundle } from "./assertProxyBundle";
 import {
   captureProductionFrame,
   closeProductionFrameCapture,
@@ -1378,35 +1379,6 @@ const assertMatchingProxyPublication = (
     throw new Error(
       "No immutable proxy publication matches this final plan's compile fingerprint, EDL fingerprint, and source frame format. Replan and finalize proxy before final conform.",
     );
-};
-
-const assertPublishedProxyBundle = (
-  target: string,
-  expected: ReadonlyMap<string, Uint8Array>,
-): void => {
-  const linked = fs.lstatSync(target);
-  if (linked.isSymbolicLink() || linked.isDirectory() === false)
-    throw new Error(`Proxy bundle "${target}" is not a physical directory.`);
-  const actual = physicalFiles(target).map((file) =>
-    normalizeSlash(path.relative(target, file)),
-  );
-  if (
-    actual.length !== expected.size ||
-    actual.some((file) => expected.has(file) === false)
-  )
-    throw new Error(
-      `Proxy bundle "${target}" has an unexpected file inventory.`,
-    );
-  for (const [relative, bytes] of expected) {
-    const resident = fs.readFileSync(path.join(target, relative));
-    if (
-      resident.length !== bytes.length ||
-      digestAutoMovieBytes(resident) !== digestAutoMovieBytes(bytes)
-    )
-      throw new Error(
-        `Proxy bundle file "${relative}" changed resident bytes.`,
-      );
-  }
 };
 
 const ensurePhysicalDirectory = (root: string, relative: string): string => {

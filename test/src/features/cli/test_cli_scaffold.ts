@@ -73,6 +73,8 @@ type GeneratedViewerMiddleware = (
  *    physical file identity it checked instead of serving a replacement.
  * 8. The registered asset route applies the same binding to ownership, closure,
  *    and final asset bytes, rejecting a byte-identical successor inode.
+ * 9. Proxy publication verification accepts an exact physical bundle and rejects a
+ *    byte-identical file successor after inventory observation.
  */
 export const test_cli_scaffold = (): void => {
   // 5. packaging guard: the scaffold dir must be a published `files` entry.
@@ -186,6 +188,7 @@ export const test_cli_scaffold = (): void => {
       "public/audio/README.md",
       "public/audio/starter-tone.json",
       "renders/README.md",
+      "scripts/assertProxyBundle.ts",
       "scripts/capture-browser.ts",
       "scripts/capture-doctor.ts",
       "scripts/capture-install.ts",
@@ -645,6 +648,7 @@ export const test_cli_scaffold = (): void => {
         "public/audio/README.md",
         "public/audio/starter-tone.json",
         "renders/README.md",
+        "scripts/assertProxyBundle.ts",
         "scripts/capture-browser.ts",
         "scripts/capture-doctor.ts",
         "scripts/capture-install.ts",
@@ -915,6 +919,59 @@ export const test_cli_scaffold = (): void => {
       assetSwapped &&
         assetResponse.statusCode === 400 &&
         assetResponse.body === "invalid registered asset request",
+    );
+    const proxy = path.join(base, "proxy-publication");
+    const proxyFiles = new Map<string, Uint8Array>([
+      ["manifest.json", Buffer.from('{"proxy":true}\n')],
+      ["media/proxy.mp4", Buffer.from("proxy bytes")],
+    ]);
+    for (const [relative, bytes] of proxyFiles) {
+      const file = path.join(proxy, ...relative.split("/"));
+      fs.mkdirSync(path.dirname(file), { recursive: true });
+      fs.writeFileSync(file, bytes);
+    }
+    const proxyModule = createRequire(__filename)(
+      path.join(target, "scripts", "assertProxyBundle.ts"),
+    ) as {
+      assertPublishedProxyBundle: (
+        directory: string,
+        expected: ReadonlyMap<string, Uint8Array>,
+      ) => void;
+    };
+    TestValidator.predicate(
+      "an exact physical proxy bundle passes immutable verification",
+      !throws(() => proxyModule.assertPublishedProxyBundle(proxy, proxyFiles)),
+    );
+    const proxyMedia = path.join(proxy, "media", "proxy.mp4");
+    const parkedProxyMedia = `${proxyMedia}.parked`;
+    let proxyMediaSwapped = false;
+    mutableFs.lstatSync = ((file, ...args: unknown[]): unknown => {
+      const status = Reflect.apply(nativeLstat, mutableFs, [file, ...args]);
+      if (
+        proxyMediaSwapped === false &&
+        path.resolve(file.toString()) === proxyMedia
+      ) {
+        fs.renameSync(proxyMedia, parkedProxyMedia);
+        fs.writeFileSync(proxyMedia, proxyFiles.get("media/proxy.mp4")!);
+        proxyMediaSwapped = true;
+      }
+      return status;
+    }) as typeof fs.lstatSync;
+    let proxyRaceRejected = false;
+    try {
+      proxyRaceRejected = throws(() =>
+        proxyModule.assertPublishedProxyBundle(proxy, proxyFiles),
+      );
+    } finally {
+      mutableFs.lstatSync = nativeLstat;
+      if (fs.existsSync(parkedProxyMedia)) {
+        fs.rmSync(proxyMedia, { force: true });
+        fs.renameSync(parkedProxyMedia, proxyMedia);
+      }
+    }
+    TestValidator.predicate(
+      "proxy verification rejects a byte-identical successor after inventory",
+      proxyMediaSwapped && proxyRaceRejected,
     );
     TestValidator.predicate(
       "a non-empty target is refused without force",
