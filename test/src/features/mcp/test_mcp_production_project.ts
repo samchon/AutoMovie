@@ -2521,6 +2521,7 @@ export const test_mcp_production_project = (): void => {
     }
     const staleRoot = path.join(invalidRoot, "stale-physical-root");
     const staleProject = AutoMovieProductionProject.open(staleRoot);
+    const staleRenderRoot = staleProject.renderRoot();
     const parkedStaleRoot = `${staleRoot}-parked`;
     fs.renameSync(staleRoot, parkedStaleRoot);
     fs.cpSync(parkedStaleRoot, staleRoot, { recursive: true });
@@ -2536,10 +2537,7 @@ export const test_mcp_production_project = (): void => {
           "root identity changed",
         ) &&
         fs.existsSync(
-          path.join(
-            staleProject.renderRoot(),
-            "deliverables/stale-root-write/frame.bin",
-          ),
+          path.join(staleRenderRoot, "deliverables/stale-root-write/frame.bin"),
         ) === false,
     );
     const missingIdentityRoot = path.join(invalidRoot, "missing-identity-root");
@@ -2565,6 +2563,8 @@ export const test_mcp_production_project = (): void => {
     const acquiredReplacementProject = AutoMovieProductionProject.open(
       acquiredReplacementRoot,
     );
+    const acquiredReplacementRenderRoot =
+      acquiredReplacementProject.renderRoot();
     const parkedAcquiredReplacementRoot = `${acquiredReplacementRoot}-parked`;
     let acquiredReplacementSwapped = false;
     const racingFiles = new Map([
@@ -2592,7 +2592,7 @@ export const test_mcp_production_project = (): void => {
     const acquiredReplacementUntouched =
       fs.existsSync(
         path.join(
-          acquiredReplacementProject.renderRoot(),
+          acquiredReplacementRenderRoot,
           "deliverables/acquired-replacement/frame.bin",
         ),
       ) === false;
