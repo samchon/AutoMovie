@@ -742,12 +742,14 @@ export class AutoMovieProductionProject {
     manifest: Uint8Array;
   } {
     this.assertIncarnation();
+    const root = ownedRootReal(this.rootReal, this.automovieRoot);
     const read = (file: string): Uint8Array => {
-      assertOwnedRegularFile(
-        ownedRootReal(this.rootReal, this.automovieRoot),
-        file,
-      );
-      return fs.readFileSync(file);
+      assertOwnedRegularFile(root, file);
+      return readAutoMovieProductionOwnedFile({
+        root,
+        directory: root,
+        relative: path.basename(file),
+      });
     };
     return {
       incarnation: read(this.incarnationPath),
@@ -1517,11 +1519,13 @@ export class AutoMovieProductionProject {
     this.assertIncarnation();
     const file = this.trackedStatePath(relativePath);
     if (lstatOrNull(file) === null) return null;
-    assertOwnedRegularFile(
-      ownedRootReal(this.rootReal, this.automovieRoot),
-      file,
-    );
-    return fs.readFileSync(file);
+    const root = ownedRootReal(this.rootReal, this.productionStateRoot);
+    assertOwnedRegularFile(root, file);
+    return readAutoMovieProductionOwnedFile({
+      root,
+      directory: root,
+      relative: path.relative(root, file),
+    });
   }
 
   /** Absolute path of one active-production tracked state record. */
@@ -3112,11 +3116,12 @@ const validateScreenplayIndex = (
 ): IValidation<IAutoMovieScreenplayIndex> =>
   typia.validateEquals<IAutoMovieScreenplayIndex>(input);
 
-const readTypedJson = <T>(
+const readOwnedTypedJson = <T>(
+  rootReal: string,
   file: string,
   validate: (input: unknown) => IValidation<T>,
 ): T | null => {
-  const value = readJson(file);
+  const value = readOwnedJson(rootReal, file);
   if (value === undefined) return null;
   const result = validate(value);
   if (result.success) return result.data;
@@ -3127,25 +3132,22 @@ const readTypedJson = <T>(
   );
 };
 
-const readOwnedTypedJson = <T>(
-  rootReal: string,
-  file: string,
-  validate: (input: unknown) => IValidation<T>,
-): T | null => {
-  assertOwnedRegularFile(rootReal, file);
-  return readTypedJson(file, validate);
-};
-
 const readOwnedJson = (rootReal: string, file: string): unknown => {
   assertOwnedRegularFile(rootReal, file);
-  return readJson(file);
-};
-
-const readJson = (file: string): unknown => {
+  let bytes: Uint8Array;
   try {
-    return JSON.parse(fs.readFileSync(file, "utf8")) as unknown;
+    bytes = readAutoMovieProductionOwnedFile({
+      root: rootReal,
+      directory: path.dirname(file),
+      relative: path.basename(file),
+    });
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") return undefined;
+    throw error;
+  }
+  try {
+    return JSON.parse(Buffer.from(bytes).toString("utf8")) as unknown;
+  } catch (error) {
     throw new Error(
       `Invalid AutoMovie JSON "${file}": ${String(error)}. Correct the file before continuing.`,
     );

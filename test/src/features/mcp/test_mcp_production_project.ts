@@ -219,6 +219,81 @@ export const test_mcp_production_project = (): void => {
         Buffer.from(sourceReadBytes).equals(sourceReadBefore),
     );
 
+    const projectManifestPath = path.join(
+      fixture.root,
+      ".automovie/manifest.json",
+    );
+    const trackedRevisionPath = path.join(
+      fixture.root,
+      ".automovie/productions/fixture-film/revision.json",
+    );
+    const stateReadResidents = new Map([
+      [projectManifestPath, fs.readFileSync(projectManifestPath)],
+      [trackedRevisionPath, fs.readFileSync(trackedRevisionPath)],
+    ]);
+    const expectedRevision = (
+      JSON.parse(stateReadResidents.get(trackedRevisionPath)!.toString()) as {
+        revision: number;
+      }
+    ).revision;
+    const statePathReads = new Set<string>();
+    const nativeStateRead = fs.readFileSync;
+    fs.readFileSync = ((
+      target: fs.PathOrFileDescriptor,
+      ...args: unknown[]
+    ): unknown => {
+      const resolved =
+        typeof target === "number" ? null : path.resolve(target.toString());
+      const resident =
+        resolved === null ? undefined : stateReadResidents.get(resolved);
+      if (resolved !== null && resident !== undefined) {
+        statePathReads.add(resolved);
+        const parked = `${resolved}.parked`;
+        fs.renameSync(resolved, parked);
+        fs.writeFileSync(
+          resolved,
+          resolved === trackedRevisionPath
+            ? JSON.stringify({ revision: expectedRevision + 1 })
+            : "transient replacement",
+        );
+        try {
+          return Reflect.apply(nativeStateRead, fs, [target, ...args]);
+        } finally {
+          fs.rmSync(resolved);
+          fs.renameSync(parked, resolved);
+        }
+      }
+      return Reflect.apply(nativeStateRead, fs, [target, ...args]);
+    }) as typeof fs.readFileSync;
+    let projectStateManifest = new Uint8Array();
+    let trackedRevision = new Uint8Array();
+    let currentRevision = -1;
+    try {
+      projectStateManifest = project.projectStateRecords().manifest;
+      trackedRevision = project.readTrackedStateFile("revision.json")!;
+      currentRevision = project.revision();
+    } finally {
+      fs.readFileSync = nativeStateRead;
+      for (const file of stateReadResidents.keys()) {
+        const parked = `${file}.parked`;
+        if (fs.existsSync(parked)) {
+          fs.rmSync(file, { force: true });
+          fs.renameSync(parked, file);
+        }
+      }
+    }
+    TestValidator.predicate(
+      "state reads bind raw records and JSON to verified descriptors across pathname swaps",
+      statePathReads.size === 0 &&
+        Buffer.from(projectStateManifest).equals(
+          stateReadResidents.get(projectManifestPath)!,
+        ) &&
+        Buffer.from(trackedRevision).equals(
+          stateReadResidents.get(trackedRevisionPath)!,
+        ) &&
+        currentRevision === expectedRevision,
+    );
+
     const invalidSchema = project.setModelRecipe(
       {} as ReturnType<typeof modelRecipe>,
     );
