@@ -44,6 +44,7 @@ import {
   planProductionRenderGc,
   planProductionRenderJob,
   probeProductionMedia,
+  probeProductionVideoMp4,
   productionPublicationInputFingerprint,
   productionRenderChunkStatuses,
   productionRenderLayersForPass,
@@ -588,11 +589,7 @@ const currentChunk = async (
   }
   try {
     const encoded = readRegularInside(directory, receipt.encoded.path);
-    const video = probeProductionMedia({
-      kind: chunk.kind,
-      mediaType: "video/mp4",
-      bytes: encoded,
-    });
+    const video = probeProductionVideoMp4(encoded);
     if (
       digestAutoMovieBytes(encoded) !== receipt.encoded.digest ||
       encoded.length !== receipt.encoded.bytes ||
@@ -764,11 +761,7 @@ const renderChunk = async (
   }, plan);
   const encodedPath = "chunk.mp4";
   writeFileAtomic(path.join(temporary, encodedPath), encodedBytes);
-  const encodedProbe = probeProductionMedia({
-    kind: chunk.kind,
-    mediaType: "video/mp4",
-    bytes: encodedBytes,
-  });
+  const encodedProbe = probeProductionVideoMp4(encodedBytes);
   if (
     encodedProbe.kind !== "video" ||
     encodedProbe.frameCount !== chunk.frames.length ||

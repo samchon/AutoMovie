@@ -10,7 +10,10 @@ import {
   createFile,
 } from "mp4box";
 
-import { probeProductionMedia } from "./probeProductionMedia";
+import {
+  probeProductionMedia,
+  probeProductionVideoMp4,
+} from "./probeProductionMedia";
 import { trimProductionAudioPresentation } from "./trimProductionAudioPresentation";
 
 /** Mux one parser-verified H.264 stream and one exact-runtime audio stream. */
@@ -18,11 +21,7 @@ export const muxProductionFeatureMp4 = (props: {
   video: Uint8Array;
   audio: Uint8Array;
 }): Uint8Array => {
-  const videoProbe = probeProductionMedia({
-    kind: "guide-pass",
-    mediaType: "video/mp4",
-    bytes: props.video,
-  });
+  const videoProbe = probeProductionVideoMp4(props.video);
   const audioProbe = probeProductionMedia({
     kind: "audio-mix",
     mediaType: "audio/mp4",
@@ -136,11 +135,7 @@ export const conformProductionRenditionVideoMp4 = (props: {
       "Repaint clip samples do not cover the exact current film timeline.",
     );
   const bytes = new Uint8Array(output.getBuffer().buffer);
-  const probe = probeProductionMedia({
-    kind: "guide-pass",
-    mediaType: "video/mp4",
-    bytes,
-  });
+  const probe = probeProductionVideoMp4(bytes);
   if (
     probe.kind !== "video" ||
     probe.frameCount !== props.timeline.totalFrames ||
@@ -350,7 +345,7 @@ export const assertProductionFeatureUsesRenditionVideo = (props: {
 
 interface IProductionRenditionClip {
   bytes: Uint8Array;
-  probe: Extract<ReturnType<typeof probeProductionMedia>, { kind: "video" }>;
+  probe: ReturnType<typeof probeProductionVideoMp4>;
   track: Track;
   samples: Sample[];
   sampleDuration: number;
@@ -428,11 +423,7 @@ const parseProductionRenditionClip = (
   bytes: Uint8Array,
   shot: string,
 ): IProductionRenditionClip => {
-  const probe = probeProductionMedia({
-    kind: "guide-pass",
-    mediaType: "video/mp4",
-    bytes,
-  });
+  const probe = probeProductionVideoMp4(bytes);
   const mp4 = parseMp4(bytes);
   const track = mp4.movie.videoTracks[0];
   const samples =

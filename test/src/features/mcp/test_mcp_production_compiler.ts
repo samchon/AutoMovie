@@ -2778,29 +2778,35 @@ export const film = {
     );
     const edgeFile = (id: string, kind: RenderedDeliverable["kind"]) => {
       const medium =
-        kind === "feature" || kind === "guide-pass"
+        kind === "feature"
           ? {
               extension: "mp4",
               bytes: featureBytes,
               mediaType: "video/mp4",
             }
-          : kind === "audio-mix"
+          : kind === "guide-pass"
             ? {
-                extension: "m4a",
-                bytes: edgeAudioBytes,
-                mediaType: "audio/mp4",
+                extension: "mp4",
+                bytes: featureVideoBytes,
+                mediaType: "video/mp4",
               }
-            : kind === "captions"
+            : kind === "audio-mix"
               ? {
-                  extension: "vtt",
-                  bytes: captionBytes,
-                  mediaType: "text/vtt",
+                  extension: "m4a",
+                  bytes: edgeAudioBytes,
+                  mediaType: "audio/mp4",
                 }
-              : {
-                  extension: "png",
-                  bytes: previewBytes,
-                  mediaType: "image/png",
-                };
+              : kind === "captions"
+                ? {
+                    extension: "vtt",
+                    bytes: captionBytes,
+                    mediaType: "text/vtt",
+                  }
+                : {
+                    extension: "png",
+                    bytes: previewBytes,
+                    mediaType: "image/png",
+                  };
       const relative = `deliverables/final-edges/${id}.${medium.extension}`;
       const absolute = path.join(
         fixture.root,

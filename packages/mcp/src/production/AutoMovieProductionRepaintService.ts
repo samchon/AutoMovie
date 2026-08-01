@@ -21,7 +21,7 @@ import {
   digestAutoMovieBytes,
 } from "./contentIdentity";
 import { assertProductionRenditionClipDelivery } from "./muxProductionFeatureMp4";
-import { probeProductionMedia } from "./probeProductionMedia";
+import { probeProductionVideoMp4 } from "./probeProductionMedia";
 import { readAutoMovieProductionRegistry } from "./productionRegistry";
 import {
   canonicalAutoMovieRepaintRuntimeIdentity,
@@ -247,18 +247,14 @@ export class AutoMovieProductionRepaintService {
         "Compiler registry or deterministic source pixels changed while repaint was running. Discard the mixed result and retry from current evidence.",
       );
     let adapterIdentity: string;
-    let probe: ReturnType<typeof probeProductionMedia>;
+    let probe: ReturnType<typeof probeProductionVideoMp4>;
     try {
       if (generated.mediaType !== "video/mp4" || generated.bytes.length === 0)
         throw new Error("the adapter did not return non-empty video/mp4 bytes");
       adapterIdentity = canonicalAutoMovieRepaintRuntimeIdentity(
         generated.runtimeIdentity,
       );
-      probe = probeProductionMedia({
-        kind: "guide-pass",
-        mediaType: generated.mediaType,
-        bytes: generated.bytes,
-      });
+      probe = probeProductionVideoMp4(generated.bytes);
       if (
         probe.kind !== "video" ||
         probe.width !== expectedOutput.width ||

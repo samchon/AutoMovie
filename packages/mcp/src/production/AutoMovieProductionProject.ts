@@ -36,7 +36,10 @@ import {
   encodeAutoMoviePathSegment,
 } from "./contentIdentity";
 import { assertProductionRenditionClipDelivery } from "./muxProductionFeatureMp4";
-import { probeProductionMedia } from "./probeProductionMedia";
+import {
+  probeProductionMedia,
+  probeProductionVideoMp4,
+} from "./probeProductionMedia";
 import {
   canonicalAutoMovieRepaintRuntimeIdentity,
   productionRepaintActiveReceiptPath,
@@ -1826,11 +1829,7 @@ export class AutoMovieProductionProject {
       receipt.output.bytes !== bytes.length
     )
       throw new Error("Stored repaint output identity is invalid.");
-    const probe = probeProductionMedia({
-      kind: "guide-pass",
-      mediaType: "video/mp4",
-      bytes,
-    });
+    const probe = probeProductionVideoMp4(bytes);
     const graph = this.graph();
     const production = graph.production;
     const shot = graph.shots.get(receipt.shot);

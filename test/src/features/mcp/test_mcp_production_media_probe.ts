@@ -1,6 +1,7 @@
 import {
   muxProductionFeatureMp4,
   probeProductionMedia,
+  probeProductionVideoMp4,
   trimProductionAudioPresentation,
 } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
@@ -373,7 +374,7 @@ export const test_mcp_production_media_probe = async (): Promise<void> => {
     bytes: video,
   });
   TestValidator.predicate(
-    "the feature probe derives H.264 geometry and frame timing",
+    "the guide probe derives H.264 geometry and frame timing",
     videoProbe.kind === "video" &&
       videoProbe.container === "mp4" &&
       videoProbe.codec === "h264" &&
@@ -410,6 +411,15 @@ export const test_mcp_production_media_probe = async (): Promise<void> => {
         }),
       "exactly 2",
     ),
+  );
+  TestValidator.predicate(
+    "the intermediate production-video probe accepts only H.264-only MP4",
+    probeProductionVideoMp4(video).frameCount === 4 &&
+      refused(() => probeProductionVideoMp4(featureBytes), "exactly one") &&
+      refused(
+        () => probeProductionVideoMp4(productionOpusMp4(8_000)),
+        "0 video tracks",
+      ),
   );
   TestValidator.predicate(
     "feature mux refuses unequal track clocks",

@@ -151,40 +151,36 @@ export const probeProductionMedia = (props: {
       throw new Error(
         `${props.kind} output declares "${props.mediaType}", but encoded video deliverables require video/mp4 bytes.`,
       );
+    if (props.kind === "guide-pass")
+      return probeParsedProductionVideoMp4(props.bytes, parsed);
     if (movie.videoTracks.length !== 1)
       throw new Error(
         `MP4 contains ${movie.videoTracks.length} video tracks; exactly one is required.`,
       );
-    if (movie.tracks.length !== (props.kind === "feature" ? 2 : 1))
+    if (movie.tracks.length !== 2)
       throw new Error(
-        `${props.kind} MP4 contains ${movie.tracks.length} total tracks; exactly ${props.kind === "feature" ? 2 : 1} are required.`,
+        `feature MP4 contains ${movie.tracks.length} total tracks; exactly 2 are required.`,
       );
-    if (props.kind === "feature" && movie.audioTracks.length !== 1)
+    if (movie.audioTracks.length !== 1)
       throw new Error(
         `Feature MP4 contains ${movie.audioTracks.length} audio tracks; exactly one is required.`,
-      );
-    if (props.kind === "guide-pass" && movie.audioTracks.length !== 0)
-      throw new Error(
-        `Guide-pass MP4 contains ${movie.audioTracks.length} audio tracks; none are allowed.`,
       );
     const video = probeVideoTrack(
       props.bytes,
       parsed.file,
       movie.videoTracks[0]!,
     );
-    if (props.kind === "feature") {
-      const audio = probeAudioTrack(
-        props.bytes,
-        parsed.file,
-        movie.audioTracks[0]!,
-        movie,
+    const audio = probeAudioTrack(
+      props.bytes,
+      parsed.file,
+      movie.audioTracks[0]!,
+      movie,
+    );
+    if (video.runtimeSeconds !== audio.runtimeSeconds)
+      throw new Error(
+        "Feature MP4 video and audio tracks do not have exactly equal runtimes.",
       );
-      if (video.runtimeSeconds !== audio.runtimeSeconds)
-        throw new Error(
-          "Feature MP4 video and audio tracks do not have exactly equal runtimes.",
-        );
-      assertProductionAudioProfile(audio, "Feature MP4");
-    }
+    assertProductionAudioProfile(audio, "Feature MP4");
     return video;
   }
   if (props.mediaType !== "audio/mp4")
@@ -211,6 +207,27 @@ export const probeProductionMedia = (props: {
   );
   assertProductionAudioProfile(audio, "Audio-mix MP4");
   return audio;
+};
+
+/** Parse one H.264-only intermediate production video. */
+export const probeProductionVideoMp4 = (
+  bytes: Uint8Array,
+): Extract<IAutoMovieProductionMediaProbe, { kind: "video" }> =>
+  probeParsedProductionVideoMp4(bytes, parseMp4(bytes));
+
+const probeParsedProductionVideoMp4 = (
+  bytes: Uint8Array,
+  parsed: { file: ReturnType<typeof createFile>; movie: Movie },
+): Extract<IAutoMovieProductionMediaProbe, { kind: "video" }> => {
+  if (parsed.movie.videoTracks.length !== 1)
+    throw new Error(
+      `Production video MP4 contains ${parsed.movie.videoTracks.length} video tracks; exactly one is required.`,
+    );
+  if (parsed.movie.tracks.length !== 1)
+    throw new Error(
+      `Production video MP4 contains ${parsed.movie.tracks.length} total tracks; exactly one is required.`,
+    );
+  return probeVideoTrack(bytes, parsed.file, parsed.movie.videoTracks[0]!);
 };
 
 const probeAudioTrack = (

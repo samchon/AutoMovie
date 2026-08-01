@@ -329,6 +329,7 @@ export const test_cli_scaffold = (): void => {
       files["scripts/render.ts"]!.includes("runProductionRenderJob") &&
       files["scripts/render.ts"]!.includes("commitProductionPublication") &&
       files["scripts/render.ts"]!.includes("probeProductionMedia") &&
+      files["scripts/render.ts"]!.includes("probeProductionVideoMp4") &&
       files["scripts/render.ts"]!.includes("deriveProductionSoundPlan") &&
       files["scripts/render.ts"]!.includes("KokoroTTS.from_pretrained") &&
       files["scripts/render.ts"]!.includes("KOKORO_MODEL_REVISION") &&

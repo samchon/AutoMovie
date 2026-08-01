@@ -82,7 +82,7 @@ export interface IAutoMovieProductionRenderChunk {
   id: AutoMovieContentDigest;
   /** Production deliverable id that owns the completed range. */
   deliverable: string;
-  /** Encoded moving-image class used by the parser probe. */
+  /** Final moving-image deliverable class that owns this video-only chunk. */
   kind: "feature" | "guide-pass";
   /** Beauty or the one structural pass declared for this range. */
   pass: AutoMovieGuidePass;
