@@ -1206,10 +1206,13 @@ export default {
     900_000,
   );
   run("test packaged starter", "npm test", starterDir);
+  // First publication acquires the pinned Kokoro model, runs CPU ONNX
+  // synthesis, encodes Opus and muxes the proxy on an otherwise cold runner.
   run(
     "publish packaged starter proxy review evidence",
     "npm run render -- all --tier proxy",
     starterDir,
+    900_000,
   );
   runExpectedFailure(
     "enforce packaged starter final review gate",
