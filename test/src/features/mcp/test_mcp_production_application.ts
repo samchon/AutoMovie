@@ -497,6 +497,15 @@ export const test_mcp_production_application = async (): Promise<void> => {
         pass: "pose",
       },
     });
+    const signalMask = await application.captureFrame({
+      target: {
+        kind: "shot",
+        productionId: "fixture-film",
+        id: "opening",
+        time: 2,
+        pass: "mask",
+      },
+    });
     const assetTurntable = await application.captureFrame({
       target: {
         kind: "asset",
@@ -623,7 +632,11 @@ export const test_mcp_production_application = async (): Promise<void> => {
         ),
     );
 
-    const frameGrid: IAutoMovieCaptureFrame[] = [firstBeauty, firstPose];
+    const frameGrid: IAutoMovieCaptureFrame[] = [
+      firstBeauty,
+      firstPose,
+      signalMask,
+    ];
     for (let index = 1; index < 12; ++index)
       for (const pass of ["beauty", "pose"] as const)
         frameGrid.push(
@@ -638,8 +651,8 @@ export const test_mcp_production_application = async (): Promise<void> => {
           }),
         );
     TestValidator.predicate(
-      "repaint source evidence covers every beauty and structural frame",
-      frameGrid.length === 24 && frameGrid.every((capture) => capture.captured),
+      "repaint source evidence covers every beauty, pose and required mask frame",
+      frameGrid.length === 25 && frameGrid.every((capture) => capture.captured),
     );
 
     const shortRenditionBytes = await productionH264Mp4({
@@ -684,6 +697,16 @@ export const test_mcp_production_application = async (): Promise<void> => {
     const sourcePrepared = repainting.prepareReview({
       target: { kind: "shot", id: "opening" },
     });
+    TestValidator.predicate(
+      "repaint source preparation owns every declared review pass",
+      sourcePrepared.frames.length === 3 &&
+        ["beauty", "mask", "pose"].every((pass) =>
+          sourcePrepared.frames.some((frame) => frame.pass === pass),
+        ) &&
+        sourcePrepared.diagnostics.every(
+          (diagnostic) => diagnostic.category !== "error",
+        ),
+    );
     const frameEvidence = (frame: (typeof sourcePrepared.frames)[number]) => ({
       kind: "frame" as const,
       target: frame.target,
