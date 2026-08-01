@@ -1,5 +1,7 @@
 import type { IAutoMovieCaptureRuntimeIdentity } from "@automovie/interface";
 import { readAutoMovieProductionOwnedFile } from "@automovie/mcp";
+import { spawnSync } from "node:child_process";
+import { randomUUID } from "node:crypto";
 import { mkdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
@@ -41,14 +43,15 @@ export interface IAutoMovieCaptureInstallReceipt {
     | "PLAYWRIGHT_CHROMIUM_DOWNLOAD_HOST";
 }
 
-interface IPlaywrightBrowserRecord {
+export interface IPlaywrightBrowserRecord {
   name: string;
   revision: string;
   browserVersion: string;
 }
 
-interface IPlaywrightMetadata {
+export interface IPlaywrightMetadata {
   packageVersion: string;
+  cliDigest: `sha256:${string}`;
   cliPath: string;
   browser: IPlaywrightBrowserRecord;
   fingerprint: string;
@@ -109,6 +112,17 @@ const CAPTURE_PROTOCOL = "automovie.capture-runtime.v1";
 const BROWSER_NAME = "chromium";
 const REQUESTED_BACKEND = "angle:swiftshader";
 const DEVICE_SCALE_FACTOR = 1;
+const DESCRIPTOR_BOUND_CLI_LOADER = [
+  'const fs = require("node:fs");',
+  'const Module = require("node:module");',
+  'const path = require("node:path");',
+  "const filename = process.argv[1];",
+  'const source = fs.readFileSync(3, "utf8");',
+  "const entry = new Module(filename, module);",
+  "entry.filename = filename;",
+  "entry.paths = Module._nodeModulePaths(path.dirname(filename));",
+  "entry._compile(source, filename);",
+].join("\n");
 
 const browserStoragePath = (projectRoot: string): string => {
   const configured = process.env.PLAYWRIGHT_BROWSERS_PATH?.trim();
@@ -132,15 +146,20 @@ const loadPlaywright = async (
   return import("playwright");
 };
 
-const playwrightMetadata = (): IPlaywrightMetadata => {
+const capturePlaywrightMetadataOnce = (props?: {
+  corePackagePath: string;
+  playwrightEntry: string;
+}): IPlaywrightMetadata => {
   const playwright = snapshotRuntimePackage({
     assets: [{ kind: "file", relative: "cli.js" }],
-    entry: require.resolve("playwright"),
+    entry: props?.playwrightEntry ?? require.resolve("playwright"),
     packageName: "playwright",
   });
-  const corePackagePath = require.resolve("playwright-core/package.json", {
-    paths: [playwright.root],
-  });
+  const corePackagePath =
+    props?.corePackagePath ??
+    require.resolve("playwright-core/package.json", {
+      paths: [playwright.root],
+    });
   const core = snapshotRuntimePackage({
     assets: [{ kind: "file", relative: "browsers.json" }],
     entry: corePackagePath,
@@ -168,21 +187,39 @@ const playwrightMetadata = (): IPlaywrightMetadata => {
     );
   return {
     packageVersion: playwright.version,
+    cliDigest: cli.digest,
     cliPath: path.join(playwright.root, cli.path),
     browser,
     fingerprint: `${playwright.fingerprint}\0${core.fingerprint}`,
   };
 };
 
+/** Capture Playwright/core metadata only after a complete composite recheck. */
+export const capturePlaywrightMetadata = (props?: {
+  corePackagePath: string;
+  playwrightEntry: string;
+}): IPlaywrightMetadata => {
+  const first = capturePlaywrightMetadataOnce(props);
+  const confirmed = capturePlaywrightMetadataOnce(props);
+  if (samePlaywrightMetadata(first, confirmed) === false)
+    throw new Error("Installed Playwright metadata changed while captured.");
+  return first;
+};
+
+const samePlaywrightMetadata = (
+  left: IPlaywrightMetadata,
+  right: IPlaywrightMetadata,
+): boolean =>
+  left.fingerprint === right.fingerprint &&
+  left.cliDigest === right.cliDigest &&
+  left.cliPath === right.cliPath &&
+  left.packageVersion === right.packageVersion &&
+  left.browser.revision === right.browser.revision &&
+  left.browser.browserVersion === right.browser.browserVersion;
+
 const assertPlaywrightMetadata = (expected: IPlaywrightMetadata): void => {
-  const current = playwrightMetadata();
-  if (
-    current.fingerprint !== expected.fingerprint ||
-    current.cliPath !== expected.cliPath ||
-    current.packageVersion !== expected.packageVersion ||
-    current.browser.revision !== expected.browser.revision ||
-    current.browser.browserVersion !== expected.browser.browserVersion
-  )
+  const current = capturePlaywrightMetadata();
+  if (samePlaywrightMetadata(current, expected) === false)
     throw new Error("Installed Playwright metadata changed while it was used.");
 };
 
@@ -254,43 +291,92 @@ export const readCaptureInstallReceipt = (
   }
 };
 
-const writeReceipt = (
+/** Publish a receipt only after its final provenance validation succeeds. */
+export const publishCaptureInstallReceipt = (
   projectRoot: string,
   receipt: IAutoMovieCaptureInstallReceipt,
+  assertCurrent: () => void,
 ): void => {
   const file = receiptPath(projectRoot);
   mkdirSync(path.dirname(file), { recursive: true });
-  const temporary = `${file}.${process.pid}.tmp`;
+  const temporary = `${file}.${process.pid}.${randomUUID()}.tmp`;
   try {
-    writeFileSync(temporary, `${JSON.stringify(receipt, null, 2)}\n`);
+    writeFileSync(temporary, `${JSON.stringify(receipt, null, 2)}\n`, {
+      flag: "wx",
+    });
+    assertCurrent();
     renameSync(temporary, file);
   } finally {
     rmSync(temporary, { force: true });
   }
 };
 
+/** Run the exact captured CommonJS CLI bytes through an inherited descriptor. */
+export const runDescriptorBoundNodeCli = (props: {
+  args: readonly string[];
+  cliDigest: `sha256:${string}`;
+  cliPath: string;
+  cwd: string;
+  env: NodeJS.ProcessEnv;
+}): number | null => {
+  const cli = openCaptureExecutable(props.cliPath);
+  try {
+    if (cli.digest !== props.cliDigest)
+      throw new Error("Playwright CLI bytes differ from captured metadata.");
+    assertCaptureExecutable(cli);
+    const result = spawnSync(
+      process.execPath,
+      ["--eval", DESCRIPTOR_BOUND_CLI_LOADER, cli.path, ...props.args],
+      {
+        cwd: props.cwd,
+        env: props.env,
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "pipe", cli.descriptor],
+      },
+    );
+    assertCaptureExecutable(cli);
+    return result.status;
+  } finally {
+    closeCaptureExecutable(cli);
+  }
+};
+
+/** Revalidate one open executable on both sides of its launch call. */
+export const launchWithCaptureExecutableSnapshot = async <Output>(props: {
+  close: (output: Output) => Promise<void>;
+  launch: (executablePath: string) => Promise<Output>;
+  snapshot: ICaptureExecutableSnapshot;
+}): Promise<Output> => {
+  assertCaptureExecutable(props.snapshot);
+  const output = await props.launch(props.snapshot.path);
+  try {
+    assertCaptureExecutable(props.snapshot);
+    return output;
+  } catch (error) {
+    await props.close(output);
+    throw error;
+  }
+};
+
 export const installPackageOwnedChromium = async (
   projectRoot: string,
 ): Promise<IAutoMovieCaptureInstallReceipt> => {
-  const metadata = playwrightMetadata();
-  const { spawnSync } = await import("node:child_process");
+  const metadata = capturePlaywrightMetadata();
   process.stderr.write(
     `Installing Playwright Chromium revision ${metadata.browser.revision} into the configured browser store...\n`,
   );
-  const installed = spawnSync(
-    process.execPath,
-    [metadata.cliPath, "install", BROWSER_NAME, "--no-shell"],
-    {
-      cwd: projectRoot,
-      env: localBrowserEnvironment(projectRoot),
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "pipe"],
-    },
-  );
-  if (installed.status !== 0)
+  assertPlaywrightMetadata(metadata);
+  const installed = runDescriptorBoundNodeCli({
+    args: ["install", BROWSER_NAME, "--no-shell"],
+    cliDigest: metadata.cliDigest,
+    cliPath: metadata.cliPath,
+    cwd: projectRoot,
+    env: localBrowserEnvironment(projectRoot),
+  });
+  if (installed !== 0)
     throw new Error(
       `Playwright Chromium installation failed with status ${
-        installed.status ?? "signal"
+        installed ?? "signal"
       }. Check HTTPS_PROXY, PLAYWRIGHT_DOWNLOAD_HOST or PLAYWRIGHT_CHROMIUM_DOWNLOAD_HOST for your network or offline mirror, then retry npm run capture:install.`,
     );
   assertPlaywrightMetadata(metadata);
@@ -324,11 +410,10 @@ export const installPackageOwnedChromium = async (
           ? "PLAYWRIGHT_DOWNLOAD_HOST"
           : "playwright-cdn",
     };
-    assertCaptureExecutable(executable);
-    assertPlaywrightMetadata(metadata);
-    writeReceipt(projectRoot, receipt);
-    assertCaptureExecutable(executable);
-    assertPlaywrightMetadata(metadata);
+    publishCaptureInstallReceipt(projectRoot, receipt, () => {
+      assertCaptureExecutable(executable);
+      assertPlaywrightMetadata(metadata);
+    });
     return receipt;
   } finally {
     closeCaptureExecutable(executable);
@@ -376,7 +461,7 @@ export const launchCaptureBrowser = async (
   inputConfig: unknown,
 ): Promise<IAutoMovieCaptureBrowserSession> => {
   const config = parseCaptureBrowserConfig(inputConfig);
-  const metadata = playwrightMetadata();
+  const metadata = capturePlaywrightMetadata();
   const { chromium } = await loadPlaywright(projectRoot);
   let product: IAutoMovieCaptureRuntimeIdentity["browser"]["product"];
   let source: IAutoMovieCaptureRuntimeIdentity["browser"]["source"];
@@ -427,11 +512,21 @@ export const launchCaptureBrowser = async (
   }
   let browser: Browser;
   try {
-    browser = await chromium.launch({
-      ...launch,
-      headless: true,
-      args: ["--use-angle=swiftshader"],
-    });
+    const launchBrowser = (executablePath?: string): Promise<Browser> =>
+      chromium.launch({
+        ...launch,
+        ...(executablePath === undefined ? {} : { executablePath }),
+        headless: true,
+        args: ["--use-angle=swiftshader"],
+      });
+    browser =
+      executable === null
+        ? await launchBrowser()
+        : await launchWithCaptureExecutableSnapshot({
+            snapshot: executable,
+            launch: launchBrowser,
+            close: (opened) => opened.close(),
+          });
   } catch (error) {
     if (executable !== null) closeCaptureExecutable(executable);
     throw new Error(

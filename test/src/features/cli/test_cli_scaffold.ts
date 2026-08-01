@@ -85,7 +85,7 @@ type GeneratedViewerMiddleware = (
  * 12. Render GC deletes only its inventoried physical candidate and preserves a
  *     successor crossing the rename boundary under reserved quarantine.
  */
-export const test_cli_scaffold = (): void => {
+export const test_cli_scaffold = async (): Promise<void> => {
   // 5. packaging guard: the scaffold dir must be a published `files` entry.
   const scaffoldDir = scaffoldAssetDirectory();
   const cliPackage = JSON.parse(
@@ -362,7 +362,16 @@ export const test_cli_scaffold = (): void => {
       ) &&
       files["scripts/capture-browser.ts"]!.includes('"--no-shell"') &&
       files["scripts/capture-browser.ts"]!.includes(
-        'stdio: ["ignore", "pipe", "pipe"]',
+        'stdio: ["ignore", "pipe", "pipe", cli.descriptor]',
+      ) &&
+      files["scripts/capture-browser.ts"]!.includes(
+        "runDescriptorBoundNodeCli",
+      ) &&
+      files["scripts/capture-browser.ts"]!.includes(
+        "launchWithCaptureExecutableSnapshot",
+      ) &&
+      files["scripts/capture-browser.ts"]!.includes(
+        "publishCaptureInstallReceipt",
       ) &&
       files["scripts/capture-browser.ts"]!.includes(
         'installSource !== "PLAYWRIGHT_CHROMIUM_DOWNLOAD_HOST"',
@@ -1380,6 +1389,233 @@ export const test_cli_scaffold = (): void => {
       "capture executable snapshot rejects a byte-identical successor",
       captureExecutableSwapped && captureExecutableRaceRejected,
     );
+    const captureBrowserModule = createRequire(__filename)(
+      path.join(scaffoldDir, "scripts", "capture-browser.ts"),
+    ) as {
+      capturePlaywrightMetadata: (props: {
+        corePackagePath: string;
+        playwrightEntry: string;
+      }) => {
+        browser: { revision: string };
+        cliDigest: string;
+        packageVersion: string;
+      };
+      launchWithCaptureExecutableSnapshot: <Output>(props: {
+        close: (output: Output) => Promise<void>;
+        launch: (executablePath: string) => Promise<Output>;
+        snapshot: unknown;
+      }) => Promise<Output>;
+      publishCaptureInstallReceipt: (
+        projectRoot: string,
+        receipt: unknown,
+        assertCurrent: () => void,
+      ) => void;
+      readCaptureInstallReceipt: (projectRoot: string) => {
+        browser: { revision: string };
+        version: number;
+      };
+      runDescriptorBoundNodeCli: (props: {
+        args: readonly string[];
+        cliDigest: string;
+        cliPath: string;
+        cwd: string;
+        env: NodeJS.ProcessEnv;
+      }) => number | null;
+    };
+    const metadataRoot = path.join(base, "capture-metadata");
+    const playwrightRoot = path.join(metadataRoot, "playwright");
+    const playwrightEntry = path.join(playwrightRoot, "index.js");
+    const playwrightCli = path.join(playwrightRoot, "cli.js");
+    const coreRoot = path.join(metadataRoot, "playwright-core");
+    const coreManifest = path.join(coreRoot, "package.json");
+    const coreBrowsers = path.join(coreRoot, "browsers.json");
+    const playwrightCliBytes = Buffer.from("module.exports = 'cli';\n");
+    fs.mkdirSync(playwrightRoot, { recursive: true });
+    fs.mkdirSync(coreRoot, { recursive: true });
+    fs.writeFileSync(
+      path.join(playwrightRoot, "package.json"),
+      `${JSON.stringify({ name: "playwright", version: "1.2.3" })}\n`,
+    );
+    fs.writeFileSync(playwrightEntry, "module.exports = {};\n");
+    fs.writeFileSync(playwrightCli, playwrightCliBytes);
+    fs.writeFileSync(
+      coreManifest,
+      `${JSON.stringify({ name: "playwright-core", version: "1.2.3" })}\n`,
+    );
+    fs.writeFileSync(
+      coreBrowsers,
+      `${JSON.stringify({
+        browsers: [
+          {
+            name: "chromium",
+            revision: "123",
+            browserVersion: "123.0.0",
+          },
+        ],
+      })}\n`,
+    );
+    const metadataFixture = () =>
+      captureBrowserModule.capturePlaywrightMetadata({
+        corePackagePath: coreManifest,
+        playwrightEntry,
+      });
+    const metadataSnapshot = metadataFixture();
+    TestValidator.predicate(
+      "capture metadata revalidates Playwright, core, browsers and CLI together",
+      metadataSnapshot.packageVersion === "1.2.3" &&
+        metadataSnapshot.browser.revision === "123" &&
+        metadataSnapshot.cliDigest === fixtureDigest(playwrightCliBytes),
+    );
+    const parkedPlaywrightCli = `${playwrightCli}.parked`;
+    let compositeMetadataSwapped = false;
+    mutableFs.lstatSync = ((file, ...args: unknown[]): unknown => {
+      const status = Reflect.apply(nativeLstat, mutableFs, [file, ...args]);
+      if (
+        compositeMetadataSwapped === false &&
+        path.resolve(file.toString()) === coreManifest
+      ) {
+        fs.renameSync(playwrightCli, parkedPlaywrightCli);
+        fs.writeFileSync(playwrightCli, playwrightCliBytes);
+        compositeMetadataSwapped = true;
+      }
+      return status;
+    }) as typeof fs.lstatSync;
+    let compositeMetadataRaceRejected = false;
+    try {
+      compositeMetadataRaceRejected = throws(metadataFixture);
+    } finally {
+      mutableFs.lstatSync = nativeLstat;
+      if (fs.existsSync(parkedPlaywrightCli)) {
+        fs.rmSync(playwrightCli, { force: true });
+        fs.renameSync(parkedPlaywrightCli, playwrightCli);
+      }
+    }
+    TestValidator.predicate(
+      "capture metadata rejects a CLI successor between package snapshots",
+      compositeMetadataSwapped && compositeMetadataRaceRejected,
+    );
+    const coreBrowserBytes = fs.readFileSync(coreBrowsers);
+    const parkedCoreBrowsers = `${coreBrowsers}.parked`;
+    let coreBrowsersSwapped = false;
+    mutableFs.lstatSync = ((file, ...args: unknown[]): unknown => {
+      const status = Reflect.apply(nativeLstat, mutableFs, [file, ...args]);
+      if (
+        coreBrowsersSwapped === false &&
+        path.resolve(file.toString()) === coreBrowsers
+      ) {
+        fs.renameSync(coreBrowsers, parkedCoreBrowsers);
+        fs.writeFileSync(coreBrowsers, coreBrowserBytes);
+        coreBrowsersSwapped = true;
+      }
+      return status;
+    }) as typeof fs.lstatSync;
+    let coreBrowsersRaceRejected = false;
+    try {
+      coreBrowsersRaceRejected = throws(metadataFixture);
+    } finally {
+      mutableFs.lstatSync = nativeLstat;
+      if (fs.existsSync(parkedCoreBrowsers)) {
+        fs.rmSync(coreBrowsers, { force: true });
+        fs.renameSync(parkedCoreBrowsers, coreBrowsers);
+      }
+    }
+    TestValidator.predicate(
+      "capture metadata rejects a core browsers successor while captured",
+      coreBrowsersSwapped && coreBrowsersRaceRejected,
+    );
+    const descriptorCli = path.join(base, "descriptor-cli.cjs");
+    const descriptorCliMarker = path.join(base, "descriptor-cli.marker");
+    const descriptorCliBytes = Buffer.from(
+      [
+        'const fs = require("node:fs");',
+        'if (process.env.PLAYWRIGHT_BROWSERS_PATH !== "0") process.exit(17);',
+        'fs.writeFileSync(process.argv[2], "captured-cli");',
+      ].join("\n"),
+    );
+    fs.writeFileSync(descriptorCli, descriptorCliBytes);
+    const descriptorCliStatus = captureBrowserModule.runDescriptorBoundNodeCli({
+      args: [descriptorCliMarker],
+      cliDigest: fixtureDigest(descriptorCliBytes),
+      cliPath: descriptorCli,
+      cwd: base,
+      env: { ...process.env, PLAYWRIGHT_BROWSERS_PATH: "0" },
+    });
+    TestValidator.predicate(
+      "capture install executes exact CLI bytes with package-local browser storage",
+      descriptorCliStatus === 0 &&
+        fs.readFileSync(descriptorCliMarker, "utf8") === "captured-cli",
+    );
+    const descriptorCliParked = `${descriptorCli}.parked`;
+    const descriptorBoundaryBytes = Buffer.from(
+      [
+        'const fs = require("node:fs");',
+        "fs.renameSync(__filename, `${__filename}.parked`);",
+        `fs.writeFileSync(__filename, ${JSON.stringify("process.exit(29);\n")});`,
+        'fs.writeFileSync(process.argv[2], "captured-cli");',
+      ].join("\n"),
+    );
+    fs.writeFileSync(descriptorCli, descriptorBoundaryBytes);
+    fs.rmSync(descriptorCliMarker, { force: true });
+    const descriptorBoundaryRejected = throws(() =>
+      captureBrowserModule.runDescriptorBoundNodeCli({
+        args: [descriptorCliMarker],
+        cliDigest: fixtureDigest(descriptorBoundaryBytes),
+        cliPath: descriptorCli,
+        cwd: base,
+        env: { ...process.env, PLAYWRIGHT_BROWSERS_PATH: "0" },
+      }),
+    );
+    TestValidator.predicate(
+      "capture install runs captured CLI bytes and rejects its pathname successor",
+      descriptorBoundaryRejected &&
+        fs.readFileSync(descriptorCliMarker, "utf8") === "captured-cli" &&
+        fs.existsSync(descriptorCliParked),
+    );
+    fs.rmSync(descriptorCli, { force: true });
+    fs.renameSync(descriptorCliParked, descriptorCli);
+    const launchExecutable = path.join(base, "launch-executable.bin");
+    fs.writeFileSync(launchExecutable, captureExecutableBytes);
+    const launchSnapshot =
+      captureExecutableModule.openCaptureExecutable(launchExecutable);
+    const launchedPath =
+      await captureBrowserModule.launchWithCaptureExecutableSnapshot({
+        snapshot: launchSnapshot,
+        launch: async (executablePath) => executablePath,
+        close: async () => undefined,
+      });
+    captureExecutableModule.closeCaptureExecutable(launchSnapshot);
+    TestValidator.predicate(
+      "capture launch accepts one unchanged executable snapshot",
+      launchedPath === launchExecutable,
+    );
+    const launchBoundarySnapshot =
+      captureExecutableModule.openCaptureExecutable(launchExecutable);
+    const parkedLaunchExecutable = `${launchExecutable}.parked`;
+    let rejectedLaunchClosed = false;
+    let launchBoundaryRejected = false;
+    try {
+      await captureBrowserModule.launchWithCaptureExecutableSnapshot({
+        snapshot: launchBoundarySnapshot,
+        launch: async () => {
+          fs.renameSync(launchExecutable, parkedLaunchExecutable);
+          fs.writeFileSync(launchExecutable, captureExecutableBytes);
+          return "opened";
+        },
+        close: async () => {
+          rejectedLaunchClosed = true;
+        },
+      });
+    } catch {
+      launchBoundaryRejected = true;
+    } finally {
+      captureExecutableModule.closeCaptureExecutable(launchBoundarySnapshot);
+      fs.rmSync(launchExecutable, { force: true });
+      fs.renameSync(parkedLaunchExecutable, launchExecutable);
+    }
+    TestValidator.predicate(
+      "capture launch closes and rejects an executable successor during launch",
+      launchBoundaryRejected && rejectedLaunchClosed,
+    );
     const captureProject = path.join(base, "capture-project");
     const captureReceipt = path.join(
       captureProject,
@@ -1387,30 +1623,23 @@ export const test_cli_scaffold = (): void => {
       "capture",
       "install-receipt.json",
     );
+    const captureReceiptValue = {
+      version: 1,
+      playwright: { package: "playwright", version: "1.2.3" },
+      browser: {
+        product: "chromium",
+        revision: "123",
+        version: "123.0.0",
+        executablePath: captureExecutable,
+        executableDigest: fixtureDigest(captureExecutableBytes),
+      },
+      installSource: "playwright-cdn",
+    } as const;
     const captureReceiptBytes = Buffer.from(
-      `${JSON.stringify({
-        version: 1,
-        playwright: { package: "playwright", version: "1.2.3" },
-        browser: {
-          product: "chromium",
-          revision: "123",
-          version: "123.0.0",
-          executablePath: captureExecutable,
-          executableDigest: fixtureDigest(captureExecutableBytes),
-        },
-        installSource: "playwright-cdn",
-      })}\n`,
+      `${JSON.stringify(captureReceiptValue)}\n`,
     );
     fs.mkdirSync(path.dirname(captureReceipt), { recursive: true });
     fs.writeFileSync(captureReceipt, captureReceiptBytes);
-    const captureBrowserModule = createRequire(__filename)(
-      path.join(scaffoldDir, "scripts", "capture-browser.ts"),
-    ) as {
-      readCaptureInstallReceipt: (projectRoot: string) => {
-        browser: { revision: string };
-        version: number;
-      };
-    };
     TestValidator.predicate(
       "capture install receipt is read through project-owned bytes",
       captureBrowserModule.readCaptureInstallReceipt(captureProject).version ===
@@ -1445,6 +1674,41 @@ export const test_cli_scaffold = (): void => {
     TestValidator.predicate(
       "capture install receipt rejects a byte-identical successor",
       captureReceiptSwapped && captureReceiptRaceRejected,
+    );
+    const nextCaptureReceipt = {
+      ...captureReceiptValue,
+      browser: { ...captureReceiptValue.browser, revision: "456" },
+    };
+    const failedReceiptPublication = throws(() =>
+      captureBrowserModule.publishCaptureInstallReceipt(
+        captureProject,
+        nextCaptureReceipt,
+        () => {
+          throw new Error("provenance changed");
+        },
+      ),
+    );
+    TestValidator.predicate(
+      "capture install preserves the prior receipt when final validation fails",
+      failedReceiptPublication &&
+        fs.readFileSync(captureReceipt).equals(captureReceiptBytes) &&
+        fs
+          .readdirSync(path.dirname(captureReceipt))
+          .every((name) => name.endsWith(".tmp") === false),
+    );
+    let receiptPublicationValidated = false;
+    captureBrowserModule.publishCaptureInstallReceipt(
+      captureProject,
+      nextCaptureReceipt,
+      () => {
+        receiptPublicationValidated = true;
+      },
+    );
+    TestValidator.predicate(
+      "capture install publishes only after its final provenance validation",
+      receiptPublicationValidated &&
+        captureBrowserModule.readCaptureInstallReceipt(captureProject).browser
+          .revision === "456",
     );
     const renderGcModule = createRequire(__filename)(
       path.join(scaffoldDir, "scripts", "renderGcSnapshot.ts"),
