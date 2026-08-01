@@ -214,7 +214,7 @@ export const test_mcp_production_project = (): void => {
       }
       return Reflect.apply(nativeSourceRead, fs, [target, ...args]);
     }) as typeof fs.readFileSync;
-    let sourceReadBytes = new Uint8Array();
+    let sourceReadBytes: Uint8Array = new Uint8Array();
     try {
       sourceReadBytes = project.readSource(sourceReadRelative);
     } finally {
@@ -276,8 +276,8 @@ export const test_mcp_production_project = (): void => {
       }
       return Reflect.apply(nativeStateRead, fs, [target, ...args]);
     }) as typeof fs.readFileSync;
-    let projectStateManifest = new Uint8Array();
-    let trackedRevision = new Uint8Array();
+    let projectStateManifest: Uint8Array = new Uint8Array();
+    let trackedRevision: Uint8Array = new Uint8Array();
     let currentRevision = -1;
     try {
       projectStateManifest = project.projectStateRecords().manifest;
@@ -928,7 +928,7 @@ export const test_mcp_production_project = (): void => {
       }
       return Reflect.apply(nativeGeneratedRead, fs, [target, ...args]);
     }) as typeof fs.readFileSync;
-    let generatedReadBytes = new Uint8Array();
+    let generatedReadBytes: Uint8Array = new Uint8Array();
     try {
       generatedReadBytes = project.readGeneratedFile("shots/opening.json");
     } finally {
