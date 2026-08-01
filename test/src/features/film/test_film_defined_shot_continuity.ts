@@ -1,5 +1,7 @@
 import {
   IAutoMovieActorContext,
+  IAutoMovieJointAxes,
+  IAutoMovieRestFrame,
   Quaternion,
   Vector3,
   compileDefinedShot,
@@ -9,13 +11,16 @@ import {
   resolvePose,
   sampleMotion,
   spaceGround,
+  validateFootSkate,
 } from "@automovie/engine";
 import {
+  AutoMovieHumanoidBone,
   IAutoMovieBeatEndState,
   IAutoMovieDefinedShotContract,
   IAutoMovieGait,
   IAutoMovieShotProgram,
   IAutoMovieSkeleton,
+  IAutoMovieTransform,
   IAutoMovieVector3,
 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
@@ -27,7 +32,13 @@ import {
   makeStagingWrite,
 } from "../internal/filmFixtures";
 import { createSkeleton, joint, makePose } from "../internal/fixtures";
-import { vclose } from "../internal/predicates";
+import { validationHasNoWarnings, vclose } from "../internal/predicates";
+
+const restAt = (x: number, y: number, z: number): IAutoMovieTransform => ({
+  translation: { x, y, z },
+  rotation: { x: 0, y: 0, z: 0, w: 1 },
+  scale: { x: 1, y: 1, z: 1 },
+});
 
 const WALK: IAutoMovieGait = {
   name: "walk",
@@ -118,20 +129,25 @@ const compileWalk = (props: {
   previous?: IAutoMovieBeatEndState;
   speed?: number;
   duration?: number | "auto";
+  gait?: IAutoMovieGait;
+  jointAxes?: Partial<Record<AutoMovieHumanoidBone, IAutoMovieJointAxes>>;
+  restFrames?: Partial<Record<AutoMovieHumanoidBone, IAutoMovieRestFrame>>;
 }) => {
   const speed = props.speed ?? 1;
+  const gait = props.gait ?? WALK;
   const contexts = new Map<string, IAutoMovieActorContext>([
     [
       "knightA",
       {
         skeleton: props.rig.id,
         rig: props.rig,
-        gaits: [WALK],
+        gaits: [gait],
         position: props.stage.actors[0]!.position,
         speed,
         facingDeg: props.stage.actors[0]!.facingDeg,
         eyeHeight: 1.6,
         restPose: makePose([]),
+        restFrames: props.restFrames,
       },
     ],
   ]);
@@ -158,6 +174,8 @@ const compileWalk = (props: {
       synthesize: makeActorSynthesizer(contexts, nodes),
       skeleton: (node) => (node === "knightA" ? props.rig : null),
       hasActorContext: (node) => node === "knightA",
+      jointAxes: (node) => (node === "knightA" ? props.jointAxes : undefined),
+      restFrames: (node) => (node === "knightA" ? props.restFrames : undefined),
       gaits: (node) => (node === "knightA" ? ["walk"] : undefined),
       frameFormat: { width: 1920, height: 1080 },
       previous: props.previous,
@@ -175,7 +193,9 @@ const compileWalk = (props: {
  * Scenarios include a flat legacy ground handoff, an airborne actor that must
  * not plant merely because its model foot is at y=0, and a translated,
  * 90-degree-facing actor whose plant is measured on a non-zero ramp and reused
- * by the next shot in the same world coordinates.
+ * by the next shot in the same world coordinates. A mirrored-axis, bent-rest
+ * rig also proves the public shot runtime carries its clinical mappings through
+ * the same planting pass.
  */
 export const test_film_defined_shot_continuity = (): void => {
   const rig = createSkeleton();
@@ -234,6 +254,112 @@ export const test_film_defined_shot_continuity = (): void => {
     )}`,
     firstPlantActor?.footPlants?.some((plant) => plant.foot === "leftFoot") ===
       true,
+  );
+
+  const clinicalRig: IAutoMovieSkeleton = {
+    id: "skeleton-1",
+    bones: [
+      {
+        bone: "hips",
+        parent: null,
+        rest: restAt(0, 0.8, 0),
+        constraint: null,
+      },
+      {
+        bone: "leftUpperLeg",
+        parent: "hips",
+        rest: restAt(0.1, 0, 0),
+        constraint: null,
+      },
+      {
+        bone: "leftLowerLeg",
+        parent: "leftUpperLeg",
+        rest: restAt(0, -0.4, 0.15),
+        constraint: null,
+      },
+      {
+        bone: "leftFoot",
+        parent: "leftLowerLeg",
+        rest: restAt(0, -0.4, -0.15),
+        constraint: null,
+      },
+    ],
+  };
+  const kneeRestFlexion = (2 * Math.atan2(0.15, 0.4) * 180) / Math.PI;
+  const clinicalJointAxes = {
+    leftLowerLeg: {
+      flexion: { x: -1, y: 0, z: 0 },
+      abduction: { x: 0, y: 0, z: 1 },
+      twist: { x: 0, y: -1, z: 0 },
+    },
+  } satisfies Partial<Record<AutoMovieHumanoidBone, IAutoMovieJointAxes>>;
+  const clinicalRestFrames = {
+    leftLowerLeg: {
+      flexion: { sign: -1, neutral: kneeRestFlexion },
+    },
+  } satisfies Partial<Record<AutoMovieHumanoidBone, IAutoMovieRestFrame>>;
+  const clinical = compileWalk({
+    id: "SB-PLANT-CLINICAL",
+    rig: clinicalRig,
+    stage: makeStagingWrite(),
+    target: { x: 0.2, y: 0, z: 0 },
+    speed: 0.2,
+    duration: 1,
+    gait: {
+      name: "walk",
+      period: 1,
+      limbs: [
+        {
+          bone: "leftUpperLeg",
+          phase: 0,
+          duty: 0.7,
+          amplitude: 0,
+        },
+        {
+          bone: "leftLowerLeg",
+          phase: 0,
+          duty: 0.7,
+          amplitude: 0,
+          neutral: kneeRestFlexion,
+        },
+      ],
+    },
+    jointAxes: clinicalJointAxes,
+    restFrames: clinicalRestFrames,
+  });
+  if (clinical.success === false)
+    throw new Error(
+      `Clinical gait shot compilation failed:\n${JSON.stringify(
+        clinical.diagnostics,
+        null,
+        2,
+      )}`,
+    );
+  const clinicalMotion = clinical.source.motions.find(
+    (motion) => (motion.gaitCycle ?? null) !== null,
+  )!;
+  const clinicalPlants = clinical.continuity.closing.actors.find(
+    (actor) => actor.node === "knightA",
+  )?.footPlants;
+  TestValidator.predicate(
+    "defined-shot planting preserves the actor clinical rig mappings",
+    clinicalPlants !== null &&
+      clinicalPlants !== undefined &&
+      clinicalPlants.length > 0 &&
+      validationHasNoWarnings(
+        "defined-shot clinical foot plant",
+        validateFootSkate({
+          motion: clinicalMotion,
+          skeleton: clinicalRig,
+          contacts: clinicalPlants.map((plant) => ({
+            bone: plant.foot,
+            start: plant.start,
+            end: plant.end,
+          })),
+          jointAxes: clinicalJointAxes,
+          restFrames: clinicalRestFrames,
+        }),
+      ),
   );
 
   const airborneStage = makeStagingWrite({

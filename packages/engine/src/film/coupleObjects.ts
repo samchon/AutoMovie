@@ -11,6 +11,7 @@ import {
 } from "@automovie/interface";
 
 import { HUMANOID_JOINT_AXES } from "../kinematics/humanoidJointAxes";
+import { IAutoMovieJointAxes } from "../kinematics/jointToQuaternion";
 import { IAutoMovieRestFrame } from "../rom/restFrame";
 import { ViolationCollector } from "../validation/violation";
 import { compileAttach } from "./compileAttach";
@@ -29,6 +30,9 @@ interface ICoupleContext {
   scene: IAutoMovieScene;
   motions: Record<string, IAutoMovieMotion>;
   skeleton: (node: string) => IAutoMovieSkeleton | null;
+  jointAxes?: (
+    node: string,
+  ) => Partial<Record<AutoMovieHumanoidBone, IAutoMovieJointAxes>> | undefined;
   restFrames?: (
     node: string,
   ) => Partial<Record<AutoMovieHumanoidBone, IAutoMovieRestFrame>> | undefined;
@@ -67,6 +71,9 @@ export const coupleObjects = (props: {
   scene: IAutoMovieScene;
   motions: Record<string, IAutoMovieMotion>;
   skeleton: (node: string) => IAutoMovieSkeleton | null;
+  jointAxes?: (
+    node: string,
+  ) => Partial<Record<AutoMovieHumanoidBone, IAutoMovieJointAxes>> | undefined;
   restFrames?: (
     node: string,
   ) => Partial<Record<AutoMovieHumanoidBone, IAutoMovieRestFrame>> | undefined;
@@ -80,6 +87,7 @@ export const coupleObjects = (props: {
     scene: props.scene,
     motions: props.motions,
     skeleton: props.skeleton,
+    jointAxes: props.jointAxes,
     restFrames: props.restFrames,
     duration: props.duration,
   };
@@ -228,7 +236,7 @@ const bakeAttachFollows = (
       start: job.action.start,
       duration: end - job.action.start,
       shotDuration: context.duration,
-      jointAxes: HUMANOID_JOINT_AXES,
+      jointAxes: context.jointAxes?.(job.action.parent) ?? HUMANOID_JOINT_AXES,
       restFrames: context.restFrames?.(job.action.parent),
     });
     keep(
@@ -290,7 +298,8 @@ const bakeMountFollow = (
       start: 0,
       duration: context.duration,
       shotDuration: context.duration,
-      jointAxes: HUMANOID_JOINT_AXES,
+      jointAxes:
+        context.jointAxes?.(mount.binding.parent) ?? HUMANOID_JOINT_AXES,
       restFrames: context.restFrames?.(mount.binding.parent),
     }),
   );

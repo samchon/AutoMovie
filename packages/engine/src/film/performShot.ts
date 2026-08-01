@@ -22,6 +22,7 @@ import {
 } from "@automovie/interface";
 
 import { armChainFault } from "../kinematics/armChainFault";
+import { IAutoMovieJointAxes } from "../kinematics/jointToQuaternion";
 import { Quaternion } from "../math/Quaternion";
 import { Vector3 } from "../math/Vector3";
 import { classifyLocomoteGroundDisplacement } from "../motion/locomote";
@@ -267,9 +268,12 @@ export namespace IAutoMoviePerformedShot {
  *   that has no skeleton (its clip skips ROM).
  * @param props.hasActorContext Optional actor-registry membership lookup. It
  *   keeps a missing context distinct from a present context with no rig.
+ * @param props.jointAxes Optional per-node clinical joint-axis lookup. Supply
+ *   the same axes the renderer/player uses so ground planting and attachment
+ *   baking read the rig through one basis.
  * @param props.restFrames Optional per-node clinical rest-frame lookup. Supply
- *   the same frame table the renderer/player uses so `attachTo` objectMotions
- *   ride the visible posed bone, not raw rig-space FK.
+ *   the same frame table the renderer/player uses so ground planting and
+ *   `attachTo` objectMotions read the visible pose, not raw rig-space FK.
  */
 export const performShot = (props: {
   script: IAutoMovieScript;
@@ -278,6 +282,9 @@ export const performShot = (props: {
   synthesize: IAutoMovieActionSynthesizer;
   skeleton: (node: string) => IAutoMovieSkeleton | null;
   hasActorContext?: (node: string) => boolean;
+  jointAxes?: (
+    node: string,
+  ) => Partial<Record<AutoMovieHumanoidBone, IAutoMovieJointAxes>> | undefined;
   restFrames?: (
     node: string,
   ) => Partial<Record<AutoMovieHumanoidBone, IAutoMovieRestFrame>> | undefined;
@@ -324,6 +331,7 @@ export const performShot = (props: {
     synthesize,
     skeleton,
     hasActorContext,
+    jointAxes,
     restFrames,
     targetAt: resolveLiveTarget,
     gaits,
@@ -1510,6 +1518,8 @@ export const performShot = (props: {
     const planted = plantStanceFeet({
       skeleton: rig,
       motion,
+      jointAxes: jointAxes?.(actor),
+      restFrames: restFrames?.(actor),
       ...(modelGround === null ? {} : { groundY: modelGround }),
       openingPlants: (priorPlants ?? []).map((plant) => ({
         foot: plant.foot,
@@ -1573,6 +1583,7 @@ export const performShot = (props: {
     scene: staged.scene,
     motions,
     skeleton,
+    jointAxes,
     restFrames,
     duration: performance.duration,
   });

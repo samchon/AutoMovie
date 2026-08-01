@@ -492,10 +492,9 @@ const plantedJoints = (
  * clip's root/torso motion rather than replacing it.
  *
  * `jointAxes` / `restFrames` decide the clinical convention the two deltas are
- * lowered into. The ground-IK pass omits them (legs sit on the default clinical
- * basis); the retarget contact pass supplies the target rig's own tables, which
- * is what lets an arm chain, whose humanoid axes are remapped, come back as
- * angles the same tables will re-read.
+ * lowered into. Canonical callers may omit them; ground-IK and retarget callers
+ * supply the rig's own tables when its basis or rest frame is non-canonical,
+ * which makes the resulting angles round-trip through the same FK convention.
  *
  * The returned `hinge` is the mid joint's world flexion axis under that same
  * zeroed chain. {@link fitChainToTarget} projects it onto the reach-normal plane

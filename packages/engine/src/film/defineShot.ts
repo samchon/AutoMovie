@@ -1,4 +1,5 @@
 import {
+  AutoMovieHumanoidBone,
   IAutoMovieBeatEndFootPlant,
   IAutoMovieBeatEndState,
   IAutoMovieCompiledContractRealization,
@@ -17,6 +18,7 @@ import {
   IAutoMovieWorldDesign,
 } from "@automovie/interface";
 
+import { IAutoMovieJointAxes } from "../kinematics/jointToQuaternion";
 import { IAutoMovieActionSynthesizer } from "../perform/compilePerformance";
 import { IAutoMovieCollisionResponse } from "../physics/collisionResponse";
 import { IAutoMovieRestFrame } from "../rom/restFrame";
@@ -115,17 +117,14 @@ export interface IAutoMovieShotRuntime {
   collisions?: readonly string[];
   /** Optional distinction between missing actor context and a rig-less actor. */
   hasActorContext?(node: string): boolean;
-  /** Optional clinical rest frames used by attachment baking. */
+  /** Optional clinical joint axes used by ground IK and attachment baking. */
+  jointAxes?(
+    node: string,
+  ): Partial<Record<AutoMovieHumanoidBone, IAutoMovieJointAxes>> | undefined;
+  /** Optional clinical rest frames used by ground IK and attachment baking. */
   restFrames?(
     node: string,
-  ):
-    | Partial<
-        Record<
-          import("@automovie/interface").AutoMovieHumanoidBone,
-          IAutoMovieRestFrame
-        >
-      >
-    | undefined;
+  ): Partial<Record<AutoMovieHumanoidBone, IAutoMovieRestFrame>> | undefined;
   /** Optional live point resolver for moving targets. */
   targetAt?(
     target: import("@automovie/interface").IAutoMovieActionTarget,
@@ -324,6 +323,7 @@ export const compileDefinedShot = <Context>(props: {
       synthesize: props.runtime.synthesize,
       skeleton: props.runtime.skeleton,
       hasActorContext: props.runtime.hasActorContext,
+      jointAxes: props.runtime.jointAxes,
       restFrames: props.runtime.restFrames,
       targetAt: props.runtime.targetAt,
       gaits: props.runtime.gaits,
