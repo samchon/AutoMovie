@@ -20,6 +20,7 @@ import {
   IAutoMovieShot,
 } from "@automovie/interface";
 import { renderPathStem } from "@automovie/render";
+import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -112,15 +113,19 @@ export class AutoMovieProject {
     public readonly root: string,
     private readonly rootDevice: string,
     private readonly rootInode: string,
+    assertNamespace: () => void,
   ) {
-    for (const dir of RESERVED_DIRS)
+    for (const dir of RESERVED_DIRS) {
+      assertNamespace();
       fs.mkdirSync(path.join(root, dir), { recursive: true });
+      assertNamespace();
+    }
     this.lastReadRevision_ = this.readRevision();
     const existing = readJson<unknown>(this.root, this.manifestPath);
     if (existing === null) {
       // A fresh project: create the manifest once.
       this.manifest = { version: 1, assets: [] };
-      writeJsonAtomic(this.manifestPath, this.manifest);
+      writeJsonAtomic(this.manifestPath, this.manifest, assertNamespace);
     } else {
       // Opening an existing project is a pure read, keep the parsed manifest
       // (unknown host/future fields and all) in memory without rewriting it, so
@@ -145,14 +150,20 @@ export class AutoMovieProject {
         const message = (error as Error).message;
         throw new AutoMovieProjectRootError(
           root,
-          message.includes("not a physical directory")
+          message ===
+            `Production project root "${root}" is not a physical directory.`
             ? "project root must be a directory, not a symbolic link, junction, or file"
             : message,
         );
       }
     })();
     try {
-      const project = new AutoMovieProject(root, lease.device, lease.inode);
+      const project = new AutoMovieProject(
+        root,
+        lease.device,
+        lease.inode,
+        () => assertProductionRootNamespaceLease(lease),
+      );
       assertProductionRootNamespaceLease(lease);
       return project;
     } finally {
@@ -285,14 +296,14 @@ export class AutoMovieProject {
     const stagedScenes = stageBeatSlices(scenes);
     const stagedShots = stageBeatSlices(shots);
     const stagedBeatEnds = stageBeatSlices(beatEnds);
-    this.commitCycle(() => {
+    this.commitCycle((assertNamespace) => {
       for (const { file, content } of staged)
         if (content === null) {
-          if (fs.existsSync(file)) fs.rmSync(file);
-        } else writeAtomic(file, content);
-      this.flushBeatSlices("scenes", stagedScenes);
-      this.flushBeatSlices("shots", stagedShots);
-      this.flushBeatSlices("beatEnds", stagedBeatEnds);
+          removeAtomic(file, assertNamespace);
+        } else writeAtomic(file, content, assertNamespace);
+      this.flushBeatSlices("scenes", stagedScenes, assertNamespace);
+      this.flushBeatSlices("shots", stagedShots, assertNamespace);
+      this.flushBeatSlices("beatEnds", stagedBeatEnds, assertNamespace);
     });
   }
 
@@ -314,13 +325,16 @@ export class AutoMovieProject {
   private flushBeatSlices(
     dir: string,
     staged: ReadonlyMap<string, string>,
+    assertNamespace: () => void,
   ): void {
     const base = path.join(this.root, dir);
+    assertNamespace();
     for (const name of fs.readdirSync(base))
       if (name.endsWith(".json") && !staged.has(name))
-        fs.rmSync(path.join(base, name));
+        removeAtomic(path.join(base, name), assertNamespace);
     for (const [name, content] of staged)
-      writeAtomic(path.join(base, name), content);
+      writeAtomic(path.join(base, name), content, assertNamespace);
+    assertNamespace();
   }
 
   /**
@@ -331,10 +345,11 @@ export class AutoMovieProject {
    * bump the monotonic revision. Every refusal happens BEFORE the first staged
    * byte lands.
    */
-  private commitCycle(flush: () => void): void {
-    this.withRootNamespace(() => {
+  private commitCycle(flush: (assertNamespace: () => void) => void): void {
+    this.withRootNamespace((assertNamespace) => {
       const token = acquireCommitLock(this.lockPath);
       try {
+        assertNamespace();
         const current = this.readRevision();
         if (current !== this.lastReadRevision_) {
           const base = this.lastReadRevision_;
@@ -343,26 +358,43 @@ export class AutoMovieProject {
             `another session committed to this project (on-disk revision ${current}; this session last synchronized at ${base}); nothing was written, re-read the current state (getSlate / nextSteps) and re-issue the call from that truth`,
           );
         }
-        flush();
-        this.lastReadRevision_ = current + 1;
-        writeJsonAtomic(this.revisionPath, {
-          revision: this.lastReadRevision_,
-        });
+        assertNamespace();
+        flush(assertNamespace);
+        assertNamespace();
+        const nextRevision = current + 1;
+        writeJsonAtomic(
+          this.revisionPath,
+          {
+            revision: nextRevision,
+          },
+          assertNamespace,
+        );
+        assertNamespace();
+        this.lastReadRevision_ = nextRevision;
       } finally {
-        releaseCommitLock(this.lockPath, token);
+        try {
+          assertNamespace();
+          releaseCommitLock(this.lockPath, token);
+        } catch {
+          releaseCommitLock(this.lockPath, token, { unlink: false });
+        }
       }
     });
   }
 
-  private withRootNamespace<T>(task: () => T): T {
+  private withRootNamespace<T>(task: (assertNamespace: () => void) => T): T {
     const lease = acquireProductionRootNamespace(this.root);
     try {
-      if (lease.device !== this.rootDevice || lease.inode !== this.rootInode)
-        throw new Error(
-          `AutoMovie project root "${this.root}" changed physical identity. Discard this project handle and open the physical project again.`,
-        );
-      const result = task();
-      assertProductionRootNamespaceLease(lease);
+      const assertNamespace = (): void => {
+        if (lease.device !== this.rootDevice || lease.inode !== this.rootInode)
+          throw new Error(
+            `AutoMovie project root "${this.root}" changed physical identity. Discard this project handle and open the physical project again.`,
+          );
+        assertProductionRootNamespaceLease(lease);
+      };
+      assertNamespace();
+      const result = task(assertNamespace);
+      assertNamespace();
       return result;
     } finally {
       releaseProductionRootNamespace(lease);
@@ -412,7 +444,9 @@ export class AutoMovieProject {
   public saveProp(spec: IAutoMovieMcpPropSpec): void {
     const file = path.join(this.root, "props", sliceFilename(spec.node));
     const content = serializeJson(spec);
-    this.commitCycle(() => writeAtomic(file, content));
+    this.commitCycle((assertNamespace) =>
+      writeAtomic(file, content, assertNamespace),
+    );
   }
 
   /**
@@ -464,8 +498,9 @@ export class AutoMovieProject {
       file: path.join(this.root, "actors", sliceFilename(spec.node)),
       content: serializeJson(spec),
     }));
-    this.commitCycle(() => {
-      for (const { file, content } of staged) writeAtomic(file, content);
+    this.commitCycle((assertNamespace) => {
+      for (const { file, content } of staged)
+        writeAtomic(file, content, assertNamespace);
     });
   }
 
@@ -479,9 +514,7 @@ export class AutoMovieProject {
   /** Remove ONE stored actor context's file; the caller checks existence. */
   public removeActor(node: string): void {
     const file = path.join(this.root, "actors", sliceFilename(node));
-    this.commitCycle(() => {
-      if (fs.existsSync(file)) fs.rmSync(file);
-    });
+    this.commitCycle((assertNamespace) => removeAtomic(file, assertNamespace));
   }
 
   private sliceCaseCollision(dir: string, node: string): string | null {
@@ -501,9 +534,7 @@ export class AutoMovieProject {
   /** Remove ONE stored prop spec's file; the caller checks existence first. */
   public removeProp(node: string): void {
     const file = path.join(this.root, "props", sliceFilename(node));
-    this.commitCycle(() => {
-      if (fs.existsSync(file)) fs.rmSync(file);
-    });
+    this.commitCycle((assertNamespace) => removeAtomic(file, assertNamespace));
   }
 
   /**
@@ -527,17 +558,18 @@ export class AutoMovieProject {
       assets: [...this.manifest.assets, normalized],
     };
     const manifestContent = serializeJson(next);
-    this.commitCycle(() => {
+    this.commitCycle((assertNamespace) => {
       if (bytes !== undefined) {
+        assertNamespace();
         if (fs.existsSync(absolute))
           throw new Error(
             `asset file "${normalized}" already exists; refusing to overwrite it`,
           );
-        fs.mkdirSync(path.dirname(absolute), { recursive: true });
-        writeAtomic(absolute, bytes);
+        writeAtomic(absolute, bytes, assertNamespace);
       }
+      writeAtomic(this.manifestPath, manifestContent, assertNamespace);
+      assertNamespace();
       this.manifest = next;
-      writeAtomic(this.manifestPath, manifestContent);
     });
     return normalized;
   }
@@ -1566,15 +1598,70 @@ const describeViolations = (
     .map((violation) => `${violation.path}: ${violation.expected}`)
     .join("; ");
 
-/** Atomic write: temp file in the same directory, then rename over. */
-const writeAtomic = (file: string, data: Uint8Array | string): void => {
-  const temp = `${file}.tmp`;
-  fs.writeFileSync(temp, data);
-  fs.renameSync(temp, file);
+/** Atomic write fenced before and after every resident namespace mutation. */
+const writeAtomic = (
+  file: string,
+  data: Uint8Array | string,
+  assertNamespace: () => void,
+): void => {
+  const temp = `${file}.tmp.${process.pid}.${randomUUID()}`;
+  let published = false;
+  try {
+    assertNamespace();
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    assertNamespace();
+    fs.writeFileSync(temp, data);
+    assertNamespace();
+    fs.renameSync(temp, file);
+    published = true;
+    assertNamespace();
+  } finally {
+    if (published === false)
+      try {
+        assertNamespace();
+        fs.rmSync(temp, { force: true });
+      } catch {
+        // A stale pathname must not clean a temporary file in a replacement
+        // namespace. The original physical root retains it for diagnosis.
+      }
+  }
 };
 
-const writeJsonAtomic = (file: string, value: unknown): void =>
-  writeAtomic(file, serializeJson(value));
+/** Remove through a fenced quarantine so a stale path is never unlinked. */
+const removeAtomic = (file: string, assertNamespace: () => void): void => {
+  const quarantine = `${file}.delete.${process.pid}.${randomUUID()}`;
+  assertNamespace();
+  try {
+    fs.renameSync(file, quarantine);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      assertNamespace();
+      return;
+    }
+    throw error;
+  }
+  try {
+    assertNamespace();
+    fs.rmSync(quarantine, { force: true });
+    assertNamespace();
+  } catch (error) {
+    try {
+      assertNamespace();
+      if (fs.existsSync(quarantine) && fs.existsSync(file) === false)
+        fs.renameSync(quarantine, file);
+      assertNamespace();
+    } catch {
+      // Never follow the quarantined name after the physical root changed.
+    }
+    throw error;
+  }
+};
+
+const writeJsonAtomic = (
+  file: string,
+  value: unknown,
+  assertNamespace: () => void,
+): void => writeAtomic(file, serializeJson(value), assertNamespace);
 
 /** The store's one JSON rendering (pretty, trailing newline). */
 const serializeJson = (value: unknown): string =>

@@ -49,6 +49,9 @@ const slateOf = (logline: string): IAutoMovieMcpWritableSlate => ({
  *    revision once (not once per actor) and both land together.
  * 5. A staging throw on any actor in the registry persists NOTHING and does not
  *    bump: the all-or-nothing guarantee the per-actor loop lacked.
+ * 6. Physical-root replacement after lock acquisition and during an atomic actor
+ *    write stops before publish, leaves the replacement untouched, and never
+ *    unlinks a copied resident token through the stale pathname.
  */
 export const test_mcp_project_transactions = (): void => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-txn-"));
@@ -177,6 +180,113 @@ export const test_mcp_project_transactions = (): void => {
       "the revision did not move on the failed actor save",
       JSON.parse(fs.readFileSync(revisionFile, "utf8")).revision,
       revAfterActors.revision,
+    );
+
+    const nativeWrite = fs.writeFileSync;
+    const lockParkedRoot = `${root}.lock-parked`;
+    let lockSwapped = false;
+    fs.writeFileSync = ((
+      file: fs.PathOrFileDescriptor,
+      ...args: unknown[]
+    ): unknown => {
+      const output = Reflect.apply(nativeWrite, fs, [file, ...args]);
+      if (
+        lockSwapped === false &&
+        typeof file !== "number" &&
+        path.resolve(file.toString()) === path.join(root, "revision.lock")
+      ) {
+        fs.renameSync(root, lockParkedRoot);
+        fs.mkdirSync(root);
+        Reflect.apply(nativeWrite, fs, [
+          path.join(root, "revision.lock"),
+          ...args,
+        ]);
+        lockSwapped = true;
+      }
+      return output;
+    }) as typeof fs.writeFileSync;
+    let lockSwapMessage = "";
+    try {
+      try {
+        a.saveActors([actorSpec("lockSwap")]);
+      } catch (error) {
+        lockSwapMessage = (error as Error).message;
+      }
+    } finally {
+      fs.writeFileSync = nativeWrite;
+    }
+    const replacementLockPreserved = fs.existsSync(
+      path.join(root, "revision.lock"),
+    );
+    fs.rmSync(root, { recursive: true, force: true });
+    fs.renameSync(lockParkedRoot, root);
+    fs.rmSync(path.join(root, "revision.lock"), { force: true });
+    TestValidator.predicate(
+      "a root swap after lock acquisition cannot unlink a copied replacement token",
+      lockSwapped &&
+        lockSwapMessage.includes("root identity or namespace fence changed") &&
+        replacementLockPreserved,
+    );
+
+    const operationParkedRoot = `${root}.operation-parked`;
+    let operationSwapped = false;
+    fs.writeFileSync = ((
+      file: fs.PathOrFileDescriptor,
+      ...args: unknown[]
+    ): unknown => {
+      const output = Reflect.apply(nativeWrite, fs, [file, ...args]);
+      if (
+        operationSwapped === false &&
+        typeof file !== "number" &&
+        path.dirname(path.resolve(file.toString())) ===
+          path.join(root, "actors") &&
+        path.basename(file.toString()).startsWith("rootSwap.json.tmp.")
+      ) {
+        fs.renameSync(root, operationParkedRoot);
+        fs.mkdirSync(root);
+        operationSwapped = true;
+      }
+      return output;
+    }) as typeof fs.writeFileSync;
+    let operationMessage = "";
+    try {
+      try {
+        a.saveActors([actorSpec("rootSwap")]);
+      } catch (error) {
+        operationMessage = (error as Error).message;
+      }
+    } finally {
+      fs.writeFileSync = nativeWrite;
+    }
+    const replacementStayedEmpty = fs.readdirSync(root).length === 0;
+    const originalLockPreserved = fs.existsSync(
+      path.join(operationParkedRoot, "revision.lock"),
+    );
+    const originalPublishPrevented =
+      fs.existsSync(
+        path.join(operationParkedRoot, "actors", "rootSwap.json"),
+      ) === false;
+    let replacementLeaseReacquired = false;
+    try {
+      AutoMovieProject.open(root).writableSlate();
+      replacementLeaseReacquired = true;
+    } catch {
+      replacementLeaseReacquired = false;
+    }
+    fs.rmSync(root, { recursive: true, force: true });
+    fs.renameSync(operationParkedRoot, root);
+    fs.rmSync(path.join(root, "revision.lock"), { force: true });
+    for (const file of fs.readdirSync(path.join(root, "actors")))
+      if (file.startsWith("rootSwap.json.tmp."))
+        fs.rmSync(path.join(root, "actors", file), { force: true });
+    TestValidator.predicate(
+      "an operation-time root swap cannot publish or release through the replacement",
+      operationSwapped &&
+        operationMessage.includes("root identity or namespace fence changed") &&
+        replacementStayedEmpty &&
+        originalLockPreserved &&
+        originalPublishPrevented &&
+        replacementLeaseReacquired,
     );
 
     const parkedRoot = `${root}.owner-parked`;

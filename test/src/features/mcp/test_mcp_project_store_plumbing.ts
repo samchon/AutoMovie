@@ -227,14 +227,17 @@ export const test_mcp_project_store_plumbing = (): void => {
     fs.rmSync(heldRoot, { recursive: true, force: true });
   }
 
-  // 5b. a non-EEXIST failure taking the commit lock propagates unchanged
+  // 5b. a live handle rejects its missing physical root before lock creation
   const goneRoot = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-gone-"));
   try {
     const project = AutoMovieProject.open(goneRoot);
     fs.rmSync(goneRoot, { recursive: true, force: true });
     TestValidator.predicate(
-      "a non-EEXIST lock-open error propagates unchanged",
-      throwsError(() => project.saveSlate(slateWith({ script })), ["ENOENT"]),
+      "a missing project root is rejected by the namespace fence",
+      throwsError(
+        () => project.saveSlate(slateWith({ script })),
+        ["project root", "not a physical directory"],
+      ),
     );
   } finally {
     fs.rmSync(goneRoot, { recursive: true, force: true });
