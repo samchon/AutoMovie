@@ -88,26 +88,22 @@ const readCommitLockSnapshot = (
 };
 
 const restoreQuarantinedLock = (quarantine: string, lockPath: string): void => {
-  let restored = false;
   try {
     fs.linkSync(quarantine, lockPath);
-    restored = true;
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "EEXIST") return;
     try {
       fs.copyFileSync(quarantine, lockPath, fs.constants.COPYFILE_EXCL);
-      restored = true;
     } catch {
       return;
     }
   }
-  if (restored)
-    try {
-      fs.rmSync(quarantine, { force: true });
-    } catch {
-      // The canonical foreign lock is restored; an extra hard link or backup
-      // is fail-closed evidence and must not endanger the resident owner.
-    }
+  try {
+    fs.rmSync(quarantine, { force: true });
+  } catch {
+    // The canonical foreign lock is restored; an extra hard link or backup
+    // is fail-closed evidence and must not endanger the resident owner.
+  }
 };
 
 /**
