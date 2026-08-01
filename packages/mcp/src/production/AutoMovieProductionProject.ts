@@ -771,6 +771,12 @@ export class AutoMovieProductionProject {
   /** Enumerate declared source, viewer, script and asset inputs safely. */
   public contentInputs(): IAutoMovieProductionContentInput[] {
     this.assertProjectRootIdentity();
+    const readContent = (physicalRoot: string, file: string): Uint8Array =>
+      readAutoMovieProductionOwnedFile({
+        root: physicalRoot,
+        directory: path.dirname(file),
+        relative: path.basename(file),
+      });
     const inputs = new Map<
       string,
       { bytes: Uint8Array | null; render: boolean; source: boolean }
@@ -823,7 +829,7 @@ export class AutoMovieProductionProject {
             );
           setInput(
             normalizeSlash(path.relative(this.root, absolute)),
-            fs.readFileSync(real),
+            readContent(physicalRoot, real),
             source,
             render,
           );
@@ -871,7 +877,7 @@ export class AutoMovieProductionProject {
         );
       setInput(
         normalizeSlash(relativeFile),
-        fs.readFileSync(real),
+        readContent(this.rootReal, real),
         false,
         true,
       );
@@ -894,7 +900,7 @@ export class AutoMovieProductionProject {
           );
         setInput(
           normalizeSlash(relativeFile),
-          fs.readFileSync(real),
+          readContent(this.rootReal, real),
           false,
           false,
         );

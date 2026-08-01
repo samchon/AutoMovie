@@ -1887,6 +1887,74 @@ export const test_mcp_production_project = (): void => {
             input.render,
         ),
     );
+    const contentReadResidents = new Map(
+      (
+        [
+          ["viewer/src/main.ts", "viewer/src/main.ts"],
+          ["automovie.config.ts", "automovie.config.ts"],
+          [".automovie/assets.json", ".automovie/assets.json"],
+        ] as const
+      ).map(([file, relative]) => {
+        const absolute = fs.realpathSync(path.join(contentFixture.root, file));
+        return [
+          absolute,
+          { relative, bytes: fs.readFileSync(absolute) },
+        ] as const;
+      }),
+    );
+    const contentPathReads = new Set<string>();
+    const nativeContentRead = fs.readFileSync;
+    fs.readFileSync = ((
+      target: fs.PathOrFileDescriptor,
+      ...args: unknown[]
+    ): unknown => {
+      const resolved =
+        typeof target === "number" ? null : path.resolve(target.toString());
+      const resident =
+        resolved === null ? undefined : contentReadResidents.get(resolved);
+      if (resolved !== null && resident !== undefined) {
+        contentPathReads.add(resolved);
+        const parked = `${resolved}.parked`;
+        fs.renameSync(resolved, parked);
+        fs.writeFileSync(resolved, "transient content bytes");
+        try {
+          return Reflect.apply(nativeContentRead, fs, [target, ...args]);
+        } finally {
+          fs.rmSync(resolved);
+          fs.renameSync(parked, resolved);
+        }
+      }
+      return Reflect.apply(nativeContentRead, fs, [target, ...args]);
+    }) as typeof fs.readFileSync;
+    let boundContentInputs: ReturnType<
+      AutoMovieProductionProject["contentInputs"]
+    > = [];
+    try {
+      boundContentInputs = contentProject.contentInputs();
+    } finally {
+      fs.readFileSync = nativeContentRead;
+      for (const file of contentReadResidents.keys()) {
+        const parked = `${file}.parked`;
+        if (fs.existsSync(parked)) {
+          fs.rmSync(file, { force: true });
+          fs.renameSync(parked, file);
+        }
+      }
+    }
+    TestValidator.predicate(
+      "declared content reads bind rooted, direct, and asset bytes to verified descriptors",
+      contentPathReads.size === 0 &&
+        [...contentReadResidents.values()].every((resident) => {
+          const input = boundContentInputs.find(
+            (candidate) => candidate.path === resident.relative,
+          );
+          return (
+            input?.bytes !== null &&
+            input?.bytes !== undefined &&
+            Buffer.from(input.bytes).equals(resident.bytes)
+          );
+        }),
+    );
     const outsideContent = fs.mkdtempSync(
       path.join(os.tmpdir(), "automovie-content-junction-"),
     );
