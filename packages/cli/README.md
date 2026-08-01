@@ -36,6 +36,7 @@ npm run capture:install
 npm run capture:doctor
 npm run build
 npm test
+npm run lint:source
 npm run preview -- --shot opening --time 2 --pass beauty
 npm run review:status
 # Complete the current evidence-bound MCP review, then:
@@ -48,12 +49,14 @@ npm run viewer
 The viewer listens at `http://127.0.0.1:5173`. The initial review-bound
 commands may stop at their named gate until the starter evidence is reviewed.
 
-`npm run compile` is the only command allowed to materialize `generated` output.
-`npm run lint` is stricter: it reruns compilation without writing and fails until
-every current design, source, shot, and film review is complete. `preview`
-captures the project-owned viewer and records a frame tied to target-local
-generated/viewer inputs and the renderer identity; review cannot complete
-against an arbitrary or stale screenshot.
+`npm run lint:source` type-checks source and runs the registered lint
+contributors without changing project state. `npm run compile` is the only
+command allowed to materialize `generated` output. `npm run lint` runs source
+lint first and is stricter: it reruns production compilation without writing and
+fails until every current design, source, shot, and film review is complete.
+`preview` captures the project-owned viewer and records a frame tied to
+target-local generated/viewer inputs and the renderer identity; review cannot
+complete against an arbitrary or stale screenshot.
 
 `npm run verify` is the read-only final gate. It reopens compiler-owned bytes,
 review state, render receipts, and delivery media and refuses damaged output or

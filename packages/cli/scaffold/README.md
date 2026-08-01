@@ -41,6 +41,7 @@ npm run capture:install
 npm run capture:doctor
 npm run build
 npm test
+npm run lint:source
 npm run lint
 npm run verify
 npm run preview -- --shot opening --time 2 --pass beauty
@@ -209,8 +210,10 @@ seek, and capture counts so throughput improvements remain measurable.
 - `generated`: compiler-owned; never edit
 - `renders`: content-addressed outputs; never pass an arbitrary screenshot as review evidence
 
-`npm run lint` type-checks source and runs the production compiler through the
-review gate in read-only mode. It deliberately fails while any design, source,
-shot, or film review is missing, stale, revising, or incomplete. `npm run compile`
-is the narrower source gate and the only command that may update generated
+`npm run lint:source` type-checks source and runs the registered `@ttsc/lint`
+contributors without modifying project state. `npm run lint` runs that source
+lint first, then runs the production compiler through the review gate in
+read-only mode. It deliberately fails while any design, source, shot, or film
+review is missing, stale, revising, or incomplete. `npm run compile` is the
+narrower production source gate and the only command that may update generated
 output.

@@ -14,7 +14,7 @@ const automovie = {
 
 /**
  * `@ttsc/lint` config for this automovie project, applied automatically by
- * `ttsc` (`npm run lint` runs `ttsc --noEmit`) and autofixed by `npm run
+ * `ttsc` (`npm run lint:source` runs `ttsc --noEmit`) and autofixed by `npm run
  * format` (`ttsc format`). The engine is the arbiter of physical truth at
  * runtime; this config is the arbiter of code health at build time.
  *

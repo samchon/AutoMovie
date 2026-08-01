@@ -1090,7 +1090,7 @@ if (
   try {
     runExpectedFailure(
       "fire packaged template-sentinel contributor",
-      "npm exec -- ttsc --noEmit -p tsconfig.json",
+      "npm run lint:source",
       starterDir,
       "Template sentinel 'AUTOMOVIE_IMPLEMENT_ME' remains in compiled source.",
       900_000,

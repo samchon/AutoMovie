@@ -29,13 +29,15 @@ export const test_cli_create_automovie = (): void => {
       status === 0 &&
         pkg.scripts?.build === "npm run compile" &&
         pkg.scripts?.lint ===
-          "ttsc --noEmit -p tsconfig.json && ttsx -P tsconfig.json scripts/lint.ts" &&
+          "npm run lint:source && ttsx -P tsconfig.json scripts/lint.ts" &&
+        pkg.scripts?.["lint:source"] === "ttsc --noEmit -p tsconfig.json" &&
         pkg.scripts?.verify === "tsx scripts/verify.ts" &&
         typeof pkg.scripts?.render === "string" &&
         typeof pkg.scripts?.viewer === "string" &&
         typeof pkg.scripts?.["capture:doctor"] === "string" &&
         fs.existsSync(path.join(target, ".mcp.json")) &&
         fs.existsSync(path.join(target, "automovie.mcp.jsonc")) === false &&
+        readme.includes("npm run lint:source") &&
         readme.includes("npm run lint") &&
         readme.includes("npm run verify") &&
         readme.includes("render all --tier proxy") &&

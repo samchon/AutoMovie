@@ -369,7 +369,10 @@ export const test_cli_scaffold = (): void => {
       files[".gitignore"]!.includes("!.automovie/reviews/**") &&
       files["package.json"]!.includes('"build": "npm run compile"') &&
       files["package.json"]!.includes(
-        '"lint": "ttsc --noEmit -p tsconfig.json && ttsx -P tsconfig.json scripts/lint.ts"',
+        '"lint": "npm run lint:source && ttsx -P tsconfig.json scripts/lint.ts"',
+      ) &&
+      files["package.json"]!.includes(
+        '"lint:source": "ttsc --noEmit -p tsconfig.json"',
       ) &&
       files["package.json"]!.includes('"verify": "tsx scripts/verify.ts"') &&
       files["scripts/verify.ts"]!.includes('.lint({ scope: "final" })') &&
