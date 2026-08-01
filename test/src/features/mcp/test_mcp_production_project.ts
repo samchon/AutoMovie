@@ -1049,6 +1049,64 @@ export const test_mcp_production_project = (): void => {
       files: retained,
     };
     ownerProject.commitGenerated(retainedBytes, smaller);
+    const stableGeneratedRevision = ownerProject.revision();
+    const generatedManifestPath = path.join(
+      fixture.root,
+      ".automovie/productions/fixture-film/generated-manifest.json",
+    );
+    const generatedManifestBefore = fs.readFileSync(generatedManifestPath);
+    const generatedManifestParked = `${generatedManifestPath}.read-parked`;
+    const nativeGeneratedManifestRead = fs.readFileSync;
+    let generatedManifestPathRead = false;
+    fs.readFileSync = ((
+      target: fs.PathOrFileDescriptor,
+      ...args: unknown[]
+    ): unknown => {
+      if (
+        typeof target !== "number" &&
+        path.resolve(target.toString()) === path.resolve(generatedManifestPath)
+      ) {
+        generatedManifestPathRead = true;
+        fs.renameSync(generatedManifestPath, generatedManifestParked);
+        fs.writeFileSync(generatedManifestPath, "transient generated manifest");
+        try {
+          return Reflect.apply(nativeGeneratedManifestRead, fs, [
+            target,
+            ...args,
+          ]);
+        } finally {
+          fs.rmSync(generatedManifestPath);
+          fs.renameSync(generatedManifestParked, generatedManifestPath);
+        }
+      }
+      return Reflect.apply(nativeGeneratedManifestRead, fs, [target, ...args]);
+    }) as typeof fs.readFileSync;
+    let stableGeneratedCommitRejected = false;
+    let repeatedGeneratedRevision = -1;
+    try {
+      repeatedGeneratedRevision = ownerProject.commitGenerated(
+        retainedBytes,
+        smaller,
+      );
+    } catch {
+      stableGeneratedCommitRejected = true;
+    } finally {
+      fs.readFileSync = nativeGeneratedManifestRead;
+      if (fs.existsSync(generatedManifestParked)) {
+        fs.rmSync(generatedManifestPath, { force: true });
+        fs.renameSync(generatedManifestParked, generatedManifestPath);
+      }
+    }
+    TestValidator.predicate(
+      "generated manifest guards bind exact bytes to descriptors",
+      stableGeneratedCommitRejected === false &&
+        generatedManifestPathRead === false &&
+        repeatedGeneratedRevision === stableGeneratedRevision &&
+        ownerProject.revision() === stableGeneratedRevision &&
+        nativeGeneratedManifestRead(generatedManifestPath).equals(
+          generatedManifestBefore,
+        ),
+    );
     TestValidator.predicate(
       "generated commit deletes formerly declared stale files",
       fs.existsSync(

@@ -2321,9 +2321,14 @@ export class AutoMovieProductionProject {
           this.productionStateRoot,
           "generated-manifest.json",
         );
+        const residentManifest = this.readTrackedStateFile(
+          "generated-manifest.json",
+        );
         if (
-          fs.existsSync(manifestPath) === false ||
-          fs.readFileSync(manifestPath, "utf8") !== serializedManifest
+          residentManifest === null ||
+          Buffer.from(residentManifest).equals(
+            Buffer.from(serializedManifest, "utf8"),
+          ) === false
         )
           writes.push({
             path: manifestPath,
@@ -2996,11 +3001,14 @@ export class AutoMovieProductionProject {
           throw new AutoMovieProductionInputRaceError(
             `Compiler-owned generated file "${relativePath}" changed while output was being published.`,
           );
+      const residentManifest = this.readTrackedStateFile(
+        "generated-manifest.json",
+      );
       if (
-        fs.readFileSync(
-          path.join(this.productionStateRoot, "generated-manifest.json"),
-          "utf8",
-        ) !== serializedManifest
+        residentManifest === null ||
+        Buffer.from(residentManifest).equals(
+          Buffer.from(serializedManifest, "utf8"),
+        ) === false
       )
         throw new AutoMovieProductionInputRaceError(
           "Compiler-owned generated manifest changed while output was being published.",
