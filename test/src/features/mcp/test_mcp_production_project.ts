@@ -1190,8 +1190,12 @@ export const test_mcp_production_project = (): void => {
     );
     fs.writeFileSync(crossApiIdentityFile, "resident");
     const nativeCrossApiStat = fs.statSync;
+    const mutableCrossApiStatFs = fs as { statSync: typeof fs.statSync };
     let divergentPathIdentityObserved = false;
-    fs.statSync = ((target: fs.PathLike, ...args: unknown[]): unknown => {
+    mutableCrossApiStatFs.statSync = ((
+      target: fs.PathLike,
+      ...args: unknown[]
+    ): unknown => {
       const status = Reflect.apply(nativeCrossApiStat, fs, [
         target,
         ...args,
@@ -1217,7 +1221,7 @@ export const test_mcp_production_project = (): void => {
         ownerProject.readRenderFile("read-cross-api-identity.bin"),
       ).toString("utf8");
     } finally {
-      fs.statSync = nativeCrossApiStat;
+      mutableCrossApiStatFs.statSync = nativeCrossApiStat;
       fs.rmSync(crossApiIdentityFile);
     }
     TestValidator.predicate(
