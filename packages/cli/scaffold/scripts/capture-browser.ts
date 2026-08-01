@@ -2,7 +2,7 @@ import type { IAutoMovieCaptureRuntimeIdentity } from "@automovie/interface";
 import { readAutoMovieProductionOwnedFile } from "@automovie/mcp";
 import { spawnSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { mkdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import fs, { type BigIntStats } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 import type { Browser, Page } from "playwright";
@@ -55,6 +55,18 @@ export interface IPlaywrightMetadata {
   cliPath: string;
   browser: IPlaywrightBrowserRecord;
   fingerprint: string;
+}
+
+interface ICaptureReceiptDirectorySnapshot {
+  directories: readonly IPhysicalDirectory[];
+  path: string;
+}
+
+interface IPhysicalDirectory {
+  identity: string;
+  path: string;
+  real: string;
+  version: string;
 }
 
 export interface IAutoMovieCaptureBrowserSession {
@@ -224,7 +236,50 @@ const assertPlaywrightMetadata = (expected: IPlaywrightMetadata): void => {
 };
 
 const receiptPath = (projectRoot: string): string =>
-  path.join(projectRoot, ".automovie", "capture", "install-receipt.json");
+  path.join(
+    path.resolve(projectRoot),
+    ".automovie",
+    "capture",
+    "install-receipt.json",
+  );
+
+const ensureCaptureReceiptDirectory = (
+  projectRoot: string,
+): ICaptureReceiptDirectorySnapshot => {
+  const project = physicalDirectory(projectRoot, "capture project root");
+  let cursor = project.path;
+  for (const segment of [".automovie", "capture"]) {
+    assertPhysicalDirectoryIdentity(project, "capture project root");
+    cursor = path.join(cursor, segment);
+    try {
+      fs.mkdirSync(cursor);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+    }
+    const current = physicalDirectory(cursor, "capture receipt directory");
+    if (inside(project.real, current.real) === false)
+      throw new Error("Capture receipt directory escapes its project root.");
+  }
+  return captureReceiptDirectory(project.path);
+};
+
+const captureReceiptDirectory = (
+  projectRoot: string,
+): ICaptureReceiptDirectorySnapshot => {
+  const project = physicalDirectory(projectRoot, "capture project root");
+  const directories = [project];
+  let cursor = project.path;
+  for (const segment of [".automovie", "capture"]) {
+    cursor = path.join(cursor, segment);
+    const current = physicalDirectory(cursor, "capture receipt directory");
+    if (inside(project.real, current.real) === false)
+      throw new Error("Capture receipt directory escapes its project root.");
+    directories.push(current);
+  }
+  for (const directory of directories)
+    assertPhysicalDirectory(directory, "capture receipt ancestry");
+  return { directories, path: cursor };
+};
 
 const parseReceipt = (
   value: unknown,
@@ -298,17 +353,117 @@ export const publishCaptureInstallReceipt = (
   assertCurrent: () => void,
 ): void => {
   const file = receiptPath(projectRoot);
-  mkdirSync(path.dirname(file), { recursive: true });
+  const owned = ensureCaptureReceiptDirectory(projectRoot);
+  if (path.resolve(path.dirname(file)) !== owned.path)
+    throw new Error("Capture receipt path escapes its owned directory.");
   const temporary = `${file}.${process.pid}.${randomUUID()}.tmp`;
   try {
-    writeFileSync(temporary, `${JSON.stringify(receipt, null, 2)}\n`, {
+    assertReceiptDirectory(owned);
+    fs.writeFileSync(temporary, `${JSON.stringify(receipt, null, 2)}\n`, {
       flag: "wx",
     });
+    const staged = captureReceiptDirectory(projectRoot);
+    assertSameReceiptDirectoryIdentity(owned, staged);
     assertCurrent();
-    renameSync(temporary, file);
+    assertReceiptDirectory(staged);
+    fs.renameSync(temporary, file);
   } finally {
-    rmSync(temporary, { force: true });
+    try {
+      const current = captureReceiptDirectory(projectRoot);
+      assertSameReceiptDirectoryIdentity(owned, current);
+      fs.rmSync(temporary, { force: true });
+    } catch {
+      // A replaced or linked project namespace is not safe cleanup authority.
+    }
   }
+};
+
+const assertReceiptDirectory = (
+  expected: ICaptureReceiptDirectorySnapshot,
+): void => {
+  for (const directory of expected.directories)
+    assertPhysicalDirectory(directory, "capture receipt ancestry");
+};
+
+const assertSameReceiptDirectoryIdentity = (
+  expected: ICaptureReceiptDirectorySnapshot,
+  current: ICaptureReceiptDirectorySnapshot,
+): void => {
+  if (
+    current.path !== expected.path ||
+    current.directories.length !== expected.directories.length ||
+    current.directories.some((directory, index) => {
+      const prior = expected.directories[index];
+      return (
+        prior === undefined ||
+        directory.path !== prior.path ||
+        directory.real !== prior.real ||
+        directory.identity !== prior.identity
+      );
+    })
+  )
+    throw new Error("Capture receipt ancestry changed physical identity.");
+};
+
+const physicalDirectory = (
+  directory: string,
+  label: string,
+): IPhysicalDirectory => {
+  const namespacePath = path.resolve(directory);
+  const linked = fs.lstatSync(namespacePath, { bigint: true });
+  if (linked.isSymbolicLink() || linked.isDirectory() === false)
+    throw new Error(`${label} "${namespacePath}" is not physical.`);
+  const real = fs.realpathSync(namespacePath);
+  const status = fs.statSync(real, { bigint: true });
+  const version = physicalVersion(status);
+  if (
+    status.isDirectory() === false ||
+    status.dev !== linked.dev ||
+    status.ino !== linked.ino ||
+    version !== physicalVersion(linked)
+  )
+    throw new Error(`${label} "${namespacePath}" changed while resolved.`);
+  return {
+    identity: `${status.dev}\0${status.ino}`,
+    path: namespacePath,
+    real,
+    version,
+  };
+};
+
+const assertPhysicalDirectory = (
+  expected: IPhysicalDirectory,
+  label: string,
+): void => {
+  const current = physicalDirectory(expected.path, label);
+  if (
+    current.identity !== expected.identity ||
+    current.real !== expected.real ||
+    current.version !== expected.version
+  )
+    throw new Error(`${label} "${expected.path}" changed physical identity.`);
+};
+
+const assertPhysicalDirectoryIdentity = (
+  expected: IPhysicalDirectory,
+  label: string,
+): void => {
+  const current = physicalDirectory(expected.path, label);
+  if (current.identity !== expected.identity || current.real !== expected.real)
+    throw new Error(`${label} "${expected.path}" changed physical identity.`);
+};
+
+const physicalVersion = (status: BigIntStats): string =>
+  `${status.dev}\0${status.ino}\0${status.size}\0${status.mtimeNs}\0${status.ctimeNs}`;
+
+const inside = (root: string, candidate: string): boolean => {
+  const relative = path.relative(root, candidate);
+  return (
+    relative === "" ||
+    (path.isAbsolute(relative) === false &&
+      relative !== ".." &&
+      relative.startsWith(`..${path.sep}`) === false)
+  );
 };
 
 /** Run the exact captured CommonJS CLI bytes through an inherited descriptor. */

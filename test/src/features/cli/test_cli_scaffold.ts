@@ -783,8 +783,10 @@ export const test_cli_scaffold = async (): Promise<void> => {
       lstatSync: typeof fs.lstatSync;
       readdirSync: typeof fs.readdirSync;
       renameSync: typeof fs.renameSync;
+      writeFileSync: typeof fs.writeFileSync;
     };
     const nativeLstat = mutableFs.lstatSync;
+    const nativeWriteFile = mutableFs.writeFileSync;
     const shotsDirectory = path.dirname(artifact);
     const parkedShots = `${shotsDirectory}.parked`;
     const replacementShots = `${shotsDirectory}.replacement`;
@@ -1710,6 +1712,79 @@ export const test_cli_scaffold = async (): Promise<void> => {
         captureBrowserModule.readCaptureInstallReceipt(captureProject).browser
           .revision === "456",
     );
+    const linkedReceiptProject = path.join(base, "linked-receipt-project");
+    const linkedReceiptOutside = path.join(base, "linked-receipt-outside");
+    const linkedReceiptMarker = path.join(linkedReceiptOutside, "marker.txt");
+    fs.mkdirSync(linkedReceiptProject);
+    fs.mkdirSync(linkedReceiptOutside);
+    fs.writeFileSync(linkedReceiptMarker, "outside");
+    fs.symlinkSync(
+      linkedReceiptOutside,
+      path.join(linkedReceiptProject, ".automovie"),
+      process.platform === "win32" ? "junction" : "dir",
+    );
+    const linkedReceiptRejected = throws(() =>
+      captureBrowserModule.publishCaptureInstallReceipt(
+        linkedReceiptProject,
+        nextCaptureReceipt,
+        () => undefined,
+      ),
+    );
+    TestValidator.predicate(
+      "capture install refuses a linked receipt ancestry before external writes",
+      linkedReceiptRejected &&
+        fs.readFileSync(linkedReceiptMarker, "utf8") === "outside" &&
+        fs.existsSync(
+          path.join(linkedReceiptOutside, "capture", "install-receipt.json"),
+        ) === false,
+    );
+    const publishedReceiptBytes = fs.readFileSync(captureReceipt);
+    const parkedCaptureProject = `${captureProject}.parked`;
+    let receiptRootSwapped = false;
+    mutableFs.writeFileSync = ((file, bytes, ...args: unknown[]): void => {
+      Reflect.apply(nativeWriteFile, mutableFs, [file, bytes, ...args]);
+      if (
+        receiptRootSwapped === false &&
+        typeof file !== "number" &&
+        path.dirname(path.resolve(file.toString())) ===
+          path.dirname(captureReceipt) &&
+        path.basename(file.toString()).startsWith("install-receipt.json.") &&
+        path.basename(file.toString()).endsWith(".tmp")
+      ) {
+        receiptRootSwapped = true;
+        fs.renameSync(captureProject, parkedCaptureProject);
+        fs.mkdirSync(path.dirname(captureReceipt), { recursive: true });
+        nativeWriteFile(captureReceipt, publishedReceiptBytes);
+      }
+    }) as typeof fs.writeFileSync;
+    let receiptRootRaceRejected = false;
+    try {
+      receiptRootRaceRejected = throws(() =>
+        captureBrowserModule.publishCaptureInstallReceipt(
+          captureProject,
+          captureReceiptValue,
+          () => undefined,
+        ),
+      );
+    } finally {
+      mutableFs.writeFileSync = nativeWriteFile;
+    }
+    TestValidator.predicate(
+      "capture install rejects a project root successor without cleaning it",
+      receiptRootSwapped &&
+        receiptRootRaceRejected &&
+        fs.readFileSync(captureReceipt).equals(publishedReceiptBytes) &&
+        fs
+          .readdirSync(path.join(parkedCaptureProject, ".automovie", "capture"))
+          .some((name) => name.endsWith(".tmp")),
+    );
+    fs.rmSync(captureProject, { recursive: true, force: true });
+    fs.renameSync(parkedCaptureProject, captureProject);
+    for (const name of fs.readdirSync(path.dirname(captureReceipt)))
+      if (name.endsWith(".tmp"))
+        fs.rmSync(path.join(path.dirname(captureReceipt), name), {
+          force: true,
+        });
     const renderGcModule = createRequire(__filename)(
       path.join(scaffoldDir, "scripts", "renderGcSnapshot.ts"),
     ) as {
