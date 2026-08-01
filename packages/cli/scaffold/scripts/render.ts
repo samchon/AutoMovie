@@ -868,6 +868,7 @@ const releaseOwnedChunkClaim = (
 };
 
 const finalize = async (plan: IAutoMovieProductionRenderJobPlan) => {
+  renderProgress("finalize.start", { tier: plan.tier.kind });
   const inspection = inspectAutoMovieProduction(productionServices());
   const incompleteReviews = inspection.reviews.entries.filter(
     (entry) => entry.state !== "complete",
@@ -879,6 +880,7 @@ const finalize = async (plan: IAutoMovieProductionRenderJobPlan) => {
         .join(", ")}. Run review:status and submit current evidence first.`,
     );
   const status = await renderStatus(plan);
+  renderProgress("finalize.status.complete", { tier: plan.tier.kind });
   const project = AutoMovieProductionProject.open(root, productionId);
   const graph = project.graph();
   if (graph.production === null)
@@ -932,7 +934,12 @@ const finalize = async (plan: IAutoMovieProductionRenderJobPlan) => {
   };
   let soundPromise: Promise<IProductionSoundBundle> | undefined;
   const currentSound = (): Promise<IProductionSoundBundle> =>
-    (soundPromise ??= produceProductionSound(project, plan));
+    (soundPromise ??= (async () => {
+      renderProgress("sound.start");
+      const sound = await produceProductionSound(project, plan);
+      renderProgress("sound.complete");
+      return sound;
+    })());
   const publicationSegment = renderPublicationFingerprint(plan).slice(7);
   for (const deliverable of graph.production.deliverables) {
     const owned = new Map<string, Uint8Array>();
@@ -950,6 +957,9 @@ const finalize = async (plan: IAutoMovieProductionRenderJobPlan) => {
     }
     let rendition: IAutoMovieProductionRenditionDelivery | undefined;
     if (deliverable.kind === "feature") {
+      renderProgress("video.feature.encode.start", {
+        deliverable: deliverable.id,
+      });
       const video =
         timeline === null
           ? await encodeChunkFrames(plan, deliverableChunks)
@@ -969,11 +979,20 @@ const finalize = async (plan: IAutoMovieProductionRenderJobPlan) => {
                 }),
               ),
             });
+      renderProgress("video.feature.encode.complete", {
+        deliverable: deliverable.id,
+      });
       const sound = await currentSound();
+      renderProgress("video.feature.mux.start", {
+        deliverable: deliverable.id,
+      });
       owned.set(
         "feature.mp4",
         muxProductionFeatureMp4({ video, audio: sound.audio }),
       );
+      renderProgress("video.feature.mux.complete", {
+        deliverable: deliverable.id,
+      });
       if (timeline !== null) {
         const shots = [
           ...new Set(timeline.segments.map((segment) => segment.shot)),
@@ -1043,10 +1062,14 @@ const finalize = async (plan: IAutoMovieProductionRenderJobPlan) => {
         throw new Error(
           `Guide deliverable "${deliverable.id}" must own one declared pass, but owns ${passes.length}.`,
         );
-      owned.set(
-        `${passes[0]}.mp4`,
-        await encodeChunkFrames(plan, deliverableChunks),
-      );
+      renderProgress("video.guide.encode.start", {
+        deliverable: deliverable.id,
+      });
+      const video = await encodeChunkFrames(plan, deliverableChunks);
+      renderProgress("video.guide.encode.complete", {
+        deliverable: deliverable.id,
+      });
+      owned.set(`${passes[0]}.mp4`, video);
       for (const chunk of [...deliverableChunks].sort(
         (left, right) => left.frameStart - right.frameStart,
       )) {
@@ -1187,8 +1210,19 @@ const finalize = async (plan: IAutoMovieProductionRenderJobPlan) => {
       ...(rendition === undefined ? {} : { rendition }),
     });
   }
-  if (plan.tier.kind === "proxy")
-    return publishProxyTierBundle(plan, publication, manifest, project);
+  if (plan.tier.kind === "proxy") {
+    renderProgress("publication.proxy.start");
+    const published = publishProxyTierBundle(
+      plan,
+      publication,
+      manifest,
+      project,
+    );
+    renderProgress("publication.proxy.complete");
+    renderProgress("finalize.complete", { tier: plan.tier.kind });
+    return published;
+  }
+  renderProgress("publication.final.start");
   const snapshot = productionPublicationInputFingerprint(project);
   const revision = project.commitProductionPublication({
     files: publication,
@@ -1223,6 +1257,8 @@ const finalize = async (plan: IAutoMovieProductionRenderJobPlan) => {
     throw new Error(
       `Parser-verified publication committed at revision ${revision}, but final compilation rejected it: ${JSON.stringify(final.diagnostics)}`,
     );
+  renderProgress("publication.final.complete");
+  renderProgress("finalize.complete", { tier: plan.tier.kind });
   return { revision, manifest, final };
 };
 
@@ -1565,6 +1601,9 @@ const produceProductionSound = async (
     contracts: graph.shots,
     compiled,
   });
+  renderProgress("sound.plan.complete", {
+    dialogueLines: soundPlan.dialogue.length,
+  });
   if (
     soundPlan.totalFrames !== renderPlan.totalFrames ||
     soundPlan.fps !== renderPlan.frameFormat.fps
@@ -1572,11 +1611,15 @@ const produceProductionSound = async (
     throw new Error(
       "Sound plan and render plan do not share the exact film frame clock.",
     );
+  renderProgress("sound.synthesis.start");
   const synthesized = await synthesizeProductionDialogue(soundPlan);
+  renderProgress("sound.synthesis.complete");
+  renderProgress("sound.render.start");
   const rendered = renderProductionSound({
     plan: soundPlan,
     dialogue: synthesized.pcm,
   });
+  renderProgress("sound.render.complete");
   if (
     rendered.analysis.clippingSamples !== 0 ||
     rendered.analysis.eventAlignment.some((event) => event.passed === false)
@@ -1584,15 +1627,24 @@ const produceProductionSound = async (
     throw new Error(
       "Final sound failed clipping or semantic event/frame alignment gates.",
     );
+  renderProgress("sound.evidence.render.start");
   const waveform = productionSoundWaveform(rendered.pcm);
   const spectrogram = productionSoundSpectrogram(rendered.pcm);
+  renderProgress("sound.evidence.render.complete");
+  renderProgress("sound.opus.encode.start");
+  const audio = await encodeProductionOpus(rendered.pcm);
+  renderProgress("sound.opus.encode.complete");
+  renderProgress("sound.evidence.encode.start");
+  const waveformBytes = encodeSoundRaster(waveform);
+  const spectrogramBytes = encodeSoundRaster(spectrogram);
+  renderProgress("sound.evidence.encode.complete");
   return {
     plan: soundPlan,
     analysis: rendered.analysis,
     tts: synthesized.receipts,
-    audio: await encodeProductionOpus(rendered.pcm),
-    waveform: encodeSoundRaster(waveform),
-    spectrogram: encodeSoundRaster(spectrogram),
+    audio,
+    waveform: waveformBytes,
+    spectrogram: spectrogramBytes,
   };
 };
 
@@ -1625,6 +1677,7 @@ const synthesizeProductionDialogue = async (
   )
     runtimeAssets = (await currentRuntime()).runtimeAssets;
   for (const line of plan.dialogue) {
+    renderProgress("sound.dialogue.start", { line: line.id });
     const cacheKey = digestAutoMovieBytes(
       Buffer.from(
         JSON.stringify({
@@ -1763,6 +1816,7 @@ const synthesizeProductionDialogue = async (
         endFrame: line.endFrame,
       }),
     });
+    renderProgress("sound.dialogue.complete", { line: line.id });
   }
   return { pcm, receipts };
 };
@@ -1772,6 +1826,10 @@ const loadPinnedKokoroRuntime = async (
   baseRuntimeAssets: IAutoMovieProductionTtsReceipt["runtimeAssets"],
 ): Promise<IKokoroLoadedRuntime> => {
   fs.mkdirSync(modelCacheRoot, { recursive: true });
+  renderProgress("sound.model.load.start", {
+    model: KOKORO_MODEL,
+    revision: KOKORO_MODEL_REVISION,
+  });
   const [{ KokoroTTS }, { env }] = await Promise.all([
     import("kokoro-js"),
     import("@huggingface/transformers"),
@@ -1819,6 +1877,10 @@ const loadPinnedKokoroRuntime = async (
       throw new Error(
         "Pinned Kokoro load produced no revision-scoped model cache assets.",
       );
+    renderProgress("sound.model.load.complete", {
+      model: KOKORO_MODEL,
+      revision: KOKORO_MODEL_REVISION,
+    });
     return {
       runtime: loaded as unknown as IKokoroRuntime,
       runtimeAssets: [...baseRuntimeAssets, ...modelAssets],
@@ -2806,6 +2868,15 @@ const reviewTargetLabel = (target: IAutoMovieReviewTarget): string =>
 
 const output = (value: unknown): void => {
   process.stdout.write(`${JSON.stringify(value, null, 2)}\n`);
+};
+
+const renderProgress = (
+  stage: string,
+  details: Readonly<Record<string, number | string>> = {},
+): void => {
+  process.stderr.write(
+    `[automovie:render] ${JSON.stringify({ stage, ...details })}\n`,
+  );
 };
 
 try {

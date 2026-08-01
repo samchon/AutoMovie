@@ -366,6 +366,22 @@ export const test_cli_scaffold = (): void => {
       ) === false &&
       files["scripts/render.ts"]!.includes("encodeProductionOpus") &&
       files["scripts/render.ts"]!.includes("muxProductionFeatureMp4") &&
+      files["scripts/render.ts"]!.includes("const renderProgress") &&
+      files["scripts/render.ts"]!.includes(
+        'renderProgress("sound.model.load.start"',
+      ) &&
+      files["scripts/render.ts"]!.includes(
+        'renderProgress("sound.dialogue.start"',
+      ) &&
+      files["scripts/render.ts"]!.includes(
+        'renderProgress("sound.opus.encode.start")',
+      ) &&
+      files["scripts/render.ts"]!.includes(
+        'renderProgress("video.feature.mux.start"',
+      ) &&
+      files["scripts/render.ts"]!.includes(
+        'renderProgress("publication.proxy.start")',
+      ) &&
       files["scripts/render.ts"]!.includes('"waveform.png"') &&
       files["scripts/render.ts"]!.includes('"spectrogram.png"') &&
       files["scripts/render.ts"]!.includes('process.argv.indexOf("--tier")') &&
