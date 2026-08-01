@@ -431,7 +431,7 @@ export const test_workspace_public_contracts = (): void => {
   TestValidator.equals(
     "the native render loader stays inside the 100% coverage gate",
     testPackage.scripts.coverage.match(
-      /--src packages\/render(?= )|--include "packages\/render\/gltfTransformCore\.cjs"|--extension \.cjs/g,
+      /--src packages\/render(?= )|--include "packages\/render\/gltfTransformCore\.cjs"|--extension \.cjs(?= |$)/g,
     ) ?? [],
     [
       "--src packages/render",
