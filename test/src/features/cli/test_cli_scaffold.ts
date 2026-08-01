@@ -91,6 +91,8 @@ type GeneratedViewerMiddleware = (
  *     scan.
  * 15. Chunk completion publishes an immutable unique tree through one direct-root
  *     exclusive pointer; resume and finalize consume its exact declared bytes.
+ * 16. Final conform reopens a matching proxy publication through its manifest,
+ *     exact payload bytes, inventory, and physical tree identity.
  */
 export const test_cli_scaffold = async (): Promise<void> => {
   // 5. packaging guard: the scaffold dir must be a published `files` entry.
@@ -508,6 +510,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       ) === false &&
       files["scripts/render.ts"]!.includes("renderPublicationFingerprint") &&
       files["scripts/render.ts"]!.includes("assertMatchingProxyPublication") &&
+      files["scripts/render.ts"]!.includes("inspectPublishedProxyBundle") &&
       files["scripts/render.ts"]!.includes("assertNoLiveRenderWorkers") &&
       files["scripts/render.ts"]!.includes("captureGcPhysicalAncestry") ===
         false &&
@@ -1130,6 +1133,15 @@ export const test_cli_scaffold = async (): Promise<void> => {
         directory: string,
         expected: ReadonlyMap<string, Uint8Array>,
       ) => void;
+      inspectPublishedProxyBundle: (
+        renderRoot: string,
+        directory: string,
+      ) => {
+        compileFingerprint: string;
+        editFingerprint: string;
+        publicationFingerprint: string;
+        tier: { kind: string };
+      };
     };
     TestValidator.predicate(
       "an exact physical proxy bundle passes immutable verification",
@@ -1241,6 +1253,232 @@ export const test_cli_scaffold = async (): Promise<void> => {
       "proxy verification rejects a late unexpected inventory entry",
       proxyInventoryMutated && proxyInventoryRaceRejected,
     );
+
+    const fixtureDigest = (bytes: Uint8Array): string =>
+      `sha256:${createHash("sha256").update(bytes).digest("hex")}`;
+    const verifiedProxyRoot = path.join(base, "verified-proxy-root");
+    const verifiedProxyPublication = fixtureDigest(
+      Buffer.from("verified proxy publication"),
+    );
+    const verifiedProxyCompile = fixtureDigest(
+      Buffer.from("verified proxy compile"),
+    );
+    const verifiedProxyEdit = fixtureDigest(Buffer.from("verified proxy edit"));
+    const verifiedProxyBundleRelative = `deliverables/proxy/${verifiedProxyPublication.slice(7)}`;
+    const verifiedProxyBundle = path.join(
+      verifiedProxyRoot,
+      ...verifiedProxyBundleRelative.split("/"),
+    );
+    const verifiedProxyPayload = path.join(
+      verifiedProxyBundle,
+      "feature",
+      "feature.mp4",
+    );
+    const verifiedProxyPayloadBytes = Buffer.from("reviewed proxy payload");
+    const proxyReceipt = (props: {
+      fileBytes?: number;
+      filePath?: string;
+      publicationFingerprint: string;
+      withPayload?: boolean;
+    }) => ({
+      version: 1,
+      tier: { kind: "proxy", resolutionScale: 0.5, frameStep: 2 },
+      publicationFingerprint: props.publicationFingerprint,
+      compileFingerprint: verifiedProxyCompile,
+      editFingerprint: verifiedProxyEdit,
+      frameFormat: { width: 640, height: 360, fps: 12 },
+      sourceFrameFormat: { width: 1280, height: 720, fps: 24 },
+      totalFrames: 12,
+      manifest: {
+        version: 1,
+        compileFingerprint: verifiedProxyCompile,
+        deliverables:
+          props.withPayload === false
+            ? []
+            : [
+                {
+                  id: "feature",
+                  kind: "feature",
+                  files: [
+                    {
+                      path:
+                        props.filePath ??
+                        `${verifiedProxyBundleRelative}/feature/feature.mp4`,
+                      digest: fixtureDigest(verifiedProxyPayloadBytes),
+                      bytes:
+                        props.fileBytes ?? verifiedProxyPayloadBytes.length,
+                      mediaType: "video/mp4",
+                    },
+                  ],
+                  runtimeSeconds: 1,
+                  frameCount: 12,
+                  codec: "h264",
+                },
+              ],
+      },
+    });
+    fs.mkdirSync(path.dirname(verifiedProxyPayload), { recursive: true });
+    fs.writeFileSync(verifiedProxyPayload, verifiedProxyPayloadBytes);
+    fs.writeFileSync(
+      path.join(verifiedProxyBundle, "publication.json"),
+      `${JSON.stringify(
+        proxyReceipt({ publicationFingerprint: verifiedProxyPublication }),
+      )}\n`,
+    );
+    const inspectedProxy = proxyModule.inspectPublishedProxyBundle(
+      verifiedProxyRoot,
+      verifiedProxyBundle,
+    );
+    TestValidator.predicate(
+      "the final proxy consumer accepts one exact manifest-backed bundle",
+      inspectedProxy.tier.kind === "proxy" &&
+        inspectedProxy.publicationFingerprint === verifiedProxyPublication &&
+        inspectedProxy.compileFingerprint === verifiedProxyCompile &&
+        inspectedProxy.editFingerprint === verifiedProxyEdit,
+    );
+
+    fs.writeFileSync(verifiedProxyPayload, "mutated reviewed proxy payload");
+    const mutatedProxyRejected = throws(() =>
+      proxyModule.inspectPublishedProxyBundle(
+        verifiedProxyRoot,
+        verifiedProxyBundle,
+      ),
+    );
+    fs.writeFileSync(verifiedProxyPayload, verifiedProxyPayloadBytes);
+    fs.rmSync(verifiedProxyPayload);
+    const deletedProxyRejected = throws(() =>
+      proxyModule.inspectPublishedProxyBundle(
+        verifiedProxyRoot,
+        verifiedProxyBundle,
+      ),
+    );
+    fs.writeFileSync(verifiedProxyPayload, verifiedProxyPayloadBytes);
+    TestValidator.predicate(
+      "the final proxy consumer rejects mutated and deleted payloads",
+      mutatedProxyRejected && deletedProxyRejected,
+    );
+
+    const receiptOnlyPublication = fixtureDigest(
+      Buffer.from("receipt only proxy"),
+    );
+    const receiptOnlyBundle = path.join(
+      verifiedProxyRoot,
+      "deliverables",
+      "proxy",
+      receiptOnlyPublication.slice(7),
+    );
+    fs.mkdirSync(receiptOnlyBundle);
+    fs.writeFileSync(
+      path.join(receiptOnlyBundle, "publication.json"),
+      `${JSON.stringify(
+        proxyReceipt({
+          publicationFingerprint: receiptOnlyPublication,
+          withPayload: false,
+        }),
+      )}\n`,
+    );
+    const receiptOnlyProxyRejected = throws(() =>
+      proxyModule.inspectPublishedProxyBundle(
+        verifiedProxyRoot,
+        receiptOnlyBundle,
+      ),
+    );
+
+    const escapingPublication = fixtureDigest(Buffer.from("escaping proxy"));
+    const escapingBundleRelative = `deliverables/proxy/${escapingPublication.slice(7)}`;
+    const escapingBundle = path.join(
+      verifiedProxyRoot,
+      ...escapingBundleRelative.split("/"),
+    );
+    fs.mkdirSync(escapingBundle);
+    fs.writeFileSync(
+      path.join(escapingBundle, "publication.json"),
+      `${JSON.stringify(
+        proxyReceipt({
+          filePath: `${escapingBundleRelative}/../escape.mp4`,
+          publicationFingerprint: escapingPublication,
+        }),
+      )}\n`,
+    );
+    const escapingProxyRejected = throws(() =>
+      proxyModule.inspectPublishedProxyBundle(
+        verifiedProxyRoot,
+        escapingBundle,
+      ),
+    );
+
+    const malformedPublication = fixtureDigest(Buffer.from("malformed proxy"));
+    const malformedBundleRelative = `deliverables/proxy/${malformedPublication.slice(7)}`;
+    const malformedBundle = path.join(
+      verifiedProxyRoot,
+      ...malformedBundleRelative.split("/"),
+    );
+    fs.mkdirSync(malformedBundle);
+    fs.writeFileSync(
+      path.join(malformedBundle, "publication.json"),
+      `${JSON.stringify(
+        proxyReceipt({
+          fileBytes: 0,
+          filePath: `${malformedBundleRelative}/feature/feature.mp4`,
+          publicationFingerprint: malformedPublication,
+        }),
+      )}\n`,
+    );
+    const malformedProxyRejected = throws(() =>
+      proxyModule.inspectPublishedProxyBundle(
+        verifiedProxyRoot,
+        malformedBundle,
+      ),
+    );
+    TestValidator.predicate(
+      "the final proxy consumer rejects receipt-only and malformed manifests",
+      receiptOnlyProxyRejected &&
+        escapingProxyRejected &&
+        malformedProxyRejected,
+    );
+
+    const parkedVerifiedProxyBundle = `${verifiedProxyBundle}.parked`;
+    const successorVerifiedProxyBundle = `${verifiedProxyBundle}.successor`;
+    fs.cpSync(verifiedProxyBundle, successorVerifiedProxyBundle, {
+      recursive: true,
+    });
+    let verifiedPayloadObservations = 0;
+    let verifiedProxyTreeSwapped = false;
+    mutableFs.lstatSync = ((file, ...args: unknown[]): unknown => {
+      const status = Reflect.apply(nativeLstat, mutableFs, [file, ...args]);
+      if (path.resolve(file.toString()) === verifiedProxyPayload) {
+        verifiedPayloadObservations++;
+        if (verifiedPayloadObservations === 2) {
+          fs.renameSync(verifiedProxyBundle, parkedVerifiedProxyBundle);
+          fs.renameSync(successorVerifiedProxyBundle, verifiedProxyBundle);
+          verifiedProxyTreeSwapped = true;
+        }
+      }
+      return status;
+    }) as typeof fs.lstatSync;
+    let verifiedProxyTreeSuccessorRejected = false;
+    try {
+      verifiedProxyTreeSuccessorRejected = throws(() =>
+        proxyModule.inspectPublishedProxyBundle(
+          verifiedProxyRoot,
+          verifiedProxyBundle,
+        ),
+      );
+    } finally {
+      mutableFs.lstatSync = nativeLstat;
+      if (fs.existsSync(parkedVerifiedProxyBundle)) {
+        fs.rmSync(verifiedProxyBundle, { recursive: true, force: true });
+        fs.renameSync(parkedVerifiedProxyBundle, verifiedProxyBundle);
+      }
+      fs.rmSync(successorVerifiedProxyBundle, {
+        recursive: true,
+        force: true,
+      });
+    }
+    TestValidator.predicate(
+      "the final proxy consumer rejects a byte-identical tree successor",
+      verifiedProxyTreeSwapped && verifiedProxyTreeSuccessorRejected,
+    );
     const runtimePackage = path.join(base, "runtime-package");
     const runtimeManifest = path.join(runtimePackage, "package.json");
     const runtimeEntry = path.join(runtimePackage, "index.mjs");
@@ -1278,8 +1516,6 @@ export const test_cli_scaffold = async (): Promise<void> => {
         entry: runtimeEntry,
         packageName: "fixture-runtime",
       });
-    const fixtureDigest = (bytes: Uint8Array): string =>
-      `sha256:${createHash("sha256").update(bytes).digest("hex")}`;
     const runtimeSnapshot = snapshotRuntimeFixture();
     TestValidator.predicate(
       "runtime package identity captures exact manifest-owned entry and assets",

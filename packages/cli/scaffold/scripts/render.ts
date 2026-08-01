@@ -69,7 +69,10 @@ import { isDeepStrictEqual } from "node:util";
 import { PNG } from "pngjs";
 
 import config from "../automovie.config";
-import { assertPublishedProxyBundle } from "./assertProxyBundle";
+import {
+  assertPublishedProxyBundle,
+  inspectPublishedProxyBundle,
+} from "./assertProxyBundle";
 import {
   captureProductionFrame,
   closeProductionFrameCapture,
@@ -1391,22 +1394,11 @@ const assertMatchingProxyPublication = (
     .filter((file) => path.basename(file) === "publication.json")
     .some((file) => {
       try {
-        const receipt = JSON.parse(
-          Buffer.from(
-            readAutoMovieProductionOwnedFile({
-              root: project.renderRoot(),
-              directory: path.dirname(file),
-              relative: "publication.json",
-            }),
-          ).toString("utf8"),
-        ) as Partial<{
-          tier: IAutoMovieProductionRenderTier;
-          compileFingerprint: AutoMovieContentDigest;
-          editFingerprint: AutoMovieContentDigest;
-          sourceFrameFormat: IAutoMovieProductionRenderJobPlan["sourceFrameFormat"];
-        }>;
+        const receipt = inspectPublishedProxyBundle(
+          project.renderRoot(),
+          path.dirname(file),
+        );
         return (
-          receipt.tier?.kind === "proxy" &&
           receipt.compileFingerprint === plan.compileFingerprint &&
           receipt.editFingerprint === plan.editFingerprint &&
           isDeepStrictEqual(receipt.sourceFrameFormat, plan.sourceFrameFormat)

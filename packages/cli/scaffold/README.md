@@ -173,6 +173,11 @@ to one exact tree; finalization consumes its frame and MP4 descriptors without
 reopening verified paths. Abandoned recovery never quarantines a tree reached by
 a valid current pointer.
 
+Final conform also reopens the matching proxy bundle as one physical tree. Its
+manifest must account for the exact regular-file inventory, and every declared
+payload length and digest must still match before the proxy can satisfy the final
+plan gate.
+
 `npm run render` is the convenience sequence: it captures current review evidence,
 reuses or renders current chunks, then attempts final publication. Finalize
 still fails closed until every current review is complete. Its terminal commit
