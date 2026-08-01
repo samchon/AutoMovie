@@ -474,6 +474,10 @@ export const test_cli_scaffold = async (): Promise<void> => {
       files["scripts/render.ts"]!.includes("removeCapturedRenderGcTarget") &&
       files["scripts/render.ts"]!.includes("quarantineCapturedRenderTarget") &&
       files["scripts/render.ts"]!.includes("readCapturedRenderGcFile") &&
+      files["scripts/render.ts"]!.includes("RENDER_LOCK_JSON_MAX_BYTES") &&
+      files["scripts/render.ts"]!.includes(
+        "captureAbandonedRenderStateTarget",
+      ) &&
       files["scripts/render.ts"]!.includes("held.snapshot") &&
       files["scripts/render.ts"]!.includes(
         "quarantineStaleSlotOutputs(current.chunks)",
@@ -1975,6 +1979,11 @@ export const test_cli_scaffold = async (): Promise<void> => {
     const renderGcModule = createRequire(__filename)(
       path.join(scaffoldDir, "scripts", "renderGcSnapshot.ts"),
     ) as {
+      assertCapturedRenderGcFileEntry: (props: {
+        directory: unknown;
+        file: unknown;
+        relative: string;
+      }) => void;
       assertCapturedRenderTarget: (snapshot: unknown) => void;
       captureRenderGcTarget: (
         base: string,
@@ -2307,8 +2316,13 @@ export const test_cli_scaffold = async (): Promise<void> => {
     fs.rmSync(workerClaimDestination, { force: true });
     fs.rmSync(workerPartialIsolated, { recursive: true, force: true });
     fs.rmSync(parkedWorkerPartial, { recursive: true, force: true });
-    const heldClaim = path.join(gcBase, "held-claim.lock");
-    const heldClaimSibling = path.join(gcBase, "held-claim-sibling.lock");
+    const heldClaimDirectory = path.join(gcBase, "held-locks");
+    const heldClaim = path.join(heldClaimDirectory, "held-claim.lock");
+    const heldClaimSibling = path.join(
+      heldClaimDirectory,
+      "held-claim-sibling.lock",
+    );
+    fs.mkdirSync(heldClaimDirectory);
     fs.writeFileSync(heldClaim, workerClaimBytes);
     const heldClaimSnapshot = renderGcModule.captureRenderGcTarget(
       gcBase,
@@ -2359,9 +2373,67 @@ export const test_cli_scaffold = async (): Promise<void> => {
         fs.readFileSync(heldClaim).equals(workerClaimBytes) &&
         fs.readFileSync(decisionSuccessor).equals(workerClaimBytes),
     );
-    fs.rmSync(heldClaim, { force: true });
-    fs.rmSync(heldClaimSibling, { force: true });
+    fs.rmSync(heldClaimDirectory, { recursive: true, force: true });
     fs.rmSync(decisionSuccessor, { force: true });
+    const largeDecision = path.join(gcBase, "large-decision.json");
+    const largeDecisionBytes = Buffer.alloc(1024 * 1024 + 17, 0x61);
+    fs.writeFileSync(largeDecision, largeDecisionBytes);
+    const largeDecisionSnapshot = renderGcModule.captureRenderGcTarget(
+      gcBase,
+      largeDecision,
+    );
+    TestValidator.predicate(
+      "captured receipt decisions have no arbitrary one-megabyte boundary",
+      Buffer.from(
+        renderGcModule.readCapturedRenderGcFile(
+          largeDecisionSnapshot,
+          largeDecisionSnapshot.bytes,
+        ),
+      ).equals(largeDecisionBytes),
+    );
+    fs.rmSync(largeDecision, { force: true });
+    const decisionTree = path.join(gcBase, "decision-tree");
+    const decisionReceipt = path.join(decisionTree, "receipt.json");
+    const parkedDecisionTree = path.join(gcBase, "decision-tree-original");
+    fs.mkdirSync(decisionTree);
+    fs.writeFileSync(decisionReceipt, '{"slot":"fixture"}\n');
+    const decisionReceiptSnapshot = renderGcModule.captureRenderGcTarget(
+      gcBase,
+      decisionReceipt,
+    );
+    const decisionTreeSnapshot = renderGcModule.captureRenderGcTarget(
+      gcBase,
+      decisionTree,
+    );
+    TestValidator.predicate(
+      "stale receipt decisions bind to their exact directory inventory",
+      !throws(() =>
+        renderGcModule.assertCapturedRenderGcFileEntry({
+          directory: decisionTreeSnapshot,
+          file: decisionReceiptSnapshot,
+          relative: "receipt.json",
+        }),
+      ),
+    );
+    fs.renameSync(decisionTree, parkedDecisionTree);
+    fs.mkdirSync(decisionTree);
+    fs.writeFileSync(decisionReceipt, '{"slot":"fixture"}\n');
+    const decisionTreeSuccessor = renderGcModule.captureRenderGcTarget(
+      gcBase,
+      decisionTree,
+    );
+    TestValidator.predicate(
+      "stale receipt decisions reject a byte-identical successor tree inventory",
+      throws(() =>
+        renderGcModule.assertCapturedRenderGcFileEntry({
+          directory: decisionTreeSuccessor,
+          file: decisionReceiptSnapshot,
+          relative: "receipt.json",
+        }),
+      ),
+    );
+    fs.rmSync(decisionTree, { recursive: true, force: true });
+    fs.rmSync(parkedDecisionTree, { recursive: true, force: true });
     TestValidator.predicate(
       "a non-empty target is refused without force",
       throws(() => writeFiles(target, files)),

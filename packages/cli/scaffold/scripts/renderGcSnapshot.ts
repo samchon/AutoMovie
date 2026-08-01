@@ -16,6 +16,8 @@ export interface IRenderGcTargetSnapshot {
   base: IRenderGcPhysicalDirectory;
   bytes: number;
   contentFingerprint: `sha256:${string}`;
+  entries: readonly IRenderGcContentEntry[];
+  fileDigest: `sha256:${string}` | null;
   kind: "directory" | "file";
   namespaceFingerprint: `sha256:${string}`;
   target: string;
@@ -30,7 +32,7 @@ export interface IRenderGcPhysicalDirectory {
   version: string;
 }
 
-interface IContentEntry {
+export interface IRenderGcContentEntry {
   bytes?: number;
   digest?: `sha256:${string}`;
   identity: string;
@@ -168,6 +170,42 @@ export const assertCapturedRenderTarget = (
   snapshot: IRenderGcTargetSnapshot,
 ): void => assertRenderGcTarget(snapshot);
 
+/** Prove that one captured file is an exact member of a captured directory. */
+export const assertCapturedRenderGcFileEntry = (props: {
+  directory: IRenderGcTargetSnapshot;
+  file: IRenderGcTargetSnapshot;
+  relative: string;
+}): void => {
+  const segments = props.relative.split("/");
+  if (
+    props.directory.kind !== "directory" ||
+    props.file.kind !== "file" ||
+    segments.length === 0 ||
+    segments.some(
+      (segment) =>
+        segment.length === 0 ||
+        segment === "." ||
+        segment === ".." ||
+        segment.includes("\\") ||
+        segment.includes("\0"),
+    ) ||
+    props.file.target !== path.resolve(props.directory.target, ...segments)
+  )
+    throw new Error("Render captured file is not the declared tree member.");
+  const entry = props.directory.entries.find(
+    (candidate) => candidate.path === props.relative,
+  );
+  if (
+    entry?.kind !== "file" ||
+    entry.identity !== props.file.targetIdentity ||
+    entry.bytes !== props.file.bytes ||
+    entry.digest !== props.file.fileDigest
+  )
+    throw new Error(
+      `Render captured file "${props.file.target}" is not bound to its directory inventory.`,
+    );
+};
+
 /** Read the bytes of the exact captured file through a matching descriptor. */
 export const readCapturedRenderGcFile = (
   snapshot: IRenderGcTargetSnapshot,
@@ -230,7 +268,7 @@ export const readCapturedRenderGcFile = (
           identity: openedIdentity,
           kind: "file",
           path: "",
-        } satisfies IContentEntry,
+        } satisfies IRenderGcContentEntry,
       ]),
     ),
   );
@@ -347,7 +385,7 @@ const captureResidentTarget = (
       `Render GC target "${absolute}" escapes renderer ownership.`,
     );
   const targetIdentity = physicalIdentity(status);
-  let entries: IContentEntry[];
+  let entries: IRenderGcContentEntry[];
   let kind: "directory" | "file";
   if (status.isFile()) {
     kind = "file";
@@ -387,6 +425,8 @@ const captureResidentTarget = (
     base,
     bytes: entries.reduce((total, entry) => total + (entry.bytes ?? 0), 0),
     contentFingerprint,
+    entries,
+    fileDigest: kind === "file" ? entries[0]!.digest! : null,
     kind,
     namespaceFingerprint,
     target: absolute,
@@ -398,8 +438,8 @@ const captureResidentTarget = (
 const captureTree = (
   base: IRenderGcPhysicalDirectory,
   root: string,
-): IContentEntry[] => {
-  const entries: IContentEntry[] = [];
+): IRenderGcContentEntry[] => {
+  const entries: IRenderGcContentEntry[] = [];
   const visit = (directory: string, relative: string): void => {
     const identity = physicalDirectory(
       directory,
@@ -428,7 +468,10 @@ const captureTree = (
   return entries;
 };
 
-const readFileEntry = (file: string, relative: string): IContentEntry => {
+const readFileEntry = (
+  file: string,
+  relative: string,
+): IRenderGcContentEntry => {
   const linked = fs.lstatSync(file, { bigint: true });
   if (linked.isSymbolicLink() || linked.isFile() === false)
     throw new Error(`Render GC content "${file}" is not one physical file.`);
