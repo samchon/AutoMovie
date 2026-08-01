@@ -499,7 +499,9 @@ export const test_mcp_production_review = async (): Promise<void> => {
       "a second production can bind the same shared model independently",
       secondProject.setProductionDesign(
         productionDesign({ id: "second-film", title: "second-film" }),
-      ).accepted && secondProject.setShotContract(shotContract()).accepted,
+      ).accepted &&
+        secondProject.setShotContract(structuredClone(aliasedReviewFrameShot))
+          .accepted,
     );
     const secondReview = new AutoMovieProductionReviewService(secondProject);
     const secondCompiler = new AutoMovieProductionCompiler(
