@@ -425,7 +425,10 @@ const productionSoundRuntimeIdentity = () => ({
   tts: {
     ...resolvedPackageIdentity("kokoro-js"),
     adapter: resolvedPackageIdentity("@huggingface/transformers"),
-    backend: resolvedPackageIdentity("onnxruntime-node"),
+    backend: {
+      ...resolvedPackageIdentity("onnxruntime-node"),
+      nativeAssets: onnxRuntimeNodeNativeAssets(),
+    },
     imageCapability: resolvedPackageIdentity("sharp"),
     model: KOKORO_MODEL,
     modelRevision: KOKORO_MODEL_REVISION,
@@ -490,6 +493,37 @@ const resolvedPackageDirectory = (packageName: string): string => {
     directory = parent;
   }
 };
+
+const onnxRuntimeNodeNativeAssets =
+  (): IAutoMovieProductionTtsReceipt["runtimeAssets"] => {
+    const packageRoot = resolvedPackageDirectory("onnxruntime-node");
+    const nativeRoot = path.join(
+      packageRoot,
+      "bin",
+      "napi-v3",
+      process.platform,
+      process.arch,
+    );
+    if (fs.existsSync(nativeRoot) === false)
+      throw new Error(
+        `ONNX Runtime Node has no native backend for ${process.platform}/${process.arch}.`,
+      );
+    const files = listFiles(nativeRoot);
+    if (files.length === 0)
+      throw new Error(
+        `ONNX Runtime Node native backend is empty for ${process.platform}/${process.arch}.`,
+      );
+    return files.map((file) => {
+      const relative = path
+        .relative(packageRoot, file)
+        .split(path.sep)
+        .join("/");
+      return {
+        path: `package:onnxruntime-node/${relative}`,
+        digest: digestAutoMovieBytes(fs.readFileSync(file)),
+      };
+    });
+  };
 
 const renderShotFingerprints = (
   project: AutoMovieProductionProject,
@@ -1800,6 +1834,7 @@ const kokoroBaseRuntimeAssets =
     const kokoro = resolvedPackageIdentity("kokoro-js");
     const transformers = resolvedPackageIdentity("@huggingface/transformers");
     const backend = resolvedPackageIdentity("onnxruntime-node");
+    const backendNativeAssets = onnxRuntimeNodeNativeAssets();
     const imageCapability = resolvedPackageIdentity("sharp");
     const voice = path.join(
       resolvedPackageDirectory("kokoro-js"),
@@ -1818,6 +1853,7 @@ const kokoroBaseRuntimeAssets =
         path: "package:onnxruntime-node",
         digest: backend.entryDigest,
       },
+      ...backendNativeAssets,
       {
         path: "package:sharp-capability-wall",
         digest: imageCapability.entryDigest,

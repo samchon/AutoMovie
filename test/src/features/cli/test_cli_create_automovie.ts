@@ -43,6 +43,8 @@ export const test_cli_create_automovie = (): void => {
         typeof pkg.scripts?.viewer === "string" &&
         typeof pkg.scripts?.["capture:doctor"] === "string" &&
         fs.existsSync(path.join(target, ".mcp.json")) &&
+        fs.readFileSync(path.join(target, ".npmrc"), "utf8") ===
+          "onnxruntime-node-install-cuda=skip\n" &&
         fs.existsSync(path.join(target, "automovie.mcp.jsonc")) === false &&
         readme.includes("\nnpm run lint:source\n") &&
         readme.includes("\nnpm run lint\n") &&

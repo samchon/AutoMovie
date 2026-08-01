@@ -39,7 +39,7 @@ const throwsWith = (fn: () => unknown, message: string): boolean => {
  * Scenarios:
  *
  * 1. `renderScaffold` yields the starter's file set with POSIX keys, and the
- *    shipped `gitignore` asset is restored to `.gitignore`.
+ *    shipped-safe `gitignore`/`npmrc` assets regain their leading dots.
  * 2. Substitution is complete: `{{name}}` becomes the project name, the
  *    `{{version:*}}` tokens become the catalog-synced versions, no `{{` token
  *    survives, and no payload carries a CRLF.
@@ -53,10 +53,9 @@ const throwsWith = (fn: () => unknown, message: string): boolean => {
  *    published `@automovie/cli` would ship no scaffold and `npx automovie
  *    start` would throw on install (#1155). Guards the packaging, which the
  *    in-repo render (workspace source) cannot.
- * 6. The pinned Kokoro/Transformers graph installs its Node CPU backend and local
- *    MIT Sharp capability wall as direct dependencies, fingerprints both in
- *    sound identity, and fails an image call explicitly instead of loading a
- *    native LGPL payload.
+ * 6. The pinned Kokoro/Transformers graph installs and fingerprints its Node CPU
+ *    backend without an unused CUDA download, while the local MIT Sharp wall
+ *    fails image calls explicitly instead of loading a native LGPL payload.
  */
 export const test_cli_scaffold = (): void => {
   // 5. packaging guard: the scaffold dir must be a published `files` entry.
@@ -79,15 +78,15 @@ export const test_cli_scaffold = (): void => {
 
   const files = renderScaffold({ name: "demo-film" });
 
-  // 1. the file set, POSIX keys, gitignore restored, IN ITS GUARANTEED ORDER.
+  // 1. the file set, POSIX keys, hidden names restored, IN GUARANTEED ORDER.
   // No re-sort: the order is the guarantee. `listFiles` sorts each directory's
   // entries by code unit and recurses in place, so the emitted order is a DFS
   // pre-order over the ON-DISK names, with `gitignore` renamed to `.gitignore`
   // on the key afterwards. Hence `.automovie/**` leads, while `.gitignore`
   // sits where the shipped `gitignore` asset sorts rather than at its rendered
-  // position. Re-sorting the keys here made the assertion hold for ANY order
-  // the scaffolder produced, so the cross-host guarantee `listFiles` exists to
-  // provide had no test at all.
+  // position; `npmrc` behaves likewise. Re-sorting the keys here made the
+  // assertion hold for ANY order the scaffolder produced, so the cross-host
+  // guarantee `listFiles` exists to provide had no test at all.
   TestValidator.equals(
     "the starter renders its expected file set, in its guaranteed order",
     Object.keys(files),
@@ -123,6 +122,7 @@ export const test_cli_scaffold = (): void => {
       "docs/demo-film/treatment.md",
       ".gitignore",
       "lint.config.ts",
+      ".npmrc",
       "package.json",
       "public/assets/README.md",
       "public/audio/README.md",
@@ -218,10 +218,11 @@ export const test_cli_scaffold = (): void => {
       pkg.includes(`"three": "${AUTOMOVIE_TEMPLATE_VERSIONS.three}"`),
   );
   TestValidator.predicate(
-    "the Sharp capability wall is directly installed and overrides Transformers",
+    "the Node TTS graph owns CPU-only and image capability installation",
     parsedPackage.dependencies?.sharp === "file:vendor/sharp-disabled" &&
       parsedPackage.overrides?.["@huggingface/transformers"]?.sharp ===
-        "file:vendor/sharp-disabled",
+        "file:vendor/sharp-disabled" &&
+      files[".npmrc"] === "onnxruntime-node-install-cuda=skip\n",
   );
   TestValidator.predicate(
     "the starter separates owned source and enforces review in read-only lint",
@@ -345,6 +346,11 @@ export const test_cli_scaffold = (): void => {
       ) &&
       files["scripts/render.ts"]!.includes(
         'path: "package:onnxruntime-node"',
+      ) &&
+      files["scripts/render.ts"]!.split("onnxRuntimeNodeNativeAssets()")
+        .length === 3 &&
+      files["scripts/render.ts"]!.includes(
+        "process.platform,\n      process.arch",
       ) &&
       files["scripts/render.ts"]!.includes(
         'imageCapability: resolvedPackageIdentity("sharp")',
@@ -553,6 +559,7 @@ export const test_cli_scaffold = (): void => {
         ".claude/settings.json",
         ".gitignore",
         ".mcp.json",
+        ".npmrc",
         "AGENTS.md",
         "CLAUDE.md",
         "README.md",

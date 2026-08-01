@@ -883,6 +883,11 @@ try {
     `node "${creatorBinTarget}" "${starterDir}"`,
     projectDir,
   );
+  if (
+    readFileSync(join(starterDir, ".npmrc"), "utf8") !==
+    "onnxruntime-node-install-cuda=skip\n"
+  )
+    fail("packaged starter does not disable the unused ONNX Runtime CUDA EP");
   const starterProductionPath = join(
     starterDir,
     ".automovie",
@@ -1262,6 +1267,31 @@ PNG.sync.read = function (input) {
   );
   const renderPlanPath = join(renderStateRoot, "plan.json");
   const renderPlanText = readFileSync(renderPlanPath, "utf8");
+  const onnxNativeBindingPath = join(
+    starterDir,
+    "node_modules",
+    "onnxruntime-node",
+    "bin",
+    "napi-v3",
+    process.platform,
+    process.arch,
+    "onnxruntime_binding.node",
+  );
+  const onnxNativeBinding = readFileSync(onnxNativeBindingPath);
+  writeFileSync(
+    onnxNativeBindingPath,
+    Buffer.concat([onnxNativeBinding, Buffer.from([0])]),
+  );
+  try {
+    runExpectedFailure(
+      "reject changed packaged ONNX Runtime native backend",
+      "npm run render -- verify",
+      starterDir,
+      "render runtime identity changed",
+    );
+  } finally {
+    writeFileSync(onnxNativeBindingPath, onnxNativeBinding);
+  }
   const tamperedRenderPlan = JSON.parse(renderPlanText);
   tamperedRenderPlan.tracks.captions += "\nNOTE tampered\n";
   writeFileSync(

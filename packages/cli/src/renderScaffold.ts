@@ -5,11 +5,14 @@ import { renderTemplate } from "./renderTemplate";
 import { AUTOMOVIE_TEMPLATE_VERSIONS } from "./templateVersions";
 
 /**
- * Files renamed as the scaffold is rendered. npm strips a real `.gitignore`
- * from a published package, so the asset ships as `gitignore` and the rendered
- * key restores the dot.
+ * Files renamed as the scaffold is rendered. npm strips real `.gitignore` and
+ * `.npmrc` files from a published package, so the assets ship without dots and
+ * the rendered keys restore them.
  */
-const RENAME: Record<string, string> = { gitignore: ".gitignore" };
+const RENAME: Record<string, string> = {
+  gitignore: ".gitignore",
+  npmrc: ".npmrc",
+};
 
 /** The values interpolated into the starter's `{{...}}` tokens. */
 export interface IAutoMovieScaffoldProps {

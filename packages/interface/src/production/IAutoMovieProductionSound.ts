@@ -140,7 +140,7 @@ export interface IAutoMovieProductionTtsReceipt {
   phonemes: string;
   /** Phoneme chunks on the exact model-native PCM clock. */
   phonemeChunks: IAutoMovieProductionPhonemeChunk[];
-  /** Adapter, model-cache, and bundled-voice byte identity. */
+  /** Adapter, native backend, model-cache, and bundled-voice byte identity. */
   runtimeAssets: Array<{
     /** Stable package or revision-cache-relative asset name. */
     path: string;
