@@ -10,13 +10,23 @@ interface IPhysicalDirectory {
   inode: string;
   path: string;
   real: string;
+  version: string;
 }
 
 interface IPhysicalFile {
-  device: string;
-  inode: string;
+  identity: string;
   path: string;
   relative: string;
+}
+
+interface IBundleDirectory {
+  identity: IPhysicalDirectory;
+  relative: string;
+}
+
+interface IPhysicalBundle {
+  directories: IBundleDirectory[];
+  files: IPhysicalFile[];
 }
 
 /** Verify one immutable proxy publication against its exact expected files. */
@@ -25,11 +35,13 @@ export const assertPublishedProxyBundle = (
   expected: ReadonlyMap<string, Uint8Array>,
 ): void => {
   const root = physicalDirectory(target, "proxy bundle");
-  const actual = physicalFiles(root);
-  const actualByPath = new Map(actual.map((file) => [file.relative, file]));
+  const bundle = physicalBundle(root);
+  const actualByPath = new Map(
+    bundle.files.map((file) => [file.relative, file]),
+  );
   if (
-    actual.length !== expected.size ||
-    actual.some((file) => expected.has(file.relative) === false)
+    bundle.files.length !== expected.size ||
+    bundle.files.some((file) => expected.has(file.relative) === false)
   )
     throw new Error(
       `Proxy bundle "${target}" has an unexpected file inventory.`,
@@ -50,7 +62,7 @@ export const assertPublishedProxyBundle = (
     )
       throw new Error(`Proxy bundle file "${relative}" is not relative.`);
     const file = path.join(root.real, ...segments);
-    assertPhysicalFile(observed);
+    assertBundleIdentities(bundle);
     const resident = Buffer.from(
       readAutoMovieProductionOwnedFile({
         root: root.real,
@@ -59,7 +71,7 @@ export const assertPublishedProxyBundle = (
       }),
     );
     assertPhysicalFile(observed);
-    assertPhysicalDirectory(root, "proxy bundle");
+    assertBundleIdentities(bundle);
     if (
       resident.length !== bytes.length ||
       digestAutoMovieBytes(resident) !== digestAutoMovieBytes(bytes)
@@ -68,17 +80,22 @@ export const assertPublishedProxyBundle = (
         `Proxy bundle file "${relative}" changed resident bytes.`,
       );
   }
-  assertPhysicalDirectory(root, "proxy bundle");
+  assertExactBundle(root, bundle);
 };
 
-const physicalFiles = (root: IPhysicalDirectory): IPhysicalFile[] => {
-  const output: IPhysicalFile[] = [];
+const physicalBundle = (root: IPhysicalDirectory): IPhysicalBundle => {
+  const directories: IBundleDirectory[] = [];
+  const files: IPhysicalFile[] = [];
   const visit = (directory: string): void => {
     const identity = physicalDirectory(directory, "proxy bundle directory");
     if (inside(root.real, identity.real) === false)
       throw new Error(
         `Proxy bundle directory "${directory}" escapes its physical root.`,
       );
+    directories.push({
+      identity,
+      relative: path.relative(root.real, identity.real).replaceAll("\\", "/"),
+    });
     for (const name of fs
       .readdirSync(identity.real)
       .sort((left, right) => (left < right ? -1 : left > right ? 1 : 0))) {
@@ -88,9 +105,8 @@ const physicalFiles = (root: IPhysicalDirectory): IPhysicalFile[] => {
         throw new Error(`Proxy bundle refuses linked entry "${file}".`);
       if (status.isDirectory()) visit(file);
       else if (status.isFile())
-        output.push({
-          device: status.dev.toString(),
-          inode: status.ino.toString(),
+        files.push({
+          identity: physicalVersion(status),
           path: file,
           relative: path.relative(root.real, file).replaceAll("\\", "/"),
         });
@@ -100,16 +116,44 @@ const physicalFiles = (root: IPhysicalDirectory): IPhysicalFile[] => {
   };
   visit(root.real);
   assertPhysicalDirectory(root, "proxy bundle");
-  return output;
+  return { directories, files };
 };
+
+const assertBundleIdentities = (bundle: IPhysicalBundle): void => {
+  for (const directory of bundle.directories)
+    assertPhysicalDirectory(directory.identity, "proxy bundle directory");
+  for (const file of bundle.files) assertPhysicalFile(file);
+};
+
+const assertExactBundle = (
+  root: IPhysicalDirectory,
+  expected: IPhysicalBundle,
+): void => {
+  assertBundleIdentities(expected);
+  const current = physicalBundle(root);
+  if (bundleFingerprint(current) !== bundleFingerprint(expected))
+    throw new Error(`Proxy bundle "${root.path}" changed exact inventory.`);
+  assertBundleIdentities(expected);
+};
+
+const bundleFingerprint = (bundle: IPhysicalBundle): string =>
+  JSON.stringify({
+    directories: bundle.directories.map((directory) => ({
+      identity: directory.identity.version,
+      relative: directory.relative,
+    })),
+    files: bundle.files.map((file) => ({
+      identity: file.identity,
+      relative: file.relative,
+    })),
+  });
 
 const assertPhysicalFile = (expected: IPhysicalFile): void => {
   const current = fs.lstatSync(expected.path, { bigint: true });
   if (
     current.isSymbolicLink() ||
     current.isFile() === false ||
-    current.dev.toString() !== expected.device ||
-    current.ino.toString() !== expected.inode
+    physicalVersion(current) !== expected.identity
   )
     throw new Error(
       `Proxy bundle file "${expected.relative}" changed physical identity.`,
@@ -126,10 +170,13 @@ const physicalDirectory = (
     throw new Error(`${label} "${namespacePath}" is not physical.`);
   const real = fs.realpathSync(namespacePath);
   const status = fs.statSync(real, { bigint: true });
+  const linkedVersion = physicalVersion(linked);
+  const statusVersion = physicalVersion(status);
   if (
     status.isDirectory() === false ||
     status.dev !== linked.dev ||
-    status.ino !== linked.ino
+    status.ino !== linked.ino ||
+    statusVersion !== linkedVersion
   )
     throw new Error(`${label} "${namespacePath}" changed while resolved.`);
   return {
@@ -137,6 +184,7 @@ const physicalDirectory = (
     inode: status.ino.toString(),
     path: namespacePath,
     real,
+    version: statusVersion,
   };
 };
 
@@ -148,10 +196,14 @@ const assertPhysicalDirectory = (
   if (
     current.device !== expected.device ||
     current.inode !== expected.inode ||
-    current.real !== expected.real
+    current.real !== expected.real ||
+    current.version !== expected.version
   )
     throw new Error(`${label} "${expected.path}" changed physical identity.`);
 };
+
+const physicalVersion = (status: fs.BigIntStats): string =>
+  `${status.dev}\0${status.ino}\0${status.size}\0${status.mtimeNs}\0${status.ctimeNs}`;
 
 const inside = (root: string, candidate: string): boolean => {
   const relative = path.relative(root, candidate);

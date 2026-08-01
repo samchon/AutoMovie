@@ -74,8 +74,9 @@ type GeneratedViewerMiddleware = (
  * 8. The registered asset route applies the same binding to ownership, closure,
  *    and final asset bytes, rejecting authorization successors and inventory
  *    mutation before serving one descriptor-bound asset.
- * 9. Proxy publication verification accepts an exact physical bundle and rejects a
- *    byte-identical file successor after inventory observation.
+ * 9. Proxy publication verification accepts an exact physical bundle and rejects
+ *    byte-identical file, hard-linked directory, and late-inventory
+ *    successors.
  */
 export const test_cli_scaffold = (): void => {
   // 5. packaging guard: the scaffold dir must be a published `files` entry.
@@ -1038,7 +1039,7 @@ export const test_cli_scaffold = (): void => {
       fs.writeFileSync(file, bytes);
     }
     const proxyModule = createRequire(__filename)(
-      path.join(target, "scripts", "assertProxyBundle.ts"),
+      path.join(scaffoldDir, "scripts", "assertProxyBundle.ts"),
     ) as {
       assertPublishedProxyBundle: (
         directory: string,
@@ -1079,6 +1080,81 @@ export const test_cli_scaffold = (): void => {
     TestValidator.predicate(
       "proxy verification rejects a byte-identical successor after inventory",
       proxyMediaSwapped && proxyRaceRejected,
+    );
+    const proxyMediaDirectory = path.dirname(proxyMedia);
+    const parkedProxyMediaDirectory = path.join(
+      base,
+      "proxy-media-directory-parked",
+    );
+    const successorProxyMediaDirectory = path.join(
+      base,
+      "proxy-media-directory-successor",
+    );
+    fs.mkdirSync(successorProxyMediaDirectory);
+    fs.linkSync(
+      proxyMedia,
+      path.join(successorProxyMediaDirectory, path.basename(proxyMedia)),
+    );
+    let proxyMediaObservations = 0;
+    let proxyDirectorySwapped = false;
+    mutableFs.lstatSync = ((file, ...args: unknown[]): unknown => {
+      const status = Reflect.apply(nativeLstat, mutableFs, [file, ...args]);
+      if (path.resolve(file.toString()) === proxyMedia) {
+        proxyMediaObservations++;
+        if (proxyMediaObservations === 2) {
+          fs.renameSync(proxyMediaDirectory, parkedProxyMediaDirectory);
+          fs.renameSync(successorProxyMediaDirectory, proxyMediaDirectory);
+          proxyDirectorySwapped = true;
+        }
+      }
+      return status;
+    }) as typeof fs.lstatSync;
+    let proxyDirectoryRaceRejected = false;
+    try {
+      proxyDirectoryRaceRejected = throws(() =>
+        proxyModule.assertPublishedProxyBundle(proxy, proxyFiles),
+      );
+    } finally {
+      mutableFs.lstatSync = nativeLstat;
+      if (fs.existsSync(parkedProxyMediaDirectory)) {
+        fs.rmSync(proxyMediaDirectory, { recursive: true, force: true });
+        fs.renameSync(parkedProxyMediaDirectory, proxyMediaDirectory);
+      }
+      fs.rmSync(successorProxyMediaDirectory, {
+        recursive: true,
+        force: true,
+      });
+    }
+    TestValidator.predicate(
+      "proxy verification rejects a hard-linked directory successor",
+      proxyDirectorySwapped && proxyDirectoryRaceRejected,
+    );
+    const lateProxyFile = path.join(proxyMediaDirectory, "late.bin");
+    proxyMediaObservations = 0;
+    let proxyInventoryMutated = false;
+    mutableFs.lstatSync = ((file, ...args: unknown[]): unknown => {
+      const status = Reflect.apply(nativeLstat, mutableFs, [file, ...args]);
+      if (path.resolve(file.toString()) === proxyMedia) {
+        proxyMediaObservations++;
+        if (proxyMediaObservations === 2) {
+          fs.writeFileSync(lateProxyFile, "late inventory");
+          proxyInventoryMutated = true;
+        }
+      }
+      return status;
+    }) as typeof fs.lstatSync;
+    let proxyInventoryRaceRejected = false;
+    try {
+      proxyInventoryRaceRejected = throws(() =>
+        proxyModule.assertPublishedProxyBundle(proxy, proxyFiles),
+      );
+    } finally {
+      mutableFs.lstatSync = nativeLstat;
+      fs.rmSync(lateProxyFile, { force: true });
+    }
+    TestValidator.predicate(
+      "proxy verification rejects a late unexpected inventory entry",
+      proxyInventoryMutated && proxyInventoryRaceRejected,
     );
     TestValidator.predicate(
       "a non-empty target is refused without force",
