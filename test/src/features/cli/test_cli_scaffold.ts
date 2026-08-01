@@ -6,6 +6,7 @@ import {
   writeFiles,
 } from "@automovie/cli";
 import { TestValidator } from "@nestia/e2e";
+import { createHash } from "node:crypto";
 import * as fs from "node:fs";
 import { createRequire } from "node:module";
 import * as os from "node:os";
@@ -77,6 +78,8 @@ type GeneratedViewerMiddleware = (
  * 9. Proxy publication verification accepts an exact physical bundle and rejects
  *    byte-identical file, hard-linked directory, and late-inventory
  *    successors.
+ * 10. Runtime package identity binds manifest, entry, and selected asset-tree bytes
+ *     to one physical snapshot and rejects their successors.
  */
 export const test_cli_scaffold = (): void => {
   // 5. packaging guard: the scaffold dir must be a published `files` entry.
@@ -202,6 +205,7 @@ export const test_cli_scaffold = (): void => {
       "scripts/preview.ts",
       "scripts/render.ts",
       "scripts/review-status.ts",
+      "scripts/runtimePackageSnapshot.ts",
       "scripts/verify.ts",
       "src/examples/lineBattle.ts",
       "src/film.ts",
@@ -405,15 +409,15 @@ export const test_cli_scaffold = (): void => {
       files["scripts/render.ts"]!.split("device: KOKORO_DEVICE").length === 4 &&
       files["scripts/render.ts"]!.includes("productionSoundRuntimeIdentity") &&
       files["scripts/render.ts"]!.includes(
-        'backend: {\n      ...resolvedPackageIdentity("onnxruntime-node"),\n      nativeAssets: onnxRuntimeNodeNativeAssets(),\n    }',
+        "backend: onnxRuntimeNodeIdentity()",
       ) &&
       files["scripts/render.ts"]!.includes(
         'path: "package:onnxruntime-node"',
       ) &&
-      files["scripts/render.ts"]!.split("onnxRuntimeNodeNativeAssets()")
-        .length === 3 &&
+      files["scripts/render.ts"]!.split("onnxRuntimeNodeIdentity()").length ===
+        3 &&
       files["scripts/render.ts"]!.includes(
-        "process.platform,\n      process.arch",
+        '["bin", "napi-v3", process.platform, process.arch]',
       ) &&
       files["scripts/render.ts"]!.includes(
         'imageCapability: resolvedPackageIdentity("sharp")',
@@ -662,6 +666,7 @@ export const test_cli_scaffold = (): void => {
         "scripts/preview.ts",
         "scripts/render.ts",
         "scripts/review-status.ts",
+        "scripts/runtimePackageSnapshot.ts",
         "scripts/verify.ts",
         "src/examples/lineBattle.ts",
         "src/film.ts",
@@ -1155,6 +1160,139 @@ export const test_cli_scaffold = (): void => {
     TestValidator.predicate(
       "proxy verification rejects a late unexpected inventory entry",
       proxyInventoryMutated && proxyInventoryRaceRejected,
+    );
+    const runtimePackage = path.join(base, "runtime-package");
+    const runtimeManifest = path.join(runtimePackage, "package.json");
+    const runtimeEntry = path.join(runtimePackage, "index.mjs");
+    const runtimeAssets = path.join(runtimePackage, "native");
+    const runtimeAsset = path.join(runtimeAssets, "runtime.node");
+    const runtimeManifestBytes = Buffer.from(
+      '{"name":"fixture-runtime","version":"1.2.3"}\n',
+    );
+    const runtimeEntryBytes = Buffer.from("export const fixture = true;\n");
+    const runtimeAssetBytes = Buffer.from("native fixture bytes");
+    fs.mkdirSync(runtimeAssets, { recursive: true });
+    fs.writeFileSync(runtimeManifest, runtimeManifestBytes);
+    fs.writeFileSync(runtimeEntry, runtimeEntryBytes);
+    fs.writeFileSync(runtimeAsset, runtimeAssetBytes);
+    const runtimePackageModule = createRequire(__filename)(
+      path.join(scaffoldDir, "scripts", "runtimePackageSnapshot.ts"),
+    ) as {
+      snapshotRuntimePackage: (props: {
+        assets?: ReadonlyArray<{
+          kind: "file" | "tree";
+          relative: string;
+        }>;
+        entry: string;
+        packageName: string;
+      }) => {
+        assets: Array<{ digest: string; path: string }>;
+        entryDigest: string;
+        package: string;
+        version: string;
+      };
+    };
+    const snapshotRuntimeFixture = () =>
+      runtimePackageModule.snapshotRuntimePackage({
+        assets: [{ kind: "tree", relative: "native" }],
+        entry: runtimeEntry,
+        packageName: "fixture-runtime",
+      });
+    const fixtureDigest = (bytes: Uint8Array): string =>
+      `sha256:${createHash("sha256").update(bytes).digest("hex")}`;
+    const runtimeSnapshot = snapshotRuntimeFixture();
+    TestValidator.predicate(
+      "runtime package identity captures exact manifest-owned entry and assets",
+      runtimeSnapshot.package === "fixture-runtime" &&
+        runtimeSnapshot.version === "1.2.3" &&
+        runtimeSnapshot.entryDigest === fixtureDigest(runtimeEntryBytes) &&
+        runtimeSnapshot.assets.length === 1 &&
+        runtimeSnapshot.assets[0]?.path === "native/runtime.node" &&
+        runtimeSnapshot.assets[0]?.digest === fixtureDigest(runtimeAssetBytes),
+    );
+    const parkedRuntimeManifest = `${runtimeManifest}.parked`;
+    let runtimeManifestSwapped = false;
+    mutableFs.lstatSync = ((file, ...args: unknown[]): unknown => {
+      const status = Reflect.apply(nativeLstat, mutableFs, [file, ...args]);
+      if (
+        runtimeManifestSwapped === false &&
+        path.resolve(file.toString()) === runtimeManifest
+      ) {
+        fs.renameSync(runtimeManifest, parkedRuntimeManifest);
+        fs.writeFileSync(runtimeManifest, runtimeManifestBytes);
+        runtimeManifestSwapped = true;
+      }
+      return status;
+    }) as typeof fs.lstatSync;
+    let runtimeManifestRaceRejected = false;
+    try {
+      runtimeManifestRaceRejected = throws(snapshotRuntimeFixture);
+    } finally {
+      mutableFs.lstatSync = nativeLstat;
+      if (fs.existsSync(parkedRuntimeManifest)) {
+        fs.rmSync(runtimeManifest, { force: true });
+        fs.renameSync(parkedRuntimeManifest, runtimeManifest);
+      }
+    }
+    TestValidator.predicate(
+      "runtime package identity rejects a byte-identical manifest successor",
+      runtimeManifestSwapped && runtimeManifestRaceRejected,
+    );
+    const parkedRuntimeEntry = `${runtimeEntry}.parked`;
+    let runtimeEntrySwapped = false;
+    mutableFs.lstatSync = ((file, ...args: unknown[]): unknown => {
+      const status = Reflect.apply(nativeLstat, mutableFs, [file, ...args]);
+      if (
+        runtimeEntrySwapped === false &&
+        path.resolve(file.toString()) === runtimeEntry
+      ) {
+        fs.renameSync(runtimeEntry, parkedRuntimeEntry);
+        fs.writeFileSync(runtimeEntry, runtimeEntryBytes);
+        runtimeEntrySwapped = true;
+      }
+      return status;
+    }) as typeof fs.lstatSync;
+    let runtimeEntryRaceRejected = false;
+    try {
+      runtimeEntryRaceRejected = throws(snapshotRuntimeFixture);
+    } finally {
+      mutableFs.lstatSync = nativeLstat;
+      if (fs.existsSync(parkedRuntimeEntry)) {
+        fs.rmSync(runtimeEntry, { force: true });
+        fs.renameSync(parkedRuntimeEntry, runtimeEntry);
+      }
+    }
+    TestValidator.predicate(
+      "runtime package identity rejects a byte-identical entry successor",
+      runtimeEntrySwapped && runtimeEntryRaceRejected,
+    );
+    const lateRuntimeAsset = path.join(runtimeAssets, "late.node");
+    const runtimeNativeReaddir = mutableFs.readdirSync;
+    let runtimeInventoryMutated = false;
+    mutableFs.readdirSync = ((directory, ...args: unknown[]): unknown => {
+      const entries = Reflect.apply(runtimeNativeReaddir, mutableFs, [
+        directory,
+        ...args,
+      ]);
+      if (
+        runtimeInventoryMutated === false &&
+        path.resolve(directory.toString()) === runtimeAssets
+      ) {
+        fs.writeFileSync(lateRuntimeAsset, "late native asset");
+        runtimeInventoryMutated = true;
+      }
+      return entries;
+    }) as typeof fs.readdirSync;
+    let runtimeInventoryRaceRejected = false;
+    try {
+      runtimeInventoryRaceRejected = throws(snapshotRuntimeFixture);
+    } finally {
+      mutableFs.readdirSync = runtimeNativeReaddir;
+      fs.rmSync(lateRuntimeAsset, { force: true });
+    }
+    TestValidator.predicate(
+      "runtime package identity rejects native asset inventory mutation",
+      runtimeInventoryMutated && runtimeInventoryRaceRejected,
     );
     TestValidator.predicate(
       "a non-empty target is refused without force",

@@ -75,6 +75,11 @@ import {
   closeProductionFrameCapture,
   productionFrameCaptureMetrics,
 } from "./capture";
+import {
+  type IRuntimePackageSnapshot,
+  type RuntimePackageAssetSelection,
+  snapshotRuntimePackage,
+} from "./runtimePackageSnapshot";
 
 const root = process.cwd();
 const productionId = config.productionId;
@@ -426,10 +431,7 @@ const productionSoundRuntimeIdentity = () => ({
   tts: {
     ...resolvedPackageIdentity("kokoro-js"),
     adapter: resolvedPackageIdentity("@huggingface/transformers"),
-    backend: {
-      ...resolvedPackageIdentity("onnxruntime-node"),
-      nativeAssets: onnxRuntimeNodeNativeAssets(),
-    },
+    backend: onnxRuntimeNodeIdentity(),
     imageCapability: resolvedPackageIdentity("sharp"),
     model: KOKORO_MODEL,
     modelRevision: KOKORO_MODEL_REVISION,
@@ -446,85 +448,60 @@ const resolvedPackageIdentity = (
   package: string;
   version: string;
   entryDigest: AutoMovieContentDigest;
+} => packageSnapshotIdentity(resolvedPackageSnapshot(packageName));
+
+const resolvedPackageSnapshot = (
+  packageName: string,
+  assets: readonly RuntimePackageAssetSelection[] = [],
+): IRuntimePackageSnapshot =>
+  snapshotRuntimePackage({
+    assets,
+    entry: resolveImportEntry(packageName),
+    packageName,
+  });
+
+const packageSnapshotIdentity = (
+  snapshot: IRuntimePackageSnapshot,
+): {
+  package: string;
+  version: string;
+  entryDigest: AutoMovieContentDigest;
+} => ({
+  package: snapshot.package,
+  version: snapshot.version,
+  entryDigest: snapshot.entryDigest,
+});
+
+const onnxRuntimeNodeIdentity = (): ReturnType<
+  typeof packageSnapshotIdentity
+> & {
+  nativeAssets: IAutoMovieProductionTtsReceipt["runtimeAssets"];
 } => {
-  const entry = resolveImportEntry(packageName);
-  let directory = path.dirname(entry);
-  for (;;) {
-    const manifest = path.join(directory, "package.json");
-    if (fs.existsSync(manifest)) {
-      const parsed = JSON.parse(fs.readFileSync(manifest, "utf8")) as Partial<{
-        name: string;
-        version: string;
-      }>;
-      if (
-        parsed.name === packageName &&
-        typeof parsed.version === "string" &&
-        parsed.version.length > 0
-      )
-        return {
-          package: packageName,
-          version: parsed.version,
-          entryDigest: digestAutoMovieBytes(fs.readFileSync(entry)),
-        };
-    }
-    const parent = path.dirname(directory);
-    if (parent === directory)
-      throw new Error(
-        `Resolved package "${packageName}" has no matching package.json ancestor.`,
-      );
-    directory = parent;
-  }
-};
-
-const resolvedPackageDirectory = (packageName: string): string => {
-  let directory = path.dirname(resolveImportEntry(packageName));
-  for (;;) {
-    const manifest = path.join(directory, "package.json");
-    if (fs.existsSync(manifest)) {
-      const parsed = JSON.parse(fs.readFileSync(manifest, "utf8")) as Partial<{
-        name: string;
-      }>;
-      if (parsed.name === packageName) return directory;
-    }
-    const parent = path.dirname(directory);
-    if (parent === directory)
-      throw new Error(
-        `Resolved package "${packageName}" has no matching package.json ancestor.`,
-      );
-    directory = parent;
-  }
-};
-
-const onnxRuntimeNodeNativeAssets =
-  (): IAutoMovieProductionTtsReceipt["runtimeAssets"] => {
-    const packageRoot = resolvedPackageDirectory("onnxruntime-node");
-    const nativeRoot = path.join(
-      packageRoot,
-      "bin",
-      "napi-v3",
-      process.platform,
-      process.arch,
-    );
-    if (fs.existsSync(nativeRoot) === false)
+  const relative = ["bin", "napi-v3", process.platform, process.arch].join("/");
+  let snapshot: IRuntimePackageSnapshot;
+  try {
+    snapshot = resolvedPackageSnapshot("onnxruntime-node", [
+      { kind: "tree", relative },
+    ]);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT")
       throw new Error(
         `ONNX Runtime Node has no native backend for ${process.platform}/${process.arch}.`,
       );
-    const files = listFiles(nativeRoot);
-    if (files.length === 0)
-      throw new Error(
-        `ONNX Runtime Node native backend is empty for ${process.platform}/${process.arch}.`,
-      );
-    return files.map((file) => {
-      const relative = path
-        .relative(packageRoot, file)
-        .split(path.sep)
-        .join("/");
-      return {
-        path: `package:onnxruntime-node/${relative}`,
-        digest: digestAutoMovieBytes(fs.readFileSync(file)),
-      };
-    });
+    throw error;
+  }
+  if (snapshot.assets.length === 0)
+    throw new Error(
+      `ONNX Runtime Node native backend is empty for ${process.platform}/${process.arch}.`,
+    );
+  return {
+    ...packageSnapshotIdentity(snapshot),
+    nativeAssets: snapshot.assets.map((asset) => ({
+      path: `package:onnxruntime-node/${asset.path}`,
+      digest: asset.digest,
+    })),
   };
+};
 
 const renderShotFingerprints = (
   project: AutoMovieProductionProject,
@@ -1865,18 +1842,16 @@ const loadPinnedKokoroRuntime = async (
 
 const kokoroBaseRuntimeAssets =
   (): IAutoMovieProductionTtsReceipt["runtimeAssets"] => {
-    const kokoro = resolvedPackageIdentity("kokoro-js");
+    const voiceRelative = `voices/${KOKORO_VOICE}.bin`;
+    const kokoro = resolvedPackageSnapshot("kokoro-js", [
+      { kind: "file", relative: voiceRelative },
+    ]);
     const transformers = resolvedPackageIdentity("@huggingface/transformers");
-    const backend = resolvedPackageIdentity("onnxruntime-node");
-    const backendNativeAssets = onnxRuntimeNodeNativeAssets();
+    const backend = onnxRuntimeNodeIdentity();
     const imageCapability = resolvedPackageIdentity("sharp");
-    const voice = path.join(
-      resolvedPackageDirectory("kokoro-js"),
-      "voices",
-      `${KOKORO_VOICE}.bin`,
-    );
-    if (fs.existsSync(voice) === false)
-      throw new Error(`Kokoro voice asset is absent: ${voice}`);
+    const voice = kokoro.assets.find((asset) => asset.path === voiceRelative);
+    if (voice === undefined)
+      throw new Error(`Kokoro voice asset is absent: ${voiceRelative}`);
     return [
       { path: "package:kokoro-js", digest: kokoro.entryDigest },
       {
@@ -1887,14 +1862,14 @@ const kokoroBaseRuntimeAssets =
         path: "package:onnxruntime-node",
         digest: backend.entryDigest,
       },
-      ...backendNativeAssets,
+      ...backend.nativeAssets,
       {
         path: "package:sharp-capability-wall",
         digest: imageCapability.entryDigest,
       },
       {
         path: `voice:${KOKORO_VOICE}.bin`,
-        digest: digestAutoMovieBytes(fs.readFileSync(voice)),
+        digest: voice.digest,
       },
     ];
   };
@@ -2284,14 +2259,14 @@ const renderRuntimeIdentity = async (props: {
 const productionEncoderIdentity = (
   fps: number,
 ): IAutoMovieProductionEncoderIdentity => {
-  const encoderEntry = require.resolve("h264-mp4-encoder");
-  const encoderPackage = JSON.parse(
-    fs.readFileSync(require.resolve("h264-mp4-encoder/package.json"), "utf8"),
-  ) as { version: string };
+  const encoder = packageSnapshotIdentity(
+    snapshotRuntimePackage({
+      entry: require.resolve("h264-mp4-encoder"),
+      packageName: "h264-mp4-encoder",
+    }),
+  );
   return {
-    package: "h264-mp4-encoder",
-    version: encoderPackage.version,
-    entryDigest: digestAutoMovieBytes(fs.readFileSync(encoderEntry)),
+    ...encoder,
     codec: "h264",
     arguments: {
       quantizationParameter: 24,
