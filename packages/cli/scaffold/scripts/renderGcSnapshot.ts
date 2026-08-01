@@ -54,12 +54,127 @@ export const captureRenderGcTarget = (
   return first;
 };
 
+/** Create one physical descendant while fencing every prior path segment. */
+export const ensureRenderPhysicalDirectory = (
+  base: string,
+  relative: string,
+): string => {
+  const segments = relative.split("/");
+  if (
+    segments.length === 0 ||
+    segments.some(
+      (segment) =>
+        segment.length === 0 ||
+        segment === "." ||
+        segment === ".." ||
+        segment.includes("\\") ||
+        segment.includes("\0"),
+    )
+  )
+    throw new Error(`Render directory path "${relative}" is invalid.`);
+  const root = physicalDirectory(base, "render ownership root");
+  const ancestry = [root];
+  let cursor = root.path;
+  for (const segment of segments) {
+    for (const directory of ancestry)
+      assertPhysicalDirectoryIdentity(directory, "render directory ancestry");
+    cursor = path.join(cursor, segment);
+    try {
+      fs.mkdirSync(cursor);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+    }
+    const current = physicalDirectory(cursor, "render directory ancestry");
+    if (inside(root.real, current.real) === false)
+      throw new Error("Render directory ancestry escapes its ownership root.");
+    ancestry.push(current);
+  }
+  for (const directory of ancestry)
+    assertPhysicalDirectoryIdentity(directory, "render directory ancestry");
+  return cursor;
+};
+
 /** Quarantine and delete only the exact target captured during GC inventory. */
 export const removeCapturedRenderGcTarget = (props: {
   isolated: string;
   quarantine: string;
   snapshot: IRenderGcTargetSnapshot;
 }): void => {
+  const isolated = isolateCapturedRenderTarget(props);
+  assertRenderGcTarget(isolated.moved);
+  assertPhysicalDirectory(isolated.quarantine, "render GC quarantine");
+  fs.rmSync(isolated.moved.target, {
+    force: true,
+    recursive: isolated.moved.kind === "directory",
+  });
+};
+
+/** Quarantine only the exact captured target through a private staging path. */
+export const quarantineCapturedRenderTarget = (props: {
+  destination: string;
+  isolated: string;
+  quarantine: string;
+  snapshot: IRenderGcTargetSnapshot;
+}): void => {
+  const isolated = isolateCapturedRenderTarget(props);
+  const destination = path.resolve(props.destination);
+  const destinationParent = physicalDirectory(
+    path.dirname(destination),
+    "render quarantine destination",
+  );
+  if (
+    path.dirname(destination) !== destinationParent.path ||
+    inside(props.snapshot.base.real, destinationParent.real) === false
+  )
+    throw new Error(
+      "Render quarantine destination escapes its ownership root.",
+    );
+  try {
+    fs.lstatSync(destination);
+    throw new Error(`Render quarantine destination "${destination}" exists.`);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+  }
+  assertRenderGcTarget(isolated.moved);
+  assertPhysicalDirectory(isolated.quarantine, "render GC quarantine");
+  assertPhysicalDirectory(destinationParent, "render quarantine destination");
+  fs.renameSync(isolated.moved.target, destination);
+  const movedDestination = physicalDirectory(
+    destinationParent.path,
+    "render quarantine destination",
+  );
+  assertSamePhysicalDirectory(
+    destinationParent,
+    movedDestination,
+    "render quarantine destination",
+  );
+  const completed = captureRenderGcTarget(
+    props.snapshot.base.path,
+    destination,
+  );
+  if (
+    completed.kind !== isolated.moved.kind ||
+    completed.targetIdentity !== isolated.moved.targetIdentity ||
+    completed.contentFingerprint !== isolated.moved.contentFingerprint
+  )
+    throw new Error(
+      `Render quarantine destination "${destination}" changed after private staging.`,
+    );
+};
+
+/** Revalidate an exact captured target without changing it. */
+export const assertCapturedRenderTarget = (
+  snapshot: IRenderGcTargetSnapshot,
+): void => assertRenderGcTarget(snapshot);
+
+const isolateCapturedRenderTarget = (props: {
+  isolated: string;
+  quarantine: string;
+  snapshot: IRenderGcTargetSnapshot;
+}): {
+  moved: IRenderGcTargetSnapshot;
+  quarantine: IRenderGcPhysicalDirectory;
+} => {
   const quarantine = physicalDirectory(
     props.quarantine,
     "render GC quarantine",
@@ -103,12 +218,7 @@ export const removeCapturedRenderGcTarget = (props: {
       `Render GC target "${props.snapshot.target}" changed at quarantine; its successor was preserved at "${isolated}" and not deleted.`,
     );
   }
-  assertRenderGcTarget(moved);
-  assertPhysicalDirectory(movedQuarantine, "render GC quarantine");
-  fs.rmSync(isolated, {
-    force: true,
-    recursive: moved.kind === "directory",
-  });
+  return { moved, quarantine: movedQuarantine };
 };
 
 const assertRenderGcTarget = (expected: IRenderGcTargetSnapshot): void => {
@@ -327,6 +437,15 @@ const assertPhysicalDirectory = (
     current.real !== expected.real ||
     current.version !== expected.version
   )
+    throw new Error(`${label} "${expected.path}" changed physical identity.`);
+};
+
+const assertPhysicalDirectoryIdentity = (
+  expected: IRenderGcPhysicalDirectory,
+  label: string,
+): void => {
+  const current = physicalDirectory(expected.path, label);
+  if (current.identity !== expected.identity || current.real !== expected.real)
     throw new Error(`${label} "${expected.path}" changed physical identity.`);
 };
 

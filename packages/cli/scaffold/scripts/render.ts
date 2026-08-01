@@ -78,8 +78,11 @@ import {
 import {
   type IRenderGcTargetSnapshot,
   RENDER_GC_PRESERVED_PREFIX,
+  assertCapturedRenderTarget,
   captureRenderGcTarget,
+  ensureRenderPhysicalDirectory,
   isRenderGcPreservedPath,
+  quarantineCapturedRenderTarget,
   removeCapturedRenderGcTarget,
 } from "./renderGcSnapshot";
 import {
@@ -112,7 +115,10 @@ const action = process.argv[2] ?? "all";
 const require = createRequire(import.meta.url);
 const resolveImportEntry = (packageName: string): string =>
   fileURLToPath(import.meta.resolve(packageName));
-const heldChunkLocks = new Map<string, { path: string; token: string }>();
+const heldChunkLocks = new Map<
+  string,
+  { snapshot: IRenderGcTargetSnapshot; token: string }
+>();
 const KOKORO_MODEL = "onnx-community/Kokoro-82M-v1.0-ONNX" as const;
 const KOKORO_MODEL_REVISION =
   "1939ad2a8e416c0acfeecc08a694d14ef25f2231" as const;
@@ -651,6 +657,8 @@ const acquireChunk = async (
   try {
     for (const file of chunkLockClaims(chunk)) {
       let owner: IRenderChunkLockOwner;
+      const snapshot = captureExistingRenderStateTarget(file);
+      if (snapshot === null) continue;
       try {
         owner = readJson<IRenderChunkLockOwner>(file);
       } catch (error) {
@@ -659,6 +667,7 @@ const acquireChunk = async (
           `Chunk lock "${file}" has no readable owner identity. Verify that no render worker owns it, then quarantine it before retrying: ${String(error)}`,
         );
       }
+      assertCapturedRenderTarget(snapshot);
       if (Number.isSafeInteger(owner.pid) === false || owner.pid <= 0)
         throw new Error(
           `Chunk lock "${file}" has an invalid owner process. Verify that no render worker owns it, then quarantine it before retrying.`,
@@ -671,12 +680,14 @@ const acquireChunk = async (
         continue;
       }
       try {
-        quarantine(file, "abandoned-lock");
+        quarantine(file, "abandoned-lock", snapshot);
       } catch (error) {
         if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
       }
     }
+    const ownedClaim = captureRenderGcTarget(stateRoot, claim);
     const owner = readJson<IRenderChunkLockOwner>(claim);
+    assertCapturedRenderTarget(ownedClaim);
     if (
       owner.chunk !== chunk.id ||
       owner.pid !== process.pid ||
@@ -685,7 +696,7 @@ const acquireChunk = async (
       throw new Error(
         `Chunk lock claim "${claim}" changed before rendering began.`,
       );
-    heldChunkLocks.set(chunk.slot, { path: claim, token });
+    heldChunkLocks.set(chunk.slot, { snapshot: ownedClaim, token });
     return true;
   } catch (error) {
     releaseOwnedChunkClaim(chunk, claim, token);
@@ -703,7 +714,8 @@ const renderChunk = async (
     "tmp",
     `${chunk.id.slice(7)}.${process.pid}`,
   );
-  if (fs.existsSync(temporary)) quarantine(temporary, "partial");
+  const partial = captureExistingRenderStateTarget(temporary);
+  if (partial !== null) quarantine(temporary, "partial", partial);
   fs.mkdirSync(temporary, { recursive: true });
   writeJsonAtomic(attemptPath(chunk), {
     slot: chunk.slot,
@@ -806,7 +818,8 @@ const renderChunk = async (
   };
   writeJsonAtomic(path.join(temporary, "receipt.json"), receipt);
   const destination = chunkDirectory(chunk.id);
-  if (fs.existsSync(destination)) quarantine(destination, "replaced");
+  const replaced = captureExistingRenderStateTarget(destination);
+  if (replaced !== null) quarantine(destination, "replaced", replaced);
   fs.mkdirSync(path.dirname(destination), { recursive: true });
   fs.renameSync(temporary, destination);
   fs.rmSync(attemptPath(chunk), { force: true });
@@ -831,22 +844,30 @@ const releaseChunk = async (
   const held = heldChunkLocks.get(chunk.slot);
   if (held === undefined) return;
   heldChunkLocks.delete(chunk.slot);
-  releaseOwnedChunkClaim(chunk, held.path, held.token);
+  releaseOwnedChunkClaim(
+    chunk,
+    held.snapshot.target,
+    held.token,
+    held.snapshot,
+  );
 };
 
 const releaseOwnedChunkClaim = (
   chunk: IAutoMovieProductionRenderChunk,
   file: string,
   token: string,
+  captured?: IRenderGcTargetSnapshot,
 ): void => {
   try {
+    const snapshot = captured ?? captureRenderGcTarget(stateRoot, file);
     const owner = readJson<IRenderChunkLockOwner>(file);
+    assertCapturedRenderTarget(snapshot);
     if (
       owner.chunk === chunk.id &&
       owner.pid === process.pid &&
       owner.token === token
     )
-      fs.rmSync(file, { force: true });
+      removeCapturedRenderStateTarget(snapshot);
   } catch {
     // A missing, unreadable, or replaced claim is not proven to be ours.
   }
@@ -1256,7 +1277,10 @@ const publishProxyTierBundle = (
   const renderRoot = project.renderRoot();
   const publicationSegment = renderPublicationFingerprint(plan).slice(7);
   const bundle = ["deliverables", "proxy", publicationSegment].join("/");
-  const parent = ensurePhysicalDirectory(renderRoot, "deliverables/proxy");
+  const parent = ensureRenderPhysicalDirectory(
+    renderRoot,
+    "deliverables/proxy",
+  );
   const target = path.join(parent, publicationSegment);
   const manifestBytes = Buffer.from(
     `${JSON.stringify(
@@ -1363,34 +1387,6 @@ const assertMatchingProxyPublication = (
     throw new Error(
       "No immutable proxy publication matches this final plan's compile fingerprint, EDL fingerprint, and source frame format. Replan and finalize proxy before final conform.",
     );
-};
-
-const ensurePhysicalDirectory = (root: string, relative: string): string => {
-  const rootStatus = fs.lstatSync(root);
-  if (rootStatus.isSymbolicLink() || rootStatus.isDirectory() === false)
-    throw new Error(`Render root "${root}" is not a physical directory.`);
-  const physicalRoot = fs.realpathSync(root);
-  let current = root;
-  for (const segment of relative.split("/")) {
-    current = path.join(current, segment);
-    if (fs.existsSync(current) === false) fs.mkdirSync(current);
-    const linked = fs.lstatSync(current);
-    const physicalRelative = path.relative(
-      physicalRoot,
-      fs.realpathSync(current),
-    );
-    if (
-      linked.isSymbolicLink() ||
-      linked.isDirectory() === false ||
-      physicalRelative === ".." ||
-      physicalRelative.startsWith(`..${path.sep}`) ||
-      path.isAbsolute(physicalRelative)
-    )
-      throw new Error(
-        `Proxy publication directory "${current}" is not a physical render descendant.`,
-      );
-  }
-  return current;
 };
 
 const encodeChunkFrames = async (
@@ -2436,7 +2432,7 @@ const renderGarbageCollection = (apply: boolean) => {
         );
       let quarantine = quarantines.get(base);
       if (quarantine === undefined) {
-        quarantine = ensurePhysicalDirectory(
+        quarantine = ensureRenderPhysicalDirectory(
           base,
           `${RENDER_GC_PRESERVED_PREFIX}${randomUUID()}`,
         );
@@ -2553,13 +2549,15 @@ const recoverAbandonedTemporaryDirectories = (): void => {
           entry.name,
         );
         const pid = Number(match?.[1]);
+        const snapshot = captureExistingRenderStateTarget(target);
+        if (snapshot === null) continue;
         if (
           entry.isFile() === false ||
           Number.isSafeInteger(pid) === false ||
           pid <= 0 ||
           processAlive(pid) === false
         )
-          quarantine(target, "abandoned-lock-candidate");
+          quarantine(target, "abandoned-lock-candidate", snapshot);
       }
   const directory = path.join(stateRoot, "tmp");
   if (fs.existsSync(directory) === false) return;
@@ -2568,13 +2566,15 @@ const recoverAbandonedTemporaryDirectories = (): void => {
     .sort((left, right) => compareCodeUnits(left.name, right.name))) {
     const target = path.join(directory, entry.name);
     const pid = Number(entry.name.split(".").at(-1));
+    const snapshot = captureExistingRenderStateTarget(target);
+    if (snapshot === null) continue;
     if (
       entry.isDirectory() === false ||
       Number.isSafeInteger(pid) === false ||
       pid <= 0 ||
       processAlive(pid) === false
     )
-      quarantine(target, "abandoned-partial");
+      quarantine(target, "abandoned-partial", snapshot);
   }
 };
 
@@ -2588,6 +2588,8 @@ const quarantineStaleSlotOutputs = (
     .filter((candidate) => candidate.isDirectory())
     .sort((left, right) => compareCodeUnits(left.name, right.name))) {
     const target = path.join(directory, entry.name);
+    const snapshot = captureExistingRenderStateTarget(target);
+    if (snapshot === null) continue;
     const receiptFile = path.join(target, "receipt.json");
     let receipt: IAutoMovieProductionRenderChunkReceipt;
     try {
@@ -2597,7 +2599,7 @@ const quarantineStaleSlotOutputs = (
       continue;
     }
     if (receipt.slot === chunk.slot && receipt.chunk !== chunk.id)
-      quarantine(target, "stale-slot");
+      quarantine(target, "stale-slot", snapshot);
   }
 };
 
@@ -2661,22 +2663,67 @@ const readRegularInside = (directory: string, relative: string): Uint8Array => {
   });
 };
 
-const quarantine = (target: string, reason: string): void => {
+const captureExistingRenderStateTarget = (
+  target: string,
+): IRenderGcTargetSnapshot | null => {
+  try {
+    return captureRenderGcTarget(stateRoot, target);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
+    throw error;
+  }
+};
+
+const removeCapturedRenderStateTarget = (
+  snapshot: IRenderGcTargetSnapshot,
+): void => {
+  const quarantine = ensureRenderPhysicalDirectory(
+    stateRoot,
+    `${RENDER_GC_PRESERVED_PREFIX}${randomUUID()}`,
+  );
+  try {
+    removeCapturedRenderGcTarget({
+      isolated: path.join(quarantine, randomUUID()),
+      quarantine,
+      snapshot,
+    });
+  } finally {
+    if (fs.readdirSync(quarantine).length === 0) fs.rmdirSync(quarantine);
+  }
+};
+
+const quarantine = (
+  target: string,
+  reason: string,
+  captured?: IRenderGcTargetSnapshot,
+): void => {
   const absolute = path.resolve(target);
   const prefix = `${path.resolve(stateRoot)}${path.sep}`;
   if (absolute.startsWith(prefix) === false)
     throw new Error(
       `Refusing to quarantine path outside render state: ${target}`,
     );
-  const directory = path.join(stateRoot, "quarantine");
-  fs.mkdirSync(directory, { recursive: true });
-  fs.renameSync(
-    absolute,
-    path.join(
-      directory,
-      `${path.basename(target)}.${reason}.${Date.now()}.${process.pid}`,
-    ),
+  const snapshot = captured ?? captureRenderGcTarget(stateRoot, absolute);
+  if (snapshot.target !== absolute)
+    throw new Error(`Render quarantine target "${target}" changed namespace.`);
+  const directory = ensureRenderPhysicalDirectory(stateRoot, "quarantine");
+  const preserved = ensureRenderPhysicalDirectory(
+    stateRoot,
+    `${RENDER_GC_PRESERVED_PREFIX}${randomUUID()}`,
   );
+  try {
+    quarantineCapturedRenderTarget({
+      destination: path.join(
+        directory,
+        `${path.basename(target)}.${reason}.${Date.now()}.${process.pid}.${randomUUID()}`,
+      ),
+      isolated: path.join(preserved, randomUUID()),
+      quarantine: preserved,
+      snapshot,
+    });
+  } finally {
+    if (fs.readdirSync(preserved).length === 0) fs.rmdirSync(preserved);
+  }
 };
 
 const processAlive = (pid: number): boolean => {

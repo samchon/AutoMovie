@@ -84,6 +84,8 @@ type GeneratedViewerMiddleware = (
  *     executable identity open across its launch boundary.
  * 12. Render GC deletes only its inventoried physical candidate and preserves a
  *     successor crossing the rename boundary under reserved quarantine.
+ * 13. Routine render cleanup releases or quarantines only the exact worker-state
+ *     target used for its ownership or staleness decision.
  */
 export const test_cli_scaffold = async (): Promise<void> => {
   // 5. packaging guard: the scaffold dir must be a published `files` entry.
@@ -470,6 +472,8 @@ export const test_cli_scaffold = async (): Promise<void> => {
       files["scripts/render.ts"]!.includes("renderGarbageCollection") &&
       files["scripts/render.ts"]!.includes("captureRenderGcTarget") &&
       files["scripts/render.ts"]!.includes("removeCapturedRenderGcTarget") &&
+      files["scripts/render.ts"]!.includes("quarantineCapturedRenderTarget") &&
+      files["scripts/render.ts"]!.includes("held.snapshot") &&
       files["scripts/render.ts"]!.includes("renderPublicationFingerprint") &&
       files["scripts/render.ts"]!.includes("assertMatchingProxyPublication") &&
       files["scripts/render.ts"]!.includes("assertNoLiveRenderWorkers") &&
@@ -1971,7 +1975,14 @@ export const test_cli_scaffold = async (): Promise<void> => {
         base: string,
         target: string,
       ) => { bytes: number; target: string };
+      ensureRenderPhysicalDirectory: (base: string, relative: string) => string;
       isRenderGcPreservedPath: (relative: string) => boolean;
+      quarantineCapturedRenderTarget: (props: {
+        destination: string;
+        isolated: string;
+        quarantine: string;
+        snapshot: unknown;
+      }) => void;
       removeCapturedRenderGcTarget: (props: {
         isolated: string;
         quarantine: string;
@@ -2200,6 +2211,93 @@ export const test_cli_scaffold = async (): Promise<void> => {
     );
     fs.rmSync(gcPublicationBoundaryIsolated, { force: true });
     fs.rmSync(parkedGcPublication, { force: true });
+    const workerQuarantine = renderGcModule.ensureRenderPhysicalDirectory(
+      gcBase,
+      "quarantine",
+    );
+    const workerPreserved = renderGcModule.ensureRenderPhysicalDirectory(
+      gcBase,
+      ".gc-preserved-worker-fixture",
+    );
+    const workerClaim = path.join(gcBase, "worker-claim.lock");
+    const workerClaimBytes = Buffer.from("exact worker claim");
+    fs.writeFileSync(workerClaim, workerClaimBytes);
+    const workerClaimSnapshot = renderGcModule.captureRenderGcTarget(
+      gcBase,
+      workerClaim,
+    );
+    const workerClaimIsolated = path.join(workerPreserved, "claim");
+    const workerClaimDestination = path.join(
+      workerQuarantine,
+      "worker-claim.released",
+    );
+    renderGcModule.quarantineCapturedRenderTarget({
+      destination: workerClaimDestination,
+      isolated: workerClaimIsolated,
+      quarantine: workerPreserved,
+      snapshot: workerClaimSnapshot,
+    });
+    TestValidator.predicate(
+      "routine worker cleanup quarantines one exact captured file",
+      fs.existsSync(workerClaim) === false &&
+        fs.existsSync(workerClaimIsolated) === false &&
+        fs.readFileSync(workerClaimDestination).equals(workerClaimBytes),
+    );
+    const workerPartial = path.join(gcBase, "worker-partial");
+    const workerPartialFile = path.join(workerPartial, "frame.bin");
+    fs.mkdirSync(workerPartial);
+    fs.writeFileSync(workerPartialFile, gcBytes);
+    const workerPartialSnapshot = renderGcModule.captureRenderGcTarget(
+      gcBase,
+      workerPartial,
+    );
+    const parkedWorkerPartial = path.join(gcBase, "worker-partial-original");
+    const workerPartialIsolated = path.join(workerPreserved, "partial");
+    const workerPartialDestination = path.join(
+      workerQuarantine,
+      "worker-partial.abandoned",
+    );
+    let workerPartialSwapped = false;
+    mutableFs.renameSync = ((oldPath, newPath) => {
+      if (
+        workerPartialSwapped === false &&
+        path.resolve(oldPath.toString()) === workerPartial &&
+        path.resolve(newPath.toString()) === workerPartialIsolated
+      ) {
+        nativeGcRename(workerPartial, parkedWorkerPartial);
+        fs.mkdirSync(workerPartial);
+        fs.writeFileSync(workerPartialFile, gcBytes);
+        workerPartialSwapped = true;
+      }
+      nativeGcRename(oldPath, newPath);
+    }) as typeof fs.renameSync;
+    let workerPartialRejected = false;
+    try {
+      workerPartialRejected = throws(() =>
+        renderGcModule.quarantineCapturedRenderTarget({
+          destination: workerPartialDestination,
+          isolated: workerPartialIsolated,
+          quarantine: workerPreserved,
+          snapshot: workerPartialSnapshot,
+        }),
+      );
+    } finally {
+      mutableFs.renameSync = nativeGcRename;
+    }
+    TestValidator.predicate(
+      "routine worker cleanup preserves a directory successor at its private boundary",
+      workerPartialSwapped &&
+        workerPartialRejected &&
+        fs.existsSync(workerPartial) === false &&
+        fs.existsSync(parkedWorkerPartial) &&
+        fs
+          .readFileSync(path.join(workerPartialIsolated, "frame.bin"))
+          .equals(gcBytes) &&
+        fs.existsSync(workerPartialDestination) === false,
+    );
+    fs.rmSync(workerClaimDestination, { force: true });
+    fs.rmSync(workerPartialIsolated, { recursive: true, force: true });
+    fs.rmSync(parkedWorkerPartial, { recursive: true, force: true });
     TestValidator.predicate(
       "a non-empty target is refused without force",
       throws(() => writeFiles(target, files)),
