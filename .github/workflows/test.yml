@@ -18,6 +18,8 @@ on:
       - 'packages/*/src/**'
       - 'packages/*/*.json'
       - 'packages/*/*.ts'
+      - 'packages/*/*.cts'
+      - 'packages/*/*.cjs'
       - 'packages/*/*.html'
       # A package's own entry document. `test_workspace_public_contracts`
       # reads three of them and asserts on their text, so they are suite
