@@ -77,6 +77,47 @@ export const test_cli_scaffold = (): void => {
   );
 
   const files = renderScaffold({ name: "demo-film" });
+  const renderScript = files["scripts/render.ts"]!;
+  const renderProgressOffset = renderScript.indexOf("const renderProgress");
+  const renderProgressSource =
+    renderProgressOffset < 0
+      ? ""
+      : renderScript.slice(
+          renderProgressOffset,
+          renderScript.indexOf("\ntry {", renderProgressOffset),
+        );
+  const renderProgressStages = [
+    "finalize.start",
+    "finalize.status.complete",
+    "sound.start",
+    "sound.plan.complete",
+    "sound.synthesis.start",
+    "sound.synthesis.complete",
+    "sound.model.load.start",
+    "sound.model.load.complete",
+    "sound.dialogue.start",
+    "sound.dialogue.complete",
+    "sound.render.start",
+    "sound.render.complete",
+    "sound.evidence.render.start",
+    "sound.evidence.render.complete",
+    "sound.opus.encode.start",
+    "sound.opus.encode.complete",
+    "sound.evidence.encode.start",
+    "sound.evidence.encode.complete",
+    "sound.complete",
+    "video.feature.encode.start",
+    "video.feature.encode.complete",
+    "video.feature.mux.start",
+    "video.feature.mux.complete",
+    "video.guide.encode.start",
+    "video.guide.encode.complete",
+    "publication.proxy.start",
+    "publication.proxy.complete",
+    "publication.final.start",
+    "publication.final.complete",
+    "finalize.complete",
+  ] as const;
 
   // 1. the file set, POSIX keys, hidden names restored, IN GUARANTEED ORDER.
   // No re-sort: the order is the guarantee. `listFiles` sorts each directory's
@@ -366,21 +407,12 @@ export const test_cli_scaffold = (): void => {
       ) === false &&
       files["scripts/render.ts"]!.includes("encodeProductionOpus") &&
       files["scripts/render.ts"]!.includes("muxProductionFeatureMp4") &&
-      files["scripts/render.ts"]!.includes("const renderProgress") &&
-      files["scripts/render.ts"]!.includes(
-        'renderProgress("sound.model.load.start"',
-      ) &&
-      files["scripts/render.ts"]!.includes(
-        'renderProgress("sound.dialogue.start"',
-      ) &&
-      files["scripts/render.ts"]!.includes(
-        'renderProgress("sound.opus.encode.start")',
-      ) &&
-      files["scripts/render.ts"]!.includes(
-        'renderProgress("video.feature.mux.start"',
-      ) &&
-      files["scripts/render.ts"]!.includes(
-        'renderProgress("publication.proxy.start")',
+      renderProgressSource.includes("process.stderr.write") &&
+      renderProgressSource.includes("[automovie:render]") &&
+      renderProgressSource.includes("JSON.stringify({ stage, ...details })") &&
+      renderProgressSource.includes("process.stdout.write") === false &&
+      renderProgressStages.every((stage) =>
+        renderScript.includes(`renderProgress("${stage}"`),
       ) &&
       files["scripts/render.ts"]!.includes('"waveform.png"') &&
       files["scripts/render.ts"]!.includes('"spectrogram.png"') &&
