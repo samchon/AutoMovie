@@ -5,6 +5,15 @@ import {
 import fs from "node:fs";
 import path from "node:path";
 
+export const RENDER_GC_PRESERVED_PREFIX = ".gc-preserved-";
+
+/** Keep fail-closed GC evidence outside all later automatic deletion plans. */
+export const isRenderGcPreservedPath = (relative: string): boolean =>
+  relative
+    .replaceAll("\\", "/")
+    .split("/")[0]
+    ?.startsWith(RENDER_GC_PRESERVED_PREFIX) === true;
+
 export interface IRenderGcTargetSnapshot {
   base: IRenderGcPhysicalDirectory;
   bytes: number;
@@ -62,7 +71,7 @@ export const removeCapturedRenderGcTarget = (props: {
   const isolated = path.resolve(props.isolated);
   if (
     path.dirname(isolated) !== quarantine.path ||
-    inside(quarantine.real, isolated) === false
+    inside(quarantine.path, isolated) === false
   )
     throw new Error("Render GC isolated path escapes its quarantine.");
   assertRenderGcTarget(props.snapshot);
@@ -79,7 +88,7 @@ export const removeCapturedRenderGcTarget = (props: {
   );
   let moved: IRenderGcTargetSnapshot;
   try {
-    moved = captureRenderGcTarget(props.snapshot.base.real, isolated);
+    moved = captureRenderGcTarget(props.snapshot.base.path, isolated);
   } catch (error) {
     throw new Error(
       `Render GC moved an unverifiable entry to "${isolated}" and preserved it: ${
@@ -92,17 +101,8 @@ export const removeCapturedRenderGcTarget = (props: {
     moved.targetIdentity !== props.snapshot.targetIdentity ||
     moved.contentFingerprint !== props.snapshot.contentFingerprint
   ) {
-    const restoration = restoreUnexpectedSuccessor(
-      props.snapshot,
-      moved,
-      movedQuarantine,
-    );
     throw new Error(
-      restoration === "restored"
-        ? `Render GC target "${props.snapshot.target}" changed at quarantine; its successor was restored and not deleted.`
-        : restoration === "restored-unverified"
-          ? `Render GC target "${props.snapshot.target}" changed at quarantine; restoration could not be verified and no deletion was attempted.`
-          : `Render GC target "${props.snapshot.target}" changed at quarantine; its successor was preserved at "${isolated}" and not deleted.`,
+      `Render GC target "${props.snapshot.target}" changed at quarantine; its successor was preserved at "${isolated}" and not deleted.`,
     );
   }
   assertRenderGcTarget(moved);
@@ -111,33 +111,6 @@ export const removeCapturedRenderGcTarget = (props: {
     force: true,
     recursive: moved.kind === "directory",
   });
-};
-
-const restoreUnexpectedSuccessor = (
-  expected: IRenderGcTargetSnapshot,
-  moved: IRenderGcTargetSnapshot,
-  quarantine: IRenderGcPhysicalDirectory,
-): "preserved" | "restored" | "restored-unverified" => {
-  try {
-    fs.lstatSync(expected.target);
-    return "preserved";
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== "ENOENT") return "preserved";
-  }
-  let restored = false;
-  try {
-    assertRenderGcTarget(moved);
-    assertPhysicalDirectory(quarantine, "render GC quarantine");
-    fs.renameSync(moved.target, expected.target);
-    restored = true;
-    const resident = captureRenderGcTarget(expected.base.real, expected.target);
-    return resident.targetIdentity === moved.targetIdentity &&
-      resident.contentFingerprint === moved.contentFingerprint
-      ? "restored"
-      : "restored-unverified";
-  } catch {
-    return restored ? "restored-unverified" : "preserved";
-  }
 };
 
 const assertRenderGcTarget = (expected: IRenderGcTargetSnapshot): void => {
@@ -159,7 +132,7 @@ const captureResidentTarget = (
 ): IRenderGcTargetSnapshot => {
   assertRootIdentity(base);
   const absolute = path.resolve(target);
-  const relative = path.relative(base.real, absolute);
+  const relative = path.relative(base.path, absolute);
   if (
     relative.length === 0 ||
     relative === ".." ||
@@ -168,7 +141,7 @@ const captureResidentTarget = (
   )
     throw new Error(`Render GC target "${target}" escapes renderer ownership.`);
   const ancestry: IRenderGcPhysicalDirectory[] = [];
-  let cursor = base.real;
+  let cursor = base.path;
   for (const segment of path.dirname(relative) === "."
     ? []
     : path.dirname(relative).split(path.sep)) {
@@ -181,18 +154,34 @@ const captureResidentTarget = (
   const status = fs.lstatSync(absolute, { bigint: true });
   if (status.isSymbolicLink())
     throw new Error(`Render GC target "${absolute}" is linked.`);
+  const resident = fs.realpathSync(absolute);
+  const physical = fs.statSync(resident, { bigint: true });
+  if (
+    inside(base.real, resident) === false ||
+    physicalVersion(physical) !== physicalVersion(status)
+  )
+    throw new Error(
+      `Render GC target "${absolute}" escapes renderer ownership.`,
+    );
   const targetIdentity = physicalIdentity(status);
   let entries: IContentEntry[];
   let kind: "directory" | "file";
   if (status.isFile()) {
     kind = "file";
-    entries = [readFileEntry(base, absolute, "")];
+    entries = [readFileEntry(base, resident, "")];
   } else {
     if (status.isDirectory() === false)
       throw new Error(`Render GC target "${absolute}" is not physical.`);
     kind = "directory";
-    entries = captureTree(base, absolute);
+    entries = captureTree(base, resident);
   }
+  const completed = fs.lstatSync(absolute, { bigint: true });
+  if (
+    completed.isSymbolicLink() ||
+    physicalVersion(completed) !== physicalVersion(status) ||
+    fs.realpathSync(absolute) !== resident
+  )
+    throw new Error(`Render GC target "${absolute}" changed while captured.`);
   for (const identity of ancestry)
     assertPhysicalDirectory(identity, "render GC target ancestry");
   assertRootIdentity(base);

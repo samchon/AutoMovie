@@ -1453,6 +1453,7 @@ export const test_cli_scaffold = (): void => {
         base: string,
         target: string,
       ) => { bytes: number; target: string };
+      isRenderGcPreservedPath: (relative: string) => boolean;
       removeCapturedRenderGcTarget: (props: {
         isolated: string;
         quarantine: string;
@@ -1462,7 +1463,7 @@ export const test_cli_scaffold = (): void => {
     const gcBase = path.join(base, "render-gc");
     const gcTarget = path.join(gcBase, "stale-chunk");
     const gcFile = path.join(gcTarget, "chunk.bin");
-    const gcQuarantine = path.join(gcBase, ".gc-quarantine-fixture");
+    const gcQuarantine = path.join(gcBase, ".gc-preserved-fixture");
     const gcBytes = Buffer.from("stale chunk bytes");
     const writeGcCandidate = (): void => {
       fs.mkdirSync(gcTarget, { recursive: true });
@@ -1481,6 +1482,34 @@ export const test_cli_scaffold = (): void => {
       gcSnapshot.bytes === gcBytes.length &&
         fs.existsSync(gcTarget) === false &&
         fs.existsSync(path.join(gcQuarantine, "normal")) === false,
+    );
+    const gcPhysicalRoot = path.join(base, "render-gc-physical-root");
+    const gcAliasRoot = path.join(base, "render-gc-alias-root");
+    const gcAliasedBase = path.join(gcAliasRoot, "nested");
+    const gcAliasedTarget = path.join(gcAliasedBase, "candidate");
+    const gcAliasedQuarantine = path.join(gcAliasedBase, ".gc-fixture");
+    fs.mkdirSync(path.join(gcPhysicalRoot, "nested", "candidate"), {
+      recursive: true,
+    });
+    fs.mkdirSync(path.join(gcPhysicalRoot, "nested", ".gc-fixture"));
+    fs.symlinkSync(
+      gcPhysicalRoot,
+      gcAliasRoot,
+      process.platform === "win32" ? "junction" : "dir",
+    );
+    fs.writeFileSync(path.join(gcAliasedTarget, "chunk.bin"), gcBytes);
+    const gcAliasedSnapshot = renderGcModule.captureRenderGcTarget(
+      gcAliasedBase,
+      gcAliasedTarget,
+    );
+    renderGcModule.removeCapturedRenderGcTarget({
+      isolated: path.join(gcAliasedQuarantine, "candidate"),
+      quarantine: gcAliasedQuarantine,
+      snapshot: gcAliasedSnapshot,
+    });
+    TestValidator.predicate(
+      "render GC accepts a physical base reached through an alias ancestor",
+      fs.existsSync(gcAliasedTarget) === false,
     );
     writeGcCandidate();
     const preRenameSnapshot = renderGcModule.captureRenderGcTarget(
@@ -1539,14 +1568,25 @@ export const test_cli_scaffold = (): void => {
       mutableFs.renameSync = nativeGcRename;
     }
     TestValidator.predicate(
-      "render GC restores and preserves a successor crossing rename",
+      "render GC preserves a successor crossing rename outside later plans",
       gcRenameBoundarySwapped &&
         gcRenameBoundaryRejected &&
-        fs.readFileSync(gcFile).equals(gcBytes) &&
+        fs.existsSync(gcTarget) === false &&
         fs.existsSync(parkedRenameBoundaryGc) &&
-        fs.existsSync(renameBoundaryIsolated) === false,
+        fs
+          .readFileSync(path.join(renameBoundaryIsolated, "chunk.bin"))
+          .equals(gcBytes) &&
+        renderGcModule.isRenderGcPreservedPath(
+          path.relative(gcBase, renameBoundaryIsolated),
+        ) &&
+        renderGcModule.isRenderGcPreservedPath(
+          "deliverables/.gc-preserved-fixture/file",
+        ) === false &&
+        renderGcModule.isRenderGcPreservedPath(".gc-preserved/file") ===
+          false &&
+        renderGcModule.isRenderGcPreservedPath("ordinary/file") === false,
     );
-    fs.rmSync(gcTarget, { recursive: true, force: true });
+    fs.rmSync(renameBoundaryIsolated, { recursive: true, force: true });
     fs.rmSync(parkedRenameBoundaryGc, { recursive: true, force: true });
     TestValidator.predicate(
       "a non-empty target is refused without force",

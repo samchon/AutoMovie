@@ -77,7 +77,9 @@ import {
 } from "./capture";
 import {
   type IRenderGcTargetSnapshot,
+  RENDER_GC_PRESERVED_PREFIX,
   captureRenderGcTarget,
+  isRenderGcPreservedPath,
   removeCapturedRenderGcTarget,
 } from "./renderGcSnapshot";
 import {
@@ -2376,6 +2378,7 @@ const renderGarbageCollection = (apply: boolean) => {
   if (fs.existsSync(renderRoot))
     for (const file of physicalFiles(renderRoot)) {
       const relative = normalizeSlash(path.relative(renderRoot, file));
+      if (isRenderGcPreservedPath(relative)) continue;
       if (
         [...reviewBundles].some(
           (bundle) => relative === bundle || relative.startsWith(`${bundle}/`),
@@ -2435,7 +2438,7 @@ const renderGarbageCollection = (apply: boolean) => {
       if (quarantine === undefined) {
         quarantine = ensurePhysicalDirectory(
           base,
-          `.gc-quarantine-${randomUUID()}`,
+          `${RENDER_GC_PRESERVED_PREFIX}${randomUUID()}`,
         );
         quarantines.set(base, quarantine);
       }
