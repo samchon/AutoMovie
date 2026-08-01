@@ -43,7 +43,8 @@ const space: IAutoMovieSpace = {
 };
 
 // The bent-rest leg of the plant-feet suites: foot on the ground with reach
-// slack, so the pin can hold while the root climbs the ramp.
+// slack, so the pin can hold while the root climbs the ramp. Its rest geometry
+// is 41.1 degrees of clinical knee flexion rather than clinical zero.
 const legSkeleton: IAutoMovieSkeleton = {
   id: "leg",
   bones: [
@@ -67,6 +68,12 @@ const legSkeleton: IAutoMovieSkeleton = {
       constraint: null,
     },
   ],
+};
+const KNEE_REST_FLEXION = (2 * Math.atan2(0.15, 0.4) * 180) / Math.PI;
+const REST_FRAMES = {
+  leftLowerLeg: {
+    flexion: { sign: 1 as const, neutral: KNEE_REST_FLEXION },
+  },
 };
 
 const kf = (time: number): IAutoMovieKeyframe => ({
@@ -134,6 +141,7 @@ export const test_space_ground_pipeline = (): void => {
         motion: path.motion,
         skeleton: legSkeleton,
         contacts,
+        restFrames: REST_FRAMES,
       }),
     ),
   );
@@ -144,6 +152,7 @@ export const test_space_ground_pipeline = (): void => {
     groundY: ground,
     tolerance: 0.05,
     legs: [{ foot: "leftFoot", upper: "leftUpperLeg", lower: "leftLowerLeg" }],
+    restFrames: REST_FRAMES,
   });
   TestValidator.predicate(
     "planted ramp climb has no foot-skate warning",
@@ -153,6 +162,7 @@ export const test_space_ground_pipeline = (): void => {
         motion: planted.motion,
         skeleton: legSkeleton,
         contacts,
+        restFrames: REST_FRAMES,
       }),
     ),
   );
@@ -166,6 +176,7 @@ export const test_space_ground_pipeline = (): void => {
         footBones: ["leftFoot"],
         groundY: ground,
         tolerance: 1e-3,
+        restFrames: REST_FRAMES,
       }),
     ),
   );

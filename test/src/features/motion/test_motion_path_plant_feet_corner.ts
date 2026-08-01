@@ -29,7 +29,7 @@ const t = (x: number, y: number, z: number): IAutoMovieTransform => ({
 
 // The plant-feet suite's bent-rest leg: hip 0.8 up over an ~0.85 leg, so the
 // horizontal reach shell is ~0.29 m; every pin-to-hip distance below stays
-// well inside it.
+// well inside it. Its rest geometry is 41.1 degrees of clinical knee flexion.
 const legSkeleton: IAutoMovieSkeleton = {
   id: "leg",
   bones: [
@@ -54,6 +54,12 @@ const legSkeleton: IAutoMovieSkeleton = {
     },
   ],
 };
+const KNEE_REST_FLEXION = (2 * Math.atan2(0.15, 0.4) * 180) / Math.PI;
+const REST_FRAMES = {
+  leftLowerLeg: {
+    flexion: { sign: 1 as const, neutral: KNEE_REST_FLEXION },
+  },
+};
 
 // Beside the driving thigh, a zero-articulation shin and foot ride along:
 // numerically identity (the toe track is untouched), but the planting
@@ -62,7 +68,12 @@ const legSkeleton: IAutoMovieSkeleton = {
 // the first `bone !== upper` test.
 const flex = (deg: number): IAutoMovieJointPose[] => [
   { bone: "leftUpperLeg", flexion: deg, abduction: null, twist: null },
-  { bone: "leftLowerLeg", flexion: 0, abduction: null, twist: null },
+  {
+    bone: "leftLowerLeg",
+    flexion: KNEE_REST_FLEXION,
+    abduction: null,
+    twist: null,
+  },
   { bone: "leftFoot", flexion: 0, abduction: null, twist: null },
 ];
 
@@ -109,9 +120,12 @@ const contacts = [
 ] as const;
 
 const footAt = (motion: IAutoMovieMotion, time: number) =>
-  resolvePose(sampleMotion(motion, time).pose, legSkeleton).find(
-    (b) => b.bone === "leftFoot",
-  )!.worldPosition;
+  resolvePose(
+    sampleMotion(motion, time).pose,
+    legSkeleton,
+    undefined,
+    REST_FRAMES,
+  ).find((b) => b.bone === "leftFoot")!.worldPosition;
 
 const plantAndAssert = (turnWindow: number, label: string): void => {
   const path = followPathMotion({
@@ -135,6 +149,7 @@ const plantAndAssert = (turnWindow: number, label: string): void => {
         motion: path.motion,
         skeleton: legSkeleton,
         contacts,
+        restFrames: REST_FRAMES,
       }),
     ),
   );
@@ -146,6 +161,7 @@ const plantAndAssert = (turnWindow: number, label: string): void => {
     tolerance: 0.005,
     legs: [LEG],
     sampleRate: 24,
+    restFrames: REST_FRAMES,
   });
 
   TestValidator.predicate(
@@ -156,6 +172,7 @@ const plantAndAssert = (turnWindow: number, label: string): void => {
         motion: planted.motion,
         skeleton: legSkeleton,
         contacts,
+        restFrames: REST_FRAMES,
       }),
     ),
   );
@@ -169,6 +186,7 @@ const plantAndAssert = (turnWindow: number, label: string): void => {
         footBones: ["leftFoot"],
         groundY: 0,
         tolerance: 1e-3,
+        restFrames: REST_FRAMES,
       }),
     ),
   );
@@ -270,6 +288,7 @@ export const test_motion_path_plant_feet_corner = (): void => {
     tolerance: 0.02,
     legs: [LEG],
     sampleRate: 24,
+    restFrames: REST_FRAMES,
   });
   TestValidator.predicate(
     "loose tolerance over-reaches through the corner and skates (warns)",
@@ -279,6 +298,7 @@ export const test_motion_path_plant_feet_corner = (): void => {
         motion: overReached.motion,
         skeleton: legSkeleton,
         contacts,
+        restFrames: REST_FRAMES,
       }),
     ),
   );

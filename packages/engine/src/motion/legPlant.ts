@@ -57,7 +57,9 @@ export const HUMANOID_LEG_CHAINS: readonly IAutoMoviePlantChain[] = [
 
 /**
  * Re-key the sampled frames densely, re-solving every pinned leg onto its
- * stance target (the assembly stage of {@link plantStanceFeet}).
+ * stance target (the assembly stage of {@link plantStanceFeet}). Optional
+ * clinical mappings must be the same ones used to resolve the stance samples
+ * and later play the returned motion.
  */
 export const rekeyPlantedFeet = (props: {
   skeleton: IAutoMovieSkeleton;
@@ -65,6 +67,10 @@ export const rekeyPlantedFeet = (props: {
   poses: ReadonlyArray<ReturnType<typeof sampleMotion>>;
   legs: readonly IAutoMovieFootLeg[];
   targets: ReadonlyArray<ReadonlyMap<AutoMovieHumanoidBone, IAutoMovieVector3>>;
+  /** Optional clinical axes used to lower and replay solved joints. */
+  jointAxes?: Partial<Record<AutoMovieHumanoidBone, IAutoMovieJointAxes>>;
+  /** Optional clinical rest frames used to lower and replay solved joints. */
+  restFrames?: Partial<Record<AutoMovieHumanoidBone, IAutoMovieRestFrame>>;
 }): IAutoMovieKeyframe[] => {
   const topology = indexSkeletonTopology(props.skeleton);
   const keyframes: IAutoMovieKeyframe[] = [];
@@ -81,6 +87,8 @@ export const rekeyPlantedFeet = (props: {
         props.targets[index]!,
         topology,
         prior,
+        props.jointAxes,
+        props.restFrames,
       ),
     };
     keyframes.push({
@@ -111,9 +119,9 @@ export const assemblePlantedFeet = (
 /**
  * FK-resolve a pose into a bone → resolved-bone lookup. `jointAxes` /
  * `restFrames` are the same optional clinical remaps {@link resolvePose} takes:
- * omit them for the default clinical basis (what the ground-IK pass uses),
- * supply a rig's own tables when the pose's clinical angles must be read
- * through them (what the retarget contact pass uses).
+ * omit them for the canonical clinical basis, or supply a rig's own tables when
+ * the pose's clinical angles must be read through them (what the ground plant
+ * and retarget contact passes do for imported/non-canonical rigs).
  */
 export const resolveBoneMap = (
   skeleton: IAutoMovieSkeleton,
@@ -453,6 +461,8 @@ const plantedJoints = (
   targets: ReadonlyMap<AutoMovieHumanoidBone, IAutoMovieVector3>,
   topology: IAutoMovieSkeletonTopology,
   referencePose?: IAutoMoviePose,
+  jointAxes?: Partial<Record<AutoMovieHumanoidBone, IAutoMovieJointAxes>>,
+  restFrames?: Partial<Record<AutoMovieHumanoidBone, IAutoMovieRestFrame>>,
 ): IAutoMovieJointPose[] => {
   let joints = pose.joints;
   for (const leg of legs) {
@@ -465,6 +475,8 @@ const plantedJoints = (
       target,
       topology,
       referencePose,
+      jointAxes,
+      restFrames,
     });
     joints = fitted.joints;
   }

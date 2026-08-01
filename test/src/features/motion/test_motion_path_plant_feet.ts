@@ -24,7 +24,8 @@ const t = (x: number, y: number, z: number): IAutoMovieTransform => ({
 });
 
 // A bent-rest leg (as the plant-feet suite): foot on the ground with reach
-// slack, so the leg can hold its pin while the root walks the path.
+// slack, so the leg can hold its pin while the root walks the path. The rest
+// geometry is 41.1 degrees of clinical knee flexion, not clinical zero.
 const legSkeleton: IAutoMovieSkeleton = {
   id: "leg",
   bones: [
@@ -72,6 +73,12 @@ const LEG = {
   upper: "leftUpperLeg",
   lower: "leftLowerLeg",
 } as const;
+const KNEE_REST_FLEXION = (2 * Math.atan2(0.15, 0.4) * 180) / Math.PI;
+const REST_FRAMES = {
+  leftLowerLeg: {
+    flexion: { sign: 1 as const, neutral: KNEE_REST_FLEXION },
+  },
+};
 
 /**
  * Path locomotion composes with the ground-IK pass (#596): a path-baked walk
@@ -108,6 +115,7 @@ export const test_motion_path_plant_feet = (): void => {
         motion: path.motion,
         skeleton: legSkeleton,
         contacts,
+        restFrames: REST_FRAMES,
       }),
     ),
   );
@@ -119,6 +127,7 @@ export const test_motion_path_plant_feet = (): void => {
     tolerance: 0.02,
     legs: [LEG],
     sampleRate: 24,
+    restFrames: REST_FRAMES,
   });
   TestValidator.predicate(
     "planted path walk has no foot-skate warning",
@@ -128,6 +137,7 @@ export const test_motion_path_plant_feet = (): void => {
         motion: planted.motion,
         skeleton: legSkeleton,
         contacts,
+        restFrames: REST_FRAMES,
       }),
     ),
   );
@@ -141,6 +151,7 @@ export const test_motion_path_plant_feet = (): void => {
         footBones: ["leftFoot"],
         groundY: 0,
         tolerance: 1e-3,
+        restFrames: REST_FRAMES,
       }),
     ),
   );

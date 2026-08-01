@@ -26,7 +26,9 @@ const t = (x: number, y: number, z: number): IAutoMovieTransform => ({
 });
 
 // A bent-rest leg: foot at the ground (y=0) with the hip only 0.8 up over a
-// 0.85 leg, so the leg has horizontal reach slack to plant while the hip travels.
+// 0.85 leg, so the leg has horizontal reach slack to plant while the hip
+// travels. Its mirrored knee axis and non-zero clinical rest flexion make this
+// the public ground-pass oracle for both optional rig mappings.
 const legSkeleton: IAutoMovieSkeleton = {
   id: "leg",
   bones: [
@@ -81,11 +83,27 @@ const LEG = {
   upper: "leftUpperLeg",
   lower: "leftLowerLeg",
 } as const;
+const KNEE_REST_FLEXION = (2 * Math.atan2(0.15, 0.4) * 180) / Math.PI;
+const JOINT_AXES = {
+  leftLowerLeg: {
+    flexion: { x: -1, y: 0, z: 0 },
+    abduction: { x: 0, y: 0, z: 1 },
+    twist: { x: 0, y: -1, z: 0 },
+  },
+};
+const REST_FRAMES = {
+  leftLowerLeg: {
+    flexion: { sign: -1 as const, neutral: KNEE_REST_FLEXION },
+  },
+};
 
 const footAt = (motion: IAutoMovieMotion, time: number) =>
-  resolvePose(sampleMotion(motion, time).pose, legSkeleton).find(
-    (b) => b.bone === "leftFoot",
-  )!.worldPosition;
+  resolvePose(
+    sampleMotion(motion, time).pose,
+    legSkeleton,
+    JOINT_AXES,
+    REST_FRAMES,
+  ).find((b) => b.bone === "leftFoot")!.worldPosition;
 
 /**
  * The ground-IK pass plants a stance foot: sampled across its stance run the
@@ -101,8 +119,9 @@ const footAt = (motion: IAutoMovieMotion, time: number) =>
  * 4. The planted foot's world XZ is constant across the run (the anti-skate
  *    property, numeric) and pinned to the stance-start contact.
  * 5. One stance run is reported for the whole clip, pinned at y = groundY.
- * 6. Every IK-derived joint stays inside the skeleton's effective ROM and the
- *    dense correction remains temporally coherent.
+ * 6. The mirrored knee axis and 41.1-degree clinical rest frame survive the whole
+ *    plant/playback/validation path: every derived joint stays inside effective
+ *    ROM and the dense correction remains temporally coherent.
  */
 export const test_motion_plant_feet = (): void => {
   const contacts = [{ bone: "leftFoot", start: 0, end: 1 } as const];
@@ -111,6 +130,8 @@ export const test_motion_plant_feet = (): void => {
     motion: skating,
     skeleton: legSkeleton,
     contacts,
+    jointAxes: JOINT_AXES,
+    restFrames: REST_FRAMES,
   });
   TestValidator.predicate(
     "raw gait skates the foot (warns)",
@@ -124,6 +145,8 @@ export const test_motion_plant_feet = (): void => {
     tolerance: 0.02,
     legs: [LEG],
     sampleRate: 24,
+    jointAxes: JOINT_AXES,
+    restFrames: REST_FRAMES,
   });
 
   TestValidator.predicate(
@@ -134,6 +157,8 @@ export const test_motion_plant_feet = (): void => {
         motion: planted.motion,
         skeleton: legSkeleton,
         contacts,
+        jointAxes: JOINT_AXES,
+        restFrames: REST_FRAMES,
       }),
     ),
   );
@@ -147,6 +172,8 @@ export const test_motion_plant_feet = (): void => {
         footBones: ["leftFoot"],
         groundY: 0,
         tolerance: 1e-3,
+        jointAxes: JOINT_AXES,
+        restFrames: REST_FRAMES,
       }),
     ),
   );
