@@ -274,10 +274,18 @@ export const test_mcp_production_shot_continuity = async (): Promise<void> => {
       targetRuntimeSeconds: number,
       source: string = continuitySource(opening, answer),
     ) => {
-      fs.writeFileSync(
-        productionPath,
-        `${JSON.stringify({ ...production, targetRuntimeSeconds }, null, 2)}\n`,
-      );
+      const design = project.setProductionDesign({
+        ...production,
+        targetRuntimeSeconds,
+      });
+      if (design.accepted === false)
+        throw new Error(
+          `Continuity fixture production mutation failed:\n${JSON.stringify(
+            design.diagnostics,
+            null,
+            2,
+          )}`,
+        );
       fs.writeFileSync(sourcePath, source);
       fs.writeFileSync(
         filmPath,
