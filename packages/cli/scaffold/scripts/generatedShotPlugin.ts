@@ -343,6 +343,7 @@ const isInside = (root: string, candidate: string): boolean => {
 interface IPhysicalDirectory {
   device: string;
   inode: string;
+  path: string;
   real: string;
 }
 
@@ -350,16 +351,22 @@ const physicalDirectory = (
   directory: string,
   label: string,
 ): IPhysicalDirectory => {
-  const linked = fs.lstatSync(directory, { bigint: true });
+  const namespacePath = path.resolve(directory);
+  const linked = fs.lstatSync(namespacePath, { bigint: true });
   if (linked.isSymbolicLink() || linked.isDirectory() === false)
     throw new Error(`${label} is not a physical directory`);
-  const real = fs.realpathSync(directory);
+  const real = fs.realpathSync(namespacePath);
   const status = fs.statSync(real, { bigint: true });
-  if (status.isDirectory() === false)
+  if (
+    status.isDirectory() === false ||
+    status.dev !== linked.dev ||
+    status.ino !== linked.ino
+  )
     throw new Error(`${label} is not a physical directory`);
   return {
     device: status.dev.toString(),
     inode: status.ino.toString(),
+    path: namespacePath,
     real,
   };
 };
@@ -368,7 +375,7 @@ const assertPhysicalDirectory = (
   expected: IPhysicalDirectory,
   label: string,
 ): void => {
-  const current = physicalDirectory(expected.real, label);
+  const current = physicalDirectory(expected.path, label);
   if (
     current.device !== expected.device ||
     current.inode !== expected.inode ||
@@ -382,6 +389,7 @@ const readPhysicalFile = (
   directory: string,
   name: string,
 ): Buffer => {
+  assertPhysicalDirectory(root, "viewer project root");
   const owner = path.resolve(directory);
   if (
     isInside(root.real, owner) === false ||
@@ -396,7 +404,10 @@ const readPhysicalFile = (
     ? []
     : relativeOwner.split(path.sep)) {
     cursor = path.join(cursor, segment);
-    directories.push(physicalDirectory(cursor, "viewer file ancestry"));
+    const identity = physicalDirectory(cursor, "viewer file ancestry");
+    if (isInside(root.real, identity.real) === false)
+      throw new Error("viewer file ancestry escapes its physical owner");
+    directories.push(identity);
   }
   const file = path.join(owner, name);
   const linked = fs.lstatSync(file, { bigint: true });

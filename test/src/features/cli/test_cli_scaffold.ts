@@ -713,8 +713,86 @@ export const test_cli_scaffold = (): void => {
         },
       },
     });
+    const positiveHeaders = new Map<string, string>();
+    const positiveResponse: GeneratedViewerResponse = {
+      body: "",
+      statusCode: 0,
+      end: (body) => {
+        positiveResponse.body = Buffer.isBuffer(body)
+          ? body.toString("utf8")
+          : String(body ?? "");
+      },
+      setHeader: (name, value) => {
+        positiveHeaders.set(name, value);
+      },
+    };
+    middleware?.(
+      { url: "/__automovie/shots/race.json" },
+      positiveResponse,
+      () => undefined,
+    );
+    TestValidator.predicate(
+      "the generated viewer serves the exact resident artifact and headers",
+      middleware !== undefined &&
+        positiveResponse.statusCode === 200 &&
+        positiveResponse.body === '{"resident":true}\n' &&
+        positiveHeaders.get("Content-Type") ===
+          "application/json; charset=utf-8" &&
+        positiveHeaders.get("Cache-Control") === "no-store",
+    );
     const mutableFs = createRequire(__filename)("node:fs") as typeof fs;
     const nativeLstat = mutableFs.lstatSync;
+    const shotsDirectory = path.dirname(artifact);
+    const parkedShots = `${shotsDirectory}.parked`;
+    const replacementShots = `${shotsDirectory}.replacement`;
+    fs.mkdirSync(replacementShots);
+    fs.writeFileSync(
+      path.join(replacementShots, "race.json"),
+      '{"ancestorReplacement":true}\n',
+    );
+    let ancestorSwapped = false;
+    mutableFs.lstatSync = ((file, ...args: unknown[]): unknown => {
+      const status = Reflect.apply(nativeLstat, mutableFs, [file, ...args]);
+      if (
+        ancestorSwapped === false &&
+        path.resolve(file.toString()) === shotsDirectory
+      ) {
+        fs.renameSync(shotsDirectory, parkedShots);
+        fs.renameSync(replacementShots, shotsDirectory);
+        ancestorSwapped = true;
+      }
+      return status;
+    }) as typeof fs.lstatSync;
+    const ancestorResponse: GeneratedViewerResponse = {
+      body: "",
+      statusCode: 0,
+      end: (body) => {
+        ancestorResponse.body = Buffer.isBuffer(body)
+          ? body.toString("utf8")
+          : String(body ?? "");
+      },
+      setHeader: () => undefined,
+    };
+    try {
+      middleware?.(
+        { url: "/__automovie/shots/race.json" },
+        ancestorResponse,
+        () => undefined,
+      );
+    } finally {
+      mutableFs.lstatSync = nativeLstat;
+      if (fs.existsSync(parkedShots)) {
+        fs.rmSync(shotsDirectory, { recursive: true, force: true });
+        fs.renameSync(parkedShots, shotsDirectory);
+      }
+      fs.rmSync(replacementShots, { recursive: true, force: true });
+    }
+    TestValidator.predicate(
+      "the generated viewer refuses an ancestry replacement during canonicalization",
+      ancestorSwapped &&
+        ancestorResponse.statusCode === 400 &&
+        ancestorResponse.body === "invalid compiled viewer artifact request",
+    );
     const parkedArtifact = `${artifact}.parked`;
     let artifactSwapped = false;
     mutableFs.lstatSync = ((file, ...args: unknown[]): unknown => {
