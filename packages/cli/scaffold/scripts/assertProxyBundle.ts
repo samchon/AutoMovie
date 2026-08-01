@@ -194,10 +194,7 @@ const proxyManifestFiles = (
     { bytes: number; digest: AutoMovieContentDigest }
   >();
   for (const deliverable of receipt.manifest.deliverables as unknown[]) {
-    if (
-      isRecord(deliverable) === false ||
-      Array.isArray(deliverable.files) === false
-    )
+    if (validRenderedDeliverable(deliverable) === false)
       throw new Error("Proxy publication manifest has an invalid deliverable.");
     for (const value of deliverable.files) {
       if (
@@ -327,6 +324,60 @@ const validFrameFormat = (
   typeof value.fps === "number" &&
   Number.isFinite(value.fps) &&
   value.fps > 0;
+
+const validRenderedDeliverable = (
+  value: unknown,
+): value is IAutoMovieProductionRenderManifest["deliverables"][number] =>
+  isRecord(value) &&
+  typeof value.id === "string" &&
+  value.id.trim().length > 0 &&
+  (value.kind === "preview" ||
+    value.kind === "feature" ||
+    value.kind === "guide-pass" ||
+    value.kind === "captions" ||
+    value.kind === "audio-mix") &&
+  Array.isArray(value.files) &&
+  (value.runtimeSeconds === null ||
+    (typeof value.runtimeSeconds === "number" &&
+      Number.isFinite(value.runtimeSeconds) &&
+      value.runtimeSeconds >= 0)) &&
+  (value.frameCount === null ||
+    (typeof value.frameCount === "number" &&
+      Number.isSafeInteger(value.frameCount) &&
+      value.frameCount >= 0)) &&
+  (value.codec === null ||
+    (typeof value.codec === "string" && value.codec.length > 0)) &&
+  (value.rendition === undefined || validRendition(value.rendition));
+
+const validRendition = (
+  value: unknown,
+): value is NonNullable<
+  IAutoMovieProductionRenderManifest["deliverables"][number]["rendition"]
+> =>
+  isRecord(value) &&
+  value.kind === "repainted" &&
+  Array.isArray(value.shots) &&
+  value.shots.every(
+    (shot) =>
+      isRecord(shot) &&
+      typeof shot.shot === "string" &&
+      shot.shot.length > 0 &&
+      typeof shot.path === "string" &&
+      shot.path.length > 0 &&
+      validDigest(shot.digest) &&
+      validDigest(shot.receiptDigest) &&
+      validDigest(shot.sourceReviewFingerprint) &&
+      validDigest(shot.renditionReviewFingerprint),
+  ) &&
+  Array.isArray(value.aggregateReviews) &&
+  value.aggregateReviews.every(
+    (review) =>
+      isRecord(review) &&
+      (review.kind === "sequence" || review.kind === "film") &&
+      typeof review.id === "string" &&
+      review.id.length > 0 &&
+      validDigest(review.fingerprint),
+  );
 
 const physicalBundle = (
   root: IPhysicalDirectory,

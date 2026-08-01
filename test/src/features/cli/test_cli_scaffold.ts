@@ -1292,6 +1292,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
     const proxyReceipt = (props: {
       fileBytes?: number;
       filePath?: string;
+      malformedDeliverable?: boolean;
       publicationFingerprint: string;
       withPayload?: boolean;
     }) => ({
@@ -1310,24 +1311,38 @@ export const test_cli_scaffold = async (): Promise<void> => {
           props.withPayload === false
             ? []
             : [
-                {
-                  id: "feature",
-                  kind: "feature",
-                  files: [
-                    {
-                      path:
-                        props.filePath ??
-                        `${verifiedProxyBundleRelative}/feature/feature.mp4`,
-                      digest: fixtureDigest(verifiedProxyPayloadBytes),
-                      bytes:
-                        props.fileBytes ?? verifiedProxyPayloadBytes.length,
-                      mediaType: "video/mp4",
+                props.malformedDeliverable === true
+                  ? {
+                      files: [
+                        {
+                          path:
+                            props.filePath ??
+                            `${verifiedProxyBundleRelative}/feature/feature.mp4`,
+                          digest: fixtureDigest(verifiedProxyPayloadBytes),
+                          bytes:
+                            props.fileBytes ?? verifiedProxyPayloadBytes.length,
+                          mediaType: "video/mp4",
+                        },
+                      ],
+                    }
+                  : {
+                      id: "feature",
+                      kind: "feature",
+                      files: [
+                        {
+                          path:
+                            props.filePath ??
+                            `${verifiedProxyBundleRelative}/feature/feature.mp4`,
+                          digest: fixtureDigest(verifiedProxyPayloadBytes),
+                          bytes:
+                            props.fileBytes ?? verifiedProxyPayloadBytes.length,
+                          mediaType: "video/mp4",
+                        },
+                      ],
+                      runtimeSeconds: 1,
+                      frameCount: 12,
+                      codec: "h264",
                     },
-                  ],
-                  runtimeSeconds: 1,
-                  frameCount: 12,
-                  codec: "h264",
-                },
               ],
       },
     });
@@ -1351,7 +1366,9 @@ export const test_cli_scaffold = async (): Promise<void> => {
         inspectedProxy.editFingerprint === verifiedProxyEdit,
     );
 
-    fs.writeFileSync(verifiedProxyPayload, "mutated reviewed proxy payload");
+    const sameLengthProxyMutation = Buffer.from(verifiedProxyPayloadBytes);
+    sameLengthProxyMutation[0] ^= 1;
+    fs.writeFileSync(verifiedProxyPayload, sameLengthProxyMutation);
     const mutatedProxyRejected = throws(() =>
       proxyModule.inspectPublishedProxyBundle(
         verifiedProxyRoot,
@@ -1371,6 +1388,20 @@ export const test_cli_scaffold = async (): Promise<void> => {
       "the final proxy consumer rejects mutated and deleted payloads",
       mutatedProxyRejected && deletedProxyRejected,
     );
+
+    const unmanifestedProxyFile = path.join(
+      verifiedProxyBundle,
+      "feature",
+      "extra.bin",
+    );
+    fs.writeFileSync(unmanifestedProxyFile, "unmanifested bytes");
+    const unmanifestedProxyRejected = throws(() =>
+      proxyModule.inspectPublishedProxyBundle(
+        verifiedProxyRoot,
+        verifiedProxyBundle,
+      ),
+    );
+    fs.rmSync(unmanifestedProxyFile);
 
     const receiptOnlyPublication = fixtureDigest(
       Buffer.from("receipt only proxy"),
@@ -1444,11 +1475,77 @@ export const test_cli_scaffold = async (): Promise<void> => {
         malformedBundle,
       ),
     );
+
+    const duplicatePublication = fixtureDigest(Buffer.from("duplicate proxy"));
+    const duplicateBundleRelative = `deliverables/proxy/${duplicatePublication.slice(7)}`;
+    const duplicateBundle = path.join(
+      verifiedProxyRoot,
+      ...duplicateBundleRelative.split("/"),
+    );
+    const duplicatePayload = path.join(
+      duplicateBundle,
+      "feature",
+      "feature.mp4",
+    );
+    fs.mkdirSync(path.dirname(duplicatePayload), { recursive: true });
+    fs.writeFileSync(duplicatePayload, verifiedProxyPayloadBytes);
+    const duplicateReceipt = proxyReceipt({
+      filePath: `${duplicateBundleRelative}/feature/feature.mp4`,
+      publicationFingerprint: duplicatePublication,
+    });
+    duplicateReceipt.manifest.deliverables.push(
+      duplicateReceipt.manifest.deliverables[0]!,
+    );
+    fs.writeFileSync(
+      path.join(duplicateBundle, "publication.json"),
+      `${JSON.stringify(duplicateReceipt)}\n`,
+    );
+    const duplicateProxyRejected = throws(() =>
+      proxyModule.inspectPublishedProxyBundle(
+        verifiedProxyRoot,
+        duplicateBundle,
+      ),
+    );
+
+    const malformedMetadataPublication = fixtureDigest(
+      Buffer.from("malformed metadata proxy"),
+    );
+    const malformedMetadataBundleRelative = `deliverables/proxy/${malformedMetadataPublication.slice(7)}`;
+    const malformedMetadataBundle = path.join(
+      verifiedProxyRoot,
+      ...malformedMetadataBundleRelative.split("/"),
+    );
+    const malformedMetadataPayload = path.join(
+      malformedMetadataBundle,
+      "feature",
+      "feature.mp4",
+    );
+    fs.mkdirSync(path.dirname(malformedMetadataPayload), { recursive: true });
+    fs.writeFileSync(malformedMetadataPayload, verifiedProxyPayloadBytes);
+    fs.writeFileSync(
+      path.join(malformedMetadataBundle, "publication.json"),
+      `${JSON.stringify(
+        proxyReceipt({
+          filePath: `${malformedMetadataBundleRelative}/feature/feature.mp4`,
+          malformedDeliverable: true,
+          publicationFingerprint: malformedMetadataPublication,
+        }),
+      )}\n`,
+    );
+    const malformedMetadataRejected = throws(() =>
+      proxyModule.inspectPublishedProxyBundle(
+        verifiedProxyRoot,
+        malformedMetadataBundle,
+      ),
+    );
     TestValidator.predicate(
-      "the final proxy consumer rejects receipt-only and malformed manifests",
-      receiptOnlyProxyRejected &&
+      "the final proxy consumer rejects unowned and malformed manifests",
+      unmanifestedProxyRejected &&
+        receiptOnlyProxyRejected &&
         escapingProxyRejected &&
-        malformedProxyRejected,
+        malformedProxyRejected &&
+        duplicateProxyRejected &&
+        malformedMetadataRejected,
     );
 
     const parkedVerifiedProxyBundle = `${verifiedProxyBundle}.parked`;
@@ -1492,6 +1589,42 @@ export const test_cli_scaffold = async (): Promise<void> => {
     TestValidator.predicate(
       "the final proxy consumer rejects a byte-identical tree successor",
       verifiedProxyTreeSwapped && verifiedProxyTreeSuccessorRejected,
+    );
+    const lateVerifiedProxyFile = path.join(
+      verifiedProxyBundle,
+      "late-after-read.bin",
+    );
+    let verifiedBundleInventoryScans = 0;
+    let verifiedProxyLateMutation = false;
+    mutableFs.readdirSync = ((directory, ...args: unknown[]): unknown => {
+      const entries = Reflect.apply(nativeReaddir, mutableFs, [
+        directory,
+        ...args,
+      ]);
+      if (path.resolve(directory.toString()) === verifiedProxyBundle) {
+        verifiedBundleInventoryScans++;
+        if (verifiedBundleInventoryScans === 2) {
+          fs.writeFileSync(lateVerifiedProxyFile, "late after all reads");
+          verifiedProxyLateMutation = true;
+        }
+      }
+      return entries;
+    }) as typeof fs.readdirSync;
+    let verifiedProxyLateMutationRejected = false;
+    try {
+      verifiedProxyLateMutationRejected = throws(() =>
+        proxyModule.inspectPublishedProxyBundle(
+          verifiedProxyRoot,
+          verifiedProxyBundle,
+        ),
+      );
+    } finally {
+      mutableFs.readdirSync = nativeReaddir;
+      fs.rmSync(lateVerifiedProxyFile, { force: true });
+    }
+    TestValidator.predicate(
+      "the final proxy consumer revalidates exact inventory after all reads",
+      verifiedProxyLateMutation && verifiedProxyLateMutationRejected,
     );
     const runtimePackage = path.join(base, "runtime-package");
     const runtimeManifest = path.join(runtimePackage, "package.json");
