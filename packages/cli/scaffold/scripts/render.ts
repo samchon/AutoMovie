@@ -76,6 +76,13 @@ import {
   productionFrameCaptureMetrics,
 } from "./capture";
 import {
+  assertRenderChunkPublication,
+  captureRenderChunkPublication,
+  publishRenderChunkSnapshot,
+  readRenderChunkPublicationFile,
+  renderChunkContentFingerprint,
+} from "./renderChunkSnapshot";
+import {
   type IRenderGcTargetSnapshot,
   RENDER_GC_PRESERVED_PREFIX,
   assertCapturedRenderGcFileEntry,
@@ -146,6 +153,21 @@ interface IRenderChunkLockOwner {
   pid: number;
   /** Absent only on an older lock written before owner-checked release. */
   token?: string;
+}
+
+type RenderChunkPublicationReceipt = IAutoMovieProductionRenderChunkReceipt & {
+  publication: {
+    contentFingerprint: `sha256:${string}`;
+    version: 1;
+  };
+};
+
+interface ICurrentRenderChunk {
+  frames: Array<{
+    bytes: Uint8Array;
+    receipt: IAutoMovieProductionRenderChunkReceipt["frames"][number];
+  }>;
+  receipt: IAutoMovieProductionRenderChunkReceipt;
 }
 
 const main = async (): Promise<void> => {
@@ -589,7 +611,7 @@ const renderStatus = async (plan: IAutoMovieProductionRenderJobPlan) => {
             ...row,
             status: "failed" as const,
             correction:
-              "Receipt bytes are partial, corrupt, or parser-inconsistent. Quarantine and rerender this chunk.",
+              "Chunk publication tree or receipt is partial, changed, corrupt, or parser-inconsistent. Quarantine and rerender this chunk.",
           }
         : row;
     }),
@@ -598,29 +620,28 @@ const renderStatus = async (plan: IAutoMovieProductionRenderJobPlan) => {
 
 const currentReceipt = async (
   chunk: IAutoMovieProductionRenderChunk,
-): Promise<IAutoMovieProductionRenderChunkReceipt | null> =>
-  currentChunk(chunk);
+): Promise<IAutoMovieProductionRenderChunkReceipt | null> => {
+  const current = await currentChunk(chunk);
+  return current?.receipt ?? null;
+};
 
 const currentChunk = async (
   chunk: IAutoMovieProductionRenderChunk,
-  consumeFrame?: (frame: Uint8Array) => void,
-): Promise<IAutoMovieProductionRenderChunkReceipt | null> => {
+): Promise<ICurrentRenderChunk | null> => {
   const directory = chunkDirectory(chunk.id);
-  const receiptFile = path.join(directory, "receipt.json");
-  if (fs.existsSync(receiptFile) === false) return null;
   let plan: IAutoMovieProductionRenderJobPlan;
-  let receipt: IAutoMovieProductionRenderChunkReceipt;
+  let receipt: RenderChunkPublicationReceipt;
+  let frames: ICurrentRenderChunk["frames"];
   try {
     plan = readPlan();
-    receipt = readJson<IAutoMovieProductionRenderChunkReceipt>(receiptFile);
+    const publication = captureRenderChunkPublication(stateRoot, directory);
+    receipt = JSON.parse(
+      Buffer.from(publication.receiptBytes).toString("utf8"),
+    ) as RenderChunkPublicationReceipt;
     verifyProductionRenderChunkReceipt({ plan, chunk, receipt });
-  } catch {
-    return null;
-  }
-  for (const frame of receipt.frames) {
-    let bytes: Uint8Array;
-    try {
-      bytes = readRegularInside(directory, frame.path);
+    frames = [];
+    for (const frame of receipt.frames) {
+      const bytes = readRenderChunkPublicationFile(publication, frame.path);
       const probe = probeProductionMedia({
         kind: "preview",
         mediaType: "image/png",
@@ -634,16 +655,12 @@ const currentChunk = async (
         probe.height !== frame.height
       )
         return null;
-    } catch {
-      return null;
+      frames.push({ bytes, receipt: frame });
     }
-    // Consumer failures belong to the decoder/encoder, not chunk validity.
-    // Keep this call outside every validation catch so its exact diagnostic
-    // survives and rerender advice is reserved for actual receipt drift.
-    consumeFrame?.(bytes);
-  }
-  try {
-    const encoded = readRegularInside(directory, receipt.encoded.path);
+    const encoded = readRenderChunkPublicationFile(
+      publication,
+      receipt.encoded.path,
+    );
     const video = probeProductionVideoMp4(encoded);
     if (
       digestAutoMovieBytes(encoded) !== receipt.encoded.digest ||
@@ -655,7 +672,8 @@ const currentChunk = async (
       Math.abs(video.fps - plan.frameFormat.fps) > 1e-9
     )
       return null;
-    return receipt;
+    assertRenderChunkPublication(publication);
+    return { frames, receipt };
   } catch {
     return null;
   }
@@ -836,7 +854,8 @@ const renderChunk = async (
     throw new Error(
       `Encoded chunk "${chunk.slot}" failed frame-count, raster, or frame-clock probe.`,
     );
-  const receipt: IAutoMovieProductionRenderChunkReceipt = {
+  const payload = captureRenderGcTarget(stateRoot, temporary);
+  const receipt: RenderChunkPublicationReceipt = {
     version: 1,
     slot: chunk.slot,
     chunk: chunk.id,
@@ -846,13 +865,21 @@ const renderChunk = async (
       digest: digestAutoMovieBytes(encodedBytes),
       bytes: encodedBytes.length,
     },
+    publication: {
+      contentFingerprint: renderChunkContentFingerprint(payload),
+      version: 1,
+    },
   };
   writeJsonAtomic(path.join(temporary, "receipt.json"), receipt);
   const destination = chunkDirectory(chunk.id);
   const replaced = captureExistingRenderStateTarget(destination);
   if (replaced !== null) quarantine(destination, "replaced", replaced);
-  fs.mkdirSync(path.dirname(destination), { recursive: true });
-  fs.renameSync(temporary, destination);
+  const published = publishRenderChunkSnapshot({
+    base: stateRoot,
+    destination,
+    source: temporary,
+  });
+  removeCapturedRenderStateTarget(published.source);
   fs.rmSync(attemptPath(chunk), { force: true });
   return receipt;
 };
@@ -1112,18 +1139,17 @@ const finalize = async (plan: IAutoMovieProductionRenderJobPlan) => {
       for (const chunk of [...deliverableChunks].sort(
         (left, right) => left.frameStart - right.frameStart,
       )) {
-        const receipt = await currentChunk(chunk);
-        if (receipt === null)
+        const current = await currentChunk(chunk);
+        if (current === null)
           throw new Error(
             `Guide-pass chunk "${chunk.slot}" changed before control-frame publication.`,
           );
-        for (const frame of receipt.frames)
+        for (const frame of current.frames)
           owned.set(
-            `frames/${passes[0]}/frame_${String(frame.globalFrame).padStart(
-              8,
-              "0",
-            )}.png`,
-            readRegularInside(chunkDirectory(chunk.id), frame.path),
+            `frames/${passes[0]}/frame_${String(
+              frame.receipt.globalFrame,
+            ).padStart(8, "0")}.png`,
+            frame.bytes,
           );
       }
     } else if (deliverable.kind === "captions") {
@@ -1432,14 +1458,15 @@ const encodeChunkFrames = async (
     for (const chunk of chunks.sort(
       (left, right) => left.frameStart - right.frameStart,
     )) {
-      const receipt = await currentChunk(chunk, (frame) => {
-        consumeFrame(frame);
-        frameCount += 1;
-      });
-      if (receipt === null)
+      const current = await currentChunk(chunk);
+      if (current === null)
         throw new Error(
           `Chunk "${chunk.slot}" changed after final status verification. Reverify or rerender it before finalizing.`,
         );
+      for (const frame of current.frames) {
+        consumeFrame(frame.bytes);
+        frameCount += 1;
+      }
     }
     if (frameCount !== plan.totalFrames)
       throw new Error(

@@ -214,6 +214,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       "scripts/mcp.ts",
       "scripts/preview.ts",
       "scripts/render.ts",
+      "scripts/renderChunkSnapshot.ts",
       "scripts/renderGcSnapshot.ts",
       "scripts/renderLiveness.ts",
       "scripts/review-status.ts",
@@ -492,6 +493,15 @@ export const test_cli_scaffold = async (): Promise<void> => {
       files["scripts/render.ts"]!.includes("renderCoordinationRoot") ===
         false &&
       files[".gitignore"]!.includes(".automovie-liveness-*") &&
+      files["scripts/render.ts"]!.includes("publishRenderChunkSnapshot") &&
+      files["scripts/render.ts"]!.includes("captureRenderChunkPublication") &&
+      files["scripts/render.ts"]!.includes("readRenderChunkPublicationFile") &&
+      files["scripts/render.ts"]!.includes(
+        "fs.renameSync(temporary, destination)",
+      ) === false &&
+      files["scripts/render.ts"]!.includes(
+        "readRegularInside(chunkDirectory(chunk.id), frame.path)",
+      ) === false &&
       files["scripts/render.ts"]!.includes("renderPublicationFingerprint") &&
       files["scripts/render.ts"]!.includes("assertMatchingProxyPublication") &&
       files["scripts/render.ts"]!.includes("assertNoLiveRenderWorkers") &&
@@ -714,6 +724,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
         "scripts/mcp.ts",
         "scripts/preview.ts",
         "scripts/render.ts",
+        "scripts/renderChunkSnapshot.ts",
         "scripts/renderGcSnapshot.ts",
         "scripts/renderLiveness.ts",
         "scripts/review-status.ts",
@@ -805,6 +816,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
     const mutableFs = createRequire(__filename)("node:fs") as {
       lstatSync: typeof fs.lstatSync;
       fsyncSync: typeof fs.fsyncSync;
+      mkdirSync: typeof fs.mkdirSync;
       openSync: typeof fs.openSync;
       readdirSync: typeof fs.readdirSync;
       renameSync: typeof fs.renameSync;
@@ -813,6 +825,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
     };
     const nativeFsync = mutableFs.fsyncSync;
     const nativeLstat = mutableFs.lstatSync;
+    const nativeMkdir = mutableFs.mkdirSync;
     const nativeOpen = mutableFs.openSync;
     const nativeStat = mutableFs.statSync;
     const nativeWriteFile = mutableFs.writeFileSync;
@@ -2351,6 +2364,223 @@ export const test_cli_scaffold = async (): Promise<void> => {
         snapshot: unknown;
       }) => void;
     };
+    const renderChunkSnapshotModule = createRequire(__filename)(
+      path.join(scaffoldDir, "scripts", "renderChunkSnapshot.ts"),
+    ) as {
+      assertRenderChunkPublication: (publication: unknown) => void;
+      captureRenderChunkPublication: (
+        base: string,
+        directory: string,
+      ) => unknown;
+      publishRenderChunkSnapshot: (props: {
+        base: string;
+        destination: string;
+        source: string;
+      }) => { destination: unknown; source: unknown };
+      readRenderChunkPublicationFile: (
+        publication: unknown,
+        relative: string,
+      ) => Uint8Array;
+      renderChunkContentFingerprint: (snapshot: unknown) => string;
+    };
+    const chunkPublicationRoot = path.join(base, "chunk-publication");
+    const chunkFrameBytes = Buffer.from("exact frame bytes");
+    const chunkVideoBytes = Buffer.from("exact encoded bytes");
+    const populateChunkSource = (
+      directory: string,
+    ): { receiptBytes: Buffer } => {
+      fs.mkdirSync(path.join(directory, "frames"), { recursive: true });
+      fs.writeFileSync(
+        path.join(directory, "frames", "frame_00000000.png"),
+        chunkFrameBytes,
+      );
+      fs.writeFileSync(path.join(directory, "chunk.mp4"), chunkVideoBytes);
+      const payload = renderGcModule.captureRenderGcTarget(
+        chunkPublicationRoot,
+        directory,
+      );
+      const receiptBytes = Buffer.from(
+        `${JSON.stringify({
+          publication: {
+            contentFingerprint:
+              renderChunkSnapshotModule.renderChunkContentFingerprint(payload),
+            version: 1,
+          },
+        })}\n`,
+      );
+      fs.writeFileSync(path.join(directory, "receipt.json"), receiptBytes);
+      return { receiptBytes };
+    };
+    fs.mkdirSync(chunkPublicationRoot);
+    const normalChunkSource = path.join(chunkPublicationRoot, "normal-source");
+    const normalChunkDestination = path.join(
+      chunkPublicationRoot,
+      "normal-destination",
+    );
+    populateChunkSource(normalChunkSource);
+    let receiptPublishedLast = false;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      if (
+        typeof file !== "number" &&
+        path.resolve(file.toString()) ===
+          path.join(normalChunkDestination, "receipt.json") &&
+        flags === "wx+"
+      )
+        receiptPublishedLast =
+          fs.existsSync(path.join(normalChunkDestination, "chunk.mp4")) &&
+          fs.existsSync(
+            path.join(normalChunkDestination, "frames", "frame_00000000.png"),
+          ) &&
+          fs.existsSync(path.join(normalChunkDestination, "receipt.json")) ===
+            false;
+      return Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+    }) as typeof fs.openSync;
+    const normalChunkPublished = (() => {
+      try {
+        return renderChunkSnapshotModule.publishRenderChunkSnapshot({
+          base: chunkPublicationRoot,
+          destination: normalChunkDestination,
+          source: normalChunkSource,
+        });
+      } finally {
+        mutableFs.openSync = nativeOpen;
+      }
+    })();
+    const normalChunkPublication =
+      renderChunkSnapshotModule.captureRenderChunkPublication(
+        chunkPublicationRoot,
+        normalChunkDestination,
+      );
+    const normalPublishedFrame =
+      renderChunkSnapshotModule.readRenderChunkPublicationFile(
+        normalChunkPublication,
+        "frames/frame_00000000.png",
+      );
+    renderChunkSnapshotModule.assertRenderChunkPublication(
+      normalChunkPublication,
+    );
+    TestValidator.predicate(
+      "render chunk publication copies exact bytes and publishes its receipt last",
+      normalChunkPublished.destination !== undefined &&
+        normalChunkPublished.source !== undefined &&
+        receiptPublishedLast &&
+        Buffer.from(normalPublishedFrame).equals(chunkFrameBytes),
+    );
+    const parkedPublishedChunk = path.join(
+      chunkPublicationRoot,
+      "normal-published-original",
+    );
+    fs.renameSync(normalChunkDestination, parkedPublishedChunk);
+    fs.cpSync(parkedPublishedChunk, normalChunkDestination, {
+      recursive: true,
+    });
+    const consumerSuccessorRejected = throws(() =>
+      renderChunkSnapshotModule.readRenderChunkPublicationFile(
+        normalChunkPublication,
+        "frames/frame_00000000.png",
+      ),
+    );
+    TestValidator.predicate(
+      "a consumer refuses a byte-identical successor installed after tree capture",
+      consumerSuccessorRejected &&
+        fs.existsSync(normalChunkDestination) &&
+        fs.existsSync(parkedPublishedChunk),
+    );
+
+    const tempRaceSource = path.join(chunkPublicationRoot, "temp-race-source");
+    const tempRaceParked = path.join(
+      chunkPublicationRoot,
+      "temp-race-original",
+    );
+    const tempRaceDestination = path.join(
+      chunkPublicationRoot,
+      "temp-race-destination",
+    );
+    populateChunkSource(tempRaceSource);
+    let tempSuccessorInstalled = false;
+    mutableFs.mkdirSync = ((directory, ...args: unknown[]) => {
+      if (
+        tempSuccessorInstalled === false &&
+        path.resolve(directory.toString()) === tempRaceDestination
+      ) {
+        nativeLivenessRename(tempRaceSource, tempRaceParked);
+        fs.cpSync(tempRaceParked, tempRaceSource, { recursive: true });
+        tempSuccessorInstalled = true;
+      }
+      return Reflect.apply(nativeMkdir, mutableFs, [directory, ...args]);
+    }) as typeof fs.mkdirSync;
+    let tempSuccessorRejected = false;
+    try {
+      tempSuccessorRejected = throws(() =>
+        renderChunkSnapshotModule.publishRenderChunkSnapshot({
+          base: chunkPublicationRoot,
+          destination: tempRaceDestination,
+          source: tempRaceSource,
+        }),
+      );
+    } finally {
+      mutableFs.mkdirSync = nativeMkdir;
+    }
+    TestValidator.predicate(
+      "publication refuses a temp tree successor after exact capture",
+      tempSuccessorInstalled &&
+        tempSuccessorRejected &&
+        fs.existsSync(tempRaceSource) &&
+        fs.existsSync(tempRaceParked) &&
+        fs.existsSync(path.join(tempRaceDestination, "receipt.json")) === false,
+    );
+
+    const destinationRaceSource = path.join(
+      chunkPublicationRoot,
+      "destination-race-source",
+    );
+    const destinationRaceTarget = path.join(
+      chunkPublicationRoot,
+      "destination-race-target",
+    );
+    populateChunkSource(destinationRaceSource);
+    let destinationSuccessorInstalled = false;
+    mutableFs.mkdirSync = ((directory, ...args: unknown[]) => {
+      if (
+        destinationSuccessorInstalled === false &&
+        path.resolve(directory.toString()) === destinationRaceTarget
+      ) {
+        nativeMkdir(destinationRaceTarget);
+        fs.writeFileSync(
+          path.join(destinationRaceTarget, "foreign.bin"),
+          "foreign successor",
+        );
+        destinationSuccessorInstalled = true;
+      }
+      return Reflect.apply(nativeMkdir, mutableFs, [directory, ...args]);
+    }) as typeof fs.mkdirSync;
+    let destinationSuccessorRejected = false;
+    try {
+      destinationSuccessorRejected = throws(() =>
+        renderChunkSnapshotModule.publishRenderChunkSnapshot({
+          base: chunkPublicationRoot,
+          destination: destinationRaceTarget,
+          source: destinationRaceSource,
+        }),
+      );
+    } finally {
+      mutableFs.mkdirSync = nativeMkdir;
+    }
+    TestValidator.predicate(
+      "exclusive destination reservation refuses a reappearing successor",
+      destinationSuccessorInstalled &&
+        destinationSuccessorRejected &&
+        fs.readFileSync(
+          path.join(destinationRaceTarget, "foreign.bin"),
+          "utf8",
+        ) === "foreign successor" &&
+        fs.existsSync(destinationRaceSource),
+    );
+    fs.rmSync(chunkPublicationRoot, { recursive: true });
     const gcBase = path.join(base, "render-gc");
     const gcTarget = path.join(gcBase, "stale-chunk");
     const gcFile = path.join(gcTarget, "chunk.bin");

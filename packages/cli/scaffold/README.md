@@ -166,8 +166,11 @@ mixing or misattributing output from two runtimes.
 Chunk workers publish complete UUID claims atomically inside a slot-specific
 lock namespace. A worker yields to every other live claim and removes only its
 own exact path. Interrupted pre-publication candidates are quarantined on the
-next run. Receipt reuse rejects linked state ancestors and files, and final
-encoding consumes the exact PNG bytes authenticated by that physical-path read.
+next run. A completed temp chunk is descriptor-read from one exact tree into an
+exclusively reserved destination; its receipt is published last and authenticates
+the content-only tree fingerprint. Receipt reuse rejects linked or replaced state
+ancestors and finalization consumes frame and MP4 bytes from that same captured
+tree rather than reopening verified paths.
 
 `npm run render` is the convenience sequence: it captures current review evidence,
 reuses or renders current chunks, then attempts final publication. Finalize
