@@ -48,7 +48,46 @@ export const test_mcp_project_manifest = (): void => {
     )}\n`;
     fs.writeFileSync(manifestPath, withUnknown);
     const before = fs.readFileSync(manifestPath, "utf8");
-    const project = AutoMovieProject.open(root);
+    const nativeManifestRead = fs.readFileSync;
+    const parkedManifest = `${manifestPath}.read-parked`;
+    let manifestPathRead = false;
+    fs.readFileSync = ((
+      file: fs.PathOrFileDescriptor,
+      ...args: unknown[]
+    ): unknown => {
+      if (
+        typeof file !== "number" &&
+        path.resolve(file.toString()) === path.resolve(manifestPath)
+      ) {
+        manifestPathRead = true;
+        fs.renameSync(manifestPath, parkedManifest);
+        fs.writeFileSync(
+          manifestPath,
+          `${JSON.stringify({
+            version: 1,
+            assets: ["models/transient.glb"],
+          })}\n`,
+        );
+        try {
+          return Reflect.apply(nativeManifestRead, fs, [file, ...args]);
+        } finally {
+          fs.rmSync(manifestPath);
+          fs.renameSync(parkedManifest, manifestPath);
+        }
+      }
+      return Reflect.apply(nativeManifestRead, fs, [file, ...args]);
+    }) as typeof fs.readFileSync;
+    const project = (() => {
+      try {
+        return AutoMovieProject.open(root);
+      } finally {
+        fs.readFileSync = nativeManifestRead;
+        if (fs.existsSync(parkedManifest)) {
+          fs.rmSync(manifestPath, { force: true });
+          fs.renameSync(parkedManifest, manifestPath);
+        }
+      }
+    })();
     TestValidator.equals(
       "opening an existing project does not rewrite the manifest",
       fs.readFileSync(manifestPath, "utf8"),
@@ -58,6 +97,11 @@ export const test_mcp_project_manifest = (): void => {
       "the opened project sees the existing assets",
       project.assets,
       ["models/a.glb"],
+    );
+    TestValidator.equals(
+      "manifest bytes bind to the verified descriptor",
+      manifestPathRead,
+      false,
     );
 
     // 3. a real mutation rewrites the manifest but keeps the unknown field.

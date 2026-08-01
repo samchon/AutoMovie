@@ -30,6 +30,7 @@ import {
   IAutoMovieMcpPropSpec,
   IAutoMovieMcpWritableSlate,
 } from "../dto";
+import { readAutoMovieProductionOwnedFile } from "../production/productionRenderJob";
 import {
   validateSceneArtifact,
   validateSequenceArtifact,
@@ -105,7 +106,7 @@ export class AutoMovieProject {
     for (const dir of RESERVED_DIRS)
       fs.mkdirSync(path.join(root, dir), { recursive: true });
     this.lastReadRevision_ = this.readRevision();
-    const existing = readJson<unknown>(this.manifestPath);
+    const existing = readJson<unknown>(this.root, this.manifestPath);
     if (existing === null) {
       // A fresh project: create the manifest once.
       this.manifest = { version: 1, assets: [] };
@@ -135,6 +136,7 @@ export class AutoMovieProject {
   public storedSlate(): Omit<IAutoMovieMcpWritableSlate, "film"> {
     this.lastReadRevision_ = this.readRevision();
     const script = readValidatedJson<IAutoMovieScript>(
+      this.root,
       this.slicePath("script.json"),
       validateScriptSlice,
     );
@@ -164,6 +166,7 @@ export class AutoMovieProject {
       ),
       notes:
         readValidatedJson<IAutoMovieReviewNote[]>(
+          this.root,
           this.slicePath("notes.json"),
           validateNotesSlice,
         ) ?? [],
@@ -176,6 +179,7 @@ export class AutoMovieProject {
     return {
       ...stored,
       film: readValidatedJson<IAutoMovieSequence>(
+        this.root,
         this.slicePath("film.json"),
         (value, violations) =>
           appendValidation(
@@ -313,7 +317,10 @@ export class AutoMovieProject {
 
   /** The committed revision on disk; a legacy project without one is 0. */
   private readRevision(): number {
-    const value = readJson<{ revision?: unknown }>(this.revisionPath);
+    const value = readJson<{ revision?: unknown }>(
+      this.root,
+      this.revisionPath,
+    );
     return value !== null && typeof value.revision === "number"
       ? value.revision
       : 0;
@@ -561,6 +568,7 @@ export class AutoMovieProject {
     );
     if (keyed.length !== 0) return keyed;
     const legacy = readValidatedJson<IAutoMovieScene>(
+      this.root,
       this.slicePath("scene.json"),
       validateSceneSlice,
     );
@@ -583,7 +591,7 @@ export class AutoMovieProject {
       .filter((name) => name.endsWith(".json"))
       .sort(compareCodeUnits)) {
       const file = path.join(base, name);
-      const value = readJson<T>(file);
+      const value = readJson<T>(this.root, file);
       if (value === null) continue;
       const fileKey = sliceKeyFromFilename(file, name);
       const expected = key.expected(fileKey);
@@ -1432,10 +1440,15 @@ const validatePropSlice = (
   }
 };
 
-const readJson = <T>(file: string): T | null => {
+const readJson = <T>(root: string, file: string): T | null => {
   if (!fs.existsSync(file)) return null;
   try {
-    return JSON.parse(fs.readFileSync(file, "utf8")) as T;
+    const bytes = readAutoMovieProductionOwnedFile({
+      root,
+      directory: path.dirname(file),
+      relative: path.basename(file),
+    });
+    return JSON.parse(Buffer.from(bytes).toString("utf8")) as T;
   } catch (error) {
     // JSON.parse and Node's synchronous filesystem APIs throw Error objects.
     const reason = (error as Error).message;
@@ -1455,13 +1468,14 @@ const validateProjectValue = <T>(
 };
 
 const readValidatedJson = <T>(
+  root: string,
   file: string,
   validate: (
     value: unknown,
     violations: IAutoMovieConstraintViolation[],
   ) => void,
 ): T | null => {
-  const value = readJson<unknown>(file);
+  const value = readJson<unknown>(root, file);
   if (value === null) return null;
   validateProjectValue(file, value, validate);
   return value as T;
