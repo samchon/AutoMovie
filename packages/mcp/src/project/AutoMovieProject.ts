@@ -174,7 +174,7 @@ export class AutoMovieProject {
   /** The stored slate assembled from the slice files (film excluded). */
   public storedSlate(): Omit<IAutoMovieMcpWritableSlate, "film"> {
     return this.withRootNamespace(() => {
-      this.lastReadRevision_ = this.readRevision();
+      this.synchronizeResidentState();
       const script = readValidatedJson<IAutoMovieScript>(
         this.root,
         this.slicePath("script.json"),
@@ -354,6 +354,7 @@ export class AutoMovieProject {
         if (current !== this.lastReadRevision_) {
           const base = this.lastReadRevision_;
           this.lastReadRevision_ = current;
+          this.manifest = this.readManifest();
           throw new Error(
             `another session committed to this project (on-disk revision ${current}; this session last synchronized at ${base}); nothing was written, re-read the current state (getSlate / nextSteps) and re-issue the call from that truth`,
           );
@@ -412,6 +413,20 @@ export class AutoMovieProject {
       : 0;
   }
 
+  private readManifest(): IManifest {
+    const value = readJson<unknown>(this.root, this.manifestPath);
+    if (value === null)
+      throw new Error(
+        `AutoMovie project manifest "${this.manifestPath}" disappeared from the resident project.`,
+      );
+    return validateManifest(this.manifestPath, value);
+  }
+
+  private synchronizeResidentState(): void {
+    this.lastReadRevision_ = this.readRevision();
+    this.manifest = this.readManifest();
+  }
+
   private get revisionPath(): string {
     return path.join(this.root, "revision.json");
   }
@@ -423,7 +438,7 @@ export class AutoMovieProject {
   /** The stored prop specs, one per `props/<node>.json`, in filename order. */
   public storedProps(): IAutoMovieMcpPropSpec[] {
     return this.withRootNamespace(() => {
-      this.lastReadRevision_ = this.readRevision();
+      this.synchronizeResidentState();
       return this.readKeyedSlices<IAutoMovieMcpPropSpec>(
         "props",
         {
@@ -469,7 +484,7 @@ export class AutoMovieProject {
    */
   public storedActors(): IAutoMovieMcpActorSpec[] {
     return this.withRootNamespace(() => {
-      this.lastReadRevision_ = this.readRevision();
+      this.synchronizeResidentState();
       return this.readKeyedSlices<IAutoMovieMcpActorSpec>("actors", {
         label: "actor node",
         expected: (node) => node,
@@ -548,17 +563,18 @@ export class AutoMovieProject {
    */
   public registerAsset(relativePath: string, bytes?: Uint8Array): string {
     const normalized = normalizeAssetPath(relativePath);
-    if (this.manifest.assets.includes(normalized))
-      throw new Error(
-        `asset "${normalized}" is already registered; assets are never silently replaced`,
-      );
     const absolute = path.join(this.root, ...normalized.split("/"));
-    const next = {
-      ...this.manifest,
-      assets: [...this.manifest.assets, normalized],
-    };
-    const manifestContent = serializeJson(next);
     this.commitCycle((assertNamespace) => {
+      const resident = this.readManifest();
+      if (resident.assets.includes(normalized))
+        throw new Error(
+          `asset "${normalized}" is already registered; assets are never silently replaced`,
+        );
+      const next = {
+        ...resident,
+        assets: [...resident.assets, normalized],
+      };
+      const manifestContent = serializeJson(next);
       if (bytes !== undefined) {
         assertNamespace();
         if (fs.existsSync(absolute))
@@ -576,7 +592,10 @@ export class AutoMovieProject {
 
   /** Tracked asset paths, project-relative, in registration order. */
   public get assets(): string[] {
-    return [...this.manifest.assets];
+    return this.withRootNamespace(() => {
+      this.synchronizeResidentState();
+      return [...this.manifest.assets];
+    });
   }
 
   /** What the project holds: which slices exist, and the tracked assets. */

@@ -182,6 +182,23 @@ export const test_mcp_project_transactions = (): void => {
       revAfterActors.revision,
     );
 
+    const assetA = AutoMovieProject.open(root);
+    const assetB = AutoMovieProject.open(root);
+    assetA.registerAsset("models/asset-a.glb", Buffer.from("asset a"));
+    assetB.writableSlate();
+    assetB.registerAsset("models/asset-b.glb", Buffer.from("asset b"));
+    TestValidator.equals(
+      "a synchronized second handle preserves the first handle's asset",
+      assetB.assets,
+      ["models/asset-a.glb", "models/asset-b.glb"],
+    );
+    TestValidator.equals(
+      "summary exposes the current resident asset index",
+      assetA.summary().assets,
+      ["models/asset-a.glb", "models/asset-b.glb"],
+    );
+    a.writableSlate();
+
     const nativeWrite = fs.writeFileSync;
     const lockParkedRoot = `${root}.lock-parked`;
     let lockSwapped = false;
