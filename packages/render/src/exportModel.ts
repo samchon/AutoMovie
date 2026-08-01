@@ -1,6 +1,8 @@
 import { tessellate } from "@automovie/engine";
 import { IAutoMovieModel, IAutoMovieTransform } from "@automovie/interface";
-import type { Material, Node } from "@gltf-transform/core";
+import type { Material, Node } from "@gltf-transform/core" with {
+  "resolution-mode": "import",
+};
 
 /**
  * Serialize an {@link IAutoMovieModel} AST into a binary glTF (`.glb`) byte
