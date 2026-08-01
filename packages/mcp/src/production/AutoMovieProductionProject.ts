@@ -1464,7 +1464,11 @@ export class AutoMovieProductionProject {
         "outside-root",
         `Source "${relativePath}" escapes its configured source root through a symlink. Move it inside a source root.`,
       );
-    return fs.readFileSync(real);
+    return readAutoMovieProductionOwnedFile({
+      root: this.rootReal,
+      directory: path.dirname(real),
+      relative: path.basename(real),
+    });
   }
 
   /** Resolve a project-relative source path and enforce source-root ownership. */

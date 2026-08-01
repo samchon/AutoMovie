@@ -177,6 +177,48 @@ export const test_mcp_production_project = (): void => {
     fs.rmSync(sourceJunction);
     fs.rmSync(outsideSource, { recursive: true });
 
+    const sourceReadRelative = shotContract().source.module;
+    const sourceReadPath = project.resolveSourcePath(sourceReadRelative);
+    const sourceReadParked = `${sourceReadPath}.parked`;
+    const sourceReadBefore = fs.readFileSync(sourceReadPath);
+    const nativeSourceRead = fs.readFileSync;
+    let sourcePathRead = false;
+    fs.readFileSync = ((
+      target: fs.PathOrFileDescriptor,
+      ...args: unknown[]
+    ): unknown => {
+      if (
+        typeof target !== "number" &&
+        path.resolve(target.toString()) === path.resolve(sourceReadPath)
+      ) {
+        sourcePathRead = true;
+        fs.renameSync(sourceReadPath, sourceReadParked);
+        fs.writeFileSync(sourceReadPath, "export const transient = true;\n");
+        try {
+          return Reflect.apply(nativeSourceRead, fs, [target, ...args]);
+        } finally {
+          fs.rmSync(sourceReadPath);
+          fs.renameSync(sourceReadParked, sourceReadPath);
+        }
+      }
+      return Reflect.apply(nativeSourceRead, fs, [target, ...args]);
+    }) as typeof fs.readFileSync;
+    let sourceReadBytes = new Uint8Array();
+    try {
+      sourceReadBytes = project.readSource(sourceReadRelative);
+    } finally {
+      fs.readFileSync = nativeSourceRead;
+      if (fs.existsSync(sourceReadParked)) {
+        fs.rmSync(sourceReadPath, { force: true });
+        fs.renameSync(sourceReadParked, sourceReadPath);
+      }
+    }
+    TestValidator.predicate(
+      "source reads bind bytes to the verified descriptor across a pathname swap",
+      sourcePathRead === false &&
+        Buffer.from(sourceReadBytes).equals(sourceReadBefore),
+    );
+
     const invalidSchema = project.setModelRecipe(
       {} as ReturnType<typeof modelRecipe>,
     );
