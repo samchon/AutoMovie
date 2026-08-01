@@ -30,6 +30,7 @@
     "h264-mp4-encoder": "catalog:media",
     "kokoro-js": "catalog:media",
     "libopus-wasm": "catalog:media",
+    "onnxruntime-node": "catalog:media",
     "pngjs": "catalog:media",
     "@gltf-transform/core": "catalog:gltf",
     "three": "catalog:three",

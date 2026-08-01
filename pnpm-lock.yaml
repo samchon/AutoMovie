@@ -575,6 +575,9 @@ importers:
       libopus-wasm:
         specifier: catalog:media
         version: 0.2.0
+      onnxruntime-node:
+        specifier: catalog:media
+        version: 1.21.0
       pngjs:
         specifier: catalog:media
         version: 7.0.0
