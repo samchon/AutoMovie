@@ -1877,7 +1877,11 @@ const kokoroModelCacheAssets = (
         return {
           path: `model:${relative}`,
           digest: digestAutoMovieBytes(
-            readRegularInside(modelCacheRoot, relative),
+            readAutoMovieProductionOwnedFile({
+              root: modelCacheRoot,
+              directory: modelCacheRoot,
+              relative,
+            }),
           ),
         };
       })

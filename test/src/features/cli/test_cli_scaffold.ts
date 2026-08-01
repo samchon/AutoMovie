@@ -358,6 +358,12 @@ export const test_cli_scaffold = (): void => {
       files["scripts/render.ts"]!.includes(
         'path: "package:sharp-capability-wall"',
       ) &&
+      files["scripts/render.ts"]!.includes(
+        "root: modelCacheRoot,\n              directory: modelCacheRoot,\n              relative,",
+      ) &&
+      files["scripts/render.ts"]!.includes(
+        "readRegularInside(modelCacheRoot, relative)",
+      ) === false &&
       files["scripts/render.ts"]!.includes("encodeProductionOpus") &&
       files["scripts/render.ts"]!.includes("muxProductionFeatureMp4") &&
       files["scripts/render.ts"]!.includes('"waveform.png"') &&
