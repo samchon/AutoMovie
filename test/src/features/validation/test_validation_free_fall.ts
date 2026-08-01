@@ -2,7 +2,7 @@ import { detectFreeFall } from "@automovie/engine";
 import { IAutoMovieBody } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { nclose } from "../internal/predicates";
+import { nclose, validationHasNoWarnings } from "../internal/predicates";
 
 const BODY: IAutoMovieBody = {
   mass: 1,
@@ -86,15 +86,9 @@ export const test_validation_free_fall = (): void => {
     attached: false,
     falling: false,
   });
-  TestValidator.equals(
-    "supported succeeds cleanly",
-    supported.validation.success,
-    true,
-  );
-  TestValidator.equals(
+  TestValidator.predicate(
     "supported has no warning",
-    warnings(supported).length,
-    0,
+    validationHasNoWarnings("supported free fall", supported.validation),
   );
   TestValidator.equals("supported has no event", supported.events.length, 0);
   TestValidator.equals("supported has no arc", supported.trajectory, null);

@@ -67,7 +67,6 @@ export const test_validation_body_collision = (): void => {
       radius: 0.2,
     }),
   });
-  TestValidator.equals("apart succeeds", apart.validation.success, true);
   TestValidator.predicate(
     "apart has no warnings",
     validationHasNoWarnings("apart body collision", apart.validation),

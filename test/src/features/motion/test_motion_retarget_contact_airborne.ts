@@ -48,6 +48,10 @@ export const test_motion_retarget_contact_airborne = (): void => {
   );
 
   const jumped = retargetHumanoidMotion({ motion: jump, source, target });
+  TestValidator.predicate(
+    "a reachable grounded contact reports no warning",
+    validationHasNoWarnings("reachable grounded contact", jumped.validation),
+  );
   if (jumped.motion === null) throw new Error("jump retarget failed");
   TestValidator.predicate(
     "the grounded keyframe is corrected",
@@ -58,11 +62,6 @@ export const test_motion_retarget_contact_airborne = (): void => {
     jumped.motion.keyframes[1]!.pose.joints,
     [],
   );
-  TestValidator.predicate(
-    "a reachable grounded contact reports no warning",
-    validationHasNoWarnings("reachable grounded contact", jumped.validation),
-  );
-
   // 2. no contact anywhere: identical to carrying the angles verbatim.
   const slide = rootShiftClip(source.id, { x: 0, y: 0, z: 0.25 });
   const ungrounded = retargetHumanoidMotion({
@@ -77,6 +76,14 @@ export const test_motion_retarget_contact_airborne = (): void => {
     target,
     contacts: { enabled: false },
   });
+  TestValidator.predicate(
+    "no ground contact reports no warning",
+    validationHasNoWarnings("ungrounded retarget", ungrounded.validation),
+  );
+  TestValidator.predicate(
+    "disabled contact reports no warning",
+    validationHasNoWarnings("contact-disabled retarget", carried.validation),
+  );
   if (ungrounded.motion === null || carried.motion === null)
     throw new Error("ungrounded retarget failed");
   TestValidator.equals(
@@ -84,11 +91,6 @@ export const test_motion_retarget_contact_airborne = (): void => {
     ungrounded.motion,
     carried.motion,
   );
-  TestValidator.predicate(
-    "no contact means nothing to warn about",
-    validationHasNoWarnings("ungrounded retarget", ungrounded.validation),
-  );
-
   // 3. a single-keyframe clip fails validation instead of crashing the pass.
   const lone = retargetHumanoidMotion({
     motion: rootShiftClip(source.id, { x: 0, y: 0, z: 0.25 }, [0]),

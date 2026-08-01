@@ -117,9 +117,9 @@ export const test_motion_retarget_contact_unreachable = (): void => {
     target,
     contacts: { tolerance: 0.5 },
   });
-  if (tolerant.motion === null) throw new Error("tolerant retarget failed");
   TestValidator.predicate(
     "a wider contact budget stops reporting the same residual",
     validationHasNoWarnings("tolerant retarget contact", tolerant.validation),
   );
+  if (tolerant.motion === null) throw new Error("tolerant retarget failed");
 };
