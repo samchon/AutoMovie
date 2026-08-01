@@ -189,6 +189,17 @@ export const test_mcp_project_manifest = (): void => {
       );
     }
 
+    fs.rmSync(manifestPath);
+    fs.mkdirSync(manifestPath);
+    TestValidator.predicate(
+      "a non-file optional manifest keeps project repair diagnostics",
+      throwsError(
+        () => AutoMovieProject.open(root),
+        ["AutoMovie project file", "automovie.json", "physical file"],
+      ),
+    );
+    fs.rmSync(manifestPath, { recursive: true });
+
     const linkedRoot = `${root}-linked`;
     fs.symlinkSync(
       root,
