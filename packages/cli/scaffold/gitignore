@@ -11,6 +11,7 @@ generated/
 !.automovie/reviews/**
 .automovie/capture/
 .automovie-liveness-*
+.automovie-chunk-*
 .gc-preserved-*
 renders/*/
 *.log

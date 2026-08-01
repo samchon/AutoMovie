@@ -76,11 +76,11 @@ import {
   productionFrameCaptureMetrics,
 } from "./capture";
 import {
-  assertRenderChunkPublication,
   captureRenderChunkPublication,
+  loadRenderChunkPublication,
   publishRenderChunkSnapshot,
-  readRenderChunkPublicationFile,
-  renderChunkContentFingerprint,
+  removeRenderChunkPublication,
+  renderChunkPublicationPath,
 } from "./renderChunkSnapshot";
 import {
   type IRenderGcTargetSnapshot,
@@ -154,13 +154,6 @@ interface IRenderChunkLockOwner {
   /** Absent only on an older lock written before owner-checked release. */
   token?: string;
 }
-
-type RenderChunkPublicationReceipt = IAutoMovieProductionRenderChunkReceipt & {
-  publication: {
-    contentFingerprint: `sha256:${string}`;
-    version: 1;
-  };
-};
 
 interface ICurrentRenderChunk {
   frames: Array<{
@@ -253,7 +246,7 @@ const main = async (): Promise<void> => {
     }
     if (action === "all") await captureReviewEvidence();
     if (action === "run" || action === "all") {
-      recoverAbandonedTemporaryDirectories();
+      recoverAbandonedTemporaryDirectories(current.chunks);
       quarantineStaleSlotOutputs(current.chunks);
       const result = await runProductionRenderJob({
         plan: current,
@@ -591,9 +584,11 @@ const renderShotFingerprints = (
 };
 
 const renderStatus = async (plan: IAutoMovieProductionRenderJobPlan) => {
-  const receipts = readAllJson<IAutoMovieProductionRenderChunkReceipt>(
-    path.join(stateRoot, "chunks"),
-    "receipt.json",
+  const currentChunks = await Promise.all(
+    plan.chunks.map((chunk) => currentChunk(chunk)),
+  );
+  const receipts = currentChunks.flatMap((current) =>
+    current === null ? [] : [current.receipt],
   );
   const attempts = readAllJson<{
     slot: string;
@@ -602,20 +597,17 @@ const renderStatus = async (plan: IAutoMovieProductionRenderJobPlan) => {
     correction: string;
   }>(path.join(stateRoot, "attempts"), ".json");
   const rows = productionRenderChunkStatuses({ plan, receipts, attempts });
-  return Promise.all(
-    rows.map(async (row, index) => {
-      if (row.status !== "complete") return row;
-      const current = await currentReceipt(plan.chunks[index]!);
-      return current === null
-        ? {
-            ...row,
-            status: "failed" as const,
-            correction:
-              "Chunk publication tree or receipt is partial, changed, corrupt, or parser-inconsistent. Quarantine and rerender this chunk.",
-          }
-        : row;
-    }),
-  );
+  return rows.map((row, index) => {
+    if (row.status !== "complete") return row;
+    return currentChunks[index] === null
+      ? {
+          ...row,
+          status: "failed" as const,
+          correction:
+            "Chunk publication tree or receipt is partial, changed, corrupt, or parser-inconsistent. Quarantine and rerender this chunk.",
+        }
+      : row;
+  });
 };
 
 const currentReceipt = async (
@@ -630,41 +622,29 @@ const currentChunk = async (
 ): Promise<ICurrentRenderChunk | null> => {
   const directory = chunkDirectory(chunk.id);
   let plan: IAutoMovieProductionRenderJobPlan;
-  let receipt: RenderChunkPublicationReceipt;
+  let receipt: IAutoMovieProductionRenderChunkReceipt;
   let frames: ICurrentRenderChunk["frames"];
   try {
     plan = readPlan();
-    const publication = captureRenderChunkPublication(stateRoot, directory);
-    receipt = JSON.parse(
-      Buffer.from(publication.receiptBytes).toString("utf8"),
-    ) as RenderChunkPublicationReceipt;
+    const loaded = loadRenderChunkPublication(root, directory);
+    receipt = loaded.receipt;
     verifyProductionRenderChunkReceipt({ plan, chunk, receipt });
-    frames = [];
-    for (const frame of receipt.frames) {
-      const bytes = readRenderChunkPublicationFile(publication, frame.path);
+    frames = loaded.frames;
+    for (const frame of frames) {
       const probe = probeProductionMedia({
         kind: "preview",
         mediaType: "image/png",
-        bytes,
+        bytes: frame.bytes,
       });
       if (
-        digestAutoMovieBytes(bytes) !== frame.digest ||
-        bytes.length !== frame.bytes ||
         probe.kind !== "png" ||
-        probe.width !== frame.width ||
-        probe.height !== frame.height
+        probe.width !== frame.receipt.width ||
+        probe.height !== frame.receipt.height
       )
         return null;
-      frames.push({ bytes, receipt: frame });
     }
-    const encoded = readRenderChunkPublicationFile(
-      publication,
-      receipt.encoded.path,
-    );
-    const video = probeProductionVideoMp4(encoded);
+    const video = probeProductionVideoMp4(loaded.encoded);
     if (
-      digestAutoMovieBytes(encoded) !== receipt.encoded.digest ||
-      encoded.length !== receipt.encoded.bytes ||
       video.kind !== "video" ||
       video.width !== plan.frameFormat.width ||
       video.height !== plan.frameFormat.height ||
@@ -672,7 +652,6 @@ const currentChunk = async (
       Math.abs(video.fps - plan.frameFormat.fps) > 1e-9
     )
       return null;
-    assertRenderChunkPublication(publication);
     return { frames, receipt };
   } catch {
     return null;
@@ -758,14 +737,15 @@ const renderChunk = async (
   plan: IAutoMovieProductionRenderJobPlan,
   chunk: IAutoMovieProductionRenderChunk,
 ): Promise<IAutoMovieProductionRenderChunkReceipt> => {
+  const existing = await currentChunk(chunk);
+  if (existing !== null) return existing.receipt;
+  removeRenderChunkPublication(root, chunkDirectory(chunk.id));
+  const temporaryRoot = ensureRenderPhysicalDirectory(stateRoot, "tmp");
   const temporary = path.join(
-    stateRoot,
-    "tmp",
-    `${chunk.id.slice(7)}.${process.pid}`,
+    temporaryRoot,
+    `${chunk.id.slice(7)}.${randomUUID()}.${process.pid}`,
   );
-  const partial = captureExistingRenderStateTarget(temporary);
-  if (partial !== null) quarantine(temporary, "partial", partial);
-  fs.mkdirSync(temporary, { recursive: true });
+  fs.mkdirSync(temporary);
   writeJsonAtomic(attemptPath(chunk), {
     slot: chunk.slot,
     chunk: chunk.id,
@@ -854,8 +834,7 @@ const renderChunk = async (
     throw new Error(
       `Encoded chunk "${chunk.slot}" failed frame-count, raster, or frame-clock probe.`,
     );
-  const payload = captureRenderGcTarget(stateRoot, temporary);
-  const receipt: RenderChunkPublicationReceipt = {
+  const receipt: IAutoMovieProductionRenderChunkReceipt = {
     version: 1,
     slot: chunk.slot,
     chunk: chunk.id,
@@ -865,23 +844,17 @@ const renderChunk = async (
       digest: digestAutoMovieBytes(encodedBytes),
       bytes: encodedBytes.length,
     },
-    publication: {
-      contentFingerprint: renderChunkContentFingerprint(payload),
-      version: 1,
-    },
   };
-  writeJsonAtomic(path.join(temporary, "receipt.json"), receipt);
-  const destination = chunkDirectory(chunk.id);
-  const replaced = captureExistingRenderStateTarget(destination);
-  if (replaced !== null) quarantine(destination, "replaced", replaced);
   const published = publishRenderChunkSnapshot({
-    base: stateRoot,
-    destination,
-    source: temporary,
+    chunk: chunk.id,
+    receipt,
+    root,
+    scope: renderLivenessScope,
+    tier: renderTier.kind,
+    tree: temporary,
   });
-  removeCapturedRenderStateTarget(published.source);
   fs.rmSync(attemptPath(chunk), { force: true });
-  return receipt;
+  return published.publication.receipt;
 };
 
 const failChunk = async (
@@ -2340,7 +2313,12 @@ const productionEncoderIdentity = (
 };
 
 const chunkDirectory = (digest: AutoMovieContentDigest): string =>
-  path.join(stateRoot, "chunks", digest.slice(7));
+  renderChunkPublicationPath({
+    chunk: digest,
+    root,
+    scope: renderLivenessScope,
+    tier: renderTier.kind,
+  });
 
 const renderGarbageCollection = (apply: boolean) => {
   if (apply === false) return collectRenderGarbage(false);
@@ -2615,7 +2593,19 @@ const physicalFiles = (directory: string): string[] => {
 
 const normalizeSlash = (value: string): string => value.replaceAll("\\", "/");
 
-const recoverAbandonedTemporaryDirectories = (): void => {
+const recoverAbandonedTemporaryDirectories = (
+  chunks: readonly IAutoMovieProductionRenderChunk[],
+): void => {
+  const publishedTrees = new Set<string>();
+  for (const chunk of chunks)
+    try {
+      publishedTrees.add(
+        captureRenderChunkPublication(root, chunkDirectory(chunk.id)).tree
+          .target,
+      );
+    } catch {
+      // Only a complete exact pointer protects an otherwise abandoned tree.
+    }
   const locks = path.join(stateRoot, "locks");
   if (fs.existsSync(locks))
     for (const slot of fs
@@ -2641,6 +2631,7 @@ const recoverAbandonedTemporaryDirectories = (): void => {
     .readdirSync(directory, { withFileTypes: true })
     .sort((left, right) => compareCodeUnits(left.name, right.name))) {
     const target = path.join(directory, entry.name);
+    if (publishedTrees.has(path.resolve(target))) continue;
     const pid = Number(entry.name.split(".").at(-1));
     const snapshot = captureAbandonedRenderStateTarget(target, pid);
     if (snapshot === null) continue;
@@ -2651,9 +2642,36 @@ const recoverAbandonedTemporaryDirectories = (): void => {
 const quarantineStaleSlotOutputs = (
   chunks: readonly IAutoMovieProductionRenderChunk[],
 ): void => {
+  const currentIds = new Set(chunks.map((chunk) => chunk.id));
+  const currentChunks = new Map(chunks.map((chunk) => [chunk.slot, chunk.id]));
+  const pointerPrefix = `.automovie-chunk-${renderLivenessScope}.${renderTier.kind}.`;
+  for (const name of fs
+    .readdirSync(root)
+    .filter(
+      (candidate) =>
+        candidate.startsWith(pointerPrefix) &&
+        candidate.endsWith(".publication.json"),
+    )
+    .sort(compareCodeUnits)) {
+    const pointer = path.join(root, name);
+    const digest = `sha256:${name.slice(
+      pointerPrefix.length,
+      -".publication.json".length,
+    )}` as AutoMovieContentDigest;
+    let current = false;
+    try {
+      const publication = captureRenderChunkPublication(root, pointer);
+      current =
+        currentIds.has(digest) &&
+        publication.receipt.chunk === digest &&
+        currentChunks.get(publication.receipt.slot) === digest;
+    } catch {
+      current = false;
+    }
+    if (current === false) removeRenderChunkPublication(root, pointer);
+  }
   const directory = path.join(stateRoot, "chunks");
   if (fs.existsSync(directory) === false) return;
-  const currentChunks = new Map(chunks.map((chunk) => [chunk.slot, chunk.id]));
   for (const entry of fs
     .readdirSync(directory, { withFileTypes: true })
     .sort((left, right) => compareCodeUnits(left.name, right.name))) {
