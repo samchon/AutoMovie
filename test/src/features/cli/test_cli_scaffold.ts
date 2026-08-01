@@ -342,7 +342,7 @@ export const test_cli_scaffold = (): void => {
       files["scripts/render.ts"]!.split("device: KOKORO_DEVICE").length === 4 &&
       files["scripts/render.ts"]!.includes("productionSoundRuntimeIdentity") &&
       files["scripts/render.ts"]!.includes(
-        'backend: resolvedPackageIdentity("onnxruntime-node")',
+        'backend: {\n      ...resolvedPackageIdentity("onnxruntime-node"),\n      nativeAssets: onnxRuntimeNodeNativeAssets(),\n    }',
       ) &&
       files["scripts/render.ts"]!.includes(
         'path: "package:onnxruntime-node"',
