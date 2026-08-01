@@ -488,6 +488,10 @@ export const test_cli_scaffold = async (): Promise<void> => {
       ) &&
       files["scripts/render.ts"]!.includes("acquireRenderSessionLease") &&
       files["scripts/render.ts"]!.includes("acquireRenderGcLease") &&
+      files["scripts/render.ts"]!.includes("coordinationRoot: root") &&
+      files["scripts/render.ts"]!.includes("renderCoordinationRoot") ===
+        false &&
+      files[".gitignore"]!.includes(".automovie-liveness-*") &&
       files["scripts/render.ts"]!.includes("renderPublicationFingerprint") &&
       files["scripts/render.ts"]!.includes("assertMatchingProxyPublication") &&
       files["scripts/render.ts"]!.includes("assertNoLiveRenderWorkers") &&
@@ -1990,28 +1994,164 @@ export const test_cli_scaffold = async (): Promise<void> => {
         coordinationRoot: string;
         pid: number;
         processAlive: (pid: number) => boolean;
+        scope: string;
       }) => unknown;
       acquireRenderSessionLease: (props: {
         coordinationRoot: string;
         pid: number;
         processAlive: (pid: number) => boolean;
+        scope: string;
         tier: "final" | "proxy";
       }) => unknown;
       releaseRenderLivenessLease: (lease: unknown) => boolean;
     };
     const livenessRoot = path.join(base, "render-liveness");
+    const livenessScope = "a".repeat(64);
     fs.mkdirSync(livenessRoot);
+    let partialLeaseDescriptor: number | null = null;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+      if (
+        typeof file !== "number" &&
+        flags === "wx+" &&
+        path.dirname(path.resolve(file.toString())) === livenessRoot
+      )
+        partialLeaseDescriptor = descriptor;
+      return descriptor;
+    }) as typeof fs.openSync;
+    mutableFs.fsyncSync = ((descriptor) => {
+      if (descriptor === partialLeaseDescriptor)
+        throw new Error("fixture lease fsync failure");
+      nativeFsync(descriptor);
+    }) as typeof fs.fsyncSync;
+    let partialLeaseRejected = false;
+    try {
+      partialLeaseRejected = throws(() =>
+        renderLivenessModule.acquireRenderGcLease({
+          coordinationRoot: livenessRoot,
+          pid: 31000,
+          processAlive: (pid) => pid === 31000,
+          scope: livenessScope,
+        }),
+      );
+    } finally {
+      mutableFs.openSync = nativeOpen;
+      mutableFs.fsyncSync = nativeFsync;
+    }
+    TestValidator.predicate(
+      "a failed descriptor-bound lease creation removes only its partial file",
+      partialLeaseRejected && fs.readdirSync(livenessRoot).length === 0,
+    );
+    let interleavedGc: unknown;
+    let workerOpenInterleaved = false;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      if (
+        workerOpenInterleaved === false &&
+        typeof file !== "number" &&
+        flags === "wx+" &&
+        path.basename(file.toString()).includes(".session.")
+      ) {
+        workerOpenInterleaved = true;
+        interleavedGc = renderLivenessModule.acquireRenderGcLease({
+          coordinationRoot: livenessRoot,
+          pid: 31009,
+          processAlive: (pid) => pid === 31009 || pid === 31010,
+          scope: livenessScope,
+        });
+      }
+      return Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+    }) as typeof fs.openSync;
+    let interleavedWorkerRejected = false;
+    try {
+      interleavedWorkerRejected = throws(() =>
+        renderLivenessModule.acquireRenderSessionLease({
+          coordinationRoot: livenessRoot,
+          pid: 31010,
+          processAlive: (pid) => pid === 31009 || pid === 31010,
+          scope: livenessScope,
+          tier: "proxy",
+        }),
+      );
+    } finally {
+      mutableFs.openSync = nativeOpen;
+      if (interleavedGc !== undefined)
+        renderLivenessModule.releaseRenderLivenessLease(interleavedGc);
+    }
+    TestValidator.predicate(
+      "a worker rechecks a GC guard published after its first check",
+      workerOpenInterleaved &&
+        interleavedWorkerRejected &&
+        fs.readdirSync(livenessRoot).length === 0,
+    );
+    let inventoryWorker: unknown;
+    let inventoryWorkerRejected = false;
+    let gcInventoryInterleaved = false;
+    mutableFs.readdirSync = ((directory, ...args: unknown[]): unknown => {
+      const entries = Reflect.apply(nativeReaddir, mutableFs, [
+        directory,
+        ...args,
+      ]);
+      if (
+        gcInventoryInterleaved === false &&
+        path.resolve(directory.toString()) === livenessRoot
+      ) {
+        gcInventoryInterleaved = true;
+        try {
+          inventoryWorker = renderLivenessModule.acquireRenderSessionLease({
+            coordinationRoot: livenessRoot,
+            pid: 31014,
+            processAlive: (pid) => pid === 31013 || pid === 31014,
+            scope: livenessScope,
+            tier: "final",
+          });
+        } catch {
+          inventoryWorkerRejected = true;
+        }
+      }
+      return entries;
+    }) as typeof fs.readdirSync;
+    let inventoryGc: unknown;
+    try {
+      inventoryGc = renderLivenessModule.acquireRenderGcLease({
+        coordinationRoot: livenessRoot,
+        pid: 31013,
+        processAlive: (pid) => pid === 31013 || pid === 31014,
+        scope: livenessScope,
+      });
+    } finally {
+      mutableFs.readdirSync = nativeReaddir;
+    }
+    if (inventoryGc !== undefined)
+      renderLivenessModule.releaseRenderLivenessLease(inventoryGc);
+    if (inventoryWorker !== undefined)
+      renderLivenessModule.releaseRenderLivenessLease(inventoryWorker);
+    TestValidator.predicate(
+      "GC publishes its guard before the session inventory boundary",
+      gcInventoryInterleaved &&
+        inventoryWorkerRejected &&
+        fs.readdirSync(livenessRoot).length === 0,
+    );
     const gcFirstAlive = new Set([31001, 31002]);
     const gcFirst = renderLivenessModule.acquireRenderGcLease({
       coordinationRoot: livenessRoot,
       pid: 31001,
       processAlive: (pid) => gcFirstAlive.has(pid),
+      scope: livenessScope,
     });
     const gcFirstWorkerRejected = throws(() =>
       renderLivenessModule.acquireRenderSessionLease({
         coordinationRoot: livenessRoot,
         pid: 31002,
         processAlive: (pid) => gcFirstAlive.has(pid),
+        scope: livenessScope,
         tier: "proxy",
       }),
     );
@@ -2020,6 +2160,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
         coordinationRoot: livenessRoot,
         pid: 31002,
         processAlive: (pid) => gcFirstAlive.has(pid),
+        scope: livenessScope,
       }),
     );
     const gcFirstReleased =
@@ -2036,6 +2177,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       coordinationRoot: livenessRoot,
       pid: 31003,
       processAlive: (pid) => workerFirstAlive.has(pid),
+      scope: livenessScope,
       tier: "final",
     });
     const workerFirstGcRejected = throws(() =>
@@ -2043,25 +2185,28 @@ export const test_cli_scaffold = async (): Promise<void> => {
         coordinationRoot: livenessRoot,
         pid: 31004,
         processAlive: (pid) => workerFirstAlive.has(pid),
+        scope: livenessScope,
       }),
     );
+    const workerFirstEntries = fs.readdirSync(livenessRoot);
     TestValidator.predicate(
       "a worker-first session makes GC release its guard and refuse apply",
       workerFirstGcRejected &&
-        fs
-          .readdirSync(livenessRoot)
-          .every((name) => name.startsWith("session.")),
+        workerFirstEntries.length === 1 &&
+        workerFirstEntries[0]!.includes(".session."),
     );
     renderLivenessModule.releaseRenderLivenessLease(workerFirst);
     const staleGc = renderLivenessModule.acquireRenderGcLease({
       coordinationRoot: livenessRoot,
       pid: 31005,
       processAlive: (pid) => pid === 31005,
+      scope: livenessScope,
     });
     const afterStaleGc = renderLivenessModule.acquireRenderSessionLease({
       coordinationRoot: livenessRoot,
       pid: 31006,
       processAlive: (pid) => pid === 31006,
+      scope: livenessScope,
       tier: "proxy",
     });
     const staleGcAlreadyRemoved =
@@ -2071,12 +2216,14 @@ export const test_cli_scaffold = async (): Promise<void> => {
       coordinationRoot: livenessRoot,
       pid: 31007,
       processAlive: (pid) => pid === 31007,
+      scope: livenessScope,
       tier: "final",
     });
     const afterStaleSession = renderLivenessModule.acquireRenderGcLease({
       coordinationRoot: livenessRoot,
       pid: 31008,
       processAlive: (pid) => pid === 31008,
+      scope: livenessScope,
     });
     const staleSessionAlreadyRemoved =
       renderLivenessModule.releaseRenderLivenessLease(staleSession) === false;
@@ -2087,6 +2234,92 @@ export const test_cli_scaffold = async (): Promise<void> => {
         staleSessionAlreadyRemoved &&
         fs.readdirSync(livenessRoot).length === 0,
     );
+    const staleSuccessorLease = renderLivenessModule.acquireRenderGcLease({
+      coordinationRoot: livenessRoot,
+      pid: 31015,
+      processAlive: (pid) => pid === 31015,
+      scope: livenessScope,
+    });
+    const staleSuccessorGuard = path.join(
+      livenessRoot,
+      fs
+        .readdirSync(livenessRoot)
+        .find((name) => name.includes(".gc-apply.lock"))!,
+    );
+    const staleSuccessorBytes = fs.readFileSync(staleSuccessorGuard);
+    const staleOriginal = path.join(livenessRoot, "stale-gc-original.lock");
+    const nativeLivenessRename = mutableFs.renameSync;
+    let isolatedStaleSuccessor: string | null = null;
+    mutableFs.renameSync = ((oldPath, newPath) => {
+      if (
+        isolatedStaleSuccessor === null &&
+        path.resolve(oldPath.toString()) === staleSuccessorGuard
+      ) {
+        nativeLivenessRename(oldPath, staleOriginal);
+        fs.writeFileSync(staleSuccessorGuard, staleSuccessorBytes);
+        isolatedStaleSuccessor = path.resolve(newPath.toString());
+      }
+      nativeLivenessRename(oldPath, newPath);
+    }) as typeof fs.renameSync;
+    let staleSuccessorRejected = false;
+    try {
+      staleSuccessorRejected = throws(() =>
+        renderLivenessModule.acquireRenderSessionLease({
+          coordinationRoot: livenessRoot,
+          pid: 31016,
+          processAlive: (pid) => pid === 31016,
+          scope: livenessScope,
+          tier: "proxy",
+        }),
+      );
+    } finally {
+      mutableFs.renameSync = nativeLivenessRename;
+    }
+    const isolatedStaleSuccessorPath = isolatedStaleSuccessor as string | null;
+    const staleSuccessorPreserved =
+      isolatedStaleSuccessorPath !== null &&
+      fs.existsSync(staleSuccessorGuard) === false &&
+      fs.existsSync(staleOriginal) &&
+      fs.readFileSync(isolatedStaleSuccessorPath).equals(staleSuccessorBytes) &&
+      path
+        .basename(path.dirname(isolatedStaleSuccessorPath))
+        .includes(".preserved-");
+    const staleSuccessorOriginalReleaseRefused =
+      renderLivenessModule.releaseRenderLivenessLease(staleSuccessorLease) ===
+      false;
+    TestValidator.predicate(
+      "stale guard cleanup preserves a pathname successor and refuses the worker",
+      staleSuccessorRejected &&
+        staleSuccessorPreserved &&
+        staleSuccessorOriginalReleaseRefused,
+    );
+    fs.rmSync(staleOriginal);
+    if (isolatedStaleSuccessorPath !== null) {
+      fs.rmSync(isolatedStaleSuccessorPath);
+      fs.rmdirSync(path.dirname(isolatedStaleSuccessorPath));
+    }
+    const malformedGuard = path.join(
+      livenessRoot,
+      `.automovie-liveness-${livenessScope}.gc-apply.lock`,
+    );
+    fs.writeFileSync(
+      malformedGuard,
+      `${JSON.stringify({ kind: "gc", pid: 31017, tier: null, token: 7 })}\n`,
+    );
+    const malformedGuardRejected = throws(() =>
+      renderLivenessModule.acquireRenderSessionLease({
+        coordinationRoot: livenessRoot,
+        pid: 31018,
+        processAlive: (pid) => pid === 31018,
+        scope: livenessScope,
+        tier: "final",
+      }),
+    );
+    TestValidator.predicate(
+      "malformed GC owner tokens fail closed without deleting the guard",
+      malformedGuardRejected && fs.existsSync(malformedGuard),
+    );
+    fs.rmSync(malformedGuard);
     const renderGcModule = createRequire(__filename)(
       path.join(scaffoldDir, "scripts", "renderGcSnapshot.ts"),
     ) as {

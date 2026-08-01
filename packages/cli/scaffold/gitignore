@@ -10,6 +10,8 @@ generated/
 !.automovie/reviews/
 !.automovie/reviews/**
 .automovie/capture/
+.automovie-liveness-*
+.gc-preserved-*
 renders/*/
 *.log
 .DS_Store

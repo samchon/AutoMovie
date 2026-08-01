@@ -4,7 +4,6 @@ import path from "node:path";
 
 import {
   type IRenderGcTargetSnapshot,
-  RENDER_GC_PRESERVED_PREFIX,
   captureRenderGcTarget,
   createRenderGcFileSnapshot,
   ensureRenderPhysicalDirectory,
@@ -12,9 +11,8 @@ import {
   removeCapturedRenderGcTarget,
 } from "./renderGcSnapshot";
 
-const GC_GUARD = "gc-apply.lock";
 const LEASE_MAX_BYTES = 64 * 1024;
-const SESSION_PATTERN = /^session\.(\d+)\.(proxy|final)\.([^.]+)\.lock$/u;
+const SCOPE_PATTERN = /^[0-9a-f]{64}$/u;
 
 interface IRenderLivenessOwner {
   kind: "gc" | "session";
@@ -25,6 +23,7 @@ interface IRenderLivenessOwner {
 
 export interface IRenderLivenessLease {
   kind: "gc" | "session";
+  scope: string;
   snapshot: IRenderGcTargetSnapshot;
 }
 
@@ -32,21 +31,23 @@ interface IRenderLivenessProps {
   coordinationRoot: string;
   pid: number;
   processAlive: (pid: number) => boolean;
+  scope: string;
 }
 
 /** Acquire a render session that cannot overlap an explicit GC apply. */
 export const acquireRenderSessionLease = (
   props: IRenderLivenessProps & { tier: "proxy" | "final" },
 ): IRenderLivenessLease => {
-  assertProcessId(props.pid);
+  assertProps(props);
   assertNoActiveGcGuard(props);
   const token = randomUUID();
   const target = path.join(
     props.coordinationRoot,
-    `session.${props.pid}.${props.tier}.${token}.lock`,
+    sessionName(props.scope, props.pid, props.tier, token),
   );
   const lease: IRenderLivenessLease = {
     kind: "session",
+    scope: props.scope,
     snapshot: createRenderGcFileSnapshot(
       props.coordinationRoot,
       target,
@@ -71,8 +72,8 @@ export const acquireRenderSessionLease = (
 export const acquireRenderGcLease = (
   props: IRenderLivenessProps,
 ): IRenderLivenessLease => {
-  assertProcessId(props.pid);
-  const target = path.join(props.coordinationRoot, GC_GUARD);
+  assertProps(props);
+  const target = path.join(props.coordinationRoot, gcGuardName(props.scope));
   for (;;) {
     const token = randomUUID();
     let snapshot: IRenderGcTargetSnapshot;
@@ -88,7 +89,11 @@ export const acquireRenderGcLease = (
         throw new Error("Render GC apply is already active.");
       continue;
     }
-    const lease: IRenderLivenessLease = { kind: "gc", snapshot };
+    const lease: IRenderLivenessLease = {
+      kind: "gc",
+      scope: props.scope,
+      snapshot,
+    };
     try {
       const active = activeRenderSessions(props);
       if (active.length !== 0)
@@ -111,7 +116,7 @@ export const releaseRenderLivenessLease = (
 ): boolean => {
   const quarantine = ensureRenderPhysicalDirectory(
     lease.snapshot.base.path,
-    `${RENDER_GC_PRESERVED_PREFIX}lease-${randomUUID()}`,
+    `.automovie-liveness-${lease.scope}.preserved-${randomUUID()}`,
   );
   try {
     removeCapturedRenderGcTarget({
@@ -132,7 +137,7 @@ const assertNoActiveGcGuard = (props: IRenderLivenessProps): void => {
   for (;;) {
     const snapshot = captureExisting(
       props.coordinationRoot,
-      path.join(props.coordinationRoot, GC_GUARD),
+      path.join(props.coordinationRoot, gcGuardName(props.scope)),
     );
     if (snapshot === null) return;
     const owner = readOwner(snapshot);
@@ -141,6 +146,7 @@ const assertNoActiveGcGuard = (props: IRenderLivenessProps): void => {
       owner.tier !== null ||
       Number.isSafeInteger(owner.pid) === false ||
       owner.pid <= 0 ||
+      typeof owner.token !== "string" ||
       owner.token.length === 0
     )
       throw new Error("Render GC guard has no trustworthy owner identity.");
@@ -152,7 +158,13 @@ const assertNoActiveGcGuard = (props: IRenderLivenessProps): void => {
       throw new Error(
         `Render GC apply ${owner.pid} became active while inspected.`,
       );
-    if (releaseRenderLivenessLease({ kind: "gc", snapshot }) === false)
+    if (
+      releaseRenderLivenessLease({
+        kind: "gc",
+        scope: props.scope,
+        snapshot,
+      }) === false
+    )
       continue;
   }
 };
@@ -160,7 +172,7 @@ const assertNoActiveGcGuard = (props: IRenderLivenessProps): void => {
 const removeStaleGcGuard = (props: IRenderLivenessProps): boolean => {
   const snapshot = captureExisting(
     props.coordinationRoot,
-    path.join(props.coordinationRoot, GC_GUARD),
+    path.join(props.coordinationRoot, gcGuardName(props.scope)),
   );
   if (snapshot === null) return true;
   const owner = readOwner(snapshot);
@@ -169,24 +181,24 @@ const removeStaleGcGuard = (props: IRenderLivenessProps): boolean => {
     owner.tier !== null ||
     Number.isSafeInteger(owner.pid) === false ||
     owner.pid <= 0 ||
+    typeof owner.token !== "string" ||
     owner.token.length === 0
   )
     throw new Error("Render GC guard has no trustworthy owner identity.");
   if (props.processAlive(owner.pid)) return false;
   if (props.processAlive(owner.pid)) return false;
-  releaseRenderLivenessLease({ kind: "gc", snapshot });
+  releaseRenderLivenessLease({ kind: "gc", scope: props.scope, snapshot });
   return true;
 };
 
 const activeRenderSessions = (props: IRenderLivenessProps): string[] => {
   const active: string[] = [];
+  const prefix = `.automovie-liveness-${props.scope}.session.`;
+  const pattern = sessionPattern(props.scope);
   for (const name of fs.readdirSync(props.coordinationRoot).sort(compare)) {
-    if (
-      name.startsWith("session.") === false ||
-      name.endsWith(".lock") === false
-    )
+    if (name.startsWith(prefix) === false || name.endsWith(".lock") === false)
       continue;
-    const match = SESSION_PATTERN.exec(name);
+    const match = pattern.exec(name);
     if (match === null)
       throw new Error(`Render session claim "${name}" is invalid.`);
     const target = path.join(props.coordinationRoot, name);
@@ -198,6 +210,7 @@ const activeRenderSessions = (props: IRenderLivenessProps): string[] => {
       owner.kind !== "session" ||
       owner.pid !== pid ||
       owner.tier !== match[2] ||
+      typeof owner.token !== "string" ||
       owner.token !== match[3] ||
       Number.isSafeInteger(pid) === false ||
       pid <= 0
@@ -211,7 +224,11 @@ const activeRenderSessions = (props: IRenderLivenessProps): string[] => {
       active.push(`${pid}/${owner.tier}`);
       continue;
     }
-    releaseRenderLivenessLease({ kind: "session", snapshot });
+    releaseRenderLivenessLease({
+      kind: "session",
+      scope: props.scope,
+      snapshot,
+    });
   }
   return active;
 };
@@ -238,9 +255,28 @@ const readOwner = (snapshot: IRenderGcTargetSnapshot): IRenderLivenessOwner =>
 const ownerBytes = (owner: IRenderLivenessOwner): Uint8Array =>
   Buffer.from(`${JSON.stringify(owner)}\n`);
 
-const assertProcessId = (pid: number): void => {
-  if (Number.isSafeInteger(pid) === false || pid <= 0)
-    throw new Error(`Render liveness PID "${pid}" is invalid.`);
+const assertProps = (props: IRenderLivenessProps): void => {
+  if (Number.isSafeInteger(props.pid) === false || props.pid <= 0)
+    throw new Error(`Render liveness PID "${props.pid}" is invalid.`);
+  if (SCOPE_PATTERN.test(props.scope) === false)
+    throw new Error(`Render liveness scope "${props.scope}" is invalid.`);
 };
+
+const gcGuardName = (scope: string): string =>
+  `.automovie-liveness-${scope}.gc-apply.lock`;
+
+const sessionName = (
+  scope: string,
+  pid: number,
+  tier: "proxy" | "final",
+  token: string,
+): string =>
+  `.automovie-liveness-${scope}.session.${pid}.${tier}.${token}.lock`;
+
+const sessionPattern = (scope: string): RegExp =>
+  new RegExp(
+    `^\\.automovie-liveness-${scope}\\.session\\.(\\d+)\\.(proxy|final)\\.([^.]+)\\.lock$`,
+    "u",
+  );
 
 const compare = (x: string, y: string): number => (x < y ? -1 : x > y ? 1 : 0);

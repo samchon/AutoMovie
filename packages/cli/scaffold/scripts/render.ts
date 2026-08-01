@@ -109,6 +109,14 @@ const tierName = (() => {
 const renderTier: IAutoMovieProductionRenderTier =
   tierName === "proxy" ? config.render.proxy : config.render.final;
 const productionSegment = encodeAutoMoviePathSegment(productionId);
+const renderLivenessScope = digestAutoMovieBytes(
+  Buffer.from(
+    JSON.stringify({
+      protocol: "automovie.render-liveness.v1",
+      productionId,
+    }),
+  ),
+).slice(7);
 const productionStateRoot = path.join(
   root,
   ".automovie",
@@ -139,18 +147,6 @@ interface IRenderChunkLockOwner {
   /** Absent only on an older lock written before owner-checked release. */
   token?: string;
 }
-
-const renderCoordinationRoot = (): string =>
-  ensureRenderPhysicalDirectory(
-    root,
-    [
-      ".automovie",
-      "productions",
-      productionSegment,
-      "render-job",
-      "coordination",
-    ].join("/"),
-  );
 
 const main = async (): Promise<void> => {
   if (
@@ -217,9 +213,10 @@ const main = async (): Promise<void> => {
     return;
   }
   const session = acquireRenderSessionLease({
-    coordinationRoot: renderCoordinationRoot(),
+    coordinationRoot: root,
     pid: process.pid,
     processAlive,
+    scope: renderLivenessScope,
     tier: renderTier.kind,
   });
   try {
@@ -2321,9 +2318,10 @@ const chunkDirectory = (digest: AutoMovieContentDigest): string =>
 const renderGarbageCollection = (apply: boolean) => {
   if (apply === false) return collectRenderGarbage(false);
   const lease = acquireRenderGcLease({
-    coordinationRoot: renderCoordinationRoot(),
+    coordinationRoot: root,
     pid: process.pid,
     processAlive,
+    scope: renderLivenessScope,
   });
   try {
     assertNoLiveRenderWorkers();
