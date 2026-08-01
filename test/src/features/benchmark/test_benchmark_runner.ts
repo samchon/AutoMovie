@@ -324,6 +324,17 @@ export {};
       agent,
       collect: collectCompleteEvidence,
     });
+    await exerciseArchiveVerifierRecordRace({
+      taskId: current.taskId,
+      lane: "deterministic",
+      runRoot: root,
+      repositoryRoot,
+      identity,
+      mcpTarget,
+      inventoryBaselines: [archivedBaseline],
+      agent,
+      collect: collectCompleteEvidence,
+    });
     await exerciseArchiveShapeLinks({
       taskId: current.taskId,
       lane: "deterministic",
@@ -850,6 +861,64 @@ const exerciseArchivePublicationSealRaces = async (
     );
     fs.rmSync(campaignPath, { recursive: true, force: true });
   }
+};
+
+const exerciseArchiveVerifierRecordRace = async (
+  base: Omit<Parameters<typeof runAutoMovieBenchmark>[0], "campaign">,
+): Promise<void> => {
+  const campaign = "publication-verifier-record-race";
+  const campaignPath = path.join(
+    path.resolve(base.runRoot),
+    ".benchmarks",
+    campaign,
+  );
+  const output = await runAutoMovieBenchmark({ ...base, campaign });
+  const commitPath = path.join(
+    path.dirname(output.archive),
+    `.archive-${path.basename(output.archive)}.commit.json`,
+  );
+  const nativeOpen = fs.openSync;
+  const nativeRead = fs.readFileSync;
+  const nativeWrite = fs.writeFileSync;
+  let descriptor: number | undefined;
+  let swapped = false;
+  fs.openSync = ((file: fs.PathLike, ...args: unknown[]): number => {
+    const opened = Reflect.apply(nativeOpen, fs, [file, ...args]) as number;
+    if (
+      descriptor === undefined &&
+      path.resolve(file.toString()) === commitPath
+    )
+      descriptor = opened;
+    return opened;
+  }) as typeof fs.openSync;
+  fs.readFileSync = ((
+    file: fs.PathOrFileDescriptor,
+    ...args: unknown[]
+  ): unknown => {
+    const bytes = Reflect.apply(nativeRead, fs, [file, ...args]);
+    if (swapped === false && typeof file === "number" && file === descriptor) {
+      nativeWrite(commitPath, "{}\n");
+      swapped = true;
+    }
+    return bytes;
+  }) as typeof fs.readFileSync;
+  let message: string;
+  try {
+    message = await rejected(() =>
+      runAutoMovieBenchmark({ ...base, campaign }),
+    );
+  } finally {
+    fs.openSync = nativeOpen;
+    fs.readFileSync = nativeRead;
+  }
+  TestValidator.predicate(
+    "archive verifier rejects a commit record changed after descriptor read",
+    swapped &&
+      message.includes(
+        "does not bind the resident content-addressed directory",
+      ),
+  );
+  fs.rmSync(campaignPath, { recursive: true, force: true });
 };
 
 const exerciseArchiveShapeLinks = async (
