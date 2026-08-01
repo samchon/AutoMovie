@@ -6,6 +6,10 @@ import path from "node:path";
 
 import { throwsError } from "../internal/predicates";
 
+const mutableFs = fs as {
+  lstatSync: typeof fs.lstatSync;
+};
+
 /**
  * Opening an existing project is a pure read (#700): a fresh directory gets its
  * manifest created once, but reopening an unchanged project must not rewrite
@@ -74,7 +78,7 @@ export const test_mcp_project_manifest = (): void => {
       }
       return exists;
     }) as typeof fs.existsSync;
-    fs.lstatSync = ((file, options) => {
+    mutableFs.lstatSync = ((file, options) => {
       const status = nativeManifestLstat(file, options);
       if (
         manifestSwapBoundary === null &&
@@ -93,7 +97,7 @@ export const test_mcp_project_manifest = (): void => {
       );
     } finally {
       fs.existsSync = nativeManifestExists;
-      fs.lstatSync = nativeManifestLstat;
+      mutableFs.lstatSync = nativeManifestLstat;
       if (nativeManifestExists(parkedManifest)) {
         fs.rmSync(manifestPath, { force: true });
         fs.renameSync(parkedManifest, manifestPath);
@@ -207,7 +211,7 @@ export const test_mcp_project_manifest = (): void => {
     const nativeOptionalLstat = fs.lstatSync;
     let optionalRootSwapped = false;
     let optionalReplacementUntouched = false;
-    fs.lstatSync = ((file, options) => {
+    mutableFs.lstatSync = ((file, options) => {
       try {
         return nativeOptionalLstat(file, options);
       } catch (error) {
@@ -230,7 +234,7 @@ export const test_mcp_project_manifest = (): void => {
         ["changed physical identity", "optional-root-race"],
       );
     } finally {
-      fs.lstatSync = nativeOptionalLstat;
+      mutableFs.lstatSync = nativeOptionalLstat;
       optionalReplacementUntouched =
         fs.existsSync(optionalRoot) &&
         fs.readdirSync(optionalRoot).length === 0;
