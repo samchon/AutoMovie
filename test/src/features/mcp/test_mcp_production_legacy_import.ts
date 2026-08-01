@@ -270,7 +270,45 @@ export const test_mcp_production_legacy_import = (): void => {
           (entry) => entry.path === "actors/archive/README.txt",
         ),
     );
-    const applied = importer.apply();
+    const legacyLockPath = path.join(fixture.root, "revision.lock");
+    const legacyLockParked = `${legacyLockPath}.read-parked`;
+    const nativeLegacyLockRead = fs.readFileSync;
+    let legacyAssertionPathRead = false;
+    fs.readFileSync = ((
+      file: fs.PathOrFileDescriptor,
+      ...args: unknown[]
+    ): unknown => {
+      if (
+        typeof file !== "number" &&
+        path.resolve(file.toString()) === path.resolve(legacyLockPath) &&
+        fs.existsSync(path.join(fixture.root, ".automovie")) === false
+      ) {
+        legacyAssertionPathRead = true;
+        fs.renameSync(legacyLockPath, legacyLockParked);
+        fs.writeFileSync(
+          legacyLockPath,
+          nativeLegacyLockRead(legacyLockParked),
+        );
+        try {
+          return Reflect.apply(nativeLegacyLockRead, fs, [file, ...args]);
+        } finally {
+          fs.rmSync(legacyLockPath);
+          fs.renameSync(legacyLockParked, legacyLockPath);
+        }
+      }
+      return Reflect.apply(nativeLegacyLockRead, fs, [file, ...args]);
+    }) as typeof fs.readFileSync;
+    const applied = (() => {
+      try {
+        return importer.apply();
+      } finally {
+        fs.readFileSync = nativeLegacyLockRead;
+        if (fs.existsSync(legacyLockParked)) {
+          fs.rmSync(legacyLockPath, { force: true });
+          fs.renameSync(legacyLockParked, legacyLockPath);
+        }
+      }
+    })();
     const appliedPlanPath = path.join(
       fixture.root,
       ".automovie/imports/legacy-v1/plan.json",
@@ -319,6 +357,7 @@ export const test_mcp_production_legacy_import = (): void => {
     TestValidator.predicate(
       "apply is atomic and idempotent until production provenance reopens",
       applied.status === "applied" &&
+        legacyAssertionPathRead === false &&
         repeatedRejected === false &&
         appliedPlanPathRead === false &&
         repeated?.status === "unchanged" &&

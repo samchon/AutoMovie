@@ -655,12 +655,14 @@ const assertLegacyLock = (root: string, lockToken?: string): void => {
       );
     return;
   }
-  if (
-    status === null ||
-    status.isSymbolicLink() ||
-    status.isFile() === false ||
-    fs.readFileSync(lock, "utf8") !== lockToken
-  )
+  let matches = false;
+  if (status !== null && status.isSymbolicLink() === false && status.isFile())
+    try {
+      const bytes = readPhysicalFile(root, "revision.lock", true);
+      matches =
+        bytes !== null && Buffer.from(bytes).toString("utf8") === lockToken;
+    } catch {}
+  if (matches === false)
     throw new Error(
       `Legacy project commit lock "${lock}" changed during import apply. No production state was published.`,
     );

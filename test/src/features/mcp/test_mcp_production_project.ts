@@ -9,6 +9,7 @@ import {
   AutoMovieProductionProject,
   acquireCommitLock,
   acquireProductionRootNamespace,
+  assertProductionRootNamespaceLease,
   compareCodeUnits,
   digestAutoMovieBytes,
   productionRenderBundleRelativePath,
@@ -2616,6 +2617,47 @@ export const test_mcp_production_project = (): void => {
         fs.existsSync(path.join(createdAlternateParent, "project")) === false,
     );
     const coordinationRoot = path.dirname(aliasLockPaths[0]!);
+    const assertionLease = acquireProductionRootNamespace(aliasProject);
+    const assertedFence = assertionLease.locks[0]!;
+    const assertedFenceParked = `${assertedFence.path}.read-parked`;
+    const nativeFenceRead = fs.readFileSync;
+    let fencePathRead = false;
+    let fenceAssertionSucceeded = false;
+    fs.readFileSync = ((
+      file: fs.PathOrFileDescriptor,
+      ...args: unknown[]
+    ): unknown => {
+      if (
+        typeof file !== "number" &&
+        path.resolve(file.toString()) === path.resolve(assertedFence.path)
+      ) {
+        fencePathRead = true;
+        fs.renameSync(assertedFence.path, assertedFenceParked);
+        fs.writeFileSync(assertedFence.path, assertedFence.token);
+        try {
+          return Reflect.apply(nativeFenceRead, fs, [file, ...args]);
+        } finally {
+          fs.rmSync(assertedFence.path);
+          fs.renameSync(assertedFenceParked, assertedFence.path);
+        }
+      }
+      return Reflect.apply(nativeFenceRead, fs, [file, ...args]);
+    }) as typeof fs.readFileSync;
+    try {
+      assertProductionRootNamespaceLease(assertionLease);
+      fenceAssertionSucceeded = true;
+    } finally {
+      fs.readFileSync = nativeFenceRead;
+      if (fs.existsSync(assertedFenceParked)) {
+        fs.rmSync(assertedFence.path, { force: true });
+        fs.renameSync(assertedFenceParked, assertedFence.path);
+      }
+      releaseProductionRootNamespace(assertionLease);
+    }
+    TestValidator.predicate(
+      "root namespace assertions bind fence tokens to descriptors",
+      fenceAssertionSucceeded && fencePathRead === false,
+    );
     // A guarded commit runs the read-only compiler gate, which commits its own
     // snapshot, so one process reaches the same root coordinate twice. That is
     // a nested operation rather than a second session, and blocking it makes

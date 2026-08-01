@@ -5,6 +5,7 @@ import path from "node:path";
 
 import { acquireCommitLock, releaseCommitLock } from "../project/commitLock";
 import { compareCodeUnits } from "./contentIdentity";
+import { readAutoMovieProductionOwnedFile } from "./productionRenderJob";
 
 const currentUser = os.userInfo();
 const COORDINATION_ROOT = path.join(
@@ -267,12 +268,22 @@ export const assertProductionRootNamespaceLease = (
   const current = physicalDirectoryIdentityOrNull(lease.root);
   const invalidLock = lease.locks.find((leaseLock) => {
     const lock = lstatOrNull(leaseLock.path);
-    return (
-      lock === null ||
-      lock.isSymbolicLink() ||
-      lock.isFile() === false ||
-      fs.readFileSync(leaseLock.path, "utf8") !== leaseLock.token
-    );
+    if (lock === null || lock.isSymbolicLink() || lock.isFile() === false)
+      return true;
+    const root = path.dirname(leaseLock.path);
+    try {
+      return (
+        Buffer.from(
+          readAutoMovieProductionOwnedFile({
+            root,
+            directory: root,
+            relative: path.basename(leaseLock.path),
+          }),
+        ).toString("utf8") !== leaseLock.token
+      );
+    } catch {
+      return true;
+    }
   });
   if (
     current === null ||
