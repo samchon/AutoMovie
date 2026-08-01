@@ -200,6 +200,52 @@ export const test_mcp_project_manifest = (): void => {
     );
     fs.rmSync(manifestPath, { recursive: true });
 
+    const optionalRoot = path.join(root, "optional-root-race");
+    const optionalParked = `${optionalRoot}.parked`;
+    fs.mkdirSync(optionalRoot);
+    const optionalRevision = path.join(optionalRoot, "revision.json");
+    const nativeOptionalLstat = fs.lstatSync;
+    let optionalRootSwapped = false;
+    let optionalReplacementUntouched = false;
+    fs.lstatSync = ((file, options) => {
+      try {
+        return nativeOptionalLstat(file, options);
+      } catch (error) {
+        if (
+          optionalRootSwapped === false &&
+          path.resolve(file.toString()) === path.resolve(optionalRevision) &&
+          (error as NodeJS.ErrnoException).code === "ENOENT"
+        ) {
+          fs.renameSync(optionalRoot, optionalParked);
+          fs.mkdirSync(optionalRoot);
+          optionalRootSwapped = true;
+        }
+        throw error;
+      }
+    }) as typeof fs.lstatSync;
+    let optionalSwapRejected = false;
+    try {
+      optionalSwapRejected = throwsError(
+        () => AutoMovieProject.open(optionalRoot),
+        ["changed physical identity", "optional-root-race"],
+      );
+    } finally {
+      fs.lstatSync = nativeOptionalLstat;
+      optionalReplacementUntouched =
+        fs.existsSync(optionalRoot) &&
+        fs.readdirSync(optionalRoot).length === 0;
+      fs.rmSync(optionalRoot, { recursive: true, force: true });
+      if (fs.existsSync(optionalParked))
+        fs.renameSync(optionalParked, optionalRoot);
+    }
+    TestValidator.predicate(
+      "optional absence revalidates its captured project ancestry",
+      optionalRootSwapped &&
+        optionalSwapRejected &&
+        optionalReplacementUntouched,
+    );
+    fs.rmSync(optionalRoot, { recursive: true, force: true });
+
     const linkedRoot = `${root}-linked`;
     fs.symlinkSync(
       root,

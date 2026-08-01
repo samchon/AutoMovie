@@ -775,6 +775,16 @@ export function readAutoMovieProductionOwnedFile(props: {
       identity: productionOwnedDirectoryIdentity(file),
     }),
   );
+  const assertResidentDirectories = (): void => {
+    const changed = identities.find(
+      (expected) =>
+        expected.identity !== productionOwnedDirectoryIdentity(expected.file),
+    );
+    if (changed !== undefined)
+      throw new Error(
+        `Production-owned path "${changed.file}" changed physical identity while it was read.`,
+      );
+  };
   let linkedIdentity: string;
   try {
     linkedIdentity = productionOwnedFileIdentity(target);
@@ -782,8 +792,10 @@ export function readAutoMovieProductionOwnedFile(props: {
     if (
       props.optional === true &&
       (error as NodeJS.ErrnoException).code === "ENOENT"
-    )
+    ) {
+      assertResidentDirectories();
       return null;
+    }
     throw error;
   }
   const descriptor = fs.openSync(target, "r");
@@ -797,14 +809,7 @@ export function readAutoMovieProductionOwnedFile(props: {
         `Production-owned path "${target}" changed physical identity before it was opened.`,
       );
     const assertResidentFile = (): void => {
-      const changed = identities.find(
-        (expected) =>
-          expected.identity !== productionOwnedDirectoryIdentity(expected.file),
-      );
-      if (changed !== undefined)
-        throw new Error(
-          `Production-owned path "${changed.file}" changed physical identity while it was read.`,
-        );
+      assertResidentDirectories();
       productionOwnedFileIdentity(target);
       const residentDescriptor = fs.openSync(target, "r");
       try {
