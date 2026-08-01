@@ -856,6 +856,26 @@ export const test_cli_scaffold = (): void => {
         },
       })}\n`,
     );
+    const positiveAssetResponse: GeneratedViewerResponse = {
+      body: "",
+      statusCode: 0,
+      end: (body) => {
+        positiveAssetResponse.body = Buffer.isBuffer(body)
+          ? body.toString("utf8")
+          : String(body ?? "");
+      },
+      setHeader: () => undefined,
+    };
+    middleware?.(
+      { url: "/__automovie/assets/public/audio/starter-tone.json" },
+      positiveAssetResponse,
+      () => undefined,
+    );
+    TestValidator.predicate(
+      "the generated viewer serves one ledger-and-closure-bound asset",
+      positiveAssetResponse.statusCode === 200 &&
+        positiveAssetResponse.body === assetBytes.toString("utf8"),
+    );
     const parkedAsset = `${asset}.parked`;
     let assetSwapped = false;
     mutableFs.lstatSync = ((file, ...args: unknown[]): unknown => {
