@@ -792,18 +792,16 @@ export const runAutoMovieBenchmark = async (
     filmScore: verdict.filmScore,
   });
   trace.append({ kind: "run-seal", runId: submission.runId });
+  writeArchiveCommit(
+    path.join(pending.real, ".archive-commit.json"),
+    submission.runId,
+  );
 
   const archive = path.join(
     campaignRoot.real,
     submission.runId.slice("sha256:".length),
   );
-  if (fs.existsSync(archive)) {
-    tryRemoveTemporaryDirectory(pending, campaignRoot);
-    tryRemoveTemporaryDirectory(work, campaignRoot);
-    throw new Error(
-      `Benchmark run ${submission.runId} is already archived at "${archive}". Content-addressed runs are immutable.`,
-    );
-  }
+  const archiveCommit = archiveCommitPath(archive);
   const publication = moveArchiveStaging(
     pending,
     campaignRoot,
@@ -818,17 +816,54 @@ export const runAutoMovieBenchmark = async (
     transcriptDigest,
     inventory,
     submission,
+    verdict,
+    report,
+    toolInventory,
   });
+  if (fs.existsSync(archive) || fs.existsSync(archiveCommit)) {
+    try {
+      assertCommittedArchive({
+        archive,
+        commit: archiveCommit,
+        repositoryRoot: repository.real,
+        taskText,
+        brief: scenario.brief,
+        projectTree,
+        transcriptDigest,
+        inventory,
+        submission,
+        verdict,
+        report,
+        toolInventory,
+      });
+    } finally {
+      tryRemoveTemporaryDirectory(publication, campaignRoot);
+      tryRemoveTemporaryDirectory(work, campaignRoot);
+    }
+    throw new Error(
+      `Benchmark run ${submission.runId} is already archived at "${archive}". Content-addressed runs are immutable.`,
+    );
+  }
   assertDirectoryIdentity(publication, "benchmark archive publication");
   assertDirectoryIdentity(campaignRoot, "benchmark campaign directory");
   fs.renameSync(publication.real, archive);
-  let archived: IDirectoryIdentity;
-  try {
-    archived = movedDirectoryIdentity(publication, archive, "final archive");
-  } catch (error) {
-    quarantineRejectedArchive(archive, campaignRoot, repository.real, error);
-  }
-  assertOutside(repository.real, archived.real, "final archive");
+  movedDirectoryIdentity(publication, archive, "final archive");
+  writeArchiveCommit(archiveCommit, submission.runId);
+  const committed = assertCommittedArchive({
+    archive,
+    commit: archiveCommit,
+    repositoryRoot: repository.real,
+    taskText,
+    brief: scenario.brief,
+    projectTree,
+    transcriptDigest,
+    inventory,
+    submission,
+    verdict,
+    report,
+    toolInventory,
+  });
+  assertOutside(repository.real, committed.real, "final archive");
   tryRemoveTemporaryDirectory(work, campaignRoot);
   return { archive, verdict, report, toolInventory };
 };
@@ -1153,31 +1188,68 @@ const moveArchiveStaging = (
   return publication;
 };
 
-const quarantineRejectedArchive = (
-  archive: string,
-  campaign: IDirectoryIdentity,
-  repositoryRoot: string,
-  identityError: unknown,
-): never => {
-  const rejected = path.join(campaign.real, `.rejected-${randomUUID()}`);
-  assertDirectoryIdentity(campaign, "benchmark campaign directory");
-  try {
-    fs.renameSync(archive, rejected);
-  } /* c8 ignore start -- a second adversarial rename during fail-closed quarantine is host-dependent */ catch (quarantineError) {
-    if (fs.existsSync(archive))
-      throw new Error(
-        `Rejected benchmark archive "${archive}" could not be quarantined safely: ${messageOf(quarantineError)}`,
-        { cause: identityError },
-      );
-    throw identityError;
-  }
-  /* c8 ignore stop */
-  assertDirectoryIdentity(campaign, "benchmark campaign directory");
-  assertOutside(repositoryRoot, fs.realpathSync(rejected), "rejected archive");
-  throw new Error(
-    `Benchmark publication moved a replacement directory; it was quarantined at "${rejected}".`,
-    { cause: identityError },
+const archiveCommitPath = (archive: string): string =>
+  path.join(
+    path.dirname(archive),
+    `.archive-${path.basename(archive)}.commit.json`,
   );
+
+const writeArchiveCommit = (file: string, runId: string): void =>
+  fs.writeFileSync(file, archiveCommitText(runId), { flag: "wx" });
+
+const archiveCommitText = (runId: string): string =>
+  `${JSON.stringify({
+    protocol: "automovie.benchmark-archive-commit.v1",
+    runId,
+  })}\n`;
+
+const assertCommittedArchive = (input: {
+  archive: string;
+  commit: string;
+  repositoryRoot: string;
+  taskText: string;
+  brief: string;
+  projectTree: IAutoMovieBenchmarkProjectTree;
+  transcriptDigest: `sha256:${string}`;
+  inventory: IObservedMcpTarget[];
+  submission: ReturnType<typeof sealAutoMovieBenchmarkSubmission>;
+  verdict: IAutoMovieBenchmarkVerdict;
+  report: ReturnType<typeof reportAutoMovieBenchmark>;
+  toolInventory: IAutoMovieBenchmarkToolInventoryReport;
+}): IDirectoryIdentity => {
+  const archive = directoryIdentity(
+    input.archive,
+    "committed benchmark archive",
+  );
+  if (fs.existsSync(input.commit) === false)
+    throw new Error(
+      `Benchmark archive "${input.archive}" is not committed; preserve it for diagnosis and remove it before retrying this run.`,
+    );
+  const commit = Buffer.from(
+    readAutoMovieProductionOwnedFile({
+      root: path.dirname(input.commit),
+      directory: path.dirname(input.commit),
+      relative: path.basename(input.commit),
+    }),
+  ).toString("utf8");
+  if (commit !== archiveCommitText(input.submission.runId))
+    throw new Error(
+      `Benchmark archive commit "${input.commit}" does not bind the resident content-addressed directory.`,
+    );
+  assertArchiveIdentity({
+    pending: archive,
+    repositoryRoot: input.repositoryRoot,
+    taskText: input.taskText,
+    brief: input.brief,
+    projectTree: input.projectTree,
+    transcriptDigest: input.transcriptDigest,
+    inventory: input.inventory,
+    submission: input.submission,
+    verdict: input.verdict,
+    report: input.report,
+    toolInventory: input.toolInventory,
+  });
+  return archive;
 };
 
 const secureChildDirectory = (
@@ -1510,7 +1582,10 @@ class AutoMovieBenchmarkTraceWriter {
 }
 
 const writeJson = (file: string, value: unknown): void =>
-  fs.writeFileSync(file, `${JSON.stringify(value, null, 2)}\n`);
+  fs.writeFileSync(file, formatJson(value));
+
+const formatJson = (value: unknown): string =>
+  `${JSON.stringify(value, null, 2)}\n`;
 
 const assertArchiveIdentity = (input: {
   pending: IDirectoryIdentity;
@@ -1521,6 +1596,9 @@ const assertArchiveIdentity = (input: {
   transcriptDigest: `sha256:${string}`;
   inventory: IObservedMcpTarget[];
   submission: ReturnType<typeof sealAutoMovieBenchmarkSubmission>;
+  verdict: IAutoMovieBenchmarkVerdict;
+  report: ReturnType<typeof reportAutoMovieBenchmark>;
+  toolInventory: IAutoMovieBenchmarkToolInventoryReport;
 }): void => {
   assertDirectoryIdentity(input.pending, "benchmark archive staging");
   assertOutside(
@@ -1541,6 +1619,18 @@ const assertArchiveIdentity = (input: {
     throw new Error(
       "Runner-owned task law or brief changed before archive publication.",
     );
+  for (const [file, content] of [
+    [".archive-commit.json", archiveCommitText(input.submission.runId)],
+    ["project-tree.json", formatJson(input.projectTree)],
+    ["submission.json", formatJson(input.submission)],
+    ["verdict.json", formatJson(input.verdict)],
+    ["report.json", formatJson(input.report)],
+    ["tool-inventory.json", formatJson(input.toolInventory)],
+  ] as const)
+    if (readPending(file).toString("utf8") !== content)
+      throw new Error(
+        `Runner-owned archive record "${file}" changed before publication.`,
+      );
   assertDirectoryIdentity(input.pending, "benchmark archive staging");
   const project = snapshotAutoMovieBenchmarkProject(
     path.join(input.pending.real, "project"),

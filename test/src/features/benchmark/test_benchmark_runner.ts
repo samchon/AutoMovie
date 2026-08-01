@@ -263,6 +263,34 @@ export {};
       duplicate.includes("is already archived"),
     );
 
+    const archiveCommit = path.join(
+      path.dirname(output.archive),
+      `.archive-${path.basename(output.archive)}.commit.json`,
+    );
+    const archiveCommitBytes = fs.readFileSync(archiveCommit);
+    fs.writeFileSync(archiveCommit, "{}\n");
+    const mismatchedCommit = await rejected(() =>
+      runAutoMovieBenchmark({
+        taskId: current.taskId,
+        lane: "deterministic",
+        campaign: "redesign-cycle-1",
+        runRoot: root,
+        repositoryRoot,
+        identity,
+        mcpTarget,
+        inventoryBaselines: [archivedBaseline],
+        agent,
+        collect: collectCompleteEvidence,
+      }),
+    );
+    fs.writeFileSync(archiveCommit, archiveCommitBytes);
+    TestValidator.predicate(
+      "an archive commit must bind the resident directory identity",
+      mismatchedCommit.includes(
+        "does not bind the resident content-addressed directory",
+      ),
+    );
+
     await exerciseArchivePublicationRaces({
       taskId: current.taskId,
       lane: "deterministic",
@@ -514,7 +542,7 @@ export {};
 const exerciseArchivePublicationRaces = async (
   base: Omit<Parameters<typeof runAutoMovieBenchmark>[0], "campaign">,
 ): Promise<void> => {
-  for (const phase of ["staging", "final"] as const) {
+  for (const phase of ["staging", "record", "final"] as const) {
     const campaign = `publication-${phase}-race`;
     const campaignPath = path.join(
       path.resolve(base.runRoot),
@@ -533,12 +561,23 @@ const exerciseArchivePublicationRaces = async (
         (phase === "staging"
           ? oldName.startsWith(".pending-") &&
             newName.startsWith(".publishing-")
-          : oldName.startsWith(".publishing-") &&
-            /^[0-9a-f]{64}$/u.test(newName));
+          : phase === "record"
+            ? oldName.startsWith(".pending-") &&
+              newName.startsWith(".publishing-")
+            : oldName.startsWith(".publishing-") &&
+              /^[0-9a-f]{64}$/u.test(newName));
       if (matches) {
         swapped = true;
-        parked = `${oldPath.toString()}.original-parked`;
         movedTo = newPath.toString();
+        if (phase === "record") {
+          nativeRename(oldPath, newPath);
+          fs.writeFileSync(
+            path.join(newPath.toString(), "submission.json"),
+            "{}\n",
+          );
+          return;
+        }
+        parked = `${oldPath.toString()}.original-parked`;
         nativeRename(oldPath, parked);
         if (phase === "staging") {
           fs.mkdirSync(oldPath);
@@ -563,10 +602,21 @@ const exerciseArchivePublicationRaces = async (
     } finally {
       fs.renameSync = nativeRename;
     }
+    const retryMessage =
+      phase === "final"
+        ? await rejected(() => runAutoMovieBenchmark({ ...base, campaign }))
+        : "";
     const contentArchives = fs.existsSync(campaignPath)
       ? fs
           .readdirSync(campaignPath)
           .filter((entry) => /^[0-9a-f]{64}$/u.test(entry))
+      : [];
+    const commitRecords = fs.existsSync(campaignPath)
+      ? fs
+          .readdirSync(campaignPath)
+          .filter((entry) =>
+            /^\.archive-[0-9a-f]{64}\.commit\.json$/u.test(entry),
+          )
       : [];
     TestValidator.predicate(
       `archive publication rejects a ${phase} identity replacement`,
@@ -574,11 +624,17 @@ const exerciseArchivePublicationRaces = async (
         message.includes(
           phase === "staging"
             ? "physical directory selected for publication"
-            : "moved a replacement directory",
+            : phase === "record"
+              ? 'archive record "submission.json" changed'
+              : "physical directory selected for publication",
         ) &&
-        contentArchives.length === 0 &&
-        (phase === "staging" ||
-          (movedTo !== undefined && fs.existsSync(movedTo) === false)),
+        contentArchives.length === (phase === "final" ? 1 : 0) &&
+        commitRecords.length === 0 &&
+        (phase !== "final" ||
+          (movedTo !== undefined &&
+            fs.existsSync(movedTo) &&
+            retryMessage.includes("is not committed") &&
+            retryMessage.includes("already archived") === false)),
     );
     if (parked !== undefined)
       fs.rmSync(parked, { recursive: true, force: true });
