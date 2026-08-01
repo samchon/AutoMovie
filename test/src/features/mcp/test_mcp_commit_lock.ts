@@ -129,6 +129,12 @@ export const test_mcp_commit_lock = (): void => {
     nativeRm(releaseRacePath, { force: true });
     nativeRm(releaseRaceParked, { force: true });
     const reacquiredRaceToken = acquireCommitLock(releaseRacePath);
+    TestValidator.predicate(
+      "a raced release permits a genuinely fresh owner",
+      reacquiredRaceToken !== releaseRaceToken &&
+        fs.existsSync(releaseRacePath) &&
+        fs.readFileSync(releaseRacePath, "utf8") === reacquiredRaceToken,
+    );
     releaseCommitLock(releaseRacePath, reacquiredRaceToken);
     TestValidator.equals(
       "a raced release clears its process-local ownership",
@@ -299,6 +305,7 @@ const exerciseQuarantineRecovery = (dir: string): void => {
     let quarantine: string | undefined;
     let quarantineLstatCalls = 0;
     let quarantineRmCalls = 0;
+    let exclusiveCopyObserved = false;
     fs.renameSync = ((oldPath, newPath) => {
       nativeRename(oldPath, newPath);
       if (
@@ -329,6 +336,12 @@ const exerciseQuarantineRecovery = (dir: string): void => {
       nativeLink(existingPath, newPath);
     }) as typeof fs.linkSync;
     fs.copyFileSync = ((source, destination, flags) => {
+      if (
+        quarantine !== undefined &&
+        path.resolve(source.toString()) === path.resolve(quarantine) &&
+        path.resolve(destination.toString()) === path.resolve(lockPath)
+      )
+        exclusiveCopyObserved = flags === fs.constants.COPYFILE_EXCL;
       if (
         mode === "copy-failure" &&
         quarantine !== undefined &&
@@ -399,6 +412,12 @@ const exerciseQuarantineRecovery = (dir: string): void => {
       quarantine !== undefined && fs.existsSync(quarantine),
       expectQuarantine,
     );
+    if (mode === "copy-success" || mode === "copy-failure")
+      TestValidator.equals(
+        `quarantine recovery uses exclusive copy for ${mode}`,
+        exclusiveCopyObserved,
+        true,
+      );
     nativeRm(lockPath, { force: true });
     if (quarantine !== undefined) nativeRm(quarantine, { force: true });
   }
