@@ -1299,7 +1299,6 @@ export const test_mcp_production_project = (): void => {
       const nativeOpen = fs.openSync;
       let swapped = false;
       fs.openSync = ((target: fs.PathLike, ...args: unknown[]): number => {
-        const descriptor = Reflect.apply(nativeOpen, fs, [target, ...args]);
         if (
           swapped === false &&
           path.resolve(target.toString()) === path.resolve(file)
@@ -1312,7 +1311,7 @@ export const test_mcp_production_project = (): void => {
             fs.symlinkSync(outsideRenderRead, directory, "junction");
           swapped = true;
         }
-        return descriptor;
+        return Reflect.apply(nativeOpen, fs, [target, ...args]);
       }) as typeof fs.openSync;
       let rejected = false;
       try {
@@ -1323,18 +1322,20 @@ export const test_mcp_production_project = (): void => {
         );
       } finally {
         fs.openSync = nativeOpen;
-        if (fs.existsSync(directory)) {
-          if (fs.lstatSync(directory).isSymbolicLink())
-            fs.unlinkSync(directory);
-          else fs.rmSync(directory, { recursive: true, force: true });
+        if (fs.existsSync(parked)) {
+          if (fs.existsSync(directory)) {
+            if (fs.lstatSync(directory).isSymbolicLink())
+              fs.unlinkSync(directory);
+            else fs.rmSync(directory, { recursive: true, force: true });
+          }
+          fs.renameSync(parked, directory);
         }
-        fs.renameSync(parked, directory);
         fs.rmSync(directory, { recursive: true, force: true });
       }
       return swapped && rejected;
     };
     TestValidator.predicate(
-      "render reads retain exact physical ancestry after opening",
+      "render reads retain exact physical ancestry across descriptor acquisition",
       ancestryRace("missing") &&
         ancestryRace("junction") &&
         ancestryRace("directory"),
