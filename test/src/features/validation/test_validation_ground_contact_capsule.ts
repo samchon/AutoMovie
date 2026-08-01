@@ -10,8 +10,8 @@ import { TestValidator } from "@nestia/e2e";
 import { makeMotion } from "../internal/fixtures";
 import {
   hasViolation,
-  hasWarning,
   validationHasNoWarnings,
+  validationHasWarning,
 } from "../internal/predicates";
 
 const restAt = (x: number, y: number, z: number): IAutoMovieTransform => ({
@@ -102,8 +102,12 @@ export const test_validation_ground_contact_capsule = (): void => {
   });
   TestValidator.predicate(
     "a capsule dipping below ground warns but succeeds",
-    sunk.success === true &&
-      hasWarning(sunk, "physics", "$input.samples[0].capsules[0].lowestY"),
+    validationHasWarning(
+      "sunk body capsule",
+      sunk,
+      "physics",
+      "$input.samples[0].capsules[0].lowestY",
+    ),
   );
 
   const clear = validateGroundContact({
@@ -127,8 +131,12 @@ export const test_validation_ground_contact_capsule = (): void => {
   });
   TestValidator.predicate(
     "the deepest endpoint is found regardless of capsule order",
-    reversed.success === true &&
-      hasWarning(reversed, "physics", "$input.samples[0].capsules[0].lowestY"),
+    validationHasWarning(
+      "reversed sunk body capsule",
+      reversed,
+      "physics",
+      "$input.samples[0].capsules[0].lowestY",
+    ),
   );
 
   const acknowledged = validateGroundContact({

@@ -8,7 +8,7 @@ import {
 import { TestValidator } from "@nestia/e2e";
 
 import { makeMotion } from "../internal/fixtures";
-import { hasWarning } from "../internal/predicates";
+import { validationHasWarning } from "../internal/predicates";
 
 const restAt = (x: number, y: number, z: number): IAutoMovieTransform => ({
   translation: { x, y, z },
@@ -86,7 +86,11 @@ export const test_validation_self_intersection_collapsed = (): void => {
 
   TestValidator.predicate(
     "collapsed-centerline overlap no longer slips through as NaN",
-    result.success === true &&
-      hasWarning(result, "physics", "$input.pairs[0].samples[0].distance"),
+    validationHasWarning(
+      "collapsed self-intersection",
+      result,
+      "physics",
+      "$input.pairs[0].samples[0].distance",
+    ),
   );
 };

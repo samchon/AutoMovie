@@ -6,7 +6,7 @@ import {
 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { hasWarning } from "../internal/predicates";
+import { validationHasWarning } from "../internal/predicates";
 
 const t = (x: number, y: number, z: number): IAutoMovieTransform => ({
   translation: { x, y, z },
@@ -75,7 +75,12 @@ export const test_validation_ground_contact_surface = (): void => {
   );
   TestValidator.predicate(
     "warning names the foot's world y",
-    hasWarning(sunk, "physics", ".leftFoot.worldPosition.y"),
+    validationHasWarning(
+      "surface ground contact",
+      sunk,
+      "physics",
+      ".leftFoot.worldPosition.y",
+    ),
   );
 
   TestValidator.equals(

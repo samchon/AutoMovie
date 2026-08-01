@@ -10,10 +10,10 @@ import { TestValidator } from "@nestia/e2e";
 import { makeMotion } from "../internal/fixtures";
 import {
   hasViolation,
-  hasWarning,
   nclose,
   validationHasNoWarnings,
-  warningCount,
+  validationHasWarning,
+  validationHasWarningCount,
 } from "../internal/predicates";
 
 const restAt = (x: number, y: number, z: number): IAutoMovieTransform => ({
@@ -91,12 +91,12 @@ export const test_validation_ground_contact = (): void => {
   });
   TestValidator.predicate(
     "penetration warns but succeeds",
-    rejected.success === true &&
-      hasWarning(
-        rejected,
-        "physics",
-        "$input.samples[2].leftFoot.worldPosition.y",
-      ),
+    validationHasWarning(
+      "penetrating ground contact",
+      rejected,
+      "physics",
+      "$input.samples[2].leftFoot.worldPosition.y",
+    ),
   );
   const mid =
     rejected.success === true
@@ -141,13 +141,17 @@ export const test_validation_ground_contact = (): void => {
   });
   TestValidator.predicate(
     "custom path",
-    hasWarning(
+    validationHasWarning(
+      "custom ground contact path",
       raisedGround,
       "physics",
       "$motion.samples[0].leftFoot.worldPosition.y",
     ),
   );
-  TestValidator.equals("custom ground samples", warningCount(raisedGround), 2);
+  TestValidator.predicate(
+    "custom ground samples",
+    validationHasWarningCount("raised ground contacts", raisedGround, 2),
+  );
 
   // #1156: a non-finite/non-positive sampleRate empties the sampling clock and
   // a non-finite tolerance makes `y < NaN` always false; either would silently

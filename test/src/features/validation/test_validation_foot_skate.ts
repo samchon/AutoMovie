@@ -10,9 +10,9 @@ import { TestValidator } from "@nestia/e2e";
 import { makeMotion } from "../internal/fixtures";
 import {
   hasViolation,
-  hasWarning,
   nclose,
   validationHasNoWarnings,
+  validationHasWarning,
   violationCount,
 } from "../internal/predicates";
 
@@ -99,12 +99,12 @@ export const test_validation_foot_skate = (): void => {
   });
   TestValidator.predicate(
     "foot skate warns but succeeds",
-    rejected.success === true &&
-      hasWarning(
-        rejected,
-        "physics",
-        "$input.contacts[0].samples[1].leftFoot.horizontalSpeed",
-      ),
+    validationHasWarning(
+      "rejected foot skate",
+      rejected,
+      "physics",
+      "$input.contacts[0].samples[1].leftFoot.horizontalSpeed",
+    ),
   );
   const first =
     rejected.success === true

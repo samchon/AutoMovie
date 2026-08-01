@@ -5,6 +5,7 @@ import {
 } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
+import { validationHasWarningCount } from "../internal/predicates";
 import {
   createScriptTree,
   treeBeats,
@@ -47,11 +48,14 @@ export const test_film_feedback_cascade = (): void => {
     centerOfMass: { x: 0.5, y: 0.4, z: 0 },
     support,
   });
+  TestValidator.predicate(
+    "a real physics warning was raised",
+    validationHasWarningCount("feedback cascade", result.validation, 1),
+  );
   const warnings =
     result.validation.success === true
       ? (result.validation.warnings ?? [])
       : [];
-  TestValidator.equals("a real physics warning was raised", warnings.length, 1);
   TestValidator.equals(
     "and it is warning severity",
     warnings[0]!.severity,

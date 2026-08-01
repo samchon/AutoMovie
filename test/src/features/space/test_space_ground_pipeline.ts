@@ -17,7 +17,7 @@ import { TestValidator } from "@nestia/e2e";
 import {
   nclose,
   validationHasNoWarnings,
-  warningCount,
+  validationHasWarnings,
 } from "../internal/predicates";
 
 const t = (x: number, y: number, z: number): IAutoMovieTransform => ({
@@ -128,13 +128,14 @@ export const test_space_ground_pipeline = (): void => {
   const contacts = [{ bone: "leftFoot", start: 0, end: 1 } as const];
   TestValidator.predicate(
     "raw ramp bake skates the foot (warns)",
-    warningCount(
+    validationHasWarnings(
+      "raw ramp foot-skate",
       validateFootSkate({
         motion: path.motion,
         skeleton: legSkeleton,
         contacts,
       }),
-    ) > 0,
+    ),
   );
 
   const planted = plantStanceFeet({

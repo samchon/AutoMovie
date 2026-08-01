@@ -74,7 +74,7 @@ export const violationCount = (v: IAutoMovieValidation): number =>
  * True when the validation succeeded but carries a matching warning: the
  * physical-plausibility advice tier, which surfaces without failing.
  */
-export const hasWarning = (
+const hasWarning = (
   v: IAutoMovieValidation,
   kind: AutoMovieViolationKind,
   pathIncludes: string,
@@ -84,9 +84,41 @@ export const hasWarning = (
     (x) => x.kind === kind && x.path.includes(pathIncludes),
   );
 
-/** Number of warnings on a successful validation (0 when it failed). */
-export const warningCount = (v: IAutoMovieValidation): number =>
-  v.success === true ? (v.warnings ?? []).length : 0;
+/** Preserve one expected warning's complete validation when it is absent. */
+export const validationHasWarning = (
+  context: string,
+  validation: IAutoMovieValidation,
+  kind: AutoMovieViolationKind,
+  pathIncludes: string,
+): boolean => {
+  const matches = hasWarning(validation, kind, pathIncludes);
+  if (matches === false) reportValidation(context, validation);
+  return matches;
+};
+
+/** Preserve validation evidence when its warning count is not exactly expected. */
+export const validationHasWarningCount = (
+  context: string,
+  validation: IAutoMovieValidation,
+  expected: number,
+): boolean => {
+  const matches =
+    validation.success === true &&
+    (validation.warnings ?? []).length === expected;
+  if (matches === false) reportValidation(context, validation);
+  return matches;
+};
+
+/** Preserve validation evidence when no warning was produced. */
+export const validationHasWarnings = (
+  context: string,
+  validation: IAutoMovieValidation,
+): boolean => {
+  const matches =
+    validation.success === true && (validation.warnings ?? []).length > 0;
+  if (matches === false) reportValidation(context, validation);
+  return matches;
+};
 
 /** Preserve one positive validation attempt's evidence when it is not clean. */
 export const validationHasNoWarnings = (
@@ -95,9 +127,14 @@ export const validationHasNoWarnings = (
 ): boolean => {
   const clean =
     validation.success === true && (validation.warnings ?? []).length === 0;
-  if (clean === false)
-    console.error(
-      `${context} validation:\n${JSON.stringify(validation, null, 2)}`,
-    );
+  if (clean === false) reportValidation(context, validation);
   return clean;
 };
+
+const reportValidation = (
+  context: string,
+  validation: IAutoMovieValidation,
+): void =>
+  console.error(
+    `${context} validation:\n${JSON.stringify(validation, null, 2)}`,
+  );

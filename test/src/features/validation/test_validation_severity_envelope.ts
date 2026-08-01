@@ -1,6 +1,8 @@
 import { ViolationCollector, toValidation, violation } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
+import { validationHasWarningCount } from "../internal/predicates";
+
 /**
  * Severity splits feedback into blocking `"error"` and advisory `"warning"`.
  * `warn` records a warning; `toValidation` fails only when an error is present,
@@ -26,11 +28,9 @@ export const test_validation_severity_envelope = (): void => {
     "warning",
   );
   const wv = warnOnly.toValidation();
-  TestValidator.equals("warning-only succeeds", wv.success, true);
-  TestValidator.equals(
+  TestValidator.predicate(
     "warning surfaced in warnings",
-    wv.success === true ? (wv.warnings?.length ?? 0) : -1,
-    1,
+    validationHasWarningCount("warning-only envelope", wv, 1),
   );
 
   const mixed = new ViolationCollector();

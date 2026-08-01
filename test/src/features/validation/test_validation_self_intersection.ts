@@ -10,9 +10,9 @@ import { TestValidator } from "@nestia/e2e";
 import { makeMotion } from "../internal/fixtures";
 import {
   hasViolation,
-  hasWarning,
   nclose,
   validationHasNoWarnings,
+  validationHasWarning,
   violationCount,
 } from "../internal/predicates";
 
@@ -115,8 +115,12 @@ export const test_validation_self_intersection = (): void => {
   });
   TestValidator.predicate(
     "self-intersection warns but succeeds",
-    rejected.success === true &&
-      hasWarning(rejected, "physics", "$input.pairs[0].samples[0].distance"),
+    validationHasWarning(
+      "rejected self-intersection",
+      rejected,
+      "physics",
+      "$input.pairs[0].samples[0].distance",
+    ),
   );
   const first =
     rejected.success === true

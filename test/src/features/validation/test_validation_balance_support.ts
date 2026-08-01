@@ -10,9 +10,9 @@ import { TestValidator } from "@nestia/e2e";
 import { makeMotion } from "../internal/fixtures";
 import {
   hasViolation,
-  hasWarning,
   nclose,
   validationHasNoWarnings,
+  validationHasWarning,
   violationCount,
 } from "../internal/predicates";
 
@@ -124,12 +124,12 @@ export const test_validation_balance_support = (): void => {
   });
   TestValidator.predicate(
     "balance support warns but succeeds",
-    rejected.success === true &&
-      hasWarning(
-        rejected,
-        "physics",
-        "$input.supports[0].samples[0].centerOfMass.supportDistance",
-      ),
+    validationHasWarning(
+      "balance support rejection",
+      rejected,
+      "physics",
+      "$input.supports[0].samples[0].centerOfMass.supportDistance",
+    ),
   );
   const first =
     rejected.success === true
@@ -253,12 +253,12 @@ export const test_validation_balance_support = (): void => {
   });
   TestValidator.predicate(
     "mass-weighted COM warns on a forward-leaning trunk",
-    leanDefault.success === true &&
-      hasWarning(
-        leanDefault,
-        "physics",
-        "$input.supports[0].samples[0].centerOfMass.supportDistance",
-      ),
+    validationHasWarning(
+      "mass-weighted balance support",
+      leanDefault,
+      "physics",
+      "$input.supports[0].samples[0].centerOfMass.supportDistance",
+    ),
   );
   const leanHips = validateBalanceSupport({
     motion: motion(leaningTrunk),
@@ -356,12 +356,12 @@ export const test_validation_balance_support = (): void => {
   });
   TestValidator.predicate(
     "polygon support warns but succeeds",
-    polygonRejected.success === true &&
-      hasWarning(
-        polygonRejected,
-        "physics",
-        "$balance.supports[0].samples[0].centerOfMass.supportDistance",
-      ),
+    validationHasWarning(
+      "polygon balance support",
+      polygonRejected,
+      "physics",
+      "$balance.supports[0].samples[0].centerOfMass.supportDistance",
+    ),
   );
 
   const invalid = validateBalanceSupport({

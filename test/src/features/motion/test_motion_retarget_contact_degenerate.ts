@@ -2,7 +2,10 @@ import { retargetHumanoidMotion } from "@automovie/engine";
 import { IAutoMovieJointConstraint } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { hasWarning, warningCount } from "../internal/predicates";
+import {
+  validationHasWarning,
+  validationHasWarningCount,
+} from "../internal/predicates";
 import {
   LEG_BONES,
   proportionedRig,
@@ -88,7 +91,8 @@ export const test_motion_retarget_contact_degenerate = (): void => {
   );
   TestValidator.predicate(
     "a degenerate chain still reports its residual",
-    hasWarning(
+    validationHasWarning(
+      "degenerate retarget contact",
       collapsed.validation,
       "physics",
       '$input.motion.keyframes[0].pose.joints["leftFoot"]',
@@ -111,10 +115,9 @@ export const test_motion_retarget_contact_degenerate = (): void => {
     frozen.motion.keyframes.map((kf) => kf.pose.joints),
     [[], []],
   );
-  TestValidator.equals(
+  TestValidator.predicate(
     "both frozen feet report their residual",
-    warningCount(frozen.validation),
-    2,
+    validationHasWarningCount("frozen retarget contacts", frozen.validation, 2),
   );
   TestValidator.equals(
     "the frozen clip equals the verbatim copy in every keyframe pose",

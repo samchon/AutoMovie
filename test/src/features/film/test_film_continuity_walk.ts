@@ -15,8 +15,8 @@ import {
 } from "../internal/fixtures";
 import {
   hasViolation,
-  hasWarning,
   validationHasNoWarnings,
+  validationHasWarning,
 } from "../internal/predicates";
 
 /** A looping travel clip whose root advances x = 2t over a 1 s cycle. */
@@ -127,7 +127,8 @@ export const test_film_continuity_walk = (): void => {
   });
   TestValidator.predicate(
     "a cut back to the origin warns, keyed by beat index",
-    hasWarning(
+    validationHasWarning(
+      "film beat continuity drift",
       drifted,
       "physics",
       "$input.beats[1].opening.actors[node=hero].transform.translation",

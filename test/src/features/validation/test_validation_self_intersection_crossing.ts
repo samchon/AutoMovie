@@ -8,7 +8,7 @@ import {
 import { TestValidator } from "@nestia/e2e";
 
 import { makeMotion } from "../internal/fixtures";
-import { hasWarning, nclose } from "../internal/predicates";
+import { nclose, validationHasWarning } from "../internal/predicates";
 
 const restAt = (x: number, y: number, z: number): IAutoMovieTransform => ({
   translation: { x, y, z },
@@ -97,8 +97,12 @@ export const test_validation_self_intersection_crossing = (): void => {
   });
   TestValidator.predicate(
     "interior X-crossing warns but succeeds",
-    crossing.success === true &&
-      hasWarning(crossing, "physics", "$input.pairs[0].samples[0].distance"),
+    validationHasWarning(
+      "crossing self-intersection",
+      crossing,
+      "physics",
+      "$input.pairs[0].samples[0].distance",
+    ),
   );
   const fired =
     crossing.success === true

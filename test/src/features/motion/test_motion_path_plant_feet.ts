@@ -12,7 +12,10 @@ import {
 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { validationHasNoWarnings, warningCount } from "../internal/predicates";
+import {
+  validationHasNoWarnings,
+  validationHasWarnings,
+} from "../internal/predicates";
 
 const t = (x: number, y: number, z: number): IAutoMovieTransform => ({
   translation: { x, y, z },
@@ -99,13 +102,14 @@ export const test_motion_path_plant_feet = (): void => {
 
   TestValidator.predicate(
     "raw path bake skates the foot (warns)",
-    warningCount(
+    validationHasWarnings(
+      "raw path foot-skate",
       validateFootSkate({
         motion: path.motion,
         skeleton: legSkeleton,
         contacts,
       }),
-    ) > 0,
+    ),
   );
 
   const planted = plantStanceFeet({

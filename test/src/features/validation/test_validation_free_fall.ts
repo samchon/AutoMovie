@@ -2,7 +2,12 @@ import { detectFreeFall } from "@automovie/engine";
 import { IAutoMovieBody } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { nclose, validationHasNoWarnings } from "../internal/predicates";
+import {
+  nclose,
+  validationHasNoWarnings,
+  validationHasWarning,
+  validationHasWarningCount,
+} from "../internal/predicates";
 
 const BODY: IAutoMovieBody = {
   mass: 1,
@@ -16,9 +21,6 @@ const FOOTPRINT = [
   { x: 1, y: 0, z: 1 },
   { x: -1, y: 0, z: 1 },
 ];
-
-const warnings = (r: ReturnType<typeof detectFreeFall>) =>
-  r.validation.success === true ? (r.validation.warnings ?? []) : [];
 
 /**
  * The default physical expectation is that an unheld body falls. A bodied
@@ -56,8 +58,11 @@ export const test_validation_free_fall = (): void => {
   TestValidator.predicate("suggested arc present", unheld.trajectory !== null);
   TestValidator.predicate(
     "gravity warning on the right path",
-    warnings(unheld).some(
-      (w) => w.kind === "physics" && w.path.includes(".gravity"),
+    validationHasWarning(
+      "unsupported free fall",
+      unheld.validation,
+      "physics",
+      ".gravity",
     ),
   );
 
@@ -68,10 +73,13 @@ export const test_validation_free_fall = (): void => {
     attached: false,
     falling: false,
   });
-  TestValidator.equals(
+  TestValidator.predicate(
     "COM outside footprint warns",
-    warnings(outside).length,
-    1,
+    validationHasWarningCount(
+      "outside support footprint",
+      outside.validation,
+      1,
+    ),
   );
   TestValidator.predicate(
     "no-node arc uses the default node",

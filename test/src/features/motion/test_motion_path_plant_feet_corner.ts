@@ -18,7 +18,7 @@ import { TestValidator } from "@nestia/e2e";
 import {
   nclose,
   validationHasNoWarnings,
-  warningCount,
+  validationHasWarnings,
 } from "../internal/predicates";
 
 const t = (x: number, y: number, z: number): IAutoMovieTransform => ({
@@ -129,13 +129,14 @@ const plantAndAssert = (turnWindow: number, label: string): void => {
 
   TestValidator.predicate(
     `${label}: raw corner bake skates the foot (warns)`,
-    warningCount(
+    validationHasWarnings(
+      `${label} raw corner foot-skate`,
       validateFootSkate({
         motion: path.motion,
         skeleton: legSkeleton,
         contacts,
       }),
-    ) > 0,
+    ),
   );
 
   const planted = plantStanceFeet({
@@ -272,12 +273,13 @@ export const test_motion_path_plant_feet_corner = (): void => {
   });
   TestValidator.predicate(
     "loose tolerance over-reaches through the corner and skates (warns)",
-    warningCount(
+    validationHasWarnings(
+      "loose-tolerance corner foot-skate",
       validateFootSkate({
         motion: overReached.motion,
         skeleton: legSkeleton,
         contacts,
       }),
-    ) > 0,
+    ),
   );
 };

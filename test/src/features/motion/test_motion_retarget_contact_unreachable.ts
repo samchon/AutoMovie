@@ -2,10 +2,10 @@ import { retargetHumanoidMotion } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import {
-  hasWarning,
   validationHasNoWarnings,
+  validationHasWarning,
+  validationHasWarningCount,
   vclose,
-  warningCount,
 } from "../internal/predicates";
 import {
   keyframeWorld,
@@ -61,15 +61,19 @@ export const test_motion_retarget_contact_unreachable = (): void => {
     pinned.validation.success,
     true,
   );
-  TestValidator.equals(
+  TestValidator.predicate(
     "one plausibility warning per pinned foot",
-    warningCount(pinned.validation),
-    2,
+    validationHasWarningCount(
+      "unreachable foot contacts",
+      pinned.validation,
+      2,
+    ),
   );
   for (const slot of ["leftFoot", "rightFoot"] as const)
     TestValidator.predicate(
       `${slot} reports its residual on the keyframe that missed most`,
-      hasWarning(
+      validationHasWarning(
+        `${slot} unreachable contact`,
         pinned.validation,
         "physics",
         `$input.motion.keyframes[0].pose.joints["${slot}"]`,
