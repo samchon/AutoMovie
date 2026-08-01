@@ -16,6 +16,7 @@ import {
   assertCaptureExecutableBytes,
   assertRelocatedCaptureExecutable,
   closeCaptureExecutable,
+  createCaptureExecutableSnapshot,
   openCaptureExecutable,
   removeCaptureExecutableIfResident,
 } from "./captureExecutableSnapshot";
@@ -372,12 +373,9 @@ export const publishCaptureInstallReceipt = (
   let published = false;
   try {
     assertReceiptDirectory(owned);
-    fs.writeFileSync(temporary, bytes, {
-      flag: "wx",
-    });
+    stagedFile = createCaptureExecutableSnapshot(temporary, bytes);
     const staged = captureReceiptDirectory(projectRoot);
     assertSameReceiptDirectoryIdentity(owned, staged);
-    stagedFile = openCaptureExecutable(temporary);
     if (stagedFile.digest !== digestAutoMovieBytes(bytes))
       throw new Error("Capture receipt temporary bytes changed after write.");
     assertCurrent();

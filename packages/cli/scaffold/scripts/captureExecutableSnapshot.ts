@@ -18,6 +18,73 @@ interface IPhysicalDirectory {
   version: string;
 }
 
+/** Create private bytes and retain the exact descriptor opened with `wx+`. */
+export const createCaptureExecutableSnapshot = (
+  file: string,
+  bytes: Uint8Array,
+): ICaptureExecutableSnapshot => {
+  const namespacePath = path.resolve(file);
+  const before = physicalDirectory(
+    path.dirname(namespacePath),
+    "capture executable directory",
+  );
+  const descriptor = fs.openSync(namespacePath, "wx+");
+  try {
+    let position = 0;
+    while (position < bytes.length) {
+      const length = fs.writeSync(
+        descriptor,
+        bytes,
+        position,
+        bytes.length - position,
+        position,
+      );
+      if (length === 0)
+        throw new Error(`Capture executable "${namespacePath}" write stalled.`);
+      position += length;
+    }
+    fs.fsyncSync(descriptor);
+    const opened = fs.fstatSync(descriptor, { bigint: true });
+    if (opened.isFile() === false)
+      throw new Error(`Capture executable "${namespacePath}" is not physical.`);
+    const directory = physicalDirectory(
+      path.dirname(namespacePath),
+      "capture executable directory",
+    );
+    if (
+      directory.path !== before.path ||
+      directory.real !== before.real ||
+      directory.identity !== before.identity
+    )
+      throw new Error(
+        `Capture executable directory "${directory.path}" changed while created.`,
+      );
+    const resident = fs.lstatSync(namespacePath, { bigint: true });
+    const identity = physicalVersion(opened);
+    if (
+      resident.isSymbolicLink() ||
+      resident.isFile() === false ||
+      physicalVersion(resident) !== identity
+    )
+      throw new Error(
+        `Capture executable "${namespacePath}" changed while created.`,
+      );
+    const snapshot: ICaptureExecutableSnapshot = {
+      descriptor,
+      digest: digestDescriptor(descriptor),
+      directory,
+      identity,
+      path: namespacePath,
+      physicalIdentity: physicalFileIdentity(opened),
+    };
+    assertCaptureExecutable(snapshot);
+    return snapshot;
+  } catch (error) {
+    fs.closeSync(descriptor);
+    throw error;
+  }
+};
+
 /** Open and fingerprint one physical executable for a later launch boundary. */
 export const openCaptureExecutable = (
   file: string,

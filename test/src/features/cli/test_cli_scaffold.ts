@@ -781,12 +781,16 @@ export const test_cli_scaffold = async (): Promise<void> => {
     );
     const mutableFs = createRequire(__filename)("node:fs") as {
       lstatSync: typeof fs.lstatSync;
+      fsyncSync: typeof fs.fsyncSync;
+      openSync: typeof fs.openSync;
       readdirSync: typeof fs.readdirSync;
       renameSync: typeof fs.renameSync;
       statSync: typeof fs.statSync;
       writeFileSync: typeof fs.writeFileSync;
     };
+    const nativeFsync = mutableFs.fsyncSync;
     const nativeLstat = mutableFs.lstatSync;
+    const nativeOpen = mutableFs.openSync;
     const nativeStat = mutableFs.statSync;
     const nativeWriteFile = mutableFs.writeFileSync;
     const shotsDirectory = path.dirname(artifact);
@@ -1701,6 +1705,65 @@ export const test_cli_scaffold = async (): Promise<void> => {
           .every((name) => name.endsWith(".tmp") === false),
     );
     const receiptBeforeTempMutation = fs.readFileSync(captureReceipt);
+    let createdReceiptDescriptor: number | null = null;
+    let createdReceiptTemporary = "";
+    let parkedCreatedReceipt = "";
+    let createdReceiptSwapped = false;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+      if (
+        typeof file !== "number" &&
+        flags === "wx+" &&
+        path.dirname(path.resolve(file.toString())) ===
+          path.dirname(captureReceipt)
+      ) {
+        createdReceiptDescriptor = descriptor;
+        createdReceiptTemporary = path.resolve(file.toString());
+      }
+      return descriptor;
+    }) as typeof fs.openSync;
+    mutableFs.fsyncSync = ((descriptor) => {
+      nativeFsync(descriptor);
+      if (
+        createdReceiptSwapped === false &&
+        descriptor === createdReceiptDescriptor
+      ) {
+        createdReceiptSwapped = true;
+        parkedCreatedReceipt = `${createdReceiptTemporary}.parked`;
+        fs.renameSync(createdReceiptTemporary, parkedCreatedReceipt);
+        nativeWriteFile(
+          createdReceiptTemporary,
+          `${JSON.stringify(nextCaptureReceipt, null, 2)}\n`,
+        );
+      }
+    }) as typeof fs.fsyncSync;
+    let createdReceiptSuccessorRejected = false;
+    try {
+      createdReceiptSuccessorRejected = throws(() =>
+        captureBrowserModule.publishCaptureInstallReceipt(
+          captureProject,
+          nextCaptureReceipt,
+          () => undefined,
+        ),
+      );
+    } finally {
+      mutableFs.openSync = nativeOpen;
+      mutableFs.fsyncSync = nativeFsync;
+    }
+    TestValidator.predicate(
+      "capture install rejects a successor before staged descriptor capture",
+      createdReceiptSwapped &&
+        createdReceiptSuccessorRejected &&
+        fs.existsSync(createdReceiptTemporary) &&
+        fs.existsSync(parkedCreatedReceipt) &&
+        fs.readFileSync(captureReceipt).equals(receiptBeforeTempMutation),
+    );
+    fs.rmSync(createdReceiptTemporary, { force: true });
+    fs.rmSync(parkedCreatedReceipt, { force: true });
     let receiptTemporaryMutated = false;
     const mutatedReceiptTemporaryRejected = throws(() =>
       captureBrowserModule.publishCaptureInstallReceipt(
@@ -1852,8 +1915,12 @@ export const test_cli_scaffold = async (): Promise<void> => {
     const publishedReceiptBytes = fs.readFileSync(captureReceipt);
     const parkedCaptureProject = `${captureProject}.parked`;
     let receiptRootSwapped = false;
-    mutableFs.writeFileSync = ((file, bytes, ...args: unknown[]): void => {
-      Reflect.apply(nativeWriteFile, mutableFs, [file, bytes, ...args]);
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
       if (
         receiptRootSwapped === false &&
         typeof file !== "number" &&
@@ -1867,7 +1934,8 @@ export const test_cli_scaffold = async (): Promise<void> => {
         fs.mkdirSync(path.dirname(captureReceipt), { recursive: true });
         nativeWriteFile(captureReceipt, publishedReceiptBytes);
       }
-    }) as typeof fs.writeFileSync;
+      return descriptor;
+    }) as typeof fs.openSync;
     let receiptRootRaceRejected = false;
     try {
       receiptRootRaceRejected = throws(() =>
@@ -1878,7 +1946,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
         ),
       );
     } finally {
-      mutableFs.writeFileSync = nativeWriteFile;
+      mutableFs.openSync = nativeOpen;
     }
     TestValidator.predicate(
       "capture install rejects a project root successor without cleaning it",
