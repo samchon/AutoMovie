@@ -68,6 +68,15 @@ export const removeCapturedRenderGcTarget = (props: {
   assertRenderGcTarget(props.snapshot);
   assertPhysicalDirectory(quarantine, "render GC quarantine");
   fs.renameSync(props.snapshot.target, isolated);
+  const movedQuarantine = physicalDirectory(
+    props.quarantine,
+    "render GC quarantine",
+  );
+  assertSamePhysicalDirectory(
+    quarantine,
+    movedQuarantine,
+    "render GC quarantine",
+  );
   let moved: IRenderGcTargetSnapshot;
   try {
     moved = captureRenderGcTarget(props.snapshot.base.real, isolated);
@@ -86,7 +95,7 @@ export const removeCapturedRenderGcTarget = (props: {
     const restoration = restoreUnexpectedSuccessor(
       props.snapshot,
       moved,
-      quarantine,
+      movedQuarantine,
     );
     throw new Error(
       restoration === "restored"
@@ -97,7 +106,7 @@ export const removeCapturedRenderGcTarget = (props: {
     );
   }
   assertRenderGcTarget(moved);
-  assertPhysicalDirectory(quarantine, "render GC quarantine");
+  assertPhysicalDirectory(movedQuarantine, "render GC quarantine");
   fs.rmSync(isolated, {
     force: true,
     recursive: moved.kind === "directory",
@@ -320,6 +329,19 @@ const assertPhysicalDirectory = (
     current.identity !== expected.identity ||
     current.real !== expected.real ||
     current.version !== expected.version
+  )
+    throw new Error(`${label} "${expected.path}" changed physical identity.`);
+};
+
+const assertSamePhysicalDirectory = (
+  expected: IRenderGcPhysicalDirectory,
+  current: IRenderGcPhysicalDirectory,
+  label: string,
+): void => {
+  if (
+    current.path !== expected.path ||
+    current.identity !== expected.identity ||
+    current.real !== expected.real
   )
     throw new Error(`${label} "${expected.path}" changed physical identity.`);
 };
