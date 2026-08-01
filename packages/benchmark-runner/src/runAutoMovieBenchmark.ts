@@ -1258,31 +1258,60 @@ const assertCommittedArchive = (input: {
   const internal = path.join(archive.real, ".archive-commit.json");
   const internalIdentity = archiveCommitFileIdentity(internal);
   const siblingIdentity = archiveCommitFileIdentity(input.commit);
-  const internalCommit = Buffer.from(
-    readAutoMovieProductionOwnedFile({
-      root: archive.real,
-      directory: archive.real,
-      relative: ".archive-commit.json",
-    }),
-  ).toString("utf8");
-  const siblingCommit = Buffer.from(
-    readAutoMovieProductionOwnedFile({
-      root: path.dirname(input.commit),
-      directory: path.dirname(input.commit),
-      relative: path.basename(input.commit),
-    }),
-  ).toString("utf8");
   const expectedCommit = archiveCommitText(
     input.submission.runId,
     input.shapeDigest,
   );
+  const assertCommitBytes = (): void => {
+    const internalCommit = Buffer.from(
+      readAutoMovieProductionOwnedFile({
+        root: archive.real,
+        directory: archive.real,
+        relative: ".archive-commit.json",
+      }),
+    ).toString("utf8");
+    const siblingCommit = Buffer.from(
+      readAutoMovieProductionOwnedFile({
+        root: path.dirname(input.commit),
+        directory: path.dirname(input.commit),
+        relative: path.basename(input.commit),
+      }),
+    ).toString("utf8");
+    if (internalCommit !== expectedCommit || siblingCommit !== expectedCommit)
+      throw new Error(
+        `Benchmark archive commit "${input.commit}" does not bind the resident content-addressed directory.`,
+      );
+  };
+  assertCommitBytes();
   if (
     internalIdentity !== siblingIdentity ||
-    internalCommit !== expectedCommit ||
-    siblingCommit !== expectedCommit ||
     archiveCommitFileIdentity(internal) !== internalIdentity ||
-    archiveCommitFileIdentity(input.commit) !== siblingIdentity ||
-    snapshotArchiveShape(archive.real).digest !== input.shapeDigest
+    archiveCommitFileIdentity(input.commit) !== siblingIdentity
+  )
+    throw new Error(
+      `Benchmark archive commit "${input.commit}" does not bind the resident content-addressed directory.`,
+    );
+  assertArchiveIdentity({
+    pending: archive,
+    repositoryRoot: input.repositoryRoot,
+    taskText: input.taskText,
+    brief: input.brief,
+    projectTree: input.projectTree,
+    transcriptDigest: input.transcriptDigest,
+    inventory: input.inventory,
+    submission: input.submission,
+    verdict: input.verdict,
+    report: input.report,
+    toolInventory: input.toolInventory,
+  });
+  if (snapshotArchiveShape(archive.real).digest !== input.shapeDigest)
+    throw new Error(
+      `Benchmark archive commit "${input.commit}" does not bind the resident content-addressed directory.`,
+    );
+  assertCommitBytes();
+  if (
+    archiveCommitFileIdentity(internal) !== internalIdentity ||
+    archiveCommitFileIdentity(input.commit) !== siblingIdentity
   )
     throw new Error(
       `Benchmark archive commit "${input.commit}" does not bind the resident content-addressed directory.`,
@@ -1296,7 +1325,7 @@ const archiveCommitFileIdentity = (file: string): string => {
     throw new Error(
       `Benchmark archive commit "${file}" is not a physical file.`,
     );
-  return `${status.dev}\0${status.ino}`;
+  return `${status.dev}\0${status.ino}\0${status.size}\0${status.mtimeNs}\0${status.ctimeNs}`;
 };
 
 interface IArchiveShapeEntry {

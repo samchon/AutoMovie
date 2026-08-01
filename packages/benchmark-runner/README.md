@@ -18,27 +18,34 @@ The runner writes direct observations to an append-only gzip trace from run
 start, then atomically publishes:
 
 ```text
-<run-root>/.benchmarks/<campaign>/<submission-sha256>/
-  brief.md
-  task.json
-  project/
-  evidence/frames/
-  evidence/deliverables/
-  transcript/stdout.txt
-  transcript/stderr.txt
-  trace/oracle.jsonl.gz
-  project-tree.json
-  tool-sessions.json
-  tool-inventory.json
-  submission.json
-  verdict.json
-  report.json
+<run-root>/.benchmarks/<campaign>/
+  .archive-<submission-sha256>.commit.json
+  <submission-sha256>/
+    .archive-commit.json
+    brief.md
+    task.json
+    project/
+    evidence/frames/
+    evidence/deliverables/
+    transcript/stdout.txt
+    transcript/stderr.txt
+    trace/oracle.jsonl.gz
+    project-tree.json
+    tool-sessions.json
+    tool-inventory.json
+    submission.json
+    verdict.json
+    report.json
 ```
 
 The candidate workspace is a separate temporary directory. Task/brief
 originals, trace, transcripts, inventory, and copied evidence are never exposed
 as candidate-writable paths. Before publication the runner reopens and hashes
 the staged project, transcripts, tool sessions, and every evidence file.
+Publication is committed only when the internal and campaign-sibling commit
+records are the same physical hard-linked file and bind the verified archive
+shape and bytes. A 64-hex directory without that sibling record is retained as
+uncommitted crash evidence and is never accepted as an immutable archive.
 
 ## Run Codex against the five-tool server
 

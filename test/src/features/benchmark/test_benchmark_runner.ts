@@ -313,6 +313,17 @@ export {};
       agent,
       collect: collectCompleteEvidence,
     });
+    await exerciseArchiveShapeLinks({
+      taskId: current.taskId,
+      lane: "deterministic",
+      runRoot: root,
+      repositoryRoot,
+      identity,
+      mcpTarget,
+      inventoryBaselines: [archivedBaseline],
+      agent,
+      collect: collectCompleteEvidence,
+    });
 
     const gateFailed = await runAutoMovieBenchmark({
       taskId: current.taskId,
@@ -656,7 +667,15 @@ const exerciseArchivePublicationRaces = async (
 const exerciseArchiveCommitPointRaces = async (
   base: Omit<Parameters<typeof runAutoMovieBenchmark>[0], "campaign">,
 ): Promise<void> => {
-  for (const phase of ["tree", "late-tree", "record"] as const) {
+  for (const phase of [
+    "tree",
+    "late-tree",
+    "late-byte",
+    "record",
+    "record-bytes",
+    "commit-directory",
+    "commit-link",
+  ] as const) {
     const campaign = `publication-commit-${phase}-race`;
     const campaignPath = path.join(
       path.resolve(base.runRoot),
@@ -670,7 +689,11 @@ const exerciseArchiveCommitPointRaces = async (
     let swapped = false;
     let commitPath: string | undefined;
     let commitDescriptor: number | undefined;
-    if (phase === "tree")
+    if (
+      phase === "tree" ||
+      phase === "commit-directory" ||
+      phase === "commit-link"
+    )
       fs.linkSync = ((existingPath, newPath) => {
         if (
           swapped === false &&
@@ -685,6 +708,20 @@ const exerciseArchiveCommitPointRaces = async (
               .basename(commitPath)
               .slice(".archive-".length, -".commit.json".length),
           );
+          if (phase === "commit-directory") {
+            fs.mkdirSync(commitPath);
+            swapped = true;
+            return;
+          }
+          if (phase === "commit-link") {
+            fs.symlinkSync(
+              archive,
+              commitPath,
+              process.platform === "win32" ? "junction" : "dir",
+            );
+            swapped = true;
+            return;
+          }
           const parked = `${archive}.precommit-parked`;
           fs.renameSync(archive, parked);
           fs.cpSync(parked, archive, {
@@ -718,6 +755,15 @@ const exerciseArchiveCommitPointRaces = async (
             );
             fs.mkdirSync(path.join(archive, "unexpected-empty-directory"));
             swapped = true;
+          } else if (phase === "late-byte") {
+            const archive = path.join(
+              path.dirname(commitPath),
+              path
+                .basename(commitPath)
+                .slice(".archive-".length, -".commit.json".length),
+            );
+            nativeWrite(path.join(archive, "task.json"), "{}\n");
+            swapped = true;
           }
         }
         const descriptor = Reflect.apply(nativeOpen, fs, [
@@ -725,7 +771,7 @@ const exerciseArchiveCommitPointRaces = async (
           ...args,
         ]) as number;
         if (
-          phase === "record" &&
+          (phase === "record" || phase === "record-bytes") &&
           commitDescriptor === undefined &&
           commitPath !== undefined &&
           path.resolve(file.toString()) === commitPath
@@ -733,7 +779,7 @@ const exerciseArchiveCommitPointRaces = async (
           commitDescriptor = descriptor;
         return descriptor;
       }) as typeof fs.openSync;
-      if (phase === "record")
+      if (phase === "record" || phase === "record-bytes")
         fs.readFileSync = ((
           file: fs.PathOrFileDescriptor,
           ...args: unknown[]
@@ -745,9 +791,11 @@ const exerciseArchiveCommitPointRaces = async (
             file === commitDescriptor &&
             commitPath !== undefined
           ) {
-            const parked = `${commitPath}.read-parked`;
-            fs.renameSync(commitPath, parked);
-            nativeWrite(commitPath, "{}\n");
+            if (phase === "record") {
+              const parked = `${commitPath}.read-parked`;
+              fs.renameSync(commitPath, parked);
+              nativeWrite(commitPath, "{}\n");
+            } else nativeWrite(commitPath, "{}\n");
             swapped = true;
           }
           return bytes;
@@ -772,8 +820,86 @@ const exerciseArchiveCommitPointRaces = async (
             ? "does not bind the resident content-addressed directory"
             : phase === "late-tree"
               ? "does not bind the resident content-addressed directory"
-              : "changed physical identity",
+              : phase === "late-byte"
+                ? "task law or brief changed"
+                : phase === "record"
+                  ? "changed physical identity"
+                  : phase === "record-bytes"
+                    ? "does not bind the resident content-addressed directory"
+                    : "is not a physical file",
         ),
+    );
+    fs.rmSync(campaignPath, { recursive: true, force: true });
+  }
+};
+
+const exerciseArchiveShapeLinks = async (
+  base: Omit<Parameters<typeof runAutoMovieBenchmark>[0], "campaign">,
+): Promise<void> => {
+  for (const phase of ["stable", "replaced"] as const) {
+    const campaign = `publication-shape-link-${phase}`;
+    const campaignPath = path.join(
+      path.resolve(base.runRoot),
+      ".benchmarks",
+      campaign,
+    );
+    const nativeReadDirectory = fs.readdirSync;
+    const nativeReadLink = fs.readlinkSync;
+    let installed = false;
+    let swapped = false;
+    let linkPath: string | undefined;
+    fs.readdirSync = ((directory: fs.PathLike, ...args: unknown[]): unknown => {
+      const resolved = path.resolve(directory.toString());
+      if (
+        installed === false &&
+        path.basename(resolved).startsWith(".publishing-")
+      ) {
+        linkPath = path.join(resolved, "archive-shape-link");
+        fs.symlinkSync(
+          path.join(resolved, "project"),
+          linkPath,
+          process.platform === "win32" ? "junction" : "dir",
+        );
+        installed = true;
+      }
+      return Reflect.apply(nativeReadDirectory, fs, [directory, ...args]);
+    }) as typeof fs.readdirSync;
+    if (phase === "replaced")
+      fs.readlinkSync = ((file: fs.PathLike, ...args: unknown[]): unknown => {
+        const target = Reflect.apply(nativeReadLink, fs, [file, ...args]);
+        if (
+          swapped === false &&
+          linkPath !== undefined &&
+          path.resolve(file.toString()) === linkPath
+        ) {
+          const parked = `${linkPath}.parked`;
+          fs.renameSync(linkPath, parked);
+          fs.symlinkSync(
+            path.join(path.dirname(linkPath), "transcript"),
+            linkPath,
+            process.platform === "win32" ? "junction" : "dir",
+          );
+          swapped = true;
+        }
+        return target;
+      }) as typeof fs.readlinkSync;
+    let message = "";
+    try {
+      if (phase === "stable")
+        await runAutoMovieBenchmark({ ...base, campaign });
+      else
+        message = await rejected(() =>
+          runAutoMovieBenchmark({ ...base, campaign }),
+        );
+    } finally {
+      fs.readdirSync = nativeReadDirectory;
+      fs.readlinkSync = nativeReadLink;
+    }
+    TestValidator.predicate(
+      `archive shape ${phase === "stable" ? "records" : "rejects"} a physical link identity`,
+      installed &&
+        (phase === "stable" ||
+          (swapped && message.includes("changed physical identity"))),
     );
     fs.rmSync(campaignPath, { recursive: true, force: true });
   }
