@@ -1154,6 +1154,7 @@ export const test_mcp_production_project = (): void => {
       "read-junction",
     );
     fs.writeFileSync(path.join(outsideRenderRead, "escape.bin"), "escape");
+    fs.writeFileSync(path.join(outsideRenderRead, "frame.bin"), "outside");
     fs.symlinkSync(outsideRenderRead, renderReadJunction, "junction");
     TestValidator.predicate(
       "render reads reject nested junction escapes",
