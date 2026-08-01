@@ -89,6 +89,17 @@ export const test_mcp_production_project = (): void => {
         project.renderRoot() ===
           path.join(fixture.root, "renders", "fixture-film"),
     );
+    const caseAliasedRoot =
+      fixture.root === fixture.root.toUpperCase()
+        ? fixture.root.toLowerCase()
+        : fixture.root.toUpperCase();
+    TestValidator.predicate(
+      "registered production discovery accepts Windows path case aliases",
+      process.platform !== "win32" ||
+        AutoMovieProductionProject.registeredProductionIds(
+          caseAliasedRoot,
+        ).includes(project.productionId),
+    );
     const beforeReadOnly = snapshotTree(fixture.root);
     const readOnly = AutoMovieProductionProject.openReadOnly(
       fixture.root,

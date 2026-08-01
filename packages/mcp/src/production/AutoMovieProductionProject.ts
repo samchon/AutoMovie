@@ -723,7 +723,7 @@ export class AutoMovieProductionProject {
   public static registeredProductionIds(rootDirectory: string): string[] {
     const root = path.resolve(rootDirectory);
     const rootReal = fs.realpathSync(root);
-    const registryPath = path.join(root, ".automovie", "productions.json");
+    const registryPath = path.join(rootReal, ".automovie", "productions.json");
     return validateProductionRegistry(
       readOwnedJson(rootReal, registryPath),
       registryPath,
