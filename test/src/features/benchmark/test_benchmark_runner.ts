@@ -3,6 +3,7 @@ import {
   IAutoMovieBenchmarkMcpSession,
   austerlitzSignalDraft,
   austerlitzTeaserDraft,
+  digestAutoMovieBenchmarkBytes,
   getAutoMovieBenchmarkScenario,
   replayAutoMovieBenchmarkTrace,
 } from "@automovie/benchmark";
@@ -1106,7 +1107,8 @@ const exerciseSnapshotLink = (root: string): void => {
   const project = path.join(root, "snapshot-project");
   const target = path.join(project, "linked-target");
   fs.mkdirSync(target, { recursive: true });
-  fs.writeFileSync(path.join(target, "evidence.txt"), "evidence");
+  const evidence = path.join(target, "evidence.txt");
+  fs.writeFileSync(evidence, "evidence");
   const linked = path.join(project, "linked-view");
   fs.symlinkSync(
     target,
@@ -1114,11 +1116,56 @@ const exerciseSnapshotLink = (root: string): void => {
     process.platform === "win32" ? "junction" : "dir",
   );
   try {
+    const resident = fs.readFileSync(evidence);
+    const parked = `${evidence}.parked`;
+    const nativeRead = fs.readFileSync;
+    let pathnameRead = false;
+    fs.readFileSync = ((
+      file: fs.PathOrFileDescriptor,
+      ...args: unknown[]
+    ): unknown => {
+      if (
+        typeof file !== "number" &&
+        path.resolve(file.toString()) === path.resolve(evidence)
+      ) {
+        pathnameRead = true;
+        fs.renameSync(evidence, parked);
+        fs.writeFileSync(evidence, "transient benchmark evidence");
+        try {
+          return Reflect.apply(nativeRead, fs, [file, ...args]);
+        } finally {
+          fs.rmSync(evidence);
+          fs.renameSync(parked, evidence);
+        }
+      }
+      return Reflect.apply(nativeRead, fs, [file, ...args]);
+    }) as typeof fs.readFileSync;
+    const snapshot = (() => {
+      try {
+        return snapshotAutoMovieBenchmarkProject(project);
+      } finally {
+        fs.readFileSync = nativeRead;
+        if (fs.existsSync(parked)) {
+          fs.rmSync(evidence, { force: true });
+          fs.renameSync(parked, evidence);
+        }
+      }
+    })();
+    const evidenceEntry = snapshot.entries.find(
+      (entry) => entry.path === "linked-target/evidence.txt",
+    );
     TestValidator.predicate(
       "project snapshots record links without following them",
-      snapshotAutoMovieBenchmarkProject(project).entries.some(
+      snapshot.entries.some(
         (entry) => entry.kind === "link" && entry.path === "linked-view",
       ),
+    );
+    TestValidator.predicate(
+      "project snapshots bind regular bytes to the verified descriptor",
+      pathnameRead === false &&
+        evidenceEntry?.kind === "file" &&
+        evidenceEntry.bytes === resident.length &&
+        evidenceEntry.digest === digestAutoMovieBenchmarkBytes(resident),
     );
   } finally {
     fs.unlinkSync(linked);

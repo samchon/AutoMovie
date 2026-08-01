@@ -33,6 +33,7 @@ import type { IAutoMovieRepaintRuntimeIdentity } from "@automovie/interface";
 import {
   canonicalAutoMovieRepaintRuntimeIdentity,
   probeProductionMedia,
+  readAutoMovieProductionOwnedFile,
 } from "@automovie/mcp";
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
@@ -386,7 +387,11 @@ export const snapshotAutoMovieBenchmarkProject = (
             `Benchmark project entry "${relative}" is not a regular file, directory, or unfollowed link.`,
           );
         /* c8 ignore stop */
-        const bytes = fs.readFileSync(absolute);
+        const bytes = readAutoMovieProductionOwnedFile({
+          root,
+          directory: path.dirname(absolute),
+          relative: path.basename(absolute),
+        });
         entries.push({
           kind: "file",
           path: relative,
@@ -1001,11 +1006,13 @@ const readResidentFile = (root: string, relative: string): Buffer => {
     throw new Error(
       `Benchmark evidence path "${relative}" is not project-relative.`,
     );
-  const absolute = path.resolve(root, relative);
-  if (inside(root, absolute) === false)
+  const rootIdentity = directoryIdentity(root, "benchmark evidence project");
+  const physicalRoot = rootIdentity.real;
+  const absolute = path.resolve(physicalRoot, relative);
+  if (inside(physicalRoot, absolute) === false)
     throw new Error(`Benchmark evidence path "${relative}" escapes project.`);
-  let cursor = root;
-  for (const segment of path.relative(root, absolute).split(path.sep)) {
+  let cursor = physicalRoot;
+  for (const segment of path.relative(physicalRoot, absolute).split(path.sep)) {
     cursor = path.join(cursor, segment);
     if (fs.lstatSync(cursor).isSymbolicLink())
       throw new Error(
@@ -1014,7 +1021,13 @@ const readResidentFile = (root: string, relative: string): Buffer => {
   }
   if (fs.statSync(absolute).isFile() === false)
     throw new Error(`Benchmark evidence path "${relative}" is not a file.`);
-  return fs.readFileSync(absolute);
+  const bytes = readAutoMovieProductionOwnedFile({
+    root: physicalRoot,
+    directory: path.dirname(absolute),
+    relative: path.basename(absolute),
+  });
+  assertDirectoryIdentity(rootIdentity, "benchmark evidence project");
+  return Buffer.from(bytes);
 };
 
 const diffProjectTrees = (
