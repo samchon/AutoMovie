@@ -159,7 +159,7 @@ export class AutoMovieProject {
     })();
     try {
       const project = new AutoMovieProject(
-        root,
+        lease.root,
         lease.device,
         lease.inode,
         () => assertProductionRootNamespaceLease(lease),

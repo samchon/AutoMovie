@@ -199,6 +199,181 @@ export const test_mcp_project_transactions = (): void => {
     );
     a.writableSlate();
 
+    const nativeCleanupWrite = fs.writeFileSync;
+    let failedTemp: string | undefined;
+    fs.writeFileSync = ((
+      file: fs.PathOrFileDescriptor,
+      ...args: unknown[]
+    ): unknown => {
+      if (
+        typeof file !== "number" &&
+        path.basename(file.toString()).startsWith("cleanupFailure.json.tmp.")
+      ) {
+        failedTemp = path.resolve(file.toString());
+        throw Object.assign(new Error("actor temporary write failed"), {
+          code: "EIO",
+        });
+      }
+      return Reflect.apply(nativeCleanupWrite, fs, [file, ...args]);
+    }) as typeof fs.writeFileSync;
+    let cleanupRejected = false;
+    try {
+      cleanupRejected = throwsError(
+        () => a.saveActors([actorSpec("cleanupFailure")]),
+        ["actor temporary write failed"],
+      );
+    } finally {
+      fs.writeFileSync = nativeCleanupWrite;
+    }
+    TestValidator.predicate(
+      "an ordinary atomic-write failure cleans its current-namespace temporary",
+      cleanupRejected &&
+        failedTemp !== undefined &&
+        fs.existsSync(failedTemp) === false &&
+        fs.existsSync(path.join(root, "actors", "cleanupFailure.json")) ===
+          false,
+    );
+
+    const nativeRename = fs.renameSync;
+    fs.renameSync = ((oldPath, newPath) => {
+      if (
+        path.resolve(oldPath.toString()) ===
+        path.join(root, "actors", "knightA.json")
+      )
+        throw Object.assign(new Error("actor rename denied"), {
+          code: "EACCES",
+        });
+      nativeRename(oldPath, newPath);
+    }) as typeof fs.renameSync;
+    let deniedRemoval = false;
+    try {
+      deniedRemoval = throwsError(
+        () => a.removeActor("knightA"),
+        ["actor rename denied"],
+      );
+    } finally {
+      fs.renameSync = nativeRename;
+    }
+    TestValidator.predicate(
+      "a non-ENOENT actor quarantine failure preserves the resident slice",
+      deniedRemoval && fs.existsSync(path.join(root, "actors", "knightA.json")),
+    );
+
+    const nativeRemove = fs.rmSync;
+    let quarantineRemoveFailed = false;
+    fs.rmSync = ((file, ...args: unknown[]): void => {
+      if (
+        quarantineRemoveFailed === false &&
+        path.basename(file.toString()).startsWith("knightA.json.delete.")
+      ) {
+        quarantineRemoveFailed = true;
+        throw Object.assign(new Error("actor quarantine busy"), {
+          code: "EBUSY",
+        });
+      }
+      Reflect.apply(nativeRemove, fs, [file, ...args]);
+    }) as typeof fs.rmSync;
+    let restoredRemoval = false;
+    try {
+      restoredRemoval = throwsError(
+        () => a.removeActor("knightA"),
+        ["actor quarantine busy"],
+      );
+    } finally {
+      fs.rmSync = nativeRemove;
+    }
+    TestValidator.predicate(
+      "a failed quarantine delete restores the actor slice",
+      quarantineRemoveFailed &&
+        restoredRemoval &&
+        fs.existsSync(path.join(root, "actors", "knightA.json")) &&
+        fs
+          .readdirSync(path.join(root, "actors"))
+          .every((file) => file.startsWith("knightA.json.delete.") === false),
+    );
+
+    let externallyRestored = false;
+    fs.rmSync = ((file, ...args: unknown[]): void => {
+      if (
+        externallyRestored === false &&
+        path.basename(file.toString()).startsWith("knightA.json.delete.")
+      ) {
+        fs.renameSync(
+          file.toString(),
+          path.join(root, "actors", "knightA.json"),
+        );
+        externallyRestored = true;
+        throw Object.assign(new Error("actor delete reported late failure"), {
+          code: "EIO",
+        });
+      }
+      Reflect.apply(nativeRemove, fs, [file, ...args]);
+    }) as typeof fs.rmSync;
+    let lateDeleteRejected = false;
+    try {
+      lateDeleteRejected = throwsError(
+        () => a.removeActor("knightA"),
+        ["actor delete reported late failure"],
+      );
+    } finally {
+      fs.rmSync = nativeRemove;
+    }
+    TestValidator.predicate(
+      "an already-restored quarantine failure never clobbers the resident actor",
+      externallyRestored &&
+        lateDeleteRejected &&
+        fs.existsSync(path.join(root, "actors", "knightA.json")),
+    );
+
+    const removalParkedRoot = `${root}.removal-parked`;
+    let removalSwapped = false;
+    fs.renameSync = ((oldPath, newPath) => {
+      nativeRename(oldPath, newPath);
+      if (
+        removalSwapped === false &&
+        path.resolve(oldPath.toString()) ===
+          path.join(root, "actors", "knightA.json") &&
+        path.basename(newPath.toString()).startsWith("knightA.json.delete.")
+      ) {
+        nativeRename(root, removalParkedRoot);
+        fs.mkdirSync(root);
+        removalSwapped = true;
+      }
+    }) as typeof fs.renameSync;
+    let removalSwapMessage = "";
+    try {
+      try {
+        a.removeActor("knightA");
+      } catch (error) {
+        removalSwapMessage = (error as Error).message;
+      }
+    } finally {
+      fs.renameSync = nativeRename;
+    }
+    const removalReplacementEmpty = fs.readdirSync(root).length === 0;
+    const quarantinedActor = fs
+      .readdirSync(path.join(removalParkedRoot, "actors"))
+      .find((file) => file.startsWith("knightA.json.delete."));
+    fs.rmSync(root, { recursive: true, force: true });
+    fs.renameSync(removalParkedRoot, root);
+    fs.rmSync(path.join(root, "revision.lock"), { force: true });
+    if (quarantinedActor !== undefined)
+      fs.renameSync(
+        path.join(root, "actors", quarantinedActor),
+        path.join(root, "actors", "knightA.json"),
+      );
+    TestValidator.predicate(
+      "a removal-time root swap preserves the quarantined original and replacement",
+      removalSwapped &&
+        removalSwapMessage.includes(
+          "root identity or namespace fence changed",
+        ) &&
+        removalReplacementEmpty &&
+        quarantinedActor !== undefined &&
+        fs.existsSync(path.join(root, "actors", "knightA.json")),
+    );
+    a.writableSlate();
+
     const nativeWrite = fs.writeFileSync;
     const lockParkedRoot = `${root}.lock-parked`;
     let lockSwapped = false;
@@ -332,5 +507,61 @@ export const test_mcp_project_transactions = (): void => {
     );
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
+  }
+
+  const aliasSandbox = fs.mkdtempSync(
+    path.join(os.tmpdir(), "automovie-txn-alias-"),
+  );
+  try {
+    const physicalA = path.join(aliasSandbox, "physical-a");
+    const physicalB = path.join(aliasSandbox, "physical-b");
+    const alias = path.join(aliasSandbox, "project-parent");
+    fs.mkdirSync(physicalA);
+    fs.mkdirSync(path.join(physicalB, "project"), { recursive: true });
+    fs.symlinkSync(
+      physicalA,
+      alias,
+      process.platform === "win32" ? "junction" : "dir",
+    );
+    const project = AutoMovieProject.open(path.join(alias, "project"));
+    const canonicalRoot = path.join(physicalA, "project");
+    const nativeWrite = fs.writeFileSync;
+    let aliasRetargeted = false;
+    fs.writeFileSync = ((
+      file: fs.PathOrFileDescriptor,
+      ...args: unknown[]
+    ): unknown => {
+      const output = Reflect.apply(nativeWrite, fs, [file, ...args]);
+      if (
+        aliasRetargeted === false &&
+        typeof file !== "number" &&
+        path.dirname(path.resolve(file.toString())) === canonicalRoot &&
+        path.basename(file.toString()).startsWith("script.json.tmp.")
+      ) {
+        fs.unlinkSync(alias);
+        fs.symlinkSync(
+          physicalB,
+          alias,
+          process.platform === "win32" ? "junction" : "dir",
+        );
+        aliasRetargeted = true;
+      }
+      return output;
+    }) as typeof fs.writeFileSync;
+    try {
+      project.saveSlate(slateOf("canonical physical root"));
+    } finally {
+      fs.writeFileSync = nativeWrite;
+    }
+    TestValidator.predicate(
+      "an operation-time ancestor alias retarget cannot redirect a live handle",
+      aliasRetargeted &&
+        fs
+          .readFileSync(path.join(canonicalRoot, "script.json"), "utf8")
+          .includes("canonical physical root") &&
+        fs.readdirSync(path.join(physicalB, "project")).length === 0,
+    );
+  } finally {
+    fs.rmSync(aliasSandbox, { recursive: true, force: true });
   }
 };
