@@ -902,6 +902,18 @@ try {
     starterProductionPath,
     `${JSON.stringify(starterProduction, null, 2)}\n`,
   );
+  const starterConfigPath = join(starterDir, "automovie.config.ts");
+  const starterConfig = readFileSync(starterConfigPath, "utf8");
+  const defaultProxyFrameStep = "      frameStep: 2,";
+  const e2eProxyFrameStep = "      frameStep: 1,";
+  if (starterConfig.split(defaultProxyFrameStep).length !== 2)
+    fail(
+      "packaged starter proxy frameStep fixture no longer has exactly one default",
+    );
+  writeFileSync(
+    starterConfigPath,
+    starterConfig.replace(defaultProxyFrameStep, e2eProxyFrameStep),
+  );
   // Pin every published AutoMovie package to its sibling tarball. Direct
   // entries make npm satisfy the packed packages' transitive semver ranges
   // without reaching for unpublished workspace versions in the registry.
