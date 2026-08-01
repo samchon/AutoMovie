@@ -1,7 +1,10 @@
 import type { AutoMovieContentDigest } from "@automovie/interface";
 import {
+  type IAutoMovieProductionRenderChunk,
   type IAutoMovieProductionRenderChunkReceipt,
   digestAutoMovieBytes,
+  probeProductionMedia,
+  probeProductionVideoMp4,
 } from "@automovie/mcp";
 import { randomUUID } from "node:crypto";
 import fs from "node:fs";
@@ -47,6 +50,11 @@ export interface ILoadedRenderChunkPublication {
   }>;
   publication: IRenderChunkPublicationSnapshot;
   receipt: RenderChunkPublicationReceipt;
+}
+
+export interface ICurrentRenderChunkPublication {
+  frames: ILoadedRenderChunkPublication["frames"];
+  receipt: IAutoMovieProductionRenderChunkReceipt;
 }
 
 /** Fingerprint physical-tree content without binding it to inode identities. */
@@ -155,7 +163,7 @@ export const publishRenderChunkSnapshot = (props: {
     assertCapturedRenderTarget(tree);
     return { publication, reused: false };
   } catch (error) {
-    removeExactRenderChunkPointer(pointer);
+    removeCapturedRenderChunkPointer(pointer);
     throw error;
   }
 };
@@ -164,11 +172,18 @@ export const publishRenderChunkSnapshot = (props: {
 export const captureRenderChunkPublication = (
   root: string,
   pointerPath: string,
+): IRenderChunkPublicationSnapshot =>
+  captureRenderChunkPublicationFromPointer(
+    captureRenderGcTarget(root, pointerPath),
+  );
+
+/** Resolve one publication only from the exact pointer snapshot already judged. */
+export const captureRenderChunkPublicationFromPointer = (
+  pointer: IRenderGcTargetSnapshot,
 ): IRenderChunkPublicationSnapshot => {
-  const pointer = captureRenderGcTarget(root, pointerPath);
   if (pointer.kind !== "file")
     throw new Error(
-      `Render chunk pointer "${pointerPath}" is not a regular file.`,
+      `Render chunk pointer "${pointer.target}" is not a regular file.`,
     );
   const receipt = parsePublicationReceipt(
     readCapturedRenderGcFile(pointer, pointer.bytes),
@@ -181,7 +196,7 @@ export const captureRenderChunkPublication = (
   });
   if (pointer.target !== expectedPointer)
     throw new Error(
-      `Render chunk pointer "${pointerPath}" has a mismatched identity.`,
+      `Render chunk pointer "${pointer.target}" has a mismatched identity.`,
     );
   const tree = captureRenderGcTarget(
     pointer.base.path,
@@ -194,7 +209,7 @@ export const captureRenderChunkPublication = (
       receipt.publication.contentFingerprint
   )
     throw new Error(
-      `Render chunk pointer "${pointerPath}" does not authenticate its tree.`,
+      `Render chunk pointer "${pointer.target}" does not authenticate its tree.`,
     );
   assertReceiptInventory(tree, receipt);
   assertCapturedRenderTarget(pointer);
@@ -206,8 +221,14 @@ export const captureRenderChunkPublication = (
 export const loadRenderChunkPublication = (
   root: string,
   pointerPath: string,
+): ILoadedRenderChunkPublication =>
+  loadCapturedRenderChunkPublication(captureRenderGcTarget(root, pointerPath));
+
+/** Load receipt-declared bytes from the exact pointer snapshot already judged. */
+export const loadCapturedRenderChunkPublication = (
+  pointer: IRenderGcTargetSnapshot,
 ): ILoadedRenderChunkPublication => {
-  const publication = captureRenderChunkPublication(root, pointerPath);
+  const publication = captureRenderChunkPublicationFromPointer(pointer);
   const frames = publication.receipt.frames.map((receipt) => {
     const bytes = readRenderChunkPublicationFile(publication, receipt.path);
     if (
@@ -235,6 +256,60 @@ export const loadRenderChunkPublication = (
     publication,
     receipt: publication.receipt,
   };
+};
+
+/** Apply the real resume/finalize media gate to one exact captured pointer. */
+export const loadCurrentRenderChunkPublication = (props: {
+  assertReceipt: (receipt: IAutoMovieProductionRenderChunkReceipt) => void;
+  chunk: Pick<IAutoMovieProductionRenderChunk, "frames">;
+  frameFormat: { fps: number; height: number; width: number };
+  pointer: IRenderGcTargetSnapshot;
+}): ICurrentRenderChunkPublication | null => {
+  const loaded = loadCapturedRenderChunkPublication(props.pointer);
+  props.assertReceipt(loaded.receipt);
+  for (const frame of loaded.frames) {
+    const probe = probeProductionMedia({
+      kind: "preview",
+      mediaType: "image/png",
+      bytes: frame.bytes,
+    });
+    if (
+      probe.kind !== "png" ||
+      probe.width !== frame.receipt.width ||
+      probe.height !== frame.receipt.height
+    )
+      return null;
+  }
+  const video = probeProductionVideoMp4(loaded.encoded);
+  if (
+    video.kind !== "video" ||
+    video.width !== props.frameFormat.width ||
+    video.height !== props.frameFormat.height ||
+    video.frameCount !== props.chunk.frames.length ||
+    Math.abs(video.fps - props.frameFormat.fps) > 1e-9
+  )
+    return null;
+  return { frames: loaded.frames, receipt: loaded.receipt };
+};
+
+/** Feed guide publication and final encode from the same verified frame bytes. */
+export const consumeCurrentRenderChunkFrames = (
+  current: ICurrentRenderChunkPublication,
+  consume: (frame: ICurrentRenderChunkPublication["frames"][number]) => void,
+): void => {
+  for (const frame of current.frames) consume(frame);
+};
+
+/** Decide protection from one current pointer and one exact dead-tree candidate. */
+export const renderChunkPublicationProtectsTree = (
+  pointer: IRenderGcTargetSnapshot,
+  candidate: IRenderGcTargetSnapshot,
+): boolean => {
+  const publication = captureRenderChunkPublicationFromPointer(pointer);
+  return (
+    publication.tree.target === candidate.target &&
+    publication.tree.targetIdentity === candidate.targetIdentity
+  );
 };
 
 /** Read one exact file that belongs to a previously captured chunk tree. */
@@ -281,8 +356,27 @@ export const removeRenderChunkPublication = (
     if ((error as NodeJS.ErrnoException).code === "ENOENT") return false;
     throw error;
   }
-  removeExactRenderChunkPointer(pointer);
+  removeCapturedRenderChunkPointer(pointer);
   return true;
+};
+
+/** Remove only the exact captured pointer, preserving any pathname successor. */
+export const removeCapturedRenderChunkPointer = (
+  pointer: IRenderGcTargetSnapshot,
+): void => {
+  const quarantine = ensureRenderPhysicalDirectory(
+    pointer.base.path,
+    `.gc-preserved-chunk-pointer-${randomUUID()}`,
+  );
+  try {
+    removeCapturedRenderGcTarget({
+      isolated: path.join(quarantine, randomUUID()),
+      quarantine,
+      snapshot: pointer,
+    });
+  } finally {
+    if (fs.readdirSync(quarantine).length === 0) fs.rmdirSync(quarantine);
+  }
 };
 
 const parsePublicationReceipt = (
@@ -356,12 +450,13 @@ const assertReceiptInventory = (
   tree: IRenderGcTargetSnapshot,
   receipt: RenderChunkPublicationReceipt,
 ): void => {
-  const files = new Set([
-    receipt.encoded.path,
-    ...receipt.frames.map((frame) => frame.path),
-  ]);
+  const files = new Map<
+    string,
+    { bytes: number; digest: AutoMovieContentDigest }
+  >([[receipt.encoded.path, receipt.encoded]]);
+  for (const frame of receipt.frames) files.set(frame.path, frame);
   const directories = new Set([""]);
-  for (const relative of files) {
+  for (const relative of files.keys()) {
     const segments = relative.split("/");
     for (let length = 1; length < segments.length; ++length)
       directories.add(segments.slice(0, length).join("/"));
@@ -370,29 +465,13 @@ const assertReceiptInventory = (
     tree.entries.length !== files.size + directories.size ||
     tree.entries.some((entry) =>
       entry.kind === "file"
-        ? files.has(entry.path) === false
+        ? files.has(entry.path) === false ||
+          entry.bytes !== files.get(entry.path)!.bytes ||
+          entry.digest !== files.get(entry.path)!.digest
         : directories.has(entry.path) === false,
     )
   )
     throw new Error("Render chunk tree differs from its receipt inventory.");
-};
-
-const removeExactRenderChunkPointer = (
-  pointer: IRenderGcTargetSnapshot,
-): void => {
-  const quarantine = ensureRenderPhysicalDirectory(
-    pointer.base.path,
-    `.gc-preserved-chunk-pointer-${randomUUID()}`,
-  );
-  try {
-    removeCapturedRenderGcTarget({
-      isolated: path.join(quarantine, randomUUID()),
-      quarantine,
-      snapshot: pointer,
-    });
-  } finally {
-    if (fs.readdirSync(quarantine).length === 0) fs.rmdirSync(quarantine);
-  }
 };
 
 const assertPublicationIdentity = (props: {

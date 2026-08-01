@@ -12,6 +12,11 @@ import { createRequire } from "node:module";
 import * as os from "node:os";
 import * as path from "node:path";
 
+import {
+  productionH264Mp4,
+  productionPng,
+} from "../mcp/productionMediaFixtures";
+
 /** True when `fn` throws. */
 const throws = (fn: () => unknown): boolean => {
   try {
@@ -499,8 +504,17 @@ export const test_cli_scaffold = async (): Promise<void> => {
       files[".gitignore"]!.includes(".automovie-liveness-*") &&
       files["scripts/render.ts"]!.includes("publishRenderChunkSnapshot") &&
       files["scripts/render.ts"]!.includes("captureRenderChunkPublication") &&
-      files["scripts/render.ts"]!.includes("loadRenderChunkPublication") &&
       files["scripts/render.ts"]!.includes("renderChunkPublicationPath") &&
+      files["scripts/render.ts"]!.includes(
+        "loadCurrentRenderChunkPublication",
+      ) &&
+      files["scripts/render.ts"]!.includes("consumeCurrentRenderChunkFrames") &&
+      files["scripts/render.ts"]!.includes(
+        "removeCapturedRenderChunkPointer(pointerSnapshot)",
+      ) &&
+      files["scripts/render.ts"]!.includes(
+        "if (currentPublicationProtectsTree(chunks, snapshot)) continue",
+      ) &&
       files[".gitignore"]!.includes(".automovie-chunk-*") &&
       files["scripts/render.ts"]!.includes(
         "fs.renameSync(temporary, destination)",
@@ -2612,6 +2626,30 @@ export const test_cli_scaffold = async (): Promise<void> => {
         root: string,
         pointer: string,
       ) => { pointer: unknown; receipt: unknown; tree: { target: string } };
+      consumeCurrentRenderChunkFrames: (
+        current: {
+          frames: Array<{
+            bytes: Uint8Array;
+            receipt: { globalFrame: number };
+          }>;
+        },
+        consume: (frame: {
+          bytes: Uint8Array;
+          receipt: { globalFrame: number };
+        }) => void,
+      ) => void;
+      loadCurrentRenderChunkPublication: (props: {
+        assertReceipt: (receipt: { chunk: string }) => void;
+        chunk: { frames: unknown[] };
+        frameFormat: { fps: number; height: number; width: number };
+        pointer: unknown;
+      }) => {
+        frames: Array<{
+          bytes: Uint8Array;
+          receipt: { globalFrame: number };
+        }>;
+        receipt: { chunk: string };
+      } | null;
       loadRenderChunkPublication: (
         root: string,
         pointer: string,
@@ -2628,12 +2666,20 @@ export const test_cli_scaffold = async (): Promise<void> => {
         scope: string;
         tier: "final" | "proxy";
         tree: string;
-      }) => { publication: { receipt: unknown }; reused: boolean };
+      }) => {
+        publication: { pointer: unknown; receipt: unknown };
+        reused: boolean;
+      };
       readRenderChunkPublicationFile: (
         publication: unknown,
         relative: string,
       ) => Uint8Array;
       removeRenderChunkPublication: (root: string, pointer: string) => boolean;
+      removeCapturedRenderChunkPointer: (pointer: unknown) => void;
+      renderChunkPublicationProtectsTree: (
+        pointer: unknown,
+        candidate: unknown,
+      ) => boolean;
       renderChunkContentFingerprint: (snapshot: unknown) => string;
       renderChunkPublicationPath: (props: {
         chunk: string;
@@ -2647,8 +2693,15 @@ export const test_cli_scaffold = async (): Promise<void> => {
     const chunkPublicationId = fixtureDigest(
       Buffer.from("published chunk identity"),
     );
-    const chunkFrameBytes = Buffer.from("exact frame bytes");
-    const chunkVideoBytes = Buffer.from("exact encoded bytes");
+    const chunkFrameBytes = Buffer.from(productionPng(16, 16));
+    const chunkVideoBytes = Buffer.from(
+      await productionH264Mp4({
+        width: 16,
+        height: 16,
+        fps: 24,
+        frameCount: 1,
+      }),
+    );
     const populateChunkSource = (
       directory: string,
       chunk: string,
@@ -2682,8 +2735,8 @@ export const test_cli_scaffold = async (): Promise<void> => {
             path: "frames/frame_00000000.png",
             digest: fixtureDigest(chunkFrameBytes),
             bytes: chunkFrameBytes.length,
-            width: 1,
-            height: 1,
+            width: 16,
+            height: 16,
           },
         ],
         encoded: {
@@ -2749,20 +2802,36 @@ export const test_cli_scaffold = async (): Promise<void> => {
         chunkPublicationRoot,
         normalChunkPointer,
       );
+    const normalCurrentChunk =
+      renderChunkSnapshotModule.loadCurrentRenderChunkPublication({
+        assertReceipt: (receipt) => {
+          if (receipt.chunk !== chunkPublicationId)
+            throw new Error("current chunk receipt changed identity");
+        },
+        chunk: { frames: [{}] },
+        frameFormat: { fps: 24, height: 16, width: 16 },
+        pointer: normalChunkPublication.pointer,
+      });
     renderChunkSnapshotModule.assertRenderChunkPublication(
       normalChunkPublication,
     );
-    const guideFrames = new Map(
-      normalLoadedChunk.frames.map((frame) => [
-        frame.receipt.globalFrame,
-        frame.bytes,
-      ]),
-    );
-    const encodedFrames = normalLoadedChunk.frames.map((frame) => frame.bytes);
+    const guideFrames = new Map<number, Uint8Array>();
+    const encodedFrames: Uint8Array[] = [];
+    if (normalCurrentChunk !== null) {
+      renderChunkSnapshotModule.consumeCurrentRenderChunkFrames(
+        normalCurrentChunk,
+        (frame) => guideFrames.set(frame.receipt.globalFrame, frame.bytes),
+      );
+      renderChunkSnapshotModule.consumeCurrentRenderChunkFrames(
+        normalCurrentChunk,
+        (frame) => encodedFrames.push(frame.bytes),
+      );
+    }
     TestValidator.predicate(
       "render chunk pointer loads complete resume and finalize bytes from one tree",
       normalChunkPublished.reused === false &&
         receiptPublishedLast &&
+        normalCurrentChunk !== null &&
         Buffer.from(normalLoadedChunk.encoded).equals(chunkVideoBytes) &&
         Buffer.from(guideFrames.get(0)!).equals(chunkFrameBytes) &&
         encodedFrames.length === 1 &&
@@ -2849,6 +2918,67 @@ export const test_cli_scaffold = async (): Promise<void> => {
           .equals(chunkVideoBytes),
     );
 
+    const byteMismatchId = fixtureDigest(Buffer.from("byte mismatch chunk"));
+    const byteMismatchSource = path.join(
+      chunkPublicationRoot,
+      "byte-mismatch-source",
+    );
+    const byteMismatchReceipt = populateChunkSource(
+      byteMismatchSource,
+      byteMismatchId,
+    );
+    const byteMismatchVideo = Buffer.from(chunkVideoBytes);
+    byteMismatchVideo[byteMismatchVideo.length - 1] ^= 1;
+    fs.writeFileSync(
+      path.join(byteMismatchSource, "chunk.mp4"),
+      byteMismatchVideo,
+    );
+    const byteMismatchPointer =
+      renderChunkSnapshotModule.renderChunkPublicationPath({
+        chunk: byteMismatchId,
+        root: chunkPublicationRoot,
+        scope: chunkPublicationScope,
+        tier: "final",
+      });
+    const byteMismatchRejected = throws(() =>
+      renderChunkSnapshotModule.publishRenderChunkSnapshot({
+        chunk: byteMismatchId,
+        receipt: byteMismatchReceipt,
+        root: chunkPublicationRoot,
+        scope: chunkPublicationScope,
+        tier: "final",
+        tree: byteMismatchSource,
+      }),
+    );
+    TestValidator.predicate(
+      "publication refuses receipt facts from a byte-different temp tree",
+      byteMismatchRejected && fs.existsSync(byteMismatchPointer) === false,
+    );
+
+    const recoveryId = fixtureDigest(Buffer.from("late recovery pointer"));
+    const recoverySource = path.join(chunkPublicationRoot, "recovery-source");
+    const recoveryReceipt = populateChunkSource(recoverySource, recoveryId);
+    const recoveryCandidate = renderGcModule.captureRenderGcTarget(
+      chunkPublicationRoot,
+      recoverySource,
+    );
+    const recoveryPublished =
+      renderChunkSnapshotModule.publishRenderChunkSnapshot({
+        chunk: recoveryId,
+        receipt: recoveryReceipt,
+        root: chunkPublicationRoot,
+        scope: chunkPublicationScope,
+        tier: "final",
+        tree: recoverySource,
+      });
+    TestValidator.predicate(
+      "a pointer published after recovery inventory protects the exact tree",
+      renderChunkSnapshotModule.renderChunkPublicationProtectsTree(
+        recoveryPublished.publication.pointer,
+        recoveryCandidate,
+      ),
+    );
+
     const pointerRaceId = fixtureDigest(Buffer.from("pointer successor chunk"));
     const pointerRaceSource = path.join(
       chunkPublicationRoot,
@@ -2865,21 +2995,24 @@ export const test_cli_scaffold = async (): Promise<void> => {
         scope: chunkPublicationScope,
         tier: "proxy",
       });
-    renderChunkSnapshotModule.publishRenderChunkSnapshot({
-      chunk: pointerRaceId,
-      receipt: pointerRaceReceipt,
-      root: chunkPublicationRoot,
-      scope: chunkPublicationScope,
-      tier: "proxy",
-      tree: pointerRaceSource,
-    });
+    const pointerRacePublished =
+      renderChunkSnapshotModule.publishRenderChunkSnapshot({
+        chunk: pointerRaceId,
+        receipt: pointerRaceReceipt,
+        root: chunkPublicationRoot,
+        scope: chunkPublicationScope,
+        tier: "proxy",
+        tree: pointerRaceSource,
+      });
     const pointerSuccessorBytes = fs.readFileSync(pointerRacePointer);
-    const oldPointerRemoved =
-      renderChunkSnapshotModule.removeRenderChunkPublication(
-        chunkPublicationRoot,
-        pointerRacePointer,
-      );
+    const parkedPointer = `${pointerRacePointer}.parked`;
+    fs.renameSync(pointerRacePointer, parkedPointer);
     fs.writeFileSync(pointerRacePointer, pointerSuccessorBytes);
+    const capturedPointerRemovalRejected = throws(() =>
+      renderChunkSnapshotModule.removeCapturedRenderChunkPointer(
+        pointerRacePublished.publication.pointer,
+      ),
+    );
     const pointerSuccessorRejected = throws(() =>
       renderChunkSnapshotModule.publishRenderChunkSnapshot({
         chunk: pointerRaceId,
@@ -2892,8 +3025,9 @@ export const test_cli_scaffold = async (): Promise<void> => {
     );
     TestValidator.predicate(
       "O_EXCL pointer publication preserves a reappearing successor",
-      oldPointerRemoved &&
+      capturedPointerRemovalRejected &&
         pointerSuccessorRejected &&
+        fs.existsSync(parkedPointer) &&
         fs.readFileSync(pointerRacePointer).equals(pointerSuccessorBytes),
     );
 

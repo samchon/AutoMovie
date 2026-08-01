@@ -79,11 +79,14 @@ import {
   productionFrameCaptureMetrics,
 } from "./capture";
 import {
-  captureRenderChunkPublication,
-  loadRenderChunkPublication,
+  type ICurrentRenderChunkPublication,
+  captureRenderChunkPublicationFromPointer,
+  consumeCurrentRenderChunkFrames,
+  loadCurrentRenderChunkPublication,
   publishRenderChunkSnapshot,
-  removeRenderChunkPublication,
+  removeCapturedRenderChunkPointer,
   renderChunkPublicationPath,
+  renderChunkPublicationProtectsTree,
 } from "./renderChunkSnapshot";
 import {
   type IRenderGcTargetSnapshot,
@@ -156,14 +159,6 @@ interface IRenderChunkLockOwner {
   pid: number;
   /** Absent only on an older lock written before owner-checked release. */
   token?: string;
-}
-
-interface ICurrentRenderChunk {
-  frames: Array<{
-    bytes: Uint8Array;
-    receipt: IAutoMovieProductionRenderChunkReceipt["frames"][number];
-  }>;
-  receipt: IAutoMovieProductionRenderChunkReceipt;
 }
 
 const main = async (): Promise<void> => {
@@ -622,40 +617,20 @@ const currentReceipt = async (
 
 const currentChunk = async (
   chunk: IAutoMovieProductionRenderChunk,
-): Promise<ICurrentRenderChunk | null> => {
-  const directory = chunkDirectory(chunk.id);
-  let plan: IAutoMovieProductionRenderJobPlan;
-  let receipt: IAutoMovieProductionRenderChunkReceipt;
-  let frames: ICurrentRenderChunk["frames"];
+  pointer?: IRenderGcTargetSnapshot | null,
+): Promise<ICurrentRenderChunkPublication | null> => {
   try {
-    plan = readPlan();
-    const loaded = loadRenderChunkPublication(root, directory);
-    receipt = loaded.receipt;
-    verifyProductionRenderChunkReceipt({ plan, chunk, receipt });
-    frames = loaded.frames;
-    for (const frame of frames) {
-      const probe = probeProductionMedia({
-        kind: "preview",
-        mediaType: "image/png",
-        bytes: frame.bytes,
-      });
-      if (
-        probe.kind !== "png" ||
-        probe.width !== frame.receipt.width ||
-        probe.height !== frame.receipt.height
-      )
-        return null;
-    }
-    const video = probeProductionVideoMp4(loaded.encoded);
-    if (
-      video.kind !== "video" ||
-      video.width !== plan.frameFormat.width ||
-      video.height !== plan.frameFormat.height ||
-      video.frameCount !== chunk.frames.length ||
-      Math.abs(video.fps - plan.frameFormat.fps) > 1e-9
-    )
-      return null;
-    return { frames, receipt };
+    const currentPointer =
+      pointer === undefined ? captureCurrentChunkPointer(chunk) : pointer;
+    if (currentPointer === null) return null;
+    const plan = readPlan();
+    return loadCurrentRenderChunkPublication({
+      assertReceipt: (receipt) =>
+        verifyProductionRenderChunkReceipt({ plan, chunk, receipt }),
+      chunk,
+      frameFormat: plan.frameFormat,
+      pointer: currentPointer,
+    });
   } catch {
     return null;
   }
@@ -740,9 +715,10 @@ const renderChunk = async (
   plan: IAutoMovieProductionRenderJobPlan,
   chunk: IAutoMovieProductionRenderChunk,
 ): Promise<IAutoMovieProductionRenderChunkReceipt> => {
-  const existing = await currentChunk(chunk);
+  const pointer = captureCurrentChunkPointer(chunk);
+  const existing = await currentChunk(chunk, pointer);
   if (existing !== null) return existing.receipt;
-  removeRenderChunkPublication(root, chunkDirectory(chunk.id));
+  if (pointer !== null) removeCapturedRenderChunkPointer(pointer);
   const temporaryRoot = ensureRenderPhysicalDirectory(stateRoot, "tmp");
   const temporary = path.join(
     temporaryRoot,
@@ -1120,13 +1096,14 @@ const finalize = async (plan: IAutoMovieProductionRenderJobPlan) => {
           throw new Error(
             `Guide-pass chunk "${chunk.slot}" changed before control-frame publication.`,
           );
-        for (const frame of current.frames)
+        consumeCurrentRenderChunkFrames(current, (frame) =>
           owned.set(
             `frames/${passes[0]}/frame_${String(
               frame.receipt.globalFrame,
             ).padStart(8, "0")}.png`,
             frame.bytes,
-          );
+          ),
+        );
       }
     } else if (deliverable.kind === "captions") {
       if (plan.tracks.captions.split("-->").length < 2) {
@@ -1428,10 +1405,10 @@ const encodeChunkFrames = async (
         throw new Error(
           `Chunk "${chunk.slot}" changed after final status verification. Reverify or rerender it before finalizing.`,
         );
-      for (const frame of current.frames) {
+      consumeCurrentRenderChunkFrames(current, (frame) => {
         consumeFrame(frame.bytes);
         frameCount += 1;
-      }
+      });
     }
     if (frameCount !== plan.totalFrames)
       throw new Error(
@@ -2588,16 +2565,6 @@ const normalizeSlash = (value: string): string => value.replaceAll("\\", "/");
 const recoverAbandonedTemporaryDirectories = (
   chunks: readonly IAutoMovieProductionRenderChunk[],
 ): void => {
-  const publishedTrees = new Set<string>();
-  for (const chunk of chunks)
-    try {
-      publishedTrees.add(
-        captureRenderChunkPublication(root, chunkDirectory(chunk.id)).tree
-          .target,
-      );
-    } catch {
-      // Only a complete exact pointer protects an otherwise abandoned tree.
-    }
   const locks = path.join(stateRoot, "locks");
   if (fs.existsSync(locks))
     for (const slot of fs
@@ -2623,10 +2590,10 @@ const recoverAbandonedTemporaryDirectories = (
     .readdirSync(directory, { withFileTypes: true })
     .sort((left, right) => compareCodeUnits(left.name, right.name))) {
     const target = path.join(directory, entry.name);
-    if (publishedTrees.has(path.resolve(target))) continue;
     const pid = Number(entry.name.split(".").at(-1));
     const snapshot = captureAbandonedRenderStateTarget(target, pid);
     if (snapshot === null) continue;
+    if (currentPublicationProtectsTree(chunks, snapshot)) continue;
     quarantine(target, "abandoned-partial", snapshot);
   }
 };
@@ -2650,9 +2617,17 @@ const quarantineStaleSlotOutputs = (
       pointerPrefix.length,
       -".publication.json".length,
     )}` as AutoMovieContentDigest;
+    let pointerSnapshot: IRenderGcTargetSnapshot;
+    try {
+      pointerSnapshot = captureRenderGcTarget(root, pointer);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") continue;
+      throw error;
+    }
     let current = false;
     try {
-      const publication = captureRenderChunkPublication(root, pointer);
+      const publication =
+        captureRenderChunkPublicationFromPointer(pointerSnapshot);
       current =
         currentIds.has(digest) &&
         publication.receipt.chunk === digest &&
@@ -2660,7 +2635,7 @@ const quarantineStaleSlotOutputs = (
     } catch {
       current = false;
     }
-    if (current === false) removeRenderChunkPublication(root, pointer);
+    if (current === false) removeCapturedRenderChunkPointer(pointerSnapshot);
   }
   const directory = path.join(stateRoot, "chunks");
   if (fs.existsSync(directory) === false) return;
@@ -2697,6 +2672,33 @@ const quarantineStaleSlotOutputs = (
       }
     }
   }
+};
+
+const captureCurrentChunkPointer = (
+  chunk: IAutoMovieProductionRenderChunk,
+): IRenderGcTargetSnapshot | null => {
+  try {
+    return captureRenderGcTarget(root, chunkDirectory(chunk.id));
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
+    throw error;
+  }
+};
+
+const currentPublicationProtectsTree = (
+  chunks: readonly IAutoMovieProductionRenderChunk[],
+  candidate: IRenderGcTargetSnapshot,
+): boolean => {
+  for (const chunk of chunks) {
+    const pointer = captureCurrentChunkPointer(chunk);
+    if (pointer === null) continue;
+    try {
+      if (renderChunkPublicationProtectsTree(pointer, candidate)) return true;
+    } catch {
+      // Only a complete exact current pointer protects a dead temp tree.
+    }
+  }
+  return false;
 };
 
 const attemptPath = (chunk: IAutoMovieProductionRenderChunk): string =>
