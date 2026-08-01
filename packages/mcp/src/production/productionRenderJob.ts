@@ -720,7 +720,7 @@ export const runProductionRenderJob = async (props: {
 };
 
 /**
- * Read one render-state file without following a link in its owned namespace.
+ * Read one production-owned file without following a link in its namespace.
  *
  * The returned bytes come from one regular file whose complete ancestry is a
  * physical descendant of `root`. Every directory and the file are identified
@@ -728,7 +728,7 @@ export const runProductionRenderJob = async (props: {
  * verified content-addressed path into different resident bytes.
  */
 export const readAutoMovieProductionOwnedFile = (props: {
-  /** Physical render-state ownership root. */
+  /** Physical production ownership root. */
   root: string;
   /** Physical directory that owns the relative file. */
   directory: string;
@@ -743,7 +743,7 @@ export const readAutoMovieProductionOwnedFile = (props: {
     target.startsWith(`${directory}${path.sep}`) === false
   )
     throw new Error(
-      `Render-state path "${props.relative}" escapes its owned directory.`,
+      `Production-owned path "${props.relative}" escapes its owned directory.`,
     );
 
   const relativeParent = path.relative(root, path.dirname(target));
@@ -773,7 +773,7 @@ export const readAutoMovieProductionOwnedFile = (props: {
       );
       if (changed !== undefined)
         throw new Error(
-          `Render-state path "${changed.file}" changed physical identity while it was read.`,
+          `Production-owned path "${changed.file}" changed physical identity while it was read.`,
         );
       productionOwnedFileIdentity(target);
       const residentDescriptor = fs.openSync(target, "r");
@@ -783,7 +783,7 @@ export const readAutoMovieProductionOwnedFile = (props: {
           openedIdentity
         )
           throw new Error(
-            `Render-state path "${target}" changed physical identity while it was read.`,
+            `Production-owned path "${target}" changed physical identity while it was read.`,
           );
       } finally {
         fs.closeSync(residentDescriptor);
@@ -984,7 +984,7 @@ const productionOwnedDirectoryIdentity = (directory: string): string => {
   const linked = fs.lstatSync(directory, { bigint: true });
   if (linked.isSymbolicLink() || linked.isDirectory() === false)
     throw new Error(
-      `Render-state directory "${directory}" is not a physical directory.`,
+      `Production-owned directory "${directory}" is not a physical directory.`,
     );
   return `${linked.dev}\0${linked.ino}`;
 };
@@ -992,7 +992,7 @@ const productionOwnedDirectoryIdentity = (directory: string): string => {
 const productionOwnedFileIdentity = (file: string): string => {
   const linked = fs.lstatSync(file, { bigint: true });
   if (linked.isSymbolicLink() || linked.isFile() === false)
-    throw new Error(`Render-state path "${file}" is not a physical file.`);
+    throw new Error(`Production-owned path "${file}" is not a physical file.`);
   return `${linked.dev}\0${linked.ino}`;
 };
 
@@ -1002,6 +1002,6 @@ const productionOwnedDescriptorIdentity = (
 ): string => {
   const opened = fs.fstatSync(descriptor, { bigint: true });
   if (opened.isFile() === false)
-    throw new Error(`Render-state path "${file}" is not a physical file.`);
+    throw new Error(`Production-owned path "${file}" is not a physical file.`);
   return `${opened.dev}\0${opened.ino}`;
 };

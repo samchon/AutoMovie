@@ -40,6 +40,7 @@ import {
   probeProductionMedia,
   probeProductionVideoMp4,
 } from "./probeProductionMedia";
+import { readAutoMovieProductionOwnedFile } from "./productionRenderJob";
 import {
   canonicalAutoMovieRepaintRuntimeIdentity,
   productionRepaintActiveReceiptPath,
@@ -1552,7 +1553,11 @@ export class AutoMovieProductionProject {
       );
     if (linked.isFile() === false)
       throw new Error(`Generated path "${relativePath}" is not a file.`);
-    return fs.readFileSync(real);
+    return readAutoMovieProductionOwnedFile({
+      root,
+      directory: root,
+      relative: relativePath,
+    });
   }
 
   /** Project-relative path of the render root. */

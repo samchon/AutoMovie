@@ -772,6 +772,49 @@ export const test_mcp_production_project = (): void => {
       "project compiler fixture",
       productionCompileSucceeded("project compiler fixture", compiled),
     );
+    const generatedReadPath = path.join(
+      project.generatedRoot(),
+      "shots/opening.json",
+    );
+    const generatedReadParked = `${generatedReadPath}.parked`;
+    const generatedReadBefore = fs.readFileSync(generatedReadPath);
+    const nativeGeneratedRead = fs.readFileSync;
+    let generatedPathRead = false;
+    fs.readFileSync = ((
+      target: fs.PathOrFileDescriptor,
+      ...args: unknown[]
+    ): unknown => {
+      if (
+        typeof target !== "number" &&
+        path.resolve(target.toString()) === path.resolve(generatedReadPath)
+      ) {
+        generatedPathRead = true;
+        fs.renameSync(generatedReadPath, generatedReadParked);
+        fs.writeFileSync(generatedReadPath, "transient replacement");
+        try {
+          return Reflect.apply(nativeGeneratedRead, fs, [target, ...args]);
+        } finally {
+          fs.rmSync(generatedReadPath);
+          fs.renameSync(generatedReadParked, generatedReadPath);
+        }
+      }
+      return Reflect.apply(nativeGeneratedRead, fs, [target, ...args]);
+    }) as typeof fs.readFileSync;
+    let generatedReadBytes = new Uint8Array();
+    try {
+      generatedReadBytes = project.readGeneratedFile("shots/opening.json");
+    } finally {
+      fs.readFileSync = nativeGeneratedRead;
+      if (fs.existsSync(generatedReadParked)) {
+        fs.rmSync(generatedReadPath, { force: true });
+        fs.renameSync(generatedReadParked, generatedReadPath);
+      }
+    }
+    TestValidator.predicate(
+      "generated reads bind bytes to the verified descriptor across a pathname swap",
+      generatedPathRead === false &&
+        Buffer.from(generatedReadBytes).equals(generatedReadBefore),
+    );
     const linkedGenerated = productionFixture();
     const outsideGenerated = fs.mkdtempSync(
       path.join(os.tmpdir(), "automovie-generated-outside-"),
