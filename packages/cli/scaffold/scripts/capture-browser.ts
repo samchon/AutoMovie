@@ -1,5 +1,8 @@
 import type { IAutoMovieCaptureRuntimeIdentity } from "@automovie/interface";
-import { readAutoMovieProductionOwnedFile } from "@automovie/mcp";
+import {
+  digestAutoMovieBytes,
+  readAutoMovieProductionOwnedFile,
+} from "@automovie/mcp";
 import { spawnSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import fs, { type BigIntStats } from "node:fs";
@@ -10,8 +13,11 @@ import type { Browser, Page } from "playwright";
 import {
   type ICaptureExecutableSnapshot,
   assertCaptureExecutable,
+  assertCaptureExecutableBytes,
+  assertRelocatedCaptureExecutable,
   closeCaptureExecutable,
   openCaptureExecutable,
+  removeCaptureExecutableIfResident,
 } from "./captureExecutableSnapshot";
 import { snapshotRuntimePackage } from "./runtimePackageSnapshot";
 
@@ -247,9 +253,11 @@ const ensureCaptureReceiptDirectory = (
   projectRoot: string,
 ): ICaptureReceiptDirectorySnapshot => {
   const project = physicalDirectory(projectRoot, "capture project root");
+  const ancestry = [project];
   let cursor = project.path;
   for (const segment of [".automovie", "capture"]) {
-    assertPhysicalDirectoryIdentity(project, "capture project root");
+    for (const directory of ancestry)
+      assertPhysicalDirectoryIdentity(directory, "capture receipt ancestry");
     cursor = path.join(cursor, segment);
     try {
       fs.mkdirSync(cursor);
@@ -259,6 +267,7 @@ const ensureCaptureReceiptDirectory = (
     const current = physicalDirectory(cursor, "capture receipt directory");
     if (inside(project.real, current.real) === false)
       throw new Error("Capture receipt directory escapes its project root.");
+    ancestry.push(current);
   }
   return captureReceiptDirectory(project.path);
 };
@@ -357,23 +366,35 @@ export const publishCaptureInstallReceipt = (
   if (path.resolve(path.dirname(file)) !== owned.path)
     throw new Error("Capture receipt path escapes its owned directory.");
   const temporary = `${file}.${process.pid}.${randomUUID()}.tmp`;
+  const bytes = Buffer.from(`${JSON.stringify(receipt, null, 2)}\n`);
+  let stagedFile: ICaptureExecutableSnapshot | null = null;
+  let completed = false;
+  let published = false;
   try {
     assertReceiptDirectory(owned);
-    fs.writeFileSync(temporary, `${JSON.stringify(receipt, null, 2)}\n`, {
+    fs.writeFileSync(temporary, bytes, {
       flag: "wx",
     });
     const staged = captureReceiptDirectory(projectRoot);
     assertSameReceiptDirectoryIdentity(owned, staged);
+    stagedFile = openCaptureExecutable(temporary);
+    if (stagedFile.digest !== digestAutoMovieBytes(bytes))
+      throw new Error("Capture receipt temporary bytes changed after write.");
     assertCurrent();
     assertReceiptDirectory(staged);
+    assertCaptureExecutable(stagedFile);
+    assertCaptureExecutableBytes(stagedFile);
     fs.renameSync(temporary, file);
+    published = true;
+    assertRelocatedCaptureExecutable(stagedFile, file);
+    completed = true;
   } finally {
-    try {
-      const current = captureReceiptDirectory(projectRoot);
-      assertSameReceiptDirectoryIdentity(owned, current);
-      fs.rmSync(temporary, { force: true });
-    } catch {
-      // A replaced or linked project namespace is not safe cleanup authority.
+    if (stagedFile !== null) {
+      if (published && completed === false)
+        removeCaptureExecutableIfResident(stagedFile, file);
+      else if (published === false)
+        removeCaptureExecutableIfResident(stagedFile);
+      closeCaptureExecutable(stagedFile);
     }
   }
 };

@@ -8,9 +8,11 @@ export interface ICaptureExecutableSnapshot {
   directory: IPhysicalDirectory;
   identity: string;
   path: string;
+  physicalIdentity: string;
 }
 
 interface IPhysicalDirectory {
+  identity: string;
   path: string;
   real: string;
   version: string;
@@ -50,6 +52,7 @@ export const openCaptureExecutable = (
       directory,
       identity,
       path: namespacePath,
+      physicalIdentity: physicalFileIdentity(opened),
     };
     assertCaptureExecutable(snapshot);
     return snapshot;
@@ -63,11 +66,9 @@ export const openCaptureExecutable = (
 export const assertCaptureExecutable = (
   expected: ICaptureExecutableSnapshot,
 ): void => {
-  const opened = fs.fstatSync(expected.descriptor, { bigint: true });
+  assertCaptureExecutableDescriptor(expected);
   const resident = fs.lstatSync(expected.path, { bigint: true });
   if (
-    opened.isFile() === false ||
-    physicalVersion(opened) !== expected.identity ||
     resident.isSymbolicLink() ||
     resident.isFile() === false ||
     physicalVersion(resident) !== expected.identity
@@ -76,6 +77,93 @@ export const assertCaptureExecutable = (
       `Capture executable "${expected.path}" changed physical identity.`,
     );
   assertPhysicalDirectory(expected.directory, "capture executable directory");
+};
+
+/** Revalidate the exact open descriptor bytes without consulting its pathname. */
+export const assertCaptureExecutableDescriptor = (
+  expected: ICaptureExecutableSnapshot,
+): void => {
+  const opened = fs.fstatSync(expected.descriptor, { bigint: true });
+  if (
+    opened.isFile() === false ||
+    physicalVersion(opened) !== expected.identity ||
+    physicalFileIdentity(opened) !== expected.physicalIdentity
+  )
+    throw new Error(
+      `Capture executable "${expected.path}" changed open descriptor bytes.`,
+    );
+};
+
+/** Rehash the exact open descriptor when byte-for-byte publication requires it. */
+export const assertCaptureExecutableBytes = (
+  expected: ICaptureExecutableSnapshot,
+): void => {
+  assertCaptureExecutableDescriptor(expected);
+  if (digestDescriptor(expected.descriptor) !== expected.digest)
+    throw new Error(
+      `Capture executable "${expected.path}" changed open descriptor bytes.`,
+    );
+  const completed = fs.fstatSync(expected.descriptor, { bigint: true });
+  if (
+    completed.isFile() === false ||
+    physicalVersion(completed) !== expected.identity
+  )
+    throw new Error(
+      `Capture executable "${expected.path}" changed while revalidated.`,
+    );
+};
+
+/** Verify that one atomic rename published the same open file at a new path. */
+export const assertRelocatedCaptureExecutable = (
+  expected: ICaptureExecutableSnapshot,
+  file: string,
+): void => {
+  assertCaptureExecutableBytes(expected);
+  const destination = path.resolve(file);
+  const directory = physicalDirectory(
+    path.dirname(destination),
+    "capture executable directory",
+  );
+  const resident = fs.lstatSync(destination, { bigint: true });
+  if (
+    directory.path !== expected.directory.path ||
+    directory.real !== expected.directory.real ||
+    directory.identity !== expected.directory.identity ||
+    resident.isSymbolicLink() ||
+    resident.isFile() === false ||
+    physicalVersion(resident) !== expected.identity
+  )
+    throw new Error(
+      `Capture executable "${expected.path}" was not relocated exactly.`,
+    );
+};
+
+/** Remove a private staged path only while it still names the captured inode. */
+export const removeCaptureExecutableIfResident = (
+  expected: ICaptureExecutableSnapshot,
+  file = expected.path,
+): boolean => {
+  try {
+    const destination = path.resolve(file);
+    const directory = physicalDirectory(
+      path.dirname(destination),
+      "capture executable directory",
+    );
+    const resident = fs.lstatSync(destination, { bigint: true });
+    if (
+      directory.path !== expected.directory.path ||
+      directory.real !== expected.directory.real ||
+      directory.identity !== expected.directory.identity ||
+      resident.isSymbolicLink() ||
+      resident.isFile() === false ||
+      physicalFileIdentity(resident) !== expected.physicalIdentity
+    )
+      return false;
+    fs.rmSync(destination, { force: true });
+    return true;
+  } catch {
+    return false;
+  }
 };
 
 /** Close a capture executable snapshot after launch verification. */
@@ -114,7 +202,12 @@ const physicalDirectory = (
     version !== physicalVersion(linked)
   )
     throw new Error(`${label} "${namespacePath}" changed while resolved.`);
-  return { path: namespacePath, real, version };
+  return {
+    identity: physicalFileIdentity(status),
+    path: namespacePath,
+    real,
+    version,
+  };
 };
 
 const assertPhysicalDirectory = (
@@ -128,3 +221,6 @@ const assertPhysicalDirectory = (
 
 const physicalVersion = (status: fs.BigIntStats): string =>
   `${status.dev}\0${status.ino}\0${status.size}\0${status.mtimeNs}\0${status.ctimeNs}`;
+
+const physicalFileIdentity = (status: fs.BigIntStats): string =>
+  `${status.dev}\0${status.ino}`;

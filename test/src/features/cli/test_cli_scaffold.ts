@@ -783,9 +783,11 @@ export const test_cli_scaffold = async (): Promise<void> => {
       lstatSync: typeof fs.lstatSync;
       readdirSync: typeof fs.readdirSync;
       renameSync: typeof fs.renameSync;
+      statSync: typeof fs.statSync;
       writeFileSync: typeof fs.writeFileSync;
     };
     const nativeLstat = mutableFs.lstatSync;
+    const nativeStat = mutableFs.statSync;
     const nativeWriteFile = mutableFs.writeFileSync;
     const shotsDirectory = path.dirname(artifact);
     const parkedShots = `${shotsDirectory}.parked`;
@@ -1698,6 +1700,72 @@ export const test_cli_scaffold = async (): Promise<void> => {
           .readdirSync(path.dirname(captureReceipt))
           .every((name) => name.endsWith(".tmp") === false),
     );
+    const receiptBeforeTempMutation = fs.readFileSync(captureReceipt);
+    let receiptTemporaryMutated = false;
+    const mutatedReceiptTemporaryRejected = throws(() =>
+      captureBrowserModule.publishCaptureInstallReceipt(
+        captureProject,
+        nextCaptureReceipt,
+        () => {
+          const temporary = fs
+            .readdirSync(path.dirname(captureReceipt))
+            .find((name) => name.endsWith(".tmp"));
+          if (temporary === undefined)
+            throw new Error("missing staged receipt");
+          fs.writeFileSync(
+            path.join(path.dirname(captureReceipt), temporary),
+            "mutated receipt bytes",
+          );
+          receiptTemporaryMutated = true;
+        },
+      ),
+    );
+    TestValidator.predicate(
+      "capture install rejects in-place temporary receipt mutation",
+      receiptTemporaryMutated &&
+        mutatedReceiptTemporaryRejected &&
+        fs.readFileSync(captureReceipt).equals(receiptBeforeTempMutation) &&
+        fs
+          .readdirSync(path.dirname(captureReceipt))
+          .every((name) => name.endsWith(".tmp") === false),
+    );
+    let receiptTemporarySucceeded = false;
+    let receiptTemporarySuccessor = "";
+    let receiptTemporaryOriginal = "";
+    const receiptTemporarySuccessorRejected = throws(() =>
+      captureBrowserModule.publishCaptureInstallReceipt(
+        captureProject,
+        nextCaptureReceipt,
+        () => {
+          const temporary = fs
+            .readdirSync(path.dirname(captureReceipt))
+            .find((name) => name.endsWith(".tmp"));
+          if (temporary === undefined)
+            throw new Error("missing staged receipt");
+          receiptTemporarySuccessor = path.join(
+            path.dirname(captureReceipt),
+            temporary,
+          );
+          receiptTemporaryOriginal = `${receiptTemporarySuccessor}.parked`;
+          fs.renameSync(receiptTemporarySuccessor, receiptTemporaryOriginal);
+          fs.writeFileSync(
+            receiptTemporarySuccessor,
+            `${JSON.stringify(nextCaptureReceipt, null, 2)}\n`,
+          );
+          receiptTemporarySucceeded = true;
+        },
+      ),
+    );
+    TestValidator.predicate(
+      "capture install preserves a same-root temporary receipt successor",
+      receiptTemporarySucceeded &&
+        receiptTemporarySuccessorRejected &&
+        fs.existsSync(receiptTemporarySuccessor) &&
+        fs.existsSync(receiptTemporaryOriginal) &&
+        fs.readFileSync(captureReceipt).equals(receiptBeforeTempMutation),
+    );
+    fs.rmSync(receiptTemporarySuccessor, { force: true });
+    fs.rmSync(receiptTemporaryOriginal, { force: true });
     let receiptPublicationValidated = false;
     captureBrowserModule.publishCaptureInstallReceipt(
       captureProject,
@@ -1738,6 +1806,49 @@ export const test_cli_scaffold = async (): Promise<void> => {
           path.join(linkedReceiptOutside, "capture", "install-receipt.json"),
         ) === false,
     );
+    const segmentReceiptProject = path.join(base, "segment-receipt-project");
+    const segmentReceiptOutside = path.join(base, "segment-receipt-outside");
+    const segmentAutomovie = path.join(segmentReceiptProject, ".automovie");
+    const parkedSegmentAutomovie = `${segmentAutomovie}.parked`;
+    fs.mkdirSync(segmentReceiptProject);
+    fs.mkdirSync(segmentReceiptOutside);
+    let receiptSegmentSwapped = false;
+    mutableFs.statSync = ((file, ...args: unknown[]): unknown => {
+      const status = Reflect.apply(nativeStat, mutableFs, [file, ...args]);
+      if (
+        receiptSegmentSwapped === false &&
+        path.resolve(file.toString()) === segmentAutomovie
+      ) {
+        receiptSegmentSwapped = true;
+        fs.renameSync(segmentAutomovie, parkedSegmentAutomovie);
+        fs.symlinkSync(
+          segmentReceiptOutside,
+          segmentAutomovie,
+          process.platform === "win32" ? "junction" : "dir",
+        );
+      }
+      return status;
+    }) as typeof fs.statSync;
+    let receiptSegmentRaceRejected = false;
+    try {
+      receiptSegmentRaceRejected = throws(() =>
+        captureBrowserModule.publishCaptureInstallReceipt(
+          segmentReceiptProject,
+          nextCaptureReceipt,
+          () => undefined,
+        ),
+      );
+    } finally {
+      mutableFs.statSync = nativeStat;
+    }
+    TestValidator.predicate(
+      "capture install revalidates each created segment before the next write",
+      receiptSegmentSwapped &&
+        receiptSegmentRaceRejected &&
+        fs.existsSync(path.join(segmentReceiptOutside, "capture")) === false,
+    );
+    fs.rmSync(segmentAutomovie, { force: true });
+    fs.renameSync(parkedSegmentAutomovie, segmentAutomovie);
     const publishedReceiptBytes = fs.readFileSync(captureReceipt);
     const parkedCaptureProject = `${captureProject}.parked`;
     let receiptRootSwapped = false;
