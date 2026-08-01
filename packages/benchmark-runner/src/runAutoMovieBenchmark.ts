@@ -36,6 +36,7 @@ import {
   readAutoMovieProductionOwnedFile,
 } from "@automovie/mcp";
 import { spawnSync } from "node:child_process";
+import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { performance } from "node:perf_hooks";
@@ -792,16 +793,6 @@ export const runAutoMovieBenchmark = async (
   });
   trace.append({ kind: "run-seal", runId: submission.runId });
 
-  assertArchiveIdentity({
-    pending,
-    repositoryRoot: repository.real,
-    taskText,
-    brief: scenario.brief,
-    projectTree,
-    transcriptDigest,
-    inventory,
-    submission,
-  });
   const archive = path.join(
     campaignRoot.real,
     submission.runId.slice("sha256:".length),
@@ -813,8 +804,31 @@ export const runAutoMovieBenchmark = async (
       `Benchmark run ${submission.runId} is already archived at "${archive}". Content-addressed runs are immutable.`,
     );
   }
-  fs.renameSync(pending.real, archive);
-  assertOutside(repository.real, fs.realpathSync(archive), "final archive");
+  const publication = moveArchiveStaging(
+    pending,
+    campaignRoot,
+    repository.real,
+  );
+  assertArchiveIdentity({
+    pending: publication,
+    repositoryRoot: repository.real,
+    taskText,
+    brief: scenario.brief,
+    projectTree,
+    transcriptDigest,
+    inventory,
+    submission,
+  });
+  assertDirectoryIdentity(publication, "benchmark archive publication");
+  assertDirectoryIdentity(campaignRoot, "benchmark campaign directory");
+  fs.renameSync(publication.real, archive);
+  let archived: IDirectoryIdentity;
+  try {
+    archived = movedDirectoryIdentity(publication, archive, "final archive");
+  } catch (error) {
+    quarantineRejectedArchive(archive, campaignRoot, repository.real, error);
+  }
+  assertOutside(repository.real, archived.real, "final archive");
   tryRemoveTemporaryDirectory(work, campaignRoot);
   return { archive, verdict, report, toolInventory };
 };
@@ -1098,6 +1112,72 @@ const assertDirectoryIdentity = (
     throw new Error(
       `${label} "${expected.path}" changed physical identity during the benchmark run.`,
     );
+};
+
+const movedDirectoryIdentity = (
+  expected: IDirectoryIdentity,
+  destination: string,
+  label: string,
+): IDirectoryIdentity => {
+  const moved = directoryIdentity(destination, label);
+  if (moved.dev !== expected.dev || moved.ino !== expected.ino)
+    throw new Error(
+      `${label} "${moved.path}" does not contain the physical directory selected for publication.`,
+    );
+  return moved;
+};
+
+const moveArchiveStaging = (
+  pending: IDirectoryIdentity,
+  campaign: IDirectoryIdentity,
+  repositoryRoot: string,
+): IDirectoryIdentity => {
+  assertDirectoryIdentity(campaign, "benchmark campaign directory");
+  assertDirectoryIdentity(pending, "benchmark archive staging");
+  const publicationPath = path.join(
+    campaign.real,
+    `.publishing-${randomUUID()}`,
+  );
+  fs.renameSync(pending.real, publicationPath);
+  assertDirectoryIdentity(campaign, "benchmark campaign directory");
+  const publication = movedDirectoryIdentity(
+    pending,
+    publicationPath,
+    "benchmark archive publication",
+  );
+  assertOutside(
+    repositoryRoot,
+    publication.real,
+    "benchmark archive publication",
+  );
+  return publication;
+};
+
+const quarantineRejectedArchive = (
+  archive: string,
+  campaign: IDirectoryIdentity,
+  repositoryRoot: string,
+  identityError: unknown,
+): never => {
+  const rejected = path.join(campaign.real, `.rejected-${randomUUID()}`);
+  assertDirectoryIdentity(campaign, "benchmark campaign directory");
+  try {
+    fs.renameSync(archive, rejected);
+  } /* c8 ignore start -- a second adversarial rename during fail-closed quarantine is host-dependent */ catch (quarantineError) {
+    if (fs.existsSync(archive))
+      throw new Error(
+        `Rejected benchmark archive "${archive}" could not be quarantined safely: ${messageOf(quarantineError)}`,
+        { cause: identityError },
+      );
+    throw identityError;
+  }
+  /* c8 ignore stop */
+  assertDirectoryIdentity(campaign, "benchmark campaign directory");
+  assertOutside(repositoryRoot, fs.realpathSync(rejected), "rejected archive");
+  throw new Error(
+    `Benchmark publication moved a replacement directory; it was quarantined at "${rejected}".`,
+    { cause: identityError },
+  );
 };
 
 const secureChildDirectory = (

@@ -109,7 +109,9 @@ export const test_benchmark_runner = async (): Promise<void> => {
       if (
         resolved !== null &&
         path.basename(resolved) === "task.json" &&
-        path.basename(path.dirname(resolved)).startsWith(".pending-")
+        [".pending-", ".publishing-"].some((prefix) =>
+          path.basename(path.dirname(resolved)).startsWith(prefix),
+        )
       ) {
         archiveTaskPathRead = true;
         const parked = `${resolved}.read-parked`;
@@ -260,6 +262,18 @@ export {};
       "an existing content-addressed run is immutable",
       duplicate.includes("is already archived"),
     );
+
+    await exerciseArchivePublicationRaces({
+      taskId: current.taskId,
+      lane: "deterministic",
+      runRoot: root,
+      repositoryRoot,
+      identity,
+      mcpTarget,
+      inventoryBaselines: [archivedBaseline],
+      agent,
+      collect: collectCompleteEvidence,
+    });
 
     const gateFailed = await runAutoMovieBenchmark({
       taskId: current.taskId,
@@ -494,6 +508,81 @@ export {};
       recursive: true,
       retryDelay: 100,
     });
+  }
+};
+
+const exerciseArchivePublicationRaces = async (
+  base: Omit<Parameters<typeof runAutoMovieBenchmark>[0], "campaign">,
+): Promise<void> => {
+  for (const phase of ["staging", "final"] as const) {
+    const campaign = `publication-${phase}-race`;
+    const campaignPath = path.join(
+      path.resolve(base.runRoot),
+      ".benchmarks",
+      campaign,
+    );
+    const nativeRename = fs.renameSync;
+    let swapped = false;
+    let parked: string | undefined;
+    let movedTo: string | undefined;
+    fs.renameSync = ((oldPath, newPath) => {
+      const oldName = path.basename(oldPath.toString());
+      const newName = path.basename(newPath.toString());
+      const matches =
+        swapped === false &&
+        (phase === "staging"
+          ? oldName.startsWith(".pending-") &&
+            newName.startsWith(".publishing-")
+          : oldName.startsWith(".publishing-") &&
+            /^[0-9a-f]{64}$/u.test(newName));
+      if (matches) {
+        swapped = true;
+        parked = `${oldPath.toString()}.original-parked`;
+        movedTo = newPath.toString();
+        nativeRename(oldPath, parked);
+        if (phase === "staging") {
+          fs.mkdirSync(oldPath);
+          fs.writeFileSync(
+            path.join(oldPath.toString(), "replacement.txt"),
+            "replacement staging directory",
+          );
+        } else
+          fs.cpSync(parked, oldPath, {
+            recursive: true,
+            dereference: false,
+            verbatimSymlinks: true,
+          });
+      }
+      nativeRename(oldPath, newPath);
+    }) as typeof fs.renameSync;
+    let message: string;
+    try {
+      message = await rejected(() =>
+        runAutoMovieBenchmark({ ...base, campaign }),
+      );
+    } finally {
+      fs.renameSync = nativeRename;
+    }
+    const contentArchives = fs.existsSync(campaignPath)
+      ? fs
+          .readdirSync(campaignPath)
+          .filter((entry) => /^[0-9a-f]{64}$/u.test(entry))
+      : [];
+    TestValidator.predicate(
+      `archive publication rejects a ${phase} identity replacement`,
+      swapped &&
+        message.includes(
+          phase === "staging"
+            ? "physical directory selected for publication"
+            : "moved a replacement directory",
+        ) &&
+        contentArchives.length === 0 &&
+        (phase === "staging" ||
+          (movedTo !== undefined && fs.existsSync(movedTo) === false)),
+    );
+    if (parked !== undefined)
+      fs.rmSync(parked, { recursive: true, force: true });
+    fs.rmSync(campaignPath, { recursive: true, force: true });
   }
 };
 
