@@ -1,7 +1,5 @@
-import {
-  digestAutoMovieBytes,
-  readAutoMovieProductionOwnedFile,
-} from "@automovie/mcp";
+import { digestAutoMovieBytes } from "@automovie/mcp";
+import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -168,7 +166,7 @@ const captureResidentTarget = (
   let kind: "directory" | "file";
   if (status.isFile()) {
     kind = "file";
-    entries = [readFileEntry(base, resident, "")];
+    entries = [readFileEntry(resident, "")];
   } else {
     if (status.isDirectory() === false)
       throw new Error(`Render GC target "${absolute}" is not physical.`);
@@ -235,8 +233,7 @@ const captureTree = (
       if (status.isSymbolicLink())
         throw new Error(`Render GC content "${absolute}" is linked.`);
       if (status.isDirectory()) visit(absolute, child);
-      else if (status.isFile())
-        entries.push(readFileEntry(base, absolute, child));
+      else if (status.isFile()) entries.push(readFileEntry(absolute, child));
       else throw new Error(`Render GC content "${absolute}" is not physical.`);
     }
     assertPhysicalDirectory(identity, "render GC content directory");
@@ -245,22 +242,33 @@ const captureTree = (
   return entries;
 };
 
-const readFileEntry = (
-  base: IRenderGcPhysicalDirectory,
-  file: string,
-  relative: string,
-): IContentEntry => {
+const readFileEntry = (file: string, relative: string): IContentEntry => {
   const linked = fs.lstatSync(file, { bigint: true });
   if (linked.isSymbolicLink() || linked.isFile() === false)
     throw new Error(`Render GC content "${file}" is not one physical file.`);
   const version = physicalVersion(linked);
-  const bytes = Buffer.from(
-    readAutoMovieProductionOwnedFile({
-      root: base.real,
-      directory: path.dirname(file),
-      relative: path.basename(file),
-    }),
-  );
+  const descriptor = fs.openSync(file, "r");
+  let bytes = 0;
+  let digest: `sha256:${string}`;
+  try {
+    const opened = fs.fstatSync(descriptor, { bigint: true });
+    if (opened.isFile() === false || physicalVersion(opened) !== version)
+      throw new Error(`Render GC content "${file}" changed before open.`);
+    const hash = createHash("sha256");
+    const chunk = Buffer.allocUnsafe(1024 * 1024);
+    for (;;) {
+      const length = fs.readSync(descriptor, chunk, 0, chunk.length, bytes);
+      if (length === 0) break;
+      hash.update(chunk.subarray(0, length));
+      bytes += length;
+    }
+    digest = `sha256:${hash.digest("hex")}`;
+    const completed = fs.fstatSync(descriptor, { bigint: true });
+    if (completed.isFile() === false || physicalVersion(completed) !== version)
+      throw new Error(`Render GC content "${file}" changed while hashed.`);
+  } finally {
+    fs.closeSync(descriptor);
+  }
   const resident = fs.lstatSync(file, { bigint: true });
   if (
     resident.isSymbolicLink() ||
@@ -269,8 +277,8 @@ const readFileEntry = (
   )
     throw new Error(`Render GC content "${file}" changed while read.`);
   return {
-    bytes: bytes.length,
-    digest: digestAutoMovieBytes(bytes),
+    bytes,
+    digest,
     identity: physicalIdentity(linked),
     kind: "file",
     path: relative,

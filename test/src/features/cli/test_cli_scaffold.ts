@@ -82,8 +82,8 @@ type GeneratedViewerMiddleware = (
  *     to one physical snapshot and rejects their successors.
  * 11. Capture provenance descriptor-binds install receipts and keeps the exact
  *     executable identity open across its launch boundary.
- * 12. Render GC deletes only its inventoried physical candidate and restores a
- *     successor that crosses the quarantine rename boundary.
+ * 12. Render GC deletes only its inventoried physical candidate and preserves a
+ *     successor crossing the rename boundary under reserved quarantine.
  */
 export const test_cli_scaffold = (): void => {
   // 5. packaging guard: the scaffold dir must be a published `files` entry.
@@ -1609,6 +1609,28 @@ export const test_cli_scaffold = (): void => {
       gcPublicationSnapshot.bytes === gcPublicationBytes.length &&
         fs.existsSync(gcPublicationFile) === false &&
         fs.existsSync(gcPublicationNormalIsolated) === false,
+    );
+    const gcSparsePublication = path.join(gcBase, "large-publication.mp4");
+    const gcSparseBytes = 2 * 1024 * 1024 + 17;
+    const gcSparseDescriptor = fs.openSync(gcSparsePublication, "wx");
+    try {
+      fs.ftruncateSync(gcSparseDescriptor, gcSparseBytes);
+    } finally {
+      fs.closeSync(gcSparseDescriptor);
+    }
+    const gcSparseSnapshot = renderGcModule.captureRenderGcTarget(
+      gcBase,
+      gcSparsePublication,
+    );
+    renderGcModule.removeCapturedRenderGcTarget({
+      isolated: path.join(gcQuarantine, "large-publication"),
+      quarantine: gcQuarantine,
+      snapshot: gcSparseSnapshot,
+    });
+    TestValidator.predicate(
+      "render GC streams a multi-chunk publication without resident bytes",
+      gcSparseSnapshot.bytes === gcSparseBytes &&
+        fs.existsSync(gcSparsePublication) === false,
     );
     fs.writeFileSync(gcPublicationFile, gcPublicationBytes);
     const gcPublicationBoundarySnapshot = renderGcModule.captureRenderGcTarget(
