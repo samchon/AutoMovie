@@ -20,6 +20,7 @@ export interface IRenderGcTargetSnapshot {
   namespaceFingerprint: `sha256:${string}`;
   target: string;
   targetIdentity: string;
+  targetVersion: string;
 }
 
 export interface IRenderGcPhysicalDirectory {
@@ -167,6 +168,80 @@ export const assertCapturedRenderTarget = (
   snapshot: IRenderGcTargetSnapshot,
 ): void => assertRenderGcTarget(snapshot);
 
+/** Read the bytes of the exact captured file through a matching descriptor. */
+export const readCapturedRenderGcFile = (
+  snapshot: IRenderGcTargetSnapshot,
+  maximumBytes: number,
+): Uint8Array => {
+  if (snapshot.kind !== "file")
+    throw new Error(`Render target "${snapshot.target}" is not a file.`);
+  if (
+    Number.isSafeInteger(maximumBytes) === false ||
+    maximumBytes < 0 ||
+    snapshot.bytes > maximumBytes
+  )
+    throw new Error(
+      `Render target "${snapshot.target}" exceeds its read boundary.`,
+    );
+  assertRootIdentity(snapshot.base);
+  const descriptor = fs.openSync(snapshot.target, "r");
+  const bytes = Buffer.alloc(snapshot.bytes);
+  let offset = 0;
+  let openedIdentity = "";
+  try {
+    const opened = fs.fstatSync(descriptor, { bigint: true });
+    if (
+      opened.isFile() === false ||
+      physicalIdentity(opened) !== snapshot.targetIdentity ||
+      physicalVersion(opened) !== snapshot.targetVersion
+    )
+      throw new Error(
+        `Render target "${snapshot.target}" opened a different file.`,
+      );
+    openedIdentity = physicalIdentity(opened);
+    while (offset < bytes.length) {
+      const length = fs.readSync(
+        descriptor,
+        bytes,
+        offset,
+        bytes.length - offset,
+        offset,
+      );
+      if (length === 0)
+        throw new Error(
+          `Render target "${snapshot.target}" ended before its captured size.`,
+        );
+      offset += length;
+    }
+    const completed = fs.fstatSync(descriptor, { bigint: true });
+    if (physicalVersion(completed) !== snapshot.targetVersion)
+      throw new Error(
+        `Render target "${snapshot.target}" changed while descriptor-read.`,
+      );
+  } finally {
+    fs.closeSync(descriptor);
+  }
+  const contentFingerprint = digestAutoMovieBytes(
+    Buffer.from(
+      JSON.stringify([
+        {
+          bytes: bytes.length,
+          digest: digestAutoMovieBytes(bytes),
+          identity: openedIdentity,
+          kind: "file",
+          path: "",
+        } satisfies IContentEntry,
+      ]),
+    ),
+  );
+  if (contentFingerprint !== snapshot.contentFingerprint)
+    throw new Error(
+      `Render target "${snapshot.target}" differs from its captured bytes.`,
+    );
+  assertRenderGcTarget(snapshot);
+  return bytes;
+};
+
 const isolateCapturedRenderTarget = (props: {
   isolated: string;
   quarantine: string;
@@ -291,7 +366,7 @@ const captureResidentTarget = (
   )
     throw new Error(`Render GC target "${absolute}" changed while captured.`);
   for (const identity of ancestry)
-    assertPhysicalDirectory(identity, "render GC target ancestry");
+    assertPhysicalDirectoryIdentity(identity, "render GC target ancestry");
   assertRootIdentity(base);
   const contentFingerprint = digestAutoMovieBytes(
     Buffer.from(JSON.stringify(entries)),
@@ -300,8 +375,8 @@ const captureResidentTarget = (
     Buffer.from(
       JSON.stringify({
         ancestry: ancestry.map((identity) => ({
+          identity: identity.identity,
           path: path.relative(base.real, identity.real).replaceAll("\\", "/"),
-          version: identity.version,
         })),
         contentFingerprint,
         targetVersion: physicalVersion(status),
@@ -316,6 +391,7 @@ const captureResidentTarget = (
     namespaceFingerprint,
     target: absolute,
     targetIdentity,
+    targetVersion: physicalVersion(status),
   };
 };
 
@@ -409,8 +485,7 @@ const physicalDirectory = (
   if (
     status.isDirectory() === false ||
     status.dev !== linked.dev ||
-    status.ino !== linked.ino ||
-    version !== physicalVersion(linked)
+    status.ino !== linked.ino
   )
     throw new Error(`${label} "${namespacePath}" changed while resolved.`);
   return {

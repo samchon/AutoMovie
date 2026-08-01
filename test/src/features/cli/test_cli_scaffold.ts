@@ -473,7 +473,11 @@ export const test_cli_scaffold = async (): Promise<void> => {
       files["scripts/render.ts"]!.includes("captureRenderGcTarget") &&
       files["scripts/render.ts"]!.includes("removeCapturedRenderGcTarget") &&
       files["scripts/render.ts"]!.includes("quarantineCapturedRenderTarget") &&
+      files["scripts/render.ts"]!.includes("readCapturedRenderGcFile") &&
       files["scripts/render.ts"]!.includes("held.snapshot") &&
+      files["scripts/render.ts"]!.includes(
+        "quarantineStaleSlotOutputs(current.chunks)",
+      ) &&
       files["scripts/render.ts"]!.includes("renderPublicationFingerprint") &&
       files["scripts/render.ts"]!.includes("assertMatchingProxyPublication") &&
       files["scripts/render.ts"]!.includes("assertNoLiveRenderWorkers") &&
@@ -1971,6 +1975,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
     const renderGcModule = createRequire(__filename)(
       path.join(scaffoldDir, "scripts", "renderGcSnapshot.ts"),
     ) as {
+      assertCapturedRenderTarget: (snapshot: unknown) => void;
       captureRenderGcTarget: (
         base: string,
         target: string,
@@ -1983,6 +1988,10 @@ export const test_cli_scaffold = async (): Promise<void> => {
         quarantine: string;
         snapshot: unknown;
       }) => void;
+      readCapturedRenderGcFile: (
+        snapshot: unknown,
+        maximumBytes: number,
+      ) => Uint8Array;
       removeCapturedRenderGcTarget: (props: {
         isolated: string;
         quarantine: string;
@@ -2298,6 +2307,61 @@ export const test_cli_scaffold = async (): Promise<void> => {
     fs.rmSync(workerClaimDestination, { force: true });
     fs.rmSync(workerPartialIsolated, { recursive: true, force: true });
     fs.rmSync(parkedWorkerPartial, { recursive: true, force: true });
+    const heldClaim = path.join(gcBase, "held-claim.lock");
+    const heldClaimSibling = path.join(gcBase, "held-claim-sibling.lock");
+    fs.writeFileSync(heldClaim, workerClaimBytes);
+    const heldClaimSnapshot = renderGcModule.captureRenderGcTarget(
+      gcBase,
+      heldClaim,
+    );
+    fs.writeFileSync(heldClaimSibling, "sibling namespace mutation");
+    TestValidator.predicate(
+      "an exact held claim survives unrelated sibling namespace mutation",
+      !throws(() =>
+        renderGcModule.assertCapturedRenderTarget(heldClaimSnapshot),
+      ),
+    );
+    const decisionSuccessor = path.join(gcBase, "decision-successor.lock");
+    fs.writeFileSync(decisionSuccessor, workerClaimBytes);
+    TestValidator.predicate(
+      "captured worker decisions read their exact descriptor bytes",
+      Buffer.from(
+        renderGcModule.readCapturedRenderGcFile(heldClaimSnapshot, 1024 * 1024),
+      ).equals(workerClaimBytes),
+    );
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      if (
+        typeof file !== "number" &&
+        path.resolve(file.toString()) === heldClaim
+      )
+        return Reflect.apply(nativeOpen, mutableFs, [
+          decisionSuccessor,
+          flags,
+          ...args,
+        ]) as number;
+      return Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+    }) as typeof fs.openSync;
+    let decisionSuccessorRejected = false;
+    try {
+      decisionSuccessorRejected = throws(() =>
+        renderGcModule.readCapturedRenderGcFile(heldClaimSnapshot, 1024 * 1024),
+      );
+    } finally {
+      mutableFs.openSync = nativeOpen;
+    }
+    TestValidator.predicate(
+      "captured worker decisions reject a pathname-opened successor descriptor",
+      decisionSuccessorRejected &&
+        fs.readFileSync(heldClaim).equals(workerClaimBytes) &&
+        fs.readFileSync(decisionSuccessor).equals(workerClaimBytes),
+    );
+    fs.rmSync(heldClaim, { force: true });
+    fs.rmSync(heldClaimSibling, { force: true });
+    fs.rmSync(decisionSuccessor, { force: true });
     TestValidator.predicate(
       "a non-empty target is refused without force",
       throws(() => writeFiles(target, files)),

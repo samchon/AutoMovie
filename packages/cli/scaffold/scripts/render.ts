@@ -83,6 +83,7 @@ import {
   ensureRenderPhysicalDirectory,
   isRenderGcPreservedPath,
   quarantineCapturedRenderTarget,
+  readCapturedRenderGcFile,
   removeCapturedRenderGcTarget,
 } from "./renderGcSnapshot";
 import {
@@ -124,6 +125,7 @@ const KOKORO_MODEL_REVISION =
   "1939ad2a8e416c0acfeecc08a694d14ef25f2231" as const;
 const KOKORO_DEVICE = "cpu" as const;
 const KOKORO_VOICE = "af_heart";
+const RENDER_STATE_JSON_MAX_BYTES = 1024 * 1024;
 
 interface IRenderChunkLockOwner {
   chunk: AutoMovieContentDigest;
@@ -208,6 +210,7 @@ const main = async (): Promise<void> => {
   if (action === "all") await captureReviewEvidence();
   if (action === "run" || action === "all") {
     recoverAbandonedTemporaryDirectories();
+    quarantineStaleSlotOutputs(current.chunks);
     const result = await runProductionRenderJob({
       plan: current,
       workers: integerOption("--workers", 1),
@@ -660,14 +663,13 @@ const acquireChunk = async (
       const snapshot = captureExistingRenderStateTarget(file);
       if (snapshot === null) continue;
       try {
-        owner = readJson<IRenderChunkLockOwner>(file);
+        owner = readCapturedRenderJson<IRenderChunkLockOwner>(snapshot);
       } catch (error) {
         if ((error as NodeJS.ErrnoException).code === "ENOENT") continue;
         throw new Error(
           `Chunk lock "${file}" has no readable owner identity. Verify that no render worker owns it, then quarantine it before retrying: ${String(error)}`,
         );
       }
-      assertCapturedRenderTarget(snapshot);
       if (Number.isSafeInteger(owner.pid) === false || owner.pid <= 0)
         throw new Error(
           `Chunk lock "${file}" has an invalid owner process. Verify that no render worker owns it, then quarantine it before retrying.`,
@@ -686,8 +688,7 @@ const acquireChunk = async (
       }
     }
     const ownedClaim = captureRenderGcTarget(stateRoot, claim);
-    const owner = readJson<IRenderChunkLockOwner>(claim);
-    assertCapturedRenderTarget(ownedClaim);
+    const owner = readCapturedRenderJson<IRenderChunkLockOwner>(ownedClaim);
     if (
       owner.chunk !== chunk.id ||
       owner.pid !== process.pid ||
@@ -708,7 +709,6 @@ const renderChunk = async (
   plan: IAutoMovieProductionRenderJobPlan,
   chunk: IAutoMovieProductionRenderChunk,
 ): Promise<IAutoMovieProductionRenderChunkReceipt> => {
-  quarantineStaleSlotOutputs(chunk);
   const temporary = path.join(
     stateRoot,
     "tmp",
@@ -860,8 +860,7 @@ const releaseOwnedChunkClaim = (
 ): void => {
   try {
     const snapshot = captured ?? captureRenderGcTarget(stateRoot, file);
-    const owner = readJson<IRenderChunkLockOwner>(file);
-    assertCapturedRenderTarget(snapshot);
+    const owner = readCapturedRenderJson<IRenderChunkLockOwner>(snapshot);
     if (
       owner.chunk === chunk.id &&
       owner.pid === process.pid &&
@@ -2549,15 +2548,10 @@ const recoverAbandonedTemporaryDirectories = (): void => {
           entry.name,
         );
         const pid = Number(match?.[1]);
+        if (Number.isSafeInteger(pid) && pid > 0 && processAlive(pid)) continue;
         const snapshot = captureExistingRenderStateTarget(target);
         if (snapshot === null) continue;
-        if (
-          entry.isFile() === false ||
-          Number.isSafeInteger(pid) === false ||
-          pid <= 0 ||
-          processAlive(pid) === false
-        )
-          quarantine(target, "abandoned-lock-candidate", snapshot);
+        quarantine(target, "abandoned-lock-candidate", snapshot);
       }
   const directory = path.join(stateRoot, "tmp");
   if (fs.existsSync(directory) === false) return;
@@ -2566,40 +2560,43 @@ const recoverAbandonedTemporaryDirectories = (): void => {
     .sort((left, right) => compareCodeUnits(left.name, right.name))) {
     const target = path.join(directory, entry.name);
     const pid = Number(entry.name.split(".").at(-1));
+    if (Number.isSafeInteger(pid) && pid > 0 && processAlive(pid)) continue;
     const snapshot = captureExistingRenderStateTarget(target);
     if (snapshot === null) continue;
-    if (
-      entry.isDirectory() === false ||
-      Number.isSafeInteger(pid) === false ||
-      pid <= 0 ||
-      processAlive(pid) === false
-    )
-      quarantine(target, "abandoned-partial", snapshot);
+    quarantine(target, "abandoned-partial", snapshot);
   }
 };
 
 const quarantineStaleSlotOutputs = (
-  chunk: IAutoMovieProductionRenderChunk,
+  chunks: readonly IAutoMovieProductionRenderChunk[],
 ): void => {
   const directory = path.join(stateRoot, "chunks");
   if (fs.existsSync(directory) === false) return;
+  const currentChunks = new Map(chunks.map((chunk) => [chunk.slot, chunk.id]));
   for (const entry of fs
     .readdirSync(directory, { withFileTypes: true })
-    .filter((candidate) => candidate.isDirectory())
     .sort((left, right) => compareCodeUnits(left.name, right.name))) {
     const target = path.join(directory, entry.name);
-    const snapshot = captureExistingRenderStateTarget(target);
-    if (snapshot === null) continue;
     const receiptFile = path.join(target, "receipt.json");
+    const receiptSnapshot = captureExistingRenderStateTarget(receiptFile);
+    if (receiptSnapshot === null || receiptSnapshot.kind !== "file") continue;
     let receipt: IAutoMovieProductionRenderChunkReceipt;
     try {
-      receipt = readJson<IAutoMovieProductionRenderChunkReceipt>(receiptFile);
+      receipt =
+        readCapturedRenderJson<IAutoMovieProductionRenderChunkReceipt>(
+          receiptSnapshot,
+        );
     } catch {
       // An unreadable unrelated directory has no trustworthy slot ownership.
       continue;
     }
-    if (receipt.slot === chunk.slot && receipt.chunk !== chunk.id)
+    const currentChunk = currentChunks.get(receipt.slot);
+    if (currentChunk !== undefined && receipt.chunk !== currentChunk) {
+      const snapshot = captureExistingRenderStateTarget(target);
+      if (snapshot === null || snapshot.kind !== "directory") continue;
+      assertCapturedRenderTarget(receiptSnapshot);
       quarantine(target, "stale-slot", snapshot);
+    }
   }
 };
 
@@ -2669,10 +2666,21 @@ const captureExistingRenderStateTarget = (
   try {
     return captureRenderGcTarget(stateRoot, target);
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
+    if (
+      (error as NodeJS.ErrnoException).code === "ENOENT" ||
+      (error as NodeJS.ErrnoException).code === "ENOTDIR"
+    )
+      return null;
     throw error;
   }
 };
+
+const readCapturedRenderJson = <T>(snapshot: IRenderGcTargetSnapshot): T =>
+  JSON.parse(
+    Buffer.from(
+      readCapturedRenderGcFile(snapshot, RENDER_STATE_JSON_MAX_BYTES),
+    ).toString("utf8"),
+  ) as T;
 
 const removeCapturedRenderStateTarget = (
   snapshot: IRenderGcTargetSnapshot,
