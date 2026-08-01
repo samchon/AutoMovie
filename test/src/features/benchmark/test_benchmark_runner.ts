@@ -145,10 +145,11 @@ export const test_benchmark_runner = async (): Promise<void> => {
         });
       } finally {
         fs.readFileSync = nativeArchiveRead;
-        if (archiveTaskParked !== null && fs.existsSync(archiveTaskParked)) {
-          const resident = archiveTaskParked.slice(0, -".read-parked".length);
+        const parked = archiveTaskParked as string | null;
+        if (parked !== null && fs.existsSync(parked)) {
+          const resident = parked.slice(0, -".read-parked".length);
           fs.rmSync(resident, { force: true });
-          fs.renameSync(archiveTaskParked, resident);
+          fs.renameSync(parked, resident);
         }
       }
     })();
@@ -630,7 +631,7 @@ const exerciseArchivePublicationRaces = async (
             "replacement staging directory",
           );
         } else
-          fs.cpSync(parked, oldPath, {
+          fs.cpSync(parked, oldPath.toString(), {
             recursive: true,
             dereference: false,
             verbatimSymlinks: true,
