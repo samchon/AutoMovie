@@ -4,6 +4,8 @@ import type { Material, Node } from "@gltf-transform/core" with {
   "resolution-mode": "import",
 };
 
+import { importGltfTransformCore } from "../gltfTransformCore.cjs";
+
 /**
  * Serialize an {@link IAutoMovieModel} AST into a binary glTF (`.glb`) byte
  * buffer: the **export** half of automovie's glTF round-trip (ingest is the
@@ -36,7 +38,7 @@ import type { Material, Node } from "@gltf-transform/core" with {
 export const exportModelToGLB = async (
   model: IAutoMovieModel,
 ): Promise<Uint8Array> => {
-  const { Document, NodeIO } = await import("@gltf-transform/core");
+  const { Document, NodeIO } = await importGltfTransformCore();
   const doc = new Document();
   const buffer = doc.createBuffer();
   const scene = doc.createScene(model.name ?? model.id);
