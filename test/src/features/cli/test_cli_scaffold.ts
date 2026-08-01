@@ -86,6 +86,9 @@ type GeneratedViewerMiddleware = (
  *     successor crossing the rename boundary under reserved quarantine.
  * 13. Routine render cleanup releases or quarantines only the exact worker-state
  *     target used for its ownership or staleness decision.
+ * 14. Render sessions and explicit GC apply use a two-sided lease handshake so
+ *     neither process can enter state mutation after the other's liveness
+ *     scan.
  */
 export const test_cli_scaffold = async (): Promise<void> => {
   // 5. packaging guard: the scaffold dir must be a published `files` entry.
@@ -212,6 +215,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       "scripts/preview.ts",
       "scripts/render.ts",
       "scripts/renderGcSnapshot.ts",
+      "scripts/renderLiveness.ts",
       "scripts/review-status.ts",
       "scripts/runtimePackageSnapshot.ts",
       "scripts/verify.ts",
@@ -482,6 +486,8 @@ export const test_cli_scaffold = async (): Promise<void> => {
       files["scripts/render.ts"]!.includes(
         "quarantineStaleSlotOutputs(current.chunks)",
       ) &&
+      files["scripts/render.ts"]!.includes("acquireRenderSessionLease") &&
+      files["scripts/render.ts"]!.includes("acquireRenderGcLease") &&
       files["scripts/render.ts"]!.includes("renderPublicationFingerprint") &&
       files["scripts/render.ts"]!.includes("assertMatchingProxyPublication") &&
       files["scripts/render.ts"]!.includes("assertNoLiveRenderWorkers") &&
@@ -705,6 +711,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
         "scripts/preview.ts",
         "scripts/render.ts",
         "scripts/renderGcSnapshot.ts",
+        "scripts/renderLiveness.ts",
         "scripts/review-status.ts",
         "scripts/runtimePackageSnapshot.ts",
         "scripts/verify.ts",
@@ -1976,6 +1983,110 @@ export const test_cli_scaffold = async (): Promise<void> => {
         fs.rmSync(path.join(path.dirname(captureReceipt), name), {
           force: true,
         });
+    const renderLivenessModule = createRequire(__filename)(
+      path.join(scaffoldDir, "scripts", "renderLiveness.ts"),
+    ) as {
+      acquireRenderGcLease: (props: {
+        coordinationRoot: string;
+        pid: number;
+        processAlive: (pid: number) => boolean;
+      }) => unknown;
+      acquireRenderSessionLease: (props: {
+        coordinationRoot: string;
+        pid: number;
+        processAlive: (pid: number) => boolean;
+        tier: "final" | "proxy";
+      }) => unknown;
+      releaseRenderLivenessLease: (lease: unknown) => boolean;
+    };
+    const livenessRoot = path.join(base, "render-liveness");
+    fs.mkdirSync(livenessRoot);
+    const gcFirstAlive = new Set([31001, 31002]);
+    const gcFirst = renderLivenessModule.acquireRenderGcLease({
+      coordinationRoot: livenessRoot,
+      pid: 31001,
+      processAlive: (pid) => gcFirstAlive.has(pid),
+    });
+    const gcFirstWorkerRejected = throws(() =>
+      renderLivenessModule.acquireRenderSessionLease({
+        coordinationRoot: livenessRoot,
+        pid: 31002,
+        processAlive: (pid) => gcFirstAlive.has(pid),
+        tier: "proxy",
+      }),
+    );
+    const gcFirstPeerRejected = throws(() =>
+      renderLivenessModule.acquireRenderGcLease({
+        coordinationRoot: livenessRoot,
+        pid: 31002,
+        processAlive: (pid) => gcFirstAlive.has(pid),
+      }),
+    );
+    const gcFirstReleased =
+      renderLivenessModule.releaseRenderLivenessLease(gcFirst);
+    TestValidator.predicate(
+      "a GC-first lease blocks a later render session",
+      gcFirstWorkerRejected &&
+        gcFirstPeerRejected &&
+        gcFirstReleased &&
+        fs.readdirSync(livenessRoot).length === 0,
+    );
+    const workerFirstAlive = new Set([31003, 31004]);
+    const workerFirst = renderLivenessModule.acquireRenderSessionLease({
+      coordinationRoot: livenessRoot,
+      pid: 31003,
+      processAlive: (pid) => workerFirstAlive.has(pid),
+      tier: "final",
+    });
+    const workerFirstGcRejected = throws(() =>
+      renderLivenessModule.acquireRenderGcLease({
+        coordinationRoot: livenessRoot,
+        pid: 31004,
+        processAlive: (pid) => workerFirstAlive.has(pid),
+      }),
+    );
+    TestValidator.predicate(
+      "a worker-first session makes GC release its guard and refuse apply",
+      workerFirstGcRejected &&
+        fs
+          .readdirSync(livenessRoot)
+          .every((name) => name.startsWith("session.")),
+    );
+    renderLivenessModule.releaseRenderLivenessLease(workerFirst);
+    const staleGc = renderLivenessModule.acquireRenderGcLease({
+      coordinationRoot: livenessRoot,
+      pid: 31005,
+      processAlive: (pid) => pid === 31005,
+    });
+    const afterStaleGc = renderLivenessModule.acquireRenderSessionLease({
+      coordinationRoot: livenessRoot,
+      pid: 31006,
+      processAlive: (pid) => pid === 31006,
+      tier: "proxy",
+    });
+    const staleGcAlreadyRemoved =
+      renderLivenessModule.releaseRenderLivenessLease(staleGc) === false;
+    renderLivenessModule.releaseRenderLivenessLease(afterStaleGc);
+    const staleSession = renderLivenessModule.acquireRenderSessionLease({
+      coordinationRoot: livenessRoot,
+      pid: 31007,
+      processAlive: (pid) => pid === 31007,
+      tier: "final",
+    });
+    const afterStaleSession = renderLivenessModule.acquireRenderGcLease({
+      coordinationRoot: livenessRoot,
+      pid: 31008,
+      processAlive: (pid) => pid === 31008,
+    });
+    const staleSessionAlreadyRemoved =
+      renderLivenessModule.releaseRenderLivenessLease(staleSession) === false;
+    renderLivenessModule.releaseRenderLivenessLease(afterStaleSession);
+    TestValidator.predicate(
+      "dead GC and session owners are recovered through exact lease cleanup",
+      staleGcAlreadyRemoved &&
+        staleSessionAlreadyRemoved &&
+        fs.readdirSync(livenessRoot).length === 0,
+    );
     const renderGcModule = createRequire(__filename)(
       path.join(scaffoldDir, "scripts", "renderGcSnapshot.ts"),
     ) as {

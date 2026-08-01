@@ -97,6 +97,66 @@ export const ensureRenderPhysicalDirectory = (
   return cursor;
 };
 
+/** Create one exact file and bind its published pathname to the write handle. */
+export const createRenderGcFileSnapshot = (
+  base: string,
+  target: string,
+  bytes: Uint8Array,
+): IRenderGcTargetSnapshot => {
+  const root = physicalDirectory(base, "render file ownership root");
+  const absolute = path.resolve(target);
+  const parent = physicalDirectory(
+    path.dirname(absolute),
+    "render file directory",
+  );
+  if (
+    parent.path !== path.dirname(absolute) ||
+    inside(root.real, parent.real) === false
+  )
+    throw new Error(`Render file "${target}" escapes its ownership root.`);
+  const source = Buffer.from(bytes);
+  const descriptor = fs.openSync(absolute, "wx+");
+  try {
+    let offset = 0;
+    while (offset < source.length) {
+      const written = fs.writeSync(
+        descriptor,
+        source,
+        offset,
+        source.length - offset,
+        offset,
+      );
+      if (written === 0)
+        throw new Error(`Render file "${target}" stopped while written.`);
+      offset += written;
+    }
+    fs.fsyncSync(descriptor);
+    const opened = fs.fstatSync(descriptor, { bigint: true });
+    if (opened.isFile() === false)
+      throw new Error(`Render file "${target}" is not one physical file.`);
+    const snapshot = captureRenderGcTarget(root.path, absolute);
+    if (
+      snapshot.kind !== "file" ||
+      snapshot.targetIdentity !== physicalIdentity(opened) ||
+      snapshot.targetVersion !== physicalVersion(opened) ||
+      Buffer.from(readCapturedRenderGcFile(snapshot, source.length)).equals(
+        source,
+      ) === false
+    )
+      throw new Error(
+        `Render file "${target}" changed after descriptor publication.`,
+      );
+    const completed = fs.fstatSync(descriptor, { bigint: true });
+    if (physicalVersion(completed) !== snapshot.targetVersion)
+      throw new Error(`Render file "${target}" changed while published.`);
+    assertPhysicalDirectoryIdentity(parent, "render file directory");
+    assertRootIdentity(root);
+    return snapshot;
+  } finally {
+    fs.closeSync(descriptor);
+  }
+};
+
 /** Quarantine and delete only the exact target captured during GC inventory. */
 export const removeCapturedRenderGcTarget = (props: {
   isolated: string;

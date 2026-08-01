@@ -87,6 +87,11 @@ import {
   removeCapturedRenderGcTarget,
 } from "./renderGcSnapshot";
 import {
+  acquireRenderGcLease,
+  acquireRenderSessionLease,
+  releaseRenderLivenessLease,
+} from "./renderLiveness";
+import {
   type IRuntimePackageSnapshot,
   type RuntimePackageAssetSelection,
   snapshotRuntimePackage,
@@ -103,11 +108,12 @@ const tierName = (() => {
 })();
 const renderTier: IAutoMovieProductionRenderTier =
   tierName === "proxy" ? config.render.proxy : config.render.final;
+const productionSegment = encodeAutoMoviePathSegment(productionId);
 const productionStateRoot = path.join(
   root,
   ".automovie",
   "productions",
-  encodeAutoMoviePathSegment(productionId),
+  productionSegment,
 );
 const renderJobRoot = path.join(productionStateRoot, "render-job");
 const stateRoot = path.join(renderJobRoot, renderTier.kind);
@@ -133,6 +139,18 @@ interface IRenderChunkLockOwner {
   /** Absent only on an older lock written before owner-checked release. */
   token?: string;
 }
+
+const renderCoordinationRoot = (): string =>
+  ensureRenderPhysicalDirectory(
+    root,
+    [
+      ".automovie",
+      "productions",
+      productionSegment,
+      "render-job",
+      "coordination",
+    ].join("/"),
+  );
 
 const main = async (): Promise<void> => {
   if (
@@ -198,46 +216,56 @@ const main = async (): Promise<void> => {
     output({ verified: true, plan: current, chunks: status });
     return;
   }
-  if (action === "finalize") {
-    output(await finalize(await currentStoredPlan()));
-    return;
+  const session = acquireRenderSessionLease({
+    coordinationRoot: renderCoordinationRoot(),
+    pid: process.pid,
+    processAlive,
+    tier: renderTier.kind,
+  });
+  try {
+    if (action === "finalize") {
+      output(await finalize(await currentStoredPlan()));
+      return;
+    }
+    const current = await currentPlan();
+    if (action === "plan") {
+      output(current);
+      return;
+    }
+    if (action === "all") await captureReviewEvidence();
+    if (action === "run" || action === "all") {
+      recoverAbandonedTemporaryDirectories();
+      quarantineStaleSlotOutputs(current.chunks);
+      const result = await runProductionRenderJob({
+        plan: current,
+        workers: integerOption("--workers", 1),
+        deliverable: stringOption("--deliverable"),
+        adapters: {
+          current: currentReceipt,
+          acquire: acquireChunk,
+          render: (chunk) => renderChunk(current, chunk),
+          fail: failChunk,
+          release: releaseChunk,
+        },
+      });
+      output({
+        plan: {
+          compileFingerprint: current.compileFingerprint,
+          editFingerprint: current.editFingerprint,
+          tier: current.tier,
+        },
+        capture: productionFrameCaptureMetrics(),
+        result,
+        chunks: await renderStatus(current),
+      });
+      if (result.failed.length !== 0 || result.busy.length !== 0)
+        process.exitCode = 1;
+      if (action === "run" || process.exitCode === 1) return;
+    }
+    output(await finalize(current));
+  } finally {
+    releaseRenderLivenessLease(session);
   }
-  const current = await currentPlan();
-  if (action === "plan") {
-    output(current);
-    return;
-  }
-  if (action === "all") await captureReviewEvidence();
-  if (action === "run" || action === "all") {
-    recoverAbandonedTemporaryDirectories();
-    quarantineStaleSlotOutputs(current.chunks);
-    const result = await runProductionRenderJob({
-      plan: current,
-      workers: integerOption("--workers", 1),
-      deliverable: stringOption("--deliverable"),
-      adapters: {
-        current: currentReceipt,
-        acquire: acquireChunk,
-        render: (chunk) => renderChunk(current, chunk),
-        fail: failChunk,
-        release: releaseChunk,
-      },
-    });
-    output({
-      plan: {
-        compileFingerprint: current.compileFingerprint,
-        editFingerprint: current.editFingerprint,
-        tier: current.tier,
-      },
-      capture: productionFrameCaptureMetrics(),
-      result,
-      chunks: await renderStatus(current),
-    });
-    if (result.failed.length !== 0 || result.busy.length !== 0)
-      process.exitCode = 1;
-    if (action === "run" || process.exitCode === 1) return;
-  }
-  output(await finalize(current));
 };
 
 const sourceFingerprint = (): AutoMovieContentDigest => {
@@ -2291,7 +2319,21 @@ const chunkDirectory = (digest: AutoMovieContentDigest): string =>
   path.join(stateRoot, "chunks", digest.slice(7));
 
 const renderGarbageCollection = (apply: boolean) => {
-  if (apply) assertNoLiveRenderWorkers();
+  if (apply === false) return collectRenderGarbage(false);
+  const lease = acquireRenderGcLease({
+    coordinationRoot: renderCoordinationRoot(),
+    pid: process.pid,
+    processAlive,
+  });
+  try {
+    assertNoLiveRenderWorkers();
+    return collectRenderGarbage(true);
+  } finally {
+    releaseRenderLivenessLease(lease);
+  }
+};
+
+const collectRenderGarbage = (apply: boolean) => {
   const currentCompileFingerprint = sourceFingerprint();
   const plans = (["proxy", "final"] as const).flatMap((tier) => {
     const file = path.join(renderJobRoot, tier, "plan.json");
@@ -2471,7 +2513,12 @@ const assertNoLiveRenderWorkers = (): void => {
       for (const file of physicalFiles(locks).filter((candidate) =>
         candidate.endsWith(".lock"),
       )) {
-        const owner = readJson<IRenderChunkLockOwner>(file);
+        const snapshot = captureExistingRenderTarget(tierRoot, file);
+        if (snapshot === null) continue;
+        const owner = readCapturedRenderJson<IRenderChunkLockOwner>(
+          snapshot,
+          RENDER_LOCK_JSON_MAX_BYTES,
+        );
         if (Number.isSafeInteger(owner.pid) && processAlive(owner.pid))
           throw new Error(
             `Render GC --apply refuses live ${tier} worker ${owner.pid} at "${file}". Wait for that worker or stop it explicitly.`,
@@ -2482,10 +2529,12 @@ const assertNoLiveRenderWorkers = (): void => {
       for (const file of physicalFiles(attempts).filter((candidate) =>
         candidate.endsWith(".json"),
       )) {
-        const attempt = readJson<{
+        const snapshot = captureExistingRenderTarget(tierRoot, file);
+        if (snapshot === null) continue;
+        const attempt = readCapturedRenderJson<{
           state?: string;
           pid?: number;
-        }>(file);
+        }>(snapshot);
         if (
           attempt.state === "running" &&
           Number.isSafeInteger(attempt.pid) &&
@@ -2677,9 +2726,15 @@ const readRegularInside = (directory: string, relative: string): Uint8Array => {
 
 const captureExistingRenderStateTarget = (
   target: string,
+): IRenderGcTargetSnapshot | null =>
+  captureExistingRenderTarget(stateRoot, target);
+
+const captureExistingRenderTarget = (
+  base: string,
+  target: string,
 ): IRenderGcTargetSnapshot | null => {
   try {
-    return captureRenderGcTarget(stateRoot, target);
+    return captureRenderGcTarget(base, target);
   } catch (error) {
     if (
       (error as NodeJS.ErrnoException).code === "ENOENT" ||

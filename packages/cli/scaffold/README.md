@@ -139,6 +139,7 @@ proxy and final plans, stored review-evidence bundles, and every file named by
 the current publication manifest, then reports unreferenced chunks, quarantine
 entries, and stale publication bytes. Active lock and attempt records are
 never sweep candidates.
+`render gc --apply` holds an exclusive render-job guard through its live-worker scan and sweep, while `plan`, `run`, `all`, and `finalize` hold session claims that make either start order fail closed before state mutation.
 If a candidate changes at the quarantine boundary, GC fails closed and leaves the observed successor under a top-level `.gc-preserved-*` directory. That reserved evidence is excluded from later automatic GC runs; inspect it and adjudicate it manually before reusing or deleting it.
 Guide-pass publication includes both its MP4 and authenticated
 `frames/<pass>/frame_XXXXXXXX.png` control images.
