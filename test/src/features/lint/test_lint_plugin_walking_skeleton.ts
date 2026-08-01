@@ -310,9 +310,24 @@ const runFixture = (props: {
   }
 };
 
-const sentinelConfig = [
-  'import { automovie } from "@automovie/lint";',
+const automoviePluginPrelude = [
+  'import type {} from "@automovie/lint";',
+  'import type { ITtscLintPlugin } from "@ttsc/lint";',
+  'import { createRequire } from "node:module";',
+  'import path from "node:path";',
   "",
+  "const require = createRequire(import.meta.url);",
+  "const automovie = {",
+  "  source: path.join(",
+  '    path.dirname(require.resolve("@automovie/lint/package.json")),',
+  '    "native",',
+  "  ),",
+  "} satisfies ITtscLintPlugin;",
+  "",
+] as const;
+
+const sentinelConfig = [
+  ...automoviePluginPrelude,
   "export default {",
   "  plugins: { automovie },",
   '  rules: { "automovie/template-sentinel": "error" },',
@@ -321,8 +336,7 @@ const sentinelConfig = [
 ].join("\n");
 
 const presenceConfig = [
-  'import { automovie } from "@automovie/lint";',
-  "",
+  ...automoviePluginPrelude,
   "export default {",
   "  plugins: { automovie },",
   "  rules: {",
@@ -350,8 +364,7 @@ const presenceConfig = [
 
 const presenceConfigWithFiles = (files: readonly string[]): string =>
   [
-    'import { automovie } from "@automovie/lint";',
-    "",
+    ...automoviePluginPrelude,
     "export default {",
     "  plugins: { automovie },",
     "  rules: {",
@@ -378,8 +391,7 @@ const presenceConfigWithFiles = (files: readonly string[]): string =>
   ].join("\n");
 
 const assetProvenanceConfig = [
-  'import { automovie } from "@automovie/lint";',
-  "",
+  ...automoviePluginPrelude,
   "export default {",
   "  plugins: { automovie },",
   "  rules: {",
@@ -529,8 +541,7 @@ const assetProvenanceFiles = (
 };
 
 const screenplayConfig = [
-  'import { automovie } from "@automovie/lint";',
-  "",
+  ...automoviePluginPrelude,
   "export default {",
   "  plugins: { automovie },",
   "  rules: {",
@@ -554,8 +565,7 @@ const screenplayConfig = [
 ].join("\n");
 
 const legacyScreenplayConfig = [
-  'import { automovie } from "@automovie/lint";',
-  "",
+  ...automoviePluginPrelude,
   "export default {",
   "  plugins: { automovie },",
   "  rules: {",
