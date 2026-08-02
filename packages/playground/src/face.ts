@@ -547,10 +547,17 @@ const matchSkullTone = (tex: THREE.Texture): void => {
     .setRGB(r / n / 255, g / n / 255, b / n / 255)
     .convertSRGBToLinear();
   applySkullTone();
+  applyShellLighting();
 };
 const selectSkin = (url: string): void => {
-  const texture = loadSkin(url);
   photoTone = null;
+  if (!url) {
+    photoMaterial.map = null;
+    photoMaterial.needsUpdate = true;
+    applySkullTone();
+    return;
+  }
+  const texture = loadSkin(url);
   photoMaterial.map = texture;
   photoMaterial.needsUpdate = true;
   applySkullTone();
@@ -1345,12 +1352,8 @@ const applyPreset = (p: IPreset): void => {
   void loadIdentity(p.data?.identity ?? "").then(() => {
     if (generation === presetGeneration) setIdentity(p.data ? 1 : 0);
   });
-  if (p.data) {
-    (window as unknown as { __loadSkin?: (u: string) => void }).__loadSkin?.(
-      p.data.skin,
-    );
-    loadPhotoHead(p.data.head);
-  }
+  selectSkin(p.data?.skin ?? "");
+  loadPhotoHead(p.data?.head ?? "");
   rebuildEyes();
   colors.skin = p.colors.skin;
   colors.hair = p.colors.hair;

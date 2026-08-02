@@ -24,6 +24,7 @@ interface IFacePhotoAssetContract {
     name: string;
     type: string | null;
   }>;
+  toneTail: string[][];
   topLevelActions: string[];
   windowAssignments: string[];
 }
@@ -54,6 +55,7 @@ const facePhotoAssetContract = (text: string): IFacePhotoAssetContract => {
     selectSkin: [],
   } as IFacePhotoAssetContract["functions"];
   const state: IFacePhotoAssetContract["state"] = [];
+  const toneTail: string[][] = [];
   const topLevelActions: string[] = [];
   for (const statement of source.statements) {
     if (ts.isVariableStatement(statement)) {
@@ -98,6 +100,17 @@ const facePhotoAssetContract = (text: string): IFacePhotoAssetContract => {
           topLevelActions.push(name);
         }
         if (name === "skullMaterial") topLevelActions.push(name);
+        if (
+          name === "matchSkullTone" &&
+          declaration.initializer !== undefined &&
+          ts.isArrowFunction(declaration.initializer) &&
+          ts.isBlock(declaration.initializer.body)
+        )
+          toneTail.push(
+            declaration.initializer.body.statements
+              .slice(-3)
+              .map((child) => compact(child, source)),
+          );
       }
       continue;
     }
@@ -131,13 +144,22 @@ const facePhotoAssetContract = (text: string): IFacePhotoAssetContract => {
     if (
       ts.isBinaryExpression(node) &&
       node.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
-      compact(node.left, source).includes("__loadSkin")
+      ["__loadSkin", "__setSkin", "__setPhotoHead"].some((name) =>
+        compact(node.left, source).includes(name),
+      )
     )
       windowAssignments.push(compact(node, source));
     ts.forEachChild(node, visit);
   };
   visit(source);
-  return { calls, functions, state, topLevelActions, windowAssignments };
+  return {
+    calls,
+    functions,
+    state,
+    toneTail,
+    topLevelActions,
+    windowAssignments,
+  };
 };
 
 /**
@@ -155,11 +177,14 @@ export const test_workspace_face_photo_assets = (): void => {
     {
       calls: {
         loadPhotoHead: [
-          "loadPhotoHead(p.data.head)",
+          'loadPhotoHead(p.data?.head??"")',
           'loadPhotoHead("/models/hero1-head.glb")',
         ],
         loadSkin: ["loadSkin(url)"],
-        selectSkin: ['selectSkin("/models/hero1-face.png")'],
+        selectSkin: [
+          'selectSkin("/models/hero1-face.png")',
+          'selectSkin(p.data?.skin??"")',
+        ],
       },
       functions: {
         loadPhotoHead: [
@@ -178,7 +203,7 @@ export const test_workspace_face_photo_assets = (): void => {
         ],
         selectSkin: [
           {
-            body: "{consttexture=loadSkin(url);photoTone=null;photoMaterial.map=texture;photoMaterial.needsUpdate=true;applySkullTone();if(texture.image)matchSkullTone(texture);}",
+            body: "{photoTone=null;if(!url){photoMaterial.map=null;photoMaterial.needsUpdate=true;applySkullTone();return;}consttexture=loadSkin(url);photoMaterial.map=texture;photoMaterial.needsUpdate=true;applySkullTone();if(texture.image)matchSkullTone(texture);}",
             parameters: ["url:string"],
             returnType: "void",
           },
@@ -234,6 +259,13 @@ export const test_workspace_face_photo_assets = (): void => {
           type: null,
         },
       ],
+      toneTail: [
+        [
+          "photoTone=newTHREE.Color().setRGB(r/n/255,g/n/255,b/n/255).convertSRGBToLinear();",
+          "applySkullTone();",
+          "applyShellLighting();",
+        ],
+      ],
       topLevelActions: [
         "photoMaterial",
         "skinCache",
@@ -252,6 +284,8 @@ export const test_workspace_face_photo_assets = (): void => {
       ],
       windowAssignments: [
         "(windowasunknownas{__loadSkin:unknown}).__loadSkin=selectSkin",
+        "(windowasunknownas{__setSkin:unknown}).__setSkin=(on:boolean)=>{faceMesh.material=on?photoMaterial:faceMaterial;faceGeometry.setIndex(on?[...CANONICAL_FACE_INDICES]:faceIndices);for(constmofeyeMeshes)m.visible=!on;skinModeOn=on;applySkullTone();applyShellLighting();}",
+        "(windowasunknownas{__setPhotoHead:unknown}).__setPhotoHead=(on:boolean)=>{photoHeadOn=on;if(photoHead)photoHead.visible=on;faceMesh.visible=!on;if(skullMesh)skullMesh.visible=!on;if(hairMesh)hairMesh.visible=!on;if(bunMesh)bunMesh.visible=!on;if(bustMesh)bustMesh.visible=!on;for(constmoftailMeshes)m.visible=!on;for(constmofeyeMeshes)m.visible=false;}",
       ],
     },
   );
