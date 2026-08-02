@@ -152,10 +152,16 @@ const captureObservationContracts = (
   source: string,
 ): {
   checks: Array<[string, string]>;
-  consoleObjects: string[][];
-  failureReports: number;
+  consoleReports: Array<Array<[string, string]>>;
+  failureGuards: Array<{
+    condition: string;
+    constructor: string | null;
+    head: string | null;
+    spans: Array<{ expression: string; literal: string }>;
+  }>;
   mainCount: number;
   observations: Array<[string, string]>;
+  outerTryCount: number;
   pixels: Array<[string, string]>;
 } => {
   const parsed = ts.createSourceFile(
@@ -177,33 +183,53 @@ const captureObservationContracts = (
         mains.push(declaration.initializer);
   }
   const checks: Array<[string, string]> = [];
-  const consoleObjects: string[][] = [];
-  let failureReports = 0;
+  const consoleReports: Array<Array<[string, string]>> = [];
+  const failureGuards: Array<{
+    condition: string;
+    constructor: string | null;
+    head: string | null;
+    spans: Array<{ expression: string; literal: string }>;
+  }> = [];
   const observations: Array<[string, string]> = [];
   const pixels: Array<[string, string]> = [];
   const compact = (node: ts.Node): string =>
     node.getText(parsed).replace(/\s+/g, " ");
-  if (mains.length === 1) {
-    const visit = (node: ts.Node): void => {
+  const outerTries =
+    mains.length === 1 &&
+    (ts.isArrowFunction(mains[0]!) || ts.isFunctionExpression(mains[0]!)) &&
+    ts.isBlock(mains[0]!.body)
+      ? mains[0]!.body.statements.filter(ts.isTryStatement)
+      : [];
+  if (outerTries.length === 1) {
+    const statements = outerTries[0]!.tryBlock.statements;
+    for (const statement of statements) {
       if (
-        ts.isVariableDeclaration(node) &&
-        ts.isIdentifier(node.name) &&
-        node.initializer !== undefined
+        ts.isVariableStatement(statement) &&
+        statement.declarationList.declarations.length === 1
       ) {
+        const declaration = statement.declarationList.declarations[0]!;
+        if (
+          ts.isIdentifier(declaration.name) === false ||
+          declaration.initializer === undefined
+        )
+          continue;
         if (
           [
             "maskSubjectPixels",
             "maskBlackPixels",
             "poseWhitePixels",
             "poseMaskPalettePixels",
-          ].includes(node.name.text)
+          ].includes(declaration.name.text)
         )
-          pixels.push([node.name.text, compact(node.initializer)]);
+          pixels.push([
+            declaration.name.text,
+            compact(declaration.initializer),
+          ]);
         if (
-          node.name.text === "observations" &&
-          ts.isObjectLiteralExpression(node.initializer)
+          declaration.name.text === "observations" &&
+          ts.isObjectLiteralExpression(declaration.initializer)
         )
-          for (const property of node.initializer.properties) {
+          for (const property of declaration.initializer.properties) {
             if (ts.isShorthandPropertyAssignment(property))
               observations.push([property.name.text, property.name.text]);
             else if (
@@ -216,25 +242,38 @@ const captureObservationContracts = (
                 compact(property.initializer),
               ]);
           }
+        continue;
       }
       if (
-        ts.isBinaryExpression(node) &&
-        node.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
-        ts.isElementAccessExpression(node.left) &&
-        ts.isIdentifier(node.left.expression) &&
-        node.left.expression.text === "checks" &&
-        ts.isStringLiteralLike(node.left.argumentExpression) &&
-        compact(node.right).includes("observations.")
-      )
-        checks.push([node.left.argumentExpression.text, compact(node.right)]);
-      if (
-        ts.isCallExpression(node) &&
-        ts.isPropertyAccessExpression(node.expression) &&
-        ts.isIdentifier(node.expression.expression) &&
-        node.expression.expression.text === "console" &&
-        node.expression.name.text === "log"
+        ts.isExpressionStatement(statement) &&
+        ts.isBinaryExpression(statement.expression) &&
+        statement.expression.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
+        ts.isElementAccessExpression(statement.expression.left) &&
+        ts.isIdentifier(statement.expression.left.expression) &&
+        statement.expression.left.expression.text === "checks" &&
+        ts.isStringLiteralLike(statement.expression.left.argumentExpression) &&
+        [
+          "mask subject color covers >= 0.3% of the frame",
+          "mask background is dominant black",
+          "pose skeleton draws white lines (0.02%..20%)",
+          "pose carries no mask palette",
+        ].includes(statement.expression.left.argumentExpression.text)
       ) {
-        const serialized = node.arguments[0];
+        checks.push([
+          statement.expression.left.argumentExpression.text,
+          compact(statement.expression.right),
+        ]);
+        continue;
+      }
+      if (
+        ts.isExpressionStatement(statement) &&
+        ts.isCallExpression(statement.expression) &&
+        ts.isPropertyAccessExpression(statement.expression.expression) &&
+        ts.isIdentifier(statement.expression.expression.expression) &&
+        statement.expression.expression.expression.text === "console" &&
+        statement.expression.expression.name.text === "log"
+      ) {
+        const serialized = statement.expression.arguments[0];
         const object =
           serialized !== undefined &&
           ts.isCallExpression(serialized) &&
@@ -245,37 +284,55 @@ const captureObservationContracts = (
             ? serialized.arguments[0]
             : undefined;
         if (object !== undefined && ts.isObjectLiteralExpression(object))
-          consoleObjects.push(
-            object.properties.map((property) =>
-              ts.isShorthandPropertyAssignment(property)
-                ? property.name.text
-                : ts.isPropertyAssignment(property) &&
-                    (ts.isIdentifier(property.name) ||
-                      ts.isStringLiteralLike(property.name))
-                  ? property.name.text
-                  : compact(property),
-            ),
+          consoleReports.push(
+            object.properties.map((property): [string, string] => {
+              if (ts.isShorthandPropertyAssignment(property))
+                return [property.name.text, property.name.text];
+              if (
+                ts.isPropertyAssignment(property) &&
+                (ts.isIdentifier(property.name) ||
+                  ts.isStringLiteralLike(property.name))
+              )
+                return [property.name.text, compact(property.initializer)];
+              return [compact(property), compact(property)];
+            }),
           );
+        continue;
       }
-      if (ts.isThrowStatement(node)) {
-        const text = compact(node);
-        if (
-          text.includes("capture smoke failed:") &&
-          text.includes("failed.map") &&
-          text.includes("JSON.stringify(observations)")
-        )
-          ++failureReports;
+      if (ts.isIfStatement(statement)) {
+        const thrown = ts.isThrowStatement(statement.thenStatement)
+          ? statement.thenStatement.expression
+          : undefined;
+        const argument =
+          thrown !== undefined &&
+          ts.isNewExpression(thrown) &&
+          thrown.arguments?.length === 1
+            ? thrown.arguments[0]
+            : undefined;
+        failureGuards.push({
+          condition: compact(statement.expression),
+          constructor:
+            thrown !== undefined && ts.isNewExpression(thrown)
+              ? compact(thrown.expression)
+              : null,
+          head: ts.isTemplateExpression(argument) ? argument.head.text : null,
+          spans: ts.isTemplateExpression(argument)
+            ? argument.templateSpans.map((span) => ({
+                expression: compact(span.expression),
+                literal: span.literal.text,
+              }))
+            : [],
+        });
       }
-      ts.forEachChild(node, visit);
-    };
-    visit(mains[0]!);
+    }
   }
   return {
     checks,
-    consoleObjects,
-    failureReports,
+    consoleReports,
+    failureGuards,
     mainCount: mains.length,
     observations,
+    outerTryCount: outerTries.length,
     pixels,
   };
 };
@@ -1457,8 +1514,31 @@ export const test_workspace_public_contracts = (): void => {
           "observations.poseMaskPalettePixels === 0",
         ],
       ],
-      consoleObjects: [["route", "server", "checks", "observations"]],
-      failureReports: 1,
+      consoleReports: [
+        [
+          ["route", "route"],
+          ["server", 'server.spawned ? "spawned" : "reused"'],
+          ["checks", "checks"],
+          ["observations", "observations"],
+        ],
+      ],
+      failureGuards: [
+        {
+          condition: "failed.length > 0",
+          constructor: "Error",
+          head: "capture smoke failed: ",
+          spans: [
+            {
+              expression: 'failed.map(([name]) => name).join("; ")',
+              literal: "; observations=",
+            },
+            {
+              expression: "JSON.stringify(observations)",
+              literal: "",
+            },
+          ],
+        },
+      ],
       mainCount: 1,
       observations: [
         ["maskBlackFraction", "maskBlackPixels / total"],
@@ -1469,6 +1549,7 @@ export const test_workspace_public_contracts = (): void => {
         ["poseWhiteFraction", "poseWhitePixels / total"],
         ["poseWhitePixels", "poseWhitePixels"],
       ],
+      outerTryCount: 1,
       pixels: [
         ["maskSubjectPixels", "mask.get(subjectKey) ?? 0"],
         ["maskBlackPixels", "mask.get(rgbKey(0, 0, 0)) ?? 0"],
