@@ -1258,6 +1258,13 @@ const renderBrowserLifecycleContract = (
   functionName: string,
 ): Array<{
   browser: string | null;
+  declarations: Array<{
+    count: number;
+    initializer: string | null;
+    kind: string | null;
+    name: string;
+    pageArgument: string | null;
+  }>;
   directActions: string[];
   outerCatch: boolean;
   outerFinally: string[];
@@ -1268,6 +1275,7 @@ const renderBrowserLifecycleContract = (
   pageTryActions: string[];
   sessionCatch: boolean;
   sessionFinally: string[];
+  writes: Record<string, string[]>;
 }> => {
   const parsed = ts.createSourceFile(
     file,
@@ -1289,6 +1297,30 @@ const renderBrowserLifecycleContract = (
         (declaration) =>
           ts.isIdentifier(declaration.name) && declaration.name.text === name,
       );
+  const declarationCount = (root: ts.Node, name: string): number => {
+    let count = 0;
+    const visit = (node: ts.Node): void => {
+      if (
+        ts.isVariableDeclaration(node) &&
+        ts.isIdentifier(node.name) &&
+        node.name.text === name
+      )
+        ++count;
+      ts.forEachChild(node, visit);
+    };
+    visit(root);
+    return count;
+  };
+  const declarationKind = (
+    declaration: ts.VariableDeclaration | undefined,
+  ): string | null => {
+    const list = declaration?.parent;
+    if (list === undefined || ts.isVariableDeclarationList(list) === false)
+      return null;
+    if ((list.flags & ts.NodeFlags.Const) !== 0) return "const";
+    if ((list.flags & ts.NodeFlags.Let) !== 0) return "let";
+    return "var";
+  };
   const action = (statement: ts.Statement): string => {
     if (ts.isTryStatement(statement)) return "try";
     if (
@@ -1301,6 +1333,13 @@ const renderBrowserLifecycleContract = (
   };
   const contracts: Array<{
     browser: string | null;
+    declarations: Array<{
+      count: number;
+      initializer: string | null;
+      kind: string | null;
+      name: string;
+      pageArgument: string | null;
+    }>;
     directActions: string[];
     outerCatch: boolean;
     outerFinally: string[];
@@ -1311,6 +1350,7 @@ const renderBrowserLifecycleContract = (
     pageTryActions: string[];
     sessionCatch: boolean;
     sessionFinally: string[];
+    writes: Record<string, string[]>;
   }> = [];
   for (const statement of parsed.statements) {
     if (ts.isVariableStatement(statement) === false) continue;
@@ -1341,11 +1381,72 @@ const renderBrowserLifecycleContract = (
         outer === undefined
           ? undefined
           : variable(outer.tryBlock.statements, "page");
+      const closePage =
+        outer === undefined
+          ? undefined
+          : variable(outer.tryBlock.statements, "closePage");
+      const session =
+        pageTry === undefined
+          ? undefined
+          : variable(pageTry.tryBlock.statements, "session");
+      const tracked = ["browser", "page", "closePage", "session"];
+      const writes = Object.fromEntries(
+        tracked.map((name) => [name, [] as string[]]),
+      );
+      const visitWrites = (node: ts.Node): void => {
+        if (
+          ts.isBinaryExpression(node) &&
+          node.operatorToken.kind >= ts.SyntaxKind.FirstAssignment &&
+          node.operatorToken.kind <= ts.SyntaxKind.LastAssignment &&
+          ts.isIdentifier(node.left) &&
+          tracked.includes(node.left.text)
+        )
+          writes[node.left.text]!.push(compact(node));
+        else if (
+          (ts.isPrefixUnaryExpression(node) ||
+            ts.isPostfixUnaryExpression(node)) &&
+          (node.operator === ts.SyntaxKind.PlusPlusToken ||
+            node.operator === ts.SyntaxKind.MinusMinusToken) &&
+          ts.isIdentifier(node.operand) &&
+          tracked.includes(node.operand.text)
+        )
+          writes[node.operand.text]!.push(compact(node));
+        ts.forEachChild(node, visitWrites);
+      };
+      visitWrites(declaration.initializer.body);
+      const bindings = [
+        ["browser", browser],
+        ["page", page],
+        ["closePage", closePage],
+        ["session", session],
+      ] as const;
       contracts.push({
         browser:
           browser?.initializer === undefined
             ? null
             : compact(browser.initializer),
+        declarations: bindings.map(([name, binding]) => ({
+          count: declarationCount(declaration.initializer.body, name),
+          initializer:
+            binding?.initializer === undefined
+              ? null
+              : name === "session" && ts.isCallExpression(binding.initializer)
+                ? compact(binding.initializer.expression)
+                : compact(binding.initializer),
+          kind: declarationKind(binding),
+          name,
+          pageArgument:
+            name === "session" &&
+            binding?.initializer !== undefined &&
+            ts.isCallExpression(binding.initializer) &&
+            binding.initializer.arguments[0] !== undefined &&
+            ts.isObjectLiteralExpression(binding.initializer.arguments[0])
+              ? (binding.initializer.arguments[0].properties
+                  .filter(ts.isShorthandPropertyAssignment)
+                  .find((property) => property.name.text === "page")?.name
+                  .text ?? null)
+              : null,
+        })),
         directActions: body.map(action),
         outerCatch: outer?.catchClause !== undefined,
         outerFinally:
@@ -1366,6 +1467,7 @@ const renderBrowserLifecycleContract = (
           sessionTry?.finallyBlock?.statements.map((statement) =>
             compact(statement),
           ) ?? [],
+        writes,
       });
     }
   }
@@ -2610,6 +2712,41 @@ export const test_workspace_public_contracts = (): void => {
         {
           browser:
             "awaitchromium.launch({executablePath:options.chrome,headless:true,})",
+          declarations: [
+            {
+              count: 1,
+              initializer:
+                "awaitchromium.launch({executablePath:options.chrome,headless:true,})",
+              kind: "const",
+              name: "browser",
+              pageArgument: null,
+            },
+            {
+              count: 1,
+              initializer:
+                "awaitbrowser.newPage({viewport:{width:options.width,height:options.height},deviceScaleFactor:1,})",
+              kind: "const",
+              name: "page",
+              pageArgument: null,
+            },
+            {
+              count: 1,
+              initializer: "true",
+              kind: "let",
+              name: "closePage",
+              pageArgument: null,
+            },
+            {
+              count: 1,
+              initializer:
+                file === "render-and-see.ts"
+                  ? "createHeadlessCaptureAdapter"
+                  : "openSequenceCaptureSession",
+              kind: "const",
+              name: "session",
+              pageArgument: "page",
+            },
+          ],
           directActions: ["route", "browser", "try"],
           outerCatch: false,
           outerFinally: ["awaitbrowser.close();"],
@@ -2620,6 +2757,12 @@ export const test_workspace_public_contracts = (): void => {
           pageTryActions: ["session", "closePage=false;", "try"],
           sessionCatch: false,
           sessionFinally: ["awaitsession.close();"],
+          writes: {
+            browser: [],
+            closePage: ["closePage=false"],
+            page: [],
+            session: [],
+          },
         },
       ],
     })),
