@@ -308,6 +308,34 @@ export const renderChunkPublicationProtectsTree = (
   publication.tree.target === candidate.target &&
   publication.tree.targetIdentity === candidate.targetIdentity;
 
+/** Resolve one dead-tree candidate through its canonical current chunk only. */
+export const currentRenderChunkPublicationProtectsTree = (props: {
+  candidate: IRenderGcTargetSnapshot;
+  candidateName: string;
+  capture: (
+    chunk: IAutoMovieProductionRenderChunk,
+  ) => IRenderChunkPublicationSnapshot | null;
+  chunks: ReadonlyMap<AutoMovieContentDigest, IAutoMovieProductionRenderChunk>;
+}): boolean => {
+  const match = /^([0-9a-f]{64})\.[^.]+\.\d+$/u.exec(props.candidateName);
+  if (match === null) return false;
+  const digest = `sha256:${match[1]}` as AutoMovieContentDigest;
+  const chunk = props.chunks.get(digest);
+  if (chunk === undefined) return false;
+  try {
+    const publication = props.capture(chunk);
+    return (
+      publication !== null &&
+      publication.receipt.chunk === digest &&
+      publication.receipt.slot === chunk.slot &&
+      renderChunkPublicationProtectsTree(publication, props.candidate)
+    );
+  } catch {
+    // Only the complete exact canonical pointer protects a dead temp tree.
+    return false;
+  }
+};
+
 /** Read one exact file that belongs to a previously captured chunk tree. */
 export const readRenderChunkPublicationFile = (
   publication: IRenderChunkPublicationSnapshot,

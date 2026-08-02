@@ -82,11 +82,11 @@ import {
   type ICurrentRenderChunkPublication,
   captureRenderChunkPublicationFromPointer,
   consumeCurrentRenderChunkFrames,
+  currentRenderChunkPublicationProtectsTree,
   loadCurrentRenderChunkPublication,
   publishRenderChunkSnapshot,
   removeCapturedRenderChunkPointer,
   renderChunkPublicationPath,
-  renderChunkPublicationProtectsTree,
 } from "./renderChunkSnapshot";
 import {
   type IRenderGcTargetSnapshot,
@@ -2692,24 +2692,17 @@ const currentPublicationProtectsTree = (
   candidateName: string,
   candidate: IRenderGcTargetSnapshot,
 ): boolean => {
-  const match = /^([0-9a-f]{64})\.[^.]+\.\d+$/u.exec(candidateName);
-  if (match === null) return false;
-  const digest = `sha256:${match[1]}` as AutoMovieContentDigest;
-  const chunk = chunks.get(digest);
-  if (chunk === undefined) return false;
-  const pointer = captureCurrentChunkPointer(chunk);
-  if (pointer === null) return false;
-  try {
-    const publication = captureRenderChunkPublicationFromPointer(pointer);
-    return (
-      publication.receipt.chunk === digest &&
-      publication.receipt.slot === chunk.slot &&
-      renderChunkPublicationProtectsTree(publication, candidate)
-    );
-  } catch {
-    // Only the complete exact canonical pointer protects a dead temp tree.
-    return false;
-  }
+  return currentRenderChunkPublicationProtectsTree({
+    candidate,
+    candidateName,
+    chunks,
+    capture: (chunk) => {
+      const pointer = captureCurrentChunkPointer(chunk);
+      return pointer === null
+        ? null
+        : captureRenderChunkPublicationFromPointer(pointer);
+    },
+  });
 };
 
 const attemptPath = (chunk: IAutoMovieProductionRenderChunk): string =>

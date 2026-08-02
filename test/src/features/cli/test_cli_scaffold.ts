@@ -128,15 +128,19 @@ export const test_cli_scaffold = async (): Promise<void> => {
           renderProgressOffset,
           renderScript.indexOf("\ntry {", renderProgressOffset),
         );
-  const recoveryProtectionOffset = renderScript.indexOf(
-    "const currentPublicationProtectsTree",
+  const recoveryProtectionModule = files["scripts/renderChunkSnapshot.ts"]!;
+  const recoveryProtectionOffset = recoveryProtectionModule.indexOf(
+    "export const currentRenderChunkPublicationProtectsTree",
   );
   const recoveryProtectionSource =
     recoveryProtectionOffset < 0
       ? ""
-      : renderScript.slice(
+      : recoveryProtectionModule.slice(
           recoveryProtectionOffset,
-          renderScript.indexOf("const attemptPath", recoveryProtectionOffset),
+          recoveryProtectionModule.indexOf(
+            "export const readRenderChunkPublicationFile",
+            recoveryProtectionOffset,
+          ),
         );
   const renderProgressStages = [
     "finalize.start",
@@ -525,7 +529,9 @@ export const test_cli_scaffold = async (): Promise<void> => {
       files["scripts/render.ts"]!.includes(
         "currentPublicationProtectsTree(currentChunks, entry.name, snapshot)",
       ) &&
-      recoveryProtectionSource.includes("const chunk = chunks.get(digest)") &&
+      recoveryProtectionSource.includes(
+        "const chunk = props.chunks.get(digest)",
+      ) &&
       recoveryProtectionSource.includes("for (const chunk of chunks)") ===
         false &&
       files[".gitignore"]!.includes(".automovie-chunk-*") &&
@@ -2880,6 +2886,16 @@ export const test_cli_scaffold = async (): Promise<void> => {
           receipt: { globalFrame: number };
         }) => void,
       ) => void;
+      currentRenderChunkPublicationProtectsTree: (props: {
+        candidate: unknown;
+        candidateName: string;
+        capture: (chunk: { id: string; slot: string }) => {
+          pointer: unknown;
+          receipt: { chunk: string; slot: string };
+          tree: { target: string };
+        } | null;
+        chunks: ReadonlyMap<string, { id: string; slot: string }>;
+      }) => boolean;
       loadCurrentRenderChunkPublication: (props: {
         assertReceipt: (receipt: { chunk: string }) => void;
         chunk: { frames: unknown[] };
@@ -3204,16 +3220,15 @@ export const test_cli_scaffold = async (): Promise<void> => {
       chunkPublicationRoot,
       recoverySource,
     );
-    const recoveryPublished =
-      renderChunkSnapshotModule.publishRenderChunkSnapshot({
-        chunk: recoveryId,
-        receipt: recoveryReceipt,
-        root: chunkPublicationRoot,
-        scope: chunkPublicationScope,
-        tier: "final",
-        tree: recoverySource,
-      });
-    const recoveryDecoySources = [0, 1].map((index) => {
+    renderChunkSnapshotModule.publishRenderChunkSnapshot({
+      chunk: recoveryId,
+      receipt: recoveryReceipt,
+      root: chunkPublicationRoot,
+      scope: chunkPublicationScope,
+      tier: "final",
+      tree: recoverySource,
+    });
+    const recoveryDecoys = [0, 1].map((index) => {
       const id = fixtureDigest(Buffer.from(`recovery decoy ${index}`));
       const source = path.join(chunkPublicationRoot, `recovery-decoy-${index}`);
       renderChunkSnapshotModule.publishRenderChunkSnapshot({
@@ -3224,46 +3239,66 @@ export const test_cli_scaffold = async (): Promise<void> => {
         tier: "final",
         tree: source,
       });
-      return source;
+      return {
+        id,
+        pointer: renderChunkSnapshotModule.renderChunkPublicationPath({
+          chunk: id,
+          root: chunkPublicationRoot,
+          scope: chunkPublicationScope,
+          tier: "final",
+        }),
+        source,
+      };
     });
-    let recoveryDecoyPayloadOpens = 0;
+    let recoveryDecoyOpens = 0;
     mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
       if (
         typeof file !== "number" &&
-        recoveryDecoySources.some((source) =>
-          path
-            .resolve(file.toString())
-            .startsWith(`${path.resolve(source)}${path.sep}`),
+        recoveryDecoys.some(
+          (decoy) =>
+            path.resolve(file.toString()) === path.resolve(decoy.pointer) ||
+            path
+              .resolve(file.toString())
+              .startsWith(`${path.resolve(decoy.source)}${path.sep}`),
         )
       )
-        recoveryDecoyPayloadOpens++;
+        recoveryDecoyOpens++;
       return Reflect.apply(nativeOpen, mutableFs, [
         file,
         flags,
         ...args,
       ]) as number;
     }) as typeof fs.openSync;
-    let recapturedRecoveryPublication: {
-      pointer: unknown;
-      receipt: unknown;
-      tree: { target: string };
-    } | null = null;
+    let recoveryProtected = false;
     try {
-      recapturedRecoveryPublication =
-        renderChunkSnapshotModule.captureRenderChunkPublicationFromPointer(
-          recoveryPublished.publication.pointer,
-        );
+      recoveryProtected =
+        renderChunkSnapshotModule.currentRenderChunkPublicationProtectsTree({
+          candidate: recoveryCandidate,
+          candidateName: `${recoveryId.slice(7)}.candidate.999999`,
+          capture: (chunk) =>
+            renderChunkSnapshotModule.captureRenderChunkPublication(
+              chunkPublicationRoot,
+              renderChunkSnapshotModule.renderChunkPublicationPath({
+                chunk: chunk.id,
+                root: chunkPublicationRoot,
+                scope: chunkPublicationScope,
+                tier: "final",
+              }),
+            ),
+          chunks: new Map([
+            [recoveryId, { id: recoveryId, slot: recoveryReceipt.slot }],
+            ...recoveryDecoys.map(
+              (decoy, index) =>
+                [decoy.id, { id: decoy.id, slot: `decoy-${index}` }] as const,
+            ),
+          ]),
+        });
     } finally {
       mutableFs.openSync = nativeOpen;
     }
     TestValidator.predicate(
       "late recovery checks only the candidate's canonical pointer and tree",
-      recapturedRecoveryPublication !== null &&
-        renderChunkSnapshotModule.renderChunkPublicationProtectsTree(
-          recapturedRecoveryPublication,
-          recoveryCandidate,
-        ) &&
-        recoveryDecoyPayloadOpens === 0,
+      recoveryProtected && recoveryDecoyOpens === 0,
     );
 
     const pointerRaceId = fixtureDigest(Buffer.from("pointer successor chunk"));
