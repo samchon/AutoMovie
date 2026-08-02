@@ -37,6 +37,7 @@ interface IFaceAnalysisCleanupContract {
     operationDigest: string;
     operationParameters: string[];
     pageOptions: string;
+    topLevelAwaited: boolean;
   }>;
 }
 
@@ -107,6 +108,22 @@ const faceAnalysisCleanupContract = (
     }
     return null;
   };
+  const isTopLevelAwait = (node: ts.CallExpression): boolean => {
+    if (ts.isAwaitExpression(node.parent) === false) return false;
+    const owner = node.parent.parent;
+    if (
+      ts.isVariableDeclaration(owner) &&
+      owner.initializer === node.parent &&
+      ts.isVariableDeclarationList(owner.parent) &&
+      ts.isVariableStatement(owner.parent.parent)
+    )
+      return owner.parent.parent.parent === source;
+    return (
+      ts.isExpressionStatement(owner) &&
+      owner.expression === node.parent &&
+      owner.parent === source
+    );
+  };
   const visit = (node: ts.Node): void => {
     if (ts.isCallExpression(node)) {
       const callee = compact(node.expression, source);
@@ -137,6 +154,7 @@ const faceAnalysisCleanupContract = (
                 )
               : [],
           pageOptions: compact(node.arguments[1]!, source),
+          topLevelAwaited: isTopLevelAwait(node),
         });
       }
       if (callee === "chromium.launch") launchOwners.push(ownerOf(node));
@@ -275,6 +293,7 @@ export const test_workspace_face_analysis_cleanup = (): void => {
             "8249ad3f2defad516ff1eeb3b4572782650fbfa67098fa96503c0ac661d6cdce",
           operationParameters: ["page"],
           pageOptions: "{viewport:{width:1000,height:1000}}",
+          topLevelAwaited: true,
         },
       ],
     },
@@ -302,6 +321,7 @@ export const test_workspace_face_analysis_cleanup = (): void => {
             "16c30a42fbed8b9e55454ad4e30627a2ccd7ca0dc4c8ca3919d19a48ae3d2f20",
           operationParameters: ["page"],
           pageOptions: "{viewport:{width:1000,height:1000}}",
+          topLevelAwaited: true,
         },
       ],
     },
@@ -338,6 +358,7 @@ export const test_workspace_face_analysis_cleanup = (): void => {
             "9d231e140e358e95175aa032b947e8423a015a87c43271a7af740828fa49f83d",
           operationParameters: ["page"],
           pageOptions: "{viewport:{width:1000,height:1000}}",
+          topLevelAwaited: true,
         },
       ],
     },
@@ -359,6 +380,7 @@ export const test_workspace_face_analysis_cleanup = (): void => {
             "bebcf2f4d302536826955adc637d83dec92e44280ae18fe36eefee0410af886d",
           operationParameters: ["page"],
           pageOptions: "{viewport:{width:800,height:600}}",
+          topLevelAwaited: true,
         },
       ],
     },
@@ -386,6 +408,7 @@ export const test_workspace_face_analysis_cleanup = (): void => {
             "ffe840322fbeb130383a3fca1a94fcc80b43781ad083e62ed9a218cada8aca5b",
           operationParameters: ["page"],
           pageOptions: "{viewport:{width:1000,height:1000}}",
+          topLevelAwaited: true,
         },
       ],
     },
@@ -413,6 +436,7 @@ export const test_workspace_face_analysis_cleanup = (): void => {
             "685df750af3c2639a830c2e458078242a7af47c7c83c1cb7f65b1a69416f1da0",
           operationParameters: ["page"],
           pageOptions: "{viewport:{width:1000,height:1000}}",
+          topLevelAwaited: true,
         },
       ],
     },
@@ -449,6 +473,7 @@ export const test_workspace_face_analysis_cleanup = (): void => {
             "7989eb8783de9d594421ecde5fd7360eba9ea712a5877a4d2f0ab22960239434",
           operationParameters: ["page"],
           pageOptions: "{viewport:{width:1000,height:1000}}",
+          topLevelAwaited: true,
         },
       ],
     },
@@ -491,6 +516,7 @@ export const test_workspace_face_analysis_cleanup = (): void => {
             "4d167c80871f80637ff5c254af0aede7d3839872869e9f7504acd11d411fb9e9",
           operationParameters: ["page"],
           pageOptions: "{viewport:{width:1000,height:1000}}",
+          topLevelAwaited: true,
         },
       ],
     },
@@ -521,6 +547,7 @@ export const test_workspace_face_analysis_cleanup = (): void => {
           operationParameters: ["page"],
           pageOptions:
             "{viewport:{width:1024,height:1024},deviceScaleFactor:1}",
+          topLevelAwaited: true,
         },
       ],
     },
@@ -549,6 +576,7 @@ export const test_workspace_face_analysis_cleanup = (): void => {
             "d9193c251375f0805209e1b197e51f5c8a08719484a16d1adf05a540628458aa",
           operationParameters: ["page"],
           pageOptions: "{viewport:{width:1100,height:700}}",
+          topLevelAwaited: true,
         },
       ],
     },
