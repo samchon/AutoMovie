@@ -1521,7 +1521,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       },
       {
         contract:
-          'files["scripts/renderAttemptSnapshot.ts"]!.includes( "createRenderGcFileSnapshot", )',
+          'source clause 1 of 2: files["scripts/renderAttemptSnapshot.ts"]!.includes( "createRenderGcFileSnapshot", )',
         satisfied: files["scripts/renderAttemptSnapshot.ts"]!.includes(
           "createRenderGcFileSnapshot",
         ),
@@ -1549,7 +1549,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       },
       {
         contract:
-          'files["scripts/renderAttemptSnapshot.ts"]!.includes( "createRenderGcFileSnapshot", )',
+          'source clause 2 of 2: files["scripts/renderAttemptSnapshot.ts"]!.includes( "createRenderGcFileSnapshot", )',
         satisfied: files["scripts/renderAttemptSnapshot.ts"]!.includes(
           "createRenderGcFileSnapshot",
         ),
