@@ -233,8 +233,10 @@ const cleanupLifecycle = (
       return statement.declarationList.declarations[0]!.name.text;
     if (ts.isInterfaceDeclaration(statement))
       return `interface:${statement.name.text}`;
-    if (ts.isForOfStatement(statement)) return "for";
+    if (ts.isForStatement(statement) || ts.isForOfStatement(statement))
+      return "for";
     if (ts.isIfStatement(statement)) return "if";
+    if (ts.isTryStatement(statement)) return "try";
     if (ts.isExpressionStatement(statement)) {
       const expression = ts.isAwaitExpression(statement.expression)
         ? statement.expression.expression
