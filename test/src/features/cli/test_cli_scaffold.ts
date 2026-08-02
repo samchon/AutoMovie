@@ -74,7 +74,7 @@ const comparatorFreeSortCalls = (
           const method = ts.isPropertyAccessExpression(expression)
             ? expression.name.text
             : ts.isElementAccessExpression(expression) &&
-                ts.isStringLiteral(expression.argumentExpression)
+                ts.isStringLiteralLike(expression.argumentExpression)
               ? expression.argumentExpression.text
               : null;
           if (method === "sort" || method === "toSorted") {
@@ -164,6 +164,20 @@ export const test_cli_scaffold = async (): Promise<void> => {
   );
 
   const files = renderScaffold({ name: "demo-film" });
+  TestValidator.equals(
+    "sort oracle distinguishes calls from source trivia and comparators",
+    comparatorFreeSortCalls({
+      "sort-oracle.ts": [
+        'const note = ".sort()";',
+        "// items.toSorted();",
+        "items.sort();",
+        'items["toSorted"]();',
+        "items[`sort`]();",
+        "items.toSorted((left, right) => left - right);",
+      ].join("\n"),
+    }),
+    ["sort-oracle.ts:3:1", "sort-oracle.ts:4:1", "sort-oracle.ts:5:1"],
+  );
   TestValidator.equals(
     "shipped TypeScript sources give every sort an explicit comparator",
     comparatorFreeSortCalls(files),
