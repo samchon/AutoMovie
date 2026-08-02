@@ -107,11 +107,11 @@ import {
   renderChunkPublicationPath,
 } from "./renderChunkSnapshot";
 import {
-  type IRenderGcPhysicalDirectory,
   type IRenderGcTargetSnapshot,
   RENDER_GC_QUARANTINE_EVIDENCE_DIRECTORY,
   RENDER_GC_REMOVAL_STAGING_DIRECTORY,
   assertCapturedRenderGcFileEntry,
+  assertCapturedRenderTarget,
   assertRenderPhysicalDirectoryIdentity,
   captureRenderGcTarget,
   captureRenderPhysicalDirectory,
@@ -133,6 +133,11 @@ import {
   captureExistingRenderPlan,
   publishRenderPlan,
 } from "./renderPlanSnapshot";
+import {
+  type IRenderChunkTemporaryTree,
+  assertRenderChunkTemporaryTree,
+  createRenderChunkTemporaryTree,
+} from "./renderTemporarySnapshot";
 import {
   type IRuntimePackageSnapshot,
   type RuntimePackageAssetSelection,
@@ -785,18 +790,17 @@ const renderChunk = async (
   });
   heldChunkAttempts.set(chunk.slot, attempt);
   if (pointer !== null) removeCapturedRenderChunkPointer(pointer);
-  const temporaryRoot = ensureRenderPhysicalDirectory(stateRoot, "tmp");
-  const temporary = path.join(
-    temporaryRoot,
-    `${chunk.id.slice(7)}.${randomUUID()}.${process.pid}`,
-  );
-  fs.mkdirSync(temporary);
-  const temporaryOwnership = captureRenderPhysicalDirectory(
-    temporary,
-    "render chunk temporary tree",
-  );
+  const temporaryOwnership = createRenderChunkTemporaryTree({
+    name: `${chunk.id.slice(7)}.${randomUUID()}.${process.pid}`,
+    stateRoot,
+  });
+  const temporary = temporaryOwnership.path;
   const frameReceipts: IAutoMovieProductionRenderChunkReceipt["frames"] = [];
   const frameBytes: Uint8Array[] = [];
+  const writtenFiles: Array<{
+    relative: string;
+    snapshot: IRenderGcTargetSnapshot;
+  }> = [];
   for (const sample of chunk.frames) {
     const images: Array<{ image: PNG; weight: number }> = [];
     for (const layer of productionRenderLayersForPass(sample, chunk.pass)) {
@@ -838,11 +842,18 @@ const renderChunk = async (
       plan.frameFormat.width,
       plan.frameFormat.height,
     );
-    const relative = `frames/frame_${String(sample.globalFrame).padStart(
+    const relative = `frame_${String(sample.globalFrame).padStart(
       8,
       "0",
     )}.${chunk.pass}.png`;
-    writeRenderFile(temporaryOwnership, path.join(temporary, relative), bytes);
+    writtenFiles.push({
+      relative,
+      snapshot: writeRenderFile({
+        bytes,
+        file: path.join(temporary, relative),
+        ownership: temporaryOwnership,
+      }),
+    });
     const probe = probeProductionMedia({
       kind: "preview",
       mediaType: "image/png",
@@ -864,11 +875,14 @@ const renderChunk = async (
     for (const frame of frameBytes) consumeFrame(frame);
   }, plan);
   const encodedPath = "chunk.mp4";
-  writeRenderFile(
-    temporaryOwnership,
-    path.join(temporary, encodedPath),
-    encodedBytes,
-  );
+  writtenFiles.push({
+    relative: encodedPath,
+    snapshot: writeRenderFile({
+      bytes: encodedBytes,
+      file: path.join(temporary, encodedPath),
+      ownership: temporaryOwnership,
+    }),
+  });
   const encodedProbe = probeProductionVideoMp4(encodedBytes);
   if (
     encodedProbe.kind !== "video" ||
@@ -891,17 +905,29 @@ const renderChunk = async (
       bytes: encodedBytes.length,
     },
   };
-  assertRenderPhysicalDirectoryIdentity(
-    temporaryOwnership,
-    "render chunk temporary tree",
-  );
+  assertRenderChunkTemporaryTree(temporaryOwnership);
+  for (const written of writtenFiles)
+    assertCapturedRenderTarget(written.snapshot);
+  const completedTree = captureRenderGcTarget(root, temporary);
+  if (
+    completedTree.kind !== "directory" ||
+    completedTree.targetIdentity !== temporaryOwnership.tree.identity
+  )
+    throw new Error("Render chunk completed tree changed physical identity.");
+  for (const written of writtenFiles)
+    assertCapturedRenderGcFileEntry({
+      directory: completedTree,
+      file: written.snapshot,
+      relative: written.relative,
+    });
+  assertRenderChunkTemporaryTree(temporaryOwnership);
   const published = publishRenderChunkSnapshot({
     chunk: chunk.id,
     receipt,
     root,
     scope: renderLivenessScope,
     tier: renderTier.kind,
-    tree: temporary,
+    tree: completedTree,
   });
   completeRenderAttempt(attempt);
   heldChunkAttempts.delete(chunk.slot);
@@ -3024,31 +3050,27 @@ const processAlive = (pid: number): boolean => {
   }
 };
 
-const writeRenderFile = (
-  ownership: IRenderGcPhysicalDirectory,
-  file: string,
-  bytes: Uint8Array,
-): void => {
-  assertRenderPhysicalDirectoryIdentity(
-    ownership,
-    "render chunk temporary tree",
+const writeRenderFile = (props: {
+  bytes: Uint8Array;
+  file: string;
+  ownership: IRenderChunkTemporaryTree;
+}): IRenderGcTargetSnapshot => {
+  if (path.dirname(path.resolve(props.file)) !== props.ownership.tree.path)
+    throw new Error("Render chunk file changed declared parent.");
+  assertRenderChunkTemporaryTree(props.ownership);
+  const snapshot = createRenderGcFileSnapshot(
+    props.ownership.tree.path,
+    props.file,
+    props.bytes,
   );
-  fs.mkdirSync(path.dirname(file), { recursive: true });
-  assertRenderPhysicalDirectoryIdentity(
-    ownership,
-    "render chunk temporary tree",
-  );
-  const snapshot = createRenderGcFileSnapshot(ownership.path, file, bytes);
   if (
-    snapshot.base.path !== ownership.path ||
-    snapshot.base.real !== ownership.real ||
-    snapshot.base.identity !== ownership.identity
+    snapshot.base.path !== props.ownership.tree.path ||
+    snapshot.base.real !== props.ownership.tree.real ||
+    snapshot.base.identity !== props.ownership.tree.identity
   )
-    throw new Error("Render chunk file changed temporary-tree ownership.");
-  assertRenderPhysicalDirectoryIdentity(
-    ownership,
-    "render chunk temporary tree",
-  );
+    throw new Error("Render chunk file changed parent ownership.");
+  assertRenderChunkTemporaryTree(props.ownership);
+  return snapshot;
 };
 
 const readJson = <T>(file: string): T =>

@@ -17,6 +17,7 @@ import {
   assertCapturedRenderGcFileEntry,
   assertCapturedRenderTarget,
   captureRenderGcTarget,
+  captureRenderPhysicalDirectory,
   createRenderGcFileSnapshot,
   ensureRenderPhysicalDirectory,
   readCapturedRenderGcFile,
@@ -109,12 +110,23 @@ export const publishRenderChunkSnapshot = (props: {
   root: string;
   scope: string;
   tier: "final" | "proxy";
-  tree: string;
+  tree: IRenderGcTargetSnapshot;
 }): { publication: IRenderChunkPublicationSnapshot; reused: boolean } => {
   assertPublicationIdentity(props);
-  const tree = captureRenderGcTarget(props.root, props.tree);
+  const tree = props.tree;
   if (tree.kind !== "directory")
-    throw new Error(`Render chunk "${props.tree}" is not a directory.`);
+    throw new Error(`Render chunk "${tree.target}" is not a directory.`);
+  const root = captureRenderPhysicalDirectory(
+    props.root,
+    "render chunk publication root",
+  );
+  if (
+    tree.base.path !== root.path ||
+    tree.base.real !== root.real ||
+    tree.base.identity !== root.identity
+  )
+    throw new Error("Render chunk tree changed publication ownership root.");
+  assertCapturedRenderTarget(tree);
   const relativeTree = ownedRelative(tree.base.path, tree.target).replaceAll(
     "\\",
     "/",

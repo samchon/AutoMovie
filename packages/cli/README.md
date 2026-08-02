@@ -109,7 +109,7 @@ Render plans use an append-only predecessor chain with one immutable no-overwrit
 
 Descriptor-bound render final slots are never automatically removed after creation begins. A write, readback, target, parent, or root validation failure leaves visible evidence for the consumer's strict gate and explicit GC or manual adjudication instead of risking deletion of a relinked successor.
 
-Frame PNGs and encoded chunk media use the same direct final-slot protocol inside one captured UUID temporary tree: every parent and final pathname is identity-fenced, each file is written through descriptor-bound `O_EXCL`, and failures remain visible in that tree for exact abandoned recovery instead of temp-file rename or cleanup.
+Frame PNGs and encoded chunk media use the same direct final-slot protocol at the root of one UUID temporary tree bound to the original render-state, temporary-root, and tree generations. Flattening the private chunk tree removes a nested frame-parent handoff; each descriptor-bound `O_EXCL` file snapshot is carried into one completed-tree inventory, and publication accepts only that exact captured tree. Failures remain visible for exact abandoned recovery instead of temp-file rename or cleanup.
 
 Dialogue synthesis caches each content key as one immutable directory, publishes both file slots through descriptor-bound `O_EXCL` with `audio.f32` before `receipt.json`, and accepts a cache hit only from one captured and revalidated two-file generation. Legacy sibling `.f32` and `.json` entries are ignored and regenerated without replacement.
 

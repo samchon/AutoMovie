@@ -122,6 +122,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
 
   const files = renderScaffold({ name: "demo-film" });
   const renderScript = files["scripts/render.ts"]!;
+  const renderTemporarySnapshot = files["scripts/renderTemporarySnapshot.ts"]!;
   const renderProgressOffset = renderScript.indexOf("const renderProgress");
   const renderProgressSource =
     renderProgressOffset < 0
@@ -270,6 +271,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       "scripts/renderGcSnapshot.ts",
       "scripts/renderLiveness.ts",
       "scripts/renderPlanSnapshot.ts",
+      "scripts/renderTemporarySnapshot.ts",
       "scripts/review-status.ts",
       "scripts/runtimePackageSnapshot.ts",
       "scripts/verify.ts",
@@ -583,17 +585,28 @@ export const test_cli_scaffold = async (): Promise<void> => {
       acquireChunkSource.includes(".candidate") === false &&
       acquireChunkSource.includes("fs.linkSync") === false &&
       acquireChunkSource.includes("fs.rmSync") === false &&
+      renderTemporarySnapshot.includes(
+        "const state = captureRenderPhysicalDirectory(",
+      ) &&
+      renderTemporarySnapshot.includes(
+        "const temporaryRoot = captureRenderPhysicalDirectory(",
+      ) &&
+      renderTemporarySnapshot.includes(
+        "const tree = captureRenderPhysicalDirectory(",
+      ) &&
       files["scripts/render.ts"]!.includes(
-        "const temporaryOwnership = captureRenderPhysicalDirectory(",
+        "const temporaryOwnership = createRenderChunkTemporaryTree({",
       ) &&
-      files["scripts/render.ts"]!.match(
-        /writeRenderFile\(\s*temporaryOwnership,/gu,
-      )?.length === 2 &&
+      files["scripts/render.ts"]!.includes("const relative = `frame_") &&
+      files["scripts/render.ts"]!.includes("const writtenFiles:") &&
+      files["scripts/render.ts"]!.includes(
+        "assertCapturedRenderGcFileEntry({",
+      ) &&
+      files["scripts/render.ts"]!.includes("tree: completedTree") &&
       writeRenderFileSource.includes("createRenderGcFileSnapshot(") &&
-      writeRenderFileSource.includes(
-        "assertRenderPhysicalDirectoryIdentity(",
-      ) &&
+      writeRenderFileSource.includes("assertRenderChunkTemporaryTree(") &&
       writeRenderFileSource.includes("snapshot.base.identity") &&
+      writeRenderFileSource.includes("return snapshot") &&
       writeRenderFileSource.includes(".tmp") === false &&
       writeRenderFileSource.includes("fs.renameSync") === false &&
       writeRenderFileSource.includes("fs.rmSync") === false &&
@@ -5821,6 +5834,14 @@ export const test_cli_scaffold = async (): Promise<void> => {
         quarantine: string;
       }) => void;
     };
+    const renderTemporarySnapshotModule = createRequire(__filename)(
+      path.join(scaffoldDir, "scripts", "renderTemporarySnapshot.ts"),
+    ) as {
+      createRenderChunkTemporaryTree: (props: {
+        name: string;
+        stateRoot: string;
+      }) => unknown;
+    };
     const renderChunkSnapshotModule = createRequire(__filename)(
       path.join(scaffoldDir, "scripts", "renderChunkSnapshot.ts"),
     ) as {
@@ -5905,7 +5926,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
         root: string;
         scope: string;
         tier: "final" | "proxy";
-        tree: string;
+        tree: unknown;
       }) => {
         publication: { pointer: unknown; receipt: unknown };
         reused: boolean;
@@ -5928,6 +5949,87 @@ export const test_cli_scaffold = async (): Promise<void> => {
         tier: "final" | "proxy";
       }) => string;
     };
+    const temporaryStateRoot = path.join(base, "render-temporary-state-root");
+    const temporaryStateTree = path.join(
+      temporaryStateRoot,
+      "tmp",
+      "state-race",
+    );
+    const parkedTemporaryStateRoot = `${temporaryStateRoot}.parked`;
+    fs.mkdirSync(temporaryStateRoot);
+    let temporaryStateSwapped = false;
+    mutableFs.mkdirSync = ((directory, ...args: unknown[]): unknown => {
+      if (
+        temporaryStateSwapped === false &&
+        path.resolve(directory.toString()) === temporaryStateTree
+      ) {
+        nativeLivenessRename(temporaryStateRoot, parkedTemporaryStateRoot);
+        Reflect.apply(nativeMkdir, mutableFs, [
+          path.join(temporaryStateRoot, "tmp"),
+          { recursive: true },
+        ]);
+        temporaryStateSwapped = true;
+      }
+      return Reflect.apply(nativeMkdir, mutableFs, [directory, ...args]);
+    }) as typeof fs.mkdirSync;
+    let temporaryStateRejected = false;
+    try {
+      temporaryStateRejected = throws(() =>
+        renderTemporarySnapshotModule.createRenderChunkTemporaryTree({
+          name: "state-race",
+          stateRoot: temporaryStateRoot,
+        }),
+      );
+    } finally {
+      mutableFs.mkdirSync = nativeMkdir;
+    }
+    TestValidator.predicate(
+      "render temporary creation rejects a render-state successor",
+      temporaryStateSwapped &&
+        temporaryStateRejected &&
+        fs.existsSync(temporaryStateTree) &&
+        fs.existsSync(path.join(parkedTemporaryStateRoot, "tmp")),
+    );
+    fs.rmSync(temporaryStateRoot, { recursive: true, force: true });
+    fs.rmSync(parkedTemporaryStateRoot, { recursive: true, force: true });
+
+    const temporaryParentState = path.join(base, "render-temporary-parent");
+    const temporaryParentRoot = path.join(temporaryParentState, "tmp");
+    const temporaryParentTree = path.join(temporaryParentRoot, "parent-race");
+    const parkedTemporaryParent = `${temporaryParentRoot}.parked`;
+    fs.mkdirSync(temporaryParentState);
+    let temporaryParentSwapped = false;
+    mutableFs.mkdirSync = ((directory, ...args: unknown[]): unknown => {
+      if (
+        temporaryParentSwapped === false &&
+        path.resolve(directory.toString()) === temporaryParentTree
+      ) {
+        nativeLivenessRename(temporaryParentRoot, parkedTemporaryParent);
+        Reflect.apply(nativeMkdir, mutableFs, [temporaryParentRoot]);
+        temporaryParentSwapped = true;
+      }
+      return Reflect.apply(nativeMkdir, mutableFs, [directory, ...args]);
+    }) as typeof fs.mkdirSync;
+    let temporaryParentRejected = false;
+    try {
+      temporaryParentRejected = throws(() =>
+        renderTemporarySnapshotModule.createRenderChunkTemporaryTree({
+          name: "parent-race",
+          stateRoot: temporaryParentState,
+        }),
+      );
+    } finally {
+      mutableFs.mkdirSync = nativeMkdir;
+    }
+    TestValidator.predicate(
+      "render temporary creation rejects a tmp-parent successor",
+      temporaryParentSwapped &&
+        temporaryParentRejected &&
+        fs.existsSync(temporaryParentTree) &&
+        fs.existsSync(parkedTemporaryParent),
+    );
+    fs.rmSync(temporaryParentState, { recursive: true, force: true });
+
     const chunkPublicationRoot = path.join(base, "chunk-publication");
     const chunkPublicationScope = "b".repeat(64);
     const chunkPublicationId = fixtureDigest(
@@ -5986,6 +6088,8 @@ export const test_cli_scaffold = async (): Promise<void> => {
         },
       };
     };
+    const captureChunkTree = (root: string, tree: string) =>
+      renderGcModule.captureRenderGcTarget(root, tree);
     fs.mkdirSync(chunkPublicationRoot);
     const normalChunkSource = path.join(chunkPublicationRoot, "normal-source");
     const normalChunkReceipt = populateChunkSource(
@@ -6026,7 +6130,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
           root: chunkPublicationRoot,
           scope: chunkPublicationScope,
           tier: "final",
-          tree: normalChunkSource,
+          tree: captureChunkTree(chunkPublicationRoot, normalChunkSource),
         });
       } finally {
         mutableFs.openSync = nativeOpen;
@@ -6139,7 +6243,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
           root: chunkPublicationRoot,
           scope: chunkPublicationScope,
           tier: "final",
-          tree: tempRaceSource,
+          tree: captureChunkTree(chunkPublicationRoot, tempRaceSource),
         }),
       );
     } finally {
@@ -6157,6 +6261,53 @@ export const test_cli_scaffold = async (): Promise<void> => {
           .readFileSync(path.join(tempRaceParked, "chunk.mp4"))
           .equals(chunkVideoBytes),
     );
+
+    for (const targetKind of ["frame", "chunk"] as const) {
+      const handoffId = fixtureDigest(
+        Buffer.from(`${targetKind} target handoff successor`),
+      );
+      const handoffSource = path.join(
+        chunkPublicationRoot,
+        `${targetKind}-handoff-source`,
+      );
+      const handoffReceipt = populateChunkSource(handoffSource, handoffId);
+      const handoffTree = captureChunkTree(chunkPublicationRoot, handoffSource);
+      const handoffTarget =
+        targetKind === "frame"
+          ? path.join(handoffSource, "frames", "frame_00000000.png")
+          : path.join(handoffSource, "chunk.mp4");
+      const parkedHandoffTarget = path.join(
+        chunkPublicationRoot,
+        `${targetKind}-handoff-original`,
+      );
+      const handoffBytes = fs.readFileSync(handoffTarget);
+      fs.renameSync(handoffTarget, parkedHandoffTarget);
+      fs.writeFileSync(handoffTarget, handoffBytes);
+      const handoffPointer =
+        renderChunkSnapshotModule.renderChunkPublicationPath({
+          chunk: handoffId,
+          root: chunkPublicationRoot,
+          scope: chunkPublicationScope,
+          tier: "final",
+        });
+      const handoffRejected = throws(() =>
+        renderChunkSnapshotModule.publishRenderChunkSnapshot({
+          chunk: handoffId,
+          receipt: handoffReceipt,
+          root: chunkPublicationRoot,
+          scope: chunkPublicationScope,
+          tier: "final",
+          tree: handoffTree,
+        }),
+      );
+      TestValidator.predicate(
+        `publication refuses a byte-identical ${targetKind} successor after tree capture`,
+        handoffRejected &&
+          fs.existsSync(parkedHandoffTarget) &&
+          fs.readFileSync(handoffTarget).equals(handoffBytes) &&
+          fs.existsSync(handoffPointer) === false,
+      );
+    }
 
     const byteMismatchId = fixtureDigest(Buffer.from("byte mismatch chunk"));
     const byteMismatchSource = path.join(
@@ -6187,7 +6338,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
         root: chunkPublicationRoot,
         scope: chunkPublicationScope,
         tier: "final",
-        tree: byteMismatchSource,
+        tree: captureChunkTree(chunkPublicationRoot, byteMismatchSource),
       }),
     );
     TestValidator.predicate(
@@ -6208,7 +6359,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       root: chunkPublicationRoot,
       scope: chunkPublicationScope,
       tier: "final",
-      tree: recoverySource,
+      tree: recoveryCandidate,
     });
     const recoveryDecoys = [0, 1].map((index) => {
       const id = fixtureDigest(Buffer.from(`recovery decoy ${index}`));
@@ -6219,7 +6370,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
         root: chunkPublicationRoot,
         scope: chunkPublicationScope,
         tier: "final",
-        tree: source,
+        tree: captureChunkTree(chunkPublicationRoot, source),
       });
       return {
         id,
@@ -6313,7 +6464,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       root: chunkGcRoot,
       scope: chunkPublicationScope,
       tier: "final",
-      tree: chunkGcCurrentTree,
+      tree: captureChunkTree(chunkGcRoot, chunkGcCurrentTree),
     });
     const chunkGcOrphanName = `${chunkGcCurrentId.slice(7)}.orphan.702`;
     populateChunkSource(
@@ -6329,7 +6480,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       root: chunkGcRoot,
       scope: chunkPublicationScope,
       tier: "final",
-      tree: chunkGcStaleTree,
+      tree: captureChunkTree(chunkGcRoot, chunkGcStaleTree),
     });
     const chunkGcLiveId = fixtureDigest(Buffer.from("gc live temp"));
     const chunkGcLiveName = `${chunkGcLiveId.slice(7)}.live.704`;
@@ -6441,7 +6592,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
         root: chunkPublicationRoot,
         scope: chunkPublicationScope,
         tier: "proxy",
-        tree: pointerRaceSource,
+        tree: captureChunkTree(chunkPublicationRoot, pointerRaceSource),
       });
     const pointerSuccessorBytes = fs.readFileSync(pointerRacePointer);
     const parkedPointer = `${pointerRacePointer}.parked`;
@@ -6459,7 +6610,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
         root: chunkPublicationRoot,
         scope: chunkPublicationScope,
         tier: "proxy",
-        tree: pointerRaceSource,
+        tree: captureChunkTree(chunkPublicationRoot, pointerRaceSource),
       }),
     );
     TestValidator.predicate(
@@ -6511,7 +6662,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
           root: rootSwapRoot,
           scope: chunkPublicationScope,
           tier: "final",
-          tree: rootSwapSource,
+          tree: captureChunkTree(rootSwapRoot, rootSwapSource),
         }),
       );
     } finally {
