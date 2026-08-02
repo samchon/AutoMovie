@@ -50,6 +50,14 @@ export interface IRenderQuarantineMarker {
   targetIdentity: string;
 }
 
+/** Strictly inspected marker and private evidence snapshots. */
+export interface IRenderQuarantineEvidence {
+  evidence: IRenderGcTargetSnapshot;
+  marker: IRenderQuarantineMarker;
+}
+
+const RENDER_QUARANTINE_MARKER_MAX_BYTES = 64 * 1024;
+
 /** Capture one physical directory without inventorying its descendants. */
 export const captureRenderPhysicalDirectory = (
   directory: string,
@@ -263,6 +271,71 @@ export const quarantineCapturedRenderTarget = (props: {
     destinationParent,
     "render quarantine destination",
   );
+};
+
+/** Bind one immutable quarantine marker to its exact private evidence. */
+export const inspectRenderQuarantineMarker = (
+  snapshot: IRenderGcTargetSnapshot,
+): IRenderQuarantineEvidence => {
+  const bytes = Buffer.from(
+    readCapturedRenderGcFile(snapshot, RENDER_QUARANTINE_MARKER_MAX_BYTES),
+  );
+  const value: unknown = JSON.parse(bytes.toString("utf8"));
+  if (
+    isPlainObject(value) === false ||
+    Object.keys(value).sort(compare).join("\0") !==
+      [
+        "contentFingerprint",
+        "kind",
+        "original",
+        "preserved",
+        "targetIdentity",
+        "version",
+      ]
+        .sort(compare)
+        .join("\0") ||
+    value.version !== 1 ||
+    (value.kind !== "directory" && value.kind !== "file") ||
+    typeof value.contentFingerprint !== "string" ||
+    /^sha256:[0-9a-f]{64}$/u.test(value.contentFingerprint) === false ||
+    typeof value.original !== "string" ||
+    validOwnedRelativePath(value.original) === false ||
+    isRenderGcPreservedPath(value.original) ||
+    typeof value.preserved !== "string" ||
+    validOwnedRelativePath(value.preserved) === false ||
+    isRenderGcPreservedPath(value.preserved) === false ||
+    typeof value.targetIdentity !== "string" ||
+    value.targetIdentity.length === 0
+  )
+    throw new Error(
+      `Render quarantine marker "${snapshot.target}" is invalid.`,
+    );
+  const marker = value as unknown as IRenderQuarantineMarker;
+  if (
+    bytes.equals(Buffer.from(`${JSON.stringify(marker, null, 2)}\n`)) === false
+  )
+    throw new Error(
+      `Render quarantine marker "${snapshot.target}" is not canonical.`,
+    );
+  const evidence = captureRenderGcTarget(
+    snapshot.base.path,
+    path.join(snapshot.base.path, ...marker.preserved.split("/")),
+  );
+  if (
+    evidence.base.path !== snapshot.base.path ||
+    evidence.base.real !== snapshot.base.real ||
+    evidence.base.identity !== snapshot.base.identity ||
+    evidence.kind !== marker.kind ||
+    evidence.contentFingerprint !== marker.contentFingerprint ||
+    evidence.targetIdentity !== marker.targetIdentity
+  )
+    throw new Error(
+      `Render quarantine marker "${snapshot.target}" does not bind its evidence.`,
+    );
+  assertRenderGcTarget(snapshot);
+  assertRenderGcTarget(evidence);
+  assertRootIdentity(snapshot.base);
+  return { evidence, marker };
 };
 
 /** Revalidate an exact captured target without changing it. */
@@ -701,6 +774,25 @@ const ownedRelativePath = (
   )
     throw new Error(`${label} escapes its ownership root.`);
   return relative.replaceAll("\\", "/");
+};
+
+const isPlainObject = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && Array.isArray(value) === false;
+
+const validOwnedRelativePath = (relative: string): boolean => {
+  const segments = relative.split("/");
+  return (
+    segments.length !== 0 &&
+    path.posix.isAbsolute(relative) === false &&
+    segments.every(
+      (segment) =>
+        segment.length !== 0 &&
+        segment !== "." &&
+        segment !== ".." &&
+        segment.includes("\\") === false &&
+        segment.includes("\0") === false,
+    )
+  );
 };
 
 const inside = (root: string, candidate: string): boolean => {

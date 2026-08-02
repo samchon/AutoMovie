@@ -112,6 +112,7 @@ import {
   assertCapturedRenderGcFileEntry,
   captureRenderGcTarget,
   ensureRenderPhysicalDirectory,
+  inspectRenderQuarantineMarker,
   isRenderGcPreservedPath,
   quarantineCapturedRenderTarget,
   readCapturedRenderGcFile,
@@ -2401,6 +2402,15 @@ const collectRenderGarbage = (apply: boolean) => {
   );
   const candidates: IAutoMovieProductionRenderGcCandidate[] = [];
   const candidateSnapshots = new Map<string, IRenderGcTargetSnapshot>();
+  const quarantineEvidenceSnapshots = new Map<
+    string,
+    IRenderGcTargetSnapshot
+  >();
+  const quarantineEntries: Array<{
+    candidate: IAutoMovieProductionRenderGcCandidate;
+    evidence: IRenderGcTargetSnapshot | null;
+    snapshot: IRenderGcTargetSnapshot;
+  }> = [];
   const retainedChunkPaths = new Set<string>();
   for (const tier of ["proxy", "final"] as const) {
     const tierPlan = plans.find((plan) => plan.tier.kind === tier);
@@ -2466,10 +2476,39 @@ const collectRenderGarbage = (apply: boolean) => {
           bytes: 0,
         };
         const snapshot = captureRenderGcTarget(renderJobRoot, target);
-        candidate.bytes = snapshot.bytes;
-        candidates.push(candidate);
-        candidateSnapshots.set(gcCandidateKey(candidate), snapshot);
+        let evidence: IRenderGcTargetSnapshot | null = null;
+        try {
+          evidence = inspectRenderQuarantineMarker(snapshot).evidence;
+        } catch {
+          // Legacy or damaged quarantine entries remain independently removable.
+        }
+        quarantineEntries.push({ candidate, evidence, snapshot });
       }
+  }
+  const quarantineEvidenceOwners = new Map<string, number>();
+  for (const entry of quarantineEntries) {
+    if (entry.evidence === null) continue;
+    const key = `${entry.evidence.base.identity}\0${entry.evidence.targetIdentity}`;
+    quarantineEvidenceOwners.set(
+      key,
+      (quarantineEvidenceOwners.get(key) ?? 0) + 1,
+    );
+  }
+  for (const entry of quarantineEntries) {
+    const key = gcCandidateKey(entry.candidate);
+    const uniqueEvidence =
+      entry.evidence !== null &&
+      quarantineEvidenceOwners.get(
+        `${entry.evidence.base.identity}\0${entry.evidence.targetIdentity}`,
+      ) === 1
+        ? entry.evidence
+        : null;
+    if (entry.evidence !== null && uniqueEvidence === null) continue;
+    entry.candidate.bytes = entry.snapshot.bytes + (uniqueEvidence?.bytes ?? 0);
+    candidates.push(entry.candidate);
+    candidateSnapshots.set(key, entry.snapshot);
+    if (uniqueEvidence !== null)
+      quarantineEvidenceSnapshots.set(key, uniqueEvidence);
   }
   const sweptPublicationRoots: string[] = [];
   const sweptPublicationTargets = new Set<string>();
@@ -2597,6 +2636,18 @@ const collectRenderGarbage = (apply: boolean) => {
         quarantines.set(base, quarantine);
       }
       const isolated = path.join(quarantine, randomUUID());
+      const evidence = quarantineEvidenceSnapshots.get(
+        gcCandidateKey(candidate),
+      );
+      if (evidence !== undefined) {
+        assertCapturedRenderTarget(snapshot);
+        assertCapturedRenderTarget(evidence);
+        removeCapturedRenderGcTarget({
+          isolated: path.join(quarantine, randomUUID()),
+          quarantine,
+          snapshot: evidence,
+        });
+      }
       removeCapturedRenderGcTarget({
         isolated,
         quarantine,
