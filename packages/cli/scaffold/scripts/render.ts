@@ -111,6 +111,7 @@ import {
   RENDER_GC_PRESERVED_PREFIX,
   assertCapturedRenderGcFileEntry,
   captureRenderGcTarget,
+  createRenderGcFileSnapshot,
   ensureRenderPhysicalDirectory,
   inventoryRenderQuarantineCandidates,
   isRenderGcPreservedPath,
@@ -689,24 +690,18 @@ const acquireChunk = async (
   fs.mkdirSync(directory, { recursive: true });
   const token = randomUUID();
   const claim = path.join(directory, `claim.${process.pid}.${token}.lock`);
-  const candidate = `${claim}.candidate`;
-  try {
-    fs.writeFileSync(
-      candidate,
+  const claimSnapshot = createRenderGcFileSnapshot(
+    stateRoot,
+    claim,
+    Buffer.from(
       `${JSON.stringify({ chunk: chunk.id, pid: process.pid, token })}\n`,
-      { flag: "wx" },
-    );
-    // Publish a fully written owner record in one namespace operation. The
-    // unique claim path is never reused by another worker, so dead-owner
-    // recovery cannot rename or unlink a later owner's lock.
-    fs.linkSync(candidate, claim);
-  } finally {
-    fs.rmSync(candidate, { force: true });
-  }
+    ),
+  );
   try {
     for (const file of chunkLockClaims(chunk)) {
       let owner: IRenderChunkLockOwner;
-      const snapshot = captureExistingRenderStateTarget(file);
+      const snapshot =
+        file === claim ? claimSnapshot : captureExistingRenderStateTarget(file);
       if (snapshot === null) continue;
       try {
         owner = readCapturedRenderJson<IRenderChunkLockOwner>(
@@ -725,7 +720,7 @@ const acquireChunk = async (
         );
       if (processAlive(owner.pid)) {
         if (file !== claim) {
-          releaseOwnedChunkClaim(chunk, claim, token);
+          releaseOwnedChunkClaim(chunk, claim, token, claimSnapshot);
           return false;
         }
         continue;
@@ -736,7 +731,7 @@ const acquireChunk = async (
         if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
       }
     }
-    const ownedClaim = captureRenderGcTarget(stateRoot, claim);
+    const ownedClaim = claimSnapshot;
     const owner = readCapturedRenderJson<IRenderChunkLockOwner>(
       ownedClaim,
       RENDER_LOCK_JSON_MAX_BYTES,
@@ -752,7 +747,7 @@ const acquireChunk = async (
     heldChunkLocks.set(chunk.slot, { snapshot: ownedClaim, token });
     return true;
   } catch (error) {
-    releaseOwnedChunkClaim(chunk, claim, token);
+    releaseOwnedChunkClaim(chunk, claim, token, claimSnapshot);
     throw error;
   }
 };

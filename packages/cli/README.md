@@ -114,7 +114,7 @@ Dialogue synthesis caches each content key as one immutable directory, publishes
 Proxy finalization publishes content-addressed materialized directories without replacing existing paths: each payload reserves and writes its final pathname directly through descriptor-bound `O_EXCL`, the root receipt appears last, and every manifest path remains an ordinary render-root-relative file that external consumers can open directly.
 
 Chunk workers publish complete UUID claims before they become visible inside a
-slot-specific lock namespace. They yield to every other live claim and remove
+slot-specific lock namespace. Each worker reserves and writes its unique final claim directly through descriptor-bound `O_EXCL`, carries that exact snapshot through owner adjudication and release, and never creates or cleans up a candidate pathname. They yield to every other live claim and remove
 only their own exact path. A killed worker leaves either a recoverable claim or
 a non-authoritative candidate that the next run isolates under private preserved
 evidence and exposes through an immutable public quarantine marker. Receipt reuse

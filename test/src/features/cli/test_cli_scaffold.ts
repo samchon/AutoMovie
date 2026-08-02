@@ -152,6 +152,14 @@ export const test_cli_scaffold = async (): Promise<void> => {
           currentChunkOffset,
           renderScript.indexOf("\nconst acquireChunk", currentChunkOffset),
         );
+  const acquireChunkOffset = renderScript.indexOf("const acquireChunk");
+  const acquireChunkSource =
+    acquireChunkOffset < 0
+      ? ""
+      : renderScript.slice(
+          acquireChunkOffset,
+          renderScript.indexOf("\nconst renderChunk", acquireChunkOffset),
+        );
   const renderProgressStages = [
     "finalize.start",
     "finalize.status.complete",
@@ -558,6 +566,15 @@ export const test_cli_scaffold = async (): Promise<void> => {
       files["scripts/render.ts"]!.includes("quarantineEvidenceSnapshots") &&
       files["scripts/render.ts"]!.includes("readCapturedRenderGcFile") &&
       files["scripts/render.ts"]!.includes("RENDER_LOCK_JSON_MAX_BYTES") &&
+      acquireChunkSource.includes("createRenderGcFileSnapshot(") &&
+      acquireChunkSource.includes("file === claim ? claimSnapshot") &&
+      acquireChunkSource.includes("const ownedClaim = claimSnapshot") &&
+      acquireChunkSource.match(
+        /releaseOwnedChunkClaim\(chunk, claim, token, claimSnapshot\)/gu,
+      )?.length === 2 &&
+      acquireChunkSource.includes(".candidate") === false &&
+      acquireChunkSource.includes("fs.linkSync") === false &&
+      acquireChunkSource.includes("fs.rmSync") === false &&
       files["scripts/render.ts"]!.includes(
         "captureAbandonedRenderStateTarget",
       ) &&

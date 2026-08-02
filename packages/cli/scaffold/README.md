@@ -181,6 +181,7 @@ reopening verified paths. Abandoned recovery never quarantines a tree reached by
 a valid current pointer.
 
 Each running attempt is authorized by the exact physical snapshot and `{ chunk, pid, token }` bytes of its held chunk lock, then reserves and writes its final record pathname directly through descriptor-bound `O_EXCL`. Dead-owner recovery and the running-to-failed transition remove only an exact captured predecessor before reserving the successor slot, while successful cleanup remains lock-bound; a root, parent, lock, attempt, or competing final-slot successor is preserved. Status and explicit GC read the same strict versioned attempt schema instead of trusting generic JSON pathnames.
+Each chunk worker also reserves and writes its unique final claim pathname directly through descriptor-bound `O_EXCL`. The returned exact snapshot is reused for the worker's own scan, owner validation, held-lock authorization, attempt binding, and release; no candidate hard link or candidate cleanup can publish or delete a pathname successor. Legacy `.candidate` entries remain recovery-only evidence for older interrupted jobs.
 
 Final conform also reopens the matching proxy bundle as one physical tree. Its
 manifest must account for the exact regular-file inventory, and every declared
