@@ -147,6 +147,139 @@ const captureFrameConsumerContracts = (
   return { consumers, mainCount: mains.length };
 };
 
+/** Trace structural pixel observations through capture-smoke main. */
+const captureObservationContracts = (
+  source: string,
+): {
+  checks: Array<[string, string]>;
+  consoleObjects: string[][];
+  failureReports: number;
+  mainCount: number;
+  observations: Array<[string, string]>;
+  pixels: Array<[string, string]>;
+} => {
+  const parsed = ts.createSourceFile(
+    "packages/playground/scripts/capture-smoke.ts",
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TS,
+  );
+  const mains: ts.Expression[] = [];
+  for (const statement of parsed.statements) {
+    if (ts.isVariableStatement(statement) === false) continue;
+    for (const declaration of statement.declarationList.declarations)
+      if (
+        ts.isIdentifier(declaration.name) &&
+        declaration.name.text === "main" &&
+        declaration.initializer !== undefined
+      )
+        mains.push(declaration.initializer);
+  }
+  const checks: Array<[string, string]> = [];
+  const consoleObjects: string[][] = [];
+  let failureReports = 0;
+  const observations: Array<[string, string]> = [];
+  const pixels: Array<[string, string]> = [];
+  const compact = (node: ts.Node): string =>
+    node.getText(parsed).replace(/\s+/g, " ");
+  if (mains.length === 1) {
+    const visit = (node: ts.Node): void => {
+      if (
+        ts.isVariableDeclaration(node) &&
+        ts.isIdentifier(node.name) &&
+        node.initializer !== undefined
+      ) {
+        if (
+          [
+            "maskSubjectPixels",
+            "maskBlackPixels",
+            "poseWhitePixels",
+            "poseMaskPalettePixels",
+          ].includes(node.name.text)
+        )
+          pixels.push([node.name.text, compact(node.initializer)]);
+        if (
+          node.name.text === "observations" &&
+          ts.isObjectLiteralExpression(node.initializer)
+        )
+          for (const property of node.initializer.properties) {
+            if (ts.isShorthandPropertyAssignment(property))
+              observations.push([property.name.text, property.name.text]);
+            else if (
+              ts.isPropertyAssignment(property) &&
+              (ts.isIdentifier(property.name) ||
+                ts.isStringLiteralLike(property.name))
+            )
+              observations.push([
+                property.name.text,
+                compact(property.initializer),
+              ]);
+          }
+      }
+      if (
+        ts.isBinaryExpression(node) &&
+        node.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
+        ts.isElementAccessExpression(node.left) &&
+        ts.isIdentifier(node.left.expression) &&
+        node.left.expression.text === "checks" &&
+        ts.isStringLiteralLike(node.left.argumentExpression) &&
+        compact(node.right).includes("observations.")
+      )
+        checks.push([node.left.argumentExpression.text, compact(node.right)]);
+      if (
+        ts.isCallExpression(node) &&
+        ts.isPropertyAccessExpression(node.expression) &&
+        ts.isIdentifier(node.expression.expression) &&
+        node.expression.expression.text === "console" &&
+        node.expression.name.text === "log"
+      ) {
+        const serialized = node.arguments[0];
+        const object =
+          serialized !== undefined &&
+          ts.isCallExpression(serialized) &&
+          ts.isPropertyAccessExpression(serialized.expression) &&
+          ts.isIdentifier(serialized.expression.expression) &&
+          serialized.expression.expression.text === "JSON" &&
+          serialized.expression.name.text === "stringify"
+            ? serialized.arguments[0]
+            : undefined;
+        if (object !== undefined && ts.isObjectLiteralExpression(object))
+          consoleObjects.push(
+            object.properties.map((property) =>
+              ts.isShorthandPropertyAssignment(property)
+                ? property.name.text
+                : ts.isPropertyAssignment(property) &&
+                    (ts.isIdentifier(property.name) ||
+                      ts.isStringLiteralLike(property.name))
+                  ? property.name.text
+                  : compact(property),
+            ),
+          );
+      }
+      if (ts.isThrowStatement(node)) {
+        const text = compact(node);
+        if (
+          text.includes("capture smoke failed:") &&
+          text.includes("failed.map") &&
+          text.includes("JSON.stringify(observations)")
+        )
+          ++failureReports;
+      }
+      ts.forEachChild(node, visit);
+    };
+    visit(mains[0]!);
+  }
+  return {
+    checks,
+    consoleObjects,
+    failureReports,
+    mainCount: mains.length,
+    observations,
+    pixels,
+  };
+};
+
 /** A source-level template interpolation without a live template expression. */
 const templateExpression = (expression: string): string =>
   "$" + "{" + expression + "}";
@@ -309,20 +442,6 @@ export const test_workspace_public_contracts = (): void => {
       : playgroundCaptureSmoke.slice(
           requireCapturedFrameOffset,
           requireCapturedFrameEnd,
-        );
-  const captureObservationsOffset = playgroundCaptureSmoke.indexOf(
-    "const observations = {",
-  );
-  const captureObservationsEnd = playgroundCaptureSmoke.indexOf(
-    "\n    };",
-    captureObservationsOffset,
-  );
-  const captureObservationsSource =
-    captureObservationsOffset < 0 || captureObservationsEnd < 0
-      ? ""
-      : playgroundCaptureSmoke.slice(
-          captureObservationsOffset,
-          captureObservationsEnd + "\n    };".length,
         );
   const ensureDevServerOffset = playgroundCaptureSmoke.indexOf(
     "const ensureDevServer =",
@@ -1190,53 +1309,44 @@ export const test_workspace_public_contracts = (): void => {
   );
   TestValidator.equals(
     "real capture smoke preserves structural threshold observations",
+    captureObservationContracts(playgroundCaptureSmoke),
     {
-      observations: [
-        "maskBlackFraction",
-        "maskBlackPixels",
-        "maskSubjectFraction",
-        "maskSubjectPixels",
-        "poseMaskPalettePixels",
-        "poseWhiteFraction",
-        "poseWhitePixels",
-      ].filter((field) =>
-        new RegExp(`^\\s*${field}(?=:|,)`, "m").test(captureObservationsSource),
-      ),
-      thresholds: [
-        "observations.maskSubjectFraction >= 0.003",
-        "observations.maskBlackFraction >= 0.25",
-        "observations.poseWhiteFraction >= 0.0002",
-        "observations.poseWhiteFraction <= 0.2",
-        "observations.poseMaskPalettePixels === 0",
-      ].filter((expression) => playgroundCaptureSmoke.includes(expression)),
-      reporting: {
-        console:
-          /JSON\.stringify\(\s*\{\s*route,\s*server: server\.spawned \? "spawned" : "reused",\s*checks,\s*observations,\s*\}/.test(
-            playgroundCaptureSmoke,
-          ),
-        failure: playgroundCaptureSmoke.includes(
-          "; observations=$" + "{JSON.stringify(observations)}",
-        ),
-      },
-    },
-    {
-      observations: [
-        "maskBlackFraction",
-        "maskBlackPixels",
-        "maskSubjectFraction",
-        "maskSubjectPixels",
-        "poseMaskPalettePixels",
-        "poseWhiteFraction",
-        "poseWhitePixels",
+      checks: [
+        [
+          "mask subject color covers >= 0.3% of the frame",
+          "observations.maskSubjectFraction >= 0.003",
+        ],
+        [
+          "mask background is dominant black",
+          "observations.maskBlackFraction >= 0.25",
+        ],
+        [
+          "pose skeleton draws white lines (0.02%..20%)",
+          "observations.poseWhiteFraction >= 0.0002 && observations.poseWhiteFraction <= 0.2",
+        ],
+        [
+          "pose carries no mask palette",
+          "observations.poseMaskPalettePixels === 0",
+        ],
       ],
-      thresholds: [
-        "observations.maskSubjectFraction >= 0.003",
-        "observations.maskBlackFraction >= 0.25",
-        "observations.poseWhiteFraction >= 0.0002",
-        "observations.poseWhiteFraction <= 0.2",
-        "observations.poseMaskPalettePixels === 0",
+      consoleObjects: [["route", "server", "checks", "observations"]],
+      failureReports: 1,
+      mainCount: 1,
+      observations: [
+        ["maskBlackFraction", "maskBlackPixels / total"],
+        ["maskBlackPixels", "maskBlackPixels"],
+        ["maskSubjectFraction", "maskSubjectPixels / total"],
+        ["maskSubjectPixels", "maskSubjectPixels"],
+        ["poseMaskPalettePixels", "poseMaskPalettePixels"],
+        ["poseWhiteFraction", "poseWhitePixels / total"],
+        ["poseWhitePixels", "poseWhitePixels"],
       ],
-      reporting: { console: true, failure: true },
+      pixels: [
+        ["maskSubjectPixels", "mask.get(subjectKey) ?? 0"],
+        ["maskBlackPixels", "mask.get(rgbKey(0, 0, 0)) ?? 0"],
+        ["poseWhitePixels", "pose.get(rgbKey(255, 255, 255)) ?? 0"],
+        ["poseMaskPalettePixels", "pose.get(subjectKey) ?? 0"],
+      ],
     },
   );
   const mcpMethods = [
