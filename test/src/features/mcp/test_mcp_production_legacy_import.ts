@@ -1155,21 +1155,29 @@ export const test_mcp_production_legacy_import = (): void => {
       fs.rmSync = nativeRm;
     }
     const nestedCleanup =
-      caught instanceof AggregateError
-        ? caught.errors.find(
-            (error: unknown) =>
-              error instanceof AggregateError &&
-              error.errors.includes(restorationFailure),
-          )
-        : undefined;
+      caught instanceof AggregateError ? caught.errors[1] : undefined;
+    const retainedQuarantine = fs
+      .readdirSync(restorationCleanupFailure.root)
+      .find((entry) => entry.startsWith(".automovie-rollback-"));
     TestValidator.predicate(
       "legacy rollback retains restoration and staging cleanup failures",
-      caught instanceof AggregateError &&
-        caught.errors[0] === rollbackFailure &&
+      nestedCleanup instanceof AggregateError &&
         aggregateContainsExactly(nestedCleanup, [
           restorationFailure,
           cleanupFailure,
-        ]),
+        ]) &&
+        aggregateContainsExactly(caught, [rollbackFailure, nestedCleanup]) &&
+        removals === 2 &&
+        fs.existsSync(stateRoot) === false &&
+        fs
+          .readdirSync(restorationCleanupFailure.root)
+          .every(
+            (entry) => entry.startsWith(".automovie-restore-") === false,
+          ) &&
+        retainedQuarantine !== undefined &&
+        fs.existsSync(
+          path.join(restorationCleanupFailure.root, retainedQuarantine),
+        ),
     );
   } finally {
     restorationCleanupFailure.dispose();
