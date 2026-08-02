@@ -112,6 +112,8 @@ const unmentionedModules = (pkg: string, document: string): string[] =>
  * 14. The packaged E2E process wrapper preserves stdout and stderr and names
  *     timeout, spawn-error, signal, missing-status, and exit-status failures,
  *     with every spawned process routed through that shared evidence.
+ * 15. The real capture smoke observes an auto-launched Vite process and reports
+ *     early spawn/exit evidence instead of waiting for the readiness timeout.
  */
 export const test_workspace_public_contracts = (): void => {
   const rootReadme = readPackageFile("README.md");
@@ -125,6 +127,35 @@ export const test_workspace_public_contracts = (): void => {
     "AutoMovieApplication.ts",
   );
   const tgzE2e = readPackageFile("internals", "e2e-tgz.mjs");
+  const playgroundCaptureSmoke = readPackageFile(
+    "packages",
+    "playground",
+    "scripts",
+    "capture-smoke.ts",
+  );
+  const devServerFailureOffset = playgroundCaptureSmoke.indexOf(
+    "const devServerFailure =",
+  );
+  const devServerFailureSource =
+    devServerFailureOffset < 0
+      ? ""
+      : playgroundCaptureSmoke.slice(
+          devServerFailureOffset,
+          playgroundCaptureSmoke.indexOf("\n\n/**", devServerFailureOffset),
+        );
+  const ensureDevServerOffset = playgroundCaptureSmoke.indexOf(
+    "const ensureDevServer =",
+  );
+  const ensureDevServerSource =
+    ensureDevServerOffset < 0
+      ? ""
+      : playgroundCaptureSmoke.slice(
+          ensureDevServerOffset,
+          playgroundCaptureSmoke.indexOf(
+            "\n\nconst answers =",
+            ensureDevServerOffset,
+          ),
+        );
   const sourceSection = (start: string, end: string): string => {
     const startOffset = tgzE2e.indexOf(start);
     const endOffset = tgzE2e.indexOf(end, startOffset + start.length);
@@ -640,6 +671,76 @@ export const test_workspace_public_contracts = (): void => {
       /expected a normal non-zero exit containing \$\{JSON\.stringify\(/g,
     ) ?? [],
     ["expected a normal non-zero exit containing $" + "{JSON.stringify("],
+  );
+  TestValidator.equals(
+    "real capture smoke reports an early Vite failure before timeout",
+    {
+      stdio:
+        ensureDevServerSource.match(
+          /stdio: \["ignore", "pipe", "pipe"\]/,
+        )?.[0] ?? null,
+      encodedChannels: [
+        ...ensureDevServerSource.matchAll(
+          /child\.(stdout|stderr)\.setEncoding\("utf8"\);/g,
+        ),
+      ].map((match) => match[1]),
+      capturedChannels: [
+        ...ensureDevServerSource.matchAll(
+          /child\.(stdout|stderr)\.on\("data",/g,
+        ),
+      ].map((match) => match[1]),
+      observers: [
+        ...ensureDevServerSource.matchAll(/child\.once\("(error|exit)",/g),
+      ].map((match) => match[1]),
+      exitSnapshotFields: ["child.exitCode", "child.signalCode"].filter(
+        (field) => ensureDevServerSource.includes(field),
+      ),
+      failureChecks: (
+        ensureDevServerSource.match(/devServerFailure\(\{/g) ?? []
+      ).length,
+      failureReasons: ["failed to spawn", "exited before readiness"].filter(
+        (reason) => devServerFailureSource.includes(reason),
+      ),
+      failureFields: [
+        "error=",
+        "message=",
+        "status=",
+        "signal=",
+        "stdout=",
+        "stderr=",
+      ].filter((field) => devServerFailureSource.includes(field)),
+      timeout: {
+        aliveOnly: ensureDevServerSource.includes(
+          "dev server remained alive but did not answer",
+        ),
+        output: ["stdout=", "stderr="].filter((field) =>
+          ensureDevServerSource
+            .slice(ensureDevServerSource.lastIndexOf("child.kill();"))
+            .includes(field),
+        ),
+      },
+      childKills: (ensureDevServerSource.match(/child\.kill\(\)/g) ?? [])
+        .length,
+    },
+    {
+      stdio: 'stdio: ["ignore", "pipe", "pipe"]',
+      encodedChannels: ["stdout", "stderr"],
+      capturedChannels: ["stdout", "stderr"],
+      observers: ["error", "exit"],
+      exitSnapshotFields: ["child.exitCode", "child.signalCode"],
+      failureChecks: 2,
+      failureReasons: ["failed to spawn", "exited before readiness"],
+      failureFields: [
+        "error=",
+        "message=",
+        "status=",
+        "signal=",
+        "stdout=",
+        "stderr=",
+      ],
+      timeout: { aliveOnly: true, output: ["stdout=", "stderr="] },
+      childKills: 4,
+    },
   );
   const mcpMethods = [
     ...mcpApplication.matchAll(

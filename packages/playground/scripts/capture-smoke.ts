@@ -11,6 +11,29 @@ import { DEFAULT_CHROME_EXECUTABLE } from "./chromeExecutable";
 const DEFAULT_BASE = process.env.BASE ?? "http://127.0.0.1:5173";
 const WIDTH = 640;
 const HEIGHT = 360;
+const DEV_SERVER_OUTPUT_MAX_CHARS = 1024 * 1024;
+
+interface DevServerExit {
+  code: number | null;
+  signal: NodeJS.Signals | null;
+}
+
+const appendDevServerOutput = (current: string, chunk: string): string =>
+  `${current}${chunk}`.slice(-DEV_SERVER_OUTPUT_MAX_CHARS);
+
+const devServerFailure = (props: {
+  error: Error | null;
+  exit: DevServerExit | null;
+  stderr: string;
+  stdout: string;
+}): string | null => {
+  const evidence = `stdout=${JSON.stringify(props.stdout)}; stderr=${JSON.stringify(props.stderr)}`;
+  if (props.error !== null)
+    return `dev server failed to spawn; error=${(props.error as NodeJS.ErrnoException).code ?? "unknown"}; message=${JSON.stringify(props.error.message)}; ${evidence}`;
+  if (props.exit !== null)
+    return `dev server exited before readiness; status=${props.exit.code ?? "none"}; signal=${props.exit.signal ?? "none"}; ${evidence}`;
+  return null;
+};
 
 /**
  * The one REAL (non-faked) headless-capture smoke (#1170). Everything the unit
@@ -139,18 +162,63 @@ const ensureDevServer = async (
   const child = spawn(
     process.execPath,
     [vite, "--host", "127.0.0.1", "--port", port, "--strictPort"],
-    { cwd: playground, stdio: "ignore" },
+    { cwd: playground, stdio: ["ignore", "pipe", "pipe"] },
   );
+  let error: Error | null = null;
+  let exit: DevServerExit | null = null;
+  let stderr = "";
+  let stdout = "";
+  child.stdout.setEncoding("utf8");
+  child.stderr.setEncoding("utf8");
+  child.stdout.on("data", (chunk: string) => {
+    stdout = appendDevServerOutput(stdout, chunk);
+  });
+  child.stderr.on("data", (chunk: string) => {
+    stderr = appendDevServerOutput(stderr, chunk);
+  });
+  child.once("error", (cause) => {
+    error = cause;
+  });
+  child.once("exit", (code, signal) => {
+    exit = { code, signal };
+  });
+  const currentExit = (): DevServerExit | null =>
+    exit ??
+    (child.exitCode !== null || child.signalCode !== null
+      ? { code: child.exitCode, signal: child.signalCode }
+      : null);
   const deadline = Date.now() + 30_000;
   while (Date.now() < deadline) {
     if (await answers(base))
       return { spawned: true, close: () => child.kill() };
+    const failure = devServerFailure({
+      error,
+      exit: currentExit(),
+      stderr,
+      stdout,
+    });
+    if (failure !== null) {
+      child.kill();
+      throw new Error(failure);
+    }
     await new Promise((resolve) => {
       setTimeout(resolve, 500);
     });
   }
+  const failure = devServerFailure({
+    error,
+    exit: currentExit(),
+    stderr,
+    stdout,
+  });
+  if (failure !== null) {
+    child.kill();
+    throw new Error(failure);
+  }
   child.kill();
-  throw new Error(`dev server did not answer at ${base} within 30s`);
+  throw new Error(
+    `dev server remained alive but did not answer at ${base} within 30s; stdout=${JSON.stringify(stdout)}; stderr=${JSON.stringify(stderr)}`,
+  );
 };
 
 const answers = async (base: string): Promise<boolean> => {
