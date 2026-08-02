@@ -1465,11 +1465,10 @@ const renderBrowserLifecycleContract = (
           (ts.isPrefixUnaryExpression(node) ||
             ts.isPostfixUnaryExpression(node)) &&
           (node.operator === ts.SyntaxKind.PlusPlusToken ||
-            node.operator === ts.SyntaxKind.MinusMinusToken) &&
-          ts.isIdentifier(node.operand) &&
-          tracked.includes(node.operand.text)
+            node.operator === ts.SyntaxKind.MinusMinusToken)
         )
-          writes[node.operand.text]!.push(compact(node));
+          for (const name of new Set(writtenBindings(node.operand)))
+            writes[name]!.push(compact(node));
         ts.forEachChild(node, visitWrites);
       };
       visitWrites(declaration.initializer.body);
