@@ -15,6 +15,7 @@ const DEV_SERVER_OUTPUT_MAX_CHARS = 1024 * 1024;
 const DEV_SERVER_POLL_INTERVAL_MS = 500;
 const DEV_SERVER_PROBE_TIMEOUT_MS = 2_000;
 const DEV_SERVER_READY_TIMEOUT_MS = 30_000;
+const DEV_SERVER_READY_MARKER = "automovie-stickman-capture-v1";
 
 interface DevServerExit {
   code: number | null;
@@ -243,7 +244,8 @@ const answers = async (base: string, timeoutMs: number): Promise<boolean> => {
     const response = await fetch(`${base.replace(/\/+$/, "")}/stickman.html`, {
       signal: AbortSignal.timeout(timeoutMs),
     });
-    return response.ok;
+    if (!response.ok) return false;
+    return (await response.text()).includes(DEV_SERVER_READY_MARKER);
   } catch {
     return false;
   }

@@ -189,6 +189,8 @@ const unmentionedModules = (pkg: string, document: string): string[] =>
  *     canonical shot entries with both their IDs and generated relative paths.
  * 17. Every capture-smoke readiness fetch and poll delay is bounded by the probe
  *     budget or the remaining advertised server-readiness deadline.
+ * 18. Capture readiness requires the versioned identity marker served by the
+ *     canonical stickman page, not an arbitrary successful HTTP response.
  */
 export const test_workspace_public_contracts = (): void => {
   const rootReadme = readPackageFile("README.md");
@@ -207,6 +209,11 @@ export const test_workspace_public_contracts = (): void => {
     "playground",
     "scripts",
     "capture-smoke.ts",
+  );
+  const playgroundStickman = readPackageFile(
+    "packages",
+    "playground",
+    "stickman.html",
   );
   const devServerFailureOffset = playgroundCaptureSmoke.indexOf(
     "const devServerFailure =",
@@ -1004,6 +1011,31 @@ export const test_workspace_public_contracts = (): void => {
       loop: true,
       delay: true,
       deadline: true,
+    },
+  );
+  TestValidator.equals(
+    "real capture smoke verifies the playground readiness identity",
+    {
+      sourceMarker:
+        playgroundCaptureSmoke.match(
+          /const DEV_SERVER_READY_MARKER = "([^"]+)";/,
+        )?.[1] ?? null,
+      htmlMarker:
+        playgroundStickman.match(
+          /<meta\s+name="automovie-capture-ready"\s+content="([^"]+)"\s*\/>/,
+        )?.[1] ?? null,
+      responseContract:
+        /if \(!response\.ok\) return false;\s*return \(await response\.text\(\)\)\.includes\(DEV_SERVER_READY_MARKER\);/.test(
+          answersSource,
+        ),
+      readinessCalls: (ensureDevServerSource.match(/await answers\(/g) ?? [])
+        .length,
+    },
+    {
+      sourceMarker: "automovie-stickman-capture-v1",
+      htmlMarker: "automovie-stickman-capture-v1",
+      responseContract: true,
+      readinessCalls: 2,
     },
   );
   const mcpMethods = [
