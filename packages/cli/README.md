@@ -113,13 +113,7 @@ Dialogue synthesis caches each content key as one immutable directory, publishes
 
 Proxy finalization publishes content-addressed materialized directories without replacing existing paths: each payload reserves and writes its final pathname directly through descriptor-bound `O_EXCL`, the root receipt appears last, and every manifest path remains an ordinary render-root-relative file that external consumers can open directly.
 
-Chunk workers publish complete UUID claims before they become visible inside a
-slot-specific lock namespace. Each worker reserves and writes its unique final claim directly through descriptor-bound `O_EXCL`, carries that exact snapshot through owner adjudication and release, and never creates or cleans up a candidate pathname. They yield to every other live claim and remove
-only their own exact path. A killed worker leaves either a recoverable claim or
-a non-authoritative candidate that the next run isolates under private preserved
-evidence and exposes through an immutable public quarantine marker. Receipt reuse
-rejects linked state ancestors and files, and final encoding consumes the exact
-PNG bytes authenticated by that physical-path read.
+Chunk workers reserve and write complete UUID claims directly at their final slot-specific lock path through descriptor-bound `O_EXCL`. Each worker carries that exact snapshot through owner adjudication and release, yields to every other live claim, and removes only its own exact path. A killed current worker leaves a recoverable final claim; only legacy jobs created by older scaffolds can leave a non-authoritative `.candidate`, which the next run isolates under private preserved evidence and exposes through an immutable public quarantine marker. Receipt reuse rejects linked state ancestors and files, and final encoding consumes the exact PNG bytes authenticated by that physical-path read.
 
 Render GC parses each valid quarantine marker relative to its proxy or final ownership tier through its captured descriptor, binds the referenced private evidence by kind, identity, and content fingerprint, reports their combined bytes, and removes the evidence before its exact marker and pre-captured empty private container. A container pathname successor is preserved. Damaged markers remain independently reclaimable while ambiguous physical duplicate evidence references across tiers remain preserved for manual adjudication.
 
