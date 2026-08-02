@@ -295,9 +295,9 @@ const publishAttemptRecord = (props: {
       throw new Error(
         "Render attempt link generation changed before cleanup binding.",
       );
+    props.assertOwnership();
     linked = capturedLinked;
     cleanupCandidate = capturedCandidate;
-    props.assertOwnership();
 
     removeExactAttempt(cleanupCandidate);
     candidateRemoved = true;
@@ -366,6 +366,7 @@ const assertSameAttemptFile = (
 ): void => {
   if (
     current.kind !== "file" ||
+    current.base.identity !== expected.base.identity ||
     current.targetIdentity !== expected.targetIdentity ||
     current.contentFingerprint !== expected.contentFingerprint ||
     current.fileDigest !== expected.fileDigest
