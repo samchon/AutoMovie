@@ -792,7 +792,7 @@ const renderChunk = async (
   if (pointer !== null) removeCapturedRenderChunkPointer(pointer);
   const temporaryOwnership = createRenderChunkTemporaryTree({
     name: `${chunk.id.slice(7)}.${randomUUID()}.${process.pid}`,
-    stateRoot,
+    state: attempt.snapshot.base,
   });
   const temporary = temporaryOwnership.path;
   const frameReceipts: IAutoMovieProductionRenderChunkReceipt["frames"] = [];

@@ -586,7 +586,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       acquireChunkSource.includes("fs.linkSync") === false &&
       acquireChunkSource.includes("fs.rmSync") === false &&
       renderTemporarySnapshot.includes(
-        "const state = captureRenderPhysicalDirectory(",
+        'assertRenderPhysicalDirectoryIdentity(props.state, "render state root")',
       ) &&
       renderTemporarySnapshot.includes(
         "const temporaryRoot = captureRenderPhysicalDirectory(",
@@ -597,6 +597,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       files["scripts/render.ts"]!.includes(
         "const temporaryOwnership = createRenderChunkTemporaryTree({",
       ) &&
+      files["scripts/render.ts"]!.includes("state: attempt.snapshot.base") &&
       files["scripts/render.ts"]!.includes("const relative = `frame_") &&
       files["scripts/render.ts"]!.includes("const writtenFiles:") &&
       files["scripts/render.ts"]!.includes(
@@ -5783,6 +5784,10 @@ export const test_cli_scaffold = async (): Promise<void> => {
         target: string;
         targetIdentity: string;
       };
+      captureRenderPhysicalDirectory: (
+        directory: string,
+        label: string,
+      ) => unknown;
       ensureRenderPhysicalDirectory: (base: string, relative: string) => string;
       inspectRenderQuarantineMarker: (snapshot: unknown) => {
         evidence: {
@@ -5839,7 +5844,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
     ) as {
       createRenderChunkTemporaryTree: (props: {
         name: string;
-        stateRoot: string;
+        state: unknown;
       }) => unknown;
     };
     const renderChunkSnapshotModule = createRequire(__filename)(
@@ -5949,6 +5954,34 @@ export const test_cli_scaffold = async (): Promise<void> => {
         tier: "final" | "proxy";
       }) => string;
     };
+    const temporaryHandoffRoot = path.join(
+      base,
+      "render-temporary-handoff-root",
+    );
+    const parkedTemporaryHandoffRoot = `${temporaryHandoffRoot}.parked`;
+    fs.mkdirSync(temporaryHandoffRoot);
+    const temporaryHandoffOwnership =
+      renderGcModule.captureRenderPhysicalDirectory(
+        temporaryHandoffRoot,
+        "render temporary handoff fixture",
+      );
+    fs.renameSync(temporaryHandoffRoot, parkedTemporaryHandoffRoot);
+    fs.mkdirSync(temporaryHandoffRoot);
+    const temporaryHandoffRejected = throws(() =>
+      renderTemporarySnapshotModule.createRenderChunkTemporaryTree({
+        name: "entry-race",
+        state: temporaryHandoffOwnership,
+      }),
+    );
+    TestValidator.predicate(
+      "render temporary creation rejects a state successor before helper entry",
+      temporaryHandoffRejected &&
+        fs.existsSync(path.join(temporaryHandoffRoot, "tmp")) === false &&
+        fs.existsSync(parkedTemporaryHandoffRoot),
+    );
+    fs.rmSync(temporaryHandoffRoot, { recursive: true, force: true });
+    fs.rmSync(parkedTemporaryHandoffRoot, { recursive: true, force: true });
+
     const temporaryStateRoot = path.join(base, "render-temporary-state-root");
     const temporaryStateTree = path.join(
       temporaryStateRoot,
@@ -5957,6 +5990,11 @@ export const test_cli_scaffold = async (): Promise<void> => {
     );
     const parkedTemporaryStateRoot = `${temporaryStateRoot}.parked`;
     fs.mkdirSync(temporaryStateRoot);
+    const temporaryStateOwnership =
+      renderGcModule.captureRenderPhysicalDirectory(
+        temporaryStateRoot,
+        "render temporary fixture state",
+      );
     let temporaryStateSwapped = false;
     mutableFs.mkdirSync = ((directory, ...args: unknown[]): unknown => {
       if (
@@ -5977,7 +6015,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       temporaryStateRejected = throws(() =>
         renderTemporarySnapshotModule.createRenderChunkTemporaryTree({
           name: "state-race",
-          stateRoot: temporaryStateRoot,
+          state: temporaryStateOwnership,
         }),
       );
     } finally {
@@ -5998,6 +6036,11 @@ export const test_cli_scaffold = async (): Promise<void> => {
     const temporaryParentTree = path.join(temporaryParentRoot, "parent-race");
     const parkedTemporaryParent = `${temporaryParentRoot}.parked`;
     fs.mkdirSync(temporaryParentState);
+    const temporaryParentOwnership =
+      renderGcModule.captureRenderPhysicalDirectory(
+        temporaryParentState,
+        "render temporary fixture parent",
+      );
     let temporaryParentSwapped = false;
     mutableFs.mkdirSync = ((directory, ...args: unknown[]): unknown => {
       if (
@@ -6015,7 +6058,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       temporaryParentRejected = throws(() =>
         renderTemporarySnapshotModule.createRenderChunkTemporaryTree({
           name: "parent-race",
-          stateRoot: temporaryParentState,
+          state: temporaryParentOwnership,
         }),
       );
     } finally {

@@ -21,7 +21,7 @@ export interface IRenderChunkTemporaryTree {
  */
 export const createRenderChunkTemporaryTree = (props: {
   name: string;
-  stateRoot: string;
+  state: IRenderGcPhysicalDirectory;
 }): IRenderChunkTemporaryTree => {
   if (
     props.name.length === 0 ||
@@ -32,28 +32,25 @@ export const createRenderChunkTemporaryTree = (props: {
     props.name.includes("\0")
   )
     throw new Error("Render chunk temporary tree name is invalid.");
-  const state = captureRenderPhysicalDirectory(
-    props.stateRoot,
-    "render state root",
-  );
+  assertRenderPhysicalDirectoryIdentity(props.state, "render state root");
   const temporaryRootPath = ensureRenderPhysicalDirectory(
-    props.stateRoot,
+    props.state.path,
     "tmp",
   );
-  assertRenderPhysicalDirectoryIdentity(state, "render state root");
+  assertRenderPhysicalDirectoryIdentity(props.state, "render state root");
   const temporaryRoot = captureRenderPhysicalDirectory(
     temporaryRootPath,
     "render temporary root",
   );
   const treePath = path.join(temporaryRoot.path, props.name);
-  assertRenderChunkTemporaryAncestry({ state, temporaryRoot });
+  assertRenderChunkTemporaryAncestry({ state: props.state, temporaryRoot });
   fs.mkdirSync(treePath);
-  assertRenderChunkTemporaryAncestry({ state, temporaryRoot });
+  assertRenderChunkTemporaryAncestry({ state: props.state, temporaryRoot });
   const tree = captureRenderPhysicalDirectory(
     treePath,
     "render chunk temporary tree",
   );
-  const ownership = { path: treePath, state, temporaryRoot, tree };
+  const ownership = { path: treePath, state: props.state, temporaryRoot, tree };
   assertRenderChunkTemporaryTree(ownership);
   return ownership;
 };
