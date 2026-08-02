@@ -290,7 +290,16 @@ const IDENTITY = NAMES.length; // morph slot of the per-character likeness
 // likeness deltas are character DATA (not in the repo): loaded when present
 let identityLoaded = false;
 let identityUrl = "";
+let identityRequest: {
+  promise: Promise<void>;
+  token: symbol;
+  url: string;
+} | null = null;
 const loadIdentity = (url: string): Promise<void> => {
+  if (identityRequest?.url === url) {
+    identityUrl = url;
+    return identityRequest.promise;
+  }
   if (url === identityUrl) return Promise.resolve();
   identityUrl = url;
   identityLoaded = false;
@@ -304,15 +313,27 @@ const loadIdentity = (url: string): Promise<void> => {
     done();
     return Promise.resolve();
   }
-  return fetch(url)
+  const token = Symbol(url);
+  const promise = fetch(url)
     .then((r) => (r.ok ? r.json() : null))
     .then((j: { identity: number[] } | null) => {
-      if (!j || identityUrl !== url) return;
+      if (identityUrl !== url) return;
+      if (!j) {
+        identityUrl = "";
+        return;
+      }
       identityDelta.set(j.identity);
       identityLoaded = true;
     })
-    .catch(() => undefined)
-    .then(done);
+    .catch(() => {
+      if (identityUrl === url) identityUrl = "";
+    })
+    .then(() => {
+      if (identityRequest?.token === token) identityRequest = null;
+      done();
+    });
+  identityRequest = { promise, token, url };
+  return promise;
 };
 void loadIdentity("/models/hero1-identity.json");
 faceGeometry.computeVertexNormals();
