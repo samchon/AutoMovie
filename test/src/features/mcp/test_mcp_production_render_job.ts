@@ -23,6 +23,7 @@ import {
 } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
+import { createRequire } from "node:module";
 import os from "node:os";
 import path from "node:path";
 
@@ -1746,8 +1747,11 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
 
     const splitIdentity = path.join(ownedRoot, "split-identity.json");
     fs.writeFileSync(splitIdentity, "split identity");
-    const nativeLstat = fs.lstatSync;
-    fs.lstatSync = ((target, options) => {
+    const mutableFs = createRequire(__filename)("node:fs") as {
+      lstatSync: typeof fs.lstatSync;
+    };
+    const nativeLstat = mutableFs.lstatSync;
+    mutableFs.lstatSync = ((target, options) => {
       const status = nativeLstat(target, options);
       if (path.resolve(target.toString()) !== path.resolve(splitIdentity))
         return status;
@@ -1766,7 +1770,7 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
           relative: "split-identity.json",
         });
       } finally {
-        fs.lstatSync = nativeLstat;
+        mutableFs.lstatSync = nativeLstat;
       }
     })();
     TestValidator.equals(
