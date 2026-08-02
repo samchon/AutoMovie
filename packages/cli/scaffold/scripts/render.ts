@@ -79,6 +79,11 @@ import {
   productionFrameCaptureMetrics,
 } from "./capture";
 import {
+  type IDialogueCacheSnapshot,
+  captureExistingDialogueCache,
+  publishDialogueCache,
+} from "./dialogueCacheSnapshot";
+import {
   captureProxyPublicationGcTarget,
   publishProxyBundle,
 } from "./publishProxyBundle";
@@ -1643,7 +1648,10 @@ const synthesizeProductionDialogue = async (
 }> => {
   const pcm = new Map<string, Float32Array>();
   const receipts: IAutoMovieProductionTtsReceipt[] = [];
-  const cacheRoot = path.join(productionStateRoot, "audio-cache", "kokoro");
+  const cacheRoot = ensureRenderPhysicalDirectory(
+    productionStateRoot,
+    "audio-cache/kokoro",
+  );
   const modelCacheRoot = path.join(
     productionStateRoot,
     "model-cache",
@@ -1684,44 +1692,14 @@ const synthesizeProductionDialogue = async (
       ),
     );
     const stem = cacheKey.slice(7);
-    const pcmPath = path.join(cacheRoot, `${stem}.f32`);
-    const receiptPath = path.join(cacheRoot, `${stem}.json`);
+    const cachePath = path.join(cacheRoot, stem);
     let cached:
       | { record: IKokoroCacheRecord; samples: Float32Array }
       | undefined;
     try {
-      if (fs.existsSync(pcmPath) && fs.existsSync(receiptPath)) {
-        const record = readRendererJson<IKokoroCacheRecord>(
-          productionStateRoot,
-          receiptPath,
-        );
-        const bytes = readAutoMovieProductionOwnedFile({
-          root: productionStateRoot,
-          directory: cacheRoot,
-          relative: path.basename(pcmPath),
-        });
-        if (
-          record.version === 2 &&
-          record.cacheKey === cacheKey &&
-          record.model === KOKORO_MODEL &&
-          record.modelRevision === KOKORO_MODEL_REVISION &&
-          record.voice === KOKORO_VOICE &&
-          isDeepStrictEqual(record.runtimeAssets, runtimeAssets) &&
-          Number.isSafeInteger(record.sourceSampleRate) &&
-          record.sourceSampleRate > 0 &&
-          Number.isSafeInteger(record.sourceSamples) &&
-          record.sourceSamples > 0 &&
-          typeof record.phonemes === "string" &&
-          validPhonemeChunks(record.phonemeChunks, record.sourceSamples) &&
-          record.sourceSamples * Float32Array.BYTES_PER_ELEMENT ===
-            bytes.length &&
-          record.pcmDigest === digestAutoMovieBytes(bytes)
-        )
-          cached = {
-            record,
-            samples: new Float32Array(Uint8Array.from(bytes).buffer),
-          };
-      }
+      const captured = captureExistingDialogueCache(cacheRoot, cachePath);
+      if (captured !== null)
+        cached = validatedDialogueCache(captured, cacheKey, runtimeAssets);
     } catch {
       cached = undefined;
     }
@@ -1788,9 +1766,17 @@ const synthesizeProductionDialogue = async (
         phonemeChunks,
         runtimeAssets,
       };
-      writeFileAtomic(pcmPath, bytes);
-      writeJsonAtomic(receiptPath, record);
-      cached = { record, samples };
+      const published = publishDialogueCache({
+        base: cacheRoot,
+        pcm: bytes,
+        receipt: Buffer.from(`${JSON.stringify(record, null, 2)}\n`, "utf8"),
+        target: cachePath,
+      });
+      cached = validatedDialogueCache(published, cacheKey, runtimeAssets);
+      if (cached === undefined)
+        throw new Error(
+          `Published Kokoro cache generation for line "${line.id}" is invalid.`,
+        );
     }
     pcm.set(line.id, cached.samples);
     receipts.push({
@@ -1806,6 +1792,38 @@ const synthesizeProductionDialogue = async (
     renderProgress("sound.dialogue.complete", { line: line.id });
   }
   return { pcm, receipts };
+};
+
+const validatedDialogueCache = (
+  snapshot: IDialogueCacheSnapshot,
+  cacheKey: AutoMovieContentDigest,
+  runtimeAssets: IAutoMovieProductionTtsReceipt["runtimeAssets"],
+): { record: IKokoroCacheRecord; samples: Float32Array } | undefined => {
+  const record = JSON.parse(
+    Buffer.from(snapshot.receipt).toString("utf8"),
+  ) as IKokoroCacheRecord;
+  if (
+    record.version !== 2 ||
+    record.cacheKey !== cacheKey ||
+    record.model !== KOKORO_MODEL ||
+    record.modelRevision !== KOKORO_MODEL_REVISION ||
+    record.voice !== KOKORO_VOICE ||
+    isDeepStrictEqual(record.runtimeAssets, runtimeAssets) === false ||
+    Number.isSafeInteger(record.sourceSampleRate) === false ||
+    record.sourceSampleRate <= 0 ||
+    Number.isSafeInteger(record.sourceSamples) === false ||
+    record.sourceSamples <= 0 ||
+    typeof record.phonemes !== "string" ||
+    validPhonemeChunks(record.phonemeChunks, record.sourceSamples) === false ||
+    record.sourceSamples * Float32Array.BYTES_PER_ELEMENT !==
+      snapshot.pcm.length ||
+    record.pcmDigest !== digestAutoMovieBytes(snapshot.pcm)
+  )
+    return undefined;
+  return {
+    record,
+    samples: new Float32Array(Uint8Array.from(snapshot.pcm).buffer),
+  };
 };
 
 const loadPinnedKokoroRuntime = async (
@@ -2978,9 +2996,6 @@ const writeFileAtomic = (file: string, bytes: Uint8Array): void => {
     fs.rmSync(temporary, { force: true });
   }
 };
-
-const writeJsonAtomic = (file: string, value: unknown): void =>
-  writeFileAtomic(file, Buffer.from(`${JSON.stringify(value, null, 2)}\n`));
 
 const readJson = <T>(file: string): T =>
   JSON.parse(

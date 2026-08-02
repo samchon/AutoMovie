@@ -242,6 +242,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       "scripts/capture.ts",
       "scripts/captureExecutableSnapshot.ts",
       "scripts/compile.ts",
+      "scripts/dialogueCacheSnapshot.ts",
       "scripts/generatedShotPlugin.ts",
       "scripts/lint.ts",
       "scripts/mcp.ts",
@@ -623,6 +624,29 @@ export const test_cli_scaffold = async (): Promise<void> => {
       files["scripts/renderPlanSnapshot.ts"]!.includes(
         "removeExactPlan(props.predecessor.snapshot)",
       ) === false &&
+      files["scripts/dialogueCacheSnapshot.ts"]!.includes(
+        'publishCacheFile(ownership, "audio.f32"',
+      ) &&
+      files["scripts/dialogueCacheSnapshot.ts"]!.includes(
+        'publishCacheFile(ownership, "receipt.json"',
+      ) &&
+      files["scripts/dialogueCacheSnapshot.ts"]!.includes(
+        "assertCapturedRenderGcFileEntry",
+      ) &&
+      files["scripts/dialogueCacheSnapshot.ts"]!.includes(
+        "createRenderGcFileSnapshot",
+      ) &&
+      files["scripts/dialogueCacheSnapshot.ts"]!.includes("fs.linkSync") ===
+        false &&
+      files["scripts/dialogueCacheSnapshot.ts"]!.includes(
+        ".gc-preserved-dialogue-candidates",
+      ) === false &&
+      files["scripts/render.ts"]!.includes(
+        "captureExistingDialogueCache(cacheRoot, cachePath)",
+      ) &&
+      files["scripts/render.ts"]!.includes(
+        "writeFileAtomic(pcmPath, bytes)",
+      ) === false &&
       files["scripts/render.ts"]!.includes(
         "current: (chunk) => currentReceipt(current, chunk)",
       ) &&
@@ -867,6 +891,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
         "scripts/capture.ts",
         "scripts/captureExecutableSnapshot.ts",
         "scripts/compile.ts",
+        "scripts/dialogueCacheSnapshot.ts",
         "scripts/generatedShotPlugin.ts",
         "scripts/lint.ts",
         "scripts/mcp.ts",
@@ -3284,6 +3309,271 @@ export const test_cli_scaffold = async (): Promise<void> => {
         fs.rmSync(path.join(path.dirname(captureReceipt), name), {
           force: true,
         });
+
+    const dialogueCacheModule = createRequire(__filename)(
+      path.join(scaffoldDir, "scripts", "dialogueCacheSnapshot.ts"),
+    ) as {
+      captureDialogueCache: (
+        base: string,
+        target: string,
+      ) => { pcm: Uint8Array; receipt: Uint8Array };
+      publishDialogueCache: (props: {
+        base: string;
+        pcm: Uint8Array;
+        receipt: Uint8Array;
+        target: string;
+      }) => { pcm: Uint8Array; receipt: Uint8Array };
+    };
+    const dialogueRoot = path.join(base, "dialogue-cache");
+    const dialogueTarget = path.join(dialogueRoot, "first");
+    const dialoguePcm = Buffer.from("dialogue pcm generation");
+    const dialogueReceipt = Buffer.from('{"generation":"first"}\n');
+    const writeDialogueFixture = (
+      target: string,
+      pcm: Uint8Array,
+      receipt: Uint8Array,
+    ): void => {
+      fs.mkdirSync(target, { recursive: true });
+      fs.writeFileSync(path.join(target, "audio.f32"), pcm);
+      fs.writeFileSync(path.join(target, "receipt.json"), receipt);
+    };
+    fs.mkdirSync(dialogueRoot);
+    const firstDialogueCache = dialogueCacheModule.publishDialogueCache({
+      base: dialogueRoot,
+      pcm: dialoguePcm,
+      receipt: dialogueReceipt,
+      target: dialogueTarget,
+    });
+    const reusedDialogueCache = dialogueCacheModule.publishDialogueCache({
+      base: dialogueRoot,
+      pcm: dialoguePcm,
+      receipt: dialogueReceipt,
+      target: dialogueTarget,
+    });
+    TestValidator.predicate(
+      "dialogue cache publishes and reuses one exact PCM receipt generation",
+      Buffer.from(firstDialogueCache.pcm).equals(dialoguePcm) &&
+        Buffer.from(reusedDialogueCache.receipt).equals(dialogueReceipt) &&
+        fs.lstatSync(dialogueTarget).isDirectory() &&
+        fs.readdirSync(dialogueTarget).sort().join(",") ===
+          "audio.f32,receipt.json",
+    );
+
+    const partialDialogueTarget = path.join(dialogueRoot, "partial");
+    fs.mkdirSync(partialDialogueTarget);
+    fs.writeFileSync(
+      path.join(partialDialogueTarget, "audio.f32"),
+      dialoguePcm,
+    );
+    const partialDialogueStatus = fs.lstatSync(partialDialogueTarget, {
+      bigint: true,
+    });
+    dialogueCacheModule.publishDialogueCache({
+      base: dialogueRoot,
+      pcm: dialoguePcm,
+      receipt: dialogueReceipt,
+      target: partialDialogueTarget,
+    });
+    TestValidator.predicate(
+      "dialogue cache monotonically completes an exact partial generation",
+      (() => {
+        const status = fs.lstatSync(partialDialogueTarget, { bigint: true });
+        return (
+          status.dev === partialDialogueStatus.dev &&
+          status.ino === partialDialogueStatus.ino
+        );
+      })() &&
+        !throws(() =>
+          dialogueCacheModule.captureDialogueCache(
+            dialogueRoot,
+            partialDialogueTarget,
+          ),
+        ),
+    );
+
+    const receiptOnlyDialogueTarget = path.join(dialogueRoot, "receipt-only");
+    fs.mkdirSync(receiptOnlyDialogueTarget);
+    fs.writeFileSync(
+      path.join(receiptOnlyDialogueTarget, "receipt.json"),
+      dialogueReceipt,
+    );
+    const receiptOnlyDialogueRejected = throws(() =>
+      dialogueCacheModule.publishDialogueCache({
+        base: dialogueRoot,
+        pcm: dialoguePcm,
+        receipt: dialogueReceipt,
+        target: receiptOnlyDialogueTarget,
+      }),
+    );
+    TestValidator.predicate(
+      "dialogue cache never completes PCM after a visible receipt",
+      receiptOnlyDialogueRejected &&
+        fs.existsSync(path.join(receiptOnlyDialogueTarget, "audio.f32")) ===
+          false &&
+        fs
+          .readFileSync(path.join(receiptOnlyDialogueTarget, "receipt.json"))
+          .equals(dialogueReceipt),
+    );
+
+    const foreignDialogueTarget = path.join(dialogueRoot, "foreign");
+    const foreignDialoguePcm = Buffer.from("foreign dialogue pcm");
+    fs.mkdirSync(foreignDialogueTarget);
+    fs.writeFileSync(
+      path.join(foreignDialogueTarget, "audio.f32"),
+      foreignDialoguePcm,
+    );
+    const foreignDialogueRejected = throws(() =>
+      dialogueCacheModule.publishDialogueCache({
+        base: dialogueRoot,
+        pcm: dialoguePcm,
+        receipt: dialogueReceipt,
+        target: foreignDialogueTarget,
+      }),
+    );
+    TestValidator.predicate(
+      "dialogue cache preserves a byte-different concurrent PCM winner",
+      foreignDialogueRejected &&
+        fs
+          .readFileSync(path.join(foreignDialogueTarget, "audio.f32"))
+          .equals(foreignDialoguePcm) &&
+        fs.existsSync(path.join(foreignDialogueTarget, "receipt.json")) ===
+          false,
+    );
+
+    const receiptSuccessorTarget = path.join(dialogueRoot, "receipt-successor");
+    const receiptSuccessorPath = path.join(
+      receiptSuccessorTarget,
+      "receipt.json",
+    );
+    const foreignDialogueReceipt = Buffer.from('{"foreign":true}\n');
+    let receiptSuccessorInserted = false;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      if (
+        receiptSuccessorInserted === false &&
+        typeof file !== "number" &&
+        path.resolve(file.toString()) === receiptSuccessorPath &&
+        flags === "wx+"
+      ) {
+        nativeWriteFile(receiptSuccessorPath, foreignDialogueReceipt);
+        receiptSuccessorInserted = true;
+      }
+      return Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+    }) as typeof fs.openSync;
+    let receiptSuccessorRejected = false;
+    try {
+      receiptSuccessorRejected = throws(() =>
+        dialogueCacheModule.publishDialogueCache({
+          base: dialogueRoot,
+          pcm: dialoguePcm,
+          receipt: dialogueReceipt,
+          target: receiptSuccessorTarget,
+        }),
+      );
+    } finally {
+      mutableFs.openSync = nativeOpen;
+    }
+    TestValidator.predicate(
+      "dialogue cache preserves a receipt successor at commit",
+      receiptSuccessorInserted &&
+        receiptSuccessorRejected &&
+        fs.readFileSync(receiptSuccessorPath).equals(foreignDialogueReceipt),
+    );
+
+    const abaDialogueTarget = path.join(dialogueRoot, "aba");
+    const abaDialogueSuccessor = `${abaDialogueTarget}.successor`;
+    const abaDialogueParked = `${abaDialogueTarget}.parked`;
+    writeDialogueFixture(abaDialogueTarget, dialoguePcm, dialogueReceipt);
+    writeDialogueFixture(abaDialogueSuccessor, dialoguePcm, dialogueReceipt);
+    const abaDialogueAudio = path.join(abaDialogueTarget, "audio.f32");
+    let abaDialogueAudioOpens = 0;
+    let abaDialogueSwapped = false;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+      if (
+        typeof file !== "number" &&
+        path.resolve(file.toString()) === abaDialogueAudio &&
+        ++abaDialogueAudioOpens === 3
+      ) {
+        nativeRename(abaDialogueTarget, abaDialogueParked);
+        nativeRename(abaDialogueSuccessor, abaDialogueTarget);
+        abaDialogueSwapped = true;
+      }
+      return descriptor;
+    }) as typeof fs.openSync;
+    let abaDialogueRejected = false;
+    try {
+      abaDialogueRejected = throws(() =>
+        dialogueCacheModule.captureDialogueCache(
+          dialogueRoot,
+          abaDialogueTarget,
+        ),
+      );
+    } finally {
+      mutableFs.openSync = nativeOpen;
+    }
+    TestValidator.predicate(
+      "dialogue cache hit rejects a directory successor between pair reads",
+      abaDialogueSwapped &&
+        abaDialogueRejected &&
+        fs.existsSync(abaDialogueTarget) &&
+        fs.existsSync(abaDialogueParked),
+    );
+
+    const rootDialogueRoot = path.join(base, "dialogue-cache-root-swap");
+    const rootDialogueTarget = path.join(rootDialogueRoot, "entry");
+    const parkedDialogueRoot = `${rootDialogueRoot}.parked`;
+    const rootDialogueMarker = path.join(rootDialogueRoot, "successor.marker");
+    fs.mkdirSync(rootDialogueRoot);
+    let dialogueRootSwapped = false;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+      if (
+        dialogueRootSwapped === false &&
+        typeof file !== "number" &&
+        flags === "wx+" &&
+        path.resolve(file.toString()) ===
+          path.join(rootDialogueTarget, "audio.f32")
+      ) {
+        nativeRename(rootDialogueRoot, parkedDialogueRoot);
+        nativeMkdir(rootDialogueRoot);
+        nativeMkdir(rootDialogueTarget);
+        nativeWriteFile(rootDialogueMarker, "successor");
+        dialogueRootSwapped = true;
+      }
+      return descriptor;
+    }) as typeof fs.openSync;
+    let dialogueRootSwapRejected = false;
+    try {
+      dialogueRootSwapRejected = throws(() =>
+        dialogueCacheModule.publishDialogueCache({
+          base: rootDialogueRoot,
+          pcm: dialoguePcm,
+          receipt: dialogueReceipt,
+          target: rootDialogueTarget,
+        }),
+      );
+    } finally {
+      mutableFs.openSync = nativeOpen;
+    }
+    TestValidator.predicate(
+      "dialogue cache preserves a root and parent successor",
+      dialogueRootSwapped &&
+        dialogueRootSwapRejected &&
+        fs.readFileSync(rootDialogueMarker, "utf8") === "successor" &&
+        fs.existsSync(path.join(parkedDialogueRoot, "entry", "audio.f32")),
+    );
     const renderAttemptModule = createRequire(__filename)(
       path.join(scaffoldDir, "scripts", "renderAttemptSnapshot.ts"),
     ) as {
