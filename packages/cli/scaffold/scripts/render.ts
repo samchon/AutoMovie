@@ -107,11 +107,14 @@ import {
   renderChunkPublicationPath,
 } from "./renderChunkSnapshot";
 import {
+  type IRenderGcPhysicalDirectory,
   type IRenderGcTargetSnapshot,
   RENDER_GC_QUARANTINE_EVIDENCE_DIRECTORY,
   RENDER_GC_REMOVAL_STAGING_DIRECTORY,
   assertCapturedRenderGcFileEntry,
+  assertRenderPhysicalDirectoryIdentity,
   captureRenderGcTarget,
+  captureRenderPhysicalDirectory,
   createRenderGcFileSnapshot,
   ensureRenderPhysicalDirectory,
   inventoryRenderQuarantineCandidates,
@@ -788,6 +791,10 @@ const renderChunk = async (
     `${chunk.id.slice(7)}.${randomUUID()}.${process.pid}`,
   );
   fs.mkdirSync(temporary);
+  const temporaryOwnership = captureRenderPhysicalDirectory(
+    temporary,
+    "render chunk temporary tree",
+  );
   const frameReceipts: IAutoMovieProductionRenderChunkReceipt["frames"] = [];
   const frameBytes: Uint8Array[] = [];
   for (const sample of chunk.frames) {
@@ -835,7 +842,7 @@ const renderChunk = async (
       8,
       "0",
     )}.${chunk.pass}.png`;
-    writeFileAtomic(path.join(temporary, relative), bytes);
+    writeRenderFile(temporaryOwnership, path.join(temporary, relative), bytes);
     const probe = probeProductionMedia({
       kind: "preview",
       mediaType: "image/png",
@@ -857,7 +864,11 @@ const renderChunk = async (
     for (const frame of frameBytes) consumeFrame(frame);
   }, plan);
   const encodedPath = "chunk.mp4";
-  writeFileAtomic(path.join(temporary, encodedPath), encodedBytes);
+  writeRenderFile(
+    temporaryOwnership,
+    path.join(temporary, encodedPath),
+    encodedBytes,
+  );
   const encodedProbe = probeProductionVideoMp4(encodedBytes);
   if (
     encodedProbe.kind !== "video" ||
@@ -880,6 +891,10 @@ const renderChunk = async (
       bytes: encodedBytes.length,
     },
   };
+  assertRenderPhysicalDirectoryIdentity(
+    temporaryOwnership,
+    "render chunk temporary tree",
+  );
   const published = publishRenderChunkSnapshot({
     chunk: chunk.id,
     receipt,
@@ -3009,15 +3024,31 @@ const processAlive = (pid: number): boolean => {
   }
 };
 
-const writeFileAtomic = (file: string, bytes: Uint8Array): void => {
+const writeRenderFile = (
+  ownership: IRenderGcPhysicalDirectory,
+  file: string,
+  bytes: Uint8Array,
+): void => {
+  assertRenderPhysicalDirectoryIdentity(
+    ownership,
+    "render chunk temporary tree",
+  );
   fs.mkdirSync(path.dirname(file), { recursive: true });
-  const temporary = `${file}.${process.pid}.tmp`;
-  try {
-    fs.writeFileSync(temporary, bytes);
-    fs.renameSync(temporary, file);
-  } finally {
-    fs.rmSync(temporary, { force: true });
-  }
+  assertRenderPhysicalDirectoryIdentity(
+    ownership,
+    "render chunk temporary tree",
+  );
+  const snapshot = createRenderGcFileSnapshot(ownership.path, file, bytes);
+  if (
+    snapshot.base.path !== ownership.path ||
+    snapshot.base.real !== ownership.real ||
+    snapshot.base.identity !== ownership.identity
+  )
+    throw new Error("Render chunk file changed temporary-tree ownership.");
+  assertRenderPhysicalDirectoryIdentity(
+    ownership,
+    "render chunk temporary tree",
+  );
 };
 
 const readJson = <T>(file: string): T =>

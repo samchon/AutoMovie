@@ -160,6 +160,14 @@ export const test_cli_scaffold = async (): Promise<void> => {
           acquireChunkOffset,
           renderScript.indexOf("\nconst renderChunk", acquireChunkOffset),
         );
+  const writeRenderFileOffset = renderScript.indexOf("const writeRenderFile");
+  const writeRenderFileSource =
+    writeRenderFileOffset < 0
+      ? ""
+      : renderScript.slice(
+          writeRenderFileOffset,
+          renderScript.indexOf("\nconst readJson", writeRenderFileOffset),
+        );
   const renderProgressStages = [
     "finalize.start",
     "finalize.status.complete",
@@ -575,6 +583,22 @@ export const test_cli_scaffold = async (): Promise<void> => {
       acquireChunkSource.includes(".candidate") === false &&
       acquireChunkSource.includes("fs.linkSync") === false &&
       acquireChunkSource.includes("fs.rmSync") === false &&
+      files["scripts/render.ts"]!.includes(
+        "const temporaryOwnership = captureRenderPhysicalDirectory(",
+      ) &&
+      files["scripts/render.ts"]!.match(
+        /writeRenderFile\(\s*temporaryOwnership,/gu,
+      )?.length === 2 &&
+      writeRenderFileSource.includes("createRenderGcFileSnapshot(") &&
+      writeRenderFileSource.includes(
+        "assertRenderPhysicalDirectoryIdentity(",
+      ) &&
+      writeRenderFileSource.includes("snapshot.base.identity") &&
+      writeRenderFileSource.includes(".tmp") === false &&
+      writeRenderFileSource.includes("fs.renameSync") === false &&
+      writeRenderFileSource.includes("fs.rmSync") === false &&
+      files["scripts/render.ts"]!.includes("writeFileAtomic") === false &&
+      files["scripts/render.ts"]!.includes("fs.renameSync") === false &&
       files["scripts/render.ts"]!.includes(
         "captureAbandonedRenderStateTarget",
       ) &&

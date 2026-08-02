@@ -109,6 +109,8 @@ Render plans use an append-only predecessor chain with one immutable no-overwrit
 
 Descriptor-bound render final slots are never automatically removed after creation begins. A write, readback, target, parent, or root validation failure leaves visible evidence for the consumer's strict gate and explicit GC or manual adjudication instead of risking deletion of a relinked successor.
 
+Frame PNGs and encoded chunk media use the same direct final-slot protocol inside one captured UUID temporary tree: every parent and final pathname is identity-fenced, each file is written through descriptor-bound `O_EXCL`, and failures remain visible in that tree for exact abandoned recovery instead of temp-file rename or cleanup.
+
 Dialogue synthesis caches each content key as one immutable directory, publishes both file slots through descriptor-bound `O_EXCL` with `audio.f32` before `receipt.json`, and accepts a cache hit only from one captured and revalidated two-file generation. Legacy sibling `.f32` and `.json` entries are ignored and regenerated without replacement.
 
 Proxy finalization publishes content-addressed materialized directories without replacing existing paths: each payload reserves and writes its final pathname directly through descriptor-bound `O_EXCL`, the root receipt appears last, and every manifest path remains an ordinary render-root-relative file that external consumers can open directly.
