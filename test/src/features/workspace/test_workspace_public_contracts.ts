@@ -116,6 +116,8 @@ const unmentionedModules = (pkg: string, document: string): string[] =>
  *     early spawn/exit evidence instead of waiting for the readiness timeout.
  * 16. The packaged starter verifier expects the versioned compile manifest's
  *     canonical shot entries with both their IDs and generated relative paths.
+ * 17. Every capture-smoke readiness fetch and poll delay is bounded by the probe
+ *     budget or the remaining advertised server-readiness deadline.
  */
 export const test_workspace_public_contracts = (): void => {
   const rootReadme = readPackageFile("README.md");
@@ -158,6 +160,12 @@ export const test_workspace_public_contracts = (): void => {
             ensureDevServerOffset,
           ),
         );
+  const answersOffset = playgroundCaptureSmoke.indexOf("const answers =");
+  const answersEnd = playgroundCaptureSmoke.indexOf("\n\n/**", answersOffset);
+  const answersSource =
+    answersOffset < 0 || answersEnd < 0
+      ? ""
+      : playgroundCaptureSmoke.slice(answersOffset, answersEnd);
   const failureAfterCloseOffset = ensureDevServerSource.indexOf(
     "const failureAfterClose =",
   );
@@ -171,9 +179,7 @@ export const test_workspace_public_contracts = (): void => {
             failureAfterCloseOffset,
           ),
         );
-  const readinessLoopOffset = ensureDevServerSource.indexOf(
-    "while (Date.now() < deadline)",
-  );
+  const readinessLoopOffset = ensureDevServerSource.indexOf("while (true)");
   const readinessLoopSource =
     readinessLoopOffset < 0
       ? ""
@@ -776,11 +782,11 @@ export const test_workspace_public_contracts = (): void => {
       },
       readinessOrder: (() => {
         const offsets = [
-          "const answered = await answers(base);",
+          "const answered = await answers(",
           "const failure = await failureAfterClose();",
           "if (failure !== null)",
           "if (answered)",
-          "setTimeout(resolve, 500);",
+          "setTimeout(resolve, delay);",
         ].map((marker) => readinessLoopSource.indexOf(marker));
         return {
           allPresent: offsets.every((offset) => offset >= 0),
@@ -875,6 +881,45 @@ export const test_workspace_public_contracts = (): void => {
       comparison:
         'assert(\n  "starter-compiled-shot-order",\n  JSON.stringify(compiled.shots) === JSON.stringify(canonicalCompiledShots),',
       labeledAssertions: 1,
+    },
+  );
+  TestValidator.equals(
+    "real capture smoke binds readiness probes to its deadline",
+    {
+      constants: [
+        ...playgroundCaptureSmoke.matchAll(
+          /const (DEV_SERVER_(?:POLL_INTERVAL|PROBE_TIMEOUT|READY_TIMEOUT)_MS) = ([\d_]+);/g,
+        ),
+      ].map((match) => [match[1], match[2]]),
+      fetch:
+        /const answers = async \(\s*base: string,\s*timeoutMs: number,?\s*\): Promise<boolean> => \{[\s\S]*?fetch\([\s\S]*?\{\s*signal: AbortSignal\.timeout\(timeoutMs\),?\s*\}\s*,?\s*\);/.test(
+          answersSource,
+        ),
+      reuse: ensureDevServerSource.includes(
+        "if (await answers(base, DEV_SERVER_PROBE_TIMEOUT_MS))",
+      ),
+      loop: /while \(true\) \{\s*const remaining = deadline - Date\.now\(\);\s*if \(remaining <= 0\) break;\s*const answered = await answers\(\s*base,\s*Math\.min\(DEV_SERVER_PROBE_TIMEOUT_MS, remaining\),\s*\);/.test(
+        ensureDevServerSource,
+      ),
+      delay:
+        /const delay = Math\.min\(\s*DEV_SERVER_POLL_INTERVAL_MS,\s*deadline - Date\.now\(\),?\s*\);\s*if \(delay > 0\)\s*await new Promise\(\(resolve\) => \{\s*setTimeout\(resolve, delay\);/.test(
+          ensureDevServerSource,
+        ),
+      deadline: ensureDevServerSource.includes(
+        "const deadline = Date.now() + DEV_SERVER_READY_TIMEOUT_MS;",
+      ),
+    },
+    {
+      constants: [
+        ["DEV_SERVER_POLL_INTERVAL_MS", "500"],
+        ["DEV_SERVER_PROBE_TIMEOUT_MS", "2_000"],
+        ["DEV_SERVER_READY_TIMEOUT_MS", "30_000"],
+      ],
+      fetch: true,
+      reuse: true,
+      loop: true,
+      delay: true,
+      deadline: true,
     },
   );
   const mcpMethods = [

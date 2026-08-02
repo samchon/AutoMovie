@@ -12,6 +12,9 @@ const DEFAULT_BASE = process.env.BASE ?? "http://127.0.0.1:5173";
 const WIDTH = 640;
 const HEIGHT = 360;
 const DEV_SERVER_OUTPUT_MAX_CHARS = 1024 * 1024;
+const DEV_SERVER_POLL_INTERVAL_MS = 500;
+const DEV_SERVER_PROBE_TIMEOUT_MS = 2_000;
+const DEV_SERVER_READY_TIMEOUT_MS = 30_000;
 
 interface DevServerExit {
   code: number | null;
@@ -150,7 +153,8 @@ export const main = async (
 const ensureDevServer = async (
   base: string,
 ): Promise<{ spawned: boolean; close: () => void }> => {
-  if (await answers(base)) return { spawned: false, close: () => {} };
+  if (await answers(base, DEV_SERVER_PROBE_TIMEOUT_MS))
+    return { spawned: false, close: () => {} };
   const port = new URL(base).port || "5173";
   const playground = path.resolve(__dirname, "..");
   // vite's `exports` map hides bin/vite.js from require.resolve; the
@@ -203,18 +207,25 @@ const ensureDevServer = async (
       stdout,
     });
   };
-  const deadline = Date.now() + 30_000;
-  while (Date.now() < deadline) {
-    const answered = await answers(base);
+  const deadline = Date.now() + DEV_SERVER_READY_TIMEOUT_MS;
+  while (true) {
+    const remaining = deadline - Date.now();
+    if (remaining <= 0) break;
+    const answered = await answers(
+      base,
+      Math.min(DEV_SERVER_PROBE_TIMEOUT_MS, remaining),
+    );
     const failure = await failureAfterClose();
     if (failure !== null) {
       child.kill();
       throw new Error(failure);
     }
     if (answered) return { spawned: true, close: () => child.kill() };
-    await new Promise((resolve) => {
-      setTimeout(resolve, 500);
-    });
+    const delay = Math.min(DEV_SERVER_POLL_INTERVAL_MS, deadline - Date.now());
+    if (delay > 0)
+      await new Promise((resolve) => {
+        setTimeout(resolve, delay);
+      });
   }
   const failure = await failureAfterClose();
   if (failure !== null) {
@@ -227,9 +238,11 @@ const ensureDevServer = async (
   );
 };
 
-const answers = async (base: string): Promise<boolean> => {
+const answers = async (base: string, timeoutMs: number): Promise<boolean> => {
   try {
-    const response = await fetch(`${base.replace(/\/+$/, "")}/stickman.html`);
+    const response = await fetch(`${base.replace(/\/+$/, "")}/stickman.html`, {
+      signal: AbortSignal.timeout(timeoutMs),
+    });
     return response.ok;
   } catch {
     return false;
