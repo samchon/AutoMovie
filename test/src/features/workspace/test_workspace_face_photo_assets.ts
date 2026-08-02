@@ -50,12 +50,17 @@ const facePhotoAssetContract = (text: string): IFacePhotoAssetContract => {
     "skinCache",
   ]);
   const initializationNames = new Set([
+    "applySkullTone",
     "applyShellLighting",
     "bunMesh",
     "bustMesh",
+    "hairMaterial",
     "hairMesh",
+    "hairUnlit",
     "skullMaterial",
+    "skullMesh",
     "skullUnlit",
+    "skinModeOn",
     "tailMeshes",
   ]);
   const functions = {
@@ -280,9 +285,14 @@ export const test_workspace_face_photo_assets = (): void => {
         "skinCache",
         "loadSkin",
         "photoTone",
+        "skinModeOn",
+        "applySkullTone",
         "selectSkin",
         "skullMaterial",
         "skullUnlit",
+        "skullMesh",
+        "hairMaterial",
+        "hairUnlit",
         "applyShellLighting",
         "hairMesh",
         "bunMesh",
