@@ -156,6 +156,8 @@ const captureContractFailures = (
  *     exact payload bytes, inventory, and physical tree identity.
  * 17. Attempt state is token-bound to its held lock and every transition removes
  *     only the exact captured owner before exclusive successor publication.
+ * 18. Each complete Kokoro dialogue line closes one explicit text splitter before
+ *     streaming it, so the upstream async iterator can terminate.
  */
 export const test_cli_scaffold = async (): Promise<void> => {
   // 5. packaging guard: the scaffold dir must be a published `files` entry.
@@ -220,6 +222,45 @@ export const test_cli_scaffold = async (): Promise<void> => {
       : renderScript.slice(
           renderProgressOffset,
           renderScript.indexOf("\ntry {", renderProgressOffset),
+        );
+  const kokoroInterfaceOffset = renderScript.indexOf(
+    "interface IKokoroRuntime",
+  );
+  const kokoroInterfaceSource =
+    kokoroInterfaceOffset < 0
+      ? ""
+      : renderScript.slice(
+          kokoroInterfaceOffset,
+          renderScript.indexOf(
+            "\nconst produceProductionSound",
+            kokoroInterfaceOffset,
+          ),
+        );
+  const dialogueSynthesisOffset = renderScript.indexOf(
+    "const synthesizeProductionDialogue",
+  );
+  const dialogueSynthesisSource =
+    dialogueSynthesisOffset < 0
+      ? ""
+      : renderScript.slice(
+          dialogueSynthesisOffset,
+          renderScript.indexOf(
+            "\nconst validatedDialogueCache",
+            dialogueSynthesisOffset,
+          ),
+        );
+  const kokoroRuntimeOffset = renderScript.indexOf(
+    "const loadPinnedKokoroRuntime",
+  );
+  const kokoroRuntimeSource =
+    kokoroRuntimeOffset < 0
+      ? ""
+      : renderScript.slice(
+          kokoroRuntimeOffset,
+          renderScript.indexOf(
+            "\nconst kokoroBaseRuntimeAssets",
+            kokoroRuntimeOffset,
+          ),
         );
   const recoveryProtectionModule = files["scripts/renderChunkSnapshot.ts"]!;
   const recoveryProtectionOffset = recoveryProtectionModule.indexOf(
@@ -448,6 +489,52 @@ export const test_cli_scaffold = async (): Promise<void> => {
       parsedPackage.overrides?.["@huggingface/transformers"]?.sharp ===
         "file:vendor/sharp-disabled" &&
       files[".npmrc"] === "onnxruntime-node-install-cuda=skip\n",
+  );
+  TestValidator.equals(
+    "each complete Kokoro dialogue closes its explicit stream input",
+    {
+      streamInputType:
+        kokoroInterfaceSource.match(/stream\(\s*text: ([^,\r\n]+)/)?.[1] ??
+        null,
+      importedSplitter:
+        kokoroRuntimeSource.match(
+          /const \[\{ KokoroTTS, (\w+) \}, \{ env \}\]/,
+        )?.[1] ?? null,
+      constructedSplitter:
+        kokoroRuntimeSource.match(
+          /createTextSplitter: \(\) => new (\w+)\(\)/,
+        )?.[1] ?? null,
+      lifecycle: [
+        ["create", "const dialogueText = loadedRuntime.createTextSplitter();"],
+        ["push", "dialogueText.push(line.text);"],
+        ["close", "dialogueText.close();"],
+        ["stream", "loadedRuntime.runtime.stream("],
+      ]
+        .filter(([, marker]) => dialogueSynthesisSource.includes(marker!))
+        .sort(
+          ([, left], [, right]) =>
+            dialogueSynthesisSource.indexOf(left!) -
+            dialogueSynthesisSource.indexOf(right!),
+        )
+        .map(([name]) => name),
+      pushedText:
+        dialogueSynthesisSource.match(/dialogueText\.push\(([^)]+)\)/)?.[1] ??
+        null,
+      streamedInput:
+        dialogueSynthesisSource.match(/runtime\.stream\(\s*(\w+),/)?.[1] ??
+        null,
+      unsafeStringInputs:
+        dialogueSynthesisSource.match(/runtime\.stream\(\s*line\.text/g) ?? [],
+    },
+    {
+      streamInputType: "IKokoroTextSplitter",
+      importedSplitter: "TextSplitterStream",
+      constructedSplitter: "TextSplitterStream",
+      lifecycle: ["create", "push", "close", "stream"],
+      pushedText: "line.text",
+      streamedInput: "dialogueText",
+      unsafeStringInputs: [],
+    },
   );
   TestValidator.predicate(
     "the starter separates owned source and enforces review in read-only lint",

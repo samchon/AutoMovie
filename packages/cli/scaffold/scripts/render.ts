@@ -1592,7 +1592,7 @@ interface IKokoroCacheRecord {
 
 interface IKokoroRuntime {
   stream(
-    text: string,
+    text: IKokoroTextSplitter,
     options: { voice: string; speed: number },
   ): AsyncIterable<{
     text: string;
@@ -1601,8 +1601,14 @@ interface IKokoroRuntime {
   }>;
 }
 
+interface IKokoroTextSplitter extends AsyncIterable<string> {
+  push(...texts: string[]): void;
+  close(): void;
+}
+
 interface IKokoroLoadedRuntime {
   runtime: IKokoroRuntime;
+  createTextSplitter(): IKokoroTextSplitter;
   runtimeAssets: IAutoMovieProductionTtsReceipt["runtimeAssets"];
 }
 
@@ -1743,18 +1749,19 @@ const synthesizeProductionDialogue = async (
       cached = undefined;
     }
     if (cached === undefined) {
+      const loadedRuntime = await currentRuntime();
+      const dialogueText = loadedRuntime.createTextSplitter();
+      dialogueText.push(line.text);
+      dialogueText.close();
       const chunks: Float32Array[] = [];
       const phonemes: string[] = [];
       const phonemeChunks: IKokoroCacheRecord["phonemeChunks"] = [];
       let sourceSampleRate: number | undefined;
       let sourceOffset = 0;
-      for await (const chunk of (await currentRuntime()).runtime.stream(
-        line.text,
-        {
-          voice: KOKORO_VOICE,
-          speed: 1,
-        },
-      )) {
+      for await (const chunk of loadedRuntime.runtime.stream(dialogueText, {
+        voice: KOKORO_VOICE,
+        speed: 1,
+      })) {
         if (
           Number.isSafeInteger(chunk.audio.sampling_rate) === false ||
           chunk.audio.sampling_rate <= 0
@@ -1874,7 +1881,7 @@ const loadPinnedKokoroRuntime = async (
     model: KOKORO_MODEL,
     revision: KOKORO_MODEL_REVISION,
   });
-  const [{ KokoroTTS }, { env }] = await Promise.all([
+  const [{ KokoroTTS, TextSplitterStream }, { env }] = await Promise.all([
     import("kokoro-js"),
     import("@huggingface/transformers"),
   ]);
@@ -1927,6 +1934,7 @@ const loadPinnedKokoroRuntime = async (
     });
     return {
       runtime: loaded as unknown as IKokoroRuntime,
+      createTextSplitter: () => new TextSplitterStream(),
       runtimeAssets: [...baseRuntimeAssets, ...modelAssets],
     };
   } finally {
