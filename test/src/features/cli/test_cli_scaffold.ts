@@ -3440,6 +3440,46 @@ export const test_cli_scaffold = async (): Promise<void> => {
           false,
     );
 
+    const pcmSuccessorTarget = path.join(dialogueRoot, "pcm-successor");
+    const pcmSuccessorPath = path.join(pcmSuccessorTarget, "audio.f32");
+    let pcmSuccessorInserted = false;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      if (
+        pcmSuccessorInserted === false &&
+        typeof file !== "number" &&
+        path.resolve(file.toString()) === pcmSuccessorPath &&
+        flags === "wx+"
+      ) {
+        nativeWriteFile(pcmSuccessorPath, foreignDialoguePcm);
+        pcmSuccessorInserted = true;
+      }
+      return Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+    }) as typeof fs.openSync;
+    let pcmSuccessorRejected = false;
+    try {
+      pcmSuccessorRejected = throws(() =>
+        dialogueCacheModule.publishDialogueCache({
+          base: dialogueRoot,
+          pcm: dialoguePcm,
+          receipt: dialogueReceipt,
+          target: pcmSuccessorTarget,
+        }),
+      );
+    } finally {
+      mutableFs.openSync = nativeOpen;
+    }
+    TestValidator.predicate(
+      "dialogue cache preserves a PCM successor at commit",
+      pcmSuccessorInserted &&
+        pcmSuccessorRejected &&
+        fs.readFileSync(pcmSuccessorPath).equals(foreignDialoguePcm) &&
+        fs.existsSync(path.join(pcmSuccessorTarget, "receipt.json")) === false,
+    );
+
     const receiptSuccessorTarget = path.join(dialogueRoot, "receipt-successor");
     const receiptSuccessorPath = path.join(
       receiptSuccessorTarget,
@@ -3481,6 +3521,27 @@ export const test_cli_scaffold = async (): Promise<void> => {
       receiptSuccessorInserted &&
         receiptSuccessorRejected &&
         fs.readFileSync(receiptSuccessorPath).equals(foreignDialogueReceipt),
+    );
+
+    const oversizedDialogueTarget = path.join(dialogueRoot, "oversized");
+    fs.mkdirSync(oversizedDialogueTarget);
+    fs.writeFileSync(
+      path.join(oversizedDialogueTarget, "audio.f32"),
+      dialoguePcm,
+    );
+    fs.writeFileSync(path.join(oversizedDialogueTarget, "receipt.json"), "{");
+    fs.truncateSync(
+      path.join(oversizedDialogueTarget, "receipt.json"),
+      8 * 1024 * 1024 + 1,
+    );
+    TestValidator.predicate(
+      "dialogue cache rejects a receipt beyond its bounded read",
+      throws(() =>
+        dialogueCacheModule.captureDialogueCache(
+          dialogueRoot,
+          oversizedDialogueTarget,
+        ),
+      ),
     );
 
     const abaDialogueTarget = path.join(dialogueRoot, "aba");

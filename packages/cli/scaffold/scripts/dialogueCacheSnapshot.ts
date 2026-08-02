@@ -35,6 +35,12 @@ export const captureDialogueCache = (
   target: string,
 ): IDialogueCacheSnapshot => {
   const snapshot = captureRenderGcTarget(base, target);
+  return readDialogueCache(snapshot);
+};
+
+const readDialogueCache = (
+  snapshot: IRenderGcTargetSnapshot,
+): IDialogueCacheSnapshot => {
   if (snapshot.kind !== "directory")
     throw new Error("Dialogue cache generation is not a physical directory.");
   assertExactInventory(snapshot, undefined);
@@ -94,8 +100,11 @@ export const publishDialogueCache = (props: {
       assertCapturedRenderTarget(existing);
       incomplete = existing;
     }
-    if (incomplete === null)
-      return captureDialogueCache(props.base, props.target);
+    if (incomplete === null) {
+      const reused = readDialogueCache(existing);
+      assertExpectedBytes(reused, props);
+      return reused;
+    }
   }
   assertRenderPhysicalDirectoryIdentity(root, "dialogue cache root");
   if (existing === null)
