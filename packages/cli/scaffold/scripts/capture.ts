@@ -26,6 +26,17 @@ interface CapturePage {
   queue: Promise<void>;
 }
 
+interface ProductionCaptureFailure {
+  error: unknown;
+}
+
+interface ProductionCaptureCleanup {
+  cleanup: () => unknown;
+  resource: string;
+}
+
+class ProductionCaptureCleanupError extends AggregateError {}
+
 let sessionPromise: Promise<CaptureSession> | null = null;
 let sessionIdentity: string | null = null;
 let captureMetrics = {
@@ -34,6 +45,37 @@ let captureMetrics = {
   seeks: 0,
   captures: 0,
   captureMilliseconds: 0,
+};
+
+/** Preserve an operation failure while attempting every requested cleanup. */
+const preserveProductionCaptureCleanup = async (
+  failure: ProductionCaptureFailure | undefined,
+  resources: readonly ProductionCaptureCleanup[],
+): Promise<void> => {
+  const results = await Promise.allSettled(
+    resources.map((resource) => Promise.resolve().then(resource.cleanup)),
+  );
+  const cleanupFailures = results.flatMap((result, index) =>
+    result.status === "fulfilled"
+      ? []
+      : [{ error: result.reason, resource: resources[index]!.resource }],
+  );
+  if (cleanupFailures.length === 0) return;
+  if (failure === undefined && cleanupFailures.length === 1)
+    throw cleanupFailures[0]!.error;
+  throw new ProductionCaptureCleanupError(
+    [
+      ...(failure === undefined
+        ? []
+        : failure.error instanceof ProductionCaptureCleanupError
+          ? failure.error.errors
+          : [failure.error]),
+      ...cleanupFailures.map((entry) => entry.error),
+    ],
+    `Production capture cleanup failed${
+      failure === undefined ? "" : " after the operation failed"
+    }: ${cleanupFailures.map((entry) => entry.resource).join(", ")}.`,
+  );
 };
 
 const startSession = async (
@@ -69,7 +111,9 @@ const startSession = async (
       pages: new Map(),
     };
   } catch (error) {
-    await server.close();
+    await preserveProductionCaptureCleanup({ error }, [
+      { resource: "capture server", cleanup: () => server.close() },
+    ]);
     throw error;
   }
 };
@@ -187,12 +231,15 @@ const capturePage = (
         queue: Promise.resolve(),
       };
     } catch (error) {
-      await page.close();
-      throw new Error(
+      const failure = new Error(
         `${
           error instanceof Error ? error.message : String(error)
         } Browser diagnostics: ${diagnostics.join(" | ") || "none reported"}`,
       );
+      await preserveProductionCaptureCleanup({ error: failure }, [
+        { resource: "capture page", cleanup: () => page.close() },
+      ]);
+      throw failure;
     }
   })();
   session.pages.set(key, pending);
@@ -208,17 +255,31 @@ const capturePage = (
  * The MCP host deliberately keeps it open and reuses it until its process
  * exits; preview and render call this in `finally` so they never hang.
  */
-export const closeProductionFrameCapture = async (): Promise<void> => {
+export const closeProductionFrameCapture = async (
+  failure?: ProductionCaptureFailure,
+): Promise<void> => {
   const pending = sessionPromise;
   sessionPromise = null;
   sessionIdentity = null;
   if (pending === null) return;
+  let session: CaptureSession;
   try {
-    const session = await pending;
-    await Promise.allSettled([session.browser.close(), session.server.close()]);
-  } catch {
-    // A partially started session closes its Vite server inside startSession.
+    session = await pending;
+  } catch (error) {
+    await preserveProductionCaptureCleanup(failure, [
+      {
+        resource: "capture session startup",
+        cleanup: () => {
+          throw error;
+        },
+      },
+    ]);
+    return;
   }
+  await preserveProductionCaptureCleanup(failure, [
+    { resource: "capture browser", cleanup: () => session.browser.close() },
+    { resource: "capture server", cleanup: () => session.server.close() },
+  ]);
 };
 
 /** Capture only the project-owned viewer and its fixed canvas. */
@@ -264,7 +325,9 @@ export const captureProductionFrame: AutoMovieProductionFrameCapture = async (
   } catch (error) {
     const key = capturePageKey(input);
     session.pages.delete(key);
-    await resident.page.close();
+    await preserveProductionCaptureCleanup({ error }, [
+      { resource: "capture page", cleanup: () => resident.page.close() },
+    ]);
     throw error;
   } finally {
     captureMetrics.captureMilliseconds +=

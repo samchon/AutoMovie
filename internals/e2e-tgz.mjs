@@ -678,6 +678,7 @@ if (phase === "review") {
       ),
     ]),
   );
+  let reviewFailure;
   try {
     for (const entry of before.reviews.entries) {
       if (entry.target.kind !== "asset") continue;
@@ -711,8 +712,11 @@ if (phase === "review") {
         );
       }
     }
+  } catch (error) {
+    reviewFailure = { error };
+    throw error;
   } finally {
-    await closeProductionFrameCapture();
+    await closeProductionFrameCapture(reviewFailure);
   }
   for (const entry of before.reviews.entries) {
     const prepared = app.prepareReview({ target: entry.target });

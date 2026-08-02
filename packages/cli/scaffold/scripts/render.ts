@@ -3141,8 +3141,12 @@ const renderProgress = (
   );
 };
 
+let renderFailure: { error: unknown } | undefined;
 try {
   await main();
+} catch (error) {
+  renderFailure = { error };
+  throw error;
 } finally {
-  await closeProductionFrameCapture();
+  await closeProductionFrameCapture(renderFailure);
 }

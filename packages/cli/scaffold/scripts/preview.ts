@@ -47,6 +47,7 @@ const app = new AutoMovieApplication({
 });
 app.getGuideDocument({ name: "AUTOMOVIE_OVERALL" });
 app.getGuideDocument({ name: "CAPTURE_FRAME" });
+let captureFailure: { error: unknown } | undefined;
 try {
   const output = await app.captureFrame({
     target: {
@@ -61,6 +62,9 @@ try {
   });
   process.stdout.write(`${JSON.stringify(output, null, 2)}\n`);
   if (output.captured === false) process.exitCode = 1;
+} catch (error) {
+  captureFailure = { error };
+  throw error;
 } finally {
-  await closeProductionFrameCapture();
+  await closeProductionFrameCapture(captureFailure);
 }

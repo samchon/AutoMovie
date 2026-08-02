@@ -3705,8 +3705,8 @@ export const test_workspace_public_contracts = (): void => {
         ],
         cleanup: [
           {
-            catch: false,
-            finally: ["awaitcloseProductionFrameCapture();"],
+            catch: true,
+            finally: ["awaitcloseProductionFrameCapture(reviewFailure);"],
           },
         ],
         imports: [
@@ -3743,7 +3743,7 @@ export const test_workspace_public_contracts = (): void => {
         ],
         views: canonicalAssetViews,
       },
-      reviewFlows: [{ before: 0, capture: 4, models: 3, views: 2 }],
+      reviewFlows: [{ before: 0, capture: 5, models: 3, views: 2 }],
       reviewPhases: 1,
     },
   );
