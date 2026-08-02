@@ -195,6 +195,7 @@ const sourceTokenDigest = (node: ts.Node, source: ts.SourceFile): string => {
 };
 
 type CaptureBrowserCleanupFunction =
+  | "handoffCaptureBrowserSession"
   | "installPackageOwnedChromium"
   | "launchCaptureBrowser"
   | "launchWithCaptureExecutableSnapshot"
@@ -217,6 +218,7 @@ const captureBrowserCleanupContract = (
     ts.ScriptKind.TS,
   );
   const functionDigests: Record<CaptureBrowserCleanupFunction, string[]> = {
+    handoffCaptureBrowserSession: [],
     installPackageOwnedChromium: [],
     launchCaptureBrowser: [],
     launchWithCaptureExecutableSnapshot: [],
@@ -654,55 +656,63 @@ export const test_cli_scaffold = async (): Promise<void> => {
     captureBrowserCleanupContract(captureBrowserScript),
     {
       classDigests: [
-        "4f9562e51f549b9db26f0b3e6ad137ec6e844524133f3d74abf3be98a248c848",
+        "8a9ea768f93807917eeca741957d15fb72176bae2c9f360211e5c0109fca1d3b",
       ],
       cleanupCalls: [
         {
           callDigest:
-            "8866e05587818013b043b62310c61e917d45a4d55f5479138064f947629f11f2",
+            "4567886ddc6ada6b32bb1014ecc7d285d47ebf1037c01393943afbc00be219f7",
           owner: "launchWithCaptureExecutableSnapshot",
         },
         {
           callDigest:
-            "fcce4ffbc991ac076b3d767cbf3cc379549d8854e18415dbcd3bd9a258ae5112",
+            "2d5c917c00e1cab0dc91802f53471c25981af0624123e38eb9d21808a45fe139",
+          owner: "handoffCaptureBrowserSession",
+        },
+        {
+          callDigest:
+            "708f0c070f7f1bf2d876474baf23bd632a7346eca50857113cea862159ef005e",
           owner: "installPackageOwnedChromium",
         },
         {
           callDigest:
-            "4536b49cf1fb58d7f3630a889ee14de02b113d44352c4be5bd10e2b93f25da57",
+            "a554089a09227d8d151b8e89523306806ada2e4854dd3d1791c07230ccaca147",
           owner: "packageOwnedProvenance",
         },
         {
           callDigest:
-            "5668ad971eb174b70043cbff1cc5a3c6bef71a01ae86549f015bcf13a0241ca2",
+            "e43ba1b71283eb9c97b188c9045869108fb97a5aa40d0fd4d3c0a0b1ab956256",
           owner: "launchCaptureBrowser",
         },
         {
           callDigest:
-            "af5316fd1c1e9fdbdca8a270f3bea8e2e4d5807f3e0897a4c99627596cf26bad",
+            "7291060392bcd1ff3f7a69eef3bc9cac18ff991b930480d2449be9de21b0848f",
           owner: "launchCaptureBrowser",
         },
         {
           callDigest:
-            "93893838e0ae1423665ecf3e871d7c985715ea38e4df78bb5778904ac52a68cd",
+            "95b17070e615d91bd1f243fb3b1e3681d3313aff61a9e9bbd81021628f88da51",
           owner: "launchCaptureBrowser",
         },
       ],
       functionDigests: {
+        handoffCaptureBrowserSession: [
+          "ce58d0303f51042113da6adbf827706708dd8532d87bd75cf213304b5739c654",
+        ],
         installPackageOwnedChromium: [
-          "ac5355f531535f5b16c96cdcbd27d8143c0b2b9ce917a6f1b2df3774554414d4",
+          "a635e71c547ab9f2663dddf629ca9388da747183c80a1fb65adaf80102aff922",
         ],
         launchCaptureBrowser: [
-          "4fbbee42766a9d0d3152578ebe9763496cdab71df2034b8d63a2bee71627375d",
+          "96328eb195a91caa24e09126a598d191a440df58346d6b1b8065dfe46a7dee5f",
         ],
         launchWithCaptureExecutableSnapshot: [
-          "cee0ad1a8523eca1272ad00247ded8f492355235e6da6e0ee7ad296a23f77e06",
+          "00990c0a7c865f4a1f8d3f7f8e67a9c9b9137ec9967823803a19416b35223069",
         ],
         packageOwnedProvenance: [
-          "a48272f6025b8a112c086b82b3079a63481733d4b15d183721d7e4ded0a475b1",
+          "7cc3c164e6f0fd03b3c8368b7b59e24344f8bc5d8fb13b9019552280729c0c66",
         ],
         preserveCaptureBrowserCleanup: [
-          "922553bdd5a17dfc59783d76f0d309cba5e88c81116ab609e0f9426a6d6ea631",
+          "46c31408dbb9945de5d4ad5a526c2d94b4fcd9b3a0c7638752a20eb72fd464f2",
         ],
       },
     },
@@ -4832,6 +4842,11 @@ export const test_cli_scaffold = async (): Promise<void> => {
       captureInstallCommandTermination: (
         result: CaptureInstallCommandResult,
       ) => string;
+      handoffCaptureBrowserSession: <Session>(props: {
+        closeBrowser: () => unknown;
+        closeSnapshot: () => unknown;
+        session: Session;
+      }) => Promise<Session>;
       launchWithCaptureExecutableSnapshot: <Output>(props: {
         close: (output: Output) => Promise<void>;
         launch: (executablePath: string) => Promise<Output>;
@@ -4983,6 +4998,65 @@ export const test_cli_scaffold = async (): Promise<void> => {
           firstBrowserCleanupFailure &&
         multipleStandaloneBrowserCleanupError.errors[1] ===
           secondBrowserCleanupFailure,
+    );
+    const successfulHandoffSession = { browser: "transferred" };
+    let successfulHandoffSnapshotCloses = 0;
+    let successfulHandoffBrowserCloses = 0;
+    const transferredHandoffSession =
+      await captureBrowserModule.handoffCaptureBrowserSession({
+        session: successfulHandoffSession,
+        closeSnapshot: () => {
+          ++successfulHandoffSnapshotCloses;
+        },
+        closeBrowser: () => {
+          ++successfulHandoffBrowserCloses;
+        },
+      });
+    const handoffSnapshotFailure = new Error("handoff snapshot close failed");
+    let recoveredHandoffBrowserCloses = 0;
+    let recoveredHandoffFailure: unknown;
+    try {
+      await captureBrowserModule.handoffCaptureBrowserSession({
+        session: successfulHandoffSession,
+        closeSnapshot: () => {
+          throw handoffSnapshotFailure;
+        },
+        closeBrowser: async () => {
+          ++recoveredHandoffBrowserCloses;
+        },
+      });
+    } catch (error) {
+      recoveredHandoffFailure = error;
+    }
+    const handoffBrowserFailure = new Error("handoff browser close failed");
+    let failedHandoffBrowserCloses = 0;
+    let combinedHandoffFailure: unknown;
+    try {
+      await captureBrowserModule.handoffCaptureBrowserSession({
+        session: successfulHandoffSession,
+        closeSnapshot: () => {
+          throw handoffSnapshotFailure;
+        },
+        closeBrowser: async () => {
+          ++failedHandoffBrowserCloses;
+          throw handoffBrowserFailure;
+        },
+      });
+    } catch (error) {
+      combinedHandoffFailure = error;
+    }
+    TestValidator.predicate(
+      "capture browser transfers ownership only after snapshot cleanup",
+      transferredHandoffSession === successfulHandoffSession &&
+        successfulHandoffSnapshotCloses === 1 &&
+        successfulHandoffBrowserCloses === 0 &&
+        recoveredHandoffBrowserCloses === 1 &&
+        recoveredHandoffFailure === handoffSnapshotFailure &&
+        failedHandoffBrowserCloses === 1 &&
+        combinedHandoffFailure instanceof AggregateError &&
+        combinedHandoffFailure.errors.length === 2 &&
+        combinedHandoffFailure.errors[0] === handoffSnapshotFailure &&
+        combinedHandoffFailure.errors[1] === handoffBrowserFailure,
     );
     const metadataRoot = path.join(base, "capture-metadata");
     const playwrightRoot = path.join(metadataRoot, "playwright");

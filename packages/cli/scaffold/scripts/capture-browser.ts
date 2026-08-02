@@ -859,6 +859,26 @@ export const launchWithCaptureExecutableSnapshot = async <Output>(props: {
   }
 };
 
+/** Release validation-only ownership before transferring one browser session. */
+export const handoffCaptureBrowserSession = async <Session>(props: {
+  closeBrowser: () => unknown;
+  closeSnapshot: () => unknown;
+  session: Session;
+}): Promise<Session> => {
+  try {
+    await Promise.resolve().then(props.closeSnapshot);
+  } catch (error) {
+    await preserveCaptureBrowserCleanup({ error }, [
+      {
+        resource: "validated capture browser",
+        cleanup: props.closeBrowser,
+      },
+    ]);
+    throw error;
+  }
+  return props.session;
+};
+
 export const installPackageOwnedChromium = async (
   projectRoot: string,
 ): Promise<IAutoMovieCaptureInstallReceipt> => {
@@ -1076,7 +1096,7 @@ export const launchCaptureBrowser = async (
       { cause },
     );
   }
-  let validationFailure: CaptureBrowserFailure | undefined;
+  let session: IAutoMovieCaptureBrowserSession;
   try {
     assertPlaywrightMetadata(metadata);
     if (executable !== null) assertCaptureExecutable(executable);
@@ -1088,7 +1108,7 @@ export const launchCaptureBrowser = async (
       throw new Error(
         `Package-owned Chromium reported version "${browserVersion}", expected "${metadata.browser.browserVersion}". Run npm run capture:install, then npm run capture:doctor.`,
       );
-    return {
+    session = {
       browser,
       runtime: {
         protocolVersion: CAPTURE_PROTOCOL,
@@ -1114,28 +1134,29 @@ export const launchCaptureBrowser = async (
       },
     };
   } catch (error) {
-    validationFailure = { error };
-    throw error;
-  } finally {
-    await preserveCaptureBrowserCleanup(validationFailure, [
-      ...(validationFailure === undefined
-        ? []
-        : [
-            {
-              resource: "invalid capture browser",
-              cleanup: () => browser.close(),
-            },
-          ]),
+    await preserveCaptureBrowserCleanup({ error }, [
+      {
+        resource: "invalid capture browser",
+        cleanup: () => browser.close(),
+      },
       ...(executable === null
         ? []
         : [
             {
-              resource: "validated executable snapshot",
+              resource: "invalid executable snapshot",
               cleanup: () => closeCaptureExecutable(executable),
             },
           ]),
     ]);
+    throw error;
   }
+  if (executable === null) return session;
+  const validatedExecutable = executable;
+  return handoffCaptureBrowserSession({
+    session,
+    closeSnapshot: () => closeCaptureExecutable(validatedExecutable),
+    closeBrowser: () => browser.close(),
+  });
 };
 
 export const inspectCaptureGraphics = async (
