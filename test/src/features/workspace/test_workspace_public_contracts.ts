@@ -1419,6 +1419,7 @@ const renderBrowserLifecycleContract = (
             ts.isParenthesizedExpression(target) ||
             ts.isAsExpression(target) ||
             ts.isTypeAssertionExpression(target) ||
+            ts.isSatisfiesExpression(target) ||
             ts.isNonNullExpression(target)
           )
             return writtenBindings(target.expression);
