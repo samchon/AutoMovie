@@ -196,7 +196,7 @@ export const test_workspace_face_photo_assets = (): void => {
         ],
         loadSkin: [
           {
-            body: "{constcached=skinCache.get(url);if(cached)returncached;lettexture!:THREE.Texture;texture=newTHREE.TextureLoader().load(url,(loaded)=>{if(photoMaterial.map===loaded)matchSkullTone(loaded);},undefined,()=>{if(skinCache.get(url)===texture)skinCache.delete(url);},);texture.colorSpace=THREE.SRGBColorSpace;texture.flipY=false;skinCache.set(url,texture);returntexture;}",
+            body: "{constcached=skinCache.get(url);if(cached)returncached;consttexture=newTHREE.TextureLoader().load(url,(loaded)=>{if(photoMaterial.map===loaded)matchSkullTone(loaded);},undefined,()=>{if(skinCache.get(url)===texture)skinCache.delete(url);},);texture.colorSpace=THREE.SRGBColorSpace;texture.flipY=false;skinCache.set(url,texture);returntexture;}",
             parameters: ["url:string"],
             returnType: "THREE.Texture",
           },

@@ -495,8 +495,7 @@ const skinCache = new Map<string, THREE.Texture>();
 const loadSkin = (url: string): THREE.Texture => {
   const cached = skinCache.get(url);
   if (cached) return cached;
-  let texture!: THREE.Texture;
-  texture = new THREE.TextureLoader().load(
+  const texture = new THREE.TextureLoader().load(
     url,
     (loaded) => {
       if (photoMaterial.map === loaded) matchSkullTone(loaded);
