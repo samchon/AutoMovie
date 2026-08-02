@@ -3464,7 +3464,9 @@ export const test_workspace_public_contracts = (): void => {
             "try",
             "checks",
             "names",
-            "for(constnameofnames)checks[`deterministic${name}`]=equalBytes(requireCapturedFrame(runs,0,name),requireCapturedFrame(runs,1,name),);",
+            "for(constnameofnames)checks[`deterministic" +
+              templateExpression("name") +
+              "`]=equalBytes(requireCapturedFrame(runs,0,name),requireCapturedFrame(runs,1,name),);",
             "mask",
             "pose",
             "total",
@@ -3482,7 +3484,11 @@ export const test_workspace_public_contracts = (): void => {
             'checks["beautydiffersfrommask(passesactuallyswitch)"]=!equalBytes(requireCapturedFrame(runs,0,"frame_00000.png"),requireCapturedFrame(runs,0,"frame_00000.mask.png"),);',
             "failed",
             'console.log(JSON.stringify({route,server:server.spawned?"spawned":"reused",checks,observations,},null,2,),);',
-            'if(failed.length>0)thrownewError(`capturesmokefailed:${failed.map(([name])=>name).join(";")};observations=${JSON.stringify(observations)}`,);',
+            "if(failed.length>0)thrownewError(`capturesmokefailed:" +
+              templateExpression('failed.map(([name])=>name).join(";")') +
+              ";observations=" +
+              templateExpression("JSON.stringify(observations)") +
+              "`,);",
           ],
         },
         session: {
