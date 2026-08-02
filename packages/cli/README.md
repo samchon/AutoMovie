@@ -99,6 +99,8 @@ graphics, declared render-source, and package-owned encoder identity preflight.
 They can launch Chromium and mark every stored chunk stale when that structured
 runtime identity changes.
 
+Render plans use an append-only predecessor chain with one immutable no-overwrite successor slot per generation. A stale planner cannot replace a winner, legacy `plan.json` bytes remain an immutable root, and each render session keeps its captured plan for scheduling, receipt verification, status, and finalization instead of reopening a later pathname generation.
+
 Proxy finalization publishes content-addressed materialized directories without replacing existing paths: payload files use descriptor-bound candidates and no-overwrite hard links, the root receipt appears last, and every manifest path remains an ordinary render-root-relative file that external consumers can open directly.
 
 Chunk workers publish complete UUID claims before they become visible inside a

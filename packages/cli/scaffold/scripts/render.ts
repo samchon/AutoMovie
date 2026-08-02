@@ -118,6 +118,10 @@ import {
   releaseRenderLivenessLease,
 } from "./renderLiveness";
 import {
+  captureExistingRenderPlan,
+  publishRenderPlan,
+} from "./renderPlanSnapshot";
+import {
   type IRuntimePackageSnapshot,
   type RuntimePackageAssetSelection,
   snapshotRuntimePackage,
@@ -265,7 +269,7 @@ const main = async (): Promise<void> => {
         workers: integerOption("--workers", 1),
         deliverable: stringOption("--deliverable"),
         adapters: {
-          current: currentReceipt,
+          current: (chunk) => currentReceipt(current, chunk),
           acquire: acquireChunk,
           render: (chunk) => renderChunk(current, chunk),
           fail: failChunk,
@@ -358,6 +362,17 @@ const captureReviewEvidence = async (): Promise<IAutoMovieCaptureFrame[]> => {
 };
 
 const currentPlan = async (): Promise<IAutoMovieProductionRenderJobPlan> => {
+  ensureRenderPhysicalDirectory(
+    root,
+    [
+      ".automovie",
+      "productions",
+      productionSegment,
+      "render-job",
+      renderTier.kind,
+    ].join("/"),
+  );
+  const predecessor = captureExistingRenderPlan(stateRoot, planPath);
   const compiled = productionServices().compiler.compile({ scope: "source" });
   if (compiled.success === false)
     throw new Error(
@@ -403,8 +418,19 @@ const currentPlan = async (): Promise<IAutoMovieProductionRenderJobPlan> => {
     chunkFrames: integerOption("--chunk-frames", 48),
     tier: renderTier,
   });
-  writeJsonAtomic(planPath, planned);
-  return planned;
+  const published = await publishRenderPlan({
+    base: stateRoot,
+    inputCurrent: async () => {
+      if (sourceFingerprint() !== planned.compileFingerprint)
+        throw new Error("Render planning inputs changed before publication.");
+      const inputs = await currentRenderPlanInputs(planned);
+      verifyProductionRenderJobPlan({ plan: planned, ...inputs });
+    },
+    plan: planned,
+    predecessor,
+    target: planPath,
+  });
+  return published.plan;
 };
 
 const productionAudioAssets = (
@@ -597,7 +623,7 @@ const renderShotFingerprints = (
 
 const renderStatus = async (plan: IAutoMovieProductionRenderJobPlan) => {
   const currentChunks = await Promise.all(
-    plan.chunks.map((chunk) => currentChunk(chunk)),
+    plan.chunks.map((chunk) => currentChunk(plan, chunk)),
   );
   const receipts = currentChunks.flatMap((current) =>
     current === null ? [] : [current.receipt],
@@ -621,13 +647,15 @@ const renderStatus = async (plan: IAutoMovieProductionRenderJobPlan) => {
 };
 
 const currentReceipt = async (
+  plan: IAutoMovieProductionRenderJobPlan,
   chunk: IAutoMovieProductionRenderChunk,
 ): Promise<IAutoMovieProductionRenderChunkReceipt | null> => {
-  const current = await currentChunk(chunk);
+  const current = await currentChunk(plan, chunk);
   return current?.receipt ?? null;
 };
 
 const currentChunk = async (
+  plan: IAutoMovieProductionRenderJobPlan,
   chunk: IAutoMovieProductionRenderChunk,
   pointer?: IRenderGcTargetSnapshot | null,
 ): Promise<ICurrentRenderChunkPublication | null> => {
@@ -635,7 +663,6 @@ const currentChunk = async (
     const currentPointer =
       pointer === undefined ? captureCurrentChunkPointer(chunk) : pointer;
     if (currentPointer === null) return null;
-    const plan = readPlan();
     return loadCurrentRenderChunkPublication({
       assertReceipt: (receipt) =>
         verifyProductionRenderChunkReceipt({ plan, chunk, receipt }),
@@ -728,7 +755,7 @@ const renderChunk = async (
   chunk: IAutoMovieProductionRenderChunk,
 ): Promise<IAutoMovieProductionRenderChunkReceipt> => {
   const pointer = captureCurrentChunkPointer(chunk);
-  const existing = await currentChunk(chunk, pointer);
+  const existing = await currentChunk(plan, chunk, pointer);
   if (existing !== null) return existing.receipt;
   const held = heldChunkLocks.get(chunk.slot);
   if (held === undefined)
@@ -1117,7 +1144,7 @@ const finalize = async (plan: IAutoMovieProductionRenderJobPlan) => {
       for (const chunk of [...deliverableChunks].sort(
         (left, right) => left.frameStart - right.frameStart,
       )) {
-        const current = await currentChunk(chunk);
+        const current = await currentChunk(plan, chunk);
         if (current === null)
           throw new Error(
             `Guide-pass chunk "${chunk.slot}" changed before control-frame publication.`,
@@ -1406,7 +1433,7 @@ const encodeChunkFrames = async (
     for (const chunk of chunks.sort(
       (left, right) => left.frameStart - right.frameStart,
     )) {
-      const current = await currentChunk(chunk);
+      const current = await currentChunk(plan, chunk);
       if (current === null)
         throw new Error(
           `Chunk "${chunk.slot}" changed after final status verification. Reverify or rerender it before finalizing.`,
@@ -2176,9 +2203,10 @@ const productionServices = () =>
   });
 
 const readPlan = (): IAutoMovieProductionRenderJobPlan => {
-  if (fs.existsSync(planPath) === false)
+  const captured = captureExistingRenderPlan(stateRoot, planPath);
+  if (captured === null)
     throw new Error("No render plan exists. Run automovie render plan.");
-  return readJson<IAutoMovieProductionRenderJobPlan>(planPath);
+  return captured.plan;
 };
 
 const currentStoredPlan =
@@ -2315,11 +2343,9 @@ const collectRenderGarbage = (apply: boolean) => {
   const currentCompileFingerprint = sourceFingerprint();
   const plans = (["proxy", "final"] as const).flatMap((tier) => {
     const file = path.join(renderJobRoot, tier, "plan.json");
-    if (fs.existsSync(file) === false) return [];
-    const plan = readRendererJson<IAutoMovieProductionRenderJobPlan>(
-      renderJobRoot,
-      file,
-    );
+    const captured = captureExistingRenderPlan(renderJobRoot, file);
+    if (captured === null) return [];
+    const plan = captured.plan;
     const currentTier =
       tier === "proxy" ? config.render.proxy : config.render.final;
     return plan.compileFingerprint === currentCompileFingerprint &&

@@ -144,6 +144,14 @@ export const test_cli_scaffold = async (): Promise<void> => {
             recoveryProtectionOffset,
           ),
         );
+  const currentChunkOffset = renderScript.indexOf("const currentChunk = async");
+  const currentChunkSource =
+    currentChunkOffset < 0
+      ? ""
+      : renderScript.slice(
+          currentChunkOffset,
+          renderScript.indexOf("\nconst acquireChunk", currentChunkOffset),
+        );
   const renderProgressStages = [
     "finalize.start",
     "finalize.status.complete",
@@ -244,6 +252,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       "scripts/renderChunkSnapshot.ts",
       "scripts/renderGcSnapshot.ts",
       "scripts/renderLiveness.ts",
+      "scripts/renderPlanSnapshot.ts",
       "scripts/review-status.ts",
       "scripts/runtimePackageSnapshot.ts",
       "scripts/verify.ts",
@@ -601,6 +610,24 @@ export const test_cli_scaffold = async (): Promise<void> => {
       files["scripts/renderAttemptSnapshot.ts"]!.includes(
         "fs.linkSync(candidate.target, props.target)",
       ) &&
+      files["scripts/renderPlanSnapshot.ts"]!.includes("generationSlot") &&
+      files["scripts/renderPlanSnapshot.ts"]!.includes(
+        "fs.linkSync(candidate.target, destination)",
+      ) &&
+      files["scripts/renderPlanSnapshot.ts"]!.includes(
+        "removeCapturedRenderGcTarget",
+      ) &&
+      files["scripts/renderPlanSnapshot.ts"]!.includes(
+        "removeExactPlan(props.predecessor.snapshot)",
+      ) === false &&
+      files["scripts/render.ts"]!.includes(
+        "current: (chunk) => currentReceipt(current, chunk)",
+      ) &&
+      currentChunkSource.includes("currentChunk(plan, chunk") === false &&
+      currentChunkSource.includes("readPlan()") === false &&
+      currentChunkSource.includes(
+        "verifyProductionRenderChunkReceipt({ plan",
+      ) &&
       files["scripts/publishProxyBundle.ts"]!.includes(
         "createRenderGcFileSnapshot",
       ) &&
@@ -847,6 +874,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
         "scripts/renderChunkSnapshot.ts",
         "scripts/renderGcSnapshot.ts",
         "scripts/renderLiveness.ts",
+        "scripts/renderPlanSnapshot.ts",
         "scripts/review-status.ts",
         "scripts/runtimePackageSnapshot.ts",
         "scripts/verify.ts",
@@ -3945,6 +3973,376 @@ export const test_cli_scaffold = async (): Promise<void> => {
     for (const name of fs.readdirSync(attemptDirectory))
       if (name.endsWith(".attempt-candidate"))
         fs.rmSync(path.join(attemptDirectory, name), { force: true });
+
+    interface RenderPlanFixture {
+      chunkFrames: number;
+      name: string;
+    }
+    interface RenderPlanFixtureSnapshot {
+      generation: string;
+      plan: RenderPlanFixture;
+      snapshot: {
+        fileDigest: string | null;
+        target: string;
+        targetIdentity: string;
+      };
+    }
+    const renderPlanModule = createRequire(__filename)(
+      path.join(scaffoldDir, "scripts", "renderPlanSnapshot.ts"),
+    ) as {
+      captureRenderPlan: (
+        base: string,
+        target: string,
+      ) => RenderPlanFixtureSnapshot;
+      publishRenderPlan: (props: {
+        base: string;
+        inputCurrent: () => Promise<void>;
+        plan: RenderPlanFixture;
+        predecessor: RenderPlanFixtureSnapshot | null;
+        target: string;
+      }) => Promise<RenderPlanFixtureSnapshot>;
+    };
+    const planFixture = (
+      name: string,
+      chunkFrames: number,
+    ): RenderPlanFixture => ({ chunkFrames, name });
+    const planRoot = path.join(base, "render-plans");
+    const planTarget = path.join(planRoot, "plan.json");
+    const planCandidateRoot = path.join(
+      planRoot,
+      ".gc-preserved-plan-candidates",
+    );
+    fs.mkdirSync(planRoot);
+    const firstPlan = await renderPlanModule.publishRenderPlan({
+      base: planRoot,
+      inputCurrent: async () => undefined,
+      plan: planFixture("first", 48),
+      predecessor: null,
+      target: planTarget,
+    });
+    const capturedFirstPlan = renderPlanModule.captureRenderPlan(
+      planRoot,
+      planTarget,
+    );
+    TestValidator.predicate(
+      "render plan publishes an immutable genesis generation",
+      fs.existsSync(planTarget) === false &&
+        firstPlan.generation === capturedFirstPlan.generation &&
+        capturedFirstPlan.plan.name === "first" &&
+        fs.readdirSync(planCandidateRoot).length === 0,
+    );
+    const secondPlan = await renderPlanModule.publishRenderPlan({
+      base: planRoot,
+      inputCurrent: async () => undefined,
+      plan: planFixture("second", 36),
+      predecessor: firstPlan,
+      target: planTarget,
+    });
+    TestValidator.predicate(
+      "render plan replacement appends one predecessor-bound successor",
+      secondPlan.generation !== firstPlan.generation &&
+        renderPlanModule.captureRenderPlan(planRoot, planTarget).generation ===
+          secondPlan.generation &&
+        fs.existsSync(firstPlan.snapshot.target),
+    );
+    let staleInputChecked = false;
+    let staleInputRejected = false;
+    try {
+      await renderPlanModule.publishRenderPlan({
+        base: planRoot,
+        inputCurrent: async () => {
+          staleInputChecked = true;
+          throw new Error("fixture stale render inputs");
+        },
+        plan: planFixture("stale-input", 30),
+        predecessor: secondPlan,
+        target: planTarget,
+      });
+    } catch {
+      staleInputRejected = true;
+    }
+    TestValidator.predicate(
+      "render plan rejects stale inputs without changing its head",
+      staleInputChecked &&
+        staleInputRejected &&
+        renderPlanModule.captureRenderPlan(planRoot, planTarget).generation ===
+          secondPlan.generation &&
+        fs.readdirSync(planCandidateRoot).length === 0,
+    );
+    let concurrentWinner: RenderPlanFixtureSnapshot | undefined;
+    let slowPlannerRejected = false;
+    try {
+      await renderPlanModule.publishRenderPlan({
+        base: planRoot,
+        inputCurrent: async () => {
+          concurrentWinner = await renderPlanModule.publishRenderPlan({
+            base: planRoot,
+            inputCurrent: async () => undefined,
+            plan: planFixture("winner", 24),
+            predecessor: secondPlan,
+            target: planTarget,
+          });
+        },
+        plan: planFixture("slow-loser", 12),
+        predecessor: secondPlan,
+        target: planTarget,
+      });
+    } catch {
+      slowPlannerRejected = true;
+    }
+    if (concurrentWinner === undefined)
+      throw new Error("fixture concurrent render-plan winner is missing");
+    TestValidator.predicate(
+      "a stale slow planner cannot replace a different chunk-size winner",
+      slowPlannerRejected &&
+        concurrentWinner.plan.chunkFrames === 24 &&
+        renderPlanModule.captureRenderPlan(planRoot, planTarget).generation ===
+          concurrentWinner.generation &&
+        fs.existsSync(secondPlan.snapshot.target),
+    );
+    const activeWorkerPlan = concurrentWinner.plan;
+    const replacementPlan = await renderPlanModule.publishRenderPlan({
+      base: planRoot,
+      inputCurrent: async () => undefined,
+      plan: planFixture("replacement", 16),
+      predecessor: concurrentWinner,
+      target: planTarget,
+    });
+    TestValidator.predicate(
+      "an active worker keeps its session plan across later replacement",
+      activeWorkerPlan.name === "winner" &&
+        activeWorkerPlan.chunkFrames === 24 &&
+        replacementPlan.plan.name === "replacement" &&
+        renderPlanModule.captureRenderPlan(planRoot, planTarget).generation ===
+          replacementPlan.generation,
+    );
+
+    const exactPlanRoot = path.join(base, "render-plan-exact-competitor");
+    const exactPlanTarget = path.join(exactPlanRoot, "plan.json");
+    const exactPlanSlot = path.join(
+      `${exactPlanTarget}.generations`,
+      "genesis.json",
+    );
+    fs.mkdirSync(exactPlanRoot);
+    let exactPlanInserted = false;
+    let exactPlanIdentity = "";
+    mutableFs.linkSync = ((source, destination) => {
+      if (
+        exactPlanInserted === false &&
+        path.resolve(destination.toString()) === exactPlanSlot
+      ) {
+        nativeWriteFile(exactPlanSlot, fs.readFileSync(source.toString()));
+        const status = fs.lstatSync(exactPlanSlot, { bigint: true });
+        exactPlanIdentity = `${status.dev}\0${status.ino}`;
+        exactPlanInserted = true;
+      }
+      nativeLink(source, destination);
+    }) as typeof fs.linkSync;
+    let exactPlanAccepted: RenderPlanFixtureSnapshot | undefined;
+    try {
+      exactPlanAccepted = await renderPlanModule.publishRenderPlan({
+        base: exactPlanRoot,
+        inputCurrent: async () => undefined,
+        plan: planFixture("exact-competitor", 48),
+        predecessor: null,
+        target: exactPlanTarget,
+      });
+    } finally {
+      mutableFs.linkSync = nativeLink;
+    }
+    TestValidator.predicate(
+      "render plan accepts an exact no-overwrite commit competitor",
+      exactPlanInserted &&
+        exactPlanAccepted !== undefined &&
+        exactPlanAccepted.plan.name === "exact-competitor" &&
+        (() => {
+          const status = fs.lstatSync(exactPlanSlot, { bigint: true });
+          return `${status.dev}\0${status.ino}` === exactPlanIdentity;
+        })() &&
+        fs.readdirSync(
+          path.join(exactPlanRoot, ".gc-preserved-plan-candidates"),
+        ).length === 0,
+    );
+
+    const foreignPlanRoot = path.join(base, "render-plan-foreign-competitor");
+    const foreignPlanTarget = path.join(foreignPlanRoot, "plan.json");
+    const foreignPlanSlot = path.join(
+      `${foreignPlanTarget}.generations`,
+      "genesis.json",
+    );
+    const foreignPlanBytes = Buffer.from(
+      `${JSON.stringify({
+        version: 1,
+        generation: "33333333-3333-4333-8333-333333333333",
+        predecessor: null,
+        plan: planFixture("foreign", 7),
+      })}\n`,
+    );
+    fs.mkdirSync(foreignPlanRoot);
+    let foreignPlanInserted = false;
+    mutableFs.linkSync = ((source, destination) => {
+      if (
+        foreignPlanInserted === false &&
+        path.resolve(destination.toString()) === foreignPlanSlot
+      ) {
+        nativeWriteFile(foreignPlanSlot, foreignPlanBytes);
+        foreignPlanInserted = true;
+      }
+      nativeLink(source, destination);
+    }) as typeof fs.linkSync;
+    let foreignPlanRejected = false;
+    try {
+      await renderPlanModule.publishRenderPlan({
+        base: foreignPlanRoot,
+        inputCurrent: async () => undefined,
+        plan: planFixture("local", 48),
+        predecessor: null,
+        target: foreignPlanTarget,
+      });
+    } catch {
+      foreignPlanRejected = true;
+    } finally {
+      mutableFs.linkSync = nativeLink;
+    }
+    TestValidator.predicate(
+      "render plan preserves a foreign destination generation competitor",
+      foreignPlanInserted &&
+        foreignPlanRejected &&
+        fs.readFileSync(foreignPlanSlot).equals(foreignPlanBytes) &&
+        renderPlanModule.captureRenderPlan(foreignPlanRoot, foreignPlanTarget)
+          .plan.name === "foreign",
+    );
+
+    const candidatePlanRoot = path.join(base, "render-plan-candidate-swap");
+    const candidatePlanTarget = path.join(candidatePlanRoot, "plan.json");
+    const candidatePlanSlot = path.join(
+      `${candidatePlanTarget}.generations`,
+      "genesis.json",
+    );
+    fs.mkdirSync(candidatePlanRoot);
+    let planCandidatePath = "";
+    let parkedPlanCandidate = "";
+    let planCandidateSwapped = false;
+    mutableFs.linkSync = ((source, destination) => {
+      if (
+        planCandidateSwapped === false &&
+        path.resolve(destination.toString()) === candidatePlanSlot
+      ) {
+        planCandidatePath = path.resolve(source.toString());
+        parkedPlanCandidate = `${planCandidatePath}.parked`;
+        nativeRename(planCandidatePath, parkedPlanCandidate);
+        nativeWriteFile(
+          planCandidatePath,
+          fs.readFileSync(parkedPlanCandidate),
+        );
+        planCandidateSwapped = true;
+      }
+      nativeLink(source, destination);
+    }) as typeof fs.linkSync;
+    let planCandidateSwapRejected = false;
+    try {
+      await renderPlanModule.publishRenderPlan({
+        base: candidatePlanRoot,
+        inputCurrent: async () => undefined,
+        plan: planFixture("candidate-swap", 48),
+        predecessor: null,
+        target: candidatePlanTarget,
+      });
+    } catch {
+      planCandidateSwapRejected = true;
+    } finally {
+      mutableFs.linkSync = nativeLink;
+    }
+    TestValidator.predicate(
+      "render plan preserves a byte-identical candidate pathname successor",
+      planCandidateSwapped &&
+        planCandidateSwapRejected &&
+        fs.existsSync(planCandidatePath) &&
+        fs.existsSync(parkedPlanCandidate) &&
+        fs.existsSync(candidatePlanSlot),
+    );
+
+    const rootSwapPlanRoot = path.join(base, "render-plan-root-swap");
+    const rootSwapPlanTarget = path.join(rootSwapPlanRoot, "plan.json");
+    const parkedRootSwapPlan = `${rootSwapPlanRoot}.parked`;
+    const rootSwapPlanMarker = path.join(rootSwapPlanRoot, "successor.marker");
+    fs.mkdirSync(rootSwapPlanRoot);
+    let planRootSwapped = false;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+      if (
+        planRootSwapped === false &&
+        typeof file !== "number" &&
+        flags === "wx+" &&
+        path.basename(file.toString()).endsWith(".plan-candidate")
+      ) {
+        nativeRename(rootSwapPlanRoot, parkedRootSwapPlan);
+        nativeMkdir(path.join(rootSwapPlanRoot, "plan.json.generations"), {
+          recursive: true,
+        });
+        nativeMkdir(
+          path.join(rootSwapPlanRoot, ".gc-preserved-plan-candidates"),
+        );
+        nativeWriteFile(rootSwapPlanMarker, "successor");
+        planRootSwapped = true;
+      }
+      return descriptor;
+    }) as typeof fs.openSync;
+    let planRootSwapRejected = false;
+    try {
+      await renderPlanModule.publishRenderPlan({
+        base: rootSwapPlanRoot,
+        inputCurrent: async () => undefined,
+        plan: planFixture("root-swap", 48),
+        predecessor: null,
+        target: rootSwapPlanTarget,
+      });
+    } catch {
+      planRootSwapRejected = true;
+    } finally {
+      mutableFs.openSync = nativeOpen;
+    }
+    TestValidator.predicate(
+      "render plan preserves a render-root and parent successor",
+      planRootSwapped &&
+        planRootSwapRejected &&
+        fs.readFileSync(rootSwapPlanMarker, "utf8") === "successor" &&
+        fs
+          .readdirSync(
+            path.join(parkedRootSwapPlan, ".gc-preserved-plan-candidates"),
+          )
+          .some((name) => name.endsWith(".plan-candidate")),
+    );
+
+    const legacyPlanRoot = path.join(base, "render-plan-legacy");
+    const legacyPlanTarget = path.join(legacyPlanRoot, "plan.json");
+    const legacyPlanBytes = Buffer.from(
+      `${JSON.stringify(planFixture("legacy", 60), null, 2)}\n`,
+    );
+    fs.mkdirSync(legacyPlanRoot);
+    fs.writeFileSync(legacyPlanTarget, legacyPlanBytes);
+    const legacyPlan = renderPlanModule.captureRenderPlan(
+      legacyPlanRoot,
+      legacyPlanTarget,
+    );
+    const migratedPlan = await renderPlanModule.publishRenderPlan({
+      base: legacyPlanRoot,
+      inputCurrent: async () => undefined,
+      plan: planFixture("migrated", 48),
+      predecessor: legacyPlan,
+      target: legacyPlanTarget,
+    });
+    TestValidator.predicate(
+      "render plan appends after an exact legacy plan without replacing it",
+      fs.readFileSync(legacyPlanTarget).equals(legacyPlanBytes) &&
+        migratedPlan.plan.name === "migrated" &&
+        renderPlanModule.captureRenderPlan(legacyPlanRoot, legacyPlanTarget)
+          .generation === migratedPlan.generation,
+    );
     const renderLivenessModule = createRequire(__filename)(
       path.join(scaffoldDir, "scripts", "renderLiveness.ts"),
     ) as {
