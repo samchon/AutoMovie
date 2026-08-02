@@ -1012,6 +1012,11 @@ const renderRasterArgumentContract = (
     even: number;
     positiveInteger: number;
   };
+  numberParser: {
+    bodies: string[][];
+    count: number;
+    parameters: string[][];
+  };
   parseArgs: {
     count: number;
     dimensions: Array<[string, string]>;
@@ -1040,6 +1045,8 @@ const renderRasterArgumentContract = (
   const parsedValues: string[] = [];
   const returns: string[] = [];
   const unsafeProperties: string[] = [];
+  const numberParserBodies: string[][] = [];
+  const numberParserParameters: string[][] = [];
   for (const statement of parsed.statements) {
     if (ts.isVariableStatement(statement) === false) continue;
     for (const declaration of statement.declarationList.declarations) {
@@ -1054,6 +1061,16 @@ const renderRasterArgumentContract = (
       )
         continue;
       const body = declaration.initializer.body;
+      if (declaration.name.text === "positiveNumber") {
+        numberParserBodies.push(
+          body.statements.map((action) => compact(action)),
+        );
+        numberParserParameters.push(
+          declaration.initializer.parameters.map((parameter) =>
+            compact(parameter.name),
+          ),
+        );
+      }
       if (declaration.name.text === "positiveEvenInteger") {
         ++helperCount;
         helperBodies.push(body.statements.map((action) => compact(action)));
@@ -1139,6 +1156,11 @@ const renderRasterArgumentContract = (
       returns,
     },
     legacyHelpers: { even, positiveInteger },
+    numberParser: {
+      bodies: numberParserBodies,
+      count: numberParserBodies.length,
+      parameters: numberParserParameters,
+    },
     parseArgs: {
       count: parseArgsCount,
       dimensions,
@@ -2340,6 +2362,18 @@ export const test_workspace_public_contracts = (): void => {
           returns: ["parsed"],
         },
         legacyHelpers: { even: 0, positiveInteger: 0 },
+        numberParser: {
+          bodies: [
+            [
+              "if(value===undefined)returnfallback;",
+              "constparsed=Number(value);",
+              "if(!Number.isFinite(parsed)||parsed<=0)thrownewError(`${label}mustbeapositivefinitenumber`);",
+              "returnparsed;",
+            ],
+          ],
+          count: 1,
+          parameters: [["value", "fallback", "label"]],
+        },
         parseArgs: {
           count: 1,
           dimensions: [
