@@ -13,6 +13,16 @@ import type {
 import fs from "node:fs";
 import path from "node:path";
 
+import {
+  type IRenderGcTargetSnapshot,
+  assertCapturedRenderGcFileEntry,
+  assertCapturedRenderTarget,
+  captureRenderGcTarget,
+  readCapturedRenderGcFile,
+} from "./renderGcSnapshot";
+
+const PROXY_PUBLICATION_RECEIPT_MAX_BYTES = 8 * 1024 * 1024;
+
 interface IPhysicalDirectory {
   device: string;
   inode: string;
@@ -112,6 +122,65 @@ export const inspectPublishedProxyBundle = (
       );
   }
   assertExactBundle(physical.target, bundle);
+  return parsed;
+};
+
+/** Inspect only the exact proxy tree already captured for GC adjudication. */
+export const inspectCapturedProxyBundle = (
+  snapshot: IRenderGcTargetSnapshot,
+): IVerifiedProxyPublication => {
+  if (snapshot.kind !== "directory")
+    throw new Error("Captured proxy publication is not a directory.");
+  const receiptEntry = snapshot.entries.find(
+    (entry) => entry.kind === "file" && entry.path === "publication.json",
+  );
+  if (receiptEntry === undefined)
+    throw new Error("Captured proxy publication has no root receipt.");
+  const receiptSnapshot = captureRenderGcTarget(
+    snapshot.base.path,
+    path.join(snapshot.target, "publication.json"),
+  );
+  assertCapturedRenderGcFileEntry({
+    directory: snapshot,
+    file: receiptSnapshot,
+    relative: "publication.json",
+  });
+  const parsed = parseProxyPublication(
+    readCapturedRenderGcFile(
+      receiptSnapshot,
+      PROXY_PUBLICATION_RECEIPT_MAX_BYTES,
+    ),
+  );
+  const bundlePath = path
+    .relative(snapshot.base.path, snapshot.target)
+    .replaceAll("\\", "/");
+  const expected = proxyManifestFiles(parsed, bundlePath);
+  const expectedFiles = new Set(["publication.json", ...expected.keys()]);
+  const expectedDirectories = new Set([""]);
+  for (const relative of expectedFiles) {
+    const segments = relative.split("/");
+    for (let length = 1; length < segments.length; ++length)
+      expectedDirectories.add(segments.slice(0, length).join("/"));
+  }
+  const actual = new Map(snapshot.entries.map((entry) => [entry.path, entry]));
+  if (
+    snapshot.entries.length !== expectedFiles.size + expectedDirectories.size ||
+    snapshot.entries.some((entry) =>
+      entry.kind === "directory"
+        ? expectedDirectories.has(entry.path) === false
+        : expectedFiles.has(entry.path) === false,
+    ) ||
+    [...expected].some(([relative, fact]) => {
+      const entry = actual.get(relative);
+      return (
+        entry?.kind !== "file" ||
+        entry.bytes !== fact.bytes ||
+        entry.digest !== fact.digest
+      );
+    })
+  )
+    throw new Error("Captured proxy publication has an invalid exact tree.");
+  assertCapturedRenderTarget(snapshot);
   return parsed;
 };
 

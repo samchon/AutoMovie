@@ -8,6 +8,7 @@ import {
   type IRenderGcPhysicalDirectory,
   type IRenderGcTargetSnapshot,
   RENDER_GC_PRESERVED_PREFIX,
+  assertCapturedRenderTarget,
   assertRenderPhysicalDirectoryIdentity,
   captureRenderGcTarget,
   captureRenderPhysicalDirectory,
@@ -37,23 +38,15 @@ interface IProxyPublicationClaim {
   token: string;
 }
 
-/** Bind one proxy-GC judgment to the exact tree observed on both sides. */
+/** Adjudicate proxy GC from one exact captured tree and revalidate it. */
 export const captureProxyPublicationGcTarget = <Value>(props: {
-  judge: () => Value;
+  judge: (snapshot: IRenderGcTargetSnapshot) => Value;
   renderRoot: string;
   target: string;
 }): { snapshot: IRenderGcTargetSnapshot; value: Value } => {
   const snapshot = captureRenderGcTarget(props.renderRoot, props.target);
-  const value = props.judge();
-  const confirmed = captureRenderGcTarget(props.renderRoot, props.target);
-  if (
-    confirmed.targetIdentity !== snapshot.targetIdentity ||
-    confirmed.contentFingerprint !== snapshot.contentFingerprint ||
-    confirmed.namespaceFingerprint !== snapshot.namespaceFingerprint
-  )
-    throw new Error(
-      `Proxy publication "${props.target}" changed while GC adjudicated it.`,
-    );
+  const value = props.judge(snapshot);
+  assertCapturedRenderTarget(snapshot);
   return { snapshot, value };
 };
 
@@ -155,8 +148,9 @@ export const publishProxyBundle = (props: {
       }
       assertOwnership();
       targetReservation = captureRenderGcTarget(props.renderRoot, props.target);
-      createExpectedDirectories(
+      targetDirectories = createExpectedDirectories(
         props.target,
+        targetReservation,
         expected.directories,
         assertOwnership,
       );
@@ -165,9 +159,11 @@ export const publishProxyBundle = (props: {
         props.target,
       );
       assertSameTarget(targetReservation, preparedTarget);
-      targetDirectories = directoryIdentities(
+      assertOwnedTarget(
+        targetReservation,
         preparedTarget,
-        expected.directories,
+        targetDirectories,
+        ownedTargetFiles,
       );
 
       const candidateFiles = fileEntries(completeCandidate);
@@ -273,21 +269,7 @@ const recoverClaimedPublication = (props: {
   const claimEntry = props.snapshot.entries.find(
     (entry) => entry.kind === "file" && entry.path === CLAIM_FILE,
   );
-  if (claimEntry === undefined) {
-    if (props.owner === null) return null;
-    if (
-      props.snapshot.targetIdentity.length === 0 ||
-      props.snapshot.entries.some(
-        (entry) =>
-          entry.kind !== "directory" ||
-          props.expected.directories.has(entry.path) === false,
-      )
-    )
-      return null;
-    removeExactTree(props.snapshot);
-    assertPublicationOwnership(props.ownership);
-    return "removed";
-  }
+  if (claimEntry === undefined) return null;
   const claimSnapshot = captureRenderGcTarget(
     props.renderRoot,
     path.join(props.target, CLAIM_FILE),
@@ -472,13 +454,47 @@ const writeExpectedTree = (
 
 const createExpectedDirectories = (
   target: string,
+  reservation: IRenderGcTargetSnapshot,
   directories: ReadonlySet<string>,
   assertOwnership: () => void,
-): void => {
+): ReadonlyMap<string, string> => {
+  const owned = new Map<string, string>([["", reservation.targetIdentity]]);
   for (const relative of [...directories].filter(Boolean).sort(compare)) {
     assertOwnership();
+    assertOwnedDirectories(target, reservation, owned);
     fs.mkdirSync(resolveBundleDirectory(target, relative));
+    const created = captureRenderPhysicalDirectory(
+      resolveBundleDirectory(target, relative),
+      `proxy publication directory "${relative}"`,
+    );
+    owned.set(relative, created.identity);
+    assertOwnedDirectories(target, reservation, owned);
     assertOwnership();
+  }
+  return owned;
+};
+
+const assertOwnedDirectories = (
+  target: string,
+  reservation: IRenderGcTargetSnapshot,
+  directories: ReadonlyMap<string, string>,
+): void => {
+  const root = captureRenderPhysicalDirectory(
+    target,
+    "proxy publication target",
+  );
+  if (root.identity !== reservation.targetIdentity)
+    throw new Error("Proxy publication target directory was replaced.");
+  for (const [relative, identity] of directories) {
+    if (relative.length === 0) continue;
+    const current = captureRenderPhysicalDirectory(
+      resolveBundleDirectory(target, relative),
+      `proxy publication directory "${relative}"`,
+    );
+    if (current.identity !== identity)
+      throw new Error(
+        `Proxy publication directory "${relative}" was replaced.`,
+      );
   }
 };
 
@@ -537,24 +553,6 @@ const fileEntries = (
       .filter((entry) => entry.kind === "file")
       .map((entry) => [entry.path, entry]),
   );
-
-const directoryIdentities = (
-  snapshot: IRenderGcTargetSnapshot,
-  expected: ReadonlySet<string>,
-): ReadonlyMap<string, string> => {
-  const directories = new Map(
-    snapshot.entries
-      .filter((entry) => entry.kind === "directory")
-      .map((entry) => [entry.path, entry.identity]),
-  );
-  if (
-    directories.size !== expected.size ||
-    [...expected].some((relative) => directories.has(relative) === false) ||
-    snapshot.entries.some((entry) => entry.kind === "file")
-  )
-    throw new Error("Proxy target directory reservation changed inventory.");
-  return directories;
-};
 
 const assertOwnedTarget = (
   reservation: IRenderGcTargetSnapshot,

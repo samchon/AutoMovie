@@ -69,7 +69,10 @@ import { isDeepStrictEqual } from "node:util";
 import { PNG } from "pngjs";
 
 import config from "../automovie.config";
-import { inspectPublishedProxyBundle } from "./assertProxyBundle";
+import {
+  inspectCapturedProxyBundle,
+  inspectPublishedProxyBundle,
+} from "./assertProxyBundle";
 import {
   captureProductionFrame,
   closeProductionFrameCapture,
@@ -2432,14 +2435,14 @@ const collectRenderGarbage = (apply: boolean) => {
       const adjudicated = captureProxyPublicationGcTarget({
         renderRoot,
         target,
-        judge: () => {
+        judge: (snapshot) => {
           if (
             currentProxy === undefined ||
             entry.name !== renderPublicationFingerprint(currentProxy).slice(7)
           )
             return false;
           try {
-            const receipt = inspectPublishedProxyBundle(renderRoot, target);
+            const receipt = inspectCapturedProxyBundle(snapshot);
             return (
               receipt.publicationFingerprint ===
                 renderPublicationFingerprint(currentProxy) &&
@@ -2454,10 +2457,16 @@ const collectRenderGarbage = (apply: boolean) => {
       const current = adjudicated.value;
       if (current || retainedByReview || retainedByManifest) {
         if (current)
-          for (const file of physicalFiles(target))
+          for (const entry of adjudicated.snapshot.entries) {
+            if (entry.kind !== "file") continue;
+            const file = path.join(
+              adjudicated.snapshot.target,
+              ...entry.path.split("/"),
+            );
             publicationPaths.add(
               `publication/${normalizeSlash(path.relative(renderRoot, file))}`,
             );
+          }
         continue;
       }
       const candidate: IAutoMovieProductionRenderGcCandidate = {
