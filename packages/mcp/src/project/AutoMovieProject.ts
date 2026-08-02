@@ -20,6 +20,7 @@ import {
   IAutoMovieShot,
 } from "@automovie/interface";
 import { renderPathStem } from "@automovie/render";
+import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -57,7 +58,6 @@ import {
   validateVectorArtifact,
 } from "../validators/primitives";
 import { acquireCommitLock, releaseCommitLock } from "./commitLock";
-import { removeResidentFile, writeResidentFile } from "./residentFileMutation";
 import { beatOf, shotIdOf } from "./shotKey";
 
 /**
@@ -77,9 +77,6 @@ import { beatOf, shotIdOf } from "./shotKey";
  * - `models/`, `assets/`, reserved for 3D binaries (GLB, textures); the store
  *   tracks and guards these paths, the host's adapters write the bytes (the
  *   render package's adapter discipline).
- * - `.automovie-resident-evidence/`, retained private predecessors isolated from
- *   successful replacements and removals; pathname cleanup never follows this
- *   tier.
  * - `renders/`, where a resident `planRender`/`seeFrame` defaults its frame and
  *   encoded-video paths (#678); the host adapter writes the bytes and may track
  *   them with `registerAsset`.
@@ -87,9 +84,8 @@ import { beatOf, shotIdOf } from "./shotKey";
  * A **cleared slice's file is removed** (null script → no `script.json`, an
  * empty notes list → no `notes.json`), so presence in the tree always means
  * content, the invalidation cascade a `commitScript` performs on the slate is
- * mirrored by files disappearing. Writes reserve their final slot through an
- * exclusive descriptor, retain replaced generations as private evidence, and
- * are pretty-printed; the whole store is synchronous, matching the tool layer.
+ * mirrored by files disappearing. Writes are atomic (temp file + rename) and
+ * pretty-printed; the whole store is synchronous, matching the tool layer.
  *
  * **Mutations are transactional cycles (#1133).** Every save stages its
  * serialized contents in memory first (a cycle that throws persists nothing),
@@ -129,12 +125,7 @@ export class AutoMovieProject {
     if (existing === null) {
       // A fresh project: create the manifest once.
       this.manifest = { version: 1, assets: [] };
-      writeJsonAtomic(
-        this.root,
-        this.manifestPath,
-        this.manifest,
-        assertNamespace,
-      );
+      writeJsonAtomic(this.manifestPath, this.manifest, assertNamespace);
     } else {
       // Opening an existing project is a pure read, keep the parsed manifest
       // (unknown host/future fields and all) in memory without rewriting it, so
@@ -275,8 +266,8 @@ export class AutoMovieProject {
    * case-collision asserts) and every serialization runs while the cycle is
    * still staged in memory, so a cycle that throws persists nothing; only then
    * does {@link commitCycle} flush the staged writes under the revision guard.
-   * The flush itself is a sequence of exact-generation per-file publications,
-   * not one atomic batch; a hard crash mid-flush remains a documented window,
+   * The flush itself is a sequence of atomic per-file renames, not one atomic
+   * batch, a hard crash mid-flush remains a documented microsecond window,
    * surfaced by the per-slice load validation on the next open.
    */
   public saveSlate(slate: IAutoMovieMcpWritableSlate): void {
@@ -308,8 +299,8 @@ export class AutoMovieProject {
     this.commitCycle((assertNamespace) => {
       for (const { file, content } of staged)
         if (content === null) {
-          removeAtomic(this.root, file, assertNamespace);
-        } else writeAtomic(this.root, file, content, assertNamespace);
+          removeAtomic(file, assertNamespace);
+        } else writeAtomic(file, content, assertNamespace);
       this.flushBeatSlices("scenes", stagedScenes, assertNamespace);
       this.flushBeatSlices("shots", stagedShots, assertNamespace);
       this.flushBeatSlices("beatEnds", stagedBeatEnds, assertNamespace);
@@ -329,8 +320,7 @@ export class AutoMovieProject {
 
   /**
    * Flush one keyed slice directory from its staged contents: remove files the
-   * staged set no longer wants, then publish every staged file through the
-   * exact-generation resident boundary.
+   * staged set no longer wants, then write every staged file atomically.
    */
   private flushBeatSlices(
     dir: string,
@@ -341,9 +331,9 @@ export class AutoMovieProject {
     assertNamespace();
     for (const name of fs.readdirSync(base))
       if (name.endsWith(".json") && !staged.has(name))
-        removeAtomic(this.root, path.join(base, name), assertNamespace);
+        removeAtomic(path.join(base, name), assertNamespace);
     for (const [name, content] of staged)
-      writeAtomic(this.root, path.join(base, name), content, assertNamespace);
+      writeAtomic(path.join(base, name), content, assertNamespace);
     assertNamespace();
   }
 
@@ -375,7 +365,6 @@ export class AutoMovieProject {
         assertNamespace();
         const nextRevision = current + 1;
         writeJsonAtomic(
-          this.root,
           this.revisionPath,
           {
             revision: nextRevision,
@@ -474,7 +463,7 @@ export class AutoMovieProject {
     const file = path.join(this.root, "props", sliceFilename(spec.node));
     const content = serializeJson(spec);
     this.commitCycle((assertNamespace) =>
-      writeAtomic(this.root, file, content, assertNamespace),
+      writeAtomic(file, content, assertNamespace),
     );
   }
 
@@ -529,7 +518,7 @@ export class AutoMovieProject {
     }));
     this.commitCycle((assertNamespace) => {
       for (const { file, content } of staged)
-        writeAtomic(this.root, file, content, assertNamespace);
+        writeAtomic(file, content, assertNamespace);
     });
   }
 
@@ -543,9 +532,7 @@ export class AutoMovieProject {
   /** Remove ONE stored actor context's file; the caller checks existence. */
   public removeActor(node: string): void {
     const file = path.join(this.root, "actors", sliceFilename(node));
-    this.commitCycle((assertNamespace) =>
-      removeAtomic(this.root, file, assertNamespace),
-    );
+    this.commitCycle((assertNamespace) => removeAtomic(file, assertNamespace));
   }
 
   private sliceCaseCollision(dir: string, node: string): string | null {
@@ -565,19 +552,17 @@ export class AutoMovieProject {
   /** Remove ONE stored prop spec's file; the caller checks existence first. */
   public removeProp(node: string): void {
     const file = path.join(this.root, "props", sliceFilename(node));
-    this.commitCycle((assertNamespace) =>
-      removeAtomic(this.root, file, assertNamespace),
-    );
+    this.commitCycle((assertNamespace) => removeAtomic(file, assertNamespace));
   }
 
   /**
    * Register a path-referenced binary asset (a GLB under `models/`, a texture
    * under `assets/`, a rendered frame under `renders/`). The store validates
    * and tracks the path and keeps the manifest's asset index consistent; when
-   * `bytes` are given it also publishes them through an exclusive final
-   * descriptor, but it **never silently overwrites**: an already-registered
-   * path, or bytes aimed at an existing file, throw. Registering without bytes
-   * tracks a file the host's adapter writes (or wrote) itself.
+   * `bytes` are given it also writes them atomically, but it **never silently
+   * overwrites**: an already-registered path, or bytes aimed at an existing
+   * file, throw. Registering without bytes tracks a file the host's adapter
+   * writes (or wrote) itself.
    */
   public registerAsset(relativePath: string, bytes?: Uint8Array): string {
     const normalized = normalizeAssetPath(relativePath);
@@ -599,14 +584,9 @@ export class AutoMovieProject {
           throw new Error(
             `asset file "${normalized}" already exists; refusing to overwrite it`,
           );
-        writeAtomic(this.root, absolute, bytes, assertNamespace);
+        writeAtomic(absolute, bytes, assertNamespace);
       }
-      writeAtomic(
-        this.root,
-        this.manifestPath,
-        manifestContent,
-        assertNamespace,
-      );
+      writeAtomic(this.manifestPath, manifestContent, assertNamespace);
       assertNamespace();
       this.manifest = next;
     });
@@ -1640,27 +1620,70 @@ const describeViolations = (
     .map((violation) => `${violation.path}: ${violation.expected}`)
     .join("; ");
 
-/** Publish through the resident exact-generation mutation boundary. */
+/** Atomic write fenced before and after every resident namespace mutation. */
 const writeAtomic = (
-  root: string,
   file: string,
   data: Uint8Array | string,
   assertNamespace: () => void,
-): void => writeResidentFile({ assertNamespace, data, file, root });
+): void => {
+  const temp = `${file}.tmp.${process.pid}.${randomUUID()}`;
+  let published = false;
+  try {
+    assertNamespace();
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    assertNamespace();
+    fs.writeFileSync(temp, data);
+    assertNamespace();
+    fs.renameSync(temp, file);
+    published = true;
+    assertNamespace();
+  } finally {
+    if (published === false)
+      try {
+        assertNamespace();
+        fs.rmSync(temp, { force: true });
+      } catch {
+        // A stale pathname must not clean a temporary file in a replacement
+        // namespace. The original physical root retains it for diagnosis.
+      }
+  }
+};
 
-/** Isolate one resident generation without pathname cleanup. */
-const removeAtomic = (
-  root: string,
-  file: string,
-  assertNamespace: () => void,
-): void => removeResidentFile({ assertNamespace, file, root });
+/** Remove through a fenced quarantine so a stale path is never unlinked. */
+const removeAtomic = (file: string, assertNamespace: () => void): void => {
+  const quarantine = `${file}.delete.${process.pid}.${randomUUID()}`;
+  assertNamespace();
+  try {
+    fs.renameSync(file, quarantine);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      assertNamespace();
+      return;
+    }
+    throw error;
+  }
+  try {
+    assertNamespace();
+    fs.rmSync(quarantine, { force: true });
+    assertNamespace();
+  } catch (error) {
+    try {
+      assertNamespace();
+      if (fs.existsSync(quarantine) && fs.existsSync(file) === false)
+        fs.renameSync(quarantine, file);
+      assertNamespace();
+    } catch {
+      // Never follow the quarantined name after the physical root changed.
+    }
+    throw error;
+  }
+};
 
 const writeJsonAtomic = (
-  root: string,
   file: string,
   value: unknown,
   assertNamespace: () => void,
-): void => writeAtomic(root, file, serializeJson(value), assertNamespace);
+): void => writeAtomic(file, serializeJson(value), assertNamespace);
 
 /** The store's one JSON rendering (pretty, trailing newline). */
 const serializeJson = (value: unknown): string =>
