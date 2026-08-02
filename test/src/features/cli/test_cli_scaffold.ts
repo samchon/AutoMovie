@@ -515,6 +515,102 @@ const renderGcDescriptorCleanupContract = (
   return { classDigests, cleanupCalls, descriptorOwners, functionDigests };
 };
 
+type ViewerDescriptorCleanupFunction =
+  | "closeViewerFileDescriptor"
+  | "readPhysicalFileSnapshot";
+
+/** Bind every generated-viewer descriptor owner to its cleanup policy. */
+const viewerDescriptorCleanupContract = (
+  source: string,
+): {
+  classDigests: string[];
+  cleanupCalls: Array<{ callDigest: string; owner: string }>;
+  descriptorOwners: Array<{
+    cleanupCalls: string[];
+    openCalls: string[];
+    owner: string;
+  }>;
+  functionDigests: Record<ViewerDescriptorCleanupFunction, string[]>;
+} => {
+  const parsed = ts.createSourceFile(
+    "scripts/generatedShotPlugin.ts",
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TS,
+  );
+  const functionDigests: Record<ViewerDescriptorCleanupFunction, string[]> = {
+    closeViewerFileDescriptor: [],
+    readPhysicalFileSnapshot: [],
+  };
+  const classDigests: string[] = [];
+  const cleanupCalls: Array<{ callDigest: string; owner: string }> = [];
+  const descriptorOwners: Array<{
+    cleanupCalls: string[];
+    openCalls: string[];
+    owner: string;
+  }> = [];
+  const inspectOwner = (owner: string, root: ts.Node): void => {
+    const ownerCleanupCalls: string[] = [];
+    const openCalls: string[] = [];
+    const visit = (node: ts.Node): void => {
+      if (ts.isCallExpression(node)) {
+        if (
+          ts.isIdentifier(node.expression) &&
+          node.expression.text === "closeViewerFileDescriptor"
+        ) {
+          const callDigest = sourceTokenDigest(node, parsed);
+          ownerCleanupCalls.push(callDigest);
+          cleanupCalls.push({ callDigest, owner });
+        }
+        if (
+          ts.isPropertyAccessExpression(node.expression) &&
+          ts.isIdentifier(node.expression.expression) &&
+          node.expression.expression.text === "fs" &&
+          node.expression.name.text === "openSync"
+        )
+          openCalls.push(sourceTokenDigest(node, parsed));
+      }
+      ts.forEachChild(node, visit);
+    };
+    visit(root);
+    if (openCalls.length !== 0 || ownerCleanupCalls.length !== 0)
+      descriptorOwners.push({
+        cleanupCalls: ownerCleanupCalls,
+        openCalls,
+        owner,
+      });
+  };
+  for (const statement of parsed.statements) {
+    if (
+      ts.isClassDeclaration(statement) &&
+      statement.name?.text === "ViewerFileDescriptorCleanupError"
+    )
+      classDigests.push(sourceTokenDigest(statement, parsed));
+    if (ts.isFunctionDeclaration(statement) && statement.name !== undefined) {
+      inspectOwner(statement.name.text, statement);
+      continue;
+    }
+    if (ts.isVariableStatement(statement) === false) continue;
+    for (const declaration of statement.declarationList.declarations) {
+      if (
+        ts.isIdentifier(declaration.name) === false ||
+        declaration.initializer === undefined ||
+        (ts.isArrowFunction(declaration.initializer) === false &&
+          ts.isFunctionExpression(declaration.initializer) === false)
+      )
+        continue;
+      const owner = declaration.name.text;
+      if (owner in functionDigests)
+        functionDigests[owner as ViewerDescriptorCleanupFunction].push(
+          sourceTokenDigest(statement, parsed),
+        );
+      inspectOwner(owner, declaration.initializer);
+    }
+  }
+  return { classDigests, cleanupCalls, descriptorOwners, functionDigests };
+};
+
 /** Inspect capture-doctor resource ownership and failure-preserving cleanup. */
 const captureDoctorCleanupContract = (
   source: string,
@@ -873,6 +969,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
   const captureExecutableScript =
     files["scripts/captureExecutableSnapshot.ts"]!;
   const renderGcSnapshotScript = files["scripts/renderGcSnapshot.ts"]!;
+  const generatedShotPluginScript = files["scripts/generatedShotPlugin.ts"]!;
   const scaffoldFileSnapshotSource = fs.readFileSync(
     path.join(path.dirname(scaffoldDir), "src", "scaffoldFileSnapshot.ts"),
     "utf8",
@@ -912,6 +1009,41 @@ export const test_cli_scaffold = async (): Promise<void> => {
     statement.includes("captureInstallCommandTermination"),
   );
   const captureInstallFailureThrow = captureInstallFailureThrows[0] ?? "";
+  TestValidator.equals(
+    "generated viewer descriptor cleanup preserves every failure",
+    viewerDescriptorCleanupContract(generatedShotPluginScript),
+    {
+      classDigests: [
+        "eefff5716d3364d1f5f1acd619fc2871f17b24a27e2b44f2062c578b420a0275",
+      ],
+      cleanupCalls: [
+        {
+          callDigest:
+            "8894bf8e87125a16f43daaf122e6d098ed6e29ede2d1cd9de6cb7e6be7aba42f",
+          owner: "readPhysicalFileSnapshot",
+        },
+      ],
+      descriptorOwners: [
+        {
+          cleanupCalls: [
+            "8894bf8e87125a16f43daaf122e6d098ed6e29ede2d1cd9de6cb7e6be7aba42f",
+          ],
+          openCalls: [
+            "6543588ab798e8cc62ff1ad7a065cde59f2a81c7cab119417ffd384fc06b9945",
+          ],
+          owner: "readPhysicalFileSnapshot",
+        },
+      ],
+      functionDigests: {
+        closeViewerFileDescriptor: [
+          "e8cd2aa42eeb157986d608a28be73e92ae779fb3bf312031f008ec315ee1087c",
+        ],
+        readPhysicalFileSnapshot: [
+          "71adc2c6648d10d1590b00724414cd2e9a7b44cd5c9a73baf787deffe95562be",
+        ],
+      },
+    },
+  );
   TestValidator.equals(
     "render GC descriptor cleanup preserves every failure",
     renderGcDescriptorCleanupContract(renderGcSnapshotScript),
@@ -3516,6 +3648,17 @@ export const test_cli_scaffold = async (): Promise<void> => {
           };
         }) => void;
       };
+      readPhysicalFileSnapshot: (
+        root: {
+          device: string;
+          inode: string;
+          path: string;
+          real: string;
+          version: string;
+        },
+        directory: string,
+        name: string,
+      ) => { bytes: Buffer };
     };
     let middleware: GeneratedViewerMiddleware | undefined;
     generatedModule.generatedShotPlugin(target, "demo-film").configureServer?.({
@@ -3581,6 +3724,124 @@ export const test_cli_scaffold = async (): Promise<void> => {
     const nativeStat = mutableFs.statSync;
     const nativeWrite = mutableFs.writeSync;
     const nativeWriteFile = mutableFs.writeFileSync;
+    const viewerRootPath = path.resolve(target);
+    const viewerRootReal = fs.realpathSync(viewerRootPath);
+    const viewerRootStatus = fs.statSync(viewerRootReal, { bigint: true });
+    const viewerRoot = {
+      device: viewerRootStatus.dev.toString(),
+      inode: viewerRootStatus.ino.toString(),
+      path: viewerRootPath,
+      real: viewerRootReal,
+      version: `${viewerRootStatus.dev}\0${viewerRootStatus.ino}\0${viewerRootStatus.size}\0${viewerRootStatus.mtimeNs}\0${viewerRootStatus.ctimeNs}`,
+    };
+    const standaloneViewerCloseFailure = new Error(
+      "standalone viewer descriptor close failed",
+    );
+    let standaloneViewerDescriptor = -1;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+      if (path.resolve(file.toString()) === artifact && flags === "r")
+        standaloneViewerDescriptor = descriptor;
+      return descriptor;
+    }) as typeof fs.openSync;
+    mutableFs.closeSync = ((descriptor: number): void => {
+      Reflect.apply(nativeClose, mutableFs, [descriptor]);
+      if (descriptor === standaloneViewerDescriptor)
+        throw standaloneViewerCloseFailure;
+    }) as typeof fs.closeSync;
+    let standaloneViewerCloseError: unknown;
+    try {
+      generatedModule.readPhysicalFileSnapshot(
+        viewerRoot,
+        path.dirname(artifact),
+        path.basename(artifact),
+      );
+    } catch (error) {
+      standaloneViewerCloseError = error;
+    } finally {
+      mutableFs.openSync = nativeOpen;
+      mutableFs.closeSync = nativeClose;
+    }
+    const primaryOnlyViewerFailure = new Error(
+      "primary-only viewer read failed",
+    );
+    let primaryOnlyViewerDescriptor = -1;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+      if (path.resolve(file.toString()) === artifact && flags === "r")
+        primaryOnlyViewerDescriptor = descriptor;
+      return descriptor;
+    }) as typeof fs.openSync;
+    mutableFs.fstatSync = ((descriptor, ...args: unknown[]): unknown => {
+      if (descriptor === primaryOnlyViewerDescriptor)
+        throw primaryOnlyViewerFailure;
+      return Reflect.apply(nativeFstat, mutableFs, [descriptor, ...args]);
+    }) as typeof fs.fstatSync;
+    let preservedPrimaryOnlyViewerFailure: unknown;
+    try {
+      generatedModule.readPhysicalFileSnapshot(
+        viewerRoot,
+        path.dirname(artifact),
+        path.basename(artifact),
+      );
+    } catch (error) {
+      preservedPrimaryOnlyViewerFailure = error;
+    } finally {
+      mutableFs.openSync = nativeOpen;
+      mutableFs.fstatSync = nativeFstat;
+    }
+    const combinedViewerPrimary = new Error("viewer descriptor read failed");
+    const combinedViewerClose = new Error("viewer descriptor close failed");
+    let combinedViewerDescriptor = -1;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+      if (path.resolve(file.toString()) === artifact && flags === "r")
+        combinedViewerDescriptor = descriptor;
+      return descriptor;
+    }) as typeof fs.openSync;
+    mutableFs.fstatSync = ((descriptor, ...args: unknown[]): unknown => {
+      if (descriptor === combinedViewerDescriptor) throw combinedViewerPrimary;
+      return Reflect.apply(nativeFstat, mutableFs, [descriptor, ...args]);
+    }) as typeof fs.fstatSync;
+    mutableFs.closeSync = ((descriptor: number): void => {
+      Reflect.apply(nativeClose, mutableFs, [descriptor]);
+      if (descriptor === combinedViewerDescriptor) throw combinedViewerClose;
+    }) as typeof fs.closeSync;
+    let combinedViewerFailure: unknown;
+    try {
+      generatedModule.readPhysicalFileSnapshot(
+        viewerRoot,
+        path.dirname(artifact),
+        path.basename(artifact),
+      );
+    } catch (error) {
+      combinedViewerFailure = error;
+    } finally {
+      mutableFs.openSync = nativeOpen;
+      mutableFs.fstatSync = nativeFstat;
+      mutableFs.closeSync = nativeClose;
+    }
+    TestValidator.predicate(
+      "generated viewer preserves descriptor operation and cleanup failures",
+      standaloneViewerCloseError === standaloneViewerCloseFailure &&
+        preservedPrimaryOnlyViewerFailure === primaryOnlyViewerFailure &&
+        combinedViewerFailure instanceof AggregateError &&
+        combinedViewerFailure.errors.length === 2 &&
+        combinedViewerFailure.errors[0] === combinedViewerPrimary &&
+        combinedViewerFailure.errors[1] === combinedViewerClose,
+    );
     const shotsDirectory = path.dirname(artifact);
     const parkedShots = `${shotsDirectory}.parked`;
     const replacementShots = `${shotsDirectory}.replacement`;

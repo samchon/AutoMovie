@@ -429,6 +429,28 @@ interface IPhysicalDirectory {
   version: string;
 }
 
+interface IViewerFileDescriptorFailure {
+  error: unknown;
+}
+
+class ViewerFileDescriptorCleanupError extends AggregateError {}
+
+/** Close one viewer-file descriptor without hiding either failure. */
+const closeViewerFileDescriptor = (
+  descriptor: number,
+  failure: IViewerFileDescriptorFailure | undefined,
+): void => {
+  try {
+    fs.closeSync(descriptor);
+  } catch (closeFailure) {
+    if (failure === undefined) throw closeFailure;
+    throw new ViewerFileDescriptorCleanupError(
+      [failure.error, closeFailure],
+      "Viewer file descriptor cleanup failed after the read failed.",
+    );
+  }
+};
+
 interface IPhysicalFileSnapshot {
   bytes: Buffer;
   directories: readonly IPhysicalDirectory[];
@@ -500,7 +522,7 @@ const readPhysicalFile = (
   name: string,
 ): Buffer => readPhysicalFileSnapshot(root, directory, name).bytes;
 
-const readPhysicalFileSnapshot = (
+export const readPhysicalFileSnapshot = (
   root: IPhysicalDirectory,
   directory: string,
   name: string,
@@ -531,6 +553,7 @@ const readPhysicalFileSnapshot = (
     throw new Error("viewer file is not one physical owned file");
   const identity = physicalVersion(linked);
   const descriptor = fs.openSync(file, "r");
+  let failure: IViewerFileDescriptorFailure | undefined;
   try {
     const opened = fs.fstatSync(descriptor, { bigint: true });
     if (
@@ -556,8 +579,11 @@ const readPhysicalFileSnapshot = (
     for (const identity of directories)
       assertPhysicalDirectory(identity, "viewer file ancestry");
     return { bytes, directories, identity, path: file };
+  } catch (error) {
+    failure = { error };
+    throw error;
   } finally {
-    fs.closeSync(descriptor);
+    closeViewerFileDescriptor(descriptor, failure);
   }
 };
 
