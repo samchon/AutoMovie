@@ -71,6 +71,23 @@ const throws = (task: () => unknown, fragment?: string): boolean => {
   }
 };
 
+const captureFailure = (task: () => unknown): unknown => {
+  try {
+    task();
+    return undefined;
+  } catch (error) {
+    return error;
+  }
+};
+
+const aggregateContainsExactly = (
+  error: unknown,
+  expected: unknown[],
+): boolean =>
+  error instanceof AggregateError &&
+  error.errors.length === expected.length &&
+  expected.every((failure, index) => error.errors[index] === failure);
+
 const createLegacy = (): {
   root: string;
   dispose: () => void;
@@ -458,6 +475,68 @@ export const test_mcp_production_legacy_import = (): void => {
     fs.rmSync(missingAsset, { force: true, recursive: true });
   }
 
+  const planningCleanup = createLegacy();
+  try {
+    const importer = new AutoMovieLegacyImporter(planningCleanup.root);
+    const nativeWrite = fs.writeFileSync;
+    const nativeRm = fs.rmSync;
+    const standaloneCleanupFailure = new Error(
+      "injected planning cleanup failure",
+    );
+    fs.rmSync = ((target: fs.PathLike, ...args: unknown[]): void => {
+      Reflect.apply(nativeRm, fs, [target, ...args]);
+      if (
+        path.basename(target.toString()).startsWith("automovie-legacy-import-")
+      )
+        throw standaloneCleanupFailure;
+    }) as typeof fs.rmSync;
+    let standaloneCaught: unknown;
+    try {
+      standaloneCaught = captureFailure(() => importer.plan());
+    } finally {
+      fs.rmSync = nativeRm;
+    }
+
+    const planningFailure = new Error("injected legacy planning failure");
+    const combinedCleanupFailure = new Error(
+      "injected combined planning cleanup failure",
+    );
+    const belongsToPlanningTemporary = (file: fs.PathLike): boolean =>
+      path
+        .resolve(file.toString())
+        .split(path.sep)
+        .some((component) => component.startsWith("automovie-legacy-import-"));
+    fs.writeFileSync = ((
+      file: fs.PathOrFileDescriptor,
+      ...args: unknown[]
+    ): void => {
+      if (typeof file !== "number" && belongsToPlanningTemporary(file))
+        throw planningFailure;
+      Reflect.apply(nativeWrite, fs, [file, ...args]);
+    }) as typeof fs.writeFileSync;
+    fs.rmSync = ((target: fs.PathLike, ...args: unknown[]): void => {
+      Reflect.apply(nativeRm, fs, [target, ...args]);
+      if (belongsToPlanningTemporary(target)) throw combinedCleanupFailure;
+    }) as typeof fs.rmSync;
+    let combinedCaught: unknown;
+    try {
+      combinedCaught = captureFailure(() => importer.plan());
+    } finally {
+      fs.writeFileSync = nativeWrite;
+      fs.rmSync = nativeRm;
+    }
+    TestValidator.predicate(
+      "legacy planning cleanup preserves standalone and combined failures",
+      standaloneCaught === standaloneCleanupFailure &&
+        aggregateContainsExactly(combinedCaught, [
+          planningFailure,
+          combinedCleanupFailure,
+        ]),
+    );
+  } finally {
+    planningCleanup.dispose();
+  }
+
   const collisions = createLegacy();
   try {
     fs.mkdirSync(path.join(collisions.root, ".automovie"));
@@ -503,6 +582,50 @@ export const test_mcp_production_legacy_import = (): void => {
     }
   } finally {
     renameFailure.dispose();
+  }
+
+  const importCleanupFailure = createLegacy();
+  try {
+    const publicationFailure = new Error("injected import publication failure");
+    const stagingCleanupFailure = new Error(
+      "injected import staging cleanup failure",
+    );
+    const nativeRename = fs.renameSync;
+    const nativeRm = fs.rmSync;
+    fs.renameSync = ((oldPath: fs.PathLike, newPath: fs.PathLike): void => {
+      if (
+        path.basename(oldPath.toString()).startsWith(".automovie-import-") &&
+        path.basename(newPath.toString()) === ".automovie"
+      )
+        throw publicationFailure;
+      nativeRename(oldPath, newPath);
+    }) as typeof fs.renameSync;
+    fs.rmSync = ((target: fs.PathLike, ...args: unknown[]): void => {
+      Reflect.apply(nativeRm, fs, [target, ...args]);
+      if (path.basename(target.toString()).startsWith(".automovie-import-"))
+        throw stagingCleanupFailure;
+    }) as typeof fs.rmSync;
+    let caught: unknown;
+    try {
+      caught = captureFailure(() =>
+        new AutoMovieLegacyImporter(importCleanupFailure.root).apply(),
+      );
+    } finally {
+      fs.renameSync = nativeRename;
+      fs.rmSync = nativeRm;
+    }
+    TestValidator.predicate(
+      "legacy import staging cleanup retains publication and cleanup failures",
+      aggregateContainsExactly(caught, [
+        publicationFailure,
+        stagingCleanupFailure,
+      ]) &&
+        fs
+          .readdirSync(importCleanupFailure.root)
+          .every((entry) => entry.startsWith(".automovie-import-") === false),
+    );
+  } finally {
+    importCleanupFailure.dispose();
   }
 
   const publishRootSwap = createLegacy();
@@ -969,6 +1092,87 @@ export const test_mcp_production_legacy_import = (): void => {
     }
   } finally {
     incompleteRestoration.dispose();
+  }
+
+  const restorationCleanupFailure = createLegacy();
+  try {
+    const importer = new AutoMovieLegacyImporter(
+      restorationCleanupFailure.root,
+    );
+    const plan = importer.plan();
+    importer.apply();
+    createMissingOwnedRoots(restorationCleanupFailure.root, plan);
+    const stateRoot = path.join(restorationCleanupFailure.root, ".automovie");
+    const rollbackFailure = new Error("injected rollback failure");
+    const restorationFailure = new Error(
+      "injected authoritative restoration failure",
+    );
+    const cleanupFailure = new Error(
+      "injected restoration staging cleanup failure",
+    );
+    const nativeRmdir = fs.rmdirSync;
+    const nativeRename = fs.renameSync;
+    const nativeRm = fs.rmSync;
+    let removals = 0;
+    fs.rmdirSync = ((directory: fs.PathLike): void => {
+      if (++removals === 2) {
+        const quarantine = fs
+          .readdirSync(restorationCleanupFailure.root)
+          .find((entry) => entry.startsWith(".automovie-rollback-"));
+        if (quarantine === undefined)
+          throw new Error("rollback quarantine was not published");
+        fs.writeFileSync(
+          path.join(
+            restorationCleanupFailure.root,
+            quarantine,
+            "incarnation.json",
+          ),
+          "{}",
+        );
+        throw rollbackFailure;
+      }
+      nativeRmdir(directory);
+    }) as typeof fs.rmdirSync;
+    fs.renameSync = ((oldPath: fs.PathLike, newPath: fs.PathLike): void => {
+      if (
+        path.basename(oldPath.toString()).startsWith(".automovie-restore-") &&
+        path.resolve(newPath.toString()) === stateRoot
+      )
+        throw restorationFailure;
+      nativeRename(oldPath, newPath);
+    }) as typeof fs.renameSync;
+    fs.rmSync = ((target: fs.PathLike, ...args: unknown[]): void => {
+      Reflect.apply(nativeRm, fs, [target, ...args]);
+      if (path.basename(target.toString()).startsWith(".automovie-restore-"))
+        throw cleanupFailure;
+    }) as typeof fs.rmSync;
+    let caught: unknown;
+    try {
+      caught = captureFailure(() => importer.rollback());
+    } finally {
+      fs.rmdirSync = nativeRmdir;
+      fs.renameSync = nativeRename;
+      fs.rmSync = nativeRm;
+    }
+    const nestedCleanup =
+      caught instanceof AggregateError
+        ? caught.errors.find(
+            (error: unknown) =>
+              error instanceof AggregateError &&
+              error.errors.includes(restorationFailure),
+          )
+        : undefined;
+    TestValidator.predicate(
+      "legacy rollback retains restoration and staging cleanup failures",
+      caught instanceof AggregateError &&
+        caught.errors[0] === rollbackFailure &&
+        aggregateContainsExactly(nestedCleanup, [
+          restorationFailure,
+          cleanupFailure,
+        ]),
+    );
+  } finally {
+    restorationCleanupFailure.dispose();
   }
 
   const preservedQuarantine = createLegacy();

@@ -85,6 +85,29 @@ interface IAppliedImportState {
   incarnation: string;
 }
 
+interface ILegacyImportCleanupFailure {
+  error: unknown;
+}
+
+class LegacyImportCleanupError extends AggregateError {}
+
+/** Remove one temporary import directory without losing earlier failures. */
+const removeLegacyImportTemporary = (
+  temporary: string,
+  failure: ILegacyImportCleanupFailure | undefined,
+  resource: string,
+): void => {
+  try {
+    fs.rmSync(temporary, { force: true, recursive: true });
+  } catch (cleanupFailure) {
+    if (failure === undefined) throw cleanupFailure;
+    throw new LegacyImportCleanupError(
+      [failure.error, cleanupFailure],
+      `Legacy import cleanup failed after the operation failed: ${resource}.`,
+    );
+  }
+};
+
 /**
  * Non-destructive bridge from the resident v1 project into production v2.
  *
@@ -168,6 +191,7 @@ export class AutoMovieLegacyImporter {
     const files = appliedImportFiles(root, plan, state);
     assertProductionRootNamespaceLease(lease);
     const staging = fs.mkdtempSync(path.join(root, ".automovie-import-"));
+    let stagingFailure: ILegacyImportCleanupFailure | undefined;
     try {
       for (const directory of PRODUCTION_STATE_DIRECTORIES)
         fs.mkdirSync(path.join(staging, directory), { recursive: true });
@@ -179,6 +203,9 @@ export class AutoMovieLegacyImporter {
       assertProductionRootNamespaceLease(lease);
       fs.renameSync(staging, stateRoot);
       assertProductionRootNamespaceLease(lease);
+    } catch (error) {
+      stagingFailure = { error };
+      throw error;
     } finally {
       let leaseCurrent = true;
       try {
@@ -188,7 +215,11 @@ export class AutoMovieLegacyImporter {
       }
       // A replaced root must not receive cleanup intended for the lease root.
       if (leaseCurrent && fs.existsSync(staging))
-        fs.rmSync(staging, { force: true, recursive: true });
+        removeLegacyImportTemporary(
+          staging,
+          stagingFailure,
+          "import publication staging directory",
+        );
     }
     return { status: "applied", plan };
   }
@@ -683,6 +714,7 @@ const withLegacyProject = <T>(
   const temporary = fs.mkdtempSync(
     path.join(os.tmpdir(), "automovie-legacy-import-"),
   );
+  let failure: ILegacyImportCleanupFailure | undefined;
   try {
     for (const [relative, bytes] of snapshot.files)
       if (bytes !== null) {
@@ -691,8 +723,11 @@ const withLegacyProject = <T>(
         fs.writeFileSync(file, bytes);
       }
     return task(AutoMovieProject.open(temporary));
+  } catch (error) {
+    failure = { error };
+    throw error;
   } finally {
-    fs.rmSync(temporary, { force: true, recursive: true });
+    removeLegacyImportTemporary(temporary, failure, "legacy planning snapshot");
   }
 };
 
@@ -1055,6 +1090,7 @@ const restoreAppliedImport = (
   lockToken: string,
 ): void => {
   const staging = fs.mkdtempSync(path.join(root, ".automovie-restore-"));
+  let failure: ILegacyImportCleanupFailure | undefined;
   try {
     for (const directory of PRODUCTION_STATE_DIRECTORIES)
       fs.mkdirSync(path.join(staging, directory), { recursive: true });
@@ -1068,9 +1104,16 @@ const restoreAppliedImport = (
       Buffer.from(lockToken, "utf8"),
     );
     fs.renameSync(staging, stateRoot);
+  } catch (error) {
+    failure = { error };
+    throw error;
   } finally {
     if (fs.existsSync(staging))
-      fs.rmSync(staging, { force: true, recursive: true });
+      removeLegacyImportTemporary(
+        staging,
+        failure,
+        "rollback restoration staging directory",
+      );
   }
 };
 
