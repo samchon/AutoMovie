@@ -80,7 +80,10 @@ export const createCaptureExecutableSnapshot = (
     assertCaptureExecutable(snapshot);
     return snapshot;
   } catch (error) {
+    const opened = safePhysicalFileIdentity(descriptor);
     fs.closeSync(descriptor);
+    if (opened !== null)
+      removeCreatedCaptureExecutable(namespacePath, before, opened);
     throw error;
   }
 };
@@ -291,3 +294,37 @@ const physicalVersion = (status: fs.BigIntStats): string =>
 
 const physicalFileIdentity = (status: fs.BigIntStats): string =>
   `${status.dev}\0${status.ino}`;
+
+const safePhysicalFileIdentity = (descriptor: number): string | null => {
+  try {
+    const opened = fs.fstatSync(descriptor, { bigint: true });
+    return opened.isFile() ? physicalFileIdentity(opened) : null;
+  } catch {
+    return null;
+  }
+};
+
+const removeCreatedCaptureExecutable = (
+  file: string,
+  expectedDirectory: IPhysicalDirectory,
+  expectedIdentity: string,
+): void => {
+  try {
+    const directory = physicalDirectory(
+      path.dirname(file),
+      "capture executable directory",
+    );
+    const resident = fs.lstatSync(file, { bigint: true });
+    if (
+      directory.path === expectedDirectory.path &&
+      directory.real === expectedDirectory.real &&
+      directory.identity === expectedDirectory.identity &&
+      resident.isSymbolicLink() === false &&
+      resident.isFile() &&
+      physicalFileIdentity(resident) === expectedIdentity
+    )
+      fs.rmSync(file, { force: true });
+  } catch {
+    // A missing or changed pathname is not this failed creation.
+  }
+};

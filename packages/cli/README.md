@@ -68,8 +68,11 @@ The default capture runtime is the Chromium build pinned to the starter's
 Playwright package. `capture:install` downloads it explicitly into
 Playwright's project-local browser path and writes an ignored receipt containing
 the package version, browser revision, executable path, and executable digest.
-Each package/browser generation owns one immutable no-overwrite receipt slot;
-the old fixed receipt path is retained only as an untouched migration fallback.
+Each package/browser generation owns one immutable no-overwrite receipt slot.
+The current metadata key is read through one ancestry-bound descriptor snapshot;
+when that exact slot is absent, the old fixed receipt remains the untouched
+migration fallback. Handled write failures remove only their exact partial,
+while an unowned crash residue remains for explicit manual adjudication.
 `capture:doctor` launches that exact executable, requires WebGL, captures a
 canvas, and decodes the PNG. Proxy and offline mirror settings use Playwright's
 standard `HTTPS_PROXY`, `PLAYWRIGHT_DOWNLOAD_HOST`, and

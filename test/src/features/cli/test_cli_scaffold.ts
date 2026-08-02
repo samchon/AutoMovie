@@ -1012,6 +1012,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       readdirSync: typeof fs.readdirSync;
       renameSync: typeof fs.renameSync;
       statSync: typeof fs.statSync;
+      writeSync: typeof fs.writeSync;
       writeFileSync: typeof fs.writeFileSync;
     };
     const nativeFsync = mutableFs.fsyncSync;
@@ -1023,6 +1024,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
     const nativeReadFile = mutableFs.readFileSync;
     const nativeRename = mutableFs.renameSync;
     const nativeStat = mutableFs.statSync;
+    const nativeWrite = mutableFs.writeSync;
     const nativeWriteFile = mutableFs.writeFileSync;
     const shotsDirectory = path.dirname(artifact);
     const parkedShots = `${shotsDirectory}.parked`;
@@ -2702,11 +2704,11 @@ export const test_cli_scaffold = async (): Promise<void> => {
     const captureBrowserModule = createRequire(__filename)(
       path.join(scaffoldDir, "scripts", "capture-browser.ts"),
     ) as {
-      capturePlaywrightMetadata: (props: {
+      capturePlaywrightMetadata: (props?: {
         corePackagePath: string;
         playwrightEntry: string;
       }) => {
-        browser: { revision: string };
+        browser: { browserVersion: string; revision: string };
         cliDigest: string;
         packageVersion: string;
       };
@@ -2985,10 +2987,39 @@ export const test_cli_scaffold = async (): Promise<void> => {
       "capture install receipt rejects a byte-identical successor",
       captureReceiptSwapped && captureReceiptRaceRejected,
     );
+    const installedCaptureMetadata =
+      captureBrowserModule.capturePlaywrightMetadata();
     const nextCaptureReceipt = {
       ...captureReceiptValue,
-      browser: { ...captureReceiptValue.browser, revision: "456" },
+      playwright: {
+        package: "playwright",
+        version: installedCaptureMetadata.packageVersion,
+      },
+      browser: {
+        ...captureReceiptValue.browser,
+        revision: installedCaptureMetadata.browser.revision,
+        version: installedCaptureMetadata.browser.browserVersion,
+      },
     };
+    const captureReceiptGenerationName = (receipt: {
+      browser: { product: string; revision: string; version: string };
+      playwright: { package: string; version: string };
+    }): string =>
+      `${createHash("sha256")
+        .update(
+          JSON.stringify({
+            browser: {
+              product: receipt.browser.product,
+              revision: receipt.browser.revision,
+              version: receipt.browser.version,
+            },
+            playwright: {
+              package: receipt.playwright.package,
+              version: receipt.playwright.version,
+            },
+          }),
+        )
+        .digest("hex")}.json`;
     const failedReceiptPublication = throws(() =>
       captureBrowserModule.publishCaptureInstallReceipt(
         captureProject,
@@ -3018,7 +3049,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       "capture install publishes only after its final provenance validation",
       receiptPublicationValidated &&
         captureBrowserModule.readCaptureInstallReceipt(captureProject).browser
-          .revision === "456" &&
+          .revision === installedCaptureMetadata.browser.revision &&
         fs.readFileSync(captureReceipt).equals(captureReceiptBytes),
     );
     const receiptGenerationDirectory = path.join(
@@ -3046,6 +3077,225 @@ export const test_cli_scaffold = async (): Promise<void> => {
           status.ino === receiptGenerationStatus.ino
         );
       })() && fs.readdirSync(receiptGenerationDirectory).length === 1,
+    );
+
+    const partialReceiptProject = path.join(base, "partial-receipt-project");
+    fs.mkdirSync(partialReceiptProject);
+    let partialReceiptDescriptor = -1;
+    let partialReceiptWriteFailed = false;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+      if (
+        typeof file !== "number" &&
+        flags === "wx+" &&
+        path.basename(path.dirname(file.toString())) === "install-receipts"
+      )
+        partialReceiptDescriptor = descriptor;
+      return descriptor;
+    }) as typeof fs.openSync;
+    mutableFs.writeSync = ((
+      descriptor: number,
+      buffer: Uint8Array,
+      offset: number,
+      _length: number,
+      position: number,
+    ): number => {
+      if (
+        partialReceiptWriteFailed === false &&
+        descriptor === partialReceiptDescriptor
+      ) {
+        Reflect.apply(nativeWrite, mutableFs, [
+          descriptor,
+          buffer,
+          offset,
+          1,
+          position,
+        ]);
+        partialReceiptWriteFailed = true;
+        throw new Error("fixture interrupted receipt write");
+      }
+      return Reflect.apply(nativeWrite, mutableFs, [
+        descriptor,
+        buffer,
+        offset,
+        _length,
+        position,
+      ]) as number;
+    }) as typeof fs.writeSync;
+    let partialReceiptRejected = false;
+    try {
+      partialReceiptRejected = throws(() =>
+        captureBrowserModule.publishCaptureInstallReceipt(
+          partialReceiptProject,
+          nextCaptureReceipt,
+          () => undefined,
+        ),
+      );
+    } finally {
+      mutableFs.openSync = nativeOpen;
+      mutableFs.writeSync = nativeWrite;
+    }
+    const partialReceiptDirectory = path.join(
+      partialReceiptProject,
+      ".automovie",
+      "capture",
+      "install-receipts",
+    );
+    captureBrowserModule.publishCaptureInstallReceipt(
+      partialReceiptProject,
+      nextCaptureReceipt,
+      () => undefined,
+    );
+    TestValidator.predicate(
+      "capture install removes only its exact handled partial and permits retry",
+      partialReceiptWriteFailed &&
+        partialReceiptRejected &&
+        fs.readdirSync(partialReceiptDirectory).length === 1 &&
+        captureBrowserModule.readCaptureInstallReceipt(partialReceiptProject)
+          .browser.revision === installedCaptureMetadata.browser.revision,
+    );
+
+    const crashReceiptProject = path.join(base, "crash-receipt-project");
+    const crashReceiptDirectory = path.join(
+      crashReceiptProject,
+      ".automovie",
+      "capture",
+      "install-receipts",
+    );
+    const crashReceiptPath = path.join(
+      crashReceiptDirectory,
+      captureReceiptGenerationName(nextCaptureReceipt),
+    );
+    const crashReceiptBytes = Buffer.from("interrupted receipt publication");
+    fs.mkdirSync(crashReceiptDirectory, { recursive: true });
+    fs.writeFileSync(crashReceiptPath, crashReceiptBytes);
+    TestValidator.predicate(
+      "capture install preserves and identifies an unowned crash residue",
+      throwsWith(
+        () =>
+          captureBrowserModule.publishCaptureInstallReceipt(
+            crashReceiptProject,
+            nextCaptureReceipt,
+            () => undefined,
+          ),
+        "Manually adjudicate",
+      ) && fs.readFileSync(crashReceiptPath).equals(crashReceiptBytes),
+    );
+
+    const receiptTargetSwapProject = path.join(
+      base,
+      "receipt-target-swap-project",
+    );
+    fs.mkdirSync(receiptTargetSwapProject);
+    let receiptTargetSwapDescriptor = -1;
+    let receiptTargetSwapPath = "";
+    let receiptTargetSwapped = false;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+      if (
+        typeof file !== "number" &&
+        flags === "wx+" &&
+        path.basename(path.dirname(file.toString())) === "install-receipts"
+      ) {
+        receiptTargetSwapDescriptor = descriptor;
+        receiptTargetSwapPath = path.resolve(file.toString());
+      }
+      return descriptor;
+    }) as typeof fs.openSync;
+    mutableFs.fsyncSync = ((descriptor: number): void => {
+      if (
+        receiptTargetSwapped === false &&
+        descriptor === receiptTargetSwapDescriptor
+      ) {
+        const parked = `${receiptTargetSwapPath}.parked`;
+        nativeRename(receiptTargetSwapPath, parked);
+        nativeWriteFile(receiptTargetSwapPath, fs.readFileSync(parked));
+        receiptTargetSwapped = true;
+      }
+      nativeFsync(descriptor);
+    }) as typeof fs.fsyncSync;
+    let receiptTargetSwapRejected = false;
+    try {
+      receiptTargetSwapRejected = throws(() =>
+        captureBrowserModule.publishCaptureInstallReceipt(
+          receiptTargetSwapProject,
+          nextCaptureReceipt,
+          () => undefined,
+        ),
+      );
+    } finally {
+      mutableFs.openSync = nativeOpen;
+      mutableFs.fsyncSync = nativeFsync;
+    }
+    TestValidator.predicate(
+      "capture install preserves a final-slot successor after descriptor open",
+      receiptTargetSwapped &&
+        receiptTargetSwapRejected &&
+        fs.existsSync(receiptTargetSwapPath) &&
+        fs.existsSync(`${receiptTargetSwapPath}.parked`),
+    );
+
+    const receiptParentSwapProject = path.join(
+      base,
+      "receipt-parent-swap-project",
+    );
+    fs.mkdirSync(receiptParentSwapProject);
+    let receiptParentSwapPath = "";
+    let parkedReceiptParent = "";
+    let receiptParentSwapped = false;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+      if (
+        receiptParentSwapped === false &&
+        typeof file !== "number" &&
+        flags === "wx+" &&
+        path.basename(path.dirname(file.toString())) === "install-receipts"
+      ) {
+        receiptParentSwapPath = path.resolve(file.toString());
+        const parent = path.dirname(receiptParentSwapPath);
+        parkedReceiptParent = `${parent}.parked`;
+        nativeRename(parent, parkedReceiptParent);
+        nativeMkdir(parent);
+        nativeWriteFile(path.join(parent, "successor.marker"), "successor");
+        receiptParentSwapped = true;
+      }
+      return descriptor;
+    }) as typeof fs.openSync;
+    let receiptParentSwapRejected = false;
+    try {
+      receiptParentSwapRejected = throws(() =>
+        captureBrowserModule.publishCaptureInstallReceipt(
+          receiptParentSwapProject,
+          nextCaptureReceipt,
+          () => undefined,
+        ),
+      );
+    } finally {
+      mutableFs.openSync = nativeOpen;
+    }
+    TestValidator.predicate(
+      "capture install preserves a generation-directory successor after descriptor open",
+      receiptParentSwapped &&
+        receiptParentSwapRejected &&
+        fs.readFileSync(
+          path.join(path.dirname(receiptParentSwapPath), "successor.marker"),
+          "utf8",
+        ) === "successor" &&
+        fs.existsSync(
+          path.join(parkedReceiptParent, path.basename(receiptParentSwapPath)),
+        ),
     );
 
     const foreignReceiptProject = path.join(base, "foreign-receipt-project");
@@ -3091,7 +3341,10 @@ export const test_cli_scaffold = async (): Promise<void> => {
 
     const upgradedCaptureReceipt = {
       ...nextCaptureReceipt,
-      browser: { ...nextCaptureReceipt.browser, revision: "789" },
+      browser: {
+        ...nextCaptureReceipt.browser,
+        revision: `${installedCaptureMetadata.browser.revision}-upgrade`,
+      },
     };
     captureBrowserModule.publishCaptureInstallReceipt(
       captureProject,
@@ -3101,7 +3354,196 @@ export const test_cli_scaffold = async (): Promise<void> => {
     TestValidator.predicate(
       "capture install retains immutable receipt generations across upgrades",
       fs.readdirSync(receiptGenerationDirectory).length === 2 &&
+        captureBrowserModule.readCaptureInstallReceipt(captureProject).browser
+          .revision === installedCaptureMetadata.browser.revision &&
         fs.readFileSync(captureReceipt).equals(captureReceiptBytes),
+    );
+
+    const legacyFallbackProject = path.join(
+      base,
+      "legacy-fallback-receipt-project",
+    );
+    const legacyFallbackReceipt = path.join(
+      legacyFallbackProject,
+      ".automovie",
+      "capture",
+      "install-receipt.json",
+    );
+    fs.mkdirSync(path.dirname(legacyFallbackReceipt), { recursive: true });
+    fs.writeFileSync(legacyFallbackReceipt, captureReceiptBytes);
+    captureBrowserModule.publishCaptureInstallReceipt(
+      legacyFallbackProject,
+      upgradedCaptureReceipt,
+      () => undefined,
+    );
+    TestValidator.predicate(
+      "capture install falls back to legacy when only a non-current generation exists",
+      captureBrowserModule.readCaptureInstallReceipt(legacyFallbackProject)
+        .browser.revision === captureReceiptValue.browser.revision,
+    );
+
+    const receiptReadSuccessor = {
+      ...nextCaptureReceipt,
+      installSource: "PLAYWRIGHT_DOWNLOAD_HOST",
+    } as const;
+    const receiptReadSuccessorBytes = Buffer.from(
+      `${JSON.stringify(receiptReadSuccessor, null, 2)}\n`,
+    );
+    const parkedReceiptReadDirectory = `${receiptGenerationDirectory}.read-parked`;
+    const successorReceiptReadDirectory = `${receiptGenerationDirectory}.read-successor`;
+    fs.mkdirSync(successorReceiptReadDirectory);
+    fs.writeFileSync(
+      path.join(
+        successorReceiptReadDirectory,
+        path.basename(receiptGenerationFile),
+      ),
+      receiptReadSuccessorBytes,
+    );
+    let receiptReadDirectorySwapped = false;
+    mutableFs.lstatSync = ((file, ...args: unknown[]): unknown => {
+      const status = Reflect.apply(nativeLstat, mutableFs, [file, ...args]);
+      if (
+        receiptReadDirectorySwapped === false &&
+        path.resolve(file.toString()) === receiptGenerationFile
+      ) {
+        nativeRename(receiptGenerationDirectory, parkedReceiptReadDirectory);
+        nativeRename(successorReceiptReadDirectory, receiptGenerationDirectory);
+        receiptReadDirectorySwapped = true;
+      }
+      return status;
+    }) as typeof fs.lstatSync;
+    let receiptReadDirectoryRejected = false;
+    try {
+      receiptReadDirectoryRejected = throws(() =>
+        captureBrowserModule.readCaptureInstallReceipt(captureProject),
+      );
+    } finally {
+      mutableFs.lstatSync = nativeLstat;
+      fs.rmSync(receiptGenerationDirectory, { recursive: true, force: true });
+      nativeRename(parkedReceiptReadDirectory, receiptGenerationDirectory);
+    }
+    TestValidator.predicate(
+      "capture install binds current-generation selection through directory read",
+      receiptReadDirectorySwapped && receiptReadDirectoryRejected,
+    );
+
+    const parkedReceiptReadRoot = `${captureProject}.read-parked`;
+    const successorReceiptReadRoot = `${captureProject}.read-successor`;
+    const successorReceiptReadFile = path.join(
+      successorReceiptReadRoot,
+      path.relative(captureProject, receiptGenerationFile),
+    );
+    fs.mkdirSync(path.dirname(successorReceiptReadFile), { recursive: true });
+    fs.writeFileSync(successorReceiptReadFile, receiptReadSuccessorBytes);
+    let receiptReadRootSwapped = false;
+    mutableFs.lstatSync = ((file, ...args: unknown[]): unknown => {
+      const status = Reflect.apply(nativeLstat, mutableFs, [file, ...args]);
+      if (
+        receiptReadRootSwapped === false &&
+        path.resolve(file.toString()) === receiptGenerationFile
+      ) {
+        nativeRename(captureProject, parkedReceiptReadRoot);
+        nativeRename(successorReceiptReadRoot, captureProject);
+        receiptReadRootSwapped = true;
+      }
+      return status;
+    }) as typeof fs.lstatSync;
+    let receiptReadRootRejected = false;
+    try {
+      receiptReadRootRejected = throws(() =>
+        captureBrowserModule.readCaptureInstallReceipt(captureProject),
+      );
+    } finally {
+      mutableFs.lstatSync = nativeLstat;
+      fs.rmSync(captureProject, { recursive: true, force: true });
+      nativeRename(parkedReceiptReadRoot, captureProject);
+    }
+    TestValidator.predicate(
+      "capture install binds current-generation selection through project-root read",
+      receiptReadRootSwapped && receiptReadRootRejected,
+    );
+
+    const mismatchedReceiptProject = path.join(
+      base,
+      "mismatched-generation-receipt-project",
+    );
+    const mismatchedReceiptDirectory = path.join(
+      mismatchedReceiptProject,
+      ".automovie",
+      "capture",
+      "install-receipts",
+    );
+    const mismatchedReceiptPath = path.join(
+      mismatchedReceiptDirectory,
+      captureReceiptGenerationName(nextCaptureReceipt),
+    );
+    fs.mkdirSync(mismatchedReceiptDirectory, { recursive: true });
+    fs.writeFileSync(
+      mismatchedReceiptPath,
+      `${JSON.stringify(upgradedCaptureReceipt)}\n`,
+    );
+    TestValidator.predicate(
+      "capture install rejects a receipt occupying another canonical filename",
+      throwsWith(
+        () =>
+          captureBrowserModule.readCaptureInstallReceipt(
+            mismatchedReceiptProject,
+          ),
+        "occupies another generation",
+      ),
+    );
+
+    const malformedSchemaProject = path.join(
+      base,
+      "malformed-generation-schema-project",
+    );
+    const malformedSchemaDirectory = path.join(
+      malformedSchemaProject,
+      ".automovie",
+      "capture",
+      "install-receipts",
+    );
+    const malformedSchemaPath = path.join(
+      malformedSchemaDirectory,
+      captureReceiptGenerationName(nextCaptureReceipt),
+    );
+    fs.mkdirSync(malformedSchemaDirectory, { recursive: true });
+    fs.writeFileSync(
+      malformedSchemaPath,
+      `${JSON.stringify({ ...nextCaptureReceipt, unexpected: true })}\n`,
+    );
+    TestValidator.predicate(
+      "capture install strictly parses the selected immutable receipt",
+      throwsWith(
+        () =>
+          captureBrowserModule.readCaptureInstallReceipt(
+            malformedSchemaProject,
+          ),
+        "is malformed",
+      ),
+    );
+
+    const malformedReceiptProject = path.join(
+      base,
+      "malformed-generation-inventory-project",
+    );
+    const malformedReceiptDirectory = path.join(
+      malformedReceiptProject,
+      ".automovie",
+      "capture",
+      "install-receipts",
+    );
+    fs.mkdirSync(malformedReceiptDirectory, { recursive: true });
+    fs.writeFileSync(path.join(malformedReceiptDirectory, "foreign.txt"), "x");
+    TestValidator.predicate(
+      "capture install rejects a malformed immutable generation inventory",
+      throwsWith(
+        () =>
+          captureBrowserModule.readCaptureInstallReceipt(
+            malformedReceiptProject,
+          ),
+        "inventory is malformed",
+      ),
     );
     const linkedReceiptProject = path.join(base, "linked-receipt-project");
     const linkedReceiptOutside = path.join(base, "linked-receipt-outside");
