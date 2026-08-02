@@ -8040,6 +8040,33 @@ export const test_cli_scaffold = async (): Promise<void> => {
       "force scaffolds into a non-empty target",
       !throws(() => writeFiles(target, files, { force: true })),
     );
+    const splitIdentityScaffold = path.join(base, "split-identity-scaffold");
+    const splitIdentityTarget = path.join(splitIdentityScaffold, "owned.txt");
+    mutableFs.lstatSync = ((file, ...args: unknown[]): unknown => {
+      const status = Reflect.apply(nativeLstat, mutableFs, [
+        file,
+        ...args,
+      ]) as fs.BigIntStats;
+      if (path.resolve(file.toString()) !== splitIdentityTarget) return status;
+      return new Proxy(status, {
+        get: (current, property, receiver): unknown =>
+          property === "ino"
+            ? current.ino + 1n
+            : Reflect.get(current, property, receiver),
+      });
+    }) as typeof fs.lstatSync;
+    let splitIdentityWritten = false;
+    try {
+      writeFiles(splitIdentityScaffold, { "owned.txt": "scaffold identity" });
+      splitIdentityWritten = true;
+    } finally {
+      mutableFs.lstatSync = nativeLstat;
+    }
+    TestValidator.predicate(
+      "scaffold writes separate stable pathname and descriptor identity domains",
+      splitIdentityWritten &&
+        fs.readFileSync(splitIdentityTarget, "utf8") === "scaffold identity",
+    );
     TestValidator.predicate(
       "a traversal key is refused",
       throws(() =>
@@ -8694,10 +8721,29 @@ export const test_cli_scaffold = async (): Promise<void> => {
     const closeFailureBase = path.join(base, "close-failure-scaffold");
     const closeFailureTarget = path.join(closeFailureBase, "complete.txt");
     let scaffoldCloseFailed = false;
+    let closeFailureDescriptor = -1;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+      if (
+        typeof file !== "number" &&
+        path.resolve(file.toString()) === closeFailureTarget &&
+        flags === "wx+"
+      )
+        closeFailureDescriptor = descriptor;
+      return descriptor;
+    }) as typeof fs.openSync;
     mutableFs.closeSync = ((descriptor: number): void => {
       Reflect.apply(nativeClose, mutableFs, [descriptor]);
-      scaffoldCloseFailed = true;
-      throw Object.assign(new Error("scaffold close failed"), { code: "EIO" });
+      if (descriptor === closeFailureDescriptor) {
+        scaffoldCloseFailed = true;
+        throw Object.assign(new Error("scaffold close failed"), {
+          code: "EIO",
+        });
+      }
     }) as typeof fs.closeSync;
     let closeFailureRejected = false;
     try {
@@ -8705,6 +8751,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
         writeFiles(closeFailureBase, { "complete.txt": "close evidence" }),
       );
     } finally {
+      mutableFs.openSync = nativeOpen;
       mutableFs.closeSync = nativeClose;
     }
     TestValidator.predicate(
@@ -8716,6 +8763,21 @@ export const test_cli_scaffold = async (): Promise<void> => {
 
     const doubleFailureBase = path.join(base, "double-failure-scaffold");
     const doubleFailureTarget = path.join(doubleFailureBase, "partial.txt");
+    let doubleFailureDescriptor = -1;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+      if (
+        typeof file !== "number" &&
+        path.resolve(file.toString()) === doubleFailureTarget &&
+        flags === "wx+"
+      )
+        doubleFailureDescriptor = descriptor;
+      return descriptor;
+    }) as typeof fs.openSync;
     mutableFs.writeSync = ((...args: unknown[]): number => {
       const [descriptor, buffer, offset, _length, position] = args as [
         number,
@@ -8737,9 +8799,10 @@ export const test_cli_scaffold = async (): Promise<void> => {
     }) as typeof fs.writeSync;
     mutableFs.closeSync = ((descriptor: number): void => {
       Reflect.apply(nativeClose, mutableFs, [descriptor]);
-      throw Object.assign(new Error("scaffold secondary close failed"), {
-        code: "EIO",
-      });
+      if (descriptor === doubleFailureDescriptor)
+        throw Object.assign(new Error("scaffold secondary close failed"), {
+          code: "EIO",
+        });
     }) as typeof fs.closeSync;
     let doubleFailurePreserved = false;
     try {
@@ -8751,6 +8814,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
         );
       }
     } finally {
+      mutableFs.openSync = nativeOpen;
       mutableFs.writeSync = nativeWrite;
       mutableFs.closeSync = nativeClose;
     }
@@ -8764,15 +8828,32 @@ export const test_cli_scaffold = async (): Promise<void> => {
     const closeTarget = path.join(closeTargetBase, "owned.txt");
     const parkedCloseTarget = path.join(base, "close-target-original.txt");
     let closeTargetSwapped = false;
+    let closeTargetDescriptor = -1;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+      if (
+        typeof file !== "number" &&
+        path.resolve(file.toString()) === closeTarget &&
+        flags === "wx+"
+      )
+        closeTargetDescriptor = descriptor;
+      return descriptor;
+    }) as typeof fs.openSync;
     mutableFs.closeSync = ((descriptor: number): void => {
       Reflect.apply(nativeClose, mutableFs, [descriptor]);
-      nativeRename(closeTarget, parkedCloseTarget);
-      Reflect.apply(nativeWriteFile, mutableFs, [
-        closeTarget,
-        "successor generation",
-        "utf8",
-      ]);
-      closeTargetSwapped = true;
+      if (descriptor === closeTargetDescriptor) {
+        nativeRename(closeTarget, parkedCloseTarget);
+        Reflect.apply(nativeWriteFile, mutableFs, [
+          closeTarget,
+          "successor generation",
+          "utf8",
+        ]);
+        closeTargetSwapped = true;
+      }
     }) as typeof fs.closeSync;
     let closeTargetRejected = false;
     try {
@@ -8780,6 +8861,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
         writeFiles(closeTargetBase, { "owned.txt": "scaffold generation" }),
       );
     } finally {
+      mutableFs.openSync = nativeOpen;
       mutableFs.closeSync = nativeClose;
     }
     TestValidator.predicate(
@@ -8799,11 +8881,28 @@ export const test_cli_scaffold = async (): Promise<void> => {
     fs.mkdirSync(forceCloseTargetBase);
     fs.writeFileSync(forceCloseTarget, "original generation");
     let forceCloseTargetSwapped = false;
+    let forceCloseTargetDescriptor = -1;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+      if (
+        typeof file !== "number" &&
+        path.resolve(file.toString()) === forceCloseTarget &&
+        flags === "r+"
+      )
+        forceCloseTargetDescriptor = descriptor;
+      return descriptor;
+    }) as typeof fs.openSync;
     mutableFs.closeSync = ((descriptor: number): void => {
       Reflect.apply(nativeClose, mutableFs, [descriptor]);
-      nativeRename(forceCloseTarget, parkedForceCloseTarget);
-      nativeWriteFile(forceCloseTarget, "successor generation");
-      forceCloseTargetSwapped = true;
+      if (descriptor === forceCloseTargetDescriptor) {
+        nativeRename(forceCloseTarget, parkedForceCloseTarget);
+        nativeWriteFile(forceCloseTarget, "successor generation");
+        forceCloseTargetSwapped = true;
+      }
     }) as typeof fs.closeSync;
     let forceCloseTargetRejected = false;
     try {
@@ -8815,6 +8914,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
         ),
       );
     } finally {
+      mutableFs.openSync = nativeOpen;
       mutableFs.closeSync = nativeClose;
     }
     TestValidator.predicate(
@@ -8831,11 +8931,28 @@ export const test_cli_scaffold = async (): Promise<void> => {
     const closeParentTarget = path.join(closeParent, "owned.txt");
     const parkedCloseParent = `${closeParent}.parked`;
     let closeParentSwapped = false;
+    let closeParentDescriptor = -1;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+      if (
+        typeof file !== "number" &&
+        path.resolve(file.toString()) === closeParentTarget &&
+        flags === "wx+"
+      )
+        closeParentDescriptor = descriptor;
+      return descriptor;
+    }) as typeof fs.openSync;
     mutableFs.closeSync = ((descriptor: number): void => {
       Reflect.apply(nativeClose, mutableFs, [descriptor]);
-      nativeRename(closeParent, parkedCloseParent);
-      fs.symlinkSync(parkedCloseParent, closeParent, "junction");
-      closeParentSwapped = true;
+      if (descriptor === closeParentDescriptor) {
+        nativeRename(closeParent, parkedCloseParent);
+        fs.symlinkSync(parkedCloseParent, closeParent, "junction");
+        closeParentSwapped = true;
+      }
     }) as typeof fs.closeSync;
     let closeParentRejected = false;
     try {
@@ -8845,6 +8962,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
         }),
       );
     } finally {
+      mutableFs.openSync = nativeOpen;
       mutableFs.closeSync = nativeClose;
     }
     TestValidator.predicate(
@@ -8861,11 +8979,28 @@ export const test_cli_scaffold = async (): Promise<void> => {
     const closeRootTarget = path.join(closeRootBase, "owned.txt");
     const parkedCloseRoot = `${closeRootBase}.parked`;
     let closeRootSwapped = false;
+    let closeRootDescriptor = -1;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+      if (
+        typeof file !== "number" &&
+        path.resolve(file.toString()) === closeRootTarget &&
+        flags === "wx+"
+      )
+        closeRootDescriptor = descriptor;
+      return descriptor;
+    }) as typeof fs.openSync;
     mutableFs.closeSync = ((descriptor: number): void => {
       Reflect.apply(nativeClose, mutableFs, [descriptor]);
-      nativeRename(closeRootBase, parkedCloseRoot);
-      fs.symlinkSync(parkedCloseRoot, closeRootBase, "junction");
-      closeRootSwapped = true;
+      if (descriptor === closeRootDescriptor) {
+        nativeRename(closeRootBase, parkedCloseRoot);
+        fs.symlinkSync(parkedCloseRoot, closeRootBase, "junction");
+        closeRootSwapped = true;
+      }
     }) as typeof fs.closeSync;
     let closeRootRejected = false;
     try {
@@ -8873,6 +9008,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
         writeFiles(closeRootBase, { "owned.txt": "scaffold generation" }),
       );
     } finally {
+      mutableFs.openSync = nativeOpen;
       mutableFs.closeSync = nativeClose;
     }
     TestValidator.predicate(

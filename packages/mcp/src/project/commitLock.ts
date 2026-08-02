@@ -54,20 +54,17 @@ const readCommitLockSnapshot = (
 ): ICommitLockSnapshot | null => {
   const linked = fs.lstatSync(lockPath, { bigint: true });
   if (linked.isSymbolicLink() || linked.isFile() === false) return null;
+  const linkedIdentity = lockIdentity(linked);
   const descriptor = fs.openSync(lockPath, "r");
   try {
     const opened = fs.fstatSync(descriptor, { bigint: true });
-    if (
-      opened.isFile() === false ||
-      lockIdentity(opened) !== lockIdentity(linked)
-    )
-      return null;
+    if (opened.isFile() === false) return null;
     const token = fs.readFileSync(descriptor, "utf8");
     const resident = fs.lstatSync(lockPath, { bigint: true });
     if (
       resident.isSymbolicLink() ||
       resident.isFile() === false ||
-      lockIdentity(resident) !== lockIdentity(opened)
+      lockIdentity(resident) !== linkedIdentity
     )
       return null;
     const residentDescriptor = fs.openSync(lockPath, "r");

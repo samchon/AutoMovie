@@ -1744,6 +1744,37 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
     fs.writeFileSync(resident, "resident");
     fs.writeFileSync(outside, "outside");
 
+    const splitIdentity = path.join(ownedRoot, "split-identity.json");
+    fs.writeFileSync(splitIdentity, "split identity");
+    const nativeLstat = fs.lstatSync;
+    fs.lstatSync = ((target, options) => {
+      const status = nativeLstat(target, options);
+      if (path.resolve(target.toString()) !== path.resolve(splitIdentity))
+        return status;
+      return new Proxy(status as fs.BigIntStats, {
+        get: (current, property, receiver): unknown =>
+          property === "ino"
+            ? current.ino + 1n
+            : Reflect.get(current, property, receiver),
+      });
+    }) as typeof fs.lstatSync;
+    const splitIdentityBytes = (() => {
+      try {
+        return readAutoMovieProductionOwnedFile({
+          root: ownedRoot,
+          directory: ownedRoot,
+          relative: "split-identity.json",
+        });
+      } finally {
+        fs.lstatSync = nativeLstat;
+      }
+    })();
+    TestValidator.equals(
+      "production-owned reads separate stable pathname and descriptor identity domains",
+      Buffer.from(splitIdentityBytes).toString("utf8"),
+      "split identity",
+    );
+
     const directBytes = readAutoMovieProductionOwnedFile({
       root: ownedRoot,
       directory: ownedRoot,

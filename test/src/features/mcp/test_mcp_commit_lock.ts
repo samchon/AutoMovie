@@ -146,6 +146,7 @@ export const test_mcp_commit_lock = (): void => {
       false,
     );
 
+    exerciseSplitPathDescriptorIdentity(dir);
     exerciseRejectedSnapshots(dir);
     exerciseQuarantineRecovery(dir);
     exerciseReleaseFailures(dir);
@@ -210,6 +211,28 @@ const mutateLockStatus = (
       return Reflect.get(target, property, receiver);
     },
   });
+
+const exerciseSplitPathDescriptorIdentity = (dir: string): void => {
+  const lockPath = path.join(dir, "split-path-descriptor.lock");
+  const token = acquireCommitLock(lockPath);
+  const nativeLstat = fs.lstatSync;
+  mutableFs.lstatSync = ((target, options) => {
+    const status = nativeLstat(target, options);
+    return path.resolve(target.toString()) === path.resolve(lockPath)
+      ? mutateLockStatus(status as fs.BigIntStats, "identity")
+      : status;
+  }) as typeof fs.lstatSync;
+  try {
+    releaseCommitLock(lockPath, token);
+  } finally {
+    mutableFs.lstatSync = nativeLstat;
+  }
+  TestValidator.equals(
+    "release accepts stable pathname and descriptor identity domains",
+    fs.existsSync(lockPath),
+    false,
+  );
+};
 
 const exerciseRejectedSnapshots = (dir: string): void => {
   const variants: Array<{

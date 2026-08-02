@@ -189,12 +189,12 @@ const createScaffoldFile = (props: {
     const opened = fs.fstatSync(descriptor, { bigint: true });
     assertOrdinarySingleLinkFile(opened, props.target);
     assertScaffoldOwnership(props.base, props.parent);
-    assertScaffoldFileMatches(captureScaffoldFile(props.target), opened);
+    assertScaffoldFileDescriptor(captureScaffoldFile(props.target), descriptor);
     writeScaffoldDescriptor(descriptor, props.target, props.bytes);
     const completed = fs.fstatSync(descriptor, { bigint: true });
     if (completed.size !== BigInt(props.bytes.byteLength))
       throw new Error(`scaffold file changed final size: ${props.target}`);
-    assertScaffoldFileMatches(captureScaffoldFile(props.target), completed);
+    assertScaffoldFileDescriptor(captureScaffoldFile(props.target), descriptor);
     assertScaffoldDescriptorBytes(descriptor, props.target, props.bytes);
     const finalStatus = fs.fstatSync(descriptor, { bigint: true });
     if (physicalVersion(finalStatus) !== physicalVersion(completed))
@@ -202,7 +202,7 @@ const createScaffoldFile = (props: {
         `scaffold file changed after final readback: ${props.target}`,
       );
     completedSnapshot = captureScaffoldFile(props.target);
-    assertScaffoldFileMatches(completedSnapshot, finalStatus);
+    assertScaffoldFileDescriptor(completedSnapshot, descriptor);
     assertScaffoldOwnership(props.base, props.parent);
   } catch (error) {
     failed = true;
@@ -227,21 +227,14 @@ const overwriteScaffoldFile = (props: {
   try {
     const opened = fs.fstatSync(descriptor, { bigint: true });
     assertOrdinarySingleLinkFile(opened, props.target);
-    if (
-      physicalIdentity(opened) !== props.existing.identity ||
-      physicalVersion(opened) !== props.existing.version
-    )
-      throw new Error(
-        `scaffold file changed before force write: ${props.target}`,
-      );
+    assertScaffoldFileDescriptor(props.existing, descriptor);
     assertScaffoldOwnership(props.base, props.parent);
-    assertScaffoldFileMatches(captureScaffoldFile(props.target), opened);
     fs.ftruncateSync(descriptor, 0);
     writeScaffoldDescriptor(descriptor, props.target, props.bytes);
     const completed = fs.fstatSync(descriptor, { bigint: true });
     if (completed.size !== BigInt(props.bytes.byteLength))
       throw new Error(`scaffold file changed final size: ${props.target}`);
-    assertScaffoldFileMatches(captureScaffoldFile(props.target), completed);
+    assertScaffoldFileDescriptor(captureScaffoldFile(props.target), descriptor);
     assertScaffoldDescriptorBytes(descriptor, props.target, props.bytes);
     const finalStatus = fs.fstatSync(descriptor, { bigint: true });
     if (physicalVersion(finalStatus) !== physicalVersion(completed))
@@ -249,7 +242,7 @@ const overwriteScaffoldFile = (props: {
         `scaffold file changed after final readback: ${props.target}`,
       );
     completedSnapshot = captureScaffoldFile(props.target);
-    assertScaffoldFileMatches(completedSnapshot, finalStatus);
+    assertScaffoldFileDescriptor(completedSnapshot, descriptor);
     assertScaffoldOwnership(props.base, props.parent);
   } catch (error) {
     failed = true;
@@ -272,15 +265,29 @@ const captureScaffoldFile = (file: string): IScaffoldFileSnapshot => {
   };
 };
 
-const assertScaffoldFileMatches = (
+const assertScaffoldFileDescriptor = (
   snapshot: IScaffoldFileSnapshot,
-  status: fs.BigIntStats,
+  descriptor: number,
 ): void => {
-  if (
-    snapshot.identity !== physicalIdentity(status) ||
-    snapshot.version !== physicalVersion(status)
-  )
-    throw new Error(`scaffold file changed generation: ${snapshot.path}`);
+  assertScaffoldFileSnapshot(snapshot);
+  const opened = fs.fstatSync(descriptor, { bigint: true });
+  assertOrdinarySingleLinkFile(opened, snapshot.path);
+  const residentDescriptor = fs.openSync(snapshot.path, "r");
+  let failed = false;
+  try {
+    const resident = fs.fstatSync(residentDescriptor, { bigint: true });
+    assertOrdinarySingleLinkFile(resident, snapshot.path);
+    if (physicalVersion(resident) !== physicalVersion(opened))
+      throw new Error(
+        `scaffold file descriptor changed resident generation: ${snapshot.path}`,
+      );
+    assertScaffoldFileSnapshot(snapshot);
+  } catch (error) {
+    failed = true;
+    throw error;
+  } finally {
+    closeScaffoldDescriptor(residentDescriptor, failed);
+  }
 };
 
 const assertScaffoldFileSnapshot = (snapshot: IScaffoldFileSnapshot): void => {

@@ -804,13 +804,12 @@ export function readAutoMovieProductionOwnedFile(props: {
       target,
       descriptor,
     );
-    if (openedIdentity !== linkedIdentity)
-      throw new Error(
-        `Production-owned path "${target}" changed physical identity before it was opened.`,
-      );
     const assertResidentFile = (): void => {
       assertResidentDirectories();
-      productionOwnedFileIdentity(target);
+      if (productionOwnedFileIdentity(target) !== linkedIdentity)
+        throw new Error(
+          `Production-owned path "${target}" changed physical identity while it was read.`,
+        );
       const residentDescriptor = fs.openSync(target, "r");
       try {
         if (
