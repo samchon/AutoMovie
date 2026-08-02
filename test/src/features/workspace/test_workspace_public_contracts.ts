@@ -1082,7 +1082,7 @@ const renderRasterArgumentContract = (
         );
         numberParserParameters.push(
           declaration.initializer.parameters.map((parameter) =>
-            compact(parameter.name),
+            compact(parameter),
           ),
         );
       }
@@ -1091,7 +1091,7 @@ const renderRasterArgumentContract = (
         helperBodies.push(body.statements.map((action) => compact(action)));
         parameters.push(
           declaration.initializer.parameters.map((parameter) =>
-            compact(parameter.name),
+            compact(parameter),
           ),
         );
         for (const action of body.statements) {
@@ -2372,7 +2372,9 @@ export const test_workspace_public_contracts = (): void => {
               error: "`${label}mustbeapositiveeveninteger`",
             },
           ],
-          parameters: [["value", "fallback", "label"]],
+          parameters: [
+            ["value:string|undefined", "fallback:number", "label:string"],
+          ],
           parsed: ["positiveNumber(value,fallback,label)"],
           returns: ["parsed"],
         },
@@ -2387,7 +2389,9 @@ export const test_workspace_public_contracts = (): void => {
             ],
           ],
           count: 1,
-          parameters: [["value", "fallback", "label"]],
+          parameters: [
+            ["value:string|undefined", "fallback:number", "label:string"],
+          ],
         },
         parseArgs: {
           count: 1,
