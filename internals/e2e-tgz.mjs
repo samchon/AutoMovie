@@ -200,7 +200,10 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
 const assert = (name, condition, detail) => {
-  if (!condition) throw new Error(\`✗ \${name}: \${detail}\`);
+  if (!condition) {
+    console.error(\`✗ \${name}: \${detail}\`);
+    process.exit(1);
+  }
   console.log(\`✓ \${name}\`);
 };
 
@@ -300,10 +303,7 @@ import {
 } from "./scripts/capture.ts";
 
 const assert = (name, condition, detail) => {
-  if (!condition) {
-    console.error(\`✗ \${name}: \${detail}\`);
-    process.exit(1);
-  }
+  if (!condition) throw new Error(\`✗ \${name}: \${detail}\`);
   console.log(\`✓ \${name}\`);
 };
 const namedFiles = (root, name) => {
