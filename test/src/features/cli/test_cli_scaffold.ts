@@ -134,6 +134,270 @@ const constFunctionThrows = (
   return throws;
 };
 
+/** Inspect capture-doctor resource ownership and failure-preserving cleanup. */
+const captureDoctorCleanupContract = (
+  source: string,
+): {
+  executionActions: string[];
+  lifecycles: Record<
+    "browser" | "page",
+    {
+      catchActions: string[];
+      catchParameter: string | null;
+      finallyActions: string[];
+      tryActions: string[];
+    } | null
+  >;
+  policy: { bodies: string[][]; count: number; parameters: string[][] };
+  resources: Record<
+    "browserFailure" | "page" | "pageFailure" | "session",
+    {
+      count: number;
+      initializer: string | null;
+      kind: string | null;
+      scopeCount: number;
+    }
+  >;
+  writes: Record<
+    "browserFailure" | "page" | "pageFailure" | "session",
+    string[]
+  >;
+} => {
+  const parsed = ts.createSourceFile(
+    "scripts/capture-doctor.ts",
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TS,
+  );
+  const compact = (node: ts.Node): string =>
+    node.getText(parsed).replace(/\s+/g, "");
+  const action = (statement: ts.Statement): string => {
+    if (
+      ts.isVariableStatement(statement) &&
+      statement.declarationList.declarations.length === 1
+    ) {
+      const declaration = statement.declarationList.declarations[0]!;
+      if (ts.isIdentifier(declaration.name)) return declaration.name.text;
+    }
+    if (ts.isTryStatement(statement)) return "try";
+    if (ts.isIfStatement(statement)) return "if";
+    if (
+      ts.isForStatement(statement) ||
+      ts.isForInStatement(statement) ||
+      ts.isForOfStatement(statement)
+    )
+      return "for";
+    if (ts.isExpressionStatement(statement)) {
+      const expression = ts.isAwaitExpression(statement.expression)
+        ? statement.expression.expression
+        : statement.expression;
+      if (ts.isCallExpression(expression))
+        return compact(expression.expression);
+    }
+    return compact(statement);
+  };
+  const policyBodies: string[][] = [];
+  const policyParameters: string[][] = [];
+  for (const statement of parsed.statements) {
+    if (ts.isVariableStatement(statement) === false) continue;
+    for (const declaration of statement.declarationList.declarations)
+      if (
+        ts.isIdentifier(declaration.name) &&
+        declaration.name.text === "preserveCleanupFailure" &&
+        declaration.initializer !== undefined &&
+        ts.isArrowFunction(declaration.initializer) &&
+        ts.isBlock(declaration.initializer.body)
+      ) {
+        policyParameters.push(
+          declaration.initializer.parameters.map((parameter) =>
+            compact(parameter),
+          ),
+        );
+        policyBodies.push(declaration.initializer.body.statements.map(compact));
+      }
+  }
+  const directTries = (statements: ts.NodeArray<ts.Statement> | undefined) =>
+    statements?.filter(ts.isTryStatement) ?? [];
+  const browserTries = directTries(parsed.statements);
+  const browser = browserTries.length === 1 ? browserTries[0]! : undefined;
+  const pageTries = directTries(browser?.tryBlock.statements);
+  const page = pageTries.length === 1 ? pageTries[0]! : undefined;
+  const lifecycle = (
+    statement: ts.TryStatement | undefined,
+  ): {
+    catchActions: string[];
+    catchParameter: string | null;
+    finallyActions: string[];
+    tryActions: string[];
+  } | null =>
+    statement?.catchClause === undefined || statement.finallyBlock === undefined
+      ? null
+      : {
+          catchActions: statement.catchClause.block.statements.map(compact),
+          catchParameter:
+            statement.catchClause.variableDeclaration === undefined
+              ? null
+              : compact(statement.catchClause.variableDeclaration),
+          finallyActions: statement.finallyBlock.statements.map(compact),
+          tryActions: statement.tryBlock.statements.map(action),
+        };
+  const declarationCount = (name: string): number => {
+    let count = 0;
+    const visit = (node: ts.Node): void => {
+      if (
+        ts.isVariableDeclaration(node) &&
+        ts.isIdentifier(node.name) &&
+        node.name.text === name
+      )
+        ++count;
+      ts.forEachChild(node, visit);
+    };
+    visit(parsed);
+    return count;
+  };
+  const binding = (
+    statements: ts.NodeArray<ts.Statement> | undefined,
+    name: string,
+  ): {
+    count: number;
+    initializer: string | null;
+    kind: string | null;
+    scopeCount: number;
+  } => {
+    const declarations = (statements ?? []).flatMap((statement) =>
+      ts.isVariableStatement(statement)
+        ? [...statement.declarationList.declarations].filter(
+            (declaration) =>
+              ts.isIdentifier(declaration.name) &&
+              declaration.name.text === name,
+          )
+        : [],
+    );
+    const declaration =
+      declarations.length === 1 ? declarations[0]! : undefined;
+    const declarationList = declaration?.parent;
+    return {
+      count: declarationCount(name),
+      initializer:
+        declaration?.initializer === undefined
+          ? null
+          : compact(declaration.initializer),
+      kind:
+        declarationList === undefined ||
+        ts.isVariableDeclarationList(declarationList) === false
+          ? null
+          : (declarationList.flags & ts.NodeFlags.Const) !== 0
+            ? "const"
+            : (declarationList.flags & ts.NodeFlags.Let) !== 0
+              ? "let"
+              : "var",
+      scopeCount: declarations.length,
+    };
+  };
+  const tracked = ["browserFailure", "page", "pageFailure", "session"] as const;
+  const writes = Object.fromEntries(
+    tracked.map((name) => [name, [] as string[]]),
+  ) as Record<(typeof tracked)[number], string[]>;
+  const writtenBindings = (target: ts.Expression): string[] => {
+    if (ts.isIdentifier(target))
+      return tracked.includes(target.text as (typeof tracked)[number])
+        ? [target.text]
+        : [];
+    if (
+      ts.isParenthesizedExpression(target) ||
+      ts.isAsExpression(target) ||
+      ts.isTypeAssertionExpression(target) ||
+      ts.isSatisfiesExpression(target) ||
+      ts.isNonNullExpression(target)
+    )
+      return writtenBindings(target.expression);
+    if (
+      ts.isPropertyAccessExpression(target) ||
+      ts.isElementAccessExpression(target)
+    )
+      return writtenBindings(target.expression);
+    if (ts.isArrayLiteralExpression(target))
+      return target.elements.flatMap((element) =>
+        ts.isOmittedExpression(element)
+          ? []
+          : ts.isSpreadElement(element)
+            ? writtenBindings(element.expression)
+            : writtenBindings(element),
+      );
+    if (ts.isObjectLiteralExpression(target))
+      return target.properties.flatMap((property) => {
+        if (ts.isShorthandPropertyAssignment(property))
+          return tracked.includes(
+            property.name.text as (typeof tracked)[number],
+          )
+            ? [property.name.text]
+            : [];
+        if (ts.isPropertyAssignment(property))
+          return writtenBindings(property.initializer);
+        if (ts.isSpreadAssignment(property))
+          return writtenBindings(property.expression);
+        return [];
+      });
+    return [];
+  };
+  const visitWrites = (node: ts.Node): void => {
+    if (
+      ts.isBinaryExpression(node) &&
+      node.operatorToken.kind >= ts.SyntaxKind.FirstAssignment &&
+      node.operatorToken.kind <= ts.SyntaxKind.LastAssignment
+    )
+      for (const name of new Set(writtenBindings(node.left)))
+        writes[name as (typeof tracked)[number]].push(compact(node));
+    else if (
+      (ts.isForInStatement(node) || ts.isForOfStatement(node)) &&
+      ts.isVariableDeclarationList(node.initializer) === false
+    )
+      for (const name of new Set(writtenBindings(node.initializer)))
+        writes[name as (typeof tracked)[number]].push(compact(node));
+    else if (
+      (ts.isPrefixUnaryExpression(node) || ts.isPostfixUnaryExpression(node)) &&
+      (node.operator === ts.SyntaxKind.PlusPlusToken ||
+        node.operator === ts.SyntaxKind.MinusMinusToken)
+    )
+      for (const name of new Set(writtenBindings(node.operand)))
+        writes[name as (typeof tracked)[number]].push(compact(node));
+    ts.forEachChild(node, visitWrites);
+  };
+  visitWrites(parsed);
+  const sessionStatement = parsed.statements.findIndex(
+    (statement) =>
+      ts.isVariableStatement(statement) &&
+      statement.declarationList.declarations.some(
+        (declaration) =>
+          ts.isIdentifier(declaration.name) &&
+          declaration.name.text === "session",
+      ),
+  );
+  return {
+    executionActions:
+      sessionStatement < 0
+        ? []
+        : parsed.statements.slice(sessionStatement).map(action),
+    lifecycles: {
+      browser: lifecycle(browser),
+      page: lifecycle(page),
+    },
+    policy: {
+      bodies: policyBodies,
+      count: policyBodies.length,
+      parameters: policyParameters,
+    },
+    resources: {
+      browserFailure: binding(parsed.statements, "browserFailure"),
+      page: binding(browser?.tryBlock.statements, "page"),
+      pageFailure: binding(browser?.tryBlock.statements, "pageFailure"),
+      session: binding(parsed.statements, "session"),
+    },
+    writes,
+  };
+};
+
 interface ICaptureContractCheck {
   contract: string;
   satisfied: boolean;
@@ -201,6 +465,8 @@ const captureContractFailures = (
  *     streaming it, so the upstream async iterator can terminate.
  * 19. Descriptor-bound capture installation preserves child output and names spawn,
  *     signal, missing-status, and ordinary exit failures.
+ * 20. Capture doctor page and browser cleanup preserve the primary diagnostic while
+ *     retaining deterministic nested resource ownership.
  */
 export const test_cli_scaffold = async (): Promise<void> => {
   // 5. packaging guard: the scaffold dir must be a published `files` entry.
@@ -223,6 +489,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
 
   const files = renderScaffold({ name: "demo-film" });
   const captureBrowserScript = files["scripts/capture-browser.ts"]!;
+  const captureDoctorScript = files["scripts/capture-doctor.ts"]!;
   const captureInstallOutputOffset = captureBrowserScript.indexOf(
     "const writeCaptureInstallCommandOutput",
   );
@@ -257,6 +524,92 @@ export const test_cli_scaffold = async (): Promise<void> => {
     statement.includes("captureInstallCommandTermination"),
   );
   const captureInstallFailureThrow = captureInstallFailureThrows[0] ?? "";
+  TestValidator.equals(
+    "capture doctor preserves primary failures during nested cleanup",
+    captureDoctorCleanupContract(captureDoctorScript),
+    {
+      executionActions: ["session", "browserFailure", "try"],
+      lifecycles: {
+        browser: {
+          catchActions: ["browserFailure={error};", "throwerror;"],
+          catchParameter: "error",
+          finallyActions: [
+            'awaitpreserveCleanupFailure(browserFailure,"capturedoctorbrowser",()=>session.browser.close(),);',
+          ],
+          tryActions: ["page", "pageFailure", "try"],
+        },
+        page: {
+          catchActions: ["pageFailure={error};", "throwerror;"],
+          catchParameter: "error",
+          finallyActions: [
+            'awaitpreserveCleanupFailure(pageFailure,"capturedoctorpage",()=>page.close(),);',
+          ],
+          tryActions: [
+            "page.setContent",
+            "graphics",
+            "bytes",
+            "png",
+            "if",
+            "visiblePixel",
+            "for",
+            "if",
+            "runtimeIdentity",
+            "rendererIdentity",
+            "process.stdout.write",
+          ],
+        },
+      },
+      policy: {
+        bodies: [
+          [
+            "try{awaitcleanup();}catch(cleanupError){if(failure===undefined)throwcleanupError;thrownewAggregateError([failure.error,cleanupError],`${resource}cleanupfailedafterthecapturedoctorfailed.`,);}",
+          ],
+        ],
+        count: 1,
+        parameters: [
+          [
+            "failure:CaptureDoctorFailure|undefined",
+            "resource:string",
+            "cleanup:()=>unknown",
+          ],
+        ],
+      },
+      resources: {
+        browserFailure: {
+          count: 1,
+          initializer: null,
+          kind: "let",
+          scopeCount: 1,
+        },
+        page: {
+          count: 1,
+          initializer:
+            "awaitsession.browser.newPage({viewport:{width:16,height:16},deviceScaleFactor:session.runtime.mode.deviceScaleFactor,})",
+          kind: "const",
+          scopeCount: 1,
+        },
+        pageFailure: {
+          count: 1,
+          initializer: null,
+          kind: "let",
+          scopeCount: 1,
+        },
+        session: {
+          count: 1,
+          initializer:
+            "awaitlaunchCaptureBrowser(process.cwd(),config.capture.browser,)",
+          kind: "const",
+          scopeCount: 1,
+        },
+      },
+      writes: {
+        browserFailure: ["browserFailure={error}"],
+        page: [],
+        pageFailure: ["pageFailure={error}"],
+        session: [],
+      },
+    },
+  );
   TestValidator.equals(
     "sort oracle distinguishes calls from source trivia and comparators",
     comparatorFreeSortCalls({
