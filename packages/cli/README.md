@@ -105,7 +105,7 @@ Render plans use an append-only predecessor chain with one immutable no-overwrit
 
 Dialogue synthesis caches each content key as one immutable directory, publishes both file slots through descriptor-bound `O_EXCL` with `audio.f32` before `receipt.json`, and accepts a cache hit only from one captured and revalidated two-file generation. Legacy sibling `.f32` and `.json` entries are ignored and regenerated without replacement.
 
-Proxy finalization publishes content-addressed materialized directories without replacing existing paths: payload files use descriptor-bound candidates and no-overwrite hard links, the root receipt appears last, and every manifest path remains an ordinary render-root-relative file that external consumers can open directly.
+Proxy finalization publishes content-addressed materialized directories without replacing existing paths: each payload reserves and writes its final pathname directly through descriptor-bound `O_EXCL`, the root receipt appears last, and every manifest path remains an ordinary render-root-relative file that external consumers can open directly.
 
 Chunk workers publish complete UUID claims before they become visible inside a
 slot-specific lock namespace. They yield to every other live claim and remove

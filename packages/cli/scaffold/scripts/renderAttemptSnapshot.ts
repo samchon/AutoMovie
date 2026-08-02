@@ -266,16 +266,8 @@ const publishAttemptRecord = (props: {
   predecessor: IRenderGcTargetSnapshot | null;
   target: string;
 }): IRenderAttemptSnapshot => {
-  const candidatePath = `${props.target}.${process.pid}.${randomUUID()}.attempt-candidate`;
   props.assertOwnership();
-  const candidate = createRenderGcFileSnapshot(
-    props.base,
-    candidatePath,
-    props.bytes,
-  );
-  let linked: IRenderGcTargetSnapshot | null = null;
-  let cleanupCandidate = candidate;
-  let candidateRemoved = false;
+  let published: IRenderGcTargetSnapshot | null = null;
   try {
     props.assertOwnership();
     if (props.predecessor !== null) {
@@ -283,33 +275,16 @@ const publishAttemptRecord = (props: {
       removeExactAttempt(props.predecessor);
       props.assertOwnership();
     }
-    fs.linkSync(candidate.target, props.target);
-    const capturedLinked = captureRenderGcTarget(props.base, props.target);
-    assertSameAttemptFile(candidate, capturedLinked);
-    const capturedCandidate = captureRenderGcTarget(
+    published = createRenderGcFileSnapshot(
       props.base,
-      candidate.target,
+      props.target,
+      props.bytes,
     );
-    assertSameAttemptFile(candidate, capturedCandidate);
-    if (capturedCandidate.targetVersion !== capturedLinked.targetVersion)
-      throw new Error(
-        "Render attempt link generation changed before cleanup binding.",
-      );
-    props.assertOwnership();
-    linked = capturedLinked;
-    cleanupCandidate = capturedCandidate;
-
-    removeExactAttempt(cleanupCandidate);
-    candidateRemoved = true;
-    const published = captureRenderGcTarget(props.base, props.target);
-    assertSameAttemptFile(candidate, published);
     props.assertOwnership();
     return readRenderAttempt(published);
   } catch (error) {
-    if (linked !== null) tryRemoveExactAttempt(linked);
+    if (published !== null) tryRemoveExactAttempt(published);
     throw error;
-  } finally {
-    if (candidateRemoved === false) tryRemoveExactAttempt(cleanupCandidate);
   }
 };
 
@@ -358,20 +333,6 @@ const assertSnapshotCurrent = (snapshot: IRenderGcTargetSnapshot): void => {
     current.namespaceFingerprint !== snapshot.namespaceFingerprint
   )
     throw new Error(`Render attempt "${snapshot.target}" changed ownership.`);
-};
-
-const assertSameAttemptFile = (
-  expected: IRenderGcTargetSnapshot,
-  current: IRenderGcTargetSnapshot,
-): void => {
-  if (
-    current.kind !== "file" ||
-    current.base.identity !== expected.base.identity ||
-    current.targetIdentity !== expected.targetIdentity ||
-    current.contentFingerprint !== expected.contentFingerprint ||
-    current.fileDigest !== expected.fileDigest
-  )
-    throw new Error("Render attempt publication used another physical file.");
 };
 
 const tryRemoveExactAttempt = (snapshot: IRenderGcTargetSnapshot): void => {

@@ -1,12 +1,10 @@
 import { digestAutoMovieBytes } from "@automovie/mcp";
-import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 
 import {
   type IRenderGcPhysicalDirectory,
   type IRenderGcTargetSnapshot,
-  RENDER_GC_PRESERVED_PREFIX,
   assertCapturedRenderGcFileEntry,
   assertCapturedRenderTarget,
   assertRenderPhysicalDirectoryIdentity,
@@ -15,7 +13,6 @@ import {
   createRenderGcFileSnapshot,
   ensureRenderPhysicalDirectory,
   readCapturedRenderGcFile,
-  removeCapturedRenderGcTarget,
 } from "./renderGcSnapshot";
 
 const PROXY_PUBLICATION_RECEIPT_MAX_BYTES = 8 * 1024 * 1024;
@@ -229,69 +226,32 @@ const publishExpectedFile = (props: {
     );
     return;
   }
-  const candidatePath = path.join(
-    props.ownership.candidates.path,
-    `.${path.basename(props.target.path)}.${process.pid}.${randomUUID()}.candidate`,
-  );
   assertPublicationDirectories(
     props.ownership,
     props.target,
     props.directories.values(),
   );
-  const candidate = createRenderGcFileSnapshot(
-    props.renderRoot,
-    candidatePath,
-    props.entry.bytes,
-  );
-  let linkSucceeded = false;
-  let cleanup = candidate;
   try {
-    assertPublicationDirectories(
-      props.ownership,
-      props.target,
-      props.directories.values(),
-    );
-    try {
-      fs.linkSync(candidate.target, destination);
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
-      const successor = captureRenderGcTarget(props.renderRoot, destination);
-      assertExpectedFile(successor, props.entry);
-      assertPublicationDirectories(
-        props.ownership,
-        props.target,
-        props.directories.values(),
-      );
-      return;
-    }
-    linkSucceeded = true;
-    const linked = captureRenderGcTarget(props.renderRoot, destination);
-    assertSamePhysicalFile(candidate, linked);
-    const capturedCandidate = captureRenderGcTarget(
+    const published = createRenderGcFileSnapshot(
       props.renderRoot,
-      candidate.target,
+      destination,
+      props.entry.bytes,
     );
-    assertSamePhysicalFile(candidate, capturedCandidate);
-    if (linked.targetVersion !== capturedCandidate.targetVersion)
-      throw new Error("Proxy publication link generation changed at commit.");
-    assertPublicationDirectories(
-      props.ownership,
-      props.target,
-      props.directories.values(),
-    );
-    cleanup = capturedCandidate;
-    if (removeOwnedCandidate(cleanup, props.ownership) === false)
-      throw new Error("Proxy publication candidate cleanup lost ownership.");
-    const published = captureRenderGcTarget(props.renderRoot, destination);
-    assertSamePhysicalFile(linked, published);
     assertExpectedFile(published, props.entry);
     assertPublicationDirectories(
       props.ownership,
       props.target,
       props.directories.values(),
     );
-  } finally {
-    if (linkSucceeded === false) removeOwnedCandidate(cleanup, props.ownership);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+    const winner = captureRenderGcTarget(props.renderRoot, destination);
+    assertExpectedFile(winner, props.entry);
+    assertPublicationDirectories(
+      props.ownership,
+      props.target,
+      props.directories.values(),
+    );
   }
 };
 
@@ -341,22 +301,7 @@ const assertExpectedFile = (
   assertCapturedRenderTarget(snapshot);
 };
 
-const assertSamePhysicalFile = (
-  expected: IRenderGcTargetSnapshot,
-  current: IRenderGcTargetSnapshot,
-): void => {
-  if (
-    current.kind !== "file" ||
-    current.base.identity !== expected.base.identity ||
-    current.targetIdentity !== expected.targetIdentity ||
-    current.contentFingerprint !== expected.contentFingerprint ||
-    current.fileDigest !== expected.fileDigest
-  )
-    throw new Error("Proxy publication used another physical candidate file.");
-};
-
 interface IProxyPublicationOwnership {
-  candidates: IRenderGcPhysicalDirectory;
   parent: IRenderGcPhysicalDirectory;
   root: IRenderGcPhysicalDirectory;
 }
@@ -381,20 +326,12 @@ const capturePublicationOwnership = (
     path.isAbsolute(relative)
   )
     throw new Error("Proxy publication parent escapes its physical root.");
-  const candidateRoot = ensureRenderPhysicalDirectory(
-    root.path,
-    `${RENDER_GC_PRESERVED_PREFIX}proxy-candidates`,
-  );
-  const candidates = captureRenderPhysicalDirectory(
-    candidateRoot,
-    "proxy publication candidate root",
-  );
   assertRenderPhysicalDirectoryIdentity(root, "proxy publication root");
   assertRenderPhysicalDirectoryIdentity(
     physicalParent,
     "proxy publication parent",
   );
-  return { candidates, parent: physicalParent, root };
+  return { parent: physicalParent, root };
 };
 
 const assertPublicationOwnership = (
@@ -403,10 +340,6 @@ const assertPublicationOwnership = (
   assertRenderPhysicalDirectoryIdentity(
     ownership.root,
     "proxy publication root",
-  );
-  assertRenderPhysicalDirectoryIdentity(
-    ownership.candidates,
-    "proxy publication candidate root",
   );
   assertRenderPhysicalDirectoryIdentity(
     ownership.parent,
@@ -426,36 +359,6 @@ const assertPublicationDirectories = (
       directory,
       "proxy publication directory",
     );
-};
-
-const removeOwnedCandidate = (
-  expected: IRenderGcTargetSnapshot,
-  ownership: IProxyPublicationOwnership,
-): boolean => {
-  try {
-    assertPublicationOwnership(ownership);
-    removeExactTarget(expected);
-    assertPublicationOwnership(ownership);
-    return true;
-  } catch {
-    return false;
-  }
-};
-
-const removeExactTarget = (snapshot: IRenderGcTargetSnapshot): void => {
-  const quarantine = ensureRenderPhysicalDirectory(
-    snapshot.base.path,
-    `${RENDER_GC_PRESERVED_PREFIX}proxy-${randomUUID()}`,
-  );
-  try {
-    removeCapturedRenderGcTarget({
-      isolated: path.join(quarantine, randomUUID()),
-      quarantine,
-      snapshot,
-    });
-  } finally {
-    if (fs.readdirSync(quarantine).length === 0) fs.rmdirSync(quarantine);
-  }
 };
 
 const captureExisting = (

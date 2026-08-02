@@ -616,8 +616,13 @@ export const test_cli_scaffold = async (): Promise<void> => {
         "assertRenderAttemptLockOwner",
       ) &&
       files["scripts/renderAttemptSnapshot.ts"]!.includes(
-        "fs.linkSync(candidate.target, props.target)",
+        "createRenderGcFileSnapshot",
       ) &&
+      files["scripts/renderAttemptSnapshot.ts"]!.includes("fs.linkSync") ===
+        false &&
+      files["scripts/renderAttemptSnapshot.ts"]!.includes(
+        ".attempt-candidate",
+      ) === false &&
       files["scripts/renderPlanSnapshot.ts"]!.includes("generationSlot") &&
       files["scripts/renderPlanSnapshot.ts"]!.includes(
         "createRenderGcFileSnapshot",
@@ -676,10 +681,10 @@ export const test_cli_scaffold = async (): Promise<void> => {
       ) &&
       files["scripts/publishProxyBundle.ts"]!.includes(
         "fs.linkSync(candidate.target, destination)",
-      ) &&
+      ) === false &&
       files["scripts/publishProxyBundle.ts"]!.includes(
-        "removeOwnedCandidate(cleanup, props.ownership)",
-      ) &&
+        ".gc-preserved-proxy-candidates",
+      ) === false &&
       files["scripts/publishProxyBundle.ts"]!.includes(
         "encodeProxyBundleContainer",
       ) === false &&
@@ -1376,10 +1381,6 @@ export const test_cli_scaffold = async (): Promise<void> => {
       "deliverables",
       "proxy",
     );
-    const proxyCandidateRoot = path.join(
-      proxyPublishRoot,
-      ".gc-preserved-proxy-candidates",
-    );
     fs.mkdirSync(proxyPublishParent, { recursive: true });
     const proxyPublishFiles = new Map<string, Uint8Array>([
       ["publication.json", Buffer.from('{"publication":true}\n')],
@@ -1419,7 +1420,6 @@ export const test_cli_scaffold = async (): Promise<void> => {
         fs
           .readdirSync(proxyPublishParent)
           .every((name) => name.endsWith(".candidate") === false) &&
-        fs.readdirSync(proxyCandidateRoot).length === 0 &&
         !throws(() =>
           proxyModule.assertPublishedProxyBundle(
             proxyPublishTarget,
@@ -1624,57 +1624,6 @@ export const test_cli_scaffold = async (): Promise<void> => {
         ),
     );
 
-    const candidateSwapTarget = path.join(proxyPublishParent, "candidate-swap");
-    const candidateSwapDestination = path.join(
-      candidateSwapTarget,
-      "feature",
-      "feature.mp4",
-    );
-    let candidateSwapPath = "";
-    let parkedCandidateSwap = "";
-    let candidateFileSwapped = false;
-    mutableFs.linkSync = ((source, destination) => {
-      if (
-        candidateFileSwapped === false &&
-        path.resolve(destination.toString()) === candidateSwapDestination
-      ) {
-        candidateSwapPath = path.resolve(source.toString());
-        parkedCandidateSwap = `${candidateSwapPath}.parked`;
-        nativeRename(candidateSwapPath, parkedCandidateSwap);
-        nativeWriteFile(
-          candidateSwapPath,
-          fs.readFileSync(parkedCandidateSwap),
-        );
-        candidateFileSwapped = true;
-      }
-      nativeLink(source, destination);
-    }) as typeof fs.linkSync;
-    let candidateFileSwapRejected = false;
-    try {
-      candidateFileSwapRejected = throws(() =>
-        proxyPublisherModule.publishProxyBundle({
-          expected: proxyPublishFiles,
-          parent: proxyPublishParent,
-          processAlive: () => false,
-          renderRoot: proxyPublishRoot,
-          target: candidateSwapTarget,
-        }),
-      );
-    } finally {
-      mutableFs.linkSync = nativeLink;
-    }
-    TestValidator.predicate(
-      "proxy publisher rejects and preserves a byte-identical candidate-file successor",
-      candidateFileSwapped &&
-        candidateFileSwapRejected &&
-        fs.existsSync(candidateSwapPath) &&
-        fs.existsSync(parkedCandidateSwap) &&
-        fs.existsSync(candidateSwapDestination),
-    );
-    fs.rmSync(candidateSwapPath, { force: true });
-    fs.rmSync(parkedCandidateSwap, { force: true });
-    fs.rmSync(candidateSwapTarget, { recursive: true, force: true });
-
     const parentSwapTarget = path.join(proxyPublishParent, "parent-swap");
     const parkedProxyPublishParent = `${proxyPublishParent}.parked`;
     let proxyParentSwapped = false;
@@ -1687,8 +1636,10 @@ export const test_cli_scaffold = async (): Promise<void> => {
       if (
         proxyParentSwapped === false &&
         typeof file !== "number" &&
-        path.dirname(path.resolve(file.toString())) === proxyCandidateRoot &&
-        path.basename(file.toString()).endsWith(".candidate")
+        flags === "wx+" &&
+        path
+          .resolve(file.toString())
+          .startsWith(`${path.resolve(parentSwapTarget)}${path.sep}`)
       ) {
         nativeRename(proxyPublishParent, parkedProxyPublishParent);
         nativeMkdir(proxyPublishParent, { recursive: true });
@@ -1719,9 +1670,6 @@ export const test_cli_scaffold = async (): Promise<void> => {
     );
     fs.rmSync(proxyPublishParent, { recursive: true, force: true });
     nativeRename(parkedProxyPublishParent, proxyPublishParent);
-    for (const name of fs.readdirSync(proxyCandidateRoot))
-      if (name.endsWith(".candidate"))
-        fs.rmSync(path.join(proxyCandidateRoot, name), { force: true });
 
     const rootSwapTarget = path.join(proxyPublishParent, "root-swap");
     const parkedProxyPublishRoot = `${proxyPublishRoot}.parked`;
@@ -1735,8 +1683,10 @@ export const test_cli_scaffold = async (): Promise<void> => {
       if (
         proxyRootSwapped === false &&
         typeof file !== "number" &&
-        path.dirname(path.resolve(file.toString())) === proxyCandidateRoot &&
-        path.basename(file.toString()).endsWith(".candidate")
+        flags === "wx+" &&
+        path
+          .resolve(file.toString())
+          .startsWith(`${path.resolve(rootSwapTarget)}${path.sep}`)
       ) {
         nativeRename(proxyPublishRoot, parkedProxyPublishRoot);
         nativeMkdir(proxyPublishParent, { recursive: true });
@@ -1767,9 +1717,6 @@ export const test_cli_scaffold = async (): Promise<void> => {
     );
     fs.rmSync(proxyPublishRoot, { recursive: true, force: true });
     nativeRename(parkedProxyPublishRoot, proxyPublishRoot);
-    for (const name of fs.readdirSync(proxyCandidateRoot))
-      if (name.endsWith(".candidate"))
-        fs.rmSync(path.join(proxyCandidateRoot, name), { force: true });
 
     const partialSuccessorTarget = path.join(
       proxyPublishParent,
@@ -1782,16 +1729,22 @@ export const test_cli_scaffold = async (): Promise<void> => {
     );
     const partialSuccessorBytes = Buffer.from("foreign partial file");
     let partialSuccessorInserted = false;
-    mutableFs.linkSync = ((source, destination) => {
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
       if (
         partialSuccessorInserted === false &&
-        path.resolve(destination.toString()) === partialSuccessorFile
+        typeof file !== "number" &&
+        path.resolve(file.toString()) === partialSuccessorFile &&
+        flags === "wx+"
       ) {
         nativeWriteFile(partialSuccessorFile, partialSuccessorBytes);
         partialSuccessorInserted = true;
       }
-      nativeLink(source, destination);
-    }) as typeof fs.linkSync;
+      return Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+    }) as typeof fs.openSync;
     let partialSuccessorRejected = false;
     try {
       partialSuccessorRejected = throws(() =>
@@ -1804,7 +1757,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
         }),
       );
     } finally {
-      mutableFs.linkSync = nativeLink;
+      mutableFs.openSync = nativeOpen;
     }
     TestValidator.predicate(
       "proxy publisher preserves a partial file appearing at commit",
@@ -1996,10 +1949,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       "proxy publication keeps large media materialized as a regular file",
       fs.lstatSync(volumeProxyTarget).isDirectory() &&
         fs.lstatSync(volumeProxyFile).isFile() &&
-        fs.statSync(volumeProxyFile).size === volumeProxyBytes.length &&
-        fs
-          .readdirSync(proxyCandidateRoot)
-          .every((name) => name.endsWith(".candidate") === false),
+        fs.statSync(volumeProxyFile).size === volumeProxyBytes.length,
     );
     const proxyMedia = path.join(proxy, "media", "proxy.mp4");
     const parkedProxyMedia = `${proxyMedia}.parked`;
@@ -3965,44 +3915,31 @@ export const test_cli_scaffold = async (): Promise<void> => {
     );
     fs.rmSync(attemptTarget);
 
-    const foreignAttemptLinkLock = createAttemptLock(32011, firstAttemptToken);
-    const foreignAttemptLockSuccessor = Buffer.from(
-      `${JSON.stringify({
-        chunk: attemptChunk,
-        pid: 32011,
-        token: secondAttemptToken,
-      })}\n`,
-    );
-    let foreignAttemptLinked = false;
-    mutableFs.lstatSync = ((file, ...args: unknown[]): unknown => {
-      const status = Reflect.apply(nativeLstat, mutableFs, [file, ...args]);
+    const targetCompetitorLock = createAttemptLock(32011, firstAttemptToken);
+    let targetCompetitorInserted = false;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
       if (
-        foreignAttemptLinked === false &&
-        path.resolve(file.toString()) === attemptRoot &&
-        fs.existsSync(attemptDirectory)
+        targetCompetitorInserted === false &&
+        typeof file !== "number" &&
+        flags === "wx+" &&
+        path.resolve(file.toString()) === attemptTarget
       ) {
-        const candidate = fs
-          .readdirSync(attemptDirectory)
-          .find((name) => name.endsWith(".attempt-candidate"));
-        if (candidate !== undefined) {
-          nativeLink(path.join(attemptDirectory, candidate), attemptTarget);
-          fs.rmSync(foreignAttemptLinkLock.snapshot.target);
-          nativeWriteFile(
-            foreignAttemptLinkLock.snapshot.target,
-            foreignAttemptLockSuccessor,
-          );
-          foreignAttemptLinked = true;
-        }
+        nativeWriteFile(attemptTarget, successorAttemptBytes);
+        targetCompetitorInserted = true;
       }
-      return status;
-    }) as typeof fs.lstatSync;
-    let foreignAttemptLinkRejected = false;
+      return Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+    }) as typeof fs.openSync;
+    let targetCompetitorRejected = false;
     try {
-      foreignAttemptLinkRejected = throws(() =>
+      targetCompetitorRejected = throws(() =>
         renderAttemptModule.beginRenderAttempt({
           base: attemptRoot,
           chunk: attemptChunk,
-          lock: foreignAttemptLinkLock,
+          lock: targetCompetitorLock,
           pid: 32011,
           processAlive: () => false,
           slot: "slot-0001",
@@ -4011,234 +3948,16 @@ export const test_cli_scaffold = async (): Promise<void> => {
         }),
       );
     } finally {
-      mutableFs.lstatSync = nativeLstat;
+      mutableFs.openSync = nativeOpen;
     }
     TestValidator.predicate(
-      "render attempt never deletes a foreign pre-link of its candidate inode",
-      foreignAttemptLinked &&
-        foreignAttemptLinkRejected &&
-        fs.existsSync(attemptTarget) &&
-        fs
-          .readFileSync(foreignAttemptLinkLock.snapshot.target)
-          .equals(foreignAttemptLockSuccessor),
+      "render attempt preserves a direct final-slot competitor",
+      targetCompetitorInserted &&
+        targetCompetitorRejected &&
+        fs.readFileSync(attemptTarget).equals(successorAttemptBytes),
     );
     fs.rmSync(attemptTarget);
-    fs.rmSync(foreignAttemptLinkLock.snapshot.target);
-
-    const candidateParentLock = createAttemptLock(32012, secondAttemptToken);
-    const parkedCandidateParent = `${attemptDirectory}.candidate-parked`;
-    let candidateParentSwapped = false;
-    let candidateParentName = "";
-    mutableFs.lstatSync = ((file, ...args: unknown[]): unknown => {
-      const status = Reflect.apply(nativeLstat, mutableFs, [file, ...args]);
-      if (
-        candidateParentSwapped === false &&
-        path.resolve(file.toString()) === attemptRoot &&
-        fs.existsSync(attemptDirectory)
-      ) {
-        const candidate = fs
-          .readdirSync(attemptDirectory)
-          .find((name) => name.endsWith(".attempt-candidate"));
-        if (candidate !== undefined) {
-          candidateParentName = candidate;
-          nativeRename(attemptDirectory, parkedCandidateParent);
-          nativeMkdir(attemptDirectory);
-          nativeLink(
-            path.join(parkedCandidateParent, candidate),
-            path.join(attemptDirectory, candidate),
-          );
-          candidateParentSwapped = true;
-        }
-      }
-      return status;
-    }) as typeof fs.lstatSync;
-    let candidateParentRejected = false;
-    try {
-      candidateParentRejected = throws(() =>
-        renderAttemptModule.beginRenderAttempt({
-          base: attemptRoot,
-          chunk: attemptChunk,
-          lock: candidateParentLock,
-          pid: 32012,
-          processAlive: () => false,
-          slot: "slot-0001",
-          target: attemptTarget,
-          token: secondAttemptToken,
-        }),
-      );
-    } finally {
-      mutableFs.lstatSync = nativeLstat;
-    }
-    TestValidator.predicate(
-      "render attempt preserves a candidate-path hard-link in a parent successor",
-      candidateParentSwapped &&
-        candidateParentRejected &&
-        fs.existsSync(path.join(attemptDirectory, candidateParentName)) &&
-        fs.existsSync(path.join(parkedCandidateParent, candidateParentName)),
-    );
-    fs.rmSync(attemptDirectory, { recursive: true, force: true });
-    nativeRename(parkedCandidateParent, attemptDirectory);
-    fs.rmSync(path.join(attemptDirectory, candidateParentName), {
-      force: true,
-    });
-
-    const targetAdoptionLock = createAttemptLock(32014, firstAttemptToken);
-    let targetAdoptionInserted = false;
-    mutableFs.linkSync = ((source, destination) => {
-      if (
-        targetAdoptionInserted === false &&
-        path.resolve(destination.toString()) === attemptTarget
-      ) {
-        nativeLink(source, destination);
-        fs.rmSync(destination);
-        nativeWriteFile(destination, successorAttemptBytes);
-        targetAdoptionInserted = true;
-        return;
-      }
-      nativeLink(source, destination);
-    }) as typeof fs.linkSync;
-    let targetAdoptionRejected = false;
-    try {
-      targetAdoptionRejected = throws(() =>
-        renderAttemptModule.beginRenderAttempt({
-          base: attemptRoot,
-          chunk: attemptChunk,
-          lock: targetAdoptionLock,
-          pid: 32014,
-          processAlive: () => false,
-          slot: "slot-0001",
-          target: attemptTarget,
-          token: firstAttemptToken,
-        }),
-      );
-    } finally {
-      mutableFs.linkSync = nativeLink;
-    }
-    const targetAdoptionCandidates = fs
-      .readdirSync(attemptDirectory)
-      .filter((name) => name.endsWith(".attempt-candidate"));
-    TestValidator.predicate(
-      "render attempt never adopts a target successor before validation",
-      targetAdoptionInserted &&
-        targetAdoptionRejected &&
-        fs.readFileSync(attemptTarget).equals(successorAttemptBytes) &&
-        targetAdoptionCandidates.length === 1,
-    );
-    fs.rmSync(attemptTarget);
-    for (const name of targetAdoptionCandidates)
-      fs.rmSync(path.join(attemptDirectory, name));
-
-    const candidateAdoptionLock = createAttemptLock(32015, secondAttemptToken);
-    let candidateAdoptionInserted = false;
-    let candidateAdoptionPath = "";
-    mutableFs.lstatSync = ((file, ...args: unknown[]): unknown => {
-      const absolute = path.resolve(file.toString());
-      if (
-        candidateAdoptionInserted === false &&
-        absolute.endsWith(".attempt-candidate") &&
-        fs.existsSync(attemptTarget)
-      ) {
-        candidateAdoptionPath = absolute;
-        fs.rmSync(absolute);
-        nativeWriteFile(absolute, successorAttemptBytes);
-        candidateAdoptionInserted = true;
-      }
-      return Reflect.apply(nativeLstat, mutableFs, [file, ...args]);
-    }) as typeof fs.lstatSync;
-    let candidateAdoptionRejected = false;
-    try {
-      candidateAdoptionRejected = throws(() =>
-        renderAttemptModule.beginRenderAttempt({
-          base: attemptRoot,
-          chunk: attemptChunk,
-          lock: candidateAdoptionLock,
-          pid: 32015,
-          processAlive: () => false,
-          slot: "slot-0001",
-          target: attemptTarget,
-          token: secondAttemptToken,
-        }),
-      );
-    } finally {
-      mutableFs.lstatSync = nativeLstat;
-    }
-    TestValidator.predicate(
-      "render attempt never adopts a candidate successor before validation",
-      candidateAdoptionInserted &&
-        candidateAdoptionRejected &&
-        fs.readFileSync(candidateAdoptionPath).equals(successorAttemptBytes) &&
-        fs.existsSync(attemptTarget),
-    );
-    fs.rmSync(candidateAdoptionPath);
-    fs.rmSync(attemptTarget);
-
-    const sameParentRelinkLock = createAttemptLock(32013, firstAttemptToken);
-    const sameParentRelinkLockSuccessor = Buffer.from(
-      `${JSON.stringify({
-        chunk: attemptChunk,
-        pid: 32013,
-        token: secondAttemptToken,
-      })}\n`,
-    );
-    let sameParentRelinked = false;
-    let sameParentCandidate = "";
-    mutableFs.lstatSync = ((file, ...args: unknown[]): unknown => {
-      const status = Reflect.apply(nativeLstat, mutableFs, [file, ...args]);
-      if (
-        sameParentRelinked === false &&
-        path.resolve(file.toString()) ===
-          sameParentRelinkLock.snapshot.target &&
-        fs.existsSync(attemptTarget)
-      ) {
-        const candidate = fs
-          .readdirSync(attemptDirectory)
-          .find((name) => name.endsWith(".attempt-candidate"));
-        if (candidate !== undefined) {
-          sameParentCandidate = path.join(attemptDirectory, candidate);
-          fs.rmSync(attemptTarget);
-          nativeLink(sameParentCandidate, attemptTarget);
-          fs.rmSync(sameParentCandidate);
-          nativeLink(attemptTarget, sameParentCandidate);
-          fs.rmSync(sameParentRelinkLock.snapshot.target);
-          nativeWriteFile(
-            sameParentRelinkLock.snapshot.target,
-            sameParentRelinkLockSuccessor,
-          );
-          sameParentRelinked = true;
-        }
-      }
-      return status;
-    }) as typeof fs.lstatSync;
-    let sameParentRelinkRejected = false;
-    try {
-      sameParentRelinkRejected = throws(() =>
-        renderAttemptModule.beginRenderAttempt({
-          base: attemptRoot,
-          chunk: attemptChunk,
-          lock: sameParentRelinkLock,
-          pid: 32013,
-          processAlive: () => false,
-          slot: "slot-0001",
-          target: attemptTarget,
-          token: firstAttemptToken,
-        }),
-      );
-    } finally {
-      mutableFs.lstatSync = nativeLstat;
-    }
-    TestValidator.predicate(
-      "render attempt preserves same-parent target and candidate relink successors",
-      sameParentRelinked &&
-        sameParentRelinkRejected &&
-        fs.existsSync(attemptTarget) &&
-        fs.existsSync(sameParentCandidate) &&
-        fs
-          .readFileSync(sameParentRelinkLock.snapshot.target)
-          .equals(sameParentRelinkLockSuccessor),
-    );
-    fs.rmSync(attemptTarget);
-    fs.rmSync(sameParentCandidate);
-    fs.rmSync(sameParentRelinkLock.snapshot.target);
+    fs.rmSync(targetCompetitorLock.snapshot.target);
 
     const parentFenceLock = createAttemptLock(32009, firstAttemptToken);
     const parkedAttemptDirectory = `${attemptDirectory}.parked`;
@@ -4247,18 +3966,25 @@ export const test_cli_scaffold = async (): Promise<void> => {
       "successor.marker",
     );
     let attemptParentSwapped = false;
-    mutableFs.linkSync = ((source, destination) => {
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
       if (
         attemptParentSwapped === false &&
-        path.resolve(destination.toString()) === attemptTarget
+        typeof file !== "number" &&
+        flags === "wx+" &&
+        path.resolve(file.toString()) === attemptTarget
       ) {
         nativeRename(attemptDirectory, parkedAttemptDirectory);
         nativeMkdir(attemptDirectory);
         nativeWriteFile(attemptParentSuccessorMarker, "successor");
         attemptParentSwapped = true;
       }
-      nativeLink(source, destination);
-    }) as typeof fs.linkSync;
+      return descriptor;
+    }) as typeof fs.openSync;
     let attemptParentRejected = false;
     try {
       attemptParentRejected = throws(() =>
@@ -4274,7 +4000,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
         }),
       );
     } finally {
-      mutableFs.linkSync = nativeLink;
+      mutableFs.openSync = nativeOpen;
     }
     TestValidator.predicate(
       "render attempt preserves an attempts-directory successor at publication",
@@ -4282,15 +4008,11 @@ export const test_cli_scaffold = async (): Promise<void> => {
         attemptParentRejected &&
         fs.readFileSync(attemptParentSuccessorMarker, "utf8") === "successor" &&
         fs.existsSync(attemptTarget) === false &&
-        fs
-          .readdirSync(parkedAttemptDirectory)
-          .some((name) => name.endsWith(".attempt-candidate")),
+        fs.existsSync(path.join(parkedAttemptDirectory, "slot-0001.json")),
     );
     fs.rmSync(attemptDirectory, { recursive: true, force: true });
     nativeRename(parkedAttemptDirectory, attemptDirectory);
-    for (const name of fs.readdirSync(attemptDirectory))
-      if (name.endsWith(".attempt-candidate"))
-        fs.rmSync(path.join(attemptDirectory, name), { force: true });
+    fs.rmSync(attemptTarget, { force: true });
 
     const rootFenceLock = createAttemptLock(32010, secondAttemptToken);
     const parkedAttemptRoot = `${attemptRoot}.parked`;
@@ -4299,10 +4021,17 @@ export const test_cli_scaffold = async (): Promise<void> => {
       "successor.marker",
     );
     let attemptRootSwapped = false;
-    mutableFs.linkSync = ((source, destination) => {
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
       if (
         attemptRootSwapped === false &&
-        path.resolve(destination.toString()) === attemptTarget
+        typeof file !== "number" &&
+        flags === "wx+" &&
+        path.resolve(file.toString()) === attemptTarget
       ) {
         nativeRename(attemptRoot, parkedAttemptRoot);
         nativeMkdir(path.join(attemptRoot, "attempts"), { recursive: true });
@@ -4310,8 +4039,8 @@ export const test_cli_scaffold = async (): Promise<void> => {
         nativeWriteFile(attemptRootSuccessorMarker, "successor");
         attemptRootSwapped = true;
       }
-      nativeLink(source, destination);
-    }) as typeof fs.linkSync;
+      return descriptor;
+    }) as typeof fs.openSync;
     let attemptRootRejected = false;
     try {
       attemptRootRejected = throws(() =>
@@ -4327,7 +4056,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
         }),
       );
     } finally {
-      mutableFs.linkSync = nativeLink;
+      mutableFs.openSync = nativeOpen;
     }
     TestValidator.predicate(
       "render attempt preserves a render-root successor at publication",
@@ -4335,15 +4064,13 @@ export const test_cli_scaffold = async (): Promise<void> => {
         attemptRootRejected &&
         fs.readFileSync(attemptRootSuccessorMarker, "utf8") === "successor" &&
         fs.existsSync(attemptTarget) === false &&
-        fs
-          .readdirSync(path.join(parkedAttemptRoot, "attempts"))
-          .some((name) => name.endsWith(".attempt-candidate")),
+        fs.existsSync(
+          path.join(parkedAttemptRoot, "attempts", "slot-0001.json"),
+        ),
     );
     fs.rmSync(attemptRoot, { recursive: true, force: true });
     nativeRename(parkedAttemptRoot, attemptRoot);
-    for (const name of fs.readdirSync(attemptDirectory))
-      if (name.endsWith(".attempt-candidate"))
-        fs.rmSync(path.join(attemptDirectory, name), { force: true });
+    fs.rmSync(attemptTarget, { force: true });
 
     interface RenderPlanFixture {
       chunkFrames: number;
