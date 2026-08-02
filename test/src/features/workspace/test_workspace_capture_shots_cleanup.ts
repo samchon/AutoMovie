@@ -19,7 +19,15 @@ interface ICaptureShotsCleanupContract {
     resource: string | null;
   }>;
   fences: Array<{ catch: string | null; finally: string }>;
-  functions: Record<"capture" | "preserveCleanupFailure", string[]>;
+  functions: Record<
+    "capture" | "preserveCleanupFailure",
+    Array<{
+      async: boolean;
+      body: string;
+      exported: boolean;
+      parameters: string[];
+    }>
+  >;
   imports: string[];
   policyCalls: string[][];
   topLevelActions: string[];
@@ -60,7 +68,22 @@ const captureShotsCleanupContract = (
         node.initializer !== undefined &&
         ts.isArrowFunction(node.initializer)
       )
-        functions[name].push(compact(node.initializer.body, source));
+        functions[name].push({
+          async:
+            node.initializer.modifiers?.some(
+              (modifier) => modifier.kind === ts.SyntaxKind.AsyncKeyword,
+            ) === true,
+          body: compact(node.initializer.body, source),
+          exported:
+            ts.isVariableDeclarationList(node.parent) &&
+            ts.isVariableStatement(node.parent.parent) &&
+            node.parent.parent.modifiers?.some(
+              (modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword,
+            ) === true,
+          parameters: node.initializer.parameters.map((parameter) =>
+            compact(parameter, source),
+          ),
+        });
       ts.forEachChild(node, visit);
     };
     visit(source);
@@ -220,10 +243,20 @@ export const test_workspace_capture_shots_cleanup = (): void => {
       ],
       functions: {
         capture: [
-          '{constW=even(w);constH=even(h);constdest=path.join(shotsDir,out);fs.mkdirSync(path.dirname(dest),{recursive:true});constpg=awaitbrowser.newPage({viewport:{width:W,height:H},deviceScaleFactor:1,});letcompletion;letpageFailure;try{constsep=q?"&":"";awaitpg.goto(`${BASE}/${page}?${q}${sep}cap=1&w=${W}&h=${H}`,{waitUntil:"load",});awaitpg.waitForFunction(()=>typeofwindow.__afSeek==="function");awaitpg.addStyleTag({content:"#clips{display:none!important}"});constview=pg.locator("#view");constenc=awaitHME.createH264MP4Encoder();letencoderFailure;try{enc.width=W;enc.height=H;enc.frameRate=fps;enc.quantizationParameter=20;enc.initialize();constt0=Date.now();for(leti=0;i<n;i++){constt=(dur*i)/(n-1);awaitpg.evaluate((tt)=>window.__afSeek(tt),t);constbuf=awaitview.screenshot({type:"png"});constpng=PNG.sync.read(buf);enc.addFrameRgba(newUint8Array(png.data));}enc.finalize();fs.writeFileSync(dest,Buffer.from(enc.FS.readFile(enc.outputFilename)));completion=`wrote${out}(${n}frames@${fps}fps,${((Date.now()-t0)/1000).toFixed(1)}s)`;}catch(error){encoderFailure={error};throwerror;}finally{awaitpreserveCleanupFailure(encoderFailure,"captureencoder",()=>enc.delete(),);}}catch(error){pageFailure={error};throwerror;}finally{awaitpreserveCleanupFailure(pageFailure,"capturepage",()=>pg.close());}console.log(completion);}',
+          {
+            async: true,
+            body: '{constW=even(w);constH=even(h);constdest=path.join(shotsDir,out);fs.mkdirSync(path.dirname(dest),{recursive:true});constpg=awaitbrowser.newPage({viewport:{width:W,height:H},deviceScaleFactor:1,});letcompletion;letpageFailure;try{constsep=q?"&":"";awaitpg.goto(`${BASE}/${page}?${q}${sep}cap=1&w=${W}&h=${H}`,{waitUntil:"load",});awaitpg.waitForFunction(()=>typeofwindow.__afSeek==="function");awaitpg.addStyleTag({content:"#clips{display:none!important}"});constview=pg.locator("#view");constenc=awaitHME.createH264MP4Encoder();letencoderFailure;try{enc.width=W;enc.height=H;enc.frameRate=fps;enc.quantizationParameter=20;enc.initialize();constt0=Date.now();for(leti=0;i<n;i++){constt=(dur*i)/(n-1);awaitpg.evaluate((tt)=>window.__afSeek(tt),t);constbuf=awaitview.screenshot({type:"png"});constpng=PNG.sync.read(buf);enc.addFrameRgba(newUint8Array(png.data));}enc.finalize();fs.writeFileSync(dest,Buffer.from(enc.FS.readFile(enc.outputFilename)));completion=`wrote${out}(${n}frames@${fps}fps,${((Date.now()-t0)/1000).toFixed(1)}s)`;}catch(error){encoderFailure={error};throwerror;}finally{awaitpreserveCleanupFailure(encoderFailure,"captureencoder",()=>enc.delete(),);}}catch(error){pageFailure={error};throwerror;}finally{awaitpreserveCleanupFailure(pageFailure,"capturepage",()=>pg.close());}console.log(completion);}',
+            exported: false,
+            parameters: ["[page,q,dur,n,w,h,out,fps]"],
+          },
         ],
         preserveCleanupFailure: [
-          "{try{awaitcleanup();}catch(cleanupError){if(failure===undefined)throwcleanupError;thrownewAggregateError([failure.error,cleanupError],`${resource}cleanupfailedaftertheoperationfailed.`,);}}",
+          {
+            async: true,
+            body: "{try{awaitcleanup();}catch(cleanupError){if(failure===undefined)throwcleanupError;thrownewAggregateError([failure.error,cleanupError],`${resource}cleanupfailedaftertheoperationfailed.`,);}}",
+            exported: true,
+            parameters: ["failure", "resource", "cleanup"],
+          },
         ],
       },
       imports: [
