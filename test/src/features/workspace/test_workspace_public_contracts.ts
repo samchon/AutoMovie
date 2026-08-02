@@ -158,6 +158,32 @@ export const test_workspace_public_contracts = (): void => {
             ensureDevServerOffset,
           ),
         );
+  const failureAfterCloseOffset = ensureDevServerSource.indexOf(
+    "const failureAfterClose =",
+  );
+  const failureAfterCloseSource =
+    failureAfterCloseOffset < 0
+      ? ""
+      : ensureDevServerSource.slice(
+          failureAfterCloseOffset,
+          ensureDevServerSource.indexOf(
+            "\n  const deadline =",
+            failureAfterCloseOffset,
+          ),
+        );
+  const readinessLoopOffset = ensureDevServerSource.indexOf(
+    "while (Date.now() < deadline)",
+  );
+  const readinessLoopSource =
+    readinessLoopOffset < 0
+      ? ""
+      : ensureDevServerSource.slice(
+          readinessLoopOffset,
+          ensureDevServerSource.indexOf(
+            "\n  const failure = await failureAfterClose();",
+            readinessLoopOffset,
+          ),
+        );
   const compiledShotOracleOffset = tgzE2e.indexOf(
     "const canonicalCompiledShots =",
   );
@@ -701,18 +727,52 @@ export const test_workspace_public_contracts = (): void => {
       ].map((match) => match[1]),
       capturedChannels: [
         ...ensureDevServerSource.matchAll(
-          /child\.(stdout|stderr)\.on\("data",/g,
+          /child\.(stdout|stderr)\.on\("data", \(chunk: string\) => \{\s*(stdout|stderr) = appendDevServerOutput\((stdout|stderr), chunk\);\s*\}\);/g,
         ),
-      ].map((match) => match[1]),
+      ].map((match) => ({
+        appended: match[3],
+        buffer: match[2],
+        stream: match[1],
+      })),
       observers: [
-        ...ensureDevServerSource.matchAll(/child\.once\("(error|exit)",/g),
+        ...ensureDevServerSource.matchAll(
+          /child\.once\("(error|exit|close)",/g,
+        ),
       ].map((match) => match[1]),
       exitSnapshotFields: ["child.exitCode", "child.signalCode"].filter(
         (field) => ensureDevServerSource.includes(field),
       ),
       failureChecks: (
-        ensureDevServerSource.match(/devServerFailure\(\{/g) ?? []
+        ensureDevServerSource.match(/await failureAfterClose\(\)/g) ?? []
       ).length,
+      drainedFailure: {
+        closeResolution:
+          /const closed = new Promise<void>\(\(resolve\) => \{\s*child\.once\("close", \(code, signal\) => \{\s*exit = \{ code, signal \};\s*resolve\(\);\s*\}\);\s*\}\);/.test(
+            ensureDevServerSource,
+          ),
+        terminalGate: failureAfterCloseSource.includes(
+          "if (error === null && currentExit() === null) return null;",
+        ),
+        waitsForClose:
+          failureAfterCloseSource.indexOf("await closed;") >= 0 &&
+          failureAfterCloseSource.indexOf("await closed;") <
+            failureAfterCloseSource.indexOf("return devServerFailure({"),
+      },
+      readinessOrder: (() => {
+        const offsets = [
+          "const answered = await answers(base);",
+          "const failure = await failureAfterClose();",
+          "if (failure !== null)",
+          "if (answered)",
+          "setTimeout(resolve, 500);",
+        ].map((marker) => readinessLoopSource.indexOf(marker));
+        return {
+          allPresent: offsets.every((offset) => offset >= 0),
+          increasing: offsets.every(
+            (offset, index) => index === 0 || offset > offsets[index - 1]!,
+          ),
+        };
+      })(),
       failureReasons: ["failed to spawn", "exited before readiness"].filter(
         (reason) => devServerFailureSource.includes(reason),
       ),
@@ -740,10 +800,19 @@ export const test_workspace_public_contracts = (): void => {
     {
       stdio: 'stdio: ["ignore", "pipe", "pipe"]',
       encodedChannels: ["stdout", "stderr"],
-      capturedChannels: ["stdout", "stderr"],
-      observers: ["error", "exit"],
+      capturedChannels: [
+        { appended: "stdout", buffer: "stdout", stream: "stdout" },
+        { appended: "stderr", buffer: "stderr", stream: "stderr" },
+      ],
+      observers: ["error", "exit", "close"],
       exitSnapshotFields: ["child.exitCode", "child.signalCode"],
       failureChecks: 2,
+      drainedFailure: {
+        closeResolution: true,
+        terminalGate: true,
+        waitsForClose: true,
+      },
+      readinessOrder: { allPresent: true, increasing: true },
       failureReasons: ["failed to spawn", "exited before readiness"],
       failureFields: [
         "error=",

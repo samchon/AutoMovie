@@ -182,35 +182,41 @@ const ensureDevServer = async (
   child.once("exit", (code, signal) => {
     exit = { code, signal };
   });
+  const closed = new Promise<void>((resolve) => {
+    child.once("close", (code, signal) => {
+      exit = { code, signal };
+      resolve();
+    });
+  });
   const currentExit = (): DevServerExit | null =>
     exit ??
     (child.exitCode !== null || child.signalCode !== null
       ? { code: child.exitCode, signal: child.signalCode }
       : null);
-  const deadline = Date.now() + 30_000;
-  while (Date.now() < deadline) {
-    if (await answers(base))
-      return { spawned: true, close: () => child.kill() };
-    const failure = devServerFailure({
+  const failureAfterClose = async (): Promise<string | null> => {
+    if (error === null && currentExit() === null) return null;
+    await closed;
+    return devServerFailure({
       error,
       exit: currentExit(),
       stderr,
       stdout,
     });
+  };
+  const deadline = Date.now() + 30_000;
+  while (Date.now() < deadline) {
+    const answered = await answers(base);
+    const failure = await failureAfterClose();
     if (failure !== null) {
       child.kill();
       throw new Error(failure);
     }
+    if (answered) return { spawned: true, close: () => child.kill() };
     await new Promise((resolve) => {
       setTimeout(resolve, 500);
     });
   }
-  const failure = devServerFailure({
-    error,
-    exit: currentExit(),
-    stderr,
-    stdout,
-  });
+  const failure = await failureAfterClose();
   if (failure !== null) {
     child.kill();
     throw new Error(failure);
