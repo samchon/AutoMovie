@@ -18,7 +18,12 @@ const templateSource = (value: string): string =>
 
 interface IFaceAnalysisCleanupContract {
   directCleanupCalls: string[];
-  exitOwners: Array<string | null>;
+  exits: Array<{
+    afterWrapper: boolean;
+    call: string;
+    condition: string | null;
+    owner: string | null;
+  }>;
   imports: string[];
   launchOwners: Array<string | null>;
   pageCalls: Record<string, number>;
@@ -82,15 +87,31 @@ const faceAnalysisCleanupContract = (
     return null;
   };
   const directCleanupCalls: string[] = [];
-  const exitOwners: Array<string | null> = [];
+  const exitNodes: Array<{
+    call: string;
+    condition: string | null;
+    owner: string | null;
+    position: number;
+  }> = [];
   const launchOwners: Array<string | null> = [];
   const pageCalls: Record<string, number> = {};
   const unownedPageCalls: string[] = [];
   const wrappers: IFaceAnalysisCleanupContract["wrappers"] = [];
+  const wrapperEnds: number[] = [];
+  const conditionOf = (node: ts.Node): string | null => {
+    let cursor: ts.Node | undefined = node;
+    while (cursor?.parent !== undefined) {
+      if (ts.isIfStatement(cursor.parent))
+        return compact(cursor.parent.expression, source);
+      cursor = cursor.parent;
+    }
+    return null;
+  };
   const visit = (node: ts.Node): void => {
     if (ts.isCallExpression(node)) {
       const callee = compact(node.expression, source);
       if (callee === "withBrowserPage") {
+        wrapperEnds.push(node.end);
         const operation = node.arguments[3];
         wrappers.push({
           arguments: node.arguments.length,
@@ -124,7 +145,13 @@ const faceAnalysisCleanupContract = (
         if (ownerOf(node) === null)
           unownedPageCalls.push(compact(node, source));
       }
-      if (callee === "process.exit") exitOwners.push(ownerOf(node));
+      if (callee === "process.exit")
+        exitNodes.push({
+          call: compact(node, source),
+          condition: conditionOf(node),
+          owner: ownerOf(node),
+          position: node.getStart(source),
+        });
       if (callee.endsWith(".close"))
         directCleanupCalls.push(compact(node, source));
     }
@@ -133,7 +160,12 @@ const faceAnalysisCleanupContract = (
   visit(source);
   return {
     directCleanupCalls,
-    exitOwners,
+    exits: exitNodes.map(({ call, condition, owner, position }) => ({
+      afterWrapper: wrapperEnds.some((end) => end < position),
+      call,
+      condition,
+      owner,
+    })),
     imports,
     launchOwners,
     pageCalls,
@@ -221,7 +253,7 @@ export const test_workspace_face_analysis_cleanup = (): void => {
   TestValidator.equals("face analysis browser/page ownership", scripts, {
     "compare-front.mjs": {
       directCleanupCalls: [],
-      exitOwners: [],
+      exits: [],
       imports: [rootImport],
       launchOwners: ['launch:"comparefront"'],
       pageCalls: {
@@ -248,7 +280,7 @@ export const test_workspace_face_analysis_cleanup = (): void => {
     },
     "compare-jaw.mjs": {
       directCleanupCalls: [],
-      exitOwners: [],
+      exits: [],
       imports: [rootImport],
       launchOwners: ['launch:"comparejaw"'],
       pageCalls: {
@@ -275,7 +307,14 @@ export const test_workspace_face_analysis_cleanup = (): void => {
     },
     "dissect-view.mjs": {
       directCleanupCalls: [],
-      exitOwners: [null],
+      exits: [
+        {
+          afterWrapper: false,
+          call: "process.exit(0)",
+          condition: "!cell",
+          owner: null,
+        },
+      ],
       imports: [rootImport],
       launchOwners: ['launch:"dissectview"'],
       pageCalls: {
@@ -304,7 +343,7 @@ export const test_workspace_face_analysis_cleanup = (): void => {
     },
     "extract-landmarks.mjs": {
       directCleanupCalls: [],
-      exitOwners: [],
+      exits: [],
       imports: [rootImport],
       launchOwners: ['launch:"extractlandmarks"'],
       pageCalls: { "page.goto": 1, "page.evaluate": 3 },
@@ -325,7 +364,7 @@ export const test_workspace_face_analysis_cleanup = (): void => {
     },
     "fit-front.mjs": {
       directCleanupCalls: [],
-      exitOwners: [],
+      exits: [],
       imports: [rootImport],
       launchOwners: ['launch:"fitfront"'],
       pageCalls: {
@@ -352,7 +391,7 @@ export const test_workspace_face_analysis_cleanup = (): void => {
     },
     "fit-joint.mjs": {
       directCleanupCalls: [],
-      exitOwners: [],
+      exits: [],
       imports: [rootImport],
       launchOwners: ['launch:"fitjoint"'],
       pageCalls: {
@@ -379,7 +418,14 @@ export const test_workspace_face_analysis_cleanup = (): void => {
     },
     "overlay-aligned.mjs": {
       directCleanupCalls: [],
-      exitOwners: [null],
+      exits: [
+        {
+          afterWrapper: true,
+          call: "process.exit(0)",
+          condition: "!photoLm||!modelLm",
+          owner: null,
+        },
+      ],
       imports: [rootImport],
       launchOwners: ['launch:"overlayaligned"'],
       pageCalls: {
@@ -408,7 +454,20 @@ export const test_workspace_face_analysis_cleanup = (): void => {
     },
     "overlay-pose.mjs": {
       directCleanupCalls: [],
-      exitOwners: [null, null],
+      exits: [
+        {
+          afterWrapper: true,
+          call: "process.exit(0)",
+          condition: "!photo||!photo.matrix",
+          owner: null,
+        },
+        {
+          afterWrapper: true,
+          call: "process.exit(0)",
+          condition: "!best",
+          owner: null,
+        },
+      ],
       imports: [rootImport],
       launchOwners: ['launch:"overlaypose"'],
       pageCalls: {
@@ -437,7 +496,7 @@ export const test_workspace_face_analysis_cleanup = (): void => {
     },
     "mh/mh_capture.mjs": {
       directCleanupCalls: [],
-      exitOwners: [],
+      exits: [],
       imports: [mhImport],
       launchOwners: ['launch:"MakeHumancapture"'],
       pageCalls: {
@@ -467,7 +526,7 @@ export const test_workspace_face_analysis_cleanup = (): void => {
     },
     "mh/mh_dissect.mjs": {
       directCleanupCalls: [],
-      exitOwners: [],
+      exits: [],
       imports: [mhImport],
       launchOwners: ['launch:"MakeHumandissect"'],
       pageCalls: {
