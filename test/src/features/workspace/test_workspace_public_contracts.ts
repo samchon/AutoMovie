@@ -863,7 +863,7 @@ export const test_workspace_public_contracts = (): void => {
       ).length,
       drainedFailure: {
         closeResolution:
-          /const closed = new Promise<void>\(\(resolve\) => \{\s*child\.once\("close", \(code, signal\) => \{\s*exit = \{ code, signal \};\s*resolve\(\);\s*\}\);\s*\}\);/.test(
+          /const closed = new Promise<undefined>\(\(resolve\) => \{\s*child\.once\("close", \(code, signal\) => \{\s*exit = \{ code, signal \};\s*resolve\(undefined\);\s*\}\);\s*\}\);/.test(
             ensureDevServerSource,
           ),
         terminalGate: failureAfterCloseSource.includes(

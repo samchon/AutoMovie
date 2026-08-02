@@ -205,10 +205,10 @@ const ensureDevServer = async (
   child.once("exit", (code, signal) => {
     exit = { code, signal };
   });
-  const closed = new Promise<void>((resolve) => {
+  const closed = new Promise<undefined>((resolve) => {
     child.once("close", (code, signal) => {
       exit = { code, signal };
-      resolve();
+      resolve(undefined);
     });
   });
   const currentExit = (): DevServerExit | null =>
