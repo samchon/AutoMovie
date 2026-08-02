@@ -5,6 +5,7 @@ import {
   scaffoldAssetDirectory,
   writeFiles,
 } from "@automovie/cli";
+import { compareCodeUnits } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
 import { createHash } from "node:crypto";
 import * as fs from "node:fs";
@@ -2954,7 +2955,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
     const descriptorBoundaryBytes = Buffer.from(
       [
         'const fs = require("node:fs");',
-        "fs.renameSync(__filename, `${__filename}.parked`);",
+        'fs.renameSync(__filename, __filename + ".parked");',
         `fs.writeFileSync(__filename, ${JSON.stringify("process.exit(29);\n")});`,
         'fs.writeFileSync(process.argv[2], "captured-cli");',
       ].join("\n"),
@@ -3882,7 +3883,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       Buffer.from(firstDialogueCache.pcm).equals(dialoguePcm) &&
         Buffer.from(reusedDialogueCache.receipt).equals(dialogueReceipt) &&
         fs.lstatSync(dialogueTarget).isDirectory() &&
-        fs.readdirSync(dialogueTarget).sort().join(",") ===
+        fs.readdirSync(dialogueTarget).sort(compareCodeUnits).join(",") ===
           "audio.f32,receipt.json",
     );
 
@@ -5854,7 +5855,11 @@ export const test_cli_scaffold = async (): Promise<void> => {
       captureRenderChunkPublication: (
         root: string,
         pointer: string,
-      ) => { pointer: unknown; receipt: unknown; tree: { target: string } };
+      ) => {
+        pointer: unknown;
+        receipt: { chunk: string; slot: string };
+        tree: { target: string };
+      };
       captureRenderChunkPublicationFromPointer: (pointer: unknown) => {
         pointer: unknown;
         receipt: unknown;
@@ -6564,7 +6569,9 @@ export const test_cli_scaffold = async (): Promise<void> => {
     TestValidator.predicate(
       "chunk GC inventories exact current/stale/orphan publications and excludes live temp",
       chunkGcInventory.retainedChunkPaths.join() ===
-        [currentPointerCandidate, currentTreeCandidate].sort().join() &&
+        [currentPointerCandidate, currentTreeCandidate]
+          .sort(compareCodeUnits)
+          .join() &&
         chunkGcInventory.entries.some(
           (entry) => entry.candidate.path === `final/tmp/${chunkGcOrphanName}`,
         ) &&
