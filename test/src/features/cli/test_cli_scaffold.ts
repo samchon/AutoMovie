@@ -327,6 +327,11 @@ const scaffoldDescriptorCleanupContract = (
 ): {
   classDigests: string[];
   cleanupCalls: Array<{ callDigest: string; owner: string }>;
+  descriptorOwners: Array<{
+    cleanupCalls: string[];
+    openCalls: string[];
+    owner: string;
+  }>;
   functionDigests: Record<ScaffoldDescriptorCleanupFunction, string[]>;
 } => {
   const parsed = ts.createSourceFile(
@@ -344,38 +349,70 @@ const scaffoldDescriptorCleanupContract = (
   };
   const classDigests: string[] = [];
   const cleanupCalls: Array<{ callDigest: string; owner: string }> = [];
+  const descriptorOwners: Array<{
+    cleanupCalls: string[];
+    openCalls: string[];
+    owner: string;
+  }> = [];
+  const inspectOwner = (owner: string, root: ts.Node): void => {
+    const ownerCleanupCalls: string[] = [];
+    const openCalls: string[] = [];
+    const visit = (node: ts.Node): void => {
+      if (ts.isCallExpression(node)) {
+        if (
+          ts.isIdentifier(node.expression) &&
+          node.expression.text === "closeScaffoldDescriptor"
+        ) {
+          const callDigest = sourceTokenDigest(node, parsed);
+          ownerCleanupCalls.push(callDigest);
+          cleanupCalls.push({ callDigest, owner });
+        }
+        if (
+          ts.isPropertyAccessExpression(node.expression) &&
+          ts.isIdentifier(node.expression.expression) &&
+          node.expression.expression.text === "fs" &&
+          node.expression.name.text === "openSync"
+        )
+          openCalls.push(sourceTokenDigest(node, parsed));
+      }
+      ts.forEachChild(node, visit);
+    };
+    visit(root);
+    if (openCalls.length !== 0 || ownerCleanupCalls.length !== 0)
+      descriptorOwners.push({
+        cleanupCalls: ownerCleanupCalls,
+        openCalls,
+        owner,
+      });
+  };
   for (const statement of parsed.statements) {
     if (
       ts.isClassDeclaration(statement) &&
       statement.name?.text === "ScaffoldDescriptorCleanupError"
     )
       classDigests.push(sourceTokenDigest(statement, parsed));
+    if (ts.isFunctionDeclaration(statement) && statement.name !== undefined) {
+      inspectOwner(statement.name.text, statement);
+      continue;
+    }
     if (ts.isVariableStatement(statement) === false) continue;
     for (const declaration of statement.declarationList.declarations) {
       if (
         ts.isIdentifier(declaration.name) === false ||
-        declaration.name.text in functionDigests === false ||
-        declaration.initializer === undefined
+        declaration.initializer === undefined ||
+        (ts.isArrowFunction(declaration.initializer) === false &&
+          ts.isFunctionExpression(declaration.initializer) === false)
       )
         continue;
-      const owner = declaration.name.text as ScaffoldDescriptorCleanupFunction;
-      functionDigests[owner].push(sourceTokenDigest(statement, parsed));
-      const visit = (node: ts.Node): void => {
-        if (
-          ts.isCallExpression(node) &&
-          ts.isIdentifier(node.expression) &&
-          node.expression.text === "closeScaffoldDescriptor"
-        )
-          cleanupCalls.push({
-            callDigest: sourceTokenDigest(node, parsed),
-            owner,
-          });
-        ts.forEachChild(node, visit);
-      };
-      visit(declaration.initializer);
+      const owner = declaration.name.text;
+      if (owner in functionDigests)
+        functionDigests[owner as ScaffoldDescriptorCleanupFunction].push(
+          sourceTokenDigest(statement, parsed),
+        );
+      inspectOwner(owner, declaration.initializer);
     }
   }
-  return { classDigests, cleanupCalls, functionDigests };
+  return { classDigests, cleanupCalls, descriptorOwners, functionDigests };
 };
 
 type RenderGcDescriptorCleanupFunction =
@@ -965,6 +1002,35 @@ export const test_cli_scaffold = async (): Promise<void> => {
         {
           callDigest:
             "fb7f2686c2aa2c7bd2513fd27abc672bf4126efdab548aefaddc8ea4a0369de7",
+          owner: "assertScaffoldFileDescriptor",
+        },
+      ],
+      descriptorOwners: [
+        {
+          cleanupCalls: [
+            "bf4af4c61a2df85bf01e3eb80288c6a66bdb36e004ffcf944d47c7ff9ecff1a6",
+          ],
+          openCalls: [
+            "e067ba28c3459eca242637e27627128aff10c0a70abd70ad33e130d183b27436",
+          ],
+          owner: "createScaffoldFile",
+        },
+        {
+          cleanupCalls: [
+            "cc6b1742023bd566dd26827c2d79f8d637adf6875fd503a4e37fd91d13097fba",
+          ],
+          openCalls: [
+            "1fca3b1a94b76eaa87993a8098ae27a5bec3add5e1e986a16dc96aee67d78026",
+          ],
+          owner: "overwriteScaffoldFile",
+        },
+        {
+          cleanupCalls: [
+            "fb7f2686c2aa2c7bd2513fd27abc672bf4126efdab548aefaddc8ea4a0369de7",
+          ],
+          openCalls: [
+            "0cfd967dde81635da63f71627350a966b6c567e3ee1d86d8f382844efe7b5efe",
+          ],
           owner: "assertScaffoldFileDescriptor",
         },
       ],
