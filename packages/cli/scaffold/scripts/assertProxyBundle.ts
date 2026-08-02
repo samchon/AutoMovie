@@ -13,10 +13,7 @@ import type {
 import fs from "node:fs";
 import path from "node:path";
 
-import {
-  type IProxyBundleCapturedEvidence,
-  decodeProxyBundleContainer,
-} from "./proxyBundleContainer";
+import type { IProxyBundleCapturedEvidence } from "./publishProxyBundle";
 import {
   type IRenderGcTargetSnapshot,
   assertCapturedRenderGcFileEntry,
@@ -70,17 +67,8 @@ export const assertPublishedProxyBundle = (
   expected: ReadonlyMap<string, Uint8Array>,
 ): void => {
   const linked = fs.lstatSync(target);
-  if (linked.isSymbolicLink())
-    throw new Error(`Proxy bundle "${target}" is linked.`);
-  if (linked.isFile()) {
-    const snapshot = captureRenderGcTarget(path.dirname(target), target);
-    const actual = decodeProxyBundleContainer(
-      readCapturedRenderGcFile(snapshot, snapshot.bytes),
-    );
-    assertExpectedContainerFiles(actual, expected);
-    assertCapturedRenderTarget(snapshot);
-    return;
-  }
+  if (linked.isSymbolicLink() || linked.isDirectory() === false)
+    throw new Error(`Proxy bundle "${target}" is not a physical directory.`);
   const root = physicalDirectory(target, "proxy bundle");
   const bundle = physicalBundle(root, []);
   const actualByPath = new Map(
@@ -107,12 +95,8 @@ export const inspectPublishedProxyBundle = (
   target: string,
 ): IVerifiedProxyPublication => {
   const linked = fs.lstatSync(target);
-  if (linked.isSymbolicLink())
-    throw new Error(`Proxy bundle "${target}" is linked.`);
-  if (linked.isFile())
-    return inspectCapturedProxyBundle(
-      captureRenderGcTarget(renderRoot, target),
-    );
+  if (linked.isSymbolicLink() || linked.isDirectory() === false)
+    throw new Error(`Proxy bundle "${target}" is not a physical directory.`);
   const physical = physicalDescendant(renderRoot, target);
   const bundle = physicalBundle(physical.target, physical.ancestry);
   const receipt = bundle.files.find(
@@ -154,17 +138,6 @@ export const inspectCapturedProxyBundle = (
   evidence?: IProxyBundleCapturedEvidence,
 ): IVerifiedProxyPublication => {
   if (evidence !== undefined) assertProxyEvidence(snapshot, evidence);
-  if (snapshot.kind === "file") {
-    const files = decodeProxyBundleContainer(
-      evidence?.bytes ?? readCapturedRenderGcFile(snapshot, snapshot.bytes),
-    );
-    const parsed = inspectProxyContainerFiles(
-      files,
-      path.relative(snapshot.base.path, snapshot.target).replaceAll("\\", "/"),
-    );
-    if (evidence === undefined) assertCapturedRenderTarget(snapshot);
-    return parsed;
-  }
   if (snapshot.kind !== "directory")
     throw new Error("Captured proxy publication is not a directory.");
   const receiptEntry = snapshot.entries.find(
@@ -236,46 +209,6 @@ const assertProxyEvidence = (
     evidence.targetVersion !== snapshot.targetVersion
   )
     throw new Error("Proxy publication evidence belongs to another snapshot.");
-};
-
-const assertExpectedContainerFiles = (
-  actual: ReadonlyMap<string, Uint8Array>,
-  expected: ReadonlyMap<string, Uint8Array>,
-): void => {
-  if (
-    actual.size !== expected.size ||
-    [...expected].some(([relative, bytes]) => {
-      const resident = actual.get(relative.replaceAll("\\", "/"));
-      return (
-        resident === undefined || Buffer.from(resident).equals(bytes) === false
-      );
-    })
-  )
-    throw new Error("Proxy bundle container differs from its expected files.");
-};
-
-const inspectProxyContainerFiles = (
-  files: ReadonlyMap<string, Uint8Array>,
-  bundlePath: string,
-): IVerifiedProxyPublication => {
-  const receipt = files.get("publication.json");
-  if (receipt === undefined)
-    throw new Error("Proxy bundle container has no publication receipt.");
-  const parsed = parseProxyPublication(receipt);
-  const expected = proxyManifestFiles(parsed, bundlePath);
-  if (
-    files.size !== expected.size + 1 ||
-    [...expected].some(([relative, fact]) => {
-      const resident = files.get(relative);
-      return (
-        resident === undefined ||
-        resident.length !== fact.bytes ||
-        digestAutoMovieBytes(resident) !== fact.digest
-      );
-    })
-  )
-    throw new Error("Proxy bundle container has an invalid exact inventory.");
-  return parsed;
 };
 
 const physicalDescendant = (

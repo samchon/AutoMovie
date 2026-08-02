@@ -99,6 +99,8 @@ graphics, declared render-source, and package-owned encoder identity preflight.
 They can launch Chromium and mark every stored chunk stale when that structured
 runtime identity changes.
 
+Proxy finalization publishes content-addressed materialized directories without replacing existing paths: payload files use descriptor-bound candidates and no-overwrite hard links, the root receipt appears last, and every manifest path remains an ordinary render-root-relative file that external consumers can open directly.
+
 Chunk workers publish complete UUID claims before they become visible inside a
 slot-specific lock namespace. They yield to every other live claim and remove
 only their own exact path. A killed worker leaves either a recoverable claim or
