@@ -15,6 +15,7 @@ import { chromium } from "playwright-core";
 import { PNG } from "pngjs";
 
 import { DEFAULT_CHROME_EXECUTABLE } from "./chromeExecutable";
+import { preserveCleanupFailure } from "./preserveCleanupFailure";
 
 const DEFAULT_BASE = process.env.BASE ?? "http://127.0.0.1:5173";
 
@@ -79,6 +80,7 @@ export const captureRenderAndSee = async (
     executablePath: options.chrome,
     headless: true,
   });
+  let browserFailure: { error: unknown } | undefined;
   try {
     const page = await browser.newPage({
       viewport: { width: options.width, height: options.height },
@@ -86,6 +88,7 @@ export const captureRenderAndSee = async (
     });
     const captured = new Map<number, string>();
     let closePage = true;
+    let pageFailure: { error: unknown } | undefined;
     try {
       const session = await createHeadlessCaptureAdapter({
         page,
@@ -98,6 +101,7 @@ export const captureRenderAndSee = async (
         },
       });
       closePage = false;
+      let sessionFailure: { error: unknown } | undefined;
       try {
         const spec: IAutoMovieRenderSpec = {
           target: options.target,
@@ -135,14 +139,31 @@ export const captureRenderAndSee = async (
         await fs.mkdir(path.dirname(options.jsonPath), { recursive: true });
         await fs.writeFile(options.jsonPath, JSON.stringify(artifact, null, 2));
         return artifact;
+      } catch (error) {
+        sessionFailure = { error };
+        throw error;
       } finally {
-        await session.close();
+        await preserveCleanupFailure(
+          sessionFailure,
+          "render capture session",
+          () => session.close(),
+        );
       }
+    } catch (error) {
+      pageFailure = { error };
+      throw error;
     } finally {
-      if (closePage) await page.close();
+      await preserveCleanupFailure(pageFailure, "render capture page", () =>
+        closePage ? page.close() : undefined,
+      );
     }
+  } catch (error) {
+    browserFailure = { error };
+    throw error;
   } finally {
-    await browser.close();
+    await preserveCleanupFailure(browserFailure, "render capture browser", () =>
+      browser.close(),
+    );
   }
 };
 
@@ -158,12 +179,13 @@ const createH264Encoder =
       options.durationSeconds,
     );
     const encoder = await HME.createH264MP4Encoder();
-    encoder.width = options.spec.frameFormat.width;
-    encoder.height = options.spec.frameFormat.height;
-    encoder.frameRate = options.spec.frameFormat.fps;
-    encoder.quantizationParameter = options.spec.crf;
-    encoder.initialize();
+    let encoderFailure: { error: unknown } | undefined;
     try {
+      encoder.width = options.spec.frameFormat.width;
+      encoder.height = options.spec.frameFormat.height;
+      encoder.frameRate = options.spec.frameFormat.fps;
+      encoder.quantizationParameter = options.spec.crf;
+      encoder.initialize();
       for (let i = 0; i < times.length; ++i) {
         const file = options.captured.get(i);
         if (file === undefined)
@@ -178,8 +200,13 @@ const createH264Encoder =
         Buffer.from(encoder.FS.readFile(encoder.outputFilename)),
       );
       return outputPath;
+    } catch (error) {
+      encoderFailure = { error };
+      throw error;
     } finally {
-      encoder.delete();
+      await preserveCleanupFailure(encoderFailure, "render H.264 encoder", () =>
+        encoder.delete(),
+      );
     }
   };
 

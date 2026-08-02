@@ -1269,6 +1269,125 @@ const renderRasterArgumentContract = (
   };
 };
 
+/** Inspect the shared primary-first cleanup failure policy. */
+const cleanupFailurePolicyContract = (
+  source: string,
+): {
+  bodies: string[][];
+  parameters: string[][];
+} => {
+  const parsed = ts.createSourceFile(
+    "preserveCleanupFailure.ts",
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TS,
+  );
+  const compact = (node: ts.Node): string =>
+    node.getText(parsed).replace(/\s+/g, "");
+  const bodies: string[][] = [];
+  const parameters: string[][] = [];
+  for (const statement of parsed.statements) {
+    if (ts.isVariableStatement(statement) === false) continue;
+    for (const declaration of statement.declarationList.declarations) {
+      if (
+        ts.isIdentifier(declaration.name) === false ||
+        declaration.name.text !== "preserveCleanupFailure" ||
+        declaration.initializer === undefined ||
+        ts.isArrowFunction(declaration.initializer) === false ||
+        ts.isBlock(declaration.initializer.body) === false
+      )
+        continue;
+      parameters.push(
+        declaration.initializer.parameters.map((parameter) =>
+          compact(parameter),
+        ),
+      );
+      bodies.push(
+        declaration.initializer.body.statements.map((statement) =>
+          compact(statement),
+        ),
+      );
+    }
+  }
+  return { bodies, parameters };
+};
+
+/** Inspect every render cleanup fence that delegates failure precedence. */
+const renderCleanupFailureContract = (
+  file: string,
+  source: string,
+): {
+  imports: number;
+  lifecycles: Array<{
+    catchActions: string[];
+    catchParameter: string | null;
+    finallyActions: string[];
+    tryMarkers: string[];
+  }>;
+} => {
+  const parsed = ts.createSourceFile(
+    file,
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TS,
+  );
+  const compact = (node: ts.Node): string =>
+    node.getText(parsed).replace(/\s+/g, "");
+  const imports = parsed.statements.filter((statement) => {
+    if (
+      ts.isImportDeclaration(statement) === false ||
+      compact(statement.moduleSpecifier) !== '"./preserveCleanupFailure"'
+    )
+      return false;
+    const bindings = statement.importClause?.namedBindings;
+    return (
+      bindings !== undefined &&
+      ts.isNamedImports(bindings) &&
+      bindings.elements.length === 1 &&
+      bindings.elements[0]!.name.text === "preserveCleanupFailure"
+    );
+  }).length;
+  const lifecycles: Array<{
+    catchActions: string[];
+    catchParameter: string | null;
+    finallyActions: string[];
+    tryMarkers: string[];
+  }> = [];
+  const visit = (node: ts.Node): void => {
+    if (
+      ts.isTryStatement(node) &&
+      node.catchClause !== undefined &&
+      node.finallyBlock !== undefined
+    ) {
+      const finallyActions = node.finallyBlock.statements
+        .map((statement) => compact(statement))
+        .filter((statement) => statement.includes("preserveCleanupFailure"));
+      if (finallyActions.length > 0)
+        lifecycles.push({
+          catchActions: node.catchClause.block.statements.map((statement) =>
+            compact(statement),
+          ),
+          catchParameter:
+            node.catchClause.variableDeclaration === undefined
+              ? null
+              : compact(node.catchClause.variableDeclaration),
+          finallyActions,
+          tryMarkers: node.tryBlock.statements
+            .map((statement) => compact(statement))
+            .filter((statement) => statement === "encoder.initialize();"),
+        });
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(parsed);
+  lifecycles.sort((left, right) =>
+    compareCodeUnits(left.finallyActions[0]!, right.finallyActions[0]!),
+  );
+  return { imports, lifecycles };
+};
+
 /** Inspect one render playground's browser, page and session cleanup fences. */
 const renderBrowserLifecycleContract = (
   file: string,
@@ -1407,7 +1526,24 @@ const renderBrowserLifecycleContract = (
         pageTry === undefined
           ? undefined
           : variable(pageTry.tryBlock.statements, "session");
-      const tracked = ["browser", "page", "closePage", "session"];
+      const browserFailure = variable(body, "browserFailure");
+      const pageFailure =
+        outer === undefined
+          ? undefined
+          : variable(outer.tryBlock.statements, "pageFailure");
+      const sessionFailure =
+        pageTry === undefined
+          ? undefined
+          : variable(pageTry.tryBlock.statements, "sessionFailure");
+      const tracked = [
+        "browser",
+        "page",
+        "closePage",
+        "session",
+        "browserFailure",
+        "pageFailure",
+        "sessionFailure",
+      ];
       const writes = Object.fromEntries(
         tracked.map((name) => [name, [] as string[]]),
       );
@@ -1478,6 +1614,9 @@ const renderBrowserLifecycleContract = (
         ["page", page],
         ["closePage", closePage],
         ["session", session],
+        ["browserFailure", browserFailure],
+        ["pageFailure", pageFailure],
+        ["sessionFailure", sessionFailure],
       ] as const;
       const awaitedCall = (
         binding: ts.VariableDeclaration | undefined,
@@ -1686,6 +1825,10 @@ const unmentionedModules = (pkg: string, document: string): string[] =>
  *     fractions in both structured output and thrown failure evidence.
  * 21. Playground TypeScript launchers use unique same-directory bundles and clean
  *     them after build failure as well as main completion.
+ * 22. Render harnesses close a successfully launched browser when page creation
+ *     fails, without weakening the later page/session ownership handoff.
+ * 23. Render session, page, browser, and encoder cleanup retain an earlier
+ *     operation failure in deterministic primary-first order.
  */
 export const test_workspace_public_contracts = (): void => {
   const rootReadme = readPackageFile("README.md");
@@ -1733,6 +1876,12 @@ export const test_workspace_public_contracts = (): void => {
     file,
     source: readPackageFile("packages", "playground", "scripts", file),
   }));
+  const playgroundCleanupFailurePolicy = readPackageFile(
+    "packages",
+    "playground",
+    "scripts",
+    "preserveCleanupFailure.ts",
+  );
   const devServerFailureOffset = playgroundCaptureSmoke.indexOf(
     "const devServerFailure =",
   );
@@ -2848,26 +2997,144 @@ export const test_workspace_public_contracts = (): void => {
               name: "session",
               pageArgument: "page",
             },
+            {
+              count: 1,
+              initializer: null,
+              kind: "let",
+              name: "browserFailure",
+              pageArgument: null,
+            },
+            {
+              count: 1,
+              initializer: null,
+              kind: "let",
+              name: "pageFailure",
+              pageArgument: null,
+            },
+            {
+              count: 1,
+              initializer: null,
+              kind: "let",
+              name: "sessionFailure",
+              pageArgument: null,
+            },
           ],
-          directActions: ["route", "browser", "try"],
-          outerCatch: false,
-          outerFinally: ["awaitbrowser.close();"],
-          outerTryActions: ["page", "captured", "closePage", "try"],
+          directActions: ["route", "browser", "browserFailure", "try"],
+          outerCatch: true,
+          outerFinally: [
+            `awaitpreserveCleanupFailure(browserFailure,"${
+              file === "render-and-see.ts" ? "render" : "sequence"
+            }capturebrowser",()=>browser.close(),);`,
+          ],
+          outerTryActions: [
+            "page",
+            "captured",
+            "closePage",
+            "pageFailure",
+            "try",
+          ],
           page: "awaitbrowser.newPage({viewport:{width:options.width,height:options.height},deviceScaleFactor:1,})",
-          pageCatch: false,
-          pageFinally: ["if(closePage)awaitpage.close();"],
-          pageTryActions: ["session", "closePage=false;", "try"],
-          sessionCatch: false,
-          sessionFinally: ["awaitsession.close();"],
+          pageCatch: true,
+          pageFinally: [
+            `awaitpreserveCleanupFailure(pageFailure,"${
+              file === "render-and-see.ts" ? "render" : "sequence"
+            }capturepage",()=>closePage?page.close():undefined,);`,
+          ],
+          pageTryActions: [
+            "session",
+            "closePage=false;",
+            "sessionFailure",
+            "try",
+          ],
+          sessionCatch: true,
+          sessionFinally: [
+            `awaitpreserveCleanupFailure(sessionFailure,"${
+              file === "render-and-see.ts" ? "render" : "sequence"
+            }capturesession",()=>session.close(),);`,
+          ],
           writes: {
             browser: [],
+            browserFailure: ["browserFailure={error}"],
             closePage: ["closePage=false"],
             page: [],
+            pageFailure: ["pageFailure={error}"],
             session: [],
+            sessionFailure: ["sessionFailure={error}"],
           },
         },
       ],
     })),
+  );
+  TestValidator.equals(
+    "render playgrounds preserve primary failures during cleanup",
+    {
+      policy: cleanupFailurePolicyContract(playgroundCleanupFailurePolicy),
+      renderers: playgroundRenderSources.map(({ file, source }) => ({
+        file,
+        contract: renderCleanupFailureContract(file, source),
+      })),
+    },
+    {
+      policy: {
+        bodies: [
+          [
+            "try{awaitcleanup();}catch(cleanupError){if(failure===undefined)throwcleanupError;thrownewAggregateError([failure.error,cleanupError],`" +
+              templateExpression("resource") +
+              "cleanupfailedaftertheoperationfailed.`,);}",
+          ],
+        ],
+        parameters: [
+          [
+            "failure:IAutoMoviePlaygroundOperationFailure|undefined",
+            "resource:string",
+            "cleanup:()=>void|Promise<void>",
+          ],
+        ],
+      },
+      renderers: playgroundRenderSources.map(({ file }) => {
+        const prefix = file === "render-and-see.ts" ? "render" : "sequence";
+        return {
+          file,
+          contract: {
+            imports: 1,
+            lifecycles: [
+              {
+                catchActions: ["browserFailure={error};", "throwerror;"],
+                catchParameter: "error",
+                finallyActions: [
+                  `awaitpreserveCleanupFailure(browserFailure,"${prefix}capturebrowser",()=>browser.close(),);`,
+                ],
+                tryMarkers: [],
+              },
+              {
+                catchActions: ["encoderFailure={error};", "throwerror;"],
+                catchParameter: "error",
+                finallyActions: [
+                  `awaitpreserveCleanupFailure(encoderFailure,"${prefix}H.264encoder",()=>encoder.delete(),);`,
+                ],
+                tryMarkers: ["encoder.initialize();"],
+              },
+              {
+                catchActions: ["pageFailure={error};", "throwerror;"],
+                catchParameter: "error",
+                finallyActions: [
+                  `awaitpreserveCleanupFailure(pageFailure,"${prefix}capturepage",()=>closePage?page.close():undefined,);`,
+                ],
+                tryMarkers: [],
+              },
+              {
+                catchActions: ["sessionFailure={error};", "throwerror;"],
+                catchParameter: "error",
+                finallyActions: [
+                  `awaitpreserveCleanupFailure(sessionFailure,"${prefix}capturesession",()=>session.close(),);`,
+                ],
+                tryMarkers: [],
+              },
+            ],
+          },
+        };
+      }),
+    },
   );
   const canonicalAssetViews: Array<Array<[string, string]>> = [
     [
