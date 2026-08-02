@@ -23,6 +23,7 @@ interface IFaceAnalysisCleanupContract {
     call: string;
     condition: string | null;
     owner: string | null;
+    topLevelGuard: boolean;
   }>;
   imports: string[];
   launchOwners: Array<string | null>;
@@ -93,17 +94,17 @@ const faceAnalysisCleanupContract = (
     condition: string | null;
     owner: string | null;
     position: number;
+    topLevelGuard: boolean;
   }> = [];
   const launchOwners: Array<string | null> = [];
   const pageCalls: Record<string, number> = {};
   const unownedPageCalls: string[] = [];
   const wrappers: IFaceAnalysisCleanupContract["wrappers"] = [];
   const wrapperEnds: number[] = [];
-  const conditionOf = (node: ts.Node): string | null => {
+  const guardOf = (node: ts.Node): ts.IfStatement | null => {
     let cursor: ts.Node | undefined = node;
     while (cursor?.parent !== undefined) {
-      if (ts.isIfStatement(cursor.parent))
-        return compact(cursor.parent.expression, source);
+      if (ts.isIfStatement(cursor.parent)) return cursor.parent;
       cursor = cursor.parent;
     }
     return null;
@@ -163,13 +164,16 @@ const faceAnalysisCleanupContract = (
         if (ownerOf(node) === null)
           unownedPageCalls.push(compact(node, source));
       }
-      if (callee === "process.exit")
+      if (callee === "process.exit") {
+        const guard = guardOf(node);
         exitNodes.push({
           call: compact(node, source),
-          condition: conditionOf(node),
+          condition: guard === null ? null : compact(guard.expression, source),
           owner: ownerOf(node),
           position: node.getStart(source),
+          topLevelGuard: guard?.parent === source,
         });
+      }
       if (callee.endsWith(".close"))
         directCleanupCalls.push(compact(node, source));
     }
@@ -178,12 +182,15 @@ const faceAnalysisCleanupContract = (
   visit(source);
   return {
     directCleanupCalls,
-    exits: exitNodes.map(({ call, condition, owner, position }) => ({
-      afterWrapper: wrapperEnds.some((end) => end < position),
-      call,
-      condition,
-      owner,
-    })),
+    exits: exitNodes.map(
+      ({ call, condition, owner, position, topLevelGuard }) => ({
+        afterWrapper: wrapperEnds.some((end) => end < position),
+        call,
+        condition,
+        owner,
+        topLevelGuard,
+      }),
+    ),
     imports,
     launchOwners,
     pageCalls,
@@ -333,6 +340,7 @@ export const test_workspace_face_analysis_cleanup = (): void => {
           call: "process.exit(0)",
           condition: "!cell",
           owner: null,
+          topLevelGuard: true,
         },
       ],
       imports: [rootImport],
@@ -448,6 +456,7 @@ export const test_workspace_face_analysis_cleanup = (): void => {
           call: "process.exit(0)",
           condition: "!photoLm||!modelLm",
           owner: null,
+          topLevelGuard: true,
         },
       ],
       imports: [rootImport],
@@ -485,12 +494,14 @@ export const test_workspace_face_analysis_cleanup = (): void => {
           call: "process.exit(0)",
           condition: "!photo||!photo.matrix",
           owner: null,
+          topLevelGuard: true,
         },
         {
           afterWrapper: true,
           call: "process.exit(0)",
           condition: "!best",
           owner: null,
+          topLevelGuard: true,
         },
       ],
       imports: [rootImport],
