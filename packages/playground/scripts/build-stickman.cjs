@@ -4,25 +4,36 @@
 // into one CommonJS module, which resolves the CJS/ESM interop a per-file
 // transpiler can't, then runs its `main()`. Emits public/models/stickman.glb.
 const esbuild = require("esbuild");
-const fs = require("fs");
+const { randomUUID } = require("crypto");
 const path = require("path");
 
-const bundlePath = path.join(__dirname, ".stickman-gen.cjs");
+const {
+  preserveBundleCleanupFailure,
+} = require("./preserveBundleCleanupFailure.cjs");
+
+const bundlePath = path.join(
+  __dirname,
+  `.stickman-gen-${process.pid}-${randomUUID()}.cjs`,
+);
 
 (async () => {
-  await esbuild.build({
-    entryPoints: [path.join(__dirname, "build-stickman.ts")],
-    bundle: true,
-    platform: "node",
-    format: "cjs",
-    outfile: bundlePath,
-  });
+  let failure;
   try {
+    await esbuild.build({
+      entryPoints: [path.join(__dirname, "build-stickman.ts")],
+      bundle: true,
+      platform: "node",
+      format: "cjs",
+      outfile: bundlePath,
+    });
     await require(bundlePath).main();
+  } catch (error) {
+    failure = { error };
+    throw error;
   } finally {
-    fs.rmSync(bundlePath, { force: true });
+    preserveBundleCleanupFailure(bundlePath, failure);
   }
-})().catch((e) => {
-  console.error(e);
+})().catch((error) => {
+  console.error(error);
   process.exit(1);
 });

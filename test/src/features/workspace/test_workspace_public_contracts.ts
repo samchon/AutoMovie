@@ -366,6 +366,7 @@ const launcherBundleContract = (
     tries: Array<{
       actions: string[];
       buildOutfiles: string[];
+      buildOptions: string[][];
       catchActions: string[];
       catchClause: boolean;
       finallyActions: string[];
@@ -398,6 +399,7 @@ const launcherBundleContract = (
     tries: Array<{
       actions: string[];
       buildOutfiles: string[];
+      buildOptions: string[][];
       catchActions: string[];
       catchClause: boolean;
       finallyActions: string[];
@@ -485,7 +487,7 @@ const launcherBundleContract = (
       ++bundleWrites;
     if (
       ts.isStringLiteralLike(node) &&
-      /^\.(?:capture-smoke|render-and-see|render-sequence-and-see)\.cjs$/.test(
+      /^\.(?:cat-gen|horse-gen|knight-gen|stickman-gen|capture-smoke|render-and-see|render-sequence-and-see)\.cjs$/.test(
         node.text,
       )
     )
@@ -525,6 +527,7 @@ const launcherBundleContract = (
       .filter(ts.isTryStatement)
       .map((tryStatement) => {
         const buildOutfiles: string[] = [];
+        const buildOptions: string[][] = [];
         const unsafeBuildOptions: string[] = [];
         const actions = tryStatement.tryBlock.statements.map((action) => {
           if (
@@ -544,7 +547,10 @@ const launcherBundleContract = (
               if (
                 options !== undefined &&
                 ts.isObjectLiteralExpression(options)
-              )
+              ) {
+                buildOptions.push(
+                  options.properties.map((property) => squash(property)),
+                );
                 for (const property of options.properties) {
                   if (
                     ts.isPropertyAssignment(property) &&
@@ -565,6 +571,7 @@ const launcherBundleContract = (
                   )
                     unsafeBuildOptions.push(squash(property));
                 }
+              }
               return "build";
             }
             if (
@@ -585,6 +592,7 @@ const launcherBundleContract = (
         return {
           actions,
           buildOutfiles,
+          buildOptions,
           catchActions:
             tryStatement.catchClause?.block.statements.map((action) =>
               squash(action),
@@ -2457,13 +2465,51 @@ export const test_workspace_public_contracts = (): void => {
     "stickman.html",
   );
   const playgroundLaunchers = [
-    ["capture-smoke.cjs", "capture-smoke"],
-    ["render-and-see.cjs", "render-and-see"],
-    ["render-sequence-and-see.cjs", "render-sequence-and-see"],
-  ].map(([file, prefix]) => ({
-    file: file!,
-    prefix: prefix!,
-    source: readPackageFile("packages", "playground", "scripts", file!),
+    {
+      file: "build-cat.cjs",
+      prefix: "cat-gen",
+      entry: "build-cat.ts",
+      external: null,
+    },
+    {
+      file: "build-horse.cjs",
+      prefix: "horse-gen",
+      entry: "build-horse.ts",
+      external: null,
+    },
+    {
+      file: "build-knight.cjs",
+      prefix: "knight-gen",
+      entry: "build-knight.ts",
+      external: null,
+    },
+    {
+      file: "build-stickman.cjs",
+      prefix: "stickman-gen",
+      entry: "build-stickman.ts",
+      external: null,
+    },
+    {
+      file: "capture-smoke.cjs",
+      prefix: "capture-smoke",
+      entry: "capture-smoke.ts",
+      external: 'external:["playwright-core","pngjs","three","vite"]',
+    },
+    {
+      file: "render-and-see.cjs",
+      prefix: "render-and-see",
+      entry: "render-and-see.ts",
+      external: 'external:["h264-mp4-encoder","playwright-core","pngjs"]',
+    },
+    {
+      file: "render-sequence-and-see.cjs",
+      prefix: "render-sequence-and-see",
+      entry: "render-sequence-and-see.ts",
+      external: 'external:["h264-mp4-encoder","playwright-core","pngjs"]',
+    },
+  ].map((launcher) => ({
+    ...launcher,
+    source: readPackageFile("packages", "playground", "scripts", launcher.file),
   }));
   const playgroundBundleCleanup = createRequire(__filename)(
     path.join(
@@ -3455,7 +3501,7 @@ export const test_workspace_public_contracts = (): void => {
       file,
       contract: launcherBundleContract(file, source),
     })),
-    playgroundLaunchers.map(({ file, prefix }) => ({
+    playgroundLaunchers.map(({ entry, external, file, prefix }) => ({
       file,
       contract: {
         bundle: {
@@ -3485,6 +3531,16 @@ export const test_workspace_public_contracts = (): void => {
               {
                 actions: ["build", "main"],
                 buildOutfiles: ["bundlePath"],
+                buildOptions: [
+                  [
+                    `entryPoints:[path.join(__dirname,"${entry}")]`,
+                    "bundle:true",
+                    'platform:"node"',
+                    'format:"cjs"',
+                    "outfile:bundlePath",
+                    ...(external === null ? [] : [external]),
+                  ],
+                ],
                 catchActions: ["failure={error};", "throwerror;"],
                 catchClause: true,
                 finallyActions: [
