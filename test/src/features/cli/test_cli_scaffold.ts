@@ -3941,6 +3941,96 @@ export const test_cli_scaffold = async (): Promise<void> => {
       force: true,
     });
 
+    const targetAdoptionLock = createAttemptLock(32014, firstAttemptToken);
+    let targetAdoptionInserted = false;
+    mutableFs.linkSync = ((source, destination) => {
+      if (
+        targetAdoptionInserted === false &&
+        path.resolve(destination.toString()) === attemptTarget
+      ) {
+        nativeLink(source, destination);
+        fs.rmSync(destination);
+        nativeWriteFile(destination, successorAttemptBytes);
+        targetAdoptionInserted = true;
+        return;
+      }
+      nativeLink(source, destination);
+    }) as typeof fs.linkSync;
+    let targetAdoptionRejected = false;
+    try {
+      targetAdoptionRejected = throws(() =>
+        renderAttemptModule.beginRenderAttempt({
+          base: attemptRoot,
+          chunk: attemptChunk,
+          lock: targetAdoptionLock,
+          pid: 32014,
+          processAlive: () => false,
+          slot: "slot-0001",
+          target: attemptTarget,
+          token: firstAttemptToken,
+        }),
+      );
+    } finally {
+      mutableFs.linkSync = nativeLink;
+    }
+    const targetAdoptionCandidates = fs
+      .readdirSync(attemptDirectory)
+      .filter((name) => name.endsWith(".attempt-candidate"));
+    TestValidator.predicate(
+      "render attempt never adopts a target successor before validation",
+      targetAdoptionInserted &&
+        targetAdoptionRejected &&
+        fs.readFileSync(attemptTarget).equals(successorAttemptBytes) &&
+        targetAdoptionCandidates.length === 1,
+    );
+    fs.rmSync(attemptTarget);
+    for (const name of targetAdoptionCandidates)
+      fs.rmSync(path.join(attemptDirectory, name));
+
+    const candidateAdoptionLock = createAttemptLock(32015, secondAttemptToken);
+    let candidateAdoptionInserted = false;
+    let candidateAdoptionPath = "";
+    mutableFs.lstatSync = ((file, ...args: unknown[]): unknown => {
+      const absolute = path.resolve(file.toString());
+      if (
+        candidateAdoptionInserted === false &&
+        absolute.endsWith(".attempt-candidate") &&
+        fs.existsSync(attemptTarget)
+      ) {
+        candidateAdoptionPath = absolute;
+        fs.rmSync(absolute);
+        nativeWriteFile(absolute, successorAttemptBytes);
+        candidateAdoptionInserted = true;
+      }
+      return Reflect.apply(nativeLstat, mutableFs, [file, ...args]);
+    }) as typeof fs.lstatSync;
+    let candidateAdoptionRejected = false;
+    try {
+      candidateAdoptionRejected = throws(() =>
+        renderAttemptModule.beginRenderAttempt({
+          base: attemptRoot,
+          chunk: attemptChunk,
+          lock: candidateAdoptionLock,
+          pid: 32015,
+          processAlive: () => false,
+          slot: "slot-0001",
+          target: attemptTarget,
+          token: secondAttemptToken,
+        }),
+      );
+    } finally {
+      mutableFs.lstatSync = nativeLstat;
+    }
+    TestValidator.predicate(
+      "render attempt never adopts a candidate successor before validation",
+      candidateAdoptionInserted &&
+        candidateAdoptionRejected &&
+        fs.readFileSync(candidateAdoptionPath).equals(successorAttemptBytes) &&
+        fs.existsSync(attemptTarget),
+    );
+    fs.rmSync(candidateAdoptionPath);
+    fs.rmSync(attemptTarget);
+
     const sameParentRelinkLock = createAttemptLock(32013, firstAttemptToken);
     const sameParentRelinkLockSuccessor = Buffer.from(
       `${JSON.stringify({

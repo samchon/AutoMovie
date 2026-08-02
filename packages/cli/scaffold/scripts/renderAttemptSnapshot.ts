@@ -284,10 +284,19 @@ const publishAttemptRecord = (props: {
       props.assertOwnership();
     }
     fs.linkSync(candidate.target, props.target);
-    linked = captureRenderGcTarget(props.base, props.target);
-    assertSameAttemptFile(candidate, linked);
-    cleanupCandidate = captureRenderGcTarget(props.base, candidate.target);
-    assertSameAttemptFile(candidate, cleanupCandidate);
+    const capturedLinked = captureRenderGcTarget(props.base, props.target);
+    assertSameAttemptFile(candidate, capturedLinked);
+    const capturedCandidate = captureRenderGcTarget(
+      props.base,
+      candidate.target,
+    );
+    assertSameAttemptFile(candidate, capturedCandidate);
+    if (capturedCandidate.targetVersion !== capturedLinked.targetVersion)
+      throw new Error(
+        "Render attempt link generation changed before cleanup binding.",
+      );
+    linked = capturedLinked;
+    cleanupCandidate = capturedCandidate;
     props.assertOwnership();
 
     removeExactAttempt(cleanupCandidate);
