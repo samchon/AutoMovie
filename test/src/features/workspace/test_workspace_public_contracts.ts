@@ -353,7 +353,10 @@ const launcherBundleContract = (
   fixedBundlePaths: string[];
   lifecycles: Array<{
     bodyActions: string[];
-    outerCatch: boolean;
+    outerCatch: {
+      actions: string[];
+      parameter: string;
+    } | null;
     tries: Array<{
       actions: string[];
       buildOutfiles: string[];
@@ -380,7 +383,10 @@ const launcherBundleContract = (
   const fixedBundlePaths: string[] = [];
   const lifecycles: Array<{
     bodyActions: string[];
-    outerCatch: boolean;
+    outerCatch: {
+      actions: string[];
+      parameter: string;
+    } | null;
     tries: Array<{
       actions: string[];
       buildOutfiles: string[];
@@ -408,7 +414,11 @@ const launcherBundleContract = (
           constant &&
           ts.isObjectBindingPattern(declaration.name) &&
           declaration.name.elements.length === 1 &&
-          declaration.name.elements[0]?.name.getText(parsed) === "randomUUID" &&
+          declaration.name.elements[0]?.propertyName === undefined &&
+          declaration.name.elements[0]?.dotDotDotToken === undefined &&
+          declaration.name.elements[0]?.initializer === undefined &&
+          ts.isIdentifier(declaration.name.elements[0]!.name) &&
+          declaration.name.elements[0]!.name.text === "randomUUID" &&
           declaration.initializer !== undefined &&
           squash(declaration.initializer) === 'require("crypto")'
         )
@@ -503,7 +513,8 @@ const launcherBundleContract = (
               ts.isPropertyAccessExpression(call.expression) &&
               ts.isIdentifier(call.expression.expression) &&
               call.expression.expression.text === "esbuild" &&
-              call.expression.name.text === "build"
+              call.expression.name.text === "build" &&
+              call.arguments.length === 1
             ) {
               const options = call.arguments[0];
               if (
@@ -540,7 +551,8 @@ const launcherBundleContract = (
               call.expression.expression.expression.text === "require" &&
               call.expression.expression.arguments.length === 1 &&
               call.expression.expression.arguments[0]?.getText(parsed) ===
-                "bundlePath"
+                "bundlePath" &&
+              call.arguments.length === 0
             )
               return "main";
           }
@@ -557,9 +569,23 @@ const launcherBundleContract = (
           unsafeBuildOptions,
         };
       });
+    const catchHandler = outerCall.arguments[0];
+    const outerCatch =
+      catchHandler !== undefined &&
+      ts.isArrowFunction(catchHandler) &&
+      catchHandler.parameters.length === 1 &&
+      ts.isIdentifier(catchHandler.parameters[0]!.name) &&
+      ts.isBlock(catchHandler.body)
+        ? {
+            actions: catchHandler.body.statements.map((action) =>
+              squash(action),
+            ),
+            parameter: catchHandler.parameters[0]!.name.text,
+          }
+        : null;
     lifecycles.push({
       bodyActions,
-      outerCatch: outerCall.arguments.length === 1,
+      outerCatch,
       tries,
     });
   }
@@ -1707,7 +1733,10 @@ export const test_workspace_public_contracts = (): void => {
         lifecycles: [
           {
             bodyActions: ["try"],
-            outerCatch: true,
+            outerCatch: {
+              actions: ["console.error(error);", "process.exit(1);"],
+              parameter: "error",
+            },
             tries: [
               {
                 actions: ["build", "main"],
