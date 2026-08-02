@@ -554,12 +554,14 @@ const selectSkin = (url: string): void => {
     photoMaterial.map = null;
     photoMaterial.needsUpdate = true;
     applySkullTone();
+    applyShellLighting();
     return;
   }
   const texture = loadSkin(url);
   photoMaterial.map = texture;
   photoMaterial.needsUpdate = true;
   applySkullTone();
+  applyShellLighting();
   if (texture.image) matchSkullTone(texture);
 };
 (window as unknown as { __loadSkin: unknown }).__loadSkin = selectSkin;
@@ -585,7 +587,6 @@ const skullMaterial = new THREE.MeshStandardMaterial({
 });
 const skullUnlit = new THREE.MeshBasicMaterial({ color: colors.skin });
 let skullMesh: THREE.Mesh | null = null;
-selectSkin("/models/hero1-face.png");
 /**
  * Pull the skull's front-hemisphere vertices that fall inside the face-oval
  * footprint up to just behind the face surface, so the feathered face plate
@@ -815,6 +816,7 @@ const rebuildBust = (): void => {
   scene.add(bustMesh);
 };
 rebuildBust();
+selectSkin("/models/hero1-face.png");
 
 // ── eyeballs (follow the morphed face; iris colored by frontness) ───────────
 const eyeMaterial = new THREE.MeshStandardMaterial({

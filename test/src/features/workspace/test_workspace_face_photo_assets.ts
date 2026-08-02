@@ -49,6 +49,15 @@ const facePhotoAssetContract = (text: string): IFacePhotoAssetContract => {
     "photoTone",
     "skinCache",
   ]);
+  const initializationNames = new Set([
+    "applyShellLighting",
+    "bunMesh",
+    "bustMesh",
+    "hairMesh",
+    "skullMaterial",
+    "skullUnlit",
+    "tailMeshes",
+  ]);
   const functions = {
     loadPhotoHead: [],
     loadSkin: [],
@@ -99,7 +108,7 @@ const facePhotoAssetContract = (text: string): IFacePhotoAssetContract => {
           });
           topLevelActions.push(name);
         }
-        if (name === "skullMaterial") topLevelActions.push(name);
+        if (initializationNames.has(name)) topLevelActions.push(name);
         if (
           name === "matchSkullTone" &&
           declaration.initializer !== undefined &&
@@ -203,7 +212,7 @@ export const test_workspace_face_photo_assets = (): void => {
         ],
         selectSkin: [
           {
-            body: "{photoTone=null;if(!url){photoMaterial.map=null;photoMaterial.needsUpdate=true;applySkullTone();return;}consttexture=loadSkin(url);photoMaterial.map=texture;photoMaterial.needsUpdate=true;applySkullTone();if(texture.image)matchSkullTone(texture);}",
+            body: "{photoTone=null;if(!url){photoMaterial.map=null;photoMaterial.needsUpdate=true;applySkullTone();applyShellLighting();return;}consttexture=loadSkin(url);photoMaterial.map=texture;photoMaterial.needsUpdate=true;applySkullTone();applyShellLighting();if(texture.image)matchSkullTone(texture);}",
             parameters: ["url:string"],
             returnType: "void",
           },
@@ -273,6 +282,12 @@ export const test_workspace_face_photo_assets = (): void => {
         "photoTone",
         "selectSkin",
         "skullMaterial",
+        "skullUnlit",
+        "applyShellLighting",
+        "hairMesh",
+        "bunMesh",
+        "tailMeshes",
+        "bustMesh",
         'selectSkin("/models/hero1-face.png");',
         "photoHead",
         "photoHeadOn",
