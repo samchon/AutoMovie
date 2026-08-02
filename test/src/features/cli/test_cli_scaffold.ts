@@ -7025,16 +7025,39 @@ export const test_cli_scaffold = async (): Promise<void> => {
       proxyTierQuarantine,
       "stable-evidence.released",
     );
+    const stableEvidenceSiblingMarker = path.join(
+      proxyTierQuarantine,
+      "concurrent-sibling.released",
+    );
     fs.writeFileSync(stableEvidenceSource, workerClaimBytes);
-    renderGcModule.quarantineCapturedRenderTarget({
-      destination: stableEvidenceMarker,
-      isolated: stableEvidenceTarget,
-      quarantine: stableEvidenceParent,
-      snapshot: renderGcModule.captureRenderGcTarget(
-        proxyTierGcRoot,
-        stableEvidenceSource,
-      ),
-    });
+    let stableEvidenceSiblingInserted = false;
+    mutableFs.statSync = ((file, ...args: unknown[]): unknown => {
+      const status = Reflect.apply(nativeStat, mutableFs, [
+        file,
+        ...args,
+      ]) as unknown;
+      if (
+        stableEvidenceSiblingInserted === false &&
+        path.resolve(file.toString()) === proxyTierQuarantine
+      ) {
+        nativeWriteFile(stableEvidenceSiblingMarker, "concurrent sibling");
+        stableEvidenceSiblingInserted = true;
+      }
+      return status;
+    }) as typeof fs.statSync;
+    try {
+      renderGcModule.quarantineCapturedRenderTarget({
+        destination: stableEvidenceMarker,
+        isolated: stableEvidenceTarget,
+        quarantine: stableEvidenceParent,
+        snapshot: renderGcModule.captureRenderGcTarget(
+          proxyTierGcRoot,
+          stableEvidenceSource,
+        ),
+      });
+    } finally {
+      mutableFs.statSync = nativeStat;
+    }
     const stableEvidenceMarkerSnapshot = renderGcModule.captureRenderGcTarget(
       proxyTierGcRoot,
       stableEvidenceMarker,
@@ -7050,8 +7073,11 @@ export const test_cli_scaffold = async (): Promise<void> => {
     });
     TestValidator.predicate(
       "render GC retains one stable quarantine-evidence parent after pair removal",
-      fs.existsSync(stableEvidenceTarget) === false &&
+      stableEvidenceSiblingInserted &&
+        fs.existsSync(stableEvidenceTarget) === false &&
         fs.existsSync(stableEvidenceMarker) === false &&
+        fs.readFileSync(stableEvidenceSiblingMarker, "utf8") ===
+          "concurrent sibling" &&
         fs.existsSync(stableEvidenceParent) &&
         fs.readdirSync(stableEvidenceParent).length === 0,
     );
@@ -7123,6 +7149,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
     fs.rmdirSync(parentSuccessorPreserved);
     fs.rmdirSync(parkedParentSuccessor);
     fs.rmdirSync(stableEvidenceParent);
+    fs.rmSync(stableEvidenceSiblingMarker);
     fs.rmSync(reorderedTierMarker);
     fs.rmSync(legacyTierMarker);
     fs.rmdirSync(tierApplyQuarantine);

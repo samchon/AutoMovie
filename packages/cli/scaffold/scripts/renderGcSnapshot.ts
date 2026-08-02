@@ -250,7 +250,10 @@ export const quarantineCapturedRenderTarget = (props: {
     );
   assertRenderGcTarget(isolated.moved);
   assertPhysicalDirectoryIdentity(isolated.quarantine, "render GC quarantine");
-  assertPhysicalDirectory(destinationParent, "render quarantine destination");
+  assertPhysicalDirectoryIdentity(
+    destinationParent,
+    "render quarantine destination",
+  );
   const marker: IRenderQuarantineMarker = {
     version: 1,
     contentFingerprint: isolated.moved.contentFingerprint,
