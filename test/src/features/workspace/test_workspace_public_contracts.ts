@@ -645,6 +645,7 @@ const packagedAssetReviewContract = (
   }>;
   captureHost: {
     applications: string[];
+    assertionFailures: string[];
     cleanup: Array<{
       catch: boolean;
       finally: string[];
@@ -826,6 +827,7 @@ const packagedAssetReviewContract = (
     initializer: string;
   }> = [];
   const applications: string[] = [];
+  const assertionFailures: string[] = [];
   const captureImports: Array<{
     module: string;
     names: string[];
@@ -870,6 +872,18 @@ const packagedAssetReviewContract = (
             declaration.initializer !== undefined
           )
             applications.push(compact(declaration.initializer));
+          else if (
+            ts.isIdentifier(declaration.name) &&
+            declaration.name.text === "assert" &&
+            declaration.initializer !== undefined &&
+            ts.isArrowFunction(declaration.initializer) &&
+            ts.isBlock(declaration.initializer.body)
+          )
+            assertionFailures.push(
+              ...declaration.initializer.body.statements
+                .filter(ts.isIfStatement)
+                .map((failure) => compact(failure.thenStatement)),
+            );
     }
     for (const statement of parsed.statements)
       if (
@@ -1060,6 +1074,7 @@ const packagedAssetReviewContract = (
     captureLoops,
     captureHost: {
       applications,
+      assertionFailures,
       cleanup: captureCleanup,
       imports: captureImports,
       verifierCommands: [
@@ -2842,7 +2857,12 @@ export const test_workspace_public_contracts = (): void => {
             condition:
               'captured.captured&&captured.reviewTarget?.kind==="asset"&&captured.reviewTarget.id===entry.target.id&&captured.receipt!==null&&captured.frame?.width===16&&captured.frame.height===16&&captured.diagnostics.every((item)=>item.category!=="error")',
             detail: "JSON.stringify(captured.diagnostics)",
-            name: "`starter-asset-view-captured:${entry.target.id}:${view.id}`",
+            name:
+              "`starter-asset-view-captured:" +
+              templateExpression("entry.target.id") +
+              ":" +
+              templateExpression("view.id") +
+              "`",
           },
           bodyStatementCount: 2,
           capture:
@@ -2853,7 +2873,10 @@ export const test_workspace_public_contracts = (): void => {
           modelAssertion: {
             condition: "model!==undefined",
             detail: '"reviewqueueassetisabsentfromthecurrentmodelgraph"',
-            name: "`starter-asset-model-current:${entry.target.id}`",
+            name:
+              "`starter-asset-model-current:" +
+              templateExpression("entry.target.id") +
+              "`",
           },
           modelInventory:
             'newMap(generated.files.filter((entry)=>entry.path.startsWith("models/")&&entry.path.endsWith(".json")).map((entry)=>{constmodel=JSON.parse(Buffer.from(project.readGeneratedFile(entry.path)).toString("utf8"));return[model.id,model];}))',
@@ -2865,6 +2888,13 @@ export const test_workspace_public_contracts = (): void => {
       captureHost: {
         applications: [
           "newAutoMovieApplication({projectRoot:root,capture:captureProductionFrame,})",
+        ],
+        assertionFailures: [
+          "thrownewError(`✗" +
+            templateExpression("name") +
+            ":" +
+            templateExpression("detail") +
+            "`);",
         ],
         cleanup: [
           {
