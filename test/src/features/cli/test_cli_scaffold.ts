@@ -577,6 +577,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       ) &&
       files["scripts/render.ts"]!.includes("publishProxyBundle({") &&
       files["scripts/render.ts"]!.includes("beginRenderAttempt({") &&
+      files["scripts/render.ts"]!.includes("snapshot: held.snapshot") &&
       files["scripts/render.ts"]!.includes("completeRenderAttempt(attempt)") &&
       files["scripts/render.ts"]!.includes("failRenderAttempt({") &&
       files["scripts/render.ts"]!.includes("listRenderAttempts(") &&
@@ -593,6 +594,12 @@ export const test_cli_scaffold = async (): Promise<void> => {
       ) &&
       files["scripts/renderAttemptSnapshot.ts"]!.includes(
         "readCapturedRenderGcFile",
+      ) &&
+      files["scripts/renderAttemptSnapshot.ts"]!.includes(
+        "assertRenderAttemptLockOwner",
+      ) &&
+      files["scripts/renderAttemptSnapshot.ts"]!.includes(
+        "fs.linkSync(candidate.target, props.target)",
       ) &&
       files["scripts/publishProxyBundle.ts"]!.includes(
         "fs.mkdirSync(props.target)",
@@ -3510,6 +3517,12 @@ export const test_cli_scaffold = async (): Promise<void> => {
       beginRenderAttempt: (props: {
         base: string;
         chunk: string;
+        lock: {
+          chunk: string;
+          pid: number;
+          snapshot: { target: string };
+          token: string;
+        };
         pid: number;
         processAlive: (pid: number) => boolean;
         slot: string;
@@ -3545,9 +3558,72 @@ export const test_cli_scaffold = async (): Promise<void> => {
     const secondAttemptToken = "22222222-2222-4222-8222-222222222222";
     const successorAttemptToken = "33333333-3333-4333-8333-333333333333";
     fs.mkdirSync(attemptRoot);
+    const attemptLockDirectory = path.join(attemptRoot, "locks");
+    fs.mkdirSync(attemptLockDirectory);
+    const renderAttemptGcModule = createRequire(__filename)(
+      path.join(scaffoldDir, "scripts", "renderGcSnapshot.ts"),
+    ) as {
+      createRenderGcFileSnapshot: (
+        base: string,
+        target: string,
+        bytes: Uint8Array,
+      ) => { target: string };
+    };
+    let attemptLockIndex = 0;
+    const createAttemptLock = (pid: number, token: string) => {
+      const target = path.join(
+        attemptLockDirectory,
+        `claim.${++attemptLockIndex}.${pid}.${token}.lock`,
+      );
+      return {
+        chunk: attemptChunk,
+        pid,
+        snapshot: renderAttemptGcModule.createRenderGcFileSnapshot(
+          attemptRoot,
+          target,
+          Buffer.from(
+            `${JSON.stringify({ chunk: attemptChunk, pid, token })}\n`,
+          ),
+        ),
+        token,
+      };
+    };
+    const replacedAttemptLock = createAttemptLock(31999, firstAttemptToken);
+    fs.rmSync(replacedAttemptLock.snapshot.target);
+    const replacementLockBytes = Buffer.from(
+      `${JSON.stringify({
+        chunk: attemptChunk,
+        pid: 31999,
+        token: secondAttemptToken,
+      })}\n`,
+    );
+    fs.writeFileSync(replacedAttemptLock.snapshot.target, replacementLockBytes);
+    const replacedLockRejected = throws(() =>
+      renderAttemptModule.beginRenderAttempt({
+        base: attemptRoot,
+        chunk: attemptChunk,
+        lock: replacedAttemptLock,
+        pid: 31999,
+        processAlive: () => false,
+        slot: "slot-0001",
+        target: attemptTarget,
+        token: firstAttemptToken,
+      }),
+    );
+    TestValidator.predicate(
+      "render attempt refuses a replaced held-lock generation before publication",
+      replacedLockRejected &&
+        fs
+          .readFileSync(replacedAttemptLock.snapshot.target)
+          .equals(replacementLockBytes) &&
+        fs.existsSync(attemptTarget) === false,
+    );
+    fs.rmSync(replacedAttemptLock.snapshot.target);
+    const runningAttemptLock = createAttemptLock(32001, firstAttemptToken);
     const runningAttempt = renderAttemptModule.beginRenderAttempt({
       base: attemptRoot,
       chunk: attemptChunk,
+      lock: runningAttemptLock,
       pid: 32001,
       processAlive: () => false,
       slot: "slot-0001",
@@ -3570,6 +3646,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
     const retriedAttempt = renderAttemptModule.beginRenderAttempt({
       base: attemptRoot,
       chunk: attemptChunk,
+      lock: createAttemptLock(32002, secondAttemptToken),
       pid: 32002,
       processAlive: () => false,
       slot: "slot-0001",
@@ -3580,6 +3657,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       renderAttemptModule.beginRenderAttempt({
         base: attemptRoot,
         chunk: attemptChunk,
+        lock: createAttemptLock(32002, successorAttemptToken),
         pid: 32002,
         processAlive: (pid) => pid === 32002,
         slot: "slot-0001",
@@ -3603,6 +3681,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
     const staleRunningAttempt = renderAttemptModule.beginRenderAttempt({
       base: attemptRoot,
       chunk: attemptChunk,
+      lock: createAttemptLock(32003, firstAttemptToken),
       pid: 32003,
       processAlive: () => false,
       slot: "slot-0001",
@@ -3612,6 +3691,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
     const recoveredStaleAttempt = renderAttemptModule.beginRenderAttempt({
       base: attemptRoot,
       chunk: attemptChunk,
+      lock: createAttemptLock(32004, secondAttemptToken),
       pid: 32004,
       processAlive: () => false,
       slot: "slot-0001",
@@ -3629,6 +3709,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
     const oversizedAttempt = renderAttemptModule.beginRenderAttempt({
       base: attemptRoot,
       chunk: attemptChunk,
+      lock: createAttemptLock(32008, secondAttemptToken),
       pid: 32008,
       processAlive: () => false,
       slot: "slot-0001",
@@ -3651,6 +3732,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
     const transitionAttempt = renderAttemptModule.beginRenderAttempt({
       base: attemptRoot,
       chunk: attemptChunk,
+      lock: createAttemptLock(32005, firstAttemptToken),
       pid: 32005,
       processAlive: () => false,
       slot: "slot-0001",
@@ -3707,6 +3789,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
     const completionAttempt = renderAttemptModule.beginRenderAttempt({
       base: attemptRoot,
       chunk: attemptChunk,
+      lock: createAttemptLock(32007, firstAttemptToken),
       pid: 32007,
       processAlive: () => false,
       slot: "slot-0001",
@@ -3740,6 +3823,111 @@ export const test_cli_scaffold = async (): Promise<void> => {
         fs.readFileSync(attemptTarget).equals(successorAttemptBytes),
     );
     fs.rmSync(attemptTarget);
+
+    const parentFenceLock = createAttemptLock(32009, firstAttemptToken);
+    const parkedAttemptDirectory = `${attemptDirectory}.parked`;
+    const attemptParentSuccessorMarker = path.join(
+      attemptDirectory,
+      "successor.marker",
+    );
+    let attemptParentSwapped = false;
+    mutableFs.linkSync = ((source, destination) => {
+      if (
+        attemptParentSwapped === false &&
+        path.resolve(destination.toString()) === attemptTarget
+      ) {
+        nativeRename(attemptDirectory, parkedAttemptDirectory);
+        nativeMkdir(attemptDirectory);
+        nativeWriteFile(attemptParentSuccessorMarker, "successor");
+        attemptParentSwapped = true;
+      }
+      nativeLink(source, destination);
+    }) as typeof fs.linkSync;
+    let attemptParentRejected = false;
+    try {
+      attemptParentRejected = throws(() =>
+        renderAttemptModule.beginRenderAttempt({
+          base: attemptRoot,
+          chunk: attemptChunk,
+          lock: parentFenceLock,
+          pid: 32009,
+          processAlive: () => false,
+          slot: "slot-0001",
+          target: attemptTarget,
+          token: firstAttemptToken,
+        }),
+      );
+    } finally {
+      mutableFs.linkSync = nativeLink;
+    }
+    TestValidator.predicate(
+      "render attempt preserves an attempts-directory successor at publication",
+      attemptParentSwapped &&
+        attemptParentRejected &&
+        fs.readFileSync(attemptParentSuccessorMarker, "utf8") === "successor" &&
+        fs.existsSync(attemptTarget) === false &&
+        fs
+          .readdirSync(parkedAttemptDirectory)
+          .some((name) => name.endsWith(".attempt-candidate")),
+    );
+    fs.rmSync(attemptDirectory, { recursive: true, force: true });
+    nativeRename(parkedAttemptDirectory, attemptDirectory);
+    for (const name of fs.readdirSync(attemptDirectory))
+      if (name.endsWith(".attempt-candidate"))
+        fs.rmSync(path.join(attemptDirectory, name), { force: true });
+
+    const rootFenceLock = createAttemptLock(32010, secondAttemptToken);
+    const parkedAttemptRoot = `${attemptRoot}.parked`;
+    const attemptRootSuccessorMarker = path.join(
+      attemptRoot,
+      "successor.marker",
+    );
+    let attemptRootSwapped = false;
+    mutableFs.linkSync = ((source, destination) => {
+      if (
+        attemptRootSwapped === false &&
+        path.resolve(destination.toString()) === attemptTarget
+      ) {
+        nativeRename(attemptRoot, parkedAttemptRoot);
+        nativeMkdir(path.join(attemptRoot, "attempts"), { recursive: true });
+        nativeMkdir(path.join(attemptRoot, "locks"), { recursive: true });
+        nativeWriteFile(attemptRootSuccessorMarker, "successor");
+        attemptRootSwapped = true;
+      }
+      nativeLink(source, destination);
+    }) as typeof fs.linkSync;
+    let attemptRootRejected = false;
+    try {
+      attemptRootRejected = throws(() =>
+        renderAttemptModule.beginRenderAttempt({
+          base: attemptRoot,
+          chunk: attemptChunk,
+          lock: rootFenceLock,
+          pid: 32010,
+          processAlive: () => false,
+          slot: "slot-0001",
+          target: attemptTarget,
+          token: secondAttemptToken,
+        }),
+      );
+    } finally {
+      mutableFs.linkSync = nativeLink;
+    }
+    TestValidator.predicate(
+      "render attempt preserves a render-root successor at publication",
+      attemptRootSwapped &&
+        attemptRootRejected &&
+        fs.readFileSync(attemptRootSuccessorMarker, "utf8") === "successor" &&
+        fs.existsSync(attemptTarget) === false &&
+        fs
+          .readdirSync(path.join(parkedAttemptRoot, "attempts"))
+          .some((name) => name.endsWith(".attempt-candidate")),
+    );
+    fs.rmSync(attemptRoot, { recursive: true, force: true });
+    nativeRename(parkedAttemptRoot, attemptRoot);
+    for (const name of fs.readdirSync(attemptDirectory))
+      if (name.endsWith(".attempt-candidate"))
+        fs.rmSync(path.join(attemptDirectory, name), { force: true });
     const renderLivenessModule = createRequire(__filename)(
       path.join(scaffoldDir, "scripts", "renderLiveness.ts"),
     ) as {

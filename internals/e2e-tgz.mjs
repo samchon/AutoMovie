@@ -1356,6 +1356,7 @@ PNG.sync.read = function (input) {
   mkdirSync(abandonedTemporary, { recursive: true });
   writeFileSync(join(abandonedTemporary, "partial.png"), Buffer.alloc(0));
   const slotSegment = encodeURIComponent(damagedChunk.slot);
+  const abandonedAttemptToken = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
   mkdirSync(join(renderStateRoot, "locks"), { recursive: true });
   mkdirSync(join(renderStateRoot, "locks", slotSegment), { recursive: true });
   writeFileSync(
@@ -1369,17 +1370,23 @@ PNG.sync.read = function (input) {
   );
   writeFileSync(
     join(renderStateRoot, "locks", `${slotSegment}.lock`),
-    `${JSON.stringify({ chunk: damagedChunk.id, pid: abandonedPid })}\n`,
+    `${JSON.stringify({
+      chunk: damagedChunk.id,
+      pid: abandonedPid,
+      token: abandonedAttemptToken,
+    })}\n`,
   );
   mkdirSync(join(renderStateRoot, "attempts"), { recursive: true });
   writeFileSync(
     join(renderStateRoot, "attempts", `${slotSegment}.json`),
     `${JSON.stringify({
+      version: 1,
       slot: damagedChunk.slot,
       chunk: damagedChunk.id,
       state: "running",
       correction: "",
       pid: abandonedPid,
+      token: abandonedAttemptToken,
     })}\n`,
   );
   run(

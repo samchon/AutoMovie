@@ -83,7 +83,7 @@ import {
   publishProxyBundle,
 } from "./publishProxyBundle";
 import {
-  type IRenderAttemptSnapshot,
+  type IOwnedRenderAttemptSnapshot,
   beginRenderAttempt,
   completeRenderAttempt,
   failRenderAttempt,
@@ -160,7 +160,7 @@ const heldChunkLocks = new Map<
   string,
   { snapshot: IRenderGcTargetSnapshot; token: string }
 >();
-const heldChunkAttempts = new Map<string, IRenderAttemptSnapshot>();
+const heldChunkAttempts = new Map<string, IOwnedRenderAttemptSnapshot>();
 const KOKORO_MODEL = "onnx-community/Kokoro-82M-v1.0-ONNX" as const;
 const KOKORO_MODEL_REVISION =
   "1939ad2a8e416c0acfeecc08a694d14ef25f2231" as const;
@@ -738,6 +738,12 @@ const renderChunk = async (
   const attempt = beginRenderAttempt({
     base: stateRoot,
     chunk: chunk.id,
+    lock: {
+      chunk: chunk.id,
+      pid: process.pid,
+      snapshot: held.snapshot,
+      token: held.token,
+    },
     pid: process.pid,
     processAlive,
     slot: chunk.slot,

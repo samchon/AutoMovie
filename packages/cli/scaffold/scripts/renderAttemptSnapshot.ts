@@ -34,21 +34,46 @@ export interface IRenderAttemptSnapshot {
   snapshot: IRenderGcTargetSnapshot;
 }
 
+/** Exact held chunk-lock generation authorizing attempt mutation. */
+export interface IRenderAttemptLockOwner {
+  chunk: AutoMovieContentDigest;
+  pid: number;
+  snapshot: IRenderGcTargetSnapshot;
+  token: string;
+}
+
+/** Attempt state paired with the exact lock generation that owns it. */
+export interface IOwnedRenderAttemptSnapshot extends IRenderAttemptSnapshot {
+  lock: IRenderAttemptLockOwner;
+}
+
 /** Publish a running attempt without replacing another owner or successor. */
 export const beginRenderAttempt = (props: {
   base: string;
   chunk: AutoMovieContentDigest;
+  lock: IRenderAttemptLockOwner;
   pid: number;
   processAlive: (pid: number) => boolean;
   slot: string;
   target: string;
   token: string;
-}): IRenderAttemptSnapshot => {
+}): IOwnedRenderAttemptSnapshot => {
+  if (
+    props.lock.chunk !== props.chunk ||
+    props.lock.pid !== props.pid ||
+    props.lock.token !== props.token ||
+    props.lock.snapshot.base.path !== path.resolve(props.base) ||
+    inside(
+      path.join(path.resolve(props.base), "locks"),
+      props.lock.snapshot.target,
+    ) === false
+  )
+    throw new Error("Render attempt does not match its held chunk lock.");
+  const attempts = ensureRenderPhysicalDirectory(props.base, "attempts");
   const base = captureRenderPhysicalDirectory(
     props.base,
     "render attempt root",
   );
-  const attempts = ensureRenderPhysicalDirectory(props.base, "attempts");
   const attemptDirectory = captureRenderPhysicalDirectory(
     attempts,
     "render attempt directory",
@@ -59,12 +84,16 @@ export const beginRenderAttempt = (props: {
       attemptDirectory,
       "render attempt directory",
     );
+    assertRenderAttemptLockOwner(props.lock);
   };
   assertAttemptTarget(attempts, props.target);
   assertOwnership();
   const existing = captureExistingAttempt(props.base, props.target);
+  assertOwnership();
+  let predecessor: IRenderGcTargetSnapshot | null = null;
   if (existing !== null) {
     const captured = readRenderAttempt(existing);
+    assertOwnership();
     if (captured.record.state === "running") {
       if (props.processAlive(captured.record.pid))
         throw new Error(
@@ -76,8 +105,7 @@ export const beginRenderAttempt = (props: {
           `Render attempt "${props.target}" became live during stale recovery.`,
         );
     }
-    removeExactAttempt(captured.snapshot);
-    assertOwnership();
+    predecessor = captured.snapshot;
   }
   const record: IRenderAttemptRecord = {
     version: 1,
@@ -89,18 +117,21 @@ export const beginRenderAttempt = (props: {
     token: props.token,
   };
   assertRenderAttemptRecord(record);
-  const bytes = renderAttemptBytes(record);
-  const snapshot = createRenderGcFileSnapshot(props.base, props.target, bytes);
-  const captured = readRenderAttempt(snapshot);
-  assertOwnership();
-  return captured;
+  const published = publishAttemptRecord({
+    assertOwnership,
+    base: props.base,
+    bytes: renderAttemptBytes(record),
+    predecessor,
+    target: props.target,
+  });
+  return { ...published, lock: props.lock };
 };
 
 /** Replace only the captured running record with its failed successor. */
 export const failRenderAttempt = (props: {
-  attempt: IRenderAttemptSnapshot;
+  attempt: IOwnedRenderAttemptSnapshot;
   correction: string;
-}): IRenderAttemptSnapshot => {
+}): IOwnedRenderAttemptSnapshot => {
   if (props.attempt.record.state !== "running")
     throw new Error("Only a running render attempt can transition to failed.");
   const record: IRenderAttemptRecord = {
@@ -122,29 +153,76 @@ export const failRenderAttempt = (props: {
       directory,
       "render attempt directory",
     );
+    assertRenderAttemptLockOwner(props.attempt.lock);
   };
   assertOwnership();
   assertCurrentAttempt(props.attempt);
-  removeExactAttempt(props.attempt.snapshot);
-  assertOwnership();
-  const snapshot = createRenderGcFileSnapshot(
-    props.attempt.snapshot.base.path,
-    props.attempt.snapshot.target,
+  const published = publishAttemptRecord({
+    assertOwnership,
+    base: props.attempt.snapshot.base.path,
     bytes,
-  );
-  const captured = readRenderAttempt(snapshot);
-  assertOwnership();
-  return captured;
+    predecessor: props.attempt.snapshot,
+    target: props.attempt.snapshot.target,
+  });
+  return { ...published, lock: props.attempt.lock };
 };
 
 /** Remove only the exact running attempt captured for a completed render. */
 export const completeRenderAttempt = (
-  attempt: IRenderAttemptSnapshot,
+  attempt: IOwnedRenderAttemptSnapshot,
 ): void => {
   if (attempt.record.state !== "running")
     throw new Error("Only a running render attempt can complete.");
+  const directory = captureRenderPhysicalDirectory(
+    path.dirname(attempt.snapshot.target),
+    "render attempt directory",
+  );
+  const assertOwnership = (): void => {
+    assertRenderPhysicalDirectoryIdentity(
+      attempt.snapshot.base,
+      "render attempt root",
+    );
+    assertRenderPhysicalDirectoryIdentity(
+      directory,
+      "render attempt directory",
+    );
+    assertRenderAttemptLockOwner(attempt.lock);
+  };
+  assertOwnership();
   assertCurrentAttempt(attempt);
+  assertOwnership();
   removeExactAttempt(attempt.snapshot);
+};
+
+/** Revalidate the exact lock pathname and owner bytes for an attempt. */
+export const assertRenderAttemptLockOwner = (
+  lock: IRenderAttemptLockOwner,
+): void => {
+  const current = captureRenderGcTarget(
+    lock.snapshot.base.path,
+    lock.snapshot.target,
+  );
+  if (
+    current.targetIdentity !== lock.snapshot.targetIdentity ||
+    current.targetVersion !== lock.snapshot.targetVersion ||
+    current.contentFingerprint !== lock.snapshot.contentFingerprint
+  )
+    throw new Error("Render attempt chunk lock changed physical generation.");
+  const owner = JSON.parse(
+    Buffer.from(
+      readCapturedRenderGcFile(lock.snapshot, RENDER_ATTEMPT_JSON_MAX_BYTES),
+    ).toString("utf8"),
+  ) as unknown;
+  if (
+    typeof owner !== "object" ||
+    owner === null ||
+    Array.isArray(owner) ||
+    Object.keys(owner).sort().join(",") !== "chunk,pid,token" ||
+    (owner as { chunk?: unknown }).chunk !== lock.chunk ||
+    (owner as { pid?: unknown }).pid !== lock.pid ||
+    (owner as { token?: unknown }).token !== lock.token
+  )
+    throw new Error("Render attempt chunk lock owner bytes changed.");
 };
 
 /** Parse one attempt only from the bytes and identity of its captured file. */
@@ -181,6 +259,54 @@ export const listRenderAttempts = (
     );
 };
 
+const publishAttemptRecord = (props: {
+  assertOwnership: () => void;
+  base: string;
+  bytes: Uint8Array;
+  predecessor: IRenderGcTargetSnapshot | null;
+  target: string;
+}): IRenderAttemptSnapshot => {
+  const candidatePath = `${props.target}.${process.pid}.${randomUUID()}.attempt-candidate`;
+  const candidate = createRenderGcFileSnapshot(
+    props.base,
+    candidatePath,
+    props.bytes,
+  );
+  let linked: IRenderGcTargetSnapshot | null = null;
+  let candidateRemoved = false;
+  try {
+    props.assertOwnership();
+    if (props.predecessor !== null) {
+      assertSnapshotCurrent(props.predecessor);
+      removeExactAttempt(props.predecessor);
+      props.assertOwnership();
+    }
+    fs.linkSync(candidate.target, props.target);
+    linked = captureRenderGcTarget(props.base, props.target);
+    assertSameAttemptFile(candidate, linked);
+    props.assertOwnership();
+
+    removeOwnedAttempt(candidate);
+    candidateRemoved = true;
+    const published = captureRenderGcTarget(props.base, props.target);
+    assertSameAttemptFile(candidate, published);
+    props.assertOwnership();
+    return readRenderAttempt(published);
+  } catch (error) {
+    const current = captureExistingAttempt(props.base, props.target);
+    if (
+      current !== null &&
+      current.base.identity === candidate.base.identity &&
+      current.targetIdentity === candidate.targetIdentity &&
+      current.contentFingerprint === candidate.contentFingerprint
+    )
+      removeExactAttempt(current);
+    throw error;
+  } finally {
+    if (candidateRemoved === false) removeOwnedAttempt(candidate, true);
+  }
+};
+
 const captureExistingAttempt = (
   base: string,
   target: string,
@@ -202,15 +328,61 @@ const assertCurrentAttempt = (attempt: IRenderAttemptSnapshot): void => {
     captureRenderGcTarget(attempt.snapshot.base.path, attempt.snapshot.target),
   );
   if (
+    current.snapshot.base.identity !== attempt.snapshot.base.identity ||
     current.snapshot.targetIdentity !== attempt.snapshot.targetIdentity ||
     current.snapshot.targetVersion !== attempt.snapshot.targetVersion ||
     current.snapshot.contentFingerprint !==
       attempt.snapshot.contentFingerprint ||
+    current.snapshot.namespaceFingerprint !==
+      attempt.snapshot.namespaceFingerprint ||
     current.record.token !== attempt.record.token
   )
     throw new Error(
       `Render attempt "${attempt.snapshot.target}" changed before transition.`,
     );
+};
+
+const assertSnapshotCurrent = (snapshot: IRenderGcTargetSnapshot): void => {
+  const current = captureRenderGcTarget(snapshot.base.path, snapshot.target);
+  if (
+    current.base.identity !== snapshot.base.identity ||
+    current.targetIdentity !== snapshot.targetIdentity ||
+    current.targetVersion !== snapshot.targetVersion ||
+    current.contentFingerprint !== snapshot.contentFingerprint ||
+    current.namespaceFingerprint !== snapshot.namespaceFingerprint
+  )
+    throw new Error(`Render attempt "${snapshot.target}" changed ownership.`);
+};
+
+const assertSameAttemptFile = (
+  expected: IRenderGcTargetSnapshot,
+  current: IRenderGcTargetSnapshot,
+): void => {
+  if (
+    current.kind !== "file" ||
+    current.targetIdentity !== expected.targetIdentity ||
+    current.contentFingerprint !== expected.contentFingerprint ||
+    current.fileDigest !== expected.fileDigest
+  )
+    throw new Error("Render attempt publication used another physical file.");
+};
+
+const removeOwnedAttempt = (
+  expected: IRenderGcTargetSnapshot,
+  absentAllowed: boolean = false,
+): void => {
+  const current = captureExistingAttempt(expected.base.path, expected.target);
+  if (current === null) {
+    if (absentAllowed) return;
+    throw new Error(`Render attempt "${expected.target}" disappeared.`);
+  }
+  if (
+    current.base.identity !== expected.base.identity ||
+    current.targetIdentity !== expected.targetIdentity ||
+    current.contentFingerprint !== expected.contentFingerprint
+  )
+    return;
+  removeExactAttempt(current);
 };
 
 const removeExactAttempt = (snapshot: IRenderGcTargetSnapshot): void => {
@@ -255,7 +427,7 @@ const assertRenderAttemptRecord = (
       (value as { state?: unknown }).state !== "failed") ||
     typeof (value as { correction?: unknown }).correction !== "string" ||
     Number.isSafeInteger((value as { pid?: unknown }).pid) === false ||
-    ((value as { pid: number }).pid as number) <= 0 ||
+    (value as { pid: number }).pid <= 0 ||
     typeof (value as { token?: unknown }).token !== "string" ||
     /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u.test(
       (value as { token: string }).token,
@@ -274,4 +446,14 @@ const assertAttemptTarget = (directory: string, target: string): void => {
     throw new Error(
       `Render attempt target "${target}" must be a direct JSON child.`,
     );
+};
+
+const inside = (root: string, candidate: string): boolean => {
+  const relative = path.relative(path.resolve(root), path.resolve(candidate));
+  return (
+    relative.length > 0 &&
+    path.isAbsolute(relative) === false &&
+    relative !== ".." &&
+    relative.startsWith(`..${path.sep}`) === false
+  );
 };

@@ -176,7 +176,7 @@ to one exact tree; finalization consumes its frame and MP4 descriptors without
 reopening verified paths. Abandoned recovery never quarantines a tree reached by
 a valid current pointer.
 
-Each running attempt carries the same random token as its held chunk lock and is created with `O_EXCL`. Dead-owner recovery, the running-to-failed transition, and successful cleanup operate only on a descriptor-validated physical snapshot; a pathname successor is preserved. Status and explicit GC read the same strict versioned attempt schema instead of trusting generic JSON pathnames.
+Each running attempt is authorized by the exact physical snapshot and `{ chunk, pid, token }` bytes of its held chunk lock, then published from a private `O_EXCL` candidate through a no-overwrite hard link. Dead-owner recovery, the running-to-failed transition, and successful cleanup operate only on lock-bound physical snapshots; a root, parent, lock, attempt, or candidate pathname successor is preserved. Status and explicit GC read the same strict versioned attempt schema instead of trusting generic JSON pathnames.
 
 Final conform also reopens the matching proxy bundle as one physical tree. Its
 manifest must account for the exact regular-file inventory, and every declared
