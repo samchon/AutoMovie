@@ -128,6 +128,7 @@ export const createRenderGcFileSnapshot = (
     throw new Error(`Render file "${target}" escapes its ownership root.`);
   const source = Buffer.from(bytes);
   const descriptor = fs.openSync(absolute, "wx+");
+  let failed = false;
   try {
     let offset = 0;
     while (offset < source.length) {
@@ -161,11 +162,27 @@ export const createRenderGcFileSnapshot = (
     const completed = fs.fstatSync(descriptor, { bigint: true });
     if (physicalVersion(completed) !== snapshot.targetVersion)
       throw new Error(`Render file "${target}" changed while published.`);
+    if (
+      snapshot.base.path !== root.path ||
+      snapshot.base.real !== root.real ||
+      snapshot.base.identity !== root.identity
+    )
+      throw new Error(`Render file "${target}" changed ownership root.`);
+    assertPhysicalDirectoryIdentity(parent, "render file directory");
+    assertRootIdentity(root);
+    assertRenderGcTarget(snapshot);
     assertPhysicalDirectoryIdentity(parent, "render file directory");
     assertRootIdentity(root);
     return snapshot;
+  } catch (error) {
+    failed = true;
+    throw error;
   } finally {
-    fs.closeSync(descriptor);
+    try {
+      fs.closeSync(descriptor);
+    } catch (error) {
+      if (failed === false) throw error;
+    }
   }
 };
 

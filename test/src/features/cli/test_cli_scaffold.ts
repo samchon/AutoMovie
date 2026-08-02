@@ -1012,6 +1012,8 @@ export const test_cli_scaffold = async (): Promise<void> => {
         positiveHeaders.get("Cache-Control") === "no-store",
     );
     const mutableFs = createRequire(__filename)("node:fs") as {
+      closeSync: typeof fs.closeSync;
+      fstatSync: typeof fs.fstatSync;
       lstatSync: typeof fs.lstatSync;
       linkSync: typeof fs.linkSync;
       fsyncSync: typeof fs.fsyncSync;
@@ -1025,6 +1027,8 @@ export const test_cli_scaffold = async (): Promise<void> => {
       writeSync: typeof fs.writeSync;
       writeFileSync: typeof fs.writeFileSync;
     };
+    const nativeClose = mutableFs.closeSync;
+    const nativeFstat = mutableFs.fstatSync;
     const nativeFsync = mutableFs.fsyncSync;
     const nativeLstat = mutableFs.lstatSync;
     const nativeLink = mutableFs.linkSync;
@@ -4202,8 +4206,11 @@ export const test_cli_scaffold = async (): Promise<void> => {
     );
     const directFileFailureBytes = Buffer.from('{"direct":"final"}\n');
     fs.mkdirSync(directFileFailureParent, { recursive: true });
+    let directFileFailureDescriptor = -1;
+    let directFileFailureCloseFailed = false;
     let directFileFailureRelinked = false;
     mutableFs.fsyncSync = ((descriptor: number): void => {
+      directFileFailureDescriptor = descriptor;
       nativeFsync(descriptor);
       if (directFileFailureRelinked === false) {
         nativeRename(directFileFailureParent, parkedDirectFileFailureParent);
@@ -4219,17 +4226,32 @@ export const test_cli_scaffold = async (): Promise<void> => {
         directFileFailureRelinked = true;
       }
     }) as typeof fs.fsyncSync;
+    mutableFs.closeSync = ((descriptor: number): void => {
+      if (
+        directFileFailureCloseFailed === false &&
+        descriptor === directFileFailureDescriptor
+      ) {
+        directFileFailureCloseFailed = true;
+        throw new Error("fixture direct file close failure");
+      }
+      nativeClose(descriptor);
+    }) as typeof fs.closeSync;
     let directFileFailureRejected = false;
     try {
-      directFileFailureRejected = throws(() =>
-        renderAttemptGcModule.createRenderGcFileSnapshot(
-          directFileFailureRoot,
-          directFileFailureTarget,
-          directFileFailureBytes,
-        ),
+      directFileFailureRejected = throwsWith(
+        () =>
+          renderAttemptGcModule.createRenderGcFileSnapshot(
+            directFileFailureRoot,
+            directFileFailureTarget,
+            directFileFailureBytes,
+          ),
+        "changed physical identity",
       );
     } finally {
       mutableFs.fsyncSync = nativeFsync;
+      mutableFs.closeSync = nativeClose;
+      if (directFileFailureCloseFailed)
+        nativeClose(directFileFailureDescriptor);
     }
     const directFileResident = fs.lstatSync(directFileFailureTarget, {
       bigint: true,
@@ -4241,6 +4263,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
     TestValidator.predicate(
       "direct render file creation preserves a same-inode parent successor on failure",
       directFileFailureRelinked &&
+        directFileFailureCloseFailed &&
         directFileFailureRejected &&
         directFileResident.dev === parkedDirectFileResident.dev &&
         directFileResident.ino === parkedDirectFileResident.ino &&
@@ -4251,6 +4274,75 @@ export const test_cli_scaffold = async (): Promise<void> => {
           path.join(directFileFailureParent, "successor.marker"),
           "utf8",
         ) === "successor",
+    );
+
+    const directFileAbaRoot = path.join(base, "direct-file-root-aba");
+    const directFileAbaParent = path.join(directFileAbaRoot, "files");
+    const directFileAbaTarget = path.join(directFileAbaParent, "final.json");
+    const parkedDirectFileAbaRoot = `${directFileAbaRoot}.original-parked`;
+    const parkedDirectFileAbaReplacement = `${directFileAbaRoot}.replacement-parked`;
+    fs.mkdirSync(directFileAbaParent, { recursive: true });
+    let directFileAbaDescriptor = -1;
+    let directFileAbaFstatCount = 0;
+    let directFileAbaRestored = false;
+    let directFileAbaSwapped = false;
+    mutableFs.fsyncSync = ((descriptor: number): void => {
+      directFileAbaDescriptor = descriptor;
+      nativeFsync(descriptor);
+      if (directFileAbaSwapped === false) {
+        nativeRename(directFileAbaRoot, parkedDirectFileAbaRoot);
+        nativeMkdir(path.join(directFileAbaRoot, "files"), {
+          recursive: true,
+        });
+        nativeLink(
+          path.join(parkedDirectFileAbaRoot, "files", "final.json"),
+          directFileAbaTarget,
+        );
+        directFileAbaSwapped = true;
+      }
+    }) as typeof fs.fsyncSync;
+    mutableFs.fstatSync = ((descriptor, ...args: unknown[]): unknown => {
+      const status = Reflect.apply(nativeFstat, mutableFs, [
+        descriptor,
+        ...args,
+      ]);
+      if (descriptor === directFileAbaDescriptor) {
+        directFileAbaFstatCount++;
+        if (directFileAbaFstatCount === 2) {
+          nativeRename(directFileAbaRoot, parkedDirectFileAbaReplacement);
+          nativeRename(parkedDirectFileAbaRoot, directFileAbaRoot);
+          directFileAbaRestored = true;
+        }
+      }
+      return status;
+    }) as typeof fs.fstatSync;
+    let directFileAbaRejected = false;
+    try {
+      directFileAbaRejected = throws(() =>
+        renderAttemptGcModule.createRenderGcFileSnapshot(
+          directFileAbaRoot,
+          directFileAbaTarget,
+          directFileFailureBytes,
+        ),
+      );
+    } finally {
+      mutableFs.fsyncSync = nativeFsync;
+      mutableFs.fstatSync = nativeFstat;
+    }
+    const directFileAbaOriginal = fs.lstatSync(directFileAbaTarget, {
+      bigint: true,
+    });
+    const directFileAbaReplacement = fs.lstatSync(
+      path.join(parkedDirectFileAbaReplacement, "files", "final.json"),
+      { bigint: true },
+    );
+    TestValidator.predicate(
+      "direct render file creation rejects a restored-root snapshot generation",
+      directFileAbaSwapped &&
+        directFileAbaRestored &&
+        directFileAbaRejected &&
+        directFileAbaOriginal.dev === directFileAbaReplacement.dev &&
+        directFileAbaOriginal.ino === directFileAbaReplacement.ino,
     );
     let attemptLockIndex = 0;
     const createAttemptLock = (pid: number, token: string) => {
@@ -5302,10 +5394,22 @@ export const test_cli_scaffold = async (): Promise<void> => {
       mutableFs.openSync = nativeOpen;
       mutableFs.fsyncSync = nativeFsync;
     }
-    TestValidator.predicate(
-      "a failed descriptor-bound lease creation removes only its partial file",
-      partialLeaseRejected && fs.readdirSync(livenessRoot).length === 0,
+    const partialLeaseFiles = fs.readdirSync(livenessRoot);
+    const partialLeaseBlocksRetry = throws(() =>
+      renderLivenessModule.acquireRenderGcLease({
+        coordinationRoot: livenessRoot,
+        pid: 31000,
+        processAlive: (pid) => pid === 31000,
+        scope: livenessScope,
+      }),
     );
+    TestValidator.predicate(
+      "a failed descriptor-bound lease remains as fail-closed evidence",
+      partialLeaseRejected &&
+        partialLeaseBlocksRetry &&
+        partialLeaseFiles.length === 1,
+    );
+    fs.rmSync(path.join(livenessRoot, partialLeaseFiles[0]!));
     let interleavedGc: unknown;
     let workerOpenInterleaved = false;
     mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
