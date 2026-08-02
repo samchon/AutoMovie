@@ -114,6 +114,8 @@ const unmentionedModules = (pkg: string, document: string): string[] =>
  *     with every spawned process routed through that shared evidence.
  * 15. The real capture smoke observes an auto-launched Vite process and reports
  *     early spawn/exit evidence instead of waiting for the readiness timeout.
+ * 16. The packaged starter verifier expects the versioned compile manifest's
+ *     canonical shot entries with both their IDs and generated relative paths.
  */
 export const test_workspace_public_contracts = (): void => {
   const rootReadme = readPackageFile("README.md");
@@ -154,6 +156,19 @@ export const test_workspace_public_contracts = (): void => {
           playgroundCaptureSmoke.indexOf(
             "\n\nconst answers =",
             ensureDevServerOffset,
+          ),
+        );
+  const compiledShotOracleOffset = tgzE2e.indexOf(
+    "const canonicalCompiledShots =",
+  );
+  const compiledShotOracleSource =
+    compiledShotOracleOffset < 0
+      ? ""
+      : tgzE2e.slice(
+          compiledShotOracleOffset,
+          tgzE2e.indexOf(
+            '\nassert(\n  "starter-render-bundle-count"',
+            compiledShotOracleOffset,
           ),
         );
   const sourceSection = (start: string, end: string): string => {
@@ -740,6 +755,30 @@ export const test_workspace_public_contracts = (): void => {
       ],
       timeout: { aliveOnly: true, output: ["stdout=", "stderr="] },
       childKills: 4,
+    },
+  );
+  TestValidator.equals(
+    "packaged starter verifier accepts versioned compiled shot entries",
+    {
+      entries: [
+        ...compiledShotOracleSource.matchAll(
+          /\{ id: "([^"]+)", path: "([^"]+)" \}/g,
+        ),
+      ].map((match) => ({ id: match[1], path: match[2] })),
+      comparison:
+        compiledShotOracleSource.match(
+          /JSON\.stringify\(compiled\.shots\) ===\s*JSON\.stringify\(canonicalCompiledShots\)/,
+        )?.[0] ?? null,
+      label: compiledShotOracleSource.includes('"starter-compiled-shot-order"'),
+    },
+    {
+      entries: [
+        { id: "answer", path: "shots/answer.json" },
+        { id: "opening", path: "shots/opening.json" },
+      ],
+      comparison:
+        "JSON.stringify(compiled.shots) === JSON.stringify(canonicalCompiledShots)",
+      label: true,
     },
   );
   const mcpMethods = [

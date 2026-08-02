@@ -484,9 +484,13 @@ for (const entry of renderManifests) {
     JSON.stringify(entry.value),
   );
 }
+const canonicalCompiledShots = [
+  { id: "answer", path: "shots/answer.json" },
+  { id: "opening", path: "shots/opening.json" },
+];
 assert(
   "starter-compiled-shot-order",
-  JSON.stringify(compiled.shots) === JSON.stringify(["answer", "opening"]),
+  JSON.stringify(compiled.shots) === JSON.stringify(canonicalCompiledShots),
   \`expected both canonical compiled shots, got \${JSON.stringify(compiled.shots)}\`,
 );
 assert(
