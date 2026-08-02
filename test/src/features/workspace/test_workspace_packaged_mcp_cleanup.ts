@@ -14,11 +14,15 @@ const tokenDigest = (node: ts.Node, source: ts.SourceFile): string => {
     ts.LanguageVariant.Standard,
     node.getText(source),
   );
-  const tokens: Array<readonly [ts.SyntaxKind, string]> = [];
+  const tokens: Array<readonly [ts.SyntaxKind, string, boolean]> = [];
   for (;;) {
     const kind = scanner.scan();
     if (kind === ts.SyntaxKind.EndOfFileToken) break;
-    tokens.push([kind, scanner.getTokenText()]);
+    tokens.push([
+      kind,
+      scanner.getTokenText(),
+      scanner.hasPrecedingLineBreak(),
+    ]);
   }
   const literals: Array<readonly [ts.SyntaxKind, string]> = [];
   const syntax: Array<readonly [ts.SyntaxKind, number]> = [];
@@ -42,8 +46,21 @@ const tokenDigest = (node: ts.Node, source: ts.SourceFile): string => {
     children.forEach(visit);
   };
   visit(node);
+  const diagnostics = (
+    source as ts.SourceFile & {
+      parseDiagnostics: ReadonlyArray<{
+        code: number;
+        length: number | undefined;
+        start: number | undefined;
+      }>;
+    }
+  ).parseDiagnostics.map((diagnostic) => [
+    diagnostic.code,
+    diagnostic.start ?? null,
+    diagnostic.length ?? null,
+  ]);
   return createHash("sha256")
-    .update(JSON.stringify({ literals, syntax, tokens }))
+    .update(JSON.stringify({ diagnostics, literals, syntax, tokens }))
     .digest("hex");
 };
 
@@ -351,14 +368,14 @@ export const test_workspace_packaged_mcp_cleanup = (): void => {
       cleanupCalls: [
         {
           callDigest:
-            "1867989d23610327a9bbfab619f3e64bbd54bc9d1d047ec586419e10f70d27cc",
+            "b4b809ecaba27749bffa14cb04df1b8aef7267a58fa1235a59fb534d51e1392f",
           failure: "clientFailure",
         },
       ],
       declarations: [
         {
           initializerDigest:
-            "1e81ada3dec1f24adbf24d0dbaf6969bd28d68dd2b9e39fc49164b37547715cb",
+            "43e6a3f28b4fb5785705d5f49739212b98d5f8c0e5ed4094258bafa58c509f09",
           kind: "const",
           name: "client",
         },
@@ -369,21 +386,21 @@ export const test_workspace_packaged_mcp_cleanup = (): void => {
         },
       ],
       failureWrites: [
-        "declaration:ad8769e4ecc83910365b5948ce38bf4884c4a9f9ea4c73de95d3773f0e2f8aac",
-        "assignment:d5876f920a9062f9cb4ba8c3dccf2a8f5e6563df80f2ec6d79aa9b63339b271d",
+        "declaration:10b9b2ee066fc4f49e618f5a464f706d8a23e149d8db78b4b9320a5163069fd6",
+        "assignment:dd9513cf8098cb9bc48d5ee9bb429a5a4bcf96e3916c4a406035ef0da2085c31",
       ],
       functions: {
         assert: [
           {
             async: false,
             bodyDigest: expectedDigest(
-              "46ebeb6f9b66e8a7508f24263b28daf68fc391b973684b5c58f853617958fe90",
+              "b265840bf99182805fe3c451c6341f8ee93f9dcdd8dba6aff6569d48408ca7d4",
               "{if(!condition)thrownewError(`✗#{name}:#{detail}`);console.log(`✓#{name}`);}",
             ),
             parameterDigests: [
-              "489d9b1667d940a1f918209324bc2ed78bdd234d48b1dd85a14cf8dbcfab6571",
-              "50fbcbdc811513094be8c69536261738a0d3acd5a0b0abdf8aa5b19de1975a28",
-              "56b2583bf974fb5e437ba71242ddae996753e6e92b78e7fcc515a762d2824f0b",
+              "c603b0e1002c2c73acf722ce565cd4035b1f8a890702cb5938a2c14d25381753",
+              "8e6c06d8d686ddac1aeffb36308c1ccfe0c1c2b2c94e384c9f5ef59839e94a9b",
+              "062de4199123e87ffa04b8c586a68a753dfe1da0f00685420d78bfd9611708ae",
             ],
           },
         ],
@@ -391,10 +408,10 @@ export const test_workspace_packaged_mcp_cleanup = (): void => {
           {
             async: true,
             bodyDigest:
-              "3827cdde8b964118fc8c7a8fee4ad1db4a078e739b90a2c8a0e0e04d38ec7e09",
+              "471734536bba6243c5478bd2c6d244e90ceae9773120d6b233920307f2f14119",
             parameterDigests: [
-              "b54056d15532279ebd2ee27e7fe8c0826a0fa979cb96bf88392421f08ddb6b2e",
-              "bd4924d579d1306da24b66ee2df595bcd856cb5dce1a1155477e05165de80abe",
+              "7dbd2433fb74ab5c3e5a2aaad1fba9c0f3106d62fd9f819921a5ce0ce4154940",
+              "060c4a2c8c157c4c87c48412f2f6b793e75bf64750106125cc0ba63f5fd4b104",
             ],
           },
         ],
@@ -402,24 +419,24 @@ export const test_workspace_packaged_mcp_cleanup = (): void => {
       lifecycle: [
         {
           catchDigest:
-            "ce254f22d4d57199f3e6c796a0f5f283527ee0c093a371cf10df0b8cd43a418a",
+            "e7eb6be6c44cccad1718585e0dcf7e0e6a1acd955f77e5a92095c6443ede2cdc",
           finallyDigest:
-            "4cf894b90582fcfb136ab497d136c943b03ec5c23bb7ac779167f96de189be25",
+            "1a260beee5550b83b8702b00d8747004114cffbdc1af75156aa2a090ce524792",
           probeDigest:
-            "675559ce9bf150d44311b6e424d084f34f07804cebe6afab670b213c104c60af",
+            "bfa71859dd9feddf4bc8609c7ee1edf793a307ece6ce15eb873b5814654fcab2",
         },
       ],
       processExits: [],
       sourceCount: 1,
       topLevelActions: [
-        "variable:28f1e0a97961b0cc71972e8026b01ebf057b77230642b2a2253c191e9c304a22",
-        "variable:b2fa6e8f8f4455494fadb5528257bcfbd36531639ebff452aa4fd93200af7f98",
-        "expression:df11a4c92466fff165965cc02dc87bcc6e5a7b1a260bb41e4e621970b66027ed",
-        "expression:ac4bec418c05a74357201c32f2cee3071fbce32987e6269972b11dba4e91a6f4",
-        "variable:273340b01e7c2ca418d8508eea111f4c50869e8df44a5a546881bafd830dae0b",
-        "variable:419dfa471917c2342dcf191e2823d9d1ddee6d58c65c9d6fc0a114b328445e29",
-        "variable:67936f5a09395cffa7d0d117589ba933c0dfee01672f1b1cf94c0539d959de8a",
-        "try:982f4a90940108ebc08eb890a41e5ee59a805f2f9846af11e2f922310c8cecbb",
+        "variable:f9b2ab0b39a6383149755a6466f7f3231c23d7177a211d9297a8afb22f2e0f3a",
+        "variable:00c6db51054a2f53cb008385ad28bd570584c734209eb29daa7c5ca5e67b9238",
+        "expression:e53c35d0ccf1d1aeb266c822ec604547c17ee7fa1c2885091ef723883b7f39b6",
+        "expression:2a7897d8430d3f8c3a6ba1028de7c7598ea4db678741f562a5d187feed96b9d0",
+        "variable:7512f73310edb014ecde288689ea928d16a90b5ab842c62ffafd8249a4985ac2",
+        "variable:8bca35e713bb795d6921b80db6e87a2a240e7ebfdac090c7ad4978bbc91af64c",
+        "variable:76c29700e1407a10d9bdda2d5599ed9c866666def9a9e619deeb700335c6f62b",
+        "try:de3fc5c98ee4ed28a944fc13af2c0432e671103bf2da693cf425ad8a41a47244",
       ],
     },
   );
