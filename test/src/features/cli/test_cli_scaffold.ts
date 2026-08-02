@@ -3824,6 +3824,123 @@ export const test_cli_scaffold = async (): Promise<void> => {
     );
     fs.rmSync(attemptTarget);
 
+    const foreignAttemptLinkLock = createAttemptLock(32011, firstAttemptToken);
+    const foreignAttemptLockSuccessor = Buffer.from(
+      `${JSON.stringify({
+        chunk: attemptChunk,
+        pid: 32011,
+        token: secondAttemptToken,
+      })}\n`,
+    );
+    let foreignAttemptLinked = false;
+    mutableFs.lstatSync = ((file, ...args: unknown[]): unknown => {
+      const status = Reflect.apply(nativeLstat, mutableFs, [file, ...args]);
+      if (
+        foreignAttemptLinked === false &&
+        path.resolve(file.toString()) === attemptRoot &&
+        fs.existsSync(attemptDirectory)
+      ) {
+        const candidate = fs
+          .readdirSync(attemptDirectory)
+          .find((name) => name.endsWith(".attempt-candidate"));
+        if (candidate !== undefined) {
+          nativeLink(path.join(attemptDirectory, candidate), attemptTarget);
+          fs.rmSync(foreignAttemptLinkLock.snapshot.target);
+          nativeWriteFile(
+            foreignAttemptLinkLock.snapshot.target,
+            foreignAttemptLockSuccessor,
+          );
+          foreignAttemptLinked = true;
+        }
+      }
+      return status;
+    }) as typeof fs.lstatSync;
+    let foreignAttemptLinkRejected = false;
+    try {
+      foreignAttemptLinkRejected = throws(() =>
+        renderAttemptModule.beginRenderAttempt({
+          base: attemptRoot,
+          chunk: attemptChunk,
+          lock: foreignAttemptLinkLock,
+          pid: 32011,
+          processAlive: () => false,
+          slot: "slot-0001",
+          target: attemptTarget,
+          token: firstAttemptToken,
+        }),
+      );
+    } finally {
+      mutableFs.lstatSync = nativeLstat;
+    }
+    TestValidator.predicate(
+      "render attempt never deletes a foreign pre-link of its candidate inode",
+      foreignAttemptLinked &&
+        foreignAttemptLinkRejected &&
+        fs.existsSync(attemptTarget) &&
+        fs
+          .readFileSync(foreignAttemptLinkLock.snapshot.target)
+          .equals(foreignAttemptLockSuccessor),
+    );
+    fs.rmSync(attemptTarget);
+    fs.rmSync(foreignAttemptLinkLock.snapshot.target);
+
+    const candidateParentLock = createAttemptLock(32012, secondAttemptToken);
+    const parkedCandidateParent = `${attemptDirectory}.candidate-parked`;
+    let candidateParentSwapped = false;
+    let candidateParentName = "";
+    mutableFs.lstatSync = ((file, ...args: unknown[]): unknown => {
+      const status = Reflect.apply(nativeLstat, mutableFs, [file, ...args]);
+      if (
+        candidateParentSwapped === false &&
+        path.resolve(file.toString()) === attemptRoot &&
+        fs.existsSync(attemptDirectory)
+      ) {
+        const candidate = fs
+          .readdirSync(attemptDirectory)
+          .find((name) => name.endsWith(".attempt-candidate"));
+        if (candidate !== undefined) {
+          candidateParentName = candidate;
+          nativeRename(attemptDirectory, parkedCandidateParent);
+          nativeMkdir(attemptDirectory);
+          nativeLink(
+            path.join(parkedCandidateParent, candidate),
+            path.join(attemptDirectory, candidate),
+          );
+          candidateParentSwapped = true;
+        }
+      }
+      return status;
+    }) as typeof fs.lstatSync;
+    let candidateParentRejected = false;
+    try {
+      candidateParentRejected = throws(() =>
+        renderAttemptModule.beginRenderAttempt({
+          base: attemptRoot,
+          chunk: attemptChunk,
+          lock: candidateParentLock,
+          pid: 32012,
+          processAlive: () => false,
+          slot: "slot-0001",
+          target: attemptTarget,
+          token: secondAttemptToken,
+        }),
+      );
+    } finally {
+      mutableFs.lstatSync = nativeLstat;
+    }
+    TestValidator.predicate(
+      "render attempt preserves a candidate-path hard-link in a parent successor",
+      candidateParentSwapped &&
+        candidateParentRejected &&
+        fs.existsSync(path.join(attemptDirectory, candidateParentName)) &&
+        fs.existsSync(path.join(parkedCandidateParent, candidateParentName)),
+    );
+    fs.rmSync(attemptDirectory, { recursive: true, force: true });
+    nativeRename(parkedCandidateParent, attemptDirectory);
+    fs.rmSync(path.join(attemptDirectory, candidateParentName), {
+      force: true,
+    });
+
     const parentFenceLock = createAttemptLock(32009, firstAttemptToken);
     const parkedAttemptDirectory = `${attemptDirectory}.parked`;
     const attemptParentSuccessorMarker = path.join(
