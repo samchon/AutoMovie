@@ -2668,7 +2668,9 @@ export const test_workspace_public_contracts = (): void => {
           bodies: [
             [
               "constparsed=positiveNumber(value,fallback,label);",
-              "if(!Number.isInteger(parsed)||parsed%2!==0)thrownewError(`${label}mustbeapositiveeveninteger`);",
+              "if(!Number.isInteger(parsed)||parsed%2!==0)thrownewError(`" +
+                templateExpression("label") +
+                "mustbeapositiveeveninteger`);",
               "returnparsed;",
             ],
           ],
@@ -2676,7 +2678,10 @@ export const test_workspace_public_contracts = (): void => {
           guards: [
             {
               condition: "!Number.isInteger(parsed)||parsed%2!==0",
-              error: "`${label}mustbeapositiveeveninteger`",
+              error:
+                "`" +
+                templateExpression("label") +
+                "mustbeapositiveeveninteger`",
             },
           ],
           parameters: [
@@ -2691,7 +2696,9 @@ export const test_workspace_public_contracts = (): void => {
             [
               "if(value===undefined)returnfallback;",
               "constparsed=Number(value);",
-              "if(!Number.isFinite(parsed)||parsed<=0)thrownewError(`${label}mustbeapositivefinitenumber`);",
+              "if(!Number.isFinite(parsed)||parsed<=0)thrownewError(`" +
+                templateExpression("label") +
+                "mustbeapositivefinitenumber`);",
               "returnparsed;",
             ],
           ],
@@ -2705,7 +2712,7 @@ export const test_workspace_public_contracts = (): void => {
           dimensions: [
             ["width", 'positiveEvenInteger(flags.width,640,"--width")'],
             ["height", 'positiveEvenInteger(flags.height,360,"--height")'],
-          ],
+          ] as Array<[string, string]>,
           directReturns: 1,
           unsafeProperties: [],
         },
