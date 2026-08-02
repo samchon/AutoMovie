@@ -296,11 +296,9 @@ let identityRequest: {
   url: string;
 } | null = null;
 const loadIdentity = (url: string): Promise<void> => {
-  if (identityRequest?.url === url) {
-    identityUrl = url;
-    return identityRequest.promise;
-  }
+  if (identityRequest?.url === url) return identityRequest.promise;
   if (url === identityUrl) return Promise.resolve();
+  identityRequest = null;
   identityUrl = url;
   identityLoaded = false;
   identityDelta.fill(0);
@@ -314,11 +312,14 @@ const loadIdentity = (url: string): Promise<void> => {
     return Promise.resolve();
   }
   const token = Symbol(url);
+  const ownsRequest = (): boolean =>
+    identityRequest?.token === token && identityUrl === url;
   const promise = fetch(url)
     .then((r) => (r.ok ? r.json() : null))
     .then((j: { identity: number[] } | null) => {
-      if (identityUrl !== url) return;
+      if (!ownsRequest()) return;
       if (!j) {
+        identityRequest = null;
         identityUrl = "";
         return;
       }
@@ -326,7 +327,10 @@ const loadIdentity = (url: string): Promise<void> => {
       identityLoaded = true;
     })
     .catch(() => {
-      if (identityUrl === url) identityUrl = "";
+      if (ownsRequest()) {
+        identityRequest = null;
+        identityUrl = "";
+      }
     })
     .then(() => {
       if (identityRequest?.token === token) identityRequest = null;
@@ -1295,7 +1299,9 @@ const PRESETS: Record<string, IPreset> = {
   },
 };
 
+let presetGeneration = 0;
 const applyPreset = (p: IPreset): void => {
+  const generation = ++presetGeneration;
   NAMES.forEach((name, idx) => {
     const w = p.face[name] ?? 0;
     faceMesh.morphTargetInfluences![idx] = w;
@@ -1334,7 +1340,7 @@ const applyPreset = (p: IPreset): void => {
   });
   rebuildTails();
   void loadIdentity(p.data?.identity ?? "").then(() => {
-    setIdentity(p.data ? 1 : 0);
+    if (generation === presetGeneration) setIdentity(p.data ? 1 : 0);
   });
   if (p.data) {
     (window as unknown as { __loadSkin?: (u: string) => void }).__loadSkin?.(

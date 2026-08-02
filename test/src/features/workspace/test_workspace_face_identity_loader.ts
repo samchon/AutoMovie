@@ -16,6 +16,8 @@ interface IIdentityLoaderContract {
     type: string | null;
   }>;
   parameters: string[];
+  presetActions: string[];
+  presetCount: number;
   returnType: string | null;
   writes: Array<{
     name: string;
@@ -41,6 +43,7 @@ const identityLoaderContract = (text: string): IIdentityLoaderContract => {
     "identityRequest",
     "identityUrl",
     "loadIdentity",
+    "presetGeneration",
   ]);
   const declarations: IIdentityLoaderContract["declarations"] = [];
   const loaders: ts.ArrowFunction[] = [];
@@ -121,6 +124,33 @@ const identityLoaderContract = (text: string): IIdentityLoaderContract => {
   };
   visitCalls(source);
 
+  const presets: ts.ArrowFunction[] = [];
+  for (const statement of source.statements) {
+    if (!ts.isVariableStatement(statement)) continue;
+    for (const declaration of statement.declarationList.declarations)
+      if (
+        ts.isIdentifier(declaration.name) &&
+        declaration.name.text === "applyPreset" &&
+        declaration.initializer !== undefined &&
+        ts.isArrowFunction(declaration.initializer)
+      )
+        presets.push(declaration.initializer);
+  }
+  const preset = presets.length === 1 ? presets[0]! : null;
+  const presetActions =
+    preset !== null && ts.isBlock(preset.body)
+      ? preset.body.statements
+          .filter((statement) => {
+            const text = statement.getText(source);
+            return (
+              text.includes("presetGeneration") ||
+              text.includes("loadIdentity") ||
+              text.includes("setIdentity")
+            );
+          })
+          .map((statement) => compact(statement, source))
+      : [];
+
   return {
     body: loader === null ? null : compact(loader.body, source),
     callSites: callSites
@@ -129,6 +159,8 @@ const identityLoaderContract = (text: string): IIdentityLoaderContract => {
     declarations,
     parameters:
       loader?.parameters.map((parameter) => compact(parameter, source)) ?? [],
+    presetActions,
+    presetCount: presets.length,
     returnType:
       loader?.type === undefined ? null : compact(loader.type, source),
     writes,
@@ -148,10 +180,10 @@ export const test_workspace_face_identity_loader = (): void => {
     "face identity loading is race-safe, coalesced, and retryable",
     identityLoaderContract(face),
     {
-      body: '{if(identityRequest?.url===url){identityUrl=url;returnidentityRequest.promise;}if(url===identityUrl)returnPromise.resolve();identityUrl=url;identityLoaded=false;identityDelta.fill(0);constdone=():void=>{(faceGeometry.morphAttributes.position[IDENTITY]asTHREE.BufferAttribute).needsUpdate=true;};if(!url){done();returnPromise.resolve();}consttoken=Symbol(url);constpromise=fetch(url).then((r)=>(r.ok?r.json():null)).then((j:{identity:number[]}|null)=>{if(identityUrl!==url)return;if(!j){identityUrl="";return;}identityDelta.set(j.identity);identityLoaded=true;}).catch(()=>{if(identityUrl===url)identityUrl="";}).then(()=>{if(identityRequest?.token===token)identityRequest=null;done();});identityRequest={promise,token,url};returnpromise;}',
+      body: '{if(identityRequest?.url===url)returnidentityRequest.promise;if(url===identityUrl)returnPromise.resolve();identityRequest=null;identityUrl=url;identityLoaded=false;identityDelta.fill(0);constdone=():void=>{(faceGeometry.morphAttributes.position[IDENTITY]asTHREE.BufferAttribute).needsUpdate=true;};if(!url){done();returnPromise.resolve();}consttoken=Symbol(url);constownsRequest=():boolean=>identityRequest?.token===token&&identityUrl===url;constpromise=fetch(url).then((r)=>(r.ok?r.json():null)).then((j:{identity:number[]}|null)=>{if(!ownsRequest())return;if(!j){identityRequest=null;identityUrl="";return;}identityDelta.set(j.identity);identityLoaded=true;}).catch(()=>{if(ownsRequest()){identityRequest=null;identityUrl="";}}).then(()=>{if(identityRequest?.token===token)identityRequest=null;done();});identityRequest={promise,token,url};returnpromise;}',
       callSites: [
         'voidloadIdentity("/models/hero1-identity.json");',
-        'voidloadIdentity(p.data?.identity??"").then(()=>{setIdentity(p.data?1:0);});',
+        'voidloadIdentity(p.data?.identity??"").then(()=>{if(generation===presetGeneration)setIdentity(p.data?1:0);});',
       ],
       declarations: [
         {
@@ -174,20 +206,33 @@ export const test_workspace_face_identity_loader = (): void => {
         },
         {
           initializer:
-            '(url:string):Promise<void>=>{if(identityRequest?.url===url){identityUrl=url;returnidentityRequest.promise;}if(url===identityUrl)returnPromise.resolve();identityUrl=url;identityLoaded=false;identityDelta.fill(0);constdone=():void=>{(faceGeometry.morphAttributes.position[IDENTITY]asTHREE.BufferAttribute).needsUpdate=true;};if(!url){done();returnPromise.resolve();}consttoken=Symbol(url);constpromise=fetch(url).then((r)=>(r.ok?r.json():null)).then((j:{identity:number[]}|null)=>{if(identityUrl!==url)return;if(!j){identityUrl="";return;}identityDelta.set(j.identity);identityLoaded=true;}).catch(()=>{if(identityUrl===url)identityUrl="";}).then(()=>{if(identityRequest?.token===token)identityRequest=null;done();});identityRequest={promise,token,url};returnpromise;}',
+            '(url:string):Promise<void>=>{if(identityRequest?.url===url)returnidentityRequest.promise;if(url===identityUrl)returnPromise.resolve();identityRequest=null;identityUrl=url;identityLoaded=false;identityDelta.fill(0);constdone=():void=>{(faceGeometry.morphAttributes.position[IDENTITY]asTHREE.BufferAttribute).needsUpdate=true;};if(!url){done();returnPromise.resolve();}consttoken=Symbol(url);constownsRequest=():boolean=>identityRequest?.token===token&&identityUrl===url;constpromise=fetch(url).then((r)=>(r.ok?r.json():null)).then((j:{identity:number[]}|null)=>{if(!ownsRequest())return;if(!j){identityRequest=null;identityUrl="";return;}identityDelta.set(j.identity);identityLoaded=true;}).catch(()=>{if(ownsRequest()){identityRequest=null;identityUrl="";}}).then(()=>{if(identityRequest?.token===token)identityRequest=null;done();});identityRequest={promise,token,url};returnpromise;}',
           kind: "const",
           name: "loadIdentity",
           type: null,
         },
+        {
+          initializer: "0",
+          kind: "let",
+          name: "presetGeneration",
+          type: null,
+        },
       ],
       parameters: ["url:string"],
+      presetActions: [
+        "constgeneration=++presetGeneration;",
+        'voidloadIdentity(p.data?.identity??"").then(()=>{if(generation===presetGeneration)setIdentity(p.data?1:0);});',
+      ],
+      presetCount: 1,
       returnType: "Promise<void>",
       writes: [
-        { name: "identityUrl", operator: "=", value: "url" },
+        { name: "identityRequest", operator: "=", value: "null" },
         { name: "identityUrl", operator: "=", value: "url" },
         { name: "identityLoaded", operator: "=", value: "false" },
+        { name: "identityRequest", operator: "=", value: "null" },
         { name: "identityUrl", operator: "=", value: '""' },
         { name: "identityLoaded", operator: "=", value: "true" },
+        { name: "identityRequest", operator: "=", value: "null" },
         { name: "identityUrl", operator: "=", value: '""' },
         { name: "identityRequest", operator: "=", value: "null" },
         {
