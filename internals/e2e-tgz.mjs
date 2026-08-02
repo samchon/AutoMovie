@@ -297,6 +297,11 @@ import fs from "node:fs";
 import path from "node:path";
 import { PNG } from "pngjs";
 
+import {
+  captureProductionFrame,
+  closeProductionFrameCapture,
+} from "./scripts/capture.ts";
+
 const assert = (name, condition, detail) => {
   if (!condition) {
     console.error(\`✗ \${name}: \${detail}\`);
@@ -545,7 +550,10 @@ assert(
   "the six captures do not distinguish all guide-pass families",
 );
 
-const app = new AutoMovieApplication({ projectRoot: root });
+const app = new AutoMovieApplication({
+  projectRoot: root,
+  capture: captureProductionFrame,
+});
 app.getGuideDocument({ name: "AUTOMOVIE_OVERALL" });
 for (const name of new Set([
   ...Object.values(AUTOMOVIE_REVIEW_GUIDES),
@@ -678,37 +686,41 @@ if (phase === "review") {
         return [model.id, model];
       }),
   );
-  for (const entry of before.reviews.entries) {
-    if (entry.target.kind !== "asset") continue;
-    const model = compiledModels.get(entry.target.id);
-    assert(
-      \`starter-asset-model-current:\${entry.target.id}\`,
-      model !== undefined,
-      "review queue asset is absent from the current model graph",
-    );
-    for (const view of packagedAssetReviewViews(model)) {
-      const captured = await app.captureFrame({
-        target: {
-          kind: "asset",
-          id: entry.target.id,
-          angleDeg: view.angleDeg,
-          elevationDeg: view.elevationDeg,
-          pose: view.pose,
-          pass: view.pass,
-        },
-      });
+  try {
+    for (const entry of before.reviews.entries) {
+      if (entry.target.kind !== "asset") continue;
+      const model = compiledModels.get(entry.target.id);
       assert(
-        \`starter-asset-view-captured:\${entry.target.id}:\${view.id}\`,
-        captured.captured &&
-          captured.reviewTarget?.kind === "asset" &&
-          captured.reviewTarget.id === entry.target.id &&
-          captured.receipt !== null &&
-          captured.frame?.width === 16 &&
-          captured.frame.height === 16 &&
-          captured.diagnostics.every((item) => item.category !== "error"),
-        JSON.stringify(captured.diagnostics),
+        \`starter-asset-model-current:\${entry.target.id}\`,
+        model !== undefined,
+        "review queue asset is absent from the current model graph",
       );
+      for (const view of packagedAssetReviewViews(model)) {
+        const captured = await app.captureFrame({
+          target: {
+            kind: "asset",
+            id: entry.target.id,
+            angleDeg: view.angleDeg,
+            elevationDeg: view.elevationDeg,
+            pose: view.pose,
+            pass: view.pass,
+          },
+        });
+        assert(
+          \`starter-asset-view-captured:\${entry.target.id}:\${view.id}\`,
+          captured.captured &&
+            captured.reviewTarget?.kind === "asset" &&
+            captured.reviewTarget.id === entry.target.id &&
+            captured.receipt !== null &&
+            captured.frame?.width === 16 &&
+            captured.frame.height === 16 &&
+            captured.diagnostics.every((item) => item.category !== "error"),
+          JSON.stringify(captured.diagnostics),
+        );
+      }
     }
+  } finally {
+    await closeProductionFrameCapture();
   }
   for (const entry of before.reviews.entries) {
     const prepared = app.prepareReview({ target: entry.target });
@@ -1408,7 +1420,7 @@ export default {
   );
   run(
     "complete packaged starter evidence reviews",
-    "node verify-packaged-starter.mjs review",
+    "npm exec -- tsx verify-packaged-starter.mjs review",
     starterDir,
   );
   run("lint reviewed packaged starter", "npm run lint", starterDir, 900_000);
@@ -1591,7 +1603,7 @@ PNG.sync.read = function (input) {
     );
   run(
     "verify packaged starter pixels, final ledger and tamper gate",
-    "node verify-packaged-starter.mjs final",
+    "npm exec -- tsx verify-packaged-starter.mjs final",
     starterDir,
   );
   run(

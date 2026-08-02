@@ -640,6 +640,18 @@ const packagedAssetReviewContract = (
     outerExpression: string;
     outerInitializer: string;
   }>;
+  captureHost: {
+    applications: string[];
+    cleanup: Array<{
+      catch: boolean;
+      finally: string[];
+    }>;
+    imports: Array<{
+      module: string;
+      names: string[];
+    }>;
+    verifierCommands: string[];
+  };
   embeddedScripts: number;
   guideLoops: Array<{
     body: string;
@@ -810,6 +822,15 @@ const packagedAssetReviewContract = (
     expression: string;
     initializer: string;
   }> = [];
+  const applications: string[] = [];
+  const captureImports: Array<{
+    module: string;
+    names: string[];
+  }> = [];
+  const captureCleanup: Array<{
+    catch: boolean;
+    finally: string[];
+  }> = [];
   const reviewFlows: Array<{
     before: number | null;
     capture: number | null;
@@ -825,6 +846,28 @@ const packagedAssetReviewContract = (
     );
     const compact = (node: ts.Node): string =>
       node.getText(parsed).replace(/\s+/g, "");
+    for (const statement of parsed.statements) {
+      if (
+        ts.isImportDeclaration(statement) &&
+        statement.importClause?.namedBindings !== undefined &&
+        ts.isNamedImports(statement.importClause.namedBindings) &&
+        compact(statement.moduleSpecifier) === '"./scripts/capture.ts"'
+      )
+        captureImports.push({
+          module: compact(statement.moduleSpecifier),
+          names: statement.importClause.namedBindings.elements.map((element) =>
+            compact(element),
+          ),
+        });
+      if (ts.isVariableStatement(statement))
+        for (const declaration of statement.declarationList.declarations)
+          if (
+            ts.isIdentifier(declaration.name) &&
+            declaration.name.text === "app" &&
+            declaration.initializer !== undefined
+          )
+            applications.push(compact(declaration.initializer));
+    }
     for (const statement of parsed.statements)
       if (
         ts.isForOfStatement(statement) &&
@@ -880,15 +923,28 @@ const packagedAssetReviewContract = (
               modelInventory = compact(declaration.initializer);
             }
           }
-        if (
-          ts.isForOfStatement(action) === false ||
-          compact(action.expression) !== "before.reviews.entries"
-        )
-          return;
+        const captureTry = ts.isTryStatement(action) ? action : undefined;
+        const captureAction = (
+          captureTry?.tryBlock.statements ??
+          ts.factory.createNodeArray([action])
+        ).find(
+          (candidate): candidate is ts.ForOfStatement =>
+            ts.isForOfStatement(candidate) &&
+            compact(candidate.expression) === "before.reviews.entries",
+        );
+        if (captureAction === undefined) return;
         flow.capture = index;
-        const outerBody = ts.isBlock(action.statement)
-          ? action.statement.statements
-          : ts.factory.createNodeArray([action.statement]);
+        if (captureTry !== undefined)
+          captureCleanup.push({
+            catch: captureTry.catchClause !== undefined,
+            finally:
+              captureTry.finallyBlock?.statements.map((statement) =>
+                compact(statement),
+              ) ?? [],
+          });
+        const outerBody = ts.isBlock(captureAction.statement)
+          ? captureAction.statement.statements
+          : ts.factory.createNodeArray([captureAction.statement]);
         const assetGuard = outerBody.find(
           (statement): statement is ts.IfStatement =>
             ts.isIfStatement(statement) &&
@@ -969,8 +1025,8 @@ const packagedAssetReviewContract = (
               : null,
           modelInventory,
           outerBodyStatementCount: outerBody.length,
-          outerExpression: compact(action.expression),
-          outerInitializer: compact(action.initializer),
+          outerExpression: compact(captureAction.expression),
+          outerInitializer: compact(captureAction.initializer),
         });
       });
       reviewFlows.push(flow);
@@ -999,6 +1055,16 @@ const packagedAssetReviewContract = (
       }),
     canonical,
     captureLoops,
+    captureHost: {
+      applications,
+      cleanup: captureCleanup,
+      imports: captureImports,
+      verifierCommands: [
+        ...tgzSource.matchAll(
+          /"(npm exec -- tsx verify-packaged-starter\.mjs (?:review|final))"/g,
+        ),
+      ].map((match) => match[1]!),
+    },
     embeddedScripts: embeddedSources.length,
     guideLoops,
     packaged,
@@ -2650,6 +2716,27 @@ export const test_workspace_public_contracts = (): void => {
           outerInitializer: "constentry",
         },
       ],
+      captureHost: {
+        applications: [
+          "newAutoMovieApplication({projectRoot:root,capture:captureProductionFrame,})",
+        ],
+        cleanup: [
+          {
+            catch: false,
+            finally: ["awaitcloseProductionFrameCapture();"],
+          },
+        ],
+        imports: [
+          {
+            module: '"./scripts/capture.ts"',
+            names: ["captureProductionFrame", "closeProductionFrameCapture"],
+          },
+        ],
+        verifierCommands: [
+          "npm exec -- tsx verify-packaged-starter.mjs review",
+          "npm exec -- tsx verify-packaged-starter.mjs final",
+        ],
+      },
       embeddedScripts: 1,
       guideLoops: [
         {
