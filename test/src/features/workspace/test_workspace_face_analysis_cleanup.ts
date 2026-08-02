@@ -56,7 +56,7 @@ const faceAnalysisCleanupContract = (
   );
   const imports = source.statements.flatMap((statement) =>
     ts.isImportDeclaration(statement) &&
-    ts.isImportClause(statement.importClause) &&
+    statement.importClause !== undefined &&
     statement.importClause.namedBindings !== undefined &&
     ts.isNamedImports(statement.importClause.namedBindings) &&
     statement.importClause.namedBindings.elements.some(

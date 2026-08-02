@@ -657,6 +657,7 @@ const packagedAssetReviewContract = (
     verifierCommands: string[];
   };
   embeddedScripts: number;
+  frameEvidence: Array<Array<[string, string]>>;
   guideLoops: Array<{
     body: string;
     expression: string;
