@@ -8718,6 +8718,154 @@ export const test_cli_scaffold = async (): Promise<void> => {
           "foreign! generation",
     );
 
+    const finalCreateMutationBase = path.join(
+      base,
+      "final-create-mutation-scaffold",
+    );
+    const finalCreateMutationTarget = path.join(
+      finalCreateMutationBase,
+      "owned.txt",
+    );
+    let finalCreateDescriptor = -1;
+    let finalCreateDescriptorSnapshots = 0;
+    let finalCreateMutationArmed = false;
+    let finalCreateMutated = false;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+      if (
+        typeof file !== "number" &&
+        path.resolve(file.toString()) === finalCreateMutationTarget &&
+        flags === "wx+"
+      )
+        finalCreateDescriptor = descriptor;
+      return descriptor;
+    }) as typeof fs.openSync;
+    mutableFs.fstatSync = ((descriptor, ...args: unknown[]): unknown => {
+      const status = Reflect.apply(nativeFstat, mutableFs, [
+        descriptor,
+        ...args,
+      ]);
+      if (
+        descriptor === finalCreateDescriptor &&
+        ++finalCreateDescriptorSnapshots === 5
+      )
+        finalCreateMutationArmed = true;
+      return status;
+    }) as typeof fs.fstatSync;
+    mutableFs.lstatSync = ((file, ...args: unknown[]): unknown => {
+      if (
+        finalCreateMutationArmed &&
+        path.resolve(file.toString()) === finalCreateMutationTarget
+      ) {
+        nativeWriteFile(
+          finalCreateMutationTarget,
+          "foreign generation after final descriptor snapshot",
+        );
+        finalCreateMutationArmed = false;
+        finalCreateMutated = true;
+      }
+      return Reflect.apply(nativeLstat, mutableFs, [file, ...args]);
+    }) as typeof fs.lstatSync;
+    let finalCreateMutationRejected = false;
+    try {
+      finalCreateMutationRejected = throws(() =>
+        writeFiles(finalCreateMutationBase, {
+          "owned.txt": "scaffold generation",
+        }),
+      );
+    } finally {
+      mutableFs.openSync = nativeOpen;
+      mutableFs.fstatSync = nativeFstat;
+      mutableFs.lstatSync = nativeLstat;
+    }
+    TestValidator.predicate(
+      "scaffold creation rejects mutation after its final descriptor snapshot",
+      finalCreateMutated &&
+        finalCreateMutationRejected &&
+        fs.readFileSync(finalCreateMutationTarget, "utf8") ===
+          "foreign generation after final descriptor snapshot",
+    );
+
+    const finalForceMutationBase = path.join(
+      base,
+      "final-force-mutation-scaffold",
+    );
+    const finalForceMutationTarget = path.join(
+      finalForceMutationBase,
+      "owned.txt",
+    );
+    fs.mkdirSync(finalForceMutationBase);
+    fs.writeFileSync(finalForceMutationTarget, "original generation");
+    let finalForceDescriptor = -1;
+    let finalForceDescriptorSnapshots = 0;
+    let finalForceMutationArmed = false;
+    let finalForceMutated = false;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+      if (
+        typeof file !== "number" &&
+        path.resolve(file.toString()) === finalForceMutationTarget &&
+        flags === "r+"
+      )
+        finalForceDescriptor = descriptor;
+      return descriptor;
+    }) as typeof fs.openSync;
+    mutableFs.fstatSync = ((descriptor, ...args: unknown[]): unknown => {
+      const status = Reflect.apply(nativeFstat, mutableFs, [
+        descriptor,
+        ...args,
+      ]);
+      if (
+        descriptor === finalForceDescriptor &&
+        ++finalForceDescriptorSnapshots === 5
+      )
+        finalForceMutationArmed = true;
+      return status;
+    }) as typeof fs.fstatSync;
+    mutableFs.lstatSync = ((file, ...args: unknown[]): unknown => {
+      if (
+        finalForceMutationArmed &&
+        path.resolve(file.toString()) === finalForceMutationTarget
+      ) {
+        nativeWriteFile(
+          finalForceMutationTarget,
+          "foreign generation after final descriptor snapshot",
+        );
+        finalForceMutationArmed = false;
+        finalForceMutated = true;
+      }
+      return Reflect.apply(nativeLstat, mutableFs, [file, ...args]);
+    }) as typeof fs.lstatSync;
+    let finalForceMutationRejected = false;
+    try {
+      finalForceMutationRejected = throws(() =>
+        writeFiles(
+          finalForceMutationBase,
+          { "owned.txt": "scaffold generation" },
+          { force: true },
+        ),
+      );
+    } finally {
+      mutableFs.openSync = nativeOpen;
+      mutableFs.fstatSync = nativeFstat;
+      mutableFs.lstatSync = nativeLstat;
+    }
+    TestValidator.predicate(
+      "forced scaffold write rejects mutation after its final descriptor snapshot",
+      finalForceMutated &&
+        finalForceMutationRejected &&
+        fs.readFileSync(finalForceMutationTarget, "utf8") ===
+          "foreign generation after final descriptor snapshot",
+    );
+
     const closeFailureBase = path.join(base, "close-failure-scaffold");
     const closeFailureTarget = path.join(closeFailureBase, "complete.txt");
     let scaffoldCloseFailed = false;

@@ -189,12 +189,20 @@ const createScaffoldFile = (props: {
     const opened = fs.fstatSync(descriptor, { bigint: true });
     assertOrdinarySingleLinkFile(opened, props.target);
     assertScaffoldOwnership(props.base, props.parent);
-    assertScaffoldFileDescriptor(captureScaffoldFile(props.target), descriptor);
+    assertScaffoldFileDescriptor(
+      captureScaffoldFile(props.target),
+      descriptor,
+      physicalVersion(opened),
+    );
     writeScaffoldDescriptor(descriptor, props.target, props.bytes);
     const completed = fs.fstatSync(descriptor, { bigint: true });
     if (completed.size !== BigInt(props.bytes.byteLength))
       throw new Error(`scaffold file changed final size: ${props.target}`);
-    assertScaffoldFileDescriptor(captureScaffoldFile(props.target), descriptor);
+    assertScaffoldFileDescriptor(
+      captureScaffoldFile(props.target),
+      descriptor,
+      physicalVersion(completed),
+    );
     assertScaffoldDescriptorBytes(descriptor, props.target, props.bytes);
     const finalStatus = fs.fstatSync(descriptor, { bigint: true });
     if (physicalVersion(finalStatus) !== physicalVersion(completed))
@@ -202,7 +210,11 @@ const createScaffoldFile = (props: {
         `scaffold file changed after final readback: ${props.target}`,
       );
     completedSnapshot = captureScaffoldFile(props.target);
-    assertScaffoldFileDescriptor(completedSnapshot, descriptor);
+    assertScaffoldFileDescriptor(
+      completedSnapshot,
+      descriptor,
+      physicalVersion(finalStatus),
+    );
     assertScaffoldOwnership(props.base, props.parent);
   } catch (error) {
     failed = true;
@@ -227,14 +239,22 @@ const overwriteScaffoldFile = (props: {
   try {
     const opened = fs.fstatSync(descriptor, { bigint: true });
     assertOrdinarySingleLinkFile(opened, props.target);
-    assertScaffoldFileDescriptor(props.existing, descriptor);
+    assertScaffoldFileDescriptor(
+      props.existing,
+      descriptor,
+      physicalVersion(opened),
+    );
     assertScaffoldOwnership(props.base, props.parent);
     fs.ftruncateSync(descriptor, 0);
     writeScaffoldDescriptor(descriptor, props.target, props.bytes);
     const completed = fs.fstatSync(descriptor, { bigint: true });
     if (completed.size !== BigInt(props.bytes.byteLength))
       throw new Error(`scaffold file changed final size: ${props.target}`);
-    assertScaffoldFileDescriptor(captureScaffoldFile(props.target), descriptor);
+    assertScaffoldFileDescriptor(
+      captureScaffoldFile(props.target),
+      descriptor,
+      physicalVersion(completed),
+    );
     assertScaffoldDescriptorBytes(descriptor, props.target, props.bytes);
     const finalStatus = fs.fstatSync(descriptor, { bigint: true });
     if (physicalVersion(finalStatus) !== physicalVersion(completed))
@@ -242,7 +262,11 @@ const overwriteScaffoldFile = (props: {
         `scaffold file changed after final readback: ${props.target}`,
       );
     completedSnapshot = captureScaffoldFile(props.target);
-    assertScaffoldFileDescriptor(completedSnapshot, descriptor);
+    assertScaffoldFileDescriptor(
+      completedSnapshot,
+      descriptor,
+      physicalVersion(finalStatus),
+    );
     assertScaffoldOwnership(props.base, props.parent);
   } catch (error) {
     failed = true;
@@ -268,10 +292,15 @@ const captureScaffoldFile = (file: string): IScaffoldFileSnapshot => {
 const assertScaffoldFileDescriptor = (
   snapshot: IScaffoldFileSnapshot,
   descriptor: number,
+  expectedDescriptorVersion: string,
 ): void => {
   assertScaffoldFileSnapshot(snapshot);
   const opened = fs.fstatSync(descriptor, { bigint: true });
   assertOrdinarySingleLinkFile(opened, snapshot.path);
+  if (physicalVersion(opened) !== expectedDescriptorVersion)
+    throw new Error(
+      `scaffold file descriptor changed generation: ${snapshot.path}`,
+    );
   const residentDescriptor = fs.openSync(snapshot.path, "r");
   let failed = false;
   try {
