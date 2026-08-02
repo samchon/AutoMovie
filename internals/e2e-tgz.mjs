@@ -455,7 +455,9 @@ const worksheet = (project, prepared) => {
                 ? [contract]
                 : [frameEvidence(frame), contract];
             })
-          : [exactEvidence(project, prepared, index)];
+          : prepared.target.kind === "asset" && index === 0
+            ? prepared.frames.map(frameEvidence)
+            : [exactEvidence(project, prepared, index)];
       return {
         criterion,
         verdict: "pass",

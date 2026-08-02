@@ -680,6 +680,14 @@ const packagedAssetReviewContract = (
     views: number | null;
   }>;
   reviewPhases: number;
+  worksheetEvidence: Array<{
+    acceptanceCondition: string;
+    assetCondition: string | null;
+    assetEvidence: string | null;
+    exactEvidence: string | null;
+    mapper: string;
+    parameters: string[];
+  }>;
   raster: {
     assertions: Array<{ comparisons: string[]; name: string }>;
     writes: string[];
@@ -888,6 +896,14 @@ const packagedAssetReviewContract = (
     models: number | null;
     views: number | null;
   }> = [];
+  const worksheetEvidence: Array<{
+    acceptanceCondition: string;
+    assetCondition: string | null;
+    assetEvidence: string | null;
+    exactEvidence: string | null;
+    mapper: string;
+    parameters: string[];
+  }> = [];
   const rasterAssertions: Array<{ comparisons: string[]; name: string }> = [];
   let reviewPhases = 0;
   for (const embedded of embeddedSources) {
@@ -898,6 +914,64 @@ const packagedAssetReviewContract = (
     );
     const compact = (node: ts.Node): string =>
       node.getText(parsed).replace(/\s+/g, "");
+    for (const statement of parsed.statements) {
+      if (ts.isVariableStatement(statement) === false) continue;
+      for (const declaration of statement.declarationList.declarations) {
+        if (
+          ts.isIdentifier(declaration.name) === false ||
+          declaration.name.text !== "worksheet" ||
+          declaration.initializer === undefined
+        )
+          continue;
+        const visitWorksheet = (node: ts.Node): void => {
+          if (
+            ts.isCallExpression(node) &&
+            ts.isPropertyAccessExpression(node.expression) &&
+            compact(node.expression) === "prepared.requiredCriteria.map" &&
+            node.arguments.length === 1 &&
+            ts.isArrowFunction(node.arguments[0]) &&
+            ts.isBlock(node.arguments[0].body)
+          ) {
+            const mapper = node.arguments[0];
+            const evidence = mapper.body.statements
+              .filter(ts.isVariableStatement)
+              .flatMap((action) => [...action.declarationList.declarations])
+              .find(
+                (candidate) =>
+                  ts.isIdentifier(candidate.name) &&
+                  candidate.name.text === "evidence",
+              );
+            const outer = evidence?.initializer;
+            const fallback =
+              outer !== undefined && ts.isConditionalExpression(outer)
+                ? outer.whenFalse
+                : undefined;
+            worksheetEvidence.push({
+              acceptanceCondition:
+                outer !== undefined && ts.isConditionalExpression(outer)
+                  ? compact(outer.condition)
+                  : "",
+              assetCondition:
+                fallback !== undefined && ts.isConditionalExpression(fallback)
+                  ? compact(fallback.condition)
+                  : null,
+              assetEvidence:
+                fallback !== undefined && ts.isConditionalExpression(fallback)
+                  ? compact(fallback.whenTrue)
+                  : null,
+              exactEvidence:
+                fallback !== undefined && ts.isConditionalExpression(fallback)
+                  ? compact(fallback.whenFalse)
+                  : null,
+              mapper: compact(node.expression),
+              parameters: mapper.parameters.map(compact),
+            });
+          }
+          ts.forEachChild(node, visitWorksheet);
+        };
+        visitWorksheet(declaration.initializer);
+      }
+    }
     for (const statement of parsed.statements)
       if (ts.isVariableStatement(statement))
         for (const declaration of statement.declarationList.declarations)
@@ -1206,6 +1280,7 @@ const packagedAssetReviewContract = (
     packaged,
     reviewFlows,
     reviewPhases,
+    worksheetEvidence,
     raster: {
       assertions: rasterAssertions,
       writes: rasterWrites,
@@ -3880,6 +3955,16 @@ export const test_workspace_public_contracts = (): void => {
       },
       reviewFlows: [{ before: 0, capture: 5, models: 3, views: 2 }],
       reviewPhases: 1,
+      worksheetEvidence: [
+        {
+          acceptanceCondition: 'criterion==="acceptance-scenarios"',
+          assetCondition: 'prepared.target.kind==="asset"&&index===0',
+          assetEvidence: "prepared.frames.map(frameEvidence)",
+          exactEvidence: "[exactEvidence(project,prepared,index)]",
+          mapper: "prepared.requiredCriteria.map",
+          parameters: ["criterion", "index"],
+        },
+      ],
       raster: {
         assertions: [
           {
