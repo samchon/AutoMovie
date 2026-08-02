@@ -394,7 +394,7 @@ export const inventoryRenderQuarantineCandidates = (
   });
 };
 
-/** Remove an exact evidence-marker pair and its now-empty private container. */
+/** Remove an exact pair, plus only a pre-captured empty legacy container. */
 export const removeCapturedRenderQuarantine = (props: {
   evidence: IRenderGcTargetSnapshot;
   marker: IRenderGcTargetSnapshot;
