@@ -2,6 +2,7 @@ import type { AutoMovieContentDigest } from "@automovie/interface";
 import {
   type IAutoMovieProductionRenderChunk,
   type IAutoMovieProductionRenderChunkReceipt,
+  type IAutoMovieProductionRenderGcCandidate,
   digestAutoMovieBytes,
   probeProductionMedia,
   probeProductionVideoMp4,
@@ -55,6 +56,11 @@ export interface ILoadedRenderChunkPublication {
 export interface ICurrentRenderChunkPublication {
   frames: ILoadedRenderChunkPublication["frames"];
   receipt: IAutoMovieProductionRenderChunkReceipt;
+}
+
+export interface IRenderChunkGcInventoryEntry {
+  candidate: IAutoMovieProductionRenderGcCandidate;
+  snapshot: IRenderGcTargetSnapshot;
 }
 
 /** Fingerprint physical-tree content without binding it to inode identities. */
@@ -335,6 +341,137 @@ export const currentRenderChunkPublicationProtectsTree = (props: {
     return false;
   }
 };
+
+/** Inventory pointer/tree GC candidates and retain only an exact current pair. */
+export const inventoryRenderChunkGarbage = (props: {
+  assertReceipt: (
+    chunk: IAutoMovieProductionRenderChunk,
+    receipt: IAutoMovieProductionRenderChunkReceipt,
+  ) => void;
+  chunks: ReadonlyMap<AutoMovieContentDigest, IAutoMovieProductionRenderChunk>;
+  processAlive: (pid: number) => boolean;
+  renderJobRoot: string;
+  root: string;
+  scope: string;
+  tier: "final" | "proxy";
+}): {
+  entries: IRenderChunkGcInventoryEntry[];
+  retainedChunkPaths: string[];
+} => {
+  if (SCOPE_PATTERN.test(props.scope) === false)
+    throw new Error("Render chunk GC scope is not a SHA-256 namespace.");
+  const entries: IRenderChunkGcInventoryEntry[] = [];
+  const retainedChunkPaths = new Set<string>();
+  const authenticatedTrees = new Map<
+    string,
+    {
+      current: boolean;
+      digest: AutoMovieContentDigest;
+      pointerPath: string;
+      tree: IRenderGcTargetSnapshot;
+    }
+  >();
+  const pointerPattern = new RegExp(
+    `^\\.automovie-chunk-${props.scope}\\.${props.tier}\\.([0-9a-f]{64})\\.publication\\.json$`,
+    "u",
+  );
+  for (const name of fs.readdirSync(props.root).sort(compareCodeUnits)) {
+    const match = pointerPattern.exec(name);
+    if (match === null) continue;
+    const digest = `sha256:${match[1]}` as AutoMovieContentDigest;
+    const pointerPath = `${props.tier}/pointers/${match[1]}`;
+    const pointer = captureRenderGcTarget(
+      props.root,
+      path.join(props.root, name),
+    );
+    entries.push({
+      candidate: {
+        path: pointerPath,
+        kind: "chunk-pointer",
+        digest,
+        bytes: pointer.bytes,
+      },
+      snapshot: pointer,
+    });
+    try {
+      const publication = captureRenderChunkPublicationFromPointer(pointer);
+      const temporaryRoot = path.join(props.renderJobRoot, props.tier, "tmp");
+      const treeName = path.basename(publication.tree.target);
+      if (
+        path.dirname(publication.tree.target) !== temporaryRoot ||
+        new RegExp(`^${match[1]}\\.[^.]+\\.\\d+$`, "u").test(treeName) ===
+          false ||
+        authenticatedTrees.has(publication.tree.target)
+      )
+        continue;
+      const chunk = props.chunks.get(digest);
+      let current = false;
+      if (chunk !== undefined)
+        try {
+          props.assertReceipt(chunk, publication.receipt);
+          current = publication.receipt.slot === chunk.slot;
+        } catch {
+          current = false;
+        }
+      authenticatedTrees.set(publication.tree.target, {
+        current,
+        digest,
+        pointerPath,
+        tree: publication.tree,
+      });
+    } catch {
+      // An invalid pointer remains an independently removable candidate.
+    }
+  }
+  const temporaryRoot = path.join(props.renderJobRoot, props.tier, "tmp");
+  if (fs.existsSync(temporaryRoot))
+    for (const entry of fs
+      .readdirSync(temporaryRoot, { withFileTypes: true })
+      .sort((left, right) => compareCodeUnits(left.name, right.name))) {
+      const match = /^([0-9a-f]{64})\.[^.]+\.(\d+)$/u.exec(entry.name);
+      if (match === null) continue;
+      const target = path.join(temporaryRoot, entry.name);
+      const authenticated = authenticatedTrees.get(target);
+      if (authenticated === undefined && props.processAlive(Number(match[2])))
+        continue;
+      const snapshot = captureRenderGcTarget(props.renderJobRoot, target);
+      const digest = `sha256:${match[1]}` as AutoMovieContentDigest;
+      const candidate: IAutoMovieProductionRenderGcCandidate = {
+        path: `${props.tier}/tmp/${entry.name}`,
+        kind: "chunk-tree",
+        digest,
+        bytes: snapshot.bytes,
+      };
+      entries.push({ candidate, snapshot });
+      if (
+        authenticated?.current === true &&
+        authenticated.digest === digest &&
+        exactTreeContent(authenticated.tree, snapshot)
+      ) {
+        retainedChunkPaths.add(authenticated.pointerPath);
+        retainedChunkPaths.add(candidate.path);
+      }
+    }
+  return {
+    entries,
+    retainedChunkPaths: [...retainedChunkPaths].sort(compareCodeUnits),
+  };
+};
+
+const exactTreeContent = (
+  authenticated: IRenderGcTargetSnapshot,
+  candidate: IRenderGcTargetSnapshot,
+): boolean =>
+  authenticated.kind === candidate.kind &&
+  authenticated.target === candidate.target &&
+  authenticated.targetIdentity === candidate.targetIdentity &&
+  authenticated.targetVersion === candidate.targetVersion &&
+  authenticated.bytes === candidate.bytes &&
+  authenticated.contentFingerprint === candidate.contentFingerprint &&
+  JSON.stringify(authenticated.entries) === JSON.stringify(candidate.entries);
+
+const compareCodeUnits = (left: string, right: string): number =>
+  left < right ? -1 : left > right ? 1 : 0;
 
 /** Read one exact file that belongs to a previously captured chunk tree. */
 export const readRenderChunkPublicationFile = (

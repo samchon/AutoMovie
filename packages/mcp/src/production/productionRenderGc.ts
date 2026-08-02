@@ -44,7 +44,11 @@ export const planProductionRenderGc = (props: {
   candidates: readonly IAutoMovieProductionRenderGcCandidate[];
 }): IAutoMovieProductionRenderGcPlan => {
   const activeChunks = new Set(
-    props.plans.flatMap((plan) => plan.chunks.map((chunk) => chunk.id)),
+    props.plans.flatMap((plan) =>
+      plan.chunks.map(
+        (chunk) => `${plan.tier.kind}\0${chunk.id.slice("sha256:".length)}`,
+      ),
+    ),
   );
   const activePublication = new Set(
     props.publicationPaths.map(canonicalRelativePath),
@@ -64,14 +68,14 @@ export const planProductionRenderGc = (props: {
     left.path < right.path ? -1 : left.path > right.path ? 1 : 0,
   )) {
     const path = canonicalRelativePath(candidate.path);
-    const chunkPath = /^(?:proxy|final)\/chunks\/([0-9a-f]{64})$/u.exec(path);
+    const chunkPath = /^(proxy|final)\/chunks\/([0-9a-f]{64})$/u.exec(path);
     const pointerPath = /^(proxy|final)\/pointers\/([0-9a-f]{64})$/u.exec(path);
     const treePath = /^(proxy|final)\/tmp\/([0-9a-f]{64})\.[^.]+\.\d+$/u.exec(
       path,
     );
     const ownedDigest =
       candidate.kind === "chunk"
-        ? chunkPath?.[1]
+        ? chunkPath?.[2]
         : candidate.kind === "chunk-pointer"
           ? pointerPath?.[2]
           : candidate.kind === "chunk-tree"
@@ -105,7 +109,9 @@ export const planProductionRenderGc = (props: {
       chunkPublicationCandidates.add(path);
     const normalized = { ...candidate, path };
     if (
-      (candidate.kind === "chunk" && activeChunks.has(candidate.digest!)) ||
+      (candidate.kind === "chunk" &&
+        chunkPath !== null &&
+        activeChunks.has(`${chunkPath[1]}\0${chunkPath[2]}`)) ||
       ((candidate.kind === "chunk-pointer" ||
         candidate.kind === "chunk-tree") &&
         retainedChunkPaths.has(path)) ||
@@ -132,9 +138,13 @@ export const planProductionRenderGc = (props: {
     retainedPairs.set(key, pair);
   }
   for (const [key, pair] of retainedPairs)
-    if (pair.pointers !== 1 || pair.trees !== 1)
+    if (
+      pair.pointers !== 1 ||
+      pair.trees !== 1 ||
+      activeChunks.has(key) === false
+    )
       throw new Error(
-        `Render GC retained chunk publication "${key.replace("\0", "/")}" is not one exact pointer/tree pair.`,
+        `Render GC retained chunk publication "${key.replace("\0", "/")}" is not one exact current pointer/tree pair.`,
       );
   const reclaimableBytes = remove.reduce(
     (total, candidate) => total + candidate.bytes,

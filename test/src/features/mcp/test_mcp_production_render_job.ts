@@ -824,6 +824,27 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
       }),
     ),
   );
+  const rejectsStaleRetainedPair = throws(() =>
+    planProductionRenderGc({
+      plans: [renderPlan],
+      publicationPaths: [],
+      retainedChunkPaths: [stalePointer, staleTree],
+      candidates: [
+        {
+          path: stalePointer,
+          kind: "chunk-pointer",
+          digest: digest("f"),
+          bytes: 1,
+        },
+        {
+          path: staleTree,
+          kind: "chunk-tree",
+          digest: digest("f"),
+          bytes: 1,
+        },
+      ],
+    }),
+  );
   TestValidator.predicate(
     "render GC marks both current tiers and sweeps only unreferenced bytes",
     garbageCollection.keep.length === 5 &&
@@ -844,6 +865,7 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
       ) &&
       garbageCollection.reclaimableBytes === 171 &&
       rejectsRetainedChunkPaths &&
+      rejectsStaleRetainedPair &&
       [
         [{ ...validChunk }, { ...validChunk }],
         [{ ...validChunk, bytes: -1 }],

@@ -498,17 +498,20 @@ export const test_cli_scaffold = async (): Promise<void> => {
       files["scripts/render.ts"]!.includes('process.argv.indexOf("--tier")') &&
       files["scripts/render.ts"]!.includes("productionRenderLayersForPass") &&
       files["scripts/render.ts"]!.includes("renderGarbageCollection") &&
-      files["scripts/render.ts"]!.includes('kind: "chunk-pointer"') &&
-      files["scripts/render.ts"]!.includes('kind: "chunk-tree"') &&
-      files["scripts/render.ts"]!.includes(
+      files["scripts/renderChunkSnapshot.ts"]!.includes(
+        'kind: "chunk-pointer"',
+      ) &&
+      files["scripts/renderChunkSnapshot.ts"]!.includes('kind: "chunk-tree"') &&
+      files["scripts/renderChunkSnapshot.ts"]!.includes(
         "captureRenderChunkPublicationFromPointer(pointer)",
       ) &&
-      files["scripts/render.ts"]!.includes(
-        "authenticated.identity === snapshot.targetIdentity",
+      files["scripts/renderChunkSnapshot.ts"]!.includes(
+        "exactTreeContent(authenticated.tree, snapshot)",
       ) &&
-      files["scripts/render.ts"]!.includes(
-        "authenticated === undefined && processAlive(Number(match[2]))",
+      files["scripts/renderChunkSnapshot.ts"]!.includes(
+        "authenticated === undefined && props.processAlive(Number(match[2]))",
       ) &&
+      files["scripts/render.ts"]!.includes("inventoryRenderChunkGarbage") &&
       files["scripts/render.ts"]!.includes(
         "retainedChunkPaths: [...retainedChunkPaths]",
       ) &&
@@ -2914,6 +2917,28 @@ export const test_cli_scaffold = async (): Promise<void> => {
         } | null;
         chunks: ReadonlyMap<string, { id: string; slot: string }>;
       }) => boolean;
+      inventoryRenderChunkGarbage: (props: {
+        assertReceipt: (
+          chunk: { id: string; slot: string },
+          receipt: { chunk: string; slot: string },
+        ) => void;
+        chunks: ReadonlyMap<string, { id: string; slot: string }>;
+        processAlive: (pid: number) => boolean;
+        renderJobRoot: string;
+        root: string;
+        scope: string;
+        tier: "final" | "proxy";
+      }) => {
+        entries: Array<{
+          candidate: { bytes: number; kind: string; path: string };
+          snapshot: {
+            base: { path: string };
+            contentFingerprint: string;
+            targetIdentity: string;
+          };
+        }>;
+        retainedChunkPaths: string[];
+      };
       loadCurrentRenderChunkPublication: (props: {
         assertReceipt: (receipt: { chunk: string }) => void;
         chunk: { frames: unknown[] };
@@ -3317,6 +3342,141 @@ export const test_cli_scaffold = async (): Promise<void> => {
     TestValidator.predicate(
       "late recovery checks only the candidate's canonical pointer and tree",
       recoveryProtected && recoveryDecoyOpens === 0,
+    );
+
+    const chunkGcRoot = path.join(base, "chunk-gc-project");
+    const chunkGcRenderJobRoot = path.join(
+      chunkGcRoot,
+      ".automovie",
+      "productions",
+      "feature",
+      "render-job",
+    );
+    const chunkGcTemporaryRoot = path.join(
+      chunkGcRenderJobRoot,
+      "final",
+      "tmp",
+    );
+    fs.mkdirSync(chunkGcTemporaryRoot, { recursive: true });
+    const chunkGcCurrentId = fixtureDigest(Buffer.from("gc current chunk"));
+    const chunkGcCurrentName = `${chunkGcCurrentId.slice(7)}.current.701`;
+    const chunkGcCurrentTree = path.join(
+      chunkGcTemporaryRoot,
+      chunkGcCurrentName,
+    );
+    const chunkGcCurrentReceipt = populateChunkSource(
+      chunkGcCurrentTree,
+      chunkGcCurrentId,
+    );
+    renderChunkSnapshotModule.publishRenderChunkSnapshot({
+      chunk: chunkGcCurrentId,
+      receipt: chunkGcCurrentReceipt,
+      root: chunkGcRoot,
+      scope: chunkPublicationScope,
+      tier: "final",
+      tree: chunkGcCurrentTree,
+    });
+    const chunkGcOrphanName = `${chunkGcCurrentId.slice(7)}.orphan.702`;
+    populateChunkSource(
+      path.join(chunkGcTemporaryRoot, chunkGcOrphanName),
+      chunkGcCurrentId,
+    );
+    const chunkGcStaleId = fixtureDigest(Buffer.from("gc stale chunk"));
+    const chunkGcStaleName = `${chunkGcStaleId.slice(7)}.stale.703`;
+    const chunkGcStaleTree = path.join(chunkGcTemporaryRoot, chunkGcStaleName);
+    renderChunkSnapshotModule.publishRenderChunkSnapshot({
+      chunk: chunkGcStaleId,
+      receipt: populateChunkSource(chunkGcStaleTree, chunkGcStaleId),
+      root: chunkGcRoot,
+      scope: chunkPublicationScope,
+      tier: "final",
+      tree: chunkGcStaleTree,
+    });
+    const chunkGcLiveId = fixtureDigest(Buffer.from("gc live temp"));
+    const chunkGcLiveName = `${chunkGcLiveId.slice(7)}.live.704`;
+    populateChunkSource(
+      path.join(chunkGcTemporaryRoot, chunkGcLiveName),
+      chunkGcLiveId,
+    );
+    const inventoryChunkGarbage = () =>
+      renderChunkSnapshotModule.inventoryRenderChunkGarbage({
+        assertReceipt: (chunk, receipt) => {
+          if (chunk.id !== receipt.chunk || chunk.slot !== receipt.slot)
+            throw new Error("test chunk receipt mismatch");
+        },
+        chunks: new Map([
+          [
+            chunkGcCurrentId,
+            {
+              id: chunkGcCurrentId,
+              slot: chunkGcCurrentReceipt.slot,
+            },
+          ],
+        ]),
+        processAlive: (pid) => pid === 704,
+        renderJobRoot: chunkGcRenderJobRoot,
+        root: chunkGcRoot,
+        scope: chunkPublicationScope,
+        tier: "final",
+      });
+    const chunkGcInventory = inventoryChunkGarbage();
+    const currentPointerCandidate = `final/pointers/${chunkGcCurrentId.slice(7)}`;
+    const currentTreeCandidate = `final/tmp/${chunkGcCurrentName}`;
+    const chunkGcPointerEntry = chunkGcInventory.entries.find(
+      (entry) => entry.candidate.path === currentPointerCandidate,
+    );
+    const chunkGcTreeEntry = chunkGcInventory.entries.find(
+      (entry) => entry.candidate.path === currentTreeCandidate,
+    );
+    TestValidator.predicate(
+      "chunk GC inventories exact current/stale/orphan publications and excludes live temp",
+      chunkGcInventory.retainedChunkPaths.join() ===
+        [currentPointerCandidate, currentTreeCandidate].sort().join() &&
+        chunkGcInventory.entries.some(
+          (entry) => entry.candidate.path === `final/tmp/${chunkGcOrphanName}`,
+        ) &&
+        chunkGcInventory.entries.some(
+          (entry) =>
+            entry.candidate.path ===
+            `final/pointers/${chunkGcStaleId.slice(7)}`,
+        ) &&
+        chunkGcInventory.entries.some(
+          (entry) => entry.candidate.path === `final/tmp/${chunkGcStaleName}`,
+        ) &&
+        chunkGcInventory.entries.some((entry) =>
+          entry.candidate.path.endsWith(chunkGcLiveName),
+        ) === false &&
+        chunkGcPointerEntry?.snapshot.base.path === chunkGcRoot &&
+        chunkGcTreeEntry?.snapshot.base.path === chunkGcRenderJobRoot,
+    );
+    const chunkGcCurrentPayload = path.join(chunkGcCurrentTree, "chunk.mp4");
+    const changedChunkGcPayload = Buffer.from(chunkVideoBytes);
+    changedChunkGcPayload[changedChunkGcPayload.length - 1] ^= 1;
+    let chunkGcPayloadMutated = false;
+    mutableFs.readdirSync = ((directory, ...args: unknown[]): unknown => {
+      if (
+        chunkGcPayloadMutated === false &&
+        path.resolve(directory.toString()) === chunkGcTemporaryRoot
+      ) {
+        fs.writeFileSync(chunkGcCurrentPayload, changedChunkGcPayload);
+        chunkGcPayloadMutated = true;
+      }
+      return Reflect.apply(nativeReaddir, mutableFs, [directory, ...args]);
+    }) as typeof fs.readdirSync;
+    let mutatedChunkGcInventory: ReturnType<
+      typeof inventoryChunkGarbage
+    > | null = null;
+    try {
+      mutatedChunkGcInventory = inventoryChunkGarbage();
+    } finally {
+      mutableFs.readdirSync = nativeReaddir;
+      fs.writeFileSync(chunkGcCurrentPayload, chunkVideoBytes);
+    }
+    TestValidator.predicate(
+      "chunk GC refuses same-inode tree content changed after pointer authentication",
+      chunkGcPayloadMutated &&
+        mutatedChunkGcInventory !== null &&
+        mutatedChunkGcInventory.retainedChunkPaths.length === 0,
     );
 
     const pointerRaceId = fixtureDigest(Buffer.from("pointer successor chunk"));

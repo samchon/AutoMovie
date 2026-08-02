@@ -83,6 +83,7 @@ import {
   captureRenderChunkPublicationFromPointer,
   consumeCurrentRenderChunkFrames,
   currentRenderChunkPublicationProtectsTree,
+  inventoryRenderChunkGarbage,
   loadCurrentRenderChunkPublication,
   publishRenderChunkSnapshot,
   removeCapturedRenderChunkPointer,
@@ -2357,97 +2358,29 @@ const collectRenderGarbage = (apply: boolean) => {
     const tierChunks = new Map(
       (tierPlan?.chunks ?? []).map((chunk) => [chunk.id, chunk]),
     );
-    const authenticatedTrees = new Map<
-      string,
-      {
-        current: boolean;
-        digest: AutoMovieContentDigest;
-        identity: string;
-        pointerPath: string;
-      }
-    >();
-    const pointerPattern = new RegExp(
-      `^\\.automovie-chunk-${renderLivenessScope}\\.${tier}\\.([0-9a-f]{64})\\.publication\\.json$`,
-      "u",
-    );
-    for (const name of fs.readdirSync(root).sort(compareCodeUnits)) {
-      const match = pointerPattern.exec(name);
-      if (match === null) continue;
-      const digest = `sha256:${match[1]}` as AutoMovieContentDigest;
-      const pointerPath = `${tier}/pointers/${match[1]}`;
-      const pointer = captureRenderGcTarget(root, path.join(root, name));
-      const pointerCandidate: IAutoMovieProductionRenderGcCandidate = {
-        path: pointerPath,
-        kind: "chunk-pointer",
-        digest,
-        bytes: pointer.bytes,
-      };
-      candidates.push(pointerCandidate);
-      candidateSnapshots.set(gcCandidateKey(pointerCandidate), pointer);
-      try {
-        const publication = captureRenderChunkPublicationFromPointer(pointer);
-        const temporaryRoot = path.join(renderJobRoot, tier, "tmp");
-        const treeName = path.basename(publication.tree.target);
-        if (
-          path.dirname(publication.tree.target) !== temporaryRoot ||
-          new RegExp(`^${match[1]}\\.[^.]+\\.\\d+$`, "u").test(treeName) ===
-            false ||
-          authenticatedTrees.has(publication.tree.target)
-        )
-          continue;
-        const currentChunk = tierChunks.get(digest);
-        let current = false;
-        if (tierPlan !== undefined && currentChunk !== undefined)
-          try {
-            verifyProductionRenderChunkReceipt({
-              plan: tierPlan,
-              chunk: currentChunk,
-              receipt: publication.receipt,
-            });
-            current = publication.receipt.slot === currentChunk.slot;
-          } catch {
-            current = false;
-          }
-        authenticatedTrees.set(publication.tree.target, {
-          current,
-          digest,
-          identity: publication.tree.targetIdentity,
-          pointerPath,
+    const publicationInventory = inventoryRenderChunkGarbage({
+      assertReceipt: (chunk, receipt) => {
+        if (tierPlan === undefined)
+          throw new Error("Render GC has no current plan for this chunk.");
+        verifyProductionRenderChunkReceipt({
+          plan: tierPlan,
+          chunk,
+          receipt,
         });
-      } catch {
-        // An invalid pointer remains an independently removable candidate.
-      }
+      },
+      chunks: tierChunks,
+      processAlive,
+      renderJobRoot,
+      root,
+      scope: renderLivenessScope,
+      tier,
+    });
+    for (const entry of publicationInventory.entries) {
+      candidates.push(entry.candidate);
+      candidateSnapshots.set(gcCandidateKey(entry.candidate), entry.snapshot);
     }
-    const temporaryRoot = path.join(renderJobRoot, tier, "tmp");
-    if (fs.existsSync(temporaryRoot))
-      for (const entry of fs
-        .readdirSync(temporaryRoot, { withFileTypes: true })
-        .sort((left, right) => compareCodeUnits(left.name, right.name))) {
-        const match = /^([0-9a-f]{64})\.[^.]+\.(\d+)$/u.exec(entry.name);
-        if (match === null) continue;
-        const target = path.join(temporaryRoot, entry.name);
-        const authenticated = authenticatedTrees.get(target);
-        if (authenticated === undefined && processAlive(Number(match[2])))
-          continue;
-        const snapshot = captureRenderGcTarget(renderJobRoot, target);
-        const digest = `sha256:${match[1]}` as AutoMovieContentDigest;
-        const candidate: IAutoMovieProductionRenderGcCandidate = {
-          path: `${tier}/tmp/${entry.name}`,
-          kind: "chunk-tree",
-          digest,
-          bytes: snapshot.bytes,
-        };
-        candidates.push(candidate);
-        candidateSnapshots.set(gcCandidateKey(candidate), snapshot);
-        if (
-          authenticated?.current === true &&
-          authenticated.digest === digest &&
-          authenticated.identity === snapshot.targetIdentity
-        ) {
-          retainedChunkPaths.add(authenticated.pointerPath);
-          retainedChunkPaths.add(candidate.path);
-        }
-      }
+    for (const retained of publicationInventory.retainedChunkPaths)
+      retainedChunkPaths.add(retained);
     const chunks = path.join(renderJobRoot, tier, "chunks");
     if (fs.existsSync(chunks))
       for (const entry of fs
