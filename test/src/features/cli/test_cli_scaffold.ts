@@ -315,6 +315,69 @@ const captureExecutableCleanupContract = (
   return { cleanupCalls, functionDigests };
 };
 
+type ScaffoldDescriptorCleanupFunction =
+  | "assertScaffoldFileDescriptor"
+  | "closeScaffoldDescriptor"
+  | "createScaffoldFile"
+  | "overwriteScaffoldFile";
+
+/** Bind every scaffold descriptor owner to the complete cleanup policy. */
+const scaffoldDescriptorCleanupContract = (
+  source: string,
+): {
+  classDigests: string[];
+  cleanupCalls: Array<{ callDigest: string; owner: string }>;
+  functionDigests: Record<ScaffoldDescriptorCleanupFunction, string[]>;
+} => {
+  const parsed = ts.createSourceFile(
+    "src/scaffoldFileSnapshot.ts",
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TS,
+  );
+  const functionDigests: Record<ScaffoldDescriptorCleanupFunction, string[]> = {
+    assertScaffoldFileDescriptor: [],
+    closeScaffoldDescriptor: [],
+    createScaffoldFile: [],
+    overwriteScaffoldFile: [],
+  };
+  const classDigests: string[] = [];
+  const cleanupCalls: Array<{ callDigest: string; owner: string }> = [];
+  for (const statement of parsed.statements) {
+    if (
+      ts.isClassDeclaration(statement) &&
+      statement.name?.text === "ScaffoldDescriptorCleanupError"
+    )
+      classDigests.push(sourceTokenDigest(statement, parsed));
+    if (ts.isVariableStatement(statement) === false) continue;
+    for (const declaration of statement.declarationList.declarations) {
+      if (
+        ts.isIdentifier(declaration.name) === false ||
+        declaration.name.text in functionDigests === false ||
+        declaration.initializer === undefined
+      )
+        continue;
+      const owner = declaration.name.text as ScaffoldDescriptorCleanupFunction;
+      functionDigests[owner].push(sourceTokenDigest(statement, parsed));
+      const visit = (node: ts.Node): void => {
+        if (
+          ts.isCallExpression(node) &&
+          ts.isIdentifier(node.expression) &&
+          node.expression.text === "closeScaffoldDescriptor"
+        )
+          cleanupCalls.push({
+            callDigest: sourceTokenDigest(node, parsed),
+            owner,
+          });
+        ts.forEachChild(node, visit);
+      };
+      visit(declaration.initializer);
+    }
+  }
+  return { classDigests, cleanupCalls, functionDigests };
+};
+
 /** Inspect capture-doctor resource ownership and failure-preserving cleanup. */
 const captureDoctorCleanupContract = (
   source: string,
@@ -672,6 +735,10 @@ export const test_cli_scaffold = async (): Promise<void> => {
   const captureBrowserScript = files["scripts/capture-browser.ts"]!;
   const captureExecutableScript =
     files["scripts/captureExecutableSnapshot.ts"]!;
+  const scaffoldFileSnapshotSource = fs.readFileSync(
+    path.join(path.dirname(scaffoldDir), "src", "scaffoldFileSnapshot.ts"),
+    "utf8",
+  );
   const captureDoctorScript = files["scripts/capture-doctor.ts"]!;
   const captureInstallOutputOffset = captureBrowserScript.indexOf(
     "const writeCaptureInstallCommandOutput",
@@ -707,6 +774,46 @@ export const test_cli_scaffold = async (): Promise<void> => {
     statement.includes("captureInstallCommandTermination"),
   );
   const captureInstallFailureThrow = captureInstallFailureThrows[0] ?? "";
+  TestValidator.equals(
+    "scaffold descriptor cleanup preserves every failure",
+    scaffoldDescriptorCleanupContract(scaffoldFileSnapshotSource),
+    {
+      classDigests: [
+        "cee523dddbf7384dfb527de324adaf7847a5a6b0e50804bb081467588c8528b3",
+      ],
+      cleanupCalls: [
+        {
+          callDigest:
+            "bf4af4c61a2df85bf01e3eb80288c6a66bdb36e004ffcf944d47c7ff9ecff1a6",
+          owner: "createScaffoldFile",
+        },
+        {
+          callDigest:
+            "cc6b1742023bd566dd26827c2d79f8d637adf6875fd503a4e37fd91d13097fba",
+          owner: "overwriteScaffoldFile",
+        },
+        {
+          callDigest:
+            "fb7f2686c2aa2c7bd2513fd27abc672bf4126efdab548aefaddc8ea4a0369de7",
+          owner: "assertScaffoldFileDescriptor",
+        },
+      ],
+      functionDigests: {
+        assertScaffoldFileDescriptor: [
+          "514db1f055580d5a467a955870647881252a956c9209c0a6b1da82982dcb7342",
+        ],
+        closeScaffoldDescriptor: [
+          "edd4a511a4bfe3b8927d50d5a785209c40d8f16907fd3f28a31e8f92950cdd78",
+        ],
+        createScaffoldFile: [
+          "354a570193b602e600443f1ad9dee541024a73d313dbb634029bd5230d99676c",
+        ],
+        overwriteScaffoldFile: [
+          "8f1f4bbf9e844f0574ed10f4cf3f57b26137f2bc24d81339ab00954f03493fc7",
+        ],
+      },
+    },
+  );
   TestValidator.equals(
     "capture executable acquisition preserves descriptor cleanup failures",
     captureExecutableCleanupContract(captureExecutableScript),
@@ -11339,6 +11446,10 @@ export const test_cli_scaffold = async (): Promise<void> => {
 
     const closeFailureBase = path.join(base, "close-failure-scaffold");
     const closeFailureTarget = path.join(closeFailureBase, "complete.txt");
+    const standaloneScaffoldCloseFailure = Object.assign(
+      new Error("scaffold close failed"),
+      { code: "EIO" },
+    );
     let scaffoldCloseFailed = false;
     let closeFailureDescriptor = -1;
     mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
@@ -11359,16 +11470,14 @@ export const test_cli_scaffold = async (): Promise<void> => {
       Reflect.apply(nativeClose, mutableFs, [descriptor]);
       if (descriptor === closeFailureDescriptor) {
         scaffoldCloseFailed = true;
-        throw Object.assign(new Error("scaffold close failed"), {
-          code: "EIO",
-        });
+        throw standaloneScaffoldCloseFailure;
       }
     }) as typeof fs.closeSync;
-    let closeFailureRejected = false;
+    let standaloneScaffoldCloseError: unknown;
     try {
-      closeFailureRejected = throws(() =>
-        writeFiles(closeFailureBase, { "complete.txt": "close evidence" }),
-      );
+      writeFiles(closeFailureBase, { "complete.txt": "close evidence" });
+    } catch (error) {
+      standaloneScaffoldCloseError = error;
     } finally {
       mutableFs.openSync = nativeOpen;
       mutableFs.closeSync = nativeClose;
@@ -11376,12 +11485,43 @@ export const test_cli_scaffold = async (): Promise<void> => {
     TestValidator.predicate(
       "a scaffold close failure leaves its exact complete final evidence",
       scaffoldCloseFailed &&
-        closeFailureRejected &&
+        standaloneScaffoldCloseError === standaloneScaffoldCloseFailure &&
         fs.readFileSync(closeFailureTarget, "utf8") === "close evidence",
+    );
+
+    const primaryOnlyFailureBase = path.join(
+      base,
+      "primary-only-failure-scaffold",
+    );
+    const primaryOnlyFailure = new Error("scaffold primary-only write failed");
+    mutableFs.writeSync = (() => {
+      throw primaryOnlyFailure;
+    }) as typeof fs.writeSync;
+    let preservedPrimaryOnlyFailure: unknown;
+    try {
+      writeFiles(primaryOnlyFailureBase, {
+        "partial.txt": "primary-only evidence",
+      });
+    } catch (error) {
+      preservedPrimaryOnlyFailure = error;
+    } finally {
+      mutableFs.writeSync = nativeWrite;
+    }
+    TestValidator.predicate(
+      "scaffold failure remains unchanged after successful descriptor close",
+      preservedPrimaryOnlyFailure === primaryOnlyFailure,
     );
 
     const doubleFailureBase = path.join(base, "double-failure-scaffold");
     const doubleFailureTarget = path.join(doubleFailureBase, "partial.txt");
+    const doubleFailurePrimary = Object.assign(
+      new Error("scaffold primary write failed"),
+      { code: "EIO" },
+    );
+    const doubleFailureClose = Object.assign(
+      new Error("scaffold secondary close failed"),
+      { code: "EIO" },
+    );
     let doubleFailureDescriptor = -1;
     mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
       const descriptor = Reflect.apply(nativeOpen, mutableFs, [
@@ -11412,35 +11552,163 @@ export const test_cli_scaffold = async (): Promise<void> => {
         1,
         position,
       ]);
-      throw Object.assign(new Error("scaffold primary write failed"), {
-        code: "EIO",
-      });
+      throw doubleFailurePrimary;
     }) as typeof fs.writeSync;
     mutableFs.closeSync = ((descriptor: number): void => {
       Reflect.apply(nativeClose, mutableFs, [descriptor]);
-      if (descriptor === doubleFailureDescriptor)
-        throw Object.assign(new Error("scaffold secondary close failed"), {
-          code: "EIO",
-        });
+      if (descriptor === doubleFailureDescriptor) throw doubleFailureClose;
     }) as typeof fs.closeSync;
-    let doubleFailurePreserved = false;
+    let combinedDoubleFailure: unknown;
     try {
-      try {
-        writeFiles(doubleFailureBase, { "partial.txt": "double evidence" });
-      } catch (error) {
-        doubleFailurePreserved = (error as Error).message.includes(
-          "scaffold primary write failed",
-        );
-      }
+      writeFiles(doubleFailureBase, { "partial.txt": "double evidence" });
+    } catch (error) {
+      combinedDoubleFailure = error;
     } finally {
       mutableFs.openSync = nativeOpen;
       mutableFs.writeSync = nativeWrite;
       mutableFs.closeSync = nativeClose;
     }
     TestValidator.predicate(
-      "a scaffold close error never replaces its primary write failure",
-      doubleFailurePreserved &&
+      "scaffold creation preserves primary and close failures",
+      combinedDoubleFailure instanceof AggregateError &&
+        combinedDoubleFailure.errors.length === 2 &&
+        combinedDoubleFailure.errors[0] === doubleFailurePrimary &&
+        combinedDoubleFailure.errors[1] === doubleFailureClose &&
         fs.readFileSync(doubleFailureTarget, "utf8") === "d",
+    );
+
+    const overwriteDoubleFailureBase = path.join(
+      base,
+      "overwrite-double-failure-scaffold",
+    );
+    const overwriteDoubleFailureTarget = path.join(
+      overwriteDoubleFailureBase,
+      "partial.txt",
+    );
+    fs.mkdirSync(overwriteDoubleFailureBase);
+    fs.writeFileSync(overwriteDoubleFailureTarget, "original evidence");
+    const overwriteDoubleFailurePrimary = new Error(
+      "scaffold overwrite failed",
+    );
+    const overwriteDoubleFailureClose = new Error(
+      "scaffold overwrite close failed",
+    );
+    let overwriteDoubleFailureDescriptor = -1;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+      if (
+        path.resolve(file.toString()) === overwriteDoubleFailureTarget &&
+        flags === "r+"
+      )
+        overwriteDoubleFailureDescriptor = descriptor;
+      return descriptor;
+    }) as typeof fs.openSync;
+    mutableFs.writeSync = ((...args: unknown[]): number => {
+      if (args[0] === overwriteDoubleFailureDescriptor)
+        throw overwriteDoubleFailurePrimary;
+      return Reflect.apply(nativeWrite, mutableFs, args) as number;
+    }) as typeof fs.writeSync;
+    mutableFs.closeSync = ((descriptor: number): void => {
+      Reflect.apply(nativeClose, mutableFs, [descriptor]);
+      if (descriptor === overwriteDoubleFailureDescriptor)
+        throw overwriteDoubleFailureClose;
+    }) as typeof fs.closeSync;
+    let combinedOverwriteDoubleFailure: unknown;
+    try {
+      writeFiles(
+        overwriteDoubleFailureBase,
+        { "partial.txt": "replacement evidence" },
+        { force: true },
+      );
+    } catch (error) {
+      combinedOverwriteDoubleFailure = error;
+    } finally {
+      mutableFs.openSync = nativeOpen;
+      mutableFs.writeSync = nativeWrite;
+      mutableFs.closeSync = nativeClose;
+    }
+    TestValidator.predicate(
+      "scaffold overwrite preserves primary and close failures",
+      combinedOverwriteDoubleFailure instanceof AggregateError &&
+        combinedOverwriteDoubleFailure.errors.length === 2 &&
+        combinedOverwriteDoubleFailure.errors[0] ===
+          overwriteDoubleFailurePrimary &&
+        combinedOverwriteDoubleFailure.errors[1] ===
+          overwriteDoubleFailureClose,
+    );
+
+    const nestedDescriptorFailureBase = path.join(
+      base,
+      "nested-descriptor-failure-scaffold",
+    );
+    const nestedDescriptorFailureTarget = path.join(
+      nestedDescriptorFailureBase,
+      "owned.txt",
+    );
+    const nestedDescriptorPrimary = new Error(
+      "resident descriptor verification failed",
+    );
+    const nestedResidentCloseFailure = new Error(
+      "resident descriptor close failed",
+    );
+    const nestedOwnerCloseFailure = new Error("owner descriptor close failed");
+    let nestedOwnerDescriptor = -1;
+    let nestedResidentDescriptor = -1;
+    let nestedResidentFailureInjected = false;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+      if (path.resolve(file.toString()) === nestedDescriptorFailureTarget) {
+        if (flags === "wx+") nestedOwnerDescriptor = descriptor;
+        else if (flags === "r" && nestedResidentDescriptor === -1)
+          nestedResidentDescriptor = descriptor;
+      }
+      return descriptor;
+    }) as typeof fs.openSync;
+    mutableFs.fstatSync = ((descriptor, ...args: unknown[]): unknown => {
+      if (
+        descriptor === nestedResidentDescriptor &&
+        nestedResidentFailureInjected === false
+      ) {
+        nestedResidentFailureInjected = true;
+        throw nestedDescriptorPrimary;
+      }
+      return Reflect.apply(nativeFstat, mutableFs, [descriptor, ...args]);
+    }) as typeof fs.fstatSync;
+    mutableFs.closeSync = ((descriptor: number): void => {
+      Reflect.apply(nativeClose, mutableFs, [descriptor]);
+      if (descriptor === nestedResidentDescriptor)
+        throw nestedResidentCloseFailure;
+      if (descriptor === nestedOwnerDescriptor) throw nestedOwnerCloseFailure;
+    }) as typeof fs.closeSync;
+    let combinedNestedDescriptorFailure: unknown;
+    try {
+      writeFiles(nestedDescriptorFailureBase, {
+        "owned.txt": "nested descriptor evidence",
+      });
+    } catch (error) {
+      combinedNestedDescriptorFailure = error;
+    } finally {
+      mutableFs.openSync = nativeOpen;
+      mutableFs.fstatSync = nativeFstat;
+      mutableFs.closeSync = nativeClose;
+    }
+    TestValidator.predicate(
+      "nested scaffold descriptor cleanup preserves resource order",
+      nestedResidentFailureInjected &&
+        combinedNestedDescriptorFailure instanceof AggregateError &&
+        combinedNestedDescriptorFailure.errors.length === 3 &&
+        combinedNestedDescriptorFailure.errors[0] === nestedDescriptorPrimary &&
+        combinedNestedDescriptorFailure.errors[1] ===
+          nestedResidentCloseFailure &&
+        combinedNestedDescriptorFailure.errors[2] === nestedOwnerCloseFailure,
     );
 
     const closeTargetBase = path.join(base, "close-target-scaffold");

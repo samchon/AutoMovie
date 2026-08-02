@@ -13,6 +13,12 @@ interface IScaffoldFileSnapshot {
   version: string;
 }
 
+interface IScaffoldDescriptorFailure {
+  error: unknown;
+}
+
+class ScaffoldDescriptorCleanupError extends AggregateError {}
+
 /**
  * Create or capture one ordinary scaffold base without following a linked
  * parent.
@@ -183,7 +189,7 @@ const createScaffoldFile = (props: {
   target: string;
 }): void => {
   const descriptor = fs.openSync(props.target, "wx+");
-  let failed = false;
+  let failure: IScaffoldDescriptorFailure | undefined;
   let completedSnapshot: IScaffoldFileSnapshot | null = null;
   try {
     const opened = fs.fstatSync(descriptor, { bigint: true });
@@ -217,10 +223,10 @@ const createScaffoldFile = (props: {
     );
     assertScaffoldOwnership(props.base, props.parent);
   } catch (error) {
-    failed = true;
+    failure = { error };
     throw error;
   } finally {
-    closeScaffoldDescriptor(descriptor, failed);
+    closeScaffoldDescriptor(descriptor, failure, "created scaffold file");
   }
   assertScaffoldFileSnapshot(completedSnapshot!);
   assertScaffoldOwnership(props.base, props.parent);
@@ -234,7 +240,7 @@ const overwriteScaffoldFile = (props: {
   target: string;
 }): void => {
   const descriptor = fs.openSync(props.target, "r+");
-  let failed = false;
+  let failure: IScaffoldDescriptorFailure | undefined;
   let completedSnapshot: IScaffoldFileSnapshot | null = null;
   try {
     const opened = fs.fstatSync(descriptor, { bigint: true });
@@ -269,10 +275,10 @@ const overwriteScaffoldFile = (props: {
     );
     assertScaffoldOwnership(props.base, props.parent);
   } catch (error) {
-    failed = true;
+    failure = { error };
     throw error;
   } finally {
-    closeScaffoldDescriptor(descriptor, failed);
+    closeScaffoldDescriptor(descriptor, failure, "overwritten scaffold file");
   }
   assertScaffoldFileSnapshot(completedSnapshot!);
   assertScaffoldOwnership(props.base, props.parent);
@@ -302,7 +308,7 @@ const assertScaffoldFileDescriptor = (
       `scaffold file descriptor changed generation: ${snapshot.path}`,
     );
   const residentDescriptor = fs.openSync(snapshot.path, "r");
-  let failed = false;
+  let failure: IScaffoldDescriptorFailure | undefined;
   try {
     const resident = fs.fstatSync(residentDescriptor, { bigint: true });
     assertOrdinarySingleLinkFile(resident, snapshot.path);
@@ -312,10 +318,14 @@ const assertScaffoldFileDescriptor = (
       );
     assertScaffoldFileSnapshot(snapshot);
   } catch (error) {
-    failed = true;
+    failure = { error };
     throw error;
   } finally {
-    closeScaffoldDescriptor(residentDescriptor, failed);
+    closeScaffoldDescriptor(
+      residentDescriptor,
+      failure,
+      "resident scaffold file",
+    );
   }
 };
 
@@ -403,11 +413,24 @@ const assertScaffoldDescriptorBytes = (
     throw new Error(`scaffold file changed during readback: ${target}`);
 };
 
-const closeScaffoldDescriptor = (descriptor: number, failed: boolean): void => {
+const closeScaffoldDescriptor = (
+  descriptor: number,
+  failure: IScaffoldDescriptorFailure | undefined,
+  resource: string,
+): void => {
   try {
     fs.closeSync(descriptor);
-  } catch (error) {
-    if (failed === false) throw error;
+  } catch (closeFailure) {
+    if (failure === undefined) throw closeFailure;
+    throw new ScaffoldDescriptorCleanupError(
+      [
+        ...(failure.error instanceof ScaffoldDescriptorCleanupError
+          ? failure.error.errors
+          : [failure.error]),
+        closeFailure,
+      ],
+      `Scaffold descriptor cleanup failed after the operation failed: ${resource}.`,
+    );
   }
 };
 
