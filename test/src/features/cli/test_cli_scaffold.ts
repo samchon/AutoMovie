@@ -943,6 +943,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
     const nativeOpen = mutableFs.openSync;
     const nativeRead = mutableFs.readSync;
     const nativeReadFile = mutableFs.readFileSync;
+    const nativeRename = mutableFs.renameSync;
     const nativeStat = mutableFs.statSync;
     const nativeWriteFile = mutableFs.writeFileSync;
     const shotsDirectory = path.dirname(artifact);
