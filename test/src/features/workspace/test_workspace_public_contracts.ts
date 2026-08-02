@@ -679,6 +679,10 @@ const packagedAssetReviewContract = (
     views: number | null;
   }>;
   reviewPhases: number;
+  raster: {
+    assertions: Array<{ comparisons: string[]; name: string }>;
+    overrides: string[];
+  };
 } => {
   interface IArrayContract {
     conditionals: Array<{
@@ -783,6 +787,19 @@ const packagedAssetReviewContract = (
   const canonical = arrayContract(canonicalArrays, reviewParsed);
 
   const tgzParsed = parse("internals/e2e-tgz.mjs", tgzSource, ts.ScriptKind.JS);
+  const compactTgz = (node: ts.Node): string =>
+    node.getText(tgzParsed).replace(/\s+/g, "");
+  const rasterOverrides: string[] = [];
+  const visitRasterOverrides = (node: ts.Node): void => {
+    if (
+      ts.isBinaryExpression(node) &&
+      node.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
+      compactTgz(node.left) === "starterProduction.frameFormat"
+    )
+      rasterOverrides.push(compactTgz(node));
+    ts.forEachChild(node, visitRasterOverrides);
+  };
+  visitRasterOverrides(tgzParsed);
   const embeddedSources: string[] = [];
   for (const statement of tgzParsed.statements) {
     if (ts.isVariableStatement(statement) === false) continue;
@@ -842,6 +859,7 @@ const packagedAssetReviewContract = (
     models: number | null;
     views: number | null;
   }> = [];
+  const rasterAssertions: Array<{ comparisons: string[]; name: string }> = [];
   let reviewPhases = 0;
   for (const embedded of embeddedSources) {
     const parsed = parse(
@@ -851,6 +869,39 @@ const packagedAssetReviewContract = (
     );
     const compact = (node: ts.Node): string =>
       node.getText(parsed).replace(/\s+/g, "");
+    const visitRasterAssertions = (node: ts.Node): void => {
+      if (
+        ts.isCallExpression(node) &&
+        ts.isIdentifier(node.expression) &&
+        node.expression.text === "assert" &&
+        node.arguments.length === 3
+      ) {
+        const name = compact(node.arguments[0]!);
+        if (
+          name.includes("starter-png-size:") ||
+          name.includes("starter-asset-view-captured:") ||
+          name === '"starter-required-deliverables-parser-complete"'
+        ) {
+          const comparisons: string[] = [];
+          const visitComparisons = (child: ts.Node): void => {
+            if (
+              ts.isBinaryExpression(child) &&
+              child.operatorToken.kind ===
+                ts.SyntaxKind.EqualsEqualsEqualsToken &&
+              (/\.(?:width|height)$/u.test(compact(child.left)) ||
+                /\?\.(?:width|height)$/u.test(compact(child.left))) &&
+              ts.isNumericLiteral(child.right)
+            )
+              comparisons.push(compact(child));
+            ts.forEachChild(child, visitComparisons);
+          };
+          visitComparisons(node.arguments[1]!);
+          rasterAssertions.push({ comparisons, name });
+        }
+      }
+      ts.forEachChild(node, visitRasterAssertions);
+    };
+    visitRasterAssertions(parsed);
     for (const statement of parsed.statements) {
       if (
         ts.isImportDeclaration(statement) &&
@@ -1088,6 +1139,10 @@ const packagedAssetReviewContract = (
     packaged,
     reviewFlows,
     reviewPhases,
+    raster: {
+      assertions: rasterAssertions,
+      overrides: rasterOverrides,
+    },
   };
 };
 
@@ -3662,7 +3717,7 @@ export const test_workspace_public_contracts = (): void => {
           assetGuard: 'if(entry.target.kind!=="asset")continue;',
           assertion: {
             condition:
-              'captured.captured&&captured.reviewTarget?.kind==="asset"&&captured.reviewTarget.id===entry.target.id&&captured.receipt!==null&&captured.frame?.width===16&&captured.frame.height===16&&captured.diagnostics.every((item)=>item.category!=="error")',
+              'captured.captured&&captured.reviewTarget?.kind==="asset"&&captured.reviewTarget.id===entry.target.id&&captured.receipt!==null&&captured.frame?.width===160&&captured.frame.height===90&&captured.diagnostics.every((item)=>item.category!=="error")',
             detail: "JSON.stringify(captured.diagnostics)",
             name:
               "`starter-asset-view-captured:" +
@@ -3745,6 +3800,45 @@ export const test_workspace_public_contracts = (): void => {
       },
       reviewFlows: [{ before: 0, capture: 5, models: 3, views: 2 }],
       reviewPhases: 1,
+      raster: {
+        assertions: [
+          {
+            comparisons: ["png.width===160", "png.height===90"],
+            name:
+              "`starter-png-size:" +
+              templateExpression("frame.shot") +
+              ":" +
+              templateExpression("frame.pass") +
+              "`",
+          },
+          {
+            comparisons: [
+              "captured.frame?.width===160",
+              "captured.frame.height===90",
+            ],
+            name:
+              "`starter-asset-view-captured:" +
+              templateExpression("entry.target.id") +
+              ":" +
+              templateExpression("view.id") +
+              "`",
+          },
+          {
+            comparisons: [
+              'receiptByDeliverable.get("starter-preview")?.probe?.width===160',
+              'receiptByDeliverable.get("starter-preview")?.probe?.height===90',
+              'receiptByDeliverable.get("starter-feature")?.probe?.width===160',
+              'receiptByDeliverable.get("starter-feature")?.probe?.height===90',
+              'receiptByDeliverable.get("starter-pose-guide")?.probe?.width===160',
+              'receiptByDeliverable.get("starter-pose-guide")?.probe?.height===90',
+            ],
+            name: '"starter-required-deliverables-parser-complete"',
+          },
+        ],
+        overrides: [
+          "starterProduction.frameFormat={...starterProduction.frameFormat,width:160,height:90,fps:2,}",
+        ],
+      },
     },
   );
   const mcpMethods = [
