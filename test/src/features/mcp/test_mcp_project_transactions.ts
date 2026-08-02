@@ -53,10 +53,10 @@ const slateOf = (logline: string): IAutoMovieMcpWritableSlate => ({
  *    refusal/retry as well as explicit read synchronization.
  * 7. A missing manifest cannot advance the optimistic revision base and let a
  *    stale slate overwrite a concurrent winner after the manifest returns.
- * 8. The mutation-defense matrix proves ordinary temp cleanup, quarantine rename
- *    failure, delete failure with successful/already-complete restore,
- *    removal-time root replacement, lock-token clone preservation, and an
- *    atomic-write root replacement without stale-path cleanup.
+ * 8. The mutation-defense matrix proves partial final evidence, absent and
+ *    replacement competitor preservation, retained exact removal evidence,
+ *    source-successor refusal, removal-time root replacement, lock-token clone
+ *    preservation, and write-time root replacement without stale cleanup.
  * 9. Retargeting a POSIX symlink or Windows junction ancestor during a write
  *    cannot redirect a live handle away from its canonical physical root.
  */
@@ -238,43 +238,164 @@ export const test_mcp_project_transactions = (): void => {
     );
     a.writableSlate();
 
-    const nativeCleanupWrite = fs.writeFileSync;
-    let failedTemp: string | undefined;
-    fs.writeFileSync = ((
-      file: fs.PathOrFileDescriptor,
-      ...args: unknown[]
-    ): unknown => {
+    const nativeOpen = fs.openSync;
+    const nativeDescriptorWrite = fs.writeSync;
+    const failedFinal = path.join(root, "actors", "cleanupFailure.json");
+    let failedDescriptor = -1;
+    fs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, fs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
       if (
         typeof file !== "number" &&
-        path.basename(file.toString()).startsWith("cleanupFailure.json.tmp.")
-      ) {
-        failedTemp = path.resolve(file.toString());
-        Reflect.apply(nativeCleanupWrite, fs, [file, ...args]);
-        throw Object.assign(new Error("actor temporary write failed"), {
+        path.resolve(file.toString()) === failedFinal &&
+        flags === "wx+"
+      )
+        failedDescriptor = descriptor;
+      return descriptor;
+    }) as typeof fs.openSync;
+    fs.writeSync = ((...args: unknown[]): number => {
+      if (args[0] === failedDescriptor) {
+        const [descriptor, buffer, offset, _length, position] = args as [
+          number,
+          Uint8Array,
+          number,
+          number,
+          number,
+        ];
+        Reflect.apply(nativeDescriptorWrite, fs, [
+          descriptor,
+          buffer,
+          offset,
+          1,
+          position,
+        ]);
+        throw Object.assign(new Error("actor final write failed"), {
           code: "EIO",
         });
       }
-      return Reflect.apply(nativeCleanupWrite, fs, [file, ...args]);
-    }) as typeof fs.writeFileSync;
-    let cleanupRejected = false;
+      return Reflect.apply(nativeDescriptorWrite, fs, args) as number;
+    }) as typeof fs.writeSync;
+    let finalWriteRejected = false;
     try {
-      cleanupRejected = throwsError(
+      finalWriteRejected = throwsError(
         () => a.saveActors([actorSpec("cleanupFailure")]),
-        ["actor temporary write failed"],
+        ["actor final write failed"],
       );
     } finally {
-      fs.writeFileSync = nativeCleanupWrite;
+      fs.openSync = nativeOpen;
+      fs.writeSync = nativeDescriptorWrite;
     }
     TestValidator.predicate(
-      "an ordinary atomic-write failure cleans its current-namespace temporary",
-      cleanupRejected &&
-        failedTemp !== undefined &&
-        fs.existsSync(failedTemp) === false &&
-        fs.existsSync(path.join(root, "actors", "cleanupFailure.json")) ===
-          false,
+      "a resident write failure retains its exact partial final evidence",
+      finalWriteRejected &&
+        failedDescriptor !== -1 &&
+        fs.readFileSync(failedFinal).length === 1,
     );
 
+    const absentCompetitor = path.join(root, "actors", "absentCompetitor.json");
+    const absentCompetitorBytes = Buffer.from("foreign absent competitor");
+    let absentCompetitorInstalled = false;
+    fs.openSync = ((file, flags, ...args: unknown[]): number => {
+      if (
+        absentCompetitorInstalled === false &&
+        typeof file !== "number" &&
+        path.resolve(file.toString()) === absentCompetitor &&
+        flags === "wx+"
+      ) {
+        fs.writeFileSync(absentCompetitor, absentCompetitorBytes);
+        absentCompetitorInstalled = true;
+      }
+      return Reflect.apply(nativeOpen, fs, [file, flags, ...args]) as number;
+    }) as typeof fs.openSync;
+    let absentCompetitorRejected = false;
+    try {
+      absentCompetitorRejected = throwsError(
+        () => a.saveActors([actorSpec("absentCompetitor")]),
+        ["EEXIST"],
+      );
+    } finally {
+      fs.openSync = nativeOpen;
+    }
+    TestValidator.predicate(
+      "an absent resident publication preserves its final-slot competitor",
+      absentCompetitorInstalled &&
+        absentCompetitorRejected &&
+        fs.readFileSync(absentCompetitor).equals(absentCompetitorBytes),
+    );
+    fs.rmSync(absentCompetitor, { force: true });
+
     const nativeRename = fs.renameSync;
+    const residentEvidence = path.join(root, ".automovie-resident-evidence");
+    const replacementRace = path.join(root, "actors", "replacementRace.json");
+    a.saveActors([actorSpec("replacementRace")]);
+    const replacementPredecessor = fs.readFileSync(replacementRace);
+    const replacementSuccessor = Buffer.from(
+      `${JSON.stringify({ ...actorSpec("replacementRace"), speed: 7 }, null, 2)}\n`,
+    );
+    const evidenceBeforeReplacement = new Set(fs.readdirSync(residentEvidence));
+    let replacementSuccessorInstalled = false;
+    fs.renameSync = ((oldPath, newPath) => {
+      nativeRename(oldPath, newPath);
+      if (
+        replacementSuccessorInstalled === false &&
+        path.resolve(oldPath.toString()) === replacementRace &&
+        path.dirname(path.resolve(newPath.toString())) === residentEvidence
+      ) {
+        fs.writeFileSync(replacementRace, replacementSuccessor);
+        replacementSuccessorInstalled = true;
+      }
+    }) as typeof fs.renameSync;
+    let replacementSuccessorRejected = false;
+    try {
+      replacementSuccessorRejected = throwsError(
+        () => a.saveActors([{ ...actorSpec("replacementRace"), speed: 2 }]),
+        ["EEXIST"],
+      );
+    } finally {
+      fs.renameSync = nativeRename;
+    }
+    const replacementEvidence = fs
+      .readdirSync(residentEvidence)
+      .filter((file) => evidenceBeforeReplacement.has(file) === false)
+      .find((file) =>
+        fs
+          .readFileSync(path.join(residentEvidence, file))
+          .equals(replacementPredecessor),
+      );
+    TestValidator.predicate(
+      "resident replacement preserves both a target successor and predecessor evidence",
+      replacementSuccessorInstalled &&
+        replacementSuccessorRejected &&
+        fs.readFileSync(replacementRace).equals(replacementSuccessor) &&
+        replacementEvidence !== undefined,
+    );
+
+    const linkedAssetOutside = path.join(root, "linked-asset-outside");
+    const linkedAssetParent = path.join(root, "assets", "linked-parent");
+    fs.mkdirSync(linkedAssetOutside);
+    fs.symlinkSync(linkedAssetOutside, linkedAssetParent, "junction");
+    let linkedAssetRejected = false;
+    try {
+      linkedAssetRejected = throwsError(
+        () =>
+          a.registerAsset(
+            "assets/linked-parent/escaped.bin",
+            Buffer.from("blocked asset bytes"),
+          ),
+        ["directory is not ordinary"],
+      );
+    } finally {
+      fs.rmSync(linkedAssetParent, { force: true });
+    }
+    TestValidator.predicate(
+      "a linked resident parent cannot redirect an asset publication",
+      linkedAssetRejected &&
+        fs.existsSync(path.join(linkedAssetOutside, "escaped.bin")) === false,
+    );
+
     fs.renameSync = ((oldPath, newPath) => {
       if (
         path.resolve(oldPath.toString()) ===
@@ -299,73 +420,65 @@ export const test_mcp_project_transactions = (): void => {
       deniedRemoval && fs.existsSync(path.join(root, "actors", "knightA.json")),
     );
 
-    const nativeRemove = fs.rmSync;
-    let quarantineRemoveFailed = false;
-    fs.rmSync = ((file, ...args: unknown[]): void => {
-      if (
-        quarantineRemoveFailed === false &&
-        path.basename(file.toString()).startsWith("knightA.json.delete.")
-      ) {
-        quarantineRemoveFailed = true;
-        throw Object.assign(new Error("actor quarantine busy"), {
-          code: "EBUSY",
-        });
-      }
-      Reflect.apply(nativeRemove, fs, [file, ...args]);
-    }) as typeof fs.rmSync;
-    let restoredRemoval = false;
-    try {
-      restoredRemoval = throwsError(
-        () => a.removeActor("knightA"),
-        ["actor quarantine busy"],
+    const knightFile = path.join(root, "actors", "knightA.json");
+    const knightBytes = fs.readFileSync(knightFile);
+    const evidenceBeforeRemoval = new Set(fs.readdirSync(residentEvidence));
+    a.removeActor("knightA");
+    const removedEvidence = fs
+      .readdirSync(residentEvidence)
+      .filter((file) => evidenceBeforeRemoval.has(file) === false)
+      .find((file) =>
+        fs.readFileSync(path.join(residentEvidence, file)).equals(knightBytes),
       );
-    } finally {
-      fs.rmSync = nativeRemove;
-    }
     TestValidator.predicate(
-      "a failed quarantine delete restores the actor slice",
-      quarantineRemoveFailed &&
-        restoredRemoval &&
-        fs.existsSync(path.join(root, "actors", "knightA.json")) &&
+      "a normal resident removal retains its exact private predecessor",
+      fs.existsSync(knightFile) === false &&
+        removedEvidence !== undefined &&
         fs
-          .readdirSync(path.join(root, "actors"))
-          .every((file) => file.startsWith("knightA.json.delete.") === false),
+          .readFileSync(path.join(residentEvidence, removedEvidence))
+          .equals(knightBytes),
     );
+    a.saveActors([actorSpec("knightA")]);
 
-    let externallyRestored = false;
-    fs.rmSync = ((file, ...args: unknown[]): void => {
+    const removalSuccessorBytes = fs.readFileSync(knightFile);
+    const evidenceBeforeSuccessor = new Set(fs.readdirSync(residentEvidence));
+    let removalSuccessorInstalled = false;
+    fs.renameSync = ((oldPath, newPath) => {
+      nativeRename(oldPath, newPath);
       if (
-        externallyRestored === false &&
-        path.basename(file.toString()).startsWith("knightA.json.delete.")
+        removalSuccessorInstalled === false &&
+        path.resolve(oldPath.toString()) === knightFile &&
+        path.dirname(path.resolve(newPath.toString())) === residentEvidence
       ) {
-        fs.renameSync(
-          file.toString(),
-          path.join(root, "actors", "knightA.json"),
-        );
-        externallyRestored = true;
-        throw Object.assign(new Error("actor delete reported late failure"), {
-          code: "EIO",
-        });
+        fs.writeFileSync(knightFile, removalSuccessorBytes);
+        removalSuccessorInstalled = true;
       }
-      Reflect.apply(nativeRemove, fs, [file, ...args]);
-    }) as typeof fs.rmSync;
-    let lateDeleteRejected = false;
+    }) as typeof fs.renameSync;
+    let removalSuccessorRejected = false;
     try {
-      lateDeleteRejected = throwsError(
+      removalSuccessorRejected = throwsError(
         () => a.removeActor("knightA"),
-        ["actor delete reported late failure"],
+        ["pathname successor"],
       );
     } finally {
-      fs.rmSync = nativeRemove;
+      fs.renameSync = nativeRename;
     }
+    const successorEvidence = fs
+      .readdirSync(residentEvidence)
+      .find((file) => evidenceBeforeSuccessor.has(file) === false);
     TestValidator.predicate(
-      "an already-restored quarantine failure never clobbers the resident actor",
-      externallyRestored &&
-        lateDeleteRejected &&
-        fs.existsSync(path.join(root, "actors", "knightA.json")),
+      "resident removal preserves a source successor and its exact predecessor",
+      removalSuccessorInstalled &&
+        removalSuccessorRejected &&
+        fs.readFileSync(knightFile).equals(removalSuccessorBytes) &&
+        successorEvidence !== undefined &&
+        fs
+          .readFileSync(path.join(residentEvidence, successorEvidence))
+          .equals(removalSuccessorBytes),
     );
 
     const removalParkedRoot = `${root}.removal-parked`;
+    const evidenceBeforeRootSwap = new Set(fs.readdirSync(residentEvidence));
     let removalSwapped = false;
     fs.renameSync = ((oldPath, newPath) => {
       nativeRename(oldPath, newPath);
@@ -373,7 +486,7 @@ export const test_mcp_project_transactions = (): void => {
         removalSwapped === false &&
         path.resolve(oldPath.toString()) ===
           path.join(root, "actors", "knightA.json") &&
-        path.basename(newPath.toString()).startsWith("knightA.json.delete.")
+        path.dirname(path.resolve(newPath.toString())) === residentEvidence
       ) {
         nativeRename(root, removalParkedRoot);
         fs.mkdirSync(root);
@@ -391,15 +504,19 @@ export const test_mcp_project_transactions = (): void => {
       fs.renameSync = nativeRename;
     }
     const removalReplacementEmpty = fs.readdirSync(root).length === 0;
+    const parkedResidentEvidence = path.join(
+      removalParkedRoot,
+      ".automovie-resident-evidence",
+    );
     const quarantinedActor = fs
-      .readdirSync(path.join(removalParkedRoot, "actors"))
-      .find((file) => file.startsWith("knightA.json.delete."));
+      .readdirSync(parkedResidentEvidence)
+      .find((file) => evidenceBeforeRootSwap.has(file) === false);
     fs.rmSync(root, { recursive: true, force: true });
     fs.renameSync(removalParkedRoot, root);
     fs.rmSync(path.join(root, "revision.lock"), { force: true });
     if (quarantinedActor !== undefined)
       fs.renameSync(
-        path.join(root, "actors", quarantinedActor),
+        path.join(root, ".automovie-resident-evidence", quarantinedActor),
         path.join(root, "actors", "knightA.json"),
       );
     TestValidator.predicate(
@@ -462,24 +579,25 @@ export const test_mcp_project_transactions = (): void => {
 
     const operationParkedRoot = `${root}.operation-parked`;
     let operationSwapped = false;
-    fs.writeFileSync = ((
-      file: fs.PathOrFileDescriptor,
-      ...args: unknown[]
-    ): unknown => {
-      const output = Reflect.apply(nativeWrite, fs, [file, ...args]);
+    fs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, fs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
       if (
         operationSwapped === false &&
         typeof file !== "number" &&
-        path.dirname(path.resolve(file.toString())) ===
-          path.join(root, "actors") &&
-        path.basename(file.toString()).startsWith("rootSwap.json.tmp.")
+        path.resolve(file.toString()) ===
+          path.join(root, "actors", "rootSwap.json") &&
+        flags === "wx+"
       ) {
         fs.renameSync(root, operationParkedRoot);
         fs.mkdirSync(root);
         operationSwapped = true;
       }
-      return output;
-    }) as typeof fs.writeFileSync;
+      return descriptor;
+    }) as typeof fs.openSync;
     let operationMessage = "";
     try {
       try {
@@ -488,16 +606,15 @@ export const test_mcp_project_transactions = (): void => {
         operationMessage = (error as Error).message;
       }
     } finally {
-      fs.writeFileSync = nativeWrite;
+      fs.openSync = nativeOpen;
     }
     const replacementStayedEmpty = fs.readdirSync(root).length === 0;
     const originalLockPreserved = fs.existsSync(
       path.join(operationParkedRoot, "revision.lock"),
     );
-    const originalPublishPrevented =
-      fs.existsSync(
-        path.join(operationParkedRoot, "actors", "rootSwap.json"),
-      ) === false;
+    const originalPartialEvidence =
+      fs.readFileSync(path.join(operationParkedRoot, "actors", "rootSwap.json"))
+        .length === 0;
     let replacementLeaseReacquired = false;
     try {
       AutoMovieProject.open(root).writableSlate();
@@ -508,16 +625,14 @@ export const test_mcp_project_transactions = (): void => {
     fs.rmSync(root, { recursive: true, force: true });
     fs.renameSync(operationParkedRoot, root);
     fs.rmSync(path.join(root, "revision.lock"), { force: true });
-    for (const file of fs.readdirSync(path.join(root, "actors")))
-      if (file.startsWith("rootSwap.json.tmp."))
-        fs.rmSync(path.join(root, "actors", file), { force: true });
+    fs.rmSync(path.join(root, "actors", "rootSwap.json"), { force: true });
     TestValidator.predicate(
       "an operation-time root swap cannot publish or release through the replacement",
       operationSwapped &&
         operationMessage.includes("root identity or namespace fence changed") &&
         replacementStayedEmpty &&
         originalLockPreserved &&
-        originalPublishPrevented &&
+        originalPartialEvidence &&
         replacementLeaseReacquired,
     );
 
@@ -565,18 +680,20 @@ export const test_mcp_project_transactions = (): void => {
     );
     const project = AutoMovieProject.open(path.join(alias, "project"));
     const canonicalRoot = path.join(physicalA, "project");
-    const nativeWrite = fs.writeFileSync;
+    const nativeAliasOpen = fs.openSync;
     let aliasRetargeted = false;
-    fs.writeFileSync = ((
-      file: fs.PathOrFileDescriptor,
-      ...args: unknown[]
-    ): unknown => {
-      const output = Reflect.apply(nativeWrite, fs, [file, ...args]);
+    fs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeAliasOpen, fs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
       if (
         aliasRetargeted === false &&
         typeof file !== "number" &&
-        path.dirname(path.resolve(file.toString())) === canonicalRoot &&
-        path.basename(file.toString()).startsWith("script.json.tmp.")
+        path.resolve(file.toString()) ===
+          path.join(canonicalRoot, "script.json") &&
+        flags === "wx+"
       ) {
         fs.unlinkSync(alias);
         fs.symlinkSync(
@@ -586,12 +703,12 @@ export const test_mcp_project_transactions = (): void => {
         );
         aliasRetargeted = true;
       }
-      return output;
-    }) as typeof fs.writeFileSync;
+      return descriptor;
+    }) as typeof fs.openSync;
     try {
       project.saveSlate(slateOf("canonical physical root"));
     } finally {
-      fs.writeFileSync = nativeWrite;
+      fs.openSync = nativeAliasOpen;
     }
     TestValidator.predicate(
       "an operation-time ancestor alias retarget cannot redirect a live handle",
