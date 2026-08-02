@@ -1503,7 +1503,8 @@ const renderBrowserLifecycleContract = (
         ts.isBlock(declaration.initializer.body) === false
       )
         continue;
-      const body = declaration.initializer.body.statements;
+      const functionBody = declaration.initializer.body;
+      const body = functionBody.statements;
       const outerTries = body.filter(ts.isTryStatement);
       const outer = outerTries.length === 1 ? outerTries[0]! : undefined;
       const pageTries =
@@ -1608,7 +1609,7 @@ const renderBrowserLifecycleContract = (
             writes[name]!.push(compact(node));
         ts.forEachChild(node, visitWrites);
       };
-      visitWrites(declaration.initializer.body);
+      visitWrites(functionBody);
       const bindings = [
         ["browser", browser],
         ["page", page],
@@ -1670,7 +1671,7 @@ const renderBrowserLifecycleContract = (
             ? null
             : compact(browser.initializer),
         declarations: bindings.map(([name, binding]) => ({
-          count: declarationCount(declaration.initializer.body, name),
+          count: declarationCount(functionBody, name),
           initializer:
             binding?.initializer === undefined
               ? null
