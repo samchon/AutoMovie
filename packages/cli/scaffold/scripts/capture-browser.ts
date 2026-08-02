@@ -64,6 +64,14 @@ export interface IPlaywrightMetadata {
   fingerprint: string;
 }
 
+export interface IAutoMovieCaptureInstallCommandResult {
+  error: { code: string; message: string } | null;
+  signal: NodeJS.Signals | null;
+  status: number | null;
+  stderr: string;
+  stdout: string;
+}
+
 interface ICaptureReceiptDirectorySnapshot {
   directories: readonly IPhysicalDirectory[];
   path: string;
@@ -718,7 +726,7 @@ export const runDescriptorBoundNodeCli = (props: {
   cliPath: string;
   cwd: string;
   env: NodeJS.ProcessEnv;
-}): number | null => {
+}): IAutoMovieCaptureInstallCommandResult => {
   const cli = openCaptureExecutable(props.cliPath);
   try {
     if (cli.digest !== props.cliDigest)
@@ -735,10 +743,56 @@ export const runDescriptorBoundNodeCli = (props: {
       },
     );
     assertCaptureExecutable(cli);
-    return result.status;
+    return {
+      error:
+        result.error === undefined
+          ? null
+          : {
+              code: (result.error as NodeJS.ErrnoException).code ?? "unknown",
+              message: result.error.message,
+            },
+      signal: result.signal,
+      status: result.status,
+      stderr: result.stderr ?? "",
+      stdout: result.stdout ?? "",
+    };
   } finally {
     closeCaptureExecutable(cli);
   }
+};
+
+const writeCaptureInstallCommandOutput = (
+  result: IAutoMovieCaptureInstallCommandResult,
+): void => {
+  process.stdout.write(result.stdout);
+  process.stderr.write(result.stderr);
+};
+
+const captureInstallCommandSucceeded = (
+  result: IAutoMovieCaptureInstallCommandResult,
+): boolean =>
+  result.error === null && result.signal === null && result.status === 0;
+
+export const captureInstallCommandTermination = (
+  result: IAutoMovieCaptureInstallCommandResult,
+): string => {
+  const reason =
+    result.error !== null
+      ? "failed to spawn"
+      : result.signal !== null
+        ? "terminated by signal"
+        : typeof result.status !== "number"
+          ? "terminated without status"
+          : `exited with status ${result.status}`;
+  return [
+    reason,
+    `status=${typeof result.status === "number" ? result.status : "none"}`,
+    `signal=${result.signal ?? "none"}`,
+    `error=${result.error?.code ?? "none"}`,
+    `message=${
+      result.error === null ? "none" : JSON.stringify(result.error.message)
+    }`,
+  ].join("; ");
 };
 
 /** Revalidate one open executable on both sides of its launch call. */
@@ -773,11 +827,10 @@ export const installPackageOwnedChromium = async (
     cwd: projectRoot,
     env: localBrowserEnvironment(projectRoot),
   });
-  if (installed !== 0)
+  writeCaptureInstallCommandOutput(installed);
+  if (captureInstallCommandSucceeded(installed) === false)
     throw new Error(
-      `Playwright Chromium installation failed with status ${
-        installed ?? "signal"
-      }. Check HTTPS_PROXY, PLAYWRIGHT_DOWNLOAD_HOST or PLAYWRIGHT_CHROMIUM_DOWNLOAD_HOST for your network or offline mirror, then retry npm run capture:install.`,
+      `Playwright Chromium installation ${captureInstallCommandTermination(installed)}. Check HTTPS_PROXY, PLAYWRIGHT_DOWNLOAD_HOST or PLAYWRIGHT_CHROMIUM_DOWNLOAD_HOST for your network or offline mirror, then retry npm run capture:install.`,
     );
   assertPlaywrightMetadata(metadata);
   const { chromium } = await loadPlaywright(projectRoot);

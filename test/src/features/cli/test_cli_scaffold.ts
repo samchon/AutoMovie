@@ -46,6 +46,14 @@ interface GeneratedViewerResponse {
   setHeader: (name: string, value: string) => void;
 }
 
+interface CaptureInstallCommandResult {
+  error: { code: string; message: string } | null;
+  signal: NodeJS.Signals | null;
+  status: number | null;
+  stderr: string;
+  stdout: string;
+}
+
 type GeneratedViewerMiddleware = (
   request: { url?: string },
   response: GeneratedViewerResponse,
@@ -158,6 +166,8 @@ const captureContractFailures = (
  *     only the exact captured owner before exclusive successor publication.
  * 18. Each complete Kokoro dialogue line closes one explicit text splitter before
  *     streaming it, so the upstream async iterator can terminate.
+ * 19. Descriptor-bound capture installation preserves child output and names spawn,
+ *     signal, missing-status, and ordinary exit failures.
  */
 export const test_cli_scaffold = async (): Promise<void> => {
   // 5. packaging guard: the scaffold dir must be a published `files` entry.
@@ -179,6 +189,33 @@ export const test_cli_scaffold = async (): Promise<void> => {
   );
 
   const files = renderScaffold({ name: "demo-film" });
+  const captureBrowserScript = files["scripts/capture-browser.ts"]!;
+  const captureInstallOutputOffset = captureBrowserScript.indexOf(
+    "const writeCaptureInstallCommandOutput",
+  );
+  const captureInstallOutputSource =
+    captureInstallOutputOffset < 0
+      ? ""
+      : captureBrowserScript.slice(
+          captureInstallOutputOffset,
+          captureBrowserScript.indexOf(
+            "\nconst captureInstallCommandSucceeded",
+            captureInstallOutputOffset,
+          ),
+        );
+  const captureInstallOffset = captureBrowserScript.indexOf(
+    "export const installPackageOwnedChromium",
+  );
+  const captureInstallSource =
+    captureInstallOffset < 0
+      ? ""
+      : captureBrowserScript.slice(
+          captureInstallOffset,
+          captureBrowserScript.indexOf(
+            "\nconst packageOwnedProvenance",
+            captureInstallOffset,
+          ),
+        );
   TestValidator.equals(
     "sort oracle distinguishes calls from source trivia and comparators",
     comparatorFreeSortCalls({
@@ -554,6 +591,62 @@ export const test_cli_scaffold = async (): Promise<void> => {
       pushedText: "line.text",
       streamedInput: "dialogueText",
       unsafeStringInputs: [],
+    },
+  );
+  TestValidator.equals(
+    "capture installation forwards child evidence before interpreting failure",
+    {
+      outputChannels: [
+        ...captureInstallOutputSource.matchAll(
+          /process\.(stdout|stderr)\.write\(result\.(stdout|stderr)\);/g,
+        ),
+      ].map((match) => [match[1], match[2]]),
+      counts: {
+        run: (
+          captureInstallSource.match(
+            /const installed = runDescriptorBoundNodeCli\(\{/g,
+          ) ?? []
+        ).length,
+        write: (
+          captureInstallSource.match(
+            /writeCaptureInstallCommandOutput\(installed\);/g,
+          ) ?? []
+        ).length,
+        interpret: (
+          captureInstallSource.match(
+            /captureInstallCommandSucceeded\(installed\)/g,
+          ) ?? []
+        ).length,
+        diagnose: (
+          captureInstallSource.match(
+            /captureInstallCommandTermination\(installed\)/g,
+          ) ?? []
+        ).length,
+      },
+      lifecycle: [
+        ["run", "const installed = runDescriptorBoundNodeCli({"],
+        ["write", "writeCaptureInstallCommandOutput(installed);"],
+        ["interpret", "if (captureInstallCommandSucceeded(installed)"],
+        ["diagnose", "captureInstallCommandTermination("],
+      ]
+        .filter(([, marker]) => captureInstallSource.includes(marker!))
+        .sort(
+          ([, left], [, right]) =>
+            captureInstallSource.indexOf(left!) -
+            captureInstallSource.indexOf(right!),
+        )
+        .map(([name]) => name),
+      retiredFallbacks:
+        captureInstallSource.match(/installed \?\? "signal"/g) ?? [],
+    },
+    {
+      outputChannels: [
+        ["stdout", "stdout"],
+        ["stderr", "stderr"],
+      ],
+      counts: { run: 1, write: 1, interpret: 1, diagnose: 1 },
+      lifecycle: ["run", "write", "interpret", "diagnose"],
+      retiredFallbacks: [],
     },
   );
   TestValidator.predicate(
@@ -4122,6 +4215,9 @@ export const test_cli_scaffold = async (): Promise<void> => {
         cliDigest: string;
         packageVersion: string;
       };
+      captureInstallCommandTermination: (
+        result: CaptureInstallCommandResult,
+      ) => string;
       launchWithCaptureExecutableSnapshot: <Output>(props: {
         close: (output: Output) => Promise<void>;
         launch: (executablePath: string) => Promise<Output>;
@@ -4142,7 +4238,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
         cliPath: string;
         cwd: string;
         env: NodeJS.ProcessEnv;
-      }) => number | null;
+      }) => CaptureInstallCommandResult;
     };
     const metadataRoot = path.join(base, "capture-metadata");
     const playwrightRoot = path.join(metadataRoot, "playwright");
@@ -4255,17 +4351,81 @@ export const test_cli_scaffold = async (): Promise<void> => {
       ].join("\n"),
     );
     fs.writeFileSync(descriptorCli, descriptorCliBytes);
-    const descriptorCliStatus = captureBrowserModule.runDescriptorBoundNodeCli({
+    const descriptorCliResult = captureBrowserModule.runDescriptorBoundNodeCli({
       args: [descriptorCliMarker],
       cliDigest: fixtureDigest(descriptorCliBytes),
       cliPath: descriptorCli,
       cwd: base,
       env: { ...process.env, PLAYWRIGHT_BROWSERS_PATH: "0" },
     });
-    TestValidator.predicate(
+    TestValidator.equals(
       "capture install executes exact CLI bytes with package-local browser storage",
-      descriptorCliStatus === 0 &&
-        fs.readFileSync(descriptorCliMarker, "utf8") === "captured-cli",
+      {
+        result: descriptorCliResult,
+        marker: fs.readFileSync(descriptorCliMarker, "utf8"),
+      },
+      {
+        result: {
+          error: null,
+          signal: null,
+          status: 0,
+          stderr: "",
+          stdout: "",
+        },
+        marker: "captured-cli",
+      },
+    );
+    const descriptorFailureBytes = Buffer.from(
+      [
+        'process.stdout.write("playwright-output\\n");',
+        'process.stderr.write("download-failure\\n");',
+        "process.exitCode = 23;",
+      ].join("\n"),
+    );
+    fs.writeFileSync(descriptorCli, descriptorFailureBytes);
+    TestValidator.equals(
+      "capture install retains both output channels and ordinary exit status",
+      captureBrowserModule.runDescriptorBoundNodeCli({
+        args: [],
+        cliDigest: fixtureDigest(descriptorFailureBytes),
+        cliPath: descriptorCli,
+        cwd: base,
+        env: process.env,
+      }),
+      {
+        error: null,
+        signal: null,
+        status: 23,
+        stderr: "download-failure\n",
+        stdout: "playwright-output\n",
+      },
+    );
+    const terminationFixture = (
+      patch: Partial<CaptureInstallCommandResult>,
+    ): CaptureInstallCommandResult => ({
+      error: null,
+      signal: null,
+      status: null,
+      stderr: "",
+      stdout: "",
+      ...patch,
+    });
+    TestValidator.equals(
+      "capture install distinguishes every abnormal child termination",
+      [
+        terminationFixture({
+          error: { code: "ENOENT", message: "missing executable" },
+        }),
+        terminationFixture({ signal: "SIGTERM" }),
+        terminationFixture({}),
+        terminationFixture({ status: 23 }),
+      ].map(captureBrowserModule.captureInstallCommandTermination),
+      [
+        'failed to spawn; status=none; signal=none; error=ENOENT; message="missing executable"',
+        "terminated by signal; status=none; signal=SIGTERM; error=none; message=none",
+        "terminated without status; status=none; signal=none; error=none; message=none",
+        "exited with status 23; status=23; signal=none; error=none; message=none",
+      ],
     );
     const descriptorCliParked = `${descriptorCli}.parked`;
     const descriptorBoundaryBytes = Buffer.from(
