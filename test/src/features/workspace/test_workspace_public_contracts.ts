@@ -870,6 +870,7 @@ const packagedAssetReviewContract = (
     expression: string;
     initializer: string;
   }> = [];
+  const frameEvidence: Array<Array<[string, string]>> = [];
   const applications: string[] = [];
   const assertionFailures: string[] = [];
   const captureImports: Array<{
@@ -896,6 +897,33 @@ const packagedAssetReviewContract = (
     );
     const compact = (node: ts.Node): string =>
       node.getText(parsed).replace(/\s+/g, "");
+    for (const statement of parsed.statements)
+      if (ts.isVariableStatement(statement))
+        for (const declaration of statement.declarationList.declarations)
+          if (
+            ts.isIdentifier(declaration.name) &&
+            declaration.name.text === "frameEvidence" &&
+            declaration.initializer !== undefined &&
+            ts.isArrowFunction(declaration.initializer)
+          ) {
+            let body = declaration.initializer.body;
+            while (ts.isParenthesizedExpression(body)) body = body.expression;
+            if (ts.isObjectLiteralExpression(body))
+              frameEvidence.push(
+                body.properties.flatMap((property) =>
+                  ts.isPropertyAssignment(property) &&
+                  (ts.isIdentifier(property.name) ||
+                    ts.isStringLiteralLike(property.name))
+                    ? [
+                        [property.name.text, compact(property.initializer)] as [
+                          string,
+                          string,
+                        ],
+                      ]
+                    : [],
+                ),
+              );
+          }
     const visitRasterAssertions = (node: ts.Node): void => {
       if (
         ts.isCallExpression(node) &&
@@ -1172,6 +1200,7 @@ const packagedAssetReviewContract = (
       ].map((match) => match[1]!),
     },
     embeddedScripts: embeddedSources.length,
+    frameEvidence,
     guideLoops,
     packaged,
     reviewFlows,
@@ -3813,6 +3842,19 @@ export const test_workspace_public_contracts = (): void => {
         ],
       },
       embeddedScripts: 1,
+      frameEvidence: [
+        [
+          ["kind", '"frame"'],
+          ["target", "frame.target"],
+          ["shot", "frame.shot"],
+          ["reviewFrame", "frame.reviewFrame"],
+          ["bundle", "frame.bundle"],
+          ["frame", "frame.frame"],
+          ["time", "frame.time"],
+          ["pass", "frame.pass"],
+          ["digest", "frame.digest"],
+        ],
+      ],
       guideLoops: [
         {
           body: "app.getGuideDocument({name});",

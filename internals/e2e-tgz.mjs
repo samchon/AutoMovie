@@ -342,6 +342,7 @@ const visibleVariance = (png) => {
 };
 const frameEvidence = (frame) => ({
   kind: "frame",
+  target: frame.target,
   shot: frame.shot,
   reviewFrame: frame.reviewFrame,
   bundle: frame.bundle,
