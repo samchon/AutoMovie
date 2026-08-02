@@ -9,6 +9,10 @@ const ROOT = path.resolve(__dirname, "..", "..", "..", "..");
 const readPackageFile = (...segments: string[]): string =>
   fs.readFileSync(path.join(ROOT, ...segments), "utf8");
 
+/** A source-level template interpolation without a live template expression. */
+const templateExpression = (expression: string): string =>
+  "$" + "{" + expression + "}";
+
 /** Directory names directly under `segments`, in code-unit order. */
 const directories = (...segments: string[]): string[] =>
   fs
@@ -456,11 +460,12 @@ export const test_workspace_public_contracts = (): void => {
         )?.[1] ?? null,
     },
     {
-      timeout: "`timed out after ${timeout} ms`",
+      timeout: "`timed out after " + templateExpression("timeout") + " ms`",
       spawnError: '"failed to spawn"',
       signal: '"terminated by signal"',
       missingStatus: '"terminated without status"',
-      exitStatus: "`exited with status ${result.status}`",
+      exitStatus:
+        "`exited with status " + templateExpression("result.status") + "`",
     },
   );
   TestValidator.equals(
@@ -468,16 +473,27 @@ export const test_workspace_public_contracts = (): void => {
     {
       order: [
         ["reason", "reason"],
-        ["timeout", "`timeout=${timeout} ms`"],
+        ["timeout", "`timeout=" + templateExpression("timeout") + " ms`"],
         [
           "status",
-          '`status=${typeof result.status === "number" ? result.status : "none"}`',
+          "`status=" +
+            templateExpression(
+              'typeof result.status === "number" ? result.status : "none"',
+            ) +
+            "`",
         ],
-        ["signal", '`signal=${result.signal ?? "none"}`'],
-        ["error", "`error=${errorCode}`"],
+        [
+          "signal",
+          "`signal=" + templateExpression('result.signal ?? "none"') + "`",
+        ],
+        ["error", "`error=" + templateExpression("errorCode") + "`"],
         [
           "message",
-          '`message=${\n      result.error === undefined ? "none" : JSON.stringify(result.error.message)\n    }`',
+          "`message=" +
+            templateExpression(
+              '\n      result.error === undefined ? "none" : JSON.stringify(result.error.message)\n    ',
+            ) +
+            "`",
         ],
       ]
         .filter(([, field]) => commandTerminationReturnSource.includes(field!))
@@ -512,13 +528,21 @@ export const test_workspace_public_contracts = (): void => {
     {
       order: ["reason", "timeout", "status", "signal", "error", "message"],
       reason: "reason",
-      timeout: "`timeout=${timeout} ms`",
+      timeout: "`timeout=" + templateExpression("timeout") + " ms`",
       status:
-        '`status=${typeof result.status === "number" ? result.status : "none"}`',
-      signal: '`signal=${result.signal ?? "none"}`',
-      error: "`error=${errorCode}`",
+        "`status=" +
+        templateExpression(
+          'typeof result.status === "number" ? result.status : "none"',
+        ) +
+        "`",
+      signal: "`signal=" + templateExpression('result.signal ?? "none"') + "`",
+      error: "`error=" + templateExpression("errorCode") + "`",
       message:
-        '`message=${\n      result.error === undefined ? "none" : JSON.stringify(result.error.message)\n    }`',
+        "`message=" +
+        templateExpression(
+          '\n      result.error === undefined ? "none" : JSON.stringify(result.error.message)\n    ',
+        ) +
+        "`",
     },
   );
   TestValidator.equals(
@@ -615,7 +639,7 @@ export const test_workspace_public_contracts = (): void => {
     tgzE2e.match(
       /expected a normal non-zero exit containing \$\{JSON\.stringify\(/g,
     ) ?? [],
-    ["expected a normal non-zero exit containing ${JSON.stringify("],
+    ["expected a normal non-zero exit containing $" + "{JSON.stringify("],
   );
   const mcpMethods = [
     ...mcpApplication.matchAll(
