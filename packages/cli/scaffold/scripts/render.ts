@@ -112,11 +112,12 @@ import {
   assertCapturedRenderGcFileEntry,
   captureRenderGcTarget,
   ensureRenderPhysicalDirectory,
-  inspectRenderQuarantineMarker,
+  inventoryRenderQuarantineCandidates,
   isRenderGcPreservedPath,
   quarantineCapturedRenderTarget,
   readCapturedRenderGcFile,
   removeCapturedRenderGcTarget,
+  removeCapturedRenderQuarantine,
 } from "./renderGcSnapshot";
 import {
   acquireRenderGcLease,
@@ -2408,7 +2409,6 @@ const collectRenderGarbage = (apply: boolean) => {
   >();
   const quarantineEntries: Array<{
     candidate: IAutoMovieProductionRenderGcCandidate;
-    evidence: IRenderGcTargetSnapshot | null;
     snapshot: IRenderGcTargetSnapshot;
   }> = [];
   const retainedChunkPaths = new Set<string>();
@@ -2475,40 +2475,28 @@ const collectRenderGarbage = (apply: boolean) => {
           digest: null,
           bytes: 0,
         };
-        const snapshot = captureRenderGcTarget(renderJobRoot, target);
-        let evidence: IRenderGcTargetSnapshot | null = null;
-        try {
-          evidence = inspectRenderQuarantineMarker(snapshot).evidence;
-        } catch {
-          // Legacy or damaged quarantine entries remain independently removable.
-        }
-        quarantineEntries.push({ candidate, evidence, snapshot });
+        const snapshot = captureRenderGcTarget(
+          path.join(renderJobRoot, tier),
+          target,
+        );
+        quarantineEntries.push({ candidate, snapshot });
       }
   }
-  const quarantineEvidenceOwners = new Map<string, number>();
-  for (const entry of quarantineEntries) {
-    if (entry.evidence === null) continue;
-    const key = `${entry.evidence.base.identity}\0${entry.evidence.targetIdentity}`;
-    quarantineEvidenceOwners.set(
-      key,
-      (quarantineEvidenceOwners.get(key) ?? 0) + 1,
-    );
-  }
-  for (const entry of quarantineEntries) {
+  const quarantineEntryByTarget = new Map(
+    quarantineEntries.map((entry) => [entry.snapshot.target, entry]),
+  );
+  for (const inventory of inventoryRenderQuarantineCandidates(
+    quarantineEntries.map((entry) => entry.snapshot),
+  )) {
+    const entry = quarantineEntryByTarget.get(inventory.marker.target);
+    if (entry === undefined)
+      throw new Error("Render quarantine inventory lost its candidate.");
     const key = gcCandidateKey(entry.candidate);
-    const uniqueEvidence =
-      entry.evidence !== null &&
-      quarantineEvidenceOwners.get(
-        `${entry.evidence.base.identity}\0${entry.evidence.targetIdentity}`,
-      ) === 1
-        ? entry.evidence
-        : null;
-    if (entry.evidence !== null && uniqueEvidence === null) continue;
-    entry.candidate.bytes = entry.snapshot.bytes + (uniqueEvidence?.bytes ?? 0);
+    entry.candidate.bytes = inventory.bytes;
     candidates.push(entry.candidate);
-    candidateSnapshots.set(key, entry.snapshot);
-    if (uniqueEvidence !== null)
-      quarantineEvidenceSnapshots.set(key, uniqueEvidence);
+    candidateSnapshots.set(key, inventory.marker);
+    if (inventory.evidence !== null)
+      quarantineEvidenceSnapshots.set(key, inventory.evidence);
   }
   const sweptPublicationRoots: string[] = [];
   const sweptPublicationTargets = new Set<string>();
@@ -2640,19 +2628,17 @@ const collectRenderGarbage = (apply: boolean) => {
         gcCandidateKey(candidate),
       );
       if (evidence !== undefined) {
-        assertCapturedRenderTarget(snapshot);
-        assertCapturedRenderTarget(evidence);
-        removeCapturedRenderGcTarget({
-          isolated: path.join(quarantine, randomUUID()),
+        removeCapturedRenderQuarantine({
+          evidence,
+          marker: snapshot,
           quarantine,
-          snapshot: evidence,
         });
-      }
-      removeCapturedRenderGcTarget({
-        isolated,
-        quarantine,
-        snapshot,
-      });
+      } else
+        removeCapturedRenderGcTarget({
+          isolated,
+          quarantine,
+          snapshot,
+        });
     }
     for (const quarantine of quarantines.values())
       if (fs.readdirSync(quarantine).length === 0) fs.rmdirSync(quarantine);

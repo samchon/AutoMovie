@@ -550,7 +550,11 @@ export const test_cli_scaffold = async (): Promise<void> => {
       files["scripts/render.ts"]!.includes("captureRenderGcTarget") &&
       files["scripts/render.ts"]!.includes("removeCapturedRenderGcTarget") &&
       files["scripts/render.ts"]!.includes("quarantineCapturedRenderTarget") &&
-      files["scripts/render.ts"]!.includes("inspectRenderQuarantineMarker") &&
+      files["scripts/render.ts"]!.includes(
+        "inventoryRenderQuarantineCandidates",
+      ) &&
+      files["scripts/render.ts"]!.includes("removeCapturedRenderQuarantine") &&
+      files["scripts/render.ts"]!.includes("path.join(renderJobRoot, tier)") &&
       files["scripts/render.ts"]!.includes("quarantineEvidenceSnapshots") &&
       files["scripts/render.ts"]!.includes("readCapturedRenderGcFile") &&
       files["scripts/render.ts"]!.includes("RENDER_LOCK_JSON_MAX_BYTES") &&
@@ -5729,6 +5733,17 @@ export const test_cli_scaffold = async (): Promise<void> => {
           version: number;
         };
       };
+      inventoryRenderQuarantineCandidates: (
+        markers: readonly unknown[],
+      ) => Array<{
+        bytes: number;
+        evidence: {
+          bytes: number;
+          target: string;
+          targetIdentity: string;
+        } | null;
+        marker: { bytes: number; target: string };
+      }>;
       isRenderGcPreservedPath: (relative: string) => boolean;
       quarantineCapturedRenderTarget: (props: {
         destination: string;
@@ -5744,6 +5759,11 @@ export const test_cli_scaffold = async (): Promise<void> => {
         isolated: string;
         quarantine: string;
         snapshot: unknown;
+      }) => void;
+      removeCapturedRenderQuarantine: (props: {
+        evidence: unknown;
+        marker: unknown;
+        quarantine: string;
       }) => void;
     };
     const renderChunkSnapshotModule = createRequire(__filename)(
@@ -6741,6 +6761,180 @@ export const test_cli_scaffold = async (): Promise<void> => {
           workerClaimSnapshot.contentFingerprint,
     );
 
+    const tierGcRoot = path.join(gcBase, "tier-gc-root");
+    const proxyTierGcRoot = path.join(tierGcRoot, "proxy");
+    const finalTierGcRoot = path.join(tierGcRoot, "final");
+    fs.mkdirSync(proxyTierGcRoot, { recursive: true });
+    fs.mkdirSync(finalTierGcRoot);
+    const proxyTierQuarantine = renderGcModule.ensureRenderPhysicalDirectory(
+      proxyTierGcRoot,
+      "quarantine",
+    );
+    const proxyTierPreserved = renderGcModule.ensureRenderPhysicalDirectory(
+      proxyTierGcRoot,
+      ".gc-preserved-tier-fixture",
+    );
+    const proxyTierClaim = path.join(proxyTierGcRoot, "tier-claim.lock");
+    const proxyTierEvidence = path.join(proxyTierPreserved, "evidence");
+    const proxyTierMarker = path.join(
+      proxyTierQuarantine,
+      "tier-claim.released",
+    );
+    fs.writeFileSync(proxyTierClaim, workerClaimBytes);
+    renderGcModule.quarantineCapturedRenderTarget({
+      destination: proxyTierMarker,
+      isolated: proxyTierEvidence,
+      quarantine: proxyTierPreserved,
+      snapshot: renderGcModule.captureRenderGcTarget(
+        proxyTierGcRoot,
+        proxyTierClaim,
+      ),
+    });
+    const proxyTierMarkerSnapshot = renderGcModule.captureRenderGcTarget(
+      proxyTierGcRoot,
+      proxyTierMarker,
+    );
+    const proxyTierInspection = renderGcModule.inspectRenderQuarantineMarker(
+      proxyTierMarkerSnapshot,
+    );
+    const wrongTierBaseRejected = throws(() =>
+      renderGcModule.inspectRenderQuarantineMarker(
+        renderGcModule.captureRenderGcTarget(tierGcRoot, proxyTierMarker),
+      ),
+    );
+    const reorderedTierMarker = path.join(
+      proxyTierQuarantine,
+      "tier-claim.reordered",
+    );
+    fs.writeFileSync(
+      reorderedTierMarker,
+      `${JSON.stringify(
+        {
+          targetIdentity: proxyTierInspection.marker.targetIdentity,
+          preserved: proxyTierInspection.marker.preserved,
+          original: proxyTierInspection.marker.original,
+          kind: proxyTierInspection.marker.kind,
+          contentFingerprint: proxyTierInspection.marker.contentFingerprint,
+          version: proxyTierInspection.marker.version,
+        },
+        null,
+        2,
+      )}\n`,
+    );
+    const reorderedTierMarkerSnapshot = renderGcModule.captureRenderGcTarget(
+      proxyTierGcRoot,
+      reorderedTierMarker,
+    );
+    const reorderedTierMarkerRejected = throws(() =>
+      renderGcModule.inspectRenderQuarantineMarker(reorderedTierMarkerSnapshot),
+    );
+    const finalTierQuarantine = renderGcModule.ensureRenderPhysicalDirectory(
+      finalTierGcRoot,
+      "quarantine",
+    );
+    const finalTierPreserved = renderGcModule.ensureRenderPhysicalDirectory(
+      finalTierGcRoot,
+      ".gc-preserved-tier-fixture",
+    );
+    const finalTierEvidence = path.join(finalTierPreserved, "evidence");
+    const finalTierMarker = path.join(
+      finalTierQuarantine,
+      "tier-claim.released",
+    );
+    nativeLink(proxyTierEvidence, finalTierEvidence);
+    fs.writeFileSync(
+      finalTierMarker,
+      `${JSON.stringify(
+        {
+          version: 1,
+          contentFingerprint: proxyTierInspection.marker.contentFingerprint,
+          kind: proxyTierInspection.marker.kind,
+          original: "cross-tier-claim.lock",
+          preserved: ".gc-preserved-tier-fixture/evidence",
+          targetIdentity: proxyTierInspection.marker.targetIdentity,
+        },
+        null,
+        2,
+      )}\n`,
+    );
+    const finalTierMarkerSnapshot = renderGcModule.captureRenderGcTarget(
+      finalTierGcRoot,
+      finalTierMarker,
+    );
+    const duplicateTierInventory =
+      renderGcModule.inventoryRenderQuarantineCandidates([
+        proxyTierMarkerSnapshot,
+        finalTierMarkerSnapshot,
+      ]);
+    fs.rmSync(finalTierMarker);
+    fs.rmSync(finalTierEvidence);
+    fs.rmdirSync(finalTierPreserved);
+    fs.rmdirSync(finalTierQuarantine);
+    const legacyTierMarker = path.join(
+      proxyTierQuarantine,
+      "legacy-quarantine-entry",
+    );
+    fs.writeFileSync(legacyTierMarker, "legacy quarantine bytes");
+    const legacyTierMarkerSnapshot = renderGcModule.captureRenderGcTarget(
+      proxyTierGcRoot,
+      legacyTierMarker,
+    );
+    const tierInventory = renderGcModule.inventoryRenderQuarantineCandidates([
+      renderGcModule.captureRenderGcTarget(proxyTierGcRoot, proxyTierMarker),
+      legacyTierMarkerSnapshot,
+    ]);
+    const tierPair = tierInventory.find(
+      (entry) => entry.marker.target === proxyTierMarker,
+    );
+    const tierLegacy = tierInventory.find(
+      (entry) => entry.marker.target === legacyTierMarker,
+    );
+    const tierApplyQuarantine = renderGcModule.ensureRenderPhysicalDirectory(
+      proxyTierGcRoot,
+      ".gc-preserved-apply-fixture",
+    );
+    let tierEvidenceGoneBeforeMarker = false;
+    mutableFs.renameSync = ((oldPath, newPath) => {
+      if (path.resolve(oldPath.toString()) === proxyTierMarker)
+        tierEvidenceGoneBeforeMarker =
+          fs.existsSync(proxyTierEvidence) === false;
+      nativeGcRename(oldPath, newPath);
+    }) as typeof fs.renameSync;
+    try {
+      if (tierPair?.evidence !== null && tierPair?.evidence !== undefined)
+        renderGcModule.removeCapturedRenderQuarantine({
+          evidence: tierPair.evidence,
+          marker: tierPair.marker,
+          quarantine: tierApplyQuarantine,
+        });
+    } finally {
+      mutableFs.renameSync = nativeGcRename;
+    }
+    TestValidator.predicate(
+      "render GC binds tier-relative evidence, omits cross-tier duplicates, and reclaims the exact pair",
+      wrongTierBaseRejected &&
+        reorderedTierMarkerRejected &&
+        duplicateTierInventory.length === 0 &&
+        tierInventory.length === 2 &&
+        tierPair !== undefined &&
+        tierPair.evidence !== null &&
+        tierPair.bytes === tierPair.marker.bytes + tierPair.evidence.bytes &&
+        tierLegacy?.evidence === null &&
+        tierLegacy.bytes === legacyTierMarkerSnapshot.bytes &&
+        tierEvidenceGoneBeforeMarker &&
+        fs.existsSync(proxyTierEvidence) === false &&
+        fs.existsSync(proxyTierMarker) === false &&
+        fs.existsSync(proxyTierPreserved) === false &&
+        fs.existsSync(legacyTierMarker),
+    );
+    fs.rmSync(reorderedTierMarker);
+    fs.rmSync(legacyTierMarker);
+    fs.rmdirSync(tierApplyQuarantine);
+    fs.rmdirSync(proxyTierQuarantine);
+    fs.rmdirSync(proxyTierGcRoot);
+    fs.rmdirSync(finalTierGcRoot);
+    fs.rmdirSync(tierGcRoot);
+
     const workerDirectory = path.join(gcBase, "worker-directory");
     const workerDirectoryFile = path.join(workerDirectory, "frame.bin");
     const workerDirectoryIsolated = path.join(workerPreserved, "directory");
@@ -7178,15 +7372,10 @@ export const test_cli_scaffold = async (): Promise<void> => {
     );
     const workerClaimReclaimableBytes =
       workerClaimMarkerSnapshot.bytes + workerClaimEvidence.evidence.bytes;
-    renderGcModule.removeCapturedRenderGcTarget({
-      isolated: path.join(gcQuarantine, "worker-claim-evidence-delete"),
+    renderGcModule.removeCapturedRenderQuarantine({
+      evidence: workerClaimEvidence.evidence,
+      marker: workerClaimMarkerSnapshot,
       quarantine: gcQuarantine,
-      snapshot: workerClaimEvidence.evidence,
-    });
-    renderGcModule.removeCapturedRenderGcTarget({
-      isolated: path.join(gcQuarantine, "worker-claim-marker-delete"),
-      quarantine: gcQuarantine,
-      snapshot: workerClaimMarkerSnapshot,
     });
     TestValidator.predicate(
       "render GC reclaims a bound evidence-marker pair evidence first",

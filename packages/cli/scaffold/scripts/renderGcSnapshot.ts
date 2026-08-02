@@ -1,5 +1,5 @@
 import { digestAutoMovieBytes } from "@automovie/mcp";
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -54,6 +54,13 @@ export interface IRenderQuarantineMarker {
 export interface IRenderQuarantineEvidence {
   evidence: IRenderGcTargetSnapshot;
   marker: IRenderQuarantineMarker;
+}
+
+/** One GC candidate bound to its optional private quarantine evidence. */
+export interface IRenderQuarantineGcCandidate {
+  bytes: number;
+  evidence: IRenderGcTargetSnapshot | null;
+  marker: IRenderGcTargetSnapshot;
 }
 
 const RENDER_QUARANTINE_MARKER_MAX_BYTES = 64 * 1024;
@@ -310,7 +317,14 @@ export const inspectRenderQuarantineMarker = (
     throw new Error(
       `Render quarantine marker "${snapshot.target}" is invalid.`,
     );
-  const marker = value as unknown as IRenderQuarantineMarker;
+  const marker: IRenderQuarantineMarker = {
+    version: 1,
+    contentFingerprint: value.contentFingerprint,
+    kind: value.kind,
+    original: value.original,
+    preserved: value.preserved,
+    targetIdentity: value.targetIdentity,
+  };
   if (
     bytes.equals(Buffer.from(`${JSON.stringify(marker, null, 2)}\n`)) === false
   )
@@ -336,6 +350,100 @@ export const inspectRenderQuarantineMarker = (
   assertRenderGcTarget(evidence);
   assertRootIdentity(snapshot.base);
   return { evidence, marker };
+};
+
+/** Inventory strict evidence pairs and retain ambiguous physical duplicates. */
+export const inventoryRenderQuarantineCandidates = (
+  markers: readonly IRenderGcTargetSnapshot[],
+): readonly IRenderQuarantineGcCandidate[] => {
+  const entries = markers.map((marker) => {
+    try {
+      return {
+        evidence: inspectRenderQuarantineMarker(marker).evidence,
+        marker,
+      };
+    } catch {
+      return { evidence: null, marker };
+    }
+  });
+  const owners = new Map<string, number>();
+  for (const entry of entries)
+    if (entry.evidence !== null)
+      owners.set(
+        entry.evidence.targetIdentity,
+        (owners.get(entry.evidence.targetIdentity) ?? 0) + 1,
+      );
+  return entries.flatMap((entry) => {
+    if (
+      entry.evidence !== null &&
+      owners.get(entry.evidence.targetIdentity) !== 1
+    )
+      return [];
+    return [
+      {
+        bytes: entry.marker.bytes + (entry.evidence?.bytes ?? 0),
+        evidence: entry.evidence,
+        marker: entry.marker,
+      },
+    ];
+  });
+};
+
+/** Remove an exact evidence-marker pair and its now-empty private container. */
+export const removeCapturedRenderQuarantine = (props: {
+  evidence: IRenderGcTargetSnapshot;
+  marker: IRenderGcTargetSnapshot;
+  quarantine: string;
+}): void => {
+  if (
+    props.evidence.base.path !== props.marker.base.path ||
+    props.evidence.base.real !== props.marker.base.real ||
+    props.evidence.base.identity !== props.marker.base.identity
+  )
+    throw new Error("Render quarantine pair crosses ownership roots.");
+  assertRenderGcTarget(props.marker);
+  assertRenderGcTarget(props.evidence);
+  const evidenceParent = path.dirname(props.evidence.target);
+  removeCapturedRenderGcTarget({
+    isolated: path.join(props.quarantine, randomUUID()),
+    quarantine: props.quarantine,
+    snapshot: props.evidence,
+  });
+  removeCapturedRenderGcTarget({
+    isolated: path.join(props.quarantine, randomUUID()),
+    quarantine: props.quarantine,
+    snapshot: props.marker,
+  });
+  const relativeParent = path.relative(
+    props.evidence.base.path,
+    evidenceParent,
+  );
+  if (
+    path.dirname(relativeParent) !== "." ||
+    path.basename(relativeParent).startsWith(RENDER_GC_PRESERVED_PREFIX) ===
+      false ||
+    path.resolve(props.quarantine) === evidenceParent
+  )
+    return;
+  let parent: IRenderGcTargetSnapshot;
+  try {
+    parent = captureRenderGcTarget(props.evidence.base.path, evidenceParent);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return;
+    throw error;
+  }
+  if (
+    parent.kind === "directory" &&
+    parent.bytes === 0 &&
+    parent.entries.length === 1 &&
+    parent.entries[0]?.kind === "directory" &&
+    parent.entries[0].path === ""
+  )
+    removeCapturedRenderGcTarget({
+      isolated: path.join(props.quarantine, randomUUID()),
+      quarantine: props.quarantine,
+      snapshot: parent,
+    });
 };
 
 /** Revalidate an exact captured target without changing it. */

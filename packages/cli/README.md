@@ -121,7 +121,7 @@ evidence and exposes through an immutable public quarantine marker. Receipt reus
 rejects linked state ancestors and files, and final encoding consumes the exact
 PNG bytes authenticated by that physical-path read.
 
-Render GC parses each valid quarantine marker through its captured descriptor, binds the referenced private evidence by kind, identity, and content fingerprint, reports their combined bytes, and removes the evidence before its exact marker. Damaged markers remain independently reclaimable while ambiguous duplicate evidence references remain preserved for manual adjudication.
+Render GC parses each valid quarantine marker relative to its proxy or final ownership tier through its captured descriptor, binds the referenced private evidence by kind, identity, and content fingerprint, reports their combined bytes, and removes the evidence before its exact marker and empty private container. Damaged markers remain independently reclaimable while ambiguous physical duplicate evidence references across tiers remain preserved for manual adjudication.
 
 ## Usage
 
