@@ -78,7 +78,7 @@ const packagedMcpCleanupContract = (
   };
   const declarations: IPackagedMcpCleanupContract["declarations"] = [];
   const topLevelActions: string[] = [];
-  let lifecycleStarted = false;
+  let resourceSetupStarted = false;
   for (const statement of source.statements) {
     if (ts.isVariableStatement(statement))
       for (const declaration of statement.declarationList.declarations) {
@@ -107,7 +107,6 @@ const packagedMcpCleanupContract = (
           ts.isIdentifier(declaration.name) &&
           ["client", "clientFailure"].includes(declaration.name.text)
         ) {
-          lifecycleStarted = true;
           declarations.push({
             initializer:
               declaration.initializer === undefined
@@ -122,26 +121,72 @@ const packagedMcpCleanupContract = (
             name: declaration.name.text,
           });
         }
+        if (
+          ts.isIdentifier(declaration.name) &&
+          declaration.name.text === "bin"
+        )
+          resourceSetupStarted = true;
       }
-    if (lifecycleStarted) {
-      if (ts.isVariableStatement(statement))
-        topLevelActions.push(
-          ...statement.declarationList.declarations
-            .filter(
-              (declaration) =>
-                ts.isIdentifier(declaration.name) &&
-                ["client", "clientFailure"].includes(declaration.name.text),
-            )
-            .map((declaration) => compact(declaration.name, source)),
-        );
-      else if (ts.isTryStatement(statement)) topLevelActions.push("try");
-    }
+    if (resourceSetupStarted)
+      topLevelActions.push(
+        ts.isTryStatement(statement)
+          ? `try:${createHash("sha256")
+              .update(compact(statement, source))
+              .digest("hex")}`
+          : compact(statement, source),
+      );
   }
 
   const cleanupCalls: IPackagedMcpCleanupContract["cleanupCalls"] = [];
   const failureWrites: string[] = [];
   const lifecycle: IPackagedMcpCleanupContract["lifecycle"] = [];
   const processExits: string[] = [];
+  const targetsFailureHolder = (node: ts.Node): boolean => {
+    if (ts.isIdentifier(node)) return node.text === "clientFailure";
+    if (
+      ts.isParenthesizedExpression(node) ||
+      ts.isAsExpression(node) ||
+      ts.isNonNullExpression(node) ||
+      ts.isTypeAssertionExpression(node)
+    )
+      return targetsFailureHolder(node.expression);
+    if (
+      ts.isPropertyAccessExpression(node) ||
+      ts.isElementAccessExpression(node)
+    )
+      return targetsFailureHolder(node.expression);
+    if (
+      ts.isBinaryExpression(node) &&
+      node.operatorToken.kind === ts.SyntaxKind.EqualsToken
+    )
+      return targetsFailureHolder(node.left);
+    if (ts.isArrayLiteralExpression(node) || ts.isArrayBindingPattern(node))
+      return node.elements.some((element) => targetsFailureHolder(element));
+    if (ts.isObjectLiteralExpression(node))
+      return node.properties.some((property) => {
+        if (ts.isPropertyAssignment(property))
+          return targetsFailureHolder(property.initializer);
+        if (ts.isShorthandPropertyAssignment(property))
+          return property.name.text === "clientFailure";
+        if (ts.isSpreadAssignment(property))
+          return targetsFailureHolder(property.expression);
+        return false;
+      });
+    if (ts.isObjectBindingPattern(node))
+      return node.elements.some((element) =>
+        targetsFailureHolder(element.name),
+      );
+    if (ts.isBindingElement(node)) return targetsFailureHolder(node.name);
+    if (ts.isSpreadElement(node)) return targetsFailureHolder(node.expression);
+    return false;
+  };
+  const recordBinding = (
+    kind: string,
+    node: ts.Node & { name?: ts.Node },
+  ): void => {
+    if (node.name !== undefined && targetsFailureHolder(node.name))
+      failureWrites.push(`${kind}:${compact(node, source)}`);
+  };
   const visit = (node: ts.Node): void => {
     if (
       ts.isTryStatement(node) &&
@@ -158,13 +203,38 @@ const packagedMcpCleanupContract = (
           .update(compact(node.tryBlock, source))
           .digest("hex"),
       });
+    if (ts.isVariableDeclaration(node)) recordBinding("declaration", node);
+    else if (ts.isParameter(node)) recordBinding("parameter", node);
+    else if (ts.isFunctionDeclaration(node) || ts.isFunctionExpression(node))
+      recordBinding("function", node);
+    else if (ts.isClassDeclaration(node) || ts.isClassExpression(node))
+      recordBinding("class", node);
+    else if (ts.isImportClause(node)) recordBinding("import", node);
+    else if (ts.isImportSpecifier(node) || ts.isNamespaceImport(node))
+      recordBinding("import", node);
     if (
       ts.isBinaryExpression(node) &&
       node.operatorToken.kind >= ts.SyntaxKind.FirstAssignment &&
       node.operatorToken.kind <= ts.SyntaxKind.LastAssignment &&
-      compact(node.left, source).includes("clientFailure")
+      targetsFailureHolder(node.left)
     )
-      failureWrites.push(compact(node, source));
+      failureWrites.push(`assignment:${compact(node, source)}`);
+    if (
+      (ts.isPrefixUnaryExpression(node) || ts.isPostfixUnaryExpression(node)) &&
+      [ts.SyntaxKind.PlusPlusToken, ts.SyntaxKind.MinusMinusToken].includes(
+        node.operator,
+      ) &&
+      targetsFailureHolder(node.operand)
+    )
+      failureWrites.push(`update:${compact(node, source)}`);
+    if (ts.isDeleteExpression(node) && targetsFailureHolder(node.expression))
+      failureWrites.push(`delete:${compact(node, source)}`);
+    if (
+      (ts.isForInStatement(node) || ts.isForOfStatement(node)) &&
+      ts.isVariableDeclarationList(node.initializer) === false &&
+      targetsFailureHolder(node.initializer)
+    )
+      failureWrites.push(`iteration:${compact(node.initializer, source)}`);
     if (
       ts.isCallExpression(node) &&
       compact(node.expression, source) === "process.exit"
@@ -235,7 +305,10 @@ export const test_workspace_packaged_mcp_cleanup = (): void => {
           name: "clientFailure",
         },
       ],
-      failureWrites: ["clientFailure={error}"],
+      failureWrites: [
+        "declaration:clientFailure",
+        "assignment:clientFailure={error}",
+      ],
       functions: {
         assert: [
           {
@@ -265,7 +338,16 @@ export const test_workspace_packaged_mcp_cleanup = (): void => {
       ],
       processExits: [],
       sourceCount: 1,
-      topLevelActions: ["client", "clientFailure", "try"],
+      topLevelActions: [
+        'constbin=path.resolve("node_modules/@automovie/mcp/lib/bin.js");',
+        'constprojectRoot=path.resolve("mcp-host");',
+        "mkdirSync(projectRoot,{recursive:true});",
+        'writeFileSync(path.join(projectRoot,"automovie.config.ts"),"exportdefault{};",);',
+        'consttransport=newStdioClientTransport({command:process.execPath,args:[bin],env:{...getDefaultEnvironment(),AUTOMOVIE_PROJECT_ROOT:projectRoot},stderr:"pipe",});',
+        'constclient=newClient({name:"automovie-tgz-e2e",version:"0.0.0"});',
+        "letclientFailure;",
+        "try:ad5f288917e7b981005acd019f7b2cde55f3f8060eadcc650dcd2e784909849b",
+      ],
     },
   );
 };
