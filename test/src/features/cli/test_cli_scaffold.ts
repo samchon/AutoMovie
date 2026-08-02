@@ -101,6 +101,39 @@ const comparatorFreeSortCalls = (
     })
     .sort(compareCodeUnits);
 
+/** Throw statements owned by one source-level const function. */
+const constFunctionThrows = (
+  file: string,
+  source: string,
+  functionName: string,
+): string[] => {
+  const parsed = ts.createSourceFile(
+    file,
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TS,
+  );
+  const throws: string[] = [];
+  for (const statement of parsed.statements) {
+    if (ts.isVariableStatement(statement) === false) continue;
+    for (const declaration of statement.declarationList.declarations) {
+      if (
+        ts.isIdentifier(declaration.name) === false ||
+        declaration.name.text !== functionName ||
+        declaration.initializer === undefined
+      )
+        continue;
+      const visit = (node: ts.Node): void => {
+        if (ts.isThrowStatement(node)) throws.push(node.getText(parsed));
+        else ts.forEachChild(node, visit);
+      };
+      visit(declaration.initializer);
+    }
+  }
+  return throws;
+};
+
 interface ICaptureContractCheck {
   contract: string;
   satisfied: boolean;
@@ -216,6 +249,14 @@ export const test_cli_scaffold = async (): Promise<void> => {
             captureInstallOffset,
           ),
         );
+  const captureInstallFailureThrows = constFunctionThrows(
+    "scripts/capture-browser.ts",
+    captureBrowserScript,
+    "installPackageOwnedChromium",
+  ).filter((statement) =>
+    statement.includes("captureInstallCommandTermination"),
+  );
+  const captureInstallFailureThrow = captureInstallFailureThrows[0] ?? "";
   TestValidator.equals(
     "sort oracle distinguishes calls from source trivia and comparators",
     comparatorFreeSortCalls({
@@ -636,6 +677,28 @@ export const test_cli_scaffold = async (): Promise<void> => {
             captureInstallSource.indexOf(right!),
         )
         .map(([name]) => name),
+      failureThrow: {
+        count: captureInstallFailureThrows.length,
+        errorConstructor:
+          captureInstallFailureThrow.match(/^throw new (Error)\(/)?.[1] ?? null,
+        formatterInputs: [
+          ...captureInstallFailureThrow.matchAll(
+            /captureInstallCommandTermination\((\w+)\)/g,
+          ),
+        ].map((match) => match[1]),
+        guidance: [
+          "HTTPS_PROXY",
+          "PLAYWRIGHT_DOWNLOAD_HOST",
+          "PLAYWRIGHT_CHROMIUM_DOWNLOAD_HOST",
+          "network or offline mirror",
+          "retry npm run capture:install",
+        ].filter((fragment) => captureInstallFailureThrow.includes(fragment)),
+      },
+      outputBeforeFailureThrow:
+        captureInstallSource.indexOf(
+          "writeCaptureInstallCommandOutput(installed);",
+        ) < captureInstallSource.indexOf(captureInstallFailureThrow) &&
+        captureInstallSource.indexOf(captureInstallFailureThrow) >= 0,
       retiredFallbacks:
         captureInstallSource.match(/installed \?\? "signal"/g) ?? [],
     },
@@ -646,6 +709,19 @@ export const test_cli_scaffold = async (): Promise<void> => {
       ],
       counts: { run: 1, write: 1, interpret: 1, diagnose: 1 },
       lifecycle: ["run", "write", "interpret", "diagnose"],
+      failureThrow: {
+        count: 1,
+        errorConstructor: "Error",
+        formatterInputs: ["installed"],
+        guidance: [
+          "HTTPS_PROXY",
+          "PLAYWRIGHT_DOWNLOAD_HOST",
+          "PLAYWRIGHT_CHROMIUM_DOWNLOAD_HOST",
+          "network or offline mirror",
+          "retry npm run capture:install",
+        ],
+      },
+      outputBeforeFailureThrow: true,
       retiredFallbacks: [],
     },
   );
