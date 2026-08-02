@@ -145,6 +145,9 @@ Active lock, attempt, and live temporary records are never sweep candidates.
 If a candidate changes at the quarantine boundary, GC fails closed and leaves the observed successor under a top-level `.gc-preserved-*` directory. That reserved evidence is excluded from later automatic GC runs; inspect it and adjudicate it manually before reusing or deleting it.
 Guide-pass publication includes both its MP4 and authenticated
 `frames/<pass>/frame_XXXXXXXX.png` control images.
+Proxy finalization verifies a hidden candidate tree, reserves the deterministic
+bundle directory without replacement, and writes `publication.json` last; a
+commit competitor is preserved and is reusable only after exact verification.
 
 Finalization derives semantic sound effects from compiled shot events, samples their emitters relative to the active camera, mixes authored score cues and caption-timed dialogue at 48 kHz stereo, and encodes deterministic Opus without a host `ffmpeg`.
 Dialogue uses the local Kokoro ONNX Runtime CPU adapter and caches each normalized line by content, model, voice, and inference settings, so changing one line invalidates only that line.

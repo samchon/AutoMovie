@@ -236,6 +236,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       "scripts/lint.ts",
       "scripts/mcp.ts",
       "scripts/preview.ts",
+      "scripts/publishProxyBundle.ts",
       "scripts/render.ts",
       "scripts/renderChunkSnapshot.ts",
       "scripts/renderGcSnapshot.ts",
@@ -565,6 +566,22 @@ export const test_cli_scaffold = async (): Promise<void> => {
       files["scripts/render.ts"]!.includes("renderPublicationFingerprint") &&
       files["scripts/render.ts"]!.includes("assertMatchingProxyPublication") &&
       files["scripts/render.ts"]!.includes("inspectPublishedProxyBundle") &&
+      files["scripts/render.ts"]!.includes("publishProxyBundle({") &&
+      files["scripts/publishProxyBundle.ts"]!.includes(
+        "fs.mkdirSync(props.target)",
+      ) &&
+      files["scripts/publishProxyBundle.ts"]!.includes(
+        'fs.writeFileSync(destination, bytes, { flag: "wx" })',
+      ) &&
+      files["scripts/publishProxyBundle.ts"]!.includes(
+        "removeCapturedRenderGcTarget",
+      ) &&
+      files["scripts/publishProxyBundle.ts"]!.includes(
+        "fs.renameSync(candidate, target)",
+      ) === false &&
+      files["scripts/publishProxyBundle.ts"]!.includes(
+        "fs.rmSync(candidate",
+      ) === false &&
       files["scripts/render.ts"]!.includes("assertNoLiveRenderWorkers") &&
       files["scripts/render.ts"]!.includes("captureGcPhysicalAncestry") ===
         false &&
@@ -784,6 +801,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
         "scripts/lint.ts",
         "scripts/mcp.ts",
         "scripts/preview.ts",
+        "scripts/publishProxyBundle.ts",
         "scripts/render.ts",
         "scripts/renderChunkSnapshot.ts",
         "scripts/renderGcSnapshot.ts",
@@ -1199,10 +1217,246 @@ export const test_cli_scaffold = async (): Promise<void> => {
         tier: { kind: string };
       };
     };
+    const proxyPublisherModule = createRequire(__filename)(
+      path.join(scaffoldDir, "scripts", "publishProxyBundle.ts"),
+    ) as {
+      publishProxyBundle: (props: {
+        expected: ReadonlyMap<string, Uint8Array>;
+        parent: string;
+        renderRoot: string;
+        target: string;
+      }) => { reused: boolean };
+    };
     TestValidator.predicate(
       "an exact physical proxy bundle passes immutable verification",
       !throws(() => proxyModule.assertPublishedProxyBundle(proxy, proxyFiles)),
     );
+    const proxyPublishRoot = path.join(base, "proxy-publisher");
+    const proxyPublishParent = path.join(
+      proxyPublishRoot,
+      "deliverables",
+      "proxy",
+    );
+    fs.mkdirSync(proxyPublishParent, { recursive: true });
+    const proxyPublishFiles = new Map<string, Uint8Array>([
+      ["publication.json", Buffer.from('{"publication":true}\n')],
+      ["feature/feature.mp4", Buffer.from("published proxy bytes")],
+    ]);
+    const writeProxyPublishFixture = (target: string): void => {
+      for (const [relative, bytes] of proxyPublishFiles) {
+        const file = path.join(target, ...relative.split("/"));
+        Reflect.apply(nativeMkdir, mutableFs, [
+          path.dirname(file),
+          {
+            recursive: true,
+          },
+        ]);
+        fs.writeFileSync(file, bytes);
+      }
+    };
+    const proxyPublishTarget = path.join(proxyPublishParent, "normal");
+    const firstProxyPublication = proxyPublisherModule.publishProxyBundle({
+      expected: proxyPublishFiles,
+      parent: proxyPublishParent,
+      renderRoot: proxyPublishRoot,
+      target: proxyPublishTarget,
+    });
+    const reusedProxyPublication = proxyPublisherModule.publishProxyBundle({
+      expected: proxyPublishFiles,
+      parent: proxyPublishParent,
+      renderRoot: proxyPublishRoot,
+      target: proxyPublishTarget,
+    });
+    TestValidator.predicate(
+      "proxy publisher reserves a new target and independently verifies reuse",
+      firstProxyPublication.reused === false &&
+        reusedProxyPublication.reused &&
+        !throws(() =>
+          proxyModule.assertPublishedProxyBundle(
+            proxyPublishTarget,
+            proxyPublishFiles,
+          ),
+        ),
+    );
+
+    const emptySuccessorTarget = path.join(
+      proxyPublishParent,
+      "empty-successor",
+    );
+    let emptySuccessorInserted = false;
+    mutableFs.mkdirSync = ((directory, ...args: unknown[]): unknown => {
+      if (
+        emptySuccessorInserted === false &&
+        path.resolve(directory.toString()) === emptySuccessorTarget
+      ) {
+        Reflect.apply(nativeMkdir, mutableFs, [emptySuccessorTarget]);
+        emptySuccessorInserted = true;
+      }
+      return Reflect.apply(nativeMkdir, mutableFs, [directory, ...args]);
+    }) as typeof fs.mkdirSync;
+    let emptySuccessorRejected = false;
+    try {
+      emptySuccessorRejected = throws(() =>
+        proxyPublisherModule.publishProxyBundle({
+          expected: proxyPublishFiles,
+          parent: proxyPublishParent,
+          renderRoot: proxyPublishRoot,
+          target: emptySuccessorTarget,
+        }),
+      );
+    } finally {
+      mutableFs.mkdirSync = nativeMkdir;
+    }
+    TestValidator.predicate(
+      "proxy publisher never replaces a destination appearing at commit",
+      emptySuccessorInserted &&
+        emptySuccessorRejected &&
+        fs.existsSync(emptySuccessorTarget) &&
+        fs.readdirSync(emptySuccessorTarget).length === 0,
+    );
+
+    const exactSuccessorTarget = path.join(
+      proxyPublishParent,
+      "exact-successor",
+    );
+    let exactSuccessorInserted = false;
+    mutableFs.mkdirSync = ((directory, ...args: unknown[]): unknown => {
+      if (
+        exactSuccessorInserted === false &&
+        path.resolve(directory.toString()) === exactSuccessorTarget
+      ) {
+        writeProxyPublishFixture(exactSuccessorTarget);
+        exactSuccessorInserted = true;
+      }
+      return Reflect.apply(nativeMkdir, mutableFs, [directory, ...args]);
+    }) as typeof fs.mkdirSync;
+    let exactSuccessorReused = false;
+    try {
+      exactSuccessorReused = proxyPublisherModule.publishProxyBundle({
+        expected: proxyPublishFiles,
+        parent: proxyPublishParent,
+        renderRoot: proxyPublishRoot,
+        target: exactSuccessorTarget,
+      }).reused;
+    } finally {
+      mutableFs.mkdirSync = nativeMkdir;
+    }
+    TestValidator.predicate(
+      "proxy publisher verifies an exact commit competitor without overwriting it",
+      exactSuccessorInserted &&
+        exactSuccessorReused &&
+        !throws(() =>
+          proxyModule.assertPublishedProxyBundle(
+            exactSuccessorTarget,
+            proxyPublishFiles,
+          ),
+        ),
+    );
+
+    const candidateSwapTarget = path.join(proxyPublishParent, "candidate-swap");
+    let candidateSwapPath = "";
+    let parkedCandidateSwap = "";
+    let candidateTreeSwapped = false;
+    mutableFs.readdirSync = ((directory, ...args: unknown[]): unknown => {
+      const entries = Reflect.apply(nativeReaddir, mutableFs, [
+        directory,
+        ...args,
+      ]);
+      if (
+        candidateTreeSwapped === false &&
+        path.dirname(path.resolve(directory.toString())) ===
+          proxyPublishParent &&
+        path.basename(directory.toString()).endsWith(".candidate") &&
+        Array.isArray(entries) &&
+        entries.length > 0
+      ) {
+        candidateSwapPath = path.resolve(directory.toString());
+        parkedCandidateSwap = `${candidateSwapPath}.parked`;
+        nativeRename(candidateSwapPath, parkedCandidateSwap);
+        fs.cpSync(parkedCandidateSwap, candidateSwapPath, { recursive: true });
+        candidateTreeSwapped = true;
+        return Reflect.apply(nativeReaddir, mutableFs, [directory, ...args]);
+      }
+      return entries;
+    }) as typeof fs.readdirSync;
+    let candidateTreeSwapRejected = false;
+    try {
+      candidateTreeSwapRejected = throws(() =>
+        proxyPublisherModule.publishProxyBundle({
+          expected: proxyPublishFiles,
+          parent: proxyPublishParent,
+          renderRoot: proxyPublishRoot,
+          target: candidateSwapTarget,
+        }),
+      );
+    } finally {
+      mutableFs.readdirSync = nativeReaddir;
+    }
+    TestValidator.predicate(
+      "proxy publisher rejects and preserves a byte-identical candidate tree successor",
+      candidateTreeSwapped &&
+        candidateTreeSwapRejected &&
+        fs.existsSync(candidateSwapPath) &&
+        fs.existsSync(parkedCandidateSwap) &&
+        fs.existsSync(candidateSwapTarget) === false,
+    );
+    fs.rmSync(candidateSwapPath, { recursive: true, force: true });
+    fs.rmSync(parkedCandidateSwap, { recursive: true, force: true });
+
+    const candidateCleanupTarget = path.join(
+      proxyPublishParent,
+      "candidate-cleanup-successor",
+    );
+    let parkedCleanupCandidate = "";
+    let movedCleanupSuccessor = "";
+    let candidateCleanupSwapped = false;
+    mutableFs.renameSync = ((oldPath, newPath) => {
+      if (
+        candidateCleanupSwapped === false &&
+        path.dirname(path.resolve(oldPath.toString())) === proxyPublishParent &&
+        path.basename(oldPath.toString()).endsWith(".candidate")
+      ) {
+        parkedCleanupCandidate = `${path.resolve(oldPath.toString())}.parked`;
+        nativeRename(oldPath, parkedCleanupCandidate);
+        fs.mkdirSync(oldPath.toString());
+        fs.writeFileSync(
+          path.join(oldPath.toString(), "successor.marker"),
+          "x",
+        );
+        candidateCleanupSwapped = true;
+        movedCleanupSuccessor = path.resolve(newPath.toString());
+      }
+      nativeRename(oldPath, newPath);
+    }) as typeof fs.renameSync;
+    let candidateCleanupRejected = false;
+    try {
+      candidateCleanupRejected = throws(() =>
+        proxyPublisherModule.publishProxyBundle({
+          expected: proxyPublishFiles,
+          parent: proxyPublishParent,
+          renderRoot: proxyPublishRoot,
+          target: candidateCleanupTarget,
+        }),
+      );
+    } finally {
+      mutableFs.renameSync = nativeRename;
+    }
+    TestValidator.predicate(
+      "proxy publisher preserves a candidate pathname successor during cleanup",
+      candidateCleanupSwapped &&
+        candidateCleanupRejected &&
+        fs.existsSync(candidateCleanupTarget) &&
+        fs.existsSync(parkedCleanupCandidate) &&
+        fs.readFileSync(
+          path.join(movedCleanupSuccessor, "successor.marker"),
+          "utf8",
+        ) === "x",
+    );
+    fs.rmSync(parkedCleanupCandidate, { recursive: true, force: true });
+    fs.rmSync(path.dirname(movedCleanupSuccessor), {
+      recursive: true,
+      force: true,
+    });
     const proxyMedia = path.join(proxy, "media", "proxy.mp4");
     const parkedProxyMedia = `${proxyMedia}.parked`;
     let proxyMediaSwapped = false;

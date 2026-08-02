@@ -69,15 +69,13 @@ import { isDeepStrictEqual } from "node:util";
 import { PNG } from "pngjs";
 
 import config from "../automovie.config";
-import {
-  assertPublishedProxyBundle,
-  inspectPublishedProxyBundle,
-} from "./assertProxyBundle";
+import { inspectPublishedProxyBundle } from "./assertProxyBundle";
 import {
   captureProductionFrame,
   closeProductionFrameCapture,
   productionFrameCaptureMetrics,
 } from "./capture";
+import { publishProxyBundle } from "./publishProxyBundle";
 import {
   type ICurrentRenderChunkPublication,
   captureRenderChunkPublicationFromPointer,
@@ -1323,40 +1321,13 @@ const publishProxyTierBundle = (
       );
     files.set(relative.slice(bundle.length + 1), bytes);
   }
-  if (fs.existsSync(target)) {
-    assertPublishedProxyBundle(target, files);
-    return { published: true, reused: true, bundle, manifest };
-  }
-  const candidate = path.join(
+  const published = publishProxyBundle({
+    expected: files,
     parent,
-    `.${publicationSegment}.${randomUUID()}.candidate`,
-  );
-  fs.mkdirSync(candidate);
-  try {
-    for (const [relative, bytes] of files) {
-      const destination = path.resolve(candidate, relative);
-      if (
-        destination.startsWith(`${path.resolve(candidate)}${path.sep}`) ===
-        false
-      )
-        throw new Error(
-          `Proxy bundle file "${relative}" escapes its candidate.`,
-        );
-      fs.mkdirSync(path.dirname(destination), { recursive: true });
-      fs.writeFileSync(destination, bytes);
-    }
-    fs.renameSync(candidate, target);
-  } catch (error) {
-    if (fs.existsSync(target)) {
-      assertPublishedProxyBundle(target, files);
-      return { published: true, reused: true, bundle, manifest };
-    }
-    throw error;
-  } finally {
-    fs.rmSync(candidate, { force: true, recursive: true });
-  }
-  assertPublishedProxyBundle(target, files);
-  return { published: true, reused: false, bundle, manifest };
+    renderRoot,
+    target,
+  });
+  return { published: true, reused: published.reused, bundle, manifest };
 };
 
 const assertMatchingProxyPublication = (
