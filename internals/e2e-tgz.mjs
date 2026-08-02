@@ -10,6 +10,7 @@
 // builds plus an npm install) and needs registry network for third-party
 // dependencies such as @modelcontextprotocol/sdk.
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import {
   appendFileSync,
   existsSync,
@@ -969,48 +970,76 @@ try {
     "capture",
     "install-receipts",
   );
-  const captureReceiptGenerations = readdirSync(captureReceiptDirectory);
+  const captureReceiptGenerations = (() => {
+    try {
+      return readdirSync(captureReceiptDirectory, { withFileTypes: true });
+    } catch (error) {
+      fail(`packaged capture install has no generation inventory: ${error}`);
+    }
+  })();
   if (
     captureReceiptGenerations.length !== 1 ||
-    /^[0-9a-f]{64}\.json$/u.test(captureReceiptGenerations[0]) === false
+    captureReceiptGenerations[0].isFile() === false ||
+    /^[0-9a-f]{64}\.json$/u.test(captureReceiptGenerations[0].name) === false
   )
     fail(
-      `packaged capture install published an invalid generation inventory: ${captureReceiptGenerations.join(", ")}`,
+      `packaged capture install published an invalid generation inventory: ${captureReceiptGenerations.map((entry) => entry.name).join(", ")}`,
     );
   const captureReceiptPath = join(
     captureReceiptDirectory,
-    captureReceiptGenerations[0],
+    captureReceiptGenerations[0].name,
   );
   const captureReceiptText = readFileSync(captureReceiptPath, "utf8");
   const captureReceipt = JSON.parse(captureReceiptText);
-  writeFileSync(captureReceiptPath, "{bad");
-  runExpectedFailure(
-    "reject malformed packaged capture receipt",
-    "npm run capture:doctor",
-    starterDir,
-    "not valid JSON",
-  );
-  writeFileSync(
-    captureReceiptPath,
-    `${JSON.stringify(
-      {
-        ...captureReceipt,
-        playwright: {
-          ...captureReceipt.playwright,
-          version: "0.0.0-stale",
+  const captureReceiptGeneration = createHash("sha256")
+    .update(
+      JSON.stringify({
+        browser: {
+          product: captureReceipt.browser.product,
+          revision: captureReceipt.browser.revision,
+          version: captureReceipt.browser.version,
         },
-      },
-      null,
-      2,
-    )}\n`,
-  );
-  runExpectedFailure(
-    "reject mis-keyed packaged capture receipt",
-    "npm run capture:doctor",
-    starterDir,
-    "occupies another generation",
-  );
-  writeFileSync(captureReceiptPath, captureReceiptText);
+        playwright: {
+          package: captureReceipt.playwright.package,
+          version: captureReceipt.playwright.version,
+        },
+      }),
+      "utf8",
+    )
+    .digest("hex");
+  if (captureReceiptGenerations[0].name !== `${captureReceiptGeneration}.json`)
+    fail("packaged capture receipt does not occupy its canonical generation");
+  try {
+    writeFileSync(captureReceiptPath, "{bad");
+    runExpectedFailure(
+      "reject malformed packaged capture receipt",
+      "npm run capture:doctor",
+      starterDir,
+      "not valid JSON",
+    );
+    writeFileSync(
+      captureReceiptPath,
+      `${JSON.stringify(
+        {
+          ...captureReceipt,
+          playwright: {
+            ...captureReceipt.playwright,
+            version: "0.0.0-stale",
+          },
+        },
+        null,
+        2,
+      )}\n`,
+    );
+    runExpectedFailure(
+      "reject mis-keyed packaged capture receipt",
+      "npm run capture:doctor",
+      starterDir,
+      "occupies another generation",
+    );
+  } finally {
+    writeFileSync(captureReceiptPath, captureReceiptText);
+  }
   const parkedCaptureExecutable = `${captureReceipt.browser.executablePath}.automovie-missing`;
   renameSync(captureReceipt.browser.executablePath, parkedCaptureExecutable);
   try {
