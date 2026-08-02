@@ -404,6 +404,38 @@ export const removeCapturedRenderQuarantine = (props: {
   assertRenderGcTarget(props.marker);
   assertRenderGcTarget(props.evidence);
   const evidenceParent = path.dirname(props.evidence.target);
+  const relativeParent = path.relative(
+    props.evidence.base.path,
+    evidenceParent,
+  );
+  let ownedParent: IRenderGcTargetSnapshot | null = null;
+  if (
+    path.dirname(relativeParent) === "." &&
+    path.basename(relativeParent).startsWith(RENDER_GC_PRESERVED_PREFIX) &&
+    path.resolve(props.quarantine) !== evidenceParent
+  ) {
+    const captured = captureRenderGcTarget(
+      props.evidence.base.path,
+      evidenceParent,
+    );
+    const child = captured.entries.find(
+      (entry) => entry.path === path.basename(props.evidence.target),
+    );
+    if (
+      captured.kind !== "directory" ||
+      child?.kind !== props.evidence.kind ||
+      child.identity !== props.evidence.targetIdentity ||
+      (props.evidence.kind === "file" &&
+        (child.bytes !== props.evidence.bytes ||
+          child.digest !== props.evidence.fileDigest))
+    )
+      throw new Error(
+        "Render quarantine evidence is not bound to its private container.",
+      );
+    ownedParent = captured;
+    assertRenderGcTarget(props.marker);
+    assertRenderGcTarget(props.evidence);
+  }
   removeCapturedRenderGcTarget({
     isolated: path.join(props.quarantine, randomUUID()),
     quarantine: props.quarantine,
@@ -414,17 +446,7 @@ export const removeCapturedRenderQuarantine = (props: {
     quarantine: props.quarantine,
     snapshot: props.marker,
   });
-  const relativeParent = path.relative(
-    props.evidence.base.path,
-    evidenceParent,
-  );
-  if (
-    path.dirname(relativeParent) !== "." ||
-    path.basename(relativeParent).startsWith(RENDER_GC_PRESERVED_PREFIX) ===
-      false ||
-    path.resolve(props.quarantine) === evidenceParent
-  )
-    return;
+  if (ownedParent === null) return;
   let parent: IRenderGcTargetSnapshot;
   try {
     parent = captureRenderGcTarget(props.evidence.base.path, evidenceParent);
@@ -433,6 +455,7 @@ export const removeCapturedRenderQuarantine = (props: {
     throw error;
   }
   if (
+    parent.targetIdentity === ownedParent.targetIdentity &&
     parent.kind === "directory" &&
     parent.bytes === 0 &&
     parent.entries.length === 1 &&

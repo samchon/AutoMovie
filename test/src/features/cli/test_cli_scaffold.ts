@@ -6927,6 +6927,73 @@ export const test_cli_scaffold = async (): Promise<void> => {
         fs.existsSync(proxyTierPreserved) === false &&
         fs.existsSync(legacyTierMarker),
     );
+    const parentSuccessorSource = path.join(
+      proxyTierGcRoot,
+      "parent-successor.lock",
+    );
+    const parentSuccessorPreserved =
+      renderGcModule.ensureRenderPhysicalDirectory(
+        proxyTierGcRoot,
+        ".gc-preserved-parent-successor",
+      );
+    const parentSuccessorEvidence = path.join(
+      parentSuccessorPreserved,
+      "evidence",
+    );
+    const parentSuccessorMarker = path.join(
+      proxyTierQuarantine,
+      "parent-successor.released",
+    );
+    fs.writeFileSync(parentSuccessorSource, workerClaimBytes);
+    renderGcModule.quarantineCapturedRenderTarget({
+      destination: parentSuccessorMarker,
+      isolated: parentSuccessorEvidence,
+      quarantine: parentSuccessorPreserved,
+      snapshot: renderGcModule.captureRenderGcTarget(
+        proxyTierGcRoot,
+        parentSuccessorSource,
+      ),
+    });
+    const parentSuccessorMarkerSnapshot = renderGcModule.captureRenderGcTarget(
+      proxyTierGcRoot,
+      parentSuccessorMarker,
+    );
+    const parentSuccessorInspection =
+      renderGcModule.inspectRenderQuarantineMarker(
+        parentSuccessorMarkerSnapshot,
+      );
+    const parkedParentSuccessor = `${parentSuccessorPreserved}.parked`;
+    let parentSuccessorSwapped = false;
+    mutableFs.renameSync = ((oldPath, newPath) => {
+      nativeGcRename(oldPath, newPath);
+      if (
+        parentSuccessorSwapped === false &&
+        path.resolve(oldPath.toString()) === parentSuccessorMarker
+      ) {
+        nativeRename(parentSuccessorPreserved, parkedParentSuccessor);
+        nativeMkdir(parentSuccessorPreserved);
+        parentSuccessorSwapped = true;
+      }
+    }) as typeof fs.renameSync;
+    try {
+      renderGcModule.removeCapturedRenderQuarantine({
+        evidence: parentSuccessorInspection.evidence,
+        marker: parentSuccessorMarkerSnapshot,
+        quarantine: tierApplyQuarantine,
+      });
+    } finally {
+      mutableFs.renameSync = nativeGcRename;
+    }
+    TestValidator.predicate(
+      "render GC preserves an empty private-container pathname successor",
+      parentSuccessorSwapped &&
+        fs.existsSync(parentSuccessorEvidence) === false &&
+        fs.existsSync(parentSuccessorMarker) === false &&
+        fs.existsSync(parentSuccessorPreserved) &&
+        fs.existsSync(parkedParentSuccessor),
+    );
+    fs.rmdirSync(parentSuccessorPreserved);
+    fs.rmdirSync(parkedParentSuccessor);
     fs.rmSync(reorderedTierMarker);
     fs.rmSync(legacyTierMarker);
     fs.rmdirSync(tierApplyQuarantine);
