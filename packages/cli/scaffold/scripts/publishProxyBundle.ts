@@ -18,14 +18,44 @@ import {
 } from "./renderGcSnapshot";
 
 const CLAIM_FILE = ".publication-claim.json";
-const CLAIM_MAX_BYTES = 16 * 1024;
+const CLAIM_MAX_BYTES = 8 * 1024 * 1024;
 
-interface IProxyPublicationClaim {
+interface IProxyPublicationOwner {
   version: 1;
   expected: `sha256:${string}`;
   pid: number;
   token: string;
 }
+
+interface IProxyPublicationClaim {
+  version: 1;
+  expected: `sha256:${string}`;
+  directories: Array<{ identity: string; path: string }>;
+  files: Array<{ identity: string; path: string }>;
+  pid: number;
+  targetIdentity: string;
+  token: string;
+}
+
+/** Bind one proxy-GC judgment to the exact tree observed on both sides. */
+export const captureProxyPublicationGcTarget = <Value>(props: {
+  judge: () => Value;
+  renderRoot: string;
+  target: string;
+}): { snapshot: IRenderGcTargetSnapshot; value: Value } => {
+  const snapshot = captureRenderGcTarget(props.renderRoot, props.target);
+  const value = props.judge();
+  const confirmed = captureRenderGcTarget(props.renderRoot, props.target);
+  if (
+    confirmed.targetIdentity !== snapshot.targetIdentity ||
+    confirmed.contentFingerprint !== snapshot.contentFingerprint ||
+    confirmed.namespaceFingerprint !== snapshot.namespaceFingerprint
+  )
+    throw new Error(
+      `Proxy publication "${props.target}" changed while GC adjudicated it.`,
+    );
+  return { snapshot, value };
+};
 
 /** Publish one immutable proxy bundle without overwriting a destination. */
 export const publishProxyBundle = (props: {
@@ -41,137 +71,198 @@ export const publishProxyBundle = (props: {
   const expected = expectedFacts(props.expected);
   const ownership = capturePublicationOwnership(props.renderRoot, props.parent);
   const assertOwnership = (): void => assertPublicationOwnership(ownership);
+  const ownerPath = path.join(
+    props.parent,
+    `.${path.basename(props.target)}.publication-owner.json`,
+  );
+  const priorOwnerSnapshot = captureExisting(props.renderRoot, ownerPath);
+  const priorOwner =
+    priorOwnerSnapshot === null
+      ? null
+      : readPublicationOwner(priorOwnerSnapshot, expected.fingerprint);
+  if (priorOwner !== null && props.processAlive(priorOwner.pid))
+    throw new Error(
+      `Proxy publication is still owned by live process ${priorOwner.pid}.`,
+    );
 
   const existing = captureExisting(props.renderRoot, props.target);
   if (existing !== null) {
     try {
       assertExpectedTree(existing, expected, undefined, false);
       assertOwnership();
+      if (priorOwnerSnapshot !== null) removeExactTree(priorOwnerSnapshot);
       return { reused: true };
     } catch (error) {
       const recovery = recoverClaimedPublication({
         ...props,
         expected,
+        owner: priorOwner,
         ownership,
         snapshot: existing,
       });
-      if (recovery === "reused") return { reused: true };
+      if (recovery === "reused") {
+        if (priorOwnerSnapshot !== null) removeExactTree(priorOwnerSnapshot);
+        return { reused: true };
+      }
       if (recovery === null) throw error;
     }
   }
-
-  const candidate = path.join(
-    props.parent,
-    `.${path.basename(props.target)}.${randomUUID()}.candidate`,
-  );
-  assertOwnership();
-  fs.mkdirSync(candidate);
-  assertOwnership();
-  const candidateReservation = captureRenderGcTarget(
+  if (priorOwnerSnapshot !== null) removeExactTree(priorOwnerSnapshot);
+  const owner: IProxyPublicationOwner = {
+    version: 1,
+    expected: expected.fingerprint,
+    pid: process.pid,
+    token: randomUUID(),
+  };
+  const ownerSnapshot = createRenderGcFileSnapshot(
     props.renderRoot,
-    candidate,
+    ownerPath,
+    Buffer.from(`${JSON.stringify(owner)}\n`, "utf8"),
   );
-  let completeCandidate: IRenderGcTargetSnapshot | null = null;
-  let candidateRemoved = false;
-  let targetReservation: IRenderGcTargetSnapshot | null = null;
-  let targetDirectories: ReadonlyMap<string, string> | null = null;
-  const ownedTargetFiles = new Map<string, IRenderGcContentEntry>();
+
   try {
-    writeExpectedTree(candidate, props.expected, assertOwnership);
-    completeCandidate = captureRenderGcTarget(props.renderRoot, candidate);
-    assertSameTarget(candidateReservation, completeCandidate);
-    assertExpectedTree(completeCandidate, expected, undefined, false);
+    const candidate = path.join(
+      props.parent,
+      `.${path.basename(props.target)}.${randomUUID()}.candidate`,
+    );
     assertOwnership();
-
-    try {
-      fs.mkdirSync(props.target);
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
-      assertOwnership();
-      const successor = captureRenderGcTarget(props.renderRoot, props.target);
-      assertExpectedTree(successor, expected, undefined, false);
-      return { reused: true };
-    }
+    fs.mkdirSync(candidate);
     assertOwnership();
-    targetReservation = captureRenderGcTarget(props.renderRoot, props.target);
-    createExpectedDirectories(
-      props.target,
-      expected.directories,
-      assertOwnership,
-    );
-    const preparedTarget = captureRenderGcTarget(
+    const candidateReservation = captureRenderGcTarget(
       props.renderRoot,
-      props.target,
-    );
-    assertSameTarget(targetReservation, preparedTarget);
-    targetDirectories = directoryIdentities(
-      preparedTarget,
-      expected.directories,
-    );
-
-    const claim: IProxyPublicationClaim = {
-      version: 1,
-      expected: expected.fingerprint,
-      pid: process.pid,
-      token: randomUUID(),
-    };
-    const claimSnapshot = createRenderGcFileSnapshot(
-      props.renderRoot,
-      path.join(props.target, CLAIM_FILE),
-      Buffer.from(`${JSON.stringify(claim)}\n`, "utf8"),
-    );
-    ownedTargetFiles.set(CLAIM_FILE, claimSnapshot.entries[0]!);
-
-    linkCandidatePayloads({
-      assertOwnership,
       candidate,
-      candidateSnapshot: completeCandidate,
-      expected,
-      ownedTargetFiles,
-      target: props.target,
-    });
-    const preparedPublication = captureRenderGcTarget(
-      props.renderRoot,
-      props.target,
     );
-    assertOwnedTarget(
-      targetReservation,
-      preparedPublication,
-      targetDirectories,
-      ownedTargetFiles,
-    );
+    let completeCandidate: IRenderGcTargetSnapshot | null = null;
+    let candidateRemoved = false;
+    let targetReservation: IRenderGcTargetSnapshot | null = null;
+    let targetDirectories: ReadonlyMap<string, string> | null = null;
+    const ownedTargetFiles = new Map<string, IRenderGcContentEntry>();
+    try {
+      writeExpectedTree(candidate, props.expected, assertOwnership);
+      completeCandidate = captureRenderGcTarget(props.renderRoot, candidate);
+      assertSameTarget(candidateReservation, completeCandidate);
+      assertExpectedTree(completeCandidate, expected, undefined, false);
+      assertOwnership();
 
-    removeExactTree(completeCandidate);
-    candidateRemoved = true;
-    assertOwnership();
+      try {
+        fs.mkdirSync(props.target);
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+        assertOwnership();
+        const successor = captureRenderGcTarget(props.renderRoot, props.target);
+        assertExpectedTree(successor, expected, undefined, false);
+        return { reused: true };
+      }
+      assertOwnership();
+      targetReservation = captureRenderGcTarget(props.renderRoot, props.target);
+      createExpectedDirectories(
+        props.target,
+        expected.directories,
+        assertOwnership,
+      );
+      const preparedTarget = captureRenderGcTarget(
+        props.renderRoot,
+        props.target,
+      );
+      assertSameTarget(targetReservation, preparedTarget);
+      targetDirectories = directoryIdentities(
+        preparedTarget,
+        expected.directories,
+      );
 
-    const receipt = props.expected.get("publication.json")!;
-    const receiptSnapshot = createRenderGcFileSnapshot(
-      props.renderRoot,
-      path.join(props.target, "publication.json"),
-      receipt,
-    );
-    ownedTargetFiles.set("publication.json", receiptSnapshot.entries[0]!);
-    removeExactTree(claimSnapshot);
-    ownedTargetFiles.delete(CLAIM_FILE);
+      const candidateFiles = fileEntries(completeCandidate);
+      const claim: IProxyPublicationClaim = {
+        version: 1,
+        expected: expected.fingerprint,
+        directories: [...targetDirectories].map(([path, identity]) => ({
+          identity,
+          path,
+        })),
+        files: [...candidateFiles].map(([path, entry]) => ({
+          identity: entry.identity,
+          path,
+        })),
+        pid: process.pid,
+        targetIdentity: targetReservation.targetIdentity,
+        token: owner.token,
+      };
+      const claimSnapshot = createRenderGcFileSnapshot(
+        props.renderRoot,
+        path.join(props.target, CLAIM_FILE),
+        Buffer.from(`${JSON.stringify(claim)}\n`, "utf8"),
+      );
+      ownedTargetFiles.set(CLAIM_FILE, claimSnapshot.entries[0]!);
 
-    const published = captureRenderGcTarget(props.renderRoot, props.target);
-    assertSameTarget(targetReservation, published);
-    assertExpectedTree(published, expected, ownedTargetFiles, true);
-    assertOwnership();
-    return { reused: false };
-  } catch (error) {
-    if (targetReservation !== null && targetDirectories !== null)
-      removeOwnedTarget(targetReservation, targetDirectories, ownedTargetFiles);
-    throw error;
+      linkCandidatePayloads({
+        assertOwnership,
+        candidate,
+        candidateSnapshot: completeCandidate,
+        expected,
+        ownedTargetFiles,
+        target: props.target,
+      });
+      const preparedPublication = captureRenderGcTarget(
+        props.renderRoot,
+        props.target,
+      );
+      assertOwnedTarget(
+        targetReservation,
+        preparedPublication,
+        targetDirectories,
+        ownedTargetFiles,
+      );
+
+      linkCandidateFile({
+        candidate,
+        candidateEntries: candidateFiles,
+        ownedTargetFiles,
+        relative: "publication.json",
+        target: props.target,
+      });
+      const committed = captureRenderGcTarget(props.renderRoot, props.target);
+      assertOwnedTarget(
+        targetReservation,
+        committed,
+        targetDirectories,
+        ownedTargetFiles,
+      );
+
+      removeExactTree(completeCandidate);
+      candidateRemoved = true;
+      removeExactTree(claimSnapshot);
+      ownedTargetFiles.delete(CLAIM_FILE);
+
+      const published = captureRenderGcTarget(props.renderRoot, props.target);
+      assertSameTarget(targetReservation, published);
+      assertOwnedTarget(
+        targetReservation,
+        published,
+        targetDirectories,
+        ownedTargetFiles,
+      );
+      assertExpectedTree(published, expected, ownedTargetFiles, true);
+      assertOwnership();
+      return { reused: false };
+    } catch (error) {
+      if (targetReservation !== null && targetDirectories !== null)
+        removeOwnedTarget(
+          targetReservation,
+          targetDirectories,
+          ownedTargetFiles,
+        );
+      throw error;
+    } finally {
+      if (candidateRemoved === false)
+        removeExactTree(completeCandidate ?? candidateReservation, true);
+    }
   } finally {
-    if (candidateRemoved === false)
-      removeExactTree(completeCandidate ?? candidateReservation, true);
+    removeExactTree(ownerSnapshot, true);
   }
 };
 
 const recoverClaimedPublication = (props: {
   expected: IExpectedTree;
+  owner: IProxyPublicationOwner | null;
   parent: string;
   processAlive: (pid: number) => boolean;
   renderRoot: string;
@@ -182,7 +273,21 @@ const recoverClaimedPublication = (props: {
   const claimEntry = props.snapshot.entries.find(
     (entry) => entry.kind === "file" && entry.path === CLAIM_FILE,
   );
-  if (claimEntry === undefined) return null;
+  if (claimEntry === undefined) {
+    if (props.owner === null) return null;
+    if (
+      props.snapshot.targetIdentity.length === 0 ||
+      props.snapshot.entries.some(
+        (entry) =>
+          entry.kind !== "directory" ||
+          props.expected.directories.has(entry.path) === false,
+      )
+    )
+      return null;
+    removeExactTree(props.snapshot);
+    assertPublicationOwnership(props.ownership);
+    return "removed";
+  }
   const claimSnapshot = captureRenderGcTarget(
     props.renderRoot,
     path.join(props.target, CLAIM_FILE),
@@ -198,11 +303,34 @@ const recoverClaimedPublication = (props: {
     ).toString("utf8"),
   ) as unknown;
   assertClaim(claim, props.expected.fingerprint);
+  if (props.owner !== null && claim.token !== props.owner.token)
+    throw new Error(
+      "Proxy publication claim does not match its owner sidecar.",
+    );
   if (props.processAlive(claim.pid))
     throw new Error(
       `Proxy publication is still owned by live process ${claim.pid}.`,
     );
   assertPublicationOwnership(props.ownership);
+  if (claim.targetIdentity !== props.snapshot.targetIdentity)
+    throw new Error("Proxy publication target changed from its owner claim.");
+  const claimedDirectories = new Map(
+    claim.directories.map((entry) => [entry.path, entry.identity]),
+  );
+  const claimedFiles = new Map(
+    claim.files.map((entry) => [entry.path, entry.identity]),
+  );
+  if (
+    claimedDirectories.size !== props.expected.directories.size ||
+    [...props.expected.directories].some(
+      (relative) => claimedDirectories.has(relative) === false,
+    ) ||
+    claimedFiles.size !== props.expected.files.size ||
+    [...props.expected.files.keys()].some(
+      (relative) => claimedFiles.has(relative) === false,
+    )
+  )
+    throw new Error("Proxy publication claim has incomplete ownership facts.");
   assertExpectedTree(
     props.snapshot,
     props.expected,
@@ -210,17 +338,37 @@ const recoverClaimedPublication = (props: {
     true,
     claimEntry,
   );
+  const currentEntries = new Map(
+    props.snapshot.entries.map((entry) => [entry.path, entry]),
+  );
+  if (
+    props.snapshot.entries.some((entry) =>
+      entry.kind === "directory"
+        ? claimedDirectories.get(entry.path) !== entry.identity
+        : entry.path === CLAIM_FILE
+          ? entry.identity !== claimEntry.identity
+          : claimedFiles.get(entry.path) !== entry.identity,
+    )
+  )
+    throw new Error("Proxy publication recovery found an inode successor.");
   const complete =
     props.expected.files.size + props.expected.directories.size + 1;
   if (props.snapshot.entries.length === complete) {
     const ownedFiles = new Map(
-      props.snapshot.entries
-        .filter((entry) => entry.kind === "file" && entry.path !== CLAIM_FILE)
-        .map((entry) => [entry.path, entry]),
+      [...props.expected.files.keys()].map((relative) => [
+        relative,
+        currentEntries.get(relative)!,
+      ]),
     );
     removeExactTree(claimSnapshot);
     const recovered = captureRenderGcTarget(props.renderRoot, props.target);
     assertSameTarget(props.snapshot, recovered);
+    assertOwnedTarget(
+      props.snapshot,
+      recovered,
+      claimedDirectories,
+      ownedFiles,
+    );
     assertExpectedTree(recovered, props.expected, ownedFiles, false);
     assertPublicationOwnership(props.ownership);
     return "reused";
@@ -342,26 +490,53 @@ const linkCandidatePayloads = (props: {
   ownedTargetFiles: Map<string, IRenderGcContentEntry>;
   target: string;
 }): void => {
-  const candidateEntries = new Map(
-    props.candidateSnapshot.entries.map((entry) => [entry.path, entry]),
-  );
+  const candidateEntries = fileEntries(props.candidateSnapshot);
   for (const relative of [...props.expected.files.keys()]
     .filter((entry) => entry !== "publication.json")
     .sort(compare)) {
     props.assertOwnership();
-    const source = resolveBundleFile(props.candidate, relative);
-    const expectedSource = candidateEntries.get(relative)!;
-    if (fileIdentity(source) !== expectedSource.identity)
-      throw new Error(`Proxy candidate file "${relative}" changed identity.`);
-    const destination = resolveBundleFile(props.target, relative);
-    fs.linkSync(source, destination);
-    const linkedIdentity = fileIdentity(destination);
-    if (linkedIdentity !== expectedSource.identity)
-      throw new Error(`Proxy target file "${relative}" is not the candidate.`);
-    props.ownedTargetFiles.set(relative, expectedSource);
+    linkCandidateFile({
+      candidate: props.candidate,
+      candidateEntries,
+      ownedTargetFiles: props.ownedTargetFiles,
+      relative,
+      target: props.target,
+    });
     props.assertOwnership();
   }
 };
+
+const linkCandidateFile = (props: {
+  candidate: string;
+  candidateEntries: ReadonlyMap<string, IRenderGcContentEntry>;
+  ownedTargetFiles: Map<string, IRenderGcContentEntry>;
+  relative: string;
+  target: string;
+}): void => {
+  const source = resolveBundleFile(props.candidate, props.relative);
+  const expectedSource = props.candidateEntries.get(props.relative)!;
+  if (fileIdentity(source) !== expectedSource.identity)
+    throw new Error(
+      `Proxy candidate file "${props.relative}" changed identity.`,
+    );
+  const destination = resolveBundleFile(props.target, props.relative);
+  fs.linkSync(source, destination);
+  const linkedIdentity = fileIdentity(destination);
+  if (linkedIdentity !== expectedSource.identity)
+    throw new Error(
+      `Proxy target file "${props.relative}" is not the candidate.`,
+    );
+  props.ownedTargetFiles.set(props.relative, expectedSource);
+};
+
+const fileEntries = (
+  snapshot: IRenderGcTargetSnapshot,
+): ReadonlyMap<string, IRenderGcContentEntry> =>
+  new Map(
+    snapshot.entries
+      .filter((entry) => entry.kind === "file")
+      .map((entry) => [entry.path, entry]),
+  );
 
 const directoryIdentities = (
   snapshot: IRenderGcTargetSnapshot,
@@ -519,16 +694,68 @@ const assertClaim = (
     typeof value !== "object" ||
     value === null ||
     Array.isArray(value) ||
+    Object.keys(value).sort().join(",") !==
+      "directories,expected,files,pid,targetIdentity,token,version" ||
+    (value as { version?: unknown }).version !== 1 ||
+    (value as { expected?: unknown }).expected !== expected ||
+    validClaimEntries((value as { directories?: unknown }).directories) ===
+      false ||
+    validClaimEntries((value as { files?: unknown }).files) === false ||
+    Number.isSafeInteger((value as { pid?: unknown }).pid) === false ||
+    (value as { pid: number }).pid <= 0 ||
+    typeof (value as { targetIdentity?: unknown }).targetIdentity !==
+      "string" ||
+    (value as { targetIdentity: string }).targetIdentity.length === 0 ||
+    typeof (value as { token?: unknown }).token !== "string" ||
+    validToken((value as { token: string }).token) === false
+  )
+    throw new Error("Proxy publication recovery claim is malformed or stale.");
+};
+
+const readPublicationOwner = (
+  snapshot: IRenderGcTargetSnapshot,
+  expected: `sha256:${string}`,
+): IProxyPublicationOwner => {
+  if (snapshot.kind !== "file")
+    throw new Error("Proxy publication owner sidecar is not a file.");
+  const value = JSON.parse(
+    Buffer.from(readCapturedRenderGcFile(snapshot, CLAIM_MAX_BYTES)).toString(
+      "utf8",
+    ),
+  ) as unknown;
+  if (
+    typeof value !== "object" ||
+    value === null ||
+    Array.isArray(value) ||
     Object.keys(value).sort().join(",") !== "expected,pid,token,version" ||
     (value as { version?: unknown }).version !== 1 ||
     (value as { expected?: unknown }).expected !== expected ||
     Number.isSafeInteger((value as { pid?: unknown }).pid) === false ||
     (value as { pid: number }).pid <= 0 ||
     typeof (value as { token?: unknown }).token !== "string" ||
-    /^[0-9a-f-]{36}$/u.test((value as { token: string }).token) === false
+    validToken((value as { token: string }).token) === false
   )
-    throw new Error("Proxy publication recovery claim is malformed or stale.");
+    throw new Error("Proxy publication owner sidecar is malformed or stale.");
+  return value as IProxyPublicationOwner;
 };
+
+const validClaimEntries = (value: unknown): boolean =>
+  Array.isArray(value) &&
+  value.every(
+    (entry) =>
+      typeof entry === "object" &&
+      entry !== null &&
+      Array.isArray(entry) === false &&
+      Object.keys(entry).sort().join(",") === "identity,path" &&
+      typeof (entry as { identity?: unknown }).identity === "string" &&
+      (entry as { identity: string }).identity.length !== 0 &&
+      typeof (entry as { path?: unknown }).path === "string",
+  );
+
+const validToken = (value: string): boolean =>
+  /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u.test(
+    value,
+  );
 
 const fileIdentity = (file: string): string => {
   const status = fs.lstatSync(file, { bigint: true });

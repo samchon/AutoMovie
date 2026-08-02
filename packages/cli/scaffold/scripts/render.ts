@@ -75,7 +75,10 @@ import {
   closeProductionFrameCapture,
   productionFrameCaptureMetrics,
 } from "./capture";
-import { publishProxyBundle } from "./publishProxyBundle";
+import {
+  captureProxyPublicationGcTarget,
+  publishProxyBundle,
+} from "./publishProxyBundle";
 import {
   type IRenderAttemptSnapshot,
   beginRenderAttempt,
@@ -2426,21 +2429,29 @@ const collectRenderGarbage = (apply: boolean) => {
       const retainedByManifest = [...publicationPaths].some(
         (file) => file === logical || file.startsWith(`${logical}/`),
       );
-      let current = false;
-      if (
-        currentProxy !== undefined &&
-        entry.name === renderPublicationFingerprint(currentProxy).slice(7)
-      )
-        try {
-          const receipt = inspectPublishedProxyBundle(renderRoot, target);
-          current =
-            receipt.publicationFingerprint ===
-              renderPublicationFingerprint(currentProxy) &&
-            receipt.compileFingerprint === currentProxy.compileFingerprint &&
-            receipt.editFingerprint === currentProxy.editFingerprint;
-        } catch {
-          current = false;
-        }
+      const adjudicated = captureProxyPublicationGcTarget({
+        renderRoot,
+        target,
+        judge: () => {
+          if (
+            currentProxy === undefined ||
+            entry.name !== renderPublicationFingerprint(currentProxy).slice(7)
+          )
+            return false;
+          try {
+            const receipt = inspectPublishedProxyBundle(renderRoot, target);
+            return (
+              receipt.publicationFingerprint ===
+                renderPublicationFingerprint(currentProxy) &&
+              receipt.compileFingerprint === currentProxy.compileFingerprint &&
+              receipt.editFingerprint === currentProxy.editFingerprint
+            );
+          } catch {
+            return false;
+          }
+        },
+      });
+      const current = adjudicated.value;
       if (current || retainedByReview || retainedByManifest) {
         if (current)
           for (const file of physicalFiles(target))
@@ -2455,10 +2466,9 @@ const collectRenderGarbage = (apply: boolean) => {
         digest: null,
         bytes: 0,
       };
-      const snapshot = captureRenderGcTarget(renderRoot, target);
-      candidate.bytes = snapshot.bytes;
+      candidate.bytes = adjudicated.snapshot.bytes;
       candidates.push(candidate);
-      candidateSnapshots.set(gcCandidateKey(candidate), snapshot);
+      candidateSnapshots.set(gcCandidateKey(candidate), adjudicated.snapshot);
       sweptPublicationRoots.push(`${relative}/`);
     }
   }

@@ -598,6 +598,9 @@ export const test_cli_scaffold = async (): Promise<void> => {
         "removeCapturedRenderGcTarget",
       ) &&
       files["scripts/publishProxyBundle.ts"]!.includes(
+        "current.entries.some",
+      ) === false &&
+      files["scripts/publishProxyBundle.ts"]!.includes(
         "fs.renameSync(candidate, target)",
       ) === false &&
       files["scripts/publishProxyBundle.ts"]!.includes(
@@ -916,9 +919,11 @@ export const test_cli_scaffold = async (): Promise<void> => {
     );
     const mutableFs = createRequire(__filename)("node:fs") as {
       lstatSync: typeof fs.lstatSync;
+      linkSync: typeof fs.linkSync;
       fsyncSync: typeof fs.fsyncSync;
       mkdirSync: typeof fs.mkdirSync;
       openSync: typeof fs.openSync;
+      readSync: typeof fs.readSync;
       readFileSync: typeof fs.readFileSync;
       readdirSync: typeof fs.readdirSync;
       renameSync: typeof fs.renameSync;
@@ -927,8 +932,10 @@ export const test_cli_scaffold = async (): Promise<void> => {
     };
     const nativeFsync = mutableFs.fsyncSync;
     const nativeLstat = mutableFs.lstatSync;
+    const nativeLink = mutableFs.linkSync;
     const nativeMkdir = mutableFs.mkdirSync;
     const nativeOpen = mutableFs.openSync;
+    const nativeRead = mutableFs.readSync;
     const nativeReadFile = mutableFs.readFileSync;
     const nativeStat = mutableFs.statSync;
     const nativeWriteFile = mutableFs.writeFileSync;
@@ -1242,6 +1249,11 @@ export const test_cli_scaffold = async (): Promise<void> => {
     const proxyPublisherModule = createRequire(__filename)(
       path.join(scaffoldDir, "scripts", "publishProxyBundle.ts"),
     ) as {
+      captureProxyPublicationGcTarget: <Value>(props: {
+        judge: () => Value;
+        renderRoot: string;
+        target: string;
+      }) => { snapshot: { kind: string; target: string }; value: Value };
       publishProxyBundle: (props: {
         expected: ReadonlyMap<string, Uint8Array>;
         parent: string;
@@ -1303,6 +1315,47 @@ export const test_cli_scaffold = async (): Promise<void> => {
           ),
         ),
     );
+
+    const gcRaceTarget = path.join(proxyPublishParent, "gc-race");
+    const gcRaceParked = `${gcRaceTarget}.parked`;
+    const gcRaceSuccessor = `${gcRaceTarget}.successor`;
+    fs.mkdirSync(gcRaceTarget);
+    fs.writeFileSync(path.join(gcRaceTarget, "invalid.bin"), "invalid");
+    writeProxyPublishFixture(gcRaceSuccessor);
+    let gcRaceSwapped = false;
+    const gcRaceRejected = throws(() =>
+      proxyPublisherModule.captureProxyPublicationGcTarget({
+        renderRoot: proxyPublishRoot,
+        target: gcRaceTarget,
+        judge: () => {
+          nativeRename(gcRaceTarget, gcRaceParked);
+          nativeRename(gcRaceSuccessor, gcRaceTarget);
+          gcRaceSwapped = true;
+          return false;
+        },
+      }),
+    );
+    const invalidGcRoot = proxyPublisherModule.captureProxyPublicationGcTarget({
+      renderRoot: proxyPublishRoot,
+      target: gcRaceParked,
+      judge: () => false,
+    });
+    TestValidator.predicate(
+      "proxy GC never turns an invalid judgment into an exact-successor removal snapshot",
+      gcRaceSwapped &&
+        gcRaceRejected &&
+        !throws(() =>
+          proxyModule.assertPublishedProxyBundle(
+            gcRaceTarget,
+            proxyPublishFiles,
+          ),
+        ) &&
+        invalidGcRoot.value === false &&
+        invalidGcRoot.snapshot.kind === "directory" &&
+        invalidGcRoot.snapshot.target === gcRaceParked,
+    );
+    fs.rmSync(gcRaceTarget, { recursive: true, force: true });
+    fs.rmSync(gcRaceParked, { recursive: true, force: true });
 
     const emptySuccessorTarget = path.join(
       proxyPublishParent,
@@ -1626,24 +1679,68 @@ export const test_cli_scaffold = async (): Promise<void> => {
     );
     fs.rmSync(postSnapshotCandidate, { recursive: true, force: true });
 
+    const directorySuccessorTarget = path.join(
+      proxyPublishParent,
+      "directory-successor",
+    );
+    let directorySuccessorInserted = false;
+    mutableFs.linkSync = ((existingPath, newPath) => {
+      if (
+        directorySuccessorInserted === false &&
+        path.resolve(newPath.toString()) ===
+          path.join(directorySuccessorTarget, "publication.json")
+      ) {
+        const feature = path.join(directorySuccessorTarget, "feature");
+        const parked = path.join(directorySuccessorTarget, "feature.parked");
+        nativeRename(feature, parked);
+        fs.mkdirSync(feature);
+        nativeRename(
+          path.join(parked, "feature.mp4"),
+          path.join(feature, "feature.mp4"),
+        );
+        directorySuccessorInserted = true;
+      }
+      nativeLink(existingPath, newPath);
+    }) as typeof fs.linkSync;
+    const directorySuccessorRejected = (() => {
+      try {
+        return throws(() =>
+          proxyPublisherModule.publishProxyBundle({
+            expected: proxyPublishFiles,
+            parent: proxyPublishParent,
+            processAlive: () => false,
+            renderRoot: proxyPublishRoot,
+            target: directorySuccessorTarget,
+          }),
+        );
+      } finally {
+        mutableFs.linkSync = nativeLink;
+      }
+    })();
+    TestValidator.predicate(
+      "proxy publisher rejects a child-directory successor that preserves payload inodes",
+      directorySuccessorInserted &&
+        directorySuccessorRejected &&
+        fs.existsSync(directorySuccessorTarget),
+    );
+    fs.rmSync(directorySuccessorTarget, { recursive: true, force: true });
+
     const receiptCompetitorTarget = path.join(
       proxyPublishParent,
       "receipt-competitor",
     );
     let receiptCompetitorInserted = false;
-    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+    mutableFs.linkSync = ((existingPath, newPath) => {
       if (
         receiptCompetitorInserted === false &&
-        typeof file !== "number" &&
-        path.resolve(file.toString()) ===
-          path.join(receiptCompetitorTarget, "publication.json") &&
-        flags === "wx+"
+        path.resolve(newPath.toString()) ===
+          path.join(receiptCompetitorTarget, "publication.json")
       ) {
-        nativeWriteFile(file, proxyPublishFiles.get("publication.json")!);
+        nativeWriteFile(newPath, proxyPublishFiles.get("publication.json")!);
         receiptCompetitorInserted = true;
       }
-      return Reflect.apply(nativeOpen, mutableFs, [file, flags, ...args]);
-    }) as typeof fs.openSync;
+      nativeLink(existingPath, newPath);
+    }) as typeof fs.linkSync;
     let receiptCompetitorRejected = false;
     try {
       receiptCompetitorRejected = throws(() =>
@@ -1656,7 +1753,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
         }),
       );
     } finally {
-      mutableFs.openSync = nativeOpen;
+      mutableFs.linkSync = nativeLink;
     }
     TestValidator.predicate(
       "proxy cleanup preserves a byte-identical competing receipt",
@@ -1671,14 +1768,6 @@ export const test_cli_scaffold = async (): Promise<void> => {
     );
     fs.rmSync(receiptCompetitorTarget, { recursive: true, force: true });
 
-    const crashRecoveryTarget = path.join(proxyPublishParent, "crash-recovery");
-    fs.mkdirSync(path.join(crashRecoveryTarget, "feature"), {
-      recursive: true,
-    });
-    fs.writeFileSync(
-      path.join(crashRecoveryTarget, "feature", "feature.mp4"),
-      proxyPublishFiles.get("feature/feature.mp4")!,
-    );
     const crashExpectedFacts = [...proxyPublishFiles]
       .map(
         ([relative, bytes]) =>
@@ -1688,16 +1777,36 @@ export const test_cli_scaffold = async (): Promise<void> => {
           ] as const,
       )
       .sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0));
-    fs.writeFileSync(
-      path.join(crashRecoveryTarget, ".publication-claim.json"),
-      `${JSON.stringify({
-        version: 1,
-        expected: fixtureDigest(
-          Buffer.from(JSON.stringify(crashExpectedFacts)),
-        ),
-        pid: 919191,
-        token: "11111111-1111-4111-8111-111111111111",
-      })}\n`,
+    const crashExpectedFingerprint = fixtureDigest(
+      Buffer.from(JSON.stringify(crashExpectedFacts)),
+    );
+    const publicationOwnerPath = (target: string): string =>
+      path.join(
+        proxyPublishParent,
+        `.${path.basename(target)}.publication-owner.json`,
+      );
+    const writePublicationOwner = (target: string, token: string): void =>
+      fs.writeFileSync(
+        publicationOwnerPath(target),
+        `${JSON.stringify({
+          version: 1,
+          expected: crashExpectedFingerprint,
+          pid: 919191,
+          token,
+        })}\n`,
+      );
+    const physicalFixtureIdentity = (target: string): string => {
+      const status = fs.lstatSync(target, { bigint: true });
+      return `${status.dev}\0${status.ino}`;
+    };
+
+    const crashRecoveryTarget = path.join(proxyPublishParent, "crash-recovery");
+    fs.mkdirSync(path.join(crashRecoveryTarget, "feature"), {
+      recursive: true,
+    });
+    writePublicationOwner(
+      crashRecoveryTarget,
+      "11111111-1111-4111-8111-111111111111",
     );
     const recoveredCrashPublication = proxyPublisherModule.publishProxyBundle({
       expected: proxyPublishFiles,
@@ -1707,11 +1816,9 @@ export const test_cli_scaffold = async (): Promise<void> => {
       target: crashRecoveryTarget,
     });
     TestValidator.predicate(
-      "proxy publisher recovers an exact dead-owner partial publication",
+      "proxy publisher recovers a directory-only crash before its internal claim",
       recoveredCrashPublication.reused === false &&
-        fs.existsSync(
-          path.join(crashRecoveryTarget, ".publication-claim.json"),
-        ) === false &&
+        fs.existsSync(publicationOwnerPath(crashRecoveryTarget)) === false &&
         !throws(() =>
           proxyModule.assertPublishedProxyBundle(
             crashRecoveryTarget,
@@ -1720,7 +1827,191 @@ export const test_cli_scaffold = async (): Promise<void> => {
         ),
     );
 
-    const publishScaleFixture = (name: string, count: number): number => {
+    const fullCrashTarget = path.join(
+      proxyPublishParent,
+      "crash-after-receipt",
+    );
+    writeProxyPublishFixture(fullCrashTarget);
+    const fullCrashToken = "44444444-4444-4444-8444-444444444444";
+    fs.writeFileSync(
+      path.join(fullCrashTarget, ".publication-claim.json"),
+      `${JSON.stringify({
+        version: 1,
+        expected: crashExpectedFingerprint,
+        directories: [
+          { path: "", identity: physicalFixtureIdentity(fullCrashTarget) },
+          {
+            path: "feature",
+            identity: physicalFixtureIdentity(
+              path.join(fullCrashTarget, "feature"),
+            ),
+          },
+        ],
+        files: [
+          {
+            path: "feature/feature.mp4",
+            identity: physicalFixtureIdentity(
+              path.join(fullCrashTarget, "feature", "feature.mp4"),
+            ),
+          },
+          {
+            path: "publication.json",
+            identity: physicalFixtureIdentity(
+              path.join(fullCrashTarget, "publication.json"),
+            ),
+          },
+        ],
+        pid: 919191,
+        targetIdentity: physicalFixtureIdentity(fullCrashTarget),
+        token: fullCrashToken,
+      })}\n`,
+    );
+    writePublicationOwner(fullCrashTarget, fullCrashToken);
+    const fullCrashRecovered = proxyPublisherModule.publishProxyBundle({
+      expected: proxyPublishFiles,
+      parent: proxyPublishParent,
+      processAlive: () => false,
+      renderRoot: proxyPublishRoot,
+      target: fullCrashTarget,
+    });
+    TestValidator.predicate(
+      "proxy publisher reuses an exact receipt-plus-claim crash generation",
+      fullCrashRecovered.reused &&
+        fs.existsSync(path.join(fullCrashTarget, ".publication-claim.json")) ===
+          false &&
+        fs.existsSync(publicationOwnerPath(fullCrashTarget)) === false,
+    );
+
+    const liveOwnerTarget = path.join(proxyPublishParent, "live-owner");
+    fs.mkdirSync(liveOwnerTarget);
+    writePublicationOwner(
+      liveOwnerTarget,
+      "55555555-5555-4555-8555-555555555555",
+    );
+    const liveOwnerRejected = throws(() =>
+      proxyPublisherModule.publishProxyBundle({
+        expected: proxyPublishFiles,
+        parent: proxyPublishParent,
+        processAlive: (pid) => pid === 919191,
+        renderRoot: proxyPublishRoot,
+        target: liveOwnerTarget,
+      }),
+    );
+    TestValidator.predicate(
+      "proxy publisher preserves a live owner sidecar and its target",
+      liveOwnerRejected &&
+        fs.existsSync(liveOwnerTarget) &&
+        fs.existsSync(publicationOwnerPath(liveOwnerTarget)),
+    );
+    fs.rmSync(liveOwnerTarget, { recursive: true, force: true });
+    fs.rmSync(publicationOwnerPath(liveOwnerTarget));
+
+    const malformedClaimTarget = path.join(
+      proxyPublishParent,
+      "malformed-claim",
+    );
+    fs.mkdirSync(malformedClaimTarget);
+    fs.writeFileSync(
+      path.join(malformedClaimTarget, ".publication-claim.json"),
+      "{}\n",
+    );
+    writePublicationOwner(
+      malformedClaimTarget,
+      "66666666-6666-4666-8666-666666666666",
+    );
+    const malformedClaimRejected = throws(() =>
+      proxyPublisherModule.publishProxyBundle({
+        expected: proxyPublishFiles,
+        parent: proxyPublishParent,
+        processAlive: () => false,
+        renderRoot: proxyPublishRoot,
+        target: malformedClaimTarget,
+      }),
+    );
+    TestValidator.predicate(
+      "proxy publisher preserves malformed recovery evidence",
+      malformedClaimRejected &&
+        fs.readFileSync(
+          path.join(malformedClaimTarget, ".publication-claim.json"),
+          "utf8",
+        ) === "{}\n" &&
+        fs.existsSync(publicationOwnerPath(malformedClaimTarget)),
+    );
+    fs.rmSync(malformedClaimTarget, { recursive: true, force: true });
+    fs.rmSync(publicationOwnerPath(malformedClaimTarget));
+
+    const innerSuccessorTarget = path.join(
+      proxyPublishParent,
+      "crash-inner-successor",
+    );
+    const innerSuccessorFeatureDirectory = path.join(
+      innerSuccessorTarget,
+      "feature",
+    );
+    const innerSuccessorPayload = path.join(
+      innerSuccessorFeatureDirectory,
+      "feature.mp4",
+    );
+    fs.mkdirSync(innerSuccessorFeatureDirectory, { recursive: true });
+    fs.writeFileSync(
+      innerSuccessorPayload,
+      proxyPublishFiles.get("feature/feature.mp4")!,
+    );
+    const claimedPayloadIdentity = physicalFixtureIdentity(
+      innerSuccessorPayload,
+    );
+    const innerSuccessorToken = "22222222-2222-4222-8222-222222222222";
+    fs.writeFileSync(
+      path.join(innerSuccessorTarget, ".publication-claim.json"),
+      `${JSON.stringify({
+        version: 1,
+        expected: crashExpectedFingerprint,
+        directories: [
+          { path: "", identity: physicalFixtureIdentity(innerSuccessorTarget) },
+          {
+            path: "feature",
+            identity: physicalFixtureIdentity(innerSuccessorFeatureDirectory),
+          },
+        ],
+        files: [
+          { path: "feature/feature.mp4", identity: claimedPayloadIdentity },
+          { path: "publication.json", identity: "unpublished" },
+        ],
+        pid: 919191,
+        targetIdentity: physicalFixtureIdentity(innerSuccessorTarget),
+        token: innerSuccessorToken,
+      })}\n`,
+    );
+    writePublicationOwner(innerSuccessorTarget, innerSuccessorToken);
+    fs.rmSync(innerSuccessorPayload);
+    fs.writeFileSync(
+      innerSuccessorPayload,
+      proxyPublishFiles.get("feature/feature.mp4")!,
+    );
+    const innerSuccessorRejected = throws(() =>
+      proxyPublisherModule.publishProxyBundle({
+        expected: proxyPublishFiles,
+        parent: proxyPublishParent,
+        processAlive: () => false,
+        renderRoot: proxyPublishRoot,
+        target: innerSuccessorTarget,
+      }),
+    );
+    TestValidator.predicate(
+      "proxy crash recovery preserves a byte-identical inner-file successor",
+      innerSuccessorRejected &&
+        physicalFixtureIdentity(innerSuccessorPayload) !==
+          claimedPayloadIdentity &&
+        fs.existsSync(innerSuccessorTarget) &&
+        fs.existsSync(publicationOwnerPath(innerSuccessorTarget)),
+    );
+    fs.rmSync(innerSuccessorTarget, { recursive: true, force: true });
+    fs.rmSync(publicationOwnerPath(innerSuccessorTarget), { force: true });
+
+    const publishScaleFixture = (
+      name: string,
+      count: number,
+    ): { observations: number; readBytes: number; sourceBytes: number } => {
       const target = path.join(proxyPublishParent, name);
       const entries = new Map<string, Uint8Array>([
         ["publication.json", Buffer.from(`{"count":${count}}\n`)],
@@ -1729,11 +2020,12 @@ export const test_cli_scaffold = async (): Promise<void> => {
           (_, index) =>
             [
               `frames/${String(index).padStart(4, "0")}.png`,
-              Buffer.from(`frame-${index}`),
+              Buffer.alloc(1024, index),
             ] as const,
         ),
       ]);
       let observations = 0;
+      let readBytes = 0;
       mutableFs.lstatSync = ((file, ...args: unknown[]): unknown => {
         if (
           path
@@ -1743,6 +2035,11 @@ export const test_cli_scaffold = async (): Promise<void> => {
           observations++;
         return Reflect.apply(nativeLstat, mutableFs, [file, ...args]);
       }) as typeof fs.lstatSync;
+      mutableFs.readSync = ((...args: unknown[]): number => {
+        const length = Reflect.apply(nativeRead, mutableFs, args) as number;
+        readBytes += length;
+        return length;
+      }) as typeof fs.readSync;
       try {
         proxyPublisherModule.publishProxyBundle({
           expected: entries,
@@ -1753,14 +2050,27 @@ export const test_cli_scaffold = async (): Promise<void> => {
         });
       } finally {
         mutableFs.lstatSync = nativeLstat;
+        mutableFs.readSync = nativeRead;
       }
-      return observations;
+      return {
+        observations,
+        readBytes,
+        sourceBytes: [...entries.values()].reduce(
+          (total, bytes) => total + bytes.length,
+          0,
+        ),
+      };
     };
     const smallProxyPublicationWork = publishScaleFixture("scale-8", 8);
     const largeProxyPublicationWork = publishScaleFixture("scale-32", 32);
     TestValidator.predicate(
       "proxy publication inventory work scales linearly with bundle entries",
-      largeProxyPublicationWork <= smallProxyPublicationWork * 6,
+      largeProxyPublicationWork.observations <=
+        smallProxyPublicationWork.observations * 6 &&
+        smallProxyPublicationWork.readBytes <=
+          smallProxyPublicationWork.sourceBytes * 12 &&
+        largeProxyPublicationWork.readBytes <=
+          largeProxyPublicationWork.sourceBytes * 12,
     );
     const proxyMedia = path.join(proxy, "media", "proxy.mp4");
     const parkedProxyMedia = `${proxyMedia}.parked`;

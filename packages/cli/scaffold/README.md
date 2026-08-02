@@ -145,12 +145,7 @@ Active lock, attempt, and live temporary records are never sweep candidates.
 If a candidate changes at the quarantine boundary, GC fails closed and leaves the observed successor under a top-level `.gc-preserved-*` directory. That reserved evidence is excluded from later automatic GC runs; inspect it and adjudicate it manually before reusing or deleting it.
 Guide-pass publication includes both its MP4 and authenticated
 `frames/<pass>/frame_XXXXXXXX.png` control images.
-Proxy finalization binds the render root, parent, candidate tree, and every
-hard-linked payload inode before it publishes trusted `publication.json` bytes
-last. A hidden owner claim makes a dead process's exact partial bundle
-recoverable, while cleanup removes only its last fully owned inode set. Commit
-competitors and physical successors are preserved, and GC retains a current
-proxy directory only after its self-described bundle passes exact verification.
+Proxy finalization binds the render root, parent, candidate tree, and every hard-linked payload inode before it publishes `publication.json` last. An external owner sidecar precedes target creation, while an internal claim records the target, directory, and file inode set, so a dead process's exact partial bundle is recoverable without owning a successor. Commit competitors and physical successors are preserved, and GC retains a current proxy directory only after its self-described bundle passes exact verification against the same captured tree.
 
 Finalization derives semantic sound effects from compiled shot events, samples their emitters relative to the active camera, mixes authored score cues and caption-timed dialogue at 48 kHz stereo, and encodes deterministic Opus without a host `ffmpeg`.
 Dialogue uses the local Kokoro ONNX Runtime CPU adapter and caches each normalized line by content, model, voice, and inference settings, so changing one line invalidates only that line.
@@ -181,11 +176,7 @@ to one exact tree; finalization consumes its frame and MP4 descriptors without
 reopening verified paths. Abandoned recovery never quarantines a tree reached by
 a valid current pointer.
 
-Each running attempt carries the same random token as its held chunk lock and is
-created with `O_EXCL`. Dead-owner recovery, the running-to-failed transition,
-and successful cleanup operate only on a descriptor-validated physical
-snapshot; a pathname successor is preserved. Status and explicit GC read the
-same strict versioned attempt schema instead of trusting generic JSON pathnames.
+Each running attempt carries the same random token as its held chunk lock and is created with `O_EXCL`. Dead-owner recovery, the running-to-failed transition, and successful cleanup operate only on a descriptor-validated physical snapshot; a pathname successor is preserved. Status and explicit GC read the same strict versioned attempt schema instead of trusting generic JSON pathnames.
 
 Final conform also reopens the matching proxy bundle as one physical tree. Its
 manifest must account for the exact regular-file inventory, and every declared
