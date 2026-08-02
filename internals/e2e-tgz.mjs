@@ -55,6 +55,47 @@ const fail = (message) => {
   throw new Error(message);
 };
 
+const writeCommandOutput = (result) => {
+  process.stderr.write(result.stdout ?? "");
+  process.stderr.write(result.stderr ?? "");
+};
+
+const commandTermination = (result, timeout) => {
+  const errorCode = result.error?.code ?? "none";
+  const reason =
+    errorCode === "ETIMEDOUT"
+      ? `timed out after ${timeout} ms`
+      : result.error !== undefined
+        ? "failed to spawn"
+        : result.signal !== null
+          ? "terminated by signal"
+          : typeof result.status !== "number"
+            ? "terminated without status"
+            : `exited with status ${result.status}`;
+  return [
+    reason,
+    `timeout=${timeout} ms`,
+    `status=${typeof result.status === "number" ? result.status : "none"}`,
+    `signal=${result.signal ?? "none"}`,
+    `error=${errorCode}`,
+    `message=${
+      result.error === undefined ? "none" : JSON.stringify(result.error.message)
+    }`,
+  ].join("; ");
+};
+
+const commandSucceeded = (result) =>
+  result.error === undefined && result.signal === null && result.status === 0;
+
+const failCommand = (label, result, timeout, detail = null) => {
+  writeCommandOutput(result);
+  fail(
+    `${label} ${commandTermination(result, timeout)}${
+      detail === null ? "" : `; ${detail}`
+    }`,
+  );
+};
+
 const run = (label, command, cwd, timeout = 300_000) => {
   console.log(`> ${label}`);
   if (tracePath !== null)
@@ -67,11 +108,7 @@ const run = (label, command, cwd, timeout = 300_000) => {
     stdio: ["ignore", "pipe", "pipe"],
     timeout,
   });
-  if (result.status !== 0) {
-    process.stderr.write(result.stdout ?? "");
-    process.stderr.write(result.stderr ?? "");
-    fail(`${label} exited with ${result.status ?? "signal"}`);
-  }
+  if (commandSucceeded(result) === false) failCommand(label, result, timeout);
   if (tracePath !== null)
     appendFileSync(tracePath, `${new Date().toISOString()} PASS ${label}\n`);
   console.log(`✓ ${label}`);
@@ -105,9 +142,13 @@ const runExpectedFailure = (
     result.status === 0 ||
     output.includes(expectedOutput) === false
   ) {
-    process.stderr.write(output);
-    fail(
-      `${label} did not exit normally with a non-zero status and the expected "${expectedOutput}" diagnostic`,
+    failCommand(
+      label,
+      result,
+      timeout,
+      `expected a normal non-zero exit containing ${JSON.stringify(
+        expectedOutput,
+      )}`,
     );
   }
   if (tracePath !== null)
@@ -122,18 +163,15 @@ const runJson = (label, executable, args, cwd) => {
   console.log(`> ${label}`);
   if (tracePath !== null)
     appendFileSync(tracePath, `${new Date().toISOString()} START ${label}\n`);
+  const timeout = 300_000;
   const result = spawnSync(executable, args, {
     cwd,
     encoding: "utf8",
     maxBuffer: 64 * 1024 * 1024,
     stdio: ["ignore", "pipe", "pipe"],
-    timeout: 300_000,
+    timeout,
   });
-  if (result.status !== 0) {
-    process.stderr.write(result.stdout ?? "");
-    process.stderr.write(result.stderr ?? "");
-    fail(`${label} exited with ${result.status ?? "signal"}`);
-  }
+  if (commandSucceeded(result) === false) failCommand(label, result, timeout);
   let output;
   try {
     output = JSON.parse(result.stdout);
@@ -795,20 +833,23 @@ try {
     fail("installed @automovie/mcp manifest has no valid package identity");
   const expectedVersion = installedManifest.version;
   writeFileSync(join(projectDir, "client.mjs"), CLIENT_SOURCE);
+  const clientTimeout = 300_000;
   const client = spawnSync(`node client.mjs`, {
     cwd: projectDir,
     shell: true,
     encoding: "utf8",
     maxBuffer: 64 * 1024 * 1024,
     stdio: ["ignore", "pipe", "pipe"],
-    timeout: 300_000,
+    timeout: clientTimeout,
     env: { ...process.env, E2E_EXPECTED_VERSION: expectedVersion },
   });
-  if (client.status !== 0) {
-    process.stderr.write(client.stdout ?? "");
-    process.stderr.write(client.stderr ?? "");
-    fail("stdio client assertions failed (see above)");
-  }
+  if (commandSucceeded(client) === false)
+    failCommand(
+      "stdio client assertions",
+      client,
+      clientTimeout,
+      "client assertions failed",
+    );
   process.stdout.write(client.stdout ?? "");
 
   // 5. Generate and exercise the production repository using only the packed

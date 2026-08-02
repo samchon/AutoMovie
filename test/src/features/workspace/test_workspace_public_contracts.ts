@@ -118,6 +118,14 @@ export const test_workspace_public_contracts = (): void => {
     "AutoMovieApplication.ts",
   );
   const tgzE2e = readPackageFile("internals", "e2e-tgz.mjs");
+  const commandTerminationOffset = tgzE2e.indexOf("const commandTermination");
+  const commandTerminationSource =
+    commandTerminationOffset < 0
+      ? ""
+      : tgzE2e.slice(
+          commandTerminationOffset,
+          tgzE2e.indexOf("\nconst run =", commandTerminationOffset),
+        );
   type PackageMetadata = {
     description: string;
     keywords: string[];
@@ -388,6 +396,35 @@ export const test_workspace_public_contracts = (): void => {
         /LLM structured-output|function-calling|structured-output|motion-control engine as Model Context Protocol tools/g,
       ) ?? [],
     [],
+  );
+  TestValidator.predicate(
+    "packaged E2E names timeout and termination reasons",
+    commandTerminationSource.includes('errorCode === "ETIMEDOUT"') &&
+      commandTerminationSource.includes("timed out after ${timeout} ms") &&
+      commandTerminationSource.includes('"failed to spawn"') &&
+      commandTerminationSource.includes('"terminated by signal"') &&
+      commandTerminationSource.includes("exited with status ${result.status}"),
+  );
+  TestValidator.predicate(
+    "packaged E2E prints complete termination fields",
+    commandTerminationSource.includes("const commandSucceeded") &&
+      commandTerminationSource.includes("timeout=${timeout} ms") &&
+      commandTerminationSource.includes("status=${") &&
+      commandTerminationSource.includes("signal=${result.signal") &&
+      commandTerminationSource.includes("error=${errorCode}") &&
+      commandTerminationSource.includes("JSON.stringify(result.error.message)"),
+  );
+  TestValidator.predicate(
+    "packaged E2E routes every spawn through shared failure evidence",
+    (tgzE2e.match(/\bspawnSync\(/g) ?? []).length ===
+      (tgzE2e.match(/\bfailCommand\(/g) ?? []).length - 1 &&
+      tgzE2e.includes('status ?? "signal"') === false,
+  );
+  TestValidator.predicate(
+    "packaged E2E preserves expected-failure output requirements",
+    tgzE2e.includes(
+      "expected a normal non-zero exit containing ${JSON.stringify(",
+    ),
   );
   const mcpMethods = [
     ...mcpApplication.matchAll(
