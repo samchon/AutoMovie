@@ -681,7 +681,7 @@ const packagedAssetReviewContract = (
   reviewPhases: number;
   raster: {
     assertions: Array<{ comparisons: string[]; name: string }>;
-    overrides: string[];
+    writes: string[];
   };
 } => {
   interface IArrayContract {
@@ -789,17 +789,44 @@ const packagedAssetReviewContract = (
   const tgzParsed = parse("internals/e2e-tgz.mjs", tgzSource, ts.ScriptKind.JS);
   const compactTgz = (node: ts.Node): string =>
     node.getText(tgzParsed).replace(/\s+/g, "");
-  const rasterOverrides: string[] = [];
-  const visitRasterOverrides = (node: ts.Node): void => {
+  const rasterWrites: string[] = [];
+  const isRasterTarget = (node: ts.Node): boolean => {
+    const target = compactTgz(node);
+    return (
+      target === "starterProduction.frameFormat" ||
+      target.startsWith("starterProduction.frameFormat.") ||
+      target.startsWith("starterProduction.frameFormat[")
+    );
+  };
+  const visitRasterWrites = (node: ts.Node): void => {
     if (
       ts.isBinaryExpression(node) &&
-      node.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
-      compactTgz(node.left) === "starterProduction.frameFormat"
+      node.operatorToken.kind >= ts.SyntaxKind.FirstAssignment &&
+      node.operatorToken.kind <= ts.SyntaxKind.LastAssignment &&
+      isRasterTarget(node.left)
     )
-      rasterOverrides.push(compactTgz(node));
-    ts.forEachChild(node, visitRasterOverrides);
+      rasterWrites.push(compactTgz(node));
+    if (
+      (ts.isPrefixUnaryExpression(node) || ts.isPostfixUnaryExpression(node)) &&
+      (node.operator === ts.SyntaxKind.PlusPlusToken ||
+        node.operator === ts.SyntaxKind.MinusMinusToken) &&
+      isRasterTarget(node.operand)
+    )
+      rasterWrites.push(compactTgz(node));
+    if (ts.isDeleteExpression(node) && isRasterTarget(node.expression))
+      rasterWrites.push(compactTgz(node));
+    if (
+      ts.isCallExpression(node) &&
+      node.arguments[0] !== undefined &&
+      isRasterTarget(node.arguments[0]) &&
+      ["Object.assign", "Object.defineProperty", "Reflect.set"].includes(
+        compactTgz(node.expression),
+      )
+    )
+      rasterWrites.push(compactTgz(node));
+    ts.forEachChild(node, visitRasterWrites);
   };
-  visitRasterOverrides(tgzParsed);
+  visitRasterWrites(tgzParsed);
   const embeddedSources: string[] = [];
   for (const statement of tgzParsed.statements) {
     if (ts.isVariableStatement(statement) === false) continue;
@@ -882,20 +909,30 @@ const packagedAssetReviewContract = (
           name.includes("starter-asset-view-captured:") ||
           name === '"starter-required-deliverables-parser-complete"'
         ) {
-          const comparisons: string[] = [];
-          const visitComparisons = (child: ts.Node): void => {
-            if (
+          const unwrap = (child: ts.Expression): ts.Expression => {
+            let current = child;
+            while (ts.isParenthesizedExpression(current))
+              current = current.expression;
+            return current;
+          };
+          const conjunctions = (child: ts.Expression): ts.Expression[] => {
+            const current = unwrap(child);
+            return ts.isBinaryExpression(current) &&
+              current.operatorToken.kind ===
+                ts.SyntaxKind.AmpersandAmpersandToken
+              ? [...conjunctions(current.left), ...conjunctions(current.right)]
+              : [current];
+          };
+          const comparisons = conjunctions(node.arguments[1]!).flatMap(
+            (child) =>
               ts.isBinaryExpression(child) &&
               child.operatorToken.kind ===
                 ts.SyntaxKind.EqualsEqualsEqualsToken &&
-              (/\.(?:width|height)$/u.test(compact(child.left)) ||
-                /\?\.(?:width|height)$/u.test(compact(child.left))) &&
+              /\.(?:width|height)$/u.test(compact(child.left)) &&
               ts.isNumericLiteral(child.right)
-            )
-              comparisons.push(compact(child));
-            ts.forEachChild(child, visitComparisons);
-          };
-          visitComparisons(node.arguments[1]!);
+                ? [compact(child)]
+                : [],
+          );
           rasterAssertions.push({ comparisons, name });
         }
       }
@@ -1141,7 +1178,7 @@ const packagedAssetReviewContract = (
     reviewPhases,
     raster: {
       assertions: rasterAssertions,
-      overrides: rasterOverrides,
+      writes: rasterWrites,
     },
   };
 };
@@ -3835,7 +3872,7 @@ export const test_workspace_public_contracts = (): void => {
             name: '"starter-required-deliverables-parser-complete"',
           },
         ],
-        overrides: [
+        writes: [
           "starterProduction.frameFormat={...starterProduction.frameFormat,width:160,height:90,fps:2,}",
         ],
       },
