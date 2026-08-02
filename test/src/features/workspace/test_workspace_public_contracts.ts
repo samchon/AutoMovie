@@ -16,6 +16,8 @@ const fetchCallContracts = (
   source: string,
 ): Array<{
   argumentCount: number;
+  callee: string;
+  optionCount: number | null;
   options: string[];
   signal: string | null;
 }> => {
@@ -28,33 +30,46 @@ const fetchCallContracts = (
   );
   const calls: Array<{
     argumentCount: number;
+    callee: string;
+    optionCount: number | null;
     options: string[];
     signal: string | null;
   }> = [];
   const visit = (node: ts.Node): void => {
-    if (
+    const fetchCall =
       ts.isCallExpression(node) &&
-      ts.isIdentifier(node.expression) &&
-      node.expression.text === "fetch"
-    ) {
+      ((ts.isIdentifier(node.expression) && node.expression.text === "fetch") ||
+        (ts.isPropertyAccessExpression(node.expression) &&
+          node.expression.name.text === "fetch") ||
+        (ts.isElementAccessExpression(node.expression) &&
+          ts.isStringLiteralLike(node.expression.argumentExpression) &&
+          node.expression.argumentExpression.text === "fetch"));
+    if (fetchCall && ts.isCallExpression(node)) {
       const options = node.arguments[1];
       const properties =
         options !== undefined && ts.isObjectLiteralExpression(options)
-          ? options.properties.filter(ts.isPropertyAssignment)
-          : [];
-      const named = properties.map((property) =>
-        ts.isIdentifier(property.name) || ts.isStringLiteralLike(property.name)
+          ? options.properties
+          : null;
+      const named = (properties ?? []).map((property) =>
+        ts.isPropertyAssignment(property) &&
+        (ts.isIdentifier(property.name) ||
+          ts.isStringLiteralLike(property.name))
           ? property.name.text
-          : property.name.getText(parsed),
+          : property.getText(parsed),
       );
-      const signal = properties.find(
-        (property) =>
-          (ts.isIdentifier(property.name) ||
-            ts.isStringLiteralLike(property.name)) &&
-          property.name.text === "signal",
-      );
+      const onlyOption = properties?.length === 1 ? properties[0] : undefined;
+      const signal =
+        onlyOption !== undefined &&
+        ts.isPropertyAssignment(onlyOption) &&
+        (ts.isIdentifier(onlyOption.name) ||
+          ts.isStringLiteralLike(onlyOption.name)) &&
+        onlyOption.name.text === "signal"
+          ? onlyOption
+          : undefined;
       calls.push({
         argumentCount: node.arguments.length,
+        callee: node.expression.getText(parsed),
+        optionCount: properties?.length ?? null,
         options: named,
         signal: signal?.initializer.getText(parsed) ?? null,
       });
@@ -978,6 +993,8 @@ export const test_workspace_public_contracts = (): void => {
       fetchCalls: [
         {
           argumentCount: 2,
+          callee: "fetch",
+          optionCount: 1,
           options: ["signal"],
           signal: "AbortSignal.timeout(timeoutMs)",
         },
