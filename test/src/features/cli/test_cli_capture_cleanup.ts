@@ -38,6 +38,13 @@ const namedArrows = (
 const captureCleanupContract = (
   text: string,
 ): {
+  catchBodies: Record<string, string[][]>;
+  closeCalls: Array<{
+    call: string;
+    owner: string;
+    protected: boolean;
+    region: "body" | "catch" | "finally" | "try";
+  }>;
   closeBodies: string[];
   policyBodies: string[];
   policyClasses: string[];
@@ -67,29 +74,74 @@ const captureCleanupContract = (
     owner: string;
     region: "body" | "catch" | "finally" | "try";
   }> = [];
+  const catchBodies: Record<string, string[][]> = {};
+  const closeCalls: Array<{
+    call: string;
+    owner: string;
+    protected: boolean;
+    region: "body" | "catch" | "finally" | "try";
+  }> = [];
   for (const owner of owners)
     for (const arrow of arrows.get(owner) ?? []) {
+      catchBodies[owner] ??= [];
+      const regionOf = (
+        node: ts.Node,
+      ): "body" | "catch" | "finally" | "try" => {
+        let cursor: ts.Node | undefined = node;
+        let region: "body" | "catch" | "finally" | "try" = "body";
+        while (cursor !== undefined && cursor !== arrow.body) {
+          if (ts.isCatchClause(cursor)) region = "catch";
+          else if (
+            ts.isBlock(cursor) &&
+            cursor.parent !== undefined &&
+            ts.isTryStatement(cursor.parent)
+          )
+            region = cursor.parent.finallyBlock === cursor ? "finally" : "try";
+          cursor = cursor.parent;
+        }
+        return region;
+      };
+      const protectedByPolicy = (node: ts.Node): boolean => {
+        let cursor: ts.Node | undefined = node.parent;
+        while (cursor !== undefined && cursor !== arrow.body) {
+          if (
+            ts.isCallExpression(cursor) &&
+            ts.isIdentifier(cursor.expression) &&
+            cursor.expression.text === "preserveProductionCaptureCleanup"
+          )
+            return true;
+          cursor = cursor.parent;
+        }
+        return false;
+      };
       const visit = (node: ts.Node): void => {
+        if (ts.isCatchClause(node))
+          catchBodies[owner]!.push(
+            node.block.statements.map((statement) =>
+              compact(statement, source),
+            ),
+          );
         if (
           ts.isCallExpression(node) &&
           ts.isIdentifier(node.expression) &&
           node.expression.text === "preserveProductionCaptureCleanup"
-        ) {
-          let cursor: ts.Node | undefined = node;
-          let region: "body" | "catch" | "finally" | "try" = "body";
-          while (cursor !== undefined && cursor !== arrow.body) {
-            if (ts.isCatchClause(cursor)) region = "catch";
-            else if (
-              ts.isBlock(cursor) &&
-              cursor.parent !== undefined &&
-              ts.isTryStatement(cursor.parent)
-            )
-              region =
-                cursor.parent.finallyBlock === cursor ? "finally" : "try";
-            cursor = cursor.parent;
-          }
-          preserveCalls.push({ call: compact(node, source), owner, region });
-        }
+        )
+          preserveCalls.push({
+            call: compact(node, source),
+            owner,
+            region: regionOf(node),
+          });
+        if (
+          ts.isCallExpression(node) &&
+          ts.isPropertyAccessExpression(node.expression) &&
+          node.expression.name.text === "close"
+        )
+          closeCalls.push({
+            call: compact(node, source),
+            owner,
+            protected: protectedByPolicy(node),
+            region: regionOf(node),
+          });
         ts.forEachChild(node, visit);
       };
       visit(arrow.body);
@@ -109,6 +161,8 @@ const captureCleanupContract = (
       : [],
   );
   return {
+    catchBodies,
+    closeCalls,
     closeBodies: close.map((arrow) => compact(arrow.body, source)),
     policyBodies: policy.map((arrow) => compact(arrow.body, source)),
     policyClasses,
@@ -120,6 +174,7 @@ const captureCleanupContract = (
 };
 
 interface ICleanupLifecycle {
+  actions: string[];
   catches: string[];
   failure: {
     count: number;
@@ -128,6 +183,7 @@ interface ICleanupLifecycle {
     type: string | null;
   };
   finally: string[];
+  operationCalls: Array<{ callee: string; guarded: boolean }>;
   tries: number;
   tryActions: string[];
   writes: string[];
@@ -138,6 +194,7 @@ const cleanupLifecycle = (
   source: ts.SourceFile,
   statements: ts.NodeArray<ts.Statement>,
   failureName: string,
+  operation: "captureFrame" | "main",
 ): ICleanupLifecycle => {
   const declarations = statements
     .filter(ts.isVariableStatement)
@@ -166,12 +223,16 @@ const cleanupLifecycle = (
         .includes("closeProductionFrameCapture") === true,
   );
   const action = (statement: ts.Statement): string => {
+    if (ts.isImportDeclaration(statement))
+      return `import:${compact(statement.moduleSpecifier, source)}`;
     if (
       ts.isVariableStatement(statement) &&
       statement.declarationList.declarations.length === 1 &&
       ts.isIdentifier(statement.declarationList.declarations[0]!.name)
     )
       return statement.declarationList.declarations[0]!.name.text;
+    if (ts.isInterfaceDeclaration(statement))
+      return `interface:${statement.name.text}`;
     if (ts.isForOfStatement(statement)) return "for";
     if (ts.isIfStatement(statement)) return "if";
     if (ts.isExpressionStatement(statement)) {
@@ -196,7 +257,35 @@ const cleanupLifecycle = (
     ts.forEachChild(node, visitWrites);
   };
   statements.forEach(visitWrites);
+  const operationCalls: Array<{ callee: string; guarded: boolean }> = [];
+  const visitOperations = (node: ts.Node): void => {
+    if (ts.isCallExpression(node)) {
+      const matches =
+        operation === "main"
+          ? ts.isIdentifier(node.expression) && node.expression.text === "main"
+          : ts.isPropertyAccessExpression(node.expression) &&
+            node.expression.name.text === "captureFrame";
+      if (matches) {
+        let cursor: ts.Node | undefined = node;
+        let guarded = false;
+        while (cursor !== undefined) {
+          if (tries.some((statement) => statement.tryBlock === cursor)) {
+            guarded = true;
+            break;
+          }
+          cursor = cursor.parent;
+        }
+        operationCalls.push({
+          callee: compact(node.expression, source),
+          guarded,
+        });
+      }
+    }
+    ts.forEachChild(node, visitOperations);
+  };
+  statements.forEach(visitOperations);
   return {
+    actions: statements.map(action),
     catches: tries.flatMap(
       (statement) =>
         statement.catchClause?.block.statements.map((entry) =>
@@ -221,6 +310,7 @@ const cleanupLifecycle = (
           compact(entry, source),
         ) ?? [],
     ),
+    operationCalls,
     tries: tries.length,
     tryActions: tries.flatMap((statement) =>
       statement.tryBlock.statements.map(action),
@@ -289,6 +379,90 @@ export const test_cli_capture_cleanup = (): void => {
     "capture cleanup aggregates primary and resource failures",
     captureCleanupContract(capture),
     {
+      catchBodies: {
+        capturePage: [
+          [
+            "constfailure=newError(`" +
+              templateExpression(
+                "errorinstanceofError?error.message:String(error)",
+              ) +
+              "Browserdiagnostics:" +
+              templateExpression('diagnostics.join("|")||"nonereported"') +
+              "`,);",
+            'awaitpreserveProductionCaptureCleanup({error:failure},[{resource:"capturepage",cleanup:()=>page.close()}],);',
+            "throwfailure;",
+          ],
+        ],
+        captureProductionFrame: [
+          [
+            "thrownewError(`" +
+              templateExpression(
+                "errorinstanceofError?error.message:String(error)",
+              ) +
+              "Browserdiagnostics:" +
+              templateExpression(
+                'resident.diagnostics.join("|")||"nonereported"',
+              ) +
+              "`,);",
+          ],
+          [
+            "constkey=capturePageKey(input);",
+            "session.pages.delete(key);",
+            'awaitpreserveProductionCaptureCleanup({error},[{resource:"capturepage",cleanup:()=>resident.page.close()}],);',
+            "throwerror;",
+          ],
+        ],
+        closeProductionFrameCapture: [
+          [
+            'awaitpreserveProductionCaptureCleanup(failure,[{resource:"capturesessionstartup",cleanup:()=>{throwerror;},},]);',
+            "return;",
+          ],
+        ],
+        startSession: [
+          [
+            'awaitpreserveProductionCaptureCleanup({error},[{resource:"captureserver",cleanup:()=>server.close()}],);',
+            "throwerror;",
+          ],
+        ],
+      },
+      closeCalls: [
+        {
+          call: "server.close()",
+          owner: "startSession",
+          protected: true,
+          region: "catch",
+        },
+        {
+          call: "previous.page.close()",
+          owner: "capturePage",
+          protected: false,
+          region: "body",
+        },
+        {
+          call: "page.close()",
+          owner: "capturePage",
+          protected: true,
+          region: "catch",
+        },
+        {
+          call: "session.browser.close()",
+          owner: "closeProductionFrameCapture",
+          protected: true,
+          region: "body",
+        },
+        {
+          call: "session.server.close()",
+          owner: "closeProductionFrameCapture",
+          protected: true,
+          region: "body",
+        },
+        {
+          call: "resident.page.close()",
+          owner: "captureProductionFrame",
+          protected: true,
+          region: "catch",
+        },
+      ],
       closeBodies: [
         '{constpending=sessionPromise;sessionPromise=null;sessionIdentity=null;if(pending===null)return;letsession:CaptureSession;try{session=awaitpending;}catch(error){awaitpreserveProductionCaptureCleanup(failure,[{resource:"capturesessionstartup",cleanup:()=>{throwerror;},},]);return;}awaitpreserveProductionCaptureCleanup(failure,[{resource:"capturebrowser",cleanup:()=>session.browser.close()},{resource:"captureserver",cleanup:()=>session.server.close()},]);}',
       ],
@@ -344,21 +518,71 @@ export const test_cli_capture_cleanup = (): void => {
     {
       packaged:
         reviewBlocks.length === 1
-          ? cleanupLifecycle(verifier, reviewBlocks[0]!, "reviewFailure")
+          ? cleanupLifecycle(
+              verifier,
+              reviewBlocks[0]!,
+              "reviewFailure",
+              "captureFrame",
+            )
           : null,
-      preview: cleanupLifecycle(preview, preview.statements, "captureFailure"),
-      render: cleanupLifecycle(render, render.statements, "renderFailure"),
+      preview: cleanupLifecycle(
+        preview,
+        preview.statements,
+        "captureFailure",
+        "captureFrame",
+      ),
+      render: cleanupLifecycle(
+        render,
+        render.statements,
+        "renderFailure",
+        "main",
+      ),
     },
     {
       packaged: {
+        actions: [
+          "before",
+          "assert",
+          "packagedAssetReviewViews",
+          "compiledModels",
+          "reviewFailure",
+          "try",
+          "for",
+          "reviewed",
+          "assert",
+        ],
         catches: ["reviewFailure={error};", "throwerror;"],
         failure: { count: 1, initializer: null, kind: "let", type: null },
         finally: ["awaitcloseProductionFrameCapture(reviewFailure);"],
+        operationCalls: [{ callee: "app.captureFrame", guarded: true }],
         tries: 1,
         tryActions: ["for"],
         writes: ["reviewFailure={error}"],
       },
       preview: {
+        actions: [
+          'import:"@automovie/interface"',
+          'import:"@automovie/mcp"',
+          'import:"../automovie.config"',
+          'import:"./capture"',
+          "args",
+          "options",
+          "positional",
+          "for",
+          "time",
+          "shot",
+          "passValue",
+          "passes",
+          "if",
+          "pass",
+          "width",
+          "height",
+          "app",
+          "app.getGuideDocument",
+          "app.getGuideDocument",
+          "captureFailure",
+          "try",
+        ],
         catches: ["captureFailure={error};", "throwerror;"],
         failure: {
           count: 1,
@@ -367,11 +591,146 @@ export const test_cli_capture_cleanup = (): void => {
           type: "{error:unknown}|undefined",
         },
         finally: ["awaitcloseProductionFrameCapture(captureFailure);"],
+        operationCalls: [{ callee: "app.captureFrame", guarded: true }],
         tries: 1,
         tryActions: ["output", "process.stdout.write", "if"],
         writes: ["captureFailure={error}"],
       },
       render: {
+        actions: [
+          'import:"@automovie/engine"',
+          'import:"@automovie/interface"',
+          'import:"@automovie/mcp"',
+          'import:"h264-mp4-encoder"',
+          'import:"mp4box"',
+          'import:"node:crypto"',
+          'import:"node:fs"',
+          'import:"node:module"',
+          'import:"node:path"',
+          'import:"node:url"',
+          'import:"node:util"',
+          'import:"pngjs"',
+          'import:"../automovie.config"',
+          'import:"./assertProxyBundle"',
+          'import:"./capture"',
+          'import:"./dialogueCacheSnapshot"',
+          'import:"./publishProxyBundle"',
+          'import:"./renderAttemptSnapshot"',
+          'import:"./renderChunkSnapshot"',
+          'import:"./renderGcSnapshot"',
+          'import:"./renderLiveness"',
+          'import:"./renderPlanSnapshot"',
+          'import:"./renderTemporarySnapshot"',
+          'import:"./runtimePackageSnapshot"',
+          "root",
+          "productionId",
+          "tierName",
+          "renderTier",
+          "productionSegment",
+          "renderLivenessScope",
+          "productionStateRoot",
+          "renderJobRoot",
+          "stateRoot",
+          "planPath",
+          "action",
+          "require",
+          "resolveImportEntry",
+          "heldChunkLocks",
+          "heldChunkAttempts",
+          "KOKORO_MODEL",
+          "KOKORO_MODEL_REVISION",
+          "KOKORO_DEVICE",
+          "KOKORO_VOICE",
+          "RENDER_LOCK_JSON_MAX_BYTES",
+          "interface:IRenderChunkLockOwner",
+          "main",
+          "sourceFingerprint",
+          "captureReviewEvidence",
+          "currentPlan",
+          "productionAudioAssets",
+          "renderSourceDigest",
+          "productionSoundRuntimeIdentity",
+          "resolvedPackageIdentity",
+          "resolvedPackageSnapshot",
+          "packageSnapshotIdentity",
+          "onnxRuntimeNodeIdentity",
+          "renderShotFingerprints",
+          "renderStatus",
+          "currentReceipt",
+          "currentChunk",
+          "acquireChunk",
+          "renderChunk",
+          "failChunk",
+          "releaseChunk",
+          "releaseOwnedChunkClaim",
+          "finalize",
+          "publishProxyTierBundle",
+          "assertMatchingProxyPublication",
+          "encodeChunkFrames",
+          "encodePngFrames",
+          "interface:IProductionSoundBundle",
+          "interface:IKokoroCacheRecord",
+          "interface:IKokoroRuntime",
+          "interface:IKokoroTextSplitter",
+          "interface:IKokoroLoadedRuntime",
+          "produceProductionSound",
+          "synthesizeProductionDialogue",
+          "validatedDialogueCache",
+          "loadPinnedKokoroRuntime",
+          "kokoroBaseRuntimeAssets",
+          "kokoroModelCacheAssets",
+          "validPhonemeChunks",
+          "encodeProductionOpus",
+          "encodeSoundRaster",
+          "concatenateFloat32",
+          "assertDeliverableProbe",
+          "composite",
+          "hasVisiblePixelVariance",
+          "productionApplication",
+          "productionServices",
+          "readPlan",
+          "currentStoredPlan",
+          "stalePlanRows",
+          "currentRenderPlanInputs",
+          "renderRuntimeIdentity",
+          "productionEncoderIdentity",
+          "chunkDirectory",
+          "renderGarbageCollection",
+          "collectRenderGarbage",
+          "gcCandidateKey",
+          "assertNoLiveRenderWorkers",
+          "renderPublicationFingerprint",
+          "physicalFiles",
+          "normalizeSlash",
+          "recoverAbandonedTemporaryDirectories",
+          "quarantineStaleSlotOutputs",
+          "captureCurrentChunkPointer",
+          "currentPublicationProtectsTree",
+          "attemptPath",
+          "legacyLockPath",
+          "chunkLockDirectory",
+          "chunkLockClaims",
+          "listFiles",
+          "readRegularInside",
+          "captureExistingRenderStateTarget",
+          "captureExistingRenderTarget",
+          "captureAbandonedRenderStateTarget",
+          "readCapturedRenderJson",
+          "removeCapturedRenderStateTarget",
+          "quarantine",
+          "processAlive",
+          "writeRenderFile",
+          "readJson",
+          "readRendererJson",
+          "integerOption",
+          "stringOption",
+          "compareCodeUnits",
+          "reviewTargetLabel",
+          "output",
+          "renderProgress",
+          "renderFailure",
+          "try",
+        ],
         catches: ["renderFailure={error};", "throwerror;"],
         failure: {
           count: 1,
@@ -380,6 +739,7 @@ export const test_cli_capture_cleanup = (): void => {
           type: "{error:unknown}|undefined",
         },
         finally: ["awaitcloseProductionFrameCapture(renderFailure);"],
+        operationCalls: [{ callee: "main", guarded: true }],
         tries: 1,
         tryActions: ["main"],
         writes: ["renderFailure={error}"],
