@@ -99,6 +99,7 @@ interface IPackagedMcpCleanupContract {
       async: boolean;
       bodyDigest: string;
       parameterDigests: string[];
+      statementDigest: string;
     }>
   >;
   lifecycle: Array<{
@@ -170,6 +171,7 @@ const packagedMcpCleanupContract = (
             parameterDigests: declaration.initializer.parameters.map(
               (parameter) => tokenDigest(parameter, source),
             ),
+            statementDigest: tokenDigest(statement, source),
           });
         }
         if (
@@ -402,6 +404,8 @@ export const test_workspace_packaged_mcp_cleanup = (): void => {
               "8e6c06d8d686ddac1aeffb36308c1ccfe0c1c2b2c94e384c9f5ef59839e94a9b",
               "062de4199123e87ffa04b8c586a68a753dfe1da0f00685420d78bfd9611708ae",
             ],
+            statementDigest:
+              "efcf3cd0925f41dd4bbc9dee5266a0fcb0fcb2590943b497da0d2040c9d4875b",
           },
         ],
         preserveCleanupFailure: [
@@ -413,6 +417,8 @@ export const test_workspace_packaged_mcp_cleanup = (): void => {
               "7dbd2433fb74ab5c3e5a2aaad1fba9c0f3106d62fd9f819921a5ce0ce4154940",
               "060c4a2c8c157c4c87c48412f2f6b793e75bf64750106125cc0ba63f5fd4b104",
             ],
+            statementDigest:
+              "57fb28085acc21e27732b5db55d44d5b06711bea21bb2de5009c4e96f43076c4",
           },
         ],
       },
