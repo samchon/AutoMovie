@@ -7,6 +7,7 @@ import {
   type IRenderGcPhysicalDirectory,
   type IRenderGcTargetSnapshot,
   RENDER_GC_PRESERVED_PREFIX,
+  assertCapturedRenderTarget,
   assertRenderPhysicalDirectoryIdentity,
   captureRenderGcTarget,
   captureRenderPhysicalDirectory,
@@ -46,26 +47,34 @@ export const captureExistingRenderPlan = (
   base: string,
   target: string,
 ): IRenderPlanSnapshot | null => {
+  const ownership = capturePlanReadOwnership(base, target);
   let current = captureLegacyRenderPlan(base, target);
-  const directory = generationDirectory(target);
-  if (physicalDirectoryExists(directory) === false) return current;
-  captureRenderPhysicalDirectory(directory, "render plan generation directory");
+  const snapshots: IRenderGcTargetSnapshot[] = [];
+  if (current !== null) snapshots.push(current.snapshot);
+  assertPlanReadOwnership(ownership, snapshots);
+  if (ownership.generations === null) return current;
   const visited = new Set<string>();
   for (;;) {
+    assertPlanReadOwnership(ownership, snapshots);
     const predecessor = current?.generation ?? null;
-    const slot = generationSlot(directory, predecessor);
+    const slot = generationSlot(ownership.generations.path, predecessor);
     const successor = captureExistingGeneration(base, slot);
-    if (successor === null) return current;
+    if (successor === null) {
+      assertPlanReadOwnership(ownership, snapshots);
+      return current;
+    }
     if (successor.record.predecessor !== predecessor)
       throw new Error("Render plan generation has another predecessor.");
     if (visited.has(successor.record.generation))
       throw new Error("Render plan generation chain contains a cycle.");
     visited.add(successor.record.generation);
+    snapshots.push(successor.snapshot);
     current = {
       generation: successor.record.generation,
       plan: successor.record.plan,
       snapshot: successor.snapshot,
     };
+    assertPlanReadOwnership(ownership, snapshots);
   }
 };
 
@@ -92,6 +101,14 @@ export const publishRenderPlan = async (props: {
 }): Promise<IRenderPlanSnapshot> => {
   const ownership = capturePlanOwnership(props.base, props.target);
   const predecessor = props.predecessor?.generation ?? null;
+  assertPlanHead(props.base, props.target, props.predecessor);
+  await props.inputCurrent();
+  assertPlanHead(props.base, props.target, props.predecessor);
+  if (
+    props.predecessor !== null &&
+    planBytes(props.predecessor.plan).equals(planBytes(props.plan))
+  )
+    return props.predecessor;
   const generation = randomUUID();
   const record: IRenderPlanGenerationRecord = {
     generation,
@@ -105,7 +122,6 @@ export const publishRenderPlan = async (props: {
     ownership.candidates.path,
     `${generation}.${process.pid}.plan-candidate`,
   );
-  assertPlanHead(props.base, props.target, props.predecessor);
   assertPlanOwnership(ownership);
   const candidate = createRenderGcFileSnapshot(
     props.base,
@@ -115,9 +131,10 @@ export const publishRenderPlan = async (props: {
   let linkSucceeded = false;
   let cleanup = candidate;
   try {
-    await props.inputCurrent();
     assertPlanHead(props.base, props.target, props.predecessor);
     assertPlanOwnership(ownership);
+    assertCapturedRenderTarget(candidate);
+    assertPlanLinkCount(candidate, 1);
     try {
       fs.linkSync(candidate.target, destination);
     } catch (error) {
@@ -146,6 +163,8 @@ export const publishRenderPlan = async (props: {
     assertSamePlanFile(candidate, capturedCandidate);
     if (linked.snapshot.targetVersion !== capturedCandidate.targetVersion)
       throw new Error("Render plan link generation changed before commit.");
+    assertPlanLinkCount(linked.snapshot, 2);
+    assertPlanLinkCount(capturedCandidate, 2);
     assertPlanOwnership(ownership);
     cleanup = capturedCandidate;
     if (removeOwnedCandidate(cleanup, ownership) === false)
@@ -160,7 +179,11 @@ export const publishRenderPlan = async (props: {
       snapshot: published.snapshot,
     };
   } finally {
-    if (linkSucceeded === false) removeOwnedCandidate(cleanup, ownership);
+    if (
+      linkSucceeded === false &&
+      removeOwnedCandidate(cleanup, ownership) === false
+    )
+      throw new Error("Render plan candidate cleanup lost ownership.");
   }
 };
 
@@ -289,6 +312,69 @@ const capturePlanOwnership = (
   return ownership;
 };
 
+const capturePlanReadOwnership = (
+  base: string,
+  target: string,
+): {
+  generations: IRenderGcPhysicalDirectory | null;
+  parent: IRenderGcPhysicalDirectory;
+  root: IRenderGcPhysicalDirectory;
+} => {
+  const root = captureRenderPhysicalDirectory(base, "render plan read root");
+  const parent = captureRenderPhysicalDirectory(
+    path.dirname(path.resolve(target)),
+    "render plan read parent",
+  );
+  const relative = path.relative(root.real, parent.real);
+  if (
+    relative === ".." ||
+    relative.startsWith(`..${path.sep}`) ||
+    path.isAbsolute(relative)
+  )
+    throw new Error("Render plan target escapes its read root.");
+  const directory = generationDirectory(target);
+  const generations = physicalDirectoryExists(directory)
+    ? captureRenderPhysicalDirectory(
+        directory,
+        "render plan generation directory",
+      )
+    : null;
+  const ownership = { generations, parent, root };
+  assertPlanReadOwnership(ownership, []);
+  return ownership;
+};
+
+const assertPlanReadOwnership = (
+  ownership: {
+    generations: IRenderGcPhysicalDirectory | null;
+    parent: IRenderGcPhysicalDirectory;
+    root: IRenderGcPhysicalDirectory;
+  },
+  snapshots: readonly IRenderGcTargetSnapshot[],
+): void => {
+  assertExactPhysicalDirectory(ownership.root, "render plan read root");
+  assertExactPhysicalDirectory(ownership.parent, "render plan read parent");
+  if (ownership.generations !== null)
+    assertExactPhysicalDirectory(
+      ownership.generations,
+      "render plan generation directory",
+    );
+  for (const snapshot of snapshots) assertCapturedRenderTarget(snapshot);
+};
+
+const assertExactPhysicalDirectory = (
+  expected: IRenderGcPhysicalDirectory,
+  label: string,
+): void => {
+  const current = captureRenderPhysicalDirectory(expected.path, label);
+  if (
+    current.identity !== expected.identity ||
+    current.real !== expected.real ||
+    current.version !== expected.version
+  )
+    throw new Error(`${label} changed exact generation.`);
+};
+
 const assertPlanOwnership = (ownership: IRenderPlanOwnership): void => {
   assertRenderPhysicalDirectoryIdentity(ownership.root, "render plan root");
   assertRenderPhysicalDirectoryIdentity(ownership.parent, "render plan parent");
@@ -318,7 +404,6 @@ const legacyGeneration = (snapshot: IRenderGcTargetSnapshot): string =>
   `legacy-${createHash("sha256")
     .update(
       JSON.stringify({
-        base: snapshot.base.identity,
         digest: snapshot.fileDigest,
         identity: snapshot.targetIdentity,
         version: snapshot.targetVersion,
@@ -362,6 +447,21 @@ const assertSamePlanFile = (
     throw new Error("Render plan publication used another physical file.");
 };
 
+const assertPlanLinkCount = (
+  snapshot: IRenderGcTargetSnapshot,
+  expected: number,
+): void => {
+  const status = fs.lstatSync(snapshot.target, { bigint: true });
+  const version = `${status.dev}\0${status.ino}\0${status.size}\0${status.mtimeNs}\0${status.ctimeNs}`;
+  if (
+    status.isSymbolicLink() ||
+    status.isFile() === false ||
+    version !== snapshot.targetVersion ||
+    status.nlink !== BigInt(expected)
+  )
+    throw new Error("Render plan file has another hard-link generation.");
+};
+
 const removeOwnedCandidate = (
   snapshot: IRenderGcTargetSnapshot,
   ownership: IRenderPlanOwnership,
@@ -380,6 +480,12 @@ const removeOwnedCandidate = (
       });
     } finally {
       if (fs.readdirSync(quarantine).length === 0) fs.rmdirSync(quarantine);
+    }
+    try {
+      fs.lstatSync(snapshot.target);
+      return false;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") return false;
     }
     assertPlanOwnership(ownership);
     return true;

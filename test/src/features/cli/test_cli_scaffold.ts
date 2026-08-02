@@ -4031,6 +4031,18 @@ export const test_cli_scaffold = async (): Promise<void> => {
         capturedFirstPlan.plan.name === "first" &&
         fs.readdirSync(planCandidateRoot).length === 0,
     );
+    const reusedFirstPlan = await renderPlanModule.publishRenderPlan({
+      base: planRoot,
+      inputCurrent: async () => undefined,
+      plan: planFixture("first", 48),
+      predecessor: firstPlan,
+      target: planTarget,
+    });
+    TestValidator.predicate(
+      "render plan reuses an unchanged sequential predecessor",
+      reusedFirstPlan.generation === firstPlan.generation &&
+        fs.readdirSync(`${planTarget}.generations`).length === 1,
+    );
     const secondPlan = await renderPlanModule.publishRenderPlan({
       base: planRoot,
       inputCurrent: async () => undefined,
@@ -4262,6 +4274,110 @@ export const test_cli_scaffold = async (): Promise<void> => {
         fs.existsSync(candidatePlanSlot),
     );
 
+    const linkedCandidatePlanRoot = path.join(
+      base,
+      "render-plan-linked-candidate-swap",
+    );
+    const linkedCandidatePlanTarget = path.join(
+      linkedCandidatePlanRoot,
+      "plan.json",
+    );
+    const linkedCandidatePlanSlot = path.join(
+      `${linkedCandidatePlanTarget}.generations`,
+      "genesis.json",
+    );
+    fs.mkdirSync(linkedCandidatePlanRoot);
+    let linkedPlanCandidate = "";
+    let parkedLinkedPlanCandidate = "";
+    let linkedPlanCandidateSwapped = false;
+    mutableFs.linkSync = ((source, destination) => {
+      if (
+        linkedPlanCandidateSwapped === false &&
+        path.resolve(destination.toString()) === linkedCandidatePlanSlot
+      ) {
+        linkedPlanCandidate = path.resolve(source.toString());
+        parkedLinkedPlanCandidate = `${linkedPlanCandidate}.parked`;
+        nativeLink(linkedPlanCandidate, parkedLinkedPlanCandidate);
+        fs.rmSync(linkedPlanCandidate);
+        nativeLink(parkedLinkedPlanCandidate, linkedPlanCandidate);
+        linkedPlanCandidateSwapped = true;
+      }
+      nativeLink(source, destination);
+    }) as typeof fs.linkSync;
+    let linkedPlanCandidateRejected = false;
+    try {
+      await renderPlanModule.publishRenderPlan({
+        base: linkedCandidatePlanRoot,
+        inputCurrent: async () => undefined,
+        plan: planFixture("linked-candidate-swap", 48),
+        predecessor: null,
+        target: linkedCandidatePlanTarget,
+      });
+    } catch {
+      linkedPlanCandidateRejected = true;
+    } finally {
+      mutableFs.linkSync = nativeLink;
+    }
+    TestValidator.predicate(
+      "render plan rejects a same-inode candidate relink generation",
+      linkedPlanCandidateSwapped &&
+        linkedPlanCandidateRejected &&
+        fs.existsSync(linkedPlanCandidate) &&
+        fs.existsSync(parkedLinkedPlanCandidate) &&
+        fs.existsSync(linkedCandidatePlanSlot),
+    );
+
+    const cleanupPlanRoot = path.join(base, "render-plan-cleanup-successor");
+    const cleanupPlanTarget = path.join(cleanupPlanRoot, "plan.json");
+    const cleanupPlanSlot = path.join(
+      `${cleanupPlanTarget}.generations`,
+      "genesis.json",
+    );
+    fs.mkdirSync(cleanupPlanRoot);
+    let cleanupPlanCandidate = "";
+    let cleanupPlanSuccessorInserted = false;
+    mutableFs.linkSync = ((source, destination) => {
+      if (path.resolve(destination.toString()) === cleanupPlanSlot)
+        nativeWriteFile(cleanupPlanSlot, fs.readFileSync(source.toString()));
+      nativeLink(source, destination);
+    }) as typeof fs.linkSync;
+    mutableFs.renameSync = ((oldPath, newPath) => {
+      nativeRename(oldPath, newPath);
+      if (
+        cleanupPlanSuccessorInserted === false &&
+        path.basename(oldPath.toString()).endsWith(".plan-candidate")
+      ) {
+        cleanupPlanCandidate = path.resolve(oldPath.toString());
+        nativeWriteFile(
+          cleanupPlanCandidate,
+          fs.readFileSync(newPath.toString()),
+        );
+        cleanupPlanSuccessorInserted = true;
+      }
+    }) as typeof fs.renameSync;
+    let cleanupPlanRejected = false;
+    try {
+      await renderPlanModule.publishRenderPlan({
+        base: cleanupPlanRoot,
+        inputCurrent: async () => undefined,
+        plan: planFixture("cleanup-successor", 48),
+        predecessor: null,
+        target: cleanupPlanTarget,
+      });
+    } catch {
+      cleanupPlanRejected = true;
+    } finally {
+      mutableFs.linkSync = nativeLink;
+      mutableFs.renameSync = nativeRename;
+    }
+    TestValidator.predicate(
+      "render plan never reports exact-winner success after cleanup successor",
+      cleanupPlanSuccessorInserted &&
+        cleanupPlanRejected &&
+        fs.existsSync(cleanupPlanCandidate) &&
+        fs.existsSync(cleanupPlanSlot),
+    );
+
     const rootSwapPlanRoot = path.join(base, "render-plan-root-swap");
     const rootSwapPlanTarget = path.join(rootSwapPlanRoot, "plan.json");
     const parkedRootSwapPlan = `${rootSwapPlanRoot}.parked`;
@@ -4341,7 +4457,109 @@ export const test_cli_scaffold = async (): Promise<void> => {
       fs.readFileSync(legacyPlanTarget).equals(legacyPlanBytes) &&
         migratedPlan.plan.name === "migrated" &&
         renderPlanModule.captureRenderPlan(legacyPlanRoot, legacyPlanTarget)
+          .generation === migratedPlan.generation &&
+        renderPlanModule.captureRenderPlan(base, legacyPlanTarget)
           .generation === migratedPlan.generation,
+    );
+
+    const traversalPlanRoot = path.join(base, "render-plan-traversal-swap");
+    const traversalPlanTarget = path.join(traversalPlanRoot, "plan.json");
+    fs.mkdirSync(traversalPlanRoot);
+    const traversalFirst = await renderPlanModule.publishRenderPlan({
+      base: traversalPlanRoot,
+      inputCurrent: async () => undefined,
+      plan: planFixture("traversal-first", 48),
+      predecessor: null,
+      target: traversalPlanTarget,
+    });
+    await renderPlanModule.publishRenderPlan({
+      base: traversalPlanRoot,
+      inputCurrent: async () => undefined,
+      plan: planFixture("traversal-second", 24),
+      predecessor: traversalFirst,
+      target: traversalPlanTarget,
+    });
+    const traversalDirectory = `${traversalPlanTarget}.generations`;
+    const parkedTraversalDirectory = `${traversalDirectory}.parked`;
+    const traversalSuccessorMarker = path.join(
+      traversalDirectory,
+      "successor.marker",
+    );
+    let traversalDirectorySwapped = false;
+    mutableFs.lstatSync = ((file, ...args: unknown[]): unknown => {
+      const status = Reflect.apply(nativeLstat, mutableFs, [file, ...args]);
+      if (
+        traversalDirectorySwapped === false &&
+        path.resolve(file.toString()) === traversalFirst.snapshot.target
+      ) {
+        nativeRename(traversalDirectory, parkedTraversalDirectory);
+        nativeMkdir(traversalDirectory);
+        nativeWriteFile(traversalSuccessorMarker, "successor");
+        traversalDirectorySwapped = true;
+      }
+      return status;
+    }) as typeof fs.lstatSync;
+    let traversalDirectoryRejected = false;
+    try {
+      renderPlanModule.captureRenderPlan(
+        traversalPlanRoot,
+        traversalPlanTarget,
+      );
+    } catch {
+      traversalDirectoryRejected = true;
+    } finally {
+      mutableFs.lstatSync = nativeLstat;
+    }
+    TestValidator.predicate(
+      "render plan traversal rejects a generation-directory successor",
+      traversalDirectorySwapped &&
+        traversalDirectoryRejected &&
+        fs.readFileSync(traversalSuccessorMarker, "utf8") === "successor" &&
+        fs.existsSync(parkedTraversalDirectory),
+    );
+
+    const malformedPlanRoot = path.join(base, "render-plan-malformed");
+    const malformedPlanTarget = path.join(malformedPlanRoot, "plan.json");
+    fs.mkdirSync(`${malformedPlanTarget}.generations`, { recursive: true });
+    fs.writeFileSync(
+      path.join(`${malformedPlanTarget}.generations`, "genesis.json"),
+      "{}\n",
+    );
+    const malformedPlanRejected = throws(() =>
+      renderPlanModule.captureRenderPlan(
+        malformedPlanRoot,
+        malformedPlanTarget,
+      ),
+    );
+    const cyclePlanRoot = path.join(base, "render-plan-cycle");
+    const cyclePlanTarget = path.join(cyclePlanRoot, "plan.json");
+    const cyclePlanDirectory = `${cyclePlanTarget}.generations`;
+    const cycleGeneration = "44444444-4444-4444-8444-444444444444";
+    fs.mkdirSync(cyclePlanDirectory, { recursive: true });
+    fs.writeFileSync(
+      path.join(cyclePlanDirectory, "genesis.json"),
+      `${JSON.stringify({
+        version: 1,
+        generation: cycleGeneration,
+        predecessor: null,
+        plan: planFixture("cycle-first", 48),
+      })}\n`,
+    );
+    fs.writeFileSync(
+      path.join(cyclePlanDirectory, `${cycleGeneration}.json`),
+      `${JSON.stringify({
+        version: 1,
+        generation: cycleGeneration,
+        predecessor: cycleGeneration,
+        plan: planFixture("cycle-second", 24),
+      })}\n`,
+    );
+    TestValidator.predicate(
+      "render plan traversal rejects malformed and cyclic generations",
+      malformedPlanRejected &&
+        throws(() =>
+          renderPlanModule.captureRenderPlan(cyclePlanRoot, cyclePlanTarget),
+        ),
     );
     const renderLivenessModule = createRequire(__filename)(
       path.join(scaffoldDir, "scripts", "renderLiveness.ts"),
