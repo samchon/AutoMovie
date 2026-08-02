@@ -12,6 +12,7 @@ import * as fs from "node:fs";
 import { createRequire } from "node:module";
 import * as os from "node:os";
 import * as path from "node:path";
+import ts from "typescript-compiler";
 
 import {
   productionH264Mp4,
@@ -50,6 +51,47 @@ type GeneratedViewerMiddleware = (
   response: GeneratedViewerResponse,
   next: () => void,
 ) => void;
+
+/** Locate zero-argument array ordering calls without matching source trivia. */
+const comparatorFreeSortCalls = (
+  files: Readonly<Record<string, string>>,
+): string[] =>
+  Object.entries(files)
+    .flatMap(([file, source]) => {
+      if (file.endsWith(".ts") === false && file.endsWith(".tsx") === false)
+        return [];
+      const parsed = ts.createSourceFile(
+        file,
+        source,
+        ts.ScriptTarget.Latest,
+        true,
+        file.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
+      );
+      const calls: string[] = [];
+      const visit = (node: ts.Node): void => {
+        if (ts.isCallExpression(node) && node.arguments.length === 0) {
+          const expression = node.expression;
+          const method = ts.isPropertyAccessExpression(expression)
+            ? expression.name.text
+            : ts.isElementAccessExpression(expression) &&
+                ts.isStringLiteral(expression.argumentExpression)
+              ? expression.argumentExpression.text
+              : null;
+          if (method === "sort" || method === "toSorted") {
+            const position = parsed.getLineAndCharacterOfPosition(
+              node.getStart(parsed),
+            );
+            calls.push(
+              `${file}:${position.line + 1}:${position.character + 1}`,
+            );
+          }
+        }
+        ts.forEachChild(node, visit);
+      };
+      visit(parsed);
+      return calls;
+    })
+    .sort(compareCodeUnits);
 
 /**
  * The `@automovie/cli` scaffolder renders the starter into an in-memory file
@@ -122,16 +164,16 @@ export const test_cli_scaffold = async (): Promise<void> => {
   );
 
   const files = renderScaffold({ name: "demo-film" });
-  const comparatorFreeSortSources = Object.entries(files)
-    .filter(
-      ([file, source]) => file.endsWith(".ts") && /\.sort\(\s*\)/u.test(source),
-    )
-    .map(([file]) => file)
-    .sort(compareCodeUnits);
   TestValidator.equals(
     "shipped TypeScript sources give every sort an explicit comparator",
-    comparatorFreeSortSources,
+    comparatorFreeSortCalls(files),
     [],
+  );
+  TestValidator.predicate(
+    "shipped lint config gates comparator-free array sorting",
+    files["lint.config.ts"]!.includes(
+      '"typescript/require-array-sort-compare": "error"',
+    ),
   );
   const renderScript = files["scripts/render.ts"]!;
   const renderTemporarySnapshot = files["scripts/renderTemporarySnapshot.ts"]!;

@@ -174,6 +174,7 @@ const config = {
     "typescript/no-misused-promises": "error",
     "typescript/no-unnecessary-type-constraint": "error",
     "typescript/prefer-as-const": "error",
+    "typescript/require-array-sort-compare": "error",
     "typescript/switch-exhaustiveness-check": "error",
   },
 } satisfies ITtscLintConfig;
