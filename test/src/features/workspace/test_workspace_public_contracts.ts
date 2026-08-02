@@ -2,12 +2,68 @@ import { compareCodeUnits } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
 import path from "node:path";
+import ts from "typescript-compiler";
 
 /** Repository root, four levels above `test/src/features/workspace`. */
 const ROOT = path.resolve(__dirname, "..", "..", "..", "..");
 
 const readPackageFile = (...segments: string[]): string =>
   fs.readFileSync(path.join(ROOT, ...segments), "utf8");
+
+/** Inventory every fetch call and its exact options without crossing calls. */
+const fetchCallContracts = (
+  file: string,
+  source: string,
+): Array<{
+  argumentCount: number;
+  options: string[];
+  signal: string | null;
+}> => {
+  const parsed = ts.createSourceFile(
+    file,
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TS,
+  );
+  const calls: Array<{
+    argumentCount: number;
+    options: string[];
+    signal: string | null;
+  }> = [];
+  const visit = (node: ts.Node): void => {
+    if (
+      ts.isCallExpression(node) &&
+      ts.isIdentifier(node.expression) &&
+      node.expression.text === "fetch"
+    ) {
+      const options = node.arguments[1];
+      const properties =
+        options !== undefined && ts.isObjectLiteralExpression(options)
+          ? options.properties.filter(ts.isPropertyAssignment)
+          : [];
+      const named = properties.map((property) =>
+        ts.isIdentifier(property.name) || ts.isStringLiteralLike(property.name)
+          ? property.name.text
+          : property.name.getText(parsed),
+      );
+      const signal = properties.find(
+        (property) =>
+          (ts.isIdentifier(property.name) ||
+            ts.isStringLiteralLike(property.name)) &&
+          property.name.text === "signal",
+      );
+      calls.push({
+        argumentCount: node.arguments.length,
+        options: named,
+        signal: signal?.initializer.getText(parsed) ?? null,
+      });
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(parsed);
+  return calls;
+};
 
 /** A source-level template interpolation without a live template expression. */
 const templateExpression = (expression: string): string =>
@@ -891,8 +947,12 @@ export const test_workspace_public_contracts = (): void => {
           /const (DEV_SERVER_(?:POLL_INTERVAL|PROBE_TIMEOUT|READY_TIMEOUT)_MS) = ([\d_]+);/g,
         ),
       ].map((match) => [match[1], match[2]]),
-      fetch:
-        /const answers = async \(\s*base: string,\s*timeoutMs: number,?\s*\): Promise<boolean> => \{[\s\S]*?fetch\([\s\S]*?\{\s*signal: AbortSignal\.timeout\(timeoutMs\),?\s*\}\s*,?\s*\);/.test(
+      fetchCalls: fetchCallContracts(
+        "packages/playground/scripts/capture-smoke.ts",
+        playgroundCaptureSmoke,
+      ),
+      answersSignature:
+        /const answers = async \(\s*base: string,\s*timeoutMs: number,?\s*\): Promise<boolean>/.test(
           answersSource,
         ),
       reuse: ensureDevServerSource.includes(
@@ -903,7 +963,7 @@ export const test_workspace_public_contracts = (): void => {
       ),
       delay:
         /const delay = Math\.min\(\s*DEV_SERVER_POLL_INTERVAL_MS,\s*deadline - Date\.now\(\),?\s*\);\s*if \(delay > 0\)\s*await new Promise\(\(resolve\) => \{\s*setTimeout\(resolve, delay\);/.test(
-          ensureDevServerSource,
+          readinessLoopSource,
         ),
       deadline: ensureDevServerSource.includes(
         "const deadline = Date.now() + DEV_SERVER_READY_TIMEOUT_MS;",
@@ -915,7 +975,14 @@ export const test_workspace_public_contracts = (): void => {
         ["DEV_SERVER_PROBE_TIMEOUT_MS", "2_000"],
         ["DEV_SERVER_READY_TIMEOUT_MS", "30_000"],
       ],
-      fetch: true,
+      fetchCalls: [
+        {
+          argumentCount: 2,
+          options: ["signal"],
+          signal: "AbortSignal.timeout(timeoutMs)",
+        },
+      ],
+      answersSignature: true,
       reuse: true,
       loop: true,
       delay: true,
