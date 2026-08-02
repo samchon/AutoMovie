@@ -998,6 +998,7 @@ const renderRasterArgumentContract = (
   source: string,
 ): {
   helper: {
+    bodies: string[][];
     count: number;
     guards: Array<{
       condition: string;
@@ -1033,6 +1034,7 @@ const renderRasterArgumentContract = (
   let positiveInteger = 0;
   let directReturns = 0;
   const dimensions: Array<[string, string]> = [];
+  const helperBodies: string[][] = [];
   const guards: Array<{ condition: string; error: string | null }> = [];
   const parameters: string[][] = [];
   const parsedValues: string[] = [];
@@ -1054,6 +1056,7 @@ const renderRasterArgumentContract = (
       const body = declaration.initializer.body;
       if (declaration.name.text === "positiveEvenInteger") {
         ++helperCount;
+        helperBodies.push(body.statements.map((action) => compact(action)));
         parameters.push(
           declaration.initializer.parameters.map((parameter) =>
             compact(parameter.name),
@@ -1128,6 +1131,7 @@ const renderRasterArgumentContract = (
   }
   return {
     helper: {
+      bodies: helperBodies,
       count: helperCount,
       guards,
       parameters,
@@ -2317,6 +2321,13 @@ export const test_workspace_public_contracts = (): void => {
       file,
       contract: {
         helper: {
+          bodies: [
+            [
+              "constparsed=positiveNumber(value,fallback,label);",
+              "if(!Number.isInteger(parsed)||parsed%2!==0)thrownewError(`${label}mustbeapositiveeveninteger`);",
+              "returnparsed;",
+            ],
+          ],
           count: 1,
           guards: [
             {
