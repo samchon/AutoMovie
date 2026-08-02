@@ -8021,7 +8021,11 @@ export const test_cli_scaffold = async (): Promise<void> => {
     let nonemptyBaseSuccessorRejected = false;
     try {
       nonemptyBaseSuccessorRejected = throws(() =>
-        writeFiles(nonemptySuccessorBase, { "owned.txt": "scaffold bytes" }),
+        writeFiles(
+          nonemptySuccessorBase,
+          { "owned.txt": "scaffold bytes" },
+          { force: true },
+        ),
       );
     } finally {
       mutableFs.mkdirSync = nativeMkdir;
