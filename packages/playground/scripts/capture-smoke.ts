@@ -7,6 +7,7 @@ import { chromium } from "playwright-core";
 import { PNG } from "pngjs";
 
 import { DEFAULT_CHROME_EXECUTABLE } from "./chromeExecutable";
+import { preserveCleanupFailure } from "./preserveCleanupFailure";
 
 const DEFAULT_BASE = process.env.BASE ?? "http://127.0.0.1:5173";
 const WIDTH = 640;
@@ -84,12 +85,14 @@ export const main = async (
   const route = `${base.replace(/\/+$/, "")}/stickman.html?char=human&clip=walk&az=80&cap=1&w=${WIDTH}&h=${HEIGHT}`;
 
   const server = await ensureDevServer(base);
+  let serverFailure: { error: unknown } | undefined;
   try {
     const runs: Array<Map<string, Uint8Array>> = [];
     const browser = await chromium.launch({
       executablePath: chrome,
       headless: true,
     });
+    let browserFailure: { error: unknown } | undefined;
     try {
       for (let run = 0; run < 2; ++run) {
         const page = await browser.newPage({
@@ -105,12 +108,30 @@ export const main = async (
             frames.set(path.basename(file), bytes);
           },
         });
-        await session.captureFrame(0, 0, "smoke");
-        await session.close();
-        runs.push(frames);
+        let sessionFailure: { error: unknown } | undefined;
+        try {
+          await session.captureFrame(0, 0, "smoke");
+          runs.push(frames);
+        } catch (error) {
+          sessionFailure = { error };
+          throw error;
+        } finally {
+          await preserveCleanupFailure(
+            sessionFailure,
+            "capture smoke session",
+            () => session.close(),
+          );
+        }
       }
+    } catch (error) {
+      browserFailure = { error };
+      throw error;
     } finally {
-      await browser.close();
+      await preserveCleanupFailure(
+        browserFailure,
+        "capture smoke browser",
+        () => browser.close(),
+      );
     }
 
     const checks: Record<string, boolean> = {};
@@ -182,8 +203,15 @@ export const main = async (
       throw new Error(
         `capture smoke failed: ${failed.map(([name]) => name).join("; ")}; observations=${JSON.stringify(observations)}`,
       );
+  } catch (error) {
+    serverFailure = { error };
+    throw error;
   } finally {
-    server.close();
+    await preserveCleanupFailure(
+      serverFailure,
+      "capture smoke dev server",
+      () => server.close(),
+    );
   }
 };
 

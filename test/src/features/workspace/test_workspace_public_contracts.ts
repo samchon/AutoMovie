@@ -1388,6 +1388,174 @@ const renderCleanupFailureContract = (
   return { imports, lifecycles };
 };
 
+/** Inspect the capture smoke's nested server, browser, and session fences. */
+const captureSmokeCleanupContract = (
+  source: string,
+): {
+  imports: number;
+  lifecycles: Record<
+    "browser" | "server" | "session",
+    {
+      catchActions: string[];
+      catchParameter: string | null;
+      finallyActions: string[];
+      tryActions: string[];
+    } | null
+  >;
+  loop: {
+    bodyActions: string[];
+    condition: string | null;
+    count: number;
+    incrementor: string | null;
+    initializer: string | null;
+  };
+  mainCount: number;
+  resources: Record<
+    | "browser"
+    | "browserFailure"
+    | "frames"
+    | "runs"
+    | "server"
+    | "serverFailure"
+    | "session"
+    | "sessionFailure",
+    { count: number; initializer: string | null }
+  >;
+} => {
+  const parsed = ts.createSourceFile(
+    "packages/playground/scripts/capture-smoke.ts",
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TS,
+  );
+  const compact = (node: ts.Node): string =>
+    node.getText(parsed).replace(/\s+/g, "");
+  const imports = parsed.statements.filter((statement) => {
+    if (
+      ts.isImportDeclaration(statement) === false ||
+      compact(statement.moduleSpecifier) !== '"./preserveCleanupFailure"'
+    )
+      return false;
+    const bindings = statement.importClause?.namedBindings;
+    return (
+      bindings !== undefined &&
+      ts.isNamedImports(bindings) &&
+      bindings.elements.length === 1 &&
+      bindings.elements[0]!.name.text === "preserveCleanupFailure"
+    );
+  }).length;
+  const mains: ts.Block[] = [];
+  for (const statement of parsed.statements) {
+    if (ts.isVariableStatement(statement) === false) continue;
+    for (const declaration of statement.declarationList.declarations)
+      if (
+        ts.isIdentifier(declaration.name) &&
+        declaration.name.text === "main" &&
+        declaration.initializer !== undefined &&
+        ts.isArrowFunction(declaration.initializer) &&
+        ts.isBlock(declaration.initializer.body)
+      )
+        mains.push(declaration.initializer.body);
+  }
+  const main = mains.length === 1 ? mains[0]! : undefined;
+  const directTries = (statements: ts.NodeArray<ts.Statement> | undefined) =>
+    statements?.filter(ts.isTryStatement) ?? [];
+  const serverTries = directTries(main?.statements);
+  const server = serverTries.length === 1 ? serverTries[0]! : undefined;
+  const browserTries = directTries(server?.tryBlock.statements);
+  const browser = browserTries.length === 1 ? browserTries[0]! : undefined;
+  const loops = browser?.tryBlock.statements.filter(ts.isForStatement) ?? [];
+  const loop = loops.length === 1 ? loops[0]! : undefined;
+  const loopBody =
+    loop !== undefined && ts.isBlock(loop.statement)
+      ? loop.statement.statements
+      : undefined;
+  const sessionTries = directTries(loopBody);
+  const session = sessionTries.length === 1 ? sessionTries[0]! : undefined;
+  const action = (statement: ts.Statement): string => {
+    if (
+      ts.isVariableStatement(statement) &&
+      statement.declarationList.declarations.length === 1
+    ) {
+      const declaration = statement.declarationList.declarations[0]!;
+      if (ts.isIdentifier(declaration.name)) return declaration.name.text;
+    }
+    if (ts.isTryStatement(statement)) return "try";
+    if (ts.isForStatement(statement))
+      return `for(${statement.initializer === undefined ? "" : compact(statement.initializer)};${statement.condition === undefined ? "" : compact(statement.condition)};${statement.incrementor === undefined ? "" : compact(statement.incrementor)})`;
+    return compact(statement);
+  };
+  const lifecycle = (
+    statement: ts.TryStatement | undefined,
+  ): {
+    catchActions: string[];
+    catchParameter: string | null;
+    finallyActions: string[];
+    tryActions: string[];
+  } | null =>
+    statement?.catchClause === undefined || statement.finallyBlock === undefined
+      ? null
+      : {
+          catchActions: statement.catchClause.block.statements.map(compact),
+          catchParameter:
+            statement.catchClause.variableDeclaration === undefined
+              ? null
+              : compact(statement.catchClause.variableDeclaration),
+          finallyActions: statement.finallyBlock.statements.map(compact),
+          tryActions: statement.tryBlock.statements.map(action),
+        };
+  const binding = (
+    statements: ts.NodeArray<ts.Statement> | undefined,
+    name: string,
+  ): { count: number; initializer: string | null } => {
+    const declarations = (statements ?? []).flatMap((statement) =>
+      ts.isVariableStatement(statement)
+        ? [...statement.declarationList.declarations].filter(
+            (declaration) =>
+              ts.isIdentifier(declaration.name) &&
+              declaration.name.text === name,
+          )
+        : [],
+    );
+    return {
+      count: declarations.length,
+      initializer:
+        declarations.length === 1 && declarations[0]!.initializer !== undefined
+          ? compact(declarations[0]!.initializer!)
+          : null,
+    };
+  };
+  return {
+    imports,
+    lifecycles: {
+      browser: lifecycle(browser),
+      server: lifecycle(server),
+      session: lifecycle(session),
+    },
+    loop: {
+      bodyActions: loopBody?.map(action) ?? [],
+      condition: loop?.condition === undefined ? null : compact(loop.condition),
+      count: loops.length,
+      incrementor:
+        loop?.incrementor === undefined ? null : compact(loop.incrementor),
+      initializer:
+        loop?.initializer === undefined ? null : compact(loop.initializer),
+    },
+    mainCount: mains.length,
+    resources: {
+      browser: binding(server?.tryBlock.statements, "browser"),
+      browserFailure: binding(server?.tryBlock.statements, "browserFailure"),
+      frames: binding(loopBody, "frames"),
+      runs: binding(server?.tryBlock.statements, "runs"),
+      server: binding(main?.statements, "server"),
+      serverFailure: binding(main?.statements, "serverFailure"),
+      session: binding(loopBody, "session"),
+      sessionFailure: binding(loopBody, "sessionFailure"),
+    },
+  };
+};
+
 /** Inspect one render playground's browser, page and session cleanup fences. */
 const renderBrowserLifecycleContract = (
   file: string,
@@ -1830,6 +1998,8 @@ const unmentionedModules = (pkg: string, document: string): string[] =>
  *     fails, without weakening the later page/session ownership handoff.
  * 23. Render session, page, browser, and encoder cleanup retain an earlier
  *     operation failure in deterministic primary-first order.
+ * 24. Capture smoke session, browser, and server cleanup use the same failure
+ *     precedence without moving successful frames outside their session fence.
  */
 export const test_workspace_public_contracts = (): void => {
   const rootReadme = readPackageFile("README.md");
@@ -3135,6 +3305,97 @@ export const test_workspace_public_contracts = (): void => {
           },
         };
       }),
+    },
+  );
+  TestValidator.equals(
+    "capture smoke preserves primary failures during nested cleanup",
+    captureSmokeCleanupContract(playgroundCaptureSmoke),
+    {
+      imports: 1,
+      lifecycles: {
+        browser: {
+          catchActions: ["browserFailure={error};", "throwerror;"],
+          catchParameter: "error",
+          finallyActions: [
+            'awaitpreserveCleanupFailure(browserFailure,"capturesmokebrowser",()=>browser.close(),);',
+          ],
+          tryActions: ["for(letrun=0;run<2;++run)"],
+        },
+        server: {
+          catchActions: ["serverFailure={error};", "throwerror;"],
+          catchParameter: "error",
+          finallyActions: [
+            'awaitpreserveCleanupFailure(serverFailure,"capturesmokedevserver",()=>server.close(),);',
+          ],
+          tryActions: [
+            "runs",
+            "browser",
+            "browserFailure",
+            "try",
+            "checks",
+            "names",
+            "for(constnameofnames)checks[`deterministic${name}`]=equalBytes(requireCapturedFrame(runs,0,name),requireCapturedFrame(runs,1,name),);",
+            "mask",
+            "pose",
+            "total",
+            "subject",
+            "subjectKey",
+            "maskSubjectPixels",
+            "maskBlackPixels",
+            "poseWhitePixels",
+            "poseMaskPalettePixels",
+            "observations",
+            'checks["masksubjectcolorcovers>=0.3%oftheframe"]=observations.maskSubjectFraction>=0.003;',
+            'checks["maskbackgroundisdominantblack"]=observations.maskBlackFraction>=0.25;',
+            'checks["poseskeletondrawswhitelines(0.02%..20%)"]=observations.poseWhiteFraction>=0.0002&&observations.poseWhiteFraction<=0.2;',
+            'checks["posecarriesnomaskpalette"]=observations.poseMaskPalettePixels===0;',
+            'checks["beautydiffersfrommask(passesactuallyswitch)"]=!equalBytes(requireCapturedFrame(runs,0,"frame_00000.png"),requireCapturedFrame(runs,0,"frame_00000.mask.png"),);',
+            "failed",
+            'console.log(JSON.stringify({route,server:server.spawned?"spawned":"reused",checks,observations,},null,2,),);',
+            'if(failed.length>0)thrownewError(`capturesmokefailed:${failed.map(([name])=>name).join(";")};observations=${JSON.stringify(observations)}`,);',
+          ],
+        },
+        session: {
+          catchActions: ["sessionFailure={error};", "throwerror;"],
+          catchParameter: "error",
+          finallyActions: [
+            'awaitpreserveCleanupFailure(sessionFailure,"capturesmokesession",()=>session.close(),);',
+          ],
+          tryActions: [
+            'awaitsession.captureFrame(0,0,"smoke");',
+            "runs.push(frames);",
+          ],
+        },
+      },
+      loop: {
+        bodyActions: ["page", "frames", "session", "sessionFailure", "try"],
+        condition: "run<2",
+        count: 1,
+        incrementor: "++run",
+        initializer: "letrun=0",
+      },
+      mainCount: 1,
+      resources: {
+        browser: {
+          count: 1,
+          initializer:
+            "awaitchromium.launch({executablePath:chrome,headless:true,})",
+        },
+        browserFailure: { count: 1, initializer: null },
+        frames: { count: 1, initializer: "newMap<string,Uint8Array>()" },
+        runs: {
+          count: 1,
+          initializer: "[]",
+        },
+        server: { count: 1, initializer: "awaitensureDevServer(base)" },
+        serverFailure: { count: 1, initializer: null },
+        session: {
+          count: 1,
+          initializer:
+            'awaitcreateHeadlessCaptureAdapter({page,url:route,passes:["beauty","mask","pose"],writeFrame:async(file,bytes)=>{frames.set(path.basename(file),bytes);},})',
+        },
+        sessionFailure: { count: 1, initializer: null },
+      },
     },
   );
   const canonicalAssetViews: Array<Array<[string, string]>> = [
