@@ -531,8 +531,8 @@ for (const frame of frames) {
   const png = PNG.sync.read(bytes);
   assert(
     \`starter-png-size:\${frame.shot}:\${frame.pass}\`,
-    png.width === 16 && png.height === 16,
-    \`expected 16x16 packaged-short raster, got \${png.width}x\${png.height}\`,
+    png.width === 160 && png.height === 90,
+    \`expected 160x90 packaged-short raster, got \${png.width}x\${png.height}\`,
   );
   assert(
     \`starter-png-visible-variance:\${frame.shot}:\${frame.pass}\`,
@@ -705,8 +705,8 @@ if (phase === "review") {
             captured.reviewTarget?.kind === "asset" &&
             captured.reviewTarget.id === entry.target.id &&
             captured.receipt !== null &&
-            captured.frame?.width === 16 &&
-            captured.frame.height === 16 &&
+            captured.frame?.width === 160 &&
+            captured.frame.height === 90 &&
             captured.diagnostics.every((item) => item.category !== "error"),
           JSON.stringify(captured.diagnostics),
         );
@@ -793,14 +793,18 @@ if (phase === "review") {
         ),
       ) &&
       receiptByDeliverable.get("starter-preview")?.probe?.kind === "png" &&
-      receiptByDeliverable.get("starter-preview")?.probe?.width === 16 &&
+      receiptByDeliverable.get("starter-preview")?.probe?.width === 160 &&
+      receiptByDeliverable.get("starter-preview")?.probe?.height === 90 &&
       receiptByDeliverable.get("starter-feature")?.probe?.kind === "video" &&
       receiptByDeliverable.get("starter-feature")?.probe?.frameCount === 23 &&
-      receiptByDeliverable.get("starter-feature")?.probe?.width === 16 &&
+      receiptByDeliverable.get("starter-feature")?.probe?.width === 160 &&
+      receiptByDeliverable.get("starter-feature")?.probe?.height === 90 &&
       receiptByDeliverable.get("starter-pose-guide")?.probe?.kind ===
         "video" &&
       receiptByDeliverable.get("starter-pose-guide")?.probe?.frameCount ===
         23 &&
+      receiptByDeliverable.get("starter-pose-guide")?.probe?.width === 160 &&
+      receiptByDeliverable.get("starter-pose-guide")?.probe?.height === 90 &&
       receiptByDeliverable.get("starter-captions")?.probe?.kind ===
         "webvtt" &&
       receiptByDeliverable.get("starter-captions")?.probe?.cueCount === 1 &&
@@ -1049,8 +1053,8 @@ try {
   );
   starterProduction.frameFormat = {
     ...starterProduction.frameFormat,
-    width: 16,
-    height: 16,
+    width: 160,
+    height: 90,
     fps: 2,
   };
   writeFileSync(
