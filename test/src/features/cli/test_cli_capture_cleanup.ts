@@ -1,6 +1,7 @@
 import { renderScaffold } from "@automovie/cli";
 import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
+import { createRequire } from "node:module";
 import path from "node:path";
 import ts from "typescript-compiler";
 
@@ -321,11 +322,153 @@ const cleanupLifecycle = (
   };
 };
 
+interface IEncoderCleanupFunctionContract {
+  catches: string[][];
+  cleanupCalls: Array<{
+    call: string;
+    protected: boolean;
+  }>;
+  preserveCalls: string[];
+}
+
+/** Inspect encoder release ownership in the two scaffold render encoders. */
+const encoderCleanupFunctionContract = (
+  source: ts.SourceFile,
+  owner: "encodePngFrames" | "encodeProductionOpus",
+): IEncoderCleanupFunctionContract[] =>
+  (namedArrows(source).get(owner) ?? []).map((arrow) => {
+    const catches: string[][] = [];
+    const cleanupCalls: IEncoderCleanupFunctionContract["cleanupCalls"] = [];
+    const preserveCalls: string[] = [];
+    const protectedByPolicy = (node: ts.Node): boolean => {
+      let cursor: ts.Node | undefined = node.parent;
+      while (cursor !== undefined && cursor !== arrow.body) {
+        if (
+          ts.isCallExpression(cursor) &&
+          ts.isIdentifier(cursor.expression) &&
+          cursor.expression.text === "preserveProductionEncoderCleanup"
+        )
+          return true;
+        cursor = cursor.parent;
+      }
+      return false;
+    };
+    const visit = (node: ts.Node): void => {
+      if (ts.isCatchClause(node))
+        catches.push(
+          node.block.statements.map((statement) => compact(statement, source)),
+        );
+      if (
+        ts.isCallExpression(node) &&
+        ts.isIdentifier(node.expression) &&
+        node.expression.text === "preserveProductionEncoderCleanup"
+      )
+        preserveCalls.push(compact(node, source));
+      if (
+        ts.isCallExpression(node) &&
+        ts.isPropertyAccessExpression(node.expression) &&
+        ["delete", "finalize", "free"].includes(node.expression.name.text)
+      )
+        cleanupCalls.push({
+          call: compact(node, source),
+          protected: protectedByPolicy(node),
+        });
+      ts.forEachChild(node, visit);
+    };
+    visit(arrow.body);
+    return { catches, cleanupCalls, preserveCalls };
+  });
+
+const aggregateContainsExactly = (
+  error: unknown,
+  expected: readonly unknown[],
+): boolean =>
+  error instanceof AggregateError &&
+  error.errors.length === expected.length &&
+  expected.every((failure, index) => error.errors[index] === failure);
+
+/** Execute the shipped encoder cleanup policy without loading the renderer. */
+const exerciseProductionEncoderCleanup = (): void => {
+  const helper = createRequire(__filename)(
+    path.join(
+      ROOT,
+      "packages",
+      "cli",
+      "scaffold",
+      "scripts",
+      "preserveProductionEncoderCleanup.cjs",
+    ),
+  ) as {
+    preserveProductionEncoderCleanup: (
+      failure: { error: unknown } | undefined,
+      resources: readonly { resource: string; cleanup: () => unknown }[],
+    ) => void;
+  };
+  const primaryFailure = new Error("encoder primary failure");
+  const firstCleanupFailure = new Error("first encoder cleanup failure");
+  const secondCleanupFailure = new Error("second encoder cleanup failure");
+  const capture = (
+    failure: { error: unknown } | undefined,
+    cleanupFailures: readonly Error[],
+  ): { caught: unknown; order: number[] } => {
+    const order: number[] = [];
+    let caught: unknown;
+    try {
+      helper.preserveProductionEncoderCleanup(
+        failure,
+        [0, 1].map((index) => ({
+          resource: `encoder-${index}`,
+          cleanup: (): void => {
+            order.push(index);
+            const cleanupFailure = cleanupFailures[index];
+            if (cleanupFailure !== undefined) throw cleanupFailure;
+          },
+        })),
+      );
+    } catch (error) {
+      caught = error;
+    }
+    return { caught, order };
+  };
+  const success = capture(undefined, []);
+  const primaryOnly = capture({ error: primaryFailure }, []);
+  const standaloneSingle = capture(undefined, [firstCleanupFailure]);
+  const standaloneMultiple = capture(undefined, [
+    firstCleanupFailure,
+    secondCleanupFailure,
+  ]);
+  const combined = capture({ error: primaryFailure }, [
+    firstCleanupFailure,
+    secondCleanupFailure,
+  ]);
+  TestValidator.predicate(
+    "scaffold encoder cleanup preserves every exact failure in resource order",
+    success.caught === undefined &&
+      success.order.join(",") === "0,1" &&
+      primaryOnly.caught === primaryFailure &&
+      primaryOnly.order.join(",") === "0,1" &&
+      standaloneSingle.caught === firstCleanupFailure &&
+      standaloneSingle.order.join(",") === "0,1" &&
+      aggregateContainsExactly(standaloneMultiple.caught, [
+        firstCleanupFailure,
+        secondCleanupFailure,
+      ]) &&
+      standaloneMultiple.order.join(",") === "0,1" &&
+      aggregateContainsExactly(combined.caught, [
+        primaryFailure,
+        firstCleanupFailure,
+        secondCleanupFailure,
+      ]) &&
+      combined.order.join(",") === "0,1",
+  );
+};
+
 /**
  * Production capture cleanup remains observable without replacing an earlier
  * session, page, command, or packaged-review failure.
  */
 export const test_cli_capture_cleanup = (): void => {
+  exerciseProductionEncoderCleanup();
   const files = renderScaffold({ name: "cleanup-film" });
   const capture = files["scripts/capture.ts"]!;
   const preview = ts.createSourceFile(
@@ -341,6 +484,13 @@ export const test_cli_capture_cleanup = (): void => {
     ts.ScriptTarget.Latest,
     true,
     ts.ScriptKind.TS,
+  );
+  const encoderCleanupPolicy = ts.createSourceFile(
+    "scripts/preserveProductionEncoderCleanup.cjs",
+    files["scripts/preserveProductionEncoderCleanup.cjs"]!,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.JS,
   );
   const tgz = ts.createSourceFile(
     "internals/e2e-tgz.mjs",
@@ -516,6 +666,63 @@ export const test_cli_capture_cleanup = (): void => {
     },
   );
   TestValidator.equals(
+    "render encoders delegate every release to the shared failure policy",
+    {
+      h264: encoderCleanupFunctionContract(render, "encodePngFrames"),
+      opus: encoderCleanupFunctionContract(render, "encodeProductionOpus"),
+      policy: {
+        classes: encoderCleanupPolicy.statements.flatMap((statement) =>
+          ts.isClassDeclaration(statement) &&
+          statement.name?.text === "ProductionEncoderCleanupError"
+            ? [
+                statement.heritageClauses
+                  ?.flatMap((clause) =>
+                    clause.types.map((type) =>
+                      compact(type, encoderCleanupPolicy),
+                    ),
+                  )
+                  .join(",") ?? "",
+              ]
+            : [],
+        ),
+        functions:
+          namedArrows(encoderCleanupPolicy)
+            .get("preserveProductionEncoderCleanup")
+            ?.map((arrow) => compact(arrow.body, encoderCleanupPolicy)) ?? [],
+      },
+    },
+    {
+      h264: [
+        {
+          catches: [["failure={error};"]],
+          cleanupCalls: [
+            { call: "encoder.finalize()", protected: false },
+            { call: "encoder.finalize()", protected: true },
+            { call: "encoder.delete()", protected: true },
+          ],
+          preserveCalls: [
+            'preserveProductionEncoderCleanup(failure,[...(initialized&&finalizeAttempted===false?[{resource:"H.264encoderfinalizer",cleanup:():void=>{finalizeAttempted=true;encoder.finalize();},},]:[]),{resource:"H.264encoder",cleanup:():void=>encoder.delete()},])',
+          ],
+        },
+      ],
+      opus: [
+        {
+          catches: [["failure={error};"]],
+          cleanupCalls: [{ call: "encoder.free()", protected: true }],
+          preserveCalls: [
+            'preserveProductionEncoderCleanup(failure,[{resource:"Opusencoder",cleanup:():void=>encoder.free()},])',
+          ],
+        },
+      ],
+      policy: {
+        classes: ["AggregateError"],
+        functions: [
+          '{constcleanupFailures=[];for(constresourceofresources)try{resource.cleanup();}catch(error){cleanupFailures.push({error,resource:resource.resource});}if(cleanupFailures.length===0){if(failure!==undefined)throwfailure.error;return;}if(failure===undefined&&cleanupFailures.length===1)throwcleanupFailures[0].error;thrownewProductionEncoderCleanupError([...(failure===undefined?[]:[failure.error]),...cleanupFailures.map((entry)=>entry.error),],`Productionencodercleanupfailed${failure===undefined?"":"aftertheoperationfailed"}:${cleanupFailures.map((entry)=>entry.resource).join(",")}.`,);}',
+        ],
+      },
+    },
+  );
+  TestValidator.equals(
     "capture entry points retain their primary failure through close",
     {
       packaged:
@@ -636,6 +843,7 @@ export const test_cli_capture_cleanup = (): void => {
           "planPath",
           "action",
           "require",
+          "preserveProductionEncoderCleanup",
           "resolveImportEntry",
           "heldChunkLocks",
           "heldChunkAttempts",

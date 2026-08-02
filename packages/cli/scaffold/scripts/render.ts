@@ -175,6 +175,14 @@ const stateRoot = path.join(renderJobRoot, renderTier.kind);
 const planPath = path.join(stateRoot, "plan.json");
 const action = process.argv[2] ?? "all";
 const require = createRequire(import.meta.url);
+const preserveProductionEncoderCleanup = (
+  require("./preserveProductionEncoderCleanup.cjs") as {
+    preserveProductionEncoderCleanup: (
+      failure: { error: unknown } | undefined,
+      resources: readonly { resource: string; cleanup: () => unknown }[],
+    ) => void;
+  }
+).preserveProductionEncoderCleanup;
 const resolveImportEntry = (packageName: string): string =>
   fileURLToPath(import.meta.resolve(packageName));
 const heldChunkLocks = new Map<
@@ -1549,21 +1557,20 @@ const encodePngFrames = async (
   } catch (error) {
     failure = { error };
   }
-  let cleanupFailure: { error: unknown } | undefined;
-  if (initialized && finalizeAttempted === false)
-    try {
-      finalizeAttempted = true;
-      encoder.finalize();
-    } catch (error) {
-      cleanupFailure = { error };
-    }
-  try {
-    encoder.delete();
-  } catch (error) {
-    cleanupFailure ??= { error };
-  }
-  if (failure !== undefined) throw failure.error;
-  if (cleanupFailure !== undefined) throw cleanupFailure.error;
+  preserveProductionEncoderCleanup(failure, [
+    ...(initialized && finalizeAttempted === false
+      ? [
+          {
+            resource: "H.264 encoder finalizer",
+            cleanup: (): void => {
+              finalizeAttempted = true;
+              encoder.finalize();
+            },
+          },
+        ]
+      : []),
+    { resource: "H.264 encoder", cleanup: (): void => encoder.delete() },
+  ]);
   return output;
 };
 
@@ -2026,37 +2033,36 @@ const encodeProductionOpus = async (pcm: Float32Array): Promise<Uint8Array> => {
     complexity: 10,
     vbr: false,
   });
-  if (
-    encoder.frameSize !== 960 ||
-    encoder.channels !== 2 ||
-    encoder.sampleRate !== 48_000
-  ) {
-    encoder.free();
-    throw new Error(
-      "Pinned Opus runtime no longer exposes the required 48 kHz stereo 20 ms profile.",
-    );
-  }
-  const primingSamples = encoder.getLookahead();
-  if (
-    Number.isSafeInteger(primingSamples) === false ||
-    primingSamples < 0 ||
-    primingSamples >= encoder.frameSize
-  ) {
-    encoder.free();
-    throw new Error(
-      "Pinned Opus runtime returned an invalid encoder lookahead.",
-    );
-  }
-  const sampleFrames = pcm.length / 2;
-  const codedSampleFrames =
-    Math.ceil((sampleFrames + primingSamples) / encoder.frameSize) *
-    encoder.frameSize;
+  let primingSamples = 0;
+  let codedSampleFrames = 0;
   const packets: Array<{
     bytes: Uint8Array<ArrayBuffer>;
     duration: number;
     dts: number;
   }> = [];
+  let failure: { error: unknown } | undefined;
   try {
+    if (
+      encoder.frameSize !== 960 ||
+      encoder.channels !== 2 ||
+      encoder.sampleRate !== 48_000
+    )
+      throw new Error(
+        "Pinned Opus runtime no longer exposes the required 48 kHz stereo 20 ms profile.",
+      );
+    primingSamples = encoder.getLookahead();
+    if (
+      Number.isSafeInteger(primingSamples) === false ||
+      primingSamples < 0 ||
+      primingSamples >= encoder.frameSize
+    )
+      throw new Error(
+        "Pinned Opus runtime returned an invalid encoder lookahead.",
+      );
+    const sampleFrames = pcm.length / 2;
+    codedSampleFrames =
+      Math.ceil((sampleFrames + primingSamples) / encoder.frameSize) *
+      encoder.frameSize;
     for (let dts = 0; dts < codedSampleFrames; dts += encoder.frameSize) {
       const frame = new Float32Array(encoder.frameSize * encoder.channels);
       frame.set(
@@ -2071,9 +2077,12 @@ const encodeProductionOpus = async (pcm: Float32Array): Promise<Uint8Array> => {
         dts,
       });
     }
-  } finally {
-    encoder.free();
+  } catch (error) {
+    failure = { error };
   }
+  preserveProductionEncoderCleanup(failure, [
+    { resource: "Opus encoder", cleanup: (): void => encoder.free() },
+  ]);
   const description = new BoxParser.box.dOps();
   description.Version = 0;
   description.OutputChannelCount = 2;

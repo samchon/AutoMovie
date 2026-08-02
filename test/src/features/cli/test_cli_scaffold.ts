@@ -1580,6 +1580,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       "scripts/generatedShotPlugin.ts",
       "scripts/lint.ts",
       "scripts/mcp.ts",
+      "scripts/preserveProductionEncoderCleanup.cjs",
       "scripts/preview.ts",
       "scripts/publishProxyBundle.ts",
       "scripts/render.ts",
