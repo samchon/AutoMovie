@@ -105,6 +105,9 @@ const unmentionedModules = (pkg: string, document: string): string[] =>
  *     removed compatibility servers and MCP-owned coding operations out.
  * 13. The native render loader stays inside the 100% coverage gate through its
  *     render source root, exact file include, and `.cjs` extension token.
+ * 14. The packaged E2E process wrapper preserves stdout and stderr and names
+ *     timeout, spawn-error, signal, missing-status, and exit-status failures,
+ *     with every spawned process routed through that shared evidence.
  */
 export const test_workspace_public_contracts = (): void => {
   const rootReadme = readPackageFile("README.md");
@@ -118,14 +121,41 @@ export const test_workspace_public_contracts = (): void => {
     "AutoMovieApplication.ts",
   );
   const tgzE2e = readPackageFile("internals", "e2e-tgz.mjs");
-  const commandTerminationOffset = tgzE2e.indexOf("const commandTermination");
-  const commandTerminationSource =
-    commandTerminationOffset < 0
+  const sourceSection = (start: string, end: string): string => {
+    const startOffset = tgzE2e.indexOf(start);
+    const endOffset = tgzE2e.indexOf(end, startOffset + start.length);
+    return startOffset < 0 || endOffset < 0
       ? ""
-      : tgzE2e.slice(
-          commandTerminationOffset,
-          tgzE2e.indexOf("\nconst run =", commandTerminationOffset),
-        );
+      : tgzE2e.slice(startOffset, endOffset);
+  };
+  const writeCommandOutputSource = sourceSection(
+    "const writeCommandOutput =",
+    "\nconst commandTermination =",
+  );
+  const commandTerminationSource = sourceSection(
+    "const commandTermination =",
+    "\nconst commandSucceeded =",
+  );
+  const failCommandSource = sourceSection(
+    "const failCommand =",
+    "\nconst run =",
+  );
+  const runSource = sourceSection(
+    "const run =",
+    "\nconst runExpectedFailure =",
+  );
+  const expectedFailureSource = sourceSection(
+    "const runExpectedFailure =",
+    "\nconst runJson =",
+  );
+  const runJsonSource = sourceSection(
+    "const runJson =",
+    "\nconst CLIENT_SOURCE =",
+  );
+  const clientSpawnSource = sourceSection(
+    "const clientTimeout =",
+    "\n  // 5. Generate",
+  );
   type PackageMetadata = {
     description: string;
     keywords: string[];
@@ -397,34 +427,152 @@ export const test_workspace_public_contracts = (): void => {
       ) ?? [],
     [],
   );
-  TestValidator.predicate(
-    "packaged E2E names timeout and termination reasons",
-    commandTerminationSource.includes('errorCode === "ETIMEDOUT"') &&
-      commandTerminationSource.includes("timed out after ${timeout} ms") &&
-      commandTerminationSource.includes('"failed to spawn"') &&
-      commandTerminationSource.includes('"terminated by signal"') &&
-      commandTerminationSource.includes("exited with status ${result.status}"),
+  TestValidator.equals(
+    "packaged E2E names every process termination reason",
+    {
+      timeout:
+        commandTerminationSource.match(
+          /errorCode === "ETIMEDOUT"\s*\?\s*(`[^`]+`)/,
+        )?.[1] ?? null,
+      spawnError:
+        commandTerminationSource.match(
+          /result\.error !== undefined\s*\?\s*("[^"]+")/,
+        )?.[1] ?? null,
+      signal:
+        commandTerminationSource.match(
+          /result\.signal !== null\s*\?\s*("[^"]+")/,
+        )?.[1] ?? null,
+      missingStatus:
+        commandTerminationSource.match(
+          /typeof result\.status !== "number"\s*\?\s*("[^"]+")/,
+        )?.[1] ?? null,
+      exitStatus:
+        commandTerminationSource.match(
+          /:\s*(`exited with status \$\{result\.status\}`)/,
+        )?.[1] ?? null,
+    },
+    {
+      timeout: "`timed out after ${timeout} ms`",
+      spawnError: '"failed to spawn"',
+      signal: '"terminated by signal"',
+      missingStatus: '"terminated without status"',
+      exitStatus: "`exited with status ${result.status}`",
+    },
   );
-  TestValidator.predicate(
-    "packaged E2E prints complete termination fields",
-    commandTerminationSource.includes("const commandSucceeded") &&
-      commandTerminationSource.includes("timeout=${timeout} ms") &&
-      commandTerminationSource.includes("status=${") &&
-      commandTerminationSource.includes("signal=${result.signal") &&
-      commandTerminationSource.includes("error=${errorCode}") &&
-      commandTerminationSource.includes("JSON.stringify(result.error.message)"),
+  TestValidator.equals(
+    "packaged E2E prints every process termination field",
+    {
+      timeout:
+        commandTerminationSource.match(/`timeout=\$\{timeout\} ms`/)?.[0] ??
+        null,
+      status:
+        commandTerminationSource.match(
+          /`status=\$\{typeof result\.status === "number" \? result\.status : "none"\}`/,
+        )?.[0] ?? null,
+      signal:
+        commandTerminationSource.match(
+          /`signal=\$\{result\.signal \?\? "none"\}`/,
+        )?.[0] ?? null,
+      error:
+        commandTerminationSource.match(/`error=\$\{errorCode\}`/)?.[0] ?? null,
+      message:
+        commandTerminationSource.match(
+          /`message=\$\{[\s\S]*?JSON\.stringify\(result\.error\.message\)[\s\S]*?\}`/,
+        )?.[0] ?? null,
+    },
+    {
+      timeout: "`timeout=${timeout} ms`",
+      status:
+        '`status=${typeof result.status === "number" ? result.status : "none"}`',
+      signal: '`signal=${result.signal ?? "none"}`',
+      error: "`error=${errorCode}`",
+      message:
+        '`message=${\n      result.error === undefined ? "none" : JSON.stringify(result.error.message)\n    }`',
+    },
   );
-  TestValidator.predicate(
-    "packaged E2E routes every spawn through shared failure evidence",
-    (tgzE2e.match(/\bspawnSync\(/g) ?? []).length ===
-      (tgzE2e.match(/\bfailCommand\(/g) ?? []).length - 1 &&
-      tgzE2e.includes('status ?? "signal"') === false,
+  TestValidator.equals(
+    "packaged E2E writes both captured streams before shared failure evidence",
+    {
+      streams: [
+        ...writeCommandOutputSource.matchAll(
+          /process\.stderr\.write\(result\.(stdout|stderr) \?\? ""\);/g,
+        ),
+      ].map((match) => match[1]),
+      failureWriters: [
+        ...failCommandSource.matchAll(/writeCommandOutput\((\w+)\);/g),
+      ].map((match) => match[1]),
+    },
+    {
+      streams: ["stdout", "stderr"],
+      failureWriters: ["result"],
+    },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
+    "packaged E2E routes every spawned process through shared failure evidence",
+    {
+      counts: {
+        spawned: (tgzE2e.match(/\bspawnSync\(/g) ?? []).length,
+        routed: (tgzE2e.match(/\bfailCommand\(/g) ?? []).length,
+      },
+      sites: [
+        {
+          site: "run",
+          spawned: runSource.match(/const (\w+) = spawnSync\(/)?.[1] ?? null,
+          routed:
+            runSource.match(/failCommand\(label, (\w+), timeout\)/)?.[1] ??
+            null,
+        },
+        {
+          site: "runExpectedFailure",
+          spawned:
+            expectedFailureSource.match(/const (\w+) = spawnSync\(/)?.[1] ??
+            null,
+          routed:
+            expectedFailureSource.match(
+              /failCommand\(\s*label,\s*(\w+),\s*timeout,/,
+            )?.[1] ?? null,
+        },
+        {
+          site: "runJson",
+          spawned:
+            runJsonSource.match(/const (\w+) = spawnSync\(/)?.[1] ?? null,
+          routed:
+            runJsonSource.match(/failCommand\(label, (\w+), timeout\)/)?.[1] ??
+            null,
+        },
+        {
+          site: "stdioClient",
+          spawned:
+            clientSpawnSource.match(/const (\w+) = spawnSync\(/)?.[1] ?? null,
+          routed:
+            clientSpawnSource.match(
+              /failCommand\(\s*"stdio client assertions",\s*(\w+),/,
+            )?.[1] ?? null,
+        },
+      ],
+      retiredFallbacks: tgzE2e.match(/status \?\? "signal"/g) ?? [],
+    },
+    {
+      counts: { spawned: 4, routed: 4 },
+      sites: [
+        { site: "run", spawned: "result", routed: "result" },
+        {
+          site: "runExpectedFailure",
+          spawned: "result",
+          routed: "result",
+        },
+        { site: "runJson", spawned: "result", routed: "result" },
+        { site: "stdioClient", spawned: "client", routed: "client" },
+      ],
+      retiredFallbacks: [],
+    },
+  );
+  TestValidator.equals(
     "packaged E2E preserves expected-failure output requirements",
-    tgzE2e.includes(
-      "expected a normal non-zero exit containing ${JSON.stringify(",
-    ),
+    tgzE2e.match(
+      /expected a normal non-zero exit containing \$\{JSON\.stringify\(/g,
+    ) ?? [],
+    ["expected a normal non-zero exit containing ${JSON.stringify("],
   );
   const mcpMethods = [
     ...mcpApplication.matchAll(
