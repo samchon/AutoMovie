@@ -4,8 +4,11 @@
 // package imports resolved from @automovie/playground.
 const esbuild = require("esbuild");
 const { randomUUID } = require("crypto");
-const fs = require("fs");
 const path = require("path");
+
+const {
+  preserveBundleCleanupFailure,
+} = require("./preserveBundleCleanupFailure.cjs");
 
 const bundlePath = path.join(
   __dirname,
@@ -13,6 +16,7 @@ const bundlePath = path.join(
 );
 
 (async () => {
+  let failure;
   try {
     await esbuild.build({
       entryPoints: [path.join(__dirname, "render-and-see.ts")],
@@ -23,8 +27,11 @@ const bundlePath = path.join(
       external: ["h264-mp4-encoder", "playwright-core", "pngjs"],
     });
     await require(bundlePath).main();
+  } catch (error) {
+    failure = { error };
+    throw error;
   } finally {
-    fs.rmSync(bundlePath, { force: true });
+    preserveBundleCleanupFailure(bundlePath, failure);
   }
 })().catch((error) => {
   console.error(error);

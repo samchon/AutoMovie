@@ -1,6 +1,8 @@
 import { compareCodeUnits } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
+import { createRequire } from "node:module";
+import os from "node:os";
 import path from "node:path";
 import ts from "typescript-compiler";
 
@@ -352,6 +354,7 @@ const launcherBundleContract = (
     initializer: string | null;
     writes: number;
   };
+  cleanupImports: number;
   cryptoImports: number;
   fixedBundlePaths: string[];
   lifecycles: Array<{
@@ -363,6 +366,7 @@ const launcherBundleContract = (
     tries: Array<{
       actions: string[];
       buildOutfiles: string[];
+      catchActions: string[];
       catchClause: boolean;
       finallyActions: string[];
       unsafeBuildOptions: string[];
@@ -382,6 +386,7 @@ const launcherBundleContract = (
   let bundleConstDeclarations = 0;
   let bundleDeclarations = 0;
   let bundleWrites = 0;
+  let cleanupImports = 0;
   let cryptoImports = 0;
   const fixedBundlePaths: string[] = [];
   const lifecycles: Array<{
@@ -393,6 +398,7 @@ const launcherBundleContract = (
     tries: Array<{
       actions: string[];
       buildOutfiles: string[];
+      catchActions: string[];
       catchClause: boolean;
       finallyActions: string[];
       unsafeBuildOptions: string[];
@@ -413,6 +419,21 @@ const launcherBundleContract = (
               ? null
               : squash(declaration.initializer);
         }
+        if (
+          constant &&
+          ts.isObjectBindingPattern(declaration.name) &&
+          declaration.name.elements.length === 1 &&
+          declaration.name.elements[0]?.propertyName === undefined &&
+          declaration.name.elements[0]?.dotDotDotToken === undefined &&
+          declaration.name.elements[0]?.initializer === undefined &&
+          ts.isIdentifier(declaration.name.elements[0]!.name) &&
+          declaration.name.elements[0]!.name.text ===
+            "preserveBundleCleanupFailure" &&
+          declaration.initializer !== undefined &&
+          squash(declaration.initializer) ===
+            'require("./preserveBundleCleanupFailure.cjs")'
+        )
+          ++cleanupImports;
         if (
           constant &&
           ts.isObjectBindingPattern(declaration.name) &&
@@ -564,6 +585,10 @@ const launcherBundleContract = (
         return {
           actions,
           buildOutfiles,
+          catchActions:
+            tryStatement.catchClause?.block.statements.map((action) =>
+              squash(action),
+            ) ?? [],
           catchClause: tryStatement.catchClause !== undefined,
           finallyActions:
             tryStatement.finallyBlock?.statements.map((action) =>
@@ -599,10 +624,83 @@ const launcherBundleContract = (
       initializer: bundleInitializer,
       writes: bundleWrites,
     },
+    cleanupImports,
     cryptoImports,
     fixedBundlePaths,
     lifecycles,
   };
+};
+
+const verifyLauncherBundleCleanup = (
+  cleanup: (
+    bundlePath: string,
+    failure: { error: unknown } | undefined,
+  ) => void,
+): void => {
+  const directory = fs.mkdtempSync(
+    path.join(os.tmpdir(), "automovie-launcher-cleanup-"),
+  );
+  const bundle = path.join(directory, "launcher.cjs");
+  const run = (
+    primaryFailure: Error | undefined,
+    cleanupFailure: Error | undefined,
+  ): { caught: unknown; removed: boolean } => {
+    fs.writeFileSync(bundle, "module.exports = {};");
+    const nativeRm = fs.rmSync;
+    fs.rmSync = ((target: fs.PathLike, ...args: unknown[]): void => {
+      Reflect.apply(nativeRm, fs, [target, ...args]);
+      if (
+        cleanupFailure !== undefined &&
+        path.resolve(target.toString()) === bundle
+      )
+        throw cleanupFailure;
+    }) as typeof fs.rmSync;
+    let caught: unknown;
+    try {
+      let failure: { error: unknown } | undefined;
+      try {
+        if (primaryFailure !== undefined) throw primaryFailure;
+      } catch (error) {
+        failure = { error };
+        throw error;
+      } finally {
+        cleanup(bundle, failure);
+      }
+    } catch (error) {
+      caught = error;
+    } finally {
+      fs.rmSync = nativeRm;
+    }
+    return { caught, removed: fs.existsSync(bundle) === false };
+  };
+  try {
+    const standaloneCleanupFailure = new Error(
+      "standalone launcher cleanup failure",
+    );
+    const primaryOnlyFailure = new Error("launcher primary-only failure");
+    const combinedPrimaryFailure = new Error("launcher combined primary");
+    const combinedCleanupFailure = new Error("launcher combined cleanup");
+    const success = run(undefined, undefined);
+    const standalone = run(undefined, standaloneCleanupFailure);
+    const primaryOnly = run(primaryOnlyFailure, undefined);
+    const combined = run(combinedPrimaryFailure, combinedCleanupFailure);
+    TestValidator.predicate(
+      "playground launcher bundle cleanup preserves operation and cleanup failures",
+      success.caught === undefined &&
+        success.removed &&
+        standalone.caught === standaloneCleanupFailure &&
+        standalone.removed &&
+        primaryOnly.caught === primaryOnlyFailure &&
+        primaryOnly.removed &&
+        combined.caught instanceof AggregateError &&
+        combined.caught.errors.length === 2 &&
+        combined.caught.errors[0] === combinedPrimaryFailure &&
+        combined.caught.errors[1] === combinedCleanupFailure &&
+        combined.removed,
+    );
+  } finally {
+    fs.rmSync(directory, { force: true, recursive: true });
+  }
 };
 
 /** Bind the packaged asset captures to the canonical review-view inventory. */
@@ -2367,6 +2465,23 @@ export const test_workspace_public_contracts = (): void => {
     prefix: prefix!,
     source: readPackageFile("packages", "playground", "scripts", file!),
   }));
+  const playgroundBundleCleanup = createRequire(__filename)(
+    path.join(
+      ROOT,
+      "packages",
+      "playground",
+      "scripts",
+      "preserveBundleCleanupFailure.cjs",
+    ),
+  ) as {
+    preserveBundleCleanupFailure: (
+      bundlePath: string,
+      failure: { error: unknown } | undefined,
+    ) => void;
+  };
+  verifyLauncherBundleCleanup(
+    playgroundBundleCleanup.preserveBundleCleanupFailure,
+  );
   const playgroundRenderSources = [
     "render-and-see.ts",
     "render-sequence-and-see.ts",
@@ -3356,11 +3471,12 @@ export const test_workspace_public_contracts = (): void => {
             ".cjs`)",
           writes: 0,
         },
+        cleanupImports: 1,
         cryptoImports: 1,
         fixedBundlePaths: [],
         lifecycles: [
           {
-            bodyActions: ["try"],
+            bodyActions: ["letfailure;", "try"],
             outerCatch: {
               actions: ["console.error(error);", "process.exit(1);"],
               parameter: "error",
@@ -3369,8 +3485,11 @@ export const test_workspace_public_contracts = (): void => {
               {
                 actions: ["build", "main"],
                 buildOutfiles: ["bundlePath"],
-                catchClause: false,
-                finallyActions: ["fs.rmSync(bundlePath,{force:true});"],
+                catchActions: ["failure={error};", "throwerror;"],
+                catchClause: true,
+                finallyActions: [
+                  "preserveBundleCleanupFailure(bundlePath,failure);",
+                ],
                 unsafeBuildOptions: [],
               },
             ],
