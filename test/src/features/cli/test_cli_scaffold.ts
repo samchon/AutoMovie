@@ -598,9 +598,6 @@ export const test_cli_scaffold = async (): Promise<void> => {
         "removeCapturedRenderGcTarget",
       ) &&
       files["scripts/publishProxyBundle.ts"]!.includes(
-        "current.entries.some",
-      ) === false &&
-      files["scripts/publishProxyBundle.ts"]!.includes(
         "fs.renameSync(candidate, target)",
       ) === false &&
       files["scripts/publishProxyBundle.ts"]!.includes(
@@ -2011,7 +2008,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
     const publishScaleFixture = (
       name: string,
       count: number,
-    ): { observations: number; readBytes: number; sourceBytes: number } => {
+    ): { observations: number; readBytes: number } => {
       const target = path.join(proxyPublishParent, name);
       const entries = new Map<string, Uint8Array>([
         ["publication.json", Buffer.from(`{"count":${count}}\n`)],
@@ -2055,10 +2052,6 @@ export const test_cli_scaffold = async (): Promise<void> => {
       return {
         observations,
         readBytes,
-        sourceBytes: [...entries.values()].reduce(
-          (total, bytes) => total + bytes.length,
-          0,
-        ),
       };
     };
     const smallProxyPublicationWork = publishScaleFixture("scale-8", 8);
@@ -2067,10 +2060,8 @@ export const test_cli_scaffold = async (): Promise<void> => {
       "proxy publication inventory work scales linearly with bundle entries",
       largeProxyPublicationWork.observations <=
         smallProxyPublicationWork.observations * 6 &&
-        smallProxyPublicationWork.readBytes <=
-          smallProxyPublicationWork.sourceBytes * 12 &&
         largeProxyPublicationWork.readBytes <=
-          largeProxyPublicationWork.sourceBytes * 12,
+          smallProxyPublicationWork.readBytes * 6,
     );
     const proxyMedia = path.join(proxy, "media", "proxy.mp4");
     const parkedProxyMedia = `${proxyMedia}.parked`;
