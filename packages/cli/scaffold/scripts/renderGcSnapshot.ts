@@ -40,6 +40,18 @@ export interface IRenderGcContentEntry {
   path: string;
 }
 
+/** Capture one physical directory without inventorying its descendants. */
+export const captureRenderPhysicalDirectory = (
+  directory: string,
+  label: string,
+): IRenderGcPhysicalDirectory => physicalDirectory(directory, label);
+
+/** Revalidate only a captured directory's physical identity and real path. */
+export const assertRenderPhysicalDirectoryIdentity = (
+  expected: IRenderGcPhysicalDirectory,
+  label: string,
+): void => assertPhysicalDirectoryIdentity(expected, label);
+
 /** Capture one exact GC candidate before planning can outlive its identity. */
 export const captureRenderGcTarget = (
   base: string,

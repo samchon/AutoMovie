@@ -1324,6 +1324,7 @@ const publishProxyTierBundle = (
   const published = publishProxyBundle({
     expected: files,
     parent,
+    processAlive,
     renderRoot,
     target,
   });
@@ -2393,22 +2394,69 @@ const collectRenderGarbage = (apply: boolean) => {
         candidateSnapshots.set(gcCandidateKey(candidate), snapshot);
       }
   }
+  const sweptPublicationRoots: string[] = [];
+  const proxyRoot = path.join(renderRoot, "deliverables", "proxy");
+  if (fs.existsSync(proxyRoot)) {
+    const currentProxy = plans.find((plan) => plan.tier.kind === "proxy");
+    for (const entry of fs
+      .readdirSync(proxyRoot, { withFileTypes: true })
+      .sort((left, right) => compareCodeUnits(left.name, right.name))) {
+      if (entry.isDirectory() === false || entry.isSymbolicLink()) continue;
+      const target = path.join(proxyRoot, entry.name);
+      const relative = normalizeSlash(path.relative(renderRoot, target));
+      const logical = `publication/${relative}`;
+      const retainedByReview = [...reviewBundles].some(
+        (bundle) => relative === bundle || relative.startsWith(`${bundle}/`),
+      );
+      const retainedByManifest = [...publicationPaths].some(
+        (file) => file === logical || file.startsWith(`${logical}/`),
+      );
+      let current = false;
+      if (
+        currentProxy !== undefined &&
+        entry.name === renderPublicationFingerprint(currentProxy).slice(7)
+      )
+        try {
+          const receipt = inspectPublishedProxyBundle(renderRoot, target);
+          current =
+            receipt.publicationFingerprint ===
+              renderPublicationFingerprint(currentProxy) &&
+            receipt.compileFingerprint === currentProxy.compileFingerprint &&
+            receipt.editFingerprint === currentProxy.editFingerprint;
+        } catch {
+          current = false;
+        }
+      if (current || retainedByReview || retainedByManifest) {
+        if (current)
+          for (const file of physicalFiles(target))
+            publicationPaths.add(
+              `publication/${normalizeSlash(path.relative(renderRoot, file))}`,
+            );
+        continue;
+      }
+      const candidate: IAutoMovieProductionRenderGcCandidate = {
+        path: logical,
+        kind: "publication",
+        digest: null,
+        bytes: 0,
+      };
+      const snapshot = captureRenderGcTarget(renderRoot, target);
+      candidate.bytes = snapshot.bytes;
+      candidates.push(candidate);
+      candidateSnapshots.set(gcCandidateKey(candidate), snapshot);
+      sweptPublicationRoots.push(`${relative}/`);
+    }
+  }
   if (fs.existsSync(renderRoot))
     for (const file of physicalFiles(renderRoot)) {
       const relative = normalizeSlash(path.relative(renderRoot, file));
       if (isRenderGcPreservedPath(relative)) continue;
+      if (sweptPublicationRoots.some((root) => relative.startsWith(root)))
+        continue;
       if (
         [...reviewBundles].some(
           (bundle) => relative === bundle || relative.startsWith(`${bundle}/`),
-        ) ||
-        plans.some((plan) => {
-          const segments = relative.split("/");
-          return (
-            segments[0] === "deliverables" &&
-            segments[1] === plan.tier.kind &&
-            segments[2] === renderPublicationFingerprint(plan).slice(7)
-          );
-        })
+        )
       )
         publicationPaths.add(`publication/${relative}`);
       const candidate: IAutoMovieProductionRenderGcCandidate = {
