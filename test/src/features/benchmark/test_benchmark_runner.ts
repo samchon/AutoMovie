@@ -21,6 +21,7 @@ import {
   snapshotAutoMovieBenchmarkProject,
 } from "@automovie/benchmark-runner";
 import { muxProductionFeatureMp4 } from "@automovie/mcp";
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
 import { createRequire } from "node:module";
@@ -1247,6 +1248,44 @@ const exerciseInputAndFilesystemFences = async (
       project: root,
     }),
   );
+  const nativeClientClose = Client.prototype.close;
+  const cleanupFailure = new Error("synthetic MCP client cleanup failure");
+  let cleanupOnlyFailure: unknown = null;
+  let combinedProbeFailure: unknown = null;
+  Client.prototype.close = async function (): Promise<void> {
+    try {
+      await Reflect.apply(nativeClientClose, this, []);
+    } finally {
+      throw cleanupFailure;
+    }
+  };
+  try {
+    cleanupOnlyFailure = await rejectedValue(() =>
+      mcpTarget.probe({
+        scenario: getAutoMovieBenchmarkScenario("short/austerlitz-teaser"),
+        project: root,
+      }),
+    );
+    combinedProbeFailure = await rejectedValue(() =>
+      missingMcp.probe({
+        scenario: getAutoMovieBenchmarkScenario("short/austerlitz-teaser"),
+        project: root,
+      }),
+    );
+  } finally {
+    Client.prototype.close = nativeClientClose;
+  }
+  TestValidator.predicate(
+    "process MCP probes preserve cleanup failures",
+    cleanupOnlyFailure === cleanupFailure &&
+      combinedProbeFailure instanceof AggregateError &&
+      combinedProbeFailure.errors.length === 2 &&
+      combinedProbeFailure.errors[0] instanceof Error &&
+      combinedProbeFailure.errors[0].message.includes(
+        'MCP probe "missing-process" failed',
+      ) &&
+      combinedProbeFailure.errors[1] === cleanupFailure,
+  );
   expectErrorMessage(
     "process MCP targets validate command and timeout",
     () =>
@@ -1733,5 +1772,16 @@ const rejected = async (closure: () => Promise<unknown>): Promise<string> => {
     return "";
   } catch (error) {
     return error instanceof Error ? error.message : String(error);
+  }
+};
+
+const rejectedValue = async (
+  closure: () => Promise<unknown>,
+): Promise<unknown> => {
+  try {
+    await closure();
+    return null;
+  } catch (error) {
+    return error;
   }
 };

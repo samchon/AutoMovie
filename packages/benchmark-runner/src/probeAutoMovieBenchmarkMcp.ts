@@ -97,38 +97,55 @@ export const createProcessAutoMovieBenchmarkMcpTarget = (
       inner.stderr?.on("data", (chunk: Buffer | string) => {
         stderr += chunk.toString();
       });
+      let probeFailure: { error: unknown } | undefined;
       try {
-        await client.connect(transport, { timeout: startupTimeoutMs });
-        const server = client.getServerVersion();
-        const listed = await client.listTools(undefined, {
-          timeout: input.timeoutMs,
-        });
-        if (server === undefined || transport.protocolVersion === null)
+        try {
+          await client.connect(transport, { timeout: startupTimeoutMs });
+          const server = client.getServerVersion();
+          const listed = await client.listTools(undefined, {
+            timeout: input.timeoutMs,
+          });
+          if (server === undefined || transport.protocolVersion === null)
+            throw new Error(
+              "MCP initialize completed without protocol or server identity.",
+            );
+          return {
+            protocolVersion: transport.protocolVersion,
+            serverName: server.name,
+            serverVersion: server.version,
+            tools: listed.tools.map((tool) => ({
+              name: tool.name,
+              descriptionBytes: Buffer.byteLength(
+                tool.description ?? "",
+                "utf8",
+              ),
+              schemaBytes: Buffer.byteLength(
+                JSON.stringify(tool.inputSchema),
+                "utf8",
+              ),
+            })),
+          };
+        } catch (error) {
+          const detail = stderr.trim();
           throw new Error(
-            "MCP initialize completed without protocol or server identity.",
+            `MCP probe "${input.provenance}" failed: ${messageOf(error)}${
+              detail.length === 0 ? "" : `; stderr: ${detail}`
+            }`,
           );
-        return {
-          protocolVersion: transport.protocolVersion,
-          serverName: server.name,
-          serverVersion: server.version,
-          tools: listed.tools.map((tool) => ({
-            name: tool.name,
-            descriptionBytes: Buffer.byteLength(tool.description ?? "", "utf8"),
-            schemaBytes: Buffer.byteLength(
-              JSON.stringify(tool.inputSchema),
-              "utf8",
-            ),
-          })),
-        };
+        }
       } catch (error) {
-        const detail = stderr.trim();
-        throw new Error(
-          `MCP probe "${input.provenance}" failed: ${messageOf(error)}${
-            detail.length === 0 ? "" : `; stderr: ${detail}`
-          }`,
-        );
+        probeFailure = { error };
+        throw error;
       } finally {
-        await client.close().catch(() => undefined);
+        try {
+          await client.close();
+        } catch (cleanupError) {
+          if (probeFailure === undefined) throw cleanupError;
+          throw new AggregateError(
+            [probeFailure.error, cleanupError],
+            `MCP probe "${input.provenance}" cleanup failed after the probe failed.`,
+          );
+        }
       }
     },
   };
