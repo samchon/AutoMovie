@@ -2033,6 +2033,7 @@ const encodeProductionOpus = async (pcm: Float32Array): Promise<Uint8Array> => {
     complexity: 10,
     vbr: false,
   });
+  const sampleFrames = pcm.length / 2;
   let primingSamples = 0;
   let codedSampleFrames = 0;
   const packets: Array<{
@@ -2059,7 +2060,6 @@ const encodeProductionOpus = async (pcm: Float32Array): Promise<Uint8Array> => {
       throw new Error(
         "Pinned Opus runtime returned an invalid encoder lookahead.",
       );
-    const sampleFrames = pcm.length / 2;
     codedSampleFrames =
       Math.ceil((sampleFrames + primingSamples) / encoder.frameSize) *
       encoder.frameSize;

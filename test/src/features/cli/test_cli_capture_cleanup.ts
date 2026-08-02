@@ -323,12 +323,24 @@ const cleanupLifecycle = (
 };
 
 interface IEncoderCleanupFunctionContract {
-  catches: string[][];
   cleanupCalls: Array<{
     call: string;
     protected: boolean;
   }>;
+  failureLifecycles: Array<{
+    catchActions: string[];
+    catchParameter: string | null;
+    guardedStatements: string[];
+  }>;
   preserveCalls: string[];
+  sampleFrames: {
+    outerDeclarations: string[];
+    uses: Array<{
+      afterPolicy: boolean;
+      call: string | null;
+      guarded: boolean;
+    }>;
+  };
 }
 
 /** Inspect encoder release ownership in the two scaffold render encoders. */
@@ -337,9 +349,16 @@ const encoderCleanupFunctionContract = (
   owner: "encodePngFrames" | "encodeProductionOpus",
 ): IEncoderCleanupFunctionContract[] =>
   (namedArrows(source).get(owner) ?? []).map((arrow) => {
-    const catches: string[][] = [];
+    if (ts.isBlock(arrow.body) === false)
+      throw new Error(`${owner} must have one block body.`);
+    const bodyStatements = [...arrow.body.statements];
+    const failureTries = bodyStatements.filter(
+      (statement): statement is ts.TryStatement =>
+        ts.isTryStatement(statement) && statement.catchClause !== undefined,
+    );
     const cleanupCalls: IEncoderCleanupFunctionContract["cleanupCalls"] = [];
     const preserveCalls: string[] = [];
+    let policyStatementIndex = -1;
     const protectedByPolicy = (node: ts.Node): boolean => {
       let cursor: ts.Node | undefined = node.parent;
       while (cursor !== undefined && cursor !== arrow.body) {
@@ -353,17 +372,32 @@ const encoderCleanupFunctionContract = (
       }
       return false;
     };
+    const guardedByFailureLifecycle = (node: ts.Node): boolean => {
+      let cursor: ts.Node | undefined = node;
+      while (cursor !== undefined && cursor !== arrow.body) {
+        if (failureTries.some((statement) => statement.tryBlock === cursor))
+          return true;
+        cursor = cursor.parent;
+      }
+      return false;
+    };
+    const owningStatementIndex = (node: ts.Node): number => {
+      let cursor = node;
+      while (cursor.parent !== undefined && cursor.parent !== arrow.body)
+        cursor = cursor.parent;
+      return bodyStatements.indexOf(cursor as ts.Statement);
+    };
+    const sampleFrameUses: IEncoderCleanupFunctionContract["sampleFrames"]["uses"] =
+      [];
     const visit = (node: ts.Node): void => {
-      if (ts.isCatchClause(node))
-        catches.push(
-          node.block.statements.map((statement) => compact(statement, source)),
-        );
       if (
         ts.isCallExpression(node) &&
         ts.isIdentifier(node.expression) &&
         node.expression.text === "preserveProductionEncoderCleanup"
-      )
+      ) {
         preserveCalls.push(compact(node, source));
+        policyStatementIndex = owningStatementIndex(node);
+      }
       if (
         ts.isCallExpression(node) &&
         ts.isPropertyAccessExpression(node.expression) &&
@@ -373,10 +407,63 @@ const encoderCleanupFunctionContract = (
           call: compact(node, source),
           protected: protectedByPolicy(node),
         });
+      if (
+        ts.isIdentifier(node) &&
+        node.text === "sampleFrames" &&
+        (ts.isVariableDeclaration(node.parent) === false ||
+          node.parent.name !== node)
+      ) {
+        let call: ts.CallExpression | undefined;
+        let cursor: ts.Node | undefined = node.parent;
+        while (cursor !== undefined && cursor !== arrow.body) {
+          if (ts.isCallExpression(cursor)) {
+            call = cursor;
+            break;
+          }
+          cursor = cursor.parent;
+        }
+        sampleFrameUses.push({
+          afterPolicy:
+            policyStatementIndex !== -1 &&
+            owningStatementIndex(node) > policyStatementIndex,
+          call: call === undefined ? null : compact(call.expression, source),
+          guarded: guardedByFailureLifecycle(node),
+        });
+      }
       ts.forEachChild(node, visit);
     };
     visit(arrow.body);
-    return { catches, cleanupCalls, preserveCalls };
+    return {
+      cleanupCalls,
+      failureLifecycles: failureTries.map((statement) => ({
+        catchActions:
+          statement.catchClause?.block.statements.map((entry) =>
+            compact(entry, source),
+          ) ?? [],
+        catchParameter:
+          statement.catchClause?.variableDeclaration === undefined
+            ? null
+            : compact(statement.catchClause.variableDeclaration, source),
+        guardedStatements: statement.tryBlock.statements.map((entry) =>
+          compact(entry, source),
+        ),
+      })),
+      preserveCalls,
+      sampleFrames: {
+        outerDeclarations: bodyStatements
+          .filter(ts.isVariableStatement)
+          .flatMap((statement) =>
+            [...statement.declarationList.declarations].flatMap(
+              (declaration) =>
+                ts.isIdentifier(declaration.name) &&
+                declaration.name.text === "sampleFrames"
+                  ? [compact(declaration, source)]
+                  : [],
+            ),
+          ),
+        uses: sampleFrameUses,
+      },
+    };
   });
 
 const aggregateContainsExactly = (
@@ -694,24 +781,67 @@ export const test_cli_capture_cleanup = (): void => {
     {
       h264: [
         {
-          catches: [["failure={error};"]],
           cleanupCalls: [
             { call: "encoder.finalize()", protected: false },
             { call: "encoder.finalize()", protected: true },
             { call: "encoder.delete()", protected: true },
           ],
+          failureLifecycles: [
+            {
+              catchActions: ["failure={error};"],
+              catchParameter: "error",
+              guardedStatements: [
+                "encoder.width=plan.frameFormat.width;",
+                "encoder.height=plan.frameFormat.height;",
+                "encoder.frameRate=plan.frameFormat.fps;",
+                "encoder.quantizationParameter=plan.runtimeIdentity.encoder.arguments.quantizationParameter;",
+                "encoder.speed=plan.runtimeIdentity.encoder.arguments.speed;",
+                "encoder.groupOfPictures=plan.runtimeIdentity.encoder.arguments.groupOfPictures;",
+                "encoder.initialize();",
+                "initialized=true;",
+                "awaitproduceFrames((frame)=>{constpng=PNG.sync.read(Buffer.from(frame));encoder.addFrameRgba(newUint8Array(png.data));});",
+                "finalizeAttempted=true;",
+                "encoder.finalize();",
+                "output=Uint8Array.from(encoder.FS.readFile(encoder.outputFilename));",
+              ],
+            },
+          ],
           preserveCalls: [
             'preserveProductionEncoderCleanup(failure,[...(initialized&&finalizeAttempted===false?[{resource:"H.264encoderfinalizer",cleanup:():void=>{finalizeAttempted=true;encoder.finalize();},},]:[]),{resource:"H.264encoder",cleanup:():void=>encoder.delete()},])',
           ],
+          sampleFrames: { outerDeclarations: [], uses: [] },
         },
       ],
       opus: [
         {
-          catches: [["failure={error};"]],
           cleanupCalls: [{ call: "encoder.free()", protected: true }],
+          failureLifecycles: [
+            {
+              catchActions: ["failure={error};"],
+              catchParameter: "error",
+              guardedStatements: [
+                'if(encoder.frameSize!==960||encoder.channels!==2||encoder.sampleRate!==48_000)thrownewError("PinnedOpusruntimenolongerexposestherequired48kHzstereo20msprofile.",);',
+                "primingSamples=encoder.getLookahead();",
+                'if(Number.isSafeInteger(primingSamples)===false||primingSamples<0||primingSamples>=encoder.frameSize)thrownewError("PinnedOpusruntimereturnedaninvalidencoderlookahead.",);',
+                "codedSampleFrames=Math.ceil((sampleFrames+primingSamples)/encoder.frameSize)*encoder.frameSize;",
+                "for(letdts=0;dts<codedSampleFrames;dts+=encoder.frameSize){constframe=newFloat32Array(encoder.frameSize*encoder.channels);frame.set(pcm.subarray(dts*encoder.channels,Math.min(pcm.length,(dts+encoder.frameSize)*encoder.channels),),);packets.push({bytes:Uint8Array.from(encoder.encodeFloat(frame)),duration:encoder.frameSize,dts,});}",
+              ],
+            },
+          ],
           preserveCalls: [
             'preserveProductionEncoderCleanup(failure,[{resource:"Opusencoder",cleanup:():void=>encoder.free()},])',
           ],
+          sampleFrames: {
+            outerDeclarations: ["sampleFrames=pcm.length/2"],
+            uses: [
+              { afterPolicy: false, call: "Math.ceil", guarded: true },
+              {
+                afterPolicy: true,
+                call: "trimProductionAudioPresentation",
+                guarded: false,
+              },
+            ],
+          },
         },
       ],
       policy: {
