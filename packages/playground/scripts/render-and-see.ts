@@ -79,66 +79,69 @@ export const captureRenderAndSee = async (
     executablePath: options.chrome,
     headless: true,
   });
-  const page = await browser.newPage({
-    viewport: { width: options.width, height: options.height },
-    deviceScaleFactor: 1,
-  });
-  const captured = new Map<number, string>();
-  let closePage = true;
   try {
-    const session = await createHeadlessCaptureAdapter({
-      page,
-      url: route,
-      passes: options.passes,
-      writeFrame: async (file, bytes, metadata) => {
-        await fs.mkdir(path.dirname(file), { recursive: true });
-        await fs.writeFile(file, Buffer.from(bytes));
-        captured.set(metadata.index, file);
-      },
+    const page = await browser.newPage({
+      viewport: { width: options.width, height: options.height },
+      deviceScaleFactor: 1,
     });
-    closePage = false;
+    const captured = new Map<number, string>();
+    let closePage = true;
     try {
-      const spec: IAutoMovieRenderSpec = {
-        target: options.target,
-        frameFormat: {
-          fps: options.fps,
-          width: options.width,
-          height: options.height,
-        },
-        toneMapping: "none",
-        codec: "h264",
-        pixelFormat: "yuv420p",
-        crf: 20,
-      };
-      const result = await renderAndSee({
-        spec,
-        durationSeconds: options.durationSeconds,
-        frameDir: options.frameDir,
-        outputPath: options.outputPath,
-        adapters: {
-          captureFrame: session.captureFrame,
-          encode: createH264Encoder({
-            captured,
-            durationSeconds: options.durationSeconds,
-            spec,
-          }),
+      const session = await createHeadlessCaptureAdapter({
+        page,
+        url: route,
+        passes: options.passes,
+        writeFrame: async (file, bytes, metadata) => {
+          await fs.mkdir(path.dirname(file), { recursive: true });
+          await fs.writeFile(file, Buffer.from(bytes));
+          captured.set(metadata.index, file);
         },
       });
-      const artifact: IAutoMoviePlaygroundRenderAndSeeArtifact = {
-        ...result,
-        route,
-        jsonPath: options.jsonPath,
-        encoder: "h264-mp4-encoder",
-        viewport: { width: options.width, height: options.height },
-      };
-      await fs.mkdir(path.dirname(options.jsonPath), { recursive: true });
-      await fs.writeFile(options.jsonPath, JSON.stringify(artifact, null, 2));
-      return artifact;
+      closePage = false;
+      try {
+        const spec: IAutoMovieRenderSpec = {
+          target: options.target,
+          frameFormat: {
+            fps: options.fps,
+            width: options.width,
+            height: options.height,
+          },
+          toneMapping: "none",
+          codec: "h264",
+          pixelFormat: "yuv420p",
+          crf: 20,
+        };
+        const result = await renderAndSee({
+          spec,
+          durationSeconds: options.durationSeconds,
+          frameDir: options.frameDir,
+          outputPath: options.outputPath,
+          adapters: {
+            captureFrame: session.captureFrame,
+            encode: createH264Encoder({
+              captured,
+              durationSeconds: options.durationSeconds,
+              spec,
+            }),
+          },
+        });
+        const artifact: IAutoMoviePlaygroundRenderAndSeeArtifact = {
+          ...result,
+          route,
+          jsonPath: options.jsonPath,
+          encoder: "h264-mp4-encoder",
+          viewport: { width: options.width, height: options.height },
+        };
+        await fs.mkdir(path.dirname(options.jsonPath), { recursive: true });
+        await fs.writeFile(options.jsonPath, JSON.stringify(artifact, null, 2));
+        return artifact;
+      } finally {
+        await session.close();
+      }
     } finally {
-      await session.close();
+      if (closePage) await page.close();
     }
   } finally {
-    if (closePage) await page.close();
     await browser.close();
   }
 };

@@ -119,73 +119,76 @@ export const captureSequenceRenderAndSee = async (
     executablePath: options.chrome,
     headless: true,
   });
-  const page = await browser.newPage({
-    viewport: { width: options.width, height: options.height },
-    deviceScaleFactor: 1,
-  });
-  const captured = new Map<number, string>();
-  let closePage = true;
   try {
-    const session = await openSequenceCaptureSession({
-      page,
-      url: route,
-      writeFrame: async (file, bytes, frame) => {
-        await fs.mkdir(path.dirname(file), { recursive: true });
-        await fs.writeFile(file, Buffer.from(bytes));
-        captured.set(frame.index, file);
-      },
+    const page = await browser.newPage({
+      viewport: { width: options.width, height: options.height },
+      deviceScaleFactor: 1,
     });
-    closePage = false;
+    const captured = new Map<number, string>();
+    let closePage = true;
     try {
-      const spec: IAutoMovieRenderSpec = {
-        target: options.target ?? session.metadata.sequence.id,
-        frameFormat: {
-          fps: options.fps,
-          width: options.width,
-          height: options.height,
-        },
-        toneMapping: "none",
-        codec: "h264",
-        pixelFormat: "yuv420p",
-        crf: 20,
-      };
-      const result = await renderSequenceAndSee({
-        sequence: session.metadata.sequence,
-        shots: session.metadata.shots,
-        spec,
-        frameDir: options.frameDir,
-        outputPath: options.outputPath,
-        adapters: {
-          captureFrame: session.captureFrame,
-          encode: createH264Encoder({ captured, spec }),
+      const session = await openSequenceCaptureSession({
+        page,
+        url: route,
+        writeFrame: async (file, bytes, frame) => {
+          await fs.mkdir(path.dirname(file), { recursive: true });
+          await fs.writeFile(file, Buffer.from(bytes));
+          captured.set(frame.index, file);
         },
       });
-      const dissolveChecks = await verifyDissolvePixels({
-        captured,
-        frames: result.frames,
-        transitions: result.plan.transitionSpans,
-        captureShot: session.captureShot,
-      });
-      const artifact: IAutoMoviePlaygroundSequenceRenderArtifact = {
-        ...result,
-        route,
-        jsonPath: options.jsonPath,
-        encoder: "h264-mp4-encoder",
-        viewport: { width: options.width, height: options.height },
-        page: {
-          duration: session.metadata.duration,
-          shots: session.metadata.shotIds,
-        },
-        dissolveChecks,
-      };
-      await fs.mkdir(path.dirname(options.jsonPath), { recursive: true });
-      await fs.writeFile(options.jsonPath, JSON.stringify(artifact, null, 2));
-      return artifact;
+      closePage = false;
+      try {
+        const spec: IAutoMovieRenderSpec = {
+          target: options.target ?? session.metadata.sequence.id,
+          frameFormat: {
+            fps: options.fps,
+            width: options.width,
+            height: options.height,
+          },
+          toneMapping: "none",
+          codec: "h264",
+          pixelFormat: "yuv420p",
+          crf: 20,
+        };
+        const result = await renderSequenceAndSee({
+          sequence: session.metadata.sequence,
+          shots: session.metadata.shots,
+          spec,
+          frameDir: options.frameDir,
+          outputPath: options.outputPath,
+          adapters: {
+            captureFrame: session.captureFrame,
+            encode: createH264Encoder({ captured, spec }),
+          },
+        });
+        const dissolveChecks = await verifyDissolvePixels({
+          captured,
+          frames: result.frames,
+          transitions: result.plan.transitionSpans,
+          captureShot: session.captureShot,
+        });
+        const artifact: IAutoMoviePlaygroundSequenceRenderArtifact = {
+          ...result,
+          route,
+          jsonPath: options.jsonPath,
+          encoder: "h264-mp4-encoder",
+          viewport: { width: options.width, height: options.height },
+          page: {
+            duration: session.metadata.duration,
+            shots: session.metadata.shotIds,
+          },
+          dissolveChecks,
+        };
+        await fs.mkdir(path.dirname(options.jsonPath), { recursive: true });
+        await fs.writeFile(options.jsonPath, JSON.stringify(artifact, null, 2));
+        return artifact;
+      } finally {
+        await session.close();
+      }
     } finally {
-      await session.close();
+      if (closePage) await page.close();
     }
   } finally {
-    if (closePage) await page.close();
     await browser.close();
   }
 };

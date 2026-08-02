@@ -1185,6 +1185,127 @@ const renderRasterArgumentContract = (
   };
 };
 
+/** Inspect one render playground's browser, page and session cleanup fences. */
+const renderBrowserLifecycleContract = (
+  file: string,
+  source: string,
+  functionName: string,
+): Array<{
+  browser: string | null;
+  directActions: string[];
+  outerCatch: boolean;
+  outerFinally: string[];
+  outerTryActions: string[];
+  page: string | null;
+  pageCatch: boolean;
+  pageFinally: string[];
+  pageTryActions: string[];
+  sessionCatch: boolean;
+  sessionFinally: string[];
+}> => {
+  const parsed = ts.createSourceFile(
+    file,
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TS,
+  );
+  const compact = (node: ts.Node): string =>
+    node.getText(parsed).replace(/\s+/g, "");
+  const variable = (
+    statements: ts.NodeArray<ts.Statement>,
+    name: string,
+  ): ts.VariableDeclaration | undefined =>
+    statements
+      .filter(ts.isVariableStatement)
+      .flatMap((statement) => [...statement.declarationList.declarations])
+      .find(
+        (declaration) =>
+          ts.isIdentifier(declaration.name) && declaration.name.text === name,
+      );
+  const action = (statement: ts.Statement): string => {
+    if (ts.isTryStatement(statement)) return "try";
+    if (
+      ts.isVariableStatement(statement) &&
+      statement.declarationList.declarations.length === 1 &&
+      ts.isIdentifier(statement.declarationList.declarations[0]!.name)
+    )
+      return statement.declarationList.declarations[0]!.name.text;
+    return compact(statement);
+  };
+  const contracts: Array<{
+    browser: string | null;
+    directActions: string[];
+    outerCatch: boolean;
+    outerFinally: string[];
+    outerTryActions: string[];
+    page: string | null;
+    pageCatch: boolean;
+    pageFinally: string[];
+    pageTryActions: string[];
+    sessionCatch: boolean;
+    sessionFinally: string[];
+  }> = [];
+  for (const statement of parsed.statements) {
+    if (ts.isVariableStatement(statement) === false) continue;
+    for (const declaration of statement.declarationList.declarations) {
+      if (
+        ts.isIdentifier(declaration.name) === false ||
+        declaration.name.text !== functionName ||
+        declaration.initializer === undefined ||
+        ts.isArrowFunction(declaration.initializer) === false ||
+        declaration.initializer.modifiers?.some(
+          (modifier) => modifier.kind === ts.SyntaxKind.AsyncKeyword,
+        ) !== true ||
+        ts.isBlock(declaration.initializer.body) === false
+      )
+        continue;
+      const body = declaration.initializer.body.statements;
+      const outerTries = body.filter(ts.isTryStatement);
+      const outer = outerTries.length === 1 ? outerTries[0]! : undefined;
+      const pageTries =
+        outer?.tryBlock.statements.filter(ts.isTryStatement) ?? [];
+      const pageTry = pageTries.length === 1 ? pageTries[0]! : undefined;
+      const sessionTries =
+        pageTry?.tryBlock.statements.filter(ts.isTryStatement) ?? [];
+      const sessionTry =
+        sessionTries.length === 1 ? sessionTries[0]! : undefined;
+      const browser = variable(body, "browser");
+      const page =
+        outer === undefined
+          ? undefined
+          : variable(outer.tryBlock.statements, "page");
+      contracts.push({
+        browser:
+          browser?.initializer === undefined
+            ? null
+            : compact(browser.initializer),
+        directActions: body.map(action),
+        outerCatch: outer?.catchClause !== undefined,
+        outerFinally:
+          outer?.finallyBlock?.statements.map((statement) =>
+            compact(statement),
+          ) ?? [],
+        outerTryActions: outer?.tryBlock.statements.map(action) ?? [],
+        page:
+          page?.initializer === undefined ? null : compact(page.initializer),
+        pageCatch: pageTry?.catchClause !== undefined,
+        pageFinally:
+          pageTry?.finallyBlock?.statements.map((statement) =>
+            compact(statement),
+          ) ?? [],
+        pageTryActions: pageTry?.tryBlock.statements.map(action) ?? [],
+        sessionCatch: sessionTry?.catchClause !== undefined,
+        sessionFinally:
+          sessionTry?.finallyBlock?.statements.map((statement) =>
+            compact(statement),
+          ) ?? [],
+      });
+    }
+  }
+  return contracts;
+};
+
 /** A source-level template interpolation without a live template expression. */
 const templateExpression = (expression: string): string =>
   "$" + "{" + expression + "}";
@@ -2403,6 +2524,38 @@ export const test_workspace_public_contracts = (): void => {
           unsafeProperties: [],
         },
       },
+    })),
+  );
+  TestValidator.equals(
+    "render playgrounds fence page creation with browser cleanup",
+    playgroundRenderSources.map(({ file, source }) => ({
+      file,
+      contract: renderBrowserLifecycleContract(
+        file,
+        source,
+        file === "render-and-see.ts"
+          ? "captureRenderAndSee"
+          : "captureSequenceRenderAndSee",
+      ),
+    })),
+    playgroundRenderSources.map(({ file }) => ({
+      file,
+      contract: [
+        {
+          browser:
+            "awaitchromium.launch({executablePath:options.chrome,headless:true,})",
+          directActions: ["route", "browser", "try"],
+          outerCatch: false,
+          outerFinally: ["awaitbrowser.close();"],
+          outerTryActions: ["page", "captured", "closePage", "try"],
+          page: "awaitbrowser.newPage({viewport:{width:options.width,height:options.height},deviceScaleFactor:1,})",
+          pageCatch: false,
+          pageFinally: ["if(closePage)awaitpage.close();"],
+          pageTryActions: ["session", "closePage=false;", "try"],
+          sessionCatch: false,
+          sessionFinally: ["awaitsession.close();"],
+        },
+      ],
     })),
   );
   const canonicalAssetViews: Array<Array<[string, string]>> = [
