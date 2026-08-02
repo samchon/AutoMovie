@@ -280,6 +280,123 @@ const captureObservationContracts = (
   };
 };
 
+/** Inspect one CommonJS launcher bundle lifecycle structurally. */
+const launcherBundleContract = (
+  file: string,
+  source: string,
+): {
+  bundleInitializer: string | null;
+  bundleOutfiles: number;
+  bundleRequires: number;
+  cryptoImports: number;
+  finallyActions: string[][];
+  fixedBundlePaths: string[];
+  tryActions: string[][];
+} => {
+  const parsed = ts.createSourceFile(
+    file,
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.JS,
+  );
+  const squash = (node: ts.Node): string =>
+    node.getText(parsed).replace(/\s+/g, "");
+  let bundleInitializer: string | null = null;
+  let bundleOutfiles = 0;
+  let bundleRequires = 0;
+  let cryptoImports = 0;
+  const finallyActions: string[][] = [];
+  const fixedBundlePaths: string[] = [];
+  const tryActions: string[][] = [];
+  const action = (statement: ts.Statement): string => {
+    if (
+      ts.isExpressionStatement(statement) &&
+      ts.isAwaitExpression(statement.expression) &&
+      ts.isCallExpression(statement.expression.expression)
+    ) {
+      const call = statement.expression.expression;
+      if (
+        ts.isPropertyAccessExpression(call.expression) &&
+        ts.isIdentifier(call.expression.expression) &&
+        call.expression.expression.text === "esbuild" &&
+        call.expression.name.text === "build"
+      )
+        return "build";
+      if (
+        ts.isPropertyAccessExpression(call.expression) &&
+        call.expression.name.text === "main" &&
+        ts.isCallExpression(call.expression.expression) &&
+        ts.isIdentifier(call.expression.expression.expression) &&
+        call.expression.expression.expression.text === "require" &&
+        call.expression.expression.arguments.length === 1 &&
+        call.expression.expression.arguments[0]?.getText(parsed) ===
+          "bundlePath"
+      )
+        return "main";
+    }
+    return squash(statement);
+  };
+  const visit = (node: ts.Node): void => {
+    if (ts.isVariableDeclaration(node)) {
+      if (
+        ts.isIdentifier(node.name) &&
+        node.name.text === "bundlePath" &&
+        node.initializer !== undefined
+      )
+        bundleInitializer = squash(node.initializer);
+      if (
+        ts.isObjectBindingPattern(node.name) &&
+        node.name.elements.length === 1 &&
+        node.name.elements[0]?.name.getText(parsed) === "randomUUID" &&
+        node.initializer !== undefined &&
+        squash(node.initializer) === 'require("crypto")'
+      )
+        ++cryptoImports;
+    }
+    if (
+      ts.isPropertyAssignment(node) &&
+      (ts.isIdentifier(node.name) || ts.isStringLiteralLike(node.name)) &&
+      node.name.text === "outfile" &&
+      node.initializer.getText(parsed) === "bundlePath"
+    )
+      ++bundleOutfiles;
+    if (
+      ts.isCallExpression(node) &&
+      ts.isIdentifier(node.expression) &&
+      node.expression.text === "require" &&
+      node.arguments.length === 1 &&
+      node.arguments[0]?.getText(parsed) === "bundlePath"
+    )
+      ++bundleRequires;
+    if (
+      ts.isStringLiteralLike(node) &&
+      /^\.(?:capture-smoke|render-and-see|render-sequence-and-see)\.cjs$/.test(
+        node.text,
+      )
+    )
+      fixedBundlePaths.push(node.text);
+    if (ts.isTryStatement(node)) {
+      tryActions.push(node.tryBlock.statements.map(action));
+      finallyActions.push(
+        node.finallyBlock?.statements.map((statement) => squash(statement)) ??
+          [],
+      );
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(parsed);
+  return {
+    bundleInitializer,
+    bundleOutfiles,
+    bundleRequires,
+    cryptoImports,
+    finallyActions,
+    fixedBundlePaths,
+    tryActions,
+  };
+};
+
 /** A source-level template interpolation without a live template expression. */
 const templateExpression = (expression: string): string =>
   "$" + "{" + expression + "}";
@@ -395,6 +512,8 @@ const unmentionedModules = (pkg: string, document: string): string[] =>
  *     evidence before byte comparison or PNG parsing.
  * 20. Structural mask and pose checks preserve their measured pixel counts and
  *     fractions in both structured output and thrown failure evidence.
+ * 21. Playground TypeScript launchers use unique same-directory bundles and clean
+ *     them after build failure as well as main completion.
  */
 export const test_workspace_public_contracts = (): void => {
   const rootReadme = readPackageFile("README.md");
@@ -419,6 +538,15 @@ export const test_workspace_public_contracts = (): void => {
     "playground",
     "stickman.html",
   );
+  const playgroundLaunchers = [
+    ["capture-smoke.cjs", "capture-smoke"],
+    ["render-and-see.cjs", "render-and-see"],
+    ["render-sequence-and-see.cjs", "render-sequence-and-see"],
+  ].map(([file, prefix]) => ({
+    file: file!,
+    prefix: prefix!,
+    source: readPackageFile("packages", "playground", "scripts", file!),
+  }));
   const devServerFailureOffset = playgroundCaptureSmoke.indexOf(
     "const devServerFailure =",
   );
@@ -1348,6 +1476,32 @@ export const test_workspace_public_contracts = (): void => {
         ["poseMaskPalettePixels", "pose.get(subjectKey) ?? 0"],
       ],
     },
+  );
+  TestValidator.equals(
+    "playground launchers isolate and always clean temporary bundles",
+    playgroundLaunchers.map(({ file, source }) => ({
+      file,
+      contract: launcherBundleContract(file, source),
+    })),
+    playgroundLaunchers.map(({ file, prefix }) => ({
+      file,
+      contract: {
+        bundleInitializer:
+          "path.join(__dirname,`." +
+          prefix +
+          "-" +
+          templateExpression("process.pid") +
+          "-" +
+          templateExpression("randomUUID()") +
+          ".cjs`)",
+        bundleOutfiles: 1,
+        bundleRequires: 1,
+        cryptoImports: 1,
+        finallyActions: [["fs.rmSync(bundlePath,{force:true});"]],
+        fixedBundlePaths: [],
+        tryActions: [["build", "main"]],
+      },
+    })),
   );
   const mcpMethods = [
     ...mcpApplication.matchAll(
