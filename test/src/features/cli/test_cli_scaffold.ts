@@ -1089,7 +1089,8 @@ export const test_cli_scaffold = async (): Promise<void> => {
       },
       {
         contract:
-          'renderProgressStages.every((stage) => renderScript.includes(`renderProgress("${stage}"`), )',
+          'renderProgressStages.every((stage) => renderScript.includes(`renderProgress("$' +
+          '{stage}"`), )',
         satisfied: renderProgressStages.every((stage) =>
           renderScript.includes(`renderProgress("${stage}"`),
         ),
