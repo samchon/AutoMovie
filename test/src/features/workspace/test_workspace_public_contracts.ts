@@ -136,6 +136,10 @@ export const test_workspace_public_contracts = (): void => {
     "const commandTermination =",
     "\nconst commandSucceeded =",
   );
+  const commandTerminationReturnSource =
+    commandTerminationSource.match(
+      /return \[([\s\S]*?)\]\.join\("; "\);/,
+    )?.[1] ?? "";
   const failCommandSource = sourceSection(
     "const failCommand =",
     "\nconst run =",
@@ -462,25 +466,52 @@ export const test_workspace_public_contracts = (): void => {
   TestValidator.equals(
     "packaged E2E prints every process termination field",
     {
+      order: [
+        ["reason", "reason"],
+        ["timeout", "`timeout=${timeout} ms`"],
+        [
+          "status",
+          '`status=${typeof result.status === "number" ? result.status : "none"}`',
+        ],
+        ["signal", '`signal=${result.signal ?? "none"}`'],
+        ["error", "`error=${errorCode}`"],
+        [
+          "message",
+          '`message=${\n      result.error === undefined ? "none" : JSON.stringify(result.error.message)\n    }`',
+        ],
+      ]
+        .filter(([, field]) => commandTerminationReturnSource.includes(field!))
+        .sort(
+          ([, left], [, right]) =>
+            commandTerminationReturnSource.indexOf(left!) -
+            commandTerminationReturnSource.indexOf(right!),
+        )
+        .map(([name]) => name),
+      reason:
+        commandTerminationReturnSource.match(/^\s*(reason),/m)?.[1] ?? null,
       timeout:
-        commandTerminationSource.match(/`timeout=\$\{timeout\} ms`/)?.[0] ??
-        null,
+        commandTerminationReturnSource.match(
+          /`timeout=\$\{timeout\} ms`/,
+        )?.[0] ?? null,
       status:
-        commandTerminationSource.match(
+        commandTerminationReturnSource.match(
           /`status=\$\{typeof result\.status === "number" \? result\.status : "none"\}`/,
         )?.[0] ?? null,
       signal:
-        commandTerminationSource.match(
+        commandTerminationReturnSource.match(
           /`signal=\$\{result\.signal \?\? "none"\}`/,
         )?.[0] ?? null,
       error:
-        commandTerminationSource.match(/`error=\$\{errorCode\}`/)?.[0] ?? null,
+        commandTerminationReturnSource.match(/`error=\$\{errorCode\}`/)?.[0] ??
+        null,
       message:
-        commandTerminationSource.match(
+        commandTerminationReturnSource.match(
           /`message=\$\{[\s\S]*?JSON\.stringify\(result\.error\.message\)[\s\S]*?\}`/,
         )?.[0] ?? null,
     },
     {
+      order: ["reason", "timeout", "status", "signal", "error", "message"],
+      reason: "reason",
       timeout: "`timeout=${timeout} ms`",
       status:
         '`status=${typeof result.status === "number" ? result.status : "none"}`',
@@ -501,10 +532,22 @@ export const test_workspace_public_contracts = (): void => {
       failureWriters: [
         ...failCommandSource.matchAll(/writeCommandOutput\((\w+)\);/g),
       ].map((match) => match[1]),
+      failureOrder: [
+        ["writeCommandOutput", "writeCommandOutput(result);"],
+        ["fail", "fail("],
+      ]
+        .filter(([, call]) => failCommandSource.includes(call!))
+        .sort(
+          ([, left], [, right]) =>
+            failCommandSource.indexOf(left!) -
+            failCommandSource.indexOf(right!),
+        )
+        .map(([name]) => name),
     },
     {
       streams: ["stdout", "stderr"],
       failureWriters: ["result"],
+      failureOrder: ["writeCommandOutput", "fail"],
     },
   );
   TestValidator.equals(
