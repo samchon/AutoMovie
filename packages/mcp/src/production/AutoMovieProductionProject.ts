@@ -3868,6 +3868,29 @@ const serializeJson = (value: unknown): string =>
 const temporaryPath = (file: string, operation: "tmp" | "delete"): string =>
   `${file}.${operation}.${process.pid}.${randomUUID()}`;
 
+interface IProductionAtomicFailure {
+  error: unknown;
+}
+
+class ProductionAtomicCleanupError extends AggregateError {}
+
+class ProductionAtomicRecoveryError extends AggregateError {}
+
+const removeAtomicTemporary = (
+  temporary: string,
+  failure: IProductionAtomicFailure | undefined,
+): void => {
+  try {
+    fs.rmSync(temporary, { force: true });
+  } catch (cleanupFailure) {
+    if (failure === undefined) throw cleanupFailure;
+    throw new ProductionAtomicCleanupError(
+      [failure.error, cleanupFailure],
+      `Production atomic write cleanup failed after the operation failed: ${temporary}.`,
+    );
+  }
+};
+
 const writeAtomic = (
   file: string,
   content: Uint8Array,
@@ -3876,13 +3899,17 @@ const writeAtomic = (
 ): void => {
   fs.mkdirSync(path.dirname(file), { recursive: true });
   const temporary = temporaryPath(file, "tmp");
+  let failure: IProductionAtomicFailure | undefined;
   try {
     fs.writeFileSync(temporary, content);
     beforePublish();
     fs.renameSync(temporary, file);
     afterPublish();
+  } catch (error) {
+    failure = { error };
+    throw error;
   } finally {
-    fs.rmSync(temporary, { force: true });
+    removeAtomicTemporary(temporary, failure);
   }
 };
 
@@ -3897,8 +3924,15 @@ const removeAtomic = (file: string, afterQuarantine: () => void): void => {
     afterQuarantine();
     fs.rmSync(quarantine, { force: true });
   } catch (error) {
-    if (lstatOrNull(quarantine) !== null && lstatOrNull(file) === null)
-      fs.renameSync(quarantine, file);
+    try {
+      if (lstatOrNull(quarantine) !== null && lstatOrNull(file) === null)
+        fs.renameSync(quarantine, file);
+    } catch (recoveryFailure) {
+      throw new ProductionAtomicRecoveryError(
+        [error, recoveryFailure],
+        `Production atomic delete recovery failed after the operation failed: ${file}.`,
+      );
+    }
     throw error;
   }
 };

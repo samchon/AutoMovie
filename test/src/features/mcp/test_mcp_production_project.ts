@@ -158,6 +158,176 @@ const aggregateContainsExactly = (
   error.errors.length === expected.length &&
   expected.every((failure, index) => error.errors[index] === failure);
 
+type ProductionAtomicFailureMode =
+  | "combined-cleanup"
+  | "combined-recovery"
+  | "primary-only"
+  | "standalone-cleanup";
+
+interface IProductionAtomicFailureEvidence {
+  caught: unknown;
+  cleanupAttempted: boolean;
+  cleanupFailure: Error;
+  fixtureAccepted: boolean;
+  primaryFailure: Error;
+  quarantineArtifacts: number;
+  recoveryAttempted: boolean;
+  recoveryFailure: Error;
+  targetExists: boolean;
+  temporaryArtifacts: number;
+}
+
+const captureProductionAtomicFailure = (
+  mode: ProductionAtomicFailureMode,
+): IProductionAtomicFailureEvidence => {
+  const fixture = productionFixture();
+  const nativeRename = fs.renameSync;
+  const nativeRemove = fs.rmSync;
+  let hooksInstalled = false;
+  try {
+    const project = AutoMovieProductionProject.open(fixture.root);
+    const base = modelRecipe();
+    const id = `atomic-failure-${mode}`;
+    const design = {
+      ...base,
+      id,
+      lod: base.lod.map((lod) => ({ ...lod, recipe: id })),
+    };
+    const target = path.join(
+      fixture.root,
+      `.automovie/design/shared/models/${id}.json`,
+    );
+    const fixtureAccepted =
+      mode !== "combined-recovery" || project.setModelRecipe(design).accepted;
+    const primaryFailure = new Error(`${mode} primary failure`);
+    const cleanupFailure = new Error(`${mode} cleanup failure`);
+    const recoveryFailure = new Error(`${mode} recovery failure`);
+    let cleanupAttempted = false;
+    let recoveryAttempted = false;
+    let quarantine: string | null = null;
+    fs.renameSync = ((oldPath, newPath): void => {
+      const source = path.resolve(oldPath.toString());
+      const destination = path.resolve(newPath.toString());
+      if (
+        mode !== "combined-recovery" &&
+        destination === path.resolve(target) &&
+        source.startsWith(`${path.resolve(target)}.tmp.`) &&
+        (mode === "primary-only" || mode === "combined-cleanup")
+      )
+        throw primaryFailure;
+      if (
+        mode === "combined-recovery" &&
+        source === path.resolve(target) &&
+        destination.startsWith(`${path.resolve(target)}.delete.`)
+      )
+        quarantine = destination;
+      if (
+        mode === "combined-recovery" &&
+        quarantine !== null &&
+        source === quarantine &&
+        destination === path.resolve(target)
+      ) {
+        recoveryAttempted = true;
+        throw recoveryFailure;
+      }
+      nativeRename(oldPath, newPath);
+    }) as typeof fs.renameSync;
+    Reflect.set(fs, "rmSync", (file: fs.PathLike, ...args: unknown[]) => {
+      const resolved = path.resolve(file.toString());
+      if (
+        mode !== "combined-recovery" &&
+        resolved.startsWith(`${path.resolve(target)}.tmp.`)
+      ) {
+        cleanupAttempted = true;
+        if (mode === "standalone-cleanup" || mode === "combined-cleanup")
+          throw cleanupFailure;
+      }
+      if (
+        mode === "combined-recovery" &&
+        quarantine !== null &&
+        resolved === quarantine
+      ) {
+        cleanupAttempted = true;
+        throw primaryFailure;
+      }
+      return (nativeRemove as (...parameters: unknown[]) => void)(
+        file,
+        ...args,
+      );
+    });
+    hooksInstalled = true;
+    let caught: unknown;
+    try {
+      if (mode === "combined-recovery")
+        project.eraseDesignArtifact({ kind: "model", id });
+      else project.setModelRecipe(design);
+    } catch (error) {
+      caught = error;
+    } finally {
+      fs.renameSync = nativeRename;
+      Reflect.set(fs, "rmSync", nativeRemove);
+      hooksInstalled = false;
+    }
+    const entries = fs.readdirSync(path.dirname(target));
+    return {
+      caught,
+      cleanupAttempted,
+      cleanupFailure,
+      fixtureAccepted,
+      primaryFailure,
+      quarantineArtifacts: entries.filter((entry) =>
+        entry.startsWith(`${path.basename(target)}.delete.`),
+      ).length,
+      recoveryAttempted,
+      recoveryFailure,
+      targetExists: fs.existsSync(target),
+      temporaryArtifacts: entries.filter((entry) =>
+        entry.startsWith(`${path.basename(target)}.tmp.`),
+      ).length,
+    };
+  } finally {
+    if (hooksInstalled) {
+      fs.renameSync = nativeRename;
+      Reflect.set(fs, "rmSync", nativeRemove);
+    }
+    fixture.dispose();
+  }
+};
+
+const exerciseProductionAtomicFailureOwnership = (): void => {
+  const standalone = captureProductionAtomicFailure("standalone-cleanup");
+  const primaryOnly = captureProductionAtomicFailure("primary-only");
+  const combinedCleanup = captureProductionAtomicFailure("combined-cleanup");
+  const combinedRecovery = captureProductionAtomicFailure("combined-recovery");
+  TestValidator.predicate(
+    "production atomic cleanup and recovery preserve exact failure ownership",
+    standalone.caught === standalone.cleanupFailure &&
+      standalone.cleanupAttempted &&
+      standalone.targetExists &&
+      standalone.temporaryArtifacts === 0 &&
+      primaryOnly.caught === primaryOnly.primaryFailure &&
+      primaryOnly.cleanupAttempted &&
+      primaryOnly.targetExists === false &&
+      primaryOnly.temporaryArtifacts === 0 &&
+      aggregateContainsExactly(combinedCleanup.caught, [
+        combinedCleanup.primaryFailure,
+        combinedCleanup.cleanupFailure,
+      ]) &&
+      combinedCleanup.cleanupAttempted &&
+      combinedCleanup.targetExists === false &&
+      combinedCleanup.temporaryArtifacts === 1 &&
+      combinedRecovery.fixtureAccepted &&
+      aggregateContainsExactly(combinedRecovery.caught, [
+        combinedRecovery.primaryFailure,
+        combinedRecovery.recoveryFailure,
+      ]) &&
+      combinedRecovery.cleanupAttempted &&
+      combinedRecovery.recoveryAttempted &&
+      combinedRecovery.targetExists === false &&
+      combinedRecovery.quarantineArtifacts === 1,
+  );
+};
+
 const exerciseRenderFileDescriptorCleanup = (
   project: AutoMovieProductionProject,
   relativePath: string,
@@ -242,6 +412,7 @@ const snapshotTree = (root: string): string[] => {
 
 /** The resident production store enforces path, revision and ownership rules. */
 export const test_mcp_production_project = (): void => {
+  exerciseProductionAtomicFailureOwnership();
   const fixture = productionFixture();
   try {
     const project = AutoMovieProductionProject.open(fixture.root);
