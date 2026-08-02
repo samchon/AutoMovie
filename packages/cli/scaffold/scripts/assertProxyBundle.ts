@@ -14,6 +14,10 @@ import fs from "node:fs";
 import path from "node:path";
 
 import {
+  type IProxyBundleCapturedEvidence,
+  decodeProxyBundleContainer,
+} from "./proxyBundleContainer";
+import {
   type IRenderGcTargetSnapshot,
   assertCapturedRenderGcFileEntry,
   assertCapturedRenderTarget,
@@ -65,6 +69,18 @@ export const assertPublishedProxyBundle = (
   target: string,
   expected: ReadonlyMap<string, Uint8Array>,
 ): void => {
+  const linked = fs.lstatSync(target);
+  if (linked.isSymbolicLink())
+    throw new Error(`Proxy bundle "${target}" is linked.`);
+  if (linked.isFile()) {
+    const snapshot = captureRenderGcTarget(path.dirname(target), target);
+    const actual = decodeProxyBundleContainer(
+      readCapturedRenderGcFile(snapshot, snapshot.bytes),
+    );
+    assertExpectedContainerFiles(actual, expected);
+    assertCapturedRenderTarget(snapshot);
+    return;
+  }
   const root = physicalDirectory(target, "proxy bundle");
   const bundle = physicalBundle(root, []);
   const actualByPath = new Map(
@@ -90,6 +106,13 @@ export const inspectPublishedProxyBundle = (
   renderRoot: string,
   target: string,
 ): IVerifiedProxyPublication => {
+  const linked = fs.lstatSync(target);
+  if (linked.isSymbolicLink())
+    throw new Error(`Proxy bundle "${target}" is linked.`);
+  if (linked.isFile())
+    return inspectCapturedProxyBundle(
+      captureRenderGcTarget(renderRoot, target),
+    );
   const physical = physicalDescendant(renderRoot, target);
   const bundle = physicalBundle(physical.target, physical.ancestry);
   const receipt = bundle.files.find(
@@ -125,10 +148,23 @@ export const inspectPublishedProxyBundle = (
   return parsed;
 };
 
-/** Inspect only the exact proxy tree already captured for GC adjudication. */
+/** Inspect only evidence bound to the proxy publication captured for GC. */
 export const inspectCapturedProxyBundle = (
   snapshot: IRenderGcTargetSnapshot,
+  evidence?: IProxyBundleCapturedEvidence,
 ): IVerifiedProxyPublication => {
+  if (evidence !== undefined) assertProxyEvidence(snapshot, evidence);
+  if (snapshot.kind === "file") {
+    const files = decodeProxyBundleContainer(
+      evidence?.bytes ?? readCapturedRenderGcFile(snapshot, snapshot.bytes),
+    );
+    const parsed = inspectProxyContainerFiles(
+      files,
+      path.relative(snapshot.base.path, snapshot.target).replaceAll("\\", "/"),
+    );
+    if (evidence === undefined) assertCapturedRenderTarget(snapshot);
+    return parsed;
+  }
   if (snapshot.kind !== "directory")
     throw new Error("Captured proxy publication is not a directory.");
   const receiptEntry = snapshot.entries.find(
@@ -136,20 +172,23 @@ export const inspectCapturedProxyBundle = (
   );
   if (receiptEntry === undefined)
     throw new Error("Captured proxy publication has no root receipt.");
-  const receiptSnapshot = captureRenderGcTarget(
-    snapshot.base.path,
-    path.join(snapshot.target, "publication.json"),
-  );
-  assertCapturedRenderGcFileEntry({
-    directory: snapshot,
-    file: receiptSnapshot,
-    relative: "publication.json",
-  });
   const parsed = parseProxyPublication(
-    readCapturedRenderGcFile(
-      receiptSnapshot,
-      PROXY_PUBLICATION_RECEIPT_MAX_BYTES,
-    ),
+    evidence?.bytes ??
+      (() => {
+        const receiptSnapshot = captureRenderGcTarget(
+          snapshot.base.path,
+          path.join(snapshot.target, "publication.json"),
+        );
+        assertCapturedRenderGcFileEntry({
+          directory: snapshot,
+          file: receiptSnapshot,
+          relative: "publication.json",
+        });
+        return readCapturedRenderGcFile(
+          receiptSnapshot,
+          PROXY_PUBLICATION_RECEIPT_MAX_BYTES,
+        );
+      })(),
   );
   const bundlePath = path
     .relative(snapshot.base.path, snapshot.target)
@@ -180,7 +219,62 @@ export const inspectCapturedProxyBundle = (
     })
   )
     throw new Error("Captured proxy publication has an invalid exact tree.");
-  assertCapturedRenderTarget(snapshot);
+  if (evidence === undefined) assertCapturedRenderTarget(snapshot);
+  return parsed;
+};
+
+const assertProxyEvidence = (
+  snapshot: IRenderGcTargetSnapshot,
+  evidence: IProxyBundleCapturedEvidence,
+): void => {
+  if (
+    evidence.baseIdentity !== snapshot.base.identity ||
+    evidence.contentFingerprint !== snapshot.contentFingerprint ||
+    evidence.namespaceFingerprint !== snapshot.namespaceFingerprint ||
+    evidence.target !== snapshot.target ||
+    evidence.targetIdentity !== snapshot.targetIdentity ||
+    evidence.targetVersion !== snapshot.targetVersion
+  )
+    throw new Error("Proxy publication evidence belongs to another snapshot.");
+};
+
+const assertExpectedContainerFiles = (
+  actual: ReadonlyMap<string, Uint8Array>,
+  expected: ReadonlyMap<string, Uint8Array>,
+): void => {
+  if (
+    actual.size !== expected.size ||
+    [...expected].some(([relative, bytes]) => {
+      const resident = actual.get(relative.replaceAll("\\", "/"));
+      return (
+        resident === undefined || Buffer.from(resident).equals(bytes) === false
+      );
+    })
+  )
+    throw new Error("Proxy bundle container differs from its expected files.");
+};
+
+const inspectProxyContainerFiles = (
+  files: ReadonlyMap<string, Uint8Array>,
+  bundlePath: string,
+): IVerifiedProxyPublication => {
+  const receipt = files.get("publication.json");
+  if (receipt === undefined)
+    throw new Error("Proxy bundle container has no publication receipt.");
+  const parsed = parseProxyPublication(receipt);
+  const expected = proxyManifestFiles(parsed, bundlePath);
+  if (
+    files.size !== expected.size + 1 ||
+    [...expected].some(([relative, fact]) => {
+      const resident = files.get(relative);
+      return (
+        resident === undefined ||
+        resident.length !== fact.bytes ||
+        digestAutoMovieBytes(resident) !== fact.digest
+      );
+    })
+  )
+    throw new Error("Proxy bundle container has an invalid exact inventory.");
   return parsed;
 };
 

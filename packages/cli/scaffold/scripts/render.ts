@@ -1367,13 +1367,19 @@ const assertMatchingProxyPublication = (
     throw new Error(
       "Final publication requires one immutable proxy publication of the same compiler-owned EDL. Finalize the proxy tier, review it, then finalize this plan.",
     );
-  const matched = physicalFiles(proxyRoot)
-    .filter((file) => path.basename(file) === "publication.json")
-    .some((file) => {
+  const matched = fs
+    .readdirSync(proxyRoot, { withFileTypes: true })
+    .filter(
+      (entry) =>
+        entry.isSymbolicLink() === false &&
+        (entry.isFile() || entry.isDirectory()) &&
+        /^[0-9a-f]{64}$/u.test(entry.name),
+    )
+    .some((entry) => {
       try {
         const receipt = inspectPublishedProxyBundle(
           project.renderRoot(),
-          path.dirname(file),
+          path.join(proxyRoot, entry.name),
         );
         return (
           receipt.compileFingerprint === plan.compileFingerprint &&
@@ -2422,13 +2428,19 @@ const collectRenderGarbage = (apply: boolean) => {
       }
   }
   const sweptPublicationRoots: string[] = [];
+  const sweptPublicationTargets = new Set<string>();
   const proxyRoot = path.join(renderRoot, "deliverables", "proxy");
   if (fs.existsSync(proxyRoot)) {
     const currentProxy = plans.find((plan) => plan.tier.kind === "proxy");
     for (const entry of fs
       .readdirSync(proxyRoot, { withFileTypes: true })
       .sort((left, right) => compareCodeUnits(left.name, right.name))) {
-      if (entry.isDirectory() === false || entry.isSymbolicLink()) continue;
+      if (
+        entry.isSymbolicLink() ||
+        (entry.isDirectory() === false && entry.isFile() === false) ||
+        /^[0-9a-f]{64}$/u.test(entry.name) === false
+      )
+        continue;
       const target = path.join(proxyRoot, entry.name);
       const relative = normalizeSlash(path.relative(renderRoot, target));
       const logical = `publication/${relative}`;
@@ -2441,14 +2453,14 @@ const collectRenderGarbage = (apply: boolean) => {
       const adjudicated = captureProxyPublicationGcTarget({
         renderRoot,
         target,
-        judge: (snapshot) => {
+        judge: (snapshot, evidence) => {
           if (
             currentProxy === undefined ||
             entry.name !== renderPublicationFingerprint(currentProxy).slice(7)
           )
             return false;
           try {
-            const receipt = inspectCapturedProxyBundle(snapshot);
+            const receipt = inspectCapturedProxyBundle(snapshot, evidence);
             return (
               receipt.publicationFingerprint ===
                 renderPublicationFingerprint(currentProxy) &&
@@ -2462,17 +2474,21 @@ const collectRenderGarbage = (apply: boolean) => {
       });
       const current = adjudicated.value;
       if (current || retainedByReview || retainedByManifest) {
-        if (current)
-          for (const entry of adjudicated.snapshot.entries) {
-            if (entry.kind !== "file") continue;
-            const file = path.join(
-              adjudicated.snapshot.target,
-              ...entry.path.split("/"),
-            );
-            publicationPaths.add(
-              `publication/${normalizeSlash(path.relative(renderRoot, file))}`,
-            );
-          }
+        if (current) {
+          if (adjudicated.snapshot.kind === "file")
+            publicationPaths.add(logical);
+          else
+            for (const entry of adjudicated.snapshot.entries) {
+              if (entry.kind !== "file") continue;
+              const file = path.join(
+                adjudicated.snapshot.target,
+                ...entry.path.split("/"),
+              );
+              publicationPaths.add(
+                `publication/${normalizeSlash(path.relative(renderRoot, file))}`,
+              );
+            }
+        }
         continue;
       }
       const candidate: IAutoMovieProductionRenderGcCandidate = {
@@ -2484,13 +2500,16 @@ const collectRenderGarbage = (apply: boolean) => {
       candidate.bytes = adjudicated.snapshot.bytes;
       candidates.push(candidate);
       candidateSnapshots.set(gcCandidateKey(candidate), adjudicated.snapshot);
-      sweptPublicationRoots.push(`${relative}/`);
+      if (adjudicated.snapshot.kind === "file")
+        sweptPublicationTargets.add(relative);
+      else sweptPublicationRoots.push(`${relative}/`);
     }
   }
   if (fs.existsSync(renderRoot))
     for (const file of physicalFiles(renderRoot)) {
       const relative = normalizeSlash(path.relative(renderRoot, file));
       if (isRenderGcPreservedPath(relative)) continue;
+      if (sweptPublicationTargets.has(relative)) continue;
       if (sweptPublicationRoots.some((root) => relative.startsWith(root)))
         continue;
       if (
