@@ -954,7 +954,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       },
       {
         contract:
-          'files["scripts/render.ts"]!.includes( "root: modelCacheRoot,\\n directory: modelCacheRoot,\\n relative,", )',
+          'files["scripts/render.ts"]!.includes( "root: modelCacheRoot,\\n              directory: modelCacheRoot,\\n              relative,", )',
         satisfied: files["scripts/render.ts"]!.includes(
           "root: modelCacheRoot,\n              directory: modelCacheRoot,\n              relative,",
         ),
