@@ -7972,6 +7972,12 @@ export const test_cli_scaffold = async (): Promise<void> => {
         writeFiles(path.join(base, "guard"), { "../escape.txt": "no" }),
       ),
     );
+    const baseTargetScaffold = path.join(base, "base-target-scaffold");
+    TestValidator.predicate(
+      "a scaffold key resolving to the base is refused before mutation",
+      throws(() => writeFiles(baseTargetScaffold, { ".": "blocked" })) &&
+        fs.existsSync(baseTargetScaffold) === false,
+    );
     const duplicateScaffold = path.join(base, "duplicate-scaffold");
     TestValidator.predicate(
       "normalized duplicate scaffold targets are refused before mutation",
@@ -8626,12 +8632,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
     mutableFs.closeSync = ((descriptor: number): void => {
       Reflect.apply(nativeClose, mutableFs, [descriptor]);
       nativeRename(closeParent, parkedCloseParent);
-      Reflect.apply(nativeMkdir, mutableFs, [closeParent]);
-      Reflect.apply(nativeWriteFile, mutableFs, [
-        path.join(closeParent, "successor.marker"),
-        "successor",
-        "utf8",
-      ]);
+      fs.symlinkSync(parkedCloseParent, closeParent, "junction");
       closeParentSwapped = true;
     }) as typeof fs.closeSync;
     let closeParentRejected = false;
@@ -8648,11 +8649,10 @@ export const test_cli_scaffold = async (): Promise<void> => {
       "scaffold materialization rejects a parent successor installed at close",
       closeParentSwapped &&
         closeParentRejected &&
-        fs.readFileSync(path.join(closeParent, "successor.marker"), "utf8") ===
-          "successor" &&
+        fs.lstatSync(closeParent).isSymbolicLink() &&
+        fs.readFileSync(closeParentTarget, "utf8") === "scaffold generation" &&
         fs.readFileSync(path.join(parkedCloseParent, "owned.txt"), "utf8") ===
-          "scaffold generation" &&
-        fs.existsSync(closeParentTarget) === false,
+          "scaffold generation",
     );
 
     const closeRootBase = path.join(base, "close-root-scaffold");
@@ -8662,12 +8662,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
     mutableFs.closeSync = ((descriptor: number): void => {
       Reflect.apply(nativeClose, mutableFs, [descriptor]);
       nativeRename(closeRootBase, parkedCloseRoot);
-      Reflect.apply(nativeMkdir, mutableFs, [closeRootBase]);
-      Reflect.apply(nativeWriteFile, mutableFs, [
-        path.join(closeRootBase, "successor.marker"),
-        "successor",
-        "utf8",
-      ]);
+      fs.symlinkSync(parkedCloseRoot, closeRootBase, "junction");
       closeRootSwapped = true;
     }) as typeof fs.closeSync;
     let closeRootRejected = false;
@@ -8682,13 +8677,10 @@ export const test_cli_scaffold = async (): Promise<void> => {
       "scaffold materialization rejects a root successor installed at close",
       closeRootSwapped &&
         closeRootRejected &&
-        fs.readFileSync(
-          path.join(closeRootBase, "successor.marker"),
-          "utf8",
-        ) === "successor" &&
+        fs.lstatSync(closeRootBase).isSymbolicLink() &&
+        fs.readFileSync(closeRootTarget, "utf8") === "scaffold generation" &&
         fs.readFileSync(path.join(parkedCloseRoot, "owned.txt"), "utf8") ===
-          "scaffold generation" &&
-        fs.existsSync(closeRootTarget) === false,
+          "scaffold generation",
     );
   } finally {
     fs.rmSync(base, { recursive: true, force: true });
