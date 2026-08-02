@@ -612,11 +612,14 @@ export const test_cli_scaffold = async (): Promise<void> => {
       ) &&
       files["scripts/renderPlanSnapshot.ts"]!.includes("generationSlot") &&
       files["scripts/renderPlanSnapshot.ts"]!.includes(
-        "fs.linkSync(candidate.target, destination)",
+        "createRenderGcFileSnapshot",
       ) &&
       files["scripts/renderPlanSnapshot.ts"]!.includes(
-        "removeCapturedRenderGcTarget",
-      ) &&
+        "fs.linkSync(candidate.target, destination)",
+      ) === false &&
+      files["scripts/renderPlanSnapshot.ts"]!.includes(
+        ".gc-preserved-plan-candidates",
+      ) === false &&
       files["scripts/renderPlanSnapshot.ts"]!.includes(
         "removeExactPlan(props.predecessor.snapshot)",
       ) === false &&
@@ -4008,10 +4011,6 @@ export const test_cli_scaffold = async (): Promise<void> => {
     ): RenderPlanFixture => ({ chunkFrames, name });
     const planRoot = path.join(base, "render-plans");
     const planTarget = path.join(planRoot, "plan.json");
-    const planCandidateRoot = path.join(
-      planRoot,
-      ".gc-preserved-plan-candidates",
-    );
     fs.mkdirSync(planRoot);
     const firstPlan = await renderPlanModule.publishRenderPlan({
       base: planRoot,
@@ -4028,8 +4027,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       "render plan publishes an immutable genesis generation",
       fs.existsSync(planTarget) === false &&
         firstPlan.generation === capturedFirstPlan.generation &&
-        capturedFirstPlan.plan.name === "first" &&
-        fs.readdirSync(planCandidateRoot).length === 0,
+        capturedFirstPlan.plan.name === "first",
     );
     const reusedFirstPlan = await renderPlanModule.publishRenderPlan({
       base: planRoot,
@@ -4078,8 +4076,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       staleInputChecked &&
         staleInputRejected &&
         renderPlanModule.captureRenderPlan(planRoot, planTarget).generation ===
-          secondPlan.generation &&
-        fs.readdirSync(planCandidateRoot).length === 0,
+          secondPlan.generation,
     );
     let concurrentWinner: RenderPlanFixtureSnapshot | undefined;
     let slowPlannerRejected = false;
@@ -4138,18 +4135,32 @@ export const test_cli_scaffold = async (): Promise<void> => {
     fs.mkdirSync(exactPlanRoot);
     let exactPlanInserted = false;
     let exactPlanIdentity = "";
-    mutableFs.linkSync = ((source, destination) => {
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
       if (
         exactPlanInserted === false &&
-        path.resolve(destination.toString()) === exactPlanSlot
+        typeof file !== "number" &&
+        path.resolve(file.toString()) === exactPlanSlot &&
+        flags === "wx+"
       ) {
-        nativeWriteFile(exactPlanSlot, fs.readFileSync(source.toString()));
+        nativeWriteFile(
+          exactPlanSlot,
+          `${JSON.stringify({
+            version: 1,
+            generation: "22222222-2222-4222-8222-222222222222",
+            predecessor: null,
+            plan: planFixture("exact-competitor", 48),
+          })}\n`,
+        );
         const status = fs.lstatSync(exactPlanSlot, { bigint: true });
         exactPlanIdentity = `${status.dev}\0${status.ino}`;
         exactPlanInserted = true;
       }
-      nativeLink(source, destination);
-    }) as typeof fs.linkSync;
+      return Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+    }) as typeof fs.openSync;
     let exactPlanAccepted: RenderPlanFixtureSnapshot | undefined;
     try {
       exactPlanAccepted = await renderPlanModule.publishRenderPlan({
@@ -4160,7 +4171,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
         target: exactPlanTarget,
       });
     } finally {
-      mutableFs.linkSync = nativeLink;
+      mutableFs.openSync = nativeOpen;
     }
     TestValidator.predicate(
       "render plan accepts an exact no-overwrite commit competitor",
@@ -4170,10 +4181,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
         (() => {
           const status = fs.lstatSync(exactPlanSlot, { bigint: true });
           return `${status.dev}\0${status.ino}` === exactPlanIdentity;
-        })() &&
-        fs.readdirSync(
-          path.join(exactPlanRoot, ".gc-preserved-plan-candidates"),
-        ).length === 0,
+        })(),
     );
 
     const foreignPlanRoot = path.join(base, "render-plan-foreign-competitor");
@@ -4192,16 +4200,22 @@ export const test_cli_scaffold = async (): Promise<void> => {
     );
     fs.mkdirSync(foreignPlanRoot);
     let foreignPlanInserted = false;
-    mutableFs.linkSync = ((source, destination) => {
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
       if (
         foreignPlanInserted === false &&
-        path.resolve(destination.toString()) === foreignPlanSlot
+        typeof file !== "number" &&
+        path.resolve(file.toString()) === foreignPlanSlot &&
+        flags === "wx+"
       ) {
         nativeWriteFile(foreignPlanSlot, foreignPlanBytes);
         foreignPlanInserted = true;
       }
-      nativeLink(source, destination);
-    }) as typeof fs.linkSync;
+      return Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+    }) as typeof fs.openSync;
     let foreignPlanRejected = false;
     try {
       await renderPlanModule.publishRenderPlan({
@@ -4214,7 +4228,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
     } catch {
       foreignPlanRejected = true;
     } finally {
-      mutableFs.linkSync = nativeLink;
+      mutableFs.openSync = nativeOpen;
     }
     TestValidator.predicate(
       "render plan preserves a foreign destination generation competitor",
@@ -4223,159 +4237,6 @@ export const test_cli_scaffold = async (): Promise<void> => {
         fs.readFileSync(foreignPlanSlot).equals(foreignPlanBytes) &&
         renderPlanModule.captureRenderPlan(foreignPlanRoot, foreignPlanTarget)
           .plan.name === "foreign",
-    );
-
-    const candidatePlanRoot = path.join(base, "render-plan-candidate-swap");
-    const candidatePlanTarget = path.join(candidatePlanRoot, "plan.json");
-    const candidatePlanSlot = path.join(
-      `${candidatePlanTarget}.generations`,
-      "genesis.json",
-    );
-    fs.mkdirSync(candidatePlanRoot);
-    let planCandidatePath = "";
-    let parkedPlanCandidate = "";
-    let planCandidateSwapped = false;
-    mutableFs.linkSync = ((source, destination) => {
-      if (
-        planCandidateSwapped === false &&
-        path.resolve(destination.toString()) === candidatePlanSlot
-      ) {
-        planCandidatePath = path.resolve(source.toString());
-        parkedPlanCandidate = `${planCandidatePath}.parked`;
-        nativeRename(planCandidatePath, parkedPlanCandidate);
-        nativeWriteFile(
-          planCandidatePath,
-          fs.readFileSync(parkedPlanCandidate),
-        );
-        planCandidateSwapped = true;
-      }
-      nativeLink(source, destination);
-    }) as typeof fs.linkSync;
-    let planCandidateSwapRejected = false;
-    try {
-      await renderPlanModule.publishRenderPlan({
-        base: candidatePlanRoot,
-        inputCurrent: async () => undefined,
-        plan: planFixture("candidate-swap", 48),
-        predecessor: null,
-        target: candidatePlanTarget,
-      });
-    } catch {
-      planCandidateSwapRejected = true;
-    } finally {
-      mutableFs.linkSync = nativeLink;
-    }
-    TestValidator.predicate(
-      "render plan preserves a byte-identical candidate pathname successor",
-      planCandidateSwapped &&
-        planCandidateSwapRejected &&
-        fs.existsSync(planCandidatePath) &&
-        fs.existsSync(parkedPlanCandidate) &&
-        fs.existsSync(candidatePlanSlot),
-    );
-
-    const linkedCandidatePlanRoot = path.join(
-      base,
-      "render-plan-linked-candidate-swap",
-    );
-    const linkedCandidatePlanTarget = path.join(
-      linkedCandidatePlanRoot,
-      "plan.json",
-    );
-    const linkedCandidatePlanSlot = path.join(
-      `${linkedCandidatePlanTarget}.generations`,
-      "genesis.json",
-    );
-    fs.mkdirSync(linkedCandidatePlanRoot);
-    let linkedPlanCandidate = "";
-    let parkedLinkedPlanCandidate = "";
-    let linkedPlanCandidateSwapped = false;
-    mutableFs.linkSync = ((source, destination) => {
-      if (
-        linkedPlanCandidateSwapped === false &&
-        path.resolve(destination.toString()) === linkedCandidatePlanSlot
-      ) {
-        linkedPlanCandidate = path.resolve(source.toString());
-        parkedLinkedPlanCandidate = `${linkedPlanCandidate}.parked`;
-        nativeLink(linkedPlanCandidate, parkedLinkedPlanCandidate);
-        fs.rmSync(linkedPlanCandidate);
-        nativeLink(parkedLinkedPlanCandidate, linkedPlanCandidate);
-        linkedPlanCandidateSwapped = true;
-      }
-      nativeLink(source, destination);
-    }) as typeof fs.linkSync;
-    let linkedPlanCandidateRejected = false;
-    try {
-      await renderPlanModule.publishRenderPlan({
-        base: linkedCandidatePlanRoot,
-        inputCurrent: async () => undefined,
-        plan: planFixture("linked-candidate-swap", 48),
-        predecessor: null,
-        target: linkedCandidatePlanTarget,
-      });
-    } catch {
-      linkedPlanCandidateRejected = true;
-    } finally {
-      mutableFs.linkSync = nativeLink;
-    }
-    TestValidator.predicate(
-      "render plan rejects a same-inode candidate relink generation",
-      linkedPlanCandidateSwapped &&
-        linkedPlanCandidateRejected &&
-        fs.existsSync(linkedPlanCandidate) &&
-        fs.existsSync(parkedLinkedPlanCandidate) &&
-        fs.existsSync(linkedCandidatePlanSlot),
-    );
-
-    const cleanupPlanRoot = path.join(base, "render-plan-cleanup-successor");
-    const cleanupPlanTarget = path.join(cleanupPlanRoot, "plan.json");
-    const cleanupPlanSlot = path.join(
-      `${cleanupPlanTarget}.generations`,
-      "genesis.json",
-    );
-    fs.mkdirSync(cleanupPlanRoot);
-    let cleanupPlanCandidate = "";
-    let cleanupPlanSuccessorInserted = false;
-    mutableFs.linkSync = ((source, destination) => {
-      if (path.resolve(destination.toString()) === cleanupPlanSlot)
-        nativeWriteFile(cleanupPlanSlot, fs.readFileSync(source.toString()));
-      nativeLink(source, destination);
-    }) as typeof fs.linkSync;
-    mutableFs.renameSync = ((oldPath, newPath) => {
-      nativeRename(oldPath, newPath);
-      if (
-        cleanupPlanSuccessorInserted === false &&
-        path.basename(oldPath.toString()).endsWith(".plan-candidate")
-      ) {
-        cleanupPlanCandidate = path.resolve(oldPath.toString());
-        nativeWriteFile(
-          cleanupPlanCandidate,
-          fs.readFileSync(newPath.toString()),
-        );
-        cleanupPlanSuccessorInserted = true;
-      }
-    }) as typeof fs.renameSync;
-    let cleanupPlanRejected = false;
-    try {
-      await renderPlanModule.publishRenderPlan({
-        base: cleanupPlanRoot,
-        inputCurrent: async () => undefined,
-        plan: planFixture("cleanup-successor", 48),
-        predecessor: null,
-        target: cleanupPlanTarget,
-      });
-    } catch {
-      cleanupPlanRejected = true;
-    } finally {
-      mutableFs.linkSync = nativeLink;
-      mutableFs.renameSync = nativeRename;
-    }
-    TestValidator.predicate(
-      "render plan never reports exact-winner success after cleanup successor",
-      cleanupPlanSuccessorInserted &&
-        cleanupPlanRejected &&
-        fs.existsSync(cleanupPlanCandidate) &&
-        fs.existsSync(cleanupPlanSlot),
     );
 
     const rootSwapPlanRoot = path.join(base, "render-plan-root-swap");
@@ -4394,15 +4255,13 @@ export const test_cli_scaffold = async (): Promise<void> => {
         planRootSwapped === false &&
         typeof file !== "number" &&
         flags === "wx+" &&
-        path.basename(file.toString()).endsWith(".plan-candidate")
+        path.resolve(file.toString()) ===
+          path.join(rootSwapPlanRoot, "plan.json.generations", "genesis.json")
       ) {
         nativeRename(rootSwapPlanRoot, parkedRootSwapPlan);
         nativeMkdir(path.join(rootSwapPlanRoot, "plan.json.generations"), {
           recursive: true,
         });
-        nativeMkdir(
-          path.join(rootSwapPlanRoot, ".gc-preserved-plan-candidates"),
-        );
         nativeWriteFile(rootSwapPlanMarker, "successor");
         planRootSwapped = true;
       }
@@ -4427,11 +4286,13 @@ export const test_cli_scaffold = async (): Promise<void> => {
       planRootSwapped &&
         planRootSwapRejected &&
         fs.readFileSync(rootSwapPlanMarker, "utf8") === "successor" &&
-        fs
-          .readdirSync(
-            path.join(parkedRootSwapPlan, ".gc-preserved-plan-candidates"),
-          )
-          .some((name) => name.endsWith(".plan-candidate")),
+        fs.existsSync(
+          path.join(
+            parkedRootSwapPlan,
+            "plan.json.generations",
+            "genesis.json",
+          ),
+        ),
     );
 
     const legacyPlanRoot = path.join(base, "render-plan-legacy");
@@ -4460,6 +4321,24 @@ export const test_cli_scaffold = async (): Promise<void> => {
           .generation === migratedPlan.generation &&
         renderPlanModule.captureRenderPlan(base, legacyPlanTarget)
           .generation === migratedPlan.generation,
+    );
+    const parkedLegacyPlanTarget = `${legacyPlanTarget}.parked`;
+    fs.renameSync(legacyPlanTarget, parkedLegacyPlanTarget);
+    fs.writeFileSync(
+      legacyPlanTarget,
+      `${JSON.stringify(planFixture("foreign-legacy", 12), null, 2)}\n`,
+    );
+    let replacedLegacyPlanRejected = false;
+    try {
+      renderPlanModule.captureRenderPlan(legacyPlanRoot, legacyPlanTarget);
+    } catch {
+      replacedLegacyPlanRejected = true;
+    }
+    TestValidator.predicate(
+      "render plan rejects a replaced legacy root after migration",
+      replacedLegacyPlanRejected &&
+        fs.existsSync(parkedLegacyPlanTarget) &&
+        fs.existsSync(`${legacyPlanTarget}.generations`),
     );
 
     const traversalPlanRoot = path.join(base, "render-plan-traversal-swap");
