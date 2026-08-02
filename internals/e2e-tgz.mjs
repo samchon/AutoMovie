@@ -200,11 +200,20 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
 const assert = (name, condition, detail) => {
-  if (!condition) {
-    console.error(\`✗ \${name}: \${detail}\`);
-    process.exit(1);
-  }
+  if (!condition) throw new Error(\`✗ \${name}: \${detail}\`);
   console.log(\`✓ \${name}\`);
+};
+
+const preserveCleanupFailure = async (failure, cleanup) => {
+  try {
+    await cleanup();
+  } catch (cleanupError) {
+    if (failure === undefined) throw cleanupError;
+    throw new AggregateError(
+      [failure.error, cleanupError],
+      "Packaged MCP client cleanup failed after the probe failed.",
+    );
+  }
 };
 
 assert(
@@ -228,15 +237,16 @@ const transport = new StdioClientTransport({
   stderr: "pipe",
 });
 const client = new Client({ name: "automovie-tgz-e2e", version: "0.0.0" });
+let clientFailure;
 try {
-  // A files-selection regression ships bin.js (npm force-includes bin
-  // targets) without the rest of lib/, so the server dies on import and the
-  // failure surfaces here, not at the bin-target existence check.
-  await client.connect(transport);
-} catch (error) {
-  assert("connect", false, \`packaged server failed to start: \${error}\`);
-}
-try {
+  try {
+    // A files-selection regression ships bin.js (npm force-includes bin
+    // targets) without the rest of lib/, so the server dies on import and the
+    // failure surfaces here, not at the bin-target existence check.
+    await client.connect(transport);
+  } catch (error) {
+    assert("connect", false, \`packaged server failed to start: \${error}\`);
+  }
   const server = client.getServerVersion();
   assert(
     "handshake",
@@ -278,8 +288,11 @@ try {
     guide.isError !== true && guideText.length >= 1000,
     \`isError=\${guide.isError} length=\${guideText.length} (guide corpus missing from the pack?)\`,
   );
+} catch (error) {
+  clientFailure = { error };
+  throw error;
 } finally {
-  await client.close();
+  await preserveCleanupFailure(clientFailure, () => client.close());
 }
 
 `;
