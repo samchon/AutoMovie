@@ -3231,7 +3231,7 @@ export const test_workspace_public_contracts = (): void => {
               "`",
           },
           modelInventory:
-            'newMap(generated.files.filter((entry)=>entry.path.startsWith("models/")&&entry.path.endsWith(".json")).map((entry)=>{constmodel=JSON.parse(Buffer.from(project.readGeneratedFile(entry.path)).toString("utf8"));return[model.id,model];}))',
+            'newMap(compiled.assets.map((entry)=>[entry.id,JSON.parse(Buffer.from(project.readGeneratedFile(entry.path)).toString("utf8")),]))',
           outerBodyStatementCount: 4,
           outerExpression: "before.reviews.entries",
           outerInitializer: "constentry",

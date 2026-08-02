@@ -671,17 +671,12 @@ if (phase === "review") {
         ]),
   ];
   const compiledModels = new Map(
-    generated.files
-      .filter(
-        (entry) =>
-          entry.path.startsWith("models/") && entry.path.endsWith(".json"),
-      )
-      .map((entry) => {
-        const model = JSON.parse(
-          Buffer.from(project.readGeneratedFile(entry.path)).toString("utf8"),
-        );
-        return [model.id, model];
-      }),
+    compiled.assets.map((entry) => [
+      entry.id,
+      JSON.parse(
+        Buffer.from(project.readGeneratedFile(entry.path)).toString("utf8"),
+      ),
+    ]),
   );
   try {
     for (const entry of before.reviews.entries) {
