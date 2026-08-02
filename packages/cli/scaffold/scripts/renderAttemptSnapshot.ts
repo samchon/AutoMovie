@@ -4,7 +4,6 @@ import fs from "node:fs";
 import path from "node:path";
 
 import {
-  type IRenderGcPhysicalDirectory,
   type IRenderGcTargetSnapshot,
   RENDER_GC_PRESERVED_PREFIX,
   assertRenderPhysicalDirectoryIdentity,
@@ -269,16 +268,13 @@ const publishAttemptRecord = (props: {
 }): IRenderAttemptSnapshot => {
   const candidatePath = `${props.target}.${process.pid}.${randomUUID()}.attempt-candidate`;
   props.assertOwnership();
-  const candidateDirectory = captureRenderPhysicalDirectory(
-    path.dirname(candidatePath),
-    "render attempt candidate directory",
-  );
   const candidate = createRenderGcFileSnapshot(
     props.base,
     candidatePath,
     props.bytes,
   );
   let linked: IRenderGcTargetSnapshot | null = null;
+  let cleanupCandidate = candidate;
   let candidateRemoved = false;
   try {
     props.assertOwnership();
@@ -290,29 +286,21 @@ const publishAttemptRecord = (props: {
     fs.linkSync(candidate.target, props.target);
     linked = captureRenderGcTarget(props.base, props.target);
     assertSameAttemptFile(candidate, linked);
+    cleanupCandidate = captureRenderGcTarget(props.base, candidate.target);
+    assertSameAttemptFile(candidate, cleanupCandidate);
     props.assertOwnership();
 
-    removeOwnedAttempt(candidate, candidateDirectory);
+    removeExactAttempt(cleanupCandidate);
     candidateRemoved = true;
     const published = captureRenderGcTarget(props.base, props.target);
     assertSameAttemptFile(candidate, published);
     props.assertOwnership();
     return readRenderAttempt(published);
   } catch (error) {
-    const current = captureExistingAttempt(props.base, props.target);
-    if (
-      linked !== null &&
-      physicalDirectoryCurrent(candidateDirectory) &&
-      current !== null &&
-      current.base.identity === linked.base.identity &&
-      current.targetIdentity === linked.targetIdentity &&
-      current.contentFingerprint === linked.contentFingerprint
-    )
-      removeExactAttempt(current);
+    if (linked !== null) tryRemoveExactAttempt(linked);
     throw error;
   } finally {
-    if (candidateRemoved === false)
-      removeOwnedAttempt(candidate, candidateDirectory, true);
+    if (candidateRemoved === false) tryRemoveExactAttempt(cleanupCandidate);
   }
 };
 
@@ -376,38 +364,11 @@ const assertSameAttemptFile = (
     throw new Error("Render attempt publication used another physical file.");
 };
 
-const removeOwnedAttempt = (
-  expected: IRenderGcTargetSnapshot,
-  directory?: IRenderGcPhysicalDirectory,
-  absentAllowed: boolean = false,
-): void => {
-  if (directory !== undefined && physicalDirectoryCurrent(directory) === false)
-    return;
-  const current = captureExistingAttempt(expected.base.path, expected.target);
-  if (current === null) {
-    if (absentAllowed) return;
-    throw new Error(`Render attempt "${expected.target}" disappeared.`);
-  }
-  if (
-    current.base.identity !== expected.base.identity ||
-    current.targetIdentity !== expected.targetIdentity ||
-    current.contentFingerprint !== expected.contentFingerprint
-  )
-    return;
-  removeExactAttempt(current);
-};
-
-const physicalDirectoryCurrent = (
-  directory: IRenderGcPhysicalDirectory,
-): boolean => {
+const tryRemoveExactAttempt = (snapshot: IRenderGcTargetSnapshot): void => {
   try {
-    assertRenderPhysicalDirectoryIdentity(
-      directory,
-      "render attempt candidate directory",
-    );
-    return true;
+    removeExactAttempt(snapshot);
   } catch {
-    return false;
+    // A missing or changed pathname is a successor, so preserve it.
   }
 };
 

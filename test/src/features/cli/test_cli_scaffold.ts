@@ -3941,6 +3941,74 @@ export const test_cli_scaffold = async (): Promise<void> => {
       force: true,
     });
 
+    const sameParentRelinkLock = createAttemptLock(32013, firstAttemptToken);
+    const sameParentRelinkLockSuccessor = Buffer.from(
+      `${JSON.stringify({
+        chunk: attemptChunk,
+        pid: 32013,
+        token: secondAttemptToken,
+      })}\n`,
+    );
+    let sameParentRelinked = false;
+    let sameParentCandidate = "";
+    mutableFs.lstatSync = ((file, ...args: unknown[]): unknown => {
+      const status = Reflect.apply(nativeLstat, mutableFs, [file, ...args]);
+      if (
+        sameParentRelinked === false &&
+        path.resolve(file.toString()) ===
+          sameParentRelinkLock.snapshot.target &&
+        fs.existsSync(attemptTarget)
+      ) {
+        const candidate = fs
+          .readdirSync(attemptDirectory)
+          .find((name) => name.endsWith(".attempt-candidate"));
+        if (candidate !== undefined) {
+          sameParentCandidate = path.join(attemptDirectory, candidate);
+          fs.rmSync(attemptTarget);
+          nativeLink(sameParentCandidate, attemptTarget);
+          fs.rmSync(sameParentCandidate);
+          nativeLink(attemptTarget, sameParentCandidate);
+          fs.rmSync(sameParentRelinkLock.snapshot.target);
+          nativeWriteFile(
+            sameParentRelinkLock.snapshot.target,
+            sameParentRelinkLockSuccessor,
+          );
+          sameParentRelinked = true;
+        }
+      }
+      return status;
+    }) as typeof fs.lstatSync;
+    let sameParentRelinkRejected = false;
+    try {
+      sameParentRelinkRejected = throws(() =>
+        renderAttemptModule.beginRenderAttempt({
+          base: attemptRoot,
+          chunk: attemptChunk,
+          lock: sameParentRelinkLock,
+          pid: 32013,
+          processAlive: () => false,
+          slot: "slot-0001",
+          target: attemptTarget,
+          token: firstAttemptToken,
+        }),
+      );
+    } finally {
+      mutableFs.lstatSync = nativeLstat;
+    }
+    TestValidator.predicate(
+      "render attempt preserves same-parent target and candidate relink successors",
+      sameParentRelinked &&
+        sameParentRelinkRejected &&
+        fs.existsSync(attemptTarget) &&
+        fs.existsSync(sameParentCandidate) &&
+        fs
+          .readFileSync(sameParentRelinkLock.snapshot.target)
+          .equals(sameParentRelinkLockSuccessor),
+    );
+    fs.rmSync(attemptTarget);
+    fs.rmSync(sameParentCandidate);
+    fs.rmSync(sameParentRelinkLock.snapshot.target);
+
     const parentFenceLock = createAttemptLock(32009, firstAttemptToken);
     const parkedAttemptDirectory = `${attemptDirectory}.parked`;
     const attemptParentSuccessorMarker = path.join(
