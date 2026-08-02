@@ -12,6 +12,9 @@ const compact = (node: ts.Node, source: ts.SourceFile): string =>
     .replace(/\/\/[^\r\n]*/g, "")
     .replace(/\s+/g, "");
 
+const templateSource = (value: string): string =>
+  value.replaceAll("#{", "$" + "{");
+
 interface ICaptureShotsCleanupContract {
   cleanupCalls: Array<{
     call: string;
@@ -284,7 +287,9 @@ export const test_workspace_capture_shots_cleanup = (): void => {
         capture: [
           {
             async: true,
-            body: '{constW=even(w);constH=even(h);constdest=path.join(shotsDir,out);fs.mkdirSync(path.dirname(dest),{recursive:true});constpg=awaitbrowser.newPage({viewport:{width:W,height:H},deviceScaleFactor:1,});letcompletion;letpageFailure;try{constsep=q?"&":"";awaitpg.goto(`${BASE}/${page}?${q}${sep}cap=1&w=${W}&h=${H}`,{waitUntil:"load",});awaitpg.waitForFunction(()=>typeofwindow.__afSeek==="function");awaitpg.addStyleTag({content:"#clips{display:none!important}"});constview=pg.locator("#view");constenc=awaitHME.createH264MP4Encoder();letencoderFailure;try{enc.width=W;enc.height=H;enc.frameRate=fps;enc.quantizationParameter=20;enc.initialize();constt0=Date.now();for(leti=0;i<n;i++){constt=(dur*i)/(n-1);awaitpg.evaluate((tt)=>window.__afSeek(tt),t);constbuf=awaitview.screenshot({type:"png"});constpng=PNG.sync.read(buf);enc.addFrameRgba(newUint8Array(png.data));}enc.finalize();fs.writeFileSync(dest,Buffer.from(enc.FS.readFile(enc.outputFilename)));completion=`wrote${out}(${n}frames@${fps}fps,${((Date.now()-t0)/1000).toFixed(1)}s)`;}catch(error){encoderFailure={error};throwerror;}finally{awaitpreserveCleanupFailure(encoderFailure,"captureencoder",()=>enc.delete(),);}}catch(error){pageFailure={error};throwerror;}finally{awaitpreserveCleanupFailure(pageFailure,"capturepage",()=>pg.close());}console.log(completion);}',
+            body: templateSource(
+              '{constW=even(w);constH=even(h);constdest=path.join(shotsDir,out);fs.mkdirSync(path.dirname(dest),{recursive:true});constpg=awaitbrowser.newPage({viewport:{width:W,height:H},deviceScaleFactor:1,});letcompletion;letpageFailure;try{constsep=q?"&":"";awaitpg.goto(`#{BASE}/#{page}?#{q}#{sep}cap=1&w=#{W}&h=#{H}`,{waitUntil:"load",});awaitpg.waitForFunction(()=>typeofwindow.__afSeek==="function");awaitpg.addStyleTag({content:"#clips{display:none!important}"});constview=pg.locator("#view");constenc=awaitHME.createH264MP4Encoder();letencoderFailure;try{enc.width=W;enc.height=H;enc.frameRate=fps;enc.quantizationParameter=20;enc.initialize();constt0=Date.now();for(leti=0;i<n;i++){constt=(dur*i)/(n-1);awaitpg.evaluate((tt)=>window.__afSeek(tt),t);constbuf=awaitview.screenshot({type:"png"});constpng=PNG.sync.read(buf);enc.addFrameRgba(newUint8Array(png.data));}enc.finalize();fs.writeFileSync(dest,Buffer.from(enc.FS.readFile(enc.outputFilename)));completion=`wrote#{out}(#{n}frames@#{fps}fps,#{((Date.now()-t0)/1000).toFixed(1)}s)`;}catch(error){encoderFailure={error};throwerror;}finally{awaitpreserveCleanupFailure(encoderFailure,"captureencoder",()=>enc.delete(),);}}catch(error){pageFailure={error};throwerror;}finally{awaitpreserveCleanupFailure(pageFailure,"capturepage",()=>pg.close());}console.log(completion);}',
+            ),
             exported: false,
             parameters: ["[page,q,dur,n,w,h,out,fps]"],
           },
@@ -292,7 +297,9 @@ export const test_workspace_capture_shots_cleanup = (): void => {
         preserveCleanupFailure: [
           {
             async: true,
-            body: "{try{awaitcleanup();}catch(cleanupError){if(failure===undefined)throwcleanupError;thrownewAggregateError([failure.error,cleanupError],`${resource}cleanupfailedaftertheoperationfailed.`,);}}",
+            body: templateSource(
+              "{try{awaitcleanup();}catch(cleanupError){if(failure===undefined)throwcleanupError;thrownewAggregateError([failure.error,cleanupError],`#{resource}cleanupfailedaftertheoperationfailed.`,);}}",
+            ),
             exported: true,
             parameters: ["failure", "resource", "cleanup"],
           },
@@ -320,8 +327,9 @@ export const test_workspace_capture_shots_cleanup = (): void => {
           body: null,
           declarationKind: "const",
           expression: null,
-          initializer:
-            'async([page,q,dur,n,w,h,out,fps])=>{constW=even(w);constH=even(h);constdest=path.join(shotsDir,out);fs.mkdirSync(path.dirname(dest),{recursive:true});constpg=awaitbrowser.newPage({viewport:{width:W,height:H},deviceScaleFactor:1,});letcompletion;letpageFailure;try{constsep=q?"&":"";awaitpg.goto(`${BASE}/${page}?${q}${sep}cap=1&w=${W}&h=${H}`,{waitUntil:"load",});awaitpg.waitForFunction(()=>typeofwindow.__afSeek==="function");awaitpg.addStyleTag({content:"#clips{display:none!important}"});constview=pg.locator("#view");constenc=awaitHME.createH264MP4Encoder();letencoderFailure;try{enc.width=W;enc.height=H;enc.frameRate=fps;enc.quantizationParameter=20;enc.initialize();constt0=Date.now();for(leti=0;i<n;i++){constt=(dur*i)/(n-1);awaitpg.evaluate((tt)=>window.__afSeek(tt),t);constbuf=awaitview.screenshot({type:"png"});constpng=PNG.sync.read(buf);enc.addFrameRgba(newUint8Array(png.data));}enc.finalize();fs.writeFileSync(dest,Buffer.from(enc.FS.readFile(enc.outputFilename)));completion=`wrote${out}(${n}frames@${fps}fps,${((Date.now()-t0)/1000).toFixed(1)}s)`;}catch(error){encoderFailure={error};throwerror;}finally{awaitpreserveCleanupFailure(encoderFailure,"captureencoder",()=>enc.delete(),);}}catch(error){pageFailure={error};throwerror;}finally{awaitpreserveCleanupFailure(pageFailure,"capturepage",()=>pg.close());}console.log(completion);}',
+          initializer: templateSource(
+            'async([page,q,dur,n,w,h,out,fps])=>{constW=even(w);constH=even(h);constdest=path.join(shotsDir,out);fs.mkdirSync(path.dirname(dest),{recursive:true});constpg=awaitbrowser.newPage({viewport:{width:W,height:H},deviceScaleFactor:1,});letcompletion;letpageFailure;try{constsep=q?"&":"";awaitpg.goto(`#{BASE}/#{page}?#{q}#{sep}cap=1&w=#{W}&h=#{H}`,{waitUntil:"load",});awaitpg.waitForFunction(()=>typeofwindow.__afSeek==="function");awaitpg.addStyleTag({content:"#clips{display:none!important}"});constview=pg.locator("#view");constenc=awaitHME.createH264MP4Encoder();letencoderFailure;try{enc.width=W;enc.height=H;enc.frameRate=fps;enc.quantizationParameter=20;enc.initialize();constt0=Date.now();for(leti=0;i<n;i++){constt=(dur*i)/(n-1);awaitpg.evaluate((tt)=>window.__afSeek(tt),t);constbuf=awaitview.screenshot({type:"png"});constpng=PNG.sync.read(buf);enc.addFrameRgba(newUint8Array(png.data));}enc.finalize();fs.writeFileSync(dest,Buffer.from(enc.FS.readFile(enc.outputFilename)));completion=`wrote#{out}(#{n}frames@#{fps}fps,#{((Date.now()-t0)/1000).toFixed(1)}s)`;}catch(error){encoderFailure={error};throwerror;}finally{awaitpreserveCleanupFailure(encoderFailure,"captureencoder",()=>enc.delete(),);}}catch(error){pageFailure={error};throwerror;}finally{awaitpreserveCleanupFailure(pageFailure,"capturepage",()=>pg.close());}console.log(completion);}',
+          ),
           kind: "declaration",
           name: "capture",
         },

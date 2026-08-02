@@ -13,6 +13,9 @@ const compact = (node: ts.Node, source: ts.SourceFile): string =>
     .replace(/\/\/[^\r\n]*/g, "")
     .replace(/\s+/g, "");
 
+const templateSource = (value: string): string =>
+  value.replaceAll("#{", "$" + "{");
+
 interface IFaceAnalysisCleanupContract {
   directCleanupCalls: string[];
   exitOwners: Array<string | null>;
@@ -469,7 +472,9 @@ export const test_workspace_face_analysis_cleanup = (): void => {
       launchOwners: ['launch:"MakeHumandissect"'],
       pageCalls: {
         "page.on": 1,
-        'page.goto(`${BASE}/mhhead.html`,{waitUntil:"load"}).catch': 1,
+        [templateSource(
+          'page.goto(`#{BASE}/mhhead.html`,{waitUntil:"load"}).catch',
+        )]: 1,
         "page.goto": 1,
         "page.evaluate": 1,
       },
@@ -506,7 +511,9 @@ export const test_workspace_face_analysis_cleanup = (): void => {
     [
       {
         async: true,
-        body: "{constbrowser=awaitlaunchBrowser();letbrowserFailure;try{constpage=awaitbrowser.newPage(pageOptions);letpageFailure;try{returnawaitoperation(page);}catch(error){pageFailure={error};throwerror;}finally{awaitpreserveCleanupFailure(pageFailure,`${resource}page`,()=>page.close(),);}}catch(error){browserFailure={error};throwerror;}finally{awaitpreserveCleanupFailure(browserFailure,`${resource}browser`,()=>browser.close(),);}}",
+        body: templateSource(
+          "{constbrowser=awaitlaunchBrowser();letbrowserFailure;try{constpage=awaitbrowser.newPage(pageOptions);letpageFailure;try{returnawaitoperation(page);}catch(error){pageFailure={error};throwerror;}finally{awaitpreserveCleanupFailure(pageFailure,`#{resource}page`,()=>page.close(),);}}catch(error){browserFailure={error};throwerror;}finally{awaitpreserveCleanupFailure(browserFailure,`#{resource}browser`,()=>browser.close(),);}}",
+        ),
         exported: true,
         parameters: ["launchBrowser", "pageOptions", "resource", "operation"],
       },

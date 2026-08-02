@@ -12,6 +12,9 @@ const compact = (node: ts.Node, source: ts.SourceFile): string =>
     .replace(/\/\/[^\r\n]*/g, "")
     .replace(/\s+/g, "");
 
+const templateSource = (value: string): string =>
+  value.replaceAll("#{", "$" + "{");
+
 const action = (statement: ts.Statement, source: ts.SourceFile): string => {
   if (
     ts.isVariableStatement(statement) &&
@@ -380,7 +383,9 @@ export const test_workspace_capture_head_cleanup = (): void => {
           owner: '"captureheadbrowser"',
         },
         {
-          call: 'page.goto(`${BASE}/head.html`,{waitUntil:"load"})',
+          call: templateSource(
+            'page.goto(`#{BASE}/head.html`,{waitUntil:"load"})',
+          ),
           owner: '"captureheadpage"',
         },
         {
@@ -424,7 +429,9 @@ export const test_workspace_capture_head_cleanup = (): void => {
           owner: '"captureheadpage"',
         },
         {
-          call: "fs.writeFileSync(path.join(modeDir,`${view}.png`),buf)",
+          call: templateSource(
+            "fs.writeFileSync(path.join(modeDir,`#{view}.png`),buf)",
+          ),
           owner: '"captureheadpage"',
         },
         {
