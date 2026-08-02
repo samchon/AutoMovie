@@ -1409,17 +1409,36 @@ const captureSmokeCleanupContract = (
     incrementor: string | null;
     initializer: string | null;
   };
+  mainActions: string[];
   mainCount: number;
   resources: Record<
     | "browser"
     | "browserFailure"
     | "frames"
+    | "page"
     | "runs"
     | "server"
     | "serverFailure"
     | "session"
     | "sessionFailure",
-    { count: number; initializer: string | null }
+    {
+      count: number;
+      initializer: string | null;
+      kind: string | null;
+      scopeCount: number;
+    }
+  >;
+  writes: Record<
+    | "browser"
+    | "browserFailure"
+    | "frames"
+    | "page"
+    | "runs"
+    | "server"
+    | "serverFailure"
+    | "session"
+    | "sessionFailure",
+    string[]
   >;
 } => {
   const parsed = ts.createSourceFile(
@@ -1508,7 +1527,12 @@ const captureSmokeCleanupContract = (
   const binding = (
     statements: ts.NodeArray<ts.Statement> | undefined,
     name: string,
-  ): { count: number; initializer: string | null } => {
+  ): {
+    count: number;
+    initializer: string | null;
+    kind: string | null;
+    scopeCount: number;
+  } => {
     const declarations = (statements ?? []).flatMap((statement) =>
       ts.isVariableStatement(statement)
         ? [...statement.declarationList.declarations].filter(
@@ -1518,14 +1542,117 @@ const captureSmokeCleanupContract = (
           )
         : [],
     );
+    let count = 0;
+    const visit = (node: ts.Node): void => {
+      if (
+        ts.isVariableDeclaration(node) &&
+        ts.isIdentifier(node.name) &&
+        node.name.text === name
+      )
+        ++count;
+      ts.forEachChild(node, visit);
+    };
+    if (main !== undefined) visit(main);
+    const declaration =
+      declarations.length === 1 ? declarations[0]! : undefined;
+    const declarationList = declaration?.parent;
     return {
-      count: declarations.length,
+      count,
       initializer:
-        declarations.length === 1 && declarations[0]!.initializer !== undefined
-          ? compact(declarations[0]!.initializer!)
-          : null,
+        declaration?.initializer === undefined
+          ? null
+          : compact(declaration.initializer),
+      kind:
+        declarationList === undefined ||
+        ts.isVariableDeclarationList(declarationList) === false
+          ? null
+          : (declarationList.flags & ts.NodeFlags.Const) !== 0
+            ? "const"
+            : (declarationList.flags & ts.NodeFlags.Let) !== 0
+              ? "let"
+              : "var",
+      scopeCount: declarations.length,
     };
   };
+  const tracked = [
+    "browser",
+    "browserFailure",
+    "frames",
+    "page",
+    "runs",
+    "server",
+    "serverFailure",
+    "session",
+    "sessionFailure",
+  ] as const;
+  const writes = Object.fromEntries(
+    tracked.map((name) => [name, [] as string[]]),
+  ) as Record<(typeof tracked)[number], string[]>;
+  const writtenBindings = (target: ts.Expression): string[] => {
+    if (ts.isIdentifier(target))
+      return tracked.includes(target.text as (typeof tracked)[number])
+        ? [target.text]
+        : [];
+    if (
+      ts.isParenthesizedExpression(target) ||
+      ts.isAsExpression(target) ||
+      ts.isTypeAssertionExpression(target) ||
+      ts.isSatisfiesExpression(target) ||
+      ts.isNonNullExpression(target)
+    )
+      return writtenBindings(target.expression);
+    if (ts.isPropertyAccessExpression(target))
+      return writtenBindings(target.expression);
+    if (ts.isElementAccessExpression(target))
+      return writtenBindings(target.expression);
+    if (ts.isArrayLiteralExpression(target))
+      return target.elements.flatMap((element) =>
+        ts.isOmittedExpression(element)
+          ? []
+          : ts.isSpreadElement(element)
+            ? writtenBindings(element.expression)
+            : writtenBindings(element),
+      );
+    if (ts.isObjectLiteralExpression(target))
+      return target.properties.flatMap((property) => {
+        if (ts.isShorthandPropertyAssignment(property))
+          return tracked.includes(
+            property.name.text as (typeof tracked)[number],
+          )
+            ? [property.name.text]
+            : [];
+        if (ts.isPropertyAssignment(property))
+          return writtenBindings(property.initializer);
+        if (ts.isSpreadAssignment(property))
+          return writtenBindings(property.expression);
+        return [];
+      });
+    return [];
+  };
+  const visitWrites = (node: ts.Node): void => {
+    if (
+      ts.isBinaryExpression(node) &&
+      node.operatorToken.kind >= ts.SyntaxKind.FirstAssignment &&
+      node.operatorToken.kind <= ts.SyntaxKind.LastAssignment
+    )
+      for (const name of new Set(writtenBindings(node.left)))
+        writes[name as (typeof tracked)[number]].push(compact(node));
+    else if (
+      (ts.isForInStatement(node) || ts.isForOfStatement(node)) &&
+      ts.isVariableDeclarationList(node.initializer) === false
+    )
+      for (const name of new Set(writtenBindings(node.initializer)))
+        writes[name as (typeof tracked)[number]].push(compact(node));
+    else if (
+      (ts.isPrefixUnaryExpression(node) || ts.isPostfixUnaryExpression(node)) &&
+      (node.operator === ts.SyntaxKind.PlusPlusToken ||
+        node.operator === ts.SyntaxKind.MinusMinusToken)
+    )
+      for (const name of new Set(writtenBindings(node.operand)))
+        writes[name as (typeof tracked)[number]].push(compact(node));
+    ts.forEachChild(node, visitWrites);
+  };
+  if (main !== undefined) visitWrites(main);
   return {
     imports,
     lifecycles: {
@@ -1542,17 +1669,20 @@ const captureSmokeCleanupContract = (
       initializer:
         loop?.initializer === undefined ? null : compact(loop.initializer),
     },
+    mainActions: main?.statements.map(action) ?? [],
     mainCount: mains.length,
     resources: {
       browser: binding(server?.tryBlock.statements, "browser"),
       browserFailure: binding(server?.tryBlock.statements, "browserFailure"),
       frames: binding(loopBody, "frames"),
+      page: binding(loopBody, "page"),
       runs: binding(server?.tryBlock.statements, "runs"),
       server: binding(main?.statements, "server"),
       serverFailure: binding(main?.statements, "serverFailure"),
       session: binding(loopBody, "session"),
       sessionFailure: binding(loopBody, "sessionFailure"),
     },
+    writes,
   };
 };
 
@@ -3374,27 +3504,85 @@ export const test_workspace_public_contracts = (): void => {
         incrementor: "++run",
         initializer: "letrun=0",
       },
+      mainActions: [
+        "flags",
+        "base",
+        "chrome",
+        "route",
+        "server",
+        "serverFailure",
+        "try",
+      ],
       mainCount: 1,
       resources: {
         browser: {
           count: 1,
           initializer:
             "awaitchromium.launch({executablePath:chrome,headless:true,})",
+          kind: "const",
+          scopeCount: 1,
         },
-        browserFailure: { count: 1, initializer: null },
-        frames: { count: 1, initializer: "newMap<string,Uint8Array>()" },
+        browserFailure: {
+          count: 1,
+          initializer: null,
+          kind: "let",
+          scopeCount: 1,
+        },
+        frames: {
+          count: 1,
+          initializer: "newMap<string,Uint8Array>()",
+          kind: "const",
+          scopeCount: 1,
+        },
+        page: {
+          count: 1,
+          initializer:
+            "awaitbrowser.newPage({viewport:{width:WIDTH,height:HEIGHT},deviceScaleFactor:1,})",
+          kind: "const",
+          scopeCount: 1,
+        },
         runs: {
           count: 1,
           initializer: "[]",
+          kind: "const",
+          scopeCount: 1,
         },
-        server: { count: 1, initializer: "awaitensureDevServer(base)" },
-        serverFailure: { count: 1, initializer: null },
+        server: {
+          count: 1,
+          initializer: "awaitensureDevServer(base)",
+          kind: "const",
+          scopeCount: 1,
+        },
+        serverFailure: {
+          count: 1,
+          initializer: null,
+          kind: "let",
+          scopeCount: 1,
+        },
         session: {
           count: 1,
           initializer:
             'awaitcreateHeadlessCaptureAdapter({page,url:route,passes:["beauty","mask","pose"],writeFrame:async(file,bytes)=>{frames.set(path.basename(file),bytes);},})',
+          kind: "const",
+          scopeCount: 1,
         },
-        sessionFailure: { count: 1, initializer: null },
+        sessionFailure: {
+          count: 1,
+          initializer: null,
+          kind: "let",
+          scopeCount: 1,
+        },
+      },
+      writes: {
+        browser: [],
+        browserFailure: ["browserFailure={error}"],
+        frames: [],
+        page: [],
+        runs: [],
+        server: [],
+        serverFailure: ["serverFailure={error}"],
+        session: [],
+        sessionFailure: ["sessionFailure={error}"],
       },
     },
   );
