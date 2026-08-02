@@ -3258,7 +3258,7 @@ export const test_workspace_public_contracts = (): void => {
           [
             "failure:IAutoMoviePlaygroundOperationFailure|undefined",
             "resource:string",
-            "cleanup:()=>void|Promise<void>",
+            "cleanup:()=>unknown",
           ],
         ],
       },

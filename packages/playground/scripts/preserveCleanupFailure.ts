@@ -13,7 +13,7 @@ export interface IAutoMoviePlaygroundOperationFailure {
 export const preserveCleanupFailure = async (
   failure: IAutoMoviePlaygroundOperationFailure | undefined,
   resource: string,
-  cleanup: () => void | Promise<void>,
+  cleanup: () => unknown,
 ): Promise<void> => {
   try {
     await cleanup();
