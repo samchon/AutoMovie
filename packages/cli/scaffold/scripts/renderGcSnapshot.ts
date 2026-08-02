@@ -4,6 +4,8 @@ import fs from "node:fs";
 import path from "node:path";
 
 export const RENDER_GC_PRESERVED_PREFIX = ".gc-preserved-";
+export const RENDER_GC_QUARANTINE_EVIDENCE_DIRECTORY = `${RENDER_GC_PRESERVED_PREFIX}quarantine-evidence`;
+export const RENDER_GC_REMOVAL_STAGING_DIRECTORY = `${RENDER_GC_PRESERVED_PREFIX}removal-staging`;
 
 /** Keep fail-closed GC evidence outside all later automatic deletion plans. */
 export const isRenderGcPreservedPath = (relative: string): boolean =>
@@ -219,7 +221,7 @@ export const removeCapturedRenderGcTarget = (props: {
 }): void => {
   const isolated = isolateCapturedRenderTarget(props);
   assertRenderGcTarget(isolated.moved);
-  assertPhysicalDirectory(isolated.quarantine, "render GC quarantine");
+  assertPhysicalDirectoryIdentity(isolated.quarantine, "render GC quarantine");
   fs.rmSync(isolated.moved.target, {
     force: true,
     recursive: isolated.moved.kind === "directory",
@@ -247,7 +249,7 @@ export const quarantineCapturedRenderTarget = (props: {
       "Render quarantine destination escapes its ownership root.",
     );
   assertRenderGcTarget(isolated.moved);
-  assertPhysicalDirectory(isolated.quarantine, "render GC quarantine");
+  assertPhysicalDirectoryIdentity(isolated.quarantine, "render GC quarantine");
   assertPhysicalDirectory(destinationParent, "render quarantine destination");
   const marker: IRenderQuarantineMarker = {
     version: 1,
@@ -273,7 +275,7 @@ export const quarantineCapturedRenderTarget = (props: {
   );
   assertRenderGcTarget(isolated.moved);
   assertRenderGcTarget(published);
-  assertPhysicalDirectory(isolated.quarantine, "render GC quarantine");
+  assertPhysicalDirectoryIdentity(isolated.quarantine, "render GC quarantine");
   assertPhysicalDirectoryIdentity(
     destinationParent,
     "render quarantine destination",
@@ -412,6 +414,7 @@ export const removeCapturedRenderQuarantine = (props: {
   if (
     path.dirname(relativeParent) === "." &&
     path.basename(relativeParent).startsWith(RENDER_GC_PRESERVED_PREFIX) &&
+    path.basename(relativeParent) !== RENDER_GC_QUARANTINE_EVIDENCE_DIRECTORY &&
     path.resolve(props.quarantine) !== evidenceParent
   ) {
     const captured = captureRenderGcTarget(
@@ -605,7 +608,7 @@ const isolateCapturedRenderTarget = (props: {
   )
     throw new Error("Render GC isolated path escapes its quarantine.");
   assertRenderGcTarget(props.snapshot);
-  assertPhysicalDirectory(quarantine, "render GC quarantine");
+  assertPhysicalDirectoryIdentity(quarantine, "render GC quarantine");
   fs.renameSync(props.snapshot.target, isolated);
   const movedQuarantine = physicalDirectory(
     props.quarantine,

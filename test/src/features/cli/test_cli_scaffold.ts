@@ -659,6 +659,18 @@ export const test_cli_scaffold = async (): Promise<void> => {
       files["scripts/renderGcSnapshot.ts"]!.includes(
         "IRenderQuarantineMarker",
       ) &&
+      files["scripts/render.ts"]!.includes(
+        "RENDER_GC_REMOVAL_STAGING_DIRECTORY",
+      ) &&
+      files["scripts/render.ts"]!.includes(
+        "RENDER_GC_QUARANTINE_EVIDENCE_DIRECTORY",
+      ) &&
+      [
+        "scripts/render.ts",
+        "scripts/renderAttemptSnapshot.ts",
+        "scripts/renderChunkSnapshot.ts",
+        "scripts/renderLiveness.ts",
+      ].every((file) => files[file]!.includes("rmdirSync") === false) &&
       files["scripts/renderGcSnapshot.ts"]!.includes(
         "fs.renameSync(isolated.moved.target, destination)",
       ) === false &&
@@ -5716,6 +5728,8 @@ export const test_cli_scaffold = async (): Promise<void> => {
     const renderGcModule = createRequire(__filename)(
       path.join(scaffoldDir, "scripts", "renderGcSnapshot.ts"),
     ) as {
+      RENDER_GC_QUARANTINE_EVIDENCE_DIRECTORY: string;
+      RENDER_GC_REMOVAL_STAGING_DIRECTORY: string;
       assertCapturedRenderGcFileEntry: (props: {
         directory: unknown;
         file: unknown;
@@ -6622,6 +6636,60 @@ export const test_cli_scaffold = async (): Promise<void> => {
     );
     fs.rmSync(renameBoundaryIsolated, { recursive: true, force: true });
     fs.rmSync(parkedRenameBoundaryGc, { recursive: true, force: true });
+    const sharedRemovalStaging = renderGcModule.ensureRenderPhysicalDirectory(
+      gcBase,
+      renderGcModule.RENDER_GC_REMOVAL_STAGING_DIRECTORY,
+    );
+    const sharedRemovalFirst = path.join(gcBase, "shared-removal-first");
+    const sharedRemovalSecond = path.join(gcBase, "shared-removal-second");
+    const sharedRemovalSibling = path.join(
+      sharedRemovalStaging,
+      "foreign-sibling",
+    );
+    fs.writeFileSync(sharedRemovalFirst, "first removal");
+    fs.writeFileSync(sharedRemovalSecond, "second removal");
+    const sharedRemovalFirstSnapshot = renderGcModule.captureRenderGcTarget(
+      gcBase,
+      sharedRemovalFirst,
+    );
+    const sharedRemovalSecondSnapshot = renderGcModule.captureRenderGcTarget(
+      gcBase,
+      sharedRemovalSecond,
+    );
+    let sharedRemovalSiblingInserted = false;
+    mutableFs.renameSync = ((oldPath, newPath) => {
+      if (
+        sharedRemovalSiblingInserted === false &&
+        path.resolve(oldPath.toString()) === sharedRemovalFirst
+      ) {
+        nativeWriteFile(sharedRemovalSibling, "foreign sibling");
+        sharedRemovalSiblingInserted = true;
+      }
+      nativeGcRename(oldPath, newPath);
+    }) as typeof fs.renameSync;
+    try {
+      renderGcModule.removeCapturedRenderGcTarget({
+        isolated: path.join(sharedRemovalStaging, "first"),
+        quarantine: sharedRemovalStaging,
+        snapshot: sharedRemovalFirstSnapshot,
+      });
+      renderGcModule.removeCapturedRenderGcTarget({
+        isolated: path.join(sharedRemovalStaging, "second"),
+        quarantine: sharedRemovalStaging,
+        snapshot: sharedRemovalSecondSnapshot,
+      });
+    } finally {
+      mutableFs.renameSync = nativeGcRename;
+    }
+    TestValidator.predicate(
+      "render removals share one retained staging parent across sibling mutation",
+      sharedRemovalSiblingInserted &&
+        fs.existsSync(sharedRemovalFirst) === false &&
+        fs.existsSync(sharedRemovalSecond) === false &&
+        fs.existsSync(sharedRemovalStaging) &&
+        fs.readdirSync(sharedRemovalStaging).join(",") === "foreign-sibling",
+    );
+    fs.rmSync(sharedRemovalSibling);
     const gcPublicationFile = path.join(gcBase, "stale-publication.mp4");
     const gcPublicationBytes = Buffer.from("stale publication bytes");
     fs.writeFileSync(gcPublicationFile, gcPublicationBytes);
@@ -6944,6 +7012,49 @@ export const test_cli_scaffold = async (): Promise<void> => {
         fs.existsSync(proxyTierPreserved) === false &&
         fs.existsSync(legacyTierMarker),
     );
+    const stableEvidenceParent = renderGcModule.ensureRenderPhysicalDirectory(
+      proxyTierGcRoot,
+      renderGcModule.RENDER_GC_QUARANTINE_EVIDENCE_DIRECTORY,
+    );
+    const stableEvidenceSource = path.join(
+      proxyTierGcRoot,
+      "stable-evidence.lock",
+    );
+    const stableEvidenceTarget = path.join(stableEvidenceParent, "evidence");
+    const stableEvidenceMarker = path.join(
+      proxyTierQuarantine,
+      "stable-evidence.released",
+    );
+    fs.writeFileSync(stableEvidenceSource, workerClaimBytes);
+    renderGcModule.quarantineCapturedRenderTarget({
+      destination: stableEvidenceMarker,
+      isolated: stableEvidenceTarget,
+      quarantine: stableEvidenceParent,
+      snapshot: renderGcModule.captureRenderGcTarget(
+        proxyTierGcRoot,
+        stableEvidenceSource,
+      ),
+    });
+    const stableEvidenceMarkerSnapshot = renderGcModule.captureRenderGcTarget(
+      proxyTierGcRoot,
+      stableEvidenceMarker,
+    );
+    const stableEvidenceInspection =
+      renderGcModule.inspectRenderQuarantineMarker(
+        stableEvidenceMarkerSnapshot,
+      );
+    renderGcModule.removeCapturedRenderQuarantine({
+      evidence: stableEvidenceInspection.evidence,
+      marker: stableEvidenceMarkerSnapshot,
+      quarantine: tierApplyQuarantine,
+    });
+    TestValidator.predicate(
+      "render GC retains one stable quarantine-evidence parent after pair removal",
+      fs.existsSync(stableEvidenceTarget) === false &&
+        fs.existsSync(stableEvidenceMarker) === false &&
+        fs.existsSync(stableEvidenceParent) &&
+        fs.readdirSync(stableEvidenceParent).length === 0,
+    );
     const parentSuccessorSource = path.join(
       proxyTierGcRoot,
       "parent-successor.lock",
@@ -7011,6 +7122,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
     );
     fs.rmdirSync(parentSuccessorPreserved);
     fs.rmdirSync(parkedParentSuccessor);
+    fs.rmdirSync(stableEvidenceParent);
     fs.rmSync(reorderedTierMarker);
     fs.rmSync(legacyTierMarker);
     fs.rmdirSync(tierApplyQuarantine);

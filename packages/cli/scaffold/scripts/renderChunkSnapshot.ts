@@ -13,6 +13,7 @@ import path from "node:path";
 
 import {
   type IRenderGcTargetSnapshot,
+  RENDER_GC_REMOVAL_STAGING_DIRECTORY,
   assertCapturedRenderGcFileEntry,
   assertCapturedRenderTarget,
   captureRenderGcTarget,
@@ -527,17 +528,13 @@ export const removeCapturedRenderChunkPointer = (
 ): void => {
   const quarantine = ensureRenderPhysicalDirectory(
     pointer.base.path,
-    `.gc-preserved-chunk-pointer-${randomUUID()}`,
+    RENDER_GC_REMOVAL_STAGING_DIRECTORY,
   );
-  try {
-    removeCapturedRenderGcTarget({
-      isolated: path.join(quarantine, randomUUID()),
-      quarantine,
-      snapshot: pointer,
-    });
-  } finally {
-    if (fs.readdirSync(quarantine).length === 0) fs.rmdirSync(quarantine);
-  }
+  removeCapturedRenderGcTarget({
+    isolated: path.join(quarantine, randomUUID()),
+    quarantine,
+    snapshot: pointer,
+  });
 };
 
 const parsePublicationReceipt = (

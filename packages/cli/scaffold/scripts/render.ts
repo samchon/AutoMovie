@@ -108,7 +108,8 @@ import {
 } from "./renderChunkSnapshot";
 import {
   type IRenderGcTargetSnapshot,
-  RENDER_GC_PRESERVED_PREFIX,
+  RENDER_GC_QUARANTINE_EVIDENCE_DIRECTORY,
+  RENDER_GC_REMOVAL_STAGING_DIRECTORY,
   assertCapturedRenderGcFileEntry,
   captureRenderGcTarget,
   createRenderGcFileSnapshot,
@@ -2614,7 +2615,7 @@ const collectRenderGarbage = (apply: boolean) => {
       if (quarantine === undefined) {
         quarantine = ensureRenderPhysicalDirectory(
           base,
-          `${RENDER_GC_PRESERVED_PREFIX}${randomUUID()}`,
+          RENDER_GC_REMOVAL_STAGING_DIRECTORY,
         );
         quarantines.set(base, quarantine);
       }
@@ -2635,8 +2636,6 @@ const collectRenderGarbage = (apply: boolean) => {
           snapshot,
         });
     }
-    for (const quarantine of quarantines.values())
-      if (fs.readdirSync(quarantine).length === 0) fs.rmdirSync(quarantine);
   }
   return { applied: apply, ...plan };
 };
@@ -2962,17 +2961,13 @@ const removeCapturedRenderStateTarget = (
 ): void => {
   const quarantine = ensureRenderPhysicalDirectory(
     stateRoot,
-    `${RENDER_GC_PRESERVED_PREFIX}${randomUUID()}`,
+    RENDER_GC_REMOVAL_STAGING_DIRECTORY,
   );
-  try {
-    removeCapturedRenderGcTarget({
-      isolated: path.join(quarantine, randomUUID()),
-      quarantine,
-      snapshot,
-    });
-  } finally {
-    if (fs.readdirSync(quarantine).length === 0) fs.rmdirSync(quarantine);
-  }
+  removeCapturedRenderGcTarget({
+    isolated: path.join(quarantine, randomUUID()),
+    quarantine,
+    snapshot,
+  });
 };
 
 const quarantine = (
@@ -2992,21 +2987,17 @@ const quarantine = (
   const directory = ensureRenderPhysicalDirectory(stateRoot, "quarantine");
   const preserved = ensureRenderPhysicalDirectory(
     stateRoot,
-    `${RENDER_GC_PRESERVED_PREFIX}${randomUUID()}`,
+    RENDER_GC_QUARANTINE_EVIDENCE_DIRECTORY,
   );
-  try {
-    quarantineCapturedRenderTarget({
-      destination: path.join(
-        directory,
-        `${path.basename(target)}.${reason}.${Date.now()}.${process.pid}.${randomUUID()}`,
-      ),
-      isolated: path.join(preserved, randomUUID()),
-      quarantine: preserved,
-      snapshot,
-    });
-  } finally {
-    if (fs.readdirSync(preserved).length === 0) fs.rmdirSync(preserved);
-  }
+  quarantineCapturedRenderTarget({
+    destination: path.join(
+      directory,
+      `${path.basename(target)}.${reason}.${Date.now()}.${process.pid}.${randomUUID()}`,
+    ),
+    isolated: path.join(preserved, randomUUID()),
+    quarantine: preserved,
+    snapshot,
+  });
 };
 
 const processAlive = (pid: number): boolean => {

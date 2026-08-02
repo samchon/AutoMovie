@@ -5,7 +5,7 @@ import path from "node:path";
 
 import {
   type IRenderGcTargetSnapshot,
-  RENDER_GC_PRESERVED_PREFIX,
+  RENDER_GC_REMOVAL_STAGING_DIRECTORY,
   assertRenderPhysicalDirectoryIdentity,
   captureRenderGcTarget,
   captureRenderPhysicalDirectory,
@@ -332,17 +332,13 @@ const assertSnapshotCurrent = (snapshot: IRenderGcTargetSnapshot): void => {
 const removeExactAttempt = (snapshot: IRenderGcTargetSnapshot): void => {
   const quarantine = ensureRenderPhysicalDirectory(
     snapshot.base.path,
-    `${RENDER_GC_PRESERVED_PREFIX}attempt-${randomUUID()}`,
+    RENDER_GC_REMOVAL_STAGING_DIRECTORY,
   );
-  try {
-    removeCapturedRenderGcTarget({
-      isolated: path.join(quarantine, randomUUID()),
-      quarantine,
-      snapshot,
-    });
-  } finally {
-    if (fs.readdirSync(quarantine).length === 0) fs.rmdirSync(quarantine);
-  }
+  removeCapturedRenderGcTarget({
+    isolated: path.join(quarantine, randomUUID()),
+    quarantine,
+    snapshot,
+  });
 };
 
 const renderAttemptBytes = (record: IRenderAttemptRecord): Uint8Array => {

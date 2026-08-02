@@ -4,6 +4,7 @@ import path from "node:path";
 
 import {
   type IRenderGcTargetSnapshot,
+  RENDER_GC_REMOVAL_STAGING_DIRECTORY,
   captureRenderGcTarget,
   createRenderGcFileSnapshot,
   ensureRenderPhysicalDirectory,
@@ -116,7 +117,7 @@ export const releaseRenderLivenessLease = (
 ): boolean => {
   const quarantine = ensureRenderPhysicalDirectory(
     lease.snapshot.base.path,
-    `.automovie-liveness-${lease.scope}.preserved-${randomUUID()}`,
+    RENDER_GC_REMOVAL_STAGING_DIRECTORY,
   );
   try {
     removeCapturedRenderGcTarget({
@@ -128,8 +129,6 @@ export const releaseRenderLivenessLease = (
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") return false;
     throw error;
-  } finally {
-    if (fs.readdirSync(quarantine).length === 0) fs.rmdirSync(quarantine);
   }
 };
 
