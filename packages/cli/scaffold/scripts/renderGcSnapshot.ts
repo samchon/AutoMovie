@@ -67,6 +67,34 @@ export interface IRenderQuarantineGcCandidate {
 
 const RENDER_QUARANTINE_MARKER_MAX_BYTES = 64 * 1024;
 
+interface IRenderGcDescriptorFailure {
+  error: unknown;
+}
+
+class RenderGcDescriptorCleanupError extends AggregateError {}
+
+/** Close one GC descriptor without discarding operation or cleanup failures. */
+const closeRenderGcDescriptor = (
+  descriptor: number,
+  failure: IRenderGcDescriptorFailure | undefined,
+  resource: string,
+): void => {
+  try {
+    fs.closeSync(descriptor);
+  } catch (closeFailure) {
+    if (failure === undefined) throw closeFailure;
+    throw new RenderGcDescriptorCleanupError(
+      [
+        ...(failure.error instanceof RenderGcDescriptorCleanupError
+          ? failure.error.errors
+          : [failure.error]),
+        closeFailure,
+      ],
+      `Render GC descriptor cleanup failed after the operation failed: ${resource}.`,
+    );
+  }
+};
+
 /** Capture one physical directory without inventorying its descendants. */
 export const captureRenderPhysicalDirectory = (
   directory: string,
@@ -155,7 +183,7 @@ export const createRenderGcFileSnapshot = (
     throw new Error(`Render file "${target}" escapes its ownership root.`);
   const source = Buffer.from(bytes);
   const descriptor = fs.openSync(absolute, "wx+");
-  let failed = false;
+  let failure: IRenderGcDescriptorFailure | undefined;
   try {
     let offset = 0;
     while (offset < source.length) {
@@ -202,14 +230,10 @@ export const createRenderGcFileSnapshot = (
     assertRootIdentity(root);
     return snapshot;
   } catch (error) {
-    failed = true;
+    failure = { error };
     throw error;
   } finally {
-    try {
-      fs.closeSync(descriptor);
-    } catch (error) {
-      if (failed === false) throw error;
-    }
+    closeRenderGcDescriptor(descriptor, failure, "created render file");
   }
 };
 
@@ -536,6 +560,7 @@ export const readCapturedRenderGcFile = (
   const bytes = Buffer.alloc(snapshot.bytes);
   let offset = 0;
   let openedIdentity = "";
+  let failure: IRenderGcDescriptorFailure | undefined;
   try {
     const opened = fs.fstatSync(descriptor, { bigint: true });
     if (
@@ -566,8 +591,11 @@ export const readCapturedRenderGcFile = (
       throw new Error(
         `Render target "${snapshot.target}" changed while descriptor-read.`,
       );
+  } catch (error) {
+    failure = { error };
+    throw error;
   } finally {
-    fs.closeSync(descriptor);
+    closeRenderGcDescriptor(descriptor, failure, "captured render file");
   }
   const contentFingerprint = digestAutoMovieBytes(
     Buffer.from(
@@ -789,6 +817,7 @@ const readFileEntry = (
   const descriptor = fs.openSync(file, "r");
   let bytes = 0;
   let digest: `sha256:${string}`;
+  let failure: IRenderGcDescriptorFailure | undefined;
   try {
     const opened = fs.fstatSync(descriptor, { bigint: true });
     if (opened.isFile() === false || physicalVersion(opened) !== version)
@@ -805,8 +834,11 @@ const readFileEntry = (
     const completed = fs.fstatSync(descriptor, { bigint: true });
     if (completed.isFile() === false || physicalVersion(completed) !== version)
       throw new Error(`Render GC content "${file}" changed while hashed.`);
+  } catch (error) {
+    failure = { error };
+    throw error;
   } finally {
-    fs.closeSync(descriptor);
+    closeRenderGcDescriptor(descriptor, failure, "inventoried render file");
   }
   const resident = fs.lstatSync(file, { bigint: true });
   if (

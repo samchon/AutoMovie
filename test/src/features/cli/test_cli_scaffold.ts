@@ -378,6 +378,106 @@ const scaffoldDescriptorCleanupContract = (
   return { classDigests, cleanupCalls, functionDigests };
 };
 
+type RenderGcDescriptorCleanupFunction =
+  | "closeRenderGcDescriptor"
+  | "createRenderGcFileSnapshot"
+  | "readCapturedRenderGcFile"
+  | "readFileEntry";
+
+/** Bind every render-GC descriptor owner to the complete cleanup policy. */
+const renderGcDescriptorCleanupContract = (
+  source: string,
+): {
+  classDigests: string[];
+  cleanupCalls: Array<{ callDigest: string; owner: string }>;
+  descriptorOwners: Array<{
+    cleanupCalls: string[];
+    openCalls: string[];
+    owner: string;
+  }>;
+  functionDigests: Record<RenderGcDescriptorCleanupFunction, string[]>;
+} => {
+  const parsed = ts.createSourceFile(
+    "scripts/renderGcSnapshot.ts",
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TS,
+  );
+  const functionDigests: Record<RenderGcDescriptorCleanupFunction, string[]> = {
+    closeRenderGcDescriptor: [],
+    createRenderGcFileSnapshot: [],
+    readCapturedRenderGcFile: [],
+    readFileEntry: [],
+  };
+  const classDigests: string[] = [];
+  const cleanupCalls: Array<{ callDigest: string; owner: string }> = [];
+  const descriptorOwners: Array<{
+    cleanupCalls: string[];
+    openCalls: string[];
+    owner: string;
+  }> = [];
+  const inspectOwner = (owner: string, root: ts.Node): void => {
+    const ownerCleanupCalls: string[] = [];
+    const openCalls: string[] = [];
+    const visit = (node: ts.Node): void => {
+      if (ts.isCallExpression(node)) {
+        if (
+          ts.isIdentifier(node.expression) &&
+          node.expression.text === "closeRenderGcDescriptor"
+        ) {
+          const callDigest = sourceTokenDigest(node, parsed);
+          ownerCleanupCalls.push(callDigest);
+          cleanupCalls.push({ callDigest, owner });
+        }
+        if (
+          ts.isPropertyAccessExpression(node.expression) &&
+          ts.isIdentifier(node.expression.expression) &&
+          node.expression.expression.text === "fs" &&
+          node.expression.name.text === "openSync"
+        )
+          openCalls.push(sourceTokenDigest(node, parsed));
+      }
+      ts.forEachChild(node, visit);
+    };
+    visit(root);
+    if (openCalls.length !== 0 || ownerCleanupCalls.length !== 0)
+      descriptorOwners.push({
+        cleanupCalls: ownerCleanupCalls,
+        openCalls,
+        owner,
+      });
+  };
+  for (const statement of parsed.statements) {
+    if (
+      ts.isClassDeclaration(statement) &&
+      statement.name?.text === "RenderGcDescriptorCleanupError"
+    )
+      classDigests.push(sourceTokenDigest(statement, parsed));
+    if (ts.isFunctionDeclaration(statement) && statement.name !== undefined) {
+      inspectOwner(statement.name.text, statement);
+      continue;
+    }
+    if (ts.isVariableStatement(statement) === false) continue;
+    for (const declaration of statement.declarationList.declarations) {
+      if (
+        ts.isIdentifier(declaration.name) === false ||
+        declaration.initializer === undefined ||
+        (ts.isArrowFunction(declaration.initializer) === false &&
+          ts.isFunctionExpression(declaration.initializer) === false)
+      )
+        continue;
+      const owner = declaration.name.text;
+      if (owner in functionDigests)
+        functionDigests[owner as RenderGcDescriptorCleanupFunction].push(
+          sourceTokenDigest(statement, parsed),
+        );
+      inspectOwner(owner, declaration.initializer);
+    }
+  }
+  return { classDigests, cleanupCalls, descriptorOwners, functionDigests };
+};
+
 /** Inspect capture-doctor resource ownership and failure-preserving cleanup. */
 const captureDoctorCleanupContract = (
   source: string,
@@ -735,6 +835,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
   const captureBrowserScript = files["scripts/capture-browser.ts"]!;
   const captureExecutableScript =
     files["scripts/captureExecutableSnapshot.ts"]!;
+  const renderGcSnapshotScript = files["scripts/renderGcSnapshot.ts"]!;
   const scaffoldFileSnapshotSource = fs.readFileSync(
     path.join(path.dirname(scaffoldDir), "src", "scaffoldFileSnapshot.ts"),
     "utf8",
@@ -774,6 +875,75 @@ export const test_cli_scaffold = async (): Promise<void> => {
     statement.includes("captureInstallCommandTermination"),
   );
   const captureInstallFailureThrow = captureInstallFailureThrows[0] ?? "";
+  TestValidator.equals(
+    "render GC descriptor cleanup preserves every failure",
+    renderGcDescriptorCleanupContract(renderGcSnapshotScript),
+    {
+      classDigests: [
+        "9266d1bf24872a9cc3afe1270091f8a3f611ed8a23e4d5f93852688ea208b1f9",
+      ],
+      cleanupCalls: [
+        {
+          callDigest:
+            "6bc6f2822484006797ee36b3cdefb91ca02a34a3a679647ef7f3a778935ddf0b",
+          owner: "createRenderGcFileSnapshot",
+        },
+        {
+          callDigest:
+            "fb9128bb5c813834fd9727967bee828f596e049fdcb4b395079f4cf1f4fb5414",
+          owner: "readCapturedRenderGcFile",
+        },
+        {
+          callDigest:
+            "58c837a699766e0882e960f3cf737e2b6ddc54ed34453f7a5c1d58607ba5a7c1",
+          owner: "readFileEntry",
+        },
+      ],
+      descriptorOwners: [
+        {
+          cleanupCalls: [
+            "6bc6f2822484006797ee36b3cdefb91ca02a34a3a679647ef7f3a778935ddf0b",
+          ],
+          openCalls: [
+            "6419a95b98910b0041b6a1452ad5137806f7b7470f8d40603c02610a74f2bd0f",
+          ],
+          owner: "createRenderGcFileSnapshot",
+        },
+        {
+          cleanupCalls: [
+            "fb9128bb5c813834fd9727967bee828f596e049fdcb4b395079f4cf1f4fb5414",
+          ],
+          openCalls: [
+            "a2a26290a645ba4f9b86c5525cf6ea1908b7573329451f508ea16f74bb61f49e",
+          ],
+          owner: "readCapturedRenderGcFile",
+        },
+        {
+          cleanupCalls: [
+            "58c837a699766e0882e960f3cf737e2b6ddc54ed34453f7a5c1d58607ba5a7c1",
+          ],
+          openCalls: [
+            "6543588ab798e8cc62ff1ad7a065cde59f2a81c7cab119417ffd384fc06b9945",
+          ],
+          owner: "readFileEntry",
+        },
+      ],
+      functionDigests: {
+        closeRenderGcDescriptor: [
+          "d960522c7c27843b71311795010bdf489be6f92a1efbef63564ee830411105b7",
+        ],
+        createRenderGcFileSnapshot: [
+          "b230d7753fb66d481871fe8c0c852699c64934e3efbdc8a493a3f62b943c6b5d",
+        ],
+        readCapturedRenderGcFile: [
+          "66c4b6e7621baaf6f814fedc0bf66d731ffa358806abf280c93b5a1e3f26665d",
+        ],
+        readFileEntry: [
+          "20d347052d41b8db34b71d044e5c8f8fb65da503f0c6f52b83d135bd5282b1fd",
+        ],
+      },
+    },
+  );
   TestValidator.equals(
     "scaffold descriptor cleanup preserves every failure",
     scaffoldDescriptorCleanupContract(scaffoldFileSnapshotSource),
@@ -8430,6 +8600,11 @@ export const test_cli_scaffold = async (): Promise<void> => {
         target: string;
         targetIdentity: string;
       };
+      createRenderGcFileSnapshot: (
+        base: string,
+        target: string,
+        bytes: Uint8Array,
+      ) => unknown;
       captureRenderPhysicalDirectory: (
         directory: string,
         label: string,
@@ -8485,6 +8660,226 @@ export const test_cli_scaffold = async (): Promise<void> => {
         quarantine: string;
       }) => void;
     };
+    const renderGcCleanupRoot = path.join(base, "render-gc-cleanup");
+    const renderGcCleanupFile = path.join(renderGcCleanupRoot, "captured.bin");
+    fs.mkdirSync(renderGcCleanupRoot);
+    fs.writeFileSync(renderGcCleanupFile, "captured render bytes");
+    const renderGcCleanupSnapshot = renderGcModule.captureRenderGcTarget(
+      renderGcCleanupRoot,
+      renderGcCleanupFile,
+    );
+    const standaloneRenderGcCloseFailure = new Error(
+      "standalone render GC close failed",
+    );
+    let standaloneRenderGcDescriptor = -1;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+      if (
+        path.resolve(file.toString()) === renderGcCleanupFile &&
+        flags === "r"
+      )
+        standaloneRenderGcDescriptor = descriptor;
+      return descriptor;
+    }) as typeof fs.openSync;
+    mutableFs.closeSync = ((descriptor: number): void => {
+      Reflect.apply(nativeClose, mutableFs, [descriptor]);
+      if (descriptor === standaloneRenderGcDescriptor)
+        throw standaloneRenderGcCloseFailure;
+    }) as typeof fs.closeSync;
+    let standaloneRenderGcCloseError: unknown;
+    try {
+      renderGcModule.readCapturedRenderGcFile(renderGcCleanupSnapshot, 1024);
+    } catch (error) {
+      standaloneRenderGcCloseError = error;
+    } finally {
+      mutableFs.openSync = nativeOpen;
+      mutableFs.closeSync = nativeClose;
+    }
+    const primaryOnlyRenderGcFailure = new Error(
+      "primary-only render GC read failed",
+    );
+    let primaryOnlyRenderGcDescriptor = -1;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+      if (
+        path.resolve(file.toString()) === renderGcCleanupFile &&
+        flags === "r"
+      )
+        primaryOnlyRenderGcDescriptor = descriptor;
+      return descriptor;
+    }) as typeof fs.openSync;
+    mutableFs.fstatSync = ((descriptor, ...args: unknown[]): unknown => {
+      if (descriptor === primaryOnlyRenderGcDescriptor)
+        throw primaryOnlyRenderGcFailure;
+      return Reflect.apply(nativeFstat, mutableFs, [descriptor, ...args]);
+    }) as typeof fs.fstatSync;
+    let preservedPrimaryOnlyRenderGcFailure: unknown;
+    try {
+      renderGcModule.readCapturedRenderGcFile(renderGcCleanupSnapshot, 1024);
+    } catch (error) {
+      preservedPrimaryOnlyRenderGcFailure = error;
+    } finally {
+      mutableFs.openSync = nativeOpen;
+      mutableFs.fstatSync = nativeFstat;
+    }
+    const combinedRenderGcPrimary = new Error("render GC read failed");
+    const combinedRenderGcClose = new Error("render GC read close failed");
+    let combinedRenderGcDescriptor = -1;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+      if (
+        path.resolve(file.toString()) === renderGcCleanupFile &&
+        flags === "r"
+      )
+        combinedRenderGcDescriptor = descriptor;
+      return descriptor;
+    }) as typeof fs.openSync;
+    mutableFs.fstatSync = ((descriptor, ...args: unknown[]): unknown => {
+      if (descriptor === combinedRenderGcDescriptor)
+        throw combinedRenderGcPrimary;
+      return Reflect.apply(nativeFstat, mutableFs, [descriptor, ...args]);
+    }) as typeof fs.fstatSync;
+    mutableFs.closeSync = ((descriptor: number): void => {
+      Reflect.apply(nativeClose, mutableFs, [descriptor]);
+      if (descriptor === combinedRenderGcDescriptor)
+        throw combinedRenderGcClose;
+    }) as typeof fs.closeSync;
+    let combinedRenderGcFailure: unknown;
+    try {
+      renderGcModule.readCapturedRenderGcFile(renderGcCleanupSnapshot, 1024);
+    } catch (error) {
+      combinedRenderGcFailure = error;
+    } finally {
+      mutableFs.openSync = nativeOpen;
+      mutableFs.fstatSync = nativeFstat;
+      mutableFs.closeSync = nativeClose;
+    }
+    const failedRenderGcCreate = path.join(
+      renderGcCleanupRoot,
+      "failed-create.bin",
+    );
+    const renderGcCreatePrimary = new Error("render GC creation failed");
+    const renderGcCreateClose = new Error("render GC creation close failed");
+    let failedRenderGcCreateDescriptor = -1;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+      if (
+        path.resolve(file.toString()) === failedRenderGcCreate &&
+        flags === "wx+"
+      )
+        failedRenderGcCreateDescriptor = descriptor;
+      return descriptor;
+    }) as typeof fs.openSync;
+    mutableFs.writeSync = ((...args: unknown[]): number => {
+      if (args[0] === failedRenderGcCreateDescriptor)
+        throw renderGcCreatePrimary;
+      return Reflect.apply(nativeWrite, mutableFs, args) as number;
+    }) as typeof fs.writeSync;
+    mutableFs.closeSync = ((descriptor: number): void => {
+      Reflect.apply(nativeClose, mutableFs, [descriptor]);
+      if (descriptor === failedRenderGcCreateDescriptor)
+        throw renderGcCreateClose;
+    }) as typeof fs.closeSync;
+    let combinedRenderGcCreateFailure: unknown;
+    try {
+      renderGcModule.createRenderGcFileSnapshot(
+        renderGcCleanupRoot,
+        failedRenderGcCreate,
+        Buffer.from("failed creation bytes"),
+      );
+    } catch (error) {
+      combinedRenderGcCreateFailure = error;
+    } finally {
+      mutableFs.openSync = nativeOpen;
+      mutableFs.writeSync = nativeWrite;
+      mutableFs.closeSync = nativeClose;
+    }
+    const nestedRenderGcCreate = path.join(
+      renderGcCleanupRoot,
+      "nested-create.bin",
+    );
+    const nestedRenderGcPrimary = new Error("render GC inventory read failed");
+    const nestedRenderGcReadClose = new Error(
+      "render GC inventory descriptor close failed",
+    );
+    const nestedRenderGcCreateClose = new Error(
+      "render GC create descriptor close failed",
+    );
+    let nestedRenderGcOwnerDescriptor = -1;
+    let nestedRenderGcReadDescriptor = -1;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+      if (path.resolve(file.toString()) === nestedRenderGcCreate) {
+        if (flags === "wx+") nestedRenderGcOwnerDescriptor = descriptor;
+        else if (flags === "r" && nestedRenderGcReadDescriptor === -1)
+          nestedRenderGcReadDescriptor = descriptor;
+      }
+      return descriptor;
+    }) as typeof fs.openSync;
+    mutableFs.fstatSync = ((descriptor, ...args: unknown[]): unknown => {
+      if (descriptor === nestedRenderGcReadDescriptor)
+        throw nestedRenderGcPrimary;
+      return Reflect.apply(nativeFstat, mutableFs, [descriptor, ...args]);
+    }) as typeof fs.fstatSync;
+    mutableFs.closeSync = ((descriptor: number): void => {
+      Reflect.apply(nativeClose, mutableFs, [descriptor]);
+      if (descriptor === nestedRenderGcReadDescriptor)
+        throw nestedRenderGcReadClose;
+      if (descriptor === nestedRenderGcOwnerDescriptor)
+        throw nestedRenderGcCreateClose;
+    }) as typeof fs.closeSync;
+    let combinedNestedRenderGcFailure: unknown;
+    try {
+      renderGcModule.createRenderGcFileSnapshot(
+        renderGcCleanupRoot,
+        nestedRenderGcCreate,
+        Buffer.from("nested creation bytes"),
+      );
+    } catch (error) {
+      combinedNestedRenderGcFailure = error;
+    } finally {
+      mutableFs.openSync = nativeOpen;
+      mutableFs.fstatSync = nativeFstat;
+      mutableFs.closeSync = nativeClose;
+    }
+    TestValidator.predicate(
+      "render GC descriptor cleanup preserves operation and resource order",
+      standaloneRenderGcCloseError === standaloneRenderGcCloseFailure &&
+        preservedPrimaryOnlyRenderGcFailure === primaryOnlyRenderGcFailure &&
+        combinedRenderGcFailure instanceof AggregateError &&
+        combinedRenderGcFailure.errors.length === 2 &&
+        combinedRenderGcFailure.errors[0] === combinedRenderGcPrimary &&
+        combinedRenderGcFailure.errors[1] === combinedRenderGcClose &&
+        combinedRenderGcCreateFailure instanceof AggregateError &&
+        combinedRenderGcCreateFailure.errors.length === 2 &&
+        combinedRenderGcCreateFailure.errors[0] === renderGcCreatePrimary &&
+        combinedRenderGcCreateFailure.errors[1] === renderGcCreateClose &&
+        combinedNestedRenderGcFailure instanceof AggregateError &&
+        combinedNestedRenderGcFailure.errors.length === 3 &&
+        combinedNestedRenderGcFailure.errors[0] === nestedRenderGcPrimary &&
+        combinedNestedRenderGcFailure.errors[1] === nestedRenderGcReadClose &&
+        combinedNestedRenderGcFailure.errors[2] === nestedRenderGcCreateClose,
+    );
     const renderTemporarySnapshotModule = createRequire(__filename)(
       path.join(scaffoldDir, "scripts", "renderTemporarySnapshot.ts"),
     ) as {
