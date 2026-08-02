@@ -260,6 +260,8 @@ const unmentionedModules = (pkg: string, document: string): string[] =>
  *     canonical stickman page, not an arbitrary successful HTTP response.
  * 19. Every expected capture-smoke frame is validated with run/name/inventory
  *     evidence before byte comparison or PNG parsing.
+ * 20. Structural mask and pose checks preserve their measured pixel counts and
+ *     fractions in both structured output and thrown failure evidence.
  */
 export const test_workspace_public_contracts = (): void => {
   const rootReadme = readPackageFile("README.md");
@@ -307,6 +309,20 @@ export const test_workspace_public_contracts = (): void => {
       : playgroundCaptureSmoke.slice(
           requireCapturedFrameOffset,
           requireCapturedFrameEnd,
+        );
+  const captureObservationsOffset = playgroundCaptureSmoke.indexOf(
+    "const observations = {",
+  );
+  const captureObservationsEnd = playgroundCaptureSmoke.indexOf(
+    "\n    };",
+    captureObservationsOffset,
+  );
+  const captureObservationsSource =
+    captureObservationsOffset < 0 || captureObservationsEnd < 0
+      ? ""
+      : playgroundCaptureSmoke.slice(
+          captureObservationsOffset,
+          captureObservationsEnd + "\n    };".length,
         );
   const ensureDevServerOffset = playgroundCaptureSmoke.indexOf(
     "const ensureDevServer =",
@@ -1170,6 +1186,57 @@ export const test_workspace_public_contracts = (): void => {
         ],
         mainCount: 1,
       },
+    },
+  );
+  TestValidator.equals(
+    "real capture smoke preserves structural threshold observations",
+    {
+      observations: [
+        "maskBlackFraction",
+        "maskBlackPixels",
+        "maskSubjectFraction",
+        "maskSubjectPixels",
+        "poseMaskPalettePixels",
+        "poseWhiteFraction",
+        "poseWhitePixels",
+      ].filter((field) =>
+        new RegExp(`^\\s*${field}(?=:|,)`, "m").test(captureObservationsSource),
+      ),
+      thresholds: [
+        "observations.maskSubjectFraction >= 0.003",
+        "observations.maskBlackFraction >= 0.25",
+        "observations.poseWhiteFraction >= 0.0002",
+        "observations.poseWhiteFraction <= 0.2",
+        "observations.poseMaskPalettePixels === 0",
+      ].filter((expression) => playgroundCaptureSmoke.includes(expression)),
+      reporting: {
+        console:
+          /JSON\.stringify\(\s*\{\s*route,\s*server: server\.spawned \? "spawned" : "reused",\s*checks,\s*observations,\s*\}/.test(
+            playgroundCaptureSmoke,
+          ),
+        failure: playgroundCaptureSmoke.includes(
+          "; observations=$" + "{JSON.stringify(observations)}",
+        ),
+      },
+    },
+    {
+      observations: [
+        "maskBlackFraction",
+        "maskBlackPixels",
+        "maskSubjectFraction",
+        "maskSubjectPixels",
+        "poseMaskPalettePixels",
+        "poseWhiteFraction",
+        "poseWhitePixels",
+      ],
+      thresholds: [
+        "observations.maskSubjectFraction >= 0.003",
+        "observations.maskBlackFraction >= 0.25",
+        "observations.poseWhiteFraction >= 0.0002",
+        "observations.poseWhiteFraction <= 0.2",
+        "observations.poseMaskPalettePixels === 0",
+      ],
+      reporting: { console: true, failure: true },
     },
   );
   const mcpMethods = [

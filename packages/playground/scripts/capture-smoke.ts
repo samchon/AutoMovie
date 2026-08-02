@@ -138,14 +138,28 @@ export const main = async (
       Math.round(subject.g * 255),
       Math.round(subject.b * 255),
     );
+    const maskSubjectPixels = mask.get(subjectKey) ?? 0;
+    const maskBlackPixels = mask.get(rgbKey(0, 0, 0)) ?? 0;
+    const poseWhitePixels = pose.get(rgbKey(255, 255, 255)) ?? 0;
+    const poseMaskPalettePixels = pose.get(subjectKey) ?? 0;
+    const observations = {
+      maskBlackFraction: maskBlackPixels / total,
+      maskBlackPixels,
+      maskSubjectFraction: maskSubjectPixels / total,
+      maskSubjectPixels,
+      poseMaskPalettePixels,
+      poseWhiteFraction: poseWhitePixels / total,
+      poseWhitePixels,
+    };
     checks["mask subject color covers >= 0.3% of the frame"] =
-      (mask.get(subjectKey) ?? 0) >= total * 0.003;
+      observations.maskSubjectFraction >= 0.003;
     checks["mask background is dominant black"] =
-      (mask.get(rgbKey(0, 0, 0)) ?? 0) >= total * 0.25;
-    const white = pose.get(rgbKey(255, 255, 255)) ?? 0;
+      observations.maskBlackFraction >= 0.25;
     checks["pose skeleton draws white lines (0.02%..20%)"] =
-      white >= total * 0.0002 && white <= total * 0.2;
-    checks["pose carries no mask palette"] = (pose.get(subjectKey) ?? 0) === 0;
+      observations.poseWhiteFraction >= 0.0002 &&
+      observations.poseWhiteFraction <= 0.2;
+    checks["pose carries no mask palette"] =
+      observations.poseMaskPalettePixels === 0;
     checks["beauty differs from mask (passes actually switch)"] = !equalBytes(
       requireCapturedFrame(runs, 0, "frame_00000.png"),
       requireCapturedFrame(runs, 0, "frame_00000.mask.png"),
@@ -154,14 +168,19 @@ export const main = async (
     const failed = Object.entries(checks).filter(([, ok]) => !ok);
     console.log(
       JSON.stringify(
-        { route, server: server.spawned ? "spawned" : "reused", checks },
+        {
+          route,
+          server: server.spawned ? "spawned" : "reused",
+          checks,
+          observations,
+        },
         null,
         2,
       ),
     );
     if (failed.length > 0)
       throw new Error(
-        `capture smoke failed: ${failed.map(([name]) => name).join("; ")}`,
+        `capture smoke failed: ${failed.map(([name]) => name).join("; ")}; observations=${JSON.stringify(observations)}`,
       );
   } finally {
     server.close();
