@@ -665,9 +665,22 @@ if (phase === "review") {
           },
         ]),
   ];
+  const compiledModels = new Map(
+    generated.files
+      .filter(
+        (entry) =>
+          entry.path.startsWith("models/") && entry.path.endsWith(".json"),
+      )
+      .map((entry) => {
+        const model = JSON.parse(
+          Buffer.from(project.readGeneratedFile(entry.path)).toString("utf8"),
+        );
+        return [model.id, model];
+      }),
+  );
   for (const entry of before.reviews.entries) {
     if (entry.target.kind !== "asset") continue;
-    const model = graph.models.get(entry.target.id);
+    const model = compiledModels.get(entry.target.id);
     assert(
       \`starter-asset-model-current:\${entry.target.id}\`,
       model !== undefined,

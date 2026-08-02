@@ -635,6 +635,7 @@ const packagedAssetReviewContract = (
       detail: string;
       name: string;
     } | null;
+    modelInventory: string | null;
     outerBodyStatementCount: number;
     outerExpression: string;
     outerInitializer: string;
@@ -658,6 +659,7 @@ const packagedAssetReviewContract = (
   reviewFlows: Array<{
     before: number | null;
     capture: number | null;
+    models: number | null;
     views: number | null;
   }>;
   reviewPhases: number;
@@ -798,6 +800,7 @@ const packagedAssetReviewContract = (
       detail: string;
       name: string;
     } | null;
+    modelInventory: string | null;
     outerBodyStatementCount: number;
     outerExpression: string;
     outerInitializer: string;
@@ -810,6 +813,7 @@ const packagedAssetReviewContract = (
   const reviewFlows: Array<{
     before: number | null;
     capture: number | null;
+    models: number | null;
     views: number | null;
   }> = [];
   let reviewPhases = 0;
@@ -842,8 +846,10 @@ const packagedAssetReviewContract = (
       const flow = {
         before: null as number | null,
         capture: null as number | null,
+        models: null as number | null,
         views: null as number | null,
       };
+      let modelInventory: string | null = null;
       statement.thenStatement.statements.forEach((action, index) => {
         if (ts.isVariableStatement(action))
           for (const declaration of action.declarationList.declarations) {
@@ -865,6 +871,14 @@ const packagedAssetReviewContract = (
               declaration.name.text === "before"
             )
               flow.before = index;
+            if (
+              ts.isIdentifier(declaration.name) &&
+              declaration.name.text === "compiledModels" &&
+              declaration.initializer !== undefined
+            ) {
+              flow.models = index;
+              modelInventory = compact(declaration.initializer);
+            }
           }
         if (
           ts.isForOfStatement(action) === false ||
@@ -953,6 +967,7 @@ const packagedAssetReviewContract = (
                   name: compact(modelAssertionCall.arguments[0]!),
                 }
               : null,
+          modelInventory,
           outerBodyStatementCount: outerBody.length,
           outerExpression: compact(action.expression),
           outerInitializer: compact(action.initializer),
@@ -2465,12 +2480,14 @@ export const test_workspace_public_contracts = (): void => {
             'awaitapp.captureFrame({target:{kind:"asset",id:entry.target.id,angleDeg:view.angleDeg,elevationDeg:view.elevationDeg,pose:view.pose,pass:view.pass,},})',
           expression: "packagedAssetReviewViews(model)",
           initializer: "constview",
-          model: "graph.models.get(entry.target.id)",
+          model: "compiledModels.get(entry.target.id)",
           modelAssertion: {
             condition: "model!==undefined",
             detail: '"reviewqueueassetisabsentfromthecurrentmodelgraph"',
             name: "`starter-asset-model-current:${entry.target.id}`",
           },
+          modelInventory:
+            'newMap(generated.files.filter((entry)=>entry.path.startsWith("models/")&&entry.path.endsWith(".json")).map((entry)=>{constmodel=JSON.parse(Buffer.from(project.readGeneratedFile(entry.path)).toString("utf8"));return[model.id,model];}))',
           outerBodyStatementCount: 4,
           outerExpression: "before.reviews.entries",
           outerInitializer: "constentry",
@@ -2499,7 +2516,7 @@ export const test_workspace_public_contracts = (): void => {
         ],
         views: canonicalAssetViews,
       },
-      reviewFlows: [{ before: 0, capture: 3, views: 2 }],
+      reviewFlows: [{ before: 0, capture: 4, models: 3, views: 2 }],
       reviewPhases: 1,
     },
   );
