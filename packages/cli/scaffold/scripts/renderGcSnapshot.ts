@@ -40,6 +40,16 @@ export interface IRenderGcContentEntry {
   path: string;
 }
 
+/** Immutable public locator for evidence retained in a private quarantine. */
+export interface IRenderQuarantineMarker {
+  version: 1;
+  contentFingerprint: `sha256:${string}`;
+  kind: "directory" | "file";
+  original: string;
+  preserved: string;
+  targetIdentity: string;
+}
+
 /** Capture one physical directory without inventorying its descendants. */
 export const captureRenderPhysicalDirectory = (
   directory: string,
@@ -221,37 +231,38 @@ export const quarantineCapturedRenderTarget = (props: {
     throw new Error(
       "Render quarantine destination escapes its ownership root.",
     );
-  try {
-    fs.lstatSync(destination);
-    throw new Error(`Render quarantine destination "${destination}" exists.`);
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
-  }
   assertRenderGcTarget(isolated.moved);
   assertPhysicalDirectory(isolated.quarantine, "render GC quarantine");
   assertPhysicalDirectory(destinationParent, "render quarantine destination");
-  fs.renameSync(isolated.moved.target, destination);
-  const movedDestination = physicalDirectory(
-    destinationParent.path,
-    "render quarantine destination",
-  );
-  assertSamePhysicalDirectory(
-    destinationParent,
-    movedDestination,
-    "render quarantine destination",
-  );
-  const completed = captureRenderGcTarget(
+  const marker: IRenderQuarantineMarker = {
+    version: 1,
+    contentFingerprint: isolated.moved.contentFingerprint,
+    kind: isolated.moved.kind,
+    original: ownedRelativePath(
+      props.snapshot.base.path,
+      props.snapshot.target,
+      "render quarantine original",
+    ),
+    preserved: ownedRelativePath(
+      props.snapshot.base.path,
+      isolated.moved.target,
+      "render quarantine evidence",
+    ),
+    targetIdentity: isolated.moved.targetIdentity,
+  };
+  const markerBytes = Buffer.from(`${JSON.stringify(marker, null, 2)}\n`);
+  const published = createRenderGcFileSnapshot(
     props.snapshot.base.path,
     destination,
+    markerBytes,
   );
-  if (
-    completed.kind !== isolated.moved.kind ||
-    completed.targetIdentity !== isolated.moved.targetIdentity ||
-    completed.contentFingerprint !== isolated.moved.contentFingerprint
-  )
-    throw new Error(
-      `Render quarantine destination "${destination}" changed after private staging.`,
-    );
+  assertRenderGcTarget(isolated.moved);
+  assertRenderGcTarget(published);
+  assertPhysicalDirectory(isolated.quarantine, "render GC quarantine");
+  assertPhysicalDirectoryIdentity(
+    destinationParent,
+    "render quarantine destination",
+  );
 };
 
 /** Revalidate an exact captured target without changing it. */
@@ -674,6 +685,23 @@ const physicalIdentity = (status: fs.BigIntStats): string =>
 
 const physicalVersion = (status: fs.BigIntStats): string =>
   `${physicalIdentity(status)}\0${status.size}\0${status.mtimeNs}\0${status.ctimeNs}`;
+
+const ownedRelativePath = (
+  base: string,
+  target: string,
+  label: string,
+): string => {
+  const relative = path.relative(path.resolve(base), path.resolve(target));
+  if (
+    relative.length === 0 ||
+    path.isAbsolute(relative) ||
+    relative === ".." ||
+    relative.startsWith(`..${path.sep}`) ||
+    relative.includes("\0")
+  )
+    throw new Error(`${label} escapes its ownership root.`);
+  return relative.replaceAll("\\", "/");
+};
 
 const inside = (root: string, candidate: string): boolean => {
   const relative = path.relative(root, candidate);

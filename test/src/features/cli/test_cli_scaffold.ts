@@ -633,6 +633,12 @@ export const test_cli_scaffold = async (): Promise<void> => {
       files["scripts/renderGcSnapshot.ts"]!.includes(
         "removeCreatedRenderFile",
       ) === false &&
+      files["scripts/renderGcSnapshot.ts"]!.includes(
+        "IRenderQuarantineMarker",
+      ) &&
+      files["scripts/renderGcSnapshot.ts"]!.includes(
+        "fs.renameSync(isolated.moved.target, destination)",
+      ) === false &&
       files["scripts/renderPlanSnapshot.ts"]!.includes("generationSlot") &&
       files["scripts/renderPlanSnapshot.ts"]!.includes(
         "createRenderGcFileSnapshot",
@@ -6674,11 +6680,182 @@ export const test_cli_scaffold = async (): Promise<void> => {
       quarantine: workerPreserved,
       snapshot: workerClaimSnapshot,
     });
+    const workerClaimMarker = JSON.parse(
+      fs.readFileSync(workerClaimDestination, "utf8"),
+    ) as {
+      contentFingerprint: string;
+      kind: string;
+      original: string;
+      preserved: string;
+      targetIdentity: string;
+      version: number;
+    };
     TestValidator.predicate(
-      "routine worker cleanup quarantines one exact captured file",
+      "routine worker cleanup publishes one immutable evidence marker",
       fs.existsSync(workerClaim) === false &&
-        fs.existsSync(workerClaimIsolated) === false &&
-        fs.readFileSync(workerClaimDestination).equals(workerClaimBytes),
+        fs.readFileSync(workerClaimIsolated).equals(workerClaimBytes) &&
+        workerClaimMarker.version === 1 &&
+        workerClaimMarker.kind === "file" &&
+        workerClaimMarker.original === "worker-claim.lock" &&
+        workerClaimMarker.preserved === ".gc-preserved-worker-fixture/claim" &&
+        workerClaimMarker.targetIdentity.length !== 0 &&
+        workerClaimMarker.contentFingerprint.startsWith("sha256:"),
+    );
+
+    const workerDirectory = path.join(gcBase, "worker-directory");
+    const workerDirectoryFile = path.join(workerDirectory, "frame.bin");
+    const workerDirectoryIsolated = path.join(workerPreserved, "directory");
+    const workerDirectoryDestination = path.join(
+      workerQuarantine,
+      "worker-directory.abandoned",
+    );
+    fs.mkdirSync(workerDirectory);
+    fs.writeFileSync(workerDirectoryFile, gcBytes);
+    renderGcModule.quarantineCapturedRenderTarget({
+      destination: workerDirectoryDestination,
+      isolated: workerDirectoryIsolated,
+      quarantine: workerPreserved,
+      snapshot: renderGcModule.captureRenderGcTarget(gcBase, workerDirectory),
+    });
+    const workerDirectoryMarker = JSON.parse(
+      fs.readFileSync(workerDirectoryDestination, "utf8"),
+    ) as { kind: string; preserved: string; version: number };
+    TestValidator.predicate(
+      "routine worker cleanup preserves directory evidence behind its marker",
+      fs
+        .readFileSync(path.join(workerDirectoryIsolated, "frame.bin"))
+        .equals(gcBytes) &&
+        workerDirectoryMarker.version === 1 &&
+        workerDirectoryMarker.kind === "directory" &&
+        workerDirectoryMarker.preserved ===
+          ".gc-preserved-worker-fixture/directory",
+    );
+
+    const workerCompetitorClaim = path.join(gcBase, "worker-competitor.lock");
+    const workerCompetitorIsolated = path.join(workerPreserved, "competitor");
+    const workerCompetitorDestination = path.join(
+      workerQuarantine,
+      "worker-competitor.released",
+    );
+    const workerDestinationCompetitorBytes = Buffer.from(
+      "foreign quarantine marker",
+    );
+    fs.writeFileSync(workerCompetitorClaim, workerClaimBytes);
+    const workerCompetitorSnapshot = renderGcModule.captureRenderGcTarget(
+      gcBase,
+      workerCompetitorClaim,
+    );
+    let workerDestinationCompetitorInserted = false;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      if (
+        workerDestinationCompetitorInserted === false &&
+        typeof file !== "number" &&
+        flags === "wx+" &&
+        path.resolve(file.toString()) === workerCompetitorDestination
+      ) {
+        nativeWriteFile(
+          workerCompetitorDestination,
+          workerDestinationCompetitorBytes,
+        );
+        workerDestinationCompetitorInserted = true;
+      }
+      return Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+    }) as typeof fs.openSync;
+    let workerDestinationCompetitorRejected = false;
+    try {
+      workerDestinationCompetitorRejected = throws(() =>
+        renderGcModule.quarantineCapturedRenderTarget({
+          destination: workerCompetitorDestination,
+          isolated: workerCompetitorIsolated,
+          quarantine: workerPreserved,
+          snapshot: workerCompetitorSnapshot,
+        }),
+      );
+    } finally {
+      mutableFs.openSync = nativeOpen;
+    }
+    TestValidator.predicate(
+      "routine worker cleanup preserves a direct destination competitor",
+      workerDestinationCompetitorInserted &&
+        workerDestinationCompetitorRejected &&
+        fs.readFileSync(workerCompetitorIsolated).equals(workerClaimBytes) &&
+        fs
+          .readFileSync(workerCompetitorDestination)
+          .equals(workerDestinationCompetitorBytes),
+    );
+
+    const workerMarkerSwapClaim = path.join(gcBase, "worker-marker-swap.lock");
+    const workerMarkerSwapIsolated = path.join(workerPreserved, "marker-swap");
+    const workerMarkerSwapDestination = path.join(
+      workerQuarantine,
+      "worker-marker-swap.released",
+    );
+    const parkedWorkerMarker = `${workerMarkerSwapDestination}.parked`;
+    const workerMarkerSuccessorBytes = Buffer.from(
+      "foreign marker pathname successor",
+    );
+    fs.writeFileSync(workerMarkerSwapClaim, workerClaimBytes);
+    const workerMarkerSwapSnapshot = renderGcModule.captureRenderGcTarget(
+      gcBase,
+      workerMarkerSwapClaim,
+    );
+    let workerMarkerDescriptor = -1;
+    let workerMarkerSwapped = false;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+      if (
+        typeof file !== "number" &&
+        flags === "wx+" &&
+        path.resolve(file.toString()) === workerMarkerSwapDestination
+      )
+        workerMarkerDescriptor = descriptor;
+      return descriptor;
+    }) as typeof fs.openSync;
+    mutableFs.fsyncSync = ((descriptor: number): void => {
+      nativeFsync(descriptor);
+      if (
+        workerMarkerSwapped === false &&
+        descriptor === workerMarkerDescriptor
+      ) {
+        nativeRename(workerMarkerSwapDestination, parkedWorkerMarker);
+        nativeWriteFile(
+          workerMarkerSwapDestination,
+          workerMarkerSuccessorBytes,
+        );
+        workerMarkerSwapped = true;
+      }
+    }) as typeof fs.fsyncSync;
+    let workerMarkerSwapRejected = false;
+    try {
+      workerMarkerSwapRejected = throws(() =>
+        renderGcModule.quarantineCapturedRenderTarget({
+          destination: workerMarkerSwapDestination,
+          isolated: workerMarkerSwapIsolated,
+          quarantine: workerPreserved,
+          snapshot: workerMarkerSwapSnapshot,
+        }),
+      );
+    } finally {
+      mutableFs.openSync = nativeOpen;
+      mutableFs.fsyncSync = nativeFsync;
+    }
+    TestValidator.predicate(
+      "routine worker cleanup preserves a quarantine marker successor",
+      workerMarkerSwapped &&
+        workerMarkerSwapRejected &&
+        fs.readFileSync(workerMarkerSwapIsolated).equals(workerClaimBytes) &&
+        fs.existsSync(parkedWorkerMarker) &&
+        fs
+          .readFileSync(workerMarkerSwapDestination)
+          .equals(workerMarkerSuccessorBytes),
     );
     const workerPartial = path.join(gcBase, "worker-partial");
     const workerPartialFile = path.join(workerPartial, "frame.bin");
@@ -6733,6 +6910,14 @@ export const test_cli_scaffold = async (): Promise<void> => {
         fs.existsSync(workerPartialDestination) === false,
     );
     fs.rmSync(workerClaimDestination, { force: true });
+    fs.rmSync(workerClaimIsolated, { force: true });
+    fs.rmSync(workerDirectoryDestination, { force: true });
+    fs.rmSync(workerDirectoryIsolated, { recursive: true, force: true });
+    fs.rmSync(workerCompetitorDestination, { force: true });
+    fs.rmSync(workerCompetitorIsolated, { force: true });
+    fs.rmSync(workerMarkerSwapDestination, { force: true });
+    fs.rmSync(parkedWorkerMarker, { force: true });
+    fs.rmSync(workerMarkerSwapIsolated, { force: true });
     fs.rmSync(workerPartialIsolated, { recursive: true, force: true });
     fs.rmSync(parkedWorkerPartial, { recursive: true, force: true });
     const heldClaimDirectory = path.join(gcBase, "held-locks");

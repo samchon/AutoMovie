@@ -116,7 +116,8 @@ Proxy finalization publishes content-addressed materialized directories without 
 Chunk workers publish complete UUID claims before they become visible inside a
 slot-specific lock namespace. They yield to every other live claim and remove
 only their own exact path. A killed worker leaves either a recoverable claim or
-a non-authoritative candidate that the next run quarantines. Receipt reuse
+a non-authoritative candidate that the next run isolates under private preserved
+evidence and exposes through an immutable public quarantine marker. Receipt reuse
 rejects linked state ancestors and files, and final encoding consumes the exact
 PNG bytes authenticated by that physical-path read.
 
