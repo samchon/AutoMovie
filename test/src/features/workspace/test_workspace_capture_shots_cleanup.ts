@@ -30,7 +30,14 @@ interface ICaptureShotsCleanupContract {
   >;
   imports: string[];
   policyCalls: string[][];
-  topLevelActions: string[];
+  topLevelActions: Array<{
+    body: string[] | null;
+    declarationKind: "const" | "let" | "var" | null;
+    expression: string | null;
+    initializer: string | null;
+    kind: "call" | "declaration" | "try";
+    name: string | null;
+  }>;
 }
 
 /** Bind direct-script encoder, page, and browser cleanup ownership. */
@@ -98,7 +105,7 @@ const captureShotsCleanupContract = (
       ? [compact(statement, capture)]
       : [],
   );
-  const topLevelActions: string[] = [];
+  const topLevelActions: ICaptureShotsCleanupContract["topLevelActions"] = [];
   for (const statement of capture.statements) {
     if (ts.isVariableStatement(statement))
       for (const declaration of statement.declarationList.declarations)
@@ -108,14 +115,46 @@ const captureShotsCleanupContract = (
             declaration.name.text,
           )
         )
-          topLevelActions.push(declaration.name.text);
-    if (ts.isTryStatement(statement)) topLevelActions.push("try");
+          topLevelActions.push({
+            body: null,
+            declarationKind:
+              statement.declarationList.flags & ts.NodeFlags.Const
+                ? "const"
+                : statement.declarationList.flags & ts.NodeFlags.Let
+                  ? "let"
+                  : "var",
+            expression: null,
+            initializer:
+              declaration.initializer === undefined
+                ? null
+                : compact(declaration.initializer, capture),
+            kind: "declaration",
+            name: declaration.name.text,
+          });
+    if (ts.isTryStatement(statement))
+      topLevelActions.push({
+        body: statement.tryBlock.statements.map((child) =>
+          compact(child, capture),
+        ),
+        declarationKind: null,
+        expression: null,
+        initializer: null,
+        kind: "try",
+        name: null,
+      });
     if (
       ts.isExpressionStatement(statement) &&
       ts.isCallExpression(statement.expression) &&
       compact(statement.expression.expression, capture) === "console.log"
     )
-      topLevelActions.push(compact(statement, capture));
+      topLevelActions.push({
+        body: null,
+        declarationKind: null,
+        expression: compact(statement, capture),
+        initializer: null,
+        kind: "call",
+        name: null,
+      });
   }
 
   const cleanupCalls: ICaptureShotsCleanupContract["cleanupCalls"] = [];
@@ -268,11 +307,48 @@ export const test_workspace_capture_shots_cleanup = (): void => {
         ["browserFailure", '"capturebrowser"', "()=>browser.close()"],
       ],
       topLevelActions: [
-        "browser",
-        "capture",
-        "browserFailure",
-        "try",
-        'console.log("done");',
+        {
+          body: null,
+          declarationKind: "const",
+          expression: null,
+          initializer:
+            "awaitchromium.launch({executablePath:CHROME,headless:true,})",
+          kind: "declaration",
+          name: "browser",
+        },
+        {
+          body: null,
+          declarationKind: "const",
+          expression: null,
+          initializer:
+            'async([page,q,dur,n,w,h,out,fps])=>{constW=even(w);constH=even(h);constdest=path.join(shotsDir,out);fs.mkdirSync(path.dirname(dest),{recursive:true});constpg=awaitbrowser.newPage({viewport:{width:W,height:H},deviceScaleFactor:1,});letcompletion;letpageFailure;try{constsep=q?"&":"";awaitpg.goto(`${BASE}/${page}?${q}${sep}cap=1&w=${W}&h=${H}`,{waitUntil:"load",});awaitpg.waitForFunction(()=>typeofwindow.__afSeek==="function");awaitpg.addStyleTag({content:"#clips{display:none!important}"});constview=pg.locator("#view");constenc=awaitHME.createH264MP4Encoder();letencoderFailure;try{enc.width=W;enc.height=H;enc.frameRate=fps;enc.quantizationParameter=20;enc.initialize();constt0=Date.now();for(leti=0;i<n;i++){constt=(dur*i)/(n-1);awaitpg.evaluate((tt)=>window.__afSeek(tt),t);constbuf=awaitview.screenshot({type:"png"});constpng=PNG.sync.read(buf);enc.addFrameRgba(newUint8Array(png.data));}enc.finalize();fs.writeFileSync(dest,Buffer.from(enc.FS.readFile(enc.outputFilename)));completion=`wrote${out}(${n}frames@${fps}fps,${((Date.now()-t0)/1000).toFixed(1)}s)`;}catch(error){encoderFailure={error};throwerror;}finally{awaitpreserveCleanupFailure(encoderFailure,"captureencoder",()=>enc.delete(),);}}catch(error){pageFailure={error};throwerror;}finally{awaitpreserveCleanupFailure(pageFailure,"capturepage",()=>pg.close());}console.log(completion);}',
+          kind: "declaration",
+          name: "capture",
+        },
+        {
+          body: null,
+          declarationKind: "let",
+          expression: null,
+          initializer: null,
+          kind: "declaration",
+          name: "browserFailure",
+        },
+        {
+          body: ["for(constshotofshots)awaitcapture(shot);"],
+          declarationKind: null,
+          expression: null,
+          initializer: null,
+          kind: "try",
+          name: null,
+        },
+        {
+          body: null,
+          declarationKind: null,
+          expression: 'console.log("done");',
+          initializer: null,
+          kind: "call",
+          name: null,
+        },
       ],
     },
   );
