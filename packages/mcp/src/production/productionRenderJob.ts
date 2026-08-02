@@ -719,6 +719,34 @@ export const runProductionRenderJob = async (props: {
   return output;
 };
 
+interface IProductionOwnedDescriptorFailure {
+  error: unknown;
+}
+
+class ProductionOwnedDescriptorCleanupError extends AggregateError {}
+
+/** Close one production-owned descriptor without losing earlier failures. */
+const closeProductionOwnedDescriptor = (
+  descriptor: number,
+  failure: IProductionOwnedDescriptorFailure | undefined,
+  target: string,
+): void => {
+  try {
+    fs.closeSync(descriptor);
+  } catch (closeFailure) {
+    if (failure === undefined) throw closeFailure;
+    throw new ProductionOwnedDescriptorCleanupError(
+      [
+        ...(failure.error instanceof ProductionOwnedDescriptorCleanupError
+          ? failure.error.errors
+          : [failure.error]),
+        closeFailure,
+      ],
+      `Production-owned descriptor cleanup failed after the read failed: ${target}.`,
+    );
+  }
+};
+
 /**
  * Read one production-owned file without following a link in its namespace.
  *
@@ -799,6 +827,7 @@ export function readAutoMovieProductionOwnedFile(props: {
     throw error;
   }
   const descriptor = fs.openSync(target, "r");
+  let failure: IProductionOwnedDescriptorFailure | undefined;
   try {
     const openedIdentity = productionOwnedDescriptorIdentity(
       target,
@@ -811,6 +840,7 @@ export function readAutoMovieProductionOwnedFile(props: {
           `Production-owned path "${target}" changed physical identity while it was read.`,
         );
       const residentDescriptor = fs.openSync(target, "r");
+      let residentFailure: IProductionOwnedDescriptorFailure | undefined;
       try {
         if (
           productionOwnedDescriptorIdentity(target, residentDescriptor) !==
@@ -819,16 +849,26 @@ export function readAutoMovieProductionOwnedFile(props: {
           throw new Error(
             `Production-owned path "${target}" changed physical identity while it was read.`,
           );
+      } catch (error) {
+        residentFailure = { error };
+        throw error;
       } finally {
-        fs.closeSync(residentDescriptor);
+        closeProductionOwnedDescriptor(
+          residentDescriptor,
+          residentFailure,
+          target,
+        );
       }
     };
     assertResidentFile();
     const bytes = fs.readFileSync(descriptor);
     assertResidentFile();
     return bytes;
+  } catch (error) {
+    failure = { error };
+    throw error;
   } finally {
-    fs.closeSync(descriptor);
+    closeProductionOwnedDescriptor(descriptor, failure, target);
   }
 }
 

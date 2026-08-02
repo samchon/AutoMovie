@@ -1789,6 +1789,11 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
       directory: chunk,
       relative: "frames/resident.png",
     });
+    exerciseProductionOwnedDescriptorCleanup({
+      root: ownedRoot,
+      directory: chunk,
+      relative: "frames/resident.png",
+    });
     const linkedDirectory = path.join(chunk, "linked");
     const linkedFile = path.join(chunk, "linked.png");
     const blockingFile = path.join(chunk, "blocking");
@@ -1896,4 +1901,160 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
     fs.rmSync(ownedRoot, { force: true, recursive: true });
     fs.rmSync(outsideRoot, { force: true, recursive: true });
   }
+};
+
+type ProductionOwnedDescriptorFailureMode =
+  | "combined-resident"
+  | "combined-source"
+  | "nested"
+  | "primary-only"
+  | "standalone-resident-close"
+  | "standalone-source-close";
+
+interface IProductionOwnedDescriptorFailureEvidence {
+  caught: unknown;
+  primaryFailure: Error;
+  residentCloseFailure: Error;
+  sourceCloseFailure: Error;
+}
+
+const captureProductionOwnedDescriptorFailure = (
+  props: { root: string; directory: string; relative: string },
+  mode: ProductionOwnedDescriptorFailureMode,
+): IProductionOwnedDescriptorFailureEvidence => {
+  const target = path.resolve(props.directory, props.relative);
+  const primaryFailure = new Error(`${mode} primary failure`);
+  const residentCloseFailure = new Error(`${mode} resident close failure`);
+  const sourceCloseFailure = new Error(`${mode} source close failure`);
+  const nativeOpen = fs.openSync;
+  const nativeFstat = fs.fstatSync;
+  const nativeClose = fs.closeSync;
+  let sourceDescriptor: number | undefined;
+  let failedResidentDescriptor: number | undefined;
+  fs.openSync = ((file, ...args: unknown[]): number => {
+    const descriptor = Reflect.apply(nativeOpen, fs, [file, ...args]) as number;
+    if (
+      sourceDescriptor === undefined &&
+      path.resolve(file.toString()) === target
+    )
+      sourceDescriptor = descriptor;
+    return descriptor;
+  }) as typeof fs.openSync;
+  fs.fstatSync = ((
+    descriptor,
+    ...args: unknown[]
+  ): fs.Stats | fs.BigIntStats => {
+    if (
+      descriptor === sourceDescriptor &&
+      (mode === "primary-only" || mode === "combined-source")
+    )
+      throw primaryFailure;
+    if (
+      sourceDescriptor !== undefined &&
+      descriptor !== sourceDescriptor &&
+      failedResidentDescriptor === undefined &&
+      (mode === "combined-resident" || mode === "nested")
+    ) {
+      failedResidentDescriptor = descriptor;
+      throw primaryFailure;
+    }
+    return Reflect.apply(nativeFstat, fs, [descriptor, ...args]) as
+      | fs.Stats
+      | fs.BigIntStats;
+  }) as typeof fs.fstatSync;
+  fs.closeSync = ((descriptor): void => {
+    if (
+      sourceDescriptor !== undefined &&
+      descriptor !== sourceDescriptor &&
+      failedResidentDescriptor === undefined &&
+      mode === "standalone-resident-close"
+    )
+      failedResidentDescriptor = descriptor;
+    nativeClose(descriptor);
+    if (
+      descriptor === failedResidentDescriptor &&
+      (mode === "combined-resident" ||
+        mode === "nested" ||
+        mode === "standalone-resident-close")
+    )
+      throw residentCloseFailure;
+    if (
+      descriptor === sourceDescriptor &&
+      (mode === "combined-source" ||
+        mode === "nested" ||
+        mode === "standalone-source-close")
+    )
+      throw sourceCloseFailure;
+  }) as typeof fs.closeSync;
+  let caught: unknown;
+  try {
+    readAutoMovieProductionOwnedFile(props);
+  } catch (error) {
+    caught = error;
+  } finally {
+    fs.openSync = nativeOpen;
+    fs.fstatSync = nativeFstat;
+    fs.closeSync = nativeClose;
+  }
+  return {
+    caught,
+    primaryFailure,
+    residentCloseFailure,
+    sourceCloseFailure,
+  };
+};
+
+const aggregateContainsExactly = (
+  error: unknown,
+  expected: unknown[],
+): boolean =>
+  error instanceof AggregateError &&
+  error.errors.length === expected.length &&
+  expected.every((failure, index) => error.errors[index] === failure);
+
+const exerciseProductionOwnedDescriptorCleanup = (props: {
+  root: string;
+  directory: string;
+  relative: string;
+}): void => {
+  const standalone = captureProductionOwnedDescriptorFailure(
+    props,
+    "standalone-source-close",
+  );
+  const standaloneResident = captureProductionOwnedDescriptorFailure(
+    props,
+    "standalone-resident-close",
+  );
+  const primaryOnly = captureProductionOwnedDescriptorFailure(
+    props,
+    "primary-only",
+  );
+  const combinedResident = captureProductionOwnedDescriptorFailure(
+    props,
+    "combined-resident",
+  );
+  const combinedSource = captureProductionOwnedDescriptorFailure(
+    props,
+    "combined-source",
+  );
+  const nested = captureProductionOwnedDescriptorFailure(props, "nested");
+  TestValidator.predicate(
+    "production-owned descriptor cleanup preserves every operation and resource failure",
+    standalone.caught === standalone.sourceCloseFailure &&
+      standaloneResident.caught === standaloneResident.residentCloseFailure &&
+      primaryOnly.caught === primaryOnly.primaryFailure &&
+      aggregateContainsExactly(combinedResident.caught, [
+        combinedResident.primaryFailure,
+        combinedResident.residentCloseFailure,
+      ]) &&
+      aggregateContainsExactly(combinedSource.caught, [
+        combinedSource.primaryFailure,
+        combinedSource.sourceCloseFailure,
+      ]) &&
+      aggregateContainsExactly(nested.caught, [
+        nested.primaryFailure,
+        nested.residentCloseFailure,
+        nested.sourceCloseFailure,
+      ]),
+  );
 };
