@@ -1412,14 +1412,49 @@ const renderBrowserLifecycleContract = (
         tracked.map((name) => [name, [] as string[]]),
       );
       const visitWrites = (node: ts.Node): void => {
+        const writtenBindings = (target: ts.Expression): string[] => {
+          if (ts.isIdentifier(target))
+            return tracked.includes(target.text) ? [target.text] : [];
+          if (
+            ts.isParenthesizedExpression(target) ||
+            ts.isAsExpression(target) ||
+            ts.isTypeAssertionExpression(target) ||
+            ts.isNonNullExpression(target)
+          )
+            return writtenBindings(target.expression);
+          if (ts.isPropertyAccessExpression(target))
+            return writtenBindings(target.expression);
+          if (ts.isElementAccessExpression(target))
+            return writtenBindings(target.expression);
+          if (ts.isArrayLiteralExpression(target))
+            return target.elements.flatMap((element) =>
+              ts.isOmittedExpression(element)
+                ? []
+                : ts.isSpreadElement(element)
+                  ? writtenBindings(element.expression)
+                  : writtenBindings(element),
+            );
+          if (ts.isObjectLiteralExpression(target))
+            return target.properties.flatMap((property) => {
+              if (ts.isShorthandPropertyAssignment(property))
+                return tracked.includes(property.name.text)
+                  ? [property.name.text]
+                  : [];
+              if (ts.isPropertyAssignment(property))
+                return writtenBindings(property.initializer);
+              if (ts.isSpreadAssignment(property))
+                return writtenBindings(property.expression);
+              return [];
+            });
+          return [];
+        };
         if (
           ts.isBinaryExpression(node) &&
           node.operatorToken.kind >= ts.SyntaxKind.FirstAssignment &&
-          node.operatorToken.kind <= ts.SyntaxKind.LastAssignment &&
-          ts.isIdentifier(node.left) &&
-          tracked.includes(node.left.text)
+          node.operatorToken.kind <= ts.SyntaxKind.LastAssignment
         )
-          writes[node.left.text]!.push(compact(node));
+          for (const name of new Set(writtenBindings(node.left)))
+            writes[name]!.push(compact(node));
         else if (
           (ts.isPrefixUnaryExpression(node) ||
             ts.isPostfixUnaryExpression(node)) &&
@@ -1438,6 +1473,32 @@ const renderBrowserLifecycleContract = (
         ["closePage", closePage],
         ["session", session],
       ] as const;
+      const awaitedCall = (
+        binding: ts.VariableDeclaration | undefined,
+      ): ts.CallExpression | undefined => {
+        const initializer = binding?.initializer;
+        if (initializer === undefined) return undefined;
+        const expression = ts.isAwaitExpression(initializer)
+          ? initializer.expression
+          : initializer;
+        return ts.isCallExpression(expression) ? expression : undefined;
+      };
+      const pageArgument = (
+        binding: ts.VariableDeclaration | undefined,
+      ): string | null => {
+        const argument = awaitedCall(binding)?.arguments[0];
+        if (
+          argument === undefined ||
+          ts.isObjectLiteralExpression(argument) === false
+        )
+          return null;
+        return (
+          argument.properties
+            .filter(ts.isShorthandPropertyAssignment)
+            .find((property) => property.name.text === "page")?.name.text ??
+          null
+        );
+      };
       contracts.push({
         browser:
           browser?.initializer === undefined
@@ -1448,22 +1509,12 @@ const renderBrowserLifecycleContract = (
           initializer:
             binding?.initializer === undefined
               ? null
-              : name === "session" && ts.isCallExpression(binding.initializer)
-                ? compact(binding.initializer.expression)
+              : name === "session" && awaitedCall(binding) !== undefined
+                ? compact(awaitedCall(binding)!.expression)
                 : compact(binding.initializer),
           kind: declarationKind(binding),
           name,
-          pageArgument:
-            name === "session" &&
-            binding?.initializer !== undefined &&
-            ts.isCallExpression(binding.initializer) &&
-            binding.initializer.arguments[0] !== undefined &&
-            ts.isObjectLiteralExpression(binding.initializer.arguments[0])
-              ? (binding.initializer.arguments[0].properties
-                  .filter(ts.isShorthandPropertyAssignment)
-                  .find((property) => property.name.text === "page")?.name
-                  .text ?? null)
-              : null,
+          pageArgument: name === "session" ? pageArgument(binding) : null,
         })),
         directActions: body.map(action),
         outerCatch: outer?.catchClause !== undefined,
