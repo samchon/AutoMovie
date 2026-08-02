@@ -310,19 +310,22 @@ const captureObservationContracts = (
           thrown.arguments?.length === 1
             ? thrown.arguments[0]
             : undefined;
+        const templateArgument =
+          argument !== undefined && ts.isTemplateExpression(argument)
+            ? argument
+            : undefined;
         failureGuards.push({
           condition: compact(statement.expression),
           constructor:
             thrown !== undefined && ts.isNewExpression(thrown)
               ? compact(thrown.expression)
               : null,
-          head: ts.isTemplateExpression(argument) ? argument.head.text : null,
-          spans: ts.isTemplateExpression(argument)
-            ? argument.templateSpans.map((span) => ({
-                expression: compact(span.expression),
-                literal: span.literal.text,
-              }))
-            : [],
+          head: templateArgument?.head.text ?? null,
+          spans:
+            templateArgument?.templateSpans.map((span) => ({
+              expression: compact(span.expression),
+              literal: span.literal.text,
+            })) ?? [],
         });
       }
     }
