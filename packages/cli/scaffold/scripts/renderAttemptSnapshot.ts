@@ -267,25 +267,19 @@ const publishAttemptRecord = (props: {
   target: string;
 }): IRenderAttemptSnapshot => {
   props.assertOwnership();
-  let published: IRenderGcTargetSnapshot | null = null;
-  try {
+  props.assertOwnership();
+  if (props.predecessor !== null) {
+    assertSnapshotCurrent(props.predecessor);
+    removeExactAttempt(props.predecessor);
     props.assertOwnership();
-    if (props.predecessor !== null) {
-      assertSnapshotCurrent(props.predecessor);
-      removeExactAttempt(props.predecessor);
-      props.assertOwnership();
-    }
-    published = createRenderGcFileSnapshot(
-      props.base,
-      props.target,
-      props.bytes,
-    );
-    props.assertOwnership();
-    return readRenderAttempt(published);
-  } catch (error) {
-    if (published !== null) tryRemoveExactAttempt(published);
-    throw error;
   }
+  const published = createRenderGcFileSnapshot(
+    props.base,
+    props.target,
+    props.bytes,
+  );
+  props.assertOwnership();
+  return readRenderAttempt(published);
 };
 
 const captureExistingAttempt = (
@@ -333,14 +327,6 @@ const assertSnapshotCurrent = (snapshot: IRenderGcTargetSnapshot): void => {
     current.namespaceFingerprint !== snapshot.namespaceFingerprint
   )
     throw new Error(`Render attempt "${snapshot.target}" changed ownership.`);
-};
-
-const tryRemoveExactAttempt = (snapshot: IRenderGcTargetSnapshot): void => {
-  try {
-    removeExactAttempt(snapshot);
-  } catch {
-    // A missing or changed pathname is a successor, so preserve it.
-  }
 };
 
 const removeExactAttempt = (snapshot: IRenderGcTargetSnapshot): void => {

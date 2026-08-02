@@ -4401,6 +4401,65 @@ export const test_cli_scaffold = async (): Promise<void> => {
     fs.rmSync(attemptTarget);
     fs.rmSync(targetCompetitorLock.snapshot.target);
 
+    const postPublicationLock = createAttemptLock(32012, secondAttemptToken);
+    const postPublicationLockSuccessor = Buffer.from(
+      `${JSON.stringify({
+        chunk: attemptChunk,
+        pid: 32012,
+        token: successorAttemptToken,
+      })}\n`,
+    );
+    const postPublicationParked = `${attemptTarget}.post-publication-parked`;
+    let postPublicationRelinked = false;
+    mutableFs.lstatSync = ((file, ...args: unknown[]): unknown => {
+      const status = Reflect.apply(nativeLstat, mutableFs, [file, ...args]);
+      if (
+        postPublicationRelinked === false &&
+        path.resolve(file.toString()) === postPublicationLock.snapshot.target &&
+        fs.existsSync(attemptTarget)
+      ) {
+        nativeLink(attemptTarget, postPublicationParked);
+        fs.rmSync(attemptTarget);
+        nativeLink(postPublicationParked, attemptTarget);
+        fs.rmSync(postPublicationParked);
+        fs.rmSync(postPublicationLock.snapshot.target);
+        nativeWriteFile(
+          postPublicationLock.snapshot.target,
+          postPublicationLockSuccessor,
+        );
+        postPublicationRelinked = true;
+      }
+      return status;
+    }) as typeof fs.lstatSync;
+    let postPublicationRejected = false;
+    try {
+      postPublicationRejected = throws(() =>
+        renderAttemptModule.beginRenderAttempt({
+          base: attemptRoot,
+          chunk: attemptChunk,
+          lock: postPublicationLock,
+          pid: 32012,
+          processAlive: () => false,
+          slot: "slot-0001",
+          target: attemptTarget,
+          token: secondAttemptToken,
+        }),
+      );
+    } finally {
+      mutableFs.lstatSync = nativeLstat;
+    }
+    TestValidator.predicate(
+      "render attempt preserves a relinked final record after lock authority loss",
+      postPublicationRelinked &&
+        postPublicationRejected &&
+        fs.existsSync(attemptTarget) &&
+        fs
+          .readFileSync(postPublicationLock.snapshot.target)
+          .equals(postPublicationLockSuccessor),
+    );
+    fs.rmSync(attemptTarget);
+    fs.rmSync(postPublicationLock.snapshot.target);
+
     const parentFenceLock = createAttemptLock(32009, firstAttemptToken);
     const parkedAttemptDirectory = `${attemptDirectory}.parked`;
     const attemptParentSuccessorMarker = path.join(
