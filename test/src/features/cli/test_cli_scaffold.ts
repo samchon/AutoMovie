@@ -261,6 +261,60 @@ const captureBrowserCleanupContract = (
   return { classDigests, cleanupCalls, functionDigests };
 };
 
+type CaptureExecutableCleanupFunction =
+  | "createCaptureExecutableSnapshot"
+  | "openCaptureExecutable"
+  | "throwCaptureExecutableSnapshotFailure";
+
+/** Bind both snapshot acquisition sites to their complete cleanup policy. */
+const captureExecutableCleanupContract = (
+  source: string,
+): {
+  cleanupCalls: Array<{ callDigest: string; owner: string }>;
+  functionDigests: Record<CaptureExecutableCleanupFunction, string[]>;
+} => {
+  const parsed = ts.createSourceFile(
+    "scripts/captureExecutableSnapshot.ts",
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TS,
+  );
+  const functionDigests: Record<CaptureExecutableCleanupFunction, string[]> = {
+    createCaptureExecutableSnapshot: [],
+    openCaptureExecutable: [],
+    throwCaptureExecutableSnapshotFailure: [],
+  };
+  const cleanupCalls: Array<{ callDigest: string; owner: string }> = [];
+  for (const statement of parsed.statements) {
+    if (ts.isVariableStatement(statement) === false) continue;
+    for (const declaration of statement.declarationList.declarations) {
+      if (
+        ts.isIdentifier(declaration.name) === false ||
+        declaration.name.text in functionDigests === false ||
+        declaration.initializer === undefined
+      )
+        continue;
+      const owner = declaration.name.text as CaptureExecutableCleanupFunction;
+      functionDigests[owner].push(sourceTokenDigest(statement, parsed));
+      const visit = (node: ts.Node): void => {
+        if (
+          ts.isCallExpression(node) &&
+          ts.isIdentifier(node.expression) &&
+          node.expression.text === "throwCaptureExecutableSnapshotFailure"
+        )
+          cleanupCalls.push({
+            callDigest: sourceTokenDigest(node, parsed),
+            owner,
+          });
+        ts.forEachChild(node, visit);
+      };
+      visit(declaration.initializer);
+    }
+  }
+  return { cleanupCalls, functionDigests };
+};
+
 /** Inspect capture-doctor resource ownership and failure-preserving cleanup. */
 const captureDoctorCleanupContract = (
   source: string,
@@ -616,6 +670,8 @@ export const test_cli_scaffold = async (): Promise<void> => {
 
   const files = renderScaffold({ name: "demo-film" });
   const captureBrowserScript = files["scripts/capture-browser.ts"]!;
+  const captureExecutableScript =
+    files["scripts/captureExecutableSnapshot.ts"]!;
   const captureDoctorScript = files["scripts/capture-doctor.ts"]!;
   const captureInstallOutputOffset = captureBrowserScript.indexOf(
     "const writeCaptureInstallCommandOutput",
@@ -651,6 +707,35 @@ export const test_cli_scaffold = async (): Promise<void> => {
     statement.includes("captureInstallCommandTermination"),
   );
   const captureInstallFailureThrow = captureInstallFailureThrows[0] ?? "";
+  TestValidator.equals(
+    "capture executable acquisition preserves descriptor cleanup failures",
+    captureExecutableCleanupContract(captureExecutableScript),
+    {
+      cleanupCalls: [
+        {
+          callDigest:
+            "35fcd9d9ba279ab5cdd9a6c8780a51346d341b540b234ad08cfa751dff9c98cc",
+          owner: "createCaptureExecutableSnapshot",
+        },
+        {
+          callDigest:
+            "e02748774b01a3de4546a911b3b1430af7d8119d9da01037eda4fb82b54b6c24",
+          owner: "openCaptureExecutable",
+        },
+      ],
+      functionDigests: {
+        createCaptureExecutableSnapshot: [
+          "cb0426627109d635acb82d0705457eb703eb7a65baa8b9bbc9b0ed47e4b74743",
+        ],
+        openCaptureExecutable: [
+          "c1ed71aae4fe0f034d5c6d83eecceabf2b74fb7a85850106673e7ea2c471002c",
+        ],
+        throwCaptureExecutableSnapshotFailure: [
+          "91479a17ed9574e535cac3d7d2e2e993fcdc6e702e4b74bdf0e6bc28b7bab17a",
+        ],
+      },
+    },
+  );
   TestValidator.equals(
     "capture browser cleanup policy and ownership sites",
     captureBrowserCleanupContract(captureBrowserScript),
@@ -4774,7 +4859,18 @@ export const test_cli_scaffold = async (): Promise<void> => {
         path: string;
       }) => void;
       closeCaptureExecutable: (snapshot: { descriptor: number }) => void;
-      openCaptureExecutable: (file: string) => {
+      createCaptureExecutableSnapshot: (
+        file: string,
+        bytes: Uint8Array,
+      ) => {
+        descriptor: number;
+        digest: string;
+        path: string;
+      };
+      openCaptureExecutable: (
+        file: string,
+        maximumBytes?: number | null,
+      ) => {
         descriptor: number;
         digest: string;
         path: string;
@@ -4827,6 +4923,118 @@ export const test_cli_scaffold = async (): Promise<void> => {
     TestValidator.predicate(
       "capture executable snapshot rejects a byte-identical successor",
       captureExecutableSwapped && captureExecutableRaceRejected,
+    );
+    const failedCaptureExecutableCreation = path.join(
+      base,
+      "failed-capture-executable-creation.bin",
+    );
+    const createSnapshotFailure = new Error(
+      "capture executable snapshot creation failed",
+    );
+    const createSnapshotCloseFailure = new Error(
+      "capture executable creation close failed",
+    );
+    let createSnapshotDescriptor = -1;
+    let createSnapshotCloseAttempts = 0;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+      if (
+        path.resolve(file.toString()) === failedCaptureExecutableCreation &&
+        flags === "wx+"
+      )
+        createSnapshotDescriptor = descriptor;
+      return descriptor;
+    }) as typeof fs.openSync;
+    mutableFs.writeSync = ((...args: unknown[]): number => {
+      if (args[0] === createSnapshotDescriptor) throw createSnapshotFailure;
+      return Reflect.apply(nativeWrite, mutableFs, args) as number;
+    }) as typeof fs.writeSync;
+    mutableFs.closeSync = ((descriptor: number): void => {
+      Reflect.apply(nativeClose, mutableFs, [descriptor]);
+      if (descriptor === createSnapshotDescriptor) {
+        ++createSnapshotCloseAttempts;
+        throw createSnapshotCloseFailure;
+      }
+    }) as typeof fs.closeSync;
+    let combinedCreateSnapshotFailure: unknown;
+    try {
+      captureExecutableModule.createCaptureExecutableSnapshot(
+        failedCaptureExecutableCreation,
+        Buffer.from("creation bytes"),
+      );
+    } catch (error) {
+      combinedCreateSnapshotFailure = error;
+    } finally {
+      mutableFs.openSync = nativeOpen;
+      mutableFs.writeSync = nativeWrite;
+      mutableFs.closeSync = nativeClose;
+    }
+    const failedCaptureExecutableOpen = path.join(
+      base,
+      "failed-capture-executable-open.bin",
+    );
+    fs.writeFileSync(failedCaptureExecutableOpen, "opening bytes");
+    const openSnapshotFailure = new Error(
+      "capture executable snapshot opening failed",
+    );
+    const openSnapshotCloseFailure = new Error(
+      "capture executable opening close failed",
+    );
+    let openSnapshotDescriptor = -1;
+    let openSnapshotCloseAttempts = 0;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+      if (
+        path.resolve(file.toString()) === failedCaptureExecutableOpen &&
+        flags === "r"
+      )
+        openSnapshotDescriptor = descriptor;
+      return descriptor;
+    }) as typeof fs.openSync;
+    mutableFs.fstatSync = ((descriptor, ...args: unknown[]): unknown => {
+      if (descriptor === openSnapshotDescriptor) throw openSnapshotFailure;
+      return Reflect.apply(nativeFstat, mutableFs, [descriptor, ...args]);
+    }) as typeof fs.fstatSync;
+    mutableFs.closeSync = ((descriptor: number): void => {
+      Reflect.apply(nativeClose, mutableFs, [descriptor]);
+      if (descriptor === openSnapshotDescriptor) {
+        ++openSnapshotCloseAttempts;
+        throw openSnapshotCloseFailure;
+      }
+    }) as typeof fs.closeSync;
+    let combinedOpenSnapshotFailure: unknown;
+    try {
+      captureExecutableModule.openCaptureExecutable(
+        failedCaptureExecutableOpen,
+      );
+    } catch (error) {
+      combinedOpenSnapshotFailure = error;
+    } finally {
+      mutableFs.openSync = nativeOpen;
+      mutableFs.fstatSync = nativeFstat;
+      mutableFs.closeSync = nativeClose;
+    }
+    TestValidator.predicate(
+      "capture executable acquisition preserves primary and close failures",
+      createSnapshotCloseAttempts === 1 &&
+        combinedCreateSnapshotFailure instanceof AggregateError &&
+        combinedCreateSnapshotFailure.errors.length === 2 &&
+        combinedCreateSnapshotFailure.errors[0] === createSnapshotFailure &&
+        combinedCreateSnapshotFailure.errors[1] ===
+          createSnapshotCloseFailure &&
+        openSnapshotCloseAttempts === 1 &&
+        combinedOpenSnapshotFailure instanceof AggregateError &&
+        combinedOpenSnapshotFailure.errors.length === 2 &&
+        combinedOpenSnapshotFailure.errors[0] === openSnapshotFailure &&
+        combinedOpenSnapshotFailure.errors[1] === openSnapshotCloseFailure,
     );
     const captureBrowserModule = createRequire(__filename)(
       path.join(scaffoldDir, "scripts", "capture-browser.ts"),

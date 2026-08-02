@@ -19,6 +19,23 @@ interface IPhysicalDirectory {
   version: string;
 }
 
+/** Close a failed acquisition without discarding either failure. */
+const throwCaptureExecutableSnapshotFailure = (
+  failure: unknown,
+  descriptor: number,
+  operation: "creation" | "opening",
+): never => {
+  try {
+    fs.closeSync(descriptor);
+  } catch (closeFailure) {
+    throw new AggregateError(
+      [failure, closeFailure],
+      `Capture executable snapshot ${operation} and descriptor cleanup failed.`,
+    );
+  }
+  throw failure;
+};
+
 /** Create private bytes and retain the exact descriptor opened with `wx+`. */
 export const createCaptureExecutableSnapshot = (
   file: string,
@@ -82,12 +99,7 @@ export const createCaptureExecutableSnapshot = (
     assertCaptureExecutable(snapshot);
     return snapshot;
   } catch (error) {
-    try {
-      fs.closeSync(descriptor);
-    } catch {
-      // Preserve the publication failure that made this final slot ambiguous.
-    }
-    throw error;
+    throwCaptureExecutableSnapshotFailure(error, descriptor, "creation");
   }
 };
 
@@ -141,12 +153,7 @@ export const openCaptureExecutable = (
     assertCaptureExecutable(snapshot);
     return snapshot;
   } catch (error) {
-    try {
-      fs.closeSync(descriptor);
-    } catch {
-      // Preserve the snapshot failure instead of replacing it with close.
-    }
-    throw error;
+    throwCaptureExecutableSnapshotFailure(error, descriptor, "opening");
   }
 };
 
