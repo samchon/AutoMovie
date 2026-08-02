@@ -13,9 +13,9 @@ import path from "node:path";
  * A lock left by a crash therefore requires explicit operator recovery after
  * verifying that no commit process is alive.
  *
- * - **Release is owner-checked.** {@link releaseCommitLock} vacates the canonical
- *   path only while it still holds this session's token. The isolated owner is
- *   retained as private evidence; a foreign token is never removed.
+ * - **Release is owner-checked.** {@link releaseCommitLock} deletes the lock only
+ *   while it still holds this session's token. A foreign token is another
+ *   session's lock and is never removed.
  * - **Acquisition is re-entrant inside one process.** A guarded commit runs the
  *   compiler's read-only input-snapshot confirmation, which commits its own
  *   snapshot, so one single-threaded process reaches the same lock twice. That
@@ -98,6 +98,12 @@ const restoreQuarantinedLock = (quarantine: string, lockPath: string): void => {
       return;
     }
   }
+  try {
+    fs.rmSync(quarantine, { force: true });
+  } catch {
+    // The canonical foreign lock is restored; an extra hard link or backup
+    // is fail-closed evidence and must not endanger the resident owner.
+  }
 };
 
 /**
@@ -132,15 +138,15 @@ export const acquireCommitLock = (lockPath: string): string => {
 
 /**
  * Release the commit lock, but only if the exact resident file still holds
- * `token`. The verified file is moved to a unique same-directory retained
- * evidence path and identified again. No pathname cleanup follows it, so a
- * successor can never be unlinked. A vanished lock is a no-op. Pass `unlink:
- * false` after a namespace-identity failure to release only this process's
- * re-entrant ownership without following the resident path into a replacement
- * root. Pass `retire: true` only when the owning operation removed the complete
- * lock namespace; this invalidates every matching nesting level and always
- * returns without resident-path I/O because none can still own the deleted
- * physical lock.
+ * `token`. The verified file is moved to a unique same-directory quarantine and
+ * identified again before deletion, so a replacement between verification and
+ * mutation is restored without clobbering a successor. A vanished lock is a
+ * no-op. Pass `unlink: false` after a namespace-identity failure to release
+ * only this process's re-entrant ownership without following the resident path
+ * into a replacement root. Pass `retire: true` only when the owning operation
+ * removed the complete lock namespace; this invalidates every matching nesting
+ * level and always returns without resident-path I/O because none can still own
+ * the deleted physical lock.
  */
 export const releaseCommitLock = (
   lockPath: string,
@@ -172,8 +178,8 @@ export const releaseCommitLock = (
         moved.identity === observed.identity &&
         moved.token === token
       )
-        return;
-      restoreQuarantinedLock(quarantine, lockPath);
+        fs.rmSync(quarantine, { force: true });
+      else restoreQuarantinedLock(quarantine, lockPath);
     } catch {
       restoreQuarantinedLock(quarantine, lockPath);
     }

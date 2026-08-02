@@ -25,9 +25,8 @@ const mutableFs = fs as {
  *    another session holds is still refused after the bounded wait.
  * 3. A lock older than 10 s is still refused and remains byte-identical. After an
  *    operator explicitly removes it, acquisition succeeds normally.
- * 4. Release vacates the canonical lock ONLY when it still holds our token,
- *    retains the isolated owner evidence, leaves a foreign owner's lock
- *    untouched, and treats an already vanished lock as a no-op.
+ * 4. Release deletes the lock ONLY when it still holds our token; a foreign
+ *    owner's lock is left untouched; an already vanished lock is a no-op.
  */
 export const test_mcp_commit_lock = (): void => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-lock-"));
@@ -82,22 +81,12 @@ export const test_mcp_commit_lock = (): void => {
       token,
     );
 
-    // 4b. release with OUR token vacates it and retains exact evidence
-    const evidenceBeforeRelease = new Set(fs.readdirSync(dir));
+    // 4b. release with OUR token deletes it
     releaseCommitLock(lockPath, token);
-    const retainedOwner = fs
-      .readdirSync(dir)
-      .filter((entry) => evidenceBeforeRelease.has(entry) === false)
-      .find((entry) => entry.startsWith(".automovie-lock-release-"));
     TestValidator.equals(
       "release with our token removes the lock",
       fs.existsSync(lockPath),
       false,
-    );
-    TestValidator.predicate(
-      "release retains the exact owner token as private evidence",
-      retainedOwner !== undefined &&
-        fs.readFileSync(path.join(dir, retainedOwner), "utf8") === token,
     );
 
     const releaseRacePath = path.join(dir, "release-race.lock");
@@ -121,10 +110,19 @@ export const test_mcp_commit_lock = (): void => {
         swapReleaseTarget();
       return nativeRename(oldPath, newPath);
     }) as typeof fs.renameSync;
+    fs.rmSync = ((target, ...args: unknown[]): void => {
+      if (
+        releaseTargetSwapped === false &&
+        path.resolve(target.toString()) === path.resolve(releaseRacePath)
+      )
+        swapReleaseTarget();
+      Reflect.apply(nativeRm, fs, [target, ...args]);
+    }) as typeof fs.rmSync;
     try {
       releaseCommitLock(releaseRacePath, releaseRaceToken);
     } finally {
       fs.renameSync = nativeRename;
+      fs.rmSync = nativeRm;
     }
     TestValidator.predicate(
       "release cannot delete a foreign lock swapped in after owner verification",
@@ -152,11 +150,11 @@ export const test_mcp_commit_lock = (): void => {
     exerciseQuarantineRecovery(dir);
     exerciseReleaseFailures(dir);
     TestValidator.equals(
-      "release defenses retain private evidence outside the canonical lock slots",
+      "release defenses leave no quarantine after test cleanup",
       fs
         .readdirSync(dir)
         .some((entry) => entry.startsWith(".automovie-lock-release-")),
-      true,
+      false,
     );
 
     // 4c. releasing an already-vanished lock is a no-op (no throw)
@@ -280,9 +278,10 @@ const exerciseRejectedSnapshots = (dir: string): void => {
 };
 
 type QuarantineRecoveryMode =
+  | "cleanup-failure"
   | "copy-failure"
   | "copy-success"
-  | "exact"
+  | "delete-failure"
   | "moved-null"
   | "moved-throw"
   | "successor";
@@ -292,9 +291,10 @@ const exerciseQuarantineRecovery = (dir: string): void => {
     "successor",
     "copy-success",
     "copy-failure",
+    "cleanup-failure",
     "moved-null",
     "moved-throw",
-    "exact",
+    "delete-failure",
   ];
   for (const mode of modes) {
     const lockPath = path.join(dir, `recovery-${mode}.lock`);
@@ -304,9 +304,11 @@ const exerciseQuarantineRecovery = (dir: string): void => {
     const nativeRename = fs.renameSync;
     const nativeLink = fs.linkSync;
     const nativeCopy = fs.copyFileSync;
+    const nativeRm = fs.rmSync;
     const nativeLstat = fs.lstatSync;
     let quarantine: string | undefined;
     let quarantineLstatCalls = 0;
+    let quarantineRmCalls = 0;
     let exclusiveCopyObserved = false;
     fs.renameSync = ((oldPath, newPath) => {
       nativeRename(oldPath, newPath);
@@ -318,7 +320,8 @@ const exerciseQuarantineRecovery = (dir: string): void => {
         if (
           mode === "successor" ||
           mode === "copy-success" ||
-          mode === "copy-failure"
+          mode === "copy-failure" ||
+          mode === "cleanup-failure"
         )
           fs.writeFileSync(quarantine, replacement);
         if (mode === "successor") fs.writeFileSync(lockPath, replacement);
@@ -368,31 +371,50 @@ const exerciseQuarantineRecovery = (dir: string): void => {
       }
       return status;
     }) as typeof fs.lstatSync;
+    fs.rmSync = ((target, ...args: unknown[]): void => {
+      if (
+        quarantine !== undefined &&
+        path.resolve(target.toString()) === path.resolve(quarantine)
+      ) {
+        ++quarantineRmCalls;
+        if (
+          mode === "cleanup-failure" ||
+          (mode === "delete-failure" && quarantineRmCalls === 1)
+        )
+          throw new Error("quarantine deletion failed");
+      }
+      Reflect.apply(nativeRm, fs, [target, ...args]);
+    }) as typeof fs.rmSync;
     try {
       releaseCommitLock(lockPath, token);
     } finally {
       fs.renameSync = nativeRename;
       fs.linkSync = nativeLink;
       fs.copyFileSync = nativeCopy;
+      fs.rmSync = nativeRm;
       mutableFs.lstatSync = nativeLstat;
     }
     const expectedResident =
-      mode === "successor" || mode === "copy-success"
+      mode === "successor" ||
+      mode === "copy-success" ||
+      mode === "cleanup-failure"
         ? replacement
         : mode === "copy-failure"
           ? undefined
-          : mode === "exact"
-            ? undefined
-            : token;
+          : token;
     TestValidator.equals(
       `quarantine recovery preserves the ${mode} resident`,
       fs.existsSync(lockPath) ? fs.readFileSync(lockPath, "utf8") : undefined,
       expectedResident,
     );
+    const expectQuarantine =
+      mode === "successor" ||
+      mode === "copy-failure" ||
+      mode === "cleanup-failure";
     TestValidator.equals(
-      `quarantine recovery retains exact evidence for ${mode}`,
+      `quarantine recovery keeps evidence for ${mode} only when required`,
       quarantine !== undefined && fs.existsSync(quarantine),
-      true,
+      expectQuarantine,
     );
     if (mode === "copy-success" || mode === "copy-failure")
       TestValidator.equals(
@@ -400,8 +422,8 @@ const exerciseQuarantineRecovery = (dir: string): void => {
         exclusiveCopyObserved,
         true,
       );
-    fs.rmSync(lockPath, { force: true });
-    if (quarantine !== undefined) fs.rmSync(quarantine, { force: true });
+    nativeRm(lockPath, { force: true });
+    if (quarantine !== undefined) nativeRm(quarantine, { force: true });
   }
 };
 
