@@ -7972,6 +7972,251 @@ export const test_cli_scaffold = async (): Promise<void> => {
         writeFiles(path.join(base, "guard"), { "../escape.txt": "no" }),
       ),
     );
+    const duplicateScaffold = path.join(base, "duplicate-scaffold");
+    TestValidator.predicate(
+      "normalized duplicate scaffold targets are refused before mutation",
+      throws(() =>
+        writeFiles(duplicateScaffold, {
+          "nested/../same.txt": "first",
+          "same.txt": "second",
+        }),
+      ) && fs.existsSync(duplicateScaffold) === false,
+    );
+    const collidingScaffold = path.join(base, "colliding-scaffold");
+    TestValidator.predicate(
+      "scaffold file and directory target collisions are refused before mutation",
+      throws(() =>
+        writeFiles(collidingScaffold, {
+          node: "file",
+          "node/child.txt": "child",
+        }),
+      ) && fs.existsSync(collidingScaffold) === false,
+    );
+
+    const linkedScaffoldOutside = path.join(base, "linked-scaffold-outside");
+    const linkedScaffoldBase = path.join(base, "linked-scaffold-base");
+    fs.mkdirSync(linkedScaffoldOutside);
+    fs.symlinkSync(linkedScaffoldOutside, linkedScaffoldBase, "junction");
+    TestValidator.predicate(
+      "a linked scaffold base cannot redirect materialization",
+      throws(() =>
+        writeFiles(
+          linkedScaffoldBase,
+          { "escaped.txt": "blocked" },
+          { force: true },
+        ),
+      ) &&
+        fs.existsSync(path.join(linkedScaffoldOutside, "escaped.txt")) ===
+          false,
+    );
+
+    const linkedParentScaffold = path.join(base, "linked-parent-scaffold");
+    const linkedParentOutside = path.join(base, "linked-parent-outside");
+    const linkedParent = path.join(linkedParentScaffold, "linked");
+    fs.mkdirSync(linkedParentScaffold);
+    fs.mkdirSync(linkedParentOutside);
+    fs.symlinkSync(linkedParentOutside, linkedParent, "junction");
+    TestValidator.predicate(
+      "a linked descendant parent cannot redirect forced materialization",
+      throws(() =>
+        writeFiles(
+          linkedParentScaffold,
+          { "linked/escaped.txt": "blocked" },
+          { force: true },
+        ),
+      ) &&
+        fs.existsSync(path.join(linkedParentOutside, "escaped.txt")) === false,
+    );
+
+    const hardLinkedScaffold = path.join(base, "hard-linked-scaffold");
+    const hardLinkedOutside = path.join(base, "hard-linked-outside.txt");
+    const hardLinkedTarget = path.join(hardLinkedScaffold, "owned.txt");
+    fs.mkdirSync(hardLinkedScaffold);
+    fs.writeFileSync(hardLinkedOutside, "outside generation");
+    fs.linkSync(hardLinkedOutside, hardLinkedTarget);
+    TestValidator.predicate(
+      "force refuses a multiply-linked target without changing its other name",
+      throws(() =>
+        writeFiles(
+          hardLinkedScaffold,
+          { "owned.txt": "replacement" },
+          { force: true },
+        ),
+      ) && fs.readFileSync(hardLinkedOutside, "utf8") === "outside generation",
+    );
+
+    const noForceRaceBase = path.join(base, "no-force-race-scaffold");
+    const noForceRaceTarget = path.join(noForceRaceBase, "winner.txt");
+    fs.mkdirSync(noForceRaceBase);
+    let noForceCompetitorCreated = false;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      if (
+        noForceCompetitorCreated === false &&
+        typeof file !== "number" &&
+        path.resolve(file.toString()) === noForceRaceTarget &&
+        flags === "wx+"
+      ) {
+        Reflect.apply(nativeWriteFile, mutableFs, [
+          noForceRaceTarget,
+          "successor generation",
+          "utf8",
+        ]);
+        noForceCompetitorCreated = true;
+      }
+      return Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+    }) as typeof fs.openSync;
+    let noForceCompetitorRejected = false;
+    try {
+      noForceCompetitorRejected = throws(() =>
+        writeFiles(noForceRaceBase, { "winner.txt": "scaffold bytes" }),
+      );
+    } finally {
+      mutableFs.openSync = nativeOpen;
+    }
+    TestValidator.predicate(
+      "a no-force final competitor is preserved",
+      noForceCompetitorCreated &&
+        noForceCompetitorRejected &&
+        fs.readFileSync(noForceRaceTarget, "utf8") === "successor generation",
+    );
+
+    const forceRaceBase = path.join(base, "force-race-scaffold");
+    const forceRaceTarget = path.join(forceRaceBase, "owned.txt");
+    const parkedForceRaceTarget = path.join(base, "force-race-original.txt");
+    fs.mkdirSync(forceRaceBase);
+    fs.writeFileSync(forceRaceTarget, "original generation");
+    let forceSuccessorInstalled = false;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+      if (
+        forceSuccessorInstalled === false &&
+        typeof file !== "number" &&
+        path.resolve(file.toString()) === forceRaceTarget &&
+        flags === "r+"
+      ) {
+        nativeRename(forceRaceTarget, parkedForceRaceTarget);
+        Reflect.apply(nativeWriteFile, mutableFs, [
+          forceRaceTarget,
+          "successor generation",
+          "utf8",
+        ]);
+        forceSuccessorInstalled = true;
+      }
+      return descriptor;
+    }) as typeof fs.openSync;
+    let forceSuccessorRejected = false;
+    try {
+      forceSuccessorRejected = throws(() =>
+        writeFiles(
+          forceRaceBase,
+          { "owned.txt": "scaffold bytes" },
+          { force: true },
+        ),
+      );
+    } finally {
+      mutableFs.openSync = nativeOpen;
+    }
+    TestValidator.predicate(
+      "force preserves a target successor installed after descriptor open",
+      forceSuccessorInstalled &&
+        forceSuccessorRejected &&
+        fs.readFileSync(forceRaceTarget, "utf8") === "successor generation" &&
+        fs.readFileSync(parkedForceRaceTarget, "utf8") ===
+          "original generation",
+    );
+
+    const rootRaceBase = path.join(base, "root-race-scaffold");
+    const rootRaceTarget = path.join(rootRaceBase, "created.txt");
+    const parkedRootRaceBase = `${rootRaceBase}.parked`;
+    fs.mkdirSync(rootRaceBase);
+    let scaffoldRootSwapped = false;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+      if (
+        scaffoldRootSwapped === false &&
+        typeof file !== "number" &&
+        path.resolve(file.toString()) === rootRaceTarget &&
+        flags === "wx+"
+      ) {
+        nativeRename(rootRaceBase, parkedRootRaceBase);
+        Reflect.apply(nativeMkdir, mutableFs, [rootRaceBase]);
+        scaffoldRootSwapped = true;
+      }
+      return descriptor;
+    }) as typeof fs.openSync;
+    let scaffoldRootRejected = false;
+    try {
+      scaffoldRootRejected = throws(() =>
+        writeFiles(rootRaceBase, { "created.txt": "scaffold bytes" }),
+      );
+    } finally {
+      mutableFs.openSync = nativeOpen;
+    }
+    TestValidator.predicate(
+      "scaffold creation rejects a base successor before writing bytes",
+      scaffoldRootSwapped &&
+        scaffoldRootRejected &&
+        fs.existsSync(rootRaceTarget) === false &&
+        fs.readFileSync(path.join(parkedRootRaceBase, "created.txt")).length ===
+          0,
+    );
+
+    const parentRaceBase = path.join(base, "parent-race-scaffold");
+    const parentRaceParent = path.join(parentRaceBase, "nested");
+    const parentRaceTarget = path.join(parentRaceParent, "created.txt");
+    const parkedParentRace = `${parentRaceParent}.parked`;
+    fs.mkdirSync(parentRaceParent, { recursive: true });
+    let scaffoldParentSwapped = false;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+      if (
+        scaffoldParentSwapped === false &&
+        typeof file !== "number" &&
+        path.resolve(file.toString()) === parentRaceTarget &&
+        flags === "wx+"
+      ) {
+        nativeRename(parentRaceParent, parkedParentRace);
+        Reflect.apply(nativeMkdir, mutableFs, [parentRaceParent]);
+        scaffoldParentSwapped = true;
+      }
+      return descriptor;
+    }) as typeof fs.openSync;
+    let scaffoldParentRejected = false;
+    try {
+      scaffoldParentRejected = throws(() =>
+        writeFiles(
+          parentRaceBase,
+          { "nested/created.txt": "scaffold bytes" },
+          { force: true },
+        ),
+      );
+    } finally {
+      mutableFs.openSync = nativeOpen;
+    }
+    TestValidator.predicate(
+      "scaffold creation rejects a descendant-parent successor before writing bytes",
+      scaffoldParentSwapped &&
+        scaffoldParentRejected &&
+        fs.existsSync(parentRaceTarget) === false &&
+        fs.readFileSync(path.join(parkedParentRace, "created.txt")).length ===
+          0,
+    );
   } finally {
     fs.rmSync(base, { recursive: true, force: true });
   }

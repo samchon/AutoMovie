@@ -157,6 +157,8 @@ const files = renderScaffold({ name: "my-film" }); // { "package.json": "...", .
 writeFiles("./my-film", files);
 ```
 
+Scaffold materialization captures one ordinary physical target directory and every descendant parent generation. New files reserve their final path through descriptor-bound `O_EXCL`; `force` overwrites only the exact captured ordinary single-link file descriptor, while linked roots, linked parents, hard-linked files, normalized target collisions, and concurrent pathname successors fail closed without cleanup.
+
 Ordinary Node scripts can also load the current tracked design and the last
 compiler-owned snapshot without starting an MCP server or client:
 
