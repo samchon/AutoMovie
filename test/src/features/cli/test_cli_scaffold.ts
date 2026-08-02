@@ -4341,6 +4341,67 @@ export const test_cli_scaffold = async (): Promise<void> => {
         fs.existsSync(`${legacyPlanTarget}.generations`),
     );
 
+    const unchangedLegacyPlanRoot = path.join(
+      base,
+      "render-plan-unchanged-legacy",
+    );
+    const unchangedLegacyPlanTarget = path.join(
+      unchangedLegacyPlanRoot,
+      "plan.json",
+    );
+    fs.mkdirSync(unchangedLegacyPlanRoot);
+    fs.writeFileSync(unchangedLegacyPlanTarget, legacyPlanBytes);
+    const unchangedLegacyPlan = renderPlanModule.captureRenderPlan(
+      unchangedLegacyPlanRoot,
+      unchangedLegacyPlanTarget,
+    );
+    const boundUnchangedLegacyPlan = await renderPlanModule.publishRenderPlan({
+      base: unchangedLegacyPlanRoot,
+      inputCurrent: async () => undefined,
+      plan: unchangedLegacyPlan.plan,
+      predecessor: unchangedLegacyPlan,
+      target: unchangedLegacyPlanTarget,
+    });
+    fs.renameSync(
+      unchangedLegacyPlanTarget,
+      `${unchangedLegacyPlanTarget}.parked`,
+    );
+    fs.writeFileSync(
+      unchangedLegacyPlanTarget,
+      `${JSON.stringify(planFixture("replacement-legacy", 60), null, 2)}\n`,
+    );
+    TestValidator.predicate(
+      "render plan binds and protects an unchanged legacy root",
+      boundUnchangedLegacyPlan.generation !== unchangedLegacyPlan.generation &&
+        throws(() =>
+          renderPlanModule.captureRenderPlan(
+            unchangedLegacyPlanRoot,
+            unchangedLegacyPlanTarget,
+          ),
+        ),
+    );
+
+    const lateLegacyPlanRoot = path.join(base, "render-plan-late-legacy");
+    const lateLegacyPlanTarget = path.join(lateLegacyPlanRoot, "plan.json");
+    fs.mkdirSync(lateLegacyPlanRoot);
+    await renderPlanModule.publishRenderPlan({
+      base: lateLegacyPlanRoot,
+      inputCurrent: async () => undefined,
+      plan: planFixture("genesis-before-legacy", 48),
+      predecessor: null,
+      target: lateLegacyPlanTarget,
+    });
+    fs.writeFileSync(lateLegacyPlanTarget, legacyPlanBytes);
+    TestValidator.predicate(
+      "render plan rejects a legacy root introduced after genesis",
+      throws(() =>
+        renderPlanModule.captureRenderPlan(
+          lateLegacyPlanRoot,
+          lateLegacyPlanTarget,
+        ),
+      ),
+    );
+
     const traversalPlanRoot = path.join(base, "render-plan-traversal-swap");
     const traversalPlanTarget = path.join(traversalPlanRoot, "plan.json");
     fs.mkdirSync(traversalPlanRoot);

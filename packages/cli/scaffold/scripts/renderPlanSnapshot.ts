@@ -106,6 +106,7 @@ export const publishRenderPlan = async (props: {
   assertPlanHead(props.base, props.target, props.predecessor);
   if (
     props.predecessor !== null &&
+    props.predecessor.generation.startsWith("legacy-") === false &&
     planBytes(props.predecessor.plan).equals(planBytes(props.plan))
   )
     return props.predecessor;
@@ -332,9 +333,11 @@ const assertLegacyRootSlot = (
   const roots = fs
     .readdirSync(generations.path)
     .filter((name) => /^legacy-[0-9a-f]{64}\.json$/u.test(name));
+  const genesis = fs.existsSync(path.join(generations.path, "genesis.json"));
   const expected = legacy === null ? null : `${legacy.generation}.json`;
   if (
     roots.length > 1 ||
+    (legacy !== null && genesis) ||
     (roots.length === 1 && roots[0] !== expected) ||
     (roots.length !== 0 && legacy === null)
   )
