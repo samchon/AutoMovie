@@ -609,11 +609,17 @@ const packagedAssetReviewContract = (
 ): {
   aligned: boolean;
   canonical: {
+    conditionals: Array<{
+      condition: string;
+      whenFalse: Array<Array<[string, string]>>;
+      whenTrue: Array<Array<[string, string]>>;
+    }>;
     declarations: number;
-    spreads: number;
+    spreads: string[];
     views: Array<Array<[string, string]>>;
   };
   captureLoops: Array<{
+    assetGuard: string | null;
     assertion: {
       condition: string;
       detail: string;
@@ -623,11 +629,30 @@ const packagedAssetReviewContract = (
     capture: string | null;
     expression: string;
     initializer: string;
+    model: string | null;
+    modelAssertion: {
+      condition: string;
+      detail: string;
+      name: string;
+    } | null;
+    outerBodyStatementCount: number;
+    outerExpression: string;
+    outerInitializer: string;
   }>;
   embeddedScripts: number;
+  guideLoops: Array<{
+    body: string;
+    expression: string;
+    initializer: string;
+  }>;
   packaged: {
+    conditionals: Array<{
+      condition: string;
+      whenFalse: Array<Array<[string, string]>>;
+      whenTrue: Array<Array<[string, string]>>;
+    }>;
     declarations: number;
-    spreads: number;
+    spreads: string[];
     views: Array<Array<[string, string]>>;
   };
   reviewFlows: Array<{
@@ -638,8 +663,13 @@ const packagedAssetReviewContract = (
   reviewPhases: number;
 } => {
   interface IArrayContract {
+    conditionals: Array<{
+      condition: string;
+      whenFalse: Array<Array<[string, string]>>;
+      whenTrue: Array<Array<[string, string]>>;
+    }>;
     declarations: number;
-    spreads: number;
+    spreads: string[];
     views: Array<Array<[string, string]>>;
   }
   const parse = (file: string, source: string, kind: ts.ScriptKind) =>
@@ -647,16 +677,45 @@ const packagedAssetReviewContract = (
   const arrayContract = (
     arrays: ts.ArrayLiteralExpression[],
     parsed: ts.SourceFile,
-    omitId: boolean,
   ): IArrayContract => {
     const compact = (node: ts.Node): string =>
       node.getText(parsed).replace(/\s+/g, "");
-    let spreads = 0;
+    const properties = (
+      array: ts.ArrayLiteralExpression,
+    ): Array<Array<[string, string]>> =>
+      array.elements.map((element) => {
+        if (ts.isObjectLiteralExpression(element) === false)
+          return [[compact(element), compact(element)]];
+        return element.properties.map((property): [string, string] => {
+          if (
+            ts.isPropertyAssignment(property) &&
+            (ts.isIdentifier(property.name) ||
+              ts.isStringLiteralLike(property.name))
+          )
+            return [
+              property.name.text,
+              compact(property.initializer).replace(/asconst$/u, ""),
+            ];
+          return [compact(property), compact(property)];
+        });
+      });
+    const conditionals: IArrayContract["conditionals"] = [];
+    const spreads: string[] = [];
     const views: Array<Array<[string, string]>> = [];
     for (const array of arrays)
       for (const element of array.elements) {
         if (ts.isSpreadElement(element)) {
-          ++spreads;
+          spreads.push(compact(element));
+          if (
+            ts.isConditionalExpression(element.expression) &&
+            ts.isArrayLiteralExpression(element.expression.whenTrue) &&
+            ts.isArrayLiteralExpression(element.expression.whenFalse)
+          )
+            conditionals.push({
+              condition: compact(element.expression.condition),
+              whenFalse: properties(element.expression.whenFalse),
+              whenTrue: properties(element.expression.whenTrue),
+            });
           continue;
         }
         if (ts.isObjectLiteralExpression(element) === false) {
@@ -670,14 +729,18 @@ const packagedAssetReviewContract = (
               (ts.isIdentifier(property.name) ||
                 ts.isStringLiteralLike(property.name))
             ) {
-              if (omitId && property.name.text === "id") return [];
-              return [[property.name.text, compact(property.initializer)]];
+              return [
+                [
+                  property.name.text,
+                  compact(property.initializer).replace(/asconst$/u, ""),
+                ],
+              ];
             }
             return [[compact(property), compact(property)]];
           }),
         );
       }
-    return { declarations: arrays.length, spreads, views };
+    return { conditionals, declarations: arrays.length, spreads, views };
   };
 
   const reviewParsed = parse(
@@ -699,7 +762,7 @@ const packagedAssetReviewContract = (
     ts.forEachChild(node, visitCanonical);
   };
   visitCanonical(reviewParsed);
-  const canonical = arrayContract(canonicalArrays, reviewParsed, true);
+  const canonical = arrayContract(canonicalArrays, reviewParsed);
 
   const tgzParsed = parse("internals/e2e-tgz.mjs", tgzSource, ts.ScriptKind.JS);
   const embeddedSources: string[] = [];
@@ -719,6 +782,7 @@ const packagedAssetReviewContract = (
     parsed: ts.SourceFile;
   }> = [];
   const captureLoops: Array<{
+    assetGuard: string | null;
     assertion: {
       condition: string;
       detail: string;
@@ -726,6 +790,20 @@ const packagedAssetReviewContract = (
     } | null;
     bodyStatementCount: number;
     capture: string | null;
+    expression: string;
+    initializer: string;
+    model: string | null;
+    modelAssertion: {
+      condition: string;
+      detail: string;
+      name: string;
+    } | null;
+    outerBodyStatementCount: number;
+    outerExpression: string;
+    outerInitializer: string;
+  }> = [];
+  const guideLoops: Array<{
+    body: string;
     expression: string;
     initializer: string;
   }> = [];
@@ -743,6 +821,16 @@ const packagedAssetReviewContract = (
     );
     const compact = (node: ts.Node): string =>
       node.getText(parsed).replace(/\s+/g, "");
+    for (const statement of parsed.statements)
+      if (
+        ts.isForOfStatement(statement) &&
+        compact(statement.statement).includes("app.getGuideDocument({name})")
+      )
+        guideLoops.push({
+          body: compact(statement.statement),
+          expression: compact(statement.expression),
+          initializer: compact(statement.initializer),
+        });
     for (const statement of parsed.statements) {
       if (
         ts.isIfStatement(statement) === false ||
@@ -763,10 +851,14 @@ const packagedAssetReviewContract = (
               ts.isIdentifier(declaration.name) &&
               declaration.name.text === "packagedAssetReviewViews" &&
               declaration.initializer !== undefined &&
-              ts.isArrayLiteralExpression(declaration.initializer)
+              ts.isArrowFunction(declaration.initializer) &&
+              ts.isArrayLiteralExpression(declaration.initializer.body)
             ) {
               flow.views = index;
-              packagedArrays.push({ array: declaration.initializer, parsed });
+              packagedArrays.push({
+                array: declaration.initializer.body,
+                parsed,
+              });
             }
             if (
               ts.isIdentifier(declaration.name) &&
@@ -776,13 +868,48 @@ const packagedAssetReviewContract = (
           }
         if (
           ts.isForOfStatement(action) === false ||
-          compact(action.expression) !== "packagedAssetReviewViews"
+          compact(action.expression) !== "before.reviews.entries"
         )
           return;
         flow.capture = index;
-        const body = ts.isBlock(action.statement)
+        const outerBody = ts.isBlock(action.statement)
           ? action.statement.statements
           : ts.factory.createNodeArray([action.statement]);
+        const assetGuard = outerBody.find(
+          (statement): statement is ts.IfStatement =>
+            ts.isIfStatement(statement) &&
+            compact(statement.expression) === 'entry.target.kind!=="asset"',
+        );
+        const modelDeclaration = outerBody
+          .filter(ts.isVariableStatement)
+          .flatMap((statement) => [...statement.declarationList.declarations])
+          .find(
+            (declaration) =>
+              ts.isIdentifier(declaration.name) &&
+              declaration.name.text === "model",
+          );
+        const modelAssertionCall = outerBody
+          .filter(ts.isExpressionStatement)
+          .map((statement) => statement.expression)
+          .find(
+            (expression): expression is ts.CallExpression =>
+              ts.isCallExpression(expression) &&
+              ts.isIdentifier(expression.expression) &&
+              expression.expression.text === "assert" &&
+              expression.arguments[1] !== undefined &&
+              compact(expression.arguments[1]) === "model!==undefined",
+          );
+        const inner = outerBody.find(
+          (statement): statement is ts.ForOfStatement =>
+            ts.isForOfStatement(statement) &&
+            compact(statement.expression) === "packagedAssetReviewViews(model)",
+        );
+        const body =
+          inner === undefined
+            ? ts.factory.createNodeArray<ts.Statement>()
+            : ts.isBlock(inner.statement)
+              ? inner.statement.statements
+              : ts.factory.createNodeArray([inner.statement]);
         const first = body[0];
         const second = body[1];
         const captureDeclaration =
@@ -798,6 +925,7 @@ const packagedAssetReviewContract = (
             ? second.expression
             : undefined;
         captureLoops.push({
+          assetGuard: assetGuard === undefined ? null : compact(assetGuard),
           assertion:
             assertionCall?.arguments.length === 3
               ? {
@@ -811,8 +939,23 @@ const packagedAssetReviewContract = (
             captureDeclaration?.initializer === undefined
               ? null
               : compact(captureDeclaration.initializer),
-          expression: compact(action.expression),
-          initializer: compact(action.initializer),
+          expression: inner === undefined ? "" : compact(inner.expression),
+          initializer: inner === undefined ? "" : compact(inner.initializer),
+          model:
+            modelDeclaration?.initializer === undefined
+              ? null
+              : compact(modelDeclaration.initializer),
+          modelAssertion:
+            modelAssertionCall?.arguments.length === 3
+              ? {
+                  condition: compact(modelAssertionCall.arguments[1]!),
+                  detail: compact(modelAssertionCall.arguments[2]!),
+                  name: compact(modelAssertionCall.arguments[0]!),
+                }
+              : null,
+          outerBodyStatementCount: outerBody.length,
+          outerExpression: compact(action.expression),
+          outerInitializer: compact(action.initializer),
         });
       });
       reviewFlows.push(flow);
@@ -820,19 +963,29 @@ const packagedAssetReviewContract = (
   }
   const packaged = packagedArrays.reduce<IArrayContract>(
     (output, entry) => {
-      const current = arrayContract([entry.array], entry.parsed, false);
+      const current = arrayContract([entry.array], entry.parsed);
+      output.conditionals.push(...current.conditionals);
       output.declarations += current.declarations;
-      output.spreads += current.spreads;
+      output.spreads.push(...current.spreads);
       output.views.push(...current.views);
       return output;
     },
-    { declarations: 0, spreads: 0, views: [] },
+    { conditionals: [], declarations: 0, spreads: [], views: [] },
   );
   return {
-    aligned: JSON.stringify(packaged.views) === JSON.stringify(canonical.views),
+    aligned:
+      JSON.stringify({
+        conditionals: packaged.conditionals,
+        views: packaged.views,
+      }) ===
+      JSON.stringify({
+        conditionals: canonical.conditionals,
+        views: canonical.views,
+      }),
     canonical,
     captureLoops,
     embeddedScripts: embeddedSources.length,
+    guideLoops,
     packaged,
     reviewFlows,
     reviewPhases,
@@ -2190,68 +2343,118 @@ export const test_workspace_public_contracts = (): void => {
   );
   const canonicalAssetViews: Array<Array<[string, string]>> = [
     [
+      ["id", '"turntable-front"'],
       ["angleDeg", "0"],
       ["elevationDeg", "15"],
       ["pose", '"rest"'],
       ["pass", '"beauty"'],
     ],
     [
+      ["id", '"turntable-right"'],
       ["angleDeg", "90"],
       ["elevationDeg", "15"],
       ["pose", '"rest"'],
       ["pass", '"beauty"'],
     ],
     [
+      ["id", '"turntable-back"'],
       ["angleDeg", "180"],
       ["elevationDeg", "15"],
       ["pose", '"rest"'],
       ["pass", '"beauty"'],
     ],
     [
+      ["id", '"turntable-left"'],
       ["angleDeg", "270"],
       ["elevationDeg", "15"],
       ["pose", '"rest"'],
       ["pass", '"beauty"'],
     ],
     [
+      ["id", '"top-outline"'],
       ["angleDeg", "0"],
       ["elevationDeg", "65"],
       ["pose", '"rest"'],
       ["pass", '"outline"'],
     ],
   ];
+  const riggedAssetViews: Array<Array<[string, string]>> = [
+    [
+      ["id", '"rig-rom-extremes"'],
+      ["angleDeg", "0"],
+      ["elevationDeg", "15"],
+      ["pose", '"rom-extremes"'],
+      ["pass", '"beauty"'],
+    ],
+  ];
   TestValidator.equals(
-    "packaged review captures every canonical unrigged asset view",
+    "packaged review captures every queued canonical asset view",
     packagedAssetReviewContract(tgzE2e, mcpProductionReviewService),
     {
       aligned: true,
       canonical: {
+        conditionals: [
+          {
+            condition: "model.skeleton===null",
+            whenFalse: riggedAssetViews,
+            whenTrue: [],
+          },
+        ],
         declarations: 1,
-        spreads: 1,
+        spreads: [
+          '...(model.skeleton===null?[]:[{id:"rig-rom-extremes",angleDeg:0,elevationDeg:15,pose:"rom-extremes"asconst,pass:"beauty"asconst,},])',
+        ],
         views: canonicalAssetViews,
       },
       captureLoops: [
         {
+          assetGuard: 'if(entry.target.kind!=="asset")continue;',
           assertion: {
             condition:
-              'captured.captured&&captured.reviewTarget?.kind==="asset"&&captured.reviewTarget.id==="army-far"&&captured.receipt!==null&&captured.frame?.width===16&&captured.frame.height===16&&captured.diagnostics.every((item)=>item.category!=="error")',
+              'captured.captured&&captured.reviewTarget?.kind==="asset"&&captured.reviewTarget.id===entry.target.id&&captured.receipt!==null&&captured.frame?.width===16&&captured.frame.height===16&&captured.diagnostics.every((item)=>item.category!=="error")',
             detail: "JSON.stringify(captured.diagnostics)",
-            name: "`starter-asset-view-captured:${view.pose}:${view.angleDeg}:${view.elevationDeg}:${view.pass}`",
+            name: "`starter-asset-view-captured:${entry.target.id}:${view.id}`",
           },
           bodyStatementCount: 2,
           capture:
-            'awaitapp.captureFrame({target:{kind:"asset",id:"army-far",...view},})',
-          expression: "packagedAssetReviewViews",
+            'awaitapp.captureFrame({target:{kind:"asset",id:entry.target.id,angleDeg:view.angleDeg,elevationDeg:view.elevationDeg,pose:view.pose,pass:view.pass,},})',
+          expression: "packagedAssetReviewViews(model)",
           initializer: "constview",
+          model: "graph.models.get(entry.target.id)",
+          modelAssertion: {
+            condition: "model!==undefined",
+            detail: '"reviewqueueassetisabsentfromthecurrentmodelgraph"',
+            name: "`starter-asset-model-current:${entry.target.id}`",
+          },
+          outerBodyStatementCount: 4,
+          outerExpression: "before.reviews.entries",
+          outerInitializer: "constentry",
         },
       ],
       embeddedScripts: 1,
+      guideLoops: [
+        {
+          body: "app.getGuideDocument({name});",
+          expression:
+            'newSet([...Object.values(AUTOMOVIE_REVIEW_GUIDES),"CAPTURE_FRAME"])',
+          initializer: "constname",
+        },
+      ],
       packaged: {
+        conditionals: [
+          {
+            condition: "model.skeleton===null",
+            whenFalse: riggedAssetViews,
+            whenTrue: [],
+          },
+        ],
         declarations: 1,
-        spreads: 0,
+        spreads: [
+          '...(model.skeleton===null?[]:[{id:"rig-rom-extremes",angleDeg:0,elevationDeg:15,pose:"rom-extremes",pass:"beauty",},])',
+        ],
         views: canonicalAssetViews,
       },
-      reviewFlows: [{ before: 2, capture: 1, views: 0 }],
+      reviewFlows: [{ before: 0, capture: 3, views: 2 }],
       reviewPhases: 1,
     },
   );

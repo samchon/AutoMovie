@@ -547,7 +547,10 @@ assert(
 
 const app = new AutoMovieApplication({ projectRoot: root });
 app.getGuideDocument({ name: "AUTOMOVIE_OVERALL" });
-for (const name of new Set(Object.values(AUTOMOVIE_REVIEW_GUIDES)))
+for (const name of new Set([
+  ...Object.values(AUTOMOVIE_REVIEW_GUIDES),
+  "CAPTURE_FRAME",
+]))
   app.getGuideDocument({ name });
 const graph = project.graph();
 const formationSummary = services.oracle.query({
@@ -608,60 +611,92 @@ assert(
 );
 const phase = process.argv[2];
 if (phase === "review") {
-  const packagedAssetReviewViews = [
-    {
-      angleDeg: 0,
-      elevationDeg: 15,
-      pose: "rest",
-      pass: "beauty",
-    },
-    {
-      angleDeg: 90,
-      elevationDeg: 15,
-      pose: "rest",
-      pass: "beauty",
-    },
-    {
-      angleDeg: 180,
-      elevationDeg: 15,
-      pose: "rest",
-      pass: "beauty",
-    },
-    {
-      angleDeg: 270,
-      elevationDeg: 15,
-      pose: "rest",
-      pass: "beauty",
-    },
-    {
-      angleDeg: 0,
-      elevationDeg: 65,
-      pose: "rest",
-      pass: "outline",
-    },
-  ];
-  for (const view of packagedAssetReviewViews) {
-    const captured = await app.captureFrame({
-      target: { kind: "asset", id: "army-far", ...view },
-    });
-    assert(
-      \`starter-asset-view-captured:\${view.pose}:\${view.angleDeg}:\${view.elevationDeg}:\${view.pass}\`,
-      captured.captured &&
-        captured.reviewTarget?.kind === "asset" &&
-        captured.reviewTarget.id === "army-far" &&
-        captured.receipt !== null &&
-        captured.frame?.width === 16 &&
-        captured.frame.height === 16 &&
-        captured.diagnostics.every((item) => item.category !== "error"),
-      JSON.stringify(captured.diagnostics),
-    );
-  }
   const before = inspectAutoMovieProduction(services);
   assert(
     "starter-review-gate-is-enforced",
     before.reviews.entries.some((entry) => entry.state !== "complete"),
     JSON.stringify(before.reviews),
   );
+  const packagedAssetReviewViews = (model) => [
+    {
+      id: "turntable-front",
+      angleDeg: 0,
+      elevationDeg: 15,
+      pose: "rest",
+      pass: "beauty",
+    },
+    {
+      id: "turntable-right",
+      angleDeg: 90,
+      elevationDeg: 15,
+      pose: "rest",
+      pass: "beauty",
+    },
+    {
+      id: "turntable-back",
+      angleDeg: 180,
+      elevationDeg: 15,
+      pose: "rest",
+      pass: "beauty",
+    },
+    {
+      id: "turntable-left",
+      angleDeg: 270,
+      elevationDeg: 15,
+      pose: "rest",
+      pass: "beauty",
+    },
+    {
+      id: "top-outline",
+      angleDeg: 0,
+      elevationDeg: 65,
+      pose: "rest",
+      pass: "outline",
+    },
+    ...(model.skeleton === null
+      ? []
+      : [
+          {
+            id: "rig-rom-extremes",
+            angleDeg: 0,
+            elevationDeg: 15,
+            pose: "rom-extremes",
+            pass: "beauty",
+          },
+        ]),
+  ];
+  for (const entry of before.reviews.entries) {
+    if (entry.target.kind !== "asset") continue;
+    const model = graph.models.get(entry.target.id);
+    assert(
+      \`starter-asset-model-current:\${entry.target.id}\`,
+      model !== undefined,
+      "review queue asset is absent from the current model graph",
+    );
+    for (const view of packagedAssetReviewViews(model)) {
+      const captured = await app.captureFrame({
+        target: {
+          kind: "asset",
+          id: entry.target.id,
+          angleDeg: view.angleDeg,
+          elevationDeg: view.elevationDeg,
+          pose: view.pose,
+          pass: view.pass,
+        },
+      });
+      assert(
+        \`starter-asset-view-captured:\${entry.target.id}:\${view.id}\`,
+        captured.captured &&
+          captured.reviewTarget?.kind === "asset" &&
+          captured.reviewTarget.id === entry.target.id &&
+          captured.receipt !== null &&
+          captured.frame?.width === 16 &&
+          captured.frame.height === 16 &&
+          captured.diagnostics.every((item) => item.category !== "error"),
+        JSON.stringify(captured.diagnostics),
+      );
+    }
+  }
   for (const entry of before.reviews.entries) {
     const prepared = app.prepareReview({ target: entry.target });
     assert(
