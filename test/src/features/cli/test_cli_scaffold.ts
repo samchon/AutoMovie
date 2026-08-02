@@ -417,6 +417,13 @@ export const test_cli_scaffold = async (): Promise<void> => {
       files["scripts/capture-browser.ts"]!.includes(
         "publishCaptureInstallReceipt",
       ) &&
+      files["scripts/capture-browser.ts"]!.includes("receiptGenerationKey") &&
+      files["scripts/capture-browser.ts"]!.includes(
+        "createCaptureExecutableSnapshot(file, bytes)",
+      ) &&
+      files["scripts/capture-browser.ts"]!.includes(
+        "fs.renameSync(temporary, file)",
+      ) === false &&
       files["scripts/capture-browser.ts"]!.includes(
         'installSource !== "PLAYWRIGHT_CHROMIUM_DOWNLOAD_HOST"',
       ) &&
@@ -3045,135 +3052,10 @@ export const test_cli_scaffold = async (): Promise<void> => {
       "capture install preserves the prior receipt when final validation fails",
       failedReceiptPublication &&
         fs.readFileSync(captureReceipt).equals(captureReceiptBytes) &&
-        fs
-          .readdirSync(path.dirname(captureReceipt))
-          .every((name) => name.endsWith(".tmp") === false),
+        fs.readdirSync(
+          path.join(path.dirname(captureReceipt), "install-receipts"),
+        ).length === 0,
     );
-    const receiptBeforeTempMutation = fs.readFileSync(captureReceipt);
-    let createdReceiptDescriptor: number | null = null;
-    let createdReceiptTemporary = "";
-    let parkedCreatedReceipt = "";
-    let createdReceiptSwapped = false;
-    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
-      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
-        file,
-        flags,
-        ...args,
-      ]) as number;
-      if (
-        typeof file !== "number" &&
-        flags === "wx+" &&
-        path.dirname(path.resolve(file.toString())) ===
-          path.dirname(captureReceipt)
-      ) {
-        createdReceiptDescriptor = descriptor;
-        createdReceiptTemporary = path.resolve(file.toString());
-      }
-      return descriptor;
-    }) as typeof fs.openSync;
-    mutableFs.fsyncSync = ((descriptor) => {
-      nativeFsync(descriptor);
-      if (
-        createdReceiptSwapped === false &&
-        descriptor === createdReceiptDescriptor
-      ) {
-        createdReceiptSwapped = true;
-        parkedCreatedReceipt = `${createdReceiptTemporary}.parked`;
-        fs.renameSync(createdReceiptTemporary, parkedCreatedReceipt);
-        nativeWriteFile(
-          createdReceiptTemporary,
-          `${JSON.stringify(nextCaptureReceipt, null, 2)}\n`,
-        );
-      }
-    }) as typeof fs.fsyncSync;
-    let createdReceiptSuccessorRejected = false;
-    try {
-      createdReceiptSuccessorRejected = throws(() =>
-        captureBrowserModule.publishCaptureInstallReceipt(
-          captureProject,
-          nextCaptureReceipt,
-          () => undefined,
-        ),
-      );
-    } finally {
-      mutableFs.openSync = nativeOpen;
-      mutableFs.fsyncSync = nativeFsync;
-    }
-    TestValidator.predicate(
-      "capture install rejects a successor before staged descriptor capture",
-      createdReceiptSwapped &&
-        createdReceiptSuccessorRejected &&
-        fs.existsSync(createdReceiptTemporary) &&
-        fs.existsSync(parkedCreatedReceipt) &&
-        fs.readFileSync(captureReceipt).equals(receiptBeforeTempMutation),
-    );
-    fs.rmSync(createdReceiptTemporary, { force: true });
-    fs.rmSync(parkedCreatedReceipt, { force: true });
-    let receiptTemporaryMutated = false;
-    const mutatedReceiptTemporaryRejected = throws(() =>
-      captureBrowserModule.publishCaptureInstallReceipt(
-        captureProject,
-        nextCaptureReceipt,
-        () => {
-          const temporary = fs
-            .readdirSync(path.dirname(captureReceipt))
-            .find((name) => name.endsWith(".tmp"));
-          if (temporary === undefined)
-            throw new Error("missing staged receipt");
-          fs.writeFileSync(
-            path.join(path.dirname(captureReceipt), temporary),
-            "mutated receipt bytes",
-          );
-          receiptTemporaryMutated = true;
-        },
-      ),
-    );
-    TestValidator.predicate(
-      "capture install rejects in-place temporary receipt mutation",
-      receiptTemporaryMutated &&
-        mutatedReceiptTemporaryRejected &&
-        fs.readFileSync(captureReceipt).equals(receiptBeforeTempMutation) &&
-        fs
-          .readdirSync(path.dirname(captureReceipt))
-          .every((name) => name.endsWith(".tmp") === false),
-    );
-    let receiptTemporarySucceeded = false;
-    let receiptTemporarySuccessor = "";
-    let receiptTemporaryOriginal = "";
-    const receiptTemporarySuccessorRejected = throws(() =>
-      captureBrowserModule.publishCaptureInstallReceipt(
-        captureProject,
-        nextCaptureReceipt,
-        () => {
-          const temporary = fs
-            .readdirSync(path.dirname(captureReceipt))
-            .find((name) => name.endsWith(".tmp"));
-          if (temporary === undefined)
-            throw new Error("missing staged receipt");
-          receiptTemporarySuccessor = path.join(
-            path.dirname(captureReceipt),
-            temporary,
-          );
-          receiptTemporaryOriginal = `${receiptTemporarySuccessor}.parked`;
-          fs.renameSync(receiptTemporarySuccessor, receiptTemporaryOriginal);
-          fs.writeFileSync(
-            receiptTemporarySuccessor,
-            `${JSON.stringify(nextCaptureReceipt, null, 2)}\n`,
-          );
-          receiptTemporarySucceeded = true;
-        },
-      ),
-    );
-    TestValidator.predicate(
-      "capture install preserves a same-root temporary receipt successor",
-      receiptTemporarySucceeded &&
-        receiptTemporarySuccessorRejected &&
-        fs.existsSync(receiptTemporarySuccessor) &&
-        fs.existsSync(receiptTemporaryOriginal) &&
-        fs.readFileSync(captureReceipt).equals(receiptBeforeTempMutation),
-    );
-    fs.rmSync(receiptTemporarySuccessor, { force: true });
-    fs.rmSync(receiptTemporaryOriginal, { force: true });
     let receiptPublicationValidated = false;
     captureBrowserModule.publishCaptureInstallReceipt(
       captureProject,
@@ -3186,7 +3068,90 @@ export const test_cli_scaffold = async (): Promise<void> => {
       "capture install publishes only after its final provenance validation",
       receiptPublicationValidated &&
         captureBrowserModule.readCaptureInstallReceipt(captureProject).browser
-          .revision === "456",
+          .revision === "456" &&
+        fs.readFileSync(captureReceipt).equals(captureReceiptBytes),
+    );
+    const receiptGenerationDirectory = path.join(
+      path.dirname(captureReceipt),
+      "install-receipts",
+    );
+    const receiptGenerationFile = path.join(
+      receiptGenerationDirectory,
+      fs.readdirSync(receiptGenerationDirectory)[0]!,
+    );
+    const receiptGenerationStatus = fs.lstatSync(receiptGenerationFile, {
+      bigint: true,
+    });
+    captureBrowserModule.publishCaptureInstallReceipt(
+      captureProject,
+      nextCaptureReceipt,
+      () => undefined,
+    );
+    TestValidator.predicate(
+      "capture install converges on one exact immutable receipt generation",
+      (() => {
+        const status = fs.lstatSync(receiptGenerationFile, { bigint: true });
+        return (
+          status.dev === receiptGenerationStatus.dev &&
+          status.ino === receiptGenerationStatus.ino
+        );
+      })() && fs.readdirSync(receiptGenerationDirectory).length === 1,
+    );
+
+    const foreignReceiptProject = path.join(base, "foreign-receipt-project");
+    fs.mkdirSync(foreignReceiptProject);
+    let foreignReceiptPath = "";
+    const foreignReceiptBytes = Buffer.from("foreign receipt generation\n");
+    let foreignReceiptInserted = false;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      if (
+        foreignReceiptInserted === false &&
+        typeof file !== "number" &&
+        flags === "wx+" &&
+        path.basename(path.dirname(file.toString())) === "install-receipts"
+      ) {
+        foreignReceiptPath = path.resolve(file.toString());
+        nativeWriteFile(foreignReceiptPath, foreignReceiptBytes);
+        foreignReceiptInserted = true;
+      }
+      return Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+    }) as typeof fs.openSync;
+    let foreignReceiptRejected = false;
+    try {
+      foreignReceiptRejected = throws(() =>
+        captureBrowserModule.publishCaptureInstallReceipt(
+          foreignReceiptProject,
+          nextCaptureReceipt,
+          () => undefined,
+        ),
+      );
+    } finally {
+      mutableFs.openSync = nativeOpen;
+    }
+    TestValidator.predicate(
+      "capture install preserves a foreign generation-slot competitor",
+      foreignReceiptInserted &&
+        foreignReceiptRejected &&
+        fs.readFileSync(foreignReceiptPath).equals(foreignReceiptBytes),
+    );
+
+    const upgradedCaptureReceipt = {
+      ...nextCaptureReceipt,
+      browser: { ...nextCaptureReceipt.browser, revision: "789" },
+    };
+    captureBrowserModule.publishCaptureInstallReceipt(
+      captureProject,
+      upgradedCaptureReceipt,
+      () => undefined,
+    );
+    TestValidator.predicate(
+      "capture install retains immutable receipt generations across upgrades",
+      fs.readdirSync(receiptGenerationDirectory).length === 2 &&
+        fs.readFileSync(captureReceipt).equals(captureReceiptBytes),
     );
     const linkedReceiptProject = path.join(base, "linked-receipt-project");
     const linkedReceiptOutside = path.join(base, "linked-receipt-outside");
@@ -3211,7 +3176,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       linkedReceiptRejected &&
         fs.readFileSync(linkedReceiptMarker, "utf8") === "outside" &&
         fs.existsSync(
-          path.join(linkedReceiptOutside, "capture", "install-receipt.json"),
+          path.join(linkedReceiptOutside, "capture", "install-receipts"),
         ) === false,
     );
     const segmentReceiptProject = path.join(base, "segment-receipt-project");
@@ -3260,6 +3225,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
     const publishedReceiptBytes = fs.readFileSync(captureReceipt);
     const parkedCaptureProject = `${captureProject}.parked`;
     let receiptRootSwapped = false;
+    let parkedReceiptGeneration = "";
     mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
       const descriptor = Reflect.apply(nativeOpen, mutableFs, [
         file,
@@ -3269,12 +3235,14 @@ export const test_cli_scaffold = async (): Promise<void> => {
       if (
         receiptRootSwapped === false &&
         typeof file !== "number" &&
-        path.dirname(path.resolve(file.toString())) ===
-          path.dirname(captureReceipt) &&
-        path.basename(file.toString()).startsWith("install-receipt.json.") &&
-        path.basename(file.toString()).endsWith(".tmp")
+        flags === "wx+" &&
+        path.basename(path.dirname(file.toString())) === "install-receipts"
       ) {
         receiptRootSwapped = true;
+        parkedReceiptGeneration = path.join(
+          parkedCaptureProject,
+          path.relative(captureProject, path.resolve(file.toString())),
+        );
         fs.renameSync(captureProject, parkedCaptureProject);
         fs.mkdirSync(path.dirname(captureReceipt), { recursive: true });
         nativeWriteFile(captureReceipt, publishedReceiptBytes);
@@ -3298,17 +3266,10 @@ export const test_cli_scaffold = async (): Promise<void> => {
       receiptRootSwapped &&
         receiptRootRaceRejected &&
         fs.readFileSync(captureReceipt).equals(publishedReceiptBytes) &&
-        fs
-          .readdirSync(path.join(parkedCaptureProject, ".automovie", "capture"))
-          .some((name) => name.endsWith(".tmp")),
+        fs.existsSync(parkedReceiptGeneration),
     );
     fs.rmSync(captureProject, { recursive: true, force: true });
     fs.renameSync(parkedCaptureProject, captureProject);
-    for (const name of fs.readdirSync(path.dirname(captureReceipt)))
-      if (name.endsWith(".tmp"))
-        fs.rmSync(path.join(path.dirname(captureReceipt), name), {
-          force: true,
-        });
 
     const dialogueCacheModule = createRequire(__filename)(
       path.join(scaffoldDir, "scripts", "dialogueCacheSnapshot.ts"),
@@ -3357,6 +3318,62 @@ export const test_cli_scaffold = async (): Promise<void> => {
         fs.lstatSync(dialogueTarget).isDirectory() &&
         fs.readdirSync(dialogueTarget).sort().join(",") ===
           "audio.f32,receipt.json",
+    );
+
+    const reuseAbaDialogueTarget = path.join(dialogueRoot, "reuse-aba");
+    const reuseAbaDialogueSuccessor = `${reuseAbaDialogueTarget}.successor`;
+    const reuseAbaDialogueParked = `${reuseAbaDialogueTarget}.parked`;
+    const reuseAbaDialoguePcm = Buffer.from("different dialogue generation");
+    writeDialogueFixture(reuseAbaDialogueTarget, dialoguePcm, dialogueReceipt);
+    writeDialogueFixture(
+      reuseAbaDialogueSuccessor,
+      reuseAbaDialoguePcm,
+      Buffer.from('{"generation":"successor"}\n'),
+    );
+    const reuseAbaDialogueAudio = path.join(
+      reuseAbaDialogueTarget,
+      "audio.f32",
+    );
+    let reuseAbaDialogueOpens = 0;
+    let reuseAbaDialogueSwapped = false;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+      if (
+        typeof file !== "number" &&
+        path.resolve(file.toString()) === reuseAbaDialogueAudio &&
+        ++reuseAbaDialogueOpens === 3
+      ) {
+        nativeRename(reuseAbaDialogueTarget, reuseAbaDialogueParked);
+        nativeRename(reuseAbaDialogueSuccessor, reuseAbaDialogueTarget);
+        reuseAbaDialogueSwapped = true;
+      }
+      return descriptor;
+    }) as typeof fs.openSync;
+    let reuseAbaDialogueRejected = false;
+    try {
+      reuseAbaDialogueRejected = throws(() =>
+        dialogueCacheModule.publishDialogueCache({
+          base: dialogueRoot,
+          pcm: dialoguePcm,
+          receipt: dialogueReceipt,
+          target: reuseAbaDialogueTarget,
+        }),
+      );
+    } finally {
+      mutableFs.openSync = nativeOpen;
+    }
+    TestValidator.predicate(
+      "dialogue cache publication reuse rejects a directory successor",
+      reuseAbaDialogueSwapped &&
+        reuseAbaDialogueRejected &&
+        fs
+          .readFileSync(path.join(reuseAbaDialogueTarget, "audio.f32"))
+          .equals(reuseAbaDialoguePcm) &&
+        fs.existsSync(reuseAbaDialogueParked),
     );
 
     const partialDialogueTarget = path.join(dialogueRoot, "partial");

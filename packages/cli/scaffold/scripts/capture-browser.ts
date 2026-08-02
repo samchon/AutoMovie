@@ -4,7 +4,6 @@ import {
   readAutoMovieProductionOwnedFile,
 } from "@automovie/mcp";
 import { spawnSync } from "node:child_process";
-import { randomUUID } from "node:crypto";
 import fs, { type BigIntStats } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
@@ -14,11 +13,9 @@ import {
   type ICaptureExecutableSnapshot,
   assertCaptureExecutable,
   assertCaptureExecutableBytes,
-  assertRelocatedCaptureExecutable,
   closeCaptureExecutable,
   createCaptureExecutableSnapshot,
   openCaptureExecutable,
-  removeCaptureExecutableIfResident,
 } from "./captureExecutableSnapshot";
 import { snapshotRuntimePackage } from "./runtimePackageSnapshot";
 
@@ -242,12 +239,53 @@ const assertPlaywrightMetadata = (expected: IPlaywrightMetadata): void => {
     throw new Error("Installed Playwright metadata changed while it was used.");
 };
 
-const receiptPath = (projectRoot: string): string =>
+const legacyReceiptPath = (projectRoot: string): string =>
   path.join(
     path.resolve(projectRoot),
     ".automovie",
     "capture",
     "install-receipt.json",
+  );
+
+const receiptGenerationDirectory = (projectRoot: string): string =>
+  path.join(
+    path.resolve(projectRoot),
+    ".automovie",
+    "capture",
+    "install-receipts",
+  );
+
+const receiptGenerationKey = (receipt: {
+  browser: Pick<
+    IAutoMovieCaptureInstallReceipt["browser"],
+    "product" | "revision" | "version"
+  >;
+  playwright: IAutoMovieCaptureInstallReceipt["playwright"];
+}): string =>
+  digestAutoMovieBytes(
+    Buffer.from(
+      JSON.stringify({
+        browser: {
+          product: receipt.browser.product,
+          revision: receipt.browser.revision,
+          version: receipt.browser.version,
+        },
+        playwright: {
+          package: receipt.playwright.package,
+          version: receipt.playwright.version,
+        },
+      }),
+      "utf8",
+    ),
+  ).slice(7);
+
+const receiptGenerationPath = (
+  projectRoot: string,
+  receipt: Parameters<typeof receiptGenerationKey>[0],
+): string =>
+  path.join(
+    receiptGenerationDirectory(projectRoot),
+    `${receiptGenerationKey(receipt)}.json`,
   );
 
 const ensureCaptureReceiptDirectory = (
@@ -273,6 +311,22 @@ const ensureCaptureReceiptDirectory = (
   return captureReceiptDirectory(project.path);
 };
 
+const ensureCaptureReceiptGenerationDirectory = (
+  projectRoot: string,
+): ICaptureReceiptDirectorySnapshot => {
+  const parent = ensureCaptureReceiptDirectory(projectRoot);
+  assertReceiptDirectory(parent);
+  const directory = path.join(parent.path, "install-receipts");
+  try {
+    fs.mkdirSync(directory);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+  }
+  const captured = captureReceiptGenerationDirectory(projectRoot);
+  assertReceiptDirectoryPrefix(parent, captured);
+  return captured;
+};
+
 const captureReceiptDirectory = (
   projectRoot: string,
 ): ICaptureReceiptDirectorySnapshot => {
@@ -291,6 +345,69 @@ const captureReceiptDirectory = (
   return { directories, path: cursor };
 };
 
+const captureReceiptGenerationDirectory = (
+  projectRoot: string,
+): ICaptureReceiptDirectorySnapshot => {
+  const parent = captureReceiptDirectory(projectRoot);
+  const current = physicalDirectory(
+    path.join(parent.path, "install-receipts"),
+    "capture receipt generation directory",
+  );
+  if (inside(parent.directories[0]!.real, current.real) === false)
+    throw new Error("Capture receipt generation directory escapes its root.");
+  const captured = {
+    directories: [...parent.directories, current],
+    path: current.path,
+  };
+  assertReceiptDirectory(captured);
+  return captured;
+};
+
+const currentReceiptGenerationPath = (projectRoot: string): string | null => {
+  let directory: ICaptureReceiptDirectorySnapshot;
+  try {
+    directory = captureReceiptGenerationDirectory(projectRoot);
+  } catch (error) {
+    if (
+      (error as NodeJS.ErrnoException).code === "ENOENT" ||
+      (error as NodeJS.ErrnoException).code === "ENOTDIR"
+    )
+      return null;
+    throw error;
+  }
+  const entries = fs.readdirSync(directory.path, { withFileTypes: true });
+  if (
+    entries.some(
+      (entry) =>
+        entry.isFile() === false ||
+        /^[0-9a-f]{64}\.json$/u.test(entry.name) === false,
+    )
+  )
+    throw new Error("Capture receipt generation inventory is malformed.");
+  const files = entries.map((entry) => entry.name).sort();
+  assertReceiptDirectory(directory);
+  if (files.length === 0) return null;
+  const metadata = capturePlaywrightMetadata();
+  const expected = `${receiptGenerationKey({
+    browser: {
+      product: "chromium",
+      revision: metadata.browser.revision,
+      version: metadata.browser.browserVersion,
+    },
+    playwright: {
+      package: "playwright",
+      version: metadata.packageVersion,
+    },
+  })}.json`;
+  const selected = files.includes(expected)
+    ? expected
+    : files.length === 1
+      ? files[0]!
+      : null;
+  assertReceiptDirectory(directory);
+  return selected === null ? null : path.join(directory.path, selected);
+};
+
 const parseReceipt = (
   value: unknown,
   file: string,
@@ -299,10 +416,32 @@ const parseReceipt = (
   if (
     typeof receipt !== "object" ||
     receipt === null ||
+    Array.isArray(receipt) ||
+    exactKeys(receipt as Record<string, unknown>, [
+      "version",
+      "playwright",
+      "browser",
+      "installSource",
+    ]) === false ||
     receipt.version !== 1 ||
+    typeof receipt.playwright !== "object" ||
+    receipt.playwright === null ||
+    exactKeys(receipt.playwright as unknown as Record<string, unknown>, [
+      "package",
+      "version",
+    ]) === false ||
     receipt.playwright?.package !== "playwright" ||
     typeof receipt.playwright.version !== "string" ||
     receipt.playwright.version.trim().length === 0 ||
+    typeof receipt.browser !== "object" ||
+    receipt.browser === null ||
+    exactKeys(receipt.browser as unknown as Record<string, unknown>, [
+      "product",
+      "revision",
+      "version",
+      "executablePath",
+      "executableDigest",
+    ]) === false ||
     receipt.browser?.product !== "chromium" ||
     typeof receipt.browser.revision !== "string" ||
     receipt.browser.revision.trim().length === 0 ||
@@ -325,7 +464,8 @@ const parseReceipt = (
 export const readCaptureInstallReceipt = (
   projectRoot: string,
 ): IAutoMovieCaptureInstallReceipt => {
-  const file = receiptPath(projectRoot);
+  const generation = currentReceiptGenerationPath(projectRoot);
+  const file = generation ?? legacyReceiptPath(projectRoot);
   let bytes: Uint8Array | null;
   try {
     bytes = readAutoMovieProductionOwnedFile({
@@ -343,10 +483,18 @@ export const readCaptureInstallReceipt = (
       `Package-owned Chromium is not installed for this project. Run npm run capture:install, then npm run capture:doctor.`,
     );
   try {
-    return parseReceipt(
+    const receipt = parseReceipt(
       JSON.parse(Buffer.from(bytes).toString("utf8")) as unknown,
       file,
     );
+    if (
+      generation !== null &&
+      path.basename(file) !== `${receiptGenerationKey(receipt)}.json`
+    )
+      throw new Error(
+        `Capture install receipt "${file}" occupies another generation.`,
+      );
+    return receipt;
   } catch (error) {
     if (error instanceof SyntaxError)
       throw new Error(
@@ -356,44 +504,39 @@ export const readCaptureInstallReceipt = (
   }
 };
 
-/** Publish a receipt only after its final provenance validation succeeds. */
+/** Publish one immutable receipt for a canonical Playwright generation. */
 export const publishCaptureInstallReceipt = (
   projectRoot: string,
   receipt: IAutoMovieCaptureInstallReceipt,
   assertCurrent: () => void,
 ): void => {
-  const file = receiptPath(projectRoot);
-  const owned = ensureCaptureReceiptDirectory(projectRoot);
+  const file = receiptGenerationPath(projectRoot, receipt);
+  parseReceipt(receipt, file);
+  const owned = ensureCaptureReceiptGenerationDirectory(projectRoot);
   if (path.resolve(path.dirname(file)) !== owned.path)
     throw new Error("Capture receipt path escapes its owned directory.");
-  const temporary = `${file}.${process.pid}.${randomUUID()}.tmp`;
   const bytes = Buffer.from(`${JSON.stringify(receipt, null, 2)}\n`);
-  let stagedFile: ICaptureExecutableSnapshot | null = null;
-  let completed = false;
-  let published = false;
+  assertCurrent();
+  assertReceiptDirectory(owned);
+  let published: ICaptureExecutableSnapshot;
   try {
-    assertReceiptDirectory(owned);
-    stagedFile = createCaptureExecutableSnapshot(temporary, bytes);
-    const staged = captureReceiptDirectory(projectRoot);
-    assertSameReceiptDirectoryIdentity(owned, staged);
-    if (stagedFile.digest !== digestAutoMovieBytes(bytes))
-      throw new Error("Capture receipt temporary bytes changed after write.");
-    assertCurrent();
-    assertReceiptDirectory(staged);
-    assertCaptureExecutable(stagedFile);
-    assertCaptureExecutableBytes(stagedFile);
-    fs.renameSync(temporary, file);
-    published = true;
-    assertRelocatedCaptureExecutable(stagedFile, file);
-    completed = true;
+    published = createCaptureExecutableSnapshot(file, bytes);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+    published = openCaptureExecutable(file);
+  }
+  try {
+    const current = captureReceiptGenerationDirectory(projectRoot);
+    assertReceiptDirectoryPrefix(owned, current);
+    if (published.digest !== digestAutoMovieBytes(bytes))
+      throw new Error(
+        "A different capture receipt owns this Playwright generation.",
+      );
+    assertCaptureExecutable(published);
+    assertCaptureExecutableBytes(published);
+    assertReceiptDirectory(current);
   } finally {
-    if (stagedFile !== null) {
-      if (published && completed === false)
-        removeCaptureExecutableIfResident(stagedFile, file);
-      else if (published === false)
-        removeCaptureExecutableIfResident(stagedFile);
-      closeCaptureExecutable(stagedFile);
-    }
+    closeCaptureExecutable(published);
   }
 };
 
@@ -404,20 +547,19 @@ const assertReceiptDirectory = (
     assertPhysicalDirectory(directory, "capture receipt ancestry");
 };
 
-const assertSameReceiptDirectoryIdentity = (
+const assertReceiptDirectoryPrefix = (
   expected: ICaptureReceiptDirectorySnapshot,
   current: ICaptureReceiptDirectorySnapshot,
 ): void => {
   if (
-    current.path !== expected.path ||
-    current.directories.length !== expected.directories.length ||
-    current.directories.some((directory, index) => {
-      const prior = expected.directories[index];
+    current.directories.length < expected.directories.length ||
+    expected.directories.some((directory, index) => {
+      const next = current.directories[index];
       return (
-        prior === undefined ||
-        directory.path !== prior.path ||
-        directory.real !== prior.real ||
-        directory.identity !== prior.identity
+        next === undefined ||
+        directory.path !== next.path ||
+        directory.real !== next.real ||
+        directory.identity !== next.identity
       );
     })
   )
