@@ -93,6 +93,19 @@ const comparatorFreeSortCalls = (
     })
     .sort(compareCodeUnits);
 
+interface ICaptureContractCheck {
+  contract: string;
+  satisfied: boolean;
+}
+
+/** Return every named scaffold contract that its rendered source violates. */
+const captureContractFailures = (
+  checks: readonly ICaptureContractCheck[],
+): string[] =>
+  checks
+    .filter((check) => check.satisfied === false)
+    .map((check) => check.contract);
+
 /**
  * The `@automovie/cli` scaffolder renders the starter into an in-memory file
  * map and writes it out: the render/write split learned from the reference
@@ -177,6 +190,15 @@ export const test_cli_scaffold = async (): Promise<void> => {
       ].join("\n"),
     }),
     ["sort-oracle.ts:3:1", "sort-oracle.ts:4:1", "sort-oracle.ts:5:1"],
+  );
+  TestValidator.equals(
+    "capture contract reporter retains every failed name in declaration order",
+    captureContractFailures([
+      { contract: "satisfied", satisfied: true },
+      { contract: "first failure", satisfied: false },
+      { contract: "second failure", satisfied: false },
+    ]),
+    ["first failure", "second failure"],
   );
   TestValidator.equals(
     "shipped TypeScript sources give every sort an explicit comparator",
@@ -439,491 +461,1610 @@ export const test_cli_scaffold = async (): Promise<void> => {
         "shot, or film\nreview is missing, stale, revising, or incomplete",
       ),
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "the local MCP host owns actual frame capture",
-    files[".mcp.json"]!.includes("scripts/mcp.ts") &&
-      files[".mcp.json"]!.includes("$" + "{CLAUDE_PROJECT_DIR:-.}") &&
-      files["scripts/mcp.ts"]!.includes("createAutoMovieMcpServer") &&
-      files["scripts/mcp.ts"]!.includes("captureProductionFrame") &&
-      files["scripts/mcp.ts"]!.includes("fileURLToPath(import.meta.url)") &&
-      files["scripts/mcp.ts"]!.includes("process.cwd()") === false &&
-      files["scripts/preview.ts"]!.includes("captureFrame") &&
-      files["scripts/preview.ts"]!.includes("previewFrame") === false &&
-      /\.locator\("#view"\)\s*\.screenshot\(\{ type: "png" \}\)/.test(
-        files["scripts/capture.ts"]!,
-      ) &&
-      pkg.includes('"three":') &&
-      files["scripts/capture.ts"]!.includes('dedupe: ["three"]') &&
-      files["vite.config.ts"]!.includes('dedupe: ["three"]') &&
-      files["viewer/index.html"]!.includes('rel="icon" href="data:,"') &&
-      files["viewer/src/shot.ts"]!.includes("mountViewer") &&
-      files["viewer/src/shot.ts"]!.includes("preserveDrawingBuffer: true") &&
-      files["viewer/src/shotRuntime.ts"]!.includes(
-        "performance === undefined ? node.motion : performance.motion",
-      ) &&
-      files["scripts/capture.ts"]!.includes(
-        'page.locator("#status").evaluate',
-      ) &&
-      files["scripts/capture.ts"]!.includes(
-        "let sessionPromise: Promise<CaptureSession> | null",
-      ) &&
-      files["scripts/capture.ts"]!.includes(
-        "pages: Map<string, Promise<CapturePage>>",
-      ) &&
-      files["scripts/capture.ts"]!.includes("productionFrameCaptureMetrics") &&
-      files["scripts/capture.ts"]!.includes("avoidedPageReloads") &&
-      files["scripts/capture.ts"]!.includes("capturesPerSecond") &&
-      files["scripts/capture.ts"]!.includes("input.productionId") &&
-      files["scripts/capture-browser.ts"]!.includes(
-        "PLAYWRIGHT_BROWSERS_PATH: browserStoragePath(projectRoot)",
-      ) &&
-      files["scripts/capture-browser.ts"]!.includes("...process.env") &&
-      files["scripts/capture-browser.ts"]!.includes(
-        "PLAYWRIGHT_CHROMIUM_DOWNLOAD_HOST",
-      ) &&
-      files["scripts/capture-browser.ts"]!.includes(
-        "PLAYWRIGHT_DOWNLOAD_HOST",
-      ) &&
-      files["scripts/capture-browser.ts"]!.includes(
-        'return import("playwright")',
-      ) &&
-      files["scripts/capture-browser.ts"]!.includes(
-        "paths: [playwright.root]",
-      ) &&
-      files["scripts/capture-browser.ts"]!.includes('"--no-shell"') &&
-      files["scripts/capture-browser.ts"]!.includes(
-        'stdio: ["ignore", "pipe", "pipe", cli.descriptor]',
-      ) &&
-      files["scripts/capture-browser.ts"]!.includes(
-        "runDescriptorBoundNodeCli",
-      ) &&
-      files["scripts/capture-browser.ts"]!.includes(
-        "launchWithCaptureExecutableSnapshot",
-      ) &&
-      files["scripts/capture-browser.ts"]!.includes(
-        "publishCaptureInstallReceipt",
-      ) &&
-      files["scripts/capture-browser.ts"]!.includes("receiptGenerationKey") &&
-      files["scripts/capture-browser.ts"]!.includes(
-        "createCaptureExecutableSnapshot(file, bytes)",
-      ) &&
-      files["scripts/capture-browser.ts"]!.includes(
-        "CAPTURE_INSTALL_RECEIPT_MAX_BYTES",
-      ) &&
-      files["scripts/captureExecutableSnapshot.ts"]!.includes("maximumBytes") &&
-      files["scripts/captureExecutableSnapshot.ts"]!.includes(
-        "removeCreatedCaptureExecutable",
-      ) === false &&
-      files["scripts/capture-browser.ts"]!.includes(
-        "fs.renameSync(temporary, file)",
-      ) === false &&
-      files["scripts/capture-browser.ts"]!.includes(
-        'installSource !== "PLAYWRIGHT_CHROMIUM_DOWNLOAD_HOST"',
-      ) &&
-      files["scripts/capture-browser.ts"]!.includes(
-        'args: ["--use-angle=swiftshader"]',
-      ) &&
-      files["scripts/capture-browser.ts"]!.includes(
-        'context.getExtension("WEBGL_debug_renderer_info")',
-      ) &&
-      files["scripts/capture-browser.ts"]!.includes(
-        "executableDigest: executable.digest",
-      ) &&
-      files["scripts/capture-browser.ts"]!.includes(
-        "readAutoMovieProductionOwnedFile",
-      ) &&
-      files["scripts/capture-browser.ts"]!.includes(
-        "assertCaptureExecutable(executable)",
-      ) &&
-      files["scripts/capture-browser.ts"]!.includes(
-        'config.source === "system-channel"',
-      ) &&
-      files["scripts/capture-browser.ts"]!.includes(
-        'source = "configured-executable"',
-      ) &&
-      files["scripts/capture-browser.ts"]!.includes(
-        "parseCaptureBrowserConfig",
-      ) &&
-      files["scripts/capture-browser.ts"]!.includes(
-        "Invalid capture browser config",
-      ) &&
-      files["scripts/capture-doctor.ts"]!.includes("PNG.sync.read") &&
-      files["scripts/capture-doctor.ts"]!.includes(
-        "canonicalAutoMovieCaptureRuntimeIdentity",
-      ) &&
-      files["scripts/capture-doctor.ts"]!.includes("visiblePixel") &&
-      files["scripts/capture-install.ts"]!.includes(
-        "installPackageOwnedChromium",
-      ) &&
-      files["automovie.config.ts"]!.includes('source: "playwright-chromium"') &&
-      files["automovie.config.ts"]!.includes(
-        "satisfies AutoMovieCaptureBrowserConfig",
-      ) &&
-      files[".gitignore"]!.includes(".automovie/capture/") &&
-      files["README.md"]!.includes("npm run capture:install") &&
-      files["README.md"]!.includes("PLAYWRIGHT_BROWSERS_PATH=0") &&
-      files["scripts/render.ts"]!.includes(
-        "await closeProductionFrameCapture()",
-      ) &&
-      files["scripts/render.ts"]!.includes("runProductionRenderJob") &&
-      files["scripts/render.ts"]!.includes("commitProductionPublication") &&
-      files["scripts/render.ts"]!.includes("probeProductionMedia") &&
-      files["scripts/render.ts"]!.includes("probeProductionVideoMp4") &&
-      files["scripts/render.ts"]!.includes("deriveProductionSoundPlan") &&
-      files["scripts/render.ts"]!.includes("KokoroTTS.from_pretrained") &&
-      files["scripts/render.ts"]!.includes("KOKORO_MODEL_REVISION") &&
-      files["scripts/render.ts"]!.includes('KOKORO_DEVICE = "cpu"') &&
-      files["scripts/render.ts"]!.split("device: KOKORO_DEVICE").length === 4 &&
-      files["scripts/render.ts"]!.includes("productionSoundRuntimeIdentity") &&
-      files["scripts/render.ts"]!.includes(
-        "backend: onnxRuntimeNodeIdentity()",
-      ) &&
-      files["scripts/render.ts"]!.includes(
-        'path: "package:onnxruntime-node"',
-      ) &&
-      files["scripts/render.ts"]!.split("onnxRuntimeNodeIdentity()").length ===
-        3 &&
-      files["scripts/render.ts"]!.includes(
-        '["bin", "napi-v3", process.platform, process.arch]',
-      ) &&
-      files["scripts/render.ts"]!.includes(
-        'imageCapability: resolvedPackageIdentity("sharp")',
-      ) &&
-      files["scripts/render.ts"]!.includes(
-        'path: "package:sharp-capability-wall"',
-      ) &&
-      files["scripts/render.ts"]!.includes(
-        "root: modelCacheRoot,\n              directory: modelCacheRoot,\n              relative,",
-      ) &&
-      files["scripts/render.ts"]!.includes(
-        "readRegularInside(modelCacheRoot, relative)",
-      ) === false &&
-      files["scripts/render.ts"]!.includes("encodeProductionOpus") &&
-      files["scripts/render.ts"]!.includes("muxProductionFeatureMp4") &&
-      renderProgressSource.includes("process.stderr.write") &&
-      renderProgressSource.includes("[automovie:render]") &&
-      renderProgressSource.includes("JSON.stringify({ stage, ...details })") &&
-      renderProgressSource.includes("process.stdout.write") === false &&
-      renderProgressStages.every((stage) =>
-        renderScript.includes(`renderProgress("${stage}"`),
-      ) &&
-      files["scripts/render.ts"]!.includes('"waveform.png"') &&
-      files["scripts/render.ts"]!.includes('"spectrogram.png"') &&
-      files["scripts/render.ts"]!.includes('process.argv.indexOf("--tier")') &&
-      files["scripts/render.ts"]!.includes("productionRenderLayersForPass") &&
-      files["scripts/render.ts"]!.includes("renderGarbageCollection") &&
-      files["scripts/renderChunkSnapshot.ts"]!.includes(
-        'kind: "chunk-pointer"',
-      ) &&
-      files["scripts/renderChunkSnapshot.ts"]!.includes('kind: "chunk-tree"') &&
-      files["scripts/renderChunkSnapshot.ts"]!.includes(
-        "captureRenderChunkPublicationFromPointer(pointer)",
-      ) &&
-      files["scripts/renderChunkSnapshot.ts"]!.includes(
-        "exactTreeContent(authenticated.tree, snapshot)",
-      ) &&
-      files["scripts/renderChunkSnapshot.ts"]!.includes(
-        "authenticated === undefined && props.processAlive(Number(match[2]))",
-      ) &&
-      files["scripts/render.ts"]!.includes("inventoryRenderChunkGarbage") &&
-      files["scripts/render.ts"]!.includes(
-        "retainedChunkPaths: [...retainedChunkPaths]",
-      ) &&
-      files["scripts/render.ts"]!.includes("const base = snapshot.base.path") &&
-      files["scripts/render.ts"]!.includes(
-        "path.resolve(renderJobRoot, candidate.path)",
-      ) === false &&
-      files["scripts/render.ts"]!.includes("captureRenderGcTarget") &&
-      files["scripts/render.ts"]!.includes("removeCapturedRenderGcTarget") &&
-      files["scripts/render.ts"]!.includes("quarantineCapturedRenderTarget") &&
-      files["scripts/render.ts"]!.includes(
-        "inventoryRenderQuarantineCandidates",
-      ) &&
-      files["scripts/render.ts"]!.includes("removeCapturedRenderQuarantine") &&
-      files["scripts/render.ts"]!.includes("path.join(renderJobRoot, tier)") &&
-      files["scripts/render.ts"]!.includes("quarantineEvidenceSnapshots") &&
-      files["scripts/render.ts"]!.includes("readCapturedRenderGcFile") &&
-      files["scripts/render.ts"]!.includes("RENDER_LOCK_JSON_MAX_BYTES") &&
-      acquireChunkSource.includes("createRenderGcFileSnapshot(") &&
-      acquireChunkSource.includes("file === claim ? claimSnapshot") &&
-      acquireChunkSource.includes("const ownedClaim = claimSnapshot") &&
-      acquireChunkSource.match(
-        /releaseOwnedChunkClaim\(chunk, claim, token, claimSnapshot\)/gu,
-      )?.length === 2 &&
-      acquireChunkSource.includes(".candidate") === false &&
-      acquireChunkSource.includes("fs.linkSync") === false &&
-      acquireChunkSource.includes("fs.rmSync") === false &&
-      renderTemporarySnapshot.includes(
-        'assertRenderPhysicalDirectoryIdentity(props.state, "render state root")',
-      ) &&
-      renderTemporarySnapshot.includes(
-        "const temporaryRoot = captureRenderPhysicalDirectory(",
-      ) &&
-      renderTemporarySnapshot.includes(
-        "const tree = captureRenderPhysicalDirectory(",
-      ) &&
-      files["scripts/render.ts"]!.includes(
-        "const temporaryOwnership = createRenderChunkTemporaryTree({",
-      ) &&
-      files["scripts/render.ts"]!.includes("state: attempt.snapshot.base") &&
-      files["scripts/render.ts"]!.includes("const relative = `frame_") &&
-      files["scripts/render.ts"]!.includes("const writtenFiles:") &&
-      files["scripts/render.ts"]!.includes(
-        "assertCapturedRenderGcFileEntry({",
-      ) &&
-      files["scripts/render.ts"]!.includes("tree: completedTree") &&
-      writeRenderFileSource.includes("createRenderGcFileSnapshot(") &&
-      writeRenderFileSource.includes("assertRenderChunkTemporaryTree(") &&
-      writeRenderFileSource.includes("snapshot.base.identity") &&
-      writeRenderFileSource.includes("return snapshot") &&
-      writeRenderFileSource.includes(".tmp") === false &&
-      writeRenderFileSource.includes("fs.renameSync") === false &&
-      writeRenderFileSource.includes("fs.rmSync") === false &&
-      files["scripts/render.ts"]!.includes("writeFileAtomic") === false &&
-      files["scripts/render.ts"]!.includes("fs.renameSync") === false &&
-      files["scripts/render.ts"]!.includes(
-        "captureAbandonedRenderStateTarget",
-      ) &&
-      files["scripts/render.ts"]!.includes("held.snapshot") &&
-      files["scripts/render.ts"]!.includes(
-        "quarantineStaleSlotOutputs(current.chunks)",
-      ) &&
-      files["scripts/render.ts"]!.includes("acquireRenderSessionLease") &&
-      files["scripts/render.ts"]!.includes("acquireRenderGcLease") &&
-      files["scripts/render.ts"]!.includes("coordinationRoot: root") &&
-      files["scripts/render.ts"]!.includes("renderCoordinationRoot") ===
-        false &&
-      files[".gitignore"]!.includes(".automovie-liveness-*") &&
-      files["scripts/render.ts"]!.includes("publishRenderChunkSnapshot") &&
-      files["scripts/render.ts"]!.includes("captureRenderChunkPublication") &&
-      files["scripts/render.ts"]!.includes("renderChunkPublicationPath") &&
-      files["scripts/render.ts"]!.includes(
-        "loadCurrentRenderChunkPublication",
-      ) &&
-      files["scripts/render.ts"]!.includes("consumeCurrentRenderChunkFrames") &&
-      files["scripts/render.ts"]!.includes(
-        "removeCapturedRenderChunkPointer(pointerSnapshot)",
-      ) &&
-      files["scripts/render.ts"]!.includes(
-        "currentPublicationProtectsTree(currentChunks, entry.name, snapshot)",
-      ) &&
-      recoveryProtectionSource.includes(
-        "const chunk = props.chunks.get(digest)",
-      ) &&
-      recoveryProtectionSource.includes("for (const chunk of chunks)") ===
-        false &&
-      files[".gitignore"]!.includes(".automovie-chunk-*") &&
-      files["scripts/render.ts"]!.includes(
-        "fs.renameSync(temporary, destination)",
-      ) === false &&
-      files["scripts/render.ts"]!.includes(
-        "readRegularInside(chunkDirectory(chunk.id), frame.path)",
-      ) === false &&
-      files["scripts/render.ts"]!.includes("renderPublicationFingerprint") &&
-      files["scripts/render.ts"]!.includes("assertMatchingProxyPublication") &&
-      files["scripts/render.ts"]!.includes("inspectPublishedProxyBundle") &&
-      files["scripts/render.ts"]!.includes(
-        "inspectCapturedProxyBundle(snapshot)",
-      ) &&
-      files["scripts/render.ts"]!.includes(
-        "for (const entry of adjudicated.snapshot.entries)",
-      ) &&
-      files["scripts/render.ts"]!.includes("publishProxyBundle({") &&
-      files["scripts/render.ts"]!.includes("beginRenderAttempt({") &&
-      files["scripts/render.ts"]!.includes("snapshot: held.snapshot") &&
-      files["scripts/render.ts"]!.includes("completeRenderAttempt(attempt)") &&
-      files["scripts/render.ts"]!.includes("failRenderAttempt({") &&
-      files["scripts/render.ts"]!.includes("listRenderAttempts(") &&
-      files["scripts/render.ts"]!.includes("fs.rmSync(attemptPath(chunk)") ===
-        false &&
-      files["scripts/render.ts"]!.includes(
-        "writeJsonAtomic(attemptPath(chunk)",
-      ) === false &&
-      files["scripts/renderAttemptSnapshot.ts"]!.includes(
-        "createRenderGcFileSnapshot",
-      ) &&
-      files["scripts/renderAttemptSnapshot.ts"]!.includes(
-        "removeCapturedRenderGcTarget",
-      ) &&
-      files["scripts/renderAttemptSnapshot.ts"]!.includes(
-        "readCapturedRenderGcFile",
-      ) &&
-      files["scripts/renderAttemptSnapshot.ts"]!.includes(
-        "assertRenderAttemptLockOwner",
-      ) &&
-      files["scripts/renderAttemptSnapshot.ts"]!.includes(
-        "createRenderGcFileSnapshot",
-      ) &&
-      files["scripts/renderAttemptSnapshot.ts"]!.includes("fs.linkSync") ===
-        false &&
-      files["scripts/renderAttemptSnapshot.ts"]!.includes(
-        ".attempt-candidate",
-      ) === false &&
-      files["scripts/renderGcSnapshot.ts"]!.includes(
-        "removeCreatedRenderFile",
-      ) === false &&
-      files["scripts/renderGcSnapshot.ts"]!.includes(
-        "IRenderQuarantineMarker",
-      ) &&
-      files["scripts/render.ts"]!.includes(
-        "RENDER_GC_REMOVAL_STAGING_DIRECTORY",
-      ) &&
-      files["scripts/render.ts"]!.includes(
-        "RENDER_GC_QUARANTINE_EVIDENCE_DIRECTORY",
-      ) &&
-      [
-        "scripts/render.ts",
-        "scripts/renderAttemptSnapshot.ts",
-        "scripts/renderChunkSnapshot.ts",
-        "scripts/renderLiveness.ts",
-      ].every((file) => files[file]!.includes("rmdirSync") === false) &&
-      files["scripts/renderGcSnapshot.ts"]!.includes(
-        "fs.renameSync(isolated.moved.target, destination)",
-      ) === false &&
-      files["scripts/renderPlanSnapshot.ts"]!.includes("generationSlot") &&
-      files["scripts/renderPlanSnapshot.ts"]!.includes(
-        "createRenderGcFileSnapshot",
-      ) &&
-      files["scripts/renderPlanSnapshot.ts"]!.includes(
-        "fs.linkSync(candidate.target, destination)",
-      ) === false &&
-      files["scripts/renderPlanSnapshot.ts"]!.includes(
-        ".gc-preserved-plan-candidates",
-      ) === false &&
-      files["scripts/renderPlanSnapshot.ts"]!.includes(
-        "removeExactPlan(props.predecessor.snapshot)",
-      ) === false &&
-      files["scripts/dialogueCacheSnapshot.ts"]!.includes(
-        'publishCacheFile(ownership, "audio.f32"',
-      ) &&
-      files["scripts/dialogueCacheSnapshot.ts"]!.includes(
-        'publishCacheFile(ownership, "receipt.json"',
-      ) &&
-      files["scripts/dialogueCacheSnapshot.ts"]!.includes(
-        "assertCapturedRenderGcFileEntry",
-      ) &&
-      files["scripts/dialogueCacheSnapshot.ts"]!.includes(
-        "createRenderGcFileSnapshot",
-      ) &&
-      files["scripts/dialogueCacheSnapshot.ts"]!.includes("fs.linkSync") ===
-        false &&
-      files["scripts/dialogueCacheSnapshot.ts"]!.includes(
-        ".gc-preserved-dialogue-candidates",
-      ) === false &&
-      files["scripts/render.ts"]!.includes(
-        "captureExistingDialogueCache(cacheRoot, cachePath)",
-      ) &&
-      files["scripts/render.ts"]!.includes(
-        "writeFileAtomic(pcmPath, bytes)",
-      ) === false &&
-      files["scripts/render.ts"]!.includes(
-        "current: (chunk) => currentReceipt(current, chunk)",
-      ) &&
-      currentChunkSource.includes("currentChunk(plan, chunk") === false &&
-      currentChunkSource.includes("readPlan()") === false &&
-      currentChunkSource.includes(
-        "verifyProductionRenderChunkReceipt({ plan",
-      ) &&
-      files["scripts/publishProxyBundle.ts"]!.includes(
-        "createRenderGcFileSnapshot",
-      ) &&
-      files["scripts/publishProxyBundle.ts"]!.includes(
-        "fs.linkSync(candidate.target, props.target)",
-      ) === false &&
-      files["scripts/publishProxyBundle.ts"]!.includes(
-        "fs.mkdirSync(props.target)",
-      ) &&
-      files["scripts/publishProxyBundle.ts"]!.includes(
-        "materializeExpectedDirectories",
-      ) &&
-      files["scripts/publishProxyBundle.ts"]!.includes(
-        "fs.linkSync(candidate.target, destination)",
-      ) === false &&
-      files["scripts/publishProxyBundle.ts"]!.includes(
-        ".gc-preserved-proxy-candidates",
-      ) === false &&
-      files["scripts/publishProxyBundle.ts"]!.includes(
-        "encodeProxyBundleContainer",
-      ) === false &&
-      files["scripts/render.ts"]!.includes("assertNoLiveRenderWorkers") &&
-      files["scripts/render.ts"]!.includes("captureGcPhysicalAncestry") ===
-        false &&
-      files["scripts/render.ts"]!.includes("project.review(entry.target)") &&
-      files["scripts/render.ts"]!.includes("frames/$" + "{passes[0]}/frame_") &&
-      files["automovie.config.ts"]!.includes('kind: "proxy"') &&
-      files["automovie.config.ts"]!.includes('kind: "final"') &&
-      files["scripts/render.ts"]!.includes(
-        "productionPublicationInputFingerprint",
-      ) &&
-      files["scripts/render.ts"]!.includes(
-        "const stagedReview = new AutoMovieProductionReviewService",
-      ) &&
-      files["scripts/render.ts"]!.includes(
-        "stagedReview.queue(status, compilerSnapshot)",
-      ) &&
-      files[".gitignore"]!.includes(".automovie/*") &&
-      files[".gitignore"]!.includes("!.automovie/design/**") &&
-      files[".gitignore"]!.includes("!.automovie/reviews/**") &&
-      files["package.json"]!.includes('"build": "npm run compile"') &&
-      files["package.json"]!.includes(
-        '"lint": "npm run lint:source && ttsx -P tsconfig.json scripts/lint.ts"',
-      ) &&
-      files["package.json"]!.includes(
-        '"lint:source": "ttsc --noEmit -p tsconfig.json"',
-      ) &&
-      files["package.json"]!.includes('"verify": "tsx scripts/verify.ts"') &&
-      files["scripts/verify.ts"]!.includes('.lint({ scope: "final" })') &&
-      files["scripts/verify.ts"]!.includes("openReadOnly") &&
-      files[".claude/settings.json"]!.includes('"matcher": "*"') &&
-      files[".claude/settings.json"]!.includes('"command": "node"') &&
-      files[".claude/settings.json"]!.includes(
-        '"$' + '{CLAUDE_PROJECT_DIR}/.claude/hooks/guard-automovie-owned.mjs"',
-      ) &&
-      files[".claude/hooks/guard-automovie-owned.mjs"]!.includes(
-        "npm run compile",
-      ) &&
-      files[".claude/hooks/guard-automovie-owned.mjs"]!.includes(
-        "process.exit(0)",
-      ) &&
-      files[".automovie/design/production.json"]!.includes(
-        '"id": "starter-feature"',
-      ) &&
-      files[".automovie/design/production.json"]!.includes(
-        '"id": "starter-pose-guide"',
-      ) &&
-      files[".automovie/design/production.json"]!.includes(
-        '"id": "starter-captions"',
-      ) &&
-      files[".automovie/design/production.json"]!.includes(
-        '"id": "starter-audio"',
-      ) &&
-      files["public/audio/starter-tone.json"]!.includes(
-        '"sampleRate": 48000',
-      ) &&
-      files["public/audio/starter-tone.json"]!.includes('"channels": 2') &&
-      files["scripts/generatedShotPlugin.ts"]!.includes('id.includes("/")') ===
-        false &&
-      files["scripts/generatedShotPlugin.ts"]!.includes(
-        'pathname === "/__automovie/film.json"',
-      ) &&
-      files["scripts/generatedShotPlugin.ts"]!.includes(
-        'const prefix = "/__automovie/assets/"',
-      ) &&
-      files["scripts/generatedShotPlugin.ts"]!.includes(
-        "readCompiledAssetClosure",
-      ) &&
-      files["viewer/src/main.ts"]!.includes('await import("./film")') &&
-      files["viewer/src/film.ts"]!.includes("renderCrossDissolveFrames") &&
-      files["viewer/src/film.ts"]!.includes('pass !== "beauty"') &&
-      files["viewer/src/loadCompiledModel.ts"]!.includes("GLTFLoader") &&
-      files["viewer/src/loadCompiledModel.ts"]!.includes("VRMLoaderPlugin") &&
-      files["viewer/src/loadCompiledModel.ts"]!.includes("rotateVRM0") &&
-      files["viewer/src/loadCompiledModel.ts"]!.includes(
-        "createImportedModelObject",
-      ) &&
-      files["package.json"]!.includes('"@pixiv/three-vrm": "^3"') &&
-      files["viewer/src/asset.ts"]!.includes('finiteParameter("angle")') &&
-      files["viewer/src/main.ts"]!.includes('from "three"') === false,
+    captureContractFailures([
+      {
+        contract: 'files[".mcp.json"]!.includes("scripts/mcp.ts")',
+        satisfied: files[".mcp.json"]!.includes("scripts/mcp.ts"),
+      },
+      {
+        contract:
+          'files[".mcp.json"]!.includes("$" + "{CLAUDE_PROJECT_DIR:-.}")',
+        satisfied: files[".mcp.json"]!.includes(
+          "$" + "{CLAUDE_PROJECT_DIR:-.}",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/mcp.ts"]!.includes("createAutoMovieMcpServer")',
+        satisfied: files["scripts/mcp.ts"]!.includes(
+          "createAutoMovieMcpServer",
+        ),
+      },
+      {
+        contract: 'files["scripts/mcp.ts"]!.includes("captureProductionFrame")',
+        satisfied: files["scripts/mcp.ts"]!.includes("captureProductionFrame"),
+      },
+      {
+        contract:
+          'files["scripts/mcp.ts"]!.includes("fileURLToPath(import.meta.url)")',
+        satisfied: files["scripts/mcp.ts"]!.includes(
+          "fileURLToPath(import.meta.url)",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/mcp.ts"]!.includes("process.cwd()") === false',
+        satisfied: files["scripts/mcp.ts"]!.includes("process.cwd()") === false,
+      },
+      {
+        contract: 'files["scripts/preview.ts"]!.includes("captureFrame")',
+        satisfied: files["scripts/preview.ts"]!.includes("captureFrame"),
+      },
+      {
+        contract:
+          'files["scripts/preview.ts"]!.includes("previewFrame") === false',
+        satisfied:
+          files["scripts/preview.ts"]!.includes("previewFrame") === false,
+      },
+      {
+        contract:
+          '/\\.locator\\("#view"\\)\\s*\\.screenshot\\(\\{ type: "png" \\}\\)/.test( files["scripts/capture.ts"]!, )',
+        satisfied:
+          /\.locator\("#view"\)\s*\.screenshot\(\{ type: "png" \}\)/.test(
+            files["scripts/capture.ts"]!,
+          ),
+      },
+      {
+        contract: "pkg.includes('\"three\":')",
+        satisfied: pkg.includes('"three":'),
+      },
+      {
+        contract:
+          'files["scripts/capture.ts"]!.includes(\'dedupe: ["three"]\')',
+        satisfied: files["scripts/capture.ts"]!.includes('dedupe: ["three"]'),
+      },
+      {
+        contract: 'files["vite.config.ts"]!.includes(\'dedupe: ["three"]\')',
+        satisfied: files["vite.config.ts"]!.includes('dedupe: ["three"]'),
+      },
+      {
+        contract:
+          'files["viewer/index.html"]!.includes(\'rel="icon" href="data:,"\')',
+        satisfied: files["viewer/index.html"]!.includes(
+          'rel="icon" href="data:,"',
+        ),
+      },
+      {
+        contract: 'files["viewer/src/shot.ts"]!.includes("mountViewer")',
+        satisfied: files["viewer/src/shot.ts"]!.includes("mountViewer"),
+      },
+      {
+        contract:
+          'files["viewer/src/shot.ts"]!.includes("preserveDrawingBuffer: true")',
+        satisfied: files["viewer/src/shot.ts"]!.includes(
+          "preserveDrawingBuffer: true",
+        ),
+      },
+      {
+        contract:
+          'files["viewer/src/shotRuntime.ts"]!.includes( "performance === undefined ? node.motion : performance.motion", )',
+        satisfied: files["viewer/src/shotRuntime.ts"]!.includes(
+          "performance === undefined ? node.motion : performance.motion",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/capture.ts"]!.includes( \'page.locator("#status").evaluate\', )',
+        satisfied: files["scripts/capture.ts"]!.includes(
+          'page.locator("#status").evaluate',
+        ),
+      },
+      {
+        contract:
+          'files["scripts/capture.ts"]!.includes( "let sessionPromise: Promise<CaptureSession> | null", )',
+        satisfied: files["scripts/capture.ts"]!.includes(
+          "let sessionPromise: Promise<CaptureSession> | null",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/capture.ts"]!.includes( "pages: Map<string, Promise<CapturePage>>", )',
+        satisfied: files["scripts/capture.ts"]!.includes(
+          "pages: Map<string, Promise<CapturePage>>",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/capture.ts"]!.includes("productionFrameCaptureMetrics")',
+        satisfied: files["scripts/capture.ts"]!.includes(
+          "productionFrameCaptureMetrics",
+        ),
+      },
+      {
+        contract: 'files["scripts/capture.ts"]!.includes("avoidedPageReloads")',
+        satisfied: files["scripts/capture.ts"]!.includes("avoidedPageReloads"),
+      },
+      {
+        contract: 'files["scripts/capture.ts"]!.includes("capturesPerSecond")',
+        satisfied: files["scripts/capture.ts"]!.includes("capturesPerSecond"),
+      },
+      {
+        contract: 'files["scripts/capture.ts"]!.includes("input.productionId")',
+        satisfied: files["scripts/capture.ts"]!.includes("input.productionId"),
+      },
+      {
+        contract:
+          'files["scripts/capture-browser.ts"]!.includes( "PLAYWRIGHT_BROWSERS_PATH: browserStoragePath(projectRoot)", )',
+        satisfied: files["scripts/capture-browser.ts"]!.includes(
+          "PLAYWRIGHT_BROWSERS_PATH: browserStoragePath(projectRoot)",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/capture-browser.ts"]!.includes("...process.env")',
+        satisfied:
+          files["scripts/capture-browser.ts"]!.includes("...process.env"),
+      },
+      {
+        contract:
+          'files["scripts/capture-browser.ts"]!.includes( "PLAYWRIGHT_CHROMIUM_DOWNLOAD_HOST", )',
+        satisfied: files["scripts/capture-browser.ts"]!.includes(
+          "PLAYWRIGHT_CHROMIUM_DOWNLOAD_HOST",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/capture-browser.ts"]!.includes( "PLAYWRIGHT_DOWNLOAD_HOST", )',
+        satisfied: files["scripts/capture-browser.ts"]!.includes(
+          "PLAYWRIGHT_DOWNLOAD_HOST",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/capture-browser.ts"]!.includes( \'return import("playwright")\', )',
+        satisfied: files["scripts/capture-browser.ts"]!.includes(
+          'return import("playwright")',
+        ),
+      },
+      {
+        contract:
+          'files["scripts/capture-browser.ts"]!.includes( "paths: [playwright.root]", )',
+        satisfied: files["scripts/capture-browser.ts"]!.includes(
+          "paths: [playwright.root]",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/capture-browser.ts"]!.includes(\'"--no-shell"\')',
+        satisfied:
+          files["scripts/capture-browser.ts"]!.includes('"--no-shell"'),
+      },
+      {
+        contract:
+          'files["scripts/capture-browser.ts"]!.includes( \'stdio: ["ignore", "pipe", "pipe", cli.descriptor]\', )',
+        satisfied: files["scripts/capture-browser.ts"]!.includes(
+          'stdio: ["ignore", "pipe", "pipe", cli.descriptor]',
+        ),
+      },
+      {
+        contract:
+          'files["scripts/capture-browser.ts"]!.includes( "runDescriptorBoundNodeCli", )',
+        satisfied: files["scripts/capture-browser.ts"]!.includes(
+          "runDescriptorBoundNodeCli",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/capture-browser.ts"]!.includes( "launchWithCaptureExecutableSnapshot", )',
+        satisfied: files["scripts/capture-browser.ts"]!.includes(
+          "launchWithCaptureExecutableSnapshot",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/capture-browser.ts"]!.includes( "publishCaptureInstallReceipt", )',
+        satisfied: files["scripts/capture-browser.ts"]!.includes(
+          "publishCaptureInstallReceipt",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/capture-browser.ts"]!.includes("receiptGenerationKey")',
+        satisfied: files["scripts/capture-browser.ts"]!.includes(
+          "receiptGenerationKey",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/capture-browser.ts"]!.includes( "createCaptureExecutableSnapshot(file, bytes)", )',
+        satisfied: files["scripts/capture-browser.ts"]!.includes(
+          "createCaptureExecutableSnapshot(file, bytes)",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/capture-browser.ts"]!.includes( "CAPTURE_INSTALL_RECEIPT_MAX_BYTES", )',
+        satisfied: files["scripts/capture-browser.ts"]!.includes(
+          "CAPTURE_INSTALL_RECEIPT_MAX_BYTES",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/captureExecutableSnapshot.ts"]!.includes("maximumBytes")',
+        satisfied:
+          files["scripts/captureExecutableSnapshot.ts"]!.includes(
+            "maximumBytes",
+          ),
+      },
+      {
+        contract:
+          'files["scripts/captureExecutableSnapshot.ts"]!.includes( "removeCreatedCaptureExecutable", ) === false',
+        satisfied:
+          files["scripts/captureExecutableSnapshot.ts"]!.includes(
+            "removeCreatedCaptureExecutable",
+          ) === false,
+      },
+      {
+        contract:
+          'files["scripts/capture-browser.ts"]!.includes( "fs.renameSync(temporary, file)", ) === false',
+        satisfied:
+          files["scripts/capture-browser.ts"]!.includes(
+            "fs.renameSync(temporary, file)",
+          ) === false,
+      },
+      {
+        contract:
+          'files["scripts/capture-browser.ts"]!.includes( \'installSource !== "PLAYWRIGHT_CHROMIUM_DOWNLOAD_HOST"\', )',
+        satisfied: files["scripts/capture-browser.ts"]!.includes(
+          'installSource !== "PLAYWRIGHT_CHROMIUM_DOWNLOAD_HOST"',
+        ),
+      },
+      {
+        contract:
+          'files["scripts/capture-browser.ts"]!.includes( \'args: ["--use-angle=swiftshader"]\', )',
+        satisfied: files["scripts/capture-browser.ts"]!.includes(
+          'args: ["--use-angle=swiftshader"]',
+        ),
+      },
+      {
+        contract:
+          'files["scripts/capture-browser.ts"]!.includes( \'context.getExtension("WEBGL_debug_renderer_info")\', )',
+        satisfied: files["scripts/capture-browser.ts"]!.includes(
+          'context.getExtension("WEBGL_debug_renderer_info")',
+        ),
+      },
+      {
+        contract:
+          'files["scripts/capture-browser.ts"]!.includes( "executableDigest: executable.digest", )',
+        satisfied: files["scripts/capture-browser.ts"]!.includes(
+          "executableDigest: executable.digest",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/capture-browser.ts"]!.includes( "readAutoMovieProductionOwnedFile", )',
+        satisfied: files["scripts/capture-browser.ts"]!.includes(
+          "readAutoMovieProductionOwnedFile",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/capture-browser.ts"]!.includes( "assertCaptureExecutable(executable)", )',
+        satisfied: files["scripts/capture-browser.ts"]!.includes(
+          "assertCaptureExecutable(executable)",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/capture-browser.ts"]!.includes( \'config.source === "system-channel"\', )',
+        satisfied: files["scripts/capture-browser.ts"]!.includes(
+          'config.source === "system-channel"',
+        ),
+      },
+      {
+        contract:
+          'files["scripts/capture-browser.ts"]!.includes( \'source = "configured-executable"\', )',
+        satisfied: files["scripts/capture-browser.ts"]!.includes(
+          'source = "configured-executable"',
+        ),
+      },
+      {
+        contract:
+          'files["scripts/capture-browser.ts"]!.includes( "parseCaptureBrowserConfig", )',
+        satisfied: files["scripts/capture-browser.ts"]!.includes(
+          "parseCaptureBrowserConfig",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/capture-browser.ts"]!.includes( "Invalid capture browser config", )',
+        satisfied: files["scripts/capture-browser.ts"]!.includes(
+          "Invalid capture browser config",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/capture-doctor.ts"]!.includes("PNG.sync.read")',
+        satisfied:
+          files["scripts/capture-doctor.ts"]!.includes("PNG.sync.read"),
+      },
+      {
+        contract:
+          'files["scripts/capture-doctor.ts"]!.includes( "canonicalAutoMovieCaptureRuntimeIdentity", )',
+        satisfied: files["scripts/capture-doctor.ts"]!.includes(
+          "canonicalAutoMovieCaptureRuntimeIdentity",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/capture-doctor.ts"]!.includes("visiblePixel")',
+        satisfied: files["scripts/capture-doctor.ts"]!.includes("visiblePixel"),
+      },
+      {
+        contract:
+          'files["scripts/capture-install.ts"]!.includes( "installPackageOwnedChromium", )',
+        satisfied: files["scripts/capture-install.ts"]!.includes(
+          "installPackageOwnedChromium",
+        ),
+      },
+      {
+        contract:
+          'files["automovie.config.ts"]!.includes(\'source: "playwright-chromium"\')',
+        satisfied: files["automovie.config.ts"]!.includes(
+          'source: "playwright-chromium"',
+        ),
+      },
+      {
+        contract:
+          'files["automovie.config.ts"]!.includes( "satisfies AutoMovieCaptureBrowserConfig", )',
+        satisfied: files["automovie.config.ts"]!.includes(
+          "satisfies AutoMovieCaptureBrowserConfig",
+        ),
+      },
+      {
+        contract: 'files[".gitignore"]!.includes(".automovie/capture/")',
+        satisfied: files[".gitignore"]!.includes(".automovie/capture/"),
+      },
+      {
+        contract: 'files["README.md"]!.includes("npm run capture:install")',
+        satisfied: files["README.md"]!.includes("npm run capture:install"),
+      },
+      {
+        contract: 'files["README.md"]!.includes("PLAYWRIGHT_BROWSERS_PATH=0")',
+        satisfied: files["README.md"]!.includes("PLAYWRIGHT_BROWSERS_PATH=0"),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes( "await closeProductionFrameCapture()", )',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "await closeProductionFrameCapture()",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("runProductionRenderJob")',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "runProductionRenderJob",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("commitProductionPublication")',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "commitProductionPublication",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("probeProductionMedia")',
+        satisfied: files["scripts/render.ts"]!.includes("probeProductionMedia"),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("probeProductionVideoMp4")',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "probeProductionVideoMp4",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("deriveProductionSoundPlan")',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "deriveProductionSoundPlan",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("KokoroTTS.from_pretrained")',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "KokoroTTS.from_pretrained",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("KOKORO_MODEL_REVISION")',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "KOKORO_MODEL_REVISION",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes(\'KOKORO_DEVICE = "cpu"\')',
+        satisfied: files["scripts/render.ts"]!.includes(
+          'KOKORO_DEVICE = "cpu"',
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.split("device: KOKORO_DEVICE").length === 4',
+        satisfied:
+          files["scripts/render.ts"]!.split("device: KOKORO_DEVICE").length ===
+          4,
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("productionSoundRuntimeIdentity")',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "productionSoundRuntimeIdentity",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes( "backend: onnxRuntimeNodeIdentity()", )',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "backend: onnxRuntimeNodeIdentity()",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes( \'path: "package:onnxruntime-node"\', )',
+        satisfied: files["scripts/render.ts"]!.includes(
+          'path: "package:onnxruntime-node"',
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.split("onnxRuntimeNodeIdentity()").length === 3',
+        satisfied:
+          files["scripts/render.ts"]!.split("onnxRuntimeNodeIdentity()")
+            .length === 3,
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes( \'["bin", "napi-v3", process.platform, process.arch]\', )',
+        satisfied: files["scripts/render.ts"]!.includes(
+          '["bin", "napi-v3", process.platform, process.arch]',
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes( \'imageCapability: resolvedPackageIdentity("sharp")\', )',
+        satisfied: files["scripts/render.ts"]!.includes(
+          'imageCapability: resolvedPackageIdentity("sharp")',
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes( \'path: "package:sharp-capability-wall"\', )',
+        satisfied: files["scripts/render.ts"]!.includes(
+          'path: "package:sharp-capability-wall"',
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes( "root: modelCacheRoot,\\n directory: modelCacheRoot,\\n relative,", )',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "root: modelCacheRoot,\n              directory: modelCacheRoot,\n              relative,",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes( "readRegularInside(modelCacheRoot, relative)", ) === false',
+        satisfied:
+          files["scripts/render.ts"]!.includes(
+            "readRegularInside(modelCacheRoot, relative)",
+          ) === false,
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("encodeProductionOpus")',
+        satisfied: files["scripts/render.ts"]!.includes("encodeProductionOpus"),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("muxProductionFeatureMp4")',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "muxProductionFeatureMp4",
+        ),
+      },
+      {
+        contract: 'renderProgressSource.includes("process.stderr.write")',
+        satisfied: renderProgressSource.includes("process.stderr.write"),
+      },
+      {
+        contract: 'renderProgressSource.includes("[automovie:render]")',
+        satisfied: renderProgressSource.includes("[automovie:render]"),
+      },
+      {
+        contract:
+          'renderProgressSource.includes("JSON.stringify({ stage, ...details })")',
+        satisfied: renderProgressSource.includes(
+          "JSON.stringify({ stage, ...details })",
+        ),
+      },
+      {
+        contract:
+          'renderProgressSource.includes("process.stdout.write") === false',
+        satisfied:
+          renderProgressSource.includes("process.stdout.write") === false,
+      },
+      {
+        contract:
+          'renderProgressStages.every((stage) => renderScript.includes(`renderProgress("${stage}"`), )',
+        satisfied: renderProgressStages.every((stage) =>
+          renderScript.includes(`renderProgress("${stage}"`),
+        ),
+      },
+      {
+        contract: 'files["scripts/render.ts"]!.includes(\'"waveform.png"\')',
+        satisfied: files["scripts/render.ts"]!.includes('"waveform.png"'),
+      },
+      {
+        contract: 'files["scripts/render.ts"]!.includes(\'"spectrogram.png"\')',
+        satisfied: files["scripts/render.ts"]!.includes('"spectrogram.png"'),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes(\'process.argv.indexOf("--tier")\')',
+        satisfied: files["scripts/render.ts"]!.includes(
+          'process.argv.indexOf("--tier")',
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("productionRenderLayersForPass")',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "productionRenderLayersForPass",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("renderGarbageCollection")',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "renderGarbageCollection",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/renderChunkSnapshot.ts"]!.includes( \'kind: "chunk-pointer"\', )',
+        satisfied: files["scripts/renderChunkSnapshot.ts"]!.includes(
+          'kind: "chunk-pointer"',
+        ),
+      },
+      {
+        contract:
+          'files["scripts/renderChunkSnapshot.ts"]!.includes(\'kind: "chunk-tree"\')',
+        satisfied:
+          files["scripts/renderChunkSnapshot.ts"]!.includes(
+            'kind: "chunk-tree"',
+          ),
+      },
+      {
+        contract:
+          'files["scripts/renderChunkSnapshot.ts"]!.includes( "captureRenderChunkPublicationFromPointer(pointer)", )',
+        satisfied: files["scripts/renderChunkSnapshot.ts"]!.includes(
+          "captureRenderChunkPublicationFromPointer(pointer)",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/renderChunkSnapshot.ts"]!.includes( "exactTreeContent(authenticated.tree, snapshot)", )',
+        satisfied: files["scripts/renderChunkSnapshot.ts"]!.includes(
+          "exactTreeContent(authenticated.tree, snapshot)",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/renderChunkSnapshot.ts"]!.includes( "authenticated === undefined && props.processAlive(Number(match[2]))", )',
+        satisfied: files["scripts/renderChunkSnapshot.ts"]!.includes(
+          "authenticated === undefined && props.processAlive(Number(match[2]))",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("inventoryRenderChunkGarbage")',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "inventoryRenderChunkGarbage",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes( "retainedChunkPaths: [...retainedChunkPaths]", )',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "retainedChunkPaths: [...retainedChunkPaths]",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("const base = snapshot.base.path")',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "const base = snapshot.base.path",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes( "path.resolve(renderJobRoot, candidate.path)", ) === false',
+        satisfied:
+          files["scripts/render.ts"]!.includes(
+            "path.resolve(renderJobRoot, candidate.path)",
+          ) === false,
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("captureRenderGcTarget")',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "captureRenderGcTarget",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("removeCapturedRenderGcTarget")',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "removeCapturedRenderGcTarget",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("quarantineCapturedRenderTarget")',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "quarantineCapturedRenderTarget",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes( "inventoryRenderQuarantineCandidates", )',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "inventoryRenderQuarantineCandidates",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("removeCapturedRenderQuarantine")',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "removeCapturedRenderQuarantine",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("path.join(renderJobRoot, tier)")',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "path.join(renderJobRoot, tier)",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("quarantineEvidenceSnapshots")',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "quarantineEvidenceSnapshots",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("readCapturedRenderGcFile")',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "readCapturedRenderGcFile",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("RENDER_LOCK_JSON_MAX_BYTES")',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "RENDER_LOCK_JSON_MAX_BYTES",
+        ),
+      },
+      {
+        contract: 'acquireChunkSource.includes("createRenderGcFileSnapshot(")',
+        satisfied: acquireChunkSource.includes("createRenderGcFileSnapshot("),
+      },
+      {
+        contract:
+          'acquireChunkSource.includes("file === claim ? claimSnapshot")',
+        satisfied: acquireChunkSource.includes(
+          "file === claim ? claimSnapshot",
+        ),
+      },
+      {
+        contract:
+          'acquireChunkSource.includes("const ownedClaim = claimSnapshot")',
+        satisfied: acquireChunkSource.includes(
+          "const ownedClaim = claimSnapshot",
+        ),
+      },
+      {
+        contract:
+          "acquireChunkSource.match( /releaseOwnedChunkClaim\\(chunk, claim, token, claimSnapshot\\)/gu, )?.length === 2",
+        satisfied:
+          acquireChunkSource.match(
+            /releaseOwnedChunkClaim\(chunk, claim, token, claimSnapshot\)/gu,
+          )?.length === 2,
+      },
+      {
+        contract: 'acquireChunkSource.includes(".candidate") === false',
+        satisfied: acquireChunkSource.includes(".candidate") === false,
+      },
+      {
+        contract: 'acquireChunkSource.includes("fs.linkSync") === false',
+        satisfied: acquireChunkSource.includes("fs.linkSync") === false,
+      },
+      {
+        contract: 'acquireChunkSource.includes("fs.rmSync") === false',
+        satisfied: acquireChunkSource.includes("fs.rmSync") === false,
+      },
+      {
+        contract:
+          "renderTemporarySnapshot.includes( 'assertRenderPhysicalDirectoryIdentity(props.state, \"render state root\")', )",
+        satisfied: renderTemporarySnapshot.includes(
+          'assertRenderPhysicalDirectoryIdentity(props.state, "render state root")',
+        ),
+      },
+      {
+        contract:
+          'renderTemporarySnapshot.includes( "const temporaryRoot = captureRenderPhysicalDirectory(", )',
+        satisfied: renderTemporarySnapshot.includes(
+          "const temporaryRoot = captureRenderPhysicalDirectory(",
+        ),
+      },
+      {
+        contract:
+          'renderTemporarySnapshot.includes( "const tree = captureRenderPhysicalDirectory(", )',
+        satisfied: renderTemporarySnapshot.includes(
+          "const tree = captureRenderPhysicalDirectory(",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes( "const temporaryOwnership = createRenderChunkTemporaryTree({", )',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "const temporaryOwnership = createRenderChunkTemporaryTree({",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("state: attempt.snapshot.base")',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "state: attempt.snapshot.base",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("const relative = `frame_")',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "const relative = `frame_",
+        ),
+      },
+      {
+        contract: 'files["scripts/render.ts"]!.includes("const writtenFiles:")',
+        satisfied: files["scripts/render.ts"]!.includes("const writtenFiles:"),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes( "assertCapturedRenderGcFileEntry({", )',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "assertCapturedRenderGcFileEntry({",
+        ),
+      },
+      {
+        contract: 'files["scripts/render.ts"]!.includes("tree: completedTree")',
+        satisfied: files["scripts/render.ts"]!.includes("tree: completedTree"),
+      },
+      {
+        contract:
+          'writeRenderFileSource.includes("createRenderGcFileSnapshot(")',
+        satisfied: writeRenderFileSource.includes(
+          "createRenderGcFileSnapshot(",
+        ),
+      },
+      {
+        contract:
+          'writeRenderFileSource.includes("assertRenderChunkTemporaryTree(")',
+        satisfied: writeRenderFileSource.includes(
+          "assertRenderChunkTemporaryTree(",
+        ),
+      },
+      {
+        contract: 'writeRenderFileSource.includes("snapshot.base.identity")',
+        satisfied: writeRenderFileSource.includes("snapshot.base.identity"),
+      },
+      {
+        contract: 'writeRenderFileSource.includes("return snapshot")',
+        satisfied: writeRenderFileSource.includes("return snapshot"),
+      },
+      {
+        contract: 'writeRenderFileSource.includes(".tmp") === false',
+        satisfied: writeRenderFileSource.includes(".tmp") === false,
+      },
+      {
+        contract: 'writeRenderFileSource.includes("fs.renameSync") === false',
+        satisfied: writeRenderFileSource.includes("fs.renameSync") === false,
+      },
+      {
+        contract: 'writeRenderFileSource.includes("fs.rmSync") === false',
+        satisfied: writeRenderFileSource.includes("fs.rmSync") === false,
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("writeFileAtomic") === false',
+        satisfied:
+          files["scripts/render.ts"]!.includes("writeFileAtomic") === false,
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("fs.renameSync") === false',
+        satisfied:
+          files["scripts/render.ts"]!.includes("fs.renameSync") === false,
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes( "captureAbandonedRenderStateTarget", )',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "captureAbandonedRenderStateTarget",
+        ),
+      },
+      {
+        contract: 'files["scripts/render.ts"]!.includes("held.snapshot")',
+        satisfied: files["scripts/render.ts"]!.includes("held.snapshot"),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes( "quarantineStaleSlotOutputs(current.chunks)", )',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "quarantineStaleSlotOutputs(current.chunks)",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("acquireRenderSessionLease")',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "acquireRenderSessionLease",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("acquireRenderGcLease")',
+        satisfied: files["scripts/render.ts"]!.includes("acquireRenderGcLease"),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("coordinationRoot: root")',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "coordinationRoot: root",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("renderCoordinationRoot") === false',
+        satisfied:
+          files["scripts/render.ts"]!.includes("renderCoordinationRoot") ===
+          false,
+      },
+      {
+        contract: 'files[".gitignore"]!.includes(".automovie-liveness-*")',
+        satisfied: files[".gitignore"]!.includes(".automovie-liveness-*"),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("publishRenderChunkSnapshot")',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "publishRenderChunkSnapshot",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("captureRenderChunkPublication")',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "captureRenderChunkPublication",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("renderChunkPublicationPath")',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "renderChunkPublicationPath",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes( "loadCurrentRenderChunkPublication", )',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "loadCurrentRenderChunkPublication",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("consumeCurrentRenderChunkFrames")',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "consumeCurrentRenderChunkFrames",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes( "removeCapturedRenderChunkPointer(pointerSnapshot)", )',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "removeCapturedRenderChunkPointer(pointerSnapshot)",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes( "currentPublicationProtectsTree(currentChunks, entry.name, snapshot)", )',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "currentPublicationProtectsTree(currentChunks, entry.name, snapshot)",
+        ),
+      },
+      {
+        contract:
+          'recoveryProtectionSource.includes( "const chunk = props.chunks.get(digest)", )',
+        satisfied: recoveryProtectionSource.includes(
+          "const chunk = props.chunks.get(digest)",
+        ),
+      },
+      {
+        contract:
+          'recoveryProtectionSource.includes("for (const chunk of chunks)") === false',
+        satisfied:
+          recoveryProtectionSource.includes("for (const chunk of chunks)") ===
+          false,
+      },
+      {
+        contract: 'files[".gitignore"]!.includes(".automovie-chunk-*")',
+        satisfied: files[".gitignore"]!.includes(".automovie-chunk-*"),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes( "fs.renameSync(temporary, destination)", ) === false',
+        satisfied:
+          files["scripts/render.ts"]!.includes(
+            "fs.renameSync(temporary, destination)",
+          ) === false,
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes( "readRegularInside(chunkDirectory(chunk.id), frame.path)", ) === false',
+        satisfied:
+          files["scripts/render.ts"]!.includes(
+            "readRegularInside(chunkDirectory(chunk.id), frame.path)",
+          ) === false,
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("renderPublicationFingerprint")',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "renderPublicationFingerprint",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("assertMatchingProxyPublication")',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "assertMatchingProxyPublication",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("inspectPublishedProxyBundle")',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "inspectPublishedProxyBundle",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes( "inspectCapturedProxyBundle(snapshot)", )',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "inspectCapturedProxyBundle(snapshot)",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes( "for (const entry of adjudicated.snapshot.entries)", )',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "for (const entry of adjudicated.snapshot.entries)",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("publishProxyBundle({")',
+        satisfied: files["scripts/render.ts"]!.includes("publishProxyBundle({"),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("beginRenderAttempt({")',
+        satisfied: files["scripts/render.ts"]!.includes("beginRenderAttempt({"),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("snapshot: held.snapshot")',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "snapshot: held.snapshot",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("completeRenderAttempt(attempt)")',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "completeRenderAttempt(attempt)",
+        ),
+      },
+      {
+        contract: 'files["scripts/render.ts"]!.includes("failRenderAttempt({")',
+        satisfied: files["scripts/render.ts"]!.includes("failRenderAttempt({"),
+      },
+      {
+        contract: 'files["scripts/render.ts"]!.includes("listRenderAttempts(")',
+        satisfied: files["scripts/render.ts"]!.includes("listRenderAttempts("),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("fs.rmSync(attemptPath(chunk)") === false',
+        satisfied:
+          files["scripts/render.ts"]!.includes(
+            "fs.rmSync(attemptPath(chunk)",
+          ) === false,
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes( "writeJsonAtomic(attemptPath(chunk)", ) === false',
+        satisfied:
+          files["scripts/render.ts"]!.includes(
+            "writeJsonAtomic(attemptPath(chunk)",
+          ) === false,
+      },
+      {
+        contract:
+          'files["scripts/renderAttemptSnapshot.ts"]!.includes( "createRenderGcFileSnapshot", )',
+        satisfied: files["scripts/renderAttemptSnapshot.ts"]!.includes(
+          "createRenderGcFileSnapshot",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/renderAttemptSnapshot.ts"]!.includes( "removeCapturedRenderGcTarget", )',
+        satisfied: files["scripts/renderAttemptSnapshot.ts"]!.includes(
+          "removeCapturedRenderGcTarget",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/renderAttemptSnapshot.ts"]!.includes( "readCapturedRenderGcFile", )',
+        satisfied: files["scripts/renderAttemptSnapshot.ts"]!.includes(
+          "readCapturedRenderGcFile",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/renderAttemptSnapshot.ts"]!.includes( "assertRenderAttemptLockOwner", )',
+        satisfied: files["scripts/renderAttemptSnapshot.ts"]!.includes(
+          "assertRenderAttemptLockOwner",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/renderAttemptSnapshot.ts"]!.includes( "createRenderGcFileSnapshot", )',
+        satisfied: files["scripts/renderAttemptSnapshot.ts"]!.includes(
+          "createRenderGcFileSnapshot",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/renderAttemptSnapshot.ts"]!.includes("fs.linkSync") === false',
+        satisfied:
+          files["scripts/renderAttemptSnapshot.ts"]!.includes("fs.linkSync") ===
+          false,
+      },
+      {
+        contract:
+          'files["scripts/renderAttemptSnapshot.ts"]!.includes( ".attempt-candidate", ) === false',
+        satisfied:
+          files["scripts/renderAttemptSnapshot.ts"]!.includes(
+            ".attempt-candidate",
+          ) === false,
+      },
+      {
+        contract:
+          'files["scripts/renderGcSnapshot.ts"]!.includes( "removeCreatedRenderFile", ) === false',
+        satisfied:
+          files["scripts/renderGcSnapshot.ts"]!.includes(
+            "removeCreatedRenderFile",
+          ) === false,
+      },
+      {
+        contract:
+          'files["scripts/renderGcSnapshot.ts"]!.includes( "IRenderQuarantineMarker", )',
+        satisfied: files["scripts/renderGcSnapshot.ts"]!.includes(
+          "IRenderQuarantineMarker",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes( "RENDER_GC_REMOVAL_STAGING_DIRECTORY", )',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "RENDER_GC_REMOVAL_STAGING_DIRECTORY",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes( "RENDER_GC_QUARANTINE_EVIDENCE_DIRECTORY", )',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "RENDER_GC_QUARANTINE_EVIDENCE_DIRECTORY",
+        ),
+      },
+      {
+        contract:
+          '[ "scripts/render.ts", "scripts/renderAttemptSnapshot.ts", "scripts/renderChunkSnapshot.ts", "scripts/renderLiveness.ts", ].every((file) => files[file]!.includes("rmdirSync") === false)',
+        satisfied: [
+          "scripts/render.ts",
+          "scripts/renderAttemptSnapshot.ts",
+          "scripts/renderChunkSnapshot.ts",
+          "scripts/renderLiveness.ts",
+        ].every((file) => files[file]!.includes("rmdirSync") === false),
+      },
+      {
+        contract:
+          'files["scripts/renderGcSnapshot.ts"]!.includes( "fs.renameSync(isolated.moved.target, destination)", ) === false',
+        satisfied:
+          files["scripts/renderGcSnapshot.ts"]!.includes(
+            "fs.renameSync(isolated.moved.target, destination)",
+          ) === false,
+      },
+      {
+        contract:
+          'files["scripts/renderPlanSnapshot.ts"]!.includes("generationSlot")',
+        satisfied:
+          files["scripts/renderPlanSnapshot.ts"]!.includes("generationSlot"),
+      },
+      {
+        contract:
+          'files["scripts/renderPlanSnapshot.ts"]!.includes( "createRenderGcFileSnapshot", )',
+        satisfied: files["scripts/renderPlanSnapshot.ts"]!.includes(
+          "createRenderGcFileSnapshot",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/renderPlanSnapshot.ts"]!.includes( "fs.linkSync(candidate.target, destination)", ) === false',
+        satisfied:
+          files["scripts/renderPlanSnapshot.ts"]!.includes(
+            "fs.linkSync(candidate.target, destination)",
+          ) === false,
+      },
+      {
+        contract:
+          'files["scripts/renderPlanSnapshot.ts"]!.includes( ".gc-preserved-plan-candidates", ) === false',
+        satisfied:
+          files["scripts/renderPlanSnapshot.ts"]!.includes(
+            ".gc-preserved-plan-candidates",
+          ) === false,
+      },
+      {
+        contract:
+          'files["scripts/renderPlanSnapshot.ts"]!.includes( "removeExactPlan(props.predecessor.snapshot)", ) === false',
+        satisfied:
+          files["scripts/renderPlanSnapshot.ts"]!.includes(
+            "removeExactPlan(props.predecessor.snapshot)",
+          ) === false,
+      },
+      {
+        contract:
+          'files["scripts/dialogueCacheSnapshot.ts"]!.includes( \'publishCacheFile(ownership, "audio.f32"\', )',
+        satisfied: files["scripts/dialogueCacheSnapshot.ts"]!.includes(
+          'publishCacheFile(ownership, "audio.f32"',
+        ),
+      },
+      {
+        contract:
+          'files["scripts/dialogueCacheSnapshot.ts"]!.includes( \'publishCacheFile(ownership, "receipt.json"\', )',
+        satisfied: files["scripts/dialogueCacheSnapshot.ts"]!.includes(
+          'publishCacheFile(ownership, "receipt.json"',
+        ),
+      },
+      {
+        contract:
+          'files["scripts/dialogueCacheSnapshot.ts"]!.includes( "assertCapturedRenderGcFileEntry", )',
+        satisfied: files["scripts/dialogueCacheSnapshot.ts"]!.includes(
+          "assertCapturedRenderGcFileEntry",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/dialogueCacheSnapshot.ts"]!.includes( "createRenderGcFileSnapshot", )',
+        satisfied: files["scripts/dialogueCacheSnapshot.ts"]!.includes(
+          "createRenderGcFileSnapshot",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/dialogueCacheSnapshot.ts"]!.includes("fs.linkSync") === false',
+        satisfied:
+          files["scripts/dialogueCacheSnapshot.ts"]!.includes("fs.linkSync") ===
+          false,
+      },
+      {
+        contract:
+          'files["scripts/dialogueCacheSnapshot.ts"]!.includes( ".gc-preserved-dialogue-candidates", ) === false',
+        satisfied:
+          files["scripts/dialogueCacheSnapshot.ts"]!.includes(
+            ".gc-preserved-dialogue-candidates",
+          ) === false,
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes( "captureExistingDialogueCache(cacheRoot, cachePath)", )',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "captureExistingDialogueCache(cacheRoot, cachePath)",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes( "writeFileAtomic(pcmPath, bytes)", ) === false',
+        satisfied:
+          files["scripts/render.ts"]!.includes(
+            "writeFileAtomic(pcmPath, bytes)",
+          ) === false,
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes( "current: (chunk) => currentReceipt(current, chunk)", )',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "current: (chunk) => currentReceipt(current, chunk)",
+        ),
+      },
+      {
+        contract:
+          'currentChunkSource.includes("currentChunk(plan, chunk") === false',
+        satisfied:
+          currentChunkSource.includes("currentChunk(plan, chunk") === false,
+      },
+      {
+        contract: 'currentChunkSource.includes("readPlan()") === false',
+        satisfied: currentChunkSource.includes("readPlan()") === false,
+      },
+      {
+        contract:
+          'currentChunkSource.includes( "verifyProductionRenderChunkReceipt({ plan", )',
+        satisfied: currentChunkSource.includes(
+          "verifyProductionRenderChunkReceipt({ plan",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/publishProxyBundle.ts"]!.includes( "createRenderGcFileSnapshot", )',
+        satisfied: files["scripts/publishProxyBundle.ts"]!.includes(
+          "createRenderGcFileSnapshot",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/publishProxyBundle.ts"]!.includes( "fs.linkSync(candidate.target, props.target)", ) === false',
+        satisfied:
+          files["scripts/publishProxyBundle.ts"]!.includes(
+            "fs.linkSync(candidate.target, props.target)",
+          ) === false,
+      },
+      {
+        contract:
+          'files["scripts/publishProxyBundle.ts"]!.includes( "fs.mkdirSync(props.target)", )',
+        satisfied: files["scripts/publishProxyBundle.ts"]!.includes(
+          "fs.mkdirSync(props.target)",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/publishProxyBundle.ts"]!.includes( "materializeExpectedDirectories", )',
+        satisfied: files["scripts/publishProxyBundle.ts"]!.includes(
+          "materializeExpectedDirectories",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/publishProxyBundle.ts"]!.includes( "fs.linkSync(candidate.target, destination)", ) === false',
+        satisfied:
+          files["scripts/publishProxyBundle.ts"]!.includes(
+            "fs.linkSync(candidate.target, destination)",
+          ) === false,
+      },
+      {
+        contract:
+          'files["scripts/publishProxyBundle.ts"]!.includes( ".gc-preserved-proxy-candidates", ) === false',
+        satisfied:
+          files["scripts/publishProxyBundle.ts"]!.includes(
+            ".gc-preserved-proxy-candidates",
+          ) === false,
+      },
+      {
+        contract:
+          'files["scripts/publishProxyBundle.ts"]!.includes( "encodeProxyBundleContainer", ) === false',
+        satisfied:
+          files["scripts/publishProxyBundle.ts"]!.includes(
+            "encodeProxyBundleContainer",
+          ) === false,
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("assertNoLiveRenderWorkers")',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "assertNoLiveRenderWorkers",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("captureGcPhysicalAncestry") === false',
+        satisfied:
+          files["scripts/render.ts"]!.includes("captureGcPhysicalAncestry") ===
+          false,
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("project.review(entry.target)")',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "project.review(entry.target)",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("frames/$" + "{passes[0]}/frame_")',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "frames/$" + "{passes[0]}/frame_",
+        ),
+      },
+      {
+        contract: 'files["automovie.config.ts"]!.includes(\'kind: "proxy"\')',
+        satisfied: files["automovie.config.ts"]!.includes('kind: "proxy"'),
+      },
+      {
+        contract: 'files["automovie.config.ts"]!.includes(\'kind: "final"\')',
+        satisfied: files["automovie.config.ts"]!.includes('kind: "final"'),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes( "productionPublicationInputFingerprint", )',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "productionPublicationInputFingerprint",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes( "const stagedReview = new AutoMovieProductionReviewService", )',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "const stagedReview = new AutoMovieProductionReviewService",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes( "stagedReview.queue(status, compilerSnapshot)", )',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "stagedReview.queue(status, compilerSnapshot)",
+        ),
+      },
+      {
+        contract: 'files[".gitignore"]!.includes(".automovie/*")',
+        satisfied: files[".gitignore"]!.includes(".automovie/*"),
+      },
+      {
+        contract: 'files[".gitignore"]!.includes("!.automovie/design/**")',
+        satisfied: files[".gitignore"]!.includes("!.automovie/design/**"),
+      },
+      {
+        contract: 'files[".gitignore"]!.includes("!.automovie/reviews/**")',
+        satisfied: files[".gitignore"]!.includes("!.automovie/reviews/**"),
+      },
+      {
+        contract:
+          'files["package.json"]!.includes(\'"build": "npm run compile"\')',
+        satisfied: files["package.json"]!.includes(
+          '"build": "npm run compile"',
+        ),
+      },
+      {
+        contract:
+          'files["package.json"]!.includes( \'"lint": "npm run lint:source && ttsx -P tsconfig.json scripts/lint.ts"\', )',
+        satisfied: files["package.json"]!.includes(
+          '"lint": "npm run lint:source && ttsx -P tsconfig.json scripts/lint.ts"',
+        ),
+      },
+      {
+        contract:
+          'files["package.json"]!.includes( \'"lint:source": "ttsc --noEmit -p tsconfig.json"\', )',
+        satisfied: files["package.json"]!.includes(
+          '"lint:source": "ttsc --noEmit -p tsconfig.json"',
+        ),
+      },
+      {
+        contract:
+          'files["package.json"]!.includes(\'"verify": "tsx scripts/verify.ts"\')',
+        satisfied: files["package.json"]!.includes(
+          '"verify": "tsx scripts/verify.ts"',
+        ),
+      },
+      {
+        contract:
+          'files["scripts/verify.ts"]!.includes(\'.lint({ scope: "final" })\')',
+        satisfied: files["scripts/verify.ts"]!.includes(
+          '.lint({ scope: "final" })',
+        ),
+      },
+      {
+        contract: 'files["scripts/verify.ts"]!.includes("openReadOnly")',
+        satisfied: files["scripts/verify.ts"]!.includes("openReadOnly"),
+      },
+      {
+        contract:
+          'files[".claude/settings.json"]!.includes(\'"matcher": "*"\')',
+        satisfied: files[".claude/settings.json"]!.includes('"matcher": "*"'),
+      },
+      {
+        contract:
+          'files[".claude/settings.json"]!.includes(\'"command": "node"\')',
+        satisfied:
+          files[".claude/settings.json"]!.includes('"command": "node"'),
+      },
+      {
+        contract:
+          "files[\".claude/settings.json\"]!.includes( '\"$' + '{CLAUDE_PROJECT_DIR}/.claude/hooks/guard-automovie-owned.mjs\"', )",
+        satisfied: files[".claude/settings.json"]!.includes(
+          '"$' +
+            '{CLAUDE_PROJECT_DIR}/.claude/hooks/guard-automovie-owned.mjs"',
+        ),
+      },
+      {
+        contract:
+          'files[".claude/hooks/guard-automovie-owned.mjs"]!.includes( "npm run compile", )',
+        satisfied:
+          files[".claude/hooks/guard-automovie-owned.mjs"]!.includes(
+            "npm run compile",
+          ),
+      },
+      {
+        contract:
+          'files[".claude/hooks/guard-automovie-owned.mjs"]!.includes( "process.exit(0)", )',
+        satisfied:
+          files[".claude/hooks/guard-automovie-owned.mjs"]!.includes(
+            "process.exit(0)",
+          ),
+      },
+      {
+        contract:
+          'files[".automovie/design/production.json"]!.includes( \'"id": "starter-feature"\', )',
+        satisfied: files[".automovie/design/production.json"]!.includes(
+          '"id": "starter-feature"',
+        ),
+      },
+      {
+        contract:
+          'files[".automovie/design/production.json"]!.includes( \'"id": "starter-pose-guide"\', )',
+        satisfied: files[".automovie/design/production.json"]!.includes(
+          '"id": "starter-pose-guide"',
+        ),
+      },
+      {
+        contract:
+          'files[".automovie/design/production.json"]!.includes( \'"id": "starter-captions"\', )',
+        satisfied: files[".automovie/design/production.json"]!.includes(
+          '"id": "starter-captions"',
+        ),
+      },
+      {
+        contract:
+          'files[".automovie/design/production.json"]!.includes( \'"id": "starter-audio"\', )',
+        satisfied: files[".automovie/design/production.json"]!.includes(
+          '"id": "starter-audio"',
+        ),
+      },
+      {
+        contract:
+          'files["public/audio/starter-tone.json"]!.includes( \'"sampleRate": 48000\', )',
+        satisfied: files["public/audio/starter-tone.json"]!.includes(
+          '"sampleRate": 48000',
+        ),
+      },
+      {
+        contract:
+          'files["public/audio/starter-tone.json"]!.includes(\'"channels": 2\')',
+        satisfied:
+          files["public/audio/starter-tone.json"]!.includes('"channels": 2'),
+      },
+      {
+        contract:
+          'files["scripts/generatedShotPlugin.ts"]!.includes(\'id.includes("/")\') === false',
+        satisfied:
+          files["scripts/generatedShotPlugin.ts"]!.includes(
+            'id.includes("/")',
+          ) === false,
+      },
+      {
+        contract:
+          'files["scripts/generatedShotPlugin.ts"]!.includes( \'pathname === "/__automovie/film.json"\', )',
+        satisfied: files["scripts/generatedShotPlugin.ts"]!.includes(
+          'pathname === "/__automovie/film.json"',
+        ),
+      },
+      {
+        contract:
+          'files["scripts/generatedShotPlugin.ts"]!.includes( \'const prefix = "/__automovie/assets/"\', )',
+        satisfied: files["scripts/generatedShotPlugin.ts"]!.includes(
+          'const prefix = "/__automovie/assets/"',
+        ),
+      },
+      {
+        contract:
+          'files["scripts/generatedShotPlugin.ts"]!.includes( "readCompiledAssetClosure", )',
+        satisfied: files["scripts/generatedShotPlugin.ts"]!.includes(
+          "readCompiledAssetClosure",
+        ),
+      },
+      {
+        contract:
+          'files["viewer/src/main.ts"]!.includes(\'await import("./film")\')',
+        satisfied: files["viewer/src/main.ts"]!.includes(
+          'await import("./film")',
+        ),
+      },
+      {
+        contract:
+          'files["viewer/src/film.ts"]!.includes("renderCrossDissolveFrames")',
+        satisfied: files["viewer/src/film.ts"]!.includes(
+          "renderCrossDissolveFrames",
+        ),
+      },
+      {
+        contract:
+          'files["viewer/src/film.ts"]!.includes(\'pass !== "beauty"\')',
+        satisfied: files["viewer/src/film.ts"]!.includes('pass !== "beauty"'),
+      },
+      {
+        contract:
+          'files["viewer/src/loadCompiledModel.ts"]!.includes("GLTFLoader")',
+        satisfied:
+          files["viewer/src/loadCompiledModel.ts"]!.includes("GLTFLoader"),
+      },
+      {
+        contract:
+          'files["viewer/src/loadCompiledModel.ts"]!.includes("VRMLoaderPlugin")',
+        satisfied:
+          files["viewer/src/loadCompiledModel.ts"]!.includes("VRMLoaderPlugin"),
+      },
+      {
+        contract:
+          'files["viewer/src/loadCompiledModel.ts"]!.includes("rotateVRM0")',
+        satisfied:
+          files["viewer/src/loadCompiledModel.ts"]!.includes("rotateVRM0"),
+      },
+      {
+        contract:
+          'files["viewer/src/loadCompiledModel.ts"]!.includes( "createImportedModelObject", )',
+        satisfied: files["viewer/src/loadCompiledModel.ts"]!.includes(
+          "createImportedModelObject",
+        ),
+      },
+      {
+        contract:
+          'files["package.json"]!.includes(\'"@pixiv/three-vrm": "^3"\')',
+        satisfied: files["package.json"]!.includes('"@pixiv/three-vrm": "^3"'),
+      },
+      {
+        contract:
+          'files["viewer/src/asset.ts"]!.includes(\'finiteParameter("angle")\')',
+        satisfied: files["viewer/src/asset.ts"]!.includes(
+          'finiteParameter("angle")',
+        ),
+      },
+      {
+        contract:
+          'files["viewer/src/main.ts"]!.includes(\'from "three"\') === false',
+        satisfied:
+          files["viewer/src/main.ts"]!.includes('from "three"') === false,
+      },
+    ]),
+    [],
   );
   TestValidator.predicate(
     "no placeholder token survives any rendered path or payload",
