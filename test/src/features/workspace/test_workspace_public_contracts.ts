@@ -80,6 +80,73 @@ const fetchCallContracts = (
   return calls;
 };
 
+/** Bind every frame-processing call in capture-smoke main to validated input. */
+const captureFrameConsumerContracts = (
+  source: string,
+): {
+  consumers: Array<{
+    arguments: string[];
+    assertedGets: number;
+    name: string;
+  }>;
+  mainCount: number;
+} => {
+  const parsed = ts.createSourceFile(
+    "packages/playground/scripts/capture-smoke.ts",
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TS,
+  );
+  const mains: ts.Expression[] = [];
+  for (const statement of parsed.statements) {
+    if (ts.isVariableStatement(statement) === false) continue;
+    for (const declaration of statement.declarationList.declarations)
+      if (
+        ts.isIdentifier(declaration.name) &&
+        declaration.name.text === "main" &&
+        declaration.initializer !== undefined
+      )
+        mains.push(declaration.initializer);
+  }
+  const consumers: Array<{
+    arguments: string[];
+    assertedGets: number;
+    name: string;
+  }> = [];
+  if (mains.length === 1) {
+    const visit = (node: ts.Node): void => {
+      if (
+        ts.isCallExpression(node) &&
+        ts.isIdentifier(node.expression) &&
+        (node.expression.text === "equalBytes" ||
+          node.expression.text === "histogram")
+      ) {
+        let assertedGets = 0;
+        const countAssertedGets = (child: ts.Node): void => {
+          if (
+            ts.isNonNullExpression(child) &&
+            ts.isCallExpression(child.expression) &&
+            ts.isPropertyAccessExpression(child.expression.expression) &&
+            child.expression.expression.name.text === "get"
+          )
+            ++assertedGets;
+          ts.forEachChild(child, countAssertedGets);
+        };
+        countAssertedGets(node);
+        consumers.push({
+          arguments: node.arguments.map((argument) => argument.getText(parsed)),
+          assertedGets,
+          name: node.expression.text,
+        });
+      }
+      ts.forEachChild(node, visit);
+    };
+    visit(mains[0]!);
+  }
+  return { consumers, mainCount: mains.length };
+};
+
 /** A source-level template interpolation without a live template expression. */
 const templateExpression = (expression: string): string =>
   "$" + "{" + expression + "}";
@@ -1064,39 +1131,45 @@ export const test_workspace_public_contracts = (): void => {
           "[...(run?.keys() ?? [])]",
         ),
       },
-      directAssertedLookups: (
-        playgroundCaptureSmoke.match(/runs\[[^\]]+\]!\.get\([^)]*\)!/g) ?? []
-      ).length,
-      consumers: {
-        determinism:
-          /equalBytes\(\s*requireCapturedFrame\(runs, 0, name\),\s*requireCapturedFrame\(runs, 1, name\),\s*\)/.test(
-            playgroundCaptureSmoke,
-          ),
-        mask: /histogram\(\s*requireCapturedFrame\(runs, 0, "frame_00000\.mask\.png"\),\s*\)/.test(
-          playgroundCaptureSmoke,
-        ),
-        pose: /histogram\(\s*requireCapturedFrame\(runs, 0, "frame_00000\.pose\.png"\),\s*\)/.test(
-          playgroundCaptureSmoke,
-        ),
-        passSwitch:
-          /equalBytes\(\s*requireCapturedFrame\(runs, 0, "frame_00000\.png"\),\s*requireCapturedFrame\(runs, 0, "frame_00000\.mask\.png"\),\s*\)/.test(
-            playgroundCaptureSmoke,
-          ),
-      },
-      validatedLookups: (
-        playgroundCaptureSmoke.match(/requireCapturedFrame\(runs,/g) ?? []
-      ).length,
+      consumerContract: captureFrameConsumerContracts(playgroundCaptureSmoke),
     },
     {
       evidence: { run: true, name: true, inventory: true },
-      directAssertedLookups: 0,
-      consumers: {
-        determinism: true,
-        mask: true,
-        pose: true,
-        passSwitch: true,
+      consumerContract: {
+        consumers: [
+          {
+            arguments: [
+              "requireCapturedFrame(runs, 0, name)",
+              "requireCapturedFrame(runs, 1, name)",
+            ],
+            assertedGets: 0,
+            name: "equalBytes",
+          },
+          {
+            arguments: [
+              'requireCapturedFrame(runs, 0, "frame_00000.mask.png")',
+            ],
+            assertedGets: 0,
+            name: "histogram",
+          },
+          {
+            arguments: [
+              'requireCapturedFrame(runs, 0, "frame_00000.pose.png")',
+            ],
+            assertedGets: 0,
+            name: "histogram",
+          },
+          {
+            arguments: [
+              'requireCapturedFrame(runs, 0, "frame_00000.png")',
+              'requireCapturedFrame(runs, 0, "frame_00000.mask.png")',
+            ],
+            assertedGets: 0,
+            name: "equalBytes",
+          },
+        ],
+        mainCount: 1,
       },
-      validatedLookups: 6,
     },
   );
   const mcpMethods = [
