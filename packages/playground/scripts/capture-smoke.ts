@@ -39,6 +39,20 @@ const devServerFailure = (props: {
   return null;
 };
 
+const requireCapturedFrame = (
+  runs: ReadonlyArray<ReadonlyMap<string, Uint8Array>>,
+  runIndex: number,
+  name: string,
+): Uint8Array => {
+  const run = runs[runIndex];
+  const frame = run?.get(name);
+  if (frame === undefined)
+    throw new Error(
+      `capture smoke run ${runIndex + 1} is missing ${JSON.stringify(name)}; captured=${JSON.stringify([...(run?.keys() ?? [])])}`,
+    );
+  return frame;
+};
+
 /**
  * The one REAL (non-faked) headless-capture smoke (#1170). Everything the unit
  * suite fakes, this drives for real: Chrome renders the live playground page,
@@ -107,12 +121,16 @@ export const main = async (
     ];
     for (const name of names)
       checks[`deterministic ${name}`] = equalBytes(
-        runs[0]!.get(name)!,
-        runs[1]!.get(name)!,
+        requireCapturedFrame(runs, 0, name),
+        requireCapturedFrame(runs, 1, name),
       );
 
-    const mask = histogram(runs[0]!.get("frame_00000.mask.png")!);
-    const pose = histogram(runs[0]!.get("frame_00000.pose.png")!);
+    const mask = histogram(
+      requireCapturedFrame(runs, 0, "frame_00000.mask.png"),
+    );
+    const pose = histogram(
+      requireCapturedFrame(runs, 0, "frame_00000.pose.png"),
+    );
     const total = WIDTH * HEIGHT;
     const subject = maskColor(0);
     const subjectKey = rgbKey(
@@ -129,8 +147,8 @@ export const main = async (
       white >= total * 0.0002 && white <= total * 0.2;
     checks["pose carries no mask palette"] = (pose.get(subjectKey) ?? 0) === 0;
     checks["beauty differs from mask (passes actually switch)"] = !equalBytes(
-      runs[0]!.get("frame_00000.png")!,
-      runs[0]!.get("frame_00000.mask.png")!,
+      requireCapturedFrame(runs, 0, "frame_00000.png"),
+      requireCapturedFrame(runs, 0, "frame_00000.mask.png"),
     );
 
     const failed = Object.entries(checks).filter(([, ok]) => !ok);

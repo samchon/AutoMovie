@@ -191,6 +191,8 @@ const unmentionedModules = (pkg: string, document: string): string[] =>
  *     budget or the remaining advertised server-readiness deadline.
  * 18. Capture readiness requires the versioned identity marker served by the
  *     canonical stickman page, not an arbitrary successful HTTP response.
+ * 19. Every expected capture-smoke frame is validated with run/name/inventory
+ *     evidence before byte comparison or PNG parsing.
  */
 export const test_workspace_public_contracts = (): void => {
   const rootReadme = readPackageFile("README.md");
@@ -224,6 +226,20 @@ export const test_workspace_public_contracts = (): void => {
       : playgroundCaptureSmoke.slice(
           devServerFailureOffset,
           playgroundCaptureSmoke.indexOf("\n\n/**", devServerFailureOffset),
+        );
+  const requireCapturedFrameOffset = playgroundCaptureSmoke.indexOf(
+    "const requireCapturedFrame =",
+  );
+  const requireCapturedFrameEnd = playgroundCaptureSmoke.indexOf(
+    "\n\n/**",
+    requireCapturedFrameOffset,
+  );
+  const requireCapturedFrameSource =
+    requireCapturedFrameOffset < 0 || requireCapturedFrameEnd < 0
+      ? ""
+      : playgroundCaptureSmoke.slice(
+          requireCapturedFrameOffset,
+          requireCapturedFrameEnd,
         );
   const ensureDevServerOffset = playgroundCaptureSmoke.indexOf(
     "const ensureDevServer =",
@@ -1036,6 +1052,51 @@ export const test_workspace_public_contracts = (): void => {
       htmlMarker: "automovie-stickman-capture-v1",
       responseContract: true,
       readinessCalls: 2,
+    },
+  );
+  TestValidator.equals(
+    "real capture smoke diagnoses every missing pass output",
+    {
+      evidence: {
+        run: requireCapturedFrameSource.includes("runIndex + 1"),
+        name: requireCapturedFrameSource.includes("JSON.stringify(name)"),
+        inventory: requireCapturedFrameSource.includes(
+          "[...(run?.keys() ?? [])]",
+        ),
+      },
+      directAssertedLookups: (
+        playgroundCaptureSmoke.match(/runs\[[^\]]+\]!\.get\([^)]*\)!/g) ?? []
+      ).length,
+      consumers: {
+        determinism:
+          /equalBytes\(\s*requireCapturedFrame\(runs, 0, name\),\s*requireCapturedFrame\(runs, 1, name\),\s*\)/.test(
+            playgroundCaptureSmoke,
+          ),
+        mask: /histogram\(\s*requireCapturedFrame\(runs, 0, "frame_00000\.mask\.png"\),\s*\)/.test(
+          playgroundCaptureSmoke,
+        ),
+        pose: /histogram\(\s*requireCapturedFrame\(runs, 0, "frame_00000\.pose\.png"\),\s*\)/.test(
+          playgroundCaptureSmoke,
+        ),
+        passSwitch:
+          /equalBytes\(\s*requireCapturedFrame\(runs, 0, "frame_00000\.png"\),\s*requireCapturedFrame\(runs, 0, "frame_00000\.mask\.png"\),\s*\)/.test(
+            playgroundCaptureSmoke,
+          ),
+      },
+      validatedLookups: (
+        playgroundCaptureSmoke.match(/requireCapturedFrame\(runs,/g) ?? []
+      ).length,
+    },
+    {
+      evidence: { run: true, name: true, inventory: true },
+      directAssertedLookups: 0,
+      consumers: {
+        determinism: true,
+        mask: true,
+        pose: true,
+        passSwitch: true,
+      },
+      validatedLookups: 6,
     },
   );
   const mcpMethods = [
