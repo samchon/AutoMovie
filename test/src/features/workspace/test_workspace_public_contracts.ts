@@ -241,6 +241,7 @@ const captureObservationContracts = (
                 property.name.text,
                 compact(property.initializer),
               ]);
+            else observations.push([compact(property), compact(property)]);
           }
         continue;
       }
