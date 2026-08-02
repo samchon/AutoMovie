@@ -963,11 +963,23 @@ try {
     starterDir,
     900_000,
   );
-  const captureReceiptPath = join(
+  const captureReceiptDirectory = join(
     starterDir,
     ".automovie",
     "capture",
-    "install-receipt.json",
+    "install-receipts",
+  );
+  const captureReceiptGenerations = readdirSync(captureReceiptDirectory);
+  if (
+    captureReceiptGenerations.length !== 1 ||
+    /^[0-9a-f]{64}\.json$/u.test(captureReceiptGenerations[0]) === false
+  )
+    fail(
+      `packaged capture install published an invalid generation inventory: ${captureReceiptGenerations.join(", ")}`,
+    );
+  const captureReceiptPath = join(
+    captureReceiptDirectory,
+    captureReceiptGenerations[0],
   );
   const captureReceiptText = readFileSync(captureReceiptPath, "utf8");
   const captureReceipt = JSON.parse(captureReceiptText);
@@ -993,10 +1005,10 @@ try {
     )}\n`,
   );
   runExpectedFailure(
-    "reject stale packaged capture receipt",
+    "reject mis-keyed packaged capture receipt",
     "npm run capture:doctor",
     starterDir,
-    "does not match the current Playwright",
+    "occupies another generation",
   );
   writeFileSync(captureReceiptPath, captureReceiptText);
   const parkedCaptureExecutable = `${captureReceipt.browser.executablePath}.automovie-missing`;
