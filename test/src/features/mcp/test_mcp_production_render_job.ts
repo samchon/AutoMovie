@@ -709,9 +709,15 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
       productionRenderLayersForPass(fadedOut, "mask")[0]?.weight === 1,
   );
 
+  const retainedPointer = `final/pointers/${renderPlan.chunks[0]!.id.slice(7)}`;
+  const retainedTree = `final/tmp/${renderPlan.chunks[0]!.id.slice(7)}.current.101`;
+  const orphanTree = `final/tmp/${renderPlan.chunks[0]!.id.slice(7)}.orphan.102`;
+  const stalePointer = `final/pointers/${digest("f").slice(7)}`;
+  const staleTree = `final/tmp/${digest("f").slice(7)}.stale.103`;
   const garbageCollection = planProductionRenderGc({
     plans: [renderPlan, proxyPlan],
     publicationPaths: ["publication/deliverables/final/current.mp4"],
+    retainedChunkPaths: [retainedPointer, retainedTree],
     candidates: [
       {
         path: `final/chunks/${renderPlan.chunks[0]!.id.slice(7)}`,
@@ -730,6 +736,36 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
         kind: "chunk",
         digest: digest("0"),
         bytes: 30,
+      },
+      {
+        path: retainedPointer,
+        kind: "chunk-pointer",
+        digest: renderPlan.chunks[0]!.id,
+        bytes: 5,
+      },
+      {
+        path: retainedTree,
+        kind: "chunk-tree",
+        digest: renderPlan.chunks[0]!.id,
+        bytes: 7,
+      },
+      {
+        path: orphanTree,
+        kind: "chunk-tree",
+        digest: renderPlan.chunks[0]!.id,
+        bytes: 11,
+      },
+      {
+        path: stalePointer,
+        kind: "chunk-pointer",
+        digest: digest("f"),
+        bytes: 13,
+      },
+      {
+        path: staleTree,
+        kind: "chunk-tree",
+        digest: digest("f"),
+        bytes: 17,
       },
       {
         path: "proxy/quarantine/old",
@@ -758,6 +794,7 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
       planProductionRenderGc({
         plans: [renderPlan],
         publicationPaths: [],
+        retainedChunkPaths: [],
         candidates,
       }),
     );
@@ -767,12 +804,46 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
     digest: renderPlan.chunks[0]!.id,
     bytes: 1,
   };
+  const validPointer = {
+    path: retainedPointer,
+    kind: "chunk-pointer" as const,
+    digest: renderPlan.chunks[0]!.id,
+    bytes: 1,
+  };
+  const rejectsRetainedChunkPaths = [
+    [retainedPointer, retainedPointer],
+    [`final/pointers/${digest("e").slice(7)}`],
+    [retainedPointer],
+  ].every((retainedChunkPaths) =>
+    throws(() =>
+      planProductionRenderGc({
+        plans: [renderPlan],
+        publicationPaths: [],
+        retainedChunkPaths,
+        candidates: [validPointer],
+      }),
+    ),
+  );
   TestValidator.predicate(
     "render GC marks both current tiers and sweeps only unreferenced bytes",
-    garbageCollection.keep.length === 3 &&
-      garbageCollection.remove.map((candidate) => candidate.bytes).join() ===
-        "30,40,60" &&
-      garbageCollection.reclaimableBytes === 130 &&
+    garbageCollection.keep.length === 5 &&
+      garbageCollection.keep.some(
+        (candidate) => candidate.path === retainedPointer,
+      ) &&
+      garbageCollection.keep.some(
+        (candidate) => candidate.path === retainedTree,
+      ) &&
+      garbageCollection.remove.some(
+        (candidate) => candidate.path === orphanTree,
+      ) &&
+      garbageCollection.remove.some(
+        (candidate) => candidate.path === stalePointer,
+      ) &&
+      garbageCollection.remove.some(
+        (candidate) => candidate.path === staleTree,
+      ) &&
+      garbageCollection.reclaimableBytes === 171 &&
+      rejectsRetainedChunkPaths &&
       [
         [{ ...validChunk }, { ...validChunk }],
         [{ ...validChunk, bytes: -1 }],
@@ -780,6 +851,21 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
         [{ ...validChunk, digest: null }],
         [{ ...validChunk, digest: digest("f") }],
         [{ ...validChunk, path: "final/chunks/not-a-digest" }],
+        [
+          {
+            ...validPointer,
+            path: `final/pointer/${renderPlan.chunks[0]!.id.slice(7)}`,
+          },
+        ],
+        [{ ...validPointer, digest: digest("f") }],
+        [
+          {
+            path: `final/tmp/${renderPlan.chunks[0]!.id.slice(7)}.missing-pid`,
+            kind: "chunk-tree" as const,
+            digest: renderPlan.chunks[0]!.id,
+            bytes: 1,
+          },
+        ],
         [
           {
             path: "final/quarantine/nested/old",

@@ -498,6 +498,24 @@ export const test_cli_scaffold = async (): Promise<void> => {
       files["scripts/render.ts"]!.includes('process.argv.indexOf("--tier")') &&
       files["scripts/render.ts"]!.includes("productionRenderLayersForPass") &&
       files["scripts/render.ts"]!.includes("renderGarbageCollection") &&
+      files["scripts/render.ts"]!.includes('kind: "chunk-pointer"') &&
+      files["scripts/render.ts"]!.includes('kind: "chunk-tree"') &&
+      files["scripts/render.ts"]!.includes(
+        "captureRenderChunkPublicationFromPointer(pointer)",
+      ) &&
+      files["scripts/render.ts"]!.includes(
+        "authenticated.identity === snapshot.targetIdentity",
+      ) &&
+      files["scripts/render.ts"]!.includes(
+        "authenticated === undefined && processAlive(Number(match[2]))",
+      ) &&
+      files["scripts/render.ts"]!.includes(
+        "retainedChunkPaths: [...retainedChunkPaths]",
+      ) &&
+      files["scripts/render.ts"]!.includes("const base = snapshot.base.path") &&
+      files["scripts/render.ts"]!.includes(
+        "path.resolve(renderJobRoot, candidate.path)",
+      ) === false &&
       files["scripts/render.ts"]!.includes("captureRenderGcTarget") &&
       files["scripts/render.ts"]!.includes("removeCapturedRenderGcTarget") &&
       files["scripts/render.ts"]!.includes("quarantineCapturedRenderTarget") &&
