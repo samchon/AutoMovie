@@ -1,5 +1,5 @@
 import { digestAutoMovieBytes } from "@automovie/mcp";
-import { createHash, randomUUID } from "node:crypto";
+import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -128,7 +128,6 @@ export const createRenderGcFileSnapshot = (
     throw new Error(`Render file "${target}" escapes its ownership root.`);
   const source = Buffer.from(bytes);
   const descriptor = fs.openSync(absolute, "wx+");
-  let closed = false;
   try {
     let offset = 0;
     while (offset < source.length) {
@@ -165,44 +164,8 @@ export const createRenderGcFileSnapshot = (
     assertPhysicalDirectoryIdentity(parent, "render file directory");
     assertRootIdentity(root);
     return snapshot;
-  } catch (error) {
-    let cleanup: IRenderGcTargetSnapshot | null = null;
-    try {
-      const opened = fs.fstatSync(descriptor, { bigint: true });
-      const resident = captureRenderGcTarget(root.path, absolute);
-      if (
-        resident.kind === "file" &&
-        resident.targetIdentity === physicalIdentity(opened) &&
-        resident.targetVersion === physicalVersion(opened)
-      )
-        cleanup = resident;
-    } catch (cleanupError) {
-      if ((cleanupError as NodeJS.ErrnoException).code !== "ENOENT")
-        throw cleanupError;
-    } finally {
-      fs.closeSync(descriptor);
-      closed = true;
-    }
-    if (cleanup !== null) removeCreatedRenderFile(cleanup);
-    throw error;
   } finally {
-    if (closed === false) fs.closeSync(descriptor);
-  }
-};
-
-const removeCreatedRenderFile = (snapshot: IRenderGcTargetSnapshot): void => {
-  const quarantine = ensureRenderPhysicalDirectory(
-    snapshot.base.path,
-    `${RENDER_GC_PRESERVED_PREFIX}create-${randomUUID()}`,
-  );
-  try {
-    removeCapturedRenderGcTarget({
-      isolated: path.join(quarantine, randomUUID()),
-      quarantine,
-      snapshot,
-    });
-  } finally {
-    if (fs.readdirSync(quarantine).length === 0) fs.rmdirSync(quarantine);
+    fs.closeSync(descriptor);
   }
 };
 

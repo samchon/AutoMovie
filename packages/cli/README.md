@@ -106,6 +106,8 @@ runtime identity changes.
 
 Render plans use an append-only predecessor chain with one immutable no-overwrite successor slot per generation. A stale planner cannot replace a winner, legacy `plan.json` bytes remain an immutable root, and each render session keeps its captured plan for scheduling, receipt verification, status, and finalization instead of reopening a later pathname generation.
 
+Descriptor-bound render final slots are never automatically removed after creation begins. A write, readback, target, parent, or root validation failure leaves visible evidence for the consumer's strict gate and explicit GC or manual adjudication instead of risking deletion of a relinked successor.
+
 Dialogue synthesis caches each content key as one immutable directory, publishes both file slots through descriptor-bound `O_EXCL` with `audio.f32` before `receipt.json`, and accepts a cache hit only from one captured and revalidated two-file generation. Legacy sibling `.f32` and `.json` entries are ignored and regenerated without replacement.
 
 Proxy finalization publishes content-addressed materialized directories without replacing existing paths: each payload reserves and writes its final pathname directly through descriptor-bound `O_EXCL`, the root receipt appears last, and every manifest path remains an ordinary render-root-relative file that external consumers can open directly.

@@ -623,6 +623,9 @@ export const test_cli_scaffold = async (): Promise<void> => {
       files["scripts/renderAttemptSnapshot.ts"]!.includes(
         ".attempt-candidate",
       ) === false &&
+      files["scripts/renderGcSnapshot.ts"]!.includes(
+        "removeCreatedRenderFile",
+      ) === false &&
       files["scripts/renderPlanSnapshot.ts"]!.includes("generationSlot") &&
       files["scripts/renderPlanSnapshot.ts"]!.includes(
         "createRenderGcFileSnapshot",
@@ -4102,6 +4105,65 @@ export const test_cli_scaffold = async (): Promise<void> => {
         bytes: Uint8Array,
       ) => { target: string };
     };
+    const directFileFailureRoot = path.join(base, "direct-file-failure");
+    const directFileFailureParent = path.join(directFileFailureRoot, "files");
+    const parkedDirectFileFailureParent = `${directFileFailureParent}.parked`;
+    const directFileFailureTarget = path.join(
+      directFileFailureParent,
+      "final.json",
+    );
+    const directFileFailureBytes = Buffer.from('{"direct":"final"}\n');
+    fs.mkdirSync(directFileFailureParent, { recursive: true });
+    let directFileFailureRelinked = false;
+    mutableFs.fsyncSync = ((descriptor: number): void => {
+      nativeFsync(descriptor);
+      if (directFileFailureRelinked === false) {
+        nativeRename(directFileFailureParent, parkedDirectFileFailureParent);
+        nativeMkdir(directFileFailureParent);
+        nativeLink(
+          path.join(parkedDirectFileFailureParent, "final.json"),
+          directFileFailureTarget,
+        );
+        nativeWriteFile(
+          path.join(directFileFailureParent, "successor.marker"),
+          "successor",
+        );
+        directFileFailureRelinked = true;
+      }
+    }) as typeof fs.fsyncSync;
+    let directFileFailureRejected = false;
+    try {
+      directFileFailureRejected = throws(() =>
+        renderAttemptGcModule.createRenderGcFileSnapshot(
+          directFileFailureRoot,
+          directFileFailureTarget,
+          directFileFailureBytes,
+        ),
+      );
+    } finally {
+      mutableFs.fsyncSync = nativeFsync;
+    }
+    const directFileResident = fs.lstatSync(directFileFailureTarget, {
+      bigint: true,
+    });
+    const parkedDirectFileResident = fs.lstatSync(
+      path.join(parkedDirectFileFailureParent, "final.json"),
+      { bigint: true },
+    );
+    TestValidator.predicate(
+      "direct render file creation preserves a same-inode parent successor on failure",
+      directFileFailureRelinked &&
+        directFileFailureRejected &&
+        directFileResident.dev === parkedDirectFileResident.dev &&
+        directFileResident.ino === parkedDirectFileResident.ino &&
+        fs
+          .readFileSync(directFileFailureTarget)
+          .equals(directFileFailureBytes) &&
+        fs.readFileSync(
+          path.join(directFileFailureParent, "successor.marker"),
+          "utf8",
+        ) === "successor",
+    );
     let attemptLockIndex = 0;
     const createAttemptLock = (pid: number, token: string) => {
       const target = path.join(
