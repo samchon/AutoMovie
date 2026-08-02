@@ -187,15 +187,31 @@ export const test_workspace_public_contracts = (): void => {
   const compiledShotOracleOffset = tgzE2e.indexOf(
     "const canonicalCompiledShots =",
   );
-  const compiledShotOracleSource =
-    compiledShotOracleOffset < 0
+  const compiledShotConstantEnd = tgzE2e.indexOf(
+    "\n];",
+    compiledShotOracleOffset,
+  );
+  const compiledShotConstantSource =
+    compiledShotOracleOffset < 0 || compiledShotConstantEnd < 0
       ? ""
       : tgzE2e.slice(
           compiledShotOracleOffset,
-          tgzE2e.indexOf(
-            '\nassert(\n  "starter-render-bundle-count"',
-            compiledShotOracleOffset,
-          ),
+          compiledShotConstantEnd + "\n];".length,
+        );
+  const compiledShotAssertionOffset = tgzE2e.indexOf(
+    'assert(\n  "starter-compiled-shot-order"',
+    compiledShotConstantEnd,
+  );
+  const compiledShotAssertionEnd = tgzE2e.indexOf(
+    "\n);",
+    compiledShotAssertionOffset,
+  );
+  const compiledShotAssertionSource =
+    compiledShotAssertionOffset < 0 || compiledShotAssertionEnd < 0
+      ? ""
+      : tgzE2e.slice(
+          compiledShotAssertionOffset,
+          compiledShotAssertionEnd + "\n);".length,
         );
   const sourceSection = (start: string, end: string): string => {
     const startOffset = tgzE2e.indexOf(start);
@@ -830,24 +846,35 @@ export const test_workspace_public_contracts = (): void => {
     "packaged starter verifier accepts versioned compiled shot entries",
     {
       entries: [
-        ...compiledShotOracleSource.matchAll(
+        ...compiledShotConstantSource.matchAll(
           /\{ id: "([^"]+)", path: "([^"]+)" \}/g,
         ),
       ].map((match) => ({ id: match[1], path: match[2] })),
+      boundaries: {
+        adjacent:
+          compiledShotConstantEnd >= 0 &&
+          compiledShotAssertionOffset ===
+            compiledShotConstantEnd + "\n];\n".length,
+        assertion: compiledShotAssertionSource.endsWith("\n);"),
+        constant: compiledShotConstantSource.endsWith("\n];"),
+      },
       comparison:
-        compiledShotOracleSource.match(
-          /JSON\.stringify\(compiled\.shots\) ===\s*JSON\.stringify\(canonicalCompiledShots\)/,
+        compiledShotAssertionSource.match(
+          /^assert\(\s*"starter-compiled-shot-order",\s*(JSON\.stringify\(compiled\.shots\) ===\s*JSON\.stringify\(canonicalCompiledShots\)),/,
         )?.[0] ?? null,
-      label: compiledShotOracleSource.includes('"starter-compiled-shot-order"'),
+      labeledAssertions: (
+        tgzE2e.match(/assert\(\s*"starter-compiled-shot-order"/g) ?? []
+      ).length,
     },
     {
       entries: [
         { id: "answer", path: "shots/answer.json" },
         { id: "opening", path: "shots/opening.json" },
       ],
+      boundaries: { adjacent: true, assertion: true, constant: true },
       comparison:
-        "JSON.stringify(compiled.shots) === JSON.stringify(canonicalCompiledShots)",
-      label: true,
+        'assert(\n  "starter-compiled-shot-order",\n  JSON.stringify(compiled.shots) === JSON.stringify(canonicalCompiledShots),',
+      labeledAssertions: 1,
     },
   );
   const mcpMethods = [
