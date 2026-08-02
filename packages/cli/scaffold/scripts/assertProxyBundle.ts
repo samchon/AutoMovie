@@ -146,22 +146,29 @@ export const inspectCapturedProxyBundle = (
   if (receiptEntry === undefined)
     throw new Error("Captured proxy publication has no root receipt.");
   const parsed = parseProxyPublication(
-    evidence?.bytes ??
-      (() => {
-        const receiptSnapshot = captureRenderGcTarget(
-          snapshot.base.path,
-          path.join(snapshot.target, "publication.json"),
-        );
-        assertCapturedRenderGcFileEntry({
-          directory: snapshot,
-          file: receiptSnapshot,
-          relative: "publication.json",
-        });
-        return readCapturedRenderGcFile(
-          receiptSnapshot,
-          PROXY_PUBLICATION_RECEIPT_MAX_BYTES,
-        );
-      })(),
+    evidence !== undefined
+      ? (() => {
+          if (evidence.bytes === null)
+            throw new Error(
+              "Captured proxy publication has no bounded root receipt.",
+            );
+          return evidence.bytes;
+        })()
+      : (() => {
+          const receiptSnapshot = captureRenderGcTarget(
+            snapshot.base.path,
+            path.join(snapshot.target, "publication.json"),
+          );
+          assertCapturedRenderGcFileEntry({
+            directory: snapshot,
+            file: receiptSnapshot,
+            relative: "publication.json",
+          });
+          return readCapturedRenderGcFile(
+            receiptSnapshot,
+            PROXY_PUBLICATION_RECEIPT_MAX_BYTES,
+          );
+        })(),
   );
   const bundlePath = path
     .relative(snapshot.base.path, snapshot.target)

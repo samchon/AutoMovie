@@ -23,7 +23,7 @@ const PROXY_PUBLICATION_RECEIPT_MAX_BYTES = 8 * 1024 * 1024;
 /** Receipt bytes bound to the exact publication snapshot that supplied them. */
 export interface IProxyBundleCapturedEvidence {
   baseIdentity: string;
-  bytes: Uint8Array;
+  bytes: Uint8Array | null;
   contentFingerprint: string;
   namespaceFingerprint: string;
   target: string;
@@ -113,30 +113,33 @@ export const publishProxyBundle = (props: {
 const captureProxyPublicationEvidence = (
   snapshot: IRenderGcTargetSnapshot,
 ): IProxyBundleCapturedEvidence => {
-  if (snapshot.kind !== "directory")
-    throw new Error("Proxy publication is not a materialized directory.");
-  const receiptEntry = snapshot.entries.find(
-    (entry) => entry.kind === "file" && entry.path === "publication.json",
-  );
-  if (
-    receiptEntry === undefined ||
-    receiptEntry.bytes === undefined ||
-    receiptEntry.bytes > PROXY_PUBLICATION_RECEIPT_MAX_BYTES
-  )
-    throw new Error("Proxy publication has no bounded root receipt.");
-  const receipt = captureRenderGcTarget(
-    snapshot.base.path,
-    path.join(snapshot.target, "publication.json"),
-  );
-  assertCapturedRenderGcFileEntry({
-    directory: snapshot,
-    file: receipt,
-    relative: "publication.json",
-  });
-  const bytes = readCapturedRenderGcFile(
-    receipt,
-    PROXY_PUBLICATION_RECEIPT_MAX_BYTES,
-  );
+  const receiptEntry =
+    snapshot.kind === "directory"
+      ? snapshot.entries.find(
+          (entry) => entry.kind === "file" && entry.path === "publication.json",
+        )
+      : undefined;
+  const bytes = (() => {
+    if (
+      receiptEntry === undefined ||
+      receiptEntry.bytes === undefined ||
+      receiptEntry.bytes > PROXY_PUBLICATION_RECEIPT_MAX_BYTES
+    )
+      return null;
+    const receipt = captureRenderGcTarget(
+      snapshot.base.path,
+      path.join(snapshot.target, "publication.json"),
+    );
+    assertCapturedRenderGcFileEntry({
+      directory: snapshot,
+      file: receipt,
+      relative: "publication.json",
+    });
+    return readCapturedRenderGcFile(
+      receipt,
+      PROXY_PUBLICATION_RECEIPT_MAX_BYTES,
+    );
+  })();
   return {
     baseIdentity: snapshot.base.identity,
     bytes,
