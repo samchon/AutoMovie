@@ -19,6 +19,8 @@ import {
 } from "./captureExecutableSnapshot";
 import { snapshotRuntimePackage } from "./runtimePackageSnapshot";
 
+const CAPTURE_INSTALL_RECEIPT_MAX_BYTES = 64 * 1024;
+
 export type AutoMovieCaptureBrowserConfig =
   | { source: "playwright-chromium" }
   | { source: "system-channel"; channel: "chrome" | "msedge" }
@@ -513,7 +515,11 @@ const readReceiptGeneration = (
   generation: ICaptureReceiptGenerationSnapshot,
 ): Uint8Array => {
   assertReceiptDirectory(generation.directory);
-  const opened = openCaptureExecutable(generation.file);
+  const opened = openCaptureExecutable(
+    generation.file,
+    CAPTURE_INSTALL_RECEIPT_MAX_BYTES,
+  );
+  let failed = false;
   try {
     const selected = generation.directory.directories.at(-1);
     if (
@@ -528,7 +534,7 @@ const readReceiptGeneration = (
     assertReceiptDirectory(generation.directory);
     assertCaptureExecutable(opened);
     const status = fs.fstatSync(opened.descriptor, { bigint: true });
-    if (status.size > 64n * 1024n)
+    if (status.size > BigInt(CAPTURE_INSTALL_RECEIPT_MAX_BYTES))
       throw new Error(
         `Capture install receipt "${generation.file}" exceeds its maximum byte length.`,
       );
@@ -552,8 +558,15 @@ const readReceiptGeneration = (
     assertCaptureExecutable(opened);
     assertReceiptDirectory(generation.directory);
     return bytes;
+  } catch (error) {
+    failed = true;
+    throw error;
   } finally {
-    closeCaptureExecutable(opened);
+    try {
+      closeCaptureExecutable(opened);
+    } catch (error) {
+      if (failed === false) throw error;
+    }
   }
 };
 
@@ -572,11 +585,21 @@ export const publishCaptureInstallReceipt = (
   assertCurrent();
   assertReceiptDirectory(owned);
   let published: ICaptureExecutableSnapshot;
+  let failed = false;
   try {
     published = createCaptureExecutableSnapshot(file, bytes);
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
-    published = openCaptureExecutable(file);
+    try {
+      published = openCaptureExecutable(
+        file,
+        CAPTURE_INSTALL_RECEIPT_MAX_BYTES,
+      );
+    } catch (existingError) {
+      throw new Error(
+        `An incomplete capture receipt owns this Playwright generation. Manually adjudicate that immutable generation before removing it: ${String(existingError)}`,
+      );
+    }
   }
   try {
     const current = captureReceiptGenerationDirectory(projectRoot);
@@ -588,8 +611,15 @@ export const publishCaptureInstallReceipt = (
     assertCaptureExecutable(published);
     assertCaptureExecutableBytes(published);
     assertReceiptDirectory(current);
+  } catch (error) {
+    failed = true;
+    throw error;
   } finally {
-    closeCaptureExecutable(published);
+    try {
+      closeCaptureExecutable(published);
+    } catch (error) {
+      if (failed === false) throw error;
+    }
   }
 };
 

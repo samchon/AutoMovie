@@ -7,6 +7,7 @@ export interface ICaptureExecutableSnapshot {
   digest: `sha256:${string}`;
   directory: IPhysicalDirectory;
   identity: string;
+  maximumBytes: number | null;
   path: string;
   physicalIdentity: string;
 }
@@ -71,19 +72,21 @@ export const createCaptureExecutableSnapshot = (
       );
     const snapshot: ICaptureExecutableSnapshot = {
       descriptor,
-      digest: digestDescriptor(descriptor),
+      digest: digestDescriptor(descriptor, bytes.length),
       directory,
       identity,
+      maximumBytes: bytes.length,
       path: namespacePath,
       physicalIdentity: physicalFileIdentity(opened),
     };
     assertCaptureExecutable(snapshot);
     return snapshot;
   } catch (error) {
-    const opened = safePhysicalFileIdentity(descriptor);
-    fs.closeSync(descriptor);
-    if (opened !== null)
-      removeCreatedCaptureExecutable(namespacePath, before, opened);
+    try {
+      fs.closeSync(descriptor);
+    } catch {
+      // Preserve the publication failure that made this final slot ambiguous.
+    }
     throw error;
   }
 };
@@ -91,7 +94,13 @@ export const createCaptureExecutableSnapshot = (
 /** Open and fingerprint one physical executable for a later launch boundary. */
 export const openCaptureExecutable = (
   file: string,
+  maximumBytes: number | null = null,
 ): ICaptureExecutableSnapshot => {
+  if (
+    maximumBytes !== null &&
+    (Number.isSafeInteger(maximumBytes) === false || maximumBytes < 0)
+  )
+    throw new Error("Capture executable byte limit is invalid.");
   const namespacePath = path.resolve(file);
   const directory = physicalDirectory(
     path.dirname(namespacePath),
@@ -110,7 +119,11 @@ export const openCaptureExecutable = (
       throw new Error(
         `Capture executable "${namespacePath}" changed before open.`,
       );
-    const digest = digestDescriptor(descriptor);
+    if (maximumBytes !== null && opened.size > BigInt(maximumBytes))
+      throw new Error(
+        `Capture executable "${namespacePath}" exceeds its maximum byte length.`,
+      );
+    const digest = digestDescriptor(descriptor, maximumBytes);
     const completed = fs.fstatSync(descriptor, { bigint: true });
     if (completed.isFile() === false || physicalVersion(completed) !== identity)
       throw new Error(
@@ -121,13 +134,18 @@ export const openCaptureExecutable = (
       digest,
       directory,
       identity,
+      maximumBytes,
       path: namespacePath,
       physicalIdentity: physicalFileIdentity(opened),
     };
     assertCaptureExecutable(snapshot);
     return snapshot;
   } catch (error) {
-    fs.closeSync(descriptor);
+    try {
+      fs.closeSync(descriptor);
+    } catch {
+      // Preserve the snapshot failure instead of replacing it with close.
+    }
     throw error;
   }
 };
@@ -169,7 +187,10 @@ export const assertCaptureExecutableBytes = (
   expected: ICaptureExecutableSnapshot,
 ): void => {
   assertCaptureExecutableDescriptor(expected);
-  if (digestDescriptor(expected.descriptor) !== expected.digest)
+  if (
+    digestDescriptor(expected.descriptor, expected.maximumBytes) !==
+    expected.digest
+  )
     throw new Error(
       `Capture executable "${expected.path}" changed open descriptor bytes.`,
     );
@@ -241,15 +262,26 @@ export const closeCaptureExecutable = (
   snapshot: ICaptureExecutableSnapshot,
 ): void => fs.closeSync(snapshot.descriptor);
 
-const digestDescriptor = (descriptor: number): `sha256:${string}` => {
+const digestDescriptor = (
+  descriptor: number,
+  maximumBytes: number | null = null,
+): `sha256:${string}` => {
   const hash = createHash("sha256");
   const chunk = Buffer.allocUnsafe(1024 * 1024);
   let position = 0;
   for (;;) {
-    const length = fs.readSync(descriptor, chunk, 0, chunk.length, position);
+    const capacity =
+      maximumBytes === null
+        ? chunk.length
+        : Math.min(chunk.length, maximumBytes - position + 1);
+    if (capacity <= 0)
+      throw new Error("Capture executable exceeds its maximum byte length.");
+    const length = fs.readSync(descriptor, chunk, 0, capacity, position);
     if (length === 0) break;
     hash.update(chunk.subarray(0, length));
     position += length;
+    if (maximumBytes !== null && position > maximumBytes)
+      throw new Error("Capture executable exceeds its maximum byte length.");
   }
   return `sha256:${hash.digest("hex")}`;
 };
@@ -294,37 +326,3 @@ const physicalVersion = (status: fs.BigIntStats): string =>
 
 const physicalFileIdentity = (status: fs.BigIntStats): string =>
   `${status.dev}\0${status.ino}`;
-
-const safePhysicalFileIdentity = (descriptor: number): string | null => {
-  try {
-    const opened = fs.fstatSync(descriptor, { bigint: true });
-    return opened.isFile() ? physicalFileIdentity(opened) : null;
-  } catch {
-    return null;
-  }
-};
-
-const removeCreatedCaptureExecutable = (
-  file: string,
-  expectedDirectory: IPhysicalDirectory,
-  expectedIdentity: string,
-): void => {
-  try {
-    const directory = physicalDirectory(
-      path.dirname(file),
-      "capture executable directory",
-    );
-    const resident = fs.lstatSync(file, { bigint: true });
-    if (
-      directory.path === expectedDirectory.path &&
-      directory.real === expectedDirectory.real &&
-      directory.identity === expectedDirectory.identity &&
-      resident.isSymbolicLink() === false &&
-      resident.isFile() &&
-      physicalFileIdentity(resident) === expectedIdentity
-    )
-      fs.rmSync(file, { force: true });
-  } catch {
-    // A missing or changed pathname is not this failed creation.
-  }
-};

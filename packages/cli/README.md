@@ -71,8 +71,9 @@ the package version, browser revision, executable path, and executable digest.
 Each package/browser generation owns one immutable no-overwrite receipt slot.
 The current metadata key is read through one ancestry-bound descriptor snapshot;
 when that exact slot is absent, the old fixed receipt remains the untouched
-migration fallback. Handled write failures remove only their exact partial,
-while an unowned crash residue remains for explicit manual adjudication.
+migration fallback. Receipt descriptors enforce their byte ceiling before every
+hash, and any failed final-slot creation remains visible for explicit manual
+adjudication instead of risking pathname cleanup of a successor.
 `capture:doctor` launches that exact executable, requires WebGL, captures a
 canvas, and decodes the PNG. Proxy and offline mirror settings use Playwright's
 standard `HTTPS_PROXY`, `PLAYWRIGHT_DOWNLOAD_HOST`, and

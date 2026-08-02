@@ -422,6 +422,13 @@ export const test_cli_scaffold = async (): Promise<void> => {
         "createCaptureExecutableSnapshot(file, bytes)",
       ) &&
       files["scripts/capture-browser.ts"]!.includes(
+        "CAPTURE_INSTALL_RECEIPT_MAX_BYTES",
+      ) &&
+      files["scripts/captureExecutableSnapshot.ts"]!.includes("maximumBytes") &&
+      files["scripts/captureExecutableSnapshot.ts"]!.includes(
+        "removeCreatedCaptureExecutable",
+      ) === false &&
+      files["scripts/capture-browser.ts"]!.includes(
         "fs.renameSync(temporary, file)",
       ) === false &&
       files["scripts/capture-browser.ts"]!.includes(
@@ -3148,18 +3155,27 @@ export const test_cli_scaffold = async (): Promise<void> => {
       "capture",
       "install-receipts",
     );
-    captureBrowserModule.publishCaptureInstallReceipt(
-      partialReceiptProject,
-      nextCaptureReceipt,
-      () => undefined,
+    const partialReceiptRetryRejected = throwsWith(
+      () =>
+        captureBrowserModule.publishCaptureInstallReceipt(
+          partialReceiptProject,
+          nextCaptureReceipt,
+          () => undefined,
+        ),
+      "Manually adjudicate",
     );
     TestValidator.predicate(
-      "capture install removes only its exact handled partial and permits retry",
+      "capture install preserves a handled partial for explicit adjudication",
       partialReceiptWriteFailed &&
         partialReceiptRejected &&
+        partialReceiptRetryRejected &&
         fs.readdirSync(partialReceiptDirectory).length === 1 &&
-        captureBrowserModule.readCaptureInstallReceipt(partialReceiptProject)
-          .browser.revision === installedCaptureMetadata.browser.revision,
+        fs.statSync(
+          path.join(
+            partialReceiptDirectory,
+            captureReceiptGenerationName(nextCaptureReceipt),
+          ),
+        ).size === 1,
     );
 
     const crashReceiptProject = path.join(base, "crash-receipt-project");
@@ -3187,6 +3203,78 @@ export const test_cli_scaffold = async (): Promise<void> => {
           ),
         "Manually adjudicate",
       ) && fs.readFileSync(crashReceiptPath).equals(crashReceiptBytes),
+    );
+
+    const oversizedReceiptProject = path.join(
+      base,
+      "oversized-receipt-project",
+    );
+    const oversizedReceiptDirectory = path.join(
+      oversizedReceiptProject,
+      ".automovie",
+      "capture",
+      "install-receipts",
+    );
+    const oversizedReceiptPath = path.join(
+      oversizedReceiptDirectory,
+      captureReceiptGenerationName(nextCaptureReceipt),
+    );
+    const oversizedReceiptBytes = Buffer.alloc(64 * 1024 + 1, 0x20);
+    fs.mkdirSync(oversizedReceiptDirectory, { recursive: true });
+    fs.writeFileSync(oversizedReceiptPath, oversizedReceiptBytes);
+    const oversizedReceiptDescriptors = new Set<number>();
+    let oversizedReceiptRead = false;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+      if (
+        typeof file !== "number" &&
+        flags === "r" &&
+        path.resolve(file.toString()) === oversizedReceiptPath
+      )
+        oversizedReceiptDescriptors.add(descriptor);
+      return descriptor;
+    }) as typeof fs.openSync;
+    mutableFs.readSync = ((...args: unknown[]): number => {
+      if (
+        typeof args[0] === "number" &&
+        oversizedReceiptDescriptors.has(args[0])
+      )
+        oversizedReceiptRead = true;
+      return Reflect.apply(nativeRead, mutableFs, args) as number;
+    }) as typeof fs.readSync;
+    let oversizedReceiptReadRejected = false;
+    let oversizedReceiptPublishRejected = false;
+    try {
+      oversizedReceiptReadRejected = throwsWith(
+        () =>
+          captureBrowserModule.readCaptureInstallReceipt(
+            oversizedReceiptProject,
+          ),
+        "exceeds its maximum byte length",
+      );
+      oversizedReceiptPublishRejected = throwsWith(
+        () =>
+          captureBrowserModule.publishCaptureInstallReceipt(
+            oversizedReceiptProject,
+            nextCaptureReceipt,
+            () => undefined,
+          ),
+        "Manually adjudicate",
+      );
+    } finally {
+      mutableFs.openSync = nativeOpen;
+      mutableFs.readSync = nativeRead;
+    }
+    TestValidator.predicate(
+      "capture install bounds current and competing receipt descriptors before hashing",
+      oversizedReceiptReadRejected &&
+        oversizedReceiptPublishRejected &&
+        oversizedReceiptRead === false &&
+        fs.statSync(oversizedReceiptPath).size === oversizedReceiptBytes.length,
     );
 
     const receiptTargetSwapProject = path.join(
