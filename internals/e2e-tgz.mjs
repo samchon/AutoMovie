@@ -608,6 +608,54 @@ assert(
 );
 const phase = process.argv[2];
 if (phase === "review") {
+  const packagedAssetReviewViews = [
+    {
+      angleDeg: 0,
+      elevationDeg: 15,
+      pose: "rest",
+      pass: "beauty",
+    },
+    {
+      angleDeg: 90,
+      elevationDeg: 15,
+      pose: "rest",
+      pass: "beauty",
+    },
+    {
+      angleDeg: 180,
+      elevationDeg: 15,
+      pose: "rest",
+      pass: "beauty",
+    },
+    {
+      angleDeg: 270,
+      elevationDeg: 15,
+      pose: "rest",
+      pass: "beauty",
+    },
+    {
+      angleDeg: 0,
+      elevationDeg: 65,
+      pose: "rest",
+      pass: "outline",
+    },
+  ];
+  for (const view of packagedAssetReviewViews) {
+    const captured = await app.captureFrame({
+      target: { kind: "asset", id: "army-far", ...view },
+    });
+    assert(
+      \`starter-asset-view-captured:\${view.pose}:\${view.angleDeg}:\${view.elevationDeg}:\${view.pass}\`,
+      captured.captured &&
+        captured.reviewTarget?.kind === "asset" &&
+        captured.reviewTarget.id === "army-far" &&
+        captured.receipt !== null &&
+        captured.frame?.width === 16 &&
+        captured.frame.height === 16 &&
+        captured.diagnostics.every((item) => item.category !== "error"),
+      JSON.stringify(captured.diagnostics),
+    );
+  }
   const before = inspectAutoMovieProduction(services);
   assert(
     "starter-review-gate-is-enforced",

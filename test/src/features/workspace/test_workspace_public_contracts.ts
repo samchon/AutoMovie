@@ -602,6 +602,243 @@ const launcherBundleContract = (
   };
 };
 
+/** Bind the packaged asset captures to the canonical review-view inventory. */
+const packagedAssetReviewContract = (
+  tgzSource: string,
+  reviewSource: string,
+): {
+  aligned: boolean;
+  canonical: {
+    declarations: number;
+    spreads: number;
+    views: Array<Array<[string, string]>>;
+  };
+  captureLoops: Array<{
+    assertion: {
+      condition: string;
+      detail: string;
+      name: string;
+    } | null;
+    bodyStatementCount: number;
+    capture: string | null;
+    expression: string;
+    initializer: string;
+  }>;
+  embeddedScripts: number;
+  packaged: {
+    declarations: number;
+    spreads: number;
+    views: Array<Array<[string, string]>>;
+  };
+  reviewFlows: Array<{
+    before: number | null;
+    capture: number | null;
+    views: number | null;
+  }>;
+  reviewPhases: number;
+} => {
+  interface IArrayContract {
+    declarations: number;
+    spreads: number;
+    views: Array<Array<[string, string]>>;
+  }
+  const parse = (file: string, source: string, kind: ts.ScriptKind) =>
+    ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, kind);
+  const arrayContract = (
+    arrays: ts.ArrayLiteralExpression[],
+    parsed: ts.SourceFile,
+    omitId: boolean,
+  ): IArrayContract => {
+    const compact = (node: ts.Node): string =>
+      node.getText(parsed).replace(/\s+/g, "");
+    let spreads = 0;
+    const views: Array<Array<[string, string]>> = [];
+    for (const array of arrays)
+      for (const element of array.elements) {
+        if (ts.isSpreadElement(element)) {
+          ++spreads;
+          continue;
+        }
+        if (ts.isObjectLiteralExpression(element) === false) {
+          views.push([[compact(element), compact(element)]]);
+          continue;
+        }
+        views.push(
+          element.properties.flatMap((property): Array<[string, string]> => {
+            if (
+              ts.isPropertyAssignment(property) &&
+              (ts.isIdentifier(property.name) ||
+                ts.isStringLiteralLike(property.name))
+            ) {
+              if (omitId && property.name.text === "id") return [];
+              return [[property.name.text, compact(property.initializer)]];
+            }
+            return [[compact(property), compact(property)]];
+          }),
+        );
+      }
+    return { declarations: arrays.length, spreads, views };
+  };
+
+  const reviewParsed = parse(
+    "AutoMovieProductionReviewService.ts",
+    reviewSource,
+    ts.ScriptKind.TS,
+  );
+  const canonicalArrays: ts.ArrayLiteralExpression[] = [];
+  const visitCanonical = (node: ts.Node): void => {
+    if (
+      ts.isVariableDeclaration(node) &&
+      ts.isIdentifier(node.name) &&
+      node.name.text === "required" &&
+      node.type?.getText(reviewParsed) === "IRequiredAssetReviewView[]" &&
+      node.initializer !== undefined &&
+      ts.isArrayLiteralExpression(node.initializer)
+    )
+      canonicalArrays.push(node.initializer);
+    ts.forEachChild(node, visitCanonical);
+  };
+  visitCanonical(reviewParsed);
+  const canonical = arrayContract(canonicalArrays, reviewParsed, true);
+
+  const tgzParsed = parse("internals/e2e-tgz.mjs", tgzSource, ts.ScriptKind.JS);
+  const embeddedSources: string[] = [];
+  for (const statement of tgzParsed.statements) {
+    if (ts.isVariableStatement(statement) === false) continue;
+    for (const declaration of statement.declarationList.declarations)
+      if (
+        ts.isIdentifier(declaration.name) &&
+        declaration.name.text === "STARTER_VERIFY_SOURCE" &&
+        declaration.initializer !== undefined &&
+        ts.isNoSubstitutionTemplateLiteral(declaration.initializer)
+      )
+        embeddedSources.push(declaration.initializer.text);
+  }
+  const packagedArrays: Array<{
+    array: ts.ArrayLiteralExpression;
+    parsed: ts.SourceFile;
+  }> = [];
+  const captureLoops: Array<{
+    assertion: {
+      condition: string;
+      detail: string;
+      name: string;
+    } | null;
+    bodyStatementCount: number;
+    capture: string | null;
+    expression: string;
+    initializer: string;
+  }> = [];
+  const reviewFlows: Array<{
+    before: number | null;
+    capture: number | null;
+    views: number | null;
+  }> = [];
+  let reviewPhases = 0;
+  for (const embedded of embeddedSources) {
+    const parsed = parse(
+      "verify-packaged-starter.mjs",
+      embedded,
+      ts.ScriptKind.JS,
+    );
+    const compact = (node: ts.Node): string =>
+      node.getText(parsed).replace(/\s+/g, "");
+    for (const statement of parsed.statements) {
+      if (
+        ts.isIfStatement(statement) === false ||
+        compact(statement.expression) !== 'phase==="review"' ||
+        ts.isBlock(statement.thenStatement) === false
+      )
+        continue;
+      ++reviewPhases;
+      const flow = {
+        before: null as number | null,
+        capture: null as number | null,
+        views: null as number | null,
+      };
+      statement.thenStatement.statements.forEach((action, index) => {
+        if (ts.isVariableStatement(action))
+          for (const declaration of action.declarationList.declarations) {
+            if (
+              ts.isIdentifier(declaration.name) &&
+              declaration.name.text === "packagedAssetReviewViews" &&
+              declaration.initializer !== undefined &&
+              ts.isArrayLiteralExpression(declaration.initializer)
+            ) {
+              flow.views = index;
+              packagedArrays.push({ array: declaration.initializer, parsed });
+            }
+            if (
+              ts.isIdentifier(declaration.name) &&
+              declaration.name.text === "before"
+            )
+              flow.before = index;
+          }
+        if (
+          ts.isForOfStatement(action) === false ||
+          compact(action.expression) !== "packagedAssetReviewViews"
+        )
+          return;
+        flow.capture = index;
+        const body = ts.isBlock(action.statement)
+          ? action.statement.statements
+          : ts.factory.createNodeArray([action.statement]);
+        const first = body[0];
+        const second = body[1];
+        const captureDeclaration =
+          first !== undefined && ts.isVariableStatement(first)
+            ? first.declarationList.declarations[0]
+            : undefined;
+        const assertionCall =
+          second !== undefined &&
+          ts.isExpressionStatement(second) &&
+          ts.isCallExpression(second.expression) &&
+          ts.isIdentifier(second.expression.expression) &&
+          second.expression.expression.text === "assert"
+            ? second.expression
+            : undefined;
+        captureLoops.push({
+          assertion:
+            assertionCall?.arguments.length === 3
+              ? {
+                  condition: compact(assertionCall.arguments[1]!),
+                  detail: compact(assertionCall.arguments[2]!),
+                  name: compact(assertionCall.arguments[0]!),
+                }
+              : null,
+          bodyStatementCount: body.length,
+          capture:
+            captureDeclaration?.initializer === undefined
+              ? null
+              : compact(captureDeclaration.initializer),
+          expression: compact(action.expression),
+          initializer: compact(action.initializer),
+        });
+      });
+      reviewFlows.push(flow);
+    }
+  }
+  const packaged = packagedArrays.reduce<IArrayContract>(
+    (output, entry) => {
+      const current = arrayContract([entry.array], entry.parsed, false);
+      output.declarations += current.declarations;
+      output.spreads += current.spreads;
+      output.views.push(...current.views);
+      return output;
+    },
+    { declarations: 0, spreads: 0, views: [] },
+  );
+  return {
+    aligned: JSON.stringify(packaged.views) === JSON.stringify(canonical.views),
+    canonical,
+    captureLoops,
+    embeddedScripts: embeddedSources.length,
+    packaged,
+    reviewFlows,
+    reviewPhases,
+  };
+};
+
 /** A source-level template interpolation without a live template expression. */
 const templateExpression = (expression: string): string =>
   "$" + "{" + expression + "}";
@@ -730,6 +967,13 @@ export const test_workspace_public_contracts = (): void => {
     "mcp",
     "src",
     "AutoMovieApplication.ts",
+  );
+  const mcpProductionReviewService = readPackageFile(
+    "packages",
+    "mcp",
+    "src",
+    "production",
+    "AutoMovieProductionReviewService.ts",
   );
   const tgzE2e = readPackageFile("internals", "e2e-tgz.mjs");
   const playgroundCaptureSmoke = readPackageFile(
@@ -1750,6 +1994,73 @@ export const test_workspace_public_contracts = (): void => {
         ],
       },
     })),
+  );
+  const canonicalAssetViews: Array<Array<[string, string]>> = [
+    [
+      ["angleDeg", "0"],
+      ["elevationDeg", "15"],
+      ["pose", '"rest"'],
+      ["pass", '"beauty"'],
+    ],
+    [
+      ["angleDeg", "90"],
+      ["elevationDeg", "15"],
+      ["pose", '"rest"'],
+      ["pass", '"beauty"'],
+    ],
+    [
+      ["angleDeg", "180"],
+      ["elevationDeg", "15"],
+      ["pose", '"rest"'],
+      ["pass", '"beauty"'],
+    ],
+    [
+      ["angleDeg", "270"],
+      ["elevationDeg", "15"],
+      ["pose", '"rest"'],
+      ["pass", '"beauty"'],
+    ],
+    [
+      ["angleDeg", "0"],
+      ["elevationDeg", "65"],
+      ["pose", '"rest"'],
+      ["pass", '"outline"'],
+    ],
+  ];
+  TestValidator.equals(
+    "packaged review captures every canonical unrigged asset view",
+    packagedAssetReviewContract(tgzE2e, mcpProductionReviewService),
+    {
+      aligned: true,
+      canonical: {
+        declarations: 1,
+        spreads: 1,
+        views: canonicalAssetViews,
+      },
+      captureLoops: [
+        {
+          assertion: {
+            condition:
+              'captured.captured&&captured.reviewTarget?.kind==="asset"&&captured.reviewTarget.id==="army-far"&&captured.receipt!==null&&captured.frame?.width===16&&captured.frame.height===16&&captured.diagnostics.every((item)=>item.category!=="error")',
+            detail: "JSON.stringify(captured.diagnostics)",
+            name: "`starter-asset-view-captured:${view.pose}:${view.angleDeg}:${view.elevationDeg}:${view.pass}`",
+          },
+          bodyStatementCount: 2,
+          capture:
+            'awaitapp.captureFrame({target:{kind:"asset",id:"army-far",...view},})',
+          expression: "packagedAssetReviewViews",
+          initializer: "constview",
+        },
+      ],
+      embeddedScripts: 1,
+      packaged: {
+        declarations: 1,
+        spreads: 0,
+        views: canonicalAssetViews,
+      },
+      reviewFlows: [{ before: 2, capture: 1, views: 0 }],
+      reviewPhases: 1,
+    },
   );
   const mcpMethods = [
     ...mcpApplication.matchAll(
