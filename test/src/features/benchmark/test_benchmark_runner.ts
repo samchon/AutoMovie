@@ -1253,11 +1253,8 @@ const exerciseInputAndFilesystemFences = async (
   let cleanupOnlyFailure: unknown = null;
   let combinedProbeFailure: unknown = null;
   Client.prototype.close = async function (): Promise<void> {
-    try {
-      await Reflect.apply(nativeClientClose, this, []);
-    } finally {
-      throw cleanupFailure;
-    }
+    await Reflect.apply(nativeClientClose, this, []);
+    throw cleanupFailure;
   };
   try {
     cleanupOnlyFailure = await rejectedValue(() =>

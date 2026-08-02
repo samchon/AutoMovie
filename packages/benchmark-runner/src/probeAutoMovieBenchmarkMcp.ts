@@ -97,19 +97,22 @@ export const createProcessAutoMovieBenchmarkMcpTarget = (
       inner.stderr?.on("data", (chunk: Buffer | string) => {
         stderr += chunk.toString();
       });
-      let probeFailure: { error: unknown } | undefined;
+      let probeResult:
+        | { success: true; value: IAutoMovieBenchmarkMcpSession }
+        | { error: unknown; success: false };
       try {
-        try {
-          await client.connect(transport, { timeout: startupTimeoutMs });
-          const server = client.getServerVersion();
-          const listed = await client.listTools(undefined, {
-            timeout: input.timeoutMs,
-          });
-          if (server === undefined || transport.protocolVersion === null)
-            throw new Error(
-              "MCP initialize completed without protocol or server identity.",
-            );
-          return {
+        await client.connect(transport, { timeout: startupTimeoutMs });
+        const server = client.getServerVersion();
+        const listed = await client.listTools(undefined, {
+          timeout: input.timeoutMs,
+        });
+        if (server === undefined || transport.protocolVersion === null)
+          throw new Error(
+            "MCP initialize completed without protocol or server identity.",
+          );
+        probeResult = {
+          success: true,
+          value: {
             protocolVersion: transport.protocolVersion,
             serverName: server.name,
             serverVersion: server.version,
@@ -124,29 +127,35 @@ export const createProcessAutoMovieBenchmarkMcpTarget = (
                 "utf8",
               ),
             })),
-          };
-        } catch (error) {
-          const detail = stderr.trim();
-          throw new Error(
+          },
+        };
+      } catch (error) {
+        const detail = stderr.trim();
+        probeResult = {
+          error: new Error(
             `MCP probe "${input.provenance}" failed: ${messageOf(error)}${
               detail.length === 0 ? "" : `; stderr: ${detail}`
             }`,
-          );
-        }
+          ),
+          success: false,
+        };
+      }
+      let cleanupFailure: { error: unknown } | undefined;
+      try {
+        await client.close();
       } catch (error) {
-        probeFailure = { error };
-        throw error;
-      } finally {
-        try {
-          await client.close();
-        } catch (cleanupError) {
-          if (probeFailure === undefined) throw cleanupError;
+        cleanupFailure = { error };
+      }
+      if (probeResult.success === false) {
+        if (cleanupFailure !== undefined)
           throw new AggregateError(
-            [probeFailure.error, cleanupError],
+            [probeResult.error, cleanupFailure.error],
             `MCP probe "${input.provenance}" cleanup failed after the probe failed.`,
           );
-        }
+        throw probeResult.error;
       }
+      if (cleanupFailure !== undefined) throw cleanupFailure.error;
+      return probeResult.value;
     },
   };
 };

@@ -39,6 +39,9 @@ const throwsWith = (fn: () => unknown, message: string): boolean => {
   }
 };
 
+const templateExpression = (expression: string): string =>
+  "$" + "{" + expression + "}";
+
 interface GeneratedViewerResponse {
   body: string;
   statusCode: number;
@@ -562,7 +565,9 @@ export const test_cli_scaffold = async (): Promise<void> => {
       policy: {
         bodies: [
           [
-            "try{awaitcleanup();}catch(cleanupError){if(failure===undefined)throwcleanupError;thrownewAggregateError([failure.error,cleanupError],`${resource}cleanupfailedafterthecapturedoctorfailed.`,);}",
+            "try{awaitcleanup();}catch(cleanupError){if(failure===undefined)throwcleanupError;thrownewAggregateError([failure.error,cleanupError],`" +
+              templateExpression("resource") +
+              "cleanupfailedafterthecapturedoctorfailed.`,);}",
           ],
         ],
         count: 1,
