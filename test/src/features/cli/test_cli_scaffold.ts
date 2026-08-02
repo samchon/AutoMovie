@@ -504,11 +504,30 @@ export const test_cli_scaffold = async (): Promise<void> => {
         kokoroRuntimeSource.match(
           /createTextSplitter: \(\) => new (\w+)\(\)/,
         )?.[1] ?? null,
+      counts: {
+        create: (
+          dialogueSynthesisSource.match(
+            /const dialogueText = loadedRuntime\.createTextSplitter\(\);/g,
+          ) ?? []
+        ).length,
+        push: (
+          dialogueSynthesisSource.match(/dialogueText\.push\(line\.text\);/g) ??
+          []
+        ).length,
+        close: (
+          dialogueSynthesisSource.match(/dialogueText\.close\(\);/g) ?? []
+        ).length,
+        consumedStream: (
+          dialogueSynthesisSource.match(
+            /for await \(const chunk of loadedRuntime\.runtime\.stream\(\s*dialogueText,/g,
+          ) ?? []
+        ).length,
+      },
       lifecycle: [
         ["create", "const dialogueText = loadedRuntime.createTextSplitter();"],
         ["push", "dialogueText.push(line.text);"],
         ["close", "dialogueText.close();"],
-        ["stream", "loadedRuntime.runtime.stream("],
+        ["stream", "for await (const chunk of loadedRuntime.runtime.stream("],
       ]
         .filter(([, marker]) => dialogueSynthesisSource.includes(marker!))
         .sort(
@@ -530,6 +549,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       streamInputType: "IKokoroTextSplitter",
       importedSplitter: "TextSplitterStream",
       constructedSplitter: "TextSplitterStream",
+      counts: { create: 1, push: 1, close: 1, consumedStream: 1 },
       lifecycle: ["create", "push", "close", "stream"],
       pushedText: "line.text",
       streamedInput: "dialogueText",
