@@ -8498,7 +8498,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       "owned.txt",
     );
     let lateCreateDescriptor = -1;
-    let lateCreateReads = 0;
+    let lateCreateReadbacks = 0;
     let lateCreateMutated = false;
     mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
       const descriptor = Reflect.apply(nativeOpen, mutableFs, [
@@ -8516,7 +8516,12 @@ export const test_cli_scaffold = async (): Promise<void> => {
     }) as typeof fs.openSync;
     mutableFs.readSync = ((...args: unknown[]): number => {
       const length = Reflect.apply(nativeRead, mutableFs, args) as number;
-      if (args[0] === lateCreateDescriptor && ++lateCreateReads === 2) {
+      if (
+        args[0] === lateCreateDescriptor &&
+        (args[4] as number) + length ===
+          Buffer.byteLength("scaffold generation") &&
+        ++lateCreateReadbacks === 2
+      ) {
         nativeWriteFile(lateCreateMutationTarget, "foreign! generation");
         lateCreateMutated = true;
       }
@@ -8552,7 +8557,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
     fs.mkdirSync(lateForceMutationBase);
     fs.writeFileSync(lateForceMutationTarget, "original generation");
     let lateForceDescriptor = -1;
-    let lateForceReads = 0;
+    let lateForceReadbacks = 0;
     let lateForceMutated = false;
     mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
       const descriptor = Reflect.apply(nativeOpen, mutableFs, [
@@ -8570,7 +8575,12 @@ export const test_cli_scaffold = async (): Promise<void> => {
     }) as typeof fs.openSync;
     mutableFs.readSync = ((...args: unknown[]): number => {
       const length = Reflect.apply(nativeRead, mutableFs, args) as number;
-      if (args[0] === lateForceDescriptor && ++lateForceReads === 2) {
+      if (
+        args[0] === lateForceDescriptor &&
+        (args[4] as number) + length ===
+          Buffer.byteLength("scaffold generation") &&
+        ++lateForceReadbacks === 2
+      ) {
         nativeWriteFile(lateForceMutationTarget, "foreign! generation");
         lateForceMutated = true;
       }
