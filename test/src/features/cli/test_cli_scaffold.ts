@@ -7993,6 +7993,104 @@ export const test_cli_scaffold = async (): Promise<void> => {
       ) && fs.existsSync(collidingScaffold) === false,
     );
 
+    const nonemptySuccessorBase = path.join(
+      base,
+      "nonempty-successor-scaffold",
+    );
+    const parkedEmptyScaffoldBase = `${nonemptySuccessorBase}.parked`;
+    let nonemptyBaseSuccessorInstalled = false;
+    mutableFs.mkdirSync = ((directory, ...args: unknown[]): unknown => {
+      const result = Reflect.apply(nativeMkdir, mutableFs, [
+        directory,
+        ...args,
+      ]);
+      if (
+        nonemptyBaseSuccessorInstalled === false &&
+        path.resolve(directory.toString()) === nonemptySuccessorBase
+      ) {
+        nativeRename(nonemptySuccessorBase, parkedEmptyScaffoldBase);
+        nativeMkdir(nonemptySuccessorBase);
+        nativeWriteFile(
+          path.join(nonemptySuccessorBase, "foreign.txt"),
+          "foreign base generation",
+        );
+        nonemptyBaseSuccessorInstalled = true;
+      }
+      return result;
+    }) as typeof fs.mkdirSync;
+    let nonemptyBaseSuccessorRejected = false;
+    try {
+      nonemptyBaseSuccessorRejected = throws(() =>
+        writeFiles(nonemptySuccessorBase, { "owned.txt": "scaffold bytes" }),
+      );
+    } finally {
+      mutableFs.mkdirSync = nativeMkdir;
+    }
+    TestValidator.predicate(
+      "scaffold creation rejects a non-empty base successor after mkdir",
+      nonemptyBaseSuccessorInstalled &&
+        nonemptyBaseSuccessorRejected &&
+        fs.readFileSync(
+          path.join(nonemptySuccessorBase, "foreign.txt"),
+          "utf8",
+        ) === "foreign base generation" &&
+        fs.readdirSync(parkedEmptyScaffoldBase).length === 0 &&
+        fs.existsSync(path.join(nonemptySuccessorBase, "owned.txt")) === false,
+    );
+
+    const nonemptyParentSuccessorBase = path.join(
+      base,
+      "nonempty-parent-successor-scaffold",
+    );
+    const nonemptyParentSuccessor = path.join(
+      nonemptyParentSuccessorBase,
+      "nested",
+    );
+    const parkedEmptyParent = `${nonemptyParentSuccessor}.parked`;
+    fs.mkdirSync(nonemptyParentSuccessorBase);
+    let nonemptyParentSuccessorInstalled = false;
+    mutableFs.mkdirSync = ((directory, ...args: unknown[]): unknown => {
+      const result = Reflect.apply(nativeMkdir, mutableFs, [
+        directory,
+        ...args,
+      ]);
+      if (
+        nonemptyParentSuccessorInstalled === false &&
+        path.resolve(directory.toString()) === nonemptyParentSuccessor
+      ) {
+        nativeRename(nonemptyParentSuccessor, parkedEmptyParent);
+        nativeMkdir(nonemptyParentSuccessor);
+        nativeWriteFile(
+          path.join(nonemptyParentSuccessor, "foreign.txt"),
+          "foreign parent generation",
+        );
+        nonemptyParentSuccessorInstalled = true;
+      }
+      return result;
+    }) as typeof fs.mkdirSync;
+    let nonemptyParentSuccessorRejected = false;
+    try {
+      nonemptyParentSuccessorRejected = throws(() =>
+        writeFiles(nonemptyParentSuccessorBase, {
+          "nested/owned.txt": "scaffold bytes",
+        }),
+      );
+    } finally {
+      mutableFs.mkdirSync = nativeMkdir;
+    }
+    TestValidator.predicate(
+      "scaffold creation rejects a non-empty descendant successor after mkdir",
+      nonemptyParentSuccessorInstalled &&
+        nonemptyParentSuccessorRejected &&
+        fs.readFileSync(
+          path.join(nonemptyParentSuccessor, "foreign.txt"),
+          "utf8",
+        ) === "foreign parent generation" &&
+        fs.readdirSync(parkedEmptyParent).length === 0 &&
+        fs.existsSync(path.join(nonemptyParentSuccessor, "owned.txt")) ===
+          false,
+    );
+
     const linkedScaffoldOutside = path.join(base, "linked-scaffold-outside");
     const linkedScaffoldBase = path.join(base, "linked-scaffold-base");
     fs.mkdirSync(linkedScaffoldOutside);
@@ -8026,6 +8124,25 @@ export const test_cli_scaffold = async (): Promise<void> => {
         ),
       ) &&
         fs.existsSync(path.join(linkedParentOutside, "escaped.txt")) === false,
+    );
+
+    const linkedFileScaffold = path.join(base, "linked-file-scaffold");
+    const linkedFileOutside = path.join(base, "linked-file-outside.txt");
+    const linkedFileTarget = path.join(linkedFileScaffold, "owned.txt");
+    fs.mkdirSync(linkedFileScaffold);
+    fs.writeFileSync(linkedFileOutside, "outside file generation");
+    fs.symlinkSync(linkedFileOutside, linkedFileTarget, "file");
+    TestValidator.predicate(
+      "force refuses a linked final file without changing its referent",
+      throws(() =>
+        writeFiles(
+          linkedFileScaffold,
+          { "owned.txt": "replacement" },
+          { force: true },
+        ),
+      ) &&
+        fs.readFileSync(linkedFileOutside, "utf8") ===
+          "outside file generation",
     );
 
     const hardLinkedScaffold = path.join(base, "hard-linked-scaffold");
@@ -8216,6 +8333,358 @@ export const test_cli_scaffold = async (): Promise<void> => {
         fs.existsSync(parentRaceTarget) === false &&
         fs.readFileSync(path.join(parkedParentRace, "created.txt")).length ===
           0,
+    );
+
+    const partialWriteBase = path.join(base, "partial-write-scaffold");
+    const partialWriteTarget = path.join(partialWriteBase, "partial.txt");
+    let scaffoldWriteCalls = 0;
+    mutableFs.writeSync = ((...args: unknown[]): number => {
+      const [descriptor, buffer, offset, length, position] = args as [
+        number,
+        Uint8Array,
+        number,
+        number,
+        number,
+      ];
+      scaffoldWriteCalls++;
+      return scaffoldWriteCalls === 1
+        ? (Reflect.apply(nativeWrite, mutableFs, [
+            descriptor,
+            buffer,
+            offset,
+            Math.min(1, length),
+            position,
+          ]) as number)
+        : 0;
+    }) as typeof fs.writeSync;
+    let partialWriteRejected = false;
+    try {
+      partialWriteRejected = throws(() =>
+        writeFiles(partialWriteBase, { "partial.txt": "partial evidence" }),
+      );
+    } finally {
+      mutableFs.writeSync = nativeWrite;
+    }
+    TestValidator.predicate(
+      "a stalled scaffold write leaves its exact partial final evidence",
+      partialWriteRejected &&
+        fs.readFileSync(partialWriteTarget, "utf8") === "p",
+    );
+
+    const fsyncFailureBase = path.join(base, "fsync-failure-scaffold");
+    const fsyncFailureTarget = path.join(fsyncFailureBase, "complete.txt");
+    let scaffoldFsyncFailed = false;
+    mutableFs.fsyncSync = ((descriptor: number): void => {
+      Reflect.apply(nativeFsync, mutableFs, [descriptor]);
+      scaffoldFsyncFailed = true;
+      throw Object.assign(new Error("scaffold fsync failed"), { code: "EIO" });
+    }) as typeof fs.fsyncSync;
+    let fsyncFailureRejected = false;
+    try {
+      fsyncFailureRejected = throws(() =>
+        writeFiles(fsyncFailureBase, { "complete.txt": "complete evidence" }),
+      );
+    } finally {
+      mutableFs.fsyncSync = nativeFsync;
+    }
+    TestValidator.predicate(
+      "a scaffold fsync failure leaves its complete final evidence",
+      scaffoldFsyncFailed &&
+        fsyncFailureRejected &&
+        fs.readFileSync(fsyncFailureTarget, "utf8") === "complete evidence",
+    );
+
+    const readFailureBase = path.join(base, "read-failure-scaffold");
+    const readFailureTarget = path.join(readFailureBase, "complete.txt");
+    let scaffoldReadStopped = false;
+    mutableFs.readSync = ((..._args: unknown[]): number => {
+      scaffoldReadStopped = true;
+      return 0;
+    }) as typeof fs.readSync;
+    let readFailureRejected = false;
+    try {
+      readFailureRejected = throws(() =>
+        writeFiles(readFailureBase, { "complete.txt": "read evidence" }),
+      );
+    } finally {
+      mutableFs.readSync = nativeRead;
+    }
+    TestValidator.predicate(
+      "a scaffold readback stall leaves its complete final evidence",
+      scaffoldReadStopped &&
+        readFailureRejected &&
+        fs.readFileSync(readFailureTarget, "utf8") === "read evidence",
+    );
+
+    const mismatchBase = path.join(base, "read-mismatch-scaffold");
+    const mismatchTarget = path.join(mismatchBase, "complete.txt");
+    let scaffoldReadMismatched = false;
+    mutableFs.readSync = ((...args: unknown[]): number => {
+      const length = Reflect.apply(nativeRead, mutableFs, args) as number;
+      if (length > 0) {
+        const buffer = args[1] as Uint8Array;
+        const offset = args[2] as number;
+        buffer[offset] = (buffer[offset] ?? 0) ^ 0xff;
+        scaffoldReadMismatched = true;
+      }
+      return length;
+    }) as typeof fs.readSync;
+    let mismatchRejected = false;
+    try {
+      mismatchRejected = throws(() =>
+        writeFiles(mismatchBase, { "complete.txt": "mismatch evidence" }),
+      );
+    } finally {
+      mutableFs.readSync = nativeRead;
+    }
+    TestValidator.predicate(
+      "a scaffold readback mismatch leaves its exact final file",
+      scaffoldReadMismatched &&
+        mismatchRejected &&
+        fs.readFileSync(mismatchTarget, "utf8") === "mismatch evidence",
+    );
+
+    const shortReadBase = path.join(base, "short-read-scaffold");
+    const shortReadTarget = path.join(shortReadBase, "complete.txt");
+    let scaffoldShortReads = 0;
+    mutableFs.readSync = ((...args: unknown[]): number => {
+      const [descriptor, buffer, offset, length, position] = args as [
+        number,
+        Uint8Array,
+        number,
+        number,
+        number,
+      ];
+      scaffoldShortReads++;
+      return Reflect.apply(nativeRead, mutableFs, [
+        descriptor,
+        buffer,
+        offset,
+        Math.min(1, length),
+        position,
+      ]) as number;
+    }) as typeof fs.readSync;
+    let shortReadAccepted = false;
+    try {
+      shortReadAccepted = !throws(() =>
+        writeFiles(shortReadBase, { "complete.txt": "short reads" }),
+      );
+    } finally {
+      mutableFs.readSync = nativeRead;
+    }
+    TestValidator.predicate(
+      "scaffold readback completes across positive short reads",
+      shortReadAccepted &&
+        scaffoldShortReads > 2 &&
+        fs.readFileSync(shortReadTarget, "utf8") === "short reads",
+    );
+
+    const closeFailureBase = path.join(base, "close-failure-scaffold");
+    const closeFailureTarget = path.join(closeFailureBase, "complete.txt");
+    let scaffoldCloseFailed = false;
+    mutableFs.closeSync = ((descriptor: number): void => {
+      Reflect.apply(nativeClose, mutableFs, [descriptor]);
+      scaffoldCloseFailed = true;
+      throw Object.assign(new Error("scaffold close failed"), { code: "EIO" });
+    }) as typeof fs.closeSync;
+    let closeFailureRejected = false;
+    try {
+      closeFailureRejected = throws(() =>
+        writeFiles(closeFailureBase, { "complete.txt": "close evidence" }),
+      );
+    } finally {
+      mutableFs.closeSync = nativeClose;
+    }
+    TestValidator.predicate(
+      "a scaffold close failure leaves its exact complete final evidence",
+      scaffoldCloseFailed &&
+        closeFailureRejected &&
+        fs.readFileSync(closeFailureTarget, "utf8") === "close evidence",
+    );
+
+    const doubleFailureBase = path.join(base, "double-failure-scaffold");
+    const doubleFailureTarget = path.join(doubleFailureBase, "partial.txt");
+    mutableFs.writeSync = ((...args: unknown[]): number => {
+      const [descriptor, buffer, offset, _length, position] = args as [
+        number,
+        Uint8Array,
+        number,
+        number,
+        number,
+      ];
+      Reflect.apply(nativeWrite, mutableFs, [
+        descriptor,
+        buffer,
+        offset,
+        1,
+        position,
+      ]);
+      throw Object.assign(new Error("scaffold primary write failed"), {
+        code: "EIO",
+      });
+    }) as typeof fs.writeSync;
+    mutableFs.closeSync = ((descriptor: number): void => {
+      Reflect.apply(nativeClose, mutableFs, [descriptor]);
+      throw Object.assign(new Error("scaffold secondary close failed"), {
+        code: "EIO",
+      });
+    }) as typeof fs.closeSync;
+    let doubleFailurePreserved = false;
+    try {
+      try {
+        writeFiles(doubleFailureBase, { "partial.txt": "double evidence" });
+      } catch (error) {
+        doubleFailurePreserved = (error as Error).message.includes(
+          "scaffold primary write failed",
+        );
+      }
+    } finally {
+      mutableFs.writeSync = nativeWrite;
+      mutableFs.closeSync = nativeClose;
+    }
+    TestValidator.predicate(
+      "a scaffold close error never replaces its primary write failure",
+      doubleFailurePreserved &&
+        fs.readFileSync(doubleFailureTarget, "utf8") === "d",
+    );
+
+    const closeTargetBase = path.join(base, "close-target-scaffold");
+    const closeTarget = path.join(closeTargetBase, "owned.txt");
+    const parkedCloseTarget = path.join(base, "close-target-original.txt");
+    let closeTargetSwapped = false;
+    mutableFs.closeSync = ((descriptor: number): void => {
+      Reflect.apply(nativeClose, mutableFs, [descriptor]);
+      nativeRename(closeTarget, parkedCloseTarget);
+      Reflect.apply(nativeWriteFile, mutableFs, [
+        closeTarget,
+        "successor generation",
+        "utf8",
+      ]);
+      closeTargetSwapped = true;
+    }) as typeof fs.closeSync;
+    let closeTargetRejected = false;
+    try {
+      closeTargetRejected = throws(() =>
+        writeFiles(closeTargetBase, { "owned.txt": "scaffold generation" }),
+      );
+    } finally {
+      mutableFs.closeSync = nativeClose;
+    }
+    TestValidator.predicate(
+      "scaffold materialization rejects a target successor installed at close",
+      closeTargetSwapped &&
+        closeTargetRejected &&
+        fs.readFileSync(closeTarget, "utf8") === "successor generation" &&
+        fs.readFileSync(parkedCloseTarget, "utf8") === "scaffold generation",
+    );
+
+    const forceCloseTargetBase = path.join(base, "force-close-target-scaffold");
+    const forceCloseTarget = path.join(forceCloseTargetBase, "owned.txt");
+    const parkedForceCloseTarget = path.join(
+      base,
+      "force-close-target-original.txt",
+    );
+    fs.mkdirSync(forceCloseTargetBase);
+    fs.writeFileSync(forceCloseTarget, "original generation");
+    let forceCloseTargetSwapped = false;
+    mutableFs.closeSync = ((descriptor: number): void => {
+      Reflect.apply(nativeClose, mutableFs, [descriptor]);
+      nativeRename(forceCloseTarget, parkedForceCloseTarget);
+      nativeWriteFile(forceCloseTarget, "successor generation");
+      forceCloseTargetSwapped = true;
+    }) as typeof fs.closeSync;
+    let forceCloseTargetRejected = false;
+    try {
+      forceCloseTargetRejected = throws(() =>
+        writeFiles(
+          forceCloseTargetBase,
+          { "owned.txt": "forced scaffold generation" },
+          { force: true },
+        ),
+      );
+    } finally {
+      mutableFs.closeSync = nativeClose;
+    }
+    TestValidator.predicate(
+      "forced scaffold materialization rejects a target successor installed at close",
+      forceCloseTargetSwapped &&
+        forceCloseTargetRejected &&
+        fs.readFileSync(forceCloseTarget, "utf8") === "successor generation" &&
+        fs.readFileSync(parkedForceCloseTarget, "utf8") ===
+          "forced scaffold generation",
+    );
+
+    const closeParentBase = path.join(base, "close-parent-scaffold");
+    const closeParent = path.join(closeParentBase, "nested");
+    const closeParentTarget = path.join(closeParent, "owned.txt");
+    const parkedCloseParent = `${closeParent}.parked`;
+    let closeParentSwapped = false;
+    mutableFs.closeSync = ((descriptor: number): void => {
+      Reflect.apply(nativeClose, mutableFs, [descriptor]);
+      nativeRename(closeParent, parkedCloseParent);
+      Reflect.apply(nativeMkdir, mutableFs, [closeParent]);
+      Reflect.apply(nativeWriteFile, mutableFs, [
+        path.join(closeParent, "successor.marker"),
+        "successor",
+        "utf8",
+      ]);
+      closeParentSwapped = true;
+    }) as typeof fs.closeSync;
+    let closeParentRejected = false;
+    try {
+      closeParentRejected = throws(() =>
+        writeFiles(closeParentBase, {
+          "nested/owned.txt": "scaffold generation",
+        }),
+      );
+    } finally {
+      mutableFs.closeSync = nativeClose;
+    }
+    TestValidator.predicate(
+      "scaffold materialization rejects a parent successor installed at close",
+      closeParentSwapped &&
+        closeParentRejected &&
+        fs.readFileSync(path.join(closeParent, "successor.marker"), "utf8") ===
+          "successor" &&
+        fs.readFileSync(path.join(parkedCloseParent, "owned.txt"), "utf8") ===
+          "scaffold generation" &&
+        fs.existsSync(closeParentTarget) === false,
+    );
+
+    const closeRootBase = path.join(base, "close-root-scaffold");
+    const closeRootTarget = path.join(closeRootBase, "owned.txt");
+    const parkedCloseRoot = `${closeRootBase}.parked`;
+    let closeRootSwapped = false;
+    mutableFs.closeSync = ((descriptor: number): void => {
+      Reflect.apply(nativeClose, mutableFs, [descriptor]);
+      nativeRename(closeRootBase, parkedCloseRoot);
+      Reflect.apply(nativeMkdir, mutableFs, [closeRootBase]);
+      Reflect.apply(nativeWriteFile, mutableFs, [
+        path.join(closeRootBase, "successor.marker"),
+        "successor",
+        "utf8",
+      ]);
+      closeRootSwapped = true;
+    }) as typeof fs.closeSync;
+    let closeRootRejected = false;
+    try {
+      closeRootRejected = throws(() =>
+        writeFiles(closeRootBase, { "owned.txt": "scaffold generation" }),
+      );
+    } finally {
+      mutableFs.closeSync = nativeClose;
+    }
+    TestValidator.predicate(
+      "scaffold materialization rejects a root successor installed at close",
+      closeRootSwapped &&
+        closeRootRejected &&
+        fs.readFileSync(
+          path.join(closeRootBase, "successor.marker"),
+          "utf8",
+        ) === "successor" &&
+        fs.readFileSync(path.join(parkedCloseRoot, "owned.txt"), "utf8") ===
+          "scaffold generation" &&
+        fs.existsSync(closeRootTarget) === false,
     );
   } finally {
     fs.rmSync(base, { recursive: true, force: true });

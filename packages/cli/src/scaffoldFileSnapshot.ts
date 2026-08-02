@@ -40,7 +40,7 @@ export const ensureScaffoldBaseDirectory = (
     assertScaffoldPhysicalDirectory(ownership);
     fs.mkdirSync(target);
     assertScaffoldPhysicalDirectory(ownership);
-    ownership = captureScaffoldPhysicalDirectory(target);
+    ownership = captureEmptyScaffoldPhysicalDirectory(target);
   }
   return ownership;
 };
@@ -77,6 +77,30 @@ export const assertScaffoldPhysicalDirectory = (
     throw new Error(`scaffold directory changed generation: ${ownership.path}`);
 };
 
+const captureEmptyScaffoldPhysicalDirectory = (
+  directory: string,
+): IScaffoldPhysicalDirectory => {
+  const ownership = captureScaffoldPhysicalDirectory(directory);
+  const before = fs.lstatSync(ownership.path, { bigint: true });
+  if (physicalIdentity(before) !== ownership.identity)
+    throw new Error(`scaffold directory changed generation: ${ownership.path}`);
+  const entries = fs.readdirSync(ownership.path);
+  const after = fs.lstatSync(ownership.path, { bigint: true });
+  if (
+    physicalIdentity(after) !== ownership.identity ||
+    physicalVersion(after) !== physicalVersion(before)
+  )
+    throw new Error(
+      `scaffold directory changed while inspected: ${ownership.path}`,
+    );
+  assertScaffoldPhysicalDirectory(ownership);
+  if (entries.length !== 0)
+    throw new Error(
+      `new scaffold directory is unexpectedly non-empty: ${ownership.path}`,
+    );
+  return ownership;
+};
+
 /** Resolve and retain every physical descendant directory needed by one file. */
 export const ensureScaffoldFileDirectory = (props: {
   base: IScaffoldPhysicalDirectory;
@@ -108,7 +132,7 @@ export const ensureScaffoldFileDirectory = (props: {
         fs.mkdirSync(target);
         assertScaffoldPhysicalDirectory(props.base);
         assertScaffoldPhysicalDirectory(current);
-        child = captureScaffoldPhysicalDirectory(target);
+        child = captureEmptyScaffoldPhysicalDirectory(target);
       }
       if (inside(props.base.real, child.real) === false)
         throw new Error(
@@ -160,6 +184,7 @@ const createScaffoldFile = (props: {
 }): void => {
   const descriptor = fs.openSync(props.target, "wx+");
   let failed = false;
+  let completedSnapshot: IScaffoldFileSnapshot | null = null;
   try {
     const opened = fs.fstatSync(descriptor, { bigint: true });
     assertOrdinarySingleLinkFile(opened, props.target);
@@ -171,10 +196,9 @@ const createScaffoldFile = (props: {
       throw new Error(`scaffold file changed final size: ${props.target}`);
     assertScaffoldFileMatches(captureScaffoldFile(props.target), completed);
     assertScaffoldDescriptorBytes(descriptor, props.target, props.bytes);
-    assertScaffoldFileMatches(
-      captureScaffoldFile(props.target),
-      fs.fstatSync(descriptor, { bigint: true }),
-    );
+    const finalStatus = fs.fstatSync(descriptor, { bigint: true });
+    completedSnapshot = captureScaffoldFile(props.target);
+    assertScaffoldFileMatches(completedSnapshot, finalStatus);
     assertScaffoldOwnership(props.base, props.parent);
   } catch (error) {
     failed = true;
@@ -182,6 +206,8 @@ const createScaffoldFile = (props: {
   } finally {
     closeScaffoldDescriptor(descriptor, failed);
   }
+  assertScaffoldFileSnapshot(completedSnapshot!);
+  assertScaffoldOwnership(props.base, props.parent);
 };
 
 const overwriteScaffoldFile = (props: {
@@ -193,6 +219,7 @@ const overwriteScaffoldFile = (props: {
 }): void => {
   const descriptor = fs.openSync(props.target, "r+");
   let failed = false;
+  let completedSnapshot: IScaffoldFileSnapshot | null = null;
   try {
     const opened = fs.fstatSync(descriptor, { bigint: true });
     assertOrdinarySingleLinkFile(opened, props.target);
@@ -212,10 +239,9 @@ const overwriteScaffoldFile = (props: {
       throw new Error(`scaffold file changed final size: ${props.target}`);
     assertScaffoldFileMatches(captureScaffoldFile(props.target), completed);
     assertScaffoldDescriptorBytes(descriptor, props.target, props.bytes);
-    assertScaffoldFileMatches(
-      captureScaffoldFile(props.target),
-      fs.fstatSync(descriptor, { bigint: true }),
-    );
+    const finalStatus = fs.fstatSync(descriptor, { bigint: true });
+    completedSnapshot = captureScaffoldFile(props.target);
+    assertScaffoldFileMatches(completedSnapshot, finalStatus);
     assertScaffoldOwnership(props.base, props.parent);
   } catch (error) {
     failed = true;
@@ -223,6 +249,8 @@ const overwriteScaffoldFile = (props: {
   } finally {
     closeScaffoldDescriptor(descriptor, failed);
   }
+  assertScaffoldFileSnapshot(completedSnapshot!);
+  assertScaffoldOwnership(props.base, props.parent);
 };
 
 const captureScaffoldFile = (file: string): IScaffoldFileSnapshot => {
@@ -245,6 +273,17 @@ const assertScaffoldFileMatches = (
     snapshot.version !== physicalVersion(status)
   )
     throw new Error(`scaffold file changed generation: ${snapshot.path}`);
+};
+
+const assertScaffoldFileSnapshot = (snapshot: IScaffoldFileSnapshot): void => {
+  const current = captureScaffoldFile(snapshot.path);
+  if (
+    current.identity !== snapshot.identity ||
+    current.version !== snapshot.version
+  )
+    throw new Error(
+      `scaffold file changed after descriptor close: ${snapshot.path}`,
+    );
 };
 
 const assertOrdinarySingleLinkFile = (
