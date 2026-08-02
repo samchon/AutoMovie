@@ -111,5 +111,4 @@ const scaffoldEntries = (
   return entries;
 };
 
-const canonicalScaffoldPath = (value: string): string =>
-  process.platform === "win32" ? value.toLowerCase() : value;
+const canonicalScaffoldPath = (value: string): string => value.toLowerCase();

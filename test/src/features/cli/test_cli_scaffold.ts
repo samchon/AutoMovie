@@ -7988,6 +7988,16 @@ export const test_cli_scaffold = async (): Promise<void> => {
         }),
       ) && fs.existsSync(duplicateScaffold) === false,
     );
+    const caseDuplicateScaffold = path.join(base, "case-duplicate-scaffold");
+    TestValidator.predicate(
+      "portable case-only duplicate scaffold targets are refused before mutation",
+      throws(() =>
+        writeFiles(caseDuplicateScaffold, {
+          "A.txt": "first",
+          "a.txt": "second",
+        }),
+      ) && fs.existsSync(caseDuplicateScaffold) === false,
+    );
     const collidingScaffold = path.join(base, "colliding-scaffold");
     TestValidator.predicate(
       "scaffold file and directory target collisions are refused before mutation",
