@@ -2565,6 +2565,7 @@ const normalizeSlash = (value: string): string => value.replaceAll("\\", "/");
 const recoverAbandonedTemporaryDirectories = (
   chunks: readonly IAutoMovieProductionRenderChunk[],
 ): void => {
+  const currentChunks = new Map(chunks.map((chunk) => [chunk.id, chunk]));
   const locks = path.join(stateRoot, "locks");
   if (fs.existsSync(locks))
     for (const slot of fs
@@ -2593,7 +2594,8 @@ const recoverAbandonedTemporaryDirectories = (
     const pid = Number(entry.name.split(".").at(-1));
     const snapshot = captureAbandonedRenderStateTarget(target, pid);
     if (snapshot === null) continue;
-    if (currentPublicationProtectsTree(chunks, snapshot)) continue;
+    if (currentPublicationProtectsTree(currentChunks, entry.name, snapshot))
+      continue;
     quarantine(target, "abandoned-partial", snapshot);
   }
 };
@@ -2686,19 +2688,28 @@ const captureCurrentChunkPointer = (
 };
 
 const currentPublicationProtectsTree = (
-  chunks: readonly IAutoMovieProductionRenderChunk[],
+  chunks: ReadonlyMap<AutoMovieContentDigest, IAutoMovieProductionRenderChunk>,
+  candidateName: string,
   candidate: IRenderGcTargetSnapshot,
 ): boolean => {
-  for (const chunk of chunks) {
-    const pointer = captureCurrentChunkPointer(chunk);
-    if (pointer === null) continue;
-    try {
-      if (renderChunkPublicationProtectsTree(pointer, candidate)) return true;
-    } catch {
-      // Only a complete exact current pointer protects a dead temp tree.
-    }
+  const match = /^([0-9a-f]{64})\.[^.]+\.\d+$/u.exec(candidateName);
+  if (match === null) return false;
+  const digest = `sha256:${match[1]}` as AutoMovieContentDigest;
+  const chunk = chunks.get(digest);
+  if (chunk === undefined) return false;
+  const pointer = captureCurrentChunkPointer(chunk);
+  if (pointer === null) return false;
+  try {
+    const publication = captureRenderChunkPublicationFromPointer(pointer);
+    return (
+      publication.receipt.chunk === digest &&
+      publication.receipt.slot === chunk.slot &&
+      renderChunkPublicationProtectsTree(publication, candidate)
+    );
+  } catch {
+    // Only the complete exact canonical pointer protects a dead temp tree.
+    return false;
   }
-  return false;
 };
 
 const attemptPath = (chunk: IAutoMovieProductionRenderChunk): string =>

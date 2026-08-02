@@ -128,6 +128,16 @@ export const test_cli_scaffold = async (): Promise<void> => {
           renderProgressOffset,
           renderScript.indexOf("\ntry {", renderProgressOffset),
         );
+  const recoveryProtectionOffset = renderScript.indexOf(
+    "const currentPublicationProtectsTree",
+  );
+  const recoveryProtectionSource =
+    recoveryProtectionOffset < 0
+      ? ""
+      : renderScript.slice(
+          recoveryProtectionOffset,
+          renderScript.indexOf("const attemptPath", recoveryProtectionOffset),
+        );
   const renderProgressStages = [
     "finalize.start",
     "finalize.status.complete",
@@ -513,8 +523,11 @@ export const test_cli_scaffold = async (): Promise<void> => {
         "removeCapturedRenderChunkPointer(pointerSnapshot)",
       ) &&
       files["scripts/render.ts"]!.includes(
-        "if (currentPublicationProtectsTree(chunks, snapshot)) continue",
+        "currentPublicationProtectsTree(currentChunks, entry.name, snapshot)",
       ) &&
+      recoveryProtectionSource.includes("const chunk = chunks.get(digest)") &&
+      recoveryProtectionSource.includes("for (const chunk of chunks)") ===
+        false &&
       files[".gitignore"]!.includes(".automovie-chunk-*") &&
       files["scripts/render.ts"]!.includes(
         "fs.renameSync(temporary, destination)",
@@ -839,6 +852,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       fsyncSync: typeof fs.fsyncSync;
       mkdirSync: typeof fs.mkdirSync;
       openSync: typeof fs.openSync;
+      readFileSync: typeof fs.readFileSync;
       readdirSync: typeof fs.readdirSync;
       renameSync: typeof fs.renameSync;
       statSync: typeof fs.statSync;
@@ -848,6 +862,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
     const nativeLstat = mutableFs.lstatSync;
     const nativeMkdir = mutableFs.mkdirSync;
     const nativeOpen = mutableFs.openSync;
+    const nativeReadFile = mutableFs.readFileSync;
     const nativeStat = mutableFs.statSync;
     const nativeWriteFile = mutableFs.writeFileSync;
     const shotsDirectory = path.dirname(artifact);
@@ -1294,6 +1309,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       filePath?: string;
       malformedDeliverable?: boolean;
       publicationFingerprint: string;
+      rendition?: "invalid" | "valid";
       withPayload?: boolean;
     }) => ({
       version: 1,
@@ -1342,6 +1358,35 @@ export const test_cli_scaffold = async (): Promise<void> => {
                       runtimeSeconds: 1,
                       frameCount: 12,
                       codec: "h264",
+                      ...(props.rendition === undefined
+                        ? {}
+                        : {
+                            rendition: {
+                              kind: "repainted",
+                              shots: [
+                                {
+                                  shot: "opening",
+                                  path: "renditions/opening.mp4",
+                                  digest: verifiedProxyCompile,
+                                  receiptDigest: verifiedProxyEdit,
+                                  sourceReviewFingerprint: verifiedProxyCompile,
+                                  renditionReviewFingerprint: verifiedProxyEdit,
+                                },
+                              ],
+                              aggregateReviews: [
+                                props.rendition === "valid"
+                                  ? {
+                                      kind: "film",
+                                      id: "feature",
+                                      fingerprint: verifiedProxyCompile,
+                                    }
+                                  : {
+                                      kind: "scene",
+                                      id: "feature",
+                                    },
+                              ],
+                            },
+                          }),
                     },
               ],
       },
@@ -1351,7 +1396,10 @@ export const test_cli_scaffold = async (): Promise<void> => {
     fs.writeFileSync(
       path.join(verifiedProxyBundle, "publication.json"),
       `${JSON.stringify(
-        proxyReceipt({ publicationFingerprint: verifiedProxyPublication }),
+        proxyReceipt({
+          publicationFingerprint: verifiedProxyPublication,
+          rendition: "valid",
+        }),
       )}\n`,
     );
     const inspectedProxy = proxyModule.inspectPublishedProxyBundle(
@@ -1538,6 +1586,38 @@ export const test_cli_scaffold = async (): Promise<void> => {
         malformedMetadataBundle,
       ),
     );
+
+    const invalidRenditionPublication = fixtureDigest(
+      Buffer.from("invalid rendition proxy"),
+    );
+    const invalidRenditionBundleRelative = `deliverables/proxy/${invalidRenditionPublication.slice(7)}`;
+    const invalidRenditionBundle = path.join(
+      verifiedProxyRoot,
+      ...invalidRenditionBundleRelative.split("/"),
+    );
+    const invalidRenditionPayload = path.join(
+      invalidRenditionBundle,
+      "feature",
+      "feature.mp4",
+    );
+    fs.mkdirSync(path.dirname(invalidRenditionPayload), { recursive: true });
+    fs.writeFileSync(invalidRenditionPayload, verifiedProxyPayloadBytes);
+    fs.writeFileSync(
+      path.join(invalidRenditionBundle, "publication.json"),
+      `${JSON.stringify(
+        proxyReceipt({
+          filePath: `${invalidRenditionBundleRelative}/feature/feature.mp4`,
+          publicationFingerprint: invalidRenditionPublication,
+          rendition: "invalid",
+        }),
+      )}\n`,
+    );
+    const invalidRenditionRejected = throws(() =>
+      proxyModule.inspectPublishedProxyBundle(
+        verifiedProxyRoot,
+        invalidRenditionBundle,
+      ),
+    );
     TestValidator.predicate(
       "the final proxy consumer rejects unowned and malformed manifests",
       unmanifestedProxyRejected &&
@@ -1545,7 +1625,8 @@ export const test_cli_scaffold = async (): Promise<void> => {
         escapingProxyRejected &&
         malformedProxyRejected &&
         duplicateProxyRejected &&
-        malformedMetadataRejected,
+        malformedMetadataRejected &&
+        invalidRenditionRejected,
     );
 
     const parkedVerifiedProxyBundle = `${verifiedProxyBundle}.parked`;
@@ -1594,19 +1675,40 @@ export const test_cli_scaffold = async (): Promise<void> => {
       verifiedProxyBundle,
       "late-after-read.bin",
     );
-    let verifiedBundleInventoryScans = 0;
+    const verifiedPayloadDescriptors = new Set<number>();
+    let verifiedPayloadReadComplete = false;
     let verifiedProxyLateMutation = false;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+      if (
+        typeof file !== "number" &&
+        path.resolve(file.toString()) === verifiedProxyPayload
+      )
+        verifiedPayloadDescriptors.add(descriptor);
+      return descriptor;
+    }) as typeof fs.openSync;
+    mutableFs.readFileSync = ((file, ...args: unknown[]): unknown => {
+      const bytes = Reflect.apply(nativeReadFile, mutableFs, [file, ...args]);
+      if (typeof file === "number" && verifiedPayloadDescriptors.has(file))
+        verifiedPayloadReadComplete = true;
+      return bytes;
+    }) as typeof fs.readFileSync;
     mutableFs.readdirSync = ((directory, ...args: unknown[]): unknown => {
       const entries = Reflect.apply(nativeReaddir, mutableFs, [
         directory,
         ...args,
       ]);
-      if (path.resolve(directory.toString()) === verifiedProxyBundle) {
-        verifiedBundleInventoryScans++;
-        if (verifiedBundleInventoryScans === 2) {
-          fs.writeFileSync(lateVerifiedProxyFile, "late after all reads");
-          verifiedProxyLateMutation = true;
-        }
+      if (
+        verifiedProxyLateMutation === false &&
+        verifiedPayloadReadComplete &&
+        path.resolve(directory.toString()) === verifiedProxyBundle
+      ) {
+        fs.writeFileSync(lateVerifiedProxyFile, "late after all reads");
+        verifiedProxyLateMutation = true;
       }
       return entries;
     }) as typeof fs.readdirSync;
@@ -1619,6 +1721,8 @@ export const test_cli_scaffold = async (): Promise<void> => {
         ),
       );
     } finally {
+      mutableFs.openSync = nativeOpen;
+      mutableFs.readFileSync = nativeReadFile;
       mutableFs.readdirSync = nativeReaddir;
       fs.rmSync(lateVerifiedProxyFile, { force: true });
     }
@@ -2759,6 +2863,11 @@ export const test_cli_scaffold = async (): Promise<void> => {
         root: string,
         pointer: string,
       ) => { pointer: unknown; receipt: unknown; tree: { target: string } };
+      captureRenderChunkPublicationFromPointer: (pointer: unknown) => {
+        pointer: unknown;
+        receipt: unknown;
+        tree: { target: string };
+      };
       consumeCurrentRenderChunkFrames: (
         current: {
           frames: Array<{
@@ -2810,7 +2919,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       removeRenderChunkPublication: (root: string, pointer: string) => boolean;
       removeCapturedRenderChunkPointer: (pointer: unknown) => void;
       renderChunkPublicationProtectsTree: (
-        pointer: unknown,
+        publication: unknown,
         candidate: unknown,
       ) => boolean;
       renderChunkContentFingerprint: (snapshot: unknown) => string;
@@ -3104,12 +3213,57 @@ export const test_cli_scaffold = async (): Promise<void> => {
         tier: "final",
         tree: recoverySource,
       });
+    const recoveryDecoySources = [0, 1].map((index) => {
+      const id = fixtureDigest(Buffer.from(`recovery decoy ${index}`));
+      const source = path.join(chunkPublicationRoot, `recovery-decoy-${index}`);
+      renderChunkSnapshotModule.publishRenderChunkSnapshot({
+        chunk: id,
+        receipt: populateChunkSource(source, id),
+        root: chunkPublicationRoot,
+        scope: chunkPublicationScope,
+        tier: "final",
+        tree: source,
+      });
+      return source;
+    });
+    let recoveryDecoyPayloadOpens = 0;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      if (
+        typeof file !== "number" &&
+        recoveryDecoySources.some((source) =>
+          path
+            .resolve(file.toString())
+            .startsWith(`${path.resolve(source)}${path.sep}`),
+        )
+      )
+        recoveryDecoyPayloadOpens++;
+      return Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+    }) as typeof fs.openSync;
+    let recapturedRecoveryPublication: {
+      pointer: unknown;
+      receipt: unknown;
+      tree: { target: string };
+    } | null = null;
+    try {
+      recapturedRecoveryPublication =
+        renderChunkSnapshotModule.captureRenderChunkPublicationFromPointer(
+          recoveryPublished.publication.pointer,
+        );
+    } finally {
+      mutableFs.openSync = nativeOpen;
+    }
     TestValidator.predicate(
-      "a pointer published after recovery inventory protects the exact tree",
-      renderChunkSnapshotModule.renderChunkPublicationProtectsTree(
-        recoveryPublished.publication.pointer,
-        recoveryCandidate,
-      ),
+      "late recovery checks only the candidate's canonical pointer and tree",
+      recapturedRecoveryPublication !== null &&
+        renderChunkSnapshotModule.renderChunkPublicationProtectsTree(
+          recapturedRecoveryPublication,
+          recoveryCandidate,
+        ) &&
+        recoveryDecoyPayloadOpens === 0,
     );
 
     const pointerRaceId = fixtureDigest(Buffer.from("pointer successor chunk"));

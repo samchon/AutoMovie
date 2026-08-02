@@ -302,15 +302,11 @@ export const consumeCurrentRenderChunkFrames = (
 
 /** Decide protection from one current pointer and one exact dead-tree candidate. */
 export const renderChunkPublicationProtectsTree = (
-  pointer: IRenderGcTargetSnapshot,
+  publication: IRenderChunkPublicationSnapshot,
   candidate: IRenderGcTargetSnapshot,
-): boolean => {
-  const publication = captureRenderChunkPublicationFromPointer(pointer);
-  return (
-    publication.tree.target === candidate.target &&
-    publication.tree.targetIdentity === candidate.targetIdentity
-  );
-};
+): boolean =>
+  publication.tree.target === candidate.target &&
+  publication.tree.targetIdentity === candidate.targetIdentity;
 
 /** Read one exact file that belongs to a previously captured chunk tree. */
 export const readRenderChunkPublicationFile = (
