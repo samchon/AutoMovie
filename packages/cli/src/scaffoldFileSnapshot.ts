@@ -197,6 +197,10 @@ const createScaffoldFile = (props: {
     assertScaffoldFileMatches(captureScaffoldFile(props.target), completed);
     assertScaffoldDescriptorBytes(descriptor, props.target, props.bytes);
     const finalStatus = fs.fstatSync(descriptor, { bigint: true });
+    if (physicalVersion(finalStatus) !== physicalVersion(completed))
+      throw new Error(
+        `scaffold file changed after final readback: ${props.target}`,
+      );
     completedSnapshot = captureScaffoldFile(props.target);
     assertScaffoldFileMatches(completedSnapshot, finalStatus);
     assertScaffoldOwnership(props.base, props.parent);
@@ -240,6 +244,10 @@ const overwriteScaffoldFile = (props: {
     assertScaffoldFileMatches(captureScaffoldFile(props.target), completed);
     assertScaffoldDescriptorBytes(descriptor, props.target, props.bytes);
     const finalStatus = fs.fstatSync(descriptor, { bigint: true });
+    if (physicalVersion(finalStatus) !== physicalVersion(completed))
+      throw new Error(
+        `scaffold file changed after final readback: ${props.target}`,
+      );
     completedSnapshot = captureScaffoldFile(props.target);
     assertScaffoldFileMatches(completedSnapshot, finalStatus);
     assertScaffoldOwnership(props.base, props.parent);

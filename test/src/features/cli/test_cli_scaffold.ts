@@ -8489,6 +8489,114 @@ export const test_cli_scaffold = async (): Promise<void> => {
         fs.readFileSync(shortReadTarget, "utf8") === "short reads",
     );
 
+    const lateCreateMutationBase = path.join(
+      base,
+      "late-create-mutation-scaffold",
+    );
+    const lateCreateMutationTarget = path.join(
+      lateCreateMutationBase,
+      "owned.txt",
+    );
+    let lateCreateDescriptor = -1;
+    let lateCreateReads = 0;
+    let lateCreateMutated = false;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+      if (
+        typeof file !== "number" &&
+        path.resolve(file.toString()) === lateCreateMutationTarget &&
+        flags === "wx+"
+      )
+        lateCreateDescriptor = descriptor;
+      return descriptor;
+    }) as typeof fs.openSync;
+    mutableFs.readSync = ((...args: unknown[]): number => {
+      const length = Reflect.apply(nativeRead, mutableFs, args) as number;
+      if (args[0] === lateCreateDescriptor && ++lateCreateReads === 2) {
+        nativeWriteFile(lateCreateMutationTarget, "foreign! generation");
+        lateCreateMutated = true;
+      }
+      return length;
+    }) as typeof fs.readSync;
+    let lateCreateMutationRejected = false;
+    try {
+      lateCreateMutationRejected = throws(() =>
+        writeFiles(lateCreateMutationBase, {
+          "owned.txt": "scaffold generation",
+        }),
+      );
+    } finally {
+      mutableFs.openSync = nativeOpen;
+      mutableFs.readSync = nativeRead;
+    }
+    TestValidator.predicate(
+      "scaffold creation rejects same-inode mutation after final readback",
+      lateCreateMutated &&
+        lateCreateMutationRejected &&
+        fs.readFileSync(lateCreateMutationTarget, "utf8") ===
+          "foreign! generation",
+    );
+
+    const lateForceMutationBase = path.join(
+      base,
+      "late-force-mutation-scaffold",
+    );
+    const lateForceMutationTarget = path.join(
+      lateForceMutationBase,
+      "owned.txt",
+    );
+    fs.mkdirSync(lateForceMutationBase);
+    fs.writeFileSync(lateForceMutationTarget, "original generation");
+    let lateForceDescriptor = -1;
+    let lateForceReads = 0;
+    let lateForceMutated = false;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+      if (
+        typeof file !== "number" &&
+        path.resolve(file.toString()) === lateForceMutationTarget &&
+        flags === "r+"
+      )
+        lateForceDescriptor = descriptor;
+      return descriptor;
+    }) as typeof fs.openSync;
+    mutableFs.readSync = ((...args: unknown[]): number => {
+      const length = Reflect.apply(nativeRead, mutableFs, args) as number;
+      if (args[0] === lateForceDescriptor && ++lateForceReads === 2) {
+        nativeWriteFile(lateForceMutationTarget, "foreign! generation");
+        lateForceMutated = true;
+      }
+      return length;
+    }) as typeof fs.readSync;
+    let lateForceMutationRejected = false;
+    try {
+      lateForceMutationRejected = throws(() =>
+        writeFiles(
+          lateForceMutationBase,
+          { "owned.txt": "scaffold generation" },
+          { force: true },
+        ),
+      );
+    } finally {
+      mutableFs.openSync = nativeOpen;
+      mutableFs.readSync = nativeRead;
+    }
+    TestValidator.predicate(
+      "forced scaffold write rejects same-inode mutation after final readback",
+      lateForceMutated &&
+        lateForceMutationRejected &&
+        fs.readFileSync(lateForceMutationTarget, "utf8") ===
+          "foreign! generation",
+    );
+
     const closeFailureBase = path.join(base, "close-failure-scaffold");
     const closeFailureTarget = path.join(closeFailureBase, "complete.txt");
     let scaffoldCloseFailed = false;
