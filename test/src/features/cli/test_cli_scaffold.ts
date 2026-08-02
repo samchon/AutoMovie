@@ -122,6 +122,17 @@ export const test_cli_scaffold = async (): Promise<void> => {
   );
 
   const files = renderScaffold({ name: "demo-film" });
+  const comparatorFreeSortSources = Object.entries(files)
+    .filter(
+      ([file, source]) => file.endsWith(".ts") && /\.sort\(\s*\)/u.test(source),
+    )
+    .map(([file]) => file)
+    .sort(compareCodeUnits);
+  TestValidator.equals(
+    "shipped TypeScript sources give every sort an explicit comparator",
+    comparatorFreeSortSources,
+    [],
+  );
   const renderScript = files["scripts/render.ts"]!;
   const renderTemporarySnapshot = files["scripts/renderTemporarySnapshot.ts"]!;
   const renderProgressOffset = renderScript.indexOf("const renderProgress");

@@ -1,4 +1,4 @@
-import type { AutoMovieContentDigest } from "@automovie/mcp";
+import { type AutoMovieContentDigest, compareCodeUnits } from "@automovie/mcp";
 import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
@@ -217,7 +217,7 @@ export const assertRenderAttemptLockOwner = (
     typeof owner !== "object" ||
     owner === null ||
     Array.isArray(owner) ||
-    Object.keys(owner).sort().join(",") !== "chunk,pid,token" ||
+    Object.keys(owner).sort(compareCodeUnits).join(",") !== "chunk,pid,token" ||
     (owner as { chunk?: unknown }).chunk !== lock.chunk ||
     (owner as { pid?: unknown }).pid !== lock.pid ||
     (owner as { token?: unknown }).token !== lock.token
@@ -355,7 +355,7 @@ const assertRenderAttemptRecord = (
     typeof value !== "object" ||
     value === null ||
     Array.isArray(value) ||
-    Object.keys(value).sort().join(",") !==
+    Object.keys(value).sort(compareCodeUnits).join(",") !==
       "chunk,correction,pid,slot,state,token,version" ||
     (value as { version?: unknown }).version !== 1 ||
     typeof (value as { slot?: unknown }).slot !== "string" ||

@@ -1,4 +1,7 @@
-import type { IAutoMovieProductionRenderJobPlan } from "@automovie/mcp";
+import {
+  type IAutoMovieProductionRenderJobPlan,
+  compareCodeUnits,
+} from "@automovie/mcp";
 import { createHash, randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
@@ -200,7 +203,7 @@ const parseGeneration = (
   ) as unknown;
   if (
     isRecord(value) === false ||
-    Object.keys(value).sort().join(",") !==
+    Object.keys(value).sort(compareCodeUnits).join(",") !==
       "generation,plan,predecessor,version" ||
     value.version !== 1 ||
     typeof value.generation !== "string" ||

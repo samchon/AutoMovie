@@ -1,5 +1,6 @@
 import type { IAutoMovieCaptureRuntimeIdentity } from "@automovie/interface";
 import {
+  compareCodeUnits,
   digestAutoMovieBytes,
   readAutoMovieProductionOwnedFile,
 } from "@automovie/mcp";
@@ -94,8 +95,8 @@ const exactKeys = (
   value: Record<string, unknown>,
   expected: readonly string[],
 ): boolean =>
-  Object.keys(value).sort().join("\u0000") ===
-  [...expected].sort().join("\u0000");
+  Object.keys(value).sort(compareCodeUnits).join("\u0000") ===
+  [...expected].sort(compareCodeUnits).join("\u0000");
 
 export const parseCaptureBrowserConfig = (
   value: unknown,
@@ -393,7 +394,7 @@ const currentReceiptGeneration = (
     )
   )
     throw new Error("Capture receipt generation inventory is malformed.");
-  const files = entries.map((entry) => entry.name).sort();
+  const files = entries.map((entry) => entry.name).sort(compareCodeUnits);
   assertReceiptDirectory(directory);
   const metadata = capturePlaywrightMetadata();
   const expected = `${receiptGenerationKey({
