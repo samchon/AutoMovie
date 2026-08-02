@@ -13,6 +13,8 @@ import { fileURLToPath } from "node:url";
 import { chromium } from "playwright-core";
 import { PNG } from "pngjs";
 
+import { withBrowserPage } from "./preserveCleanupFailure.mjs";
+
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "../../..");
 const hero = process.argv[2] ?? "hero3";
@@ -44,77 +46,80 @@ const JAW = [
   397, 288, 361, 323, 454,
 ];
 
-const browser = await chromium.launch({
-  executablePath: CHROME,
-  headless: true,
-});
-const page = await browser.newPage({ viewport: { width: 1000, height: 1000 } });
-await page.goto(`${BASE}/head.html`, { waitUntil: "load" });
-await page.waitForFunction(() => window.__faceEditor?.setValues);
-await page.addStyleTag({
-  content: `#panel,#strip,#hud{display:none!important}#stage{grid-template-columns:1fr!important}#workbench{grid-template-rows:1fr!important}`,
-});
-await page.setViewportSize({ width: 1000, height: 1000 });
-await page.evaluate(async () => {
-  const vision =
-    await import("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14");
-  const { FaceLandmarker, FilesetResolver } = vision;
-  const fileset = await FilesetResolver.forVisionTasks(
-    "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm",
-  );
-  window.__fl = await FaceLandmarker.createFromOptions(fileset, {
-    baseOptions: {
-      modelAssetPath:
-        "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task",
-    },
-    runningMode: "IMAGE",
-    numFaces: 1,
-  });
-});
-
-const photo = await page.evaluate(
-  async ({ url, sx, sy, sw, sh }) => {
-    const img = await new Promise((res, rej) => {
-      const im = new Image();
-      im.onload = () => res(im);
-      im.onerror = () => rej(new Error("load"));
-      im.src = url;
+const { photo, modelDet } = await withBrowserPage(
+  () => chromium.launch({ executablePath: CHROME, headless: true }),
+  { viewport: { width: 1000, height: 1000 } },
+  "compare jaw",
+  async (page) => {
+    await page.goto(`${BASE}/head.html`, { waitUntil: "load" });
+    await page.waitForFunction(() => window.__faceEditor?.setValues);
+    await page.addStyleTag({
+      content: `#panel,#strip,#hud{display:none!important}#stage{grid-template-columns:1fr!important}#workbench{grid-template-rows:1fr!important}`,
     });
-    const c = document.createElement("canvas");
-    c.width = sw;
-    c.height = sh;
-    c.getContext("2d").drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
-    const r = window.__fl.detect(c);
-    const f = r.faceLandmarks && r.faceLandmarks[0];
-    return f ? { lm: f.map((p) => [p.x, p.y]), w: sw, h: sh } : null;
-  },
-  {
-    url: `/@fs/${rootUrl}/${sheetRel}`,
-    sx: Math.round(cell.column * cw),
-    sy: Math.round(cell.row * ch),
-    sw: Math.round(cw),
-    sh: Math.round(ch),
-  },
-);
+    await page.setViewportSize({ width: 1000, height: 1000 });
+    await page.evaluate(async () => {
+      const vision =
+        await import("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14");
+      const { FaceLandmarker, FilesetResolver } = vision;
+      const fileset = await FilesetResolver.forVisionTasks(
+        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm",
+      );
+      window.__fl = await FaceLandmarker.createFromOptions(fileset, {
+        baseOptions: {
+          modelAssetPath:
+            "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task",
+        },
+        runningMode: "IMAGE",
+        numFaces: 1,
+      });
+    });
 
-const modelDet = await page.evaluate(
-  async ({ hero, ovr }) => {
-    window.__faceEditor.setPreset(hero);
-    if (ovr) window.__faceEditor.setValues(ovr);
-    window.__faceEditor.setView("front");
-    await new Promise((r) =>
-      requestAnimationFrame(() => requestAnimationFrame(r)),
+    const photo = await page.evaluate(
+      async ({ url, sx, sy, sw, sh }) => {
+        const img = await new Promise((res, rej) => {
+          const im = new Image();
+          im.onload = () => res(im);
+          im.onerror = () => rej(new Error("load"));
+          im.src = url;
+        });
+        const c = document.createElement("canvas");
+        c.width = sw;
+        c.height = sh;
+        c.getContext("2d").drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
+        const r = window.__fl.detect(c);
+        const f = r.faceLandmarks && r.faceLandmarks[0];
+        return f ? { lm: f.map((p) => [p.x, p.y]), w: sw, h: sh } : null;
+      },
+      {
+        url: `/@fs/${rootUrl}/${sheetRel}`,
+        sx: Math.round(cell.column * cw),
+        sy: Math.round(cell.row * ch),
+        sw: Math.round(cw),
+        sh: Math.round(ch),
+      },
     );
-    const c = document.querySelector("#view");
-    const r = window.__fl.detect(c);
-    const f = r.faceLandmarks && r.faceLandmarks[0];
-    return f ? { lm: f.map((p) => [p.x, p.y]), w: c.width, h: c.height } : null;
-  },
-  { hero, ovr },
-);
 
-await page.close();
-await browser.close();
+    const modelDet = await page.evaluate(
+      async ({ hero, ovr }) => {
+        window.__faceEditor.setPreset(hero);
+        if (ovr) window.__faceEditor.setValues(ovr);
+        window.__faceEditor.setView("front");
+        await new Promise((r) =>
+          requestAnimationFrame(() => requestAnimationFrame(r)),
+        );
+        const c = document.querySelector("#view");
+        const r = window.__fl.detect(c);
+        const f = r.faceLandmarks && r.faceLandmarks[0];
+        return f
+          ? { lm: f.map((p) => [p.x, p.y]), w: c.width, h: c.height }
+          : null;
+      },
+      { hero, ovr },
+    );
+
+    return { photo, modelDet };
+  },
+);
 
 // normalize a detection: chin(152) at origin, scale by bizygomatic(234-454)
 const normArc = (det) => {

@@ -12,6 +12,8 @@ import { fileURLToPath } from "node:url";
 import { chromium } from "playwright-core";
 import { PNG } from "pngjs";
 
+import { withBrowserPage } from "./preserveCleanupFailure.mjs";
+
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "../../..");
 const hero = process.argv[2] ?? "hero3";
@@ -52,115 +54,120 @@ for (let y = 0; y < chi; y++)
     cellPng.data[d + 3] = 255;
   }
 
-const browser = await chromium.launch({
-  executablePath: CHROME,
-  headless: true,
-});
-const page = await browser.newPage({ viewport: { width: 1000, height: 1000 } });
-await page.goto(`${BASE}/head.html`, { waitUntil: "load" });
-await page.waitForFunction(() => window.__faceEditor?.setCameraYaw);
-await page.addStyleTag({
-  content: `#panel,#strip,#hud,#reference{display:none!important}#stage{grid-template-columns:1fr!important}#workbench{grid-template-rows:1fr!important}`,
-});
-await page.setViewportSize({ width: 1000, height: 1000 });
-await page.evaluate(async () => {
-  const vision =
-    await import("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14");
-  const { FaceLandmarker, FilesetResolver } = vision;
-  const fileset = await FilesetResolver.forVisionTasks(
-    "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm",
-  );
-  window.__fl = await FaceLandmarker.createFromOptions(fileset, {
-    baseOptions: {
-      modelAssetPath:
-        "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task",
-    },
-    runningMode: "IMAGE",
-    numFaces: 1,
-    outputFacialTransformationMatrixes: true,
-  });
-});
-
-const photo = await page.evaluate(
-  async ({ url, sx, sy, sw, sh }) => {
-    const img = await new Promise((res, rej) => {
-      const im = new Image();
-      im.onload = () => res(im);
-      im.onerror = rej;
-      im.src = url;
+const { photo, yawDeg, best } = await withBrowserPage(
+  () => chromium.launch({ executablePath: CHROME, headless: true }),
+  { viewport: { width: 1000, height: 1000 } },
+  "overlay pose",
+  async (page) => {
+    await page.goto(`${BASE}/head.html`, { waitUntil: "load" });
+    await page.waitForFunction(() => window.__faceEditor?.setCameraYaw);
+    await page.addStyleTag({
+      content: `#panel,#strip,#hud,#reference{display:none!important}#stage{grid-template-columns:1fr!important}#workbench{grid-template-rows:1fr!important}`,
     });
-    const c = document.createElement("canvas");
-    c.width = sw;
-    c.height = sh;
-    c.getContext("2d").drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
-    const r = window.__fl.detect(c);
-    const f = r.faceLandmarks && r.faceLandmarks[0];
-    const m =
-      r.facialTransformationMatrixes && r.facialTransformationMatrixes[0];
-    return f
-      ? {
-          lm: f.map((p) => [p.x * sw, p.y * sh]),
-          matrix: m ? Array.from(m.data) : null,
-        }
-      : null;
-  },
-  {
-    url: `/@fs/${rootUrl}/.models/hero/${heroNum}/input/face.png`,
-    sx: cx0,
-    sy: cy0,
-    sw: cwi,
-    sh: chi,
+    await page.setViewportSize({ width: 1000, height: 1000 });
+    await page.evaluate(async () => {
+      const vision =
+        await import("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14");
+      const { FaceLandmarker, FilesetResolver } = vision;
+      const fileset = await FilesetResolver.forVisionTasks(
+        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm",
+      );
+      window.__fl = await FaceLandmarker.createFromOptions(fileset, {
+        baseOptions: {
+          modelAssetPath:
+            "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task",
+        },
+        runningMode: "IMAGE",
+        numFaces: 1,
+        outputFacialTransformationMatrixes: true,
+      });
+    });
+
+    const photo = await page.evaluate(
+      async ({ url, sx, sy, sw, sh }) => {
+        const img = await new Promise((res, rej) => {
+          const im = new Image();
+          im.onload = () => res(im);
+          im.onerror = rej;
+          im.src = url;
+        });
+        const c = document.createElement("canvas");
+        c.width = sw;
+        c.height = sh;
+        c.getContext("2d").drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
+        const r = window.__fl.detect(c);
+        const f = r.faceLandmarks && r.faceLandmarks[0];
+        const m =
+          r.facialTransformationMatrixes && r.facialTransformationMatrixes[0];
+        return f
+          ? {
+              lm: f.map((p) => [p.x * sw, p.y * sh]),
+              matrix: m ? Array.from(m.data) : null,
+            }
+          : null;
+      },
+      {
+        url: `/@fs/${rootUrl}/.models/hero/${heroNum}/input/face.png`,
+        sx: cx0,
+        sy: cy0,
+        sw: cwi,
+        sh: chi,
+      },
+    );
+    if (!photo || !photo.matrix) {
+      return { photo, yawDeg: null, best: null };
+    }
+    // column-major 4x4; forward axis = col2 (m[8],m[9],m[10]); yaw about Y
+    const m = photo.matrix;
+    const yawDeg = (Math.atan2(m[8], m[10]) * 180) / Math.PI;
+
+    // render the model at the matched yaw (try both signs, keep the closer match)
+    const renderAt = async (deg) => {
+      await page.evaluate((d) => {
+        window.__faceEditor.setCameraYaw(d);
+      }, deg);
+      await page.evaluate(
+        () =>
+          new Promise((r) =>
+            requestAnimationFrame(() => requestAnimationFrame(r)),
+          ),
+      );
+      const shot = await page.locator("#view").screenshot({ type: "png" });
+      const det = await page.evaluate(() => {
+        const c = document.querySelector("#view");
+        const r = window.__fl.detect(c);
+        const f = r.faceLandmarks && r.faceLandmarks[0];
+        const mm =
+          r.facialTransformationMatrixes && r.facialTransformationMatrixes[0];
+        return f
+          ? {
+              lm: f.map((p) => [p.x * c.width, p.y * c.height]),
+              w: c.width,
+              h: c.height,
+              yaw: mm
+                ? (Math.atan2(mm.data[8], mm.data[10]) * 180) / Math.PI
+                : null,
+            }
+          : null;
+      });
+      return { shot, det };
+    };
+    await page.evaluate((h) => window.__faceEditor.setPreset(h), hero);
+    let best = null;
+    for (const deg of [yawDeg, -yawDeg]) {
+      const r = await renderAt(deg);
+      if (r.det && r.det.yaw != null) {
+        const err = Math.abs(r.det.yaw - yawDeg);
+        if (!best || err < best.err) best = { ...r, deg, err };
+      }
+    }
+    return { photo, yawDeg, best };
   },
 );
 if (!photo || !photo.matrix) {
-  await browser.close();
   console.log(JSON.stringify({ hero, view, error: "no photo pose" }));
   process.exit(0);
 }
-// column-major 4x4; forward axis = col2 (m[8],m[9],m[10]); yaw about Y
-const m = photo.matrix;
-const yawDeg = (Math.atan2(m[8], m[10]) * 180) / Math.PI;
-
-// render the model at the matched yaw (try both signs, keep the closer match)
-const renderAt = async (deg) => {
-  await page.evaluate((d) => {
-    window.__faceEditor.setCameraYaw(d);
-  }, deg);
-  await page.evaluate(
-    () =>
-      new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))),
-  );
-  const shot = await page.locator("#view").screenshot({ type: "png" });
-  const det = await page.evaluate(() => {
-    const c = document.querySelector("#view");
-    const r = window.__fl.detect(c);
-    const f = r.faceLandmarks && r.faceLandmarks[0];
-    const mm =
-      r.facialTransformationMatrixes && r.facialTransformationMatrixes[0];
-    return f
-      ? {
-          lm: f.map((p) => [p.x * c.width, p.y * c.height]),
-          w: c.width,
-          h: c.height,
-          yaw: mm
-            ? (Math.atan2(mm.data[8], mm.data[10]) * 180) / Math.PI
-            : null,
-        }
-      : null;
-  });
-  return { shot, det };
-};
-await page.evaluate((h) => window.__faceEditor.setPreset(h), hero);
-let best = null;
-for (const deg of [yawDeg, -yawDeg]) {
-  const r = await renderAt(deg);
-  if (r.det && r.det.yaw != null) {
-    const err = Math.abs(r.det.yaw - yawDeg);
-    if (!best || err < best.err) best = { ...r, deg, err };
-  }
-}
-await page.close();
-await browser.close();
 if (!best) {
   console.log(
     JSON.stringify({
