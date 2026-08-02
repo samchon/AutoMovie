@@ -48,6 +48,171 @@ const throws = (closure: () => unknown, fragment?: string): boolean => {
   }
 };
 
+type RenderFileDescriptorFailureMode =
+  | "combined-resident"
+  | "combined-source"
+  | "nested"
+  | "primary-only"
+  | "standalone-resident-close"
+  | "standalone-source-close";
+
+interface IRenderFileDescriptorFailureEvidence {
+  caught: unknown;
+  primaryFailure: Error;
+  residentCloseFailure: Error;
+  sourceCloseFailure: Error;
+}
+
+const captureRenderFileDescriptorFailure = (
+  project: AutoMovieProductionProject,
+  relativePath: string,
+  mode: RenderFileDescriptorFailureMode,
+): IRenderFileDescriptorFailureEvidence => {
+  const target = path.resolve(project.renderRoot(), relativePath);
+  const primaryFailure = new Error(`${mode} primary failure`);
+  const residentCloseFailure = new Error(`${mode} resident close failure`);
+  const sourceCloseFailure = new Error(`${mode} source close failure`);
+  const nativeOpen = fs.openSync;
+  const nativeFstat = fs.fstatSync;
+  const nativeClose = fs.closeSync;
+  let sourceDescriptor: number | undefined;
+  let failedResidentDescriptor: number | undefined;
+  fs.openSync = ((file, ...args: unknown[]): number => {
+    const descriptor = Reflect.apply(nativeOpen, fs, [file, ...args]) as number;
+    if (
+      sourceDescriptor === undefined &&
+      path.resolve(file.toString()) === target
+    )
+      sourceDescriptor = descriptor;
+    return descriptor;
+  }) as typeof fs.openSync;
+  fs.fstatSync = ((
+    descriptor,
+    ...args: unknown[]
+  ): fs.Stats | fs.BigIntStats => {
+    if (
+      descriptor === sourceDescriptor &&
+      (mode === "primary-only" || mode === "combined-source")
+    )
+      throw primaryFailure;
+    if (
+      sourceDescriptor !== undefined &&
+      descriptor !== sourceDescriptor &&
+      failedResidentDescriptor === undefined &&
+      (mode === "combined-resident" || mode === "nested")
+    ) {
+      failedResidentDescriptor = descriptor;
+      throw primaryFailure;
+    }
+    return Reflect.apply(nativeFstat, fs, [descriptor, ...args]) as
+      | fs.Stats
+      | fs.BigIntStats;
+  }) as typeof fs.fstatSync;
+  fs.closeSync = ((descriptor): void => {
+    if (
+      sourceDescriptor !== undefined &&
+      descriptor !== sourceDescriptor &&
+      failedResidentDescriptor === undefined &&
+      mode === "standalone-resident-close"
+    )
+      failedResidentDescriptor = descriptor;
+    nativeClose(descriptor);
+    if (
+      descriptor === failedResidentDescriptor &&
+      (mode === "combined-resident" ||
+        mode === "nested" ||
+        mode === "standalone-resident-close")
+    )
+      throw residentCloseFailure;
+    if (
+      descriptor === sourceDescriptor &&
+      (mode === "combined-source" ||
+        mode === "nested" ||
+        mode === "standalone-source-close")
+    )
+      throw sourceCloseFailure;
+  }) as typeof fs.closeSync;
+  let caught: unknown;
+  try {
+    project.readRenderFile(relativePath);
+  } catch (error) {
+    caught = error;
+  } finally {
+    fs.openSync = nativeOpen;
+    fs.fstatSync = nativeFstat;
+    fs.closeSync = nativeClose;
+  }
+  return {
+    caught,
+    primaryFailure,
+    residentCloseFailure,
+    sourceCloseFailure,
+  };
+};
+
+const aggregateContainsExactly = (
+  error: unknown,
+  expected: unknown[],
+): boolean =>
+  error instanceof AggregateError &&
+  error.errors.length === expected.length &&
+  expected.every((failure, index) => error.errors[index] === failure);
+
+const exerciseRenderFileDescriptorCleanup = (
+  project: AutoMovieProductionProject,
+  relativePath: string,
+): void => {
+  const standaloneSource = captureRenderFileDescriptorFailure(
+    project,
+    relativePath,
+    "standalone-source-close",
+  );
+  const standaloneResident = captureRenderFileDescriptorFailure(
+    project,
+    relativePath,
+    "standalone-resident-close",
+  );
+  const primaryOnly = captureRenderFileDescriptorFailure(
+    project,
+    relativePath,
+    "primary-only",
+  );
+  const combinedResident = captureRenderFileDescriptorFailure(
+    project,
+    relativePath,
+    "combined-resident",
+  );
+  const combinedSource = captureRenderFileDescriptorFailure(
+    project,
+    relativePath,
+    "combined-source",
+  );
+  const nested = captureRenderFileDescriptorFailure(
+    project,
+    relativePath,
+    "nested",
+  );
+  TestValidator.predicate(
+    "render-file descriptor cleanup preserves every operation and resource failure",
+    standaloneSource.caught === standaloneSource.sourceCloseFailure &&
+      standaloneResident.caught === standaloneResident.residentCloseFailure &&
+      primaryOnly.caught === primaryOnly.primaryFailure &&
+      aggregateContainsExactly(combinedResident.caught, [
+        combinedResident.primaryFailure,
+        combinedResident.residentCloseFailure,
+      ]) &&
+      aggregateContainsExactly(combinedSource.caught, [
+        combinedSource.primaryFailure,
+        combinedSource.sourceCloseFailure,
+      ]) &&
+      aggregateContainsExactly(nested.caught, [
+        nested.primaryFailure,
+        nested.residentCloseFailure,
+        nested.sourceCloseFailure,
+      ]),
+  );
+};
+
 const snapshotTree = (root: string): string[] => {
   const output: string[] = [];
   const visit = (directory: string): void => {
@@ -1459,6 +1624,17 @@ export const test_mcp_production_project = (): void => {
       "render reads compare descriptor identities within one platform API domain",
       divergentPathIdentityObserved && crossApiIdentityRead === "resident",
     );
+
+    const descriptorCleanupFile = path.join(
+      ownerProject.renderRoot(),
+      "read-descriptor-cleanup.bin",
+    );
+    fs.writeFileSync(descriptorCleanupFile, "resident");
+    exerciseRenderFileDescriptorCleanup(
+      ownerProject,
+      path.relative(ownerProject.renderRoot(), descriptorCleanupFile),
+    );
+    fs.rmSync(descriptorCleanupFile);
 
     const descriptorRace = (
       replacement: "directory" | "regular" | "symlink",

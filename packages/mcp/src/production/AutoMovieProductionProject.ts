@@ -117,6 +117,34 @@ export class AutoMovieProductionSourcePathError extends Error {
   }
 }
 
+interface IRenderFileDescriptorFailure {
+  error: unknown;
+}
+
+class RenderFileDescriptorCleanupError extends AggregateError {}
+
+/** Close one render-file descriptor without losing earlier failures. */
+const closeRenderFileDescriptor = (
+  descriptor: number,
+  failure: IRenderFileDescriptorFailure | undefined,
+  relativePath: string,
+): void => {
+  try {
+    fs.closeSync(descriptor);
+  } catch (closeFailure) {
+    if (failure === undefined) throw closeFailure;
+    throw new RenderFileDescriptorCleanupError(
+      [
+        ...(failure.error instanceof RenderFileDescriptorCleanupError
+          ? failure.error.errors
+          : [failure.error]),
+        closeFailure,
+      ],
+      `Render-file descriptor cleanup failed after the read failed: ${relativePath}.`,
+    );
+  }
+};
+
 /**
  * Tracked production repository for the coding-agent-first application.
  *
@@ -1603,6 +1631,7 @@ export class AutoMovieProductionProject {
         throw new Error(`Render file "${relativePath}" does not exist.`);
       throw error;
     }
+    let failure: IRenderFileDescriptorFailure | undefined;
     try {
       const opened = fs.fstatSync(descriptor, { bigint: true });
       const assertResidentFile = (): void => {
@@ -1614,22 +1643,33 @@ export class AutoMovieProductionProject {
           );
         const real = fs.realpathSync(file);
         const residentDescriptor = fs.openSync(real, "r");
+        let residentFailure: IRenderFileDescriptorFailure | undefined;
         try {
           const resident = fs.fstatSync(residentDescriptor, { bigint: true });
           if (fileIdentityKey(resident) !== fileIdentityKey(opened))
             throw new Error(
               `Render file "${relativePath}" changed physical identity inside the render root. Re-render it inside the owned output root.`,
             );
+        } catch (error) {
+          residentFailure = { error };
+          throw error;
         } finally {
-          fs.closeSync(residentDescriptor);
+          closeRenderFileDescriptor(
+            residentDescriptor,
+            residentFailure,
+            relativePath,
+          );
         }
       };
       assertResidentFile();
       const bytes = fs.readFileSync(descriptor);
       assertResidentFile();
       return bytes;
+    } catch (error) {
+      failure = { error };
+      throw error;
     } finally {
-      fs.closeSync(descriptor);
+      closeRenderFileDescriptor(descriptor, failure, relativePath);
     }
   }
 
