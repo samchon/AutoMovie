@@ -343,13 +343,25 @@ const launcherBundleContract = (
   file: string,
   source: string,
 ): {
-  bundleInitializer: string | null;
-  bundleOutfiles: number;
-  bundleRequires: number;
+  bundle: {
+    constDeclarations: number;
+    declarations: number;
+    initializer: string | null;
+    writes: number;
+  };
   cryptoImports: number;
-  finallyActions: string[][];
   fixedBundlePaths: string[];
-  tryActions: string[][];
+  lifecycles: Array<{
+    bodyActions: string[];
+    outerCatch: boolean;
+    tries: Array<{
+      actions: string[];
+      buildOutfiles: string[];
+      catchClause: boolean;
+      finallyActions: string[];
+      unsafeBuildOptions: string[];
+    }>;
+  }>;
 } => {
   const parsed = ts.createSourceFile(
     file,
@@ -361,72 +373,82 @@ const launcherBundleContract = (
   const squash = (node: ts.Node): string =>
     node.getText(parsed).replace(/\s+/g, "");
   let bundleInitializer: string | null = null;
-  let bundleOutfiles = 0;
-  let bundleRequires = 0;
+  let bundleConstDeclarations = 0;
+  let bundleDeclarations = 0;
+  let bundleWrites = 0;
   let cryptoImports = 0;
-  const finallyActions: string[][] = [];
   const fixedBundlePaths: string[] = [];
-  const tryActions: string[][] = [];
-  const action = (statement: ts.Statement): string => {
-    if (
-      ts.isExpressionStatement(statement) &&
-      ts.isAwaitExpression(statement.expression) &&
-      ts.isCallExpression(statement.expression.expression)
-    ) {
-      const call = statement.expression.expression;
-      if (
-        ts.isPropertyAccessExpression(call.expression) &&
-        ts.isIdentifier(call.expression.expression) &&
-        call.expression.expression.text === "esbuild" &&
-        call.expression.name.text === "build"
-      )
-        return "build";
-      if (
-        ts.isPropertyAccessExpression(call.expression) &&
-        call.expression.name.text === "main" &&
-        ts.isCallExpression(call.expression.expression) &&
-        ts.isIdentifier(call.expression.expression.expression) &&
-        call.expression.expression.expression.text === "require" &&
-        call.expression.expression.arguments.length === 1 &&
-        call.expression.expression.arguments[0]?.getText(parsed) ===
-          "bundlePath"
-      )
-        return "main";
+  const lifecycles: Array<{
+    bodyActions: string[];
+    outerCatch: boolean;
+    tries: Array<{
+      actions: string[];
+      buildOutfiles: string[];
+      catchClause: boolean;
+      finallyActions: string[];
+      unsafeBuildOptions: string[];
+    }>;
+  }> = [];
+  for (const statement of parsed.statements)
+    if (ts.isVariableStatement(statement)) {
+      const constant =
+        (statement.declarationList.flags & ts.NodeFlags.Const) !== 0;
+      for (const declaration of statement.declarationList.declarations) {
+        if (
+          ts.isIdentifier(declaration.name) &&
+          declaration.name.text === "bundlePath"
+        ) {
+          if (constant) ++bundleConstDeclarations;
+          bundleInitializer =
+            declaration.initializer === undefined
+              ? null
+              : squash(declaration.initializer);
+        }
+        if (
+          constant &&
+          ts.isObjectBindingPattern(declaration.name) &&
+          declaration.name.elements.length === 1 &&
+          declaration.name.elements[0]?.name.getText(parsed) === "randomUUID" &&
+          declaration.initializer !== undefined &&
+          squash(declaration.initializer) === 'require("crypto")'
+        )
+          ++cryptoImports;
+      }
     }
-    return squash(statement);
-  };
   const visit = (node: ts.Node): void => {
-    if (ts.isVariableDeclaration(node)) {
-      if (
+    if (
+      ((ts.isVariableDeclaration(node) ||
+        ts.isParameter(node) ||
+        ts.isBindingElement(node)) &&
         ts.isIdentifier(node.name) &&
-        node.name.text === "bundlePath" &&
-        node.initializer !== undefined
-      )
-        bundleInitializer = squash(node.initializer);
-      if (
-        ts.isObjectBindingPattern(node.name) &&
-        node.name.elements.length === 1 &&
-        node.name.elements[0]?.name.getText(parsed) === "randomUUID" &&
-        node.initializer !== undefined &&
-        squash(node.initializer) === 'require("crypto")'
-      )
-        ++cryptoImports;
+        node.name.text === "bundlePath") ||
+      ((ts.isFunctionDeclaration(node) ||
+        ts.isFunctionExpression(node) ||
+        ts.isClassDeclaration(node) ||
+        ts.isClassExpression(node)) &&
+        node.name?.text === "bundlePath")
+    )
+      ++bundleDeclarations;
+    if (
+      ts.isBinaryExpression(node) &&
+      node.operatorToken.kind >= ts.SyntaxKind.FirstAssignment &&
+      node.operatorToken.kind <= ts.SyntaxKind.LastAssignment
+    ) {
+      let writesBundle = false;
+      const findBundle = (target: ts.Node): void => {
+        if (ts.isIdentifier(target) && target.text === "bundlePath")
+          writesBundle = true;
+        else ts.forEachChild(target, findBundle);
+      };
+      findBundle(node.left);
+      if (writesBundle) ++bundleWrites;
     }
     if (
-      ts.isPropertyAssignment(node) &&
-      (ts.isIdentifier(node.name) || ts.isStringLiteralLike(node.name)) &&
-      node.name.text === "outfile" &&
-      node.initializer.getText(parsed) === "bundlePath"
+      (ts.isPrefixUnaryExpression(node) || ts.isPostfixUnaryExpression(node)) &&
+      ts.isIdentifier(node.operand) &&
+      node.operand.text === "bundlePath"
     )
-      ++bundleOutfiles;
-    if (
-      ts.isCallExpression(node) &&
-      ts.isIdentifier(node.expression) &&
-      node.expression.text === "require" &&
-      node.arguments.length === 1 &&
-      node.arguments[0]?.getText(parsed) === "bundlePath"
-    )
-      ++bundleRequires;
+      ++bundleWrites;
     if (
       ts.isStringLiteralLike(node) &&
       /^\.(?:capture-smoke|render-and-see|render-sequence-and-see)\.cjs$/.test(
@@ -434,24 +456,123 @@ const launcherBundleContract = (
       )
     )
       fixedBundlePaths.push(node.text);
-    if (ts.isTryStatement(node)) {
-      tryActions.push(node.tryBlock.statements.map(action));
-      finallyActions.push(
-        node.finallyBlock?.statements.map((statement) => squash(statement)) ??
-          [],
-      );
-    }
     ts.forEachChild(node, visit);
   };
   visit(parsed);
+  for (const statement of parsed.statements) {
+    if (
+      ts.isExpressionStatement(statement) === false ||
+      ts.isCallExpression(statement.expression) === false ||
+      ts.isPropertyAccessExpression(statement.expression.expression) ===
+        false ||
+      statement.expression.expression.name.text !== "catch" ||
+      ts.isCallExpression(statement.expression.expression.expression) === false
+    )
+      continue;
+    const outerCall = statement.expression;
+    const invocation = statement.expression.expression.expression;
+    const wrapped = ts.isParenthesizedExpression(invocation.expression)
+      ? invocation.expression.expression
+      : invocation.expression;
+    if (
+      ts.isArrowFunction(wrapped) === false ||
+      wrapped.modifiers?.some(
+        (modifier) => modifier.kind === ts.SyntaxKind.AsyncKeyword,
+      ) !== true ||
+      ts.isBlock(wrapped.body) === false ||
+      wrapped.parameters.length !== 0 ||
+      invocation.arguments.length !== 0
+    )
+      continue;
+    const bodyActions = wrapped.body.statements.map((action) =>
+      ts.isTryStatement(action) ? "try" : squash(action),
+    );
+    const tries = wrapped.body.statements
+      .filter(ts.isTryStatement)
+      .map((tryStatement) => {
+        const buildOutfiles: string[] = [];
+        const unsafeBuildOptions: string[] = [];
+        const actions = tryStatement.tryBlock.statements.map((action) => {
+          if (
+            ts.isExpressionStatement(action) &&
+            ts.isAwaitExpression(action.expression) &&
+            ts.isCallExpression(action.expression.expression)
+          ) {
+            const call = action.expression.expression;
+            if (
+              ts.isPropertyAccessExpression(call.expression) &&
+              ts.isIdentifier(call.expression.expression) &&
+              call.expression.expression.text === "esbuild" &&
+              call.expression.name.text === "build"
+            ) {
+              const options = call.arguments[0];
+              if (
+                options !== undefined &&
+                ts.isObjectLiteralExpression(options)
+              )
+                for (const property of options.properties) {
+                  if (
+                    ts.isPropertyAssignment(property) &&
+                    (ts.isIdentifier(property.name) ||
+                      ts.isStringLiteralLike(property.name)) &&
+                    property.name.text === "outfile"
+                  )
+                    buildOutfiles.push(squash(property.initializer));
+                  else if (
+                    ts.isSpreadAssignment(property) ||
+                    (ts.isPropertyAssignment(property) &&
+                      ts.isComputedPropertyName(property.name)) ||
+                    ((ts.isShorthandPropertyAssignment(property) ||
+                      ts.isMethodDeclaration(property) ||
+                      ts.isGetAccessorDeclaration(property) ||
+                      ts.isSetAccessorDeclaration(property)) &&
+                      property.name.getText(parsed) === "outfile")
+                  )
+                    unsafeBuildOptions.push(squash(property));
+                }
+              return "build";
+            }
+            if (
+              ts.isPropertyAccessExpression(call.expression) &&
+              call.expression.name.text === "main" &&
+              ts.isCallExpression(call.expression.expression) &&
+              ts.isIdentifier(call.expression.expression.expression) &&
+              call.expression.expression.expression.text === "require" &&
+              call.expression.expression.arguments.length === 1 &&
+              call.expression.expression.arguments[0]?.getText(parsed) ===
+                "bundlePath"
+            )
+              return "main";
+          }
+          return squash(action);
+        });
+        return {
+          actions,
+          buildOutfiles,
+          catchClause: tryStatement.catchClause !== undefined,
+          finallyActions:
+            tryStatement.finallyBlock?.statements.map((action) =>
+              squash(action),
+            ) ?? [],
+          unsafeBuildOptions,
+        };
+      });
+    lifecycles.push({
+      bodyActions,
+      outerCatch: outerCall.arguments.length === 1,
+      tries,
+    });
+  }
   return {
-    bundleInitializer,
-    bundleOutfiles,
-    bundleRequires,
+    bundle: {
+      constDeclarations: bundleConstDeclarations,
+      declarations: bundleDeclarations,
+      initializer: bundleInitializer,
+      writes: bundleWrites,
+    },
     cryptoImports,
-    finallyActions,
     fixedBundlePaths,
-    tryActions,
+    lifecycles,
   };
 };
 
@@ -1568,20 +1689,36 @@ export const test_workspace_public_contracts = (): void => {
     playgroundLaunchers.map(({ file, prefix }) => ({
       file,
       contract: {
-        bundleInitializer:
-          "path.join(__dirname,`." +
-          prefix +
-          "-" +
-          templateExpression("process.pid") +
-          "-" +
-          templateExpression("randomUUID()") +
-          ".cjs`)",
-        bundleOutfiles: 1,
-        bundleRequires: 1,
+        bundle: {
+          constDeclarations: 1,
+          declarations: 1,
+          initializer:
+            "path.join(__dirname,`." +
+            prefix +
+            "-" +
+            templateExpression("process.pid") +
+            "-" +
+            templateExpression("randomUUID()") +
+            ".cjs`)",
+          writes: 0,
+        },
         cryptoImports: 1,
-        finallyActions: [["fs.rmSync(bundlePath,{force:true});"]],
         fixedBundlePaths: [],
-        tryActions: [["build", "main"]],
+        lifecycles: [
+          {
+            bodyActions: ["try"],
+            outerCatch: true,
+            tries: [
+              {
+                actions: ["build", "main"],
+                buildOutfiles: ["bundlePath"],
+                catchClause: false,
+                finallyActions: ["fs.rmSync(bundlePath,{force:true});"],
+                unsafeBuildOptions: [],
+              },
+            ],
+          },
+        ],
       },
     })),
   );
