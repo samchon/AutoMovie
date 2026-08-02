@@ -98,6 +98,8 @@ type GeneratedViewerMiddleware = (
  *     exclusive pointer; resume and finalize consume its exact declared bytes.
  * 16. Final conform reopens a matching proxy publication through its manifest,
  *     exact payload bytes, inventory, and physical tree identity.
+ * 17. Attempt state is token-bound to its held lock and every transition removes
+ *     only the exact captured owner before exclusive successor publication.
  */
 export const test_cli_scaffold = async (): Promise<void> => {
   // 5. packaging guard: the scaffold dir must be a published `files` entry.
@@ -238,6 +240,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       "scripts/preview.ts",
       "scripts/publishProxyBundle.ts",
       "scripts/render.ts",
+      "scripts/renderAttemptSnapshot.ts",
       "scripts/renderChunkSnapshot.ts",
       "scripts/renderGcSnapshot.ts",
       "scripts/renderLiveness.ts",
@@ -567,6 +570,24 @@ export const test_cli_scaffold = async (): Promise<void> => {
       files["scripts/render.ts"]!.includes("assertMatchingProxyPublication") &&
       files["scripts/render.ts"]!.includes("inspectPublishedProxyBundle") &&
       files["scripts/render.ts"]!.includes("publishProxyBundle({") &&
+      files["scripts/render.ts"]!.includes("beginRenderAttempt({") &&
+      files["scripts/render.ts"]!.includes("completeRenderAttempt(attempt)") &&
+      files["scripts/render.ts"]!.includes("failRenderAttempt({") &&
+      files["scripts/render.ts"]!.includes("listRenderAttempts(") &&
+      files["scripts/render.ts"]!.includes("fs.rmSync(attemptPath(chunk)") ===
+        false &&
+      files["scripts/render.ts"]!.includes(
+        "writeJsonAtomic(attemptPath(chunk)",
+      ) === false &&
+      files["scripts/renderAttemptSnapshot.ts"]!.includes(
+        "createRenderGcFileSnapshot",
+      ) &&
+      files["scripts/renderAttemptSnapshot.ts"]!.includes(
+        "removeCapturedRenderGcTarget",
+      ) &&
+      files["scripts/renderAttemptSnapshot.ts"]!.includes(
+        "readCapturedRenderGcFile",
+      ) &&
       files["scripts/publishProxyBundle.ts"]!.includes(
         "fs.mkdirSync(props.target)",
       ) &&
@@ -803,6 +824,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
         "scripts/preview.ts",
         "scripts/publishProxyBundle.ts",
         "scripts/render.ts",
+        "scripts/renderAttemptSnapshot.ts",
         "scripts/renderChunkSnapshot.ts",
         "scripts/renderGcSnapshot.ts",
         "scripts/renderLiveness.ts",
@@ -3055,6 +3077,242 @@ export const test_cli_scaffold = async (): Promise<void> => {
         fs.rmSync(path.join(path.dirname(captureReceipt), name), {
           force: true,
         });
+    const renderAttemptModule = createRequire(__filename)(
+      path.join(scaffoldDir, "scripts", "renderAttemptSnapshot.ts"),
+    ) as {
+      beginRenderAttempt: (props: {
+        base: string;
+        chunk: string;
+        pid: number;
+        processAlive: (pid: number) => boolean;
+        slot: string;
+        target: string;
+        token: string;
+      }) => {
+        record: {
+          chunk: string;
+          correction: string;
+          pid: number;
+          slot: string;
+          state: "failed" | "running";
+          token: string;
+          version: 1;
+        };
+        snapshot: { target: string; targetIdentity: string };
+      };
+      completeRenderAttempt: (attempt: unknown) => void;
+      failRenderAttempt: (props: { attempt: unknown; correction: string }) => {
+        record: { correction: string; state: "failed" | "running" };
+        snapshot: { target: string };
+      };
+      listRenderAttempts: (
+        base: string,
+        directory: string,
+      ) => Array<{ record: { token: string } }>;
+    };
+    const attemptRoot = path.join(base, "render-attempts");
+    const attemptDirectory = path.join(attemptRoot, "attempts");
+    const attemptTarget = path.join(attemptDirectory, "slot-0001.json");
+    const attemptChunk = `sha256:${"1".repeat(64)}`;
+    const firstAttemptToken = "11111111-1111-4111-8111-111111111111";
+    const secondAttemptToken = "22222222-2222-4222-8222-222222222222";
+    const successorAttemptToken = "33333333-3333-4333-8333-333333333333";
+    fs.mkdirSync(attemptRoot);
+    const runningAttempt = renderAttemptModule.beginRenderAttempt({
+      base: attemptRoot,
+      chunk: attemptChunk,
+      pid: 32001,
+      processAlive: () => false,
+      slot: "slot-0001",
+      target: attemptTarget,
+      token: firstAttemptToken,
+    });
+    const failedAttempt = renderAttemptModule.failRenderAttempt({
+      attempt: runningAttempt,
+      correction: "fixture render failed",
+    });
+    TestValidator.predicate(
+      "render attempt publishes running then exact failed state under one lock token",
+      runningAttempt.record.state === "running" &&
+        runningAttempt.record.token === firstAttemptToken &&
+        failedAttempt.record.state === "failed" &&
+        failedAttempt.record.correction === "fixture render failed" &&
+        renderAttemptModule.listRenderAttempts(attemptRoot, attemptDirectory)[0]
+          ?.record.token === firstAttemptToken,
+    );
+    const retriedAttempt = renderAttemptModule.beginRenderAttempt({
+      base: attemptRoot,
+      chunk: attemptChunk,
+      pid: 32002,
+      processAlive: () => false,
+      slot: "slot-0001",
+      target: attemptTarget,
+      token: secondAttemptToken,
+    });
+    const pidReuseRejected = throws(() =>
+      renderAttemptModule.beginRenderAttempt({
+        base: attemptRoot,
+        chunk: attemptChunk,
+        pid: 32002,
+        processAlive: (pid) => pid === 32002,
+        slot: "slot-0001",
+        target: attemptTarget,
+        token: successorAttemptToken,
+      }),
+    );
+    TestValidator.predicate(
+      "render attempt recovers failed state but rejects a live PID-reuse owner with another token",
+      retriedAttempt.record.token === secondAttemptToken &&
+        pidReuseRejected &&
+        JSON.parse(fs.readFileSync(attemptTarget, "utf8")).token ===
+          secondAttemptToken,
+    );
+    renderAttemptModule.completeRenderAttempt(retriedAttempt);
+    TestValidator.predicate(
+      "render attempt completion removes its exact captured running record",
+      fs.existsSync(attemptTarget) === false,
+    );
+
+    const staleRunningAttempt = renderAttemptModule.beginRenderAttempt({
+      base: attemptRoot,
+      chunk: attemptChunk,
+      pid: 32003,
+      processAlive: () => false,
+      slot: "slot-0001",
+      target: attemptTarget,
+      token: firstAttemptToken,
+    });
+    const recoveredStaleAttempt = renderAttemptModule.beginRenderAttempt({
+      base: attemptRoot,
+      chunk: attemptChunk,
+      pid: 32004,
+      processAlive: () => false,
+      slot: "slot-0001",
+      target: attemptTarget,
+      token: secondAttemptToken,
+    });
+    TestValidator.predicate(
+      "render attempt stale recovery replaces only a dead exact owner",
+      staleRunningAttempt.snapshot.targetIdentity !==
+        recoveredStaleAttempt.snapshot.targetIdentity &&
+        recoveredStaleAttempt.record.token === secondAttemptToken,
+    );
+    renderAttemptModule.completeRenderAttempt(recoveredStaleAttempt);
+
+    const oversizedAttempt = renderAttemptModule.beginRenderAttempt({
+      base: attemptRoot,
+      chunk: attemptChunk,
+      pid: 32008,
+      processAlive: () => false,
+      slot: "slot-0001",
+      target: attemptTarget,
+      token: secondAttemptToken,
+    });
+    const oversizedFailureRejected = throws(() =>
+      renderAttemptModule.failRenderAttempt({
+        attempt: oversizedAttempt,
+        correction: "x".repeat(64 * 1024),
+      }),
+    );
+    TestValidator.predicate(
+      "render attempt validates a failed successor before removing running evidence",
+      oversizedFailureRejected &&
+        JSON.parse(fs.readFileSync(attemptTarget, "utf8")).state === "running",
+    );
+    renderAttemptModule.completeRenderAttempt(oversizedAttempt);
+
+    const transitionAttempt = renderAttemptModule.beginRenderAttempt({
+      base: attemptRoot,
+      chunk: attemptChunk,
+      pid: 32005,
+      processAlive: () => false,
+      slot: "slot-0001",
+      target: attemptTarget,
+      token: firstAttemptToken,
+    });
+    const successorAttemptBytes = Buffer.from(
+      `${JSON.stringify(
+        {
+          version: 1,
+          slot: "slot-0001",
+          chunk: attemptChunk,
+          state: "running",
+          correction: "",
+          pid: 32006,
+          token: successorAttemptToken,
+        },
+        null,
+        2,
+      )}\n`,
+    );
+    let transitionSuccessorInserted = false;
+    mutableFs.renameSync = ((oldPath, newPath) => {
+      if (
+        transitionSuccessorInserted === false &&
+        path.resolve(oldPath.toString()) === attemptTarget
+      ) {
+        nativeRename(oldPath, newPath);
+        nativeWriteFile(oldPath, successorAttemptBytes);
+        transitionSuccessorInserted = true;
+        return;
+      }
+      nativeRename(oldPath, newPath);
+    }) as typeof fs.renameSync;
+    let transitionSuccessorRejected = false;
+    try {
+      transitionSuccessorRejected = throws(() =>
+        renderAttemptModule.failRenderAttempt({
+          attempt: transitionAttempt,
+          correction: "must not overwrite successor",
+        }),
+      );
+    } finally {
+      mutableFs.renameSync = nativeRename;
+    }
+    TestValidator.predicate(
+      "render attempt failure transition preserves a pathname successor",
+      transitionSuccessorInserted &&
+        transitionSuccessorRejected &&
+        fs.readFileSync(attemptTarget).equals(successorAttemptBytes),
+    );
+    fs.rmSync(attemptTarget);
+
+    const completionAttempt = renderAttemptModule.beginRenderAttempt({
+      base: attemptRoot,
+      chunk: attemptChunk,
+      pid: 32007,
+      processAlive: () => false,
+      slot: "slot-0001",
+      target: attemptTarget,
+      token: firstAttemptToken,
+    });
+    let completionSuccessorInserted = false;
+    mutableFs.renameSync = ((oldPath, newPath) => {
+      if (
+        completionSuccessorInserted === false &&
+        path.resolve(oldPath.toString()) === attemptTarget
+      ) {
+        nativeRename(oldPath, newPath);
+        nativeWriteFile(oldPath, successorAttemptBytes);
+        completionSuccessorInserted = true;
+        return;
+      }
+      nativeRename(oldPath, newPath);
+    }) as typeof fs.renameSync;
+    let completionAccepted = false;
+    try {
+      renderAttemptModule.completeRenderAttempt(completionAttempt);
+      completionAccepted = true;
+    } finally {
+      mutableFs.renameSync = nativeRename;
+    }
+    TestValidator.predicate(
+      "render attempt completion deletes the captured owner and preserves its successor",
+      completionAccepted &&
+        completionSuccessorInserted &&
+        fs.readFileSync(attemptTarget).equals(successorAttemptBytes),
+    );
+    fs.rmSync(attemptTarget);
     const renderLivenessModule = createRequire(__filename)(
       path.join(scaffoldDir, "scripts", "renderLiveness.ts"),
     ) as {

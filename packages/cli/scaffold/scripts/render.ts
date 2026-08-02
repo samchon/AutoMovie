@@ -77,6 +77,14 @@ import {
 } from "./capture";
 import { publishProxyBundle } from "./publishProxyBundle";
 import {
+  type IRenderAttemptSnapshot,
+  beginRenderAttempt,
+  completeRenderAttempt,
+  failRenderAttempt,
+  listRenderAttempts,
+  readRenderAttempt,
+} from "./renderAttemptSnapshot";
+import {
   type ICurrentRenderChunkPublication,
   captureRenderChunkPublicationFromPointer,
   consumeCurrentRenderChunkFrames,
@@ -146,6 +154,7 @@ const heldChunkLocks = new Map<
   string,
   { snapshot: IRenderGcTargetSnapshot; token: string }
 >();
+const heldChunkAttempts = new Map<string, IRenderAttemptSnapshot>();
 const KOKORO_MODEL = "onnx-community/Kokoro-82M-v1.0-ONNX" as const;
 const KOKORO_MODEL_REVISION =
   "1939ad2a8e416c0acfeecc08a694d14ef25f2231" as const;
@@ -587,12 +596,10 @@ const renderStatus = async (plan: IAutoMovieProductionRenderJobPlan) => {
   const receipts = currentChunks.flatMap((current) =>
     current === null ? [] : [current.receipt],
   );
-  const attempts = readAllJson<{
-    slot: string;
-    chunk: AutoMovieContentDigest;
-    state: "running" | "failed";
-    correction: string;
-  }>(path.join(stateRoot, "attempts"), ".json");
+  const attempts = listRenderAttempts(
+    stateRoot,
+    path.join(stateRoot, "attempts"),
+  ).map((attempt) => attempt.record);
   const rows = productionRenderChunkStatuses({ plan, receipts, attempts });
   return rows.map((row, index) => {
     if (row.status !== "complete") return row;
@@ -717,6 +724,21 @@ const renderChunk = async (
   const pointer = captureCurrentChunkPointer(chunk);
   const existing = await currentChunk(chunk, pointer);
   if (existing !== null) return existing.receipt;
+  const held = heldChunkLocks.get(chunk.slot);
+  if (held === undefined)
+    throw new Error(
+      `Chunk "${chunk.slot}" cannot start an attempt without its held lock.`,
+    );
+  const attempt = beginRenderAttempt({
+    base: stateRoot,
+    chunk: chunk.id,
+    pid: process.pid,
+    processAlive,
+    slot: chunk.slot,
+    target: attemptPath(chunk),
+    token: held.token,
+  });
+  heldChunkAttempts.set(chunk.slot, attempt);
   if (pointer !== null) removeCapturedRenderChunkPointer(pointer);
   const temporaryRoot = ensureRenderPhysicalDirectory(stateRoot, "tmp");
   const temporary = path.join(
@@ -724,13 +746,6 @@ const renderChunk = async (
     `${chunk.id.slice(7)}.${randomUUID()}.${process.pid}`,
   );
   fs.mkdirSync(temporary);
-  writeJsonAtomic(attemptPath(chunk), {
-    slot: chunk.slot,
-    chunk: chunk.id,
-    state: "running",
-    correction: "",
-    pid: process.pid,
-  });
   const frameReceipts: IAutoMovieProductionRenderChunkReceipt["frames"] = [];
   const frameBytes: Uint8Array[] = [];
   for (const sample of chunk.frames) {
@@ -831,25 +846,25 @@ const renderChunk = async (
     tier: renderTier.kind,
     tree: temporary,
   });
-  fs.rmSync(attemptPath(chunk), { force: true });
+  completeRenderAttempt(attempt);
+  heldChunkAttempts.delete(chunk.slot);
   return published.publication.receipt;
 };
 
 const failChunk = async (
   chunk: IAutoMovieProductionRenderChunk,
   correction: string,
-): Promise<void> =>
-  writeJsonAtomic(attemptPath(chunk), {
-    slot: chunk.slot,
-    chunk: chunk.id,
-    state: "failed",
-    correction,
-    pid: process.pid,
-  });
+): Promise<void> => {
+  const attempt = heldChunkAttempts.get(chunk.slot);
+  if (attempt === undefined) return;
+  failRenderAttempt({ attempt, correction });
+  heldChunkAttempts.delete(chunk.slot);
+};
 
 const releaseChunk = async (
   chunk: IAutoMovieProductionRenderChunk,
 ): Promise<void> => {
+  heldChunkAttempts.delete(chunk.slot);
   const held = heldChunkLocks.get(chunk.slot);
   if (held === undefined) return;
   heldChunkLocks.delete(chunk.slot);
@@ -2530,25 +2545,14 @@ const assertNoLiveRenderWorkers = (): void => {
           );
       }
     const attempts = path.join(tierRoot, "attempts");
-    if (fs.existsSync(attempts))
-      for (const file of physicalFiles(attempts).filter((candidate) =>
-        candidate.endsWith(".json"),
-      )) {
-        const snapshot = captureExistingRenderTarget(tierRoot, file);
-        if (snapshot === null) continue;
-        const attempt = readCapturedRenderJson<{
-          state?: string;
-          pid?: number;
-        }>(snapshot);
-        if (
-          attempt.state === "running" &&
-          Number.isSafeInteger(attempt.pid) &&
-          processAlive(attempt.pid!)
-        )
-          throw new Error(
-            `Render GC --apply refuses live ${tier} attempt ${attempt.pid} at "${file}". Wait for that worker or stop it explicitly.`,
-          );
-      }
+    for (const captured of listRenderAttempts(tierRoot, attempts)) {
+      const attempt = captured.record;
+      const file = captured.snapshot.target;
+      if (attempt.state === "running" && processAlive(attempt.pid))
+        throw new Error(
+          `Render GC --apply refuses live ${tier} attempt ${attempt.pid} at "${file}". Wait for that worker or stop it explicitly.`,
+        );
+    }
   }
 };
 
@@ -2767,19 +2771,6 @@ const chunkLockClaims = (chunk: IAutoMovieProductionRenderChunk): string[] => {
   if (fs.existsSync(legacy)) claims.push(legacy);
   return claims.sort(compareCodeUnits);
 };
-
-const readAllJson = <T>(directory: string, suffix: string): T[] =>
-  fs.existsSync(directory)
-    ? listFiles(directory)
-        .filter((file) => file.endsWith(suffix))
-        .flatMap((file) => {
-          try {
-            return [readJson<T>(file)];
-          } catch {
-            return [];
-          }
-        })
-    : [];
 
 const listFiles = (directory: string): string[] =>
   fs
