@@ -137,6 +137,128 @@ const constFunctionThrows = (
   return throws;
 };
 
+const sourceTokenDigest = (node: ts.Node, source: ts.SourceFile): string => {
+  const scanner = ts.createScanner(
+    ts.ScriptTarget.Latest,
+    true,
+    ts.LanguageVariant.Standard,
+    node.getText(source),
+  );
+  const tokens: Array<readonly [ts.SyntaxKind, string, boolean]> = [];
+  for (;;) {
+    const kind = scanner.scan();
+    if (kind === ts.SyntaxKind.EndOfFileToken) break;
+    tokens.push([
+      kind,
+      scanner.getTokenText(),
+      scanner.hasPrecedingLineBreak(),
+    ]);
+  }
+  const literals: Array<readonly [ts.SyntaxKind, string]> = [];
+  const syntax: Array<readonly [ts.SyntaxKind, number]> = [];
+  const visit = (child: ts.Node): void => {
+    if (
+      ts.isStringLiteralLike(child) ||
+      [
+        ts.SyntaxKind.TemplateHead,
+        ts.SyntaxKind.TemplateMiddle,
+        ts.SyntaxKind.TemplateTail,
+        ts.SyntaxKind.RegularExpressionLiteral,
+        ts.SyntaxKind.JsxText,
+      ].includes(child.kind)
+    )
+      literals.push([child.kind, child.getText(source)]);
+    const children: ts.Node[] = [];
+    ts.forEachChild(child, (nested) => {
+      children.push(nested);
+    });
+    syntax.push([child.kind, children.length]);
+    children.forEach(visit);
+  };
+  visit(node);
+  const diagnostics = (
+    source as ts.SourceFile & {
+      parseDiagnostics: ReadonlyArray<{
+        code: number;
+        length: number | undefined;
+        start: number | undefined;
+      }>;
+    }
+  ).parseDiagnostics.map((diagnostic) => [
+    diagnostic.code,
+    diagnostic.start ?? null,
+    diagnostic.length ?? null,
+  ]);
+  return createHash("sha256")
+    .update(JSON.stringify({ diagnostics, literals, syntax, tokens }))
+    .digest("hex");
+};
+
+type CaptureBrowserCleanupFunction =
+  | "installPackageOwnedChromium"
+  | "launchCaptureBrowser"
+  | "launchWithCaptureExecutableSnapshot"
+  | "packageOwnedProvenance"
+  | "preserveCaptureBrowserCleanup";
+
+/** Bind the complete capture-browser cleanup policy and every call site. */
+const captureBrowserCleanupContract = (
+  source: string,
+): {
+  classDigests: string[];
+  cleanupCalls: Array<{ callDigest: string; owner: string }>;
+  functionDigests: Record<CaptureBrowserCleanupFunction, string[]>;
+} => {
+  const parsed = ts.createSourceFile(
+    "scripts/capture-browser.ts",
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TS,
+  );
+  const functionDigests: Record<CaptureBrowserCleanupFunction, string[]> = {
+    installPackageOwnedChromium: [],
+    launchCaptureBrowser: [],
+    launchWithCaptureExecutableSnapshot: [],
+    packageOwnedProvenance: [],
+    preserveCaptureBrowserCleanup: [],
+  };
+  const classDigests: string[] = [];
+  const cleanupCalls: Array<{ callDigest: string; owner: string }> = [];
+  for (const statement of parsed.statements) {
+    if (
+      ts.isClassDeclaration(statement) &&
+      statement.name?.text === "CaptureBrowserCleanupError"
+    )
+      classDigests.push(sourceTokenDigest(statement, parsed));
+    if (ts.isVariableStatement(statement) === false) continue;
+    for (const declaration of statement.declarationList.declarations) {
+      if (
+        ts.isIdentifier(declaration.name) === false ||
+        declaration.name.text in functionDigests === false ||
+        declaration.initializer === undefined
+      )
+        continue;
+      const owner = declaration.name.text as keyof typeof functionDigests;
+      functionDigests[owner].push(sourceTokenDigest(statement, parsed));
+      const visit = (node: ts.Node): void => {
+        if (
+          ts.isCallExpression(node) &&
+          ts.isIdentifier(node.expression) &&
+          node.expression.text === "preserveCaptureBrowserCleanup"
+        )
+          cleanupCalls.push({
+            callDigest: sourceTokenDigest(node, parsed),
+            owner,
+          });
+        ts.forEachChild(node, visit);
+      };
+      visit(declaration.initializer);
+    }
+  }
+  return { classDigests, cleanupCalls, functionDigests };
+};
+
 /** Inspect capture-doctor resource ownership and failure-preserving cleanup. */
 const captureDoctorCleanupContract = (
   source: string,
@@ -527,6 +649,64 @@ export const test_cli_scaffold = async (): Promise<void> => {
     statement.includes("captureInstallCommandTermination"),
   );
   const captureInstallFailureThrow = captureInstallFailureThrows[0] ?? "";
+  TestValidator.equals(
+    "capture browser cleanup policy and ownership sites",
+    captureBrowserCleanupContract(captureBrowserScript),
+    {
+      classDigests: [
+        "4f9562e51f549b9db26f0b3e6ad137ec6e844524133f3d74abf3be98a248c848",
+      ],
+      cleanupCalls: [
+        {
+          callDigest:
+            "8866e05587818013b043b62310c61e917d45a4d55f5479138064f947629f11f2",
+          owner: "launchWithCaptureExecutableSnapshot",
+        },
+        {
+          callDigest:
+            "fcce4ffbc991ac076b3d767cbf3cc379549d8854e18415dbcd3bd9a258ae5112",
+          owner: "installPackageOwnedChromium",
+        },
+        {
+          callDigest:
+            "4536b49cf1fb58d7f3630a889ee14de02b113d44352c4be5bd10e2b93f25da57",
+          owner: "packageOwnedProvenance",
+        },
+        {
+          callDigest:
+            "5668ad971eb174b70043cbff1cc5a3c6bef71a01ae86549f015bcf13a0241ca2",
+          owner: "launchCaptureBrowser",
+        },
+        {
+          callDigest:
+            "af5316fd1c1e9fdbdca8a270f3bea8e2e4d5807f3e0897a4c99627596cf26bad",
+          owner: "launchCaptureBrowser",
+        },
+        {
+          callDigest:
+            "93893838e0ae1423665ecf3e871d7c985715ea38e4df78bb5778904ac52a68cd",
+          owner: "launchCaptureBrowser",
+        },
+      ],
+      functionDigests: {
+        installPackageOwnedChromium: [
+          "ac5355f531535f5b16c96cdcbd27d8143c0b2b9ce917a6f1b2df3774554414d4",
+        ],
+        launchCaptureBrowser: [
+          "4fbbee42766a9d0d3152578ebe9763496cdab71df2034b8d63a2bee71627375d",
+        ],
+        launchWithCaptureExecutableSnapshot: [
+          "cee0ad1a8523eca1272ad00247ded8f492355235e6da6e0ee7ad296a23f77e06",
+        ],
+        packageOwnedProvenance: [
+          "a48272f6025b8a112c086b82b3079a63481733d4b15d183721d7e4ded0a475b1",
+        ],
+        preserveCaptureBrowserCleanup: [
+          "922553bdd5a17dfc59783d76f0d309cba5e88c81116ab609e0f9426a6d6ea631",
+        ],
+      },
+    },
+  );
   TestValidator.equals(
     "capture doctor preserves primary failures during nested cleanup",
     captureDoctorCleanupContract(captureDoctorScript),
@@ -4657,6 +4837,13 @@ export const test_cli_scaffold = async (): Promise<void> => {
         launch: (executablePath: string) => Promise<Output>;
         snapshot: unknown;
       }) => Promise<Output>;
+      preserveCaptureBrowserCleanup: (
+        failure: { error: unknown } | undefined,
+        resources: ReadonlyArray<{
+          cleanup: () => unknown;
+          resource: string;
+        }>,
+      ) => Promise<void>;
       publishCaptureInstallReceipt: (
         projectRoot: string,
         receipt: unknown,
@@ -4674,6 +4861,129 @@ export const test_cli_scaffold = async (): Promise<void> => {
         env: NodeJS.ProcessEnv;
       }) => CaptureInstallCommandResult;
     };
+    let successfulBrowserCleanup = 0;
+    await captureBrowserModule.preserveCaptureBrowserCleanup(undefined, [
+      {
+        resource: "successful cleanup",
+        cleanup: () => {
+          ++successfulBrowserCleanup;
+        },
+      },
+    ]);
+    const standaloneBrowserCleanupFailure = new Error(
+      "standalone browser cleanup",
+    );
+    let standaloneBrowserCleanupError: unknown;
+    try {
+      await captureBrowserModule.preserveCaptureBrowserCleanup(undefined, [
+        {
+          resource: "standalone cleanup",
+          cleanup: () => {
+            throw standaloneBrowserCleanupFailure;
+          },
+        },
+      ]);
+    } catch (error) {
+      standaloneBrowserCleanupError = error;
+    }
+    const browserBootstrapFailure = new Error("browser bootstrap failed");
+    const firstBrowserCleanupFailure = new Error("first browser cleanup");
+    const secondBrowserCleanupFailure = new Error("second browser cleanup");
+    let attemptedBrowserCleanups = 0;
+    let combinedBrowserCleanupError: unknown;
+    try {
+      await captureBrowserModule.preserveCaptureBrowserCleanup(
+        { error: browserBootstrapFailure },
+        [
+          {
+            resource: "first cleanup",
+            cleanup: () => {
+              ++attemptedBrowserCleanups;
+              throw firstBrowserCleanupFailure;
+            },
+          },
+          {
+            resource: "successful cleanup",
+            cleanup: () => {
+              ++attemptedBrowserCleanups;
+            },
+          },
+          {
+            resource: "second cleanup",
+            cleanup: async () => {
+              ++attemptedBrowserCleanups;
+              throw secondBrowserCleanupFailure;
+            },
+          },
+        ],
+      );
+    } catch (error) {
+      combinedBrowserCleanupError = error;
+    }
+    const trailingBrowserCleanupFailure = new Error("trailing browser cleanup");
+    let flattenedBrowserCleanupError: unknown;
+    try {
+      await captureBrowserModule.preserveCaptureBrowserCleanup(
+        { error: combinedBrowserCleanupError },
+        [
+          {
+            resource: "trailing cleanup",
+            cleanup: () => {
+              throw trailingBrowserCleanupFailure;
+            },
+          },
+        ],
+      );
+    } catch (error) {
+      flattenedBrowserCleanupError = error;
+    }
+    let multipleStandaloneBrowserCleanupError: unknown;
+    try {
+      await captureBrowserModule.preserveCaptureBrowserCleanup(undefined, [
+        {
+          resource: "first cleanup",
+          cleanup: () => {
+            throw firstBrowserCleanupFailure;
+          },
+        },
+        {
+          resource: "second cleanup",
+          cleanup: () => {
+            throw secondBrowserCleanupFailure;
+          },
+        },
+      ]);
+    } catch (error) {
+      multipleStandaloneBrowserCleanupError = error;
+    }
+    TestValidator.predicate(
+      "capture browser cleanup preserves primary-first failure order",
+      successfulBrowserCleanup === 1 &&
+        standaloneBrowserCleanupError === standaloneBrowserCleanupFailure &&
+        attemptedBrowserCleanups === 3 &&
+        combinedBrowserCleanupError instanceof AggregateError &&
+        combinedBrowserCleanupError.errors.length === 3 &&
+        combinedBrowserCleanupError.errors[0] === browserBootstrapFailure &&
+        combinedBrowserCleanupError.errors[1] === firstBrowserCleanupFailure &&
+        combinedBrowserCleanupError.errors[2] === secondBrowserCleanupFailure &&
+        combinedBrowserCleanupError.message.includes(
+          "first cleanup, second cleanup",
+        ) &&
+        flattenedBrowserCleanupError instanceof AggregateError &&
+        flattenedBrowserCleanupError.errors.length === 4 &&
+        flattenedBrowserCleanupError.errors[0] === browserBootstrapFailure &&
+        flattenedBrowserCleanupError.errors[1] === firstBrowserCleanupFailure &&
+        flattenedBrowserCleanupError.errors[2] ===
+          secondBrowserCleanupFailure &&
+        flattenedBrowserCleanupError.errors[3] ===
+          trailingBrowserCleanupFailure &&
+        multipleStandaloneBrowserCleanupError instanceof AggregateError &&
+        multipleStandaloneBrowserCleanupError.errors.length === 2 &&
+        multipleStandaloneBrowserCleanupError.errors[0] ===
+          firstBrowserCleanupFailure &&
+        multipleStandaloneBrowserCleanupError.errors[1] ===
+          secondBrowserCleanupFailure,
+    );
     const metadataRoot = path.join(base, "capture-metadata");
     const playwrightRoot = path.join(metadataRoot, "playwright");
     const playwrightEntry = path.join(playwrightRoot, "index.js");
@@ -4931,6 +5241,42 @@ export const test_cli_scaffold = async (): Promise<void> => {
     TestValidator.predicate(
       "capture launch closes and rejects an executable successor during launch",
       launchBoundaryRejected && rejectedLaunchClosed,
+    );
+    const failedLaunchCleanupSnapshot =
+      captureExecutableModule.openCaptureExecutable(launchExecutable);
+    const failedLaunchCleanupParked = `${launchExecutable}.cleanup-parked`;
+    const launchCleanupFailure = new Error("launch cleanup failed");
+    let failedLaunchCleanupError: unknown;
+    try {
+      await captureBrowserModule.launchWithCaptureExecutableSnapshot({
+        snapshot: failedLaunchCleanupSnapshot,
+        launch: async () => {
+          fs.renameSync(launchExecutable, failedLaunchCleanupParked);
+          fs.writeFileSync(launchExecutable, captureExecutableBytes);
+          return "opened";
+        },
+        close: async () => {
+          throw launchCleanupFailure;
+        },
+      });
+    } catch (error) {
+      failedLaunchCleanupError = error;
+    } finally {
+      captureExecutableModule.closeCaptureExecutable(
+        failedLaunchCleanupSnapshot,
+      );
+      fs.rmSync(launchExecutable, { force: true });
+      fs.renameSync(failedLaunchCleanupParked, launchExecutable);
+    }
+    TestValidator.predicate(
+      "capture launch retains identity failure before rejected cleanup",
+      failedLaunchCleanupError instanceof AggregateError &&
+        failedLaunchCleanupError.errors.length === 2 &&
+        failedLaunchCleanupError.errors[0] instanceof Error &&
+        failedLaunchCleanupError.errors[0].message.includes(
+          "changed physical identity",
+        ) &&
+        failedLaunchCleanupError.errors[1] === launchCleanupFailure,
     );
     const captureProject = path.join(base, "capture-project");
     const captureReceipt = path.join(

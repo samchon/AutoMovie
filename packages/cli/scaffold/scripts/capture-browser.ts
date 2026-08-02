@@ -795,6 +795,48 @@ export const captureInstallCommandTermination = (
   ].join("; ");
 };
 
+interface CaptureBrowserFailure {
+  error: unknown;
+}
+
+interface CaptureBrowserCleanup {
+  cleanup: () => unknown;
+  resource: string;
+}
+
+class CaptureBrowserCleanupError extends AggregateError {}
+
+/** Attempt every browser-bootstrap cleanup without replacing prior failures. */
+export const preserveCaptureBrowserCleanup = async (
+  failure: CaptureBrowserFailure | undefined,
+  resources: readonly CaptureBrowserCleanup[],
+): Promise<void> => {
+  const results = await Promise.allSettled(
+    resources.map((resource) => Promise.resolve().then(resource.cleanup)),
+  );
+  const cleanupFailures = results.flatMap((result, index) =>
+    result.status === "fulfilled"
+      ? []
+      : [{ error: result.reason, resource: resources[index]!.resource }],
+  );
+  if (cleanupFailures.length === 0) return;
+  if (failure === undefined && cleanupFailures.length === 1)
+    throw cleanupFailures[0]!.error;
+  throw new CaptureBrowserCleanupError(
+    [
+      ...(failure === undefined
+        ? []
+        : failure.error instanceof CaptureBrowserCleanupError
+          ? failure.error.errors
+          : [failure.error]),
+      ...cleanupFailures.map((entry) => entry.error),
+    ],
+    `Capture browser cleanup failed${
+      failure === undefined ? "" : " after the operation failed"
+    }: ${cleanupFailures.map((entry) => entry.resource).join(", ")}.`,
+  );
+};
+
 /** Revalidate one open executable on both sides of its launch call. */
 export const launchWithCaptureExecutableSnapshot = async <Output>(props: {
   close: (output: Output) => Promise<void>;
@@ -807,7 +849,12 @@ export const launchWithCaptureExecutableSnapshot = async <Output>(props: {
     assertCaptureExecutable(props.snapshot);
     return output;
   } catch (error) {
-    await props.close(output);
+    await preserveCaptureBrowserCleanup({ error }, [
+      {
+        resource: "launched capture browser",
+        cleanup: () => props.close(output),
+      },
+    ]);
     throw error;
   }
 };
@@ -843,6 +890,7 @@ export const installPackageOwnedChromium = async (
       `Playwright reported no physical Chromium executable at "${chromium.executablePath()}". Retry npm run capture:install.`,
     );
   }
+  let installFailure: CaptureBrowserFailure | undefined;
   try {
     const receipt: IAutoMovieCaptureInstallReceipt = {
       version: 1,
@@ -868,19 +916,27 @@ export const installPackageOwnedChromium = async (
       assertPlaywrightMetadata(metadata);
     });
     return receipt;
+  } catch (error) {
+    installFailure = { error };
+    throw error;
   } finally {
-    closeCaptureExecutable(executable);
+    await preserveCaptureBrowserCleanup(installFailure, [
+      {
+        resource: "installed capture executable snapshot",
+        cleanup: () => closeCaptureExecutable(executable),
+      },
+    ]);
   }
 };
 
-const packageOwnedProvenance = (
+const packageOwnedProvenance = async (
   projectRoot: string,
   metadata: IPlaywrightMetadata,
   executablePath: string,
-): {
+): Promise<{
   executable: ICaptureExecutableSnapshot;
   receipt: IAutoMovieCaptureInstallReceipt;
-} => {
+}> => {
   const receipt = readCaptureInstallReceipt(projectRoot);
   const resolvedExecutable = path.resolve(executablePath);
   if (
@@ -901,10 +957,16 @@ const packageOwnedProvenance = (
     );
   }
   if (executable.digest !== receipt.browser.executableDigest) {
-    closeCaptureExecutable(executable);
-    throw new Error(
+    const error = new Error(
       "The package-owned Chromium executable is missing or differs from its install receipt. Run npm run capture:install, then npm run capture:doctor.",
     );
+    await preserveCaptureBrowserCleanup({ error }, [
+      {
+        resource: "rejected package-owned executable snapshot",
+        cleanup: () => closeCaptureExecutable(executable),
+      },
+    ]);
+    throw error;
   }
   return { executable, receipt };
 };
@@ -923,7 +985,7 @@ export const launchCaptureBrowser = async (
   let executable: ICaptureExecutableSnapshot | null = null;
   let launch: NonNullable<Parameters<typeof chromium.launch>[0]>;
   if (config.source === "playwright-chromium") {
-    const provenance = packageOwnedProvenance(
+    const provenance = await packageOwnedProvenance(
       projectRoot,
       metadata,
       chromium.executablePath(),
@@ -960,7 +1022,17 @@ export const launchCaptureBrowser = async (
     assertPlaywrightMetadata(metadata);
     if (executable !== null) assertCaptureExecutable(executable);
   } catch (error) {
-    if (executable !== null) closeCaptureExecutable(executable);
+    await preserveCaptureBrowserCleanup(
+      { error },
+      executable === null
+        ? []
+        : [
+            {
+              resource: "pre-launch executable snapshot",
+              cleanup: () => closeCaptureExecutable(executable),
+            },
+          ],
+    );
     throw error;
   }
   let browser: Browser;
@@ -981,13 +1053,30 @@ export const launchCaptureBrowser = async (
             close: (opened) => opened.close(),
           });
   } catch (error) {
-    if (executable !== null) closeCaptureExecutable(executable);
+    let cause: unknown = error;
+    try {
+      await preserveCaptureBrowserCleanup(
+        { error },
+        executable === null
+          ? []
+          : [
+              {
+                resource: "failed-launch executable snapshot",
+                cleanup: () => closeCaptureExecutable(executable),
+              },
+            ],
+      );
+    } catch (cleanupError) {
+      cause = cleanupError;
+    }
     throw new Error(
       `Capture browser launch failed: ${
         error instanceof Error ? error.message : String(error)
       } Run npm run capture:install and npm run capture:doctor. If Linux reports missing shared libraries, run npx playwright install-deps chromium; otherwise correct the explicit system-channel/configured-executable setting.`,
+      { cause },
     );
   }
+  let validationFailure: CaptureBrowserFailure | undefined;
   try {
     assertPlaywrightMetadata(metadata);
     if (executable !== null) assertCaptureExecutable(executable);
@@ -1025,10 +1114,27 @@ export const launchCaptureBrowser = async (
       },
     };
   } catch (error) {
-    await browser.close();
+    validationFailure = { error };
     throw error;
   } finally {
-    if (executable !== null) closeCaptureExecutable(executable);
+    await preserveCaptureBrowserCleanup(validationFailure, [
+      ...(validationFailure === undefined
+        ? []
+        : [
+            {
+              resource: "invalid capture browser",
+              cleanup: () => browser.close(),
+            },
+          ]),
+      ...(executable === null
+        ? []
+        : [
+            {
+              resource: "validated executable snapshot",
+              cleanup: () => closeCaptureExecutable(executable),
+            },
+          ]),
+    ]);
   }
 };
 
