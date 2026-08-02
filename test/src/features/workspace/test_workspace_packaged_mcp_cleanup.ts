@@ -20,7 +20,25 @@ const tokenDigest = (node: ts.Node, source: ts.SourceFile): string => {
     if (kind === ts.SyntaxKind.EndOfFileToken) break;
     tokens.push([kind, scanner.getTokenText()]);
   }
-  return createHash("sha256").update(JSON.stringify(tokens)).digest("hex");
+  const literals: Array<readonly [ts.SyntaxKind, string]> = [];
+  const visit = (child: ts.Node): void => {
+    if (
+      ts.isStringLiteralLike(child) ||
+      [
+        ts.SyntaxKind.TemplateHead,
+        ts.SyntaxKind.TemplateMiddle,
+        ts.SyntaxKind.TemplateTail,
+        ts.SyntaxKind.RegularExpressionLiteral,
+        ts.SyntaxKind.JsxText,
+      ].includes(child.kind)
+    )
+      literals.push([child.kind, child.getText(source)]);
+    ts.forEachChild(child, visit);
+  };
+  visit(node);
+  return createHash("sha256")
+    .update(JSON.stringify({ literals, tokens }))
+    .digest("hex");
 };
 
 const expectedDigest = (digest: string, _description: string): string => digest;
@@ -327,14 +345,14 @@ export const test_workspace_packaged_mcp_cleanup = (): void => {
       cleanupCalls: [
         {
           callDigest:
-            "bfa36ed4960767c6af2bc034e15f8294e580373d628dadfd5a8de6c66144a9cc",
+            "7b8d57bc6c7a3305e7bfcb8a6e8cb0dc7c71c60b7e3a46520bc7103b9757a77c",
           failure: "clientFailure",
         },
       ],
       declarations: [
         {
           initializerDigest:
-            "06047bd30fc65edbdf13ec571a7287621d0de1d4f83893303ea8ac829e9929f4",
+            "d1aa804db7ba977523697e1959b5854b5352009dbce7c0685d3d32ded5d0aa2c",
           kind: "const",
           name: "client",
         },
@@ -345,21 +363,21 @@ export const test_workspace_packaged_mcp_cleanup = (): void => {
         },
       ],
       failureWrites: [
-        "declaration:364976945ec76e3893410445ffdb1c8183cb28d727adf027e9cda6a59c68e609",
-        "assignment:cf6e11f71fea417dde0e70d77cc65b6c79ed1980d7d163686f1ba8c84bd3bcc3",
+        "declaration:404eb80010a82b3ec8edb16532ffe06c285884182b5a4720672fb8e14b41ec50",
+        "assignment:69c07c6fc1b67c53708b07aa6f677f47313b3d0edaba4f0ea3550c4243e6f067",
       ],
       functions: {
         assert: [
           {
             async: false,
             bodyDigest: expectedDigest(
-              "658a8c522345f82e1ab2f45ddb0182f8df48e206ff8485fc1fad574a700e8367",
+              "b25efd48e8623ec95403b70fbecae3b1c3c81613622207122c3ca6fb0257e262",
               "{if(!condition)thrownewError(`✗#{name}:#{detail}`);console.log(`✓#{name}`);}",
             ),
             parameterDigests: [
-              "5fbff4b5e0026045beaeeeb11a7158ef94dcdf28713cca6ea4c5d3becd7b6d0f",
-              "df4a4ee1490054c8dd755cfa29f1954d808578ae5d79166a72a027e53aea440f",
-              "6cd1cbe184067bb4770cc2f5faf1cc29aa47a56abc4a815122923462adad3f66",
+              "23537fb35bcecb28c4e1d98b420eca724787c904f3f612020e5f9f8df40132e6",
+              "5f3a1fe9bec0fcf5efb0bb80cbeca1123e6a5e870da838cfc8d6bace48090c11",
+              "8965b455c44ba21891e486579822a3a62bad0396624d18ef01f3fc6d433ac3ff",
             ],
           },
         ],
@@ -367,10 +385,10 @@ export const test_workspace_packaged_mcp_cleanup = (): void => {
           {
             async: true,
             bodyDigest:
-              "28389ac4d17b9509e036cfb19116dde97300d995139eeeb578ff4fca9820896b",
+              "7a2e2fac4a7bb554e496604389460dd571113c86cf25f7abcce511465185b4ad",
             parameterDigests: [
-              "bd6915f99a0fb80d2fdfc2f460fd78073deae7e9d5a1a7b2921305ab50f41bfe",
-              "6bb173ef83cac6a1b9b70304bbc8c22be31ea6fd94c4dbe09cb1dba462fb4f86",
+              "742518240429049f1b3ecfb9bd8b8b162e4948e7fe111a4b77af977360164360",
+              "41f180b0b20ee3971599e2a5ba5b1a0dda6fdbd51908f54f32e59e0228b40889",
             ],
           },
         ],
@@ -378,24 +396,24 @@ export const test_workspace_packaged_mcp_cleanup = (): void => {
       lifecycle: [
         {
           catchDigest:
-            "a0fe30ba4bca1975fd7860a9246a8d12b33b5b0809a1071b6aed59893c501a1a",
+            "7f21c7a1e446cf30e2fe99d0e86d0056ba52b732eeb93a5620bc40a4a01db9af",
           finallyDigest:
-            "5ea951e0ac1ea5be2d9d6d874812e31d1304da87bcbd2f13900c4a0f79b4404c",
+            "0ab290e48b50da1be541be1a2b42121bd7870fa047f28bf21d09ff1404480f74",
           probeDigest:
-            "e57ebd1711cdd3d0fe3c840d12515649a9ec21ab0ae89dfaa7fad4ab329a0735",
+            "6be99b7203698ea3ed07eb2e82dc7c1f71f559dd678eb540890351a8670b81e9",
         },
       ],
       processExits: [],
       sourceCount: 1,
       topLevelActions: [
-        "variable:3632d97f8213152947201578283b5598463d9ed89d7f706dca561c4e76128062",
-        "variable:51cc13f846ed864dcbf13c1611a6e032acbf1d9942fca795bacf1b130d06c957",
-        "expression:74085183de4c8661d0a93e14146b89eff269cbd692635bc80ff95a15ea6cf47c",
-        "expression:212c408f45765c987a46386f5bcb5d4d7960a8f69a709932d7b9b90c54e38ca0",
-        "variable:0c22409b779168871e01abb7a7c7f0909931ad2c10a5e0ec7fb7d4ab35d29fc3",
-        "variable:ed79343dcafef6e988750359736b783bee07253d4a3e560f6051cbd118b2b60f",
-        "variable:84ce4275db6f2334e4e2e953123ea4577b081ceb3e4e6544297ca4814190a4c8",
-        "try:c357f9b3627cfbcd533a887173f16c7f388a54971f996b722ded9ba960ddb8b2",
+        "variable:b33c49f07502268b959cc0f0a8e518e3683f0fad40d19eac3c387d3ad3d9cbae",
+        "variable:916b2b99ea6ebf0039d5f6e85ea6e8ca0a93c4b8a8de01f7a478e344f56733eb",
+        "expression:835d75742f690f625e3a465d4cde4c40b59dc73ad3383fb2869818fe439cffeb",
+        "expression:cbd1e23876a310cd526ad29fa7e531de20bc63d6f0c5f8a94e82bbf6fc802320",
+        "variable:99747588d4cba8fa97a023466de0fe9c65edaeb715b2978a03f8c1540008d719",
+        "variable:de6e149225e5746da7683243ec32e5d54cb2a182c0a8b749677b39747c543914",
+        "variable:8bf627ba01f0f9bf0976c8e04615fff3d5a1ff78eeac28ff6e4e2885eaf67638",
+        "try:d1ed081ea61bab339695ba9a2dc92d656671dbbb967dcf9facdec7a1b83a7d19",
       ],
     },
   );
