@@ -1456,6 +1456,12 @@ const renderBrowserLifecycleContract = (
           for (const name of new Set(writtenBindings(node.left)))
             writes[name]!.push(compact(node));
         else if (
+          (ts.isForInStatement(node) || ts.isForOfStatement(node)) &&
+          ts.isVariableDeclarationList(node.initializer) === false
+        )
+          for (const name of new Set(writtenBindings(node.initializer)))
+            writes[name]!.push(compact(node));
+        else if (
           (ts.isPrefixUnaryExpression(node) ||
             ts.isPostfixUnaryExpression(node)) &&
           (node.operator === ts.SyntaxKind.PlusPlusToken ||
@@ -1477,11 +1483,13 @@ const renderBrowserLifecycleContract = (
         binding: ts.VariableDeclaration | undefined,
       ): ts.CallExpression | undefined => {
         const initializer = binding?.initializer;
-        if (initializer === undefined) return undefined;
-        const expression = ts.isAwaitExpression(initializer)
-          ? initializer.expression
-          : initializer;
-        return ts.isCallExpression(expression) ? expression : undefined;
+        if (
+          initializer === undefined ||
+          ts.isAwaitExpression(initializer) === false ||
+          ts.isCallExpression(initializer.expression) === false
+        )
+          return undefined;
+        return initializer.expression;
       };
       const pageArgument = (
         binding: ts.VariableDeclaration | undefined,
@@ -1492,12 +1500,30 @@ const renderBrowserLifecycleContract = (
           ts.isObjectLiteralExpression(argument) === false
         )
           return null;
-        return (
-          argument.properties
-            .filter(ts.isShorthandPropertyAssignment)
-            .find((property) => property.name.text === "page")?.name.text ??
-          null
+        if (
+          argument.properties.some(
+            (property) =>
+              ts.isSpreadAssignment(property) ||
+              (ts.isShorthandPropertyAssignment(property) === false &&
+                ts.isComputedPropertyName(property.name)),
+          )
+        )
+          return null;
+        const pageProperties = argument.properties.filter(
+          (property) =>
+            (ts.isShorthandPropertyAssignment(property) ||
+              ts.isPropertyAssignment(property) ||
+              ts.isMethodDeclaration(property) ||
+              ts.isGetAccessorDeclaration(property) ||
+              ts.isSetAccessorDeclaration(property)) &&
+            (ts.isIdentifier(property.name) ||
+              ts.isStringLiteralLike(property.name)) &&
+            property.name.text === "page",
         );
+        return pageProperties.length === 1 &&
+          ts.isShorthandPropertyAssignment(pageProperties[0]!)
+          ? pageProperties[0]!.name.text
+          : null;
       };
       contracts.push({
         browser:
