@@ -206,8 +206,8 @@ const parseArgs = (
     chrome: flags.chrome ?? DEFAULT_CHROME_EXECUTABLE,
     durationSeconds: positiveNumber(flags.duration, 1, "--duration"),
     fps: positiveNumber(flags.fps, 12, "--fps"),
-    width: even(positiveInteger(flags.width, 640, "--width")),
-    height: even(positiveInteger(flags.height, 360, "--height")),
+    width: positiveEvenInteger(flags.width, 640, "--width"),
+    height: positiveEvenInteger(flags.height, 360, "--height"),
     target: flags.target ?? stem,
     outputPath,
     frameDir,
@@ -246,13 +246,16 @@ const positiveNumber = (
   return parsed;
 };
 
-const positiveInteger = (
+const positiveEvenInteger = (
   value: string | undefined,
   fallback: number,
   label: string,
-): number => Math.round(positiveNumber(value, fallback, label));
-
-const even = (value: number): number => value - (value % 2);
+): number => {
+  const parsed = positiveNumber(value, fallback, label);
+  if (!Number.isInteger(parsed) || parsed % 2 !== 0)
+    throw new Error(`${label} must be a positive even integer`);
+  return parsed;
+};
 
 const repoRoot = (): string => {
   const cwd = process.cwd();

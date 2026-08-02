@@ -839,6 +839,158 @@ const packagedAssetReviewContract = (
   };
 };
 
+/** Inspect one render playground's exact raster argument validator. */
+const renderRasterArgumentContract = (
+  file: string,
+  source: string,
+): {
+  helper: {
+    count: number;
+    guards: Array<{
+      condition: string;
+      error: string | null;
+    }>;
+    parameters: string[][];
+    parsed: string[];
+    returns: string[];
+  };
+  legacyHelpers: {
+    even: number;
+    positiveInteger: number;
+  };
+  parseArgs: {
+    count: number;
+    dimensions: Array<[string, string]>;
+    directReturns: number;
+    unsafeProperties: string[];
+  };
+} => {
+  const parsed = ts.createSourceFile(
+    file,
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TS,
+  );
+  const compact = (node: ts.Node): string =>
+    node.getText(parsed).replace(/\s+/g, "");
+  let even = 0;
+  let helperCount = 0;
+  let parseArgsCount = 0;
+  let positiveInteger = 0;
+  let directReturns = 0;
+  const dimensions: Array<[string, string]> = [];
+  const guards: Array<{ condition: string; error: string | null }> = [];
+  const parameters: string[][] = [];
+  const parsedValues: string[] = [];
+  const returns: string[] = [];
+  const unsafeProperties: string[] = [];
+  for (const statement of parsed.statements) {
+    if (ts.isVariableStatement(statement) === false) continue;
+    for (const declaration of statement.declarationList.declarations) {
+      if (ts.isIdentifier(declaration.name) === false) continue;
+      if (declaration.name.text === "even") ++even;
+      if (declaration.name.text === "positiveInteger") ++positiveInteger;
+      if (
+        declaration.initializer === undefined ||
+        (ts.isArrowFunction(declaration.initializer) === false &&
+          ts.isFunctionExpression(declaration.initializer) === false) ||
+        ts.isBlock(declaration.initializer.body) === false
+      )
+        continue;
+      const body = declaration.initializer.body;
+      if (declaration.name.text === "positiveEvenInteger") {
+        ++helperCount;
+        parameters.push(
+          declaration.initializer.parameters.map((parameter) =>
+            compact(parameter.name),
+          ),
+        );
+        for (const action of body.statements) {
+          if (
+            ts.isVariableStatement(action) &&
+            action.declarationList.declarations.length === 1 &&
+            ts.isIdentifier(action.declarationList.declarations[0]!.name) &&
+            action.declarationList.declarations[0]!.name.text === "parsed" &&
+            action.declarationList.declarations[0]!.initializer !== undefined
+          )
+            parsedValues.push(
+              compact(action.declarationList.declarations[0]!.initializer!),
+            );
+          if (ts.isIfStatement(action)) {
+            const thrown = ts.isThrowStatement(action.thenStatement)
+              ? action.thenStatement.expression
+              : undefined;
+            const argument =
+              thrown !== undefined &&
+              ts.isNewExpression(thrown) &&
+              thrown.arguments?.length === 1
+                ? thrown.arguments[0]
+                : undefined;
+            guards.push({
+              condition: compact(action.expression),
+              error: argument === undefined ? null : compact(argument),
+            });
+          }
+          if (ts.isReturnStatement(action) && action.expression !== undefined)
+            returns.push(compact(action.expression));
+        }
+      }
+      if (declaration.name.text !== "parseArgs") continue;
+      ++parseArgsCount;
+      for (const action of body.statements) {
+        if (ts.isReturnStatement(action) === false) continue;
+        ++directReturns;
+        if (
+          action.expression === undefined ||
+          ts.isObjectLiteralExpression(action.expression) === false
+        )
+          continue;
+        for (const property of action.expression.properties) {
+          if (
+            ts.isPropertyAssignment(property) &&
+            (ts.isIdentifier(property.name) ||
+              ts.isStringLiteralLike(property.name)) &&
+            (property.name.text === "width" || property.name.text === "height")
+          )
+            dimensions.push([
+              property.name.text,
+              compact(property.initializer),
+            ]);
+          else if (
+            ts.isSpreadAssignment(property) ||
+            (ts.isSpreadAssignment(property) === false &&
+              ts.isComputedPropertyName(property.name)) ||
+            ((ts.isShorthandPropertyAssignment(property) ||
+              ts.isMethodDeclaration(property) ||
+              ts.isGetAccessorDeclaration(property) ||
+              ts.isSetAccessorDeclaration(property)) &&
+              (property.name.getText(parsed) === "width" ||
+                property.name.getText(parsed) === "height"))
+          )
+            unsafeProperties.push(compact(property));
+        }
+      }
+    }
+  }
+  return {
+    helper: {
+      count: helperCount,
+      guards,
+      parameters,
+      parsed: parsedValues,
+      returns,
+    },
+    legacyHelpers: { even, positiveInteger },
+    parseArgs: {
+      count: parseArgsCount,
+      dimensions,
+      directReturns,
+      unsafeProperties,
+    },
+  };
+};
+
 /** A source-level template interpolation without a live template expression. */
 const templateExpression = (expression: string): string =>
   "$" + "{" + expression + "}";
@@ -995,6 +1147,13 @@ export const test_workspace_public_contracts = (): void => {
     file: file!,
     prefix: prefix!,
     source: readPackageFile("packages", "playground", "scripts", file!),
+  }));
+  const playgroundRenderSources = [
+    "render-and-see.ts",
+    "render-sequence-and-see.ts",
+  ].map((file) => ({
+    file,
+    source: readPackageFile("packages", "playground", "scripts", file),
   }));
   const devServerFailureOffset = playgroundCaptureSmoke.indexOf(
     "const devServerFailure =",
@@ -1992,6 +2151,40 @@ export const test_workspace_public_contracts = (): void => {
             ],
           },
         ],
+      },
+    })),
+  );
+  TestValidator.equals(
+    "render playgrounds preserve exact positive even raster arguments",
+    playgroundRenderSources.map(({ file, source }) => ({
+      file,
+      contract: renderRasterArgumentContract(file, source),
+    })),
+    playgroundRenderSources.map(({ file }) => ({
+      file,
+      contract: {
+        helper: {
+          count: 1,
+          guards: [
+            {
+              condition: "!Number.isInteger(parsed)||parsed%2!==0",
+              error: "`${label}mustbeapositiveeveninteger`",
+            },
+          ],
+          parameters: [["value", "fallback", "label"]],
+          parsed: ["positiveNumber(value,fallback,label)"],
+          returns: ["parsed"],
+        },
+        legacyHelpers: { even: 0, positiveInteger: 0 },
+        parseArgs: {
+          count: 1,
+          dimensions: [
+            ["width", 'positiveEvenInteger(flags.width,640,"--width")'],
+            ["height", 'positiveEvenInteger(flags.height,360,"--height")'],
+          ],
+          directReturns: 1,
+          unsafeProperties: [],
+        },
       },
     })),
   );
