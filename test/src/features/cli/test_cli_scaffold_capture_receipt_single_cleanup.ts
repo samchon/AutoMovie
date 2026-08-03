@@ -117,7 +117,7 @@ export const test_cli_scaffold_capture_receipt_single_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1935,
+          containerStatements: 1940,
           finallyDigest:
             "60a847debefc4d5cd8e5456376d28eea0ac053c0f5b65946e9faa284da06f6d2",
           finallySubstantive: {
@@ -142,7 +142,7 @@ export const test_cli_scaffold_capture_receipt_single_cleanup = (): void => {
           catchBodies: ["foreignReceiptCleanupFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1935,
+          containerStatements: 1940,
           finallyDigest:
             "7d83a451aa90abb6575b45dd70ac59e4cc74e1581589f17b5d24ef3fa64253ef",
           finallySubstantive: {
@@ -167,7 +167,7 @@ export const test_cli_scaffold_capture_receipt_single_cleanup = (): void => {
           catchBodies: ["receiptSegmentCleanupFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1935,
+          containerStatements: 1940,
           finallyDigest:
             "5b18bd2c6986af9966f9b6e43211f40653f6feabf0854dbdf4770fd1e1956a05",
           finallySubstantive: {
@@ -192,7 +192,7 @@ export const test_cli_scaffold_capture_receipt_single_cleanup = (): void => {
           catchBodies: ["receiptRootCleanupFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1935,
+          containerStatements: 1940,
           finallyDigest:
             "8b0c484c31978fa0ee66dc681f6a520351cbb95c45fad37b7d06a4e34704cbc3",
           finallySubstantive: {

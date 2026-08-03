@@ -30,7 +30,7 @@ const leafTokenContract = (
   };
 };
 
-const writerMutationCleanupContract = (text: string): unknown => {
+const dialogueCacheCleanupContract = (text: string): unknown => {
   const source = ts.createSourceFile(
     "test_cli_scaffold.ts",
     text,
@@ -39,10 +39,11 @@ const writerMutationCleanupContract = (text: string): unknown => {
     ts.ScriptKind.TS,
   );
   const anchors = [
-    "scaffoldlatecreateopenhook",
-    "scaffoldlateforceopenhook",
-    "scaffoldfinalcreateopenhook",
-    "scaffoldfinalforceopenhook",
+    "dialoguecachereuseabaopenhook",
+    "dialoguecachepcmsuccessoropenhook",
+    "dialoguecachereceiptsuccessoropenhook",
+    "dialoguecachecaptureabaopenhook",
+    "dialoguecacherootswapopenhook",
   ];
   const lifecycles: Array<{
     catchBodies: string[];
@@ -102,125 +103,145 @@ const writerMutationCleanupContract = (text: string): unknown => {
   };
 };
 
-export const test_cli_scaffold_writer_mutation_cleanup = (): void => {
+export const test_cli_scaffold_dialogue_cache_cleanup = (): void => {
   TestValidator.equals(
-    "CLI scaffold owns four writer mutation cleanup lifecycles",
-    writerMutationCleanupContract(
+    "CLI scaffold owns five dialogue cache cleanup lifecycles",
+    dialogueCacheCleanupContract(
       fs.readFileSync(path.join(__dirname, "test_cli_scaffold.ts"), "utf8"),
     ),
     {
       lifecycles: [
         {
           catchBodies: [
-            "lateCreateMutationCleanupFailure={error};",
+            "reuseAbaDialogueCleanupFailure={error};",
             "throwerror;",
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
           containerStatements: 1940,
           finallyDigest:
-            "f67b4c2bd34e98b18375178299e2953f29b5605ebde4daf5ab1983c8a834829b",
+            "82bf93a82d33ec9ccaca05ef1eca7b6d82d09a43898eea6c1487d3b2fc347bc7",
           finallySubstantive: {
             digest:
-              "d51400177f28d9e908c10ae27a481c310c00c33918290d412e6eca60ffbe2546",
-            tokens: 50,
+              "963f2002e93878118f29f2436906b1631b831b1b071efca48858b6baac002abe",
+            tokens: 29,
           },
-          index: 1792,
+          index: 748,
           preceding:
-            "letlateCreateMutationCleanupFailure:{error:unknown}|undefined;",
+            "letreuseAbaDialogueCleanupFailure:{error:unknown}|undefined;",
           substantive: {
             digest:
-              "4e6e830f59b99d9b9557a1cc91afa3917d7f43ccda1d3a2759938237d844f2b1",
-            tokens: 21,
+              "b93bd0ccefdd3bc81846f2bc0af680a8fe9c335460fca5453e12d3f8449bde35",
+            tokens: 33,
           },
           tryBody:
-            '{lateCreateMutationRejected=throws(()=>writeFiles(lateCreateMutationBase,{"owned.txt":"scaffoldgeneration",}),);}',
+            "{reuseAbaDialogueRejected=throws(()=>dialogueCacheModule.publishDialogueCache({base:dialogueRoot,pcm:dialoguePcm,receipt:dialogueReceipt,target:reuseAbaDialogueTarget,}),);}",
           tryDigest:
-            "123267b58a1629c81d7393e1bd93013086b2c643fb35964624625bd5cb96597e",
+            "faa71140ec597b2587718f2c053b5bd969654782fc95b3829fd748d2d67701e9",
+        },
+        {
+          catchBodies: ["pcmSuccessorCleanupFailure={error};", "throwerror;"],
+          catchVariables: ["error"],
+          containerKind: "TryStatement",
+          containerStatements: 1940,
+          finallyDigest:
+            "6ee43ae006515e8527df651f5618a54280b360654bc91c996e70bc159e4c6764",
+          finallySubstantive: {
+            digest:
+              "96b4562a838bf89876b5e15033c63cb81a6a57901070c3e0baa675f195f33f4b",
+            tokens: 29,
+          },
+          index: 773,
+          preceding: "letpcmSuccessorCleanupFailure:{error:unknown}|undefined;",
+          substantive: {
+            digest:
+              "450e2295d0292e9126ebdfea78602df97473c9d3a5bfe722ad4307dd9811d38e",
+            tokens: 33,
+          },
+          tryBody:
+            "{pcmSuccessorRejected=throws(()=>dialogueCacheModule.publishDialogueCache({base:dialogueRoot,pcm:dialoguePcm,receipt:dialogueReceipt,target:pcmSuccessorTarget,}),);}",
+          tryDigest:
+            "9913015203577f67613a8eeab37bc6df52fbf000155bf7dd598e95c163f9332a",
         },
         {
           catchBodies: [
-            "lateForceMutationCleanupFailure={error};",
+            "receiptSuccessorCleanupFailure={error};",
             "throwerror;",
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
           containerStatements: 1940,
           finallyDigest:
-            "792ace9b3784dff220b9bdc13343a066d0cfea799dceb9a5785abcffd073c5d9",
+            "015266ad94bd00d0338147a13ee22386a127037b73f44a7d0b1f66d12f742fa5",
           finallySubstantive: {
             digest:
-              "d4a30948f625f5ad354536caa2f08ad5890753439cfa4efe3d65f99aa1a164ea",
-            tokens: 50,
+              "b6297913e6371d2a09a94ec3a82e8630b06e5d33dba143c1b788ed653098d5f8",
+            tokens: 29,
           },
-          index: 1805,
+          index: 782,
           preceding:
-            "letlateForceMutationCleanupFailure:{error:unknown}|undefined;",
+            "letreceiptSuccessorCleanupFailure:{error:unknown}|undefined;",
           substantive: {
             digest:
-              "ce709dd372fb45a84d37c2ad4ed87818f4839b6572982714967090986bade3b3",
-            tokens: 27,
+              "26ec295eb026b6930a7ef50b9d650b5a3a3500fadf01c3018bb910d6872fcfb6",
+            tokens: 33,
           },
           tryBody:
-            '{lateForceMutationRejected=throws(()=>writeFiles(lateForceMutationBase,{"owned.txt":"scaffoldgeneration"},{force:true},),);}',
+            "{receiptSuccessorRejected=throws(()=>dialogueCacheModule.publishDialogueCache({base:dialogueRoot,pcm:dialoguePcm,receipt:dialogueReceipt,target:receiptSuccessorTarget,}),);}",
           tryDigest:
-            "a7781ede8b175b36359b08ca4e02246c93837fecfbbc9aee87ebc99642c0a59e",
+            "978ce6b8abcd0f686b7abf6c0d9a870d12cb3d943d2607185f9aa9b3ff9b0aca",
+        },
+        {
+          catchBodies: ["abaDialogueCleanupFailure={error};", "throwerror;"],
+          catchVariables: ["error"],
+          containerKind: "TryStatement",
+          containerStatements: 1940,
+          finallyDigest:
+            "967b7d5e8cbca269410064ba269d1de0d41d68ce87a5a68dcd6c768ba2b204d5",
+          finallySubstantive: {
+            digest:
+              "637869f8d9b7a70bc6eb13e6b8fd50188338ef44a4179a699556730ce465ee12",
+            tokens: 29,
+          },
+          index: 801,
+          preceding: "letabaDialogueCleanupFailure:{error:unknown}|undefined;",
+          substantive: {
+            digest:
+              "3afd973b3941b6514459c10bd38cb663ba4e14e866b27f48737e7c8815b6a8ad",
+            tokens: 19,
+          },
+          tryBody:
+            "{abaDialogueRejected=throws(()=>dialogueCacheModule.captureDialogueCache(dialogueRoot,abaDialogueTarget,),);}",
+          tryDigest:
+            "a2c903328eb02bcedac3c1f2e21277c57c47ed5d42af6bd11a02814b8976e337",
         },
         {
           catchBodies: [
-            "finalCreateMutationCleanupFailure={error};",
+            "dialogueRootSwapCleanupFailure={error};",
             "throwerror;",
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
           containerStatements: 1940,
           finallyDigest:
-            "1ee054979b4e2ea9ad25f87c29b2e69feb7c2953ee49f28931b8153d53b86ba8",
+            "f508077e4f310325dd66c62d2f159326ccb30722f7016fcbf9d725c7e186794d",
           finallySubstantive: {
             digest:
-              "053a12e9e29a5b0894ef21f6e600f389e3b9d48a19c3395aac72a2e8102928d8",
-            tokens: 71,
+              "c385783bf222f334b1ad64295c688d12b40dcc0ce709cd73ac0d275cf6395e57",
+            tokens: 29,
           },
-          index: 1818,
+          index: 812,
           preceding:
-            "letfinalCreateMutationCleanupFailure:{error:unknown}|undefined;",
+            "letdialogueRootSwapCleanupFailure:{error:unknown}|undefined;",
           substantive: {
             digest:
-              "11f86871f66655596892ef7dccf0d361461922645a921e85f3d31e0077800bd9",
-            tokens: 21,
+              "8b6fd6e02fa2a9593e371bbfbce1badf37c7c06bd8c2c1cd97d9dc8780459681",
+            tokens: 33,
           },
           tryBody:
-            '{finalCreateMutationRejected=throws(()=>writeFiles(finalCreateMutationBase,{"owned.txt":"scaffoldgeneration",}),);}',
+            "{dialogueRootSwapRejected=throws(()=>dialogueCacheModule.publishDialogueCache({base:rootDialogueRoot,pcm:dialoguePcm,receipt:dialogueReceipt,target:rootDialogueTarget,}),);}",
           tryDigest:
-            "82268124ea176d2db1a4cc0cc9f46a1043dc883056eedf51752f9b5d108fbba5",
-        },
-        {
-          catchBodies: [
-            "finalForceMutationCleanupFailure={error};",
-            "throwerror;",
-          ],
-          catchVariables: ["error"],
-          containerKind: "TryStatement",
-          containerStatements: 1940,
-          finallyDigest:
-            "daeab11b6674f05f06b125b652250f8dc06116935cb33f377f90ebd8440b9eb4",
-          finallySubstantive: {
-            digest:
-              "28b0f4c18c46e0d9e73dca974dae0d9c4b8e408e6c2038c4cf45ff5ccb5c040e",
-            tokens: 71,
-          },
-          index: 1833,
-          preceding:
-            "letfinalForceMutationCleanupFailure:{error:unknown}|undefined;",
-          substantive: {
-            digest:
-              "321234335a773c5c8ce6f69ff10e0c282bc5e758ed1ddb6687f778aede744886",
-            tokens: 27,
-          },
-          tryBody:
-            '{finalForceMutationRejected=throws(()=>writeFiles(finalForceMutationBase,{"owned.txt":"scaffoldgeneration"},{force:true},),);}',
-          tryDigest:
-            "1e5476cc2ac59fc17b04c60f7eadac45db7a9490bd98c1b804259017276ca57b",
+            "c4a00b529562e68e0af9a6aa642aa34c74c8387881730dd18230caf39d6137e0",
         },
       ],
       parseDiagnostics: [],

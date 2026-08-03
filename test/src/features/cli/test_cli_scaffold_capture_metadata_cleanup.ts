@@ -112,7 +112,7 @@ export const test_cli_scaffold_capture_metadata_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1935,
+          containerStatements: 1940,
           finallyDigest:
             "0aa5288af368b96dbae9edb653410c88d2e17bf136e47a8ebe214d85d5d5c77e",
           finallySubstantive: {
@@ -136,7 +136,7 @@ export const test_cli_scaffold_capture_metadata_cleanup = (): void => {
           catchBodies: ["coreBrowsersCleanupFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1935,
+          containerStatements: 1940,
           finallyDigest:
             "c448f1fc024246e74a18e9da9a774d11270de00f3f8f59da226a4ec3690f9693",
           finallySubstantive: {

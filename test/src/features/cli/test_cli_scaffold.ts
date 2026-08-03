@@ -8015,6 +8015,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       return descriptor;
     }) as typeof fs.openSync;
     let reuseAbaDialogueRejected = false;
+    let reuseAbaDialogueCleanupFailure: { error: unknown } | undefined;
     try {
       reuseAbaDialogueRejected = throws(() =>
         dialogueCacheModule.publishDialogueCache({
@@ -8024,8 +8025,18 @@ export const test_cli_scaffold = async (): Promise<void> => {
           target: reuseAbaDialogueTarget,
         }),
       );
+    } catch (error) {
+      reuseAbaDialogueCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.openSync = nativeOpen;
+      preserveCliHarnessCleanup(reuseAbaDialogueCleanupFailure, [
+        {
+          resource: "dialogue cache reuse ABA open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "dialogue cache publication reuse rejects a directory successor",
@@ -8138,6 +8149,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       ]) as number;
     }) as typeof fs.openSync;
     let pcmSuccessorRejected = false;
+    let pcmSuccessorCleanupFailure: { error: unknown } | undefined;
     try {
       pcmSuccessorRejected = throws(() =>
         dialogueCacheModule.publishDialogueCache({
@@ -8147,8 +8159,18 @@ export const test_cli_scaffold = async (): Promise<void> => {
           target: pcmSuccessorTarget,
         }),
       );
+    } catch (error) {
+      pcmSuccessorCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.openSync = nativeOpen;
+      preserveCliHarnessCleanup(pcmSuccessorCleanupFailure, [
+        {
+          resource: "dialogue cache PCM successor open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "dialogue cache preserves a PCM successor at commit",
@@ -8182,6 +8204,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       ]) as number;
     }) as typeof fs.openSync;
     let receiptSuccessorRejected = false;
+    let receiptSuccessorCleanupFailure: { error: unknown } | undefined;
     try {
       receiptSuccessorRejected = throws(() =>
         dialogueCacheModule.publishDialogueCache({
@@ -8191,8 +8214,18 @@ export const test_cli_scaffold = async (): Promise<void> => {
           target: receiptSuccessorTarget,
         }),
       );
+    } catch (error) {
+      receiptSuccessorCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.openSync = nativeOpen;
+      preserveCliHarnessCleanup(receiptSuccessorCleanupFailure, [
+        {
+          resource: "dialogue cache receipt successor open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "dialogue cache preserves a receipt successor at commit",
@@ -8248,6 +8281,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       return descriptor;
     }) as typeof fs.openSync;
     let abaDialogueRejected = false;
+    let abaDialogueCleanupFailure: { error: unknown } | undefined;
     try {
       abaDialogueRejected = throws(() =>
         dialogueCacheModule.captureDialogueCache(
@@ -8255,8 +8289,18 @@ export const test_cli_scaffold = async (): Promise<void> => {
           abaDialogueTarget,
         ),
       );
+    } catch (error) {
+      abaDialogueCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.openSync = nativeOpen;
+      preserveCliHarnessCleanup(abaDialogueCleanupFailure, [
+        {
+          resource: "dialogue cache capture ABA open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "dialogue cache hit rejects a directory successor between pair reads",
@@ -8294,6 +8338,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       return descriptor;
     }) as typeof fs.openSync;
     let dialogueRootSwapRejected = false;
+    let dialogueRootSwapCleanupFailure: { error: unknown } | undefined;
     try {
       dialogueRootSwapRejected = throws(() =>
         dialogueCacheModule.publishDialogueCache({
@@ -8303,8 +8348,18 @@ export const test_cli_scaffold = async (): Promise<void> => {
           target: rootDialogueTarget,
         }),
       );
+    } catch (error) {
+      dialogueRootSwapCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.openSync = nativeOpen;
+      preserveCliHarnessCleanup(dialogueRootSwapCleanupFailure, [
+        {
+          resource: "dialogue cache root swap open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "dialogue cache preserves a root and parent successor",
