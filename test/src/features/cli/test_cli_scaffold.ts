@@ -9482,6 +9482,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       nativeFsync(descriptor);
     }) as typeof fs.fsyncSync;
     let partialLeaseRejected = false;
+    let partialLeaseCleanupFailure: { error: unknown } | undefined;
     try {
       partialLeaseRejected = throws(() =>
         renderLivenessModule.acquireRenderGcLease({
@@ -9491,9 +9492,24 @@ export const test_cli_scaffold = async (): Promise<void> => {
           scope: livenessScope,
         }),
       );
+    } catch (error) {
+      partialLeaseCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.openSync = nativeOpen;
-      mutableFs.fsyncSync = nativeFsync;
+      preserveCliHarnessCleanup(partialLeaseCleanupFailure, [
+        {
+          resource: "render liveness partial open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+        {
+          resource: "render liveness partial fsync hook",
+          cleanup: () => {
+            mutableFs.fsyncSync = nativeFsync;
+          },
+        },
+      ]);
     }
     const partialLeaseFiles = fs.readdirSync(livenessRoot);
     const partialLeaseBlocksRetry = throws(() =>
@@ -9535,6 +9551,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       ]) as number;
     }) as typeof fs.openSync;
     let interleavedWorkerRejected = false;
+    let interleavedWorkerCleanupFailure: { error: unknown } | undefined;
     try {
       interleavedWorkerRejected = throws(() =>
         renderLivenessModule.acquireRenderSessionLease({
@@ -9545,10 +9562,25 @@ export const test_cli_scaffold = async (): Promise<void> => {
           tier: "proxy",
         }),
       );
+    } catch (error) {
+      interleavedWorkerCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.openSync = nativeOpen;
-      if (interleavedGc !== undefined)
-        renderLivenessModule.releaseRenderLivenessLease(interleavedGc);
+      preserveCliHarnessCleanup(interleavedWorkerCleanupFailure, [
+        {
+          resource: "render liveness interleaved open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+        {
+          resource: "render liveness interleaved GC lease",
+          cleanup: () => {
+            if (interleavedGc !== undefined)
+              renderLivenessModule.releaseRenderLivenessLease(interleavedGc);
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "a worker rechecks a GC guard published after its first check",

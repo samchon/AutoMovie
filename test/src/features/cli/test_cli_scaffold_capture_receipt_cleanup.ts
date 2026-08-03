@@ -116,7 +116,7 @@ export const test_cli_scaffold_capture_receipt_cleanup = (): void => {
           catchBodies: ["captureReceiptCleanupFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1903,
+          containerStatements: 1905,
           finallyDigest:
             "4fe618160bd4a8229abdecbbc18400cd3c0e20afeef9fbd9d60385bc7118ff82",
           finallySubstantive: {
@@ -141,7 +141,7 @@ export const test_cli_scaffold_capture_receipt_cleanup = (): void => {
           catchBodies: ["partialReceiptCleanupFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1903,
+          containerStatements: 1905,
           finallyDigest:
             "b284e20cf2755e35b20b8a6ca3167e13010fbd6327d41c227db2fc0206af3772",
           finallySubstantive: {
@@ -169,7 +169,7 @@ export const test_cli_scaffold_capture_receipt_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1903,
+          containerStatements: 1905,
           finallyDigest:
             "8268d8fcbc7589dc275b36fdcebdd35d28c9883ff7451c6eb772c6b48203586a",
           finallySubstantive: {
@@ -197,7 +197,7 @@ export const test_cli_scaffold_capture_receipt_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1903,
+          containerStatements: 1905,
           finallyDigest:
             "3b129d59eb2805ac04b03ed1da557b09ab657b6d0505bcd0605915e2ae13311f",
           finallySubstantive: {
@@ -225,7 +225,7 @@ export const test_cli_scaffold_capture_receipt_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1903,
+          containerStatements: 1905,
           finallyDigest:
             "0d60c16ccb2344e7c27369368b361367c29720d4333008fc4cba433fc5595035",
           finallySubstantive: {
@@ -253,7 +253,7 @@ export const test_cli_scaffold_capture_receipt_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1903,
+          containerStatements: 1905,
           finallyDigest:
             "b6d7fa6450a72b69e5b2387c5ba5881f934cd85b0f5cba8cf05c21428d520577",
           finallySubstantive: {
