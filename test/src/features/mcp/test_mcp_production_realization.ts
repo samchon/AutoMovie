@@ -33,6 +33,27 @@ const transform = (x: number, y: number, z: number): IAutoMovieTransform => ({
   scale: { x: 1, y: 1, z: 1 },
 });
 
+interface IProductionRealizationFixtureFailure {
+  error: unknown;
+}
+
+class ProductionRealizationFixtureCleanupError extends AggregateError {}
+
+export const preserveProductionRealizationFixtureCleanup = (
+  failure: IProductionRealizationFixtureFailure | undefined,
+  cleanup: () => void,
+): void => {
+  try {
+    cleanup();
+  } catch (cleanupFailure) {
+    if (failure === undefined) throw cleanupFailure;
+    throw new ProductionRealizationFixtureCleanupError(
+      [failure.error, cleanupFailure],
+      "Production-realization fixture teardown failed after the test failed.",
+    );
+  }
+};
+
 /**
  * Contract realization is recomputed from compiled scene, pose and clip data.
  *
@@ -42,6 +63,9 @@ const transform = (x: number, y: number, z: number): IAutoMovieTransform => ({
  * evidence. No source-authored boolean or echoed contract id can pass it.
  */
 export const test_mcp_production_realization = (): void => {
+  let productionRealizationFailure:
+    | IProductionRealizationFixtureFailure
+    | undefined;
   const fixture = productionFixture();
   try {
     const project = AutoMovieProductionProject.open(fixture.root);
@@ -631,7 +655,13 @@ export const test_mcp_production_realization = (): void => {
         missingOperandPredicates[7]?.actual === 0 &&
         missingOperandPredicates[7].passed === true,
     );
+  } catch (error) {
+    productionRealizationFailure = { error };
+    throw error;
   } finally {
-    fixture.dispose();
+    preserveProductionRealizationFixtureCleanup(
+      productionRealizationFailure,
+      () => fixture.dispose(),
+    );
   }
 };
