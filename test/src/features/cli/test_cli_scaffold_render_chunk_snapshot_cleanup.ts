@@ -30,7 +30,7 @@ const leafTokenContract = (
   };
 };
 
-const captureReceiptSingleCleanupContract = (text: string): unknown => {
+const renderChunkSnapshotCleanupContract = (text: string): unknown => {
   const source = ts.createSourceFile(
     "test_cli_scaffold.ts",
     text,
@@ -39,10 +39,10 @@ const captureReceiptSingleCleanupContract = (text: string): unknown => {
     ts.ScriptKind.TS,
   );
   const anchors = [
-    "capturereceiptparentswapopenhook",
-    "captureforeignreceiptopenhook",
-    "capturereceiptsegmentstathook",
-    "capturereceiptrootswapopenhook",
+    "renderchunknormalpublicationopenhook",
+    "renderchunktempsuccessoropenhook",
+    "renderchunkrecoverydecoyopenhook",
+    "renderchunkrootswapopenhook",
   ];
   const lifecycles: Array<{
     catchBodies: string[];
@@ -102,115 +102,115 @@ const captureReceiptSingleCleanupContract = (text: string): unknown => {
   };
 };
 
-export const test_cli_scaffold_capture_receipt_single_cleanup = (): void => {
+export const test_cli_scaffold_render_chunk_snapshot_cleanup = (): void => {
   TestValidator.equals(
-    "CLI scaffold owns four capture receipt single-hook cleanup lifecycles",
-    captureReceiptSingleCleanupContract(
+    "CLI scaffold owns four render chunk snapshot cleanup lifecycles",
+    renderChunkSnapshotCleanupContract(
       fs.readFileSync(path.join(__dirname, "test_cli_scaffold.ts"), "utf8"),
     ),
     {
       lifecycles: [
         {
+          catchBodies: ["normalChunkCleanupFailure={error};", "throwerror;"],
+          catchVariables: ["error"],
+          containerKind: "ArrowFunction",
+          containerStatements: 2,
+          finallyDigest:
+            "4fd6af293fa3467eb0d75b6ec4dd5a5223284918aee445328b67e59f41b5c230",
+          finallySubstantive: {
+            digest:
+              "6b94bbf130c0d8f391db59debb95e23a49d734fe368fe84254310383ecf85b7e",
+            tokens: 29,
+          },
+          index: 1,
+          preceding: "letnormalChunkCleanupFailure:{error:unknown}|undefined;",
+          substantive: {
+            digest:
+              "879fe28bb259977d5be30651be2f93b4f733809c030942dc0f5e7692ddc1ad97",
+            tokens: 38,
+          },
+          tryBody:
+            '{returnrenderChunkSnapshotModule.publishRenderChunkSnapshot({chunk:chunkPublicationId,receipt:normalChunkReceipt,root:chunkPublicationRoot,scope:chunkPublicationScope,tier:"final",tree:captureChunkTree(chunkPublicationRoot,normalChunkSource),});}',
+          tryDigest:
+            "81a35351a75b70cf2c3c1ca305df34955cb000f4ab77db8a6d0cc032f3cbc755",
+        },
+        {
+          catchBodies: ["tempSuccessorCleanupFailure={error};", "throwerror;"],
+          catchVariables: ["error"],
+          containerKind: "TryStatement",
+          containerStatements: 1957,
+          finallyDigest:
+            "7da45bf78f6faf658138fd804dc9a97d428e768eba28dabe1e0758c9bd19500c",
+          finallySubstantive: {
+            digest:
+              "585022d8d5b7288884c6ceadca0db539aa8041170aa78361a70d339d0e920c35",
+            tokens: 29,
+          },
+          index: 1262,
+          preceding:
+            "lettempSuccessorCleanupFailure:{error:unknown}|undefined;",
+          substantive: {
+            digest:
+              "f9b353c15ba8f51cd2ff8f9c86d84fbb323c475238f3dbf9f0a46ca6f572e5c2",
+            tokens: 46,
+          },
+          tryBody:
+            '{tempSuccessorRejected=throws(()=>renderChunkSnapshotModule.publishRenderChunkSnapshot({chunk:tempRaceId,receipt:tempRaceReceipt,root:chunkPublicationRoot,scope:chunkPublicationScope,tier:"final",tree:captureChunkTree(chunkPublicationRoot,tempRaceSource),}),);}',
+          tryDigest:
+            "07ba1ceb968f87b44f6d7436181b5ce3955e5a04e2fea7a181ee57cdda6a22df",
+        },
+        {
+          catchBodies: ["recoveryDecoyCleanupFailure={error};", "throwerror;"],
+          catchVariables: ["error"],
+          containerKind: "TryStatement",
+          containerStatements: 1957,
+          finallyDigest:
+            "aef20cbf37a8ba36cfbfd7703d4889962e8ab5165979c1b9c66360044e18b207",
+          finallySubstantive: {
+            digest:
+              "c6d89073be00109d3b1d43c5c264d0dd3973bdabd30d02651f7308fdb8822806",
+            tokens: 29,
+          },
+          index: 1284,
+          preceding:
+            "letrecoveryDecoyCleanupFailure:{error:unknown}|undefined;",
+          substantive: {
+            digest:
+              "343770bddfc05dc0b706bfcd35a7d95ef4aac815cdb28fd1822f86a350cd8950",
+            tokens: 125,
+          },
+          tryBody:
+            '{recoveryProtected=renderChunkSnapshotModule.currentRenderChunkPublicationProtectsTree({candidate:recoveryCandidate,candidateName:`${recoveryId.slice(7)}.candidate.999999`,capture:(chunk)=>renderChunkSnapshotModule.captureRenderChunkPublication(chunkPublicationRoot,renderChunkSnapshotModule.renderChunkPublicationPath({chunk:chunk.id,root:chunkPublicationRoot,scope:chunkPublicationScope,tier:"final",}),),chunks:newMap([[recoveryId,{id:recoveryId,slot:recoveryReceipt.slot}],...recoveryDecoys.map((decoy,index)=>[decoy.id,{id:decoy.id,slot:`decoy-${index}`}]asconst,),]),});}',
+          tryDigest:
+            "339c76ace056b5a08af8d4eeaa8a9644af155197efce93cf8aeffe3889fb4201",
+        },
+        {
           catchBodies: [
-            "receiptParentSwapCleanupFailure={error};",
+            "publicationRootSwapCleanupFailure={error};",
             "throwerror;",
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
           containerStatements: 1957,
           finallyDigest:
-            "60a847debefc4d5cd8e5456376d28eea0ac053c0f5b65946e9faa284da06f6d2",
+            "f65c0066fb1502f04ee4a0226a7a0e7d22fe7677f649a003f7108159b2b8596b",
           finallySubstantive: {
             digest:
-              "667f03143daa4a914699abfa8adac3cc34feac843208b8ff5f576c64fe4927fd",
+              "de03834995d8cc52b3d59d846a0794012efac49c2c5785776cd595f19c0c169d",
             tokens: 29,
           },
-          index: 631,
+          index: 1344,
           preceding:
-            "letreceiptParentSwapCleanupFailure:{error:unknown}|undefined;",
+            "letpublicationRootSwapCleanupFailure:{error:unknown}|undefined;",
           substantive: {
             digest:
-              "0f7fa2ab8ec01668f3a70bd2575bb9125f37dc64830e612d19375c6385b0d27f",
-            tokens: 24,
+              "546a5f27f9ea8e792b720aa11eb3dff2b9162d7ede3bf4ddeb1957be5f4fe5d8",
+            tokens: 46,
           },
           tryBody:
-            "{receiptParentSwapRejected=throws(()=>captureBrowserModule.publishCaptureInstallReceipt(receiptParentSwapProject,nextCaptureReceipt,()=>undefined,),);}",
+            '{publicationRootSwapRejected=throws(()=>renderChunkSnapshotModule.publishRenderChunkSnapshot({chunk:rootSwapId,receipt:rootSwapReceipt,root:rootSwapRoot,scope:chunkPublicationScope,tier:"final",tree:captureChunkTree(rootSwapRoot,rootSwapSource),}),);}',
           tryDigest:
-            "b53f2409be596e6c5c41fef9ab0e9c438f725b0eba50644ebcac12ded9eadf81",
-        },
-        {
-          catchBodies: ["foreignReceiptCleanupFailure={error};", "throwerror;"],
-          catchVariables: ["error"],
-          containerKind: "TryStatement",
-          containerStatements: 1957,
-          finallyDigest:
-            "7d83a451aa90abb6575b45dd70ac59e4cc74e1581589f17b5d24ef3fa64253ef",
-          finallySubstantive: {
-            digest:
-              "3ebb81ea26340d427fd8d9b6772bf27cde79e9b474b12bcb7c6c5efe7cb51a4b",
-            tokens: 29,
-          },
-          index: 641,
-          preceding:
-            "letforeignReceiptCleanupFailure:{error:unknown}|undefined;",
-          substantive: {
-            digest:
-              "6873f59f8953eb3761e3b9aa715b5a00c3fcd36a8beb7e48d6b2001d0a31e2a8",
-            tokens: 24,
-          },
-          tryBody:
-            "{foreignReceiptRejected=throws(()=>captureBrowserModule.publishCaptureInstallReceipt(foreignReceiptProject,nextCaptureReceipt,()=>undefined,),);}",
-          tryDigest:
-            "19072fb4c1950e3cf03ad6056d7c5544063f52d3c702428f6ebfdcd465bcb499",
-        },
-        {
-          catchBodies: ["receiptSegmentCleanupFailure={error};", "throwerror;"],
-          catchVariables: ["error"],
-          containerKind: "TryStatement",
-          containerStatements: 1957,
-          finallyDigest:
-            "5b18bd2c6986af9966f9b6e43211f40653f6feabf0854dbdf4770fd1e1956a05",
-          finallySubstantive: {
-            digest:
-              "f4f8f08cc3124762ba53d55ee9d119670e771c627f2f1d466657e9442d9ed625",
-            tokens: 29,
-          },
-          index: 711,
-          preceding:
-            "letreceiptSegmentCleanupFailure:{error:unknown}|undefined;",
-          substantive: {
-            digest:
-              "12d59664e311406e6ad3ad9f24f3c924302c6ba01d719dbf427fba9d87d40648",
-            tokens: 24,
-          },
-          tryBody:
-            "{receiptSegmentRaceRejected=throws(()=>captureBrowserModule.publishCaptureInstallReceipt(segmentReceiptProject,nextCaptureReceipt,()=>undefined,),);}",
-          tryDigest:
-            "74c072576fc507846a76e94a3ce82145bd2421556d8844a83e38fc835fdac0c5",
-        },
-        {
-          catchBodies: ["receiptRootCleanupFailure={error};", "throwerror;"],
-          catchVariables: ["error"],
-          containerKind: "TryStatement",
-          containerStatements: 1957,
-          finallyDigest:
-            "8b0c484c31978fa0ee66dc681f6a520351cbb95c45fad37b7d06a4e34704cbc3",
-          finallySubstantive: {
-            digest:
-              "7db57acdaf3a11f4566a549cf535893beedfe1ac9d4ee6b3759add1b2f0fdfe6",
-            tokens: 29,
-          },
-          index: 722,
-          preceding: "letreceiptRootCleanupFailure:{error:unknown}|undefined;",
-          substantive: {
-            digest:
-              "acf76d723c47371a0f44c629e0956bf4122118c3ad4eb12c5f3dc76e8bb1a96c",
-            tokens: 24,
-          },
-          tryBody:
-            "{receiptRootRaceRejected=throws(()=>captureBrowserModule.publishCaptureInstallReceipt(captureProject,captureReceiptValue,()=>undefined,),);}",
-          tryDigest:
-            "85ad5d7163e74074ab777fe47c8dee058e354cde9be46cac0b48e5ad1ef70b84",
+            "03e6133ab5ebb60c968063584bbde385261724d3265eb832cfd0b84626530b9e",
         },
       ],
       parseDiagnostics: [],

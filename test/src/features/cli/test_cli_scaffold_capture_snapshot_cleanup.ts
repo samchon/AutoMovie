@@ -111,7 +111,7 @@ export const test_cli_scaffold_capture_snapshot_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1954,
+          containerStatements: 1957,
           finallyDigest:
             "e5d065d9ad2b75eaccd2174d760cac65055b53314fc85d7b8b5c6dbee3805b4e",
           finallySubstantive: {

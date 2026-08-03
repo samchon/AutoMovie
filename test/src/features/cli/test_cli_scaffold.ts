@@ -10849,6 +10849,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       ]) as number;
     }) as typeof fs.openSync;
     const normalChunkPublished = (() => {
+      let normalChunkCleanupFailure: { error: unknown } | undefined;
       try {
         return renderChunkSnapshotModule.publishRenderChunkSnapshot({
           chunk: chunkPublicationId,
@@ -10858,8 +10859,18 @@ export const test_cli_scaffold = async (): Promise<void> => {
           tier: "final",
           tree: captureChunkTree(chunkPublicationRoot, normalChunkSource),
         });
+      } catch (error) {
+        normalChunkCleanupFailure = { error };
+        throw error;
       } finally {
-        mutableFs.openSync = nativeOpen;
+        preserveCliHarnessCleanup(normalChunkCleanupFailure, [
+          {
+            resource: "render chunk normal publication open hook",
+            cleanup: () => {
+              mutableFs.openSync = nativeOpen;
+            },
+          },
+        ]);
       }
     })();
     const normalChunkPublication =
@@ -10961,6 +10972,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       ]) as number;
     }) as typeof fs.openSync;
     let tempSuccessorRejected = false;
+    let tempSuccessorCleanupFailure: { error: unknown } | undefined;
     try {
       tempSuccessorRejected = throws(() =>
         renderChunkSnapshotModule.publishRenderChunkSnapshot({
@@ -10972,8 +10984,18 @@ export const test_cli_scaffold = async (): Promise<void> => {
           tree: captureChunkTree(chunkPublicationRoot, tempRaceSource),
         }),
       );
+    } catch (error) {
+      tempSuccessorCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.openSync = nativeOpen;
+      preserveCliHarnessCleanup(tempSuccessorCleanupFailure, [
+        {
+          resource: "render chunk temp successor open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "publication refuses a temp successor without modifying its tree bytes",
@@ -11129,6 +11151,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       ]) as number;
     }) as typeof fs.openSync;
     let recoveryProtected = false;
+    let recoveryDecoyCleanupFailure: { error: unknown } | undefined;
     try {
       recoveryProtected =
         renderChunkSnapshotModule.currentRenderChunkPublicationProtectsTree({
@@ -11152,8 +11175,18 @@ export const test_cli_scaffold = async (): Promise<void> => {
             ),
           ]),
         });
+    } catch (error) {
+      recoveryDecoyCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.openSync = nativeOpen;
+      preserveCliHarnessCleanup(recoveryDecoyCleanupFailure, [
+        {
+          resource: "render chunk recovery decoy open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "late recovery checks only the candidate's canonical pointer and tree",
@@ -11398,6 +11431,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       ]) as number;
     }) as typeof fs.openSync;
     let publicationRootSwapRejected = false;
+    let publicationRootSwapCleanupFailure: { error: unknown } | undefined;
     try {
       publicationRootSwapRejected = throws(() =>
         renderChunkSnapshotModule.publishRenderChunkSnapshot({
@@ -11409,8 +11443,18 @@ export const test_cli_scaffold = async (): Promise<void> => {
           tree: captureChunkTree(rootSwapRoot, rootSwapSource),
         }),
       );
+    } catch (error) {
+      publicationRootSwapCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.openSync = nativeOpen;
+      preserveCliHarnessCleanup(publicationRootSwapCleanupFailure, [
+        {
+          resource: "render chunk root swap open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "chunk pointer publication fails closed across a physical root swap",

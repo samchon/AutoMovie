@@ -112,7 +112,7 @@ export const test_cli_scaffold_render_temporary_cleanup = (): void => {
           catchBodies: ["temporaryStateCleanupFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1954,
+          containerStatements: 1957,
           finallyDigest:
             "90a1a79a2eb0c1af7f02ecc4031a8f9e27639a80baf52a6e869aa23038a23d9d",
           finallySubstantive: {
@@ -140,7 +140,7 @@ export const test_cli_scaffold_render_temporary_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1954,
+          containerStatements: 1957,
           finallyDigest:
             "34b489ed659556c93ead50ffd1390f61ce13282c4895b5ec426b2f00af0c582c",
           finallySubstantive: {
