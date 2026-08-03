@@ -32,12 +32,36 @@ const png = (width = 16, height = 16): Uint8Array => {
   return PNG.sync.write(image);
 };
 
+interface IProductionReviewRenderFixtureFailure {
+  error: unknown;
+}
+
+class ProductionReviewRenderFixtureCleanupError extends AggregateError {}
+
+export const preserveProductionReviewRenderFixtureCleanup = (
+  failure: IProductionReviewRenderFixtureFailure | undefined,
+  cleanup: () => void,
+): void => {
+  try {
+    cleanup();
+  } catch (cleanupFailure) {
+    if (failure === undefined) throw cleanupFailure;
+    throw new ProductionReviewRenderFixtureCleanupError(
+      [failure.error, cleanupFailure],
+      "Production review-render fixture teardown failed after the test failed.",
+    );
+  }
+};
+
 /**
  * Review frame inventory rejects malformed, escaping and raced evidence,
  * including a physical bundle replaced after discovery but before consumption.
  */
 export const test_mcp_production_review_render_edges =
   async (): Promise<void> => {
+    let productionReviewRenderFailure:
+      | IProductionReviewRenderFixtureFailure
+      | undefined;
     const fixture = productionFixture();
     try {
       const project = AutoMovieProductionProject.open(fixture.root);
@@ -1291,7 +1315,13 @@ export const test_mcp_production_review_render_edges =
         if (fs.existsSync(lateParked)) fs.renameSync(lateParked, lateRoot);
         fs.rmSync(lateRoot, { recursive: true, force: true });
       }
+    } catch (error) {
+      productionReviewRenderFailure = { error };
+      throw error;
     } finally {
-      fixture.dispose();
+      preserveProductionReviewRenderFixtureCleanup(
+        productionReviewRenderFailure,
+        () => fixture.dispose(),
+      );
     }
   };
