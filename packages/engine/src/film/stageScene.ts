@@ -4,8 +4,9 @@ import {
   IAutoMovieMountBinding,
   IAutoMovieScene,
   IAutoMovieSceneNode,
-  IAutoMovieScriptApplication,
-  IAutoMovieStagingApplication,
+  IAutoMovieScript,
+  IAutoMovieStage,
+  IAutoMovieStageLight,
   IAutoMovieVector3,
 } from "@automovie/interface";
 
@@ -22,7 +23,7 @@ import { ViolationCollector } from "../validation/violation";
 import { lookRotation } from "./cameraMove";
 
 /**
- * Camera frustum bounds the staging schema does not ask the model for, the LLM
+ * Camera frustum bounds the staging schema does not ask source code for, the
  * decides placement and field of view, the engine owns the clip planes.
  */
 const CAMERA_NEAR = 0.1;
@@ -56,7 +57,7 @@ const setPieceScale = (
 
 /** A light placement's kind, defaulting to the sun-like parallel source. */
 const lightTypeOf = (
-  light: IAutoMovieStagingApplication.ILightPlacement,
+  light: IAutoMovieStageLight,
 ): IAutoMovieLight["type"] | null => {
   const type = (light as unknown as { type?: unknown }).type;
   if (type === undefined) return "directional";
@@ -89,7 +90,7 @@ const DEFAULT_CONE_ANGLE = 45;
  * only rung between the model and the scene.
  */
 const validateLightPlacementShape = (
-  light: IAutoMovieStagingApplication.ILightPlacement,
+  light: IAutoMovieStageLight,
   path: string,
   out: ViolationCollector,
 ): void => {
@@ -276,9 +277,7 @@ const unitComponent = (
  * Omitted color is neutral white with `a: null`, the light-slot convention
  * {@link IAutoMovieColor} documents.
  */
-const lowerLightPlacement = (
-  light: IAutoMovieStagingApplication.ILightPlacement,
-): IAutoMovieLight => {
+const lowerLightPlacement = (light: IAutoMovieStageLight): IAutoMovieLight => {
   const type = lightTypeOf(light)!;
   const base = {
     id: light.node,
@@ -360,8 +359,8 @@ export namespace IAutoMovieStagedSet {
 /**
  * The STAGING consumer, fold the script's cast and the staging stage's
  * placements into the {@link IAutoMovieScene} every later stage performs into.
- * This is the first rung of the film pipeline (the workflow spine): LLM stage
- * payloads in, a validated engine artifact or a violation list out.
+ * This is the first rung of the film pipeline: coding-agent stage payloads in,
+ * a validated engine artifact or a violation list out.
  *
  * Referential integrity is the whole check: every placement must name a cast
  * member, every cast member must be placed (an unplaced character can never
@@ -386,14 +385,14 @@ export namespace IAutoMovieStagedSet {
  * composes `space: null`, the scalar ground plane the engine assumed before.
  */
 export const stageScene = (
-  script: IAutoMovieScriptApplication.IWrite,
-  staging: IAutoMovieStagingApplication.IWrite,
+  script: IAutoMovieScript,
+  staging: IAutoMovieStage,
 ): IAutoMovieStagedSet => {
   const out = new ViolationCollector();
   const cast = new Map<
     string,
     {
-      member: IAutoMovieScriptApplication.IWrite["cast"][number];
+      member: IAutoMovieScript["cast"][number];
       index: number;
     }
   >();

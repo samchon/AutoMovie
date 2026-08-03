@@ -2,10 +2,11 @@ import { detectBodyCollision } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import { staticActor } from "../internal/collision";
-import { vclose } from "../internal/predicates";
-
-const warningCount = (r: ReturnType<typeof detectBodyCollision>): number =>
-  r.validation.success === true ? (r.validation.warnings?.length ?? 0) : -1;
+import {
+  validationHasNoWarnings,
+  validationHasWarningCount,
+  vclose,
+} from "../internal/predicates";
 
 /**
  * Inter-body collision is advisory: overlapping capsules produce
@@ -40,8 +41,10 @@ export const test_validation_body_collision = (): void => {
     sampleRate: 1,
     gainDegPerImpulse: 5,
   });
-  TestValidator.equals("overlap still succeeds", hit.validation.success, true);
-  TestValidator.equals("one warning per sampled frame", warningCount(hit), 2);
+  TestValidator.predicate(
+    "one warning per sampled frame",
+    validationHasWarningCount("sampled body collision", hit.validation, 2),
+  );
   TestValidator.equals("one contact event per frame", hit.events.length, 2);
   TestValidator.equals("event is a contact", hit.events[0]?.kind, "contact");
   TestValidator.equals("event names actor A", hit.events[0]?.actor, "A");
@@ -67,8 +70,10 @@ export const test_validation_body_collision = (): void => {
       radius: 0.2,
     }),
   });
-  TestValidator.equals("apart succeeds", apart.validation.success, true);
-  TestValidator.equals("apart has no warnings", warningCount(apart), 0);
+  TestValidator.predicate(
+    "apart has no warnings",
+    validationHasNoWarnings("apart body collision", apart.validation),
+  );
   TestValidator.equals("apart has no events", apart.events.length, 0);
   TestValidator.equals("apart has no response", apart.response, null);
 };

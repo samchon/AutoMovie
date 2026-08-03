@@ -2,7 +2,10 @@ import { retargetHumanoidMotion } from "@automovie/engine";
 import { IAutoMovieJointConstraint } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { hasWarning, warningCount } from "../internal/predicates";
+import {
+  validationHasWarning,
+  validationHasWarningCount,
+} from "../internal/predicates";
 import {
   LEG_BONES,
   proportionedRig,
@@ -80,21 +83,21 @@ export const test_motion_retarget_contact_degenerate = (): void => {
       ["leftLowerLeg", "rightLowerLeg"],
     ),
   });
+  TestValidator.predicate(
+    "a degenerate chain still reports its residual",
+    validationHasWarning(
+      "degenerate retarget contact",
+      collapsed.validation,
+      "physics",
+      '$input.motion.keyframes[0].pose.joints["leftFoot"]',
+    ),
+  );
   if (collapsed.motion === null) throw new Error("collapsed retarget failed");
   TestValidator.equals(
     "a degenerate chain leaves the authored joints alone",
     collapsed.motion.keyframes.map((kf) => kf.pose.joints),
     [[], []],
   );
-  TestValidator.predicate(
-    "a degenerate chain still reports its residual",
-    hasWarning(
-      collapsed.validation,
-      "physics",
-      '$input.motion.keyframes[0].pose.joints["leftFoot"]',
-    ),
-  );
-
   // 3. immobile leg joints: every candidate clamps back to rest.
   const frozen = retargetHumanoidMotion({
     motion,
@@ -105,16 +108,15 @@ export const test_motion_retarget_contact_degenerate = (): void => {
       IMMOBILE,
     ),
   });
+  TestValidator.predicate(
+    "both frozen feet report their residual",
+    validationHasWarningCount("frozen retarget contacts", frozen.validation, 2),
+  );
   if (frozen.motion === null) throw new Error("frozen retarget failed");
   TestValidator.equals(
     "an unimprovable correction is not applied",
     frozen.motion.keyframes.map((kf) => kf.pose.joints),
     [[], []],
-  );
-  TestValidator.equals(
-    "both frozen feet report their residual",
-    warningCount(frozen.validation),
-    2,
   );
   TestValidator.equals(
     "the frozen clip equals the verbatim copy in every keyframe pose",

@@ -1,606 +1,1187 @@
 import {
-  IAutoMovieCompileProject,
-  IAutoMovieEraseDesignArtifact,
+  AutoMovieProductionFrameCapture,
+  IAutoMovieAssetManifest,
+  IAutoMovieCaptureFrame,
   IAutoMovieGetGuideDocument,
-  IAutoMovieInspectProject,
-  IAutoMovieOpenProject,
   IAutoMoviePrepareReview,
-  IAutoMoviePreviewFrame,
-  IAutoMovieQueryGeometry,
-  IAutoMovieRenderBundleManifest,
-  IAutoMovieSetAcceptanceScenario,
-  IAutoMovieSetFormationDesign,
-  IAutoMovieSetModelRecipe,
-  IAutoMovieSetProductionDesign,
-  IAutoMovieSetShotContract,
-  IAutoMovieSetWorldDesign,
+  IAutoMovieRepaintShot,
+  IAutoMovieReviewTarget,
   IAutoMovieSubmitReview,
 } from "@automovie/interface";
 import {
+  AUTOMOVIE_PRODUCTION_GUIDE_NAMES,
+  AUTOMOVIE_REPAINT_GUIDE,
+  AUTOMOVIE_REVIEW_GUIDES,
+  AUTOMOVIE_TOOL_GUIDES,
   AutoMovieApplication,
   AutoMovieProductionProject,
-  createAutoMovieProductionMcpServer,
-  productionRenderBundleRelativePath,
-  productionRenderTargetFingerprint,
+  compileAutoMovieProduction,
+  createAutoMovieMcpServer,
+  digestAutoMovieBytes,
+  inspectAutoMovieProduction,
+  openAutoMovieProduction,
 } from "@automovie/mcp";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
+import { PNG } from "pngjs";
 
 import {
-  acceptanceScenarios,
-  formationDesign,
-  modelRecipe,
+  productionCompileSucceeded,
   productionDesign,
   productionFixture,
   shotContract,
-  testRendererIdentity,
-  worldDesign,
+  testCaptureRuntimeIdentity,
 } from "./productionFixtures";
+import { productionH264Mp4 } from "./productionMediaFixtures";
 
-const throws = (closure: () => unknown): boolean => {
+interface IProductionApplicationFailure {
+  error: unknown;
+}
+
+interface IProductionApplicationConnectionCleanup {
+  cleanup: () => Promise<unknown>;
+  resource: string;
+}
+
+class ProductionApplicationCleanupError extends AggregateError {}
+
+/** Close application resources without replacing an earlier failure. */
+export const preserveProductionApplicationCleanup = async (
+  failure: IProductionApplicationFailure | undefined,
+  connections: readonly IProductionApplicationConnectionCleanup[],
+  fixtureCleanup: () => unknown,
+): Promise<void> => {
+  const results = await Promise.allSettled(
+    connections.map((resource) => Promise.resolve().then(resource.cleanup)),
+  );
+  const cleanupFailures: Array<{ error: unknown; resource: string }> =
+    results.flatMap((result, index) =>
+      result.status === "fulfilled"
+        ? []
+        : [{ error: result.reason, resource: connections[index]!.resource }],
+    );
   try {
-    closure();
-    return false;
-  } catch {
-    return true;
+    fixtureCleanup();
+  } catch (error) {
+    cleanupFailures.push({ error, resource: "production fixture" });
   }
+  if (cleanupFailures.length === 0) return;
+  if (failure === undefined && cleanupFailures.length === 1)
+    throw cleanupFailures[0]!.error;
+  throw new ProductionApplicationCleanupError(
+    [
+      ...(failure === undefined ? [] : [failure.error]),
+      ...cleanupFailures.map((entry) => entry.error),
+    ],
+    `Production-application cleanup failed${
+      failure === undefined ? "" : " after the test failed"
+    }: ${cleanupFailures.map((entry) => entry.resource).join(", ")}.`,
+  );
 };
 
-/**
- * The public production facade is one closed map of AutoBe-style tool pairs.
- *
- * The runtime tool inventory below rejects an extra or missing method while
- * this structural assignment rejects a method whose named `IProps` and result
- * no longer form the advertised pair. Together they prevent a future inline
- * object parameter or detached `Input`/`Output` signature from silently joining
- * the MCP surface.
- */
-interface IProductionToolContract {
+interface IFiveToolContract {
   getGuideDocument(
     props: IAutoMovieGetGuideDocument.IProps,
   ): IAutoMovieGetGuideDocument;
-  openProject(props: IAutoMovieOpenProject.IProps): IAutoMovieOpenProject;
-  inspectProject(
-    props: IAutoMovieInspectProject.IProps,
-  ): IAutoMovieInspectProject;
-  setProductionDesign(
-    props: IAutoMovieSetProductionDesign.IProps,
-  ): IAutoMovieSetProductionDesign;
-  setModelRecipe(
-    props: IAutoMovieSetModelRecipe.IProps,
-  ): IAutoMovieSetModelRecipe;
-  setWorldDesign(
-    props: IAutoMovieSetWorldDesign.IProps,
-  ): IAutoMovieSetWorldDesign;
-  setFormationDesign(
-    props: IAutoMovieSetFormationDesign.IProps,
-  ): IAutoMovieSetFormationDesign;
-  setShotContract(
-    props: IAutoMovieSetShotContract.IProps,
-  ): IAutoMovieSetShotContract;
-  setAcceptanceScenario(
-    props: IAutoMovieSetAcceptanceScenario.IProps,
-  ): IAutoMovieSetAcceptanceScenario;
-  eraseDesignArtifact(
-    props: IAutoMovieEraseDesignArtifact.IProps,
-  ): IAutoMovieEraseDesignArtifact;
-  compileProject(
-    props: IAutoMovieCompileProject.IProps,
-  ): IAutoMovieCompileProject;
-  queryGeometry(props: IAutoMovieQueryGeometry.IProps): IAutoMovieQueryGeometry;
-  previewFrame(
-    props: IAutoMoviePreviewFrame.IProps,
-  ): Promise<IAutoMoviePreviewFrame>;
+  captureFrame(
+    props: IAutoMovieCaptureFrame.IProps,
+  ): Promise<IAutoMovieCaptureFrame>;
+  repaintShot(
+    props: IAutoMovieRepaintShot.IProps,
+  ): Promise<IAutoMovieRepaintShot>;
   prepareReview(props: IAutoMoviePrepareReview.IProps): IAutoMoviePrepareReview;
   submitReview(props: IAutoMovieSubmitReview.IProps): IAutoMovieSubmitReview;
 }
 
-/**
- * Minimum semantic signals that keep each production tool from degenerating
- * into a signature paraphrase.
- *
- * The exact prose may improve, but every description must continue to explain
- * its trust boundary, refusal or non-goal. Length alone cannot distinguish
- * useful context from repetition, so this table pins one positive
- * responsibility and one correction boundary per tool.
- */
-const PRODUCTION_TOOL_DESCRIPTION_SIGNALS = {
-  getGuideDocument: ["real precondition", "unknown name"],
-  openProject: ["durable shared memory", "does not author shots"],
-  inspectProject: ["authoritative status projection", "never repairs"],
-  setProductionDesign: ["complete object", "downstream fingerprint"],
-  setModelRecipe: ["compiler", "never imports arbitrary meshes"],
-  setWorldDesign: ["bounded effect recipes", "complete world"],
-  setFormationDesign: ["compiler stores", "does not animate troops"],
-  setShotContract: ["ordinary code", "independent"],
-  setAcceptanceScenario: ["fingerprinted evidence", "does not implement tests"],
-  eraseDesignArtifact: ["never cascades silently", "generated files"],
-  compileProject: ["bounded effect streams", "partial generation"],
-  queryGeometry: ["effect", "read-only"],
-  previewFrame: ["actual png", "full-film rendering"],
-  prepareReview: ["fingerprint", "does not perform aesthetic judgment"],
-  submitReview: ["false completion", "apply corrections"],
-} as const;
+const rejected = async (
+  closure: () => Promise<unknown>,
+): Promise<string | null> => {
+  try {
+    await closure();
+    return null;
+  } catch (error) {
+    return error instanceof Error ? error.message : String(error);
+  }
+};
 
-/**
- * The canonical 15-tool production coordinator preserves its AutoBe-style
- * `IProps -> result` pairs, guide and resident-state gates, ownership and
- * freshness semantics, actual-frame evidence, and review compliance surface.
- *
- * Scenarios:
- *
- * 1. Project activation requires the overall guide, respects a host-fixed root,
- *    and reports initialization only once.
- * 2. Every named props/result pair and the exact 15-tool inventory remain
- *    structurally closed.
- * 3. Design setters, erasure, compilation, geometry, preview and review calls
- *    preserve their positive, refusal, stale and recovery paths.
- * 4. Inspection reports missing source, invalid design, unowned output, stale
- *    renders and unsafe links without following or repairing them.
- * 5. A live generated controller serves the guide, carries decision-ready
- *    instructions in the first 512 characters, and gives every tool substantial
- *    boundary context below the 1023-character hard cap.
- */
+const directorySnapshot = (root: string): string[] => {
+  const entries: string[] = [];
+  const visit = (directory: string): void => {
+    for (const entry of fs
+      .readdirSync(directory, { withFileTypes: true })
+      .sort((left, right) => left.name.localeCompare(right.name))) {
+      const absolute = path.join(directory, entry.name);
+      const relative = path.relative(root, absolute).split(path.sep).join("/");
+      if (entry.isDirectory()) {
+        entries.push(`directory:${relative}`);
+        visit(absolute);
+      } else
+        entries.push(
+          `file:${relative}:${digestAutoMovieBytes(fs.readFileSync(absolute))}`,
+        );
+    }
+  };
+  visit(root);
+  return entries;
+};
+
+/** The public MCP boundary is exactly knowledge, evidence, and judgment. */
 export const test_mcp_production_application = async (): Promise<void> => {
+  const connectionCleanups: IProductionApplicationConnectionCleanup[] = [];
+  let productionApplicationFailure: IProductionApplicationFailure | undefined;
   const fixture = productionFixture();
   try {
-    const deferredRoot = fs.mkdtempSync(
-      path.join(os.tmpdir(), "automovie-production-deferred-"),
-    );
-    try {
-      const deferred = new AutoMovieApplication({
-        projectRoot: deferredRoot,
-      });
-      TestValidator.predicate(
-        "a fixed root is not initialized before the guide and openProject",
-        fs.existsSync(path.join(deferredRoot, ".automovie")) === false &&
-          throws(() => deferred.inspectProject({})),
-      );
-      deferred.getGuideDocument({ name: "AUTOMOVIE_OVERALL" });
-      const initialized = deferred.openProject({ root: deferredRoot });
-      const reused = deferred.openProject({ root: deferredRoot });
-      TestValidator.predicate(
-        "openProject reports initialization only for the call that performed it",
-        fs.existsSync(path.join(deferredRoot, ".automovie/manifest.json")) &&
-          initialized.project.initialized &&
-          reused.project.initialized === false,
-      );
-    } finally {
-      fs.rmSync(deferredRoot, { force: true, recursive: true });
-    }
-    const application = new AutoMovieApplication({
-      projectRoot: fixture.root,
-    });
-    const pairedApplication: IProductionToolContract = application;
-    TestValidator.predicate(
-      "the facade implements every named props and result pair",
-      pairedApplication === application,
-    );
-    TestValidator.predicate(
-      "overall guide is a real prerequisite",
-      throws(() => application.openProject({ root: fixture.root })),
-    );
-    const overall = application.getGuideDocument({
-      name: "AUTOMOVIE_OVERALL",
-    });
-    TestValidator.predicate(
-      "overall guide explains coding-agent ownership",
-      overall.content.includes("coding agent") && overall.version.length > 0,
-    );
-    const opened = application.openProject({ root: fixture.root });
-    const reopenedSameSession = application.openProject({
-      root: fixture.root,
-    });
-    TestValidator.equals(
-      "fixed project root",
-      opened.project.root,
+    const productionPath = path.join(
       fixture.root,
+      ".automovie/design/production.json",
     );
-    TestValidator.equals(
-      "same-session open reuses the active resident project",
-      reopenedSameSession.project.root,
-      opened.project.root,
-    );
-    TestValidator.predicate(
-      "fixed host rejects a different root",
-      throws(() => application.openProject({ root: `${fixture.root}-other` })),
-    );
-    const initial = application.inspectProject({});
-    TestValidator.predicate(
-      "compact inspection sees source and design",
-      initial.design.production &&
-        initial.source.bound.includes("src/shots/opening.ts") &&
-        initial.reviews.entries.length > 0 &&
-        initial.nextActions.some(
-          (action) =>
-            action.owner === "compile" && action.action === "compileProject",
-        ),
-    );
-
-    for (const name of [
-      "PRODUCTION_DESIGN",
-      "MODEL_RECIPE",
-      "WORLD_DESIGN",
-      "FORMATION_DESIGN",
-      "SHOT_CONTRACT",
-      "ACCEPTANCE",
-      "SOURCE_OWNERSHIP",
-      "COMPILATION",
-      "GEOMETRY",
-      "PRODUCTION_REVIEW",
-      "PRODUCTION_RENDER",
-    ] as const)
-      TestValidator.predicate(
-        `guide ${name}`,
-        application.getGuideDocument({ name }).content.length > 100,
-      );
-
-    TestValidator.predicate(
-      "all bounded design setters accept the starter graph",
-      application.setProductionDesign(productionDesign()).accepted &&
-        application.setModelRecipe(modelRecipe()).accepted &&
-        application.setWorldDesign(worldDesign()).accepted &&
-        application.setFormationDesign(formationDesign()).accepted &&
-        application.setShotContract(shotContract()).accepted &&
-        acceptanceScenarios().every(
-          (scenario) => application.setAcceptanceScenario(scenario).accepted,
-        ),
-    );
-    TestValidator.predicate(
-      "empty erase reason is rejected",
-      throws(() =>
-        application.eraseDesignArtifact({
-          target: { kind: "formation", id: "line" },
-          reason: " ",
-        }),
-      ),
-    );
-    const erased = application.eraseDesignArtifact({
-      target: { kind: "formation", id: "line" },
-      reason: "exercise the one-artifact eraser",
-    });
-    TestValidator.predicate(
-      "unreferenced design erases exactly once",
-      erased.accepted && erased.fingerprint === null,
-    );
-    const compiled = application.compileProject({ scope: "source" });
-    TestValidator.predicate(
-      "application delegates compiler and geometry oracles",
-      compiled.success &&
-        application.queryGeometry({
-          request: { query: "ground", point: { x: 0, z: 0 } },
-        }).result?.kind === "ground",
-    );
-    const changedWorld = worldDesign();
-    changedWorld.landmarks = changedWorld.landmarks.map((landmark, index) =>
-      index === 0
-        ? { ...landmark, meaning: `${landmark.meaning} Changed.` }
-        : landmark,
-    );
-    application.setWorldDesign(changedWorld);
-    const staleGeometry = application.queryGeometry({
-      request: { query: "ground", point: { x: 0, z: 0 } },
-    });
-    const staleInspection = application.inspectProject({});
-    const refreshed = application.compileProject({ scope: "source" });
-    TestValidator.predicate(
-      "oracle and inspection refuse stale generated facts",
-      staleGeometry.result === null &&
-        staleGeometry.diagnostics.some(
-          (diagnostic) => diagnostic.code === "generated-stale",
-        ) &&
-        staleInspection.nextActions.some(
-          (action) =>
-            action.owner === "compile" &&
-            action.action === "compileProject" &&
-            action.target === "generated-manifest",
-        ) &&
-        refreshed.success,
-    );
-    const renderProject = AutoMovieProductionProject.open(fixture.root);
-    const renderManifest: IAutoMovieRenderBundleManifest = {
-      version: 3,
-      target: { kind: "shot", id: "opening" },
-      compileFingerprint: refreshed.compiler.inputFingerprint,
-      rendererIdentity: testRendererIdentity(),
-      targetFingerprint: productionRenderTargetFingerprint(
-        renderProject,
-        renderProject.generatedManifest()!,
-        { kind: "shot", id: "opening" },
-      ),
-      renderSpec: {
-        target: "opening",
-        frameFormat: { width: 2, height: 2, fps: 24 },
-        toneMapping: "none",
-        codec: "h264",
-        pixelFormat: "yuv420p",
-        crf: 17,
-      },
-      frames: [],
-    };
-    const renderBundle = productionRenderBundleRelativePath(renderManifest);
-    renderProject.commitRenderBundle(renderBundle, new Map(), renderManifest);
-    const currentRender = path.join(
-      renderProject.renderRoot(),
-      renderBundle,
-      "manifest.json",
-    );
-    const malformedRender = path.join(
-      fixture.root,
-      "renders/application-malformed/manifest.json",
-    );
-    fs.mkdirSync(path.dirname(currentRender), { recursive: true });
-    fs.mkdirSync(path.dirname(malformedRender), { recursive: true });
-    TestValidator.predicate(
-      "application test render is canonical",
-      fs.existsSync(currentRender),
-    );
-    fs.writeFileSync(malformedRender, "{bad");
-    const renderInspection = application.inspectProject({});
-    TestValidator.predicate(
-      "inspection parses render identity instead of substring matching",
-      renderInspection.renders.some((render) => render.current) &&
-        renderInspection.renders.some((render) => render.current === false),
-    );
-    const unrelatedSource = path.join(fixture.root, "src/unrelated.ts");
+    const production = JSON.parse(
+      fs.readFileSync(productionPath, "utf8"),
+    ) as ReturnType<typeof productionDesign>;
+    production.frameFormat.fps = 2;
+    production.visualDelivery = "repainted";
+    production.deliverables = production.deliverables.map((deliverable) => ({
+      ...deliverable,
+      required: deliverable.kind === "feature",
+    }));
     fs.writeFileSync(
-      unrelatedSource,
-      "export const unrelated = 'does not alter opening pixels';\n",
+      productionPath,
+      `${JSON.stringify(production, null, 2)}\n`,
     );
-    const unrelatedCompile = application.compileProject({ scope: "source" });
-    const unrelatedInspection = application.inspectProject({});
-    fs.rmSync(unrelatedSource);
-    application.compileProject({ scope: "source" });
-    TestValidator.predicate(
-      "inspection preserves a target-local bundle across unrelated source identity",
-      unrelatedCompile.success &&
-        unrelatedInspection.renders.some((render) => render.current),
-    );
-    const newerWorld = worldDesign();
-    newerWorld.landmarks[0]!.meaning += " Newer.";
-    application.setWorldDesign(newerWorld);
-    const staleRenderInspection = application.inspectProject({});
-    application.setWorldDesign(changedWorld);
-    application.compileProject({ scope: "source" });
-    TestValidator.predicate(
-      "a bundle matching stale generated output is not reported as current",
-      staleRenderInspection.renders.every((render) => render.current === false),
-    );
-    const sourceFile = path.join(fixture.root, "src/shots/opening.ts");
-    const sourceBytes = fs.readFileSync(sourceFile);
-    fs.rmSync(sourceFile);
-    const missingSourceInspection = application.inspectProject({});
-    fs.writeFileSync(sourceFile, sourceBytes);
-    const modelFile = path.join(
-      fixture.root,
-      ".automovie/design/models/sentinel.json",
-    );
-    const modelBytes = fs.readFileSync(modelFile);
-    const invalidModel = JSON.parse(modelBytes.toString("utf8"));
-    invalidModel.parameters.height = 99;
-    fs.writeFileSync(modelFile, JSON.stringify(invalidModel));
-    const invalidDesignInspection = application.inspectProject({});
-    fs.writeFileSync(modelFile, modelBytes);
-    TestValidator.predicate(
-      "inspection turns missing source and invalid design into next actions",
-      missingSourceInspection.nextActions.some(
-        (action) => action.owner === "source",
-      ) &&
-        invalidDesignInspection.nextActions.some(
-          (action) => action.owner === "design",
-        ),
-    );
-    const unavailable = await application.previewFrame({
-      target: { kind: "shot", id: "opening" },
-      time: 0,
-      width: 2,
-      height: 2,
+    const assetManifestPath = path.join(fixture.root, ".automovie/assets.json");
+    const assetManifest = JSON.parse(
+      fs.readFileSync(assetManifestPath, "utf8"),
+    ) as IAutoMovieAssetManifest;
+    const reference = assetManifest.assets[0]!;
+    reference.uses.push({
+      production: "fixture-film",
+      consumer: { kind: "rendition-reference", id: "opening" },
+      reason: "Fixed style reference for the opening shot rendition.",
     });
-    const prepared = application.prepareReview({
-      target: { kind: "source", path: "src/shots/opening.ts" },
-    });
-    const refused = application.submitReview({
-      target: prepared.target,
-      preparedFingerprint: prepared.fingerprint,
-      observations: "",
-      checks: [],
-      corrections: [],
-      completionBasis: "",
-      complete: false,
-    });
-    TestValidator.predicate(
-      "application exposes capture refusal and review validation",
-      unavailable.captured === false && refused.accepted === false,
+    const restrictedReference = structuredClone(reference);
+    restrictedReference.path = "public/audio/non-rendition-reference-stem.json";
+    restrictedReference.uses = [
+      {
+        production: "fixture-film",
+        consumer: { kind: "audio-cue", id: "restricted-guide" },
+        reason: "Audio-only guide stem that repaint must never disclose.",
+      },
+      {
+        production: "second-film",
+        consumer: { kind: "audio-cue", id: "restricted-guide" },
+        reason: "Second production reuses the same audio-only guide stem.",
+      },
+    ];
+    assetManifest.assets.push(restrictedReference);
+    assetManifest.assets.sort((left, right) =>
+      left.path < right.path ? -1 : left.path > right.path ? 1 : 0,
     );
-    const unowned = path.join(
-      fixture.root,
-      "generated",
-      "nested",
-      "unowned.json",
+    fs.copyFileSync(
+      path.join(fixture.root, reference.path),
+      path.join(fixture.root, restrictedReference.path),
     );
-    fs.mkdirSync(path.dirname(unowned), { recursive: true });
-    fs.writeFileSync(unowned, "{}");
-    const unownedInspection = application.inspectProject({});
-    TestValidator.predicate(
-      "inspection reports and routes nested unowned generated files",
-      unownedInspection.source.unownedGenerated.includes(
-        "nested/unowned.json",
-      ) &&
-        unownedInspection.nextActions.some(
-          (action) =>
-            action.action === "remove-unowned-generated" &&
-            action.target === "nested/unowned.json",
-        ),
+    fs.writeFileSync(
+      assetManifestPath,
+      `${JSON.stringify(assetManifest, null, 2)}\n`,
     );
-    fs.rmSync(unowned);
-    const outsideGenerated = fs.mkdtempSync(
-      path.join(os.tmpdir(), "automovie-inspect-generated-"),
-    );
-    const outsideRender = fs.mkdtempSync(
-      path.join(os.tmpdir(), "automovie-inspect-render-"),
-    );
-    try {
-      fs.writeFileSync(path.join(outsideGenerated, "escape.json"), "{}");
-      fs.writeFileSync(
-        path.join(outsideRender, "foreign.json"),
-        JSON.stringify({
-          compileFingerprint: refreshed.compiler.inputFingerprint,
-        }),
-      );
-      const generatedJunction = path.join(
-        fixture.root,
-        "generated",
-        "outside-junction",
-      );
-      const renderManifestJunction = path.join(
-        fixture.root,
-        "renders",
-        "application-linked",
-        "manifest.json",
-      );
-      fs.symlinkSync(outsideGenerated, generatedJunction, "junction");
-      fs.mkdirSync(path.dirname(renderManifestJunction), { recursive: true });
-      fs.symlinkSync(outsideRender, renderManifestJunction, "junction");
-      const linkedInspection = application.inspectProject({});
-      TestValidator.predicate(
-        "inspection reports generated junctions without following them",
-        linkedInspection.source.unownedGenerated.includes("outside-junction") &&
-          linkedInspection.source.unownedGenerated.every(
-            (file) => file !== "outside-junction/escape.json",
-          ),
-      );
-      TestValidator.predicate(
-        "inspection never treats a render junction as a current manifest",
-        linkedInspection.renders.some(
-          (render) =>
-            render.path === "renders/application-linked/manifest.json" &&
-            render.current === false,
-        ),
-      );
-    } finally {
-      fs.rmSync(outsideGenerated, { force: true, recursive: true });
-      fs.rmSync(outsideRender, { force: true, recursive: true });
-    }
-
-    const inactive = new AutoMovieApplication();
-    inactive.getGuideDocument({ name: "AUTOMOVIE_OVERALL" });
-    TestValidator.predicate(
-      "resident operations require an active project",
-      throws(() => inactive.inspectProject({})),
-    );
-    TestValidator.predicate(
-      "unknown guide names fail loudly at runtime",
-      throws(() =>
-        inactive.getGuideDocument({
-          name: "UNKNOWN" as "AUTOMOVIE_OVERALL",
-        }),
+    const filmPath = path.join(fixture.root, "src/film.ts");
+    fs.writeFileSync(
+      filmPath,
+      fs.readFileSync(filmPath, "utf8").replace(
+        "audio: [],",
+        `audio: [{
+          id: "restricted-guide",
+          asset: "public/audio/non-rendition-reference-stem.json",
+          sourceDuration: { seconds: 11.5 },
+          sourceOffset: { frame: 0 },
+          start: { frame: 0 },
+          duration: { seconds: 6 },
+          gain: 0,
+          fadeIn: { frame: 0 },
+          fadeOut: { frame: 0 },
+          bus: "ambience",
+        }],`,
       ),
     );
 
-    const server = createAutoMovieProductionMcpServer();
+    const capturedProductionIds: string[] = [];
+    const capture = async (
+      input: Parameters<AutoMovieProductionFrameCapture>[0],
+    ) => {
+      capturedProductionIds.push(input.productionId);
+      const image = new PNG({
+        width: input.width ?? 16,
+        height: input.height ?? 16,
+      });
+      image.data.fill(180);
+      image.data[0] = input.productionId === "fixture-film" ? 20 : 40;
+      return {
+        bytes: PNG.sync.write(image),
+        runtimeIdentity: testCaptureRuntimeIdentity(),
+        width: image.width,
+        height: image.height,
+      };
+    };
+    const first = openAutoMovieProduction({
+      projectRoot: fixture.root,
+      productionId: "fixture-film",
+      capture,
+    });
+    const firstCompile = compileAutoMovieProduction({
+      projectRoot: fixture.root,
+      productionId: "fixture-film",
+      scope: "source",
+    });
+    if (firstCompile.success === false)
+      throw new Error(
+        `The non-MCP compiler API failed its first registered production:\n${JSON.stringify(firstCompile.diagnostics, null, 2)}`,
+      );
+    const firstRegistry = AutoMovieProductionProject.registeredProductionIds(
+      fixture.root,
+    );
+    TestValidator.predicate(
+      "the non-MCP compiler API compiles the first registered production",
+      firstRegistry.length === 1 && firstRegistry[0] === "fixture-film",
+    );
+    TestValidator.predicate(
+      "the non-MCP inspection API reports current compiled ownership",
+      inspectAutoMovieProduction(first).source.missing.length === 0 &&
+        inspectAutoMovieProduction(first).source.unownedGenerated.length === 0,
+    );
+    const secondProject = AutoMovieProductionProject.open(
+      fixture.root,
+      "second-film",
+    );
+    TestValidator.predicate(
+      "a second production binds the same source registry independently",
+      secondProject.setProductionDesign(
+        productionDesign({
+          id: "second-film",
+          title: "second-film",
+          visualDelivery: "deterministic",
+        }),
+      ).accepted &&
+        secondProject.setShotContract(shotContract()).accepted &&
+        productionCompileSucceeded(
+          "second production application fixture",
+          openAutoMovieProduction({
+            projectRoot: fixture.root,
+            productionId: "second-film",
+            capture,
+          }).compiler.compile({ scope: "source" }),
+        ),
+    );
+
+    const application = new AutoMovieApplication({
+      projectRoot: path.join(fixture.root, "src"),
+      productionId: "fixture-film",
+      capture,
+    });
+    const paired: IFiveToolContract = application;
+    TestValidator.predicate(
+      "the application implements the five named props/result pairs",
+      paired === application &&
+        Object.keys(AUTOMOVIE_TOOL_GUIDES).join(",") ===
+          "getGuideDocument,captureFrame,repaintShot,prepareReview,submitReview",
+    );
+    const gated = await rejected(() =>
+      application.captureFrame({
+        target: {
+          kind: "shot",
+          productionId: "fixture-film",
+          id: "opening",
+          time: 0,
+        },
+      }),
+    );
+    TestValidator.predicate(
+      "missing knowledge is a plain recovery script with partial credit",
+      gated?.includes("0/2 required guides") === true &&
+        gated.includes('getGuideDocument({ name: "AUTOMOVIE_OVERALL" })') &&
+        gated.includes('getGuideDocument({ name: "CAPTURE_FRAME" })') &&
+        gated.includes("not a payload validation error"),
+    );
+    application.getGuideDocument({ name: "AUTOMOVIE_OVERALL" });
+    const partiallyGated = await rejected(() =>
+      application.captureFrame({
+        target: {
+          kind: "shot",
+          productionId: "fixture-film",
+          id: "opening",
+          time: 0,
+        },
+      }),
+    );
+    TestValidator.predicate(
+      "guide credit survives and the recovery script lists only missing reads",
+      partiallyGated?.includes("1/2 required guides") === true &&
+        partiallyGated.includes(
+          'getGuideDocument({ name: "CAPTURE_FRAME" })',
+        ) &&
+        partiallyGated.includes(
+          'getGuideDocument({ name: "AUTOMOVIE_OVERALL" })',
+        ) === false,
+    );
+    application.getGuideDocument({ name: "CAPTURE_FRAME" });
+    const reviewGated = await rejected(async () =>
+      application.prepareReview({
+        target: { kind: "asset", id: "sentinel" },
+      }),
+    );
+    TestValidator.predicate(
+      "review knowledge is selected from the exact target surface",
+      reviewGated?.includes("1/2 required guides") === true &&
+        reviewGated.includes('getGuideDocument({ name: "REVIEW_ASSET" })') &&
+        AUTOMOVIE_REVIEW_GUIDES.asset === "REVIEW_ASSET" &&
+        AUTOMOVIE_REVIEW_GUIDES.shot === "REVIEW_SHOT" &&
+        AUTOMOVIE_REVIEW_GUIDES.rendition === "REVIEW_SHOT" &&
+        AUTOMOVIE_REVIEW_GUIDES.sequence === "REVIEW_SEQUENCE" &&
+        AUTOMOVIE_REVIEW_GUIDES.film === "REVIEW_FILM" &&
+        AUTOMOVIE_REVIEW_GUIDES.design === "REVIEW_DEPENDENCY" &&
+        AUTOMOVIE_REVIEW_GUIDES.source === "REVIEW_DEPENDENCY",
+    );
+    const reviewTargets: IAutoMovieReviewTarget[] = [
+      { kind: "asset", id: "sentinel" },
+      { kind: "design", design: { kind: "production" } },
+      { kind: "source", path: "src/shots/opening.ts" },
+      { kind: "shot", id: "opening" },
+      { kind: "rendition", id: "opening" },
+      { kind: "sequence", id: "SEQ-SIGNAL" },
+      { kind: "film", id: "fixture-film" },
+    ];
+    for (const target of reviewTargets) {
+      const gatedReview = new AutoMovieApplication({
+        projectRoot: fixture.root,
+        productionId: "fixture-film",
+        capture,
+      });
+      gatedReview.getGuideDocument({ name: "AUTOMOVIE_OVERALL" });
+      const expectedGuide = AUTOMOVIE_REVIEW_GUIDES[target.kind];
+      const prepareGate = await rejected(async () =>
+        gatedReview.prepareReview({ target }),
+      );
+      const submitGate = await rejected(async () =>
+        gatedReview.submitReview({
+          target,
+          preparedFingerprint: `sha256:${"0".repeat(64)}`,
+          observations: "Gate execution probe.",
+          checks: [],
+          corrections: [
+            {
+              owner: "source",
+              target: "gate-probe",
+              problem: "The probe is intentionally incomplete.",
+              expected: "The target-specific guide is credited.",
+            },
+          ],
+          completionBasis: "Gate execution probe.",
+          complete: false,
+        }),
+      );
+      TestValidator.predicate(
+        `${target.kind} prepare and submit both require the exact review guide`,
+        prepareGate?.includes(
+          `getGuideDocument({ name: "${expectedGuide}" })`,
+        ) === true &&
+          submitGate?.includes(
+            `getGuideDocument({ name: "${expectedGuide}" })`,
+          ) === true,
+      );
+      gatedReview.getGuideDocument({ name: expectedGuide });
+      TestValidator.predicate(
+        `${target.kind} prepare and submit execute after exact guide credit`,
+        (await rejected(async () => gatedReview.prepareReview({ target }))) ===
+          null &&
+          (await rejected(async () =>
+            gatedReview.submitReview({
+              target,
+              preparedFingerprint: `sha256:${"0".repeat(64)}`,
+              observations: "Gate execution probe.",
+              checks: [],
+              corrections: [
+                {
+                  owner: "source",
+                  target: "gate-probe",
+                  problem: "The probe is intentionally incomplete.",
+                  expected: "The target-specific guide is credited.",
+                },
+              ],
+              completionBasis: "Gate execution probe.",
+              complete: false,
+            }),
+          )) === null,
+      );
+    }
+    application.getGuideDocument({ name: "REPAINT_SHOT" });
+    const deterministicRepaint = await application.repaintShot({
+      productionId: "second-film",
+      shot: "opening",
+      references: [{ role: "style", path: reference.path }],
+      parameters: { prompt: "Preserve the signal.", seed: 17, strength: 0.8 },
+    });
+    TestValidator.predicate(
+      "deterministic delivery refuses repaint without requiring diffusion knowledge",
+      deterministicRepaint.repainted === false &&
+        deterministicRepaint.diagnostics[0]?.code ===
+          "repaint-delivery-disabled" &&
+        AUTOMOVIE_REPAINT_GUIDE === "DIFFUSION_ENHANCE",
+    );
+    const stateRoot = path.join(fixture.root, ".automovie");
+    const stateRegistryPath = path.join(stateRoot, "productions.json");
+    const registryBeforeUnknown = fs.readFileSync(stateRegistryPath);
+    const revisionBeforeUnknown = first.project.revision();
+    const treeBeforeUnknown = directorySnapshot(stateRoot);
+    const unknownProductionCapture = await application.captureFrame({
+      target: {
+        kind: "shot",
+        productionId: "typo-film",
+        id: "opening",
+        time: 0,
+      },
+    });
+    const unknownProductionRepaint = await application.repaintShot({
+      productionId: "typo-film",
+      shot: "opening",
+      references: [{ role: "style", path: reference.path }],
+      parameters: { prompt: "Preserve the signal.", seed: 17, strength: 0.8 },
+    });
+    TestValidator.predicate(
+      "unknown production ids are read-only refusals",
+      unknownProductionCapture.diagnostics[0]?.code ===
+        "capture-production-unregistered" &&
+        unknownProductionRepaint.diagnostics[0]?.code ===
+          "repaint-production-unregistered" &&
+        fs.readFileSync(stateRegistryPath).equals(registryBeforeUnknown) &&
+        first.project.revision() === revisionBeforeUnknown &&
+        JSON.stringify(directorySnapshot(stateRoot)) ===
+          JSON.stringify(treeBeforeUnknown),
+    );
+    const unknownGuide = await rejected(async () =>
+      application.getGuideDocument({
+        name: "RETIRED_GUIDE" as IAutoMovieGetGuideDocument.IProps["name"],
+      }),
+    );
+    TestValidator.predicate(
+      "unknown guide recovery names the complete production allowlist",
+      AUTOMOVIE_PRODUCTION_GUIDE_NAMES.every(
+        (name) => unknownGuide?.includes(name) === true,
+      ),
+    );
+    const invalidCaptureProduction = await application.captureFrame({
+      target: {
+        kind: "shot",
+        productionId: " ",
+        id: "opening",
+        time: 0,
+      },
+    });
+    const invalidRepaintProduction = await application.repaintShot({
+      productionId: " ",
+      shot: "opening",
+      references: [{ role: "style", path: reference.path }],
+      parameters: { prompt: "Preserve the signal.", seed: 17, strength: 0.8 },
+    });
+    TestValidator.predicate(
+      "explicit blank production ids never fall through to the host default",
+      invalidCaptureProduction.diagnostics[0]?.code ===
+        "capture-production-invalid" &&
+        invalidRepaintProduction.diagnostics[0]?.code ===
+          "repaint-production-invalid",
+    );
+    const registryPath = path.join(
+      first.project.generatedRoot(),
+      "manifests/compile.json",
+    );
+    const originalRegistry = fs.readFileSync(registryPath);
+    const alteredRegistry = JSON.parse(originalRegistry.toString("utf8")) as {
+      film: string | null;
+    };
+    alteredRegistry.film = "altered-without-ownership";
+    fs.writeFileSync(
+      registryPath,
+      `${JSON.stringify(alteredRegistry, null, 2)}\n`,
+    );
+    const staleRegistry = await application.captureFrame({
+      target: {
+        kind: "shot",
+        productionId: "fixture-film",
+        id: "opening",
+        time: 0,
+      },
+    });
+    fs.writeFileSync(registryPath, originalRegistry);
+    TestValidator.predicate(
+      "capture refuses registry bytes that differ from compiler ownership",
+      staleRegistry.captured === false &&
+        staleRegistry.diagnostics[0]?.code === "capture-registry-unavailable",
+    );
+    const missing = await application.captureFrame({
+      target: {
+        kind: "shot",
+        productionId: "fixture-film",
+        id: "caller-invented",
+        time: 0,
+      },
+    });
+    const firstBeauty = await application.captureFrame({
+      target: {
+        kind: "shot",
+        productionId: "fixture-film",
+        id: "opening",
+        time: 0,
+        pass: "beauty",
+      },
+    });
+    const firstPose = await application.captureFrame({
+      target: {
+        kind: "shot",
+        productionId: "fixture-film",
+        id: "opening",
+        time: 0,
+        pass: "pose",
+      },
+    });
+    const signalMask = await application.captureFrame({
+      target: {
+        kind: "shot",
+        productionId: "fixture-film",
+        id: "opening",
+        time: 2,
+        pass: "mask",
+      },
+    });
+    const assetTurntable = await application.captureFrame({
+      target: {
+        kind: "asset",
+        id: "sentinel",
+        angleDeg: 90,
+        elevationDeg: 0,
+        pose: "rest",
+        pass: "beauty",
+      },
+    });
+    const secondBeauty = await application.captureFrame({
+      target: {
+        kind: "shot",
+        productionId: "second-film",
+        id: "opening",
+        time: 0,
+        pass: "beauty",
+      },
+    });
+    const capturesAreCurrentAndIsolated =
+      missing.captured === false &&
+      missing.diagnostics[0]?.code === "capture-target-missing" &&
+      firstBeauty.captured &&
+      firstPose.captured &&
+      assetTurntable.captured &&
+      secondBeauty.captured &&
+      firstBeauty.receipt?.productionId === "fixture-film" &&
+      assetTurntable.receipt?.productionId === "fixture-film" &&
+      assetTurntable.receipt?.target.kind === "asset" &&
+      assetTurntable.receipt.target.id === "sentinel" &&
+      assetTurntable.receipt.target.angleDeg === 90 &&
+      assetTurntable.receipt.outputDigest === assetTurntable.frame?.digest &&
+      secondBeauty.receipt?.productionId === "second-film" &&
+      firstBeauty.receipt?.bundle !== secondBeauty.receipt?.bundle &&
+      capturedProductionIds.includes("fixture-film") &&
+      capturedProductionIds.includes("second-film");
+    if (capturesAreCurrentAndIsolated === false)
+      throw new Error(
+        `Capture isolation matrix failed:\n${JSON.stringify(
+          {
+            missing,
+            firstBeauty,
+            firstPose,
+            assetTurntable,
+            secondBeauty,
+            capturedProductionIds,
+          },
+          null,
+          2,
+        )}`,
+      );
+    TestValidator.predicate(
+      "capture resolves only current registry ids and isolates two productions",
+      capturesAreCurrentAndIsolated,
+    );
+    TestValidator.equals(
+      "only the production guide allowlist is served",
+      AUTOMOVIE_PRODUCTION_GUIDE_NAMES,
+      [
+        "AUTOMOVIE_OVERALL",
+        "PRODUCTION_DESIGN",
+        "MODEL_RECIPE",
+        "WORLD_DESIGN",
+        "FORMATION_DESIGN",
+        "SHOT_CONTRACT",
+        "ACCEPTANCE",
+        "SOURCE_OWNERSHIP",
+        "COMPILATION",
+        "GEOMETRY",
+        "CAPTURE_FRAME",
+        "REPAINT_SHOT",
+        "REVIEW_ASSET",
+        "REVIEW_SHOT",
+        "REVIEW_SEQUENCE",
+        "REVIEW_FILM",
+        "REVIEW_DEPENDENCY",
+        "SCREENPLAY_WRITING",
+        "CINEMATOGRAPHY",
+        "EDITING",
+        "OBJECT_RIGGING",
+        "WORLD_BUILDING",
+        "MOTION",
+        "BATTLE_SIM",
+        "SOUND_DESIGN",
+        "ASSET_SOURCING",
+        "DIFFUSION_ENHANCE",
+        "TYPESCRIPT",
+        "DEBUGGING",
+      ],
+    );
+
+    const diffusionGated = await rejected(() =>
+      application.repaintShot({
+        productionId: "fixture-film",
+        shot: "opening",
+        references: [{ role: "style", path: reference.path }],
+        parameters: {
+          prompt: "Preserve the signal.",
+          seed: 17,
+          strength: 0.8,
+        },
+      }),
+    );
+    TestValidator.predicate(
+      "repainted delivery dynamically requires diffusion guidance",
+      diffusionGated?.includes("2/3 required guides") === true &&
+        diffusionGated.includes(
+          'getGuideDocument({ name: "DIFFUSION_ENHANCE" })',
+        ),
+    );
+    application.getGuideDocument({ name: "DIFFUSION_ENHANCE" });
+    const unavailable = await application.repaintShot({
+      productionId: "fixture-film",
+      shot: "opening",
+      references: [{ role: "style", path: reference.path }],
+      parameters: { prompt: "Preserve the signal.", seed: 17, strength: 0.8 },
+    });
+    TestValidator.predicate(
+      "a missing repaint adapter returns provisioning guidance",
+      unavailable.repainted === false &&
+        unavailable.diagnostics[0]?.code === "repaint-host-unavailable" &&
+        unavailable.diagnostics[0].message.includes(
+          "AutoMovieProductionShotRepaint",
+        ),
+    );
+
+    const frameGrid: IAutoMovieCaptureFrame[] = [
+      firstBeauty,
+      firstPose,
+      signalMask,
+    ];
+    for (let index = 1; index < 12; ++index)
+      for (const pass of ["beauty", "pose"] as const)
+        frameGrid.push(
+          await application.captureFrame({
+            target: {
+              kind: "shot",
+              productionId: "fixture-film",
+              id: "opening",
+              time: index / 2,
+              pass,
+            },
+          }),
+        );
+    TestValidator.predicate(
+      "repaint source evidence covers every beauty, pose and required mask frame",
+      frameGrid.length === 25 && frameGrid.every((capture) => capture.captured),
+    );
+
+    const shortRenditionBytes = await productionH264Mp4({
+      width: 16,
+      height: 16,
+      fps: 2,
+      frameCount: 2,
+    });
+    const renditionBytes = await productionH264Mp4({
+      width: 16,
+      height: 16,
+      fps: 2,
+      frameCount: 12,
+    });
+    let repaintAdapterCalls = 0;
+    const repainting = new AutoMovieApplication({
+      projectRoot: fixture.root,
+      productionId: "fixture-film",
+      capture,
+      repaint: async (input) => {
+        ++repaintAdapterCalls;
+        return {
+          bytes:
+            input.parameters.prompt === "Return a short clip."
+              ? shortRenditionBytes
+              : renditionBytes,
+          mediaType: "video/mp4",
+          runtimeIdentity: {
+            protocolVersion: "automovie.repaint-runtime.v1",
+            provider: "fixture",
+            model: "fixture-video",
+            version: "1",
+            execution: "local",
+          },
+        };
+      },
+    });
+    repainting.getGuideDocument({ name: "AUTOMOVIE_OVERALL" });
+    repainting.getGuideDocument({ name: "REPAINT_SHOT" });
+    repainting.getGuideDocument({ name: "DIFFUSION_ENHANCE" });
+    repainting.getGuideDocument({ name: "REVIEW_SHOT" });
+    const sourcePrepared = repainting.prepareReview({
+      target: { kind: "shot", id: "opening" },
+    });
+    TestValidator.predicate(
+      "repaint source preparation owns every declared review pass",
+      sourcePrepared.frames.length === 3 &&
+        ["beauty", "mask", "pose"].every((pass) =>
+          sourcePrepared.frames.some((frame) => frame.pass === pass),
+        ) &&
+        sourcePrepared.diagnostics.every(
+          (diagnostic) => diagnostic.category !== "error",
+        ),
+    );
+    const frameEvidence = (frame: (typeof sourcePrepared.frames)[number]) => ({
+      kind: "frame" as const,
+      target: frame.target,
+      reviewFrame: frame.reviewFrame,
+      bundle: frame.bundle,
+      frame: frame.frame,
+      time: frame.time,
+      pass: frame.pass,
+      digest: frame.digest,
+    });
+    const sourceAcceptance = [
+      ...first.project.graph().acceptance.values(),
+    ].filter(
+      (scenario) =>
+        scenario.required &&
+        scenario.target.kind === "shot" &&
+        scenario.target.id === "opening",
+    );
+    const sourceReview = repainting.submitReview({
+      target: sourcePrepared.target,
+      preparedFingerprint: sourcePrepared.fingerprint,
+      observations:
+        "The current deterministic source frames satisfy the shot contract.",
+      checks: sourcePrepared.requiredCriteria.map((criterion, index) => ({
+        criterion,
+        verdict: "pass",
+        observation: `${criterion} passes on current deterministic evidence.`,
+        evidence:
+          criterion === "acceptance-scenarios"
+            ? sourceAcceptance.flatMap((scenario) => {
+                const matching = sourcePrepared.frames.find(
+                  (frame) =>
+                    scenario.criterion.kind === "frame" &&
+                    frame.reviewFrame === scenario.criterion.frame &&
+                    frame.pass === scenario.criterion.pass,
+                );
+                return [
+                  ...(matching === undefined ? [] : [frameEvidence(matching)]),
+                  {
+                    kind: "acceptance" as const,
+                    scenario: scenario.id,
+                    exactValue: scenario,
+                  },
+                ];
+              })
+            : [
+                frameEvidence(
+                  sourcePrepared.frames[index % sourcePrepared.frames.length]!,
+                ),
+              ],
+        ...(criterion === "acceptance-scenarios"
+          ? {
+              acceptanceScenarios: sourceAcceptance.map(
+                (scenario) => scenario.id,
+              ),
+            }
+          : {}),
+      })),
+      corrections: [],
+      completionBasis: sourcePrepared.requiredCriteria.join(", "),
+      complete: true,
+    });
+    if (sourceReview.accepted === false || sourceReview.state !== "complete")
+      throw new Error(
+        `Deterministic repaint-source review failed:\n${JSON.stringify(
+          {
+            prepared: {
+              criteria: sourcePrepared.requiredCriteria,
+              frames: sourcePrepared.frames.map((frame) => ({
+                reviewFrame: frame.reviewFrame,
+                time: frame.time,
+                pass: frame.pass,
+                digest: frame.digest,
+              })),
+              diagnostics: sourcePrepared.diagnostics,
+            },
+            submitted: sourceReview,
+          },
+          null,
+          2,
+        )}`,
+      );
+    TestValidator.predicate(
+      "repaint requires and records a current completed deterministic source review",
+      sourceReview.accepted && sourceReview.state === "complete",
+    );
+    const restricted = await repainting.repaintShot({
+      productionId: "fixture-film",
+      shot: "opening",
+      references: [{ role: "style", path: restrictedReference.path }],
+      parameters: {
+        prompt: "Do not send this asset.",
+        seed: 17,
+        strength: 0.8,
+      },
+    });
+    TestValidator.predicate(
+      "non-rendition asset bytes are refused before adapter disclosure",
+      restricted.repainted === false &&
+        restricted.diagnostics[0]?.code === "repaint-reference-invalid" &&
+        repaintAdapterCalls === 0,
+    );
+    const shortRendition = await repainting.repaintShot({
+      productionId: "fixture-film",
+      shot: "opening",
+      references: [{ role: "style", path: reference.path }],
+      parameters: { prompt: "Return a short clip.", seed: 17, strength: 0.8 },
+    });
+    TestValidator.predicate(
+      "repaint output must match exact shot raster, clock and frame count",
+      shortRendition.repainted === false &&
+        shortRendition.diagnostics[0]?.code === "repaint-output-invalid" &&
+        repaintAdapterCalls === 1,
+    );
+    const repainted = await repainting.repaintShot({
+      productionId: "fixture-film",
+      shot: "opening",
+      references: [{ role: "style", path: reference.path }],
+      parameters: { prompt: "Preserve the signal.", seed: 17, strength: 0.8 },
+    });
+    TestValidator.predicate(
+      "attached repaint commits the complete provenance chain",
+      repainted.repainted &&
+        repainted.receipt?.sourceRenderFingerprint.startsWith("sha256:") ===
+          true &&
+        repainted.receipt.sourceReviewFingerprint ===
+          sourceReview.fingerprint &&
+        repainted.receipt.attemptId.length === 36 &&
+        repainted.receipt.controls.some((control) => control.pass === "pose") &&
+        repainted.receipt.references[0]?.digest === reference.digest &&
+        repainted.receipt.adapterIdentity.includes("fixture-video") &&
+        repainted.receipt.output.digest.startsWith("sha256:") &&
+        repaintAdapterCalls === 2 &&
+        fs.existsSync(
+          path.join(
+            fixture.root,
+            "renders",
+            "fixture-film",
+            repainted.receipt.output.path,
+          ),
+        ),
+    );
+    repainting.getGuideDocument({ name: "REVIEW_SHOT" });
+    const renditionReview = repainting.prepareReview({
+      target: { kind: "rendition", id: "opening" },
+    });
+    const acceptedReceipt = repainted.receipt;
+    TestValidator.predicate(
+      "repainted delivery enters separate receipt-bound review evidence",
+      acceptedReceipt !== null &&
+        renditionReview.renditions.some(
+          (rendition) =>
+            rendition.shot === "opening" &&
+            rendition.path === acceptedReceipt.output.path &&
+            rendition.digest === acceptedReceipt.output.digest &&
+            rendition.receiptDigest.startsWith("sha256:") &&
+            rendition.sourceRenderFingerprint ===
+              acceptedReceipt.sourceRenderFingerprint &&
+            rendition.sourceReviewFingerprint ===
+              acceptedReceipt.sourceReviewFingerprint,
+        ) &&
+        renditionReview.diagnostics.some(
+          (diagnostic) => diagnostic.code === "review-rendition-missing",
+        ) === false,
+    );
+    const rerolled = await repainting.repaintShot({
+      productionId: "fixture-film",
+      shot: "opening",
+      references: [{ role: "style", path: reference.path }],
+      parameters: {
+        prompt: "Preserve the signal.",
+        seed: 17,
+        strength: 0.8,
+      },
+    });
+    const rerolledReview = repainting.prepareReview({
+      target: { kind: "rendition", id: "opening" },
+    });
+    repainting.getGuideDocument({ name: "REVIEW_FILM" });
+    const repaintFilmReview = repainting.prepareReview({
+      target: { kind: "film", id: "fixture-film" },
+    });
+    TestValidator.predicate(
+      "even an identical-byte reroll selects a new attempt and stales prior review identity",
+      rerolled.repainted &&
+        rerolled.receipt?.attemptId !== acceptedReceipt?.attemptId &&
+        rerolled.receipt?.output.path !== acceptedReceipt?.output.path &&
+        rerolledReview.fingerprint !== renditionReview.fingerprint &&
+        rerolledReview.renditions.length === 1 &&
+        rerolledReview.renditions[0]?.path === rerolled.receipt?.output.path,
+    );
+    TestValidator.predicate(
+      "film review preflights the selected repaint cut before approval",
+      repaintFilmReview.renditions.length === 1 &&
+        repaintFilmReview.diagnostics.some(
+          (diagnostic) =>
+            diagnostic.code === "review-rendition-delivery-invalid",
+        ) === false,
+    );
+    const activeRenditionPath = first.project.trackedStatePath(
+      "renditions/active/opening.json",
+    );
+    const activeRenditionBytes = fs.readFileSync(activeRenditionPath);
+    const activeRendition = JSON.parse(
+      activeRenditionBytes.toString("utf8"),
+    ) as {
+      version: 1;
+      shot: string;
+      receipt: string;
+      output: string;
+    };
+    const invalidRenditionReviews: IAutoMoviePrepareReview[] = [];
+    for (const active of [
+      "{",
+      "{}\n",
+      `${JSON.stringify(
+        { ...activeRendition, receipt: "renditions/missing.json" },
+        null,
+        2,
+      )}\n`,
+      `${JSON.stringify(
+        { ...activeRendition, output: "renditions/wrong.mp4" },
+        null,
+        2,
+      )}\n`,
+    ]) {
+      fs.writeFileSync(activeRenditionPath, active);
+      invalidRenditionReviews.push(
+        repainting.prepareReview({
+          target: { kind: "rendition", id: "opening" },
+        }),
+      );
+    }
+    fs.writeFileSync(activeRenditionPath, activeRenditionBytes);
+    const selectedReceiptPath = first.project.trackedStatePath(
+      activeRendition.receipt,
+    );
+    const selectedReceiptBytes = fs.readFileSync(selectedReceiptPath);
+    fs.writeFileSync(selectedReceiptPath, "{}\n");
+    invalidRenditionReviews.push(
+      repainting.prepareReview({
+        target: { kind: "rendition", id: "opening" },
+      }),
+    );
+    const wrongShotReceipt = JSON.parse(
+      selectedReceiptBytes.toString("utf8"),
+    ) as NonNullable<IAutoMovieRepaintShot["receipt"]>;
+    wrongShotReceipt.shot = "answer";
+    fs.writeFileSync(
+      selectedReceiptPath,
+      `${JSON.stringify(wrongShotReceipt, null, 2)}\n`,
+    );
+    invalidRenditionReviews.push(
+      repainting.prepareReview({
+        target: { kind: "rendition", id: "opening" },
+      }),
+    );
+    fs.writeFileSync(selectedReceiptPath, selectedReceiptBytes);
+    const selectedOutputPath = path.join(
+      first.project.renderRoot(),
+      rerolled.receipt!.output.path,
+    );
+    const selectedOutputBytes = fs.readFileSync(selectedOutputPath);
+    fs.writeFileSync(
+      selectedOutputPath,
+      Buffer.concat([selectedOutputBytes, Buffer.from([0])]),
+    );
+    const changedOutputReview = repainting.prepareReview({
+      target: { kind: "rendition", id: "opening" },
+    });
+    invalidRenditionReviews.push(changedOutputReview);
+    fs.writeFileSync(selectedOutputPath, selectedOutputBytes);
+    TestValidator.predicate(
+      "forged active pointers and changed rendition bytes never become review evidence",
+      invalidRenditionReviews.every(
+        (prepared) =>
+          prepared.renditions.length === 0 &&
+          prepared.diagnostics.some(
+            (diagnostic) => diagnostic.code === "review-rendition-missing",
+          ),
+      ),
+    );
+    const currentRenditionEvidence = {
+      kind: "rendition" as const,
+      ...rerolledReview.renditions[0]!,
+    };
+    const renditionWorksheet: IAutoMovieSubmitReview.IProps = {
+      target: { kind: "rendition", id: "opening" },
+      preparedFingerprint: rerolledReview.fingerprint,
+      observations: "The current selected rendition needs another pass.",
+      checks: rerolledReview.requiredCriteria.map((criterion, index) => ({
+        criterion,
+        verdict: "revise",
+        observation: `Rendition criterion ${index} remains under review.`,
+        evidence: [currentRenditionEvidence],
+        ...(criterion === "acceptance-scenarios"
+          ? { acceptanceScenarios: [] }
+          : {}),
+      })),
+      corrections: [
+        {
+          owner: "render",
+          target: rerolledReview.renditions[0]!.path,
+          problem: "The visual approval probe remains intentionally open.",
+          expected: "Submit a complete evidence-backed appearance review.",
+        },
+      ],
+      completionBasis: "The rendition evidence is current but not approved.",
+      complete: false,
+    };
+    const acceptedRenditionReview = repainting.submitReview(renditionWorksheet);
+    const forgedRenditionWorksheet = structuredClone(renditionWorksheet);
+    const forgedRenditionEvidence = forgedRenditionWorksheet.checks[0]!
+      .evidence[0] as Extract<
+      (typeof forgedRenditionWorksheet.checks)[number]["evidence"][number],
+      { kind: "rendition" }
+    >;
+    forgedRenditionEvidence.digest = digestAutoMovieBytes(
+      Buffer.from("forged-rendition"),
+    );
+    const forgedRenditionReview = repainting.submitReview(
+      forgedRenditionWorksheet,
+    );
+    const uncitedCompletion = structuredClone(renditionWorksheet);
+    uncitedCompletion.complete = true;
+    uncitedCompletion.corrections = [];
+    for (const check of uncitedCompletion.checks) {
+      check.verdict = "pass";
+      check.evidence = check.evidence.filter(
+        (evidence) => evidence.kind !== "rendition",
+      );
+    }
+    const uncitedRenditionReview = repainting.submitReview(uncitedCompletion);
+    TestValidator.predicate(
+      "submitReview accepts exact rendition evidence and refuses forged or uncited identities",
+      acceptedRenditionReview.accepted &&
+        forgedRenditionReview.diagnostics.some(
+          (diagnostic) => diagnostic.code === "review-evidence-stale",
+        ) &&
+        uncitedRenditionReview.diagnostics.some(
+          (diagnostic) =>
+            diagnostic.code === "review-rendition-coverage-incomplete",
+        ),
+    );
+    const forgedReceipt = structuredClone(repainted.receipt!);
+    forgedReceipt.sourceRenderFingerprint = forgedReceipt.output.digest;
+    let forgedReceiptRejected = false;
+    try {
+      first.project.commitRepaintRendition(forgedReceipt, renditionBytes);
+    } catch {
+      forgedReceiptRejected = true;
+    }
+    TestValidator.predicate(
+      "the project commit gate independently rejects forged source provenance",
+      forgedReceiptRejected,
+    );
+
+    const server = createAutoMovieMcpServer({
+      projectRoot: fixture.root,
+      productionId: "fixture-film",
+      capture,
+    });
+    connectionCleanups.push({
+      resource: "MCP server",
+      cleanup: () => server.close(),
+    });
     const client = new Client({
-      name: "production-schema-test",
+      name: "five-tool-schema-test",
       version: "0.0.0",
+    });
+    connectionCleanups.unshift({
+      resource: "MCP client",
+      cleanup: () => client.close(),
     });
     const [clientTransport, serverTransport] =
       InMemoryTransport.createLinkedPair();
-    try {
-      await Promise.all([
-        server.connect(serverTransport),
-        client.connect(clientTransport),
-      ]);
-      const { tools } = await client.listTools();
-      const schemaChars = tools.reduce(
-        (sum, tool) =>
-          sum +
-          JSON.stringify(tool.inputSchema).length +
-          JSON.stringify(tool.outputSchema ?? {}).length,
-        0,
-      );
-      TestValidator.equals(
-        "production tool inventory",
-        tools.map((tool) => tool.name),
-        [
-          "getGuideDocument",
-          "openProject",
-          "inspectProject",
-          "setProductionDesign",
-          "setModelRecipe",
-          "setWorldDesign",
-          "setFormationDesign",
-          "setShotContract",
-          "setAcceptanceScenario",
-          "eraseDesignArtifact",
-          "compileProject",
-          "queryGeometry",
-          "previewFrame",
-          "prepareReview",
-          "submitReview",
-        ],
-      );
-      TestValidator.predicate(
-        "schema and description ceilings",
-        schemaChars <= 150_000 &&
-          tools.every(
-            (tool) =>
-              JSON.stringify(tool.inputSchema).length +
-                JSON.stringify(tool.outputSchema ?? {}).length <=
-                45_000 &&
-              (tool.description?.length ?? 0) >= 450 &&
-              (tool.description?.length ?? 0) <= 1_023,
-          ),
-      );
-      const instructions = client.getInstructions();
-      const instructionLead = instructions?.slice(0, 512).toLowerCase() ?? "";
-      TestValidator.predicate(
-        "server instruction lead states ownership, entry point, and no internal LLM",
-        instructionLead.includes("production-control mcp") &&
-          instructionLead.includes("agent authors") &&
-          instructionLead.includes("automovie_overall") &&
-          instructionLead.includes("never runs an internal llm"),
-      );
-      for (const tool of tools) {
-        const signals =
-          PRODUCTION_TOOL_DESCRIPTION_SIGNALS[
-            tool.name as keyof typeof PRODUCTION_TOOL_DESCRIPTION_SIGNALS
-          ];
-        const description =
-          tool.description?.replace(/\s+/g, " ").toLowerCase() ?? "";
-        TestValidator.predicate(
-          `tool description carries responsibility and correction boundaries: ${tool.name}`,
-          signals !== undefined &&
-            signals.every((signal) => description.includes(signal)),
-        );
-        for (const [property, schema] of Object.entries(
-          tool.inputSchema.properties ?? {},
-        ))
-          TestValidator.predicate(
-            `top-level input property is documented: ${tool.name}.${property}`,
-            typeof (schema as { description?: unknown }).description ===
-              "string" &&
-              (
-                schema as {
-                  description: string;
-                }
-              ).description.trim().length > 0,
-          );
-      }
-      const guide = await client.callTool({
-        name: "getGuideDocument",
-        arguments: { name: "AUTOMOVIE_OVERALL" },
-      });
-      TestValidator.predicate(
-        "live generated controller serves a guide",
-        guide.isError !== true,
-      );
-    } finally {
-      await Promise.allSettled([client.close(), server.close()]);
-    }
+    await Promise.all([
+      server.connect(serverTransport),
+      client.connect(clientTransport),
+    ]);
+    const { tools } = await client.listTools();
+    TestValidator.equals(
+      "the reflected MCP inventory is exactly five tools",
+      tools.map((tool) => tool.name),
+      [
+        "getGuideDocument",
+        "captureFrame",
+        "repaintShot",
+        "prepareReview",
+        "submitReview",
+      ],
+    );
+    TestValidator.predicate(
+      "every tool description fits MCP client limits",
+      tools.every(
+        (tool) =>
+          (tool.description?.length ?? 0) > 100 &&
+          (tool.description?.length ?? 0) <= 1_023,
+      ),
+    );
+    const submitReview = tools.find((tool) => tool.name === "submitReview")!;
+    TestValidator.equals(
+      "submitReview remains verdict-last after reflection",
+      Object.keys(
+        (
+          submitReview.inputSchema as {
+            properties: Record<string, unknown>;
+          }
+        ).properties,
+      ),
+      [
+        "target",
+        "preparedFingerprint",
+        "observations",
+        "checks",
+        "corrections",
+        "completionBasis",
+        "complete",
+      ],
+    );
+  } catch (error) {
+    productionApplicationFailure = { error };
+    throw error;
   } finally {
-    fixture.dispose();
+    await preserveProductionApplicationCleanup(
+      productionApplicationFailure,
+      connectionCleanups,
+      () => fixture.dispose(),
+    );
   }
 };

@@ -15,7 +15,7 @@ import {
   IAutoMovieMotion,
   IAutoMoviePose,
   IAutoMovieQuaternion,
-  IAutoMovieStagingApplication,
+  IAutoMovieStage,
   IAutoMovieTransform,
   IAutoMovieVector3,
 } from "@automovie/interface";
@@ -85,7 +85,7 @@ const scriptOf = () =>
     ],
   });
 
-const cameraOf = (): IAutoMovieStagingApplication.IWrite["cameras"] => [
+const cameraOf = (): IAutoMovieStage["cameras"] => [
   {
     node: "cam",
     position: { x: 4, y: 2, z: 4 },

@@ -1,5 +1,11 @@
 {
   "id": "opening-effect-mask",
+  "evidence": [
+    {
+      "reason": "The effect mask verifies the signal scene's bounded visual cue.",
+      "scene": "SCN-001"
+    }
+  ],
   "target": { "kind": "shot", "id": "opening" },
   "criterion": {
     "kind": "frame",

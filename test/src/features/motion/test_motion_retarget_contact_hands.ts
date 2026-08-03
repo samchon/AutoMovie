@@ -4,7 +4,7 @@ import {
 } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
-import { vclose, warningCount } from "../internal/predicates";
+import { validationHasNoWarnings, vclose } from "../internal/predicates";
 import {
   keyframeWorld,
   mapped,
@@ -98,10 +98,9 @@ export const test_motion_retarget_contact_hands = (): void => {
         5e-3,
       ),
     );
-  TestValidator.equals(
+  TestValidator.predicate(
     "a reachable hand contact reports no warning",
-    warningCount(declared.validation),
-    0,
+    validationHasNoWarnings("reachable hand contact", declared.validation),
   );
 
   // 3. a window between the keyframes pins nothing.

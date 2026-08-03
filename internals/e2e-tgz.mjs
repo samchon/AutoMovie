@@ -6,10 +6,11 @@
 //
 // Run: pnpm run e2e:tgz
 //
-// Deliberately OUTSIDE the c8 coverage gate: it is slow (six prepack
+// Deliberately OUTSIDE the c8 coverage gate: it is slow (eleven prepack
 // builds plus an npm install) and needs registry network for third-party
 // dependencies such as @modelcontextprotocol/sdk.
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import {
   appendFileSync,
   existsSync,
@@ -25,17 +26,78 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import packagedE2eCleanup from "./preservePackagedE2eCleanup.cjs";
+
+const { preservePackagedE2eCleanup } = packagedE2eCleanup;
+
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(HERE, "..");
 const KEEP_STAGE = process.env.AUTOMOVIE_E2E_KEEP_STAGE === "1";
 
 // Interface first, CLI last: each runtime dependency packs before its consumer.
-const PACKAGES = ["interface", "engine", "render", "viewer", "mcp", "cli"];
+const PACKAGES = [
+  "interface",
+  "benchmark",
+  "engine",
+  "render",
+  "viewer",
+  "ingest",
+  "mcp",
+  "benchmark-runner",
+  "lint",
+  "cli",
+  "create-automovie",
+];
+const publishedPackageName = (name) =>
+  name === "create-automovie" ? name : `@automovie/${name}`;
+const tarballPrefix = (name) =>
+  name === "create-automovie" ? `${name}-` : `automovie-${name}-`;
 let tracePath = null;
 
 const fail = (message) => {
   console.error(`\n✗ e2e:tgz FAILED: ${message}`);
   throw new Error(message);
+};
+
+const writeCommandOutput = (result) => {
+  process.stderr.write(result.stdout ?? "");
+  process.stderr.write(result.stderr ?? "");
+};
+
+const commandTermination = (result, timeout) => {
+  const errorCode = result.error?.code ?? "none";
+  const reason =
+    errorCode === "ETIMEDOUT"
+      ? `timed out after ${timeout} ms`
+      : result.error !== undefined
+        ? "failed to spawn"
+        : result.signal !== null
+          ? "terminated by signal"
+          : typeof result.status !== "number"
+            ? "terminated without status"
+            : `exited with status ${result.status}`;
+  return [
+    reason,
+    `timeout=${timeout} ms`,
+    `status=${typeof result.status === "number" ? result.status : "none"}`,
+    `signal=${result.signal ?? "none"}`,
+    `error=${errorCode}`,
+    `message=${
+      result.error === undefined ? "none" : JSON.stringify(result.error.message)
+    }`,
+  ].join("; ");
+};
+
+const commandSucceeded = (result) =>
+  result.error === undefined && result.signal === null && result.status === 0;
+
+const failCommand = (label, result, timeout, detail = null) => {
+  writeCommandOutput(result);
+  fail(
+    `${label} ${commandTermination(result, timeout)}${
+      detail === null ? "" : `; ${detail}`
+    }`,
+  );
 };
 
 const run = (label, command, cwd, timeout = 300_000) => {
@@ -50,11 +112,7 @@ const run = (label, command, cwd, timeout = 300_000) => {
     stdio: ["ignore", "pipe", "pipe"],
     timeout,
   });
-  if (result.status !== 0) {
-    process.stderr.write(result.stdout ?? "");
-    process.stderr.write(result.stderr ?? "");
-    fail(`${label} exited with ${result.status ?? "signal"}`);
-  }
+  if (commandSucceeded(result) === false) failCommand(label, result, timeout);
   if (tracePath !== null)
     appendFileSync(tracePath, `${new Date().toISOString()} PASS ${label}\n`);
   console.log(`✓ ${label}`);
@@ -88,9 +146,13 @@ const runExpectedFailure = (
     result.status === 0 ||
     output.includes(expectedOutput) === false
   ) {
-    process.stderr.write(output);
-    fail(
-      `${label} did not exit normally with a non-zero status and the expected "${expectedOutput}" diagnostic`,
+    failCommand(
+      label,
+      result,
+      timeout,
+      `expected a normal non-zero exit containing ${JSON.stringify(
+        expectedOutput,
+      )}`,
     );
   }
   if (tracePath !== null)
@@ -105,18 +167,15 @@ const runJson = (label, executable, args, cwd) => {
   console.log(`> ${label}`);
   if (tracePath !== null)
     appendFileSync(tracePath, `${new Date().toISOString()} START ${label}\n`);
+  const timeout = 300_000;
   const result = spawnSync(executable, args, {
     cwd,
     encoding: "utf8",
     maxBuffer: 64 * 1024 * 1024,
     stdio: ["ignore", "pipe", "pipe"],
-    timeout: 300_000,
+    timeout,
   });
-  if (result.status !== 0) {
-    process.stderr.write(result.stdout ?? "");
-    process.stderr.write(result.stderr ?? "");
-    fail(`${label} exited with ${result.status ?? "signal"}`);
-  }
+  if (commandSucceeded(result) === false) failCommand(label, result, timeout);
   let output;
   try {
     output = JSON.parse(result.stdout);
@@ -133,41 +192,65 @@ const runJson = (label, executable, args, cwd) => {
 
 const CLIENT_SOURCE = `
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
-import { existsSync } from "node:fs";
+import {
+  StdioClientTransport,
+  getDefaultEnvironment,
+} from "@modelcontextprotocol/sdk/client/stdio.js";
+import {
+  createProcessAutoMovieBenchmarkAgent,
+  snapshotAutoMovieBenchmarkProject,
+} from "@automovie/benchmark-runner";
+import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
 const assert = (name, condition, detail) => {
-  if (!condition) {
-    console.error(\`✗ \${name}: \${detail}\`);
-    process.exit(1);
-  }
+  if (!condition) throw new Error(\`✗ \${name}: \${detail}\`);
   console.log(\`✓ \${name}\`);
 };
 
+const preserveCleanupFailure = async (failure, cleanup) => {
+  try {
+    await cleanup();
+  } catch (cleanupError) {
+    if (failure === undefined) throw cleanupError;
+    throw new AggregateError(
+      [failure.error, cleanupError],
+      "Packaged MCP client cleanup failed after the probe failed.",
+    );
+  }
+};
+
+assert(
+  "benchmark-runner-public-entry",
+  typeof createProcessAutoMovieBenchmarkAgent === "function" &&
+    typeof snapshotAutoMovieBenchmarkProject === "function",
+  "the packed benchmark runner public entry is incomplete",
+);
+
 const bin = path.resolve("node_modules/@automovie/mcp/lib/bin.js");
-const granularBin = path.resolve(
-  "node_modules/@automovie/mcp/lib/bin-granular.js",
+const projectRoot = path.resolve("mcp-host");
+mkdirSync(projectRoot, { recursive: true });
+writeFileSync(
+  path.join(projectRoot, "automovie.config.ts"),
+  "export default {};",
 );
-const productionBin = path.resolve(
-  "node_modules/@automovie/mcp/lib/bin-production.js",
-);
-const projectRoot = path.resolve("automovie-project");
 const transport = new StdioClientTransport({
   command: process.execPath,
   args: [bin],
+  env: { ...getDefaultEnvironment(), AUTOMOVIE_PROJECT_ROOT: projectRoot },
   stderr: "pipe",
 });
 const client = new Client({ name: "automovie-tgz-e2e", version: "0.0.0" });
+let clientFailure;
 try {
-  // A files-selection regression ships bin.js (npm force-includes bin
-  // targets) without the rest of lib/, so the server dies on import and the
-  // failure surfaces here, not at the bin-target existence check.
-  await client.connect(transport);
-} catch (error) {
-  assert("connect", false, \`packaged server failed to start: \${error}\`);
-}
-try {
+  try {
+    // A files-selection regression ships bin.js (npm force-includes bin
+    // targets) without the rest of lib/, so the server dies on import and the
+    // failure surfaces here, not at the bin-target existence check.
+    await client.connect(transport);
+  } catch (error) {
+    assert("connect", false, \`packaged server failed to start: \${error}\`);
+  }
   const server = client.getServerVersion();
   assert(
     "handshake",
@@ -177,17 +260,19 @@ try {
   );
 
   const { tools } = await client.listTools();
+  const toolNames = tools.map((tool) => tool.name).sort();
+  const expectedTools = [
+    "captureFrame",
+    "getGuideDocument",
+    "prepareReview",
+    "repaintShot",
+    "submitReview",
+  ];
   assert(
-    "tool-count",
-    tools.length === 4,
-    \`expected 4 compact tools, got \${tools.length}\`,
+    "five-tool-surface",
+    JSON.stringify(toolNames) === JSON.stringify(expectedTools),
+    \`expected \${expectedTools.join(", ")}, got \${toolNames.join(", ")}\`,
   );
-  for (const name of ["execute", "getGuideDocument", "openProject", "nextSteps"])
-    assert(
-      \`tool-present:\${name}\`,
-      tools.some((tool) => tool.name === name),
-      "tool missing from tools/list",
-    );
   const overflowing = tools.filter(
     (tool) => (tool.description ?? "").length > 1023,
   );
@@ -207,175 +292,35 @@ try {
     guide.isError !== true && guideText.length >= 1000,
     \`isError=\${guide.isError} length=\${guideText.length} (guide corpus missing from the pack?)\`,
   );
-
-  const open = await client.callTool({
-    name: "openProject",
-    arguments: { root: projectRoot },
-  });
-  assert(
-    "open-project",
-    open.isError !== true,
-    (open.content?.[0]?.text ?? "").slice(0, 300),
-  );
-  for (const entry of [
-    "automovie.json",
-    "assets",
-    "beatEnds",
-    "models",
-    "props",
-    "renders",
-    "scenes",
-    "shots",
-  ])
-    assert(
-      \`resident-structure:\${entry}\`,
-      existsSync(path.join(projectRoot, entry)),
-      "openProject did not create the resident project entry",
-    );
-
-  const next = await client.callTool({ name: "nextSteps", arguments: {} });
-  const nextText = next.content?.[0]?.text ?? "";
-  assert(
-    "next-steps",
-    next.isError !== true && nextText.length > 0,
-    nextText.slice(0, 300),
-  );
-
-  const slate = await client.callTool({
-    name: "execute",
-    arguments: { call: { operation: "getSlate", input: {} } },
-  });
-  const slateResult = slate.structuredContent?.result;
-  assert(
-    "execute-operation",
-    slate.isError !== true &&
-      slateResult?.operation === "getSlate" &&
-      slateResult.output?.slate !== undefined,
-    (slate.content?.[0]?.text ?? "").slice(0, 300),
-  );
+} catch (error) {
+  clientFailure = { error };
+  throw error;
 } finally {
-  await client.close();
+  await preserveCleanupFailure(clientFailure, () => client.close());
 }
 
-assert(
-  "granular-bin-target",
-  existsSync(granularBin),
-  "the compatibility binary is missing",
-);
-const granularTransport = new StdioClientTransport({
-  command: process.execPath,
-  args: [granularBin],
-  stderr: "pipe",
-});
-const granular = new Client({
-  name: "automovie-tgz-e2e-granular",
-  version: "0.0.0",
-});
-await granular.connect(granularTransport);
-try {
-  const { tools } = await granular.listTools();
-  // Derived from the packed package rather than compared with a number kept
-  // here by hand. The granular surface is one tool per application method, so
-  // that is the property to assert; a literal only records what the count was
-  // on the day someone last remembered to change it (#1393, #1402). The trade
-  // is deliberate: a literal would also have caught a packaging step that lost
-  // methods from the built library, which this cannot, since both sides would
-  // shrink together. That case is covered in-repo by test_mcp_stdio_roundtrip,
-  // which pins the whole granular name inventory, and by assertBuild.
-  const { AutoMovieLegacyApplication } = await import("@automovie/mcp");
-  const operations = Object.getOwnPropertyNames(
-    AutoMovieLegacyApplication.prototype,
-  ).filter((name) => name !== "constructor");
-  assert(
-    "granular-tool-count",
-    tools.length === operations.length,
-    \`expected one granular tool per application method (\${operations.length}), got \${tools.length}\`,
-  );
-  for (const name of ["stage", "perform", "cut"])
-    assert(
-      \`granular-tool-present:\${name}\`,
-      tools.some((tool) => tool.name === name),
-      "tool missing from compatibility tools/list",
-    );
-} finally {
-  await granular.close();
-}
-
-assert(
-  "production-bin-target",
-  existsSync(productionBin),
-  "the coding-agent production binary is missing",
-);
-const productionTransport = new StdioClientTransport({
-  command: process.execPath,
-  args: [productionBin],
-  stderr: "pipe",
-});
-const production = new Client({
-  name: "automovie-tgz-e2e-production",
-  version: "0.0.0",
-});
-await production.connect(productionTransport);
-try {
-  const { tools } = await production.listTools();
-  assert(
-    "production-tool-count",
-    tools.length === 15,
-    \`expected 15 production tools, got \${tools.length}\`,
-  );
-  for (const name of [
-    "getGuideDocument",
-    "openProject",
-    "compileProject",
-    "queryGeometry",
-    "previewFrame",
-    "submitReview",
-  ])
-    assert(
-      \`production-tool-present:\${name}\`,
-      tools.some((tool) => tool.name === name),
-      "tool missing from production tools/list",
-    );
-  const guide = await production.callTool({
-    name: "getGuideDocument",
-    arguments: { name: "AUTOMOVIE_OVERALL" },
-  });
-  assert(
-    "production-guide",
-    guide.isError !== true,
-    (guide.content?.[0]?.text ?? "").slice(0, 300),
-  );
-  const opened = await production.callTool({
-    name: "openProject",
-    arguments: { root: path.resolve(".") },
-  });
-  assert(
-    "production-open-project",
-    opened.isError !== true &&
-      existsSync(path.resolve(".automovie/manifest.json")),
-    (opened.content?.[0]?.text ?? "").slice(0, 300),
-  );
-} finally {
-  await production.close();
-}
 `;
 
 const STARTER_VERIFY_SOURCE = `
 import {
+  AUTOMOVIE_REVIEW_GUIDES,
   AutoMovieApplication,
-  AutoMovieProductionProject,
   digestAutoMovieBytes,
+  inspectAutoMovieProduction,
+  openAutoMovieProduction,
   parseAutoMovieCaptureRuntimeIdentity,
 } from "@automovie/mcp";
 import fs from "node:fs";
 import path from "node:path";
 import { PNG } from "pngjs";
 
+import {
+  captureProductionFrame,
+  closeProductionFrameCapture,
+} from "./scripts/capture.ts";
+
 const assert = (name, condition, detail) => {
-  if (!condition) {
-    console.error(\`✗ \${name}: \${detail}\`);
-    process.exit(1);
-  }
+  if (!condition) throw new Error(\`✗ \${name}: \${detail}\`);
   console.log(\`✓ \${name}\`);
 };
 const namedFiles = (root, name) => {
@@ -414,6 +359,7 @@ const visibleVariance = (png) => {
 };
 const frameEvidence = (frame) => ({
   kind: "frame",
+  target: frame.target,
   shot: frame.shot,
   reviewFrame: frame.reviewFrame,
   bundle: frame.bundle,
@@ -513,7 +459,9 @@ const worksheet = (project, prepared) => {
                 ? [contract]
                 : [frameEvidence(frame), contract];
             })
-          : [exactEvidence(project, prepared, index)];
+          : prepared.target.kind === "asset" && index === 0
+            ? prepared.frames.map(frameEvidence)
+            : [exactEvidence(project, prepared, index)];
       return {
         criterion,
         verdict: "pass",
@@ -531,9 +479,15 @@ const worksheet = (project, prepared) => {
 };
 
 const root = process.cwd();
-const generated = readJson(path.join(root, ".automovie/generated-manifest.json"));
-const compiled = readJson(path.join(root, "generated/manifests/compile.json"));
-const manifests = namedFiles(path.join(root, "renders"), "manifest.json");
+const services = openAutoMovieProduction({ projectRoot: root });
+const project = services.project;
+const generated = project.generatedManifest();
+if (generated === null)
+  throw new Error("Packaged verifier requires current generated output.");
+const compiled = readJson(
+  path.join(project.generatedRoot(), "manifests", "compile.json"),
+);
+const manifests = namedFiles(project.renderRoot(), "manifest.json");
 const renderManifests = manifests
   .map((file) => ({ file, value: readJson(file) }))
   .filter((entry) => Array.isArray(entry.value.frames));
@@ -552,9 +506,13 @@ for (const entry of renderManifests) {
     JSON.stringify(entry.value),
   );
 }
+const canonicalCompiledShots = [
+  { id: "answer", path: "shots/answer.json" },
+  { id: "opening", path: "shots/opening.json" },
+];
 assert(
   "starter-compiled-shot-order",
-  JSON.stringify(compiled.shots) === JSON.stringify(["answer", "opening"]),
+  JSON.stringify(compiled.shots) === JSON.stringify(canonicalCompiledShots),
   \`expected both canonical compiled shots, got \${JSON.stringify(compiled.shots)}\`,
 );
 assert(
@@ -593,8 +551,8 @@ for (const frame of frames) {
   const png = PNG.sync.read(bytes);
   assert(
     \`starter-png-size:\${frame.shot}:\${frame.pass}\`,
-    png.width === 16 && png.height === 16,
-    \`expected 16x16 packaged-short raster, got \${png.width}x\${png.height}\`,
+    png.width === 160 && png.height === 90,
+    \`expected 160x90 packaged-short raster, got \${png.width}x\${png.height}\`,
   );
   assert(
     \`starter-png-visible-variance:\${frame.shot}:\${frame.pass}\`,
@@ -609,15 +567,18 @@ assert(
   "the six captures do not distinguish all guide-pass families",
 );
 
-const app = new AutoMovieApplication({ projectRoot: root });
+const app = new AutoMovieApplication({
+  projectRoot: root,
+  capture: captureProductionFrame,
+});
 app.getGuideDocument({ name: "AUTOMOVIE_OVERALL" });
-app.getGuideDocument({ name: "COMPILATION" });
-app.getGuideDocument({ name: "GEOMETRY" });
-app.getGuideDocument({ name: "PRODUCTION_REVIEW" });
-app.openProject({ root });
-const project = AutoMovieProductionProject.open(root);
+for (const name of new Set([
+  ...Object.values(AUTOMOVIE_REVIEW_GUIDES),
+  "CAPTURE_FRAME",
+]))
+  app.getGuideDocument({ name });
 const graph = project.graph();
-const formationSummary = app.queryGeometry({
+const formationSummary = services.oracle.query({
   request: {
     query: "formation",
     formation: "army",
@@ -642,7 +603,7 @@ assert(
     ),
   JSON.stringify(formationSummary),
 );
-const effectSummary = app.queryGeometry({
+const effectSummary = services.oracle.query({
   request: {
     query: "effect",
     zone: "signal-smoke",
@@ -675,12 +636,143 @@ assert(
 );
 const phase = process.argv[2];
 if (phase === "review") {
-  const before = app.inspectProject({});
+  const before = inspectAutoMovieProduction(services);
   assert(
     "starter-review-gate-is-enforced",
     before.reviews.entries.some((entry) => entry.state !== "complete"),
     JSON.stringify(before.reviews),
   );
+  const packagedAssetReviewViews = (model) => [
+    {
+      id: "turntable-front",
+      angleDeg: 0,
+      elevationDeg: 15,
+      pose: "rest",
+      pass: "beauty",
+    },
+    {
+      id: "turntable-right",
+      angleDeg: 90,
+      elevationDeg: 15,
+      pose: "rest",
+      pass: "beauty",
+    },
+    {
+      id: "turntable-back",
+      angleDeg: 180,
+      elevationDeg: 15,
+      pose: "rest",
+      pass: "beauty",
+    },
+    {
+      id: "turntable-left",
+      angleDeg: 270,
+      elevationDeg: 15,
+      pose: "rest",
+      pass: "beauty",
+    },
+    {
+      id: "top-outline",
+      angleDeg: 0,
+      elevationDeg: 65,
+      pose: "rest",
+      pass: "outline",
+    },
+    ...(model.skeleton === null
+      ? []
+      : [
+          {
+            id: "rig-rom-extremes",
+            angleDeg: 0,
+            elevationDeg: 15,
+            pose: "rom-extremes",
+            pass: "beauty",
+          },
+        ]),
+  ];
+  const compiledModels = new Map(
+    compiled.assets.map((entry) => [
+      entry.id,
+      JSON.parse(
+        Buffer.from(project.readGeneratedFile(entry.path)).toString("utf8"),
+      ),
+    ]),
+  );
+  let reviewFailure;
+  try {
+    for (const entry of before.reviews.entries) {
+      if (entry.target.kind === "shot")
+        for (const scenario of requiredAcceptance(graph, entry.target)) {
+          if (scenario.criterion.kind !== "frame") continue;
+          const reviewFrame = graph.shots
+            .get(entry.target.id)
+            ?.reviewFrames.find(
+              (candidate) => candidate.id === scenario.criterion.frame,
+            );
+          assert(
+            \`starter-acceptance-frame-current:\${scenario.id}\`,
+            reviewFrame !== undefined &&
+              reviewFrame.passes.includes(scenario.criterion.pass),
+            \`required frame \${scenario.criterion.frame} pass \${scenario.criterion.pass} is absent from shot \${entry.target.id}\`,
+          );
+          if (reviewFrame === undefined) continue;
+          const captured = await app.captureFrame({
+            target: {
+              kind: "shot",
+              id: entry.target.id,
+              time: reviewFrame.time,
+              pass: scenario.criterion.pass,
+            },
+          });
+          assert(
+            \`starter-acceptance-frame-captured:\${scenario.id}\`,
+            captured.captured &&
+              captured.reviewTarget?.kind === "shot" &&
+              captured.reviewTarget.id === entry.target.id &&
+              captured.receipt !== null &&
+              captured.frame?.width === 160 &&
+              captured.frame.height === 90 &&
+              captured.diagnostics.every((item) => item.category !== "error"),
+            JSON.stringify(captured.diagnostics),
+          );
+        }
+      if (entry.target.kind !== "asset") continue;
+      const model = compiledModels.get(entry.target.id);
+      assert(
+        \`starter-asset-model-current:\${entry.target.id}\`,
+        model !== undefined,
+        "review queue asset is absent from the current model graph",
+      );
+      for (const view of packagedAssetReviewViews(model)) {
+        const captured = await app.captureFrame({
+          target: {
+            kind: "asset",
+            id: entry.target.id,
+            angleDeg: view.angleDeg,
+            elevationDeg: view.elevationDeg,
+            pose: view.pose,
+            pass: view.pass,
+          },
+        });
+        assert(
+          \`starter-asset-view-captured:\${entry.target.id}:\${view.id}\`,
+          captured.captured &&
+            captured.reviewTarget?.kind === "asset" &&
+            captured.reviewTarget.id === entry.target.id &&
+            captured.receipt !== null &&
+            captured.frame?.width === 160 &&
+            captured.frame.height === 90 &&
+            captured.diagnostics.every((item) => item.category !== "error"),
+          JSON.stringify(captured.diagnostics),
+        );
+      }
+    }
+  } catch (error) {
+    reviewFailure = { error };
+    throw error;
+  } finally {
+    await closeProductionFrameCapture(reviewFailure);
+  }
   for (const entry of before.reviews.entries) {
     const prepared = app.prepareReview({ target: entry.target });
     assert(
@@ -702,7 +794,7 @@ if (phase === "review") {
       JSON.stringify(submitted.diagnostics),
     );
   }
-  const reviewed = app.compileProject({ scope: "review" });
+  const reviewed = services.compiler.compile({ scope: "review" });
   assert(
     "starter-review-compile-gate",
     reviewed.success &&
@@ -710,11 +802,11 @@ if (phase === "review") {
     JSON.stringify(reviewed.diagnostics),
   );
 } else if (phase === "final") {
-  const aggregatePath = path.join(root, ".automovie/render-manifest.json");
+  const aggregatePath = project.trackedStatePath("render-manifest.json");
   const aggregateBytes = fs.readFileSync(aggregatePath);
   const aggregate = JSON.parse(aggregateBytes.toString("utf8"));
   const receipt = readJson(
-    path.join(root, ".automovie/render-manifest-receipt.json"),
+    project.trackedStatePath("render-manifest-receipt.json"),
   );
   assert(
     "starter-aggregate-receipt",
@@ -756,14 +848,18 @@ if (phase === "review") {
         ),
       ) &&
       receiptByDeliverable.get("starter-preview")?.probe?.kind === "png" &&
-      receiptByDeliverable.get("starter-preview")?.probe?.width === 16 &&
+      receiptByDeliverable.get("starter-preview")?.probe?.width === 160 &&
+      receiptByDeliverable.get("starter-preview")?.probe?.height === 90 &&
       receiptByDeliverable.get("starter-feature")?.probe?.kind === "video" &&
       receiptByDeliverable.get("starter-feature")?.probe?.frameCount === 23 &&
-      receiptByDeliverable.get("starter-feature")?.probe?.width === 16 &&
+      receiptByDeliverable.get("starter-feature")?.probe?.width === 160 &&
+      receiptByDeliverable.get("starter-feature")?.probe?.height === 90 &&
       receiptByDeliverable.get("starter-pose-guide")?.probe?.kind ===
         "video" &&
       receiptByDeliverable.get("starter-pose-guide")?.probe?.frameCount ===
         23 &&
+      receiptByDeliverable.get("starter-pose-guide")?.probe?.width === 160 &&
+      receiptByDeliverable.get("starter-pose-guide")?.probe?.height === 90 &&
       receiptByDeliverable.get("starter-captions")?.probe?.kind ===
         "webvtt" &&
       receiptByDeliverable.get("starter-captions")?.probe?.cueCount === 1 &&
@@ -775,7 +871,7 @@ if (phase === "review") {
         11.5,
     JSON.stringify(aggregate),
   );
-  const final = app.compileProject({ scope: "final" });
+  const final = services.compiler.compile({ scope: "final" });
   assert(
     "starter-final-compile",
     final.success &&
@@ -784,12 +880,12 @@ if (phase === "review") {
   );
 
   const first = aggregate.deliverables[0].files[0];
-  const deliverablePath = path.join(root, "renders", first.path);
+  const deliverablePath = path.join(project.renderRoot(), first.path);
   const original = fs.readFileSync(deliverablePath);
   const tampered = Buffer.from(original);
   tampered[0] ^= 0xff;
   fs.writeFileSync(deliverablePath, tampered);
-  const rejected = app.compileProject({ scope: "final" });
+  const rejected = services.compiler.compile({ scope: "final" });
   assert(
     "starter-final-ledger-tamper-gate",
     rejected.success === false &&
@@ -799,7 +895,7 @@ if (phase === "review") {
     JSON.stringify(rejected.diagnostics),
   );
   fs.writeFileSync(deliverablePath, original);
-  const restored = app.compileProject({ scope: "final" });
+  const restored = services.compiler.compile({ scope: "final" });
   assert(
     "starter-final-ledger-restored",
     restored.success,
@@ -818,11 +914,12 @@ const projectDir = join(stage, "project");
 mkdirSync(tarballDir);
 mkdirSync(projectDir);
 
+let packagedE2eFailure;
 try {
   // 1. Pack the chain. prepack runs each package's full build.
   for (const name of PACKAGES)
     run(
-      `pack @automovie/${name}`,
+      `pack ${publishedPackageName(name)}`,
       `pnpm pack --pack-destination "${tarballDir}"`,
       resolve(REPO_ROOT, "packages", name),
     );
@@ -862,38 +959,31 @@ try {
   );
   if (!existsSync(binTarget))
     fail(`packed artifact is missing the bin target: ${binTarget}`);
+  const creatorBinTarget = join(
+    projectDir,
+    "node_modules",
+    "create-automovie",
+    "lib",
+    "bin.js",
+  );
+  if (!existsSync(creatorBinTarget))
+    fail(
+      `packed artifact is missing the creator bin target: ${creatorBinTarget}`,
+    );
   console.log("✓ bin-target: lib/bin.js present in the installed package");
-  const granularBinTarget = join(
-    projectDir,
-    "node_modules",
-    "@automovie",
-    "mcp",
-    "lib",
-    "bin-granular.js",
-  );
-  if (!existsSync(granularBinTarget))
-    fail(
-      `packed artifact is missing the granular bin target: ${granularBinTarget}`,
+  for (const retired of ["bin-granular.js", "bin-production.js"]) {
+    const target = join(
+      projectDir,
+      "node_modules",
+      "@automovie",
+      "mcp",
+      "lib",
+      retired,
     );
-  console.log(
-    "✓ granular-bin-target: lib/bin-granular.js present in the installed package",
-  );
-
-  const productionBinTarget = join(
-    projectDir,
-    "node_modules",
-    "@automovie",
-    "mcp",
-    "lib",
-    "bin-production.js",
-  );
-  if (!existsSync(productionBinTarget))
-    fail(
-      `packed artifact is missing the production bin target: ${productionBinTarget}`,
-    );
-  console.log(
-    "production-bin-target: lib/bin-production.js present in the installed package",
-  );
+    if (existsSync(target))
+      fail(`packed artifact unexpectedly contains retired bin: ${target}`);
+  }
+  console.log("✓ retired-bin-targets: compatibility bins are absent");
 
   // 4. Drive the packaged server as a real MCP client. The client runs with
   //    the fresh project as cwd so @modelcontextprotocol/sdk resolves from
@@ -911,27 +1001,31 @@ try {
     fail("installed @automovie/mcp manifest has no valid package identity");
   const expectedVersion = installedManifest.version;
   writeFileSync(join(projectDir, "client.mjs"), CLIENT_SOURCE);
+  const clientTimeout = 300_000;
   const client = spawnSync(`node client.mjs`, {
     cwd: projectDir,
     shell: true,
     encoding: "utf8",
     maxBuffer: 64 * 1024 * 1024,
     stdio: ["ignore", "pipe", "pipe"],
-    timeout: 300_000,
+    timeout: clientTimeout,
     env: { ...process.env, E2E_EXPECTED_VERSION: expectedVersion },
   });
-  if (client.status !== 0) {
-    process.stderr.write(client.stdout ?? "");
-    process.stderr.write(client.stderr ?? "");
-    fail("stdio client assertions failed (see above)");
-  }
+  if (commandSucceeded(client) === false)
+    failCommand(
+      "stdio client assertions",
+      client,
+      clientTimeout,
+      "client assertions failed",
+    );
   process.stdout.write(client.stdout ?? "");
 
   // 5. Generate and exercise the production repository using only the packed
-  // CLI and runtime tarballs. The first render must be blocked by missing
-  // reviews after it creates evidence. An external-agent worksheet then
-  // completes every current target, the second render reaches final compile,
-  // and a byte tamper proves the delivery ledger is enforced.
+  // CLI and runtime tarballs. The proxy render creates review evidence and the
+  // immutable proxy publication; the following final render must be blocked
+  // by missing reviews. An external-agent worksheet then completes every
+  // current target, the resumed final render reaches final compile, and a byte
+  // tamper proves the delivery ledger is enforced.
   const cliBin = join(
     projectDir,
     "node_modules",
@@ -990,15 +1084,20 @@ try {
     existsSync(join(legacyDir, ".automovie"))
   )
     fail("packaged legacy rollback did not restore the legacy-only tree");
-  // Keep the strict-layout probe outside the npm-hoisted fixture project.
+  // Keep the packaged-starter probe outside the fixture project.
   // Otherwise Node can climb to projectDir/node_modules and hide a missing
-  // production dependency from the pnpm-installed scaffold.
+  // production dependency from the separately installed scaffold.
   const starterDir = join(stage, "production-starter");
   run(
     "scaffold packaged production starter",
-    `node "${cliBin}" start "${starterDir}"`,
+    `node "${creatorBinTarget}" "${starterDir}"`,
     projectDir,
   );
+  if (
+    readFileSync(join(starterDir, ".npmrc"), "utf8") !==
+    "onnxruntime-node-install-cuda=skip\n"
+  )
+    fail("packaged starter does not disable the unused ONNX Runtime CUDA EP");
   const starterProductionPath = join(
     starterDir,
     ".automovie",
@@ -1010,42 +1109,55 @@ try {
   );
   starterProduction.frameFormat = {
     ...starterProduction.frameFormat,
-    width: 16,
-    height: 16,
+    width: 160,
+    height: 90,
     fps: 2,
   };
   writeFileSync(
     starterProductionPath,
     `${JSON.stringify(starterProduction, null, 2)}\n`,
   );
-  // Override every published `@automovie/*` range with its own tarball before
-  // installing. `pnpm add <tarball>` resolves the manifest it already has
-  // first, so the starter's registry ranges 404 outside the workspace before
-  // any tarball spec replaces them, and a transitive range (mcp's own
-  // dependency on render) is never replaced at all. An override covers direct
-  // and transitive alike, which keeps the probe offline and installs exactly
-  // the bytes this commit packed.
-  const runtimeTarballs = tarballs.filter(
-    (file) => file.startsWith("automovie-cli-") === false,
+  const starterConfigPath = join(starterDir, "automovie.config.ts");
+  const starterConfig = readFileSync(starterConfigPath, "utf8");
+  const defaultProxyFrameStep = "      frameStep: 2,";
+  const e2eProxyFrameStep = "      frameStep: 1,";
+  if (starterConfig.split(defaultProxyFrameStep).length !== 2)
+    fail(
+      "packaged starter proxy frameStep fixture no longer has exactly one default",
+    );
+  writeFileSync(
+    starterConfigPath,
+    starterConfig.replace(defaultProxyFrameStep, e2eProxyFrameStep),
   );
+  // Pin every published AutoMovie package to its sibling tarball. Direct
+  // entries make npm satisfy the packed packages' transitive semver ranges
+  // without reaching for unpublished workspace versions in the registry.
   const starterManifestPath = join(starterDir, "package.json");
   const starterManifest = JSON.parse(readFileSync(starterManifestPath, "utf8"));
-  starterManifest.pnpm = {
-    ...starterManifest.pnpm,
-    overrides: Object.fromEntries(
-      runtimeTarballs.map((file) => [
-        `@automovie/${PACKAGES.find((name) => file.startsWith(`automovie-${name}-`))}`,
-        `file:${join(tarballDir, file).replaceAll("\\", "/")}`,
-      ]),
-    ),
-  };
+  for (const name of PACKAGES.filter((entry) => entry !== "create-automovie")) {
+    const file = tarballs.find((entry) =>
+      entry.startsWith(tarballPrefix(name)),
+    );
+    if (file === undefined)
+      fail(`missing tarball for ${publishedPackageName(name)}`);
+    const packageName = publishedPackageName(name);
+    const specifier = `file:${join(tarballDir, file).replaceAll("\\", "/")}`;
+    if (Object.hasOwn(starterManifest.devDependencies ?? {}, packageName))
+      starterManifest.devDependencies[packageName] = specifier;
+    else starterManifest.dependencies[packageName] = specifier;
+  }
   writeFileSync(
     starterManifestPath,
     `${JSON.stringify(starterManifest, null, 2)}\n`,
   );
   run(
-    "install packaged starter dependencies with strict pnpm layout",
-    "pnpm install --ignore-workspace --prefer-offline --config.strict-peer-dependencies=false",
+    "install packaged starter dependencies with npm",
+    "npm install --prefer-offline --no-audit --no-fund",
+    starterDir,
+  );
+  run(
+    "invoke the packaged starter-local automovie binary",
+    "npm exec --offline -- automovie --help",
     starterDir,
   );
   if (process.env.CI === "true" && process.platform === "linux")
@@ -1057,61 +1169,121 @@ try {
     );
   run(
     "install packaged starter Chromium",
-    "pnpm capture:install",
+    "npm run capture:install",
     starterDir,
     900_000,
   );
-  const captureReceiptPath = join(
+  const captureReceiptDirectory = join(
     starterDir,
     ".automovie",
     "capture",
-    "install-receipt.json",
+    "install-receipts",
+  );
+  const captureReceiptGenerations = (() => {
+    try {
+      return readdirSync(captureReceiptDirectory, { withFileTypes: true });
+    } catch (error) {
+      fail(`packaged capture install has no generation inventory: ${error}`);
+    }
+  })();
+  if (
+    captureReceiptGenerations.length !== 1 ||
+    captureReceiptGenerations[0].isFile() === false ||
+    /^[0-9a-f]{64}\.json$/u.test(captureReceiptGenerations[0].name) === false
+  )
+    fail(
+      `packaged capture install published an invalid generation inventory: ${captureReceiptGenerations.map((entry) => entry.name).join(", ")}`,
+    );
+  const captureReceiptPath = join(
+    captureReceiptDirectory,
+    captureReceiptGenerations[0].name,
   );
   const captureReceiptText = readFileSync(captureReceiptPath, "utf8");
   const captureReceipt = JSON.parse(captureReceiptText);
-  writeFileSync(captureReceiptPath, "{bad");
-  runExpectedFailure(
-    "reject malformed packaged capture receipt",
-    "pnpm capture:doctor",
-    starterDir,
-    "not valid JSON",
-  );
-  writeFileSync(
-    captureReceiptPath,
-    `${JSON.stringify(
-      {
-        ...captureReceipt,
-        playwright: {
-          ...captureReceipt.playwright,
-          version: "0.0.0-stale",
+  const captureReceiptGeneration = createHash("sha256")
+    .update(
+      JSON.stringify({
+        browser: {
+          product: captureReceipt.browser.product,
+          revision: captureReceipt.browser.revision,
+          version: captureReceipt.browser.version,
         },
-      },
-      null,
-      2,
-    )}\n`,
-  );
-  runExpectedFailure(
-    "reject stale packaged capture receipt",
-    "pnpm capture:doctor",
-    starterDir,
-    "does not match the current Playwright",
-  );
-  writeFileSync(captureReceiptPath, captureReceiptText);
+        playwright: {
+          package: captureReceipt.playwright.package,
+          version: captureReceipt.playwright.version,
+        },
+      }),
+      "utf8",
+    )
+    .digest("hex");
+  if (captureReceiptGenerations[0].name !== `${captureReceiptGeneration}.json`)
+    fail("packaged capture receipt does not occupy its canonical generation");
+  let captureReceiptFailure;
+  try {
+    writeFileSync(captureReceiptPath, "{bad");
+    runExpectedFailure(
+      "reject malformed packaged capture receipt",
+      "npm run capture:doctor",
+      starterDir,
+      "not valid JSON",
+    );
+    writeFileSync(
+      captureReceiptPath,
+      `${JSON.stringify(
+        {
+          ...captureReceipt,
+          playwright: {
+            ...captureReceipt.playwright,
+            version: "0.0.0-stale",
+          },
+        },
+        null,
+        2,
+      )}\n`,
+    );
+    runExpectedFailure(
+      "reject mis-keyed packaged capture receipt",
+      "npm run capture:doctor",
+      starterDir,
+      "occupies another generation",
+    );
+  } catch (error) {
+    captureReceiptFailure = { error };
+    throw error;
+  } finally {
+    preservePackagedE2eCleanup(
+      captureReceiptFailure,
+      "packaged capture receipt",
+      () => writeFileSync(captureReceiptPath, captureReceiptText),
+    );
+  }
   const parkedCaptureExecutable = `${captureReceipt.browser.executablePath}.automovie-missing`;
   renameSync(captureReceipt.browser.executablePath, parkedCaptureExecutable);
+  let captureExecutableFailure;
   try {
     runExpectedFailure(
       "diagnose missing packaged capture executable",
-      "pnpm capture:doctor",
+      "npm run capture:doctor",
       starterDir,
       "is missing or differs",
     );
+  } catch (error) {
+    captureExecutableFailure = { error };
+    throw error;
   } finally {
-    renameSync(parkedCaptureExecutable, captureReceipt.browser.executablePath);
+    preservePackagedE2eCleanup(
+      captureExecutableFailure,
+      "packaged capture executable",
+      () =>
+        renameSync(
+          parkedCaptureExecutable,
+          captureReceipt.browser.executablePath,
+        ),
+    );
   }
   run(
     "doctor packaged starter capture runtime",
-    "pnpm capture:doctor",
+    "npm run capture:doctor",
     starterDir,
   );
   const captureConfigPath = join(starterDir, "automovie.config.ts");
@@ -1123,33 +1295,225 @@ try {
       'source: "system-channel", channel: "firefox"',
     ),
   );
+  let captureConfigFailure;
   try {
     runExpectedFailure(
       "reject invalid packaged capture config",
-      "pnpm capture:doctor",
+      "npm run capture:doctor",
       starterDir,
       "Invalid capture browser config",
     );
+  } catch (error) {
+    captureConfigFailure = { error };
+    throw error;
   } finally {
-    writeFileSync(captureConfigPath, captureConfigText);
+    preservePackagedE2eCleanup(
+      captureConfigFailure,
+      "packaged capture config",
+      () => writeFileSync(captureConfigPath, captureConfigText),
+    );
   }
-  run("compile packaged starter", "pnpm compile", starterDir);
+  run("compile packaged starter", "npm run compile", starterDir);
+  const stateReaderTypeProbePath = join(
+    starterDir,
+    "verify-packaged-state-reader.ts",
+  );
+  writeFileSync(
+    stateReaderTypeProbePath,
+    `import { loadAutoMovieProjectState, requireCurrentAutoMovieProjectState } from "@automovie/cli";
+import { Vector3 } from "@automovie/engine";
+
+const state = requireCurrentAutoMovieProjectState(
+  loadAutoMovieProjectState({ root: process.cwd() }),
+);
+const distance: number = Vector3.length({ x: 3, y: 4, z: 0 });
+if (state.generated.registry.productionId.length === 0 || distance !== 5)
+  throw new Error("packaged state reader or engine query failed");
+`,
+  );
+  run(
+    "typecheck packaged CLI state-reader export",
+    "npm exec -- tsc --ignoreConfig --noEmit --target ES2022 --module NodeNext --moduleResolution NodeNext --types node --skipLibCheck verify-packaged-state-reader.ts",
+    starterDir,
+  );
+  const stateReaderRuntimeProbePath = join(
+    starterDir,
+    "verify-packaged-state-reader.mjs",
+  );
+  writeFileSync(
+    stateReaderRuntimeProbePath,
+    `import { loadAutoMovieProjectState, requireCurrentAutoMovieProjectState } from "@automovie/cli";
+import { Vector3 } from "@automovie/engine";
+
+const state = requireCurrentAutoMovieProjectState(
+  loadAutoMovieProjectState({ root: process.cwd() }),
+);
+if (
+  state.generated.registry.productionId !== state.productionId ||
+  state.generated.shots.size === 0 ||
+  Vector3.length({ x: 3, y: 4, z: 0 }) !== 5
+)
+  throw new Error("packaged state reader or engine query failed");
+`,
+  );
+  run(
+    "execute packaged CLI state-reader and engine query",
+    "node verify-packaged-state-reader.mjs",
+    starterDir,
+  );
+  const packagedSentinelPath = join(
+    starterDir,
+    "src",
+    "packaged-lint-sentinel.ts",
+  );
+  writeFileSync(
+    packagedSentinelPath,
+    'export const status = "AUTOMOVIE_IMPLEMENT_ME";\n',
+  );
+  let packagedSentinelFailure;
+  try {
+    runExpectedFailure(
+      "fire packaged template-sentinel contributor",
+      "npm run lint:source",
+      starterDir,
+      "Template sentinel 'AUTOMOVIE_IMPLEMENT_ME' remains in compiled source.",
+      900_000,
+    );
+  } catch (error) {
+    packagedSentinelFailure = { error };
+    throw error;
+  } finally {
+    preservePackagedE2eCleanup(
+      packagedSentinelFailure,
+      "packaged lint sentinel",
+      () => rmSync(packagedSentinelPath, { force: true }),
+    );
+  }
+  const packagedPresenceProject = join(starterDir, "lint-presence-probe");
+  const packagedPresenceRoot = join(packagedPresenceProject, ".automovie");
+  mkdirSync(join(packagedPresenceProject, "src"), { recursive: true });
+  mkdirSync(packagedPresenceRoot);
+  writeFileSync(
+    join(packagedPresenceProject, "package.json"),
+    `${JSON.stringify({ private: true, type: "module" }, null, 2)}\n`,
+  );
+  writeFileSync(
+    join(packagedPresenceProject, "tsconfig.json"),
+    `${JSON.stringify(
+      {
+        compilerOptions: {
+          module: "nodenext",
+          moduleResolution: "nodenext",
+          noEmit: true,
+          plugins: [{ transform: "@ttsc/lint" }],
+          skipLibCheck: true,
+          strict: true,
+          target: "esnext",
+        },
+        include: ["src", "lint.config.ts"],
+      },
+      null,
+      2,
+    )}\n`,
+  );
+  writeFileSync(
+    join(packagedPresenceProject, "lint.config.ts"),
+    `import { automovie } from "@automovie/lint";
+
+export default {
+  plugins: { automovie },
+  rules: {
+    "automovie/state-presence": [
+      "error",
+      {
+        slots: [
+          {
+            name: "upstream",
+            files: [".automovie/upstream.json"],
+            requires: [],
+          },
+          {
+            name: "downstream",
+            files: [".automovie/downstream.json"],
+            requires: ["upstream"],
+          },
+        ],
+      },
+    ],
+  },
+};
+`,
+  );
+  writeFileSync(
+    join(packagedPresenceProject, "src", "index.ts"),
+    "export {};\n",
+  );
+  writeFileSync(join(packagedPresenceRoot, "downstream.json"), "[]\n");
+  const packagedTtsc = join(
+    starterDir,
+    "node_modules",
+    "ttsc",
+    "lib",
+    "launcher",
+    "ttsc.js",
+  );
+  const packagedPresenceCommand = `"${process.execPath}" "${packagedTtsc}" check -p tsconfig.json`;
+  let packagedPresenceFailure;
+  try {
+    runExpectedFailure(
+      "fire packaged state-presence contributor",
+      packagedPresenceCommand,
+      packagedPresenceProject,
+      "State slot 'downstream' is present while required upstream slot 'upstream' is absent.",
+      900_000,
+    );
+    writeFileSync(join(packagedPresenceRoot, "upstream.json"), "[]\n");
+    run(
+      "silence packaged state-presence contributor with resident upstream",
+      packagedPresenceCommand,
+      packagedPresenceProject,
+      900_000,
+    );
+  } catch (error) {
+    packagedPresenceFailure = { error };
+    throw error;
+  } finally {
+    preservePackagedE2eCleanup(
+      packagedPresenceFailure,
+      "packaged state-presence fixture",
+      () =>
+        rmSync(packagedPresenceProject, {
+          force: true,
+          maxRetries: 3,
+          recursive: true,
+          retryDelay: 100,
+        }),
+    );
+  }
   // A fresh @ttsc/lint install builds its source plugin with Go once per
   // cache key. Cold Windows and CI caches can legitimately exceed the ordinary
   // five-minute command fence before TypeScript linting itself begins.
   runExpectedFailure(
     "enforce packaged starter lint review gate",
-    "pnpm lint",
+    "npm run lint",
     starterDir,
-    "review-",
+    "has no citing acceptance scenario passed by a shot/film review",
     900_000,
   );
-  run("test packaged starter", "pnpm test", starterDir);
-  runExpectedFailure(
-    "enforce packaged starter review gate",
-    "pnpm render",
+  run("test packaged starter", "npm test", starterDir);
+  // First publication acquires the pinned Kokoro model, runs CPU ONNX
+  // synthesis, encodes Opus and muxes the proxy on an otherwise cold runner.
+  run(
+    "publish packaged starter proxy review evidence",
+    "npm run render -- all --tier proxy",
     starterDir,
-    "review-",
+    900_000,
+  );
+  runExpectedFailure(
+    "enforce packaged starter final review gate",
+    "npm run render -- all --tier final",
+    starterDir,
+    "Final publication is review-blocked by",
   );
   writeFileSync(
     join(starterDir, "verify-packaged-starter.mjs"),
@@ -1157,10 +1521,10 @@ try {
   );
   run(
     "complete packaged starter evidence reviews",
-    "node verify-packaged-starter.mjs review",
+    "npm exec -- tsx verify-packaged-starter.mjs review",
     starterDir,
   );
-  run("lint reviewed packaged starter", "pnpm lint", starterDir, 900_000);
+  run("lint reviewed packaged starter", "npm run lint", starterDir, 900_000);
   const encoderFailureHookPath = join(starterDir, "fail-packaged-encoder.cjs");
   writeFileSync(
     encoderFailureHookPath,
@@ -1177,7 +1541,7 @@ PNG.sync.read = function (input) {
   );
   runExpectedFailure(
     "preserve packaged encoder consumer diagnostics",
-    "pnpm render finalize",
+    "npm run render -- finalize",
     starterDir,
     "automovie-encoder-consumer-sentinel",
     300_000,
@@ -1191,37 +1555,93 @@ PNG.sync.read = function (input) {
         .join(" "),
     },
   );
-  const renderStateRoot = join(starterDir, ".automovie", "render-job");
+  const renderStateRoot = join(
+    starterDir,
+    ".automovie",
+    "productions",
+    String(starterProduction.id),
+    "render-job",
+    "final",
+  );
   const renderPlanPath = join(renderStateRoot, "plan.json");
   const renderPlanText = readFileSync(renderPlanPath, "utf8");
+  const onnxNativeBindingPath = join(
+    starterDir,
+    "node_modules",
+    "onnxruntime-node",
+    "bin",
+    "napi-v3",
+    process.platform,
+    process.arch,
+    "onnxruntime_binding.node",
+  );
+  const onnxNativeBinding = readFileSync(onnxNativeBindingPath);
+  writeFileSync(
+    onnxNativeBindingPath,
+    Buffer.concat([onnxNativeBinding, Buffer.from([0])]),
+  );
+  let onnxNativeBindingFailure;
+  try {
+    runExpectedFailure(
+      "reject changed packaged ONNX Runtime native backend",
+      "npm run render -- verify",
+      starterDir,
+      "render runtime identity changed",
+    );
+  } catch (error) {
+    onnxNativeBindingFailure = { error };
+    throw error;
+  } finally {
+    preservePackagedE2eCleanup(
+      onnxNativeBindingFailure,
+      "packaged ONNX Runtime binding",
+      () => writeFileSync(onnxNativeBindingPath, onnxNativeBinding),
+    );
+  }
   const tamperedRenderPlan = JSON.parse(renderPlanText);
   tamperedRenderPlan.tracks.captions += "\nNOTE tampered\n";
   writeFileSync(
     renderPlanPath,
     `${JSON.stringify(tamperedRenderPlan, null, 2)}\n`,
   );
+  let tamperedRenderPlanFailure;
   try {
     runExpectedFailure(
       "reject tampered packaged render plan",
-      "pnpm render verify",
+      "npm run render -- verify",
       starterDir,
       "Stored render plan differs",
     );
+  } catch (error) {
+    tamperedRenderPlanFailure = { error };
+    throw error;
   } finally {
-    writeFileSync(renderPlanPath, renderPlanText);
+    preservePackagedE2eCleanup(
+      tamperedRenderPlanFailure,
+      "packaged render plan tamper",
+      () => writeFileSync(renderPlanPath, renderPlanText),
+    );
   }
   const renderPlan = JSON.parse(renderPlanText);
   renderPlan.runtimeIdentity.encoder.version = "0.0.0-stale";
   writeFileSync(renderPlanPath, `${JSON.stringify(renderPlan, null, 2)}\n`);
+  let staleRenderRuntimeFailure;
   try {
     runExpectedFailure(
       "reject stale packaged render runtime identity",
-      "pnpm render verify",
+      "npm run render -- verify",
       starterDir,
       "render runtime identity changed",
     );
+  } catch (error) {
+    staleRenderRuntimeFailure = { error };
+    throw error;
   } finally {
-    writeFileSync(renderPlanPath, renderPlanText);
+    preservePackagedE2eCleanup(
+      staleRenderRuntimeFailure,
+      "packaged render runtime identity",
+      () => writeFileSync(renderPlanPath, renderPlanText),
+    );
   }
   const damagedChunk = renderPlan.chunks[0];
   const retainedChunk = renderPlan.chunks[1];
@@ -1255,6 +1675,7 @@ PNG.sync.read = function (input) {
   mkdirSync(abandonedTemporary, { recursive: true });
   writeFileSync(join(abandonedTemporary, "partial.png"), Buffer.alloc(0));
   const slotSegment = encodeURIComponent(damagedChunk.slot);
+  const abandonedAttemptToken = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
   mkdirSync(join(renderStateRoot, "locks"), { recursive: true });
   mkdirSync(join(renderStateRoot, "locks", slotSegment), { recursive: true });
   writeFileSync(
@@ -1268,22 +1689,28 @@ PNG.sync.read = function (input) {
   );
   writeFileSync(
     join(renderStateRoot, "locks", `${slotSegment}.lock`),
-    `${JSON.stringify({ chunk: damagedChunk.id, pid: abandonedPid })}\n`,
+    `${JSON.stringify({
+      chunk: damagedChunk.id,
+      pid: abandonedPid,
+      token: abandonedAttemptToken,
+    })}\n`,
   );
   mkdirSync(join(renderStateRoot, "attempts"), { recursive: true });
   writeFileSync(
     join(renderStateRoot, "attempts", `${slotSegment}.json`),
     `${JSON.stringify({
+      version: 1,
       slot: damagedChunk.slot,
       chunk: damagedChunk.id,
       state: "running",
       correction: "",
       pid: abandonedPid,
+      token: abandonedAttemptToken,
     })}\n`,
   );
   run(
     "resume interrupted packaged render through final compile",
-    "pnpm render",
+    "npm run render",
     starterDir,
   );
   const quarantine = readdirSync(join(renderStateRoot, "quarantine"));
@@ -1301,14 +1728,24 @@ PNG.sync.read = function (input) {
     );
   run(
     "verify packaged starter pixels, final ledger and tamper gate",
-    "node verify-packaged-starter.mjs final",
+    "npm exec -- tsx verify-packaged-starter.mjs final",
+    starterDir,
+  );
+  run(
+    "run the packaged read-only final verifier",
+    "npm run verify",
     starterDir,
   );
 
   console.log(
     "\n✓ e2e:tgz PASSED: packaged MCP surfaces and two-shot production scaffold verified",
   );
+} catch (error) {
+  packagedE2eFailure = { error };
+  throw error;
 } finally {
-  if (KEEP_STAGE) console.log(`\nverification stage retained at ${stage}`);
-  else rmSync(stage, { recursive: true, force: true, maxRetries: 5 });
+  preservePackagedE2eCleanup(packagedE2eFailure, "packaged E2E stage", () => {
+    if (KEEP_STAGE) console.log(`\nverification stage retained at ${stage}`);
+    else rmSync(stage, { recursive: true, force: true, maxRetries: 5 });
+  });
 }

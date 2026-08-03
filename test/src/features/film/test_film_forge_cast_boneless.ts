@@ -21,7 +21,6 @@ export const test_film_forge_cast_boneless = (): void => {
   const entry = forgeEntry("knightB", { skeleton: null });
   entry.model.parts = [{ ...entry.model.parts[0]!, material: "no-such-mat" }];
   const forged = forgeCast(makeScriptWrite(), {
-    type: "write",
     entries: [entry],
   });
   TestValidator.equals("fails", forged.success, false);

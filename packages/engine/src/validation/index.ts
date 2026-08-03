@@ -13,6 +13,7 @@ export * from "./validateMeshTopology";
 export * from "./validateModel";
 export * from "./validateMotion";
 export * from "./validatePose";
+export * from "./validateProfileCapabilities";
 export * from "./validateScriptTree";
 export * from "./validateSelfIntersection";
 export * from "./validateShotArtifact";

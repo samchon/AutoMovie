@@ -26,7 +26,6 @@ const shot = (id: string, duration: number): IAutoMovieShot => ({
 export const test_film_cut_sequence_duplicate_shot_ids = (): void => {
   const cut = cutSequence(
     {
-      type: "write",
       sequence: { id: "seq-duplicate-shot", name: "ambiguous source shots" },
       fps: 24,
       entries: [

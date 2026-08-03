@@ -44,7 +44,6 @@ export const test_film_full_ladder_e2e = (): void => {
   const script = makeScriptWrite();
 
   const forged = forgeCast(script, {
-    type: "write",
     entries: [forgeEntry("knightB")],
   });
   TestValidator.equals("forge", forged.success, true);
@@ -79,7 +78,6 @@ export const test_film_full_ladder_e2e = (): void => {
   );
 
   const reviewed = reviewShot(script, {
-    type: "write",
     beat: "beat-1",
     observations: "the strike lands on its anchor; the medium frame holds.",
     verdict: "pass",
@@ -94,7 +92,6 @@ export const test_film_full_ladder_e2e = (): void => {
 
   const cut = cutSequence(
     {
-      type: "write",
       sequence: { id: "seq-duel", name: "duel at dawn" },
       fps: 24,
       entries: [{ shot: performed.shot.id, trim: null, transition: null }],

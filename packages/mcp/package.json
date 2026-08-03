@@ -1,13 +1,10 @@
 {
   "name": "@automovie/mcp",
   "version": "0.1.0",
-  "description": "automovie MCP server: deterministic motion-control engine as Model Context Protocol tools",
+  "description": "AutoMovie MCP boundary for session knowledge, host evidence, optional repaint receipts, and verdict-last review.",
   "main": "src/index.ts",
   "bin": {
-    "automovie-mcp": "lib/bin.js",
-    "automovie-mcp-legacy": "lib/bin.js",
-    "automovie-mcp-production": "lib/bin-production.js",
-    "automovie-mcp-granular": "lib/bin-granular.js"
+    "automovie-mcp": "lib/bin.js"
   },
   "exports": {
     ".": "./src/index.ts",
@@ -19,16 +16,14 @@
     "build": "pnpm run build:prompt && rimraf lib && ttsc && tsc --emitDeclarationOnly",
     "postbuild": "node ../../internals/config/assertBuild.js",
     "start": "ttsx src/bin.ts",
-    "start:production": "ttsx src/bin-production.ts",
-    "start:granular": "ttsx src/bin-granular.ts",
     "prepack": "pnpm run build"
   },
   "keywords": [
     "mcp",
     "model-context-protocol",
-    "typia",
-    "llm",
-    "animation"
+    "evidence",
+    "review",
+    "filmmaking"
   ],
   "author": "Samchon",
   "license": "MIT",
@@ -36,22 +31,13 @@
     "type": "git",
     "url": "https://github.com/samchon/automovie"
   },
-  "files": [
-    "lib",
-    "src",
-    "package.json",
-    "LICENSE",
-    "README.md"
-  ],
+  "files": ["lib", "src", "package.json", "LICENSE", "README.md"],
   "publishConfig": {
     "access": "public",
     "main": "lib/index.js",
     "types": "lib/index.d.ts",
     "bin": {
-      "automovie-mcp": "lib/bin.js",
-      "automovie-mcp-legacy": "lib/bin.js",
-      "automovie-mcp-production": "lib/bin-production.js",
-      "automovie-mcp-granular": "lib/bin-granular.js"
+      "automovie-mcp": "lib/bin.js"
     },
     "exports": {
       ".": {
@@ -63,6 +49,7 @@
   },
   "dependencies": {
     "@automovie/engine": "workspace:^",
+    "@automovie/ingest": "workspace:^",
     "@automovie/interface": "workspace:^",
     "@automovie/render": "workspace:^",
     "@modelcontextprotocol/sdk": "catalog:modelcontextprotocol",

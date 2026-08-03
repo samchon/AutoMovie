@@ -24,18 +24,15 @@ export const productionPublicationInputFingerprint = (
     throw new Error(
       "Terminal publication snapshot requires current compiler-owned output.",
     );
+  const projectState = project.projectStateRecords();
   const graph = project.graph();
   const snapshot = {
     protocol: "automovie.terminal-publication-snapshot.v1",
     revision: project.revision(),
-    incarnationDigest: digestAutoMovieBytes(
-      project.readTrackedStateFile("incarnation.json")!,
-    ),
+    incarnationDigest: digestAutoMovieBytes(projectState.incarnation),
     manifest: {
       value: project.manifest(),
-      digest: digestAutoMovieBytes(
-        project.readTrackedStateFile("manifest.json")!,
-      ),
+      digest: digestAutoMovieBytes(projectState.manifest),
     },
     design: {
       production: graph.production,

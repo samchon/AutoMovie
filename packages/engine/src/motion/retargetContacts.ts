@@ -13,7 +13,6 @@ import {
   reachableBoneNames,
 } from "../kinematics/resolvePose";
 import { Vector3 } from "../math/Vector3";
-import { clampJointToSkeleton } from "../rom/clampPose";
 import { IAutoMovieRestFrame } from "../rom/restFrame";
 import { groundFunction } from "../space/ground";
 import { ViolationCollector } from "../validation/violation";
@@ -21,8 +20,8 @@ import { contactMask } from "./groundPins";
 import {
   HUMANOID_LEG_CHAINS,
   IAutoMoviePlantChain,
+  fitChainToTarget,
   resolveBoneMap,
-  solveChainPlant,
 } from "./legPlant";
 
 /** Contact tolerance above the source ground counted as a planted contact. */
@@ -263,9 +262,11 @@ export const preserveRetargetContacts = (props: {
     AutoMovieHumanoidBone,
     { residual: number; index: number }
   >();
-  const keyframes = frames.map((kf, index) =>
-    correctFrame({
-      keyframe: kf,
+  const keyframes: IAutoMovieKeyframe[] = [];
+  let referencePose: IAutoMoviePose | undefined;
+  frames.forEach((keyframe, index) => {
+    const corrected = correctFrame({
+      keyframe,
       index,
       pins: pins[index]!,
       chains,
@@ -274,8 +275,11 @@ export const preserveRetargetContacts = (props: {
       jointAxes: props.targetJointAxes,
       restFrames: props.targetRestFrames,
       worst,
-    }),
-  );
+      referencePose,
+    });
+    keyframes.push(corrected);
+    referencePose = corrected.pose;
+  });
 
   const budget = tolerance * props.rootScale;
   for (const [effector, entry] of worst)
@@ -313,6 +317,7 @@ const correctFrame = (props: {
   jointAxes: Partial<Record<AutoMovieHumanoidBone, IAutoMovieJointAxes>>;
   restFrames: Partial<Record<AutoMovieHumanoidBone, IAutoMovieRestFrame>>;
   worst: Map<AutoMovieHumanoidBone, { residual: number; index: number }>;
+  referencePose?: IAutoMoviePose;
 }): IAutoMovieKeyframe => {
   if (props.pins.size === 0) return props.keyframe;
 
@@ -331,62 +336,18 @@ const correctFrame = (props: {
     const current = resolved.get(effector)!.worldPosition;
     if (drift(current, target) <= NOOP_EPSILON) continue;
     const chain = props.chains.get(effector)!;
-    const solve = (
-      bendNormal?: IAutoMovieVector3,
-    ): ReturnType<typeof solveChainPlant> =>
-      solveChainPlant({
-        skeleton: props.skeleton,
-        pose,
-        chain,
-        target,
-        topology: props.topology,
-        jointAxes: props.jointAxes,
-        restFrames: props.restFrames,
-        bendNormal,
-      });
-
-    // Three bend planes are tried, not one: the world-down pole the ground-IK
-    // pass uses, and the mid joint's own hinge in both directions. A hinge
-    // joint can only articulate in its hinge plane, so the pole solution
-    // routinely lowers into abduction/twist the ROM clamp then zeroes, which
-    // would leave the limb further from the contact than doing nothing. Each
-    // candidate is clamped and re-resolved, and the one that actually lands
-    // closest to the contact wins; ties keep the earlier candidate, so the
-    // choice is deterministic.
-    const pole = solve();
-    if (pole === null) continue;
-    // Seeded with the uncorrected limb, so a target the rig simply cannot pose
-    // keeps its authored angles and reports the residual instead of being
-    // pushed somewhere worse. The two hinge branches cannot be `null` once the
-    // pole branch is not: the solver rejects only zero-length segments and a
-    // target on the chain root, none of which the bend plane touches.
-    let best: { pose: IAutoMoviePose; residual: number } = {
+    const fitted = fitChainToTarget({
+      skeleton: props.skeleton,
       pose,
-      residual: drift(current, target),
-    };
-    for (const solved of [
-      pole,
-      solve(pole.hinge)!,
-      solve(Vector3.scale(pole.hinge, -1))!,
-    ]) {
-      const candidate: IAutoMoviePose = {
-        ...pose,
-        joints: [
-          ...pose.joints.filter(
-            (j) => j.bone !== chain.upper && j.bone !== chain.lower,
-          ),
-          clampJointToSkeleton(solved.upper, props.skeleton),
-          clampJointToSkeleton(solved.lower, props.skeleton),
-        ],
-      };
-      const residual = drift(
-        resolve(candidate).get(effector)!.worldPosition,
-        target,
-      );
-      if (residual < best.residual) best = { pose: candidate, residual };
-    }
-    if (best.pose === pose) continue;
-    pose = best.pose;
+      chain,
+      target,
+      topology: props.topology,
+      jointAxes: props.jointAxes,
+      restFrames: props.restFrames,
+      referencePose: props.referencePose,
+    });
+    if (fitted === pose) continue;
+    pose = fitted;
     resolved = resolve(pose);
   }
 

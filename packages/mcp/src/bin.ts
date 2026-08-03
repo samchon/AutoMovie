@@ -3,16 +3,12 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 
 import { createAutoMovieMcpServer } from "./createAutoMovieMcpServer";
 
-/**
- * The AutoMovie MCP server entry point: expose the film engine's tools over
- * stdio so an MCP client (Codex, Claude Desktop, …) can spawn this as a
- * subprocess and drive the pipeline. Configure it as, e.g., `command: "npx",
- * args: ["@automovie/mcp"]` (or `node lib/bin.js`).
- *
- * @author Samchon
- */
+/** Start AutoMovie's five-tool server from one host-owned workspace seed. */
 const main = async (): Promise<void> => {
-  const server = createAutoMovieMcpServer();
+  const server = createAutoMovieMcpServer({
+    projectRoot: process.env.AUTOMOVIE_PROJECT_ROOT ?? process.cwd(),
+    productionId: process.env.AUTOMOVIE_PRODUCTION_ID,
+  });
   await server.connect(new StdioServerTransport());
 };
 void main();

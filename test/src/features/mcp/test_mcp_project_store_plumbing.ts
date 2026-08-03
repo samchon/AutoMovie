@@ -12,6 +12,29 @@ import path from "node:path";
 
 import { throwsError } from "../internal/predicates";
 
+interface IProjectStorePlumbingFixtureFailure {
+  error: unknown;
+}
+
+class ProjectStorePlumbingFixtureCleanupError extends AggregateError {}
+
+/** Remove one plumbing root without replacing its primary failure. */
+export const preserveProjectStorePlumbingFixtureCleanup = (
+  failure: IProjectStorePlumbingFixtureFailure | undefined,
+  cleanup: () => unknown,
+  resource: string,
+): void => {
+  try {
+    cleanup();
+  } catch (cleanupFailure) {
+    if (failure === undefined) throw cleanupFailure;
+    throw new ProjectStorePlumbingFixtureCleanupError(
+      [failure.error, cleanupFailure],
+      `Project-store ${resource} fixture cleanup failed after the test failed.`,
+    );
+  }
+};
+
 const shotOf = (id: string): IAutoMovieShot => ({
   id,
   name: null,
@@ -86,6 +109,7 @@ const film: IAutoMovieSequence = {
 export const test_mcp_project_store_plumbing = (): void => {
   // 1. a not-yet-existing nested root is created; a file-blocked root is refused
   const parent = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-root-"));
+  let parentFailure: IProjectStorePlumbingFixtureFailure | undefined;
   try {
     const nested = path.join(parent, "does", "not", "exist");
     const created = AutoMovieProject.open(nested);
@@ -109,12 +133,20 @@ export const test_mcp_project_store_plumbing = (): void => {
         ["AutoMovie project root", "Fix or remove"],
       ),
     );
+  } catch (error) {
+    parentFailure = { error };
+    throw error;
   } finally {
-    fs.rmSync(parent, { recursive: true, force: true });
+    preserveProjectStorePlumbingFixtureCleanup(
+      parentFailure,
+      () => fs.rmSync(parent, { recursive: true, force: true }),
+      "nested-root",
+    );
   }
 
   // 2. orderResidentSlate reproduces the filename sort and the id fallback
   const orderRoot = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-order-"));
+  let orderFailure: IProjectStorePlumbingFixtureFailure | undefined;
   try {
     const project = AutoMovieProject.open(orderRoot);
     const ordered = project.orderResidentSlate(
@@ -142,12 +174,20 @@ export const test_mcp_project_store_plumbing = (): void => {
       ordered.beatEnds.map((end) => end.beat),
       ["a-end", "b-end", "c-end"],
     );
+  } catch (error) {
+    orderFailure = { error };
+    throw error;
   } finally {
-    fs.rmSync(orderRoot, { recursive: true, force: true });
+    preserveProjectStorePlumbingFixtureCleanup(
+      orderFailure,
+      () => fs.rmSync(orderRoot, { recursive: true, force: true }),
+      "ordering",
+    );
   }
 
   // 3. a non-shot: shot id keys its slice by the raw id
   const rawRoot = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-raw-"));
+  let rawFailure: IProjectStorePlumbingFixtureFailure | undefined;
   try {
     AutoMovieProject.open(rawRoot).saveSlate(
       slateWith({ shots: [shotOf("plainshot"), shotOf("shot:b1")] }),
@@ -157,12 +197,20 @@ export const test_mcp_project_store_plumbing = (): void => {
       fs.existsSync(path.join(rawRoot, "shots", "plainshot.json")),
       true,
     );
+  } catch (error) {
+    rawFailure = { error };
+    throw error;
   } finally {
-    fs.rmSync(rawRoot, { recursive: true, force: true });
+    preserveProjectStorePlumbingFixtureCleanup(
+      rawFailure,
+      () => fs.rmSync(rawRoot, { recursive: true, force: true }),
+      "raw-shot",
+    );
   }
 
   // 4. a keyed slice holding literal null is skipped
   const nullRoot = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-null-"));
+  let nullFailure: IProjectStorePlumbingFixtureFailure | undefined;
   try {
     AutoMovieProject.open(nullRoot);
     fs.writeFileSync(path.join(nullRoot, "shots", "gap.json"), "null\n");
@@ -171,12 +219,20 @@ export const test_mcp_project_store_plumbing = (): void => {
       AutoMovieProject.open(nullRoot).writableSlate().shots.length,
       0,
     );
+  } catch (error) {
+    nullFailure = { error };
+    throw error;
   } finally {
-    fs.rmSync(nullRoot, { recursive: true, force: true });
+    preserveProjectStorePlumbingFixtureCleanup(
+      nullFailure,
+      () => fs.rmSync(nullRoot, { recursive: true, force: true }),
+      "null-slice",
+    );
   }
 
   // 5. old and fresh foreign locks are both fail-closed
   const staleRoot = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-stale-"));
+  let staleFailure: IProjectStorePlumbingFixtureFailure | undefined;
   try {
     const project = AutoMovieProject.open(staleRoot);
     const lockPath = path.join(staleRoot, "revision.lock");
@@ -207,11 +263,19 @@ export const test_mcp_project_store_plumbing = (): void => {
       fs.existsSync(path.join(staleRoot, "script.json")),
       true,
     );
+  } catch (error) {
+    staleFailure = { error };
+    throw error;
   } finally {
-    fs.rmSync(staleRoot, { recursive: true, force: true });
+    preserveProjectStorePlumbingFixtureCleanup(
+      staleFailure,
+      () => fs.rmSync(staleRoot, { recursive: true, force: true }),
+      "stale-lock",
+    );
   }
 
   const heldRoot = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-held-"));
+  let heldFailure: IProjectStorePlumbingFixtureFailure | undefined;
   try {
     const project = AutoMovieProject.open(heldRoot);
     const lockPath = path.join(heldRoot, "revision.lock");
@@ -223,25 +287,44 @@ export const test_mcp_project_store_plumbing = (): void => {
         ["commit lock is held by another session", "retry"],
       ),
     );
+  } catch (error) {
+    heldFailure = { error };
+    throw error;
   } finally {
-    fs.rmSync(heldRoot, { recursive: true, force: true });
+    preserveProjectStorePlumbingFixtureCleanup(
+      heldFailure,
+      () => fs.rmSync(heldRoot, { recursive: true, force: true }),
+      "held-lock",
+    );
   }
 
-  // 5b. a non-EEXIST failure taking the commit lock propagates unchanged
+  // 5b. a live handle rejects its missing physical root before lock creation
   const goneRoot = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-gone-"));
+  let goneFailure: IProjectStorePlumbingFixtureFailure | undefined;
   try {
     const project = AutoMovieProject.open(goneRoot);
     fs.rmSync(goneRoot, { recursive: true, force: true });
     TestValidator.predicate(
-      "a non-EEXIST lock-open error propagates unchanged",
-      throwsError(() => project.saveSlate(slateWith({ script })), ["ENOENT"]),
+      "a missing project root is rejected by the namespace fence",
+      throwsError(
+        () => project.saveSlate(slateWith({ script })),
+        ["project root", "not a physical directory"],
+      ),
     );
+  } catch (error) {
+    goneFailure = { error };
+    throw error;
   } finally {
-    fs.rmSync(goneRoot, { recursive: true, force: true });
+    preserveProjectStorePlumbingFixtureCleanup(
+      goneFailure,
+      () => fs.rmSync(goneRoot, { recursive: true, force: true }),
+      "removed-root",
+    );
   }
 
   // 6. many keyed slices and many render strays round-trip through the sort
   const sortRoot = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-sort-"));
+  let sortFailure: IProjectStorePlumbingFixtureFailure | undefined;
   try {
     const project = AutoMovieProject.open(sortRoot);
     const beats = ["b3", "b1", "b4", "b2"];
@@ -277,7 +360,14 @@ export const test_mcp_project_store_plumbing = (): void => {
       AutoMovieProject.open(sortRoot).summary().staleRenders,
       ["renders/a-stray", "renders/m-stray", "renders/z-stray"],
     );
+  } catch (error) {
+    sortFailure = { error };
+    throw error;
   } finally {
-    fs.rmSync(sortRoot, { recursive: true, force: true });
+    preserveProjectStorePlumbingFixtureCleanup(
+      sortFailure,
+      () => fs.rmSync(sortRoot, { recursive: true, force: true }),
+      "filename-sort",
+    );
   }
 };

@@ -5,6 +5,8 @@ import {
   IAutoMovieVector3,
 } from "@automovie/interface";
 
+import { IAutoMovieJointAxes } from "../kinematics/jointToQuaternion";
+import { IAutoMovieRestFrame } from "../rom/restFrame";
 import { groundFunction } from "../space/ground";
 import { pinStanceTargets } from "./groundPins";
 import {
@@ -97,6 +99,9 @@ export interface IAutoMoviePlantedFeet {
  * those times a stance foot's world XZ is constant, so it passes
  * {@link validateFootSkate} and {@link validateGroundContact} where the raw gait
  * failed. Swing frames and non-leg joints are carried through unchanged.
+ * Imported or non-canonical rigs pass the same `jointAxes` and `restFrames`
+ * used for playback: stance detection, IK decomposition, ROM clamping, and
+ * residual FK then share one clinical contract.
  *
  * Ground is a scalar plane or a `(x, z) → y` source. Plug a space in via
  * {@link spaceGround} (#605). Path/turning locomotion is #599; the shared
@@ -115,8 +120,19 @@ export const plantStanceFeet = (props: {
   tolerance?: number;
   /** Legs to plant. Defaults to both humanoid legs. */
   legs?: readonly IAutoMovieFootLeg[];
+  /** Optional clinical-axis remap used consistently by detection and IK. */
+  jointAxes?: Partial<Record<AutoMovieHumanoidBone, IAutoMovieJointAxes>>;
+  /** Optional clinical rest frames used consistently by detection and IK. */
+  restFrames?: Partial<Record<AutoMovieHumanoidBone, IAutoMovieRestFrame>>;
   /** Samples/second for detection and re-keying. Defaults to `24`. */
   sampleRate?: number;
+  /**
+   * Prior beat plants expressed in this motion's model frame.
+   *
+   * When a detected stance begins at the opening sample, its first pin resumes
+   * this authoritative position instead of deriving a nearby replacement.
+   */
+  openingPlants?: ReadonlyArray<Pick<IAutoMovieFootPlant, "foot" | "position">>;
 }): IAutoMoviePlantedFeet => {
   const groundAt = groundFunction(props.groundY ?? DEFAULT_GROUND_Y);
   const tolerance = props.tolerance ?? DEFAULT_TOLERANCE;
@@ -130,7 +146,13 @@ export const plantStanceFeet = (props: {
   const times = sampleTimes(props.motion.duration, sampleRate);
   const poses = times.map((time) => sampleMotion(props.motion, time));
   const resolved = poses.map((sampled) =>
-    resolveBoneMap(props.skeleton, sampled.pose),
+    resolveBoneMap(
+      props.skeleton,
+      sampled.pose,
+      undefined,
+      props.jointAxes,
+      props.restFrames,
+    ),
   );
 
   // A stance run per leg pinned to its start contact; per-frame solve targets.
@@ -140,6 +162,9 @@ export const plantStanceFeet = (props: {
     times,
     groundAt,
     tolerance,
+    openingTargets: new Map(
+      (props.openingPlants ?? []).map((plant) => [plant.foot, plant.position]),
+    ),
   });
 
   const keyframes = rekeyPlantedFeet({
@@ -148,6 +173,8 @@ export const plantStanceFeet = (props: {
     poses,
     legs,
     targets,
+    jointAxes: props.jointAxes,
+    restFrames: props.restFrames,
   });
 
   return assemblePlantedFeet(props.motion, keyframes, plants);

@@ -1,6 +1,7 @@
 import {
   IAutoMovieCompiledShotSource,
   IAutoMovieFormationMotion,
+  IAutoMovieInstanceSetDesign,
   IAutoMovieModelRecipe,
   IAutoMovieShotSourceOutput,
 } from "@automovie/interface";
@@ -11,6 +12,7 @@ import {
   AutoMovieProductionProject,
   materializeCompiledFormation,
   materializeCompiledFormationInventory,
+  materializeCompiledInstanceSetInventory,
   materializeCompiledShot,
   materializeFormationInventory,
   materializeFormationSlot,
@@ -27,9 +29,34 @@ import path from "node:path";
 import {
   formationDesign,
   modelRecipe,
+  productionCompileSucceeded,
   productionFixture,
+  setProductionFixtureShotContract,
   shotContract,
+  worldDesign,
 } from "./productionFixtures";
+
+interface IProductionMaterializationFixtureFailure {
+  error: unknown;
+}
+
+class ProductionMaterializationFixtureCleanupError extends AggregateError {}
+
+/** Dispose the materialization fixture without replacing its failure. */
+export const preserveProductionMaterializationFixtureCleanup = (
+  failure: IProductionMaterializationFixtureFailure | undefined,
+  cleanup: () => unknown,
+): void => {
+  try {
+    cleanup();
+  } catch (cleanupFailure) {
+    if (failure === undefined) throw cleanupFailure;
+    throw new ProductionMaterializationFixtureCleanupError(
+      [failure.error, cleanupFailure],
+      "Production-materialization fixture teardown failed after the test failed.",
+    );
+  }
+};
 
 const recipe = (
   id: string,
@@ -62,8 +89,9 @@ const recipe = (
  * 2. Line, column, wedge, one-member arc, and seeded scatter layouts produce
  *    stable slots, hero identities, anchors, and facing.
  * 3. Shot materialization adds missing slots, repositions an existing hero,
- *    reports ordinary-slot collisions, and remains safe when a referenced
- *    formation, inventory, model, or source-only model is absent.
+ *    reports formation/general-instance ordinary-slot collisions, and remains
+ *    safe when a referenced formation, inventory, model, or source-only model
+ *    is absent.
  * 4. A source omitting both optional cue arrays materializes empty effect and
  *    formation-motion streams instead of leaking undefined into compiled data.
  */
@@ -256,17 +284,23 @@ export const test_mcp_production_materialization = (): void => {
       Object.keys(inventory).length === layouts.length,
   );
 
+  let productionMaterializationFailure:
+    | IProductionMaterializationFixtureFailure
+    | undefined;
   const fixture = productionFixture();
   try {
     const project = AutoMovieProductionProject.open(fixture.root);
     const compiler = new AutoMovieProductionCompiler(project);
     TestValidator.predicate(
       "materialization fixture compiles",
-      compiler.compile({ scope: "source" }).success,
+      productionCompileSucceeded(
+        "materialization fixture",
+        compiler.compile({ scope: "source" }),
+      ),
     );
     const compiled = JSON.parse(
       fs.readFileSync(
-        path.join(fixture.root, "generated/shots/opening.json"),
+        path.join(fixture.root, "generated/fixture-film/shots/opening.json"),
         "utf8",
       ),
     ) as IAutoMovieCompiledShotSource;
@@ -291,6 +325,28 @@ export const test_mcp_production_materialization = (): void => {
       new Map([[modelRecipe().id, modelRecipe()]]),
     );
     const runtimeModels = materializeProductionModels(
+      new Map([[modelRecipe().id, modelRecipe()]]),
+    );
+    const generalInstances: IAutoMovieInstanceSetDesign = {
+      id: "trees",
+      modelRecipe: modelRecipe().id,
+      count: 2,
+      layout: { kind: "scatter", radius: 2 },
+      anchor: { x: 0, y: 0, z: 0 },
+      facingDeg: 0,
+      seed: 9,
+      variation: {
+        scale: { min: 0.9, max: 1.1 },
+        palette: ["#335522"],
+        traits: [],
+      },
+    };
+    const instanceWorld = {
+      ...worldDesign(),
+      instanceSets: [generalInstances],
+    };
+    const instanceSetRuntime = materializeCompiledInstanceSetInventory(
+      instanceWorld,
       new Map([[modelRecipe().id, modelRecipe()]]),
     );
     const heroSource = structuredClone(source);
@@ -434,6 +490,20 @@ export const test_mcp_production_materialization = (): void => {
       runtimeModels,
       source: collisionSource,
     });
+    const instanceCollisionSource = structuredClone(source);
+    instanceCollisionSource.scene.nodes.push({
+      ...instanceCollisionSource.scene.nodes[0]!,
+      id: "instance:trees:slot:000001",
+    });
+    const instanceCollision = materializeCompiledShot({
+      contract: shotContract(),
+      formations: new Map(),
+      instanceSetRuntime,
+      modelRecipes: new Map([[modelRecipe().id, modelRecipe()]]),
+      runtimeModels,
+      world: instanceWorld,
+      source: instanceCollisionSource,
+    });
     const absentFormation = materializeCompiledShot({
       contract,
       formations: new Map(),
@@ -471,6 +541,7 @@ export const test_mcp_production_materialization = (): void => {
           (node) => node.id !== "formation:line:slot:000001",
         ) &&
         collision.collisions.includes("formation:line:slot:000001") &&
+        instanceCollision.collisions.includes("instance:trees:slot:000001") &&
         absentFormation.value.scene.nodes.length ===
           source.scene.nodes.length &&
         absentModel.value.scene.nodes.length === source.scene.nodes.length &&
@@ -530,7 +601,7 @@ export const test_mcp_production_materialization = (): void => {
         })(),
     );
     project.setFormationDesign(highCount);
-    project.setShotContract({
+    setProductionFixtureShotContract(project, {
       ...shotContract(),
       participants: [
         ...shotContract().participants,
@@ -549,10 +620,17 @@ export const test_mcp_production_materialization = (): void => {
       .replaceAll('"army"', `"${highCount.id}"`);
     fs.writeFileSync(openingSourcePath, openingSource);
     const highCountCompile = compiler.compile({ scope: "source" });
-    const highCountShot = highCountCompile.success
+    const highCountCompileSucceeded = productionCompileSucceeded(
+      "high-count formation fixture",
+      highCountCompile,
+    );
+    const highCountShot = highCountCompileSucceeded
       ? (JSON.parse(
           fs.readFileSync(
-            path.join(fixture.root, "generated/shots/opening.json"),
+            path.join(
+              fixture.root,
+              "generated/fixture-film/shots/opening.json",
+            ),
             "utf8",
           ),
         ) as IAutoMovieCompiledShotSource)
@@ -569,7 +647,7 @@ export const test_mcp_production_materialization = (): void => {
     });
     TestValidator.predicate(
       "shot sandbox regenerates a high slot and preserves one compact formation motion",
-      highCountCompile.success &&
+      highCountCompileSucceeded &&
         highCountShot?.formations[0]?.count === highCount.count &&
         highCountShot.scene.nodes.every(
           (node) =>
@@ -588,7 +666,13 @@ export const test_mcp_production_materialization = (): void => {
           Number(highCountSummary.result.values.culled) ===
           highCount.count - highCount.heroOverrides.length,
     );
+  } catch (error) {
+    productionMaterializationFailure = { error };
+    throw error;
   } finally {
-    fixture.dispose();
+    preserveProductionMaterializationFixtureCleanup(
+      productionMaterializationFailure,
+      () => fixture.dispose(),
+    );
   }
 };

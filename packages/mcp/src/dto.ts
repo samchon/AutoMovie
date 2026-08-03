@@ -9,6 +9,7 @@ import {
   AutoMovieEasing,
   AutoMovieGuidePass,
   AutoMovieHumanoidBone,
+  type AutoMovieProductionGuideName,
   IAutoMovieAimDriver,
   IAutoMovieBeatEndState,
   IAutoMovieChannelLimit,
@@ -1372,33 +1373,13 @@ export interface IAutoMovieNextStepsOutput {
 }
 
 /**
- * Every guide document the server ships. Keys match `packages/mcp/prompts/*.md`
- * filename stems, except `README.md`, which documents the corpus for a reader
- * of the repository and is never served. The runtime content is generated from
- * those markdown files at build time. Start new work with
- * `"AUTOMOVIE_OVERALL"`, then read the guide matching the next stage.
+ * Canonical guide name exported by the production interface.
+ *
+ * This compatibility alias intentionally has no second handwritten union: the
+ * reflected DTO and the served prompt corpus therefore cannot retain retired
+ * names after the production contract removes them.
  */
-export type AutoMovieGuideName =
-  | "AUTOMOVIE_OVERALL"
-  | "STAGING"
-  | "BLOCKING"
-  | "PERFORMANCE"
-  | "FORGE"
-  | "REVIEW"
-  | "PROPS"
-  | "PROJECT_MEMORY"
-  | "RENDER_GUIDES"
-  | "PRODUCTION_DESIGN"
-  | "MODEL_RECIPE"
-  | "WORLD_DESIGN"
-  | "FORMATION_DESIGN"
-  | "SHOT_CONTRACT"
-  | "ACCEPTANCE"
-  | "SOURCE_OWNERSHIP"
-  | "COMPILATION"
-  | "GEOMETRY"
-  | "PRODUCTION_REVIEW"
-  | "PRODUCTION_RENDER";
+export type AutoMovieGuideName = AutoMovieProductionGuideName;
 
 /** The `getGuideDocument` tool's result. */
 export interface IAutoMovieGuideDocumentOutput {

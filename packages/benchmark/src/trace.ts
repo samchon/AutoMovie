@@ -8,8 +8,10 @@ import typia from "typia";
 import {
   AutoMovieBenchmarkGate,
   AutoMovieBenchmarkGateStatus,
+  IAutoMovieBenchmarkInfraIncident,
 } from "./lifecycle";
 import {
+  AutoMovieBenchmarkLane,
   AutoMovieBenchmarkSurface,
   canonicalBenchmarkJson,
   compareBenchmarkCodeUnits,
@@ -17,7 +19,7 @@ import {
 
 /** Trace schema every archived event stream carries. */
 export const AUTOMOVIE_BENCHMARK_TRACE_PROTOCOL =
-  "automovie.benchmark.trace.v1";
+  "automovie.benchmark.trace.v2";
 
 /** Fields every observed event carries. */
 export interface IAutoMovieBenchmarkTraceHeader {
@@ -33,12 +35,30 @@ export type IAutoMovieBenchmarkTraceEvent = IAutoMovieBenchmarkTraceHeader &
     | {
         /** The run opened. */
         kind: "run-start";
-        /** Content-addressed run identity. */
-        runId: AutoMovieContentDigest;
+        /** Attempt identity known before candidate execution starts. */
+        executionId: AutoMovieContentDigest;
         /** Task law the run is produced under. */
         taskId: string;
         /** Surface the candidate drives. */
         surface: AutoMovieBenchmarkSurface;
+        /** Selected deterministic or optional repaint lane. */
+        lane: AutoMovieBenchmarkLane;
+      }
+    | {
+        /** The runner sealed all observed evidence under its final identity. */
+        kind: "run-seal";
+        /** Content-addressed submission identity. */
+        runId: AutoMovieContentDigest;
+      }
+    | {
+        /** Runner-owned infrastructure incident observed during execution. */
+        kind: "incident";
+        /** Infrastructure failure class. */
+        incident: IAutoMovieBenchmarkInfraIncident["kind"];
+        /** Gate the run was standing on. */
+        gate: AutoMovieBenchmarkGate;
+        /** Direct runner diagnostic. */
+        detail: string;
       }
     | {
         /** One lifecycle gate reached a terminal outcome. */

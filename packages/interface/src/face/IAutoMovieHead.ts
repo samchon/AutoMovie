@@ -126,8 +126,8 @@ export interface IAutoMovieHeadJaw {
  * A full-head shape specification for the parametric head built on the clean
  * MakeHuman-derived base: the document the head editor's tool calling emits and
  * the engine projects (via `flattenHead`) onto
- * {@link AutoMovieHeadParameterName} morph weights the forge `morphHead`
- * applies.
+ * {@link AutoMovieHeadParameterName} morph weights the face package's
+ * `morphHead` applies.
  *
  * Anatomy-grouped so an LLM reads it the way a person reads a face; every leaf
  * is a signed weight in `[-2, 2]` (`0` = the neutral average). Omitted fields

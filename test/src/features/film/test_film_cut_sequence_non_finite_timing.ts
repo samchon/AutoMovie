@@ -1,8 +1,5 @@
 import { cutSequence } from "@automovie/engine";
-import {
-  IAutoMovieAssembleApplication,
-  IAutoMovieShot,
-} from "@automovie/interface";
+import { IAutoMovieEditEntry, IAutoMovieShot } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { hasViolation } from "../internal/predicates";
@@ -18,13 +15,9 @@ const SHOT: IAutoMovieShot = {
   duration: 3,
 };
 
-const run = (props: {
-  fps?: number;
-  entries?: IAutoMovieAssembleApplication.IEntry[];
-}) =>
+const run = (props: { fps?: number; entries?: IAutoMovieEditEntry[] }) =>
   cutSequence(
     {
-      type: "write",
       sequence: { id: "seq-finite", name: "finite timing" },
       fps: props.fps ?? 24,
       entries: props.entries ?? [

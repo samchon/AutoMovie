@@ -18,6 +18,9 @@ import { IAutoMovieRecoilPush, impactRecoil } from "../physics/impactRecoil";
  * impulse to the `push`).
  *
  * A three-keyframe clip: rest (0) → flinch (`peak`) → rest (`duration`).
+ * Resting axes stay `null`, the pose model's neutral representation, so a rig
+ * whose ROM excludes numeric 0 does not receive invented articulation at either
+ * edge.
  *
  * @author Samchon
  */
@@ -45,9 +48,9 @@ export const reactMotion = (
 
   const neutral: IAutoMovieJointPose[] = chain.map((bone) => ({
     bone,
-    flexion: 0,
-    abduction: 0,
-    twist: 0,
+    flexion: null,
+    abduction: null,
+    twist: null,
   }));
   const rest: IAutoMoviePose = {
     skeleton: skeleton.id,

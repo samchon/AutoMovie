@@ -1,11 +1,11 @@
 import { stageScene } from "@automovie/engine";
-import { IAutoMovieStagingApplication } from "@automovie/interface";
+import { IAutoMovieStageSetPiece } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { makeScriptWrite, makeStagingWrite } from "../internal/filmFixtures";
 import { hasViolation } from "../internal/predicates";
 
-type SetPlacement = IAutoMovieStagingApplication.ISetPlacement;
+type SetPlacement = IAutoMovieStageSetPiece;
 
 const stageSet = (set: SetPlacement[]) =>
   stageScene(makeScriptWrite(), makeStagingWrite({ set }));

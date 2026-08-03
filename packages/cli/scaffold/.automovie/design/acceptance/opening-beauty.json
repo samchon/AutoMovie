@@ -1,5 +1,11 @@
 {
   "id": "opening-beauty",
+  "evidence": [
+    {
+      "reason": "Beauty evidence verifies that the signal scene remains visually readable.",
+      "scene": "SCN-001"
+    }
+  ],
   "target": { "kind": "shot", "id": "opening" },
   "criterion": {
     "kind": "frame",

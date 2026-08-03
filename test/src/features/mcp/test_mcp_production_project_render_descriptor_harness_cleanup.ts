@@ -1,0 +1,311 @@
+import { TestValidator } from "@nestia/e2e";
+import { createHash } from "node:crypto";
+import fs from "node:fs";
+import path from "node:path";
+import ts from "typescript-compiler";
+
+import { preserveProductionProjectFixtureCleanup } from "./test_mcp_production_project";
+
+const compact = (node: ts.Node, source: ts.SourceFile): string =>
+  node.getText(source).replace(/\s+/g, "");
+
+const digestText = (text: string): string =>
+  createHash("sha256").update(text).digest("hex");
+
+const leafTokenContract = (
+  nodes: readonly ts.Node[],
+  source: ts.SourceFile,
+): { digest: string; tokens: number } => {
+  const tokens: Array<[ts.SyntaxKind, string]> = [];
+  const visit = (node: ts.Node): void => {
+    const children = node.getChildren(source);
+    if (children.length !== 0) children.forEach(visit);
+    else {
+      const text = node.getText(source);
+      if (text.length !== 0) tokens.push([node.kind, text]);
+    }
+  };
+  nodes.forEach(visit);
+  return {
+    digest: digestText(JSON.stringify(tokens)),
+    tokens: tokens.length,
+  };
+};
+
+const aggregateContainsExactly = (
+  error: unknown,
+  expected: readonly unknown[],
+): boolean =>
+  error instanceof AggregateError &&
+  error.errors.length === expected.length &&
+  expected.every((failure, index) => error.errors[index] === failure);
+
+const renderDescriptorHarnessCleanupContract = (text: string): unknown => {
+  const source = ts.createSourceFile(
+    "test_mcp_production_project.ts",
+    text,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TS,
+  );
+  const owners = source.statements.flatMap((statement) =>
+    ts.isVariableStatement(statement)
+      ? [...statement.declarationList.declarations].flatMap((declaration) =>
+          ts.isIdentifier(declaration.name) &&
+          declaration.name.text === "captureRenderFileDescriptorFailure" &&
+          declaration.initializer !== undefined &&
+          ts.isArrowFunction(declaration.initializer)
+            ? [declaration.initializer]
+            : [],
+        )
+      : [],
+  );
+  const lifecycles: Array<{
+    catchBodies: string[];
+    catchVariables: string[];
+    containerKind: string;
+    containerStatements: number;
+    failureHolder: string;
+    finallyDigest: string;
+    finallyStatements: number;
+    finallySubstantive: { digest: string; tokens: number };
+    index: number;
+    substantive: { digest: string; tokens: number };
+    tryBody: string;
+    tryDigest: string;
+    tryStatements: number;
+  }> = [];
+  for (const owner of owners) {
+    const visit = (node: ts.Node): void => {
+      if (
+        ts.isTryStatement(node) &&
+        node.catchClause !== undefined &&
+        node.finallyBlock !== undefined &&
+        ts.isBlock(node.parent)
+      ) {
+        const statements = [...node.parent.statements];
+        const index = statements.indexOf(node);
+        const failureHolder = compact(statements[index - 1]!, source);
+        if (failureHolder.startsWith("letrenderDescriptorHarnessFailure:"))
+          lifecycles.push({
+            catchBodies: node.catchClause.block.statements.map((statement) =>
+              compact(statement, source),
+            ),
+            catchVariables:
+              node.catchClause.variableDeclaration === undefined
+                ? []
+                : [compact(node.catchClause.variableDeclaration, source)],
+            containerKind: ts.SyntaxKind[node.parent.parent.kind]!,
+            containerStatements: statements.length,
+            failureHolder,
+            finallyDigest: digestText(node.finallyBlock.getText(source)),
+            finallyStatements: node.finallyBlock.statements.length,
+            finallySubstantive: leafTokenContract(
+              node.finallyBlock.statements,
+              source,
+            ),
+            index,
+            substantive: leafTokenContract(node.tryBlock.statements, source),
+            tryBody: compact(node.tryBlock, source),
+            tryDigest: digestText(node.tryBlock.getText(source)),
+            tryStatements: node.tryBlock.statements.length,
+          });
+      }
+      ts.forEachChild(node, visit);
+    };
+    visit(owner.body);
+  }
+  return {
+    owner: {
+      count: owners.length,
+      lifecycles,
+      statementCounts: owners.flatMap((owner) =>
+        ts.isBlock(owner.body) ? [owner.body.statements.length] : [],
+      ),
+    },
+    parseDiagnostics: (
+      source as ts.SourceFile & { parseDiagnostics: readonly ts.Diagnostic[] }
+    ).parseDiagnostics.map((diagnostic) => String(diagnostic.messageText)),
+  };
+};
+
+const captureCleanup = (props: {
+  cleanupFailures?: readonly ({ error: unknown; present: true } | undefined)[];
+  primaryFailure?: { error: unknown; present: true };
+}): {
+  caught: boolean;
+  failure: unknown;
+  operationCaught: boolean;
+  operationFailure: unknown;
+  order: string[];
+} => {
+  let caught = false;
+  let failure: unknown;
+  let operationCaught = false;
+  let operationFailure: unknown;
+  const order: string[] = [];
+  try {
+    let primaryState: { error: unknown } | undefined;
+    try {
+      if (props.primaryFailure !== undefined) throw props.primaryFailure.error;
+    } catch (error) {
+      operationCaught = true;
+      operationFailure = error;
+      primaryState = { error };
+    } finally {
+      preserveProductionProjectFixtureCleanup(
+        primaryState,
+        ["open", "fstat", "close"].map((resource, index) => ({
+          resource: `render descriptor ${resource} hook`,
+          cleanup: (): void => {
+            order.push(resource);
+            const cleanupFailure = props.cleanupFailures?.[index];
+            if (cleanupFailure !== undefined) throw cleanupFailure.error;
+          },
+        })),
+      );
+    }
+  } catch (error) {
+    caught = true;
+    failure = error;
+  }
+  return { caught, failure, operationCaught, operationFailure, order };
+};
+
+export const test_mcp_production_project_render_descriptor_harness_cleanup =
+  (): void => {
+    const primaryFailure = { phase: "render descriptor read" };
+    const openFailure = { phase: "render descriptor open restoration" };
+    const fstatFailure = { phase: "render descriptor fstat restoration" };
+    const closeFailure = { phase: "render descriptor close restoration" };
+    const cleanupFailures = [
+      { error: openFailure, present: true as const },
+      { error: fstatFailure, present: true as const },
+      { error: closeFailure, present: true as const },
+    ];
+    const success = captureCleanup({});
+    const primaryOnly = captureCleanup({
+      primaryFailure: { error: primaryFailure, present: true },
+    });
+    const standalone = captureCleanup({
+      cleanupFailures: [cleanupFailures[0]],
+    });
+    const multiple = captureCleanup({ cleanupFailures });
+    const combined = captureCleanup({
+      cleanupFailures,
+      primaryFailure: { error: primaryFailure, present: true },
+    });
+    const undefinedPrimary = captureCleanup({
+      primaryFailure: { error: undefined, present: true },
+    });
+    const undefinedStandalone = captureCleanup({
+      cleanupFailures: [{ error: undefined, present: true }],
+    });
+    const undefinedCombined = captureCleanup({
+      cleanupFailures: [{ error: undefined, present: true }],
+      primaryFailure: { error: undefined, present: true },
+    });
+    const order = "open,fstat,close";
+    TestValidator.predicate(
+      "render descriptor harness cleanup preserves evidence and every hook",
+      success.caught === false &&
+        success.failure === undefined &&
+        success.operationCaught === false &&
+        success.operationFailure === undefined &&
+        success.order.join(",") === order &&
+        primaryOnly.caught === false &&
+        primaryOnly.failure === undefined &&
+        primaryOnly.operationCaught &&
+        primaryOnly.operationFailure === primaryFailure &&
+        primaryOnly.order.join(",") === order &&
+        standalone.caught &&
+        standalone.failure === openFailure &&
+        standalone.operationCaught === false &&
+        standalone.operationFailure === undefined &&
+        standalone.order.join(",") === order &&
+        multiple.caught &&
+        aggregateContainsExactly(multiple.failure, [
+          openFailure,
+          fstatFailure,
+          closeFailure,
+        ]) &&
+        multiple.operationCaught === false &&
+        multiple.operationFailure === undefined &&
+        multiple.order.join(",") === order &&
+        combined.caught &&
+        aggregateContainsExactly(combined.failure, [
+          primaryFailure,
+          openFailure,
+          fstatFailure,
+          closeFailure,
+        ]) &&
+        combined.operationCaught &&
+        combined.operationFailure === primaryFailure &&
+        combined.order.join(",") === order &&
+        undefinedPrimary.caught === false &&
+        undefinedPrimary.failure === undefined &&
+        undefinedPrimary.operationCaught &&
+        undefinedPrimary.operationFailure === undefined &&
+        undefinedPrimary.order.join(",") === order &&
+        undefinedStandalone.caught &&
+        undefinedStandalone.failure === undefined &&
+        undefinedStandalone.operationCaught === false &&
+        undefinedStandalone.operationFailure === undefined &&
+        undefinedStandalone.order.join(",") === order &&
+        undefinedCombined.caught &&
+        aggregateContainsExactly(undefinedCombined.failure, [
+          undefined,
+          undefined,
+        ]) &&
+        undefinedCombined.operationCaught &&
+        undefinedCombined.operationFailure === undefined &&
+        undefinedCombined.order.join(",") === order,
+    );
+    TestValidator.equals(
+      "render descriptor harness owns one cleanup lifecycle",
+      renderDescriptorHarnessCleanupContract(
+        fs.readFileSync(
+          path.join(__dirname, "test_mcp_production_project.ts"),
+          "utf8",
+        ),
+      ),
+      {
+        owner: {
+          count: 1,
+          lifecycles: [
+            {
+              catchBodies: [
+                "caught=error;",
+                "renderDescriptorHarnessFailure={error};",
+              ],
+              catchVariables: ["error"],
+              containerKind: "ArrowFunction",
+              containerStatements: 16,
+              failureHolder:
+                "letrenderDescriptorHarnessFailure:|IProductionProjectFixtureFailure|undefined;",
+              finallyDigest:
+                "793e7bd16700b40d028ff85c769063743f57624193313d6841df4449d592e4b2",
+              finallyStatements: 1,
+              finallySubstantive: {
+                digest:
+                  "f39e7e55ad27c3c2739d2135f8ba0db4af8d4cd78c2ff110668c97ceebcf622b",
+                tokens: 71,
+              },
+              index: 14,
+              substantive: {
+                digest:
+                  "800057d47fa60dd724576e9d17d1cfa940ed1706ba1fd04d3c1c25ad718d7539",
+                tokens: 7,
+              },
+              tryBody: "{project.readRenderFile(relativePath);}",
+              tryDigest:
+                "37bf4d400878ed3e7779b67f251cd6cfd4bc276293b8f2dea87dabbe3c32d79b",
+              tryStatements: 1,
+            },
+          ],
+          statementCounts: [16],
+        },
+        parseDiagnostics: [],
+      },
+    );
+  };

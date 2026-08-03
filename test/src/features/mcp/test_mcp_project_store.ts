@@ -14,6 +14,29 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+interface IProjectStoreFixtureFailure {
+  error: unknown;
+}
+
+class ProjectStoreFixtureCleanupError extends AggregateError {}
+
+/** Remove one project-store root without replacing its primary failure. */
+export const preserveProjectStoreFixtureCleanup = (
+  failure: IProjectStoreFixtureFailure | undefined,
+  cleanup: () => unknown,
+  resource: string,
+): void => {
+  try {
+    cleanup();
+  } catch (cleanupFailure) {
+    if (failure === undefined) throw cleanupFailure;
+    throw new ProjectStoreFixtureCleanupError(
+      [failure.error, cleanupFailure],
+      `Project-store ${resource} fixture cleanup failed after the test failed.`,
+    );
+  }
+};
+
 const script: IAutoMovieScript = {
   logline: "a door opens",
   theme: "curiosity",
@@ -166,6 +189,7 @@ const ghostBeatTree = (): NonNullable<IAutoMovieScript["tree"]> => [
  */
 export const test_mcp_project_store = (): void => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-store-"));
+  let storeFailure: IProjectStoreFixtureFailure | undefined;
   try {
     const project = AutoMovieProject.open(root);
     TestValidator.equals(
@@ -282,13 +306,21 @@ export const test_mcp_project_store = (): void => {
       fs.existsSync(path.join(root, "script.json")),
       true,
     );
+  } catch (error) {
+    storeFailure = { error };
+    throw error;
   } finally {
-    fs.rmSync(root, { recursive: true, force: true });
+    preserveProjectStoreFixtureCleanup(
+      storeFailure,
+      () => fs.rmSync(root, { recursive: true, force: true }),
+      "main-store",
+    );
   }
 
   const manifestRoot = fs.mkdtempSync(
     path.join(os.tmpdir(), "automovie-bad-manifest-"),
   );
+  let manifestFailure: IProjectStoreFixtureFailure | undefined;
   try {
     fs.writeFileSync(path.join(manifestRoot, "automovie.json"), "{ nope");
     TestValidator.predicate(
@@ -298,13 +330,21 @@ export const test_mcp_project_store = (): void => {
         ["AutoMovie project file", "automovie.json", "Fix or remove"],
       ),
     );
+  } catch (error) {
+    manifestFailure = { error };
+    throw error;
   } finally {
-    fs.rmSync(manifestRoot, { recursive: true, force: true });
+    preserveProjectStoreFixtureCleanup(
+      manifestFailure,
+      () => fs.rmSync(manifestRoot, { recursive: true, force: true }),
+      "malformed-manifest",
+    );
   }
 
   const sliceRoot = fs.mkdtempSync(
     path.join(os.tmpdir(), "automovie-bad-slice-"),
   );
+  let sliceFailure: IProjectStoreFixtureFailure | undefined;
   try {
     AutoMovieProject.open(sliceRoot);
     fs.writeFileSync(path.join(sliceRoot, "script.json"), "{ nope");
@@ -315,8 +355,15 @@ export const test_mcp_project_store = (): void => {
         ["AutoMovie project file", "script.json", "Fix or remove"],
       ),
     );
+  } catch (error) {
+    sliceFailure = { error };
+    throw error;
   } finally {
-    fs.rmSync(sliceRoot, { recursive: true, force: true });
+    preserveProjectStoreFixtureCleanup(
+      sliceFailure,
+      () => fs.rmSync(sliceRoot, { recursive: true, force: true }),
+      "malformed-slice",
+    );
   }
 
   const invalidShapeCases: {
@@ -360,6 +407,7 @@ export const test_mcp_project_store = (): void => {
     const invalidRoot = fs.mkdtempSync(
       path.join(os.tmpdir(), "automovie-invalid-slice-shape-"),
     );
+    let invalidShapeFailure: IProjectStoreFixtureFailure | undefined;
     try {
       AutoMovieProject.open(invalidRoot);
       fs.writeFileSync(
@@ -378,14 +426,22 @@ export const test_mcp_project_store = (): void => {
           ],
         ),
       );
+    } catch (error) {
+      invalidShapeFailure = { error };
+      throw error;
     } finally {
-      fs.rmSync(invalidRoot, { recursive: true, force: true });
+      preserveProjectStoreFixtureCleanup(
+        invalidShapeFailure,
+        () => fs.rmSync(invalidRoot, { recursive: true, force: true }),
+        "invalid-slice-shape",
+      );
     }
   }
 
   const keyedRoot = fs.mkdtempSync(
     path.join(os.tmpdir(), "automovie-bad-keyed-"),
   );
+  let keyedFailure: IProjectStoreFixtureFailure | undefined;
   try {
     AutoMovieProject.open(keyedRoot);
     fs.writeFileSync(path.join(keyedRoot, "shots", "b1.json"), "{ nope");
@@ -396,8 +452,15 @@ export const test_mcp_project_store = (): void => {
         ["AutoMovie project file", "shots", "b1.json", "Fix or remove"],
       ),
     );
+  } catch (error) {
+    keyedFailure = { error };
+    throw error;
   } finally {
-    fs.rmSync(keyedRoot, { recursive: true, force: true });
+    preserveProjectStoreFixtureCleanup(
+      keyedFailure,
+      () => fs.rmSync(keyedRoot, { recursive: true, force: true }),
+      "malformed-keyed-slice",
+    );
   }
 
   const invalidKeyedShapeCases: {
@@ -462,6 +525,7 @@ export const test_mcp_project_store = (): void => {
     const invalidRoot = fs.mkdtempSync(
       path.join(os.tmpdir(), "automovie-invalid-keyed-shape-"),
     );
+    let invalidKeyedShapeFailure: IProjectStoreFixtureFailure | undefined;
     try {
       AutoMovieProject.open(invalidRoot);
       fs.writeFileSync(
@@ -481,14 +545,22 @@ export const test_mcp_project_store = (): void => {
           ],
         ),
       );
+    } catch (error) {
+      invalidKeyedShapeFailure = { error };
+      throw error;
     } finally {
-      fs.rmSync(invalidRoot, { recursive: true, force: true });
+      preserveProjectStoreFixtureCleanup(
+        invalidKeyedShapeFailure,
+        () => fs.rmSync(invalidRoot, { recursive: true, force: true }),
+        "invalid-keyed-shape",
+      );
     }
   }
 
   const blockedParent = fs.mkdtempSync(
     path.join(os.tmpdir(), "automovie-file-root-"),
   );
+  let blockedFailure: IProjectStoreFixtureFailure | undefined;
   try {
     const blockedRoot = path.join(blockedParent, "project");
     fs.writeFileSync(blockedRoot, "not a directory");
@@ -503,7 +575,14 @@ export const test_mcp_project_store = (): void => {
         ],
       ),
     );
+  } catch (error) {
+    blockedFailure = { error };
+    throw error;
   } finally {
-    fs.rmSync(blockedParent, { recursive: true, force: true });
+    preserveProjectStoreFixtureCleanup(
+      blockedFailure,
+      () => fs.rmSync(blockedParent, { recursive: true, force: true }),
+      "file-blocked-root",
+    );
   }
 };

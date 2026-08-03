@@ -36,7 +36,6 @@ const SHOT: IAutoMovieShot = {
 export const test_film_cut_sequence_invalid_entries = (): void => {
   const cut = cutSequence(
     {
-      type: "write",
       sequence: { id: "seq-bad", name: "the mess" },
       fps: 24,
       entries: [
@@ -111,7 +110,6 @@ export const test_film_cut_sequence_invalid_entries = (): void => {
 
   const overPrevious = cutSequence(
     {
-      type: "write",
       sequence: { id: "seq-bad-prev", name: "the early dissolve" },
       fps: 24,
       entries: [
@@ -148,7 +146,6 @@ export const test_film_cut_sequence_invalid_entries = (): void => {
 
   const overlappingAdjacent = cutSequence(
     {
-      type: "write",
       sequence: { id: "seq-bad-overlap", name: "the nested dissolve" },
       fps: 24,
       entries: [

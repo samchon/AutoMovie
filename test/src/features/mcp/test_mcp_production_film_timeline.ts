@@ -1,5 +1,6 @@
 import { scaffoldAssetDirectory } from "@automovie/cli";
 import {
+  IAutoMovieAssetManifest,
   IAutoMovieFilmEdit,
   IAutoMovieFilmTimeline,
   IAutoMoviePrepareReviewOutput,
@@ -25,14 +26,44 @@ import { PNG } from "pngjs";
 
 import {
   fixtureWorldDesign,
+  productionCompileSucceeded,
   productionDesign,
   productionFixture,
+  setProductionFixtureShotContract,
   testCaptureRuntimeIdentity,
   worldDesign,
 } from "./productionFixtures";
 
 const editSource = (edit: unknown): string =>
   `export const film = { build() { return ${JSON.stringify(edit)}; } };\n`;
+
+const writeEditSource = (
+  root: string,
+  filmPath: string,
+  edit: IAutoMovieFilmEdit,
+): void => {
+  const manifestPath = path.join(root, ".automovie/assets.json");
+  const manifest = JSON.parse(
+    fs.readFileSync(manifestPath, "utf8"),
+  ) as IAutoMovieAssetManifest;
+  for (const asset of manifest.assets) {
+    const retained = asset.uses.filter(
+      (use) => use.production !== "fixture-film",
+    );
+    asset.uses = [
+      ...retained,
+      ...edit.tracks.audio
+        .filter((cue) => cue.asset === asset.path)
+        .map((cue) => ({
+          production: "fixture-film",
+          consumer: { kind: "audio-cue" as const, id: cue.id },
+          reason: `The film timeline consumes ${asset.path} through ${cue.id}.`,
+        })),
+    ];
+  }
+  fs.writeFileSync(manifestPath, JSON.stringify(manifest));
+  fs.writeFileSync(filmPath, editSource(edit));
+};
 
 const diagnosticCodes = (
   output: ReturnType<AutoMovieProductionCompiler["compile"]>,
@@ -44,6 +75,65 @@ const throws = (closure: () => unknown): boolean => {
     return false;
   } catch {
     return true;
+  }
+};
+
+interface IFilmSourceFixtureFailure {
+  error: unknown;
+}
+
+interface IFilmSourceFixtureCleanup {
+  cleanup: () => unknown;
+  resource: string;
+}
+
+class FilmSourceFixtureCleanupError extends AggregateError {}
+
+/** Attempt each independent film-source cleanup without hiding failure. */
+export const preserveFilmSourceFixtureCleanup = (
+  failure: IFilmSourceFixtureFailure | undefined,
+  resources: readonly IFilmSourceFixtureCleanup[],
+): void => {
+  const cleanupFailures: Array<{ error: unknown; resource: string }> = [];
+  for (const resource of resources)
+    try {
+      resource.cleanup();
+    } catch (error) {
+      cleanupFailures.push({ error, resource: resource.resource });
+    }
+  if (cleanupFailures.length === 1 && failure === undefined)
+    throw cleanupFailures[0]!.error;
+  if (cleanupFailures.length !== 0)
+    throw new FilmSourceFixtureCleanupError(
+      [
+        ...(failure === undefined ? [] : [failure.error]),
+        ...cleanupFailures.map((entry) => entry.error),
+      ],
+      `Film-source fixture cleanup failed${
+        failure === undefined ? "" : " after the test failed"
+      }: ${cleanupFailures.map((entry) => entry.resource).join(", ")}.`,
+    );
+};
+
+interface IFilmTimelineFixtureFailure {
+  error: unknown;
+}
+
+class FilmTimelineFixtureCleanupError extends AggregateError {}
+
+/** Dispose the film-timeline fixture without replacing its failure. */
+export const preserveFilmTimelineFixtureCleanup = (
+  failure: IFilmTimelineFixtureFailure | undefined,
+  cleanup: () => unknown,
+): void => {
+  try {
+    cleanup();
+  } catch (cleanupFailure) {
+    if (failure === undefined) throw cleanupFailure;
+    throw new FilmTimelineFixtureCleanupError(
+      [failure.error, cleanupFailure],
+      "Film-timeline fixture teardown failed after the test failed.",
+    );
   }
 };
 
@@ -70,16 +160,29 @@ const filmWorksheet = (
         (scenario.target.kind === "shot" ? scenario.target.id : undefined);
       return prepared.frames.some(
         (frame) =>
-          frame.shot === shot &&
+          frame.target.kind === "shot" &&
+          frame.target.id === shot &&
           frame.reviewFrame === criterion.frame &&
           frame.pass === criterion.pass,
       );
     })
     .sort((left, right) => left.id.localeCompare(right.id));
-  const frame = prepared.frames[0]!;
+  const frame = prepared.frames[0];
+  if (frame === undefined)
+    throw new Error(
+      `Film worksheet requires current prepared frame evidence:\n${JSON.stringify(
+        {
+          target: prepared.target,
+          diagnostics: prepared.diagnostics,
+          outcomes: prepared.outcomes,
+        },
+        null,
+        2,
+      )}`,
+    );
   const frameEvidence = {
     kind: "frame" as const,
-    shot: frame.shot,
+    target: frame.target,
     reviewFrame: frame.reviewFrame,
     bundle: frame.bundle,
     frame: frame.frame,
@@ -113,7 +216,8 @@ const filmWorksheet = (
                     : undefined);
                 const evidence = prepared.frames.find(
                   (candidate) =>
-                    candidate.shot === shot &&
+                    candidate.target.kind === "shot" &&
+                    candidate.target.id === shot &&
                     candidate.reviewFrame === scenarioCriterion.frame &&
                     candidate.pass === scenarioCriterion.pass,
                 )!;
@@ -121,7 +225,7 @@ const filmWorksheet = (
                   contractEvidence,
                   {
                     kind: "frame" as const,
-                    shot: evidence.shot,
+                    target: evidence.target,
                     reviewFrame: evidence.reviewFrame,
                     bundle: evidence.bundle,
                     frame: evidence.frame,
@@ -215,6 +319,7 @@ const twoShotEdit = (): IAutoMovieFilmEdit => {
 
 /** Film source compiles into one frame-exact artifact shared downstream. */
 export const test_mcp_production_film_timeline = async (): Promise<void> => {
+  let filmTimelineFailure: IFilmTimelineFixtureFailure | undefined;
   const fixture = productionFixture();
   try {
     const project = AutoMovieProductionProject.open(fixture.root);
@@ -222,13 +327,17 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
     const filmPath = path.join(fixture.root, "src/film.ts");
     const originalSource = fs.readFileSync(filmPath);
     const first = compiler.compile({ scope: "source" });
+    const firstSucceeded = productionCompileSucceeded(
+      "initial film timeline fixture",
+      first,
+    );
     const timelinePath = path.join(
       fixture.root,
-      "generated/film-timeline.json",
+      "generated/fixture-film/film-timeline.json",
     );
     const editPath = path.join(
       fixture.root,
-      "generated/contracts/film-edit.json",
+      "generated/fixture-film/contracts/film-edit.json",
     );
     const firstTimelineBytes = fs.readFileSync(timelinePath);
     const firstTimelineMtime = fs.statSync(timelinePath).mtimeMs;
@@ -239,9 +348,13 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
     const reopened = new AutoMovieProductionCompiler(
       AutoMovieProductionProject.open(fixture.root),
     ).compile({ scope: "source" });
+    const reopenedSucceeded = productionCompileSucceeded(
+      "reopened film timeline fixture",
+      reopened,
+    );
     TestValidator.predicate(
       "valid film materializes deterministic edit and timeline bytes",
-      first.success &&
+      firstSucceeded &&
         timeline.id === "fixture-film" &&
         timeline.totalFrames === 144 &&
         timeline.segments.length === 1 &&
@@ -252,7 +365,7 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
         compiledEdit.source.export === "film" &&
         compiledEdit.inputFingerprint === first.compiler.inputFingerprint &&
         timeline.inputFingerprint === first.compiler.inputFingerprint &&
-        reopened.success &&
+        reopenedSucceeded &&
         reopened.compiler.inputFingerprint ===
           first.compiler.inputFingerprint &&
         reopened.materialized.every((file) => file.status === "unchanged") &&
@@ -266,7 +379,7 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
     ): ReturnType<AutoMovieProductionCompiler["compile"]> => {
       const edit = baseEdit();
       mutate(edit);
-      fs.writeFileSync(filmPath, editSource(edit));
+      writeEditSource(fixture.root, filmPath, edit);
       return compiler.compile({ scope: "source" });
     };
     const cases: Array<{
@@ -516,10 +629,13 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
       start: { frame: 0 },
       end: { frame: 1 },
     });
-    fs.writeFileSync(filmPath, editSource(captioned));
+    writeEditSource(fixture.root, filmPath, captioned);
     TestValidator.predicate(
       "a present non-blank caption speaker remains valid",
-      compiler.compile({ scope: "source" }).success,
+      productionCompileSucceeded(
+        "non-blank caption speaker",
+        compiler.compile({ scope: "source" }),
+      ),
     );
 
     project.setWorldDesign(worldDesign());
@@ -537,7 +653,7 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
       };
       mutate(cue);
       edit.tracks.effects.push(cue);
-      fs.writeFileSync(filmPath, editSource(edit));
+      writeEditSource(fixture.root, filmPath, edit);
       return compiler.compile({ scope: "source" });
     };
     const effectFailures = [
@@ -577,7 +693,7 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
         intensity: 0.5,
       },
     );
-    fs.writeFileSync(filmPath, editSource(orderedEffects));
+    writeEditSource(fixture.root, filmPath, orderedEffects);
     effectFailures.push(compiler.compile({ scope: "source" }));
     TestValidator.predicate(
       "every effect time, duration, intensity and ordering boundary is refused",
@@ -631,6 +747,7 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
     const outsideFilmRoot = fs.mkdtempSync(
       path.join(os.tmpdir(), "automovie-film-source-outside-"),
     );
+    let filmSourceFixtureFailure: IFilmSourceFixtureFailure | undefined;
     try {
       const outsideFilm = path.join(outsideFilmRoot, "film.ts");
       fs.writeFileSync(outsideFilm, originalSource);
@@ -642,10 +759,24 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
           "source-path-outside-root",
         ),
       );
+    } catch (error) {
+      filmSourceFixtureFailure = { error };
+      throw error;
     } finally {
-      fs.rmSync(filmPath, { force: true });
-      fs.writeFileSync(filmPath, originalSource);
-      fs.rmSync(outsideFilmRoot, { force: true, recursive: true });
+      preserveFilmSourceFixtureCleanup(filmSourceFixtureFailure, [
+        {
+          resource: "resident film source",
+          cleanup: (): void => {
+            fs.rmSync(filmPath, { force: true });
+            fs.writeFileSync(filmPath, originalSource);
+          },
+        },
+        {
+          resource: "outside film-source root",
+          cleanup: () =>
+            fs.rmSync(outsideFilmRoot, { force: true, recursive: true }),
+        },
+      ]);
     }
 
     const answer = JSON.parse(
@@ -660,7 +791,7 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
     project.setProductionDesign(
       productionDesign({ targetRuntimeSeconds: 11.5 }),
     );
-    project.setShotContract(answer);
+    setProductionFixtureShotContract(project, answer);
     project.setAcceptanceScenario({
       id: "film-runtime",
       target: { kind: "film", id: "fixture-film" },
@@ -684,8 +815,12 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
       },
       required: true,
     });
-    fs.writeFileSync(filmPath, editSource(twoShotEdit()));
+    writeEditSource(fixture.root, filmPath, twoShotEdit());
     const twoShot = compiler.compile({ scope: "source" });
+    const twoShotSucceeded = productionCompileSucceeded(
+      "two-shot film timeline",
+      twoShot,
+    );
     const twoShotTimeline = JSON.parse(
       fs.readFileSync(timelinePath, "utf8"),
     ) as IAutoMovieFilmTimeline;
@@ -694,7 +829,7 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
     });
     TestValidator.predicate(
       "cut, dissolve and fade law materializes an overlap without changing total frames",
-      twoShot.success &&
+      twoShotSucceeded &&
         twoShotTimeline.totalFrames === 276 &&
         twoShotTimeline.segments[0]?.transitionIn.kind === "cut" &&
         twoShotTimeline.segments[0]?.transitionOut.kind === "dissolve" &&
@@ -764,7 +899,7 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
     for (const testCase of invalidTwoShotCases) {
       const edit = twoShotEdit();
       testCase.mutate(edit);
-      fs.writeFileSync(filmPath, editSource(edit));
+      writeEditSource(fixture.root, filmPath, edit);
       TestValidator.predicate(
         `${testCase.code} blocks two-shot publication`,
         diagnosticCodes(compiler.compile({ scope: "source" })).has(
@@ -775,36 +910,40 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
     const opening = structuredClone(project.graph().shots.get("opening")!);
     const openingWithoutClosing = structuredClone(opening);
     openingWithoutClosing.closing = [];
-    project.setShotContract(openingWithoutClosing);
+    setProductionFixtureShotContract(project, openingWithoutClosing);
     const trimmedOpeningBoundary = twoShotEdit();
     trimmedOpeningBoundary.tracks.video[1]!.sourceIn = { frame: 1 };
-    fs.writeFileSync(filmPath, editSource(trimmedOpeningBoundary));
+    writeEditSource(fixture.root, filmPath, trimmedOpeningBoundary);
     TestValidator.predicate(
       "a trimmed boundary rejects a claimed current opening even without a previous closing claim",
       diagnosticCodes(compiler.compile({ scope: "source" })).has(
         "film-state-handoff-unverifiable",
       ),
     );
-    project.setShotContract(opening);
+    setProductionFixtureShotContract(project, opening);
     const mismatched = structuredClone(answer);
     mismatched.opening[0]!.predicates[0]!.value = 90;
-    project.setShotContract(mismatched);
-    fs.writeFileSync(filmPath, editSource(twoShotEdit()));
+    setProductionFixtureShotContract(project, mismatched);
+    writeEditSource(fixture.root, filmPath, twoShotEdit());
     TestValidator.predicate(
       "adjacent compiled opening and closing state predicates must match",
       diagnosticCodes(compiler.compile({ scope: "source" })).has(
         "film-state-handoff-mismatch",
       ),
     );
-    project.setShotContract(answer);
+    setProductionFixtureShotContract(project, answer);
     project.setProductionDesign(productionDesign({ targetRuntimeSeconds: 6 }));
     const omitted = baseEdit();
     omitted.omissions.push({
       shot: "answer",
       reason: "The alternate answer is intentionally excluded.",
     });
-    fs.writeFileSync(filmPath, editSource(omitted));
+    writeEditSource(fixture.root, filmPath, omitted);
     const legalOmission = compiler.compile({ scope: "source" });
+    const legalOmissionSucceeded = productionCompileSucceeded(
+      "film omission",
+      legalOmission,
+    );
     const omissionReview = new AutoMovieProductionReviewService(
       project,
     ).prepare({
@@ -833,11 +972,11 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
     )!.digest = digestAutoMovieBytes(staleTimelineBytes);
     const timelineFilePath = path.join(
       fixture.root,
-      "generated/film-timeline.json",
+      "generated/fixture-film/film-timeline.json",
     );
     const generatedManifestPath = path.join(
       fixture.root,
-      ".automovie/generated-manifest.json",
+      ".automovie/productions/fixture-film/generated-manifest.json",
     );
     const gapTimeline = structuredClone(validTimeline);
     gapTimeline.segments[0]!.startFrame = 1;
@@ -899,7 +1038,7 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
     fs.writeFileSync(generatedManifestPath, JSON.stringify(currentManifest));
     TestValidator.predicate(
       "an explicit current-shot omission controls review evidence and shared timeline validation",
-      legalOmission.success &&
+      legalOmissionSucceeded &&
         validTimeline.omissions[0]?.shot === "answer" &&
         gapFrame.result === null &&
         gapFrame.diagnostics[0]?.message.includes("no owning video segment") &&
@@ -966,7 +1105,7 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
         window: { from: 4, to: 6 },
       },
     );
-    project.setShotContract(openingWithBoundaryEvents);
+    setProductionFixtureShotContract(project, openingWithBoundaryEvents);
     project.setProductionDesign(productionDesign({ targetRuntimeSeconds: 2 }));
     project.setAcceptanceScenario({
       id: "film-runtime",
@@ -1008,8 +1147,12 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
       shot: "answer",
       reason: "The alternate answer remains excluded from the shorter cut.",
     });
-    fs.writeFileSync(filmPath, editSource(trimmed));
+    writeEditSource(fixture.root, filmPath, trimmed);
     const legalTrim = compiler.compile({ scope: "source" });
+    const legalTrimSucceeded = productionCompileSucceeded(
+      "film trim",
+      legalTrim,
+    );
     const trimTimeline = JSON.parse(
       fs.readFileSync(timelinePath, "utf8"),
     ) as IAutoMovieFilmTimeline;
@@ -1051,7 +1194,7 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
     )?.acceptanceScenarios;
     TestValidator.predicate(
       "a legal trim uses one in-range fallback and submits exact half-open event coverage",
-      legalTrim.success &&
+      legalTrimSucceeded &&
         trimSelection.length === 1 &&
         trimSelection[0]?.id === "film-segment-entry" &&
         trimSelection[0]?.index === 72 &&
@@ -1085,7 +1228,7 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
     );
     const realizationPath = path.join(
       fixture.root,
-      "generated/realizations/opening.json",
+      "generated/fixture-film/realizations/opening.json",
     );
     const realizationBytes = fs.readFileSync(realizationPath);
     const realization = JSON.parse(realizationBytes.toString("utf8")) as {
@@ -1179,7 +1322,12 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
       );
     }
     fs.writeFileSync(realizationPath, realizationBytes);
+  } catch (error) {
+    filmTimelineFailure = { error };
+    throw error;
   } finally {
-    fixture.dispose();
+    preserveFilmTimelineFixtureCleanup(filmTimelineFailure, () =>
+      fixture.dispose(),
+    );
   }
 };

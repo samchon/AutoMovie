@@ -2,6 +2,7 @@ import {
   AutoMovieBodyRegion,
   AutoMovieHumanoidBone,
   IAutoMovieActionCall,
+  IAutoMovieBeatEndState,
   IAutoMovieKeyframe,
   IAutoMovieMotion,
   IAutoMoviePose,
@@ -25,16 +26,20 @@ import { bodyRegionBones } from "./bodyRegionBones";
  * IK reach are all authored against a particular skeleton, so the host supplies
  * them. The compiler stays generic: it owns the **timeline assembly** (which
  * actor, when, repeated how often, held across gaps, layered by region), never
- * the keyframes. This is the harness's "thin verb in, dense motion out" split
- * made concrete: the model emits {@link IAutoMovieActionCall}s, this seam
- * fattens each into a clip, and {@link compilePerformance} composes them into
- * the shot.
+ * the keyframes. This is "thin verb in, dense motion out" made concrete: a
+ * coding agent authors {@link IAutoMovieActionCall}s, this seam fattens each
+ * into a clip, and {@link compilePerformance} composes them into the shot.
  *
  * @author Samchon
  */
 export type IAutoMovieActionSynthesizer = (
   action: IAutoMovieActionCall,
   actor: string,
+  /**
+   * Prior verified beat state; custom synthesizers may resume its simulation
+   * facts.
+   */
+  previous?: IAutoMovieBeatEndState | null,
 ) => IAutoMovieMotion | null;
 
 const ROOT_REGIONS = new Set<AutoMovieBodyRegion>(["lowerBody", "fullBody"]);

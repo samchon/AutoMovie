@@ -1,6 +1,8 @@
 import {
   IAutoMovieActionCall,
   IAutoMovieActionTarget,
+  IAutoMovieBeatEndActorState,
+  IAutoMovieBeatEndState,
   IAutoMovieKeyframe,
   IAutoMovieMotion,
   IAutoMoviePose,
@@ -19,7 +21,10 @@ import { holdMotion } from "../motion/arrange";
 import { ease } from "../motion/easing";
 import { gaitMotion } from "../motion/gait";
 import { gestureMotion } from "../motion/gesture";
-import { locomoteMotion } from "../motion/locomote";
+import {
+  classifyLocomoteGroundDisplacement,
+  locomoteMotion,
+} from "../motion/locomote";
 import { reactMotion } from "../motion/react";
 import { sampleMotion } from "../motion/sampleMotion";
 import { timeScaleMotion } from "../motion/timeScale";
@@ -68,6 +73,55 @@ const staticActorWorldFrame = (
   rotation: Quaternion.fromAxisAngle({ x: 0, y: 1, z: 0 }, context.facingDeg),
   facingDeg: context.facingDeg,
 });
+
+/** Resume one actor context from a verified prior beat snapshot. */
+const resumeActorContext = (
+  context: IAutoMovieActorContext,
+  previous: IAutoMovieBeatEndActorState | undefined,
+): IAutoMovieActorContext => {
+  if (previous === undefined) return context;
+  const carriedSpeed =
+    previous.rootVelocity === null
+      ? 0
+      : Math.hypot(previous.rootVelocity.x, previous.rootVelocity.z);
+  return {
+    ...context,
+    position: previous.transform.translation,
+    facingDeg:
+      (Math.atan2(previous.facing.x, previous.facing.z) * 180) / Math.PI,
+    gaitPhase: previous.gaitPhase,
+    speed: carriedSpeed > 1e-6 ? carriedSpeed : context.speed,
+    restPose: previous.pose ?? context.restPose,
+  };
+};
+
+/** Apply prior root positions to every positional target in the live beat. */
+const resumedRuntime = (
+  contexts: ReadonlyMap<string, IAutoMovieActorContext>,
+  placements: ReadonlyMap<string, IAutoMovieVector3>,
+  previous: IAutoMovieBeatEndState | null | undefined,
+): {
+  contexts: Map<string, IAutoMovieActorContext>;
+  nodes: Map<string, IAutoMovieVector3>;
+} => {
+  if (previous === null || previous === undefined)
+    return {
+      contexts: new Map(contexts),
+      nodes: new Map(placements),
+    };
+  const states = new Map(previous.actors.map((actor) => [actor.node, actor]));
+  const liveContexts = new Map(
+    [...contexts].map(
+      ([node, context]) =>
+        [node, resumeActorContext(context, states.get(node))] as const,
+    ),
+  );
+  const nodes = new Map(placements);
+  for (const actor of previous.actors)
+    if (nodes.has(actor.node))
+      nodes.set(actor.node, actor.transform.translation);
+  return { contexts: liveContexts, nodes };
+};
 
 /** Resolve a motion root on top of the actor's staged world transform. */
 export const resolveActorWorldFrame = (
@@ -372,6 +426,29 @@ const fitDeclaredSpan = (
     ? motion
     : timeScaleMotion(motion, duration / motion.duration);
 
+/** Preserve carried articulation on gait bones the new cycle does not drive. */
+const seedRestArticulation = (
+  motion: IAutoMovieMotion,
+  restPose: IAutoMoviePose,
+): IAutoMovieMotion => ({
+  ...motion,
+  keyframes: motion.keyframes.map((keyframe) => {
+    const driven = new Set(keyframe.pose.joints.map((joint) => joint.bone));
+    return {
+      ...keyframe,
+      pose: {
+        ...keyframe.pose,
+        joints: [
+          ...keyframe.pose.joints,
+          ...restPose.joints
+            .filter((joint) => driven.has(joint.bone) === false)
+            .map((joint) => ({ ...joint })),
+        ],
+      },
+    };
+  }),
+});
+
 /**
  * Build a reference {@link IAutoMovieActionSynthesizer} (the content seam
  * {@link compilePerformance} injects) for the verbs the engine can fatten
@@ -423,7 +500,7 @@ const fitDeclaredSpan = (
  */
 export const makeActorSynthesizer = (
   contexts: Map<string, IAutoMovieActorContext>,
-  nodes: Map<string, IAutoMovieVector3>,
+  placements: Map<string, IAutoMovieVector3>,
   boneTargetAt?: (
     target: IAutoMovieActionTarget,
     seconds: number,
@@ -434,12 +511,15 @@ export const makeActorSynthesizer = (
   ) => IAutoMovieActorWorldFrame | null,
 ): IAutoMovieActionSynthesizer => {
   for (const [actor, ctx] of contexts) assertUniqueActorGaits(actor, ctx.gaits);
-  const aimPoints = aimPointsOf(contexts, nodes);
   return (
     action: IAutoMovieActionCall,
     actor: string,
+    previous?: IAutoMovieBeatEndState | null,
   ): IAutoMovieMotion | null => {
-    const ctx = contexts.get(actor);
+    const live = resumedRuntime(contexts, placements, previous);
+    const nodes = live.nodes;
+    const aimPoints = aimPointsOf(live.contexts, nodes);
+    const ctx = live.contexts.get(actor);
     if (ctx === undefined) return null;
     const staticFrame = staticActorWorldFrame(ctx);
     const frameAt = (seconds: number): IAutoMovieActorWorldFrame =>
@@ -455,12 +535,15 @@ export const makeActorSynthesizer = (
     if (action.verb === "locomote") {
       const gait = ctx.gaits.find((g) => g.name === action.gait);
       if (gait === undefined) return null;
-      const cycle = gaitMotion(
-        `${actor}:${action.gait}`,
-        ctx.skeleton,
-        gait,
-        GAIT_SAMPLES,
-        ctx.gaitPhase ?? 0,
+      const cycle = seedRestArticulation(
+        gaitMotion(
+          `${actor}:${action.gait}`,
+          ctx.skeleton,
+          gait,
+          GAIT_SAMPLES,
+          ctx.gaitPhase ?? 0,
+        ),
+        ctx.restPose,
       );
       const dest = resolveTarget(action.to, nodes, action.start);
       // Every arm below is fitted to a DECLARED duration (#1366). The engine
@@ -474,15 +557,31 @@ export const makeActorSynthesizer = (
       // (undo the facing) and the composed render carries it to the world
       // destination; a turned actor would otherwise walk off its heading.
       const local = toModelSpace(dest, staticFrame);
-      const distance = Math.hypot(local.x, local.z);
-      if (distance < 1e-6) return fitDeclaredSpan(cycle, action.duration); // already there → step in place
+      const displacement = classifyLocomoteGroundDisplacement(local);
+      if (displacement.alreadyThere)
+        return fitDeclaredSpan(cycle, action.duration); // already there → step in place
+      // A gait cannot realize a purely vertical displacement. Returning null
+      // makes the performance gate report the unsupported ground destination;
+      // pretending it is "already there" would silently leave the actor at
+      // the wrong height, while carrying it vertically would turn a walk into
+      // an elevator. The same epsilon prevents an unbounded slope ratio.
+      if (displacement.verticalOnly) return null;
+      // A locomote destination is the ground point the actor must actually
+      // reach, including a ramp's rise. Keep gait cadence governed by the XZ
+      // distance (the actor profile's speed is its ground speed), but carry the
+      // complete displacement through locomoteMotion. Scaling the 3D speed by
+      // the same slope ratio leaves distance / speed, cycle count, and duration
+      // identical to the planar walk while making the baked root arrive at the
+      // authored Y instead of silently discarding it (#1473).
+      const travelSpeed =
+        ctx.speed * (displacement.travelDistance / displacement.groundDistance);
       return fitDeclaredSpan(
         locomoteMotion(
           `${actor}:${action.gait}:travel`,
           cycle,
-          distance,
-          ctx.speed,
-          { x: local.x, y: 0, z: local.z },
+          displacement.travelDistance,
+          travelSpeed,
+          local,
           action.faceTravel === true,
         ),
         action.duration,

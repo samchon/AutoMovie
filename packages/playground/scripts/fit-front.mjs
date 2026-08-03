@@ -12,6 +12,8 @@ import { fileURLToPath } from "node:url";
 import { chromium } from "playwright-core";
 import { PNG } from "pngjs";
 
+import { withBrowserPage } from "./preserveCleanupFailure.mjs";
+
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "../../..");
 const hero = process.argv[2] ?? "hero3";
@@ -97,112 +99,113 @@ const relRms = (m, t) => {
   return Math.sqrt(s / n);
 };
 
-const browser = await chromium.launch({
-  executablePath: CHROME,
-  headless: true,
-});
-const page = await browser.newPage({ viewport: { width: 1000, height: 1000 } });
-await page.goto(`${BASE}/head.html`, { waitUntil: "load" });
-await page.waitForFunction(() => window.__faceEditor?.setValues);
-await page.addStyleTag({
-  content: `#panel,#strip,#hud{display:none!important}#stage{grid-template-columns:1fr!important}#workbench{grid-template-rows:1fr!important}`,
-});
-await page.setViewportSize({ width: 1000, height: 1000 });
-await page.evaluate(async () => {
-  const vision =
-    await import("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14");
-  const { FaceLandmarker, FilesetResolver } = vision;
-  const fileset = await FilesetResolver.forVisionTasks(
-    "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm",
-  );
-  window.__fl = await FaceLandmarker.createFromOptions(fileset, {
-    baseOptions: {
-      modelAssetPath:
-        "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task",
-    },
-    runningMode: "IMAGE",
-    numFaces: 1,
-  });
-  window.__faceEditor.setView("front");
-});
-
-// detect photo target once
-const photo = await page.evaluate(
-  async ({ url, sx, sy, sw, sh }) => {
-    const img = await new Promise((res, rej) => {
-      const im = new Image();
-      im.onload = () => res(im);
-      im.onerror = () => rej(new Error("load"));
-      im.src = url;
+const { target, final, cur, startRms } = await withBrowserPage(
+  () => chromium.launch({ executablePath: CHROME, headless: true }),
+  { viewport: { width: 1000, height: 1000 } },
+  "fit front",
+  async (page) => {
+    await page.goto(`${BASE}/head.html`, { waitUntil: "load" });
+    await page.waitForFunction(() => window.__faceEditor?.setValues);
+    await page.addStyleTag({
+      content: `#panel,#strip,#hud{display:none!important}#stage{grid-template-columns:1fr!important}#workbench{grid-template-rows:1fr!important}`,
     });
-    const cvs = document.createElement("canvas");
-    cvs.width = sw;
-    cvs.height = sh;
-    cvs.getContext("2d").drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
-    const r = window.__fl.detect(cvs);
-    const f = r.faceLandmarks && r.faceLandmarks[0];
-    return f ? { lm: f.map((p) => [p.x, p.y]), w: sw, h: sh } : null;
-  },
-  {
-    url: `/@fs/${rootUrl}/${sheetRel}`,
-    sx: Math.round(cell.column * cw),
-    sy: Math.round(cell.row * ch),
-    sw: Math.round(cw),
-    sh: Math.round(ch),
+    await page.setViewportSize({ width: 1000, height: 1000 });
+    await page.evaluate(async () => {
+      const vision =
+        await import("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14");
+      const { FaceLandmarker, FilesetResolver } = vision;
+      const fileset = await FilesetResolver.forVisionTasks(
+        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm",
+      );
+      window.__fl = await FaceLandmarker.createFromOptions(fileset, {
+        baseOptions: {
+          modelAssetPath:
+            "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task",
+        },
+        runningMode: "IMAGE",
+        numFaces: 1,
+      });
+      window.__faceEditor.setView("front");
+    });
+
+    // detect photo target once
+    const photo = await page.evaluate(
+      async ({ url, sx, sy, sw, sh }) => {
+        const img = await new Promise((res, rej) => {
+          const im = new Image();
+          im.onload = () => res(im);
+          im.onerror = () => rej(new Error("load"));
+          im.src = url;
+        });
+        const cvs = document.createElement("canvas");
+        cvs.width = sw;
+        cvs.height = sh;
+        cvs.getContext("2d").drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
+        const r = window.__fl.detect(cvs);
+        const f = r.faceLandmarks && r.faceLandmarks[0];
+        return f ? { lm: f.map((p) => [p.x, p.y]), w: sw, h: sh } : null;
+      },
+      {
+        url: `/@fs/${rootUrl}/${sheetRel}`,
+        sx: Math.round(cell.column * cw),
+        sy: Math.round(cell.row * ch),
+        sw: Math.round(cw),
+        sh: Math.round(ch),
+      },
+    );
+    const target = ratios(photo.lm, photo.w, photo.h);
+
+    await page.evaluate((h) => window.__faceEditor.setPreset(h), hero);
+
+    const evalModel = async (values) => {
+      const det = await page.evaluate(async (vals) => {
+        window.__faceEditor.setValues(vals);
+        await new Promise((r) =>
+          requestAnimationFrame(() => requestAnimationFrame(r)),
+        );
+        const cvs = document.querySelector("#view");
+        const r = window.__fl.detect(cvs);
+        const f = r.faceLandmarks && r.faceLandmarks[0];
+        return f
+          ? { lm: f.map((p) => [p.x, p.y]), w: cvs.width, h: cvs.height }
+          : null;
+      }, values);
+      if (!det) return { rms: 99, m: null };
+      const m = ratios(det.lm, det.w, det.h);
+      return { rms: relRms(m, target), m };
+    };
+
+    // seed from the hero preset (fitted axes only)
+    const seed = { ...(model.presets[hero]?.values ?? {}) };
+    let cur = {};
+    for (const k of FIT) cur[k] = seed[k] ?? 0;
+    let base = await evalModel(cur);
+    const startRms = base.rms;
+    const grid = [];
+    for (let v = -BOUND; v <= BOUND + 1e-9; v += 0.1) grid.push(+v.toFixed(2));
+
+    for (let round = 0; round < 3; round++) {
+      for (const p of FIT) {
+        let bestV = cur[p];
+        let bestObj = (await evalModel(cur)).rms + penalty(cur);
+        for (const v of grid) {
+          const trial = { ...cur, [p]: v };
+          const r = (await evalModel(trial)).rms + penalty(trial);
+          if (r < bestObj - 1e-4) {
+            bestObj = r;
+            bestV = v;
+          }
+        }
+        cur[p] = bestV;
+      }
+      process.stderr.write(
+        `round ${round}: relRMS ${(await evalModel(cur)).rms.toFixed(4)} reg ${penalty(cur).toFixed(4)}\n`,
+      );
+    }
+    const final = await evalModel(cur);
+    return { target, final, cur, startRms };
   },
 );
-const target = ratios(photo.lm, photo.w, photo.h);
-
-await page.evaluate((h) => window.__faceEditor.setPreset(h), hero);
-
-const evalModel = async (values) => {
-  const det = await page.evaluate(async (vals) => {
-    window.__faceEditor.setValues(vals);
-    await new Promise((r) =>
-      requestAnimationFrame(() => requestAnimationFrame(r)),
-    );
-    const cvs = document.querySelector("#view");
-    const r = window.__fl.detect(cvs);
-    const f = r.faceLandmarks && r.faceLandmarks[0];
-    return f
-      ? { lm: f.map((p) => [p.x, p.y]), w: cvs.width, h: cvs.height }
-      : null;
-  }, values);
-  if (!det) return { rms: 99, m: null };
-  const m = ratios(det.lm, det.w, det.h);
-  return { rms: relRms(m, target), m };
-};
-
-// seed from the hero preset (fitted axes only)
-const seed = { ...(model.presets[hero]?.values ?? {}) };
-let cur = {};
-for (const k of FIT) cur[k] = seed[k] ?? 0;
-let base = await evalModel(cur);
-const startRms = base.rms;
-const grid = [];
-for (let v = -BOUND; v <= BOUND + 1e-9; v += 0.1) grid.push(+v.toFixed(2));
-
-for (let round = 0; round < 3; round++) {
-  for (const p of FIT) {
-    let bestV = cur[p];
-    let bestObj = (await evalModel(cur)).rms + penalty(cur);
-    for (const v of grid) {
-      const trial = { ...cur, [p]: v };
-      const r = (await evalModel(trial)).rms + penalty(trial);
-      if (r < bestObj - 1e-4) {
-        bestObj = r;
-        bestV = v;
-      }
-    }
-    cur[p] = bestV;
-  }
-  process.stderr.write(
-    `round ${round}: relRMS ${(await evalModel(cur)).rms.toFixed(4)} reg ${penalty(cur).toFixed(4)}\n`,
-  );
-}
-const final = await evalModel(cur);
-await page.close();
-await browser.close();
 
 const residuals = Object.keys(target).map((k) => ({
   metric: k,

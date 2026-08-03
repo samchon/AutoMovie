@@ -14,7 +14,11 @@ import {
 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { nclose, warningCount } from "../internal/predicates";
+import {
+  nclose,
+  validationHasNoWarnings,
+  validationHasWarnings,
+} from "../internal/predicates";
 
 const t = (x: number, y: number, z: number): IAutoMovieTransform => ({
   translation: { x, y, z },
@@ -39,7 +43,8 @@ const space: IAutoMovieSpace = {
 };
 
 // The bent-rest leg of the plant-feet suites: foot on the ground with reach
-// slack, so the pin can hold while the root climbs the ramp.
+// slack, so the pin can hold while the root climbs the ramp. Its rest geometry
+// is 41.1 degrees of clinical knee flexion rather than clinical zero.
 const legSkeleton: IAutoMovieSkeleton = {
   id: "leg",
   bones: [
@@ -63,6 +68,12 @@ const legSkeleton: IAutoMovieSkeleton = {
       constraint: null,
     },
   ],
+};
+const KNEE_REST_FLEXION = (2 * Math.atan2(0.15, 0.4) * 180) / Math.PI;
+const REST_FRAMES = {
+  leftLowerLeg: {
+    flexion: { sign: 1 as const, neutral: KNEE_REST_FLEXION },
+  },
 };
 
 const kf = (time: number): IAutoMovieKeyframe => ({
@@ -124,13 +135,15 @@ export const test_space_ground_pipeline = (): void => {
   const contacts = [{ bone: "leftFoot", start: 0, end: 1 } as const];
   TestValidator.predicate(
     "raw ramp bake skates the foot (warns)",
-    warningCount(
+    validationHasWarnings(
+      "raw ramp foot-skate",
       validateFootSkate({
         motion: path.motion,
         skeleton: legSkeleton,
         contacts,
+        restFrames: REST_FRAMES,
       }),
-    ) > 0,
+    ),
   );
 
   const planted = plantStanceFeet({
@@ -139,29 +152,32 @@ export const test_space_ground_pipeline = (): void => {
     groundY: ground,
     tolerance: 0.05,
     legs: [{ foot: "leftFoot", upper: "leftUpperLeg", lower: "leftLowerLeg" }],
+    restFrames: REST_FRAMES,
   });
-  TestValidator.equals(
+  TestValidator.predicate(
     "planted ramp climb has no foot-skate warning",
-    warningCount(
+    validationHasNoWarnings(
+      "planted ramp climb foot-skate",
       validateFootSkate({
         motion: planted.motion,
         skeleton: legSkeleton,
         contacts,
+        restFrames: REST_FRAMES,
       }),
     ),
-    0,
   );
-  TestValidator.equals(
+  TestValidator.predicate(
     "planted ramp climb has no ground-contact warning on the space",
-    warningCount(
+    validationHasNoWarnings(
+      "planted ramp climb ground-contact",
       validateGroundContact({
         motion: planted.motion,
         skeleton: legSkeleton,
         footBones: ["leftFoot"],
         groundY: ground,
         tolerance: 1e-3,
+        restFrames: REST_FRAMES,
       }),
     ),
-    0,
   );
 };

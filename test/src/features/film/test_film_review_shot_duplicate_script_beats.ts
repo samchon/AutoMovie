@@ -28,7 +28,6 @@ export const test_film_review_shot_duplicate_script_beats = (): void => {
       ],
     }),
     {
-      type: "write",
       beat: "beat-1",
       observations: "the pass is keyed by an ambiguous beat.",
       verdict: "pass",

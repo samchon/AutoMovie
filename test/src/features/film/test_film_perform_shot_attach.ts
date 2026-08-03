@@ -1,4 +1,5 @@
 import {
+  DEFAULT_JOINT_AXES,
   HUMANOID_JOINT_AXES,
   HUMANOID_REST_FRAME,
   IAutoMovieActionSynthesizer,
@@ -33,6 +34,11 @@ import {
   makePose,
 } from "../internal/fixtures";
 import { vclose } from "../internal/predicates";
+
+const CUSTOM_JOINT_AXES = {
+  ...HUMANOID_JOINT_AXES,
+  leftUpperArm: DEFAULT_JOINT_AXES,
+};
 
 /** A launch/attach produces no actor pose: those animate objects, not the rig. */
 const synth: IAutoMovieActionSynthesizer = (action, actor) =>
@@ -84,8 +90,8 @@ const stagingOf = () =>
  * 1. The knight gestures (the arm moves) with the sword attached to its
  *    `leftHand`: the sword gets one `objectMotion` that changes over the shot
  *    (it follows the swinging hand), and only the knight performs.
- * 2. A clinical-space parent clip carries its restFrames into the baked follow
- *    clip, matching the renderer/player FK path.
+ * 2. A clinical-space parent clip carries its custom jointAxes and restFrames into
+ *    the baked follow clip, matching the renderer/player FK path.
  * 3. An attachTo parent that is not a staged node → an input violation.
  * 4. An attachTo parent with no rig to attach a bone of → a violation.
  * 5. A bone that is not on the parent's skeleton → a violation.
@@ -212,11 +218,17 @@ export const test_film_perform_shot_attach = (): void => {
       shieldRelease.actionIndex === 2,
   );
 
-  // 2. restFrames are threaded into the baked objectMotion FK.
+  // 2. custom jointAxes and restFrames reach the baked objectMotion FK.
   const raisedMotion: IAutoMovieMotion = makeMotion(
     [
-      keyframe(0, makePose([joint("leftUpperArm", { abduction: 180 })])),
-      keyframe(1, makePose([joint("leftUpperArm", { abduction: 180 })])),
+      keyframe(
+        0,
+        makePose([joint("leftUpperArm", { flexion: 60, abduction: 180 })]),
+      ),
+      keyframe(
+        1,
+        makePose([joint("leftUpperArm", { flexion: 60, abduction: 180 })]),
+      ),
     ],
     1,
   );
@@ -254,6 +266,7 @@ export const test_film_perform_shot_attach = (): void => {
     }),
     synthesize: clinicalSynth,
     skeleton: (node) => (node === "knight" ? createSkeleton() : null),
+    jointAxes: (node) => (node === "knight" ? CUSTOM_JOINT_AXES : undefined),
     restFrames: (node) => (node === "knight" ? HUMANOID_REST_FRAME : undefined),
   });
   TestValidator.equals("the rest-framed attach performs", framed.success, true);
@@ -270,7 +283,7 @@ export const test_film_perform_shot_attach = (): void => {
     sampleMotion(raisedMotion, 0.5).pose,
     createSkeleton(),
     { parentBone: "leftHand", offset: IDENTITY_TRANSFORM },
-    HUMANOID_JOINT_AXES,
+    CUSTOM_JOINT_AXES,
     HUMANOID_REST_FRAME,
   );
   const expected = Vector3.add(
@@ -278,8 +291,19 @@ export const test_film_perform_shot_attach = (): void => {
     Quaternion.rotateVector(parent.transform.rotation, local.translation),
   );
   TestValidator.predicate(
-    "performShot passes restFrames to attach FK",
+    "performShot passes custom jointAxes and restFrames to attach FK",
     vclose(framedVec, expected, 1e-9),
+  );
+  const fallbackLocal = resolveAttachment(
+    sampleMotion(raisedMotion, 0.5).pose,
+    createSkeleton(),
+    { parentBone: "leftHand", offset: IDENTITY_TRANSFORM },
+    HUMANOID_JOINT_AXES,
+    HUMANOID_REST_FRAME,
+  );
+  TestValidator.predicate(
+    "the custom attach basis is observably distinct from the humanoid fallback",
+    !vclose(local.translation, fallbackLocal.translation, 1e-3),
   );
 
   // 3. the parent must be a staged node

@@ -6,6 +6,28 @@ import path from "node:path";
 
 import { throwsError } from "../internal/predicates";
 
+interface IProjectSliceEdgeFixtureFailure {
+  error: unknown;
+}
+
+class ProjectSliceEdgeFixtureCleanupError extends AggregateError {}
+
+/** Remove one slice-edge root without replacing its primary failure. */
+export const preserveProjectSliceEdgeFixtureCleanup = (
+  failure: IProjectSliceEdgeFixtureFailure | undefined,
+  cleanup: () => unknown,
+): void => {
+  try {
+    cleanup();
+  } catch (cleanupFailure) {
+    if (failure === undefined) throw cleanupFailure;
+    throw new ProjectSliceEdgeFixtureCleanupError(
+      [failure.error, cleanupFailure],
+      "Project-slice edge fixture cleanup failed after the test failed.",
+    );
+  }
+};
+
 /** Write a crafted (deliberately malformed) slice file into an open project. */
 const writeSlice = (root: string, rel: string, value: unknown): void =>
   fs.writeFileSync(
@@ -415,6 +437,7 @@ export const test_mcp_project_slice_shape_edges = (): void => {
     const root = fs.mkdtempSync(
       path.join(os.tmpdir(), "automovie-slice-edge-"),
     );
+    let sliceEdgeFailure: IProjectSliceEdgeFixtureFailure | undefined;
     try {
       AutoMovieProject.open(root);
       writeSlice(root, entry.rel, entry.value);
@@ -423,8 +446,13 @@ export const test_mcp_project_slice_shape_edges = (): void => {
         entry.title,
         throwsError(() => read(root), entry.fragments),
       );
+    } catch (error) {
+      sliceEdgeFailure = { error };
+      throw error;
     } finally {
-      fs.rmSync(root, { recursive: true, force: true });
+      preserveProjectSliceEdgeFixtureCleanup(sliceEdgeFailure, () =>
+        fs.rmSync(root, { recursive: true, force: true }),
+      );
     }
   }
 };

@@ -2,22 +2,22 @@
   "private": true,
   "name": "@automovie/station",
   "version": "0.1.0",
-  "description": "automovie monorepo: LLM structured-output engine for character/object motion",
+  "description": "Coding-agent-native deterministic filmmaking: tracked authoring, compilation, rendering, review, and delivery.",
   "packageManager": "pnpm@10.6.4",
   "scripts": {
     "build": "pnpm --filter=./packages/** -r build",
     "test": "pnpm --filter @automovie/test build && pnpm --filter @automovie/test start",
     "e2e:tgz": "node internals/e2e-tgz.mjs",
+    "license:check": "node internals/license-policy.mjs",
     "format": "prettier --write \"**/*.ts\"",
     "format:check": "prettier --check \"**/*.ts\""
   },
   "keywords": [
-    "llm",
-    "function-calling",
-    "structured-output",
+    "coding-agent",
+    "deterministic",
+    "filmmaking",
     "animation",
-    "motion",
-    "typia"
+    "rendering"
   ],
   "author": "Samchon",
   "license": "MIT",

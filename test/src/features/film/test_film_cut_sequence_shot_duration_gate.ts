@@ -27,7 +27,6 @@ const shot = (id: string, duration: number): IAutoMovieShot => ({
 export const test_film_cut_sequence_shot_duration_gate = (): void => {
   const cut = cutSequence(
     {
-      type: "write",
       sequence: { id: "seq-bad-shot-duration", name: "bad source shots" },
       fps: 24,
       entries: [

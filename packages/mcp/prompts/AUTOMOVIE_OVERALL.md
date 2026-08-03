@@ -1,86 +1,59 @@
-# AutoMovie MCP Operating Guide
+# AutoMovie Production Constitution
 
-AutoMovie MCP is the deterministic gate for turning creative intent into a validated, renderable film. The engine computes and validates (poses, motion, physics plausibility, staging coherence), but it never decides what the film should be. You, the coding agent, are the orchestrator: you author intent, the engine enforces reality ("engine enforces, model creates"). The server blocks wrong order and names the next step, but it does not drive the loop for you.
+AutoMovie turns ordinary tracked screenplay, design, TypeScript, and configuration files into a deterministic film. The coding agent authors those files; the compiler and engine decide structural truth; the five MCP tools deliver knowledge, host-produced pixels, optional repaint, and evidence-bound review. A filename, a confident explanation, or remembered chat is never proof.
 
-Read this guide first, then identify the advertised surface below. Do not request a guide until that surface's schema says the guide name exists.
+## Flow
 
-## Choose the Surface You Actually Have
+1. Start with this constitution, then choose the next guide from Guide selection. Whenever a named guide is required, retrieve only that guide by calling `getGuideDocument` with its exact stem, for example `getGuideDocument({ name: "SCREENPLAY_WRITING" })`.
+2. Author the screenplay ladder: logline, treatment sequences and beats, then scene prose and its typed index. Read `SCREENPLAY_WRITING`.
+3. Author production, models, world, formations, shot contracts, acceptance scenarios, and TypeScript shot/film source in their tracked owners. Read the matching contract guide and handbook before editing.
+4. Run the scaffold compiler or lint command. Compilation, project-state loading, geometry, status, migration, rendering, and verification are ordinary package or CLI APIs, never MCP tools.
+5. Read `CAPTURE_FRAME`, then call `captureFrame` for current asset turntables or current shot pixels. `captured:false` is a refusal, not evidence.
+6. Review deterministic assets and shots first. When production design declares visual delivery `repainted`, complete the current `shot` review, read `REPAINT_SHOT` and `DIFFUSION_ENHANCE`, call `repaintShot`, then complete the separate `rendition` review. Deterministic delivery does not route through diffusion.
+7. Read the exact target guide before both `prepareReview` and `submitReview`: `REVIEW_ASSET`, `REVIEW_SHOT` (for `shot` and `rendition`), `REVIEW_SEQUENCE`, or `REVIEW_FILM`. Inspect every returned current evidence item yourself. Put the final boolean last.
+8. Render through the scaffold CLI only after current review gates pass. Verify receipts and media facts; never infer completion from an output path.
 
-AutoMovie is migrating to a coding-agent-first production coordinator. Inspect the advertised tools instead of guessing:
+The host fixes project root and default production at startup. No tool payload may activate another filesystem root. Registry identity is `production / artifact id / time-or-angle-and-pass / fingerprint`; all evidence must reopen through that identity.
 
-- If `inspectProject`, `setProductionDesign`, `compileProject`, `previewFrame`, `prepareReview`, and `submitReview` are present, source code is the authoring surface. Read `PRODUCTION_DESIGN`, `MODEL_RECIPE`, `WORLD_DESIGN`, `FORMATION_DESIGN`, `SHOT_CONTRACT`, `ACCEPTANCE`, `SOURCE_OWNERSHIP`, `COMPILATION`, `GEOMETRY`, `PRODUCTION_REVIEW`, and `PRODUCTION_RENDER`. Write screenplay, shot builders, motions, effects, audio integration, tests, and refactors as ordinary repository files. Use MCP only for bounded design truth, deterministic compile/oracles, actual-frame capture, and evidence-bound review.
-- If only `openProject`, `nextSteps`, and `execute` accompany this guide, you are on the compact legacy surface described below. It remains available during the measured migration and uses the stage/block/perform/cut ladder.
-- If stage names are advertised directly, you are on the granular compatibility surface. Its semantics match the compact legacy path but its schema payload is much larger.
+## Guide selection
 
-On either legacy surface, read the stage guide that matches the next operation: `STAGING`, `BLOCKING`, `PERFORMANCE`, `FORGE`, `PROPS`, `REVIEW`, `PROJECT_MEMORY`, or `RENDER_GUIDES`. Those names do not exist on the coding-agent production surface.
+Read only the route that matches the next owned decision. Contract guides define records and gates; handbooks provide recipes and judgment.
 
-Never translate ordinary coding work into giant JSON calls merely because a tool exists. Never claim a visual pass without an actual current PNG. Never edit compiler-owned `generated` output to make a source failure appear fixed.
+### Contracts and deterministic boundaries
 
-## Compact Gateway Calls
+- `PRODUCTION_DESIGN`: production clock, deliverables, art direction, and visual-delivery declaration.
+- `MODEL_RECIPE`: bounded primitive and external model recipes.
+- `WORLD_DESIGN`: terrain, routes, landmarks, and bounded effects.
+- `FORMATION_DESIGN`: repeated-unit layouts, heroes, and formation motion.
+- `SHOT_CONTRACT`: source binding, events, camera intent, review times, and rendition policy.
+- `ACCEPTANCE`: falsifiable frame, event, and metric criteria.
+- `SOURCE_OWNERSHIP`: coding-agent, compiler, renderer, and review ownership.
+- `COMPILATION`: design/source/review/final scopes and atomic publication.
+- `GEOMETRY`: direct engine geometry and project-state queries outside the compile sandbox.
 
-The default server advertises `getGuideDocument`, `openProject`, `nextSteps`,
-and `execute`. The first three are called directly. Every other tool name in
-this guide is an `execute` operation: call
-`execute({ call: { operation: "stage", input: { script, staging } } })`, for
-example, and read the original stage output at `result.output`. The operation's
-input and output schemas are unchanged; the wrapper lets the shared film type
-graph ship once instead of once per tool. If `nextSteps` names `commitScript`,
-route it through `execute` the same way. The optional granular compatibility
-server advertises the operation names directly, but the production ladder and
-result semantics are identical.
+### MCP gate contracts
 
-## The Ladder
+- `CAPTURE_FRAME`: exact `captureFrame` targets, passes, receipts, and refusal recovery.
+- `REPAINT_SHOT`: exact `repaintShot` inputs, source-grid requirements, provenance, and refusal recovery.
+- `REVIEW_ASSET`: asset turntable worksheet and silhouette, rig, material, and provenance axes.
+- `REVIEW_SHOT`: shot worksheet and composition, performance, continuity, and acceptance axes.
+- `REVIEW_SEQUENCE`: sequence coverage, editorial rhythm, transition, and continuity worksheet.
+- `REVIEW_FILM`: whole-film story, pacing, audiovisual delivery, and terminal consistency worksheet.
+- `REVIEW_DEPENDENCY`: temporary design/source dependency worksheets exposed by the current schema; these are not additional visual surfaces.
 
-1. `openProject`: activate (or create) the project folder. The folder itself is the durable state: human-readable JSON slices plus registered assets. Call this first in resident mode.
-2. `nextSteps`: ask the server what is missing and what to do next, any time. The same computation gates out-of-order commits, so asking first avoids thrown prerequisite errors.
-3. `commitScript`: the script is the upstream truth: logline, theme, cast, beats. Committing a new script clears every downstream slice (scene, shots, beat ends, notes, film). In a resident project the cleared slices' files are removed.
-4. `forge` / `forgeProp`: build stand-in rigs for `modelRef: null` cast members, and author props as data. `forge` persists nothing. It gates and returns the rigs. `forgeProp` gates and returns too, but in a resident project an accepted spec also writes through as `props/<node>.json` (`stored: true`), so a prop is forged once and later sessions read it instead of re-sending the spec (see `PROPS` / `PROJECT_MEMORY`).
-5. `stage` → `commitScene`: place the cast, cameras, and lights; commit the staged scene.
-6. `block` → `perform` → `commitShot`, per beat: gate the shot plan, compile the performance into motions and a shot, commit it.
-7. `commitBeatEnd` / `commitNotes`: persist continuity handoffs and review notes per beat.
-8. `cut` → `commitFilm`: assemble the shots into the sequence.
-9. `planRender` / `seeFrame`: plan deterministic render output and capture frames (see `RENDER_GUIDES`).
+### Authoring handbooks
 
-The authoring payloads (`script`, `staging`, `blocking`, `performance`, `assemble`, `forge`) carry an **optional** `"type": "write"` discriminator. Every tool that takes one takes only the write arm, so the tool's own signature already fixes the value: omit it or supply it, whichever you prefer, and it is never the reason a call fails. A different literal is refused, and the commit tools take finished ARTIFACTS (`commitScript` takes a script, not a script write), which carry no discriminator at all: adding one there is an excess property and is refused.
+- `SCREENPLAY_WRITING`: logline-to-scene screenplay craft and revision rubric.
+- `CINEMATOGRAPHY`: shot-size meaning, 180-degree line, eyeline, screen direction, camera motion, and intentional violations.
+- `EDITING`: EDL authorship, coverage, rhythm, transitions, and the Murch priority order.
+- `OBJECT_RIGGING`: silhouette-first object design, axes, pivots, skeletons, profiles, traits, and retargeting.
+- `WORLD_BUILDING`: procedural layout, semantic anchors, scale, traversal, and environmental storytelling.
+- `MOTION`: action verbs, clip construction, contact, weight, expression, and continuity.
+- `BATTLE_SIM`: historical evidence, formations, immutable engine facts, reaction hints, and authored performance.
+- `SOUND_DESIGN`: event-derived sound, dialogue, ambience, spatialization, and mix hierarchy.
+- `ASSET_SOURCING`: license, provenance, digest, conversion, and consumer restrictions.
+- `DIFFUSION_ENHANCE`: current-model research, reference locking, structural controls, repaint review, and reroll discipline.
+- `TYPESCRIPT`: deterministic source-module patterns and typed registration.
+- `DEBUGGING`: diagnostics-first correction across ownership, compile, render, repaint, and review.
 
-Compute tools (`stage`, `block`, `perform`, `cut`, `forge`, `forgeProp`) are never gated by prerequisite order. All but `forgeProp` are pure functions of their explicit inputs; `forgeProp` is pure too, except that a resident success writes its spec through as noted above. Order is enforced only where state lives: resident commits.
-
-## Result Semantics
-
-Tool results are shaped for the tool, not forced into one top-level envelope.
-Validation tools return `{ validation }` wrapping `IAutoMovieValidation`.
-Compute tools wrap the engine verdict in a tool-specific result field: `stage` returns `staged`,
-`block` returns `blocked`, `perform` returns `performed`, `cut` returns `cut`,
-and `forge` / `forgeProp` return `forged` (with resident storage metadata when
-needed). Render and resident mutation tools carry a sibling `validation` field
-next to their payload (`plan`, `preview`, `slate`, `assets`, etc.).
-
-The verdict field is the part that uses `{ success: true, ... }` or
-`{ success: false, violations }`. Violations carry a `kind`, a field-located
-`path` (`$input...`), and a `severity`:
-
-- `error`: the artifact breaks integrity (a broken skeleton graph, an out-of-ROM joint, a dangling reference). Validation fails; fix the artifact and resubmit.
-- `warning`: physical-plausibility advice (a planted foot skates, a foot passes through the ground, bodies interpenetrate or a limb self-intersects, a pose loses balance, a stacked object would topple, an unsupported body would fall). Validation still succeeds and the warnings ride along. A film may be deliberately unphysical: accept the suggested response, restage, or acknowledge with a `physicsIntent` marker on the action (e.g. `"moonwalk"`, `"wire-fu"`, `"defies-gravity"`, `"superhuman-impact"`) which suppresses the matching warnings on later rounds. Only an *impossible* fact is an error; an *implausible* one is a suppressible warning.
-
-Never explain a violation away. Fix the owning artifact, or acknowledge it deliberately. Those are the only two honest moves.
-
-## Correction Loop
-
-For each stage: submit one coherent artifact → read the violations → fix exactly what they locate → resubmit. Prerequisite errors from resident commits are thrown with a "Do this next" list. Follow it literally. Validation tools (`validatePose`, `validateMotion`, `validateFootSkate`, `validateGroundContact`, `validateModel`, `validateScene`, `validateShot`, `validateSequence`) let you check an artifact before committing anything. `validateFootSkate` takes declared planted-foot windows; `validateGroundContact` checks selected feet against a scalar ground plane. Both consume the dense motion from `perform({ response: "full" })`, and return advisory physics warnings with the exact foot and sample path. When the committed script carries a refinement tree, `commitShot` stamps each violation with the screenplay `node` claiming the beat. The violation names where in the screenplay the correction belongs (see `REVIEW`).
-
-## Surgical Corrections
-
-Prefer the narrowest tool that fixes the fault (surgical, not a reset):
-
-- Beat commits upsert: re-committing a beat replaces exactly that beat's shot or end-state and leaves sibling beats untouched. Fixing beat 7 never means resending beats 1–6.
-- `eraseShot` / `eraseNotes`: remove ONE beat's shot (with its end-state and notes) or ONE beat's review notes. Both demand a `reason` and refuse a beat with nothing to erase.
-- `setActorPerformance`: splice one actor's performance inside one committed shot. It removes that beat's end-state and review notes, then clears the film. Replacement-only: a NEW performer changes the shot's dramatic content and belongs to `perform` + `commitShot`.
-- `setPlacement`: move one staged node without restaging the scene. Author its `transform.rotation` as **semantic Euler degrees** (`{x, y, z, order}`), never a raw quaternion, or omit it entirely for a move that only slides the node; the engine lowers the angles. It clears everything downstream exactly as `commitScene` would, because every committed shot was performed against the old world coordinates.
-
-## The Face Has Two Resolutions
-
-`emote`'s preset set is VRM 1.0's closed six, and it is the coarse handle. The fine one is the ARKit 52-channel overlay every keyframe `expression` carries, layered on top of the preset. When a beat asks for an emotion the six do not name (wary, suspicious, resigned, relieved rather than happy), author it on those channels through a clip and `enact`, rather than committing the nearest preset and calling it what the brief asked for. `PERFORMANCE` has the channel groups and a worked example.
-
-## Geometry Before Guesswork
-
-Never stage by hope. `getReach` answers two things and you need both: `reachable` says the target is inside the arm's shell (distance), and per arm `poseWithinRom` says whether the IK pose that lands there is one the joints can hold, with `romViolations` naming the axes that break it. A reach can be well inside the shell and still be a pose `perform` refuses, so read the second answer before you stage on the first. `measureDistance` measures the world; `getResolvedPose` shows where every bone actually is at a shot time. Measure, then stage. These geometry tools are resident-or-explicit: omit `scene`/`context` to read the active project. A reopened project resolves cast rest/ambient poses and reach from each actor's persisted rig (`actors/<node>.json`, written by resident `perform`). No re-commit needed. Motions stay session-only, so a query that samples a specific beat's compiled motion still needs that beat's `commitShot` in this session, or an explicit `context`. Do NOT re-run `commitScene` to recover a rig: it clears shots, beat ends, notes, and the film.
+If you do not know the next guide, locate the next file or tool you must touch in Flow, then read the one route that owns it. Do not read every handbook as ritual; route deliberately and return here when the stage changes.

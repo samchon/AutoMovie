@@ -5,6 +5,8 @@ export * from "./gait";
 export * from "./gesture";
 export * from "./horseGaits";
 export * from "./humanoidGaits";
+export { fitChainToTarget } from "./legPlant";
+export type { IAutoMoviePlantChain } from "./legPlant";
 export * from "./plantFeet";
 export * from "./sampleClock";
 export * from "./sampleMotion";

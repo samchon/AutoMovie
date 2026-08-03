@@ -2,6 +2,8 @@ import { detectFreeFall } from "@automovie/engine";
 import { IAutoMovieBody } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
+import { validationHasNoWarnings } from "../internal/predicates";
+
 const BODY: IAutoMovieBody = {
   mass: 1,
   centerOfMass: null,
@@ -9,9 +11,6 @@ const BODY: IAutoMovieBody = {
   restitution: 0.5,
 };
 const COM = { x: 0, y: 5, z: 0 };
-
-const warnCount = (r: ReturnType<typeof detectFreeFall>) =>
-  r.validation.success === true ? (r.validation.warnings ?? []).length : -1;
 
 /**
  * The gravity expectation is suppressed by anything that would hold a body up
@@ -35,7 +34,10 @@ export const test_validation_free_fall_suppressed = (): void => {
     attached: false,
     falling: false,
   });
-  TestValidator.equals("null body never falls", warnCount(noBody), 0);
+  TestValidator.predicate(
+    "null body never falls",
+    validationHasNoWarnings("bodyless free fall", noBody.validation),
+  );
   TestValidator.equals("null body has no event", noBody.events.length, 0);
 
   const attached = detectFreeFall({
@@ -46,7 +48,10 @@ export const test_validation_free_fall_suppressed = (): void => {
     attached: true,
     falling: false,
   });
-  TestValidator.equals("attached body never falls", warnCount(attached), 0);
+  TestValidator.predicate(
+    "attached body never falls",
+    validationHasNoWarnings("attached free fall", attached.validation),
+  );
   TestValidator.equals("attached body has no arc", attached.trajectory, null);
 
   const falling = detectFreeFall({
@@ -57,7 +62,10 @@ export const test_validation_free_fall_suppressed = (): void => {
     attached: false,
     falling: true,
   });
-  TestValidator.equals("already-falling not re-warned", warnCount(falling), 0);
+  TestValidator.predicate(
+    "already-falling not re-warned",
+    validationHasNoWarnings("active free fall", falling.validation),
+  );
 
   const levitating = detectFreeFall({
     node: "orb",
@@ -68,10 +76,9 @@ export const test_validation_free_fall_suppressed = (): void => {
     falling: false,
     physicsIntent: "defies-gravity",
   });
-  TestValidator.equals(
+  TestValidator.predicate(
     "intent suppresses the warning",
-    warnCount(levitating),
-    0,
+    validationHasNoWarnings("defies-gravity free fall", levitating.validation),
   );
   TestValidator.equals(
     "intent still surfaces the event",

@@ -19,6 +19,7 @@ import { type Locator, type Page, chromium } from "playwright-core";
 import { PNG } from "pngjs";
 
 import { DEFAULT_CHROME_EXECUTABLE } from "./chromeExecutable";
+import { preserveCleanupFailure } from "./preserveCleanupFailure";
 
 const DEFAULT_BASE = process.env.BASE ?? "http://127.0.0.1:5173";
 
@@ -119,74 +120,99 @@ export const captureSequenceRenderAndSee = async (
     executablePath: options.chrome,
     headless: true,
   });
-  const page = await browser.newPage({
-    viewport: { width: options.width, height: options.height },
-    deviceScaleFactor: 1,
-  });
-  const captured = new Map<number, string>();
-  let closePage = true;
+  let browserFailure: { error: unknown } | undefined;
   try {
-    const session = await openSequenceCaptureSession({
-      page,
-      url: route,
-      writeFrame: async (file, bytes, frame) => {
-        await fs.mkdir(path.dirname(file), { recursive: true });
-        await fs.writeFile(file, Buffer.from(bytes));
-        captured.set(frame.index, file);
-      },
+    const page = await browser.newPage({
+      viewport: { width: options.width, height: options.height },
+      deviceScaleFactor: 1,
     });
-    closePage = false;
+    const captured = new Map<number, string>();
+    let closePage = true;
+    let pageFailure: { error: unknown } | undefined;
     try {
-      const spec: IAutoMovieRenderSpec = {
-        target: options.target ?? session.metadata.sequence.id,
-        frameFormat: {
-          fps: options.fps,
-          width: options.width,
-          height: options.height,
-        },
-        toneMapping: "none",
-        codec: "h264",
-        pixelFormat: "yuv420p",
-        crf: 20,
-      };
-      const result = await renderSequenceAndSee({
-        sequence: session.metadata.sequence,
-        shots: session.metadata.shots,
-        spec,
-        frameDir: options.frameDir,
-        outputPath: options.outputPath,
-        adapters: {
-          captureFrame: session.captureFrame,
-          encode: createH264Encoder({ captured, spec }),
+      const session = await openSequenceCaptureSession({
+        page,
+        url: route,
+        writeFrame: async (file, bytes, frame) => {
+          await fs.mkdir(path.dirname(file), { recursive: true });
+          await fs.writeFile(file, Buffer.from(bytes));
+          captured.set(frame.index, file);
         },
       });
-      const dissolveChecks = await verifyDissolvePixels({
-        captured,
-        frames: result.frames,
-        transitions: result.plan.transitionSpans,
-        captureShot: session.captureShot,
-      });
-      const artifact: IAutoMoviePlaygroundSequenceRenderArtifact = {
-        ...result,
-        route,
-        jsonPath: options.jsonPath,
-        encoder: "h264-mp4-encoder",
-        viewport: { width: options.width, height: options.height },
-        page: {
-          duration: session.metadata.duration,
-          shots: session.metadata.shotIds,
-        },
-        dissolveChecks,
-      };
-      await fs.mkdir(path.dirname(options.jsonPath), { recursive: true });
-      await fs.writeFile(options.jsonPath, JSON.stringify(artifact, null, 2));
-      return artifact;
+      closePage = false;
+      let sessionFailure: { error: unknown } | undefined;
+      try {
+        const spec: IAutoMovieRenderSpec = {
+          target: options.target ?? session.metadata.sequence.id,
+          frameFormat: {
+            fps: options.fps,
+            width: options.width,
+            height: options.height,
+          },
+          toneMapping: "none",
+          codec: "h264",
+          pixelFormat: "yuv420p",
+          crf: 20,
+        };
+        const result = await renderSequenceAndSee({
+          sequence: session.metadata.sequence,
+          shots: session.metadata.shots,
+          spec,
+          frameDir: options.frameDir,
+          outputPath: options.outputPath,
+          adapters: {
+            captureFrame: session.captureFrame,
+            encode: createH264Encoder({ captured, spec }),
+          },
+        });
+        const dissolveChecks = await verifyDissolvePixels({
+          captured,
+          frames: result.frames,
+          transitions: result.plan.transitionSpans,
+          captureShot: session.captureShot,
+        });
+        const artifact: IAutoMoviePlaygroundSequenceRenderArtifact = {
+          ...result,
+          route,
+          jsonPath: options.jsonPath,
+          encoder: "h264-mp4-encoder",
+          viewport: { width: options.width, height: options.height },
+          page: {
+            duration: session.metadata.duration,
+            shots: session.metadata.shotIds,
+          },
+          dissolveChecks,
+        };
+        await fs.mkdir(path.dirname(options.jsonPath), { recursive: true });
+        await fs.writeFile(options.jsonPath, JSON.stringify(artifact, null, 2));
+        return artifact;
+      } catch (error) {
+        sessionFailure = { error };
+        throw error;
+      } finally {
+        await preserveCleanupFailure(
+          sessionFailure,
+          "sequence capture session",
+          () => session.close(),
+        );
+      }
+    } catch (error) {
+      pageFailure = { error };
+      throw error;
     } finally {
-      await session.close();
+      await preserveCleanupFailure(pageFailure, "sequence capture page", () =>
+        closePage ? page.close() : undefined,
+      );
     }
+  } catch (error) {
+    browserFailure = { error };
+    throw error;
   } finally {
-    if (closePage) await page.close();
-    await browser.close();
+    await preserveCleanupFailure(
+      browserFailure,
+      "sequence capture browser",
+      () => browser.close(),
+    );
   }
 };
 
@@ -318,12 +344,13 @@ const createH264Encoder =
     const frameCount = options.captured.size;
     if (frameCount === 0) throw new Error("no captured sequence frames");
     const encoder = await HME.createH264MP4Encoder();
-    encoder.width = options.spec.frameFormat.width;
-    encoder.height = options.spec.frameFormat.height;
-    encoder.frameRate = options.spec.frameFormat.fps;
-    encoder.quantizationParameter = options.spec.crf;
-    encoder.initialize();
+    let encoderFailure: { error: unknown } | undefined;
     try {
+      encoder.width = options.spec.frameFormat.width;
+      encoder.height = options.spec.frameFormat.height;
+      encoder.frameRate = options.spec.frameFormat.fps;
+      encoder.quantizationParameter = options.spec.crf;
+      encoder.initialize();
       for (let i = 0; i < frameCount; ++i) {
         const file = options.captured.get(i);
         if (file === undefined)
@@ -338,8 +365,15 @@ const createH264Encoder =
         Buffer.from(encoder.FS.readFile(encoder.outputFilename)),
       );
       return outputPath;
+    } catch (error) {
+      encoderFailure = { error };
+      throw error;
     } finally {
-      encoder.delete();
+      await preserveCleanupFailure(
+        encoderFailure,
+        "sequence H.264 encoder",
+        () => encoder.delete(),
+      );
     }
   };
 
@@ -491,8 +525,8 @@ const parseArgs = (
     base: flags.base ?? DEFAULT_BASE,
     chrome: flags.chrome ?? DEFAULT_CHROME_EXECUTABLE,
     fps: positiveNumber(flags.fps, 12, "--fps"),
-    width: even(positiveInteger(flags.width, 640, "--width")),
-    height: even(positiveInteger(flags.height, 360, "--height")),
+    width: positiveEvenInteger(flags.width, 640, "--width"),
+    height: positiveEvenInteger(flags.height, 360, "--height"),
     target: flags.target ?? null,
     outputPath,
     frameDir,
@@ -529,13 +563,16 @@ const positiveNumber = (
   return parsed;
 };
 
-const positiveInteger = (
+const positiveEvenInteger = (
   value: string | undefined,
   fallback: number,
   label: string,
-): number => Math.round(positiveNumber(value, fallback, label));
-
-const even = (value: number): number => value - (value % 2);
+): number => {
+  const parsed = positiveNumber(value, fallback, label);
+  if (!Number.isInteger(parsed) || parsed % 2 !== 0)
+    throw new Error(`${label} must be a positive even integer`);
+  return parsed;
+};
 
 const repoRoot = (): string => {
   const cwd = process.cwd();

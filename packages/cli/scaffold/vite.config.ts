@@ -6,7 +6,7 @@ import { generatedShotPlugin } from "./scripts/generatedShotPlugin";
 /** Local deterministic viewer; generated artifacts remain ordinary files. */
 export default defineConfig({
   root: ".",
-  plugins: [generatedShotPlugin(process.cwd())],
+  plugins: [generatedShotPlugin(process.cwd(), config.productionId)],
   resolve: {
     dedupe: ["three"],
   },

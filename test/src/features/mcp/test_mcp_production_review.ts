@@ -18,8 +18,11 @@ import { PNG } from "pngjs";
 
 import {
   acceptanceScenarios,
+  modelRecipe,
+  productionCompileSucceeded,
   productionDesign,
   productionFixture,
+  setProductionFixtureShotContract,
   shotContract,
   testCaptureRuntimeIdentity,
 } from "./productionFixtures";
@@ -79,7 +82,7 @@ const frameEvidenceOf = (
 ): IAutoMovieReviewEvidence => {
   return {
     kind: "frame",
-    shot: frame.shot,
+    target: frame.target,
     reviewFrame: frame.reviewFrame,
     bundle: frame.bundle,
     frame: frame.frame,
@@ -95,22 +98,40 @@ const worksheet = (
   complete = true,
 ): IAutoMovieSubmitReviewInput => {
   const graph = project.graph();
+  const preparedShotIds = new Set(
+    prepared.frames.flatMap((frame) =>
+      frame.target.kind === "shot" ? [frame.target.id] : [],
+    ),
+  );
   const visualTarget =
-    prepared.target.kind === "shot" || prepared.target.kind === "film"
+    prepared.target.kind === "shot" ||
+    prepared.target.kind === "sequence" ||
+    prepared.target.kind === "film"
       ? prepared.target
       : null;
+  const acceptanceAddressesVisualTarget = (
+    scenario: ReturnType<typeof acceptanceScenarios>[number],
+  ): boolean => {
+    if (visualTarget === null) return false;
+    if (visualTarget.kind === "film") return true;
+    const addressedShots = new Set([
+      ...(scenario.target.kind === "shot" ? [scenario.target.id] : []),
+      ...((scenario.criterion.kind === "frame" ||
+        scenario.criterion.kind === "event") &&
+      scenario.criterion.shot !== undefined
+        ? [scenario.criterion.shot]
+        : []),
+    ]);
+    return visualTarget.kind === "sequence"
+      ? [...addressedShots].some((shot) => preparedShotIds.has(shot))
+      : addressedShots.has(visualTarget.id);
+  };
   const requiredAcceptance =
     visualTarget !== null
       ? [...graph.acceptance.values()]
           .filter(
             (scenario) =>
-              scenario.required &&
-              (visualTarget.kind === "film" ||
-                (scenario.target.kind === "shot" &&
-                  scenario.target.id === visualTarget.id) ||
-                ((scenario.criterion.kind === "frame" ||
-                  scenario.criterion.kind === "event") &&
-                  scenario.criterion.shot === visualTarget.id)),
+              scenario.required && acceptanceAddressesVisualTarget(scenario),
           )
           .sort((left, right) => left.id.localeCompare(right.id))
       : [];
@@ -147,7 +168,8 @@ const worksheet = (
                   : undefined);
               const frame = prepared.frames.find(
                 (item) =>
-                  item.shot === shot &&
+                  item.target.kind === "shot" &&
+                  item.target.id === shot &&
                   item.reviewFrame === scenarioCriterion.frame &&
                   item.pass === scenarioCriterion.pass,
               );
@@ -155,7 +177,9 @@ const worksheet = (
                 ? [contractEvidence]
                 : [frameEvidenceOf(frame), contractEvidence];
             })
-          : [evidenceOf(project, prepared, index)];
+          : prepared.target.kind === "asset" && index === 0
+            ? prepared.frames.map(frameEvidenceOf)
+            : [evidenceOf(project, prepared, index)];
       return {
         criterion,
         verdict: complete || index !== 0 ? "pass" : "revise",
@@ -198,8 +222,102 @@ const captureBytes = (width = 16, height = 16): Uint8Array => {
   return PNG.sync.write(png);
 };
 
+const assetReviewViews = [
+  {
+    angleDeg: 0,
+    elevationDeg: 15,
+    pose: "rest" as const,
+    pass: "beauty" as const,
+  },
+  {
+    angleDeg: 90,
+    elevationDeg: 15,
+    pose: "rest" as const,
+    pass: "beauty" as const,
+  },
+  {
+    angleDeg: 180,
+    elevationDeg: 15,
+    pose: "rest" as const,
+    pass: "beauty" as const,
+  },
+  {
+    angleDeg: 270,
+    elevationDeg: 15,
+    pose: "rest" as const,
+    pass: "beauty" as const,
+  },
+  {
+    angleDeg: 0,
+    elevationDeg: 65,
+    pose: "rest" as const,
+    pass: "outline" as const,
+  },
+  {
+    angleDeg: 0,
+    elevationDeg: 15,
+    pose: "rom-extremes" as const,
+    pass: "beauty" as const,
+  },
+] as const;
+
+interface IProductionReviewFixtureFailure {
+  error: unknown;
+}
+
+class ProductionReviewFixtureCleanupError extends AggregateError {}
+
+export const preserveProductionReviewFixtureCleanup = (
+  failure: IProductionReviewFixtureFailure | undefined,
+  cleanup: () => void,
+): void => {
+  try {
+    cleanup();
+  } catch (cleanupFailure) {
+    if (failure === undefined) throw cleanupFailure;
+    throw new ProductionReviewFixtureCleanupError(
+      [failure.error, cleanupFailure],
+      "Production review fixture teardown failed after the test failed.",
+    );
+  }
+};
+
+interface IProductionReviewHarnessCleanup {
+  cleanup: () => unknown;
+  resource: string;
+}
+
+class ProductionReviewHarnessCleanupError extends AggregateError {}
+
+/** Attempt every review harness restoration without hiding failure. */
+export const preserveProductionReviewHarnessCleanup = (
+  failure: IProductionReviewFixtureFailure | undefined,
+  resources: readonly IProductionReviewHarnessCleanup[],
+): void => {
+  const cleanupFailures: Array<{ error: unknown; resource: string }> = [];
+  for (const resource of resources)
+    try {
+      resource.cleanup();
+    } catch (error) {
+      cleanupFailures.push({ error, resource: resource.resource });
+    }
+  if (cleanupFailures.length === 1 && failure === undefined)
+    throw cleanupFailures[0]!.error;
+  if (cleanupFailures.length !== 0)
+    throw new ProductionReviewHarnessCleanupError(
+      [
+        ...(failure === undefined ? [] : [failure.error]),
+        ...cleanupFailures.map((entry) => entry.error),
+      ],
+      `Production review harness cleanup failed${
+        failure === undefined ? "" : " after the review failed"
+      }: ${cleanupFailures.map((entry) => entry.resource).join(", ")}.`,
+    );
+};
+
 /** Review records require current exact design, source and actual PNG evidence. */
 export const test_mcp_production_review = async (): Promise<void> => {
+  let productionReviewFailure: IProductionReviewFixtureFailure | undefined;
   const fixture = productionFixture();
   try {
     const project = AutoMovieProductionProject.open(fixture.root);
@@ -311,14 +429,18 @@ export const test_mcp_production_review = async (): Promise<void> => {
     });
     TestValidator.predicate(
       "one physical frame may witness two distinct semantic review-frame ids",
-      project.setShotContract(aliasedReviewFrameShot).accepted,
+      setProductionFixtureShotContract(project, aliasedReviewFrameShot)
+        .accepted,
     );
     const compiler = new AutoMovieProductionCompiler(
       project,
       (status, snapshot) => review.queue(status, snapshot),
     );
     const compiledStatus = compiler.compile({ scope: "source" });
-    TestValidator.predicate("review fixture compiles", compiledStatus.success);
+    TestValidator.predicate(
+      "review fixture compiles",
+      productionCompileSucceeded("review fixture", compiledStatus),
+    );
     const missingVisual = review.prepare({
       target: { kind: "shot", id: "opening" },
     });
@@ -359,9 +481,11 @@ export const test_mcp_production_review = async (): Promise<void> => {
       completionBasis: "Visual evidence is missing.",
       complete: false,
     });
+    const capturedProductionIds: string[] = [];
     const oracle = new AutoMovieProductionOracleService(
       project,
       async (input) => {
+        capturedProductionIds.push(input.productionId);
         const width = input.width ?? 16;
         const height = input.height ?? 16;
         return {
@@ -371,6 +495,157 @@ export const test_mcp_production_review = async (): Promise<void> => {
           height,
         };
       },
+    );
+    for (const { pass, ...view } of assetReviewViews)
+      TestValidator.predicate(
+        `current asset turntable ${view.pose}/${view.angleDeg}/${pass}`,
+        (
+          await oracle.preview({
+            target: { kind: "asset", id: "sentinel", ...view },
+            time: 0,
+            pass,
+            width: 16,
+            height: 16,
+          })
+        ).captured,
+      );
+    const assetPrepared = review.prepare({
+      target: { kind: "asset", id: "sentinel" },
+    });
+    const missingAssetView = worksheet(project, assetPrepared);
+    for (const check of missingAssetView.checks)
+      check.evidence = check.evidence.filter(
+        (evidence) =>
+          evidence.kind !== "frame" ||
+          evidence.reviewFrame !== "rig-rom-extremes",
+      );
+    TestValidator.predicate(
+      "asset completion refuses a worksheet that omits one required view digest",
+      review
+        .submit(missingAssetView)
+        .diagnostics.some(
+          (diagnostic) =>
+            diagnostic.code === "review-asset-view-coverage-incomplete",
+        ),
+    );
+    const assetSubmitted = review.submit(worksheet(project, assetPrepared));
+    TestValidator.predicate(
+      "a consumed asset requires every isolated current view and can then discharge its production-local gate",
+      assetPrepared.frames.length === 6 &&
+        assetPrepared.diagnostics.every(
+          (diagnostic) => diagnostic.category !== "error",
+        ) &&
+        assetSubmitted.accepted &&
+        assetSubmitted.state === "complete" &&
+        review
+          .queue(compiledStatus)
+          .entries.some(
+            (entry) =>
+              entry.target.kind === "asset" &&
+              entry.target.id === "sentinel" &&
+              entry.state === "complete",
+          ),
+    );
+    const secondProject = AutoMovieProductionProject.open(
+      fixture.root,
+      "second-film",
+    );
+    TestValidator.predicate(
+      "a second production can bind the same shared model independently",
+      secondProject.setProductionDesign(
+        productionDesign({ id: "second-film", title: "second-film" }),
+      ).accepted &&
+        secondProject.setShotContract(structuredClone(aliasedReviewFrameShot))
+          .accepted,
+    );
+    const secondReview = new AutoMovieProductionReviewService(secondProject);
+    const secondCompiler = new AutoMovieProductionCompiler(
+      secondProject,
+      (status, snapshot) => secondReview.queue(status, snapshot),
+    );
+    const secondCompiled = secondCompiler.compile({ scope: "source" });
+    if (secondCompiled.success === false)
+      throw new Error(
+        `Second-production consumer compile failed:\n${JSON.stringify(
+          secondCompiled.diagnostics,
+          null,
+          2,
+        )}`,
+      );
+    TestValidator.predicate(
+      "the second production materializes its own consumer",
+      secondCompiled.success,
+    );
+    const secondOracle = new AutoMovieProductionOracleService(
+      secondProject,
+      async (input) => {
+        capturedProductionIds.push(input.productionId);
+        const width = input.width ?? 16;
+        const height = input.height ?? 16;
+        return {
+          bytes: captureBytes(width, height),
+          runtimeIdentity: testCaptureRuntimeIdentity(),
+          width,
+          height,
+        };
+      },
+    );
+    for (const { pass, ...view } of assetReviewViews)
+      TestValidator.predicate(
+        `second-production asset turntable ${view.pose}/${view.angleDeg}/${pass}`,
+        (
+          await secondOracle.preview({
+            target: { kind: "asset", id: "sentinel", ...view },
+            time: 0,
+            pass,
+            width: 16,
+            height: 16,
+          })
+        ).captured,
+      );
+    const secondAssetPrepared = secondReview.prepare({
+      target: { kind: "asset", id: "sentinel" },
+    });
+    const secondAssetSubmitted = secondReview.submit(
+      worksheet(secondProject, secondAssetPrepared),
+    );
+    TestValidator.predicate(
+      "two productions keep independent asset review addresses and fingerprints",
+      secondAssetSubmitted.accepted &&
+        secondAssetSubmitted.state === "complete" &&
+        assetSubmitted.fingerprint !== secondAssetSubmitted.fingerprint &&
+        capturedProductionIds.includes("fixture-film") &&
+        capturedProductionIds.includes("second-film") &&
+        project.reviewPath(assetPrepared.target) !==
+          secondProject.reviewPath(secondAssetPrepared.target) &&
+        project.review(assetPrepared.target)?.complete === true &&
+        secondProject.review(secondAssetPrepared.target)?.complete === true,
+    );
+    const originalModel = modelRecipe();
+    TestValidator.predicate(
+      "modifying a consumed model makes its completed asset review stale",
+      project.setModelRecipe({
+        ...originalModel,
+        palette: { body: "#d6b46c" },
+      }).accepted &&
+        review
+          .queue()
+          .entries.some(
+            (entry) =>
+              entry.target.kind === "asset" &&
+              entry.target.id === "sentinel" &&
+              entry.state === "stale",
+          ) &&
+        compiler
+          .lint({ scope: "review" })
+          .diagnostics.some(
+            (diagnostic) => diagnostic.code === "asset-review-stale",
+          ) &&
+        project.setModelRecipe(originalModel).accepted &&
+        productionCompileSucceeded(
+          "restored reviewed model",
+          compiler.compile({ scope: "source" }),
+        ),
     );
     const thumbnail = await oracle.preview({
       target: { kind: "shot", id: "opening" },
@@ -590,7 +865,7 @@ export const test_mcp_production_review = async (): Promise<void> => {
     project.graph = residentGraph;
     const ambiguousEventFile = path.join(
       fixture.root,
-      ".automovie/design/acceptance/ambiguous-film-event.json",
+      ".automovie/design/fixture-film/acceptance/ambiguous-film-event.json",
     );
     fs.writeFileSync(
       ambiguousEventFile,
@@ -773,8 +1048,17 @@ export const test_mcp_production_review = async (): Promise<void> => {
     });
     const incomplete = review.submit(incompleteSheet);
     TestValidator.predicate(
-      "an actionable unfinished worksheet has an incomplete state",
-      incomplete.accepted && incomplete.state === "incomplete",
+      "an actionable false verdict is stored and remains in the queue",
+      incomplete.accepted &&
+        incomplete.state === "incomplete" &&
+        review
+          .queue()
+          .entries.some(
+            (entry) =>
+              entry.target.kind === "source" &&
+              entry.target.path === sourceTarget.path &&
+              entry.state === "incomplete",
+          ),
     );
     const contradictory = worksheet(project, sourcePrepared);
     contradictory.checks[0]!.verdict = "revise";
@@ -894,7 +1178,7 @@ export const test_mcp_production_review = async (): Promise<void> => {
     );
     const productionPath = path.join(
       fixture.root,
-      ".automovie/design/production.json",
+      ".automovie/design/fixture-film/production.json",
     );
     const productionBytes = fs.readFileSync(productionPath);
     const oversizedProduction = JSON.parse(productionBytes.toString("utf8"));
@@ -1103,13 +1387,29 @@ export const test_mcp_production_review = async (): Promise<void> => {
     let commitBoundarySubmission: ReturnType<
       AutoMovieProductionReviewService["submit"]
     >;
+    let shotCommitRaceFailure: IProductionReviewFixtureFailure | undefined;
     try {
       commitBoundarySubmission = review.submit(
         worksheet(project, commitBoundaryPrepared),
       );
+    } catch (error) {
+      shotCommitRaceFailure = { error };
+      throw error;
     } finally {
-      project.commitReview = residentCommitReview;
-      fs.writeFileSync(sourceFile, sourceBeforeRace);
+      preserveProductionReviewHarnessCleanup(shotCommitRaceFailure, [
+        {
+          resource: "shot commit-review hook",
+          cleanup: () => {
+            project.commitReview = residentCommitReview;
+          },
+        },
+        {
+          resource: "shot source bytes",
+          cleanup: () => {
+            fs.writeFileSync(sourceFile, sourceBeforeRace);
+          },
+        },
+      ]);
     }
     const reviewAfterCommitRace = fs.existsSync(reviewPath)
       ? fs.readFileSync(reviewPath)
@@ -1162,8 +1462,10 @@ export const test_mcp_production_review = async (): Promise<void> => {
     const noVisualResult = review.submit(noVisualBasis);
     const highRiskNotApplicable = worksheet(project, shotPrepared);
     const highRiskCriterion = highRiskNotApplicable.checks.find(
-      (check) => check.criterion === "motion-and-grounding",
-    )!;
+      (check) => check.criterion === "beat-fidelity",
+    );
+    if (highRiskCriterion === undefined)
+      throw new Error("shot worksheet has no beat-fidelity criterion");
     highRiskCriterion.verdict = "not-applicable";
     const highRiskNotApplicableResult = review.submit(highRiskNotApplicable);
     const acceptanceCoverageMismatch = worksheet(project, shotPrepared);
@@ -1214,7 +1516,7 @@ export const test_mcp_production_review = async (): Promise<void> => {
     badRegion.checks[0]!.evidence = [
       {
         kind: "frame",
-        shot: frame.shot,
+        target: frame.target,
         reviewFrame: frame.reviewFrame,
         bundle: frame.bundle,
         frame: frame.frame,
@@ -1228,7 +1530,7 @@ export const test_mcp_production_review = async (): Promise<void> => {
     staleFrame.checks[0]!.evidence = [
       {
         kind: "frame",
-        shot: frame.shot,
+        target: frame.target,
         reviewFrame: frame.reviewFrame,
         bundle: "renders/absent",
         frame: 0,
@@ -1266,7 +1568,7 @@ export const test_mcp_production_review = async (): Promise<void> => {
         sheet.checks[0]!.evidence = [
           {
             kind: "frame",
-            shot: frame.shot,
+            target: frame.target,
             reviewFrame: frame.reviewFrame,
             bundle: frame.bundle,
             frame: frame.frame,
@@ -1365,8 +1667,7 @@ export const test_mcp_production_review = async (): Promise<void> => {
     );
 
     const legacyBundleDirectory = path.join(
-      fixture.root,
-      "renders",
+      project.renderRoot(),
       "retained-v2-history",
     );
     const currentBundleManifest = JSON.parse(
@@ -1389,8 +1690,7 @@ export const test_mcp_production_review = async (): Promise<void> => {
       }),
     );
     const legacyFilmBundleDirectory = path.join(
-      fixture.root,
-      "renders",
+      project.renderRoot(),
       "retained-v2-film-history",
     );
     fs.mkdirSync(legacyFilmBundleDirectory, { recursive: true });
@@ -1436,10 +1736,46 @@ export const test_mcp_production_review = async (): Promise<void> => {
     }
     TestValidator.predicate(
       "review compile gate passes only after the full queue",
-      compiler.compile({ scope: "review" }).success,
+      productionCompileSucceeded(
+        "full review queue",
+        compiler.compile({ scope: "review" }),
+      ),
     );
     const filmTarget = { kind: "film" as const, id: "fixture-film" };
     const storedShotReview = project.review(shotTarget)!;
+    const legacyShotReview = JSON.parse(
+      JSON.stringify(storedShotReview),
+    ) as Record<string, unknown> & {
+      checks: Array<{ evidence: Array<Record<string, unknown>> }>;
+    };
+    for (const check of legacyShotReview.checks)
+      for (const evidence of check.evidence)
+        if (
+          evidence.kind === "frame" &&
+          typeof evidence.target === "object" &&
+          evidence.target !== null &&
+          (evidence.target as Record<string, unknown>).kind === "shot"
+        ) {
+          evidence.shot = (evidence.target as Record<string, unknown>).id;
+          delete evidence.target;
+        }
+    fs.writeFileSync(
+      project.reviewPath(shotTarget),
+      `${JSON.stringify(legacyShotReview, null, 2)}\n`,
+    );
+    const normalizedLegacyShotReview = project.review(shotTarget);
+    TestValidator.predicate(
+      "legacy v1 shot-frame evidence is normalized before current schema validation",
+      normalizedLegacyShotReview?.checks.some((check) =>
+        check.evidence.some(
+          (evidence) =>
+            evidence.kind === "frame" &&
+            evidence.target.kind === "shot" &&
+            evidence.target.id === shotTarget.id,
+        ),
+      ) === true,
+    );
+    project.commitReview(storedShotReview);
     const filmBeforeChildReviewChange = review.prepare({
       target: filmTarget,
     }).fingerprint;
@@ -1474,13 +1810,29 @@ export const test_mcp_production_review = async (): Promise<void> => {
     let filmCommitSubmission: ReturnType<
       AutoMovieProductionReviewService["submit"]
     >;
+    let filmCommitRaceFailure: IProductionReviewFixtureFailure | undefined;
     try {
       filmCommitSubmission = review.submit(
         worksheet(project, filmCommitPrepared),
       );
+    } catch (error) {
+      filmCommitRaceFailure = { error };
+      throw error;
     } finally {
-      project.commitReview = residentFilmCommitReview;
-      fs.writeFileSync(filmSourceFile, filmSourceBeforeRace);
+      preserveProductionReviewHarnessCleanup(filmCommitRaceFailure, [
+        {
+          resource: "film commit-review hook",
+          cleanup: () => {
+            project.commitReview = residentFilmCommitReview;
+          },
+        },
+        {
+          resource: "film source bytes",
+          cleanup: () => {
+            fs.writeFileSync(filmSourceFile, filmSourceBeforeRace);
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "a film-source mutation during review commit rolls back the stale ledger",
@@ -1519,7 +1871,9 @@ export const test_mcp_production_review = async (): Promise<void> => {
       kind: "acceptance",
       id: filmMetricAcceptance.id,
     });
-    fs.rmSync(path.join(fixture.root, ".automovie/design/production.json"));
+    fs.rmSync(
+      path.join(fixture.root, ".automovie/design/fixture-film/production.json"),
+    );
     const noProductionFrames = review.prepare({ target: shotTarget });
     project.setProductionDesign(productionDesign());
     project.setAcceptanceScenario(filmMetricAcceptance);
@@ -1587,7 +1941,12 @@ export const test_mcp_production_review = async (): Promise<void> => {
           .compile({ scope: "review" })
           .diagnostics.some((item) => item.code === "review-stale"),
     );
+  } catch (error) {
+    productionReviewFailure = { error };
+    throw error;
   } finally {
-    fixture.dispose();
+    preserveProductionReviewFixtureCleanup(productionReviewFailure, () =>
+      fixture.dispose(),
+    );
   }
 };

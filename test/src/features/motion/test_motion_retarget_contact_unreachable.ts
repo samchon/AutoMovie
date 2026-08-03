@@ -1,7 +1,12 @@
 import { retargetHumanoidMotion } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
-import { hasWarning, vclose, warningCount } from "../internal/predicates";
+import {
+  validationHasNoWarnings,
+  validationHasWarning,
+  validationHasWarningCount,
+  vclose,
+} from "../internal/predicates";
 import {
   keyframeWorld,
   mapped,
@@ -49,22 +54,21 @@ export const test_motion_retarget_contact_unreachable = (): void => {
 
   // 1. a warning per foot, not a failure.
   const pinned = retargetHumanoidMotion({ motion, source, target });
+  TestValidator.predicate(
+    "one plausibility warning per pinned foot",
+    validationHasWarningCount(
+      "unreachable foot contacts",
+      pinned.validation,
+      2,
+    ),
+  );
   if (pinned.motion === null || pinned.characterization === null)
     throw new Error("an unreachable contact must not fail the retarget");
-  TestValidator.equals(
-    "an unreachable contact still succeeds",
-    pinned.validation.success,
-    true,
-  );
-  TestValidator.equals(
-    "one plausibility warning per pinned foot",
-    warningCount(pinned.validation),
-    2,
-  );
   for (const slot of ["leftFoot", "rightFoot"] as const)
     TestValidator.predicate(
       `${slot} reports its residual on the keyframe that missed most`,
-      hasWarning(
+      validationHasWarning(
+        `${slot} unreachable contact`,
         pinned.validation,
         "physics",
         `$input.motion.keyframes[0].pose.joints["${slot}"]`,
@@ -112,10 +116,9 @@ export const test_motion_retarget_contact_unreachable = (): void => {
     target,
     contacts: { tolerance: 0.5 },
   });
-  if (tolerant.motion === null) throw new Error("tolerant retarget failed");
-  TestValidator.equals(
+  TestValidator.predicate(
     "a wider contact budget stops reporting the same residual",
-    warningCount(tolerant.validation),
-    0,
+    validationHasNoWarnings("tolerant retarget contact", tolerant.validation),
   );
+  if (tolerant.motion === null) throw new Error("tolerant retarget failed");
 };

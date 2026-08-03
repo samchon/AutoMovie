@@ -1,11 +1,18 @@
-import { probeProductionMedia } from "@automovie/mcp";
+import {
+  muxProductionFeatureMp4,
+  probeProductionMedia,
+  probeProductionVideoMp4,
+  trimProductionAudioPresentation,
+} from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
+import { createFile } from "mp4box";
 
 import {
   productionAudioMp4,
   productionH264Mp4,
   productionInterframeH264Mp4,
   productionMpeg4Part2Mp4,
+  productionOpusMp4,
   productionPng,
   productionWebVtt,
 } from "./productionMediaFixtures";
@@ -46,7 +53,7 @@ export const test_mcp_production_media_probe = async (): Promise<void> => {
           mediaType: "image/jpeg",
           bytes: png,
         }),
-      "require image/png",
+      "requires image/png",
     ),
   );
   TestValidator.predicate(
@@ -60,6 +67,78 @@ export const test_mcp_production_media_probe = async (): Promise<void> => {
         }),
       "unrecognised content",
     ),
+  );
+  const soundEvidence = Buffer.from(
+    JSON.stringify({
+      version: 1,
+      plan: { events: [{ id: "volley" }] },
+      analysis: {
+        clippingSamples: 0,
+        eventAlignment: [{ passed: true }],
+      },
+      tts: [{ line: "captain" }],
+    }),
+  );
+  TestValidator.equals(
+    "sound evidence derives event, dialogue, clipping and alignment facts",
+    probeProductionMedia({
+      kind: "audio-mix",
+      mediaType: "application/json",
+      bytes: soundEvidence,
+    }),
+    {
+      kind: "sound-evidence",
+      eventCount: 1,
+      dialogueCount: 1,
+      clippingSamples: 0,
+      eventAlignmentPassed: true,
+    },
+  );
+  TestValidator.predicate(
+    "sound evidence must be UTF-8 JSON with complete event analysis",
+    refused(
+      () =>
+        probeProductionMedia({
+          kind: "audio-mix",
+          mediaType: "application/json",
+          bytes: Buffer.from([0xc3]),
+        }),
+      "UTF-8 JSON",
+    ) &&
+      refused(
+        () =>
+          probeProductionMedia({
+            kind: "audio-mix",
+            mediaType: "application/json",
+            bytes: Buffer.from(
+              JSON.stringify({
+                version: 1,
+                plan: { events: [{}] },
+                analysis: { clippingSamples: 0, eventAlignment: [] },
+                tts: [],
+              }),
+            ),
+          }),
+        "does not cover",
+      ) &&
+      refused(
+        () =>
+          probeProductionMedia({
+            kind: "audio-mix",
+            mediaType: "application/json",
+            bytes: Buffer.from("{}"),
+          }),
+        "lacks a versioned plan",
+      ),
+  );
+  TestValidator.equals(
+    "audio-mix PNG evidence is decoded as a raster",
+    probeProductionMedia({
+      kind: "audio-mix",
+      mediaType: "image/png",
+      bytes: png,
+    }),
+    { kind: "png", width: 16, height: 8 },
   );
 
   const vtt = productionWebVtt();
@@ -289,21 +368,190 @@ export const test_mcp_production_media_probe = async (): Promise<void> => {
     fps: 24,
     frameCount: 4,
   });
-  const feature = probeProductionMedia({
-    kind: "feature",
+  const videoProbe = probeProductionMedia({
+    kind: "guide-pass",
     mediaType: "video/mp4",
     bytes: video,
   });
   TestValidator.predicate(
-    "the feature probe derives H.264 geometry and frame timing",
+    "the guide probe derives H.264 geometry and frame timing",
+    videoProbe.kind === "video" &&
+      videoProbe.container === "mp4" &&
+      videoProbe.codec === "h264" &&
+      videoProbe.width === 16 &&
+      videoProbe.height === 16 &&
+      videoProbe.frameCount === 4 &&
+      videoProbe.fps === 24 &&
+      Math.abs(videoProbe.runtimeSeconds - 4 / 24) < 1e-9,
+  );
+  const featureBytes = muxProductionFeatureMp4({
+    video,
+    audio: productionOpusMp4(8_000),
+  });
+  const feature = probeProductionMedia({
+    kind: "feature",
+    mediaType: "video/mp4",
+    bytes: featureBytes,
+  });
+  TestValidator.predicate(
+    "a feature requires and preserves exact-runtime H.264 plus stereo Opus",
     feature.kind === "video" &&
-      feature.container === "mp4" &&
-      feature.codec === "h264" &&
-      feature.width === 16 &&
-      feature.height === 16 &&
       feature.frameCount === 4 &&
       feature.fps === 24 &&
       Math.abs(feature.runtimeSeconds - 4 / 24) < 1e-9,
+  );
+  TestValidator.predicate(
+    "video-only MP4 cannot satisfy the final feature contract",
+    refused(
+      () =>
+        probeProductionMedia({
+          kind: "feature",
+          mediaType: "video/mp4",
+          bytes: video,
+        }),
+      "exactly 2",
+    ),
+  );
+  TestValidator.predicate(
+    "the intermediate production-video probe accepts only H.264-only MP4",
+    probeProductionVideoMp4(video).frameCount === 4 &&
+      refused(() => probeProductionVideoMp4(featureBytes), "exactly one") &&
+      refused(
+        () => probeProductionVideoMp4(productionOpusMp4(8_000)),
+        "0 video tracks",
+      ),
+  );
+  TestValidator.predicate(
+    "feature mux refuses unequal track clocks",
+    refused(
+      () =>
+        muxProductionFeatureMp4({
+          video,
+          audio: productionOpusMp4(7_999),
+        }),
+      "exactly equal",
+    ),
+  );
+  TestValidator.predicate(
+    "feature mux refuses a non-48-kHz-stereo final audio track",
+    refused(
+      () =>
+        muxProductionFeatureMp4({
+          video,
+          audio: productionOpusMp4(8_000, 1),
+        }),
+      "48 kHz stereo",
+    ),
+  );
+  const editFile = createFile();
+  editFile.init({ brands: ["isom"], timescale: 48_000, duration: 960 });
+  const editTrack = editFile.addTrack({
+    type: "Opus",
+    hdlr: "soun",
+    timescale: 48_000,
+    media_duration: 960,
+    duration: 960,
+  });
+  TestValidator.predicate(
+    "audio presentation edits reject malformed clocks and duplicate edits",
+    refused(
+      () =>
+        trimProductionAudioPresentation({
+          file: editFile,
+          track: 0,
+          mediaTimescale: 48_000,
+          movieTimescale: 48_000,
+          primingSamples: 0,
+          presentationSamples: 960,
+        }),
+      "finite sample counts",
+    ) &&
+      refused(
+        () =>
+          trimProductionAudioPresentation({
+            file: editFile,
+            track: editTrack,
+            mediaTimescale: 48_000,
+            movieTimescale: 48_000,
+            primingSamples: -1,
+            presentationSamples: 960,
+          }),
+        "finite sample counts",
+      ) &&
+      refused(
+        () =>
+          trimProductionAudioPresentation({
+            file: editFile,
+            track: editTrack,
+            mediaTimescale: 3,
+            movieTimescale: 2,
+            primingSamples: 0,
+            presentationSamples: 1,
+          }),
+        "does not land",
+      ) &&
+      refused(
+        () =>
+          trimProductionAudioPresentation({
+            file: editFile,
+            track: editTrack + 1,
+            mediaTimescale: 48_000,
+            movieTimescale: 48_000,
+            primingSamples: 0,
+            presentationSamples: 960,
+          }),
+        "existing track",
+      ),
+  );
+  trimProductionAudioPresentation({
+    file: editFile,
+    track: editTrack,
+    mediaTimescale: 48_000,
+    movieTimescale: 48_000,
+    primingSamples: 312,
+    presentationSamples: 960,
+  });
+  TestValidator.predicate(
+    "audio presentation edits cannot be added twice",
+    refused(
+      () =>
+        trimProductionAudioPresentation({
+          file: editFile,
+          track: editTrack,
+          mediaTimescale: 48_000,
+          movieTimescale: 48_000,
+          primingSamples: 312,
+          presentationSamples: 960,
+        }),
+      "already has",
+    ),
+  );
+  const headerless = createFile();
+  headerless.init({ brands: ["isom"], timescale: 48_000, duration: 960 });
+  const headerlessTrack = headerless.addTrack({
+    type: "Opus",
+    hdlr: "soun",
+    timescale: 48_000,
+    media_duration: 960,
+    duration: 960,
+  });
+  Object.defineProperty(headerless, "getBox", {
+    value: () => undefined,
+  });
+  TestValidator.predicate(
+    "audio presentation edits require movie metadata",
+    refused(
+      () =>
+        trimProductionAudioPresentation({
+          file: headerless,
+          track: headerlessTrack,
+          mediaTimescale: 48_000,
+          movieTimescale: 48_000,
+          primingSamples: 0,
+          presentationSamples: 960,
+        }),
+      "movie header",
+    ),
   );
   TestValidator.predicate(
     "guide passes use the same decoded video contract",
@@ -432,7 +680,7 @@ export const test_mcp_production_media_probe = async (): Promise<void> => {
     refused(
       () =>
         probeProductionMedia({
-          kind: "feature",
+          kind: "guide-pass",
           mediaType: "video/mp4",
           bytes: escapedSamples,
         }),
@@ -447,7 +695,7 @@ export const test_mcp_production_media_probe = async (): Promise<void> => {
     refused(
       () =>
         probeProductionMedia({
-          kind: "feature",
+          kind: "guide-pass",
           mediaType: "video/mp4",
           bytes: zeroVideoClock,
         }),
@@ -462,7 +710,7 @@ export const test_mcp_production_media_probe = async (): Promise<void> => {
     refused(
       () =>
         probeProductionMedia({
-          kind: "feature",
+          kind: "guide-pass",
           mediaType: "video/mp4",
           bytes: zeroSampleDuration,
         }),
@@ -477,7 +725,7 @@ export const test_mcp_production_media_probe = async (): Promise<void> => {
     refused(
       () =>
         probeProductionMedia({
-          kind: "feature",
+          kind: "guide-pass",
           mediaType: "video/mp4",
           bytes: noSyncSample,
         }),
@@ -496,7 +744,7 @@ export const test_mcp_production_media_probe = async (): Promise<void> => {
     refused(
       () =>
         probeProductionMedia({
-          kind: "feature",
+          kind: "guide-pass",
           mediaType: "video/mp4",
           bytes: unbackedSamples,
         }),
@@ -508,7 +756,7 @@ export const test_mcp_production_media_probe = async (): Promise<void> => {
     refused(
       () =>
         probeProductionMedia({
-          kind: "feature",
+          kind: "guide-pass",
           mediaType: "video/mp4",
           bytes: productionMpeg4Part2Mp4(),
         }),
@@ -516,20 +764,34 @@ export const test_mcp_production_media_probe = async (): Promise<void> => {
     ),
   );
 
-  const audio = productionAudioMp4();
+  const audio = productionOpusMp4(48_000);
   const audioProbe = probeProductionMedia({
     kind: "audio-mix",
     mediaType: "audio/mp4",
     bytes: audio,
   });
   TestValidator.predicate(
-    "the audio probe derives real codec, clock, channels and sample rate",
+    "the audio probe derives presentation clock, profile, packets and priming",
     audioProbe.kind === "audio" &&
       audioProbe.container === "mp4" &&
-      audioProbe.codec.length > 0 &&
-      audioProbe.runtimeSeconds > 0 &&
-      audioProbe.channels === 1 &&
-      audioProbe.sampleRate > 0,
+      audioProbe.codec.toLowerCase().startsWith("opus") &&
+      audioProbe.runtimeSeconds === 1 &&
+      audioProbe.channels === 2 &&
+      audioProbe.sampleRate === 48_000 &&
+      audioProbe.sampleCount > 0 &&
+      audioProbe.primingSamples === 312,
+  );
+  TestValidator.predicate(
+    "audio-mix rejects a resident mono AAC track",
+    refused(
+      () =>
+        probeProductionMedia({
+          kind: "audio-mix",
+          mediaType: "audio/mp4",
+          bytes: productionAudioMp4(),
+        }),
+      "48 kHz stereo",
+    ),
   );
   const zeroAudioClock = Buffer.from(audio);
   const audioMediaHeader = boxTypeOffset(zeroAudioClock, "mdhd");
@@ -582,8 +844,13 @@ export const test_mcp_production_media_probe = async (): Promise<void> => {
       "video tracks; none are allowed",
     ),
   );
-  const trackless = Buffer.from(audio);
-  trackless.write("free", boxTypeOffset(trackless, "trak"), "ascii");
+  const tracklessFile = createFile();
+  tracklessFile.init({
+    brands: ["isom", "iso2", "mp41"],
+    timescale: 48_000,
+    duration: 48_000,
+  });
+  const trackless = new Uint8Array(tracklessFile.getBuffer().buffer);
   TestValidator.predicate(
     "an audio mix requires exactly one audio track",
     refused(

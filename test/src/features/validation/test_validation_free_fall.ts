@@ -2,7 +2,12 @@ import { detectFreeFall } from "@automovie/engine";
 import { IAutoMovieBody } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { nclose } from "../internal/predicates";
+import {
+  nclose,
+  validationHasNoWarnings,
+  validationHasWarning,
+  validationHasWarningCount,
+} from "../internal/predicates";
 
 const BODY: IAutoMovieBody = {
   mass: 1,
@@ -16,9 +21,6 @@ const FOOTPRINT = [
   { x: 1, y: 0, z: 1 },
   { x: -1, y: 0, z: 1 },
 ];
-
-const warnings = (r: ReturnType<typeof detectFreeFall>) =>
-  r.validation.success === true ? (r.validation.warnings ?? []) : [];
 
 /**
  * The default physical expectation is that an unheld body falls. A bodied
@@ -46,20 +48,18 @@ export const test_validation_free_fall = (): void => {
     attached: false,
     falling: false,
   });
-  TestValidator.equals(
-    "unsupported succeeds warning-only",
-    unheld.validation.success,
-    true,
+  TestValidator.predicate(
+    "gravity warning on the right path",
+    validationHasWarning(
+      "unsupported free fall",
+      unheld.validation,
+      "physics",
+      ".gravity",
+    ),
   );
   TestValidator.equals("one fall event", unheld.events.length, 1);
   TestValidator.equals("fall event kind", unheld.events[0]!.kind, "fall");
   TestValidator.predicate("suggested arc present", unheld.trajectory !== null);
-  TestValidator.predicate(
-    "gravity warning on the right path",
-    warnings(unheld).some(
-      (w) => w.kind === "physics" && w.path.includes(".gravity"),
-    ),
-  );
 
   const outside = detectFreeFall({
     body: BODY,
@@ -68,10 +68,13 @@ export const test_validation_free_fall = (): void => {
     attached: false,
     falling: false,
   });
-  TestValidator.equals(
+  TestValidator.predicate(
     "COM outside footprint warns",
-    warnings(outside).length,
-    1,
+    validationHasWarningCount(
+      "outside support footprint",
+      outside.validation,
+      1,
+    ),
   );
   TestValidator.predicate(
     "no-node arc uses the default node",
@@ -86,15 +89,9 @@ export const test_validation_free_fall = (): void => {
     attached: false,
     falling: false,
   });
-  TestValidator.equals(
-    "supported succeeds cleanly",
-    supported.validation.success,
-    true,
-  );
-  TestValidator.equals(
+  TestValidator.predicate(
     "supported has no warning",
-    warnings(supported).length,
-    0,
+    validationHasNoWarnings("supported free fall", supported.validation),
   );
   TestValidator.equals("supported has no event", supported.events.length, 0);
   TestValidator.equals("supported has no arc", supported.trajectory, null);

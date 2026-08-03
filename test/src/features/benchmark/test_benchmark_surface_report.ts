@@ -72,9 +72,12 @@ export const test_benchmark_surface_report = (): void => {
     "each surface is reported separately, in code-unit order",
     report.surfaces.map(
       (surface) =>
-        `${surface.surface}:${surface.scored}/${surface.gateFailed}/${surface.infraExcluded}:${surface.denominator}`,
+        `${surface.surface}:${surface.lane}:${surface.scored}/${surface.gateFailed}/${surface.infraExcluded}:${surface.denominator}`,
     ),
-    ["legacy-compact:1/0/1:1", "production:1/0/0:1"],
+    [
+      "legacy-compact:deterministic:1/0/1:1",
+      "production:deterministic:1/0/0:1",
+    ],
   );
   TestValidator.equals(
     "the legacy run's lower score and higher friction are both visible",
@@ -258,6 +261,26 @@ export const test_benchmark_surface_report = (): void => {
       taskDigest: changedTaskDigest,
     }).versionDrift,
     [`taskDigest: ${productionVerdict.taskDigest} -> ${changedTaskDigest}`],
+  );
+  const repaintVerdict = {
+    ...productionVerdict,
+    runId: digestBenchmarkValue("repaint-run"),
+    lane: "repaint" as const,
+  };
+  TestValidator.equals(
+    "delivery lanes form separate aggregates and comparisons",
+    {
+      lanes: reportAutoMovieBenchmark([
+        productionVerdict,
+        repaintVerdict,
+      ]).surfaces.map((surface) => surface.lane),
+      drift: diffAutoMovieBenchmarkVerdicts(productionVerdict, repaintVerdict)
+        .versionDrift,
+    },
+    {
+      lanes: ["deterministic", "repaint"],
+      drift: ["lane: deterministic -> repaint"],
+    },
   );
   const sameLaw = diffAutoMovieBenchmarkVerdicts(
     productionVerdict,

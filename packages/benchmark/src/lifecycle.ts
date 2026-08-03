@@ -39,6 +39,7 @@ export type AutoMovieBenchmarkInfraKind =
   | "runner-interrupted"
   | "account-limit"
   | "rate-limit"
+  | "repaint-adapter-unavailable"
   | "harness-error";
 
 /** One infrastructure failure that removes a run from the denominator. */

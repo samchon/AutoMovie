@@ -25,7 +25,7 @@
   "license": "MIT",
   "dependencies": {
     "@automovie/engine": "workspace:^",
-    "@automovie/forge": "workspace:^",
+    "@automovie/face": "workspace:^",
     "@automovie/interface": "workspace:^",
     "@automovie/render": "workspace:^",
     "@automovie/viewer": "workspace:^",

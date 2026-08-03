@@ -9,7 +9,11 @@ import {
 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { vclose } from "../internal/predicates";
+import {
+  validationHasNoWarnings,
+  validationHasWarningCount,
+  vclose,
+} from "../internal/predicates";
 
 const IDENTITY = { x: 0, y: 0, z: 0, w: 1 };
 const UNIT = { x: 1, y: 1, z: 1 };
@@ -81,17 +85,9 @@ export const test_validation_affordance_stack = (): void => {
     centerOfMass: seat.translation,
     support,
   });
-  TestValidator.equals(
-    "centered stack is stable",
-    stable.validation.success,
-    true,
-  );
-  TestValidator.equals(
+  TestValidator.predicate(
     "no warning for a stable stack",
-    stable.validation.success === true
-      ? (stable.validation.warnings?.length ?? 0)
-      : -1,
-    0,
+    validationHasNoWarnings("centered affordance stack", stable.validation),
   );
   TestValidator.equals("no toppling suggested", stable.toppling, null);
 
@@ -100,17 +96,13 @@ export const test_validation_affordance_stack = (): void => {
     centerOfMass: { x: 3.7, y: 1, z: 2 },
     support,
   });
-  TestValidator.equals(
-    "overhung stack still succeeds (warning-only)",
-    overhung.validation.success,
-    true,
-  );
-  TestValidator.equals(
+  TestValidator.predicate(
     "overhang raises one physics warning",
-    overhung.validation.success === true
-      ? (overhung.validation.warnings?.length ?? 0)
-      : -1,
-    1,
+    validationHasWarningCount(
+      "overhung affordance stack",
+      overhung.validation,
+      1,
+    ),
   );
   TestValidator.predicate(
     "toppling falls toward the overhang (+X)",

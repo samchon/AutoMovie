@@ -13,7 +13,11 @@ import {
   makeMotion,
   makePose,
 } from "../internal/fixtures";
-import { hasViolation, hasWarning, warningCount } from "../internal/predicates";
+import {
+  hasViolation,
+  validationHasNoWarnings,
+  validationHasWarning,
+} from "../internal/predicates";
 
 /** A looping travel clip whose root advances x = 2t over a 1 s cycle. */
 const walk: IAutoMovieMotion = {
@@ -113,14 +117,18 @@ export const test_film_continuity_walk = (): void => {
   const resumed = validateFilmContinuity({
     beats: [beatProps("b1", 0, 0.5), beatProps("b2", 1, 0.5)],
   });
-  TestValidator.equals("a resumed cut has no drift", warningCount(resumed), 0);
+  TestValidator.predicate(
+    "a resumed cut has no drift",
+    validationHasNoWarnings("resumed film cut", resumed),
+  );
 
   const drifted = validateFilmContinuity({
     beats: [beatProps("b1", 0, 0.5), beatProps("b2", 0, 0.5)],
   });
   TestValidator.predicate(
     "a cut back to the origin warns, keyed by beat index",
-    hasWarning(
+    validationHasWarning(
+      "film beat continuity drift",
       drifted,
       "physics",
       "$input.beats[1].opening.actors[node=hero].transform.translation",

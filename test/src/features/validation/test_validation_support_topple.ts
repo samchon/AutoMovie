@@ -4,6 +4,7 @@ import { TestValidator } from "@nestia/e2e";
 import {
   hasViolation,
   nclose,
+  validationHasWarningCount,
   vclose,
   violationCount,
 } from "../internal/predicates";
@@ -49,15 +50,9 @@ export const test_validation_support_topple = (): void => {
     centerOfMass: v(3, 1),
     support: square,
   });
-  TestValidator.equals(
-    "overhang is a warning, not an error",
-    topple.validation.success,
-    true,
-  );
   TestValidator.predicate(
     "one topple warning surfaced",
-    topple.validation.success === true &&
-      (topple.validation.warnings?.length ?? 0) === 1,
+    validationHasWarningCount("support overhang", topple.validation, 1),
   );
   TestValidator.predicate(
     "overshoot = distance - margin",

@@ -15,7 +15,7 @@ import {
   buildHairShell,
   buildHairTails,
   buildSkullShell,
-} from "@automovie/forge";
+} from "@automovie/face";
 import {
   AutoMovieFaceParameterName,
   IAutoMovieFace,
@@ -290,8 +290,15 @@ const IDENTITY = NAMES.length; // morph slot of the per-character likeness
 // likeness deltas are character DATA (not in the repo): loaded when present
 let identityLoaded = false;
 let identityUrl = "";
+let identityRequest: {
+  promise: Promise<void>;
+  token: symbol;
+  url: string;
+} | null = null;
 const loadIdentity = (url: string): Promise<void> => {
+  if (identityRequest?.url === url) return identityRequest.promise;
   if (url === identityUrl) return Promise.resolve();
+  identityRequest = null;
   identityUrl = url;
   identityLoaded = false;
   identityDelta.fill(0);
@@ -304,15 +311,33 @@ const loadIdentity = (url: string): Promise<void> => {
     done();
     return Promise.resolve();
   }
-  return fetch(url)
+  const token = Symbol(url);
+  const ownsRequest = (): boolean =>
+    identityRequest?.token === token && identityUrl === url;
+  const promise = fetch(url)
     .then((r) => (r.ok ? r.json() : null))
     .then((j: { identity: number[] } | null) => {
-      if (!j || identityUrl !== url) return;
+      if (!ownsRequest()) return;
+      if (!j) {
+        identityRequest = null;
+        identityUrl = "";
+        return;
+      }
       identityDelta.set(j.identity);
       identityLoaded = true;
     })
-    .catch(() => undefined)
-    .then(done);
+    .catch(() => {
+      if (ownsRequest()) {
+        identityRequest = null;
+        identityUrl = "";
+      }
+    })
+    .then(() => {
+      if (identityRequest?.token === token) identityRequest = null;
+      done();
+    });
+  identityRequest = { promise, token, url };
+  return promise;
 };
 void loadIdentity("/models/hero1-identity.json");
 faceGeometry.computeVertexNormals();
@@ -465,17 +490,25 @@ const faceMesh = new THREE.Mesh<
 >(faceGeometry, faceMaterial);
 // per-character photo skin baked into the canonical UV layout (character
 // data, not in the repo): swaps in when present
-let photoMaterialRef: THREE.MeshBasicMaterial | null = null;
+const photoMaterial = new THREE.MeshBasicMaterial({ side: THREE.DoubleSide });
 const skinCache = new Map<string, THREE.Texture>();
 const loadSkin = (url: string): THREE.Texture => {
-  let t = skinCache.get(url);
-  if (!t) {
-    t = new THREE.TextureLoader().load(url, matchSkullTone);
-    t.colorSpace = THREE.SRGBColorSpace;
-    t.flipY = false;
-    skinCache.set(url, t);
-  } else if (t.image) matchSkullTone(t);
-  return t;
+  const cached = skinCache.get(url);
+  if (cached) return cached;
+  const texture = new THREE.TextureLoader().load(
+    url,
+    (loaded) => {
+      if (photoMaterial.map === loaded) matchSkullTone(loaded);
+    },
+    undefined,
+    () => {
+      if (skinCache.get(url) === texture) skinCache.delete(url);
+    },
+  );
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.flipY = false;
+  skinCache.set(url, texture);
+  return texture;
 };
 // the parametric skull/neck must wear the photographed person's skin tone or
 // the face plate reads as a pasted mask. Sample the skin texture's mean
@@ -513,33 +546,35 @@ const matchSkullTone = (tex: THREE.Texture): void => {
     .setRGB(r / n / 255, g / n / 255, b / n / 255)
     .convertSRGBToLinear();
   applySkullTone();
+  applyShellLighting();
 };
-(window as unknown as { __loadSkin: unknown }).__loadSkin = (url: string) => {
-  if (!photoMaterialRef) return;
-  photoMaterialRef.map = loadSkin(url);
-  photoMaterialRef.needsUpdate = true;
-};
-new THREE.TextureLoader().load("/models/hero1-face.png", (tex) => {
-  tex.colorSpace = THREE.SRGBColorSpace;
-  tex.flipY = false; // the bake uses the glTF top-left UV convention
-  // UNLIT in photo mode: re-shading photographed pixels shifts how features
-  // read (the detector-free overlay proved the data itself is pixel-exact)
-  const photoMaterial = new THREE.MeshBasicMaterial({
-    map: tex,
-    side: THREE.DoubleSide,
-  });
-  photoMaterialRef = photoMaterial;
-  (window as unknown as { __setSkin: unknown }).__setSkin = (on: boolean) => {
-    faceMesh.material = on ? photoMaterial : faceMaterial;
-    // photo skin carries painted eyes: restore the lid covers, park the
-    // sphere eyeballs; sculpt mode cuts the covers and brings them back
-    faceGeometry.setIndex(on ? [...CANONICAL_FACE_INDICES] : faceIndices);
-    for (const m of eyeMeshes) m.visible = !on;
-    skinModeOn = on;
+const selectSkin = (url: string): void => {
+  photoTone = null;
+  if (!url) {
+    photoMaterial.map = null;
+    photoMaterial.needsUpdate = true;
     applySkullTone();
     applyShellLighting();
-  };
-});
+    return;
+  }
+  const texture = loadSkin(url);
+  photoMaterial.map = texture;
+  photoMaterial.needsUpdate = true;
+  applySkullTone();
+  applyShellLighting();
+  if (texture.image) matchSkullTone(texture);
+};
+(window as unknown as { __loadSkin: unknown }).__loadSkin = selectSkin;
+(window as unknown as { __setSkin: unknown }).__setSkin = (on: boolean) => {
+  faceMesh.material = on ? photoMaterial : faceMaterial;
+  // photo skin carries painted eyes: restore the lid covers, park the
+  // sphere eyeballs; sculpt mode cuts the covers and brings them back
+  faceGeometry.setIndex(on ? [...CANONICAL_FACE_INDICES] : faceIndices);
+  for (const m of eyeMeshes) m.visible = !on;
+  skinModeOn = on;
+  applySkullTone();
+  applyShellLighting();
+};
 faceMesh.morphTargetInfluences = [...NAMES.map(() => 0), 0];
 scene.add(faceMesh);
 
@@ -781,6 +816,7 @@ const rebuildBust = (): void => {
   scene.add(bustMesh);
 };
 rebuildBust();
+selectSkin("/models/hero1-face.png");
 
 // ── eyeballs (follow the morphed face; iris colored by frontness) ───────────
 const eyeMaterial = new THREE.MeshStandardMaterial({
@@ -1274,7 +1310,9 @@ const PRESETS: Record<string, IPreset> = {
   },
 };
 
+let presetGeneration = 0;
 const applyPreset = (p: IPreset): void => {
+  const generation = ++presetGeneration;
   NAMES.forEach((name, idx) => {
     const w = p.face[name] ?? 0;
     faceMesh.morphTargetInfluences![idx] = w;
@@ -1313,14 +1351,10 @@ const applyPreset = (p: IPreset): void => {
   });
   rebuildTails();
   void loadIdentity(p.data?.identity ?? "").then(() => {
-    setIdentity(p.data ? 1 : 0);
+    if (generation === presetGeneration) setIdentity(p.data ? 1 : 0);
   });
-  if (p.data) {
-    (window as unknown as { __loadSkin?: (u: string) => void }).__loadSkin?.(
-      p.data.skin,
-    );
-    loadPhotoHead(p.data.head);
-  }
+  selectSkin(p.data?.skin ?? "");
+  loadPhotoHead(p.data?.head ?? "");
   rebuildEyes();
   colors.skin = p.colors.skin;
   colors.hair = p.colors.hair;
@@ -1358,38 +1392,58 @@ const setIdentity = (w: number): void => {
 // her face contour, which is exactly what reads as a different outline
 let photoHead: THREE.Group | null = null;
 let photoHeadOn = false;
+let photoHeadUrl = "";
 const headCache = new Map<string, THREE.Group>();
+const headRequests = new Map<string, symbol>();
 const loadPhotoHead = (url: string): void => {
   const place = (g: THREE.Group): void => {
     if (photoHead) photoHead.visible = false;
     photoHead = g;
     photoHead.visible = photoHeadOn;
   };
+  if (url !== photoHeadUrl) {
+    photoHeadUrl = url;
+    if (photoHead) photoHead.visible = false;
+    photoHead = null;
+  }
+  if (!url) return;
   const hit = headCache.get(url);
   if (hit) {
     place(hit);
     return;
   }
-  new GLTFLoader().load(url, (gltf) => {
-    gltf.scene.traverse((o) => {
-      const m = o as THREE.Mesh;
-      if (m.isMesh) {
-        const std = m.material as THREE.MeshStandardMaterial;
-        m.material = new THREE.MeshBasicMaterial({
-          map: std.map,
-          side: THREE.DoubleSide,
-          // the face plate carries a vertex-alpha feather at its rim: keep
-          // the asset's blend mode when swapping to the unlit material
-          vertexColors: m.geometry.hasAttribute("color"),
-          transparent: std.transparent,
-        });
-      }
-    });
-    gltf.scene.visible = false;
-    scene.add(gltf.scene);
-    headCache.set(url, gltf.scene);
-    place(gltf.scene);
-  });
+  if (headRequests.has(url)) return;
+  const token = Symbol(url);
+  headRequests.set(url, token);
+  new GLTFLoader().load(
+    url,
+    (gltf) => {
+      if (headRequests.get(url) !== token) return;
+      headRequests.delete(url);
+      gltf.scene.traverse((o) => {
+        const m = o as THREE.Mesh;
+        if (m.isMesh) {
+          const std = m.material as THREE.MeshStandardMaterial;
+          m.material = new THREE.MeshBasicMaterial({
+            map: std.map,
+            side: THREE.DoubleSide,
+            // the face plate carries a vertex-alpha feather at its rim: keep
+            // the asset's blend mode when swapping to the unlit material
+            vertexColors: m.geometry.hasAttribute("color"),
+            transparent: std.transparent,
+          });
+        }
+      });
+      gltf.scene.visible = false;
+      scene.add(gltf.scene);
+      headCache.set(url, gltf.scene);
+      if (photoHeadUrl === url) place(gltf.scene);
+    },
+    undefined,
+    () => {
+      if (headRequests.get(url) === token) headRequests.delete(url);
+    },
+  );
 };
 loadPhotoHead("/models/hero1-head.glb");
 (window as unknown as { __setPhotoHead: unknown }).__setPhotoHead = (

@@ -20,6 +20,8 @@ import { fileURLToPath } from "node:url";
 import { chromium } from "playwright-core";
 import { PNG } from "pngjs";
 
+import { preserveCleanupFailure } from "./preserveCleanupFailure.mjs";
+
 const HME = HMEmod.default ?? HMEmod;
 const here = path.dirname(fileURLToPath(import.meta.url));
 const shotsDir = path.resolve(here, "../../../.shots");
@@ -208,43 +210,68 @@ const capture = async ([page, q, dur, n, w, h, out, fps]) => {
     viewport: { width: W, height: H },
     deviceScaleFactor: 1,
   });
-  const sep = q ? "&" : "";
-  // Pass the even frame size in the URL too (#1251): the viewer pins `#view` to
-  // exactly W×H, so the element screenshot is that size even if the viewport
-  // above ever drifts. Viewport and canvas now agree by contract, not luck.
-  await pg.goto(`${BASE}/${page}?${q}${sep}cap=1&w=${W}&h=${H}`, {
-    waitUntil: "load",
-  });
-  await pg.waitForFunction(() => typeof window.__afSeek === "function");
-  // frame only the 3D: hide any UI overlay (clip-selector bar) that would
-  // otherwise overlap the canvas in the element screenshot
-  await pg.addStyleTag({ content: "#clips{display:none!important}" });
-  const view = pg.locator("#view");
+  let completion;
+  let pageFailure;
+  try {
+    const sep = q ? "&" : "";
+    // Pass the even frame size in the URL too (#1251): the viewer pins `#view` to
+    // exactly W×H, so the element screenshot is that size even if the viewport
+    // above ever drifts. Viewport and canvas now agree by contract, not luck.
+    await pg.goto(`${BASE}/${page}?${q}${sep}cap=1&w=${W}&h=${H}`, {
+      waitUntil: "load",
+    });
+    await pg.waitForFunction(() => typeof window.__afSeek === "function");
+    // frame only the 3D: hide any UI overlay (clip-selector bar) that would
+    // otherwise overlap the canvas in the element screenshot
+    await pg.addStyleTag({ content: "#clips{display:none!important}" });
+    const view = pg.locator("#view");
 
-  const enc = await HME.createH264MP4Encoder();
-  enc.width = W;
-  enc.height = H;
-  enc.frameRate = fps;
-  enc.quantizationParameter = 20; // lower = higher quality
-  enc.initialize();
+    const enc = await HME.createH264MP4Encoder();
+    let encoderFailure;
+    try {
+      enc.width = W;
+      enc.height = H;
+      enc.frameRate = fps;
+      enc.quantizationParameter = 20; // lower = higher quality
+      enc.initialize();
 
-  const t0 = Date.now();
-  for (let i = 0; i < n; i++) {
-    const t = (dur * i) / (n - 1);
-    await pg.evaluate((tt) => window.__afSeek(tt), t);
-    const buf = await view.screenshot({ type: "png" });
-    const png = PNG.sync.read(buf);
-    enc.addFrameRgba(new Uint8Array(png.data));
+      const t0 = Date.now();
+      for (let i = 0; i < n; i++) {
+        const t = (dur * i) / (n - 1);
+        await pg.evaluate((tt) => window.__afSeek(tt), t);
+        const buf = await view.screenshot({ type: "png" });
+        const png = PNG.sync.read(buf);
+        enc.addFrameRgba(new Uint8Array(png.data));
+      }
+      enc.finalize();
+      fs.writeFileSync(dest, Buffer.from(enc.FS.readFile(enc.outputFilename)));
+      completion = `wrote ${out} (${n} frames @ ${fps}fps, ${((Date.now() - t0) / 1000).toFixed(1)}s)`;
+    } catch (error) {
+      encoderFailure = { error };
+      throw error;
+    } finally {
+      await preserveCleanupFailure(encoderFailure, "capture encoder", () =>
+        enc.delete(),
+      );
+    }
+  } catch (error) {
+    pageFailure = { error };
+    throw error;
+  } finally {
+    await preserveCleanupFailure(pageFailure, "capture page", () => pg.close());
   }
-  enc.finalize();
-  fs.writeFileSync(dest, Buffer.from(enc.FS.readFile(enc.outputFilename)));
-  enc.delete();
-  await pg.close();
-  console.log(
-    `wrote ${out} (${n} frames @ ${fps}fps, ${((Date.now() - t0) / 1000).toFixed(1)}s)`,
-  );
+  console.log(completion);
 };
 
-for (const shot of shots) await capture(shot);
-await browser.close();
+let browserFailure;
+try {
+  for (const shot of shots) await capture(shot);
+} catch (error) {
+  browserFailure = { error };
+  throw error;
+} finally {
+  await preserveCleanupFailure(browserFailure, "capture browser", () =>
+    browser.close(),
+  );
+}
 console.log("done");

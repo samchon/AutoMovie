@@ -1,10 +1,23 @@
+import {
+  deriveProductionSoundPlan,
+  productionPhonemesToVisemes,
+  productionSoundSpectrogram,
+  productionSoundWaveform,
+  renderProductionSound,
+} from "@automovie/engine";
 import type {
   AutoMovieContentDigest,
   AutoMovieGuidePass,
-  IAutoMoviePreviewFrameOutput,
+  IAutoMovieCaptureFrame,
+  IAutoMovieCompiledShotSource,
   IAutoMovieProductionDeliverable,
   IAutoMovieProductionMediaProbe,
   IAutoMovieProductionRenderManifest,
+  IAutoMovieProductionRenditionDelivery,
+  IAutoMovieProductionSoundAnalysis,
+  IAutoMovieProductionSoundPlan,
+  IAutoMovieProductionTtsReceipt,
+  IAutoMovieRepaintReceipt,
   IAutoMovieReviewTarget,
 } from "@automovie/interface";
 import {
@@ -16,40 +29,185 @@ import {
   type IAutoMovieProductionEncoderIdentity,
   type IAutoMovieProductionRenderChunk,
   type IAutoMovieProductionRenderChunkReceipt,
+  type IAutoMovieProductionRenderGcCandidate,
   type IAutoMovieProductionRenderJobPlan,
   type IAutoMovieProductionRenderRuntimeIdentity,
+  type IAutoMovieProductionRenderTier,
   canonicalAutoMovieCaptureRuntimeIdentity,
+  canonicalAutoMovieJsonBytes,
+  conformProductionRenditionVideoMp4,
   digestAutoMovieBytes,
   encodeAutoMoviePathSegment,
+  inspectAutoMovieProduction,
+  muxProductionFeatureMp4,
+  openAutoMovieProduction,
+  planProductionRenderGc,
   planProductionRenderJob,
   probeProductionMedia,
+  probeProductionVideoMp4,
   productionPublicationInputFingerprint,
   productionRenderChunkStatuses,
+  productionRenderLayersForPass,
   readAutoMovieFilmTimeline,
   readAutoMovieProductionOwnedFile,
+  resolveProductionRenderTierFrameFormat,
   runProductionRenderJob,
   sampleProductionRenderFrame,
   selectAutoMovieFilmReviewFrames,
+  trimProductionAudioPresentation,
   verifyProductionRenderChunkReceipt,
   verifyProductionRenderJobPlan,
 } from "@automovie/mcp";
 import * as HME from "h264-mp4-encoder";
-import { createFile } from "mp4box";
+import { BoxParser, createFile } from "mp4box";
 import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { isDeepStrictEqual } from "node:util";
 import { PNG } from "pngjs";
 
-import { captureProductionFrame, closeProductionFrameCapture } from "./capture";
+import config from "../automovie.config";
+import {
+  inspectCapturedProxyBundle,
+  inspectPublishedProxyBundle,
+} from "./assertProxyBundle";
+import {
+  captureProductionFrame,
+  closeProductionFrameCapture,
+  productionFrameCaptureMetrics,
+} from "./capture";
+import {
+  type IDialogueCacheSnapshot,
+  captureExistingDialogueCache,
+  publishDialogueCache,
+} from "./dialogueCacheSnapshot";
+import {
+  captureProxyPublicationGcTarget,
+  publishProxyBundle,
+} from "./publishProxyBundle";
+import {
+  type IOwnedRenderAttemptSnapshot,
+  beginRenderAttempt,
+  completeRenderAttempt,
+  failRenderAttempt,
+  listRenderAttempts,
+  readRenderAttempt,
+} from "./renderAttemptSnapshot";
+import {
+  type ICurrentRenderChunkPublication,
+  captureRenderChunkPublicationFromPointer,
+  consumeCurrentRenderChunkFrames,
+  currentRenderChunkPublicationProtectsTree,
+  inventoryRenderChunkGarbage,
+  loadCurrentRenderChunkPublication,
+  publishRenderChunkSnapshot,
+  removeCapturedRenderChunkPointer,
+  renderChunkPublicationPath,
+} from "./renderChunkSnapshot";
+import {
+  type IRenderGcTargetSnapshot,
+  RENDER_GC_QUARANTINE_EVIDENCE_DIRECTORY,
+  RENDER_GC_REMOVAL_STAGING_DIRECTORY,
+  assertCapturedRenderGcFileEntry,
+  assertCapturedRenderTarget,
+  assertRenderPhysicalDirectoryIdentity,
+  captureRenderGcTarget,
+  captureRenderPhysicalDirectory,
+  createRenderGcFileSnapshot,
+  ensureRenderPhysicalDirectory,
+  inventoryRenderQuarantineCandidates,
+  isRenderGcPreservedPath,
+  quarantineCapturedRenderTarget,
+  readCapturedRenderGcFile,
+  removeCapturedRenderGcTarget,
+  removeCapturedRenderQuarantine,
+} from "./renderGcSnapshot";
+import {
+  acquireRenderGcLease,
+  acquireRenderSessionLease,
+  releaseRenderLivenessLease,
+} from "./renderLiveness";
+import {
+  captureExistingRenderPlan,
+  publishRenderPlan,
+} from "./renderPlanSnapshot";
+import {
+  type IRenderChunkTemporaryTree,
+  assertRenderChunkTemporaryTree,
+  createRenderChunkTemporaryTree,
+} from "./renderTemporarySnapshot";
+import {
+  type IRuntimePackageSnapshot,
+  type RuntimePackageAssetSelection,
+  snapshotRuntimePackage,
+} from "./runtimePackageSnapshot";
 
 const root = process.cwd();
-const stateRoot = path.join(root, ".automovie", "render-job");
+const productionId = config.productionId;
+const tierName = (() => {
+  const index = process.argv.indexOf("--tier");
+  const value = index < 0 ? "final" : process.argv[index + 1];
+  if (value !== "proxy" && value !== "final")
+    throw new Error('--tier must be either "proxy" or "final".');
+  return value;
+})();
+const renderTier: IAutoMovieProductionRenderTier =
+  tierName === "proxy" ? config.render.proxy : config.render.final;
+const productionSegment = encodeAutoMoviePathSegment(productionId);
+const renderLivenessScope = digestAutoMovieBytes(
+  Buffer.from(
+    JSON.stringify({
+      protocol: "automovie.render-liveness.v1",
+      productionId,
+    }),
+  ),
+).slice(7);
+const productionStateRoot = path.join(
+  root,
+  ".automovie",
+  "productions",
+  productionSegment,
+);
+const renderJobRoot = path.join(productionStateRoot, "render-job");
+const stateRoot = path.join(renderJobRoot, renderTier.kind);
 const planPath = path.join(stateRoot, "plan.json");
 const action = process.argv[2] ?? "all";
 const require = createRequire(import.meta.url);
-const heldChunkLocks = new Map<string, { path: string; token: string }>();
+const preserveProductionEncoderCleanup = (
+  require("./preserveProductionEncoderCleanup.cjs") as {
+    preserveProductionEncoderCleanup: (
+      failure: { error: unknown } | undefined,
+      resources: readonly { resource: string; cleanup: () => unknown }[],
+    ) => void;
+  }
+).preserveProductionEncoderCleanup;
+const withKokoroRuntimeOverrides = (
+  require("./withKokoroRuntimeOverrides.cjs") as {
+    withKokoroRuntimeOverrides: <Output>(
+      overrides: readonly {
+        resource: string;
+        install: () => unknown;
+        restore: () => unknown;
+      }[],
+      operation: () => Output | Promise<Output>,
+    ) => Promise<Output>;
+  }
+).withKokoroRuntimeOverrides;
+const resolveImportEntry = (packageName: string): string =>
+  fileURLToPath(import.meta.resolve(packageName));
+const heldChunkLocks = new Map<
+  string,
+  { snapshot: IRenderGcTargetSnapshot; token: string }
+>();
+const heldChunkAttempts = new Map<string, IOwnedRenderAttemptSnapshot>();
+const KOKORO_MODEL = "onnx-community/Kokoro-82M-v1.0-ONNX" as const;
+const KOKORO_MODEL_REVISION =
+  "1939ad2a8e416c0acfeecc08a694d14ef25f2231" as const;
+const KOKORO_DEVICE = "cpu" as const;
+const KOKORO_VOICE = "af_heart";
+const RENDER_LOCK_JSON_MAX_BYTES = 64 * 1024;
 
 interface IRenderChunkLockOwner {
   chunk: AutoMovieContentDigest;
@@ -65,11 +223,16 @@ const main = async (): Promise<void> => {
     action !== "run" &&
     action !== "status" &&
     action !== "verify" &&
-    action !== "finalize"
+    action !== "finalize" &&
+    action !== "gc"
   )
     throw new Error(
-      `Unknown render action "${action}". Use plan, run, status, verify, or finalize.`,
+      `Unknown render action "${action}". Use plan, run, status, verify, finalize, or gc.`,
     );
+  if (action === "gc") {
+    output(renderGarbageCollection(process.argv.includes("--apply")));
+    return;
+  }
   if (action === "status") {
     const plan = readPlan();
     if (sourceFingerprint() !== plan.compileFingerprint)
@@ -117,48 +280,62 @@ const main = async (): Promise<void> => {
     output({ verified: true, plan: current, chunks: status });
     return;
   }
-  if (action === "finalize") {
-    output(await finalize(await currentStoredPlan()));
-    return;
+  const session = acquireRenderSessionLease({
+    coordinationRoot: root,
+    pid: process.pid,
+    processAlive,
+    scope: renderLivenessScope,
+    tier: renderTier.kind,
+  });
+  try {
+    if (action === "finalize") {
+      output(await finalize(await currentStoredPlan()));
+      return;
+    }
+    const current = await currentPlan();
+    if (action === "plan") {
+      output(current);
+      return;
+    }
+    if (action === "all") await captureReviewEvidence();
+    if (action === "run" || action === "all") {
+      recoverAbandonedTemporaryDirectories(current.chunks);
+      quarantineStaleSlotOutputs(current.chunks);
+      const result = await runProductionRenderJob({
+        plan: current,
+        workers: integerOption("--workers", 1),
+        deliverable: stringOption("--deliverable"),
+        adapters: {
+          current: (chunk) => currentReceipt(current, chunk),
+          acquire: acquireChunk,
+          render: (chunk) => renderChunk(current, chunk),
+          fail: failChunk,
+          release: releaseChunk,
+        },
+      });
+      output({
+        plan: {
+          compileFingerprint: current.compileFingerprint,
+          editFingerprint: current.editFingerprint,
+          tier: current.tier,
+        },
+        capture: productionFrameCaptureMetrics(),
+        result,
+        chunks: await renderStatus(current),
+      });
+      if (result.failed.length !== 0 || result.busy.length !== 0)
+        process.exitCode = 1;
+      if (action === "run" || process.exitCode === 1) return;
+    }
+    output(await finalize(current));
+  } finally {
+    releaseRenderLivenessLease(session);
   }
-  const current = await currentPlan();
-  if (action === "plan") {
-    output(current);
-    return;
-  }
-  if (action === "all") await captureReviewEvidence();
-  if (action === "run" || action === "all") {
-    recoverAbandonedTemporaryDirectories();
-    const result = await runProductionRenderJob({
-      plan: current,
-      workers: integerOption("--workers", 1),
-      deliverable: stringOption("--deliverable"),
-      adapters: {
-        current: currentReceipt,
-        acquire: acquireChunk,
-        render: (chunk) => renderChunk(current, chunk),
-        fail: failChunk,
-        release: releaseChunk,
-      },
-    });
-    output({
-      plan: {
-        compileFingerprint: current.compileFingerprint,
-        editFingerprint: current.editFingerprint,
-      },
-      result,
-      chunks: await renderStatus(current),
-    });
-    if (result.failed.length !== 0 || result.busy.length !== 0)
-      process.exitCode = 1;
-    if (action === "run" || process.exitCode === 1) return;
-  }
-  output(await finalize(current));
 };
 
 const sourceFingerprint = (): AutoMovieContentDigest => {
   const checked = new AutoMovieProductionCompiler(
-    AutoMovieProductionProject.open(root),
+    AutoMovieProductionProject.open(root, productionId),
   ).lint({ scope: "source" });
   if (checked.success === false)
     throw new Error(
@@ -169,18 +346,16 @@ const sourceFingerprint = (): AutoMovieContentDigest => {
   return checked.compiler.inputFingerprint;
 };
 
-const captureReviewEvidence = async (): Promise<
-  IAutoMoviePreviewFrameOutput[]
-> => {
+const captureReviewEvidence = async (): Promise<IAutoMovieCaptureFrame[]> => {
   const app = productionApplication();
-  const compiled = app.compileProject({ scope: "source" });
+  const compiled = productionServices().compiler.compile({ scope: "source" });
   if (compiled.success === false)
     throw new Error(
       `Source compilation failed before review capture: ${JSON.stringify(
         compiled.diagnostics,
       )}`,
     );
-  const project = AutoMovieProductionProject.open(root);
+  const project = AutoMovieProductionProject.open(root, productionId);
   const graph = project.graph();
   if (graph.production === null)
     throw new Error("Review capture requires a production design.");
@@ -188,7 +363,7 @@ const captureReviewEvidence = async (): Promise<
     project,
     compiled.compiler.inputFingerprint,
   );
-  const frames: IAutoMoviePreviewFrameOutput[] = [];
+  const frames: IAutoMovieCaptureFrame[] = [];
   for (const segment of timeline.segments) {
     const contract = graph.shots.get(segment.shot);
     if (contract === undefined)
@@ -202,10 +377,14 @@ const captureReviewEvidence = async (): Promise<
     ))
       for (const pass of request.passes)
         frames.push(
-          await app.previewFrame({
-            target: { kind: "shot", id: segment.shot },
-            time: request.time,
-            pass,
+          await app.captureFrame({
+            target: {
+              kind: "shot",
+              productionId,
+              id: segment.shot,
+              time: request.time,
+              pass,
+            },
           }),
         );
   }
@@ -220,15 +399,25 @@ const captureReviewEvidence = async (): Promise<
 };
 
 const currentPlan = async (): Promise<IAutoMovieProductionRenderJobPlan> => {
-  const app = productionApplication();
-  const compiled = app.compileProject({ scope: "source" });
+  ensureRenderPhysicalDirectory(
+    root,
+    [
+      ".automovie",
+      "productions",
+      productionSegment,
+      "render-job",
+      renderTier.kind,
+    ].join("/"),
+  );
+  const predecessor = captureExistingRenderPlan(stateRoot, planPath);
+  const compiled = productionServices().compiler.compile({ scope: "source" });
   if (compiled.success === false)
     throw new Error(
       `Source compilation failed before render planning: ${JSON.stringify(
         compiled.diagnostics,
       )}`,
     );
-  const project = AutoMovieProductionProject.open(root);
+  const project = AutoMovieProductionProject.open(root, productionId);
   const graph = project.graph();
   if (graph.production === null)
     throw new Error("Render planning requires a production design.");
@@ -243,14 +432,19 @@ const currentPlan = async (): Promise<IAutoMovieProductionRenderJobPlan> => {
     project,
     compiled.compiler.inputFingerprint,
   );
+  const frameFormat = resolveProductionRenderTierFrameFormat(
+    graph.production.frameFormat,
+    renderTier,
+  );
   const first = sampleProductionRenderFrame(timeline, 0).layers.at(-1)!;
   const runtimeIdentity = await renderRuntimeIdentity({
     project,
     compileFingerprint: compiled.compiler.inputFingerprint,
     timeline,
     first,
-    width: graph.production.frameFormat.width,
-    height: graph.production.frameFormat.height,
+    width: frameFormat.width,
+    height: frameFormat.height,
+    fps: frameFormat.fps,
   });
   const planned = planProductionRenderJob({
     timeline,
@@ -259,9 +453,21 @@ const currentPlan = async (): Promise<IAutoMovieProductionRenderJobPlan> => {
     runtimeIdentity,
     sourceFingerprints: renderShotFingerprints(project, timeline),
     chunkFrames: integerOption("--chunk-frames", 48),
+    tier: renderTier,
   });
-  writeJsonAtomic(planPath, planned);
-  return planned;
+  const published = await publishRenderPlan({
+    base: stateRoot,
+    inputCurrent: async () => {
+      if (sourceFingerprint() !== planned.compileFingerprint)
+        throw new Error("Render planning inputs changed before publication.");
+      const inputs = await currentRenderPlanInputs(planned);
+      verifyProductionRenderJobPlan({ plan: planned, ...inputs });
+    },
+    plan: planned,
+    predecessor,
+    target: planPath,
+  });
+  return published.plan;
 };
 
 const productionAudioAssets = (
@@ -320,8 +526,8 @@ const renderSourceDigest = (
 ): AutoMovieContentDigest =>
   digestAutoMovieBytes(
     Buffer.from(
-      JSON.stringify(
-        project
+      JSON.stringify({
+        content: project
           .contentInputs()
           .filter((input) => {
             const audio = new Set(
@@ -334,10 +540,99 @@ const renderSourceDigest = (
             digest:
               input.bytes === null ? null : digestAutoMovieBytes(input.bytes),
           })),
-      ),
+        soundRuntime: productionSoundRuntimeIdentity(),
+      }),
       "utf8",
     ),
   );
+
+const productionSoundRuntimeIdentity = () => ({
+  protocol: "automovie.production-sound.v1",
+  sampleRate: 48_000,
+  channels: 2,
+  opus: {
+    ...resolvedPackageIdentity("libopus-wasm"),
+    bitrate: 128_000,
+    complexity: 10,
+    vbr: false,
+    frameSize: 960,
+  },
+  mux: resolvedPackageIdentity("mp4box"),
+  evidencePng: resolvedPackageIdentity("pngjs"),
+  tts: {
+    ...resolvedPackageIdentity("kokoro-js"),
+    adapter: resolvedPackageIdentity("@huggingface/transformers"),
+    backend: onnxRuntimeNodeIdentity(),
+    imageCapability: resolvedPackageIdentity("sharp"),
+    model: KOKORO_MODEL,
+    modelRevision: KOKORO_MODEL_REVISION,
+    dtype: "q8",
+    device: KOKORO_DEVICE,
+    voice: KOKORO_VOICE,
+    speed: 1,
+  },
+});
+
+const resolvedPackageIdentity = (
+  packageName: string,
+): {
+  package: string;
+  version: string;
+  entryDigest: AutoMovieContentDigest;
+} => packageSnapshotIdentity(resolvedPackageSnapshot(packageName));
+
+const resolvedPackageSnapshot = (
+  packageName: string,
+  assets: readonly RuntimePackageAssetSelection[] = [],
+): IRuntimePackageSnapshot =>
+  snapshotRuntimePackage({
+    assets,
+    entry: resolveImportEntry(packageName),
+    packageName,
+  });
+
+const packageSnapshotIdentity = (
+  snapshot: IRuntimePackageSnapshot,
+): {
+  package: string;
+  version: string;
+  entryDigest: AutoMovieContentDigest;
+} => ({
+  package: snapshot.package,
+  version: snapshot.version,
+  entryDigest: snapshot.entryDigest,
+});
+
+const onnxRuntimeNodeIdentity = (): ReturnType<
+  typeof packageSnapshotIdentity
+> & {
+  nativeAssets: IAutoMovieProductionTtsReceipt["runtimeAssets"];
+} => {
+  const relative = ["bin", "napi-v3", process.platform, process.arch].join("/");
+  let snapshot: IRuntimePackageSnapshot;
+  try {
+    snapshot = resolvedPackageSnapshot("onnxruntime-node", [
+      { kind: "tree", relative },
+    ]);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT")
+      throw new Error(
+        `ONNX Runtime Node has no native backend for ${process.platform}/${process.arch}.`,
+      );
+    throw error;
+  }
+  if (snapshot.assets.length === 0)
+    throw new Error(
+      `ONNX Runtime Node native backend is empty for ${process.platform}/${process.arch}.`,
+    );
+  return {
+    ...packageSnapshotIdentity(snapshot),
+    nativeAssets: snapshot.assets.map((asset) => ({
+      path: `package:onnxruntime-node/${asset.path}`,
+      digest: asset.digest,
+    })),
+  };
+};
 
 const renderShotFingerprints = (
   project: AutoMovieProductionProject,
@@ -364,97 +659,54 @@ const renderShotFingerprints = (
 };
 
 const renderStatus = async (plan: IAutoMovieProductionRenderJobPlan) => {
-  const receipts = readAllJson<IAutoMovieProductionRenderChunkReceipt>(
-    path.join(stateRoot, "chunks"),
-    "receipt.json",
+  const currentChunks = await Promise.all(
+    plan.chunks.map((chunk) => currentChunk(plan, chunk)),
   );
-  const attempts = readAllJson<{
-    slot: string;
-    chunk: AutoMovieContentDigest;
-    state: "running" | "failed";
-    correction: string;
-  }>(path.join(stateRoot, "attempts"), ".json");
+  const receipts = currentChunks.flatMap((current) =>
+    current === null ? [] : [current.receipt],
+  );
+  const attempts = listRenderAttempts(
+    stateRoot,
+    path.join(stateRoot, "attempts"),
+  ).map((attempt) => attempt.record);
   const rows = productionRenderChunkStatuses({ plan, receipts, attempts });
-  return Promise.all(
-    rows.map(async (row, index) => {
-      if (row.status !== "complete") return row;
-      const current = await currentReceipt(plan.chunks[index]!);
-      return current === null
-        ? {
-            ...row,
-            status: "failed" as const,
-            correction:
-              "Receipt bytes are partial, corrupt, or parser-inconsistent. Quarantine and rerender this chunk.",
-          }
-        : row;
-    }),
-  );
+  return rows.map((row, index) => {
+    if (row.status !== "complete") return row;
+    return currentChunks[index] === null
+      ? {
+          ...row,
+          status: "failed" as const,
+          correction:
+            "Chunk publication tree or receipt is partial, changed, corrupt, or parser-inconsistent. Quarantine and rerender this chunk.",
+        }
+      : row;
+  });
 };
 
 const currentReceipt = async (
+  plan: IAutoMovieProductionRenderJobPlan,
   chunk: IAutoMovieProductionRenderChunk,
-): Promise<IAutoMovieProductionRenderChunkReceipt | null> =>
-  currentChunk(chunk);
+): Promise<IAutoMovieProductionRenderChunkReceipt | null> => {
+  const current = await currentChunk(plan, chunk);
+  return current?.receipt ?? null;
+};
 
 const currentChunk = async (
+  plan: IAutoMovieProductionRenderJobPlan,
   chunk: IAutoMovieProductionRenderChunk,
-  consumeFrame?: (frame: Uint8Array) => void,
-): Promise<IAutoMovieProductionRenderChunkReceipt | null> => {
-  const directory = chunkDirectory(chunk.id);
-  const receiptFile = path.join(directory, "receipt.json");
-  if (fs.existsSync(receiptFile) === false) return null;
-  let plan: IAutoMovieProductionRenderJobPlan;
-  let receipt: IAutoMovieProductionRenderChunkReceipt;
+  pointer?: IRenderGcTargetSnapshot | null,
+): Promise<ICurrentRenderChunkPublication | null> => {
   try {
-    plan = readPlan();
-    receipt = readJson<IAutoMovieProductionRenderChunkReceipt>(receiptFile);
-    verifyProductionRenderChunkReceipt({ plan, chunk, receipt });
-  } catch {
-    return null;
-  }
-  for (const frame of receipt.frames) {
-    let bytes: Uint8Array;
-    try {
-      bytes = readRegularInside(directory, frame.path);
-      const probe = probeProductionMedia({
-        kind: "preview",
-        mediaType: "image/png",
-        bytes,
-      });
-      if (
-        digestAutoMovieBytes(bytes) !== frame.digest ||
-        bytes.length !== frame.bytes ||
-        probe.kind !== "png" ||
-        probe.width !== frame.width ||
-        probe.height !== frame.height
-      )
-        return null;
-    } catch {
-      return null;
-    }
-    // Consumer failures belong to the decoder/encoder, not chunk validity.
-    // Keep this call outside every validation catch so its exact diagnostic
-    // survives and rerender advice is reserved for actual receipt drift.
-    consumeFrame?.(bytes);
-  }
-  try {
-    const encoded = readRegularInside(directory, receipt.encoded.path);
-    const video = probeProductionMedia({
-      kind: chunk.kind,
-      mediaType: "video/mp4",
-      bytes: encoded,
+    const currentPointer =
+      pointer === undefined ? captureCurrentChunkPointer(chunk) : pointer;
+    if (currentPointer === null) return null;
+    return loadCurrentRenderChunkPublication({
+      assertReceipt: (receipt) =>
+        verifyProductionRenderChunkReceipt({ plan, chunk, receipt }),
+      chunk,
+      frameFormat: plan.frameFormat,
+      pointer: currentPointer,
     });
-    if (
-      digestAutoMovieBytes(encoded) !== receipt.encoded.digest ||
-      encoded.length !== receipt.encoded.bytes ||
-      video.kind !== "video" ||
-      video.width !== plan.frameFormat.width ||
-      video.height !== plan.frameFormat.height ||
-      video.frameCount !== chunk.frames.length ||
-      Math.abs(video.fps - plan.frameFormat.fps) > 1e-9
-    )
-      return null;
-    return receipt;
   } catch {
     return null;
   }
@@ -467,25 +719,24 @@ const acquireChunk = async (
   fs.mkdirSync(directory, { recursive: true });
   const token = randomUUID();
   const claim = path.join(directory, `claim.${process.pid}.${token}.lock`);
-  const candidate = `${claim}.candidate`;
-  try {
-    fs.writeFileSync(
-      candidate,
+  const claimSnapshot = createRenderGcFileSnapshot(
+    stateRoot,
+    claim,
+    Buffer.from(
       `${JSON.stringify({ chunk: chunk.id, pid: process.pid, token })}\n`,
-      { flag: "wx" },
-    );
-    // Publish a fully written owner record in one namespace operation. The
-    // unique claim path is never reused by another worker, so dead-owner
-    // recovery cannot rename or unlink a later owner's lock.
-    fs.linkSync(candidate, claim);
-  } finally {
-    fs.rmSync(candidate, { force: true });
-  }
+    ),
+  );
   try {
     for (const file of chunkLockClaims(chunk)) {
       let owner: IRenderChunkLockOwner;
+      const snapshot =
+        file === claim ? claimSnapshot : captureExistingRenderStateTarget(file);
+      if (snapshot === null) continue;
       try {
-        owner = readJson<IRenderChunkLockOwner>(file);
+        owner = readCapturedRenderJson<IRenderChunkLockOwner>(
+          snapshot,
+          RENDER_LOCK_JSON_MAX_BYTES,
+        );
       } catch (error) {
         if ((error as NodeJS.ErrnoException).code === "ENOENT") continue;
         throw new Error(
@@ -498,18 +749,22 @@ const acquireChunk = async (
         );
       if (processAlive(owner.pid)) {
         if (file !== claim) {
-          releaseOwnedChunkClaim(chunk, claim, token);
+          releaseOwnedChunkClaim(chunk, claim, token, claimSnapshot);
           return false;
         }
         continue;
       }
       try {
-        quarantine(file, "abandoned-lock");
+        quarantine(file, "abandoned-lock", snapshot);
       } catch (error) {
         if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
       }
     }
-    const owner = readJson<IRenderChunkLockOwner>(claim);
+    const ownedClaim = claimSnapshot;
+    const owner = readCapturedRenderJson<IRenderChunkLockOwner>(
+      ownedClaim,
+      RENDER_LOCK_JSON_MAX_BYTES,
+    );
     if (
       owner.chunk !== chunk.id ||
       owner.pid !== process.pid ||
@@ -518,10 +773,10 @@ const acquireChunk = async (
       throw new Error(
         `Chunk lock claim "${claim}" changed before rendering began.`,
       );
-    heldChunkLocks.set(chunk.slot, { path: claim, token });
+    heldChunkLocks.set(chunk.slot, { snapshot: ownedClaim, token });
     return true;
   } catch (error) {
-    releaseOwnedChunkClaim(chunk, claim, token);
+    releaseOwnedChunkClaim(chunk, claim, token, claimSnapshot);
     throw error;
   }
 };
@@ -530,31 +785,51 @@ const renderChunk = async (
   plan: IAutoMovieProductionRenderJobPlan,
   chunk: IAutoMovieProductionRenderChunk,
 ): Promise<IAutoMovieProductionRenderChunkReceipt> => {
-  quarantineStaleSlotOutputs(chunk);
-  const temporary = path.join(
-    stateRoot,
-    "tmp",
-    `${chunk.id.slice(7)}.${process.pid}`,
-  );
-  if (fs.existsSync(temporary)) quarantine(temporary, "partial");
-  fs.mkdirSync(temporary, { recursive: true });
-  writeJsonAtomic(attemptPath(chunk), {
-    slot: chunk.slot,
+  const pointer = captureCurrentChunkPointer(chunk);
+  const existing = await currentChunk(plan, chunk, pointer);
+  if (existing !== null) return existing.receipt;
+  const held = heldChunkLocks.get(chunk.slot);
+  if (held === undefined)
+    throw new Error(
+      `Chunk "${chunk.slot}" cannot start an attempt without its held lock.`,
+    );
+  const attempt = beginRenderAttempt({
+    base: stateRoot,
     chunk: chunk.id,
-    state: "running",
-    correction: "",
+    lock: {
+      chunk: chunk.id,
+      pid: process.pid,
+      snapshot: held.snapshot,
+      token: held.token,
+    },
     pid: process.pid,
+    processAlive,
+    slot: chunk.slot,
+    target: attemptPath(chunk),
+    token: held.token,
   });
+  heldChunkAttempts.set(chunk.slot, attempt);
+  if (pointer !== null) removeCapturedRenderChunkPointer(pointer);
+  const temporaryOwnership = createRenderChunkTemporaryTree({
+    name: `${chunk.id.slice(7)}.${randomUUID()}.${process.pid}`,
+    state: attempt.snapshot.base,
+  });
+  const temporary = temporaryOwnership.path;
   const frameReceipts: IAutoMovieProductionRenderChunkReceipt["frames"] = [];
   const frameBytes: Uint8Array[] = [];
+  const writtenFiles: Array<{
+    relative: string;
+    snapshot: IRenderGcTargetSnapshot;
+  }> = [];
   for (const sample of chunk.frames) {
     const images: Array<{ image: PNG; weight: number }> = [];
-    for (const layer of sample.layers) {
+    for (const layer of productionRenderLayersForPass(sample, chunk.pass)) {
       const captured = await captureProductionFrame({
         projectRoot: root,
+        productionId,
         compileFingerprint: plan.compileFingerprint,
         target: { kind: "shot", id: layer.shot },
-        time: layer.sourceFrame / plan.frameFormat.fps,
+        time: layer.sourceFrame / plan.sourceFrameFormat.fps,
         pass: chunk.pass,
         width: plan.frameFormat.width,
         height: plan.frameFormat.height,
@@ -587,11 +862,18 @@ const renderChunk = async (
       plan.frameFormat.width,
       plan.frameFormat.height,
     );
-    const relative = `frames/frame_${String(sample.globalFrame).padStart(
+    const relative = `frame_${String(sample.globalFrame).padStart(
       8,
       "0",
     )}.${chunk.pass}.png`;
-    writeFileAtomic(path.join(temporary, relative), bytes);
+    writtenFiles.push({
+      relative,
+      snapshot: writeRenderFile({
+        bytes,
+        file: path.join(temporary, relative),
+        ownership: temporaryOwnership,
+      }),
+    });
     const probe = probeProductionMedia({
       kind: "preview",
       mediaType: "image/png",
@@ -613,12 +895,15 @@ const renderChunk = async (
     for (const frame of frameBytes) consumeFrame(frame);
   }, plan);
   const encodedPath = "chunk.mp4";
-  writeFileAtomic(path.join(temporary, encodedPath), encodedBytes);
-  const encodedProbe = probeProductionMedia({
-    kind: chunk.kind,
-    mediaType: "video/mp4",
-    bytes: encodedBytes,
+  writtenFiles.push({
+    relative: encodedPath,
+    snapshot: writeRenderFile({
+      bytes: encodedBytes,
+      file: path.join(temporary, encodedPath),
+      ownership: temporaryOwnership,
+    }),
   });
+  const encodedProbe = probeProductionVideoMp4(encodedBytes);
   if (
     encodedProbe.kind !== "video" ||
     encodedProbe.frameCount !== chunk.frames.length ||
@@ -640,71 +925,117 @@ const renderChunk = async (
       bytes: encodedBytes.length,
     },
   };
-  writeJsonAtomic(path.join(temporary, "receipt.json"), receipt);
-  const destination = chunkDirectory(chunk.id);
-  if (fs.existsSync(destination)) quarantine(destination, "replaced");
-  fs.mkdirSync(path.dirname(destination), { recursive: true });
-  fs.renameSync(temporary, destination);
-  fs.rmSync(attemptPath(chunk), { force: true });
-  return receipt;
+  assertRenderChunkTemporaryTree(temporaryOwnership);
+  for (const written of writtenFiles)
+    assertCapturedRenderTarget(written.snapshot);
+  const completedTree = captureRenderGcTarget(root, temporary);
+  if (
+    completedTree.kind !== "directory" ||
+    completedTree.targetIdentity !== temporaryOwnership.tree.identity
+  )
+    throw new Error("Render chunk completed tree changed physical identity.");
+  for (const written of writtenFiles)
+    assertCapturedRenderGcFileEntry({
+      directory: completedTree,
+      file: written.snapshot,
+      relative: written.relative,
+    });
+  assertRenderChunkTemporaryTree(temporaryOwnership);
+  const published = publishRenderChunkSnapshot({
+    chunk: chunk.id,
+    receipt,
+    root,
+    scope: renderLivenessScope,
+    tier: renderTier.kind,
+    tree: completedTree,
+  });
+  completeRenderAttempt(attempt);
+  heldChunkAttempts.delete(chunk.slot);
+  return published.publication.receipt;
 };
 
 const failChunk = async (
   chunk: IAutoMovieProductionRenderChunk,
   correction: string,
-): Promise<void> =>
-  writeJsonAtomic(attemptPath(chunk), {
-    slot: chunk.slot,
-    chunk: chunk.id,
-    state: "failed",
-    correction,
-    pid: process.pid,
-  });
+): Promise<void> => {
+  const attempt = heldChunkAttempts.get(chunk.slot);
+  if (attempt === undefined) return;
+  failRenderAttempt({ attempt, correction });
+  heldChunkAttempts.delete(chunk.slot);
+};
 
 const releaseChunk = async (
   chunk: IAutoMovieProductionRenderChunk,
 ): Promise<void> => {
+  heldChunkAttempts.delete(chunk.slot);
   const held = heldChunkLocks.get(chunk.slot);
   if (held === undefined) return;
   heldChunkLocks.delete(chunk.slot);
-  releaseOwnedChunkClaim(chunk, held.path, held.token);
+  releaseOwnedChunkClaim(
+    chunk,
+    held.snapshot.target,
+    held.token,
+    held.snapshot,
+  );
 };
 
 const releaseOwnedChunkClaim = (
   chunk: IAutoMovieProductionRenderChunk,
   file: string,
   token: string,
+  captured?: IRenderGcTargetSnapshot,
 ): void => {
   try {
-    const owner = readJson<IRenderChunkLockOwner>(file);
+    const snapshot = captured ?? captureRenderGcTarget(stateRoot, file);
+    const owner = readCapturedRenderJson<IRenderChunkLockOwner>(
+      snapshot,
+      RENDER_LOCK_JSON_MAX_BYTES,
+    );
     if (
       owner.chunk === chunk.id &&
       owner.pid === process.pid &&
       owner.token === token
     )
-      fs.rmSync(file, { force: true });
+      removeCapturedRenderStateTarget(snapshot);
   } catch {
     // A missing, unreadable, or replaced claim is not proven to be ours.
   }
 };
 
 const finalize = async (plan: IAutoMovieProductionRenderJobPlan) => {
-  const app = productionApplication();
-  const inspection = app.inspectProject({});
+  renderProgress("finalize.start", { tier: plan.tier.kind });
+  const inspection = inspectAutoMovieProduction(productionServices());
   const incompleteReviews = inspection.reviews.entries.filter(
     (entry) => entry.state !== "complete",
   );
-  if (incompleteReviews.length !== 0)
+  if (plan.tier.kind === "final" && incompleteReviews.length !== 0)
     throw new Error(
       `Final publication is review-blocked by ${incompleteReviews
         .map((entry) => `${reviewTargetLabel(entry.target)}:${entry.state}`)
         .join(", ")}. Run review:status and submit current evidence first.`,
     );
   const status = await renderStatus(plan);
-  const project = AutoMovieProductionProject.open(root);
+  renderProgress("finalize.status.complete", { tier: plan.tier.kind });
+  const project = AutoMovieProductionProject.open(root, productionId);
   const graph = project.graph();
   if (graph.production === null)
     throw new Error("Production design disappeared before final publication.");
+  if (plan.tier.kind === "final") assertMatchingProxyPublication(project, plan);
+  const timeline =
+    plan.tier.kind === "final" &&
+    graph.production.visualDelivery === "repainted"
+      ? readAutoMovieFilmTimeline(project, plan.compileFingerprint)
+      : null;
+  const renditionReceipts: Map<string, IAutoMovieRepaintReceipt> =
+    timeline === null
+      ? new Map()
+      : new Map(
+          project
+            .verifiedRepaintRenditions([
+              ...new Set(timeline.segments.map((segment) => segment.shot)),
+            ])
+            .map((receipt) => [receipt.shot, receipt] as const),
+        );
   const requiredVideo = new Set(
     graph.production.deliverables
       .filter(
@@ -736,6 +1067,15 @@ const finalize = async (plan: IAutoMovieProductionRenderJobPlan) => {
     compileFingerprint: plan.compileFingerprint,
     deliverables: [],
   };
+  let soundPromise: Promise<IProductionSoundBundle> | undefined;
+  const currentSound = (): Promise<IProductionSoundBundle> =>
+    (soundPromise ??= (async () => {
+      renderProgress("sound.start");
+      const sound = await produceProductionSound(project, plan);
+      renderProgress("sound.complete");
+      return sound;
+    })());
+  const publicationSegment = renderPublicationFingerprint(plan).slice(7);
   for (const deliverable of graph.production.deliverables) {
     const owned = new Map<string, Uint8Array>();
     const deliverableChunks = plan.chunks.filter(
@@ -750,21 +1090,138 @@ const finalize = async (plan: IAutoMovieProductionRenderJobPlan) => {
         );
       continue;
     }
+    let rendition: IAutoMovieProductionRenditionDelivery | undefined;
     if (deliverable.kind === "feature") {
+      renderProgress("video.feature.encode.start", {
+        deliverable: deliverable.id,
+      });
+      const video =
+        timeline === null
+          ? await encodeChunkFrames(plan, deliverableChunks)
+          : conformProductionRenditionVideoMp4({
+              timeline,
+              clips: new Map(
+                timeline.segments.map((segment) => {
+                  const receipt = renditionReceipts.get(segment.shot);
+                  if (receipt === undefined)
+                    throw new Error(
+                      `Repainted feature delivery is missing current receipt-bound output for shot "${segment.shot}".`,
+                    );
+                  return [
+                    segment.shot,
+                    project.readRenderFile(receipt.output.path),
+                  ] as const;
+                }),
+              ),
+            });
+      renderProgress("video.feature.encode.complete", {
+        deliverable: deliverable.id,
+      });
+      const sound = await currentSound();
+      renderProgress("video.feature.mux.start", {
+        deliverable: deliverable.id,
+      });
       owned.set(
         "feature.mp4",
-        await encodeChunkFrames(plan, deliverableChunks),
+        muxProductionFeatureMp4({ video, audio: sound.audio }),
       );
+      renderProgress("video.feature.mux.complete", {
+        deliverable: deliverable.id,
+      });
+      if (timeline !== null) {
+        const shots = [
+          ...new Set(timeline.segments.map((segment) => segment.shot)),
+        ];
+        rendition = {
+          kind: "repainted",
+          shots: shots.map((shot) => {
+            const receipt = renditionReceipts.get(shot);
+            const sourceReview = project.review({ kind: "shot", id: shot });
+            const renditionReview = project.review({
+              kind: "rendition",
+              id: shot,
+            });
+            if (
+              receipt === undefined ||
+              sourceReview === null ||
+              sourceReview.complete === false ||
+              sourceReview.fingerprint !== receipt.sourceReviewFingerprint ||
+              renditionReview === null ||
+              renditionReview.complete === false
+            )
+              throw new Error(
+                `Repainted feature delivery requires current completed source and rendition reviews for shot "${shot}".`,
+              );
+            return {
+              shot,
+              path: receipt.output.path,
+              digest: receipt.output.digest,
+              receiptDigest: digestAutoMovieBytes(
+                canonicalAutoMovieJsonBytes(receipt),
+              ),
+              sourceReviewFingerprint: sourceReview.fingerprint,
+              renditionReviewFingerprint: renditionReview.fingerprint,
+            };
+          }),
+          aggregateReviews: inspection.reviews.entries
+            .flatMap((entry) => {
+              if (
+                (entry.target.kind !== "sequence" &&
+                  entry.target.kind !== "film") ||
+                entry.state !== "complete"
+              )
+                return [];
+              const review = project.review(entry.target);
+              if (review === null || review.complete === false)
+                throw new Error(
+                  `Repainted feature delivery lost current ${reviewTargetLabel(entry.target)} review.`,
+                );
+              return [
+                {
+                  kind: entry.target.kind,
+                  id: entry.target.id,
+                  fingerprint: review.fingerprint,
+                },
+              ];
+            })
+            .sort(
+              (left, right) =>
+                compareCodeUnits(left.kind, right.kind) ||
+                compareCodeUnits(left.id, right.id),
+            ),
+        };
+      }
     } else if (deliverable.kind === "guide-pass") {
       const passes = [...new Set(deliverableChunks.map((chunk) => chunk.pass))];
       if (passes.length !== 1)
         throw new Error(
           `Guide deliverable "${deliverable.id}" must own one declared pass, but owns ${passes.length}.`,
         );
-      owned.set(
-        `${passes[0]}.mp4`,
-        await encodeChunkFrames(plan, deliverableChunks),
-      );
+      renderProgress("video.guide.encode.start", {
+        deliverable: deliverable.id,
+      });
+      const video = await encodeChunkFrames(plan, deliverableChunks);
+      renderProgress("video.guide.encode.complete", {
+        deliverable: deliverable.id,
+      });
+      owned.set(`${passes[0]}.mp4`, video);
+      for (const chunk of [...deliverableChunks].sort(
+        (left, right) => left.frameStart - right.frameStart,
+      )) {
+        const current = await currentChunk(plan, chunk);
+        if (current === null)
+          throw new Error(
+            `Guide-pass chunk "${chunk.slot}" changed before control-frame publication.`,
+          );
+        consumeCurrentRenderChunkFrames(current, (frame) =>
+          owned.set(
+            `frames/${passes[0]}/frame_${String(
+              frame.receipt.globalFrame,
+            ).padStart(8, "0")}.png`,
+            frame.bytes,
+          ),
+        );
+      }
     } else if (deliverable.kind === "captions") {
       if (plan.tracks.captions.split("-->").length < 2) {
         if (deliverable.required)
@@ -772,11 +1229,26 @@ const finalize = async (plan: IAutoMovieProductionRenderJobPlan) => {
       } else
         owned.set("captions.vtt", Buffer.from(plan.tracks.captions, "utf8"));
     } else if (deliverable.kind === "audio-mix") {
-      if (plan.tracks.audio.some((cue) => cue.gain !== 0))
-        throw new Error(
-          "The scaffold audio adapter currently accepts zero-gain guide stems only. Supply a package-owned PCM/AAC adapter before requiring audible mix output.",
-        );
-      owned.set("audio.mp4", deterministicSilentAudio(plan));
+      const sound = await currentSound();
+      owned.set("audio.mp4", sound.audio);
+      owned.set("waveform.png", sound.waveform);
+      owned.set("spectrogram.png", sound.spectrogram);
+      owned.set(
+        "evidence.json",
+        Buffer.from(
+          `${JSON.stringify(
+            {
+              version: 1,
+              plan: sound.plan,
+              analysis: sound.analysis,
+              tts: sound.tts,
+            },
+            null,
+            2,
+          )}\n`,
+          "utf8",
+        ),
+      );
     } else {
       const timeline = readAutoMovieFilmTimeline(
         project,
@@ -785,6 +1257,7 @@ const finalize = async (plan: IAutoMovieProductionRenderJobPlan) => {
       const frame = sampleProductionRenderFrame(timeline, 0).layers.at(-1)!;
       const captured = await captureProductionFrame({
         projectRoot: root,
+        productionId,
         compileFingerprint: plan.compileFingerprint,
         target: { kind: "shot", id: frame.shot },
         time: frame.sourceFrame / timeline.fps,
@@ -818,18 +1291,21 @@ const finalize = async (plan: IAutoMovieProductionRenderJobPlan) => {
     for (const [name, bytes] of owned) {
       const relative = [
         "deliverables",
+        plan.tier.kind,
+        publicationSegment,
         encodeAutoMoviePathSegment(deliverable.id),
-        plan.editFingerprint.slice(7),
         name,
       ].join("/");
       const mediaType =
         deliverable.kind === "captions"
           ? "text/vtt"
-          : deliverable.kind === "preview"
-            ? "image/png"
-            : deliverable.kind === "audio-mix"
-              ? "audio/mp4"
-              : "video/mp4";
+          : name.endsWith(".json")
+            ? "application/json"
+            : deliverable.kind === "preview" || name.endsWith(".png")
+              ? "image/png"
+              : deliverable.kind === "audio-mix"
+                ? "audio/mp4"
+                : "video/mp4";
       const probe = probeProductionMedia({
         kind: deliverable.kind,
         mediaType,
@@ -866,18 +1342,32 @@ const finalize = async (plan: IAutoMovieProductionRenderJobPlan) => {
           : audio?.kind === "audio"
             ? audio.codec
             : null,
+      ...(rendition === undefined ? {} : { rendition }),
     });
   }
+  if (plan.tier.kind === "proxy") {
+    renderProgress("publication.proxy.start");
+    const published = publishProxyTierBundle(
+      plan,
+      publication,
+      manifest,
+      project,
+    );
+    renderProgress("publication.proxy.complete");
+    renderProgress("finalize.complete", { tier: plan.tier.kind });
+    return published;
+  }
+  renderProgress("publication.final.start");
   const snapshot = productionPublicationInputFingerprint(project);
   const revision = project.commitProductionPublication({
     files: publication,
     manifest,
     inputCurrent: () =>
       productionPublicationInputFingerprint(
-        AutoMovieProductionProject.open(root),
+        AutoMovieProductionProject.open(root, productionId),
       ) === snapshot,
     publicationCurrent: () => {
-      const stagedProject = AutoMovieProductionProject.open(root);
+      const stagedProject = AutoMovieProductionProject.open(root, productionId);
       const statusCompiler = new AutoMovieProductionCompiler(stagedProject);
       const stagedReview = new AutoMovieProductionReviewService(
         stagedProject,
@@ -897,12 +1387,104 @@ const finalize = async (plan: IAutoMovieProductionRenderJobPlan) => {
     },
     expectedRevision: project.revision(),
   });
-  const final = productionApplication().compileProject({ scope: "final" });
+  const final = productionServices().compiler.compile({ scope: "final" });
   if (final.success === false)
     throw new Error(
       `Parser-verified publication committed at revision ${revision}, but final compilation rejected it: ${JSON.stringify(final.diagnostics)}`,
     );
+  renderProgress("publication.final.complete");
+  renderProgress("finalize.complete", { tier: plan.tier.kind });
   return { revision, manifest, final };
+};
+
+const publishProxyTierBundle = (
+  plan: IAutoMovieProductionRenderJobPlan,
+  publication: ReadonlyMap<string, Uint8Array>,
+  manifest: IAutoMovieProductionRenderManifest,
+  project: AutoMovieProductionProject,
+) => {
+  const renderRoot = project.renderRoot();
+  const publicationSegment = renderPublicationFingerprint(plan).slice(7);
+  const bundle = ["deliverables", "proxy", publicationSegment].join("/");
+  const parent = ensureRenderPhysicalDirectory(
+    renderRoot,
+    "deliverables/proxy",
+  );
+  const target = path.join(parent, publicationSegment);
+  const manifestBytes = Buffer.from(
+    `${JSON.stringify(
+      {
+        version: 1,
+        tier: plan.tier,
+        publicationFingerprint: renderPublicationFingerprint(plan),
+        compileFingerprint: plan.compileFingerprint,
+        editFingerprint: plan.editFingerprint,
+        frameFormat: plan.frameFormat,
+        sourceFrameFormat: plan.sourceFrameFormat,
+        totalFrames: plan.totalFrames,
+        manifest,
+      },
+      null,
+      2,
+    )}\n`,
+    "utf8",
+  );
+  const files = new Map<string, Uint8Array>([
+    ["publication.json", manifestBytes],
+  ]);
+  for (const [relative, bytes] of publication) {
+    if (relative.startsWith(`${bundle}/`) === false)
+      throw new Error(
+        `Proxy publication path "${relative}" escapes current bundle "${bundle}".`,
+      );
+    files.set(relative.slice(bundle.length + 1), bytes);
+  }
+  const published = publishProxyBundle({
+    expected: files,
+    parent,
+    processAlive,
+    renderRoot,
+    target,
+  });
+  return { published: true, reused: published.reused, bundle, manifest };
+};
+
+const assertMatchingProxyPublication = (
+  project: AutoMovieProductionProject,
+  plan: IAutoMovieProductionRenderJobPlan,
+): void => {
+  const proxyRoot = path.join(project.renderRoot(), "deliverables", "proxy");
+  if (fs.existsSync(proxyRoot) === false)
+    throw new Error(
+      "Final publication requires one immutable proxy publication of the same compiler-owned EDL. Finalize the proxy tier, review it, then finalize this plan.",
+    );
+  const matched = fs
+    .readdirSync(proxyRoot, { withFileTypes: true })
+    .filter(
+      (entry) =>
+        entry.isSymbolicLink() === false &&
+        (entry.isFile() || entry.isDirectory()) &&
+        /^[0-9a-f]{64}$/u.test(entry.name),
+    )
+    .some((entry) => {
+      try {
+        const receipt = inspectPublishedProxyBundle(
+          project.renderRoot(),
+          path.join(proxyRoot, entry.name),
+        );
+        return (
+          receipt.compileFingerprint === plan.compileFingerprint &&
+          receipt.editFingerprint === plan.editFingerprint &&
+          isDeepStrictEqual(receipt.sourceFrameFormat, plan.sourceFrameFormat)
+        );
+      } catch {
+        return false;
+      }
+    });
+  if (matched === false)
+    throw new Error(
+      "No immutable proxy publication matches this final plan's compile fingerprint, EDL fingerprint, and source frame format. Replan and finalize proxy before final conform.",
+    );
 };
 
 const encodeChunkFrames = async (
@@ -915,14 +1497,15 @@ const encodeChunkFrames = async (
     for (const chunk of chunks.sort(
       (left, right) => left.frameStart - right.frameStart,
     )) {
-      const receipt = await currentChunk(chunk, (frame) => {
-        consumeFrame(frame);
-        frameCount += 1;
-      });
-      if (receipt === null)
+      const current = await currentChunk(plan, chunk);
+      if (current === null)
         throw new Error(
           `Chunk "${chunk.slot}" changed after final status verification. Reverify or rerender it before finalizing.`,
         );
+      consumeCurrentRenderChunkFrames(current, (frame) => {
+        consumeFrame(frame.bytes);
+        frameCount += 1;
+      });
     }
     if (frameCount !== plan.totalFrames)
       throw new Error(
@@ -986,62 +1569,616 @@ const encodePngFrames = async (
   } catch (error) {
     failure = { error };
   }
-  let cleanupFailure: { error: unknown } | undefined;
-  if (initialized && finalizeAttempted === false)
-    try {
-      finalizeAttempted = true;
-      encoder.finalize();
-    } catch (error) {
-      cleanupFailure = { error };
-    }
-  try {
-    encoder.delete();
-  } catch (error) {
-    cleanupFailure ??= { error };
-  }
-  if (failure !== undefined) throw failure.error;
-  if (cleanupFailure !== undefined) throw cleanupFailure.error;
+  preserveProductionEncoderCleanup(failure, [
+    ...(initialized && finalizeAttempted === false
+      ? [
+          {
+            resource: "H.264 encoder finalizer",
+            cleanup: (): void => {
+              finalizeAttempted = true;
+              encoder.finalize();
+            },
+          },
+        ]
+      : []),
+    { resource: "H.264 encoder", cleanup: (): void => encoder.delete() },
+  ]);
   return output;
 };
 
-const deterministicSilentAudio = (
-  plan: IAutoMovieProductionRenderJobPlan,
-): Uint8Array => {
-  // Raw AAC-LC silence access units at 48 kHz stereo. The container duration is
-  // exact even when the final access unit is shorter than 1024 samples.
-  const sampleRate = 48_000;
-  const total = Math.round(
-    (plan.totalFrames / plan.frameFormat.fps) * sampleRate,
+interface IProductionSoundBundle {
+  plan: IAutoMovieProductionSoundPlan;
+  analysis: IAutoMovieProductionSoundAnalysis;
+  tts: IAutoMovieProductionTtsReceipt[];
+  audio: Uint8Array;
+  waveform: Uint8Array;
+  spectrogram: Uint8Array;
+}
+
+interface IKokoroCacheRecord {
+  version: 2;
+  cacheKey: AutoMovieContentDigest;
+  model: "onnx-community/Kokoro-82M-v1.0-ONNX";
+  modelRevision: "1939ad2a8e416c0acfeecc08a694d14ef25f2231";
+  voice: string;
+  sourceSampleRate: number;
+  sourceSamples: number;
+  pcmDigest: AutoMovieContentDigest;
+  phonemes: string;
+  phonemeChunks: IAutoMovieProductionTtsReceipt["phonemeChunks"];
+  runtimeAssets: IAutoMovieProductionTtsReceipt["runtimeAssets"];
+}
+
+interface IKokoroRuntime {
+  stream(
+    text: IKokoroTextSplitter,
+    options: { voice: string; speed: number },
+  ): AsyncIterable<{
+    text: string;
+    phonemes: string;
+    audio: { audio: Float32Array; sampling_rate: number };
+  }>;
+}
+
+interface IKokoroTextSplitter extends AsyncIterable<string> {
+  push(...texts: string[]): void;
+  close(): void;
+}
+
+interface IKokoroLoadedRuntime {
+  runtime: IKokoroRuntime;
+  createTextSplitter(): IKokoroTextSplitter;
+  runtimeAssets: IAutoMovieProductionTtsReceipt["runtimeAssets"];
+}
+
+const produceProductionSound = async (
+  project: AutoMovieProductionProject,
+  renderPlan: IAutoMovieProductionRenderJobPlan,
+): Promise<IProductionSoundBundle> => {
+  const timeline = readAutoMovieFilmTimeline(
+    project,
+    renderPlan.compileFingerprint,
   );
+  const graph = project.graph();
+  const compiled = new Map<string, IAutoMovieCompiledShotSource>();
+  for (const shot of new Set(timeline.segments.map((segment) => segment.shot)))
+    compiled.set(
+      shot,
+      JSON.parse(
+        Buffer.from(
+          project.readGeneratedFile(
+            `shots/${encodeAutoMoviePathSegment(shot)}.json`,
+          ),
+        ).toString("utf8"),
+      ) as IAutoMovieCompiledShotSource,
+    );
+  const soundPlan = deriveProductionSoundPlan({
+    timeline,
+    contracts: graph.shots,
+    compiled,
+  });
+  renderProgress("sound.plan.complete", {
+    dialogueLines: soundPlan.dialogue.length,
+  });
+  if (
+    soundPlan.totalFrames !== renderPlan.totalFrames ||
+    soundPlan.fps !== renderPlan.frameFormat.fps
+  )
+    throw new Error(
+      "Sound plan and render plan do not share the exact film frame clock.",
+    );
+  renderProgress("sound.synthesis.start");
+  const synthesized = await synthesizeProductionDialogue(soundPlan);
+  renderProgress("sound.synthesis.complete");
+  renderProgress("sound.render.start");
+  const rendered = renderProductionSound({
+    plan: soundPlan,
+    dialogue: synthesized.pcm,
+  });
+  renderProgress("sound.render.complete");
+  if (
+    rendered.analysis.clippingSamples !== 0 ||
+    rendered.analysis.eventAlignment.some((event) => event.passed === false)
+  )
+    throw new Error(
+      "Final sound failed clipping or semantic event/frame alignment gates.",
+    );
+  renderProgress("sound.evidence.render.start");
+  const waveform = productionSoundWaveform(rendered.pcm);
+  const spectrogram = productionSoundSpectrogram(rendered.pcm);
+  renderProgress("sound.evidence.render.complete");
+  renderProgress("sound.opus.encode.start");
+  const audio = await encodeProductionOpus(rendered.pcm);
+  renderProgress("sound.opus.encode.complete");
+  renderProgress("sound.evidence.encode.start");
+  const waveformBytes = encodeSoundRaster(waveform);
+  const spectrogramBytes = encodeSoundRaster(spectrogram);
+  renderProgress("sound.evidence.encode.complete");
+  return {
+    plan: soundPlan,
+    analysis: rendered.analysis,
+    tts: synthesized.receipts,
+    audio,
+    waveform: waveformBytes,
+    spectrogram: spectrogramBytes,
+  };
+};
+
+const synthesizeProductionDialogue = async (
+  plan: IAutoMovieProductionSoundPlan,
+): Promise<{
+  pcm: Map<string, Float32Array>;
+  receipts: IAutoMovieProductionTtsReceipt[];
+}> => {
+  const pcm = new Map<string, Float32Array>();
+  const receipts: IAutoMovieProductionTtsReceipt[] = [];
+  const cacheRoot = ensureRenderPhysicalDirectory(
+    productionStateRoot,
+    "audio-cache/kokoro",
+  );
+  const modelCacheRoot = path.join(
+    productionStateRoot,
+    "model-cache",
+    "kokoro",
+    KOKORO_MODEL_REVISION,
+  );
+  const baseRuntimeAssets = kokoroBaseRuntimeAssets();
+  let runtime: Promise<IKokoroLoadedRuntime> | undefined;
+  const currentRuntime = (): Promise<IKokoroLoadedRuntime> =>
+    (runtime ??= loadPinnedKokoroRuntime(modelCacheRoot, baseRuntimeAssets));
+  let runtimeAssets = [
+    ...baseRuntimeAssets,
+    ...kokoroModelCacheAssets(modelCacheRoot),
+  ];
+  if (
+    plan.dialogue.length > 0 &&
+    runtimeAssets.length === baseRuntimeAssets.length
+  )
+    runtimeAssets = (await currentRuntime()).runtimeAssets;
+  for (const line of plan.dialogue) {
+    renderProgress("sound.dialogue.start", { line: line.id });
+    const cacheKey = digestAutoMovieBytes(
+      Buffer.from(
+        JSON.stringify({
+          version: 2,
+          model: KOKORO_MODEL,
+          modelRevision: KOKORO_MODEL_REVISION,
+          dtype: "q8",
+          device: KOKORO_DEVICE,
+          voice: KOKORO_VOICE,
+          speed: 1,
+          text: line.text.normalize("NFKC"),
+          language: line.language.normalize("NFKC"),
+          speaker: line.speaker?.normalize("NFKC") ?? null,
+          runtimeAssets,
+        }),
+        "utf8",
+      ),
+    );
+    const stem = cacheKey.slice(7);
+    const cachePath = path.join(cacheRoot, stem);
+    let cached:
+      | { record: IKokoroCacheRecord; samples: Float32Array }
+      | undefined;
+    try {
+      const captured = captureExistingDialogueCache(cacheRoot, cachePath);
+      if (captured !== null)
+        cached = validatedDialogueCache(captured, cacheKey, runtimeAssets);
+    } catch {
+      cached = undefined;
+    }
+    if (cached === undefined) {
+      const loadedRuntime = await currentRuntime();
+      const dialogueText = loadedRuntime.createTextSplitter();
+      dialogueText.push(line.text);
+      dialogueText.close();
+      const chunks: Float32Array[] = [];
+      const phonemes: string[] = [];
+      const phonemeChunks: IKokoroCacheRecord["phonemeChunks"] = [];
+      let sourceSampleRate: number | undefined;
+      let sourceOffset = 0;
+      for await (const chunk of loadedRuntime.runtime.stream(dialogueText, {
+        voice: KOKORO_VOICE,
+        speed: 1,
+      })) {
+        if (
+          Number.isSafeInteger(chunk.audio.sampling_rate) === false ||
+          chunk.audio.sampling_rate <= 0
+        )
+          throw new Error(
+            `Kokoro line "${line.id}" returned an invalid PCM sample rate.`,
+          );
+        if (
+          sourceSampleRate !== undefined &&
+          sourceSampleRate !== chunk.audio.sampling_rate
+        )
+          throw new Error(
+            `Kokoro line "${line.id}" changed PCM sample rate mid-stream.`,
+          );
+        sourceSampleRate = chunk.audio.sampling_rate;
+        const audio = Float32Array.from(chunk.audio.audio);
+        if (audio.length === 0)
+          throw new Error(
+            `Kokoro line "${line.id}" returned an empty PCM chunk.`,
+          );
+        chunks.push(audio);
+        phonemes.push(chunk.phonemes);
+        phonemeChunks.push({
+          phonemes: chunk.phonemes,
+          startSample: sourceOffset,
+          endSample: sourceOffset + audio.length,
+        });
+        sourceOffset += audio.length;
+      }
+      if (sourceSampleRate === undefined || chunks.length === 0)
+        throw new Error(`Kokoro synthesized no PCM for line "${line.id}".`);
+      const samples = concatenateFloat32(chunks);
+      const bytes = new Uint8Array(
+        samples.buffer,
+        samples.byteOffset,
+        samples.byteLength,
+      );
+      const record: IKokoroCacheRecord = {
+        version: 2,
+        cacheKey,
+        model: KOKORO_MODEL,
+        modelRevision: KOKORO_MODEL_REVISION,
+        voice: KOKORO_VOICE,
+        sourceSampleRate,
+        sourceSamples: samples.length,
+        pcmDigest: digestAutoMovieBytes(bytes),
+        phonemes: phonemes.join(""),
+        phonemeChunks,
+        runtimeAssets,
+      };
+      const published = publishDialogueCache({
+        base: cacheRoot,
+        pcm: bytes,
+        receipt: Buffer.from(`${JSON.stringify(record, null, 2)}\n`, "utf8"),
+        target: cachePath,
+      });
+      cached = validatedDialogueCache(published, cacheKey, runtimeAssets);
+      if (cached === undefined)
+        throw new Error(
+          `Published Kokoro cache generation for line "${line.id}" is invalid.`,
+        );
+    }
+    pcm.set(line.id, cached.samples);
+    receipts.push({
+      ...cached.record,
+      line: line.id,
+      visemes: productionPhonemesToVisemes({
+        chunks: cached.record.phonemeChunks,
+        sourceSamples: cached.record.sourceSamples,
+        startFrame: line.startFrame,
+        endFrame: line.endFrame,
+      }),
+    });
+    renderProgress("sound.dialogue.complete", { line: line.id });
+  }
+  return { pcm, receipts };
+};
+
+const validatedDialogueCache = (
+  snapshot: IDialogueCacheSnapshot,
+  cacheKey: AutoMovieContentDigest,
+  runtimeAssets: IAutoMovieProductionTtsReceipt["runtimeAssets"],
+): { record: IKokoroCacheRecord; samples: Float32Array } | undefined => {
+  const record = JSON.parse(
+    Buffer.from(snapshot.receipt).toString("utf8"),
+  ) as IKokoroCacheRecord;
+  if (
+    record.version !== 2 ||
+    record.cacheKey !== cacheKey ||
+    record.model !== KOKORO_MODEL ||
+    record.modelRevision !== KOKORO_MODEL_REVISION ||
+    record.voice !== KOKORO_VOICE ||
+    isDeepStrictEqual(record.runtimeAssets, runtimeAssets) === false ||
+    Number.isSafeInteger(record.sourceSampleRate) === false ||
+    record.sourceSampleRate <= 0 ||
+    Number.isSafeInteger(record.sourceSamples) === false ||
+    record.sourceSamples <= 0 ||
+    typeof record.phonemes !== "string" ||
+    validPhonemeChunks(record.phonemeChunks, record.sourceSamples) === false ||
+    record.sourceSamples * Float32Array.BYTES_PER_ELEMENT !==
+      snapshot.pcm.length ||
+    record.pcmDigest !== digestAutoMovieBytes(snapshot.pcm)
+  )
+    return undefined;
+  return {
+    record,
+    samples: new Float32Array(Uint8Array.from(snapshot.pcm).buffer),
+  };
+};
+
+const loadPinnedKokoroRuntime = async (
+  modelCacheRoot: string,
+  baseRuntimeAssets: IAutoMovieProductionTtsReceipt["runtimeAssets"],
+): Promise<IKokoroLoadedRuntime> => {
+  fs.mkdirSync(modelCacheRoot, { recursive: true });
+  renderProgress("sound.model.load.start", {
+    model: KOKORO_MODEL,
+    revision: KOKORO_MODEL_REVISION,
+  });
+  const [{ KokoroTTS, TextSplitterStream }, { env }] = await Promise.all([
+    import("kokoro-js"),
+    import("@huggingface/transformers"),
+  ]);
+  const previous = {
+    cacheDir: env.cacheDir,
+    fetch: globalThis.fetch,
+  };
+  const fetcher = globalThis.fetch.bind(globalThis);
+  const pinnedFetch: typeof globalThis.fetch = async (input, init) => {
+    const source =
+      typeof input === "string"
+        ? input
+        : input instanceof URL
+          ? input.href
+          : input.url;
+    const marker = `huggingface.co/${KOKORO_MODEL}/resolve/`;
+    const markerIndex = source.indexOf(marker);
+    if (markerIndex < 0) return fetcher(input, init);
+    const suffix = source.slice(markerIndex + marker.length);
+    const separator = suffix.indexOf("/");
+    if (separator < 0)
+      throw new Error(`Kokoro model URL has no asset path: ${source}`);
+    const pinned =
+      source.slice(0, markerIndex + marker.length) +
+      KOKORO_MODEL_REVISION +
+      suffix.slice(separator);
+    const request =
+      typeof input === "object" &&
+      input !== null &&
+      "url" in input &&
+      input instanceof Request
+        ? new Request(pinned, input)
+        : pinned;
+    return fetcher(request, init);
+  };
+  return withKokoroRuntimeOverrides(
+    [
+      {
+        resource: "Transformers cache directory",
+        install: () => {
+          env.cacheDir = modelCacheRoot;
+        },
+        restore: () => {
+          env.cacheDir = previous.cacheDir;
+        },
+      },
+      {
+        resource: "global fetch",
+        install: () => {
+          globalThis.fetch = pinnedFetch;
+        },
+        restore: () => {
+          globalThis.fetch = previous.fetch;
+        },
+      },
+    ],
+    async () => {
+      const loaded = await KokoroTTS.from_pretrained(KOKORO_MODEL, {
+        dtype: "q8",
+        device: KOKORO_DEVICE,
+      });
+      const modelAssets = kokoroModelCacheAssets(modelCacheRoot);
+      if (modelAssets.length === 0)
+        throw new Error(
+          "Pinned Kokoro load produced no revision-scoped model cache assets.",
+        );
+      renderProgress("sound.model.load.complete", {
+        model: KOKORO_MODEL,
+        revision: KOKORO_MODEL_REVISION,
+      });
+      return {
+        runtime: loaded as unknown as IKokoroRuntime,
+        createTextSplitter: () => new TextSplitterStream(),
+        runtimeAssets: [...baseRuntimeAssets, ...modelAssets],
+      };
+    },
+  );
+};
+
+const kokoroBaseRuntimeAssets =
+  (): IAutoMovieProductionTtsReceipt["runtimeAssets"] => {
+    const voiceRelative = `voices/${KOKORO_VOICE}.bin`;
+    const kokoro = resolvedPackageSnapshot("kokoro-js", [
+      { kind: "file", relative: voiceRelative },
+    ]);
+    const transformers = resolvedPackageIdentity("@huggingface/transformers");
+    const backend = onnxRuntimeNodeIdentity();
+    const imageCapability = resolvedPackageIdentity("sharp");
+    const voice = kokoro.assets.find((asset) => asset.path === voiceRelative);
+    if (voice === undefined)
+      throw new Error(`Kokoro voice asset is absent: ${voiceRelative}`);
+    return [
+      { path: "package:kokoro-js", digest: kokoro.entryDigest },
+      {
+        path: "package:@huggingface/transformers",
+        digest: transformers.entryDigest,
+      },
+      {
+        path: "package:onnxruntime-node",
+        digest: backend.entryDigest,
+      },
+      ...backend.nativeAssets,
+      {
+        path: "package:sharp-capability-wall",
+        digest: imageCapability.entryDigest,
+      },
+      {
+        path: `voice:${KOKORO_VOICE}.bin`,
+        digest: voice.digest,
+      },
+    ];
+  };
+
+const kokoroModelCacheAssets = (
+  modelCacheRoot: string,
+): IAutoMovieProductionTtsReceipt["runtimeAssets"] =>
+  fs.existsSync(modelCacheRoot)
+    ? listFiles(modelCacheRoot).map((file) => {
+        const relative = path
+          .relative(modelCacheRoot, file)
+          .split(path.sep)
+          .join("/");
+        return {
+          path: `model:${relative}`,
+          digest: digestAutoMovieBytes(
+            readAutoMovieProductionOwnedFile({
+              root: modelCacheRoot,
+              directory: modelCacheRoot,
+              relative,
+            }),
+          ),
+        };
+      })
+    : [];
+
+const validPhonemeChunks = (
+  chunks: unknown,
+  sourceSamples: number,
+): chunks is IKokoroCacheRecord["phonemeChunks"] =>
+  Array.isArray(chunks) &&
+  chunks.length > 0 &&
+  chunks.every(
+    (chunk, index) =>
+      typeof chunk === "object" &&
+      chunk !== null &&
+      typeof chunk.phonemes === "string" &&
+      Number.isSafeInteger(chunk.startSample) &&
+      Number.isSafeInteger(chunk.endSample) &&
+      chunk.startSample === (index === 0 ? 0 : chunks[index - 1]!.endSample) &&
+      chunk.endSample > chunk.startSample,
+  ) &&
+  chunks.at(-1)!.endSample === sourceSamples;
+
+const encodeProductionOpus = async (pcm: Float32Array): Promise<Uint8Array> => {
+  if (pcm.length === 0 || pcm.length % 2 !== 0)
+    throw new Error("Opus encoding requires non-empty interleaved stereo PCM.");
+  const { createEncoder } = await import("libopus-wasm");
+  const encoder = await createEncoder({
+    bitrate: 128_000,
+    complexity: 10,
+    vbr: false,
+  });
+  const sampleFrames = pcm.length / 2;
+  let primingSamples = 0;
+  let codedSampleFrames = 0;
+  const packets: Array<{
+    bytes: Uint8Array<ArrayBuffer>;
+    duration: number;
+    dts: number;
+  }> = [];
+  let failure: { error: unknown } | undefined;
+  try {
+    if (
+      encoder.frameSize !== 960 ||
+      encoder.channels !== 2 ||
+      encoder.sampleRate !== 48_000
+    )
+      throw new Error(
+        "Pinned Opus runtime no longer exposes the required 48 kHz stereo 20 ms profile.",
+      );
+    primingSamples = encoder.getLookahead();
+    if (
+      Number.isSafeInteger(primingSamples) === false ||
+      primingSamples < 0 ||
+      primingSamples >= encoder.frameSize
+    )
+      throw new Error(
+        "Pinned Opus runtime returned an invalid encoder lookahead.",
+      );
+    codedSampleFrames =
+      Math.ceil((sampleFrames + primingSamples) / encoder.frameSize) *
+      encoder.frameSize;
+    for (let dts = 0; dts < codedSampleFrames; dts += encoder.frameSize) {
+      const frame = new Float32Array(encoder.frameSize * encoder.channels);
+      frame.set(
+        pcm.subarray(
+          dts * encoder.channels,
+          Math.min(pcm.length, (dts + encoder.frameSize) * encoder.channels),
+        ),
+      );
+      packets.push({
+        bytes: Uint8Array.from(encoder.encodeFloat(frame)),
+        duration: encoder.frameSize,
+        dts,
+      });
+    }
+  } catch (error) {
+    failure = { error };
+  }
+  preserveProductionEncoderCleanup(failure, [
+    { resource: "Opus encoder", cleanup: (): void => encoder.free() },
+  ]);
+  const description = new BoxParser.box.dOps();
+  description.Version = 0;
+  description.OutputChannelCount = 2;
+  description.PreSkip = primingSamples;
+  description.InputSampleRate = 48_000;
+  description.OutputGain = 0;
+  description.ChannelMappingFamily = 0;
+  description.StreamCount = 1;
+  description.CoupledCount = 1;
+  description.ChannelMapping = [];
   const file = createFile();
   file.init({
-    brands: ["isom", "iso2", "mp41"],
-    timescale: sampleRate,
-    duration: total,
+    brands: ["isom", "iso2", "mp41", "Opus"],
+    timescale: 48_000,
+    duration: codedSampleFrames,
   });
   const track = file.addTrack({
-    type: "mp4a",
+    type: "Opus",
     hdlr: "soun",
-    name: "AutoMovie deterministic silence",
-    timescale: sampleRate,
-    media_duration: total,
-    duration: total,
-    samplerate: sampleRate,
+    name: "AutoMovie deterministic Opus mix",
+    timescale: 48_000,
+    media_duration: codedSampleFrames,
+    duration: codedSampleFrames,
+    samplerate: 48_000,
     channel_count: 2,
     samplesize: 16,
+    description_boxes: [description],
   });
-  for (let dts = 0; dts < total; dts += 1_024)
-    file.addSample(
-      track,
-      Uint8Array.from([0x21, 0x10, 0x04, 0x60, 0x8c, 0x1c]),
-      {
-        duration: Math.min(1_024, total - dts),
-        dts,
-        cts: dts,
-        is_sync: true,
-      },
-    );
+  for (const packet of packets)
+    file.addSample(track, packet.bytes, {
+      duration: packet.duration,
+      dts: packet.dts,
+      cts: packet.dts,
+      is_sync: true,
+    });
+  trimProductionAudioPresentation({
+    file,
+    track,
+    mediaTimescale: 48_000,
+    movieTimescale: 48_000,
+    primingSamples,
+    presentationSamples: sampleFrames,
+  });
   return new Uint8Array(file.getBuffer().buffer);
+};
+
+const encodeSoundRaster = (raster: {
+  width: number;
+  height: number;
+  rgba: Uint8Array;
+}): Uint8Array => {
+  const png = new PNG({ width: raster.width, height: raster.height });
+  png.data = Buffer.from(raster.rgba);
+  return PNG.sync.write(png);
+};
+
+const concatenateFloat32 = (chunks: readonly Float32Array[]): Float32Array => {
+  const output = new Float32Array(
+    chunks.reduce((total, chunk) => total + chunk.length, 0),
+  );
+  let offset = 0;
+  for (const chunk of chunks) {
+    output.set(chunk, offset);
+    offset += chunk.length;
+  }
+  return output;
 };
 
 const assertDeliverableProbe = (
@@ -1051,6 +2188,16 @@ const assertDeliverableProbe = (
 ): void => {
   const runtimeSeconds = plan.totalFrames / plan.frameFormat.fps;
   if (kind === "feature" || kind === "guide-pass") {
+    if (kind === "guide-pass" && probe.kind === "png") {
+      if (
+        probe.width !== plan.frameFormat.width ||
+        probe.height !== plan.frameFormat.height
+      )
+        throw new Error(
+          "Published guide frame does not match the tier raster.",
+        );
+      return;
+    }
     if (
       probe.kind !== "video" ||
       probe.width !== plan.frameFormat.width ||
@@ -1077,6 +2224,16 @@ const assertDeliverableProbe = (
     if (probe.kind !== "webvtt" || probe.lastCueSeconds > runtimeSeconds)
       throw new Error(
         "Caption output is empty, malformed, unordered, or outside the production timeline.",
+      );
+    return;
+  }
+  if (probe.kind === "png" || probe.kind === "sound-evidence") {
+    if (
+      probe.kind === "sound-evidence" &&
+      (probe.clippingSamples !== 0 || probe.eventAlignmentPassed === false)
+    )
+      throw new Error(
+        "Sound evidence reports clipping or a semantic event outside its frame gate.",
       );
     return;
   }
@@ -1134,19 +2291,26 @@ const hasVisiblePixelVariance = (png: PNG): boolean => {
 const productionApplication = (): AutoMovieApplication => {
   const app = new AutoMovieApplication({
     projectRoot: root,
+    productionId,
     capture: captureProductionFrame,
   });
   app.getGuideDocument({ name: "AUTOMOVIE_OVERALL" });
-  app.getGuideDocument({ name: "COMPILATION" });
-  app.getGuideDocument({ name: "PRODUCTION_RENDER" });
-  app.openProject({ root });
+  app.getGuideDocument({ name: "CAPTURE_FRAME" });
   return app;
 };
 
+const productionServices = () =>
+  openAutoMovieProduction({
+    projectRoot: root,
+    productionId,
+    capture: captureProductionFrame,
+  });
+
 const readPlan = (): IAutoMovieProductionRenderJobPlan => {
-  if (fs.existsSync(planPath) === false)
+  const captured = captureExistingRenderPlan(stateRoot, planPath);
+  if (captured === null)
     throw new Error("No render plan exists. Run automovie render plan.");
-  return readJson<IAutoMovieProductionRenderJobPlan>(planPath);
+  return captured.plan;
 };
 
 const currentStoredPlan =
@@ -1181,7 +2345,7 @@ const stalePlanRows = (
 const currentRenderPlanInputs = async (
   plan: IAutoMovieProductionRenderJobPlan,
 ) => {
-  const project = AutoMovieProductionProject.open(root);
+  const project = AutoMovieProductionProject.open(root, productionId);
   const graph = project.graph();
   const production = graph.production;
   if (production === null)
@@ -1195,8 +2359,9 @@ const currentRenderPlanInputs = async (
     compileFingerprint: plan.compileFingerprint,
     timeline,
     first,
-    width: production.frameFormat.width,
-    height: production.frameFormat.height,
+    width: plan.frameFormat.width,
+    height: plan.frameFormat.height,
+    fps: plan.frameFormat.fps,
   });
   return {
     timeline,
@@ -1214,9 +2379,11 @@ const renderRuntimeIdentity = async (props: {
   first: { shot: string; sourceFrame: number };
   width: number;
   height: number;
+  fps: number;
 }): Promise<IAutoMovieProductionRenderRuntimeIdentity> => {
   const preflight = await captureProductionFrame({
     projectRoot: root,
+    productionId,
     compileFingerprint: props.compileFingerprint,
     target: { kind: "shot", id: props.first.shot },
     time: props.first.sourceFrame / props.timeline.fps,
@@ -1228,21 +2395,21 @@ const renderRuntimeIdentity = async (props: {
     protocolVersion: "automovie.production-render-runtime.v1",
     sourceDigest: renderSourceDigest(props.project, props.timeline),
     capture: preflight.runtimeIdentity,
-    encoder: productionEncoderIdentity(props.timeline.fps),
+    encoder: productionEncoderIdentity(props.fps),
   };
 };
 
 const productionEncoderIdentity = (
   fps: number,
 ): IAutoMovieProductionEncoderIdentity => {
-  const encoderEntry = require.resolve("h264-mp4-encoder");
-  const encoderPackage = JSON.parse(
-    fs.readFileSync(require.resolve("h264-mp4-encoder/package.json"), "utf8"),
-  ) as { version: string };
+  const encoder = packageSnapshotIdentity(
+    snapshotRuntimePackage({
+      entry: require.resolve("h264-mp4-encoder"),
+      packageName: "h264-mp4-encoder",
+    }),
+  );
   return {
-    package: "h264-mp4-encoder",
-    version: encoderPackage.version,
-    entryDigest: digestAutoMovieBytes(fs.readFileSync(encoderEntry)),
+    ...encoder,
     codec: "h264",
     arguments: {
       quantizationParameter: 24,
@@ -1253,9 +2420,396 @@ const productionEncoderIdentity = (
 };
 
 const chunkDirectory = (digest: AutoMovieContentDigest): string =>
-  path.join(stateRoot, "chunks", digest.slice(7));
+  renderChunkPublicationPath({
+    chunk: digest,
+    root,
+    scope: renderLivenessScope,
+    tier: renderTier.kind,
+  });
 
-const recoverAbandonedTemporaryDirectories = (): void => {
+const renderGarbageCollection = (apply: boolean) => {
+  if (apply === false) return collectRenderGarbage(false);
+  const lease = acquireRenderGcLease({
+    coordinationRoot: root,
+    pid: process.pid,
+    processAlive,
+    scope: renderLivenessScope,
+  });
+  try {
+    assertNoLiveRenderWorkers();
+    return collectRenderGarbage(true);
+  } finally {
+    releaseRenderLivenessLease(lease);
+  }
+};
+
+const collectRenderGarbage = (apply: boolean) => {
+  const currentCompileFingerprint = sourceFingerprint();
+  const plans = (["proxy", "final"] as const).flatMap((tier) => {
+    const file = path.join(renderJobRoot, tier, "plan.json");
+    const captured = captureExistingRenderPlan(renderJobRoot, file);
+    if (captured === null) return [];
+    const plan = captured.plan;
+    const currentTier =
+      tier === "proxy" ? config.render.proxy : config.render.final;
+    return plan.compileFingerprint === currentCompileFingerprint &&
+      isDeepStrictEqual(plan.tier, currentTier)
+      ? [plan]
+      : [];
+  });
+  const project = AutoMovieProductionProject.open(root, productionId);
+  const renderRoot = project.renderRoot();
+  const reviewBundles = new Set(
+    inspectAutoMovieProduction(productionServices()).reviews.entries.flatMap(
+      (entry) => {
+        const review = project.review(entry.target);
+        return (
+          review?.checks.flatMap((check) =>
+            check.evidence.flatMap((evidence) =>
+              evidence.kind === "frame" ? [evidence.bundle] : [],
+            ),
+          ) ?? []
+        );
+      },
+    ),
+  );
+  const manifestPath = path.join(productionStateRoot, "render-manifest.json");
+  const publicationPaths = new Set(
+    fs.existsSync(manifestPath)
+      ? (
+          readRendererJson<{
+            deliverables: Array<{ files: Array<{ path: string }> }>;
+          }>(productionStateRoot, manifestPath).deliverables ?? []
+        ).flatMap((deliverable) =>
+          deliverable.files.map((file) => `publication/${file.path}`),
+        )
+      : [],
+  );
+  const candidates: IAutoMovieProductionRenderGcCandidate[] = [];
+  const candidateSnapshots = new Map<string, IRenderGcTargetSnapshot>();
+  const quarantineEvidenceSnapshots = new Map<
+    string,
+    IRenderGcTargetSnapshot
+  >();
+  const quarantineEntries: Array<{
+    candidate: IAutoMovieProductionRenderGcCandidate;
+    snapshot: IRenderGcTargetSnapshot;
+  }> = [];
+  const retainedChunkPaths = new Set<string>();
+  for (const tier of ["proxy", "final"] as const) {
+    const tierPlan = plans.find((plan) => plan.tier.kind === tier);
+    const tierChunks = new Map(
+      (tierPlan?.chunks ?? []).map((chunk) => [chunk.id, chunk]),
+    );
+    const publicationInventory = inventoryRenderChunkGarbage({
+      assertReceipt: (chunk, receipt) => {
+        if (tierPlan === undefined)
+          throw new Error("Render GC has no current plan for this chunk.");
+        verifyProductionRenderChunkReceipt({
+          plan: tierPlan,
+          chunk,
+          receipt,
+        });
+      },
+      chunks: tierChunks,
+      processAlive,
+      renderJobRoot,
+      root,
+      scope: renderLivenessScope,
+      tier,
+    });
+    for (const entry of publicationInventory.entries) {
+      candidates.push(entry.candidate);
+      candidateSnapshots.set(gcCandidateKey(entry.candidate), entry.snapshot);
+    }
+    for (const retained of publicationInventory.retainedChunkPaths)
+      retainedChunkPaths.add(retained);
+    const chunks = path.join(renderJobRoot, tier, "chunks");
+    if (fs.existsSync(chunks))
+      for (const entry of fs
+        .readdirSync(chunks, { withFileTypes: true })
+        .sort((left, right) => compareCodeUnits(left.name, right.name))) {
+        if (
+          entry.isDirectory() === false ||
+          /^[0-9a-f]{64}$/u.test(entry.name) === false
+        )
+          continue;
+        const target = path.join(chunks, entry.name);
+        const candidate: IAutoMovieProductionRenderGcCandidate = {
+          path: `${tier}/chunks/${entry.name}`,
+          kind: "chunk",
+          digest: `sha256:${entry.name}`,
+          bytes: 0,
+        };
+        const snapshot = captureRenderGcTarget(renderJobRoot, target);
+        candidate.bytes = snapshot.bytes;
+        candidates.push(candidate);
+        candidateSnapshots.set(gcCandidateKey(candidate), snapshot);
+      }
+    const quarantineRoot = path.join(renderJobRoot, tier, "quarantine");
+    if (fs.existsSync(quarantineRoot))
+      for (const entry of fs
+        .readdirSync(quarantineRoot, { withFileTypes: true })
+        .sort((left, right) => compareCodeUnits(left.name, right.name))) {
+        if (entry.isSymbolicLink()) continue;
+        const target = path.join(quarantineRoot, entry.name);
+        const candidate: IAutoMovieProductionRenderGcCandidate = {
+          path: `${tier}/quarantine/${entry.name}`,
+          kind: "quarantine",
+          digest: null,
+          bytes: 0,
+        };
+        const snapshot = captureRenderGcTarget(
+          path.join(renderJobRoot, tier),
+          target,
+        );
+        quarantineEntries.push({ candidate, snapshot });
+      }
+  }
+  const quarantineEntryByTarget = new Map(
+    quarantineEntries.map((entry) => [entry.snapshot.target, entry]),
+  );
+  for (const inventory of inventoryRenderQuarantineCandidates(
+    quarantineEntries.map((entry) => entry.snapshot),
+  )) {
+    const entry = quarantineEntryByTarget.get(inventory.marker.target);
+    if (entry === undefined)
+      throw new Error("Render quarantine inventory lost its candidate.");
+    const key = gcCandidateKey(entry.candidate);
+    entry.candidate.bytes = inventory.bytes;
+    candidates.push(entry.candidate);
+    candidateSnapshots.set(key, inventory.marker);
+    if (inventory.evidence !== null)
+      quarantineEvidenceSnapshots.set(key, inventory.evidence);
+  }
+  const sweptPublicationRoots: string[] = [];
+  const sweptPublicationTargets = new Set<string>();
+  const proxyRoot = path.join(renderRoot, "deliverables", "proxy");
+  if (fs.existsSync(proxyRoot)) {
+    const currentProxy = plans.find((plan) => plan.tier.kind === "proxy");
+    for (const entry of fs
+      .readdirSync(proxyRoot, { withFileTypes: true })
+      .sort((left, right) => compareCodeUnits(left.name, right.name))) {
+      if (
+        entry.isSymbolicLink() ||
+        (entry.isDirectory() === false && entry.isFile() === false) ||
+        /^[0-9a-f]{64}$/u.test(entry.name) === false
+      )
+        continue;
+      const target = path.join(proxyRoot, entry.name);
+      const relative = normalizeSlash(path.relative(renderRoot, target));
+      const logical = `publication/${relative}`;
+      const retainedByReview = [...reviewBundles].some(
+        (bundle) => relative === bundle || relative.startsWith(`${bundle}/`),
+      );
+      const retainedByManifest = [...publicationPaths].some(
+        (file) => file === logical || file.startsWith(`${logical}/`),
+      );
+      const adjudicated = captureProxyPublicationGcTarget({
+        renderRoot,
+        target,
+        judge: (snapshot, evidence) => {
+          if (
+            currentProxy === undefined ||
+            entry.name !== renderPublicationFingerprint(currentProxy).slice(7)
+          )
+            return false;
+          try {
+            const receipt = inspectCapturedProxyBundle(snapshot, evidence);
+            return (
+              receipt.publicationFingerprint ===
+                renderPublicationFingerprint(currentProxy) &&
+              receipt.compileFingerprint === currentProxy.compileFingerprint &&
+              receipt.editFingerprint === currentProxy.editFingerprint
+            );
+          } catch {
+            return false;
+          }
+        },
+      });
+      const current = adjudicated.value;
+      if (current || retainedByReview || retainedByManifest) {
+        if (current) {
+          if (adjudicated.snapshot.kind === "file")
+            publicationPaths.add(logical);
+          else
+            for (const entry of adjudicated.snapshot.entries) {
+              if (entry.kind !== "file") continue;
+              const file = path.join(
+                adjudicated.snapshot.target,
+                ...entry.path.split("/"),
+              );
+              publicationPaths.add(
+                `publication/${normalizeSlash(path.relative(renderRoot, file))}`,
+              );
+            }
+        }
+        continue;
+      }
+      const candidate: IAutoMovieProductionRenderGcCandidate = {
+        path: logical,
+        kind: "publication",
+        digest: null,
+        bytes: 0,
+      };
+      candidate.bytes = adjudicated.snapshot.bytes;
+      candidates.push(candidate);
+      candidateSnapshots.set(gcCandidateKey(candidate), adjudicated.snapshot);
+      if (adjudicated.snapshot.kind === "file")
+        sweptPublicationTargets.add(relative);
+      else sweptPublicationRoots.push(`${relative}/`);
+    }
+  }
+  if (fs.existsSync(renderRoot))
+    for (const file of physicalFiles(renderRoot)) {
+      const relative = normalizeSlash(path.relative(renderRoot, file));
+      if (isRenderGcPreservedPath(relative)) continue;
+      if (sweptPublicationTargets.has(relative)) continue;
+      if (sweptPublicationRoots.some((root) => relative.startsWith(root)))
+        continue;
+      if (
+        [...reviewBundles].some(
+          (bundle) => relative === bundle || relative.startsWith(`${bundle}/`),
+        )
+      )
+        publicationPaths.add(`publication/${relative}`);
+      const candidate: IAutoMovieProductionRenderGcCandidate = {
+        path: `publication/${relative}`,
+        kind: "publication",
+        digest: null,
+        bytes: 0,
+      };
+      const snapshot = captureRenderGcTarget(renderRoot, file);
+      candidate.bytes = snapshot.bytes;
+      candidates.push(candidate);
+      candidateSnapshots.set(gcCandidateKey(candidate), snapshot);
+    }
+  const plan = planProductionRenderGc({
+    plans,
+    publicationPaths: [...publicationPaths],
+    retainedChunkPaths: [...retainedChunkPaths],
+    candidates,
+  });
+  if (apply) {
+    const quarantines = new Map<string, string>();
+    for (const candidate of plan.remove) {
+      const snapshot = candidateSnapshots.get(gcCandidateKey(candidate));
+      if (snapshot === undefined)
+        throw new Error(
+          `GC candidate "${candidate.path}" has no matching inventory snapshot.`,
+        );
+      const base = snapshot.base.path;
+      let quarantine = quarantines.get(base);
+      if (quarantine === undefined) {
+        quarantine = ensureRenderPhysicalDirectory(
+          base,
+          RENDER_GC_REMOVAL_STAGING_DIRECTORY,
+        );
+        quarantines.set(base, quarantine);
+      }
+      const isolated = path.join(quarantine, randomUUID());
+      const evidence = quarantineEvidenceSnapshots.get(
+        gcCandidateKey(candidate),
+      );
+      if (evidence !== undefined) {
+        removeCapturedRenderQuarantine({
+          evidence,
+          marker: snapshot,
+          quarantine,
+        });
+      } else
+        removeCapturedRenderGcTarget({
+          isolated,
+          quarantine,
+          snapshot,
+        });
+    }
+  }
+  return { applied: apply, ...plan };
+};
+
+const gcCandidateKey = (
+  candidate: Pick<IAutoMovieProductionRenderGcCandidate, "kind" | "path">,
+): string => `${candidate.kind}\0${candidate.path}`;
+
+const assertNoLiveRenderWorkers = (): void => {
+  for (const tier of ["proxy", "final"] as const) {
+    const tierRoot = path.join(renderJobRoot, tier);
+    const locks = path.join(tierRoot, "locks");
+    if (fs.existsSync(locks))
+      for (const file of physicalFiles(locks).filter((candidate) =>
+        candidate.endsWith(".lock"),
+      )) {
+        const snapshot = captureExistingRenderTarget(tierRoot, file);
+        if (snapshot === null) continue;
+        const owner = readCapturedRenderJson<IRenderChunkLockOwner>(
+          snapshot,
+          RENDER_LOCK_JSON_MAX_BYTES,
+        );
+        if (Number.isSafeInteger(owner.pid) && processAlive(owner.pid))
+          throw new Error(
+            `Render GC --apply refuses live ${tier} worker ${owner.pid} at "${file}". Wait for that worker or stop it explicitly.`,
+          );
+      }
+    const attempts = path.join(tierRoot, "attempts");
+    for (const captured of listRenderAttempts(tierRoot, attempts)) {
+      const attempt = captured.record;
+      const file = captured.snapshot.target;
+      if (attempt.state === "running" && processAlive(attempt.pid))
+        throw new Error(
+          `Render GC --apply refuses live ${tier} attempt ${attempt.pid} at "${file}". Wait for that worker or stop it explicitly.`,
+        );
+    }
+  }
+};
+
+const renderPublicationFingerprint = (
+  plan: IAutoMovieProductionRenderJobPlan,
+): AutoMovieContentDigest =>
+  digestAutoMovieBytes(
+    Buffer.from(
+      JSON.stringify({
+        protocol: "automovie.production-publication.v2",
+        productionId: plan.productionId,
+        compileFingerprint: plan.compileFingerprint,
+        editFingerprint: plan.editFingerprint,
+        runtimeIdentity: plan.runtimeIdentity,
+        tier: plan.tier,
+        sourceFrameFormat: plan.sourceFrameFormat,
+        frameFormat: plan.frameFormat,
+        totalFrames: plan.totalFrames,
+        chunkFrames: plan.chunkFrames,
+        chunks: plan.chunks.map((chunk) => ({
+          slot: chunk.slot,
+          id: chunk.id,
+          pass: chunk.pass,
+        })),
+        tracks: plan.tracks,
+      }),
+      "utf8",
+    ),
+  );
+
+const physicalFiles = (directory: string): string[] => {
+  const output: string[] = [];
+  for (const entry of fs
+    .readdirSync(directory, { withFileTypes: true })
+    .sort((left, right) => compareCodeUnits(left.name, right.name))) {
+    const target = path.join(directory, entry.name);
+    if (entry.isSymbolicLink())
+      throw new Error(`Render GC refuses linked publication "${target}".`);
+    if (entry.isDirectory()) output.push(...physicalFiles(target));
+    else if (entry.isFile()) output.push(target);
+  }
+  return output;
+};
+
+const normalizeSlash = (value: string): string => value.replaceAll("\\", "/");
+
+const recoverAbandonedTemporaryDirectories = (
+  chunks: readonly IAutoMovieProductionRenderChunk[],
+): void => {
+  const currentChunks = new Map(chunks.map((chunk) => [chunk.id, chunk]));
   const locks = path.join(stateRoot, "locks");
   if (fs.existsSync(locks))
     for (const slot of fs
@@ -1271,13 +2825,9 @@ const recoverAbandonedTemporaryDirectories = (): void => {
           entry.name,
         );
         const pid = Number(match?.[1]);
-        if (
-          entry.isFile() === false ||
-          Number.isSafeInteger(pid) === false ||
-          pid <= 0 ||
-          processAlive(pid) === false
-        )
-          quarantine(target, "abandoned-lock-candidate");
+        const snapshot = captureAbandonedRenderStateTarget(target, pid);
+        if (snapshot === null) continue;
+        quarantine(target, "abandoned-lock-candidate", snapshot);
       }
   const directory = path.join(stateRoot, "tmp");
   if (fs.existsSync(directory) === false) return;
@@ -1286,37 +2836,117 @@ const recoverAbandonedTemporaryDirectories = (): void => {
     .sort((left, right) => compareCodeUnits(left.name, right.name))) {
     const target = path.join(directory, entry.name);
     const pid = Number(entry.name.split(".").at(-1));
-    if (
-      entry.isDirectory() === false ||
-      Number.isSafeInteger(pid) === false ||
-      pid <= 0 ||
-      processAlive(pid) === false
-    )
-      quarantine(target, "abandoned-partial");
+    const snapshot = captureAbandonedRenderStateTarget(target, pid);
+    if (snapshot === null) continue;
+    if (currentPublicationProtectsTree(currentChunks, entry.name, snapshot))
+      continue;
+    quarantine(target, "abandoned-partial", snapshot);
   }
 };
 
 const quarantineStaleSlotOutputs = (
-  chunk: IAutoMovieProductionRenderChunk,
+  chunks: readonly IAutoMovieProductionRenderChunk[],
 ): void => {
+  const currentIds = new Set(chunks.map((chunk) => chunk.id));
+  const currentChunks = new Map(chunks.map((chunk) => [chunk.slot, chunk.id]));
+  const pointerPrefix = `.automovie-chunk-${renderLivenessScope}.${renderTier.kind}.`;
+  for (const name of fs
+    .readdirSync(root)
+    .filter(
+      (candidate) =>
+        candidate.startsWith(pointerPrefix) &&
+        candidate.endsWith(".publication.json"),
+    )
+    .sort(compareCodeUnits)) {
+    const pointer = path.join(root, name);
+    const digest = `sha256:${name.slice(
+      pointerPrefix.length,
+      -".publication.json".length,
+    )}` as AutoMovieContentDigest;
+    let pointerSnapshot: IRenderGcTargetSnapshot;
+    try {
+      pointerSnapshot = captureRenderGcTarget(root, pointer);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") continue;
+      throw error;
+    }
+    let current = false;
+    try {
+      const publication =
+        captureRenderChunkPublicationFromPointer(pointerSnapshot);
+      current =
+        currentIds.has(digest) &&
+        publication.receipt.chunk === digest &&
+        currentChunks.get(publication.receipt.slot) === digest;
+    } catch {
+      current = false;
+    }
+    if (current === false) removeCapturedRenderChunkPointer(pointerSnapshot);
+  }
   const directory = path.join(stateRoot, "chunks");
   if (fs.existsSync(directory) === false) return;
   for (const entry of fs
     .readdirSync(directory, { withFileTypes: true })
-    .filter((candidate) => candidate.isDirectory())
     .sort((left, right) => compareCodeUnits(left.name, right.name))) {
     const target = path.join(directory, entry.name);
     const receiptFile = path.join(target, "receipt.json");
+    const receiptSnapshot = captureExistingRenderStateTarget(receiptFile);
+    if (receiptSnapshot === null || receiptSnapshot.kind !== "file") continue;
     let receipt: IAutoMovieProductionRenderChunkReceipt;
     try {
-      receipt = readJson<IAutoMovieProductionRenderChunkReceipt>(receiptFile);
+      receipt =
+        readCapturedRenderJson<IAutoMovieProductionRenderChunkReceipt>(
+          receiptSnapshot,
+        );
     } catch {
       // An unreadable unrelated directory has no trustworthy slot ownership.
       continue;
     }
-    if (receipt.slot === chunk.slot && receipt.chunk !== chunk.id)
-      quarantine(target, "stale-slot");
+    const currentChunk = currentChunks.get(receipt.slot);
+    if (currentChunk !== undefined && receipt.chunk !== currentChunk) {
+      const snapshot = captureExistingRenderStateTarget(target);
+      if (snapshot === null || snapshot.kind !== "directory") continue;
+      assertCapturedRenderGcFileEntry({
+        directory: snapshot,
+        file: receiptSnapshot,
+        relative: "receipt.json",
+      });
+      try {
+        quarantine(target, "stale-slot", snapshot);
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+      }
+    }
   }
+};
+
+const captureCurrentChunkPointer = (
+  chunk: IAutoMovieProductionRenderChunk,
+): IRenderGcTargetSnapshot | null => {
+  try {
+    return captureRenderGcTarget(root, chunkDirectory(chunk.id));
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
+    throw error;
+  }
+};
+
+const currentPublicationProtectsTree = (
+  chunks: ReadonlyMap<AutoMovieContentDigest, IAutoMovieProductionRenderChunk>,
+  candidateName: string,
+  candidate: IRenderGcTargetSnapshot,
+): boolean => {
+  return currentRenderChunkPublicationProtectsTree({
+    candidate,
+    candidateName,
+    chunks,
+    capture: (chunk) => {
+      const pointer = captureCurrentChunkPointer(chunk);
+      return pointer === null
+        ? null
+        : captureRenderChunkPublicationFromPointer(pointer);
+    },
+  });
 };
 
 const attemptPath = (chunk: IAutoMovieProductionRenderChunk): string =>
@@ -1349,19 +2979,6 @@ const chunkLockClaims = (chunk: IAutoMovieProductionRenderChunk): string[] => {
   return claims.sort(compareCodeUnits);
 };
 
-const readAllJson = <T>(directory: string, suffix: string): T[] =>
-  fs.existsSync(directory)
-    ? listFiles(directory)
-        .filter((file) => file.endsWith(suffix))
-        .flatMap((file) => {
-          try {
-            return [readJson<T>(file)];
-          } catch {
-            return [];
-          }
-        })
-    : [];
-
 const listFiles = (directory: string): string[] =>
   fs
     .readdirSync(directory, { withFileTypes: true })
@@ -1379,22 +2996,96 @@ const readRegularInside = (directory: string, relative: string): Uint8Array => {
   });
 };
 
-const quarantine = (target: string, reason: string): void => {
+const captureExistingRenderStateTarget = (
+  target: string,
+): IRenderGcTargetSnapshot | null =>
+  captureExistingRenderTarget(stateRoot, target);
+
+const captureExistingRenderTarget = (
+  base: string,
+  target: string,
+): IRenderGcTargetSnapshot | null => {
+  try {
+    return captureRenderGcTarget(base, target);
+  } catch (error) {
+    if (
+      (error as NodeJS.ErrnoException).code === "ENOENT" ||
+      (error as NodeJS.ErrnoException).code === "ENOTDIR"
+    )
+      return null;
+    throw error;
+  }
+};
+
+const captureAbandonedRenderStateTarget = (
+  target: string,
+  pid: number,
+): IRenderGcTargetSnapshot | null => {
+  const validPid = Number.isSafeInteger(pid) && pid > 0;
+  if (validPid && processAlive(pid)) return null;
+  let snapshot: IRenderGcTargetSnapshot | null;
+  try {
+    snapshot = captureExistingRenderStateTarget(target);
+  } catch (error) {
+    if (validPid && processAlive(pid)) return null;
+    throw error;
+  }
+  if (validPid && processAlive(pid)) return null;
+  return snapshot;
+};
+
+const readCapturedRenderJson = <T>(
+  snapshot: IRenderGcTargetSnapshot,
+  maximumBytes: number = snapshot.bytes,
+): T =>
+  JSON.parse(
+    Buffer.from(readCapturedRenderGcFile(snapshot, maximumBytes)).toString(
+      "utf8",
+    ),
+  ) as T;
+
+const removeCapturedRenderStateTarget = (
+  snapshot: IRenderGcTargetSnapshot,
+): void => {
+  const quarantine = ensureRenderPhysicalDirectory(
+    stateRoot,
+    RENDER_GC_REMOVAL_STAGING_DIRECTORY,
+  );
+  removeCapturedRenderGcTarget({
+    isolated: path.join(quarantine, randomUUID()),
+    quarantine,
+    snapshot,
+  });
+};
+
+const quarantine = (
+  target: string,
+  reason: string,
+  captured?: IRenderGcTargetSnapshot,
+): void => {
   const absolute = path.resolve(target);
   const prefix = `${path.resolve(stateRoot)}${path.sep}`;
   if (absolute.startsWith(prefix) === false)
     throw new Error(
       `Refusing to quarantine path outside render state: ${target}`,
     );
-  const directory = path.join(stateRoot, "quarantine");
-  fs.mkdirSync(directory, { recursive: true });
-  fs.renameSync(
-    absolute,
-    path.join(
-      directory,
-      `${path.basename(target)}.${reason}.${Date.now()}.${process.pid}`,
-    ),
+  const snapshot = captured ?? captureRenderGcTarget(stateRoot, absolute);
+  if (snapshot.target !== absolute)
+    throw new Error(`Render quarantine target "${target}" changed namespace.`);
+  const directory = ensureRenderPhysicalDirectory(stateRoot, "quarantine");
+  const preserved = ensureRenderPhysicalDirectory(
+    stateRoot,
+    RENDER_GC_QUARANTINE_EVIDENCE_DIRECTORY,
   );
+  quarantineCapturedRenderTarget({
+    destination: path.join(
+      directory,
+      `${path.basename(target)}.${reason}.${Date.now()}.${process.pid}.${randomUUID()}`,
+    ),
+    isolated: path.join(preserved, randomUUID()),
+    quarantine: preserved,
+    snapshot,
+  });
 };
 
 const processAlive = (pid: number): boolean => {
@@ -1406,24 +3097,44 @@ const processAlive = (pid: number): boolean => {
   }
 };
 
-const writeFileAtomic = (file: string, bytes: Uint8Array): void => {
-  fs.mkdirSync(path.dirname(file), { recursive: true });
-  const temporary = `${file}.${process.pid}.tmp`;
-  try {
-    fs.writeFileSync(temporary, bytes);
-    fs.renameSync(temporary, file);
-  } finally {
-    fs.rmSync(temporary, { force: true });
-  }
+const writeRenderFile = (props: {
+  bytes: Uint8Array;
+  file: string;
+  ownership: IRenderChunkTemporaryTree;
+}): IRenderGcTargetSnapshot => {
+  if (path.dirname(path.resolve(props.file)) !== props.ownership.tree.path)
+    throw new Error("Render chunk file changed declared parent.");
+  assertRenderChunkTemporaryTree(props.ownership);
+  const snapshot = createRenderGcFileSnapshot(
+    props.ownership.tree.path,
+    props.file,
+    props.bytes,
+  );
+  if (
+    snapshot.base.path !== props.ownership.tree.path ||
+    snapshot.base.real !== props.ownership.tree.real ||
+    snapshot.base.identity !== props.ownership.tree.identity
+  )
+    throw new Error("Render chunk file changed parent ownership.");
+  assertRenderChunkTemporaryTree(props.ownership);
+  return snapshot;
 };
-
-const writeJsonAtomic = (file: string, value: unknown): void =>
-  writeFileAtomic(file, Buffer.from(`${JSON.stringify(value, null, 2)}\n`));
 
 const readJson = <T>(file: string): T =>
   JSON.parse(
     Buffer.from(
       readRegularInside(path.dirname(file), path.basename(file)),
+    ).toString("utf8"),
+  ) as T;
+
+const readRendererJson = <T>(ownershipRoot: string, file: string): T =>
+  JSON.parse(
+    Buffer.from(
+      readAutoMovieProductionOwnedFile({
+        root: ownershipRoot,
+        directory: path.dirname(file),
+        relative: path.basename(file),
+      }),
     ).toString("utf8"),
   ) as T;
 
@@ -1460,8 +3171,21 @@ const output = (value: unknown): void => {
   process.stdout.write(`${JSON.stringify(value, null, 2)}\n`);
 };
 
+const renderProgress = (
+  stage: string,
+  details: Readonly<Record<string, number | string>> = {},
+): void => {
+  process.stderr.write(
+    `[automovie:render] ${JSON.stringify({ stage, ...details })}\n`,
+  );
+};
+
+let renderFailure: { error: unknown } | undefined;
 try {
   await main();
+} catch (error) {
+  renderFailure = { error };
+  throw error;
 } finally {
-  await closeProductionFrameCapture();
+  await closeProductionFrameCapture(renderFailure);
 }

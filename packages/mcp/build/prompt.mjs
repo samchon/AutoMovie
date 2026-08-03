@@ -3,7 +3,7 @@
 // every install/build. The unified AutoMovieApplication exposes each document
 // by exact SCREAMING_SNAKE_CASE filename stem through getGuideDocument({ name }).
 // One file, one export.
-import { mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -14,10 +14,38 @@ const OUT_DIR = resolve(PACKAGE_ROOT, "src/guides");
 const OUT_FILE = resolve(OUT_DIR, "AutoMovieGuideConstant.ts");
 mkdirSync(OUT_DIR, { recursive: true });
 
-// README.md documents the corpus itself and is never served as a guide.
-const files = readdirSync(PROMPTS_ROOT).filter(
-  (f) => f.endsWith(".md") && f !== "README.md",
-);
+const SERVED_GUIDES = [
+  "AUTOMOVIE_OVERALL",
+  "PRODUCTION_DESIGN",
+  "MODEL_RECIPE",
+  "WORLD_DESIGN",
+  "FORMATION_DESIGN",
+  "SHOT_CONTRACT",
+  "ACCEPTANCE",
+  "SOURCE_OWNERSHIP",
+  "COMPILATION",
+  "GEOMETRY",
+  "CAPTURE_FRAME",
+  "REPAINT_SHOT",
+  "REVIEW_ASSET",
+  "REVIEW_SHOT",
+  "REVIEW_SEQUENCE",
+  "REVIEW_FILM",
+  "REVIEW_DEPENDENCY",
+  "SCREENPLAY_WRITING",
+  "CINEMATOGRAPHY",
+  "EDITING",
+  "OBJECT_RIGGING",
+  "WORLD_BUILDING",
+  "MOTION",
+  "BATTLE_SIM",
+  "SOUND_DESIGN",
+  "ASSET_SOURCING",
+  "DIFFUSION_ENHANCE",
+  "TYPESCRIPT",
+  "DEBUGGING",
+];
+const files = SERVED_GUIDES.map((name) => `${name}.md`);
 
 const record = {};
 for (const file of files) {

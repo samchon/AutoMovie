@@ -26,6 +26,7 @@ import {
   IAutoMovieGeneratedManifest,
   IAutoMovieGeometryResult,
   IAutoMovieGeometrySelector,
+  IAutoMovieModel,
   IAutoMoviePose,
   IAutoMoviePreviewFrameInput,
   IAutoMoviePreviewFrameOutput,
@@ -83,15 +84,21 @@ export class AutoMovieProductionOracleService {
   ): IAutoMovieQueryGeometryOutput {
     const request = input.request;
     const generated = this.project.generatedManifest();
+    const generatedManifestPath = normalizeSlash(
+      path.relative(
+        this.project.root,
+        this.project.trackedStatePath("generated-manifest.json"),
+      ),
+    );
     if (generated === null)
       return queryFailure(request.query, null, {
         code: "compile-missing",
         category: "error",
         phase: "compile",
         target: request.query,
-        path: ".automovie/generated-manifest.json",
+        path: generatedManifestPath,
         message:
-          "No current compile exists. Run compileProject scope source before queryGeometry.",
+          "No current compile exists. Run the scaffold source compile command before using the geometry API.",
       });
     const freshness = this.freshnessDiagnostic(generated);
     if (freshness !== null)
@@ -772,7 +779,7 @@ export class AutoMovieProductionOracleService {
     const generated = this.project.generatedManifest();
     if (generated === null)
       throw new Error(
-        "previewFrame requires a current source compile. Run compileProject before requesting pixels.",
+        "captureFrame requires a current source compile. Run the scaffold compile command before requesting pixels.",
       );
     const freshness = this.freshnessDiagnostic(generated);
     if (freshness !== null)
@@ -785,7 +792,7 @@ export class AutoMovieProductionOracleService {
     const production = graph.production;
     if (production === null)
       throw new Error(
-        "previewFrame requires production frame format. Call setProductionDesign and compileProject.",
+        "captureFrame requires a production frame format. Create the tracked production design record and run the scaffold compile command.",
       );
     const pass = input.pass ?? "beauty";
     const width = input.width ?? production.frameFormat.width;
@@ -804,25 +811,68 @@ export class AutoMovieProductionOracleService {
       return previewFailure(
         generated.inputFingerprint,
         "preview-input-invalid",
-        `Preview time must be non-negative; dimensions must be positive integers no larger than the validated ${production.frameFormat.width}x${production.frameFormat.height} production frame. Correct previewFrame input.`,
+        `Capture time must be non-negative; dimensions must be positive integers no larger than the validated ${production.frameFormat.width}x${production.frameFormat.height} production frame. Correct captureFrame input.`,
       );
-    const duration = graph.shots.get(input.target.id)?.durationSeconds;
+    let duration: number | undefined;
+    let requestedTime = input.time;
+    const targetPath =
+      input.target.kind === "shot"
+        ? `shots/${encodeAutoMoviePathSegment(input.target.id)}.json`
+        : `models/${encodeAutoMoviePathSegment(input.target.id)}.json`;
     const targetMaterialized = generated.files.some(
-      (file) =>
-        file.path ===
-        `shots/${encodeAutoMoviePathSegment(input.target.id)}.json`,
+      (file) => file.path === targetPath,
     );
+    if (input.target.kind === "shot")
+      duration = graph.shots.get(input.target.id)?.durationSeconds;
+    else {
+      if (
+        graph.models.has(input.target.id) === false ||
+        Number.isFinite(input.target.angleDeg) === false ||
+        input.target.angleDeg < 0 ||
+        input.target.angleDeg >= 360 ||
+        Number.isFinite(input.target.elevationDeg) === false ||
+        input.target.elevationDeg < -85 ||
+        input.target.elevationDeg > 85
+      )
+        return previewFailure(
+          generated.inputFingerprint,
+          "preview-input-invalid",
+          "Asset preview requires a current model, angleDeg in [0, 360), and elevationDeg in [-85, 85]. Correct the isolated turntable target.",
+        );
+      duration = 12;
+      requestedTime = input.target.angleDeg / 30;
+      if (input.target.pose === "rom-extremes")
+        try {
+          const validation = typia.validateEquals<IAutoMovieModel>(
+            JSON.parse(
+              Buffer.from(this.project.readGeneratedFile(targetPath)).toString(
+                "utf8",
+              ),
+            ) as unknown,
+          );
+          if (validation.success === false || validation.data.skeleton === null)
+            throw new Error("the compiled model has no humanoid skeleton");
+        } catch (error) {
+          return previewFailure(
+            generated.inputFingerprint,
+            "preview-input-invalid",
+            `Asset ROM-extremes capture is unavailable because ${
+              error instanceof Error ? error.message : String(error)
+            }. Use rest pose for props or compile a valid rig.`,
+          );
+        }
+    }
     if (duration === undefined || targetMaterialized === false)
       return previewFailure(
         generated.inputFingerprint,
         "preview-target-missing",
-        `Target "${input.target.kind}:${input.target.id}" is absent from current compiler-owned output. Correct the target or compile its source before previewFrame.`,
+        `Target "${input.target.kind}:${input.target.id}" is absent from current compiler-owned output. Correct the target or compile its source before captureFrame.`,
       );
-    if (input.time > duration)
+    if (requestedTime > duration)
       return previewFailure(
         generated.inputFingerprint,
         "preview-input-invalid",
-        `Preview time ${input.time} exceeds target duration ${duration}. Choose a current in-range frame time.`,
+        `Preview time ${requestedTime} exceeds target duration ${duration}. Choose a current in-range frame time.`,
       );
     if (this.capture === undefined)
       return previewFailure(
@@ -836,7 +886,7 @@ export class AutoMovieProductionOracleService {
       input.target,
     );
     const index = Math.min(
-      Math.round(input.time * fps),
+      Math.round(requestedTime * fps),
       Math.floor(duration * fps),
     );
     const time = index / fps;
@@ -848,6 +898,7 @@ export class AutoMovieProductionOracleService {
         width,
         height,
         projectRoot: this.project.root,
+        productionId: this.project.productionId,
         compileFingerprint: generated.inputFingerprint,
       });
     } catch (error) {
@@ -856,7 +907,7 @@ export class AutoMovieProductionOracleService {
         "capture-failed",
         `${
           error instanceof Error ? error.message : String(error)
-        }. Correct the preview host and retry previewFrame.`,
+        }. Correct the capture host and retry captureFrame.`,
       );
     }
     const captureInputsCurrent = (): boolean => {
@@ -901,7 +952,7 @@ export class AutoMovieProductionOracleService {
       return previewFailure(
         generated.inputFingerprint,
         "capture-renderer-identity-invalid",
-        `${String(error)} Correct the capture adapter or run pnpm capture:install and pnpm capture:doctor before these pixels enter a render bundle.`,
+        `${String(error)} Correct the capture adapter or run npm run capture:install and npm run capture:doctor before these pixels enter a render bundle.`,
       );
     }
     if (
@@ -1026,6 +1077,12 @@ export class AutoMovieProductionOracleService {
   private freshnessDiagnostic(
     generated: IAutoMovieGeneratedManifest,
   ): IAutoMovieDiagnostic | null {
+    const generatedManifestPath = normalizeSlash(
+      path.relative(
+        this.project.root,
+        this.project.trackedStatePath("generated-manifest.json"),
+      ),
+    );
     if (this.compileStatus === undefined) return null;
     const status = this.compileStatus();
     if (status.compiler.inputFingerprint !== generated.inputFingerprint)
@@ -1034,8 +1091,8 @@ export class AutoMovieProductionOracleService {
         category: "error",
         phase: "compile",
         target: "generated-manifest",
-        path: ".automovie/generated-manifest.json",
-        message: `Generated input ${generated.inputFingerprint} differs from current ${status.compiler.inputFingerprint}. Run compileProject before requesting oracle evidence.`,
+        path: generatedManifestPath,
+        message: `Generated input ${generated.inputFingerprint} differs from current ${status.compiler.inputFingerprint}. Run the scaffold compile command before requesting oracle evidence.`,
       };
     const error = status.diagnostics.find(
       (diagnostic) => diagnostic.category === "error",
@@ -1046,8 +1103,8 @@ export class AutoMovieProductionOracleService {
         category: "error",
         phase: "compile",
         target: "generated-manifest",
-        path: ".automovie/generated-manifest.json",
-        message: `Current source does not pass the read-only compiler gate${error === undefined ? "" : `: ${error.message}`}. Correct it and run compileProject before requesting oracle evidence.`,
+        path: generatedManifestPath,
+        message: `Current source does not pass the read-only compiler gate${error === undefined ? "" : `: ${error.message}`}. Correct it and run the scaffold compile command before requesting oracle evidence.`,
       };
     return null;
   }
@@ -1067,13 +1124,13 @@ const readCompiledShots = (
     const bytes = project.readGeneratedFile(entry.path);
     if (digestAutoMovieBytes(bytes) !== entry.digest)
       throw new Error(
-        `Generated shot "${entry.path}" changed after compiler freshness validation. Run compileProject before requesting oracle evidence.`,
+        `Generated shot "${entry.path}" changed after compiler freshness validation. Run the scaffold compile command before requesting oracle evidence.`,
       );
     const raw = JSON.parse(Buffer.from(bytes).toString("utf8")) as unknown;
     const validation = typia.validateEquals<IAutoMovieCompiledShotSource>(raw);
     if (validation.success === false)
       throw new Error(
-        `Generated shot "${entry.path}" is invalid. Run compileProject after correcting source.`,
+        `Generated shot "${entry.path}" is invalid. Run the scaffold compile command after correcting source.`,
       );
     output.set(validation.data.shot.id, validation.data);
   }

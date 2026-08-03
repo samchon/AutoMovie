@@ -3,13 +3,20 @@
 
 /** Dependency versions baked into the scaffold, kept in sync with this repo. */
 export const AUTOMOVIE_TEMPLATE_VERSIONS: Record<string, string> = {
+  cli: "^0.1.0",
   engine: "^0.1.0",
   interface: "^0.1.0",
+  lint: "^0.1.0",
   mcp: "^0.1.0",
   viewer: "^0.1.0",
+  huggingFaceTransformers: "3.8.1",
   h264Mp4Encoder: "^1.0.12",
+  kokoroJs: "1.2.1",
+  libopusWasm: "^0.2.0",
   mp4box: "^2.4.1",
+  onnxruntimeNode: "1.21.0",
   mcpSdk: "^1.29.0",
+  threeVrm: "^3",
   playwright: "^1.60.0",
   pngjs: "^7.0.0",
   pngjsTypes: "^6.0.5",

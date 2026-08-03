@@ -1,8 +1,20 @@
-import type { ITtscLintConfig } from "@ttsc/lint";
+/// <reference types="node" />
+import type {} from "@automovie/lint";
+import type { ITtscLintConfig, ITtscLintPlugin } from "@ttsc/lint";
+import { createRequire } from "node:module";
+import path from "node:path";
+
+const require = createRequire(import.meta.url);
+const automovie = {
+  source: path.join(
+    path.dirname(require.resolve("@automovie/lint/package.json")),
+    "native",
+  ),
+} satisfies ITtscLintPlugin;
 
 /**
  * `@ttsc/lint` config for this automovie project, applied automatically by
- * `ttsc` (`npm run lint` runs `ttsc --noEmit`) and autofixed by `npm run
+ * `ttsc` (`npm run lint:source` runs `ttsc --noEmit`) and autofixed by `npm run
  * format` (`ttsc format`). The engine is the arbiter of physical truth at
  * runtime; this config is the arbiter of code health at build time.
  *
@@ -47,7 +59,107 @@ const config = {
     },
     jsDoc: true,
   },
+  plugins: {
+    automovie,
+  },
   rules: {
+    "automovie/asset-provenance": [
+      "error",
+      {
+        manifests: [".automovie/assets.json"],
+        assets: [
+          "public/**/*.bin",
+          "public/**/*.exr",
+          "public/**/*.flac",
+          "public/**/*.glb",
+          "public/**/*.gltf",
+          "public/**/*.hdr",
+          "public/**/*.jpeg",
+          "public/**/*.jpg",
+          "public/**/*.json",
+          "public/**/*.ktx",
+          "public/**/*.ktx2",
+          "public/**/*.mp3",
+          "public/**/*.ogg",
+          "public/**/*.otf",
+          "public/**/*.png",
+          "public/**/*.svg",
+          "public/**/*.ttf",
+          "public/**/*.vrm",
+          "public/**/*.wav",
+          "public/**/*.webp",
+          "public/**/*.woff",
+          "public/**/*.woff2",
+        ],
+      },
+    ],
+    "automovie/screenplay-contract": [
+      "error",
+      {
+        indexes: [
+          ".automovie/design/screenplay/index.json",
+          ".automovie/design/*/screenplay/index.json",
+        ],
+        documents: ["docs/**/*.md"],
+        shots: [
+          ".automovie/design/shots/*.json",
+          ".automovie/design/*/shots/*.json",
+        ],
+        acceptance: [
+          ".automovie/design/acceptance/*.json",
+          ".automovie/design/*/acceptance/*.json",
+        ],
+        models: [
+          ".automovie/design/models/*.json",
+          ".automovie/design/*/models/*.json",
+          ".automovie/design/shared/models/*.json",
+        ],
+        formations: [
+          ".automovie/design/formations/*.json",
+          ".automovie/design/*/formations/*.json",
+          ".automovie/design/shared/formations/*.json",
+        ],
+        worlds: [
+          ".automovie/design/world.json",
+          ".automovie/design/*/world.json",
+          ".automovie/design/shared/world.json",
+        ],
+        realizations: [
+          "generated/realizations/*.json",
+          "generated/*/realizations/*.json",
+        ],
+        reviews: [
+          ".automovie/reviews/shots/*.json",
+          ".automovie/reviews/film/*.json",
+          ".automovie/reviews/*/shots/*.json",
+          ".automovie/reviews/*/film/*.json",
+        ],
+      },
+    ],
+    "automovie/state-presence": [
+      "error",
+      {
+        slots: [
+          {
+            name: "screenplay-index",
+            files: [
+              ".automovie/design/screenplay/index.json",
+              ".automovie/design/*/screenplay/index.json",
+            ],
+            requires: [],
+          },
+          {
+            name: "shot-contracts",
+            files: [
+              ".automovie/design/shots/*.json",
+              ".automovie/design/*/shots/*.json",
+            ],
+            requires: ["screenplay-index"],
+          },
+        ],
+      },
+    ],
+    "automovie/template-sentinel": "error",
     eqeqeq: "error",
     "no-debugger": "error",
     "no-duplicate-imports": "error",
@@ -62,6 +174,7 @@ const config = {
     "typescript/no-misused-promises": "error",
     "typescript/no-unnecessary-type-constraint": "error",
     "typescript/prefer-as-const": "error",
+    "typescript/require-array-sort-compare": "error",
     "typescript/switch-exhaustiveness-check": "error",
   },
 } satisfies ITtscLintConfig;

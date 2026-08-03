@@ -1,4 +1,6 @@
 import {
+  IAutoMovieAssetManifest,
+  IAutoMovieModel,
   IAutoMovieProductionRenderManifest,
   IAutoMovieProductionRenderReceipt,
 } from "@automovie/interface";
@@ -9,6 +11,7 @@ import {
   canonicalizeAutoMovieJson,
   compareCodeUnits,
   digestAutoMovieBytes,
+  muxProductionFeatureMp4,
   probeProductionMedia,
 } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
@@ -20,15 +23,124 @@ import { PNG } from "pngjs";
 import {
   formationDesign,
   modelRecipe,
+  productionCompileSucceeded,
   productionDesign,
   productionFixture,
+  setProductionFixtureShotContract,
   shotContract,
   worldDesign,
 } from "./productionFixtures";
 import {
-  productionAudioMp4,
   productionH264Mp4,
+  productionOpusMp4,
+  productionPng,
 } from "./productionMediaFixtures";
+
+interface IProductionCompilerFixtureFailure {
+  error: unknown;
+}
+
+class ProductionCompilerFixtureCleanupError extends AggregateError {}
+
+/** Remove one compiler fixture without replacing its primary failure. */
+export const preserveProductionCompilerFixtureCleanup = (
+  failure: IProductionCompilerFixtureFailure | undefined,
+  cleanup: () => unknown,
+): void => {
+  try {
+    cleanup();
+  } catch (cleanupFailure) {
+    if (failure === undefined) throw cleanupFailure;
+    throw new ProductionCompilerFixtureCleanupError(
+      [failure.error, cleanupFailure],
+      "Production-compiler fixture teardown failed after the test failed.",
+    );
+  }
+};
+
+const minimalExternalModelJson = (): string => {
+  const vertexCount = 15;
+  const positions = Buffer.alloc(
+    vertexCount * 3 * Float32Array.BYTES_PER_ELEMENT,
+  );
+  [0, 0, 0, 1, 0, 0, 0, 1, 0].forEach((value, index) =>
+    positions.writeFloatLE(value, index * Float32Array.BYTES_PER_ELEMENT),
+  );
+  const joints = Buffer.alloc(vertexCount * 4);
+  const weights = Buffer.alloc(vertexCount * 4);
+  for (let vertex = 0; vertex < vertexCount; ++vertex) {
+    joints[vertex * 4] = Math.min(vertex, 12);
+    weights[vertex * 4] = 255;
+  }
+  const payload = Buffer.concat([positions, joints, weights]);
+  return JSON.stringify({
+    asset: { version: "2.0" },
+    buffers: [
+      {
+        byteLength: payload.length,
+        uri: `data:application/octet-stream;base64,${payload.toString("base64")}`,
+      },
+    ],
+    bufferViews: [
+      { buffer: 0, byteOffset: 0, byteLength: positions.length },
+      { buffer: 0, byteOffset: positions.length, byteLength: joints.length },
+      {
+        buffer: 0,
+        byteOffset: positions.length + joints.length,
+        byteLength: weights.length,
+      },
+    ],
+    accessors: [
+      {
+        bufferView: 0,
+        componentType: 5126,
+        count: vertexCount,
+        type: "VEC3",
+        min: [0, 0, 0],
+        max: [1, 1, 0],
+      },
+      {
+        bufferView: 1,
+        componentType: 5121,
+        count: vertexCount,
+        type: "VEC4",
+      },
+      {
+        bufferView: 2,
+        componentType: 5121,
+        normalized: true,
+        count: vertexCount,
+        type: "VEC4",
+      },
+    ],
+    meshes: [
+      {
+        primitives: [
+          { attributes: { POSITION: 0, JOINTS_0: 1, WEIGHTS_0: 2 } },
+        ],
+      },
+    ],
+    nodes: [
+      { mesh: 0, skin: 0, name: "RegisteredTriangle" },
+      { name: "Hips" },
+      { name: "Spine" },
+      { name: "Head" },
+      { name: "LeftArm" },
+      { name: "LeftForeArm" },
+      { name: "LeftHand" },
+      { name: "RightArm" },
+      { name: "RightForeArm" },
+      { name: "RightHand" },
+      { name: "LeftUpLeg" },
+      { name: "LeftLeg" },
+      { name: "RightUpLeg" },
+      { name: "RightLeg" },
+    ],
+    skins: [{ joints: Array.from({ length: 13 }, (_, index) => index + 1) }],
+    scenes: [{ nodes: [0] }],
+    scene: 0,
+  });
+};
 
 const diagnosticCodes = (
   output: ReturnType<AutoMovieProductionCompiler["compile"]>,
@@ -36,30 +148,46 @@ const diagnosticCodes = (
 
 /** Source compilation is sandboxed, recoverable and stable after reopen. */
 export const test_mcp_production_compiler = async (): Promise<void> => {
+  let productionCompilerFailure: IProductionCompilerFixtureFailure | undefined;
   const fixture = productionFixture();
-  const sourcePath = path.join(fixture.root, "src/shots/opening.ts");
-  const original = fs.readFileSync(sourcePath, "utf8");
-  const mutateSourceOutput = (mutation: string): string =>
-    original
-      .replace(
-        "  return {\n    eventSamples:",
-        "  const output = {\n    eventSamples:",
-      )
-      .replace(
-        "\n  };\n};\n\n/** Opening",
-        `\n  };\n${mutation}\n  return output;\n};\n\n/** Opening`,
-      );
-  const injectBuildSignal = (...statements: string[]): string =>
-    original.replace(
-      "): IAutoMovieShotSourceOutput => {",
-      ["): IAutoMovieShotSourceOutput => {", ...statements].join("\n"),
-    );
   try {
+    const sourcePath = path.join(fixture.root, "src/shots/opening.ts");
+    const original = fs.readFileSync(sourcePath, "utf8");
+    const {
+      id: _fixtureShotId,
+      source: _fixtureShotSource,
+      ...fixtureRegistration
+    } = shotContract();
+    const mutateSourceOutput = (
+      mutation: string,
+      source: string = original,
+    ): string =>
+      source
+        .replace("  return {\n    actors:", "  const output = {\n    actors:")
+        .replace(
+          "\n  };\n};\n\n/** Opening source",
+          `\n  };\n${mutation}\n  return output;\n};\n\n/** Opening source`,
+        );
+    const injectBuildSignal = (...statements: string[]): string =>
+      original.replace(
+        "): IAutoMovieProductionShotProgram => {",
+        ["): IAutoMovieProductionShotProgram => {", ...statements].join("\n"),
+      );
     const project = AutoMovieProductionProject.open(fixture.root);
     const review = new AutoMovieProductionReviewService(project);
     const compiler = new AutoMovieProductionCompiler(
       project,
       (status, snapshot) => review.queue(status, snapshot),
+    );
+    TestValidator.predicate(
+      "the sliced fixture keeps its source registration equal to its design",
+      original.includes(
+        `const OPENING_CONTRACT: IAutoMovieDefinedShotContract = ${JSON.stringify(
+          fixtureRegistration,
+          null,
+          2,
+        )};`,
+      ),
     );
 
     const designOnly = compiler.lint({ scope: "design" });
@@ -69,7 +197,7 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     );
     const preexistingGenerated = path.join(
       fixture.root,
-      "generated/intruder.txt",
+      "generated/fixture-film/intruder.txt",
     );
     fs.writeFileSync(preexistingGenerated, "unowned");
     TestValidator.predicate(
@@ -89,7 +217,7 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     project.contentInputs = firstContentInputs;
     TestValidator.predicate(
       "starter source compiles from one shared snapshot and two commit guards",
-      first.success &&
+      productionCompileSucceeded("starter source fixture", first) &&
         firstContentReads === 3 &&
         first.materialized.some(
           (file) =>
@@ -99,6 +227,802 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
           (entry) => entry.currentFingerprint !== null,
         ),
     );
+
+    const assetManifestPath = path.join(fixture.root, ".automovie/assets.json");
+    const assetPath = path.join(fixture.root, "public/audio/starter-tone.json");
+    const originalAssetManifest = fs.readFileSync(assetManifestPath, "utf8");
+    const originalAssetBytes = fs.readFileSync(assetPath);
+    const assetManifest = JSON.parse(
+      originalAssetManifest,
+    ) as IAutoMovieAssetManifest;
+    const assetCodes = (value: unknown): Set<string> => {
+      fs.writeFileSync(
+        assetManifestPath,
+        typeof value === "string" ? value : JSON.stringify(value),
+      );
+      return diagnosticCodes(compiler.lint({ scope: "source" }));
+    };
+
+    fs.appendFileSync(assetPath, "drift");
+    const driftedAsset = diagnosticCodes(compiler.lint({ scope: "source" }));
+    fs.writeFileSync(assetPath, originalAssetBytes);
+    fs.rmSync(assetManifestPath);
+    const missingAssetManifest = diagnosticCodes(
+      compiler.lint({ scope: "source" }),
+    );
+    fs.writeFileSync(assetManifestPath, originalAssetManifest);
+    const malformedAssetManifest = assetCodes("{bad");
+    const invalidAssetManifest = assetCodes({});
+    const incompleteAssetManifest = assetCodes({
+      ...assetManifest,
+      assets: assetManifest.assets.map((asset) => ({
+        ...asset,
+        original: { ...asset.original, url: "not a URL" },
+        license: { ...asset.license, identifier: "", url: "ftp://license" },
+        uses: [
+          {
+            ...asset.uses[0]!,
+            consumer: { ...asset.uses[0]!.consumer, id: "" },
+            reason: "",
+          },
+        ],
+        processing: [{ tool: "", command: "", parameters: {} }],
+      })),
+    });
+    const provenanceFieldFailures = [
+      {
+        ...assetManifest,
+        assets: assetManifest.assets.map((asset) => ({
+          ...asset,
+          digest: "sha256:not-hex",
+        })),
+      },
+      {
+        ...assetManifest,
+        assets: assetManifest.assets.map((asset) => ({
+          ...asset,
+          original: { ...asset.original, digest: "sha256:not-hex" },
+        })),
+      },
+      {
+        ...assetManifest,
+        assets: assetManifest.assets.map((asset) => ({
+          ...asset,
+          original: { ...asset.original, url: "not-a-url" },
+        })),
+      },
+      {
+        ...assetManifest,
+        assets: assetManifest.assets.map((asset) => ({
+          ...asset,
+          original: { ...asset.original, url: "ftp://example.com/asset" },
+        })),
+      },
+      {
+        ...assetManifest,
+        assets: assetManifest.assets.map((asset) => ({
+          ...asset,
+          license: { ...asset.license, identifier: "" },
+        })),
+      },
+      {
+        ...assetManifest,
+        assets: assetManifest.assets.map((asset) => ({
+          ...asset,
+          license: { ...asset.license, url: "ftp://example.com/license" },
+        })),
+      },
+      {
+        ...assetManifest,
+        assets: assetManifest.assets.map((asset) => ({
+          ...asset,
+          uses: [],
+        })),
+      },
+      {
+        ...assetManifest,
+        assets: assetManifest.assets.map((asset) => ({
+          ...asset,
+          uses: [
+            {
+              ...asset.uses[0]!,
+              production: "",
+              consumer: { ...asset.uses[0]!.consumer, id: "consumer" },
+              reason: "reason",
+            },
+          ],
+        })),
+      },
+      {
+        ...assetManifest,
+        assets: assetManifest.assets.map((asset) => ({
+          ...asset,
+          uses: [
+            {
+              ...asset.uses[0]!,
+              production: "fixture-library",
+              consumer: { ...asset.uses[0]!.consumer, id: "" },
+              reason: "reason",
+            },
+          ],
+        })),
+      },
+      {
+        ...assetManifest,
+        assets: assetManifest.assets.map((asset) => ({
+          ...asset,
+          uses: [
+            {
+              ...asset.uses[0]!,
+              production: "fixture-library",
+              consumer: { ...asset.uses[0]!.consumer, id: "consumer" },
+              reason: "",
+            },
+          ],
+        })),
+      },
+      {
+        ...assetManifest,
+        assets: assetManifest.assets.map((asset) => ({
+          ...asset,
+          processing: [
+            { tool: "", command: "copy", parameters: { stable: true } },
+          ],
+        })),
+      },
+      {
+        ...assetManifest,
+        assets: assetManifest.assets.map((asset) => ({
+          ...asset,
+          processing: [
+            { tool: "fixture", command: "", parameters: { stable: true } },
+          ],
+        })),
+      },
+    ].map(assetCodes);
+    const missingProcessing = assetCodes({
+      ...assetManifest,
+      assets: assetManifest.assets.map((asset) => ({
+        ...asset,
+        original: {
+          ...asset.original,
+          digest: `sha256:${"f".repeat(64)}`,
+        },
+      })),
+    });
+    const nonCanonicalAsset = assetCodes({
+      ...assetManifest,
+      assets: [
+        ...assetManifest.assets,
+        { ...assetManifest.assets[0]! },
+        {
+          ...assetManifest.assets[0]!,
+          path: "public\\audio\\starter-tone.json",
+        },
+      ],
+    });
+    const invalidPathCodes = [
+      "/absolute.bin",
+      "C:/drive.bin",
+      ".",
+      "public/../escape.bin",
+      "../escape.bin",
+      "",
+    ].map((invalidPath) =>
+      assetCodes({
+        ...assetManifest,
+        assets: [
+          {
+            ...assetManifest.assets[0]!,
+            path: invalidPath,
+          },
+        ],
+      }),
+    );
+    const caseCollision = assetCodes({
+      ...assetManifest,
+      assets: [
+        {
+          ...assetManifest.assets[0]!,
+          path: "PUBLIC/AUDIO/STARTER-TONE.JSON",
+        },
+        assetManifest.assets[0]!,
+      ],
+    });
+    const sourceAssetPath = path.join(fixture.root, "src/shots/opening.ts");
+    const sourceAssetBytes = fs.readFileSync(sourceAssetPath);
+    const nonRenderAsset = assetCodes({
+      version: 1,
+      assets: [
+        {
+          ...assetManifest.assets[0]!,
+          path: "src/shots/opening.ts",
+          digest: digestAutoMovieBytes(sourceAssetBytes),
+          original: {
+            ...assetManifest.assets[0]!.original,
+            digest: digestAutoMovieBytes(sourceAssetBytes),
+          },
+        },
+      ],
+    });
+    const originalContentInputs = project.contentInputs;
+    project.contentInputs = (() => [
+      ...originalContentInputs.call(project),
+      {
+        path: "public/audio/declared-missing.json",
+        bytes: null,
+        source: false,
+        render: true,
+      },
+    ]) as typeof project.contentInputs;
+    const nullAssetBytes = assetCodes({
+      version: 1,
+      assets: [
+        {
+          ...assetManifest.assets[0]!,
+          path: "public/audio/declared-missing.json",
+        },
+      ],
+    });
+    project.contentInputs = originalContentInputs;
+    fs.rmSync(assetPath);
+    const missingAssetBytes = assetCodes(assetManifest);
+    fs.writeFileSync(assetPath, originalAssetBytes);
+
+    const modelPath = path.join(fixture.root, "public/models/actor.gltf");
+    const modelBytes = Buffer.from(minimalExternalModelJson(), "utf8");
+    fs.mkdirSync(path.dirname(modelPath), { recursive: true });
+    fs.writeFileSync(modelPath, modelBytes);
+    const modelDigest = digestAutoMovieBytes(modelBytes);
+    const modelAsset = {
+      path: "public/models/actor.gltf",
+      digest: modelDigest,
+      original: {
+        url: "https://example.com/actor.gltf",
+        digest: modelDigest,
+      },
+      license: {
+        identifier: "CC0-1.0",
+        url: "https://creativecommons.org/publicdomain/zero/1.0/",
+      },
+      processing: [],
+      uses: [
+        {
+          production: "fixture-library",
+          consumer: { kind: "model-recipe" as const, id: "sentinel" },
+          reason: "The fixture casts this external model.",
+        },
+      ],
+      model: {
+        ingestProfile: "gltf-humanoid-v1",
+        lod: [
+          {
+            level: "hero" as const,
+            asset: "public/models/actor.gltf",
+          },
+        ],
+        collisionProxy: {
+          kind: "generated" as const,
+          recipe: "capsule-v1" as const,
+          parameters: { radius: 0.3, height: 1.8 },
+        },
+        measurementProxy: {
+          kind: "generated" as const,
+          recipe: "humanoid-landmarks-v1" as const,
+          parameters: {
+            height: 1.8,
+            shoulderWidth: 0.45,
+            hipWidth: 0.32,
+          },
+        },
+      },
+    };
+    const validModelManifest = {
+      ...assetManifest,
+      assets: [...assetManifest.assets, modelAsset],
+    } satisfies IAutoMovieAssetManifest;
+    const validModelAsset = assetCodes(validModelManifest);
+    const missingModelProvenance = assetCodes({
+      ...validModelManifest,
+      assets: validModelManifest.assets.map((asset) =>
+        asset.path === modelAsset.path ? { ...asset, model: undefined } : asset,
+      ),
+    });
+    const incompleteModelDecisions = [
+      {
+        ...validModelManifest,
+        assets: validModelManifest.assets.map((asset) =>
+          asset.path === modelAsset.path
+            ? {
+                ...asset,
+                model: { ...modelAsset.model, ingestProfile: "" },
+              }
+            : asset,
+        ),
+      },
+      {
+        ...validModelManifest,
+        assets: validModelManifest.assets.map((asset) =>
+          asset.path === modelAsset.path
+            ? {
+                ...asset,
+                model: { ...modelAsset.model, lod: [] },
+              }
+            : asset,
+        ),
+      },
+    ].map(assetCodes);
+    const danglingModelLod = assetCodes({
+      ...validModelManifest,
+      assets: validModelManifest.assets.map((asset) =>
+        asset.path === modelAsset.path
+          ? {
+              ...asset,
+              model: {
+                ...modelAsset.model,
+                lod: [
+                  {
+                    level: "hero" as const,
+                    asset: "public/models/missing.glb",
+                  },
+                ],
+              },
+            }
+          : asset,
+      ),
+    });
+    const wrongTypeModelLod = assetCodes({
+      ...validModelManifest,
+      assets: validModelManifest.assets.map((asset) =>
+        asset.path === modelAsset.path
+          ? {
+              ...asset,
+              model: {
+                ...modelAsset.model,
+                lod: [
+                  {
+                    level: "hero" as const,
+                    asset: "public/audio/starter-tone.json",
+                  },
+                ],
+              },
+            }
+          : asset,
+      ),
+    });
+    const duplicateModelLod = assetCodes({
+      ...validModelManifest,
+      assets: validModelManifest.assets.map((asset) =>
+        asset.path === modelAsset.path
+          ? {
+              ...asset,
+              model: {
+                ...modelAsset.model,
+                lod: [...modelAsset.model.lod, ...modelAsset.model.lod],
+              },
+            }
+          : asset,
+      ),
+    });
+    const outOfOrderModelLod = assetCodes({
+      ...validModelManifest,
+      assets: validModelManifest.assets.map((asset) =>
+        asset.path === modelAsset.path
+          ? {
+              ...asset,
+              model: {
+                ...modelAsset.model,
+                lod: [
+                  {
+                    level: "far" as const,
+                    asset: modelAsset.path,
+                  },
+                  {
+                    level: "near" as const,
+                    asset: modelAsset.path,
+                  },
+                ],
+              },
+            }
+          : asset,
+      ),
+    });
+    const danglingModelProxy = assetCodes({
+      ...validModelManifest,
+      assets: validModelManifest.assets.map((asset) =>
+        asset.path === modelAsset.path
+          ? {
+              ...asset,
+              model: {
+                ...modelAsset.model,
+                collisionProxy: {
+                  kind: "asset" as const,
+                  asset: "public/models/missing-proxy.glb",
+                },
+              },
+            }
+          : asset,
+      ),
+    });
+    const danglingMeasurementProxy = assetCodes({
+      ...validModelManifest,
+      assets: validModelManifest.assets.map((asset) =>
+        asset.path === modelAsset.path
+          ? {
+              ...asset,
+              model: {
+                ...modelAsset.model,
+                measurementProxy: {
+                  kind: "asset" as const,
+                  asset: "public/models/missing-measurement.json",
+                },
+              },
+            }
+          : asset,
+      ),
+    });
+    fs.writeFileSync(modelPath, "not glTF");
+    const invalidModelBytes = assetCodes({
+      ...validModelManifest,
+      assets: validModelManifest.assets.map((asset) =>
+        asset.path === modelAsset.path
+          ? { ...asset, digest: digestAutoMovieBytes(Buffer.from("not glTF")) }
+          : asset,
+      ),
+    });
+    fs.writeFileSync(modelPath, modelBytes);
+    const sidecarModel = JSON.parse(modelBytes.toString("utf8")) as {
+      buffers: Array<{ uri: string }>;
+    };
+    sidecarModel.buffers[0]!.uri = "actor.bin";
+    const sidecarBytes = Buffer.from(JSON.stringify(sidecarModel), "utf8");
+    fs.writeFileSync(modelPath, sidecarBytes);
+    const unboundModelSidecar = assetCodes({
+      ...validModelManifest,
+      assets: validModelManifest.assets.map((asset) =>
+        asset.path === modelAsset.path
+          ? { ...asset, digest: digestAutoMovieBytes(sidecarBytes) }
+          : asset,
+      ),
+    });
+    fs.writeFileSync(modelPath, modelBytes);
+    const emptyGeneratedProxy = assetCodes({
+      ...validModelManifest,
+      assets: validModelManifest.assets.map((asset) =>
+        asset.path === modelAsset.path
+          ? {
+              ...asset,
+              model: {
+                ...modelAsset.model,
+                collisionProxy: {
+                  kind: "generated",
+                  recipe: "capsule-v1",
+                  parameters: {},
+                },
+              },
+            }
+          : asset,
+      ),
+    });
+    const filmPath = path.join(fixture.root, "src/film.ts");
+    const originalFilmSource = fs.readFileSync(filmPath, "utf8");
+    fs.writeFileSync(
+      filmPath,
+      originalFilmSource.replace(
+        "audio: []",
+        `audio: [{
+          id: "bound-audio",
+          asset: "public/audio/starter-tone.json",
+          sourceDuration: { seconds: 6 },
+          sourceOffset: { frame: 0 },
+          start: { frame: 0 },
+          duration: { seconds: 6 },
+          gain: 0,
+          fadeIn: { frame: 0 },
+          fadeOut: { frame: 0 },
+          bus: "ambience",
+        }]`,
+      ),
+    );
+    const boundModel = project.graph().models.values().next().value!;
+    const blankModelAsset = project.setModelRecipe({
+      ...boundModel,
+      asset: " ",
+    });
+    project.setModelRecipe({ ...boundModel, asset: modelAsset.path });
+    const activeAudioManifest = {
+      ...validModelManifest,
+      assets: validModelManifest.assets.map((asset) => ({
+        ...asset,
+        uses:
+          asset.path === modelAsset.path
+            ? [
+                {
+                  production: "fixture-film",
+                  consumer: {
+                    kind: "model-recipe" as const,
+                    id: boundModel.id,
+                  },
+                  reason: "The fixture binds the registered model appearance.",
+                },
+              ]
+            : [
+                {
+                  production: "fixture-film",
+                  consumer: {
+                    kind: "audio-cue" as const,
+                    id: "bound-audio",
+                  },
+                  reason: "The fixture binds the exact film audio cue.",
+                },
+              ],
+      })),
+    } satisfies IAutoMovieAssetManifest;
+    const staticRigBinding = assetCodes({
+      ...activeAudioManifest,
+      assets: activeAudioManifest.assets.map((asset) =>
+        asset.path === modelAsset.path
+          ? {
+              ...asset,
+              model: {
+                ...modelAsset.model,
+                ingestProfile: "gltf-static-v1",
+              },
+            }
+          : asset,
+      ),
+    });
+    const exactActiveUse = assetCodes(activeAudioManifest);
+    const externalCompile = compiler.compile({ scope: "source" });
+    const externalCompileSucceeded = productionCompileSucceeded(
+      "external asset fixture",
+      externalCompile,
+    );
+    const importedRuntime = externalCompileSucceeded
+      ? (JSON.parse(
+          Buffer.from(
+            project.readGeneratedFile(`models/${boundModel.id}.json`),
+          ).toString("utf8"),
+        ) as IAutoMovieModel)
+      : null;
+    const wrongProductionUse = assetCodes({
+      ...activeAudioManifest,
+      assets: activeAudioManifest.assets.map((asset) => ({
+        ...asset,
+        uses: asset.uses.map((use) => ({
+          ...use,
+          production: "another-production",
+        })),
+      })),
+    });
+    const wrongAudioConsumer = assetCodes({
+      ...activeAudioManifest,
+      assets: activeAudioManifest.assets.map((asset) => ({
+        ...asset,
+        uses: asset.uses.map((use) =>
+          use.consumer.kind === "audio-cue"
+            ? {
+                ...use,
+                consumer: { kind: "audio-cue" as const, id: "stale-audio" },
+              }
+            : use,
+        ),
+      })),
+    });
+    const duplicateActiveUse = assetCodes({
+      ...activeAudioManifest,
+      assets: activeAudioManifest.assets.map((asset) => ({
+        ...asset,
+        uses: [...asset.uses, asset.uses[0]!],
+      })),
+    });
+    const danglingModelConsumer = assetCodes({
+      ...activeAudioManifest,
+      assets: activeAudioManifest.assets.map((asset) => ({
+        ...asset,
+        uses: asset.uses.map((use) =>
+          use.consumer.kind === "model-recipe"
+            ? {
+                ...use,
+                consumer: {
+                  kind: "model-recipe" as const,
+                  id: "missing-consumer",
+                },
+              }
+            : use,
+        ),
+      })),
+    });
+    project.setModelRecipe(boundModel);
+    fs.writeFileSync(filmPath, originalFilmSource);
+    fs.rmSync(modelPath);
+    fs.rmdirSync(path.dirname(modelPath));
+    fs.writeFileSync(assetManifestPath, originalAssetManifest);
+
+    const assetCompilerContracts = {
+      "drifted bytes report asset-digest-mismatch": driftedAsset.has(
+        "asset-digest-mismatch",
+      ),
+      "missing manifest reports asset-manifest-missing":
+        missingAssetManifest.has("asset-manifest-missing"),
+      "malformed manifest reports asset-manifest-invalid":
+        malformedAssetManifest.has("asset-manifest-invalid"),
+      "invalid manifest reports asset-manifest-invalid":
+        invalidAssetManifest.has("asset-manifest-invalid"),
+      "incomplete provenance reports asset-provenance-incomplete":
+        incompleteAssetManifest.has("asset-provenance-incomplete"),
+      "every incomplete provenance field reports asset-provenance-incomplete":
+        provenanceFieldFailures.every((codes) =>
+          codes.has("asset-provenance-incomplete"),
+        ),
+      "missing processing reports asset-processing-missing":
+        missingProcessing.has("asset-processing-missing"),
+      "non-canonical path reports asset-path-invalid":
+        nonCanonicalAsset.has("asset-path-invalid"),
+      "non-canonical manifest reports asset-manifest-order":
+        nonCanonicalAsset.has("asset-manifest-order"),
+      "every invalid path reports asset-path-invalid": invalidPathCodes.every(
+        (codes) => codes.has("asset-path-invalid"),
+      ),
+      "case collision reports asset-path-invalid":
+        caseCollision.has("asset-path-invalid"),
+      "source-only asset reports asset-bytes-missing": nonRenderAsset.has(
+        "asset-bytes-missing",
+      ),
+      "null asset bytes report asset-bytes-missing": nullAssetBytes.has(
+        "asset-bytes-missing",
+      ),
+      "missing asset bytes report asset-bytes-missing": missingAssetBytes.has(
+        "asset-bytes-missing",
+      ),
+      "valid model asset has no asset diagnostics": [...validModelAsset].every(
+        (code) => !code.startsWith("asset-"),
+      ),
+      "missing model provenance reports asset-model-provenance-missing":
+        missingModelProvenance.has("asset-model-provenance-missing"),
+      "every incomplete model decision reports asset-model-provenance-missing":
+        incompleteModelDecisions.every((codes) =>
+          codes.has("asset-model-provenance-missing"),
+        ),
+      "dangling model LOD reports asset-model-lod-dangling":
+        danglingModelLod.has("asset-model-lod-dangling"),
+      "wrong-type model LOD reports asset-model-lod-dangling":
+        wrongTypeModelLod.has("asset-model-lod-dangling"),
+      "duplicate model LOD reports asset-model-lod-dangling":
+        duplicateModelLod.has("asset-model-lod-dangling"),
+      "out-of-order model LOD reports asset-model-lod-dangling":
+        outOfOrderModelLod.has("asset-model-lod-dangling"),
+      "dangling collision proxy reports asset-model-proxy-dangling":
+        danglingModelProxy.has("asset-model-proxy-dangling"),
+      "dangling measurement proxy reports asset-model-proxy-dangling":
+        danglingMeasurementProxy.has("asset-model-proxy-dangling"),
+      "invalid model bytes report asset-model-ingest-invalid":
+        invalidModelBytes.has("asset-model-ingest-invalid"),
+      "unbound model sidecar reports asset-model-resource-unbound":
+        unboundModelSidecar.has("asset-model-resource-unbound"),
+      "empty generated proxy reports asset-manifest-invalid":
+        emptyGeneratedProxy.has("asset-manifest-invalid"),
+      "blank model asset reports design-text-empty":
+        blankModelAsset.accepted === false &&
+        blankModelAsset.diagnostics.some(
+          (diagnostic) => diagnostic.code === "design-text-empty",
+        ),
+      "static rig binding reports asset-model-rig-incompatible":
+        staticRigBinding.has("asset-model-rig-incompatible"),
+      "exact active uses have no asset diagnostics": [...exactActiveUse].every(
+        (code) => !code.startsWith("asset-"),
+      ),
+      "external asset compile succeeds": externalCompileSucceeded,
+      "imported runtime records imported origin":
+        importedRuntime?.origin === "imported",
+      "imported runtime records the source asset":
+        importedRuntime?.asset === modelAsset.path,
+      "imported runtime clears procedural profiles":
+        importedRuntime?.profiles?.length === 0,
+      "imported runtime records the ingest profile":
+        importedRuntime?.imported?.profile === "gltf-humanoid-v1",
+      "imported runtime maps the hips node":
+        importedRuntime?.imported?.humanoidBones.some(
+          (mapping) => mapping.bone === "hips" && mapping.node === 1,
+        ) === true,
+      "every imported humanoid bone is weighted":
+        importedRuntime?.imported?.humanoidBones.every(
+          (mapping) => mapping.weighted,
+        ) === true,
+      "imported runtime records the model digest":
+        importedRuntime?.imported?.assets.some(
+          (entry) =>
+            entry.path === modelAsset.path && entry.digest === modelDigest,
+        ) === true,
+      "imported runtime has one collision proxy":
+        importedRuntime?.parts.length === 1,
+      "imported runtime registers the collision proxy":
+        importedRuntime?.parts[0]?.id === "registered-collision-proxy",
+      "wrong-production use reports film-audio-cue-invalid":
+        wrongProductionUse.has("film-audio-cue-invalid"),
+      "wrong audio consumer reports asset-use-stale":
+        wrongAudioConsumer.has("asset-use-stale"),
+      "wrong audio consumer reports asset-use-missing":
+        wrongAudioConsumer.has("asset-use-missing"),
+      "duplicate active use reports asset-use-duplicate":
+        duplicateActiveUse.has("asset-use-duplicate"),
+      "dangling model consumer reports asset-use-dangling":
+        danglingModelConsumer.has("asset-use-dangling"),
+    } satisfies Record<string, boolean>;
+    const failedAssetCompilerContracts = Object.entries(assetCompilerContracts)
+      .filter(([, accepted]) => accepted === false)
+      .map(([contract]) => `- ${contract}`);
+    if (failedAssetCompilerContracts.length !== 0)
+      throw new Error(
+        [
+          "Asset compiler contract failures:",
+          ...failedAssetCompilerContracts,
+          "External compile diagnostics:",
+          JSON.stringify(externalCompile.diagnostics, null, 2),
+        ].join("\n"),
+      );
+    TestValidator.predicate(
+      "compiler binds asset references to a byte-exact licensed manifest",
+      failedAssetCompilerContracts.length === 0,
+    );
+
+    let unmanifestedFixtureFailure:
+      | IProductionCompilerFixtureFailure
+      | undefined;
+    const unmanifestedFixture = productionFixture();
+    try {
+      const ownershipPath = path.join(
+        unmanifestedFixture.root,
+        ".automovie/manifest.json",
+      );
+      const ownership = JSON.parse(
+        fs.readFileSync(ownershipPath, "utf8"),
+      ) as Record<string, unknown>;
+      delete ownership.assetManifest;
+      fs.writeFileSync(ownershipPath, JSON.stringify(ownership));
+      const unmanifestedFilmPath = path.join(
+        unmanifestedFixture.root,
+        "src/film.ts",
+      );
+      fs.writeFileSync(
+        unmanifestedFilmPath,
+        fs.readFileSync(unmanifestedFilmPath, "utf8").replace(
+          "audio: []",
+          `audio: [{
+          id: "unmanifested",
+          asset: "public/audio/starter-tone.json",
+          sourceDuration: { seconds: 6 },
+          sourceOffset: { frame: 0 },
+          start: { frame: 0 },
+          duration: { seconds: 6 },
+          gain: 0,
+          fadeIn: { frame: 0 },
+          fadeOut: { frame: 0 },
+          bus: "ambience",
+        }]`,
+        ),
+      );
+      const unmanifestedProject = AutoMovieProductionProject.open(
+        unmanifestedFixture.root,
+      );
+      const unmanifested = new AutoMovieProductionCompiler(
+        unmanifestedProject,
+        () => ({ entries: [] }),
+      ).lint({ scope: "source" });
+      TestValidator.predicate(
+        "a referenced content file cannot become a film asset without a provenance manifest",
+        unmanifested.success === false &&
+          diagnosticCodes(unmanifested).has("film-audio-cue-invalid"),
+      );
+    } catch (error) {
+      unmanifestedFixtureFailure = { error };
+      throw error;
+    } finally {
+      preserveProductionCompilerFixtureCleanup(unmanifestedFixtureFailure, () =>
+        unmanifestedFixture.dispose(),
+      );
+    }
+
     let singleQueueCalls = 0;
     const singleQueueCompile = new AutoMovieProductionCompiler(
       project,
@@ -111,7 +1035,10 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     ).compile({ scope: "source" });
     TestValidator.predicate(
       "successful compile derives its response queue exactly once before commit",
-      singleQueueCompile.success && singleQueueCalls === 1,
+      productionCompileSucceeded(
+        "single review-queue compile",
+        singleQueueCompile,
+      ) && singleQueueCalls === 1,
     );
     fs.writeFileSync(
       sourcePath,
@@ -293,7 +1220,7 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     );
     const recipeFile = path.join(
       fixture.root,
-      ".automovie/design/models/sentinel.json",
+      ".automovie/design/shared/models/sentinel.json",
     );
     const recipeBytes = fs.readFileSync(recipeFile);
     const recipeWithoutMaterial = JSON.parse(recipeBytes.toString("utf8"));
@@ -311,7 +1238,7 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     project.setFormationDesign(formationDesign());
     const formationFile = path.join(
       fixture.root,
-      ".automovie/design/formations/line.json",
+      ".automovie/design/shared/formations/line.json",
     );
     const formationBytes = fs.readFileSync(formationFile);
     const oversizedFormation = formationDesign();
@@ -334,7 +1261,7 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     );
     const generatedManifestPath = path.join(
       fixture.root,
-      ".automovie/generated-manifest.json",
+      ".automovie/productions/fixture-film/generated-manifest.json",
     );
     const generatedBeforeDesignGate = fs.readFileSync(
       generatedManifestPath,
@@ -343,11 +1270,13 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     const compileDesignOnly = compiler.compile({ scope: "design" });
     TestValidator.predicate(
       "design scope never replaces current generated source output",
-      compileDesignOnly.success &&
+      productionCompileSucceeded("design-only compile", compileDesignOnly) &&
         compileDesignOnly.materialized.length === 0 &&
         fs.readFileSync(generatedManifestPath, "utf8") ===
           generatedBeforeDesignGate &&
-        fs.existsSync(path.join(fixture.root, "generated/shots/opening.json")),
+        fs.existsSync(
+          path.join(fixture.root, "generated/fixture-film/shots/opening.json"),
+        ),
     );
     const designRevisionRacer = AutoMovieProductionProject.open(fixture.root);
     const residentRevision = project.revision;
@@ -387,7 +1316,10 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     project.revision = residentRevision;
     TestValidator.predicate(
       "design-only success returns the fenced revision without a later read",
-      stableDesignOnly.success &&
+      productionCompileSucceeded(
+        "fenced design-only compile",
+        stableDesignOnly,
+      ) &&
         postFenceDesignReads === 5 &&
         postFenceDesignMutation === false,
     );
@@ -414,7 +1346,7 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
         reopened.materialized.every((file) => file.status === "unchanged"),
     );
     const canonicalShotBytes = fs.readFileSync(
-      path.join(fixture.root, "generated/shots/opening.json"),
+      path.join(fixture.root, "generated/fixture-film/shots/opening.json"),
       "utf8",
     );
     TestValidator.equals(
@@ -477,7 +1409,7 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
 
     const generatedShot = path.join(
       fixture.root,
-      "generated/shots/opening.json",
+      "generated/fixture-film/shots/opening.json",
     );
     fs.writeFileSync(generatedShot, "{}\n");
     const tamperedLint = compiler.lint({ scope: "source" });
@@ -489,7 +1421,7 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     const repaired = compiler.compile({ scope: "source" });
     TestValidator.predicate(
       "compile repairs a declared generated file",
-      repaired.success &&
+      productionCompileSucceeded("tampered generated repair", repaired) &&
         repaired.materialized.some(
           (file) =>
             file.path === "shots/opening.json" && file.status === "updated",
@@ -510,7 +1442,7 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
         (item) =>
           item.code === "generated-tampered" && item.message.includes("null"),
       ) &&
-        recreated.success &&
+        productionCompileSucceeded("missing generated repair", recreated) &&
         recreated.materialized.some(
           (file) =>
             file.path === "shots/opening.json" && file.status === "created",
@@ -524,7 +1456,10 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
       diagnosticCodes(missingOwnershipManifest).has(
         "generated-manifest-missing",
       ) &&
-        repairedOwnershipManifest.success &&
+        productionCompileSucceeded(
+          "missing ownership-manifest repair",
+          repairedOwnershipManifest,
+        ) &&
         repairedOwnershipManifest.diagnostics.some(
           (diagnostic) =>
             diagnostic.code === "generated-manifest-missing" &&
@@ -532,7 +1467,10 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
         ) &&
         fs.existsSync(generatedManifestPath),
     );
-    const unowned = path.join(fixture.root, "generated/hand-edited.json");
+    const unowned = path.join(
+      fixture.root,
+      "generated/fixture-film/hand-edited.json",
+    );
     fs.writeFileSync(unowned, "{}\n");
     TestValidator.predicate(
       "unowned generated output blocks compilation",
@@ -563,9 +1501,15 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
       "a self-consistent forged generated manifest cannot redefine compiler truth",
       diagnosticCodes(forgedOwnership).has("generated-tampered") &&
         diagnosticCodes(forgedOwnership).has("generated-manifest-stale") &&
-        compiler.compile({ scope: "source" }).success,
+        productionCompileSucceeded(
+          "forged generated manifest recovery",
+          compiler.compile({ scope: "source" }),
+        ),
     );
-    const stalePath = path.join(fixture.root, "generated/stale-output.json");
+    const stalePath = path.join(
+      fixture.root,
+      "generated/fixture-film/stale-output.json",
+    );
     const staleBytes = Buffer.from('{"stale":true}\n');
     const withStale = JSON.parse(
       fs.readFileSync(generatedManifestPath, "utf8"),
@@ -669,7 +1613,10 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     );
     TestValidator.predicate(
       "refused source traversal leaves the current source compilable",
-      compiler.compile({ scope: "source" }).success,
+      productionCompileSucceeded(
+        "refused source traversal recovery",
+        compiler.compile({ scope: "source" }),
+      ),
     );
 
     fs.writeFileSync(
@@ -679,7 +1626,7 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
         'import fs from "node:fs";',
         'import * as runtimeNamespace from "runtime-namespace";',
         'import { type TypeOnly, runtimeName } from "mixed-runtime";',
-        "export const opening = { build() {",
+        'export const opening = { id: "opening", build() {',
         "async function delayed() { return 1; } void delayed;",
         'void import("node:path");',
         "Math.random(); Math.random(); Date.now(); performance.now(); crypto.randomUUID(); Intl.Collator();",
@@ -712,7 +1659,10 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     );
     TestValidator.predicate(
       "pure type-only imports remain valid coding-agent source",
-      compiler.compile({ scope: "source" }).success,
+      productionCompileSucceeded(
+        "type-only source import",
+        compiler.compile({ scope: "source" }),
+      ),
     );
     fs.writeFileSync(
       sourcePath,
@@ -736,7 +1686,7 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     );
     fs.writeFileSync(
       sourcePath,
-      "export const opening = { build() { return Promise.resolve({}); } };\n",
+      injectBuildSignal("  return Promise.resolve({}) as never;"),
     );
     TestValidator.predicate(
       "async source is rejected",
@@ -746,7 +1696,7 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     );
     fs.writeFileSync(
       sourcePath,
-      "export const opening = { build() { return { then() {} }; } };\n",
+      injectBuildSignal("  return { then() {} } as never;"),
     );
     TestValidator.predicate(
       "thenable source results are rejected even without the Promise global",
@@ -767,7 +1717,7 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     for (const expression of ["{}", "undefined"]) {
       fs.writeFileSync(
         sourcePath,
-        `export const opening = { build() { return ${expression}; } };\n`,
+        injectBuildSignal(`  return ${expression} as never;`),
       );
       TestValidator.predicate(
         `structurally invalid source result ${expression} is rejected`,
@@ -778,8 +1728,35 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     }
     fs.writeFileSync(
       sourcePath,
-      'export const opening = { build() { throw "boom"; } };\n',
+      original.replace('defineShot("opening"', 'defineShot("another-shot"'),
     );
+    TestValidator.predicate(
+      "registered export id is bound to contract module and export",
+      diagnosticCodes(compiler.compile({ scope: "source" })).has(
+        "source-registration-mismatch",
+      ),
+    );
+    fs.writeFileSync(
+      sourcePath,
+      original.replace('defineShot("opening"', 'defineShot(""'),
+    );
+    TestValidator.predicate(
+      "registered source export requires an explicit string id",
+      diagnosticCodes(compiler.compile({ scope: "source" })).has(
+        "source-registration-mismatch",
+      ),
+    );
+    fs.writeFileSync(
+      sourcePath,
+      original.replace('scene: "opening-scene"', 'scene: "unregistered-scene"'),
+    );
+    TestValidator.predicate(
+      "registered scene remains authoritative over the built stage",
+      diagnosticCodes(compiler.compile({ scope: "source" })).has(
+        "contract-mismatch",
+      ),
+    );
+    fs.writeFileSync(sourcePath, injectBuildSignal('  throw "boom";'));
     TestValidator.predicate(
       "source exceptions are isolated",
       diagnosticCodes(compiler.compile({ scope: "source" })).has(
@@ -788,7 +1765,7 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     );
     fs.writeFileSync(
       sourcePath,
-      'export const opening = { build() { throw { message: "object boom" }; } };\n',
+      injectBuildSignal('  throw { message: "object boom" };'),
     );
     TestValidator.predicate(
       "object-shaped source exceptions retain their message",
@@ -797,10 +1774,7 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
         .diagnostics.some((item) => item.message.includes("object boom")),
     );
     for (const expression of ["null", "{}"]) {
-      fs.writeFileSync(
-        sourcePath,
-        `export const opening = { build() { throw ${expression}; } };\n`,
-      );
+      fs.writeFileSync(sourcePath, injectBuildSignal(`  throw ${expression};`));
       TestValidator.predicate(
         `source exception ${expression} is stringified`,
         diagnosticCodes(compiler.compile({ scope: "source" })).has(
@@ -808,10 +1782,7 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
         ),
       );
     }
-    fs.writeFileSync(
-      sourcePath,
-      "export const opening = { build() { while (true) {} } };\n",
-    );
+    fs.writeFileSync(sourcePath, injectBuildSignal("  while (true) {}"));
     TestValidator.predicate(
       "source execution has a hard timeout",
       diagnosticCodes(compiler.compile({ scope: "source" })).has(
@@ -820,7 +1791,7 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     );
     const getterSource = mutateSourceOutput(
       [
-        '  Object.defineProperty(output, "shot", {',
+        '  Object.defineProperty(output, "eventSamples", {',
         "    get() { while (true) {} },",
         "  });",
       ].join("\n"),
@@ -834,12 +1805,12 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     );
     fs.writeFileSync(
       sourcePath,
-      original.replace("model: model.id,", 'model: "absent-model",'),
+      original.replace('model: "sentinel",', 'model: "absent-model",'),
     );
     TestValidator.predicate(
       "compiled scenes cannot reference an absent model",
       diagnosticCodes(compiler.compile({ scope: "source" })).has(
-        "engine-validation-failed",
+        "source-actor-runtime-invalid",
       ),
     );
     fs.writeFileSync(sourcePath, "export const opening = { build: ( => 1 };\n");
@@ -861,7 +1832,10 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     fs.writeFileSync(sourcePath, instrumented);
     TestValidator.predicate(
       "constant ground geometry is available in the source oracle",
-      compiler.compile({ scope: "source" }).success,
+      productionCompileSucceeded(
+        "constant ground geometry source oracle",
+        compiler.compile({ scope: "source" }),
+      ),
     );
     project.setWorldDesign({
       ...worldDesign(),
@@ -880,7 +1854,10 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     fs.writeFileSync(sourcePath, instrumented);
     TestValidator.predicate(
       "explicit geometry helpers run in the frozen sandbox",
-      compiler.compile({ scope: "source" }).success,
+      productionCompileSucceeded(
+        "explicit geometry helper sandbox",
+        compiler.compile({ scope: "source" }),
+      ),
     );
     project.setWorldDesign(worldDesign());
     fs.writeFileSync(sourcePath, original);
@@ -892,15 +1869,27 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
         '    skeleton: "missing-skeleton",\n    duration:',
       ),
     );
-    TestValidator.predicate(
-      "motion skeleton references are compiler gates",
-      compiler
-        .compile({ scope: "source" })
-        .diagnostics.some(
-          (item) =>
-            item.code === "engine-validation-failed" &&
-            item.message.includes("missing skeleton"),
+    const missingSkeleton = compiler.compile({ scope: "source" });
+    const missingSkeletonIsRejected = missingSkeleton.diagnostics.some(
+      (item) =>
+        item.code === "performance-invalid" &&
+        item.phase === "source" &&
+        item.target === "shot:opening" &&
+        item.message.includes(
+          'motion skeleton "missing-skeleton" does not match target skeleton "automovie:skeleton:sentinel"',
         ),
+    );
+    if (missingSkeletonIsRejected === false)
+      throw new Error(
+        `Missing-skeleton compile did not reach the expected engine gate:\n${JSON.stringify(
+          missingSkeleton.diagnostics,
+          null,
+          2,
+        )}`,
+      );
+    TestValidator.predicate(
+      "motion skeleton mismatches are source performance gates",
+      missingSkeletonIsRejected,
     );
     fs.writeFileSync(sourcePath, original);
 
@@ -928,8 +1917,10 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     const contentIndependentDesign = compiler.compile({ scope: "design" });
     TestValidator.predicate(
       "design scope does not read declared content or derive review fingerprints",
-      contentIndependentDesign.success &&
-        contentIndependentDesign.reviews.entries.length === 0,
+      productionCompileSucceeded(
+        "content-independent design compile",
+        contentIndependentDesign,
+      ) && contentIndependentDesign.reviews.entries.length === 0,
     );
     for (const failure of [
       new Error("declared content junction"),
@@ -1050,7 +2041,7 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     );
     const rawGeneratedIntruder = path.join(
       fixture.root,
-      "generated/raw-race.txt",
+      "generated/fixture-film/raw-race.txt",
     );
     let noWriteInventoryRaceReads = 0;
     project.contentInputs = (() => {
@@ -1215,52 +2206,54 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     );
     project.readGeneratedFile = residentReadGenerated;
 
-    const durationNeedle = "duration: context.contract.durationSeconds,";
-    const durationIndex = original.lastIndexOf(durationNeedle);
-    const wrongIdentity = `${original
-      .slice(0, durationIndex)
-      .replace(
-        "id: context.contract.id,",
-        'id: "wrong-shot",',
-      )}duration: context.contract.durationSeconds - 1,${original.slice(
-      durationIndex + durationNeedle.length,
-    )}`;
+    const wrongIdentity = original.replace(
+      "duration: context.contract.durationSeconds,\n    },\n    eventSamples:",
+      "duration: context.contract.durationSeconds - 1,\n    },\n    eventSamples:",
+    );
     fs.writeFileSync(sourcePath, wrongIdentity);
     TestValidator.predicate(
       "compiled shot identity and duration are engine gates",
       diagnosticCodes(compiler.compile({ scope: "source" })).has(
-        "engine-validation-failed",
+        "contract-mismatch",
       ),
     );
-    for (const [name, mutation] of [
+    for (const [name, expectedCode, mutation] of [
       [
         "duplicate-invalid-event-sample",
+        "contract-mismatch",
         [
           "  output.eventSamples[0]!.time = 999;",
           "  output.eventSamples.push({ ...output.eventSamples[0]! });",
         ].join("\n"),
       ],
-      ["missing-event-sample", "  output.eventSamples = [];"],
+      [
+        "missing-event-sample",
+        "contract-mismatch",
+        "  output.eventSamples = [];",
+      ],
       [
         "false-opening-state",
-        "  output.motions[0]!.keyframes[0]!.pose.joints[0]!.abduction = 50;",
+        "contract-realization-failed",
+        "  output.clips![0]!.keyframes[0]!.pose.joints[0]!.abduction = 50;",
       ],
       [
         "false-closing-state",
-        "  output.motions[0]!.keyframes[output.motions[0]!.keyframes.length - 1]!.pose.joints[0]!.abduction = 0;",
+        "contract-realization-failed",
+        "  output.clips![0]!.keyframes[output.clips![0]!.keyframes.length - 1]!.pose.joints[0]!.abduction = 0;",
       ],
       [
         "unreadable-camera",
-        "  output.scene.cameras[0]!.transform.translation.x = 100;",
+        "contract-realization-failed",
+        '  output.performance.draft[1]!.on = { kind: "point", point: { x: 100, y: 0, z: 0 } };',
       ],
     ] as const) {
       fs.writeFileSync(sourcePath, mutateSourceOutput(mutation));
       const realizationOutput = compiler.compile({ scope: "source" });
       TestValidator.predicate(
-        `compiler-derived contract realization rejects ${name}: ${realizationOutput.diagnostics
+        `compiler rejects ${name} with ${expectedCode}: ${realizationOutput.diagnostics
           .map((diagnostic) => diagnostic.code)
           .join(",")}`,
-        diagnosticCodes(realizationOutput).has("contract-realization-failed"),
+        diagnosticCodes(realizationOutput).has(expectedCode),
       );
     }
     fs.writeFileSync(sourcePath, original);
@@ -1280,7 +2273,7 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
           ...formationDesign(),
           modelRecipe: "formation-sentinel",
         }).accepted &&
-        project.setShotContract({
+        setProductionFixtureShotContract(project, {
           ...shotContract(),
           participants: [
             { kind: "actor", id: "sentinel" },
@@ -1289,9 +2282,13 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
         }).accepted,
     );
     const materializedFormation = compiler.compile({ scope: "source" });
+    const formationCompileSucceeded = productionCompileSucceeded(
+      "formation materialization fixture",
+      materializedFormation,
+    );
     const formationShot = JSON.parse(
       fs.readFileSync(
-        path.join(fixture.root, "generated/shots/opening.json"),
+        path.join(fixture.root, "generated/fixture-film/shots/opening.json"),
         "utf8",
       ),
     ) as {
@@ -1304,7 +2301,10 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     };
     const formationRealization = JSON.parse(
       fs.readFileSync(
-        path.join(fixture.root, "generated/realizations/opening.json"),
+        path.join(
+          fixture.root,
+          "generated/fixture-film/realizations/opening.json",
+        ),
         "utf8",
       ),
     ) as {
@@ -1312,7 +2312,7 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     };
     TestValidator.predicate(
       "formation count, compact anonymous runtime, hero identity and realization come from the compiler",
-      materializedFormation.success &&
+      formationCompileSucceeded &&
         formationShot.scene.nodes.some((node) => node.id === "captain") &&
         formationShot.scene.nodes.filter(
           (node) =>
@@ -1331,15 +2331,18 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
             formation.passed,
         ),
     );
+    const formationSource = fs.readFileSync(sourcePath, "utf8");
     fs.writeFileSync(
       sourcePath,
       mutateSourceOutput(
         [
-          "  output.scene.nodes.push({",
-          "    ...output.scene.nodes[0]!,",
-          '    id: "formation:line:slot:000001",',
-          "  });",
+          "  output.stage.set = [{",
+          '    node: "formation:line:slot:000001",',
+          '    model: "sentinel",',
+          "    position: { x: 0, y: 0, z: 0 },",
+          "  }];",
         ].join("\n"),
+        formationSource,
       ),
     );
     TestValidator.predicate(
@@ -1348,9 +2351,9 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
         "contract-realization-failed",
       ),
     );
-    fs.writeFileSync(sourcePath, original);
+    fs.writeFileSync(sourcePath, formationSource);
     fs.rmSync(
-      path.join(fixture.root, ".automovie/design/formations/line.json"),
+      path.join(fixture.root, ".automovie/design/shared/formations/line.json"),
     );
     TestValidator.predicate(
       "a physically missing formation design is a reference-graph failure",
@@ -1362,7 +2365,7 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
       ...formationDesign(),
       modelRecipe: "formation-sentinel",
     });
-    project.setShotContract(shotContract());
+    setProductionFixtureShotContract(project, shotContract());
     project.eraseDesignArtifact(
       { kind: "formation", id: "line" },
       "restore the one-shot compiler fixture after formation witness coverage",
@@ -1446,6 +2449,11 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
           kind: "feature" as const,
           required: true,
         },
+        {
+          id: "optional-preview" as const,
+          kind: "preview" as const,
+          required: false,
+        },
       ],
     };
     project.setProductionDesign(requiredProduction);
@@ -1453,11 +2461,11 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     const missingRender = finalCompiler.compile({ scope: "final" });
     const renderManifestPath = path.join(
       fixture.root,
-      ".automovie/render-manifest.json",
+      ".automovie/productions/fixture-film/render-manifest.json",
     );
     const renderReceiptPath = path.join(
       fixture.root,
-      ".automovie/render-manifest-receipt.json",
+      ".automovie/productions/fixture-film/render-manifest-receipt.json",
     );
     fs.writeFileSync(renderManifestPath, "{}");
     const unownedRender = finalCompiler.compile({ scope: "final" });
@@ -1489,24 +2497,39 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
       requiredProduction.targetRuntimeSeconds *
         requiredProduction.frameFormat.fps,
     );
-    const featureBytes = await productionH264Mp4({
+    const featureVideoBytes = await productionH264Mp4({
       width: requiredProduction.frameFormat.width,
       height: requiredProduction.frameFormat.height,
       fps: requiredProduction.frameFormat.fps,
       frameCount: featureFrameCount,
     });
-    fs.mkdirSync(path.join(fixture.root, "renders/deliverables"), {
+    const featureBytes = muxProductionFeatureMp4({
+      video: featureVideoBytes,
+      audio: productionOpusMp4(
+        Math.round(requiredProduction.targetRuntimeSeconds * 48_000),
+      ),
+    });
+    fs.mkdirSync(path.join(fixture.root, "renders/fixture-film/deliverables"), {
       recursive: true,
     });
     fs.writeFileSync(
-      path.join(fixture.root, "renders", featurePath),
+      path.join(fixture.root, "renders", "fixture-film", featurePath),
       featureBytes,
     );
     const fakeFeaturePath = "deliverables/fake-feature.mp4";
     const fakeFeatureBytes = Buffer.from("this is not an MP4 container");
     fs.writeFileSync(
-      path.join(fixture.root, "renders", fakeFeaturePath),
+      path.join(fixture.root, "renders", "fixture-film", fakeFeaturePath),
       fakeFeatureBytes,
+    );
+    const previewPath = "deliverables/optional-preview.png";
+    const optionalPreviewBytes = productionPng(
+      requiredProduction.frameFormat.width,
+      requiredProduction.frameFormat.height,
+    );
+    fs.writeFileSync(
+      path.join(fixture.root, "renders", "fixture-film", previewPath),
+      optionalPreviewBytes,
     );
     const currentFingerprint = unsafeRender.compiler.inputFingerprint;
     const completeRenderManifest = {
@@ -1589,14 +2612,42 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     })();
     project.commitProductionRenderManifest(completeRenderManifest);
     fs.appendFileSync(
-      path.join(fixture.root, "renders", featurePath),
+      path.join(fixture.root, "renders", "fixture-film", featurePath),
       Buffer.from([0]),
     );
     const mismatchedRender = finalCompiler.compile({ scope: "final" });
     fs.writeFileSync(
-      path.join(fixture.root, "renders", featurePath),
+      path.join(fixture.root, "renders", "fixture-film", featurePath),
       featureBytes,
     );
+    project.commitProductionRenderManifest(completeRenderManifest);
+    project.commitProductionRenderManifest({
+      ...completeRenderManifest,
+      deliverables: [
+        ...completeRenderManifest.deliverables,
+        {
+          id: "optional-preview",
+          kind: "preview",
+          files: [
+            {
+              path: previewPath,
+              digest: digestAutoMovieBytes(optionalPreviewBytes),
+              bytes: optionalPreviewBytes.length,
+              mediaType: "image/png",
+            },
+          ],
+          runtimeSeconds: null,
+          frameCount: null,
+          codec: null,
+          rendition: {
+            kind: "repainted",
+            shots: [],
+            aggregateReviews: [],
+          },
+        },
+      ],
+    });
+    const nominalPreviewRendition = finalCompiler.compile({ scope: "final" });
     project.commitProductionRenderManifest(completeRenderManifest);
     TestValidator.predicate(
       "final compile requires an aggregate deliverable manifest",
@@ -1638,9 +2689,18 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     TestValidator.predicate(
       "final compile accepts complete byte-exact aggregate deliverables",
       fakeMediaCommitRefused &&
-        finalCompiler.compile({ scope: "final" }).success,
+        productionCompileSucceeded(
+          "byte-exact final deliverables",
+          finalCompiler.compile({ scope: "final" }),
+        ),
     );
-    const edgeAudioBytes = productionAudioMp4();
+    TestValidator.predicate(
+      "non-feature outputs cannot carry nominal repaint provenance",
+      diagnosticCodes(nominalPreviewRendition).has(
+        "render-rendition-provenance-invalid",
+      ),
+    );
+    const edgeAudioBytes = productionOpusMp4(48_000);
     const edgeAudioProbe = probeProductionMedia({
       kind: "audio-mix",
       mediaType: "audio/mp4",
@@ -1696,6 +2756,7 @@ export const film = {
       { id: "captions-invalid", kind: "captions", required: false },
       { id: "feature-codec", kind: "feature", required: false },
       { id: "guide-codec", kind: "guide-pass", required: false },
+      { id: "guide-controls", kind: "guide-pass", required: false },
       { id: "audio-codec", kind: "audio-mix", required: false },
       { id: "audio-runtime", kind: "audio-mix", required: false },
       { id: "audio-valid", kind: "audio-mix", required: false },
@@ -1748,31 +2809,42 @@ export const film = {
     );
     const edgeFile = (id: string, kind: RenderedDeliverable["kind"]) => {
       const medium =
-        kind === "feature" || kind === "guide-pass"
+        kind === "feature"
           ? {
               extension: "mp4",
               bytes: featureBytes,
               mediaType: "video/mp4",
             }
-          : kind === "audio-mix"
+          : kind === "guide-pass"
             ? {
-                extension: "m4a",
-                bytes: edgeAudioBytes,
-                mediaType: "audio/mp4",
+                extension: "mp4",
+                bytes: featureVideoBytes,
+                mediaType: "video/mp4",
               }
-            : kind === "captions"
+            : kind === "audio-mix"
               ? {
-                  extension: "vtt",
-                  bytes: captionBytes,
-                  mediaType: "text/vtt",
+                  extension: "m4a",
+                  bytes: edgeAudioBytes,
+                  mediaType: "audio/mp4",
                 }
-              : {
-                  extension: "png",
-                  bytes: previewBytes,
-                  mediaType: "image/png",
-                };
+              : kind === "captions"
+                ? {
+                    extension: "vtt",
+                    bytes: captionBytes,
+                    mediaType: "text/vtt",
+                  }
+                : {
+                    extension: "png",
+                    bytes: previewBytes,
+                    mediaType: "image/png",
+                  };
       const relative = `deliverables/final-edges/${id}.${medium.extension}`;
-      const absolute = path.join(fixture.root, "renders", relative);
+      const absolute = path.join(
+        fixture.root,
+        "renders",
+        "fixture-film",
+        relative,
+      );
       fs.mkdirSync(path.dirname(absolute), { recursive: true });
       fs.writeFileSync(absolute, medium.bytes);
       return {
@@ -1780,6 +2852,30 @@ export const film = {
         digest: digestAutoMovieBytes(medium.bytes),
         bytes: medium.bytes.length,
         mediaType: medium.mediaType,
+      };
+    };
+    const edgeSoundEvidenceFile = (id: string) => {
+      const bytes = Buffer.from(
+        JSON.stringify({
+          version: 1,
+          plan: { events: [] },
+          analysis: { clippingSamples: 0, eventAlignment: [] },
+          tts: [],
+        }),
+      );
+      const relative = `deliverables/final-edges/${id}.json`;
+      const absolute = path.join(
+        fixture.root,
+        "renders",
+        "fixture-film",
+        relative,
+      );
+      fs.writeFileSync(absolute, bytes);
+      return {
+        path: relative,
+        digest: digestAutoMovieBytes(bytes),
+        bytes: bytes.length,
+        mediaType: "application/json",
       };
     };
     const validRendered = (
@@ -1795,7 +2891,15 @@ export const film = {
       return {
         id,
         kind,
-        files: [edgeFile(id, kind)],
+        files:
+          kind === "audio-mix"
+            ? [
+                edgeFile(id, kind),
+                edgeFile(`${id}-waveform`, "preview"),
+                edgeFile(`${id}-spectrogram`, "preview"),
+                edgeSoundEvidenceFile(`${id}-evidence`),
+              ]
+            : [edgeFile(id, kind)],
         runtimeSeconds: timed ? edgeProduction.targetRuntimeSeconds : null,
         frameCount: framed
           ? Math.round(
@@ -1816,6 +2920,9 @@ export const film = {
     );
     const edge = (id: string): RenderedDeliverable =>
       invalidDeliverables.find((deliverable) => deliverable.id === id)!;
+    edge("guide-controls").files.push(
+      edgeFile("guide-controls-frame", "preview"),
+    );
     edge("feature-runtime").runtimeSeconds =
       edgeProduction.targetRuntimeSeconds / 2;
     edge("preview-runtime").runtimeSeconds = 0;
@@ -1944,6 +3051,7 @@ export const film = {
     const probeFailurePath = path.join(
       fixture.root,
       "renders",
+      "fixture-film",
       probeFailureFile.path,
     );
     const probeFailureBytes = fs.readFileSync(probeFailurePath);
@@ -1955,6 +3063,7 @@ export const film = {
     const captionFailurePath = path.join(
       fixture.root,
       "renders",
+      "fixture-film",
       captionFailureFile.path,
     );
     const captionFailureBytes = fs.readFileSync(captionFailurePath);
@@ -2004,7 +3113,12 @@ export const film = {
     const invalidEntryRender = finalCompiler.compile({ scope: "final" });
     restoreEdgeLedger();
     fs.rmSync(
-      path.join(fixture.root, "renders", edge("missing-file").files[0]!.path),
+      path.join(
+        fixture.root,
+        "renders",
+        "fixture-film",
+        edge("missing-file").files[0]!.path,
+      ),
     );
     const semanticRender = finalCompiler.compile({ scope: "final" });
     const residentRenderRead = project.readRenderFile;
@@ -2060,13 +3174,21 @@ export const film = {
           "render-deliverable-incomplete",
           "render-deliverable-missing",
         ].every((code) => diagnosticCodes(semanticRender).has(code)) &&
+        semanticRender.diagnostics.some(
+          (diagnostic) =>
+            diagnostic.target === "guide-controls" &&
+            diagnostic.code === "render-deliverable-media-mismatch" &&
+            diagnostic.message.includes("continuous"),
+        ) &&
         nonErrorRenderRead.diagnostics.some(
           (diagnostic) =>
             diagnostic.code === "render-deliverable-missing" &&
             diagnostic.message.includes("non-error render read failure"),
         ),
     );
-    fs.rmSync(path.join(fixture.root, ".automovie/design/production.json"));
+    fs.rmSync(
+      path.join(fixture.root, ".automovie/design/fixture-film/production.json"),
+    );
     TestValidator.predicate(
       "final diagnostics tolerate an absent production while design owns error",
       diagnosticCodes(finalCompiler.compile({ scope: "final" })).has(
@@ -2094,6 +3216,7 @@ export const film = {
     fs.writeFileSync(sourcePath, original);
     project.setWorldDesign(worldDesign());
 
+    let noDesignFailure: IProductionCompilerFixtureFailure | undefined;
     const noDesignRoot = fs.mkdtempSync(
       path.join(os.tmpdir(), "automovie-production-empty-"),
     );
@@ -2107,10 +3230,20 @@ export const film = {
           empty.diagnostics.filter((item) => item.code === "design-missing")
             .length === 3,
       );
+    } catch (error) {
+      noDesignFailure = { error };
+      throw error;
     } finally {
-      fs.rmSync(noDesignRoot, { force: true, recursive: true });
+      preserveProductionCompilerFixtureCleanup(noDesignFailure, () =>
+        fs.rmSync(noDesignRoot, { force: true, recursive: true }),
+      );
     }
+  } catch (error) {
+    productionCompilerFailure = { error };
+    throw error;
   } finally {
-    fixture.dispose();
+    preserveProductionCompilerFixtureCleanup(productionCompilerFailure, () =>
+      fixture.dispose(),
+    );
   }
 };

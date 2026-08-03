@@ -28,6 +28,7 @@ import {
 import {
   IDENTITY_TRANSFORM,
   createSkeleton,
+  joint,
   keyframe,
   makeMotion,
   makePose,
@@ -60,6 +61,40 @@ const horseWalk: IAutoMovieMotion = makeMotion(
 /** The horse animates its own walk; every other actor uses the shared clip. */
 const synth: IAutoMovieActionSynthesizer = (action, actor) =>
   actor === "horse" ? horseWalk : validSynthesizer(action, actor);
+
+const CUSTOM_MOUNT_JOINT_AXES = {
+  hips: {
+    flexion: { x: 0, y: 0, z: 1 },
+    abduction: { x: 1, y: 0, z: 0 },
+    twist: { x: 0, y: 1, z: 0 },
+  },
+};
+const CUSTOM_MOUNT_REST_FRAMES = {
+  hips: { flexion: { sign: 1 as const, neutral: 15 } },
+};
+const clinicalHorseWalk: IAutoMovieMotion = makeMotion(
+  [
+    keyframe(
+      0,
+      makePose([joint("hips", { flexion: 30 })], {
+        translation: { x: 0, y: 0, z: 0 },
+        rotation: { x: 0, y: 0, z: 0, w: 1 },
+        scale: { x: 1, y: 1, z: 1 },
+      }),
+    ),
+    keyframe(
+      2,
+      makePose([joint("hips", { flexion: 30 })], {
+        translation: { x: 2, y: 0, z: 0 },
+        rotation: { x: 0, y: 0, z: 0, w: 1 },
+        scale: { x: 1, y: 1, z: 1 },
+      }),
+    ),
+  ],
+  2,
+);
+const clinicalSynth: IAutoMovieActionSynthesizer = (action, actor) =>
+  actor === "horse" ? clinicalHorseWalk : validSynthesizer(action, actor);
 
 const scriptOf = () =>
   makeScriptWrite({
@@ -127,12 +162,14 @@ const riderPosAt = (clip: IAutoMovieClip, t: number): IAutoMovieVector3 => {
  * 3. `resolveBeatEnd` derives the rider's end transform/velocity from that same
  *    baked clip: it sits at the saddle (following the horse), not at (5,5,5),
  *    with the horse's trailing velocity, and carries the mount binding.
- * 4. Continuity: a SECOND beat with no `attachTo` still bakes the follow: the
+ * 4. A clinical parent uses its actor-specific joint axes and rest frames for the
+ *    staged mount's baked follow.
+ * 5. Continuity: a SECOND beat with no `attachTo` still bakes the follow: the
  *    persistence #631's beat-end carry is meant to enable.
- * 5. An explicit `attachTo` for the rider this beat overrides its mount (one
+ * 6. An explicit `attachTo` for the rider this beat overrides its mount (one
  *    follow clip, the attachTo one).
- * 6. A mountless staging bakes no follow clip (byte-compatible with pre-#674).
- * 7. A mount onto a rig-less parent, and onto an absent bone, each fail.
+ * 7. A mountless staging bakes no follow clip (byte-compatible with pre-#674).
+ * 8. A mount onto a rig-less parent, and onto an absent bone, each fail.
  */
 export const test_film_perform_shot_mount = (): void => {
   const staged = stageScene(scriptOf(), stagingOf());
@@ -268,7 +305,7 @@ export const test_film_perform_shot_mount = (): void => {
   );
 
   // 3c. a mount whose parent clip is authored in clinical space threads the
-  // parent's restFrames into the follow FK (the same path attachTo uses).
+  // parent's custom axes/rest frames into the follow FK.
   const clinical = performShot({
     script: scriptOf(),
     staged,
@@ -280,9 +317,12 @@ export const test_film_perform_shot_mount = (): void => {
       revise: { review: "the clinical-space ride.", final: null },
       duration: 2,
     }),
-    synthesize: synth,
+    synthesize: clinicalSynth,
     skeleton: () => createSkeleton(),
-    restFrames: (node) => (node === "horse" ? HUMANOID_REST_FRAME : undefined),
+    jointAxes: (node) =>
+      node === "horse" ? CUSTOM_MOUNT_JOINT_AXES : undefined,
+    restFrames: (node) =>
+      node === "horse" ? CUSTOM_MOUNT_REST_FRAMES : undefined,
   });
   TestValidator.equals("the clinical mount performs", clinical.success, true);
   if (clinical.success === true) {
@@ -296,8 +336,8 @@ export const test_film_perform_shot_mount = (): void => {
       sampleMotion(clinical.motions["horse"]!, 2).pose,
       createSkeleton(),
       { parentBone: "spine", offset: IDENTITY_TRANSFORM },
-      HUMANOID_JOINT_AXES,
-      HUMANOID_REST_FRAME,
+      CUSTOM_MOUNT_JOINT_AXES,
+      CUSTOM_MOUNT_REST_FRAMES,
     );
     const expectedClinical = Vector3.add(
       horse.transform.translation,
@@ -307,12 +347,23 @@ export const test_film_perform_shot_mount = (): void => {
       ),
     );
     TestValidator.predicate(
-      "the mount follow threads the parent's restFrames into its FK",
+      "the mount follow threads the parent's custom clinical mappings into FK",
       vclose(
         { x: clinicalEnd[0]!, y: clinicalEnd[1]!, z: clinicalEnd[2]! },
         expectedClinical,
         1e-9,
       ),
+    );
+    const fallbackLocal = resolveAttachment(
+      sampleMotion(clinical.motions["horse"]!, 2).pose,
+      createSkeleton(),
+      { parentBone: "spine", offset: IDENTITY_TRANSFORM },
+      HUMANOID_JOINT_AXES,
+      HUMANOID_REST_FRAME,
+    );
+    TestValidator.predicate(
+      "the custom mount basis is observably distinct from humanoid fallback",
+      !vclose(localClinical.translation, fallbackLocal.translation, 1e-3),
     );
   }
 

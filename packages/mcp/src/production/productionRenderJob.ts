@@ -42,6 +42,16 @@ export interface IAutoMovieProductionRenderRuntimeIdentity {
   encoder: IAutoMovieProductionEncoderIdentity;
 }
 
+/** Explicit cost/quality tier sharing one compiler-owned edit. */
+export interface IAutoMovieProductionRenderTier {
+  /** Stable tier identity used in slots, chunks, and publication paths. */
+  kind: "proxy" | "final";
+  /** Output raster multiplier in `(0, 1]`; final is exactly one. */
+  resolutionScale: number;
+  /** Keep every Nth source frame; final is exactly one. */
+  frameStep: number;
+}
+
 /** One source image participating in a film-global output frame. */
 export interface IAutoMovieProductionRenderLayer {
   /** Compiler-owned shot id. */
@@ -54,8 +64,10 @@ export interface IAutoMovieProductionRenderLayer {
 
 /** One exact film-global frame with transitions already resolved. */
 export interface IAutoMovieProductionRenderFrame {
-  /** Exact zero-based film frame. */
+  /** Exact zero-based output frame in this render tier. */
   globalFrame: number;
+  /** Exact frame on the compiler-owned full-rate film timeline. */
+  timelineFrame: number;
   /** Derived film time, never an accumulated clock. */
   timeSeconds: number;
   /** One hard-cut/fade layer or two dissolve layers, back to front. */
@@ -70,7 +82,7 @@ export interface IAutoMovieProductionRenderChunk {
   id: AutoMovieContentDigest;
   /** Production deliverable id that owns the completed range. */
   deliverable: string;
-  /** Encoded moving-image class used by the parser probe. */
+  /** Final moving-image deliverable class that owns this video-only chunk. */
   kind: "feature" | "guide-pass";
   /** Beauty or the one structural pass declared for this range. */
   pass: AutoMovieGuidePass;
@@ -85,13 +97,19 @@ export interface IAutoMovieProductionRenderChunk {
 /** Persisted plan reopened by every `automovie render` subcommand. */
 export interface IAutoMovieProductionRenderJobPlan {
   /** Plan schema. */
-  version: 1;
+  version: 3;
+  /** Exact production namespace that owns every slot and output. */
+  productionId: string;
   /** Compiler source-input fingerprint used by all captures. */
   compileFingerprint: AutoMovieContentDigest;
   /** Digest of the compiler-owned film edit. */
   editFingerprint: AutoMovieContentDigest;
   /** Homogeneous capture and encoder identity. */
   runtimeIdentity: IAutoMovieProductionRenderRuntimeIdentity;
+  /** Proxy/final cost policy; both retain the same edit fingerprint. */
+  tier: IAutoMovieProductionRenderTier;
+  /** Compiler-owned full-quality clock and raster before tier sampling. */
+  sourceFrameFormat: IAutoMovieProductionDesign["frameFormat"];
   /** Exact production raster and frame clock. */
   frameFormat: IAutoMovieProductionDesign["frameFormat"];
   /** Exact total film frame count. */
@@ -195,6 +213,8 @@ export const planProductionRenderJob = (props: {
   audioAssets: readonly IAutoMovieProductionAudioAssetIdentity[];
   chunkFrames: number;
   guidePasses?: readonly Exclude<AutoMovieGuidePass, "beauty">[];
+  /** Explicit proxy/final policy; omitted is the exact final tier. */
+  tier?: IAutoMovieProductionRenderTier;
 }): IAutoMovieProductionRenderJobPlan => {
   if (
     Number.isSafeInteger(props.chunkFrames) === false ||
@@ -207,10 +227,12 @@ export const planProductionRenderJob = (props: {
     throw new Error(
       "Render runtime sourceDigest must be one current SHA-256 content identity.",
     );
-  if (
-    props.production.frameFormat.width % 2 !== 0 ||
-    props.production.frameFormat.height % 2 !== 0
-  )
+  const tier = normalizeRenderTier(props.tier);
+  const frameFormat = resolveProductionRenderTierFrameFormat(
+    props.production.frameFormat,
+    tier,
+  );
+  if (frameFormat.width % 2 !== 0 || frameFormat.height % 2 !== 0)
     throw new Error(
       "The production H.264 render adapter requires even width and height.",
     );
@@ -226,6 +248,10 @@ export const planProductionRenderJob = (props: {
     throw new Error(
       "The film edit differs from the production identity, frame clock, or runtime. Recompile before planning.",
     );
+  if (props.timeline.totalFrames % tier.frameStep !== 0)
+    throw new Error(
+      `Render tier "${tier.kind}" frameStep ${tier.frameStep} does not divide the ${props.timeline.totalFrames}-frame edit. Choose a divisor so proxy and final have the same exact runtime.`,
+    );
   const audioAssets = normalizeAudioAssets(props.audioAssets);
   for (const cue of props.timeline.tracks.audio) {
     const asset = audioAssets.find((candidate) => candidate.path === cue.asset);
@@ -238,7 +264,7 @@ export const planProductionRenderJob = (props: {
         `Audio cue "${cue.id}" lacks one digest-, format-, and duration-verified source asset.`,
       );
   }
-  const guidePasses = normalizeGuidePasses(props.guidePasses ?? ["pose"]);
+  const legacyGuidePasses = normalizeGuidePasses(props.guidePasses ?? ["pose"]);
   const editFingerprint = digestJson({
     protocol: "automovie.production-render-edit.v1",
     id: props.timeline.id,
@@ -249,8 +275,16 @@ export const planProductionRenderJob = (props: {
     tracks: props.timeline.tracks,
   });
   const frames = Array.from(
-    { length: props.timeline.totalFrames },
-    (_, frame) => sampleProductionRenderFrame(props.timeline, frame),
+    { length: props.timeline.totalFrames / tier.frameStep },
+    (_, outputFrame) => {
+      const timelineFrame = outputFrame * tier.frameStep;
+      return {
+        ...sampleProductionRenderFrame(props.timeline, timelineFrame),
+        globalFrame: outputFrame,
+        timelineFrame,
+        timeSeconds: outputFrame / frameFormat.fps,
+      };
+    },
   );
   const chunks: IAutoMovieProductionRenderChunk[] = [];
   for (const deliverable of props.production.deliverables) {
@@ -260,7 +294,13 @@ export const planProductionRenderJob = (props: {
     if (deliverable.kind !== "feature" && deliverable.kind !== "guide-pass")
       continue;
     const passes: readonly AutoMovieGuidePass[] =
-      deliverable.kind === "feature" ? ["beauty"] : guidePasses;
+      deliverable.kind === "feature"
+        ? ["beauty"]
+        : normalizeGuidePasses(
+            deliverable.pass === undefined
+              ? legacyGuidePasses
+              : [deliverable.pass],
+          );
     for (const pass of passes)
       for (
         let frameStart = 0, index = 0;
@@ -286,13 +326,16 @@ export const planProductionRenderJob = (props: {
               );
             return { shot, digest };
           });
-        const slot = `${deliverable.id}:${pass}:${index}`;
+        const slot = `${props.production.id}:${tier.kind}:${deliverable.id}:${pass}:${index}`;
         const identity = {
-          protocol: "automovie.production-render-chunk.v1",
+          protocol: "automovie.production-render-chunk.v3",
+          production: props.production.id,
+          tier,
           deliverable: deliverable.id,
           kind: deliverable.kind,
           editFingerprint,
-          frameFormat: props.production.frameFormat,
+          sourceFrameFormat: props.production.frameFormat,
+          frameFormat,
           frameStart,
           frameEndExclusive,
           pass,
@@ -312,12 +355,15 @@ export const planProductionRenderJob = (props: {
       }
   }
   return {
-    version: 1,
+    version: 3,
+    productionId: props.production.id,
     compileFingerprint: props.timeline.inputFingerprint,
     editFingerprint,
     runtimeIdentity: props.runtimeIdentity,
-    frameFormat: props.production.frameFormat,
-    totalFrames: props.timeline.totalFrames,
+    tier,
+    sourceFrameFormat: structuredClone(props.production.frameFormat),
+    frameFormat,
+    totalFrames: frames.length,
     chunkFrames: props.chunkFrames,
     chunks,
     tracks: {
@@ -346,6 +392,7 @@ export const verifyProductionRenderJobPlan = (props: {
     audioAssets: props.audioAssets,
     chunkFrames: props.plan.chunkFrames,
     guidePasses: props.guidePasses,
+    tier: props.plan.tier,
   });
   if (canonicalJson(props.plan) !== canonicalJson(expected))
     throw new Error(
@@ -419,6 +466,29 @@ export const sampleProductionRenderFrame = (
   return frame(timeline, globalFrame, [
     { ...incoming, weight: Math.min(fadeIn, fadeOut) },
   ]);
+};
+
+/**
+ * Resolve pass-specific transition inputs.
+ *
+ * Beauty is alpha composited. Structural guide passes are classifications or
+ * geometric fields, so linearly blending their pixels invents invalid values;
+ * they select the dominant shot layer instead (incoming wins an exact tie).
+ */
+export const productionRenderLayersForPass = (
+  frame: IAutoMovieProductionRenderFrame,
+  pass: AutoMovieGuidePass,
+): IAutoMovieProductionRenderLayer[] => {
+  if (pass === "beauty") return structuredClone(frame.layers);
+  const selected = frame.layers.reduce((selected, candidate) =>
+    candidate.weight >= selected.weight ? candidate : selected,
+  );
+  return [
+    {
+      ...structuredClone(selected),
+      weight: 1,
+    },
+  ];
 };
 
 /** Canonical WebVTT derived only from compiled caption placements. */
@@ -531,6 +601,29 @@ export const verifyProductionRenderChunkReceipt = (props: {
     throw new Error(`Chunk "${chunk.slot}" has no verified encoded output.`);
 };
 
+interface IProductionRenderChunkFailure {
+  error: unknown;
+}
+
+class ProductionRenderChunkLifecycleError extends AggregateError {}
+
+/** Preserve one acquired chunk's complete fatal lifecycle in phase order. */
+const productionRenderChunkLifecycleFailure = (
+  attempt: IProductionRenderChunkFailure | undefined,
+  failureRecord: IProductionRenderChunkFailure | undefined,
+  release: IProductionRenderChunkFailure | undefined,
+): unknown => {
+  const failures = [attempt, failureRecord, release].filter(
+    (failure): failure is IProductionRenderChunkFailure =>
+      failure !== undefined,
+  );
+  if (failures.length === 1) return failures[0]!.error;
+  return new ProductionRenderChunkLifecycleError(
+    failures.map((failure) => failure.error),
+    "Production render chunk cleanup failed after the render attempt failed.",
+  );
+};
+
 /** Schedule only non-current chunks through host-owned lock/byte adapters. */
 export const runProductionRenderJob = async (props: {
   plan: IAutoMovieProductionRenderJobPlan;
@@ -581,9 +674,16 @@ export const runProductionRenderJob = async (props: {
     failed: [] as Array<{ slot: string; correction: string }>,
   };
   let cursor = 0;
-  const fatalFailures: unknown[] = [];
+  const fatalFailures: IProductionRenderChunkFailure[] = [];
+  const reserveFatalFailure = (): IProductionRenderChunkFailure | undefined => {
+    if (fatalFailures.length !== 0) return undefined;
+    const failure: IProductionRenderChunkFailure = { error: undefined };
+    fatalFailures.push(failure);
+    return failure;
+  };
   const recordFatalFailure = (error: unknown): void => {
-    if (fatalFailures.length === 0) fatalFailures.push(error);
+    const failure = reserveFatalFailure();
+    if (failure !== undefined) failure.error = error;
   };
   const worker = async (): Promise<void> => {
     try {
@@ -603,6 +703,10 @@ export const runProductionRenderJob = async (props: {
           output.busy.push(chunk.slot);
           continue;
         }
+        let attemptFailure: IProductionRenderChunkFailure | undefined;
+        let failureRecordFailure: IProductionRenderChunkFailure | undefined;
+        let releaseFailure: IProductionRenderChunkFailure | undefined;
+        let fatalFailure: IProductionRenderChunkFailure | undefined;
         try {
           const receipt = await props.adapters.render(chunk);
           verifyProductionRenderChunkReceipt({
@@ -612,20 +716,29 @@ export const runProductionRenderJob = async (props: {
           });
           output.rendered.push(chunk.slot);
         } catch (error) {
+          attemptFailure = { error };
           const correction =
             error instanceof Error ? error.message : String(error);
           try {
             await props.adapters.fail(chunk, correction);
             output.failed.push({ slot: chunk.slot, correction });
           } catch (failure) {
-            recordFatalFailure(failure);
+            failureRecordFailure = { error: failure };
+            fatalFailure = reserveFatalFailure();
           }
         } finally {
           try {
             await props.adapters.release(chunk);
           } catch (failure) {
-            recordFatalFailure(failure);
+            releaseFailure = { error: failure };
+            fatalFailure ??= reserveFatalFailure();
           }
+          if (fatalFailure !== undefined)
+            fatalFailure.error = productionRenderChunkLifecycleFailure(
+              attemptFailure,
+              failureRecordFailure,
+              releaseFailure,
+            );
         }
       }
     } catch (error) {
@@ -638,7 +751,7 @@ export const runProductionRenderJob = async (props: {
       worker,
     ),
   );
-  if (fatalFailures.length !== 0) throw fatalFailures[0];
+  if (fatalFailures.length !== 0) throw fatalFailures[0]!.error;
   const order = new Map(queue.map((chunk, index) => [chunk.slot, index]));
   output.complete.sort((left, right) => order.get(left)! - order.get(right)!);
   output.rendered.sort((left, right) => order.get(left)! - order.get(right)!);
@@ -649,22 +762,66 @@ export const runProductionRenderJob = async (props: {
   return output;
 };
 
+interface IProductionOwnedDescriptorFailure {
+  error: unknown;
+}
+
+class ProductionOwnedDescriptorCleanupError extends AggregateError {}
+
+/** Close one production-owned descriptor without losing earlier failures. */
+const closeProductionOwnedDescriptor = (
+  descriptor: number,
+  failure: IProductionOwnedDescriptorFailure | undefined,
+  target: string,
+): void => {
+  try {
+    fs.closeSync(descriptor);
+  } catch (closeFailure) {
+    if (failure === undefined) throw closeFailure;
+    throw new ProductionOwnedDescriptorCleanupError(
+      [
+        ...(failure.error instanceof ProductionOwnedDescriptorCleanupError
+          ? failure.error.errors
+          : [failure.error]),
+        closeFailure,
+      ],
+      `Production-owned descriptor cleanup failed after the read failed: ${target}.`,
+    );
+  }
+};
+
 /**
- * Read one render-state file without following a link in its owned namespace.
+ * Read one production-owned file without following a link in its namespace.
  *
  * The returned bytes come from one regular file whose complete ancestry is a
  * physical descendant of `root`. Every directory and the file are identified
  * before the read and rechecked afterwards, so a replacement cannot turn a
  * verified content-addressed path into different resident bytes.
  */
-export const readAutoMovieProductionOwnedFile = (props: {
-  /** Physical render-state ownership root. */
+export function readAutoMovieProductionOwnedFile(props: {
+  /** Physical production ownership root. */
   root: string;
   /** Physical directory that owns the relative file. */
   directory: string;
   /** Strict descendant path below `directory`. */
   relative: string;
-}): Uint8Array => {
+  /** Return `null` only when the first target observation is absent. */
+  optional: true;
+}): Uint8Array | null;
+export function readAutoMovieProductionOwnedFile(props: {
+  /** Physical production ownership root. */
+  root: string;
+  /** Physical directory that owns the relative file. */
+  directory: string;
+  /** Strict descendant path below `directory`. */
+  relative: string;
+}): Uint8Array;
+export function readAutoMovieProductionOwnedFile(props: {
+  root: string;
+  directory: string;
+  relative: string;
+  optional?: boolean;
+}): Uint8Array | null {
   const root = path.resolve(props.root);
   const directory = path.resolve(props.directory);
   const target = path.resolve(directory, props.relative);
@@ -673,7 +830,7 @@ export const readAutoMovieProductionOwnedFile = (props: {
     target.startsWith(`${directory}${path.sep}`) === false
   )
     throw new Error(
-      `Render-state path "${props.relative}" escapes its owned directory.`,
+      `Production-owned path "${props.relative}" escapes its owned directory.`,
     );
 
   const relativeParent = path.relative(root, path.dirname(target));
@@ -686,29 +843,77 @@ export const readAutoMovieProductionOwnedFile = (props: {
   const identities: IProductionOwnedPathIdentity[] = directories.map(
     (file) => ({
       file,
-      directory: true,
       identity: productionOwnedDirectoryIdentity(file),
     }),
   );
-  identities.push({
-    file: target,
-    directory: false,
-    identity: productionOwnedFileIdentity(target),
-  });
-  const bytes = fs.readFileSync(target);
-  const changed = identities.find(
-    (expected) =>
-      expected.identity !==
-      (expected.directory
-        ? productionOwnedDirectoryIdentity(expected.file)
-        : productionOwnedFileIdentity(expected.file)),
-  );
-  if (changed !== undefined)
-    throw new Error(
-      `Render-state path "${changed.file}" changed physical identity while it was read.`,
+  const assertResidentDirectories = (): void => {
+    const changed = identities.find(
+      (expected) =>
+        expected.identity !== productionOwnedDirectoryIdentity(expected.file),
     );
-  return bytes;
-};
+    if (changed !== undefined)
+      throw new Error(
+        `Production-owned path "${changed.file}" changed physical identity while it was read.`,
+      );
+  };
+  let linkedIdentity: string;
+  try {
+    linkedIdentity = productionOwnedFileIdentity(target);
+  } catch (error) {
+    if (
+      props.optional === true &&
+      (error as NodeJS.ErrnoException).code === "ENOENT"
+    ) {
+      assertResidentDirectories();
+      return null;
+    }
+    throw error;
+  }
+  const descriptor = fs.openSync(target, "r");
+  let failure: IProductionOwnedDescriptorFailure | undefined;
+  try {
+    const openedIdentity = productionOwnedDescriptorIdentity(
+      target,
+      descriptor,
+    );
+    const assertResidentFile = (): void => {
+      assertResidentDirectories();
+      if (productionOwnedFileIdentity(target) !== linkedIdentity)
+        throw new Error(
+          `Production-owned path "${target}" changed physical identity while it was read.`,
+        );
+      const residentDescriptor = fs.openSync(target, "r");
+      let residentFailure: IProductionOwnedDescriptorFailure | undefined;
+      try {
+        if (
+          productionOwnedDescriptorIdentity(target, residentDescriptor) !==
+          openedIdentity
+        )
+          throw new Error(
+            `Production-owned path "${target}" changed physical identity while it was read.`,
+          );
+      } catch (error) {
+        residentFailure = { error };
+        throw error;
+      } finally {
+        closeProductionOwnedDescriptor(
+          residentDescriptor,
+          residentFailure,
+          target,
+        );
+      }
+    };
+    assertResidentFile();
+    const bytes = fs.readFileSync(descriptor);
+    assertResidentFile();
+    return bytes;
+  } catch (error) {
+    failure = { error };
+    throw error;
+  } finally {
+    closeProductionOwnedDescriptor(descriptor, failure, target);
+  }
+}
 
 const frame = (
   timeline: IAutoMovieFilmTimeline,
@@ -716,9 +921,55 @@ const frame = (
   layers: IAutoMovieProductionRenderLayer[],
 ): IAutoMovieProductionRenderFrame => ({
   globalFrame,
+  timelineFrame: globalFrame,
   timeSeconds: globalFrame / timeline.fps,
   layers,
 });
+
+const normalizeRenderTier = (
+  tier: IAutoMovieProductionRenderTier | undefined,
+): IAutoMovieProductionRenderTier => {
+  const value = tier ?? {
+    kind: "final",
+    resolutionScale: 1,
+    frameStep: 1,
+  };
+  if (
+    (value.kind !== "proxy" && value.kind !== "final") ||
+    Number.isFinite(value.resolutionScale) === false ||
+    value.resolutionScale <= 0 ||
+    value.resolutionScale > 1 ||
+    Number.isSafeInteger(value.frameStep) === false ||
+    value.frameStep <= 0 ||
+    value.frameStep > 16 ||
+    (value.kind === "final" &&
+      (value.resolutionScale !== 1 || value.frameStep !== 1)) ||
+    (value.kind === "proxy" &&
+      value.resolutionScale === 1 &&
+      value.frameStep === 1)
+  )
+    throw new Error(
+      "Render tier must be exact final (scale 1, step 1) or a bounded cheaper proxy (scale in (0, 1], integer step 1..16, with at least one reduction).",
+    );
+  return structuredClone(value);
+};
+
+/** Derive the exact even raster and frame clock for one render tier. */
+export const resolveProductionRenderTierFrameFormat = (
+  source: IAutoMovieProductionDesign["frameFormat"],
+  tier: IAutoMovieProductionRenderTier,
+): IAutoMovieProductionDesign["frameFormat"] => {
+  const normalized = normalizeRenderTier(tier);
+  if (normalized.kind === "final") return structuredClone(source);
+  const even = (value: number): number =>
+    Math.max(2, Math.floor((value * normalized.resolutionScale) / 2) * 2);
+  return {
+    width: even(source.width),
+    height: even(source.height),
+    fps: source.fps / normalized.frameStep,
+    colorSpace: source.colorSpace,
+  };
+};
 
 const status = (
   chunk: IAutoMovieProductionRenderChunk,
@@ -843,7 +1094,6 @@ const compareCodeUnits = (left: string, right: string): number =>
 
 interface IProductionOwnedPathIdentity {
   file: string;
-  directory: boolean;
   identity: string;
 }
 
@@ -851,7 +1101,7 @@ const productionOwnedDirectoryIdentity = (directory: string): string => {
   const linked = fs.lstatSync(directory, { bigint: true });
   if (linked.isSymbolicLink() || linked.isDirectory() === false)
     throw new Error(
-      `Render-state directory "${directory}" is not a physical directory.`,
+      `Production-owned directory "${directory}" is not a physical directory.`,
     );
   return `${linked.dev}\0${linked.ino}`;
 };
@@ -859,6 +1109,16 @@ const productionOwnedDirectoryIdentity = (directory: string): string => {
 const productionOwnedFileIdentity = (file: string): string => {
   const linked = fs.lstatSync(file, { bigint: true });
   if (linked.isSymbolicLink() || linked.isFile() === false)
-    throw new Error(`Render-state path "${file}" is not a physical file.`);
+    throw new Error(`Production-owned path "${file}" is not a physical file.`);
   return `${linked.dev}\0${linked.ino}`;
+};
+
+const productionOwnedDescriptorIdentity = (
+  file: string,
+  descriptor: number,
+): string => {
+  const opened = fs.fstatSync(descriptor, { bigint: true });
+  if (opened.isFile() === false)
+    throw new Error(`Production-owned path "${file}" is not a physical file.`);
+  return `${opened.dev}\0${opened.ino}`;
 };

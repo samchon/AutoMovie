@@ -1,0 +1,15 @@
+{
+  "extends": "../../internals/config/tsconfig.json",
+  "compilerOptions": {
+    "moduleResolution": "bundler",
+    "outDir": "lib",
+    "rootDir": "src",
+    "sourceMap": false,
+    "types": [
+      "node"
+    ]
+  },
+  "include": [
+    "src"
+  ]
+}

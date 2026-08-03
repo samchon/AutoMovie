@@ -5,11 +5,17 @@ import {
 import {
   IAutoMovieProductionRenderChunkReceipt,
   IAutoMovieProductionRenderJobPlan,
+  assertProductionFeatureUsesRenditionClips,
+  assertProductionFeatureUsesRenditionVideo,
   canonicalProductionWebVtt,
+  conformProductionRenditionVideoMp4,
+  planProductionRenderGc,
   planProductionRenderJob,
   probeProductionMedia,
   productionRenderChunkStatuses,
+  productionRenderLayersForPass,
   readAutoMovieProductionOwnedFile,
+  resolveProductionRenderTierFrameFormat,
   runProductionRenderJob,
   sampleProductionRenderFrame,
   verifyProductionRenderChunkReceipt,
@@ -17,6 +23,7 @@ import {
 } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
+import { createRequire } from "node:module";
 import os from "node:os";
 import path from "node:path";
 
@@ -24,6 +31,7 @@ import {
   productionDesign,
   testCaptureRuntimeIdentity,
 } from "./productionFixtures";
+import { productionH264Mp4 } from "./productionMediaFixtures";
 
 const digest = (digit: string): AutoMovieContentDigest =>
   `sha256:${digit.repeat(64)}`;
@@ -43,6 +51,43 @@ const rejects = async (task: Promise<unknown>): Promise<boolean> => {
  * witness the compiler cannot narrow back to `Error`.
  */
 const NON_ERROR_FAILURE: unknown = "string failure";
+
+interface IRenderJobFixtureFailure {
+  error: unknown;
+}
+
+interface IRenderJobFixtureCleanup {
+  cleanup: () => unknown;
+  resource: string;
+}
+
+class RenderJobFixtureCleanupError extends AggregateError {}
+
+/** Attempt every acquired render-job fixture cleanup without hiding failure. */
+export const preserveRenderJobFixtureCleanup = (
+  failure: IRenderJobFixtureFailure | undefined,
+  resources: readonly IRenderJobFixtureCleanup[],
+): void => {
+  const cleanupFailures: Array<{ error: unknown; resource: string }> = [];
+  for (const resource of resources)
+    try {
+      resource.cleanup();
+    } catch (error) {
+      cleanupFailures.push({ error, resource: resource.resource });
+    }
+  if (cleanupFailures.length === 1 && failure === undefined)
+    throw cleanupFailures[0]!.error;
+  if (cleanupFailures.length !== 0)
+    throw new RenderJobFixtureCleanupError(
+      [
+        ...(failure === undefined ? [] : [failure.error]),
+        ...cleanupFailures.map((entry) => entry.error),
+      ],
+      `Render-job fixture cleanup failed${
+        failure === undefined ? "" : " after the test failed"
+      }: ${cleanupFailures.map((entry) => entry.resource).join(", ")}.`,
+    );
+};
 
 const audioAssets = () => [
   {
@@ -132,6 +177,7 @@ const plan = (
   sources: Readonly<
     Record<string, AutoMovieContentDigest>
   > = sourceFingerprints(),
+  tier?: Parameters<typeof planProductionRenderJob>[0]["tier"],
 ): IAutoMovieProductionRenderJobPlan =>
   planProductionRenderJob({
     timeline: timeline(),
@@ -170,6 +216,7 @@ const plan = (
       },
     },
     chunkFrames: 2,
+    tier,
   });
 
 const receipt = (
@@ -235,7 +282,192 @@ const throws = (closure: () => unknown): boolean => {
  *    ancestors/files, non-files, and replacement races fail closed.
  */
 export const test_mcp_production_render_job = async (): Promise<void> => {
+  const repaintTimeline: IAutoMovieFilmTimeline = {
+    ...timeline(),
+    totalFrames: 4,
+    segments: ["opening", "answer"].map((shot, index) => ({
+      shot,
+      sourceInFrame: 0,
+      sourceOutFrame: 2,
+      startFrame: index * 2,
+      endFrame: index * 2 + 2,
+      headHandleFrames: 0,
+      tailHandleFrames: 0,
+      transitionIn: { kind: "cut" as const },
+      transitionOut: { kind: "cut" as const },
+    })),
+  };
+  const repaintClips = new Map<string, Uint8Array>([
+    [
+      "opening",
+      await productionH264Mp4({
+        width: 16,
+        height: 16,
+        fps: 2,
+        frameCount: 2,
+      }),
+    ],
+    [
+      "answer",
+      await productionH264Mp4({
+        width: 16,
+        height: 16,
+        fps: 2,
+        frameCount: 2,
+      }),
+    ],
+  ]);
+  const conformedRepaint = conformProductionRenditionVideoMp4({
+    timeline: repaintTimeline,
+    clips: repaintClips,
+  });
+  const incompatibleAnswer = Buffer.from(repaintClips.get("answer")!);
+  const avcConfiguration = incompatibleAnswer.indexOf("avcC");
+  if (avcConfiguration < 0)
+    throw new Error("H.264 fixture has no AVC decoder configuration box.");
+  incompatibleAnswer[avcConfiguration + 6] ^= 1;
+  const mismatchedRepaint = Buffer.from(conformedRepaint);
+  const mediaData = mismatchedRepaint.indexOf("mdat");
+  if (mediaData < 0)
+    throw new Error("Conformed repaint has no media data box.");
+  mismatchedRepaint[mediaData + 4] ^= 1;
+  const nonSyncRendition = Buffer.from(conformedRepaint);
+  const firstTrackRun = nonSyncRendition.indexOf("trun");
+  if (firstTrackRun < 0)
+    throw new Error(
+      "Conformed repaint has no track-run sample flags for a dependency witness.",
+    );
+  const sampleFlags = firstTrackRun + 24;
+  if (sampleFlags + 4 > nonSyncRendition.length)
+    throw new Error("Conformed repaint has a truncated track-run sample.");
+  const originalSampleFlags = nonSyncRendition.readUInt32BE(sampleFlags);
+  if (originalSampleFlags !== 0x02000000 && originalSampleFlags !== 0x00010000)
+    throw new Error(
+      `Conformed repaint has unexpected canonical sample flags 0x${originalSampleFlags.toString(16)}.`,
+    );
+  nonSyncRendition.writeUInt32BE(0x00010000, sampleFlags);
+  const nonSyncDependencyMismatch = Buffer.from(nonSyncRendition);
+  nonSyncDependencyMismatch.writeUInt32BE(0x02010000, sampleFlags);
+  let sampleDifference = "";
+  try {
+    assertProductionFeatureUsesRenditionClips({
+      feature: mismatchedRepaint,
+      timeline: repaintTimeline,
+      clips: repaintClips,
+    });
+  } catch (error) {
+    sampleDifference = error instanceof Error ? error.message : String(error);
+  }
+  const sampleDifferenceJson = sampleDifference.indexOf("{");
+  const sampleDifferenceDetails =
+    sampleDifferenceJson === -1
+      ? null
+      : (JSON.parse(sampleDifference.slice(sampleDifferenceJson)) as {
+          timing: {
+            actual: { duration: number; dts: number; cts: number };
+            expected: { duration: number; dts: number; cts: number };
+          };
+          flags: {
+            actual: { isSync: boolean; dependsOn: number };
+            expected: { isSync: boolean; dependsOn: number };
+            match: boolean;
+          };
+          sampleDescriptionMatches: boolean;
+          payload: {
+            actualBytes: number;
+            expectedBytes: number;
+            firstDifferingActualByte: number;
+          };
+        });
+  TestValidator.predicate(
+    "repaint conform preserves exact cut-only shot samples and rejects incompatible clips or transitions",
+    probeProductionMedia({
+      kind: "guide-pass",
+      mediaType: "video/mp4",
+      bytes: conformedRepaint,
+    }).kind === "video" &&
+      (() => {
+        assertProductionFeatureUsesRenditionClips({
+          feature: conformedRepaint,
+          timeline: repaintTimeline,
+          clips: repaintClips,
+        });
+        assertProductionFeatureUsesRenditionVideo({
+          feature: conformedRepaint,
+          renditionVideo: conformedRepaint,
+        });
+        return true;
+      })() &&
+      sampleDifferenceDetails !== null &&
+      JSON.stringify(sampleDifferenceDetails.timing.actual) ===
+        JSON.stringify(sampleDifferenceDetails.timing.expected) &&
+      sampleDifferenceDetails.payload.actualBytes > 0 &&
+      sampleDifferenceDetails.payload.actualBytes ===
+        sampleDifferenceDetails.payload.expectedBytes &&
+      sampleDifferenceDetails.flags.actual.isSync === true &&
+      sampleDifferenceDetails.flags.actual.dependsOn === 2 &&
+      sampleDifferenceDetails.flags.expected.isSync === true &&
+      sampleDifferenceDetails.flags.expected.dependsOn === 0 &&
+      sampleDifferenceDetails.flags.match === true &&
+      sampleDifferenceDetails.sampleDescriptionMatches === true &&
+      sampleDifferenceDetails.payload.firstDifferingActualByte === 0 &&
+      throws(() =>
+        assertProductionFeatureUsesRenditionVideo({
+          feature: nonSyncDependencyMismatch,
+          renditionVideo: nonSyncRendition,
+        }),
+      ) &&
+      throws(() =>
+        conformProductionRenditionVideoMp4({
+          timeline: {
+            ...repaintTimeline,
+            segments: repaintTimeline.segments.map((segment, index) =>
+              index === 0
+                ? {
+                    ...segment,
+                    transitionOut: {
+                      kind: "fade" as const,
+                      durationFrames: 1,
+                    },
+                  }
+                : segment,
+            ),
+          },
+          clips: repaintClips,
+        }),
+      ) &&
+      throws(() =>
+        conformProductionRenditionVideoMp4({
+          timeline: repaintTimeline,
+          clips: new Map(repaintClips).set("answer", incompatibleAnswer),
+        }),
+      ),
+  );
   const renderPlan = plan();
+  const proxyPlan = planProductionRenderJob({
+    timeline: timeline(),
+    audioAssets: audioAssets(),
+    sourceFingerprints: sourceFingerprints(),
+    production: {
+      ...productionDesign({
+        id: "render-film",
+        targetRuntimeSeconds: 3,
+        frameFormat: {
+          width: 16,
+          height: 16,
+          fps: 2,
+          colorSpace: "srgb",
+        },
+      }),
+      deliverables: [
+        { id: "feature", kind: "feature", required: true },
+        { id: "guides", kind: "guide-pass", required: true },
+      ],
+    },
+    runtimeIdentity: renderPlan.runtimeIdentity,
+    chunkFrames: 2,
+    tier: { kind: "proxy", resolutionScale: 0.5, frameStep: 2 },
+  });
   const selectivelyChanged = plan({
     ...sourceFingerprints(),
     outgoing: digest("9"),
@@ -305,6 +537,39 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
     chunkFrames: 6,
     guidePasses: ["mask", "mask"],
   });
+  const typedGuides = planProductionRenderJob({
+    timeline: timeline(),
+    audioAssets: audioAssets(),
+    sourceFingerprints: sourceFingerprints(),
+    production: {
+      ...productionDesign({
+        id: "render-film",
+        targetRuntimeSeconds: 3,
+        frameFormat: {
+          width: 16,
+          height: 16,
+          fps: 2,
+          colorSpace: "srgb",
+        },
+      }),
+      deliverables: [
+        {
+          id: "depth-guide",
+          kind: "guide-pass",
+          pass: "depth",
+          required: true,
+        },
+        {
+          id: "normal-guide",
+          kind: "guide-pass",
+          pass: "normal",
+          required: true,
+        },
+      ],
+    },
+    runtimeIdentity: renderPlan.runtimeIdentity,
+    chunkFrames: 6,
+  });
   const booleanIdentityPlan = planProductionRenderJob({
     timeline: timeline(),
     audioAssets: audioAssets(),
@@ -331,7 +596,14 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
   });
   TestValidator.predicate(
     "film edit becomes deterministic feature and guide chunks",
-    renderPlan.totalFrames === 6 &&
+    renderPlan.version === 3 &&
+      renderPlan.productionId === "render-film" &&
+      renderPlan.chunks.every((chunk) =>
+        chunk.slot.startsWith("render-film:final:"),
+      ) &&
+      renderPlan.tier.kind === "final" &&
+      renderPlan.sourceFrameFormat.fps === 2 &&
+      renderPlan.totalFrames === 6 &&
       renderPlan.chunks.length === 6 &&
       renderPlan.chunks[0]?.frameStart === 0 &&
       renderPlan.chunks[0]?.frameEndExclusive === 2 &&
@@ -374,7 +646,64 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
       partialPlan.chunks[1]?.frameEndExclusive === 6 &&
       explicitGuide.chunks.length === 1 &&
       explicitGuide.chunks[0]?.pass === "mask" &&
+      typedGuides.chunks.some(
+        (chunk) =>
+          chunk.deliverable === "depth-guide" && chunk.pass === "depth",
+      ) &&
+      typedGuides.chunks.some(
+        (chunk) =>
+          chunk.deliverable === "normal-guide" && chunk.pass === "normal",
+      ) &&
       booleanIdentityPlan.chunks.length === 1,
+  );
+  TestValidator.predicate(
+    "proxy and final tiers preserve one edit while owning distinct clocks and chunks",
+    proxyPlan.editFingerprint === renderPlan.editFingerprint &&
+      proxyPlan.tier.kind === "proxy" &&
+      proxyPlan.frameFormat.width === 8 &&
+      proxyPlan.frameFormat.height === 8 &&
+      proxyPlan.frameFormat.fps === 1 &&
+      proxyPlan.totalFrames === 3 &&
+      proxyPlan.chunks.every((chunk) =>
+        chunk.slot.startsWith("render-film:proxy:"),
+      ) &&
+      proxyPlan.chunks[0]?.id !== renderPlan.chunks[0]?.id &&
+      proxyPlan.chunks[0]?.frames[0]?.timelineFrame === 0 &&
+      proxyPlan.chunks[0]?.frames[1]?.timelineFrame === 2 &&
+      proxyPlan.chunks[1]?.frames[0]?.timelineFrame === 4 &&
+      proxyPlan.chunks[1]?.frames[0]?.timeSeconds === 2 &&
+      resolveProductionRenderTierFrameFormat(
+        renderPlan.sourceFrameFormat,
+        proxyPlan.tier,
+      ).fps === 1,
+  );
+  TestValidator.predicate(
+    "render tiers reject ambiguous quality policies and inexact proxy clocks",
+    [
+      { kind: "invalid", resolutionScale: 0.5, frameStep: 2 },
+      { kind: "final", resolutionScale: 0.5, frameStep: 1 },
+      { kind: "proxy", resolutionScale: 1, frameStep: 1 },
+      { kind: "proxy", resolutionScale: 0, frameStep: 2 },
+      { kind: "proxy", resolutionScale: 2, frameStep: 2 },
+      { kind: "proxy", resolutionScale: Number.NaN, frameStep: 2 },
+      { kind: "proxy", resolutionScale: 0.5, frameStep: 0 },
+      { kind: "proxy", resolutionScale: 0.5, frameStep: 1.5 },
+      { kind: "proxy", resolutionScale: 0.5, frameStep: 17 },
+    ].every((tier) =>
+      throws(() =>
+        resolveProductionRenderTierFrameFormat(
+          renderPlan.sourceFrameFormat,
+          tier as Parameters<typeof resolveProductionRenderTierFrameFormat>[1],
+        ),
+      ),
+    ) &&
+      throws(() =>
+        plan(sourceFingerprints(), {
+          kind: "proxy",
+          resolutionScale: 0.5,
+          frameStep: 4,
+        }),
+      ),
   );
   TestValidator.predicate(
     "shot source identity invalidates only ranges that sample that shot",
@@ -404,6 +733,262 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
       dissolveMiddle.layers[0]?.weight === 0.5 &&
       dissolveMiddle.layers[1]?.weight === 0.5 &&
       fadedOut.layers[0]?.weight === 0.5,
+  );
+  TestValidator.predicate(
+    "structural passes select one semantic dissolve layer while beauty blends",
+    productionRenderLayersForPass(dissolveMiddle, "beauty").length === 2 &&
+      productionRenderLayersForPass(dissolveMiddle, "depth").length === 1 &&
+      productionRenderLayersForPass(dissolveMiddle, "normal")[0]?.shot ===
+        "incoming" &&
+      productionRenderLayersForPass(dissolveMiddle, "normal")[0]?.weight ===
+        1 &&
+      productionRenderLayersForPass(dissolveStart, "pose")[0]?.shot ===
+        "outgoing" &&
+      productionRenderLayersForPass(fadedOut, "mask")[0]?.weight === 1,
+  );
+
+  const retainedPointer = `final/pointers/${renderPlan.chunks[0]!.id.slice(7)}`;
+  const retainedTree = `final/tmp/${renderPlan.chunks[0]!.id.slice(7)}.current.101`;
+  const orphanTree = `final/tmp/${renderPlan.chunks[0]!.id.slice(7)}.orphan.102`;
+  const stalePointer = `final/pointers/${digest("f").slice(7)}`;
+  const staleTree = `final/tmp/${digest("f").slice(7)}.stale.103`;
+  const garbageCollection = planProductionRenderGc({
+    plans: [renderPlan, proxyPlan],
+    publicationPaths: ["publication/deliverables/final/current.mp4"],
+    retainedChunkPaths: [retainedPointer, retainedTree],
+    candidates: [
+      {
+        path: `final/chunks/${renderPlan.chunks[0]!.id.slice(7)}`,
+        kind: "chunk",
+        digest: renderPlan.chunks[0]!.id,
+        bytes: 10,
+      },
+      {
+        path: `proxy/chunks/${proxyPlan.chunks[0]!.id.slice(7)}`,
+        kind: "chunk",
+        digest: proxyPlan.chunks[0]!.id,
+        bytes: 20,
+      },
+      {
+        path: `final/chunks/${digest("0").slice(7)}`,
+        kind: "chunk",
+        digest: digest("0"),
+        bytes: 30,
+      },
+      {
+        path: retainedPointer,
+        kind: "chunk-pointer",
+        digest: renderPlan.chunks[0]!.id,
+        bytes: 5,
+      },
+      {
+        path: retainedTree,
+        kind: "chunk-tree",
+        digest: renderPlan.chunks[0]!.id,
+        bytes: 7,
+      },
+      {
+        path: orphanTree,
+        kind: "chunk-tree",
+        digest: renderPlan.chunks[0]!.id,
+        bytes: 11,
+      },
+      {
+        path: stalePointer,
+        kind: "chunk-pointer",
+        digest: digest("f"),
+        bytes: 13,
+      },
+      {
+        path: staleTree,
+        kind: "chunk-tree",
+        digest: digest("f"),
+        bytes: 17,
+      },
+      {
+        path: "proxy/quarantine/old",
+        kind: "quarantine",
+        digest: null,
+        bytes: 40,
+      },
+      {
+        path: "publication/deliverables/final/current.mp4",
+        kind: "publication",
+        digest: null,
+        bytes: 50,
+      },
+      {
+        path: "publication/deliverables/proxy/stale.mp4",
+        kind: "publication",
+        digest: null,
+        bytes: 60,
+      },
+    ],
+  });
+  const rejectsGcCandidates = (
+    candidates: Parameters<typeof planProductionRenderGc>[0]["candidates"],
+  ): boolean =>
+    throws(() =>
+      planProductionRenderGc({
+        plans: [renderPlan],
+        publicationPaths: [],
+        retainedChunkPaths: [],
+        candidates,
+      }),
+    );
+  const validChunk = {
+    path: `final/chunks/${renderPlan.chunks[0]!.id.slice(7)}`,
+    kind: "chunk" as const,
+    digest: renderPlan.chunks[0]!.id,
+    bytes: 1,
+  };
+  const validPointer = {
+    path: retainedPointer,
+    kind: "chunk-pointer" as const,
+    digest: renderPlan.chunks[0]!.id,
+    bytes: 1,
+  };
+  const rejectsRetainedChunkPaths = [
+    [retainedPointer, retainedPointer],
+    [`final/pointers/${digest("e").slice(7)}`],
+    [retainedPointer],
+  ].every((retainedChunkPaths) =>
+    throws(() =>
+      planProductionRenderGc({
+        plans: [renderPlan],
+        publicationPaths: [],
+        retainedChunkPaths,
+        candidates: [validPointer],
+      }),
+    ),
+  );
+  const rejectsStaleRetainedPair = throws(() =>
+    planProductionRenderGc({
+      plans: [renderPlan],
+      publicationPaths: [],
+      retainedChunkPaths: [stalePointer, staleTree],
+      candidates: [
+        {
+          path: stalePointer,
+          kind: "chunk-pointer",
+          digest: digest("f"),
+          bytes: 1,
+        },
+        {
+          path: staleTree,
+          kind: "chunk-tree",
+          digest: digest("f"),
+          bytes: 1,
+        },
+      ],
+    }),
+  );
+  TestValidator.predicate(
+    "render GC marks both current tiers and sweeps only unreferenced bytes",
+    garbageCollection.keep.length === 5 &&
+      garbageCollection.keep.some(
+        (candidate) => candidate.path === retainedPointer,
+      ) &&
+      garbageCollection.keep.some(
+        (candidate) => candidate.path === retainedTree,
+      ) &&
+      garbageCollection.remove.some(
+        (candidate) => candidate.path === orphanTree,
+      ) &&
+      garbageCollection.remove.some(
+        (candidate) => candidate.path === stalePointer,
+      ) &&
+      garbageCollection.remove.some(
+        (candidate) => candidate.path === staleTree,
+      ) &&
+      garbageCollection.reclaimableBytes === 171 &&
+      rejectsRetainedChunkPaths &&
+      rejectsStaleRetainedPair &&
+      [
+        [{ ...validChunk }, { ...validChunk }],
+        [{ ...validChunk, bytes: -1 }],
+        [{ ...validChunk, bytes: 1.5 }],
+        [{ ...validChunk, digest: null }],
+        [{ ...validChunk, digest: digest("f") }],
+        [{ ...validChunk, path: "final/chunks/not-a-digest" }],
+        [
+          {
+            ...validPointer,
+            path: `final/pointer/${renderPlan.chunks[0]!.id.slice(7)}`,
+          },
+        ],
+        [{ ...validPointer, digest: digest("f") }],
+        [
+          {
+            path: `final/tmp/${renderPlan.chunks[0]!.id.slice(7)}.missing-pid`,
+            kind: "chunk-tree" as const,
+            digest: renderPlan.chunks[0]!.id,
+            bytes: 1,
+          },
+        ],
+        [
+          {
+            path: "final/quarantine/nested/old",
+            kind: "quarantine" as const,
+            digest: null,
+            bytes: 1,
+          },
+        ],
+        [
+          {
+            path: "final/quarantine/old",
+            kind: "quarantine" as const,
+            digest: digest("f"),
+            bytes: 1,
+          },
+        ],
+        [
+          {
+            path: "deliverables/stale.mp4",
+            kind: "publication" as const,
+            digest: null,
+            bytes: 1,
+          },
+        ],
+        [
+          {
+            path: "publication/stale.mp4",
+            kind: "publication" as const,
+            digest: digest("f"),
+            bytes: 1,
+          },
+        ],
+        ...[
+          "",
+          "../escape",
+          "a\\b",
+          "/absolute",
+          "C:/drive",
+          "a//b",
+          "a/./b",
+        ].map((path) => [
+          {
+            path,
+            kind: "publication" as const,
+            digest: null,
+            bytes: 1,
+          },
+        ]),
+        [
+          {
+            path: "publication/a",
+            kind: "publication" as const,
+            digest: null,
+            bytes: Number.MAX_SAFE_INTEGER,
+          },
+          {
+            path: "publication/b",
+            kind: "publication" as const,
+            digest: null,
+            bytes: 1,
+          },
+        ],
+      ].every(rejectsGcCandidates),
   );
 
   const captions = canonicalProductionWebVtt(timeline());
@@ -657,6 +1242,63 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
       released.length === 2 &&
       failed[0]?.endsWith(":encoder failed") === true,
   );
+  const lifecyclePlan = {
+    ...renderPlan,
+    chunks: renderPlan.chunks.slice(0, 1),
+  };
+  const ATTEMPT_FAILURE: unknown = { phase: "render attempt" };
+  const FAILURE_RECORD_FAILURE: unknown = { phase: "failure record" };
+  const RELEASE_FAILURE: unknown = { phase: "release" };
+  const captureLifecycleFailure = async (props: {
+    attempt?: unknown;
+    failureRecord?: unknown;
+    release?: unknown;
+  }): Promise<{
+    failure: unknown;
+    failureRecordAttempts: number;
+    releaseAttempts: number;
+  }> => {
+    let failure: unknown;
+    let failureRecordAttempts = 0;
+    let releaseAttempts = 0;
+    try {
+      await runProductionRenderJob({
+        plan: lifecyclePlan,
+        workers: 1,
+        adapters: {
+          current: async () => null,
+          acquire: async () => true,
+          render: async () => {
+            if (props.attempt !== undefined) throw props.attempt as Error;
+            return receipt(lifecyclePlan, 0);
+          },
+          fail: async () => {
+            ++failureRecordAttempts;
+            if (props.failureRecord !== undefined)
+              throw props.failureRecord as Error;
+          },
+          release: async () => {
+            ++releaseAttempts;
+            if (props.release !== undefined) throw props.release as Error;
+          },
+        },
+      });
+    } catch (error) {
+      failure = error;
+    }
+    return { failure, failureRecordAttempts, releaseAttempts };
+  };
+  const releaseOnlyFailure = await captureLifecycleFailure({
+    release: RELEASE_FAILURE,
+  });
+  const attemptAndFailureRecord = await captureLifecycleFailure({
+    attempt: ATTEMPT_FAILURE,
+    failureRecord: FAILURE_RECORD_FAILURE,
+  });
+  const attemptAndRelease = await captureLifecycleFailure({
+    attempt: ATTEMPT_FAILURE,
+    release: RELEASE_FAILURE,
+  });
   const drainingPlan = {
     ...renderPlan,
     chunks: renderPlan.chunks.slice(0, 3),
@@ -681,8 +1323,8 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
     });
   let peerDrained = false;
   let releaseStarted = false;
+  let drainingReleaseAttempts = 0;
   const currentCalls: string[] = [];
-  const RELEASE_FAILURE: unknown = "release failure";
   const draining = runProductionRenderJob({
     plan: drainingPlan,
     workers: 2,
@@ -699,13 +1341,14 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
       },
       acquire: async () => true,
       render: async () => {
-        throw new Error("encoder failure");
+        throw ATTEMPT_FAILURE;
       },
       fail: async () => {
-        throw NON_ERROR_FAILURE;
+        throw FAILURE_RECORD_FAILURE;
       },
       release: async () => {
         releaseStarted = true;
+        ++drainingReleaseAttempts;
         await releaseBarrier;
         throw RELEASE_FAILURE;
       },
@@ -761,9 +1404,32 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
       peerDrained &&
       thirdStartedBeforeRelease === false &&
       releaseStarted &&
+      drainingReleaseAttempts === 1 &&
       settledBeforeRelease === false &&
-      fatalReason === NON_ERROR_FAILURE &&
+      aggregateContainsExactly(fatalReason, [
+        ATTEMPT_FAILURE,
+        FAILURE_RECORD_FAILURE,
+        RELEASE_FAILURE,
+      ]) &&
       currentFatalReason === NON_ERROR_FAILURE,
+  );
+  TestValidator.predicate(
+    "scheduler preserves acquired-chunk attempt, failure-record, and release failures in phase order",
+    releaseOnlyFailure.failure === RELEASE_FAILURE &&
+      releaseOnlyFailure.failureRecordAttempts === 0 &&
+      releaseOnlyFailure.releaseAttempts === 1 &&
+      aggregateContainsExactly(attemptAndFailureRecord.failure, [
+        ATTEMPT_FAILURE,
+        FAILURE_RECORD_FAILURE,
+      ]) &&
+      attemptAndFailureRecord.failureRecordAttempts === 1 &&
+      attemptAndFailureRecord.releaseAttempts === 1 &&
+      aggregateContainsExactly(attemptAndRelease.failure, [
+        ATTEMPT_FAILURE,
+        RELEASE_FAILURE,
+      ]) &&
+      attemptAndRelease.failureRecordAttempts === 1 &&
+      attemptAndRelease.releaseAttempts === 1,
   );
   TestValidator.predicate(
     "scheduler rejects invalid workers and missing deliverables",
@@ -1183,10 +1849,12 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
   const ownedRoot = fs.mkdtempSync(
     path.join(os.tmpdir(), "automovie-render-owned-"),
   );
-  const outsideRoot = fs.mkdtempSync(
-    path.join(os.tmpdir(), "automovie-render-outside-"),
-  );
+  let outsideRoot: string | undefined;
+  let renderJobFixtureFailure: IRenderJobFixtureFailure | undefined;
   try {
+    outsideRoot = fs.mkdtempSync(
+      path.join(os.tmpdir(), "automovie-render-outside-"),
+    );
     const chunk = path.join(ownedRoot, "chunk");
     const frames = path.join(chunk, "frames");
     const direct = path.join(ownedRoot, "direct.json");
@@ -1197,12 +1865,51 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
     fs.writeFileSync(resident, "resident");
     fs.writeFileSync(outside, "outside");
 
+    const splitIdentity = path.join(ownedRoot, "split-identity.json");
+    fs.writeFileSync(splitIdentity, "split identity");
+    const mutableFs = createRequire(__filename)("node:fs") as {
+      lstatSync: typeof fs.lstatSync;
+    };
+    const nativeLstat = mutableFs.lstatSync;
+    mutableFs.lstatSync = ((target, options) => {
+      const status = nativeLstat(target, options);
+      if (path.resolve(target.toString()) !== path.resolve(splitIdentity))
+        return status;
+      return new Proxy(status as fs.BigIntStats, {
+        get: (current, property, receiver): unknown =>
+          property === "ino"
+            ? current.ino + 1n
+            : Reflect.get(current, property, receiver),
+      });
+    }) as typeof fs.lstatSync;
+    const splitIdentityBytes = (() => {
+      try {
+        return readAutoMovieProductionOwnedFile({
+          root: ownedRoot,
+          directory: ownedRoot,
+          relative: "split-identity.json",
+        });
+      } finally {
+        mutableFs.lstatSync = nativeLstat;
+      }
+    })();
+    TestValidator.equals(
+      "production-owned reads separate stable pathname and descriptor identity domains",
+      Buffer.from(splitIdentityBytes).toString("utf8"),
+      "split identity",
+    );
+
     const directBytes = readAutoMovieProductionOwnedFile({
       root: ownedRoot,
       directory: ownedRoot,
       relative: "direct.json",
     });
     const residentBytes = readAutoMovieProductionOwnedFile({
+      root: ownedRoot,
+      directory: chunk,
+      relative: "frames/resident.png",
+    });
+    exerciseProductionOwnedDescriptorCleanup({
       root: ownedRoot,
       directory: chunk,
       relative: "frames/resident.png",
@@ -1245,17 +1952,63 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
     const replacement = path.join(frames, "replacement.png");
     fs.writeFileSync(replacement, "replacement");
     const nativeRead = fs.readFileSync;
+    const preserved = path.join(frames, "preserved.png");
+    let swapped = false;
+    fs.readFileSync = ((
+      file: fs.PathOrFileDescriptor,
+      ...args: unknown[]
+    ): unknown => {
+      if (
+        swapped === false &&
+        typeof file !== "number" &&
+        path.resolve(file.toString()) === resident
+      ) {
+        swapped = true;
+        fs.renameSync(resident, preserved);
+        fs.renameSync(replacement, resident);
+        let pathnameReadFailure: IRenderJobFixtureFailure | undefined;
+        try {
+          return Reflect.apply(nativeRead, fs, [file, ...args]) as unknown;
+        } catch (error) {
+          pathnameReadFailure = { error };
+          throw error;
+        } finally {
+          preserveRenderJobFixtureCleanup(pathnameReadFailure, [
+            {
+              resource: "pathname replacement",
+              cleanup: () => fs.renameSync(resident, replacement),
+            },
+            {
+              resource: "pathname resident",
+              cleanup: () => fs.renameSync(preserved, resident),
+            },
+          ]);
+        }
+      }
+      return Reflect.apply(nativeRead, fs, [file, ...args]) as unknown;
+    }) as typeof fs.readFileSync;
+    try {
+      TestValidator.predicate(
+        "render-state reads bind bytes to the verified descriptor across a pathname swap",
+        Buffer.from(
+          readAutoMovieProductionOwnedFile({
+            root: ownedRoot,
+            directory: chunk,
+            relative: "frames/resident.png",
+          }),
+        ).toString("utf8") === "resident" && swapped === false,
+      );
+    } finally {
+      fs.readFileSync = nativeRead;
+    }
+
     let replaced = false;
     fs.readFileSync = ((
       file: fs.PathOrFileDescriptor,
       ...args: unknown[]
     ): unknown => {
       const bytes = Reflect.apply(nativeRead, fs, [file, ...args]) as unknown;
-      if (
-        replaced === false &&
-        typeof file !== "number" &&
-        path.resolve(file.toString()) === resident
-      ) {
+      if (replaced === false) {
         replaced = true;
         fs.rmSync(resident);
         fs.renameSync(replacement, resident);
@@ -1276,8 +2029,203 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
     } finally {
       fs.readFileSync = nativeRead;
     }
+  } catch (error) {
+    renderJobFixtureFailure = { error };
+    throw error;
   } finally {
-    fs.rmSync(ownedRoot, { force: true, recursive: true });
-    fs.rmSync(outsideRoot, { force: true, recursive: true });
+    const completedOutsideRoot = outsideRoot;
+    preserveRenderJobFixtureCleanup(renderJobFixtureFailure, [
+      {
+        resource: "owned fixture root",
+        cleanup: () => fs.rmSync(ownedRoot, { force: true, recursive: true }),
+      },
+      ...(completedOutsideRoot === undefined
+        ? []
+        : [
+            {
+              resource: "outside fixture root",
+              cleanup: () =>
+                fs.rmSync(completedOutsideRoot, {
+                  force: true,
+                  recursive: true,
+                }),
+            },
+          ]),
+    ]);
   }
+};
+
+type ProductionOwnedDescriptorFailureMode =
+  | "combined-resident"
+  | "combined-source"
+  | "nested"
+  | "primary-only"
+  | "standalone-resident-close"
+  | "standalone-source-close";
+
+interface IProductionOwnedDescriptorFailureEvidence {
+  caught: unknown;
+  primaryFailure: Error;
+  residentCloseFailure: Error;
+  sourceCloseFailure: Error;
+}
+
+const captureProductionOwnedDescriptorFailure = (
+  props: { root: string; directory: string; relative: string },
+  mode: ProductionOwnedDescriptorFailureMode,
+): IProductionOwnedDescriptorFailureEvidence => {
+  const target = path.resolve(props.directory, props.relative);
+  const primaryFailure = new Error(`${mode} primary failure`);
+  const residentCloseFailure = new Error(`${mode} resident close failure`);
+  const sourceCloseFailure = new Error(`${mode} source close failure`);
+  const nativeOpen = fs.openSync;
+  const nativeFstat = fs.fstatSync;
+  const nativeClose = fs.closeSync;
+  let sourceDescriptor: number | undefined;
+  let failedResidentDescriptor: number | undefined;
+  fs.openSync = ((file, ...args: unknown[]): number => {
+    const descriptor = Reflect.apply(nativeOpen, fs, [file, ...args]) as number;
+    if (
+      sourceDescriptor === undefined &&
+      path.resolve(file.toString()) === target
+    )
+      sourceDescriptor = descriptor;
+    return descriptor;
+  }) as typeof fs.openSync;
+  fs.fstatSync = ((
+    descriptor,
+    ...args: unknown[]
+  ): fs.Stats | fs.BigIntStats => {
+    if (
+      descriptor === sourceDescriptor &&
+      (mode === "primary-only" || mode === "combined-source")
+    )
+      throw primaryFailure;
+    if (
+      sourceDescriptor !== undefined &&
+      descriptor !== sourceDescriptor &&
+      failedResidentDescriptor === undefined &&
+      (mode === "combined-resident" || mode === "nested")
+    ) {
+      failedResidentDescriptor = descriptor;
+      throw primaryFailure;
+    }
+    return Reflect.apply(nativeFstat, fs, [descriptor, ...args]) as
+      | fs.Stats
+      | fs.BigIntStats;
+  }) as typeof fs.fstatSync;
+  fs.closeSync = ((descriptor): void => {
+    if (
+      sourceDescriptor !== undefined &&
+      descriptor !== sourceDescriptor &&
+      failedResidentDescriptor === undefined &&
+      mode === "standalone-resident-close"
+    )
+      failedResidentDescriptor = descriptor;
+    nativeClose(descriptor);
+    if (
+      descriptor === failedResidentDescriptor &&
+      (mode === "combined-resident" ||
+        mode === "nested" ||
+        mode === "standalone-resident-close")
+    )
+      throw residentCloseFailure;
+    if (
+      descriptor === sourceDescriptor &&
+      (mode === "combined-source" ||
+        mode === "nested" ||
+        mode === "standalone-source-close")
+    )
+      throw sourceCloseFailure;
+  }) as typeof fs.closeSync;
+  let caught: unknown;
+  let descriptorReadFailure: IRenderJobFixtureFailure | undefined;
+  try {
+    readAutoMovieProductionOwnedFile(props);
+  } catch (error) {
+    caught = error;
+    descriptorReadFailure = { error };
+  } finally {
+    preserveRenderJobFixtureCleanup(descriptorReadFailure, [
+      {
+        resource: "owned-descriptor open hook",
+        cleanup: () => {
+          fs.openSync = nativeOpen;
+        },
+      },
+      {
+        resource: "owned-descriptor fstat hook",
+        cleanup: () => {
+          fs.fstatSync = nativeFstat;
+        },
+      },
+      {
+        resource: "owned-descriptor close hook",
+        cleanup: () => {
+          fs.closeSync = nativeClose;
+        },
+      },
+    ]);
+  }
+  return {
+    caught,
+    primaryFailure,
+    residentCloseFailure,
+    sourceCloseFailure,
+  };
+};
+
+const aggregateContainsExactly = (
+  error: unknown,
+  expected: unknown[],
+): boolean =>
+  error instanceof AggregateError &&
+  error.errors.length === expected.length &&
+  expected.every((failure, index) => error.errors[index] === failure);
+
+const exerciseProductionOwnedDescriptorCleanup = (props: {
+  root: string;
+  directory: string;
+  relative: string;
+}): void => {
+  const standalone = captureProductionOwnedDescriptorFailure(
+    props,
+    "standalone-source-close",
+  );
+  const standaloneResident = captureProductionOwnedDescriptorFailure(
+    props,
+    "standalone-resident-close",
+  );
+  const primaryOnly = captureProductionOwnedDescriptorFailure(
+    props,
+    "primary-only",
+  );
+  const combinedResident = captureProductionOwnedDescriptorFailure(
+    props,
+    "combined-resident",
+  );
+  const combinedSource = captureProductionOwnedDescriptorFailure(
+    props,
+    "combined-source",
+  );
+  const nested = captureProductionOwnedDescriptorFailure(props, "nested");
+  TestValidator.predicate(
+    "production-owned descriptor cleanup preserves every operation and resource failure",
+    standalone.caught === standalone.sourceCloseFailure &&
+      standaloneResident.caught === standaloneResident.residentCloseFailure &&
+      primaryOnly.caught === primaryOnly.primaryFailure &&
+      aggregateContainsExactly(combinedResident.caught, [
+        combinedResident.primaryFailure,
+        combinedResident.residentCloseFailure,
+      ]) &&
+      aggregateContainsExactly(combinedSource.caught, [
+        combinedSource.primaryFailure,
+        combinedSource.sourceCloseFailure,
+      ]) &&
+      aggregateContainsExactly(nested.caught, [
+        nested.primaryFailure,
+        nested.residentCloseFailure,
+        nested.sourceCloseFailure,
+      ]),
+  );
 };

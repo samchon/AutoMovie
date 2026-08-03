@@ -25,7 +25,6 @@ export const test_film_review_shot_nonempty_refs = (): void => {
   });
 
   const reviewed = reviewShot(script, {
-    type: "write",
     beat: " ",
     observations: "the pass is keyed by a blank beat.",
     verdict: "revise",

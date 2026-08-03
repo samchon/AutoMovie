@@ -14,8 +14,32 @@ import {
   worldDesign,
 } from "./productionFixtures";
 
+interface IProductionReviewDesignFixtureFailure {
+  error: unknown;
+}
+
+class ProductionReviewDesignFixtureCleanupError extends AggregateError {}
+
+export const preserveProductionReviewDesignFixtureCleanup = (
+  failure: IProductionReviewDesignFixtureFailure | undefined,
+  cleanup: () => void,
+): void => {
+  try {
+    cleanup();
+  } catch (cleanupFailure) {
+    if (failure === undefined) throw cleanupFailure;
+    throw new ProductionReviewDesignFixtureCleanupError(
+      [failure.error, cleanupFailure],
+      "Production review-design fixture teardown failed after the test failed.",
+    );
+  }
+};
+
 /** Design dependencies and quotable selectors stay explicit and bounded. */
 export const test_mcp_production_review_design_edges = (): void => {
+  let productionReviewDesignFailure:
+    | IProductionReviewDesignFixtureFailure
+    | undefined;
   const fixture = productionFixture();
   try {
     const project = AutoMovieProductionProject.open(fixture.root);
@@ -99,7 +123,7 @@ export const test_mcp_production_review_design_edges = (): void => {
     project.setModelRecipe(dependentModel);
     const dependentModelFile = path.join(
       fixture.root,
-      ".automovie/design/models/review-model.json",
+      ".automovie/design/shared/models/review-model.json",
     );
     const dependentModelBytes = fs.readFileSync(dependentModelFile);
     fs.writeFileSync(
@@ -255,7 +279,7 @@ export const test_mcp_production_review_design_edges = (): void => {
 
     const formationFile = path.join(
       fixture.root,
-      ".automovie/design/formations/line.json",
+      ".automovie/design/shared/formations/line.json",
     );
     const formationBytes = fs.readFileSync(formationFile);
     fs.writeFileSync(
@@ -274,7 +298,7 @@ export const test_mcp_production_review_design_edges = (): void => {
     fs.writeFileSync(formationFile, formationBytes);
     const shotFile = path.join(
       fixture.root,
-      ".automovie/design/shots/opening.json",
+      ".automovie/design/fixture-film/shots/opening.json",
     );
     const shotBytes = fs.readFileSync(shotFile);
     fs.writeFileSync(
@@ -293,7 +317,7 @@ export const test_mcp_production_review_design_edges = (): void => {
     fs.writeFileSync(shotFile, shotBytes);
     const acceptanceFile = path.join(
       fixture.root,
-      ".automovie/design/acceptance/opening-beauty.json",
+      ".automovie/design/fixture-film/acceptance/opening-beauty.json",
     );
     const acceptanceBytes = fs.readFileSync(acceptanceFile);
     fs.writeFileSync(
@@ -388,7 +412,9 @@ export const test_mcp_production_review_design_edges = (): void => {
       target: { kind: "design", design: { kind: "world" } },
     });
     project.setWorldDesign(worldDesign());
-    fs.rmSync(path.join(fixture.root, ".automovie/design/production.json"));
+    fs.rmSync(
+      path.join(fixture.root, ".automovie/design/fixture-film/production.json"),
+    );
     const missingProduction = review.prepare({
       target: { kind: "design", design: { kind: "production" } },
     });
@@ -405,7 +431,13 @@ export const test_mcp_production_review_design_edges = (): void => {
             item.path?.endsWith("production.json"),
         ),
     );
+  } catch (error) {
+    productionReviewDesignFailure = { error };
+    throw error;
   } finally {
-    fixture.dispose();
+    preserveProductionReviewDesignFixtureCleanup(
+      productionReviewDesignFailure,
+      () => fixture.dispose(),
+    );
   }
 };

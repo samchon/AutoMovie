@@ -1,8 +1,8 @@
 import {
   IAutoMovieConstraintViolation,
-  IAutoMovieForgeApplication,
+  IAutoMovieForgePlan,
   IAutoMovieModel,
-  IAutoMovieScriptApplication,
+  IAutoMovieScript,
 } from "@automovie/interface";
 
 import { validateModel } from "../validation/validateModel";
@@ -53,14 +53,14 @@ export namespace IAutoMovieForgedCast {
  * skeleton at all; boneless models are props, not castable actors.
  */
 export const forgeCast = (
-  script: IAutoMovieScriptApplication.IWrite,
-  forge: IAutoMovieForgeApplication.IWrite,
+  script: IAutoMovieScript,
+  forge: IAutoMovieForgePlan,
 ): IAutoMovieForgedCast => {
   const out = new ViolationCollector();
   const cast = new Map<
     string,
     {
-      member: IAutoMovieScriptApplication.IWrite["cast"][number];
+      member: IAutoMovieScript["cast"][number];
       index: number;
     }
   >();

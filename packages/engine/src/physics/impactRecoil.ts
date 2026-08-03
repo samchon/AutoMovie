@@ -1,6 +1,5 @@
 import {
   AutoMovieHumanoidBone,
-  IAutoMovieAngleRange,
   IAutoMovieJointPose,
   IAutoMoviePose,
   IAutoMovieSkeleton,
@@ -8,6 +7,8 @@ import {
 } from "@automovie/interface";
 
 import { Vector3 } from "../math/Vector3";
+import { clampJointRom } from "../rom/clampPose";
+import { getConstraint } from "../rom/humanoidRom";
 
 /** A reactive deflection (degrees) the impact pushes a joint toward. */
 export interface IAutoMovieRecoilPush {
@@ -43,27 +44,23 @@ export const impulseToRecoilPush = (
 };
 
 /**
- * Bound a reactive deflection by the joint's ROM. A **zero push** means the
- * impact did not deflect this axis, so the axis stays neutral (0): the ROM
- * bounds how far the impact _yields_ the joint, not where an un-pushed joint
- * rests. Without this, a joint whose ROM excludes 0 (an always-flexed elbow,
- * `min > 0`) would be dragged to its lower bound by a flinch that never touched
- * that axis: spurious motion the impact never caused. A non-zero push is bound
- * to the range as before.
+ * Scale one input deflection down the recoil chain. An absent or zero push is
+ * represented as `null`, the pose model's resting axis, so a zero-excluding ROM
+ * does not drag an untouched axis to its minimum and the resulting pose remains
+ * legal under the same validator. A non-zero deflection stays explicit for the
+ * shared whole-joint ROM clamp.
  */
-const clampAxis = (
-  value: number,
-  range: IAutoMovieAngleRange | null,
-): number =>
-  value === 0 || range === null
-    ? value
-    : Math.max(range.min, Math.min(range.max, value));
+const scaledPushAxis = (value: number | null, scale: number): number | null => {
+  if (value === null) return null;
+  const scaled = value * scale;
+  return scaled === 0 ? null : scaled;
+};
 
 const readPushAxis = (
   axis: keyof IAutoMovieRecoilPush,
   value: number | undefined,
-): number => {
-  if (value === undefined) return 0;
+): number | null => {
+  if (value === undefined || value === 0) return null;
   if (!Number.isFinite(value))
     throw new RangeError(
       `impact recoil push ${axis} must be finite, but was ${value}`,
@@ -107,15 +104,19 @@ export const impactRecoil = (
   const twist = readPushAxis("twist", push.twist);
 
   const joints: IAutoMovieJointPose[] = chain.map((bone, i) => {
+    const configured = skeleton.bones.find((entry) => entry.bone === bone);
     const constraint =
-      skeleton.bones.find((b) => b.bone === bone)?.constraint ?? null;
+      configured === undefined
+        ? null
+        : getConstraint(bone, configured.constraint);
     const k = Math.pow(falloff, i);
-    return {
+    const recoil: IAutoMovieJointPose = {
       bone,
-      flexion: clampAxis(flexion * k, constraint?.flexion ?? null),
-      abduction: clampAxis(abduction * k, constraint?.abduction ?? null),
-      twist: clampAxis(twist * k, constraint?.twist ?? null),
+      flexion: scaledPushAxis(flexion, k),
+      abduction: scaledPushAxis(abduction, k),
+      twist: scaledPushAxis(twist, k),
     };
+    return constraint === null ? recoil : clampJointRom(recoil, constraint);
   });
   return { skeleton: skeleton.id, root: null, joints };
 };

@@ -14,6 +14,8 @@ import { fileURLToPath } from "node:url";
 import { chromium } from "playwright-core";
 import { PNG } from "pngjs";
 
+import { withBrowserPage } from "./preserveCleanupFailure.mjs";
+
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "../../..");
 const hero = process.argv[2] ?? "hero3";
@@ -46,76 +48,77 @@ const views = [
   "rightProfile",
 ].filter((v) => ref.views[v]);
 
-const browser = await chromium.launch({
-  executablePath: CHROME,
-  headless: true,
-});
-const page = await browser.newPage({ viewport: { width: 800, height: 600 } });
-await page.goto(`${BASE}/head.html`, { waitUntil: "load" });
+const result = await withBrowserPage(
+  () => chromium.launch({ executablePath: CHROME, headless: true }),
+  { viewport: { width: 800, height: 600 } },
+  "extract landmarks",
+  async (page) => {
+    await page.goto(`${BASE}/head.html`, { waitUntil: "load" });
 
-await page.evaluate(async () => {
-  const vision =
-    await import("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14");
-  const { FaceLandmarker, FilesetResolver } = vision;
-  const fileset = await FilesetResolver.forVisionTasks(
-    "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm",
-  );
-  window.__fl = await FaceLandmarker.createFromOptions(fileset, {
-    baseOptions: {
-      modelAssetPath:
-        "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task",
-    },
-    runningMode: "IMAGE",
-    numFaces: 1,
-  });
-});
+    await page.evaluate(async () => {
+      const vision =
+        await import("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14");
+      const { FaceLandmarker, FilesetResolver } = vision;
+      const fileset = await FilesetResolver.forVisionTasks(
+        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm",
+      );
+      window.__fl = await FaceLandmarker.createFromOptions(fileset, {
+        baseOptions: {
+          modelAssetPath:
+            "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task",
+        },
+        runningMode: "IMAGE",
+        numFaces: 1,
+      });
+    });
 
-const sheetImg = await page.evaluate(
-  (url) =>
-    new Promise((res, rej) => {
-      const im = new Image();
-      im.onload = () => {
-        window.__sheet = im;
-        res({ w: im.naturalWidth, h: im.naturalHeight });
+    const sheetImg = await page.evaluate(
+      (url) =>
+        new Promise((res, rej) => {
+          const im = new Image();
+          im.onload = () => {
+            window.__sheet = im;
+            res({ w: im.naturalWidth, h: im.naturalHeight });
+          };
+          im.onerror = () => rej(new Error("img load failed: " + url));
+          im.src = url;
+        }),
+      sheetPath,
+    );
+
+    const result = {};
+    for (const view of views) {
+      const cell = ref.views[view];
+      const sx = Math.round(cell.column * cw);
+      const sy = Math.round(cell.row * ch);
+      const sw = Math.round(cw);
+      const sh = Math.round(ch);
+      const lms = await page.evaluate(
+        ({ sx, sy, sw, sh }) => {
+          const cvs = document.createElement("canvas");
+          cvs.width = sw;
+          cvs.height = sh;
+          const ctx = cvs.getContext("2d");
+          ctx.drawImage(window.__sheet, sx, sy, sw, sh, 0, 0, sw, sh);
+          const r = window.__fl.detect(cvs);
+          const f = r.faceLandmarks && r.faceLandmarks[0];
+          return f
+            ? f.map((p) => [+p.x.toFixed(5), +p.y.toFixed(5), +p.z.toFixed(5)])
+            : null;
+        },
+        { sx, sy, sw, sh },
+      );
+      result[view] = {
+        cell,
+        crop: { w: Math.round(cw), h: Math.round(ch) },
+        landmarks: lms,
+        count: lms?.length ?? 0,
       };
-      im.onerror = () => rej(new Error("img load failed: " + url));
-      im.src = url;
-    }),
-  sheetPath,
+    }
+
+    return result;
+  },
 );
-
-const result = {};
-for (const view of views) {
-  const cell = ref.views[view];
-  const sx = Math.round(cell.column * cw);
-  const sy = Math.round(cell.row * ch);
-  const sw = Math.round(cw);
-  const sh = Math.round(ch);
-  const lms = await page.evaluate(
-    ({ sx, sy, sw, sh }) => {
-      const cvs = document.createElement("canvas");
-      cvs.width = sw;
-      cvs.height = sh;
-      const ctx = cvs.getContext("2d");
-      ctx.drawImage(window.__sheet, sx, sy, sw, sh, 0, 0, sw, sh);
-      const r = window.__fl.detect(cvs);
-      const f = r.faceLandmarks && r.faceLandmarks[0];
-      return f
-        ? f.map((p) => [+p.x.toFixed(5), +p.y.toFixed(5), +p.z.toFixed(5)])
-        : null;
-    },
-    { sx, sy, sw, sh },
-  );
-  result[view] = {
-    cell,
-    crop: { w: Math.round(cw), h: Math.round(ch) },
-    landmarks: lms,
-    count: lms?.length ?? 0,
-  };
-}
-
-await page.close();
-await browser.close();
 
 // ---- save landmarks ----
 const jsonPath = path.join(outDir, `landmarks-${hero}.json`);

@@ -8,7 +8,11 @@ import {
 import { TestValidator } from "@nestia/e2e";
 
 import { IDENTITY_TRANSFORM } from "../internal/fixtures";
-import { hasViolation, hasWarning, warningCount } from "../internal/predicates";
+import {
+  hasViolation,
+  validationHasNoWarnings,
+  validationHasWarning,
+} from "../internal/predicates";
 
 const FORWARD: IAutoMovieVector3 = { x: 0, y: 0, z: 1 };
 
@@ -76,7 +80,8 @@ export const test_validation_continuity = (): void => {
   });
   TestValidator.predicate(
     "position drift warns",
-    hasWarning(
+    validationHasWarning(
+      "actor position continuity",
       drift,
       "physics",
       "$input.opening.actors[node=hero].transform.translation",
@@ -90,7 +95,12 @@ export const test_validation_continuity = (): void => {
   });
   TestValidator.predicate(
     "facing drift warns",
-    hasWarning(spun, "physics", "$input.opening.actors[node=hero].facing"),
+    validationHasWarning(
+      "actor facing continuity",
+      spun,
+      "physics",
+      "$input.opening.actors[node=hero].facing",
+    ),
   );
 
   // 4. mount discontinuity: dropped, changed parent, changed bone.
@@ -112,15 +122,30 @@ export const test_validation_continuity = (): void => {
   });
   TestValidator.predicate(
     "dropped mount warns",
-    hasWarning(dropped, "physics", "$input.opening.actors[node=rider].mount"),
+    validationHasWarning(
+      "dropped mount continuity",
+      dropped,
+      "physics",
+      "$input.opening.actors[node=rider].mount",
+    ),
   );
   TestValidator.predicate(
     "reparented mount warns",
-    hasWarning(reparent, "physics", "$input.opening.actors[node=rider].mount"),
+    validationHasWarning(
+      "reparented mount continuity",
+      reparent,
+      "physics",
+      "$input.opening.actors[node=rider].mount",
+    ),
   );
   TestValidator.predicate(
     "rebound mount warns",
-    hasWarning(rebone, "physics", "$input.opening.actors[node=rider].mount"),
+    validationHasWarning(
+      "rebound mount continuity",
+      rebone,
+      "physics",
+      "$input.opening.actors[node=rider].mount",
+    ),
   );
 
   // 5. actor missing from the incoming opening.
@@ -130,7 +155,12 @@ export const test_validation_continuity = (): void => {
   });
   TestValidator.predicate(
     "absent actor warns",
-    hasWarning(missing, "physics", "$input.opening.actors"),
+    validationHasWarning(
+      "missing actor continuity",
+      missing,
+      "physics",
+      "$input.opening.actors",
+    ),
   );
 
   // 6. a generous tolerance suppresses a large drift: no warning.
@@ -139,7 +169,10 @@ export const test_validation_continuity = (): void => {
     opening: state([actor({ node: "hero", x: 3 })]),
     positionTolerance: 5,
   });
-  TestValidator.equals("tolerance suppresses drift", warningCount(tolerant), 0);
+  TestValidator.predicate(
+    "tolerance suppresses drift",
+    validationHasNoWarnings("tolerant continuity", tolerant),
+  );
 
   // 7. nonsensical tolerances are range errors that short-circuit.
   const badPos = validateContinuity({

@@ -9,6 +9,8 @@ import {
   AutoMovieProductionProject,
   acquireCommitLock,
   acquireProductionRootNamespace,
+  assertProductionRootNamespaceLease,
+  compareCodeUnits,
   digestAutoMovieBytes,
   productionRenderBundleRelativePath,
   productionRenderTargetFingerprint,
@@ -23,8 +25,10 @@ import { PNG } from "pngjs";
 
 import {
   acceptanceScenarios,
+  fixtureWorldDesign,
   formationDesign,
   modelRecipe,
+  productionCompileSucceeded,
   productionDesign,
   productionFixture,
   shotContract,
@@ -44,8 +48,481 @@ const throws = (closure: () => unknown, fragment?: string): boolean => {
   }
 };
 
+type RenderFileDescriptorFailureMode =
+  | "combined-resident"
+  | "combined-source"
+  | "nested"
+  | "primary-only"
+  | "standalone-resident-close"
+  | "standalone-source-close";
+
+interface IRenderFileDescriptorFailureEvidence {
+  caught: unknown;
+  primaryFailure: Error;
+  residentCloseFailure: Error;
+  sourceCloseFailure: Error;
+}
+
+const captureRenderFileDescriptorFailure = (
+  project: AutoMovieProductionProject,
+  relativePath: string,
+  mode: RenderFileDescriptorFailureMode,
+): IRenderFileDescriptorFailureEvidence => {
+  const target = path.resolve(project.renderRoot(), relativePath);
+  const primaryFailure = new Error(`${mode} primary failure`);
+  const residentCloseFailure = new Error(`${mode} resident close failure`);
+  const sourceCloseFailure = new Error(`${mode} source close failure`);
+  const nativeOpen = fs.openSync;
+  const nativeFstat = fs.fstatSync;
+  const nativeClose = fs.closeSync;
+  let sourceDescriptor: number | undefined;
+  let failedResidentDescriptor: number | undefined;
+  fs.openSync = ((file, ...args: unknown[]): number => {
+    const descriptor = Reflect.apply(nativeOpen, fs, [file, ...args]) as number;
+    if (
+      sourceDescriptor === undefined &&
+      path.resolve(file.toString()) === target
+    )
+      sourceDescriptor = descriptor;
+    return descriptor;
+  }) as typeof fs.openSync;
+  fs.fstatSync = ((
+    descriptor,
+    ...args: unknown[]
+  ): fs.Stats | fs.BigIntStats => {
+    if (
+      descriptor === sourceDescriptor &&
+      (mode === "primary-only" || mode === "combined-source")
+    )
+      throw primaryFailure;
+    if (
+      sourceDescriptor !== undefined &&
+      descriptor !== sourceDescriptor &&
+      failedResidentDescriptor === undefined &&
+      (mode === "combined-resident" || mode === "nested")
+    ) {
+      failedResidentDescriptor = descriptor;
+      throw primaryFailure;
+    }
+    return Reflect.apply(nativeFstat, fs, [descriptor, ...args]) as
+      | fs.Stats
+      | fs.BigIntStats;
+  }) as typeof fs.fstatSync;
+  fs.closeSync = ((descriptor): void => {
+    if (
+      sourceDescriptor !== undefined &&
+      descriptor !== sourceDescriptor &&
+      failedResidentDescriptor === undefined &&
+      mode === "standalone-resident-close"
+    )
+      failedResidentDescriptor = descriptor;
+    nativeClose(descriptor);
+    if (
+      descriptor === failedResidentDescriptor &&
+      (mode === "combined-resident" ||
+        mode === "nested" ||
+        mode === "standalone-resident-close")
+    )
+      throw residentCloseFailure;
+    if (
+      descriptor === sourceDescriptor &&
+      (mode === "combined-source" ||
+        mode === "nested" ||
+        mode === "standalone-source-close")
+    )
+      throw sourceCloseFailure;
+  }) as typeof fs.closeSync;
+  let caught: unknown;
+  let renderDescriptorHarnessFailure:
+    | IProductionProjectFixtureFailure
+    | undefined;
+  try {
+    project.readRenderFile(relativePath);
+  } catch (error) {
+    caught = error;
+    renderDescriptorHarnessFailure = { error };
+  } finally {
+    preserveProductionProjectFixtureCleanup(renderDescriptorHarnessFailure, [
+      {
+        resource: "render descriptor open hook",
+        cleanup: () => {
+          fs.openSync = nativeOpen;
+        },
+      },
+      {
+        resource: "render descriptor fstat hook",
+        cleanup: () => {
+          fs.fstatSync = nativeFstat;
+        },
+      },
+      {
+        resource: "render descriptor close hook",
+        cleanup: () => {
+          fs.closeSync = nativeClose;
+        },
+      },
+    ]);
+  }
+  return {
+    caught,
+    primaryFailure,
+    residentCloseFailure,
+    sourceCloseFailure,
+  };
+};
+
+const aggregateContainsExactly = (
+  error: unknown,
+  expected: unknown[],
+): boolean =>
+  error instanceof AggregateError &&
+  error.errors.length === expected.length &&
+  expected.every((failure, index) => error.errors[index] === failure);
+
+interface IProductionProjectFixtureFailure {
+  error: unknown;
+}
+
+interface IProductionProjectFixtureCleanup {
+  cleanup: () => unknown;
+  resource: string;
+}
+
+class ProductionProjectFixtureCleanupError extends AggregateError {}
+
+/** Attempt every acquired project fixture cleanup without hiding failure. */
+export const preserveProductionProjectFixtureCleanup = (
+  failure: IProductionProjectFixtureFailure | undefined,
+  resources: readonly IProductionProjectFixtureCleanup[],
+): void => {
+  const cleanupFailures: Array<{ error: unknown; resource: string }> = [];
+  for (const resource of resources)
+    try {
+      resource.cleanup();
+    } catch (error) {
+      cleanupFailures.push({ error, resource: resource.resource });
+    }
+  if (cleanupFailures.length === 1 && failure === undefined)
+    throw cleanupFailures[0]!.error;
+  if (cleanupFailures.length !== 0)
+    throw new ProductionProjectFixtureCleanupError(
+      [
+        ...(failure === undefined ? [] : [failure.error]),
+        ...cleanupFailures.map((entry) => entry.error),
+      ],
+      `Production-project fixture cleanup failed${
+        failure === undefined ? "" : " after the test failed"
+      }: ${cleanupFailures.map((entry) => entry.resource).join(", ")}.`,
+    );
+};
+
+interface ISingleProductionProjectFixtureFailure {
+  error: unknown;
+}
+
+class SingleProductionProjectFixtureCleanupError extends AggregateError {}
+
+export const preserveSingleProductionProjectFixtureCleanup = (
+  failure: ISingleProductionProjectFixtureFailure | undefined,
+  cleanup: () => void,
+): void => {
+  try {
+    cleanup();
+  } catch (cleanupFailure) {
+    if (failure === undefined) throw cleanupFailure;
+    throw new SingleProductionProjectFixtureCleanupError(
+      [failure.error, cleanupFailure],
+      "Single production-project fixture teardown failed after the test failed.",
+    );
+  }
+};
+
+type ProductionAtomicFailureMode =
+  | "combined-cleanup"
+  | "combined-recovery"
+  | "primary-only"
+  | "standalone-cleanup";
+
+interface IProductionAtomicFailureEvidence {
+  caught: unknown;
+  cleanupAttempted: boolean;
+  cleanupFailure: Error;
+  fixtureAccepted: boolean;
+  primaryFailure: Error;
+  quarantineArtifacts: number;
+  recoveryAttempted: boolean;
+  recoveryFailure: Error;
+  targetExists: boolean;
+  temporaryArtifacts: number;
+}
+
+interface IProductionAtomicNativeHooks {
+  remove: typeof fs.rmSync;
+  rename: typeof fs.renameSync;
+}
+
+const captureProductionAtomicFailure = (
+  mode: ProductionAtomicFailureMode,
+): IProductionAtomicFailureEvidence => {
+  let nativeHooks: IProductionAtomicNativeHooks | undefined;
+  let hooksInstalled = false;
+  let atomicHarnessFailure: IProductionProjectFixtureFailure | undefined;
+  const fixture = productionFixture();
+  try {
+    nativeHooks = { remove: fs.rmSync, rename: fs.renameSync };
+    const { remove: nativeRemove, rename: nativeRename } = nativeHooks;
+    const project = AutoMovieProductionProject.open(fixture.root);
+    const base = modelRecipe();
+    const id = `atomic-failure-${mode}`;
+    const design = {
+      ...base,
+      id,
+      lod: base.lod.map((lod) => ({ ...lod, recipe: id })),
+    };
+    const target = path.join(
+      fixture.root,
+      `.automovie/design/shared/models/${id}.json`,
+    );
+    const fixtureAccepted =
+      mode !== "combined-recovery" || project.setModelRecipe(design).accepted;
+    const primaryFailure = new Error(`${mode} primary failure`);
+    const cleanupFailure = new Error(`${mode} cleanup failure`);
+    const recoveryFailure = new Error(`${mode} recovery failure`);
+    let cleanupAttempted = false;
+    let recoveryAttempted = false;
+    let quarantine: string | null = null;
+    fs.renameSync = ((oldPath, newPath): void => {
+      const source = path.resolve(oldPath.toString());
+      const destination = path.resolve(newPath.toString());
+      if (
+        mode !== "combined-recovery" &&
+        destination === path.resolve(target) &&
+        source.startsWith(`${path.resolve(target)}.tmp.`) &&
+        (mode === "primary-only" || mode === "combined-cleanup")
+      )
+        throw primaryFailure;
+      if (
+        mode === "combined-recovery" &&
+        source === path.resolve(target) &&
+        destination.startsWith(`${path.resolve(target)}.delete.`)
+      )
+        quarantine = destination;
+      if (
+        mode === "combined-recovery" &&
+        quarantine !== null &&
+        source === quarantine &&
+        destination === path.resolve(target)
+      ) {
+        recoveryAttempted = true;
+        throw recoveryFailure;
+      }
+      nativeRename(oldPath, newPath);
+    }) as typeof fs.renameSync;
+    Reflect.set(fs, "rmSync", (file: fs.PathLike, ...args: unknown[]) => {
+      const resolved = path.resolve(file.toString());
+      if (
+        mode !== "combined-recovery" &&
+        resolved.startsWith(`${path.resolve(target)}.tmp.`)
+      ) {
+        cleanupAttempted = true;
+        if (mode === "standalone-cleanup" || mode === "combined-cleanup")
+          throw cleanupFailure;
+      }
+      if (
+        mode === "combined-recovery" &&
+        quarantine !== null &&
+        resolved === quarantine
+      ) {
+        cleanupAttempted = true;
+        throw primaryFailure;
+      }
+      return (nativeRemove as (...parameters: unknown[]) => void)(
+        file,
+        ...args,
+      );
+    });
+    hooksInstalled = true;
+    let caught: unknown;
+    try {
+      if (mode === "combined-recovery")
+        project.eraseDesignArtifact({ kind: "model", id });
+      else project.setModelRecipe(design);
+    } catch (error) {
+      caught = error;
+    } finally {
+      fs.renameSync = nativeRename;
+      Reflect.set(fs, "rmSync", nativeRemove);
+      hooksInstalled = false;
+    }
+    const entries = fs.readdirSync(path.dirname(target));
+    return {
+      caught,
+      cleanupAttempted,
+      cleanupFailure,
+      fixtureAccepted,
+      primaryFailure,
+      quarantineArtifacts: entries.filter((entry) =>
+        entry.startsWith(`${path.basename(target)}.delete.`),
+      ).length,
+      recoveryAttempted,
+      recoveryFailure,
+      targetExists: fs.existsSync(target),
+      temporaryArtifacts: entries.filter((entry) =>
+        entry.startsWith(`${path.basename(target)}.tmp.`),
+      ).length,
+    };
+  } catch (error) {
+    atomicHarnessFailure = { error };
+    throw error;
+  } finally {
+    const completedNativeHooks = nativeHooks;
+    preserveProductionProjectFixtureCleanup(atomicHarnessFailure, [
+      ...(hooksInstalled && completedNativeHooks !== undefined
+        ? [
+            {
+              resource: "atomic rename hook",
+              cleanup: (): void => {
+                fs.renameSync = completedNativeHooks.rename;
+              },
+            },
+            {
+              resource: "atomic remove hook",
+              cleanup: (): void => {
+                Reflect.set(fs, "rmSync", completedNativeHooks.remove);
+              },
+            },
+          ]
+        : []),
+      {
+        resource: "atomic failure production fixture",
+        cleanup: () => fixture.dispose(),
+      },
+    ]);
+  }
+};
+
+const exerciseProductionAtomicFailureOwnership = (): void => {
+  const standalone = captureProductionAtomicFailure("standalone-cleanup");
+  const primaryOnly = captureProductionAtomicFailure("primary-only");
+  const combinedCleanup = captureProductionAtomicFailure("combined-cleanup");
+  const combinedRecovery = captureProductionAtomicFailure("combined-recovery");
+  TestValidator.predicate(
+    "production atomic cleanup and recovery preserve exact failure ownership",
+    standalone.caught === standalone.cleanupFailure &&
+      standalone.cleanupAttempted &&
+      standalone.targetExists &&
+      standalone.temporaryArtifacts === 0 &&
+      primaryOnly.caught === primaryOnly.primaryFailure &&
+      primaryOnly.cleanupAttempted &&
+      primaryOnly.targetExists === false &&
+      primaryOnly.temporaryArtifacts === 0 &&
+      aggregateContainsExactly(combinedCleanup.caught, [
+        combinedCleanup.primaryFailure,
+        combinedCleanup.cleanupFailure,
+      ]) &&
+      combinedCleanup.cleanupAttempted &&
+      combinedCleanup.targetExists === false &&
+      combinedCleanup.temporaryArtifacts === 1 &&
+      combinedRecovery.fixtureAccepted &&
+      aggregateContainsExactly(combinedRecovery.caught, [
+        combinedRecovery.primaryFailure,
+        combinedRecovery.recoveryFailure,
+      ]) &&
+      combinedRecovery.cleanupAttempted &&
+      combinedRecovery.recoveryAttempted &&
+      combinedRecovery.targetExists === false &&
+      combinedRecovery.quarantineArtifacts === 1,
+  );
+};
+
+const exerciseRenderFileDescriptorCleanup = (
+  project: AutoMovieProductionProject,
+  relativePath: string,
+): void => {
+  const standaloneSource = captureRenderFileDescriptorFailure(
+    project,
+    relativePath,
+    "standalone-source-close",
+  );
+  const standaloneResident = captureRenderFileDescriptorFailure(
+    project,
+    relativePath,
+    "standalone-resident-close",
+  );
+  const primaryOnly = captureRenderFileDescriptorFailure(
+    project,
+    relativePath,
+    "primary-only",
+  );
+  const combinedResident = captureRenderFileDescriptorFailure(
+    project,
+    relativePath,
+    "combined-resident",
+  );
+  const combinedSource = captureRenderFileDescriptorFailure(
+    project,
+    relativePath,
+    "combined-source",
+  );
+  const nested = captureRenderFileDescriptorFailure(
+    project,
+    relativePath,
+    "nested",
+  );
+  TestValidator.predicate(
+    "render-file descriptor cleanup preserves every operation and resource failure",
+    standaloneSource.caught === standaloneSource.sourceCloseFailure &&
+      standaloneResident.caught === standaloneResident.residentCloseFailure &&
+      primaryOnly.caught === primaryOnly.primaryFailure &&
+      aggregateContainsExactly(combinedResident.caught, [
+        combinedResident.primaryFailure,
+        combinedResident.residentCloseFailure,
+      ]) &&
+      aggregateContainsExactly(combinedSource.caught, [
+        combinedSource.primaryFailure,
+        combinedSource.sourceCloseFailure,
+      ]) &&
+      aggregateContainsExactly(nested.caught, [
+        nested.primaryFailure,
+        nested.residentCloseFailure,
+        nested.sourceCloseFailure,
+      ]),
+  );
+};
+
+const snapshotTree = (root: string): string[] => {
+  const output: string[] = [];
+  const visit = (directory: string): void => {
+    for (const entry of fs
+      .readdirSync(directory, { withFileTypes: true })
+      .sort((left, right) =>
+        left.name < right.name ? -1 : left.name > right.name ? 1 : 0,
+      )) {
+      const absolute = path.join(directory, entry.name);
+      const relative = path.relative(root, absolute).split(path.sep).join("/");
+      if (entry.isDirectory()) {
+        output.push(`directory:${relative}`);
+        visit(absolute);
+      } else
+        output.push(
+          `${entry.isSymbolicLink() ? "link" : "file"}:${relative}:${
+            entry.isSymbolicLink()
+              ? fs.readlinkSync(absolute)
+              : digestAutoMovieBytes(fs.readFileSync(absolute))
+          }`,
+        );
+    }
+  };
+  visit(root);
+  return output;
+};
+
 /** The resident production store enforces path, revision and ownership rules. */
 export const test_mcp_production_project = (): void => {
+  exerciseProductionAtomicFailureOwnership();
+  let productionProjectFailure:
+    | ISingleProductionProjectFixtureFailure
+    | undefined;
   const fixture = productionFixture();
   try {
     const project = AutoMovieProductionProject.open(fixture.root);
@@ -53,8 +530,41 @@ export const test_mcp_production_project = (): void => {
       "manifest and summary preserve tracked identity",
       project.manifest().formatVersion === 2 &&
         project.summary().initialized === false &&
-        project.generatedRoot() === path.join(fixture.root, "generated") &&
-        project.renderRoot() === path.join(fixture.root, "renders"),
+        project.productionId === "fixture-film" &&
+        project.generatedRoot() ===
+          path.join(fixture.root, "generated", "fixture-film") &&
+        project.renderRoot() ===
+          path.join(fixture.root, "renders", "fixture-film"),
+    );
+    const caseAliasedRoot =
+      fixture.root === fixture.root.toUpperCase()
+        ? fixture.root.toLowerCase()
+        : fixture.root.toUpperCase();
+    TestValidator.predicate(
+      "registered production discovery accepts Windows path case aliases",
+      process.platform !== "win32" ||
+        AutoMovieProductionProject.registeredProductionIds(
+          caseAliasedRoot,
+        ).includes(project.productionId),
+    );
+    const beforeReadOnly = snapshotTree(fixture.root);
+    const readOnly = AutoMovieProductionProject.openReadOnly(
+      fixture.root,
+      project.productionId,
+    );
+    const readOnlyLint = new AutoMovieProductionCompiler(readOnly).lint({
+      scope: "source",
+    });
+    TestValidator.predicate(
+      "read-only open and lint never create, migrate, repair, or mutate state",
+      typeof readOnlyLint.compiler.inputFingerprint === "string" &&
+        readOnly.productionId === project.productionId &&
+        throws(
+          () => readOnly.setWorldDesign(fixtureWorldDesign()),
+          "opened read-only",
+        ) &&
+        JSON.stringify(snapshotTree(fixture.root)) ===
+          JSON.stringify(beforeReadOnly),
     );
     const manifestCopy = project.manifest();
     manifestCopy.generatedRoot = "caller-mutated";
@@ -124,6 +634,190 @@ export const test_mcp_production_project = (): void => {
     );
     fs.rmSync(sourceJunction);
     fs.rmSync(outsideSource, { recursive: true });
+
+    const sourceReadRelative = shotContract().source.module;
+    const sourceReadPath = project.resolveSourcePath(sourceReadRelative);
+    const sourceReadParked = `${sourceReadPath}.parked`;
+    const sourceReadBefore = fs.readFileSync(sourceReadPath);
+    const nativeSourceRead = fs.readFileSync;
+    let sourcePathRead = false;
+    fs.readFileSync = ((
+      target: fs.PathOrFileDescriptor,
+      ...args: unknown[]
+    ): unknown => {
+      if (
+        typeof target !== "number" &&
+        path.resolve(target.toString()) === path.resolve(sourceReadPath)
+      ) {
+        sourcePathRead = true;
+        fs.renameSync(sourceReadPath, sourceReadParked);
+        fs.writeFileSync(sourceReadPath, "export const transient = true;\n");
+        let sourceTransientReadFailure:
+          | IProductionProjectFixtureFailure
+          | undefined;
+        try {
+          return Reflect.apply(nativeSourceRead, fs, [target, ...args]);
+        } catch (error) {
+          sourceTransientReadFailure = { error };
+          throw error;
+        } finally {
+          preserveProductionProjectFixtureCleanup(sourceTransientReadFailure, [
+            {
+              resource: "source-read transient replacement",
+              cleanup: () => fs.rmSync(sourceReadPath),
+            },
+            {
+              resource: "source-read parked resident",
+              cleanup: () => fs.renameSync(sourceReadParked, sourceReadPath),
+            },
+          ]);
+        }
+      }
+      return Reflect.apply(nativeSourceRead, fs, [target, ...args]);
+    }) as typeof fs.readFileSync;
+    let sourceReadBytes: Uint8Array = new Uint8Array();
+    let sourceReadFailure: IProductionProjectFixtureFailure | undefined;
+    try {
+      sourceReadBytes = project.readSource(sourceReadRelative);
+    } catch (error) {
+      sourceReadFailure = { error };
+      throw error;
+    } finally {
+      const sourceResidentParked = fs.existsSync(sourceReadParked);
+      preserveProductionProjectFixtureCleanup(sourceReadFailure, [
+        {
+          resource: "source-read native hook",
+          cleanup: () => {
+            fs.readFileSync = nativeSourceRead;
+          },
+        },
+        ...(sourceResidentParked
+          ? [
+              {
+                resource: "source-read transient replacement",
+                cleanup: () => fs.rmSync(sourceReadPath, { force: true }),
+              },
+              {
+                resource: "source-read parked resident",
+                cleanup: () => fs.renameSync(sourceReadParked, sourceReadPath),
+              },
+            ]
+          : []),
+      ]);
+    }
+    TestValidator.predicate(
+      "source reads bind bytes to the verified descriptor across a pathname swap",
+      sourcePathRead === false &&
+        Buffer.from(sourceReadBytes).equals(sourceReadBefore),
+    );
+
+    const projectManifestPath = path.join(
+      fixture.root,
+      ".automovie/manifest.json",
+    );
+    const trackedRevisionPath = path.join(
+      fixture.root,
+      ".automovie/productions/fixture-film/revision.json",
+    );
+    const stateReadResidents = new Map([
+      [projectManifestPath, fs.readFileSync(projectManifestPath)],
+      [trackedRevisionPath, fs.readFileSync(trackedRevisionPath)],
+    ]);
+    const expectedRevision = (
+      JSON.parse(stateReadResidents.get(trackedRevisionPath)!.toString()) as {
+        revision: number;
+      }
+    ).revision;
+    const statePathReads = new Set<string>();
+    const nativeStateRead = fs.readFileSync;
+    fs.readFileSync = ((
+      target: fs.PathOrFileDescriptor,
+      ...args: unknown[]
+    ): unknown => {
+      const resolved =
+        typeof target === "number" ? null : path.resolve(target.toString());
+      const resident =
+        resolved === null ? undefined : stateReadResidents.get(resolved);
+      if (resolved !== null && resident !== undefined) {
+        statePathReads.add(resolved);
+        const parked = `${resolved}.parked`;
+        fs.renameSync(resolved, parked);
+        fs.writeFileSync(
+          resolved,
+          resolved === trackedRevisionPath
+            ? JSON.stringify({ revision: expectedRevision + 1 })
+            : "transient replacement",
+        );
+        let stateTransientReadFailure:
+          | IProductionProjectFixtureFailure
+          | undefined;
+        try {
+          return Reflect.apply(nativeStateRead, fs, [target, ...args]);
+        } catch (error) {
+          stateTransientReadFailure = { error };
+          throw error;
+        } finally {
+          preserveProductionProjectFixtureCleanup(stateTransientReadFailure, [
+            {
+              resource: `state-read transient replacement ${resolved}`,
+              cleanup: () => fs.rmSync(resolved),
+            },
+            {
+              resource: `state-read parked resident ${resolved}`,
+              cleanup: () => fs.renameSync(parked, resolved),
+            },
+          ]);
+        }
+      }
+      return Reflect.apply(nativeStateRead, fs, [target, ...args]);
+    }) as typeof fs.readFileSync;
+    let projectStateManifest: Uint8Array = new Uint8Array();
+    let trackedRevision: Uint8Array = new Uint8Array();
+    let currentRevision = -1;
+    let stateReadFailure: IProductionProjectFixtureFailure | undefined;
+    try {
+      projectStateManifest = project.projectStateRecords().manifest;
+      trackedRevision = project.readTrackedStateFile("revision.json")!;
+      currentRevision = project.revision();
+    } catch (error) {
+      stateReadFailure = { error };
+      throw error;
+    } finally {
+      preserveProductionProjectFixtureCleanup(stateReadFailure, [
+        {
+          resource: "state-read native hook",
+          cleanup: () => {
+            fs.readFileSync = nativeStateRead;
+          },
+        },
+        ...[...stateReadResidents.keys()].flatMap((file) => {
+          const parked = `${file}.parked`;
+          return fs.existsSync(parked)
+            ? [
+                {
+                  resource: `state-read transient replacement ${file}`,
+                  cleanup: () => fs.rmSync(file, { force: true }),
+                },
+                {
+                  resource: `state-read parked resident ${file}`,
+                  cleanup: () => fs.renameSync(parked, file),
+                },
+              ]
+            : [];
+        }),
+      ]);
+    }
+    TestValidator.predicate(
+      "state reads bind raw records and JSON to verified descriptors across pathname swaps",
+      statePathReads.size === 0 &&
+        Buffer.from(projectStateManifest).equals(
+          stateReadResidents.get(projectManifestPath)!,
+        ) &&
+        Buffer.from(trackedRevision).equals(
+          stateReadResidents.get(trackedRevisionPath)!,
+        ) &&
+        currentRevision === expectedRevision,
+    );
 
     const invalidSchema = project.setModelRecipe(
       {} as ReturnType<typeof modelRecipe>,
@@ -404,8 +1098,11 @@ export const test_mcp_production_project = (): void => {
     const transitiveDependentMutation = project.setModelRecipe(
       transitiveDependentModel,
     );
-    const dependencyCycleFixture = productionFixture();
     let cyclicDependencyTraversal = false;
+    let dependencyCycleFailure:
+      | ISingleProductionProjectFixtureFailure
+      | undefined;
+    const dependencyCycleFixture = productionFixture();
     try {
       const modelRoot = path.join(
         dependencyCycleFixture.root,
@@ -460,8 +1157,14 @@ export const test_mcp_production_project = (): void => {
         id: "sentinel",
       });
       cyclicDependencyTraversal = true;
+    } catch (error) {
+      dependencyCycleFailure = { error };
+      throw error;
     } finally {
-      dependencyCycleFixture.dispose();
+      preserveSingleProductionProjectFixtureCleanup(
+        dependencyCycleFailure,
+        () => dependencyCycleFixture.dispose(),
+      );
     }
     const refusedModelErase = project.eraseDesignArtifact({
       kind: "model",
@@ -525,23 +1228,142 @@ export const test_mcp_production_project = (): void => {
         ) &&
         acceptanceMutation.consequences.staleReviews.some(
           (target) => target.kind === "shot" && target.id === "second",
+        ) === false &&
+        secondShotMutation.consequences.staleReviews.some(
+          (target) => target.kind === "sequence" && target.id === "SEQ-SIGNAL",
+        ) &&
+        secondShotMutation.consequences.staleReviews.some(
+          (target) => target.kind === "sequence" && target.id === "SEQ-ANSWER",
+        ) === false &&
+        secondShotMutation.consequences.staleReviews.some(
+          (target) => target.kind === "rendition",
+        ) === false &&
+        acceptanceMutation.consequences.staleReviews.some(
+          (target) => target.kind === "sequence" && target.id === "SEQ-SIGNAL",
+        ),
+    );
+    const refusedRepaint = project.setProductionDesign(
+      productionDesign({ visualDelivery: "repainted" }),
+    );
+    TestValidator.predicate(
+      "refused delivery mutations retain only current review targets",
+      refusedRepaint.accepted === false &&
+        refusedRepaint.consequences.staleReviews.some(
+          (target) => target.kind === "rendition",
         ) === false,
     );
+    const repaintedProduction = productionDesign({
+      visualDelivery: "repainted",
+    });
+    repaintedProduction.deliverables = repaintedProduction.deliverables.map(
+      (deliverable) => ({
+        ...deliverable,
+        required: deliverable.kind === "feature",
+      }),
+    );
+    const productionMutation = project.setProductionDesign(repaintedProduction);
+    const repaintedShotMutation = project.setShotContract({
+      ...shotContract(),
+      id: "second",
+      beat: "second repaint consequence",
+    });
+    const movedSequenceShot = shotContract();
+    movedSequenceShot.id = "second";
+    movedSequenceShot.beat = "second moved sequence consequence";
+    movedSequenceShot.evidence = [
+      {
+        reason: "This shot now realizes the screenplay's answering action.",
+        scene: "SCN-002",
+      },
+    ];
+    const movedSequenceShotMutation =
+      project.setShotContract(movedSequenceShot);
+    const repaintedAcceptance = acceptanceScenarios()[0]!;
+    if (repaintedAcceptance.criterion.kind === "frame")
+      repaintedAcceptance.criterion.expectation +=
+        " The selected rendition remains readable.";
+    const repaintedAcceptanceMutation =
+      project.setAcceptanceScenario(repaintedAcceptance);
+    const movedAcceptanceMutation = project.setAcceptanceScenario({
+      ...repaintedAcceptance,
+      target: { kind: "shot", id: "second" },
+    });
+    const restoredAcceptanceMutation =
+      project.setAcceptanceScenario(repaintedAcceptance);
     const modelMutation = project.setModelRecipe(modelRecipe());
+    const formationMutation = project.setFormationDesign({
+      ...formationDesign(),
+      facingDeg: 1,
+    });
     const worldMutation = project.setWorldDesign(worldDesign());
-    const productionMutation = project.setProductionDesign(productionDesign());
     TestValidator.predicate(
-      "mutation consequences identify dependent shot and film",
+      "mutation consequences identify exact sequence and rendition review dependencies",
       modelMutation.consequences.staleRenders.includes("shot:opening") &&
         modelMutation.consequences.staleRenders.includes("shot:second") &&
         worldMutation.consequences.staleReviews.some(
           (target) => target.kind === "film",
         ) &&
         productionMutation.consequences.staleRenders.length > 0 &&
+        repaintedShotMutation.consequences.staleReviews.some(
+          (target) => target.kind === "rendition" && target.id === "second",
+        ) &&
+        repaintedShotMutation.consequences.staleReviews.some(
+          (target) => target.kind === "sequence" && target.id === "SEQ-SIGNAL",
+        ) &&
+        repaintedShotMutation.consequences.staleReviews.some(
+          (target) => target.kind === "sequence" && target.id === "SEQ-ANSWER",
+        ) === false &&
+        movedSequenceShotMutation.consequences.staleReviews.some(
+          (target) => target.kind === "sequence" && target.id === "SEQ-SIGNAL",
+        ) &&
+        movedSequenceShotMutation.consequences.staleReviews.some(
+          (target) => target.kind === "sequence" && target.id === "SEQ-ANSWER",
+        ) &&
+        repaintedAcceptanceMutation.consequences.staleReviews.some(
+          (target) => target.kind === "rendition" && target.id === "opening",
+        ) &&
+        movedAcceptanceMutation.consequences.staleReviews.some(
+          (target) => target.kind === "shot" && target.id === "opening",
+        ) &&
+        movedAcceptanceMutation.consequences.staleReviews.some(
+          (target) => target.kind === "shot" && target.id === "second",
+        ) &&
+        movedAcceptanceMutation.consequences.staleReviews.some(
+          (target) => target.kind === "rendition" && target.id === "opening",
+        ) &&
+        movedAcceptanceMutation.consequences.staleReviews.some(
+          (target) => target.kind === "rendition" && target.id === "second",
+        ) &&
+        movedAcceptanceMutation.consequences.staleReviews.some(
+          (target) => target.kind === "sequence" && target.id === "SEQ-SIGNAL",
+        ) &&
+        movedAcceptanceMutation.consequences.staleReviews.some(
+          (target) => target.kind === "sequence" && target.id === "SEQ-ANSWER",
+        ) &&
+        restoredAcceptanceMutation.accepted &&
+        modelMutation.consequences.staleReviews.some(
+          (target) => target.kind === "rendition" && target.id === "opening",
+        ) &&
+        formationMutation.consequences.staleReviews.some(
+          (target) => target.kind === "rendition" && target.id === "opening",
+        ) &&
+        worldMutation.consequences.staleReviews.some(
+          (target) => target.kind === "sequence" && target.id === "SEQ-SIGNAL",
+        ) &&
+        project.setProductionDesign(productionDesign()).accepted &&
         project.eraseDesignArtifact({
           kind: "shot",
           id: "second",
         }).accepted,
+    );
+    const movedReviewKeys =
+      movedSequenceShotMutation.consequences.staleReviews.map((target) =>
+        JSON.stringify(target),
+      );
+    TestValidator.equals(
+      "merged review consequences remain unique and code-unit sorted",
+      movedReviewKeys,
+      [...new Set(movedReviewKeys)].sort(compareCodeUnits),
     );
     project.setShotContract(shotContract());
     TestValidator.predicate(
@@ -554,29 +1376,152 @@ export const test_mcp_production_project = (): void => {
 
     const first = AutoMovieProductionProject.open(fixture.root);
     const stale = AutoMovieProductionProject.open(fixture.root);
-    first.setWorldDesign(worldDesign());
+    const staleRevision = stale.revision();
+    const concurrentDesign = productionDesign({
+      title: "fixture-film concurrent revision",
+    });
+    const concurrentMutation = first.setProductionDesign(concurrentDesign);
     TestValidator.predicate(
       "optimistic revision rejects stale resident writers",
-      throws(() => stale.setProductionDesign(productionDesign())),
+      concurrentMutation.accepted &&
+        concurrentMutation.revision > staleRevision &&
+        throws(
+          () => stale.setProductionDesign(productionDesign()),
+          "Production revision changed",
+        ),
+    );
+    const staleEraser = AutoMovieProductionProject.open(fixture.root);
+    const staleEraseRevision = staleEraser.revision();
+    const removableFormation = {
+      ...formationDesign(),
+      id: "stale-erase",
+    };
+    const formationAddition = first.setFormationDesign(removableFormation);
+    TestValidator.predicate(
+      "optimistic revision rejects stale resident erasers",
+      formationAddition.accepted &&
+        formationAddition.revision > staleEraseRevision &&
+        throws(
+          () =>
+            staleEraser.eraseDesignArtifact({
+              kind: "formation",
+              id: removableFormation.id,
+            }),
+          "Production revision changed",
+        ) &&
+        AutoMovieProductionProject.open(fixture.root).eraseDesignArtifact({
+          kind: "formation",
+          id: removableFormation.id,
+        }).accepted,
     );
 
     const compiler = new AutoMovieProductionCompiler(
       AutoMovieProductionProject.open(fixture.root),
     );
     const compiled = compiler.compile({ scope: "source" });
-    TestValidator.predicate("project compiler fixture", compiled.success);
-    const linkedGenerated = productionFixture();
-    const outsideGenerated = fs.mkdtempSync(
-      path.join(os.tmpdir(), "automovie-generated-outside-"),
+    TestValidator.predicate(
+      "project compiler fixture",
+      productionCompileSucceeded("project compiler fixture", compiled),
     );
+    const generatedReadPath = path.join(
+      project.generatedRoot(),
+      "shots/opening.json",
+    );
+    const generatedReadParked = `${generatedReadPath}.parked`;
+    const generatedReadBefore = fs.readFileSync(generatedReadPath);
+    const nativeGeneratedRead = fs.readFileSync;
+    let generatedPathRead = false;
+    fs.readFileSync = ((
+      target: fs.PathOrFileDescriptor,
+      ...args: unknown[]
+    ): unknown => {
+      if (
+        typeof target !== "number" &&
+        path.resolve(target.toString()) === path.resolve(generatedReadPath)
+      ) {
+        generatedPathRead = true;
+        fs.renameSync(generatedReadPath, generatedReadParked);
+        fs.writeFileSync(generatedReadPath, "transient replacement");
+        let generatedTransientReadFailure:
+          | IProductionProjectFixtureFailure
+          | undefined;
+        try {
+          return Reflect.apply(nativeGeneratedRead, fs, [target, ...args]);
+        } catch (error) {
+          generatedTransientReadFailure = { error };
+          throw error;
+        } finally {
+          preserveProductionProjectFixtureCleanup(
+            generatedTransientReadFailure,
+            [
+              {
+                resource: "generated-read transient replacement",
+                cleanup: () => fs.rmSync(generatedReadPath),
+              },
+              {
+                resource: "generated-read parked resident",
+                cleanup: () =>
+                  fs.renameSync(generatedReadParked, generatedReadPath),
+              },
+            ],
+          );
+        }
+      }
+      return Reflect.apply(nativeGeneratedRead, fs, [target, ...args]);
+    }) as typeof fs.readFileSync;
+    let generatedReadBytes: Uint8Array = new Uint8Array();
+    let generatedReadFailure: IProductionProjectFixtureFailure | undefined;
     try {
+      generatedReadBytes = project.readGeneratedFile("shots/opening.json");
+    } catch (error) {
+      generatedReadFailure = { error };
+      throw error;
+    } finally {
+      const generatedResidentParked = fs.existsSync(generatedReadParked);
+      preserveProductionProjectFixtureCleanup(generatedReadFailure, [
+        {
+          resource: "generated-read native hook",
+          cleanup: () => {
+            fs.readFileSync = nativeGeneratedRead;
+          },
+        },
+        ...(generatedResidentParked
+          ? [
+              {
+                resource: "generated-read transient replacement",
+                cleanup: () => fs.rmSync(generatedReadPath, { force: true }),
+              },
+              {
+                resource: "generated-read parked resident",
+                cleanup: () =>
+                  fs.renameSync(generatedReadParked, generatedReadPath),
+              },
+            ]
+          : []),
+      ]);
+    }
+    TestValidator.predicate(
+      "generated reads bind bytes to the verified descriptor across a pathname swap",
+      generatedPathRead === false &&
+        Buffer.from(generatedReadBytes).equals(generatedReadBefore),
+    );
+    const linkedGenerated = productionFixture();
+    let outsideGenerated: string | undefined;
+    let linkedGeneratedFailure: IProductionProjectFixtureFailure | undefined;
+    try {
+      outsideGenerated = fs.mkdtempSync(
+        path.join(os.tmpdir(), "automovie-generated-outside-"),
+      );
       const linkedProject = AutoMovieProductionProject.open(
         linkedGenerated.root,
       );
       const linkedCompiler = new AutoMovieProductionCompiler(linkedProject);
       TestValidator.predicate(
         "linked generated fixture compiles",
-        linkedCompiler.compile({ scope: "source" }).success,
+        productionCompileSucceeded(
+          "linked generated fixture",
+          linkedCompiler.compile({ scope: "source" }),
+        ),
       );
       const shotsRoot = path.join(linkedProject.generatedRoot(), "shots");
       fs.copyFileSync(
@@ -595,17 +1540,42 @@ export const test_mcp_production_project = (): void => {
             (item) => item.code === "generated-path-outside",
           ),
       );
+    } catch (error) {
+      linkedGeneratedFailure = { error };
+      throw error;
     } finally {
-      linkedGenerated.dispose();
-      fs.rmSync(outsideGenerated, { force: true, recursive: true });
+      const completedOutsideGenerated = outsideGenerated;
+      preserveProductionProjectFixtureCleanup(linkedGeneratedFailure, [
+        {
+          resource: "linked-generated production fixture",
+          cleanup: () => linkedGenerated.dispose(),
+        },
+        ...(completedOutsideGenerated === undefined
+          ? []
+          : [
+              {
+                resource: "linked-generated outside root",
+                cleanup: () =>
+                  fs.rmSync(completedOutsideGenerated, {
+                    force: true,
+                    recursive: true,
+                  }),
+              },
+            ]),
+      ]);
     }
     const linkedState = productionFixture();
-    const outsideState = fs.mkdtempSync(
-      path.join(os.tmpdir(), "automovie-state-outside-"),
-    );
+    let outsideState: string | undefined;
+    let linkedStateFailure: IProductionProjectFixtureFailure | undefined;
     try {
+      outsideState = fs.mkdtempSync(
+        path.join(os.tmpdir(), "automovie-state-outside-"),
+      );
       const stateProject = AutoMovieProductionProject.open(linkedState.root);
-      const modelRoot = path.join(linkedState.root, ".automovie/design/models");
+      const modelRoot = path.join(
+        linkedState.root,
+        ".automovie/design/shared/models",
+      );
       fs.copyFileSync(
         path.join(modelRoot, "sentinel.json"),
         path.join(outsideState, "sentinel.json"),
@@ -616,30 +1586,75 @@ export const test_mcp_production_project = (): void => {
         "tracked design reads refuse a nested state junction",
         throws(() => stateProject.graph()),
       );
+    } catch (error) {
+      linkedStateFailure = { error };
+      throw error;
     } finally {
-      linkedState.dispose();
-      fs.rmSync(outsideState, { force: true, recursive: true });
+      const completedOutsideState = outsideState;
+      preserveProductionProjectFixtureCleanup(linkedStateFailure, [
+        {
+          resource: "linked-state production fixture",
+          cleanup: () => linkedState.dispose(),
+        },
+        ...(completedOutsideState === undefined
+          ? []
+          : [
+              {
+                resource: "linked-state outside root",
+                cleanup: () =>
+                  fs.rmSync(completedOutsideState, {
+                    force: true,
+                    recursive: true,
+                  }),
+              },
+            ]),
+      ]);
     }
     const linkedStateFile = productionFixture();
-    const outsideStateFile = fs.mkdtempSync(
-      path.join(os.tmpdir(), "automovie-state-file-outside-"),
-    );
+    let outsideStateFile: string | undefined;
+    let linkedStateFileFailure: IProductionProjectFixtureFailure | undefined;
     try {
+      outsideStateFile = fs.mkdtempSync(
+        path.join(os.tmpdir(), "automovie-state-file-outside-"),
+      );
       const stateProject = AutoMovieProductionProject.open(
         linkedStateFile.root,
       );
       fs.symlinkSync(
         outsideStateFile,
-        path.join(linkedStateFile.root, ".automovie/design/models/unsafe.json"),
+        path.join(
+          linkedStateFile.root,
+          ".automovie/design/shared/models/unsafe.json",
+        ),
         "junction",
       );
       TestValidator.predicate(
         "tracked keyed design refuses a symbolic JSON entry",
         throws(() => stateProject.graph()),
       );
+    } catch (error) {
+      linkedStateFileFailure = { error };
+      throw error;
     } finally {
-      linkedStateFile.dispose();
-      fs.rmSync(outsideStateFile, { force: true, recursive: true });
+      const completedOutsideStateFile = outsideStateFile;
+      preserveProductionProjectFixtureCleanup(linkedStateFileFailure, [
+        {
+          resource: "linked-state-file production fixture",
+          cleanup: () => linkedStateFile.dispose(),
+        },
+        ...(completedOutsideStateFile === undefined
+          ? []
+          : [
+              {
+                resource: "linked-state-file outside root",
+                cleanup: () =>
+                  fs.rmSync(completedOutsideStateFile, {
+                    force: true,
+                    recursive: true,
+                  }),
+              },
+            ]),
+      ]);
     }
     const ownerProject = AutoMovieProductionProject.open(fixture.root);
     TestValidator.predicate(
@@ -662,6 +1677,106 @@ export const test_mcp_production_project = (): void => {
       files: retained,
     };
     ownerProject.commitGenerated(retainedBytes, smaller);
+    const stableGeneratedRevision = ownerProject.revision();
+    const generatedManifestPath = path.join(
+      fixture.root,
+      ".automovie/productions/fixture-film/generated-manifest.json",
+    );
+    const generatedManifestBefore = fs.readFileSync(generatedManifestPath);
+    const generatedManifestParked = `${generatedManifestPath}.read-parked`;
+    const nativeGeneratedManifestRead = fs.readFileSync;
+    let generatedManifestPathRead = false;
+    fs.readFileSync = ((
+      target: fs.PathOrFileDescriptor,
+      ...args: unknown[]
+    ): unknown => {
+      if (
+        typeof target !== "number" &&
+        path.resolve(target.toString()) === path.resolve(generatedManifestPath)
+      ) {
+        generatedManifestPathRead = true;
+        fs.renameSync(generatedManifestPath, generatedManifestParked);
+        fs.writeFileSync(generatedManifestPath, "transient generated manifest");
+        let generatedManifestTransientReadFailure:
+          | IProductionProjectFixtureFailure
+          | undefined;
+        try {
+          return Reflect.apply(nativeGeneratedManifestRead, fs, [
+            target,
+            ...args,
+          ]);
+        } catch (error) {
+          generatedManifestTransientReadFailure = { error };
+          throw error;
+        } finally {
+          preserveProductionProjectFixtureCleanup(
+            generatedManifestTransientReadFailure,
+            [
+              {
+                resource: "generated-manifest transient replacement",
+                cleanup: () => fs.rmSync(generatedManifestPath),
+              },
+              {
+                resource: "generated-manifest parked resident",
+                cleanup: () =>
+                  fs.renameSync(generatedManifestParked, generatedManifestPath),
+              },
+            ],
+          );
+        }
+      }
+      return Reflect.apply(nativeGeneratedManifestRead, fs, [target, ...args]);
+    }) as typeof fs.readFileSync;
+    let stableGeneratedCommitRejected = false;
+    let repeatedGeneratedRevision = -1;
+    let generatedManifestReadFailure:
+      | IProductionProjectFixtureFailure
+      | undefined;
+    try {
+      repeatedGeneratedRevision = ownerProject.commitGenerated(
+        retainedBytes,
+        smaller,
+      );
+    } catch (error) {
+      generatedManifestReadFailure = { error };
+      stableGeneratedCommitRejected = true;
+    } finally {
+      const generatedManifestResidentParked = fs.existsSync(
+        generatedManifestParked,
+      );
+      preserveProductionProjectFixtureCleanup(generatedManifestReadFailure, [
+        {
+          resource: "generated-manifest native hook",
+          cleanup: () => {
+            fs.readFileSync = nativeGeneratedManifestRead;
+          },
+        },
+        ...(generatedManifestResidentParked
+          ? [
+              {
+                resource: "generated-manifest transient replacement",
+                cleanup: () =>
+                  fs.rmSync(generatedManifestPath, { force: true }),
+              },
+              {
+                resource: "generated-manifest parked resident",
+                cleanup: () =>
+                  fs.renameSync(generatedManifestParked, generatedManifestPath),
+              },
+            ]
+          : []),
+      ]);
+    }
+    TestValidator.predicate(
+      "generated manifest guards bind exact bytes to descriptors",
+      stableGeneratedCommitRejected === false &&
+        generatedManifestPathRead === false &&
+        repeatedGeneratedRevision === stableGeneratedRevision &&
+        ownerProject.revision() === stableGeneratedRevision &&
+        nativeGeneratedManifestRead(generatedManifestPath).equals(
+          generatedManifestBefore,
+        ),
+    );
     TestValidator.predicate(
       "generated commit deletes formerly declared stale files",
       fs.existsSync(
@@ -813,7 +1928,7 @@ export const test_mcp_production_project = (): void => {
     );
     const renderReceiptDirectory = path.join(
       fixture.root,
-      ".automovie/render-receipts",
+      ".automovie/productions/fixture-film/render-receipts",
     );
     const renderReceiptPath = path.join(
       renderReceiptDirectory,
@@ -930,216 +2045,404 @@ export const test_mcp_production_project = (): void => {
       throws(() => ownerProject.readRenderFile("absent.bin")) &&
         throws(() => ownerProject.readRenderFile(renderBundle)),
     );
+    let outsideRenderReadFailure:
+      | ISingleProductionProjectFixtureFailure
+      | undefined;
     const outsideRenderRead = fs.mkdtempSync(
       path.join(os.tmpdir(), "automovie-render-read-"),
     );
-    const renderReadJunction = path.join(
-      ownerProject.renderRoot(),
-      "read-junction",
-    );
-    fs.writeFileSync(path.join(outsideRenderRead, "escape.bin"), "escape");
-    fs.symlinkSync(outsideRenderRead, renderReadJunction, "junction");
-    TestValidator.predicate(
-      "render reads reject nested junction escapes",
-      throws(() => ownerProject.readRenderFile("read-junction/escape.bin")),
-    );
-    fs.rmSync(renderReadJunction);
-    const renderFileLink = path.join(
-      ownerProject.renderRoot(),
-      "read-file-link.bin",
-    );
-    fs.symlinkSync(
-      path.join(outsideRenderRead, "escape.bin"),
-      renderFileLink,
-      "file",
-    );
-    const renderParentFile = path.join(
-      ownerProject.renderRoot(),
-      "read-parent-file",
-    );
-    fs.writeFileSync(renderParentFile, "not a directory");
-    TestValidator.predicate(
-      "render reads reject linked files and non-directory ancestry",
-      throws(() => ownerProject.readRenderFile("read-file-link.bin")) &&
-        throws(() =>
-          ownerProject.readRenderFile("read-parent-file/escape.bin"),
-        ),
-    );
-    fs.unlinkSync(renderFileLink);
-    fs.rmSync(renderParentFile);
-
-    const descriptorRace = (
-      replacement: "directory" | "regular" | "symlink",
-    ): boolean => {
-      const directory = path.join(
-        ownerProject.renderRoot(),
-        `read-descriptor-${replacement}`,
-      );
-      const file = path.join(directory, "frame.bin");
-      const parked = `${file}.parked`;
-      fs.mkdirSync(directory);
-      fs.writeFileSync(file, "resident");
-      const nativeOpen = fs.openSync;
-      let swapped = false;
-      fs.openSync = ((target: fs.PathLike, ...args: unknown[]): number => {
-        const descriptor = Reflect.apply(nativeOpen, fs, [target, ...args]);
-        if (
-          swapped === false &&
-          path.resolve(target.toString()) === path.resolve(file)
-        ) {
-          fs.renameSync(file, parked);
-          if (replacement === "directory") fs.mkdirSync(file);
-          else if (replacement === "regular")
-            fs.writeFileSync(file, "replacement");
-          else
-            fs.symlinkSync(
-              path.join(outsideRenderRead, "escape.bin"),
-              file,
-              "file",
-            );
-          swapped = true;
-        }
-        return descriptor;
-      }) as typeof fs.openSync;
-      let rejected = false;
-      try {
-        rejected = throws(() =>
-          ownerProject.readRenderFile(
-            path.relative(ownerProject.renderRoot(), file),
-          ),
-        );
-      } finally {
-        fs.openSync = nativeOpen;
-        if (fs.lstatSync(file).isSymbolicLink()) fs.unlinkSync(file);
-        else fs.rmSync(file, { recursive: true, force: true });
-        fs.renameSync(parked, file);
-        fs.rmSync(directory, { recursive: true, force: true });
-      }
-      return swapped && rejected;
-    };
-    TestValidator.predicate(
-      "an opened descriptor cannot bless a replaced render filename",
-      descriptorRace("symlink") &&
-        descriptorRace("directory") &&
-        descriptorRace("regular"),
-    );
-
-    const ancestryRace = (
-      replacement: "directory" | "junction" | "missing",
-    ): boolean => {
-      const directory = path.join(
-        ownerProject.renderRoot(),
-        `read-ancestry-${replacement}`,
-      );
-      const parked = `${directory}.parked`;
-      const file = path.join(directory, "frame.bin");
-      fs.mkdirSync(directory);
-      fs.writeFileSync(file, "resident");
-      const nativeOpen = fs.openSync;
-      let swapped = false;
-      fs.openSync = ((target: fs.PathLike, ...args: unknown[]): number => {
-        const descriptor = Reflect.apply(nativeOpen, fs, [target, ...args]);
-        if (
-          swapped === false &&
-          path.resolve(target.toString()) === path.resolve(file)
-        ) {
-          fs.renameSync(directory, parked);
-          if (replacement === "directory") {
-            fs.mkdirSync(directory);
-            fs.writeFileSync(file, "replacement");
-          } else if (replacement === "junction")
-            fs.symlinkSync(outsideRenderRead, directory, "junction");
-          swapped = true;
-        }
-        return descriptor;
-      }) as typeof fs.openSync;
-      let rejected = false;
-      try {
-        rejected = throws(() =>
-          ownerProject.readRenderFile(
-            path.relative(ownerProject.renderRoot(), file),
-          ),
-        );
-      } finally {
-        fs.openSync = nativeOpen;
-        if (fs.existsSync(directory)) {
-          if (fs.lstatSync(directory).isSymbolicLink())
-            fs.unlinkSync(directory);
-          else fs.rmSync(directory, { recursive: true, force: true });
-        }
-        fs.renameSync(parked, directory);
-        fs.rmSync(directory, { recursive: true, force: true });
-      }
-      return swapped && rejected;
-    };
-    TestValidator.predicate(
-      "render reads retain exact physical ancestry after opening",
-      ancestryRace("missing") &&
-        ancestryRace("junction") &&
-        ancestryRace("directory"),
-    );
-
-    const afterReadDirectory = path.join(
-      ownerProject.renderRoot(),
-      "read-after-descriptor",
-    );
-    const afterReadFile = path.join(afterReadDirectory, "frame.bin");
-    const afterReadParked = `${afterReadFile}.parked`;
-    fs.mkdirSync(afterReadDirectory);
-    fs.writeFileSync(afterReadFile, "resident");
-    const nativeDescriptorRead = fs.readFileSync;
-    let swappedAfterRead = false;
-    fs.readFileSync = ((
-      target: fs.PathOrFileDescriptor,
-      ...args: unknown[]
-    ): unknown => {
-      const bytes = Reflect.apply(nativeDescriptorRead, fs, [target, ...args]);
-      if (swappedAfterRead === false && typeof target === "number") {
-        fs.renameSync(afterReadFile, afterReadParked);
-        fs.writeFileSync(afterReadFile, "replacement");
-        swappedAfterRead = true;
-      }
-      return bytes;
-    }) as typeof fs.readFileSync;
-    let afterReadRejected = false;
     try {
-      afterReadRejected = throws(() =>
-        ownerProject.readRenderFile("read-after-descriptor/frame.bin"),
+      const renderReadJunction = path.join(
+        ownerProject.renderRoot(),
+        "read-junction",
       );
-    } finally {
-      fs.readFileSync = nativeDescriptorRead;
-      fs.rmSync(afterReadFile);
-      fs.renameSync(afterReadParked, afterReadFile);
-      fs.rmSync(afterReadDirectory, { recursive: true, force: true });
-    }
-    const deniedOpenFile = path.join(
-      ownerProject.renderRoot(),
-      "read-open-denied.bin",
-    );
-    fs.writeFileSync(deniedOpenFile, "resident");
-    const nativeDeniedOpen = fs.openSync;
-    fs.openSync = ((target: fs.PathLike, ...args: unknown[]): number => {
-      if (path.resolve(target.toString()) === path.resolve(deniedOpenFile)) {
-        const error = new Error("injected render open denial");
-        Object.assign(error, { code: "EACCES" });
+      fs.writeFileSync(path.join(outsideRenderRead, "escape.bin"), "escape");
+      fs.writeFileSync(path.join(outsideRenderRead, "frame.bin"), "outside");
+      fs.symlinkSync(outsideRenderRead, renderReadJunction, "junction");
+      TestValidator.predicate(
+        "render reads reject nested junction escapes",
+        throws(() => ownerProject.readRenderFile("read-junction/escape.bin")),
+      );
+      fs.rmSync(renderReadJunction);
+      const renderFileLink = path.join(
+        ownerProject.renderRoot(),
+        "read-file-link.bin",
+      );
+      fs.symlinkSync(
+        path.join(outsideRenderRead, "escape.bin"),
+        renderFileLink,
+        "file",
+      );
+      const renderParentFile = path.join(
+        ownerProject.renderRoot(),
+        "read-parent-file",
+      );
+      fs.writeFileSync(renderParentFile, "not a directory");
+      TestValidator.predicate(
+        "render reads reject linked files and non-directory ancestry",
+        throws(() => ownerProject.readRenderFile("read-file-link.bin")) &&
+          throws(() =>
+            ownerProject.readRenderFile("read-parent-file/escape.bin"),
+          ),
+      );
+      fs.unlinkSync(renderFileLink);
+      fs.rmSync(renderParentFile);
+
+      const crossApiIdentityFile = path.join(
+        ownerProject.renderRoot(),
+        "read-cross-api-identity.bin",
+      );
+      fs.writeFileSync(crossApiIdentityFile, "resident");
+      const nativeCrossApiStat = fs.statSync;
+      const mutableCrossApiStatFs = fs as { statSync: typeof fs.statSync };
+      let divergentPathIdentityObserved = false;
+      mutableCrossApiStatFs.statSync = ((
+        target: fs.PathLike,
+        ...args: unknown[]
+      ): unknown => {
+        const status = Reflect.apply(nativeCrossApiStat, fs, [
+          target,
+          ...args,
+        ]) as fs.Stats | fs.BigIntStats;
+        if (
+          path.resolve(target.toString()) === path.resolve(crossApiIdentityFile)
+        ) {
+          divergentPathIdentityObserved = true;
+          return {
+            ...status,
+            ino:
+              typeof status.ino === "bigint"
+                ? status.ino + BigInt(1)
+                : status.ino + 1,
+          };
+        }
+        return status;
+      }) as typeof fs.statSync;
+      let crossApiIdentityRead = "";
+      let crossApiIdentityFailure: IProductionProjectFixtureFailure | undefined;
+      try {
+        fs.statSync(crossApiIdentityFile, { bigint: true });
+        crossApiIdentityRead = Buffer.from(
+          ownerProject.readRenderFile("read-cross-api-identity.bin"),
+        ).toString("utf8");
+      } catch (error) {
+        crossApiIdentityFailure = { error };
         throw error;
+      } finally {
+        preserveProductionProjectFixtureCleanup(crossApiIdentityFailure, [
+          {
+            resource: "cross-API stat hook",
+            cleanup: () => {
+              mutableCrossApiStatFs.statSync = nativeCrossApiStat;
+            },
+          },
+          {
+            resource: "cross-API identity file",
+            cleanup: () => fs.rmSync(crossApiIdentityFile),
+          },
+        ]);
       }
-      return Reflect.apply(nativeDeniedOpen, fs, [target, ...args]);
-    }) as typeof fs.openSync;
-    let deniedOpenRejected = false;
-    try {
-      deniedOpenRejected = throws(() =>
-        ownerProject.readRenderFile("read-open-denied.bin"),
+      TestValidator.predicate(
+        "render reads compare descriptor identities within one platform API domain",
+        divergentPathIdentityObserved && crossApiIdentityRead === "resident",
       );
+
+      const descriptorCleanupFile = path.join(
+        ownerProject.renderRoot(),
+        "read-descriptor-cleanup.bin",
+      );
+      fs.writeFileSync(descriptorCleanupFile, "resident");
+      exerciseRenderFileDescriptorCleanup(
+        ownerProject,
+        path.relative(ownerProject.renderRoot(), descriptorCleanupFile),
+      );
+      fs.rmSync(descriptorCleanupFile);
+
+      const descriptorRace = (
+        replacement: "directory" | "regular" | "symlink",
+      ): boolean => {
+        const directory = path.join(
+          ownerProject.renderRoot(),
+          `read-descriptor-${replacement}`,
+        );
+        const file = path.join(directory, "frame.bin");
+        const parked = `${file}.parked`;
+        fs.mkdirSync(directory);
+        fs.writeFileSync(file, "resident");
+        const nativeOpen = fs.openSync;
+        let swapped = false;
+        fs.openSync = ((target: fs.PathLike, ...args: unknown[]): number => {
+          const descriptor = Reflect.apply(nativeOpen, fs, [target, ...args]);
+          if (
+            swapped === false &&
+            path.resolve(target.toString()) === path.resolve(file)
+          ) {
+            fs.renameSync(file, parked);
+            if (replacement === "directory") fs.mkdirSync(file);
+            else if (replacement === "regular")
+              fs.writeFileSync(file, "replacement");
+            else
+              fs.symlinkSync(
+                path.join(outsideRenderRead, "escape.bin"),
+                file,
+                "file",
+              );
+            swapped = true;
+          }
+          return descriptor;
+        }) as typeof fs.openSync;
+        let rejected = false;
+        let descriptorRaceFailure: IProductionProjectFixtureFailure | undefined;
+        try {
+          rejected = throws(() =>
+            ownerProject.readRenderFile(
+              path.relative(ownerProject.renderRoot(), file),
+            ),
+          );
+        } catch (error) {
+          descriptorRaceFailure = { error };
+          throw error;
+        } finally {
+          const descriptorParked = fs.existsSync(parked);
+          preserveProductionProjectFixtureCleanup(descriptorRaceFailure, [
+            {
+              resource: `descriptor-race ${replacement} open hook`,
+              cleanup: () => {
+                fs.openSync = nativeOpen;
+              },
+            },
+            ...(descriptorParked
+              ? [
+                  {
+                    resource: `descriptor-race ${replacement} active replacement`,
+                    cleanup: () => {
+                      if (fs.existsSync(file)) {
+                        if (fs.lstatSync(file).isSymbolicLink())
+                          fs.unlinkSync(file);
+                        else fs.rmSync(file, { recursive: true, force: true });
+                      }
+                    },
+                  },
+                  {
+                    resource: `descriptor-race ${replacement} parked file`,
+                    cleanup: () => fs.renameSync(parked, file),
+                  },
+                ]
+              : []),
+            {
+              resource: `descriptor-race ${replacement} directory`,
+              cleanup: () =>
+                fs.rmSync(directory, { recursive: true, force: true }),
+            },
+          ]);
+        }
+        return swapped && rejected;
+      };
+      TestValidator.predicate(
+        "an opened descriptor cannot bless a replaced render filename",
+        descriptorRace("symlink") &&
+          descriptorRace("directory") &&
+          descriptorRace("regular"),
+      );
+
+      const ancestryRace = (
+        replacement: "directory" | "junction" | "missing",
+      ): boolean => {
+        const directory = path.join(
+          ownerProject.renderRoot(),
+          `read-ancestry-${replacement}`,
+        );
+        const parked = `${directory}.parked`;
+        const file = path.join(directory, "frame.bin");
+        fs.mkdirSync(directory);
+        fs.writeFileSync(file, "resident");
+        const nativeOpen = fs.openSync;
+        let swapped = false;
+        fs.openSync = ((target: fs.PathLike, ...args: unknown[]): number => {
+          if (
+            swapped === false &&
+            path.resolve(target.toString()) === path.resolve(file)
+          ) {
+            fs.renameSync(directory, parked);
+            if (replacement === "directory") {
+              fs.mkdirSync(directory);
+              fs.writeFileSync(file, "replacement");
+            } else if (replacement === "junction")
+              fs.symlinkSync(outsideRenderRead, directory, "junction");
+            swapped = true;
+          }
+          return Reflect.apply(nativeOpen, fs, [target, ...args]);
+        }) as typeof fs.openSync;
+        let rejected = false;
+        let ancestryRaceFailure: IProductionProjectFixtureFailure | undefined;
+        try {
+          rejected = throws(() =>
+            ownerProject.readRenderFile(
+              path.relative(ownerProject.renderRoot(), file),
+            ),
+          );
+        } catch (error) {
+          ancestryRaceFailure = { error };
+          throw error;
+        } finally {
+          const ancestryParked = fs.existsSync(parked);
+          preserveProductionProjectFixtureCleanup(ancestryRaceFailure, [
+            {
+              resource: `ancestry-race ${replacement} open hook`,
+              cleanup: () => {
+                fs.openSync = nativeOpen;
+              },
+            },
+            ...(ancestryParked
+              ? [
+                  {
+                    resource: `ancestry-race ${replacement} active replacement`,
+                    cleanup: () => {
+                      if (fs.existsSync(directory)) {
+                        if (fs.lstatSync(directory).isSymbolicLink())
+                          fs.unlinkSync(directory);
+                        else
+                          fs.rmSync(directory, {
+                            recursive: true,
+                            force: true,
+                          });
+                      }
+                    },
+                  },
+                  {
+                    resource: `ancestry-race ${replacement} parked directory`,
+                    cleanup: () => fs.renameSync(parked, directory),
+                  },
+                ]
+              : []),
+            {
+              resource: `ancestry-race ${replacement} directory`,
+              cleanup: () =>
+                fs.rmSync(directory, { recursive: true, force: true }),
+            },
+          ]);
+        }
+        return swapped && rejected;
+      };
+      TestValidator.predicate(
+        "render reads retain exact physical ancestry across descriptor acquisition",
+        ancestryRace("missing") &&
+          ancestryRace("junction") &&
+          ancestryRace("directory"),
+      );
+
+      const afterReadDirectory = path.join(
+        ownerProject.renderRoot(),
+        "read-after-descriptor",
+      );
+      const afterReadFile = path.join(afterReadDirectory, "frame.bin");
+      const afterReadParked = `${afterReadFile}.parked`;
+      fs.mkdirSync(afterReadDirectory);
+      fs.writeFileSync(afterReadFile, "resident");
+      const nativeDescriptorRead = fs.readFileSync;
+      let swappedAfterRead = false;
+      fs.readFileSync = ((
+        target: fs.PathOrFileDescriptor,
+        ...args: unknown[]
+      ): unknown => {
+        // prettier-ignore
+        const bytes = Reflect.apply(nativeDescriptorRead, fs, [target, ...args]);
+        if (swappedAfterRead === false && typeof target === "number") {
+          fs.renameSync(afterReadFile, afterReadParked);
+          fs.writeFileSync(afterReadFile, "replacement");
+          swappedAfterRead = true;
+        }
+        return bytes;
+      }) as typeof fs.readFileSync;
+      let afterReadRejected = false;
+      let afterReadFailure: IProductionProjectFixtureFailure | undefined;
+      try {
+        afterReadRejected = throws(() =>
+          ownerProject.readRenderFile("read-after-descriptor/frame.bin"),
+        );
+      } catch (error) {
+        afterReadFailure = { error };
+        throw error;
+      } finally {
+        const afterReadWasParked = fs.existsSync(afterReadParked);
+        preserveProductionProjectFixtureCleanup(afterReadFailure, [
+          {
+            resource: "post-descriptor read hook",
+            cleanup: () => {
+              fs.readFileSync = nativeDescriptorRead;
+            },
+          },
+          ...(afterReadWasParked
+            ? [
+                {
+                  resource: "post-descriptor active replacement",
+                  cleanup: () => {
+                    if (fs.existsSync(afterReadFile)) fs.rmSync(afterReadFile);
+                  },
+                },
+                {
+                  resource: "post-descriptor parked file",
+                  cleanup: () => fs.renameSync(afterReadParked, afterReadFile),
+                },
+              ]
+            : []),
+          {
+            resource: "post-descriptor directory",
+            cleanup: () =>
+              fs.rmSync(afterReadDirectory, { recursive: true, force: true }),
+          },
+        ]);
+      }
+      const deniedOpenFile = path.join(
+        ownerProject.renderRoot(),
+        "read-open-denied.bin",
+      );
+      fs.writeFileSync(deniedOpenFile, "resident");
+      const nativeDeniedOpen = fs.openSync;
+      fs.openSync = ((target: fs.PathLike, ...args: unknown[]): number => {
+        if (path.resolve(target.toString()) === path.resolve(deniedOpenFile)) {
+          const error = new Error("injected render open denial");
+          Object.assign(error, { code: "EACCES" });
+          throw error;
+        }
+        return Reflect.apply(nativeDeniedOpen, fs, [target, ...args]);
+      }) as typeof fs.openSync;
+      let deniedOpenRejected = false;
+      let deniedOpenFailure: IProductionProjectFixtureFailure | undefined;
+      try {
+        deniedOpenRejected = throws(() =>
+          ownerProject.readRenderFile("read-open-denied.bin"),
+        );
+      } catch (error) {
+        deniedOpenFailure = { error };
+        throw error;
+      } finally {
+        preserveProductionProjectFixtureCleanup(deniedOpenFailure, [
+          {
+            resource: "denied-open hook",
+            cleanup: () => {
+              fs.openSync = nativeDeniedOpen;
+            },
+          },
+          {
+            resource: "denied-open file",
+            cleanup: () => fs.rmSync(deniedOpenFile),
+          },
+        ]);
+      }
+      TestValidator.predicate(
+        "render reads revalidate after descriptor I/O and preserve non-absence errors",
+        swappedAfterRead && afterReadRejected && deniedOpenRejected,
+      );
+    } catch (error) {
+      outsideRenderReadFailure = { error };
+      throw error;
     } finally {
-      fs.openSync = nativeDeniedOpen;
-      fs.rmSync(deniedOpenFile);
+      preserveSingleProductionProjectFixtureCleanup(
+        outsideRenderReadFailure,
+        () => fs.rmSync(outsideRenderRead, { force: true, recursive: true }),
+      );
     }
-    TestValidator.predicate(
-      "render reads revalidate after descriptor I/O and preserve non-absence errors",
-      swappedAfterRead && afterReadRejected && deniedOpenRejected,
-    );
-    fs.rmSync(outsideRenderRead, { force: true, recursive: true });
     const deliverableFiles = ownerProject.commitProductionDeliverableFiles(
       "feature*CON",
       new Map([
@@ -1189,12 +2492,54 @@ export const test_mcp_production_project = (): void => {
     const frameBeforeFailure = fs.readFileSync(renderFramePath);
     const manifestBeforeFailure = fs.readFileSync(renderManifestPath);
     const revisionBeforeFailure = ownerProject.revision();
+    const nativeRollbackRead = fs.readFileSync;
+    const rollbackReadParked = `${renderFramePath}.rollback-read-parked`;
+    let rollbackPathRead = false;
+    fs.readFileSync = ((
+      target: fs.PathOrFileDescriptor,
+      ...args: unknown[]
+    ): unknown => {
+      if (
+        typeof target !== "number" &&
+        path.resolve(target.toString()) === path.resolve(renderFramePath)
+      ) {
+        rollbackPathRead = true;
+        fs.renameSync(renderFramePath, rollbackReadParked);
+        fs.writeFileSync(renderFramePath, "transient rollback baseline");
+        let rollbackTransientReadFailure:
+          | IProductionProjectFixtureFailure
+          | undefined;
+        try {
+          return Reflect.apply(nativeRollbackRead, fs, [target, ...args]);
+        } catch (error) {
+          rollbackTransientReadFailure = { error };
+          throw error;
+        } finally {
+          preserveProductionProjectFixtureCleanup(
+            rollbackTransientReadFailure,
+            [
+              {
+                resource: "rollback-read transient replacement",
+                cleanup: () => fs.rmSync(renderFramePath),
+              },
+              {
+                resource: "rollback-read parked frame",
+                cleanup: () =>
+                  fs.renameSync(rollbackReadParked, renderFramePath),
+              },
+            ],
+          );
+        }
+      }
+      return Reflect.apply(nativeRollbackRead, fs, [target, ...args]);
+    }) as typeof fs.readFileSync;
     const renameSync = fs.renameSync;
     fs.renameSync = ((oldPath, newPath) => {
       if (String(newPath) === renderManifestPath)
         throw new Error("injected manifest rename failure");
       return renameSync(oldPath, newPath);
     }) as typeof fs.renameSync;
+    let renderRollbackFailure: IProductionProjectFixtureFailure | undefined;
     try {
       TestValidator.predicate(
         "multi-file commit rolls back updated and newly created files",
@@ -1208,15 +2553,48 @@ export const test_mcp_production_project = (): void => {
             renderManifest,
           ),
         ) &&
-          fs.readFileSync(renderFramePath).equals(frameBeforeFailure) &&
-          fs.readFileSync(renderManifestPath).equals(manifestBeforeFailure) &&
+          rollbackPathRead === false &&
+          nativeRollbackRead(renderFramePath).equals(frameBeforeFailure) &&
+          nativeRollbackRead(renderManifestPath).equals(
+            manifestBeforeFailure,
+          ) &&
           fs.existsSync(
             path.join(ownerProject.renderRoot(), renderBundle, "new.bin"),
           ) === false &&
           ownerProject.revision() === revisionBeforeFailure,
       );
+    } catch (error) {
+      renderRollbackFailure = { error };
+      throw error;
     } finally {
-      fs.renameSync = renameSync;
+      const rollbackFrameParked = fs.existsSync(rollbackReadParked);
+      preserveProductionProjectFixtureCleanup(renderRollbackFailure, [
+        {
+          resource: "rollback rename hook",
+          cleanup: () => {
+            fs.renameSync = renameSync;
+          },
+        },
+        {
+          resource: "rollback read hook",
+          cleanup: () => {
+            fs.readFileSync = nativeRollbackRead;
+          },
+        },
+        ...(rollbackFrameParked
+          ? [
+              {
+                resource: "rollback transient frame",
+                cleanup: () => fs.rmSync(renderFramePath, { force: true }),
+              },
+              {
+                resource: "rollback parked frame",
+                cleanup: () =>
+                  fs.renameSync(rollbackReadParked, renderFramePath),
+              },
+            ]
+          : []),
+      ]);
     }
     let renameFailures = 0;
     fs.renameSync = ((oldPath, newPath) => {
@@ -1230,6 +2608,7 @@ export const test_mcp_production_project = (): void => {
       }
       return renameSync(oldPath, newPath);
     }) as typeof fs.renameSync;
+    let rollbackAggregateFailure: IProductionProjectFixtureFailure | undefined;
     try {
       let aggregate = false;
       try {
@@ -1245,28 +2624,57 @@ export const test_mcp_production_project = (): void => {
         "rollback failure is surfaced as an aggregate instead of hidden",
         aggregate && ownerProject.revision() === revisionBeforeFailure,
       );
+    } catch (error) {
+      rollbackAggregateFailure = { error };
+      throw error;
     } finally {
-      fs.renameSync = renameSync;
-      fs.writeFileSync(renderFramePath, frameBeforeFailure);
-      fs.writeFileSync(renderManifestPath, manifestBeforeFailure);
+      preserveProductionProjectFixtureCleanup(rollbackAggregateFailure, [
+        {
+          resource: "rollback-aggregate rename hook",
+          cleanup: () => {
+            fs.renameSync = renameSync;
+          },
+        },
+        {
+          resource: "rollback-aggregate frame baseline",
+          cleanup: () => fs.writeFileSync(renderFramePath, frameBeforeFailure),
+        },
+        {
+          resource: "rollback-aggregate manifest baseline",
+          cleanup: () =>
+            fs.writeFileSync(renderManifestPath, manifestBeforeFailure),
+        },
+      ]);
     }
     fs.rmSync(renderFramePath);
+    let outsideRenderTargetFailure:
+      | ISingleProductionProjectFixtureFailure
+      | undefined;
     const outsideRenderTarget = fs.mkdtempSync(
       path.join(os.tmpdir(), "automovie-render-target-"),
     );
-    fs.symlinkSync(outsideRenderTarget, renderFramePath, "junction");
-    TestValidator.predicate(
-      "commit target cannot be replaced through a symlink or junction",
-      throws(() =>
-        ownerProject.commitRenderBundle(
-          renderBundle,
-          new Map([["frame.bin", Buffer.from("unsafe")]]),
-          renderManifest,
+    try {
+      fs.symlinkSync(outsideRenderTarget, renderFramePath, "junction");
+      TestValidator.predicate(
+        "commit target cannot be replaced through a symlink or junction",
+        throws(() =>
+          ownerProject.commitRenderBundle(
+            renderBundle,
+            new Map([["frame.bin", Buffer.from("unsafe")]]),
+            renderManifest,
+          ),
         ),
-      ),
-    );
-    fs.rmSync(renderFramePath, { force: true, recursive: true });
-    fs.rmSync(outsideRenderTarget, { force: true, recursive: true });
+      );
+      fs.rmSync(renderFramePath, { force: true, recursive: true });
+    } catch (error) {
+      outsideRenderTargetFailure = { error };
+      throw error;
+    } finally {
+      preserveSingleProductionProjectFixtureCleanup(
+        outsideRenderTargetFailure,
+        () => fs.rmSync(outsideRenderTarget, { force: true, recursive: true }),
+      );
+    }
     const lstatSync = fs.lstatSync;
     Object.defineProperty(fs, "lstatSync", {
       configurable: true,
@@ -1281,16 +2689,27 @@ export const test_mcp_production_project = (): void => {
         return lstatSync(filePath, options as never);
       }) as typeof fs.lstatSync,
     });
+    let deniedLstatHookFailure: IProductionProjectFixtureFailure | undefined;
     try {
       TestValidator.predicate(
         "non-missing lstat errors are not hidden as absent files",
         throws(() => ownerProject.readTrackedStateFile("denied.json")),
       );
+    } catch (error) {
+      deniedLstatHookFailure = { error };
+      throw error;
     } finally {
-      Object.defineProperty(fs, "lstatSync", {
-        configurable: true,
-        value: lstatSync,
-      });
+      preserveProductionProjectFixtureCleanup(deniedLstatHookFailure, [
+        {
+          resource: "tracked-state lstat hook",
+          cleanup: () => {
+            Object.defineProperty(fs, "lstatSync", {
+              configurable: true,
+              value: lstatSync,
+            });
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "all review target paths are owned and encoded",
@@ -1345,7 +2764,10 @@ export const test_mcp_production_project = (): void => {
       digestAutoMovieBytes(Buffer.from("frame")).startsWith("sha256:"),
     );
 
-    const modelDirectory = path.join(fixture.root, ".automovie/design/models");
+    const modelDirectory = path.join(
+      fixture.root,
+      ".automovie/design/shared/models",
+    );
     const encodedDuplicate = path.join(modelDirectory, "%73entinel.json");
     fs.writeFileSync(encodedDuplicate, JSON.stringify(modelRecipe()));
     TestValidator.predicate(
@@ -1387,13 +2809,24 @@ export const test_mcp_production_project = (): void => {
         ...args,
       );
     }) as typeof fs.readFileSync;
+    let inventoryReadHookFailure: IProductionProjectFixtureFailure | undefined;
     try {
       TestValidator.predicate(
         "a design disappearing during inventory is a loud race",
         throws(() => ownerProject.graph()),
       );
+    } catch (error) {
+      inventoryReadHookFailure = { error };
+      throw error;
     } finally {
-      fs.readFileSync = residentReadFileSync;
+      preserveProductionProjectFixtureCleanup(inventoryReadHookFailure, [
+        {
+          resource: "design-inventory read hook",
+          cleanup: () => {
+            fs.readFileSync = residentReadFileSync;
+          },
+        },
+      ]);
     }
     const invalidTyped = path.join(modelDirectory, "invalid.json");
     fs.writeFileSync(invalidTyped, "null");
@@ -1402,10 +2835,17 @@ export const test_mcp_production_project = (): void => {
       throws(() => ownerProject.graph()),
     );
     fs.rmSync(invalidTyped);
+  } catch (error) {
+    productionProjectFailure = { error };
+    throw error;
   } finally {
-    fixture.dispose();
+    preserveSingleProductionProjectFixtureCleanup(
+      productionProjectFailure,
+      () => fixture.dispose(),
+    );
   }
 
+  let contentFixtureFailure: ISingleProductionProjectFixtureFailure | undefined;
   const contentFixture = productionFixture();
   try {
     const manifestPath = path.join(
@@ -1438,64 +2878,184 @@ export const test_mcp_production_project = (): void => {
         ) &&
         inputs.some(
           (input) =>
+            input.path === ".automovie/assets.json" &&
+            input.bytes !== null &&
+            input.source === false &&
+            input.render === false,
+        ) &&
+        inputs.some(
+          (input) =>
             input.path === "src/shots/opening.ts" &&
             input.source &&
             input.render,
         ),
     );
+    const contentReadResidents = new Map(
+      (
+        [
+          ["viewer/src/main.ts", "viewer/src/main.ts"],
+          ["automovie.config.ts", "automovie.config.ts"],
+          [".automovie/assets.json", ".automovie/assets.json"],
+        ] as const
+      ).map(([file, relative]) => {
+        const absolute = fs.realpathSync(path.join(contentFixture.root, file));
+        return [
+          absolute,
+          { relative, bytes: fs.readFileSync(absolute) },
+        ] as const;
+      }),
+    );
+    const contentPathReads = new Set<string>();
+    const nativeContentRead = fs.readFileSync;
+    fs.readFileSync = ((
+      target: fs.PathOrFileDescriptor,
+      ...args: unknown[]
+    ): unknown => {
+      const resolved =
+        typeof target === "number" ? null : path.resolve(target.toString());
+      const resident =
+        resolved === null ? undefined : contentReadResidents.get(resolved);
+      if (resolved !== null && resident !== undefined) {
+        contentPathReads.add(resolved);
+        const parked = `${resolved}.parked`;
+        fs.renameSync(resolved, parked);
+        fs.writeFileSync(resolved, "transient content bytes");
+        let contentTransientReadFailure:
+          | IProductionProjectFixtureFailure
+          | undefined;
+        try {
+          return Reflect.apply(nativeContentRead, fs, [target, ...args]);
+        } catch (error) {
+          contentTransientReadFailure = { error };
+          throw error;
+        } finally {
+          preserveProductionProjectFixtureCleanup(contentTransientReadFailure, [
+            {
+              resource: `content-read transient replacement ${resolved}`,
+              cleanup: () => fs.rmSync(resolved),
+            },
+            {
+              resource: `content-read parked resident ${resolved}`,
+              cleanup: () => fs.renameSync(parked, resolved),
+            },
+          ]);
+        }
+      }
+      return Reflect.apply(nativeContentRead, fs, [target, ...args]);
+    }) as typeof fs.readFileSync;
+    let boundContentInputs: ReturnType<
+      AutoMovieProductionProject["contentInputs"]
+    > = [];
+    let contentReadFailure: IProductionProjectFixtureFailure | undefined;
+    try {
+      boundContentInputs = contentProject.contentInputs();
+    } catch (error) {
+      contentReadFailure = { error };
+      throw error;
+    } finally {
+      preserveProductionProjectFixtureCleanup(contentReadFailure, [
+        {
+          resource: "content-read native hook",
+          cleanup: () => {
+            fs.readFileSync = nativeContentRead;
+          },
+        },
+        ...[...contentReadResidents.keys()].flatMap((file) => {
+          const parked = `${file}.parked`;
+          return fs.existsSync(parked)
+            ? [
+                {
+                  resource: `content-read transient replacement ${file}`,
+                  cleanup: () => fs.rmSync(file, { force: true }),
+                },
+                {
+                  resource: `content-read parked resident ${file}`,
+                  cleanup: () => fs.renameSync(parked, file),
+                },
+              ]
+            : [];
+        }),
+      ]);
+    }
+    TestValidator.predicate(
+      "declared content reads bind rooted, direct, and asset bytes to verified descriptors",
+      contentPathReads.size === 0 &&
+        [...contentReadResidents.values()].every((resident) => {
+          const input = boundContentInputs.find(
+            (candidate) => candidate.path === resident.relative,
+          );
+          return (
+            input?.bytes !== null &&
+            input?.bytes !== undefined &&
+            Buffer.from(input.bytes).equals(resident.bytes)
+          );
+        }),
+    );
+    let outsideContentFailure:
+      | ISingleProductionProjectFixtureFailure
+      | undefined;
     const outsideContent = fs.mkdtempSync(
       path.join(os.tmpdir(), "automovie-content-junction-"),
     );
-    const nestedContentJunction = path.join(
-      contentFixture.root,
-      "viewer",
-      "linked",
-    );
-    fs.writeFileSync(path.join(outsideContent, "escape.ts"), "export {};\n");
-    fs.symlinkSync(outsideContent, nestedContentJunction, "junction");
-    TestValidator.predicate(
-      "declared content inventory refuses nested junctions",
-      throws(() => contentProject.contentInputs()),
-    );
-    fs.rmSync(nestedContentJunction);
-    fs.rmSync(outsideContent, { force: true, recursive: true });
+    try {
+      const nestedContentJunction = path.join(
+        contentFixture.root,
+        "viewer",
+        "linked",
+      );
+      fs.writeFileSync(path.join(outsideContent, "escape.ts"), "export {};\n");
+      fs.symlinkSync(outsideContent, nestedContentJunction, "junction");
+      TestValidator.predicate(
+        "declared content inventory refuses nested junctions",
+        throws(() => contentProject.contentInputs()),
+      );
+      fs.rmSync(nestedContentJunction);
+    } catch (error) {
+      outsideContentFailure = { error };
+      throw error;
+    } finally {
+      preserveSingleProductionProjectFixtureCleanup(outsideContentFailure, () =>
+        fs.rmSync(outsideContent, { force: true, recursive: true }),
+      );
+    }
+    let racedOutsideFailure: ISingleProductionProjectFixtureFailure | undefined;
     const racedOutside = fs.mkdtempSync(
       path.join(os.tmpdir(), "automovie-content-race-"),
     );
-    const racedOutsideFile = path.join(racedOutside, "outside.ts");
-    fs.writeFileSync(racedOutsideFile, "export {};\n");
-    const viewerRoot = path.join(contentFixture.root, "viewer");
-    const viewerFile = path.join(viewerRoot, "src/main.ts");
-    const residentRealpathSync = fs.realpathSync;
-    const withRacedRealpath = (
-      select: (absolute: string, occurrence: number) => string | null,
-    ): boolean => {
-      const occurrences = new Map<string, number>();
-      Reflect.set(
-        fs,
-        "realpathSync",
-        (candidate: fs.PathLike, ...args: unknown[]) => {
-          const absolute = path.resolve(String(candidate));
-          const occurrence = (occurrences.get(absolute) ?? 0) + 1;
-          occurrences.set(absolute, occurrence);
-          const replacement = select(absolute, occurrence);
-          return replacement === null
-            ? (
-                residentRealpathSync as (
-                  file: fs.PathLike,
-                  ...options: unknown[]
-                ) => unknown
-              )(candidate, ...args)
-            : replacement;
-        },
-      );
-      try {
-        return throws(() => contentProject.contentInputs());
-      } finally {
-        Reflect.set(fs, "realpathSync", residentRealpathSync);
-      }
-    };
     try {
+      const racedOutsideFile = path.join(racedOutside, "outside.ts");
+      fs.writeFileSync(racedOutsideFile, "export {};\n");
+      const viewerRoot = path.join(contentFixture.root, "viewer");
+      const viewerFile = path.join(viewerRoot, "src/main.ts");
+      const residentRealpathSync = fs.realpathSync;
+      const withRacedRealpath = (
+        select: (absolute: string, occurrence: number) => string | null,
+      ): boolean => {
+        const occurrences = new Map<string, number>();
+        Reflect.set(
+          fs,
+          "realpathSync",
+          (candidate: fs.PathLike, ...args: unknown[]) => {
+            const absolute = path.resolve(String(candidate));
+            const occurrence = (occurrences.get(absolute) ?? 0) + 1;
+            occurrences.set(absolute, occurrence);
+            const replacement = select(absolute, occurrence);
+            return replacement === null
+              ? (
+                  residentRealpathSync as (
+                    file: fs.PathLike,
+                    ...options: unknown[]
+                  ) => unknown
+                )(candidate, ...args)
+              : replacement;
+          },
+        );
+        try {
+          return throws(() => contentProject.contentInputs());
+        } finally {
+          Reflect.set(fs, "realpathSync", residentRealpathSync);
+        }
+      };
       TestValidator.predicate(
         "a content root cannot race its physical-root realpath outside the project",
         withRacedRealpath((absolute, occurrence) =>
@@ -1524,18 +3084,80 @@ export const test_mcp_production_project = (): void => {
         "a declared content root replaced after project open is refused",
         throws(() => contentProject.contentInputs()),
       );
+    } catch (error) {
+      racedOutsideFailure = { error };
+      throw error;
     } finally {
-      fs.rmSync(racedOutside, { force: true, recursive: true });
+      preserveSingleProductionProjectFixtureCleanup(racedOutsideFailure, () =>
+        fs.rmSync(racedOutside, { force: true, recursive: true }),
+      );
     }
+  } catch (error) {
+    contentFixtureFailure = { error };
+    throw error;
   } finally {
-    contentFixture.dispose();
+    preserveSingleProductionProjectFixtureCleanup(contentFixtureFailure, () =>
+      contentFixture.dispose(),
+    );
+  }
+
+  for (const [name, replace, expected] of [
+    [
+      "missing",
+      (assetManifestPath: string): void => fs.rmSync(assetManifestPath),
+      (inputs: ReturnType<AutoMovieProductionProject["contentInputs"]>) =>
+        inputs.some(
+          (input) =>
+            input.path === ".automovie/assets.json" && input.bytes === null,
+        ),
+    ],
+    [
+      "directory",
+      (assetManifestPath: string): void => {
+        fs.rmSync(assetManifestPath);
+        fs.mkdirSync(assetManifestPath);
+      },
+      (_inputs: ReturnType<AutoMovieProductionProject["contentInputs"]>) =>
+        false,
+    ],
+  ] as const) {
+    let assetManifestFixtureFailure:
+      | ISingleProductionProjectFixtureFailure
+      | undefined;
+    const assetManifestFixture = productionFixture();
+    try {
+      const assetManifestPath = path.join(
+        assetManifestFixture.root,
+        ".automovie/assets.json",
+      );
+      replace(assetManifestPath);
+      const assetManifestProject = AutoMovieProductionProject.open(
+        assetManifestFixture.root,
+      );
+      TestValidator.predicate(
+        `declared asset manifest reports ${name} physical state`,
+        name === "directory"
+          ? throws(() => assetManifestProject.contentInputs())
+          : expected(assetManifestProject.contentInputs()),
+      );
+    } catch (error) {
+      assetManifestFixtureFailure = { error };
+      throw error;
+    } finally {
+      preserveSingleProductionProjectFixtureCleanup(
+        assetManifestFixtureFailure,
+        () => assetManifestFixture.dispose(),
+      );
+    }
   }
 
   const nestedContentFileFixture = productionFixture();
-  const outsideContentFile = fs.mkdtempSync(
-    path.join(os.tmpdir(), "automovie-content-file-junction-"),
-  );
+  let outsideContentFile: string | undefined;
+  let nestedContentFileFailure: IProductionProjectFixtureFailure | undefined;
   try {
+    outsideContentFile = fs.mkdtempSync(
+      path.join(os.tmpdir(), "automovie-content-file-junction-"),
+    );
     fs.writeFileSync(
       path.join(outsideContentFile, "escape.ts"),
       "export {};\n",
@@ -1564,16 +3186,38 @@ export const test_mcp_production_project = (): void => {
       "declared content files cannot escape through an intermediate junction",
       throws(() => contentProject.contentInputs()),
     );
+  } catch (error) {
+    nestedContentFileFailure = { error };
+    throw error;
   } finally {
-    nestedContentFileFixture.dispose();
-    fs.rmSync(outsideContentFile, { force: true, recursive: true });
+    const completedOutsideContentFile = outsideContentFile;
+    preserveProductionProjectFixtureCleanup(nestedContentFileFailure, [
+      {
+        resource: "nested-content-file production fixture",
+        cleanup: () => nestedContentFileFixture.dispose(),
+      },
+      ...(completedOutsideContentFile === undefined
+        ? []
+        : [
+            {
+              resource: "nested-content-file outside root",
+              cleanup: () =>
+                fs.rmSync(completedOutsideContentFile, {
+                  force: true,
+                  recursive: true,
+                }),
+            },
+          ]),
+    ]);
   }
 
   const parentJunctionFixture = productionFixture();
-  const outsideContentRoot = fs.mkdtempSync(
-    path.join(os.tmpdir(), "automovie-content-root-junction-"),
-  );
+  let outsideContentRoot: string | undefined;
+  let parentJunctionFailure: IProductionProjectFixtureFailure | undefined;
   try {
+    outsideContentRoot = fs.mkdtempSync(
+      path.join(os.tmpdir(), "automovie-content-root-junction-"),
+    );
     fs.mkdirSync(path.join(outsideContentRoot, "viewer"));
     fs.writeFileSync(
       path.join(outsideContentRoot, "viewer", "escape.ts"),
@@ -1600,9 +3244,29 @@ export const test_mcp_production_project = (): void => {
       "a declared content root cannot escape through a parent junction",
       throws(() => AutoMovieProductionProject.open(parentJunctionFixture.root)),
     );
+  } catch (error) {
+    parentJunctionFailure = { error };
+    throw error;
   } finally {
-    parentJunctionFixture.dispose();
-    fs.rmSync(outsideContentRoot, { force: true, recursive: true });
+    const completedOutsideContentRoot = outsideContentRoot;
+    preserveProductionProjectFixtureCleanup(parentJunctionFailure, [
+      {
+        resource: "parent-junction production fixture",
+        cleanup: () => parentJunctionFixture.dispose(),
+      },
+      ...(completedOutsideContentRoot === undefined
+        ? []
+        : [
+            {
+              resource: "parent-junction outside root",
+              cleanup: () =>
+                fs.rmSync(completedOutsideContentRoot, {
+                  force: true,
+                  recursive: true,
+                }),
+            },
+          ]),
+    ]);
   }
 
   for (const [name, contentRoots, contentFiles, prepare] of [
@@ -1632,6 +3296,9 @@ export const test_mcp_production_project = (): void => {
       },
     ],
   ] as const) {
+    let invalidContentFailure:
+      | ISingleProductionProjectFixtureFailure
+      | undefined;
     const invalidContent = productionFixture();
     try {
       prepare(invalidContent.root);
@@ -1650,18 +3317,25 @@ export const test_mcp_production_project = (): void => {
           AutoMovieProductionProject.open(invalidContent.root).contentInputs(),
         ),
       );
+    } catch (error) {
+      invalidContentFailure = { error };
+      throw error;
     } finally {
-      invalidContent.dispose();
+      preserveSingleProductionProjectFixtureCleanup(invalidContentFailure, () =>
+        invalidContent.dispose(),
+      );
     }
   }
 
+  let replacedOwnerFailure: ISingleProductionProjectFixtureFailure | undefined;
   const replacedOwner = productionFixture();
   try {
     const ownerProject = AutoMovieProductionProject.open(replacedOwner.root);
-    fs.rmSync(ownerProject.renderRoot(), { recursive: true });
+    const ownerRenderRoot = ownerProject.renderRoot();
+    fs.rmSync(ownerRenderRoot, { recursive: true });
     fs.symlinkSync(
       path.join(replacedOwner.root, "viewer"),
-      path.join(replacedOwner.root, "renders"),
+      ownerRenderRoot,
       "junction",
     );
     TestValidator.predicate(
@@ -1673,10 +3347,16 @@ export const test_mcp_production_project = (): void => {
         ),
       ),
     );
+  } catch (error) {
+    replacedOwnerFailure = { error };
+    throw error;
   } finally {
-    replacedOwner.dispose();
+    preserveSingleProductionProjectFixtureCleanup(replacedOwnerFailure, () =>
+      replacedOwner.dispose(),
+    );
   }
 
+  let invalidRootFailure: ISingleProductionProjectFixtureFailure | undefined;
   const invalidRoot = fs.mkdtempSync(
     path.join(os.tmpdir(), "automovie-production-root-"),
   );
@@ -1725,14 +3405,25 @@ export const test_mcp_production_project = (): void => {
       }
       Reflect.apply(nativeWriteForExistingRoot, fs, [file, ...args]);
     }) as typeof fs.writeFileSync;
+    let existingRootHookFailure: IProductionProjectFixtureFailure | undefined;
     try {
       TestValidator.predicate(
         "an existing writable project does not require writable parent access",
         AutoMovieProductionProject.open(fresh).root ===
           fs.realpathSync(fresh) && attemptedParentSiblingLock === false,
       );
+    } catch (error) {
+      existingRootHookFailure = { error };
+      throw error;
     } finally {
-      fs.writeFileSync = nativeWriteForExistingRoot;
+      preserveProductionProjectFixtureCleanup(existingRootHookFailure, [
+        {
+          resource: "existing-root write hook",
+          cleanup: () => {
+            fs.writeFileSync = nativeWriteForExistingRoot;
+          },
+        },
+      ]);
     }
     const nestedFresh = path.join(invalidRoot, "missing", "nested", "project");
     TestValidator.predicate(
@@ -1758,10 +3449,21 @@ export const test_mcp_production_project = (): void => {
       )
         aliasLockPaths.push(path.resolve(file.toString()));
     }) as typeof fs.writeFileSync;
+    let aliasOpenHookFailure: IProductionProjectFixtureFailure | undefined;
     try {
       AutoMovieProductionProject.open(aliasProject);
+    } catch (error) {
+      aliasOpenHookFailure = { error };
+      throw error;
     } finally {
-      fs.writeFileSync = nativeWriteForAlias;
+      preserveProductionProjectFixtureCleanup(aliasOpenHookFailure, [
+        {
+          resource: "alias-open write hook",
+          cleanup: () => {
+            fs.writeFileSync = nativeWriteForAlias;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "ancestor aliases create through the physical parent then hold the project-owned namespace",
@@ -1804,15 +3506,40 @@ export const test_mcp_production_project = (): void => {
       }
     }) as typeof fs.writeFileSync;
     let requestedSwapRejected = false;
+    let requestedSwapFailure: IProductionProjectFixtureFailure | undefined;
     try {
       requestedSwapRejected = throws(
         () => acquireProductionRootNamespace(aliasProject),
         "changed physical identity",
       );
+    } catch (error) {
+      requestedSwapFailure = { error };
+      throw error;
     } finally {
-      fs.writeFileSync = nativeWriteForRequestedSwap;
-      fs.rmSync(aliasParent);
-      fs.symlinkSync(physicalAliasParent, aliasParent, "junction");
+      const requestedSwapAttempted = requestedRootLocks === 2;
+      preserveProductionProjectFixtureCleanup(requestedSwapFailure, [
+        {
+          resource: "requested-swap write hook",
+          cleanup: () => {
+            fs.writeFileSync = nativeWriteForRequestedSwap;
+          },
+        },
+        ...(requestedSwapAttempted
+          ? [
+              {
+                resource: "requested-swap active alias",
+                cleanup: () => {
+                  if (fs.existsSync(aliasParent)) fs.rmSync(aliasParent);
+                },
+              },
+              {
+                resource: "requested-swap physical alias",
+                cleanup: () =>
+                  fs.symlinkSync(physicalAliasParent, aliasParent, "junction"),
+              },
+            ]
+          : []),
+      ]);
     }
     TestValidator.predicate(
       "a requested alias swapped after physical lock acquisition is rejected",
@@ -1836,6 +3563,7 @@ export const test_mcp_production_project = (): void => {
         | fs.Stats
         | fs.BigIntStats;
     }) as typeof fs.lstatSync;
+    let missingBaseHookFailure: IProductionProjectFixtureFailure | undefined;
     try {
       TestValidator.predicate(
         "a recursively absent filesystem base is rejected without unbounded parent walking",
@@ -1847,8 +3575,18 @@ export const test_mcp_production_project = (): void => {
           "does not exist as a physical directory",
         ),
       );
+    } catch (error) {
+      missingBaseHookFailure = { error };
+      throw error;
     } finally {
-      mutableLstatFs.lstatSync = nativeLstatForMissingBase;
+      preserveProductionProjectFixtureCleanup(missingBaseHookFailure, [
+        {
+          resource: "missing-base lstat hook",
+          cleanup: () => {
+            mutableLstatFs.lstatSync = nativeLstatForMissingBase;
+          },
+        },
+      ]);
     }
     const collidingParent = path.join(invalidRoot, "colliding-parent");
     const collidingParentProject = path.join(collidingParent, "project");
@@ -1955,15 +3693,45 @@ export const test_mcp_production_project = (): void => {
       }
     }) as typeof fs.writeFileSync;
     let createdAliasRejected = false;
+    let createdAliasFailure: IProductionProjectFixtureFailure | undefined;
     try {
       createdAliasRejected = throws(
         () => AutoMovieProductionProject.open(createdAliasProject),
         "changed physical identity",
       );
+    } catch (error) {
+      createdAliasFailure = { error };
+      throw error;
     } finally {
-      fs.writeFileSync = nativeWriteForCreatedAlias;
-      fs.rmSync(createdAliasParent);
-      fs.symlinkSync(createdPhysicalParent, createdAliasParent, "junction");
+      const createdAliasSwapAttempted = createdAliasLocks.length === 2;
+      preserveProductionProjectFixtureCleanup(createdAliasFailure, [
+        {
+          resource: "created-alias write hook",
+          cleanup: () => {
+            fs.writeFileSync = nativeWriteForCreatedAlias;
+          },
+        },
+        ...(createdAliasSwapAttempted
+          ? [
+              {
+                resource: "created-alias active alias",
+                cleanup: () => {
+                  if (fs.existsSync(createdAliasParent))
+                    fs.rmSync(createdAliasParent);
+                },
+              },
+              {
+                resource: "created-alias physical alias",
+                cleanup: () =>
+                  fs.symlinkSync(
+                    createdPhysicalParent,
+                    createdAliasParent,
+                    "junction",
+                  ),
+              },
+            ]
+          : []),
+      ]);
     }
     TestValidator.predicate(
       "a newly created physical root releases its lease when the requested alias changes afterward",
@@ -1973,6 +3741,92 @@ export const test_mcp_production_project = (): void => {
         fs.existsSync(path.join(createdAlternateParent, "project")) === false,
     );
     const coordinationRoot = path.dirname(aliasLockPaths[0]!);
+    const assertionLease = acquireProductionRootNamespace(aliasProject);
+    const assertedFence = assertionLease.locks[0]!;
+    const assertedFenceParked = `${assertedFence.path}.read-parked`;
+    const nativeFenceRead = fs.readFileSync;
+    let fencePathRead = false;
+    let fenceAssertionSucceeded = false;
+    fs.readFileSync = ((
+      file: fs.PathOrFileDescriptor,
+      ...args: unknown[]
+    ): unknown => {
+      if (
+        typeof file !== "number" &&
+        path.resolve(file.toString()) === path.resolve(assertedFence.path)
+      ) {
+        fencePathRead = true;
+        fs.renameSync(assertedFence.path, assertedFenceParked);
+        fs.writeFileSync(assertedFence.path, assertedFence.token);
+        let fenceTransientReadFailure:
+          | IProductionProjectFixtureFailure
+          | undefined;
+        try {
+          return Reflect.apply(nativeFenceRead, fs, [file, ...args]);
+        } catch (error) {
+          fenceTransientReadFailure = { error };
+          throw error;
+        } finally {
+          preserveProductionProjectFixtureCleanup(fenceTransientReadFailure, [
+            {
+              resource: "assertion-fence transient replacement",
+              cleanup: () => {
+                if (fs.existsSync(assertedFence.path))
+                  fs.rmSync(assertedFence.path);
+              },
+            },
+            {
+              resource: "assertion-fence parked token",
+              cleanup: () =>
+                fs.renameSync(assertedFenceParked, assertedFence.path),
+            },
+          ]);
+        }
+      }
+      return Reflect.apply(nativeFenceRead, fs, [file, ...args]);
+    }) as typeof fs.readFileSync;
+    let fenceAssertionFailure: IProductionProjectFixtureFailure | undefined;
+    try {
+      assertProductionRootNamespaceLease(assertionLease);
+      fenceAssertionSucceeded = true;
+    } catch (error) {
+      fenceAssertionFailure = { error };
+      throw error;
+    } finally {
+      const fenceWasParked = fs.existsSync(assertedFenceParked);
+      preserveProductionProjectFixtureCleanup(fenceAssertionFailure, [
+        {
+          resource: "assertion-fence read hook",
+          cleanup: () => {
+            fs.readFileSync = nativeFenceRead;
+          },
+        },
+        ...(fenceWasParked
+          ? [
+              {
+                resource: "assertion-fence active token",
+                cleanup: () => {
+                  if (fs.existsSync(assertedFence.path))
+                    fs.rmSync(assertedFence.path);
+                },
+              },
+              {
+                resource: "assertion-fence parked token",
+                cleanup: () =>
+                  fs.renameSync(assertedFenceParked, assertedFence.path),
+              },
+            ]
+          : []),
+        {
+          resource: "assertion-fence namespace lease",
+          cleanup: () => releaseProductionRootNamespace(assertionLease),
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "root namespace assertions bind fence tokens to descriptors",
+      fenceAssertionSucceeded && fencePathRead === false,
+    );
     // A guarded commit runs the read-only compiler gate, which commits its own
     // snapshot, so one process reaches the same root coordinate twice. That is
     // a nested operation rather than a second session, and blocking it makes
@@ -1991,25 +3845,78 @@ export const test_mcp_production_project = (): void => {
       )
         reentrantLocks.push(path.resolve(file.toString()));
     }) as typeof fs.writeFileSync;
-    let outerLease: ReturnType<typeof acquireProductionRootNamespace>;
-    let innerLease: ReturnType<typeof acquireProductionRootNamespace>;
+    let outerLease:
+      | ReturnType<typeof acquireProductionRootNamespace>
+      | undefined;
+    let innerLease:
+      | ReturnType<typeof acquireProductionRootNamespace>
+      | undefined;
+    let reentrantAcquisitionFailure:
+      | IProductionProjectFixtureFailure
+      | undefined;
     try {
       outerLease = acquireProductionRootNamespace(aliasProject);
       innerLease = acquireProductionRootNamespace(aliasProject);
+    } catch (error) {
+      reentrantAcquisitionFailure = { error };
+      throw error;
     } finally {
-      fs.writeFileSync = nativeWriteForReentrancy;
+      const acquiredInnerLease = innerLease;
+      const acquiredOuterLease = outerLease;
+      let reentrantHookRestoreFailed = false;
+      preserveProductionProjectFixtureCleanup(reentrantAcquisitionFailure, [
+        {
+          resource: "reentrant namespace write hook",
+          cleanup: () => {
+            try {
+              fs.writeFileSync = nativeWriteForReentrancy;
+            } catch (error) {
+              reentrantHookRestoreFailed = true;
+              throw error;
+            }
+          },
+        },
+        ...(acquiredInnerLease === undefined
+          ? []
+          : [
+              {
+                resource: "reentrant inner namespace lease",
+                cleanup: () => {
+                  if (
+                    reentrantAcquisitionFailure !== undefined ||
+                    reentrantHookRestoreFailed
+                  )
+                    releaseProductionRootNamespace(acquiredInnerLease);
+                },
+              },
+            ]),
+        ...(acquiredOuterLease === undefined
+          ? []
+          : [
+              {
+                resource: "reentrant outer namespace lease",
+                cleanup: () => {
+                  if (
+                    reentrantAcquisitionFailure !== undefined ||
+                    reentrantHookRestoreFailed
+                  )
+                    releaseProductionRootNamespace(acquiredOuterLease);
+                },
+              },
+            ]),
+      ]);
     }
     const heldAfterInnerRelease = ((): boolean => {
-      releaseProductionRootNamespace(innerLease);
+      releaseProductionRootNamespace(innerLease!);
       return reentrantLocks.every((file) => fs.existsSync(file));
     })();
-    releaseProductionRootNamespace(outerLease);
+    releaseProductionRootNamespace(outerLease!);
     TestValidator.equals(
       "one process reaches the same root coordinate twice without deadlocking",
       {
         coordinates: reentrantLocks.length,
-        sharedTokens: outerLease.locks.every(
-          (lock, index) => lock.token === innerLease.locks[index]?.token,
+        sharedTokens: outerLease!.locks.every(
+          (lock, index) => lock.token === innerLease!.locks[index]?.token,
         ),
         heldAfterInnerRelease,
         releasedAfterOuterRelease: reentrantLocks.every(
@@ -2049,13 +3956,24 @@ export const test_mcp_production_project = (): void => {
       }
     }) as typeof fs.writeFileSync;
     let parentSwapRejected = false;
+    let parentSwapFailure: IProductionProjectFixtureFailure | undefined;
     try {
       parentSwapRejected = throws(
         () => AutoMovieProductionProject.open(swappedProject),
         "changed physical identity",
       );
+    } catch (error) {
+      parentSwapFailure = { error };
+      throw error;
     } finally {
-      fs.writeFileSync = nativeWriteForParentSwap;
+      preserveProductionProjectFixtureCleanup(parentSwapFailure, [
+        {
+          resource: "creation-parent swap write hook",
+          cleanup: () => {
+            fs.writeFileSync = nativeWriteForParentSwap;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "a parent replaced while creation fences are acquired is rejected before either tree receives a child",
@@ -2093,13 +4011,26 @@ export const test_mcp_production_project = (): void => {
         }
       }) as typeof fs.writeFileSync;
       let rejected = false;
+      let replacementParentFailure:
+        | IProductionProjectFixtureFailure
+        | undefined;
       try {
         rejected = throws(
           () => AutoMovieProductionProject.open(projectPath),
           "changed physical identity",
         );
+      } catch (error) {
+        replacementParentFailure = { error };
+        throw error;
       } finally {
-        fs.writeFileSync = nativeWriteForReplacement;
+        preserveProductionProjectFixtureCleanup(replacementParentFailure, [
+          {
+            resource: `${replacement} parent write hook`,
+            cleanup: () => {
+              fs.writeFileSync = nativeWriteForReplacement;
+            },
+          },
+        ]);
       }
       TestValidator.predicate(
         `a ${replacement} creation parent fails closed and releases both coordinates`,
@@ -2122,6 +4053,7 @@ export const test_mcp_production_project = (): void => {
         ...args,
       ]) as unknown;
     }) as typeof fs.mkdirSync;
+    let coordinationMkdirFailure: IProductionProjectFixtureFailure | undefined;
     try {
       TestValidator.predicate(
         "a root coordination directory creation failure is fail-closed",
@@ -2130,8 +4062,18 @@ export const test_mcp_production_project = (): void => {
           "coordination mkdir denied",
         ),
       );
+    } catch (error) {
+      coordinationMkdirFailure = { error };
+      throw error;
     } finally {
-      fs.mkdirSync = nativeCoordinationMkdir;
+      preserveProductionProjectFixtureCleanup(coordinationMkdirFailure, [
+        {
+          resource: "coordination mkdir hook",
+          cleanup: () => {
+            fs.mkdirSync = nativeCoordinationMkdir;
+          },
+        },
+      ]);
     }
     const nativeCoordinationLstat = fs.lstatSync;
     const mutableFs = fs as { lstatSync: typeof fs.lstatSync };
@@ -2153,6 +4095,9 @@ export const test_mcp_production_project = (): void => {
           ...args,
         ]) as fs.Stats;
       }) as typeof fs.lstatSync;
+      let coordinationCollisionFailure:
+        | IProductionProjectFixtureFailure
+        | undefined;
       try {
         TestValidator.predicate(
           `a ${name} root coordination collision is rejected`,
@@ -2161,8 +4106,18 @@ export const test_mcp_production_project = (): void => {
             "is not a physical directory",
           ),
         );
+      } catch (error) {
+        coordinationCollisionFailure = { error };
+        throw error;
       } finally {
-        mutableFs.lstatSync = nativeCoordinationLstat;
+        preserveProductionProjectFixtureCleanup(coordinationCollisionFailure, [
+          {
+            resource: `${name} coordination lstat hook`,
+            cleanup: () => {
+              mutableFs.lstatSync = nativeCoordinationLstat;
+            },
+          },
+        ]);
       }
     }
     const deniedRoot = path.join(invalidRoot, "denied-root");
@@ -2188,6 +4143,7 @@ export const test_mcp_production_project = (): void => {
           | fs.BigIntStats;
       }) as typeof fs.lstatSync,
     });
+    let deniedRootLstatFailure: IProductionProjectFixtureFailure | undefined;
     try {
       TestValidator.predicate(
         "an unexpected project-root lstat denial propagates",
@@ -2196,8 +4152,17 @@ export const test_mcp_production_project = (): void => {
           "injected project-root lstat denial",
         ),
       );
+    } catch (error) {
+      deniedRootLstatFailure = { error };
+      throw error;
     } finally {
-      Object.defineProperty(fs, "lstatSync", nativeRootLstatDescriptor);
+      preserveProductionProjectFixtureCleanup(deniedRootLstatFailure, [
+        {
+          resource: "project-root lstat descriptor",
+          cleanup: () =>
+            Object.defineProperty(fs, "lstatSync", nativeRootLstatDescriptor),
+        },
+      ]);
     }
     const nativeCoordinationChmod = fs.chmodSync;
     fs.chmodSync = ((file: fs.PathLike): void => {
@@ -2205,6 +4170,7 @@ export const test_mcp_production_project = (): void => {
         throw new Error("coordination chmod denied");
       nativeCoordinationChmod(file, 0o700);
     }) as typeof fs.chmodSync;
+    let coordinationChmodFailure: IProductionProjectFixtureFailure | undefined;
     try {
       TestValidator.predicate(
         "an insecure coordination permission failure is fail-closed",
@@ -2213,8 +4179,18 @@ export const test_mcp_production_project = (): void => {
           "coordination chmod denied",
         ),
       );
+    } catch (error) {
+      coordinationChmodFailure = { error };
+      throw error;
     } finally {
-      fs.chmodSync = nativeCoordinationChmod;
+      preserveProductionProjectFixtureCleanup(coordinationChmodFailure, [
+        {
+          resource: "coordination chmod hook",
+          cleanup: () => {
+            fs.chmodSync = nativeCoordinationChmod;
+          },
+        },
+      ]);
     }
     const nativeCoordinateWrite = fs.writeFileSync;
     const partiallyHeldCoordinates: string[] = [];
@@ -2236,6 +4212,7 @@ export const test_mcp_production_project = (): void => {
       )
         partiallyHeldCoordinates.push(path.resolve(file.toString()));
     }) as typeof fs.writeFileSync;
+    let partialCoordinateFailure: IProductionProjectFixtureFailure | undefined;
     try {
       TestValidator.predicate(
         "partial dual-coordinate acquisition releases the physical identity fence",
@@ -2248,11 +4225,22 @@ export const test_mcp_production_project = (): void => {
             (file) => fs.existsSync(file) === false,
           ),
       );
+    } catch (error) {
+      partialCoordinateFailure = { error };
+      throw error;
     } finally {
-      fs.writeFileSync = nativeCoordinateWrite;
+      preserveProductionProjectFixtureCleanup(partialCoordinateFailure, [
+        {
+          resource: "partial-coordinate write hook",
+          cleanup: () => {
+            fs.writeFileSync = nativeCoordinateWrite;
+          },
+        },
+      ]);
     }
     const staleRoot = path.join(invalidRoot, "stale-physical-root");
     const staleProject = AutoMovieProductionProject.open(staleRoot);
+    const staleRenderRoot = staleProject.renderRoot();
     const parkedStaleRoot = `${staleRoot}-parked`;
     fs.renameSync(staleRoot, parkedStaleRoot);
     fs.cpSync(parkedStaleRoot, staleRoot, { recursive: true });
@@ -2268,10 +4256,7 @@ export const test_mcp_production_project = (): void => {
           "root identity changed",
         ) &&
         fs.existsSync(
-          path.join(
-            staleRoot,
-            "renders/deliverables/stale-root-write/frame.bin",
-          ),
+          path.join(staleRenderRoot, "deliverables/stale-root-write/frame.bin"),
         ) === false,
     );
     const missingIdentityRoot = path.join(invalidRoot, "missing-identity-root");
@@ -2279,6 +4264,7 @@ export const test_mcp_production_project = (): void => {
       AutoMovieProductionProject.open(missingIdentityRoot);
     const parkedMissingIdentityRoot = `${missingIdentityRoot}-parked`;
     fs.renameSync(missingIdentityRoot, parkedMissingIdentityRoot);
+    let missingIdentityFailure: IProductionProjectFixtureFailure | undefined;
     try {
       TestValidator.predicate(
         "an absent physical root invalidates a stale handle before any read",
@@ -2287,8 +4273,17 @@ export const test_mcp_production_project = (): void => {
           "root identity changed",
         ),
       );
+    } catch (error) {
+      missingIdentityFailure = { error };
+      throw error;
     } finally {
-      fs.renameSync(parkedMissingIdentityRoot, missingIdentityRoot);
+      preserveProductionProjectFixtureCleanup(missingIdentityFailure, [
+        {
+          resource: "missing-identity parked root",
+          cleanup: () =>
+            fs.renameSync(parkedMissingIdentityRoot, missingIdentityRoot),
+        },
+      ]);
     }
     const acquiredReplacementRoot = path.join(
       invalidRoot,
@@ -2297,6 +4292,8 @@ export const test_mcp_production_project = (): void => {
     const acquiredReplacementProject = AutoMovieProductionProject.open(
       acquiredReplacementRoot,
     );
+    const acquiredReplacementRenderRoot =
+      acquiredReplacementProject.renderRoot();
     const parkedAcquiredReplacementRoot = `${acquiredReplacementRoot}-parked`;
     let acquiredReplacementSwapped = false;
     const racingFiles = new Map([
@@ -2324,8 +4321,8 @@ export const test_mcp_production_project = (): void => {
     const acquiredReplacementUntouched =
       fs.existsSync(
         path.join(
-          acquiredReplacementRoot,
-          "renders/deliverables/acquired-replacement/frame.bin",
+          acquiredReplacementRenderRoot,
+          "deliverables/acquired-replacement/frame.bin",
         ),
       ) === false;
     if (acquiredReplacementSwapped) {
@@ -2346,8 +4343,8 @@ export const test_mcp_production_project = (): void => {
       new Map([["frame.bin", preLeaseBytes]]),
     );
     const preLeaseTarget = path.join(
-      preLeaseRoot,
-      "renders/deliverables/pre-lease/frame.bin",
+      preLeaseProject.renderRoot(),
+      "deliverables/pre-lease/frame.bin",
     );
     const parkedPreLeaseRoot = `${preLeaseRoot}-parked`;
     const nativeReadForPreLease = fs.readFileSync;
@@ -2369,6 +4366,8 @@ export const test_mcp_production_project = (): void => {
       return output;
     }) as typeof fs.readFileSync;
     let preLeaseRejected = false;
+    let preLeaseReplacementUntouched = false;
+    let preLeaseFailure: IProductionProjectFixtureFailure | undefined;
     try {
       preLeaseRejected = throws(
         () =>
@@ -2378,14 +4377,42 @@ export const test_mcp_production_project = (): void => {
           ),
         "namespace fence changed",
       );
+    } catch (error) {
+      preLeaseFailure = { error };
+      throw error;
     } finally {
-      fs.readFileSync = nativeReadForPreLease;
-    }
-    const preLeaseReplacementUntouched =
-      fs.readFileSync(preLeaseTarget, "utf8") === "before";
-    if (preLeaseSwapped) {
-      fs.rmSync(preLeaseRoot, { force: true, recursive: true });
-      fs.renameSync(parkedPreLeaseRoot, preLeaseRoot);
+      const preLeaseWasSwapped = fs.existsSync(parkedPreLeaseRoot);
+      preserveProductionProjectFixtureCleanup(preLeaseFailure, [
+        {
+          resource: "pre-lease read hook",
+          cleanup: () => {
+            fs.readFileSync = nativeReadForPreLease;
+          },
+        },
+        {
+          resource: "pre-lease replacement observation",
+          cleanup: () => {
+            preLeaseReplacementUntouched =
+              Reflect.apply(nativeReadForPreLease, fs, [
+                preLeaseTarget,
+                "utf8",
+              ]) === "before";
+          },
+        },
+        ...(preLeaseWasSwapped
+          ? [
+              {
+                resource: "pre-lease active replacement",
+                cleanup: () =>
+                  fs.rmSync(preLeaseRoot, { force: true, recursive: true }),
+              },
+              {
+                resource: "pre-lease parked root",
+                cleanup: () => fs.renameSync(parkedPreLeaseRoot, preLeaseRoot),
+              },
+            ]
+          : []),
+      ]);
     }
     TestValidator.predicate(
       "a root replaced while staging under the namespace lease is refused without mutation",
@@ -2406,7 +4433,7 @@ export const test_mcp_production_project = (): void => {
     );
     const atomicDeleteTarget = path.join(
       fresh,
-      ".automovie/design/models/atomic-delete-recovery.json",
+      ".automovie/design/shared/models/atomic-delete-recovery.json",
     );
     const atomicDeleteBytes = fs.readFileSync(atomicDeleteTarget);
     const atomicDeleteRevision = initialized.revision();
@@ -2428,6 +4455,7 @@ export const test_mcp_production_project = (): void => {
       );
     });
     let atomicDeleteRejected = false;
+    let atomicDeleteFailure: IProductionProjectFixtureFailure | undefined;
     try {
       atomicDeleteRejected = throws(
         () =>
@@ -2437,8 +4465,18 @@ export const test_mcp_production_project = (): void => {
           }),
         "injected quarantine delete denial",
       );
+    } catch (error) {
+      atomicDeleteFailure = { error };
+      throw error;
     } finally {
-      Reflect.set(fs, "rmSync", nativeRmForAtomicDelete);
+      preserveProductionProjectFixtureCleanup(atomicDeleteFailure, [
+        {
+          resource: "atomic-delete rm hook",
+          cleanup: () => {
+            Reflect.set(fs, "rmSync", nativeRmForAtomicDelete);
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "a failed quarantine cleanup restores the exact deleted file and revision",
@@ -2462,8 +4500,8 @@ export const test_mcp_production_project = (): void => {
     const mutationRoot = path.join(invalidRoot, "mutation-root");
     const mutationProject = AutoMovieProductionProject.open(mutationRoot);
     const mutationFrame = path.join(
-      mutationRoot,
-      "renders/deliverables/root-swap/frame.bin",
+      mutationProject.renderRoot(),
+      "deliverables/root-swap/frame.bin",
     );
     const parkedMutationRoot = `${mutationRoot}-parked`;
     const nativeRenameForMutationSwap = fs.renameSync;
@@ -2480,47 +4518,105 @@ export const test_mcp_production_project = (): void => {
       return nativeRenameForMutationSwap(oldPath, newPath);
     }) as typeof fs.renameSync;
     let mutationSwapRejected = false;
-    try {
-      mutationProject.commitProductionDeliverableFiles(
-        "root-swap",
-        new Map([["frame.bin", Buffer.from("unsafe")]]),
-      );
-    } catch (error) {
-      mutationSwapRejected =
-        error instanceof AggregateError &&
-        error.message.includes("No stale-path rollback was attempted");
-    } finally {
-      fs.renameSync = nativeRenameForMutationSwap;
-    }
-    const replacementUntouched = fs.existsSync(mutationFrame) === false;
+    let replacementUntouched = false;
     let abandonedLockReleased = false;
     let processOwnershipReleased = false;
-    if (mutationRootSwapped) {
-      const abandonedLock = path.join(
-        parkedMutationRoot,
-        ".automovie/revision.lock",
-      );
-      const abandonedToken = fs.readFileSync(abandonedLock, "utf8");
-      fs.mkdirSync(path.join(mutationRoot, ".automovie"), {
-        recursive: true,
-      });
-      const replacementLock = path.join(
-        mutationRoot,
-        ".automovie/revision.lock",
-      );
-      const replacementToken = acquireCommitLock(replacementLock);
+    const mutationLock = path.join(
+      mutationRoot,
+      ".automovie/productions/mutation-root/revision.lock",
+    );
+    let abandonedToken: string | undefined;
+    let replacementToken: string | undefined;
+    let mutationHarnessFailure: IProductionProjectFixtureFailure | undefined;
+    try {
       try {
+        mutationProject.commitProductionDeliverableFiles(
+          "root-swap",
+          new Map([["frame.bin", Buffer.from("unsafe")]]),
+        );
+      } catch (error) {
+        mutationSwapRejected =
+          error instanceof AggregateError &&
+          error.message.includes("No stale-path rollback was attempted");
+        if (mutationSwapRejected === false) throw error;
+      }
+      replacementUntouched = fs.existsSync(mutationFrame) === false;
+      if (mutationRootSwapped) {
+        const abandonedLock = path.join(
+          parkedMutationRoot,
+          ".automovie/productions/mutation-root/revision.lock",
+        );
+        abandonedToken = fs.readFileSync(abandonedLock, "utf8");
+        fs.mkdirSync(
+          path.join(mutationRoot, ".automovie/productions/mutation-root"),
+          {
+            recursive: true,
+          },
+        );
+        replacementToken = acquireCommitLock(mutationLock);
         processOwnershipReleased =
           replacementToken !== abandonedToken &&
-          fs.readFileSync(replacementLock, "utf8") === replacementToken;
-      } finally {
-        releaseCommitLock(replacementLock, replacementToken);
+          fs.readFileSync(mutationLock, "utf8") === replacementToken;
       }
-      fs.rmSync(mutationRoot, { force: true, recursive: true });
-      fs.renameSync(parkedMutationRoot, mutationRoot);
-      const restoredLock = path.join(mutationRoot, ".automovie/revision.lock");
-      releaseCommitLock(restoredLock, abandonedToken);
-      abandonedLockReleased = fs.existsSync(restoredLock) === false;
+    } catch (error) {
+      mutationHarnessFailure = { error };
+      throw error;
+    } finally {
+      const acquiredReplacementToken = replacementToken;
+      const acquiredAbandonedToken = abandonedToken;
+      const mutationRootWasParked = fs.existsSync(parkedMutationRoot);
+      let mutationRootRestored = false;
+      preserveProductionProjectFixtureCleanup(mutationHarnessFailure, [
+        {
+          resource: "mutation-root rename hook",
+          cleanup: () => {
+            fs.renameSync = nativeRenameForMutationSwap;
+          },
+        },
+        ...(acquiredReplacementToken === undefined
+          ? []
+          : [
+              {
+                resource: "mutation-root replacement lock",
+                cleanup: () =>
+                  releaseCommitLock(mutationLock, acquiredReplacementToken),
+              },
+            ]),
+        ...(mutationRootWasParked
+          ? [
+              {
+                resource: "mutation-root active replacement",
+                cleanup: () =>
+                  fs.rmSync(mutationRoot, { force: true, recursive: true }),
+              },
+              {
+                resource: "mutation-root parked original",
+                cleanup: () => {
+                  fs.renameSync(parkedMutationRoot, mutationRoot);
+                  mutationRootRestored = true;
+                },
+              },
+            ]
+          : []),
+        ...(acquiredAbandonedToken === undefined
+          ? []
+          : [
+              {
+                resource: "mutation-root abandoned lock",
+                cleanup: () => {
+                  const abandonedLock = mutationRootRestored
+                    ? mutationLock
+                    : path.join(
+                        parkedMutationRoot,
+                        ".automovie/productions/mutation-root/revision.lock",
+                      );
+                  releaseCommitLock(abandonedLock, acquiredAbandonedToken);
+                  abandonedLockReleased =
+                    fs.existsSync(abandonedLock) === false;
+                },
+              },
+            ]),
+      ]);
     }
     TestValidator.predicate(
       "a root swapped during publication refuses rollback and stale lock release in the replacement",
@@ -2551,6 +4647,7 @@ export const test_mcp_production_project = (): void => {
       "null",
       '{"formatVersion":1}',
       '{"formatVersion":2,"projectId":"","sourceRoots":[],"generatedRoot":"g","renderRoot":"r"}',
+      '{"formatVersion":2,"projectId":"x","sourceRoots":[],"assetManifest":"assets.json","generatedRoot":"g","renderRoot":"r"}',
     ]) {
       const root = path.join(invalidRoot, `manifest-${Math.random()}`);
       fs.mkdirSync(path.join(root, ".automovie"), { recursive: true });
@@ -2769,6 +4866,9 @@ export const test_mcp_production_project = (): void => {
       "compiler-owned root cannot escape through a junction",
       throws(() => AutoMovieProductionProject.open(junctionRoot)),
     );
+    let internalAliasFailure:
+      | ISingleProductionProjectFixtureFailure
+      | undefined;
     const internalAlias = productionFixture();
     try {
       fs.rmSync(path.join(internalAlias.root, "generated"), {
@@ -2784,8 +4884,13 @@ export const test_mcp_production_project = (): void => {
         "owned roots cannot alias another project directory through a junction",
         throws(() => AutoMovieProductionProject.open(internalAlias.root)),
       );
+    } catch (error) {
+      internalAliasFailure = { error };
+      throw error;
     } finally {
-      internalAlias.dispose();
+      preserveSingleProductionProjectFixtureCleanup(internalAliasFailure, () =>
+        internalAlias.dispose(),
+      );
     }
 
     const stateOutside = path.join(invalidRoot, "state-outside");
@@ -2827,6 +4932,9 @@ export const test_mcp_production_project = (): void => {
       );
     }
 
+    let malformedDesignFailure:
+      | ISingleProductionProjectFixtureFailure
+      | undefined;
     const malformedDesign = productionFixture();
     try {
       fs.writeFileSync(
@@ -2840,10 +4948,13 @@ export const test_mcp_production_project = (): void => {
         ),
       );
       fs.rmSync(
-        path.join(malformedDesign.root, ".automovie/design/models/%ZZ.json"),
+        path.join(
+          malformedDesign.root,
+          ".automovie/design/shared/models/%ZZ.json",
+        ),
       );
       fs.writeFileSync(
-        path.join(malformedDesign.root, ".automovie/design/world.json"),
+        path.join(malformedDesign.root, ".automovie/design/shared/world.json"),
         "{bad",
       );
       TestValidator.predicate(
@@ -2852,10 +4963,19 @@ export const test_mcp_production_project = (): void => {
           AutoMovieProductionProject.open(malformedDesign.root).graph(),
         ),
       );
+    } catch (error) {
+      malformedDesignFailure = { error };
+      throw error;
     } finally {
-      malformedDesign.dispose();
+      preserveSingleProductionProjectFixtureCleanup(
+        malformedDesignFailure,
+        () => malformedDesign.dispose(),
+      );
     }
 
+    let invalidRevisionFailure:
+      | ISingleProductionProjectFixtureFailure
+      | undefined;
     const invalidRevision = productionFixture();
     try {
       fs.writeFileSync(
@@ -2866,10 +4986,21 @@ export const test_mcp_production_project = (): void => {
         "revision must be a non-negative safe integer",
         throws(() => AutoMovieProductionProject.open(invalidRevision.root)),
       );
+    } catch (error) {
+      invalidRevisionFailure = { error };
+      throw error;
     } finally {
-      invalidRevision.dispose();
+      preserveSingleProductionProjectFixtureCleanup(
+        invalidRevisionFailure,
+        () => invalidRevision.dispose(),
+      );
     }
+  } catch (error) {
+    invalidRootFailure = { error };
+    throw error;
   } finally {
-    fs.rmSync(invalidRoot, { force: true, recursive: true });
+    preserveSingleProductionProjectFixtureCleanup(invalidRootFailure, () =>
+      fs.rmSync(invalidRoot, { force: true, recursive: true }),
+    );
   }
 };

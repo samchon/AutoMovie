@@ -16,7 +16,7 @@ import { hasViolation } from "../internal/predicates";
  *    "stickman") is NOT demanded: only the stand-in member is.
  */
 export const test_film_forge_cast_missing = (): void => {
-  const forged = forgeCast(makeScriptWrite(), { type: "write", entries: [] });
+  const forged = forgeCast(makeScriptWrite(), { entries: [] });
   TestValidator.equals("fails", forged.success, false);
   TestValidator.predicate(
     "names the unforged stand-in member only",

@@ -10,10 +10,10 @@ import { TestValidator } from "@nestia/e2e";
 import { makeMotion } from "../internal/fixtures";
 import {
   hasViolation,
-  hasWarning,
   nclose,
+  validationHasNoWarnings,
+  validationHasWarning,
   violationCount,
-  warningCount,
 } from "../internal/predicates";
 
 const restAt = (x: number, y: number, z: number): IAutoMovieTransform => ({
@@ -99,12 +99,12 @@ export const test_validation_foot_skate = (): void => {
   });
   TestValidator.predicate(
     "foot skate warns but succeeds",
-    rejected.success === true &&
-      hasWarning(
-        rejected,
-        "physics",
-        "$input.contacts[0].samples[1].leftFoot.horizontalSpeed",
-      ),
+    validationHasWarning(
+      "rejected foot skate",
+      rejected,
+      "physics",
+      "$input.contacts[0].samples[1].leftFoot.horizontalSpeed",
+    ),
   );
   const first =
     rejected.success === true
@@ -125,10 +125,9 @@ export const test_validation_foot_skate = (): void => {
     sampleRate: 2,
     physicsIntent: "moonwalk",
   });
-  TestValidator.equals(
+  TestValidator.predicate(
     "acknowledged skate is clean",
-    acknowledged.success === true && warningCount(acknowledged),
-    0,
+    validationHasNoWarnings("acknowledged foot skate", acknowledged),
   );
 
   TestValidator.equals(

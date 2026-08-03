@@ -1,4 +1,7 @@
-import { IAutoMovieRenderBundleManifest } from "@automovie/interface";
+import {
+  IAutoMovieDiagnostic,
+  IAutoMovieRenderBundleManifest,
+} from "@automovie/interface";
 import {
   AutoMovieProductionCompiler,
   AutoMovieProductionOracleService,
@@ -16,6 +19,7 @@ import { PNG } from "pngjs";
 
 import {
   fixtureWorldDesign,
+  productionCompileSucceeded,
   productionFixture,
   testCaptureRuntimeIdentity,
   testRendererIdentity,
@@ -28,19 +32,79 @@ const png = (width = 16, height = 16): Uint8Array => {
   return PNG.sync.write(image);
 };
 
+interface IProductionReviewRenderFixtureFailure {
+  error: unknown;
+}
+
+class ProductionReviewRenderFixtureCleanupError extends AggregateError {}
+
+export const preserveProductionReviewRenderFixtureCleanup = (
+  failure: IProductionReviewRenderFixtureFailure | undefined,
+  cleanup: () => void,
+): void => {
+  try {
+    cleanup();
+  } catch (cleanupFailure) {
+    if (failure === undefined) throw cleanupFailure;
+    throw new ProductionReviewRenderFixtureCleanupError(
+      [failure.error, cleanupFailure],
+      "Production review-render fixture teardown failed after the test failed.",
+    );
+  }
+};
+
+interface IProductionReviewRenderHarnessCleanup {
+  cleanup: () => unknown;
+  resource: string;
+}
+
+class ProductionReviewRenderHarnessCleanupError extends AggregateError {}
+
+/** Attempt every review-render harness cleanup without hiding failure. */
+export const preserveProductionReviewRenderHarnessCleanup = (
+  failure: IProductionReviewRenderFixtureFailure | undefined,
+  resources: readonly IProductionReviewRenderHarnessCleanup[],
+): void => {
+  const cleanupFailures: Array<{ error: unknown; resource: string }> = [];
+  for (const resource of resources)
+    try {
+      resource.cleanup();
+    } catch (error) {
+      cleanupFailures.push({ error, resource: resource.resource });
+    }
+  if (cleanupFailures.length === 1 && failure === undefined)
+    throw cleanupFailures[0]!.error;
+  if (cleanupFailures.length !== 0)
+    throw new ProductionReviewRenderHarnessCleanupError(
+      [
+        ...(failure === undefined ? [] : [failure.error]),
+        ...cleanupFailures.map((entry) => entry.error),
+      ],
+      `Production review-render harness cleanup failed${
+        failure === undefined ? "" : " after the guarded check failed"
+      }: ${cleanupFailures.map((entry) => entry.resource).join(", ")}.`,
+    );
+};
+
 /**
  * Review frame inventory rejects malformed, escaping and raced evidence,
  * including a physical bundle replaced after discovery but before consumption.
  */
 export const test_mcp_production_review_render_edges =
   async (): Promise<void> => {
+    let productionReviewRenderFailure:
+      | IProductionReviewRenderFixtureFailure
+      | undefined;
     const fixture = productionFixture();
     try {
       const project = AutoMovieProductionProject.open(fixture.root);
       const compiler = new AutoMovieProductionCompiler(project);
       TestValidator.predicate(
         "render review fixture compiles",
-        compiler.compile({ scope: "source" }).success,
+        productionCompileSucceeded(
+          "render review fixture",
+          compiler.compile({ scope: "source" }),
+        ),
       );
       const oracle = new AutoMovieProductionOracleService(
         project,
@@ -64,13 +128,27 @@ export const test_mcp_production_review_render_edges =
         height: 2,
       });
       const smallPrepared = review.prepare({ target });
+      const smallThumbnailContract =
+        smallPreview.captured &&
+        smallPrepared.frames.length === 0 &&
+        smallPrepared.diagnostics.some(
+          (diagnostic) => diagnostic.code === "render-frame-invalid",
+        );
+      if (smallThumbnailContract === false)
+        throw new Error(
+          `Review thumbnail contract failed:\n${JSON.stringify(
+            {
+              preview: smallPreview,
+              preparedFrames: smallPrepared.frames,
+              reviewDiagnostics: smallPrepared.diagnostics,
+            },
+            null,
+            2,
+          )}`,
+        );
       TestValidator.predicate(
         "a decodable thumbnail remains previewable but cannot satisfy production review",
-        smallPreview.captured &&
-          smallPrepared.frames.length === 0 &&
-          smallPrepared.diagnostics.some(
-            (diagnostic) => diagnostic.code === "render-frame-invalid",
-          ),
+        smallThumbnailContract,
       );
       fs.rmSync(path.join(fixture.root, smallPreview.renderBundle!), {
         recursive: true,
@@ -236,7 +314,7 @@ export const test_mcp_production_review_render_edges =
       );
       const aggregateManifest = path.join(
         fixture.root,
-        ".automovie/render-manifest.json",
+        ".automovie/productions/fixture-film/render-manifest.json",
       );
       const beforeAggregate = review.prepare({
         target: { kind: "film", id: "fixture-film" },
@@ -323,30 +401,282 @@ export const test_mcp_production_review_render_edges =
               preparedFrame.time === frame.time,
           ),
       );
-      fs.rmSync(path.join(fixture.root, "renders", wrongClockBundle), {
-        recursive: true,
-        force: true,
-      });
+      fs.rmSync(
+        path.join(fixture.root, "renders", "fixture-film", wrongClockBundle),
+        {
+          recursive: true,
+          force: true,
+        },
+      );
 
       const malformedDirectory = path.join(
         fixture.root,
-        "renders/review-malformed",
+        "renders/fixture-film/review-malformed",
       );
       fs.mkdirSync(malformedDirectory, { recursive: true });
       fs.writeFileSync(path.join(malformedDirectory, "manifest.json"), "{bad");
-      TestValidator.predicate(
-        "malformed bundle manifests are explicit",
-        review
-          .prepare({ target })
-          .diagnostics.some((item) => item.code === "render-bundle-invalid"),
+      const malformedShotPrepared = review.prepare({ target });
+      const malformedAssetPrepared = review.prepare({
+        target: { kind: "asset", id: "sentinel" },
+      });
+      const malformedManifestPath =
+        "renders/fixture-film/review-malformed/manifest.json";
+      const shotInvalidManifest = malformedShotPrepared.diagnostics.find(
+        (item) =>
+          item.code === "render-bundle-invalid" &&
+          item.path === malformedManifestPath,
+      );
+      const assetInvalidManifest = malformedAssetPrepared.diagnostics.find(
+        (item) =>
+          item.code === "render-bundle-invalid" &&
+          item.path === malformedManifestPath,
+      );
+      TestValidator.equals(
+        "malformed bundle manifests retain exact diagnostics during asset review",
+        {
+          assetDiagnostic:
+            assetInvalidManifest === undefined
+              ? null
+              : {
+                  code: assetInvalidManifest.code,
+                  category: assetInvalidManifest.category,
+                  phase: assetInvalidManifest.phase,
+                  target: assetInvalidManifest.target,
+                  path: assetInvalidManifest.path,
+                  preservesValidationEvidence:
+                    assetInvalidManifest.message.startsWith(
+                      "Render bundle manifest is invalid: ",
+                    ) &&
+                    assetInvalidManifest.message.length >
+                      "Render bundle manifest is invalid: . Recreate the bundle through captureFrame."
+                        .length,
+                  preservesRecaptureAndSafetyGuidance:
+                    assetInvalidManifest.message.includes(
+                      ". Recreate the bundle through captureFrame.",
+                    ) &&
+                    assetInvalidManifest.message.endsWith(
+                      "Correction feedback does not authorize deleting the artifact.",
+                    ),
+                },
+          sameAsShot:
+            JSON.stringify(assetInvalidManifest) ===
+            JSON.stringify(shotInvalidManifest),
+          preservesMissingViews: malformedAssetPrepared.diagnostics.some(
+            (item) => item.code === "review-evidence-missing",
+          ),
+        },
+        {
+          assetDiagnostic: {
+            code: "render-bundle-invalid",
+            category: "error",
+            phase: "render",
+            target: malformedManifestPath,
+            path: malformedManifestPath,
+            preservesValidationEvidence: true,
+            preservesRecaptureAndSafetyGuidance: true,
+          },
+          sameAsShot: true,
+          preservesMissingViews: true,
+        },
       );
       fs.rmSync(malformedDirectory, { recursive: true, force: true });
+
+      const mismatchedAssetBytes = png();
+      const mismatchedAssetTarget = {
+        kind: "asset" as const,
+        id: "sentinel",
+        angleDeg: 0,
+        elevationDeg: 15,
+        pose: "rest" as const,
+      };
+      const mismatchedAssetBase: IAutoMovieRenderBundleManifest = {
+        version: 3,
+        target: mismatchedAssetTarget,
+        compileFingerprint: project.generatedManifest()!.inputFingerprint,
+        rendererIdentity: testRendererIdentity(),
+        targetFingerprint: productionRenderTargetFingerprint(
+          project,
+          project.generatedManifest()!,
+          mismatchedAssetTarget,
+        ),
+        renderSpec: {
+          target: mismatchedAssetTarget.id,
+          frameFormat: { width: 16, height: 16, fps: 24 },
+          toneMapping: "none",
+          codec: "h264",
+          pixelFormat: "yuv420p",
+          crf: 17,
+        },
+        frames: [
+          {
+            index: 0,
+            time: 0,
+            pass: "beauty",
+            path: "asset.png",
+            digest: digestAutoMovieBytes(mismatchedAssetBytes),
+            width: 16,
+            height: 16,
+          },
+        ],
+      };
+      const mismatchedAssetManifests: IAutoMovieRenderBundleManifest[] = [
+        {
+          ...mismatchedAssetBase,
+          renderSpec: {
+            ...mismatchedAssetBase.renderSpec,
+            target: "another-asset",
+          },
+        },
+        {
+          ...mismatchedAssetBase,
+          renderSpec: {
+            ...mismatchedAssetBase.renderSpec,
+            frameFormat: {
+              ...mismatchedAssetBase.renderSpec.frameFormat,
+              fps: 12,
+            },
+          },
+        },
+        {
+          ...mismatchedAssetBase,
+          renderSpec: {
+            ...mismatchedAssetBase.renderSpec,
+            frameFormat: {
+              ...mismatchedAssetBase.renderSpec.frameFormat,
+              width: 15,
+            },
+          },
+        },
+        {
+          ...mismatchedAssetBase,
+          renderSpec: {
+            ...mismatchedAssetBase.renderSpec,
+            frameFormat: {
+              ...mismatchedAssetBase.renderSpec.frameFormat,
+              height: 15,
+            },
+          },
+        },
+      ];
+      const mismatchedAssetBundles = mismatchedAssetManifests.map(
+        (manifest) => {
+          const bundle = productionRenderBundleRelativePath(manifest);
+          project.commitRenderBundle(
+            bundle,
+            new Map([["asset.png", mismatchedAssetBytes]]),
+            manifest,
+          );
+          return bundle;
+        },
+      );
+      const staleAssetManifest: IAutoMovieRenderBundleManifest = {
+        ...mismatchedAssetBase,
+        targetFingerprint:
+          "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        renderSpec: {
+          ...mismatchedAssetBase.renderSpec,
+          target: "stale-other-asset",
+          crf: 18,
+        },
+      };
+      const staleAssetBundle =
+        productionRenderBundleRelativePath(staleAssetManifest);
+      project.commitRenderBundle(
+        staleAssetBundle,
+        new Map([["asset.png", mismatchedAssetBytes]]),
+        staleAssetManifest,
+      );
+      const mismatchedAssetPaths = mismatchedAssetBundles.map((bundle) => ({
+        target: path
+          .relative(fixture.root, path.join(project.renderRoot(), bundle))
+          .replaceAll(path.sep, "/"),
+        manifest: path
+          .relative(
+            fixture.root,
+            path.join(project.renderRoot(), bundle, "manifest.json"),
+          )
+          .replaceAll(path.sep, "/"),
+      }));
+      const staleAssetManifestPath = path
+        .relative(
+          fixture.root,
+          path.join(project.renderRoot(), staleAssetBundle, "manifest.json"),
+        )
+        .replaceAll(path.sep, "/");
+      const mismatchedAssetPrepared = review.prepare({
+        target: { kind: "asset", id: "sentinel" },
+      });
+      const mismatchedAssetDiagnostics = mismatchedAssetPrepared.diagnostics
+        .filter(
+          (diagnostic) =>
+            diagnostic.path !== null &&
+            mismatchedAssetPaths.some(
+              (candidate) => candidate.manifest === diagnostic.path,
+            ),
+        )
+        .sort((left, right) =>
+          compareCodeUnits(left.path ?? "", right.path ?? ""),
+        );
+      TestValidator.equals(
+        "asset review rejects every mismatched renderer-owned render spec",
+        {
+          admittedFrames: mismatchedAssetPrepared.frames.length,
+          diagnostics: mismatchedAssetDiagnostics,
+          missingViews: mismatchedAssetPrepared.diagnostics
+            .filter(
+              (diagnostic) => diagnostic.code === "review-evidence-missing",
+            )
+            .map((diagnostic) => diagnostic.target)
+            .sort(compareCodeUnits),
+          staleBundleAdmitted: mismatchedAssetPrepared.frames.some((frame) =>
+            frame.bundle.endsWith(staleAssetBundle),
+          ),
+          staleBundleReportedAsRenderSpecMismatch:
+            mismatchedAssetPrepared.diagnostics.some(
+              (diagnostic) =>
+                diagnostic.code === "render-frame-invalid" &&
+                diagnostic.path === staleAssetManifestPath,
+            ),
+        },
+        {
+          admittedFrames: 0,
+          diagnostics: mismatchedAssetPaths
+            .sort((left, right) =>
+              compareCodeUnits(left.manifest, right.manifest),
+            )
+            .map(
+              (candidate) =>
+                ({
+                  code: "render-frame-invalid",
+                  category: "warning",
+                  phase: "render",
+                  target: candidate.target,
+                  path: candidate.manifest,
+                  message:
+                    "This asset view does not match the current asset, production FPS, and exact production raster, so it cannot discharge review. Capture the required view again without width/height overrides before submitReview. Correction feedback does not authorize deleting the artifact.",
+                }) satisfies IAutoMovieDiagnostic,
+            ),
+          missingViews: [
+            "asset:sentinel:rig-rom-extremes",
+            "asset:sentinel:top-outline",
+            "asset:sentinel:turntable-back",
+            "asset:sentinel:turntable-front",
+            "asset:sentinel:turntable-left",
+            "asset:sentinel:turntable-right",
+          ],
+          staleBundleAdmitted: false,
+          staleBundleReportedAsRenderSpecMismatch: false,
+        },
+      );
 
       for (const [name, framePath] of [
         ["absolute", path.resolve(fixture.root, "outside.png")],
         ["escape", "../outside.png"],
       ]) {
-        const directory = path.join(fixture.root, `renders/review-${name}`);
+        const directory = path.join(
+          fixture.root,
+          `renders/fixture-film/review-${name}`,
+        );
         fs.mkdirSync(directory, { recursive: true });
         fs.writeFileSync(
           path.join(directory, "manifest.json"),
@@ -366,7 +696,7 @@ export const test_mcp_production_review_render_edges =
 
       const symlinkDirectory = path.join(
         fixture.root,
-        "renders/review-symlink",
+        "renders/fixture-film/review-symlink",
       );
       const externalFrames = path.join(fixture.root, "external-frames");
       fs.mkdirSync(symlinkDirectory, { recursive: true });
@@ -417,7 +747,10 @@ export const test_mcp_production_review_render_edges =
           }),
         ],
       ] as const) {
-        const directory = path.join(fixture.root, `renders/review-${name}`);
+        const directory = path.join(
+          fixture.root,
+          `renders/fixture-film/review-${name}`,
+        );
         fs.mkdirSync(directory, { recursive: true });
         fs.copyFileSync(sourceFrame, path.join(directory, "frame.png"));
         fs.writeFileSync(
@@ -545,7 +878,7 @@ export const test_mcp_production_review_render_edges =
 
       const invalidDirectory = path.join(
         fixture.root,
-        "renders/review-invalid-frame",
+        "renders/fixture-film/review-invalid-frame",
       );
       const invalidFrame = path.join(invalidDirectory, "frame.png");
       fs.mkdirSync(invalidDirectory, { recursive: true });
@@ -667,6 +1000,9 @@ export const test_mcp_production_review_render_edges =
         }
         return residentReadRenderFile(relativePath);
       }) as typeof project.readRenderFile;
+      let postVerificationFailureState:
+        | IProductionReviewRenderFixtureFailure
+        | undefined;
       try {
         TestValidator.predicate(
           "post-verification byte changes remain actionable",
@@ -692,11 +1028,29 @@ export const test_mcp_production_review_render_edges =
                 item.message.includes("non-error frame read"),
             ),
         );
+      } catch (error) {
+        postVerificationFailureState = { error };
+        throw error;
       } finally {
-        project.verifiedRenderManifest =
-          residentVerifiedRenderManifest as typeof project.verifiedRenderManifest;
-        project.readRenderFile =
-          residentReadRenderFile as typeof project.readRenderFile;
+        preserveProductionReviewRenderHarnessCleanup(
+          postVerificationFailureState,
+          [
+            {
+              resource: "post-verification manifest hook",
+              cleanup: () => {
+                project.verifiedRenderManifest =
+                  residentVerifiedRenderManifest as typeof project.verifiedRenderManifest;
+              },
+            },
+            {
+              resource: "post-verification read hook",
+              cleanup: () => {
+                project.readRenderFile =
+                  residentReadRenderFile as typeof project.readRenderFile;
+              },
+            },
+          ],
+        );
       }
       const racedBundleRoot = path.join(project.renderRoot(), racedBundle);
       const outsideRacedFrame = path.join(
@@ -719,6 +1073,9 @@ export const test_mcp_production_review_render_edges =
               ),
             };
       }) as typeof project.verifiedRenderManifest;
+      let escapedFrameFailure:
+        | IProductionReviewRenderFixtureFailure
+        | undefined;
       try {
         TestValidator.equals(
           "verified frame paths cannot escape their content-addressed bundle",
@@ -738,11 +1095,27 @@ export const test_mcp_production_review_render_edges =
           }),
           [true, true, true],
         );
+      } catch (error) {
+        escapedFrameFailure = { error };
+        throw error;
       } finally {
-        project.verifiedRenderManifest =
-          residentVerifiedRenderManifest as typeof project.verifiedRenderManifest;
-        fs.unlinkSync(linkedRacedFrame);
-        fs.rmSync(outsideRacedFrame);
+        preserveProductionReviewRenderHarnessCleanup(escapedFrameFailure, [
+          {
+            resource: "escaped-frame manifest hook",
+            cleanup: () => {
+              project.verifiedRenderManifest =
+                residentVerifiedRenderManifest as typeof project.verifiedRenderManifest;
+            },
+          },
+          {
+            resource: "escaped-frame link",
+            cleanup: () => fs.unlinkSync(linkedRacedFrame),
+          },
+          {
+            resource: "escaped-frame outside file",
+            cleanup: () => fs.rmSync(outsideRacedFrame),
+          },
+        ]);
       }
       fs.rmSync(path.join(project.renderRoot(), racedBundle), {
         recursive: true,
@@ -794,7 +1167,7 @@ export const test_mcp_production_review_render_edges =
 
       const disappearingDirectory = path.join(
         fixture.root,
-        "renders/review-disappearing",
+        "renders/fixture-film/review-disappearing",
       );
       const disappearingManifest = path.join(
         disappearingDirectory,
@@ -826,6 +1199,7 @@ export const test_mcp_production_review_render_edges =
         const directory = path.join(
           fixture.root,
           "renders",
+          "fixture-film",
           `review-inventory-${name}`,
         );
         const parked = `${directory}-parked`;
@@ -847,15 +1221,27 @@ export const test_mcp_production_review_render_edges =
         }
         return { directory, parked, external };
       };
-      const disposeInventoryRaceFixture = (race: {
+      const inventoryRaceCleanup = (race: {
         directory: string;
         parked: string;
         external: string;
-      }): void => {
-        fs.rmSync(race.directory, { recursive: true, force: true });
-        fs.rmSync(race.parked, { recursive: true, force: true });
-        fs.rmSync(race.external, { recursive: true, force: true });
-      };
+      }): IProductionReviewRenderHarnessCleanup[] => [
+        {
+          resource: "inventory active root",
+          cleanup: () =>
+            fs.rmSync(race.directory, { recursive: true, force: true }),
+        },
+        {
+          resource: "inventory parked root",
+          cleanup: () =>
+            fs.rmSync(race.parked, { recursive: true, force: true }),
+        },
+        {
+          resource: "inventory external root",
+          cleanup: () =>
+            fs.rmSync(race.external, { recursive: true, force: true }),
+        },
+      ];
       const postReadDirectoryRace = (
         replacement: "directory" | "file" | "junction",
       ): boolean => {
@@ -884,6 +1270,9 @@ export const test_mcp_production_review_render_edges =
             return entries;
           },
         );
+        let postReadRaceFailure:
+          | IProductionReviewRenderFixtureFailure
+          | undefined;
         try {
           try {
             review.prepare({ target });
@@ -892,9 +1281,19 @@ export const test_mcp_production_review_render_edges =
               error instanceof Error &&
               error.message.includes("Render inventory directory");
           }
+        } catch (error) {
+          postReadRaceFailure = { error };
+          throw error;
         } finally {
-          Reflect.set(fs, "readdirSync", residentReaddirSync);
-          disposeInventoryRaceFixture(race);
+          preserveProductionReviewRenderHarnessCleanup(postReadRaceFailure, [
+            {
+              resource: "inventory readdir hook",
+              cleanup: () => {
+                Reflect.set(fs, "readdirSync", residentReaddirSync);
+              },
+            },
+            ...inventoryRaceCleanup(race),
+          ]);
         }
         return swapped && rejected;
       };
@@ -926,6 +1325,7 @@ export const test_mcp_production_review_render_edges =
           }
           return status;
         });
+        let lstatRaceFailure: IProductionReviewRenderFixtureFailure | undefined;
         try {
           try {
             review.prepare({ target });
@@ -933,9 +1333,19 @@ export const test_mcp_production_review_render_edges =
             rejected =
               error instanceof Error && error.message.includes(fragment);
           }
+        } catch (error) {
+          lstatRaceFailure = { error };
+          throw error;
         } finally {
-          Reflect.set(fs, "lstatSync", residentLstatSync);
-          disposeInventoryRaceFixture(race);
+          preserveProductionReviewRenderHarnessCleanup(lstatRaceFailure, [
+            {
+              resource: "inventory lstat hook",
+              cleanup: () => {
+                Reflect.set(fs, "lstatSync", residentLstatSync);
+              },
+            },
+            ...inventoryRaceCleanup(race),
+          ]);
         }
         return swapped && rejected;
       };
@@ -993,6 +1403,7 @@ export const test_mcp_production_review_render_edges =
         }
         return residentVerifiedManifest(manifestPath);
       }) as typeof project.verifiedRenderManifest;
+      let lateBundleFailure: IProductionReviewRenderFixtureFailure | undefined;
       try {
         const prepared = review.prepare({ target });
         TestValidator.predicate(
@@ -1006,15 +1417,50 @@ export const test_mcp_production_review_render_edges =
                   path.resolve(lateManifestPath),
             ),
         );
+      } catch (error) {
+        lateBundleFailure = { error };
+        throw error;
       } finally {
-        project.verifiedRenderManifest =
-          residentVerifiedManifest as typeof project.verifiedRenderManifest;
-        if (lateSwapped) fs.unlinkSync(lateRoot);
-        fs.rmSync(lateSource, { recursive: true, force: true });
-        if (fs.existsSync(lateParked)) fs.renameSync(lateParked, lateRoot);
-        fs.rmSync(lateRoot, { recursive: true, force: true });
+        preserveProductionReviewRenderHarnessCleanup(lateBundleFailure, [
+          {
+            resource: "late-bundle manifest hook",
+            cleanup: () => {
+              project.verifiedRenderManifest =
+                residentVerifiedManifest as typeof project.verifiedRenderManifest;
+            },
+          },
+          {
+            resource: "late-bundle replacement link",
+            cleanup: () => {
+              if (lateSwapped) fs.unlinkSync(lateRoot);
+            },
+          },
+          {
+            resource: "late-bundle external source",
+            cleanup: () =>
+              fs.rmSync(lateSource, { recursive: true, force: true }),
+          },
+          {
+            resource: "late-bundle parked original",
+            cleanup: () => {
+              if (fs.existsSync(lateParked))
+                fs.renameSync(lateParked, lateRoot);
+            },
+          },
+          {
+            resource: "late-bundle restored root",
+            cleanup: () =>
+              fs.rmSync(lateRoot, { recursive: true, force: true }),
+          },
+        ]);
       }
+    } catch (error) {
+      productionReviewRenderFailure = { error };
+      throw error;
     } finally {
-      fixture.dispose();
+      preserveProductionReviewRenderFixtureCleanup(
+        productionReviewRenderFailure,
+        () => fixture.dispose(),
+      );
     }
   };

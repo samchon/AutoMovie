@@ -2,6 +2,7 @@ import {
   AutoMovieContentDigest,
   AutoMovieGuidePass,
   IAutoMovieProductionDeliverable,
+  IAutoMovieRepaintRuntimeIdentity,
 } from "@automovie/interface";
 import typia from "typia";
 
@@ -11,16 +12,18 @@ import {
   resolveAutoMovieBenchmarkLifecycle,
 } from "./lifecycle";
 import {
+  AutoMovieBenchmarkLane,
   AutoMovieBenchmarkSurface,
   IAutoMovieBenchmarkTask,
   IAutoMovieBenchmarkVersions,
+  canonicalBenchmarkJson,
   digestBenchmarkValue,
   validateAutoMovieBenchmarkTask,
 } from "./task";
 
 /** Submission schema every archived run carries. */
 export const AUTOMOVIE_BENCHMARK_SUBMISSION_PROTOCOL =
-  "automovie.benchmark.submission.v1";
+  "automovie.benchmark.submission.v3";
 
 /** One packaged artifact the candidate installed from. */
 export interface IAutoMovieBenchmarkArtifact {
@@ -92,6 +95,8 @@ export interface IAutoMovieBenchmarkSourceEdit {
 
 /** One actual captured frame the run produced. */
 export interface IAutoMovieBenchmarkCapturedFrame {
+  /** Archive-relative resident PNG path. */
+  path: string;
   /** Compiler-owned shot id. */
   shot: string;
   /** Non-negative finite shot-local capture time in seconds. */
@@ -112,6 +117,8 @@ export interface IAutoMovieBenchmarkCapturedFrame {
 
 /** One published deliverable file and its parser receipt. */
 export interface IAutoMovieBenchmarkDeliveredFile {
+  /** Archive-relative resident output path. */
+  path: string;
   /** Deliverable id that owns the file. */
   deliverable: string;
   /** Deliverable class. */
@@ -156,6 +163,47 @@ export interface IAutoMovieBenchmarkRuntime {
   capture: string;
 }
 
+/** Runner-owned receipt evidence for one reviewed repaint shot. */
+export interface IAutoMovieBenchmarkRepaintShotEvidence {
+  /** Compiled shot id. */
+  shot: string;
+  /** Digest of the immutable repaint receipt. */
+  receiptDigest: AutoMovieContentDigest;
+  /** Digest of the exact repaint MP4 bytes. */
+  outputDigest: AutoMovieContentDigest;
+  /** Current completed deterministic source-review fingerprint. */
+  sourceReviewFingerprint: AutoMovieContentDigest;
+  /** Current completed rendition-review fingerprint. */
+  renditionReviewFingerprint: AutoMovieContentDigest;
+}
+
+/** Structured repaint runtime and delivery evidence observed by the runner. */
+export type IAutoMovieBenchmarkRepaintEvidence =
+  | {
+      /** Deterministic lane never requested an adapter. */
+      status: "not-requested";
+    }
+  | {
+      /** Requested repaint lane had no host-owned runtime. */
+      status: "unavailable";
+    }
+  | {
+      /** Runtime existed, but the candidate produced no verified delivery. */
+      status: "not-produced";
+      /** Canonical host-owned adapter/model identity. */
+      adapterIdentity: string;
+    }
+  | {
+      /** Current receipts, reviews, and final feature were all observed. */
+      status: "verified";
+      /** Canonical host-owned adapter/model identity. */
+      adapterIdentity: string;
+      /** Every repaint shot consumed by the delivered feature. */
+      shots: IAutoMovieBenchmarkRepaintShotEvidence[];
+      /** Digest of the final feature proven to consume these renditions. */
+      featureDigest: AutoMovieContentDigest;
+    };
+
 /** One immutable archived run, before its content-addressed identity. */
 export interface IAutoMovieBenchmarkSubmissionDraft {
   /** Submission schema. */
@@ -170,6 +218,8 @@ export interface IAutoMovieBenchmarkSubmissionDraft {
   briefDigest: AutoMovieContentDigest;
   /** Surface the candidate drove. */
   surface: AutoMovieBenchmarkSurface;
+  /** Deterministic baseline or optional repaint experiment. */
+  lane: AutoMovieBenchmarkLane;
   /** Packaged repository state. */
   repository: IAutoMovieBenchmarkRepository;
   /** External client identity. */
@@ -178,6 +228,8 @@ export interface IAutoMovieBenchmarkSubmissionDraft {
   mcp: IAutoMovieBenchmarkMcpSession;
   /** Digest of the complete transcript and tool-result stream. */
   transcriptDigest: AutoMovieContentDigest;
+  /** Digest of runner-observed MCP sessions and their target provenance. */
+  inventoryDigest: AutoMovieContentDigest;
   /** Every source edit the run made. */
   edits: IAutoMovieBenchmarkSourceEdit[];
   /** Digest of the final project tree. */
@@ -196,6 +248,8 @@ export interface IAutoMovieBenchmarkSubmissionDraft {
   generation: IAutoMovieBenchmarkGenerationHealth;
   /** Machine identity. */
   runtime: IAutoMovieBenchmarkRuntime;
+  /** Runner-observed optional repaint runtime and receipt chain. */
+  repaint: IAutoMovieBenchmarkRepaintEvidence;
   /** Infrastructure failure that removes the run from the denominator. */
   incident: IAutoMovieBenchmarkInfraIncident | null;
 }
@@ -309,6 +363,90 @@ const assertNumericClaims = (
   );
 };
 
+/** Refuse evidence addresses that cannot resolve inside one immutable archive. */
+const assertEvidencePaths = (
+  draft: IAutoMovieBenchmarkSubmissionDraft,
+): void => {
+  const entries = [
+    ...draft.frames.map((frame) => ({
+      path: frame.path,
+      prefix: "evidence/frames/",
+    })),
+    ...draft.deliverables.map((file) => ({
+      path: file.path,
+      prefix: "evidence/deliverables/",
+    })),
+  ];
+  const invalid = entries.find(
+    (entry) =>
+      entry.path.startsWith(entry.prefix) === false ||
+      entry.path.includes("\\") ||
+      entry.path
+        .split("/")
+        .some(
+          (segment) =>
+            segment.length === 0 ||
+            segment === "." ||
+            segment === ".." ||
+            segment.includes("\0"),
+        ),
+  );
+  if (invalid !== undefined)
+    throw new Error(
+      `Invalid AutoMovie benchmark submission: evidence path "${invalid.path}" must be a normalized archive-relative path below "${invalid.prefix}".`,
+    );
+  const duplicate = entries.find(
+    (entry, index) =>
+      entries.findIndex((candidate) => candidate.path === entry.path) !== index,
+  );
+  if (duplicate !== undefined)
+    throw new Error(
+      `Invalid AutoMovie benchmark submission: evidence path "${duplicate.path}" is owned more than once.`,
+    );
+};
+
+/** Refuse nominal repaint labels that do not describe one exact host runtime. */
+const assertRepaintEvidence = (
+  draft: IAutoMovieBenchmarkSubmissionDraft,
+): void => {
+  if (
+    draft.repaint.status !== "not-produced" &&
+    draft.repaint.status !== "verified"
+  )
+    return;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(draft.repaint.adapterIdentity);
+  } catch {
+    throw new Error(
+      "Invalid AutoMovie benchmark submission: repaint adapter identity is not canonical JSON.",
+    );
+  }
+  const validation =
+    typia.validateEquals<IAutoMovieRepaintRuntimeIdentity>(parsed);
+  if (
+    validation.success === false ||
+    validation.data.protocolVersion !== "automovie.repaint-runtime.v1" ||
+    validation.data.provider.trim().length === 0 ||
+    validation.data.model.trim().length === 0 ||
+    validation.data.version.trim().length === 0 ||
+    canonicalBenchmarkJson(validation.data) !== draft.repaint.adapterIdentity
+  )
+    throw new Error(
+      "Invalid AutoMovie benchmark submission: repaint adapter identity must be canonical runtime-v1 JSON with non-blank provider, model, and version.",
+    );
+  if (
+    draft.repaint.status === "verified" &&
+    (draft.repaint.shots.length === 0 ||
+      draft.repaint.shots.some((shot) => shot.shot.trim().length === 0) ||
+      new Set(draft.repaint.shots.map((shot) => shot.shot)).size !==
+        draft.repaint.shots.length)
+  )
+    throw new Error(
+      "Invalid AutoMovie benchmark submission: verified repaint evidence requires unique non-blank shot receipts.",
+    );
+};
+
 /**
  * Validate one archived run, resolve its lifecycle, and seal it.
  *
@@ -329,6 +467,8 @@ export const sealAutoMovieBenchmarkSubmission = (
         .join("; ")}.`,
     );
   assertNumericClaims(draft);
+  assertEvidencePaths(draft);
+  assertRepaintEvidence(draft);
   const sealed: IAutoMovieBenchmarkSubmissionDraft = {
     ...draft,
     lifecycle: resolveAutoMovieBenchmarkLifecycle(draft.lifecycle),
@@ -360,6 +500,8 @@ const assertAutoMovieBenchmarkSubmissionIntegrity = (
     );
   const { runId, ...draft } = validation.data;
   assertNumericClaims(draft);
+  assertEvidencePaths(draft);
+  assertRepaintEvidence(draft);
   const canonicalLifecycle = resolveAutoMovieBenchmarkLifecycle(
     draft.lifecycle,
   );
@@ -475,6 +617,7 @@ export const benchmarkComparisonDrift = (
         right.versions.scenarioHelper,
       ],
       ["briefDigest", left.briefDigest, right.briefDigest],
+      ["lane", left.lane, right.lane],
       ["commit", left.repository.commit, right.repository.commit],
       ["dirty", left.repository.dirty, right.repository.dirty],
       [

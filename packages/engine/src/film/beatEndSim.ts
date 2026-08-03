@@ -8,6 +8,7 @@ import {
 
 import { Matrix4 } from "../math/Matrix4";
 import { Vector3 } from "../math/Vector3";
+import { addPositiveModulo } from "../math/positiveModulo";
 import { sampleMotion } from "../motion/sampleMotion";
 
 /**
@@ -88,16 +89,12 @@ export const gaitPhaseOf = (
   if (cycle !== null) {
     if (!Number.isFinite(cycle.period) || cycle.period <= 0) return null;
     if (!Number.isFinite(cycle.phaseAt)) return null;
-    return modPositive(cycle.phaseAt + localTime, cycle.period);
+    return addPositiveModulo(cycle.phaseAt, localTime, cycle.period);
   }
   if (!clip.loop) return null;
   if (clip.duration <= 0) return null;
   return wrapTime(localTime, clip.duration);
 };
-
-/** `value mod period` normalized into `[0, period)`. */
-const modPositive = (value: number, period: number): number =>
-  ((value % period) + period) % period;
 
 /**
  * World root velocity at `localTime`, finite-differenced over the clip's last
@@ -107,8 +104,10 @@ const modPositive = (value: number, period: number): number =>
  * it: within a cycle the window is the trailing {@link VELOCITY_DT}; in the
  * cycle's opening instants it shrinks to `[0, phase]`; and exactly on the seam
  * the cycle's closing stretch is measured with the clip clamped (un-looped) so
- * sampling `duration` does not wrap to the cycle start. A clamped clip that has
- * already reached its end holds its last pose: zero velocity.
+ * sampling `duration` does not wrap to the cycle start. A non-looping clip
+ * sampled exactly at its end uses that same incoming left-hand window for the
+ * cut; only a sample after the clip has ended holds its last pose at zero
+ * velocity.
  */
 export const rootVelocityOf = (
   node: IAutoMovieSceneNode,
@@ -125,15 +124,16 @@ export const rootVelocityOf = (
     return velocityOver(node, clamped, start, clip.duration);
   }
 
-  if (localTime >= clip.duration) return { x: 0, y: 0, z: 0 };
-  const t1 = Math.max(localTime, 0);
+  if (localTime > clip.duration) return { x: 0, y: 0, z: 0 };
+  const t1 = Math.min(Math.max(localTime, 0), clip.duration);
   return velocityOver(node, clip, Math.max(0, t1 - VELOCITY_DT), t1);
 };
 
 /**
- * The most recent stance plant per foot at/before `localTime`, the contact the
- * next beat should keep each foot on. Later entries win ties; `null` when no
- * plant data was supplied or none had started yet.
+ * The most recent stance plant per foot active at `localTime`, the contact the
+ * next beat should keep each foot on. Stance bounds are inclusive; later
+ * entries win equal-start ties. Returns `null` when no plant data was supplied
+ * or every run is past/future at the cut.
  */
 export const plantsAtEnd = (
   plants: readonly IAutoMovieBeatEndFootPlant[] | undefined,
@@ -145,7 +145,7 @@ export const plantsAtEnd = (
     IAutoMovieBeatEndFootPlant
   >();
   for (const plant of plants) {
-    if (plant.start > localTime) continue;
+    if (plant.start > localTime || plant.end < localTime) continue;
     const held = byFoot.get(plant.foot);
     if (held === undefined || plant.start >= held.start)
       byFoot.set(plant.foot, plant);

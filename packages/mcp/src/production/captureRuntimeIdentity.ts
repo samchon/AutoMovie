@@ -54,7 +54,7 @@ export const canonicalAutoMovieCaptureRuntimeIdentity = (
       identity.browser.executableDigest === null)
   )
     throw new Error(
-      "Package-owned capture identity requires the Chromium product, a non-blank Playwright revision, and an exact executable digest. Run pnpm capture:install and pnpm capture:doctor.",
+      "Package-owned capture identity requires the Chromium product, a non-blank Playwright revision, and an exact executable digest. Run npm run capture:install and npm run capture:doctor.",
     );
   if (
     identity.browser.source === "configured-executable" &&

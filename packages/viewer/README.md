@@ -1,5 +1,14 @@
 # `@automovie/viewer`
 
+`mapImportedHumanoidBones` maps a loaded glTF/VRM scene onto a compiled
+proxy skeleton before `createImportedModelObject` wraps it. Production hosts
+therefore render and review the final registered mesh while engine validation
+continues to use deterministic proxy geometry and measurement data.
+
+`buildInstancedInstanceSet` and `regenerateInstanceSlot` render general crowd,
+vegetation, prop, and debris chunks with seeded scale, palette, numeric traits,
+frustum culling, and automatic LOD without scene-node expansion.
+
 `@automovie/viewer`는 AutoMovie 산출물을 `three.js` 위에서 재생하는 런타임이다.
 
 AI가 만든 `@automovie/interface` 모델, 포즈, 모션, 표정을 화면에 올리고, `@automovie/engine`이 계산한 FK와 보간 결과를 그대로 투영한다. 이 패키지는 editor가 아니다. 수작업 저작 UI는 playground가 담당하고, viewer는 재생과 스냅샷의 얇은 표면으로 남는다.

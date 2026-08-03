@@ -17,6 +17,8 @@ import { fileURLToPath } from "node:url";
 import { chromium } from "playwright-core";
 import { PNG } from "pngjs";
 
+import { withBrowserPage } from "./preserveCleanupFailure.mjs";
+
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "../../..");
 const hero = process.argv[2] ?? "hero2";
@@ -248,134 +250,137 @@ const arcRms = (a, b) => {
 };
 
 // ---------- browser ----------
-const browser = await chromium.launch({
-  executablePath: CHROME,
-  headless: true,
-});
-const page = await browser.newPage({ viewport: { width: 1000, height: 1000 } });
-await page.goto(`${BASE}/head.html`, { waitUntil: "load" });
-await page.waitForFunction(() => window.__faceEditor?.setValues);
-await page.addStyleTag({
-  content: `#panel,#strip,#hud{display:none!important}#stage{grid-template-columns:1fr!important}#workbench{grid-template-rows:1fr!important}`,
-});
-await page.setViewportSize({ width: 1000, height: 1000 });
-await page.evaluate(async () => {
-  const vision =
-    await import("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14");
-  const { FaceLandmarker, FilesetResolver } = vision;
-  const fileset = await FilesetResolver.forVisionTasks(
-    "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm",
-  );
-  window.__fl = await FaceLandmarker.createFromOptions(fileset, {
-    baseOptions: {
-      modelAssetPath:
-        "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task",
-    },
-    runningMode: "IMAGE",
-    numFaces: 1,
-  });
-});
-const cw = sheet.width / ref.grid.columns,
-  ch = sheet.height / ref.grid.rows;
-const cell = ref.views.front;
-const photoDet = await page.evaluate(
-  async ({ url, sx, sy, sw, sh }) => {
-    const img = await new Promise((res, rej) => {
-      const im = new Image();
-      im.onload = () => res(im);
-      im.onerror = rej;
-      im.src = url;
+const { FIT, start, final, cur } = await withBrowserPage(
+  () => chromium.launch({ executablePath: CHROME, headless: true }),
+  { viewport: { width: 1000, height: 1000 } },
+  "fit joint",
+  async (page) => {
+    await page.goto(`${BASE}/head.html`, { waitUntil: "load" });
+    await page.waitForFunction(() => window.__faceEditor?.setValues);
+    await page.addStyleTag({
+      content: `#panel,#strip,#hud{display:none!important}#stage{grid-template-columns:1fr!important}#workbench{grid-template-rows:1fr!important}`,
     });
-    const c = document.createElement("canvas");
-    c.width = sw;
-    c.height = sh;
-    c.getContext("2d").drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
-    const r = window.__fl.detect(c);
-    const f = r.faceLandmarks && r.faceLandmarks[0];
-    return f ? { lm: f.map((p) => [p.x, p.y]), w: sw, h: sh } : null;
-  },
-  {
-    url: `/@fs/${rootUrl}/.models/hero/${heroNum}/input/face.png`,
-    sx: Math.round(cell.column * cw),
-    sy: Math.round(cell.row * ch),
-    sw: Math.round(cw),
-    sh: Math.round(ch),
+    await page.setViewportSize({ width: 1000, height: 1000 });
+    await page.evaluate(async () => {
+      const vision =
+        await import("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14");
+      const { FaceLandmarker, FilesetResolver } = vision;
+      const fileset = await FilesetResolver.forVisionTasks(
+        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm",
+      );
+      window.__fl = await FaceLandmarker.createFromOptions(fileset, {
+        baseOptions: {
+          modelAssetPath:
+            "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task",
+        },
+        runningMode: "IMAGE",
+        numFaces: 1,
+      });
+    });
+    const cw = sheet.width / ref.grid.columns,
+      ch = sheet.height / ref.grid.rows;
+    const cell = ref.views.front;
+    const photoDet = await page.evaluate(
+      async ({ url, sx, sy, sw, sh }) => {
+        const img = await new Promise((res, rej) => {
+          const im = new Image();
+          im.onload = () => res(im);
+          im.onerror = rej;
+          im.src = url;
+        });
+        const c = document.createElement("canvas");
+        c.width = sw;
+        c.height = sh;
+        c.getContext("2d").drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
+        const r = window.__fl.detect(c);
+        const f = r.faceLandmarks && r.faceLandmarks[0];
+        return f ? { lm: f.map((p) => [p.x, p.y]), w: sw, h: sh } : null;
+      },
+      {
+        url: `/@fs/${rootUrl}/.models/hero/${heroNum}/input/face.png`,
+        sx: Math.round(cell.column * cw),
+        sy: Math.round(cell.row * ch),
+        sw: Math.round(cw),
+        sh: Math.round(ch),
+      },
+    );
+    const frontTarget = frontRatios(photoDet.lm, photoDet.w, photoDet.h);
+    const jawTarget = jawArc(photoDet.lm, photoDet.w, photoDet.h);
+    await page.evaluate((h) => window.__faceEditor.setPreset(h), hero);
+
+    const browserEval = async (ovr) => {
+      const det = await page.evaluate(async (vals) => {
+        window.__faceEditor.setValues(vals);
+        await new Promise((r) =>
+          requestAnimationFrame(() => requestAnimationFrame(r)),
+        );
+        const c = document.querySelector("#view");
+        const r = window.__fl.detect(c);
+        const f = r.faceLandmarks && r.faceLandmarks[0];
+        return f
+          ? { lm: f.map((p) => [p.x, p.y]), w: c.width, h: c.height }
+          : null;
+      }, ovr);
+      if (!det) return { front: 9, jaw: 9 };
+      return {
+        front: relRms(frontRatios(det.lm, det.w, det.h), frontTarget),
+        jaw: arcRms(jawArc(det.lm, det.w, det.h), jawTarget),
+      };
+    };
+
+    // ---------- joint coordinate descent over coupled axes ----------
+    const FIT = [
+      "faceLength",
+      "chinHeight",
+      "noseBaseHeight",
+      "mouthHeightPosition",
+    ];
+    const WF = 1,
+      WP = 1.5,
+      WJ = 1,
+      REG = 0.02,
+      BOUND = 0.9;
+    const penalty = (o) => {
+      let s = 0;
+      for (const k of FIT) s += (o[k] ?? 0) ** 2;
+      return REG * Math.sqrt(s / FIT.length);
+    };
+    const obj = async (ovr) => {
+      const b = await browserEval(ovr);
+      const p = profileRms(ovr);
+      return {
+        total: WF * b.front + WP * p + WJ * b.jaw + penalty(ovr),
+        front: b.front,
+        profile: p,
+        jaw: b.jaw,
+      };
+    };
+    const seed = {};
+    for (const k of FIT) seed[k] = model.presets[hero]?.values?.[k] ?? 0;
+    let cur = { ...seed };
+    const start = await obj(cur);
+    const grid = [];
+    for (let v = -BOUND; v <= BOUND + 1e-9; v += 0.1) grid.push(+v.toFixed(2));
+    for (let round = 0; round < 2; round++) {
+      for (const p of FIT) {
+        let bestV = cur[p],
+          bestO = (await obj(cur)).total;
+        for (const v of grid) {
+          const t = { ...cur, [p]: v };
+          const o = (await obj(t)).total;
+          if (o < bestO - 1e-4) {
+            bestO = o;
+            bestV = v;
+          }
+        }
+        cur[p] = bestV;
+      }
+      process.stderr.write(`round ${round} done\n`);
+    }
+    const final = await obj(cur);
+    return { FIT, start, final, cur };
   },
 );
-const frontTarget = frontRatios(photoDet.lm, photoDet.w, photoDet.h);
-const jawTarget = jawArc(photoDet.lm, photoDet.w, photoDet.h);
-await page.evaluate((h) => window.__faceEditor.setPreset(h), hero);
-
-const browserEval = async (ovr) => {
-  const det = await page.evaluate(async (vals) => {
-    window.__faceEditor.setValues(vals);
-    await new Promise((r) =>
-      requestAnimationFrame(() => requestAnimationFrame(r)),
-    );
-    const c = document.querySelector("#view");
-    const r = window.__fl.detect(c);
-    const f = r.faceLandmarks && r.faceLandmarks[0];
-    return f ? { lm: f.map((p) => [p.x, p.y]), w: c.width, h: c.height } : null;
-  }, ovr);
-  if (!det) return { front: 9, jaw: 9 };
-  return {
-    front: relRms(frontRatios(det.lm, det.w, det.h), frontTarget),
-    jaw: arcRms(jawArc(det.lm, det.w, det.h), jawTarget),
-  };
-};
-
-// ---------- joint coordinate descent over coupled axes ----------
-const FIT = [
-  "faceLength",
-  "chinHeight",
-  "noseBaseHeight",
-  "mouthHeightPosition",
-];
-const WF = 1,
-  WP = 1.5,
-  WJ = 1,
-  REG = 0.02,
-  BOUND = 0.9;
-const penalty = (o) => {
-  let s = 0;
-  for (const k of FIT) s += (o[k] ?? 0) ** 2;
-  return REG * Math.sqrt(s / FIT.length);
-};
-const obj = async (ovr) => {
-  const b = await browserEval(ovr);
-  const p = profileRms(ovr);
-  return {
-    total: WF * b.front + WP * p + WJ * b.jaw + penalty(ovr),
-    front: b.front,
-    profile: p,
-    jaw: b.jaw,
-  };
-};
-const seed = {};
-for (const k of FIT) seed[k] = model.presets[hero]?.values?.[k] ?? 0;
-let cur = { ...seed };
-const start = await obj(cur);
-const grid = [];
-for (let v = -BOUND; v <= BOUND + 1e-9; v += 0.1) grid.push(+v.toFixed(2));
-for (let round = 0; round < 2; round++) {
-  for (const p of FIT) {
-    let bestV = cur[p],
-      bestO = (await obj(cur)).total;
-    for (const v of grid) {
-      const t = { ...cur, [p]: v };
-      const o = (await obj(t)).total;
-      if (o < bestO - 1e-4) {
-        bestO = o;
-        bestV = v;
-      }
-    }
-    cur[p] = bestV;
-  }
-  process.stderr.write(`round ${round} done\n`);
-}
-const final = await obj(cur);
-await page.close();
-await browser.close();
 const rounded = {};
 for (const k of FIT) rounded[k] = +cur[k].toFixed(2);
 console.log(

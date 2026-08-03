@@ -15,6 +15,7 @@ import { chromium } from "playwright-core";
 import { PNG } from "pngjs";
 
 import { DEFAULT_CHROME_EXECUTABLE } from "./chromeExecutable";
+import { preserveCleanupFailure } from "./preserveCleanupFailure";
 
 const DEFAULT_BASE = process.env.BASE ?? "http://127.0.0.1:5173";
 
@@ -79,67 +80,90 @@ export const captureRenderAndSee = async (
     executablePath: options.chrome,
     headless: true,
   });
-  const page = await browser.newPage({
-    viewport: { width: options.width, height: options.height },
-    deviceScaleFactor: 1,
-  });
-  const captured = new Map<number, string>();
-  let closePage = true;
+  let browserFailure: { error: unknown } | undefined;
   try {
-    const session = await createHeadlessCaptureAdapter({
-      page,
-      url: route,
-      passes: options.passes,
-      writeFrame: async (file, bytes, metadata) => {
-        await fs.mkdir(path.dirname(file), { recursive: true });
-        await fs.writeFile(file, Buffer.from(bytes));
-        captured.set(metadata.index, file);
-      },
+    const page = await browser.newPage({
+      viewport: { width: options.width, height: options.height },
+      deviceScaleFactor: 1,
     });
-    closePage = false;
+    const captured = new Map<number, string>();
+    let closePage = true;
+    let pageFailure: { error: unknown } | undefined;
     try {
-      const spec: IAutoMovieRenderSpec = {
-        target: options.target,
-        frameFormat: {
-          fps: options.fps,
-          width: options.width,
-          height: options.height,
-        },
-        toneMapping: "none",
-        codec: "h264",
-        pixelFormat: "yuv420p",
-        crf: 20,
-      };
-      const result = await renderAndSee({
-        spec,
-        durationSeconds: options.durationSeconds,
-        frameDir: options.frameDir,
-        outputPath: options.outputPath,
-        adapters: {
-          captureFrame: session.captureFrame,
-          encode: createH264Encoder({
-            captured,
-            durationSeconds: options.durationSeconds,
-            spec,
-          }),
+      const session = await createHeadlessCaptureAdapter({
+        page,
+        url: route,
+        passes: options.passes,
+        writeFrame: async (file, bytes, metadata) => {
+          await fs.mkdir(path.dirname(file), { recursive: true });
+          await fs.writeFile(file, Buffer.from(bytes));
+          captured.set(metadata.index, file);
         },
       });
-      const artifact: IAutoMoviePlaygroundRenderAndSeeArtifact = {
-        ...result,
-        route,
-        jsonPath: options.jsonPath,
-        encoder: "h264-mp4-encoder",
-        viewport: { width: options.width, height: options.height },
-      };
-      await fs.mkdir(path.dirname(options.jsonPath), { recursive: true });
-      await fs.writeFile(options.jsonPath, JSON.stringify(artifact, null, 2));
-      return artifact;
+      closePage = false;
+      let sessionFailure: { error: unknown } | undefined;
+      try {
+        const spec: IAutoMovieRenderSpec = {
+          target: options.target,
+          frameFormat: {
+            fps: options.fps,
+            width: options.width,
+            height: options.height,
+          },
+          toneMapping: "none",
+          codec: "h264",
+          pixelFormat: "yuv420p",
+          crf: 20,
+        };
+        const result = await renderAndSee({
+          spec,
+          durationSeconds: options.durationSeconds,
+          frameDir: options.frameDir,
+          outputPath: options.outputPath,
+          adapters: {
+            captureFrame: session.captureFrame,
+            encode: createH264Encoder({
+              captured,
+              durationSeconds: options.durationSeconds,
+              spec,
+            }),
+          },
+        });
+        const artifact: IAutoMoviePlaygroundRenderAndSeeArtifact = {
+          ...result,
+          route,
+          jsonPath: options.jsonPath,
+          encoder: "h264-mp4-encoder",
+          viewport: { width: options.width, height: options.height },
+        };
+        await fs.mkdir(path.dirname(options.jsonPath), { recursive: true });
+        await fs.writeFile(options.jsonPath, JSON.stringify(artifact, null, 2));
+        return artifact;
+      } catch (error) {
+        sessionFailure = { error };
+        throw error;
+      } finally {
+        await preserveCleanupFailure(
+          sessionFailure,
+          "render capture session",
+          () => session.close(),
+        );
+      }
+    } catch (error) {
+      pageFailure = { error };
+      throw error;
     } finally {
-      await session.close();
+      await preserveCleanupFailure(pageFailure, "render capture page", () =>
+        closePage ? page.close() : undefined,
+      );
     }
+  } catch (error) {
+    browserFailure = { error };
+    throw error;
   } finally {
-    if (closePage) await page.close();
-    await browser.close();
+    await preserveCleanupFailure(browserFailure, "render capture browser", () =>
+      browser.close(),
+    );
   }
 };
 
@@ -155,12 +179,13 @@ const createH264Encoder =
       options.durationSeconds,
     );
     const encoder = await HME.createH264MP4Encoder();
-    encoder.width = options.spec.frameFormat.width;
-    encoder.height = options.spec.frameFormat.height;
-    encoder.frameRate = options.spec.frameFormat.fps;
-    encoder.quantizationParameter = options.spec.crf;
-    encoder.initialize();
+    let encoderFailure: { error: unknown } | undefined;
     try {
+      encoder.width = options.spec.frameFormat.width;
+      encoder.height = options.spec.frameFormat.height;
+      encoder.frameRate = options.spec.frameFormat.fps;
+      encoder.quantizationParameter = options.spec.crf;
+      encoder.initialize();
       for (let i = 0; i < times.length; ++i) {
         const file = options.captured.get(i);
         if (file === undefined)
@@ -175,8 +200,13 @@ const createH264Encoder =
         Buffer.from(encoder.FS.readFile(encoder.outputFilename)),
       );
       return outputPath;
+    } catch (error) {
+      encoderFailure = { error };
+      throw error;
     } finally {
-      encoder.delete();
+      await preserveCleanupFailure(encoderFailure, "render H.264 encoder", () =>
+        encoder.delete(),
+      );
     }
   };
 
@@ -206,8 +236,8 @@ const parseArgs = (
     chrome: flags.chrome ?? DEFAULT_CHROME_EXECUTABLE,
     durationSeconds: positiveNumber(flags.duration, 1, "--duration"),
     fps: positiveNumber(flags.fps, 12, "--fps"),
-    width: even(positiveInteger(flags.width, 640, "--width")),
-    height: even(positiveInteger(flags.height, 360, "--height")),
+    width: positiveEvenInteger(flags.width, 640, "--width"),
+    height: positiveEvenInteger(flags.height, 360, "--height"),
     target: flags.target ?? stem,
     outputPath,
     frameDir,
@@ -246,13 +276,16 @@ const positiveNumber = (
   return parsed;
 };
 
-const positiveInteger = (
+const positiveEvenInteger = (
   value: string | undefined,
   fallback: number,
   label: string,
-): number => Math.round(positiveNumber(value, fallback, label));
-
-const even = (value: number): number => value - (value % 2);
+): number => {
+  const parsed = positiveNumber(value, fallback, label);
+  if (!Number.isInteger(parsed) || parsed % 2 !== 0)
+    throw new Error(`${label} must be a positive even integer`);
+  return parsed;
+};
 
 const repoRoot = (): string => {
   const cwd = process.cwd();

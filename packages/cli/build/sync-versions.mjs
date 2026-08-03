@@ -62,14 +62,31 @@ const catalogVersion = (catalog, dep) => {
   throw new Error(`dependency "${dep}" not found in catalog "${catalog}"`);
 };
 
+/**
+ * Freeze one catalog range to the exact version used by a shipped runtime
+ * graph.
+ */
+const exactCatalogVersion = (catalog, dep) =>
+  catalogVersion(catalog, dep).replace(/^[~^]/, "");
+
 const versions = {
+  cli: packageVersion("packages/cli"),
   engine: packageVersion("packages/engine"),
   interface: packageVersion("packages/interface"),
+  lint: packageVersion("packages/lint"),
   mcp: packageVersion("packages/mcp"),
   viewer: packageVersion("packages/viewer"),
+  huggingFaceTransformers: exactCatalogVersion(
+    "media",
+    "@huggingface/transformers",
+  ),
   h264Mp4Encoder: catalogVersion("media", "h264-mp4-encoder"),
+  kokoroJs: exactCatalogVersion("media", "kokoro-js"),
+  libopusWasm: catalogVersion("media", "libopus-wasm"),
   mp4box: catalogVersion("media", "mp4box"),
+  onnxruntimeNode: exactCatalogVersion("media", "onnxruntime-node"),
   mcpSdk: catalogVersion("modelcontextprotocol", "@modelcontextprotocol/sdk"),
+  threeVrm: catalogVersion("three", "@pixiv/three-vrm"),
   playwright: catalogVersion("media", "playwright"),
   pngjs: catalogVersion("media", "pngjs"),
   pngjsTypes: catalogVersion("media", "@types/pngjs"),

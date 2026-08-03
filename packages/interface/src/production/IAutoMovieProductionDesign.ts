@@ -1,6 +1,8 @@
 import { AutoMovieGuidePass } from "../cinematics";
+import { IAutoMovieProfile } from "../core";
 import { IAutoMovieVector3 } from "../geometry";
 import { AutoMovieHumanoidBone } from "../skeleton";
+import { IAutoMovieSceneEvidence } from "./IAutoMovieScreenplayIndex";
 
 /** A SHA-256 value computed by AutoMovie from authoritative project bytes. */
 export type AutoMovieContentDigest = `sha256:${string}`;
@@ -11,6 +13,14 @@ export interface IAutoMovieProductionDeliverable {
   id: string;
   /** Output class. */
   kind: "preview" | "feature" | "guide-pass" | "captions" | "audio-mix";
+  /**
+   * Structural render pass owned by a guide-pass deliverable.
+   *
+   * Omitted only for legacy production records, which retain the pose default.
+   * New production contracts declare one pass per guide deliverable so depth,
+   * normal, mask, outline, and pose outputs have distinct typed ownership.
+   */
+  pass?: Exclude<AutoMovieGuidePass, "beauty">;
   /** Whether final compilation requires the deliverable. */
   required: boolean;
 }
@@ -28,6 +38,15 @@ export interface IAutoMovieProductionDesign {
    * production frame clock.
    */
   targetRuntimeSeconds: number;
+  /**
+   * Final visual delivery layer.
+   *
+   * Deterministic delivery uses compiler/render output directly. Repainted
+   * delivery keeps that output as technical truth and additionally requires a
+   * required feature plus a receipt-bound rendition review for every delivered
+   * shot.
+   */
+  visualDelivery: "deterministic" | "repainted";
   /** Deterministic frame clock and raster format. */
   frameFormat: {
     /**
@@ -95,6 +114,12 @@ export interface IAutoMovieModelRecipe {
     | "weapon"
     | "primitive-prop";
   /**
+   * Registered external appearance asset, or omitted for compiler-generated
+   * primitive geometry. The active production asset ledger must carry one
+   * matching `model-recipe` use for this exact recipe id.
+   */
+  asset?: string;
+  /**
    * Exact archetype-specific parameter map. Read `MODEL_RECIPE`: required keys,
    * value kinds and ranges vary by archetype, and unsupported keys are
    * refused.
@@ -128,6 +153,75 @@ export interface IAutoMovieModelRecipe {
     /** Bone id used as the attachment parent. */
     bone: AutoMovieHumanoidBone;
   }>;
+  /**
+   * Declarative capability profiles copied onto the compiler-owned runtime
+   * model. Omitted means that engine verbs such as shooting are unavailable.
+   */
+  profiles?: IAutoMovieProfile[];
+}
+
+/** Compact deterministic placement algorithm for a general instance set. */
+export type IAutoMovieInstanceSetLayout =
+  | {
+      /** Rectangular grid. */
+      kind: "grid";
+      /** Positive integer rows. */
+      rows: number;
+      /** Positive integer columns; rows times columns must cover count. */
+      columns: number;
+      /** Positive center-to-center spacing in meters. */
+      spacing: { x: number; z: number };
+    }
+  | {
+      /** Uniform seeded disk scatter. */
+      kind: "scatter";
+      /** Positive disk radius in meters. */
+      radius: number;
+    }
+  | {
+      /** Seeded placement along one named world route. */
+      kind: "along-route";
+      /** Existing route id. */
+      route: string;
+      /** Maximum lateral offset from the route centerline in meters. */
+      lateralJitter: number;
+    };
+
+/** Seed-derived per-instance visual and semantic variation. */
+export interface IAutoMovieInstanceVariation {
+  /** Inclusive uniform scale range, both strictly above zero. */
+  scale: { min: number; max: number };
+  /** Non-empty exact `#RRGGBB` palette choices applied per instance. */
+  palette: string[];
+  /** Named bounded numeric traits regenerated from seed and slot. */
+  traits: Array<{
+    /** Stable trait name unique in this set. */
+    name: string;
+    /** Inclusive minimum. */
+    min: number;
+    /** Inclusive maximum. */
+    max: number;
+  }>;
+}
+
+/** A compact non-formation crowd, vegetation, prop, or debris set. */
+export interface IAutoMovieInstanceSetDesign {
+  /** Stable id unique within the world. */
+  id: string;
+  /** Existing model recipe rendered by every member. */
+  modelRecipe: string;
+  /** Integer slot count from one through 100,000. */
+  count: number;
+  /** Compact deterministic placement law. */
+  layout: IAutoMovieInstanceSetLayout;
+  /** World-space origin for grid and scatter layouts. */
+  anchor: IAutoMovieVector3;
+  /** Finite base heading in degrees. */
+  facingDeg: number;
+  /** Full non-negative safe-integer seed. */
+  seed: number;
+  /** Seed-derived per-slot differences. */
+  variation: IAutoMovieInstanceVariation;
 }
 
 /** A named point in the production world. */
@@ -280,6 +374,12 @@ export interface IAutoMovieWorldDesign {
   effectRecipes: IAutoMovieEffectRecipe[];
   /** Deterministic effect regions bound to recipes. */
   effectZones: IAutoMovieWorldEffectZone[];
+  /**
+   * Compact non-formation instance sets such as civilians, trees, or debris.
+   *
+   * Omitted is equivalent to an empty list for backwards compatibility.
+   */
+  instanceSets?: IAutoMovieInstanceSetDesign[];
 }
 
 /**
@@ -523,6 +623,18 @@ export interface IAutoMovieShotReviewFrame {
   passes: AutoMovieGuidePass[];
 }
 
+/**
+ * Deliberate grammar breaks that suppress only their matching heuristic.
+ *
+ * Pure geometric facts remain measurable; this marker records why a director
+ * chose to keep one otherwise questionable edit.
+ */
+export type AutoMovieGrammarStyleIntent =
+  | "jump-cut"
+  | "eyeline-break"
+  | "tight-reestablish"
+  | "rhythmic-pacing";
+
 /** A code-bound shot contract, not a dense keyframe list. */
 export interface IAutoMovieShotContract {
   /** Non-blank stable shot id, unique under portable case folding. */
@@ -540,10 +652,21 @@ export interface IAutoMovieShotContract {
     export: string;
   };
   /**
+   * Screenplay scenes and optional canon claims this shot intends to realize.
+   *
+   * Project lint requires this field once a screenplay index is resident.
+   */
+  evidence?: IAutoMovieSceneEvidence[];
+  /**
    * Finite shot runtime in seconds, strictly above zero and on the production
    * frame clock.
    */
   durationSeconds: number;
+  /**
+   * Unique deliberate film-grammar exceptions. Each value suppresses only its
+   * corresponding heuristic diagnostic; unrelated facts remain visible.
+   */
+  styleIntent?: AutoMovieGrammarStyleIntent[];
   /** Unique required actor and formation ids; formations must already exist. */
   participants: IAutoMovieShotParticipant[];
   /** Required opening states. */
@@ -618,6 +741,13 @@ export type IAutoMovieAcceptanceCriterion =
 export interface IAutoMovieAcceptanceScenario {
   /** Non-blank stable scenario id, unique under portable case folding. */
   id: string;
+  /**
+   * Screenplay scenes and optional canon claims this observable check verifies.
+   *
+   * Traceability is valid for every claim, but only a matching claim
+   * verification owner can discharge that claim.
+   */
+  evidence?: IAutoMovieSceneEvidence[];
   /** Scenario target. */
   target:
     | {
@@ -647,7 +777,7 @@ export interface IAutoMovieAcceptanceScenario {
 /** An addressable design artifact. */
 export type IAutoMovieDesignTarget =
   | {
-      /** Singleton production design. */
+      /** Active production design. */
       kind: "production";
     }
   | {
@@ -657,7 +787,7 @@ export type IAutoMovieDesignTarget =
       id: string;
     }
   | {
-      /** Singleton world design. */
+      /** Project-shared world design. */
       kind: "world";
     }
   | {

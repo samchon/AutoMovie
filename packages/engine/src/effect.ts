@@ -3,6 +3,8 @@ import {
   IAutoMovieVector3,
 } from "@automovie/interface";
 
+import { mixSeed } from "./math/random";
+
 /** One exact live billboard derived from a compiled effect stream. */
 export interface IAutoMovieEffectParticle {
   /** Stable zero-based spawn identity. */
@@ -87,7 +89,7 @@ export const sampleCompiledEffect = (
     const lifetime = interpolate(
       recipe.particle.lifetime.min,
       recipe.particle.lifetime.max,
-      random(effect.seed, index, 0x6c696665),
+      effectValue(effect.seed, index, 0x6c696665),
     );
     if (age < 0 || age >= lifetime) continue;
     const ageRatio = age / lifetime;
@@ -95,28 +97,28 @@ export const sampleCompiledEffect = (
       x: interpolate(
         effect.bounds.min.x,
         effect.bounds.max.x,
-        random(effect.seed, index, 0x706f7358),
+        effectValue(effect.seed, index, 0x706f7358),
       ),
       y: interpolate(
         effect.bounds.min.y,
         effect.bounds.max.y,
-        random(effect.seed, index, 0x706f7359),
+        effectValue(effect.seed, index, 0x706f7359),
       ),
       z: interpolate(
         effect.bounds.min.z,
         effect.bounds.max.z,
-        random(effect.seed, index, 0x706f735a),
+        effectValue(effect.seed, index, 0x706f735a),
       ),
     };
     const turbulenceAngle =
-      random(effect.seed, index, 0x74757262) * Math.PI * 2;
+      effectValue(effect.seed, index, 0x74757262) * Math.PI * 2;
     const turbulenceSpeed =
-      recipe.motion.turbulence * random(effect.seed, index, 0x73706565);
+      recipe.motion.turbulence * effectValue(effect.seed, index, 0x73706565);
     const opacity =
       interpolate(
         recipe.particle.opacity.min,
         recipe.particle.opacity.max,
-        random(effect.seed, index, 0x6f706163),
+        effectValue(effect.seed, index, 0x6f706163),
       ) *
       intensity *
       Math.sin(Math.PI * ageRatio);
@@ -136,7 +138,7 @@ export const sampleCompiledEffect = (
       size: interpolate(
         recipe.particle.size.min,
         recipe.particle.size.max,
-        random(effect.seed, index, 0x73697a65),
+        effectValue(effect.seed, index, 0x73697a65),
       ),
       opacity,
       ageRatio,
@@ -149,7 +151,12 @@ export const sampleCompiledEffect = (
 const interpolate = (from: number, to: number, ratio: number): number =>
   from * (1 - ratio) + to * ratio;
 
-const random = (seed: number, index: number, domain: number): number => {
+/**
+ * Preserve the compiled-effect v1 stream while the public multi-part sampler
+ * serves new domains. The effect digest does not carry a sampler version, so
+ * changing this fold would make identical compiled bytes replay differently.
+ */
+const effectValue = (seed: number, index: number, domain: number): number => {
   let state = mixSeed(seed, domain);
   state = mixSeed(index, state);
   state = (state + 0x6d2b79f5) >>> 0;
@@ -157,14 +164,4 @@ const random = (seed: number, index: number, domain: number): number => {
   output = Math.imul(output ^ (output >>> 15), output | 1);
   output ^= output + Math.imul(output ^ (output >>> 7), output | 61);
   return ((output ^ (output >>> 14)) >>> 0) / 4_294_967_296;
-};
-
-const mixSeed = (seed: number, salt: number): number => {
-  const integer = Math.trunc(seed);
-  const low = integer >>> 0;
-  const high = Math.floor(integer / 4_294_967_296) >>> 0;
-  let value = (salt ^ low) >>> 0;
-  value = Math.imul(value ^ (value >>> 16), 0x7feb352d);
-  value = Math.imul(value ^ (value >>> 15) ^ high, 0x846ca68b);
-  return (value ^ (value >>> 16)) >>> 0;
 };

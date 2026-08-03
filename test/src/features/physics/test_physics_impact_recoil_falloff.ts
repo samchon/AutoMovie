@@ -60,7 +60,7 @@ export const test_physics_impact_recoil_falloff = (): void => {
   TestValidator.predicate(
     "falloff zero stops at the next joint",
     nclose(contactOnly.joints[0]!.flexion!, 10) &&
-      nclose(contactOnly.joints[1]!.flexion!, 0),
+      contactOnly.joints[1]!.flexion === null,
   );
 
   const noLoss = impactRecoil({ flexion: 10 }, ["spine", "chest"], skeleton, 1);

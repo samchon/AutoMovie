@@ -2,6 +2,7 @@ import {
   composeFormationHeroTransform,
   intersectsPerspectiveFrustumSphere,
   sampleFormationMotion,
+  seededValue,
   selectFormationLod,
 } from "@automovie/engine";
 import {
@@ -92,7 +93,13 @@ export const buildInstancedFormation = (input: {
         throw new Error(
           `Formation "${input.formation.id}" LOD "${lod.tier}" references missing runtime model "${lod.model}".`,
         );
-      return [lod.tier, flattenModel(model)] as const;
+      return [
+        lod.tier,
+        flattenInstancedModel(
+          model,
+          `Formation "${input.formation.id}" LOD "${lod.tier}"`,
+        ),
+      ] as const;
     }),
   );
   const selectionRadius = input.formation.projectionRadius;
@@ -388,8 +395,10 @@ export const regenerateFormationSlot = (
   };
 };
 
-const flattenModel = (
+/** Flatten one static runtime model for a chunked instancing consumer. */
+export const flattenInstancedModel = (
   model: IAutoMovieModel,
+  owner = `Instanced runtime model "${model.id}"`,
 ): { geometry: THREE.BufferGeometry; materials: THREE.Material[] } => {
   const built = buildModel(model);
   built.object.updateMatrixWorld(true);
@@ -399,17 +408,13 @@ const flattenModel = (
     if ((object as THREE.Mesh).isMesh !== true) return;
     const mesh = object as THREE.Mesh;
     if (Array.isArray(mesh.material))
-      throw new Error(
-        `Formation runtime model "${model.id}" has a multi-material source mesh.`,
-      );
+      throw new Error(`${owner} has a multi-material source mesh.`);
     geometries.push(mesh.geometry.clone().applyMatrix4(mesh.matrixWorld));
     materials.push(mesh.material);
   });
   const geometry = mergeGeometries(geometries, true);
   if (geometry === null || materials.length === 0)
-    throw new Error(
-      `Formation runtime model "${model.id}" cannot be flattened for instancing.`,
-    );
+    throw new Error(`${owner} cannot be flattened for instancing.`);
   return { geometry, materials };
 };
 
@@ -469,23 +474,3 @@ const objectTransform = (object: THREE.Object3D): IAutoMovieTransform => ({
   rotation: quaternion(object.quaternion),
   scale: point(object.scale),
 });
-
-const seededValue = (...values: number[]): number => {
-  let state = 0x9e3779b9;
-  for (const value of values) state = mixSeed(value, state);
-  state = (state + 0x6d2b79f5) >>> 0;
-  let output = state;
-  output = Math.imul(output ^ (output >>> 15), output | 1);
-  output ^= output + Math.imul(output ^ (output >>> 7), output | 61);
-  return ((output ^ (output >>> 14)) >>> 0) / 4_294_967_296;
-};
-
-const mixSeed = (seed: number, salt: number): number => {
-  const integer = Math.trunc(seed);
-  const low = integer >>> 0;
-  const high = Math.floor(integer / 4_294_967_296) >>> 0;
-  let value = (salt ^ low) >>> 0;
-  value = Math.imul(value ^ (value >>> 16), 0x7feb352d);
-  value = Math.imul(value ^ (value >>> 15) ^ high, 0x846ca68b);
-  return (value ^ (value >>> 16)) >>> 0;
-};

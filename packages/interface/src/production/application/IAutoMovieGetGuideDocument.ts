@@ -10,8 +10,25 @@ export type AutoMovieProductionGuideName =
   | "SOURCE_OWNERSHIP"
   | "COMPILATION"
   | "GEOMETRY"
-  | "PRODUCTION_REVIEW"
-  | "PRODUCTION_RENDER";
+  | "CAPTURE_FRAME"
+  | "REPAINT_SHOT"
+  | "REVIEW_ASSET"
+  | "REVIEW_SHOT"
+  | "REVIEW_SEQUENCE"
+  | "REVIEW_FILM"
+  | "REVIEW_DEPENDENCY"
+  | "SCREENPLAY_WRITING"
+  | "CINEMATOGRAPHY"
+  | "EDITING"
+  | "OBJECT_RIGGING"
+  | "WORLD_BUILDING"
+  | "MOTION"
+  | "BATTLE_SIM"
+  | "SOUND_DESIGN"
+  | "ASSET_SOURCING"
+  | "DIFFUSION_ENHANCE"
+  | "TYPESCRIPT"
+  | "DEBUGGING";
 
 /** One packaged coding-agent production guide. */
 export interface IAutoMovieGetGuideDocument {

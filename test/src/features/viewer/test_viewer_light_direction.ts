@@ -1,7 +1,7 @@
 import { stageScene } from "@automovie/engine";
 import {
   IAutoMovieScene,
-  IAutoMovieStagingApplication,
+  IAutoMovieStageLight,
   IAutoMovieVector3,
 } from "@automovie/interface";
 import { buildScene } from "@automovie/viewer";
@@ -11,9 +11,7 @@ import * as THREE from "three";
 import { vclose } from "../internal/predicates";
 
 /** Stage a scene carrying exactly the given light placements. */
-const stagedWith = (
-  lights: IAutoMovieStagingApplication.ILightPlacement[],
-): IAutoMovieScene => {
+const stagedWith = (lights: IAutoMovieStageLight[]): IAutoMovieScene => {
   const staged = stageScene(
     {
       logline: "one lit beat",

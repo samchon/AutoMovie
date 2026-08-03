@@ -1,5 +1,11 @@
 {
   "id": "answer-pose",
+  "evidence": [
+    {
+      "reason": "The pose frame verifies the authored answering gesture.",
+      "scene": "SCN-002"
+    }
+  ],
   "target": { "kind": "shot", "id": "answer" },
   "criterion": {
     "kind": "frame",

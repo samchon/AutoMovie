@@ -1,6 +1,7 @@
 import type { AutoMovieGuidePass } from "@automovie/interface";
 import { AutoMovieApplication } from "@automovie/mcp";
 
+import config from "../automovie.config";
 import { captureProductionFrame, closeProductionFrameCapture } from "./capture";
 
 const args = process.argv.slice(2);
@@ -41,21 +42,29 @@ const height =
     : Number(options.get("--height"));
 const app = new AutoMovieApplication({
   projectRoot: process.cwd(),
+  productionId: config.productionId,
   capture: captureProductionFrame,
 });
 app.getGuideDocument({ name: "AUTOMOVIE_OVERALL" });
-app.getGuideDocument({ name: "PRODUCTION_RENDER" });
-app.openProject({ root: process.cwd() });
+app.getGuideDocument({ name: "CAPTURE_FRAME" });
+let captureFailure: { error: unknown } | undefined;
 try {
-  const output = await app.previewFrame({
-    target: { kind: "shot", id: shot },
-    time,
-    pass,
+  const output = await app.captureFrame({
+    target: {
+      kind: "shot",
+      productionId: config.productionId,
+      id: shot,
+      time,
+      pass,
+    },
     width,
     height,
   });
   process.stdout.write(`${JSON.stringify(output, null, 2)}\n`);
   if (output.captured === false) process.exitCode = 1;
+} catch (error) {
+  captureFailure = { error };
+  throw error;
 } finally {
-  await closeProductionFrameCapture();
+  await closeProductionFrameCapture(captureFailure);
 }

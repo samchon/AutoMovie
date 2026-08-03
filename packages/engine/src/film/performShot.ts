@@ -2,16 +2,19 @@ import {
   AutoMovieHumanoidBone,
   IAutoMovieActionCall,
   IAutoMovieActionTarget,
-  IAutoMovieBlockingApplication,
+  IAutoMovieBeatEndFootPlant,
+  IAutoMovieBeatEndState,
+  IAutoMovieBlocking,
+  IAutoMovieBlockingCoverage,
   IAutoMovieCamera,
   IAutoMovieCameraAction,
   IAutoMovieClip,
   IAutoMovieConstraintViolation,
   IAutoMovieInteractionEvent,
   IAutoMovieMotion,
-  IAutoMoviePerformanceApplication,
+  IAutoMoviePerformance,
   IAutoMovieQuaternion,
-  IAutoMovieScriptApplication,
+  IAutoMovieScript,
   IAutoMovieShot,
   IAutoMovieShotCoverage,
   IAutoMovieSkeleton,
@@ -19,8 +22,11 @@ import {
 } from "@automovie/interface";
 
 import { armChainFault } from "../kinematics/armChainFault";
+import { IAutoMovieJointAxes } from "../kinematics/jointToQuaternion";
 import { Quaternion } from "../math/Quaternion";
 import { Vector3 } from "../math/Vector3";
+import { classifyLocomoteGroundDisplacement } from "../motion/locomote";
+import { plantStanceFeet } from "../motion/plantFeet";
 import { sampleMotion } from "../motion/sampleMotion";
 import { actionRegion } from "../perform/actionRegion";
 import { bodyRegionBones } from "../perform/bodyRegionBones";
@@ -35,6 +41,7 @@ import {
 import { resolveTargetPoint } from "../perform/resolveTargetPoint";
 import { scenePlacements } from "../perform/scenePlacements";
 import { IAutoMovieRestFrame } from "../rom/restFrame";
+import { spaceGround } from "../space/surfaces";
 import { compareCodeUnits } from "../text/compareCodeUnits";
 import { validateMotion } from "../validation/validateMotion";
 import { validateShotArtifact } from "../validation/validateShotArtifact";
@@ -157,6 +164,14 @@ export namespace IAutoMoviePerformedShot {
 
     /** The synthesised per-actor clips, keyed by scene-node id. */
     motions: Record<string, IAutoMovieMotion>;
+
+    /** Ground-IK stance runs produced for gait or resumed opening plants. */
+    plants: Array<{
+      /** Scene node owning these world-space plant runs. */
+      node: string;
+      /** Current-shot stance runs carried into the next beat. */
+      plants: IAutoMovieBeatEndFootPlant[];
+    }>;
   }
 
   /** The action list contradicted the stage, or a compiled clip broke ROM. */
@@ -238,21 +253,38 @@ export namespace IAutoMoviePerformedShot {
  * grab/attach/detach/release events (it is standing scene state, not a per-shot
  * pickup). A mount onto a rig-less parent or an absent bone is a violation.
  *
+ * Locomotion and gait-bearing actor motions pass through {@link plantStanceFeet}
+ * before ROM and artifact validation. A first stride therefore emits the
+ * world-space plant facts a later beat can resume; an existing opening plant is
+ * converted into model space for the solve and back into scene world space
+ * exactly once at this boundary. When staging supplies a scene space, its world
+ * surface height is transformed into the actor's model frame for contact and
+ * pinning; otherwise the legacy model-space y=0 plane remains. Static non-gait
+ * clips keep their authored key grid. This conversion reads the unit-scale,
+ * yaw-only actor transform {@link stageScene} emits; `staged` is that validated
+ * stage result, not an arbitrary fabricated scene graph.
+ *
  * @param props.skeleton Rig lookup for ROM validation; return null for a node
  *   that has no skeleton (its clip skips ROM).
  * @param props.hasActorContext Optional actor-registry membership lookup. It
  *   keeps a missing context distinct from a present context with no rig.
+ * @param props.jointAxes Optional per-node clinical joint-axis lookup. Supply
+ *   the same axes the renderer/player uses so ground planting and attachment
+ *   baking read the rig through one basis.
  * @param props.restFrames Optional per-node clinical rest-frame lookup. Supply
- *   the same frame table the renderer/player uses so `attachTo` objectMotions
- *   ride the visible posed bone, not raw rig-space FK.
+ *   the same frame table the renderer/player uses so ground planting and
+ *   `attachTo` objectMotions read the visible pose, not raw rig-space FK.
  */
 export const performShot = (props: {
-  script: IAutoMovieScriptApplication.IWrite;
+  script: IAutoMovieScript;
   staged: IAutoMovieStagedSet.ISuccess;
-  performance: IAutoMoviePerformanceApplication.IWrite;
+  performance: IAutoMoviePerformance;
   synthesize: IAutoMovieActionSynthesizer;
   skeleton: (node: string) => IAutoMovieSkeleton | null;
   hasActorContext?: (node: string) => boolean;
+  jointAxes?: (
+    node: string,
+  ) => Partial<Record<AutoMovieHumanoidBone, IAutoMovieJointAxes>> | undefined;
   restFrames?: (
     node: string,
   ) => Partial<Record<AutoMovieHumanoidBone, IAutoMovieRestFrame>> | undefined;
@@ -275,7 +307,22 @@ export const performShot = (props: {
    * and realization: matching beat and duration, every timing anchor covered by
    * an action of its actor, and the camera intent honoured.
    */
-  blocking?: IAutoMovieBlockingApplication.IWrite;
+  blocking?: IAutoMovieBlocking;
+  /**
+   * Registered source identity for direct code authoring. Omit on the legacy
+   * beat ladder to retain its `shot:${beat}` identity.
+   */
+  shotId?: string;
+  /**
+   * Prior verified beat state supplied to every action synthesizer call.
+   *
+   * The caller owns resuming `staged` from this same state before entering the
+   * performance boundary, as `compileDefinedShot` does. This function keeps the
+   * staged scene as the one coordinate authority for rendering, targeting,
+   * ground conversion, and coupling; it does not partially restage lookup
+   * tables behind the scene's back.
+   */
+  previous?: IAutoMovieBeatEndState | null;
 }): IAutoMoviePerformedShot => {
   const {
     script,
@@ -284,11 +331,15 @@ export const performShot = (props: {
     synthesize,
     skeleton,
     hasActorContext,
+    jointAxes,
     restFrames,
     targetAt: resolveLiveTarget,
     gaits,
     blocking,
+    previous,
   } = props;
+  const shotId = props.shotId ?? `shot:${performance.beat}`;
+  const cameraClipScope = props.shotId ?? performance.beat;
   const out = new ViolationCollector();
   const synthesisCache = new WeakMap<
     IAutoMovieActionCall,
@@ -297,7 +348,7 @@ export const performShot = (props: {
   const synthesizeOnce: IAutoMovieActionSynthesizer = (action, actor) => {
     const cachedByActor = synthesisCache.get(action);
     if (cachedByActor?.has(actor) === true) return cachedByActor.get(actor)!;
-    const motion = synthesize(action, actor);
+    const motion = synthesize(action, actor, previous);
     const byActor = cachedByActor ?? new Map<string, IAutoMovieMotion | null>();
     byActor.set(actor, motion);
     synthesisCache.set(action, byActor);
@@ -306,7 +357,7 @@ export const performShot = (props: {
   const beatById = new Map<
     string,
     {
-      beat: IAutoMovieScriptApplication.IWrite["beats"][number];
+      beat: IAutoMovieScript["beats"][number];
       index: number;
     }
   >();
@@ -739,14 +790,33 @@ export const performShot = (props: {
         const relative =
           isRecord(action.to) &&
           (action.to.kind === "direction" || action.to.kind === "offscreen");
-        if (!relative)
-          resolvePositionalTarget(
+        if (!relative) {
+          const destination = resolvePositionalTarget(
             action.to,
             `${base}[${i}].to`,
             "locomote target",
             "a locomote destination",
             action.start,
           );
+          if (destination !== null)
+            for (const actor of actors.filter((candidate) =>
+              nodeIds.has(candidate),
+            )) {
+              const origin = nodePositions.get(actor)!;
+              const displacement = classifyLocomoteGroundDisplacement({
+                x: destination.x - origin.x,
+                y: destination.y - origin.y,
+                z: destination.z - origin.z,
+              });
+              if (displacement.verticalOnly)
+                out.push(
+                  "range",
+                  `${base}[${i}].to`,
+                  `actor "${actor}" cannot locomote to a vertical-only destination (${Math.abs(destination.y - origin.y)} m height change with ${displacement.groundDistance} m XZ travel); choose a walkable ground point with horizontal travel or use another action verb`,
+                  action.to,
+                );
+            }
+        }
       } else if (action.verb === "launch") {
         // The projectile is a scene object, so it must be staged (its placed
         // position is where the flight begins), and the aim must resolve to a
@@ -1167,7 +1237,7 @@ export const performShot = (props: {
   // something that resolves to a point. The election itself is untouched: a
   // coverage camera never becomes a second live `frame`.
   const coverageJobs: {
-    intent: IAutoMovieBlockingApplication.ICoverageIntent;
+    intent: IAutoMovieBlockingCoverage;
     camera: IAutoMovieCamera;
   }[] = [];
   const coveredCameras = new Map<string, number>();
@@ -1405,6 +1475,70 @@ export const performShot = (props: {
 
   const compiled = compilePerformance(stageActions, synthesizeOnce);
   const motions = compiled.performances;
+  const plants: IAutoMoviePerformedShot.ISuccess["plants"] = [];
+  const previousByNode = new Map(
+    (previous?.actors ?? []).map((actor) => [actor.node, actor]),
+  );
+  const sceneSpace = staged.scene.space ?? null;
+  const worldGround = sceneSpace === null ? null : spaceGround(sceneSpace);
+  // A first stride must create the plant state a later stride can resume.
+  // Restrict the pass to actual gait-bearing output or an existing pin so a
+  // custom locomotion synthesizer without gait/contact data, and every static
+  // gesture/hold clip, keep their authored key grid.
+  for (const [actor, motion] of Object.entries(motions).sort(([x], [y]) =>
+    compareCodeUnits(x, y),
+  )) {
+    const priorPlants = previousByNode.get(actor)?.footPlants ?? null;
+    if (priorPlants === null && (motion.gaitCycle ?? null) === null) continue;
+    const rig = skeleton(actor);
+    const node = staged.scene.nodes.find((entry) => entry.id === actor);
+    if (rig === null || node === undefined) continue;
+    const inverse = Quaternion.inverse(node.transform.rotation);
+    const toModelPoint = (point: IAutoMovieVector3): IAutoMovieVector3 =>
+      Quaternion.rotateVector(
+        inverse,
+        Vector3.subtract(point, node.transform.translation),
+      );
+    const toWorldPoint = (point: IAutoMovieVector3): IAutoMovieVector3 =>
+      Vector3.add(
+        node.transform.translation,
+        Quaternion.rotateVector(node.transform.rotation, point),
+      );
+    const modelGround =
+      worldGround === null
+        ? null
+        : (x: number, z: number): number => {
+            const plan = toWorldPoint({ x, y: 0, z });
+            return toModelPoint({
+              x: plan.x,
+              y: worldGround(plan.x, plan.z),
+              z: plan.z,
+            }).y;
+          };
+    const planted = plantStanceFeet({
+      skeleton: rig,
+      motion,
+      jointAxes: jointAxes?.(actor),
+      restFrames: restFrames?.(actor),
+      ...(modelGround === null ? {} : { groundY: modelGround }),
+      openingPlants: (priorPlants ?? []).map((plant) => ({
+        foot: plant.foot,
+        position: toModelPoint(plant.position),
+      })),
+    });
+    // A rig may have no recognized foot effectors. In that case this pass has
+    // established no authority: preserve the authored clip and do not shadow
+    // host-provided plant measurements (or their duplicate diagnostics).
+    if (planted.plants.length === 0) continue;
+    motions[actor] = planted.motion;
+    plants.push({
+      node: actor,
+      plants: planted.plants.map((plant) => ({
+        ...plant,
+        position: toWorldPoint(plant.position),
+      })),
+    });
+  }
 
   // An authored channel the compiler does not apply is REPORTED (#1349). The
   // region mask itself is deliberate, but it used to discard content in
@@ -1449,6 +1583,7 @@ export const performShot = (props: {
     scene: staged.scene,
     motions,
     skeleton,
+    jointAxes,
     restFrames,
     duration: performance.duration,
   });
@@ -1525,7 +1660,7 @@ export const performShot = (props: {
     subject: framedSubject(action.on),
   }));
   const cameraMotion = compileCameraMove({
-    clipId: `cam:${performance.beat}`,
+    clipId: `cam:${cameraClipScope}`,
     camera: cameraObject,
     entries,
     shotDuration: performance.duration,
@@ -1541,7 +1676,7 @@ export const performShot = (props: {
     ({ intent, camera }) =>
       compileCameraCoverage({
         camera,
-        clipId: `cam:${performance.beat}:${camera.id}`,
+        clipId: `cam:${cameraClipScope}:${camera.id}`,
         entries: [
           {
             action: {
@@ -1571,7 +1706,7 @@ export const performShot = (props: {
   );
 
   const shot: IAutoMovieShot = {
-    id: `shot:${performance.beat}`,
+    id: shotId,
     name: beat!.name,
     scene: staged.scene.id,
     camera: liveCamera!,
@@ -1631,5 +1766,5 @@ export const performShot = (props: {
         .join("; ")}`,
     );
 
-  return { success: true, shot, motions };
+  return { success: true, shot, motions, plants };
 };

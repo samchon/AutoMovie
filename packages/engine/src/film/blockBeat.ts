@@ -1,22 +1,31 @@
 import {
   IAutoMovieBeatEndState,
-  IAutoMovieBlockingApplication,
+  IAutoMovieBlocking,
+  IAutoMovieBlockingCamera,
   IAutoMovieConstraintViolation,
-  IAutoMovieScriptApplication,
+  IAutoMovieScript,
 } from "@automovie/interface";
 
 import { ViolationCollector } from "../validation/violation";
 import { IAutoMovieStagedSet } from "./stageScene";
 
 /** The closed framing union, gated at runtime the way performShot gates it. */
-const CAMERA_FRAMINGS = new Set<
-  IAutoMovieBlockingApplication.ICameraIntent["framing"]
->(["wide", "full", "medium", "close"]);
+const CAMERA_FRAMINGS = new Set<IAutoMovieBlockingCamera["framing"]>([
+  "wide",
+  "full",
+  "medium",
+  "close",
+]);
 
 /** The closed move union, gated at runtime the way performShot gates it. */
-const CAMERA_MOVES = new Set<
-  IAutoMovieBlockingApplication.ICameraIntent["move"]
->(["static", "follow", "orbit", "push-in", "truck", "whip"]);
+const CAMERA_MOVES = new Set<IAutoMovieBlockingCamera["move"]>([
+  "static",
+  "follow",
+  "orbit",
+  "push-in",
+  "truck",
+  "whip",
+]);
 
 /**
  * A validated blocking: the beat's shot plan, coherent with the script and the
@@ -34,14 +43,13 @@ export namespace IAutoMovieBlockedBeat {
     success: true;
 
     /** The validated plan, verbatim. */
-    blocking: IAutoMovieBlockingApplication.IWrite;
+    blocking: IAutoMovieBlocking;
 
     /**
      * The validated initial condition from the prior beat, or `null` for the
      * first beat (or when none was supplied). Surfaced so the performance stage
-     * can seed each actor's start position, facing, gait phase, velocity,
-     * plants, and mount from where the previous beat actually ended; full
-     * seeding into the action synthesizer is a follow-up.
+     * seeds each actor's start position, facing, articulation, gait phase,
+     * velocity, plants, and mount from where the previous beat actually ended.
      */
     previous: IAutoMovieBeatEndState | null;
   }
@@ -75,9 +83,9 @@ export namespace IAutoMovieBlockedBeat {
  * resetting the world at the cut.
  */
 export const blockBeat = (
-  script: IAutoMovieScriptApplication.IWrite,
+  script: IAutoMovieScript,
   staged: IAutoMovieStagedSet.ISuccess,
-  blocking: IAutoMovieBlockingApplication.IWrite,
+  blocking: IAutoMovieBlocking,
   previous?: IAutoMovieBeatEndState,
 ): IAutoMovieBlockedBeat => {
   const out = new ViolationCollector();

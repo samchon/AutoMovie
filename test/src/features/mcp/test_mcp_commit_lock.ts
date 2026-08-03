@@ -4,6 +4,65 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+const mutableFs = fs as {
+  lstatSync: typeof fs.lstatSync;
+};
+
+interface ICommitLockFixtureFailure {
+  error: unknown;
+}
+
+class CommitLockFixtureCleanupError extends AggregateError {}
+
+/** Remove the commit-lock fixture root without replacing its primary failure. */
+export const preserveCommitLockFixtureCleanup = (
+  failure: ICommitLockFixtureFailure | undefined,
+  cleanup: () => unknown,
+): void => {
+  try {
+    cleanup();
+  } catch (cleanupFailure) {
+    if (failure === undefined) throw cleanupFailure;
+    throw new CommitLockFixtureCleanupError(
+      [failure.error, cleanupFailure],
+      "Commit-lock fixture cleanup failed after the test failed.",
+    );
+  }
+};
+
+interface ICommitLockHookCleanup {
+  cleanup: () => unknown;
+  resource: string;
+}
+
+class CommitLockHookCleanupError extends AggregateError {}
+
+/** Attempt every commit-lock harness hook restoration without hiding failure. */
+export const preserveCommitLockHookCleanup = (
+  failure: ICommitLockFixtureFailure | undefined,
+  resources: readonly ICommitLockHookCleanup[],
+): void => {
+  const cleanupFailures: Array<{ error: unknown; resource: string }> = [];
+  for (const resource of resources)
+    try {
+      resource.cleanup();
+    } catch (error) {
+      cleanupFailures.push({ error, resource: resource.resource });
+    }
+  if (cleanupFailures.length === 1 && failure === undefined)
+    throw cleanupFailures[0]!.error;
+  if (cleanupFailures.length !== 0)
+    throw new CommitLockHookCleanupError(
+      [
+        ...(failure === undefined ? [] : [failure.error]),
+        ...cleanupFailures.map((entry) => entry.error),
+      ],
+      `Commit-lock hook cleanup failed${
+        failure === undefined ? "" : " after the test failed"
+      }: ${cleanupFailures.map((entry) => entry.resource).join(", ")}.`,
+    );
+};
+
 /**
  * The commit lock is owner-identified and fail-closed (#1257/#1252): a release
  * deletes only this session's token, and age never authorizes a different
@@ -26,6 +85,7 @@ import path from "node:path";
  */
 export const test_mcp_commit_lock = (): void => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-lock-"));
+  let commitLockFailure: ICommitLockFixtureFailure | undefined;
   try {
     const lockPath = path.join(dir, "revision.lock");
 
@@ -85,6 +145,91 @@ export const test_mcp_commit_lock = (): void => {
       false,
     );
 
+    const releaseRacePath = path.join(dir, "release-race.lock");
+    const releaseRaceParked = `${releaseRacePath}.owner-parked`;
+    const releaseRaceToken = acquireCommitLock(releaseRacePath);
+    const foreignToken = "successor-session-token";
+    const nativeRename = fs.renameSync;
+    const nativeRm = fs.rmSync;
+    let releaseTargetSwapped = false;
+    const swapReleaseTarget = (): void => {
+      releaseTargetSwapped = true;
+      nativeRename(releaseRacePath, releaseRaceParked);
+      fs.writeFileSync(releaseRacePath, foreignToken);
+    };
+    fs.renameSync = ((oldPath, newPath) => {
+      if (
+        releaseTargetSwapped === false &&
+        path.resolve(oldPath.toString()) === path.resolve(releaseRacePath) &&
+        path.basename(newPath.toString()).startsWith(".automovie-lock-release-")
+      )
+        swapReleaseTarget();
+      return nativeRename(oldPath, newPath);
+    }) as typeof fs.renameSync;
+    fs.rmSync = ((target, ...args: unknown[]): void => {
+      if (
+        releaseTargetSwapped === false &&
+        path.resolve(target.toString()) === path.resolve(releaseRacePath)
+      )
+        swapReleaseTarget();
+      Reflect.apply(nativeRm, fs, [target, ...args]);
+    }) as typeof fs.rmSync;
+    let releaseRaceFailure: ICommitLockFixtureFailure | undefined;
+    try {
+      releaseCommitLock(releaseRacePath, releaseRaceToken);
+    } catch (error) {
+      releaseRaceFailure = { error };
+      throw error;
+    } finally {
+      preserveCommitLockHookCleanup(releaseRaceFailure, [
+        {
+          resource: "release-race rename hook",
+          cleanup: () => {
+            fs.renameSync = nativeRename;
+          },
+        },
+        {
+          resource: "release-race remove hook",
+          cleanup: () => {
+            fs.rmSync = nativeRm;
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "release cannot delete a foreign lock swapped in after owner verification",
+      releaseTargetSwapped &&
+        fs.existsSync(releaseRacePath) &&
+        fs.readFileSync(releaseRacePath, "utf8") === foreignToken,
+    );
+    nativeRm(releaseRacePath, { force: true });
+    nativeRm(releaseRaceParked, { force: true });
+    const reacquiredRaceToken = acquireCommitLock(releaseRacePath);
+    TestValidator.predicate(
+      "a raced release permits a genuinely fresh owner",
+      reacquiredRaceToken !== releaseRaceToken &&
+        fs.existsSync(releaseRacePath) &&
+        fs.readFileSync(releaseRacePath, "utf8") === reacquiredRaceToken,
+    );
+    releaseCommitLock(releaseRacePath, reacquiredRaceToken);
+    TestValidator.equals(
+      "a raced release clears its process-local ownership",
+      fs.existsSync(releaseRacePath),
+      false,
+    );
+
+    exerciseSplitPathDescriptorIdentity(dir);
+    exerciseRejectedSnapshots(dir);
+    exerciseQuarantineRecovery(dir);
+    exerciseReleaseFailures(dir);
+    TestValidator.equals(
+      "release defenses leave no quarantine after test cleanup",
+      fs
+        .readdirSync(dir)
+        .some((entry) => entry.startsWith(".automovie-lock-release-")),
+      false,
+    );
+
     // 4c. releasing an already-vanished lock is a no-op (no throw)
     releaseCommitLock(lockPath, token);
     TestValidator.equals(
@@ -117,9 +262,396 @@ export const test_mcp_commit_lock = (): void => {
       fresh,
     );
     releaseCommitLock(lockPath, fresh);
+  } catch (error) {
+    commitLockFailure = { error };
+    throw error;
   } finally {
-    fs.rmSync(dir, { recursive: true, force: true });
+    preserveCommitLockFixtureCleanup(commitLockFailure, () =>
+      fs.rmSync(dir, { recursive: true, force: true }),
+    );
   }
+};
+
+type LockStatusMutation = "identity" | "non-file" | "symlink";
+
+const mutateLockStatus = (
+  status: fs.BigIntStats,
+  mutation: LockStatusMutation,
+): fs.BigIntStats =>
+  new Proxy(status, {
+    get: (target, property, receiver): unknown => {
+      if (mutation === "identity" && property === "ino") return target.ino + 1n;
+      if (mutation === "non-file" && property === "isFile")
+        return (): boolean => false;
+      if (mutation === "symlink" && property === "isSymbolicLink")
+        return (): boolean => true;
+      return Reflect.get(target, property, receiver);
+    },
+  });
+
+const exerciseSplitPathDescriptorIdentity = (dir: string): void => {
+  const lockPath = path.join(dir, "split-path-descriptor.lock");
+  const token = acquireCommitLock(lockPath);
+  const nativeLstat = fs.lstatSync;
+  mutableFs.lstatSync = ((target, options) => {
+    const status = nativeLstat(target, options);
+    return path.resolve(target.toString()) === path.resolve(lockPath)
+      ? mutateLockStatus(status as fs.BigIntStats, "identity")
+      : status;
+  }) as typeof fs.lstatSync;
+  let splitPathFailure: ICommitLockFixtureFailure | undefined;
+  try {
+    releaseCommitLock(lockPath, token);
+  } catch (error) {
+    splitPathFailure = { error };
+    throw error;
+  } finally {
+    preserveCommitLockHookCleanup(splitPathFailure, [
+      {
+        resource: "split-path lstat hook",
+        cleanup: () => {
+          mutableFs.lstatSync = nativeLstat;
+        },
+      },
+    ]);
+  }
+  TestValidator.equals(
+    "release accepts stable pathname and descriptor identity domains",
+    fs.existsSync(lockPath),
+    false,
+  );
+};
+
+const exerciseRejectedSnapshots = (dir: string): void => {
+  const variants: Array<{
+    name: string;
+    source: "fstat" | "lstat";
+    call: number;
+    mutation: LockStatusMutation;
+  }> = [
+    { name: "linked-symlink", source: "lstat", call: 1, mutation: "symlink" },
+    { name: "linked-non-file", source: "lstat", call: 1, mutation: "non-file" },
+    { name: "opened-non-file", source: "fstat", call: 1, mutation: "non-file" },
+    { name: "opened-swap", source: "fstat", call: 1, mutation: "identity" },
+    { name: "resident-symlink", source: "lstat", call: 2, mutation: "symlink" },
+    {
+      name: "resident-non-file",
+      source: "lstat",
+      call: 2,
+      mutation: "non-file",
+    },
+    { name: "resident-swap", source: "lstat", call: 2, mutation: "identity" },
+    {
+      name: "current-non-file",
+      source: "fstat",
+      call: 2,
+      mutation: "non-file",
+    },
+    { name: "current-swap", source: "fstat", call: 2, mutation: "identity" },
+  ];
+  for (const variant of variants) {
+    const lockPath = path.join(dir, `snapshot-${variant.name}.lock`);
+    const token = `snapshot-${variant.name}-token`;
+    fs.writeFileSync(lockPath, token);
+    const nativeLstat = fs.lstatSync;
+    const nativeFstat = fs.fstatSync;
+    let lstatCalls = 0;
+    let fstatCalls = 0;
+    mutableFs.lstatSync = ((target, options) => {
+      const status = nativeLstat(target, options);
+      if (path.resolve(target.toString()) !== path.resolve(lockPath))
+        return status;
+      ++lstatCalls;
+      return variant.source === "lstat" && variant.call === lstatCalls
+        ? mutateLockStatus(status as fs.BigIntStats, variant.mutation)
+        : status;
+    }) as typeof fs.lstatSync;
+    fs.fstatSync = ((descriptor, options) => {
+      const status = nativeFstat(descriptor, options);
+      ++fstatCalls;
+      return variant.source === "fstat" && variant.call === fstatCalls
+        ? mutateLockStatus(status as fs.BigIntStats, variant.mutation)
+        : status;
+    }) as typeof fs.fstatSync;
+    let rejectedSnapshotFailure: ICommitLockFixtureFailure | undefined;
+    try {
+      releaseCommitLock(lockPath, token);
+    } catch (error) {
+      rejectedSnapshotFailure = { error };
+      throw error;
+    } finally {
+      preserveCommitLockHookCleanup(rejectedSnapshotFailure, [
+        {
+          resource: "rejected-snapshot lstat hook",
+          cleanup: () => {
+            mutableFs.lstatSync = nativeLstat;
+          },
+        },
+        {
+          resource: "rejected-snapshot fstat hook",
+          cleanup: () => {
+            fs.fstatSync = nativeFstat;
+          },
+        },
+      ]);
+    }
+    TestValidator.equals(
+      `release rejects the ${variant.name} snapshot`,
+      fs.readFileSync(lockPath, "utf8"),
+      token,
+    );
+    fs.rmSync(lockPath);
+  }
+};
+
+type QuarantineRecoveryMode =
+  | "cleanup-failure"
+  | "copy-failure"
+  | "copy-success"
+  | "delete-failure"
+  | "moved-null"
+  | "moved-throw"
+  | "successor";
+
+const exerciseQuarantineRecovery = (dir: string): void => {
+  const modes: QuarantineRecoveryMode[] = [
+    "successor",
+    "copy-success",
+    "copy-failure",
+    "cleanup-failure",
+    "moved-null",
+    "moved-throw",
+    "delete-failure",
+  ];
+  for (const mode of modes) {
+    const lockPath = path.join(dir, `recovery-${mode}.lock`);
+    const token = `recovery-${mode}-token`;
+    const replacement = `replacement-${mode}-token`;
+    fs.writeFileSync(lockPath, token);
+    const nativeRename = fs.renameSync;
+    const nativeLink = fs.linkSync;
+    const nativeCopy = fs.copyFileSync;
+    const nativeRm = fs.rmSync;
+    const nativeLstat = fs.lstatSync;
+    let quarantine: string | undefined;
+    let quarantineLstatCalls = 0;
+    let quarantineRmCalls = 0;
+    let exclusiveCopyObserved = false;
+    fs.renameSync = ((oldPath, newPath) => {
+      nativeRename(oldPath, newPath);
+      if (
+        path.resolve(oldPath.toString()) === path.resolve(lockPath) &&
+        path.basename(newPath.toString()).startsWith(".automovie-lock-release-")
+      ) {
+        quarantine = newPath.toString();
+        if (
+          mode === "successor" ||
+          mode === "copy-success" ||
+          mode === "copy-failure" ||
+          mode === "cleanup-failure"
+        )
+          fs.writeFileSync(quarantine, replacement);
+        if (mode === "successor") fs.writeFileSync(lockPath, replacement);
+      }
+    }) as typeof fs.renameSync;
+    fs.linkSync = ((existingPath, newPath) => {
+      if (
+        quarantine !== undefined &&
+        path.resolve(existingPath.toString()) === path.resolve(quarantine) &&
+        path.resolve(newPath.toString()) === path.resolve(lockPath) &&
+        (mode === "copy-success" || mode === "copy-failure")
+      )
+        throw Object.assign(new Error("hard link unavailable"), {
+          code: "EPERM",
+        });
+      nativeLink(existingPath, newPath);
+    }) as typeof fs.linkSync;
+    fs.copyFileSync = ((source, destination, flags) => {
+      if (
+        quarantine !== undefined &&
+        path.resolve(source.toString()) === path.resolve(quarantine) &&
+        path.resolve(destination.toString()) === path.resolve(lockPath)
+      )
+        exclusiveCopyObserved = flags === fs.constants.COPYFILE_EXCL;
+      if (
+        mode === "copy-failure" &&
+        quarantine !== undefined &&
+        path.resolve(source.toString()) === path.resolve(quarantine) &&
+        path.resolve(destination.toString()) === path.resolve(lockPath)
+      )
+        throw Object.assign(new Error("exclusive copy unavailable"), {
+          code: "EPERM",
+        });
+      nativeCopy(source, destination, flags);
+    }) as typeof fs.copyFileSync;
+    mutableFs.lstatSync = ((target, options) => {
+      const status = nativeLstat(target, options);
+      if (
+        quarantine !== undefined &&
+        path.resolve(target.toString()) === path.resolve(quarantine)
+      ) {
+        ++quarantineLstatCalls;
+        if (quarantineLstatCalls === 1 && mode === "moved-null")
+          return mutateLockStatus(status as fs.BigIntStats, "symlink");
+        if (quarantineLstatCalls === 1 && mode === "moved-throw")
+          throw new Error("quarantine inspection failed");
+      }
+      return status;
+    }) as typeof fs.lstatSync;
+    fs.rmSync = ((target, ...args: unknown[]): void => {
+      if (
+        quarantine !== undefined &&
+        path.resolve(target.toString()) === path.resolve(quarantine)
+      ) {
+        ++quarantineRmCalls;
+        if (
+          mode === "cleanup-failure" ||
+          (mode === "delete-failure" && quarantineRmCalls === 1)
+        )
+          throw new Error("quarantine deletion failed");
+      }
+      Reflect.apply(nativeRm, fs, [target, ...args]);
+    }) as typeof fs.rmSync;
+    let quarantineRecoveryFailure: ICommitLockFixtureFailure | undefined;
+    try {
+      releaseCommitLock(lockPath, token);
+    } catch (error) {
+      quarantineRecoveryFailure = { error };
+      throw error;
+    } finally {
+      preserveCommitLockHookCleanup(quarantineRecoveryFailure, [
+        {
+          resource: "quarantine-recovery rename hook",
+          cleanup: () => {
+            fs.renameSync = nativeRename;
+          },
+        },
+        {
+          resource: "quarantine-recovery link hook",
+          cleanup: () => {
+            fs.linkSync = nativeLink;
+          },
+        },
+        {
+          resource: "quarantine-recovery copy hook",
+          cleanup: () => {
+            fs.copyFileSync = nativeCopy;
+          },
+        },
+        {
+          resource: "quarantine-recovery remove hook",
+          cleanup: () => {
+            fs.rmSync = nativeRm;
+          },
+        },
+        {
+          resource: "quarantine-recovery lstat hook",
+          cleanup: () => {
+            mutableFs.lstatSync = nativeLstat;
+          },
+        },
+      ]);
+    }
+    const expectedResident =
+      mode === "successor" ||
+      mode === "copy-success" ||
+      mode === "cleanup-failure"
+        ? replacement
+        : mode === "copy-failure"
+          ? undefined
+          : token;
+    TestValidator.equals(
+      `quarantine recovery preserves the ${mode} resident`,
+      fs.existsSync(lockPath) ? fs.readFileSync(lockPath, "utf8") : undefined,
+      expectedResident,
+    );
+    const expectQuarantine =
+      mode === "successor" ||
+      mode === "copy-failure" ||
+      mode === "cleanup-failure";
+    TestValidator.equals(
+      `quarantine recovery keeps evidence for ${mode} only when required`,
+      quarantine !== undefined && fs.existsSync(quarantine),
+      expectQuarantine,
+    );
+    if (mode === "copy-success" || mode === "copy-failure")
+      TestValidator.equals(
+        `quarantine recovery uses exclusive copy for ${mode}`,
+        exclusiveCopyObserved,
+        true,
+      );
+    nativeRm(lockPath, { force: true });
+    if (quarantine !== undefined) nativeRm(quarantine, { force: true });
+  }
+};
+
+const exerciseReleaseFailures = (dir: string): void => {
+  const renamePath = path.join(dir, "release-rename-failure.lock");
+  const renameToken = "release-rename-failure-token";
+  fs.writeFileSync(renamePath, renameToken);
+  const nativeRename = fs.renameSync;
+  fs.renameSync = ((oldPath, newPath) => {
+    if (
+      path.resolve(oldPath.toString()) === path.resolve(renamePath) &&
+      path.basename(newPath.toString()).startsWith(".automovie-lock-release-")
+    )
+      throw new Error("quarantine rename failed");
+    nativeRename(oldPath, newPath);
+  }) as typeof fs.renameSync;
+  let releaseRenameFailure: ICommitLockFixtureFailure | undefined;
+  try {
+    releaseCommitLock(renamePath, renameToken);
+  } catch (error) {
+    releaseRenameFailure = { error };
+    throw error;
+  } finally {
+    preserveCommitLockHookCleanup(releaseRenameFailure, [
+      {
+        resource: "release-rename hook",
+        cleanup: () => {
+          fs.renameSync = nativeRename;
+        },
+      },
+    ]);
+  }
+  TestValidator.equals(
+    "a failed quarantine rename leaves the owner lock resident",
+    fs.readFileSync(renamePath, "utf8"),
+    renameToken,
+  );
+  fs.rmSync(renamePath);
+
+  const snapshotPath = path.join(dir, "release-snapshot-failure.lock");
+  const snapshotToken = "release-snapshot-failure-token";
+  fs.writeFileSync(snapshotPath, snapshotToken);
+  const nativeLstat = fs.lstatSync;
+  mutableFs.lstatSync = ((target, options) => {
+    if (path.resolve(target.toString()) === path.resolve(snapshotPath))
+      throw new Error("initial snapshot failed");
+    return nativeLstat(target, options);
+  }) as typeof fs.lstatSync;
+  let releaseSnapshotFailure: ICommitLockFixtureFailure | undefined;
+  try {
+    releaseCommitLock(snapshotPath, snapshotToken);
+  } catch (error) {
+    releaseSnapshotFailure = { error };
+    throw error;
+  } finally {
+    preserveCommitLockHookCleanup(releaseSnapshotFailure, [
+      {
+        resource: "release-snapshot lstat hook",
+        cleanup: () => {
+          mutableFs.lstatSync = nativeLstat;
+        },
+      },
+    ]);
+  }
+  TestValidator.equals(
+    "a failed initial snapshot leaves the owner lock resident",
+    fs.readFileSync(snapshotPath, "utf8"),
+    snapshotToken,
+  );
+  fs.rmSync(snapshotPath);
 };
 
 /** True when `task` throws an error whose message contains every fragment. */

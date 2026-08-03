@@ -7,6 +7,62 @@ import path from "node:path";
 
 import { throwsError } from "../internal/predicates";
 
+interface IProjectTransactionFixtureFailure {
+  error: unknown;
+}
+
+class ProjectTransactionFixtureCleanupError extends AggregateError {}
+
+/** Remove one transaction root without replacing its primary failure. */
+export const preserveProjectTransactionFixtureCleanup = (
+  failure: IProjectTransactionFixtureFailure | undefined,
+  cleanup: () => unknown,
+  resource: string,
+): void => {
+  try {
+    cleanup();
+  } catch (cleanupFailure) {
+    if (failure === undefined) throw cleanupFailure;
+    throw new ProjectTransactionFixtureCleanupError(
+      [failure.error, cleanupFailure],
+      `Project-transaction ${resource} cleanup failed after the test failed.`,
+    );
+  }
+};
+
+interface IProjectTransactionSwapCleanup {
+  cleanup: () => unknown;
+  resource: string;
+}
+
+class ProjectTransactionSwapCleanupError extends AggregateError {}
+
+/** Attempt every transaction root-swap cleanup without hiding failure. */
+export const preserveProjectTransactionSwapCleanup = (
+  failure: IProjectTransactionFixtureFailure | undefined,
+  resources: readonly IProjectTransactionSwapCleanup[],
+): void => {
+  const cleanupFailures: Array<{ error: unknown; resource: string }> = [];
+  for (const resource of resources)
+    try {
+      resource.cleanup();
+    } catch (error) {
+      cleanupFailures.push({ error, resource: resource.resource });
+    }
+  if (cleanupFailures.length === 1 && failure === undefined)
+    throw cleanupFailures[0]!.error;
+  if (cleanupFailures.length !== 0)
+    throw new ProjectTransactionSwapCleanupError(
+      [
+        ...(failure === undefined ? [] : [failure.error]),
+        ...cleanupFailures.map((entry) => entry.error),
+      ],
+      `Project-transaction root-swap cleanup failed${
+        failure === undefined ? "" : " after the guarded check failed"
+      }: ${cleanupFailures.map((entry) => entry.resource).join(", ")}.`,
+    );
+};
+
 const scriptOf = (logline: string): IAutoMovieScript => ({
   logline,
   theme: "durability",
@@ -49,9 +105,20 @@ const slateOf = (logline: string): IAutoMovieMcpWritableSlate => ({
  *    revision once (not once per actor) and both land together.
  * 5. A staging throw on any actor in the registry persists NOTHING and does not
  *    bump: the all-or-nothing guarantee the per-actor loop lacked.
+ * 6. Two live asset registrars preserve both manifest entries through direct stale
+ *    refusal/retry as well as explicit read synchronization.
+ * 7. A missing manifest cannot advance the optimistic revision base and let a
+ *    stale slate overwrite a concurrent winner after the manifest returns.
+ * 8. The mutation-defense matrix proves ordinary temp cleanup, quarantine rename
+ *    failure, delete failure with successful/already-complete restore,
+ *    removal-time root replacement, lock-token clone preservation, and an
+ *    atomic-write root replacement without stale-path cleanup.
+ * 9. Retargeting a POSIX symlink or Windows junction ancestor during a write
+ *    cannot redirect a live handle away from its canonical physical root.
  */
 export const test_mcp_project_transactions = (): void => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-txn-"));
+  let transactionFailure: IProjectTransactionFixtureFailure | undefined;
   try {
     const a = AutoMovieProject.open(root);
     a.writableSlate();
@@ -178,7 +245,535 @@ export const test_mcp_project_transactions = (): void => {
       JSON.parse(fs.readFileSync(revisionFile, "utf8")).revision,
       revAfterActors.revision,
     );
-  } finally {
+
+    const assetA = AutoMovieProject.open(root);
+    const assetB = AutoMovieProject.open(root);
+    assetA.registerAsset("models/asset-a.glb", Buffer.from("asset a"));
+    TestValidator.predicate(
+      "a stale asset registrar is refused before writing",
+      throwsError(
+        () =>
+          assetB.registerAsset("models/asset-b.glb", Buffer.from("asset b")),
+        ["another session committed", "nothing was written"],
+      ) && fs.existsSync(path.join(root, "models", "asset-b.glb")) === false,
+    );
+    assetB.registerAsset("models/asset-b.glb", Buffer.from("asset b"));
+    TestValidator.equals(
+      "a synchronized second handle preserves the first handle's asset",
+      assetB.assets,
+      ["models/asset-a.glb", "models/asset-b.glb"],
+    );
+    TestValidator.equals(
+      "summary exposes the current resident asset index",
+      assetA.summary().assets,
+      ["models/asset-a.glb", "models/asset-b.glb"],
+    );
+
+    const manifestRaceA = AutoMovieProject.open(root);
+    const manifestRaceB = AutoMovieProject.open(root);
+    const staleSlate = manifestRaceB.writableSlate();
+    manifestRaceA.saveSlate(slateOf("manifest race winner"));
+    const manifestFile = path.join(root, "automovie.json");
+    const parkedManifest = `${manifestFile}.parked`;
+    fs.renameSync(manifestFile, parkedManifest);
+    const missingManifestRejected = throwsError(
+      () => manifestRaceB.writableSlate(),
+      ["manifest", "disappeared from the resident project"],
+    );
+    fs.renameSync(parkedManifest, manifestFile);
+    const staleAfterManifestFailureRejected = throwsError(
+      () => manifestRaceB.saveSlate(staleSlate),
+      ["another session committed", "nothing was written"],
+    );
+    TestValidator.predicate(
+      "a failed manifest refresh cannot advance the stale slate base",
+      missingManifestRejected &&
+        staleAfterManifestFailureRejected &&
+        fs
+          .readFileSync(path.join(root, "script.json"), "utf8")
+          .includes("manifest race winner"),
+    );
+    a.writableSlate();
+
+    const nativeCleanupWrite = fs.writeFileSync;
+    let failedTemp: string | undefined;
+    fs.writeFileSync = ((
+      file: fs.PathOrFileDescriptor,
+      ...args: unknown[]
+    ): unknown => {
+      if (
+        typeof file !== "number" &&
+        path.basename(file.toString()).startsWith("cleanupFailure.json.tmp.")
+      ) {
+        failedTemp = path.resolve(file.toString());
+        Reflect.apply(nativeCleanupWrite, fs, [file, ...args]);
+        throw Object.assign(new Error("actor temporary write failed"), {
+          code: "EIO",
+        });
+      }
+      return Reflect.apply(nativeCleanupWrite, fs, [file, ...args]);
+    }) as typeof fs.writeFileSync;
+    let cleanupRejected = false;
+    let cleanupWriteFailure: IProjectTransactionFixtureFailure | undefined;
+    try {
+      cleanupRejected = throwsError(
+        () => a.saveActors([actorSpec("cleanupFailure")]),
+        ["actor temporary write failed"],
+      );
+    } catch (error) {
+      cleanupWriteFailure = { error };
+      throw error;
+    } finally {
+      preserveProjectTransactionSwapCleanup(cleanupWriteFailure, [
+        {
+          resource: "actor cleanup write hook",
+          cleanup: () => {
+            fs.writeFileSync = nativeCleanupWrite;
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "an ordinary atomic-write failure cleans its current-namespace temporary",
+      cleanupRejected &&
+        failedTemp !== undefined &&
+        fs.existsSync(failedTemp) === false &&
+        fs.existsSync(path.join(root, "actors", "cleanupFailure.json")) ===
+          false,
+    );
+
+    const nativeRename = fs.renameSync;
+    fs.renameSync = ((oldPath, newPath) => {
+      if (
+        path.resolve(oldPath.toString()) ===
+        path.join(root, "actors", "knightA.json")
+      )
+        throw Object.assign(new Error("actor rename denied"), {
+          code: "EACCES",
+        });
+      nativeRename(oldPath, newPath);
+    }) as typeof fs.renameSync;
+    let deniedRemoval = false;
+    let deniedRemovalFailure: IProjectTransactionFixtureFailure | undefined;
+    try {
+      deniedRemoval = throwsError(
+        () => a.removeActor("knightA"),
+        ["actor rename denied"],
+      );
+    } catch (error) {
+      deniedRemovalFailure = { error };
+      throw error;
+    } finally {
+      preserveProjectTransactionSwapCleanup(deniedRemovalFailure, [
+        {
+          resource: "denied-removal rename hook",
+          cleanup: () => {
+            fs.renameSync = nativeRename;
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "a non-ENOENT actor quarantine failure preserves the resident slice",
+      deniedRemoval && fs.existsSync(path.join(root, "actors", "knightA.json")),
+    );
+
+    const nativeRemove = fs.rmSync;
+    let quarantineRemoveFailed = false;
+    fs.rmSync = ((file, ...args: unknown[]): void => {
+      if (
+        quarantineRemoveFailed === false &&
+        path.basename(file.toString()).startsWith("knightA.json.delete.")
+      ) {
+        quarantineRemoveFailed = true;
+        throw Object.assign(new Error("actor quarantine busy"), {
+          code: "EBUSY",
+        });
+      }
+      Reflect.apply(nativeRemove, fs, [file, ...args]);
+    }) as typeof fs.rmSync;
+    let restoredRemoval = false;
+    let restoredRemovalFailure: IProjectTransactionFixtureFailure | undefined;
+    try {
+      restoredRemoval = throwsError(
+        () => a.removeActor("knightA"),
+        ["actor quarantine busy"],
+      );
+    } catch (error) {
+      restoredRemovalFailure = { error };
+      throw error;
+    } finally {
+      preserveProjectTransactionSwapCleanup(restoredRemovalFailure, [
+        {
+          resource: "restored-removal remove hook",
+          cleanup: () => {
+            fs.rmSync = nativeRemove;
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "a failed quarantine delete restores the actor slice",
+      quarantineRemoveFailed &&
+        restoredRemoval &&
+        fs.existsSync(path.join(root, "actors", "knightA.json")) &&
+        fs
+          .readdirSync(path.join(root, "actors"))
+          .every((file) => file.startsWith("knightA.json.delete.") === false),
+    );
+
+    let externallyRestored = false;
+    fs.rmSync = ((file, ...args: unknown[]): void => {
+      if (
+        externallyRestored === false &&
+        path.basename(file.toString()).startsWith("knightA.json.delete.")
+      ) {
+        fs.renameSync(
+          file.toString(),
+          path.join(root, "actors", "knightA.json"),
+        );
+        externallyRestored = true;
+        throw Object.assign(new Error("actor delete reported late failure"), {
+          code: "EIO",
+        });
+      }
+      Reflect.apply(nativeRemove, fs, [file, ...args]);
+    }) as typeof fs.rmSync;
+    let lateDeleteRejected = false;
+    let lateDeleteFailure: IProjectTransactionFixtureFailure | undefined;
+    try {
+      lateDeleteRejected = throwsError(
+        () => a.removeActor("knightA"),
+        ["actor delete reported late failure"],
+      );
+    } catch (error) {
+      lateDeleteFailure = { error };
+      throw error;
+    } finally {
+      preserveProjectTransactionSwapCleanup(lateDeleteFailure, [
+        {
+          resource: "late-delete remove hook",
+          cleanup: () => {
+            fs.rmSync = nativeRemove;
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "an already-restored quarantine failure never clobbers the resident actor",
+      externallyRestored &&
+        lateDeleteRejected &&
+        fs.existsSync(path.join(root, "actors", "knightA.json")),
+    );
+
+    const removalParkedRoot = `${root}.removal-parked`;
+    let removalSwapped = false;
+    fs.renameSync = ((oldPath, newPath) => {
+      nativeRename(oldPath, newPath);
+      if (
+        removalSwapped === false &&
+        path.resolve(oldPath.toString()) ===
+          path.join(root, "actors", "knightA.json") &&
+        path.basename(newPath.toString()).startsWith("knightA.json.delete.")
+      ) {
+        nativeRename(root, removalParkedRoot);
+        fs.mkdirSync(root);
+        removalSwapped = true;
+      }
+    }) as typeof fs.renameSync;
+    let removalSwapMessage = "";
+    let removalSwapFailure: IProjectTransactionFixtureFailure | undefined;
+    try {
+      try {
+        a.removeActor("knightA");
+      } catch (error) {
+        removalSwapMessage = (error as Error).message;
+      }
+    } catch (error) {
+      removalSwapFailure = { error };
+      throw error;
+    } finally {
+      preserveProjectTransactionSwapCleanup(removalSwapFailure, [
+        {
+          resource: "removal-swap rename hook",
+          cleanup: () => {
+            fs.renameSync = nativeRename;
+          },
+        },
+      ]);
+    }
+    const removalReplacementEmpty = fs.readdirSync(root).length === 0;
+    const quarantinedActor = fs
+      .readdirSync(path.join(removalParkedRoot, "actors"))
+      .find((file) => file.startsWith("knightA.json.delete."));
     fs.rmSync(root, { recursive: true, force: true });
+    fs.renameSync(removalParkedRoot, root);
+    fs.rmSync(path.join(root, "revision.lock"), { force: true });
+    if (quarantinedActor !== undefined)
+      fs.renameSync(
+        path.join(root, "actors", quarantinedActor),
+        path.join(root, "actors", "knightA.json"),
+      );
+    TestValidator.predicate(
+      "a removal-time root swap preserves the quarantined original and replacement",
+      removalSwapped &&
+        removalSwapMessage.includes(
+          "root identity or namespace fence changed",
+        ) &&
+        removalReplacementEmpty &&
+        quarantinedActor !== undefined &&
+        fs.existsSync(path.join(root, "actors", "knightA.json")),
+    );
+    a.writableSlate();
+
+    const nativeWrite = fs.writeFileSync;
+    const lockParkedRoot = `${root}.lock-parked`;
+    let lockSwapped = false;
+    fs.writeFileSync = ((
+      file: fs.PathOrFileDescriptor,
+      ...args: unknown[]
+    ): unknown => {
+      const output = Reflect.apply(nativeWrite, fs, [file, ...args]);
+      if (
+        lockSwapped === false &&
+        typeof file !== "number" &&
+        path.resolve(file.toString()) === path.join(root, "revision.lock")
+      ) {
+        fs.renameSync(root, lockParkedRoot);
+        fs.mkdirSync(root);
+        Reflect.apply(nativeWrite, fs, [
+          path.join(root, "revision.lock"),
+          ...args,
+        ]);
+        lockSwapped = true;
+      }
+      return output;
+    }) as typeof fs.writeFileSync;
+    let lockSwapMessage = "";
+    let lockSwapFailure: IProjectTransactionFixtureFailure | undefined;
+    try {
+      try {
+        a.saveActors([actorSpec("lockSwap")]);
+      } catch (error) {
+        lockSwapMessage = (error as Error).message;
+      }
+    } catch (error) {
+      lockSwapFailure = { error };
+      throw error;
+    } finally {
+      preserveProjectTransactionSwapCleanup(lockSwapFailure, [
+        {
+          resource: "lock-swap write hook",
+          cleanup: () => {
+            fs.writeFileSync = nativeWrite;
+          },
+        },
+      ]);
+    }
+    const replacementLockPreserved = fs.existsSync(
+      path.join(root, "revision.lock"),
+    );
+    fs.rmSync(root, { recursive: true, force: true });
+    fs.renameSync(lockParkedRoot, root);
+    fs.rmSync(path.join(root, "revision.lock"), { force: true });
+    TestValidator.predicate(
+      "a root swap after lock acquisition cannot unlink a copied replacement token",
+      lockSwapped &&
+        lockSwapMessage.includes("root identity or namespace fence changed") &&
+        replacementLockPreserved,
+    );
+
+    const operationParkedRoot = `${root}.operation-parked`;
+    let operationSwapped = false;
+    fs.writeFileSync = ((
+      file: fs.PathOrFileDescriptor,
+      ...args: unknown[]
+    ): unknown => {
+      const output = Reflect.apply(nativeWrite, fs, [file, ...args]);
+      if (
+        operationSwapped === false &&
+        typeof file !== "number" &&
+        path.dirname(path.resolve(file.toString())) ===
+          path.join(root, "actors") &&
+        path.basename(file.toString()).startsWith("rootSwap.json.tmp.")
+      ) {
+        fs.renameSync(root, operationParkedRoot);
+        fs.mkdirSync(root);
+        operationSwapped = true;
+      }
+      return output;
+    }) as typeof fs.writeFileSync;
+    let operationMessage = "";
+    let rootSwapOperationFailure: IProjectTransactionFixtureFailure | undefined;
+    try {
+      try {
+        a.saveActors([actorSpec("rootSwap")]);
+      } catch (error) {
+        operationMessage = (error as Error).message;
+      }
+    } catch (error) {
+      rootSwapOperationFailure = { error };
+      throw error;
+    } finally {
+      preserveProjectTransactionSwapCleanup(rootSwapOperationFailure, [
+        {
+          resource: "root-swap operation write hook",
+          cleanup: () => {
+            fs.writeFileSync = nativeWrite;
+          },
+        },
+      ]);
+    }
+    const replacementStayedEmpty = fs.readdirSync(root).length === 0;
+    const originalLockPreserved = fs.existsSync(
+      path.join(operationParkedRoot, "revision.lock"),
+    );
+    const originalPublishPrevented =
+      fs.existsSync(
+        path.join(operationParkedRoot, "actors", "rootSwap.json"),
+      ) === false;
+    let replacementLeaseReacquired = false;
+    try {
+      AutoMovieProject.open(root).writableSlate();
+      replacementLeaseReacquired = true;
+    } catch {
+      replacementLeaseReacquired = false;
+    }
+    fs.rmSync(root, { recursive: true, force: true });
+    fs.renameSync(operationParkedRoot, root);
+    fs.rmSync(path.join(root, "revision.lock"), { force: true });
+    for (const file of fs.readdirSync(path.join(root, "actors")))
+      if (file.startsWith("rootSwap.json.tmp."))
+        fs.rmSync(path.join(root, "actors", file), { force: true });
+    TestValidator.predicate(
+      "an operation-time root swap cannot publish or release through the replacement",
+      operationSwapped &&
+        operationMessage.includes("root identity or namespace fence changed") &&
+        replacementStayedEmpty &&
+        originalLockPreserved &&
+        originalPublishPrevented &&
+        replacementLeaseReacquired,
+    );
+
+    const parkedRoot = `${root}.owner-parked`;
+    fs.renameSync(root, parkedRoot);
+    fs.mkdirSync(root);
+    let replacementUntouched = false;
+    let replacedReadRejected = false;
+    let replacedMutationRejected = false;
+    let rootSwapFailure: IProjectTransactionFixtureFailure | undefined;
+    try {
+      replacedReadRejected = throwsError(
+        () => a.writableSlate(),
+        ["root", "changed physical identity", "Discard this project handle"],
+      );
+      replacedMutationRejected = throwsError(
+        () => a.saveSlate(slateOf("must not enter replacement")),
+        ["root", "changed physical identity", "Discard this project handle"],
+      );
+      replacementUntouched = fs.readdirSync(root).length === 0;
+    } catch (error) {
+      rootSwapFailure = { error };
+      throw error;
+    } finally {
+      preserveProjectTransactionSwapCleanup(rootSwapFailure, [
+        {
+          resource: "active replacement",
+          cleanup: () => fs.rmSync(root, { recursive: true, force: true }),
+        },
+        {
+          resource: "parked original",
+          cleanup: () => fs.renameSync(parkedRoot, root),
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "a live project handle never follows a replacement root namespace",
+      replacedReadRejected && replacedMutationRejected && replacementUntouched,
+    );
+  } catch (error) {
+    transactionFailure = { error };
+    throw error;
+  } finally {
+    preserveProjectTransactionFixtureCleanup(
+      transactionFailure,
+      () => fs.rmSync(root, { recursive: true, force: true }),
+      "main-root",
+    );
+  }
+
+  const aliasSandbox = fs.mkdtempSync(
+    path.join(os.tmpdir(), "automovie-txn-alias-"),
+  );
+  let aliasFailure: IProjectTransactionFixtureFailure | undefined;
+  try {
+    const physicalA = path.join(aliasSandbox, "physical-a");
+    const physicalB = path.join(aliasSandbox, "physical-b");
+    const alias = path.join(aliasSandbox, "project-parent");
+    fs.mkdirSync(physicalA);
+    fs.mkdirSync(path.join(physicalB, "project"), { recursive: true });
+    fs.symlinkSync(
+      physicalA,
+      alias,
+      process.platform === "win32" ? "junction" : "dir",
+    );
+    const project = AutoMovieProject.open(path.join(alias, "project"));
+    const canonicalRoot = path.join(physicalA, "project");
+    const nativeWrite = fs.writeFileSync;
+    let aliasRetargeted = false;
+    fs.writeFileSync = ((
+      file: fs.PathOrFileDescriptor,
+      ...args: unknown[]
+    ): unknown => {
+      const output = Reflect.apply(nativeWrite, fs, [file, ...args]);
+      if (
+        aliasRetargeted === false &&
+        typeof file !== "number" &&
+        path.dirname(path.resolve(file.toString())) === canonicalRoot &&
+        path.basename(file.toString()).startsWith("script.json.tmp.")
+      ) {
+        fs.unlinkSync(alias);
+        fs.symlinkSync(
+          physicalB,
+          alias,
+          process.platform === "win32" ? "junction" : "dir",
+        );
+        aliasRetargeted = true;
+      }
+      return output;
+    }) as typeof fs.writeFileSync;
+    let aliasRetargetFailure: IProjectTransactionFixtureFailure | undefined;
+    try {
+      project.saveSlate(slateOf("canonical physical root"));
+    } catch (error) {
+      aliasRetargetFailure = { error };
+      throw error;
+    } finally {
+      preserveProjectTransactionSwapCleanup(aliasRetargetFailure, [
+        {
+          resource: "alias-retarget write hook",
+          cleanup: () => {
+            fs.writeFileSync = nativeWrite;
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "an operation-time ancestor alias retarget cannot redirect a live handle",
+      aliasRetargeted &&
+        fs
+          .readFileSync(path.join(canonicalRoot, "script.json"), "utf8")
+          .includes("canonical physical root") &&
+        fs.readdirSync(path.join(physicalB, "project")).length === 0,
+    );
+  } catch (error) {
+    aliasFailure = { error };
+    throw error;
+  } finally {
+    preserveProjectTransactionFixtureCleanup(
+      aliasFailure,
+      () => fs.rmSync(aliasSandbox, { recursive: true, force: true }),
+      "alias-sandbox",
+    );
   }
 };

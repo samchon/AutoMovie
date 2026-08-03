@@ -1,5 +1,8 @@
 import { blockBeat, stageScene } from "@automovie/engine";
-import { IAutoMovieBlockingApplication } from "@automovie/interface";
+import {
+  IAutoMovieBlockingCamera,
+  IAutoMovieBlockingCoverage,
+} from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import {
@@ -9,8 +12,8 @@ import {
 } from "../internal/filmFixtures";
 import { hasViolation } from "../internal/predicates";
 
-type ICameraIntent = IAutoMovieBlockingApplication.ICameraIntent;
-type ICoverageIntent = IAutoMovieBlockingApplication.ICoverageIntent;
+type ICameraIntent = IAutoMovieBlockingCamera;
+type ICoverageIntent = IAutoMovieBlockingCoverage;
 
 const script = makeScriptWrite();
 

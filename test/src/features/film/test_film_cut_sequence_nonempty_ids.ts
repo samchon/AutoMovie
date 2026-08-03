@@ -26,7 +26,6 @@ const shot = (id: string): IAutoMovieShot => ({
 export const test_film_cut_sequence_nonempty_ids = (): void => {
   const cut = cutSequence(
     {
-      type: "write",
       sequence: { id: "", name: "blank sequence" },
       fps: 24,
       entries: [{ shot: " ", trim: null, transition: null }],

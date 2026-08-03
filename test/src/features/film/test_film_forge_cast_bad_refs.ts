@@ -21,7 +21,6 @@ import { hasViolation } from "../internal/predicates";
  */
 export const test_film_forge_cast_bad_refs = (): void => {
   const forged = forgeCast(makeScriptWrite(), {
-    type: "write",
     entries: [
       forgeEntry("ghost"),
       forgeEntry("knightA"),

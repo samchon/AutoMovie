@@ -14,6 +14,7 @@ import {
 import {
   AUTOMOVIE_BENCHMARK_DELIVERY_PREFIX,
   AutoMovieBenchmarkAxis,
+  AutoMovieBenchmarkLane,
   AutoMovieBenchmarkOperator,
   AutoMovieBenchmarkSurface,
   IAutoMovieBenchmarkFrameAssertion,
@@ -26,7 +27,7 @@ import {
 
 /** Verdict schema every judged run carries. */
 export const AUTOMOVIE_BENCHMARK_VERDICT_PROTOCOL =
-  "automovie.benchmark.verdict.v1";
+  "automovie.benchmark.verdict.v2";
 
 /**
  * Outcome of one deterministic assertion.
@@ -80,6 +81,8 @@ export interface IAutoMovieBenchmarkVerdictBase {
   taskDigest: AutoMovieContentDigest;
   /** Surface the candidate drove. */
   surface: AutoMovieBenchmarkSurface;
+  /** Deterministic baseline or optional repaint experiment. */
+  lane: AutoMovieBenchmarkLane;
   /** Every version the verdict is comparable within. */
   versions: IAutoMovieBenchmarkVersions;
   /** Canonical ordered lifecycle. */
@@ -182,7 +185,7 @@ const judgeFrame = (
   assertion: IAutoMovieBenchmarkFrameAssertion,
   submission: IAutoMovieBenchmarkSubmission,
 ): IAutoMovieBenchmarkAssertionResult => {
-  const evidence = `frame:${assertion.shot}@${assertion.timeSeconds}:${assertion.pass}`;
+  const logicalEvidence = `frame:${assertion.shot}@${assertion.timeSeconds}:${assertion.pass}`;
   const frames = submission.frames
     .filter(
       (candidate) =>
@@ -203,7 +206,7 @@ const judgeFrame = (
       axis: "frame",
       statement: assertion.statement,
       outcome: "unknown",
-      evidence,
+      evidence: logicalEvidence,
       observed: null,
     };
   const passing = frames.find(
@@ -219,7 +222,7 @@ const judgeFrame = (
     axis: "frame",
     statement: assertion.statement,
     outcome: passing === undefined ? "fail" : "pass",
-    evidence,
+    evidence: `archive:${observed.path}`,
     observed: observed.bytes,
   };
 };
@@ -248,7 +251,9 @@ const judgeDelivery = (
       outcome: files.some((file) => file.probeValid)
         ? ("pass" as const)
         : ("fail" as const),
-      evidence,
+      evidence: `archive:${
+        files.find((file) => file.probeValid)?.path ?? files[0]!.path
+      }`,
       observed: files.length,
     };
   });
@@ -312,6 +317,7 @@ export const judgeAutoMovieBenchmarkSubmission = (
     taskId: submission.taskId,
     taskDigest: submission.taskDigest,
     surface: submission.surface,
+    lane: submission.lane,
     versions: submission.versions,
     lifecycle: submission.lifecycle,
     generation: submission.generation,
@@ -330,6 +336,15 @@ export const judgeAutoMovieBenchmarkSubmission = (
       outcome: "gate-failed",
       failedGate: blocking.gate,
       detail: blocking.detail,
+      filmScore: 0,
+    };
+  const repaintFailure = repaintEvidenceFailure(submission);
+  if (repaintFailure !== null)
+    return {
+      ...base,
+      outcome: "gate-failed",
+      failedGate: "final-compile",
+      detail: repaintFailure,
       filmScore: 0,
     };
   const assertions: IAutoMovieBenchmarkAssertionResult[] = [
@@ -355,4 +370,29 @@ export const judgeAutoMovieBenchmarkSubmission = (
     axes,
     filmScore: axes.reduce((sum, axis) => sum + axis.weight * axis.score, 0),
   };
+};
+
+const repaintEvidenceFailure = (
+  submission: IAutoMovieBenchmarkSubmission,
+): string | null => {
+  if (submission.lane === "deterministic")
+    return submission.repaint.status === "not-requested"
+      ? null
+      : "Deterministic lane submission carries repaint runtime claims.";
+  if (submission.repaint.status !== "verified")
+    return "Completed repaint lane has no runner-verified adapter, receipt, output, and rendition-review chain.";
+  const repaint = submission.repaint;
+  const feature = submission.deliverables.find(
+    (file) => file.kind === "feature" && file.probeValid,
+  );
+  if (
+    repaint.adapterIdentity.trim().length === 0 ||
+    repaint.shots.length === 0 ||
+    new Set(repaint.shots.map((shot) => shot.shot)).size !==
+      repaint.shots.length ||
+    feature === undefined ||
+    feature.digest !== repaint.featureDigest
+  )
+    return "Repaint lane evidence is incomplete, duplicates a shot, or does not bind the delivered feature digest.";
+  return null;
 };

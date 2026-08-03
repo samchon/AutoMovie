@@ -90,6 +90,12 @@ export const test_mcp_production_content_identity = (): void => {
       encodeAutoMoviePathSegment("lpt9.json") === "%6Cpt9.json" &&
       decodeAutoMoviePathSegment("%43ON") === "CON",
   );
+  TestValidator.predicate(
+    "portable path segments escape dot aliases",
+    encodeAutoMoviePathSegment(".") === "%2E" &&
+      encodeAutoMoviePathSegment("..") === ".%2E" &&
+      encodeAutoMoviePathSegment("shared.") === "shared%2E",
+  );
   const longId = "장편-전투-".repeat(64);
   const longSegment = encodeAutoMoviePathSegment(longId);
   TestValidator.predicate(

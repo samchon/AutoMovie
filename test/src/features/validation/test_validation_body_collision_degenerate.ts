@@ -2,6 +2,7 @@ import { detectBodyCollision } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import { staticActor } from "../internal/collision";
+import { validationHasWarnings } from "../internal/predicates";
 
 /**
  * When two capsules touch exactly at a shared point the closest pair coincides
@@ -29,17 +30,9 @@ export const test_validation_body_collision_degenerate = (): void => {
     }),
     sampleRate: 1,
   });
-  TestValidator.equals(
-    "coincident contact still succeeds",
-    result.validation.success,
-    true,
-  );
-  TestValidator.equals(
+  TestValidator.predicate(
     "coincident contact warns",
-    result.validation.success === true
-      ? (result.validation.warnings?.length ?? 0) > 0
-      : false,
-    true,
+    validationHasWarnings("coincident body collision", result.validation),
   );
   TestValidator.predicate(
     "response built on the fallback normal",

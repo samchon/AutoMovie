@@ -9,6 +9,7 @@ on:
       # editing this file alone must still build (#1397).
       - '.github/workflows/build.yml'
       - '.github/workflows/test.yml'
+      - '.github/license-policy.json'
       # Matched by SHAPE, mirroring build.yml. The suite reads more than `src`:
       # the per-package lint ruleset `ttsc` enforces before a scenario runs, the
       # generators whose output it asserts, the guide corpus `prepare` bakes
@@ -17,12 +18,17 @@ on:
       - 'packages/*/src/**'
       - 'packages/*/*.json'
       - 'packages/*/*.ts'
+      - 'packages/*/*.cts'
+      - 'packages/*/*.cjs'
       - 'packages/*/*.html'
       # A package's own entry document. `test_workspace_public_contracts`
       # reads three of them and asserts on their text, so they are suite
       # inputs the same way `src` is (#1397).
       - 'packages/*/*.md'
       - 'packages/*/build/**'
+      - 'packages/*/native/**'
+      - 'packages/*/go.mod'
+      - 'packages/*/go.sum'
       - 'packages/*/prompts/**'
       - 'packages/*/scaffold/**'
       - 'packages/*/scripts/**'
@@ -56,18 +62,46 @@ jobs:
   Ubuntu:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 22.x
-      - uses: pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66ddda # v4.1.0
+      - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
 
       - name: Install Dependencies
         run: pnpm install
 
+      - name: Check Production Dependency Licenses
+        run: pnpm run license:check
+
       # The test program runs straight through ttsx (ttsc's tsgo runner, no
       # separate compile step). The coverage run executes every scenario and
       # fails if engine coverage drops below 100% on any metric.
+      - name: Run Tests with 100% Coverage Gate
+        run: pnpm coverage
+        working-directory: test
+
+      - name: Report Exact Coverage Gaps
+        if: failure()
+        run: node internals/report-coverage-gaps.mjs
+
+  Windows:
+    # NTFS supplies the case-insensitive path-identity half of the lint
+    # contributor contract; Ubuntu retains the case-sensitive twin above.
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22.x
+      - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+
+      - name: Install Dependencies
+        run: pnpm install
+
+      - name: Check Production Dependency Licenses
+        run: pnpm run license:check
+
       - name: Run Tests with 100% Coverage Gate
         run: pnpm coverage
         working-directory: test

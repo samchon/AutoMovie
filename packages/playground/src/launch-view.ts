@@ -10,10 +10,10 @@ import {
 import {
   IAutoMovieModel,
   IAutoMovieMotion,
-  IAutoMoviePerformanceApplication,
-  IAutoMovieScriptApplication,
+  IAutoMoviePerformance,
+  IAutoMovieScript,
   IAutoMovieShot,
-  IAutoMovieStagingApplication,
+  IAutoMovieStage,
   IAutoMovieVector3,
 } from "@automovie/interface";
 import {
@@ -69,9 +69,8 @@ const arrowModel: IAutoMovieModel = {
   asset: null,
 };
 
-// ── the stage payloads (what the LLM will author; fixtures here) ─────────────
-const script: IAutoMovieScriptApplication.IWrite = {
-  type: "write",
+// ── the coding-agent-authored stage values ──────────────────────────────────
+const script: IAutoMovieScript = {
   logline: "An archer looses; the shaft finds its mark across the field.",
   theme: "a computed arc",
   cast: [
@@ -90,8 +89,7 @@ const script: IAutoMovieScriptApplication.IWrite = {
   ],
 };
 
-const staging: IAutoMovieStagingApplication.IWrite = {
-  type: "write",
+const staging: IAutoMovieStage = {
   scene: { id: "scene-range", name: "the range" },
   plan: "archer at the near mark facing downrange (+Z); the mark 6.5 m away; the arrow nocked at bow height; camera side-on to read the whole arc.",
   actors: [
@@ -117,8 +115,7 @@ const staging: IAutoMovieStagingApplication.IWrite = {
   ],
 };
 
-const performance: IAutoMoviePerformanceApplication.IWrite = {
-  type: "write",
+const performance: IAutoMoviePerformance = {
   beat: "loose",
   plan: "the archer tracks the mark and looses; the engine flies the arrow and recoils the mark on the hit.",
   draft: [
@@ -207,7 +204,6 @@ const motionsByShot = new Map<string, Record<string, IAutoMovieMotion>>([
 
 const cut = cutSequence(
   {
-    type: "write",
     sequence: { id: "seq-range", name: "the range" },
     fps: 30,
     entries: shots.map((s) => ({ shot: s.id, trim: null, transition: null })),

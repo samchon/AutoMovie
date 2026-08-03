@@ -1,6 +1,8 @@
 import { detectSupportToppling } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
+import { validationHasWarningCount } from "../internal/predicates";
+
 const v = (x: number, z: number) => ({ x, y: 0, z });
 
 /**
@@ -38,7 +40,10 @@ export const test_validation_support_hull_fix = (): void => {
   });
   TestValidator.predicate(
     "mis-ordered support still detects the overhang",
-    overhang.validation.success === true &&
-      (overhang.validation.warnings?.length ?? 0) === 1,
+    validationHasWarningCount(
+      "mis-ordered support overhang",
+      overhang.validation,
+      1,
+    ),
   );
 };

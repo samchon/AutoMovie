@@ -9,11 +9,12 @@ import {
   stageScene,
 } from "@automovie/engine";
 import {
+  IAutoMovieActionCall,
   IAutoMovieMotion,
-  IAutoMoviePerformanceApplication,
-  IAutoMovieScriptApplication,
+  IAutoMoviePerformance,
+  IAutoMovieScript,
   IAutoMovieShot,
-  IAutoMovieStagingApplication,
+  IAutoMovieStage,
   IAutoMovieVector3,
 } from "@automovie/interface";
 import { AutoMoviePlayer, buildModel, mountViewer } from "@automovie/viewer";
@@ -28,8 +29,7 @@ import { DEFAULT_STICKMAN, buildStickman } from "./stickman";
 // render, so a front-3/4 camera reads the arms cleanly. Deterministic via
 // renderAt(t).
 
-const script: IAutoMovieScriptApplication.IWrite = {
-  type: "write",
+const script: IAutoMovieScript = {
   logline: "A figure runs through its arm gestures.",
   theme: "the gesture vocabulary on parade",
   cast: [{ node: "mime", character: "the mime", modelRef: "stickman" }],
@@ -43,8 +43,7 @@ const script: IAutoMovieScriptApplication.IWrite = {
   ],
 };
 
-const staging: IAutoMovieStagingApplication.IWrite = {
-  type: "write",
+const staging: IAutoMovieStage = {
   scene: { id: "scene-showcase", name: "the parade" },
   plan: "the mime stands centre, facing +Z; a front-3/4 camera reads the arms.",
   actors: [{ node: "mime", position: { x: 0, y: 0, z: 0 }, facingDeg: 0 }],
@@ -70,7 +69,7 @@ const arm = (
   start: number,
   duration: number,
   kind: "wave" | "celebrate" | "draw" | "throw",
-): IAutoMoviePerformanceApplication.IWrite["draft"][number] => ({
+): IAutoMovieActionCall => ({
   verb: "gesture",
   actor: "mime",
   start,
@@ -79,8 +78,7 @@ const arm = (
   region: "upperBody",
 });
 
-const performance: IAutoMoviePerformanceApplication.IWrite = {
-  type: "write",
+const performance: IAutoMoviePerformance = {
   beat: "parade",
   plan: "wave, celebrate, draw, throw: one after another.",
   draft: [
@@ -144,7 +142,6 @@ const motionsByShot = new Map<string, Record<string, IAutoMovieMotion>>([
 
 const cut = cutSequence(
   {
-    type: "write",
     sequence: { id: "seq-showcase", name: "the parade" },
     fps: 30,
     entries: shots.map((s) => ({ shot: s.id, trim: null, transition: null })),

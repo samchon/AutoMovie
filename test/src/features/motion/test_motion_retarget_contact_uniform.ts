@@ -1,7 +1,11 @@
 import { retargetHumanoidMotion } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
-import { nclose, vclose, warningCount } from "../internal/predicates";
+import {
+  nclose,
+  validationHasNoWarnings,
+  vclose,
+} from "../internal/predicates";
 import {
   keyframeWorld,
   mapped,
@@ -76,10 +80,9 @@ export const test_motion_retarget_contact_uniform = (): void => {
   );
 
   // 3. no warning, and the feet sit exactly on the mapped contacts.
-  TestValidator.equals(
+  TestValidator.predicate(
     "an exact retarget reports no plausibility warning",
-    warningCount(pinned.validation),
-    0,
+    validationHasNoWarnings("exact uniform retarget", pinned.validation),
   );
   TestValidator.equals(
     "root scale is exactly two",

@@ -5,6 +5,7 @@ import path from "node:path";
 
 import { acquireCommitLock, releaseCommitLock } from "../project/commitLock";
 import { compareCodeUnits } from "./contentIdentity";
+import { readAutoMovieProductionOwnedFile } from "./productionRenderJob";
 
 const currentUser = os.userInfo();
 const COORDINATION_ROOT = path.join(
@@ -21,7 +22,13 @@ export interface IAutoMovieProductionRootNamespaceLease {
 }
 
 const coordinatePath = (
-  kind: "create-path" | "create-id" | "root-path" | "root-id",
+  kind:
+    | "create-path"
+    | "create-id"
+    | "root-path"
+    | "root-id"
+    | "production-path"
+    | "production-id",
   namespace: string,
 ): string => {
   ensureCoordinationRoot();
@@ -162,6 +169,7 @@ const ensureDirectory = (directory: string): string => {
 
 const acquireExistingRoot = (
   rootDirectory: string,
+  productionId?: string,
 ): IAutoMovieProductionRootNamespaceLease => {
   const linked = lstatOrNull(rootDirectory);
   if (
@@ -176,10 +184,19 @@ const acquireExistingRoot = (
   const identity = fs.statSync(root, { bigint: true });
   const device = identity.dev.toString();
   const inode = identity.ino.toString();
-  const locks = acquireCoordinates([
-    coordinatePath("root-path", root),
-    coordinatePath("root-id", `${device}\0${inode}`),
-  ]);
+  const locks =
+    productionId === undefined
+      ? acquireCoordinates([
+          coordinatePath("root-path", root),
+          coordinatePath("root-id", `${device}\0${inode}`),
+        ])
+      : acquireCoordinates([
+          coordinatePath("production-path", `${root}\0${productionId}`),
+          coordinatePath(
+            "production-id",
+            `${device}\0${inode}\0${productionId}`,
+          ),
+        ]);
   const lease: IAutoMovieProductionRootNamespaceLease = {
     root,
     locks,
@@ -204,8 +221,9 @@ const acquireExistingRoot = (
  */
 export const acquireProductionRootNamespace = (
   rootDirectory: string,
+  productionId?: string,
 ): IAutoMovieProductionRootNamespaceLease =>
-  acquireExistingRoot(path.resolve(rootDirectory));
+  acquireExistingRoot(path.resolve(rootDirectory), productionId);
 
 /**
  * Reserve one physical project root, creating it when it is still absent.
@@ -250,12 +268,22 @@ export const assertProductionRootNamespaceLease = (
   const current = physicalDirectoryIdentityOrNull(lease.root);
   const invalidLock = lease.locks.find((leaseLock) => {
     const lock = lstatOrNull(leaseLock.path);
-    return (
-      lock === null ||
-      lock.isSymbolicLink() ||
-      lock.isFile() === false ||
-      fs.readFileSync(leaseLock.path, "utf8") !== leaseLock.token
-    );
+    if (lock === null || lock.isSymbolicLink() || lock.isFile() === false)
+      return true;
+    const root = path.dirname(leaseLock.path);
+    try {
+      return (
+        Buffer.from(
+          readAutoMovieProductionOwnedFile({
+            root,
+            directory: root,
+            relative: path.basename(leaseLock.path),
+          }),
+        ).toString("utf8") !== leaseLock.token
+      );
+    } catch {
+      return true;
+    }
   });
   if (
     current === null ||

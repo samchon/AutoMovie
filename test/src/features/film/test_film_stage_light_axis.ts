@@ -2,7 +2,7 @@ import { stageScene } from "@automovie/engine";
 import {
   IAutoMovieColor,
   IAutoMovieLight,
-  IAutoMovieStagingApplication,
+  IAutoMovieStageLight,
   IAutoMovieValidation,
 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
@@ -13,7 +13,7 @@ import { hasViolation, qclose, vclose } from "../internal/predicates";
 const script = makeScriptWrite();
 
 /** Stage the duel with `lights` replaced, everything else untouched. */
-const stageLights = (lights: IAutoMovieStagingApplication.ILightPlacement[]) =>
+const stageLights = (lights: IAutoMovieStageLight[]) =>
   stageScene(script, makeStagingWrite({ lights }));
 
 /** The staged scene's lights, or `[]` when staging refused. */
@@ -476,7 +476,7 @@ export const test_film_stage_light_axis = (): void => {
             node: "arc",
             type: "laser",
             intensity: 1,
-          } as unknown as IAutoMovieStagingApplication.ILightPlacement,
+          } as unknown as IAutoMovieStageLight,
         ]),
       ),
       "type",

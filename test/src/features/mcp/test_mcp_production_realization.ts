@@ -1,3 +1,4 @@
+import { realizeShotContract } from "@automovie/engine";
 import {
   IAutoMovieCompiledShotSource,
   IAutoMovieModel,
@@ -8,9 +9,9 @@ import {
 import {
   AutoMovieProductionCompiler,
   AutoMovieProductionProject,
+  materializeCompiledFormation,
   materializeCompiledShot,
   materializeProductionModels,
-  realizeShotContract,
 } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
@@ -19,6 +20,7 @@ import path from "node:path";
 import {
   formationDesign,
   modelRecipe,
+  productionCompileSucceeded,
   productionDesign,
   productionFixture,
   shotContract,
@@ -31,6 +33,27 @@ const transform = (x: number, y: number, z: number): IAutoMovieTransform => ({
   scale: { x: 1, y: 1, z: 1 },
 });
 
+interface IProductionRealizationFixtureFailure {
+  error: unknown;
+}
+
+class ProductionRealizationFixtureCleanupError extends AggregateError {}
+
+export const preserveProductionRealizationFixtureCleanup = (
+  failure: IProductionRealizationFixtureFailure | undefined,
+  cleanup: () => void,
+): void => {
+  try {
+    cleanup();
+  } catch (cleanupFailure) {
+    if (failure === undefined) throw cleanupFailure;
+    throw new ProductionRealizationFixtureCleanupError(
+      [failure.error, cleanupFailure],
+      "Production-realization fixture teardown failed after the test failed.",
+    );
+  }
+};
+
 /**
  * Contract realization is recomputed from compiled scene, pose and clip data.
  *
@@ -40,17 +63,23 @@ const transform = (x: number, y: number, z: number): IAutoMovieTransform => ({
  * evidence. No source-authored boolean or echoed contract id can pass it.
  */
 export const test_mcp_production_realization = (): void => {
+  let productionRealizationFailure:
+    | IProductionRealizationFixtureFailure
+    | undefined;
   const fixture = productionFixture();
   try {
     const project = AutoMovieProductionProject.open(fixture.root);
     const compiler = new AutoMovieProductionCompiler(project);
     TestValidator.predicate(
       "the base realization fixture compiles",
-      compiler.compile({ scope: "source" }).success,
+      productionCompileSucceeded(
+        "base realization fixture",
+        compiler.compile({ scope: "source" }),
+      ),
     );
     const base = JSON.parse(
       fs.readFileSync(
-        path.join(fixture.root, "generated/shots/opening.json"),
+        path.join(fixture.root, "generated/fixture-film/shots/opening.json"),
         "utf8",
       ),
     ) as IAutoMovieCompiledShotSource;
@@ -92,6 +121,32 @@ export const test_mcp_production_realization = (): void => {
     const formations = new Map([[formation.id, formation]]);
     const runtimeModels = materializeProductionModels(
       new Map([[modelRecipe().id, modelRecipe()]]),
+    );
+    const sourceStageContract: IAutoMovieShotContract = {
+      ...shotContract(),
+      participants: [
+        ...shotContract().participants,
+        { kind: "formation", id: formation.id },
+      ],
+    };
+    const sourceStageOutcome = realizeShotContract({
+      contract: sourceStageContract,
+      production: null,
+      frameFormat: productionDesign().frameFormat,
+      world: worldDesign(),
+      formations,
+      compiled: {
+        ...structuredClone(base),
+        formations: [materializeCompiledFormation(formation)],
+      },
+      collisions: [],
+    });
+    TestValidator.predicate(
+      "source-stage formation realization precedes compiler-owned hero nodes",
+      sourceStageOutcome.diagnostics.length === 0 &&
+        sourceStageOutcome.realization.formations.some(
+          (item) => item.id === formation.id && item.passed,
+        ),
     );
     const {
       models: _baseModels,
@@ -231,6 +286,13 @@ export const test_mcp_production_realization = (): void => {
       runtimeModels,
       source,
     }).value;
+    const measuredCamera = materialized.scene.cameras.find(
+      (camera) => camera.id === materialized.shot.camera,
+    );
+    if (measuredCamera === undefined)
+      throw new Error("measured realization fixture has no camera");
+    measuredCamera.transform = transform(0, 0, 5);
+    materialized.shot.cameraMotion = null;
     const staticModel = materializeProductionModels(
       new Map([
         [
@@ -559,7 +621,7 @@ export const test_mcp_production_realization = (): void => {
             {
               kind: "joint-angle",
               actor: "sentinel",
-              bone: "rightFoot",
+              bone: "rightLowerLeg",
               axis: "twist",
               operator: "==",
               value: 0,
@@ -577,13 +639,29 @@ export const test_mcp_production_realization = (): void => {
       compiled: brokenCompiled,
       collisions: [],
     });
+    const missingOperandPredicates =
+      missingOperandsOutcome.realization.opening[0]?.predicates ?? [];
     TestValidator.predicate(
       "missing selector operands produce null measured values",
-      missingOperandsOutcome.realization.opening[0]?.predicates.every(
-        (item) => item.actual === null && item.passed === false,
-      ) === true,
+      ([0, 1, 2, 3, 4, 6] as const).every((index) => {
+        const item = missingOperandPredicates[index];
+        return item?.actual === null && item.passed === false;
+      }),
     );
+    TestValidator.predicate(
+      "node transforms and omitted joint channels remain measurable",
+      missingOperandPredicates[5]?.actual === 2 &&
+        missingOperandPredicates[5].passed === false &&
+        missingOperandPredicates[7]?.actual === 0 &&
+        missingOperandPredicates[7].passed === true,
+    );
+  } catch (error) {
+    productionRealizationFailure = { error };
+    throw error;
   } finally {
-    fixture.dispose();
+    preserveProductionRealizationFixtureCleanup(
+      productionRealizationFailure,
+      () => fixture.dispose(),
+    );
   }
 };

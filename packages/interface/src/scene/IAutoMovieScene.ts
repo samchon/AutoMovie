@@ -1,3 +1,4 @@
+import { IAutoMovieStage } from "../authoring/IAutoMovieAuthoring";
 import { IAutoMovieCamera } from "./IAutoMovieCamera";
 import { IAutoMovieLight } from "./IAutoMovieLight";
 import { IAutoMovieSceneNode } from "./IAutoMovieSceneNode";
@@ -38,10 +39,9 @@ export interface IAutoMovieScene {
    * required so every pre-space scene stays valid, the evolving-schema pattern
    * {@link IAutoMovieShot.events} uses.
    *
-   * Staging authors it ({@link IAutoMovieStagingApplication.IWrite.space}) and
-   * the viewer draws it: each surface becomes a real mesh, so the ground
-   * reaches the structural guide passes instead of leaving actors over a void
-   * (#1173).
+   * Staging authors it ({@link IAutoMovieStage.space}) and the viewer draws it:
+   * each surface becomes a real mesh, so the ground reaches the structural
+   * guide passes instead of leaving actors over a void (#1173).
    */
   space?: IAutoMovieSpace | null;
 }

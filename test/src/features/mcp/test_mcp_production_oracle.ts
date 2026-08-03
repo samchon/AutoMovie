@@ -18,6 +18,7 @@ import {
   formationDesign,
   productionDesign,
   productionFixture,
+  setProductionFixtureShotContract,
   shotContract,
   testCaptureRuntimeIdentity,
   worldDesign,
@@ -36,11 +37,66 @@ const blankPng = (width: number, height: number): Uint8Array => {
   return PNG.sync.write(image);
 };
 
+interface IProductionOracleFixtureFailure {
+  error: unknown;
+}
+
+class ProductionOracleFixtureCleanupError extends AggregateError {}
+
+export const preserveProductionOracleFixtureCleanup = (
+  failure: IProductionOracleFixtureFailure | undefined,
+  cleanup: () => void,
+): void => {
+  try {
+    cleanup();
+  } catch (cleanupFailure) {
+    if (failure === undefined) throw cleanupFailure;
+    throw new ProductionOracleFixtureCleanupError(
+      [failure.error, cleanupFailure],
+      "Production-oracle fixture teardown failed after the test failed.",
+    );
+  }
+};
+
+interface IProductionOracleHookCleanup {
+  cleanup: () => unknown;
+  resource: string;
+}
+
+class ProductionOracleHookCleanupError extends AggregateError {}
+
+/** Attempt every oracle harness hook restoration without hiding failure. */
+export const preserveProductionOracleHookCleanup = (
+  failure: IProductionOracleFixtureFailure | undefined,
+  resources: readonly IProductionOracleHookCleanup[],
+): void => {
+  const cleanupFailures: Array<{ error: unknown; resource: string }> = [];
+  for (const resource of resources)
+    try {
+      resource.cleanup();
+    } catch (error) {
+      cleanupFailures.push({ error, resource: resource.resource });
+    }
+  if (cleanupFailures.length === 1 && failure === undefined)
+    throw cleanupFailures[0]!.error;
+  if (cleanupFailures.length !== 0)
+    throw new ProductionOracleHookCleanupError(
+      [
+        ...(failure === undefined ? [] : [failure.error]),
+        ...cleanupFailures.map((entry) => entry.error),
+      ],
+      `Production oracle hook cleanup failed${
+        failure === undefined ? "" : " after the preview failed"
+      }: ${cleanupFailures.map((entry) => entry.resource).join(", ")}.`,
+    );
+};
+
 /**
  * Geometry queries and preview frames use current compiler-owned artifacts,
  * including scale-aware promoted-hero visibility at the camera boundary.
  */
 export const test_mcp_production_oracle = async (): Promise<void> => {
+  let productionOracleFailure: IProductionOracleFixtureFailure | undefined;
   const fixture = productionFixture();
   try {
     const project = AutoMovieProductionProject.open(fixture.root);
@@ -56,9 +112,9 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
     project.setWorldDesign(routedWorld);
     project.setFormationDesign({
       ...formationDesign(),
-      heroOverrides: [{ slot: 0, actor: "sentinel" }],
+      heroOverrides: [{ slot: 1, actor: "sentinel" }],
     });
-    project.setShotContract({
+    setProductionFixtureShotContract(project, {
       ...shotContract(),
       participants: [
         { kind: "actor", id: "sentinel" },
@@ -66,10 +122,16 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
       ],
     });
     const compiler = new AutoMovieProductionCompiler(project);
-    TestValidator.predicate(
-      "oracle fixture compiles",
-      compiler.compile({ scope: "source" }).success,
-    );
+    const initialCompile = compiler.compile({ scope: "source" });
+    if (initialCompile.success === false)
+      throw new Error(
+        `Oracle fixture compile failed:\n${JSON.stringify(
+          initialCompile.diagnostics,
+          null,
+          2,
+        )}`,
+      );
+    TestValidator.predicate("oracle fixture compiles", initialCompile.success);
     const oracle = new AutoMovieProductionOracleService(project);
     const filmFrame = oracle.query({
       request: { query: "film-time", at: { seconds: 2 } },
@@ -362,7 +424,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
 
     const generatedShotPath = path.join(
       fixture.root,
-      "generated/shots/opening.json",
+      "generated/fixture-film/shots/opening.json",
     );
     const generatedShotBytes = fs.readFileSync(generatedShotPath, "utf8");
     const generatedShot = JSON.parse(
@@ -383,7 +445,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
 
     const generatedManifestPath = path.join(
       fixture.root,
-      ".automovie/generated-manifest.json",
+      ".automovie/productions/fixture-film/generated-manifest.json",
     );
     const generatedManifestBytes = fs.readFileSync(generatedManifestPath);
     const generatedManifest = JSON.parse(
@@ -513,7 +575,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
     const recurringBytes = Buffer.from(JSON.stringify(recurringShot));
     const recurringPath = path.join(
       fixture.root,
-      "generated/shots/second.json",
+      "generated/fixture-film/shots/second.json",
     );
     fs.writeFileSync(recurringPath, recurringBytes);
     generatedManifest.files.push({
@@ -703,7 +765,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
     writeCorrupted(corrupted());
     const productionPath = path.join(
       fixture.root,
-      ".automovie/design/production.json",
+      ".automovie/design/fixture-film/production.json",
     );
     const productionBytes = fs.readFileSync(productionPath);
     fs.rmSync(productionPath);
@@ -940,6 +1002,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         time: 2,
       },
     });
+    generatedShot.scene.nodes[0]!.motion = generatedShot.motions[0]!.id;
     generatedShot.shot.performances = [];
     writeCorrupted(generatedShot);
     const missingPerformance = oracle.query({
@@ -999,7 +1062,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
 
     const manifestPath = path.join(
       fixture.root,
-      ".automovie/generated-manifest.json",
+      ".automovie/productions/fixture-film/generated-manifest.json",
     );
     const manifestBytes = fs.readFileSync(manifestPath, "utf8");
     const racingOracle = new AutoMovieProductionOracleService(
@@ -1087,7 +1150,9 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         unroutedFormation.result.values.routeClearance === 0,
     );
 
-    fs.rmSync(path.join(fixture.root, ".automovie/design/production.json"));
+    fs.rmSync(
+      path.join(fixture.root, ".automovie/design/fixture-film/production.json"),
+    );
     const noProductionPreview = await new AutoMovieProductionOracleService(
       project,
     )
@@ -1843,6 +1908,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         throw new Error("retained frame disappeared after verification");
       }) as typeof project.readRenderFile;
       let retainedReadRace: Awaited<ReturnType<typeof actual.preview>>;
+      let retainedReadRaceFailure: IProductionOracleFixtureFailure | undefined;
       try {
         retainedReadRace = await actual.preview({
           target: { kind: "shot", id: "opening" },
@@ -1850,9 +1916,24 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
           width: 2,
           height: 2,
         });
+      } catch (error) {
+        retainedReadRaceFailure = { error };
+        throw error;
       } finally {
-        project.verifiedRenderManifest = residentVerifiedRenderManifest;
-        project.readRenderFile = residentReadRenderFile;
+        preserveProductionOracleHookCleanup(retainedReadRaceFailure, [
+          {
+            resource: "retained-read verified-manifest hook",
+            cleanup: () => {
+              project.verifiedRenderManifest = residentVerifiedRenderManifest;
+            },
+          },
+          {
+            resource: "retained-read file hook",
+            cleanup: () => {
+              project.readRenderFile = residentReadRenderFile;
+            },
+          },
+        ]);
       }
       const retainedRaceResult = project.verifiedRenderManifest(
         path.join(bundleRoot, "manifest.json"),
@@ -1897,13 +1978,13 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
       );
     }
 
+    let emptyRootFailure: IProductionOracleFixtureFailure | undefined;
     const emptyRoot = productionFixture();
     try {
       const emptyProject = AutoMovieProductionProject.open(emptyRoot.root);
-      fs.rmSync(
-        path.join(emptyRoot.root, ".automovie/generated-manifest.json"),
-        { force: true },
-      );
+      fs.rmSync(emptyProject.trackedStatePath("generated-manifest.json"), {
+        force: true,
+      });
       TestValidator.predicate(
         "queries and preview refuse a missing compile",
         new AutoMovieProductionOracleService(emptyProject).query({
@@ -1919,10 +2000,20 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
             })
             .catch((error: unknown) => error)) instanceof Error,
       );
+    } catch (error) {
+      emptyRootFailure = { error };
+      throw error;
     } finally {
-      emptyRoot.dispose();
+      preserveProductionOracleFixtureCleanup(emptyRootFailure, () =>
+        emptyRoot.dispose(),
+      );
     }
+  } catch (error) {
+    productionOracleFailure = { error };
+    throw error;
   } finally {
-    fixture.dispose();
+    preserveProductionOracleFixtureCleanup(productionOracleFailure, () =>
+      fixture.dispose(),
+    );
   }
 };

@@ -1,6 +1,6 @@
 import {
-  IAutoMovieAssembleApplication,
   IAutoMovieConstraintViolation,
+  IAutoMovieEditPlan,
   IAutoMovieSequence,
   IAutoMovieShot,
 } from "@automovie/interface";
@@ -51,7 +51,7 @@ export namespace IAutoMovieCut {
  * subtracts its duration from the straight sum.
  */
 export const cutSequence = (
-  assemble: IAutoMovieAssembleApplication.IWrite,
+  assemble: IAutoMovieEditPlan,
   shots: IAutoMovieShot[],
 ): IAutoMovieCut => {
   const out = new ViolationCollector();

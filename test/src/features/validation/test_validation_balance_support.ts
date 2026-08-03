@@ -10,10 +10,10 @@ import { TestValidator } from "@nestia/e2e";
 import { makeMotion } from "../internal/fixtures";
 import {
   hasViolation,
-  hasWarning,
   nclose,
+  validationHasNoWarnings,
+  validationHasWarning,
   violationCount,
-  warningCount,
 } from "../internal/predicates";
 
 const restAt = (x: number, y: number, z: number): IAutoMovieTransform => ({
@@ -124,12 +124,12 @@ export const test_validation_balance_support = (): void => {
   });
   TestValidator.predicate(
     "balance support warns but succeeds",
-    rejected.success === true &&
-      hasWarning(
-        rejected,
-        "physics",
-        "$input.supports[0].samples[0].centerOfMass.supportDistance",
-      ),
+    validationHasWarning(
+      "balance support rejection",
+      rejected,
+      "physics",
+      "$input.supports[0].samples[0].centerOfMass.supportDistance",
+    ),
   );
   const first =
     rejected.success === true
@@ -156,10 +156,9 @@ export const test_validation_balance_support = (): void => {
     sampleRate: 1,
     physicsIntent: "wire-fu",
   });
-  TestValidator.equals(
+  TestValidator.predicate(
     "acknowledged imbalance is clean",
-    acknowledged.success === true && warningCount(acknowledged),
-    0,
+    validationHasNoWarnings("acknowledged imbalance", acknowledged),
   );
 
   TestValidator.equals(
@@ -254,12 +253,12 @@ export const test_validation_balance_support = (): void => {
   });
   TestValidator.predicate(
     "mass-weighted COM warns on a forward-leaning trunk",
-    leanDefault.success === true &&
-      hasWarning(
-        leanDefault,
-        "physics",
-        "$input.supports[0].samples[0].centerOfMass.supportDistance",
-      ),
+    validationHasWarning(
+      "mass-weighted balance support",
+      leanDefault,
+      "physics",
+      "$input.supports[0].samples[0].centerOfMass.supportDistance",
+    ),
   );
   const leanHips = validateBalanceSupport({
     motion: motion(leaningTrunk),
@@ -275,10 +274,9 @@ export const test_validation_balance_support = (): void => {
     ],
     sampleRate: 1,
   });
-  TestValidator.equals(
+  TestValidator.predicate(
     "the single-hips proxy misses the same lean (pelvis stays over the feet)",
-    leanHips.success === true && warningCount(leanHips),
-    0,
+    validationHasNoWarnings("single-hips balance proxy", leanHips),
   );
 
   const insidePolygon = skeleton(0, 0.2);
@@ -358,12 +356,12 @@ export const test_validation_balance_support = (): void => {
   });
   TestValidator.predicate(
     "polygon support warns but succeeds",
-    polygonRejected.success === true &&
-      hasWarning(
-        polygonRejected,
-        "physics",
-        "$balance.supports[0].samples[0].centerOfMass.supportDistance",
-      ),
+    validationHasWarning(
+      "polygon balance support",
+      polygonRejected,
+      "physics",
+      "$balance.supports[0].samples[0].centerOfMass.supportDistance",
+    ),
   );
 
   const invalid = validateBalanceSupport({

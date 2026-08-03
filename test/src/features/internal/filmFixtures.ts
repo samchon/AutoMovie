@@ -5,11 +5,11 @@ import {
 } from "@automovie/engine";
 import {
   IAutoMovieActionCall,
-  IAutoMovieBlockingApplication,
-  IAutoMovieForgeApplication,
-  IAutoMoviePerformanceApplication,
-  IAutoMovieScriptApplication,
-  IAutoMovieStagingApplication,
+  IAutoMovieBlocking,
+  IAutoMovieForgeEntry,
+  IAutoMoviePerformance,
+  IAutoMovieScript,
+  IAutoMovieStage,
 } from "@automovie/interface";
 
 import { createModel, joint, keyframe, makeMotion, makePose } from "./fixtures";
@@ -21,8 +21,8 @@ import { createModel, joint, keyframe, makeMotion, makePose } from "./fixtures";
  */
 export const forgeEntry = (
   node: string,
-  model: Partial<IAutoMovieForgeApplication.IEntry["model"]> = {},
-): IAutoMovieForgeApplication.IEntry => ({
+  model: Partial<IAutoMovieForgeEntry["model"]> = {},
+): IAutoMovieForgeEntry => ({
   node,
   model: { ...createModel(), id: node, ...model },
 });
@@ -34,9 +34,8 @@ export const forgeEntry = (
  * `revise.final ?? draft` rule.
  */
 export const makePerformanceWrite = (
-  partial: Partial<IAutoMoviePerformanceApplication.IWrite> = {},
-): IAutoMoviePerformanceApplication.IWrite => ({
-  type: "write",
+  partial: Partial<IAutoMoviePerformance> = {},
+): IAutoMoviePerformance => ({
   beat: "beat-1",
   plan: "both advance a step; A strikes at the top of the walk; camera holds.",
   draft: [
@@ -81,9 +80,8 @@ export const makePerformanceWrite = (
  * inject each intent/realization mismatch.
  */
 export const makeBlockingWrite = (
-  partial: Partial<IAutoMovieBlockingApplication.IWrite> = {},
-): IAutoMovieBlockingApplication.IWrite => ({
-  type: "write",
+  partial: Partial<IAutoMovieBlocking> = {},
+): IAutoMovieBlocking => ({
   beat: "beat-1",
   analysis: "the charge must read as decisive, one step, one strike.",
   rationale: "medium static keeps both knights readable at striking range.",
@@ -145,9 +143,8 @@ export const validSynthesizer: IAutoMovieActionSynthesizer = (action) =>
  * Film-pipeline scenarios override fields as needed.
  */
 export const makeScriptWrite = (
-  partial: Partial<IAutoMovieScriptApplication.IWrite> = {},
-): IAutoMovieScriptApplication.IWrite => ({
-  type: "write",
+  partial: Partial<IAutoMovieScript> = {},
+): IAutoMovieScript => ({
   logline: "Two knights duel at dawn.",
   theme: "honor answered in steel",
   cast: [
@@ -171,9 +168,8 @@ export const makeScriptWrite = (
  * override fields to inject each contradiction.
  */
 export const makeStagingWrite = (
-  partial: Partial<IAutoMovieStagingApplication.IWrite> = {},
-): IAutoMovieStagingApplication.IWrite => ({
-  type: "write",
+  partial: Partial<IAutoMovieStage> = {},
+): IAutoMovieStage => ({
   scene: { id: "scene-duel", name: "duel at dawn" },
   plan: "A faces B at 0.7 m; camera side-on covers both; sun from the east.",
   actors: [

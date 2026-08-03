@@ -1,5 +1,47 @@
 # `@automovie/engine`
 
+## Deterministic film grammar
+
+`analyzeFilmGrammar` consumes shots in edited order and reports axis crossings,
+jump cuts, eyeline mismatches, screen-direction reversals, measured shot-size
+mismatches, missing re-establishment, and pacing statistics. It sorts subjects
+by stable id, uses opening/closing camera, subject, and resolved gaze-target
+geometry plus durations, and returns each finding as fact, editorial impact,
+and recovery. A neutral action-axis shot or a camera that visibly changes
+half-plane inside a shot breaks an otherwise hidden crossing.
+
+`IAutoMovieShotContract.styleIntent` records deliberate grammar exceptions.
+Each marker suppresses exactly one matching diagnostic; for example,
+`jump-cut` removes only `grammar-jump-cut`. Use
+`grammarDiagnosticsToReviewNotes` to file results through the existing visual
+review backlog. The edit-list layer supplies shot order; human or VLM aesthetic
+judgment remains outside this mechanical analyzer.
+
+## Capability-gated combat and world kit
+
+`resolveFirearmVolley` requires an exact model profile, `shooter` trait, and
+typed firearm before it returns one deterministic event per shooter. Reload,
+misfire, accuracy interpolation, effective range, and seeded hit sampling stay
+separate so agent-owned behavior code can react to returned data.
+
+`seededValue` and `mixSeed` are the shared domain-separated PRNG primitives for
+effects, combat, formations, and general instances. The world kit constructs
+terrain/ramp surfaces, visible wall/building box proxies, and grid/scatter/
+route instance designs. `assertWorldPlacements` throws on overlapping or
+floating blocks, blocked routes, and unreachable landmarks.
+
+## Registered shot authoring
+
+`defineShot(id, { scene, contract, build })` is the code-authoring boundary for
+one registered shot. `compileDefinedShot` runs the authored
+stage → block → perform pipeline directly in the engine, so a source module
+does not need an MCP application wrapper to produce a deterministic shot
+artifact.
+
+The returned runtime contains the compiler-ready source artifact, opening/closing continuity, independently measured participant/state/event/camera outcomes, and D010 physics-advice decisions. The registered builder remains the source of the typed stage, blocking, and performance program; the host supplies current rig lookup and frame dimensions, and a builder cannot pass by echoing its own contract ids.
+
+Physics advice is a discriminated decision record: it preserves the original proposal separately from an accepted or modified selected response, while rejection selects nothing. `realizeShotContract` is also owned here so compiler and direct-link consumers lower the same production contract through the same engine path.
+
 ## Interaction events
 
 `performShot` emits `shot.events` for engine-visible interactions on the
@@ -55,38 +97,36 @@ automovie의 **결정론적 엔진**. `@automovie/interface`의 AST를 받아 �
 
 이 패키지가 automovie의 "검증 가능하면 수렴한다" 사상을 실제로 구현하는 곳이다. 특히 **관절 가동범위(ROM) 검증**이 여기 산다: 물리적으로 불가능한 포즈를 결정론적으로 거부하고 `IAutoMovieConstraintViolation[]`을 만들어 하니스의 `// ❌` 피드백 재료를 제공한다.
 
-## 소비 방식: 두 갈래
+## 코드 저작과 제품 경계
 
-automovie를 구동하는 길은 둘이며, 둘 다 일급이다.
+모션 제작은 극한에서 **코딩 작업**이다. 파라메트릭 곡선, 위상 합성, 샘플링 솔버를 코딩 에이전트가 tracked TypeScript로 작성하고, `@automovie/interface`의 타입과 이 패키지의 순수 함수를 직접 사용한다.
 
-- **MCP 도구** ([`@automovie/mcp`](../mcp)): 에이전트가 stdio로 파이프라인을 구동한다. 슬레이트 상태·트랜잭션·교정 루프·크로스세션 영속성이 필요할 때. 얇은 동사를 기본 신시사이저가 살찌우고, `enact`로 **코드가 계산한 dense 클립**까지 주입할 수 있다.
-- **직접 링크**: `@automovie/interface`(타입)와 이 패키지를 임포트해 타입에 직접 프로그래밍한다. 코드 네이티브 모션 저작, 커스텀 신시사이저, 호스트 통합에 쓴다.
-
-모션 제작은 극한에서 **코딩 작업**이다(파라메트릭 곡선, 위상 합성, 샘플링 솔버). 그래서 코딩 에이전트에겐 타입 시스템 자체가 자연스러운 인터페이스일 수 있고, 이 패키지는 그 직접 경로를 정식으로 연다. 직접 소비자의 진입 seam:
+직접 소비자의 진입 seam:
 
 - `performShot`: 주입식 `IAutoMovieActionSynthesizer`가 콘텐츠 seam이다. 어떤 동사든 **코드로 계산한 클립**을 반환하면 엔진이 영역 마스킹·레이어링·ROM 게이트를 그대로 적용한다("engine enforces, model creates").
 - `validateMotion`/`validatePose`/`clampPose` + ROM: 결정론적 오라클. 무엇을 만들든 물리 진실은 엔진이 심판한다.
 - `sampleMotion`/`sampleClip`: 재생 계약. 저작한 클립을 프레임으로 샘플링한다.
 
-두 경로는 합쳐진다: 코드로 클립을 계산하고, 어느 문으로 들어왔든 **같은 엔진**이 강제한다. `enact`가 그 다리다. 러너블 스타터는 `npx automovie start <dir>`([`@automovie/cli`](../cli)) 참고.
+[`@automovie/mcp`](../mcp)는 이 엔진의 두 번째 저작 API가 아니다. 정확히 다섯 개의 가이드·호스트 증거·리뷰 도구만 제공하며 design setter, compiler, renderer, geometry query를 노출하지 않는다. 러너블 스타터는 `npx create-automovie <dir>`로 만들고, generated project의 compile/lint/render/verify 명령이 같은 엔진을 호출한다.
 
 ## 모듈
 
-| 모듈 | 책임 |
-|---|---|
-| `math/` | 벡터·쿼터니언 수학 (순수 함수, three.js 비의존) |
-| `kinematics/` | 의미 각도(flexion/abduction/twist) → 본 로컬 쿼터니언(FK), 포즈 해석 |
-| `rom/` | 휴머노이드 ROM 기본 테이블 + 관절별 ROM 검증 |
-| `motion/` | 이징 함수, 키프레임 보간(시각 t의 포즈 샘플링) |
-| `face/` | **Dormant boundary**: 결정 001 이후 보존만 하는 face/head flatten·morph 헬퍼. 검증과 테스트는 유지하지만 현재 본진은 모션/하니스다. |
-| `geometry/` | 프리미티브 형상 → 삼각형 메쉬 테셀레이션 |
-| `perform/` | 액션 콜 → 배우별 퍼포먼스 클립: 리전 마스크(`bodyRegionBones`, `actionRegion`), 레이어링·블렌딩, 기본 신서사이저, 위치 타겟 해석 |
-| `film/` | 필름 파이프라인 stage/block/perform/cut: 씬 스테이징, 비트 블로킹, 샷 수행, 카메라 무브·프로젝션, 부착·발사 컴파일, 비트 엔드 상태, 시퀀스 컷, 리뷰 |
-| `resolve/` | 시각 t의 해석: 클립 샘플링, 드라이버·드리븐 커브, IK, 스프링, 채널 한계, 씬 합성, 조명 해석, 스켈레톤 노드화 |
-| `physics/` | 탄도·투사체, 충돌과 반응, 임팩트·반동, 질량 특성 |
-| `space/` | 공간: 지면·standable surface, affordance 접촉 |
-| `text/` | 결정적 문자열 비교(`compareCodeUnits`) |
-| `validation/` | 티어별 검증 오케스트레이터 → `IAutoMovieValidation` |
+| 모듈          | 책임                                                                                                                                                |
+| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `math/`       | 벡터·쿼터니언 수학 (순수 함수, three.js 비의존)                                                                                                     |
+| `kinematics/` | 의미 각도(flexion/abduction/twist) → 본 로컬 쿼터니언(FK), 포즈 해석                                                                                |
+| `rom/`        | 휴머노이드 ROM 기본 테이블 + 관절별 ROM 검증                                                                                                        |
+| `motion/`     | 이징 함수, 키프레임 보간(시각 t의 포즈 샘플링)                                                                                                      |
+| `face/`       | **Dormant boundary**: 결정 001 이후 보존만 하는 face/head flatten·morph 헬퍼. 검증과 테스트는 유지하지만 현재 본진은 모션/하니스다.                 |
+| `geometry/`   | 프리미티브 형상 → 삼각형 메쉬 테셀레이션                                                                                                            |
+| `perform/`    | 액션 콜 → 배우별 퍼포먼스 클립: 리전 마스크(`bodyRegionBones`, `actionRegion`), 레이어링·블렌딩, 기본 신서사이저, 위치 타겟 해석                    |
+| `film/`       | 필름 파이프라인 stage/block/perform/cut: 씬 스테이징, 비트 블로킹, 샷 수행, 카메라 무브·프로젝션, 부착·발사 컴파일, 비트 엔드 상태, 시퀀스 컷, 리뷰 |
+| `resolve/`    | 시각 t의 해석: 클립 샘플링, 드라이버·드리븐 커브, IK, 스프링, 채널 한계, 씬 합성, 조명 해석, 스켈레톤 노드화                                        |
+| `physics/`    | 탄도·투사체, 충돌과 반응, 임팩트·반동, 질량 특성                                                                                                    |
+| `space/`      | 공간: 지면·standable surface, affordance 접촉                                                                                                       |
+| `text/`       | 결정적 문자열 비교(`compareCodeUnits`)                                                                                                              |
+| `validation/` | 티어별 검증 오케스트레이터 → `IAutoMovieValidation`                                                                                                 |
+| `sound/` | 완성 필름 타임라인의 결정론적 사운드 계획·렌더링, 음소-비짐 변환, 파형·스펙트로그램 증거 |
 
 ## 검증 티어 (현재 구현)
 
@@ -96,7 +136,7 @@ automovie를 구동하는 길은 둘이며, 둘 다 일급이다.
 - **Tier 4 (temporal):** 시간 일관성. 키프레임 시간 단조성·duration 이내·각속도 상한.
 - **Tier 5 (topology):** non-manifold edge와 뒤집힌 winding 같은 mesh 구조 오류를 거부한다. 닫힌 solid가 필요한 호출자는 open boundary도 검사한다.
 
-검증기는 `IAutoMovieConstraintViolation[]`을 만들고 `IAutoMovieValidation`으로 묶는다. 직접-link 호출자는 이 결과를 그대로 소비하고, MCP 경로는 같은 위반을 도구 응답의 JSON path에 실어 외부 에이전트의 교정 루프로 돌려준다. error가 하나라도 있으면 실패하고 warning만 있으면 성공한다.
+검증기는 `IAutoMovieConstraintViolation[]`을 만들고 `IAutoMovieValidation`으로 묶는다. 직접-link 호출자와 production compiler가 이 결과를 소비하며, lint와 compile 진단이 외부 에이전트의 일반적인 작성→실행→수정 루프로 되돌린다. error가 하나라도 있으면 실패하고 warning만 있으면 성공한다.
 
 ## 좌표·각도 규약
 

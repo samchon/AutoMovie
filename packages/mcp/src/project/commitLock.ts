@@ -1,4 +1,6 @@
+import { randomUUID } from "node:crypto";
 import fs from "node:fs";
+import path from "node:path";
 
 /**
  * A short-lived, owner-identified commit lock guarding the project store's
@@ -39,6 +41,68 @@ const waitForRelease = (ms: number): void => {
   Atomics.wait(waitBuffer, 0, 0, ms);
 };
 
+interface ICommitLockSnapshot {
+  identity: string;
+  token: string;
+}
+
+const lockIdentity = (status: fs.BigIntStats): string =>
+  `${status.dev}\0${status.ino}`;
+
+const readCommitLockSnapshot = (
+  lockPath: string,
+): ICommitLockSnapshot | null => {
+  const linked = fs.lstatSync(lockPath, { bigint: true });
+  if (linked.isSymbolicLink() || linked.isFile() === false) return null;
+  const linkedIdentity = lockIdentity(linked);
+  const descriptor = fs.openSync(lockPath, "r");
+  try {
+    const opened = fs.fstatSync(descriptor, { bigint: true });
+    if (opened.isFile() === false) return null;
+    const token = fs.readFileSync(descriptor, "utf8");
+    const resident = fs.lstatSync(lockPath, { bigint: true });
+    if (
+      resident.isSymbolicLink() ||
+      resident.isFile() === false ||
+      lockIdentity(resident) !== linkedIdentity
+    )
+      return null;
+    const residentDescriptor = fs.openSync(lockPath, "r");
+    try {
+      const current = fs.fstatSync(residentDescriptor, { bigint: true });
+      if (
+        current.isFile() === false ||
+        lockIdentity(current) !== lockIdentity(opened)
+      )
+        return null;
+    } finally {
+      fs.closeSync(residentDescriptor);
+    }
+    return { identity: lockIdentity(opened), token };
+  } finally {
+    fs.closeSync(descriptor);
+  }
+};
+
+const restoreQuarantinedLock = (quarantine: string, lockPath: string): void => {
+  try {
+    fs.linkSync(quarantine, lockPath);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "EEXIST") return;
+    try {
+      fs.copyFileSync(quarantine, lockPath, fs.constants.COPYFILE_EXCL);
+    } catch {
+      return;
+    }
+  }
+  try {
+    fs.rmSync(quarantine, { force: true });
+  } catch {
+    // The canonical foreign lock is restored; an extra hard link or backup
+    // is fail-closed evidence and must not endanger the resident owner.
+  }
+};
+
 /**
  * Take the commit lock, returning the owner token to pass to
  * {@link releaseCommitLock}. Throws after ~2 s if the lock never frees.
@@ -70,9 +134,11 @@ export const acquireCommitLock = (lockPath: string): string => {
 };
 
 /**
- * Release the commit lock, but only if it still holds `token`. Deleting a
- * foreign token would delete another session's lock (#1257). A vanished lock is
- * a no-op. Pass `unlink: false` after a namespace-identity failure to release
+ * Release the commit lock, but only if the exact resident file still holds
+ * `token`. The verified file is moved to a unique same-directory quarantine and
+ * identified again before deletion, so a replacement between verification and
+ * mutation is restored without clobbering a successor. A vanished lock is a
+ * no-op. Pass `unlink: false` after a namespace-identity failure to release
  * only this process's re-entrant ownership without following the resident path
  * into a replacement root. Pass `retire: true` only when the owning operation
  * removed the complete lock namespace; this invalidates every matching nesting
@@ -91,8 +157,29 @@ export const releaseCommitLock = (
   }
   if (options.retire === true || options.unlink === false) return;
   try {
-    if (fs.readFileSync(lockPath, "utf8") === token)
-      fs.rmSync(lockPath, { force: true });
+    const observed = readCommitLockSnapshot(lockPath);
+    if (observed === null || observed.token !== token) return;
+    const quarantine = path.join(
+      path.dirname(lockPath),
+      `.automovie-lock-release-${process.pid}-${randomUUID()}`,
+    );
+    try {
+      fs.renameSync(lockPath, quarantine);
+    } catch {
+      return;
+    }
+    try {
+      const moved = readCommitLockSnapshot(quarantine);
+      if (
+        moved !== null &&
+        moved.identity === observed.identity &&
+        moved.token === token
+      )
+        fs.rmSync(quarantine, { force: true });
+      else restoreQuarantinedLock(quarantine, lockPath);
+    } catch {
+      restoreQuarantinedLock(quarantine, lockPath);
+    }
   } catch {
     // already gone, nothing of ours to release
   }

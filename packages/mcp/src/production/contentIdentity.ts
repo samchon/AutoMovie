@@ -3,11 +3,11 @@ import { createHash } from "node:crypto";
 
 /** Versioned review-fingerprint protocol. */
 export const AUTOMOVIE_REVIEW_FINGERPRINT_PROTOCOL =
-  "automovie.review.fingerprint.v1";
+  "automovie.review.fingerprint.v4";
 
 /** Versioned production-compiler input protocol. */
 export const AUTOMOVIE_COMPILE_FINGERPRINT_PROTOCOL =
-  "automovie.compile.input.v1";
+  "automovie.compile.input.v2";
 
 /** One domain-separated field in a content fingerprint. */
 export interface IAutoMovieFingerprintField {
@@ -47,6 +47,11 @@ export const encodeAutoMoviePathSegment = (value: string): string => {
     (character) =>
       `%${character.charCodeAt(0).toString(16).toUpperCase().padStart(2, "0")}`,
   );
+  // Windows strips trailing dots from path components, while "." and ".."
+  // retain traversal meaning on every supported filesystem. Percent-escape
+  // those spellings so two logical ids never resolve to one physical leaf.
+  if (encoded === "." || encoded === ".." || encoded.endsWith("."))
+    encoded = `${encoded.slice(0, -1)}%2E`;
   if (
     /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9]|conin\$|conout\$)(?:\.|$)/i.test(
       encoded,

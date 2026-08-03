@@ -15,10 +15,33 @@ import fs from "node:fs";
 import path from "node:path";
 
 import {
+  productionCompileSucceeded,
   productionFixture,
   shotContract,
   worldDesign,
 } from "./productionFixtures";
+
+interface IProductionEffectFixtureFailure {
+  error: unknown;
+}
+
+class ProductionEffectFixtureCleanupError extends AggregateError {}
+
+/** Dispose the production-effect fixture without replacing its failure. */
+export const preserveProductionEffectFixtureCleanup = (
+  failure: IProductionEffectFixtureFailure | undefined,
+  cleanup: () => unknown,
+): void => {
+  try {
+    cleanup();
+  } catch (cleanupFailure) {
+    if (failure === undefined) throw cleanupFailure;
+    throw new ProductionEffectFixtureCleanupError(
+      [failure.error, cleanupFailure],
+      "Production-effect fixture teardown failed after the test failed.",
+    );
+  }
+};
 
 /**
  * Effect source compilation, validation, and oracle queries must share one
@@ -42,16 +65,24 @@ import {
  */
 export const test_mcp_production_effect = (): void => {
   const fixture = productionFixture();
+  let productionEffectFailure: IProductionEffectFixtureFailure | undefined;
   try {
     const project = AutoMovieProductionProject.open(fixture.root);
     project.setWorldDesign(worldDesign());
     const compile = new AutoMovieProductionCompiler(project).compile({
       scope: "source",
     });
-    const compiled = compile.success
+    const compileSucceeded = productionCompileSucceeded(
+      "effect fixture",
+      compile,
+    );
+    const compiled = compileSucceeded
       ? (JSON.parse(
           fs.readFileSync(
-            path.join(fixture.root, "generated/shots/opening.json"),
+            path.join(
+              fixture.root,
+              "generated/fixture-film/shots/opening.json",
+            ),
             "utf8",
           ),
         ) as IAutoMovieCompiledShotSource)
@@ -112,7 +143,7 @@ export const test_mcp_production_effect = (): void => {
     });
     TestValidator.predicate(
       "source cue becomes one current deterministic effect stream and oracle summary",
-      compile.success &&
+      compileSucceeded &&
         compiled?.effects.length === 1 &&
         compiled.effects[0]?.kind === "smoke" &&
         compiled.effects[0]?.event === "signal-raised" &&
@@ -205,10 +236,13 @@ export const test_mcp_production_effect = (): void => {
         }).length === 0,
     );
 
-    const shotPath = path.join(fixture.root, "generated/shots/opening.json");
+    const shotPath = path.join(
+      fixture.root,
+      "generated/fixture-film/shots/opening.json",
+    );
     const manifestPath = path.join(
       fixture.root,
-      ".automovie/generated-manifest.json",
+      ".automovie/productions/fixture-film/generated-manifest.json",
     );
     const originalShot = fs.readFileSync(shotPath);
     const originalManifest = fs.readFileSync(manifestPath);
@@ -349,7 +383,12 @@ export const test_mcp_production_effect = (): void => {
         facingAwaySummary.result?.kind === "measurement" &&
         facingAwaySummary.result.values.cameraIntersectionLength === 0,
     );
+  } catch (error) {
+    productionEffectFailure = { error };
+    throw error;
   } finally {
-    fixture.dispose();
+    preserveProductionEffectFixtureCleanup(productionEffectFailure, () =>
+      fixture.dispose(),
+    );
   }
 };

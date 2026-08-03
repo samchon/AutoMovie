@@ -2,6 +2,7 @@ import { detectBodyCollision } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import { staticActor } from "../internal/collision";
+import { validationHasNoWarnings } from "../internal/predicates";
 
 /**
  * A `physicsIntent` marker (a choreographed fight, a stylized clash)
@@ -33,17 +34,9 @@ export const test_validation_body_collision_intent = (): void => {
     sampleRate: 1,
     physicsIntent: "choreographed",
   });
-  TestValidator.equals(
-    "intent still succeeds",
-    result.validation.success,
-    true,
-  );
-  TestValidator.equals(
+  TestValidator.predicate(
     "intent suppresses warnings",
-    result.validation.success === true
-      ? (result.validation.warnings?.length ?? 0)
-      : -1,
-    0,
+    validationHasNoWarnings("intentional body collision", result.validation),
   );
   TestValidator.equals(
     "intent suppresses the suggestion",

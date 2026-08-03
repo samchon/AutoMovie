@@ -20,6 +20,7 @@ import {
   IAutoMovieShot,
 } from "@automovie/interface";
 import { renderPathStem } from "@automovie/render";
+import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -30,6 +31,13 @@ import {
   IAutoMovieMcpPropSpec,
   IAutoMovieMcpWritableSlate,
 } from "../dto";
+import { readAutoMovieProductionOwnedFile } from "../production/productionRenderJob";
+import {
+  acquireOrCreateProductionRootNamespace,
+  acquireProductionRootNamespace,
+  assertProductionRootNamespaceLease,
+  releaseProductionRootNamespace,
+} from "../production/rootNamespaceLock";
 import {
   validateSceneArtifact,
   validateSequenceArtifact,
@@ -101,15 +109,23 @@ export class AutoMovieProject {
    */
   private lastReadRevision_: number;
 
-  private constructor(public readonly root: string) {
-    for (const dir of RESERVED_DIRS)
+  private constructor(
+    public readonly root: string,
+    private readonly rootDevice: string,
+    private readonly rootInode: string,
+    assertNamespace: () => void,
+  ) {
+    for (const dir of RESERVED_DIRS) {
+      assertNamespace();
       fs.mkdirSync(path.join(root, dir), { recursive: true });
+      assertNamespace();
+    }
     this.lastReadRevision_ = this.readRevision();
-    const existing = readJson<unknown>(this.manifestPath);
+    const existing = readJson<unknown>(this.root, this.manifestPath);
     if (existing === null) {
       // A fresh project: create the manifest once.
       this.manifest = { version: 1, assets: [] };
-      writeJsonAtomic(this.manifestPath, this.manifest);
+      writeJsonAtomic(this.manifestPath, this.manifest, assertNamespace);
     } else {
       // Opening an existing project is a pure read, keep the parsed manifest
       // (unknown host/future fields and all) in memory without rewriting it, so
@@ -127,63 +143,97 @@ export class AutoMovieProject {
    */
   public static open(rootDir: string): AutoMovieProject {
     const root = path.resolve(rootDir);
-    assertProjectRootDirectory(root);
-    return new AutoMovieProject(root);
+    const lease = (() => {
+      try {
+        return acquireOrCreateProductionRootNamespace(root);
+      } catch (error) {
+        const message = (error as Error).message;
+        throw new AutoMovieProjectRootError(
+          root,
+          message ===
+            `Production project root "${root}" is not a physical directory.`
+            ? "project root must be a directory, not a symbolic link, junction, or file"
+            : message,
+        );
+      }
+    })();
+    try {
+      const project = new AutoMovieProject(
+        lease.root,
+        lease.device,
+        lease.inode,
+        () => assertProductionRootNamespaceLease(lease),
+      );
+      assertProductionRootNamespaceLease(lease);
+      return project;
+    } finally {
+      releaseProductionRootNamespace(lease);
+    }
   }
 
   /** The stored slate assembled from the slice files (film excluded). */
   public storedSlate(): Omit<IAutoMovieMcpWritableSlate, "film"> {
-    this.lastReadRevision_ = this.readRevision();
-    const script = readValidatedJson<IAutoMovieScript>(
-      this.slicePath("script.json"),
-      validateScriptSlice,
-    );
-    const scenes = this.readStagedScenes();
-    const shots = this.readKeyedSlices<IAutoMovieShot>(
-      "shots",
-      {
-        label: "shot id",
-        expected: shotIdOf,
-        actual: (shot) => shot.id,
-      },
-      (file, shot) => validateProjectValue(file, shot, validateShotSlice),
-    );
-    return {
-      script,
-      scenes,
-      shots,
-      beatEnds: this.readKeyedSlices<IAutoMovieBeatEndState>(
-        "beatEnds",
+    return this.withRootNamespace(() => {
+      this.synchronizeResidentState();
+      const script = readValidatedJson<IAutoMovieScript>(
+        this.root,
+        this.slicePath("script.json"),
+        validateScriptSlice,
+      );
+      const scenes = this.readStagedScenes();
+      const shots = this.readKeyedSlices<IAutoMovieShot>(
+        "shots",
         {
-          label: "beat end",
-          expected: (beat) => beat,
-          actual: (end) => end.beat,
+          label: "shot id",
+          expected: shotIdOf,
+          actual: (shot) => shot.id,
         },
-        (file, beatEnd) =>
-          validateProjectValue(file, beatEnd, validateBeatEndSlice),
-      ),
-      notes:
-        readValidatedJson<IAutoMovieReviewNote[]>(
-          this.slicePath("notes.json"),
-          validateNotesSlice,
-        ) ?? [],
-    };
+        (file, shot) => validateProjectValue(file, shot, validateShotSlice),
+      );
+      return {
+        script,
+        scenes,
+        shots,
+        beatEnds: this.readKeyedSlices<IAutoMovieBeatEndState>(
+          "beatEnds",
+          {
+            label: "beat end",
+            expected: (beat) => beat,
+            actual: (end) => end.beat,
+          },
+          (file, beatEnd) =>
+            validateProjectValue(file, beatEnd, validateBeatEndSlice),
+        ),
+        notes:
+          readValidatedJson<IAutoMovieReviewNote[]>(
+            this.root,
+            this.slicePath("notes.json"),
+            validateNotesSlice,
+          ) ?? [],
+      };
+    });
   }
 
   /** The full writable slate, including the film slice. */
   public writableSlate(): IAutoMovieMcpWritableSlate {
-    const stored = this.storedSlate();
-    return {
-      ...stored,
-      film: readValidatedJson<IAutoMovieSequence>(
-        this.slicePath("film.json"),
-        (value, violations) =>
-          appendValidation(
-            violations,
-            validateSequenceArtifact(value as IAutoMovieSequence, stored.shots),
-          ),
-      ),
-    };
+    return this.withRootNamespace(() => {
+      const stored = this.storedSlate();
+      return {
+        ...stored,
+        film: readValidatedJson<IAutoMovieSequence>(
+          this.root,
+          this.slicePath("film.json"),
+          (value, violations) =>
+            appendValidation(
+              violations,
+              validateSequenceArtifact(
+                value as IAutoMovieSequence,
+                stored.shots,
+              ),
+            ),
+        ),
+      };
+    });
   }
 
   /**
@@ -246,14 +296,14 @@ export class AutoMovieProject {
     const stagedScenes = stageBeatSlices(scenes);
     const stagedShots = stageBeatSlices(shots);
     const stagedBeatEnds = stageBeatSlices(beatEnds);
-    this.commitCycle(() => {
+    this.commitCycle((assertNamespace) => {
       for (const { file, content } of staged)
         if (content === null) {
-          if (fs.existsSync(file)) fs.rmSync(file);
-        } else writeAtomic(file, content);
-      this.flushBeatSlices("scenes", stagedScenes);
-      this.flushBeatSlices("shots", stagedShots);
-      this.flushBeatSlices("beatEnds", stagedBeatEnds);
+          removeAtomic(file, assertNamespace);
+        } else writeAtomic(file, content, assertNamespace);
+      this.flushBeatSlices("scenes", stagedScenes, assertNamespace);
+      this.flushBeatSlices("shots", stagedShots, assertNamespace);
+      this.flushBeatSlices("beatEnds", stagedBeatEnds, assertNamespace);
     });
   }
 
@@ -275,13 +325,16 @@ export class AutoMovieProject {
   private flushBeatSlices(
     dir: string,
     staged: ReadonlyMap<string, string>,
+    assertNamespace: () => void,
   ): void {
     const base = path.join(this.root, dir);
+    assertNamespace();
     for (const name of fs.readdirSync(base))
       if (name.endsWith(".json") && !staged.has(name))
-        fs.rmSync(path.join(base, name));
+        removeAtomic(path.join(base, name), assertNamespace);
     for (const [name, content] of staged)
-      writeAtomic(path.join(base, name), content);
+      writeAtomic(path.join(base, name), content, assertNamespace);
+    assertNamespace();
   }
 
   /**
@@ -292,31 +345,89 @@ export class AutoMovieProject {
    * bump the monotonic revision. Every refusal happens BEFORE the first staged
    * byte lands.
    */
-  private commitCycle(flush: () => void): void {
-    const token = acquireCommitLock(this.lockPath);
-    try {
-      const current = this.readRevision();
-      if (current !== this.lastReadRevision_) {
-        const base = this.lastReadRevision_;
-        this.lastReadRevision_ = current;
-        throw new Error(
-          `another session committed to this project (on-disk revision ${current}; this session last synchronized at ${base}); nothing was written, re-read the current state (getSlate / nextSteps) and re-issue the call from that truth`,
+  private commitCycle(flush: (assertNamespace: () => void) => void): void {
+    this.withRootNamespace((assertNamespace) => {
+      const token = acquireCommitLock(this.lockPath);
+      try {
+        assertNamespace();
+        const current = this.readRevision();
+        if (current !== this.lastReadRevision_) {
+          const base = this.lastReadRevision_;
+          const manifest = this.readManifest();
+          this.lastReadRevision_ = current;
+          this.manifest = manifest;
+          throw new Error(
+            `another session committed to this project (on-disk revision ${current}; this session last synchronized at ${base}); nothing was written, re-read the current state (getSlate / nextSteps) and re-issue the call from that truth`,
+          );
+        }
+        assertNamespace();
+        flush(assertNamespace);
+        assertNamespace();
+        const nextRevision = current + 1;
+        writeJsonAtomic(
+          this.revisionPath,
+          {
+            revision: nextRevision,
+          },
+          assertNamespace,
         );
+        assertNamespace();
+        this.lastReadRevision_ = nextRevision;
+      } finally {
+        try {
+          assertNamespace();
+          releaseCommitLock(this.lockPath, token);
+        } catch {
+          releaseCommitLock(this.lockPath, token, { unlink: false });
+        }
       }
-      flush();
-      this.lastReadRevision_ = current + 1;
-      writeJsonAtomic(this.revisionPath, { revision: this.lastReadRevision_ });
+    });
+  }
+
+  private withRootNamespace<T>(task: (assertNamespace: () => void) => T): T {
+    const lease = acquireProductionRootNamespace(this.root);
+    try {
+      const assertNamespace = (): void => {
+        if (lease.device !== this.rootDevice || lease.inode !== this.rootInode)
+          throw new Error(
+            `AutoMovie project root "${this.root}" changed physical identity. Discard this project handle and open the physical project again.`,
+          );
+        assertProductionRootNamespaceLease(lease);
+      };
+      assertNamespace();
+      const result = task(assertNamespace);
+      assertNamespace();
+      return result;
     } finally {
-      releaseCommitLock(this.lockPath, token);
+      releaseProductionRootNamespace(lease);
     }
   }
 
   /** The committed revision on disk; a legacy project without one is 0. */
   private readRevision(): number {
-    const value = readJson<{ revision?: unknown }>(this.revisionPath);
+    const value = readJson<{ revision?: unknown }>(
+      this.root,
+      this.revisionPath,
+    );
     return value !== null && typeof value.revision === "number"
       ? value.revision
       : 0;
+  }
+
+  private readManifest(): IManifest {
+    const value = readJson<unknown>(this.root, this.manifestPath);
+    if (value === null)
+      throw new Error(
+        `AutoMovie project manifest "${this.manifestPath}" disappeared from the resident project.`,
+      );
+    return validateManifest(this.manifestPath, value);
+  }
+
+  private synchronizeResidentState(): void {
+    const revision = this.readRevision();
+    const manifest = this.readManifest();
+    this.lastReadRevision_ = revision;
+    this.manifest = manifest;
   }
 
   private get revisionPath(): string {
@@ -329,16 +440,18 @@ export class AutoMovieProject {
 
   /** The stored prop specs, one per `props/<node>.json`, in filename order. */
   public storedProps(): IAutoMovieMcpPropSpec[] {
-    this.lastReadRevision_ = this.readRevision();
-    return this.readKeyedSlices<IAutoMovieMcpPropSpec>(
-      "props",
-      {
-        label: "prop node",
-        expected: (node) => node,
-        actual: (spec) => spec.node,
-      },
-      (file, spec) => validateProjectValue(file, spec, validatePropSlice),
-    );
+    return this.withRootNamespace(() => {
+      this.synchronizeResidentState();
+      return this.readKeyedSlices<IAutoMovieMcpPropSpec>(
+        "props",
+        {
+          label: "prop node",
+          expected: (node) => node,
+          actual: (spec) => spec.node,
+        },
+        (file, spec) => validateProjectValue(file, spec, validatePropSlice),
+      );
+    });
   }
 
   /**
@@ -349,7 +462,9 @@ export class AutoMovieProject {
   public saveProp(spec: IAutoMovieMcpPropSpec): void {
     const file = path.join(this.root, "props", sliceFilename(spec.node));
     const content = serializeJson(spec);
-    this.commitCycle(() => writeAtomic(file, content));
+    this.commitCycle((assertNamespace) =>
+      writeAtomic(file, content, assertNamespace),
+    );
   }
 
   /**
@@ -360,7 +475,7 @@ export class AutoMovieProject {
    * id match is the ordinary upsert, not a collision.
    */
   public propCaseCollision(node: string): string | null {
-    return this.sliceCaseCollision("props", node);
+    return this.withRootNamespace(() => this.sliceCaseCollision("props", node));
   }
 
   /**
@@ -371,11 +486,13 @@ export class AutoMovieProject {
    * `$slate.actors` with full precision.
    */
   public storedActors(): IAutoMovieMcpActorSpec[] {
-    this.lastReadRevision_ = this.readRevision();
-    return this.readKeyedSlices<IAutoMovieMcpActorSpec>("actors", {
-      label: "actor node",
-      expected: (node) => node,
-      actual: (spec) => spec.node,
+    return this.withRootNamespace(() => {
+      this.synchronizeResidentState();
+      return this.readKeyedSlices<IAutoMovieMcpActorSpec>("actors", {
+        label: "actor node",
+        expected: (node) => node,
+        actual: (spec) => spec.node,
+      });
     });
   }
 
@@ -399,22 +516,23 @@ export class AutoMovieProject {
       file: path.join(this.root, "actors", sliceFilename(spec.node)),
       content: serializeJson(spec),
     }));
-    this.commitCycle(() => {
-      for (const { file, content } of staged) writeAtomic(file, content);
+    this.commitCycle((assertNamespace) => {
+      for (const { file, content } of staged)
+        writeAtomic(file, content, assertNamespace);
     });
   }
 
   /** The actor twin of {@link propCaseCollision} (#1093). */
   public actorCaseCollision(node: string): string | null {
-    return this.sliceCaseCollision("actors", node);
+    return this.withRootNamespace(() =>
+      this.sliceCaseCollision("actors", node),
+    );
   }
 
   /** Remove ONE stored actor context's file; the caller checks existence. */
   public removeActor(node: string): void {
     const file = path.join(this.root, "actors", sliceFilename(node));
-    this.commitCycle(() => {
-      if (fs.existsSync(file)) fs.rmSync(file);
-    });
+    this.commitCycle((assertNamespace) => removeAtomic(file, assertNamespace));
   }
 
   private sliceCaseCollision(dir: string, node: string): string | null {
@@ -434,9 +552,7 @@ export class AutoMovieProject {
   /** Remove ONE stored prop spec's file; the caller checks existence first. */
   public removeProp(node: string): void {
     const file = path.join(this.root, "props", sliceFilename(node));
-    this.commitCycle(() => {
-      if (fs.existsSync(file)) fs.rmSync(file);
-    });
+    this.commitCycle((assertNamespace) => removeAtomic(file, assertNamespace));
   }
 
   /**
@@ -450,52 +566,59 @@ export class AutoMovieProject {
    */
   public registerAsset(relativePath: string, bytes?: Uint8Array): string {
     const normalized = normalizeAssetPath(relativePath);
-    if (this.manifest.assets.includes(normalized))
-      throw new Error(
-        `asset "${normalized}" is already registered; assets are never silently replaced`,
-      );
     const absolute = path.join(this.root, ...normalized.split("/"));
-    const next = {
-      ...this.manifest,
-      assets: [...this.manifest.assets, normalized],
-    };
-    const manifestContent = serializeJson(next);
-    this.commitCycle(() => {
+    this.commitCycle((assertNamespace) => {
+      const resident = this.readManifest();
+      if (resident.assets.includes(normalized))
+        throw new Error(
+          `asset "${normalized}" is already registered; assets are never silently replaced`,
+        );
+      const next = {
+        ...resident,
+        assets: [...resident.assets, normalized],
+      };
+      const manifestContent = serializeJson(next);
       if (bytes !== undefined) {
+        assertNamespace();
         if (fs.existsSync(absolute))
           throw new Error(
             `asset file "${normalized}" already exists; refusing to overwrite it`,
           );
-        fs.mkdirSync(path.dirname(absolute), { recursive: true });
-        writeAtomic(absolute, bytes);
+        writeAtomic(absolute, bytes, assertNamespace);
       }
+      writeAtomic(this.manifestPath, manifestContent, assertNamespace);
+      assertNamespace();
       this.manifest = next;
-      writeAtomic(this.manifestPath, manifestContent);
     });
     return normalized;
   }
 
   /** Tracked asset paths, project-relative, in registration order. */
   public get assets(): string[] {
-    return [...this.manifest.assets];
+    return this.withRootNamespace(() => {
+      this.synchronizeResidentState();
+      return [...this.manifest.assets];
+    });
   }
 
   /** What the project holds: which slices exist, and the tracked assets. */
   public summary(): IAutoMovieMcpProjectSummary {
-    const slate = this.writableSlate();
-    return {
-      root: this.root,
-      script: slate.script !== null,
-      scene: slate.scenes.length !== 0,
-      shots: slate.shots.map((shot) => shot.id),
-      beatEnds: slate.beatEnds.map((end) => end.beat),
-      notes: slate.notes.length,
-      film: slate.film !== null,
-      props: this.storedProps().map((spec) => spec.node),
-      actors: this.storedActors().map((spec) => spec.node),
-      staleRenders: this.staleRenders(slate),
-      assets: this.assets,
-    };
+    return this.withRootNamespace(() => {
+      const slate = this.writableSlate();
+      return {
+        root: this.root,
+        script: slate.script !== null,
+        scene: slate.scenes.length !== 0,
+        shots: slate.shots.map((shot) => shot.id),
+        beatEnds: slate.beatEnds.map((end) => end.beat),
+        notes: slate.notes.length,
+        film: slate.film !== null,
+        props: this.storedProps().map((spec) => spec.node),
+        actors: this.storedActors().map((spec) => spec.node),
+        staleRenders: this.staleRenders(slate),
+        assets: this.assets,
+      };
+    });
   }
 
   /**
@@ -561,6 +684,7 @@ export class AutoMovieProject {
     );
     if (keyed.length !== 0) return keyed;
     const legacy = readValidatedJson<IAutoMovieScene>(
+      this.root,
       this.slicePath("scene.json"),
       validateSceneSlice,
     );
@@ -583,7 +707,7 @@ export class AutoMovieProject {
       .filter((name) => name.endsWith(".json"))
       .sort(compareCodeUnits)) {
       const file = path.join(base, name);
-      const value = readJson<T>(file);
+      const value = readJson<T>(this.root, file);
       if (value === null) continue;
       const fileKey = sliceKeyFromFilename(file, name);
       const expected = key.expected(fileKey);
@@ -786,25 +910,6 @@ class AutoMovieProjectRootError extends Error {
     this.name = "AutoMovieProjectRootError";
   }
 }
-
-const assertProjectRootDirectory = (root: string): void => {
-  try {
-    if (fs.existsSync(root)) {
-      if (!fs.statSync(root).isDirectory())
-        throw new AutoMovieProjectRootError(
-          root,
-          "project root must be a directory",
-        );
-      return;
-    }
-    fs.mkdirSync(root, { recursive: true });
-  } catch (error) {
-    if (error instanceof AutoMovieProjectRootError) throw error;
-    // Node's synchronous filesystem APIs throw Error objects.
-    const detail = (error as Error).message;
-    throw new AutoMovieProjectRootError(root, detail);
-  }
-};
 
 const validateManifest = (file: string, value: unknown): IManifest => {
   if (!isRecord(value))
@@ -1432,10 +1537,16 @@ const validatePropSlice = (
   }
 };
 
-const readJson = <T>(file: string): T | null => {
-  if (!fs.existsSync(file)) return null;
+const readJson = <T>(root: string, file: string): T | null => {
   try {
-    return JSON.parse(fs.readFileSync(file, "utf8")) as T;
+    const bytes = readAutoMovieProductionOwnedFile({
+      root,
+      directory: path.dirname(file),
+      relative: path.basename(file),
+      optional: true,
+    });
+    if (bytes === null) return null;
+    return JSON.parse(Buffer.from(bytes).toString("utf8")) as T;
   } catch (error) {
     // JSON.parse and Node's synchronous filesystem APIs throw Error objects.
     const reason = (error as Error).message;
@@ -1455,13 +1566,14 @@ const validateProjectValue = <T>(
 };
 
 const readValidatedJson = <T>(
+  root: string,
   file: string,
   validate: (
     value: unknown,
     violations: IAutoMovieConstraintViolation[],
   ) => void,
 ): T | null => {
-  const value = readJson<unknown>(file);
+  const value = readJson<unknown>(root, file);
   if (value === null) return null;
   validateProjectValue(file, value, validate);
   return value as T;
@@ -1508,15 +1620,70 @@ const describeViolations = (
     .map((violation) => `${violation.path}: ${violation.expected}`)
     .join("; ");
 
-/** Atomic write: temp file in the same directory, then rename over. */
-const writeAtomic = (file: string, data: Uint8Array | string): void => {
-  const temp = `${file}.tmp`;
-  fs.writeFileSync(temp, data);
-  fs.renameSync(temp, file);
+/** Atomic write fenced before and after every resident namespace mutation. */
+const writeAtomic = (
+  file: string,
+  data: Uint8Array | string,
+  assertNamespace: () => void,
+): void => {
+  const temp = `${file}.tmp.${process.pid}.${randomUUID()}`;
+  let published = false;
+  try {
+    assertNamespace();
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    assertNamespace();
+    fs.writeFileSync(temp, data);
+    assertNamespace();
+    fs.renameSync(temp, file);
+    published = true;
+    assertNamespace();
+  } finally {
+    if (published === false)
+      try {
+        assertNamespace();
+        fs.rmSync(temp, { force: true });
+      } catch {
+        // A stale pathname must not clean a temporary file in a replacement
+        // namespace. The original physical root retains it for diagnosis.
+      }
+  }
 };
 
-const writeJsonAtomic = (file: string, value: unknown): void =>
-  writeAtomic(file, serializeJson(value));
+/** Remove through a fenced quarantine so a stale path is never unlinked. */
+const removeAtomic = (file: string, assertNamespace: () => void): void => {
+  const quarantine = `${file}.delete.${process.pid}.${randomUUID()}`;
+  assertNamespace();
+  try {
+    fs.renameSync(file, quarantine);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      assertNamespace();
+      return;
+    }
+    throw error;
+  }
+  try {
+    assertNamespace();
+    fs.rmSync(quarantine, { force: true });
+    assertNamespace();
+  } catch (error) {
+    try {
+      assertNamespace();
+      if (fs.existsSync(quarantine) && fs.existsSync(file) === false)
+        fs.renameSync(quarantine, file);
+      assertNamespace();
+    } catch {
+      // Never follow the quarantined name after the physical root changed.
+    }
+    throw error;
+  }
+};
+
+const writeJsonAtomic = (
+  file: string,
+  value: unknown,
+  assertNamespace: () => void,
+): void => writeAtomic(file, serializeJson(value), assertNamespace);
 
 /** The store's one JSON rendering (pretty, trailing newline). */
 const serializeJson = (value: unknown): string =>

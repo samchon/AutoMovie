@@ -80,10 +80,11 @@ const plant = (
   foot: IAutoMovieBeatEndFootPlant["foot"],
   start: number,
   x: number,
+  end: number = start + 0.4,
 ): IAutoMovieBeatEndFootPlant => ({
   foot,
   start,
-  end: start + 0.4,
+  end,
   position: { x, y: 0, z: 0 },
 });
 
@@ -91,26 +92,28 @@ const plant = (
  * The resumable-sim fields a beat-end state derives beyond the end pose:
  * one-shot clips have no cycle to resume, an ended clip holds still, held
  * actors carry nothing, and plant/mount data pass through with their carry
- * rules (latest plant per foot at/before the end, rider-side mount binding).
+ * rules (latest plant per foot active at the end, rider-side mount binding).
  *
  * Scenarios:
  *
  * 1. A non-looping clip mid-flight (0.5 s of 1 s): gaitPhase null (no cycle),
  *    rootVelocity = the clip's true 2 m/s.
- * 2. The same clip past its end (2 s ≥ 1 s): it clamps and holds (zero velocity,
- *    still no phase).
- * 3. A held actor: gaitPhase, rootVelocity, footPlants, and mount all null.
- * 4. Plants carry the latest run per foot at/before beat end: a later left-foot
- *    run supersedes an earlier one even listed first, a not-yet-started run is
- *    filtered, and a foot's only run is kept.
- * 5. No plant entry for a node, and an entry with zero applicable runs, both yield
- *    null.
- * 6. A staged mount is carried onto its rider; unmounted actors get null.
- * 7. Duplicated plant/mount node entries throw loudly.
- * 8. A degenerate zero-duration looping clip has no cycle to resume (null phase,
+ * 2. At the exact 1 s cut, the non-looping clip keeps its incoming 2 m/s left-hand
+ *    velocity.
+ * 3. The same clip past its end (2 s > 1 s) clamps and holds at zero velocity.
+ * 4. A held actor: gaitPhase, rootVelocity, footPlants, and mount all null.
+ * 5. Plants carry the latest active run per foot: a run beginning exactly at the
+ *    cut supersedes an earlier overlapping run, a run ending exactly at the cut
+ *    remains active, equal starts go to the later input, and past/future runs
+ *    are filtered.
+ * 6. No plant entry for a node, an empty entry, and an entry with only past/future
+ *    runs all yield null.
+ * 7. A staged mount is carried onto its rider; unmounted actors get null.
+ * 8. Duplicated plant/mount node entries throw loudly.
+ * 9. A degenerate zero-duration looping clip has no cycle to resume (null phase,
  *    zero velocity) instead of dividing by its empty period.
- * 9. A performance that starts exactly at shot end (local time 0) has an empty
- *    velocity window: zero, not NaN.
+ * 10. A performance that starts exactly at shot end (local time 0) has an empty
+ *     velocity window: zero, not NaN.
  */
 export const test_film_beat_end_sim_state = (): void => {
   const flight = resolveBeatEnd({
@@ -123,6 +126,17 @@ export const test_film_beat_end_sim_state = (): void => {
   TestValidator.predicate(
     "one-shot velocity mid-flight",
     vclose(flight.rootVelocity!, { x: 2, y: 0, z: 0 }, 1e-9),
+  );
+
+  const atCut = resolveBeatEnd({
+    beat: "beat-1",
+    scene,
+    shot: shotOf(1),
+    motions: [dash],
+  }).actors[0]!;
+  TestValidator.predicate(
+    "one-shot velocity at the exact cut uses the incoming left derivative",
+    vclose(atCut.rootVelocity!, { x: 2, y: 0, z: 0 }, 1e-9),
   );
 
   const ended = resolveBeatEnd({
@@ -147,9 +161,12 @@ export const test_film_beat_end_sim_state = (): void => {
       {
         node: "hero",
         plants: [
-          plant("leftFoot", 1.2, 3),
-          plant("leftFoot", 0.1, 1),
-          plant("rightFoot", 0.6, 2),
+          plant("leftFoot", 2, 3),
+          plant("leftFoot", 1.2, 1, 2.1),
+          plant("leftFoot", 0.1, 8),
+          plant("rightFoot", 1.6, 7),
+          plant("rightFoot", 2, 4, 2),
+          plant("rightFoot", 2, 2, 2),
           plant("rightFoot", 99, 9),
         ],
       },
@@ -166,9 +183,9 @@ export const test_film_beat_end_sim_state = (): void => {
   TestValidator.equals("unmounted actor has no mount", guard.mount, null);
 
   TestValidator.equals(
-    "latest plant per foot carried, unstarted filtered",
+    "latest active plant per foot carried with inclusive cut bounds",
     hero.footPlants,
-    [plant("leftFoot", 1.2, 3), plant("rightFoot", 0.6, 2)],
+    [plant("leftFoot", 2, 3), plant("rightFoot", 2, 2, 2)],
   );
   TestValidator.equals("mount carried to its rider", hero.mount, {
     parent: "horse",
@@ -183,6 +200,24 @@ export const test_film_beat_end_sim_state = (): void => {
   }).actors[0]!;
   TestValidator.equals("no plant data yields null", noData.footPlants, null);
   TestValidator.equals("no mount data yields null", noData.mount, null);
+
+  const inactive = resolveBeatEnd({
+    beat: "beat-1",
+    scene,
+    shot: shotOf(2),
+    motions: [dash],
+    plants: [
+      {
+        node: "hero",
+        plants: [plant("leftFoot", 0.1, 1), plant("rightFoot", 3, 2)],
+      },
+    ],
+  }).actors[0]!;
+  TestValidator.equals(
+    "past and future plant runs yield no opening pin",
+    inactive.footPlants,
+    null,
+  );
 
   TestValidator.predicate(
     "duplicated plant node throws",

@@ -5,10 +5,21 @@ import {
   scaffoldAssetDirectory,
   writeFiles,
 } from "@automovie/cli";
+import { compareCodeUnits } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
+import { createHash } from "node:crypto";
 import * as fs from "node:fs";
+import { createRequire } from "node:module";
 import * as os from "node:os";
 import * as path from "node:path";
+import ts from "typescript-compiler";
+
+import {
+  productionH264Mp4,
+  productionPng,
+} from "../mcp/productionMediaFixtures";
+import { preserveCliHarnessCleanup } from "./CliHarnessCleanup";
+import { preserveCliRootFixtureCleanup } from "./CliRootFixtureCleanup";
 
 /** True when `fn` throws. */
 const throws = (fn: () => unknown): boolean => {
@@ -20,6 +31,982 @@ const throws = (fn: () => unknown): boolean => {
   }
 };
 
+/** True when `fn` throws an Error containing `message`. */
+const throwsWith = (fn: () => unknown, message: string): boolean => {
+  try {
+    fn();
+    return false;
+  } catch (error) {
+    return error instanceof Error && error.message.includes(message);
+  }
+};
+
+const templateExpression = (expression: string): string =>
+  "$" + "{" + expression + "}";
+
+interface GeneratedViewerResponse {
+  body: string;
+  statusCode: number;
+  end: (body?: unknown) => void;
+  setHeader: (name: string, value: string) => void;
+}
+
+interface CaptureInstallCommandResult {
+  error: { code: string; message: string } | null;
+  signal: NodeJS.Signals | null;
+  status: number | null;
+  stderr: string;
+  stdout: string;
+}
+
+type GeneratedViewerMiddleware = (
+  request: { url?: string },
+  response: GeneratedViewerResponse,
+  next: () => void,
+) => void;
+
+/** Locate zero-argument array ordering calls without matching source trivia. */
+const comparatorFreeSortCalls = (
+  files: Readonly<Record<string, string>>,
+): string[] =>
+  Object.entries(files)
+    .flatMap(([file, source]) => {
+      if (file.endsWith(".ts") === false && file.endsWith(".tsx") === false)
+        return [];
+      const parsed = ts.createSourceFile(
+        file,
+        source,
+        ts.ScriptTarget.Latest,
+        true,
+        file.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
+      );
+      const calls: string[] = [];
+      const visit = (node: ts.Node): void => {
+        if (ts.isCallExpression(node) && node.arguments.length === 0) {
+          const expression = node.expression;
+          const method = ts.isPropertyAccessExpression(expression)
+            ? expression.name.text
+            : ts.isElementAccessExpression(expression) &&
+                ts.isStringLiteralLike(expression.argumentExpression)
+              ? expression.argumentExpression.text
+              : null;
+          if (method === "sort" || method === "toSorted") {
+            const position = parsed.getLineAndCharacterOfPosition(
+              node.getStart(parsed),
+            );
+            calls.push(
+              `${file}:${position.line + 1}:${position.character + 1}`,
+            );
+          }
+        }
+        ts.forEachChild(node, visit);
+      };
+      visit(parsed);
+      return calls;
+    })
+    .sort(compareCodeUnits);
+
+/** Throw statements owned by one source-level const function. */
+const constFunctionThrows = (
+  file: string,
+  source: string,
+  functionName: string,
+): string[] => {
+  const parsed = ts.createSourceFile(
+    file,
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TS,
+  );
+  const throws: string[] = [];
+  for (const statement of parsed.statements) {
+    if (ts.isVariableStatement(statement) === false) continue;
+    for (const declaration of statement.declarationList.declarations) {
+      if (
+        ts.isIdentifier(declaration.name) === false ||
+        declaration.name.text !== functionName ||
+        declaration.initializer === undefined
+      )
+        continue;
+      const visit = (node: ts.Node): void => {
+        if (ts.isThrowStatement(node)) throws.push(node.getText(parsed));
+        else ts.forEachChild(node, visit);
+      };
+      visit(declaration.initializer);
+    }
+  }
+  return throws;
+};
+
+const sourceTokenDigest = (node: ts.Node, source: ts.SourceFile): string => {
+  const scanner = ts.createScanner(
+    ts.ScriptTarget.Latest,
+    true,
+    ts.LanguageVariant.Standard,
+    node.getText(source),
+  );
+  const tokens: Array<readonly [ts.SyntaxKind, string, boolean]> = [];
+  for (;;) {
+    const kind = scanner.scan();
+    if (kind === ts.SyntaxKind.EndOfFileToken) break;
+    tokens.push([
+      kind,
+      scanner.getTokenText(),
+      scanner.hasPrecedingLineBreak(),
+    ]);
+  }
+  const literals: Array<readonly [ts.SyntaxKind, string]> = [];
+  const syntax: Array<readonly [ts.SyntaxKind, number]> = [];
+  const visit = (child: ts.Node): void => {
+    if (
+      ts.isStringLiteralLike(child) ||
+      [
+        ts.SyntaxKind.TemplateHead,
+        ts.SyntaxKind.TemplateMiddle,
+        ts.SyntaxKind.TemplateTail,
+        ts.SyntaxKind.RegularExpressionLiteral,
+        ts.SyntaxKind.JsxText,
+      ].includes(child.kind)
+    )
+      literals.push([child.kind, child.getText(source)]);
+    const children: ts.Node[] = [];
+    ts.forEachChild(child, (nested) => {
+      children.push(nested);
+    });
+    syntax.push([child.kind, children.length]);
+    children.forEach(visit);
+  };
+  visit(node);
+  const diagnostics = (
+    source as ts.SourceFile & {
+      parseDiagnostics: ReadonlyArray<{
+        code: number;
+        length: number | undefined;
+        start: number | undefined;
+      }>;
+    }
+  ).parseDiagnostics.map((diagnostic) => [
+    diagnostic.code,
+    diagnostic.start ?? null,
+    diagnostic.length ?? null,
+  ]);
+  return createHash("sha256")
+    .update(JSON.stringify({ diagnostics, literals, syntax, tokens }))
+    .digest("hex");
+};
+
+type CaptureBrowserCleanupFunction =
+  | "handoffCaptureBrowserSession"
+  | "installPackageOwnedChromium"
+  | "launchCaptureBrowser"
+  | "launchWithCaptureExecutableSnapshot"
+  | "packageOwnedProvenance"
+  | "preserveCaptureBrowserCleanup";
+
+/** Bind the complete capture-browser cleanup policy and every call site. */
+const captureBrowserCleanupContract = (
+  source: string,
+): {
+  classDigests: string[];
+  cleanupCalls: Array<{ callDigest: string; owner: string }>;
+  functionDigests: Record<CaptureBrowserCleanupFunction, string[]>;
+} => {
+  const parsed = ts.createSourceFile(
+    "scripts/capture-browser.ts",
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TS,
+  );
+  const functionDigests: Record<CaptureBrowserCleanupFunction, string[]> = {
+    handoffCaptureBrowserSession: [],
+    installPackageOwnedChromium: [],
+    launchCaptureBrowser: [],
+    launchWithCaptureExecutableSnapshot: [],
+    packageOwnedProvenance: [],
+    preserveCaptureBrowserCleanup: [],
+  };
+  const classDigests: string[] = [];
+  const cleanupCalls: Array<{ callDigest: string; owner: string }> = [];
+  for (const statement of parsed.statements) {
+    if (
+      ts.isClassDeclaration(statement) &&
+      statement.name?.text === "CaptureBrowserCleanupError"
+    )
+      classDigests.push(sourceTokenDigest(statement, parsed));
+    if (ts.isVariableStatement(statement) === false) continue;
+    for (const declaration of statement.declarationList.declarations) {
+      if (
+        ts.isIdentifier(declaration.name) === false ||
+        declaration.name.text in functionDigests === false ||
+        declaration.initializer === undefined
+      )
+        continue;
+      const owner = declaration.name.text as keyof typeof functionDigests;
+      functionDigests[owner].push(sourceTokenDigest(statement, parsed));
+      const visit = (node: ts.Node): void => {
+        if (
+          ts.isCallExpression(node) &&
+          ts.isIdentifier(node.expression) &&
+          node.expression.text === "preserveCaptureBrowserCleanup"
+        )
+          cleanupCalls.push({
+            callDigest: sourceTokenDigest(node, parsed),
+            owner,
+          });
+        ts.forEachChild(node, visit);
+      };
+      visit(declaration.initializer);
+    }
+  }
+  return { classDigests, cleanupCalls, functionDigests };
+};
+
+type CaptureDescriptorCleanupFunction =
+  | "publishCaptureInstallReceipt"
+  | "readReceiptGeneration"
+  | "runDescriptorBoundNodeCli";
+
+/** Bind every synchronous descriptor consumer to one cleanup policy. */
+const captureDescriptorCleanupContract = (
+  source: string,
+): {
+  classExtensions: string[];
+  lifecycles: Array<{
+    catchActions: string[];
+    catchParameter: string | null;
+    failureDeclarations: string[];
+    finallyActions: string[];
+    owner: CaptureDescriptorCleanupFunction;
+  }>;
+  policies: Array<{ actions: string[]; parameters: string[] }>;
+} => {
+  const parsed = ts.createSourceFile(
+    "scripts/capture-browser.ts",
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TS,
+  );
+  const compact = (node: ts.Node): string =>
+    node.getText(parsed).replace(/\s+/g, "");
+  const owners = new Set<CaptureDescriptorCleanupFunction>([
+    "publishCaptureInstallReceipt",
+    "readReceiptGeneration",
+    "runDescriptorBoundNodeCli",
+  ]);
+  const classExtensions: string[] = [];
+  const lifecycles: Array<{
+    catchActions: string[];
+    catchParameter: string | null;
+    failureDeclarations: string[];
+    finallyActions: string[];
+    owner: CaptureDescriptorCleanupFunction;
+  }> = [];
+  const policies: Array<{ actions: string[]; parameters: string[] }> = [];
+  for (const statement of parsed.statements) {
+    if (
+      ts.isClassDeclaration(statement) &&
+      statement.name?.text === "CaptureDescriptorCleanupError"
+    )
+      classExtensions.push(
+        ...(statement.heritageClauses ?? []).flatMap((clause) =>
+          clause.types.map(compact),
+        ),
+      );
+    if (ts.isVariableStatement(statement) === false) continue;
+    for (const declaration of statement.declarationList.declarations) {
+      if (
+        ts.isIdentifier(declaration.name) === false ||
+        declaration.initializer === undefined ||
+        ts.isArrowFunction(declaration.initializer) === false ||
+        ts.isBlock(declaration.initializer.body) === false
+      )
+        continue;
+      if (declaration.name.text === "preserveCaptureDescriptorCleanup")
+        policies.push({
+          actions: declaration.initializer.body.statements.map(compact),
+          parameters: declaration.initializer.parameters.map(compact),
+        });
+      if (
+        owners.has(
+          declaration.name.text as CaptureDescriptorCleanupFunction,
+        ) === false
+      )
+        continue;
+      const owner = declaration.name.text as CaptureDescriptorCleanupFunction;
+      const lifecycle = declaration.initializer.body.statements.find(
+        (action): action is ts.TryStatement =>
+          ts.isTryStatement(action) &&
+          action.catchClause !== undefined &&
+          action.finallyBlock !== undefined &&
+          action.finallyBlock
+            .getText(parsed)
+            .includes("preserveCaptureDescriptorCleanup"),
+      );
+      if (
+        lifecycle === undefined ||
+        lifecycle.catchClause === undefined ||
+        lifecycle.finallyBlock === undefined
+      )
+        continue;
+      const catchClause = lifecycle.catchClause;
+      const finallyBlock = lifecycle.finallyBlock;
+      lifecycles.push({
+        catchActions: catchClause.block.statements.map(compact),
+        catchParameter:
+          catchClause.variableDeclaration === undefined
+            ? null
+            : compact(catchClause.variableDeclaration),
+        failureDeclarations: declaration.initializer.body.statements.flatMap(
+          (action) =>
+            ts.isVariableStatement(action)
+              ? [...action.declarationList.declarations]
+                  .filter(
+                    (binding) =>
+                      binding.type
+                        ?.getText(parsed)
+                        .includes("CaptureDescriptorFailure") === true,
+                  )
+                  .map(compact)
+              : [],
+        ),
+        finallyActions: finallyBlock.statements.map(compact),
+        owner,
+      });
+    }
+  }
+  return { classExtensions, lifecycles, policies };
+};
+
+type CaptureExecutableCleanupFunction =
+  | "createCaptureExecutableSnapshot"
+  | "openCaptureExecutable"
+  | "throwCaptureExecutableSnapshotFailure";
+
+/** Bind both snapshot acquisition sites to their complete cleanup policy. */
+const captureExecutableCleanupContract = (
+  source: string,
+): {
+  cleanupCalls: Array<{ callDigest: string; owner: string }>;
+  functionDigests: Record<CaptureExecutableCleanupFunction, string[]>;
+} => {
+  const parsed = ts.createSourceFile(
+    "scripts/captureExecutableSnapshot.ts",
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TS,
+  );
+  const functionDigests: Record<CaptureExecutableCleanupFunction, string[]> = {
+    createCaptureExecutableSnapshot: [],
+    openCaptureExecutable: [],
+    throwCaptureExecutableSnapshotFailure: [],
+  };
+  const cleanupCalls: Array<{ callDigest: string; owner: string }> = [];
+  for (const statement of parsed.statements) {
+    if (ts.isVariableStatement(statement) === false) continue;
+    for (const declaration of statement.declarationList.declarations) {
+      if (
+        ts.isIdentifier(declaration.name) === false ||
+        declaration.name.text in functionDigests === false ||
+        declaration.initializer === undefined
+      )
+        continue;
+      const owner = declaration.name.text as CaptureExecutableCleanupFunction;
+      functionDigests[owner].push(sourceTokenDigest(statement, parsed));
+      const visit = (node: ts.Node): void => {
+        if (
+          ts.isCallExpression(node) &&
+          ts.isIdentifier(node.expression) &&
+          node.expression.text === "throwCaptureExecutableSnapshotFailure"
+        )
+          cleanupCalls.push({
+            callDigest: sourceTokenDigest(node, parsed),
+            owner,
+          });
+        ts.forEachChild(node, visit);
+      };
+      visit(declaration.initializer);
+    }
+  }
+  return { cleanupCalls, functionDigests };
+};
+
+type ScaffoldDescriptorCleanupFunction =
+  | "assertScaffoldFileDescriptor"
+  | "closeScaffoldDescriptor"
+  | "createScaffoldFile"
+  | "overwriteScaffoldFile";
+
+/** Bind every scaffold descriptor owner to the complete cleanup policy. */
+const scaffoldDescriptorCleanupContract = (
+  source: string,
+): {
+  classDigests: string[];
+  cleanupCalls: Array<{ callDigest: string; owner: string }>;
+  descriptorOwners: Array<{
+    cleanupCalls: string[];
+    openCalls: string[];
+    owner: string;
+  }>;
+  functionDigests: Record<ScaffoldDescriptorCleanupFunction, string[]>;
+} => {
+  const parsed = ts.createSourceFile(
+    "src/scaffoldFileSnapshot.ts",
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TS,
+  );
+  const functionDigests: Record<ScaffoldDescriptorCleanupFunction, string[]> = {
+    assertScaffoldFileDescriptor: [],
+    closeScaffoldDescriptor: [],
+    createScaffoldFile: [],
+    overwriteScaffoldFile: [],
+  };
+  const classDigests: string[] = [];
+  const cleanupCalls: Array<{ callDigest: string; owner: string }> = [];
+  const descriptorOwners: Array<{
+    cleanupCalls: string[];
+    openCalls: string[];
+    owner: string;
+  }> = [];
+  const inspectOwner = (owner: string, root: ts.Node): void => {
+    const ownerCleanupCalls: string[] = [];
+    const openCalls: string[] = [];
+    const visit = (node: ts.Node): void => {
+      if (ts.isCallExpression(node)) {
+        if (
+          ts.isIdentifier(node.expression) &&
+          node.expression.text === "closeScaffoldDescriptor"
+        ) {
+          const callDigest = sourceTokenDigest(node, parsed);
+          ownerCleanupCalls.push(callDigest);
+          cleanupCalls.push({ callDigest, owner });
+        }
+        if (
+          ts.isPropertyAccessExpression(node.expression) &&
+          ts.isIdentifier(node.expression.expression) &&
+          node.expression.expression.text === "fs" &&
+          node.expression.name.text === "openSync"
+        )
+          openCalls.push(sourceTokenDigest(node, parsed));
+      }
+      ts.forEachChild(node, visit);
+    };
+    visit(root);
+    if (openCalls.length !== 0 || ownerCleanupCalls.length !== 0)
+      descriptorOwners.push({
+        cleanupCalls: ownerCleanupCalls,
+        openCalls,
+        owner,
+      });
+  };
+  for (const statement of parsed.statements) {
+    if (
+      ts.isClassDeclaration(statement) &&
+      statement.name?.text === "ScaffoldDescriptorCleanupError"
+    )
+      classDigests.push(sourceTokenDigest(statement, parsed));
+    if (ts.isFunctionDeclaration(statement) && statement.name !== undefined) {
+      inspectOwner(statement.name.text, statement);
+      continue;
+    }
+    if (ts.isVariableStatement(statement) === false) continue;
+    for (const declaration of statement.declarationList.declarations) {
+      if (
+        ts.isIdentifier(declaration.name) === false ||
+        declaration.initializer === undefined ||
+        (ts.isArrowFunction(declaration.initializer) === false &&
+          ts.isFunctionExpression(declaration.initializer) === false)
+      )
+        continue;
+      const owner = declaration.name.text;
+      if (owner in functionDigests)
+        functionDigests[owner as ScaffoldDescriptorCleanupFunction].push(
+          sourceTokenDigest(statement, parsed),
+        );
+      inspectOwner(owner, declaration.initializer);
+    }
+  }
+  return { classDigests, cleanupCalls, descriptorOwners, functionDigests };
+};
+
+type RenderGcDescriptorCleanupFunction =
+  | "closeRenderGcDescriptor"
+  | "createRenderGcFileSnapshot"
+  | "readCapturedRenderGcFile"
+  | "readFileEntry";
+
+/** Bind every render-GC descriptor owner to the complete cleanup policy. */
+const renderGcDescriptorCleanupContract = (
+  source: string,
+): {
+  classDigests: string[];
+  cleanupCalls: Array<{ callDigest: string; owner: string }>;
+  descriptorOwners: Array<{
+    cleanupCalls: string[];
+    openCalls: string[];
+    owner: string;
+  }>;
+  functionDigests: Record<RenderGcDescriptorCleanupFunction, string[]>;
+} => {
+  const parsed = ts.createSourceFile(
+    "scripts/renderGcSnapshot.ts",
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TS,
+  );
+  const functionDigests: Record<RenderGcDescriptorCleanupFunction, string[]> = {
+    closeRenderGcDescriptor: [],
+    createRenderGcFileSnapshot: [],
+    readCapturedRenderGcFile: [],
+    readFileEntry: [],
+  };
+  const classDigests: string[] = [];
+  const cleanupCalls: Array<{ callDigest: string; owner: string }> = [];
+  const descriptorOwners: Array<{
+    cleanupCalls: string[];
+    openCalls: string[];
+    owner: string;
+  }> = [];
+  const inspectOwner = (owner: string, root: ts.Node): void => {
+    const ownerCleanupCalls: string[] = [];
+    const openCalls: string[] = [];
+    const visit = (node: ts.Node): void => {
+      if (ts.isCallExpression(node)) {
+        if (
+          ts.isIdentifier(node.expression) &&
+          node.expression.text === "closeRenderGcDescriptor"
+        ) {
+          const callDigest = sourceTokenDigest(node, parsed);
+          ownerCleanupCalls.push(callDigest);
+          cleanupCalls.push({ callDigest, owner });
+        }
+        if (
+          ts.isPropertyAccessExpression(node.expression) &&
+          ts.isIdentifier(node.expression.expression) &&
+          node.expression.expression.text === "fs" &&
+          node.expression.name.text === "openSync"
+        )
+          openCalls.push(sourceTokenDigest(node, parsed));
+      }
+      ts.forEachChild(node, visit);
+    };
+    visit(root);
+    if (openCalls.length !== 0 || ownerCleanupCalls.length !== 0)
+      descriptorOwners.push({
+        cleanupCalls: ownerCleanupCalls,
+        openCalls,
+        owner,
+      });
+  };
+  for (const statement of parsed.statements) {
+    if (
+      ts.isClassDeclaration(statement) &&
+      statement.name?.text === "RenderGcDescriptorCleanupError"
+    )
+      classDigests.push(sourceTokenDigest(statement, parsed));
+    if (ts.isFunctionDeclaration(statement) && statement.name !== undefined) {
+      inspectOwner(statement.name.text, statement);
+      continue;
+    }
+    if (ts.isVariableStatement(statement) === false) continue;
+    for (const declaration of statement.declarationList.declarations) {
+      if (
+        ts.isIdentifier(declaration.name) === false ||
+        declaration.initializer === undefined ||
+        (ts.isArrowFunction(declaration.initializer) === false &&
+          ts.isFunctionExpression(declaration.initializer) === false)
+      )
+        continue;
+      const owner = declaration.name.text;
+      if (owner in functionDigests)
+        functionDigests[owner as RenderGcDescriptorCleanupFunction].push(
+          sourceTokenDigest(statement, parsed),
+        );
+      inspectOwner(owner, declaration.initializer);
+    }
+  }
+  return { classDigests, cleanupCalls, descriptorOwners, functionDigests };
+};
+
+type ViewerDescriptorCleanupFunction =
+  | "closeViewerFileDescriptor"
+  | "readPhysicalFileSnapshot";
+
+/** Bind every generated-viewer descriptor owner to its cleanup policy. */
+const viewerDescriptorCleanupContract = (
+  source: string,
+): {
+  classDigests: string[];
+  cleanupCalls: Array<{ callDigest: string; owner: string }>;
+  descriptorOwners: Array<{
+    cleanupCalls: string[];
+    openCalls: string[];
+    owner: string;
+  }>;
+  functionDigests: Record<ViewerDescriptorCleanupFunction, string[]>;
+} => {
+  const parsed = ts.createSourceFile(
+    "scripts/generatedShotPlugin.ts",
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TS,
+  );
+  const functionDigests: Record<ViewerDescriptorCleanupFunction, string[]> = {
+    closeViewerFileDescriptor: [],
+    readPhysicalFileSnapshot: [],
+  };
+  const classDigests: string[] = [];
+  const cleanupCalls: Array<{ callDigest: string; owner: string }> = [];
+  const descriptorOwners: Array<{
+    cleanupCalls: string[];
+    openCalls: string[];
+    owner: string;
+  }> = [];
+  const inspectOwner = (owner: string, root: ts.Node): void => {
+    const ownerCleanupCalls: string[] = [];
+    const openCalls: string[] = [];
+    const visit = (node: ts.Node): void => {
+      if (ts.isCallExpression(node)) {
+        if (
+          ts.isIdentifier(node.expression) &&
+          node.expression.text === "closeViewerFileDescriptor"
+        ) {
+          const callDigest = sourceTokenDigest(node, parsed);
+          ownerCleanupCalls.push(callDigest);
+          cleanupCalls.push({ callDigest, owner });
+        }
+        if (
+          ts.isPropertyAccessExpression(node.expression) &&
+          ts.isIdentifier(node.expression.expression) &&
+          node.expression.expression.text === "fs" &&
+          node.expression.name.text === "openSync"
+        )
+          openCalls.push(sourceTokenDigest(node, parsed));
+      }
+      ts.forEachChild(node, visit);
+    };
+    visit(root);
+    if (openCalls.length !== 0 || ownerCleanupCalls.length !== 0)
+      descriptorOwners.push({
+        cleanupCalls: ownerCleanupCalls,
+        openCalls,
+        owner,
+      });
+  };
+  for (const statement of parsed.statements) {
+    if (
+      ts.isClassDeclaration(statement) &&
+      statement.name?.text === "ViewerFileDescriptorCleanupError"
+    )
+      classDigests.push(sourceTokenDigest(statement, parsed));
+    if (ts.isFunctionDeclaration(statement) && statement.name !== undefined) {
+      inspectOwner(statement.name.text, statement);
+      continue;
+    }
+    if (ts.isVariableStatement(statement) === false) continue;
+    for (const declaration of statement.declarationList.declarations) {
+      if (
+        ts.isIdentifier(declaration.name) === false ||
+        declaration.initializer === undefined ||
+        (ts.isArrowFunction(declaration.initializer) === false &&
+          ts.isFunctionExpression(declaration.initializer) === false)
+      )
+        continue;
+      const owner = declaration.name.text;
+      if (owner in functionDigests)
+        functionDigests[owner as ViewerDescriptorCleanupFunction].push(
+          sourceTokenDigest(statement, parsed),
+        );
+      inspectOwner(owner, declaration.initializer);
+    }
+  }
+  return { classDigests, cleanupCalls, descriptorOwners, functionDigests };
+};
+
+/** Inspect capture-doctor resource ownership and failure-preserving cleanup. */
+const captureDoctorCleanupContract = (
+  source: string,
+): {
+  executionActions: string[];
+  lifecycles: Record<
+    "browser" | "page",
+    {
+      catchActions: string[];
+      catchParameter: string | null;
+      finallyActions: string[];
+      tryActions: string[];
+    } | null
+  >;
+  policy: { bodies: string[][]; count: number; parameters: string[][] };
+  resources: Record<
+    "browserFailure" | "page" | "pageFailure" | "session",
+    {
+      count: number;
+      initializer: string | null;
+      kind: string | null;
+      scopeCount: number;
+    }
+  >;
+  writes: Record<
+    "browserFailure" | "page" | "pageFailure" | "session",
+    string[]
+  >;
+} => {
+  const parsed = ts.createSourceFile(
+    "scripts/capture-doctor.ts",
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TS,
+  );
+  const compact = (node: ts.Node): string =>
+    node.getText(parsed).replace(/\s+/g, "");
+  const action = (statement: ts.Statement): string => {
+    if (
+      ts.isVariableStatement(statement) &&
+      statement.declarationList.declarations.length === 1
+    ) {
+      const declaration = statement.declarationList.declarations[0]!;
+      if (ts.isIdentifier(declaration.name)) return declaration.name.text;
+    }
+    if (ts.isTryStatement(statement)) return "try";
+    if (ts.isIfStatement(statement)) return "if";
+    if (
+      ts.isForStatement(statement) ||
+      ts.isForInStatement(statement) ||
+      ts.isForOfStatement(statement)
+    )
+      return "for";
+    if (ts.isExpressionStatement(statement)) {
+      const expression = ts.isAwaitExpression(statement.expression)
+        ? statement.expression.expression
+        : statement.expression;
+      if (ts.isCallExpression(expression))
+        return compact(expression.expression);
+    }
+    return compact(statement);
+  };
+  const policyBodies: string[][] = [];
+  const policyParameters: string[][] = [];
+  for (const statement of parsed.statements) {
+    if (ts.isVariableStatement(statement) === false) continue;
+    for (const declaration of statement.declarationList.declarations)
+      if (
+        ts.isIdentifier(declaration.name) &&
+        declaration.name.text === "preserveCleanupFailure" &&
+        declaration.initializer !== undefined &&
+        ts.isArrowFunction(declaration.initializer) &&
+        ts.isBlock(declaration.initializer.body)
+      ) {
+        policyParameters.push(
+          declaration.initializer.parameters.map((parameter) =>
+            compact(parameter),
+          ),
+        );
+        policyBodies.push(declaration.initializer.body.statements.map(compact));
+      }
+  }
+  const directTries = (statements: ts.NodeArray<ts.Statement> | undefined) =>
+    statements?.filter(ts.isTryStatement) ?? [];
+  const browserTries = directTries(parsed.statements);
+  const browser = browserTries.length === 1 ? browserTries[0]! : undefined;
+  const pageTries = directTries(browser?.tryBlock.statements);
+  const page = pageTries.length === 1 ? pageTries[0]! : undefined;
+  const lifecycle = (
+    statement: ts.TryStatement | undefined,
+  ): {
+    catchActions: string[];
+    catchParameter: string | null;
+    finallyActions: string[];
+    tryActions: string[];
+  } | null =>
+    statement?.catchClause === undefined || statement.finallyBlock === undefined
+      ? null
+      : {
+          catchActions: statement.catchClause.block.statements.map(compact),
+          catchParameter:
+            statement.catchClause.variableDeclaration === undefined
+              ? null
+              : compact(statement.catchClause.variableDeclaration),
+          finallyActions: statement.finallyBlock.statements.map(compact),
+          tryActions: statement.tryBlock.statements.map(action),
+        };
+  const declarationCount = (name: string): number => {
+    let count = 0;
+    const visit = (node: ts.Node): void => {
+      if (
+        ts.isVariableDeclaration(node) &&
+        ts.isIdentifier(node.name) &&
+        node.name.text === name
+      )
+        ++count;
+      ts.forEachChild(node, visit);
+    };
+    visit(parsed);
+    return count;
+  };
+  const binding = (
+    statements: ts.NodeArray<ts.Statement> | undefined,
+    name: string,
+  ): {
+    count: number;
+    initializer: string | null;
+    kind: string | null;
+    scopeCount: number;
+  } => {
+    const declarations = (statements ?? []).flatMap((statement) =>
+      ts.isVariableStatement(statement)
+        ? [...statement.declarationList.declarations].filter(
+            (declaration) =>
+              ts.isIdentifier(declaration.name) &&
+              declaration.name.text === name,
+          )
+        : [],
+    );
+    const declaration =
+      declarations.length === 1 ? declarations[0]! : undefined;
+    const declarationList = declaration?.parent;
+    return {
+      count: declarationCount(name),
+      initializer:
+        declaration?.initializer === undefined
+          ? null
+          : compact(declaration.initializer),
+      kind:
+        declarationList === undefined ||
+        ts.isVariableDeclarationList(declarationList) === false
+          ? null
+          : (declarationList.flags & ts.NodeFlags.Const) !== 0
+            ? "const"
+            : (declarationList.flags & ts.NodeFlags.Let) !== 0
+              ? "let"
+              : "var",
+      scopeCount: declarations.length,
+    };
+  };
+  const tracked = ["browserFailure", "page", "pageFailure", "session"] as const;
+  const writes = Object.fromEntries(
+    tracked.map((name) => [name, [] as string[]]),
+  ) as Record<(typeof tracked)[number], string[]>;
+  const writtenBindings = (target: ts.Expression): string[] => {
+    if (ts.isIdentifier(target))
+      return tracked.includes(target.text as (typeof tracked)[number])
+        ? [target.text]
+        : [];
+    if (
+      ts.isParenthesizedExpression(target) ||
+      ts.isAsExpression(target) ||
+      ts.isTypeAssertionExpression(target) ||
+      ts.isSatisfiesExpression(target) ||
+      ts.isNonNullExpression(target)
+    )
+      return writtenBindings(target.expression);
+    if (
+      ts.isPropertyAccessExpression(target) ||
+      ts.isElementAccessExpression(target)
+    )
+      return writtenBindings(target.expression);
+    if (ts.isArrayLiteralExpression(target))
+      return target.elements.flatMap((element) =>
+        ts.isOmittedExpression(element)
+          ? []
+          : ts.isSpreadElement(element)
+            ? writtenBindings(element.expression)
+            : writtenBindings(element),
+      );
+    if (ts.isObjectLiteralExpression(target))
+      return target.properties.flatMap((property) => {
+        if (ts.isShorthandPropertyAssignment(property))
+          return tracked.includes(
+            property.name.text as (typeof tracked)[number],
+          )
+            ? [property.name.text]
+            : [];
+        if (ts.isPropertyAssignment(property))
+          return writtenBindings(property.initializer);
+        if (ts.isSpreadAssignment(property))
+          return writtenBindings(property.expression);
+        return [];
+      });
+    return [];
+  };
+  const visitWrites = (node: ts.Node): void => {
+    if (
+      ts.isBinaryExpression(node) &&
+      node.operatorToken.kind >= ts.SyntaxKind.FirstAssignment &&
+      node.operatorToken.kind <= ts.SyntaxKind.LastAssignment
+    )
+      for (const name of new Set(writtenBindings(node.left)))
+        writes[name as (typeof tracked)[number]].push(compact(node));
+    else if (
+      (ts.isForInStatement(node) || ts.isForOfStatement(node)) &&
+      ts.isVariableDeclarationList(node.initializer) === false
+    )
+      for (const name of new Set(writtenBindings(node.initializer)))
+        writes[name as (typeof tracked)[number]].push(compact(node));
+    else if (
+      (ts.isPrefixUnaryExpression(node) || ts.isPostfixUnaryExpression(node)) &&
+      (node.operator === ts.SyntaxKind.PlusPlusToken ||
+        node.operator === ts.SyntaxKind.MinusMinusToken)
+    )
+      for (const name of new Set(writtenBindings(node.operand)))
+        writes[name as (typeof tracked)[number]].push(compact(node));
+    ts.forEachChild(node, visitWrites);
+  };
+  visitWrites(parsed);
+  const sessionStatement = parsed.statements.findIndex(
+    (statement) =>
+      ts.isVariableStatement(statement) &&
+      statement.declarationList.declarations.some(
+        (declaration) =>
+          ts.isIdentifier(declaration.name) &&
+          declaration.name.text === "session",
+      ),
+  );
+  return {
+    executionActions:
+      sessionStatement < 0
+        ? []
+        : parsed.statements.slice(sessionStatement).map(action),
+    lifecycles: {
+      browser: lifecycle(browser),
+      page: lifecycle(page),
+    },
+    policy: {
+      bodies: policyBodies,
+      count: policyBodies.length,
+      parameters: policyParameters,
+    },
+    resources: {
+      browserFailure: binding(parsed.statements, "browserFailure"),
+      page: binding(browser?.tryBlock.statements, "page"),
+      pageFailure: binding(browser?.tryBlock.statements, "pageFailure"),
+      session: binding(parsed.statements, "session"),
+    },
+    writes,
+  };
+};
+
+interface ICaptureContractCheck {
+  contract: string;
+  satisfied: boolean;
+}
+
+/** Return every named scaffold contract that its rendered source violates. */
+const captureContractFailures = (
+  checks: readonly ICaptureContractCheck[],
+): string[] =>
+  checks
+    .filter((check) => check.satisfied === false)
+    .map((check) => check.contract);
+
 /**
  * The `@automovie/cli` scaffolder renders the starter into an in-memory file
  * map and writes it out: the render/write split learned from the reference
@@ -28,7 +1015,7 @@ const throws = (fn: () => unknown): boolean => {
  * Scenarios:
  *
  * 1. `renderScaffold` yields the starter's file set with POSIX keys, and the
- *    shipped `gitignore` asset is restored to `.gitignore`.
+ *    shipped-safe `gitignore`/`npmrc` assets regain their leading dots.
  * 2. Substitution is complete: `{{name}}` becomes the project name, the
  *    `{{version:*}}` tokens become the catalog-synced versions, no `{{` token
  *    survives, and no payload carries a CRLF.
@@ -42,8 +1029,42 @@ const throws = (fn: () => unknown): boolean => {
  *    published `@automovie/cli` would ship no scaffold and `npx automovie
  *    start` would throw on install (#1155). Guards the packaging, which the
  *    in-repo render (workspace source) cannot.
+ * 6. The pinned Kokoro/Transformers graph installs and fingerprints its Node CPU
+ *    backend without an unused CUDA download, while the local MIT Sharp wall
+ *    fails image calls explicitly instead of loading a native LGPL payload.
+ * 7. The generated viewer middleware binds one compiled artifact descriptor to the
+ *    physical file identity it checked instead of serving a replacement.
+ * 8. The registered asset route applies the same binding to ownership, closure,
+ *    and final asset bytes, rejecting authorization successors and inventory
+ *    mutation before serving one descriptor-bound asset.
+ * 9. Proxy publication verification accepts an exact physical bundle and rejects
+ *    byte-identical file, hard-linked directory, and late-inventory
+ *    successors.
+ * 10. Runtime package identity binds manifest, entry, and selected asset-tree bytes
+ *     to one physical snapshot and rejects their successors.
+ * 11. Capture provenance descriptor-binds install receipts and keeps the exact
+ *     executable identity open across its launch boundary.
+ * 12. Render GC deletes only its inventoried physical candidate and preserves a
+ *     successor crossing the rename boundary under reserved quarantine.
+ * 13. Routine render cleanup releases or quarantines only the exact worker-state
+ *     target used for its ownership or staleness decision.
+ * 14. Render sessions and explicit GC apply use a two-sided lease handshake so
+ *     neither process can enter state mutation after the other's liveness
+ *     scan.
+ * 15. Chunk completion publishes an immutable unique tree through one direct-root
+ *     exclusive pointer; resume and finalize consume its exact declared bytes.
+ * 16. Final conform reopens a matching proxy publication through its manifest,
+ *     exact payload bytes, inventory, and physical tree identity.
+ * 17. Attempt state is token-bound to its held lock and every transition removes
+ *     only the exact captured owner before exclusive successor publication.
+ * 18. Each complete Kokoro dialogue line closes one explicit text splitter before
+ *     streaming it, so the upstream async iterator can terminate.
+ * 19. Descriptor-bound capture installation preserves child output and names spawn,
+ *     signal, missing-status, and ordinary exit failures.
+ * 20. Capture doctor page and browser cleanup preserve the primary diagnostic while
+ *     retaining deterministic nested resource ownership.
  */
-export const test_cli_scaffold = (): void => {
+export const test_cli_scaffold = async (): Promise<void> => {
   // 5. packaging guard: the scaffold dir must be a published `files` entry.
   const scaffoldDir = scaffoldAssetDirectory();
   const cliPackage = JSON.parse(
@@ -63,20 +1084,629 @@ export const test_cli_scaffold = (): void => {
   );
 
   const files = renderScaffold({ name: "demo-film" });
+  const captureBrowserScript = files["scripts/capture-browser.ts"]!;
+  const captureExecutableScript =
+    files["scripts/captureExecutableSnapshot.ts"]!;
+  const renderGcSnapshotScript = files["scripts/renderGcSnapshot.ts"]!;
+  const generatedShotPluginScript = files["scripts/generatedShotPlugin.ts"]!;
+  const scaffoldFileSnapshotSource = fs.readFileSync(
+    path.join(path.dirname(scaffoldDir), "src", "scaffoldFileSnapshot.ts"),
+    "utf8",
+  );
+  const captureDoctorScript = files["scripts/capture-doctor.ts"]!;
+  const captureInstallOutputOffset = captureBrowserScript.indexOf(
+    "const writeCaptureInstallCommandOutput",
+  );
+  const captureInstallOutputSource =
+    captureInstallOutputOffset < 0
+      ? ""
+      : captureBrowserScript.slice(
+          captureInstallOutputOffset,
+          captureBrowserScript.indexOf(
+            "\nconst captureInstallCommandSucceeded",
+            captureInstallOutputOffset,
+          ),
+        );
+  const captureInstallOffset = captureBrowserScript.indexOf(
+    "export const installPackageOwnedChromium",
+  );
+  const captureInstallSource =
+    captureInstallOffset < 0
+      ? ""
+      : captureBrowserScript.slice(
+          captureInstallOffset,
+          captureBrowserScript.indexOf(
+            "\nconst packageOwnedProvenance",
+            captureInstallOffset,
+          ),
+        );
+  const captureInstallFailureThrows = constFunctionThrows(
+    "scripts/capture-browser.ts",
+    captureBrowserScript,
+    "installPackageOwnedChromium",
+  ).filter((statement) =>
+    statement.includes("captureInstallCommandTermination"),
+  );
+  const captureInstallFailureThrow = captureInstallFailureThrows[0] ?? "";
+  TestValidator.equals(
+    "generated viewer descriptor cleanup preserves every failure",
+    viewerDescriptorCleanupContract(generatedShotPluginScript),
+    {
+      classDigests: [
+        "eefff5716d3364d1f5f1acd619fc2871f17b24a27e2b44f2062c578b420a0275",
+      ],
+      cleanupCalls: [
+        {
+          callDigest:
+            "8894bf8e87125a16f43daaf122e6d098ed6e29ede2d1cd9de6cb7e6be7aba42f",
+          owner: "readPhysicalFileSnapshot",
+        },
+      ],
+      descriptorOwners: [
+        {
+          cleanupCalls: [
+            "8894bf8e87125a16f43daaf122e6d098ed6e29ede2d1cd9de6cb7e6be7aba42f",
+          ],
+          openCalls: [
+            "6543588ab798e8cc62ff1ad7a065cde59f2a81c7cab119417ffd384fc06b9945",
+          ],
+          owner: "readPhysicalFileSnapshot",
+        },
+      ],
+      functionDigests: {
+        closeViewerFileDescriptor: [
+          "e8cd2aa42eeb157986d608a28be73e92ae779fb3bf312031f008ec315ee1087c",
+        ],
+        readPhysicalFileSnapshot: [
+          "71adc2c6648d10d1590b00724414cd2e9a7b44cd5c9a73baf787deffe95562be",
+        ],
+      },
+    },
+  );
+  TestValidator.equals(
+    "render GC descriptor cleanup preserves every failure",
+    renderGcDescriptorCleanupContract(renderGcSnapshotScript),
+    {
+      classDigests: [
+        "9266d1bf24872a9cc3afe1270091f8a3f611ed8a23e4d5f93852688ea208b1f9",
+      ],
+      cleanupCalls: [
+        {
+          callDigest:
+            "6bc6f2822484006797ee36b3cdefb91ca02a34a3a679647ef7f3a778935ddf0b",
+          owner: "createRenderGcFileSnapshot",
+        },
+        {
+          callDigest:
+            "fb9128bb5c813834fd9727967bee828f596e049fdcb4b395079f4cf1f4fb5414",
+          owner: "readCapturedRenderGcFile",
+        },
+        {
+          callDigest:
+            "58c837a699766e0882e960f3cf737e2b6ddc54ed34453f7a5c1d58607ba5a7c1",
+          owner: "readFileEntry",
+        },
+      ],
+      descriptorOwners: [
+        {
+          cleanupCalls: [
+            "6bc6f2822484006797ee36b3cdefb91ca02a34a3a679647ef7f3a778935ddf0b",
+          ],
+          openCalls: [
+            "6419a95b98910b0041b6a1452ad5137806f7b7470f8d40603c02610a74f2bd0f",
+          ],
+          owner: "createRenderGcFileSnapshot",
+        },
+        {
+          cleanupCalls: [
+            "fb9128bb5c813834fd9727967bee828f596e049fdcb4b395079f4cf1f4fb5414",
+          ],
+          openCalls: [
+            "a2a26290a645ba4f9b86c5525cf6ea1908b7573329451f508ea16f74bb61f49e",
+          ],
+          owner: "readCapturedRenderGcFile",
+        },
+        {
+          cleanupCalls: [
+            "58c837a699766e0882e960f3cf737e2b6ddc54ed34453f7a5c1d58607ba5a7c1",
+          ],
+          openCalls: [
+            "6543588ab798e8cc62ff1ad7a065cde59f2a81c7cab119417ffd384fc06b9945",
+          ],
+          owner: "readFileEntry",
+        },
+      ],
+      functionDigests: {
+        closeRenderGcDescriptor: [
+          "d960522c7c27843b71311795010bdf489be6f92a1efbef63564ee830411105b7",
+        ],
+        createRenderGcFileSnapshot: [
+          "b230d7753fb66d481871fe8c0c852699c64934e3efbdc8a493a3f62b943c6b5d",
+        ],
+        readCapturedRenderGcFile: [
+          "66c4b6e7621baaf6f814fedc0bf66d731ffa358806abf280c93b5a1e3f26665d",
+        ],
+        readFileEntry: [
+          "20d347052d41b8db34b71d044e5c8f8fb65da503f0c6f52b83d135bd5282b1fd",
+        ],
+      },
+    },
+  );
+  TestValidator.equals(
+    "scaffold descriptor cleanup preserves every failure",
+    scaffoldDescriptorCleanupContract(scaffoldFileSnapshotSource),
+    {
+      classDigests: [
+        "cee523dddbf7384dfb527de324adaf7847a5a6b0e50804bb081467588c8528b3",
+      ],
+      cleanupCalls: [
+        {
+          callDigest:
+            "bf4af4c61a2df85bf01e3eb80288c6a66bdb36e004ffcf944d47c7ff9ecff1a6",
+          owner: "createScaffoldFile",
+        },
+        {
+          callDigest:
+            "cc6b1742023bd566dd26827c2d79f8d637adf6875fd503a4e37fd91d13097fba",
+          owner: "overwriteScaffoldFile",
+        },
+        {
+          callDigest:
+            "fb7f2686c2aa2c7bd2513fd27abc672bf4126efdab548aefaddc8ea4a0369de7",
+          owner: "assertScaffoldFileDescriptor",
+        },
+      ],
+      descriptorOwners: [
+        {
+          cleanupCalls: [
+            "bf4af4c61a2df85bf01e3eb80288c6a66bdb36e004ffcf944d47c7ff9ecff1a6",
+          ],
+          openCalls: [
+            "e067ba28c3459eca242637e27627128aff10c0a70abd70ad33e130d183b27436",
+          ],
+          owner: "createScaffoldFile",
+        },
+        {
+          cleanupCalls: [
+            "cc6b1742023bd566dd26827c2d79f8d637adf6875fd503a4e37fd91d13097fba",
+          ],
+          openCalls: [
+            "1fca3b1a94b76eaa87993a8098ae27a5bec3add5e1e986a16dc96aee67d78026",
+          ],
+          owner: "overwriteScaffoldFile",
+        },
+        {
+          cleanupCalls: [
+            "fb7f2686c2aa2c7bd2513fd27abc672bf4126efdab548aefaddc8ea4a0369de7",
+          ],
+          openCalls: [
+            "0cfd967dde81635da63f71627350a966b6c567e3ee1d86d8f382844efe7b5efe",
+          ],
+          owner: "assertScaffoldFileDescriptor",
+        },
+      ],
+      functionDigests: {
+        assertScaffoldFileDescriptor: [
+          "514db1f055580d5a467a955870647881252a956c9209c0a6b1da82982dcb7342",
+        ],
+        closeScaffoldDescriptor: [
+          "edd4a511a4bfe3b8927d50d5a785209c40d8f16907fd3f28a31e8f92950cdd78",
+        ],
+        createScaffoldFile: [
+          "354a570193b602e600443f1ad9dee541024a73d313dbb634029bd5230d99676c",
+        ],
+        overwriteScaffoldFile: [
+          "8f1f4bbf9e844f0574ed10f4cf3f57b26137f2bc24d81339ab00954f03493fc7",
+        ],
+      },
+    },
+  );
+  TestValidator.equals(
+    "capture executable acquisition preserves descriptor cleanup failures",
+    captureExecutableCleanupContract(captureExecutableScript),
+    {
+      cleanupCalls: [
+        {
+          callDigest:
+            "35fcd9d9ba279ab5cdd9a6c8780a51346d341b540b234ad08cfa751dff9c98cc",
+          owner: "createCaptureExecutableSnapshot",
+        },
+        {
+          callDigest:
+            "e02748774b01a3de4546a911b3b1430af7d8119d9da01037eda4fb82b54b6c24",
+          owner: "openCaptureExecutable",
+        },
+      ],
+      functionDigests: {
+        createCaptureExecutableSnapshot: [
+          "cb0426627109d635acb82d0705457eb703eb7a65baa8b9bbc9b0ed47e4b74743",
+        ],
+        openCaptureExecutable: [
+          "c1ed71aae4fe0f034d5c6d83eecceabf2b74fb7a85850106673e7ea2c471002c",
+        ],
+        throwCaptureExecutableSnapshotFailure: [
+          "91479a17ed9574e535cac3d7d2e2e993fcdc6e702e4b74bdf0e6bc28b7bab17a",
+        ],
+      },
+    },
+  );
+  TestValidator.equals(
+    "capture browser cleanup policy and ownership sites",
+    captureBrowserCleanupContract(captureBrowserScript),
+    {
+      classDigests: [
+        "8a9ea768f93807917eeca741957d15fb72176bae2c9f360211e5c0109fca1d3b",
+      ],
+      cleanupCalls: [
+        {
+          callDigest:
+            "4567886ddc6ada6b32bb1014ecc7d285d47ebf1037c01393943afbc00be219f7",
+          owner: "launchWithCaptureExecutableSnapshot",
+        },
+        {
+          callDigest:
+            "2d5c917c00e1cab0dc91802f53471c25981af0624123e38eb9d21808a45fe139",
+          owner: "handoffCaptureBrowserSession",
+        },
+        {
+          callDigest:
+            "708f0c070f7f1bf2d876474baf23bd632a7346eca50857113cea862159ef005e",
+          owner: "installPackageOwnedChromium",
+        },
+        {
+          callDigest:
+            "a554089a09227d8d151b8e89523306806ada2e4854dd3d1791c07230ccaca147",
+          owner: "packageOwnedProvenance",
+        },
+        {
+          callDigest:
+            "e43ba1b71283eb9c97b188c9045869108fb97a5aa40d0fd4d3c0a0b1ab956256",
+          owner: "launchCaptureBrowser",
+        },
+        {
+          callDigest:
+            "7291060392bcd1ff3f7a69eef3bc9cac18ff991b930480d2449be9de21b0848f",
+          owner: "launchCaptureBrowser",
+        },
+        {
+          callDigest:
+            "95b17070e615d91bd1f243fb3b1e3681d3313aff61a9e9bbd81021628f88da51",
+          owner: "launchCaptureBrowser",
+        },
+      ],
+      functionDigests: {
+        handoffCaptureBrowserSession: [
+          "ce58d0303f51042113da6adbf827706708dd8532d87bd75cf213304b5739c654",
+        ],
+        installPackageOwnedChromium: [
+          "a635e71c547ab9f2663dddf629ca9388da747183c80a1fb65adaf80102aff922",
+        ],
+        launchCaptureBrowser: [
+          "96328eb195a91caa24e09126a598d191a440df58346d6b1b8065dfe46a7dee5f",
+        ],
+        launchWithCaptureExecutableSnapshot: [
+          "00990c0a7c865f4a1f8d3f7f8e67a9c9b9137ec9967823803a19416b35223069",
+        ],
+        packageOwnedProvenance: [
+          "7cc3c164e6f0fd03b3c8368b7b59e24344f8bc5d8fb13b9019552280729c0c66",
+        ],
+        preserveCaptureBrowserCleanup: [
+          "46c31408dbb9945de5d4ad5a526c2d94b4fcd9b3a0c7638752a20eb72fd464f2",
+        ],
+      },
+    },
+  );
+  TestValidator.equals(
+    "capture descriptor consumers own failure-preserving cleanup",
+    captureDescriptorCleanupContract(captureBrowserScript),
+    {
+      classExtensions: ["AggregateError"],
+      lifecycles: [
+        {
+          catchActions: ["receiptReadFailure={error};", "throwerror;"],
+          catchParameter: "error",
+          failureDeclarations: [
+            "receiptReadFailure:CaptureDescriptorFailure|undefined",
+          ],
+          finallyActions: [
+            'preserveCaptureDescriptorCleanup(receiptReadFailure,"capturereceiptgenerationdescriptor",()=>closeCaptureExecutable(opened),);',
+          ],
+          owner: "readReceiptGeneration",
+        },
+        {
+          catchActions: ["receiptPublicationFailure={error};", "throwerror;"],
+          catchParameter: "error",
+          failureDeclarations: [
+            "receiptPublicationFailure:CaptureDescriptorFailure|undefined",
+          ],
+          finallyActions: [
+            'preserveCaptureDescriptorCleanup(receiptPublicationFailure,"capturereceiptpublicationdescriptor",()=>closeCaptureExecutable(published),);',
+          ],
+          owner: "publishCaptureInstallReceipt",
+        },
+        {
+          catchActions: ["descriptorCliFailure={error};", "throwerror;"],
+          catchParameter: "error",
+          failureDeclarations: [
+            "descriptorCliFailure:CaptureDescriptorFailure|undefined",
+          ],
+          finallyActions: [
+            'preserveCaptureDescriptorCleanup(descriptorCliFailure,"descriptor-boundPlaywrightCLI",()=>closeCaptureExecutable(cli),);',
+          ],
+          owner: "runDescriptorBoundNodeCli",
+        },
+      ],
+      policies: [
+        {
+          actions: [
+            "try{cleanup();}catch(cleanupFailure){if(failure===undefined)throwcleanupFailure;thrownewCaptureDescriptorCleanupError([failure.error,cleanupFailure],`$" +
+              "{resource}cleanupfailedaftertheoperationfailed.`,);}",
+          ],
+          parameters: [
+            "failure:CaptureDescriptorFailure|undefined",
+            "resource:string",
+            "cleanup:()=>void",
+          ],
+        },
+      ],
+    },
+  );
+  TestValidator.equals(
+    "capture doctor preserves primary failures during nested cleanup",
+    captureDoctorCleanupContract(captureDoctorScript),
+    {
+      executionActions: ["session", "browserFailure", "try"],
+      lifecycles: {
+        browser: {
+          catchActions: ["browserFailure={error};", "throwerror;"],
+          catchParameter: "error",
+          finallyActions: [
+            'awaitpreserveCleanupFailure(browserFailure,"capturedoctorbrowser",()=>session.browser.close(),);',
+          ],
+          tryActions: ["page", "pageFailure", "try"],
+        },
+        page: {
+          catchActions: ["pageFailure={error};", "throwerror;"],
+          catchParameter: "error",
+          finallyActions: [
+            'awaitpreserveCleanupFailure(pageFailure,"capturedoctorpage",()=>page.close(),);',
+          ],
+          tryActions: [
+            "page.setContent",
+            "graphics",
+            "bytes",
+            "png",
+            "if",
+            "visiblePixel",
+            "for",
+            "if",
+            "runtimeIdentity",
+            "rendererIdentity",
+            "process.stdout.write",
+          ],
+        },
+      },
+      policy: {
+        bodies: [
+          [
+            "try{awaitcleanup();}catch(cleanupError){if(failure===undefined)throwcleanupError;thrownewAggregateError([failure.error,cleanupError],`" +
+              templateExpression("resource") +
+              "cleanupfailedafterthecapturedoctorfailed.`,);}",
+          ],
+        ],
+        count: 1,
+        parameters: [
+          [
+            "failure:CaptureDoctorFailure|undefined",
+            "resource:string",
+            "cleanup:()=>unknown",
+          ],
+        ],
+      },
+      resources: {
+        browserFailure: {
+          count: 1,
+          initializer: null,
+          kind: "let",
+          scopeCount: 1,
+        },
+        page: {
+          count: 1,
+          initializer:
+            "awaitsession.browser.newPage({viewport:{width:16,height:16},deviceScaleFactor:session.runtime.mode.deviceScaleFactor,})",
+          kind: "const",
+          scopeCount: 1,
+        },
+        pageFailure: {
+          count: 1,
+          initializer: null,
+          kind: "let",
+          scopeCount: 1,
+        },
+        session: {
+          count: 1,
+          initializer:
+            "awaitlaunchCaptureBrowser(process.cwd(),config.capture.browser,)",
+          kind: "const",
+          scopeCount: 1,
+        },
+      },
+      writes: {
+        browserFailure: ["browserFailure={error}"],
+        page: [],
+        pageFailure: ["pageFailure={error}"],
+        session: [],
+      },
+    },
+  );
+  TestValidator.equals(
+    "sort oracle distinguishes calls from source trivia and comparators",
+    comparatorFreeSortCalls({
+      "sort-oracle.ts": [
+        'const note = ".sort()";',
+        "// items.toSorted();",
+        "items.sort();",
+        'items["toSorted"]();',
+        "items[`sort`]();",
+        "items.toSorted((left, right) => left - right);",
+      ].join("\n"),
+    }),
+    ["sort-oracle.ts:3:1", "sort-oracle.ts:4:1", "sort-oracle.ts:5:1"],
+  );
+  TestValidator.equals(
+    "capture contract reporter retains every failed name in declaration order",
+    captureContractFailures([
+      { contract: "satisfied", satisfied: true },
+      { contract: "first failure", satisfied: false },
+      { contract: "second failure", satisfied: false },
+    ]),
+    ["first failure", "second failure"],
+  );
+  TestValidator.equals(
+    "shipped TypeScript sources give every sort an explicit comparator",
+    comparatorFreeSortCalls(files),
+    [],
+  );
+  TestValidator.predicate(
+    "shipped lint config gates comparator-free array sorting",
+    files["lint.config.ts"]!.includes(
+      '"typescript/require-array-sort-compare": "error"',
+    ),
+  );
+  const renderScript = files["scripts/render.ts"]!;
+  const renderTemporarySnapshot = files["scripts/renderTemporarySnapshot.ts"]!;
+  const renderProgressOffset = renderScript.indexOf("const renderProgress");
+  const renderProgressSource =
+    renderProgressOffset < 0
+      ? ""
+      : renderScript.slice(
+          renderProgressOffset,
+          renderScript.indexOf("\ntry {", renderProgressOffset),
+        );
+  const kokoroInterfaceOffset = renderScript.indexOf(
+    "interface IKokoroRuntime",
+  );
+  const kokoroInterfaceSource =
+    kokoroInterfaceOffset < 0
+      ? ""
+      : renderScript.slice(
+          kokoroInterfaceOffset,
+          renderScript.indexOf(
+            "\nconst produceProductionSound",
+            kokoroInterfaceOffset,
+          ),
+        );
+  const dialogueSynthesisOffset = renderScript.indexOf(
+    "const synthesizeProductionDialogue",
+  );
+  const dialogueSynthesisSource =
+    dialogueSynthesisOffset < 0
+      ? ""
+      : renderScript.slice(
+          dialogueSynthesisOffset,
+          renderScript.indexOf(
+            "\nconst validatedDialogueCache",
+            dialogueSynthesisOffset,
+          ),
+        );
+  const kokoroRuntimeOffset = renderScript.indexOf(
+    "const loadPinnedKokoroRuntime",
+  );
+  const kokoroRuntimeSource =
+    kokoroRuntimeOffset < 0
+      ? ""
+      : renderScript.slice(
+          kokoroRuntimeOffset,
+          renderScript.indexOf(
+            "\nconst kokoroBaseRuntimeAssets",
+            kokoroRuntimeOffset,
+          ),
+        );
+  const recoveryProtectionModule = files["scripts/renderChunkSnapshot.ts"]!;
+  const recoveryProtectionOffset = recoveryProtectionModule.indexOf(
+    "export const currentRenderChunkPublicationProtectsTree",
+  );
+  const recoveryProtectionSource =
+    recoveryProtectionOffset < 0
+      ? ""
+      : recoveryProtectionModule.slice(
+          recoveryProtectionOffset,
+          recoveryProtectionModule.indexOf(
+            "export const readRenderChunkPublicationFile",
+            recoveryProtectionOffset,
+          ),
+        );
+  const currentChunkOffset = renderScript.indexOf("const currentChunk = async");
+  const currentChunkSource =
+    currentChunkOffset < 0
+      ? ""
+      : renderScript.slice(
+          currentChunkOffset,
+          renderScript.indexOf("\nconst acquireChunk", currentChunkOffset),
+        );
+  const acquireChunkOffset = renderScript.indexOf("const acquireChunk");
+  const acquireChunkSource =
+    acquireChunkOffset < 0
+      ? ""
+      : renderScript.slice(
+          acquireChunkOffset,
+          renderScript.indexOf("\nconst renderChunk", acquireChunkOffset),
+        );
+  const writeRenderFileOffset = renderScript.indexOf("const writeRenderFile");
+  const writeRenderFileSource =
+    writeRenderFileOffset < 0
+      ? ""
+      : renderScript.slice(
+          writeRenderFileOffset,
+          renderScript.indexOf("\nconst readJson", writeRenderFileOffset),
+        );
+  const renderProgressStages = [
+    "finalize.start",
+    "finalize.status.complete",
+    "sound.start",
+    "sound.plan.complete",
+    "sound.synthesis.start",
+    "sound.synthesis.complete",
+    "sound.model.load.start",
+    "sound.model.load.complete",
+    "sound.dialogue.start",
+    "sound.dialogue.complete",
+    "sound.render.start",
+    "sound.render.complete",
+    "sound.evidence.render.start",
+    "sound.evidence.render.complete",
+    "sound.opus.encode.start",
+    "sound.opus.encode.complete",
+    "sound.evidence.encode.start",
+    "sound.evidence.encode.complete",
+    "sound.complete",
+    "video.feature.encode.start",
+    "video.feature.encode.complete",
+    "video.feature.mux.start",
+    "video.feature.mux.complete",
+    "video.guide.encode.start",
+    "video.guide.encode.complete",
+    "publication.proxy.start",
+    "publication.proxy.complete",
+    "publication.final.start",
+    "publication.final.complete",
+    "finalize.complete",
+  ] as const;
 
-  // 1. the file set, POSIX keys, gitignore restored, IN ITS GUARANTEED ORDER.
+  // 1. the file set, POSIX keys, hidden names restored, IN GUARANTEED ORDER.
   // No re-sort: the order is the guarantee. `listFiles` sorts each directory's
   // entries by code unit and recurses in place, so the emitted order is a DFS
   // pre-order over the ON-DISK names, with `gitignore` renamed to `.gitignore`
   // on the key afterwards. Hence `.automovie/**` leads, while `.gitignore`
   // sits where the shipped `gitignore` asset sorts rather than at its rendered
-  // position. Re-sorting the keys here made the assertion hold for ANY order
-  // the scaffolder produced, so the cross-host guarantee `listFiles` exists to
-  // provide had no test at all.
+  // position; `npmrc` behaves likewise. Re-sorting the keys here made the
+  // assertion hold for ANY order the scaffolder produced, so the cross-host
+  // guarantee `listFiles` exists to provide had no test at all.
   TestValidator.equals(
     "the starter renders its expected file set, in its guaranteed order",
     Object.keys(files),
     [
+      ".automovie/assets.json",
       ".automovie/design/acceptance/answer-beauty.json",
       ".automovie/design/acceptance/answer-pose.json",
       ".automovie/design/acceptance/opening-beauty.json",
@@ -88,44 +1718,72 @@ export const test_cli_scaffold = (): void => {
       ".automovie/design/models/army-near.json",
       ".automovie/design/models/sentinel.json",
       ".automovie/design/production.json",
+      ".automovie/design/screenplay/index.json",
       ".automovie/design/shots/answer.json",
       ".automovie/design/shots/opening.json",
       ".automovie/design/world.json",
       ".automovie/manifest.json",
       ".automovie/reviews/README.md",
+      ".claude/hooks/guard-automovie-owned.mjs",
+      ".claude/settings.json",
+      ".mcp.json",
       "AGENTS.md",
       "CLAUDE.md",
       "README.md",
       "automovie.config.ts",
-      "automovie.mcp.jsonc",
       "docs/art-direction.md",
       "docs/historical-notes.md",
-      "docs/screenplay.md",
-      "docs/treatment.md",
+      "docs/demo-film/screenplay.md",
+      "docs/demo-film/treatment.md",
       ".gitignore",
       "lint.config.ts",
+      ".npmrc",
       "package.json",
       "public/assets/README.md",
       "public/audio/README.md",
       "public/audio/starter-tone.json",
       "renders/README.md",
+      "scripts/assertProxyBundle.ts",
       "scripts/capture-browser.ts",
       "scripts/capture-doctor.ts",
       "scripts/capture-install.ts",
       "scripts/capture.ts",
+      "scripts/captureExecutableSnapshot.ts",
       "scripts/compile.ts",
+      "scripts/dialogueCacheSnapshot.ts",
       "scripts/generatedShotPlugin.ts",
       "scripts/lint.ts",
       "scripts/mcp.ts",
+      "scripts/preserveProductionEncoderCleanup.cjs",
       "scripts/preview.ts",
+      "scripts/publishProxyBundle.ts",
       "scripts/render.ts",
+      "scripts/renderAttemptSnapshot.ts",
+      "scripts/renderChunkSnapshot.ts",
+      "scripts/renderGcSnapshot.ts",
+      "scripts/renderLiveness.ts",
+      "scripts/renderPlanSnapshot.ts",
+      "scripts/renderTemporarySnapshot.ts",
       "scripts/review-status.ts",
+      "scripts/runtimePackageSnapshot.ts",
+      "scripts/verify.ts",
+      "scripts/withKokoroRuntimeOverrides.cjs",
+      "src/examples/lineBattle.ts",
       "src/film.ts",
       "src/shots/opening.ts",
       "test/opening.test.ts",
       "tsconfig.json",
+      "vendor/sharp-disabled/LICENSE",
+      "vendor/sharp-disabled/index.cjs",
+      "vendor/sharp-disabled/package.json",
       "viewer/index.html",
+      "viewer/src/asset.ts",
+      "viewer/src/film.ts",
+      "viewer/src/loadCompiledModel.ts",
       "viewer/src/main.ts",
+      "viewer/src/shot.ts",
+      "viewer/src/shotRuntime.ts",
+      "viewer/src/viewerDocument.ts",
       "vite.config.ts",
     ],
   );
@@ -136,6 +1794,10 @@ export const test_cli_scaffold = (): void => {
 
   // 2. substitution is complete and byte-clean.
   const pkg = files["package.json"]!;
+  const parsedPackage = JSON.parse(pkg) as {
+    dependencies?: Record<string, string>;
+    overrides?: Record<string, Record<string, string>>;
+  };
   TestValidator.predicate(
     "the project name is substituted",
     pkg.includes('"name": "demo-film"') &&
@@ -143,17 +1805,34 @@ export const test_cli_scaffold = (): void => {
   );
   TestValidator.predicate(
     "the production package versions are catalog-synced",
-    pkg.includes(
-      `"@automovie/engine": "${AUTOMOVIE_TEMPLATE_VERSIONS.engine}"`,
-    ) &&
+    pkg.includes(`"@automovie/cli": "${AUTOMOVIE_TEMPLATE_VERSIONS.cli}"`) &&
+      pkg.includes(
+        `"@automovie/engine": "${AUTOMOVIE_TEMPLATE_VERSIONS.engine}"`,
+      ) &&
+      pkg.includes(
+        `"@automovie/lint": "${AUTOMOVIE_TEMPLATE_VERSIONS.lint}"`,
+      ) &&
       pkg.includes(`"@automovie/mcp": "${AUTOMOVIE_TEMPLATE_VERSIONS.mcp}"`) &&
       pkg.includes(
         `"@automovie/viewer": "${AUTOMOVIE_TEMPLATE_VERSIONS.viewer}"`,
       ) &&
       pkg.includes(
+        `"@huggingface/transformers": "${AUTOMOVIE_TEMPLATE_VERSIONS.huggingFaceTransformers}"`,
+      ) &&
+      AUTOMOVIE_TEMPLATE_VERSIONS.huggingFaceTransformers === "3.8.1" &&
+      pkg.includes(
         `"h264-mp4-encoder": "${AUTOMOVIE_TEMPLATE_VERSIONS.h264Mp4Encoder}"`,
       ) &&
+      pkg.includes(`"kokoro-js": "${AUTOMOVIE_TEMPLATE_VERSIONS.kokoroJs}"`) &&
+      AUTOMOVIE_TEMPLATE_VERSIONS.kokoroJs === "1.2.1" &&
+      pkg.includes(
+        `"libopus-wasm": "${AUTOMOVIE_TEMPLATE_VERSIONS.libopusWasm}"`,
+      ) &&
       pkg.includes(`"mp4box": "${AUTOMOVIE_TEMPLATE_VERSIONS.mp4box}"`) &&
+      pkg.includes(
+        `"onnxruntime-node": "${AUTOMOVIE_TEMPLATE_VERSIONS.onnxruntimeNode}"`,
+      ) &&
+      AUTOMOVIE_TEMPLATE_VERSIONS.onnxruntimeNode === "1.21.0" &&
       pkg.includes(
         `"playwright": "${AUTOMOVIE_TEMPLATE_VERSIONS.playwright}"`,
       ) &&
@@ -161,142 +1840,1836 @@ export const test_cli_scaffold = (): void => {
       pkg.includes(
         `"@types/pngjs": "${AUTOMOVIE_TEMPLATE_VERSIONS.pngjsTypes}"`,
       ) &&
+      pkg.includes(
+        `"@types/node": "${AUTOMOVIE_TEMPLATE_VERSIONS.nodeTypes}"`,
+      ) &&
       pkg.includes(`"three": "${AUTOMOVIE_TEMPLATE_VERSIONS.three}"`),
+  );
+  TestValidator.predicate(
+    "the Node TTS graph owns CPU-only and image capability installation",
+    parsedPackage.dependencies?.sharp === "file:vendor/sharp-disabled" &&
+      parsedPackage.overrides?.["@huggingface/transformers"]?.sharp ===
+        "file:vendor/sharp-disabled" &&
+      files[".npmrc"] === "onnxruntime-node-install-cuda=skip\n",
+  );
+  TestValidator.equals(
+    "each complete Kokoro dialogue closes its explicit stream input",
+    {
+      streamInputType:
+        kokoroInterfaceSource.match(/stream\(\s*text: ([^,\r\n]+)/)?.[1] ??
+        null,
+      importedSplitter:
+        kokoroRuntimeSource.match(
+          /const \[\{ KokoroTTS, (\w+) \}, \{ env \}\]/,
+        )?.[1] ?? null,
+      constructedSplitter:
+        kokoroRuntimeSource.match(
+          /createTextSplitter: \(\) => new (\w+)\(\)/,
+        )?.[1] ?? null,
+      counts: {
+        create: (
+          dialogueSynthesisSource.match(
+            /const dialogueText = loadedRuntime\.createTextSplitter\(\);/g,
+          ) ?? []
+        ).length,
+        push: (
+          dialogueSynthesisSource.match(/dialogueText\.push\(line\.text\);/g) ??
+          []
+        ).length,
+        close: (
+          dialogueSynthesisSource.match(/dialogueText\.close\(\);/g) ?? []
+        ).length,
+        consumedStream: (
+          dialogueSynthesisSource.match(
+            /for await \(const chunk of loadedRuntime\.runtime\.stream\(\s*dialogueText,/g,
+          ) ?? []
+        ).length,
+      },
+      lifecycle: [
+        ["create", "const dialogueText = loadedRuntime.createTextSplitter();"],
+        ["push", "dialogueText.push(line.text);"],
+        ["close", "dialogueText.close();"],
+        ["stream", "for await (const chunk of loadedRuntime.runtime.stream("],
+      ]
+        .filter(([, marker]) => dialogueSynthesisSource.includes(marker!))
+        .sort(
+          ([, left], [, right]) =>
+            dialogueSynthesisSource.indexOf(left!) -
+            dialogueSynthesisSource.indexOf(right!),
+        )
+        .map(([name]) => name),
+      pushedText:
+        dialogueSynthesisSource.match(/dialogueText\.push\(([^)]+)\)/)?.[1] ??
+        null,
+      streamedInput:
+        dialogueSynthesisSource.match(/runtime\.stream\(\s*(\w+),/)?.[1] ??
+        null,
+      unsafeStringInputs:
+        dialogueSynthesisSource.match(/runtime\.stream\(\s*line\.text/g) ?? [],
+    },
+    {
+      streamInputType: "IKokoroTextSplitter",
+      importedSplitter: "TextSplitterStream",
+      constructedSplitter: "TextSplitterStream",
+      counts: { create: 1, push: 1, close: 1, consumedStream: 1 },
+      lifecycle: ["create", "push", "close", "stream"],
+      pushedText: "line.text",
+      streamedInput: "dialogueText",
+      unsafeStringInputs: [],
+    },
+  );
+  TestValidator.equals(
+    "capture installation forwards child evidence before interpreting failure",
+    {
+      outputChannels: [
+        ...captureInstallOutputSource.matchAll(
+          /process\.(stdout|stderr)\.write\(result\.(stdout|stderr)\);/g,
+        ),
+      ].map((match) => [match[1], match[2]]),
+      counts: {
+        run: (
+          captureInstallSource.match(
+            /const installed = runDescriptorBoundNodeCli\(\{/g,
+          ) ?? []
+        ).length,
+        write: (
+          captureInstallSource.match(
+            /writeCaptureInstallCommandOutput\(installed\);/g,
+          ) ?? []
+        ).length,
+        interpret: (
+          captureInstallSource.match(
+            /captureInstallCommandSucceeded\(installed\)/g,
+          ) ?? []
+        ).length,
+        diagnose: (
+          captureInstallSource.match(
+            /captureInstallCommandTermination\(installed\)/g,
+          ) ?? []
+        ).length,
+      },
+      lifecycle: [
+        ["run", "const installed = runDescriptorBoundNodeCli({"],
+        ["write", "writeCaptureInstallCommandOutput(installed);"],
+        ["interpret", "if (captureInstallCommandSucceeded(installed)"],
+        ["diagnose", "captureInstallCommandTermination("],
+      ]
+        .filter(([, marker]) => captureInstallSource.includes(marker!))
+        .sort(
+          ([, left], [, right]) =>
+            captureInstallSource.indexOf(left!) -
+            captureInstallSource.indexOf(right!),
+        )
+        .map(([name]) => name),
+      failureThrow: {
+        count: captureInstallFailureThrows.length,
+        errorConstructor:
+          captureInstallFailureThrow.match(/^throw new (Error)\(/)?.[1] ?? null,
+        formatterInputs: [
+          ...captureInstallFailureThrow.matchAll(
+            /captureInstallCommandTermination\((\w+)\)/g,
+          ),
+        ].map((match) => match[1]),
+        guidance: [
+          "HTTPS_PROXY",
+          "PLAYWRIGHT_DOWNLOAD_HOST",
+          "PLAYWRIGHT_CHROMIUM_DOWNLOAD_HOST",
+          "network or offline mirror",
+          "retry npm run capture:install",
+        ].filter((fragment) => captureInstallFailureThrow.includes(fragment)),
+      },
+      outputBeforeFailureThrow:
+        captureInstallSource.indexOf(
+          "writeCaptureInstallCommandOutput(installed);",
+        ) < captureInstallSource.indexOf(captureInstallFailureThrow) &&
+        captureInstallSource.indexOf(captureInstallFailureThrow) >= 0,
+      retiredFallbacks:
+        captureInstallSource.match(/installed \?\? "signal"/g) ?? [],
+    },
+    {
+      outputChannels: [
+        ["stdout", "stdout"],
+        ["stderr", "stderr"],
+      ],
+      counts: { run: 1, write: 1, interpret: 1, diagnose: 1 },
+      lifecycle: ["run", "write", "interpret", "diagnose"],
+      failureThrow: {
+        count: 1,
+        errorConstructor: "Error",
+        formatterInputs: ["installed"],
+        guidance: [
+          "HTTPS_PROXY",
+          "PLAYWRIGHT_DOWNLOAD_HOST",
+          "PLAYWRIGHT_CHROMIUM_DOWNLOAD_HOST",
+          "network or offline mirror",
+          "retry npm run capture:install",
+        ],
+      },
+      outputBeforeFailureThrow: true,
+      retiredFallbacks: [],
+    },
   );
   TestValidator.predicate(
     "the starter separates owned source and enforces review in read-only lint",
     files["AGENTS.md"]!.includes("Never edit `generated`") &&
       files[".gitignore"]!.includes("generated/") &&
+      files["scripts/compile.ts"]!.includes("compileAutoMovieProduction") &&
       files["scripts/compile.ts"]!.includes('scope: "source"') &&
       files["scripts/lint.ts"]!.includes('scope: "review"') &&
       files["README.md"]!.includes("fails while any design, source,") &&
       files["README.md"]!.includes(
-        "shot, or film review is missing, stale, revising, or incomplete",
+        "shot, or film\nreview is missing, stale, revising, or incomplete",
+      ),
+  );
+  TestValidator.equals(
+    "the local MCP host owns actual frame capture",
+    captureContractFailures([
+      {
+        contract: 'files[".mcp.json"]!.includes("scripts/mcp.ts")',
+        satisfied: files[".mcp.json"]!.includes("scripts/mcp.ts"),
+      },
+      {
+        contract:
+          'files[".mcp.json"]!.includes("$" + "{CLAUDE_PROJECT_DIR:-.}")',
+        satisfied: files[".mcp.json"]!.includes(
+          "$" + "{CLAUDE_PROJECT_DIR:-.}",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/mcp.ts"]!.includes("createAutoMovieMcpServer")',
+        satisfied: files["scripts/mcp.ts"]!.includes(
+          "createAutoMovieMcpServer",
+        ),
+      },
+      {
+        contract: 'files["scripts/mcp.ts"]!.includes("captureProductionFrame")',
+        satisfied: files["scripts/mcp.ts"]!.includes("captureProductionFrame"),
+      },
+      {
+        contract:
+          'files["scripts/mcp.ts"]!.includes("fileURLToPath(import.meta.url)")',
+        satisfied: files["scripts/mcp.ts"]!.includes(
+          "fileURLToPath(import.meta.url)",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/mcp.ts"]!.includes("process.cwd()") === false',
+        satisfied: files["scripts/mcp.ts"]!.includes("process.cwd()") === false,
+      },
+      {
+        contract: 'files["scripts/preview.ts"]!.includes("captureFrame")',
+        satisfied: files["scripts/preview.ts"]!.includes("captureFrame"),
+      },
+      {
+        contract:
+          'files["scripts/preview.ts"]!.includes("previewFrame") === false',
+        satisfied:
+          files["scripts/preview.ts"]!.includes("previewFrame") === false,
+      },
+      {
+        contract:
+          '/\\.locator\\("#view"\\)\\s*\\.screenshot\\(\\{ type: "png" \\}\\)/.test( files["scripts/capture.ts"]!, )',
+        satisfied:
+          /\.locator\("#view"\)\s*\.screenshot\(\{ type: "png" \}\)/.test(
+            files["scripts/capture.ts"]!,
+          ),
+      },
+      {
+        contract: "pkg.includes('\"three\":')",
+        satisfied: pkg.includes('"three":'),
+      },
+      {
+        contract:
+          'files["scripts/capture.ts"]!.includes(\'dedupe: ["three"]\')',
+        satisfied: files["scripts/capture.ts"]!.includes('dedupe: ["three"]'),
+      },
+      {
+        contract: 'files["vite.config.ts"]!.includes(\'dedupe: ["three"]\')',
+        satisfied: files["vite.config.ts"]!.includes('dedupe: ["three"]'),
+      },
+      {
+        contract:
+          'files["viewer/index.html"]!.includes(\'rel="icon" href="data:,"\')',
+        satisfied: files["viewer/index.html"]!.includes(
+          'rel="icon" href="data:,"',
+        ),
+      },
+      {
+        contract: 'files["viewer/src/shot.ts"]!.includes("mountViewer")',
+        satisfied: files["viewer/src/shot.ts"]!.includes("mountViewer"),
+      },
+      {
+        contract:
+          'files["viewer/src/shot.ts"]!.includes("preserveDrawingBuffer: true")',
+        satisfied: files["viewer/src/shot.ts"]!.includes(
+          "preserveDrawingBuffer: true",
+        ),
+      },
+      {
+        contract:
+          'files["viewer/src/shotRuntime.ts"]!.includes( "performance === undefined ? node.motion : performance.motion", )',
+        satisfied: files["viewer/src/shotRuntime.ts"]!.includes(
+          "performance === undefined ? node.motion : performance.motion",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/capture.ts"]!.includes( \'page.locator("#status").evaluate\', )',
+        satisfied: files["scripts/capture.ts"]!.includes(
+          'page.locator("#status").evaluate',
+        ),
+      },
+      {
+        contract:
+          'files["scripts/capture.ts"]!.includes( "let sessionPromise: Promise<CaptureSession> | null", )',
+        satisfied: files["scripts/capture.ts"]!.includes(
+          "let sessionPromise: Promise<CaptureSession> | null",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/capture.ts"]!.includes( "pages: Map<string, Promise<CapturePage>>", )',
+        satisfied: files["scripts/capture.ts"]!.includes(
+          "pages: Map<string, Promise<CapturePage>>",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/capture.ts"]!.includes("productionFrameCaptureMetrics")',
+        satisfied: files["scripts/capture.ts"]!.includes(
+          "productionFrameCaptureMetrics",
+        ),
+      },
+      {
+        contract: 'files["scripts/capture.ts"]!.includes("avoidedPageReloads")',
+        satisfied: files["scripts/capture.ts"]!.includes("avoidedPageReloads"),
+      },
+      {
+        contract: 'files["scripts/capture.ts"]!.includes("capturesPerSecond")',
+        satisfied: files["scripts/capture.ts"]!.includes("capturesPerSecond"),
+      },
+      {
+        contract: 'files["scripts/capture.ts"]!.includes("input.productionId")',
+        satisfied: files["scripts/capture.ts"]!.includes("input.productionId"),
+      },
+      {
+        contract:
+          'files["scripts/capture-browser.ts"]!.includes( "PLAYWRIGHT_BROWSERS_PATH: browserStoragePath(projectRoot)", )',
+        satisfied: files["scripts/capture-browser.ts"]!.includes(
+          "PLAYWRIGHT_BROWSERS_PATH: browserStoragePath(projectRoot)",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/capture-browser.ts"]!.includes("...process.env")',
+        satisfied:
+          files["scripts/capture-browser.ts"]!.includes("...process.env"),
+      },
+      {
+        contract:
+          'files["scripts/capture-browser.ts"]!.includes( "PLAYWRIGHT_CHROMIUM_DOWNLOAD_HOST", )',
+        satisfied: files["scripts/capture-browser.ts"]!.includes(
+          "PLAYWRIGHT_CHROMIUM_DOWNLOAD_HOST",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/capture-browser.ts"]!.includes( "PLAYWRIGHT_DOWNLOAD_HOST", )',
+        satisfied: files["scripts/capture-browser.ts"]!.includes(
+          "PLAYWRIGHT_DOWNLOAD_HOST",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/capture-browser.ts"]!.includes( \'return import("playwright")\', )',
+        satisfied: files["scripts/capture-browser.ts"]!.includes(
+          'return import("playwright")',
+        ),
+      },
+      {
+        contract:
+          'files["scripts/capture-browser.ts"]!.includes( "paths: [playwright.root]", )',
+        satisfied: files["scripts/capture-browser.ts"]!.includes(
+          "paths: [playwright.root]",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/capture-browser.ts"]!.includes(\'"--no-shell"\')',
+        satisfied:
+          files["scripts/capture-browser.ts"]!.includes('"--no-shell"'),
+      },
+      {
+        contract:
+          'files["scripts/capture-browser.ts"]!.includes( \'stdio: ["ignore", "pipe", "pipe", cli.descriptor]\', )',
+        satisfied: files["scripts/capture-browser.ts"]!.includes(
+          'stdio: ["ignore", "pipe", "pipe", cli.descriptor]',
+        ),
+      },
+      {
+        contract:
+          'files["scripts/capture-browser.ts"]!.includes( "runDescriptorBoundNodeCli", )',
+        satisfied: files["scripts/capture-browser.ts"]!.includes(
+          "runDescriptorBoundNodeCli",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/capture-browser.ts"]!.includes( "launchWithCaptureExecutableSnapshot", )',
+        satisfied: files["scripts/capture-browser.ts"]!.includes(
+          "launchWithCaptureExecutableSnapshot",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/capture-browser.ts"]!.includes( "publishCaptureInstallReceipt", )',
+        satisfied: files["scripts/capture-browser.ts"]!.includes(
+          "publishCaptureInstallReceipt",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/capture-browser.ts"]!.includes("receiptGenerationKey")',
+        satisfied: files["scripts/capture-browser.ts"]!.includes(
+          "receiptGenerationKey",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/capture-browser.ts"]!.includes( "createCaptureExecutableSnapshot(file, bytes)", )',
+        satisfied: files["scripts/capture-browser.ts"]!.includes(
+          "createCaptureExecutableSnapshot(file, bytes)",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/capture-browser.ts"]!.includes( "CAPTURE_INSTALL_RECEIPT_MAX_BYTES", )',
+        satisfied: files["scripts/capture-browser.ts"]!.includes(
+          "CAPTURE_INSTALL_RECEIPT_MAX_BYTES",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/captureExecutableSnapshot.ts"]!.includes("maximumBytes")',
+        satisfied:
+          files["scripts/captureExecutableSnapshot.ts"]!.includes(
+            "maximumBytes",
+          ),
+      },
+      {
+        contract:
+          'files["scripts/captureExecutableSnapshot.ts"]!.includes( "removeCreatedCaptureExecutable", ) === false',
+        satisfied:
+          files["scripts/captureExecutableSnapshot.ts"]!.includes(
+            "removeCreatedCaptureExecutable",
+          ) === false,
+      },
+      {
+        contract:
+          'files["scripts/capture-browser.ts"]!.includes( "fs.renameSync(temporary, file)", ) === false',
+        satisfied:
+          files["scripts/capture-browser.ts"]!.includes(
+            "fs.renameSync(temporary, file)",
+          ) === false,
+      },
+      {
+        contract:
+          'files["scripts/capture-browser.ts"]!.includes( \'installSource !== "PLAYWRIGHT_CHROMIUM_DOWNLOAD_HOST"\', )',
+        satisfied: files["scripts/capture-browser.ts"]!.includes(
+          'installSource !== "PLAYWRIGHT_CHROMIUM_DOWNLOAD_HOST"',
+        ),
+      },
+      {
+        contract:
+          'files["scripts/capture-browser.ts"]!.includes( \'args: ["--use-angle=swiftshader"]\', )',
+        satisfied: files["scripts/capture-browser.ts"]!.includes(
+          'args: ["--use-angle=swiftshader"]',
+        ),
+      },
+      {
+        contract:
+          'files["scripts/capture-browser.ts"]!.includes( \'context.getExtension("WEBGL_debug_renderer_info")\', )',
+        satisfied: files["scripts/capture-browser.ts"]!.includes(
+          'context.getExtension("WEBGL_debug_renderer_info")',
+        ),
+      },
+      {
+        contract:
+          'files["scripts/capture-browser.ts"]!.includes( "executableDigest: executable.digest", )',
+        satisfied: files["scripts/capture-browser.ts"]!.includes(
+          "executableDigest: executable.digest",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/capture-browser.ts"]!.includes( "readAutoMovieProductionOwnedFile", )',
+        satisfied: files["scripts/capture-browser.ts"]!.includes(
+          "readAutoMovieProductionOwnedFile",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/capture-browser.ts"]!.includes( "assertCaptureExecutable(executable)", )',
+        satisfied: files["scripts/capture-browser.ts"]!.includes(
+          "assertCaptureExecutable(executable)",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/capture-browser.ts"]!.includes( \'config.source === "system-channel"\', )',
+        satisfied: files["scripts/capture-browser.ts"]!.includes(
+          'config.source === "system-channel"',
+        ),
+      },
+      {
+        contract:
+          'files["scripts/capture-browser.ts"]!.includes( \'source = "configured-executable"\', )',
+        satisfied: files["scripts/capture-browser.ts"]!.includes(
+          'source = "configured-executable"',
+        ),
+      },
+      {
+        contract:
+          'files["scripts/capture-browser.ts"]!.includes( "parseCaptureBrowserConfig", )',
+        satisfied: files["scripts/capture-browser.ts"]!.includes(
+          "parseCaptureBrowserConfig",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/capture-browser.ts"]!.includes( "Invalid capture browser config", )',
+        satisfied: files["scripts/capture-browser.ts"]!.includes(
+          "Invalid capture browser config",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/capture-doctor.ts"]!.includes("PNG.sync.read")',
+        satisfied:
+          files["scripts/capture-doctor.ts"]!.includes("PNG.sync.read"),
+      },
+      {
+        contract:
+          'files["scripts/capture-doctor.ts"]!.includes( "canonicalAutoMovieCaptureRuntimeIdentity", )',
+        satisfied: files["scripts/capture-doctor.ts"]!.includes(
+          "canonicalAutoMovieCaptureRuntimeIdentity",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/capture-doctor.ts"]!.includes("visiblePixel")',
+        satisfied: files["scripts/capture-doctor.ts"]!.includes("visiblePixel"),
+      },
+      {
+        contract:
+          'files["scripts/capture-install.ts"]!.includes( "installPackageOwnedChromium", )',
+        satisfied: files["scripts/capture-install.ts"]!.includes(
+          "installPackageOwnedChromium",
+        ),
+      },
+      {
+        contract:
+          'files["automovie.config.ts"]!.includes(\'source: "playwright-chromium"\')',
+        satisfied: files["automovie.config.ts"]!.includes(
+          'source: "playwright-chromium"',
+        ),
+      },
+      {
+        contract:
+          'files["automovie.config.ts"]!.includes( "satisfies AutoMovieCaptureBrowserConfig", )',
+        satisfied: files["automovie.config.ts"]!.includes(
+          "satisfies AutoMovieCaptureBrowserConfig",
+        ),
+      },
+      {
+        contract: 'files[".gitignore"]!.includes(".automovie/capture/")',
+        satisfied: files[".gitignore"]!.includes(".automovie/capture/"),
+      },
+      {
+        contract: 'files["README.md"]!.includes("npm run capture:install")',
+        satisfied: files["README.md"]!.includes("npm run capture:install"),
+      },
+      {
+        contract: 'files["README.md"]!.includes("PLAYWRIGHT_BROWSERS_PATH=0")',
+        satisfied: files["README.md"]!.includes("PLAYWRIGHT_BROWSERS_PATH=0"),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes( "await closeProductionFrameCapture()", )',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "await closeProductionFrameCapture()",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("runProductionRenderJob")',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "runProductionRenderJob",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("commitProductionPublication")',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "commitProductionPublication",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("probeProductionMedia")',
+        satisfied: files["scripts/render.ts"]!.includes("probeProductionMedia"),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("probeProductionVideoMp4")',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "probeProductionVideoMp4",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("deriveProductionSoundPlan")',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "deriveProductionSoundPlan",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("KokoroTTS.from_pretrained")',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "KokoroTTS.from_pretrained",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("KOKORO_MODEL_REVISION")',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "KOKORO_MODEL_REVISION",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes(\'KOKORO_DEVICE = "cpu"\')',
+        satisfied: files["scripts/render.ts"]!.includes(
+          'KOKORO_DEVICE = "cpu"',
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.split("device: KOKORO_DEVICE").length === 4',
+        satisfied:
+          files["scripts/render.ts"]!.split("device: KOKORO_DEVICE").length ===
+          4,
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("productionSoundRuntimeIdentity")',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "productionSoundRuntimeIdentity",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes( "backend: onnxRuntimeNodeIdentity()", )',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "backend: onnxRuntimeNodeIdentity()",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes( \'path: "package:onnxruntime-node"\', )',
+        satisfied: files["scripts/render.ts"]!.includes(
+          'path: "package:onnxruntime-node"',
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.split("onnxRuntimeNodeIdentity()").length === 3',
+        satisfied:
+          files["scripts/render.ts"]!.split("onnxRuntimeNodeIdentity()")
+            .length === 3,
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes( \'["bin", "napi-v3", process.platform, process.arch]\', )',
+        satisfied: files["scripts/render.ts"]!.includes(
+          '["bin", "napi-v3", process.platform, process.arch]',
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes( \'imageCapability: resolvedPackageIdentity("sharp")\', )',
+        satisfied: files["scripts/render.ts"]!.includes(
+          'imageCapability: resolvedPackageIdentity("sharp")',
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes( \'path: "package:sharp-capability-wall"\', )',
+        satisfied: files["scripts/render.ts"]!.includes(
+          'path: "package:sharp-capability-wall"',
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes( "root: modelCacheRoot,\\n              directory: modelCacheRoot,\\n              relative,", )',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "root: modelCacheRoot,\n              directory: modelCacheRoot,\n              relative,",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes( "readRegularInside(modelCacheRoot, relative)", ) === false',
+        satisfied:
+          files["scripts/render.ts"]!.includes(
+            "readRegularInside(modelCacheRoot, relative)",
+          ) === false,
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("encodeProductionOpus")',
+        satisfied: files["scripts/render.ts"]!.includes("encodeProductionOpus"),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("muxProductionFeatureMp4")',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "muxProductionFeatureMp4",
+        ),
+      },
+      {
+        contract: 'renderProgressSource.includes("process.stderr.write")',
+        satisfied: renderProgressSource.includes("process.stderr.write"),
+      },
+      {
+        contract: 'renderProgressSource.includes("[automovie:render]")',
+        satisfied: renderProgressSource.includes("[automovie:render]"),
+      },
+      {
+        contract:
+          'renderProgressSource.includes("JSON.stringify({ stage, ...details })")',
+        satisfied: renderProgressSource.includes(
+          "JSON.stringify({ stage, ...details })",
+        ),
+      },
+      {
+        contract:
+          'renderProgressSource.includes("process.stdout.write") === false',
+        satisfied:
+          renderProgressSource.includes("process.stdout.write") === false,
+      },
+      {
+        contract:
+          'renderProgressStages.every((stage) => renderScript.includes(`renderProgress("$' +
+          '{stage}"`), )',
+        satisfied: renderProgressStages.every((stage) =>
+          renderScript.includes(`renderProgress("${stage}"`),
+        ),
+      },
+      {
+        contract: 'files["scripts/render.ts"]!.includes(\'"waveform.png"\')',
+        satisfied: files["scripts/render.ts"]!.includes('"waveform.png"'),
+      },
+      {
+        contract: 'files["scripts/render.ts"]!.includes(\'"spectrogram.png"\')',
+        satisfied: files["scripts/render.ts"]!.includes('"spectrogram.png"'),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes(\'process.argv.indexOf("--tier")\')',
+        satisfied: files["scripts/render.ts"]!.includes(
+          'process.argv.indexOf("--tier")',
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("productionRenderLayersForPass")',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "productionRenderLayersForPass",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("renderGarbageCollection")',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "renderGarbageCollection",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/renderChunkSnapshot.ts"]!.includes( \'kind: "chunk-pointer"\', )',
+        satisfied: files["scripts/renderChunkSnapshot.ts"]!.includes(
+          'kind: "chunk-pointer"',
+        ),
+      },
+      {
+        contract:
+          'files["scripts/renderChunkSnapshot.ts"]!.includes(\'kind: "chunk-tree"\')',
+        satisfied:
+          files["scripts/renderChunkSnapshot.ts"]!.includes(
+            'kind: "chunk-tree"',
+          ),
+      },
+      {
+        contract:
+          'files["scripts/renderChunkSnapshot.ts"]!.includes( "captureRenderChunkPublicationFromPointer(pointer)", )',
+        satisfied: files["scripts/renderChunkSnapshot.ts"]!.includes(
+          "captureRenderChunkPublicationFromPointer(pointer)",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/renderChunkSnapshot.ts"]!.includes( "exactTreeContent(authenticated.tree, snapshot)", )',
+        satisfied: files["scripts/renderChunkSnapshot.ts"]!.includes(
+          "exactTreeContent(authenticated.tree, snapshot)",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/renderChunkSnapshot.ts"]!.includes( "authenticated === undefined && props.processAlive(Number(match[2]))", )',
+        satisfied: files["scripts/renderChunkSnapshot.ts"]!.includes(
+          "authenticated === undefined && props.processAlive(Number(match[2]))",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("inventoryRenderChunkGarbage")',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "inventoryRenderChunkGarbage",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes( "retainedChunkPaths: [...retainedChunkPaths]", )',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "retainedChunkPaths: [...retainedChunkPaths]",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("const base = snapshot.base.path")',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "const base = snapshot.base.path",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes( "path.resolve(renderJobRoot, candidate.path)", ) === false',
+        satisfied:
+          files["scripts/render.ts"]!.includes(
+            "path.resolve(renderJobRoot, candidate.path)",
+          ) === false,
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("captureRenderGcTarget")',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "captureRenderGcTarget",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("removeCapturedRenderGcTarget")',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "removeCapturedRenderGcTarget",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("quarantineCapturedRenderTarget")',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "quarantineCapturedRenderTarget",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes( "inventoryRenderQuarantineCandidates", )',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "inventoryRenderQuarantineCandidates",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("removeCapturedRenderQuarantine")',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "removeCapturedRenderQuarantine",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("path.join(renderJobRoot, tier)")',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "path.join(renderJobRoot, tier)",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("quarantineEvidenceSnapshots")',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "quarantineEvidenceSnapshots",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("readCapturedRenderGcFile")',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "readCapturedRenderGcFile",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("RENDER_LOCK_JSON_MAX_BYTES")',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "RENDER_LOCK_JSON_MAX_BYTES",
+        ),
+      },
+      {
+        contract: 'acquireChunkSource.includes("createRenderGcFileSnapshot(")',
+        satisfied: acquireChunkSource.includes("createRenderGcFileSnapshot("),
+      },
+      {
+        contract:
+          'acquireChunkSource.includes("file === claim ? claimSnapshot")',
+        satisfied: acquireChunkSource.includes(
+          "file === claim ? claimSnapshot",
+        ),
+      },
+      {
+        contract:
+          'acquireChunkSource.includes("const ownedClaim = claimSnapshot")',
+        satisfied: acquireChunkSource.includes(
+          "const ownedClaim = claimSnapshot",
+        ),
+      },
+      {
+        contract:
+          "acquireChunkSource.match( /releaseOwnedChunkClaim\\(chunk, claim, token, claimSnapshot\\)/gu, )?.length === 2",
+        satisfied:
+          acquireChunkSource.match(
+            /releaseOwnedChunkClaim\(chunk, claim, token, claimSnapshot\)/gu,
+          )?.length === 2,
+      },
+      {
+        contract: 'acquireChunkSource.includes(".candidate") === false',
+        satisfied: acquireChunkSource.includes(".candidate") === false,
+      },
+      {
+        contract: 'acquireChunkSource.includes("fs.linkSync") === false',
+        satisfied: acquireChunkSource.includes("fs.linkSync") === false,
+      },
+      {
+        contract: 'acquireChunkSource.includes("fs.rmSync") === false',
+        satisfied: acquireChunkSource.includes("fs.rmSync") === false,
+      },
+      {
+        contract:
+          "renderTemporarySnapshot.includes( 'assertRenderPhysicalDirectoryIdentity(props.state, \"render state root\")', )",
+        satisfied: renderTemporarySnapshot.includes(
+          'assertRenderPhysicalDirectoryIdentity(props.state, "render state root")',
+        ),
+      },
+      {
+        contract:
+          'renderTemporarySnapshot.includes( "const temporaryRoot = captureRenderPhysicalDirectory(", )',
+        satisfied: renderTemporarySnapshot.includes(
+          "const temporaryRoot = captureRenderPhysicalDirectory(",
+        ),
+      },
+      {
+        contract:
+          'renderTemporarySnapshot.includes( "const tree = captureRenderPhysicalDirectory(", )',
+        satisfied: renderTemporarySnapshot.includes(
+          "const tree = captureRenderPhysicalDirectory(",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes( "const temporaryOwnership = createRenderChunkTemporaryTree({", )',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "const temporaryOwnership = createRenderChunkTemporaryTree({",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("state: attempt.snapshot.base")',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "state: attempt.snapshot.base",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("const relative = `frame_")',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "const relative = `frame_",
+        ),
+      },
+      {
+        contract: 'files["scripts/render.ts"]!.includes("const writtenFiles:")',
+        satisfied: files["scripts/render.ts"]!.includes("const writtenFiles:"),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes( "assertCapturedRenderGcFileEntry({", )',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "assertCapturedRenderGcFileEntry({",
+        ),
+      },
+      {
+        contract: 'files["scripts/render.ts"]!.includes("tree: completedTree")',
+        satisfied: files["scripts/render.ts"]!.includes("tree: completedTree"),
+      },
+      {
+        contract:
+          'writeRenderFileSource.includes("createRenderGcFileSnapshot(")',
+        satisfied: writeRenderFileSource.includes(
+          "createRenderGcFileSnapshot(",
+        ),
+      },
+      {
+        contract:
+          'writeRenderFileSource.includes("assertRenderChunkTemporaryTree(")',
+        satisfied: writeRenderFileSource.includes(
+          "assertRenderChunkTemporaryTree(",
+        ),
+      },
+      {
+        contract: 'writeRenderFileSource.includes("snapshot.base.identity")',
+        satisfied: writeRenderFileSource.includes("snapshot.base.identity"),
+      },
+      {
+        contract: 'writeRenderFileSource.includes("return snapshot")',
+        satisfied: writeRenderFileSource.includes("return snapshot"),
+      },
+      {
+        contract: 'writeRenderFileSource.includes(".tmp") === false',
+        satisfied: writeRenderFileSource.includes(".tmp") === false,
+      },
+      {
+        contract: 'writeRenderFileSource.includes("fs.renameSync") === false',
+        satisfied: writeRenderFileSource.includes("fs.renameSync") === false,
+      },
+      {
+        contract: 'writeRenderFileSource.includes("fs.rmSync") === false',
+        satisfied: writeRenderFileSource.includes("fs.rmSync") === false,
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("writeFileAtomic") === false',
+        satisfied:
+          files["scripts/render.ts"]!.includes("writeFileAtomic") === false,
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("fs.renameSync") === false',
+        satisfied:
+          files["scripts/render.ts"]!.includes("fs.renameSync") === false,
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes( "captureAbandonedRenderStateTarget", )',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "captureAbandonedRenderStateTarget",
+        ),
+      },
+      {
+        contract: 'files["scripts/render.ts"]!.includes("held.snapshot")',
+        satisfied: files["scripts/render.ts"]!.includes("held.snapshot"),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes( "quarantineStaleSlotOutputs(current.chunks)", )',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "quarantineStaleSlotOutputs(current.chunks)",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("acquireRenderSessionLease")',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "acquireRenderSessionLease",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("acquireRenderGcLease")',
+        satisfied: files["scripts/render.ts"]!.includes("acquireRenderGcLease"),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("coordinationRoot: root")',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "coordinationRoot: root",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("renderCoordinationRoot") === false',
+        satisfied:
+          files["scripts/render.ts"]!.includes("renderCoordinationRoot") ===
+          false,
+      },
+      {
+        contract: 'files[".gitignore"]!.includes(".automovie-liveness-*")',
+        satisfied: files[".gitignore"]!.includes(".automovie-liveness-*"),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("publishRenderChunkSnapshot")',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "publishRenderChunkSnapshot",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("captureRenderChunkPublication")',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "captureRenderChunkPublication",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("renderChunkPublicationPath")',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "renderChunkPublicationPath",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes( "loadCurrentRenderChunkPublication", )',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "loadCurrentRenderChunkPublication",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("consumeCurrentRenderChunkFrames")',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "consumeCurrentRenderChunkFrames",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes( "removeCapturedRenderChunkPointer(pointerSnapshot)", )',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "removeCapturedRenderChunkPointer(pointerSnapshot)",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes( "currentPublicationProtectsTree(currentChunks, entry.name, snapshot)", )',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "currentPublicationProtectsTree(currentChunks, entry.name, snapshot)",
+        ),
+      },
+      {
+        contract:
+          'recoveryProtectionSource.includes( "const chunk = props.chunks.get(digest)", )',
+        satisfied: recoveryProtectionSource.includes(
+          "const chunk = props.chunks.get(digest)",
+        ),
+      },
+      {
+        contract:
+          'recoveryProtectionSource.includes("for (const chunk of chunks)") === false',
+        satisfied:
+          recoveryProtectionSource.includes("for (const chunk of chunks)") ===
+          false,
+      },
+      {
+        contract: 'files[".gitignore"]!.includes(".automovie-chunk-*")',
+        satisfied: files[".gitignore"]!.includes(".automovie-chunk-*"),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes( "fs.renameSync(temporary, destination)", ) === false',
+        satisfied:
+          files["scripts/render.ts"]!.includes(
+            "fs.renameSync(temporary, destination)",
+          ) === false,
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes( "readRegularInside(chunkDirectory(chunk.id), frame.path)", ) === false',
+        satisfied:
+          files["scripts/render.ts"]!.includes(
+            "readRegularInside(chunkDirectory(chunk.id), frame.path)",
+          ) === false,
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("renderPublicationFingerprint")',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "renderPublicationFingerprint",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("assertMatchingProxyPublication")',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "assertMatchingProxyPublication",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("inspectPublishedProxyBundle")',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "inspectPublishedProxyBundle",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes( "inspectCapturedProxyBundle(snapshot)", )',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "inspectCapturedProxyBundle(snapshot)",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes( "for (const entry of adjudicated.snapshot.entries)", )',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "for (const entry of adjudicated.snapshot.entries)",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("publishProxyBundle({")',
+        satisfied: files["scripts/render.ts"]!.includes("publishProxyBundle({"),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("beginRenderAttempt({")',
+        satisfied: files["scripts/render.ts"]!.includes("beginRenderAttempt({"),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("snapshot: held.snapshot")',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "snapshot: held.snapshot",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("completeRenderAttempt(attempt)")',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "completeRenderAttempt(attempt)",
+        ),
+      },
+      {
+        contract: 'files["scripts/render.ts"]!.includes("failRenderAttempt({")',
+        satisfied: files["scripts/render.ts"]!.includes("failRenderAttempt({"),
+      },
+      {
+        contract: 'files["scripts/render.ts"]!.includes("listRenderAttempts(")',
+        satisfied: files["scripts/render.ts"]!.includes("listRenderAttempts("),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("fs.rmSync(attemptPath(chunk)") === false',
+        satisfied:
+          files["scripts/render.ts"]!.includes(
+            "fs.rmSync(attemptPath(chunk)",
+          ) === false,
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes( "writeJsonAtomic(attemptPath(chunk)", ) === false',
+        satisfied:
+          files["scripts/render.ts"]!.includes(
+            "writeJsonAtomic(attemptPath(chunk)",
+          ) === false,
+      },
+      {
+        contract:
+          'source clause 1 of 2: files["scripts/renderAttemptSnapshot.ts"]!.includes( "createRenderGcFileSnapshot", )',
+        satisfied: files["scripts/renderAttemptSnapshot.ts"]!.includes(
+          "createRenderGcFileSnapshot",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/renderAttemptSnapshot.ts"]!.includes( "removeCapturedRenderGcTarget", )',
+        satisfied: files["scripts/renderAttemptSnapshot.ts"]!.includes(
+          "removeCapturedRenderGcTarget",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/renderAttemptSnapshot.ts"]!.includes( "readCapturedRenderGcFile", )',
+        satisfied: files["scripts/renderAttemptSnapshot.ts"]!.includes(
+          "readCapturedRenderGcFile",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/renderAttemptSnapshot.ts"]!.includes( "assertRenderAttemptLockOwner", )',
+        satisfied: files["scripts/renderAttemptSnapshot.ts"]!.includes(
+          "assertRenderAttemptLockOwner",
+        ),
+      },
+      {
+        contract:
+          'source clause 2 of 2: files["scripts/renderAttemptSnapshot.ts"]!.includes( "createRenderGcFileSnapshot", )',
+        satisfied: files["scripts/renderAttemptSnapshot.ts"]!.includes(
+          "createRenderGcFileSnapshot",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/renderAttemptSnapshot.ts"]!.includes("fs.linkSync") === false',
+        satisfied:
+          files["scripts/renderAttemptSnapshot.ts"]!.includes("fs.linkSync") ===
+          false,
+      },
+      {
+        contract:
+          'files["scripts/renderAttemptSnapshot.ts"]!.includes( ".attempt-candidate", ) === false',
+        satisfied:
+          files["scripts/renderAttemptSnapshot.ts"]!.includes(
+            ".attempt-candidate",
+          ) === false,
+      },
+      {
+        contract:
+          'files["scripts/renderGcSnapshot.ts"]!.includes( "removeCreatedRenderFile", ) === false',
+        satisfied:
+          files["scripts/renderGcSnapshot.ts"]!.includes(
+            "removeCreatedRenderFile",
+          ) === false,
+      },
+      {
+        contract:
+          'files["scripts/renderGcSnapshot.ts"]!.includes( "IRenderQuarantineMarker", )',
+        satisfied: files["scripts/renderGcSnapshot.ts"]!.includes(
+          "IRenderQuarantineMarker",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes( "RENDER_GC_REMOVAL_STAGING_DIRECTORY", )',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "RENDER_GC_REMOVAL_STAGING_DIRECTORY",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes( "RENDER_GC_QUARANTINE_EVIDENCE_DIRECTORY", )',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "RENDER_GC_QUARANTINE_EVIDENCE_DIRECTORY",
+        ),
+      },
+      {
+        contract:
+          '[ "scripts/render.ts", "scripts/renderAttemptSnapshot.ts", "scripts/renderChunkSnapshot.ts", "scripts/renderLiveness.ts", ].every((file) => files[file]!.includes("rmdirSync") === false)',
+        satisfied: [
+          "scripts/render.ts",
+          "scripts/renderAttemptSnapshot.ts",
+          "scripts/renderChunkSnapshot.ts",
+          "scripts/renderLiveness.ts",
+        ].every((file) => files[file]!.includes("rmdirSync") === false),
+      },
+      {
+        contract:
+          'files["scripts/renderGcSnapshot.ts"]!.includes( "fs.renameSync(isolated.moved.target, destination)", ) === false',
+        satisfied:
+          files["scripts/renderGcSnapshot.ts"]!.includes(
+            "fs.renameSync(isolated.moved.target, destination)",
+          ) === false,
+      },
+      {
+        contract:
+          'files["scripts/renderPlanSnapshot.ts"]!.includes("generationSlot")',
+        satisfied:
+          files["scripts/renderPlanSnapshot.ts"]!.includes("generationSlot"),
+      },
+      {
+        contract:
+          'files["scripts/renderPlanSnapshot.ts"]!.includes( "createRenderGcFileSnapshot", )',
+        satisfied: files["scripts/renderPlanSnapshot.ts"]!.includes(
+          "createRenderGcFileSnapshot",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/renderPlanSnapshot.ts"]!.includes( "fs.linkSync(candidate.target, destination)", ) === false',
+        satisfied:
+          files["scripts/renderPlanSnapshot.ts"]!.includes(
+            "fs.linkSync(candidate.target, destination)",
+          ) === false,
+      },
+      {
+        contract:
+          'files["scripts/renderPlanSnapshot.ts"]!.includes( ".gc-preserved-plan-candidates", ) === false',
+        satisfied:
+          files["scripts/renderPlanSnapshot.ts"]!.includes(
+            ".gc-preserved-plan-candidates",
+          ) === false,
+      },
+      {
+        contract:
+          'files["scripts/renderPlanSnapshot.ts"]!.includes( "removeExactPlan(props.predecessor.snapshot)", ) === false',
+        satisfied:
+          files["scripts/renderPlanSnapshot.ts"]!.includes(
+            "removeExactPlan(props.predecessor.snapshot)",
+          ) === false,
+      },
+      {
+        contract:
+          'files["scripts/dialogueCacheSnapshot.ts"]!.includes( \'publishCacheFile(ownership, "audio.f32"\', )',
+        satisfied: files["scripts/dialogueCacheSnapshot.ts"]!.includes(
+          'publishCacheFile(ownership, "audio.f32"',
+        ),
+      },
+      {
+        contract:
+          'files["scripts/dialogueCacheSnapshot.ts"]!.includes( \'publishCacheFile(ownership, "receipt.json"\', )',
+        satisfied: files["scripts/dialogueCacheSnapshot.ts"]!.includes(
+          'publishCacheFile(ownership, "receipt.json"',
+        ),
+      },
+      {
+        contract:
+          'files["scripts/dialogueCacheSnapshot.ts"]!.includes( "assertCapturedRenderGcFileEntry", )',
+        satisfied: files["scripts/dialogueCacheSnapshot.ts"]!.includes(
+          "assertCapturedRenderGcFileEntry",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/dialogueCacheSnapshot.ts"]!.includes( "createRenderGcFileSnapshot", )',
+        satisfied: files["scripts/dialogueCacheSnapshot.ts"]!.includes(
+          "createRenderGcFileSnapshot",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/dialogueCacheSnapshot.ts"]!.includes("fs.linkSync") === false',
+        satisfied:
+          files["scripts/dialogueCacheSnapshot.ts"]!.includes("fs.linkSync") ===
+          false,
+      },
+      {
+        contract:
+          'files["scripts/dialogueCacheSnapshot.ts"]!.includes( ".gc-preserved-dialogue-candidates", ) === false',
+        satisfied:
+          files["scripts/dialogueCacheSnapshot.ts"]!.includes(
+            ".gc-preserved-dialogue-candidates",
+          ) === false,
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes( "captureExistingDialogueCache(cacheRoot, cachePath)", )',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "captureExistingDialogueCache(cacheRoot, cachePath)",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes( "writeFileAtomic(pcmPath, bytes)", ) === false',
+        satisfied:
+          files["scripts/render.ts"]!.includes(
+            "writeFileAtomic(pcmPath, bytes)",
+          ) === false,
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes( "current: (chunk) => currentReceipt(current, chunk)", )',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "current: (chunk) => currentReceipt(current, chunk)",
+        ),
+      },
+      {
+        contract:
+          'currentChunkSource.includes("currentChunk(plan, chunk") === false',
+        satisfied:
+          currentChunkSource.includes("currentChunk(plan, chunk") === false,
+      },
+      {
+        contract: 'currentChunkSource.includes("readPlan()") === false',
+        satisfied: currentChunkSource.includes("readPlan()") === false,
+      },
+      {
+        contract:
+          'currentChunkSource.includes( "verifyProductionRenderChunkReceipt({ plan", )',
+        satisfied: currentChunkSource.includes(
+          "verifyProductionRenderChunkReceipt({ plan",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/publishProxyBundle.ts"]!.includes( "createRenderGcFileSnapshot", )',
+        satisfied: files["scripts/publishProxyBundle.ts"]!.includes(
+          "createRenderGcFileSnapshot",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/publishProxyBundle.ts"]!.includes( "fs.linkSync(candidate.target, props.target)", ) === false',
+        satisfied:
+          files["scripts/publishProxyBundle.ts"]!.includes(
+            "fs.linkSync(candidate.target, props.target)",
+          ) === false,
+      },
+      {
+        contract:
+          'files["scripts/publishProxyBundle.ts"]!.includes( "fs.mkdirSync(props.target)", )',
+        satisfied: files["scripts/publishProxyBundle.ts"]!.includes(
+          "fs.mkdirSync(props.target)",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/publishProxyBundle.ts"]!.includes( "materializeExpectedDirectories", )',
+        satisfied: files["scripts/publishProxyBundle.ts"]!.includes(
+          "materializeExpectedDirectories",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/publishProxyBundle.ts"]!.includes( "fs.linkSync(candidate.target, destination)", ) === false',
+        satisfied:
+          files["scripts/publishProxyBundle.ts"]!.includes(
+            "fs.linkSync(candidate.target, destination)",
+          ) === false,
+      },
+      {
+        contract:
+          'files["scripts/publishProxyBundle.ts"]!.includes( ".gc-preserved-proxy-candidates", ) === false',
+        satisfied:
+          files["scripts/publishProxyBundle.ts"]!.includes(
+            ".gc-preserved-proxy-candidates",
+          ) === false,
+      },
+      {
+        contract:
+          'files["scripts/publishProxyBundle.ts"]!.includes( "encodeProxyBundleContainer", ) === false',
+        satisfied:
+          files["scripts/publishProxyBundle.ts"]!.includes(
+            "encodeProxyBundleContainer",
+          ) === false,
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("assertNoLiveRenderWorkers")',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "assertNoLiveRenderWorkers",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("captureGcPhysicalAncestry") === false',
+        satisfied:
+          files["scripts/render.ts"]!.includes("captureGcPhysicalAncestry") ===
+          false,
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("project.review(entry.target)")',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "project.review(entry.target)",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes("frames/$" + "{passes[0]}/frame_")',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "frames/$" + "{passes[0]}/frame_",
+        ),
+      },
+      {
+        contract: 'files["automovie.config.ts"]!.includes(\'kind: "proxy"\')',
+        satisfied: files["automovie.config.ts"]!.includes('kind: "proxy"'),
+      },
+      {
+        contract: 'files["automovie.config.ts"]!.includes(\'kind: "final"\')',
+        satisfied: files["automovie.config.ts"]!.includes('kind: "final"'),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes( "productionPublicationInputFingerprint", )',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "productionPublicationInputFingerprint",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes( "const stagedReview = new AutoMovieProductionReviewService", )',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "const stagedReview = new AutoMovieProductionReviewService",
+        ),
+      },
+      {
+        contract:
+          'files["scripts/render.ts"]!.includes( "stagedReview.queue(status, compilerSnapshot)", )',
+        satisfied: files["scripts/render.ts"]!.includes(
+          "stagedReview.queue(status, compilerSnapshot)",
+        ),
+      },
+      {
+        contract: 'files[".gitignore"]!.includes(".automovie/*")',
+        satisfied: files[".gitignore"]!.includes(".automovie/*"),
+      },
+      {
+        contract: 'files[".gitignore"]!.includes("!.automovie/design/**")',
+        satisfied: files[".gitignore"]!.includes("!.automovie/design/**"),
+      },
+      {
+        contract: 'files[".gitignore"]!.includes("!.automovie/reviews/**")',
+        satisfied: files[".gitignore"]!.includes("!.automovie/reviews/**"),
+      },
+      {
+        contract:
+          'files["package.json"]!.includes(\'"build": "npm run compile"\')',
+        satisfied: files["package.json"]!.includes(
+          '"build": "npm run compile"',
+        ),
+      },
+      {
+        contract:
+          'files["package.json"]!.includes( \'"lint": "npm run lint:source && ttsx -P tsconfig.json scripts/lint.ts"\', )',
+        satisfied: files["package.json"]!.includes(
+          '"lint": "npm run lint:source && ttsx -P tsconfig.json scripts/lint.ts"',
+        ),
+      },
+      {
+        contract:
+          'files["package.json"]!.includes( \'"lint:source": "ttsc --noEmit -p tsconfig.json"\', )',
+        satisfied: files["package.json"]!.includes(
+          '"lint:source": "ttsc --noEmit -p tsconfig.json"',
+        ),
+      },
+      {
+        contract:
+          'files["package.json"]!.includes(\'"verify": "tsx scripts/verify.ts"\')',
+        satisfied: files["package.json"]!.includes(
+          '"verify": "tsx scripts/verify.ts"',
+        ),
+      },
+      {
+        contract:
+          'files["scripts/verify.ts"]!.includes(\'.lint({ scope: "final" })\')',
+        satisfied: files["scripts/verify.ts"]!.includes(
+          '.lint({ scope: "final" })',
+        ),
+      },
+      {
+        contract: 'files["scripts/verify.ts"]!.includes("openReadOnly")',
+        satisfied: files["scripts/verify.ts"]!.includes("openReadOnly"),
+      },
+      {
+        contract:
+          'files[".claude/settings.json"]!.includes(\'"matcher": "*"\')',
+        satisfied: files[".claude/settings.json"]!.includes('"matcher": "*"'),
+      },
+      {
+        contract:
+          'files[".claude/settings.json"]!.includes(\'"command": "node"\')',
+        satisfied:
+          files[".claude/settings.json"]!.includes('"command": "node"'),
+      },
+      {
+        contract:
+          "files[\".claude/settings.json\"]!.includes( '\"$' + '{CLAUDE_PROJECT_DIR}/.claude/hooks/guard-automovie-owned.mjs\"', )",
+        satisfied: files[".claude/settings.json"]!.includes(
+          '"$' +
+            '{CLAUDE_PROJECT_DIR}/.claude/hooks/guard-automovie-owned.mjs"',
+        ),
+      },
+      {
+        contract:
+          'files[".claude/hooks/guard-automovie-owned.mjs"]!.includes( "npm run compile", )',
+        satisfied:
+          files[".claude/hooks/guard-automovie-owned.mjs"]!.includes(
+            "npm run compile",
+          ),
+      },
+      {
+        contract:
+          'files[".claude/hooks/guard-automovie-owned.mjs"]!.includes( "process.exit(0)", )',
+        satisfied:
+          files[".claude/hooks/guard-automovie-owned.mjs"]!.includes(
+            "process.exit(0)",
+          ),
+      },
+      {
+        contract:
+          'files[".automovie/design/production.json"]!.includes( \'"id": "starter-feature"\', )',
+        satisfied: files[".automovie/design/production.json"]!.includes(
+          '"id": "starter-feature"',
+        ),
+      },
+      {
+        contract:
+          'files[".automovie/design/production.json"]!.includes( \'"id": "starter-pose-guide"\', )',
+        satisfied: files[".automovie/design/production.json"]!.includes(
+          '"id": "starter-pose-guide"',
+        ),
+      },
+      {
+        contract:
+          'files[".automovie/design/production.json"]!.includes( \'"id": "starter-captions"\', )',
+        satisfied: files[".automovie/design/production.json"]!.includes(
+          '"id": "starter-captions"',
+        ),
+      },
+      {
+        contract:
+          'files[".automovie/design/production.json"]!.includes( \'"id": "starter-audio"\', )',
+        satisfied: files[".automovie/design/production.json"]!.includes(
+          '"id": "starter-audio"',
+        ),
+      },
+      {
+        contract:
+          'files["public/audio/starter-tone.json"]!.includes( \'"sampleRate": 48000\', )',
+        satisfied: files["public/audio/starter-tone.json"]!.includes(
+          '"sampleRate": 48000',
+        ),
+      },
+      {
+        contract:
+          'files["public/audio/starter-tone.json"]!.includes(\'"channels": 2\')',
+        satisfied:
+          files["public/audio/starter-tone.json"]!.includes('"channels": 2'),
+      },
+      {
+        contract:
+          'files["scripts/generatedShotPlugin.ts"]!.includes(\'id.includes("/")\') === false',
+        satisfied:
+          files["scripts/generatedShotPlugin.ts"]!.includes(
+            'id.includes("/")',
+          ) === false,
+      },
+      {
+        contract:
+          'files["scripts/generatedShotPlugin.ts"]!.includes( \'pathname === "/__automovie/film.json"\', )',
+        satisfied: files["scripts/generatedShotPlugin.ts"]!.includes(
+          'pathname === "/__automovie/film.json"',
+        ),
+      },
+      {
+        contract:
+          'files["scripts/generatedShotPlugin.ts"]!.includes( \'const prefix = "/__automovie/assets/"\', )',
+        satisfied: files["scripts/generatedShotPlugin.ts"]!.includes(
+          'const prefix = "/__automovie/assets/"',
+        ),
+      },
+      {
+        contract:
+          'files["scripts/generatedShotPlugin.ts"]!.includes( "readCompiledAssetClosure", )',
+        satisfied: files["scripts/generatedShotPlugin.ts"]!.includes(
+          "readCompiledAssetClosure",
+        ),
+      },
+      {
+        contract:
+          'files["viewer/src/main.ts"]!.includes(\'await import("./film")\')',
+        satisfied: files["viewer/src/main.ts"]!.includes(
+          'await import("./film")',
+        ),
+      },
+      {
+        contract:
+          'files["viewer/src/film.ts"]!.includes("renderCrossDissolveFrames")',
+        satisfied: files["viewer/src/film.ts"]!.includes(
+          "renderCrossDissolveFrames",
+        ),
+      },
+      {
+        contract:
+          'files["viewer/src/film.ts"]!.includes(\'pass !== "beauty"\')',
+        satisfied: files["viewer/src/film.ts"]!.includes('pass !== "beauty"'),
+      },
+      {
+        contract:
+          'files["viewer/src/loadCompiledModel.ts"]!.includes("GLTFLoader")',
+        satisfied:
+          files["viewer/src/loadCompiledModel.ts"]!.includes("GLTFLoader"),
+      },
+      {
+        contract:
+          'files["viewer/src/loadCompiledModel.ts"]!.includes("VRMLoaderPlugin")',
+        satisfied:
+          files["viewer/src/loadCompiledModel.ts"]!.includes("VRMLoaderPlugin"),
+      },
+      {
+        contract:
+          'files["viewer/src/loadCompiledModel.ts"]!.includes("rotateVRM0")',
+        satisfied:
+          files["viewer/src/loadCompiledModel.ts"]!.includes("rotateVRM0"),
+      },
+      {
+        contract:
+          'files["viewer/src/loadCompiledModel.ts"]!.includes( "createImportedModelObject", )',
+        satisfied: files["viewer/src/loadCompiledModel.ts"]!.includes(
+          "createImportedModelObject",
+        ),
+      },
+      {
+        contract:
+          'files["package.json"]!.includes(\'"@pixiv/three-vrm": "^3"\')',
+        satisfied: files["package.json"]!.includes('"@pixiv/three-vrm": "^3"'),
+      },
+      {
+        contract:
+          'files["viewer/src/asset.ts"]!.includes(\'finiteParameter("angle")\')',
+        satisfied: files["viewer/src/asset.ts"]!.includes(
+          'finiteParameter("angle")',
+        ),
+      },
+      {
+        contract:
+          'files["viewer/src/main.ts"]!.includes(\'from "three"\') === false',
+        satisfied:
+          files["viewer/src/main.ts"]!.includes('from "three"') === false,
+      },
+    ]),
+    [],
+  );
+  TestValidator.predicate(
+    "no placeholder token survives any rendered path or payload",
+    Object.entries(files).every(
+      ([key, content]) => !key.includes("{{") && !content.includes("{{"),
+    ),
+  );
+  TestValidator.predicate(
+    "the starter owns prose and its machine index per production",
+    files[".automovie/design/screenplay/index.json"]!.includes(
+      '"production": "demo-film"',
+    ) &&
+      files[".automovie/design/screenplay/index.json"]!.includes(
+        '"path": "docs/demo-film/screenplay.md"',
+      ) &&
+      files["docs/demo-film/screenplay.md"]!.includes("SCN-001") &&
+      files["docs/demo-film/treatment.md"]!.includes(
+        "A lone sentinel raises a signal",
       ),
   );
   TestValidator.predicate(
-    "the local MCP host owns actual frame capture",
-    files["automovie.mcp.jsonc"]!.includes("scripts/mcp.ts") &&
-      files["scripts/mcp.ts"]!.includes("captureProductionFrame") &&
-      files["scripts/capture.ts"]!.includes('locator("#view").screenshot') &&
-      pkg.includes('"three":') &&
-      files["scripts/capture.ts"]!.includes('dedupe: ["three"]') &&
-      files["vite.config.ts"]!.includes('dedupe: ["three"]') &&
-      files["viewer/index.html"]!.includes('rel="icon" href="data:,"') &&
-      files["viewer/src/main.ts"]!.includes("mountViewer") &&
-      files["viewer/src/main.ts"]!.includes("preserveDrawingBuffer: true") &&
-      files["viewer/src/main.ts"]!.includes(
-        "performance === undefined ? node.motion : performance.motion",
-      ) &&
-      files["scripts/capture.ts"]!.includes(
-        'page.locator("#status").evaluate',
-      ) &&
-      files["scripts/capture.ts"]!.includes(
-        "let sessionPromise: Promise<CaptureSession> | null",
-      ) &&
-      files["scripts/capture-browser.ts"]!.includes(
-        "PLAYWRIGHT_BROWSERS_PATH: browserStoragePath(projectRoot)",
-      ) &&
-      files["scripts/capture-browser.ts"]!.includes("...process.env") &&
-      files["scripts/capture-browser.ts"]!.includes(
-        "PLAYWRIGHT_CHROMIUM_DOWNLOAD_HOST",
-      ) &&
-      files["scripts/capture-browser.ts"]!.includes(
-        "PLAYWRIGHT_DOWNLOAD_HOST",
-      ) &&
-      files["scripts/capture-browser.ts"]!.includes(
-        'return import("playwright")',
-      ) &&
-      files["scripts/capture-browser.ts"]!.includes("paths: [packageRoot]") &&
-      files["scripts/capture-browser.ts"]!.includes('"--no-shell"') &&
-      files["scripts/capture-browser.ts"]!.includes(
-        'stdio: ["ignore", "pipe", "pipe"]',
-      ) &&
-      files["scripts/capture-browser.ts"]!.includes(
-        'installSource !== "PLAYWRIGHT_CHROMIUM_DOWNLOAD_HOST"',
-      ) &&
-      files["scripts/capture-browser.ts"]!.includes(
-        'args: ["--use-angle=swiftshader"]',
-      ) &&
-      files["scripts/capture-browser.ts"]!.includes(
-        'context.getExtension("WEBGL_debug_renderer_info")',
-      ) &&
-      files["scripts/capture-browser.ts"]!.includes(
-        "executableDigest: await digestFile",
-      ) &&
-      files["scripts/capture-browser.ts"]!.includes(
-        'config.source === "system-channel"',
-      ) &&
-      files["scripts/capture-browser.ts"]!.includes(
-        'source = "configured-executable"',
-      ) &&
-      files["scripts/capture-browser.ts"]!.includes(
-        "parseCaptureBrowserConfig",
-      ) &&
-      files["scripts/capture-browser.ts"]!.includes(
-        "Invalid capture browser config",
-      ) &&
-      files["scripts/capture-doctor.ts"]!.includes("PNG.sync.read") &&
-      files["scripts/capture-doctor.ts"]!.includes(
-        "canonicalAutoMovieCaptureRuntimeIdentity",
-      ) &&
-      files["scripts/capture-doctor.ts"]!.includes("visiblePixel") &&
-      files["scripts/capture-install.ts"]!.includes(
-        "installPackageOwnedChromium",
-      ) &&
-      files["automovie.config.ts"]!.includes('source: "playwright-chromium"') &&
-      files["automovie.config.ts"]!.includes(
-        "satisfies AutoMovieCaptureBrowserConfig",
-      ) &&
-      files[".gitignore"]!.includes(".automovie/capture/") &&
-      files["README.md"]!.includes("pnpm capture:install") &&
-      files["README.md"]!.includes("PLAYWRIGHT_BROWSERS_PATH=0") &&
-      files["scripts/render.ts"]!.includes(
-        "await closeProductionFrameCapture()",
-      ) &&
-      files["scripts/render.ts"]!.includes("runProductionRenderJob") &&
-      files["scripts/render.ts"]!.includes("commitProductionPublication") &&
-      files["scripts/render.ts"]!.includes("probeProductionMedia") &&
-      files["scripts/render.ts"]!.includes(
-        "productionPublicationInputFingerprint",
-      ) &&
-      files["scripts/render.ts"]!.includes(
-        "const stagedReview = new AutoMovieProductionReviewService",
-      ) &&
-      files["scripts/render.ts"]!.includes(
-        "stagedReview.queue(status, compilerSnapshot)",
-      ) &&
-      files[".gitignore"]!.includes(".automovie/render-job/") &&
-      files[".automovie/design/production.json"]!.includes(
-        '"id": "starter-feature"',
-      ) &&
-      files[".automovie/design/production.json"]!.includes(
-        '"id": "starter-pose-guide"',
-      ) &&
-      files[".automovie/design/production.json"]!.includes(
-        '"id": "starter-captions"',
-      ) &&
-      files[".automovie/design/production.json"]!.includes(
-        '"id": "starter-audio"',
-      ) &&
-      files["public/audio/starter-tone.json"]!.includes(
-        '"sampleRate": 48000',
-      ) &&
-      files["public/audio/starter-tone.json"]!.includes('"channels": 2') &&
-      files["scripts/generatedShotPlugin.ts"]!.includes(
-        'shotId.includes("/")',
-      ) === false &&
-      files["viewer/src/main.ts"]!.includes('from "three"') === false,
-  );
-  TestValidator.predicate(
-    "no placeholder token survives any payload",
-    Object.values(files).every((content) => !content.includes("{{")),
-  );
-  TestValidator.predicate(
     "the starter ships the correctness lint ruleset",
-    files["lint.config.ts"]!.includes(
-      '"typescript/switch-exhaustiveness-check": "error"',
-    ) && files["lint.config.ts"]!.includes('"typescript/no-explicit-any"'),
+    files["lint.config.ts"]!.startsWith('/// <reference types="node" />\n') &&
+      files["lint.config.ts"]!.includes(
+        '"typescript/switch-exhaustiveness-check": "error"',
+      ) &&
+      files["lint.config.ts"]!.includes('"typescript/no-explicit-any"') &&
+      files["lint.config.ts"]!.includes(
+        '"automovie/template-sentinel": "error"',
+      ) &&
+      files["lint.config.ts"]!.includes('"automovie/asset-provenance": [') &&
+      files[".automovie/manifest.json"]!.includes(
+        '"assetManifest": ".automovie/assets.json"',
+      ) &&
+      files[".automovie/assets.json"]!.includes(
+        '"path": "public/audio/starter-tone.json"',
+      ) &&
+      files[".automovie/assets.json"]!.includes(
+        '"digest": "sha256:f7c7178b601f4b029ba3c56ab05f2bb5ab57f9d0da21fa35cd9292656c2c48aa"',
+      ) &&
+      files["lint.config.ts"]!.includes('"automovie/screenplay-contract": [') &&
+      files["lint.config.ts"]!.includes('".automovie/reviews/film/*.json"') &&
+      files["lint.config.ts"]!.includes('".automovie/reviews/*/film/*.json"') &&
+      files["lint.config.ts"]!.includes("/films/") === false,
   );
   TestValidator.predicate(
     "no payload carries a CRLF",
@@ -316,9 +3689,15 @@ export const test_cli_scaffold = (): void => {
     "renderScaffold throws on a blank name",
     throws(() => renderScaffold({ name: "   " })),
   );
+  TestValidator.predicate(
+    "renderScaffold refuses a path-bearing production name",
+    throws(() => renderScaffold({ name: "../escape" })) &&
+      throws(() => renderScaffold({ name: "film/name" })),
+  );
 
   // 4. write half: materialize, non-empty guard, traversal guard.
   const base = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-scaffold-"));
+  let scaffoldFailure: { error: unknown } | undefined;
   try {
     const target = path.join(base, "project");
     const written = writeFiles(target, files);
@@ -340,6 +3719,7 @@ export const test_cli_scaffold = (): void => {
         path.relative(target, absolute).split(path.sep).join("/"),
       ),
       [
+        ".automovie/assets.json",
         ".automovie/design/acceptance/answer-beauty.json",
         ".automovie/design/acceptance/answer-pose.json",
         ".automovie/design/acceptance/opening-beauty.json",
@@ -351,44 +3731,69 @@ export const test_cli_scaffold = (): void => {
         ".automovie/design/models/army-near.json",
         ".automovie/design/models/sentinel.json",
         ".automovie/design/production.json",
+        ".automovie/design/screenplay/index.json",
         ".automovie/design/shots/answer.json",
         ".automovie/design/shots/opening.json",
         ".automovie/design/world.json",
         ".automovie/manifest.json",
         ".automovie/reviews/README.md",
+        ".claude/hooks/guard-automovie-owned.mjs",
+        ".claude/settings.json",
         ".gitignore",
+        ".mcp.json",
+        ".npmrc",
         "AGENTS.md",
         "CLAUDE.md",
         "README.md",
         "automovie.config.ts",
-        "automovie.mcp.jsonc",
         "docs/art-direction.md",
+        "docs/demo-film/screenplay.md",
+        "docs/demo-film/treatment.md",
         "docs/historical-notes.md",
-        "docs/screenplay.md",
-        "docs/treatment.md",
         "lint.config.ts",
         "package.json",
         "public/assets/README.md",
         "public/audio/README.md",
         "public/audio/starter-tone.json",
         "renders/README.md",
+        "scripts/assertProxyBundle.ts",
         "scripts/capture-browser.ts",
         "scripts/capture-doctor.ts",
         "scripts/capture-install.ts",
         "scripts/capture.ts",
+        "scripts/captureExecutableSnapshot.ts",
         "scripts/compile.ts",
+        "scripts/dialogueCacheSnapshot.ts",
         "scripts/generatedShotPlugin.ts",
         "scripts/lint.ts",
         "scripts/mcp.ts",
         "scripts/preview.ts",
+        "scripts/publishProxyBundle.ts",
         "scripts/render.ts",
+        "scripts/renderAttemptSnapshot.ts",
+        "scripts/renderChunkSnapshot.ts",
+        "scripts/renderGcSnapshot.ts",
+        "scripts/renderLiveness.ts",
+        "scripts/renderPlanSnapshot.ts",
         "scripts/review-status.ts",
+        "scripts/runtimePackageSnapshot.ts",
+        "scripts/verify.ts",
+        "src/examples/lineBattle.ts",
         "src/film.ts",
         "src/shots/opening.ts",
         "test/opening.test.ts",
         "tsconfig.json",
+        "vendor/sharp-disabled/LICENSE",
+        "vendor/sharp-disabled/index.cjs",
+        "vendor/sharp-disabled/package.json",
         "viewer/index.html",
+        "viewer/src/asset.ts",
+        "viewer/src/film.ts",
+        "viewer/src/loadCompiledModel.ts",
         "viewer/src/main.ts",
+        "viewer/src/shot.ts",
+        "viewer/src/shotRuntime.ts",
+        "viewer/src/viewerDocument.ts",
         "vite.config.ts",
       ],
     );
@@ -396,6 +3801,9073 @@ export const test_cli_scaffold = (): void => {
       "the written tree matches the rendered keys on disk",
       Object.keys(files).every((key) => fs.existsSync(path.join(target, key))),
     );
+    const sharpWall = createRequire(__filename)(
+      path.join(target, "vendor", "sharp-disabled", "index.cjs"),
+    ) as () => never;
+    TestValidator.predicate(
+      "the local Sharp replacement fails explicitly outside the TTS surface",
+      throwsWith(sharpWall, "text/audio path only"),
+    );
+    const generatedRoot = path.join(target, "generated", "demo-film");
+    const artifact = path.join(generatedRoot, "shots", "race.json");
+    fs.mkdirSync(path.dirname(artifact), { recursive: true });
+    fs.writeFileSync(artifact, '{"resident":true}\n');
+    const generatedModule = createRequire(__filename)(
+      path.join(target, "scripts", "generatedShotPlugin.ts"),
+    ) as {
+      generatedShotPlugin: (
+        root: string,
+        productionId: string,
+      ) => {
+        configureServer?: (server: {
+          middlewares: {
+            use: (handler: GeneratedViewerMiddleware) => void;
+          };
+        }) => void;
+      };
+      readPhysicalFileSnapshot: (
+        root: {
+          device: string;
+          inode: string;
+          path: string;
+          real: string;
+          version: string;
+        },
+        directory: string,
+        name: string,
+      ) => { bytes: Buffer };
+    };
+    let middleware: GeneratedViewerMiddleware | undefined;
+    generatedModule.generatedShotPlugin(target, "demo-film").configureServer?.({
+      middlewares: {
+        use: (handler) => {
+          middleware = handler;
+        },
+      },
+    });
+    const positiveHeaders = new Map<string, string>();
+    const positiveResponse: GeneratedViewerResponse = {
+      body: "",
+      statusCode: 0,
+      end: (body) => {
+        positiveResponse.body = Buffer.isBuffer(body)
+          ? body.toString("utf8")
+          : String(body ?? "");
+      },
+      setHeader: (name, value) => {
+        positiveHeaders.set(name, value);
+      },
+    };
+    middleware?.(
+      { url: "/__automovie/shots/race.json" },
+      positiveResponse,
+      () => undefined,
+    );
+    TestValidator.predicate(
+      "the generated viewer serves the exact resident artifact and headers",
+      middleware !== undefined &&
+        positiveResponse.statusCode === 200 &&
+        positiveResponse.body === '{"resident":true}\n' &&
+        positiveHeaders.get("Content-Type") ===
+          "application/json; charset=utf-8" &&
+        positiveHeaders.get("Cache-Control") === "no-store",
+    );
+    const mutableFs = createRequire(__filename)("node:fs") as {
+      closeSync: typeof fs.closeSync;
+      fstatSync: typeof fs.fstatSync;
+      lstatSync: typeof fs.lstatSync;
+      linkSync: typeof fs.linkSync;
+      fsyncSync: typeof fs.fsyncSync;
+      mkdirSync: typeof fs.mkdirSync;
+      openSync: typeof fs.openSync;
+      readSync: typeof fs.readSync;
+      readFileSync: typeof fs.readFileSync;
+      readdirSync: typeof fs.readdirSync;
+      renameSync: typeof fs.renameSync;
+      statSync: typeof fs.statSync;
+      writeSync: typeof fs.writeSync;
+      writeFileSync: typeof fs.writeFileSync;
+    };
+    const nativeClose = mutableFs.closeSync;
+    const nativeFstat = mutableFs.fstatSync;
+    const nativeFsync = mutableFs.fsyncSync;
+    const nativeLstat = mutableFs.lstatSync;
+    const nativeLink = mutableFs.linkSync;
+    const nativeMkdir = mutableFs.mkdirSync;
+    const nativeOpen = mutableFs.openSync;
+    const nativeRead = mutableFs.readSync;
+    const nativeReadFile = mutableFs.readFileSync;
+    const nativeRename = mutableFs.renameSync;
+    const nativeStat = mutableFs.statSync;
+    const nativeWrite = mutableFs.writeSync;
+    const nativeWriteFile = mutableFs.writeFileSync;
+    const viewerRootPath = path.resolve(target);
+    const viewerRootReal = fs.realpathSync(viewerRootPath);
+    const viewerRootStatus = fs.statSync(viewerRootReal, { bigint: true });
+    const viewerRoot = {
+      device: viewerRootStatus.dev.toString(),
+      inode: viewerRootStatus.ino.toString(),
+      path: viewerRootPath,
+      real: viewerRootReal,
+      version: `${viewerRootStatus.dev}\0${viewerRootStatus.ino}\0${viewerRootStatus.size}\0${viewerRootStatus.mtimeNs}\0${viewerRootStatus.ctimeNs}`,
+    };
+    const standaloneViewerCloseFailure = new Error(
+      "standalone viewer descriptor close failed",
+    );
+    let standaloneViewerDescriptor = -1;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+      if (path.resolve(file.toString()) === artifact && flags === "r")
+        standaloneViewerDescriptor = descriptor;
+      return descriptor;
+    }) as typeof fs.openSync;
+    mutableFs.closeSync = ((descriptor: number): void => {
+      Reflect.apply(nativeClose, mutableFs, [descriptor]);
+      if (descriptor === standaloneViewerDescriptor)
+        throw standaloneViewerCloseFailure;
+    }) as typeof fs.closeSync;
+    let standaloneViewerCloseError: unknown;
+    let standaloneViewerHookFailure: { error: unknown } | undefined;
+    try {
+      generatedModule.readPhysicalFileSnapshot(
+        viewerRoot,
+        path.dirname(artifact),
+        path.basename(artifact),
+      );
+    } catch (error) {
+      standaloneViewerCloseError = error;
+      standaloneViewerHookFailure = { error };
+    } finally {
+      preserveCliHarnessCleanup(standaloneViewerHookFailure, [
+        {
+          resource: "viewer standalone open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+        {
+          resource: "viewer standalone close hook",
+          cleanup: () => {
+            mutableFs.closeSync = nativeClose;
+          },
+        },
+      ]);
+    }
+    const primaryOnlyViewerFailure = new Error(
+      "primary-only viewer read failed",
+    );
+    let primaryOnlyViewerDescriptor = -1;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+      if (path.resolve(file.toString()) === artifact && flags === "r")
+        primaryOnlyViewerDescriptor = descriptor;
+      return descriptor;
+    }) as typeof fs.openSync;
+    mutableFs.fstatSync = ((descriptor, ...args: unknown[]): unknown => {
+      if (descriptor === primaryOnlyViewerDescriptor)
+        throw primaryOnlyViewerFailure;
+      return Reflect.apply(nativeFstat, mutableFs, [descriptor, ...args]);
+    }) as typeof fs.fstatSync;
+    let preservedPrimaryOnlyViewerFailure: unknown;
+    let primaryOnlyViewerHookFailure: { error: unknown } | undefined;
+    try {
+      generatedModule.readPhysicalFileSnapshot(
+        viewerRoot,
+        path.dirname(artifact),
+        path.basename(artifact),
+      );
+    } catch (error) {
+      preservedPrimaryOnlyViewerFailure = error;
+      primaryOnlyViewerHookFailure = { error };
+    } finally {
+      preserveCliHarnessCleanup(primaryOnlyViewerHookFailure, [
+        {
+          resource: "viewer primary-only open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+        {
+          resource: "viewer primary-only fstat hook",
+          cleanup: () => {
+            mutableFs.fstatSync = nativeFstat;
+          },
+        },
+      ]);
+    }
+    const combinedViewerPrimary = new Error("viewer descriptor read failed");
+    const combinedViewerClose = new Error("viewer descriptor close failed");
+    let combinedViewerDescriptor = -1;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+      if (path.resolve(file.toString()) === artifact && flags === "r")
+        combinedViewerDescriptor = descriptor;
+      return descriptor;
+    }) as typeof fs.openSync;
+    mutableFs.fstatSync = ((descriptor, ...args: unknown[]): unknown => {
+      if (descriptor === combinedViewerDescriptor) throw combinedViewerPrimary;
+      return Reflect.apply(nativeFstat, mutableFs, [descriptor, ...args]);
+    }) as typeof fs.fstatSync;
+    mutableFs.closeSync = ((descriptor: number): void => {
+      Reflect.apply(nativeClose, mutableFs, [descriptor]);
+      if (descriptor === combinedViewerDescriptor) throw combinedViewerClose;
+    }) as typeof fs.closeSync;
+    let combinedViewerFailure: unknown;
+    let combinedViewerHookFailure: { error: unknown } | undefined;
+    try {
+      generatedModule.readPhysicalFileSnapshot(
+        viewerRoot,
+        path.dirname(artifact),
+        path.basename(artifact),
+      );
+    } catch (error) {
+      combinedViewerFailure = error;
+      combinedViewerHookFailure = { error };
+    } finally {
+      preserveCliHarnessCleanup(combinedViewerHookFailure, [
+        {
+          resource: "viewer combined open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+        {
+          resource: "viewer combined fstat hook",
+          cleanup: () => {
+            mutableFs.fstatSync = nativeFstat;
+          },
+        },
+        {
+          resource: "viewer combined close hook",
+          cleanup: () => {
+            mutableFs.closeSync = nativeClose;
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "generated viewer preserves descriptor operation and cleanup failures",
+      standaloneViewerCloseError === standaloneViewerCloseFailure &&
+        preservedPrimaryOnlyViewerFailure === primaryOnlyViewerFailure &&
+        combinedViewerFailure instanceof AggregateError &&
+        combinedViewerFailure.errors.length === 2 &&
+        combinedViewerFailure.errors[0] === combinedViewerPrimary &&
+        combinedViewerFailure.errors[1] === combinedViewerClose,
+    );
+    const shotsDirectory = path.dirname(artifact);
+    const parkedShots = `${shotsDirectory}.parked`;
+    const replacementShots = `${shotsDirectory}.replacement`;
+    fs.mkdirSync(replacementShots);
+    fs.writeFileSync(
+      path.join(replacementShots, "race.json"),
+      '{"ancestorReplacement":true}\n',
+    );
+    let ancestorSwapped = false;
+    mutableFs.lstatSync = ((file, ...args: unknown[]): unknown => {
+      const status = Reflect.apply(nativeLstat, mutableFs, [file, ...args]);
+      if (
+        ancestorSwapped === false &&
+        path.resolve(file.toString()) === shotsDirectory
+      ) {
+        fs.renameSync(shotsDirectory, parkedShots);
+        fs.renameSync(replacementShots, shotsDirectory);
+        ancestorSwapped = true;
+      }
+      return status;
+    }) as typeof fs.lstatSync;
+    const ancestorResponse: GeneratedViewerResponse = {
+      body: "",
+      statusCode: 0,
+      end: (body) => {
+        ancestorResponse.body = Buffer.isBuffer(body)
+          ? body.toString("utf8")
+          : String(body ?? "");
+      },
+      setHeader: () => undefined,
+    };
+    let ancestorRaceCleanupFailure: { error: unknown } | undefined;
+    try {
+      middleware?.(
+        { url: "/__automovie/shots/race.json" },
+        ancestorResponse,
+        () => undefined,
+      );
+    } catch (error) {
+      ancestorRaceCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(ancestorRaceCleanupFailure, [
+        {
+          resource: "viewer ancestor lstat hook",
+          cleanup: () => {
+            mutableFs.lstatSync = nativeLstat;
+          },
+        },
+        {
+          resource: "viewer ancestor resident shots",
+          cleanup: () => {
+            if (fs.existsSync(parkedShots)) {
+              fs.rmSync(shotsDirectory, { recursive: true, force: true });
+              fs.renameSync(parkedShots, shotsDirectory);
+            }
+          },
+        },
+        {
+          resource: "viewer ancestor replacement shots",
+          cleanup: () => {
+            fs.rmSync(replacementShots, { recursive: true, force: true });
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "the generated viewer refuses an ancestry replacement during canonicalization",
+      ancestorSwapped &&
+        ancestorResponse.statusCode === 400 &&
+        ancestorResponse.body === "invalid compiled viewer artifact request",
+    );
+    const parkedArtifact = `${artifact}.parked`;
+    let artifactSwapped = false;
+    mutableFs.lstatSync = ((file, ...args: unknown[]): unknown => {
+      const status = Reflect.apply(nativeLstat, mutableFs, [file, ...args]);
+      if (
+        artifactSwapped === false &&
+        path.resolve(file.toString()) === artifact
+      ) {
+        fs.renameSync(artifact, parkedArtifact);
+        fs.writeFileSync(artifact, '{"replacement":true}\n');
+        artifactSwapped = true;
+      }
+      return status;
+    }) as typeof fs.lstatSync;
+    const viewerResponse: GeneratedViewerResponse = {
+      body: "",
+      statusCode: 0,
+      end: (body) => {
+        viewerResponse.body = Buffer.isBuffer(body)
+          ? body.toString("utf8")
+          : String(body ?? "");
+      },
+      setHeader: () => undefined,
+    };
+    let artifactRaceCleanupFailure: { error: unknown } | undefined;
+    try {
+      middleware?.(
+        { url: "/__automovie/shots/race.json" },
+        viewerResponse,
+        () => undefined,
+      );
+    } catch (error) {
+      artifactRaceCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(artifactRaceCleanupFailure, [
+        {
+          resource: "viewer artifact lstat hook",
+          cleanup: () => {
+            mutableFs.lstatSync = nativeLstat;
+          },
+        },
+        {
+          resource: "viewer resident artifact",
+          cleanup: () => {
+            if (fs.existsSync(parkedArtifact)) {
+              fs.rmSync(artifact, { force: true });
+              fs.renameSync(parkedArtifact, artifact);
+            }
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "the generated viewer refuses an artifact replaced after linked identity",
+      middleware !== undefined &&
+        artifactSwapped &&
+        viewerResponse.statusCode === 400 &&
+        viewerResponse.body === "invalid compiled viewer artifact request",
+    );
+    const asset = path.join(target, "public", "audio", "starter-tone.json");
+    const assetBytes = fs.readFileSync(asset);
+    const assetDigest =
+      "sha256:f7c7178b601f4b029ba3c56ab05f2bb5ab57f9d0da21fa35cd9292656c2c48aa";
+    const model = path.join(generatedRoot, "models", "asset-closure.json");
+    fs.mkdirSync(path.dirname(model), { recursive: true });
+    fs.writeFileSync(
+      model,
+      `${JSON.stringify({
+        imported: {
+          assets: [
+            {
+              path: "public/audio/starter-tone.json",
+              digest: assetDigest,
+            },
+          ],
+        },
+      })}\n`,
+    );
+    const positiveAssetResponse: GeneratedViewerResponse = {
+      body: "",
+      statusCode: 0,
+      end: (body) => {
+        positiveAssetResponse.body = Buffer.isBuffer(body)
+          ? body.toString("utf8")
+          : String(body ?? "");
+      },
+      setHeader: () => undefined,
+    };
+    middleware?.(
+      { url: "/__automovie/assets/public/audio/starter-tone.json" },
+      positiveAssetResponse,
+      () => undefined,
+    );
+    TestValidator.predicate(
+      "the generated viewer serves one ledger-and-closure-bound asset",
+      positiveAssetResponse.statusCode === 200 &&
+        positiveAssetResponse.body === assetBytes.toString("utf8"),
+    );
+    const requestRegisteredAsset = (): GeneratedViewerResponse => {
+      const response: GeneratedViewerResponse = {
+        body: "",
+        statusCode: 0,
+        end: (body) => {
+          response.body = Buffer.isBuffer(body)
+            ? body.toString("utf8")
+            : String(body ?? "");
+        },
+        setHeader: () => undefined,
+      };
+      middleware?.(
+        { url: "/__automovie/assets/public/audio/starter-tone.json" },
+        response,
+        () => undefined,
+      );
+      return response;
+    };
+    const ledger = path.join(target, ".automovie", "assets.json");
+    const ledgerBytes = fs.readFileSync(ledger);
+    const parkedLedger = `${ledger}.parked`;
+    let ledgerSwapped = false;
+    mutableFs.lstatSync = ((file, ...args: unknown[]): unknown => {
+      const status = Reflect.apply(nativeLstat, mutableFs, [file, ...args]);
+      if (ledgerSwapped === false && path.resolve(file.toString()) === ledger) {
+        fs.renameSync(ledger, parkedLedger);
+        fs.writeFileSync(ledger, ledgerBytes);
+        ledgerSwapped = true;
+      }
+      return status;
+    }) as typeof fs.lstatSync;
+    let ledgerResponse: GeneratedViewerResponse;
+    let ledgerRaceCleanupFailure: { error: unknown } | undefined;
+    try {
+      ledgerResponse = requestRegisteredAsset();
+    } catch (error) {
+      ledgerRaceCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(ledgerRaceCleanupFailure, [
+        {
+          resource: "viewer ledger lstat hook",
+          cleanup: () => {
+            mutableFs.lstatSync = nativeLstat;
+          },
+        },
+        {
+          resource: "viewer resident asset ledger",
+          cleanup: () => {
+            if (fs.existsSync(parkedLedger)) {
+              fs.rmSync(ledger, { force: true });
+              fs.renameSync(parkedLedger, ledger);
+            }
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "the generated viewer refuses a byte-identical asset ledger successor",
+      ledgerSwapped &&
+        ledgerResponse.statusCode === 400 &&
+        ledgerResponse.body === "invalid registered asset request",
+    );
+    const modelBytes = fs.readFileSync(model);
+    const parkedModel = `${model}.parked`;
+    let modelSwapped = false;
+    mutableFs.lstatSync = ((file, ...args: unknown[]): unknown => {
+      const status = Reflect.apply(nativeLstat, mutableFs, [file, ...args]);
+      if (modelSwapped === false && path.resolve(file.toString()) === model) {
+        fs.renameSync(model, parkedModel);
+        fs.writeFileSync(model, modelBytes);
+        modelSwapped = true;
+      }
+      return status;
+    }) as typeof fs.lstatSync;
+    let modelResponse: GeneratedViewerResponse;
+    let modelRaceCleanupFailure: { error: unknown } | undefined;
+    try {
+      modelResponse = requestRegisteredAsset();
+    } catch (error) {
+      modelRaceCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(modelRaceCleanupFailure, [
+        {
+          resource: "viewer model lstat hook",
+          cleanup: () => {
+            mutableFs.lstatSync = nativeLstat;
+          },
+        },
+        {
+          resource: "viewer resident compiled model",
+          cleanup: () => {
+            if (fs.existsSync(parkedModel)) {
+              fs.rmSync(model, { force: true });
+              fs.renameSync(parkedModel, model);
+            }
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "the generated viewer refuses a byte-identical compiled model successor",
+      modelSwapped &&
+        modelResponse.statusCode === 400 &&
+        modelResponse.body === "invalid registered asset request",
+    );
+    const modelsDirectory = path.dirname(model);
+    const extraModel = path.join(modelsDirectory, "late-inventory.json");
+    const nativeReaddir = mutableFs.readdirSync;
+    let inventoryMutated = false;
+    mutableFs.readdirSync = ((directory, ...args: unknown[]): unknown => {
+      const entries = Reflect.apply(nativeReaddir, mutableFs, [
+        directory,
+        ...args,
+      ]);
+      if (
+        inventoryMutated === false &&
+        path.resolve(directory.toString()) === modelsDirectory
+      ) {
+        fs.writeFileSync(extraModel, '{"imported":{"assets":[]}}\n');
+        inventoryMutated = true;
+      }
+      return entries;
+    }) as typeof fs.readdirSync;
+    let inventoryResponse: GeneratedViewerResponse;
+    let inventoryRaceCleanupFailure: { error: unknown } | undefined;
+    try {
+      inventoryResponse = requestRegisteredAsset();
+    } catch (error) {
+      inventoryRaceCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(inventoryRaceCleanupFailure, [
+        {
+          resource: "viewer inventory readdir hook",
+          cleanup: () => {
+            mutableFs.readdirSync = nativeReaddir;
+          },
+        },
+        {
+          resource: "viewer extra compiled model",
+          cleanup: () => {
+            fs.rmSync(extraModel, { force: true });
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "the generated viewer refuses compiled model inventory mutation",
+      inventoryMutated &&
+        inventoryResponse.statusCode === 400 &&
+        inventoryResponse.body === "invalid registered asset request",
+    );
+    const parkedAsset = `${asset}.parked`;
+    let assetSwapped = false;
+    mutableFs.lstatSync = ((file, ...args: unknown[]): unknown => {
+      const status = Reflect.apply(nativeLstat, mutableFs, [file, ...args]);
+      if (assetSwapped === false && path.resolve(file.toString()) === asset) {
+        fs.renameSync(asset, parkedAsset);
+        fs.writeFileSync(asset, assetBytes);
+        assetSwapped = true;
+      }
+      return status;
+    }) as typeof fs.lstatSync;
+    const assetResponse: GeneratedViewerResponse = {
+      body: "",
+      statusCode: 0,
+      end: (body) => {
+        assetResponse.body = Buffer.isBuffer(body)
+          ? body.toString("utf8")
+          : String(body ?? "");
+      },
+      setHeader: () => undefined,
+    };
+    let assetRaceCleanupFailure: { error: unknown } | undefined;
+    try {
+      middleware?.(
+        { url: "/__automovie/assets/public/audio/starter-tone.json" },
+        assetResponse,
+        () => undefined,
+      );
+    } catch (error) {
+      assetRaceCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(assetRaceCleanupFailure, [
+        {
+          resource: "viewer asset lstat hook",
+          cleanup: () => {
+            mutableFs.lstatSync = nativeLstat;
+          },
+        },
+        {
+          resource: "viewer resident registered asset",
+          cleanup: () => {
+            if (fs.existsSync(parkedAsset)) {
+              fs.rmSync(asset, { force: true });
+              fs.renameSync(parkedAsset, asset);
+            }
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "the generated viewer refuses a byte-identical registered asset successor",
+      assetSwapped &&
+        assetResponse.statusCode === 400 &&
+        assetResponse.body === "invalid registered asset request",
+    );
+    const proxy = path.join(base, "proxy-publication");
+    const proxyFiles = new Map<string, Uint8Array>([
+      ["manifest.json", Buffer.from('{"proxy":true}\n')],
+      ["media/proxy.mp4", Buffer.from("proxy bytes")],
+    ]);
+    for (const [relative, bytes] of proxyFiles) {
+      const file = path.join(proxy, ...relative.split("/"));
+      fs.mkdirSync(path.dirname(file), { recursive: true });
+      fs.writeFileSync(file, bytes);
+    }
+    const proxyModule = createRequire(__filename)(
+      path.join(scaffoldDir, "scripts", "assertProxyBundle.ts"),
+    ) as {
+      assertPublishedProxyBundle: (
+        directory: string,
+        expected: ReadonlyMap<string, Uint8Array>,
+      ) => void;
+      inspectPublishedProxyBundle: (
+        renderRoot: string,
+        directory: string,
+      ) => {
+        compileFingerprint: string;
+        editFingerprint: string;
+        publicationFingerprint: string;
+        tier: { kind: string };
+      };
+      inspectCapturedProxyBundle: (
+        snapshot: unknown,
+        evidence: unknown,
+      ) => {
+        compileFingerprint: string;
+        editFingerprint: string;
+        publicationFingerprint: string;
+      };
+    };
+    const proxyPublisherModule = createRequire(__filename)(
+      path.join(scaffoldDir, "scripts", "publishProxyBundle.ts"),
+    ) as {
+      captureProxyPublicationGcTarget: <Value>(props: {
+        judge: (
+          snapshot: {
+            entries: Array<{ kind: string; path: string }>;
+            kind: string;
+            target: string;
+            targetIdentity: string;
+          },
+          evidence: unknown,
+        ) => Value;
+        renderRoot: string;
+        target: string;
+      }) => {
+        snapshot: {
+          entries: Array<{ kind: string; path: string }>;
+          kind: string;
+          target: string;
+          targetIdentity: string;
+        };
+        value: Value;
+      };
+      publishProxyBundle: (props: {
+        expected: ReadonlyMap<string, Uint8Array>;
+        parent: string;
+        processAlive: (pid: number) => boolean;
+        renderRoot: string;
+        target: string;
+      }) => { reused: boolean };
+    };
+    TestValidator.predicate(
+      "an exact physical proxy bundle passes immutable verification",
+      !throws(() => proxyModule.assertPublishedProxyBundle(proxy, proxyFiles)),
+    );
+    const proxyPublishRoot = path.join(base, "proxy-publisher");
+    const proxyPublishParent = path.join(
+      proxyPublishRoot,
+      "deliverables",
+      "proxy",
+    );
+    fs.mkdirSync(proxyPublishParent, { recursive: true });
+    const proxyPublishFiles = new Map<string, Uint8Array>([
+      ["publication.json", Buffer.from('{"publication":true}\n')],
+      ["feature/feature.mp4", Buffer.from("published proxy bytes")],
+    ]);
+    const writeProxyPublishFixture = (target: string): void => {
+      for (const [relative, bytes] of proxyPublishFiles) {
+        const file = path.join(target, ...relative.split("/"));
+        Reflect.apply(nativeMkdir, mutableFs, [
+          path.dirname(file),
+          {
+            recursive: true,
+          },
+        ]);
+        fs.writeFileSync(file, bytes);
+      }
+    };
+    const proxyPublishTarget = path.join(proxyPublishParent, "normal");
+    const firstProxyPublication = proxyPublisherModule.publishProxyBundle({
+      expected: proxyPublishFiles,
+      parent: proxyPublishParent,
+      processAlive: () => false,
+      renderRoot: proxyPublishRoot,
+      target: proxyPublishTarget,
+    });
+    const reusedProxyPublication = proxyPublisherModule.publishProxyBundle({
+      expected: proxyPublishFiles,
+      parent: proxyPublishParent,
+      processAlive: () => false,
+      renderRoot: proxyPublishRoot,
+      target: proxyPublishTarget,
+    });
+    TestValidator.predicate(
+      "proxy publisher reserves a new target and independently verifies reuse",
+      firstProxyPublication.reused === false &&
+        reusedProxyPublication.reused &&
+        fs
+          .readdirSync(proxyPublishParent)
+          .every((name) => name.endsWith(".candidate") === false) &&
+        !throws(() =>
+          proxyModule.assertPublishedProxyBundle(
+            proxyPublishTarget,
+            proxyPublishFiles,
+          ),
+        ),
+    );
+
+    const gcRaceTarget = path.join(proxyPublishParent, "gc-race");
+    const gcRaceParked = `${gcRaceTarget}.parked`;
+    const gcRaceSuccessor = `${gcRaceTarget}.successor`;
+    fs.mkdirSync(gcRaceTarget);
+    fs.writeFileSync(path.join(gcRaceTarget, "invalid.bin"), "invalid");
+    writeProxyPublishFixture(gcRaceSuccessor);
+    let gcRaceSwapped = false;
+    const gcRaceRejected = throws(() =>
+      proxyPublisherModule.captureProxyPublicationGcTarget({
+        renderRoot: proxyPublishRoot,
+        target: gcRaceTarget,
+        judge: () => {
+          nativeRename(gcRaceTarget, gcRaceParked);
+          nativeRename(gcRaceSuccessor, gcRaceTarget);
+          gcRaceSwapped = true;
+          return false;
+        },
+      }),
+    );
+    const invalidGcRoot = proxyPublisherModule.captureProxyPublicationGcTarget({
+      renderRoot: proxyPublishRoot,
+      target: gcRaceParked,
+      judge: () => false,
+    });
+    TestValidator.predicate(
+      "proxy GC never turns an invalid judgment into an exact-successor removal snapshot",
+      gcRaceSwapped &&
+        gcRaceRejected &&
+        !throws(() =>
+          proxyModule.assertPublishedProxyBundle(
+            gcRaceTarget,
+            proxyPublishFiles,
+          ),
+        ) &&
+        invalidGcRoot.value === false &&
+        invalidGcRoot.snapshot.kind === "directory" &&
+        invalidGcRoot.snapshot.target === gcRaceParked,
+    );
+    fs.rmSync(gcRaceTarget, { recursive: true, force: true });
+    fs.rmSync(gcRaceParked, { recursive: true, force: true });
+
+    const gcAbaTarget = path.join(proxyPublishParent, "gc-aba");
+    const gcAbaParked = `${gcAbaTarget}.parked`;
+    const gcAbaSuccessor = `${gcAbaTarget}.successor`;
+    writeProxyPublishFixture(gcAbaTarget);
+    fs.mkdirSync(gcAbaSuccessor);
+    fs.writeFileSync(path.join(gcAbaSuccessor, "invalid.bin"), "invalid");
+    const gcAbaStatus = fs.lstatSync(gcAbaTarget, { bigint: true });
+    const gcAbaIdentity = `${gcAbaStatus.dev}\0${gcAbaStatus.ino}`;
+    let gcAba:
+      | {
+          snapshot: { targetIdentity: string };
+          value: boolean;
+        }
+      | undefined;
+    let gcAbaRejected = false;
+    try {
+      gcAba = proxyPublisherModule.captureProxyPublicationGcTarget({
+        renderRoot: proxyPublishRoot,
+        target: gcAbaTarget,
+        judge: (snapshot) => {
+          nativeRename(gcAbaTarget, gcAbaParked);
+          nativeRename(gcAbaSuccessor, gcAbaTarget);
+          const value =
+            snapshot.targetIdentity === gcAbaIdentity &&
+            snapshot.entries.some(
+              (entry) =>
+                entry.kind === "file" && entry.path === "publication.json",
+            );
+          nativeRename(gcAbaTarget, gcAbaSuccessor);
+          nativeRename(gcAbaParked, gcAbaTarget);
+          return value;
+        },
+      });
+    } catch {
+      gcAbaRejected = true;
+    }
+    TestValidator.predicate(
+      "proxy GC derives an ABA judgment from the captured generation",
+      (gcAbaRejected ||
+        (gcAba?.value === true &&
+          gcAba.snapshot.targetIdentity === gcAbaIdentity)) &&
+        (() => {
+          const status = fs.lstatSync(gcAbaTarget, { bigint: true });
+          return `${status.dev}\0${status.ino}` === gcAbaIdentity;
+        })() &&
+        fs.readFileSync(path.join(gcAbaSuccessor, "invalid.bin"), "utf8") ===
+          "invalid",
+    );
+    fs.rmSync(gcAbaTarget, { recursive: true, force: true });
+    fs.rmSync(gcAbaSuccessor, { recursive: true, force: true });
+
+    const emptySuccessorTarget = path.join(
+      proxyPublishParent,
+      "empty-successor",
+    );
+    let emptySuccessorInserted = false;
+    let emptySuccessorIdentity = "";
+    mutableFs.mkdirSync = ((directory, ...args: unknown[]): unknown => {
+      if (
+        emptySuccessorInserted === false &&
+        path.resolve(directory.toString()) === emptySuccessorTarget
+      ) {
+        nativeMkdir(emptySuccessorTarget);
+        emptySuccessorInserted = true;
+        const status = fs.lstatSync(emptySuccessorTarget, { bigint: true });
+        emptySuccessorIdentity = `${status.dev}\0${status.ino}`;
+        const error = new Error(
+          "fixture destination exists",
+        ) as NodeJS.ErrnoException;
+        error.code = "EEXIST";
+        throw error;
+      }
+      return Reflect.apply(nativeMkdir, mutableFs, [directory, ...args]);
+    }) as typeof fs.mkdirSync;
+    let emptySuccessorCompleted = false;
+    let emptySuccessorCleanupFailure: { error: unknown } | undefined;
+    try {
+      proxyPublisherModule.publishProxyBundle({
+        expected: proxyPublishFiles,
+        parent: proxyPublishParent,
+        processAlive: () => false,
+        renderRoot: proxyPublishRoot,
+        target: emptySuccessorTarget,
+      });
+      emptySuccessorCompleted = true;
+    } catch (error) {
+      emptySuccessorCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(emptySuccessorCleanupFailure, [
+        {
+          resource: "proxy empty successor mkdir hook",
+          cleanup: () => {
+            mutableFs.mkdirSync = nativeMkdir;
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "proxy publisher monotonically completes an empty destination competitor",
+      emptySuccessorInserted &&
+        emptySuccessorCompleted &&
+        (() => {
+          const status = fs.lstatSync(emptySuccessorTarget, { bigint: true });
+          return `${status.dev}\0${status.ino}` === emptySuccessorIdentity;
+        })() &&
+        !throws(() =>
+          proxyModule.assertPublishedProxyBundle(
+            emptySuccessorTarget,
+            proxyPublishFiles,
+          ),
+        ),
+    );
+
+    const exactSuccessorTarget = path.join(
+      proxyPublishParent,
+      "exact-successor",
+    );
+    let exactSuccessorInserted = false;
+    let exactSuccessorIdentity = "";
+    mutableFs.mkdirSync = ((directory, ...args: unknown[]): unknown => {
+      if (
+        exactSuccessorInserted === false &&
+        path.resolve(directory.toString()) === exactSuccessorTarget
+      ) {
+        writeProxyPublishFixture(exactSuccessorTarget);
+        exactSuccessorInserted = true;
+        const status = fs.lstatSync(exactSuccessorTarget, { bigint: true });
+        exactSuccessorIdentity = `${status.dev}\0${status.ino}`;
+        const error = new Error(
+          "fixture destination exists",
+        ) as NodeJS.ErrnoException;
+        error.code = "EEXIST";
+        throw error;
+      }
+      return Reflect.apply(nativeMkdir, mutableFs, [directory, ...args]);
+    }) as typeof fs.mkdirSync;
+    let exactSuccessorAccepted = false;
+    let exactSuccessorCleanupFailure: { error: unknown } | undefined;
+    try {
+      proxyPublisherModule.publishProxyBundle({
+        expected: proxyPublishFiles,
+        parent: proxyPublishParent,
+        processAlive: () => false,
+        renderRoot: proxyPublishRoot,
+        target: exactSuccessorTarget,
+      });
+      exactSuccessorAccepted = true;
+    } catch (error) {
+      exactSuccessorCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(exactSuccessorCleanupFailure, [
+        {
+          resource: "proxy exact successor mkdir hook",
+          cleanup: () => {
+            mutableFs.mkdirSync = nativeMkdir;
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "proxy publisher verifies an exact directory competitor without replacing it",
+      exactSuccessorInserted &&
+        exactSuccessorAccepted &&
+        (() => {
+          const status = fs.lstatSync(exactSuccessorTarget, { bigint: true });
+          return `${status.dev}\0${status.ino}` === exactSuccessorIdentity;
+        })() &&
+        !throws(() =>
+          proxyModule.assertPublishedProxyBundle(
+            exactSuccessorTarget,
+            proxyPublishFiles,
+          ),
+        ),
+    );
+
+    const parentSwapTarget = path.join(proxyPublishParent, "parent-swap");
+    const parkedProxyPublishParent = `${proxyPublishParent}.parked`;
+    let proxyParentSwapped = false;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+      if (
+        proxyParentSwapped === false &&
+        typeof file !== "number" &&
+        flags === "wx+" &&
+        path
+          .resolve(file.toString())
+          .startsWith(`${path.resolve(parentSwapTarget)}${path.sep}`)
+      ) {
+        nativeRename(proxyPublishParent, parkedProxyPublishParent);
+        nativeMkdir(proxyPublishParent, { recursive: true });
+        proxyParentSwapped = true;
+      }
+      return descriptor;
+    }) as typeof fs.openSync;
+    let proxyParentSwapRejected = false;
+    let proxyParentSwapCleanupFailure: { error: unknown } | undefined;
+    try {
+      proxyParentSwapRejected = throws(() =>
+        proxyPublisherModule.publishProxyBundle({
+          expected: proxyPublishFiles,
+          parent: proxyPublishParent,
+          processAlive: () => false,
+          renderRoot: proxyPublishRoot,
+          target: parentSwapTarget,
+        }),
+      );
+    } catch (error) {
+      proxyParentSwapCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(proxyParentSwapCleanupFailure, [
+        {
+          resource: "proxy parent swap open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "proxy publisher rejects and preserves a physical parent successor",
+      proxyParentSwapped &&
+        proxyParentSwapRejected &&
+        fs.existsSync(proxyPublishParent) &&
+        fs.existsSync(parkedProxyPublishParent),
+    );
+    fs.rmSync(proxyPublishParent, { recursive: true, force: true });
+    nativeRename(parkedProxyPublishParent, proxyPublishParent);
+
+    const rootSwapTarget = path.join(proxyPublishParent, "root-swap");
+    const parkedProxyPublishRoot = `${proxyPublishRoot}.parked`;
+    let proxyRootSwapped = false;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+      if (
+        proxyRootSwapped === false &&
+        typeof file !== "number" &&
+        flags === "wx+" &&
+        path
+          .resolve(file.toString())
+          .startsWith(`${path.resolve(rootSwapTarget)}${path.sep}`)
+      ) {
+        nativeRename(proxyPublishRoot, parkedProxyPublishRoot);
+        nativeMkdir(proxyPublishParent, { recursive: true });
+        proxyRootSwapped = true;
+      }
+      return descriptor;
+    }) as typeof fs.openSync;
+    let proxyRootSwapRejected = false;
+    let proxyRootSwapCleanupFailure: { error: unknown } | undefined;
+    try {
+      proxyRootSwapRejected = throws(() =>
+        proxyPublisherModule.publishProxyBundle({
+          expected: proxyPublishFiles,
+          parent: proxyPublishParent,
+          processAlive: () => false,
+          renderRoot: proxyPublishRoot,
+          target: rootSwapTarget,
+        }),
+      );
+    } catch (error) {
+      proxyRootSwapCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(proxyRootSwapCleanupFailure, [
+        {
+          resource: "proxy root swap open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "proxy publisher rejects and preserves a physical render-root successor",
+      proxyRootSwapped &&
+        proxyRootSwapRejected &&
+        fs.existsSync(proxyPublishRoot) &&
+        fs.existsSync(parkedProxyPublishRoot),
+    );
+    fs.rmSync(proxyPublishRoot, { recursive: true, force: true });
+    nativeRename(parkedProxyPublishRoot, proxyPublishRoot);
+
+    const partialSuccessorTarget = path.join(
+      proxyPublishParent,
+      "partial-file-successor",
+    );
+    const partialSuccessorFile = path.join(
+      partialSuccessorTarget,
+      "feature",
+      "feature.mp4",
+    );
+    const partialSuccessorBytes = Buffer.from("foreign partial file");
+    let partialSuccessorInserted = false;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      if (
+        partialSuccessorInserted === false &&
+        typeof file !== "number" &&
+        path.resolve(file.toString()) === partialSuccessorFile &&
+        flags === "wx+"
+      ) {
+        nativeWriteFile(partialSuccessorFile, partialSuccessorBytes);
+        partialSuccessorInserted = true;
+      }
+      return Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+    }) as typeof fs.openSync;
+    let partialSuccessorRejected = false;
+    let partialSuccessorCleanupFailure: { error: unknown } | undefined;
+    try {
+      partialSuccessorRejected = throws(() =>
+        proxyPublisherModule.publishProxyBundle({
+          expected: proxyPublishFiles,
+          parent: proxyPublishParent,
+          processAlive: () => false,
+          renderRoot: proxyPublishRoot,
+          target: partialSuccessorTarget,
+        }),
+      );
+    } catch (error) {
+      partialSuccessorCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(partialSuccessorCleanupFailure, [
+        {
+          resource: "proxy partial successor open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "proxy publisher preserves a partial file appearing at commit",
+      partialSuccessorInserted &&
+        partialSuccessorRejected &&
+        fs.readFileSync(partialSuccessorFile).equals(partialSuccessorBytes),
+    );
+    fs.rmSync(partialSuccessorTarget, { recursive: true, force: true });
+
+    const proxyFixtureDigest = (bytes: Uint8Array): string =>
+      `sha256:${createHash("sha256").update(bytes).digest("hex")}`;
+    const gcAbaPublication = `sha256:${"a".repeat(64)}`;
+    const gcAbaCompile = `sha256:${"b".repeat(64)}`;
+    const gcAbaEdit = `sha256:${"c".repeat(64)}`;
+    const gcAbaPayload = Buffer.from("captured proxy payload");
+    const gcAbaProductionTarget = path.join(
+      proxyPublishParent,
+      gcAbaPublication.slice(7),
+    );
+    const gcAbaProductionParked = `${gcAbaProductionTarget}.parked`;
+    const gcAbaProductionSuccessor = `${gcAbaProductionTarget}.successor`;
+    const gcAbaProductionFiles = new Map<string, Uint8Array>([
+      [
+        "publication.json",
+        Buffer.from(
+          `${JSON.stringify({
+            version: 1,
+            tier: { kind: "proxy", resolutionScale: 0.5, frameStep: 2 },
+            publicationFingerprint: gcAbaPublication,
+            compileFingerprint: gcAbaCompile,
+            editFingerprint: gcAbaEdit,
+            frameFormat: { width: 640, height: 360, fps: 24 },
+            sourceFrameFormat: { width: 1280, height: 720, fps: 24 },
+            totalFrames: 24,
+            manifest: {
+              version: 1,
+              compileFingerprint: gcAbaCompile,
+              deliverables: [
+                {
+                  id: "feature",
+                  kind: "feature",
+                  files: [
+                    {
+                      path: `deliverables/proxy/${gcAbaPublication.slice(7)}/feature/feature.mp4`,
+                      digest: proxyFixtureDigest(gcAbaPayload),
+                      bytes: gcAbaPayload.length,
+                      mediaType: "video/mp4",
+                    },
+                  ],
+                  runtimeSeconds: 1,
+                  frameCount: 24,
+                  codec: "fixture",
+                },
+              ],
+            },
+          })}\n`,
+        ),
+      ],
+      ["feature/feature.mp4", gcAbaPayload],
+    ]);
+    for (const [relative, bytes] of gcAbaProductionFiles) {
+      const file = path.join(gcAbaProductionTarget, ...relative.split("/"));
+      fs.mkdirSync(path.dirname(file), { recursive: true });
+      fs.writeFileSync(file, bytes);
+    }
+    fs.mkdirSync(gcAbaProductionSuccessor);
+    fs.writeFileSync(
+      path.join(gcAbaProductionSuccessor, "invalid.bin"),
+      "invalid directory",
+    );
+    const gcAbaProduction =
+      proxyPublisherModule.captureProxyPublicationGcTarget({
+        renderRoot: proxyPublishRoot,
+        target: gcAbaProductionTarget,
+        judge: (snapshot, evidence) => {
+          nativeRename(gcAbaProductionTarget, gcAbaProductionParked);
+          nativeRename(gcAbaProductionSuccessor, gcAbaProductionTarget);
+          let gcAbaJudgeCleanupFailure: { error: unknown } | undefined;
+          try {
+            const receipt = proxyModule.inspectCapturedProxyBundle(
+              snapshot,
+              evidence,
+            );
+            return (
+              receipt.publicationFingerprint === gcAbaPublication &&
+              receipt.compileFingerprint === gcAbaCompile &&
+              receipt.editFingerprint === gcAbaEdit
+            );
+          } catch (error) {
+            gcAbaJudgeCleanupFailure = { error };
+            return false;
+          } finally {
+            preserveCliHarnessCleanup(gcAbaJudgeCleanupFailure, [
+              {
+                resource: "proxy GC ABA successor target",
+                cleanup: () => {
+                  nativeRename(gcAbaProductionTarget, gcAbaProductionSuccessor);
+                },
+              },
+              {
+                resource: "proxy GC ABA resident target",
+                cleanup: () => {
+                  nativeRename(gcAbaProductionParked, gcAbaProductionTarget);
+                },
+              },
+            ]);
+          }
+        },
+      });
+    TestValidator.predicate(
+      "proxy GC production adjudication derives ABA status from captured evidence",
+      gcAbaProduction.value &&
+        !throws(() =>
+          proxyModule.inspectPublishedProxyBundle(
+            proxyPublishRoot,
+            gcAbaProductionTarget,
+          ),
+        ) &&
+        fs.readFileSync(
+          path.join(gcAbaProductionSuccessor, "invalid.bin"),
+          "utf8",
+        ) === "invalid directory",
+    );
+    fs.rmSync(gcAbaProductionTarget, { recursive: true, force: true });
+    fs.rmSync(gcAbaProductionSuccessor, { recursive: true, force: true });
+
+    const publishScaleFixture = (
+      name: string,
+      count: number,
+    ): { observations: number; readBytes: number } => {
+      const target = path.join(proxyPublishParent, name);
+      const entries = new Map<string, Uint8Array>([
+        ["publication.json", Buffer.from(`{"count":${count}}\n`)],
+        ...Array.from(
+          { length: count },
+          (_, index) =>
+            [
+              `frames/${String(index).padStart(4, "0")}.png`,
+              Buffer.alloc(1024, index),
+            ] as const,
+        ),
+      ]);
+      let observations = 0;
+      let readBytes = 0;
+      mutableFs.lstatSync = ((file, ...args: unknown[]): unknown => {
+        if (
+          path
+            .resolve(file.toString())
+            .startsWith(`${path.resolve(proxyPublishParent)}${path.sep}`)
+        )
+          observations++;
+        return Reflect.apply(nativeLstat, mutableFs, [file, ...args]);
+      }) as typeof fs.lstatSync;
+      mutableFs.readSync = ((...args: unknown[]): number => {
+        const length = Reflect.apply(nativeRead, mutableFs, args) as number;
+        readBytes += length;
+        return length;
+      }) as typeof fs.readSync;
+      let scaleCleanupFailure: { error: unknown } | undefined;
+      try {
+        proxyPublisherModule.publishProxyBundle({
+          expected: entries,
+          parent: proxyPublishParent,
+          processAlive: () => false,
+          renderRoot: proxyPublishRoot,
+          target,
+        });
+      } catch (error) {
+        scaleCleanupFailure = { error };
+        throw error;
+      } finally {
+        preserveCliHarnessCleanup(scaleCleanupFailure, [
+          {
+            resource: "proxy scale lstat hook",
+            cleanup: () => {
+              mutableFs.lstatSync = nativeLstat;
+            },
+          },
+          {
+            resource: "proxy scale read hook",
+            cleanup: () => {
+              mutableFs.readSync = nativeRead;
+            },
+          },
+        ]);
+      }
+      return {
+        observations,
+        readBytes,
+      };
+    };
+    const smallProxyPublicationWork = publishScaleFixture("scale-8", 8);
+    const largeProxyPublicationWork = publishScaleFixture("scale-32", 32);
+    TestValidator.predicate(
+      "proxy publication inventory work scales linearly with bundle entries",
+      largeProxyPublicationWork.observations <=
+        smallProxyPublicationWork.observations * 6 &&
+        largeProxyPublicationWork.readBytes <=
+          smallProxyPublicationWork.readBytes * 6,
+    );
+    const volumeProxyTarget = path.join(proxyPublishParent, "scale-volume");
+    const volumeProxyBytes = Buffer.alloc(32 * 1024 * 1024, 0x5a);
+    proxyPublisherModule.publishProxyBundle({
+      expected: new Map<string, Uint8Array>([
+        ["publication.json", Buffer.from('{"volume":true}\n')],
+        ["feature/feature.mp4", volumeProxyBytes],
+      ]),
+      parent: proxyPublishParent,
+      processAlive: () => false,
+      renderRoot: proxyPublishRoot,
+      target: volumeProxyTarget,
+    });
+    const volumeProxyFile = path.join(
+      volumeProxyTarget,
+      "feature",
+      "feature.mp4",
+    );
+    TestValidator.predicate(
+      "proxy publication keeps large media materialized as a regular file",
+      fs.lstatSync(volumeProxyTarget).isDirectory() &&
+        fs.lstatSync(volumeProxyFile).isFile() &&
+        fs.statSync(volumeProxyFile).size === volumeProxyBytes.length,
+    );
+    const proxyMedia = path.join(proxy, "media", "proxy.mp4");
+    const parkedProxyMedia = `${proxyMedia}.parked`;
+    let proxyMediaSwapped = false;
+    mutableFs.lstatSync = ((file, ...args: unknown[]): unknown => {
+      const status = Reflect.apply(nativeLstat, mutableFs, [file, ...args]);
+      if (
+        proxyMediaSwapped === false &&
+        path.resolve(file.toString()) === proxyMedia
+      ) {
+        fs.renameSync(proxyMedia, parkedProxyMedia);
+        fs.writeFileSync(proxyMedia, proxyFiles.get("media/proxy.mp4")!);
+        proxyMediaSwapped = true;
+      }
+      return status;
+    }) as typeof fs.lstatSync;
+    let proxyRaceRejected = false;
+    let proxyMediaCleanupFailure: { error: unknown } | undefined;
+    try {
+      proxyRaceRejected = throws(() =>
+        proxyModule.assertPublishedProxyBundle(proxy, proxyFiles),
+      );
+    } catch (error) {
+      proxyMediaCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(proxyMediaCleanupFailure, [
+        {
+          resource: "proxy media lstat hook",
+          cleanup: () => {
+            mutableFs.lstatSync = nativeLstat;
+          },
+        },
+        {
+          resource: "proxy resident media",
+          cleanup: () => {
+            if (fs.existsSync(parkedProxyMedia)) {
+              fs.rmSync(proxyMedia, { force: true });
+              fs.renameSync(parkedProxyMedia, proxyMedia);
+            }
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "proxy verification rejects a byte-identical successor after inventory",
+      proxyMediaSwapped && proxyRaceRejected,
+    );
+    const proxyMediaDirectory = path.dirname(proxyMedia);
+    const parkedProxyMediaDirectory = path.join(
+      base,
+      "proxy-media-directory-parked",
+    );
+    const successorProxyMediaDirectory = path.join(
+      base,
+      "proxy-media-directory-successor",
+    );
+    fs.mkdirSync(successorProxyMediaDirectory);
+    fs.linkSync(
+      proxyMedia,
+      path.join(successorProxyMediaDirectory, path.basename(proxyMedia)),
+    );
+    let proxyMediaObservations = 0;
+    let proxyDirectorySwapped = false;
+    mutableFs.lstatSync = ((file, ...args: unknown[]): unknown => {
+      const status = Reflect.apply(nativeLstat, mutableFs, [file, ...args]);
+      if (path.resolve(file.toString()) === proxyMedia) {
+        proxyMediaObservations++;
+        if (proxyMediaObservations === 2) {
+          fs.renameSync(proxyMediaDirectory, parkedProxyMediaDirectory);
+          fs.renameSync(successorProxyMediaDirectory, proxyMediaDirectory);
+          proxyDirectorySwapped = true;
+        }
+      }
+      return status;
+    }) as typeof fs.lstatSync;
+    let proxyDirectoryRaceRejected = false;
+    let proxyDirectoryCleanupFailure: { error: unknown } | undefined;
+    try {
+      proxyDirectoryRaceRejected = throws(() =>
+        proxyModule.assertPublishedProxyBundle(proxy, proxyFiles),
+      );
+    } catch (error) {
+      proxyDirectoryCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(proxyDirectoryCleanupFailure, [
+        {
+          resource: "proxy directory lstat hook",
+          cleanup: () => {
+            mutableFs.lstatSync = nativeLstat;
+          },
+        },
+        {
+          resource: "proxy resident media directory",
+          cleanup: () => {
+            if (fs.existsSync(parkedProxyMediaDirectory)) {
+              fs.rmSync(proxyMediaDirectory, {
+                recursive: true,
+                force: true,
+              });
+              fs.renameSync(parkedProxyMediaDirectory, proxyMediaDirectory);
+            }
+          },
+        },
+        {
+          resource: "proxy successor media directory",
+          cleanup: () => {
+            fs.rmSync(successorProxyMediaDirectory, {
+              recursive: true,
+              force: true,
+            });
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "proxy verification rejects a hard-linked directory successor",
+      proxyDirectorySwapped && proxyDirectoryRaceRejected,
+    );
+    const lateProxyFile = path.join(proxyMediaDirectory, "late.bin");
+    proxyMediaObservations = 0;
+    let proxyInventoryMutated = false;
+    mutableFs.lstatSync = ((file, ...args: unknown[]): unknown => {
+      const status = Reflect.apply(nativeLstat, mutableFs, [file, ...args]);
+      if (path.resolve(file.toString()) === proxyMedia) {
+        proxyMediaObservations++;
+        if (proxyMediaObservations === 2) {
+          fs.writeFileSync(lateProxyFile, "late inventory");
+          proxyInventoryMutated = true;
+        }
+      }
+      return status;
+    }) as typeof fs.lstatSync;
+    let proxyInventoryRaceRejected = false;
+    let proxyInventoryCleanupFailure: { error: unknown } | undefined;
+    try {
+      proxyInventoryRaceRejected = throws(() =>
+        proxyModule.assertPublishedProxyBundle(proxy, proxyFiles),
+      );
+    } catch (error) {
+      proxyInventoryCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(proxyInventoryCleanupFailure, [
+        {
+          resource: "proxy inventory lstat hook",
+          cleanup: () => {
+            mutableFs.lstatSync = nativeLstat;
+          },
+        },
+        {
+          resource: "proxy late inventory file",
+          cleanup: () => {
+            fs.rmSync(lateProxyFile, { force: true });
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "proxy verification rejects a late unexpected inventory entry",
+      proxyInventoryMutated && proxyInventoryRaceRejected,
+    );
+
+    const fixtureDigest = (bytes: Uint8Array): string =>
+      `sha256:${createHash("sha256").update(bytes).digest("hex")}`;
+    const verifiedProxyRoot = path.join(base, "verified-proxy-root");
+    const verifiedProxyPublication = fixtureDigest(
+      Buffer.from("verified proxy publication"),
+    );
+    const verifiedProxyCompile = fixtureDigest(
+      Buffer.from("verified proxy compile"),
+    );
+    const verifiedProxyEdit = fixtureDigest(Buffer.from("verified proxy edit"));
+    const verifiedProxyBundleRelative = `deliverables/proxy/${verifiedProxyPublication.slice(7)}`;
+    const verifiedProxyBundle = path.join(
+      verifiedProxyRoot,
+      ...verifiedProxyBundleRelative.split("/"),
+    );
+    const verifiedProxyPayload = path.join(
+      verifiedProxyBundle,
+      "feature",
+      "feature.mp4",
+    );
+    const verifiedProxyPayloadBytes = Buffer.from("reviewed proxy payload");
+    const proxyReceipt = (props: {
+      fileBytes?: number;
+      filePath?: string;
+      malformedDeliverable?: boolean;
+      publicationFingerprint: string;
+      rendition?: "invalid" | "valid";
+      withPayload?: boolean;
+    }) => ({
+      version: 1,
+      tier: { kind: "proxy", resolutionScale: 0.5, frameStep: 2 },
+      publicationFingerprint: props.publicationFingerprint,
+      compileFingerprint: verifiedProxyCompile,
+      editFingerprint: verifiedProxyEdit,
+      frameFormat: { width: 640, height: 360, fps: 12 },
+      sourceFrameFormat: { width: 1280, height: 720, fps: 24 },
+      totalFrames: 12,
+      manifest: {
+        version: 1,
+        compileFingerprint: verifiedProxyCompile,
+        deliverables:
+          props.withPayload === false
+            ? []
+            : [
+                props.malformedDeliverable === true
+                  ? {
+                      files: [
+                        {
+                          path:
+                            props.filePath ??
+                            `${verifiedProxyBundleRelative}/feature/feature.mp4`,
+                          digest: fixtureDigest(verifiedProxyPayloadBytes),
+                          bytes:
+                            props.fileBytes ?? verifiedProxyPayloadBytes.length,
+                          mediaType: "video/mp4",
+                        },
+                      ],
+                    }
+                  : {
+                      id: "feature",
+                      kind: "feature",
+                      files: [
+                        {
+                          path:
+                            props.filePath ??
+                            `${verifiedProxyBundleRelative}/feature/feature.mp4`,
+                          digest: fixtureDigest(verifiedProxyPayloadBytes),
+                          bytes:
+                            props.fileBytes ?? verifiedProxyPayloadBytes.length,
+                          mediaType: "video/mp4",
+                        },
+                      ],
+                      runtimeSeconds: 1,
+                      frameCount: 12,
+                      codec: "h264",
+                      ...(props.rendition === undefined
+                        ? {}
+                        : {
+                            rendition: {
+                              kind: "repainted",
+                              shots: [
+                                {
+                                  shot: "opening",
+                                  path: "renditions/opening.mp4",
+                                  digest: verifiedProxyCompile,
+                                  receiptDigest: verifiedProxyEdit,
+                                  sourceReviewFingerprint: verifiedProxyCompile,
+                                  renditionReviewFingerprint: verifiedProxyEdit,
+                                },
+                              ],
+                              aggregateReviews: [
+                                props.rendition === "valid"
+                                  ? {
+                                      kind: "film",
+                                      id: "feature",
+                                      fingerprint: verifiedProxyCompile,
+                                    }
+                                  : {
+                                      kind: "scene",
+                                      id: "feature",
+                                    },
+                              ],
+                            },
+                          }),
+                    },
+              ],
+      },
+    });
+    fs.mkdirSync(path.dirname(verifiedProxyPayload), { recursive: true });
+    fs.writeFileSync(verifiedProxyPayload, verifiedProxyPayloadBytes);
+    fs.writeFileSync(
+      path.join(verifiedProxyBundle, "publication.json"),
+      `${JSON.stringify(
+        proxyReceipt({
+          publicationFingerprint: verifiedProxyPublication,
+          rendition: "valid",
+        }),
+      )}\n`,
+    );
+    const inspectedProxy = proxyModule.inspectPublishedProxyBundle(
+      verifiedProxyRoot,
+      verifiedProxyBundle,
+    );
+    TestValidator.predicate(
+      "the final proxy consumer accepts one exact manifest-backed bundle",
+      inspectedProxy.tier.kind === "proxy" &&
+        inspectedProxy.publicationFingerprint === verifiedProxyPublication &&
+        inspectedProxy.compileFingerprint === verifiedProxyCompile &&
+        inspectedProxy.editFingerprint === verifiedProxyEdit,
+    );
+
+    const sameLengthProxyMutation = Buffer.from(verifiedProxyPayloadBytes);
+    sameLengthProxyMutation[0] ^= 1;
+    fs.writeFileSync(verifiedProxyPayload, sameLengthProxyMutation);
+    const mutatedProxyRejected = throws(() =>
+      proxyModule.inspectPublishedProxyBundle(
+        verifiedProxyRoot,
+        verifiedProxyBundle,
+      ),
+    );
+    fs.writeFileSync(verifiedProxyPayload, verifiedProxyPayloadBytes);
+    fs.rmSync(verifiedProxyPayload);
+    const deletedProxyRejected = throws(() =>
+      proxyModule.inspectPublishedProxyBundle(
+        verifiedProxyRoot,
+        verifiedProxyBundle,
+      ),
+    );
+    fs.writeFileSync(verifiedProxyPayload, verifiedProxyPayloadBytes);
+    TestValidator.predicate(
+      "the final proxy consumer rejects mutated and deleted payloads",
+      mutatedProxyRejected && deletedProxyRejected,
+    );
+
+    const unmanifestedProxyFile = path.join(
+      verifiedProxyBundle,
+      "feature",
+      "extra.bin",
+    );
+    fs.writeFileSync(unmanifestedProxyFile, "unmanifested bytes");
+    const unmanifestedProxyRejected = throws(() =>
+      proxyModule.inspectPublishedProxyBundle(
+        verifiedProxyRoot,
+        verifiedProxyBundle,
+      ),
+    );
+    fs.rmSync(unmanifestedProxyFile);
+
+    const receiptOnlyPublication = fixtureDigest(
+      Buffer.from("receipt only proxy"),
+    );
+    const receiptOnlyBundle = path.join(
+      verifiedProxyRoot,
+      "deliverables",
+      "proxy",
+      receiptOnlyPublication.slice(7),
+    );
+    fs.mkdirSync(receiptOnlyBundle);
+    fs.writeFileSync(
+      path.join(receiptOnlyBundle, "publication.json"),
+      `${JSON.stringify(
+        proxyReceipt({
+          publicationFingerprint: receiptOnlyPublication,
+          withPayload: false,
+        }),
+      )}\n`,
+    );
+    const receiptOnlyProxyRejected = throws(() =>
+      proxyModule.inspectPublishedProxyBundle(
+        verifiedProxyRoot,
+        receiptOnlyBundle,
+      ),
+    );
+
+    const escapingPublication = fixtureDigest(Buffer.from("escaping proxy"));
+    const escapingBundleRelative = `deliverables/proxy/${escapingPublication.slice(7)}`;
+    const escapingBundle = path.join(
+      verifiedProxyRoot,
+      ...escapingBundleRelative.split("/"),
+    );
+    fs.mkdirSync(escapingBundle);
+    fs.writeFileSync(
+      path.join(escapingBundle, "publication.json"),
+      `${JSON.stringify(
+        proxyReceipt({
+          filePath: `${escapingBundleRelative}/../escape.mp4`,
+          publicationFingerprint: escapingPublication,
+        }),
+      )}\n`,
+    );
+    const escapingProxyRejected = throws(() =>
+      proxyModule.inspectPublishedProxyBundle(
+        verifiedProxyRoot,
+        escapingBundle,
+      ),
+    );
+
+    const malformedPublication = fixtureDigest(Buffer.from("malformed proxy"));
+    const malformedBundleRelative = `deliverables/proxy/${malformedPublication.slice(7)}`;
+    const malformedBundle = path.join(
+      verifiedProxyRoot,
+      ...malformedBundleRelative.split("/"),
+    );
+    fs.mkdirSync(malformedBundle);
+    fs.writeFileSync(
+      path.join(malformedBundle, "publication.json"),
+      `${JSON.stringify(
+        proxyReceipt({
+          fileBytes: 0,
+          filePath: `${malformedBundleRelative}/feature/feature.mp4`,
+          publicationFingerprint: malformedPublication,
+        }),
+      )}\n`,
+    );
+    const malformedProxyRejected = throws(() =>
+      proxyModule.inspectPublishedProxyBundle(
+        verifiedProxyRoot,
+        malformedBundle,
+      ),
+    );
+
+    const duplicatePublication = fixtureDigest(Buffer.from("duplicate proxy"));
+    const duplicateBundleRelative = `deliverables/proxy/${duplicatePublication.slice(7)}`;
+    const duplicateBundle = path.join(
+      verifiedProxyRoot,
+      ...duplicateBundleRelative.split("/"),
+    );
+    const duplicatePayload = path.join(
+      duplicateBundle,
+      "feature",
+      "feature.mp4",
+    );
+    fs.mkdirSync(path.dirname(duplicatePayload), { recursive: true });
+    fs.writeFileSync(duplicatePayload, verifiedProxyPayloadBytes);
+    const duplicateReceipt = proxyReceipt({
+      filePath: `${duplicateBundleRelative}/feature/feature.mp4`,
+      publicationFingerprint: duplicatePublication,
+    });
+    duplicateReceipt.manifest.deliverables.push(
+      duplicateReceipt.manifest.deliverables[0]!,
+    );
+    fs.writeFileSync(
+      path.join(duplicateBundle, "publication.json"),
+      `${JSON.stringify(duplicateReceipt)}\n`,
+    );
+    const duplicateProxyRejected = throws(() =>
+      proxyModule.inspectPublishedProxyBundle(
+        verifiedProxyRoot,
+        duplicateBundle,
+      ),
+    );
+
+    const malformedMetadataPublication = fixtureDigest(
+      Buffer.from("malformed metadata proxy"),
+    );
+    const malformedMetadataBundleRelative = `deliverables/proxy/${malformedMetadataPublication.slice(7)}`;
+    const malformedMetadataBundle = path.join(
+      verifiedProxyRoot,
+      ...malformedMetadataBundleRelative.split("/"),
+    );
+    const malformedMetadataPayload = path.join(
+      malformedMetadataBundle,
+      "feature",
+      "feature.mp4",
+    );
+    fs.mkdirSync(path.dirname(malformedMetadataPayload), { recursive: true });
+    fs.writeFileSync(malformedMetadataPayload, verifiedProxyPayloadBytes);
+    fs.writeFileSync(
+      path.join(malformedMetadataBundle, "publication.json"),
+      `${JSON.stringify(
+        proxyReceipt({
+          filePath: `${malformedMetadataBundleRelative}/feature/feature.mp4`,
+          malformedDeliverable: true,
+          publicationFingerprint: malformedMetadataPublication,
+        }),
+      )}\n`,
+    );
+    const malformedMetadataRejected = throws(() =>
+      proxyModule.inspectPublishedProxyBundle(
+        verifiedProxyRoot,
+        malformedMetadataBundle,
+      ),
+    );
+
+    const invalidRenditionPublication = fixtureDigest(
+      Buffer.from("invalid rendition proxy"),
+    );
+    const invalidRenditionBundleRelative = `deliverables/proxy/${invalidRenditionPublication.slice(7)}`;
+    const invalidRenditionBundle = path.join(
+      verifiedProxyRoot,
+      ...invalidRenditionBundleRelative.split("/"),
+    );
+    const invalidRenditionPayload = path.join(
+      invalidRenditionBundle,
+      "feature",
+      "feature.mp4",
+    );
+    fs.mkdirSync(path.dirname(invalidRenditionPayload), { recursive: true });
+    fs.writeFileSync(invalidRenditionPayload, verifiedProxyPayloadBytes);
+    fs.writeFileSync(
+      path.join(invalidRenditionBundle, "publication.json"),
+      `${JSON.stringify(
+        proxyReceipt({
+          filePath: `${invalidRenditionBundleRelative}/feature/feature.mp4`,
+          publicationFingerprint: invalidRenditionPublication,
+          rendition: "invalid",
+        }),
+      )}\n`,
+    );
+    const invalidRenditionRejected = throws(() =>
+      proxyModule.inspectPublishedProxyBundle(
+        verifiedProxyRoot,
+        invalidRenditionBundle,
+      ),
+    );
+    TestValidator.predicate(
+      "the final proxy consumer rejects unowned and malformed manifests",
+      unmanifestedProxyRejected &&
+        receiptOnlyProxyRejected &&
+        escapingProxyRejected &&
+        malformedProxyRejected &&
+        duplicateProxyRejected &&
+        malformedMetadataRejected &&
+        invalidRenditionRejected,
+    );
+
+    const parkedVerifiedProxyBundle = `${verifiedProxyBundle}.parked`;
+    const successorVerifiedProxyBundle = `${verifiedProxyBundle}.successor`;
+    fs.cpSync(verifiedProxyBundle, successorVerifiedProxyBundle, {
+      recursive: true,
+    });
+    let verifiedPayloadObservations = 0;
+    let verifiedProxyTreeSwapped = false;
+    mutableFs.lstatSync = ((file, ...args: unknown[]): unknown => {
+      const status = Reflect.apply(nativeLstat, mutableFs, [file, ...args]);
+      if (path.resolve(file.toString()) === verifiedProxyPayload) {
+        verifiedPayloadObservations++;
+        if (verifiedPayloadObservations === 2) {
+          fs.renameSync(verifiedProxyBundle, parkedVerifiedProxyBundle);
+          fs.renameSync(successorVerifiedProxyBundle, verifiedProxyBundle);
+          verifiedProxyTreeSwapped = true;
+        }
+      }
+      return status;
+    }) as typeof fs.lstatSync;
+    let verifiedProxyTreeSuccessorRejected = false;
+    let verifiedProxyTreeCleanupFailure: { error: unknown } | undefined;
+    try {
+      verifiedProxyTreeSuccessorRejected = throws(() =>
+        proxyModule.inspectPublishedProxyBundle(
+          verifiedProxyRoot,
+          verifiedProxyBundle,
+        ),
+      );
+    } catch (error) {
+      verifiedProxyTreeCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(verifiedProxyTreeCleanupFailure, [
+        {
+          resource: "verified proxy tree lstat hook",
+          cleanup: () => {
+            mutableFs.lstatSync = nativeLstat;
+          },
+        },
+        {
+          resource: "verified proxy resident bundle",
+          cleanup: () => {
+            if (fs.existsSync(parkedVerifiedProxyBundle)) {
+              fs.rmSync(verifiedProxyBundle, {
+                recursive: true,
+                force: true,
+              });
+              fs.renameSync(parkedVerifiedProxyBundle, verifiedProxyBundle);
+            }
+          },
+        },
+        {
+          resource: "verified proxy successor bundle",
+          cleanup: () => {
+            fs.rmSync(successorVerifiedProxyBundle, {
+              recursive: true,
+              force: true,
+            });
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "the final proxy consumer rejects a byte-identical tree successor",
+      verifiedProxyTreeSwapped && verifiedProxyTreeSuccessorRejected,
+    );
+    const lateVerifiedProxyFile = path.join(
+      verifiedProxyBundle,
+      "late-after-read.bin",
+    );
+    const verifiedPayloadDescriptors = new Set<number>();
+    let verifiedPayloadReadComplete = false;
+    let verifiedProxyLateMutation = false;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+      if (
+        typeof file !== "number" &&
+        path.resolve(file.toString()) === verifiedProxyPayload
+      )
+        verifiedPayloadDescriptors.add(descriptor);
+      return descriptor;
+    }) as typeof fs.openSync;
+    mutableFs.readFileSync = ((file, ...args: unknown[]): unknown => {
+      const bytes = Reflect.apply(nativeReadFile, mutableFs, [file, ...args]);
+      if (typeof file === "number" && verifiedPayloadDescriptors.has(file))
+        verifiedPayloadReadComplete = true;
+      return bytes;
+    }) as typeof fs.readFileSync;
+    mutableFs.readdirSync = ((directory, ...args: unknown[]): unknown => {
+      const entries = Reflect.apply(nativeReaddir, mutableFs, [
+        directory,
+        ...args,
+      ]);
+      if (
+        verifiedProxyLateMutation === false &&
+        verifiedPayloadReadComplete &&
+        path.resolve(directory.toString()) === verifiedProxyBundle
+      ) {
+        fs.writeFileSync(lateVerifiedProxyFile, "late after all reads");
+        verifiedProxyLateMutation = true;
+      }
+      return entries;
+    }) as typeof fs.readdirSync;
+    let verifiedProxyLateMutationRejected = false;
+    let verifiedProxyInventoryCleanupFailure: { error: unknown } | undefined;
+    try {
+      verifiedProxyLateMutationRejected = throws(() =>
+        proxyModule.inspectPublishedProxyBundle(
+          verifiedProxyRoot,
+          verifiedProxyBundle,
+        ),
+      );
+    } catch (error) {
+      verifiedProxyInventoryCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(verifiedProxyInventoryCleanupFailure, [
+        {
+          resource: "verified proxy inventory open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+        {
+          resource: "verified proxy inventory read-file hook",
+          cleanup: () => {
+            mutableFs.readFileSync = nativeReadFile;
+          },
+        },
+        {
+          resource: "verified proxy inventory readdir hook",
+          cleanup: () => {
+            mutableFs.readdirSync = nativeReaddir;
+          },
+        },
+        {
+          resource: "verified proxy late inventory file",
+          cleanup: () => {
+            fs.rmSync(lateVerifiedProxyFile, { force: true });
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "the final proxy consumer revalidates exact inventory after all reads",
+      verifiedProxyLateMutation && verifiedProxyLateMutationRejected,
+    );
+    const runtimePackage = path.join(base, "runtime-package");
+    const runtimeManifest = path.join(runtimePackage, "package.json");
+    const runtimeEntry = path.join(runtimePackage, "index.mjs");
+    const runtimeAssets = path.join(runtimePackage, "native");
+    const runtimeAsset = path.join(runtimeAssets, "runtime.node");
+    const runtimeManifestBytes = Buffer.from(
+      '{"name":"fixture-runtime","version":"1.2.3"}\n',
+    );
+    const runtimeEntryBytes = Buffer.from("export const fixture = true;\n");
+    const runtimeAssetBytes = Buffer.from("native fixture bytes");
+    fs.mkdirSync(runtimeAssets, { recursive: true });
+    fs.writeFileSync(runtimeManifest, runtimeManifestBytes);
+    fs.writeFileSync(runtimeEntry, runtimeEntryBytes);
+    fs.writeFileSync(runtimeAsset, runtimeAssetBytes);
+    const runtimePackageModule = createRequire(__filename)(
+      path.join(scaffoldDir, "scripts", "runtimePackageSnapshot.ts"),
+    ) as {
+      snapshotRuntimePackage: (props: {
+        assets?: ReadonlyArray<{
+          kind: "file" | "tree";
+          relative: string;
+        }>;
+        entry: string;
+        packageName: string;
+      }) => {
+        assets: Array<{ digest: string; path: string }>;
+        entryDigest: string;
+        package: string;
+        version: string;
+      };
+    };
+    const snapshotRuntimeFixture = () =>
+      runtimePackageModule.snapshotRuntimePackage({
+        assets: [{ kind: "tree", relative: "native" }],
+        entry: runtimeEntry,
+        packageName: "fixture-runtime",
+      });
+    const runtimeSnapshot = snapshotRuntimeFixture();
+    TestValidator.predicate(
+      "runtime package identity captures exact manifest-owned entry and assets",
+      runtimeSnapshot.package === "fixture-runtime" &&
+        runtimeSnapshot.version === "1.2.3" &&
+        runtimeSnapshot.entryDigest === fixtureDigest(runtimeEntryBytes) &&
+        runtimeSnapshot.assets.length === 1 &&
+        runtimeSnapshot.assets[0]?.path === "native/runtime.node" &&
+        runtimeSnapshot.assets[0]?.digest === fixtureDigest(runtimeAssetBytes),
+    );
+    const parkedRuntimeManifest = `${runtimeManifest}.parked`;
+    let runtimeManifestSwapped = false;
+    mutableFs.lstatSync = ((file, ...args: unknown[]): unknown => {
+      const status = Reflect.apply(nativeLstat, mutableFs, [file, ...args]);
+      if (
+        runtimeManifestSwapped === false &&
+        path.resolve(file.toString()) === runtimeManifest
+      ) {
+        fs.renameSync(runtimeManifest, parkedRuntimeManifest);
+        fs.writeFileSync(runtimeManifest, runtimeManifestBytes);
+        runtimeManifestSwapped = true;
+      }
+      return status;
+    }) as typeof fs.lstatSync;
+    let runtimeManifestRaceRejected = false;
+    let runtimeManifestCleanupFailure: { error: unknown } | undefined;
+    try {
+      runtimeManifestRaceRejected = throws(snapshotRuntimeFixture);
+    } catch (error) {
+      runtimeManifestCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(runtimeManifestCleanupFailure, [
+        {
+          resource: "runtime manifest lstat hook",
+          cleanup: () => {
+            mutableFs.lstatSync = nativeLstat;
+          },
+        },
+        {
+          resource: "runtime resident manifest",
+          cleanup: () => {
+            if (fs.existsSync(parkedRuntimeManifest)) {
+              fs.rmSync(runtimeManifest, { force: true });
+              fs.renameSync(parkedRuntimeManifest, runtimeManifest);
+            }
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "runtime package identity rejects a byte-identical manifest successor",
+      runtimeManifestSwapped && runtimeManifestRaceRejected,
+    );
+    const parkedRuntimeEntry = `${runtimeEntry}.parked`;
+    let runtimeEntrySwapped = false;
+    mutableFs.lstatSync = ((file, ...args: unknown[]): unknown => {
+      const status = Reflect.apply(nativeLstat, mutableFs, [file, ...args]);
+      if (
+        runtimeEntrySwapped === false &&
+        path.resolve(file.toString()) === runtimeEntry
+      ) {
+        fs.renameSync(runtimeEntry, parkedRuntimeEntry);
+        fs.writeFileSync(runtimeEntry, runtimeEntryBytes);
+        runtimeEntrySwapped = true;
+      }
+      return status;
+    }) as typeof fs.lstatSync;
+    let runtimeEntryRaceRejected = false;
+    let runtimeEntryCleanupFailure: { error: unknown } | undefined;
+    try {
+      runtimeEntryRaceRejected = throws(snapshotRuntimeFixture);
+    } catch (error) {
+      runtimeEntryCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(runtimeEntryCleanupFailure, [
+        {
+          resource: "runtime entry lstat hook",
+          cleanup: () => {
+            mutableFs.lstatSync = nativeLstat;
+          },
+        },
+        {
+          resource: "runtime resident entry",
+          cleanup: () => {
+            if (fs.existsSync(parkedRuntimeEntry)) {
+              fs.rmSync(runtimeEntry, { force: true });
+              fs.renameSync(parkedRuntimeEntry, runtimeEntry);
+            }
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "runtime package identity rejects a byte-identical entry successor",
+      runtimeEntrySwapped && runtimeEntryRaceRejected,
+    );
+    const lateRuntimeAsset = path.join(runtimeAssets, "late.node");
+    const runtimeNativeReaddir = mutableFs.readdirSync;
+    let runtimeInventoryMutated = false;
+    mutableFs.readdirSync = ((directory, ...args: unknown[]): unknown => {
+      const entries = Reflect.apply(runtimeNativeReaddir, mutableFs, [
+        directory,
+        ...args,
+      ]);
+      if (
+        runtimeInventoryMutated === false &&
+        path.resolve(directory.toString()) === runtimeAssets
+      ) {
+        fs.writeFileSync(lateRuntimeAsset, "late native asset");
+        runtimeInventoryMutated = true;
+      }
+      return entries;
+    }) as typeof fs.readdirSync;
+    let runtimeInventoryRaceRejected = false;
+    let runtimeInventoryCleanupFailure: { error: unknown } | undefined;
+    try {
+      runtimeInventoryRaceRejected = throws(snapshotRuntimeFixture);
+    } catch (error) {
+      runtimeInventoryCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(runtimeInventoryCleanupFailure, [
+        {
+          resource: "runtime inventory readdir hook",
+          cleanup: () => {
+            mutableFs.readdirSync = runtimeNativeReaddir;
+          },
+        },
+        {
+          resource: "runtime late native asset",
+          cleanup: () => {
+            fs.rmSync(lateRuntimeAsset, { force: true });
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "runtime package identity rejects native asset inventory mutation",
+      runtimeInventoryMutated && runtimeInventoryRaceRejected,
+    );
+    const captureExecutableModule = createRequire(__filename)(
+      path.join(scaffoldDir, "scripts", "captureExecutableSnapshot.ts"),
+    ) as {
+      assertCaptureExecutable: (snapshot: {
+        descriptor: number;
+        digest: string;
+        path: string;
+      }) => void;
+      closeCaptureExecutable: (snapshot: { descriptor: number }) => void;
+      createCaptureExecutableSnapshot: (
+        file: string,
+        bytes: Uint8Array,
+      ) => {
+        descriptor: number;
+        digest: string;
+        path: string;
+      };
+      openCaptureExecutable: (
+        file: string,
+        maximumBytes?: number | null,
+      ) => {
+        descriptor: number;
+        digest: string;
+        path: string;
+      };
+    };
+    const captureExecutable = path.join(base, "capture-executable.bin");
+    const captureExecutableBytes = Buffer.from("capture executable bytes");
+    fs.writeFileSync(captureExecutable, captureExecutableBytes);
+    const captureSnapshot =
+      captureExecutableModule.openCaptureExecutable(captureExecutable);
+    let captureSnapshotAccepted = false;
+    let captureSnapshotCleanupFailure: { error: unknown } | undefined;
+    try {
+      captureExecutableModule.assertCaptureExecutable(captureSnapshot);
+      captureSnapshotAccepted =
+        captureSnapshot.path === captureExecutable &&
+        captureSnapshot.digest === fixtureDigest(captureExecutableBytes);
+    } catch (error) {
+      captureSnapshotCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(captureSnapshotCleanupFailure, [
+        {
+          resource: "capture accepted snapshot descriptor",
+          cleanup: () => {
+            captureExecutableModule.closeCaptureExecutable(captureSnapshot);
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "capture executable snapshot preserves exact resident bytes and identity",
+      captureSnapshotAccepted,
+    );
+    const parkedCaptureExecutable = `${captureExecutable}.parked`;
+    let captureExecutableSwapped = false;
+    mutableFs.lstatSync = ((file, ...args: unknown[]): unknown => {
+      const status = Reflect.apply(nativeLstat, mutableFs, [file, ...args]);
+      if (
+        captureExecutableSwapped === false &&
+        path.resolve(file.toString()) === captureExecutable
+      ) {
+        fs.renameSync(captureExecutable, parkedCaptureExecutable);
+        fs.writeFileSync(captureExecutable, captureExecutableBytes);
+        captureExecutableSwapped = true;
+      }
+      return status;
+    }) as typeof fs.lstatSync;
+    let captureExecutableRaceRejected = false;
+    let captureExecutableRaceCleanupFailure: { error: unknown } | undefined;
+    try {
+      captureExecutableRaceRejected = throws(() =>
+        captureExecutableModule.openCaptureExecutable(captureExecutable),
+      );
+    } catch (error) {
+      captureExecutableRaceCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(captureExecutableRaceCleanupFailure, [
+        {
+          resource: "capture executable lstat hook",
+          cleanup: () => {
+            mutableFs.lstatSync = nativeLstat;
+          },
+        },
+        {
+          resource: "capture resident executable",
+          cleanup: () => {
+            if (fs.existsSync(parkedCaptureExecutable)) {
+              fs.rmSync(captureExecutable, { force: true });
+              fs.renameSync(parkedCaptureExecutable, captureExecutable);
+            }
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "capture executable snapshot rejects a byte-identical successor",
+      captureExecutableSwapped && captureExecutableRaceRejected,
+    );
+    const failedCaptureExecutableCreation = path.join(
+      base,
+      "failed-capture-executable-creation.bin",
+    );
+    const createSnapshotFailure = new Error(
+      "capture executable snapshot creation failed",
+    );
+    const createSnapshotCloseFailure = new Error(
+      "capture executable creation close failed",
+    );
+    let createSnapshotDescriptor = -1;
+    let createSnapshotCloseAttempts = 0;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+      if (
+        path.resolve(file.toString()) === failedCaptureExecutableCreation &&
+        flags === "wx+"
+      )
+        createSnapshotDescriptor = descriptor;
+      return descriptor;
+    }) as typeof fs.openSync;
+    mutableFs.writeSync = ((...args: unknown[]): number => {
+      if (args[0] === createSnapshotDescriptor) throw createSnapshotFailure;
+      return Reflect.apply(nativeWrite, mutableFs, args) as number;
+    }) as typeof fs.writeSync;
+    mutableFs.closeSync = ((descriptor: number): void => {
+      Reflect.apply(nativeClose, mutableFs, [descriptor]);
+      if (descriptor === createSnapshotDescriptor) {
+        ++createSnapshotCloseAttempts;
+        throw createSnapshotCloseFailure;
+      }
+    }) as typeof fs.closeSync;
+    let combinedCreateSnapshotFailure: unknown;
+    let createSnapshotHookCleanupFailure: { error: unknown } | undefined;
+    try {
+      captureExecutableModule.createCaptureExecutableSnapshot(
+        failedCaptureExecutableCreation,
+        Buffer.from("creation bytes"),
+      );
+    } catch (error) {
+      combinedCreateSnapshotFailure = error;
+      createSnapshotHookCleanupFailure = { error };
+    } finally {
+      preserveCliHarnessCleanup(createSnapshotHookCleanupFailure, [
+        {
+          resource: "capture create open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+        {
+          resource: "capture create write hook",
+          cleanup: () => {
+            mutableFs.writeSync = nativeWrite;
+          },
+        },
+        {
+          resource: "capture create close hook",
+          cleanup: () => {
+            mutableFs.closeSync = nativeClose;
+          },
+        },
+      ]);
+    }
+    const failedCaptureExecutableOpen = path.join(
+      base,
+      "failed-capture-executable-open.bin",
+    );
+    fs.writeFileSync(failedCaptureExecutableOpen, "opening bytes");
+    const openSnapshotFailure = new Error(
+      "capture executable snapshot opening failed",
+    );
+    const openSnapshotCloseFailure = new Error(
+      "capture executable opening close failed",
+    );
+    let openSnapshotDescriptor = -1;
+    let openSnapshotCloseAttempts = 0;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+      if (
+        path.resolve(file.toString()) === failedCaptureExecutableOpen &&
+        flags === "r"
+      )
+        openSnapshotDescriptor = descriptor;
+      return descriptor;
+    }) as typeof fs.openSync;
+    mutableFs.fstatSync = ((descriptor, ...args: unknown[]): unknown => {
+      if (descriptor === openSnapshotDescriptor) throw openSnapshotFailure;
+      return Reflect.apply(nativeFstat, mutableFs, [descriptor, ...args]);
+    }) as typeof fs.fstatSync;
+    mutableFs.closeSync = ((descriptor: number): void => {
+      Reflect.apply(nativeClose, mutableFs, [descriptor]);
+      if (descriptor === openSnapshotDescriptor) {
+        ++openSnapshotCloseAttempts;
+        throw openSnapshotCloseFailure;
+      }
+    }) as typeof fs.closeSync;
+    let combinedOpenSnapshotFailure: unknown;
+    let openSnapshotHookCleanupFailure: { error: unknown } | undefined;
+    try {
+      captureExecutableModule.openCaptureExecutable(
+        failedCaptureExecutableOpen,
+      );
+    } catch (error) {
+      combinedOpenSnapshotFailure = error;
+      openSnapshotHookCleanupFailure = { error };
+    } finally {
+      preserveCliHarnessCleanup(openSnapshotHookCleanupFailure, [
+        {
+          resource: "capture open open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+        {
+          resource: "capture open fstat hook",
+          cleanup: () => {
+            mutableFs.fstatSync = nativeFstat;
+          },
+        },
+        {
+          resource: "capture open close hook",
+          cleanup: () => {
+            mutableFs.closeSync = nativeClose;
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "capture executable acquisition preserves primary and close failures",
+      createSnapshotCloseAttempts === 1 &&
+        combinedCreateSnapshotFailure instanceof AggregateError &&
+        combinedCreateSnapshotFailure.errors.length === 2 &&
+        combinedCreateSnapshotFailure.errors[0] === createSnapshotFailure &&
+        combinedCreateSnapshotFailure.errors[1] ===
+          createSnapshotCloseFailure &&
+        openSnapshotCloseAttempts === 1 &&
+        combinedOpenSnapshotFailure instanceof AggregateError &&
+        combinedOpenSnapshotFailure.errors.length === 2 &&
+        combinedOpenSnapshotFailure.errors[0] === openSnapshotFailure &&
+        combinedOpenSnapshotFailure.errors[1] === openSnapshotCloseFailure,
+    );
+    const captureBrowserModule = createRequire(__filename)(
+      path.join(scaffoldDir, "scripts", "capture-browser.ts"),
+    ) as {
+      capturePlaywrightMetadata: (props?: {
+        corePackagePath: string;
+        playwrightEntry: string;
+      }) => {
+        browser: { browserVersion: string; revision: string };
+        cliDigest: string;
+        packageVersion: string;
+      };
+      captureInstallCommandTermination: (
+        result: CaptureInstallCommandResult,
+      ) => string;
+      handoffCaptureBrowserSession: <Session>(props: {
+        closeBrowser: () => unknown;
+        closeSnapshot: () => unknown;
+        session: Session;
+      }) => Promise<Session>;
+      launchWithCaptureExecutableSnapshot: <Output>(props: {
+        close: (output: Output) => Promise<void>;
+        launch: (executablePath: string) => Promise<Output>;
+        snapshot: unknown;
+      }) => Promise<Output>;
+      preserveCaptureBrowserCleanup: (
+        failure: { error: unknown } | undefined,
+        resources: ReadonlyArray<{
+          cleanup: () => unknown;
+          resource: string;
+        }>,
+      ) => Promise<void>;
+      preserveCaptureDescriptorCleanup: (
+        failure: { error: unknown } | undefined,
+        resource: string,
+        cleanup: () => void,
+      ) => void;
+      publishCaptureInstallReceipt: (
+        projectRoot: string,
+        receipt: unknown,
+        assertCurrent: () => void,
+      ) => void;
+      readCaptureInstallReceipt: (projectRoot: string) => {
+        browser: { revision: string };
+        version: number;
+      };
+      runDescriptorBoundNodeCli: (props: {
+        args: readonly string[];
+        cliDigest: string;
+        cliPath: string;
+        cwd: string;
+        env: NodeJS.ProcessEnv;
+      }) => CaptureInstallCommandResult;
+    };
+    const exerciseCaptureDescriptorCleanup = <Output>(
+      operation: () => Output,
+      cleanup: () => void,
+    ): Output => {
+      let failure: { error: unknown } | undefined;
+      try {
+        return operation();
+      } catch (error) {
+        failure = { error };
+        throw error;
+      } finally {
+        captureBrowserModule.preserveCaptureDescriptorCleanup(
+          failure,
+          "capture descriptor fixture",
+          cleanup,
+        );
+      }
+    };
+    let successfulDescriptorCleanupAttempts = 0;
+    const successfulDescriptorResult = exerciseCaptureDescriptorCleanup(
+      () => "descriptor result",
+      () => {
+        ++successfulDescriptorCleanupAttempts;
+      },
+    );
+    const descriptorPrimaryFailure = new Error("descriptor operation failed");
+    let primaryDescriptorCleanupAttempts = 0;
+    let primaryDescriptorFailureCaught: unknown;
+    try {
+      exerciseCaptureDescriptorCleanup(
+        () => {
+          throw descriptorPrimaryFailure;
+        },
+        () => {
+          ++primaryDescriptorCleanupAttempts;
+        },
+      );
+    } catch (error) {
+      primaryDescriptorFailureCaught = error;
+    }
+    const standaloneDescriptorCleanupFailure = new Error(
+      "standalone descriptor cleanup failed",
+    );
+    let standaloneDescriptorCleanupAttempts = 0;
+    let standaloneDescriptorCleanupCaught: unknown;
+    try {
+      exerciseCaptureDescriptorCleanup(
+        () => undefined,
+        () => {
+          ++standaloneDescriptorCleanupAttempts;
+          throw standaloneDescriptorCleanupFailure;
+        },
+      );
+    } catch (error) {
+      standaloneDescriptorCleanupCaught = error;
+    }
+    const combinedDescriptorCleanupFailure = new Error(
+      "combined descriptor cleanup failed",
+    );
+    let combinedDescriptorCleanupAttempts = 0;
+    let combinedDescriptorCleanupCaught: unknown;
+    try {
+      exerciseCaptureDescriptorCleanup(
+        () => {
+          throw descriptorPrimaryFailure;
+        },
+        () => {
+          ++combinedDescriptorCleanupAttempts;
+          throw combinedDescriptorCleanupFailure;
+        },
+      );
+    } catch (error) {
+      combinedDescriptorCleanupCaught = error;
+    }
+    TestValidator.predicate(
+      "capture descriptor cleanup preserves exact failure precedence",
+      successfulDescriptorResult === "descriptor result" &&
+        successfulDescriptorCleanupAttempts === 1 &&
+        primaryDescriptorCleanupAttempts === 1 &&
+        primaryDescriptorFailureCaught === descriptorPrimaryFailure &&
+        standaloneDescriptorCleanupAttempts === 1 &&
+        standaloneDescriptorCleanupCaught ===
+          standaloneDescriptorCleanupFailure &&
+        combinedDescriptorCleanupAttempts === 1 &&
+        combinedDescriptorCleanupCaught instanceof AggregateError &&
+        combinedDescriptorCleanupCaught.errors.length === 2 &&
+        combinedDescriptorCleanupCaught.errors[0] ===
+          descriptorPrimaryFailure &&
+        combinedDescriptorCleanupCaught.errors[1] ===
+          combinedDescriptorCleanupFailure,
+    );
+    let successfulBrowserCleanup = 0;
+    await captureBrowserModule.preserveCaptureBrowserCleanup(undefined, [
+      {
+        resource: "successful cleanup",
+        cleanup: () => {
+          ++successfulBrowserCleanup;
+        },
+      },
+    ]);
+    const standaloneBrowserCleanupFailure = new Error(
+      "standalone browser cleanup",
+    );
+    let standaloneBrowserCleanupError: unknown;
+    try {
+      await captureBrowserModule.preserveCaptureBrowserCleanup(undefined, [
+        {
+          resource: "standalone cleanup",
+          cleanup: () => {
+            throw standaloneBrowserCleanupFailure;
+          },
+        },
+      ]);
+    } catch (error) {
+      standaloneBrowserCleanupError = error;
+    }
+    const browserBootstrapFailure = new Error("browser bootstrap failed");
+    const firstBrowserCleanupFailure = new Error("first browser cleanup");
+    const secondBrowserCleanupFailure = new Error("second browser cleanup");
+    let attemptedBrowserCleanups = 0;
+    let combinedBrowserCleanupError: unknown;
+    try {
+      await captureBrowserModule.preserveCaptureBrowserCleanup(
+        { error: browserBootstrapFailure },
+        [
+          {
+            resource: "first cleanup",
+            cleanup: () => {
+              ++attemptedBrowserCleanups;
+              throw firstBrowserCleanupFailure;
+            },
+          },
+          {
+            resource: "successful cleanup",
+            cleanup: () => {
+              ++attemptedBrowserCleanups;
+            },
+          },
+          {
+            resource: "second cleanup",
+            cleanup: async () => {
+              ++attemptedBrowserCleanups;
+              throw secondBrowserCleanupFailure;
+            },
+          },
+        ],
+      );
+    } catch (error) {
+      combinedBrowserCleanupError = error;
+    }
+    const trailingBrowserCleanupFailure = new Error("trailing browser cleanup");
+    let flattenedBrowserCleanupError: unknown;
+    try {
+      await captureBrowserModule.preserveCaptureBrowserCleanup(
+        { error: combinedBrowserCleanupError },
+        [
+          {
+            resource: "trailing cleanup",
+            cleanup: () => {
+              throw trailingBrowserCleanupFailure;
+            },
+          },
+        ],
+      );
+    } catch (error) {
+      flattenedBrowserCleanupError = error;
+    }
+    let multipleStandaloneBrowserCleanupError: unknown;
+    try {
+      await captureBrowserModule.preserveCaptureBrowserCleanup(undefined, [
+        {
+          resource: "first cleanup",
+          cleanup: () => {
+            throw firstBrowserCleanupFailure;
+          },
+        },
+        {
+          resource: "second cleanup",
+          cleanup: () => {
+            throw secondBrowserCleanupFailure;
+          },
+        },
+      ]);
+    } catch (error) {
+      multipleStandaloneBrowserCleanupError = error;
+    }
+    TestValidator.predicate(
+      "capture browser cleanup preserves primary-first failure order",
+      successfulBrowserCleanup === 1 &&
+        standaloneBrowserCleanupError === standaloneBrowserCleanupFailure &&
+        attemptedBrowserCleanups === 3 &&
+        combinedBrowserCleanupError instanceof AggregateError &&
+        combinedBrowserCleanupError.errors.length === 3 &&
+        combinedBrowserCleanupError.errors[0] === browserBootstrapFailure &&
+        combinedBrowserCleanupError.errors[1] === firstBrowserCleanupFailure &&
+        combinedBrowserCleanupError.errors[2] === secondBrowserCleanupFailure &&
+        combinedBrowserCleanupError.message.includes(
+          "first cleanup, second cleanup",
+        ) &&
+        flattenedBrowserCleanupError instanceof AggregateError &&
+        flattenedBrowserCleanupError.errors.length === 4 &&
+        flattenedBrowserCleanupError.errors[0] === browserBootstrapFailure &&
+        flattenedBrowserCleanupError.errors[1] === firstBrowserCleanupFailure &&
+        flattenedBrowserCleanupError.errors[2] ===
+          secondBrowserCleanupFailure &&
+        flattenedBrowserCleanupError.errors[3] ===
+          trailingBrowserCleanupFailure &&
+        multipleStandaloneBrowserCleanupError instanceof AggregateError &&
+        multipleStandaloneBrowserCleanupError.errors.length === 2 &&
+        multipleStandaloneBrowserCleanupError.errors[0] ===
+          firstBrowserCleanupFailure &&
+        multipleStandaloneBrowserCleanupError.errors[1] ===
+          secondBrowserCleanupFailure,
+    );
+    const successfulHandoffSession = { browser: "transferred" };
+    let successfulHandoffSnapshotCloses = 0;
+    let successfulHandoffBrowserCloses = 0;
+    const transferredHandoffSession =
+      await captureBrowserModule.handoffCaptureBrowserSession({
+        session: successfulHandoffSession,
+        closeSnapshot: () => {
+          ++successfulHandoffSnapshotCloses;
+        },
+        closeBrowser: () => {
+          ++successfulHandoffBrowserCloses;
+        },
+      });
+    const handoffSnapshotFailure = new Error("handoff snapshot close failed");
+    let recoveredHandoffBrowserCloses = 0;
+    let recoveredHandoffFailure: unknown;
+    try {
+      await captureBrowserModule.handoffCaptureBrowserSession({
+        session: successfulHandoffSession,
+        closeSnapshot: () => {
+          throw handoffSnapshotFailure;
+        },
+        closeBrowser: async () => {
+          ++recoveredHandoffBrowserCloses;
+        },
+      });
+    } catch (error) {
+      recoveredHandoffFailure = error;
+    }
+    const handoffBrowserFailure = new Error("handoff browser close failed");
+    let failedHandoffBrowserCloses = 0;
+    let combinedHandoffFailure: unknown;
+    try {
+      await captureBrowserModule.handoffCaptureBrowserSession({
+        session: successfulHandoffSession,
+        closeSnapshot: () => {
+          throw handoffSnapshotFailure;
+        },
+        closeBrowser: async () => {
+          ++failedHandoffBrowserCloses;
+          throw handoffBrowserFailure;
+        },
+      });
+    } catch (error) {
+      combinedHandoffFailure = error;
+    }
+    TestValidator.predicate(
+      "capture browser transfers ownership only after snapshot cleanup",
+      transferredHandoffSession === successfulHandoffSession &&
+        successfulHandoffSnapshotCloses === 1 &&
+        successfulHandoffBrowserCloses === 0 &&
+        recoveredHandoffBrowserCloses === 1 &&
+        recoveredHandoffFailure === handoffSnapshotFailure &&
+        failedHandoffBrowserCloses === 1 &&
+        combinedHandoffFailure instanceof AggregateError &&
+        combinedHandoffFailure.errors.length === 2 &&
+        combinedHandoffFailure.errors[0] === handoffSnapshotFailure &&
+        combinedHandoffFailure.errors[1] === handoffBrowserFailure,
+    );
+    const metadataRoot = path.join(base, "capture-metadata");
+    const playwrightRoot = path.join(metadataRoot, "playwright");
+    const playwrightEntry = path.join(playwrightRoot, "index.js");
+    const playwrightCli = path.join(playwrightRoot, "cli.js");
+    const coreRoot = path.join(metadataRoot, "playwright-core");
+    const coreManifest = path.join(coreRoot, "package.json");
+    const coreBrowsers = path.join(coreRoot, "browsers.json");
+    const playwrightCliBytes = Buffer.from("module.exports = 'cli';\n");
+    fs.mkdirSync(playwrightRoot, { recursive: true });
+    fs.mkdirSync(coreRoot, { recursive: true });
+    fs.writeFileSync(
+      path.join(playwrightRoot, "package.json"),
+      `${JSON.stringify({ name: "playwright", version: "1.2.3" })}\n`,
+    );
+    fs.writeFileSync(playwrightEntry, "module.exports = {};\n");
+    fs.writeFileSync(playwrightCli, playwrightCliBytes);
+    fs.writeFileSync(
+      coreManifest,
+      `${JSON.stringify({ name: "playwright-core", version: "1.2.3" })}\n`,
+    );
+    fs.writeFileSync(
+      coreBrowsers,
+      `${JSON.stringify({
+        browsers: [
+          {
+            name: "chromium",
+            revision: "123",
+            browserVersion: "123.0.0",
+          },
+        ],
+      })}\n`,
+    );
+    const metadataFixture = () =>
+      captureBrowserModule.capturePlaywrightMetadata({
+        corePackagePath: coreManifest,
+        playwrightEntry,
+      });
+    const metadataSnapshot = metadataFixture();
+    TestValidator.predicate(
+      "capture metadata revalidates Playwright, core, browsers and CLI together",
+      metadataSnapshot.packageVersion === "1.2.3" &&
+        metadataSnapshot.browser.revision === "123" &&
+        metadataSnapshot.cliDigest === fixtureDigest(playwrightCliBytes),
+    );
+    const parkedPlaywrightCli = `${playwrightCli}.parked`;
+    let compositeMetadataSwapped = false;
+    mutableFs.lstatSync = ((file, ...args: unknown[]): unknown => {
+      const status = Reflect.apply(nativeLstat, mutableFs, [file, ...args]);
+      if (
+        compositeMetadataSwapped === false &&
+        path.resolve(file.toString()) === coreManifest
+      ) {
+        fs.renameSync(playwrightCli, parkedPlaywrightCli);
+        fs.writeFileSync(playwrightCli, playwrightCliBytes);
+        compositeMetadataSwapped = true;
+      }
+      return status;
+    }) as typeof fs.lstatSync;
+    let compositeMetadataRaceRejected = false;
+    let compositeMetadataCleanupFailure: { error: unknown } | undefined;
+    try {
+      compositeMetadataRaceRejected = throws(metadataFixture);
+    } catch (error) {
+      compositeMetadataCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(compositeMetadataCleanupFailure, [
+        {
+          resource: "capture metadata lstat hook",
+          cleanup: () => {
+            mutableFs.lstatSync = nativeLstat;
+          },
+        },
+        {
+          resource: "capture metadata resident CLI",
+          cleanup: () => {
+            if (fs.existsSync(parkedPlaywrightCli)) {
+              fs.rmSync(playwrightCli, { force: true });
+              fs.renameSync(parkedPlaywrightCli, playwrightCli);
+            }
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "capture metadata rejects a CLI successor between package snapshots",
+      compositeMetadataSwapped && compositeMetadataRaceRejected,
+    );
+    const coreBrowserBytes = fs.readFileSync(coreBrowsers);
+    const parkedCoreBrowsers = `${coreBrowsers}.parked`;
+    let coreBrowsersSwapped = false;
+    mutableFs.lstatSync = ((file, ...args: unknown[]): unknown => {
+      const status = Reflect.apply(nativeLstat, mutableFs, [file, ...args]);
+      if (
+        coreBrowsersSwapped === false &&
+        path.resolve(file.toString()) === coreBrowsers
+      ) {
+        fs.renameSync(coreBrowsers, parkedCoreBrowsers);
+        fs.writeFileSync(coreBrowsers, coreBrowserBytes);
+        coreBrowsersSwapped = true;
+      }
+      return status;
+    }) as typeof fs.lstatSync;
+    let coreBrowsersRaceRejected = false;
+    let coreBrowsersCleanupFailure: { error: unknown } | undefined;
+    try {
+      coreBrowsersRaceRejected = throws(metadataFixture);
+    } catch (error) {
+      coreBrowsersCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(coreBrowsersCleanupFailure, [
+        {
+          resource: "capture core browsers lstat hook",
+          cleanup: () => {
+            mutableFs.lstatSync = nativeLstat;
+          },
+        },
+        {
+          resource: "capture resident core browsers",
+          cleanup: () => {
+            if (fs.existsSync(parkedCoreBrowsers)) {
+              fs.rmSync(coreBrowsers, { force: true });
+              fs.renameSync(parkedCoreBrowsers, coreBrowsers);
+            }
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "capture metadata rejects a core browsers successor while captured",
+      coreBrowsersSwapped && coreBrowsersRaceRejected,
+    );
+    const descriptorCli = path.join(base, "descriptor-cli.cjs");
+    const descriptorCliMarker = path.join(base, "descriptor-cli.marker");
+    const descriptorCliBytes = Buffer.from(
+      [
+        'const fs = require("node:fs");',
+        'if (process.env.PLAYWRIGHT_BROWSERS_PATH !== "0") process.exit(17);',
+        'fs.writeFileSync(process.argv[2], "captured-cli");',
+      ].join("\n"),
+    );
+    fs.writeFileSync(descriptorCli, descriptorCliBytes);
+    const descriptorCliResult = captureBrowserModule.runDescriptorBoundNodeCli({
+      args: [descriptorCliMarker],
+      cliDigest: fixtureDigest(descriptorCliBytes),
+      cliPath: descriptorCli,
+      cwd: base,
+      env: { ...process.env, PLAYWRIGHT_BROWSERS_PATH: "0" },
+    });
+    TestValidator.equals(
+      "capture install executes exact CLI bytes with package-local browser storage",
+      {
+        result: descriptorCliResult,
+        marker: fs.readFileSync(descriptorCliMarker, "utf8"),
+      },
+      {
+        result: {
+          error: null,
+          signal: null,
+          status: 0,
+          stderr: "",
+          stdout: "",
+        },
+        marker: "captured-cli",
+      },
+    );
+    const descriptorFailureBytes = Buffer.from(
+      [
+        'process.stdout.write("playwright-output\\n");',
+        'process.stderr.write("download-failure\\n");',
+        "process.exitCode = 23;",
+      ].join("\n"),
+    );
+    fs.writeFileSync(descriptorCli, descriptorFailureBytes);
+    TestValidator.equals(
+      "capture install retains both output channels and ordinary exit status",
+      captureBrowserModule.runDescriptorBoundNodeCli({
+        args: [],
+        cliDigest: fixtureDigest(descriptorFailureBytes),
+        cliPath: descriptorCli,
+        cwd: base,
+        env: process.env,
+      }),
+      {
+        error: null,
+        signal: null,
+        status: 23,
+        stderr: "download-failure\n",
+        stdout: "playwright-output\n",
+      },
+    );
+    const terminationFixture = (
+      patch: Partial<CaptureInstallCommandResult>,
+    ): CaptureInstallCommandResult => ({
+      error: null,
+      signal: null,
+      status: null,
+      stderr: "",
+      stdout: "",
+      ...patch,
+    });
+    TestValidator.equals(
+      "capture install distinguishes every abnormal child termination",
+      [
+        terminationFixture({
+          error: { code: "ENOENT", message: "missing executable" },
+        }),
+        terminationFixture({ signal: "SIGTERM" }),
+        terminationFixture({}),
+        terminationFixture({ status: 23 }),
+      ].map(captureBrowserModule.captureInstallCommandTermination),
+      [
+        'failed to spawn; status=none; signal=none; error=ENOENT; message="missing executable"',
+        "terminated by signal; status=none; signal=SIGTERM; error=none; message=none",
+        "terminated without status; status=none; signal=none; error=none; message=none",
+        "exited with status 23; status=23; signal=none; error=none; message=none",
+      ],
+    );
+    const descriptorCliParked = `${descriptorCli}.parked`;
+    const descriptorBoundaryBytes = Buffer.from(
+      [
+        'const fs = require("node:fs");',
+        'fs.renameSync(__filename, __filename + ".parked");',
+        `fs.writeFileSync(__filename, ${JSON.stringify("process.exit(29);\n")});`,
+        'fs.writeFileSync(process.argv[2], "captured-cli");',
+      ].join("\n"),
+    );
+    fs.writeFileSync(descriptorCli, descriptorBoundaryBytes);
+    fs.rmSync(descriptorCliMarker, { force: true });
+    const descriptorBoundaryRejected = throws(() =>
+      captureBrowserModule.runDescriptorBoundNodeCli({
+        args: [descriptorCliMarker],
+        cliDigest: fixtureDigest(descriptorBoundaryBytes),
+        cliPath: descriptorCli,
+        cwd: base,
+        env: { ...process.env, PLAYWRIGHT_BROWSERS_PATH: "0" },
+      }),
+    );
+    TestValidator.predicate(
+      "capture install runs captured CLI bytes and rejects its pathname successor",
+      descriptorBoundaryRejected &&
+        fs.readFileSync(descriptorCliMarker, "utf8") === "captured-cli" &&
+        fs.existsSync(descriptorCliParked),
+    );
+    fs.rmSync(descriptorCli, { force: true });
+    fs.renameSync(descriptorCliParked, descriptorCli);
+    const launchExecutable = path.join(base, "launch-executable.bin");
+    fs.writeFileSync(launchExecutable, captureExecutableBytes);
+    const launchSnapshot =
+      captureExecutableModule.openCaptureExecutable(launchExecutable);
+    const launchedPath =
+      await captureBrowserModule.launchWithCaptureExecutableSnapshot({
+        snapshot: launchSnapshot,
+        launch: async (executablePath) => executablePath,
+        close: async () => undefined,
+      });
+    captureExecutableModule.closeCaptureExecutable(launchSnapshot);
+    TestValidator.predicate(
+      "capture launch accepts one unchanged executable snapshot",
+      launchedPath === launchExecutable,
+    );
+    const launchBoundarySnapshot =
+      captureExecutableModule.openCaptureExecutable(launchExecutable);
+    const parkedLaunchExecutable = `${launchExecutable}.parked`;
+    let rejectedLaunchClosed = false;
+    let launchBoundaryRejected = false;
+    let launchBoundaryCleanupFailure: { error: unknown } | undefined;
+    try {
+      await captureBrowserModule.launchWithCaptureExecutableSnapshot({
+        snapshot: launchBoundarySnapshot,
+        launch: async () => {
+          fs.renameSync(launchExecutable, parkedLaunchExecutable);
+          fs.writeFileSync(launchExecutable, captureExecutableBytes);
+          return "opened";
+        },
+        close: async () => {
+          rejectedLaunchClosed = true;
+        },
+      });
+    } catch (error) {
+      launchBoundaryRejected = true;
+      launchBoundaryCleanupFailure = { error };
+    } finally {
+      preserveCliHarnessCleanup(launchBoundaryCleanupFailure, [
+        {
+          resource: "capture launch boundary snapshot",
+          cleanup: () => {
+            captureExecutableModule.closeCaptureExecutable(
+              launchBoundarySnapshot,
+            );
+          },
+        },
+        {
+          resource: "capture launch boundary successor",
+          cleanup: () => {
+            fs.rmSync(launchExecutable, { force: true });
+          },
+        },
+        {
+          resource: "capture launch boundary resident executable",
+          cleanup: () => {
+            fs.renameSync(parkedLaunchExecutable, launchExecutable);
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "capture launch closes and rejects an executable successor during launch",
+      launchBoundaryRejected && rejectedLaunchClosed,
+    );
+    const failedLaunchCleanupSnapshot =
+      captureExecutableModule.openCaptureExecutable(launchExecutable);
+    const failedLaunchCleanupParked = `${launchExecutable}.cleanup-parked`;
+    const launchCleanupFailure = new Error("launch cleanup failed");
+    let failedLaunchCleanupError: unknown;
+    let failedLaunchHarnessCleanupFailure: { error: unknown } | undefined;
+    try {
+      await captureBrowserModule.launchWithCaptureExecutableSnapshot({
+        snapshot: failedLaunchCleanupSnapshot,
+        launch: async () => {
+          fs.renameSync(launchExecutable, failedLaunchCleanupParked);
+          fs.writeFileSync(launchExecutable, captureExecutableBytes);
+          return "opened";
+        },
+        close: async () => {
+          throw launchCleanupFailure;
+        },
+      });
+    } catch (error) {
+      failedLaunchCleanupError = error;
+      failedLaunchHarnessCleanupFailure = { error };
+    } finally {
+      preserveCliHarnessCleanup(failedLaunchHarnessCleanupFailure, [
+        {
+          resource: "capture rejected launch snapshot",
+          cleanup: () => {
+            captureExecutableModule.closeCaptureExecutable(
+              failedLaunchCleanupSnapshot,
+            );
+          },
+        },
+        {
+          resource: "capture rejected launch successor",
+          cleanup: () => {
+            fs.rmSync(launchExecutable, { force: true });
+          },
+        },
+        {
+          resource: "capture rejected launch resident executable",
+          cleanup: () => {
+            fs.renameSync(failedLaunchCleanupParked, launchExecutable);
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "capture launch retains identity failure before rejected cleanup",
+      failedLaunchCleanupError instanceof AggregateError &&
+        failedLaunchCleanupError.errors.length === 2 &&
+        failedLaunchCleanupError.errors[0] instanceof Error &&
+        failedLaunchCleanupError.errors[0].message.includes(
+          "changed physical identity",
+        ) &&
+        failedLaunchCleanupError.errors[1] === launchCleanupFailure,
+    );
+    const captureProject = path.join(base, "capture-project");
+    const captureReceipt = path.join(
+      captureProject,
+      ".automovie",
+      "capture",
+      "install-receipt.json",
+    );
+    const captureReceiptValue = {
+      version: 1,
+      playwright: { package: "playwright", version: "1.2.3" },
+      browser: {
+        product: "chromium",
+        revision: "123",
+        version: "123.0.0",
+        executablePath: captureExecutable,
+        executableDigest: fixtureDigest(captureExecutableBytes),
+      },
+      installSource: "playwright-cdn",
+    } as const;
+    const captureReceiptBytes = Buffer.from(
+      `${JSON.stringify(captureReceiptValue)}\n`,
+    );
+    fs.mkdirSync(path.dirname(captureReceipt), { recursive: true });
+    fs.writeFileSync(captureReceipt, captureReceiptBytes);
+    TestValidator.predicate(
+      "capture install receipt is read through project-owned bytes",
+      captureBrowserModule.readCaptureInstallReceipt(captureProject).version ===
+        1,
+    );
+    const parkedCaptureReceipt = `${captureReceipt}.parked`;
+    let captureReceiptSwapped = false;
+    mutableFs.lstatSync = ((file, ...args: unknown[]): unknown => {
+      const status = Reflect.apply(nativeLstat, mutableFs, [file, ...args]);
+      if (
+        captureReceiptSwapped === false &&
+        path.resolve(file.toString()) === captureReceipt
+      ) {
+        fs.renameSync(captureReceipt, parkedCaptureReceipt);
+        fs.writeFileSync(captureReceipt, captureReceiptBytes);
+        captureReceiptSwapped = true;
+      }
+      return status;
+    }) as typeof fs.lstatSync;
+    let captureReceiptRaceRejected = false;
+    let captureReceiptCleanupFailure: { error: unknown } | undefined;
+    try {
+      captureReceiptRaceRejected = throws(() =>
+        captureBrowserModule.readCaptureInstallReceipt(captureProject),
+      );
+    } catch (error) {
+      captureReceiptCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(captureReceiptCleanupFailure, [
+        {
+          resource: "capture receipt lstat hook",
+          cleanup: () => {
+            mutableFs.lstatSync = nativeLstat;
+          },
+        },
+        {
+          resource: "capture resident receipt",
+          cleanup: () => {
+            if (fs.existsSync(parkedCaptureReceipt)) {
+              fs.rmSync(captureReceipt, { force: true });
+              fs.renameSync(parkedCaptureReceipt, captureReceipt);
+            }
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "capture install receipt rejects a byte-identical successor",
+      captureReceiptSwapped && captureReceiptRaceRejected,
+    );
+    const installedCaptureMetadata =
+      captureBrowserModule.capturePlaywrightMetadata();
+    const nextCaptureReceipt = {
+      ...captureReceiptValue,
+      playwright: {
+        package: "playwright",
+        version: installedCaptureMetadata.packageVersion,
+      },
+      browser: {
+        ...captureReceiptValue.browser,
+        revision: installedCaptureMetadata.browser.revision,
+        version: installedCaptureMetadata.browser.browserVersion,
+      },
+    };
+    const captureReceiptGenerationName = (receipt: {
+      browser: { product: string; revision: string; version: string };
+      playwright: { package: string; version: string };
+    }): string =>
+      `${createHash("sha256")
+        .update(
+          JSON.stringify({
+            browser: {
+              product: receipt.browser.product,
+              revision: receipt.browser.revision,
+              version: receipt.browser.version,
+            },
+            playwright: {
+              package: receipt.playwright.package,
+              version: receipt.playwright.version,
+            },
+          }),
+        )
+        .digest("hex")}.json`;
+    const failedReceiptPublication = throws(() =>
+      captureBrowserModule.publishCaptureInstallReceipt(
+        captureProject,
+        nextCaptureReceipt,
+        () => {
+          throw new Error("provenance changed");
+        },
+      ),
+    );
+    TestValidator.predicate(
+      "capture install preserves the prior receipt when final validation fails",
+      failedReceiptPublication &&
+        fs.readFileSync(captureReceipt).equals(captureReceiptBytes) &&
+        fs.readdirSync(
+          path.join(path.dirname(captureReceipt), "install-receipts"),
+        ).length === 0,
+    );
+    let receiptPublicationValidated = false;
+    captureBrowserModule.publishCaptureInstallReceipt(
+      captureProject,
+      nextCaptureReceipt,
+      () => {
+        receiptPublicationValidated = true;
+      },
+    );
+    TestValidator.predicate(
+      "capture install publishes only after its final provenance validation",
+      receiptPublicationValidated &&
+        captureBrowserModule.readCaptureInstallReceipt(captureProject).browser
+          .revision === installedCaptureMetadata.browser.revision &&
+        fs.readFileSync(captureReceipt).equals(captureReceiptBytes),
+    );
+    const receiptGenerationDirectory = path.join(
+      path.dirname(captureReceipt),
+      "install-receipts",
+    );
+    const receiptGenerationFile = path.join(
+      receiptGenerationDirectory,
+      fs.readdirSync(receiptGenerationDirectory)[0]!,
+    );
+    const receiptGenerationStatus = fs.lstatSync(receiptGenerationFile, {
+      bigint: true,
+    });
+    captureBrowserModule.publishCaptureInstallReceipt(
+      captureProject,
+      nextCaptureReceipt,
+      () => undefined,
+    );
+    TestValidator.predicate(
+      "capture install converges on one exact immutable receipt generation",
+      (() => {
+        const status = fs.lstatSync(receiptGenerationFile, { bigint: true });
+        return (
+          status.dev === receiptGenerationStatus.dev &&
+          status.ino === receiptGenerationStatus.ino
+        );
+      })() && fs.readdirSync(receiptGenerationDirectory).length === 1,
+    );
+
+    const partialReceiptProject = path.join(base, "partial-receipt-project");
+    fs.mkdirSync(partialReceiptProject);
+    let partialReceiptDescriptor = -1;
+    let partialReceiptWriteFailed = false;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+      if (
+        typeof file !== "number" &&
+        flags === "wx+" &&
+        path.basename(path.dirname(file.toString())) === "install-receipts"
+      )
+        partialReceiptDescriptor = descriptor;
+      return descriptor;
+    }) as typeof fs.openSync;
+    mutableFs.writeSync = ((
+      descriptor: number,
+      buffer: Uint8Array,
+      offset: number,
+      _length: number,
+      position: number,
+    ): number => {
+      if (
+        partialReceiptWriteFailed === false &&
+        descriptor === partialReceiptDescriptor
+      ) {
+        Reflect.apply(nativeWrite, mutableFs, [
+          descriptor,
+          buffer,
+          offset,
+          1,
+          position,
+        ]);
+        partialReceiptWriteFailed = true;
+        throw new Error("fixture interrupted receipt write");
+      }
+      return Reflect.apply(nativeWrite, mutableFs, [
+        descriptor,
+        buffer,
+        offset,
+        _length,
+        position,
+      ]) as number;
+    }) as typeof fs.writeSync;
+    let partialReceiptRejected = false;
+    let partialReceiptCleanupFailure: { error: unknown } | undefined;
+    try {
+      partialReceiptRejected = throws(() =>
+        captureBrowserModule.publishCaptureInstallReceipt(
+          partialReceiptProject,
+          nextCaptureReceipt,
+          () => undefined,
+        ),
+      );
+    } catch (error) {
+      partialReceiptCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(partialReceiptCleanupFailure, [
+        {
+          resource: "capture receipt partial open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+        {
+          resource: "capture receipt partial write hook",
+          cleanup: () => {
+            mutableFs.writeSync = nativeWrite;
+          },
+        },
+      ]);
+    }
+    const partialReceiptDirectory = path.join(
+      partialReceiptProject,
+      ".automovie",
+      "capture",
+      "install-receipts",
+    );
+    const partialReceiptRetryRejected = throwsWith(
+      () =>
+        captureBrowserModule.publishCaptureInstallReceipt(
+          partialReceiptProject,
+          nextCaptureReceipt,
+          () => undefined,
+        ),
+      "Manually adjudicate",
+    );
+    TestValidator.predicate(
+      "capture install preserves a handled partial for explicit adjudication",
+      partialReceiptWriteFailed &&
+        partialReceiptRejected &&
+        partialReceiptRetryRejected &&
+        fs.readdirSync(partialReceiptDirectory).length === 1 &&
+        fs.statSync(
+          path.join(
+            partialReceiptDirectory,
+            captureReceiptGenerationName(nextCaptureReceipt),
+          ),
+        ).size === 1,
+    );
+
+    const crashReceiptProject = path.join(base, "crash-receipt-project");
+    const crashReceiptDirectory = path.join(
+      crashReceiptProject,
+      ".automovie",
+      "capture",
+      "install-receipts",
+    );
+    const crashReceiptPath = path.join(
+      crashReceiptDirectory,
+      captureReceiptGenerationName(nextCaptureReceipt),
+    );
+    const crashReceiptBytes = Buffer.from("interrupted receipt publication");
+    fs.mkdirSync(crashReceiptDirectory, { recursive: true });
+    fs.writeFileSync(crashReceiptPath, crashReceiptBytes);
+    TestValidator.predicate(
+      "capture install preserves and identifies an unowned crash residue",
+      throwsWith(
+        () =>
+          captureBrowserModule.publishCaptureInstallReceipt(
+            crashReceiptProject,
+            nextCaptureReceipt,
+            () => undefined,
+          ),
+        "Manually adjudicate",
+      ) && fs.readFileSync(crashReceiptPath).equals(crashReceiptBytes),
+    );
+
+    const oversizedReceiptProject = path.join(
+      base,
+      "oversized-receipt-project",
+    );
+    const oversizedReceiptDirectory = path.join(
+      oversizedReceiptProject,
+      ".automovie",
+      "capture",
+      "install-receipts",
+    );
+    const oversizedReceiptPath = path.join(
+      oversizedReceiptDirectory,
+      captureReceiptGenerationName(nextCaptureReceipt),
+    );
+    const oversizedReceiptBytes = Buffer.alloc(64 * 1024 + 1, 0x20);
+    fs.mkdirSync(oversizedReceiptDirectory, { recursive: true });
+    fs.writeFileSync(oversizedReceiptPath, oversizedReceiptBytes);
+    const oversizedReceiptDescriptors = new Set<number>();
+    let oversizedReceiptRead = false;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+      if (
+        typeof file !== "number" &&
+        flags === "r" &&
+        path.resolve(file.toString()) === oversizedReceiptPath
+      )
+        oversizedReceiptDescriptors.add(descriptor);
+      return descriptor;
+    }) as typeof fs.openSync;
+    mutableFs.readSync = ((...args: unknown[]): number => {
+      if (
+        typeof args[0] === "number" &&
+        oversizedReceiptDescriptors.has(args[0])
+      )
+        oversizedReceiptRead = true;
+      return Reflect.apply(nativeRead, mutableFs, args) as number;
+    }) as typeof fs.readSync;
+    let oversizedReceiptReadRejected = false;
+    let oversizedReceiptPublishRejected = false;
+    let oversizedReceiptCleanupFailure: { error: unknown } | undefined;
+    try {
+      oversizedReceiptReadRejected = throwsWith(
+        () =>
+          captureBrowserModule.readCaptureInstallReceipt(
+            oversizedReceiptProject,
+          ),
+        "exceeds its maximum byte length",
+      );
+      oversizedReceiptPublishRejected = throwsWith(
+        () =>
+          captureBrowserModule.publishCaptureInstallReceipt(
+            oversizedReceiptProject,
+            nextCaptureReceipt,
+            () => undefined,
+          ),
+        "Manually adjudicate",
+      );
+    } catch (error) {
+      oversizedReceiptCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(oversizedReceiptCleanupFailure, [
+        {
+          resource: "capture receipt oversized open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+        {
+          resource: "capture receipt oversized read hook",
+          cleanup: () => {
+            mutableFs.readSync = nativeRead;
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "capture install bounds current and competing receipt descriptors before hashing",
+      oversizedReceiptReadRejected &&
+        oversizedReceiptPublishRejected &&
+        oversizedReceiptRead === false &&
+        fs.statSync(oversizedReceiptPath).size === oversizedReceiptBytes.length,
+    );
+
+    const receiptTargetSwapProject = path.join(
+      base,
+      "receipt-target-swap-project",
+    );
+    fs.mkdirSync(receiptTargetSwapProject);
+    let receiptTargetSwapDescriptor = -1;
+    let receiptTargetSwapPath = "";
+    let receiptTargetSwapped = false;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+      if (
+        typeof file !== "number" &&
+        flags === "wx+" &&
+        path.basename(path.dirname(file.toString())) === "install-receipts"
+      ) {
+        receiptTargetSwapDescriptor = descriptor;
+        receiptTargetSwapPath = path.resolve(file.toString());
+      }
+      return descriptor;
+    }) as typeof fs.openSync;
+    mutableFs.fsyncSync = ((descriptor: number): void => {
+      if (
+        receiptTargetSwapped === false &&
+        descriptor === receiptTargetSwapDescriptor
+      ) {
+        const parked = `${receiptTargetSwapPath}.parked`;
+        nativeRename(receiptTargetSwapPath, parked);
+        nativeWriteFile(receiptTargetSwapPath, fs.readFileSync(parked));
+        receiptTargetSwapped = true;
+      }
+      nativeFsync(descriptor);
+    }) as typeof fs.fsyncSync;
+    let receiptTargetSwapRejected = false;
+    let receiptTargetSwapCleanupFailure: { error: unknown } | undefined;
+    try {
+      receiptTargetSwapRejected = throws(() =>
+        captureBrowserModule.publishCaptureInstallReceipt(
+          receiptTargetSwapProject,
+          nextCaptureReceipt,
+          () => undefined,
+        ),
+      );
+    } catch (error) {
+      receiptTargetSwapCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(receiptTargetSwapCleanupFailure, [
+        {
+          resource: "capture receipt target open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+        {
+          resource: "capture receipt target fsync hook",
+          cleanup: () => {
+            mutableFs.fsyncSync = nativeFsync;
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "capture install preserves a final-slot successor after descriptor open",
+      receiptTargetSwapped &&
+        receiptTargetSwapRejected &&
+        fs.existsSync(receiptTargetSwapPath) &&
+        fs.existsSync(`${receiptTargetSwapPath}.parked`),
+    );
+
+    const receiptParentSwapProject = path.join(
+      base,
+      "receipt-parent-swap-project",
+    );
+    fs.mkdirSync(receiptParentSwapProject);
+    let receiptParentSwapPath = "";
+    let parkedReceiptParent = "";
+    let receiptParentSwapped = false;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+      if (
+        receiptParentSwapped === false &&
+        typeof file !== "number" &&
+        flags === "wx+" &&
+        path.basename(path.dirname(file.toString())) === "install-receipts"
+      ) {
+        receiptParentSwapPath = path.resolve(file.toString());
+        const parent = path.dirname(receiptParentSwapPath);
+        parkedReceiptParent = `${parent}.parked`;
+        nativeRename(parent, parkedReceiptParent);
+        nativeMkdir(parent);
+        nativeWriteFile(path.join(parent, "successor.marker"), "successor");
+        receiptParentSwapped = true;
+      }
+      return descriptor;
+    }) as typeof fs.openSync;
+    let receiptParentSwapRejected = false;
+    let receiptParentSwapCleanupFailure: { error: unknown } | undefined;
+    try {
+      receiptParentSwapRejected = throws(() =>
+        captureBrowserModule.publishCaptureInstallReceipt(
+          receiptParentSwapProject,
+          nextCaptureReceipt,
+          () => undefined,
+        ),
+      );
+    } catch (error) {
+      receiptParentSwapCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(receiptParentSwapCleanupFailure, [
+        {
+          resource: "capture receipt parent swap open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "capture install preserves a generation-directory successor after descriptor open",
+      receiptParentSwapped &&
+        receiptParentSwapRejected &&
+        fs.readFileSync(
+          path.join(path.dirname(receiptParentSwapPath), "successor.marker"),
+          "utf8",
+        ) === "successor" &&
+        fs.existsSync(
+          path.join(parkedReceiptParent, path.basename(receiptParentSwapPath)),
+        ),
+    );
+
+    const foreignReceiptProject = path.join(base, "foreign-receipt-project");
+    fs.mkdirSync(foreignReceiptProject);
+    let foreignReceiptPath = "";
+    const foreignReceiptBytes = Buffer.from("foreign receipt generation\n");
+    let foreignReceiptInserted = false;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      if (
+        foreignReceiptInserted === false &&
+        typeof file !== "number" &&
+        flags === "wx+" &&
+        path.basename(path.dirname(file.toString())) === "install-receipts"
+      ) {
+        foreignReceiptPath = path.resolve(file.toString());
+        nativeWriteFile(foreignReceiptPath, foreignReceiptBytes);
+        foreignReceiptInserted = true;
+      }
+      return Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+    }) as typeof fs.openSync;
+    let foreignReceiptRejected = false;
+    let foreignReceiptCleanupFailure: { error: unknown } | undefined;
+    try {
+      foreignReceiptRejected = throws(() =>
+        captureBrowserModule.publishCaptureInstallReceipt(
+          foreignReceiptProject,
+          nextCaptureReceipt,
+          () => undefined,
+        ),
+      );
+    } catch (error) {
+      foreignReceiptCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(foreignReceiptCleanupFailure, [
+        {
+          resource: "capture foreign receipt open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "capture install preserves a foreign generation-slot competitor",
+      foreignReceiptInserted &&
+        foreignReceiptRejected &&
+        fs.readFileSync(foreignReceiptPath).equals(foreignReceiptBytes),
+    );
+
+    const upgradedCaptureReceipt = {
+      ...nextCaptureReceipt,
+      browser: {
+        ...nextCaptureReceipt.browser,
+        revision: `${installedCaptureMetadata.browser.revision}-upgrade`,
+      },
+    };
+    captureBrowserModule.publishCaptureInstallReceipt(
+      captureProject,
+      upgradedCaptureReceipt,
+      () => undefined,
+    );
+    TestValidator.predicate(
+      "capture install retains immutable receipt generations across upgrades",
+      fs.readdirSync(receiptGenerationDirectory).length === 2 &&
+        captureBrowserModule.readCaptureInstallReceipt(captureProject).browser
+          .revision === installedCaptureMetadata.browser.revision &&
+        fs.readFileSync(captureReceipt).equals(captureReceiptBytes),
+    );
+
+    const legacyFallbackProject = path.join(
+      base,
+      "legacy-fallback-receipt-project",
+    );
+    const legacyFallbackReceipt = path.join(
+      legacyFallbackProject,
+      ".automovie",
+      "capture",
+      "install-receipt.json",
+    );
+    fs.mkdirSync(path.dirname(legacyFallbackReceipt), { recursive: true });
+    fs.writeFileSync(legacyFallbackReceipt, captureReceiptBytes);
+    captureBrowserModule.publishCaptureInstallReceipt(
+      legacyFallbackProject,
+      upgradedCaptureReceipt,
+      () => undefined,
+    );
+    TestValidator.predicate(
+      "capture install falls back to legacy when only a non-current generation exists",
+      captureBrowserModule.readCaptureInstallReceipt(legacyFallbackProject)
+        .browser.revision === captureReceiptValue.browser.revision,
+    );
+
+    const receiptReadSuccessor = {
+      ...nextCaptureReceipt,
+      installSource: "PLAYWRIGHT_DOWNLOAD_HOST",
+    } as const;
+    const receiptReadSuccessorBytes = Buffer.from(
+      `${JSON.stringify(receiptReadSuccessor, null, 2)}\n`,
+    );
+    const parkedReceiptReadDirectory = `${receiptGenerationDirectory}.read-parked`;
+    const successorReceiptReadDirectory = `${receiptGenerationDirectory}.read-successor`;
+    fs.mkdirSync(successorReceiptReadDirectory);
+    fs.writeFileSync(
+      path.join(
+        successorReceiptReadDirectory,
+        path.basename(receiptGenerationFile),
+      ),
+      receiptReadSuccessorBytes,
+    );
+    let receiptReadDirectorySwapped = false;
+    mutableFs.lstatSync = ((file, ...args: unknown[]): unknown => {
+      const status = Reflect.apply(nativeLstat, mutableFs, [file, ...args]);
+      if (
+        receiptReadDirectorySwapped === false &&
+        path.resolve(file.toString()) === receiptGenerationFile
+      ) {
+        nativeRename(receiptGenerationDirectory, parkedReceiptReadDirectory);
+        nativeRename(successorReceiptReadDirectory, receiptGenerationDirectory);
+        receiptReadDirectorySwapped = true;
+      }
+      return status;
+    }) as typeof fs.lstatSync;
+    let receiptReadDirectoryRejected = false;
+    let receiptReadDirectoryCleanupFailure: { error: unknown } | undefined;
+    try {
+      receiptReadDirectoryRejected = throws(() =>
+        captureBrowserModule.readCaptureInstallReceipt(captureProject),
+      );
+    } catch (error) {
+      receiptReadDirectoryCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(receiptReadDirectoryCleanupFailure, [
+        {
+          resource: "capture receipt directory lstat hook",
+          cleanup: () => {
+            mutableFs.lstatSync = nativeLstat;
+          },
+        },
+        {
+          resource: "capture receipt successor directory",
+          cleanup: () => {
+            fs.rmSync(receiptGenerationDirectory, {
+              recursive: true,
+              force: true,
+            });
+          },
+        },
+        {
+          resource: "capture receipt resident directory",
+          cleanup: () => {
+            nativeRename(
+              parkedReceiptReadDirectory,
+              receiptGenerationDirectory,
+            );
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "capture install binds current-generation selection through directory read",
+      receiptReadDirectorySwapped && receiptReadDirectoryRejected,
+    );
+
+    const parkedReceiptReadRoot = `${captureProject}.read-parked`;
+    const successorReceiptReadRoot = `${captureProject}.read-successor`;
+    const successorReceiptReadFile = path.join(
+      successorReceiptReadRoot,
+      path.relative(captureProject, receiptGenerationFile),
+    );
+    fs.mkdirSync(path.dirname(successorReceiptReadFile), { recursive: true });
+    fs.writeFileSync(successorReceiptReadFile, receiptReadSuccessorBytes);
+    let receiptReadRootSwapped = false;
+    mutableFs.lstatSync = ((file, ...args: unknown[]): unknown => {
+      const status = Reflect.apply(nativeLstat, mutableFs, [file, ...args]);
+      if (
+        receiptReadRootSwapped === false &&
+        path.resolve(file.toString()) === receiptGenerationFile
+      ) {
+        nativeRename(captureProject, parkedReceiptReadRoot);
+        nativeRename(successorReceiptReadRoot, captureProject);
+        receiptReadRootSwapped = true;
+      }
+      return status;
+    }) as typeof fs.lstatSync;
+    let receiptReadRootRejected = false;
+    let receiptReadRootCleanupFailure: { error: unknown } | undefined;
+    try {
+      receiptReadRootRejected = throws(() =>
+        captureBrowserModule.readCaptureInstallReceipt(captureProject),
+      );
+    } catch (error) {
+      receiptReadRootCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(receiptReadRootCleanupFailure, [
+        {
+          resource: "capture receipt root lstat hook",
+          cleanup: () => {
+            mutableFs.lstatSync = nativeLstat;
+          },
+        },
+        {
+          resource: "capture receipt successor root",
+          cleanup: () => {
+            fs.rmSync(captureProject, { recursive: true, force: true });
+          },
+        },
+        {
+          resource: "capture receipt resident root",
+          cleanup: () => {
+            nativeRename(parkedReceiptReadRoot, captureProject);
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "capture install binds current-generation selection through project-root read",
+      receiptReadRootSwapped && receiptReadRootRejected,
+    );
+
+    const mismatchedReceiptProject = path.join(
+      base,
+      "mismatched-generation-receipt-project",
+    );
+    const mismatchedReceiptDirectory = path.join(
+      mismatchedReceiptProject,
+      ".automovie",
+      "capture",
+      "install-receipts",
+    );
+    const mismatchedReceiptPath = path.join(
+      mismatchedReceiptDirectory,
+      captureReceiptGenerationName(nextCaptureReceipt),
+    );
+    fs.mkdirSync(mismatchedReceiptDirectory, { recursive: true });
+    fs.writeFileSync(
+      mismatchedReceiptPath,
+      `${JSON.stringify(upgradedCaptureReceipt)}\n`,
+    );
+    TestValidator.predicate(
+      "capture install rejects a receipt occupying another canonical filename",
+      throwsWith(
+        () =>
+          captureBrowserModule.readCaptureInstallReceipt(
+            mismatchedReceiptProject,
+          ),
+        "occupies another generation",
+      ),
+    );
+
+    const malformedSchemaProject = path.join(
+      base,
+      "malformed-generation-schema-project",
+    );
+    const malformedSchemaDirectory = path.join(
+      malformedSchemaProject,
+      ".automovie",
+      "capture",
+      "install-receipts",
+    );
+    const malformedSchemaPath = path.join(
+      malformedSchemaDirectory,
+      captureReceiptGenerationName(nextCaptureReceipt),
+    );
+    fs.mkdirSync(malformedSchemaDirectory, { recursive: true });
+    fs.writeFileSync(
+      malformedSchemaPath,
+      `${JSON.stringify({ ...nextCaptureReceipt, unexpected: true })}\n`,
+    );
+    TestValidator.predicate(
+      "capture install strictly parses the selected immutable receipt",
+      throwsWith(
+        () =>
+          captureBrowserModule.readCaptureInstallReceipt(
+            malformedSchemaProject,
+          ),
+        "is malformed",
+      ),
+    );
+
+    const malformedReceiptProject = path.join(
+      base,
+      "malformed-generation-inventory-project",
+    );
+    const malformedReceiptDirectory = path.join(
+      malformedReceiptProject,
+      ".automovie",
+      "capture",
+      "install-receipts",
+    );
+    fs.mkdirSync(malformedReceiptDirectory, { recursive: true });
+    fs.writeFileSync(path.join(malformedReceiptDirectory, "foreign.txt"), "x");
+    TestValidator.predicate(
+      "capture install rejects a malformed immutable generation inventory",
+      throwsWith(
+        () =>
+          captureBrowserModule.readCaptureInstallReceipt(
+            malformedReceiptProject,
+          ),
+        "inventory is malformed",
+      ),
+    );
+    const linkedReceiptProject = path.join(base, "linked-receipt-project");
+    const linkedReceiptOutside = path.join(base, "linked-receipt-outside");
+    const linkedReceiptMarker = path.join(linkedReceiptOutside, "marker.txt");
+    fs.mkdirSync(linkedReceiptProject);
+    fs.mkdirSync(linkedReceiptOutside);
+    fs.writeFileSync(linkedReceiptMarker, "outside");
+    fs.symlinkSync(
+      linkedReceiptOutside,
+      path.join(linkedReceiptProject, ".automovie"),
+      process.platform === "win32" ? "junction" : "dir",
+    );
+    const linkedReceiptRejected = throws(() =>
+      captureBrowserModule.publishCaptureInstallReceipt(
+        linkedReceiptProject,
+        nextCaptureReceipt,
+        () => undefined,
+      ),
+    );
+    TestValidator.predicate(
+      "capture install refuses a linked receipt ancestry before external writes",
+      linkedReceiptRejected &&
+        fs.readFileSync(linkedReceiptMarker, "utf8") === "outside" &&
+        fs.existsSync(
+          path.join(linkedReceiptOutside, "capture", "install-receipts"),
+        ) === false,
+    );
+    const segmentReceiptProject = path.join(base, "segment-receipt-project");
+    const segmentReceiptOutside = path.join(base, "segment-receipt-outside");
+    const segmentAutomovie = path.join(segmentReceiptProject, ".automovie");
+    const parkedSegmentAutomovie = `${segmentAutomovie}.parked`;
+    fs.mkdirSync(segmentReceiptProject);
+    fs.mkdirSync(segmentReceiptOutside);
+    let receiptSegmentSwapped = false;
+    mutableFs.statSync = ((file, ...args: unknown[]): unknown => {
+      const status = Reflect.apply(nativeStat, mutableFs, [file, ...args]);
+      if (
+        receiptSegmentSwapped === false &&
+        path.resolve(file.toString()) === segmentAutomovie
+      ) {
+        receiptSegmentSwapped = true;
+        fs.renameSync(segmentAutomovie, parkedSegmentAutomovie);
+        fs.symlinkSync(
+          segmentReceiptOutside,
+          segmentAutomovie,
+          process.platform === "win32" ? "junction" : "dir",
+        );
+      }
+      return status;
+    }) as typeof fs.statSync;
+    let receiptSegmentRaceRejected = false;
+    let receiptSegmentCleanupFailure: { error: unknown } | undefined;
+    try {
+      receiptSegmentRaceRejected = throws(() =>
+        captureBrowserModule.publishCaptureInstallReceipt(
+          segmentReceiptProject,
+          nextCaptureReceipt,
+          () => undefined,
+        ),
+      );
+    } catch (error) {
+      receiptSegmentCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(receiptSegmentCleanupFailure, [
+        {
+          resource: "capture receipt segment stat hook",
+          cleanup: () => {
+            mutableFs.statSync = nativeStat;
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "capture install revalidates each created segment before the next write",
+      receiptSegmentSwapped &&
+        receiptSegmentRaceRejected &&
+        fs.existsSync(path.join(segmentReceiptOutside, "capture")) === false,
+    );
+    fs.rmSync(segmentAutomovie, { force: true });
+    fs.renameSync(parkedSegmentAutomovie, segmentAutomovie);
+    const publishedReceiptBytes = fs.readFileSync(captureReceipt);
+    const parkedCaptureProject = `${captureProject}.parked`;
+    let receiptRootSwapped = false;
+    let parkedReceiptGeneration = "";
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+      if (
+        receiptRootSwapped === false &&
+        typeof file !== "number" &&
+        flags === "wx+" &&
+        path.basename(path.dirname(file.toString())) === "install-receipts"
+      ) {
+        receiptRootSwapped = true;
+        parkedReceiptGeneration = path.join(
+          parkedCaptureProject,
+          path.relative(captureProject, path.resolve(file.toString())),
+        );
+        fs.renameSync(captureProject, parkedCaptureProject);
+        fs.mkdirSync(path.dirname(captureReceipt), { recursive: true });
+        nativeWriteFile(captureReceipt, publishedReceiptBytes);
+      }
+      return descriptor;
+    }) as typeof fs.openSync;
+    let receiptRootRaceRejected = false;
+    let receiptRootCleanupFailure: { error: unknown } | undefined;
+    try {
+      receiptRootRaceRejected = throws(() =>
+        captureBrowserModule.publishCaptureInstallReceipt(
+          captureProject,
+          captureReceiptValue,
+          () => undefined,
+        ),
+      );
+    } catch (error) {
+      receiptRootCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(receiptRootCleanupFailure, [
+        {
+          resource: "capture receipt root swap open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "capture install rejects a project root successor without cleaning it",
+      receiptRootSwapped &&
+        receiptRootRaceRejected &&
+        fs.readFileSync(captureReceipt).equals(publishedReceiptBytes) &&
+        fs.existsSync(parkedReceiptGeneration),
+    );
+    fs.rmSync(captureProject, { recursive: true, force: true });
+    fs.renameSync(parkedCaptureProject, captureProject);
+
+    const dialogueCacheModule = createRequire(__filename)(
+      path.join(scaffoldDir, "scripts", "dialogueCacheSnapshot.ts"),
+    ) as {
+      captureDialogueCache: (
+        base: string,
+        target: string,
+      ) => { pcm: Uint8Array; receipt: Uint8Array };
+      publishDialogueCache: (props: {
+        base: string;
+        pcm: Uint8Array;
+        receipt: Uint8Array;
+        target: string;
+      }) => { pcm: Uint8Array; receipt: Uint8Array };
+    };
+    const dialogueRoot = path.join(base, "dialogue-cache");
+    const dialogueTarget = path.join(dialogueRoot, "first");
+    const dialoguePcm = Buffer.from("dialogue pcm generation");
+    const dialogueReceipt = Buffer.from('{"generation":"first"}\n');
+    const writeDialogueFixture = (
+      target: string,
+      pcm: Uint8Array,
+      receipt: Uint8Array,
+    ): void => {
+      fs.mkdirSync(target, { recursive: true });
+      fs.writeFileSync(path.join(target, "audio.f32"), pcm);
+      fs.writeFileSync(path.join(target, "receipt.json"), receipt);
+    };
+    fs.mkdirSync(dialogueRoot);
+    const firstDialogueCache = dialogueCacheModule.publishDialogueCache({
+      base: dialogueRoot,
+      pcm: dialoguePcm,
+      receipt: dialogueReceipt,
+      target: dialogueTarget,
+    });
+    const reusedDialogueCache = dialogueCacheModule.publishDialogueCache({
+      base: dialogueRoot,
+      pcm: dialoguePcm,
+      receipt: dialogueReceipt,
+      target: dialogueTarget,
+    });
+    TestValidator.predicate(
+      "dialogue cache publishes and reuses one exact PCM receipt generation",
+      Buffer.from(firstDialogueCache.pcm).equals(dialoguePcm) &&
+        Buffer.from(reusedDialogueCache.receipt).equals(dialogueReceipt) &&
+        fs.lstatSync(dialogueTarget).isDirectory() &&
+        fs.readdirSync(dialogueTarget).sort(compareCodeUnits).join(",") ===
+          "audio.f32,receipt.json",
+    );
+
+    const reuseAbaDialogueTarget = path.join(dialogueRoot, "reuse-aba");
+    const reuseAbaDialogueSuccessor = `${reuseAbaDialogueTarget}.successor`;
+    const reuseAbaDialogueParked = `${reuseAbaDialogueTarget}.parked`;
+    const reuseAbaDialoguePcm = Buffer.from("different dialogue generation");
+    writeDialogueFixture(reuseAbaDialogueTarget, dialoguePcm, dialogueReceipt);
+    writeDialogueFixture(
+      reuseAbaDialogueSuccessor,
+      reuseAbaDialoguePcm,
+      Buffer.from('{"generation":"successor"}\n'),
+    );
+    const reuseAbaDialogueAudio = path.join(
+      reuseAbaDialogueTarget,
+      "audio.f32",
+    );
+    let reuseAbaDialogueOpens = 0;
+    let reuseAbaDialogueSwapped = false;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+      if (
+        typeof file !== "number" &&
+        path.resolve(file.toString()) === reuseAbaDialogueAudio &&
+        ++reuseAbaDialogueOpens === 3
+      ) {
+        nativeRename(reuseAbaDialogueTarget, reuseAbaDialogueParked);
+        nativeRename(reuseAbaDialogueSuccessor, reuseAbaDialogueTarget);
+        reuseAbaDialogueSwapped = true;
+      }
+      return descriptor;
+    }) as typeof fs.openSync;
+    let reuseAbaDialogueRejected = false;
+    let reuseAbaDialogueCleanupFailure: { error: unknown } | undefined;
+    try {
+      reuseAbaDialogueRejected = throws(() =>
+        dialogueCacheModule.publishDialogueCache({
+          base: dialogueRoot,
+          pcm: dialoguePcm,
+          receipt: dialogueReceipt,
+          target: reuseAbaDialogueTarget,
+        }),
+      );
+    } catch (error) {
+      reuseAbaDialogueCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(reuseAbaDialogueCleanupFailure, [
+        {
+          resource: "dialogue cache reuse ABA open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "dialogue cache publication reuse rejects a directory successor",
+      reuseAbaDialogueSwapped &&
+        reuseAbaDialogueRejected &&
+        fs
+          .readFileSync(path.join(reuseAbaDialogueTarget, "audio.f32"))
+          .equals(reuseAbaDialoguePcm) &&
+        fs.existsSync(reuseAbaDialogueParked),
+    );
+
+    const partialDialogueTarget = path.join(dialogueRoot, "partial");
+    fs.mkdirSync(partialDialogueTarget);
+    fs.writeFileSync(
+      path.join(partialDialogueTarget, "audio.f32"),
+      dialoguePcm,
+    );
+    const partialDialogueStatus = fs.lstatSync(partialDialogueTarget, {
+      bigint: true,
+    });
+    dialogueCacheModule.publishDialogueCache({
+      base: dialogueRoot,
+      pcm: dialoguePcm,
+      receipt: dialogueReceipt,
+      target: partialDialogueTarget,
+    });
+    TestValidator.predicate(
+      "dialogue cache monotonically completes an exact partial generation",
+      (() => {
+        const status = fs.lstatSync(partialDialogueTarget, { bigint: true });
+        return (
+          status.dev === partialDialogueStatus.dev &&
+          status.ino === partialDialogueStatus.ino
+        );
+      })() &&
+        !throws(() =>
+          dialogueCacheModule.captureDialogueCache(
+            dialogueRoot,
+            partialDialogueTarget,
+          ),
+        ),
+    );
+
+    const receiptOnlyDialogueTarget = path.join(dialogueRoot, "receipt-only");
+    fs.mkdirSync(receiptOnlyDialogueTarget);
+    fs.writeFileSync(
+      path.join(receiptOnlyDialogueTarget, "receipt.json"),
+      dialogueReceipt,
+    );
+    const receiptOnlyDialogueRejected = throws(() =>
+      dialogueCacheModule.publishDialogueCache({
+        base: dialogueRoot,
+        pcm: dialoguePcm,
+        receipt: dialogueReceipt,
+        target: receiptOnlyDialogueTarget,
+      }),
+    );
+    TestValidator.predicate(
+      "dialogue cache never completes PCM after a visible receipt",
+      receiptOnlyDialogueRejected &&
+        fs.existsSync(path.join(receiptOnlyDialogueTarget, "audio.f32")) ===
+          false &&
+        fs
+          .readFileSync(path.join(receiptOnlyDialogueTarget, "receipt.json"))
+          .equals(dialogueReceipt),
+    );
+
+    const foreignDialogueTarget = path.join(dialogueRoot, "foreign");
+    const foreignDialoguePcm = Buffer.from("foreign dialogue pcm");
+    fs.mkdirSync(foreignDialogueTarget);
+    fs.writeFileSync(
+      path.join(foreignDialogueTarget, "audio.f32"),
+      foreignDialoguePcm,
+    );
+    const foreignDialogueRejected = throws(() =>
+      dialogueCacheModule.publishDialogueCache({
+        base: dialogueRoot,
+        pcm: dialoguePcm,
+        receipt: dialogueReceipt,
+        target: foreignDialogueTarget,
+      }),
+    );
+    TestValidator.predicate(
+      "dialogue cache preserves a byte-different concurrent PCM winner",
+      foreignDialogueRejected &&
+        fs
+          .readFileSync(path.join(foreignDialogueTarget, "audio.f32"))
+          .equals(foreignDialoguePcm) &&
+        fs.existsSync(path.join(foreignDialogueTarget, "receipt.json")) ===
+          false,
+    );
+
+    const pcmSuccessorTarget = path.join(dialogueRoot, "pcm-successor");
+    const pcmSuccessorPath = path.join(pcmSuccessorTarget, "audio.f32");
+    let pcmSuccessorInserted = false;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      if (
+        pcmSuccessorInserted === false &&
+        typeof file !== "number" &&
+        path.resolve(file.toString()) === pcmSuccessorPath &&
+        flags === "wx+"
+      ) {
+        nativeWriteFile(pcmSuccessorPath, foreignDialoguePcm);
+        pcmSuccessorInserted = true;
+      }
+      return Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+    }) as typeof fs.openSync;
+    let pcmSuccessorRejected = false;
+    let pcmSuccessorCleanupFailure: { error: unknown } | undefined;
+    try {
+      pcmSuccessorRejected = throws(() =>
+        dialogueCacheModule.publishDialogueCache({
+          base: dialogueRoot,
+          pcm: dialoguePcm,
+          receipt: dialogueReceipt,
+          target: pcmSuccessorTarget,
+        }),
+      );
+    } catch (error) {
+      pcmSuccessorCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(pcmSuccessorCleanupFailure, [
+        {
+          resource: "dialogue cache PCM successor open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "dialogue cache preserves a PCM successor at commit",
+      pcmSuccessorInserted &&
+        pcmSuccessorRejected &&
+        fs.readFileSync(pcmSuccessorPath).equals(foreignDialoguePcm) &&
+        fs.existsSync(path.join(pcmSuccessorTarget, "receipt.json")) === false,
+    );
+
+    const receiptSuccessorTarget = path.join(dialogueRoot, "receipt-successor");
+    const receiptSuccessorPath = path.join(
+      receiptSuccessorTarget,
+      "receipt.json",
+    );
+    const foreignDialogueReceipt = Buffer.from('{"foreign":true}\n');
+    let receiptSuccessorInserted = false;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      if (
+        receiptSuccessorInserted === false &&
+        typeof file !== "number" &&
+        path.resolve(file.toString()) === receiptSuccessorPath &&
+        flags === "wx+"
+      ) {
+        nativeWriteFile(receiptSuccessorPath, foreignDialogueReceipt);
+        receiptSuccessorInserted = true;
+      }
+      return Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+    }) as typeof fs.openSync;
+    let receiptSuccessorRejected = false;
+    let receiptSuccessorCleanupFailure: { error: unknown } | undefined;
+    try {
+      receiptSuccessorRejected = throws(() =>
+        dialogueCacheModule.publishDialogueCache({
+          base: dialogueRoot,
+          pcm: dialoguePcm,
+          receipt: dialogueReceipt,
+          target: receiptSuccessorTarget,
+        }),
+      );
+    } catch (error) {
+      receiptSuccessorCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(receiptSuccessorCleanupFailure, [
+        {
+          resource: "dialogue cache receipt successor open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "dialogue cache preserves a receipt successor at commit",
+      receiptSuccessorInserted &&
+        receiptSuccessorRejected &&
+        fs.readFileSync(receiptSuccessorPath).equals(foreignDialogueReceipt),
+    );
+
+    const oversizedDialogueTarget = path.join(dialogueRoot, "oversized");
+    fs.mkdirSync(oversizedDialogueTarget);
+    fs.writeFileSync(
+      path.join(oversizedDialogueTarget, "audio.f32"),
+      dialoguePcm,
+    );
+    fs.writeFileSync(path.join(oversizedDialogueTarget, "receipt.json"), "{");
+    fs.truncateSync(
+      path.join(oversizedDialogueTarget, "receipt.json"),
+      8 * 1024 * 1024 + 1,
+    );
+    TestValidator.predicate(
+      "dialogue cache rejects a receipt beyond its bounded read",
+      throws(() =>
+        dialogueCacheModule.captureDialogueCache(
+          dialogueRoot,
+          oversizedDialogueTarget,
+        ),
+      ),
+    );
+
+    const abaDialogueTarget = path.join(dialogueRoot, "aba");
+    const abaDialogueSuccessor = `${abaDialogueTarget}.successor`;
+    const abaDialogueParked = `${abaDialogueTarget}.parked`;
+    writeDialogueFixture(abaDialogueTarget, dialoguePcm, dialogueReceipt);
+    writeDialogueFixture(abaDialogueSuccessor, dialoguePcm, dialogueReceipt);
+    const abaDialogueAudio = path.join(abaDialogueTarget, "audio.f32");
+    let abaDialogueAudioOpens = 0;
+    let abaDialogueSwapped = false;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+      if (
+        typeof file !== "number" &&
+        path.resolve(file.toString()) === abaDialogueAudio &&
+        ++abaDialogueAudioOpens === 3
+      ) {
+        nativeRename(abaDialogueTarget, abaDialogueParked);
+        nativeRename(abaDialogueSuccessor, abaDialogueTarget);
+        abaDialogueSwapped = true;
+      }
+      return descriptor;
+    }) as typeof fs.openSync;
+    let abaDialogueRejected = false;
+    let abaDialogueCleanupFailure: { error: unknown } | undefined;
+    try {
+      abaDialogueRejected = throws(() =>
+        dialogueCacheModule.captureDialogueCache(
+          dialogueRoot,
+          abaDialogueTarget,
+        ),
+      );
+    } catch (error) {
+      abaDialogueCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(abaDialogueCleanupFailure, [
+        {
+          resource: "dialogue cache capture ABA open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "dialogue cache hit rejects a directory successor between pair reads",
+      abaDialogueSwapped &&
+        abaDialogueRejected &&
+        fs.existsSync(abaDialogueTarget) &&
+        fs.existsSync(abaDialogueParked),
+    );
+
+    const rootDialogueRoot = path.join(base, "dialogue-cache-root-swap");
+    const rootDialogueTarget = path.join(rootDialogueRoot, "entry");
+    const parkedDialogueRoot = `${rootDialogueRoot}.parked`;
+    const rootDialogueMarker = path.join(rootDialogueRoot, "successor.marker");
+    fs.mkdirSync(rootDialogueRoot);
+    let dialogueRootSwapped = false;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+      if (
+        dialogueRootSwapped === false &&
+        typeof file !== "number" &&
+        flags === "wx+" &&
+        path.resolve(file.toString()) ===
+          path.join(rootDialogueTarget, "audio.f32")
+      ) {
+        nativeRename(rootDialogueRoot, parkedDialogueRoot);
+        nativeMkdir(rootDialogueRoot);
+        nativeMkdir(rootDialogueTarget);
+        nativeWriteFile(rootDialogueMarker, "successor");
+        dialogueRootSwapped = true;
+      }
+      return descriptor;
+    }) as typeof fs.openSync;
+    let dialogueRootSwapRejected = false;
+    let dialogueRootSwapCleanupFailure: { error: unknown } | undefined;
+    try {
+      dialogueRootSwapRejected = throws(() =>
+        dialogueCacheModule.publishDialogueCache({
+          base: rootDialogueRoot,
+          pcm: dialoguePcm,
+          receipt: dialogueReceipt,
+          target: rootDialogueTarget,
+        }),
+      );
+    } catch (error) {
+      dialogueRootSwapCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(dialogueRootSwapCleanupFailure, [
+        {
+          resource: "dialogue cache root swap open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "dialogue cache preserves a root and parent successor",
+      dialogueRootSwapped &&
+        dialogueRootSwapRejected &&
+        fs.readFileSync(rootDialogueMarker, "utf8") === "successor" &&
+        fs.existsSync(path.join(parkedDialogueRoot, "entry", "audio.f32")),
+    );
+    const renderAttemptModule = createRequire(__filename)(
+      path.join(scaffoldDir, "scripts", "renderAttemptSnapshot.ts"),
+    ) as {
+      beginRenderAttempt: (props: {
+        base: string;
+        chunk: string;
+        lock: {
+          chunk: string;
+          pid: number;
+          snapshot: { target: string };
+          token: string;
+        };
+        pid: number;
+        processAlive: (pid: number) => boolean;
+        slot: string;
+        target: string;
+        token: string;
+      }) => {
+        record: {
+          chunk: string;
+          correction: string;
+          pid: number;
+          slot: string;
+          state: "failed" | "running";
+          token: string;
+          version: 1;
+        };
+        snapshot: { target: string; targetIdentity: string };
+      };
+      completeRenderAttempt: (attempt: unknown) => void;
+      failRenderAttempt: (props: { attempt: unknown; correction: string }) => {
+        record: { correction: string; state: "failed" | "running" };
+        snapshot: { target: string };
+      };
+      listRenderAttempts: (
+        base: string,
+        directory: string,
+      ) => Array<{ record: { token: string } }>;
+    };
+    const attemptRoot = path.join(base, "render-attempts");
+    const attemptDirectory = path.join(attemptRoot, "attempts");
+    const attemptTarget = path.join(attemptDirectory, "slot-0001.json");
+    const attemptChunk = `sha256:${"1".repeat(64)}`;
+    const firstAttemptToken = "11111111-1111-4111-8111-111111111111";
+    const secondAttemptToken = "22222222-2222-4222-8222-222222222222";
+    const successorAttemptToken = "33333333-3333-4333-8333-333333333333";
+    fs.mkdirSync(attemptRoot);
+    const attemptLockDirectory = path.join(attemptRoot, "locks");
+    fs.mkdirSync(attemptLockDirectory);
+    const renderAttemptGcModule = createRequire(__filename)(
+      path.join(scaffoldDir, "scripts", "renderGcSnapshot.ts"),
+    ) as {
+      createRenderGcFileSnapshot: (
+        base: string,
+        target: string,
+        bytes: Uint8Array,
+      ) => { target: string };
+    };
+    const directFileFailureRoot = path.join(base, "direct-file-failure");
+    const directFileFailureParent = path.join(directFileFailureRoot, "files");
+    const parkedDirectFileFailureParent = `${directFileFailureParent}.parked`;
+    const directFileFailureTarget = path.join(
+      directFileFailureParent,
+      "final.json",
+    );
+    const directFileFailureBytes = Buffer.from('{"direct":"final"}\n');
+    fs.mkdirSync(directFileFailureParent, { recursive: true });
+    let directFileFailureDescriptor = -1;
+    let directFileFailureCloseFailed = false;
+    let directFileFailureRelinked = false;
+    mutableFs.fsyncSync = ((descriptor: number): void => {
+      directFileFailureDescriptor = descriptor;
+      nativeFsync(descriptor);
+      if (directFileFailureRelinked === false) {
+        nativeRename(directFileFailureParent, parkedDirectFileFailureParent);
+        nativeMkdir(directFileFailureParent);
+        nativeLink(
+          path.join(parkedDirectFileFailureParent, "final.json"),
+          directFileFailureTarget,
+        );
+        nativeWriteFile(
+          path.join(directFileFailureParent, "successor.marker"),
+          "successor",
+        );
+        directFileFailureRelinked = true;
+      }
+    }) as typeof fs.fsyncSync;
+    mutableFs.closeSync = ((descriptor: number): void => {
+      if (
+        directFileFailureCloseFailed === false &&
+        descriptor === directFileFailureDescriptor
+      ) {
+        directFileFailureCloseFailed = true;
+        throw new Error("fixture direct file close failure");
+      }
+      nativeClose(descriptor);
+    }) as typeof fs.closeSync;
+    let directFileFailureRejected = false;
+    let directFileFailureCleanupFailure: { error: unknown } | undefined;
+    try {
+      directFileFailureRejected = throwsWith(
+        () =>
+          renderAttemptGcModule.createRenderGcFileSnapshot(
+            directFileFailureRoot,
+            directFileFailureTarget,
+            directFileFailureBytes,
+          ),
+        "changed physical identity",
+      );
+    } catch (error) {
+      directFileFailureCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(directFileFailureCleanupFailure, [
+        {
+          resource: "direct render file fsync hook",
+          cleanup: () => {
+            mutableFs.fsyncSync = nativeFsync;
+          },
+        },
+        {
+          resource: "direct render file close hook",
+          cleanup: () => {
+            mutableFs.closeSync = nativeClose;
+          },
+        },
+        {
+          resource: "direct render file descriptor",
+          cleanup: () => {
+            if (directFileFailureCloseFailed)
+              nativeClose(directFileFailureDescriptor);
+          },
+        },
+      ]);
+    }
+    const directFileResident = fs.lstatSync(directFileFailureTarget, {
+      bigint: true,
+    });
+    const parkedDirectFileResident = fs.lstatSync(
+      path.join(parkedDirectFileFailureParent, "final.json"),
+      { bigint: true },
+    );
+    TestValidator.predicate(
+      "direct render file creation preserves a same-inode parent successor on failure",
+      directFileFailureRelinked &&
+        directFileFailureCloseFailed &&
+        directFileFailureRejected &&
+        directFileResident.dev === parkedDirectFileResident.dev &&
+        directFileResident.ino === parkedDirectFileResident.ino &&
+        fs
+          .readFileSync(directFileFailureTarget)
+          .equals(directFileFailureBytes) &&
+        fs.readFileSync(
+          path.join(directFileFailureParent, "successor.marker"),
+          "utf8",
+        ) === "successor",
+    );
+
+    const directFileAbaRoot = path.join(base, "direct-file-root-aba");
+    const directFileAbaParent = path.join(directFileAbaRoot, "files");
+    const directFileAbaTarget = path.join(directFileAbaParent, "final.json");
+    const parkedDirectFileAbaRoot = `${directFileAbaRoot}.original-parked`;
+    const parkedDirectFileAbaReplacement = `${directFileAbaRoot}.replacement-parked`;
+    fs.mkdirSync(directFileAbaParent, { recursive: true });
+    let directFileAbaDescriptor = -1;
+    let directFileAbaFstatCount = 0;
+    let directFileAbaRestored = false;
+    let directFileAbaSwapped = false;
+    mutableFs.fsyncSync = ((descriptor: number): void => {
+      directFileAbaDescriptor = descriptor;
+      nativeFsync(descriptor);
+      if (directFileAbaSwapped === false) {
+        nativeRename(directFileAbaRoot, parkedDirectFileAbaRoot);
+        nativeMkdir(path.join(directFileAbaRoot, "files"), {
+          recursive: true,
+        });
+        nativeLink(
+          path.join(parkedDirectFileAbaRoot, "files", "final.json"),
+          directFileAbaTarget,
+        );
+        directFileAbaSwapped = true;
+      }
+    }) as typeof fs.fsyncSync;
+    mutableFs.fstatSync = ((descriptor, ...args: unknown[]): unknown => {
+      const status = Reflect.apply(nativeFstat, mutableFs, [
+        descriptor,
+        ...args,
+      ]);
+      if (descriptor === directFileAbaDescriptor) {
+        directFileAbaFstatCount++;
+        if (directFileAbaFstatCount === 2) {
+          nativeRename(directFileAbaRoot, parkedDirectFileAbaReplacement);
+          nativeRename(parkedDirectFileAbaRoot, directFileAbaRoot);
+          directFileAbaRestored = true;
+        }
+      }
+      return status;
+    }) as typeof fs.fstatSync;
+    let directFileAbaRejected = false;
+    let directFileAbaCleanupFailure: { error: unknown } | undefined;
+    try {
+      directFileAbaRejected = throws(() =>
+        renderAttemptGcModule.createRenderGcFileSnapshot(
+          directFileAbaRoot,
+          directFileAbaTarget,
+          directFileFailureBytes,
+        ),
+      );
+    } catch (error) {
+      directFileAbaCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(directFileAbaCleanupFailure, [
+        {
+          resource: "direct render ABA fsync hook",
+          cleanup: () => {
+            mutableFs.fsyncSync = nativeFsync;
+          },
+        },
+        {
+          resource: "direct render ABA fstat hook",
+          cleanup: () => {
+            mutableFs.fstatSync = nativeFstat;
+          },
+        },
+      ]);
+    }
+    const directFileAbaOriginal = fs.lstatSync(directFileAbaTarget, {
+      bigint: true,
+    });
+    const directFileAbaReplacement = fs.lstatSync(
+      path.join(parkedDirectFileAbaReplacement, "files", "final.json"),
+      { bigint: true },
+    );
+    TestValidator.predicate(
+      "direct render file creation rejects a restored-root snapshot generation",
+      directFileAbaSwapped &&
+        directFileAbaRestored &&
+        directFileAbaRejected &&
+        directFileAbaOriginal.dev === directFileAbaReplacement.dev &&
+        directFileAbaOriginal.ino === directFileAbaReplacement.ino,
+    );
+    let attemptLockIndex = 0;
+    const createAttemptLock = (pid: number, token: string) => {
+      const target = path.join(
+        attemptLockDirectory,
+        `claim.${++attemptLockIndex}.${pid}.${token}.lock`,
+      );
+      return {
+        chunk: attemptChunk,
+        pid,
+        snapshot: renderAttemptGcModule.createRenderGcFileSnapshot(
+          attemptRoot,
+          target,
+          Buffer.from(
+            `${JSON.stringify({ chunk: attemptChunk, pid, token })}\n`,
+          ),
+        ),
+        token,
+      };
+    };
+    const replacedAttemptLock = createAttemptLock(31999, firstAttemptToken);
+    fs.rmSync(replacedAttemptLock.snapshot.target);
+    const replacementLockBytes = Buffer.from(
+      `${JSON.stringify({
+        chunk: attemptChunk,
+        pid: 31999,
+        token: secondAttemptToken,
+      })}\n`,
+    );
+    fs.writeFileSync(replacedAttemptLock.snapshot.target, replacementLockBytes);
+    const replacedLockRejected = throws(() =>
+      renderAttemptModule.beginRenderAttempt({
+        base: attemptRoot,
+        chunk: attemptChunk,
+        lock: replacedAttemptLock,
+        pid: 31999,
+        processAlive: () => false,
+        slot: "slot-0001",
+        target: attemptTarget,
+        token: firstAttemptToken,
+      }),
+    );
+    TestValidator.predicate(
+      "render attempt refuses a replaced held-lock generation before publication",
+      replacedLockRejected &&
+        fs
+          .readFileSync(replacedAttemptLock.snapshot.target)
+          .equals(replacementLockBytes) &&
+        fs.existsSync(attemptTarget) === false,
+    );
+    fs.rmSync(replacedAttemptLock.snapshot.target);
+    const runningAttemptLock = createAttemptLock(32001, firstAttemptToken);
+    const runningAttempt = renderAttemptModule.beginRenderAttempt({
+      base: attemptRoot,
+      chunk: attemptChunk,
+      lock: runningAttemptLock,
+      pid: 32001,
+      processAlive: () => false,
+      slot: "slot-0001",
+      target: attemptTarget,
+      token: firstAttemptToken,
+    });
+    const failedAttempt = renderAttemptModule.failRenderAttempt({
+      attempt: runningAttempt,
+      correction: "fixture render failed",
+    });
+    TestValidator.predicate(
+      "render attempt publishes running then exact failed state under one lock token",
+      runningAttempt.record.state === "running" &&
+        runningAttempt.record.token === firstAttemptToken &&
+        failedAttempt.record.state === "failed" &&
+        failedAttempt.record.correction === "fixture render failed" &&
+        renderAttemptModule.listRenderAttempts(attemptRoot, attemptDirectory)[0]
+          ?.record.token === firstAttemptToken,
+    );
+    const retriedAttempt = renderAttemptModule.beginRenderAttempt({
+      base: attemptRoot,
+      chunk: attemptChunk,
+      lock: createAttemptLock(32002, secondAttemptToken),
+      pid: 32002,
+      processAlive: () => false,
+      slot: "slot-0001",
+      target: attemptTarget,
+      token: secondAttemptToken,
+    });
+    const pidReuseRejected = throws(() =>
+      renderAttemptModule.beginRenderAttempt({
+        base: attemptRoot,
+        chunk: attemptChunk,
+        lock: createAttemptLock(32002, successorAttemptToken),
+        pid: 32002,
+        processAlive: (pid) => pid === 32002,
+        slot: "slot-0001",
+        target: attemptTarget,
+        token: successorAttemptToken,
+      }),
+    );
+    TestValidator.predicate(
+      "render attempt recovers failed state but rejects a live PID-reuse owner with another token",
+      retriedAttempt.record.token === secondAttemptToken &&
+        pidReuseRejected &&
+        JSON.parse(fs.readFileSync(attemptTarget, "utf8")).token ===
+          secondAttemptToken,
+    );
+    renderAttemptModule.completeRenderAttempt(retriedAttempt);
+    TestValidator.predicate(
+      "render attempt completion removes its exact captured running record",
+      fs.existsSync(attemptTarget) === false,
+    );
+
+    const staleRunningAttempt = renderAttemptModule.beginRenderAttempt({
+      base: attemptRoot,
+      chunk: attemptChunk,
+      lock: createAttemptLock(32003, firstAttemptToken),
+      pid: 32003,
+      processAlive: () => false,
+      slot: "slot-0001",
+      target: attemptTarget,
+      token: firstAttemptToken,
+    });
+    const recoveredStaleAttempt = renderAttemptModule.beginRenderAttempt({
+      base: attemptRoot,
+      chunk: attemptChunk,
+      lock: createAttemptLock(32004, secondAttemptToken),
+      pid: 32004,
+      processAlive: () => false,
+      slot: "slot-0001",
+      target: attemptTarget,
+      token: secondAttemptToken,
+    });
+    TestValidator.predicate(
+      "render attempt stale recovery replaces only a dead exact owner",
+      staleRunningAttempt.snapshot.targetIdentity !==
+        recoveredStaleAttempt.snapshot.targetIdentity &&
+        recoveredStaleAttempt.record.token === secondAttemptToken,
+    );
+    renderAttemptModule.completeRenderAttempt(recoveredStaleAttempt);
+
+    const oversizedAttempt = renderAttemptModule.beginRenderAttempt({
+      base: attemptRoot,
+      chunk: attemptChunk,
+      lock: createAttemptLock(32008, secondAttemptToken),
+      pid: 32008,
+      processAlive: () => false,
+      slot: "slot-0001",
+      target: attemptTarget,
+      token: secondAttemptToken,
+    });
+    const oversizedFailureRejected = throws(() =>
+      renderAttemptModule.failRenderAttempt({
+        attempt: oversizedAttempt,
+        correction: "x".repeat(64 * 1024),
+      }),
+    );
+    TestValidator.predicate(
+      "render attempt validates a failed successor before removing running evidence",
+      oversizedFailureRejected &&
+        JSON.parse(fs.readFileSync(attemptTarget, "utf8")).state === "running",
+    );
+    renderAttemptModule.completeRenderAttempt(oversizedAttempt);
+
+    const transitionAttempt = renderAttemptModule.beginRenderAttempt({
+      base: attemptRoot,
+      chunk: attemptChunk,
+      lock: createAttemptLock(32005, firstAttemptToken),
+      pid: 32005,
+      processAlive: () => false,
+      slot: "slot-0001",
+      target: attemptTarget,
+      token: firstAttemptToken,
+    });
+    const successorAttemptBytes = Buffer.from(
+      `${JSON.stringify(
+        {
+          version: 1,
+          slot: "slot-0001",
+          chunk: attemptChunk,
+          state: "running",
+          correction: "",
+          pid: 32006,
+          token: successorAttemptToken,
+        },
+        null,
+        2,
+      )}\n`,
+    );
+    let transitionSuccessorInserted = false;
+    mutableFs.renameSync = ((oldPath, newPath) => {
+      if (
+        transitionSuccessorInserted === false &&
+        path.resolve(oldPath.toString()) === attemptTarget
+      ) {
+        nativeRename(oldPath, newPath);
+        nativeWriteFile(oldPath, successorAttemptBytes);
+        transitionSuccessorInserted = true;
+        return;
+      }
+      nativeRename(oldPath, newPath);
+    }) as typeof fs.renameSync;
+    let transitionSuccessorRejected = false;
+    let transitionSuccessorCleanupFailure: { error: unknown } | undefined;
+    try {
+      transitionSuccessorRejected = throws(() =>
+        renderAttemptModule.failRenderAttempt({
+          attempt: transitionAttempt,
+          correction: "must not overwrite successor",
+        }),
+      );
+    } catch (error) {
+      transitionSuccessorCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(transitionSuccessorCleanupFailure, [
+        {
+          resource: "render attempt transition rename hook",
+          cleanup: () => {
+            mutableFs.renameSync = nativeRename;
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "render attempt failure transition preserves a pathname successor",
+      transitionSuccessorInserted &&
+        transitionSuccessorRejected &&
+        fs.readFileSync(attemptTarget).equals(successorAttemptBytes),
+    );
+    fs.rmSync(attemptTarget);
+
+    const completionAttempt = renderAttemptModule.beginRenderAttempt({
+      base: attemptRoot,
+      chunk: attemptChunk,
+      lock: createAttemptLock(32007, firstAttemptToken),
+      pid: 32007,
+      processAlive: () => false,
+      slot: "slot-0001",
+      target: attemptTarget,
+      token: firstAttemptToken,
+    });
+    let completionSuccessorInserted = false;
+    mutableFs.renameSync = ((oldPath, newPath) => {
+      if (
+        completionSuccessorInserted === false &&
+        path.resolve(oldPath.toString()) === attemptTarget
+      ) {
+        nativeRename(oldPath, newPath);
+        nativeWriteFile(oldPath, successorAttemptBytes);
+        completionSuccessorInserted = true;
+        return;
+      }
+      nativeRename(oldPath, newPath);
+    }) as typeof fs.renameSync;
+    let completionAccepted = false;
+    let completionCleanupFailure: { error: unknown } | undefined;
+    try {
+      renderAttemptModule.completeRenderAttempt(completionAttempt);
+      completionAccepted = true;
+    } catch (error) {
+      completionCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(completionCleanupFailure, [
+        {
+          resource: "render attempt completion rename hook",
+          cleanup: () => {
+            mutableFs.renameSync = nativeRename;
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "render attempt completion deletes the captured owner and preserves its successor",
+      completionAccepted &&
+        completionSuccessorInserted &&
+        fs.readFileSync(attemptTarget).equals(successorAttemptBytes),
+    );
+    fs.rmSync(attemptTarget);
+
+    const targetCompetitorLock = createAttemptLock(32011, firstAttemptToken);
+    let targetCompetitorInserted = false;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      if (
+        targetCompetitorInserted === false &&
+        typeof file !== "number" &&
+        flags === "wx+" &&
+        path.resolve(file.toString()) === attemptTarget
+      ) {
+        nativeWriteFile(attemptTarget, successorAttemptBytes);
+        targetCompetitorInserted = true;
+      }
+      return Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+    }) as typeof fs.openSync;
+    let targetCompetitorRejected = false;
+    let targetCompetitorCleanupFailure: { error: unknown } | undefined;
+    try {
+      targetCompetitorRejected = throws(() =>
+        renderAttemptModule.beginRenderAttempt({
+          base: attemptRoot,
+          chunk: attemptChunk,
+          lock: targetCompetitorLock,
+          pid: 32011,
+          processAlive: () => false,
+          slot: "slot-0001",
+          target: attemptTarget,
+          token: firstAttemptToken,
+        }),
+      );
+    } catch (error) {
+      targetCompetitorCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(targetCompetitorCleanupFailure, [
+        {
+          resource: "render attempt competitor open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "render attempt preserves a direct final-slot competitor",
+      targetCompetitorInserted &&
+        targetCompetitorRejected &&
+        fs.readFileSync(attemptTarget).equals(successorAttemptBytes),
+    );
+    fs.rmSync(attemptTarget);
+    fs.rmSync(targetCompetitorLock.snapshot.target);
+
+    const postPublicationLock = createAttemptLock(32012, secondAttemptToken);
+    const postPublicationLockSuccessor = Buffer.from(
+      `${JSON.stringify({
+        chunk: attemptChunk,
+        pid: 32012,
+        token: successorAttemptToken,
+      })}\n`,
+    );
+    const postPublicationParked = `${attemptTarget}.post-publication-parked`;
+    let postPublicationRelinked = false;
+    mutableFs.lstatSync = ((file, ...args: unknown[]): unknown => {
+      const status = Reflect.apply(nativeLstat, mutableFs, [file, ...args]);
+      if (
+        postPublicationRelinked === false &&
+        path.resolve(file.toString()) === postPublicationLock.snapshot.target &&
+        fs.existsSync(attemptTarget)
+      ) {
+        nativeLink(attemptTarget, postPublicationParked);
+        fs.rmSync(attemptTarget);
+        nativeLink(postPublicationParked, attemptTarget);
+        fs.rmSync(postPublicationParked);
+        fs.rmSync(postPublicationLock.snapshot.target);
+        nativeWriteFile(
+          postPublicationLock.snapshot.target,
+          postPublicationLockSuccessor,
+        );
+        postPublicationRelinked = true;
+      }
+      return status;
+    }) as typeof fs.lstatSync;
+    let postPublicationRejected = false;
+    let postPublicationCleanupFailure: { error: unknown } | undefined;
+    try {
+      postPublicationRejected = throws(() =>
+        renderAttemptModule.beginRenderAttempt({
+          base: attemptRoot,
+          chunk: attemptChunk,
+          lock: postPublicationLock,
+          pid: 32012,
+          processAlive: () => false,
+          slot: "slot-0001",
+          target: attemptTarget,
+          token: secondAttemptToken,
+        }),
+      );
+    } catch (error) {
+      postPublicationCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(postPublicationCleanupFailure, [
+        {
+          resource: "render attempt post-publication lstat hook",
+          cleanup: () => {
+            mutableFs.lstatSync = nativeLstat;
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "render attempt preserves a relinked final record after lock authority loss",
+      postPublicationRelinked &&
+        postPublicationRejected &&
+        fs.existsSync(attemptTarget) &&
+        fs
+          .readFileSync(postPublicationLock.snapshot.target)
+          .equals(postPublicationLockSuccessor),
+    );
+    fs.rmSync(attemptTarget);
+    fs.rmSync(postPublicationLock.snapshot.target);
+
+    const parentFenceLock = createAttemptLock(32009, firstAttemptToken);
+    const parkedAttemptDirectory = `${attemptDirectory}.parked`;
+    const attemptParentSuccessorMarker = path.join(
+      attemptDirectory,
+      "successor.marker",
+    );
+    let attemptParentSwapped = false;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+      if (
+        attemptParentSwapped === false &&
+        typeof file !== "number" &&
+        flags === "wx+" &&
+        path.resolve(file.toString()) === attemptTarget
+      ) {
+        nativeRename(attemptDirectory, parkedAttemptDirectory);
+        nativeMkdir(attemptDirectory);
+        nativeWriteFile(attemptParentSuccessorMarker, "successor");
+        attemptParentSwapped = true;
+      }
+      return descriptor;
+    }) as typeof fs.openSync;
+    let attemptParentRejected = false;
+    let attemptParentCleanupFailure: { error: unknown } | undefined;
+    try {
+      attemptParentRejected = throws(() =>
+        renderAttemptModule.beginRenderAttempt({
+          base: attemptRoot,
+          chunk: attemptChunk,
+          lock: parentFenceLock,
+          pid: 32009,
+          processAlive: () => false,
+          slot: "slot-0001",
+          target: attemptTarget,
+          token: firstAttemptToken,
+        }),
+      );
+    } catch (error) {
+      attemptParentCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(attemptParentCleanupFailure, [
+        {
+          resource: "render attempt parent open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "render attempt preserves an attempts-directory successor at publication",
+      attemptParentSwapped &&
+        attemptParentRejected &&
+        fs.readFileSync(attemptParentSuccessorMarker, "utf8") === "successor" &&
+        fs.existsSync(attemptTarget) === false &&
+        fs.existsSync(path.join(parkedAttemptDirectory, "slot-0001.json")),
+    );
+    fs.rmSync(attemptDirectory, { recursive: true, force: true });
+    nativeRename(parkedAttemptDirectory, attemptDirectory);
+    fs.rmSync(attemptTarget, { force: true });
+
+    const rootFenceLock = createAttemptLock(32010, secondAttemptToken);
+    const parkedAttemptRoot = `${attemptRoot}.parked`;
+    const attemptRootSuccessorMarker = path.join(
+      attemptRoot,
+      "successor.marker",
+    );
+    let attemptRootSwapped = false;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+      if (
+        attemptRootSwapped === false &&
+        typeof file !== "number" &&
+        flags === "wx+" &&
+        path.resolve(file.toString()) === attemptTarget
+      ) {
+        nativeRename(attemptRoot, parkedAttemptRoot);
+        nativeMkdir(path.join(attemptRoot, "attempts"), { recursive: true });
+        nativeMkdir(path.join(attemptRoot, "locks"), { recursive: true });
+        nativeWriteFile(attemptRootSuccessorMarker, "successor");
+        attemptRootSwapped = true;
+      }
+      return descriptor;
+    }) as typeof fs.openSync;
+    let attemptRootRejected = false;
+    let attemptRootCleanupFailure: { error: unknown } | undefined;
+    try {
+      attemptRootRejected = throws(() =>
+        renderAttemptModule.beginRenderAttempt({
+          base: attemptRoot,
+          chunk: attemptChunk,
+          lock: rootFenceLock,
+          pid: 32010,
+          processAlive: () => false,
+          slot: "slot-0001",
+          target: attemptTarget,
+          token: secondAttemptToken,
+        }),
+      );
+    } catch (error) {
+      attemptRootCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(attemptRootCleanupFailure, [
+        {
+          resource: "render attempt root open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "render attempt preserves a render-root successor at publication",
+      attemptRootSwapped &&
+        attemptRootRejected &&
+        fs.readFileSync(attemptRootSuccessorMarker, "utf8") === "successor" &&
+        fs.existsSync(attemptTarget) === false &&
+        fs.existsSync(
+          path.join(parkedAttemptRoot, "attempts", "slot-0001.json"),
+        ),
+    );
+    fs.rmSync(attemptRoot, { recursive: true, force: true });
+    nativeRename(parkedAttemptRoot, attemptRoot);
+    fs.rmSync(attemptTarget, { force: true });
+
+    interface RenderPlanFixture {
+      chunkFrames: number;
+      name: string;
+    }
+    interface RenderPlanFixtureSnapshot {
+      generation: string;
+      plan: RenderPlanFixture;
+      snapshot: {
+        fileDigest: string | null;
+        target: string;
+        targetIdentity: string;
+      };
+    }
+    const renderPlanModule = createRequire(__filename)(
+      path.join(scaffoldDir, "scripts", "renderPlanSnapshot.ts"),
+    ) as {
+      captureRenderPlan: (
+        base: string,
+        target: string,
+      ) => RenderPlanFixtureSnapshot;
+      publishRenderPlan: (props: {
+        base: string;
+        inputCurrent: () => Promise<void>;
+        plan: RenderPlanFixture;
+        predecessor: RenderPlanFixtureSnapshot | null;
+        target: string;
+      }) => Promise<RenderPlanFixtureSnapshot>;
+    };
+    const planFixture = (
+      name: string,
+      chunkFrames: number,
+    ): RenderPlanFixture => ({ chunkFrames, name });
+    const planRoot = path.join(base, "render-plans");
+    const planTarget = path.join(planRoot, "plan.json");
+    fs.mkdirSync(planRoot);
+    const firstPlan = await renderPlanModule.publishRenderPlan({
+      base: planRoot,
+      inputCurrent: async () => undefined,
+      plan: planFixture("first", 48),
+      predecessor: null,
+      target: planTarget,
+    });
+    const capturedFirstPlan = renderPlanModule.captureRenderPlan(
+      planRoot,
+      planTarget,
+    );
+    TestValidator.predicate(
+      "render plan publishes an immutable genesis generation",
+      fs.existsSync(planTarget) === false &&
+        firstPlan.generation === capturedFirstPlan.generation &&
+        capturedFirstPlan.plan.name === "first",
+    );
+    const reusedFirstPlan = await renderPlanModule.publishRenderPlan({
+      base: planRoot,
+      inputCurrent: async () => undefined,
+      plan: planFixture("first", 48),
+      predecessor: firstPlan,
+      target: planTarget,
+    });
+    TestValidator.predicate(
+      "render plan reuses an unchanged sequential predecessor",
+      reusedFirstPlan.generation === firstPlan.generation &&
+        fs.readdirSync(`${planTarget}.generations`).length === 1,
+    );
+    const secondPlan = await renderPlanModule.publishRenderPlan({
+      base: planRoot,
+      inputCurrent: async () => undefined,
+      plan: planFixture("second", 36),
+      predecessor: firstPlan,
+      target: planTarget,
+    });
+    TestValidator.predicate(
+      "render plan replacement appends one predecessor-bound successor",
+      secondPlan.generation !== firstPlan.generation &&
+        renderPlanModule.captureRenderPlan(planRoot, planTarget).generation ===
+          secondPlan.generation &&
+        fs.existsSync(firstPlan.snapshot.target),
+    );
+    let staleInputChecked = false;
+    let staleInputRejected = false;
+    try {
+      await renderPlanModule.publishRenderPlan({
+        base: planRoot,
+        inputCurrent: async () => {
+          staleInputChecked = true;
+          throw new Error("fixture stale render inputs");
+        },
+        plan: planFixture("stale-input", 30),
+        predecessor: secondPlan,
+        target: planTarget,
+      });
+    } catch {
+      staleInputRejected = true;
+    }
+    TestValidator.predicate(
+      "render plan rejects stale inputs without changing its head",
+      staleInputChecked &&
+        staleInputRejected &&
+        renderPlanModule.captureRenderPlan(planRoot, planTarget).generation ===
+          secondPlan.generation,
+    );
+    let concurrentWinner: RenderPlanFixtureSnapshot | undefined;
+    let slowPlannerRejected = false;
+    try {
+      await renderPlanModule.publishRenderPlan({
+        base: planRoot,
+        inputCurrent: async () => {
+          concurrentWinner = await renderPlanModule.publishRenderPlan({
+            base: planRoot,
+            inputCurrent: async () => undefined,
+            plan: planFixture("winner", 24),
+            predecessor: secondPlan,
+            target: planTarget,
+          });
+        },
+        plan: planFixture("slow-loser", 12),
+        predecessor: secondPlan,
+        target: planTarget,
+      });
+    } catch {
+      slowPlannerRejected = true;
+    }
+    if (concurrentWinner === undefined)
+      throw new Error("fixture concurrent render-plan winner is missing");
+    TestValidator.predicate(
+      "a stale slow planner cannot replace a different chunk-size winner",
+      slowPlannerRejected &&
+        concurrentWinner.plan.chunkFrames === 24 &&
+        renderPlanModule.captureRenderPlan(planRoot, planTarget).generation ===
+          concurrentWinner.generation &&
+        fs.existsSync(secondPlan.snapshot.target),
+    );
+    const activeWorkerPlan = concurrentWinner.plan;
+    const replacementPlan = await renderPlanModule.publishRenderPlan({
+      base: planRoot,
+      inputCurrent: async () => undefined,
+      plan: planFixture("replacement", 16),
+      predecessor: concurrentWinner,
+      target: planTarget,
+    });
+    TestValidator.predicate(
+      "an active worker keeps its session plan across later replacement",
+      activeWorkerPlan.name === "winner" &&
+        activeWorkerPlan.chunkFrames === 24 &&
+        replacementPlan.plan.name === "replacement" &&
+        renderPlanModule.captureRenderPlan(planRoot, planTarget).generation ===
+          replacementPlan.generation,
+    );
+
+    const exactPlanRoot = path.join(base, "render-plan-exact-competitor");
+    const exactPlanTarget = path.join(exactPlanRoot, "plan.json");
+    const exactPlanSlot = path.join(
+      `${exactPlanTarget}.generations`,
+      "genesis.json",
+    );
+    fs.mkdirSync(exactPlanRoot);
+    let exactPlanInserted = false;
+    let exactPlanIdentity = "";
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      if (
+        exactPlanInserted === false &&
+        typeof file !== "number" &&
+        path.resolve(file.toString()) === exactPlanSlot &&
+        flags === "wx+"
+      ) {
+        nativeWriteFile(
+          exactPlanSlot,
+          `${JSON.stringify({
+            version: 1,
+            generation: "22222222-2222-4222-8222-222222222222",
+            predecessor: null,
+            plan: planFixture("exact-competitor", 48),
+          })}\n`,
+        );
+        const status = fs.lstatSync(exactPlanSlot, { bigint: true });
+        exactPlanIdentity = `${status.dev}\0${status.ino}`;
+        exactPlanInserted = true;
+      }
+      return Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+    }) as typeof fs.openSync;
+    let exactPlanAccepted: RenderPlanFixtureSnapshot | undefined;
+    let exactPlanCleanupFailure: { error: unknown } | undefined;
+    try {
+      exactPlanAccepted = await renderPlanModule.publishRenderPlan({
+        base: exactPlanRoot,
+        inputCurrent: async () => undefined,
+        plan: planFixture("exact-competitor", 48),
+        predecessor: null,
+        target: exactPlanTarget,
+      });
+    } catch (error) {
+      exactPlanCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(exactPlanCleanupFailure, [
+        {
+          resource: "render plan exact competitor open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "render plan accepts an exact no-overwrite commit competitor",
+      exactPlanInserted &&
+        exactPlanAccepted !== undefined &&
+        exactPlanAccepted.plan.name === "exact-competitor" &&
+        (() => {
+          const status = fs.lstatSync(exactPlanSlot, { bigint: true });
+          return `${status.dev}\0${status.ino}` === exactPlanIdentity;
+        })(),
+    );
+
+    const foreignPlanRoot = path.join(base, "render-plan-foreign-competitor");
+    const foreignPlanTarget = path.join(foreignPlanRoot, "plan.json");
+    const foreignPlanSlot = path.join(
+      `${foreignPlanTarget}.generations`,
+      "genesis.json",
+    );
+    const foreignPlanBytes = Buffer.from(
+      `${JSON.stringify({
+        version: 1,
+        generation: "33333333-3333-4333-8333-333333333333",
+        predecessor: null,
+        plan: planFixture("foreign", 7),
+      })}\n`,
+    );
+    fs.mkdirSync(foreignPlanRoot);
+    let foreignPlanInserted = false;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      if (
+        foreignPlanInserted === false &&
+        typeof file !== "number" &&
+        path.resolve(file.toString()) === foreignPlanSlot &&
+        flags === "wx+"
+      ) {
+        nativeWriteFile(foreignPlanSlot, foreignPlanBytes);
+        foreignPlanInserted = true;
+      }
+      return Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+    }) as typeof fs.openSync;
+    let foreignPlanRejected = false;
+    let foreignPlanCleanupFailure: { error: unknown } | undefined;
+    try {
+      await renderPlanModule.publishRenderPlan({
+        base: foreignPlanRoot,
+        inputCurrent: async () => undefined,
+        plan: planFixture("local", 48),
+        predecessor: null,
+        target: foreignPlanTarget,
+      });
+    } catch (error) {
+      foreignPlanRejected = true;
+      foreignPlanCleanupFailure = { error };
+    } finally {
+      preserveCliHarnessCleanup(foreignPlanCleanupFailure, [
+        {
+          resource: "render plan foreign competitor open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "render plan preserves a foreign destination generation competitor",
+      foreignPlanInserted &&
+        foreignPlanRejected &&
+        fs.readFileSync(foreignPlanSlot).equals(foreignPlanBytes) &&
+        renderPlanModule.captureRenderPlan(foreignPlanRoot, foreignPlanTarget)
+          .plan.name === "foreign",
+    );
+
+    const rootSwapPlanRoot = path.join(base, "render-plan-root-swap");
+    const rootSwapPlanTarget = path.join(rootSwapPlanRoot, "plan.json");
+    const parkedRootSwapPlan = `${rootSwapPlanRoot}.parked`;
+    const rootSwapPlanMarker = path.join(rootSwapPlanRoot, "successor.marker");
+    fs.mkdirSync(rootSwapPlanRoot);
+    let planRootSwapped = false;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+      if (
+        planRootSwapped === false &&
+        typeof file !== "number" &&
+        flags === "wx+" &&
+        path.resolve(file.toString()) ===
+          path.join(rootSwapPlanRoot, "plan.json.generations", "genesis.json")
+      ) {
+        nativeRename(rootSwapPlanRoot, parkedRootSwapPlan);
+        nativeMkdir(path.join(rootSwapPlanRoot, "plan.json.generations"), {
+          recursive: true,
+        });
+        nativeWriteFile(rootSwapPlanMarker, "successor");
+        planRootSwapped = true;
+      }
+      return descriptor;
+    }) as typeof fs.openSync;
+    let planRootSwapRejected = false;
+    let planRootSwapCleanupFailure: { error: unknown } | undefined;
+    try {
+      await renderPlanModule.publishRenderPlan({
+        base: rootSwapPlanRoot,
+        inputCurrent: async () => undefined,
+        plan: planFixture("root-swap", 48),
+        predecessor: null,
+        target: rootSwapPlanTarget,
+      });
+    } catch (error) {
+      planRootSwapRejected = true;
+      planRootSwapCleanupFailure = { error };
+    } finally {
+      preserveCliHarnessCleanup(planRootSwapCleanupFailure, [
+        {
+          resource: "render plan root swap open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "render plan preserves a render-root and parent successor",
+      planRootSwapped &&
+        planRootSwapRejected &&
+        fs.readFileSync(rootSwapPlanMarker, "utf8") === "successor" &&
+        fs.existsSync(
+          path.join(
+            parkedRootSwapPlan,
+            "plan.json.generations",
+            "genesis.json",
+          ),
+        ),
+    );
+
+    const legacyPlanRoot = path.join(base, "render-plan-legacy");
+    const legacyPlanTarget = path.join(legacyPlanRoot, "plan.json");
+    const legacyPlanBytes = Buffer.from(
+      `${JSON.stringify(planFixture("legacy", 60), null, 2)}\n`,
+    );
+    fs.mkdirSync(legacyPlanRoot);
+    fs.writeFileSync(legacyPlanTarget, legacyPlanBytes);
+    const legacyPlan = renderPlanModule.captureRenderPlan(
+      legacyPlanRoot,
+      legacyPlanTarget,
+    );
+    const migratedPlan = await renderPlanModule.publishRenderPlan({
+      base: legacyPlanRoot,
+      inputCurrent: async () => undefined,
+      plan: planFixture("migrated", 48),
+      predecessor: legacyPlan,
+      target: legacyPlanTarget,
+    });
+    TestValidator.predicate(
+      "render plan appends after an exact legacy plan without replacing it",
+      fs.readFileSync(legacyPlanTarget).equals(legacyPlanBytes) &&
+        migratedPlan.plan.name === "migrated" &&
+        renderPlanModule.captureRenderPlan(legacyPlanRoot, legacyPlanTarget)
+          .generation === migratedPlan.generation &&
+        renderPlanModule.captureRenderPlan(base, legacyPlanTarget)
+          .generation === migratedPlan.generation,
+    );
+    const parkedLegacyPlanTarget = `${legacyPlanTarget}.parked`;
+    fs.renameSync(legacyPlanTarget, parkedLegacyPlanTarget);
+    fs.writeFileSync(
+      legacyPlanTarget,
+      `${JSON.stringify(planFixture("foreign-legacy", 12), null, 2)}\n`,
+    );
+    let replacedLegacyPlanRejected = false;
+    try {
+      renderPlanModule.captureRenderPlan(legacyPlanRoot, legacyPlanTarget);
+    } catch {
+      replacedLegacyPlanRejected = true;
+    }
+    TestValidator.predicate(
+      "render plan rejects a replaced legacy root after migration",
+      replacedLegacyPlanRejected &&
+        fs.existsSync(parkedLegacyPlanTarget) &&
+        fs.existsSync(`${legacyPlanTarget}.generations`),
+    );
+
+    const unchangedLegacyPlanRoot = path.join(
+      base,
+      "render-plan-unchanged-legacy",
+    );
+    const unchangedLegacyPlanTarget = path.join(
+      unchangedLegacyPlanRoot,
+      "plan.json",
+    );
+    fs.mkdirSync(unchangedLegacyPlanRoot);
+    fs.writeFileSync(unchangedLegacyPlanTarget, legacyPlanBytes);
+    const unchangedLegacyPlan = renderPlanModule.captureRenderPlan(
+      unchangedLegacyPlanRoot,
+      unchangedLegacyPlanTarget,
+    );
+    const boundUnchangedLegacyPlan = await renderPlanModule.publishRenderPlan({
+      base: unchangedLegacyPlanRoot,
+      inputCurrent: async () => undefined,
+      plan: unchangedLegacyPlan.plan,
+      predecessor: unchangedLegacyPlan,
+      target: unchangedLegacyPlanTarget,
+    });
+    fs.renameSync(
+      unchangedLegacyPlanTarget,
+      `${unchangedLegacyPlanTarget}.parked`,
+    );
+    fs.writeFileSync(
+      unchangedLegacyPlanTarget,
+      `${JSON.stringify(planFixture("replacement-legacy", 60), null, 2)}\n`,
+    );
+    TestValidator.predicate(
+      "render plan binds and protects an unchanged legacy root",
+      boundUnchangedLegacyPlan.generation !== unchangedLegacyPlan.generation &&
+        throws(() =>
+          renderPlanModule.captureRenderPlan(
+            unchangedLegacyPlanRoot,
+            unchangedLegacyPlanTarget,
+          ),
+        ),
+    );
+
+    const lateLegacyPlanRoot = path.join(base, "render-plan-late-legacy");
+    const lateLegacyPlanTarget = path.join(lateLegacyPlanRoot, "plan.json");
+    fs.mkdirSync(lateLegacyPlanRoot);
+    await renderPlanModule.publishRenderPlan({
+      base: lateLegacyPlanRoot,
+      inputCurrent: async () => undefined,
+      plan: planFixture("genesis-before-legacy", 48),
+      predecessor: null,
+      target: lateLegacyPlanTarget,
+    });
+    fs.writeFileSync(lateLegacyPlanTarget, legacyPlanBytes);
+    TestValidator.predicate(
+      "render plan rejects a legacy root introduced after genesis",
+      throws(() =>
+        renderPlanModule.captureRenderPlan(
+          lateLegacyPlanRoot,
+          lateLegacyPlanTarget,
+        ),
+      ),
+    );
+
+    const traversalPlanRoot = path.join(base, "render-plan-traversal-swap");
+    const traversalPlanTarget = path.join(traversalPlanRoot, "plan.json");
+    fs.mkdirSync(traversalPlanRoot);
+    const traversalFirst = await renderPlanModule.publishRenderPlan({
+      base: traversalPlanRoot,
+      inputCurrent: async () => undefined,
+      plan: planFixture("traversal-first", 48),
+      predecessor: null,
+      target: traversalPlanTarget,
+    });
+    await renderPlanModule.publishRenderPlan({
+      base: traversalPlanRoot,
+      inputCurrent: async () => undefined,
+      plan: planFixture("traversal-second", 24),
+      predecessor: traversalFirst,
+      target: traversalPlanTarget,
+    });
+    const traversalDirectory = `${traversalPlanTarget}.generations`;
+    const parkedTraversalDirectory = `${traversalDirectory}.parked`;
+    const traversalSuccessorMarker = path.join(
+      traversalDirectory,
+      "successor.marker",
+    );
+    let traversalDirectorySwapped = false;
+    mutableFs.lstatSync = ((file, ...args: unknown[]): unknown => {
+      const status = Reflect.apply(nativeLstat, mutableFs, [file, ...args]);
+      if (
+        traversalDirectorySwapped === false &&
+        path.resolve(file.toString()) === traversalFirst.snapshot.target
+      ) {
+        nativeRename(traversalDirectory, parkedTraversalDirectory);
+        nativeMkdir(traversalDirectory);
+        nativeWriteFile(traversalSuccessorMarker, "successor");
+        traversalDirectorySwapped = true;
+      }
+      return status;
+    }) as typeof fs.lstatSync;
+    let traversalDirectoryRejected = false;
+    let traversalDirectoryCleanupFailure: { error: unknown } | undefined;
+    try {
+      renderPlanModule.captureRenderPlan(
+        traversalPlanRoot,
+        traversalPlanTarget,
+      );
+    } catch (error) {
+      traversalDirectoryRejected = true;
+      traversalDirectoryCleanupFailure = { error };
+    } finally {
+      preserveCliHarnessCleanup(traversalDirectoryCleanupFailure, [
+        {
+          resource: "render plan traversal lstat hook",
+          cleanup: () => {
+            mutableFs.lstatSync = nativeLstat;
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "render plan traversal rejects a generation-directory successor",
+      traversalDirectorySwapped &&
+        traversalDirectoryRejected &&
+        fs.readFileSync(traversalSuccessorMarker, "utf8") === "successor" &&
+        fs.existsSync(parkedTraversalDirectory),
+    );
+
+    const malformedPlanRoot = path.join(base, "render-plan-malformed");
+    const malformedPlanTarget = path.join(malformedPlanRoot, "plan.json");
+    fs.mkdirSync(`${malformedPlanTarget}.generations`, { recursive: true });
+    fs.writeFileSync(
+      path.join(`${malformedPlanTarget}.generations`, "genesis.json"),
+      "{}\n",
+    );
+    const malformedPlanRejected = throws(() =>
+      renderPlanModule.captureRenderPlan(
+        malformedPlanRoot,
+        malformedPlanTarget,
+      ),
+    );
+    const cyclePlanRoot = path.join(base, "render-plan-cycle");
+    const cyclePlanTarget = path.join(cyclePlanRoot, "plan.json");
+    const cyclePlanDirectory = `${cyclePlanTarget}.generations`;
+    const cycleGeneration = "44444444-4444-4444-8444-444444444444";
+    fs.mkdirSync(cyclePlanDirectory, { recursive: true });
+    fs.writeFileSync(
+      path.join(cyclePlanDirectory, "genesis.json"),
+      `${JSON.stringify({
+        version: 1,
+        generation: cycleGeneration,
+        predecessor: null,
+        plan: planFixture("cycle-first", 48),
+      })}\n`,
+    );
+    fs.writeFileSync(
+      path.join(cyclePlanDirectory, `${cycleGeneration}.json`),
+      `${JSON.stringify({
+        version: 1,
+        generation: cycleGeneration,
+        predecessor: cycleGeneration,
+        plan: planFixture("cycle-second", 24),
+      })}\n`,
+    );
+    TestValidator.predicate(
+      "render plan traversal rejects malformed and cyclic generations",
+      malformedPlanRejected &&
+        throws(() =>
+          renderPlanModule.captureRenderPlan(cyclePlanRoot, cyclePlanTarget),
+        ),
+    );
+    const renderLivenessModule = createRequire(__filename)(
+      path.join(scaffoldDir, "scripts", "renderLiveness.ts"),
+    ) as {
+      acquireRenderGcLease: (props: {
+        coordinationRoot: string;
+        pid: number;
+        processAlive: (pid: number) => boolean;
+        scope: string;
+      }) => unknown;
+      acquireRenderSessionLease: (props: {
+        coordinationRoot: string;
+        pid: number;
+        processAlive: (pid: number) => boolean;
+        scope: string;
+        tier: "final" | "proxy";
+      }) => unknown;
+      releaseRenderLivenessLease: (lease: unknown) => boolean;
+    };
+    const livenessRoot = path.join(base, "render-liveness");
+    const livenessScope = "a".repeat(64);
+    fs.mkdirSync(livenessRoot);
+    let partialLeaseDescriptor: number | null = null;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+      if (
+        typeof file !== "number" &&
+        flags === "wx+" &&
+        path.dirname(path.resolve(file.toString())) === livenessRoot
+      )
+        partialLeaseDescriptor = descriptor;
+      return descriptor;
+    }) as typeof fs.openSync;
+    mutableFs.fsyncSync = ((descriptor) => {
+      if (descriptor === partialLeaseDescriptor)
+        throw new Error("fixture lease fsync failure");
+      nativeFsync(descriptor);
+    }) as typeof fs.fsyncSync;
+    let partialLeaseRejected = false;
+    let partialLeaseCleanupFailure: { error: unknown } | undefined;
+    try {
+      partialLeaseRejected = throws(() =>
+        renderLivenessModule.acquireRenderGcLease({
+          coordinationRoot: livenessRoot,
+          pid: 31000,
+          processAlive: (pid) => pid === 31000,
+          scope: livenessScope,
+        }),
+      );
+    } catch (error) {
+      partialLeaseCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(partialLeaseCleanupFailure, [
+        {
+          resource: "render liveness partial open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+        {
+          resource: "render liveness partial fsync hook",
+          cleanup: () => {
+            mutableFs.fsyncSync = nativeFsync;
+          },
+        },
+      ]);
+    }
+    const partialLeaseFiles = fs.readdirSync(livenessRoot);
+    const partialLeaseBlocksRetry = throws(() =>
+      renderLivenessModule.acquireRenderGcLease({
+        coordinationRoot: livenessRoot,
+        pid: 31000,
+        processAlive: (pid) => pid === 31000,
+        scope: livenessScope,
+      }),
+    );
+    TestValidator.predicate(
+      "a failed descriptor-bound lease remains as fail-closed evidence",
+      partialLeaseRejected &&
+        partialLeaseBlocksRetry &&
+        partialLeaseFiles.length === 1,
+    );
+    fs.rmSync(path.join(livenessRoot, partialLeaseFiles[0]!));
+    let interleavedGc: unknown;
+    let workerOpenInterleaved = false;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      if (
+        workerOpenInterleaved === false &&
+        typeof file !== "number" &&
+        flags === "wx+" &&
+        path.basename(file.toString()).includes(".session.")
+      ) {
+        workerOpenInterleaved = true;
+        interleavedGc = renderLivenessModule.acquireRenderGcLease({
+          coordinationRoot: livenessRoot,
+          pid: 31009,
+          processAlive: (pid) => pid === 31009 || pid === 31010,
+          scope: livenessScope,
+        });
+      }
+      return Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+    }) as typeof fs.openSync;
+    let interleavedWorkerRejected = false;
+    let interleavedWorkerCleanupFailure: { error: unknown } | undefined;
+    try {
+      interleavedWorkerRejected = throws(() =>
+        renderLivenessModule.acquireRenderSessionLease({
+          coordinationRoot: livenessRoot,
+          pid: 31010,
+          processAlive: (pid) => pid === 31009 || pid === 31010,
+          scope: livenessScope,
+          tier: "proxy",
+        }),
+      );
+    } catch (error) {
+      interleavedWorkerCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(interleavedWorkerCleanupFailure, [
+        {
+          resource: "render liveness interleaved open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+        {
+          resource: "render liveness interleaved GC lease",
+          cleanup: () => {
+            if (interleavedGc !== undefined)
+              renderLivenessModule.releaseRenderLivenessLease(interleavedGc);
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "a worker rechecks a GC guard published after its first check",
+      workerOpenInterleaved &&
+        interleavedWorkerRejected &&
+        fs.readdirSync(livenessRoot).length === 0,
+    );
+    let inventoryWorker: unknown;
+    let inventoryWorkerRejected = false;
+    let gcInventoryInterleaved = false;
+    mutableFs.readdirSync = ((directory, ...args: unknown[]): unknown => {
+      const entries = Reflect.apply(nativeReaddir, mutableFs, [
+        directory,
+        ...args,
+      ]);
+      if (
+        gcInventoryInterleaved === false &&
+        path.resolve(directory.toString()) === livenessRoot
+      ) {
+        gcInventoryInterleaved = true;
+        try {
+          inventoryWorker = renderLivenessModule.acquireRenderSessionLease({
+            coordinationRoot: livenessRoot,
+            pid: 31014,
+            processAlive: (pid) => pid === 31013 || pid === 31014,
+            scope: livenessScope,
+            tier: "final",
+          });
+        } catch {
+          inventoryWorkerRejected = true;
+        }
+      }
+      return entries;
+    }) as typeof fs.readdirSync;
+    let inventoryGc: unknown;
+    let inventoryGcCleanupFailure: { error: unknown } | undefined;
+    try {
+      inventoryGc = renderLivenessModule.acquireRenderGcLease({
+        coordinationRoot: livenessRoot,
+        pid: 31013,
+        processAlive: (pid) => pid === 31013 || pid === 31014,
+        scope: livenessScope,
+      });
+    } catch (error) {
+      inventoryGcCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(inventoryGcCleanupFailure, [
+        {
+          resource: "render liveness inventory readdir hook",
+          cleanup: () => {
+            mutableFs.readdirSync = nativeReaddir;
+          },
+        },
+      ]);
+    }
+    if (inventoryGc !== undefined)
+      renderLivenessModule.releaseRenderLivenessLease(inventoryGc);
+    if (inventoryWorker !== undefined)
+      renderLivenessModule.releaseRenderLivenessLease(inventoryWorker);
+    TestValidator.predicate(
+      "GC publishes its guard before the session inventory boundary",
+      gcInventoryInterleaved &&
+        inventoryWorkerRejected &&
+        fs.readdirSync(livenessRoot).length === 0,
+    );
+    const gcFirstAlive = new Set([31001, 31002]);
+    const gcFirst = renderLivenessModule.acquireRenderGcLease({
+      coordinationRoot: livenessRoot,
+      pid: 31001,
+      processAlive: (pid) => gcFirstAlive.has(pid),
+      scope: livenessScope,
+    });
+    const gcFirstWorkerRejected = throws(() =>
+      renderLivenessModule.acquireRenderSessionLease({
+        coordinationRoot: livenessRoot,
+        pid: 31002,
+        processAlive: (pid) => gcFirstAlive.has(pid),
+        scope: livenessScope,
+        tier: "proxy",
+      }),
+    );
+    const gcFirstPeerRejected = throws(() =>
+      renderLivenessModule.acquireRenderGcLease({
+        coordinationRoot: livenessRoot,
+        pid: 31002,
+        processAlive: (pid) => gcFirstAlive.has(pid),
+        scope: livenessScope,
+      }),
+    );
+    const gcFirstReleased =
+      renderLivenessModule.releaseRenderLivenessLease(gcFirst);
+    TestValidator.predicate(
+      "a GC-first lease blocks a later render session",
+      gcFirstWorkerRejected &&
+        gcFirstPeerRejected &&
+        gcFirstReleased &&
+        fs.readdirSync(livenessRoot).length === 0,
+    );
+    const workerFirstAlive = new Set([31003, 31004]);
+    const workerFirst = renderLivenessModule.acquireRenderSessionLease({
+      coordinationRoot: livenessRoot,
+      pid: 31003,
+      processAlive: (pid) => workerFirstAlive.has(pid),
+      scope: livenessScope,
+      tier: "final",
+    });
+    const workerFirstGcRejected = throws(() =>
+      renderLivenessModule.acquireRenderGcLease({
+        coordinationRoot: livenessRoot,
+        pid: 31004,
+        processAlive: (pid) => workerFirstAlive.has(pid),
+        scope: livenessScope,
+      }),
+    );
+    const workerFirstEntries = fs.readdirSync(livenessRoot);
+    TestValidator.predicate(
+      "a worker-first session makes GC release its guard and refuse apply",
+      workerFirstGcRejected &&
+        workerFirstEntries.length === 1 &&
+        workerFirstEntries[0]!.includes(".session."),
+    );
+    renderLivenessModule.releaseRenderLivenessLease(workerFirst);
+    const staleGc = renderLivenessModule.acquireRenderGcLease({
+      coordinationRoot: livenessRoot,
+      pid: 31005,
+      processAlive: (pid) => pid === 31005,
+      scope: livenessScope,
+    });
+    const afterStaleGc = renderLivenessModule.acquireRenderSessionLease({
+      coordinationRoot: livenessRoot,
+      pid: 31006,
+      processAlive: (pid) => pid === 31006,
+      scope: livenessScope,
+      tier: "proxy",
+    });
+    const staleGcAlreadyRemoved =
+      renderLivenessModule.releaseRenderLivenessLease(staleGc) === false;
+    renderLivenessModule.releaseRenderLivenessLease(afterStaleGc);
+    const staleSession = renderLivenessModule.acquireRenderSessionLease({
+      coordinationRoot: livenessRoot,
+      pid: 31007,
+      processAlive: (pid) => pid === 31007,
+      scope: livenessScope,
+      tier: "final",
+    });
+    const afterStaleSession = renderLivenessModule.acquireRenderGcLease({
+      coordinationRoot: livenessRoot,
+      pid: 31008,
+      processAlive: (pid) => pid === 31008,
+      scope: livenessScope,
+    });
+    const staleSessionAlreadyRemoved =
+      renderLivenessModule.releaseRenderLivenessLease(staleSession) === false;
+    renderLivenessModule.releaseRenderLivenessLease(afterStaleSession);
+    TestValidator.predicate(
+      "dead GC and session owners are recovered through exact lease cleanup",
+      staleGcAlreadyRemoved &&
+        staleSessionAlreadyRemoved &&
+        fs.readdirSync(livenessRoot).length === 0,
+    );
+    const staleSuccessorLease = renderLivenessModule.acquireRenderGcLease({
+      coordinationRoot: livenessRoot,
+      pid: 31015,
+      processAlive: (pid) => pid === 31015,
+      scope: livenessScope,
+    });
+    const staleSuccessorGuard = path.join(
+      livenessRoot,
+      fs
+        .readdirSync(livenessRoot)
+        .find((name) => name.includes(".gc-apply.lock"))!,
+    );
+    const staleSuccessorBytes = fs.readFileSync(staleSuccessorGuard);
+    const staleOriginal = path.join(livenessRoot, "stale-gc-original.lock");
+    const nativeLivenessRename = mutableFs.renameSync;
+    let isolatedStaleSuccessor: string | null = null;
+    mutableFs.renameSync = ((oldPath, newPath) => {
+      if (
+        isolatedStaleSuccessor === null &&
+        path.resolve(oldPath.toString()) === staleSuccessorGuard
+      ) {
+        nativeLivenessRename(oldPath, staleOriginal);
+        fs.writeFileSync(staleSuccessorGuard, staleSuccessorBytes);
+        isolatedStaleSuccessor = path.resolve(newPath.toString());
+      }
+      nativeLivenessRename(oldPath, newPath);
+    }) as typeof fs.renameSync;
+    let staleSuccessorRejected = false;
+    let staleSuccessorCleanupFailure: { error: unknown } | undefined;
+    try {
+      staleSuccessorRejected = throws(() =>
+        renderLivenessModule.acquireRenderSessionLease({
+          coordinationRoot: livenessRoot,
+          pid: 31016,
+          processAlive: (pid) => pid === 31016,
+          scope: livenessScope,
+          tier: "proxy",
+        }),
+      );
+    } catch (error) {
+      staleSuccessorCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(staleSuccessorCleanupFailure, [
+        {
+          resource: "render liveness stale successor rename hook",
+          cleanup: () => {
+            mutableFs.renameSync = nativeLivenessRename;
+          },
+        },
+      ]);
+    }
+    const isolatedStaleSuccessorPath = isolatedStaleSuccessor as string | null;
+    const staleSuccessorPreserved =
+      isolatedStaleSuccessorPath !== null &&
+      fs.existsSync(staleSuccessorGuard) === false &&
+      fs.existsSync(staleOriginal) &&
+      fs.readFileSync(isolatedStaleSuccessorPath).equals(staleSuccessorBytes) &&
+      path
+        .basename(path.dirname(isolatedStaleSuccessorPath))
+        .includes(".preserved-");
+    const staleSuccessorOriginalReleaseRefused =
+      renderLivenessModule.releaseRenderLivenessLease(staleSuccessorLease) ===
+      false;
+    TestValidator.predicate(
+      "stale guard cleanup preserves a pathname successor and refuses the worker",
+      staleSuccessorRejected &&
+        staleSuccessorPreserved &&
+        staleSuccessorOriginalReleaseRefused,
+    );
+    fs.rmSync(staleOriginal);
+    if (isolatedStaleSuccessorPath !== null) {
+      fs.rmSync(isolatedStaleSuccessorPath);
+      fs.rmdirSync(path.dirname(isolatedStaleSuccessorPath));
+    }
+    const malformedGuard = path.join(
+      livenessRoot,
+      `.automovie-liveness-${livenessScope}.gc-apply.lock`,
+    );
+    fs.writeFileSync(
+      malformedGuard,
+      `${JSON.stringify({ kind: "gc", pid: 31017, tier: null, token: 7 })}\n`,
+    );
+    const malformedGuardRejected = throws(() =>
+      renderLivenessModule.acquireRenderSessionLease({
+        coordinationRoot: livenessRoot,
+        pid: 31018,
+        processAlive: (pid) => pid === 31018,
+        scope: livenessScope,
+        tier: "final",
+      }),
+    );
+    TestValidator.predicate(
+      "malformed GC owner tokens fail closed without deleting the guard",
+      malformedGuardRejected && fs.existsSync(malformedGuard),
+    );
+    fs.rmSync(malformedGuard);
+    const renderGcModule = createRequire(__filename)(
+      path.join(scaffoldDir, "scripts", "renderGcSnapshot.ts"),
+    ) as {
+      RENDER_GC_QUARANTINE_EVIDENCE_DIRECTORY: string;
+      RENDER_GC_REMOVAL_STAGING_DIRECTORY: string;
+      assertCapturedRenderGcFileEntry: (props: {
+        directory: unknown;
+        file: unknown;
+        relative: string;
+      }) => void;
+      assertCapturedRenderTarget: (snapshot: unknown) => void;
+      captureRenderGcTarget: (
+        base: string,
+        target: string,
+      ) => {
+        bytes: number;
+        contentFingerprint: string;
+        kind: "directory" | "file";
+        target: string;
+        targetIdentity: string;
+      };
+      createRenderGcFileSnapshot: (
+        base: string,
+        target: string,
+        bytes: Uint8Array,
+      ) => unknown;
+      captureRenderPhysicalDirectory: (
+        directory: string,
+        label: string,
+      ) => unknown;
+      ensureRenderPhysicalDirectory: (base: string, relative: string) => string;
+      inspectRenderQuarantineMarker: (snapshot: unknown) => {
+        evidence: {
+          bytes: number;
+          contentFingerprint: string;
+          kind: "directory" | "file";
+          target: string;
+          targetIdentity: string;
+        };
+        marker: {
+          contentFingerprint: string;
+          kind: "directory" | "file";
+          original: string;
+          preserved: string;
+          targetIdentity: string;
+          version: number;
+        };
+      };
+      inventoryRenderQuarantineCandidates: (
+        markers: readonly unknown[],
+      ) => Array<{
+        bytes: number;
+        evidence: {
+          bytes: number;
+          target: string;
+          targetIdentity: string;
+        } | null;
+        marker: { bytes: number; target: string };
+      }>;
+      isRenderGcPreservedPath: (relative: string) => boolean;
+      quarantineCapturedRenderTarget: (props: {
+        destination: string;
+        isolated: string;
+        quarantine: string;
+        snapshot: unknown;
+      }) => void;
+      readCapturedRenderGcFile: (
+        snapshot: unknown,
+        maximumBytes: number,
+      ) => Uint8Array;
+      removeCapturedRenderGcTarget: (props: {
+        isolated: string;
+        quarantine: string;
+        snapshot: unknown;
+      }) => void;
+      removeCapturedRenderQuarantine: (props: {
+        evidence: unknown;
+        marker: unknown;
+        quarantine: string;
+      }) => void;
+    };
+    const renderGcCleanupRoot = path.join(base, "render-gc-cleanup");
+    const renderGcCleanupFile = path.join(renderGcCleanupRoot, "captured.bin");
+    fs.mkdirSync(renderGcCleanupRoot);
+    fs.writeFileSync(renderGcCleanupFile, "captured render bytes");
+    const renderGcCleanupSnapshot = renderGcModule.captureRenderGcTarget(
+      renderGcCleanupRoot,
+      renderGcCleanupFile,
+    );
+    const standaloneRenderGcCloseFailure = new Error(
+      "standalone render GC close failed",
+    );
+    let standaloneRenderGcDescriptor = -1;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+      if (
+        path.resolve(file.toString()) === renderGcCleanupFile &&
+        flags === "r"
+      )
+        standaloneRenderGcDescriptor = descriptor;
+      return descriptor;
+    }) as typeof fs.openSync;
+    mutableFs.closeSync = ((descriptor: number): void => {
+      Reflect.apply(nativeClose, mutableFs, [descriptor]);
+      if (descriptor === standaloneRenderGcDescriptor)
+        throw standaloneRenderGcCloseFailure;
+    }) as typeof fs.closeSync;
+    let standaloneRenderGcCloseError: unknown;
+    let standaloneRenderGcHarnessCleanupFailure: { error: unknown } | undefined;
+    try {
+      renderGcModule.readCapturedRenderGcFile(renderGcCleanupSnapshot, 1024);
+    } catch (error) {
+      standaloneRenderGcCloseError = error;
+      standaloneRenderGcHarnessCleanupFailure = { error };
+    } finally {
+      preserveCliHarnessCleanup(standaloneRenderGcHarnessCleanupFailure, [
+        {
+          resource: "render GC standalone open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+        {
+          resource: "render GC standalone close hook",
+          cleanup: () => {
+            mutableFs.closeSync = nativeClose;
+          },
+        },
+      ]);
+    }
+    const primaryOnlyRenderGcFailure = new Error(
+      "primary-only render GC read failed",
+    );
+    let primaryOnlyRenderGcDescriptor = -1;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+      if (
+        path.resolve(file.toString()) === renderGcCleanupFile &&
+        flags === "r"
+      )
+        primaryOnlyRenderGcDescriptor = descriptor;
+      return descriptor;
+    }) as typeof fs.openSync;
+    mutableFs.fstatSync = ((descriptor, ...args: unknown[]): unknown => {
+      if (descriptor === primaryOnlyRenderGcDescriptor)
+        throw primaryOnlyRenderGcFailure;
+      return Reflect.apply(nativeFstat, mutableFs, [descriptor, ...args]);
+    }) as typeof fs.fstatSync;
+    let preservedPrimaryOnlyRenderGcFailure: unknown;
+    let primaryOnlyRenderGcHarnessCleanupFailure:
+      | { error: unknown }
+      | undefined;
+    try {
+      renderGcModule.readCapturedRenderGcFile(renderGcCleanupSnapshot, 1024);
+    } catch (error) {
+      preservedPrimaryOnlyRenderGcFailure = error;
+      primaryOnlyRenderGcHarnessCleanupFailure = { error };
+    } finally {
+      preserveCliHarnessCleanup(primaryOnlyRenderGcHarnessCleanupFailure, [
+        {
+          resource: "render GC primary-only open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+        {
+          resource: "render GC primary-only fstat hook",
+          cleanup: () => {
+            mutableFs.fstatSync = nativeFstat;
+          },
+        },
+      ]);
+    }
+    const combinedRenderGcPrimary = new Error("render GC read failed");
+    const combinedRenderGcClose = new Error("render GC read close failed");
+    let combinedRenderGcDescriptor = -1;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+      if (
+        path.resolve(file.toString()) === renderGcCleanupFile &&
+        flags === "r"
+      )
+        combinedRenderGcDescriptor = descriptor;
+      return descriptor;
+    }) as typeof fs.openSync;
+    mutableFs.fstatSync = ((descriptor, ...args: unknown[]): unknown => {
+      if (descriptor === combinedRenderGcDescriptor)
+        throw combinedRenderGcPrimary;
+      return Reflect.apply(nativeFstat, mutableFs, [descriptor, ...args]);
+    }) as typeof fs.fstatSync;
+    mutableFs.closeSync = ((descriptor: number): void => {
+      Reflect.apply(nativeClose, mutableFs, [descriptor]);
+      if (descriptor === combinedRenderGcDescriptor)
+        throw combinedRenderGcClose;
+    }) as typeof fs.closeSync;
+    let combinedRenderGcFailure: unknown;
+    let combinedRenderGcHarnessCleanupFailure: { error: unknown } | undefined;
+    try {
+      renderGcModule.readCapturedRenderGcFile(renderGcCleanupSnapshot, 1024);
+    } catch (error) {
+      combinedRenderGcFailure = error;
+      combinedRenderGcHarnessCleanupFailure = { error };
+    } finally {
+      preserveCliHarnessCleanup(combinedRenderGcHarnessCleanupFailure, [
+        {
+          resource: "render GC combined open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+        {
+          resource: "render GC combined fstat hook",
+          cleanup: () => {
+            mutableFs.fstatSync = nativeFstat;
+          },
+        },
+        {
+          resource: "render GC combined close hook",
+          cleanup: () => {
+            mutableFs.closeSync = nativeClose;
+          },
+        },
+      ]);
+    }
+    const failedRenderGcCreate = path.join(
+      renderGcCleanupRoot,
+      "failed-create.bin",
+    );
+    const renderGcCreatePrimary = new Error("render GC creation failed");
+    const renderGcCreateClose = new Error("render GC creation close failed");
+    let failedRenderGcCreateDescriptor = -1;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+      if (
+        path.resolve(file.toString()) === failedRenderGcCreate &&
+        flags === "wx+"
+      )
+        failedRenderGcCreateDescriptor = descriptor;
+      return descriptor;
+    }) as typeof fs.openSync;
+    mutableFs.writeSync = ((...args: unknown[]): number => {
+      if (args[0] === failedRenderGcCreateDescriptor)
+        throw renderGcCreatePrimary;
+      return Reflect.apply(nativeWrite, mutableFs, args) as number;
+    }) as typeof fs.writeSync;
+    mutableFs.closeSync = ((descriptor: number): void => {
+      Reflect.apply(nativeClose, mutableFs, [descriptor]);
+      if (descriptor === failedRenderGcCreateDescriptor)
+        throw renderGcCreateClose;
+    }) as typeof fs.closeSync;
+    let combinedRenderGcCreateFailure: unknown;
+    let renderGcCreateHarnessCleanupFailure: { error: unknown } | undefined;
+    try {
+      renderGcModule.createRenderGcFileSnapshot(
+        renderGcCleanupRoot,
+        failedRenderGcCreate,
+        Buffer.from("failed creation bytes"),
+      );
+    } catch (error) {
+      combinedRenderGcCreateFailure = error;
+      renderGcCreateHarnessCleanupFailure = { error };
+    } finally {
+      preserveCliHarnessCleanup(renderGcCreateHarnessCleanupFailure, [
+        {
+          resource: "render GC create open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+        {
+          resource: "render GC create write hook",
+          cleanup: () => {
+            mutableFs.writeSync = nativeWrite;
+          },
+        },
+        {
+          resource: "render GC create close hook",
+          cleanup: () => {
+            mutableFs.closeSync = nativeClose;
+          },
+        },
+      ]);
+    }
+    const nestedRenderGcCreate = path.join(
+      renderGcCleanupRoot,
+      "nested-create.bin",
+    );
+    const nestedRenderGcPrimary = new Error("render GC inventory read failed");
+    const nestedRenderGcReadClose = new Error(
+      "render GC inventory descriptor close failed",
+    );
+    const nestedRenderGcCreateClose = new Error(
+      "render GC create descriptor close failed",
+    );
+    let nestedRenderGcOwnerDescriptor = -1;
+    let nestedRenderGcReadDescriptor = -1;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+      if (path.resolve(file.toString()) === nestedRenderGcCreate) {
+        if (flags === "wx+") nestedRenderGcOwnerDescriptor = descriptor;
+        else if (flags === "r" && nestedRenderGcReadDescriptor === -1)
+          nestedRenderGcReadDescriptor = descriptor;
+      }
+      return descriptor;
+    }) as typeof fs.openSync;
+    mutableFs.fstatSync = ((descriptor, ...args: unknown[]): unknown => {
+      if (descriptor === nestedRenderGcReadDescriptor)
+        throw nestedRenderGcPrimary;
+      return Reflect.apply(nativeFstat, mutableFs, [descriptor, ...args]);
+    }) as typeof fs.fstatSync;
+    mutableFs.closeSync = ((descriptor: number): void => {
+      Reflect.apply(nativeClose, mutableFs, [descriptor]);
+      if (descriptor === nestedRenderGcReadDescriptor)
+        throw nestedRenderGcReadClose;
+      if (descriptor === nestedRenderGcOwnerDescriptor)
+        throw nestedRenderGcCreateClose;
+    }) as typeof fs.closeSync;
+    let combinedNestedRenderGcFailure: unknown;
+    let nestedRenderGcHarnessCleanupFailure: { error: unknown } | undefined;
+    try {
+      renderGcModule.createRenderGcFileSnapshot(
+        renderGcCleanupRoot,
+        nestedRenderGcCreate,
+        Buffer.from("nested creation bytes"),
+      );
+    } catch (error) {
+      combinedNestedRenderGcFailure = error;
+      nestedRenderGcHarnessCleanupFailure = { error };
+    } finally {
+      preserveCliHarnessCleanup(nestedRenderGcHarnessCleanupFailure, [
+        {
+          resource: "render GC nested open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+        {
+          resource: "render GC nested fstat hook",
+          cleanup: () => {
+            mutableFs.fstatSync = nativeFstat;
+          },
+        },
+        {
+          resource: "render GC nested close hook",
+          cleanup: () => {
+            mutableFs.closeSync = nativeClose;
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "render GC descriptor cleanup preserves operation and resource order",
+      standaloneRenderGcCloseError === standaloneRenderGcCloseFailure &&
+        preservedPrimaryOnlyRenderGcFailure === primaryOnlyRenderGcFailure &&
+        combinedRenderGcFailure instanceof AggregateError &&
+        combinedRenderGcFailure.errors.length === 2 &&
+        combinedRenderGcFailure.errors[0] === combinedRenderGcPrimary &&
+        combinedRenderGcFailure.errors[1] === combinedRenderGcClose &&
+        combinedRenderGcCreateFailure instanceof AggregateError &&
+        combinedRenderGcCreateFailure.errors.length === 2 &&
+        combinedRenderGcCreateFailure.errors[0] === renderGcCreatePrimary &&
+        combinedRenderGcCreateFailure.errors[1] === renderGcCreateClose &&
+        combinedNestedRenderGcFailure instanceof AggregateError &&
+        combinedNestedRenderGcFailure.errors.length === 3 &&
+        combinedNestedRenderGcFailure.errors[0] === nestedRenderGcPrimary &&
+        combinedNestedRenderGcFailure.errors[1] === nestedRenderGcReadClose &&
+        combinedNestedRenderGcFailure.errors[2] === nestedRenderGcCreateClose,
+    );
+    const renderTemporarySnapshotModule = createRequire(__filename)(
+      path.join(scaffoldDir, "scripts", "renderTemporarySnapshot.ts"),
+    ) as {
+      createRenderChunkTemporaryTree: (props: {
+        name: string;
+        state: unknown;
+      }) => unknown;
+    };
+    const renderChunkSnapshotModule = createRequire(__filename)(
+      path.join(scaffoldDir, "scripts", "renderChunkSnapshot.ts"),
+    ) as {
+      assertRenderChunkPublication: (publication: unknown) => void;
+      captureRenderChunkPublication: (
+        root: string,
+        pointer: string,
+      ) => {
+        pointer: unknown;
+        receipt: { chunk: string; slot: string };
+        tree: { target: string };
+      };
+      captureRenderChunkPublicationFromPointer: (pointer: unknown) => {
+        pointer: unknown;
+        receipt: unknown;
+        tree: { target: string };
+      };
+      consumeCurrentRenderChunkFrames: (
+        current: {
+          frames: Array<{
+            bytes: Uint8Array;
+            receipt: { globalFrame: number };
+          }>;
+        },
+        consume: (frame: {
+          bytes: Uint8Array;
+          receipt: { globalFrame: number };
+        }) => void,
+      ) => void;
+      currentRenderChunkPublicationProtectsTree: (props: {
+        candidate: unknown;
+        candidateName: string;
+        capture: (chunk: { id: string; slot: string }) => {
+          pointer: unknown;
+          receipt: { chunk: string; slot: string };
+          tree: { target: string };
+        } | null;
+        chunks: ReadonlyMap<string, { id: string; slot: string }>;
+      }) => boolean;
+      inventoryRenderChunkGarbage: (props: {
+        assertReceipt: (
+          chunk: { id: string; slot: string },
+          receipt: { chunk: string; slot: string },
+        ) => void;
+        chunks: ReadonlyMap<string, { id: string; slot: string }>;
+        processAlive: (pid: number) => boolean;
+        renderJobRoot: string;
+        root: string;
+        scope: string;
+        tier: "final" | "proxy";
+      }) => {
+        entries: Array<{
+          candidate: { bytes: number; kind: string; path: string };
+          snapshot: {
+            base: { path: string };
+            contentFingerprint: string;
+            targetIdentity: string;
+          };
+        }>;
+        retainedChunkPaths: string[];
+      };
+      loadCurrentRenderChunkPublication: (props: {
+        assertReceipt: (receipt: { chunk: string }) => void;
+        chunk: { frames: unknown[] };
+        frameFormat: { fps: number; height: number; width: number };
+        pointer: unknown;
+      }) => {
+        frames: Array<{
+          bytes: Uint8Array;
+          receipt: { globalFrame: number };
+        }>;
+        receipt: { chunk: string };
+      } | null;
+      loadRenderChunkPublication: (
+        root: string,
+        pointer: string,
+      ) => {
+        encoded: Uint8Array;
+        frames: Array<{ bytes: Uint8Array; receipt: { globalFrame: number } }>;
+        publication: unknown;
+        receipt: unknown;
+      };
+      publishRenderChunkSnapshot: (props: {
+        chunk: string;
+        receipt: unknown;
+        root: string;
+        scope: string;
+        tier: "final" | "proxy";
+        tree: unknown;
+      }) => {
+        publication: { pointer: unknown; receipt: unknown };
+        reused: boolean;
+      };
+      readRenderChunkPublicationFile: (
+        publication: unknown,
+        relative: string,
+      ) => Uint8Array;
+      removeRenderChunkPublication: (root: string, pointer: string) => boolean;
+      removeCapturedRenderChunkPointer: (pointer: unknown) => void;
+      renderChunkPublicationProtectsTree: (
+        publication: unknown,
+        candidate: unknown,
+      ) => boolean;
+      renderChunkContentFingerprint: (snapshot: unknown) => string;
+      renderChunkPublicationPath: (props: {
+        chunk: string;
+        root: string;
+        scope: string;
+        tier: "final" | "proxy";
+      }) => string;
+    };
+    const temporaryHandoffRoot = path.join(
+      base,
+      "render-temporary-handoff-root",
+    );
+    const parkedTemporaryHandoffRoot = `${temporaryHandoffRoot}.parked`;
+    fs.mkdirSync(temporaryHandoffRoot);
+    const temporaryHandoffOwnership =
+      renderGcModule.captureRenderPhysicalDirectory(
+        temporaryHandoffRoot,
+        "render temporary handoff fixture",
+      );
+    fs.renameSync(temporaryHandoffRoot, parkedTemporaryHandoffRoot);
+    fs.mkdirSync(temporaryHandoffRoot);
+    const temporaryHandoffRejected = throws(() =>
+      renderTemporarySnapshotModule.createRenderChunkTemporaryTree({
+        name: "entry-race",
+        state: temporaryHandoffOwnership,
+      }),
+    );
+    TestValidator.predicate(
+      "render temporary creation rejects a state successor before helper entry",
+      temporaryHandoffRejected &&
+        fs.existsSync(path.join(temporaryHandoffRoot, "tmp")) === false &&
+        fs.existsSync(parkedTemporaryHandoffRoot),
+    );
+    fs.rmSync(temporaryHandoffRoot, { recursive: true, force: true });
+    fs.rmSync(parkedTemporaryHandoffRoot, { recursive: true, force: true });
+
+    const temporaryStateRoot = path.join(base, "render-temporary-state-root");
+    const temporaryStateTree = path.join(
+      temporaryStateRoot,
+      "tmp",
+      "state-race",
+    );
+    const parkedTemporaryStateRoot = `${temporaryStateRoot}.parked`;
+    fs.mkdirSync(temporaryStateRoot);
+    const temporaryStateOwnership =
+      renderGcModule.captureRenderPhysicalDirectory(
+        temporaryStateRoot,
+        "render temporary fixture state",
+      );
+    let temporaryStateSwapped = false;
+    mutableFs.mkdirSync = ((directory, ...args: unknown[]): unknown => {
+      if (
+        temporaryStateSwapped === false &&
+        path.resolve(directory.toString()) === temporaryStateTree
+      ) {
+        nativeLivenessRename(temporaryStateRoot, parkedTemporaryStateRoot);
+        Reflect.apply(nativeMkdir, mutableFs, [
+          path.join(temporaryStateRoot, "tmp"),
+          { recursive: true },
+        ]);
+        temporaryStateSwapped = true;
+      }
+      return Reflect.apply(nativeMkdir, mutableFs, [directory, ...args]);
+    }) as typeof fs.mkdirSync;
+    let temporaryStateRejected = false;
+    let temporaryStateCleanupFailure: { error: unknown } | undefined;
+    try {
+      temporaryStateRejected = throws(() =>
+        renderTemporarySnapshotModule.createRenderChunkTemporaryTree({
+          name: "state-race",
+          state: temporaryStateOwnership,
+        }),
+      );
+    } catch (error) {
+      temporaryStateCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(temporaryStateCleanupFailure, [
+        {
+          resource: "render temporary state mkdir hook",
+          cleanup: () => {
+            mutableFs.mkdirSync = nativeMkdir;
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "render temporary creation rejects a render-state successor",
+      temporaryStateSwapped &&
+        temporaryStateRejected &&
+        fs.existsSync(temporaryStateTree) &&
+        fs.existsSync(path.join(parkedTemporaryStateRoot, "tmp")),
+    );
+    fs.rmSync(temporaryStateRoot, { recursive: true, force: true });
+    fs.rmSync(parkedTemporaryStateRoot, { recursive: true, force: true });
+
+    const temporaryParentState = path.join(base, "render-temporary-parent");
+    const temporaryParentRoot = path.join(temporaryParentState, "tmp");
+    const temporaryParentTree = path.join(temporaryParentRoot, "parent-race");
+    const parkedTemporaryParent = `${temporaryParentRoot}.parked`;
+    fs.mkdirSync(temporaryParentState);
+    const temporaryParentOwnership =
+      renderGcModule.captureRenderPhysicalDirectory(
+        temporaryParentState,
+        "render temporary fixture parent",
+      );
+    let temporaryParentSwapped = false;
+    mutableFs.mkdirSync = ((directory, ...args: unknown[]): unknown => {
+      if (
+        temporaryParentSwapped === false &&
+        path.resolve(directory.toString()) === temporaryParentTree
+      ) {
+        nativeLivenessRename(temporaryParentRoot, parkedTemporaryParent);
+        Reflect.apply(nativeMkdir, mutableFs, [temporaryParentRoot]);
+        temporaryParentSwapped = true;
+      }
+      return Reflect.apply(nativeMkdir, mutableFs, [directory, ...args]);
+    }) as typeof fs.mkdirSync;
+    let temporaryParentRejected = false;
+    let temporaryParentCleanupFailure: { error: unknown } | undefined;
+    try {
+      temporaryParentRejected = throws(() =>
+        renderTemporarySnapshotModule.createRenderChunkTemporaryTree({
+          name: "parent-race",
+          state: temporaryParentOwnership,
+        }),
+      );
+    } catch (error) {
+      temporaryParentCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(temporaryParentCleanupFailure, [
+        {
+          resource: "render temporary parent mkdir hook",
+          cleanup: () => {
+            mutableFs.mkdirSync = nativeMkdir;
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "render temporary creation rejects a tmp-parent successor",
+      temporaryParentSwapped &&
+        temporaryParentRejected &&
+        fs.existsSync(temporaryParentTree) &&
+        fs.existsSync(parkedTemporaryParent),
+    );
+    fs.rmSync(temporaryParentState, { recursive: true, force: true });
+
+    const chunkPublicationRoot = path.join(base, "chunk-publication");
+    const chunkPublicationScope = "b".repeat(64);
+    const chunkPublicationId = fixtureDigest(
+      Buffer.from("published chunk identity"),
+    );
+    const chunkFrameBytes = Buffer.from(productionPng(16, 16));
+    const chunkVideoBytes = Buffer.from(
+      await productionH264Mp4({
+        width: 16,
+        height: 16,
+        fps: 24,
+        frameCount: 1,
+      }),
+    );
+    const populateChunkSource = (
+      directory: string,
+      chunk: string,
+    ): {
+      encoded: { bytes: number; digest: string; path: string };
+      frames: Array<{
+        bytes: number;
+        digest: string;
+        globalFrame: number;
+        height: number;
+        path: string;
+        width: number;
+      }>;
+      slot: string;
+      chunk: string;
+      version: 1;
+    } => {
+      fs.mkdirSync(path.join(directory, "frames"), { recursive: true });
+      fs.writeFileSync(
+        path.join(directory, "frames", "frame_00000000.png"),
+        chunkFrameBytes,
+      );
+      fs.writeFileSync(path.join(directory, "chunk.mp4"), chunkVideoBytes);
+      return {
+        version: 1,
+        slot: "feature:beauty:00000000",
+        chunk,
+        frames: [
+          {
+            globalFrame: 0,
+            path: "frames/frame_00000000.png",
+            digest: fixtureDigest(chunkFrameBytes),
+            bytes: chunkFrameBytes.length,
+            width: 16,
+            height: 16,
+          },
+        ],
+        encoded: {
+          path: "chunk.mp4",
+          digest: fixtureDigest(chunkVideoBytes),
+          bytes: chunkVideoBytes.length,
+        },
+      };
+    };
+    const captureChunkTree = (root: string, tree: string) =>
+      renderGcModule.captureRenderGcTarget(root, tree);
+    fs.mkdirSync(chunkPublicationRoot);
+    const normalChunkSource = path.join(chunkPublicationRoot, "normal-source");
+    const normalChunkReceipt = populateChunkSource(
+      normalChunkSource,
+      chunkPublicationId,
+    );
+    const normalChunkPointer =
+      renderChunkSnapshotModule.renderChunkPublicationPath({
+        chunk: chunkPublicationId,
+        root: chunkPublicationRoot,
+        scope: chunkPublicationScope,
+        tier: "final",
+      });
+    let receiptPublishedLast = false;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      if (
+        typeof file !== "number" &&
+        path.resolve(file.toString()) === normalChunkPointer &&
+        flags === "wx+"
+      )
+        receiptPublishedLast =
+          fs.existsSync(path.join(normalChunkSource, "chunk.mp4")) &&
+          fs.existsSync(
+            path.join(normalChunkSource, "frames", "frame_00000000.png"),
+          ) &&
+          fs.existsSync(normalChunkPointer) === false;
+      return Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+    }) as typeof fs.openSync;
+    const normalChunkPublished = (() => {
+      let normalChunkCleanupFailure: { error: unknown } | undefined;
+      try {
+        return renderChunkSnapshotModule.publishRenderChunkSnapshot({
+          chunk: chunkPublicationId,
+          receipt: normalChunkReceipt,
+          root: chunkPublicationRoot,
+          scope: chunkPublicationScope,
+          tier: "final",
+          tree: captureChunkTree(chunkPublicationRoot, normalChunkSource),
+        });
+      } catch (error) {
+        normalChunkCleanupFailure = { error };
+        throw error;
+      } finally {
+        preserveCliHarnessCleanup(normalChunkCleanupFailure, [
+          {
+            resource: "render chunk normal publication open hook",
+            cleanup: () => {
+              mutableFs.openSync = nativeOpen;
+            },
+          },
+        ]);
+      }
+    })();
+    const normalChunkPublication =
+      renderChunkSnapshotModule.captureRenderChunkPublication(
+        chunkPublicationRoot,
+        normalChunkPointer,
+      );
+    const normalLoadedChunk =
+      renderChunkSnapshotModule.loadRenderChunkPublication(
+        chunkPublicationRoot,
+        normalChunkPointer,
+      );
+    const normalCurrentChunk =
+      renderChunkSnapshotModule.loadCurrentRenderChunkPublication({
+        assertReceipt: (receipt) => {
+          if (receipt.chunk !== chunkPublicationId)
+            throw new Error("current chunk receipt changed identity");
+        },
+        chunk: { frames: [{}] },
+        frameFormat: { fps: 24, height: 16, width: 16 },
+        pointer: normalChunkPublication.pointer,
+      });
+    renderChunkSnapshotModule.assertRenderChunkPublication(
+      normalChunkPublication,
+    );
+    const guideFrames = new Map<number, Uint8Array>();
+    const encodedFrames: Uint8Array[] = [];
+    if (normalCurrentChunk !== null) {
+      renderChunkSnapshotModule.consumeCurrentRenderChunkFrames(
+        normalCurrentChunk,
+        (frame) => guideFrames.set(frame.receipt.globalFrame, frame.bytes),
+      );
+      renderChunkSnapshotModule.consumeCurrentRenderChunkFrames(
+        normalCurrentChunk,
+        (frame) => encodedFrames.push(frame.bytes),
+      );
+    }
+    TestValidator.predicate(
+      "render chunk pointer loads complete resume and finalize bytes from one tree",
+      normalChunkPublished.reused === false &&
+        receiptPublishedLast &&
+        normalCurrentChunk !== null &&
+        Buffer.from(normalLoadedChunk.encoded).equals(chunkVideoBytes) &&
+        Buffer.from(guideFrames.get(0)!).equals(chunkFrameBytes) &&
+        encodedFrames.length === 1 &&
+        Buffer.from(encodedFrames[0]!).equals(chunkFrameBytes),
+    );
+    const parkedPublishedTree = path.join(
+      chunkPublicationRoot,
+      "normal-tree-original",
+    );
+    fs.renameSync(normalChunkSource, parkedPublishedTree);
+    fs.cpSync(parkedPublishedTree, normalChunkSource, {
+      recursive: true,
+    });
+    const consumerSuccessorRejected = throws(() =>
+      renderChunkSnapshotModule.loadRenderChunkPublication(
+        chunkPublicationRoot,
+        normalChunkPointer,
+      ),
+    );
+    TestValidator.predicate(
+      "a consumer refuses a byte-identical successor installed after tree capture",
+      consumerSuccessorRejected &&
+        fs.existsSync(normalChunkSource) &&
+        fs.existsSync(parkedPublishedTree),
+    );
+
+    const tempRaceId = fixtureDigest(Buffer.from("temp successor chunk"));
+    const tempRaceSource = path.join(chunkPublicationRoot, "temp-race-source");
+    const tempRaceParked = path.join(
+      chunkPublicationRoot,
+      "temp-race-original",
+    );
+    const tempRaceReceipt = populateChunkSource(tempRaceSource, tempRaceId);
+    const tempRacePointer =
+      renderChunkSnapshotModule.renderChunkPublicationPath({
+        chunk: tempRaceId,
+        root: chunkPublicationRoot,
+        scope: chunkPublicationScope,
+        tier: "final",
+      });
+    let tempSuccessorInstalled = false;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      if (
+        tempSuccessorInstalled === false &&
+        typeof file !== "number" &&
+        path.resolve(file.toString()) === tempRacePointer &&
+        flags === "wx+"
+      ) {
+        nativeLivenessRename(tempRaceSource, tempRaceParked);
+        fs.cpSync(tempRaceParked, tempRaceSource, { recursive: true });
+        tempSuccessorInstalled = true;
+      }
+      return Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+    }) as typeof fs.openSync;
+    let tempSuccessorRejected = false;
+    let tempSuccessorCleanupFailure: { error: unknown } | undefined;
+    try {
+      tempSuccessorRejected = throws(() =>
+        renderChunkSnapshotModule.publishRenderChunkSnapshot({
+          chunk: tempRaceId,
+          receipt: tempRaceReceipt,
+          root: chunkPublicationRoot,
+          scope: chunkPublicationScope,
+          tier: "final",
+          tree: captureChunkTree(chunkPublicationRoot, tempRaceSource),
+        }),
+      );
+    } catch (error) {
+      tempSuccessorCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(tempSuccessorCleanupFailure, [
+        {
+          resource: "render chunk temp successor open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "publication refuses a temp successor without modifying its tree bytes",
+      tempSuccessorInstalled &&
+        tempSuccessorRejected &&
+        fs.existsSync(tempRaceParked) &&
+        fs
+          .readFileSync(path.join(tempRaceSource, "chunk.mp4"))
+          .equals(chunkVideoBytes) &&
+        fs
+          .readFileSync(path.join(tempRaceParked, "chunk.mp4"))
+          .equals(chunkVideoBytes),
+    );
+
+    for (const targetKind of ["frame", "chunk"] as const) {
+      const handoffId = fixtureDigest(
+        Buffer.from(`${targetKind} target handoff successor`),
+      );
+      const handoffSource = path.join(
+        chunkPublicationRoot,
+        `${targetKind}-handoff-source`,
+      );
+      const handoffReceipt = populateChunkSource(handoffSource, handoffId);
+      const handoffTree = captureChunkTree(chunkPublicationRoot, handoffSource);
+      const handoffTarget =
+        targetKind === "frame"
+          ? path.join(handoffSource, "frames", "frame_00000000.png")
+          : path.join(handoffSource, "chunk.mp4");
+      const parkedHandoffTarget = path.join(
+        chunkPublicationRoot,
+        `${targetKind}-handoff-original`,
+      );
+      const handoffBytes = fs.readFileSync(handoffTarget);
+      fs.renameSync(handoffTarget, parkedHandoffTarget);
+      fs.writeFileSync(handoffTarget, handoffBytes);
+      const handoffPointer =
+        renderChunkSnapshotModule.renderChunkPublicationPath({
+          chunk: handoffId,
+          root: chunkPublicationRoot,
+          scope: chunkPublicationScope,
+          tier: "final",
+        });
+      const handoffRejected = throws(() =>
+        renderChunkSnapshotModule.publishRenderChunkSnapshot({
+          chunk: handoffId,
+          receipt: handoffReceipt,
+          root: chunkPublicationRoot,
+          scope: chunkPublicationScope,
+          tier: "final",
+          tree: handoffTree,
+        }),
+      );
+      TestValidator.predicate(
+        `publication refuses a byte-identical ${targetKind} successor after tree capture`,
+        handoffRejected &&
+          fs.existsSync(parkedHandoffTarget) &&
+          fs.readFileSync(handoffTarget).equals(handoffBytes) &&
+          fs.existsSync(handoffPointer) === false,
+      );
+    }
+
+    const byteMismatchId = fixtureDigest(Buffer.from("byte mismatch chunk"));
+    const byteMismatchSource = path.join(
+      chunkPublicationRoot,
+      "byte-mismatch-source",
+    );
+    const byteMismatchReceipt = populateChunkSource(
+      byteMismatchSource,
+      byteMismatchId,
+    );
+    const byteMismatchVideo = Buffer.from(chunkVideoBytes);
+    byteMismatchVideo[byteMismatchVideo.length - 1] ^= 1;
+    fs.writeFileSync(
+      path.join(byteMismatchSource, "chunk.mp4"),
+      byteMismatchVideo,
+    );
+    const byteMismatchPointer =
+      renderChunkSnapshotModule.renderChunkPublicationPath({
+        chunk: byteMismatchId,
+        root: chunkPublicationRoot,
+        scope: chunkPublicationScope,
+        tier: "final",
+      });
+    const byteMismatchRejected = throws(() =>
+      renderChunkSnapshotModule.publishRenderChunkSnapshot({
+        chunk: byteMismatchId,
+        receipt: byteMismatchReceipt,
+        root: chunkPublicationRoot,
+        scope: chunkPublicationScope,
+        tier: "final",
+        tree: captureChunkTree(chunkPublicationRoot, byteMismatchSource),
+      }),
+    );
+    TestValidator.predicate(
+      "publication refuses receipt facts from a byte-different temp tree",
+      byteMismatchRejected && fs.existsSync(byteMismatchPointer) === false,
+    );
+
+    const recoveryId = fixtureDigest(Buffer.from("late recovery pointer"));
+    const recoverySource = path.join(chunkPublicationRoot, "recovery-source");
+    const recoveryReceipt = populateChunkSource(recoverySource, recoveryId);
+    const recoveryCandidate = renderGcModule.captureRenderGcTarget(
+      chunkPublicationRoot,
+      recoverySource,
+    );
+    renderChunkSnapshotModule.publishRenderChunkSnapshot({
+      chunk: recoveryId,
+      receipt: recoveryReceipt,
+      root: chunkPublicationRoot,
+      scope: chunkPublicationScope,
+      tier: "final",
+      tree: recoveryCandidate,
+    });
+    const recoveryDecoys = [0, 1].map((index) => {
+      const id = fixtureDigest(Buffer.from(`recovery decoy ${index}`));
+      const source = path.join(chunkPublicationRoot, `recovery-decoy-${index}`);
+      renderChunkSnapshotModule.publishRenderChunkSnapshot({
+        chunk: id,
+        receipt: populateChunkSource(source, id),
+        root: chunkPublicationRoot,
+        scope: chunkPublicationScope,
+        tier: "final",
+        tree: captureChunkTree(chunkPublicationRoot, source),
+      });
+      return {
+        id,
+        pointer: renderChunkSnapshotModule.renderChunkPublicationPath({
+          chunk: id,
+          root: chunkPublicationRoot,
+          scope: chunkPublicationScope,
+          tier: "final",
+        }),
+        source,
+      };
+    });
+    let recoveryDecoyOpens = 0;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      if (
+        typeof file !== "number" &&
+        recoveryDecoys.some(
+          (decoy) =>
+            path.resolve(file.toString()) === path.resolve(decoy.pointer) ||
+            path
+              .resolve(file.toString())
+              .startsWith(`${path.resolve(decoy.source)}${path.sep}`),
+        )
+      )
+        recoveryDecoyOpens++;
+      return Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+    }) as typeof fs.openSync;
+    let recoveryProtected = false;
+    let recoveryDecoyCleanupFailure: { error: unknown } | undefined;
+    try {
+      recoveryProtected =
+        renderChunkSnapshotModule.currentRenderChunkPublicationProtectsTree({
+          candidate: recoveryCandidate,
+          candidateName: `${recoveryId.slice(7)}.candidate.999999`,
+          capture: (chunk) =>
+            renderChunkSnapshotModule.captureRenderChunkPublication(
+              chunkPublicationRoot,
+              renderChunkSnapshotModule.renderChunkPublicationPath({
+                chunk: chunk.id,
+                root: chunkPublicationRoot,
+                scope: chunkPublicationScope,
+                tier: "final",
+              }),
+            ),
+          chunks: new Map([
+            [recoveryId, { id: recoveryId, slot: recoveryReceipt.slot }],
+            ...recoveryDecoys.map(
+              (decoy, index) =>
+                [decoy.id, { id: decoy.id, slot: `decoy-${index}` }] as const,
+            ),
+          ]),
+        });
+    } catch (error) {
+      recoveryDecoyCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(recoveryDecoyCleanupFailure, [
+        {
+          resource: "render chunk recovery decoy open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "late recovery checks only the candidate's canonical pointer and tree",
+      recoveryProtected && recoveryDecoyOpens === 0,
+    );
+
+    const chunkGcRoot = path.join(base, "chunk-gc-project");
+    const chunkGcRenderJobRoot = path.join(
+      chunkGcRoot,
+      ".automovie",
+      "productions",
+      "feature",
+      "render-job",
+    );
+    const chunkGcTemporaryRoot = path.join(
+      chunkGcRenderJobRoot,
+      "final",
+      "tmp",
+    );
+    fs.mkdirSync(chunkGcTemporaryRoot, { recursive: true });
+    const chunkGcCurrentId = fixtureDigest(Buffer.from("gc current chunk"));
+    const chunkGcCurrentName = `${chunkGcCurrentId.slice(7)}.current.701`;
+    const chunkGcCurrentTree = path.join(
+      chunkGcTemporaryRoot,
+      chunkGcCurrentName,
+    );
+    const chunkGcCurrentReceipt = populateChunkSource(
+      chunkGcCurrentTree,
+      chunkGcCurrentId,
+    );
+    renderChunkSnapshotModule.publishRenderChunkSnapshot({
+      chunk: chunkGcCurrentId,
+      receipt: chunkGcCurrentReceipt,
+      root: chunkGcRoot,
+      scope: chunkPublicationScope,
+      tier: "final",
+      tree: captureChunkTree(chunkGcRoot, chunkGcCurrentTree),
+    });
+    const chunkGcOrphanName = `${chunkGcCurrentId.slice(7)}.orphan.702`;
+    populateChunkSource(
+      path.join(chunkGcTemporaryRoot, chunkGcOrphanName),
+      chunkGcCurrentId,
+    );
+    const chunkGcStaleId = fixtureDigest(Buffer.from("gc stale chunk"));
+    const chunkGcStaleName = `${chunkGcStaleId.slice(7)}.stale.703`;
+    const chunkGcStaleTree = path.join(chunkGcTemporaryRoot, chunkGcStaleName);
+    renderChunkSnapshotModule.publishRenderChunkSnapshot({
+      chunk: chunkGcStaleId,
+      receipt: populateChunkSource(chunkGcStaleTree, chunkGcStaleId),
+      root: chunkGcRoot,
+      scope: chunkPublicationScope,
+      tier: "final",
+      tree: captureChunkTree(chunkGcRoot, chunkGcStaleTree),
+    });
+    const chunkGcLiveId = fixtureDigest(Buffer.from("gc live temp"));
+    const chunkGcLiveName = `${chunkGcLiveId.slice(7)}.live.704`;
+    populateChunkSource(
+      path.join(chunkGcTemporaryRoot, chunkGcLiveName),
+      chunkGcLiveId,
+    );
+    const inventoryChunkGarbage = () =>
+      renderChunkSnapshotModule.inventoryRenderChunkGarbage({
+        assertReceipt: (chunk, receipt) => {
+          if (chunk.id !== receipt.chunk || chunk.slot !== receipt.slot)
+            throw new Error("test chunk receipt mismatch");
+        },
+        chunks: new Map([
+          [
+            chunkGcCurrentId,
+            {
+              id: chunkGcCurrentId,
+              slot: chunkGcCurrentReceipt.slot,
+            },
+          ],
+        ]),
+        processAlive: (pid) => pid === 704,
+        renderJobRoot: chunkGcRenderJobRoot,
+        root: chunkGcRoot,
+        scope: chunkPublicationScope,
+        tier: "final",
+      });
+    const chunkGcInventory = inventoryChunkGarbage();
+    const currentPointerCandidate = `final/pointers/${chunkGcCurrentId.slice(7)}`;
+    const currentTreeCandidate = `final/tmp/${chunkGcCurrentName}`;
+    const chunkGcPointerEntry = chunkGcInventory.entries.find(
+      (entry) => entry.candidate.path === currentPointerCandidate,
+    );
+    const chunkGcTreeEntry = chunkGcInventory.entries.find(
+      (entry) => entry.candidate.path === currentTreeCandidate,
+    );
+    TestValidator.predicate(
+      "chunk GC inventories exact current/stale/orphan publications and excludes live temp",
+      chunkGcInventory.retainedChunkPaths.join() ===
+        [currentPointerCandidate, currentTreeCandidate]
+          .sort(compareCodeUnits)
+          .join() &&
+        chunkGcInventory.entries.some(
+          (entry) => entry.candidate.path === `final/tmp/${chunkGcOrphanName}`,
+        ) &&
+        chunkGcInventory.entries.some(
+          (entry) =>
+            entry.candidate.path ===
+            `final/pointers/${chunkGcStaleId.slice(7)}`,
+        ) &&
+        chunkGcInventory.entries.some(
+          (entry) => entry.candidate.path === `final/tmp/${chunkGcStaleName}`,
+        ) &&
+        chunkGcInventory.entries.some((entry) =>
+          entry.candidate.path.endsWith(chunkGcLiveName),
+        ) === false &&
+        chunkGcPointerEntry?.snapshot.base.path === chunkGcRoot &&
+        chunkGcTreeEntry?.snapshot.base.path === chunkGcRenderJobRoot,
+    );
+    const chunkGcCurrentPayload = path.join(chunkGcCurrentTree, "chunk.mp4");
+    const changedChunkGcPayload = Buffer.from(chunkVideoBytes);
+    changedChunkGcPayload[changedChunkGcPayload.length - 1] ^= 1;
+    let chunkGcPayloadMutated = false;
+    mutableFs.readdirSync = ((directory, ...args: unknown[]): unknown => {
+      if (
+        chunkGcPayloadMutated === false &&
+        path.resolve(directory.toString()) === chunkGcTemporaryRoot
+      ) {
+        fs.writeFileSync(chunkGcCurrentPayload, changedChunkGcPayload);
+        chunkGcPayloadMutated = true;
+      }
+      return Reflect.apply(nativeReaddir, mutableFs, [directory, ...args]);
+    }) as typeof fs.readdirSync;
+    let mutatedChunkGcInventory: ReturnType<
+      typeof inventoryChunkGarbage
+    > | null = null;
+    let chunkGcInventoryCleanupFailure: { error: unknown } | undefined;
+    try {
+      mutatedChunkGcInventory = inventoryChunkGarbage();
+    } catch (error) {
+      chunkGcInventoryCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(chunkGcInventoryCleanupFailure, [
+        {
+          resource: "chunk GC inventory readdir hook",
+          cleanup: () => {
+            mutableFs.readdirSync = nativeReaddir;
+          },
+        },
+        {
+          resource: "chunk GC current payload",
+          cleanup: () => {
+            fs.writeFileSync(chunkGcCurrentPayload, chunkVideoBytes);
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "chunk GC refuses same-inode tree content changed after pointer authentication",
+      chunkGcPayloadMutated &&
+        mutatedChunkGcInventory !== null &&
+        mutatedChunkGcInventory.retainedChunkPaths.length === 0,
+    );
+
+    const pointerRaceId = fixtureDigest(Buffer.from("pointer successor chunk"));
+    const pointerRaceSource = path.join(
+      chunkPublicationRoot,
+      "pointer-race-source",
+    );
+    const pointerRaceReceipt = populateChunkSource(
+      pointerRaceSource,
+      pointerRaceId,
+    );
+    const pointerRacePointer =
+      renderChunkSnapshotModule.renderChunkPublicationPath({
+        chunk: pointerRaceId,
+        root: chunkPublicationRoot,
+        scope: chunkPublicationScope,
+        tier: "proxy",
+      });
+    const pointerRacePublished =
+      renderChunkSnapshotModule.publishRenderChunkSnapshot({
+        chunk: pointerRaceId,
+        receipt: pointerRaceReceipt,
+        root: chunkPublicationRoot,
+        scope: chunkPublicationScope,
+        tier: "proxy",
+        tree: captureChunkTree(chunkPublicationRoot, pointerRaceSource),
+      });
+    const pointerSuccessorBytes = fs.readFileSync(pointerRacePointer);
+    const parkedPointer = `${pointerRacePointer}.parked`;
+    fs.renameSync(pointerRacePointer, parkedPointer);
+    fs.writeFileSync(pointerRacePointer, pointerSuccessorBytes);
+    const capturedPointerRemovalRejected = throws(() =>
+      renderChunkSnapshotModule.removeCapturedRenderChunkPointer(
+        pointerRacePublished.publication.pointer,
+      ),
+    );
+    const pointerSuccessorRejected = throws(() =>
+      renderChunkSnapshotModule.publishRenderChunkSnapshot({
+        chunk: pointerRaceId,
+        receipt: pointerRaceReceipt,
+        root: chunkPublicationRoot,
+        scope: chunkPublicationScope,
+        tier: "proxy",
+        tree: captureChunkTree(chunkPublicationRoot, pointerRaceSource),
+      }),
+    );
+    TestValidator.predicate(
+      "O_EXCL pointer publication preserves a reappearing successor",
+      capturedPointerRemovalRejected &&
+        pointerSuccessorRejected &&
+        fs.existsSync(parkedPointer) &&
+        fs.readFileSync(pointerRacePointer).equals(pointerSuccessorBytes),
+    );
+
+    const rootSwapParent = path.join(base, "chunk-root-swap");
+    const rootSwapRoot = path.join(rootSwapParent, "root");
+    const rootSwapParked = path.join(rootSwapParent, "root-original");
+    const rootSwapSource = path.join(rootSwapRoot, "source");
+    const rootSwapId = fixtureDigest(Buffer.from("root swap chunk"));
+    fs.mkdirSync(rootSwapRoot, { recursive: true });
+    const rootSwapReceipt = populateChunkSource(rootSwapSource, rootSwapId);
+    const rootSwapPointer =
+      renderChunkSnapshotModule.renderChunkPublicationPath({
+        chunk: rootSwapId,
+        root: rootSwapRoot,
+        scope: chunkPublicationScope,
+        tier: "final",
+      });
+    let publicationRootSwapped = false;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      if (
+        publicationRootSwapped === false &&
+        typeof file !== "number" &&
+        path.resolve(file.toString()) === rootSwapPointer &&
+        flags === "wx+"
+      ) {
+        nativeLivenessRename(rootSwapRoot, rootSwapParked);
+        nativeMkdir(rootSwapRoot);
+        publicationRootSwapped = true;
+      }
+      return Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+    }) as typeof fs.openSync;
+    let publicationRootSwapRejected = false;
+    let publicationRootSwapCleanupFailure: { error: unknown } | undefined;
+    try {
+      publicationRootSwapRejected = throws(() =>
+        renderChunkSnapshotModule.publishRenderChunkSnapshot({
+          chunk: rootSwapId,
+          receipt: rootSwapReceipt,
+          root: rootSwapRoot,
+          scope: chunkPublicationScope,
+          tier: "final",
+          tree: captureChunkTree(rootSwapRoot, rootSwapSource),
+        }),
+      );
+    } catch (error) {
+      publicationRootSwapCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(publicationRootSwapCleanupFailure, [
+        {
+          resource: "render chunk root swap open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "chunk pointer publication fails closed across a physical root swap",
+      publicationRootSwapped &&
+        publicationRootSwapRejected &&
+        fs
+          .readFileSync(path.join(rootSwapParked, "source", "chunk.mp4"))
+          .equals(chunkVideoBytes) &&
+        fs
+          .readFileSync(
+            path.join(rootSwapParked, "source", "frames", "frame_00000000.png"),
+          )
+          .equals(chunkFrameBytes),
+    );
+    fs.rmSync(rootSwapParent, { recursive: true });
+    fs.rmSync(chunkPublicationRoot, { recursive: true });
+    const gcBase = path.join(base, "render-gc");
+    const gcTarget = path.join(gcBase, "stale-chunk");
+    const gcFile = path.join(gcTarget, "chunk.bin");
+    const gcQuarantine = path.join(gcBase, ".gc-preserved-fixture");
+    const gcBytes = Buffer.from("stale chunk bytes");
+    const writeGcCandidate = (): void => {
+      fs.mkdirSync(gcTarget, { recursive: true });
+      fs.writeFileSync(gcFile, gcBytes);
+    };
+    fs.mkdirSync(gcQuarantine, { recursive: true });
+    writeGcCandidate();
+    const gcSnapshot = renderGcModule.captureRenderGcTarget(gcBase, gcTarget);
+    renderGcModule.removeCapturedRenderGcTarget({
+      isolated: path.join(gcQuarantine, "normal"),
+      quarantine: gcQuarantine,
+      snapshot: gcSnapshot,
+    });
+    TestValidator.predicate(
+      "render GC removes only one exact inventoried candidate",
+      gcSnapshot.bytes === gcBytes.length &&
+        fs.existsSync(gcTarget) === false &&
+        fs.existsSync(path.join(gcQuarantine, "normal")) === false,
+    );
+    const gcPhysicalRoot = path.join(base, "render-gc-physical-root");
+    const gcAliasRoot = path.join(base, "render-gc-alias-root");
+    const gcAliasedBase = path.join(gcAliasRoot, "nested");
+    const gcAliasedTarget = path.join(gcAliasedBase, "candidate");
+    const gcAliasedQuarantine = path.join(gcAliasedBase, ".gc-fixture");
+    fs.mkdirSync(path.join(gcPhysicalRoot, "nested", "candidate"), {
+      recursive: true,
+    });
+    fs.mkdirSync(path.join(gcPhysicalRoot, "nested", ".gc-fixture"));
+    fs.symlinkSync(
+      gcPhysicalRoot,
+      gcAliasRoot,
+      process.platform === "win32" ? "junction" : "dir",
+    );
+    fs.writeFileSync(path.join(gcAliasedTarget, "chunk.bin"), gcBytes);
+    const gcAliasedSnapshot = renderGcModule.captureRenderGcTarget(
+      gcAliasedBase,
+      gcAliasedTarget,
+    );
+    renderGcModule.removeCapturedRenderGcTarget({
+      isolated: path.join(gcAliasedQuarantine, "candidate"),
+      quarantine: gcAliasedQuarantine,
+      snapshot: gcAliasedSnapshot,
+    });
+    TestValidator.predicate(
+      "render GC accepts a physical base reached through an alias ancestor",
+      fs.existsSync(gcAliasedTarget) === false,
+    );
+    writeGcCandidate();
+    const preRenameSnapshot = renderGcModule.captureRenderGcTarget(
+      gcBase,
+      gcTarget,
+    );
+    const parkedPreRenameGc = path.join(gcBase, "pre-rename-original");
+    fs.renameSync(gcTarget, parkedPreRenameGc);
+    writeGcCandidate();
+    const preRenameGcRejected = throws(() =>
+      renderGcModule.removeCapturedRenderGcTarget({
+        isolated: path.join(gcQuarantine, "pre-rename"),
+        quarantine: gcQuarantine,
+        snapshot: preRenameSnapshot,
+      }),
+    );
+    TestValidator.predicate(
+      "render GC refuses a successor installed before quarantine",
+      preRenameGcRejected &&
+        fs.existsSync(gcTarget) &&
+        fs.existsSync(parkedPreRenameGc),
+    );
+    fs.rmSync(gcTarget, { recursive: true, force: true });
+    fs.rmSync(parkedPreRenameGc, { recursive: true, force: true });
+    writeGcCandidate();
+    const renameBoundarySnapshot = renderGcModule.captureRenderGcTarget(
+      gcBase,
+      gcTarget,
+    );
+    const parkedRenameBoundaryGc = path.join(gcBase, "rename-original");
+    const renameBoundaryIsolated = path.join(gcQuarantine, "rename-boundary");
+    const nativeGcRename = mutableFs.renameSync;
+    let gcRenameBoundarySwapped = false;
+    mutableFs.renameSync = ((oldPath, newPath) => {
+      if (
+        gcRenameBoundarySwapped === false &&
+        path.resolve(oldPath.toString()) === gcTarget &&
+        path.resolve(newPath.toString()) === renameBoundaryIsolated
+      ) {
+        nativeGcRename(gcTarget, parkedRenameBoundaryGc);
+        writeGcCandidate();
+        gcRenameBoundarySwapped = true;
+      }
+      nativeGcRename(oldPath, newPath);
+    }) as typeof fs.renameSync;
+    let gcRenameBoundaryRejected = false;
+    let gcRenameBoundaryCleanupFailure: { error: unknown } | undefined;
+    try {
+      gcRenameBoundaryRejected = throws(() =>
+        renderGcModule.removeCapturedRenderGcTarget({
+          isolated: renameBoundaryIsolated,
+          quarantine: gcQuarantine,
+          snapshot: renameBoundarySnapshot,
+        }),
+      );
+    } catch (error) {
+      gcRenameBoundaryCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(gcRenameBoundaryCleanupFailure, [
+        {
+          resource: "render GC target rename hook",
+          cleanup: () => {
+            mutableFs.renameSync = nativeGcRename;
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "render GC preserves a successor crossing rename outside later plans",
+      gcRenameBoundarySwapped &&
+        gcRenameBoundaryRejected &&
+        fs.existsSync(gcTarget) === false &&
+        fs.existsSync(parkedRenameBoundaryGc) &&
+        fs
+          .readFileSync(path.join(renameBoundaryIsolated, "chunk.bin"))
+          .equals(gcBytes) &&
+        renderGcModule.isRenderGcPreservedPath(
+          path.relative(gcBase, renameBoundaryIsolated),
+        ) &&
+        renderGcModule.isRenderGcPreservedPath(
+          "deliverables/.gc-preserved-fixture/file",
+        ) === false &&
+        renderGcModule.isRenderGcPreservedPath(".gc-preserved/file") ===
+          false &&
+        renderGcModule.isRenderGcPreservedPath("ordinary/file") === false,
+    );
+    fs.rmSync(renameBoundaryIsolated, { recursive: true, force: true });
+    fs.rmSync(parkedRenameBoundaryGc, { recursive: true, force: true });
+    const sharedRemovalStaging = renderGcModule.ensureRenderPhysicalDirectory(
+      gcBase,
+      renderGcModule.RENDER_GC_REMOVAL_STAGING_DIRECTORY,
+    );
+    const sharedRemovalFirst = path.join(gcBase, "shared-removal-first");
+    const sharedRemovalSecond = path.join(gcBase, "shared-removal-second");
+    const sharedRemovalSibling = path.join(
+      sharedRemovalStaging,
+      "foreign-sibling",
+    );
+    fs.writeFileSync(sharedRemovalFirst, "first removal");
+    fs.writeFileSync(sharedRemovalSecond, "second removal");
+    const sharedRemovalFirstSnapshot = renderGcModule.captureRenderGcTarget(
+      gcBase,
+      sharedRemovalFirst,
+    );
+    const sharedRemovalSecondSnapshot = renderGcModule.captureRenderGcTarget(
+      gcBase,
+      sharedRemovalSecond,
+    );
+    let sharedRemovalSiblingInserted = false;
+    mutableFs.renameSync = ((oldPath, newPath) => {
+      if (
+        sharedRemovalSiblingInserted === false &&
+        path.resolve(oldPath.toString()) === sharedRemovalFirst
+      ) {
+        nativeWriteFile(sharedRemovalSibling, "foreign sibling");
+        sharedRemovalSiblingInserted = true;
+      }
+      nativeGcRename(oldPath, newPath);
+    }) as typeof fs.renameSync;
+    let sharedRemovalCleanupFailure: { error: unknown } | undefined;
+    try {
+      renderGcModule.removeCapturedRenderGcTarget({
+        isolated: path.join(sharedRemovalStaging, "first"),
+        quarantine: sharedRemovalStaging,
+        snapshot: sharedRemovalFirstSnapshot,
+      });
+      renderGcModule.removeCapturedRenderGcTarget({
+        isolated: path.join(sharedRemovalStaging, "second"),
+        quarantine: sharedRemovalStaging,
+        snapshot: sharedRemovalSecondSnapshot,
+      });
+    } catch (error) {
+      sharedRemovalCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(sharedRemovalCleanupFailure, [
+        {
+          resource: "render GC shared removal rename hook",
+          cleanup: () => {
+            mutableFs.renameSync = nativeGcRename;
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "render removals share one retained staging parent across sibling mutation",
+      sharedRemovalSiblingInserted &&
+        fs.existsSync(sharedRemovalFirst) === false &&
+        fs.existsSync(sharedRemovalSecond) === false &&
+        fs.existsSync(sharedRemovalStaging) &&
+        fs.readdirSync(sharedRemovalStaging).join(",") === "foreign-sibling",
+    );
+    fs.rmSync(sharedRemovalSibling);
+    const gcPublicationFile = path.join(gcBase, "stale-publication.mp4");
+    const gcPublicationBytes = Buffer.from("stale publication bytes");
+    fs.writeFileSync(gcPublicationFile, gcPublicationBytes);
+    const gcPublicationSnapshot = renderGcModule.captureRenderGcTarget(
+      gcBase,
+      gcPublicationFile,
+    );
+    const gcPublicationNormalIsolated = path.join(
+      gcQuarantine,
+      "normal-publication",
+    );
+    renderGcModule.removeCapturedRenderGcTarget({
+      isolated: gcPublicationNormalIsolated,
+      quarantine: gcQuarantine,
+      snapshot: gcPublicationSnapshot,
+    });
+    TestValidator.predicate(
+      "render GC removes one exact inventoried publication file",
+      gcPublicationSnapshot.bytes === gcPublicationBytes.length &&
+        fs.existsSync(gcPublicationFile) === false &&
+        fs.existsSync(gcPublicationNormalIsolated) === false,
+    );
+    const gcSparsePublication = path.join(gcBase, "large-publication.mp4");
+    const gcSparseBytes = 2 * 1024 * 1024 + 17;
+    const gcSparseDescriptor = fs.openSync(gcSparsePublication, "wx");
+    let gcSparseDescriptorFailure: { error: unknown } | undefined;
+    try {
+      fs.ftruncateSync(gcSparseDescriptor, gcSparseBytes);
+    } catch (error) {
+      gcSparseDescriptorFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(gcSparseDescriptorFailure, [
+        {
+          resource: "render GC sparse publication descriptor",
+          cleanup: () => fs.closeSync(gcSparseDescriptor),
+        },
+      ]);
+    }
+    const gcSparseSnapshot = renderGcModule.captureRenderGcTarget(
+      gcBase,
+      gcSparsePublication,
+    );
+    renderGcModule.removeCapturedRenderGcTarget({
+      isolated: path.join(gcQuarantine, "large-publication"),
+      quarantine: gcQuarantine,
+      snapshot: gcSparseSnapshot,
+    });
+    TestValidator.predicate(
+      "render GC streams a multi-chunk publication without resident bytes",
+      gcSparseSnapshot.bytes === gcSparseBytes &&
+        fs.existsSync(gcSparsePublication) === false,
+    );
+    fs.writeFileSync(gcPublicationFile, gcPublicationBytes);
+    const gcPublicationBoundarySnapshot = renderGcModule.captureRenderGcTarget(
+      gcBase,
+      gcPublicationFile,
+    );
+    const parkedGcPublication = path.join(gcBase, "publication-original.mp4");
+    const gcPublicationBoundaryIsolated = path.join(
+      gcQuarantine,
+      "publication-boundary",
+    );
+    let gcPublicationBoundarySwapped = false;
+    mutableFs.renameSync = ((oldPath, newPath) => {
+      if (
+        gcPublicationBoundarySwapped === false &&
+        path.resolve(oldPath.toString()) === gcPublicationFile &&
+        path.resolve(newPath.toString()) === gcPublicationBoundaryIsolated
+      ) {
+        nativeGcRename(gcPublicationFile, parkedGcPublication);
+        fs.writeFileSync(gcPublicationFile, gcPublicationBytes);
+        gcPublicationBoundarySwapped = true;
+      }
+      nativeGcRename(oldPath, newPath);
+    }) as typeof fs.renameSync;
+    let gcPublicationBoundaryRejected = false;
+    let gcPublicationBoundaryCleanupFailure: { error: unknown } | undefined;
+    try {
+      gcPublicationBoundaryRejected = throws(() =>
+        renderGcModule.removeCapturedRenderGcTarget({
+          isolated: gcPublicationBoundaryIsolated,
+          quarantine: gcQuarantine,
+          snapshot: gcPublicationBoundarySnapshot,
+        }),
+      );
+    } catch (error) {
+      gcPublicationBoundaryCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(gcPublicationBoundaryCleanupFailure, [
+        {
+          resource: "render GC publication rename hook",
+          cleanup: () => {
+            mutableFs.renameSync = nativeGcRename;
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "render GC preserves a publication file successor crossing rename",
+      gcPublicationBoundarySwapped &&
+        gcPublicationBoundaryRejected &&
+        fs.existsSync(gcPublicationFile) === false &&
+        fs.readFileSync(parkedGcPublication).equals(gcPublicationBytes) &&
+        fs
+          .readFileSync(gcPublicationBoundaryIsolated)
+          .equals(gcPublicationBytes) &&
+        renderGcModule.isRenderGcPreservedPath(
+          path.relative(gcBase, gcPublicationBoundaryIsolated),
+        ),
+    );
+    fs.rmSync(gcPublicationBoundaryIsolated, { force: true });
+    fs.rmSync(parkedGcPublication, { force: true });
+    const workerQuarantine = renderGcModule.ensureRenderPhysicalDirectory(
+      gcBase,
+      "quarantine",
+    );
+    const workerPreserved = renderGcModule.ensureRenderPhysicalDirectory(
+      gcBase,
+      ".gc-preserved-worker-fixture",
+    );
+    const workerClaim = path.join(gcBase, "worker-claim.lock");
+    const workerClaimBytes = Buffer.from("exact worker claim");
+    fs.writeFileSync(workerClaim, workerClaimBytes);
+    const workerClaimSnapshot = renderGcModule.captureRenderGcTarget(
+      gcBase,
+      workerClaim,
+    );
+    const workerClaimIsolated = path.join(workerPreserved, "claim");
+    const workerClaimDestination = path.join(
+      workerQuarantine,
+      "worker-claim.released",
+    );
+    renderGcModule.quarantineCapturedRenderTarget({
+      destination: workerClaimDestination,
+      isolated: workerClaimIsolated,
+      quarantine: workerPreserved,
+      snapshot: workerClaimSnapshot,
+    });
+    const workerClaimMarker = JSON.parse(
+      fs.readFileSync(workerClaimDestination, "utf8"),
+    ) as {
+      contentFingerprint: string;
+      kind: string;
+      original: string;
+      preserved: string;
+      targetIdentity: string;
+      version: number;
+    };
+    const workerClaimMarkerSnapshot = renderGcModule.captureRenderGcTarget(
+      gcBase,
+      workerClaimDestination,
+    );
+    const workerClaimEvidence = renderGcModule.inspectRenderQuarantineMarker(
+      workerClaimMarkerSnapshot,
+    );
+    TestValidator.predicate(
+      "routine worker cleanup publishes one immutable evidence marker",
+      fs.existsSync(workerClaim) === false &&
+        fs.readFileSync(workerClaimIsolated).equals(workerClaimBytes) &&
+        workerClaimMarker.version === 1 &&
+        workerClaimMarker.kind === "file" &&
+        workerClaimMarker.original === "worker-claim.lock" &&
+        workerClaimMarker.preserved === ".gc-preserved-worker-fixture/claim" &&
+        workerClaimMarker.targetIdentity ===
+          workerClaimSnapshot.targetIdentity &&
+        workerClaimMarker.contentFingerprint ===
+          workerClaimSnapshot.contentFingerprint &&
+        workerClaimEvidence.evidence.target === workerClaimIsolated &&
+        workerClaimEvidence.evidence.targetIdentity ===
+          workerClaimSnapshot.targetIdentity &&
+        workerClaimEvidence.evidence.contentFingerprint ===
+          workerClaimSnapshot.contentFingerprint,
+    );
+
+    const tierGcRoot = path.join(gcBase, "tier-gc-root");
+    const proxyTierGcRoot = path.join(tierGcRoot, "proxy");
+    const finalTierGcRoot = path.join(tierGcRoot, "final");
+    fs.mkdirSync(proxyTierGcRoot, { recursive: true });
+    fs.mkdirSync(finalTierGcRoot);
+    const proxyTierQuarantine = renderGcModule.ensureRenderPhysicalDirectory(
+      proxyTierGcRoot,
+      "quarantine",
+    );
+    const proxyTierPreserved = renderGcModule.ensureRenderPhysicalDirectory(
+      proxyTierGcRoot,
+      ".gc-preserved-tier-fixture",
+    );
+    const proxyTierClaim = path.join(proxyTierGcRoot, "tier-claim.lock");
+    const proxyTierEvidence = path.join(proxyTierPreserved, "evidence");
+    const proxyTierMarker = path.join(
+      proxyTierQuarantine,
+      "tier-claim.released",
+    );
+    fs.writeFileSync(proxyTierClaim, workerClaimBytes);
+    renderGcModule.quarantineCapturedRenderTarget({
+      destination: proxyTierMarker,
+      isolated: proxyTierEvidence,
+      quarantine: proxyTierPreserved,
+      snapshot: renderGcModule.captureRenderGcTarget(
+        proxyTierGcRoot,
+        proxyTierClaim,
+      ),
+    });
+    const proxyTierMarkerSnapshot = renderGcModule.captureRenderGcTarget(
+      proxyTierGcRoot,
+      proxyTierMarker,
+    );
+    const proxyTierInspection = renderGcModule.inspectRenderQuarantineMarker(
+      proxyTierMarkerSnapshot,
+    );
+    const wrongTierBaseRejected = throws(() =>
+      renderGcModule.inspectRenderQuarantineMarker(
+        renderGcModule.captureRenderGcTarget(tierGcRoot, proxyTierMarker),
+      ),
+    );
+    const reorderedTierMarker = path.join(
+      proxyTierQuarantine,
+      "tier-claim.reordered",
+    );
+    fs.writeFileSync(
+      reorderedTierMarker,
+      `${JSON.stringify(
+        {
+          targetIdentity: proxyTierInspection.marker.targetIdentity,
+          preserved: proxyTierInspection.marker.preserved,
+          original: proxyTierInspection.marker.original,
+          kind: proxyTierInspection.marker.kind,
+          contentFingerprint: proxyTierInspection.marker.contentFingerprint,
+          version: proxyTierInspection.marker.version,
+        },
+        null,
+        2,
+      )}\n`,
+    );
+    const reorderedTierMarkerSnapshot = renderGcModule.captureRenderGcTarget(
+      proxyTierGcRoot,
+      reorderedTierMarker,
+    );
+    const reorderedTierMarkerRejected = throws(() =>
+      renderGcModule.inspectRenderQuarantineMarker(reorderedTierMarkerSnapshot),
+    );
+    const finalTierQuarantine = renderGcModule.ensureRenderPhysicalDirectory(
+      finalTierGcRoot,
+      "quarantine",
+    );
+    const finalTierPreserved = renderGcModule.ensureRenderPhysicalDirectory(
+      finalTierGcRoot,
+      ".gc-preserved-tier-fixture",
+    );
+    const finalTierEvidence = path.join(finalTierPreserved, "evidence");
+    const finalTierMarker = path.join(
+      finalTierQuarantine,
+      "tier-claim.released",
+    );
+    nativeLink(proxyTierEvidence, finalTierEvidence);
+    fs.writeFileSync(
+      finalTierMarker,
+      `${JSON.stringify(
+        {
+          version: 1,
+          contentFingerprint: proxyTierInspection.marker.contentFingerprint,
+          kind: proxyTierInspection.marker.kind,
+          original: "cross-tier-claim.lock",
+          preserved: ".gc-preserved-tier-fixture/evidence",
+          targetIdentity: proxyTierInspection.marker.targetIdentity,
+        },
+        null,
+        2,
+      )}\n`,
+    );
+    const finalTierMarkerSnapshot = renderGcModule.captureRenderGcTarget(
+      finalTierGcRoot,
+      finalTierMarker,
+    );
+    const duplicateTierInventory =
+      renderGcModule.inventoryRenderQuarantineCandidates([
+        proxyTierMarkerSnapshot,
+        finalTierMarkerSnapshot,
+      ]);
+    fs.rmSync(finalTierMarker);
+    fs.rmSync(finalTierEvidence);
+    fs.rmdirSync(finalTierPreserved);
+    fs.rmdirSync(finalTierQuarantine);
+    const legacyTierMarker = path.join(
+      proxyTierQuarantine,
+      "legacy-quarantine-entry",
+    );
+    fs.writeFileSync(legacyTierMarker, "legacy quarantine bytes");
+    const legacyTierMarkerSnapshot = renderGcModule.captureRenderGcTarget(
+      proxyTierGcRoot,
+      legacyTierMarker,
+    );
+    const tierInventory = renderGcModule.inventoryRenderQuarantineCandidates([
+      renderGcModule.captureRenderGcTarget(proxyTierGcRoot, proxyTierMarker),
+      legacyTierMarkerSnapshot,
+    ]);
+    const tierPair = tierInventory.find(
+      (entry) => entry.marker.target === proxyTierMarker,
+    );
+    const tierLegacy = tierInventory.find(
+      (entry) => entry.marker.target === legacyTierMarker,
+    );
+    const tierApplyQuarantine = renderGcModule.ensureRenderPhysicalDirectory(
+      proxyTierGcRoot,
+      ".gc-preserved-apply-fixture",
+    );
+    let tierEvidenceGoneBeforeMarker = false;
+    mutableFs.renameSync = ((oldPath, newPath) => {
+      if (path.resolve(oldPath.toString()) === proxyTierMarker)
+        tierEvidenceGoneBeforeMarker =
+          fs.existsSync(proxyTierEvidence) === false;
+      nativeGcRename(oldPath, newPath);
+    }) as typeof fs.renameSync;
+    let tierApplyCleanupFailure: { error: unknown } | undefined;
+    try {
+      if (tierPair?.evidence !== null && tierPair?.evidence !== undefined)
+        renderGcModule.removeCapturedRenderQuarantine({
+          evidence: tierPair.evidence,
+          marker: tierPair.marker,
+          quarantine: tierApplyQuarantine,
+        });
+    } catch (error) {
+      tierApplyCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(tierApplyCleanupFailure, [
+        {
+          resource: "render GC tier apply rename hook",
+          cleanup: () => {
+            mutableFs.renameSync = nativeGcRename;
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "render GC binds tier-relative evidence, omits cross-tier duplicates, and reclaims the exact pair",
+      wrongTierBaseRejected &&
+        reorderedTierMarkerRejected &&
+        duplicateTierInventory.length === 0 &&
+        tierInventory.length === 2 &&
+        tierPair !== undefined &&
+        tierPair.evidence !== null &&
+        tierPair.bytes === tierPair.marker.bytes + tierPair.evidence.bytes &&
+        tierLegacy?.evidence === null &&
+        tierLegacy.bytes === legacyTierMarkerSnapshot.bytes &&
+        tierEvidenceGoneBeforeMarker &&
+        fs.existsSync(proxyTierEvidence) === false &&
+        fs.existsSync(proxyTierMarker) === false &&
+        fs.existsSync(proxyTierPreserved) === false &&
+        fs.existsSync(legacyTierMarker),
+    );
+    const stableEvidenceParent = renderGcModule.ensureRenderPhysicalDirectory(
+      proxyTierGcRoot,
+      renderGcModule.RENDER_GC_QUARANTINE_EVIDENCE_DIRECTORY,
+    );
+    const stableEvidenceSource = path.join(
+      proxyTierGcRoot,
+      "stable-evidence.lock",
+    );
+    const stableEvidenceTarget = path.join(stableEvidenceParent, "evidence");
+    const stableEvidenceMarker = path.join(
+      proxyTierQuarantine,
+      "stable-evidence.released",
+    );
+    const stableEvidenceSiblingMarker = path.join(
+      proxyTierQuarantine,
+      "concurrent-sibling.released",
+    );
+    fs.writeFileSync(stableEvidenceSource, workerClaimBytes);
+    let stableEvidenceSiblingInserted = false;
+    mutableFs.statSync = ((file, ...args: unknown[]): unknown => {
+      const status = Reflect.apply(nativeStat, mutableFs, [
+        file,
+        ...args,
+      ]) as unknown;
+      if (
+        stableEvidenceSiblingInserted === false &&
+        path.resolve(file.toString()) === proxyTierQuarantine
+      ) {
+        nativeWriteFile(stableEvidenceSiblingMarker, "concurrent sibling");
+        stableEvidenceSiblingInserted = true;
+      }
+      return status;
+    }) as typeof fs.statSync;
+    let stableEvidenceCleanupFailure: { error: unknown } | undefined;
+    try {
+      renderGcModule.quarantineCapturedRenderTarget({
+        destination: stableEvidenceMarker,
+        isolated: stableEvidenceTarget,
+        quarantine: stableEvidenceParent,
+        snapshot: renderGcModule.captureRenderGcTarget(
+          proxyTierGcRoot,
+          stableEvidenceSource,
+        ),
+      });
+    } catch (error) {
+      stableEvidenceCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(stableEvidenceCleanupFailure, [
+        {
+          resource: "render GC stable evidence stat hook",
+          cleanup: () => {
+            mutableFs.statSync = nativeStat;
+          },
+        },
+      ]);
+    }
+    const stableEvidenceMarkerSnapshot = renderGcModule.captureRenderGcTarget(
+      proxyTierGcRoot,
+      stableEvidenceMarker,
+    );
+    const stableEvidenceInspection =
+      renderGcModule.inspectRenderQuarantineMarker(
+        stableEvidenceMarkerSnapshot,
+      );
+    renderGcModule.removeCapturedRenderQuarantine({
+      evidence: stableEvidenceInspection.evidence,
+      marker: stableEvidenceMarkerSnapshot,
+      quarantine: tierApplyQuarantine,
+    });
+    TestValidator.predicate(
+      "render GC retains one stable quarantine-evidence parent after pair removal",
+      stableEvidenceSiblingInserted &&
+        fs.existsSync(stableEvidenceTarget) === false &&
+        fs.existsSync(stableEvidenceMarker) === false &&
+        fs.readFileSync(stableEvidenceSiblingMarker, "utf8") ===
+          "concurrent sibling" &&
+        fs.existsSync(stableEvidenceParent) &&
+        fs.readdirSync(stableEvidenceParent).length === 0,
+    );
+    const parentSuccessorSource = path.join(
+      proxyTierGcRoot,
+      "parent-successor.lock",
+    );
+    const parentSuccessorPreserved =
+      renderGcModule.ensureRenderPhysicalDirectory(
+        proxyTierGcRoot,
+        ".gc-preserved-parent-successor",
+      );
+    const parentSuccessorEvidence = path.join(
+      parentSuccessorPreserved,
+      "evidence",
+    );
+    const parentSuccessorMarker = path.join(
+      proxyTierQuarantine,
+      "parent-successor.released",
+    );
+    fs.writeFileSync(parentSuccessorSource, workerClaimBytes);
+    renderGcModule.quarantineCapturedRenderTarget({
+      destination: parentSuccessorMarker,
+      isolated: parentSuccessorEvidence,
+      quarantine: parentSuccessorPreserved,
+      snapshot: renderGcModule.captureRenderGcTarget(
+        proxyTierGcRoot,
+        parentSuccessorSource,
+      ),
+    });
+    const parentSuccessorMarkerSnapshot = renderGcModule.captureRenderGcTarget(
+      proxyTierGcRoot,
+      parentSuccessorMarker,
+    );
+    const parentSuccessorInspection =
+      renderGcModule.inspectRenderQuarantineMarker(
+        parentSuccessorMarkerSnapshot,
+      );
+    const parkedParentSuccessor = `${parentSuccessorPreserved}.parked`;
+    let parentSuccessorSwapped = false;
+    mutableFs.renameSync = ((oldPath, newPath) => {
+      nativeGcRename(oldPath, newPath);
+      if (
+        parentSuccessorSwapped === false &&
+        path.resolve(oldPath.toString()) === parentSuccessorMarker
+      ) {
+        nativeRename(parentSuccessorPreserved, parkedParentSuccessor);
+        nativeMkdir(parentSuccessorPreserved);
+        parentSuccessorSwapped = true;
+      }
+    }) as typeof fs.renameSync;
+    let parentSuccessorCleanupFailure: { error: unknown } | undefined;
+    try {
+      renderGcModule.removeCapturedRenderQuarantine({
+        evidence: parentSuccessorInspection.evidence,
+        marker: parentSuccessorMarkerSnapshot,
+        quarantine: tierApplyQuarantine,
+      });
+    } catch (error) {
+      parentSuccessorCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(parentSuccessorCleanupFailure, [
+        {
+          resource: "render GC parent successor rename hook",
+          cleanup: () => {
+            mutableFs.renameSync = nativeGcRename;
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "render GC preserves an empty private-container pathname successor",
+      parentSuccessorSwapped &&
+        fs.existsSync(parentSuccessorEvidence) === false &&
+        fs.existsSync(parentSuccessorMarker) === false &&
+        fs.existsSync(parentSuccessorPreserved) &&
+        fs.existsSync(parkedParentSuccessor),
+    );
+    fs.rmdirSync(parentSuccessorPreserved);
+    fs.rmdirSync(parkedParentSuccessor);
+    fs.rmdirSync(stableEvidenceParent);
+    fs.rmSync(stableEvidenceSiblingMarker);
+    fs.rmSync(reorderedTierMarker);
+    fs.rmSync(legacyTierMarker);
+    fs.rmdirSync(tierApplyQuarantine);
+    fs.rmdirSync(proxyTierQuarantine);
+    fs.rmdirSync(proxyTierGcRoot);
+    fs.rmdirSync(finalTierGcRoot);
+    fs.rmdirSync(tierGcRoot);
+
+    const workerDirectory = path.join(gcBase, "worker-directory");
+    const workerDirectoryFile = path.join(workerDirectory, "frame.bin");
+    const workerDirectoryIsolated = path.join(workerPreserved, "directory");
+    const workerDirectoryDestination = path.join(
+      workerQuarantine,
+      "worker-directory.abandoned",
+    );
+    fs.mkdirSync(workerDirectory);
+    fs.writeFileSync(workerDirectoryFile, gcBytes);
+    renderGcModule.quarantineCapturedRenderTarget({
+      destination: workerDirectoryDestination,
+      isolated: workerDirectoryIsolated,
+      quarantine: workerPreserved,
+      snapshot: renderGcModule.captureRenderGcTarget(gcBase, workerDirectory),
+    });
+    const workerDirectoryMarker = JSON.parse(
+      fs.readFileSync(workerDirectoryDestination, "utf8"),
+    ) as { kind: string; preserved: string; version: number };
+    TestValidator.predicate(
+      "routine worker cleanup preserves directory evidence behind its marker",
+      fs
+        .readFileSync(path.join(workerDirectoryIsolated, "frame.bin"))
+        .equals(gcBytes) &&
+        workerDirectoryMarker.version === 1 &&
+        workerDirectoryMarker.kind === "directory" &&
+        workerDirectoryMarker.preserved ===
+          ".gc-preserved-worker-fixture/directory",
+    );
+
+    const workerCompetitorClaim = path.join(gcBase, "worker-competitor.lock");
+    const workerCompetitorIsolated = path.join(workerPreserved, "competitor");
+    const workerCompetitorDestination = path.join(
+      workerQuarantine,
+      "worker-competitor.released",
+    );
+    const workerDestinationCompetitorBytes = Buffer.from(
+      "foreign quarantine marker",
+    );
+    fs.writeFileSync(workerCompetitorClaim, workerClaimBytes);
+    const workerCompetitorSnapshot = renderGcModule.captureRenderGcTarget(
+      gcBase,
+      workerCompetitorClaim,
+    );
+    let workerDestinationCompetitorInserted = false;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      if (
+        workerDestinationCompetitorInserted === false &&
+        typeof file !== "number" &&
+        flags === "wx+" &&
+        path.resolve(file.toString()) === workerCompetitorDestination
+      ) {
+        nativeWriteFile(
+          workerCompetitorDestination,
+          workerDestinationCompetitorBytes,
+        );
+        workerDestinationCompetitorInserted = true;
+      }
+      return Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+    }) as typeof fs.openSync;
+    let workerDestinationCompetitorRejected = false;
+    let workerDestinationCompetitorCleanupFailure:
+      | { error: unknown }
+      | undefined;
+    try {
+      workerDestinationCompetitorRejected = throws(() =>
+        renderGcModule.quarantineCapturedRenderTarget({
+          destination: workerCompetitorDestination,
+          isolated: workerCompetitorIsolated,
+          quarantine: workerPreserved,
+          snapshot: workerCompetitorSnapshot,
+        }),
+      );
+    } catch (error) {
+      workerDestinationCompetitorCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(workerDestinationCompetitorCleanupFailure, [
+        {
+          resource: "render GC worker destination open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "routine worker cleanup preserves a direct destination competitor",
+      workerDestinationCompetitorInserted &&
+        workerDestinationCompetitorRejected &&
+        fs.readFileSync(workerCompetitorIsolated).equals(workerClaimBytes) &&
+        fs
+          .readFileSync(workerCompetitorDestination)
+          .equals(workerDestinationCompetitorBytes),
+    );
+
+    const workerMarkerSwapClaim = path.join(gcBase, "worker-marker-swap.lock");
+    const workerMarkerSwapIsolated = path.join(workerPreserved, "marker-swap");
+    const workerMarkerSwapDestination = path.join(
+      workerQuarantine,
+      "worker-marker-swap.released",
+    );
+    const parkedWorkerMarker = `${workerMarkerSwapDestination}.parked`;
+    const workerMarkerSuccessorBytes = Buffer.from(
+      "foreign marker pathname successor",
+    );
+    fs.writeFileSync(workerMarkerSwapClaim, workerClaimBytes);
+    const workerMarkerSwapSnapshot = renderGcModule.captureRenderGcTarget(
+      gcBase,
+      workerMarkerSwapClaim,
+    );
+    let workerMarkerDescriptor = -1;
+    let workerMarkerSwapped = false;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+      if (
+        typeof file !== "number" &&
+        flags === "wx+" &&
+        path.resolve(file.toString()) === workerMarkerSwapDestination
+      )
+        workerMarkerDescriptor = descriptor;
+      return descriptor;
+    }) as typeof fs.openSync;
+    mutableFs.fsyncSync = ((descriptor: number): void => {
+      nativeFsync(descriptor);
+      if (
+        workerMarkerSwapped === false &&
+        descriptor === workerMarkerDescriptor
+      ) {
+        nativeRename(workerMarkerSwapDestination, parkedWorkerMarker);
+        nativeWriteFile(
+          workerMarkerSwapDestination,
+          workerMarkerSuccessorBytes,
+        );
+        workerMarkerSwapped = true;
+      }
+    }) as typeof fs.fsyncSync;
+    let workerMarkerSwapRejected = false;
+    let workerMarkerSwapCleanupFailure: { error: unknown } | undefined;
+    try {
+      workerMarkerSwapRejected = throws(() =>
+        renderGcModule.quarantineCapturedRenderTarget({
+          destination: workerMarkerSwapDestination,
+          isolated: workerMarkerSwapIsolated,
+          quarantine: workerPreserved,
+          snapshot: workerMarkerSwapSnapshot,
+        }),
+      );
+    } catch (error) {
+      workerMarkerSwapCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(workerMarkerSwapCleanupFailure, [
+        {
+          resource: "render quarantine marker open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+        {
+          resource: "render quarantine marker fsync hook",
+          cleanup: () => {
+            mutableFs.fsyncSync = nativeFsync;
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "routine worker cleanup preserves a quarantine marker successor",
+      workerMarkerSwapped &&
+        workerMarkerSwapRejected &&
+        fs.readFileSync(workerMarkerSwapIsolated).equals(workerClaimBytes) &&
+        fs.existsSync(parkedWorkerMarker) &&
+        fs
+          .readFileSync(workerMarkerSwapDestination)
+          .equals(workerMarkerSuccessorBytes),
+    );
+
+    const workerEvidenceSwapClaim = path.join(
+      gcBase,
+      "worker-evidence-swap.lock",
+    );
+    const workerEvidenceSwapIsolated = path.join(
+      workerPreserved,
+      "evidence-swap",
+    );
+    const parkedWorkerEvidence = `${workerEvidenceSwapIsolated}.parked`;
+    const workerEvidenceSwapDestination = path.join(
+      workerQuarantine,
+      "worker-evidence-swap.released",
+    );
+    const workerEvidenceSuccessorBytes = Buffer.from(
+      "foreign private evidence successor",
+    );
+    fs.writeFileSync(workerEvidenceSwapClaim, workerClaimBytes);
+    const workerEvidenceSwapSnapshot = renderGcModule.captureRenderGcTarget(
+      gcBase,
+      workerEvidenceSwapClaim,
+    );
+    let workerEvidenceMarkerDescriptor = -1;
+    let workerEvidenceSwapped = false;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+      if (
+        typeof file !== "number" &&
+        flags === "wx+" &&
+        path.resolve(file.toString()) === workerEvidenceSwapDestination
+      )
+        workerEvidenceMarkerDescriptor = descriptor;
+      return descriptor;
+    }) as typeof fs.openSync;
+    mutableFs.closeSync = ((descriptor: number): void => {
+      nativeClose(descriptor);
+      if (
+        workerEvidenceSwapped === false &&
+        descriptor === workerEvidenceMarkerDescriptor
+      ) {
+        nativeRename(workerEvidenceSwapIsolated, parkedWorkerEvidence);
+        nativeWriteFile(
+          workerEvidenceSwapIsolated,
+          workerEvidenceSuccessorBytes,
+        );
+        workerEvidenceSwapped = true;
+      }
+    }) as typeof fs.closeSync;
+    let workerEvidenceSwapRejected = false;
+    let workerEvidenceSwapCleanupFailure: { error: unknown } | undefined;
+    try {
+      workerEvidenceSwapRejected = throws(() =>
+        renderGcModule.quarantineCapturedRenderTarget({
+          destination: workerEvidenceSwapDestination,
+          isolated: workerEvidenceSwapIsolated,
+          quarantine: workerPreserved,
+          snapshot: workerEvidenceSwapSnapshot,
+        }),
+      );
+    } catch (error) {
+      workerEvidenceSwapCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(workerEvidenceSwapCleanupFailure, [
+        {
+          resource: "render quarantine evidence open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+        {
+          resource: "render quarantine evidence close hook",
+          cleanup: () => {
+            mutableFs.closeSync = nativeClose;
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "routine worker cleanup rejects private evidence changed after marker publication",
+      workerEvidenceSwapped &&
+        workerEvidenceSwapRejected &&
+        fs.readFileSync(parkedWorkerEvidence).equals(workerClaimBytes) &&
+        fs
+          .readFileSync(workerEvidenceSwapIsolated)
+          .equals(workerEvidenceSuccessorBytes) &&
+        fs.existsSync(workerEvidenceSwapDestination) &&
+        throws(() =>
+          renderGcModule.inspectRenderQuarantineMarker(
+            renderGcModule.captureRenderGcTarget(
+              gcBase,
+              workerEvidenceSwapDestination,
+            ),
+          ),
+        ),
+    );
+
+    const workerParentAbaClaim = path.join(gcBase, "worker-parent-aba.lock");
+    const workerParentAbaIsolated = path.join(workerPreserved, "parent-aba");
+    const workerParentAbaDestination = path.join(
+      workerQuarantine,
+      "worker-parent-aba.released",
+    );
+    const parkedWorkerQuarantine = `${workerQuarantine}.parent-aba-parked`;
+    fs.writeFileSync(workerParentAbaClaim, workerClaimBytes);
+    const workerParentAbaSnapshot = renderGcModule.captureRenderGcTarget(
+      gcBase,
+      workerParentAbaClaim,
+    );
+    let workerParentAbaSwapped = false;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+      if (
+        workerParentAbaSwapped === false &&
+        typeof file !== "number" &&
+        flags === "wx+" &&
+        path.resolve(file.toString()) === workerParentAbaDestination
+      ) {
+        nativeRename(workerQuarantine, parkedWorkerQuarantine);
+        nativeMkdir(workerQuarantine);
+        nativeLink(
+          path.join(parkedWorkerQuarantine, path.basename(file.toString())),
+          workerParentAbaDestination,
+        );
+        workerParentAbaSwapped = true;
+      }
+      return descriptor;
+    }) as typeof fs.openSync;
+    let workerParentAbaRejected = false;
+    let workerParentAbaCleanupFailure: { error: unknown } | undefined;
+    try {
+      workerParentAbaRejected = throws(() =>
+        renderGcModule.quarantineCapturedRenderTarget({
+          destination: workerParentAbaDestination,
+          isolated: workerParentAbaIsolated,
+          quarantine: workerPreserved,
+          snapshot: workerParentAbaSnapshot,
+        }),
+      );
+    } catch (error) {
+      workerParentAbaCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(workerParentAbaCleanupFailure, [
+        {
+          resource: "render GC worker parent ABA open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "routine worker cleanup rejects a same-inode quarantine-parent successor",
+      workerParentAbaSwapped &&
+        workerParentAbaRejected &&
+        fs.readFileSync(workerParentAbaIsolated).equals(workerClaimBytes) &&
+        fs.existsSync(workerParentAbaDestination) &&
+        fs.existsSync(
+          path.join(
+            parkedWorkerQuarantine,
+            path.basename(workerParentAbaDestination),
+          ),
+        ),
+    );
+    fs.rmSync(workerQuarantine, { recursive: true });
+    nativeRename(parkedWorkerQuarantine, workerQuarantine);
+    fs.rmSync(workerParentAbaDestination, { force: true });
+    fs.rmSync(workerParentAbaIsolated, { force: true });
+
+    const workerRootAbaClaim = path.join(gcBase, "worker-root-aba.lock");
+    const workerRootAbaIsolated = path.join(workerPreserved, "root-aba");
+    const workerRootAbaDestination = path.join(
+      workerQuarantine,
+      "worker-root-aba.released",
+    );
+    const parkedWorkerRoot = `${gcBase}.root-aba-parked`;
+    const workerRootCompetitorBytes = Buffer.from(
+      "foreign replacement-root marker",
+    );
+    fs.writeFileSync(workerRootAbaClaim, workerClaimBytes);
+    const workerRootAbaSnapshot = renderGcModule.captureRenderGcTarget(
+      gcBase,
+      workerRootAbaClaim,
+    );
+    let workerRootAbaSwapped = false;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+      if (
+        workerRootAbaSwapped === false &&
+        typeof file !== "number" &&
+        flags === "wx+" &&
+        path.resolve(file.toString()) === workerRootAbaDestination
+      ) {
+        nativeRename(gcBase, parkedWorkerRoot);
+        nativeMkdir(path.dirname(workerRootAbaDestination), {
+          recursive: true,
+        });
+        nativeWriteFile(workerRootAbaDestination, workerRootCompetitorBytes);
+        workerRootAbaSwapped = true;
+      }
+      return descriptor;
+    }) as typeof fs.openSync;
+    let workerRootAbaRejected = false;
+    let workerRootAbaCleanupFailure: { error: unknown } | undefined;
+    try {
+      workerRootAbaRejected = throws(() =>
+        renderGcModule.quarantineCapturedRenderTarget({
+          destination: workerRootAbaDestination,
+          isolated: workerRootAbaIsolated,
+          quarantine: workerPreserved,
+          snapshot: workerRootAbaSnapshot,
+        }),
+      );
+    } catch (error) {
+      workerRootAbaCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(workerRootAbaCleanupFailure, [
+        {
+          resource: "render GC worker root ABA open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "routine worker cleanup rejects a replacement render-root competitor",
+      workerRootAbaSwapped &&
+        workerRootAbaRejected &&
+        fs
+          .readFileSync(
+            path.join(
+              parkedWorkerRoot,
+              path.relative(gcBase, workerRootAbaIsolated),
+            ),
+          )
+          .equals(workerClaimBytes) &&
+        fs.existsSync(
+          path.join(
+            parkedWorkerRoot,
+            path.relative(gcBase, workerRootAbaDestination),
+          ),
+        ) &&
+        fs
+          .readFileSync(workerRootAbaDestination)
+          .equals(workerRootCompetitorBytes),
+    );
+    fs.rmSync(gcBase, { recursive: true });
+    nativeRename(parkedWorkerRoot, gcBase);
+    fs.rmSync(workerRootAbaDestination, { force: true });
+    fs.rmSync(workerRootAbaIsolated, { force: true });
+
+    const workerPartial = path.join(gcBase, "worker-partial");
+    const workerPartialFile = path.join(workerPartial, "frame.bin");
+    fs.mkdirSync(workerPartial);
+    fs.writeFileSync(workerPartialFile, gcBytes);
+    const workerPartialSnapshot = renderGcModule.captureRenderGcTarget(
+      gcBase,
+      workerPartial,
+    );
+    const parkedWorkerPartial = path.join(gcBase, "worker-partial-original");
+    const workerPartialIsolated = path.join(workerPreserved, "partial");
+    const workerPartialDestination = path.join(
+      workerQuarantine,
+      "worker-partial.abandoned",
+    );
+    let workerPartialSwapped = false;
+    mutableFs.renameSync = ((oldPath, newPath) => {
+      if (
+        workerPartialSwapped === false &&
+        path.resolve(oldPath.toString()) === workerPartial &&
+        path.resolve(newPath.toString()) === workerPartialIsolated
+      ) {
+        nativeGcRename(workerPartial, parkedWorkerPartial);
+        fs.mkdirSync(workerPartial);
+        fs.writeFileSync(workerPartialFile, gcBytes);
+        workerPartialSwapped = true;
+      }
+      nativeGcRename(oldPath, newPath);
+    }) as typeof fs.renameSync;
+    let workerPartialRejected = false;
+    let workerPartialCleanupFailure: { error: unknown } | undefined;
+    try {
+      workerPartialRejected = throws(() =>
+        renderGcModule.quarantineCapturedRenderTarget({
+          destination: workerPartialDestination,
+          isolated: workerPartialIsolated,
+          quarantine: workerPreserved,
+          snapshot: workerPartialSnapshot,
+        }),
+      );
+    } catch (error) {
+      workerPartialCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(workerPartialCleanupFailure, [
+        {
+          resource: "render GC worker partial rename hook",
+          cleanup: () => {
+            mutableFs.renameSync = nativeGcRename;
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "routine worker cleanup preserves a directory successor at its private boundary",
+      workerPartialSwapped &&
+        workerPartialRejected &&
+        fs.existsSync(workerPartial) === false &&
+        fs.existsSync(parkedWorkerPartial) &&
+        fs
+          .readFileSync(path.join(workerPartialIsolated, "frame.bin"))
+          .equals(gcBytes) &&
+        fs.existsSync(workerPartialDestination) === false,
+    );
+    const workerClaimReclaimableBytes =
+      workerClaimMarkerSnapshot.bytes + workerClaimEvidence.evidence.bytes;
+    renderGcModule.removeCapturedRenderQuarantine({
+      evidence: workerClaimEvidence.evidence,
+      marker: workerClaimMarkerSnapshot,
+      quarantine: gcQuarantine,
+    });
+    TestValidator.predicate(
+      "render GC reclaims a bound evidence-marker pair evidence first",
+      workerClaimReclaimableBytes ===
+        workerClaimBytes.length +
+          Buffer.byteLength(
+            `${JSON.stringify(workerClaimMarker, null, 2)}\n`,
+          ) &&
+        fs.existsSync(workerClaimIsolated) === false &&
+        fs.existsSync(workerClaimDestination) === false,
+    );
+    fs.rmSync(workerDirectoryDestination, { force: true });
+    fs.rmSync(workerDirectoryIsolated, { recursive: true, force: true });
+    fs.rmSync(workerCompetitorDestination, { force: true });
+    fs.rmSync(workerCompetitorIsolated, { force: true });
+    fs.rmSync(workerMarkerSwapDestination, { force: true });
+    fs.rmSync(parkedWorkerMarker, { force: true });
+    fs.rmSync(workerMarkerSwapIsolated, { force: true });
+    fs.rmSync(workerEvidenceSwapDestination, { force: true });
+    fs.rmSync(workerEvidenceSwapIsolated, { force: true });
+    fs.rmSync(parkedWorkerEvidence, { force: true });
+    fs.rmSync(workerPartialIsolated, { recursive: true, force: true });
+    fs.rmSync(parkedWorkerPartial, { recursive: true, force: true });
+    const heldClaimDirectory = path.join(gcBase, "held-locks");
+    const heldClaim = path.join(heldClaimDirectory, "held-claim.lock");
+    const heldClaimSibling = path.join(
+      heldClaimDirectory,
+      "held-claim-sibling.lock",
+    );
+    fs.mkdirSync(heldClaimDirectory);
+    fs.writeFileSync(heldClaim, workerClaimBytes);
+    const heldClaimSnapshot = renderGcModule.captureRenderGcTarget(
+      gcBase,
+      heldClaim,
+    );
+    fs.writeFileSync(heldClaimSibling, "sibling namespace mutation");
+    TestValidator.predicate(
+      "an exact held claim survives unrelated sibling namespace mutation",
+      !throws(() =>
+        renderGcModule.assertCapturedRenderTarget(heldClaimSnapshot),
+      ),
+    );
+    const decisionSuccessor = path.join(gcBase, "decision-successor.lock");
+    fs.writeFileSync(decisionSuccessor, workerClaimBytes);
+    TestValidator.predicate(
+      "captured worker decisions read their exact descriptor bytes",
+      Buffer.from(
+        renderGcModule.readCapturedRenderGcFile(heldClaimSnapshot, 1024 * 1024),
+      ).equals(workerClaimBytes),
+    );
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      if (
+        typeof file !== "number" &&
+        path.resolve(file.toString()) === heldClaim
+      )
+        return Reflect.apply(nativeOpen, mutableFs, [
+          decisionSuccessor,
+          flags,
+          ...args,
+        ]) as number;
+      return Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+    }) as typeof fs.openSync;
+    let decisionSuccessorRejected = false;
+    let decisionSuccessorCleanupFailure: { error: unknown } | undefined;
+    try {
+      decisionSuccessorRejected = throws(() =>
+        renderGcModule.readCapturedRenderGcFile(heldClaimSnapshot, 1024 * 1024),
+      );
+    } catch (error) {
+      decisionSuccessorCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(decisionSuccessorCleanupFailure, [
+        {
+          resource: "render GC decision successor open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "captured worker decisions reject a pathname-opened successor descriptor",
+      decisionSuccessorRejected &&
+        fs.readFileSync(heldClaim).equals(workerClaimBytes) &&
+        fs.readFileSync(decisionSuccessor).equals(workerClaimBytes),
+    );
+    fs.rmSync(heldClaimDirectory, { recursive: true, force: true });
+    fs.rmSync(decisionSuccessor, { force: true });
+    const largeDecision = path.join(gcBase, "large-decision.json");
+    const largeDecisionBytes = Buffer.alloc(1024 * 1024 + 17, 0x61);
+    fs.writeFileSync(largeDecision, largeDecisionBytes);
+    const largeDecisionSnapshot = renderGcModule.captureRenderGcTarget(
+      gcBase,
+      largeDecision,
+    );
+    TestValidator.predicate(
+      "captured receipt decisions have no arbitrary one-megabyte boundary",
+      Buffer.from(
+        renderGcModule.readCapturedRenderGcFile(
+          largeDecisionSnapshot,
+          largeDecisionSnapshot.bytes,
+        ),
+      ).equals(largeDecisionBytes),
+    );
+    fs.rmSync(largeDecision, { force: true });
+    const decisionTree = path.join(gcBase, "decision-tree");
+    const decisionReceipt = path.join(decisionTree, "receipt.json");
+    const parkedDecisionTree = path.join(gcBase, "decision-tree-original");
+    fs.mkdirSync(decisionTree);
+    fs.writeFileSync(decisionReceipt, '{"slot":"fixture"}\n');
+    const decisionReceiptSnapshot = renderGcModule.captureRenderGcTarget(
+      gcBase,
+      decisionReceipt,
+    );
+    const decisionTreeSnapshot = renderGcModule.captureRenderGcTarget(
+      gcBase,
+      decisionTree,
+    );
+    TestValidator.predicate(
+      "stale receipt decisions bind to their exact directory inventory",
+      !throws(() =>
+        renderGcModule.assertCapturedRenderGcFileEntry({
+          directory: decisionTreeSnapshot,
+          file: decisionReceiptSnapshot,
+          relative: "receipt.json",
+        }),
+      ),
+    );
+    fs.renameSync(decisionTree, parkedDecisionTree);
+    fs.mkdirSync(decisionTree);
+    fs.writeFileSync(decisionReceipt, '{"slot":"fixture"}\n');
+    const decisionTreeSuccessor = renderGcModule.captureRenderGcTarget(
+      gcBase,
+      decisionTree,
+    );
+    TestValidator.predicate(
+      "stale receipt decisions reject a byte-identical successor tree inventory",
+      throws(() =>
+        renderGcModule.assertCapturedRenderGcFileEntry({
+          directory: decisionTreeSuccessor,
+          file: decisionReceiptSnapshot,
+          relative: "receipt.json",
+        }),
+      ),
+    );
+    fs.rmSync(decisionTree, { recursive: true, force: true });
+    fs.rmSync(parkedDecisionTree, { recursive: true, force: true });
     TestValidator.predicate(
       "a non-empty target is refused without force",
       throws(() => writeFiles(target, files)),
@@ -404,13 +12876,1655 @@ export const test_cli_scaffold = (): void => {
       "force scaffolds into a non-empty target",
       !throws(() => writeFiles(target, files, { force: true })),
     );
+    const splitIdentityScaffold = path.join(base, "split-identity-scaffold");
+    const splitIdentityTarget = path.join(splitIdentityScaffold, "owned.txt");
+    mutableFs.lstatSync = ((file, ...args: unknown[]): unknown => {
+      const status = Reflect.apply(nativeLstat, mutableFs, [
+        file,
+        ...args,
+      ]) as fs.BigIntStats;
+      if (path.resolve(file.toString()) !== splitIdentityTarget) return status;
+      return new Proxy(status, {
+        get: (current, property, receiver): unknown =>
+          property === "ino"
+            ? current.ino + 1n
+            : Reflect.get(current, property, receiver),
+      });
+    }) as typeof fs.lstatSync;
+    let splitIdentityWritten = false;
+    let splitIdentityCleanupFailure: { error: unknown } | undefined;
+    try {
+      writeFiles(splitIdentityScaffold, { "owned.txt": "scaffold identity" });
+      splitIdentityWritten = true;
+    } catch (error) {
+      splitIdentityCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(splitIdentityCleanupFailure, [
+        {
+          resource: "scaffold writer split identity lstat hook",
+          cleanup: () => {
+            mutableFs.lstatSync = nativeLstat;
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "scaffold writes separate stable pathname and descriptor identity domains",
+      splitIdentityWritten &&
+        fs.readFileSync(splitIdentityTarget, "utf8") === "scaffold identity",
+    );
     TestValidator.predicate(
       "a traversal key is refused",
       throws(() =>
         writeFiles(path.join(base, "guard"), { "../escape.txt": "no" }),
       ),
     );
+    const baseTargetScaffold = path.join(base, "base-target-scaffold");
+    TestValidator.predicate(
+      "a scaffold key resolving to the base is refused before mutation",
+      throws(() => writeFiles(baseTargetScaffold, { ".": "blocked" })) &&
+        fs.existsSync(baseTargetScaffold) === false,
+    );
+    const duplicateScaffold = path.join(base, "duplicate-scaffold");
+    TestValidator.predicate(
+      "normalized duplicate scaffold targets are refused before mutation",
+      throws(() =>
+        writeFiles(duplicateScaffold, {
+          "nested/../same.txt": "first",
+          "same.txt": "second",
+        }),
+      ) && fs.existsSync(duplicateScaffold) === false,
+    );
+    const caseDuplicateScaffold = path.join(base, "case-duplicate-scaffold");
+    TestValidator.predicate(
+      "portable case-only duplicate scaffold targets are refused before mutation",
+      throws(() =>
+        writeFiles(caseDuplicateScaffold, {
+          "A.txt": "first",
+          "a.txt": "second",
+        }),
+      ) && fs.existsSync(caseDuplicateScaffold) === false,
+    );
+    const collidingScaffold = path.join(base, "colliding-scaffold");
+    TestValidator.predicate(
+      "scaffold file and directory target collisions are refused before mutation",
+      throws(() =>
+        writeFiles(collidingScaffold, {
+          node: "file",
+          "node/child.txt": "child",
+        }),
+      ) && fs.existsSync(collidingScaffold) === false,
+    );
+
+    const nonemptySuccessorBase = path.join(
+      base,
+      "nonempty-successor-scaffold",
+    );
+    const parkedEmptyScaffoldBase = `${nonemptySuccessorBase}.parked`;
+    let nonemptyBaseSuccessorInstalled = false;
+    mutableFs.mkdirSync = ((directory, ...args: unknown[]): unknown => {
+      const result = Reflect.apply(nativeMkdir, mutableFs, [
+        directory,
+        ...args,
+      ]);
+      if (
+        nonemptyBaseSuccessorInstalled === false &&
+        path.resolve(directory.toString()) === nonemptySuccessorBase
+      ) {
+        nativeRename(nonemptySuccessorBase, parkedEmptyScaffoldBase);
+        nativeMkdir(nonemptySuccessorBase);
+        nativeWriteFile(
+          path.join(nonemptySuccessorBase, "foreign.txt"),
+          "foreign base generation",
+        );
+        nonemptyBaseSuccessorInstalled = true;
+      }
+      return result;
+    }) as typeof fs.mkdirSync;
+    let nonemptyBaseSuccessorRejected = false;
+    let nonemptyBaseSuccessorCleanupFailure: { error: unknown } | undefined;
+    try {
+      nonemptyBaseSuccessorRejected = throws(() =>
+        writeFiles(
+          nonemptySuccessorBase,
+          { "owned.txt": "scaffold bytes" },
+          { force: true },
+        ),
+      );
+    } catch (error) {
+      nonemptyBaseSuccessorCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(nonemptyBaseSuccessorCleanupFailure, [
+        {
+          resource: "scaffold writer nonempty base mkdir hook",
+          cleanup: () => {
+            mutableFs.mkdirSync = nativeMkdir;
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "scaffold creation rejects a non-empty base successor after mkdir",
+      nonemptyBaseSuccessorInstalled &&
+        nonemptyBaseSuccessorRejected &&
+        fs.readFileSync(
+          path.join(nonemptySuccessorBase, "foreign.txt"),
+          "utf8",
+        ) === "foreign base generation" &&
+        fs.readdirSync(parkedEmptyScaffoldBase).length === 0 &&
+        fs.existsSync(path.join(nonemptySuccessorBase, "owned.txt")) === false,
+    );
+
+    const nonemptyParentSuccessorBase = path.join(
+      base,
+      "nonempty-parent-successor-scaffold",
+    );
+    const nonemptyParentSuccessor = path.join(
+      nonemptyParentSuccessorBase,
+      "nested",
+    );
+    const parkedEmptyParent = `${nonemptyParentSuccessor}.parked`;
+    fs.mkdirSync(nonemptyParentSuccessorBase);
+    let nonemptyParentSuccessorInstalled = false;
+    mutableFs.mkdirSync = ((directory, ...args: unknown[]): unknown => {
+      const result = Reflect.apply(nativeMkdir, mutableFs, [
+        directory,
+        ...args,
+      ]);
+      if (
+        nonemptyParentSuccessorInstalled === false &&
+        path.resolve(directory.toString()) === nonemptyParentSuccessor
+      ) {
+        nativeRename(nonemptyParentSuccessor, parkedEmptyParent);
+        nativeMkdir(nonemptyParentSuccessor);
+        nativeWriteFile(
+          path.join(nonemptyParentSuccessor, "foreign.txt"),
+          "foreign parent generation",
+        );
+        nonemptyParentSuccessorInstalled = true;
+      }
+      return result;
+    }) as typeof fs.mkdirSync;
+    let nonemptyParentSuccessorRejected = false;
+    let nonemptyParentSuccessorCleanupFailure: { error: unknown } | undefined;
+    try {
+      nonemptyParentSuccessorRejected = throws(() =>
+        writeFiles(nonemptyParentSuccessorBase, {
+          "nested/owned.txt": "scaffold bytes",
+        }),
+      );
+    } catch (error) {
+      nonemptyParentSuccessorCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(nonemptyParentSuccessorCleanupFailure, [
+        {
+          resource: "scaffold writer nonempty parent mkdir hook",
+          cleanup: () => {
+            mutableFs.mkdirSync = nativeMkdir;
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "scaffold creation rejects a non-empty descendant successor after mkdir",
+      nonemptyParentSuccessorInstalled &&
+        nonemptyParentSuccessorRejected &&
+        fs.readFileSync(
+          path.join(nonemptyParentSuccessor, "foreign.txt"),
+          "utf8",
+        ) === "foreign parent generation" &&
+        fs.readdirSync(parkedEmptyParent).length === 0 &&
+        fs.existsSync(path.join(nonemptyParentSuccessor, "owned.txt")) ===
+          false,
+    );
+
+    const linkedScaffoldOutside = path.join(base, "linked-scaffold-outside");
+    const linkedScaffoldBase = path.join(base, "linked-scaffold-base");
+    fs.mkdirSync(linkedScaffoldOutside);
+    fs.symlinkSync(linkedScaffoldOutside, linkedScaffoldBase, "junction");
+    TestValidator.predicate(
+      "a linked scaffold base cannot redirect materialization",
+      throws(() =>
+        writeFiles(
+          linkedScaffoldBase,
+          { "escaped.txt": "blocked" },
+          { force: true },
+        ),
+      ) &&
+        fs.existsSync(path.join(linkedScaffoldOutside, "escaped.txt")) ===
+          false,
+    );
+
+    const linkedParentScaffold = path.join(base, "linked-parent-scaffold");
+    const linkedParentOutside = path.join(base, "linked-parent-outside");
+    const linkedParent = path.join(linkedParentScaffold, "linked");
+    fs.mkdirSync(linkedParentScaffold);
+    fs.mkdirSync(linkedParentOutside);
+    fs.symlinkSync(linkedParentOutside, linkedParent, "junction");
+    TestValidator.predicate(
+      "a linked descendant parent cannot redirect forced materialization",
+      throws(() =>
+        writeFiles(
+          linkedParentScaffold,
+          { "linked/escaped.txt": "blocked" },
+          { force: true },
+        ),
+      ) &&
+        fs.existsSync(path.join(linkedParentOutside, "escaped.txt")) === false,
+    );
+
+    const linkedFileScaffold = path.join(base, "linked-file-scaffold");
+    const linkedFileOutside = path.join(base, "linked-file-outside.txt");
+    const linkedFileTarget = path.join(linkedFileScaffold, "owned.txt");
+    fs.mkdirSync(linkedFileScaffold);
+    fs.writeFileSync(linkedFileOutside, "outside file generation");
+    fs.symlinkSync(linkedFileOutside, linkedFileTarget, "file");
+    TestValidator.predicate(
+      "force refuses a linked final file without changing its referent",
+      throws(() =>
+        writeFiles(
+          linkedFileScaffold,
+          { "owned.txt": "replacement" },
+          { force: true },
+        ),
+      ) &&
+        fs.readFileSync(linkedFileOutside, "utf8") ===
+          "outside file generation",
+    );
+
+    const hardLinkedScaffold = path.join(base, "hard-linked-scaffold");
+    const hardLinkedOutside = path.join(base, "hard-linked-outside.txt");
+    const hardLinkedTarget = path.join(hardLinkedScaffold, "owned.txt");
+    fs.mkdirSync(hardLinkedScaffold);
+    fs.writeFileSync(hardLinkedOutside, "outside generation");
+    fs.linkSync(hardLinkedOutside, hardLinkedTarget);
+    TestValidator.predicate(
+      "force refuses a multiply-linked target without changing its other name",
+      throws(() =>
+        writeFiles(
+          hardLinkedScaffold,
+          { "owned.txt": "replacement" },
+          { force: true },
+        ),
+      ) && fs.readFileSync(hardLinkedOutside, "utf8") === "outside generation",
+    );
+
+    const noForceRaceBase = path.join(base, "no-force-race-scaffold");
+    const noForceRaceTarget = path.join(noForceRaceBase, "winner.txt");
+    fs.mkdirSync(noForceRaceBase);
+    let noForceCompetitorCreated = false;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      if (
+        noForceCompetitorCreated === false &&
+        typeof file !== "number" &&
+        path.resolve(file.toString()) === noForceRaceTarget &&
+        flags === "wx+"
+      ) {
+        Reflect.apply(nativeWriteFile, mutableFs, [
+          noForceRaceTarget,
+          "successor generation",
+          "utf8",
+        ]);
+        noForceCompetitorCreated = true;
+      }
+      return Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+    }) as typeof fs.openSync;
+    let noForceCompetitorRejected = false;
+    let noForceCompetitorCleanupFailure: { error: unknown } | undefined;
+    try {
+      noForceCompetitorRejected = throws(() =>
+        writeFiles(noForceRaceBase, { "winner.txt": "scaffold bytes" }),
+      );
+    } catch (error) {
+      noForceCompetitorCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(noForceCompetitorCleanupFailure, [
+        {
+          resource: "scaffold writer no-force competitor open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "a no-force final competitor is preserved",
+      noForceCompetitorCreated &&
+        noForceCompetitorRejected &&
+        fs.readFileSync(noForceRaceTarget, "utf8") === "successor generation",
+    );
+
+    const forceRaceBase = path.join(base, "force-race-scaffold");
+    const forceRaceTarget = path.join(forceRaceBase, "owned.txt");
+    const parkedForceRaceTarget = path.join(base, "force-race-original.txt");
+    fs.mkdirSync(forceRaceBase);
+    fs.writeFileSync(forceRaceTarget, "original generation");
+    let forceSuccessorInstalled = false;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+      if (
+        forceSuccessorInstalled === false &&
+        typeof file !== "number" &&
+        path.resolve(file.toString()) === forceRaceTarget &&
+        flags === "r+"
+      ) {
+        nativeRename(forceRaceTarget, parkedForceRaceTarget);
+        Reflect.apply(nativeWriteFile, mutableFs, [
+          forceRaceTarget,
+          "successor generation",
+          "utf8",
+        ]);
+        forceSuccessorInstalled = true;
+      }
+      return descriptor;
+    }) as typeof fs.openSync;
+    let forceSuccessorRejected = false;
+    let forceSuccessorCleanupFailure: { error: unknown } | undefined;
+    try {
+      forceSuccessorRejected = throws(() =>
+        writeFiles(
+          forceRaceBase,
+          { "owned.txt": "scaffold bytes" },
+          { force: true },
+        ),
+      );
+    } catch (error) {
+      forceSuccessorCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(forceSuccessorCleanupFailure, [
+        {
+          resource: "scaffold writer force successor open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "force preserves a target successor installed after descriptor open",
+      forceSuccessorInstalled &&
+        forceSuccessorRejected &&
+        fs.readFileSync(forceRaceTarget, "utf8") === "successor generation" &&
+        fs.readFileSync(parkedForceRaceTarget, "utf8") ===
+          "original generation",
+    );
+
+    const rootRaceBase = path.join(base, "root-race-scaffold");
+    const rootRaceTarget = path.join(rootRaceBase, "created.txt");
+    const parkedRootRaceBase = `${rootRaceBase}.parked`;
+    fs.mkdirSync(rootRaceBase);
+    let scaffoldRootSwapped = false;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+      if (
+        scaffoldRootSwapped === false &&
+        typeof file !== "number" &&
+        path.resolve(file.toString()) === rootRaceTarget &&
+        flags === "wx+"
+      ) {
+        nativeRename(rootRaceBase, parkedRootRaceBase);
+        Reflect.apply(nativeMkdir, mutableFs, [rootRaceBase]);
+        scaffoldRootSwapped = true;
+      }
+      return descriptor;
+    }) as typeof fs.openSync;
+    let scaffoldRootRejected = false;
+    let scaffoldRootCleanupFailure: { error: unknown } | undefined;
+    try {
+      scaffoldRootRejected = throws(() =>
+        writeFiles(rootRaceBase, { "created.txt": "scaffold bytes" }),
+      );
+    } catch (error) {
+      scaffoldRootCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(scaffoldRootCleanupFailure, [
+        {
+          resource: "scaffold writer root successor open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "scaffold creation rejects a base successor before writing bytes",
+      scaffoldRootSwapped &&
+        scaffoldRootRejected &&
+        fs.existsSync(rootRaceTarget) === false &&
+        fs.readFileSync(path.join(parkedRootRaceBase, "created.txt")).length ===
+          0,
+    );
+
+    const parentRaceBase = path.join(base, "parent-race-scaffold");
+    const parentRaceParent = path.join(parentRaceBase, "nested");
+    const parentRaceTarget = path.join(parentRaceParent, "created.txt");
+    const parkedParentRace = `${parentRaceParent}.parked`;
+    fs.mkdirSync(parentRaceParent, { recursive: true });
+    let scaffoldParentSwapped = false;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+      if (
+        scaffoldParentSwapped === false &&
+        typeof file !== "number" &&
+        path.resolve(file.toString()) === parentRaceTarget &&
+        flags === "wx+"
+      ) {
+        nativeRename(parentRaceParent, parkedParentRace);
+        Reflect.apply(nativeMkdir, mutableFs, [parentRaceParent]);
+        scaffoldParentSwapped = true;
+      }
+      return descriptor;
+    }) as typeof fs.openSync;
+    let scaffoldParentRejected = false;
+    let scaffoldParentCleanupFailure: { error: unknown } | undefined;
+    try {
+      scaffoldParentRejected = throws(() =>
+        writeFiles(
+          parentRaceBase,
+          { "nested/created.txt": "scaffold bytes" },
+          { force: true },
+        ),
+      );
+    } catch (error) {
+      scaffoldParentCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(scaffoldParentCleanupFailure, [
+        {
+          resource: "scaffold writer parent successor open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "scaffold creation rejects a descendant-parent successor before writing bytes",
+      scaffoldParentSwapped &&
+        scaffoldParentRejected &&
+        fs.existsSync(parentRaceTarget) === false &&
+        fs.readFileSync(path.join(parkedParentRace, "created.txt")).length ===
+          0,
+    );
+
+    const partialWriteBase = path.join(base, "partial-write-scaffold");
+    const partialWriteTarget = path.join(partialWriteBase, "partial.txt");
+    let scaffoldWriteCalls = 0;
+    mutableFs.writeSync = ((...args: unknown[]): number => {
+      const [descriptor, buffer, offset, length, position] = args as [
+        number,
+        Uint8Array,
+        number,
+        number,
+        number,
+      ];
+      scaffoldWriteCalls++;
+      return scaffoldWriteCalls === 1
+        ? (Reflect.apply(nativeWrite, mutableFs, [
+            descriptor,
+            buffer,
+            offset,
+            Math.min(1, length),
+            position,
+          ]) as number)
+        : 0;
+    }) as typeof fs.writeSync;
+    let partialWriteRejected = false;
+    let partialWriteCleanupFailure: { error: unknown } | undefined;
+    try {
+      partialWriteRejected = throws(() =>
+        writeFiles(partialWriteBase, { "partial.txt": "partial evidence" }),
+      );
+    } catch (error) {
+      partialWriteCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(partialWriteCleanupFailure, [
+        {
+          resource: "scaffold writer partial write hook",
+          cleanup: () => {
+            mutableFs.writeSync = nativeWrite;
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "a stalled scaffold write leaves its exact partial final evidence",
+      partialWriteRejected &&
+        fs.readFileSync(partialWriteTarget, "utf8") === "p",
+    );
+
+    const fsyncFailureBase = path.join(base, "fsync-failure-scaffold");
+    const fsyncFailureTarget = path.join(fsyncFailureBase, "complete.txt");
+    let scaffoldFsyncFailed = false;
+    mutableFs.fsyncSync = ((descriptor: number): void => {
+      Reflect.apply(nativeFsync, mutableFs, [descriptor]);
+      scaffoldFsyncFailed = true;
+      throw Object.assign(new Error("scaffold fsync failed"), { code: "EIO" });
+    }) as typeof fs.fsyncSync;
+    let fsyncFailureRejected = false;
+    let fsyncFailureCleanupFailure: { error: unknown } | undefined;
+    try {
+      fsyncFailureRejected = throws(() =>
+        writeFiles(fsyncFailureBase, { "complete.txt": "complete evidence" }),
+      );
+    } catch (error) {
+      fsyncFailureCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(fsyncFailureCleanupFailure, [
+        {
+          resource: "scaffold writer fsync hook",
+          cleanup: () => {
+            mutableFs.fsyncSync = nativeFsync;
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "a scaffold fsync failure leaves its complete final evidence",
+      scaffoldFsyncFailed &&
+        fsyncFailureRejected &&
+        fs.readFileSync(fsyncFailureTarget, "utf8") === "complete evidence",
+    );
+
+    const readFailureBase = path.join(base, "read-failure-scaffold");
+    const readFailureTarget = path.join(readFailureBase, "complete.txt");
+    let scaffoldReadStopped = false;
+    mutableFs.readSync = ((..._args: unknown[]): number => {
+      scaffoldReadStopped = true;
+      return 0;
+    }) as typeof fs.readSync;
+    let readFailureRejected = false;
+    let readFailureCleanupFailure: { error: unknown } | undefined;
+    try {
+      readFailureRejected = throws(() =>
+        writeFiles(readFailureBase, { "complete.txt": "read evidence" }),
+      );
+    } catch (error) {
+      readFailureCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(readFailureCleanupFailure, [
+        {
+          resource: "scaffold writer read stall hook",
+          cleanup: () => {
+            mutableFs.readSync = nativeRead;
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "a scaffold readback stall leaves its complete final evidence",
+      scaffoldReadStopped &&
+        readFailureRejected &&
+        fs.readFileSync(readFailureTarget, "utf8") === "read evidence",
+    );
+
+    const mismatchBase = path.join(base, "read-mismatch-scaffold");
+    const mismatchTarget = path.join(mismatchBase, "complete.txt");
+    let scaffoldReadMismatched = false;
+    mutableFs.readSync = ((...args: unknown[]): number => {
+      const length = Reflect.apply(nativeRead, mutableFs, args) as number;
+      if (length > 0) {
+        const buffer = args[1] as Uint8Array;
+        const offset = args[2] as number;
+        buffer[offset] = (buffer[offset] ?? 0) ^ 0xff;
+        scaffoldReadMismatched = true;
+      }
+      return length;
+    }) as typeof fs.readSync;
+    let mismatchRejected = false;
+    let mismatchCleanupFailure: { error: unknown } | undefined;
+    try {
+      mismatchRejected = throws(() =>
+        writeFiles(mismatchBase, { "complete.txt": "mismatch evidence" }),
+      );
+    } catch (error) {
+      mismatchCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(mismatchCleanupFailure, [
+        {
+          resource: "scaffold writer mismatch read hook",
+          cleanup: () => {
+            mutableFs.readSync = nativeRead;
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "a scaffold readback mismatch leaves its exact final file",
+      scaffoldReadMismatched &&
+        mismatchRejected &&
+        fs.readFileSync(mismatchTarget, "utf8") === "mismatch evidence",
+    );
+
+    const shortReadBase = path.join(base, "short-read-scaffold");
+    const shortReadTarget = path.join(shortReadBase, "complete.txt");
+    let scaffoldShortReads = 0;
+    mutableFs.readSync = ((...args: unknown[]): number => {
+      const [descriptor, buffer, offset, length, position] = args as [
+        number,
+        Uint8Array,
+        number,
+        number,
+        number,
+      ];
+      scaffoldShortReads++;
+      return Reflect.apply(nativeRead, mutableFs, [
+        descriptor,
+        buffer,
+        offset,
+        Math.min(1, length),
+        position,
+      ]) as number;
+    }) as typeof fs.readSync;
+    let shortReadAccepted = false;
+    let shortReadCleanupFailure: { error: unknown } | undefined;
+    try {
+      shortReadAccepted = !throws(() =>
+        writeFiles(shortReadBase, { "complete.txt": "short reads" }),
+      );
+    } catch (error) {
+      shortReadCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(shortReadCleanupFailure, [
+        {
+          resource: "scaffold writer short read hook",
+          cleanup: () => {
+            mutableFs.readSync = nativeRead;
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "scaffold readback completes across positive short reads",
+      shortReadAccepted &&
+        scaffoldShortReads > 2 &&
+        fs.readFileSync(shortReadTarget, "utf8") === "short reads",
+    );
+
+    const lateCreateMutationBase = path.join(
+      base,
+      "late-create-mutation-scaffold",
+    );
+    const lateCreateMutationTarget = path.join(
+      lateCreateMutationBase,
+      "owned.txt",
+    );
+    let lateCreateDescriptor = -1;
+    let lateCreateReadbacks = 0;
+    let lateCreateMutated = false;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+      if (
+        typeof file !== "number" &&
+        path.resolve(file.toString()) === lateCreateMutationTarget &&
+        flags === "wx+"
+      )
+        lateCreateDescriptor = descriptor;
+      return descriptor;
+    }) as typeof fs.openSync;
+    mutableFs.readSync = ((...args: unknown[]): number => {
+      const length = Reflect.apply(nativeRead, mutableFs, args) as number;
+      if (
+        args[0] === lateCreateDescriptor &&
+        (args[4] as number) + length ===
+          Buffer.byteLength("scaffold generation") &&
+        ++lateCreateReadbacks === 2
+      ) {
+        nativeWriteFile(lateCreateMutationTarget, "foreign! generation");
+        lateCreateMutated = true;
+      }
+      return length;
+    }) as typeof fs.readSync;
+    let lateCreateMutationRejected = false;
+    let lateCreateMutationCleanupFailure: { error: unknown } | undefined;
+    try {
+      lateCreateMutationRejected = throws(() =>
+        writeFiles(lateCreateMutationBase, {
+          "owned.txt": "scaffold generation",
+        }),
+      );
+    } catch (error) {
+      lateCreateMutationCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(lateCreateMutationCleanupFailure, [
+        {
+          resource: "scaffold late create open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+        {
+          resource: "scaffold late create read hook",
+          cleanup: () => {
+            mutableFs.readSync = nativeRead;
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "scaffold creation rejects same-inode mutation after final readback",
+      lateCreateMutated &&
+        lateCreateMutationRejected &&
+        fs.readFileSync(lateCreateMutationTarget, "utf8") ===
+          "foreign! generation",
+    );
+
+    const lateForceMutationBase = path.join(
+      base,
+      "late-force-mutation-scaffold",
+    );
+    const lateForceMutationTarget = path.join(
+      lateForceMutationBase,
+      "owned.txt",
+    );
+    fs.mkdirSync(lateForceMutationBase);
+    fs.writeFileSync(lateForceMutationTarget, "original generation");
+    let lateForceDescriptor = -1;
+    let lateForceReadbacks = 0;
+    let lateForceMutated = false;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+      if (
+        typeof file !== "number" &&
+        path.resolve(file.toString()) === lateForceMutationTarget &&
+        flags === "r+"
+      )
+        lateForceDescriptor = descriptor;
+      return descriptor;
+    }) as typeof fs.openSync;
+    mutableFs.readSync = ((...args: unknown[]): number => {
+      const length = Reflect.apply(nativeRead, mutableFs, args) as number;
+      if (
+        args[0] === lateForceDescriptor &&
+        (args[4] as number) + length ===
+          Buffer.byteLength("scaffold generation") &&
+        ++lateForceReadbacks === 2
+      ) {
+        nativeWriteFile(lateForceMutationTarget, "foreign! generation");
+        lateForceMutated = true;
+      }
+      return length;
+    }) as typeof fs.readSync;
+    let lateForceMutationRejected = false;
+    let lateForceMutationCleanupFailure: { error: unknown } | undefined;
+    try {
+      lateForceMutationRejected = throws(() =>
+        writeFiles(
+          lateForceMutationBase,
+          { "owned.txt": "scaffold generation" },
+          { force: true },
+        ),
+      );
+    } catch (error) {
+      lateForceMutationCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(lateForceMutationCleanupFailure, [
+        {
+          resource: "scaffold late force open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+        {
+          resource: "scaffold late force read hook",
+          cleanup: () => {
+            mutableFs.readSync = nativeRead;
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "forced scaffold write rejects same-inode mutation after final readback",
+      lateForceMutated &&
+        lateForceMutationRejected &&
+        fs.readFileSync(lateForceMutationTarget, "utf8") ===
+          "foreign! generation",
+    );
+
+    const finalCreateMutationBase = path.join(
+      base,
+      "final-create-mutation-scaffold",
+    );
+    const finalCreateMutationTarget = path.join(
+      finalCreateMutationBase,
+      "owned.txt",
+    );
+    let finalCreateDescriptor = -1;
+    let finalCreateDescriptorSnapshots = 0;
+    let finalCreateMutationArmed = false;
+    let finalCreateMutated = false;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+      if (
+        typeof file !== "number" &&
+        path.resolve(file.toString()) === finalCreateMutationTarget &&
+        flags === "wx+"
+      )
+        finalCreateDescriptor = descriptor;
+      return descriptor;
+    }) as typeof fs.openSync;
+    mutableFs.fstatSync = ((descriptor, ...args: unknown[]): unknown => {
+      const status = Reflect.apply(nativeFstat, mutableFs, [
+        descriptor,
+        ...args,
+      ]);
+      if (
+        descriptor === finalCreateDescriptor &&
+        ++finalCreateDescriptorSnapshots === 5
+      )
+        finalCreateMutationArmed = true;
+      return status;
+    }) as typeof fs.fstatSync;
+    mutableFs.lstatSync = ((file, ...args: unknown[]): unknown => {
+      if (
+        finalCreateMutationArmed &&
+        path.resolve(file.toString()) === finalCreateMutationTarget
+      ) {
+        nativeWriteFile(
+          finalCreateMutationTarget,
+          "foreign generation after final descriptor snapshot",
+        );
+        finalCreateMutationArmed = false;
+        finalCreateMutated = true;
+      }
+      return Reflect.apply(nativeLstat, mutableFs, [file, ...args]);
+    }) as typeof fs.lstatSync;
+    let finalCreateMutationRejected = false;
+    let finalCreateMutationCleanupFailure: { error: unknown } | undefined;
+    try {
+      finalCreateMutationRejected = throws(() =>
+        writeFiles(finalCreateMutationBase, {
+          "owned.txt": "scaffold generation",
+        }),
+      );
+    } catch (error) {
+      finalCreateMutationCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(finalCreateMutationCleanupFailure, [
+        {
+          resource: "scaffold final create open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+        {
+          resource: "scaffold final create fstat hook",
+          cleanup: () => {
+            mutableFs.fstatSync = nativeFstat;
+          },
+        },
+        {
+          resource: "scaffold final create lstat hook",
+          cleanup: () => {
+            mutableFs.lstatSync = nativeLstat;
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "scaffold creation rejects mutation after its final descriptor snapshot",
+      finalCreateMutated &&
+        finalCreateMutationRejected &&
+        fs.readFileSync(finalCreateMutationTarget, "utf8") ===
+          "foreign generation after final descriptor snapshot",
+    );
+
+    const finalForceMutationBase = path.join(
+      base,
+      "final-force-mutation-scaffold",
+    );
+    const finalForceMutationTarget = path.join(
+      finalForceMutationBase,
+      "owned.txt",
+    );
+    fs.mkdirSync(finalForceMutationBase);
+    fs.writeFileSync(finalForceMutationTarget, "original generation");
+    let finalForceDescriptor = -1;
+    let finalForceDescriptorSnapshots = 0;
+    let finalForceMutationArmed = false;
+    let finalForceMutated = false;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+      if (
+        typeof file !== "number" &&
+        path.resolve(file.toString()) === finalForceMutationTarget &&
+        flags === "r+"
+      )
+        finalForceDescriptor = descriptor;
+      return descriptor;
+    }) as typeof fs.openSync;
+    mutableFs.fstatSync = ((descriptor, ...args: unknown[]): unknown => {
+      const status = Reflect.apply(nativeFstat, mutableFs, [
+        descriptor,
+        ...args,
+      ]);
+      if (
+        descriptor === finalForceDescriptor &&
+        ++finalForceDescriptorSnapshots === 5
+      )
+        finalForceMutationArmed = true;
+      return status;
+    }) as typeof fs.fstatSync;
+    mutableFs.lstatSync = ((file, ...args: unknown[]): unknown => {
+      if (
+        finalForceMutationArmed &&
+        path.resolve(file.toString()) === finalForceMutationTarget
+      ) {
+        nativeWriteFile(
+          finalForceMutationTarget,
+          "foreign generation after final descriptor snapshot",
+        );
+        finalForceMutationArmed = false;
+        finalForceMutated = true;
+      }
+      return Reflect.apply(nativeLstat, mutableFs, [file, ...args]);
+    }) as typeof fs.lstatSync;
+    let finalForceMutationRejected = false;
+    let finalForceMutationCleanupFailure: { error: unknown } | undefined;
+    try {
+      finalForceMutationRejected = throws(() =>
+        writeFiles(
+          finalForceMutationBase,
+          { "owned.txt": "scaffold generation" },
+          { force: true },
+        ),
+      );
+    } catch (error) {
+      finalForceMutationCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(finalForceMutationCleanupFailure, [
+        {
+          resource: "scaffold final force open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+        {
+          resource: "scaffold final force fstat hook",
+          cleanup: () => {
+            mutableFs.fstatSync = nativeFstat;
+          },
+        },
+        {
+          resource: "scaffold final force lstat hook",
+          cleanup: () => {
+            mutableFs.lstatSync = nativeLstat;
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "forced scaffold write rejects mutation after its final descriptor snapshot",
+      finalForceMutated &&
+        finalForceMutationRejected &&
+        fs.readFileSync(finalForceMutationTarget, "utf8") ===
+          "foreign generation after final descriptor snapshot",
+    );
+
+    const closeFailureBase = path.join(base, "close-failure-scaffold");
+    const closeFailureTarget = path.join(closeFailureBase, "complete.txt");
+    const standaloneScaffoldCloseFailure = Object.assign(
+      new Error("scaffold close failed"),
+      { code: "EIO" },
+    );
+    let scaffoldCloseFailed = false;
+    let closeFailureDescriptor = -1;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+      if (
+        typeof file !== "number" &&
+        path.resolve(file.toString()) === closeFailureTarget &&
+        flags === "wx+"
+      )
+        closeFailureDescriptor = descriptor;
+      return descriptor;
+    }) as typeof fs.openSync;
+    mutableFs.closeSync = ((descriptor: number): void => {
+      Reflect.apply(nativeClose, mutableFs, [descriptor]);
+      if (descriptor === closeFailureDescriptor) {
+        scaffoldCloseFailed = true;
+        throw standaloneScaffoldCloseFailure;
+      }
+    }) as typeof fs.closeSync;
+    let standaloneScaffoldCloseError: unknown;
+    let standaloneScaffoldHarnessCleanupFailure: { error: unknown } | undefined;
+    try {
+      writeFiles(closeFailureBase, { "complete.txt": "close evidence" });
+    } catch (error) {
+      standaloneScaffoldCloseError = error;
+      standaloneScaffoldHarnessCleanupFailure = { error };
+    } finally {
+      preserveCliHarnessCleanup(standaloneScaffoldHarnessCleanupFailure, [
+        {
+          resource: "scaffold standalone open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+        {
+          resource: "scaffold standalone close hook",
+          cleanup: () => {
+            mutableFs.closeSync = nativeClose;
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "a scaffold close failure leaves its exact complete final evidence",
+      scaffoldCloseFailed &&
+        standaloneScaffoldCloseError === standaloneScaffoldCloseFailure &&
+        fs.readFileSync(closeFailureTarget, "utf8") === "close evidence",
+    );
+
+    const primaryOnlyFailureBase = path.join(
+      base,
+      "primary-only-failure-scaffold",
+    );
+    const primaryOnlyFailure = new Error("scaffold primary-only write failed");
+    mutableFs.writeSync = (() => {
+      throw primaryOnlyFailure;
+    }) as typeof fs.writeSync;
+    let preservedPrimaryOnlyFailure: unknown;
+    let primaryOnlyCleanupFailure: { error: unknown } | undefined;
+    try {
+      writeFiles(primaryOnlyFailureBase, {
+        "partial.txt": "primary-only evidence",
+      });
+    } catch (error) {
+      preservedPrimaryOnlyFailure = error;
+      primaryOnlyCleanupFailure = { error };
+    } finally {
+      preserveCliHarnessCleanup(primaryOnlyCleanupFailure, [
+        {
+          resource: "scaffold writer primary-only write hook",
+          cleanup: () => {
+            mutableFs.writeSync = nativeWrite;
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "scaffold failure remains unchanged after successful descriptor close",
+      preservedPrimaryOnlyFailure === primaryOnlyFailure,
+    );
+
+    const doubleFailureBase = path.join(base, "double-failure-scaffold");
+    const doubleFailureTarget = path.join(doubleFailureBase, "partial.txt");
+    const doubleFailurePrimary = Object.assign(
+      new Error("scaffold primary write failed"),
+      { code: "EIO" },
+    );
+    const doubleFailureClose = Object.assign(
+      new Error("scaffold secondary close failed"),
+      { code: "EIO" },
+    );
+    let doubleFailureDescriptor = -1;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+      if (
+        typeof file !== "number" &&
+        path.resolve(file.toString()) === doubleFailureTarget &&
+        flags === "wx+"
+      )
+        doubleFailureDescriptor = descriptor;
+      return descriptor;
+    }) as typeof fs.openSync;
+    mutableFs.writeSync = ((...args: unknown[]): number => {
+      const [descriptor, buffer, offset, _length, position] = args as [
+        number,
+        Uint8Array,
+        number,
+        number,
+        number,
+      ];
+      Reflect.apply(nativeWrite, mutableFs, [
+        descriptor,
+        buffer,
+        offset,
+        1,
+        position,
+      ]);
+      throw doubleFailurePrimary;
+    }) as typeof fs.writeSync;
+    mutableFs.closeSync = ((descriptor: number): void => {
+      Reflect.apply(nativeClose, mutableFs, [descriptor]);
+      if (descriptor === doubleFailureDescriptor) throw doubleFailureClose;
+    }) as typeof fs.closeSync;
+    let combinedDoubleFailure: unknown;
+    let doubleFailureHarnessCleanupFailure: { error: unknown } | undefined;
+    try {
+      writeFiles(doubleFailureBase, { "partial.txt": "double evidence" });
+    } catch (error) {
+      combinedDoubleFailure = error;
+      doubleFailureHarnessCleanupFailure = { error };
+    } finally {
+      preserveCliHarnessCleanup(doubleFailureHarnessCleanupFailure, [
+        {
+          resource: "scaffold create double open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+        {
+          resource: "scaffold create double write hook",
+          cleanup: () => {
+            mutableFs.writeSync = nativeWrite;
+          },
+        },
+        {
+          resource: "scaffold create double close hook",
+          cleanup: () => {
+            mutableFs.closeSync = nativeClose;
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "scaffold creation preserves primary and close failures",
+      combinedDoubleFailure instanceof AggregateError &&
+        combinedDoubleFailure.errors.length === 2 &&
+        combinedDoubleFailure.errors[0] === doubleFailurePrimary &&
+        combinedDoubleFailure.errors[1] === doubleFailureClose &&
+        fs.readFileSync(doubleFailureTarget, "utf8") === "d",
+    );
+
+    const overwriteDoubleFailureBase = path.join(
+      base,
+      "overwrite-double-failure-scaffold",
+    );
+    const overwriteDoubleFailureTarget = path.join(
+      overwriteDoubleFailureBase,
+      "partial.txt",
+    );
+    fs.mkdirSync(overwriteDoubleFailureBase);
+    fs.writeFileSync(overwriteDoubleFailureTarget, "original evidence");
+    const overwriteDoubleFailurePrimary = new Error(
+      "scaffold overwrite failed",
+    );
+    const overwriteDoubleFailureClose = new Error(
+      "scaffold overwrite close failed",
+    );
+    let overwriteDoubleFailureDescriptor = -1;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+      if (
+        path.resolve(file.toString()) === overwriteDoubleFailureTarget &&
+        flags === "r+"
+      )
+        overwriteDoubleFailureDescriptor = descriptor;
+      return descriptor;
+    }) as typeof fs.openSync;
+    mutableFs.writeSync = ((...args: unknown[]): number => {
+      if (args[0] === overwriteDoubleFailureDescriptor)
+        throw overwriteDoubleFailurePrimary;
+      return Reflect.apply(nativeWrite, mutableFs, args) as number;
+    }) as typeof fs.writeSync;
+    mutableFs.closeSync = ((descriptor: number): void => {
+      Reflect.apply(nativeClose, mutableFs, [descriptor]);
+      if (descriptor === overwriteDoubleFailureDescriptor)
+        throw overwriteDoubleFailureClose;
+    }) as typeof fs.closeSync;
+    let combinedOverwriteDoubleFailure: unknown;
+    let overwriteDoubleFailureHarnessCleanupFailure:
+      | { error: unknown }
+      | undefined;
+    try {
+      writeFiles(
+        overwriteDoubleFailureBase,
+        { "partial.txt": "replacement evidence" },
+        { force: true },
+      );
+    } catch (error) {
+      combinedOverwriteDoubleFailure = error;
+      overwriteDoubleFailureHarnessCleanupFailure = { error };
+    } finally {
+      preserveCliHarnessCleanup(overwriteDoubleFailureHarnessCleanupFailure, [
+        {
+          resource: "scaffold overwrite double open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+        {
+          resource: "scaffold overwrite double write hook",
+          cleanup: () => {
+            mutableFs.writeSync = nativeWrite;
+          },
+        },
+        {
+          resource: "scaffold overwrite double close hook",
+          cleanup: () => {
+            mutableFs.closeSync = nativeClose;
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "scaffold overwrite preserves primary and close failures",
+      combinedOverwriteDoubleFailure instanceof AggregateError &&
+        combinedOverwriteDoubleFailure.errors.length === 2 &&
+        combinedOverwriteDoubleFailure.errors[0] ===
+          overwriteDoubleFailurePrimary &&
+        combinedOverwriteDoubleFailure.errors[1] ===
+          overwriteDoubleFailureClose,
+    );
+
+    const nestedDescriptorFailureBase = path.join(
+      base,
+      "nested-descriptor-failure-scaffold",
+    );
+    const nestedDescriptorFailureTarget = path.join(
+      nestedDescriptorFailureBase,
+      "owned.txt",
+    );
+    const nestedDescriptorPrimary = new Error(
+      "resident descriptor verification failed",
+    );
+    const nestedResidentCloseFailure = new Error(
+      "resident descriptor close failed",
+    );
+    const nestedOwnerCloseFailure = new Error("owner descriptor close failed");
+    let nestedOwnerDescriptor = -1;
+    let nestedResidentDescriptor = -1;
+    let nestedResidentFailureInjected = false;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+      if (path.resolve(file.toString()) === nestedDescriptorFailureTarget) {
+        if (flags === "wx+") nestedOwnerDescriptor = descriptor;
+        else if (flags === "r" && nestedResidentDescriptor === -1)
+          nestedResidentDescriptor = descriptor;
+      }
+      return descriptor;
+    }) as typeof fs.openSync;
+    mutableFs.fstatSync = ((descriptor, ...args: unknown[]): unknown => {
+      if (
+        descriptor === nestedResidentDescriptor &&
+        nestedResidentFailureInjected === false
+      ) {
+        nestedResidentFailureInjected = true;
+        throw nestedDescriptorPrimary;
+      }
+      return Reflect.apply(nativeFstat, mutableFs, [descriptor, ...args]);
+    }) as typeof fs.fstatSync;
+    mutableFs.closeSync = ((descriptor: number): void => {
+      Reflect.apply(nativeClose, mutableFs, [descriptor]);
+      if (descriptor === nestedResidentDescriptor)
+        throw nestedResidentCloseFailure;
+      if (descriptor === nestedOwnerDescriptor) throw nestedOwnerCloseFailure;
+    }) as typeof fs.closeSync;
+    let combinedNestedDescriptorFailure: unknown;
+    let nestedDescriptorHarnessCleanupFailure: { error: unknown } | undefined;
+    try {
+      writeFiles(nestedDescriptorFailureBase, {
+        "owned.txt": "nested descriptor evidence",
+      });
+    } catch (error) {
+      combinedNestedDescriptorFailure = error;
+      nestedDescriptorHarnessCleanupFailure = { error };
+    } finally {
+      preserveCliHarnessCleanup(nestedDescriptorHarnessCleanupFailure, [
+        {
+          resource: "scaffold nested descriptor open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+        {
+          resource: "scaffold nested descriptor fstat hook",
+          cleanup: () => {
+            mutableFs.fstatSync = nativeFstat;
+          },
+        },
+        {
+          resource: "scaffold nested descriptor close hook",
+          cleanup: () => {
+            mutableFs.closeSync = nativeClose;
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "nested scaffold descriptor cleanup preserves resource order",
+      nestedResidentFailureInjected &&
+        combinedNestedDescriptorFailure instanceof AggregateError &&
+        combinedNestedDescriptorFailure.errors.length === 3 &&
+        combinedNestedDescriptorFailure.errors[0] === nestedDescriptorPrimary &&
+        combinedNestedDescriptorFailure.errors[1] ===
+          nestedResidentCloseFailure &&
+        combinedNestedDescriptorFailure.errors[2] === nestedOwnerCloseFailure,
+    );
+
+    const closeTargetBase = path.join(base, "close-target-scaffold");
+    const closeTarget = path.join(closeTargetBase, "owned.txt");
+    const parkedCloseTarget = path.join(base, "close-target-original.txt");
+    let closeTargetSwapped = false;
+    let closeTargetDescriptor = -1;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+      if (
+        typeof file !== "number" &&
+        path.resolve(file.toString()) === closeTarget &&
+        flags === "wx+"
+      )
+        closeTargetDescriptor = descriptor;
+      return descriptor;
+    }) as typeof fs.openSync;
+    mutableFs.closeSync = ((descriptor: number): void => {
+      Reflect.apply(nativeClose, mutableFs, [descriptor]);
+      if (descriptor === closeTargetDescriptor) {
+        nativeRename(closeTarget, parkedCloseTarget);
+        Reflect.apply(nativeWriteFile, mutableFs, [
+          closeTarget,
+          "successor generation",
+          "utf8",
+        ]);
+        closeTargetSwapped = true;
+      }
+    }) as typeof fs.closeSync;
+    let closeTargetRejected = false;
+    let closeTargetCleanupFailure: { error: unknown } | undefined;
+    try {
+      closeTargetRejected = throws(() =>
+        writeFiles(closeTargetBase, { "owned.txt": "scaffold generation" }),
+      );
+    } catch (error) {
+      closeTargetCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(closeTargetCleanupFailure, [
+        {
+          resource: "scaffold close target open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+        {
+          resource: "scaffold close target close hook",
+          cleanup: () => {
+            mutableFs.closeSync = nativeClose;
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "scaffold materialization rejects a target successor installed at close",
+      closeTargetSwapped &&
+        closeTargetRejected &&
+        fs.readFileSync(closeTarget, "utf8") === "successor generation" &&
+        fs.readFileSync(parkedCloseTarget, "utf8") === "scaffold generation",
+    );
+
+    const forceCloseTargetBase = path.join(base, "force-close-target-scaffold");
+    const forceCloseTarget = path.join(forceCloseTargetBase, "owned.txt");
+    const parkedForceCloseTarget = path.join(
+      base,
+      "force-close-target-original.txt",
+    );
+    fs.mkdirSync(forceCloseTargetBase);
+    fs.writeFileSync(forceCloseTarget, "original generation");
+    let forceCloseTargetSwapped = false;
+    let forceCloseTargetDescriptor = -1;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+      if (
+        typeof file !== "number" &&
+        path.resolve(file.toString()) === forceCloseTarget &&
+        flags === "r+"
+      )
+        forceCloseTargetDescriptor = descriptor;
+      return descriptor;
+    }) as typeof fs.openSync;
+    mutableFs.closeSync = ((descriptor: number): void => {
+      Reflect.apply(nativeClose, mutableFs, [descriptor]);
+      if (descriptor === forceCloseTargetDescriptor) {
+        nativeRename(forceCloseTarget, parkedForceCloseTarget);
+        nativeWriteFile(forceCloseTarget, "successor generation");
+        forceCloseTargetSwapped = true;
+      }
+    }) as typeof fs.closeSync;
+    let forceCloseTargetRejected = false;
+    let forceCloseTargetCleanupFailure: { error: unknown } | undefined;
+    try {
+      forceCloseTargetRejected = throws(() =>
+        writeFiles(
+          forceCloseTargetBase,
+          { "owned.txt": "forced scaffold generation" },
+          { force: true },
+        ),
+      );
+    } catch (error) {
+      forceCloseTargetCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(forceCloseTargetCleanupFailure, [
+        {
+          resource: "scaffold force close target open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+        {
+          resource: "scaffold force close target close hook",
+          cleanup: () => {
+            mutableFs.closeSync = nativeClose;
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "forced scaffold materialization rejects a target successor installed at close",
+      forceCloseTargetSwapped &&
+        forceCloseTargetRejected &&
+        fs.readFileSync(forceCloseTarget, "utf8") === "successor generation" &&
+        fs.readFileSync(parkedForceCloseTarget, "utf8") ===
+          "forced scaffold generation",
+    );
+
+    const closeParentBase = path.join(base, "close-parent-scaffold");
+    const closeParent = path.join(closeParentBase, "nested");
+    const closeParentTarget = path.join(closeParent, "owned.txt");
+    const parkedCloseParent = `${closeParent}.parked`;
+    let closeParentSwapped = false;
+    let closeParentDescriptor = -1;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+      if (
+        typeof file !== "number" &&
+        path.resolve(file.toString()) === closeParentTarget &&
+        flags === "wx+"
+      )
+        closeParentDescriptor = descriptor;
+      return descriptor;
+    }) as typeof fs.openSync;
+    mutableFs.closeSync = ((descriptor: number): void => {
+      Reflect.apply(nativeClose, mutableFs, [descriptor]);
+      if (descriptor === closeParentDescriptor) {
+        nativeRename(closeParent, parkedCloseParent);
+        fs.symlinkSync(parkedCloseParent, closeParent, "junction");
+        closeParentSwapped = true;
+      }
+    }) as typeof fs.closeSync;
+    let closeParentRejected = false;
+    let closeParentCleanupFailure: { error: unknown } | undefined;
+    try {
+      closeParentRejected = throws(() =>
+        writeFiles(closeParentBase, {
+          "nested/owned.txt": "scaffold generation",
+        }),
+      );
+    } catch (error) {
+      closeParentCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(closeParentCleanupFailure, [
+        {
+          resource: "scaffold close parent open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+        {
+          resource: "scaffold close parent close hook",
+          cleanup: () => {
+            mutableFs.closeSync = nativeClose;
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "scaffold materialization rejects a parent successor installed at close",
+      closeParentSwapped &&
+        closeParentRejected &&
+        fs.lstatSync(closeParent).isSymbolicLink() &&
+        fs.readFileSync(closeParentTarget, "utf8") === "scaffold generation" &&
+        fs.readFileSync(path.join(parkedCloseParent, "owned.txt"), "utf8") ===
+          "scaffold generation",
+    );
+
+    const closeRootBase = path.join(base, "close-root-scaffold");
+    const closeRootTarget = path.join(closeRootBase, "owned.txt");
+    const parkedCloseRoot = `${closeRootBase}.parked`;
+    let closeRootSwapped = false;
+    let closeRootDescriptor = -1;
+    mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpen, mutableFs, [
+        file,
+        flags,
+        ...args,
+      ]) as number;
+      if (
+        typeof file !== "number" &&
+        path.resolve(file.toString()) === closeRootTarget &&
+        flags === "wx+"
+      )
+        closeRootDescriptor = descriptor;
+      return descriptor;
+    }) as typeof fs.openSync;
+    mutableFs.closeSync = ((descriptor: number): void => {
+      Reflect.apply(nativeClose, mutableFs, [descriptor]);
+      if (descriptor === closeRootDescriptor) {
+        nativeRename(closeRootBase, parkedCloseRoot);
+        fs.symlinkSync(parkedCloseRoot, closeRootBase, "junction");
+        closeRootSwapped = true;
+      }
+    }) as typeof fs.closeSync;
+    let closeRootRejected = false;
+    let closeRootCleanupFailure: { error: unknown } | undefined;
+    try {
+      closeRootRejected = throws(() =>
+        writeFiles(closeRootBase, { "owned.txt": "scaffold generation" }),
+      );
+    } catch (error) {
+      closeRootCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(closeRootCleanupFailure, [
+        {
+          resource: "scaffold close root open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+        {
+          resource: "scaffold close root close hook",
+          cleanup: () => {
+            mutableFs.closeSync = nativeClose;
+          },
+        },
+      ]);
+    }
+    TestValidator.predicate(
+      "scaffold materialization rejects a root successor installed at close",
+      closeRootSwapped &&
+        closeRootRejected &&
+        fs.lstatSync(closeRootBase).isSymbolicLink() &&
+        fs.readFileSync(closeRootTarget, "utf8") === "scaffold generation" &&
+        fs.readFileSync(path.join(parkedCloseRoot, "owned.txt"), "utf8") ===
+          "scaffold generation",
+    );
+  } catch (error) {
+    scaffoldFailure = { error };
+    throw error;
   } finally {
-    fs.rmSync(base, { recursive: true, force: true });
+    preserveCliRootFixtureCleanup(
+      scaffoldFailure,
+      () => fs.rmSync(base, { recursive: true, force: true }),
+      "scaffold fixture root",
+    );
   }
 };

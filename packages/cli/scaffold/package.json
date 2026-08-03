@@ -3,31 +3,48 @@
   "private": true,
   "type": "module",
   "version": "0.1.0",
+  "license": "MIT",
   "description": "An AutoMovie coding-agent production repository.",
+  "overrides": {
+    "@huggingface/transformers": {
+      "sharp": "file:vendor/sharp-disabled"
+    }
+  },
   "scripts": {
     "capture:doctor": "tsx scripts/capture-doctor.ts",
     "capture:install": "tsx scripts/capture-install.ts",
+    "build": "npm run compile",
     "compile": "tsx scripts/compile.ts",
-    "lint": "ttsc --noEmit -p tsconfig.json && tsx scripts/lint.ts",
+    "lint": "npm run lint:source && ttsx -P tsconfig.json scripts/lint.ts",
+    "lint:source": "ttsc --noEmit -p tsconfig.json",
     "preview": "tsx scripts/preview.ts",
     "review:status": "tsx scripts/review-status.ts",
     "render": "tsx scripts/render.ts",
     "viewer": "vite --host 127.0.0.1",
     "test": "tsx test/opening.test.ts",
+    "verify": "tsx scripts/verify.ts",
     "format": "ttsc format -p tsconfig.json"
   },
   "dependencies": {
+    "@automovie/cli": "{{version:cli}}",
     "@automovie/engine": "{{version:engine}}",
     "@automovie/interface": "{{version:interface}}",
     "@automovie/mcp": "{{version:mcp}}",
     "@automovie/viewer": "{{version:viewer}}",
+    "@huggingface/transformers": "{{version:huggingFaceTransformers}}",
     "@modelcontextprotocol/sdk": "{{version:mcpSdk}}",
+    "@pixiv/three-vrm": "{{version:threeVrm}}",
     "h264-mp4-encoder": "{{version:h264Mp4Encoder}}",
+    "kokoro-js": "{{version:kokoroJs}}",
+    "libopus-wasm": "{{version:libopusWasm}}",
     "mp4box": "{{version:mp4box}}",
+    "onnxruntime-node": "{{version:onnxruntimeNode}}",
     "pngjs": "{{version:pngjs}}",
+    "sharp": "file:vendor/sharp-disabled",
     "three": "{{version:three}}"
   },
   "devDependencies": {
+    "@automovie/lint": "{{version:lint}}",
     "@ttsc/lint": "{{version:ttscLint}}",
     "@types/node": "{{version:nodeTypes}}",
     "@types/pngjs": "{{version:pngjsTypes}}",

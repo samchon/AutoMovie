@@ -5,6 +5,13 @@
     "module": "src/shots/opening.ts",
     "export": "opening"
   },
+  "evidence": [
+    {
+      "reason": "This shot realizes the screenplay's visible signal action.",
+      "scene": "SCN-001",
+      "claim": "signal-arm-readable"
+    }
+  ],
   "durationSeconds": 6,
   "participants": [
     { "kind": "actor", "id": "sentinel" },

@@ -62,6 +62,41 @@ export const test_mcp_production_design_validation = (): void => {
     validateAutoMovieProductionGraph(valid),
     [],
   );
+  TestValidator.predicate(
+    "repainted delivery requires one non-optional feature",
+    validateAutoMovieProductionGraph({
+      ...valid,
+      production: {
+        ...productionDesign(),
+        visualDelivery: "repainted",
+        deliverables: [
+          { id: "preview", kind: "preview", required: true },
+          { id: "optional-feature", kind: "feature", required: false },
+        ],
+      },
+    }).some(
+      (diagnostic) => diagnostic.code === "design-repaint-feature-required",
+    ),
+  );
+  TestValidator.predicate(
+    "duplicate shot style intent is diagnosed at its own field",
+    validateAutoMovieProductionGraph({
+      ...valid,
+      shots: new Map([
+        [
+          "opening",
+          {
+            ...shotContract(),
+            styleIntent: ["jump-cut", "jump-cut"],
+          },
+        ],
+      ]),
+    }).some(
+      (diagnostic) =>
+        diagnostic.code === "design-duplicate-id" &&
+        diagnostic.message.includes("styleIntent"),
+    ),
+  );
   const oversizedFormation = formationDesign();
   oversizedFormation.count = AUTOMOVIE_MAX_FORMATION_MEMBERS + 1;
   const cumulativeFormation = formationDesign();
@@ -518,6 +553,7 @@ export const test_mcp_production_design_validation = (): void => {
     beat: "",
     source: { module: "", export: "" },
     durationSeconds: 0,
+    styleIntent: ["jump-cut" as const, "jump-cut" as const],
     participants: [
       { kind: "formation" as const, id: "absent" },
       { kind: "formation" as const, id: "absent" },
@@ -615,6 +651,7 @@ export const test_mcp_production_design_validation = (): void => {
       title: "",
       logline: "",
       targetRuntimeSeconds: 0,
+      visualDelivery: "unsupported" as "deterministic",
       frameFormat: {
         ...productionDesign().frameFormat,
         width: 15,
@@ -694,6 +731,7 @@ export const test_mcp_production_design_validation = (): void => {
       [
         "design-identity-mismatch",
         "design-range-invalid",
+        "design-enum-invalid",
         "design-duplicate-id",
         "design-collection-empty",
         "design-text-empty",

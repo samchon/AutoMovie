@@ -51,7 +51,6 @@ import { qclose, vclose } from "../internal/predicates";
 export const test_resolve_scene_clip_parity = (): void => {
   const script = makeScriptWrite();
   const forged = forgeCast(script, {
-    type: "write",
     entries: [forgeEntry("knightB")],
   });
   if (forged.success !== true) throw new Error("forge must succeed");

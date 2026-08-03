@@ -1,11 +1,11 @@
-import { AutoMovieApplication } from "@automovie/mcp";
+import { compileAutoMovieProduction } from "@automovie/mcp";
 
-const app = new AutoMovieApplication({
+import config from "../automovie.config";
+
+const output = compileAutoMovieProduction({
   projectRoot: process.cwd(),
+  productionId: config.productionId,
+  scope: "source",
 });
-app.getGuideDocument({ name: "AUTOMOVIE_OVERALL" });
-app.getGuideDocument({ name: "COMPILATION" });
-app.openProject({ root: process.cwd() });
-const output = app.compileProject({ scope: "source" });
 process.stdout.write(`${JSON.stringify(output, null, 2)}\n`);
 if (output.success === false) process.exitCode = 1;

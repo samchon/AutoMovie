@@ -8,7 +8,11 @@ import {
 import { TestValidator } from "@nestia/e2e";
 
 import { makeMotion } from "../internal/fixtures";
-import { hasViolation, hasWarning, warningCount } from "../internal/predicates";
+import {
+  hasViolation,
+  validationHasNoWarnings,
+  validationHasWarning,
+} from "../internal/predicates";
 
 const restAt = (x: number, y: number, z: number): IAutoMovieTransform => ({
   translation: { x, y, z },
@@ -98,8 +102,12 @@ export const test_validation_ground_contact_capsule = (): void => {
   });
   TestValidator.predicate(
     "a capsule dipping below ground warns but succeeds",
-    sunk.success === true &&
-      hasWarning(sunk, "physics", "$input.samples[0].capsules[0].lowestY"),
+    validationHasWarning(
+      "sunk body capsule",
+      sunk,
+      "physics",
+      "$input.samples[0].capsules[0].lowestY",
+    ),
   );
 
   const clear = validateGroundContact({
@@ -109,10 +117,9 @@ export const test_validation_ground_contact_capsule = (): void => {
     capsules: [{ from: "hips", to: "chest", radius: 0.2 }],
     sampleRate: 1,
   });
-  TestValidator.equals(
+  TestValidator.predicate(
     "a capsule above the ground raises no warning",
-    clear.success === true && warningCount(clear),
-    0,
+    validationHasNoWarnings("clear ground capsule", clear),
   );
 
   const reversed = validateGroundContact({
@@ -124,8 +131,12 @@ export const test_validation_ground_contact_capsule = (): void => {
   });
   TestValidator.predicate(
     "the deepest endpoint is found regardless of capsule order",
-    reversed.success === true &&
-      hasWarning(reversed, "physics", "$input.samples[0].capsules[0].lowestY"),
+    validationHasWarning(
+      "reversed sunk body capsule",
+      reversed,
+      "physics",
+      "$input.samples[0].capsules[0].lowestY",
+    ),
   );
 
   const acknowledged = validateGroundContact({
@@ -136,10 +147,9 @@ export const test_validation_ground_contact_capsule = (): void => {
     sampleRate: 1,
     physicsIntent: "phasing",
   });
-  TestValidator.equals(
+  TestValidator.predicate(
     "physicsIntent suppresses the capsule warning",
-    acknowledged.success === true && warningCount(acknowledged),
-    0,
+    validationHasNoWarnings("acknowledged ground capsule", acknowledged),
   );
 
   const bad = validateGroundContact({

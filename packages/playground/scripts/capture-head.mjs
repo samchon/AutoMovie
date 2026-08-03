@@ -3,6 +3,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright-core";
 
+import { preserveCleanupFailure } from "./preserveCleanupFailure.mjs";
+
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "../../..");
 const shotsDir = path.join(root, ".shots");
@@ -76,11 +78,6 @@ const cutawayForView = (view) => {
   return "none";
 };
 
-const browser = await chromium.launch({
-  executablePath: CHROME,
-  headless: true,
-});
-
 const cleanDir = (dir) => {
   fs.rmSync(dir, { recursive: true, force: true });
   fs.mkdirSync(dir, { recursive: true });
@@ -88,74 +85,100 @@ const cleanDir = (dir) => {
 
 cleanDir(outDir);
 
-const page = await browser.newPage({
-  viewport: { width: 1280, height: 960 },
-  deviceScaleFactor: 1,
+const browser = await chromium.launch({
+  executablePath: CHROME,
+  headless: true,
 });
-
-await page.goto(`${BASE}/head.html`, { waitUntil: "load" });
-await page.waitForFunction(
-  () =>
-    window.__faceEditor?.setView &&
-    window.__faceEditor?.setOverlay &&
-    window.__faceEditor?.setCutaway,
-);
-await page.addStyleTag({
-  content: `
+let browserFailure;
+try {
+  const page = await browser.newPage({
+    viewport: { width: 1280, height: 960 },
+    deviceScaleFactor: 1,
+  });
+  let pageFailure;
+  try {
+    await page.goto(`${BASE}/head.html`, { waitUntil: "load" });
+    await page.waitForFunction(
+      () =>
+        window.__faceEditor?.setView &&
+        window.__faceEditor?.setOverlay &&
+        window.__faceEditor?.setCutaway,
+    );
+    await page.addStyleTag({
+      content: `
     #panel, #strip, #hud { display: none !important; }
     #stage { grid-template-columns: 1fr !important; }
     #workbench { grid-template-rows: 1fr !important; }
   `,
-});
+    });
 
-const settle = async () => {
-  await page.evaluate(
-    () =>
-      new Promise((resolve) =>
-        requestAnimationFrame(() => requestAnimationFrame(resolve)),
-      ),
-  );
-};
+    const settle = async () => {
+      await page.evaluate(
+        () =>
+          new Promise((resolve) =>
+            requestAnimationFrame(() => requestAnimationFrame(resolve)),
+          ),
+      );
+    };
 
-if (process.env.NOSCULPT) await page.evaluate(() => { window.__noSculpt = true; });
-await page.evaluate((preset) => window.__faceEditor.setPreset(preset), PRESET);
-await settle();
-
-for (const mode of modes) {
-  const modeDir = path.join(outDir, mode.name);
-  cleanDir(modeDir);
-
-  for (const view of views) {
+    if (process.env.NOSCULPT)
+      await page.evaluate(() => {
+        window.__noSculpt = true;
+      });
     await page.evaluate(
-      ([nextView, overlay, cutaway]) => {
-        window.__faceEditor.setOverlay(overlay);
-        window.__faceEditor.setView(nextView);
-        window.__faceEditor.setCutaway(cutaway);
-      },
-      [
-        view,
-        mode.overlay,
-        mode.cutaway === "view" ? cutawayForView(view) : mode.cutaway,
-      ],
+      (preset) => window.__faceEditor.setPreset(preset),
+      PRESET,
     );
     await settle();
-    const buf = await mode.screenshot(page);
-    fs.writeFileSync(path.join(modeDir, `${view}.png`), buf);
+
+    for (const mode of modes) {
+      const modeDir = path.join(outDir, mode.name);
+      cleanDir(modeDir);
+
+      for (const view of views) {
+        await page.evaluate(
+          ([nextView, overlay, cutaway]) => {
+            window.__faceEditor.setOverlay(overlay);
+            window.__faceEditor.setView(nextView);
+            window.__faceEditor.setCutaway(cutaway);
+          },
+          [
+            view,
+            mode.overlay,
+            mode.cutaway === "view" ? cutawayForView(view) : mode.cutaway,
+          ],
+        );
+        await settle();
+        const buf = await mode.screenshot(page);
+        fs.writeFileSync(path.join(modeDir, `${view}.png`), buf);
+      }
+    }
+
+    await page.evaluate(() => {
+      window.__faceEditor.setOverlay(0);
+      window.__faceEditor.setView("front");
+    });
+    await settle();
+    fs.writeFileSync(
+      path.join(shotsDir, "head-latest.png"),
+      await page.locator("#view").screenshot({ type: "png" }),
+    );
+  } catch (error) {
+    pageFailure = { error };
+    throw error;
+  } finally {
+    await preserveCleanupFailure(pageFailure, "capture head page", () =>
+      page.close(),
+    );
   }
+} catch (error) {
+  browserFailure = { error };
+  throw error;
+} finally {
+  await preserveCleanupFailure(browserFailure, "capture head browser", () =>
+    browser.close(),
+  );
 }
-
-await page.evaluate(() => {
-  window.__faceEditor.setOverlay(0);
-  window.__faceEditor.setView("front");
-});
-await settle();
-fs.writeFileSync(
-  path.join(shotsDir, "head-latest.png"),
-  await page.locator("#view").screenshot({ type: "png" }),
-);
-
-await page.close();
-await browser.close();
 console.log(
   `wrote ${path.relative(root, outDir)} and ${path.relative(root, path.join(shotsDir, "head-latest.png"))}`,
 );

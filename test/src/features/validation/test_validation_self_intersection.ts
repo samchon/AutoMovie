@@ -10,10 +10,10 @@ import { TestValidator } from "@nestia/e2e";
 import { makeMotion } from "../internal/fixtures";
 import {
   hasViolation,
-  hasWarning,
   nclose,
+  validationHasNoWarnings,
+  validationHasWarning,
   violationCount,
-  warningCount,
 } from "../internal/predicates";
 
 const restAt = (x: number, y: number, z: number): IAutoMovieTransform => ({
@@ -115,8 +115,12 @@ export const test_validation_self_intersection = (): void => {
   });
   TestValidator.predicate(
     "self-intersection warns but succeeds",
-    rejected.success === true &&
-      hasWarning(rejected, "physics", "$input.pairs[0].samples[0].distance"),
+    validationHasWarning(
+      "rejected self-intersection",
+      rejected,
+      "physics",
+      "$input.pairs[0].samples[0].distance",
+    ),
   );
   const first =
     rejected.success === true
@@ -135,10 +139,9 @@ export const test_validation_self_intersection = (): void => {
     sampleRate: 1,
     physicsIntent: "grapple",
   });
-  TestValidator.equals(
+  TestValidator.predicate(
     "acknowledged self-intersection is clean",
-    acknowledged.success === true && warningCount(acknowledged),
-    0,
+    validationHasNoWarnings("acknowledged self-intersection", acknowledged),
   );
 
   const clearSkeleton = skeleton(1);

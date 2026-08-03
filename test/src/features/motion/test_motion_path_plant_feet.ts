@@ -12,7 +12,10 @@ import {
 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { warningCount } from "../internal/predicates";
+import {
+  validationHasNoWarnings,
+  validationHasWarnings,
+} from "../internal/predicates";
 
 const t = (x: number, y: number, z: number): IAutoMovieTransform => ({
   translation: { x, y, z },
@@ -21,7 +24,8 @@ const t = (x: number, y: number, z: number): IAutoMovieTransform => ({
 });
 
 // A bent-rest leg (as the plant-feet suite): foot on the ground with reach
-// slack, so the leg can hold its pin while the root walks the path.
+// slack, so the leg can hold its pin while the root walks the path. The rest
+// geometry is 41.1 degrees of clinical knee flexion, not clinical zero.
 const legSkeleton: IAutoMovieSkeleton = {
   id: "leg",
   bones: [
@@ -69,6 +73,12 @@ const LEG = {
   upper: "leftUpperLeg",
   lower: "leftLowerLeg",
 } as const;
+const KNEE_REST_FLEXION = (2 * Math.atan2(0.15, 0.4) * 180) / Math.PI;
+const REST_FRAMES = {
+  leftLowerLeg: {
+    flexion: { sign: 1 as const, neutral: KNEE_REST_FLEXION },
+  },
+};
 
 /**
  * Path locomotion composes with the ground-IK pass (#596): a path-baked walk
@@ -99,13 +109,15 @@ export const test_motion_path_plant_feet = (): void => {
 
   TestValidator.predicate(
     "raw path bake skates the foot (warns)",
-    warningCount(
+    validationHasWarnings(
+      "raw path foot-skate",
       validateFootSkate({
         motion: path.motion,
         skeleton: legSkeleton,
         contacts,
+        restFrames: REST_FRAMES,
       }),
-    ) > 0,
+    ),
   );
 
   const planted = plantStanceFeet({
@@ -115,29 +127,32 @@ export const test_motion_path_plant_feet = (): void => {
     tolerance: 0.02,
     legs: [LEG],
     sampleRate: 24,
+    restFrames: REST_FRAMES,
   });
-  TestValidator.equals(
+  TestValidator.predicate(
     "planted path walk has no foot-skate warning",
-    warningCount(
+    validationHasNoWarnings(
+      "planted path walk foot-skate",
       validateFootSkate({
         motion: planted.motion,
         skeleton: legSkeleton,
         contacts,
+        restFrames: REST_FRAMES,
       }),
     ),
-    0,
   );
-  TestValidator.equals(
+  TestValidator.predicate(
     "planted path walk has no ground-contact warning",
-    warningCount(
+    validationHasNoWarnings(
+      "planted path walk ground-contact",
       validateGroundContact({
         motion: planted.motion,
         skeleton: legSkeleton,
         footBones: ["leftFoot"],
         groundY: 0,
         tolerance: 1e-3,
+        restFrames: REST_FRAMES,
       }),
     ),
-    0,
   );
 };

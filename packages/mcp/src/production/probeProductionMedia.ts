@@ -12,13 +12,62 @@ export const probeProductionMedia = (props: {
   mediaType: string;
   bytes: Uint8Array;
 }): IAutoMovieProductionMediaProbe => {
-  if (props.kind === "preview") {
+  if (
+    props.kind === "preview" ||
+    ((props.kind === "guide-pass" || props.kind === "audio-mix") &&
+      props.mediaType === "image/png")
+  ) {
     if (props.mediaType !== "image/png")
       throw new Error(
-        `Preview output declares "${props.mediaType}", but preview deliverables require image/png bytes.`,
+        `${props.kind} output declares "${props.mediaType}", but this image requires image/png bytes.`,
       );
     const png = PNG.sync.read(Buffer.from(props.bytes));
     return { kind: "png", width: png.width, height: png.height };
+  }
+  if (props.kind === "audio-mix" && props.mediaType === "application/json") {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(
+        new TextDecoder("utf-8", { fatal: true }).decode(props.bytes),
+      );
+    } catch {
+      throw new Error("Sound evidence bytes are not valid UTF-8 JSON.");
+    }
+    const evidence = parsed as Partial<{
+      version: number;
+      plan: { events: unknown[] };
+      analysis: {
+        clippingSamples: number;
+        eventAlignment: Array<{ passed: boolean }>;
+      };
+      tts: unknown[];
+    }>;
+    if (
+      evidence.version !== 1 ||
+      Array.isArray(evidence.plan?.events) === false ||
+      Number.isSafeInteger(evidence.analysis?.clippingSamples) === false ||
+      evidence.analysis!.clippingSamples < 0 ||
+      Array.isArray(evidence.analysis?.eventAlignment) === false ||
+      Array.isArray(evidence.tts) === false
+    )
+      throw new Error(
+        "Sound evidence JSON lacks a versioned plan, analysis, and TTS receipt list.",
+      );
+    if (
+      evidence.analysis!.eventAlignment.length !== evidence.plan!.events.length
+    )
+      throw new Error(
+        "Sound evidence event analysis does not cover every planned event.",
+      );
+    return {
+      kind: "sound-evidence",
+      eventCount: evidence.plan!.events.length,
+      dialogueCount: evidence.tts.length,
+      clippingSamples: evidence.analysis!.clippingSamples,
+      eventAlignmentPassed: evidence.analysis!.eventAlignment.every(
+        (event) => event.passed === true,
+      ),
+    };
   }
   if (props.kind === "captions") {
     if (props.mediaType !== "text/vtt")
@@ -102,11 +151,37 @@ export const probeProductionMedia = (props: {
       throw new Error(
         `${props.kind} output declares "${props.mediaType}", but encoded video deliverables require video/mp4 bytes.`,
       );
+    if (props.kind === "guide-pass")
+      return probeParsedProductionVideoMp4(props.bytes, parsed);
     if (movie.videoTracks.length !== 1)
       throw new Error(
         `MP4 contains ${movie.videoTracks.length} video tracks; exactly one is required.`,
       );
-    return probeVideoTrack(props.bytes, parsed.file, movie.videoTracks[0]!);
+    if (movie.tracks.length !== 2)
+      throw new Error(
+        `feature MP4 contains ${movie.tracks.length} total tracks; exactly 2 are required.`,
+      );
+    if (movie.audioTracks.length !== 1)
+      throw new Error(
+        `Feature MP4 contains ${movie.audioTracks.length} audio tracks; exactly one is required.`,
+      );
+    const video = probeVideoTrack(
+      props.bytes,
+      parsed.file,
+      movie.videoTracks[0]!,
+    );
+    const audio = probeAudioTrack(
+      props.bytes,
+      parsed.file,
+      movie.audioTracks[0]!,
+      movie,
+    );
+    if (video.runtimeSeconds !== audio.runtimeSeconds)
+      throw new Error(
+        "Feature MP4 video and audio tracks do not have exactly equal runtimes.",
+      );
+    assertProductionAudioProfile(audio, "Feature MP4");
+    return video;
   }
   if (props.mediaType !== "audio/mp4")
     throw new Error(
@@ -120,7 +195,47 @@ export const probeProductionMedia = (props: {
     throw new Error(
       `MP4 contains ${movie.audioTracks.length} audio tracks; exactly one is required.`,
     );
-  const track = movie.audioTracks[0]!;
+  if (movie.tracks.length !== 1)
+    throw new Error(
+      `Audio-mix MP4 contains ${movie.tracks.length} total tracks; exactly one is required.`,
+    );
+  const audio = probeAudioTrack(
+    props.bytes,
+    parsed.file,
+    movie.audioTracks[0]!,
+    movie,
+  );
+  assertProductionAudioProfile(audio, "Audio-mix MP4");
+  return audio;
+};
+
+/** Parse one H.264-only intermediate production video. */
+export const probeProductionVideoMp4 = (
+  bytes: Uint8Array,
+): Extract<IAutoMovieProductionMediaProbe, { kind: "video" }> =>
+  probeParsedProductionVideoMp4(bytes, parseMp4(bytes));
+
+const probeParsedProductionVideoMp4 = (
+  bytes: Uint8Array,
+  parsed: { file: ReturnType<typeof createFile>; movie: Movie },
+): Extract<IAutoMovieProductionMediaProbe, { kind: "video" }> => {
+  if (parsed.movie.videoTracks.length !== 1)
+    throw new Error(
+      `Production video MP4 contains ${parsed.movie.videoTracks.length} video tracks; exactly one is required.`,
+    );
+  if (parsed.movie.tracks.length !== 1)
+    throw new Error(
+      `Production video MP4 contains ${parsed.movie.tracks.length} total tracks; exactly one is required.`,
+    );
+  return probeVideoTrack(bytes, parsed.file, parsed.movie.videoTracks[0]!);
+};
+
+const probeAudioTrack = (
+  bytes: Uint8Array,
+  file: ReturnType<typeof createFile>,
+  track: Track,
+  movie: Movie,
+): Extract<IAutoMovieProductionMediaProbe, { kind: "audio" }> => {
   const audio = track.audio;
   if (
     audio === undefined ||
@@ -131,15 +246,44 @@ export const probeProductionMedia = (props: {
     throw new Error(
       "MP4 audio track lacks codec, duration, or channel metadata.",
     );
-  verifySampleStorage(props.bytes, parsed.file, track);
+  const samples = verifySampleStorage(bytes, file, track);
+  const description = samples[0]!.description as {
+    boxes?: Array<{ type?: string; PreSkip?: number }>;
+  };
+  const primingSamples = /^(opus)(?:\.|$)/i.test(track.codec)
+    ? description.boxes?.find((box) => box.type === "dOps")?.PreSkip
+    : 0;
+  if (Number.isSafeInteger(primingSamples) === false || primingSamples! < 0)
+    throw new Error("Opus audio track lacks a finite dOps pre-skip.");
+  const presentationDuration =
+    track.movie_duration > 0 && movie.timescale > 0
+      ? track.movie_duration / movie.timescale
+      : track.duration / track.timescale;
   return {
     kind: "audio",
     container: "mp4",
     codec: track.codec,
-    runtimeSeconds: track.duration / track.timescale,
+    runtimeSeconds: presentationDuration,
     channels: audio.channel_count,
     sampleRate: audio.sample_rate,
+    sampleCount: samples.length,
+    primingSamples: primingSamples!,
   };
+};
+
+const assertProductionAudioProfile = (
+  audio: Extract<IAutoMovieProductionMediaProbe, { kind: "audio" }>,
+  label: string,
+): void => {
+  if (
+    audio.sampleCount <= 0 ||
+    audio.channels !== 2 ||
+    audio.sampleRate !== 48_000 ||
+    /^(opus|mp4a)(?:\.|$)/i.test(audio.codec) === false
+  )
+    throw new Error(
+      `${label} audio must contain resident 48 kHz stereo Opus or AAC packets, but parsed ${audio.sampleCount} samples of ${audio.codec}, ${audio.sampleRate} Hz, ${audio.channels} channels.`,
+    );
 };
 
 const parseWebVttCue = (line: string): { start: number; end: number } => {
@@ -214,7 +358,7 @@ const probeVideoTrack = (
   bytes: Uint8Array,
   file: ReturnType<typeof createFile>,
   track: Track,
-): IAutoMovieProductionMediaProbe => {
+): Extract<IAutoMovieProductionMediaProbe, { kind: "video" }> => {
   if (/^(avc1|avc3)(?:\.|$)/i.test(track.codec) === false)
     throw new Error(
       `MP4 video codec "${track.codec}" is not an H.264/AVC sample entry.`,
@@ -264,6 +408,7 @@ const verifySampleStorage = (
 ): ReturnType<ReturnType<typeof createFile>["getTrackSamplesInfo"]> => {
   const samples = file.getTrackSamplesInfo(track.id);
   if (
+    samples.length === 0 ||
     samples.length !== track.nb_samples ||
     samples.some(
       (sample) =>

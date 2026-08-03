@@ -125,8 +125,9 @@ export const resolveBeatEnd = (
  * forward-written end-state exists to prevent but nothing verified.
  *
  * Same shape as the end snapshot, so `gaitPhase`/`rootVelocity`/`footPlants`
- * are the resumable-state fields at the opening instant; the linter reads only
- * `transform`, `facing`, and `mount`.
+ * are the resumable-state fields at the opening instant. The direct shot
+ * compiler seeds all of them, together with transform, facing, pose, and mount,
+ * when a verified previous snapshot is supplied.
  */
 export const resolveBeatOpening = (
   props: IResolveBeatProps,

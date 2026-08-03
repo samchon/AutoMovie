@@ -50,6 +50,30 @@ const effectWorld = (
   ],
 });
 
+/** Frozen sampler used by compiled effect-stream v1 before multipart seeds. */
+const legacyEffectValue = (
+  seed: number,
+  index: number,
+  domain: number,
+): number => {
+  const mix = (value: number, salt: number): number => {
+    const integer = Math.trunc(value);
+    const low = integer >>> 0;
+    const high = Math.floor(integer / 4_294_967_296) >>> 0;
+    let mixed = (salt ^ low) >>> 0;
+    mixed = Math.imul(mixed ^ (mixed >>> 16), 0x7feb352d);
+    mixed = Math.imul(mixed ^ (mixed >>> 15) ^ high, 0x846ca68b);
+    return (mixed ^ (mixed >>> 16)) >>> 0;
+  };
+  let state = mix(seed, domain);
+  state = mix(index, state);
+  state = (state + 0x6d2b79f5) >>> 0;
+  let output = state;
+  output = Math.imul(output ^ (output >>> 15), output | 1);
+  output ^= output + Math.imul(output ^ (output >>> 7), output | 61);
+  return ((output ^ (output >>> 14)) >>> 0) / 4_294_967_296;
+};
+
 /**
  * Compiled effect sampling and the instance viewer must replay the same
  * absolute fixed-step particle state without frame-history dependence.
@@ -58,7 +82,8 @@ const effectWorld = (
  *
  * 1. Two times inside one fixed step produce byte-equivalent samples, while a
  *    changed zone seed changes the compiled digest and all supported effect
- *    kinds retain their identity.
+ *    kinds retain their identity; the frozen v1 stream still determines the
+ *    first particle exactly.
  * 2. Distance LOD reduces the far sample, particle lifetimes stay bounded, a
  *    one-particle budget caps output, and times outside the cue are inactive.
  * 3. Fractional duration emits no invented regular particle, and a burst expires
@@ -164,6 +189,24 @@ export const test_viewer_effect = (): void => {
         cues,
       })[0]?.kind,
   );
+  const firstParticle = repeated.particles[0]!;
+  const firstLifetime =
+    effect!.recipe.particle.lifetime.min *
+      (1 - legacyEffectValue(effect!.seed, 0, 0x6c696665)) +
+    effect!.recipe.particle.lifetime.max *
+      legacyEffectValue(effect!.seed, 0, 0x6c696665);
+  const firstAngle =
+    legacyEffectValue(effect!.seed, 0, 0x74757262) * Math.PI * 2;
+  const firstSpeed =
+    effect!.recipe.motion.turbulence *
+    legacyEffectValue(effect!.seed, 0, 0x73706565);
+  const firstAge = repeated.time - effect!.start;
+  const expectedFirstX =
+    effect!.bounds.min.x *
+      (1 - legacyEffectValue(effect!.seed, 0, 0x706f7358)) +
+    effect!.bounds.max.x * legacyEffectValue(effect!.seed, 0, 0x706f7358) +
+    (effect!.recipe.motion.wind.x + Math.cos(firstAngle) * firstSpeed) *
+      firstAge;
   TestValidator.predicate(
     "compiled effects preserve exact seeds, kinds and fixed-step replay",
     JSON.stringify(repeated) === JSON.stringify(sameStep) &&
@@ -182,6 +225,8 @@ export const test_viewer_effect = (): void => {
       defaultClock.event === undefined &&
       effect!.digest !== differentSeed.digest &&
       kinds.join(",") === "fog,smoke,dust" &&
+      firstParticle.ageRatio === firstAge / firstLifetime &&
+      firstParticle.position.x === expectedFirstX &&
       materializeCompiledEffects({
         contract,
         world: effectWorld(),

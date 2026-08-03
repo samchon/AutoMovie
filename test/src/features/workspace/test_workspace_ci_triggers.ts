@@ -184,14 +184,20 @@ const SUITE_INPUTS = [
   "packages/engine/README.md",
   "packages/interface/README.md",
   "packages/mcp/README.md",
-  "packages/interface/src/harness/IAutoMoviePerformanceApplication.ts",
+  "packages/interface/src/authoring/IAutoMovieAuthoring.ts",
   "packages/interface/src/harness/IAutoMovieActionCall.ts",
   "packages/interface/src/skeleton/AutoMovieBodyRegion.ts",
   "packages/interface/src/validation/AutoMovieViolationKind.ts",
   "packages/interface/src/validation/IAutoMovieConstraintViolation.ts",
+  "packages/lint/native/state_presence.go",
+  "packages/lint/go.mod",
+  "packages/render/gltfTransformCore.cjs",
+  "packages/render/gltfTransformCore.d.cts",
   // test_workspace_pnpm_policy
   "package.json",
   "pnpm-workspace.yaml",
+  ".github/license-policy.json",
+  "internals/license-policy.mjs",
   // packaged capture and production verification
   "internals/e2e-tgz.mjs",
   // this scenario

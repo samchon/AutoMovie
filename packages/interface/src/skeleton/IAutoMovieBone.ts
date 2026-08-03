@@ -32,9 +32,10 @@ export interface IAutoMovieBone {
   rest: IAutoMovieTransform;
 
   /**
-   * Anatomical range of motion for this joint. `null` = unconstrained (no ROM
-   * check; e.g. a stylized rig or a slot where limits are unknown). Supplying a
-   * constraint is what enables the engine's Tier-2 ROM verifier.
+   * Per-rig anatomical range-of-motion override for this joint. `null` keeps
+   * the normalized humanoid default when that slot has one; a slot absent from
+   * the default table is unconstrained. Supply a constraint to replace the
+   * default for a stylized, non-human, or specially trained character.
    */
   constraint: IAutoMovieJointConstraint | null;
 }

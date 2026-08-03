@@ -1,11 +1,23 @@
-import { Quaternion } from "@automovie/engine";
+import {
+  Quaternion,
+  formationSlot,
+  mixSeed,
+  productionRuntimeModelId,
+  productionRuntimeSkeletonId,
+  seededValue,
+} from "@automovie/engine";
 import {
   AutoMovieContentDigest,
   IAutoMovieCompiledEffect,
   IAutoMovieCompiledFormation,
+  IAutoMovieCompiledInstanceSet,
   IAutoMovieCompiledShotSource,
   IAutoMovieFormationDesign,
   IAutoMovieFormationSlot,
+  IAutoMovieGeneratedCollisionProxy,
+  IAutoMovieGeneratedMeasurementProxy,
+  IAutoMovieInstanceSetDesign,
+  IAutoMovieInstanceSlot,
   IAutoMovieModel,
   IAutoMovieModelPart,
   IAutoMovieModelRecipe,
@@ -24,26 +36,55 @@ import {
 /** Slots per independently regenerated and culled runtime chunk. */
 export const AUTOMOVIE_FORMATION_CHUNK_SIZE = 1_024;
 
+/** Slots per independently regenerated general-instance chunk. */
+export const AUTOMOVIE_INSTANCE_CHUNK_SIZE = 1_024;
+
 /** Matrix bytes reserved by one slot in one LOD instance buffer. */
 export const AUTOMOVIE_FORMATION_MATRIX_BYTES =
   16 * Float32Array.BYTES_PER_ELEMENT;
 
-/** Compiler-owned runtime identity for one model recipe. */
-export const productionRuntimeModelId = (recipe: string): string =>
-  `automovie:model:${recipe}`;
+export { productionRuntimeModelId, productionRuntimeSkeletonId };
 
-/** Compiler-owned skeleton identity for one rigged model recipe. */
-export const productionRuntimeSkeletonId = (recipe: string): string =>
-  `automovie:skeleton:${recipe}`;
+/** Compiler-resolved external appearance and deterministic proxy semantics. */
+export interface IAutoMovieExternalModelRuntimeBinding {
+  /** Manifest-owned final render asset. */
+  asset: string;
+  /** Fixed normalization profile proved by ingest. */
+  profile: NonNullable<IAutoMovieModel["imported"]>["profile"];
+  /** Exact model LOD identities retained for host selection. */
+  lod: NonNullable<IAutoMovieModel["imported"]>["lod"];
+  /** Compiler-sealed model, sidecar and proxy digest closure. */
+  assets: NonNullable<IAutoMovieModel["imported"]>["assets"];
+  /** Ingest/VRM-owned normalized bone mapping. */
+  humanoidBones: NonNullable<IAutoMovieModel["imported"]>["humanoidBones"];
+  /** Exact collision primitive used by engine geometry and mass queries. */
+  collision: IAutoMovieGeneratedCollisionProxy;
+  /** Exact measurement envelope used by projection and distance queries. */
+  measurement: IAutoMovieGeneratedMeasurementProxy;
+}
 
-/** Materialize every bounded model recipe into deterministic primitive data. */
+/**
+ * Materialize every bounded model recipe into deterministic proxy data.
+ *
+ * External appearances keep only a recipe skeleton proved by ingest mapping,
+ * drop unproved semantic profiles, replace visible primitive parts with the
+ * registered collision proxy for engine semantics, and bind the final
+ * manifest-owned mesh plus its closed byte ledger.
+ */
 export const materializeProductionModels = (
   recipes: ReadonlyMap<string, IAutoMovieModelRecipe>,
+  externalModels: ReadonlyMap<
+    string,
+    IAutoMovieExternalModelRuntimeBinding
+  > = new Map(),
 ): ReadonlyMap<string, IAutoMovieModel> =>
   new Map(
     [...recipes]
       .sort(([left], [right]) => compareCodeUnits(left, right))
-      .map(([id, recipe]) => [id, materializeModel(recipe)] as const),
+      .map(
+        ([id, recipe]) =>
+          [id, materializeModel(recipe, externalModels.get(id))] as const,
+      ),
   );
 
 /** Materialize one compact formation into ordered world-space slots. */
@@ -58,37 +99,7 @@ export const materializeFormationSlots = (
 export const materializeFormationSlot = (
   formation: IAutoMovieFormationDesign,
   slot: number,
-): IAutoMovieFormationSlot => {
-  if (
-    Number.isSafeInteger(slot) === false ||
-    slot < 0 ||
-    slot >= formation.count
-  )
-    throw new RangeError(
-      `Formation "${formation.id}" slot ${slot} is outside 0..${formation.count - 1}.`,
-    );
-  const point = localFormationPoint(formation, slot);
-  const radians = (formation.facingDeg * Math.PI) / 180;
-  const cosine = Math.cos(radians);
-  const sine = Math.sin(radians);
-  const actor =
-    formation.heroOverrides.find((hero) => hero.slot === slot)?.actor ?? null;
-  return {
-    slot,
-    node:
-      actor ??
-      `formation:${formation.id}:slot:${String(slot).padStart(6, "0")}`,
-    actor,
-    modelRecipe: formation.modelRecipe,
-    position: {
-      x: formation.anchor.x + point.x * cosine + point.z * sine,
-      y: formation.anchor.y,
-      z: formation.anchor.z - point.x * sine + point.z * cosine,
-    },
-    facingDeg: formation.facingDeg,
-    motionPhase: seededValue(formation.seed, slot, 0x70686173),
-  };
-};
+): IAutoMovieFormationSlot => formationSlot(formation, slot);
 
 /** Compiler-owned formation inventory passed to deterministic shot source. */
 export const materializeFormationInventory = (
@@ -104,13 +115,17 @@ export const materializeFormationInventory = (
 export const materializeCompiledFormationInventory = (
   formations: ReadonlyMap<string, IAutoMovieFormationDesign>,
   recipes: ReadonlyMap<string, IAutoMovieModelRecipe>,
+  externalModels: ReadonlyMap<
+    string,
+    IAutoMovieExternalModelRuntimeBinding
+  > = new Map(),
 ): Readonly<Record<string, IAutoMovieCompiledFormation>> =>
   Object.fromEntries(
     [...formations]
       .sort(([left], [right]) => compareCodeUnits(left, right))
       .map(([id, formation]) => [
         id,
-        materializeCompiledFormation(formation, recipes),
+        materializeCompiledFormation(formation, recipes, externalModels),
       ]),
   );
 
@@ -118,6 +133,10 @@ export const materializeCompiledFormationInventory = (
 export const materializeCompiledFormation = (
   formation: IAutoMovieFormationDesign,
   recipes: ReadonlyMap<string, IAutoMovieModelRecipe> = new Map(),
+  externalModels: ReadonlyMap<
+    string,
+    IAutoMovieExternalModelRuntimeBinding
+  > = new Map(),
 ): IAutoMovieCompiledFormation => {
   const heroes = new Set(formation.heroOverrides.map((hero) => hero.slot));
   const chunks = Array.from(
@@ -170,8 +189,14 @@ export const materializeCompiledFormation = (
       0.01,
       ...lod.map(
         (item) =>
-          recipeProjectionRadius(recipes.get(item.recipe)) ??
-          recipeProjectionRadius(recipe) ??
+          recipeProjectionRadius(
+            recipes.get(item.recipe),
+            externalModels.get(item.recipe),
+          ) ??
+          recipeProjectionRadius(
+            recipe,
+            externalModels.get(formation.modelRecipe),
+          ) ??
           0.5,
       ),
     ),
@@ -198,6 +223,206 @@ export const materializeCompiledFormation = (
   };
 };
 
+/** Regenerate one exact non-formation instance in constant memory. */
+export const materializeInstanceSlot = (
+  instanceSet: IAutoMovieInstanceSetDesign,
+  world: Pick<IAutoMovieWorldDesign, "routes">,
+  slot: number,
+): IAutoMovieInstanceSlot => {
+  if (
+    Number.isSafeInteger(slot) === false ||
+    slot < 0 ||
+    slot >= instanceSet.count
+  )
+    throw new RangeError(
+      `Instance set "${instanceSet.id}" slot ${slot} is outside 0..${instanceSet.count - 1}.`,
+    );
+  const point = localInstancePoint(instanceSet, world, slot);
+  const radians = (instanceSet.facingDeg * Math.PI) / 180;
+  const cosine = Math.cos(radians);
+  const sine = Math.sin(radians);
+  const scaleSample = seededValue(instanceSet.seed, slot, 0x7363616c);
+  const scale = stableInterpolate(
+    instanceSet.variation.scale.min,
+    instanceSet.variation.scale.max,
+    scaleSample,
+  );
+  const paletteIndex = Math.min(
+    instanceSet.variation.palette.length - 1,
+    Math.floor(
+      seededValue(instanceSet.seed, slot, 0x70616c65) *
+        instanceSet.variation.palette.length,
+    ),
+  );
+  const position =
+    instanceSet.layout.kind === "along-route"
+      ? {
+          x: point.x,
+          y: instanceSet.anchor.y,
+          z: point.z,
+        }
+      : {
+          x: instanceSet.anchor.x + point.x * cosine + point.z * sine,
+          y: instanceSet.anchor.y,
+          z: instanceSet.anchor.z - point.x * sine + point.z * cosine,
+        };
+  const traits = Object.fromEntries(
+    instanceSet.variation.traits.map((trait, index) => [
+      trait.name,
+      stableInterpolate(
+        trait.min,
+        trait.max,
+        seededValue(instanceSet.seed, slot, index, 0x74726169),
+      ),
+    ]),
+  );
+  const palette = instanceSet.variation.palette[paletteIndex];
+  if (
+    [position.x, position.y, position.z, scale, ...Object.values(traits)].some(
+      (value) => Number.isFinite(value) === false,
+    ) ||
+    palette === undefined
+  )
+    throw new RangeError(
+      `Instance set "${instanceSet.id}" slot ${slot} derived non-finite variation or an empty palette.`,
+    );
+  return {
+    slot,
+    node: `instance:${instanceSet.id}:slot:${String(slot).padStart(6, "0")}`,
+    modelRecipe: instanceSet.modelRecipe,
+    position,
+    facingDeg: instanceSet.facingDeg,
+    scale,
+    palette,
+    traits,
+  };
+};
+
+/** Materialize one general instance set for direct inspection. */
+export const materializeInstanceSlots = (
+  instanceSet: IAutoMovieInstanceSetDesign,
+  world: Pick<IAutoMovieWorldDesign, "routes">,
+): IAutoMovieInstanceSlot[] =>
+  Array.from({ length: instanceSet.count }, (_, slot) =>
+    materializeInstanceSlot(instanceSet, world, slot),
+  );
+
+/** Compile every world instance set into bounded regenerable chunks. */
+export const materializeCompiledInstanceSetInventory = (
+  world: IAutoMovieWorldDesign,
+  recipes: ReadonlyMap<string, IAutoMovieModelRecipe>,
+  externalModels: ReadonlyMap<
+    string,
+    IAutoMovieExternalModelRuntimeBinding
+  > = new Map(),
+): Readonly<Record<string, IAutoMovieCompiledInstanceSet>> =>
+  Object.fromEntries(
+    [...(world.instanceSets ?? [])]
+      .sort((left, right) => compareCodeUnits(left.id, right.id))
+      .map((instanceSet) => [
+        instanceSet.id,
+        materializeCompiledInstanceSet(
+          instanceSet,
+          world,
+          recipes,
+          externalModels,
+        ),
+      ]),
+  );
+
+/** Compile one world instance set without expanding its full slot inventory. */
+export const materializeCompiledInstanceSet = (
+  instanceSet: IAutoMovieInstanceSetDesign,
+  world: IAutoMovieWorldDesign,
+  recipes: ReadonlyMap<string, IAutoMovieModelRecipe> = new Map(),
+  externalModels: ReadonlyMap<
+    string,
+    IAutoMovieExternalModelRuntimeBinding
+  > = new Map(),
+): IAutoMovieCompiledInstanceSet => {
+  const chunks = Array.from(
+    {
+      length: Math.ceil(instanceSet.count / AUTOMOVIE_INSTANCE_CHUNK_SIZE),
+    },
+    (_, index) => {
+      const start = index * AUTOMOVIE_INSTANCE_CHUNK_SIZE;
+      const count = Math.min(
+        AUTOMOVIE_INSTANCE_CHUNK_SIZE,
+        instanceSet.count - start,
+      );
+      return {
+        index,
+        start,
+        count,
+        ...summarizeInstanceRange(instanceSet, world, start, count),
+      };
+    },
+  );
+  const summary = summarizeInstanceRange(
+    instanceSet,
+    world,
+    0,
+    instanceSet.count,
+  );
+  const recipe = recipes.get(instanceSet.modelRecipe);
+  const layout = instanceSet.layout;
+  const sourceLod = recipe?.lod ?? [];
+  const lod = (
+    sourceLod.length === 0
+      ? [
+          {
+            tier: "near" as const,
+            maxDistance: null,
+            recipe: instanceSet.modelRecipe,
+          },
+        ]
+      : sourceLod
+  ).map((item) => ({
+    ...item,
+    recipeDigest: lodRecipeDigest(recipes, item.recipe),
+    model: productionRuntimeModelId(item.recipe),
+  }));
+  const core = {
+    version: 1 as const,
+    id: instanceSet.id,
+    count: instanceSet.count,
+    modelRecipe: instanceSet.modelRecipe,
+    layout: structuredClone(layout),
+    route:
+      layout.kind === "along-route"
+        ? structuredClone(
+            world.routes.find((route) => route.id === layout.route) ?? null,
+          )
+        : null,
+    anchor: structuredClone(instanceSet.anchor),
+    facingDeg: instanceSet.facingDeg,
+    seed: instanceSet.seed,
+    variation: structuredClone(instanceSet.variation),
+    ...summary,
+    projectionRadius: Math.max(
+      0.01,
+      ...lod.map(
+        (item) =>
+          recipeProjectionRadius(
+            recipes.get(item.recipe),
+            externalModels.get(item.recipe),
+          ) ??
+          recipeProjectionRadius(
+            recipe,
+            externalModels.get(instanceSet.modelRecipe),
+          ) ??
+          0.5,
+      ),
+    ),
+    chunks,
+    lod,
+  };
+  return {
+    ...core,
+    digest: digestAutoMovieBytes(canonicalAutoMovieJsonBytes(core)),
+  };
+};
+
 /**
  * Add compiler-owned models, hero nodes and compact formations to choreography.
  *
@@ -208,6 +433,7 @@ export const materializeCompiledShot = (props: {
   contract: IAutoMovieShotContract;
   formations: ReadonlyMap<string, IAutoMovieFormationDesign>;
   formationRuntime?: Readonly<Record<string, IAutoMovieCompiledFormation>>;
+  instanceSetRuntime?: Readonly<Record<string, IAutoMovieCompiledInstanceSet>>;
   modelRecipes?: ReadonlyMap<string, IAutoMovieModelRecipe>;
   runtimeModels: ReadonlyMap<string, IAutoMovieModel>;
   world?: IAutoMovieWorldDesign;
@@ -269,6 +495,21 @@ export const materializeCompiledShot = (props: {
       nodes.set(node.id, node);
     }
   }
+  for (const instanceSet of Object.values(props.instanceSetRuntime ?? {})) {
+    const ordinaryPrefix = `instance:${instanceSet.id}:slot:`;
+    for (const node of source.scene.nodes) {
+      if (node.id.startsWith(ordinaryPrefix) === false) continue;
+      const suffix = node.id.slice(ordinaryPrefix.length);
+      const slot = Number(suffix);
+      if (
+        /^\d{6}$/.test(suffix) &&
+        Number.isSafeInteger(slot) &&
+        slot >= 0 &&
+        slot < instanceSet.count
+      )
+        collisions.push(node.id);
+    }
+  }
   const modelByRuntimeId = new Map(
     [...props.runtimeModels.values()].map((model) => [model.id, model]),
   );
@@ -277,6 +518,9 @@ export const materializeCompiledShot = (props: {
       ...source.scene.nodes.map((node) => node.model),
       ...formations.flatMap((formation) =>
         formation.lod.map((lod) => lod.model),
+      ),
+      ...Object.values(props.instanceSetRuntime ?? {}).flatMap((instanceSet) =>
+        instanceSet.lod.map((lod) => lod.model),
       ),
     ]),
   ]
@@ -292,6 +536,9 @@ export const materializeCompiledShot = (props: {
       effects,
       models,
       formations,
+      instanceSets: Object.values(props.instanceSetRuntime ?? {}).sort(
+        (left, right) => compareCodeUnits(left.id, right.id),
+      ),
     },
     collisions,
   };
@@ -353,52 +600,6 @@ const slotTransform = (slot: IAutoMovieFormationSlot): IAutoMovieTransform => ({
   scale: { x: 1, y: 1, z: 1 },
 });
 
-const localFormationPoint = (
-  formation: IAutoMovieFormationDesign,
-  slot: number,
-): { x: number; z: number } => {
-  const layout = formation.layout;
-  if (layout.kind === "line" || layout.kind === "column") {
-    const rank =
-      layout.kind === "line"
-        ? Math.floor(slot / layout.files)
-        : slot % layout.ranks;
-    const file =
-      layout.kind === "line"
-        ? slot % layout.files
-        : Math.floor(slot / layout.ranks);
-    return {
-      x: (file - (layout.files - 1) / 2) * layout.spacing.lateral,
-      z: rank * layout.spacing.depth,
-    };
-  }
-  if (layout.kind === "wedge") {
-    const row = Math.floor(Math.sqrt(slot));
-    const column = slot - row * row - row;
-    return {
-      x: column * layout.spacing.lateral,
-      z: row * layout.spacing.depth,
-    };
-  }
-  if (layout.kind === "arc") {
-    const ratio = formation.count === 1 ? 0.5 : slot / (formation.count - 1);
-    const degrees = (ratio - 0.5) * layout.arcDegrees;
-    const radians = (degrees * Math.PI) / 180;
-    return {
-      x: Math.sin(radians) * layout.radius,
-      z: Math.cos(radians) * layout.radius,
-    };
-  }
-  const radius =
-    Math.sqrt(seededValue(formation.seed, layout.seed, slot, 0)) *
-    layout.radius;
-  const angle = seededValue(formation.seed, layout.seed, slot, 1) * Math.PI * 2;
-  return {
-    x: Math.cos(angle) * radius,
-    z: Math.sin(angle) * radius,
-  };
-};
-
 const summarizeFormationRange = (
   formation: IAutoMovieFormationDesign,
   start: number,
@@ -437,41 +638,123 @@ const summarizeFormationRange = (
   };
 };
 
+const localInstancePoint = (
+  instanceSet: IAutoMovieInstanceSetDesign,
+  world: Pick<IAutoMovieWorldDesign, "routes">,
+  slot: number,
+): { x: number; z: number } => {
+  const layout = instanceSet.layout;
+  if (layout.kind === "grid") {
+    const row = Math.floor(slot / layout.columns);
+    const column = slot % layout.columns;
+    return {
+      x: (column - (layout.columns - 1) / 2) * layout.spacing.x,
+      z: row * layout.spacing.z,
+    };
+  }
+  if (layout.kind === "scatter") {
+    const radius =
+      Math.sqrt(seededValue(instanceSet.seed, slot, 0x72616469)) *
+      layout.radius;
+    const angle = seededValue(instanceSet.seed, slot, 0x616e676c) * Math.PI * 2;
+    return {
+      x: Math.cos(angle) * radius,
+      z: Math.sin(angle) * radius,
+    };
+  }
+  const route = world.routes.find((candidate) => candidate.id === layout.route);
+  if (route === undefined || route.waypoints.length < 2)
+    throw new Error(
+      `Instance set "${instanceSet.id}" references unavailable route "${layout.route}".`,
+    );
+  const segments = route.waypoints.slice(1).map((right, index) => {
+    const left = route.waypoints[index]!;
+    return {
+      left,
+      right,
+      length: Math.hypot(right.x - left.x, right.z - left.z),
+    };
+  });
+  const total = segments.reduce((sum, segment) => sum + segment.length, 0);
+  if (Number.isFinite(total) === false || total <= 0)
+    throw new RangeError(
+      `Instance set "${instanceSet.id}" route "${layout.route}" must have finite non-zero length.`,
+    );
+  let remaining = ((slot + 0.5) / instanceSet.count) * total;
+  const segment = (segments.find((candidate) => {
+    if (remaining <= candidate.length) return true;
+    remaining -= candidate.length;
+    return false;
+  }) ?? segments.at(-1))!;
+  const ratio =
+    segment.length === 0 ? 0 : Math.min(1, remaining / segment.length);
+  const tangent = {
+    x: segment.right.x - segment.left.x,
+    z: segment.right.z - segment.left.z,
+  };
+  const tangentLength = Math.hypot(tangent.x, tangent.z);
+  const jitter =
+    (seededValue(instanceSet.seed, slot, 0x6a697474) * 2 - 1) *
+    layout.lateralJitter;
+  return {
+    x:
+      segment.left.x +
+      tangent.x * ratio -
+      (tangentLength === 0 ? 0 : (tangent.z / tangentLength) * jitter),
+    z:
+      segment.left.z +
+      tangent.z * ratio +
+      (tangentLength === 0 ? 0 : (tangent.x / tangentLength) * jitter),
+  };
+};
+
+const summarizeInstanceRange = (
+  instanceSet: IAutoMovieInstanceSetDesign,
+  world: Pick<IAutoMovieWorldDesign, "routes">,
+  start: number,
+  count: number,
+): {
+  bounds: IAutoMovieCompiledInstanceSet["bounds"];
+  centroid: IAutoMovieCompiledInstanceSet["centroid"];
+} => {
+  const min = {
+    x: Number.POSITIVE_INFINITY,
+    y: Number.POSITIVE_INFINITY,
+    z: Number.POSITIVE_INFINITY,
+  };
+  const max = {
+    x: Number.NEGATIVE_INFINITY,
+    y: Number.NEGATIVE_INFINITY,
+    z: Number.NEGATIVE_INFINITY,
+  };
+  const centroid = { x: 0, y: 0, z: 0 };
+  for (let slot = start; slot < start + count; ++slot) {
+    const point = materializeInstanceSlot(instanceSet, world, slot).position;
+    min.x = Math.min(min.x, point.x);
+    min.y = Math.min(min.y, point.y);
+    min.z = Math.min(min.z, point.z);
+    max.x = Math.max(max.x, point.x);
+    max.y = Math.max(max.y, point.y);
+    max.z = Math.max(max.z, point.z);
+    const seen = slot - start + 1;
+    centroid.x = stableMeanStep(centroid.x, point.x, seen);
+    centroid.y = stableMeanStep(centroid.y, point.y, seen);
+    centroid.z = stableMeanStep(centroid.z, point.z, seen);
+  }
+  return { bounds: { min, max }, centroid };
+};
+
 const stableMeanStep = (mean: number, value: number, count: number): number =>
   mean * ((count - 1) / count) + value / count;
 
-const seededValue = (...values: number[]): number => {
-  let state = 0x9e3779b9;
-  for (const value of values) state = mixSeed(value, state);
-  state = (state + 0x6d2b79f5) >>> 0;
-  let output = state;
-  output = Math.imul(output ^ (output >>> 15), output | 1);
-  output ^= output + Math.imul(output ^ (output >>> 7), output | 61);
-  return ((output ^ (output >>> 14)) >>> 0) / 4_294_967_296;
-};
-
-/**
- * Fold one full safe-integer seed into a 32-bit PRNG state.
- *
- * Low and high words are mixed in sequence, with a caller-supplied salt, so
- * swapped seed roles and values separated by 2^32 no longer collapse by
- * construction under JavaScript bitwise XOR.
- */
-const mixSeed = (seed: number, salt: number): number => {
-  const integer = Math.trunc(seed);
-  const low = integer >>> 0;
-  const high = Math.floor(integer / 4_294_967_296) >>> 0;
-  let value = (salt ^ low) >>> 0;
-  value = Math.imul(value ^ (value >>> 16), 0x7feb352d);
-  value = Math.imul(value ^ (value >>> 15) ^ high, 0x846ca68b);
-  return (value ^ (value >>> 16)) >>> 0;
-};
+const stableInterpolate = (from: number, to: number, ratio: number): number =>
+  from * (1 - ratio) + to * ratio;
 
 /**
  * Content digest for one LOD tier's model-recipe reference.
  *
  * The design gate refuses an absent recipe and a non-finite parameter alike, so
- * neither reaches a compiled production through `setModelRecipe`. The
+ * neither reaches a compiled production through a tracked model recipe. The
  * materializer still answers for both the bounded way it answers a malformed
  * projection proxy: a reference that cannot be canonically encoded digests a
  * marker naming what the tier pointed at, instead of letting a canonical-JSON
@@ -497,7 +780,22 @@ const lodRecipeDigest = (
 
 const recipeProjectionRadius = (
   recipe: IAutoMovieModelRecipe | undefined,
+  external: IAutoMovieExternalModelRuntimeBinding | undefined,
 ): number | null => {
+  if (external !== undefined)
+    return external.measurement.recipe === "box-v1"
+      ? Math.hypot(
+          external.measurement.parameters.width,
+          external.measurement.parameters.height,
+          external.measurement.parameters.depth,
+        ) / 2
+      : Math.hypot(
+          Math.max(
+            external.measurement.parameters.shoulderWidth,
+            external.measurement.parameters.hipWidth,
+          ),
+          external.measurement.parameters.height,
+        ) / 2;
   if (recipe === undefined) return null;
   const number = (key: string): number => {
     const value = recipe.parameters[key];
@@ -535,7 +833,53 @@ const recipeProjectionRadius = (
   }
 };
 
-const materializeModel = (recipe: IAutoMovieModelRecipe): IAutoMovieModel => {
+const materializeModel = (
+  recipe: IAutoMovieModelRecipe,
+  external: IAutoMovieExternalModelRuntimeBinding | undefined,
+): IAutoMovieModel => {
+  const generated = materializeGeneratedModel(recipe);
+  if (external === undefined) return generated;
+  const shape =
+    external.collision.recipe === "capsule-v1"
+      ? {
+          type: "capsule" as const,
+          radius: external.collision.parameters.radius,
+          height: external.collision.parameters.height,
+        }
+      : {
+          type: "box" as const,
+          width: external.collision.parameters.width,
+          height: external.collision.parameters.height,
+          depth: external.collision.parameters.depth,
+        };
+  return {
+    ...generated,
+    name: `imported recipe ${recipe.id}`,
+    origin: "imported",
+    asset: external.asset,
+    profiles: [],
+    imported: {
+      profile: external.profile,
+      lod: structuredClone(external.lod),
+      assets: structuredClone(external.assets),
+      humanoidBones: structuredClone(external.humanoidBones),
+    },
+    parts: [
+      {
+        id: "registered-collision-proxy",
+        name: "registered collision proxy",
+        geometry: { type: "primitive", shape },
+        material: generated.materials[0]?.id ?? null,
+        attachedBone: null,
+        transform: null,
+      },
+    ],
+  };
+};
+
+const materializeGeneratedModel = (
+  recipe: IAutoMovieModelRecipe,
+): IAutoMovieModel => {
   const material = materialOf(recipe);
   const base = {
     id: productionRuntimeModelId(recipe.id),
@@ -545,6 +889,7 @@ const materializeModel = (recipe: IAutoMovieModelRecipe): IAutoMovieModel => {
     affordances: null,
     materials: [material],
     asset: null,
+    profiles: structuredClone(recipe.profiles ?? []),
   };
   if (recipe.archetype === "stickman") {
     const height = numberParameter(recipe, "height");

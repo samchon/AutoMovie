@@ -3,7 +3,7 @@
 Scaffold an [automovie](https://github.com/samchon/automovie) project.
 
 ```bash
-npx automovie start my-film
+npx create-automovie my-film
 npx automovie migrate legacy-film --dry-run
 npx automovie migrate legacy-film
 ```
@@ -11,8 +11,8 @@ npx automovie migrate legacy-film
 Lays down a starter with both ways to drive the engine:
 
 - ordinary TypeScript source for treatment, shot, motion, effects, and tests;
-- an **MCP** server config (`automovie.mcp.jsonc`) for deterministic compile,
-  geometry queries, actual-frame evidence, and review gates; and
+- a Claude-compatible **MCP** server config (`.mcp.json`) for actual-frame
+  evidence and review gates; and
 - a local viewer and Playwright capture path that render compiler-owned output.
 
 The coding agent owns `src`, `docs`, `test`, and `public`. AutoMovie owns bounded
@@ -21,31 +21,59 @@ review ledger. The starter intentionally keeps long-form authoring in files
 instead of asking the model to serialize dense motion graphs through tool
 calls.
 
+Treatment and screenplay prose live under `docs/<production>/`. Their machine
+index lives at `.automovie/design/screenplay/index.json` before the first open
+and migrates into the selected production namespace. `npm run lint` checks exact
+beat coverage, SCN headings and bodies, the permanent soft-lock ledger,
+catalog/continuity references, and realized scene coverage without replacing
+the prose with JSON.
+
 ## Starter workflow
 
 ```bash
-pnpm install
-pnpm capture:install
-pnpm capture:doctor
-pnpm compile
-pnpm test
-pnpm preview -- --shot opening --time 2 --pass beauty
-pnpm review:status
+npm install
+npm run capture:install
+npm run capture:doctor
+npm run build
+npm test
+npm run lint:source
+npm run preview -- --shot opening --time 2 --pass beauty
+npm run review:status
 # Complete the current evidence-bound MCP review, then:
-pnpm lint
+npm run lint
+npm run verify
+npm run render -- all --tier proxy
+npm run viewer
 ```
 
-`pnpm compile` is the only command allowed to materialize `generated` output.
-`pnpm lint` is stricter: it reruns compilation without writing and fails until
-every current design, source, shot, and film review is complete. `preview`
-captures the project-owned viewer and records a frame tied to target-local
-generated/viewer inputs and the renderer identity; review cannot complete
-against an arbitrary or stale screenshot.
+The viewer listens at `http://127.0.0.1:5173`. The initial review-bound
+commands may stop at their named gate until the starter evidence is reviewed.
+
+`npm run lint:source` type-checks source and runs the registered lint
+contributors without changing project state. `npm run compile` is the only
+command allowed to materialize `generated` output. `npm run lint` runs source
+lint first and is stricter: it reruns production compilation without writing and
+fails until every current design, source, shot, and film review is complete.
+`preview` captures the project-owned viewer and records a frame tied to
+target-local generated/viewer inputs and the renderer identity; review cannot
+complete against an arbitrary or stale screenshot.
+
+`npm run verify` is the read-only final gate. It reopens compiler-owned bytes,
+review state, render receipts, and delivery media and refuses damaged output or
+forged ownership claims. Claude Code receives a project hook that blocks direct,
+Bash, MCP, and symlink-aliased writes to generated, render, capture, and
+production state while leaving authored design and review records writable.
 
 The default capture runtime is the Chromium build pinned to the starter's
 Playwright package. `capture:install` downloads it explicitly into
 Playwright's project-local browser path and writes an ignored receipt containing
 the package version, browser revision, executable path, and executable digest.
+Each package/browser generation owns one immutable no-overwrite receipt slot.
+The current metadata key is read through one ancestry-bound descriptor snapshot;
+when that exact slot is absent, the old fixed receipt remains the untouched
+migration fallback. Receipt descriptors enforce their byte ceiling before every
+hash, and any failed final-slot creation remains visible for explicit manual
+adjudication instead of risking pathname cleanup of a successor.
 `capture:doctor` launches that exact executable, requires WebGL, captures a
 canvas, and decodes the PNG. Proxy and offline mirror settings use Playwright's
 standard `HTTPS_PROXY`, `PLAYWRIGHT_DOWNLOAD_HOST`, and
@@ -77,17 +105,26 @@ graphics, declared render-source, and package-owned encoder identity preflight.
 They can launch Chromium and mark every stored chunk stale when that structured
 runtime identity changes.
 
-Chunk workers publish complete UUID claims before they become visible inside a
-slot-specific lock namespace. They yield to every other live claim and remove
-only their own exact path. A killed worker leaves either a recoverable claim or
-a non-authoritative candidate that the next run quarantines. Receipt reuse
-rejects linked state ancestors and files, and final encoding consumes the exact
-PNG bytes authenticated by that physical-path read.
+Render plans use an append-only predecessor chain with one immutable no-overwrite successor slot per generation. A stale planner cannot replace a winner, legacy `plan.json` bytes remain an immutable root, and each render session keeps its captured plan for scheduling, receipt verification, status, and finalization instead of reopening a later pathname generation.
+
+Descriptor-bound render final slots are never automatically removed after creation begins. A write, readback, target, parent, or root validation failure leaves visible evidence for the consumer's strict gate and explicit GC or manual adjudication instead of risking deletion of a relinked successor.
+
+Frame PNGs and encoded chunk media use the same direct final-slot protocol at the root of one UUID temporary tree bound to the render-attempt authority's exact state-root generation, then to its temporary-root and tree generations. Flattening the private chunk tree removes a nested frame-parent handoff; each descriptor-bound `O_EXCL` file snapshot is carried into one completed-tree inventory, and publication accepts only that exact captured tree. Failures remain visible for exact abandoned recovery instead of temp-file rename or cleanup.
+
+Dialogue synthesis caches each content key as one immutable directory, publishes both file slots through descriptor-bound `O_EXCL` with `audio.f32` before `receipt.json`, and accepts a cache hit only from one captured and revalidated two-file generation. Legacy sibling `.f32` and `.json` entries are ignored and regenerated without replacement.
+
+Proxy finalization publishes content-addressed materialized directories without replacing existing paths: each payload reserves and writes its final pathname directly through descriptor-bound `O_EXCL`, the root receipt appears last, and every manifest path remains an ordinary render-root-relative file that external consumers can open directly.
+
+Chunk workers reserve and write complete UUID claims directly at their final slot-specific lock path through descriptor-bound `O_EXCL`. Each worker carries that exact snapshot through owner adjudication and release, yields to every other live claim, and removes only its own exact path. A killed current worker leaves a recoverable final claim; only legacy jobs created by older scaffolds can leave a non-authoritative `.candidate`, which the next run isolates under private preserved evidence and exposes through an immutable public quarantine marker. Receipt reuse rejects linked state ancestors and files, and final encoding consumes the exact PNG bytes authenticated by that physical-path read.
+
+Render GC parses each valid quarantine marker relative to its proxy or final ownership tier through its captured descriptor, binds the referenced private evidence by kind, identity, and content fingerprint, reports their combined bytes, and removes the evidence before its exact marker. Current jobs share one retained tier-local evidence parent and one retained exact-removal staging parent instead of creating and rmdir-cleaning per-operation directories; legacy per-operation evidence parents are removed only when their pre-captured identity remains strictly empty, and pathname successors are preserved. Damaged markers remain independently reclaimable while ambiguous physical duplicate evidence references across tiers remain preserved for manual adjudication.
 
 ## Usage
 
 ```
+npx create-automovie <directory> [--force]
 npx automovie start <directory> [--force]
+npx automovie verify
 npx automovie migrate <directory> [--dry-run | --rollback]
 ```
 
@@ -117,5 +154,56 @@ output can be asserted in a test or written by another consumer:
 import { renderScaffold, writeFiles } from "@automovie/cli";
 
 const files = renderScaffold({ name: "my-film" }); // { "package.json": "...", ... }
-writeFiles("./my-film", files); // → written absolute paths
+writeFiles("./my-film", files);
 ```
+
+Scaffold materialization captures one ordinary physical target directory and every descendant parent generation. Newly created directories accept only an identity-fenced empty generation, and new files reserve their final path through descriptor-bound `O_EXCL`; `force` overwrites only the exact captured ordinary single-link file descriptor, while linked roots, linked parents or files, hard-linked files, non-empty directory successors, normalized target collisions, and concurrent pathname successors fail closed without cleanup, including after descriptor close.
+
+Ordinary Node scripts can also load the current tracked design and the last
+compiler-owned snapshot without starting an MCP server or client:
+
+```ts
+import {
+  loadAutoMovieProjectState,
+  requireCurrentAutoMovieProjectState,
+} from "@automovie/cli";
+import {
+  Vector3,
+  formationSlot,
+  reachPose,
+  sampleFormationMotion,
+  transformFormationPoint,
+} from "@automovie/engine";
+
+const loaded = loadAutoMovieProjectState({ root: process.cwd() });
+const state = requireCurrentAutoMovieProjectState(loaded);
+const shot = state.generated.shots.get("opening")!;
+const formation = state.generated.design.formations.get("army")!;
+const runtime = shot.formations.find((item) => item.id === formation.id)!;
+const base = formationSlot(formation, 31).position;
+const atTwoSeconds = transformFormationPoint(
+  base,
+  runtime.anchor,
+  sampleFormationMotion(shot.formationMotions, formation.id, 2),
+  runtime.facingDeg,
+);
+const landmark = state.generated.design.world.landmarks[0]!.position;
+const distance = Vector3.length(Vector3.subtract(atTwoSeconds, landmark));
+const actor = shot.scene.nodes.find((item) => item.id === "sentinel")!;
+const model = shot.models.find((item) => item.id === actor.model)!;
+const reach =
+  model.skeleton === null
+    ? null
+    : reachPose(model.skeleton, "right", { x: 0.5, y: 1.2, z: 0 });
+```
+
+`freshness` always carries the loaded compile fingerprint, the fingerprint
+recomputed from current source, the current project revision, diagnostics, and
+reader integrity problems. Use `requireCurrentAutoMovieProjectState` before
+measuring; it refuses both missing and stale output rather than letting a script
+quietly answer from an old compile.
+
+This API is an external I/O boundary. Never import or call it inside a shot or
+film `build` function: the compiler executes those functions in a deterministic
+no-I/O sandbox. Use it only from measurement scripts, tests, and offline
+diagnostics, then pass the loaded values to pure `@automovie/engine` functions.

@@ -69,7 +69,6 @@ const runPipeline = (): string => {
 
   const cut = cutSequence(
     {
-      type: "write",
       sequence: { id: "seq-duel", name: "duel at dawn" },
       fps: 24,
       entries: [

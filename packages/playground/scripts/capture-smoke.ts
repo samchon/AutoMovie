@@ -7,10 +7,52 @@ import { chromium } from "playwright-core";
 import { PNG } from "pngjs";
 
 import { DEFAULT_CHROME_EXECUTABLE } from "./chromeExecutable";
+import { preserveCleanupFailure } from "./preserveCleanupFailure";
 
 const DEFAULT_BASE = process.env.BASE ?? "http://127.0.0.1:5173";
 const WIDTH = 640;
 const HEIGHT = 360;
+const DEV_SERVER_OUTPUT_MAX_CHARS = 1024 * 1024;
+const DEV_SERVER_POLL_INTERVAL_MS = 500;
+const DEV_SERVER_PROBE_TIMEOUT_MS = 2_000;
+const DEV_SERVER_READY_TIMEOUT_MS = 30_000;
+const DEV_SERVER_READY_MARKER = "automovie-stickman-capture-v1";
+
+interface DevServerExit {
+  code: number | null;
+  signal: NodeJS.Signals | null;
+}
+
+const appendDevServerOutput = (current: string, chunk: string): string =>
+  `${current}${chunk}`.slice(-DEV_SERVER_OUTPUT_MAX_CHARS);
+
+const devServerFailure = (props: {
+  error: Error | null;
+  exit: DevServerExit | null;
+  stderr: string;
+  stdout: string;
+}): string | null => {
+  const evidence = `stdout=${JSON.stringify(props.stdout)}; stderr=${JSON.stringify(props.stderr)}`;
+  if (props.error !== null)
+    return `dev server failed to spawn; error=${(props.error as NodeJS.ErrnoException).code ?? "unknown"}; message=${JSON.stringify(props.error.message)}; ${evidence}`;
+  if (props.exit !== null)
+    return `dev server exited before readiness; status=${props.exit.code ?? "none"}; signal=${props.exit.signal ?? "none"}; ${evidence}`;
+  return null;
+};
+
+const requireCapturedFrame = (
+  runs: ReadonlyArray<ReadonlyMap<string, Uint8Array>>,
+  runIndex: number,
+  name: string,
+): Uint8Array => {
+  const run = runs[runIndex];
+  const frame = run?.get(name);
+  if (frame === undefined)
+    throw new Error(
+      `capture smoke run ${runIndex + 1} is missing ${JSON.stringify(name)}; captured=${JSON.stringify([...(run?.keys() ?? [])])}`,
+    );
+  return frame;
+};
 
 /**
  * The one REAL (non-faked) headless-capture smoke (#1170). Everything the unit
@@ -43,12 +85,14 @@ export const main = async (
   const route = `${base.replace(/\/+$/, "")}/stickman.html?char=human&clip=walk&az=80&cap=1&w=${WIDTH}&h=${HEIGHT}`;
 
   const server = await ensureDevServer(base);
+  let serverFailure: { error: unknown } | undefined;
   try {
     const runs: Array<Map<string, Uint8Array>> = [];
     const browser = await chromium.launch({
       executablePath: chrome,
       headless: true,
     });
+    let browserFailure: { error: unknown } | undefined;
     try {
       for (let run = 0; run < 2; ++run) {
         const page = await browser.newPage({
@@ -64,12 +108,30 @@ export const main = async (
             frames.set(path.basename(file), bytes);
           },
         });
-        await session.captureFrame(0, 0, "smoke");
-        await session.close();
-        runs.push(frames);
+        let sessionFailure: { error: unknown } | undefined;
+        try {
+          await session.captureFrame(0, 0, "smoke");
+          runs.push(frames);
+        } catch (error) {
+          sessionFailure = { error };
+          throw error;
+        } finally {
+          await preserveCleanupFailure(
+            sessionFailure,
+            "capture smoke session",
+            () => session.close(),
+          );
+        }
       }
+    } catch (error) {
+      browserFailure = { error };
+      throw error;
     } finally {
-      await browser.close();
+      await preserveCleanupFailure(
+        browserFailure,
+        "capture smoke browser",
+        () => browser.close(),
+      );
     }
 
     const checks: Record<string, boolean> = {};
@@ -80,12 +142,16 @@ export const main = async (
     ];
     for (const name of names)
       checks[`deterministic ${name}`] = equalBytes(
-        runs[0]!.get(name)!,
-        runs[1]!.get(name)!,
+        requireCapturedFrame(runs, 0, name),
+        requireCapturedFrame(runs, 1, name),
       );
 
-    const mask = histogram(runs[0]!.get("frame_00000.mask.png")!);
-    const pose = histogram(runs[0]!.get("frame_00000.pose.png")!);
+    const mask = histogram(
+      requireCapturedFrame(runs, 0, "frame_00000.mask.png"),
+    );
+    const pose = histogram(
+      requireCapturedFrame(runs, 0, "frame_00000.pose.png"),
+    );
     const total = WIDTH * HEIGHT;
     const subject = maskColor(0);
     const subjectKey = rgbKey(
@@ -93,33 +159,59 @@ export const main = async (
       Math.round(subject.g * 255),
       Math.round(subject.b * 255),
     );
+    const maskSubjectPixels = mask.get(subjectKey) ?? 0;
+    const maskBlackPixels = mask.get(rgbKey(0, 0, 0)) ?? 0;
+    const poseWhitePixels = pose.get(rgbKey(255, 255, 255)) ?? 0;
+    const poseMaskPalettePixels = pose.get(subjectKey) ?? 0;
+    const observations = {
+      maskBlackFraction: maskBlackPixels / total,
+      maskBlackPixels,
+      maskSubjectFraction: maskSubjectPixels / total,
+      maskSubjectPixels,
+      poseMaskPalettePixels,
+      poseWhiteFraction: poseWhitePixels / total,
+      poseWhitePixels,
+    };
     checks["mask subject color covers >= 0.3% of the frame"] =
-      (mask.get(subjectKey) ?? 0) >= total * 0.003;
+      observations.maskSubjectFraction >= 0.003;
     checks["mask background is dominant black"] =
-      (mask.get(rgbKey(0, 0, 0)) ?? 0) >= total * 0.25;
-    const white = pose.get(rgbKey(255, 255, 255)) ?? 0;
+      observations.maskBlackFraction >= 0.25;
     checks["pose skeleton draws white lines (0.02%..20%)"] =
-      white >= total * 0.0002 && white <= total * 0.2;
-    checks["pose carries no mask palette"] = (pose.get(subjectKey) ?? 0) === 0;
+      observations.poseWhiteFraction >= 0.0002 &&
+      observations.poseWhiteFraction <= 0.2;
+    checks["pose carries no mask palette"] =
+      observations.poseMaskPalettePixels === 0;
     checks["beauty differs from mask (passes actually switch)"] = !equalBytes(
-      runs[0]!.get("frame_00000.png")!,
-      runs[0]!.get("frame_00000.mask.png")!,
+      requireCapturedFrame(runs, 0, "frame_00000.png"),
+      requireCapturedFrame(runs, 0, "frame_00000.mask.png"),
     );
 
     const failed = Object.entries(checks).filter(([, ok]) => !ok);
     console.log(
       JSON.stringify(
-        { route, server: server.spawned ? "spawned" : "reused", checks },
+        {
+          route,
+          server: server.spawned ? "spawned" : "reused",
+          checks,
+          observations,
+        },
         null,
         2,
       ),
     );
     if (failed.length > 0)
       throw new Error(
-        `capture smoke failed: ${failed.map(([name]) => name).join("; ")}`,
+        `capture smoke failed: ${failed.map(([name]) => name).join("; ")}; observations=${JSON.stringify(observations)}`,
       );
+  } catch (error) {
+    serverFailure = { error };
+    throw error;
   } finally {
-    server.close();
+    await preserveCleanupFailure(
+      serverFailure,
+      "capture smoke dev server",
+      () => server.close(),
+    );
   }
 };
 
@@ -127,7 +219,8 @@ export const main = async (
 const ensureDevServer = async (
   base: string,
 ): Promise<{ spawned: boolean; close: () => void }> => {
-  if (await answers(base)) return { spawned: false, close: () => {} };
+  if (await answers(base, DEV_SERVER_PROBE_TIMEOUT_MS))
+    return { spawned: false, close: () => {} };
   const port = new URL(base).port || "5173";
   const playground = path.resolve(__dirname, "..");
   // vite's `exports` map hides bin/vite.js from require.resolve; the
@@ -139,24 +232,85 @@ const ensureDevServer = async (
   const child = spawn(
     process.execPath,
     [vite, "--host", "127.0.0.1", "--port", port, "--strictPort"],
-    { cwd: playground, stdio: "ignore" },
+    { cwd: playground, stdio: ["ignore", "pipe", "pipe"] },
   );
-  const deadline = Date.now() + 30_000;
-  while (Date.now() < deadline) {
-    if (await answers(base))
-      return { spawned: true, close: () => child.kill() };
-    await new Promise((resolve) => {
-      setTimeout(resolve, 500);
+  let error: Error | null = null;
+  let exit: DevServerExit | null = null;
+  let stderr = "";
+  let stdout = "";
+  child.stdout.setEncoding("utf8");
+  child.stderr.setEncoding("utf8");
+  child.stdout.on("data", (chunk: string) => {
+    stdout = appendDevServerOutput(stdout, chunk);
+  });
+  child.stderr.on("data", (chunk: string) => {
+    stderr = appendDevServerOutput(stderr, chunk);
+  });
+  child.once("error", (cause) => {
+    error = cause;
+  });
+  child.once("exit", (code, signal) => {
+    exit = { code, signal };
+  });
+  const closed = new Promise<undefined>((resolve) => {
+    child.once("close", (code, signal) => {
+      exit = { code, signal };
+      resolve(undefined);
     });
+  });
+  const currentExit = (): DevServerExit | null =>
+    exit ??
+    (child.exitCode !== null || child.signalCode !== null
+      ? { code: child.exitCode, signal: child.signalCode }
+      : null);
+  const failureAfterClose = async (): Promise<string | null> => {
+    if (error === null && currentExit() === null) return null;
+    await closed;
+    return devServerFailure({
+      error,
+      exit: currentExit(),
+      stderr,
+      stdout,
+    });
+  };
+  const deadline = Date.now() + DEV_SERVER_READY_TIMEOUT_MS;
+  while (true) {
+    const remaining = deadline - Date.now();
+    if (remaining <= 0) break;
+    const answered = await answers(
+      base,
+      Math.min(DEV_SERVER_PROBE_TIMEOUT_MS, remaining),
+    );
+    const failure = await failureAfterClose();
+    if (failure !== null) {
+      child.kill();
+      throw new Error(failure);
+    }
+    if (answered) return { spawned: true, close: () => child.kill() };
+    const delay = Math.min(DEV_SERVER_POLL_INTERVAL_MS, deadline - Date.now());
+    if (delay > 0)
+      await new Promise((resolve) => {
+        setTimeout(resolve, delay);
+      });
+  }
+  const failure = await failureAfterClose();
+  if (failure !== null) {
+    child.kill();
+    throw new Error(failure);
   }
   child.kill();
-  throw new Error(`dev server did not answer at ${base} within 30s`);
+  throw new Error(
+    `dev server remained alive but did not answer at ${base} within 30s; stdout=${JSON.stringify(stdout)}; stderr=${JSON.stringify(stderr)}`,
+  );
 };
 
-const answers = async (base: string): Promise<boolean> => {
+const answers = async (base: string, timeoutMs: number): Promise<boolean> => {
   try {
-    const response = await fetch(`${base.replace(/\/+$/, "")}/stickman.html`);
-    return response.ok;
+    const response = await fetch(`${base.replace(/\/+$/, "")}/stickman.html`, {
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+    if (!response.ok) return false;
+    return (await response.text()).includes(DEV_SERVER_READY_MARKER);
   } catch {
     return false;
   }

@@ -8,15 +8,38 @@ import {
   launchCaptureBrowser,
 } from "./capture-browser";
 
+interface CaptureDoctorFailure {
+  error: unknown;
+}
+
+/** Release one doctor resource without replacing an earlier failure. */
+const preserveCleanupFailure = async (
+  failure: CaptureDoctorFailure | undefined,
+  resource: string,
+  cleanup: () => unknown,
+): Promise<void> => {
+  try {
+    await cleanup();
+  } catch (cleanupError) {
+    if (failure === undefined) throw cleanupError;
+    throw new AggregateError(
+      [failure.error, cleanupError],
+      `${resource} cleanup failed after the capture doctor failed.`,
+    );
+  }
+};
+
 const session = await launchCaptureBrowser(
   process.cwd(),
   config.capture.browser,
 );
+let browserFailure: CaptureDoctorFailure | undefined;
 try {
   const page = await session.browser.newPage({
     viewport: { width: 16, height: 16 },
     deviceScaleFactor: session.runtime.mode.deviceScaleFactor,
   });
+  let pageFailure: CaptureDoctorFailure | undefined;
   try {
     await page.setContent(
       '<canvas id="view" width="16" height="16"></canvas><script>const gl=document.querySelector("#view").getContext("webgl2")??document.querySelector("#view").getContext("webgl");if(gl){gl.clearColor(0.1,0.3,0.7,1);gl.clear(gl.COLOR_BUFFER_BIT)}</script>',
@@ -62,9 +85,19 @@ try {
         2,
       )}\n`,
     );
+  } catch (error) {
+    pageFailure = { error };
+    throw error;
   } finally {
-    await page.close();
+    await preserveCleanupFailure(pageFailure, "capture doctor page", () =>
+      page.close(),
+    );
   }
+} catch (error) {
+  browserFailure = { error };
+  throw error;
 } finally {
-  await session.browser.close();
+  await preserveCleanupFailure(browserFailure, "capture doctor browser", () =>
+    session.browser.close(),
+  );
 }

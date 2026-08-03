@@ -25,6 +25,7 @@ import {
   digestAutoMovieBytes,
   encodeAutoMoviePathSegment,
 } from "./contentIdentity";
+import { readAutoMovieProductionOwnedFile } from "./productionRenderJob";
 import {
   IAutoMovieProductionRootNamespaceLease,
   acquireProductionRootNamespace,
@@ -83,6 +84,29 @@ interface IAppliedImportState {
   fingerprint: AutoMovieContentDigest;
   incarnation: string;
 }
+
+interface ILegacyImportCleanupFailure {
+  error: unknown;
+}
+
+class LegacyImportCleanupError extends AggregateError {}
+
+/** Remove one temporary import directory without losing earlier failures. */
+const removeLegacyImportTemporary = (
+  temporary: string,
+  failure: ILegacyImportCleanupFailure | undefined,
+  resource: string,
+): void => {
+  try {
+    fs.rmSync(temporary, { force: true, recursive: true });
+  } catch (cleanupFailure) {
+    if (failure === undefined) throw cleanupFailure;
+    throw new LegacyImportCleanupError(
+      [failure.error, cleanupFailure],
+      `Legacy import cleanup failed after the operation failed: ${resource}.`,
+    );
+  }
+};
 
 /**
  * Non-destructive bridge from the resident v1 project into production v2.
@@ -145,7 +169,8 @@ export class AutoMovieLegacyImporter {
           `Production state root "${stateRoot}" is not a physical directory. Remove the collision before applying the legacy import.`,
         );
       const prior = readJson<IAutoMovieLegacyImportPlan>(
-        path.join(stateRoot, IMPORT_PLAN_PATH),
+        stateRoot,
+        IMPORT_PLAN_PATH,
       );
       if (prior !== null && verifyAppliedImport(stateRoot, root, prior)) {
         const snapshot = readLegacySnapshot(root, lockToken);
@@ -166,6 +191,7 @@ export class AutoMovieLegacyImporter {
     const files = appliedImportFiles(root, plan, state);
     assertProductionRootNamespaceLease(lease);
     const staging = fs.mkdtempSync(path.join(root, ".automovie-import-"));
+    let stagingFailure: ILegacyImportCleanupFailure | undefined;
     try {
       for (const directory of PRODUCTION_STATE_DIRECTORIES)
         fs.mkdirSync(path.join(staging, directory), { recursive: true });
@@ -177,6 +203,9 @@ export class AutoMovieLegacyImporter {
       assertProductionRootNamespaceLease(lease);
       fs.renameSync(staging, stateRoot);
       assertProductionRootNamespaceLease(lease);
+    } catch (error) {
+      stagingFailure = { error };
+      throw error;
     } finally {
       let leaseCurrent = true;
       try {
@@ -186,7 +215,11 @@ export class AutoMovieLegacyImporter {
       }
       // A replaced root must not receive cleanup intended for the lease root.
       if (leaseCurrent && fs.existsSync(staging))
-        fs.rmSync(staging, { force: true, recursive: true });
+        removeLegacyImportTemporary(
+          staging,
+          stagingFailure,
+          "import publication staging directory",
+        );
     }
     return { status: "applied", plan };
   }
@@ -227,7 +260,8 @@ export class AutoMovieLegacyImporter {
     try {
       assertProductionRootNamespaceLease(lease);
       const plan = readJson<IAutoMovieLegacyImportPlan>(
-        path.join(stateRoot, IMPORT_PLAN_PATH),
+        stateRoot,
+        IMPORT_PLAN_PATH,
       );
       const appliedState = readAppliedImportState(stateRoot, plan);
       if (
@@ -375,6 +409,7 @@ const createPlan = (
       legacy.slate.script?.logline.trim() ||
       "Legacy project import awaiting treatment reconstruction.",
     targetRuntimeSeconds,
+    visualDelivery: "deterministic",
     frameFormat: {
       width: 1280,
       height: 720,
@@ -651,12 +686,14 @@ const assertLegacyLock = (root: string, lockToken?: string): void => {
       );
     return;
   }
-  if (
-    status === null ||
-    status.isSymbolicLink() ||
-    status.isFile() === false ||
-    fs.readFileSync(lock, "utf8") !== lockToken
-  )
+  let matches = false;
+  if (status !== null && status.isSymbolicLink() === false && status.isFile())
+    try {
+      const bytes = readPhysicalFile(root, "revision.lock", true);
+      matches =
+        bytes !== null && Buffer.from(bytes).toString("utf8") === lockToken;
+    } catch {}
+  if (matches === false)
     throw new Error(
       `Legacy project commit lock "${lock}" changed during import apply. No production state was published.`,
     );
@@ -677,6 +714,7 @@ const withLegacyProject = <T>(
   const temporary = fs.mkdtempSync(
     path.join(os.tmpdir(), "automovie-legacy-import-"),
   );
+  let failure: ILegacyImportCleanupFailure | undefined;
   try {
     for (const [relative, bytes] of snapshot.files)
       if (bytes !== null) {
@@ -685,8 +723,11 @@ const withLegacyProject = <T>(
         fs.writeFileSync(file, bytes);
       }
     return task(AutoMovieProject.open(temporary));
+  } catch (error) {
+    failure = { error };
+    throw error;
   } finally {
-    fs.rmSync(temporary, { force: true, recursive: true });
+    removeLegacyImportTemporary(temporary, failure, "legacy planning snapshot");
   }
 };
 
@@ -715,7 +756,7 @@ const collectDirectory = (
       directories?.push(child);
       collectDirectory(root, child, files, directories);
     } else if (entry.isFile())
-      files.set(child, fs.readFileSync(path.join(root, ...child.split("/"))));
+      files.set(child, readPhysicalFile(root, child, true)!);
     else
       throw new Error(
         `Legacy inventory path "${child}" is not a regular file or directory.`,
@@ -729,6 +770,7 @@ const readPhysicalFile = (
   required: boolean,
 ): Uint8Array | null => {
   let current = root;
+  let finalStatus: fs.Stats | null = null;
   for (const segment of relative.split("/")) {
     current = path.join(current, segment);
     const status = lstatOrNull(current);
@@ -741,10 +783,15 @@ const readPhysicalFile = (
       throw new Error(
         `Legacy project path "${current}" is a symlink or junction. Replace it with physical project content before import.`,
       );
+    finalStatus = status;
   }
-  if (fs.statSync(current).isFile() === false)
+  if (finalStatus?.isFile() !== true)
     throw new Error(`Legacy project path "${current}" is not a regular file.`);
-  return fs.readFileSync(current);
+  return readAutoMovieProductionOwnedFile({
+    root,
+    directory: root,
+    relative,
+  });
 };
 
 const validateLegacyManifest = (
@@ -1043,6 +1090,7 @@ const restoreAppliedImport = (
   lockToken: string,
 ): void => {
   const staging = fs.mkdtempSync(path.join(root, ".automovie-restore-"));
+  let failure: ILegacyImportCleanupFailure | undefined;
   try {
     for (const directory of PRODUCTION_STATE_DIRECTORIES)
       fs.mkdirSync(path.join(staging, directory), { recursive: true });
@@ -1056,9 +1104,16 @@ const restoreAppliedImport = (
       Buffer.from(lockToken, "utf8"),
     );
     fs.renameSync(staging, stateRoot);
+  } catch (error) {
+    failure = { error };
+    throw error;
   } finally {
     if (fs.existsSync(staging))
-      fs.rmSync(staging, { force: true, recursive: true });
+      removeLegacyImportTemporary(
+        staging,
+        failure,
+        "rollback restoration staging directory",
+      );
   }
 };
 
@@ -1068,7 +1123,7 @@ const readAppliedImportState = (
 ): IAppliedImportState | null => {
   try {
     if (validatePlan(planValue) === false) return null;
-    const value = readJson<unknown>(path.join(stateRoot, IMPORT_STATE_PATH));
+    const value = readJson<unknown>(stateRoot, IMPORT_STATE_PATH);
     const validation = typia.validateEquals<IAppliedImportState>(value);
     if (
       validation.success === false ||
@@ -1118,12 +1173,20 @@ const parseJson = (bytes: Uint8Array, file: string): unknown => {
 
 class InvalidLegacyImportJsonError extends Error {}
 
-const readJson = <T>(file: string): T | null => {
+const readJson = <T>(root: string, relative: string): T | null => {
+  const file = path.join(root, ...relative.split("/"));
   const status = lstatOrNull(file);
   if (status === null) return null;
   if (status.isSymbolicLink() || status.isFile() === false)
     throw new Error(`Import state path "${file}" is not a physical file.`);
-  return parseJson(fs.readFileSync(file), file) as T;
+  return parseJson(
+    readAutoMovieProductionOwnedFile({
+      root,
+      directory: root,
+      relative,
+    }),
+    file,
+  ) as T;
 };
 
 const serializeJson = (value: unknown): Uint8Array =>
