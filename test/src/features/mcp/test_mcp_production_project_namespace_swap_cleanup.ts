@@ -313,7 +313,7 @@ export const test_mcp_production_project_namespace_swap_cleanup = (): void => {
             catchBodies: ["requestedSwapFailure={error};", "throwerror;"],
             catchVariables: ["error"],
             containerKind: "TryStatement",
-            containerStatements: 225,
+            containerStatements: 228,
             failureHolder:
               "letrequestedSwapFailure:IProductionProjectFixtureFailure|undefined;",
             finallyDigest:
@@ -324,7 +324,7 @@ export const test_mcp_production_project_namespace_swap_cleanup = (): void => {
                 "75e463d606f212ea62fce2094904da43b90a0897cda3e5a559005c6bafd9dfab",
               tokens: 101,
             },
-            index: 30,
+            index: 32,
             substantive: {
               digest:
                 "9fa29ebc3cdc07cd53996d9f98b566fdce370d21fa0b73a3448ab095de4b2ffa",
@@ -338,7 +338,7 @@ export const test_mcp_production_project_namespace_swap_cleanup = (): void => {
             catchBodies: ["createdAliasFailure={error};", "throwerror;"],
             catchVariables: ["error"],
             containerKind: "TryStatement",
-            containerStatements: 225,
+            containerStatements: 228,
             failureHolder:
               "letcreatedAliasFailure:IProductionProjectFixtureFailure|undefined;",
             finallyDigest:
@@ -349,7 +349,7 @@ export const test_mcp_production_project_namespace_swap_cleanup = (): void => {
                 "8d19c581125f46728959c74f49239e7da5bedc8335911e8a79d5fccac531de0f",
               tokens: 104,
             },
-            index: 66,
+            index: 69,
             substantive: {
               digest:
                 "e04d3404fb71b2b26d2f19496d1daa471fdceb6f009f91484954ccab9edaaa03",
@@ -388,7 +388,7 @@ export const test_mcp_production_project_namespace_swap_cleanup = (): void => {
             catchBodies: ["fenceAssertionFailure={error};", "throwerror;"],
             catchVariables: ["error"],
             containerKind: "TryStatement",
-            containerStatements: 225,
+            containerStatements: 228,
             failureHolder:
               "letfenceAssertionFailure:IProductionProjectFixtureFailure|undefined;",
             finallyDigest:
@@ -399,7 +399,7 @@ export const test_mcp_production_project_namespace_swap_cleanup = (): void => {
                 "6f4d0e37abddbecfc8d87e7024b75e4165acb56a322b78608ca139da48e68b0a",
               tokens: 125,
             },
-            index: 77,
+            index: 80,
             substantive: {
               digest:
                 "66b2b596973e5cdad4fc1467f790bd80fa705f4a987480edf5b3e3bed9e5831a",

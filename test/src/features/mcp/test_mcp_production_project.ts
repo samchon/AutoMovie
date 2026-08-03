@@ -3405,14 +3405,25 @@ export const test_mcp_production_project = (): void => {
       }
       Reflect.apply(nativeWriteForExistingRoot, fs, [file, ...args]);
     }) as typeof fs.writeFileSync;
+    let existingRootHookFailure: IProductionProjectFixtureFailure | undefined;
     try {
       TestValidator.predicate(
         "an existing writable project does not require writable parent access",
         AutoMovieProductionProject.open(fresh).root ===
           fs.realpathSync(fresh) && attemptedParentSiblingLock === false,
       );
+    } catch (error) {
+      existingRootHookFailure = { error };
+      throw error;
     } finally {
-      fs.writeFileSync = nativeWriteForExistingRoot;
+      preserveProductionProjectFixtureCleanup(existingRootHookFailure, [
+        {
+          resource: "existing-root write hook",
+          cleanup: () => {
+            fs.writeFileSync = nativeWriteForExistingRoot;
+          },
+        },
+      ]);
     }
     const nestedFresh = path.join(invalidRoot, "missing", "nested", "project");
     TestValidator.predicate(
@@ -3438,10 +3449,21 @@ export const test_mcp_production_project = (): void => {
       )
         aliasLockPaths.push(path.resolve(file.toString()));
     }) as typeof fs.writeFileSync;
+    let aliasOpenHookFailure: IProductionProjectFixtureFailure | undefined;
     try {
       AutoMovieProductionProject.open(aliasProject);
+    } catch (error) {
+      aliasOpenHookFailure = { error };
+      throw error;
     } finally {
-      fs.writeFileSync = nativeWriteForAlias;
+      preserveProductionProjectFixtureCleanup(aliasOpenHookFailure, [
+        {
+          resource: "alias-open write hook",
+          cleanup: () => {
+            fs.writeFileSync = nativeWriteForAlias;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "ancestor aliases create through the physical parent then hold the project-owned namespace",
@@ -3541,6 +3563,7 @@ export const test_mcp_production_project = (): void => {
         | fs.Stats
         | fs.BigIntStats;
     }) as typeof fs.lstatSync;
+    let missingBaseHookFailure: IProductionProjectFixtureFailure | undefined;
     try {
       TestValidator.predicate(
         "a recursively absent filesystem base is rejected without unbounded parent walking",
@@ -3552,8 +3575,18 @@ export const test_mcp_production_project = (): void => {
           "does not exist as a physical directory",
         ),
       );
+    } catch (error) {
+      missingBaseHookFailure = { error };
+      throw error;
     } finally {
-      mutableLstatFs.lstatSync = nativeLstatForMissingBase;
+      preserveProductionProjectFixtureCleanup(missingBaseHookFailure, [
+        {
+          resource: "missing-base lstat hook",
+          cleanup: () => {
+            mutableLstatFs.lstatSync = nativeLstatForMissingBase;
+          },
+        },
+      ]);
     }
     const collidingParent = path.join(invalidRoot, "colliding-parent");
     const collidingParentProject = path.join(collidingParent, "project");

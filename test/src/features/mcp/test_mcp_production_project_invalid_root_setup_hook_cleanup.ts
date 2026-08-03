@@ -40,7 +40,7 @@ const aggregateContainsExactly = (
   error.errors.length === expected.length &&
   expected.every((failure, index) => error.errors[index] === failure);
 
-const rootCoordinationHookCleanupContract = (text: string): unknown => {
+const invalidRootSetupHookCleanupContract = (text: string): unknown => {
   const source = ts.createSourceFile(
     "test_mcp_production_project.ts",
     text,
@@ -61,13 +61,9 @@ const rootCoordinationHookCleanupContract = (text: string): unknown => {
       : [],
   );
   const holderNames = [
-    "parentSwapFailure",
-    "replacementParentFailure",
-    "coordinationMkdirFailure",
-    "coordinationCollisionFailure",
-    "deniedRootLstatFailure",
-    "coordinationChmodFailure",
-    "partialCoordinateFailure",
+    "existingRootHookFailure",
+    "aliasOpenHookFailure",
+    "missingBaseHookFailure",
   ] as const;
   const lifecycles: Array<{
     catchBodies: string[];
@@ -80,6 +76,7 @@ const rootCoordinationHookCleanupContract = (text: string): unknown => {
     finallySubstantive: { digest: string; tokens: number };
     index: number;
     substantive: { digest: string; tokens: number };
+    tryBody: string;
     tryDigest: string;
     tryStatements: number;
   }> = [];
@@ -114,6 +111,7 @@ const rootCoordinationHookCleanupContract = (text: string): unknown => {
             ),
             index,
             substantive: leafTokenContract(node.tryBlock.statements, source),
+            tryBody: compact(node.tryBlock, source),
             tryDigest: digestText(node.tryBlock.getText(source)),
             tryStatements: node.tryBlock.statements.length,
           });
@@ -139,38 +137,40 @@ const rootCoordinationHookCleanupContract = (text: string): unknown => {
 const captureCleanup = (props: {
   cleanupFailure?: { error: unknown; present: true };
   primaryFailure?: { error: unknown; present: true };
-}): { caught: boolean; failure: unknown; order: string[] } => {
+}): { attempts: number; caught: boolean; failure: unknown } => {
+  let attempts = 0;
   let caught = false;
-  const order: string[] = [];
   let failure: unknown;
   try {
-    preserveProductionProjectFixtureCleanup(
-      props.primaryFailure === undefined
-        ? undefined
-        : { error: props.primaryFailure.error },
-      [
+    let primaryState: { error: unknown } | undefined;
+    try {
+      if (props.primaryFailure !== undefined) throw props.primaryFailure.error;
+    } catch (error) {
+      primaryState = { error };
+      throw error;
+    } finally {
+      preserveProductionProjectFixtureCleanup(primaryState, [
         {
-          resource: "root-coordination hook",
+          resource: "invalid-root setup hook",
           cleanup: (): void => {
-            order.push("hook");
+            ++attempts;
             if (props.cleanupFailure !== undefined)
               throw props.cleanupFailure.error;
           },
         },
-      ],
-    );
-    if (props.primaryFailure !== undefined) throw props.primaryFailure.error;
+      ]);
+    }
   } catch (error) {
     caught = true;
     failure = error;
   }
-  return { caught, failure, order };
+  return { attempts, caught, failure };
 };
 
-export const test_mcp_production_project_root_coordination_hook_cleanup =
+export const test_mcp_production_project_invalid_root_setup_hook_cleanup =
   (): void => {
-    const primaryFailure = { phase: "root-coordination assertion" };
-    const cleanupFailure = { phase: "root-coordination hook restoration" };
+    const primaryFailure = { phase: "invalid-root setup assertion" };
+    const cleanupFailure = { phase: "invalid-root setup hook restoration" };
     const success = captureCleanup({});
     const primaryOnly = captureCleanup({
       primaryFailure: { error: primaryFailure, present: true },
@@ -182,6 +182,9 @@ export const test_mcp_production_project_root_coordination_hook_cleanup =
       cleanupFailure: { error: cleanupFailure, present: true },
       primaryFailure: { error: primaryFailure, present: true },
     });
+    const undefinedPrimary = captureCleanup({
+      primaryFailure: { error: undefined, present: true },
+    });
     const undefinedStandalone = captureCleanup({
       cleanupFailure: { error: undefined, present: true },
     });
@@ -190,35 +193,38 @@ export const test_mcp_production_project_root_coordination_hook_cleanup =
       primaryFailure: { error: undefined, present: true },
     });
     TestValidator.predicate(
-      "root-coordination hooks preserve primary and restoration failures",
+      "invalid-root setup hook cleanup preserves failure identity and order",
       success.caught === false &&
         success.failure === undefined &&
-        success.order.join(",") === "hook" &&
+        success.attempts === 1 &&
         primaryOnly.caught &&
         primaryOnly.failure === primaryFailure &&
-        primaryOnly.order.join(",") === "hook" &&
+        primaryOnly.attempts === 1 &&
         standalone.caught &&
         standalone.failure === cleanupFailure &&
-        standalone.order.join(",") === "hook" &&
+        standalone.attempts === 1 &&
         combined.caught &&
         aggregateContainsExactly(combined.failure, [
           primaryFailure,
           cleanupFailure,
         ]) &&
-        combined.order.join(",") === "hook" &&
+        combined.attempts === 1 &&
+        undefinedPrimary.caught &&
+        undefinedPrimary.failure === undefined &&
+        undefinedPrimary.attempts === 1 &&
         undefinedStandalone.caught &&
         undefinedStandalone.failure === undefined &&
-        undefinedStandalone.order.join(",") === "hook" &&
+        undefinedStandalone.attempts === 1 &&
         undefinedCombined.caught &&
         aggregateContainsExactly(undefinedCombined.failure, [
           undefined,
           undefined,
         ]) &&
-        undefinedCombined.order.join(",") === "hook",
+        undefinedCombined.attempts === 1,
     );
     TestValidator.equals(
-      "production-project test owns seven root-coordination hook cleanup lifecycles",
-      rootCoordinationHookCleanupContract(
+      "production-project test owns three invalid-root setup hook lifecycles",
+      invalidRootSetupHookCleanupContract(
         fs.readFileSync(
           path.join(__dirname, "test_mcp_production_project.ts"),
           "utf8",
@@ -229,181 +235,83 @@ export const test_mcp_production_project_root_coordination_hook_cleanup =
           count: 1,
           lifecycles: [
             {
-              catchBodies: ["parentSwapFailure={error};", "throwerror;"],
+              catchBodies: ["existingRootHookFailure={error};", "throwerror;"],
               catchVariables: ["error"],
               containerKind: "TryStatement",
               containerStatements: 228,
               failureHolder:
-                "letparentSwapFailure:IProductionProjectFixtureFailure|undefined;",
+                "letexistingRootHookFailure:IProductionProjectFixtureFailure|undefined;",
               finallyDigest:
-                "8807eb573f652a063498f49a1f8c7c73382d2ff5a660dcbb93f3e02ed15d296f",
+                "21d7de9889dc61e51ec8fa8d17a4958bb9ce4446d7d79a47f58e320f591686d1",
               finallyStatements: 1,
               finallySubstantive: {
                 digest:
-                  "f0334f257cb1c1db8f34cabc1728970b1664920a8239851ca5b82a08e76f60b7",
+                  "df4544153f83b4ba20bb4e88c65e22e122bee23349b93dcdd612b72aa30a1b3b",
                 tokens: 29,
               },
-              index: 102,
+              index: 11,
               substantive: {
                 digest:
-                  "c479b72f1e900c5c2f3c1d10fea9bc6d5dd028cafbe35abc57d7fca99c3b86d7",
-                tokens: 18,
+                  "85ec1d7266b5f93b96573acb99fe3b4d09da84ae5343fd372a559807085880cf",
+                tokens: 28,
               },
+              tryBody:
+                '{TestValidator.predicate("anexistingwritableprojectdoesnotrequirewritableparentaccess",AutoMovieProductionProject.open(fresh).root===fs.realpathSync(fresh)&&attemptedParentSiblingLock===false,);}',
               tryDigest:
-                "e6e42736d73f96f130b029e5bbf3a8f525b8dc5e4ac606684272c87406fd82d5",
+                "8f13895af5005751845cf612e842c009d9cb8b70ca2e9e190ca94f62c2e2fa69",
               tryStatements: 1,
             },
             {
-              catchBodies: ["replacementParentFailure={error};", "throwerror;"],
-              catchVariables: ["error"],
-              containerKind: "ForOfStatement",
-              containerStatements: 11,
-              failureHolder:
-                "letreplacementParentFailure:|IProductionProjectFixtureFailure|undefined;",
-              finallyDigest:
-                "40c43c02ee2b16196ec74433670cecdebf232629ae61646fb1e172b65c085d23",
-              finallyStatements: 1,
-              finallySubstantive: {
-                digest:
-                  "d83ec2a74ba3dbe647f064589e875c9529ee1404e30097623e73236d1501854c",
-                tokens: 31,
-              },
-              index: 9,
-              substantive: {
-                digest:
-                  "50bbc6baa018b0b6d34f5e3860fca5cf53ae1b0d26122e1afda8897899398e58",
-                tokens: 18,
-              },
-              tryDigest:
-                "1cee9b66e20071f6699c2f5e12002e80159550d600e375ef938571e73c5cc6d0",
-              tryStatements: 1,
-            },
-            {
-              catchBodies: ["coordinationMkdirFailure={error};", "throwerror;"],
+              catchBodies: ["aliasOpenHookFailure={error};", "throwerror;"],
               catchVariables: ["error"],
               containerKind: "TryStatement",
               containerStatements: 228,
               failureHolder:
-                "letcoordinationMkdirFailure:IProductionProjectFixtureFailure|undefined;",
+                "letaliasOpenHookFailure:IProductionProjectFixtureFailure|undefined;",
               finallyDigest:
-                "4057211d59e45161b7f0bdcb882bc81856aff01badb325dd3c27a06ce0fb6b4f",
+                "a1405adc10f82b7aeb7ea561bfeb46f05813ab76522b86664bdac6856c13ae60",
               finallyStatements: 1,
               finallySubstantive: {
                 digest:
-                  "1eea9705598f3f70da68eb81e0cf487efb5828413d4a7af461d7519760b6f1f1",
+                  "1a8ef1453c00c47bab2cb8b323662149a3c435b4cc7da8ece011b0c47dbff7e1",
                 tokens: 29,
               },
-              index: 108,
+              index: 23,
               substantive: {
                 digest:
-                  "a6edb73b7c29d891b5e4de8472642d2721010433fda68278cbc4f6567f441cf9",
-                tokens: 24,
+                  "67b206c5685b95e5c988b5638e5de7bc3074d34acc6fa9a59618bd7f660752cd",
+                tokens: 7,
               },
+              tryBody: "{AutoMovieProductionProject.open(aliasProject);}",
               tryDigest:
-                "f23218ddd88c4a440c516164ac047fef2aff7a7be000b55642ef5025f0347ea2",
+                "22a6c3fee0f69beed0519be21659aec223dcc15ef17264dc19905f6e3f866ab4",
               tryStatements: 1,
             },
             {
-              catchBodies: [
-                "coordinationCollisionFailure={error};",
-                "throwerror;",
-              ],
-              catchVariables: ["error"],
-              containerKind: "ForOfStatement",
-              containerStatements: 3,
-              failureHolder:
-                "letcoordinationCollisionFailure:|IProductionProjectFixtureFailure|undefined;",
-              finallyDigest:
-                "7164febd0e8b85e9f685a0cb345b0bfcb3e7196e18b5ec6ec14ae6b35e43939d",
-              finallyStatements: 1,
-              finallySubstantive: {
-                digest:
-                  "55b2c79fc20abbd83b652afb50755f59a75e09b55335ca9e2cd240c5f915fe3a",
-                tokens: 31,
-              },
-              index: 2,
-              substantive: {
-                digest:
-                  "8a8a007b47a6eda32d00be9e15d2e174207af36b432b15a86699131d43cad55c",
-                tokens: 26,
-              },
-              tryDigest:
-                "d04d9065359e6c7e046072a86e66e1e2791340cfd8b9fcc4f6cd040ae93d66cc",
-              tryStatements: 1,
-            },
-            {
-              catchBodies: ["deniedRootLstatFailure={error};", "throwerror;"],
+              catchBodies: ["missingBaseHookFailure={error};", "throwerror;"],
               catchVariables: ["error"],
               containerKind: "TryStatement",
               containerStatements: 228,
               failureHolder:
-                "letdeniedRootLstatFailure:IProductionProjectFixtureFailure|undefined;",
+                "letmissingBaseHookFailure:IProductionProjectFixtureFailure|undefined;",
               finallyDigest:
-                "d4a85146403df83d536442473c0f9bd3aa96baf339db3d50fd1d8450a101a67b",
+                "dc41e7200c3363ff40fa666feb4b573370835b1409cf7c74ddddb422d99c234c",
               finallyStatements: 1,
               finallySubstantive: {
                 digest:
-                  "c71e51a4ad9263cf673465c6f30ee131ca483f3678ab4bd53f905a4a9e5eaade",
-                tokens: 31,
-              },
-              index: 116,
-              substantive: {
-                digest:
-                  "53ee05c8c2383b8370f0fa6de53970ccc9ee3161286105a3e9b031afe1a50228",
-                tokens: 24,
-              },
-              tryDigest:
-                "debd32bdbdc0223c625548191686813f22a7541c4f25ba19abe20217cd32d9e7",
-              tryStatements: 1,
-            },
-            {
-              catchBodies: ["coordinationChmodFailure={error};", "throwerror;"],
-              catchVariables: ["error"],
-              containerKind: "TryStatement",
-              containerStatements: 228,
-              failureHolder:
-                "letcoordinationChmodFailure:IProductionProjectFixtureFailure|undefined;",
-              finallyDigest:
-                "b788bb0430806f22e40a23d224027659d67d1fe4b7d34ff3aefe6512a29522e4",
-              finallyStatements: 1,
-              finallySubstantive: {
-                digest:
-                  "32e15267074805754bdd085575ceb17929346f4feb535774d38955976bdb8c6a",
+                  "ea2b371046a842ed06a17d1959937f7376cf93a1dd9706e9a0657abef7325c88",
                 tokens: 29,
               },
-              index: 120,
+              index: 39,
               substantive: {
                 digest:
-                  "6c74696b06c39577bc4dbe62477338211104677c0fb4b00b13315940e000989a",
-                tokens: 24,
+                  "d0cf73c20c2a45f57ce231d5318923eeb5b55c2fa007d61a273d1fb67e8e079d",
+                tokens: 34,
               },
+              tryBody:
+                '{TestValidator.predicate("arecursivelyabsentfilesystembaseisrejectedwithoutunboundedparentwalking",throws(()=>AutoMovieProductionProject.open(path.join(filesystemRoot,"automovie-absent-base","project"),),"doesnotexistasaphysicaldirectory",),);}',
               tryDigest:
-                "f468176561b33243438655a0b82c6b35443b9a42770da74420d59ca8752e1d1e",
-              tryStatements: 1,
-            },
-            {
-              catchBodies: ["partialCoordinateFailure={error};", "throwerror;"],
-              catchVariables: ["error"],
-              containerKind: "TryStatement",
-              containerStatements: 228,
-              failureHolder:
-                "letpartialCoordinateFailure:IProductionProjectFixtureFailure|undefined;",
-              finallyDigest:
-                "48c0003e2ba14c7f5d96d54c8d8605ea19864605fc640adbb118b15e94952adc",
-              finallyStatements: 1,
-              finallySubstantive: {
-                digest:
-                  "69dd4e7ba9f5c5c031d8e52a9f293719f71fc2c72381ccb09fb7793ea8cd4b01",
-                tokens: 29,
-              },
-              index: 125,
-              substantive: {
-                digest:
-                  "d020ca4a7c34d38ab8275576953988e180eb24310644171a5a945ae67f00ac1f",
-                tokens: 49,
-              },
-              tryDigest:
-                "fde000a27de637c6d4f25e1e9ced8dbf4433cb2b58c4ea4cd1e34eb3e7ab455d",
+                "fda83200d39019795c8ec6e9eaed48cf8b13c68dd486753bbd1d7686cee3e424",
               tryStatements: 1,
             },
           ],

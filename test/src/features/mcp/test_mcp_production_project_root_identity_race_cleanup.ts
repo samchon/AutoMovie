@@ -300,7 +300,7 @@ export const test_mcp_production_project_root_identity_race_cleanup =
               catchBodies: ["missingIdentityFailure={error};", "throwerror;"],
               catchVariables: ["error"],
               containerKind: "TryStatement",
-              containerStatements: 225,
+              containerStatements: 228,
               failureHolder:
                 "letmissingIdentityFailure:IProductionProjectFixtureFailure|undefined;",
               finallyDigest:
@@ -311,7 +311,7 @@ export const test_mcp_production_project_root_identity_race_cleanup =
                   "474d0df1caf3abe4640ea5182e91ba5a23ab12d6ceda76f7fce78d7968e4c5e0",
                 tokens: 29,
               },
-              index: 135,
+              index: 138,
               substantive: {
                 digest:
                   "5ee4cdbd2a9fdc2cdf7b4997b112c70bdf984bac60d142e8452f0e0513ffbfee",
@@ -325,7 +325,7 @@ export const test_mcp_production_project_root_identity_race_cleanup =
               catchBodies: ["preLeaseFailure={error};", "throwerror;"],
               catchVariables: ["error"],
               containerKind: "TryStatement",
-              containerStatements: 225,
+              containerStatements: 228,
               failureHolder:
                 "letpreLeaseFailure:IProductionProjectFixtureFailure|undefined;",
               finallyDigest:
@@ -336,7 +336,7 @@ export const test_mcp_production_project_root_identity_race_cleanup =
                   "b253516d5cacb655e5c534ec97170f65f6abd60be33faa72d0f9ac64b48f28fc",
                 tokens: 135,
               },
-              index: 160,
+              index: 163,
               substantive: {
                 digest:
                   "b37c4ffc20e6d1ed19fa9b1b66f197adc761ff6d68a62fff16171cf6cc315944",

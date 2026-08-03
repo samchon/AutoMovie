@@ -249,12 +249,12 @@ export const test_mcp_production_project_invalid_root_cleanup = (): void => {
             index: 22,
             substantive: {
               digest:
-                "d065f03444481ba3a3372e59bd83d3c1ff29e3f8f6e21c3cc963089398f67aa3",
-              tokens: 8098,
+                "10de1f4517815563791d922683694fab88cafd73caf6b3c928a2364f2109112d",
+              tokens: 8233,
             },
             tryDigest:
-              "e0a40c0f19022fed1169b013aaba86e57c95f2e29833fb8d6f326aa2ae383637",
-            tryStatements: 225,
+              "17dc9d0246da321fd8671288dfd811de9a6e51cac53d75471bd7445203e3a9b0",
+            tryStatements: 228,
           },
         ],
         statementCounts: [23],

@@ -222,7 +222,7 @@ export const test_mcp_production_project_atomic_delete_cleanup = (): void => {
             catchBodies: ["atomicDeleteFailure={error};", "throwerror;"],
             catchVariables: ["error"],
             containerKind: "TryStatement",
-            containerStatements: 225,
+            containerStatements: 228,
             failureHolder:
               "letatomicDeleteFailure:IProductionProjectFixtureFailure|undefined;",
             finallyDigest:
@@ -233,7 +233,7 @@ export const test_mcp_production_project_atomic_delete_cleanup = (): void => {
                 "530bdcf0db3dcf53ebd560e729046516e0128c6b7d04a736835512b779b242e0",
               tokens: 34,
             },
-            index: 173,
+            index: 176,
             substantive: {
               digest:
                 "9568a897450833653b48fea2eb1f405e252908b5eb82fd34e823901e53a5faf8",

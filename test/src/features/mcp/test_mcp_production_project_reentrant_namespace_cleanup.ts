@@ -340,7 +340,7 @@ export const test_mcp_production_project_reentrant_namespace_cleanup =
               ],
               catchVariables: ["error"],
               containerKind: "TryStatement",
-              containerStatements: 225,
+              containerStatements: 228,
               failureHolder:
                 "letreentrantAcquisitionFailure:|IProductionProjectFixtureFailure|undefined;",
               finallyDigest:
@@ -351,7 +351,7 @@ export const test_mcp_production_project_reentrant_namespace_cleanup =
                   "af696ad64a4e425fab3cceb08aee699f6bbf8dc89b2c52cb78e635f2a427be79",
                 tokens: 142,
               },
-              index: 85,
+              index: 88,
               substantive: {
                 digest:
                   "5d087ab79e251353a1af7358b3a63909c44b2486864bbce57e7445784eb3b832",
