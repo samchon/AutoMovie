@@ -3873,14 +3873,22 @@ export const test_cli_scaffold = async (): Promise<void> => {
       positiveResponse,
       () => undefined,
     );
-    TestValidator.predicate(
+    TestValidator.equals(
       "the generated viewer serves the exact resident artifact and headers",
-      middleware !== undefined &&
-        positiveResponse.statusCode === 200 &&
-        positiveResponse.body === '{"resident":true}\n' &&
-        positiveHeaders.get("Content-Type") ===
-          "application/json; charset=utf-8" &&
-        positiveHeaders.get("Cache-Control") === "no-store",
+      {
+        body: positiveResponse.body,
+        cacheControl: positiveHeaders.get("Cache-Control") ?? null,
+        contentType: positiveHeaders.get("Content-Type") ?? null,
+        installed: middleware !== undefined,
+        statusCode: positiveResponse.statusCode,
+      },
+      {
+        body: JSON.stringify({ resident: true }) + String.fromCharCode(10),
+        cacheControl: "no-store",
+        contentType: "application/json; charset=utf-8",
+        installed: true,
+        statusCode: 200,
+      },
     );
     const mutableFs = createRequire(__filename)("node:fs") as {
       closeSync: typeof fs.closeSync;
