@@ -5041,7 +5041,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
     // directory by rename moves its `ctime`, which the target version covers, so
     // the collector must refuse to act on evidence it can no longer prove.
     let gcAbaJudged = false;
-    const gcAbaProductionRefused = throws(
+    const gcAbaProductionRefused = throwsWith(
       () =>
         proxyPublisherModule.captureProxyPublicationGcTarget({
           renderRoot: proxyPublishRoot,
