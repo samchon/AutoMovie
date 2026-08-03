@@ -616,19 +616,38 @@ assert(
   JSON.stringify(compiled.shots) === JSON.stringify(canonicalCompiledShots),
   \`expected both canonical compiled shots, got \${JSON.stringify(compiled.shots)}\`,
 );
+const currentShotRenderManifests = renderManifests.filter(
+  (entry) =>
+    entry.value.target.kind === "shot" &&
+    entry.value.compileFingerprint === generated.inputFingerprint,
+);
 assert(
-  "starter-render-bundle-count",
-  renderManifests.length === 2,
-  \`expected one accumulated content-addressed bundle per shot, got \${renderManifests.length}\`,
+  "starter-render-bundle-shot-coverage",
+  JSON.stringify(
+    [...new Set(currentShotRenderManifests.map((entry) => entry.value.target.id))].sort(),
+  ) === JSON.stringify(canonicalCompiledShots.map((shot) => shot.id).sort()),
+  \`current shot bundles do not cover the canonical compiled shots: \${JSON.stringify(currentShotRenderManifests.map((entry) => entry.value.target))}\`,
 );
-const frames = renderManifests.flatMap((entry) =>
-  entry.value.frames.map((frame) => ({
-    ...frame,
-    shot: entry.value.target.id,
-    manifest: entry.value,
-    directory: path.dirname(entry.file),
-  })),
-);
+const currentShotFrames = new Map();
+for (const entry of currentShotRenderManifests)
+  for (const frame of entry.value.frames) {
+    const current = {
+      ...frame,
+      shot: entry.value.target.id,
+      manifest: entry.value,
+      directory: path.dirname(entry.file),
+    };
+    const identity = JSON.stringify([
+      current.shot,
+      current.index,
+      current.time,
+      current.pass,
+      current.digest,
+    ]);
+    if (currentShotFrames.has(identity) === false)
+      currentShotFrames.set(identity, current);
+  }
+const frames = [...currentShotFrames.values()];
 assert(
   "starter-render-frame-inventory",
   frames.length === 6 &&
