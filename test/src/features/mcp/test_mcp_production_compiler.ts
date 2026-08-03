@@ -36,6 +36,28 @@ import {
   productionPng,
 } from "./productionMediaFixtures";
 
+interface IProductionCompilerFixtureFailure {
+  error: unknown;
+}
+
+class ProductionCompilerFixtureCleanupError extends AggregateError {}
+
+/** Remove one compiler fixture without replacing its primary failure. */
+export const preserveProductionCompilerFixtureCleanup = (
+  failure: IProductionCompilerFixtureFailure | undefined,
+  cleanup: () => unknown,
+): void => {
+  try {
+    cleanup();
+  } catch (cleanupFailure) {
+    if (failure === undefined) throw cleanupFailure;
+    throw new ProductionCompilerFixtureCleanupError(
+      [failure.error, cleanupFailure],
+      "Production-compiler fixture teardown failed after the test failed.",
+    );
+  }
+};
+
 const minimalExternalModelJson = (): string => {
   const vertexCount = 15;
   const positions = Buffer.alloc(
@@ -126,30 +148,31 @@ const diagnosticCodes = (
 
 /** Source compilation is sandboxed, recoverable and stable after reopen. */
 export const test_mcp_production_compiler = async (): Promise<void> => {
+  let productionCompilerFailure: IProductionCompilerFixtureFailure | undefined;
   const fixture = productionFixture();
-  const sourcePath = path.join(fixture.root, "src/shots/opening.ts");
-  const original = fs.readFileSync(sourcePath, "utf8");
-  const {
-    id: _fixtureShotId,
-    source: _fixtureShotSource,
-    ...fixtureRegistration
-  } = shotContract();
-  const mutateSourceOutput = (
-    mutation: string,
-    source: string = original,
-  ): string =>
-    source
-      .replace("  return {\n    actors:", "  const output = {\n    actors:")
-      .replace(
-        "\n  };\n};\n\n/** Opening source",
-        `\n  };\n${mutation}\n  return output;\n};\n\n/** Opening source`,
-      );
-  const injectBuildSignal = (...statements: string[]): string =>
-    original.replace(
-      "): IAutoMovieProductionShotProgram => {",
-      ["): IAutoMovieProductionShotProgram => {", ...statements].join("\n"),
-    );
   try {
+    const sourcePath = path.join(fixture.root, "src/shots/opening.ts");
+    const original = fs.readFileSync(sourcePath, "utf8");
+    const {
+      id: _fixtureShotId,
+      source: _fixtureShotSource,
+      ...fixtureRegistration
+    } = shotContract();
+    const mutateSourceOutput = (
+      mutation: string,
+      source: string = original,
+    ): string =>
+      source
+        .replace("  return {\n    actors:", "  const output = {\n    actors:")
+        .replace(
+          "\n  };\n};\n\n/** Opening source",
+          `\n  };\n${mutation}\n  return output;\n};\n\n/** Opening source`,
+        );
+    const injectBuildSignal = (...statements: string[]): string =>
+      original.replace(
+        "): IAutoMovieProductionShotProgram => {",
+        ["): IAutoMovieProductionShotProgram => {", ...statements].join("\n"),
+      );
     const project = AutoMovieProductionProject.open(fixture.root);
     const review = new AutoMovieProductionReviewService(project);
     const compiler = new AutoMovieProductionCompiler(
@@ -943,6 +966,9 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
       failedAssetCompilerContracts.length === 0,
     );
 
+    let unmanifestedFixtureFailure:
+      | IProductionCompilerFixtureFailure
+      | undefined;
     const unmanifestedFixture = productionFixture();
     try {
       const ownershipPath = path.join(
@@ -988,8 +1014,13 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
         unmanifested.success === false &&
           diagnosticCodes(unmanifested).has("film-audio-cue-invalid"),
       );
+    } catch (error) {
+      unmanifestedFixtureFailure = { error };
+      throw error;
     } finally {
-      unmanifestedFixture.dispose();
+      preserveProductionCompilerFixtureCleanup(unmanifestedFixtureFailure, () =>
+        unmanifestedFixture.dispose(),
+      );
     }
 
     let singleQueueCalls = 0;
@@ -3185,6 +3216,7 @@ export const film = {
     fs.writeFileSync(sourcePath, original);
     project.setWorldDesign(worldDesign());
 
+    let noDesignFailure: IProductionCompilerFixtureFailure | undefined;
     const noDesignRoot = fs.mkdtempSync(
       path.join(os.tmpdir(), "automovie-production-empty-"),
     );
@@ -3198,10 +3230,20 @@ export const film = {
           empty.diagnostics.filter((item) => item.code === "design-missing")
             .length === 3,
       );
+    } catch (error) {
+      noDesignFailure = { error };
+      throw error;
     } finally {
-      fs.rmSync(noDesignRoot, { force: true, recursive: true });
+      preserveProductionCompilerFixtureCleanup(noDesignFailure, () =>
+        fs.rmSync(noDesignRoot, { force: true, recursive: true }),
+      );
     }
+  } catch (error) {
+    productionCompilerFailure = { error };
+    throw error;
   } finally {
-    fixture.dispose();
+    preserveProductionCompilerFixtureCleanup(productionCompilerFailure, () =>
+      fixture.dispose(),
+    );
   }
 };
