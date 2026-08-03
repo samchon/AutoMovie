@@ -53,6 +53,7 @@ const legacyImportFixtureContract = (text: string): unknown => {
     containerStatements: number;
     finallyBodies: string[];
     index: number;
+    loopHeaders: string[];
     prefixes: string[];
     tryDigest: string;
     tryPrefixes: string[];
@@ -69,6 +70,9 @@ const legacyImportFixtureContract = (text: string): unknown => {
       ) {
         const statements = [...node.parent.statements];
         const index = statements.indexOf(node);
+        const loop = ts.isForOfStatement(node.parent.parent)
+          ? node.parent.parent
+          : undefined;
         lifecycles.push({
           catchBodies: node.catchClause.block.statements.map((statement) =>
             compact(statement, source),
@@ -82,6 +86,13 @@ const legacyImportFixtureContract = (text: string): unknown => {
             compact(statement, source),
           ),
           index,
+          loopHeaders:
+            loop === undefined
+              ? []
+              : [
+                  compact(loop.initializer, source),
+                  compact(loop.expression, source),
+                ],
           prefixes: statements
             .slice(Math.max(0, index - 3), index)
             .map((statement) => compact(statement, source)),
@@ -254,6 +265,7 @@ export const test_mcp_production_legacy_import_fixture_cleanup = (): void => {
               'preserveLegacyImportFixtureCleanup(linkedRootFailure,[{resource:"linked-rootlegacyfixture",cleanup:()=>linkedRoot.dispose(),},...(completedLinkedParent===undefined?[]:[{resource:"linked-rootoutsideroot",cleanup:()=>fs.rmSync(completedLinkedParent,{force:true,recursive:true,}),},]),]);',
             ],
             index: 62,
+            loopHeaders: [],
             prefixes: [
               "constlinkedRoot=createLegacy();",
               "letlinkedParent:string|undefined;",
@@ -274,6 +286,7 @@ export const test_mcp_production_legacy_import_fixture_cleanup = (): void => {
               'preserveLegacyImportFixtureCleanup(linkedRevisionFailure,[{resource:"linked-revisionlegacyfixture",cleanup:()=>linkedRevision.dispose(),},...(completedLinkedRevisionTarget===undefined?[]:[{resource:"linked-revisionoutsideroot",cleanup:()=>fs.rmSync(completedLinkedRevisionTarget,{force:true,recursive:true,}),},]),]);',
             ],
             index: 92,
+            loopHeaders: [],
             prefixes: [
               "constlinkedRevision=createLegacy();",
               "letlinkedRevisionTarget:string|undefined;",
@@ -294,6 +307,10 @@ export const test_mcp_production_legacy_import_fixture_cleanup = (): void => {
               'preserveLegacyImportFixtureCleanup(changingLockFailure,[{resource:"changing-locklegacyfixture",cleanup:()=>changingLock.dispose(),},...(completedOutsideLock===undefined?[]:[{resource:"changing-lockoutsideroot",cleanup:()=>fs.rmSync(completedOutsideLock,{force:true,recursive:true,}),},]),]);',
             ],
             index: 3,
+            loopHeaders: [
+              "constlockMutation",
+              '["missing","symlink","directory","foreign-token",]asconst',
+            ],
             prefixes: [
               "constchangingLock=createLegacy();",
               "letoutsideLock:string|undefined;",
@@ -314,6 +331,7 @@ export const test_mcp_production_legacy_import_fixture_cleanup = (): void => {
               'preserveLegacyImportFixtureCleanup(linkedAppliedStateFailure,[{resource:"linked-applied-statelegacyfixture",cleanup:()=>linkedAppliedState.dispose(),},...(completedLinkedAppliedStateTarget===undefined?[]:[{resource:"linked-applied-stateoutsideroot",cleanup:()=>fs.rmSync(completedLinkedAppliedStateTarget,{force:true,recursive:true,}),},]),]);',
             ],
             index: 99,
+            loopHeaders: [],
             prefixes: [
               "constlinkedAppliedState=createLegacy();",
               "letlinkedAppliedStateTarget:string|undefined;",
@@ -334,6 +352,7 @@ export const test_mcp_production_legacy_import_fixture_cleanup = (): void => {
               'preserveLegacyImportFixtureCleanup(unsafeFailure,[{resource:"unsafe-inventorylegacyfixture",cleanup:()=>unsafe.dispose(),},...(completedOutside===undefined?[]:[{resource:"unsafe-inventoryoutsideroot",cleanup:()=>fs.rmSync(completedOutside,{force:true,recursive:true,}),},]),]);',
             ],
             index: 109,
+            loopHeaders: [],
             prefixes: [
               "constunsafe=createLegacy();",
               "letoutside:string|undefined;",
