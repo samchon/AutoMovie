@@ -37,6 +37,51 @@ import {
 } from "./productionFixtures";
 import { productionH264Mp4 } from "./productionMediaFixtures";
 
+interface IProductionApplicationFailure {
+  error: unknown;
+}
+
+interface IProductionApplicationConnectionCleanup {
+  cleanup: () => Promise<unknown>;
+  resource: string;
+}
+
+class ProductionApplicationCleanupError extends AggregateError {}
+
+/** Close application resources without replacing an earlier failure. */
+export const preserveProductionApplicationCleanup = async (
+  failure: IProductionApplicationFailure | undefined,
+  connections: readonly IProductionApplicationConnectionCleanup[],
+  fixtureCleanup: () => unknown,
+): Promise<void> => {
+  const results = await Promise.allSettled(
+    connections.map((resource) => Promise.resolve().then(resource.cleanup)),
+  );
+  const cleanupFailures: Array<{ error: unknown; resource: string }> =
+    results.flatMap((result, index) =>
+      result.status === "fulfilled"
+        ? []
+        : [{ error: result.reason, resource: connections[index]!.resource }],
+    );
+  try {
+    fixtureCleanup();
+  } catch (error) {
+    cleanupFailures.push({ error, resource: "production fixture" });
+  }
+  if (cleanupFailures.length === 0) return;
+  if (failure === undefined && cleanupFailures.length === 1)
+    throw cleanupFailures[0]!.error;
+  throw new ProductionApplicationCleanupError(
+    [
+      ...(failure === undefined ? [] : [failure.error]),
+      ...cleanupFailures.map((entry) => entry.error),
+    ],
+    `Production-application cleanup failed${
+      failure === undefined ? "" : " after the test failed"
+    }: ${cleanupFailures.map((entry) => entry.resource).join(", ")}.`,
+  );
+};
+
 interface IFiveToolContract {
   getGuideDocument(
     props: IAutoMovieGetGuideDocument.IProps,
@@ -85,6 +130,8 @@ const directorySnapshot = (root: string): string[] => {
 
 /** The public MCP boundary is exactly knowledge, evidence, and judgment. */
 export const test_mcp_production_application = async (): Promise<void> => {
+  const connectionCleanups: IProductionApplicationConnectionCleanup[] = [];
+  let productionApplicationFailure: IProductionApplicationFailure | undefined;
   const fixture = productionFixture();
   try {
     const productionPath = path.join(
@@ -1069,61 +1116,72 @@ export const test_mcp_production_application = async (): Promise<void> => {
       productionId: "fixture-film",
       capture,
     });
+    connectionCleanups.push({
+      resource: "MCP server",
+      cleanup: () => server.close(),
+    });
     const client = new Client({
       name: "five-tool-schema-test",
       version: "0.0.0",
     });
+    connectionCleanups.unshift({
+      resource: "MCP client",
+      cleanup: () => client.close(),
+    });
     const [clientTransport, serverTransport] =
       InMemoryTransport.createLinkedPair();
-    try {
-      await Promise.all([
-        server.connect(serverTransport),
-        client.connect(clientTransport),
-      ]);
-      const { tools } = await client.listTools();
-      TestValidator.equals(
-        "the reflected MCP inventory is exactly five tools",
-        tools.map((tool) => tool.name),
-        [
-          "getGuideDocument",
-          "captureFrame",
-          "repaintShot",
-          "prepareReview",
-          "submitReview",
-        ],
-      );
-      TestValidator.predicate(
-        "every tool description fits MCP client limits",
-        tools.every(
-          (tool) =>
-            (tool.description?.length ?? 0) > 100 &&
-            (tool.description?.length ?? 0) <= 1_023,
-        ),
-      );
-      const submitReview = tools.find((tool) => tool.name === "submitReview")!;
-      TestValidator.equals(
-        "submitReview remains verdict-last after reflection",
-        Object.keys(
-          (
-            submitReview.inputSchema as {
-              properties: Record<string, unknown>;
-            }
-          ).properties,
-        ),
-        [
-          "target",
-          "preparedFingerprint",
-          "observations",
-          "checks",
-          "corrections",
-          "completionBasis",
-          "complete",
-        ],
-      );
-    } finally {
-      await Promise.allSettled([client.close(), server.close()]);
-    }
+    await Promise.all([
+      server.connect(serverTransport),
+      client.connect(clientTransport),
+    ]);
+    const { tools } = await client.listTools();
+    TestValidator.equals(
+      "the reflected MCP inventory is exactly five tools",
+      tools.map((tool) => tool.name),
+      [
+        "getGuideDocument",
+        "captureFrame",
+        "repaintShot",
+        "prepareReview",
+        "submitReview",
+      ],
+    );
+    TestValidator.predicate(
+      "every tool description fits MCP client limits",
+      tools.every(
+        (tool) =>
+          (tool.description?.length ?? 0) > 100 &&
+          (tool.description?.length ?? 0) <= 1_023,
+      ),
+    );
+    const submitReview = tools.find((tool) => tool.name === "submitReview")!;
+    TestValidator.equals(
+      "submitReview remains verdict-last after reflection",
+      Object.keys(
+        (
+          submitReview.inputSchema as {
+            properties: Record<string, unknown>;
+          }
+        ).properties,
+      ),
+      [
+        "target",
+        "preparedFingerprint",
+        "observations",
+        "checks",
+        "corrections",
+        "completionBasis",
+        "complete",
+      ],
+    );
+  } catch (error) {
+    productionApplicationFailure = { error };
+    throw error;
   } finally {
-    fixture.dispose();
+    await preserveProductionApplicationCleanup(
+      productionApplicationFailure,
+      connectionCleanups,
+      () => fixture.dispose(),
+    );
   }
 };
