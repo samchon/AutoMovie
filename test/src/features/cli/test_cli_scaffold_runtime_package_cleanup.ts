@@ -30,7 +30,7 @@ const leafTokenContract = (
   };
 };
 
-const verifiedProxyCleanupContract = (text: string): unknown => {
+const runtimePackageCleanupContract = (text: string): unknown => {
   const source = ts.createSourceFile(
     "test_cli_scaffold.ts",
     text,
@@ -39,8 +39,9 @@ const verifiedProxyCleanupContract = (text: string): unknown => {
     ts.ScriptKind.TS,
   );
   const anchors = [
-    "verifiedproxytreelstathook",
-    "verifiedproxyinventoryopenhook",
+    "runtimemanifestlstathook",
+    "runtimeentrylstathook",
+    "runtimeinventoryreaddirhook",
   ];
   const lifecycles: Array<{
     catchBodies: string[];
@@ -100,69 +101,92 @@ const verifiedProxyCleanupContract = (text: string): unknown => {
   };
 };
 
-export const test_cli_scaffold_verified_proxy_cleanup = (): void => {
+export const test_cli_scaffold_runtime_package_cleanup = (): void => {
   TestValidator.equals(
-    "CLI scaffold owns two verified proxy cleanup lifecycles",
-    verifiedProxyCleanupContract(
+    "CLI scaffold owns three runtime package cleanup lifecycles",
+    runtimePackageCleanupContract(
       fs.readFileSync(path.join(__dirname, "test_cli_scaffold.ts"), "utf8"),
     ),
     {
       lifecycles: [
         {
           catchBodies: [
-            "verifiedProxyTreeCleanupFailure={error};",
+            "runtimeManifestCleanupFailure={error};",
             "throwerror;",
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
           containerStatements: 1888,
           finallyDigest:
-            "d00876a73d3676827029dede236cbe84ef1e558dc5e4b37b774d41db08ed53cf",
+            "e52a087bacf5f1a99cb27b855ed82acb6b02faca8f7a15e8b9d3af1d001feba6",
           finallySubstantive: {
             digest:
-              "1ddd419a3bbd5e5fd81ff927f9fcc84ae3230b225fdce64cbc63f6664c7a58df",
-            tokens: 115,
+              "5e161ce5989d1165cb7acf34a0311a9704ffd6f893fd3b222b8e7f6b4ec89f20",
+            tokens: 77,
           },
-          index: 336,
+          index: 370,
           preceding:
-            "letverifiedProxyTreeCleanupFailure:{error:unknown}|undefined;",
+            "letruntimeManifestCleanupFailure:{error:unknown}|undefined;",
           substantive: {
             digest:
-              "ce3268fc7c1fad4e7c34596cf3a3a2c63dc939da651fb661835639e4ac63ebe9",
-            tokens: 19,
+              "516409df9aeb8ca02873a426ad4db504d0c3eedf1b067c43a87981326542d3c9",
+            tokens: 7,
           },
           tryBody:
-            "{verifiedProxyTreeSuccessorRejected=throws(()=>proxyModule.inspectPublishedProxyBundle(verifiedProxyRoot,verifiedProxyBundle,),);}",
+            "{runtimeManifestRaceRejected=throws(snapshotRuntimeFixture);}",
           tryDigest:
-            "b86be392535b10de1b87f6ca31c414725299bc2bdc09fb45f6cd88abf4012814",
+            "89eab1fff629884860fc7a47074ace56ff84612cc2f89d1e4070b9b5fadbaef8",
+        },
+        {
+          catchBodies: ["runtimeEntryCleanupFailure={error};", "throwerror;"],
+          catchVariables: ["error"],
+          containerKind: "TryStatement",
+          containerStatements: 1888,
+          finallyDigest:
+            "966469116e2c84ee8efa23eb5170eb602f9744c74b4acf7df16e4ace28ed334a",
+          finallySubstantive: {
+            digest:
+              "c80183210cb73942cfccc780198e8be202fdaabd0730d0b241b89b16d4d88b1d",
+            tokens: 77,
+          },
+          index: 377,
+          preceding: "letruntimeEntryCleanupFailure:{error:unknown}|undefined;",
+          substantive: {
+            digest:
+              "e3e3c9c03e10ab7227b37014e99c37dbdb048cd00d4587c6f843e70a36cbf0b8",
+            tokens: 7,
+          },
+          tryBody: "{runtimeEntryRaceRejected=throws(snapshotRuntimeFixture);}",
+          tryDigest:
+            "864648d0e12d9f97c6572c0faa4ab9b9933ce18fe1378b61a7d796f5826ec885",
         },
         {
           catchBodies: [
-            "verifiedProxyInventoryCleanupFailure={error};",
+            "runtimeInventoryCleanupFailure={error};",
             "throwerror;",
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
           containerStatements: 1888,
           finallyDigest:
-            "700a1adbe2c656b62d88d2efac6ef77f32b3ef96274b83482763fb3d5ae65c3d",
+            "668754d6e71a2ddb2f509639f44fded1911cc61dc0015b653c9fe4e19ef71da2",
           finallySubstantive: {
             digest:
-              "70b4dbd7cf747cfa0354387023ede667b69c4b1f0af9b3408d37a09a6e4b3f0b",
-            tokens: 99,
+              "bca2541427e5391902b0dbfa59bf8ebe8dcc23a7179740574cb25fd2eadbe85f",
+            tokens: 57,
           },
-          index: 347,
+          index: 385,
           preceding:
-            "letverifiedProxyInventoryCleanupFailure:{error:unknown}|undefined;",
+            "letruntimeInventoryCleanupFailure:{error:unknown}|undefined;",
           substantive: {
             digest:
-              "e1950d54cb638d63807470a9504cbf95901ba090fc5e7cebb9539fa78a6b410b",
-            tokens: 19,
+              "25c7abd712c8477187a4a94f109bec5a99f600208c6176ec7c949c799c54a5fa",
+            tokens: 7,
           },
           tryBody:
-            "{verifiedProxyLateMutationRejected=throws(()=>proxyModule.inspectPublishedProxyBundle(verifiedProxyRoot,verifiedProxyBundle,),);}",
+            "{runtimeInventoryRaceRejected=throws(snapshotRuntimeFixture);}",
           tryDigest:
-            "0c0ec72321cd2d85c484246cb26eba2170e1d99fb3b0b715d64563a48ee8af03",
+            "dfbd7dbc8bcc4b0743446e8d257efb500ca6a1830f1093368f258ce5f4a7ea94",
         },
       ],
       parseDiagnostics: [],

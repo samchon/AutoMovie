@@ -5845,14 +5845,30 @@ export const test_cli_scaffold = async (): Promise<void> => {
       return status;
     }) as typeof fs.lstatSync;
     let runtimeManifestRaceRejected = false;
+    let runtimeManifestCleanupFailure: { error: unknown } | undefined;
     try {
       runtimeManifestRaceRejected = throws(snapshotRuntimeFixture);
+    } catch (error) {
+      runtimeManifestCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.lstatSync = nativeLstat;
-      if (fs.existsSync(parkedRuntimeManifest)) {
-        fs.rmSync(runtimeManifest, { force: true });
-        fs.renameSync(parkedRuntimeManifest, runtimeManifest);
-      }
+      preserveCliHarnessCleanup(runtimeManifestCleanupFailure, [
+        {
+          resource: "runtime manifest lstat hook",
+          cleanup: () => {
+            mutableFs.lstatSync = nativeLstat;
+          },
+        },
+        {
+          resource: "runtime resident manifest",
+          cleanup: () => {
+            if (fs.existsSync(parkedRuntimeManifest)) {
+              fs.rmSync(runtimeManifest, { force: true });
+              fs.renameSync(parkedRuntimeManifest, runtimeManifest);
+            }
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "runtime package identity rejects a byte-identical manifest successor",
@@ -5873,14 +5889,30 @@ export const test_cli_scaffold = async (): Promise<void> => {
       return status;
     }) as typeof fs.lstatSync;
     let runtimeEntryRaceRejected = false;
+    let runtimeEntryCleanupFailure: { error: unknown } | undefined;
     try {
       runtimeEntryRaceRejected = throws(snapshotRuntimeFixture);
+    } catch (error) {
+      runtimeEntryCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.lstatSync = nativeLstat;
-      if (fs.existsSync(parkedRuntimeEntry)) {
-        fs.rmSync(runtimeEntry, { force: true });
-        fs.renameSync(parkedRuntimeEntry, runtimeEntry);
-      }
+      preserveCliHarnessCleanup(runtimeEntryCleanupFailure, [
+        {
+          resource: "runtime entry lstat hook",
+          cleanup: () => {
+            mutableFs.lstatSync = nativeLstat;
+          },
+        },
+        {
+          resource: "runtime resident entry",
+          cleanup: () => {
+            if (fs.existsSync(parkedRuntimeEntry)) {
+              fs.rmSync(runtimeEntry, { force: true });
+              fs.renameSync(parkedRuntimeEntry, runtimeEntry);
+            }
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "runtime package identity rejects a byte-identical entry successor",
@@ -5904,11 +5936,27 @@ export const test_cli_scaffold = async (): Promise<void> => {
       return entries;
     }) as typeof fs.readdirSync;
     let runtimeInventoryRaceRejected = false;
+    let runtimeInventoryCleanupFailure: { error: unknown } | undefined;
     try {
       runtimeInventoryRaceRejected = throws(snapshotRuntimeFixture);
+    } catch (error) {
+      runtimeInventoryCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.readdirSync = runtimeNativeReaddir;
-      fs.rmSync(lateRuntimeAsset, { force: true });
+      preserveCliHarnessCleanup(runtimeInventoryCleanupFailure, [
+        {
+          resource: "runtime inventory readdir hook",
+          cleanup: () => {
+            mutableFs.readdirSync = runtimeNativeReaddir;
+          },
+        },
+        {
+          resource: "runtime late native asset",
+          cleanup: () => {
+            fs.rmSync(lateRuntimeAsset, { force: true });
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "runtime package identity rejects native asset inventory mutation",
