@@ -5036,58 +5036,79 @@ export const test_cli_scaffold = async (): Promise<void> => {
       path.join(gcAbaProductionSuccessor, "invalid.bin"),
       "invalid directory",
     );
-    const gcAbaProduction =
-      proxyPublisherModule.captureProxyPublicationGcTarget({
-        renderRoot: proxyPublishRoot,
-        target: gcAbaProductionTarget,
-        judge: (snapshot, evidence) => {
-          nativeRename(gcAbaProductionTarget, gcAbaProductionParked);
-          nativeRename(gcAbaProductionSuccessor, gcAbaProductionTarget);
-          let gcAbaJudgeCleanupFailure: { error: unknown } | undefined;
-          try {
-            const receipt = proxyModule.inspectCapturedProxyBundle(
-              snapshot,
-              evidence,
-            );
-            return (
-              receipt.publicationFingerprint === gcAbaPublication &&
-              receipt.compileFingerprint === gcAbaCompile &&
-              receipt.editFingerprint === gcAbaEdit
-            );
-          } catch (error) {
-            gcAbaJudgeCleanupFailure = { error };
-            return false;
-          } finally {
-            preserveCliHarnessCleanup(gcAbaJudgeCleanupFailure, [
-              {
-                resource: "proxy GC ABA successor target",
-                cleanup: () => {
-                  nativeRename(gcAbaProductionTarget, gcAbaProductionSuccessor);
+    // The judge adjudicates from the captured snapshot while the live target is
+    // swapped, so its verdict is recorded separately: restoring the resident
+    // directory by rename moves its `ctime`, which the target version covers, so
+    // the collector must refuse to act on evidence it can no longer prove.
+    let gcAbaJudged = false;
+    const gcAbaProductionRefused = throws(
+      () =>
+        proxyPublisherModule.captureProxyPublicationGcTarget({
+          renderRoot: proxyPublishRoot,
+          target: gcAbaProductionTarget,
+          judge: (snapshot, evidence) => {
+            nativeRename(gcAbaProductionTarget, gcAbaProductionParked);
+            nativeRename(gcAbaProductionSuccessor, gcAbaProductionTarget);
+            let gcAbaJudgeCleanupFailure: { error: unknown } | undefined;
+            try {
+              const receipt = proxyModule.inspectCapturedProxyBundle(
+                snapshot,
+                evidence,
+              );
+              gcAbaJudged =
+                receipt.publicationFingerprint === gcAbaPublication &&
+                receipt.compileFingerprint === gcAbaCompile &&
+                receipt.editFingerprint === gcAbaEdit;
+              return gcAbaJudged;
+            } catch (error) {
+              gcAbaJudgeCleanupFailure = { error };
+              return false;
+            } finally {
+              preserveCliHarnessCleanup(gcAbaJudgeCleanupFailure, [
+                {
+                  resource: "proxy GC ABA successor target",
+                  cleanup: () => {
+                    nativeRename(
+                      gcAbaProductionTarget,
+                      gcAbaProductionSuccessor,
+                    );
+                  },
                 },
-              },
-              {
-                resource: "proxy GC ABA resident target",
-                cleanup: () => {
-                  nativeRename(gcAbaProductionParked, gcAbaProductionTarget);
+                {
+                  resource: "proxy GC ABA resident target",
+                  cleanup: () => {
+                    nativeRename(gcAbaProductionParked, gcAbaProductionTarget);
+                  },
                 },
-              },
-            ]);
-          }
-        },
-      });
-    TestValidator.predicate(
+              ]);
+            }
+          },
+        }),
+      "changed after inventory",
+    );
+    TestValidator.equals(
       "proxy GC production adjudication derives ABA status from captured evidence",
-      gcAbaProduction.value &&
-        !throws(() =>
+      {
+        judged: gcAbaJudged,
+        refused: gcAbaProductionRefused,
+        residentPublished: !throws(() =>
           proxyModule.inspectPublishedProxyBundle(
             proxyPublishRoot,
             gcAbaProductionTarget,
           ),
-        ) &&
-        fs.readFileSync(
-          path.join(gcAbaProductionSuccessor, "invalid.bin"),
-          "utf8",
-        ) === "invalid directory",
+        ),
+        successorIntact:
+          fs.readFileSync(
+            path.join(gcAbaProductionSuccessor, "invalid.bin"),
+            "utf8",
+          ) === "invalid directory",
+      },
+      {
+        judged: true,
+        refused: true,
+        residentPublished: true,
+        successorIntact: true,
+      },
     );
     fs.rmSync(gcAbaProductionTarget, { recursive: true, force: true });
     fs.rmSync(gcAbaProductionSuccessor, { recursive: true, force: true });

@@ -195,7 +195,7 @@ export const test_cli_scaffold_render_gc_sparse_descriptor_cleanup =
           catchVariables: ["error"],
           cleanup: "()=>fs.closeSync(gcSparseDescriptor)",
           containerKind: "TryStatement",
-          containerStatements: 1982,
+          containerStatements: 1983,
           failureHolder:
             "letgcSparseDescriptorFailure:{error:unknown}|undefined;",
           finallyDigest:
@@ -206,7 +206,7 @@ export const test_cli_scaffold_render_gc_sparse_descriptor_cleanup =
             tokens: 27,
           },
           helper: "preserveCliHarnessCleanup",
-          index: 1418,
+          index: 1419,
           resource: "render GC sparse publication descriptor",
           tryBody: "{fs.ftruncateSync(gcSparseDescriptor,gcSparseBytes);}",
           tryDigest:
@@ -219,12 +219,12 @@ export const test_cli_scaffold_render_gc_sparse_descriptor_cleanup =
         },
       ],
       outerDigest:
-        "6a6a437c29901a5a1c9920f2155edcc85d846f802a511d5732cd4571f8ff8b1a",
+        "8d17d0b4074ffe2257c6306f60c75563f04776d7c0603997efb33bdfe30e8244",
       parentDigest:
-        "2e908eacfa50810070ac6ddbeccfeacd9d954afd86fec6caa5820714d1f78971",
+        "9bed00ecccd5af4f04171c77a691f6f82b88377f7fc802e8afe853d4d7f8a234",
       parseDiagnostics: [],
       rootDigest:
-        "d4bf9d381b66b03b02db62abd16321d1cb8a5e1082e4e6a6a02ef89c0c3f14fc",
+        "edd7aa250a89b627ec375bd5c87cd0b3c36a7fbaf355f8195fc30647a33aa241",
     };
     TestValidator.equals(
       "CLI scaffold protects sparse publication descriptor cleanup",
