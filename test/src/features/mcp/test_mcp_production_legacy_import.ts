@@ -824,39 +824,87 @@ export const test_mcp_production_legacy_import = (): void => {
 
   const publishRootSwap = createLegacy();
   const parkedPublishRoot = `${publishRootSwap.root}-parked`;
-  try {
-    const stateRoot = path.join(publishRootSwap.root, ".automovie");
-    const nativeRename = fs.renameSync;
-    let swapped = false;
-    fs.renameSync = ((oldPath: fs.PathLike, newPath: fs.PathLike): void => {
-      nativeRename(oldPath, newPath);
-      if (swapped === false && path.resolve(newPath.toString()) === stateRoot) {
-        swapped = true;
-        nativeRename(publishRootSwap.root, parkedPublishRoot);
-        fs.mkdirSync(publishRootSwap.root);
-      }
-    }) as typeof fs.renameSync;
+  {
+    let publishRootSwapFailure: ILegacyImportFixtureFailure | undefined;
     try {
-      TestValidator.predicate(
-        "a root replaced immediately after import publication receives no stale cleanup",
-        throws(
-          () => new AutoMovieLegacyImporter(publishRootSwap.root).apply(),
-          "root identity",
-        ) &&
-          swapped &&
-          fs.readdirSync(publishRootSwap.root).length === 0,
-      );
-    } finally {
-      fs.renameSync = nativeRename;
-      if (swapped) {
-        fs.rmSync(publishRootSwap.root, { force: true, recursive: true });
-        nativeRename(parkedPublishRoot, publishRootSwap.root);
+      const stateRoot = path.join(publishRootSwap.root, ".automovie");
+      const nativeRename = fs.renameSync;
+      let swapped = false;
+      fs.renameSync = ((oldPath: fs.PathLike, newPath: fs.PathLike): void => {
+        nativeRename(oldPath, newPath);
+        if (
+          swapped === false &&
+          path.resolve(newPath.toString()) === stateRoot
+        ) {
+          swapped = true;
+          nativeRename(publishRootSwap.root, parkedPublishRoot);
+          fs.mkdirSync(publishRootSwap.root);
+        }
+      }) as typeof fs.renameSync;
+      let publishRootSwapRecoveryFailure:
+        | ILegacyImportFixtureFailure
+        | undefined;
+      try {
+        TestValidator.predicate(
+          "a root replaced immediately after import publication receives no stale cleanup",
+          throws(
+            () => new AutoMovieLegacyImporter(publishRootSwap.root).apply(),
+            "root identity",
+          ) &&
+            swapped &&
+            fs.readdirSync(publishRootSwap.root).length === 0,
+        );
+      } catch (error) {
+        publishRootSwapRecoveryFailure = { error };
+        throw error;
+      } finally {
+        preserveLegacyImportFixtureCleanup(publishRootSwapRecoveryFailure, [
+          {
+            resource: "publish root-swap rename hook",
+            cleanup: () => {
+              fs.renameSync = nativeRename;
+            },
+          },
+          {
+            resource: "publish root-swap transient root",
+            cleanup: () => {
+              if (swapped)
+                fs.rmSync(publishRootSwap.root, {
+                  force: true,
+                  recursive: true,
+                });
+            },
+          },
+          {
+            resource: "publish root-swap resident root",
+            cleanup: () => {
+              if (swapped)
+                nativeRename(parkedPublishRoot, publishRootSwap.root);
+            },
+          },
+        ]);
       }
+    } catch (error) {
+      publishRootSwapFailure = { error };
+      throw error;
+    } finally {
+      preserveLegacyImportFixtureCleanup(publishRootSwapFailure, [
+        {
+          resource: "publish root-swap legacy fixture",
+          cleanup: () => publishRootSwap.dispose(),
+        },
+        {
+          resource: "publish root-swap parked fallback",
+          cleanup: () => {
+            if (fs.existsSync(parkedPublishRoot))
+              fs.rmSync(parkedPublishRoot, {
+                force: true,
+                recursive: true,
+              });
+          },
+        },
+      ]);
     }
-  } finally {
-    publishRootSwap.dispose();
-    if (fs.existsSync(parkedPublishRoot))
-      fs.rmSync(parkedPublishRoot, { force: true, recursive: true });
   }
 
   const tampered = createLegacy();
@@ -1218,40 +1266,85 @@ export const test_mcp_production_legacy_import = (): void => {
 
   const rollbackRootSwap = createLegacy();
   const parkedRollbackRoot = `${rollbackRootSwap.root}-parked`;
-  try {
-    const importer = new AutoMovieLegacyImporter(rollbackRootSwap.root);
-    const plan = importer.plan();
-    importer.apply();
-    createMissingOwnedRoots(rollbackRootSwap.root, plan);
-    const nativeRmdir = fs.rmdirSync;
-    let swapped = false;
-    fs.rmdirSync = ((directory: fs.PathLike): void => {
-      nativeRmdir(directory);
-      if (swapped === false) {
-        swapped = true;
-        fs.renameSync(rollbackRootSwap.root, parkedRollbackRoot);
-        fs.mkdirSync(rollbackRootSwap.root);
-        throw new Error("injected rollback root replacement");
-      }
-    }) as typeof fs.rmdirSync;
+  {
+    let rollbackRootSwapFailure: ILegacyImportFixtureFailure | undefined;
     try {
-      TestValidator.predicate(
-        "rollback abandons restoration when the physical root changes",
-        throws(() => importer.rollback(), "changed physical identity") &&
-          swapped &&
-          fs.readdirSync(rollbackRootSwap.root).length === 0,
-      );
-    } finally {
-      fs.rmdirSync = nativeRmdir;
-      if (swapped) {
-        fs.rmSync(rollbackRootSwap.root, { force: true, recursive: true });
-        fs.renameSync(parkedRollbackRoot, rollbackRootSwap.root);
+      const importer = new AutoMovieLegacyImporter(rollbackRootSwap.root);
+      const plan = importer.plan();
+      importer.apply();
+      createMissingOwnedRoots(rollbackRootSwap.root, plan);
+      const nativeRmdir = fs.rmdirSync;
+      let swapped = false;
+      fs.rmdirSync = ((directory: fs.PathLike): void => {
+        nativeRmdir(directory);
+        if (swapped === false) {
+          swapped = true;
+          fs.renameSync(rollbackRootSwap.root, parkedRollbackRoot);
+          fs.mkdirSync(rollbackRootSwap.root);
+          throw new Error("injected rollback root replacement");
+        }
+      }) as typeof fs.rmdirSync;
+      let rollbackRootSwapRecoveryFailure:
+        | ILegacyImportFixtureFailure
+        | undefined;
+      try {
+        TestValidator.predicate(
+          "rollback abandons restoration when the physical root changes",
+          throws(() => importer.rollback(), "changed physical identity") &&
+            swapped &&
+            fs.readdirSync(rollbackRootSwap.root).length === 0,
+        );
+      } catch (error) {
+        rollbackRootSwapRecoveryFailure = { error };
+        throw error;
+      } finally {
+        preserveLegacyImportFixtureCleanup(rollbackRootSwapRecoveryFailure, [
+          {
+            resource: "rollback root-swap rmdir hook",
+            cleanup: () => {
+              fs.rmdirSync = nativeRmdir;
+            },
+          },
+          {
+            resource: "rollback root-swap transient root",
+            cleanup: () => {
+              if (swapped)
+                fs.rmSync(rollbackRootSwap.root, {
+                  force: true,
+                  recursive: true,
+                });
+            },
+          },
+          {
+            resource: "rollback root-swap resident root",
+            cleanup: () => {
+              if (swapped)
+                fs.renameSync(parkedRollbackRoot, rollbackRootSwap.root);
+            },
+          },
+        ]);
       }
+    } catch (error) {
+      rollbackRootSwapFailure = { error };
+      throw error;
+    } finally {
+      preserveLegacyImportFixtureCleanup(rollbackRootSwapFailure, [
+        {
+          resource: "rollback root-swap legacy fixture",
+          cleanup: () => rollbackRootSwap.dispose(),
+        },
+        {
+          resource: "rollback root-swap parked fallback",
+          cleanup: () => {
+            if (fs.existsSync(parkedRollbackRoot))
+              fs.rmSync(parkedRollbackRoot, {
+                force: true,
+                recursive: true,
+              });
+          },
+        },
+      ]);
     }
-  } finally {
-    rollbackRootSwap.dispose();
-    if (fs.existsSync(parkedRollbackRoot))
-      fs.rmSync(parkedRollbackRoot, { force: true, recursive: true });
   }
 
   const incompleteRestoration = createLegacy();
@@ -1627,61 +1720,104 @@ export const test_mcp_production_legacy_import = (): void => {
     path.join(os.tmpdir(), "automovie-import-root-race-target-"),
   );
   const parkedRoot = `${replacedDuringAcquire.root}-parked`;
-  try {
-    const namespaceLocks: string[] = [];
-    const nativeWrite = fs.writeFileSync;
-    let replaced = false;
-    fs.writeFileSync = ((
-      file: fs.PathOrFileDescriptor,
-      ...args: unknown[]
-    ): void => {
-      Reflect.apply(nativeWrite, fs, [file, ...args]);
-      if (
-        typeof file !== "number" &&
-        path.basename(path.dirname(file.toString())) ===
-          ".automovie-root-locks" &&
-        path.basename(file.toString()).startsWith("root-")
-      ) {
-        namespaceLocks.push(path.resolve(file.toString()));
-        if (replaced === false) {
-          replaced = true;
-          fs.renameSync(replacedDuringAcquire.root, parkedRoot);
-          fs.symlinkSync(
-            replacementTarget,
-            replacedDuringAcquire.root,
-            "junction",
-          );
-        }
-      }
-    }) as typeof fs.writeFileSync;
+  {
+    let acquireRootSwapFailure: ILegacyImportFixtureFailure | undefined;
     try {
-      TestValidator.predicate(
-        "root replacement after namespace acquisition is detected before import",
-        throws(
-          () => new AutoMovieLegacyImporter(replacedDuringAcquire.root).apply(),
-          // Whichever fence catches it, the refusal names the root identity.
-          // The claim is that the swap is caught before any import writes, and
-          // the absent resident lock below is what proves that.
-          "root identity",
-        ) &&
-          fs.existsSync(path.join(replacementTarget, "revision.lock")) ===
-            false &&
-          namespaceLocks.length === 2 &&
-          namespaceLocks.every((file) => fs.existsSync(file) === false),
-      );
-    } finally {
-      fs.writeFileSync = nativeWrite;
-      if (fs.lstatSync(replacedDuringAcquire.root).isSymbolicLink())
-        fs.rmSync(replacedDuringAcquire.root);
-      if (fs.existsSync(parkedRoot)) {
-        fs.renameSync(parkedRoot, replacedDuringAcquire.root);
+      const namespaceLocks: string[] = [];
+      const nativeWrite = fs.writeFileSync;
+      let replaced = false;
+      fs.writeFileSync = ((
+        file: fs.PathOrFileDescriptor,
+        ...args: unknown[]
+      ): void => {
+        Reflect.apply(nativeWrite, fs, [file, ...args]);
+        if (
+          typeof file !== "number" &&
+          path.basename(path.dirname(file.toString())) ===
+            ".automovie-root-locks" &&
+          path.basename(file.toString()).startsWith("root-")
+        ) {
+          namespaceLocks.push(path.resolve(file.toString()));
+          if (replaced === false) {
+            replaced = true;
+            fs.renameSync(replacedDuringAcquire.root, parkedRoot);
+            fs.symlinkSync(
+              replacementTarget,
+              replacedDuringAcquire.root,
+              "junction",
+            );
+          }
+        }
+      }) as typeof fs.writeFileSync;
+      let acquireRootSwapRecoveryFailure:
+        | ILegacyImportFixtureFailure
+        | undefined;
+      try {
+        TestValidator.predicate(
+          "root replacement after namespace acquisition is detected before import",
+          throws(
+            () =>
+              new AutoMovieLegacyImporter(replacedDuringAcquire.root).apply(),
+            // Whichever fence catches it, the refusal names the root identity.
+            // The claim is that the swap is caught before any import writes, and
+            // the absent resident lock below is what proves that.
+            "root identity",
+          ) &&
+            fs.existsSync(path.join(replacementTarget, "revision.lock")) ===
+              false &&
+            namespaceLocks.length === 2 &&
+            namespaceLocks.every((file) => fs.existsSync(file) === false),
+        );
+      } catch (error) {
+        acquireRootSwapRecoveryFailure = { error };
+        throw error;
+      } finally {
+        preserveLegacyImportFixtureCleanup(acquireRootSwapRecoveryFailure, [
+          {
+            resource: "acquire root-swap write hook",
+            cleanup: () => {
+              fs.writeFileSync = nativeWrite;
+            },
+          },
+          {
+            resource: "acquire root-swap transient root",
+            cleanup: () => {
+              if (fs.lstatSync(replacedDuringAcquire.root).isSymbolicLink())
+                fs.rmSync(replacedDuringAcquire.root);
+            },
+          },
+          {
+            resource: "acquire root-swap resident root",
+            cleanup: () => {
+              if (fs.existsSync(parkedRoot))
+                fs.renameSync(parkedRoot, replacedDuringAcquire.root);
+            },
+          },
+        ]);
       }
+    } catch (error) {
+      acquireRootSwapFailure = { error };
+      throw error;
+    } finally {
+      preserveLegacyImportFixtureCleanup(acquireRootSwapFailure, [
+        {
+          resource: "acquire root-swap legacy fixture",
+          cleanup: () => replacedDuringAcquire.dispose(),
+        },
+        {
+          resource: "acquire root-swap replacement target",
+          cleanup: () =>
+            fs.rmSync(replacementTarget, { force: true, recursive: true }),
+        },
+        {
+          resource: "acquire root-swap parked fallback",
+          cleanup: () => {
+            if (fs.existsSync(parkedRoot))
+              fs.rmSync(parkedRoot, { force: true, recursive: true });
+          },
+        },
+      ]);
     }
-  } finally {
-    replacedDuringAcquire.dispose();
-    fs.rmSync(replacementTarget, { force: true, recursive: true });
-    if (fs.existsSync(parkedRoot))
-      fs.rmSync(parkedRoot, { force: true, recursive: true });
   }
 
   const replacedAfterResidentLock = createLegacy();
