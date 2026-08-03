@@ -30,7 +30,7 @@ const leafTokenContract = (
   };
 };
 
-const captureReceiptCleanupContract = (text: string): unknown => {
+const renderAttemptCleanupContract = (text: string): unknown => {
   const source = ts.createSourceFile(
     "test_cli_scaffold.ts",
     text,
@@ -39,12 +39,12 @@ const captureReceiptCleanupContract = (text: string): unknown => {
     ts.ScriptKind.TS,
   );
   const anchors = [
-    "capturereceiptlstathook",
-    "capturereceiptpartialopenhook",
-    "capturereceiptoversizedopenhook",
-    "capturereceipttargetopenhook",
-    "capturereceiptdirectorylstathook",
-    "capturereceiptrootlstathook",
+    "renderattempttransitionrenamehook",
+    "renderattemptcompletionrenamehook",
+    "renderattemptcompetitoropenhook",
+    "renderattemptpost-publicationlstathook",
+    "renderattemptparentopenhook",
+    "renderattemptrootopenhook",
   ];
   const lifecycles: Array<{
     catchBodies: string[];
@@ -65,7 +65,7 @@ const captureReceiptCleanupContract = (text: string): unknown => {
       node.catchClause !== undefined &&
       node.finallyBlock !== undefined &&
       anchors.some((anchor) =>
-        compact(node.finallyBlock!, source).includes(anchor),
+        compact(node.finallyBlock!, source).toLowerCase().includes(anchor),
       ) &&
       ts.isBlock(node.parent)
     ) {
@@ -104,175 +104,170 @@ const captureReceiptCleanupContract = (text: string): unknown => {
   };
 };
 
-export const test_cli_scaffold_capture_receipt_cleanup = (): void => {
+export const test_cli_scaffold_render_attempt_cleanup = (): void => {
   TestValidator.equals(
-    "CLI scaffold owns six capture receipt cleanup lifecycles",
-    captureReceiptCleanupContract(
+    "CLI scaffold owns six render attempt cleanup lifecycles",
+    renderAttemptCleanupContract(
       fs.readFileSync(path.join(__dirname, "test_cli_scaffold.ts"), "utf8"),
     ),
     {
       lifecycles: [
         {
-          catchBodies: ["captureReceiptCleanupFailure={error};", "throwerror;"],
-          catchVariables: ["error"],
-          containerKind: "TryStatement",
-          containerStatements: 1946,
-          finallyDigest:
-            "4fe618160bd4a8229abdecbbc18400cd3c0e20afeef9fbd9d60385bc7118ff82",
-          finallySubstantive: {
-            digest:
-              "1f42780f9842a1a5fd1a472827ec4962996d31441da3025d7d98c0bc48c14a76",
-            tokens: 77,
-          },
-          index: 563,
-          preceding:
-            "letcaptureReceiptCleanupFailure:{error:unknown}|undefined;",
-          substantive: {
-            digest:
-              "1825f7007352b14e998c89490858e9942ac2133badadb453a0fff26e547497f4",
-            tokens: 16,
-          },
-          tryBody:
-            "{captureReceiptRaceRejected=throws(()=>captureBrowserModule.readCaptureInstallReceipt(captureProject),);}",
-          tryDigest:
-            "27c17ae2df106c8914175baf3d4e14f4841dd5fa5ca6319de41685b374e0a1d0",
-        },
-        {
-          catchBodies: ["partialReceiptCleanupFailure={error};", "throwerror;"],
-          catchVariables: ["error"],
-          containerKind: "TryStatement",
-          containerStatements: 1946,
-          finallyDigest:
-            "b284e20cf2755e35b20b8a6ca3167e13010fbd6327d41c227db2fc0206af3772",
-          finallySubstantive: {
-            digest:
-              "8a0f86b604004fee057791bae97ee3a6a7aacac627caa32f6e620714f9e36930",
-            tokens: 50,
-          },
-          index: 586,
-          preceding:
-            "letpartialReceiptCleanupFailure:{error:unknown}|undefined;",
-          substantive: {
-            digest:
-              "68aea749eac6d6da2995f92136ebb42186e273275996a8b6b23711fd3bbef4ea",
-            tokens: 24,
-          },
-          tryBody:
-            "{partialReceiptRejected=throws(()=>captureBrowserModule.publishCaptureInstallReceipt(partialReceiptProject,nextCaptureReceipt,()=>undefined,),);}",
-          tryDigest:
-            "057b8823e587d39a3dc40d9a5975dbdc65f8c6f399902cc10474be2c9f4486b9",
-        },
-        {
           catchBodies: [
-            "oversizedReceiptCleanupFailure={error};",
+            "transitionSuccessorCleanupFailure={error};",
             "throwerror;",
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
           containerStatements: 1946,
           finallyDigest:
-            "8268d8fcbc7589dc275b36fdcebdd35d28c9883ff7451c6eb772c6b48203586a",
+            "1a52b11c7f8b87aeea9d640f69b6bb69d4a717e4696b2e9957ebd80e383513c6",
           finallySubstantive: {
             digest:
-              "80a0d580be81df99eee20b3c37206d075d08c87ddf39ddbaf9ef3c98abab5ffd",
-            tokens: 50,
+              "f84f9d820a5ca5e21bbdac311577bbc2262b77b2d9082ac1a4d2f96be0e8557f",
+            tokens: 29,
           },
-          index: 610,
+          index: 893,
           preceding:
-            "letoversizedReceiptCleanupFailure:{error:unknown}|undefined;",
+            "lettransitionSuccessorCleanupFailure:{error:unknown}|undefined;",
           substantive: {
             digest:
-              "e445d1acede5834ad309d4c40b7d2f95ef40b711ed939dbf9b308943a8b9af89",
-            tokens: 45,
+              "b5ad66518f250382364fbdb38beea412413c07b539dd494cad6c971829ecb308",
+            tokens: 25,
           },
           tryBody:
-            '{oversizedReceiptReadRejected=throwsWith(()=>captureBrowserModule.readCaptureInstallReceipt(oversizedReceiptProject,),"exceedsitsmaximumbytelength",);oversizedReceiptPublishRejected=throwsWith(()=>captureBrowserModule.publishCaptureInstallReceipt(oversizedReceiptProject,nextCaptureReceipt,()=>undefined,),"Manuallyadjudicate",);}',
+            '{transitionSuccessorRejected=throws(()=>renderAttemptModule.failRenderAttempt({attempt:transitionAttempt,correction:"mustnotoverwritesuccessor",}),);}',
           tryDigest:
-            "5dfbb8d067b17f2fadc0889b6733d3b74accde8a76472705b58946f9feb061d7",
+            "36a45a47603f6357c1370f7b7d4db582bbfb422ed85a8d35f08e5058d785648a",
+        },
+        {
+          catchBodies: ["completionCleanupFailure={error};", "throwerror;"],
+          catchVariables: ["error"],
+          containerKind: "TryStatement",
+          containerStatements: 1946,
+          finallyDigest:
+            "d48016f975aac3312553269c482415529a0fe682395b8a35c1651ec3561c3aab",
+          finallySubstantive: {
+            digest:
+              "72d37e755be4bf2c8060f8dd0e84b3917dc946776dbc98932a8f160156112423",
+            tokens: 29,
+          },
+          index: 901,
+          preceding: "letcompletionCleanupFailure:{error:unknown}|undefined;",
+          substantive: {
+            digest:
+              "cf9baed49dc183b9a25e34962a63eb6de83e9193330ff6d4a36709b6118eca5e",
+            tokens: 11,
+          },
+          tryBody:
+            "{renderAttemptModule.completeRenderAttempt(completionAttempt);completionAccepted=true;}",
+          tryDigest:
+            "d16d6f5e52c89d13f1f2e098ab208225ac05c31c324050119fcfebad09bba3e9",
         },
         {
           catchBodies: [
-            "receiptTargetSwapCleanupFailure={error};",
+            "targetCompetitorCleanupFailure={error};",
             "throwerror;",
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
           containerStatements: 1946,
           finallyDigest:
-            "3b129d59eb2805ac04b03ed1da557b09ab657b6d0505bcd0605915e2ae13311f",
+            "210f47c6cbf38f0fb79e2f5f49300cf5ac87683bb07ae06fe7311ec54e0f59e9",
           finallySubstantive: {
             digest:
-              "02e7ff5a09439c462fa1be924045ca0d265a805ead9491bedf59eb79fcf270c1",
-            tokens: 50,
+              "268dd0f2e12cda62b52b9db5cf77bfbe12996aced5170b79f1b0b38478bd853b",
+            tokens: 29,
           },
-          index: 621,
+          index: 909,
           preceding:
-            "letreceiptTargetSwapCleanupFailure:{error:unknown}|undefined;",
+            "lettargetCompetitorCleanupFailure:{error:unknown}|undefined;",
           substantive: {
             digest:
-              "1e5a131c3aa9cb45a58fd2c0809868314910198d668b05d6dadaeb827a99828f",
-            tokens: 24,
+              "22dd1eb886a286d555226e1efa3df678112a518e027193f1772badf93290b269",
+            tokens: 52,
           },
           tryBody:
-            "{receiptTargetSwapRejected=throws(()=>captureBrowserModule.publishCaptureInstallReceipt(receiptTargetSwapProject,nextCaptureReceipt,()=>undefined,),);}",
+            '{targetCompetitorRejected=throws(()=>renderAttemptModule.beginRenderAttempt({base:attemptRoot,chunk:attemptChunk,lock:targetCompetitorLock,pid:32011,processAlive:()=>false,slot:"slot-0001",target:attemptTarget,token:firstAttemptToken,}),);}',
           tryDigest:
-            "8f4c6e749dc76e42c2d03339c82f60f7d5d3a0e8bb8a8268592336749e4cb4dc",
+            "efd3c83aa1828db58b048b20aff10f5dbe3406ef787fee28d2a63bd321c43eb3",
         },
         {
           catchBodies: [
-            "receiptReadDirectoryCleanupFailure={error};",
+            "postPublicationCleanupFailure={error};",
             "throwerror;",
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
           containerStatements: 1946,
           finallyDigest:
-            "0d60c16ccb2344e7c27369368b361367c29720d4333008fc4cba433fc5595035",
+            "519a708c0c53e1b1f08f1ccdb79fb33840b81d204ee3bbc64cd2a192a73ce6a3",
           finallySubstantive: {
             digest:
-              "19e679ab5f04fb7c9e0c1cfdb50fd936deb4e92a8811e7b320343e8e9ec0e112",
-            tokens: 85,
+              "a3e1a4a33a1ba91f8c7cf152aef9f9e206dac9c06145a80b02faa14c825e9a54",
+            tokens: 29,
           },
-          index: 662,
+          index: 920,
           preceding:
-            "letreceiptReadDirectoryCleanupFailure:{error:unknown}|undefined;",
+            "letpostPublicationCleanupFailure:{error:unknown}|undefined;",
           substantive: {
             digest:
-              "2ba1f922204655b3f5f9c9fa2ebb851f2b299850892e2161bca60db5f504fe52",
-            tokens: 16,
+              "be46287f496652c85f8dc5b9c7a374f399f65227b147b466b32f5eda27245f31",
+            tokens: 52,
           },
           tryBody:
-            "{receiptReadDirectoryRejected=throws(()=>captureBrowserModule.readCaptureInstallReceipt(captureProject),);}",
+            '{postPublicationRejected=throws(()=>renderAttemptModule.beginRenderAttempt({base:attemptRoot,chunk:attemptChunk,lock:postPublicationLock,pid:32012,processAlive:()=>false,slot:"slot-0001",target:attemptTarget,token:secondAttemptToken,}),);}',
           tryDigest:
-            "550ae2c36cfc29f42f888bea176760c7945df3265ba77df9d925301296d0528f",
+            "83a33979c48346f05e369f7bb9db09b9dbec007c3e1db4f2a6f43b176410f9a4",
         },
         {
-          catchBodies: [
-            "receiptReadRootCleanupFailure={error};",
-            "throwerror;",
-          ],
+          catchBodies: ["attemptParentCleanupFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
           containerStatements: 1946,
           finallyDigest:
-            "b6d7fa6450a72b69e5b2387c5ba5881f934cd85b0f5cba8cf05c21428d520577",
+            "c0bd3ac1589a54709429e5c07836349f948471d74029dd57b993d04ee308a8dc",
           finallySubstantive: {
             digest:
-              "aacf8cb3b0c8c72b76039f985a638dd85816a41f8017742cb39617ee0b57c9e0",
-            tokens: 83,
+              "a9ec4a1e6fa4425ed65ef12f64fb9e3be097c79745ba24d8fef6d95a98b1713a",
+            tokens: 29,
           },
-          index: 673,
+          index: 931,
           preceding:
-            "letreceiptReadRootCleanupFailure:{error:unknown}|undefined;",
+            "letattemptParentCleanupFailure:{error:unknown}|undefined;",
           substantive: {
             digest:
-              "c72b65ff85c48b91b1a233792bcf8a0e9198bf0a01bc63c02603c63d3b103de7",
-            tokens: 16,
+              "f92a8e2ef52ae22cb7e8ae7a6331e6518d34b1412565990481d4246866ed1f51",
+            tokens: 52,
           },
           tryBody:
-            "{receiptReadRootRejected=throws(()=>captureBrowserModule.readCaptureInstallReceipt(captureProject),);}",
+            '{attemptParentRejected=throws(()=>renderAttemptModule.beginRenderAttempt({base:attemptRoot,chunk:attemptChunk,lock:parentFenceLock,pid:32009,processAlive:()=>false,slot:"slot-0001",target:attemptTarget,token:firstAttemptToken,}),);}',
           tryDigest:
-            "24b3e3a54025c459039eb39e61281a6750a38988714d1eec37bb4a985c640445",
+            "0422fc950c78ed7801c6eef55269bded70d7158fd9b7d3a810d9d020cc0e51e8",
+        },
+        {
+          catchBodies: ["attemptRootCleanupFailure={error};", "throwerror;"],
+          catchVariables: ["error"],
+          containerKind: "TryStatement",
+          containerStatements: 1946,
+          finallyDigest:
+            "a3ee49cc566c95b99fbfa9e6164570d950c508c22071a1b97164c5ee9b306782",
+          finallySubstantive: {
+            digest:
+              "2737475cfcf849ec29116bc1b0d415c9fd63a5a3021ea402ed886e68507d6c98",
+            tokens: 29,
+          },
+          index: 943,
+          preceding: "letattemptRootCleanupFailure:{error:unknown}|undefined;",
+          substantive: {
+            digest:
+              "41ce27ba8a2ae5e3974dbfce067860bfc1b78ba8fd58237cc21792305e42d959",
+            tokens: 52,
+          },
+          tryBody:
+            '{attemptRootRejected=throws(()=>renderAttemptModule.beginRenderAttempt({base:attemptRoot,chunk:attemptChunk,lock:rootFenceLock,pid:32010,processAlive:()=>false,slot:"slot-0001",target:attemptTarget,token:secondAttemptToken,}),);}',
+          tryDigest:
+            "1e6f1529b2a95d817ff425ec6a468296b904ef6416bc975db3d13cd6d9ce4f57",
         },
       ],
       parseDiagnostics: [],

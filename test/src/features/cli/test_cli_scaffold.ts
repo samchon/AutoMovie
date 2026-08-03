@@ -8809,6 +8809,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       nativeRename(oldPath, newPath);
     }) as typeof fs.renameSync;
     let transitionSuccessorRejected = false;
+    let transitionSuccessorCleanupFailure: { error: unknown } | undefined;
     try {
       transitionSuccessorRejected = throws(() =>
         renderAttemptModule.failRenderAttempt({
@@ -8816,8 +8817,18 @@ export const test_cli_scaffold = async (): Promise<void> => {
           correction: "must not overwrite successor",
         }),
       );
+    } catch (error) {
+      transitionSuccessorCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.renameSync = nativeRename;
+      preserveCliHarnessCleanup(transitionSuccessorCleanupFailure, [
+        {
+          resource: "render attempt transition rename hook",
+          cleanup: () => {
+            mutableFs.renameSync = nativeRename;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "render attempt failure transition preserves a pathname successor",
@@ -8851,11 +8862,22 @@ export const test_cli_scaffold = async (): Promise<void> => {
       nativeRename(oldPath, newPath);
     }) as typeof fs.renameSync;
     let completionAccepted = false;
+    let completionCleanupFailure: { error: unknown } | undefined;
     try {
       renderAttemptModule.completeRenderAttempt(completionAttempt);
       completionAccepted = true;
+    } catch (error) {
+      completionCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.renameSync = nativeRename;
+      preserveCliHarnessCleanup(completionCleanupFailure, [
+        {
+          resource: "render attempt completion rename hook",
+          cleanup: () => {
+            mutableFs.renameSync = nativeRename;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "render attempt completion deletes the captured owner and preserves its successor",
@@ -8884,6 +8906,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       ]) as number;
     }) as typeof fs.openSync;
     let targetCompetitorRejected = false;
+    let targetCompetitorCleanupFailure: { error: unknown } | undefined;
     try {
       targetCompetitorRejected = throws(() =>
         renderAttemptModule.beginRenderAttempt({
@@ -8897,8 +8920,18 @@ export const test_cli_scaffold = async (): Promise<void> => {
           token: firstAttemptToken,
         }),
       );
+    } catch (error) {
+      targetCompetitorCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.openSync = nativeOpen;
+      preserveCliHarnessCleanup(targetCompetitorCleanupFailure, [
+        {
+          resource: "render attempt competitor open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "render attempt preserves a direct final-slot competitor",
@@ -8940,6 +8973,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       return status;
     }) as typeof fs.lstatSync;
     let postPublicationRejected = false;
+    let postPublicationCleanupFailure: { error: unknown } | undefined;
     try {
       postPublicationRejected = throws(() =>
         renderAttemptModule.beginRenderAttempt({
@@ -8953,8 +8987,18 @@ export const test_cli_scaffold = async (): Promise<void> => {
           token: secondAttemptToken,
         }),
       );
+    } catch (error) {
+      postPublicationCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.lstatSync = nativeLstat;
+      preserveCliHarnessCleanup(postPublicationCleanupFailure, [
+        {
+          resource: "render attempt post-publication lstat hook",
+          cleanup: () => {
+            mutableFs.lstatSync = nativeLstat;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "render attempt preserves a relinked final record after lock authority loss",
@@ -8995,6 +9039,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       return descriptor;
     }) as typeof fs.openSync;
     let attemptParentRejected = false;
+    let attemptParentCleanupFailure: { error: unknown } | undefined;
     try {
       attemptParentRejected = throws(() =>
         renderAttemptModule.beginRenderAttempt({
@@ -9008,8 +9053,18 @@ export const test_cli_scaffold = async (): Promise<void> => {
           token: firstAttemptToken,
         }),
       );
+    } catch (error) {
+      attemptParentCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.openSync = nativeOpen;
+      preserveCliHarnessCleanup(attemptParentCleanupFailure, [
+        {
+          resource: "render attempt parent open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "render attempt preserves an attempts-directory successor at publication",
@@ -9051,6 +9106,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       return descriptor;
     }) as typeof fs.openSync;
     let attemptRootRejected = false;
+    let attemptRootCleanupFailure: { error: unknown } | undefined;
     try {
       attemptRootRejected = throws(() =>
         renderAttemptModule.beginRenderAttempt({
@@ -9064,8 +9120,18 @@ export const test_cli_scaffold = async (): Promise<void> => {
           token: secondAttemptToken,
         }),
       );
+    } catch (error) {
+      attemptRootCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.openSync = nativeOpen;
+      preserveCliHarnessCleanup(attemptRootCleanupFailure, [
+        {
+          resource: "render attempt root open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "render attempt preserves a render-root successor at publication",
