@@ -12985,15 +12985,31 @@ export const test_cli_scaffold = async (): Promise<void> => {
       return length;
     }) as typeof fs.readSync;
     let lateCreateMutationRejected = false;
+    let lateCreateMutationCleanupFailure: { error: unknown } | undefined;
     try {
       lateCreateMutationRejected = throws(() =>
         writeFiles(lateCreateMutationBase, {
           "owned.txt": "scaffold generation",
         }),
       );
+    } catch (error) {
+      lateCreateMutationCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.openSync = nativeOpen;
-      mutableFs.readSync = nativeRead;
+      preserveCliHarnessCleanup(lateCreateMutationCleanupFailure, [
+        {
+          resource: "scaffold late create open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+        {
+          resource: "scaffold late create read hook",
+          cleanup: () => {
+            mutableFs.readSync = nativeRead;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "scaffold creation rejects same-inode mutation after final readback",
@@ -13044,6 +13060,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       return length;
     }) as typeof fs.readSync;
     let lateForceMutationRejected = false;
+    let lateForceMutationCleanupFailure: { error: unknown } | undefined;
     try {
       lateForceMutationRejected = throws(() =>
         writeFiles(
@@ -13052,9 +13069,24 @@ export const test_cli_scaffold = async (): Promise<void> => {
           { force: true },
         ),
       );
+    } catch (error) {
+      lateForceMutationCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.openSync = nativeOpen;
-      mutableFs.readSync = nativeRead;
+      preserveCliHarnessCleanup(lateForceMutationCleanupFailure, [
+        {
+          resource: "scaffold late force open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+        {
+          resource: "scaffold late force read hook",
+          cleanup: () => {
+            mutableFs.readSync = nativeRead;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "forced scaffold write rejects same-inode mutation after final readback",
@@ -13117,16 +13149,37 @@ export const test_cli_scaffold = async (): Promise<void> => {
       return Reflect.apply(nativeLstat, mutableFs, [file, ...args]);
     }) as typeof fs.lstatSync;
     let finalCreateMutationRejected = false;
+    let finalCreateMutationCleanupFailure: { error: unknown } | undefined;
     try {
       finalCreateMutationRejected = throws(() =>
         writeFiles(finalCreateMutationBase, {
           "owned.txt": "scaffold generation",
         }),
       );
+    } catch (error) {
+      finalCreateMutationCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.openSync = nativeOpen;
-      mutableFs.fstatSync = nativeFstat;
-      mutableFs.lstatSync = nativeLstat;
+      preserveCliHarnessCleanup(finalCreateMutationCleanupFailure, [
+        {
+          resource: "scaffold final create open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+        {
+          resource: "scaffold final create fstat hook",
+          cleanup: () => {
+            mutableFs.fstatSync = nativeFstat;
+          },
+        },
+        {
+          resource: "scaffold final create lstat hook",
+          cleanup: () => {
+            mutableFs.lstatSync = nativeLstat;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "scaffold creation rejects mutation after its final descriptor snapshot",
@@ -13191,6 +13244,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       return Reflect.apply(nativeLstat, mutableFs, [file, ...args]);
     }) as typeof fs.lstatSync;
     let finalForceMutationRejected = false;
+    let finalForceMutationCleanupFailure: { error: unknown } | undefined;
     try {
       finalForceMutationRejected = throws(() =>
         writeFiles(
@@ -13199,10 +13253,30 @@ export const test_cli_scaffold = async (): Promise<void> => {
           { force: true },
         ),
       );
+    } catch (error) {
+      finalForceMutationCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.openSync = nativeOpen;
-      mutableFs.fstatSync = nativeFstat;
-      mutableFs.lstatSync = nativeLstat;
+      preserveCliHarnessCleanup(finalForceMutationCleanupFailure, [
+        {
+          resource: "scaffold final force open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+        {
+          resource: "scaffold final force fstat hook",
+          cleanup: () => {
+            mutableFs.fstatSync = nativeFstat;
+          },
+        },
+        {
+          resource: "scaffold final force lstat hook",
+          cleanup: () => {
+            mutableFs.lstatSync = nativeLstat;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "forced scaffold write rejects mutation after its final descriptor snapshot",
