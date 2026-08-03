@@ -363,6 +363,7 @@ export const test_mcp_project_manifest = (): void => {
       linkedRoot,
       process.platform === "win32" ? "junction" : "dir",
     );
+    let linkedRootFailure: IProjectManifestFixtureFailure | undefined;
     try {
       TestValidator.predicate(
         "project roots reject symlinks before creating resident state",
@@ -371,8 +372,16 @@ export const test_mcp_project_manifest = (): void => {
           ["AutoMovie project root", "symbolic link"],
         ),
       );
+    } catch (error) {
+      linkedRootFailure = { error };
+      throw error;
     } finally {
-      fs.unlinkSync(linkedRoot);
+      preserveProjectManifestRaceCleanup(linkedRootFailure, [
+        {
+          resource: "linked project root",
+          cleanup: () => fs.unlinkSync(linkedRoot),
+        },
+      ]);
     }
   } catch (error) {
     projectManifestFailure = { error };

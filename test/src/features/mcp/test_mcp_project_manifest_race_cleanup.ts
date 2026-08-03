@@ -77,6 +77,8 @@ const projectManifestRaceCleanupContract = (text: string): unknown => {
       compact(node.finallyBlock, source).includes(
         "preserveProjectManifestRaceCleanup(",
       ) &&
+      (compact(node.finallyBlock, source).match(/resource:/g)?.length ?? 0) >
+        1 &&
       ts.isBlock(node.parent)
     ) {
       const statements = [...node.parent.statements];
@@ -257,7 +259,7 @@ export const test_mcp_project_manifest_race_cleanup = (): void => {
           catchBodies: ["manifestRaceFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 48,
+          containerStatements: 49,
           failureHolder:
             "letmanifestRaceFailure:IProjectManifestFixtureFailure|undefined;",
           finallyDigest:
@@ -282,7 +284,7 @@ export const test_mcp_project_manifest_race_cleanup = (): void => {
           catchBodies: ["optionalRaceFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 48,
+          containerStatements: 49,
           failureHolder:
             "letoptionalRaceFailure:IProjectManifestFixtureFailure|undefined;",
           finallyDigest:
