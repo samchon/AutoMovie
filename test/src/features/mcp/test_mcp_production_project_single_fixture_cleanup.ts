@@ -283,25 +283,25 @@ export const test_mcp_production_project_single_fixture_cleanup = (): void => {
             index: 3,
             substantive: {
               digest:
-                "4e80f8565c4ce4bb6c457fe4d78e4404a5544c96626a0303e5dc6bd7fbc2bf1d",
-              tokens: 11200,
+                "4dc43f83bd15a8ec317b8c75c293425c2bb587843e7e5d8477e72c06a575d0e4",
+              tokens: 11742,
             },
             tryDigest:
-              "31299a4f2ff50217d94c960d4e1ef2418e3b7aa24bc1ba629e936a6ec862b882",
-            tryStatements: 288,
+              "4f4280805176e2c385a24199c3c013402c7daf24c0601bd314d6c7c5959d8528",
+            tryStatements: 292,
           },
           {
             acquisition: "constdependencyCycleFixture=productionFixture();",
             catchBodies: ["dependencyCycleFailure={error};", "throwerror;"],
             catchVariables: ["error"],
             containerKind: "TryStatement",
-            containerStatements: 288,
+            containerStatements: 292,
             failureHolder:
               "letdependencyCycleFailure:|ISingleProductionProjectFixtureFailure|undefined;",
             finallyBodies: [
               "preserveSingleProductionProjectFixtureCleanup(dependencyCycleFailure,()=>dependencyCycleFixture.dispose(),);",
             ],
-            index: 91,
+            index: 93,
             substantive: {
               digest:
                 "480b4ec15a2f992254ff2a7a19527407577ca8a724762e193462f46bc83eac3a",
@@ -325,12 +325,12 @@ export const test_mcp_production_project_single_fixture_cleanup = (): void => {
             index: 6,
             substantive: {
               digest:
-                "e9f5e199c167384803476ec5d4600259f8a2cfe76ac1ab2b68d69d0185dfa0ae",
-              tokens: 1264,
+                "c8fec55b939a8316f733fb20fa086fd5393411c3dd21d317c6d5fb6a5e736433",
+              tokens: 1406,
             },
             tryDigest:
-              "bc9093d82067dcb31bd3a4713028f679ed65ef863317af814e10a555e706101d",
-            tryStatements: 19,
+              "70ca35f004ed6f3e5ca4b15e1fb59fed7b1da8db1e80a6548d0c1219bf790613",
+            tryStatements: 20,
           },
           {
             acquisition: "constassetManifestFixture=productionFixture();",

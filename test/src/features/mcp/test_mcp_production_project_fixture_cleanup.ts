@@ -69,6 +69,14 @@ const productionProjectFixtureContract = (text: string): unknown => {
       ) {
         const statements = [...node.parent.statements];
         const index = statements.indexOf(node);
+        if (
+          compact(statements[index - 3]!, source).endsWith(
+            "=productionFixture();",
+          ) === false
+        ) {
+          ts.forEachChild(node, visit);
+          return;
+        }
         lifecycles.push({
           catchBodies: node.catchClause.block.statements.map((statement) =>
             compact(statement, source),
@@ -248,12 +256,12 @@ export const test_mcp_production_project_fixture_cleanup = (): void => {
           {
             catchBodies: ["linkedGeneratedFailure={error};", "throwerror;"],
             catchVariables: ["error"],
-            containerStatements: 288,
+            containerStatements: 292,
             finallyBodies: [
               "constcompletedOutsideGenerated=outsideGenerated;",
               'preserveProductionProjectFixtureCleanup(linkedGeneratedFailure,[{resource:"linked-generatedproductionfixture",cleanup:()=>linkedGenerated.dispose(),},...(completedOutsideGenerated===undefined?[]:[{resource:"linked-generatedoutsideroot",cleanup:()=>fs.rmSync(completedOutsideGenerated,{force:true,recursive:true,}),},]),]);',
             ],
-            index: 149,
+            index: 152,
             prefixes: [
               "constlinkedGenerated=productionFixture();",
               "letoutsideGenerated:string|undefined;",
@@ -268,12 +276,12 @@ export const test_mcp_production_project_fixture_cleanup = (): void => {
           {
             catchBodies: ["linkedStateFailure={error};", "throwerror;"],
             catchVariables: ["error"],
-            containerStatements: 288,
+            containerStatements: 292,
             finallyBodies: [
               "constcompletedOutsideState=outsideState;",
               'preserveProductionProjectFixtureCleanup(linkedStateFailure,[{resource:"linked-stateproductionfixture",cleanup:()=>linkedState.dispose(),},...(completedOutsideState===undefined?[]:[{resource:"linked-stateoutsideroot",cleanup:()=>fs.rmSync(completedOutsideState,{force:true,recursive:true,}),},]),]);',
             ],
-            index: 153,
+            index: 156,
             prefixes: [
               "constlinkedState=productionFixture();",
               "letoutsideState:string|undefined;",
@@ -288,12 +296,12 @@ export const test_mcp_production_project_fixture_cleanup = (): void => {
           {
             catchBodies: ["linkedStateFileFailure={error};", "throwerror;"],
             catchVariables: ["error"],
-            containerStatements: 288,
+            containerStatements: 292,
             finallyBodies: [
               "constcompletedOutsideStateFile=outsideStateFile;",
               'preserveProductionProjectFixtureCleanup(linkedStateFileFailure,[{resource:"linked-state-fileproductionfixture",cleanup:()=>linkedStateFile.dispose(),},...(completedOutsideStateFile===undefined?[]:[{resource:"linked-state-fileoutsideroot",cleanup:()=>fs.rmSync(completedOutsideStateFile,{force:true,recursive:true,}),},]),]);',
             ],
-            index: 157,
+            index: 160,
             prefixes: [
               "constlinkedStateFile=productionFixture();",
               "letoutsideStateFile:string|undefined;",

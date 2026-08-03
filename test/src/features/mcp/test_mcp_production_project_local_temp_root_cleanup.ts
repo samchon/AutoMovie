@@ -248,13 +248,13 @@ export const test_mcp_production_project_local_temp_root_cleanup = (): void => {
             catchBodies: ["outsideRenderReadFailure={error};", "throwerror;"],
             catchVariables: ["error"],
             containerKind: "TryStatement",
-            containerStatements: 288,
+            containerStatements: 292,
             failureHolder:
               "letoutsideRenderReadFailure:|ISingleProductionProjectFixtureFailure|undefined;",
             finallyBodies: [
               "preserveSingleProductionProjectFixtureCleanup(outsideRenderReadFailure,()=>fs.rmSync(outsideRenderRead,{force:true,recursive:true}),);",
             ],
-            index: 236,
+            index: 240,
             substantive: {
               digest:
                 "a9f2e38a36c908ba761f36292a98f524aac47771cefcc62f2f2ac812e0d020e2",
@@ -270,13 +270,13 @@ export const test_mcp_production_project_local_temp_root_cleanup = (): void => {
             catchBodies: ["outsideRenderTargetFailure={error};", "throwerror;"],
             catchVariables: ["error"],
             containerKind: "TryStatement",
-            containerStatements: 288,
+            containerStatements: 292,
             failureHolder:
               "letoutsideRenderTargetFailure:|ISingleProductionProjectFixtureFailure|undefined;",
             finallyBodies: [
               "preserveSingleProductionProjectFixtureCleanup(outsideRenderTargetFailure,()=>fs.rmSync(outsideRenderTarget,{force:true,recursive:true}),);",
             ],
-            index: 256,
+            index: 260,
             substantive: {
               digest:
                 "09de7969f70d53d55b4b044b4f467c66bd9ca4990cf3e0e4f72febfb306d8128",
@@ -292,13 +292,13 @@ export const test_mcp_production_project_local_temp_root_cleanup = (): void => {
             catchBodies: ["outsideContentFailure={error};", "throwerror;"],
             catchVariables: ["error"],
             containerKind: "TryStatement",
-            containerStatements: 19,
+            containerStatements: 20,
             failureHolder:
               "letoutsideContentFailure:|ISingleProductionProjectFixtureFailure|undefined;",
             finallyBodies: [
               "preserveSingleProductionProjectFixtureCleanup(outsideContentFailure,()=>fs.rmSync(outsideContent,{force:true,recursive:true}),);",
             ],
-            index: 15,
+            index: 16,
             substantive: {
               digest:
                 "97d99abae5db1bbb64b832dc5e3d0bc69d0777dc1d83cd978a662e318d2d9b40",
@@ -314,13 +314,13 @@ export const test_mcp_production_project_local_temp_root_cleanup = (): void => {
             catchBodies: ["racedOutsideFailure={error};", "throwerror;"],
             catchVariables: ["error"],
             containerKind: "TryStatement",
-            containerStatements: 19,
+            containerStatements: 20,
             failureHolder:
               "letracedOutsideFailure:ISingleProductionProjectFixtureFailure|undefined;",
             finallyBodies: [
               "preserveSingleProductionProjectFixtureCleanup(racedOutsideFailure,()=>fs.rmSync(racedOutside,{force:true,recursive:true}),);",
             ],
-            index: 18,
+            index: 19,
             substantive: {
               digest:
                 "b98e84b35443e5af4556f30179c5a8d53055c46a7ee03678bb386796ca3eb1b5",

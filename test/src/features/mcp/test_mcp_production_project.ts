@@ -631,24 +631,58 @@ export const test_mcp_production_project = (): void => {
         sourcePathRead = true;
         fs.renameSync(sourceReadPath, sourceReadParked);
         fs.writeFileSync(sourceReadPath, "export const transient = true;\n");
+        let sourceTransientReadFailure:
+          | IProductionProjectFixtureFailure
+          | undefined;
         try {
           return Reflect.apply(nativeSourceRead, fs, [target, ...args]);
+        } catch (error) {
+          sourceTransientReadFailure = { error };
+          throw error;
         } finally {
-          fs.rmSync(sourceReadPath);
-          fs.renameSync(sourceReadParked, sourceReadPath);
+          preserveProductionProjectFixtureCleanup(sourceTransientReadFailure, [
+            {
+              resource: "source-read transient replacement",
+              cleanup: () => fs.rmSync(sourceReadPath),
+            },
+            {
+              resource: "source-read parked resident",
+              cleanup: () => fs.renameSync(sourceReadParked, sourceReadPath),
+            },
+          ]);
         }
       }
       return Reflect.apply(nativeSourceRead, fs, [target, ...args]);
     }) as typeof fs.readFileSync;
     let sourceReadBytes: Uint8Array = new Uint8Array();
+    let sourceReadFailure: IProductionProjectFixtureFailure | undefined;
     try {
       sourceReadBytes = project.readSource(sourceReadRelative);
+    } catch (error) {
+      sourceReadFailure = { error };
+      throw error;
     } finally {
-      fs.readFileSync = nativeSourceRead;
-      if (fs.existsSync(sourceReadParked)) {
-        fs.rmSync(sourceReadPath, { force: true });
-        fs.renameSync(sourceReadParked, sourceReadPath);
-      }
+      const sourceResidentParked = fs.existsSync(sourceReadParked);
+      preserveProductionProjectFixtureCleanup(sourceReadFailure, [
+        {
+          resource: "source-read native hook",
+          cleanup: () => {
+            fs.readFileSync = nativeSourceRead;
+          },
+        },
+        ...(sourceResidentParked
+          ? [
+              {
+                resource: "source-read transient replacement",
+                cleanup: () => fs.rmSync(sourceReadPath, { force: true }),
+              },
+              {
+                resource: "source-read parked resident",
+                cleanup: () => fs.renameSync(sourceReadParked, sourceReadPath),
+              },
+            ]
+          : []),
+      ]);
     }
     TestValidator.predicate(
       "source reads bind bytes to the verified descriptor across a pathname swap",
@@ -693,11 +727,25 @@ export const test_mcp_production_project = (): void => {
             ? JSON.stringify({ revision: expectedRevision + 1 })
             : "transient replacement",
         );
+        let stateTransientReadFailure:
+          | IProductionProjectFixtureFailure
+          | undefined;
         try {
           return Reflect.apply(nativeStateRead, fs, [target, ...args]);
+        } catch (error) {
+          stateTransientReadFailure = { error };
+          throw error;
         } finally {
-          fs.rmSync(resolved);
-          fs.renameSync(parked, resolved);
+          preserveProductionProjectFixtureCleanup(stateTransientReadFailure, [
+            {
+              resource: `state-read transient replacement ${resolved}`,
+              cleanup: () => fs.rmSync(resolved),
+            },
+            {
+              resource: `state-read parked resident ${resolved}`,
+              cleanup: () => fs.renameSync(parked, resolved),
+            },
+          ]);
         }
       }
       return Reflect.apply(nativeStateRead, fs, [target, ...args]);
@@ -705,19 +753,38 @@ export const test_mcp_production_project = (): void => {
     let projectStateManifest: Uint8Array = new Uint8Array();
     let trackedRevision: Uint8Array = new Uint8Array();
     let currentRevision = -1;
+    let stateReadFailure: IProductionProjectFixtureFailure | undefined;
     try {
       projectStateManifest = project.projectStateRecords().manifest;
       trackedRevision = project.readTrackedStateFile("revision.json")!;
       currentRevision = project.revision();
+    } catch (error) {
+      stateReadFailure = { error };
+      throw error;
     } finally {
-      fs.readFileSync = nativeStateRead;
-      for (const file of stateReadResidents.keys()) {
-        const parked = `${file}.parked`;
-        if (fs.existsSync(parked)) {
-          fs.rmSync(file, { force: true });
-          fs.renameSync(parked, file);
-        }
-      }
+      preserveProductionProjectFixtureCleanup(stateReadFailure, [
+        {
+          resource: "state-read native hook",
+          cleanup: () => {
+            fs.readFileSync = nativeStateRead;
+          },
+        },
+        ...[...stateReadResidents.keys()].flatMap((file) => {
+          const parked = `${file}.parked`;
+          return fs.existsSync(parked)
+            ? [
+                {
+                  resource: `state-read transient replacement ${file}`,
+                  cleanup: () => fs.rmSync(file, { force: true }),
+                },
+                {
+                  resource: `state-read parked resident ${file}`,
+                  cleanup: () => fs.renameSync(parked, file),
+                },
+              ]
+            : [];
+        }),
+      ]);
     }
     TestValidator.predicate(
       "state reads bind raw records and JSON to verified descriptors across pathname swaps",
@@ -1354,24 +1421,63 @@ export const test_mcp_production_project = (): void => {
         generatedPathRead = true;
         fs.renameSync(generatedReadPath, generatedReadParked);
         fs.writeFileSync(generatedReadPath, "transient replacement");
+        let generatedTransientReadFailure:
+          | IProductionProjectFixtureFailure
+          | undefined;
         try {
           return Reflect.apply(nativeGeneratedRead, fs, [target, ...args]);
+        } catch (error) {
+          generatedTransientReadFailure = { error };
+          throw error;
         } finally {
-          fs.rmSync(generatedReadPath);
-          fs.renameSync(generatedReadParked, generatedReadPath);
+          preserveProductionProjectFixtureCleanup(
+            generatedTransientReadFailure,
+            [
+              {
+                resource: "generated-read transient replacement",
+                cleanup: () => fs.rmSync(generatedReadPath),
+              },
+              {
+                resource: "generated-read parked resident",
+                cleanup: () =>
+                  fs.renameSync(generatedReadParked, generatedReadPath),
+              },
+            ],
+          );
         }
       }
       return Reflect.apply(nativeGeneratedRead, fs, [target, ...args]);
     }) as typeof fs.readFileSync;
     let generatedReadBytes: Uint8Array = new Uint8Array();
+    let generatedReadFailure: IProductionProjectFixtureFailure | undefined;
     try {
       generatedReadBytes = project.readGeneratedFile("shots/opening.json");
+    } catch (error) {
+      generatedReadFailure = { error };
+      throw error;
     } finally {
-      fs.readFileSync = nativeGeneratedRead;
-      if (fs.existsSync(generatedReadParked)) {
-        fs.rmSync(generatedReadPath, { force: true });
-        fs.renameSync(generatedReadParked, generatedReadPath);
-      }
+      const generatedResidentParked = fs.existsSync(generatedReadParked);
+      preserveProductionProjectFixtureCleanup(generatedReadFailure, [
+        {
+          resource: "generated-read native hook",
+          cleanup: () => {
+            fs.readFileSync = nativeGeneratedRead;
+          },
+        },
+        ...(generatedResidentParked
+          ? [
+              {
+                resource: "generated-read transient replacement",
+                cleanup: () => fs.rmSync(generatedReadPath, { force: true }),
+              },
+              {
+                resource: "generated-read parked resident",
+                cleanup: () =>
+                  fs.renameSync(generatedReadParked, generatedReadPath),
+              },
+            ]
+          : []),
+      ]);
     }
     TestValidator.predicate(
       "generated reads bind bytes to the verified descriptor across a pathname swap",
@@ -1570,33 +1676,75 @@ export const test_mcp_production_project = (): void => {
         generatedManifestPathRead = true;
         fs.renameSync(generatedManifestPath, generatedManifestParked);
         fs.writeFileSync(generatedManifestPath, "transient generated manifest");
+        let generatedManifestTransientReadFailure:
+          | IProductionProjectFixtureFailure
+          | undefined;
         try {
           return Reflect.apply(nativeGeneratedManifestRead, fs, [
             target,
             ...args,
           ]);
+        } catch (error) {
+          generatedManifestTransientReadFailure = { error };
+          throw error;
         } finally {
-          fs.rmSync(generatedManifestPath);
-          fs.renameSync(generatedManifestParked, generatedManifestPath);
+          preserveProductionProjectFixtureCleanup(
+            generatedManifestTransientReadFailure,
+            [
+              {
+                resource: "generated-manifest transient replacement",
+                cleanup: () => fs.rmSync(generatedManifestPath),
+              },
+              {
+                resource: "generated-manifest parked resident",
+                cleanup: () =>
+                  fs.renameSync(generatedManifestParked, generatedManifestPath),
+              },
+            ],
+          );
         }
       }
       return Reflect.apply(nativeGeneratedManifestRead, fs, [target, ...args]);
     }) as typeof fs.readFileSync;
     let stableGeneratedCommitRejected = false;
     let repeatedGeneratedRevision = -1;
+    let generatedManifestReadFailure:
+      | IProductionProjectFixtureFailure
+      | undefined;
     try {
       repeatedGeneratedRevision = ownerProject.commitGenerated(
         retainedBytes,
         smaller,
       );
-    } catch {
+    } catch (error) {
+      generatedManifestReadFailure = { error };
       stableGeneratedCommitRejected = true;
     } finally {
-      fs.readFileSync = nativeGeneratedManifestRead;
-      if (fs.existsSync(generatedManifestParked)) {
-        fs.rmSync(generatedManifestPath, { force: true });
-        fs.renameSync(generatedManifestParked, generatedManifestPath);
-      }
+      const generatedManifestResidentParked = fs.existsSync(
+        generatedManifestParked,
+      );
+      preserveProductionProjectFixtureCleanup(generatedManifestReadFailure, [
+        {
+          resource: "generated-manifest native hook",
+          cleanup: () => {
+            fs.readFileSync = nativeGeneratedManifestRead;
+          },
+        },
+        ...(generatedManifestResidentParked
+          ? [
+              {
+                resource: "generated-manifest transient replacement",
+                cleanup: () =>
+                  fs.rmSync(generatedManifestPath, { force: true }),
+              },
+              {
+                resource: "generated-manifest parked resident",
+                cleanup: () =>
+                  fs.renameSync(generatedManifestParked, generatedManifestPath),
+              },
+            ]
+          : []),
+      ]);
     }
     TestValidator.predicate(
       "generated manifest guards bind exact bytes to descriptors",
@@ -2550,11 +2698,25 @@ export const test_mcp_production_project = (): void => {
         const parked = `${resolved}.parked`;
         fs.renameSync(resolved, parked);
         fs.writeFileSync(resolved, "transient content bytes");
+        let contentTransientReadFailure:
+          | IProductionProjectFixtureFailure
+          | undefined;
         try {
           return Reflect.apply(nativeContentRead, fs, [target, ...args]);
+        } catch (error) {
+          contentTransientReadFailure = { error };
+          throw error;
         } finally {
-          fs.rmSync(resolved);
-          fs.renameSync(parked, resolved);
+          preserveProductionProjectFixtureCleanup(contentTransientReadFailure, [
+            {
+              resource: `content-read transient replacement ${resolved}`,
+              cleanup: () => fs.rmSync(resolved),
+            },
+            {
+              resource: `content-read parked resident ${resolved}`,
+              cleanup: () => fs.renameSync(parked, resolved),
+            },
+          ]);
         }
       }
       return Reflect.apply(nativeContentRead, fs, [target, ...args]);
@@ -2562,17 +2724,36 @@ export const test_mcp_production_project = (): void => {
     let boundContentInputs: ReturnType<
       AutoMovieProductionProject["contentInputs"]
     > = [];
+    let contentReadFailure: IProductionProjectFixtureFailure | undefined;
     try {
       boundContentInputs = contentProject.contentInputs();
+    } catch (error) {
+      contentReadFailure = { error };
+      throw error;
     } finally {
-      fs.readFileSync = nativeContentRead;
-      for (const file of contentReadResidents.keys()) {
-        const parked = `${file}.parked`;
-        if (fs.existsSync(parked)) {
-          fs.rmSync(file, { force: true });
-          fs.renameSync(parked, file);
-        }
-      }
+      preserveProductionProjectFixtureCleanup(contentReadFailure, [
+        {
+          resource: "content-read native hook",
+          cleanup: () => {
+            fs.readFileSync = nativeContentRead;
+          },
+        },
+        ...[...contentReadResidents.keys()].flatMap((file) => {
+          const parked = `${file}.parked`;
+          return fs.existsSync(parked)
+            ? [
+                {
+                  resource: `content-read transient replacement ${file}`,
+                  cleanup: () => fs.rmSync(file, { force: true }),
+                },
+                {
+                  resource: `content-read parked resident ${file}`,
+                  cleanup: () => fs.renameSync(parked, file),
+                },
+              ]
+            : [];
+        }),
+      ]);
     }
     TestValidator.predicate(
       "declared content reads bind rooted, direct, and asset bytes to verified descriptors",
