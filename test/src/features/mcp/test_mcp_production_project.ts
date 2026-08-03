@@ -195,6 +195,27 @@ export const preserveProductionProjectFixtureCleanup = (
     );
 };
 
+interface ISingleProductionProjectFixtureFailure {
+  error: unknown;
+}
+
+class SingleProductionProjectFixtureCleanupError extends AggregateError {}
+
+export const preserveSingleProductionProjectFixtureCleanup = (
+  failure: ISingleProductionProjectFixtureFailure | undefined,
+  cleanup: () => void,
+): void => {
+  try {
+    cleanup();
+  } catch (cleanupFailure) {
+    if (failure === undefined) throw cleanupFailure;
+    throw new SingleProductionProjectFixtureCleanupError(
+      [failure.error, cleanupFailure],
+      "Single production-project fixture teardown failed after the test failed.",
+    );
+  }
+};
+
 type ProductionAtomicFailureMode =
   | "combined-cleanup"
   | "combined-recovery"
@@ -478,6 +499,9 @@ const snapshotTree = (root: string): string[] => {
 /** The resident production store enforces path, revision and ownership rules. */
 export const test_mcp_production_project = (): void => {
   exerciseProductionAtomicFailureOwnership();
+  let productionProjectFailure:
+    | ISingleProductionProjectFixtureFailure
+    | undefined;
   const fixture = productionFixture();
   try {
     const project = AutoMovieProductionProject.open(fixture.root);
@@ -986,8 +1010,11 @@ export const test_mcp_production_project = (): void => {
     const transitiveDependentMutation = project.setModelRecipe(
       transitiveDependentModel,
     );
-    const dependencyCycleFixture = productionFixture();
     let cyclicDependencyTraversal = false;
+    let dependencyCycleFailure:
+      | ISingleProductionProjectFixtureFailure
+      | undefined;
+    const dependencyCycleFixture = productionFixture();
     try {
       const modelRoot = path.join(
         dependencyCycleFixture.root,
@@ -1042,8 +1069,14 @@ export const test_mcp_production_project = (): void => {
         id: "sentinel",
       });
       cyclicDependencyTraversal = true;
+    } catch (error) {
+      dependencyCycleFailure = { error };
+      throw error;
     } finally {
-      dependencyCycleFixture.dispose();
+      preserveSingleProductionProjectFixtureCleanup(
+        dependencyCycleFailure,
+        () => dependencyCycleFixture.dispose(),
+      );
     }
     const refusedModelErase = project.eraseDesignArtifact({
       kind: "model",
@@ -2407,10 +2440,17 @@ export const test_mcp_production_project = (): void => {
       throws(() => ownerProject.graph()),
     );
     fs.rmSync(invalidTyped);
+  } catch (error) {
+    productionProjectFailure = { error };
+    throw error;
   } finally {
-    fixture.dispose();
+    preserveSingleProductionProjectFixtureCleanup(
+      productionProjectFailure,
+      () => fixture.dispose(),
+    );
   }
 
+  let contentFixtureFailure: ISingleProductionProjectFixtureFailure | undefined;
   const contentFixture = productionFixture();
   try {
     const manifestPath = path.join(
@@ -2607,8 +2647,13 @@ export const test_mcp_production_project = (): void => {
     } finally {
       fs.rmSync(racedOutside, { force: true, recursive: true });
     }
+  } catch (error) {
+    contentFixtureFailure = { error };
+    throw error;
   } finally {
-    contentFixture.dispose();
+    preserveSingleProductionProjectFixtureCleanup(contentFixtureFailure, () =>
+      contentFixture.dispose(),
+    );
   }
 
   for (const [name, replace, expected] of [
@@ -2631,6 +2676,9 @@ export const test_mcp_production_project = (): void => {
         false,
     ],
   ] as const) {
+    let assetManifestFixtureFailure:
+      | ISingleProductionProjectFixtureFailure
+      | undefined;
     const assetManifestFixture = productionFixture();
     try {
       const assetManifestPath = path.join(
@@ -2647,8 +2695,14 @@ export const test_mcp_production_project = (): void => {
           ? throws(() => assetManifestProject.contentInputs())
           : expected(assetManifestProject.contentInputs()),
       );
+    } catch (error) {
+      assetManifestFixtureFailure = { error };
+      throw error;
     } finally {
-      assetManifestFixture.dispose();
+      preserveSingleProductionProjectFixtureCleanup(
+        assetManifestFixtureFailure,
+        () => assetManifestFixture.dispose(),
+      );
     }
   }
 
@@ -2797,6 +2851,9 @@ export const test_mcp_production_project = (): void => {
       },
     ],
   ] as const) {
+    let invalidContentFailure:
+      | ISingleProductionProjectFixtureFailure
+      | undefined;
     const invalidContent = productionFixture();
     try {
       prepare(invalidContent.root);
@@ -2815,11 +2872,17 @@ export const test_mcp_production_project = (): void => {
           AutoMovieProductionProject.open(invalidContent.root).contentInputs(),
         ),
       );
+    } catch (error) {
+      invalidContentFailure = { error };
+      throw error;
     } finally {
-      invalidContent.dispose();
+      preserveSingleProductionProjectFixtureCleanup(invalidContentFailure, () =>
+        invalidContent.dispose(),
+      );
     }
   }
 
+  let replacedOwnerFailure: ISingleProductionProjectFixtureFailure | undefined;
   const replacedOwner = productionFixture();
   try {
     const ownerProject = AutoMovieProductionProject.open(replacedOwner.root);
@@ -2839,8 +2902,13 @@ export const test_mcp_production_project = (): void => {
         ),
       ),
     );
+  } catch (error) {
+    replacedOwnerFailure = { error };
+    throw error;
   } finally {
-    replacedOwner.dispose();
+    preserveSingleProductionProjectFixtureCleanup(replacedOwnerFailure, () =>
+      replacedOwner.dispose(),
+    );
   }
 
   const invalidRoot = fs.mkdtempSync(
@@ -3983,6 +4051,9 @@ export const test_mcp_production_project = (): void => {
       "compiler-owned root cannot escape through a junction",
       throws(() => AutoMovieProductionProject.open(junctionRoot)),
     );
+    let internalAliasFailure:
+      | ISingleProductionProjectFixtureFailure
+      | undefined;
     const internalAlias = productionFixture();
     try {
       fs.rmSync(path.join(internalAlias.root, "generated"), {
@@ -3998,8 +4069,13 @@ export const test_mcp_production_project = (): void => {
         "owned roots cannot alias another project directory through a junction",
         throws(() => AutoMovieProductionProject.open(internalAlias.root)),
       );
+    } catch (error) {
+      internalAliasFailure = { error };
+      throw error;
     } finally {
-      internalAlias.dispose();
+      preserveSingleProductionProjectFixtureCleanup(internalAliasFailure, () =>
+        internalAlias.dispose(),
+      );
     }
 
     const stateOutside = path.join(invalidRoot, "state-outside");
@@ -4041,6 +4117,9 @@ export const test_mcp_production_project = (): void => {
       );
     }
 
+    let malformedDesignFailure:
+      | ISingleProductionProjectFixtureFailure
+      | undefined;
     const malformedDesign = productionFixture();
     try {
       fs.writeFileSync(
@@ -4069,10 +4148,19 @@ export const test_mcp_production_project = (): void => {
           AutoMovieProductionProject.open(malformedDesign.root).graph(),
         ),
       );
+    } catch (error) {
+      malformedDesignFailure = { error };
+      throw error;
     } finally {
-      malformedDesign.dispose();
+      preserveSingleProductionProjectFixtureCleanup(
+        malformedDesignFailure,
+        () => malformedDesign.dispose(),
+      );
     }
 
+    let invalidRevisionFailure:
+      | ISingleProductionProjectFixtureFailure
+      | undefined;
     const invalidRevision = productionFixture();
     try {
       fs.writeFileSync(
@@ -4083,8 +4171,14 @@ export const test_mcp_production_project = (): void => {
         "revision must be a non-negative safe integer",
         throws(() => AutoMovieProductionProject.open(invalidRevision.root)),
       );
+    } catch (error) {
+      invalidRevisionFailure = { error };
+      throw error;
     } finally {
-      invalidRevision.dispose();
+      preserveSingleProductionProjectFixtureCleanup(
+        invalidRevisionFailure,
+        () => invalidRevision.dispose(),
+      );
     }
   } finally {
     fs.rmSync(invalidRoot, { force: true, recursive: true });
