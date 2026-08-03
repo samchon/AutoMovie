@@ -314,13 +314,24 @@ export const test_mcp_project_transactions = (): void => {
       return Reflect.apply(nativeCleanupWrite, fs, [file, ...args]);
     }) as typeof fs.writeFileSync;
     let cleanupRejected = false;
+    let cleanupWriteFailure: IProjectTransactionFixtureFailure | undefined;
     try {
       cleanupRejected = throwsError(
         () => a.saveActors([actorSpec("cleanupFailure")]),
         ["actor temporary write failed"],
       );
+    } catch (error) {
+      cleanupWriteFailure = { error };
+      throw error;
     } finally {
-      fs.writeFileSync = nativeCleanupWrite;
+      preserveProjectTransactionSwapCleanup(cleanupWriteFailure, [
+        {
+          resource: "actor cleanup write hook",
+          cleanup: () => {
+            fs.writeFileSync = nativeCleanupWrite;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "an ordinary atomic-write failure cleans its current-namespace temporary",
@@ -343,13 +354,24 @@ export const test_mcp_project_transactions = (): void => {
       nativeRename(oldPath, newPath);
     }) as typeof fs.renameSync;
     let deniedRemoval = false;
+    let deniedRemovalFailure: IProjectTransactionFixtureFailure | undefined;
     try {
       deniedRemoval = throwsError(
         () => a.removeActor("knightA"),
         ["actor rename denied"],
       );
+    } catch (error) {
+      deniedRemovalFailure = { error };
+      throw error;
     } finally {
-      fs.renameSync = nativeRename;
+      preserveProjectTransactionSwapCleanup(deniedRemovalFailure, [
+        {
+          resource: "denied-removal rename hook",
+          cleanup: () => {
+            fs.renameSync = nativeRename;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "a non-ENOENT actor quarantine failure preserves the resident slice",
@@ -371,13 +393,24 @@ export const test_mcp_project_transactions = (): void => {
       Reflect.apply(nativeRemove, fs, [file, ...args]);
     }) as typeof fs.rmSync;
     let restoredRemoval = false;
+    let restoredRemovalFailure: IProjectTransactionFixtureFailure | undefined;
     try {
       restoredRemoval = throwsError(
         () => a.removeActor("knightA"),
         ["actor quarantine busy"],
       );
+    } catch (error) {
+      restoredRemovalFailure = { error };
+      throw error;
     } finally {
-      fs.rmSync = nativeRemove;
+      preserveProjectTransactionSwapCleanup(restoredRemovalFailure, [
+        {
+          resource: "restored-removal remove hook",
+          cleanup: () => {
+            fs.rmSync = nativeRemove;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "a failed quarantine delete restores the actor slice",
@@ -407,13 +440,24 @@ export const test_mcp_project_transactions = (): void => {
       Reflect.apply(nativeRemove, fs, [file, ...args]);
     }) as typeof fs.rmSync;
     let lateDeleteRejected = false;
+    let lateDeleteFailure: IProjectTransactionFixtureFailure | undefined;
     try {
       lateDeleteRejected = throwsError(
         () => a.removeActor("knightA"),
         ["actor delete reported late failure"],
       );
+    } catch (error) {
+      lateDeleteFailure = { error };
+      throw error;
     } finally {
-      fs.rmSync = nativeRemove;
+      preserveProjectTransactionSwapCleanup(lateDeleteFailure, [
+        {
+          resource: "late-delete remove hook",
+          cleanup: () => {
+            fs.rmSync = nativeRemove;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "an already-restored quarantine failure never clobbers the resident actor",
@@ -438,14 +482,25 @@ export const test_mcp_project_transactions = (): void => {
       }
     }) as typeof fs.renameSync;
     let removalSwapMessage = "";
+    let removalSwapFailure: IProjectTransactionFixtureFailure | undefined;
     try {
       try {
         a.removeActor("knightA");
       } catch (error) {
         removalSwapMessage = (error as Error).message;
       }
+    } catch (error) {
+      removalSwapFailure = { error };
+      throw error;
     } finally {
-      fs.renameSync = nativeRename;
+      preserveProjectTransactionSwapCleanup(removalSwapFailure, [
+        {
+          resource: "removal-swap rename hook",
+          cleanup: () => {
+            fs.renameSync = nativeRename;
+          },
+        },
+      ]);
     }
     const removalReplacementEmpty = fs.readdirSync(root).length === 0;
     const quarantinedActor = fs
@@ -495,14 +550,25 @@ export const test_mcp_project_transactions = (): void => {
       return output;
     }) as typeof fs.writeFileSync;
     let lockSwapMessage = "";
+    let lockSwapFailure: IProjectTransactionFixtureFailure | undefined;
     try {
       try {
         a.saveActors([actorSpec("lockSwap")]);
       } catch (error) {
         lockSwapMessage = (error as Error).message;
       }
+    } catch (error) {
+      lockSwapFailure = { error };
+      throw error;
     } finally {
-      fs.writeFileSync = nativeWrite;
+      preserveProjectTransactionSwapCleanup(lockSwapFailure, [
+        {
+          resource: "lock-swap write hook",
+          cleanup: () => {
+            fs.writeFileSync = nativeWrite;
+          },
+        },
+      ]);
     }
     const replacementLockPreserved = fs.existsSync(
       path.join(root, "revision.lock"),
@@ -538,14 +604,25 @@ export const test_mcp_project_transactions = (): void => {
       return output;
     }) as typeof fs.writeFileSync;
     let operationMessage = "";
+    let rootSwapOperationFailure: IProjectTransactionFixtureFailure | undefined;
     try {
       try {
         a.saveActors([actorSpec("rootSwap")]);
       } catch (error) {
         operationMessage = (error as Error).message;
       }
+    } catch (error) {
+      rootSwapOperationFailure = { error };
+      throw error;
     } finally {
-      fs.writeFileSync = nativeWrite;
+      preserveProjectTransactionSwapCleanup(rootSwapOperationFailure, [
+        {
+          resource: "root-swap operation write hook",
+          cleanup: () => {
+            fs.writeFileSync = nativeWrite;
+          },
+        },
+      ]);
     }
     const replacementStayedEmpty = fs.readdirSync(root).length === 0;
     const originalLockPreserved = fs.existsSync(
@@ -665,10 +742,21 @@ export const test_mcp_project_transactions = (): void => {
       }
       return output;
     }) as typeof fs.writeFileSync;
+    let aliasRetargetFailure: IProjectTransactionFixtureFailure | undefined;
     try {
       project.saveSlate(slateOf("canonical physical root"));
+    } catch (error) {
+      aliasRetargetFailure = { error };
+      throw error;
     } finally {
-      fs.writeFileSync = nativeWrite;
+      preserveProjectTransactionSwapCleanup(aliasRetargetFailure, [
+        {
+          resource: "alias-retarget write hook",
+          cleanup: () => {
+            fs.writeFileSync = nativeWrite;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "an operation-time ancestor alias retarget cannot redirect a live handle",

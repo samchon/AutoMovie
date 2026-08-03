@@ -77,6 +77,8 @@ const transactionRootSwapCleanupContract = (text: string): unknown => {
       compact(node.finallyBlock, source).includes(
         "preserveProjectTransactionSwapCleanup(",
       ) &&
+      (compact(node.finallyBlock, source).match(/resource:/g)?.length ?? 0) >
+        1 &&
       ts.isBlock(node.parent)
     ) {
       const statements = [...node.parent.statements];
@@ -255,7 +257,7 @@ export const test_mcp_project_transaction_root_swap_cleanup = (): void => {
           catchBodies: ["rootSwapFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 129,
+          containerStatements: 136,
           failureHolder:
             "letrootSwapFailure:IProjectTransactionFixtureFailure|undefined;",
           finallyDigest:
@@ -265,7 +267,7 @@ export const test_mcp_project_transaction_root_swap_cleanup = (): void => {
               "c7f5ad93986760f2738617e8cd8719ff529db09f0b8223a99e45393de7a4f441",
             tokens: 58,
           },
-          index: 127,
+          index: 134,
           substantive: {
             digest:
               "3f2a22009e12d466fd4f481141257f97fe60b6a99a669de07f394c14681e3756",

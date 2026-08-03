@@ -240,8 +240,8 @@ export const test_mcp_project_transaction_fixture_cleanup = (): void => {
               "a81bbdcffb3eec2261a6d19f4441e610d8197b48cd39746d0da10a743bdb53ce",
             rootStringLiterals: ["automovie-txn-"],
             tryDigest:
-              "56cda35059fd1076288d00b10c71b5c9fac598cf41a789dc6fb97669b6cdc4bf",
-            tryStatements: 129,
+              "fa7bbc08b58608b208d971dbd28a2dc1b49c9bbf44160b2b9f80d4823c4803dd",
+            tryStatements: 136,
           },
           {
             bodyStatements: 6,
@@ -259,8 +259,8 @@ export const test_mcp_project_transaction_fixture_cleanup = (): void => {
               "a0b7ebd5e86c6f9a9599a8971c0e63c52e574bdcd89e324da392bc945cc7c1b9",
             rootStringLiterals: ["automovie-txn-alias-"],
             tryDigest:
-              "226bfb69c8f2d9ea3ba4307c619b193213698f0323492fd5b35c3e6f4fcf7658",
-            tryStatements: 13,
+              "50395f59f182d0c45f0fe5bf817c8247ac0d8c61fa114663a00f75d77e087e5a",
+            tryStatements: 14,
           },
         ],
       },
