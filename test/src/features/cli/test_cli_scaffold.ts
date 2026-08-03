@@ -18,6 +18,7 @@ import {
   productionH264Mp4,
   productionPng,
 } from "../mcp/productionMediaFixtures";
+import { preserveCliHarnessCleanup } from "./CliHarnessCleanup";
 import { preserveCliRootFixtureCleanup } from "./CliRootFixtureCleanup";
 
 /** True when `fn` throws. */
@@ -3929,6 +3930,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
         throw standaloneViewerCloseFailure;
     }) as typeof fs.closeSync;
     let standaloneViewerCloseError: unknown;
+    let standaloneViewerHookFailure: { error: unknown } | undefined;
     try {
       generatedModule.readPhysicalFileSnapshot(
         viewerRoot,
@@ -3937,9 +3939,22 @@ export const test_cli_scaffold = async (): Promise<void> => {
       );
     } catch (error) {
       standaloneViewerCloseError = error;
+      standaloneViewerHookFailure = { error };
     } finally {
-      mutableFs.openSync = nativeOpen;
-      mutableFs.closeSync = nativeClose;
+      preserveCliHarnessCleanup(standaloneViewerHookFailure, [
+        {
+          resource: "viewer standalone open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+        {
+          resource: "viewer standalone close hook",
+          cleanup: () => {
+            mutableFs.closeSync = nativeClose;
+          },
+        },
+      ]);
     }
     const primaryOnlyViewerFailure = new Error(
       "primary-only viewer read failed",
@@ -3961,6 +3976,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       return Reflect.apply(nativeFstat, mutableFs, [descriptor, ...args]);
     }) as typeof fs.fstatSync;
     let preservedPrimaryOnlyViewerFailure: unknown;
+    let primaryOnlyViewerHookFailure: { error: unknown } | undefined;
     try {
       generatedModule.readPhysicalFileSnapshot(
         viewerRoot,
@@ -3969,9 +3985,22 @@ export const test_cli_scaffold = async (): Promise<void> => {
       );
     } catch (error) {
       preservedPrimaryOnlyViewerFailure = error;
+      primaryOnlyViewerHookFailure = { error };
     } finally {
-      mutableFs.openSync = nativeOpen;
-      mutableFs.fstatSync = nativeFstat;
+      preserveCliHarnessCleanup(primaryOnlyViewerHookFailure, [
+        {
+          resource: "viewer primary-only open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+        {
+          resource: "viewer primary-only fstat hook",
+          cleanup: () => {
+            mutableFs.fstatSync = nativeFstat;
+          },
+        },
+      ]);
     }
     const combinedViewerPrimary = new Error("viewer descriptor read failed");
     const combinedViewerClose = new Error("viewer descriptor close failed");
@@ -3995,6 +4024,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       if (descriptor === combinedViewerDescriptor) throw combinedViewerClose;
     }) as typeof fs.closeSync;
     let combinedViewerFailure: unknown;
+    let combinedViewerHookFailure: { error: unknown } | undefined;
     try {
       generatedModule.readPhysicalFileSnapshot(
         viewerRoot,
@@ -4003,10 +4033,28 @@ export const test_cli_scaffold = async (): Promise<void> => {
       );
     } catch (error) {
       combinedViewerFailure = error;
+      combinedViewerHookFailure = { error };
     } finally {
-      mutableFs.openSync = nativeOpen;
-      mutableFs.fstatSync = nativeFstat;
-      mutableFs.closeSync = nativeClose;
+      preserveCliHarnessCleanup(combinedViewerHookFailure, [
+        {
+          resource: "viewer combined open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+        {
+          resource: "viewer combined fstat hook",
+          cleanup: () => {
+            mutableFs.fstatSync = nativeFstat;
+          },
+        },
+        {
+          resource: "viewer combined close hook",
+          cleanup: () => {
+            mutableFs.closeSync = nativeClose;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "generated viewer preserves descriptor operation and cleanup failures",
