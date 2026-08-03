@@ -30,6 +30,39 @@ export const preserveCommitLockFixtureCleanup = (
   }
 };
 
+interface ICommitLockHookCleanup {
+  cleanup: () => unknown;
+  resource: string;
+}
+
+class CommitLockHookCleanupError extends AggregateError {}
+
+/** Attempt every commit-lock harness hook restoration without hiding failure. */
+export const preserveCommitLockHookCleanup = (
+  failure: ICommitLockFixtureFailure | undefined,
+  resources: readonly ICommitLockHookCleanup[],
+): void => {
+  const cleanupFailures: Array<{ error: unknown; resource: string }> = [];
+  for (const resource of resources)
+    try {
+      resource.cleanup();
+    } catch (error) {
+      cleanupFailures.push({ error, resource: resource.resource });
+    }
+  if (cleanupFailures.length === 1 && failure === undefined)
+    throw cleanupFailures[0]!.error;
+  if (cleanupFailures.length !== 0)
+    throw new CommitLockHookCleanupError(
+      [
+        ...(failure === undefined ? [] : [failure.error]),
+        ...cleanupFailures.map((entry) => entry.error),
+      ],
+      `Commit-lock hook cleanup failed${
+        failure === undefined ? "" : " after the test failed"
+      }: ${cleanupFailures.map((entry) => entry.resource).join(", ")}.`,
+    );
+};
+
 /**
  * The commit lock is owner-identified and fail-closed (#1257/#1252): a release
  * deletes only this session's token, and age never authorizes a different
@@ -141,11 +174,27 @@ export const test_mcp_commit_lock = (): void => {
         swapReleaseTarget();
       Reflect.apply(nativeRm, fs, [target, ...args]);
     }) as typeof fs.rmSync;
+    let releaseRaceFailure: ICommitLockFixtureFailure | undefined;
     try {
       releaseCommitLock(releaseRacePath, releaseRaceToken);
+    } catch (error) {
+      releaseRaceFailure = { error };
+      throw error;
     } finally {
-      fs.renameSync = nativeRename;
-      fs.rmSync = nativeRm;
+      preserveCommitLockHookCleanup(releaseRaceFailure, [
+        {
+          resource: "release-race rename hook",
+          cleanup: () => {
+            fs.renameSync = nativeRename;
+          },
+        },
+        {
+          resource: "release-race remove hook",
+          cleanup: () => {
+            fs.rmSync = nativeRm;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "release cannot delete a foreign lock swapped in after owner verification",
@@ -313,11 +362,27 @@ const exerciseRejectedSnapshots = (dir: string): void => {
         ? mutateLockStatus(status as fs.BigIntStats, variant.mutation)
         : status;
     }) as typeof fs.fstatSync;
+    let rejectedSnapshotFailure: ICommitLockFixtureFailure | undefined;
     try {
       releaseCommitLock(lockPath, token);
+    } catch (error) {
+      rejectedSnapshotFailure = { error };
+      throw error;
     } finally {
-      mutableFs.lstatSync = nativeLstat;
-      fs.fstatSync = nativeFstat;
+      preserveCommitLockHookCleanup(rejectedSnapshotFailure, [
+        {
+          resource: "rejected-snapshot lstat hook",
+          cleanup: () => {
+            mutableFs.lstatSync = nativeLstat;
+          },
+        },
+        {
+          resource: "rejected-snapshot fstat hook",
+          cleanup: () => {
+            fs.fstatSync = nativeFstat;
+          },
+        },
+      ]);
     }
     TestValidator.equals(
       `release rejects the ${variant.name} snapshot`,
@@ -436,14 +501,45 @@ const exerciseQuarantineRecovery = (dir: string): void => {
       }
       Reflect.apply(nativeRm, fs, [target, ...args]);
     }) as typeof fs.rmSync;
+    let quarantineRecoveryFailure: ICommitLockFixtureFailure | undefined;
     try {
       releaseCommitLock(lockPath, token);
+    } catch (error) {
+      quarantineRecoveryFailure = { error };
+      throw error;
     } finally {
-      fs.renameSync = nativeRename;
-      fs.linkSync = nativeLink;
-      fs.copyFileSync = nativeCopy;
-      fs.rmSync = nativeRm;
-      mutableFs.lstatSync = nativeLstat;
+      preserveCommitLockHookCleanup(quarantineRecoveryFailure, [
+        {
+          resource: "quarantine-recovery rename hook",
+          cleanup: () => {
+            fs.renameSync = nativeRename;
+          },
+        },
+        {
+          resource: "quarantine-recovery link hook",
+          cleanup: () => {
+            fs.linkSync = nativeLink;
+          },
+        },
+        {
+          resource: "quarantine-recovery copy hook",
+          cleanup: () => {
+            fs.copyFileSync = nativeCopy;
+          },
+        },
+        {
+          resource: "quarantine-recovery remove hook",
+          cleanup: () => {
+            fs.rmSync = nativeRm;
+          },
+        },
+        {
+          resource: "quarantine-recovery lstat hook",
+          cleanup: () => {
+            mutableFs.lstatSync = nativeLstat;
+          },
+        },
+      ]);
     }
     const expectedResident =
       mode === "successor" ||

@@ -229,8 +229,8 @@ export const test_mcp_commit_lock_fixture_cleanup = (): void => {
               "letcommitLockFailure:ICommitLockFixtureFailure|undefined;",
             ],
             tryDigest:
-              "63531be9af9bfb4076ed785476def51ff5fce636c46b6989d082b5220b7b7814",
-            tryStatements: 49,
+              "a9af0d6404a2e327049603a055d77c15417f41658c44e02fd52c872752859b04",
+            tryStatements: 50,
           },
         ],
       },
