@@ -3441,15 +3441,40 @@ export const test_mcp_production_project = (): void => {
       }
     }) as typeof fs.writeFileSync;
     let requestedSwapRejected = false;
+    let requestedSwapFailure: IProductionProjectFixtureFailure | undefined;
     try {
       requestedSwapRejected = throws(
         () => acquireProductionRootNamespace(aliasProject),
         "changed physical identity",
       );
+    } catch (error) {
+      requestedSwapFailure = { error };
+      throw error;
     } finally {
-      fs.writeFileSync = nativeWriteForRequestedSwap;
-      fs.rmSync(aliasParent);
-      fs.symlinkSync(physicalAliasParent, aliasParent, "junction");
+      const requestedSwapAttempted = requestedRootLocks === 2;
+      preserveProductionProjectFixtureCleanup(requestedSwapFailure, [
+        {
+          resource: "requested-swap write hook",
+          cleanup: () => {
+            fs.writeFileSync = nativeWriteForRequestedSwap;
+          },
+        },
+        ...(requestedSwapAttempted
+          ? [
+              {
+                resource: "requested-swap active alias",
+                cleanup: () => {
+                  if (fs.existsSync(aliasParent)) fs.rmSync(aliasParent);
+                },
+              },
+              {
+                resource: "requested-swap physical alias",
+                cleanup: () =>
+                  fs.symlinkSync(physicalAliasParent, aliasParent, "junction"),
+              },
+            ]
+          : []),
+      ]);
     }
     TestValidator.predicate(
       "a requested alias swapped after physical lock acquisition is rejected",
@@ -3592,15 +3617,45 @@ export const test_mcp_production_project = (): void => {
       }
     }) as typeof fs.writeFileSync;
     let createdAliasRejected = false;
+    let createdAliasFailure: IProductionProjectFixtureFailure | undefined;
     try {
       createdAliasRejected = throws(
         () => AutoMovieProductionProject.open(createdAliasProject),
         "changed physical identity",
       );
+    } catch (error) {
+      createdAliasFailure = { error };
+      throw error;
     } finally {
-      fs.writeFileSync = nativeWriteForCreatedAlias;
-      fs.rmSync(createdAliasParent);
-      fs.symlinkSync(createdPhysicalParent, createdAliasParent, "junction");
+      const createdAliasSwapAttempted = createdAliasLocks.length === 2;
+      preserveProductionProjectFixtureCleanup(createdAliasFailure, [
+        {
+          resource: "created-alias write hook",
+          cleanup: () => {
+            fs.writeFileSync = nativeWriteForCreatedAlias;
+          },
+        },
+        ...(createdAliasSwapAttempted
+          ? [
+              {
+                resource: "created-alias active alias",
+                cleanup: () => {
+                  if (fs.existsSync(createdAliasParent))
+                    fs.rmSync(createdAliasParent);
+                },
+              },
+              {
+                resource: "created-alias physical alias",
+                cleanup: () =>
+                  fs.symlinkSync(
+                    createdPhysicalParent,
+                    createdAliasParent,
+                    "junction",
+                  ),
+              },
+            ]
+          : []),
+      ]);
     }
     TestValidator.predicate(
       "a newly created physical root releases its lease when the requested alias changes afterward",
@@ -3627,25 +3682,70 @@ export const test_mcp_production_project = (): void => {
         fencePathRead = true;
         fs.renameSync(assertedFence.path, assertedFenceParked);
         fs.writeFileSync(assertedFence.path, assertedFence.token);
+        let fenceTransientReadFailure:
+          | IProductionProjectFixtureFailure
+          | undefined;
         try {
           return Reflect.apply(nativeFenceRead, fs, [file, ...args]);
+        } catch (error) {
+          fenceTransientReadFailure = { error };
+          throw error;
         } finally {
-          fs.rmSync(assertedFence.path);
-          fs.renameSync(assertedFenceParked, assertedFence.path);
+          preserveProductionProjectFixtureCleanup(fenceTransientReadFailure, [
+            {
+              resource: "assertion-fence transient replacement",
+              cleanup: () => {
+                if (fs.existsSync(assertedFence.path))
+                  fs.rmSync(assertedFence.path);
+              },
+            },
+            {
+              resource: "assertion-fence parked token",
+              cleanup: () =>
+                fs.renameSync(assertedFenceParked, assertedFence.path),
+            },
+          ]);
         }
       }
       return Reflect.apply(nativeFenceRead, fs, [file, ...args]);
     }) as typeof fs.readFileSync;
+    let fenceAssertionFailure: IProductionProjectFixtureFailure | undefined;
     try {
       assertProductionRootNamespaceLease(assertionLease);
       fenceAssertionSucceeded = true;
+    } catch (error) {
+      fenceAssertionFailure = { error };
+      throw error;
     } finally {
-      fs.readFileSync = nativeFenceRead;
-      if (fs.existsSync(assertedFenceParked)) {
-        fs.rmSync(assertedFence.path, { force: true });
-        fs.renameSync(assertedFenceParked, assertedFence.path);
-      }
-      releaseProductionRootNamespace(assertionLease);
+      const fenceWasParked = fs.existsSync(assertedFenceParked);
+      preserveProductionProjectFixtureCleanup(fenceAssertionFailure, [
+        {
+          resource: "assertion-fence read hook",
+          cleanup: () => {
+            fs.readFileSync = nativeFenceRead;
+          },
+        },
+        ...(fenceWasParked
+          ? [
+              {
+                resource: "assertion-fence active token",
+                cleanup: () => {
+                  if (fs.existsSync(assertedFence.path))
+                    fs.rmSync(assertedFence.path);
+                },
+              },
+              {
+                resource: "assertion-fence parked token",
+                cleanup: () =>
+                  fs.renameSync(assertedFenceParked, assertedFence.path),
+              },
+            ]
+          : []),
+        {
+          resource: "assertion-fence namespace lease",
+          cleanup: () => releaseProductionRootNamespace(assertionLease),
+        },
+      ]);
     }
     TestValidator.predicate(
       "root namespace assertions bind fence tokens to descriptors",
