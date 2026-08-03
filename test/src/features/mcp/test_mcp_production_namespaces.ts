@@ -26,6 +26,43 @@ const throws = (closure: () => unknown, signal?: string): boolean => {
   }
 };
 
+interface INamespaceAuditFixtureFailure {
+  error: unknown;
+}
+
+interface INamespaceAuditFixtureCleanup {
+  cleanup: () => unknown;
+  resource: string;
+}
+
+class NamespaceAuditFixtureCleanupError extends AggregateError {}
+
+/** Attempt every acquired namespace-audit cleanup without hiding failure. */
+export const preserveNamespaceAuditFixtureCleanup = (
+  failure: INamespaceAuditFixtureFailure | undefined,
+  resources: readonly INamespaceAuditFixtureCleanup[],
+): void => {
+  const cleanupFailures: Array<{ error: unknown; resource: string }> = [];
+  for (const resource of resources)
+    try {
+      resource.cleanup();
+    } catch (error) {
+      cleanupFailures.push({ error, resource: resource.resource });
+    }
+  if (cleanupFailures.length === 1 && failure === undefined)
+    throw cleanupFailures[0]!.error;
+  if (cleanupFailures.length !== 0)
+    throw new NamespaceAuditFixtureCleanupError(
+      [
+        ...(failure === undefined ? [] : [failure.error]),
+        ...cleanupFailures.map((entry) => entry.error),
+      ],
+      `Namespace-audit fixture cleanup failed${
+        failure === undefined ? "" : " after the test failed"
+      }: ${cleanupFailures.map((entry) => entry.resource).join(", ")}.`,
+    );
+};
+
 /**
  * Proves that one physical project can host independent production namespaces.
  *
@@ -479,10 +516,12 @@ export const test_mcp_production_namespaces = (): void => {
   }
 
   const auditFixture = productionFixture();
-  const externalAudit = fs.mkdtempSync(
-    path.join(path.dirname(auditFixture.root), "automovie-external-audit-"),
-  );
+  let externalAudit: string | undefined;
+  let auditFailure: INamespaceAuditFixtureFailure | undefined;
   try {
+    externalAudit = fs.mkdtempSync(
+      path.join(path.dirname(auditFixture.root), "automovie-external-audit-"),
+    );
     const project = AutoMovieProductionProject.open(auditFixture.root);
     const auditRoot = path.join(auditFixture.root, ".automovie/audit");
     fs.symlinkSync(
@@ -496,9 +535,29 @@ export const test_mcp_production_namespaces = (): void => {
         fs.readdirSync(externalAudit).length === 0 &&
         project.summary().productionId === "fixture-film",
     );
+  } catch (error) {
+    auditFailure = { error };
+    throw error;
   } finally {
-    auditFixture.dispose();
-    fs.rmSync(externalAudit, { force: true, recursive: true });
+    const completedExternalAudit = externalAudit;
+    preserveNamespaceAuditFixtureCleanup(auditFailure, [
+      {
+        resource: "audit production fixture",
+        cleanup: () => auditFixture.dispose(),
+      },
+      ...(completedExternalAudit === undefined
+        ? []
+        : [
+            {
+              resource: "external audit root",
+              cleanup: () =>
+                fs.rmSync(completedExternalAudit, {
+                  force: true,
+                  recursive: true,
+                }),
+            },
+          ]),
+    ]);
   }
 };
 
