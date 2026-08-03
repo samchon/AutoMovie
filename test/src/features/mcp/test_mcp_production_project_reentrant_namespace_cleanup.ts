@@ -340,7 +340,7 @@ export const test_mcp_production_project_reentrant_namespace_cleanup =
               ],
               catchVariables: ["error"],
               containerKind: "TryStatement",
-              containerStatements: 228,
+              containerStatements: 230,
               failureHolder:
                 "letreentrantAcquisitionFailure:|IProductionProjectFixtureFailure|undefined;",
               finallyDigest:

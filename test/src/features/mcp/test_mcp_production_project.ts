@@ -4383,11 +4383,17 @@ export const test_mcp_production_project = (): void => {
     const parkedPreLeaseRoot = `${preLeaseRoot}-parked`;
     const nativeReadForPreLease = fs.readFileSync;
     let preLeaseSwapped = false;
+    // Record what the staging read actually opens: a descriptor read, or a
+    // pathname the fixture spells differently, both defeat a path comparison.
+    const preLeasePathReads: string[] = [];
+    let preLeaseDescriptorReads = 0;
     fs.readFileSync = ((
       file: fs.PathOrFileDescriptor,
       ...args: unknown[]
     ): unknown => {
       const output = Reflect.apply(nativeReadForPreLease, fs, [file, ...args]);
+      if (typeof file === "number") preLeaseDescriptorReads += 1;
+      else preLeasePathReads.push(path.resolve(file.toString()));
       if (
         preLeaseSwapped === false &&
         typeof file !== "number" &&
@@ -4451,11 +4457,19 @@ export const test_mcp_production_project = (): void => {
     TestValidator.equals(
       "a root replaced while staging under the namespace lease is refused without mutation",
       {
+        descriptorReads: preLeaseDescriptorReads === 0 ? "none" : "some",
         rejected: preLeaseRejected,
         replacementUntouched: preLeaseReplacementUntouched,
         swapped: preLeaseSwapped,
+        targetPathRead: preLeasePathReads.includes(preLeaseTarget),
       },
-      { rejected: true, replacementUntouched: true, swapped: true },
+      {
+        descriptorReads: "some",
+        rejected: true,
+        replacementUntouched: true,
+        swapped: true,
+        targetPathRead: true,
+      },
     );
     const atomicDeleteBase = modelRecipe();
     const atomicDeleteModel = {

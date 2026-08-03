@@ -115,7 +115,7 @@ export const test_cli_scaffold_proxy_publication_single_cleanup = (): void => {
           catchBodies: ["emptySuccessorCleanupFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1985,
+          containerStatements: 1986,
           finallyDigest:
             "fc97051e3b37056de4addcdb8df9b4d939eaa392c4b76bb1b028162ce9deabeb",
           finallySubstantive: {
@@ -123,7 +123,7 @@ export const test_cli_scaffold_proxy_publication_single_cleanup = (): void => {
               "ea22d472b63e7fb7b10bebb1cb0d99e975cc1f7d497858d5b5a3994218cfbe70",
             tokens: 29,
           },
-          index: 168,
+          index: 169,
           preceding:
             "letemptySuccessorCleanupFailure:{error:unknown}|undefined;",
           substantive: {
@@ -140,7 +140,7 @@ export const test_cli_scaffold_proxy_publication_single_cleanup = (): void => {
           catchBodies: ["exactSuccessorCleanupFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1985,
+          containerStatements: 1986,
           finallyDigest:
             "6c9fc37a863b442f1f2bcaaa9787d1cbb842fab73519efe210c6dbdb8b03afb7",
           finallySubstantive: {
@@ -148,7 +148,7 @@ export const test_cli_scaffold_proxy_publication_single_cleanup = (): void => {
               "f09c9cfa21bd89ade69b79d4fe575bfcf696cc8c826133122953404f74a7928a",
             tokens: 29,
           },
-          index: 176,
+          index: 177,
           preceding:
             "letexactSuccessorCleanupFailure:{error:unknown}|undefined;",
           substantive: {
@@ -168,7 +168,7 @@ export const test_cli_scaffold_proxy_publication_single_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1985,
+          containerStatements: 1986,
           finallyDigest:
             "067a617e605d0a76545f310bdb5f6142fa2706438bbbbe5d93d785da9191778b",
           finallySubstantive: {
@@ -176,7 +176,7 @@ export const test_cli_scaffold_proxy_publication_single_cleanup = (): void => {
               "3779691d5b4e90a9af5ca524860b4007d1d90ef96d7c85dbde7b481492c777a2",
             tokens: 29,
           },
-          index: 184,
+          index: 185,
           preceding:
             "letproxyParentSwapCleanupFailure:{error:unknown}|undefined;",
           substantive: {
@@ -193,7 +193,7 @@ export const test_cli_scaffold_proxy_publication_single_cleanup = (): void => {
           catchBodies: ["proxyRootSwapCleanupFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1985,
+          containerStatements: 1986,
           finallyDigest:
             "1885008df301204a283cf4690885af4c8efb553753f101d40313cd408060978d",
           finallySubstantive: {
@@ -201,7 +201,7 @@ export const test_cli_scaffold_proxy_publication_single_cleanup = (): void => {
               "1ddaa3c2c9a90ab922db7898759cc8a2d76e1540ebafc58ea119911373ed748b",
             tokens: 29,
           },
-          index: 194,
+          index: 195,
           preceding:
             "letproxyRootSwapCleanupFailure:{error:unknown}|undefined;",
           substantive: {
@@ -221,7 +221,7 @@ export const test_cli_scaffold_proxy_publication_single_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1985,
+          containerStatements: 1986,
           finallyDigest:
             "f31b2a0be5053ffecd6b4f4c08ba003d903350d5515fac41b3a5048a34f91c57",
           finallySubstantive: {
@@ -229,7 +229,7 @@ export const test_cli_scaffold_proxy_publication_single_cleanup = (): void => {
               "28b8295ccb4f0ca5693a6cdbb7c435bb6fbc8355f03c1539ea7ff14d7289a5b7",
             tokens: 29,
           },
-          index: 205,
+          index: 206,
           preceding:
             "letpartialSuccessorCleanupFailure:{error:unknown}|undefined;",
           substantive: {

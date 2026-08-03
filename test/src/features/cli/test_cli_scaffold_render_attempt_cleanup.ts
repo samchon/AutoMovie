@@ -119,7 +119,7 @@ export const test_cli_scaffold_render_attempt_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1985,
+          containerStatements: 1986,
           finallyDigest:
             "1a52b11c7f8b87aeea9d640f69b6bb69d4a717e4696b2e9957ebd80e383513c6",
           finallySubstantive: {
@@ -127,7 +127,7 @@ export const test_cli_scaffold_render_attempt_cleanup = (): void => {
               "f84f9d820a5ca5e21bbdac311577bbc2262b77b2d9082ac1a4d2f96be0e8557f",
             tokens: 29,
           },
-          index: 896,
+          index: 897,
           preceding:
             "lettransitionSuccessorCleanupFailure:{error:unknown}|undefined;",
           substantive: {
@@ -144,7 +144,7 @@ export const test_cli_scaffold_render_attempt_cleanup = (): void => {
           catchBodies: ["completionCleanupFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1985,
+          containerStatements: 1986,
           finallyDigest:
             "d48016f975aac3312553269c482415529a0fe682395b8a35c1651ec3561c3aab",
           finallySubstantive: {
@@ -152,7 +152,7 @@ export const test_cli_scaffold_render_attempt_cleanup = (): void => {
               "72d37e755be4bf2c8060f8dd0e84b3917dc946776dbc98932a8f160156112423",
             tokens: 29,
           },
-          index: 904,
+          index: 905,
           preceding: "letcompletionCleanupFailure:{error:unknown}|undefined;",
           substantive: {
             digest:
@@ -171,7 +171,7 @@ export const test_cli_scaffold_render_attempt_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1985,
+          containerStatements: 1986,
           finallyDigest:
             "210f47c6cbf38f0fb79e2f5f49300cf5ac87683bb07ae06fe7311ec54e0f59e9",
           finallySubstantive: {
@@ -179,7 +179,7 @@ export const test_cli_scaffold_render_attempt_cleanup = (): void => {
               "268dd0f2e12cda62b52b9db5cf77bfbe12996aced5170b79f1b0b38478bd853b",
             tokens: 29,
           },
-          index: 912,
+          index: 913,
           preceding:
             "lettargetCompetitorCleanupFailure:{error:unknown}|undefined;",
           substantive: {
@@ -199,7 +199,7 @@ export const test_cli_scaffold_render_attempt_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1985,
+          containerStatements: 1986,
           finallyDigest:
             "519a708c0c53e1b1f08f1ccdb79fb33840b81d204ee3bbc64cd2a192a73ce6a3",
           finallySubstantive: {
@@ -207,7 +207,7 @@ export const test_cli_scaffold_render_attempt_cleanup = (): void => {
               "a3e1a4a33a1ba91f8c7cf152aef9f9e206dac9c06145a80b02faa14c825e9a54",
             tokens: 29,
           },
-          index: 923,
+          index: 924,
           preceding:
             "letpostPublicationCleanupFailure:{error:unknown}|undefined;",
           substantive: {
@@ -224,7 +224,7 @@ export const test_cli_scaffold_render_attempt_cleanup = (): void => {
           catchBodies: ["attemptParentCleanupFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1985,
+          containerStatements: 1986,
           finallyDigest:
             "c0bd3ac1589a54709429e5c07836349f948471d74029dd57b993d04ee308a8dc",
           finallySubstantive: {
@@ -232,7 +232,7 @@ export const test_cli_scaffold_render_attempt_cleanup = (): void => {
               "a9ec4a1e6fa4425ed65ef12f64fb9e3be097c79745ba24d8fef6d95a98b1713a",
             tokens: 29,
           },
-          index: 934,
+          index: 935,
           preceding:
             "letattemptParentCleanupFailure:{error:unknown}|undefined;",
           substantive: {
@@ -249,7 +249,7 @@ export const test_cli_scaffold_render_attempt_cleanup = (): void => {
           catchBodies: ["attemptRootCleanupFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1985,
+          containerStatements: 1986,
           finallyDigest:
             "a3ee49cc566c95b99fbfa9e6164570d950c508c22071a1b97164c5ee9b306782",
           finallySubstantive: {
@@ -257,7 +257,7 @@ export const test_cli_scaffold_render_attempt_cleanup = (): void => {
               "2737475cfcf849ec29116bc1b0d415c9fd63a5a3021ea402ed886e68507d6c98",
             tokens: 29,
           },
-          index: 946,
+          index: 947,
           preceding: "letattemptRootCleanupFailure:{error:unknown}|undefined;",
           substantive: {
             digest:

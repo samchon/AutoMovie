@@ -3873,10 +3873,39 @@ export const test_cli_scaffold = async (): Promise<void> => {
       positiveResponse,
       () => undefined,
     );
+    // The plugin answers 400 for every non-ENOENT read failure, so ask its own
+    // exported reader directly for the message behind that status.
+    const artifactSnapshotFailure = ((): string | null => {
+      const real = fs.realpathSync(path.resolve(target));
+      const status = fs.statSync(real, { bigint: true });
+      try {
+        generatedModule.readPhysicalFileSnapshot(
+          {
+            device: status.dev.toString(),
+            inode: status.ino.toString(),
+            path: path.resolve(target),
+            real,
+            version: [
+              status.dev,
+              status.ino,
+              status.size,
+              status.mtimeNs,
+              status.ctimeNs,
+            ].join(String.fromCharCode(0)),
+          },
+          path.dirname(artifact),
+          path.basename(artifact),
+        );
+        return null;
+      } catch (error) {
+        return error instanceof Error ? error.message : String(error);
+      }
+    })();
     TestValidator.equals(
       "the generated viewer serves the exact resident artifact and headers",
       {
         artifactResident: fs.existsSync(artifact),
+        artifactSnapshotFailure,
         body: positiveResponse.body,
         cacheControl: positiveHeaders.get("Cache-Control") ?? null,
         contentType: positiveHeaders.get("Content-Type") ?? null,
@@ -3888,6 +3917,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       },
       {
         artifactResident: true,
+        artifactSnapshotFailure: null,
         body: JSON.stringify({ resident: true }) + String.fromCharCode(10),
         cacheControl: "no-store",
         contentType: "application/json; charset=utf-8",
