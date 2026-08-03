@@ -2339,42 +2339,37 @@ export const test_mcp_production_project = (): void => {
       const afterReadParked = `${afterReadFile}.parked`;
       fs.mkdirSync(afterReadDirectory);
       fs.writeFileSync(afterReadFile, "resident");
+      // Render reads are fenced by coordinate locks whose snapshots are also
+      // read through descriptors, so remember the descriptor this file's own
+      // acquisition returns and swap only after that descriptor is read. Stat
+      // identity is not usable here: Windows reports different `dev` values for
+      // a descriptor and its path.
+      const nativeAfterReadOpen = fs.openSync;
       const nativeDescriptorRead = fs.readFileSync;
+      let afterReadDescriptor: number | null = null;
       let swappedAfterRead = false;
+      fs.openSync = ((file: fs.PathLike, ...args: unknown[]): number => {
+        const descriptor = Reflect.apply(nativeAfterReadOpen, fs, [
+          file,
+          ...args,
+        ]) as number;
+        if (
+          afterReadDescriptor === null &&
+          path.resolve(String(file)) === path.resolve(afterReadFile)
+        )
+          afterReadDescriptor = descriptor;
+        return descriptor;
+      }) as typeof fs.openSync;
       fs.readFileSync = ((
         target: fs.PathOrFileDescriptor,
         ...args: unknown[]
       ): unknown => {
         // prettier-ignore
         const bytes = Reflect.apply(nativeDescriptorRead, fs, [target, ...args]);
-        // Render reads are fenced by coordinate locks whose snapshots are also
-        // read through descriptors, so the swap must observe this file's own
-        // descriptor instead of the first numeric read that happens to arrive.
-        if (swappedAfterRead === false && typeof target === "number") {
-          const identity = (
-            stat: () => fs.BigIntStats,
-          ): { dev: bigint; ino: bigint } | null => {
-            try {
-              const status = stat();
-              return { dev: status.dev, ino: status.ino };
-            } catch {
-              return null;
-            }
-          };
-          const read = identity(() => fs.fstatSync(target, { bigint: true }));
-          const resident = identity(() =>
-            fs.statSync(afterReadFile, { bigint: true }),
-          );
-          if (
-            read !== null &&
-            resident !== null &&
-            read.dev === resident.dev &&
-            read.ino === resident.ino
-          ) {
-            fs.renameSync(afterReadFile, afterReadParked);
-            fs.writeFileSync(afterReadFile, "replacement");
-            swappedAfterRead = true;
-          }
+        if (swappedAfterRead === false && target === afterReadDescriptor) {
+          fs.renameSync(afterReadFile, afterReadParked);
+          fs.writeFileSync(afterReadFile, "replacement");
+          swappedAfterRead = true;
         }
         return bytes;
       }) as typeof fs.readFileSync;
@@ -2394,6 +2389,12 @@ export const test_mcp_production_project = (): void => {
             resource: "post-descriptor read hook",
             cleanup: () => {
               fs.readFileSync = nativeDescriptorRead;
+            },
+          },
+          {
+            resource: "post-descriptor open hook",
+            cleanup: () => {
+              fs.openSync = nativeAfterReadOpen;
             },
           },
           ...(afterReadWasParked

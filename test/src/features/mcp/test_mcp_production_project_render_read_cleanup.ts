@@ -321,7 +321,7 @@ export const test_mcp_production_project_render_read_cleanup = (): void => {
             catchBodies: ["crossApiIdentityFailure={error};", "throwerror;"],
             catchVariables: ["error"],
             containerKind: "TryStatement",
-            containerStatements: 50,
+            containerStatements: 53,
             failureHolder:
               "letcrossApiIdentityFailure:IProductionProjectFixtureFailure|undefined;",
             finallyDigest:
@@ -396,18 +396,18 @@ export const test_mcp_production_project_render_read_cleanup = (): void => {
             catchBodies: ["afterReadFailure={error};", "throwerror;"],
             catchVariables: ["error"],
             containerKind: "TryStatement",
-            containerStatements: 50,
+            containerStatements: 53,
             failureHolder:
               "letafterReadFailure:IProductionProjectFixtureFailure|undefined;",
             finallyDigest:
-              "d24d13cae4bc7b22c4ceb9a8edbbdeae6065b2f5a3b75bb522ce8659b7b07869",
+              "0e601e3cbf55079dbf2f185d05de3ddf14b7d25e05d2d2d92ff13fcccf0900ec",
             finallyStatements: 2,
             finallySubstantive: {
               digest:
-                "c57addb611498fed5ac66ba13c7cc1b5ca8e1fc6f7f9cadc6570136a5113f80b",
-              tokens: 131,
+                "9f499cb33746711aaaafeb515dc5c44688ba1df8913a9001c361c0b887a99bc6",
+              tokens: 152,
             },
-            index: 41,
+            index: 44,
             substantive: {
               digest:
                 "0f1d22a7c94012eac1153a2416b050ed0a3610762114a5ee3441ebd70257df3c",
@@ -421,7 +421,7 @@ export const test_mcp_production_project_render_read_cleanup = (): void => {
             catchBodies: ["deniedOpenFailure={error};", "throwerror;"],
             catchVariables: ["error"],
             containerKind: "TryStatement",
-            containerStatements: 50,
+            containerStatements: 53,
             failureHolder:
               "letdeniedOpenFailure:IProductionProjectFixtureFailure|undefined;",
             finallyDigest:
@@ -432,7 +432,7 @@ export const test_mcp_production_project_render_read_cleanup = (): void => {
                 "82566c571292e19e48cf14900ef66b3f7159d263eac5e8851ff51fe62c97bf34",
               tokens: 48,
             },
-            index: 48,
+            index: 51,
             substantive: {
               digest:
                 "0330906d698f68948a9e5b9ce4a1fb209e37f414fcf5ce43ac56a0331dec5d93",

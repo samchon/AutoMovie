@@ -767,15 +767,50 @@ export const test_mcp_production_legacy_import = (): void => {
       throw new Error("injected rename failure");
     };
     try {
-      TestValidator.predicate(
+      // Name the observed failure and the leftover entries: a cleanup that
+      // cannot remove the staging tree must be reported as itself rather than
+      // collapsing this scenario into one boolean.
+      const publishFailure = ((): unknown => {
+        try {
+          new AutoMovieLegacyImporter(renameFailure.root).apply();
+          return null;
+        } catch (error) {
+          return error;
+        }
+      })();
+      TestValidator.equals(
         "a failed atomic publish removes its staging directory",
-        throws(
-          () => new AutoMovieLegacyImporter(renameFailure.root).apply(),
-          "injected rename failure",
-        ) &&
-          fs
+        {
+          failure:
+            publishFailure instanceof AggregateError
+              ? {
+                  errors: publishFailure.errors.map((error) =>
+                    error instanceof Error ? error.message : String(error),
+                  ),
+                  kind: "aggregate",
+                  message: publishFailure.message,
+                }
+              : publishFailure instanceof Error
+                ? {
+                    kind: "error",
+                    message: publishFailure.message.includes(
+                      "injected rename failure",
+                    )
+                      ? "injected rename failure"
+                      : publishFailure.message,
+                  }
+                : {
+                    kind: typeof publishFailure,
+                    value: String(publishFailure),
+                  },
+          staging: fs
             .readdirSync(renameFailure.root)
-            .every((entry) => entry.startsWith(".automovie-import-") === false),
+            .filter((entry) => entry.startsWith(".automovie-import-")),
+        },
+        {
+          failure: { kind: "error", message: "injected rename failure" },
+          staging: [],
+        },
       );
     } finally {
       fs.renameSync = nativeRename;
