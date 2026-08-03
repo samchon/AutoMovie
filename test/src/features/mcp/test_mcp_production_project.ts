@@ -214,14 +214,21 @@ interface IProductionAtomicFailureEvidence {
   temporaryArtifacts: number;
 }
 
+interface IProductionAtomicNativeHooks {
+  remove: typeof fs.rmSync;
+  rename: typeof fs.renameSync;
+}
+
 const captureProductionAtomicFailure = (
   mode: ProductionAtomicFailureMode,
 ): IProductionAtomicFailureEvidence => {
-  const fixture = productionFixture();
-  const nativeRename = fs.renameSync;
-  const nativeRemove = fs.rmSync;
+  let nativeHooks: IProductionAtomicNativeHooks | undefined;
   let hooksInstalled = false;
+  let atomicHarnessFailure: IProductionProjectFixtureFailure | undefined;
+  const fixture = productionFixture();
   try {
+    nativeHooks = { remove: fs.rmSync, rename: fs.renameSync };
+    const { remove: nativeRemove, rename: nativeRename } = nativeHooks;
     const project = AutoMovieProductionProject.open(fixture.root);
     const base = modelRecipe();
     const id = `atomic-failure-${mode}`;
@@ -322,12 +329,33 @@ const captureProductionAtomicFailure = (
         entry.startsWith(`${path.basename(target)}.tmp.`),
       ).length,
     };
+  } catch (error) {
+    atomicHarnessFailure = { error };
+    throw error;
   } finally {
-    if (hooksInstalled) {
-      fs.renameSync = nativeRename;
-      Reflect.set(fs, "rmSync", nativeRemove);
-    }
-    fixture.dispose();
+    const completedNativeHooks = nativeHooks;
+    preserveProductionProjectFixtureCleanup(atomicHarnessFailure, [
+      ...(hooksInstalled && completedNativeHooks !== undefined
+        ? [
+            {
+              resource: "atomic rename hook",
+              cleanup: (): void => {
+                fs.renameSync = completedNativeHooks.rename;
+              },
+            },
+            {
+              resource: "atomic remove hook",
+              cleanup: (): void => {
+                Reflect.set(fs, "rmSync", completedNativeHooks.remove);
+              },
+            },
+          ]
+        : []),
+      {
+        resource: "atomic failure production fixture",
+        cleanup: () => fixture.dispose(),
+      },
+    ]);
   }
 };
 
