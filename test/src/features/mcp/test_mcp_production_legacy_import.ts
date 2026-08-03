@@ -681,11 +681,27 @@ export const test_mcp_production_legacy_import = (): void => {
       if (belongsToPlanningTemporary(target)) throw combinedCleanupFailure;
     }) as typeof fs.rmSync;
     let combinedCaught: unknown;
+    let combinedPlanningHookFailure: ILegacyImportFixtureFailure | undefined;
     try {
       combinedCaught = captureFailure(() => importer.plan());
+    } catch (error) {
+      combinedPlanningHookFailure = { error };
+      throw error;
     } finally {
-      fs.writeFileSync = nativeWrite;
-      fs.rmSync = nativeRm;
+      preserveLegacyImportFixtureCleanup(combinedPlanningHookFailure, [
+        {
+          resource: "planning write hook",
+          cleanup: () => {
+            fs.writeFileSync = nativeWrite;
+          },
+        },
+        {
+          resource: "planning remove hook",
+          cleanup: () => {
+            fs.rmSync = nativeRm;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "legacy planning cleanup preserves standalone and combined failures",
@@ -768,13 +784,29 @@ export const test_mcp_production_legacy_import = (): void => {
         throw stagingCleanupFailure;
     }) as typeof fs.rmSync;
     let caught: unknown;
+    let importCleanupHookFailure: ILegacyImportFixtureFailure | undefined;
     try {
       caught = captureFailure(() =>
         new AutoMovieLegacyImporter(importCleanupFailure.root).apply(),
       );
+    } catch (error) {
+      importCleanupHookFailure = { error };
+      throw error;
     } finally {
-      fs.renameSync = nativeRename;
-      fs.rmSync = nativeRm;
+      preserveLegacyImportFixtureCleanup(importCleanupHookFailure, [
+        {
+          resource: "import cleanup rename hook",
+          cleanup: () => {
+            fs.renameSync = nativeRename;
+          },
+        },
+        {
+          resource: "import cleanup remove hook",
+          cleanup: () => {
+            fs.rmSync = nativeRm;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "legacy import staging cleanup retains publication and cleanup failures",
@@ -1135,6 +1167,7 @@ export const test_mcp_production_legacy_import = (): void => {
       }
       Reflect.apply(nativeRm, fs, [target, ...args]);
     }) as typeof fs.rmSync;
+    let rollbackHookFailure: ILegacyImportFixtureFailure | undefined;
     try {
       TestValidator.predicate(
         "a partial rollback failure restores the complete applied state",
@@ -1143,11 +1176,36 @@ export const test_mcp_production_legacy_import = (): void => {
           importer.apply().status === "unchanged" &&
           quarantineCleanupDenied,
       );
+    } catch (error) {
+      rollbackHookFailure = { error };
+      throw error;
     } finally {
-      fs.rmdirSync = nativeRmdir;
-      fs.mkdirSync = nativeMkdir;
-      fs.writeFileSync = nativeWrite;
-      fs.rmSync = nativeRm;
+      preserveLegacyImportFixtureCleanup(rollbackHookFailure, [
+        {
+          resource: "rollback rmdir hook",
+          cleanup: () => {
+            fs.rmdirSync = nativeRmdir;
+          },
+        },
+        {
+          resource: "rollback mkdir hook",
+          cleanup: () => {
+            fs.mkdirSync = nativeMkdir;
+          },
+        },
+        {
+          resource: "rollback write hook",
+          cleanup: () => {
+            fs.writeFileSync = nativeWrite;
+          },
+        },
+        {
+          resource: "rollback remove hook",
+          cleanup: () => {
+            fs.rmSync = nativeRm;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "a restored import remains safely roll-backable",
@@ -1242,15 +1300,38 @@ export const test_mcp_production_legacy_import = (): void => {
         throw new Error("injected owned-directory restoration failure");
       return Reflect.apply(nativeMkdir, fs, [directory, ...args]) as unknown;
     }) as typeof fs.mkdirSync;
+    let incompleteRestorationHookFailure:
+      | ILegacyImportFixtureFailure
+      | undefined;
     try {
       TestValidator.predicate(
         "rollback reports every failed state and owned-directory restoration",
         throws(() => importer.rollback(), "restoration was incomplete"),
       );
+    } catch (error) {
+      incompleteRestorationHookFailure = { error };
+      throw error;
     } finally {
-      fs.rmdirSync = nativeRmdir;
-      fs.renameSync = nativeRename;
-      fs.mkdirSync = nativeMkdir;
+      preserveLegacyImportFixtureCleanup(incompleteRestorationHookFailure, [
+        {
+          resource: "incomplete restoration rmdir hook",
+          cleanup: () => {
+            fs.rmdirSync = nativeRmdir;
+          },
+        },
+        {
+          resource: "incomplete restoration rename hook",
+          cleanup: () => {
+            fs.renameSync = nativeRename;
+          },
+        },
+        {
+          resource: "incomplete restoration mkdir hook",
+          cleanup: () => {
+            fs.mkdirSync = nativeMkdir;
+          },
+        },
+      ]);
     }
   } finally {
     incompleteRestoration.dispose();
@@ -1309,12 +1390,33 @@ export const test_mcp_production_legacy_import = (): void => {
         throw cleanupFailure;
     }) as typeof fs.rmSync;
     let caught: unknown;
+    let restorationCleanupHookFailure: ILegacyImportFixtureFailure | undefined;
     try {
       caught = captureFailure(() => importer.rollback());
+    } catch (error) {
+      restorationCleanupHookFailure = { error };
+      throw error;
     } finally {
-      fs.rmdirSync = nativeRmdir;
-      fs.renameSync = nativeRename;
-      fs.rmSync = nativeRm;
+      preserveLegacyImportFixtureCleanup(restorationCleanupHookFailure, [
+        {
+          resource: "restoration cleanup rmdir hook",
+          cleanup: () => {
+            fs.rmdirSync = nativeRmdir;
+          },
+        },
+        {
+          resource: "restoration cleanup rename hook",
+          cleanup: () => {
+            fs.renameSync = nativeRename;
+          },
+        },
+        {
+          resource: "restoration cleanup remove hook",
+          cleanup: () => {
+            fs.rmSync = nativeRm;
+          },
+        },
+      ]);
     }
     const nestedCleanup =
       caught instanceof AggregateError ? caught.errors[1] : undefined;
@@ -1368,14 +1470,30 @@ export const test_mcp_production_legacy_import = (): void => {
         return;
       nativeRename(oldPath, newPath);
     }) as typeof fs.renameSync;
+    let preservedQuarantineHookFailure: ILegacyImportFixtureFailure | undefined;
     try {
       TestValidator.predicate(
         "rollback reports an authoritative quarantine when restoration cannot publish",
         throws(() => importer.rollback(), "remains preserved"),
       );
+    } catch (error) {
+      preservedQuarantineHookFailure = { error };
+      throw error;
     } finally {
-      fs.rmdirSync = nativeRmdir;
-      fs.renameSync = nativeRename;
+      preserveLegacyImportFixtureCleanup(preservedQuarantineHookFailure, [
+        {
+          resource: "preserved quarantine rmdir hook",
+          cleanup: () => {
+            fs.rmdirSync = nativeRmdir;
+          },
+        },
+        {
+          resource: "preserved quarantine rename hook",
+          cleanup: () => {
+            fs.renameSync = nativeRename;
+          },
+        },
+      ]);
     }
   } finally {
     preservedQuarantine.dispose();
@@ -1810,6 +1928,7 @@ export const test_mcp_production_legacy_import = (): void => {
         );
       }
     }) as typeof fs.closeSync;
+    let revisionAfterReadHookFailure: ILegacyImportFixtureFailure | undefined;
     try {
       TestValidator.predicate(
         "a revision changed after its descriptor read cannot bless a mixed import plan",
@@ -1818,9 +1937,24 @@ export const test_mcp_production_legacy_import = (): void => {
           "revision changed",
         ) && changedAfterRead,
       );
+    } catch (error) {
+      revisionAfterReadHookFailure = { error };
+      throw error;
     } finally {
-      fs.openSync = nativeOpen;
-      fs.closeSync = nativeClose;
+      preserveLegacyImportFixtureCleanup(revisionAfterReadHookFailure, [
+        {
+          resource: "revision-after-read open hook",
+          cleanup: () => {
+            fs.openSync = nativeOpen;
+          },
+        },
+        {
+          resource: "revision-after-read close hook",
+          cleanup: () => {
+            fs.closeSync = nativeClose;
+          },
+        },
+      ]);
     }
   } finally {
     revisionAfterReadRace.dispose();
