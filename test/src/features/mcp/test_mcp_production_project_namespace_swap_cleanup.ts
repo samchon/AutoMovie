@@ -313,7 +313,7 @@ export const test_mcp_production_project_namespace_swap_cleanup = (): void => {
             catchBodies: ["requestedSwapFailure={error};", "throwerror;"],
             catchVariables: ["error"],
             containerKind: "TryStatement",
-            containerStatements: 222,
+            containerStatements: 225,
             failureHolder:
               "letrequestedSwapFailure:IProductionProjectFixtureFailure|undefined;",
             finallyDigest:
@@ -338,7 +338,7 @@ export const test_mcp_production_project_namespace_swap_cleanup = (): void => {
             catchBodies: ["createdAliasFailure={error};", "throwerror;"],
             catchVariables: ["error"],
             containerKind: "TryStatement",
-            containerStatements: 222,
+            containerStatements: 225,
             failureHolder:
               "letcreatedAliasFailure:IProductionProjectFixtureFailure|undefined;",
             finallyDigest:
@@ -388,7 +388,7 @@ export const test_mcp_production_project_namespace_swap_cleanup = (): void => {
             catchBodies: ["fenceAssertionFailure={error};", "throwerror;"],
             catchVariables: ["error"],
             containerKind: "TryStatement",
-            containerStatements: 222,
+            containerStatements: 225,
             failureHolder:
               "letfenceAssertionFailure:IProductionProjectFixtureFailure|undefined;",
             finallyDigest:

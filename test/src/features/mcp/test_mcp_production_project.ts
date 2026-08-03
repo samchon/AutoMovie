@@ -4442,53 +4442,94 @@ export const test_mcp_production_project = (): void => {
       return nativeRenameForMutationSwap(oldPath, newPath);
     }) as typeof fs.renameSync;
     let mutationSwapRejected = false;
-    try {
-      mutationProject.commitProductionDeliverableFiles(
-        "root-swap",
-        new Map([["frame.bin", Buffer.from("unsafe")]]),
-      );
-    } catch (error) {
-      mutationSwapRejected =
-        error instanceof AggregateError &&
-        error.message.includes("No stale-path rollback was attempted");
-    } finally {
-      fs.renameSync = nativeRenameForMutationSwap;
-    }
-    const replacementUntouched = fs.existsSync(mutationFrame) === false;
+    let replacementUntouched = false;
     let abandonedLockReleased = false;
     let processOwnershipReleased = false;
-    if (mutationRootSwapped) {
-      const abandonedLock = path.join(
-        parkedMutationRoot,
-        ".automovie/productions/mutation-root/revision.lock",
-      );
-      const abandonedToken = fs.readFileSync(abandonedLock, "utf8");
-      fs.mkdirSync(
-        path.join(mutationRoot, ".automovie/productions/mutation-root"),
-        {
-          recursive: true,
-        },
-      );
-      const replacementLock = path.join(
-        mutationRoot,
-        ".automovie/productions/mutation-root/revision.lock",
-      );
-      const replacementToken = acquireCommitLock(replacementLock);
+    const mutationLock = path.join(
+      mutationRoot,
+      ".automovie/productions/mutation-root/revision.lock",
+    );
+    let abandonedToken: string | undefined;
+    let replacementToken: string | undefined;
+    let mutationHarnessFailure: IProductionProjectFixtureFailure | undefined;
+    try {
       try {
+        mutationProject.commitProductionDeliverableFiles(
+          "root-swap",
+          new Map([["frame.bin", Buffer.from("unsafe")]]),
+        );
+      } catch (error) {
+        mutationSwapRejected =
+          error instanceof AggregateError &&
+          error.message.includes("No stale-path rollback was attempted");
+        if (mutationSwapRejected === false) throw error;
+      }
+      replacementUntouched = fs.existsSync(mutationFrame) === false;
+      if (mutationRootSwapped) {
+        const abandonedLock = path.join(
+          parkedMutationRoot,
+          ".automovie/productions/mutation-root/revision.lock",
+        );
+        abandonedToken = fs.readFileSync(abandonedLock, "utf8");
+        fs.mkdirSync(
+          path.join(mutationRoot, ".automovie/productions/mutation-root"),
+          {
+            recursive: true,
+          },
+        );
+        replacementToken = acquireCommitLock(mutationLock);
         processOwnershipReleased =
           replacementToken !== abandonedToken &&
-          fs.readFileSync(replacementLock, "utf8") === replacementToken;
-      } finally {
-        releaseCommitLock(replacementLock, replacementToken);
+          fs.readFileSync(mutationLock, "utf8") === replacementToken;
       }
-      fs.rmSync(mutationRoot, { force: true, recursive: true });
-      fs.renameSync(parkedMutationRoot, mutationRoot);
-      const restoredLock = path.join(
-        mutationRoot,
-        ".automovie/productions/mutation-root/revision.lock",
-      );
-      releaseCommitLock(restoredLock, abandonedToken);
-      abandonedLockReleased = fs.existsSync(restoredLock) === false;
+    } catch (error) {
+      mutationHarnessFailure = { error };
+      throw error;
+    } finally {
+      const acquiredReplacementToken = replacementToken;
+      const acquiredAbandonedToken = abandonedToken;
+      const mutationRootWasParked = fs.existsSync(parkedMutationRoot);
+      preserveProductionProjectFixtureCleanup(mutationHarnessFailure, [
+        {
+          resource: "mutation-root rename hook",
+          cleanup: () => {
+            fs.renameSync = nativeRenameForMutationSwap;
+          },
+        },
+        ...(acquiredReplacementToken === undefined
+          ? []
+          : [
+              {
+                resource: "mutation-root replacement lock",
+                cleanup: () =>
+                  releaseCommitLock(mutationLock, acquiredReplacementToken),
+              },
+            ]),
+        ...(mutationRootWasParked
+          ? [
+              {
+                resource: "mutation-root active replacement",
+                cleanup: () =>
+                  fs.rmSync(mutationRoot, { force: true, recursive: true }),
+              },
+              {
+                resource: "mutation-root parked original",
+                cleanup: () => fs.renameSync(parkedMutationRoot, mutationRoot),
+              },
+            ]
+          : []),
+        ...(acquiredAbandonedToken === undefined
+          ? []
+          : [
+              {
+                resource: "mutation-root abandoned lock",
+                cleanup: () => {
+                  releaseCommitLock(mutationLock, acquiredAbandonedToken);
+                  abandonedLockReleased = fs.existsSync(mutationLock) === false;
+                },
+              },
+            ]),
+      ]);
     }
     TestValidator.predicate(
       "a root swapped during publication refuses rollback and stale lock release in the replacement",

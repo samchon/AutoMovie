@@ -222,7 +222,7 @@ export const test_mcp_production_project_atomic_delete_cleanup = (): void => {
             catchBodies: ["atomicDeleteFailure={error};", "throwerror;"],
             catchVariables: ["error"],
             containerKind: "TryStatement",
-            containerStatements: 222,
+            containerStatements: 225,
             failureHolder:
               "letatomicDeleteFailure:IProductionProjectFixtureFailure|undefined;",
             finallyDigest:
