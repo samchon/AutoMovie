@@ -4,6 +4,28 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+interface ILicensePolicyFixtureFailure {
+  error: unknown;
+}
+
+class LicensePolicyFixtureCleanupError extends AggregateError {}
+
+/** Remove the license-policy root without replacing its primary failure. */
+export const preserveLicensePolicyFixtureCleanup = (
+  failure: ILicensePolicyFixtureFailure | undefined,
+  cleanup: () => unknown,
+): void => {
+  try {
+    cleanup();
+  } catch (cleanupFailure) {
+    if (failure === undefined) throw cleanupFailure;
+    throw new LicensePolicyFixtureCleanupError(
+      [failure.error, cleanupFailure],
+      "License-policy fixture cleanup failed after the test failed.",
+    );
+  }
+};
+
 const ROOT = path.resolve(__dirname, "../../../..");
 const POLICY_SCRIPT = path.join(ROOT, "internals", "license-policy.mjs");
 
@@ -235,6 +257,7 @@ export const test_workspace_license_policy = (): void => {
     [],
   );
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-license-"));
+  let licensePolicyFailure: ILicensePolicyFixtureFailure | undefined;
   try {
     fs.writeFileSync(
       path.join(root, "package.json"),
@@ -502,7 +525,12 @@ export const test_workspace_license_policy = (): void => {
         missingTransitive.status === 1 &&
         missingTransitive.stderr.includes("transitive-missing"),
     );
+  } catch (error) {
+    licensePolicyFailure = { error };
+    throw error;
   } finally {
-    fs.rmSync(root, { force: true, recursive: true });
+    preserveLicensePolicyFixtureCleanup(licensePolicyFailure, () =>
+      fs.rmSync(root, { force: true, recursive: true }),
+    );
   }
 };
