@@ -41,10 +41,15 @@ const kokoroOverrideContract = (
   renderText: string,
   helperText: string,
 ): {
-  binding: { count: number; moduleReferences: string[] };
+  binding: {
+    count: number;
+    initializers: string[];
+    moduleReferences: string[];
+  };
   owner: {
     assignments: Array<{ assignment: string; guarded: boolean }>;
-    calls: Array<{ operationActions: string[]; overrides: string[] }>;
+    calls: Array<{ operationBodies: string[]; overrides: string[] }>;
+    pinnedFetchDeclarations: string[];
   };
   policy: {
     bodies: string[];
@@ -97,6 +102,7 @@ const kokoroOverrideContract = (
   const owner = namedArrow(render, "loadPinnedKokoroRuntime");
   const calls: ts.CallExpression[] = [];
   const assignments: Array<{ assignment: string; guarded: boolean }> = [];
+  const pinnedFetchDeclarations: string[] = [];
   if (owner !== undefined) {
     const protectedByHelper = (node: ts.Node): boolean => {
       let cursor: ts.Node | undefined = node.parent;
@@ -112,6 +118,15 @@ const kokoroOverrideContract = (
       return false;
     };
     const visit = (node: ts.Node): void => {
+      if (
+        ts.isVariableStatement(node) &&
+        node.declarationList.declarations.some(
+          (declaration) =>
+            ts.isIdentifier(declaration.name) &&
+            declaration.name.text === "pinnedFetch",
+        )
+      )
+        pinnedFetchDeclarations.push(compact(node, render));
       if (
         ts.isCallExpression(node) &&
         ts.isIdentifier(node.expression) &&
@@ -133,35 +148,13 @@ const kokoroOverrideContract = (
     };
     visit(owner.body);
   }
-  const action = (statement: ts.Statement): string => {
-    const declaration = ts.isVariableStatement(statement)
-      ? statement.declarationList.declarations[0]
-      : undefined;
-    if (
-      ts.isVariableStatement(statement) &&
-      statement.declarationList.declarations.length === 1 &&
-      declaration !== undefined &&
-      ts.isIdentifier(declaration.name)
-    )
-      return declaration.name.text;
-    if (ts.isIfStatement(statement)) return "if";
-    if (ts.isReturnStatement(statement)) return "return";
-    if (
-      ts.isExpressionStatement(statement) &&
-      ts.isCallExpression(statement.expression)
-    )
-      return compact(statement.expression.expression, render);
-    return compact(statement, render);
-  };
   const callContracts = calls.map((call) => {
     const overrides = call.arguments[0];
     const operation = call.arguments[1];
     return {
-      operationActions:
-        operation !== undefined &&
-        ts.isArrowFunction(operation) &&
-        ts.isBlock(operation.body)
-          ? operation.body.statements.map(action)
+      operationBodies:
+        operation !== undefined && ts.isArrowFunction(operation)
+          ? [compact(operation.body, render)]
           : [],
       overrides:
         overrides !== undefined && ts.isArrayLiteralExpression(overrides)
@@ -173,9 +166,18 @@ const kokoroOverrideContract = (
   return {
     binding: {
       count: bindingDeclarations.length,
+      initializers: bindingDeclarations.flatMap((declaration) =>
+        declaration.initializer === undefined
+          ? []
+          : [compact(declaration.initializer, render)],
+      ),
       moduleReferences,
     },
-    owner: { assignments, calls: callContracts },
+    owner: {
+      assignments,
+      calls: callContracts,
+      pinnedFetchDeclarations,
+    },
     policy: {
       bodies:
         policy !== undefined && ts.isBlock(policy.body)
@@ -315,6 +317,9 @@ export const test_cli_kokoro_runtime_overrides = async (): Promise<void> => {
     {
       binding: {
         count: 1,
+        initializers: [
+          '(require("./withKokoroRuntimeOverrides.cjs")as{withKokoroRuntimeOverrides:<Output>(overrides:readonly{resource:string;install:()=>unknown;restore:()=>unknown;}[],operation:()=>Output|Promise<Output>,)=>Promise<Output>;}).withKokoroRuntimeOverrides',
+        ],
         moduleReferences: ["./withKokoroRuntimeOverrides.cjs"],
       },
       owner: {
@@ -324,14 +329,13 @@ export const test_cli_kokoro_runtime_overrides = async (): Promise<void> => {
           { assignment: "globalThis.fetch=pinnedFetch", guarded: true },
           { assignment: "globalThis.fetch=previous.fetch", guarded: true },
         ],
+        pinnedFetchDeclarations: [
+          'constpinnedFetch:typeofglobalThis.fetch=async(input,init)=>{constsource=typeofinput==="string"?input:inputinstanceofURL?input.href:input.url;constmarker=`huggingface.co/${KOKORO_MODEL}/resolve/`;constmarkerIndex=source.indexOf(marker);if(markerIndex<0)returnfetcher(input,init);constsuffix=source.slice(markerIndex+marker.length);constseparator=suffix.indexOf("/");if(separator<0)thrownewError(`KokoromodelURLhasnoassetpath:${source}`);constpinned=source.slice(0,markerIndex+marker.length)+KOKORO_MODEL_REVISION+suffix.slice(separator);constrequest=typeofinput==="object"&&input!==null&&"url"ininput&&inputinstanceofRequest?newRequest(pinned,input):pinned;returnfetcher(request,init);};',
+        ],
         calls: [
           {
-            operationActions: [
-              "loaded",
-              "modelAssets",
-              "if",
-              "renderProgress",
-              "return",
+            operationBodies: [
+              '{constloaded=awaitKokoroTTS.from_pretrained(KOKORO_MODEL,{dtype:"q8",device:KOKORO_DEVICE,});constmodelAssets=kokoroModelCacheAssets(modelCacheRoot);if(modelAssets.length===0)thrownewError("PinnedKokoroloadproducednorevision-scopedmodelcacheassets.",);renderProgress("sound.model.load.complete",{model:KOKORO_MODEL,revision:KOKORO_MODEL_REVISION,});return{runtime:loadedasunknownasIKokoroRuntime,createTextSplitter:()=>newTextSplitterStream(),runtimeAssets:[...baseRuntimeAssets,...modelAssets],};}',
             ],
             overrides: [
               '{resource:"Transformerscachedirectory",install:()=>{env.cacheDir=modelCacheRoot;},restore:()=>{env.cacheDir=previous.cacheDir;},}',

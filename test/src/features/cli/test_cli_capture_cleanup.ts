@@ -974,6 +974,7 @@ export const test_cli_capture_cleanup = (): void => {
           "action",
           "require",
           "preserveProductionEncoderCleanup",
+          "withKokoroRuntimeOverrides",
           "resolveImportEntry",
           "heldChunkLocks",
           "heldChunkAttempts",
