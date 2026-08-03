@@ -1237,66 +1237,66 @@ export const test_cli_scaffold = async (): Promise<void> => {
     scaffoldDescriptorCleanupContract(scaffoldFileSnapshotSource),
     {
       classDigests: [
-        "cee523dddbf7384dfb527de324adaf7847a5a6b0e50804bb081467588c8528b3",
+        "9b33a05028818b00f8e1fa2eef100417b5b6c27bcf0f03765258b7137452d892",
       ],
       cleanupCalls: [
         {
           callDigest:
-            "bf4af4c61a2df85bf01e3eb80288c6a66bdb36e004ffcf944d47c7ff9ecff1a6",
+            "1389bd89152721298bb6d5426cdf0b0e2d974bda2c50650ec958ec5bf5f55ef3",
           owner: "createScaffoldFile",
         },
         {
           callDigest:
-            "cc6b1742023bd566dd26827c2d79f8d637adf6875fd503a4e37fd91d13097fba",
+            "0d522419887c0156765a2634e0afcffd14e8022543c6823f6ce6a34e8007979e",
           owner: "overwriteScaffoldFile",
         },
         {
           callDigest:
-            "fb7f2686c2aa2c7bd2513fd27abc672bf4126efdab548aefaddc8ea4a0369de7",
+            "d0a2200056874f81c92149105b05048295b131368f33afcfc31c5c679c8fd0f1",
           owner: "assertScaffoldFileDescriptor",
         },
       ],
       descriptorOwners: [
         {
           cleanupCalls: [
-            "bf4af4c61a2df85bf01e3eb80288c6a66bdb36e004ffcf944d47c7ff9ecff1a6",
+            "1389bd89152721298bb6d5426cdf0b0e2d974bda2c50650ec958ec5bf5f55ef3",
           ],
           openCalls: [
-            "e067ba28c3459eca242637e27627128aff10c0a70abd70ad33e130d183b27436",
+            "5ea12b1a114047a7c6c5d0904d4a6ae4dbbd549fe3d440577fc79eeacb5472c6",
           ],
           owner: "createScaffoldFile",
         },
         {
           cleanupCalls: [
-            "cc6b1742023bd566dd26827c2d79f8d637adf6875fd503a4e37fd91d13097fba",
+            "0d522419887c0156765a2634e0afcffd14e8022543c6823f6ce6a34e8007979e",
           ],
           openCalls: [
-            "1fca3b1a94b76eaa87993a8098ae27a5bec3add5e1e986a16dc96aee67d78026",
+            "d98f4ea0ce3a378a0ea0938f3d7e03e21dd35f0c4980664f5e4fe25358465810",
           ],
           owner: "overwriteScaffoldFile",
         },
         {
           cleanupCalls: [
-            "fb7f2686c2aa2c7bd2513fd27abc672bf4126efdab548aefaddc8ea4a0369de7",
+            "d0a2200056874f81c92149105b05048295b131368f33afcfc31c5c679c8fd0f1",
           ],
           openCalls: [
-            "0cfd967dde81635da63f71627350a966b6c567e3ee1d86d8f382844efe7b5efe",
+            "4d05e450768b610006cf02726a9147a2b4ef32098ccf67359fad6a3ba640f176",
           ],
           owner: "assertScaffoldFileDescriptor",
         },
       ],
       functionDigests: {
         assertScaffoldFileDescriptor: [
-          "514db1f055580d5a467a955870647881252a956c9209c0a6b1da82982dcb7342",
+          "c1aed3c28ae5df939382cd6dc3bbf974a136b9866a7f4f676e1df6f34ef6457f",
         ],
         closeScaffoldDescriptor: [
-          "edd4a511a4bfe3b8927d50d5a785209c40d8f16907fd3f28a31e8f92950cdd78",
+          "ef7a7743640fa6fd1a1628b0fd2443a1363a734ddf0e9538d9b4420ca340297b",
         ],
         createScaffoldFile: [
-          "354a570193b602e600443f1ad9dee541024a73d313dbb634029bd5230d99676c",
+          "7cdc7b2f2add34528ed6f14e6a41b6e658aee750cf60a32599b41a10a4497bbf",
         ],
         overwriteScaffoldFile: [
-          "8f1f4bbf9e844f0574ed10f4cf3f57b26137f2bc24d81339ab00954f03493fc7",
+          "70ad4f2b6c4ea20e8087a3603875854ea60dd6c111f53c08516b379d6de3ee9e",
         ],
       },
     },
@@ -1308,24 +1308,24 @@ export const test_cli_scaffold = async (): Promise<void> => {
       cleanupCalls: [
         {
           callDigest:
-            "35fcd9d9ba279ab5cdd9a6c8780a51346d341b540b234ad08cfa751dff9c98cc",
+            "f6957b5e10caee4dae031618d87264f9db3ddd6056cb25b0462fba5142d2411b",
           owner: "createCaptureExecutableSnapshot",
         },
         {
           callDigest:
-            "e02748774b01a3de4546a911b3b1430af7d8119d9da01037eda4fb82b54b6c24",
+            "7d57ddd73820ab06227890433e325dbe245eb3fdffd7cfcf3c0c9388f0275245",
           owner: "openCaptureExecutable",
         },
       ],
       functionDigests: {
         createCaptureExecutableSnapshot: [
-          "bc8bd4bfeb567656ab795df432a4da1e48a6adc0ad1caf9dad7691641528f8ba",
+          "4e94943826b74986395a03dd6988fa45bfc9cad705b68f589cd750846d6cadb7",
         ],
         openCaptureExecutable: [
-          "9bb2144697110a1e418f8e5f22d78b9535c1ece2d1d1f3204389b7979d336c4e",
+          "d267f5a4c0e13a183b03566ccae9836a36b42d921d4b8087f1f5ac89128ee8cd",
         ],
         throwCaptureExecutableSnapshotFailure: [
-          "91479a17ed9574e535cac3d7d2e2e993fcdc6e702e4b74bdf0e6bc28b7bab17a",
+          "1bac8de7acb0c6ca423cfcc0eda233aea7e2138a8764fe0651d4dfc9a690ba3b",
         ],
       },
     },
@@ -1335,63 +1335,63 @@ export const test_cli_scaffold = async (): Promise<void> => {
     captureBrowserCleanupContract(captureBrowserScript),
     {
       classDigests: [
-        "8a9ea768f93807917eeca741957d15fb72176bae2c9f360211e5c0109fca1d3b",
+        "4f9562e51f549b9db26f0b3e6ad137ec6e844524133f3d74abf3be98a248c848",
       ],
       cleanupCalls: [
         {
           callDigest:
-            "4567886ddc6ada6b32bb1014ecc7d285d47ebf1037c01393943afbc00be219f7",
+            "8866e05587818013b043b62310c61e917d45a4d55f5479138064f947629f11f2",
           owner: "launchWithCaptureExecutableSnapshot",
         },
         {
           callDigest:
-            "2d5c917c00e1cab0dc91802f53471c25981af0624123e38eb9d21808a45fe139",
+            "c16f2f9d7e620b5089f3bc1902ac0adae1cefe8315d402e642b2dfeabd884c37",
           owner: "handoffCaptureBrowserSession",
         },
         {
           callDigest:
-            "708f0c070f7f1bf2d876474baf23bd632a7346eca50857113cea862159ef005e",
+            "fcce4ffbc991ac076b3d767cbf3cc379549d8854e18415dbcd3bd9a258ae5112",
           owner: "installPackageOwnedChromium",
         },
         {
           callDigest:
-            "a554089a09227d8d151b8e89523306806ada2e4854dd3d1791c07230ccaca147",
+            "4536b49cf1fb58d7f3630a889ee14de02b113d44352c4be5bd10e2b93f25da57",
           owner: "packageOwnedProvenance",
         },
         {
           callDigest:
-            "e43ba1b71283eb9c97b188c9045869108fb97a5aa40d0fd4d3c0a0b1ab956256",
+            "5668ad971eb174b70043cbff1cc5a3c6bef71a01ae86549f015bcf13a0241ca2",
           owner: "launchCaptureBrowser",
         },
         {
           callDigest:
-            "7291060392bcd1ff3f7a69eef3bc9cac18ff991b930480d2449be9de21b0848f",
+            "af5316fd1c1e9fdbdca8a270f3bea8e2e4d5807f3e0897a4c99627596cf26bad",
           owner: "launchCaptureBrowser",
         },
         {
           callDigest:
-            "95b17070e615d91bd1f243fb3b1e3681d3313aff61a9e9bbd81021628f88da51",
+            "90a9b3d5453f343c0b53b1b3c706c41039f4002ce197b126a7b05b0785689b84",
           owner: "launchCaptureBrowser",
         },
       ],
       functionDigests: {
         handoffCaptureBrowserSession: [
-          "ce58d0303f51042113da6adbf827706708dd8532d87bd75cf213304b5739c654",
+          "698202f2e160f21272494e18f197d1767373a2ea2929d0292905fdfb1bdaca2e",
         ],
         installPackageOwnedChromium: [
-          "a635e71c547ab9f2663dddf629ca9388da747183c80a1fb65adaf80102aff922",
+          "ac5355f531535f5b16c96cdcbd27d8143c0b2b9ce917a6f1b2df3774554414d4",
         ],
         launchCaptureBrowser: [
-          "96328eb195a91caa24e09126a598d191a440df58346d6b1b8065dfe46a7dee5f",
+          "92cd2761fd2f4c6c5e1453ed330c13a56d1f04b54846d623468fbaf2922b7aef",
         ],
         launchWithCaptureExecutableSnapshot: [
-          "00990c0a7c865f4a1f8d3f7f8e67a9c9b9137ec9967823803a19416b35223069",
+          "cee0ad1a8523eca1272ad00247ded8f492355235e6da6e0ee7ad296a23f77e06",
         ],
         packageOwnedProvenance: [
-          "7cc3c164e6f0fd03b3c8368b7b59e24344f8bc5d8fb13b9019552280729c0c66",
+          "a48272f6025b8a112c086b82b3079a63481733d4b15d183721d7e4ded0a475b1",
         ],
         preserveCaptureBrowserCleanup: [
-          "46c31408dbb9945de5d4ad5a526c2d94b4fcd9b3a0c7638752a20eb72fd464f2",
+          "922553bdd5a17dfc59783d76f0d309cba5e88c81116ab609e0f9426a6d6ea631",
         ],
       },
     },
@@ -2397,9 +2397,9 @@ export const test_cli_scaffold = async (): Promise<void> => {
       },
       {
         contract:
-          'files["scripts/render.ts"]!.includes( "await closeProductionFrameCapture()", )',
+          'files["scripts/render.ts"]!.includes( "await closeProductionFrameCapture(renderFailure)", )',
         satisfied: files["scripts/render.ts"]!.includes(
-          "await closeProductionFrameCapture()",
+          "await closeProductionFrameCapture(renderFailure)",
         ),
       },
       {
@@ -3020,9 +3020,9 @@ export const test_cli_scaffold = async (): Promise<void> => {
       },
       {
         contract:
-          'files["scripts/render.ts"]!.includes( "inspectCapturedProxyBundle(snapshot)", )',
+          'files["scripts/render.ts"]!.includes( "inspectCapturedProxyBundle(snapshot, evidence)", )',
         satisfied: files["scripts/render.ts"]!.includes(
-          "inspectCapturedProxyBundle(snapshot)",
+          "inspectCapturedProxyBundle(snapshot, evidence)",
         ),
       },
       {
