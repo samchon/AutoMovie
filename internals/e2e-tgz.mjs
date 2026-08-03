@@ -1821,12 +1821,22 @@ PNG.sync.read = function (input) {
     starterDir,
   );
   const quarantine = readdirSync(join(renderStateRoot, "quarantine"));
+  const damagedCurrent = capturePackagedRenderChunkPublication(
+    starterDir,
+    "final",
+    damagedChunk,
+  );
   const retainedCurrent = capturePackagedRenderChunkPublication(
     starterDir,
     "final",
     retainedChunk,
   );
   if (
+    damagedCurrent.path !== damagedPublication.path ||
+    damagedCurrent.directory === damagedPublication.directory ||
+    damagedCurrent.text === damagedPublication.text ||
+    existsSync(damagedPublication.directory) ||
+    existsSync(damagedCurrent.directory) === false ||
     retainedCurrent.path !== retainedPublication.path ||
     retainedCurrent.directory !== retainedPublication.directory ||
     retainedCurrent.text !== retainedPublication.text ||
@@ -1835,8 +1845,7 @@ PNG.sync.read = function (input) {
     quarantine.some((entry) => entry.includes("abandoned-partial")) === false ||
     quarantine.some((entry) => entry.includes("abandoned-lock-candidate")) ===
       false ||
-    quarantine.some((entry) => entry.includes("abandoned-lock")) === false ||
-    quarantine.some((entry) => entry.includes("replaced")) === false
+    quarantine.some((entry) => entry.includes("abandoned-lock")) === false
   )
     fail(
       "packaged render did not reuse the current chunk and recover interrupted/corrupt state selectively",
