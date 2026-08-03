@@ -118,7 +118,7 @@ export const test_cli_scaffold_render_gc_descriptor_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1963,
+          containerStatements: 1968,
           finallyDigest:
             "2a9944070d82bed555181099bdd1a318d6b339e47539a7736415848457017d71",
           finallySubstantive: {
@@ -146,7 +146,7 @@ export const test_cli_scaffold_render_gc_descriptor_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1963,
+          containerStatements: 1968,
           finallyDigest:
             "4a22ec047a926dadf2a201c13ccdee1576cbed299982087e811d9cce9580ad90",
           finallySubstantive: {
@@ -174,7 +174,7 @@ export const test_cli_scaffold_render_gc_descriptor_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1963,
+          containerStatements: 1968,
           finallyDigest:
             "e045cfeb4b5f91a00e06aecd20b2f9595f443e3105acf87e54109a5baee33e07",
           finallySubstantive: {
@@ -202,7 +202,7 @@ export const test_cli_scaffold_render_gc_descriptor_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1963,
+          containerStatements: 1968,
           finallyDigest:
             "e967432aed91bfa40ad068334a5a9743a12cdfc7b73aa82619b64a82f74ac498",
           finallySubstantive: {
@@ -230,7 +230,7 @@ export const test_cli_scaffold_render_gc_descriptor_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1963,
+          containerStatements: 1968,
           finallyDigest:
             "e78a963517ca712885dc497298981265fae2ab5fca31f8fbf38fed23d2807803",
           finallySubstantive: {

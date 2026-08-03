@@ -138,7 +138,7 @@ export const test_cli_scaffold_render_chunk_snapshot_cleanup = (): void => {
           catchBodies: ["tempSuccessorCleanupFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1963,
+          containerStatements: 1968,
           finallyDigest:
             "7da45bf78f6faf658138fd804dc9a97d428e768eba28dabe1e0758c9bd19500c",
           finallySubstantive: {
@@ -163,7 +163,7 @@ export const test_cli_scaffold_render_chunk_snapshot_cleanup = (): void => {
           catchBodies: ["recoveryDecoyCleanupFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1963,
+          containerStatements: 1968,
           finallyDigest:
             "aef20cbf37a8ba36cfbfd7703d4889962e8ab5165979c1b9c66360044e18b207",
           finallySubstantive: {
@@ -191,7 +191,7 @@ export const test_cli_scaffold_render_chunk_snapshot_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1963,
+          containerStatements: 1968,
           finallyDigest:
             "f65c0066fb1502f04ee4a0226a7a0e7d22fe7677f649a003f7108159b2b8596b",
           finallySubstantive: {

@@ -12251,6 +12251,9 @@ export const test_cli_scaffold = async (): Promise<void> => {
       ]) as number;
     }) as typeof fs.openSync;
     let workerDestinationCompetitorRejected = false;
+    let workerDestinationCompetitorCleanupFailure:
+      | { error: unknown }
+      | undefined;
     try {
       workerDestinationCompetitorRejected = throws(() =>
         renderGcModule.quarantineCapturedRenderTarget({
@@ -12260,8 +12263,18 @@ export const test_cli_scaffold = async (): Promise<void> => {
           snapshot: workerCompetitorSnapshot,
         }),
       );
+    } catch (error) {
+      workerDestinationCompetitorCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.openSync = nativeOpen;
+      preserveCliHarnessCleanup(workerDestinationCompetitorCleanupFailure, [
+        {
+          resource: "render GC worker destination open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "routine worker cleanup preserves a direct destination competitor",
@@ -12495,6 +12508,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       return descriptor;
     }) as typeof fs.openSync;
     let workerParentAbaRejected = false;
+    let workerParentAbaCleanupFailure: { error: unknown } | undefined;
     try {
       workerParentAbaRejected = throws(() =>
         renderGcModule.quarantineCapturedRenderTarget({
@@ -12504,8 +12518,18 @@ export const test_cli_scaffold = async (): Promise<void> => {
           snapshot: workerParentAbaSnapshot,
         }),
       );
+    } catch (error) {
+      workerParentAbaCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.openSync = nativeOpen;
+      preserveCliHarnessCleanup(workerParentAbaCleanupFailure, [
+        {
+          resource: "render GC worker parent ABA open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "routine worker cleanup rejects a same-inode quarantine-parent successor",
@@ -12563,6 +12587,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       return descriptor;
     }) as typeof fs.openSync;
     let workerRootAbaRejected = false;
+    let workerRootAbaCleanupFailure: { error: unknown } | undefined;
     try {
       workerRootAbaRejected = throws(() =>
         renderGcModule.quarantineCapturedRenderTarget({
@@ -12572,8 +12597,18 @@ export const test_cli_scaffold = async (): Promise<void> => {
           snapshot: workerRootAbaSnapshot,
         }),
       );
+    } catch (error) {
+      workerRootAbaCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.openSync = nativeOpen;
+      preserveCliHarnessCleanup(workerRootAbaCleanupFailure, [
+        {
+          resource: "render GC worker root ABA open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "routine worker cleanup rejects a replacement render-root competitor",
@@ -12631,6 +12666,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       nativeGcRename(oldPath, newPath);
     }) as typeof fs.renameSync;
     let workerPartialRejected = false;
+    let workerPartialCleanupFailure: { error: unknown } | undefined;
     try {
       workerPartialRejected = throws(() =>
         renderGcModule.quarantineCapturedRenderTarget({
@@ -12640,8 +12676,18 @@ export const test_cli_scaffold = async (): Promise<void> => {
           snapshot: workerPartialSnapshot,
         }),
       );
+    } catch (error) {
+      workerPartialCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.renameSync = nativeGcRename;
+      preserveCliHarnessCleanup(workerPartialCleanupFailure, [
+        {
+          resource: "render GC worker partial rename hook",
+          cleanup: () => {
+            mutableFs.renameSync = nativeGcRename;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "routine worker cleanup preserves a directory successor at its private boundary",
@@ -12727,12 +12773,23 @@ export const test_cli_scaffold = async (): Promise<void> => {
       ]) as number;
     }) as typeof fs.openSync;
     let decisionSuccessorRejected = false;
+    let decisionSuccessorCleanupFailure: { error: unknown } | undefined;
     try {
       decisionSuccessorRejected = throws(() =>
         renderGcModule.readCapturedRenderGcFile(heldClaimSnapshot, 1024 * 1024),
       );
+    } catch (error) {
+      decisionSuccessorCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.openSync = nativeOpen;
+      preserveCliHarnessCleanup(decisionSuccessorCleanupFailure, [
+        {
+          resource: "render GC decision successor open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "captured worker decisions reject a pathname-opened successor descriptor",

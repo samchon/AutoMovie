@@ -117,7 +117,7 @@ export const test_cli_scaffold_capture_launch_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1963,
+          containerStatements: 1968,
           finallyDigest:
             "5e9526da18da593cbb6793a558dc5b7ab5e3064d51dc99ab0170422d8e237561",
           finallySubstantive: {
@@ -147,7 +147,7 @@ export const test_cli_scaffold_capture_launch_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1963,
+          containerStatements: 1968,
           finallyDigest:
             "d9584d9210c82b23ee5ff644144239fe5c33de67eecb7a15dfc732479b382514",
           finallySubstantive: {

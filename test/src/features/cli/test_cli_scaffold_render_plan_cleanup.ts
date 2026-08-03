@@ -114,7 +114,7 @@ export const test_cli_scaffold_render_plan_cleanup = (): void => {
           catchBodies: ["exactPlanCleanupFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1963,
+          containerStatements: 1968,
           finallyDigest:
             "709ac636f3f741cd1aafd479d10ee85d7fb3c576dd7f52429411026203a4c85a",
           finallySubstantive: {
@@ -141,7 +141,7 @@ export const test_cli_scaffold_render_plan_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1963,
+          containerStatements: 1968,
           finallyDigest:
             "1b83cf07a900e4b6e86311596e2d6b3fc54bdf7b6b37f1aa86be4d1975eb7b35",
           finallySubstantive: {
@@ -168,7 +168,7 @@ export const test_cli_scaffold_render_plan_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1963,
+          containerStatements: 1968,
           finallyDigest:
             "c30ce33c112121613ce4b1a18bb579ed23055722cc75c8713972c7507f7cae01",
           finallySubstantive: {
@@ -195,7 +195,7 @@ export const test_cli_scaffold_render_plan_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1963,
+          containerStatements: 1968,
           finallyDigest:
             "dd2168825844fd9d4de95c19d3137305a711309dd1f399bed9240d299909e54f",
           finallySubstantive: {
