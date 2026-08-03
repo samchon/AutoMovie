@@ -13658,13 +13658,29 @@ export const test_cli_scaffold = async (): Promise<void> => {
       }
     }) as typeof fs.closeSync;
     let closeTargetRejected = false;
+    let closeTargetCleanupFailure: { error: unknown } | undefined;
     try {
       closeTargetRejected = throws(() =>
         writeFiles(closeTargetBase, { "owned.txt": "scaffold generation" }),
       );
+    } catch (error) {
+      closeTargetCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.openSync = nativeOpen;
-      mutableFs.closeSync = nativeClose;
+      preserveCliHarnessCleanup(closeTargetCleanupFailure, [
+        {
+          resource: "scaffold close target open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+        {
+          resource: "scaffold close target close hook",
+          cleanup: () => {
+            mutableFs.closeSync = nativeClose;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "scaffold materialization rejects a target successor installed at close",
@@ -13707,6 +13723,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       }
     }) as typeof fs.closeSync;
     let forceCloseTargetRejected = false;
+    let forceCloseTargetCleanupFailure: { error: unknown } | undefined;
     try {
       forceCloseTargetRejected = throws(() =>
         writeFiles(
@@ -13715,9 +13732,24 @@ export const test_cli_scaffold = async (): Promise<void> => {
           { force: true },
         ),
       );
+    } catch (error) {
+      forceCloseTargetCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.openSync = nativeOpen;
-      mutableFs.closeSync = nativeClose;
+      preserveCliHarnessCleanup(forceCloseTargetCleanupFailure, [
+        {
+          resource: "scaffold force close target open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+        {
+          resource: "scaffold force close target close hook",
+          cleanup: () => {
+            mutableFs.closeSync = nativeClose;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "forced scaffold materialization rejects a target successor installed at close",
@@ -13757,15 +13789,31 @@ export const test_cli_scaffold = async (): Promise<void> => {
       }
     }) as typeof fs.closeSync;
     let closeParentRejected = false;
+    let closeParentCleanupFailure: { error: unknown } | undefined;
     try {
       closeParentRejected = throws(() =>
         writeFiles(closeParentBase, {
           "nested/owned.txt": "scaffold generation",
         }),
       );
+    } catch (error) {
+      closeParentCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.openSync = nativeOpen;
-      mutableFs.closeSync = nativeClose;
+      preserveCliHarnessCleanup(closeParentCleanupFailure, [
+        {
+          resource: "scaffold close parent open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+        {
+          resource: "scaffold close parent close hook",
+          cleanup: () => {
+            mutableFs.closeSync = nativeClose;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "scaffold materialization rejects a parent successor installed at close",
@@ -13805,13 +13853,29 @@ export const test_cli_scaffold = async (): Promise<void> => {
       }
     }) as typeof fs.closeSync;
     let closeRootRejected = false;
+    let closeRootCleanupFailure: { error: unknown } | undefined;
     try {
       closeRootRejected = throws(() =>
         writeFiles(closeRootBase, { "owned.txt": "scaffold generation" }),
       );
+    } catch (error) {
+      closeRootCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.openSync = nativeOpen;
-      mutableFs.closeSync = nativeClose;
+      preserveCliHarnessCleanup(closeRootCleanupFailure, [
+        {
+          resource: "scaffold close root open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+        {
+          resource: "scaffold close root close hook",
+          cleanup: () => {
+            mutableFs.closeSync = nativeClose;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "scaffold materialization rejects a root successor installed at close",

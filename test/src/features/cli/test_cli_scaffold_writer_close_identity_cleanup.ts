@@ -30,7 +30,7 @@ const leafTokenContract = (
   };
 };
 
-const writerMutationCleanupContract = (text: string): unknown => {
+const writerCloseIdentityCleanupContract = (text: string): unknown => {
   const source = ts.createSourceFile(
     "test_cli_scaffold.ts",
     text,
@@ -39,10 +39,10 @@ const writerMutationCleanupContract = (text: string): unknown => {
     ts.ScriptKind.TS,
   );
   const anchors = [
-    "scaffoldlatecreateopenhook",
-    "scaffoldlateforceopenhook",
-    "scaffoldfinalcreateopenhook",
-    "scaffoldfinalforceopenhook",
+    "scaffoldclosetargetopenhook",
+    "scaffoldforceclosetargetopenhook",
+    "scaffoldcloseparentopenhook",
+    "scaffoldcloserootopenhook",
   ];
   const lifecycles: Array<{
     catchBodies: string[];
@@ -102,125 +102,113 @@ const writerMutationCleanupContract = (text: string): unknown => {
   };
 };
 
-export const test_cli_scaffold_writer_mutation_cleanup = (): void => {
+export const test_cli_scaffold_writer_close_identity_cleanup = (): void => {
   TestValidator.equals(
-    "CLI scaffold owns four writer mutation cleanup lifecycles",
-    writerMutationCleanupContract(
+    "CLI scaffold owns four writer close identity cleanup lifecycles",
+    writerCloseIdentityCleanupContract(
       fs.readFileSync(path.join(__dirname, "test_cli_scaffold.ts"), "utf8"),
     ),
     {
       lifecycles: [
         {
-          catchBodies: [
-            "lateCreateMutationCleanupFailure={error};",
-            "throwerror;",
-          ],
+          catchBodies: ["closeTargetCleanupFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
           containerStatements: 1925,
           finallyDigest:
-            "f67b4c2bd34e98b18375178299e2953f29b5605ebde4daf5ab1983c8a834829b",
+            "52e67f87dfae7d03dd506e455a713573833027768e97767664b3166cdc24c078",
           finallySubstantive: {
             digest:
-              "d51400177f28d9e908c10ae27a481c310c00c33918290d412e6eca60ffbe2546",
+              "ca4c3ac43982ad9a05bcad4072de4c15561a2bdb2ab6c9ae8d352f946286decd",
             tokens: 50,
           },
-          index: 1777,
-          preceding:
-            "letlateCreateMutationCleanupFailure:{error:unknown}|undefined;",
+          index: 1887,
+          preceding: "letcloseTargetCleanupFailure:{error:unknown}|undefined;",
           substantive: {
             digest:
-              "4e6e830f59b99d9b9557a1cc91afa3917d7f43ccda1d3a2759938237d844f2b1",
-            tokens: 21,
+              "217bf95e42840af13a6eaee373880e8d8390c2c7035d7ae3bb3bc0dda6980791",
+            tokens: 20,
           },
           tryBody:
-            '{lateCreateMutationRejected=throws(()=>writeFiles(lateCreateMutationBase,{"owned.txt":"scaffoldgeneration",}),);}',
+            '{closeTargetRejected=throws(()=>writeFiles(closeTargetBase,{"owned.txt":"scaffoldgeneration"}),);}',
           tryDigest:
-            "123267b58a1629c81d7393e1bd93013086b2c643fb35964624625bd5cb96597e",
+            "4449d5fc284a96e969939f967372bb0486403bb92a089e64fc8e3475e8fda61c",
         },
         {
           catchBodies: [
-            "lateForceMutationCleanupFailure={error};",
+            "forceCloseTargetCleanupFailure={error};",
             "throwerror;",
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
           containerStatements: 1925,
           finallyDigest:
-            "792ace9b3784dff220b9bdc13343a066d0cfea799dceb9a5785abcffd073c5d9",
+            "d16a1386f2ad61146e107c837fe3e6991847916d672d1ec378f7e9a08b52223e",
           finallySubstantive: {
             digest:
-              "d4a30948f625f5ad354536caa2f08ad5890753439cfa4efe3d65f99aa1a164ea",
+              "30e37c1353efda8eac83094a6d3b950f94ecd27ccdcdd3a83c3272bd42cc0482",
             tokens: 50,
           },
-          index: 1790,
+          index: 1900,
           preceding:
-            "letlateForceMutationCleanupFailure:{error:unknown}|undefined;",
+            "letforceCloseTargetCleanupFailure:{error:unknown}|undefined;",
           substantive: {
             digest:
-              "ce709dd372fb45a84d37c2ad4ed87818f4839b6572982714967090986bade3b3",
+              "8dad24288fc32f054d3c399ecc94c126168a449a379d464a305c3454a18831ee",
             tokens: 27,
           },
           tryBody:
-            '{lateForceMutationRejected=throws(()=>writeFiles(lateForceMutationBase,{"owned.txt":"scaffoldgeneration"},{force:true},),);}',
+            '{forceCloseTargetRejected=throws(()=>writeFiles(forceCloseTargetBase,{"owned.txt":"forcedscaffoldgeneration"},{force:true},),);}',
           tryDigest:
-            "a7781ede8b175b36359b08ca4e02246c93837fecfbbc9aee87ebc99642c0a59e",
+            "b357b28dbcbce69e96dc64cab282555f593c423e0e1d744d6e7eb1c79ec72a81",
         },
         {
-          catchBodies: [
-            "finalCreateMutationCleanupFailure={error};",
-            "throwerror;",
-          ],
+          catchBodies: ["closeParentCleanupFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
           containerStatements: 1925,
           finallyDigest:
-            "1ee054979b4e2ea9ad25f87c29b2e69feb7c2953ee49f28931b8153d53b86ba8",
+            "78b50ae43ea6548ed997f9445f4a672ffd7c0cd00d2045e6db7aac2f3cb2e679",
           finallySubstantive: {
             digest:
-              "053a12e9e29a5b0894ef21f6e600f389e3b9d48a19c3395aac72a2e8102928d8",
-            tokens: 71,
+              "0f7b08030b7c4e01ed05de783028451c100be8604ddce8a2fe9a4bf6c52fbab9",
+            tokens: 50,
           },
-          index: 1803,
-          preceding:
-            "letfinalCreateMutationCleanupFailure:{error:unknown}|undefined;",
+          index: 1912,
+          preceding: "letcloseParentCleanupFailure:{error:unknown}|undefined;",
           substantive: {
             digest:
-              "11f86871f66655596892ef7dccf0d361461922645a921e85f3d31e0077800bd9",
+              "db18b8af75829158461dcf235be40dc358d275b39c9771e344c85a127fcb8c86",
             tokens: 21,
           },
           tryBody:
-            '{finalCreateMutationRejected=throws(()=>writeFiles(finalCreateMutationBase,{"owned.txt":"scaffoldgeneration",}),);}',
+            '{closeParentRejected=throws(()=>writeFiles(closeParentBase,{"nested/owned.txt":"scaffoldgeneration",}),);}',
           tryDigest:
-            "82268124ea176d2db1a4cc0cc9f46a1043dc883056eedf51752f9b5d108fbba5",
+            "49d34574ed18ae185fb0bc6312038073e40f55ae791b6f023a728d296b01a07d",
         },
         {
-          catchBodies: [
-            "finalForceMutationCleanupFailure={error};",
-            "throwerror;",
-          ],
+          catchBodies: ["closeRootCleanupFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
           containerStatements: 1925,
           finallyDigest:
-            "daeab11b6674f05f06b125b652250f8dc06116935cb33f377f90ebd8440b9eb4",
+            "a71853ca57f34eeb330845011da025a34b5807a752c04e9477800184071e26e9",
           finallySubstantive: {
             digest:
-              "28b0f4c18c46e0d9e73dca974dae0d9c4b8e408e6c2038c4cf45ff5ccb5c040e",
-            tokens: 71,
+              "ce88db1ec456c8f1a6f8f93714cc8f7f5fc1085bb136d6fb73ab9d37bcb25453",
+            tokens: 50,
           },
-          index: 1818,
-          preceding:
-            "letfinalForceMutationCleanupFailure:{error:unknown}|undefined;",
+          index: 1923,
+          preceding: "letcloseRootCleanupFailure:{error:unknown}|undefined;",
           substantive: {
             digest:
-              "321234335a773c5c8ce6f69ff10e0c282bc5e758ed1ddb6687f778aede744886",
-            tokens: 27,
+              "6a68c7e5af6e81bdd16883facb24394ab0e6efbd74b06cdcb07e918c717ef9d6",
+            tokens: 20,
           },
           tryBody:
-            '{finalForceMutationRejected=throws(()=>writeFiles(finalForceMutationBase,{"owned.txt":"scaffoldgeneration"},{force:true},),);}',
+            '{closeRootRejected=throws(()=>writeFiles(closeRootBase,{"owned.txt":"scaffoldgeneration"}),);}',
           tryDigest:
-            "1e5476cc2ac59fc17b04c60f7eadac45db7a9490bd98c1b804259017276ca57b",
+            "56f3d7f7070546cad064fb53cf1425b66a3d1debbdff16d176680a7816b813c2",
         },
       ],
       parseDiagnostics: [],
