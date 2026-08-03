@@ -37,11 +37,33 @@ const blankPng = (width: number, height: number): Uint8Array => {
   return PNG.sync.write(image);
 };
 
+interface IProductionOracleFixtureFailure {
+  error: unknown;
+}
+
+class ProductionOracleFixtureCleanupError extends AggregateError {}
+
+export const preserveProductionOracleFixtureCleanup = (
+  failure: IProductionOracleFixtureFailure | undefined,
+  cleanup: () => void,
+): void => {
+  try {
+    cleanup();
+  } catch (cleanupFailure) {
+    if (failure === undefined) throw cleanupFailure;
+    throw new ProductionOracleFixtureCleanupError(
+      [failure.error, cleanupFailure],
+      "Production-oracle fixture teardown failed after the test failed.",
+    );
+  }
+};
+
 /**
  * Geometry queries and preview frames use current compiler-owned artifacts,
  * including scale-aware promoted-hero visibility at the camera boundary.
  */
 export const test_mcp_production_oracle = async (): Promise<void> => {
+  let productionOracleFailure: IProductionOracleFixtureFailure | undefined;
   const fixture = productionFixture();
   try {
     const project = AutoMovieProductionProject.open(fixture.root);
@@ -1907,6 +1929,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
       );
     }
 
+    let emptyRootFailure: IProductionOracleFixtureFailure | undefined;
     const emptyRoot = productionFixture();
     try {
       const emptyProject = AutoMovieProductionProject.open(emptyRoot.root);
@@ -1928,10 +1951,20 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
             })
             .catch((error: unknown) => error)) instanceof Error,
       );
+    } catch (error) {
+      emptyRootFailure = { error };
+      throw error;
     } finally {
-      emptyRoot.dispose();
+      preserveProductionOracleFixtureCleanup(emptyRootFailure, () =>
+        emptyRoot.dispose(),
+      );
     }
+  } catch (error) {
+    productionOracleFailure = { error };
+    throw error;
   } finally {
-    fixture.dispose();
+    preserveProductionOracleFixtureCleanup(productionOracleFailure, () =>
+      fixture.dispose(),
+    );
   }
 };
