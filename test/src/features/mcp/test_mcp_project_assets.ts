@@ -6,6 +6,28 @@ import path from "node:path";
 
 import { throwsError } from "../internal/predicates";
 
+interface IProjectAssetsFixtureFailure {
+  error: unknown;
+}
+
+class ProjectAssetsFixtureCleanupError extends AggregateError {}
+
+/** Remove the project-assets root without replacing its primary failure. */
+export const preserveProjectAssetsFixtureCleanup = (
+  failure: IProjectAssetsFixtureFailure | undefined,
+  cleanup: () => unknown,
+): void => {
+  try {
+    cleanup();
+  } catch (cleanupFailure) {
+    if (failure === undefined) throw cleanupFailure;
+    throw new ProjectAssetsFixtureCleanupError(
+      [failure.error, cleanupFailure],
+      "Project-assets fixture cleanup failed after the test failed.",
+    );
+  }
+};
+
 /**
  * Binary assets are first-class managed artifacts (#614): the manifest tracks
  * project-relative paths, bytes write atomically when supplied, and nothing is
@@ -24,6 +46,7 @@ import { throwsError } from "../internal/predicates";
  */
 export const test_mcp_project_assets = (): void => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-assets-"));
+  let projectAssetsFailure: IProjectAssetsFixtureFailure | undefined;
   try {
     const project = AutoMovieProject.open(root);
     const registered = project.registerAsset(
@@ -79,7 +102,12 @@ export const test_mcp_project_assets = (): void => {
         `invalid path refuses: ${bad}`,
         throwsError(() => project.registerAsset(bad), "asset path"),
       );
+  } catch (error) {
+    projectAssetsFailure = { error };
+    throw error;
   } finally {
-    fs.rmSync(root, { recursive: true, force: true });
+    preserveProjectAssetsFixtureCleanup(projectAssetsFailure, () =>
+      fs.rmSync(root, { recursive: true, force: true }),
+    );
   }
 };
