@@ -26,6 +26,10 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import packagedE2eCleanup from "./preservePackagedE2eCleanup.cjs";
+
+const { preservePackagedE2eCleanup } = packagedE2eCleanup;
+
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(HERE, "..");
 const KEEP_STAGE = process.env.AUTOMOVIE_E2E_KEEP_STAGE === "1";
@@ -875,6 +879,7 @@ const projectDir = join(stage, "project");
 mkdirSync(tarballDir);
 mkdirSync(projectDir);
 
+let packagedE2eFailure;
 try {
   // 1. Pack the chain. prepack runs each package's full build.
   for (const name of PACKAGES)
@@ -1178,6 +1183,7 @@ try {
     .digest("hex");
   if (captureReceiptGenerations[0].name !== `${captureReceiptGeneration}.json`)
     fail("packaged capture receipt does not occupy its canonical generation");
+  let captureReceiptFailure;
   try {
     writeFileSync(captureReceiptPath, "{bad");
     runExpectedFailure(
@@ -1206,11 +1212,19 @@ try {
       starterDir,
       "occupies another generation",
     );
+  } catch (error) {
+    captureReceiptFailure = { error };
+    throw error;
   } finally {
-    writeFileSync(captureReceiptPath, captureReceiptText);
+    preservePackagedE2eCleanup(
+      captureReceiptFailure,
+      "packaged capture receipt",
+      () => writeFileSync(captureReceiptPath, captureReceiptText),
+    );
   }
   const parkedCaptureExecutable = `${captureReceipt.browser.executablePath}.automovie-missing`;
   renameSync(captureReceipt.browser.executablePath, parkedCaptureExecutable);
+  let captureExecutableFailure;
   try {
     runExpectedFailure(
       "diagnose missing packaged capture executable",
@@ -1218,8 +1232,19 @@ try {
       starterDir,
       "is missing or differs",
     );
+  } catch (error) {
+    captureExecutableFailure = { error };
+    throw error;
   } finally {
-    renameSync(parkedCaptureExecutable, captureReceipt.browser.executablePath);
+    preservePackagedE2eCleanup(
+      captureExecutableFailure,
+      "packaged capture executable",
+      () =>
+        renameSync(
+          parkedCaptureExecutable,
+          captureReceipt.browser.executablePath,
+        ),
+    );
   }
   run(
     "doctor packaged starter capture runtime",
@@ -1235,6 +1260,7 @@ try {
       'source: "system-channel", channel: "firefox"',
     ),
   );
+  let captureConfigFailure;
   try {
     runExpectedFailure(
       "reject invalid packaged capture config",
@@ -1242,8 +1268,15 @@ try {
       starterDir,
       "Invalid capture browser config",
     );
+  } catch (error) {
+    captureConfigFailure = { error };
+    throw error;
   } finally {
-    writeFileSync(captureConfigPath, captureConfigText);
+    preservePackagedE2eCleanup(
+      captureConfigFailure,
+      "packaged capture config",
+      () => writeFileSync(captureConfigPath, captureConfigText),
+    );
   }
   run("compile packaged starter", "npm run compile", starterDir);
   const stateReaderTypeProbePath = join(
@@ -1302,6 +1335,7 @@ if (
     packagedSentinelPath,
     'export const status = "AUTOMOVIE_IMPLEMENT_ME";\n',
   );
+  let packagedSentinelFailure;
   try {
     runExpectedFailure(
       "fire packaged template-sentinel contributor",
@@ -1310,8 +1344,15 @@ if (
       "Template sentinel 'AUTOMOVIE_IMPLEMENT_ME' remains in compiled source.",
       900_000,
     );
+  } catch (error) {
+    packagedSentinelFailure = { error };
+    throw error;
   } finally {
-    rmSync(packagedSentinelPath, { force: true });
+    preservePackagedE2eCleanup(
+      packagedSentinelFailure,
+      "packaged lint sentinel",
+      () => rmSync(packagedSentinelPath, { force: true }),
+    );
   }
   const packagedPresenceProject = join(starterDir, "lint-presence-probe");
   const packagedPresenceRoot = join(packagedPresenceProject, ".automovie");
@@ -1382,6 +1423,7 @@ export default {
     "ttsc.js",
   );
   const packagedPresenceCommand = `"${process.execPath}" "${packagedTtsc}" check -p tsconfig.json`;
+  let packagedPresenceFailure;
   try {
     runExpectedFailure(
       "fire packaged state-presence contributor",
@@ -1397,13 +1439,21 @@ export default {
       packagedPresenceProject,
       900_000,
     );
+  } catch (error) {
+    packagedPresenceFailure = { error };
+    throw error;
   } finally {
-    rmSync(packagedPresenceProject, {
-      force: true,
-      maxRetries: 3,
-      recursive: true,
-      retryDelay: 100,
-    });
+    preservePackagedE2eCleanup(
+      packagedPresenceFailure,
+      "packaged state-presence fixture",
+      () =>
+        rmSync(packagedPresenceProject, {
+          force: true,
+          maxRetries: 3,
+          recursive: true,
+          retryDelay: 100,
+        }),
+    );
   }
   // A fresh @ttsc/lint install builds its source plugin with Go once per
   // cache key. Cold Windows and CI caches can legitimately exceed the ordinary
@@ -1495,6 +1545,7 @@ PNG.sync.read = function (input) {
     onnxNativeBindingPath,
     Buffer.concat([onnxNativeBinding, Buffer.from([0])]),
   );
+  let onnxNativeBindingFailure;
   try {
     runExpectedFailure(
       "reject changed packaged ONNX Runtime native backend",
@@ -1502,8 +1553,15 @@ PNG.sync.read = function (input) {
       starterDir,
       "render runtime identity changed",
     );
+  } catch (error) {
+    onnxNativeBindingFailure = { error };
+    throw error;
   } finally {
-    writeFileSync(onnxNativeBindingPath, onnxNativeBinding);
+    preservePackagedE2eCleanup(
+      onnxNativeBindingFailure,
+      "packaged ONNX Runtime binding",
+      () => writeFileSync(onnxNativeBindingPath, onnxNativeBinding),
+    );
   }
   const tamperedRenderPlan = JSON.parse(renderPlanText);
   tamperedRenderPlan.tracks.captions += "\nNOTE tampered\n";
@@ -1511,6 +1569,7 @@ PNG.sync.read = function (input) {
     renderPlanPath,
     `${JSON.stringify(tamperedRenderPlan, null, 2)}\n`,
   );
+  let tamperedRenderPlanFailure;
   try {
     runExpectedFailure(
       "reject tampered packaged render plan",
@@ -1518,12 +1577,20 @@ PNG.sync.read = function (input) {
       starterDir,
       "Stored render plan differs",
     );
+  } catch (error) {
+    tamperedRenderPlanFailure = { error };
+    throw error;
   } finally {
-    writeFileSync(renderPlanPath, renderPlanText);
+    preservePackagedE2eCleanup(
+      tamperedRenderPlanFailure,
+      "packaged render plan tamper",
+      () => writeFileSync(renderPlanPath, renderPlanText),
+    );
   }
   const renderPlan = JSON.parse(renderPlanText);
   renderPlan.runtimeIdentity.encoder.version = "0.0.0-stale";
   writeFileSync(renderPlanPath, `${JSON.stringify(renderPlan, null, 2)}\n`);
+  let staleRenderRuntimeFailure;
   try {
     runExpectedFailure(
       "reject stale packaged render runtime identity",
@@ -1531,8 +1598,15 @@ PNG.sync.read = function (input) {
       starterDir,
       "render runtime identity changed",
     );
+  } catch (error) {
+    staleRenderRuntimeFailure = { error };
+    throw error;
   } finally {
-    writeFileSync(renderPlanPath, renderPlanText);
+    preservePackagedE2eCleanup(
+      staleRenderRuntimeFailure,
+      "packaged render runtime identity",
+      () => writeFileSync(renderPlanPath, renderPlanText),
+    );
   }
   const damagedChunk = renderPlan.chunks[0];
   const retainedChunk = renderPlan.chunks[1];
@@ -1631,7 +1705,12 @@ PNG.sync.read = function (input) {
   console.log(
     "\n✓ e2e:tgz PASSED: packaged MCP surfaces and two-shot production scaffold verified",
   );
+} catch (error) {
+  packagedE2eFailure = { error };
+  throw error;
 } finally {
-  if (KEEP_STAGE) console.log(`\nverification stage retained at ${stage}`);
-  else rmSync(stage, { recursive: true, force: true, maxRetries: 5 });
+  preservePackagedE2eCleanup(packagedE2eFailure, "packaged E2E stage", () => {
+    if (KEEP_STAGE) console.log(`\nverification stage retained at ${stage}`);
+    else rmSync(stage, { recursive: true, force: true, maxRetries: 5 });
+  });
 }
