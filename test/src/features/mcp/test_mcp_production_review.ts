@@ -261,8 +261,30 @@ const assetReviewViews = [
   },
 ] as const;
 
+interface IProductionReviewFixtureFailure {
+  error: unknown;
+}
+
+class ProductionReviewFixtureCleanupError extends AggregateError {}
+
+export const preserveProductionReviewFixtureCleanup = (
+  failure: IProductionReviewFixtureFailure | undefined,
+  cleanup: () => void,
+): void => {
+  try {
+    cleanup();
+  } catch (cleanupFailure) {
+    if (failure === undefined) throw cleanupFailure;
+    throw new ProductionReviewFixtureCleanupError(
+      [failure.error, cleanupFailure],
+      "Production review fixture teardown failed after the test failed.",
+    );
+  }
+};
+
 /** Review records require current exact design, source and actual PNG evidence. */
 export const test_mcp_production_review = async (): Promise<void> => {
+  let productionReviewFailure: IProductionReviewFixtureFailure | undefined;
   const fixture = productionFixture();
   try {
     const project = AutoMovieProductionProject.open(fixture.root);
@@ -1854,7 +1876,12 @@ export const test_mcp_production_review = async (): Promise<void> => {
           .compile({ scope: "review" })
           .diagnostics.some((item) => item.code === "review-stale"),
     );
+  } catch (error) {
+    productionReviewFailure = { error };
+    throw error;
   } finally {
-    fixture.dispose();
+    preserveProductionReviewFixtureCleanup(productionReviewFailure, () =>
+      fixture.dispose(),
+    );
   }
 };
