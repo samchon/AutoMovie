@@ -4,6 +4,28 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+interface IShadowingFixtureFailure {
+  error: unknown;
+}
+
+class ShadowingFixtureCleanupError extends AggregateError {}
+
+/** Remove the shadowing scratch tree without replacing its primary failure. */
+export const preserveShadowingFixtureCleanup = (
+  failure: IShadowingFixtureFailure | undefined,
+  cleanup: () => unknown,
+): void => {
+  try {
+    cleanup();
+  } catch (cleanupFailure) {
+    if (failure === undefined) throw cleanupFailure;
+    throw new ShadowingFixtureCleanupError(
+      [failure.error, cleanupFailure],
+      "Shadowing fixture cleanup failed after the test failed.",
+    );
+  }
+};
+
 /** Repository root, four levels above `test/src/features/workspace`. */
 const ROOT = path.resolve(__dirname, "..", "..", "..", "..");
 
@@ -98,6 +120,7 @@ export const test_workspace_no_shadowing_js = (): void => {
 
   // 2. fault injection, outside the repository so the tree stays clean
   const scratch = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-shadow-"));
+  let shadowingFailure: IShadowingFixtureFailure | undefined;
   try {
     fs.mkdirSync(path.join(scratch, "nested"));
     fs.writeFileSync(
@@ -117,7 +140,12 @@ export const test_workspace_no_shadowing_js = (): void => {
       shadowingJavaScriptFiles([scratch]).map((file) => path.basename(file)),
       ["shadowed.js"],
     );
+  } catch (error) {
+    shadowingFailure = { error };
+    throw error;
   } finally {
-    fs.rmSync(scratch, { recursive: true, force: true });
+    preserveShadowingFixtureCleanup(shadowingFailure, () =>
+      fs.rmSync(scratch, { recursive: true, force: true }),
+    );
   }
 };
