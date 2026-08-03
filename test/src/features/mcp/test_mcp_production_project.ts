@@ -2098,14 +2098,28 @@ export const test_mcp_production_project = (): void => {
         return status;
       }) as typeof fs.statSync;
       let crossApiIdentityRead = "";
+      let crossApiIdentityFailure: IProductionProjectFixtureFailure | undefined;
       try {
         fs.statSync(crossApiIdentityFile, { bigint: true });
         crossApiIdentityRead = Buffer.from(
           ownerProject.readRenderFile("read-cross-api-identity.bin"),
         ).toString("utf8");
+      } catch (error) {
+        crossApiIdentityFailure = { error };
+        throw error;
       } finally {
-        mutableCrossApiStatFs.statSync = nativeCrossApiStat;
-        fs.rmSync(crossApiIdentityFile);
+        preserveProductionProjectFixtureCleanup(crossApiIdentityFailure, [
+          {
+            resource: "cross-API stat hook",
+            cleanup: () => {
+              mutableCrossApiStatFs.statSync = nativeCrossApiStat;
+            },
+          },
+          {
+            resource: "cross-API identity file",
+            cleanup: () => fs.rmSync(crossApiIdentityFile),
+          },
+        ]);
       }
       TestValidator.predicate(
         "render reads compare descriptor identities within one platform API domain",
@@ -2157,18 +2171,41 @@ export const test_mcp_production_project = (): void => {
           return descriptor;
         }) as typeof fs.openSync;
         let rejected = false;
+        let descriptorRaceFailure: IProductionProjectFixtureFailure | undefined;
         try {
           rejected = throws(() =>
             ownerProject.readRenderFile(
               path.relative(ownerProject.renderRoot(), file),
             ),
           );
+        } catch (error) {
+          descriptorRaceFailure = { error };
+          throw error;
         } finally {
-          fs.openSync = nativeOpen;
-          if (fs.lstatSync(file).isSymbolicLink()) fs.unlinkSync(file);
-          else fs.rmSync(file, { recursive: true, force: true });
-          fs.renameSync(parked, file);
-          fs.rmSync(directory, { recursive: true, force: true });
+          preserveProductionProjectFixtureCleanup(descriptorRaceFailure, [
+            {
+              resource: `descriptor-race ${replacement} open hook`,
+              cleanup: () => {
+                fs.openSync = nativeOpen;
+              },
+            },
+            {
+              resource: `descriptor-race ${replacement} active replacement`,
+              cleanup: () => {
+                if (fs.lstatSync(file).isSymbolicLink()) fs.unlinkSync(file);
+                else fs.rmSync(file, { recursive: true, force: true });
+              },
+            },
+            {
+              resource: `descriptor-race ${replacement} parked file`,
+              cleanup: () => fs.renameSync(parked, file),
+            },
+            {
+              resource: `descriptor-race ${replacement} directory`,
+              cleanup: () =>
+                fs.rmSync(directory, { recursive: true, force: true }),
+            },
+          ]);
         }
         return swapped && rejected;
       };
@@ -2208,23 +2245,53 @@ export const test_mcp_production_project = (): void => {
           return Reflect.apply(nativeOpen, fs, [target, ...args]);
         }) as typeof fs.openSync;
         let rejected = false;
+        let ancestryRaceFailure: IProductionProjectFixtureFailure | undefined;
         try {
           rejected = throws(() =>
             ownerProject.readRenderFile(
               path.relative(ownerProject.renderRoot(), file),
             ),
           );
+        } catch (error) {
+          ancestryRaceFailure = { error };
+          throw error;
         } finally {
-          fs.openSync = nativeOpen;
-          if (fs.existsSync(parked)) {
-            if (fs.existsSync(directory)) {
-              if (fs.lstatSync(directory).isSymbolicLink())
-                fs.unlinkSync(directory);
-              else fs.rmSync(directory, { recursive: true, force: true });
-            }
-            fs.renameSync(parked, directory);
-          }
-          fs.rmSync(directory, { recursive: true, force: true });
+          const ancestryParked = fs.existsSync(parked);
+          preserveProductionProjectFixtureCleanup(ancestryRaceFailure, [
+            {
+              resource: `ancestry-race ${replacement} open hook`,
+              cleanup: () => {
+                fs.openSync = nativeOpen;
+              },
+            },
+            ...(ancestryParked
+              ? [
+                  {
+                    resource: `ancestry-race ${replacement} active replacement`,
+                    cleanup: () => {
+                      if (fs.existsSync(directory)) {
+                        if (fs.lstatSync(directory).isSymbolicLink())
+                          fs.unlinkSync(directory);
+                        else
+                          fs.rmSync(directory, {
+                            recursive: true,
+                            force: true,
+                          });
+                      }
+                    },
+                  },
+                  {
+                    resource: `ancestry-race ${replacement} parked directory`,
+                    cleanup: () => fs.renameSync(parked, directory),
+                  },
+                ]
+              : []),
+            {
+              resource: `ancestry-race ${replacement} directory`,
+              cleanup: () =>
+                fs.rmSync(directory, { recursive: true, force: true }),
+            },
+          ]);
         }
         return swapped && rejected;
       };
@@ -2259,15 +2326,36 @@ export const test_mcp_production_project = (): void => {
         return bytes;
       }) as typeof fs.readFileSync;
       let afterReadRejected = false;
+      let afterReadFailure: IProductionProjectFixtureFailure | undefined;
       try {
         afterReadRejected = throws(() =>
           ownerProject.readRenderFile("read-after-descriptor/frame.bin"),
         );
+      } catch (error) {
+        afterReadFailure = { error };
+        throw error;
       } finally {
-        fs.readFileSync = nativeDescriptorRead;
-        fs.rmSync(afterReadFile);
-        fs.renameSync(afterReadParked, afterReadFile);
-        fs.rmSync(afterReadDirectory, { recursive: true, force: true });
+        preserveProductionProjectFixtureCleanup(afterReadFailure, [
+          {
+            resource: "post-descriptor read hook",
+            cleanup: () => {
+              fs.readFileSync = nativeDescriptorRead;
+            },
+          },
+          {
+            resource: "post-descriptor active replacement",
+            cleanup: () => fs.rmSync(afterReadFile),
+          },
+          {
+            resource: "post-descriptor parked file",
+            cleanup: () => fs.renameSync(afterReadParked, afterReadFile),
+          },
+          {
+            resource: "post-descriptor directory",
+            cleanup: () =>
+              fs.rmSync(afterReadDirectory, { recursive: true, force: true }),
+          },
+        ]);
       }
       const deniedOpenFile = path.join(
         ownerProject.renderRoot(),
@@ -2284,13 +2372,27 @@ export const test_mcp_production_project = (): void => {
         return Reflect.apply(nativeDeniedOpen, fs, [target, ...args]);
       }) as typeof fs.openSync;
       let deniedOpenRejected = false;
+      let deniedOpenFailure: IProductionProjectFixtureFailure | undefined;
       try {
         deniedOpenRejected = throws(() =>
           ownerProject.readRenderFile("read-open-denied.bin"),
         );
+      } catch (error) {
+        deniedOpenFailure = { error };
+        throw error;
       } finally {
-        fs.openSync = nativeDeniedOpen;
-        fs.rmSync(deniedOpenFile);
+        preserveProductionProjectFixtureCleanup(deniedOpenFailure, [
+          {
+            resource: "denied-open hook",
+            cleanup: () => {
+              fs.openSync = nativeDeniedOpen;
+            },
+          },
+          {
+            resource: "denied-open file",
+            cleanup: () => fs.rmSync(deniedOpenFile),
+          },
+        ]);
       }
       TestValidator.predicate(
         "render reads revalidate after descriptor I/O and preserve non-absence errors",

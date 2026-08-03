@@ -1,0 +1,396 @@
+import { TestValidator } from "@nestia/e2e";
+import { createHash } from "node:crypto";
+import fs from "node:fs";
+import path from "node:path";
+import ts from "typescript-compiler";
+
+import { preserveProductionProjectFixtureCleanup } from "./test_mcp_production_project";
+
+const compact = (node: ts.Node, source: ts.SourceFile): string =>
+  node.getText(source).replace(/\s+/g, "");
+
+const digestText = (text: string): string =>
+  createHash("sha256").update(text).digest("hex");
+
+const leafTokenContract = (
+  nodes: readonly ts.Node[],
+  source: ts.SourceFile,
+): { digest: string; tokens: number } => {
+  const tokens: Array<[ts.SyntaxKind, string]> = [];
+  const visit = (node: ts.Node): void => {
+    const children = node.getChildren(source);
+    if (children.length !== 0) children.forEach(visit);
+    else {
+      const text = node.getText(source);
+      if (text.length !== 0) tokens.push([node.kind, text]);
+    }
+  };
+  nodes.forEach(visit);
+  return {
+    digest: digestText(JSON.stringify(tokens)),
+    tokens: tokens.length,
+  };
+};
+
+const aggregateContainsExactly = (
+  error: unknown,
+  expected: readonly unknown[],
+): boolean =>
+  error instanceof AggregateError &&
+  error.errors.length === expected.length &&
+  expected.every((failure, index) => error.errors[index] === failure);
+
+const renderReadCleanupContract = (text: string): unknown => {
+  const source = ts.createSourceFile(
+    "test_mcp_production_project.ts",
+    text,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TS,
+  );
+  const owners = source.statements.flatMap((statement) =>
+    ts.isVariableStatement(statement)
+      ? [...statement.declarationList.declarations].flatMap((declaration) =>
+          ts.isIdentifier(declaration.name) &&
+          declaration.name.text === "test_mcp_production_project" &&
+          declaration.initializer !== undefined &&
+          ts.isArrowFunction(declaration.initializer)
+            ? [declaration.initializer]
+            : [],
+        )
+      : [],
+  );
+  const holderNames = [
+    "crossApiIdentityFailure",
+    "descriptorRaceFailure",
+    "ancestryRaceFailure",
+    "afterReadFailure",
+    "deniedOpenFailure",
+  ] as const;
+  const lifecycles: Array<{
+    catchBodies: string[];
+    catchVariables: string[];
+    containerKind: string;
+    containerStatements: number;
+    failureHolder: string;
+    finallyDigest: string;
+    finallyStatements: number;
+    finallySubstantive: { digest: string; tokens: number };
+    index: number;
+    substantive: { digest: string; tokens: number };
+    tryDigest: string;
+    tryStatements: number;
+  }> = [];
+  for (const owner of owners) {
+    const visit = (node: ts.Node): void => {
+      if (
+        ts.isTryStatement(node) &&
+        node.catchClause !== undefined &&
+        node.finallyBlock !== undefined &&
+        ts.isBlock(node.parent)
+      ) {
+        const statements = [...node.parent.statements];
+        const index = statements.indexOf(node);
+        const failureHolder = compact(statements[index - 1]!, source);
+        if (holderNames.some((name) => failureHolder.startsWith(`let${name}:`)))
+          lifecycles.push({
+            catchBodies: node.catchClause.block.statements.map((statement) =>
+              compact(statement, source),
+            ),
+            catchVariables:
+              node.catchClause.variableDeclaration === undefined
+                ? []
+                : [compact(node.catchClause.variableDeclaration, source)],
+            containerKind: ts.SyntaxKind[node.parent.parent.kind]!,
+            containerStatements: statements.length,
+            failureHolder,
+            finallyDigest: digestText(node.finallyBlock.getText(source)),
+            finallyStatements: node.finallyBlock.statements.length,
+            finallySubstantive: leafTokenContract(
+              node.finallyBlock.statements,
+              source,
+            ),
+            index,
+            substantive: leafTokenContract(node.tryBlock.statements, source),
+            tryDigest: digestText(node.tryBlock.getText(source)),
+            tryStatements: node.tryBlock.statements.length,
+          });
+      }
+      ts.forEachChild(node, visit);
+    };
+    visit(owner.body);
+  }
+  return {
+    owner: {
+      count: owners.length,
+      lifecycles,
+      statementCounts: owners.flatMap((owner) =>
+        ts.isBlock(owner.body) ? [owner.body.statements.length] : [],
+      ),
+    },
+    parseDiagnostics: source.parseDiagnostics.map((diagnostic) =>
+      String(diagnostic.messageText),
+    ),
+  };
+};
+
+const captureCleanup = (props: {
+  cleanupFailures?: readonly ({ error: unknown; present: true } | undefined)[];
+  primaryFailure?: { error: unknown; present: true };
+  resources?: number;
+}): { caught: boolean; failure: unknown; order: string[] } => {
+  let caught = false;
+  const order: string[] = [];
+  let failure: unknown;
+  try {
+    preserveProductionProjectFixtureCleanup(
+      props.primaryFailure === undefined
+        ? undefined
+        : { error: props.primaryFailure.error },
+      Array.from({ length: props.resources ?? 4 }, (_, index) => ({
+        resource: `render-read-${index}`,
+        cleanup: (): void => {
+          order.push(`cleanup-${index}`);
+          const cleanupFailure = props.cleanupFailures?.[index];
+          if (cleanupFailure !== undefined) throw cleanupFailure.error;
+        },
+      })),
+    );
+    if (props.primaryFailure !== undefined) throw props.primaryFailure.error;
+  } catch (error) {
+    caught = true;
+    failure = error;
+  }
+  return { caught, failure, order };
+};
+
+export const test_mcp_production_project_render_read_cleanup = (): void => {
+  const primaryFailure = { phase: "render-read assertion" };
+  const hookFailure = { phase: "render-read hook restoration" };
+  const activeFailure = { phase: "render-read active replacement" };
+  const parkedFailure = { phase: "render-read parked resident" };
+  const directoryFailure = { phase: "render-read directory" };
+  const success = captureCleanup({});
+  const primaryOnly = captureCleanup({
+    primaryFailure: { error: primaryFailure, present: true },
+  });
+  const standalone = captureCleanup({
+    cleanupFailures: [{ error: hookFailure, present: true }],
+  });
+  const multiple = captureCleanup({
+    cleanupFailures: [
+      { error: hookFailure, present: true },
+      { error: activeFailure, present: true },
+      { error: parkedFailure, present: true },
+      { error: directoryFailure, present: true },
+    ],
+  });
+  const combined = captureCleanup({
+    cleanupFailures: [
+      { error: hookFailure, present: true },
+      { error: activeFailure, present: true },
+      { error: parkedFailure, present: true },
+      { error: directoryFailure, present: true },
+    ],
+    primaryFailure: { error: primaryFailure, present: true },
+  });
+  const partialSetup = captureCleanup({
+    primaryFailure: { error: primaryFailure, present: true },
+    resources: 1,
+  });
+  const undefinedStandalone = captureCleanup({
+    cleanupFailures: [{ error: undefined, present: true }],
+  });
+  const undefinedCombined = captureCleanup({
+    cleanupFailures: [{ error: undefined, present: true }],
+    primaryFailure: { error: undefined, present: true },
+  });
+  TestValidator.predicate(
+    "render-read cleanup preserves failure and recovery order",
+    success.caught === false &&
+      success.failure === undefined &&
+      success.order.join(",") === "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+      primaryOnly.caught &&
+      primaryOnly.failure === primaryFailure &&
+      primaryOnly.order.join(",") ===
+        "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+      standalone.caught &&
+      standalone.failure === hookFailure &&
+      standalone.order.join(",") ===
+        "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+      multiple.caught &&
+      aggregateContainsExactly(multiple.failure, [
+        hookFailure,
+        activeFailure,
+        parkedFailure,
+        directoryFailure,
+      ]) &&
+      multiple.order.join(",") === "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+      combined.caught &&
+      aggregateContainsExactly(combined.failure, [
+        primaryFailure,
+        hookFailure,
+        activeFailure,
+        parkedFailure,
+        directoryFailure,
+      ]) &&
+      combined.order.join(",") === "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+      partialSetup.caught &&
+      partialSetup.failure === primaryFailure &&
+      partialSetup.order.join(",") === "cleanup-0" &&
+      undefinedStandalone.caught &&
+      undefinedStandalone.failure === undefined &&
+      undefinedStandalone.order.join(",") ===
+        "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+      undefinedCombined.caught &&
+      aggregateContainsExactly(undefinedCombined.failure, [
+        undefined,
+        undefined,
+      ]) &&
+      undefinedCombined.order.join(",") ===
+        "cleanup-0,cleanup-1,cleanup-2,cleanup-3",
+  );
+  TestValidator.equals(
+    "production-project test owns five render-read cleanup lifecycles",
+    renderReadCleanupContract(
+      fs.readFileSync(
+        path.join(__dirname, "test_mcp_production_project.ts"),
+        "utf8",
+      ),
+    ),
+    {
+      owner: {
+        count: 1,
+        lifecycles: [
+          {
+            catchBodies: ["crossApiIdentityFailure={error};", "throwerror;"],
+            catchVariables: ["error"],
+            containerKind: "TryStatement",
+            containerStatements: 50,
+            failureHolder:
+              "letcrossApiIdentityFailure:IProductionProjectFixtureFailure|undefined;",
+            finallyDigest:
+              "fa9410ef860f83ff4209f724f6df89e6840416a23204912fce02ec2b58d0bbf9",
+            finallyStatements: 1,
+            finallySubstantive: {
+              digest:
+                "fb54996b314ee20523bd16e9d896f7a6c71d953e52d2bea648b3ad1b6ee65cc4",
+              tokens: 48,
+            },
+            index: 21,
+            substantive: {
+              digest:
+                "fa453b50850e30cec338bfebe67a00f32802891cae04cace9accba8a43747779",
+              tokens: 33,
+            },
+            tryDigest:
+              "cf38a97978a60b57546a679df8c60d18022eae5b631e5d217bd0281ef2385565",
+            tryStatements: 2,
+          },
+          {
+            catchBodies: ["descriptorRaceFailure={error};", "throwerror;"],
+            catchVariables: ["error"],
+            containerKind: "ArrowFunction",
+            containerStatements: 12,
+            failureHolder:
+              "letdescriptorRaceFailure:IProductionProjectFixtureFailure|undefined;",
+            finallyDigest:
+              "5c86bd3b80e6835713c6d84b43b4a51565ee4e6da19ebd18edf83d89ad66c528",
+            finallyStatements: 1,
+            finallySubstantive: {
+              digest:
+                "31e2a2c3abc5a6b8cd0ddbcb906e66e26c3dc59f1eb8c43171ea2793e0018d8a",
+              tokens: 140,
+            },
+            index: 10,
+            substantive: {
+              digest:
+                "6bd96bd5181431bbc16c4be8519514aa980ffce5abf7db267797f70533ab97f6",
+              tokens: 28,
+            },
+            tryDigest:
+              "1b68bba13fbc38fb7839e443b13633fb36fabe7c5ff11feb7787835da73a3676",
+            tryStatements: 1,
+          },
+          {
+            catchBodies: ["ancestryRaceFailure={error};", "throwerror;"],
+            catchVariables: ["error"],
+            containerKind: "ArrowFunction",
+            containerStatements: 12,
+            failureHolder:
+              "letancestryRaceFailure:IProductionProjectFixtureFailure|undefined;",
+            finallyDigest:
+              "261fbbdba3ad90db6e50384795b9bc2e5aea43a9155815aec9d967804e80a849",
+            finallyStatements: 2,
+            finallySubstantive: {
+              digest:
+                "f9d1394ff36c4219dbaea78ea5c7472247eda7c7c60e3ec8d268100a446c7fda",
+              tokens: 173,
+            },
+            index: 10,
+            substantive: {
+              digest:
+                "6bd96bd5181431bbc16c4be8519514aa980ffce5abf7db267797f70533ab97f6",
+              tokens: 28,
+            },
+            tryDigest:
+              "1b68bba13fbc38fb7839e443b13633fb36fabe7c5ff11feb7787835da73a3676",
+            tryStatements: 1,
+          },
+          {
+            catchBodies: ["afterReadFailure={error};", "throwerror;"],
+            catchVariables: ["error"],
+            containerKind: "TryStatement",
+            containerStatements: 50,
+            failureHolder:
+              "letafterReadFailure:IProductionProjectFixtureFailure|undefined;",
+            finallyDigest:
+              "3c5bb6200d91eba31dd661a96cf196ad0f41f9b69642e0ce682fe509e8f0955e",
+            finallyStatements: 1,
+            finallySubstantive: {
+              digest:
+                "91ef2119ecc7f468835742184defb1d30d7b2e80ad16366fc34d2f319f306f58",
+              tokens: 98,
+            },
+            index: 41,
+            substantive: {
+              digest:
+                "0f1d22a7c94012eac1153a2416b050ed0a3610762114a5ee3441ebd70257df3c",
+              tokens: 16,
+            },
+            tryDigest:
+              "7b99b3142ee3bb5ecf82c3de835bd53b3e12c54c1ae7de0256d6444cc02c6194",
+            tryStatements: 1,
+          },
+          {
+            catchBodies: ["deniedOpenFailure={error};", "throwerror;"],
+            catchVariables: ["error"],
+            containerKind: "TryStatement",
+            containerStatements: 50,
+            failureHolder:
+              "letdeniedOpenFailure:IProductionProjectFixtureFailure|undefined;",
+            finallyDigest:
+              "5026616bc75ba839022ada212b12616d0942e576efd6bfdd6a32714d2ac70e0c",
+            finallyStatements: 1,
+            finallySubstantive: {
+              digest:
+                "82566c571292e19e48cf14900ef66b3f7159d263eac5e8851ff51fe62c97bf34",
+              tokens: 48,
+            },
+            index: 48,
+            substantive: {
+              digest:
+                "0330906d698f68948a9e5b9ce4a1fb209e37f414fcf5ce43ac56a0331dec5d93",
+              tokens: 16,
+            },
+            tryDigest:
+              "01e70871088c155fc8cf5a4fe53dcdac39df0ccd9c10c9024991ab4970979fbb",
+            tryStatements: 1,
+          },
+        ],
+        statementCounts: [23],
+      },
+      parseDiagnostics: [],
+    },
+  );
+};
