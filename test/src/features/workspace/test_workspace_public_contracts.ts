@@ -6,6 +6,28 @@ import os from "node:os";
 import path from "node:path";
 import ts from "typescript-compiler";
 
+interface ILauncherCleanupOracleFixtureFailure {
+  error: unknown;
+}
+
+class LauncherCleanupOracleFixtureCleanupError extends AggregateError {}
+
+/** Remove the launcher-oracle directory without replacing its primary failure. */
+export const preserveLauncherCleanupOracleFixtureCleanup = (
+  failure: ILauncherCleanupOracleFixtureFailure | undefined,
+  cleanup: () => unknown,
+): void => {
+  try {
+    cleanup();
+  } catch (cleanupFailure) {
+    if (failure === undefined) throw cleanupFailure;
+    throw new LauncherCleanupOracleFixtureCleanupError(
+      [failure.error, cleanupFailure],
+      "Launcher cleanup oracle fixture teardown failed after the test failed.",
+    );
+  }
+};
+
 /** Repository root, four levels above `test/src/features/workspace`. */
 const ROOT = path.resolve(__dirname, "..", "..", "..", "..");
 
@@ -681,6 +703,7 @@ const verifyLauncherBundleCleanup = (
     }
     return { caught, removed: fs.existsSync(bundle) === false };
   };
+  let launcherOracleFailure: ILauncherCleanupOracleFixtureFailure | undefined;
   try {
     const standaloneCleanupFailure = new Error(
       "standalone launcher cleanup failure",
@@ -706,8 +729,13 @@ const verifyLauncherBundleCleanup = (
         combined.caught.errors[1] === combinedCleanupFailure &&
         combined.removed,
     );
+  } catch (error) {
+    launcherOracleFailure = { error };
+    throw error;
   } finally {
-    fs.rmSync(directory, { force: true, recursive: true });
+    preserveLauncherCleanupOracleFixtureCleanup(launcherOracleFailure, () =>
+      fs.rmSync(directory, { force: true, recursive: true }),
+    );
   }
 };
 
