@@ -5,10 +5,12 @@ import os from "node:os";
 import path from "node:path";
 
 import { captureCliOutput as captureCli } from "./CliOutputCapture";
+import { preserveCliRootFixtureCleanup } from "./CliRootFixtureCleanup";
 
 /** The public CLI drives dry-run, apply, idempotence, and guarded rollback. */
 export const test_cli_migrate = (): void => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-cli-migrate-"));
+  let migrateFailure: { error: unknown } | undefined;
   try {
     AutoMovieProject.open(root);
     const dryRun = captureCli(["migrate", root, "--dry-run"]);
@@ -54,7 +56,14 @@ export const test_cli_migrate = (): void => {
         rollbackOutput.status === "rolled-back" &&
         fs.existsSync(path.join(root, ".automovie")) === false,
     );
+  } catch (error) {
+    migrateFailure = { error };
+    throw error;
   } finally {
-    fs.rmSync(root, { force: true, recursive: true });
+    preserveCliRootFixtureCleanup(
+      migrateFailure,
+      () => fs.rmSync(root, { force: true, recursive: true }),
+      "migrate fixture root",
+    );
   }
 };

@@ -5,6 +5,8 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+import { preserveCliRootFixtureCleanup } from "./CliRootFixtureCleanup";
+
 interface IGuardResult {
   status: number | null;
   stderr: string;
@@ -39,8 +41,9 @@ const guard = (
  */
 export const test_cli_ownership_guard = (): void => {
   const base = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-guard-"));
-  const root = path.join(base, "film");
+  let ownershipFailure: { error: unknown } | undefined;
   try {
+    const root = path.join(base, "film");
     writeFiles(root, renderScaffold({ name: "guard-film" }));
     const authored = guard(root, "Write", {
       file_path: path.join(
@@ -113,7 +116,14 @@ export const test_cli_ownership_guard = (): void => {
         malformed.status === 2 &&
         malformed.stderr.includes("manifest.json is unreadable"),
     );
+  } catch (error) {
+    ownershipFailure = { error };
+    throw error;
   } finally {
-    fs.rmSync(base, { force: true, recursive: true });
+    preserveCliRootFixtureCleanup(
+      ownershipFailure,
+      () => fs.rmSync(base, { force: true, recursive: true }),
+      "ownership-guard fixture root",
+    );
   }
 };

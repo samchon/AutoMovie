@@ -18,6 +18,7 @@ import {
   productionH264Mp4,
   productionPng,
 } from "../mcp/productionMediaFixtures";
+import { preserveCliRootFixtureCleanup } from "./CliRootFixtureCleanup";
 
 /** True when `fn` throws. */
 const throws = (fn: () => unknown): boolean => {
@@ -3694,6 +3695,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
 
   // 4. write half: materialize, non-empty guard, traversal guard.
   const base = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-scaffold-"));
+  let scaffoldFailure: { error: unknown } | undefined;
   try {
     const target = path.join(base, "project");
     const written = writeFiles(target, files);
@@ -12898,7 +12900,14 @@ export const test_cli_scaffold = async (): Promise<void> => {
         fs.readFileSync(path.join(parkedCloseRoot, "owned.txt"), "utf8") ===
           "scaffold generation",
     );
+  } catch (error) {
+    scaffoldFailure = { error };
+    throw error;
   } finally {
-    fs.rmSync(base, { recursive: true, force: true });
+    preserveCliRootFixtureCleanup(
+      scaffoldFailure,
+      () => fs.rmSync(base, { recursive: true, force: true }),
+      "scaffold fixture root",
+    );
   }
 };
