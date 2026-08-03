@@ -26,32 +26,55 @@ import {
   shotContract,
 } from "../mcp/productionFixtures";
 
+interface IProjectStateFixtureFailure {
+  error: unknown;
+}
+
+class ProjectStateFixtureCleanupError extends AggregateError {}
+
+/** Dispose the project-state fixture without replacing its primary failure. */
+export const preserveProjectStateFixtureCleanup = (
+  failure: IProjectStateFixtureFailure | undefined,
+  cleanup: () => unknown,
+): void => {
+  try {
+    cleanup();
+  } catch (cleanupFailure) {
+    if (failure === undefined) throw cleanupFailure;
+    throw new ProjectStateFixtureCleanupError(
+      [failure.error, cleanupFailure],
+      "Project-state fixture teardown failed after the test failed.",
+    );
+  }
+};
+
 /**
  * The transport-free project reader authenticates one compiled snapshot, feeds
  * its typed values directly to pure engine geometry, and refuses stale bytes.
  */
 export const test_cli_project_state = (): void => {
   const fixture = productionFixture();
-  const sourcePath = path.join(fixture.root, "src/shots/opening.ts");
-  const formation = {
-    ...formationDesign(),
-    id: "army",
-    anchor: { x: 3, y: 0, z: -4 },
-  };
-  const formationPath = path.join(
-    fixture.root,
-    ".automovie/design/formations/army.json",
-  );
-  const formationContract = {
-    ...shotContract(),
-    participants: [
-      ...shotContract().participants,
-      { kind: "formation" as const, id: "army" },
-    ],
-  };
-  fs.mkdirSync(path.dirname(formationPath), { recursive: true });
-  fs.writeFileSync(formationPath, `${JSON.stringify(formation, null, 2)}\n`);
+  let projectStateFailure: IProjectStateFixtureFailure | undefined;
   try {
+    const sourcePath = path.join(fixture.root, "src/shots/opening.ts");
+    const formation = {
+      ...formationDesign(),
+      id: "army",
+      anchor: { x: 3, y: 0, z: -4 },
+    };
+    const formationPath = path.join(
+      fixture.root,
+      ".automovie/design/formations/army.json",
+    );
+    const formationContract = {
+      ...shotContract(),
+      participants: [
+        ...shotContract().participants,
+        { kind: "formation" as const, id: "army" },
+      ],
+    };
+    fs.mkdirSync(path.dirname(formationPath), { recursive: true });
+    fs.writeFileSync(formationPath, `${JSON.stringify(formation, null, 2)}\n`);
     const project = AutoMovieProductionProject.open(fixture.root);
     TestValidator.predicate(
       "state-reader formation contract updates design and source registration",
@@ -400,8 +423,13 @@ export const test_cli_project_state = (): void => {
         modified.generated.shots.has("opening") === false &&
         refusesCurrent(modified),
     );
+  } catch (error) {
+    projectStateFailure = { error };
+    throw error;
   } finally {
-    fixture.dispose();
+    preserveProjectStateFixtureCleanup(projectStateFailure, () =>
+      fixture.dispose(),
+    );
   }
 };
 
