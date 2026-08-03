@@ -116,7 +116,7 @@ export const test_cli_scaffold_viewer_race_cleanup = (): void => {
           catchBodies: ["ancestorRaceCleanupFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1883,
+          containerStatements: 1885,
           finallyDigest:
             "79be2444a4921a3048dc93ec4a73aab02b57515f9f1c0343e915bdbdc4595a6f",
           finallySubstantive: {
@@ -140,7 +140,7 @@ export const test_cli_scaffold_viewer_race_cleanup = (): void => {
           catchBodies: ["artifactRaceCleanupFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1883,
+          containerStatements: 1885,
           finallyDigest:
             "348d543079155e35b90bb1c0f0112561e8ba6273b29c00fe493e8d0ac18185a7",
           finallySubstantive: {
@@ -164,7 +164,7 @@ export const test_cli_scaffold_viewer_race_cleanup = (): void => {
           catchBodies: ["ledgerRaceCleanupFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1883,
+          containerStatements: 1885,
           finallyDigest:
             "2e74f40dd2c237b508abc3fb69932d474c11872e8e8c7e8cd4c0671898d53ddf",
           finallySubstantive: {
@@ -187,7 +187,7 @@ export const test_cli_scaffold_viewer_race_cleanup = (): void => {
           catchBodies: ["modelRaceCleanupFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1883,
+          containerStatements: 1885,
           finallyDigest:
             "d58362fc72ab44a081cdba00f71240a5b198212bc860987308d84331af4c59e3",
           finallySubstantive: {
@@ -210,7 +210,7 @@ export const test_cli_scaffold_viewer_race_cleanup = (): void => {
           catchBodies: ["inventoryRaceCleanupFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1883,
+          containerStatements: 1885,
           finallyDigest:
             "b8b24aff509ffca14288f4adc74df66e29f4635c345912cc057fae715a018883",
           finallySubstantive: {
@@ -234,7 +234,7 @@ export const test_cli_scaffold_viewer_race_cleanup = (): void => {
           catchBodies: ["assetRaceCleanupFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1883,
+          containerStatements: 1885,
           finallyDigest:
             "716d7864a47395a399ed02c0be44c5b96e9e3c0dc121ac0ea19e65d71d2d1644",
           finallySubstantive: {

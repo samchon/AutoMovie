@@ -5652,6 +5652,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       return status;
     }) as typeof fs.lstatSync;
     let verifiedProxyTreeSuccessorRejected = false;
+    let verifiedProxyTreeCleanupFailure: { error: unknown } | undefined;
     try {
       verifiedProxyTreeSuccessorRejected = throws(() =>
         proxyModule.inspectPublishedProxyBundle(
@@ -5659,16 +5660,39 @@ export const test_cli_scaffold = async (): Promise<void> => {
           verifiedProxyBundle,
         ),
       );
+    } catch (error) {
+      verifiedProxyTreeCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.lstatSync = nativeLstat;
-      if (fs.existsSync(parkedVerifiedProxyBundle)) {
-        fs.rmSync(verifiedProxyBundle, { recursive: true, force: true });
-        fs.renameSync(parkedVerifiedProxyBundle, verifiedProxyBundle);
-      }
-      fs.rmSync(successorVerifiedProxyBundle, {
-        recursive: true,
-        force: true,
-      });
+      preserveCliHarnessCleanup(verifiedProxyTreeCleanupFailure, [
+        {
+          resource: "verified proxy tree lstat hook",
+          cleanup: () => {
+            mutableFs.lstatSync = nativeLstat;
+          },
+        },
+        {
+          resource: "verified proxy resident bundle",
+          cleanup: () => {
+            if (fs.existsSync(parkedVerifiedProxyBundle)) {
+              fs.rmSync(verifiedProxyBundle, {
+                recursive: true,
+                force: true,
+              });
+              fs.renameSync(parkedVerifiedProxyBundle, verifiedProxyBundle);
+            }
+          },
+        },
+        {
+          resource: "verified proxy successor bundle",
+          cleanup: () => {
+            fs.rmSync(successorVerifiedProxyBundle, {
+              recursive: true,
+              force: true,
+            });
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "the final proxy consumer rejects a byte-identical tree successor",
@@ -5716,6 +5740,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       return entries;
     }) as typeof fs.readdirSync;
     let verifiedProxyLateMutationRejected = false;
+    let verifiedProxyInventoryCleanupFailure: { error: unknown } | undefined;
     try {
       verifiedProxyLateMutationRejected = throws(() =>
         proxyModule.inspectPublishedProxyBundle(
@@ -5723,11 +5748,36 @@ export const test_cli_scaffold = async (): Promise<void> => {
           verifiedProxyBundle,
         ),
       );
+    } catch (error) {
+      verifiedProxyInventoryCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.openSync = nativeOpen;
-      mutableFs.readFileSync = nativeReadFile;
-      mutableFs.readdirSync = nativeReaddir;
-      fs.rmSync(lateVerifiedProxyFile, { force: true });
+      preserveCliHarnessCleanup(verifiedProxyInventoryCleanupFailure, [
+        {
+          resource: "verified proxy inventory open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+        {
+          resource: "verified proxy inventory read-file hook",
+          cleanup: () => {
+            mutableFs.readFileSync = nativeReadFile;
+          },
+        },
+        {
+          resource: "verified proxy inventory readdir hook",
+          cleanup: () => {
+            mutableFs.readdirSync = nativeReaddir;
+          },
+        },
+        {
+          resource: "verified proxy late inventory file",
+          cleanup: () => {
+            fs.rmSync(lateVerifiedProxyFile, { force: true });
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "the final proxy consumer revalidates exact inventory after all reads",
