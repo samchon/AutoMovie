@@ -6938,16 +6938,32 @@ export const test_cli_scaffold = async (): Promise<void> => {
       return status;
     }) as typeof fs.lstatSync;
     let captureReceiptRaceRejected = false;
+    let captureReceiptCleanupFailure: { error: unknown } | undefined;
     try {
       captureReceiptRaceRejected = throws(() =>
         captureBrowserModule.readCaptureInstallReceipt(captureProject),
       );
+    } catch (error) {
+      captureReceiptCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.lstatSync = nativeLstat;
-      if (fs.existsSync(parkedCaptureReceipt)) {
-        fs.rmSync(captureReceipt, { force: true });
-        fs.renameSync(parkedCaptureReceipt, captureReceipt);
-      }
+      preserveCliHarnessCleanup(captureReceiptCleanupFailure, [
+        {
+          resource: "capture receipt lstat hook",
+          cleanup: () => {
+            mutableFs.lstatSync = nativeLstat;
+          },
+        },
+        {
+          resource: "capture resident receipt",
+          cleanup: () => {
+            if (fs.existsSync(parkedCaptureReceipt)) {
+              fs.rmSync(captureReceipt, { force: true });
+              fs.renameSync(parkedCaptureReceipt, captureReceipt);
+            }
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "capture install receipt rejects a byte-identical successor",
@@ -7093,6 +7109,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       ]) as number;
     }) as typeof fs.writeSync;
     let partialReceiptRejected = false;
+    let partialReceiptCleanupFailure: { error: unknown } | undefined;
     try {
       partialReceiptRejected = throws(() =>
         captureBrowserModule.publishCaptureInstallReceipt(
@@ -7101,9 +7118,24 @@ export const test_cli_scaffold = async (): Promise<void> => {
           () => undefined,
         ),
       );
+    } catch (error) {
+      partialReceiptCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.openSync = nativeOpen;
-      mutableFs.writeSync = nativeWrite;
+      preserveCliHarnessCleanup(partialReceiptCleanupFailure, [
+        {
+          resource: "capture receipt partial open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+        {
+          resource: "capture receipt partial write hook",
+          cleanup: () => {
+            mutableFs.writeSync = nativeWrite;
+          },
+        },
+      ]);
     }
     const partialReceiptDirectory = path.join(
       partialReceiptProject,
@@ -7204,6 +7236,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
     }) as typeof fs.readSync;
     let oversizedReceiptReadRejected = false;
     let oversizedReceiptPublishRejected = false;
+    let oversizedReceiptCleanupFailure: { error: unknown } | undefined;
     try {
       oversizedReceiptReadRejected = throwsWith(
         () =>
@@ -7221,9 +7254,24 @@ export const test_cli_scaffold = async (): Promise<void> => {
           ),
         "Manually adjudicate",
       );
+    } catch (error) {
+      oversizedReceiptCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.openSync = nativeOpen;
-      mutableFs.readSync = nativeRead;
+      preserveCliHarnessCleanup(oversizedReceiptCleanupFailure, [
+        {
+          resource: "capture receipt oversized open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+        {
+          resource: "capture receipt oversized read hook",
+          cleanup: () => {
+            mutableFs.readSync = nativeRead;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "capture install bounds current and competing receipt descriptors before hashing",
@@ -7270,6 +7318,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       nativeFsync(descriptor);
     }) as typeof fs.fsyncSync;
     let receiptTargetSwapRejected = false;
+    let receiptTargetSwapCleanupFailure: { error: unknown } | undefined;
     try {
       receiptTargetSwapRejected = throws(() =>
         captureBrowserModule.publishCaptureInstallReceipt(
@@ -7278,9 +7327,24 @@ export const test_cli_scaffold = async (): Promise<void> => {
           () => undefined,
         ),
       );
+    } catch (error) {
+      receiptTargetSwapCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.openSync = nativeOpen;
-      mutableFs.fsyncSync = nativeFsync;
+      preserveCliHarnessCleanup(receiptTargetSwapCleanupFailure, [
+        {
+          resource: "capture receipt target open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+        {
+          resource: "capture receipt target fsync hook",
+          cleanup: () => {
+            mutableFs.fsyncSync = nativeFsync;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "capture install preserves a final-slot successor after descriptor open",
@@ -7460,14 +7524,41 @@ export const test_cli_scaffold = async (): Promise<void> => {
       return status;
     }) as typeof fs.lstatSync;
     let receiptReadDirectoryRejected = false;
+    let receiptReadDirectoryCleanupFailure: { error: unknown } | undefined;
     try {
       receiptReadDirectoryRejected = throws(() =>
         captureBrowserModule.readCaptureInstallReceipt(captureProject),
       );
+    } catch (error) {
+      receiptReadDirectoryCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.lstatSync = nativeLstat;
-      fs.rmSync(receiptGenerationDirectory, { recursive: true, force: true });
-      nativeRename(parkedReceiptReadDirectory, receiptGenerationDirectory);
+      preserveCliHarnessCleanup(receiptReadDirectoryCleanupFailure, [
+        {
+          resource: "capture receipt directory lstat hook",
+          cleanup: () => {
+            mutableFs.lstatSync = nativeLstat;
+          },
+        },
+        {
+          resource: "capture receipt successor directory",
+          cleanup: () => {
+            fs.rmSync(receiptGenerationDirectory, {
+              recursive: true,
+              force: true,
+            });
+          },
+        },
+        {
+          resource: "capture receipt resident directory",
+          cleanup: () => {
+            nativeRename(
+              parkedReceiptReadDirectory,
+              receiptGenerationDirectory,
+            );
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "capture install binds current-generation selection through directory read",
@@ -7496,14 +7587,35 @@ export const test_cli_scaffold = async (): Promise<void> => {
       return status;
     }) as typeof fs.lstatSync;
     let receiptReadRootRejected = false;
+    let receiptReadRootCleanupFailure: { error: unknown } | undefined;
     try {
       receiptReadRootRejected = throws(() =>
         captureBrowserModule.readCaptureInstallReceipt(captureProject),
       );
+    } catch (error) {
+      receiptReadRootCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.lstatSync = nativeLstat;
-      fs.rmSync(captureProject, { recursive: true, force: true });
-      nativeRename(parkedReceiptReadRoot, captureProject);
+      preserveCliHarnessCleanup(receiptReadRootCleanupFailure, [
+        {
+          resource: "capture receipt root lstat hook",
+          cleanup: () => {
+            mutableFs.lstatSync = nativeLstat;
+          },
+        },
+        {
+          resource: "capture receipt successor root",
+          cleanup: () => {
+            fs.rmSync(captureProject, { recursive: true, force: true });
+          },
+        },
+        {
+          resource: "capture receipt resident root",
+          cleanup: () => {
+            nativeRename(parkedReceiptReadRoot, captureProject);
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "capture install binds current-generation selection through project-root read",
