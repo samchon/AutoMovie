@@ -360,7 +360,6 @@ const visibleVariance = (png) => {
 const frameEvidence = (frame) => ({
   kind: "frame",
   target: frame.target,
-  shot: frame.shot,
   reviewFrame: frame.reviewFrame,
   bundle: frame.bundle,
   frame: frame.frame,
@@ -451,7 +450,8 @@ const worksheet = (project, prepared) => {
                   : undefined);
               const frame = prepared.frames.find(
                 (item) =>
-                  item.shot === shot &&
+                  item.target.kind === "shot" &&
+                  item.target.id === shot &&
                   item.reviewFrame === scenario.criterion.frame &&
                   item.pass === scenario.criterion.pass,
               );
@@ -784,7 +784,11 @@ if (phase === "review") {
       assert(
         "starter-film-review-sees-every-shot",
         prepared.frames.length === 6 &&
-          new Set(prepared.frames.map((frame) => frame.shot)).size === 2,
+          new Set(
+            prepared.frames.flatMap((frame) =>
+              frame.target.kind === "shot" ? [frame.target.id] : [],
+            ),
+          ).size === 2,
         JSON.stringify(prepared.frames),
       );
     const submitted = app.submitReview(worksheet(project, prepared));

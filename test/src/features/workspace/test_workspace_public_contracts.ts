@@ -1014,6 +1014,7 @@ const packagedAssetReviewContract = (
     initializer: string;
   }> = [];
   const frameEvidence: Array<Array<[string, string]>> = [];
+  const filmFrameOwnership: string[] = [];
   const applications: string[] = [];
   const assertionFailures: string[] = [];
   const captureImports: Array<{
@@ -1082,6 +1083,19 @@ const packagedAssetReviewContract = (
               outer !== undefined && ts.isConditionalExpression(outer)
                 ? outer.whenFalse
                 : undefined;
+            let acceptanceFrameMatch: string | null = null;
+            const visitAcceptanceFrameMatch = (child: ts.Node): void => {
+              if (
+                ts.isCallExpression(child) &&
+                ts.isPropertyAccessExpression(child.expression) &&
+                compact(child.expression) === "prepared.frames.find" &&
+                child.arguments[0] !== undefined &&
+                ts.isArrowFunction(child.arguments[0])
+              )
+                acceptanceFrameMatch = compact(child.arguments[0].body);
+              ts.forEachChild(child, visitAcceptanceFrameMatch);
+            };
+            visitAcceptanceFrameMatch(mapper.body);
             worksheetEvidence.push({
               acceptanceCondition:
                 outer !== undefined && ts.isConditionalExpression(outer)
@@ -1099,6 +1113,7 @@ const packagedAssetReviewContract = (
                 fallback !== undefined && ts.isConditionalExpression(fallback)
                   ? compact(fallback.whenFalse)
                   : null,
+              acceptanceFrameMatch,
               mapper: compact(node.expression),
               parameters: mapper.parameters.map(compact),
             });
@@ -1143,6 +1158,8 @@ const packagedAssetReviewContract = (
         node.arguments.length === 3
       ) {
         const name = compact(node.arguments[0]!);
+        if (name === '"starter-film-review-sees-every-shot"')
+          filmFrameOwnership.push(compact(node.arguments[1]!));
         if (
           name.includes("starter-png-size:") ||
           name.includes("starter-acceptance-frame-captured:") ||
@@ -1412,6 +1429,7 @@ const packagedAssetReviewContract = (
       ].map((match) => match[1]!),
     },
     embeddedScripts: embeddedSources.length,
+    filmFrameOwnership,
     frameEvidence,
     guideLoops,
     packaged,
@@ -4124,11 +4142,13 @@ export const test_workspace_public_contracts = (): void => {
         ],
       },
       embeddedScripts: 1,
+      filmFrameOwnership: [
+        'prepared.frames.length===6&&newSet(prepared.frames.flatMap((frame)=>frame.target.kind==="shot"?[frame.target.id]:[],),).size===2',
+      ],
       frameEvidence: [
         [
           ["kind", '"frame"'],
           ["target", "frame.target"],
-          ["shot", "frame.shot"],
           ["reviewFrame", "frame.reviewFrame"],
           ["bundle", "frame.bundle"],
           ["frame", "frame.frame"],
@@ -4164,6 +4184,8 @@ export const test_workspace_public_contracts = (): void => {
       worksheetEvidence: [
         {
           acceptanceCondition: 'criterion==="acceptance-scenarios"',
+          acceptanceFrameMatch:
+            'item.target.kind==="shot"&&item.target.id===shot&&item.reviewFrame===scenario.criterion.frame&&item.pass===scenario.criterion.pass',
           assetCondition: 'prepared.target.kind==="asset"&&index===0',
           assetEvidence: "prepared.frames.map(frameEvidence)",
           exactEvidence: "[exactEvidence(project,prepared,index)]",
