@@ -32,6 +32,39 @@ export const preserveProjectManifestFixtureCleanup = (
   }
 };
 
+interface IProjectManifestRaceCleanup {
+  cleanup: () => unknown;
+  resource: string;
+}
+
+class ProjectManifestRaceCleanupError extends AggregateError {}
+
+/** Attempt every project-manifest race cleanup without hiding failure. */
+export const preserveProjectManifestRaceCleanup = (
+  failure: IProjectManifestFixtureFailure | undefined,
+  resources: readonly IProjectManifestRaceCleanup[],
+): void => {
+  const cleanupFailures: Array<{ error: unknown; resource: string }> = [];
+  for (const resource of resources)
+    try {
+      resource.cleanup();
+    } catch (error) {
+      cleanupFailures.push({ error, resource: resource.resource });
+    }
+  if (cleanupFailures.length === 1 && failure === undefined)
+    throw cleanupFailures[0]!.error;
+  if (cleanupFailures.length !== 0)
+    throw new ProjectManifestRaceCleanupError(
+      [
+        ...(failure === undefined ? [] : [failure.error]),
+        ...cleanupFailures.map((entry) => entry.error),
+      ],
+      `Project-manifest race cleanup failed${
+        failure === undefined ? "" : " after the race failed"
+      }: ${cleanupFailures.map((entry) => entry.resource).join(", ")}.`,
+    );
+};
+
 /**
  * Opening an existing project is a pure read (#700): a fresh directory gets its
  * manifest created once, but reopening an unchanged project must not rewrite
@@ -113,18 +146,44 @@ export const test_mcp_project_manifest = (): void => {
       return status;
     }) as typeof fs.lstatSync;
     let manifestSwapRejected = false;
+    let manifestRaceFailure: IProjectManifestFixtureFailure | undefined;
     try {
       manifestSwapRejected = throwsError(
         () => AutoMovieProject.open(root),
         ["changed physical identity", "automovie.json"],
       );
+    } catch (error) {
+      manifestRaceFailure = { error };
+      throw error;
     } finally {
-      fs.existsSync = nativeManifestExists;
-      mutableFs.lstatSync = nativeManifestLstat;
-      if (nativeManifestExists(parkedManifest)) {
-        fs.rmSync(manifestPath, { force: true });
-        fs.renameSync(parkedManifest, manifestPath);
-      }
+      preserveProjectManifestRaceCleanup(manifestRaceFailure, [
+        {
+          resource: "manifest exists hook",
+          cleanup: () => {
+            fs.existsSync = nativeManifestExists;
+          },
+        },
+        {
+          resource: "manifest lstat hook",
+          cleanup: () => {
+            mutableFs.lstatSync = nativeManifestLstat;
+          },
+        },
+        {
+          resource: "manifest transient replacement",
+          cleanup: () => {
+            if (nativeManifestExists(parkedManifest))
+              fs.rmSync(manifestPath, { force: true });
+          },
+        },
+        {
+          resource: "manifest parked resident",
+          cleanup: () => {
+            if (nativeManifestExists(parkedManifest))
+              fs.renameSync(parkedManifest, manifestPath);
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "manifest reads reject replacement between first observation and descriptor open",
@@ -251,19 +310,44 @@ export const test_mcp_project_manifest = (): void => {
       }
     }) as typeof fs.lstatSync;
     let optionalSwapRejected = false;
+    let optionalRaceFailure: IProjectManifestFixtureFailure | undefined;
     try {
       optionalSwapRejected = throwsError(
         () => AutoMovieProject.open(optionalRoot),
         ["changed physical identity", "optional-root-race"],
       );
+    } catch (error) {
+      optionalRaceFailure = { error };
+      throw error;
     } finally {
-      mutableFs.lstatSync = nativeOptionalLstat;
-      optionalReplacementUntouched =
-        fs.existsSync(optionalRoot) &&
-        fs.readdirSync(optionalRoot).length === 0;
-      fs.rmSync(optionalRoot, { recursive: true, force: true });
-      if (fs.existsSync(optionalParked))
-        fs.renameSync(optionalParked, optionalRoot);
+      preserveProjectManifestRaceCleanup(optionalRaceFailure, [
+        {
+          resource: "optional-root lstat hook",
+          cleanup: () => {
+            mutableFs.lstatSync = nativeOptionalLstat;
+          },
+        },
+        {
+          resource: "optional-root replacement observation",
+          cleanup: () => {
+            optionalReplacementUntouched =
+              fs.existsSync(optionalRoot) &&
+              fs.readdirSync(optionalRoot).length === 0;
+          },
+        },
+        {
+          resource: "optional-root active replacement",
+          cleanup: () =>
+            fs.rmSync(optionalRoot, { recursive: true, force: true }),
+        },
+        {
+          resource: "optional-root parked resident",
+          cleanup: () => {
+            if (fs.existsSync(optionalParked))
+              fs.renameSync(optionalParked, optionalRoot);
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "optional absence revalidates its captured project ancestry",

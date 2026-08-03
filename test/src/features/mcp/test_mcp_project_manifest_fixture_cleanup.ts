@@ -245,12 +245,12 @@ export const test_mcp_project_manifest_fixture_cleanup = (): void => {
               'constroot=fs.mkdtempSync(path.join(os.tmpdir(),"automovie-manifest-"));',
             substantive: {
               digest:
-                "e32a9385c6b314de146055f79a95d0582e33342879de7f0a044560e9c00731b0",
-              tokens: 1160,
+                "43e610d5048cabfe71dc0fb5045e09d007356ae84fe62e6d1bad2ec93365a92d",
+              tokens: 1342,
             },
             tryDigest:
-              "627ba578fc5f19731b165d3eb6733ea93fb7db92fe3b0826609359d8454ef875",
-            tryStatements: 46,
+              "52ecc9e414d7c3e516d9f9dd91dcf69de1cd6b26e826f94964b548073cd0a9f3",
+            tryStatements: 48,
           },
         ],
       },
