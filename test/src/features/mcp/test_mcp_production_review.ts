@@ -282,6 +282,39 @@ export const preserveProductionReviewFixtureCleanup = (
   }
 };
 
+interface IProductionReviewHarnessCleanup {
+  cleanup: () => unknown;
+  resource: string;
+}
+
+class ProductionReviewHarnessCleanupError extends AggregateError {}
+
+/** Attempt every review harness restoration without hiding failure. */
+export const preserveProductionReviewHarnessCleanup = (
+  failure: IProductionReviewFixtureFailure | undefined,
+  resources: readonly IProductionReviewHarnessCleanup[],
+): void => {
+  const cleanupFailures: Array<{ error: unknown; resource: string }> = [];
+  for (const resource of resources)
+    try {
+      resource.cleanup();
+    } catch (error) {
+      cleanupFailures.push({ error, resource: resource.resource });
+    }
+  if (cleanupFailures.length === 1 && failure === undefined)
+    throw cleanupFailures[0]!.error;
+  if (cleanupFailures.length !== 0)
+    throw new ProductionReviewHarnessCleanupError(
+      [
+        ...(failure === undefined ? [] : [failure.error]),
+        ...cleanupFailures.map((entry) => entry.error),
+      ],
+      `Production review harness cleanup failed${
+        failure === undefined ? "" : " after the review failed"
+      }: ${cleanupFailures.map((entry) => entry.resource).join(", ")}.`,
+    );
+};
+
 /** Review records require current exact design, source and actual PNG evidence. */
 export const test_mcp_production_review = async (): Promise<void> => {
   let productionReviewFailure: IProductionReviewFixtureFailure | undefined;
@@ -1354,13 +1387,29 @@ export const test_mcp_production_review = async (): Promise<void> => {
     let commitBoundarySubmission: ReturnType<
       AutoMovieProductionReviewService["submit"]
     >;
+    let shotCommitRaceFailure: IProductionReviewFixtureFailure | undefined;
     try {
       commitBoundarySubmission = review.submit(
         worksheet(project, commitBoundaryPrepared),
       );
+    } catch (error) {
+      shotCommitRaceFailure = { error };
+      throw error;
     } finally {
-      project.commitReview = residentCommitReview;
-      fs.writeFileSync(sourceFile, sourceBeforeRace);
+      preserveProductionReviewHarnessCleanup(shotCommitRaceFailure, [
+        {
+          resource: "shot commit-review hook",
+          cleanup: () => {
+            project.commitReview = residentCommitReview;
+          },
+        },
+        {
+          resource: "shot source bytes",
+          cleanup: () => {
+            fs.writeFileSync(sourceFile, sourceBeforeRace);
+          },
+        },
+      ]);
     }
     const reviewAfterCommitRace = fs.existsSync(reviewPath)
       ? fs.readFileSync(reviewPath)
@@ -1761,13 +1810,29 @@ export const test_mcp_production_review = async (): Promise<void> => {
     let filmCommitSubmission: ReturnType<
       AutoMovieProductionReviewService["submit"]
     >;
+    let filmCommitRaceFailure: IProductionReviewFixtureFailure | undefined;
     try {
       filmCommitSubmission = review.submit(
         worksheet(project, filmCommitPrepared),
       );
+    } catch (error) {
+      filmCommitRaceFailure = { error };
+      throw error;
     } finally {
-      project.commitReview = residentFilmCommitReview;
-      fs.writeFileSync(filmSourceFile, filmSourceBeforeRace);
+      preserveProductionReviewHarnessCleanup(filmCommitRaceFailure, [
+        {
+          resource: "film commit-review hook",
+          cleanup: () => {
+            project.commitReview = residentFilmCommitReview;
+          },
+        },
+        {
+          resource: "film source bytes",
+          cleanup: () => {
+            fs.writeFileSync(filmSourceFile, filmSourceBeforeRace);
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "a film-source mutation during review commit rolls back the stale ledger",
