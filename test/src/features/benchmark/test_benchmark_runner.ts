@@ -1452,6 +1452,16 @@ const exerciseInputAndFilesystemFences = async (
       project: root,
     }),
   );
+  // The MCP host refuses to start outside an AutoMovie workspace, so the probe
+  // that must succeed observes a marked workspace, exactly like the runner marks
+  // the candidate project before observing a live target. It lives inside the
+  // fixture root the outer lifecycle already removes.
+  const probeWorkspace = path.join(root, "probe-workspace");
+  fs.mkdirSync(probeWorkspace);
+  fs.writeFileSync(
+    path.join(probeWorkspace, "automovie.config.ts"),
+    "export {};\n",
+  );
   const nativeClientClose = Client.prototype.close;
   const cleanupFailure = new Error("synthetic MCP client cleanup failure");
   let cleanupOnlyFailure: unknown = null;
@@ -1474,7 +1484,7 @@ const exerciseInputAndFilesystemFences = async (
     cleanupOnlyFailure = await rejectedValue(() =>
       mcpTarget.probe({
         scenario: getAutoMovieBenchmarkScenario("short/austerlitz-teaser"),
-        project: root,
+        project: probeWorkspace,
       }),
     );
     combinedProbeFailure = await rejectedValue(() =>

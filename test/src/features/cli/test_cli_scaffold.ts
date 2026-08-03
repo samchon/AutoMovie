@@ -1168,47 +1168,47 @@ export const test_cli_scaffold = async (): Promise<void> => {
     renderGcDescriptorCleanupContract(renderGcSnapshotScript),
     {
       classDigests: [
-        "9266d1bf24872a9cc3afe1270091f8a3f611ed8a23e4d5f93852688ea208b1f9",
+        "2706a56467dddf236d7eb29116125b89869e76103edffa51003fd64bfdeab6d5",
       ],
       cleanupCalls: [
         {
           callDigest:
-            "6bc6f2822484006797ee36b3cdefb91ca02a34a3a679647ef7f3a778935ddf0b",
+            "c98b35d96fe1b1b597c18208ef52876f9d432de8a21492c18c71fbeb41650106",
           owner: "createRenderGcFileSnapshot",
         },
         {
           callDigest:
-            "fb9128bb5c813834fd9727967bee828f596e049fdcb4b395079f4cf1f4fb5414",
+            "485b897080dd4d86169450da49bef86fa9723b1ed9c50dd248dc1a70baa4ad34",
           owner: "readCapturedRenderGcFile",
         },
         {
           callDigest:
-            "58c837a699766e0882e960f3cf737e2b6ddc54ed34453f7a5c1d58607ba5a7c1",
+            "44be5407e93eb8c91a3e90d3a8b736477e0a32f2b6de1002441cc8247fdd609f",
           owner: "readFileEntry",
         },
       ],
       descriptorOwners: [
         {
           cleanupCalls: [
-            "6bc6f2822484006797ee36b3cdefb91ca02a34a3a679647ef7f3a778935ddf0b",
+            "c98b35d96fe1b1b597c18208ef52876f9d432de8a21492c18c71fbeb41650106",
           ],
           openCalls: [
-            "6419a95b98910b0041b6a1452ad5137806f7b7470f8d40603c02610a74f2bd0f",
+            "16faa59d27c09c60e28a767075b9d3f0e4bd0e26fa245a328e65ae09eee1bfdf",
           ],
           owner: "createRenderGcFileSnapshot",
         },
         {
           cleanupCalls: [
-            "fb9128bb5c813834fd9727967bee828f596e049fdcb4b395079f4cf1f4fb5414",
+            "485b897080dd4d86169450da49bef86fa9723b1ed9c50dd248dc1a70baa4ad34",
           ],
           openCalls: [
-            "a2a26290a645ba4f9b86c5525cf6ea1908b7573329451f508ea16f74bb61f49e",
+            "af6478db328d36331a688efb8d86f283188da85fba00955b0574f24b34d548bb",
           ],
           owner: "readCapturedRenderGcFile",
         },
         {
           cleanupCalls: [
-            "58c837a699766e0882e960f3cf737e2b6ddc54ed34453f7a5c1d58607ba5a7c1",
+            "44be5407e93eb8c91a3e90d3a8b736477e0a32f2b6de1002441cc8247fdd609f",
           ],
           openCalls: [
             "c9d38a4c9b794cd433e3514dc42a16ebc3f5d69b0927fe7426c297b884778196",
@@ -1218,16 +1218,16 @@ export const test_cli_scaffold = async (): Promise<void> => {
       ],
       functionDigests: {
         closeRenderGcDescriptor: [
-          "d960522c7c27843b71311795010bdf489be6f92a1efbef63564ee830411105b7",
+          "64155196bcfdd8402264f23e2dd169e90c7283945a915fd16caff53c137da759",
         ],
         createRenderGcFileSnapshot: [
-          "b230d7753fb66d481871fe8c0c852699c64934e3efbdc8a493a3f62b943c6b5d",
+          "71ac573a2c04921be47d3e6519c5792da6f11d903f2521f1696550fe9f283e43",
         ],
         readCapturedRenderGcFile: [
-          "66c4b6e7621baaf6f814fedc0bf66d731ffa358806abf280c93b5a1e3f26665d",
+          "9d136dbd921cfd8af3ea6d8daec3e2ff2c4e865f255a131581c914ce7e6857c8",
         ],
         readFileEntry: [
-          "20d347052d41b8db34b71d044e5c8f8fb65da503f0c6f52b83d135bd5282b1fd",
+          "86cfb31e19bff5d3a9b59d069bd79d170c89d85ec6970481300ab57f6e535d48",
         ],
       },
     },

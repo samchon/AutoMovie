@@ -193,10 +193,10 @@ export const test_benchmark_runner_single_resource_cleanup = (): void => {
   const expected = {
     count: 3,
     parentDigest:
-      "d8e28fb5720097431c8d9b5c4600ea5b3bcc38b0def07517261c93028e941eaf",
+      "ad15dd9b9740f7fb8b499bd8133656359ef86dffa880407b6879c927a1322dd3",
     parseDiagnostics: [],
     rootDigest:
-      "a4f3dc24520c481b8483a382544a45d5bfd896e062ff95afa4a52c73af89b76e",
+      "f422df13535b2287bbc6704d0d00612d8cd66e10968da29837d0de5175fbe1c7",
     rows: [
       {
         catchBodies: ["archivePublicationFailure={error};", "throwerror;"],
@@ -230,7 +230,7 @@ export const test_benchmark_runner_single_resource_cleanup = (): void => {
         catchVariables: ["error"],
         cleanup: "()=>{Client.prototype.close=nativeClientClose;}",
         containerKind: "ArrowFunction",
-        containerStatements: 33,
+        containerStatements: 36,
         failureHolder:
           "letmcpProbeHarnessFailure:IBenchmarkRunnerFixtureFailure|undefined;",
         finallyDigest:
@@ -241,14 +241,14 @@ export const test_benchmark_runner_single_resource_cleanup = (): void => {
           tokens: 31,
         },
         helper: "preserveBenchmarkRunnerHookCleanup",
-        index: 14,
+        index: 17,
         owner: "exerciseInputAndFilesystemFences",
         resource: "MCP-probe client-close hook",
         tryDigest:
-          "ed4755787a7ac92975dbfca0f30f0738a9c47a355fda755fbac5c85cafe59acd",
+          "256c923ae04ba8a401e0ae1a1c9e54de691824b1000aaa4804ed29268f59f9f7",
         trySubstantive: {
           digest:
-            "1a65776a0317f9b206d1c8272e79ea382d33dedc2d65e94a64d4388bfe2afdca",
+            "704a8c586d37d1c705477bc25019eed60d60838d8bb94179e1a547cddb1dcc8a",
           tokens: 58,
         },
       },
