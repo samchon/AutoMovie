@@ -133,14 +133,35 @@ const captureRenderFileDescriptorFailure = (
       throw sourceCloseFailure;
   }) as typeof fs.closeSync;
   let caught: unknown;
+  let renderDescriptorHarnessFailure:
+    | IProductionProjectFixtureFailure
+    | undefined;
   try {
     project.readRenderFile(relativePath);
   } catch (error) {
     caught = error;
+    renderDescriptorHarnessFailure = { error };
   } finally {
-    fs.openSync = nativeOpen;
-    fs.fstatSync = nativeFstat;
-    fs.closeSync = nativeClose;
+    preserveProductionProjectFixtureCleanup(renderDescriptorHarnessFailure, [
+      {
+        resource: "render descriptor open hook",
+        cleanup: () => {
+          fs.openSync = nativeOpen;
+        },
+      },
+      {
+        resource: "render descriptor fstat hook",
+        cleanup: () => {
+          fs.fstatSync = nativeFstat;
+        },
+      },
+      {
+        resource: "render descriptor close hook",
+        cleanup: () => {
+          fs.closeSync = nativeClose;
+        },
+      },
+    ]);
   }
   return {
     caught,
