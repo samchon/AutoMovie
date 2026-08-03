@@ -10,6 +10,28 @@ import fs from "node:fs";
 import path from "node:path";
 import ts from "typescript-compiler";
 
+interface IGuideSnippetFixtureFailure {
+  error: unknown;
+}
+
+class GuideSnippetFixtureCleanupError extends AggregateError {}
+
+/** Remove the guide-snippet root without replacing its compiler failure. */
+export const preserveGuideSnippetFixtureCleanup = (
+  failure: IGuideSnippetFixtureFailure | undefined,
+  cleanup: () => unknown,
+): void => {
+  try {
+    cleanup();
+  } catch (cleanupFailure) {
+    if (failure === undefined) throw cleanupFailure;
+    throw new GuideSnippetFixtureCleanupError(
+      [failure.error, cleanupFailure],
+      "Guide-snippet fixture cleanup failed after the test failed.",
+    );
+  }
+};
+
 /** Pin the guide corpus as an executable contract rather than loose prose. */
 export const test_mcp_guide_corpus = (): void => {
   const root = path.resolve(__dirname, "../../../..");
@@ -205,6 +227,7 @@ const compileSnippets = (
   const temporary = fs.mkdtempSync(
     path.join(cache, "automovie-guide-snippets-"),
   );
+  let guideSnippetFailure: IGuideSnippetFixtureFailure | undefined;
   try {
     for (const snippet of snippets) {
       const file = path.join(
@@ -235,8 +258,13 @@ const compileSnippets = (
           )}`,
         );
     }
+  } catch (error) {
+    guideSnippetFailure = { error };
+    throw error;
   } finally {
-    fs.rmSync(temporary, { force: true, recursive: true });
+    preserveGuideSnippetFixtureCleanup(guideSnippetFailure, () =>
+      fs.rmSync(temporary, { force: true, recursive: true }),
+    );
   }
 };
 
