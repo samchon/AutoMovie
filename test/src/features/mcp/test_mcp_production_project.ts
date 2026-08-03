@@ -3880,13 +3880,24 @@ export const test_mcp_production_project = (): void => {
       }
     }) as typeof fs.writeFileSync;
     let parentSwapRejected = false;
+    let parentSwapFailure: IProductionProjectFixtureFailure | undefined;
     try {
       parentSwapRejected = throws(
         () => AutoMovieProductionProject.open(swappedProject),
         "changed physical identity",
       );
+    } catch (error) {
+      parentSwapFailure = { error };
+      throw error;
     } finally {
-      fs.writeFileSync = nativeWriteForParentSwap;
+      preserveProductionProjectFixtureCleanup(parentSwapFailure, [
+        {
+          resource: "creation-parent swap write hook",
+          cleanup: () => {
+            fs.writeFileSync = nativeWriteForParentSwap;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "a parent replaced while creation fences are acquired is rejected before either tree receives a child",
@@ -3924,13 +3935,26 @@ export const test_mcp_production_project = (): void => {
         }
       }) as typeof fs.writeFileSync;
       let rejected = false;
+      let replacementParentFailure:
+        | IProductionProjectFixtureFailure
+        | undefined;
       try {
         rejected = throws(
           () => AutoMovieProductionProject.open(projectPath),
           "changed physical identity",
         );
+      } catch (error) {
+        replacementParentFailure = { error };
+        throw error;
       } finally {
-        fs.writeFileSync = nativeWriteForReplacement;
+        preserveProductionProjectFixtureCleanup(replacementParentFailure, [
+          {
+            resource: `${replacement} parent write hook`,
+            cleanup: () => {
+              fs.writeFileSync = nativeWriteForReplacement;
+            },
+          },
+        ]);
       }
       TestValidator.predicate(
         `a ${replacement} creation parent fails closed and releases both coordinates`,
@@ -3953,6 +3977,7 @@ export const test_mcp_production_project = (): void => {
         ...args,
       ]) as unknown;
     }) as typeof fs.mkdirSync;
+    let coordinationMkdirFailure: IProductionProjectFixtureFailure | undefined;
     try {
       TestValidator.predicate(
         "a root coordination directory creation failure is fail-closed",
@@ -3961,8 +3986,18 @@ export const test_mcp_production_project = (): void => {
           "coordination mkdir denied",
         ),
       );
+    } catch (error) {
+      coordinationMkdirFailure = { error };
+      throw error;
     } finally {
-      fs.mkdirSync = nativeCoordinationMkdir;
+      preserveProductionProjectFixtureCleanup(coordinationMkdirFailure, [
+        {
+          resource: "coordination mkdir hook",
+          cleanup: () => {
+            fs.mkdirSync = nativeCoordinationMkdir;
+          },
+        },
+      ]);
     }
     const nativeCoordinationLstat = fs.lstatSync;
     const mutableFs = fs as { lstatSync: typeof fs.lstatSync };
@@ -3984,6 +4019,9 @@ export const test_mcp_production_project = (): void => {
           ...args,
         ]) as fs.Stats;
       }) as typeof fs.lstatSync;
+      let coordinationCollisionFailure:
+        | IProductionProjectFixtureFailure
+        | undefined;
       try {
         TestValidator.predicate(
           `a ${name} root coordination collision is rejected`,
@@ -3992,8 +4030,18 @@ export const test_mcp_production_project = (): void => {
             "is not a physical directory",
           ),
         );
+      } catch (error) {
+        coordinationCollisionFailure = { error };
+        throw error;
       } finally {
-        mutableFs.lstatSync = nativeCoordinationLstat;
+        preserveProductionProjectFixtureCleanup(coordinationCollisionFailure, [
+          {
+            resource: `${name} coordination lstat hook`,
+            cleanup: () => {
+              mutableFs.lstatSync = nativeCoordinationLstat;
+            },
+          },
+        ]);
       }
     }
     const deniedRoot = path.join(invalidRoot, "denied-root");
@@ -4019,6 +4067,7 @@ export const test_mcp_production_project = (): void => {
           | fs.BigIntStats;
       }) as typeof fs.lstatSync,
     });
+    let deniedRootLstatFailure: IProductionProjectFixtureFailure | undefined;
     try {
       TestValidator.predicate(
         "an unexpected project-root lstat denial propagates",
@@ -4027,8 +4076,17 @@ export const test_mcp_production_project = (): void => {
           "injected project-root lstat denial",
         ),
       );
+    } catch (error) {
+      deniedRootLstatFailure = { error };
+      throw error;
     } finally {
-      Object.defineProperty(fs, "lstatSync", nativeRootLstatDescriptor);
+      preserveProductionProjectFixtureCleanup(deniedRootLstatFailure, [
+        {
+          resource: "project-root lstat descriptor",
+          cleanup: () =>
+            Object.defineProperty(fs, "lstatSync", nativeRootLstatDescriptor),
+        },
+      ]);
     }
     const nativeCoordinationChmod = fs.chmodSync;
     fs.chmodSync = ((file: fs.PathLike): void => {
@@ -4036,6 +4094,7 @@ export const test_mcp_production_project = (): void => {
         throw new Error("coordination chmod denied");
       nativeCoordinationChmod(file, 0o700);
     }) as typeof fs.chmodSync;
+    let coordinationChmodFailure: IProductionProjectFixtureFailure | undefined;
     try {
       TestValidator.predicate(
         "an insecure coordination permission failure is fail-closed",
@@ -4044,8 +4103,18 @@ export const test_mcp_production_project = (): void => {
           "coordination chmod denied",
         ),
       );
+    } catch (error) {
+      coordinationChmodFailure = { error };
+      throw error;
     } finally {
-      fs.chmodSync = nativeCoordinationChmod;
+      preserveProductionProjectFixtureCleanup(coordinationChmodFailure, [
+        {
+          resource: "coordination chmod hook",
+          cleanup: () => {
+            fs.chmodSync = nativeCoordinationChmod;
+          },
+        },
+      ]);
     }
     const nativeCoordinateWrite = fs.writeFileSync;
     const partiallyHeldCoordinates: string[] = [];
@@ -4067,6 +4136,7 @@ export const test_mcp_production_project = (): void => {
       )
         partiallyHeldCoordinates.push(path.resolve(file.toString()));
     }) as typeof fs.writeFileSync;
+    let partialCoordinateFailure: IProductionProjectFixtureFailure | undefined;
     try {
       TestValidator.predicate(
         "partial dual-coordinate acquisition releases the physical identity fence",
@@ -4079,8 +4149,18 @@ export const test_mcp_production_project = (): void => {
             (file) => fs.existsSync(file) === false,
           ),
       );
+    } catch (error) {
+      partialCoordinateFailure = { error };
+      throw error;
     } finally {
-      fs.writeFileSync = nativeCoordinateWrite;
+      preserveProductionProjectFixtureCleanup(partialCoordinateFailure, [
+        {
+          resource: "partial-coordinate write hook",
+          cleanup: () => {
+            fs.writeFileSync = nativeCoordinateWrite;
+          },
+        },
+      ]);
     }
     const staleRoot = path.join(invalidRoot, "stale-physical-root");
     const staleProject = AutoMovieProductionProject.open(staleRoot);
