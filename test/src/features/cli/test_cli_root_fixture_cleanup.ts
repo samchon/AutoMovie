@@ -241,7 +241,7 @@ export const test_cli_root_fixture_cleanup = (): void => {
       ],
       [
         {
-          bodyStatements: 70,
+          bodyStatements: 71,
           lifecycles: [
             {
               catchBodies: ["scaffoldFailure={error};", "throwerror;"],
@@ -249,13 +249,13 @@ export const test_cli_root_fixture_cleanup = (): void => {
               finallyBodies: [
                 'preserveCliRootFixtureCleanup(scaffoldFailure,()=>fs.rmSync(base,{recursive:true,force:true}),"scaffoldfixtureroot",);',
               ],
-              index: 69,
+              index: 70,
               prefixes: [
                 'constbase=fs.mkdtempSync(path.join(os.tmpdir(),"automovie-scaffold-"));',
                 "letscaffoldFailure:{error:unknown}|undefined;",
               ],
               tryDigest:
-                "da7271ab65dc5f7db798050d7c39b8ab78e5579127b7887bd4c3a893e4617dec",
+                "6a6a437c29901a5a1c9920f2155edcc85d846f802a511d5732cd4571f8ff8b1a",
             },
           ],
         },
