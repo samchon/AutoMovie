@@ -343,13 +343,20 @@ const captureDescriptorCleanupContract = (
             .getText(parsed)
             .includes("preserveCaptureDescriptorCleanup"),
       );
-      if (lifecycle === undefined) continue;
+      if (
+        lifecycle === undefined ||
+        lifecycle.catchClause === undefined ||
+        lifecycle.finallyBlock === undefined
+      )
+        continue;
+      const catchClause = lifecycle.catchClause;
+      const finallyBlock = lifecycle.finallyBlock;
       lifecycles.push({
-        catchActions: lifecycle.catchClause.block.statements.map(compact),
+        catchActions: catchClause.block.statements.map(compact),
         catchParameter:
-          lifecycle.catchClause.variableDeclaration === undefined
+          catchClause.variableDeclaration === undefined
             ? null
-            : compact(lifecycle.catchClause.variableDeclaration),
+            : compact(catchClause.variableDeclaration),
         failureDeclarations: declaration.initializer.body.statements.flatMap(
           (action) =>
             ts.isVariableStatement(action)
@@ -363,7 +370,7 @@ const captureDescriptorCleanupContract = (
                   .map(compact)
               : [],
         ),
-        finallyActions: lifecycle.finallyBlock.statements.map(compact),
+        finallyActions: finallyBlock.statements.map(compact),
         owner,
       });
     }
