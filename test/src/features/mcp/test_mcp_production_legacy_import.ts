@@ -369,7 +369,10 @@ export const test_mcp_production_legacy_import = (): void => {
         legacyRevision: plan.legacyRevision,
         legacyStateAbsent:
           fs.existsSync(path.join(fixture.root, ".automovie")) === false,
-        lockPaths: planLockPaths.length,
+        // Planning fences the root namespace once per fenced operation, so the
+        // owned identity is the coordinate set, not how many times each was
+        // taken.
+        lockCoordinates: new Set(planLockPaths).size,
         lockPathsAbsent: planLockPaths.every(
           (file) => fs.existsSync(file) === false,
         ),
@@ -396,7 +399,7 @@ export const test_mcp_production_legacy_import = (): void => {
         firstShotDraft: shot.id,
         legacyRevision: 2,
         legacyStateAbsent: true,
-        lockPaths: 2,
+        lockCoordinates: 2,
         lockPathsAbsent: true,
         manifestInventoryDigest: true,
         nestedInventoryDigest: true,

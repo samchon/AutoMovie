@@ -2347,10 +2347,34 @@ export const test_mcp_production_project = (): void => {
       ): unknown => {
         // prettier-ignore
         const bytes = Reflect.apply(nativeDescriptorRead, fs, [target, ...args]);
+        // Render reads are fenced by coordinate locks whose snapshots are also
+        // read through descriptors, so the swap must observe this file's own
+        // descriptor instead of the first numeric read that happens to arrive.
         if (swappedAfterRead === false && typeof target === "number") {
-          fs.renameSync(afterReadFile, afterReadParked);
-          fs.writeFileSync(afterReadFile, "replacement");
-          swappedAfterRead = true;
+          const identity = (
+            stat: () => fs.BigIntStats,
+          ): { dev: bigint; ino: bigint } | null => {
+            try {
+              const status = stat();
+              return { dev: status.dev, ino: status.ino };
+            } catch {
+              return null;
+            }
+          };
+          const read = identity(() => fs.fstatSync(target, { bigint: true }));
+          const resident = identity(() =>
+            fs.statSync(afterReadFile, { bigint: true }),
+          );
+          if (
+            read !== null &&
+            resident !== null &&
+            read.dev === resident.dev &&
+            read.ino === resident.ino
+          ) {
+            fs.renameSync(afterReadFile, afterReadParked);
+            fs.writeFileSync(afterReadFile, "replacement");
+            swappedAfterRead = true;
+          }
         }
         return bytes;
       }) as typeof fs.readFileSync;

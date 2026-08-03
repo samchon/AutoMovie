@@ -1165,8 +1165,8 @@ export function test_lint_plugin_walking_skeleton(): void {
     ],
     [
       "model-proxy-invalid",
-      "proxy cites unknown manifest asset",
-      "A model proxy must resolve to manifest bytes or a closed generated recipe.",
+      "is not a byte-grounded version-1 JSON proxy",
+      "A model proxy must resolve to byte-grounded version-1 JSON proxy bytes or a closed generated recipe.",
     ],
   ] as const) {
     const result = runFixture({
