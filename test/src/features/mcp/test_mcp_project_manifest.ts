@@ -10,6 +10,28 @@ const mutableFs = fs as {
   lstatSync: typeof fs.lstatSync;
 };
 
+interface IProjectManifestFixtureFailure {
+  error: unknown;
+}
+
+class ProjectManifestFixtureCleanupError extends AggregateError {}
+
+/** Remove the project-manifest fixture without replacing its primary failure. */
+export const preserveProjectManifestFixtureCleanup = (
+  failure: IProjectManifestFixtureFailure | undefined,
+  cleanup: () => unknown,
+): void => {
+  try {
+    cleanup();
+  } catch (cleanupFailure) {
+    if (failure === undefined) throw cleanupFailure;
+    throw new ProjectManifestFixtureCleanupError(
+      [failure.error, cleanupFailure],
+      "Project-manifest fixture cleanup failed after the test failed.",
+    );
+  }
+};
+
 /**
  * Opening an existing project is a pure read (#700): a fresh directory gets its
  * manifest created once, but reopening an unchanged project must not rewrite
@@ -33,8 +55,9 @@ const mutableFs = fs as {
  */
 export const test_mcp_project_manifest = (): void => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-manifest-"));
-  const manifestPath = path.join(root, "automovie.json");
+  let projectManifestFailure: IProjectManifestFixtureFailure | undefined;
   try {
+    const manifestPath = path.join(root, "automovie.json");
     // 1. fresh dir initializes the manifest once.
     AutoMovieProject.open(root);
     TestValidator.equals(
@@ -267,7 +290,12 @@ export const test_mcp_project_manifest = (): void => {
     } finally {
       fs.unlinkSync(linkedRoot);
     }
+  } catch (error) {
+    projectManifestFailure = { error };
+    throw error;
   } finally {
-    fs.rmSync(root, { recursive: true, force: true });
+    preserveProjectManifestFixtureCleanup(projectManifestFailure, () =>
+      fs.rmSync(root, { recursive: true, force: true }),
+    );
   }
 };
