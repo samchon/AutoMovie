@@ -4096,19 +4096,40 @@ export const test_cli_scaffold = async (): Promise<void> => {
       },
       setHeader: () => undefined,
     };
+    let ancestorRaceCleanupFailure: { error: unknown } | undefined;
     try {
       middleware?.(
         { url: "/__automovie/shots/race.json" },
         ancestorResponse,
         () => undefined,
       );
+    } catch (error) {
+      ancestorRaceCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.lstatSync = nativeLstat;
-      if (fs.existsSync(parkedShots)) {
-        fs.rmSync(shotsDirectory, { recursive: true, force: true });
-        fs.renameSync(parkedShots, shotsDirectory);
-      }
-      fs.rmSync(replacementShots, { recursive: true, force: true });
+      preserveCliHarnessCleanup(ancestorRaceCleanupFailure, [
+        {
+          resource: "viewer ancestor lstat hook",
+          cleanup: () => {
+            mutableFs.lstatSync = nativeLstat;
+          },
+        },
+        {
+          resource: "viewer ancestor resident shots",
+          cleanup: () => {
+            if (fs.existsSync(parkedShots)) {
+              fs.rmSync(shotsDirectory, { recursive: true, force: true });
+              fs.renameSync(parkedShots, shotsDirectory);
+            }
+          },
+        },
+        {
+          resource: "viewer ancestor replacement shots",
+          cleanup: () => {
+            fs.rmSync(replacementShots, { recursive: true, force: true });
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "the generated viewer refuses an ancestry replacement during canonicalization",
@@ -4140,18 +4161,34 @@ export const test_cli_scaffold = async (): Promise<void> => {
       },
       setHeader: () => undefined,
     };
+    let artifactRaceCleanupFailure: { error: unknown } | undefined;
     try {
       middleware?.(
         { url: "/__automovie/shots/race.json" },
         viewerResponse,
         () => undefined,
       );
+    } catch (error) {
+      artifactRaceCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.lstatSync = nativeLstat;
-      if (fs.existsSync(parkedArtifact)) {
-        fs.rmSync(artifact, { force: true });
-        fs.renameSync(parkedArtifact, artifact);
-      }
+      preserveCliHarnessCleanup(artifactRaceCleanupFailure, [
+        {
+          resource: "viewer artifact lstat hook",
+          cleanup: () => {
+            mutableFs.lstatSync = nativeLstat;
+          },
+        },
+        {
+          resource: "viewer resident artifact",
+          cleanup: () => {
+            if (fs.existsSync(parkedArtifact)) {
+              fs.rmSync(artifact, { force: true });
+              fs.renameSync(parkedArtifact, artifact);
+            }
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "the generated viewer refuses an artifact replaced after linked identity",
@@ -4231,14 +4268,30 @@ export const test_cli_scaffold = async (): Promise<void> => {
       return status;
     }) as typeof fs.lstatSync;
     let ledgerResponse: GeneratedViewerResponse;
+    let ledgerRaceCleanupFailure: { error: unknown } | undefined;
     try {
       ledgerResponse = requestRegisteredAsset();
+    } catch (error) {
+      ledgerRaceCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.lstatSync = nativeLstat;
-      if (fs.existsSync(parkedLedger)) {
-        fs.rmSync(ledger, { force: true });
-        fs.renameSync(parkedLedger, ledger);
-      }
+      preserveCliHarnessCleanup(ledgerRaceCleanupFailure, [
+        {
+          resource: "viewer ledger lstat hook",
+          cleanup: () => {
+            mutableFs.lstatSync = nativeLstat;
+          },
+        },
+        {
+          resource: "viewer resident asset ledger",
+          cleanup: () => {
+            if (fs.existsSync(parkedLedger)) {
+              fs.rmSync(ledger, { force: true });
+              fs.renameSync(parkedLedger, ledger);
+            }
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "the generated viewer refuses a byte-identical asset ledger successor",
@@ -4259,14 +4312,30 @@ export const test_cli_scaffold = async (): Promise<void> => {
       return status;
     }) as typeof fs.lstatSync;
     let modelResponse: GeneratedViewerResponse;
+    let modelRaceCleanupFailure: { error: unknown } | undefined;
     try {
       modelResponse = requestRegisteredAsset();
+    } catch (error) {
+      modelRaceCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.lstatSync = nativeLstat;
-      if (fs.existsSync(parkedModel)) {
-        fs.rmSync(model, { force: true });
-        fs.renameSync(parkedModel, model);
-      }
+      preserveCliHarnessCleanup(modelRaceCleanupFailure, [
+        {
+          resource: "viewer model lstat hook",
+          cleanup: () => {
+            mutableFs.lstatSync = nativeLstat;
+          },
+        },
+        {
+          resource: "viewer resident compiled model",
+          cleanup: () => {
+            if (fs.existsSync(parkedModel)) {
+              fs.rmSync(model, { force: true });
+              fs.renameSync(parkedModel, model);
+            }
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "the generated viewer refuses a byte-identical compiled model successor",
@@ -4293,11 +4362,27 @@ export const test_cli_scaffold = async (): Promise<void> => {
       return entries;
     }) as typeof fs.readdirSync;
     let inventoryResponse: GeneratedViewerResponse;
+    let inventoryRaceCleanupFailure: { error: unknown } | undefined;
     try {
       inventoryResponse = requestRegisteredAsset();
+    } catch (error) {
+      inventoryRaceCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.readdirSync = nativeReaddir;
-      fs.rmSync(extraModel, { force: true });
+      preserveCliHarnessCleanup(inventoryRaceCleanupFailure, [
+        {
+          resource: "viewer inventory readdir hook",
+          cleanup: () => {
+            mutableFs.readdirSync = nativeReaddir;
+          },
+        },
+        {
+          resource: "viewer extra compiled model",
+          cleanup: () => {
+            fs.rmSync(extraModel, { force: true });
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "the generated viewer refuses compiled model inventory mutation",
@@ -4326,18 +4411,34 @@ export const test_cli_scaffold = async (): Promise<void> => {
       },
       setHeader: () => undefined,
     };
+    let assetRaceCleanupFailure: { error: unknown } | undefined;
     try {
       middleware?.(
         { url: "/__automovie/assets/public/audio/starter-tone.json" },
         assetResponse,
         () => undefined,
       );
+    } catch (error) {
+      assetRaceCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.lstatSync = nativeLstat;
-      if (fs.existsSync(parkedAsset)) {
-        fs.rmSync(asset, { force: true });
-        fs.renameSync(parkedAsset, asset);
-      }
+      preserveCliHarnessCleanup(assetRaceCleanupFailure, [
+        {
+          resource: "viewer asset lstat hook",
+          cleanup: () => {
+            mutableFs.lstatSync = nativeLstat;
+          },
+        },
+        {
+          resource: "viewer resident registered asset",
+          cleanup: () => {
+            if (fs.existsSync(parkedAsset)) {
+              fs.rmSync(asset, { force: true });
+              fs.renameSync(parkedAsset, asset);
+            }
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "the generated viewer refuses a byte-identical registered asset successor",
