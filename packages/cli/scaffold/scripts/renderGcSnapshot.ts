@@ -348,7 +348,7 @@ export const inspectRenderQuarantineMarker = (
     );
   const marker: IRenderQuarantineMarker = {
     version: 1,
-    contentFingerprint: value.contentFingerprint,
+    contentFingerprint: value.contentFingerprint as `sha256:${string}`,
     kind: value.kind,
     original: value.original,
     preserved: value.preserved,

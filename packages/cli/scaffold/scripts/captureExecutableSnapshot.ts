@@ -99,7 +99,7 @@ export const createCaptureExecutableSnapshot = (
     assertCaptureExecutable(snapshot);
     return snapshot;
   } catch (error) {
-    throwCaptureExecutableSnapshotFailure(error, descriptor, "creation");
+    return throwCaptureExecutableSnapshotFailure(error, descriptor, "creation");
   }
 };
 
@@ -153,7 +153,7 @@ export const openCaptureExecutable = (
     assertCaptureExecutable(snapshot);
     return snapshot;
   } catch (error) {
-    throwCaptureExecutableSnapshotFailure(error, descriptor, "opening");
+    return throwCaptureExecutableSnapshotFailure(error, descriptor, "opening");
   }
 };
 

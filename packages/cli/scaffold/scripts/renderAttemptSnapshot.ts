@@ -1,4 +1,5 @@
-import { type AutoMovieContentDigest, compareCodeUnits } from "@automovie/mcp";
+import type { AutoMovieContentDigest } from "@automovie/interface";
+import { compareCodeUnits } from "@automovie/mcp";
 import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
@@ -348,9 +349,9 @@ const renderAttemptBytes = (record: IRenderAttemptRecord): Uint8Array => {
   return bytes;
 };
 
-const assertRenderAttemptRecord = (
+const assertRenderAttemptRecord: (
   value: unknown,
-): asserts value is IRenderAttemptRecord => {
+) => asserts value is IRenderAttemptRecord = (value) => {
   if (
     typeof value !== "object" ||
     value === null ||

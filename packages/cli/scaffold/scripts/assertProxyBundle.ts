@@ -3,12 +3,10 @@ import type {
   IAutoMovieProductionRenderManifest,
 } from "@automovie/interface";
 import {
+  type IAutoMovieProductionRenderJobPlan,
+  type IAutoMovieProductionRenderTier,
   digestAutoMovieBytes,
   readAutoMovieProductionOwnedFile,
-} from "@automovie/mcp";
-import type {
-  IAutoMovieProductionRenderJobPlan,
-  IAutoMovieProductionRenderTier,
 } from "@automovie/mcp";
 import fs from "node:fs";
 import path from "node:path";
@@ -280,7 +278,7 @@ const parseProxyPublication = (
     Array.isArray(receipt.manifest.deliverables) === false
   )
     throw new Error("Proxy publication receipt has an invalid identity.");
-  return value as IVerifiedProxyPublication;
+  return value as unknown as IVerifiedProxyPublication;
 };
 
 const proxyManifestFiles = (

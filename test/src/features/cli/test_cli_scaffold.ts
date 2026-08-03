@@ -1319,10 +1319,10 @@ export const test_cli_scaffold = async (): Promise<void> => {
       ],
       functionDigests: {
         createCaptureExecutableSnapshot: [
-          "cb0426627109d635acb82d0705457eb703eb7a65baa8b9bbc9b0ed47e4b74743",
+          "bc8bd4bfeb567656ab795df432a4da1e48a6adc0ad1caf9dad7691641528f8ba",
         ],
         openCaptureExecutable: [
-          "c1ed71aae4fe0f034d5c6d83eecceabf2b74fb7a85850106673e7ea2c471002c",
+          "9bb2144697110a1e418f8e5f22d78b9535c1ece2d1d1f3204389b7979d336c4e",
         ],
         throwCaptureExecutableSnapshotFailure: [
           "91479a17ed9574e535cac3d7d2e2e993fcdc6e702e4b74bdf0e6bc28b7bab17a",
