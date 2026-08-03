@@ -8,6 +8,28 @@ const mutableFs = fs as {
   lstatSync: typeof fs.lstatSync;
 };
 
+interface ICommitLockFixtureFailure {
+  error: unknown;
+}
+
+class CommitLockFixtureCleanupError extends AggregateError {}
+
+/** Remove the commit-lock fixture root without replacing its primary failure. */
+export const preserveCommitLockFixtureCleanup = (
+  failure: ICommitLockFixtureFailure | undefined,
+  cleanup: () => unknown,
+): void => {
+  try {
+    cleanup();
+  } catch (cleanupFailure) {
+    if (failure === undefined) throw cleanupFailure;
+    throw new CommitLockFixtureCleanupError(
+      [failure.error, cleanupFailure],
+      "Commit-lock fixture cleanup failed after the test failed.",
+    );
+  }
+};
+
 /**
  * The commit lock is owner-identified and fail-closed (#1257/#1252): a release
  * deletes only this session's token, and age never authorizes a different
@@ -30,6 +52,7 @@ const mutableFs = fs as {
  */
 export const test_mcp_commit_lock = (): void => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-lock-"));
+  let commitLockFailure: ICommitLockFixtureFailure | undefined;
   try {
     const lockPath = path.join(dir, "revision.lock");
 
@@ -190,8 +213,13 @@ export const test_mcp_commit_lock = (): void => {
       fresh,
     );
     releaseCommitLock(lockPath, fresh);
+  } catch (error) {
+    commitLockFailure = { error };
+    throw error;
   } finally {
-    fs.rmSync(dir, { recursive: true, force: true });
+    preserveCommitLockFixtureCleanup(commitLockFailure, () =>
+      fs.rmSync(dir, { recursive: true, force: true }),
+    );
   }
 };
 
