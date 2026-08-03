@@ -1,42 +1,10 @@
-import { run } from "@automovie/cli";
 import { AutoMovieProject } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-interface ICliResult {
-  status: number;
-  stdout: string;
-  stderr: string;
-}
-
-const captureCli = (args: readonly string[]): ICliResult => {
-  const nativeStdout = process.stdout.write;
-  const nativeStderr = process.stderr.write;
-  let stdout = "";
-  let stderr = "";
-  process.stdout.write = ((chunk: string | Uint8Array): boolean => {
-    stdout +=
-      typeof chunk === "string" ? chunk : Buffer.from(chunk).toString("utf8");
-    return true;
-  }) as typeof process.stdout.write;
-  process.stderr.write = ((chunk: string | Uint8Array): boolean => {
-    stderr +=
-      typeof chunk === "string" ? chunk : Buffer.from(chunk).toString("utf8");
-    return true;
-  }) as typeof process.stderr.write;
-  try {
-    return {
-      status: run(["node", "automovie", ...args]),
-      stdout,
-      stderr,
-    };
-  } finally {
-    process.stdout.write = nativeStdout;
-    process.stderr.write = nativeStderr;
-  }
-};
+import { captureCliOutput as captureCli } from "./CliOutputCapture";
 
 /** The public CLI drives dry-run, apply, idempotence, and guarded rollback. */
 export const test_cli_migrate = (): void => {
