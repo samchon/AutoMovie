@@ -13316,13 +13316,27 @@ export const test_cli_scaffold = async (): Promise<void> => {
       }
     }) as typeof fs.closeSync;
     let standaloneScaffoldCloseError: unknown;
+    let standaloneScaffoldHarnessCleanupFailure: { error: unknown } | undefined;
     try {
       writeFiles(closeFailureBase, { "complete.txt": "close evidence" });
     } catch (error) {
       standaloneScaffoldCloseError = error;
+      standaloneScaffoldHarnessCleanupFailure = { error };
     } finally {
-      mutableFs.openSync = nativeOpen;
-      mutableFs.closeSync = nativeClose;
+      preserveCliHarnessCleanup(standaloneScaffoldHarnessCleanupFailure, [
+        {
+          resource: "scaffold standalone open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+        {
+          resource: "scaffold standalone close hook",
+          cleanup: () => {
+            mutableFs.closeSync = nativeClose;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "a scaffold close failure leaves its exact complete final evidence",
@@ -13401,14 +13415,33 @@ export const test_cli_scaffold = async (): Promise<void> => {
       if (descriptor === doubleFailureDescriptor) throw doubleFailureClose;
     }) as typeof fs.closeSync;
     let combinedDoubleFailure: unknown;
+    let doubleFailureHarnessCleanupFailure: { error: unknown } | undefined;
     try {
       writeFiles(doubleFailureBase, { "partial.txt": "double evidence" });
     } catch (error) {
       combinedDoubleFailure = error;
+      doubleFailureHarnessCleanupFailure = { error };
     } finally {
-      mutableFs.openSync = nativeOpen;
-      mutableFs.writeSync = nativeWrite;
-      mutableFs.closeSync = nativeClose;
+      preserveCliHarnessCleanup(doubleFailureHarnessCleanupFailure, [
+        {
+          resource: "scaffold create double open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+        {
+          resource: "scaffold create double write hook",
+          cleanup: () => {
+            mutableFs.writeSync = nativeWrite;
+          },
+        },
+        {
+          resource: "scaffold create double close hook",
+          cleanup: () => {
+            mutableFs.closeSync = nativeClose;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "scaffold creation preserves primary and close failures",
@@ -13460,6 +13493,9 @@ export const test_cli_scaffold = async (): Promise<void> => {
         throw overwriteDoubleFailureClose;
     }) as typeof fs.closeSync;
     let combinedOverwriteDoubleFailure: unknown;
+    let overwriteDoubleFailureHarnessCleanupFailure:
+      | { error: unknown }
+      | undefined;
     try {
       writeFiles(
         overwriteDoubleFailureBase,
@@ -13468,10 +13504,28 @@ export const test_cli_scaffold = async (): Promise<void> => {
       );
     } catch (error) {
       combinedOverwriteDoubleFailure = error;
+      overwriteDoubleFailureHarnessCleanupFailure = { error };
     } finally {
-      mutableFs.openSync = nativeOpen;
-      mutableFs.writeSync = nativeWrite;
-      mutableFs.closeSync = nativeClose;
+      preserveCliHarnessCleanup(overwriteDoubleFailureHarnessCleanupFailure, [
+        {
+          resource: "scaffold overwrite double open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+        {
+          resource: "scaffold overwrite double write hook",
+          cleanup: () => {
+            mutableFs.writeSync = nativeWrite;
+          },
+        },
+        {
+          resource: "scaffold overwrite double close hook",
+          cleanup: () => {
+            mutableFs.closeSync = nativeClose;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "scaffold overwrite preserves primary and close failures",
@@ -13531,16 +13585,35 @@ export const test_cli_scaffold = async (): Promise<void> => {
       if (descriptor === nestedOwnerDescriptor) throw nestedOwnerCloseFailure;
     }) as typeof fs.closeSync;
     let combinedNestedDescriptorFailure: unknown;
+    let nestedDescriptorHarnessCleanupFailure: { error: unknown } | undefined;
     try {
       writeFiles(nestedDescriptorFailureBase, {
         "owned.txt": "nested descriptor evidence",
       });
     } catch (error) {
       combinedNestedDescriptorFailure = error;
+      nestedDescriptorHarnessCleanupFailure = { error };
     } finally {
-      mutableFs.openSync = nativeOpen;
-      mutableFs.fstatSync = nativeFstat;
-      mutableFs.closeSync = nativeClose;
+      preserveCliHarnessCleanup(nestedDescriptorHarnessCleanupFailure, [
+        {
+          resource: "scaffold nested descriptor open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+        {
+          resource: "scaffold nested descriptor fstat hook",
+          cleanup: () => {
+            mutableFs.fstatSync = nativeFstat;
+          },
+        },
+        {
+          resource: "scaffold nested descriptor close hook",
+          cleanup: () => {
+            mutableFs.closeSync = nativeClose;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "nested scaffold descriptor cleanup preserves resource order",

@@ -30,7 +30,7 @@ const leafTokenContract = (
   };
 };
 
-const runtimePackageCleanupContract = (text: string): unknown => {
+const writerDescriptorCleanupContract = (text: string): unknown => {
   const source = ts.createSourceFile(
     "test_cli_scaffold.ts",
     text,
@@ -39,9 +39,10 @@ const runtimePackageCleanupContract = (text: string): unknown => {
     ts.ScriptKind.TS,
   );
   const anchors = [
-    "runtimemanifestlstathook",
-    "runtimeentrylstathook",
-    "runtimeinventoryreaddirhook",
+    "scaffoldstandaloneopenhook",
+    "scaffoldcreatedoubleopenhook",
+    "scaffoldoverwritedoubleopenhook",
+    "scaffoldnesteddescriptoropenhook",
   ];
   const lifecycles: Array<{
     catchBodies: string[];
@@ -62,7 +63,7 @@ const runtimePackageCleanupContract = (text: string): unknown => {
       node.catchClause !== undefined &&
       node.finallyBlock !== undefined &&
       anchors.some((anchor) =>
-        compact(node.finallyBlock!, source).includes(anchor),
+        compact(node.finallyBlock!, source).toLowerCase().includes(anchor),
       ) &&
       ts.isBlock(node.parent)
     ) {
@@ -101,92 +102,125 @@ const runtimePackageCleanupContract = (text: string): unknown => {
   };
 };
 
-export const test_cli_scaffold_runtime_package_cleanup = (): void => {
+export const test_cli_scaffold_writer_descriptor_cleanup = (): void => {
   TestValidator.equals(
-    "CLI scaffold owns three runtime package cleanup lifecycles",
-    runtimePackageCleanupContract(
+    "CLI scaffold owns four writer descriptor cleanup lifecycles",
+    writerDescriptorCleanupContract(
       fs.readFileSync(path.join(__dirname, "test_cli_scaffold.ts"), "utf8"),
     ),
     {
       lifecycles: [
         {
           catchBodies: [
-            "runtimeManifestCleanupFailure={error};",
-            "throwerror;",
+            "standaloneScaffoldCloseError=error;",
+            "standaloneScaffoldHarnessCleanupFailure={error};",
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
           containerStatements: 1921,
           finallyDigest:
-            "e52a087bacf5f1a99cb27b855ed82acb6b02faca8f7a15e8b9d3af1d001feba6",
+            "0e423586e3a6b89ec0a28e9aa5371254be28eb1a946eeafec0713daff2dc78aa",
           finallySubstantive: {
             digest:
-              "5e161ce5989d1165cb7acf34a0311a9704ffd6f893fd3b222b8e7f6b4ec89f20",
-            tokens: 77,
+              "dbe6880b4145fea9973da5053a4a60c3114e959115c6c9241fba979d511c761a",
+            tokens: 50,
           },
-          index: 370,
+          index: 1829,
           preceding:
-            "letruntimeManifestCleanupFailure:{error:unknown}|undefined;",
+            "letstandaloneScaffoldHarnessCleanupFailure:{error:unknown}|undefined;",
           substantive: {
             digest:
-              "516409df9aeb8ca02873a426ad4db504d0c3eedf1b067c43a87981326542d3c9",
-            tokens: 7,
+              "41fca2be99c34f557229d0f6f826f10eb63ae2a17309f69ff54e89384532ab31",
+            tokens: 11,
           },
           tryBody:
-            "{runtimeManifestRaceRejected=throws(snapshotRuntimeFixture);}",
+            '{writeFiles(closeFailureBase,{"complete.txt":"closeevidence"});}',
           tryDigest:
-            "89eab1fff629884860fc7a47074ace56ff84612cc2f89d1e4070b9b5fadbaef8",
-        },
-        {
-          catchBodies: ["runtimeEntryCleanupFailure={error};", "throwerror;"],
-          catchVariables: ["error"],
-          containerKind: "TryStatement",
-          containerStatements: 1921,
-          finallyDigest:
-            "966469116e2c84ee8efa23eb5170eb602f9744c74b4acf7df16e4ace28ed334a",
-          finallySubstantive: {
-            digest:
-              "c80183210cb73942cfccc780198e8be202fdaabd0730d0b241b89b16d4d88b1d",
-            tokens: 77,
-          },
-          index: 377,
-          preceding: "letruntimeEntryCleanupFailure:{error:unknown}|undefined;",
-          substantive: {
-            digest:
-              "e3e3c9c03e10ab7227b37014e99c37dbdb048cd00d4587c6f843e70a36cbf0b8",
-            tokens: 7,
-          },
-          tryBody: "{runtimeEntryRaceRejected=throws(snapshotRuntimeFixture);}",
-          tryDigest:
-            "864648d0e12d9f97c6572c0faa4ab9b9933ce18fe1378b61a7d796f5826ec885",
+            "25468f5cb041d542dd1afd99e0e49176078aa654285bd2ded230c8e2ba6cd536",
         },
         {
           catchBodies: [
-            "runtimeInventoryCleanupFailure={error};",
-            "throwerror;",
+            "combinedDoubleFailure=error;",
+            "doubleFailureHarnessCleanupFailure={error};",
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
           containerStatements: 1921,
           finallyDigest:
-            "668754d6e71a2ddb2f509639f44fded1911cc61dc0015b653c9fe4e19ef71da2",
+            "903daf3528f7e750d53c3fe62c1077e494e6003d323de55b1897ca1dc013cc23",
           finallySubstantive: {
             digest:
-              "bca2541427e5391902b0dbfa59bf8ebe8dcc23a7179740574cb25fd2eadbe85f",
-            tokens: 57,
+              "6f94ec7030cbf3f2a8fc6a79c167f9acf0fe017010817b4944dff56bfcc95caf",
+            tokens: 71,
           },
-          index: 385,
+          index: 1847,
           preceding:
-            "letruntimeInventoryCleanupFailure:{error:unknown}|undefined;",
+            "letdoubleFailureHarnessCleanupFailure:{error:unknown}|undefined;",
           substantive: {
             digest:
-              "25c7abd712c8477187a4a94f109bec5a99f600208c6176ec7c949c799c54a5fa",
-            tokens: 7,
+              "d439e63f8d14a87686be77030f7a11bd538a1742e102ac1d3332f59a46663506",
+            tokens: 11,
           },
           tryBody:
-            "{runtimeInventoryRaceRejected=throws(snapshotRuntimeFixture);}",
+            '{writeFiles(doubleFailureBase,{"partial.txt":"doubleevidence"});}',
           tryDigest:
-            "dfbd7dbc8bcc4b0743446e8d257efb500ca6a1830f1093368f258ce5f4a7ea94",
+            "7e103e1b4fe15e91717537b76a34ab2d652043fe24fe8c36874fb2944c08cd58",
+        },
+        {
+          catchBodies: [
+            "combinedOverwriteDoubleFailure=error;",
+            "overwriteDoubleFailureHarnessCleanupFailure={error};",
+          ],
+          catchVariables: ["error"],
+          containerKind: "TryStatement",
+          containerStatements: 1921,
+          finallyDigest:
+            "ab395882c726decd4351299602bf69784115042f82479d6a53e7b8cedf5a4664",
+          finallySubstantive: {
+            digest:
+              "406ee4dac892e791fbdee311ac74edb44889463fcc278215e99e9bea3893ec0e",
+            tokens: 71,
+          },
+          index: 1861,
+          preceding:
+            "letoverwriteDoubleFailureHarnessCleanupFailure:|{error:unknown}|undefined;",
+          substantive: {
+            digest:
+              "5922cfc2766242306fadf700583ef88d0566cd54d2872d601cad94398ec2ceaf",
+            tokens: 18,
+          },
+          tryBody:
+            '{writeFiles(overwriteDoubleFailureBase,{"partial.txt":"replacementevidence"},{force:true},);}',
+          tryDigest:
+            "87bf9a71a21763a6507896b52535aa6216a953abc3f86043cf68355bb5ab8935",
+        },
+        {
+          catchBodies: [
+            "combinedNestedDescriptorFailure=error;",
+            "nestedDescriptorHarnessCleanupFailure={error};",
+          ],
+          catchVariables: ["error"],
+          containerKind: "TryStatement",
+          containerStatements: 1921,
+          finallyDigest:
+            "73a8c47e4d40b564edc1b30d7ae4a9cbb760c833a5527d9a38f36e5020aa7df3",
+          finallySubstantive: {
+            digest:
+              "a2a15303a61ce48d2fad36c2ede9e533752aa4af186cceea37c8ae03b28b1ab1",
+            tokens: 71,
+          },
+          index: 1876,
+          preceding:
+            "letnestedDescriptorHarnessCleanupFailure:{error:unknown}|undefined;",
+          substantive: {
+            digest:
+              "c19a60f4507a5572da3d4e16a258565aa4e177f1edfb74cf24f301a057cb245d",
+            tokens: 12,
+          },
+          tryBody:
+            '{writeFiles(nestedDescriptorFailureBase,{"owned.txt":"nesteddescriptorevidence",});}',
+          tryDigest:
+            "52ca6ac0338832ea77b4ffc26cd83ae80cc39e71a88ec371c5ec8a9ec9b78c46",
         },
       ],
       parseDiagnostics: [],

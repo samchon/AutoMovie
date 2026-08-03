@@ -117,7 +117,7 @@ export const test_cli_scaffold_writer_mutation_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1917,
+          containerStatements: 1921,
           finallyDigest:
             "f67b4c2bd34e98b18375178299e2953f29b5605ebde4daf5ab1983c8a834829b",
           finallySubstantive: {
@@ -145,7 +145,7 @@ export const test_cli_scaffold_writer_mutation_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1917,
+          containerStatements: 1921,
           finallyDigest:
             "792ace9b3784dff220b9bdc13343a066d0cfea799dceb9a5785abcffd073c5d9",
           finallySubstantive: {
@@ -173,7 +173,7 @@ export const test_cli_scaffold_writer_mutation_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1917,
+          containerStatements: 1921,
           finallyDigest:
             "1ee054979b4e2ea9ad25f87c29b2e69feb7c2953ee49f28931b8153d53b86ba8",
           finallySubstantive: {
@@ -201,7 +201,7 @@ export const test_cli_scaffold_writer_mutation_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1917,
+          containerStatements: 1921,
           finallyDigest:
             "daeab11b6674f05f06b125b652250f8dc06116935cb33f377f90ebd8440b9eb4",
           finallySubstantive: {
