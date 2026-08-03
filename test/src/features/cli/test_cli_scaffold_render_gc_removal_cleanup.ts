@@ -119,7 +119,7 @@ export const test_cli_scaffold_render_gc_removal_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1975,
+          containerStatements: 1981,
           finallyDigest:
             "181133e16bace432fcd2fae85df617750647d6a8c8614ec0c07ffd3d62227650",
           finallySubstantive: {
@@ -144,7 +144,7 @@ export const test_cli_scaffold_render_gc_removal_cleanup = (): void => {
           catchBodies: ["sharedRemovalCleanupFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1975,
+          containerStatements: 1981,
           finallyDigest:
             "60735d07af041548a97ca502017fce4ca8eea6dffbd59523e09ef11ef61d7c38",
           finallySubstantive: {
@@ -172,7 +172,7 @@ export const test_cli_scaffold_render_gc_removal_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1975,
+          containerStatements: 1981,
           finallyDigest:
             "ebaded5080136b8f034940c2c55fa573489a844c51360118953a8fa63e02e007",
           finallySubstantive: {
@@ -197,7 +197,7 @@ export const test_cli_scaffold_render_gc_removal_cleanup = (): void => {
           catchBodies: ["tierApplyCleanupFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1975,
+          containerStatements: 1981,
           finallyDigest:
             "3ba98141df0b189046c2ae63ac05979ee5f9d4fb98f2cf2929e22ee2a445e685",
           finallySubstantive: {
@@ -221,7 +221,7 @@ export const test_cli_scaffold_render_gc_removal_cleanup = (): void => {
           catchBodies: ["stableEvidenceCleanupFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1975,
+          containerStatements: 1981,
           finallyDigest:
             "ba5c206bc2332ed551d68868f5c3832a1940c6b03b0775f3258f452d72929181",
           finallySubstantive: {
@@ -249,7 +249,7 @@ export const test_cli_scaffold_render_gc_removal_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1975,
+          containerStatements: 1981,
           finallyDigest:
             "8a5fe44fea7d4a8efec33b89b142abf9f54d16425724eb6aa149011a8abd15c2",
           finallySubstantive: {

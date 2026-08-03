@@ -13382,12 +13382,23 @@ export const test_cli_scaffold = async (): Promise<void> => {
         : 0;
     }) as typeof fs.writeSync;
     let partialWriteRejected = false;
+    let partialWriteCleanupFailure: { error: unknown } | undefined;
     try {
       partialWriteRejected = throws(() =>
         writeFiles(partialWriteBase, { "partial.txt": "partial evidence" }),
       );
+    } catch (error) {
+      partialWriteCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.writeSync = nativeWrite;
+      preserveCliHarnessCleanup(partialWriteCleanupFailure, [
+        {
+          resource: "scaffold writer partial write hook",
+          cleanup: () => {
+            mutableFs.writeSync = nativeWrite;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "a stalled scaffold write leaves its exact partial final evidence",
@@ -13404,12 +13415,23 @@ export const test_cli_scaffold = async (): Promise<void> => {
       throw Object.assign(new Error("scaffold fsync failed"), { code: "EIO" });
     }) as typeof fs.fsyncSync;
     let fsyncFailureRejected = false;
+    let fsyncFailureCleanupFailure: { error: unknown } | undefined;
     try {
       fsyncFailureRejected = throws(() =>
         writeFiles(fsyncFailureBase, { "complete.txt": "complete evidence" }),
       );
+    } catch (error) {
+      fsyncFailureCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.fsyncSync = nativeFsync;
+      preserveCliHarnessCleanup(fsyncFailureCleanupFailure, [
+        {
+          resource: "scaffold writer fsync hook",
+          cleanup: () => {
+            mutableFs.fsyncSync = nativeFsync;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "a scaffold fsync failure leaves its complete final evidence",
@@ -13426,12 +13448,23 @@ export const test_cli_scaffold = async (): Promise<void> => {
       return 0;
     }) as typeof fs.readSync;
     let readFailureRejected = false;
+    let readFailureCleanupFailure: { error: unknown } | undefined;
     try {
       readFailureRejected = throws(() =>
         writeFiles(readFailureBase, { "complete.txt": "read evidence" }),
       );
+    } catch (error) {
+      readFailureCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.readSync = nativeRead;
+      preserveCliHarnessCleanup(readFailureCleanupFailure, [
+        {
+          resource: "scaffold writer read stall hook",
+          cleanup: () => {
+            mutableFs.readSync = nativeRead;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "a scaffold readback stall leaves its complete final evidence",
@@ -13454,12 +13487,23 @@ export const test_cli_scaffold = async (): Promise<void> => {
       return length;
     }) as typeof fs.readSync;
     let mismatchRejected = false;
+    let mismatchCleanupFailure: { error: unknown } | undefined;
     try {
       mismatchRejected = throws(() =>
         writeFiles(mismatchBase, { "complete.txt": "mismatch evidence" }),
       );
+    } catch (error) {
+      mismatchCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.readSync = nativeRead;
+      preserveCliHarnessCleanup(mismatchCleanupFailure, [
+        {
+          resource: "scaffold writer mismatch read hook",
+          cleanup: () => {
+            mutableFs.readSync = nativeRead;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "a scaffold readback mismatch leaves its exact final file",
@@ -13489,12 +13533,23 @@ export const test_cli_scaffold = async (): Promise<void> => {
       ]) as number;
     }) as typeof fs.readSync;
     let shortReadAccepted = false;
+    let shortReadCleanupFailure: { error: unknown } | undefined;
     try {
       shortReadAccepted = !throws(() =>
         writeFiles(shortReadBase, { "complete.txt": "short reads" }),
       );
+    } catch (error) {
+      shortReadCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.readSync = nativeRead;
+      preserveCliHarnessCleanup(shortReadCleanupFailure, [
+        {
+          resource: "scaffold writer short read hook",
+          cleanup: () => {
+            mutableFs.readSync = nativeRead;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "scaffold readback completes across positive short reads",
@@ -13911,14 +13966,23 @@ export const test_cli_scaffold = async (): Promise<void> => {
       throw primaryOnlyFailure;
     }) as typeof fs.writeSync;
     let preservedPrimaryOnlyFailure: unknown;
+    let primaryOnlyCleanupFailure: { error: unknown } | undefined;
     try {
       writeFiles(primaryOnlyFailureBase, {
         "partial.txt": "primary-only evidence",
       });
     } catch (error) {
       preservedPrimaryOnlyFailure = error;
+      primaryOnlyCleanupFailure = { error };
     } finally {
-      mutableFs.writeSync = nativeWrite;
+      preserveCliHarnessCleanup(primaryOnlyCleanupFailure, [
+        {
+          resource: "scaffold writer primary-only write hook",
+          cleanup: () => {
+            mutableFs.writeSync = nativeWrite;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "scaffold failure remains unchanged after successful descriptor close",

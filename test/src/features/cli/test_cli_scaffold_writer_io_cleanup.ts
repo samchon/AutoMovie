@@ -30,7 +30,7 @@ const leafTokenContract = (
   };
 };
 
-const captureReceiptCleanupContract = (text: string): unknown => {
+const writerIoCleanupContract = (text: string): unknown => {
   const source = ts.createSourceFile(
     "test_cli_scaffold.ts",
     text,
@@ -39,12 +39,12 @@ const captureReceiptCleanupContract = (text: string): unknown => {
     ts.ScriptKind.TS,
   );
   const anchors = [
-    "capturereceiptlstathook",
-    "capturereceiptpartialopenhook",
-    "capturereceiptoversizedopenhook",
-    "capturereceipttargetopenhook",
-    "capturereceiptdirectorylstathook",
-    "capturereceiptrootlstathook",
+    "scaffoldwriterpartialwritehook",
+    "scaffoldwriterfsynchook",
+    "scaffoldwriterreadstallhook",
+    "scaffoldwritermismatchreadhook",
+    "scaffoldwritershortreadhook",
+    "scaffoldwriterprimary-onlywritehook",
   ];
   const lifecycles: Array<{
     catchBodies: string[];
@@ -65,7 +65,7 @@ const captureReceiptCleanupContract = (text: string): unknown => {
       node.catchClause !== undefined &&
       node.finallyBlock !== undefined &&
       anchors.some((anchor) =>
-        compact(node.finallyBlock!, source).includes(anchor),
+        compact(node.finallyBlock!, source).toLowerCase().includes(anchor),
       ) &&
       ts.isBlock(node.parent)
     ) {
@@ -104,175 +104,160 @@ const captureReceiptCleanupContract = (text: string): unknown => {
   };
 };
 
-export const test_cli_scaffold_capture_receipt_cleanup = (): void => {
+export const test_cli_scaffold_writer_io_cleanup = (): void => {
   TestValidator.equals(
-    "CLI scaffold owns six capture receipt cleanup lifecycles",
-    captureReceiptCleanupContract(
+    "CLI scaffold owns six writer I/O cleanup lifecycles",
+    writerIoCleanupContract(
       fs.readFileSync(path.join(__dirname, "test_cli_scaffold.ts"), "utf8"),
     ),
     {
       lifecycles: [
         {
-          catchBodies: ["captureReceiptCleanupFailure={error};", "throwerror;"],
+          catchBodies: ["partialWriteCleanupFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
           containerStatements: 1981,
           finallyDigest:
-            "4fe618160bd4a8229abdecbbc18400cd3c0e20afeef9fbd9d60385bc7118ff82",
+            "0a151e02cfc830392ec63ca6a918dd6818243798f17d47cc5fee947854e5d847",
           finallySubstantive: {
             digest:
-              "1f42780f9842a1a5fd1a472827ec4962996d31441da3025d7d98c0bc48c14a76",
-            tokens: 77,
+              "0ab96182d834ed54be1d273be1664cbcb8de6e9f6034785ba12770825852f5ac",
+            tokens: 29,
           },
-          index: 563,
-          preceding:
-            "letcaptureReceiptCleanupFailure:{error:unknown}|undefined;",
+          index: 1789,
+          preceding: "letpartialWriteCleanupFailure:{error:unknown}|undefined;",
           substantive: {
             digest:
-              "1825f7007352b14e998c89490858e9942ac2133badadb453a0fff26e547497f4",
-            tokens: 16,
+              "ed13ab304751d3f1db4ff50f765c5e52d60c3b8a74b03351d9ebc37cb316e1d4",
+            tokens: 20,
           },
           tryBody:
-            "{captureReceiptRaceRejected=throws(()=>captureBrowserModule.readCaptureInstallReceipt(captureProject),);}",
+            '{partialWriteRejected=throws(()=>writeFiles(partialWriteBase,{"partial.txt":"partialevidence"}),);}',
           tryDigest:
-            "27c17ae2df106c8914175baf3d4e14f4841dd5fa5ca6319de41685b374e0a1d0",
+            "d4456b1e09673899ea25cc38fae198c826228490ca36baf03b25babddbb00f94",
         },
         {
-          catchBodies: ["partialReceiptCleanupFailure={error};", "throwerror;"],
+          catchBodies: ["fsyncFailureCleanupFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
           containerStatements: 1981,
           finallyDigest:
-            "b284e20cf2755e35b20b8a6ca3167e13010fbd6327d41c227db2fc0206af3772",
+            "ac40b6ee7872ca480591ef274d6960d06068f9883b3647daa5ee8ea59a7936a5",
           finallySubstantive: {
             digest:
-              "8a0f86b604004fee057791bae97ee3a6a7aacac627caa32f6e620714f9e36930",
-            tokens: 50,
+              "abd32d245a97be6397972ea7fadccbeb076d9f0b4acf5ad6cc99e530e4ab1698",
+            tokens: 29,
           },
-          index: 586,
-          preceding:
-            "letpartialReceiptCleanupFailure:{error:unknown}|undefined;",
+          index: 1797,
+          preceding: "letfsyncFailureCleanupFailure:{error:unknown}|undefined;",
           substantive: {
             digest:
-              "68aea749eac6d6da2995f92136ebb42186e273275996a8b6b23711fd3bbef4ea",
-            tokens: 24,
+              "89d231e46607ae2f680a48c426a4f83b9873d1474610d39008439122b5bd8959",
+            tokens: 20,
           },
           tryBody:
-            "{partialReceiptRejected=throws(()=>captureBrowserModule.publishCaptureInstallReceipt(partialReceiptProject,nextCaptureReceipt,()=>undefined,),);}",
+            '{fsyncFailureRejected=throws(()=>writeFiles(fsyncFailureBase,{"complete.txt":"completeevidence"}),);}',
           tryDigest:
-            "057b8823e587d39a3dc40d9a5975dbdc65f8c6f399902cc10474be2c9f4486b9",
+            "5d0c6f7aafc9b006ad8ac808f8337522f4be2daa8d302e755d36661973d00efa",
+        },
+        {
+          catchBodies: ["readFailureCleanupFailure={error};", "throwerror;"],
+          catchVariables: ["error"],
+          containerKind: "TryStatement",
+          containerStatements: 1981,
+          finallyDigest:
+            "5f70f77aff507b601d1cdd66ce72964e0ed89469e1efacdcd6865779da9f2f5d",
+          finallySubstantive: {
+            digest:
+              "9911b6b3aa06c6ca0ccf26d1d95b8a319e3734f46d00b72e4514e11af83990d6",
+            tokens: 29,
+          },
+          index: 1805,
+          preceding: "letreadFailureCleanupFailure:{error:unknown}|undefined;",
+          substantive: {
+            digest:
+              "48e3c79cb64b8e3e9cc0db3f3b0c9c273c5121e9ee71b4ffb2d2898fb442327c",
+            tokens: 20,
+          },
+          tryBody:
+            '{readFailureRejected=throws(()=>writeFiles(readFailureBase,{"complete.txt":"readevidence"}),);}',
+          tryDigest:
+            "5d241c53e5057072ca6880f3e746080e9094d4ce02d930684faed8bb7bab383b",
+        },
+        {
+          catchBodies: ["mismatchCleanupFailure={error};", "throwerror;"],
+          catchVariables: ["error"],
+          containerKind: "TryStatement",
+          containerStatements: 1981,
+          finallyDigest:
+            "789da64a344004bcfb07e26d78a34a21112287d3b00f2de05591ca036e5ff083",
+          finallySubstantive: {
+            digest:
+              "21a6bd9a1d348ea46ea144d6d8db11f9672717634d542bb710830533aec133b2",
+            tokens: 29,
+          },
+          index: 1813,
+          preceding: "letmismatchCleanupFailure:{error:unknown}|undefined;",
+          substantive: {
+            digest:
+              "3ae2aba4b459cf59f260b35275f74f3659fa67c8dde582e3c04dab59e6f8e42a",
+            tokens: 20,
+          },
+          tryBody:
+            '{mismatchRejected=throws(()=>writeFiles(mismatchBase,{"complete.txt":"mismatchevidence"}),);}',
+          tryDigest:
+            "d187a9b744160acb0662a84a7c35162d45735d28bca80923dfe25922a3c08b79",
+        },
+        {
+          catchBodies: ["shortReadCleanupFailure={error};", "throwerror;"],
+          catchVariables: ["error"],
+          containerKind: "TryStatement",
+          containerStatements: 1981,
+          finallyDigest:
+            "c839f99ea9b3bc2ef6d85633e6efdbb566b3c68a0f297e51c76eea79545496f1",
+          finallySubstantive: {
+            digest:
+              "1b430b4ea0b63d256545e8c9e61f17b800302a52b2a7ab7302212d8f81c9bcaa",
+            tokens: 29,
+          },
+          index: 1821,
+          preceding: "letshortReadCleanupFailure:{error:unknown}|undefined;",
+          substantive: {
+            digest:
+              "1e178081d11494b4779b574d2ca365dc9cc9e1912288126909dbe493a54a5611",
+            tokens: 21,
+          },
+          tryBody:
+            '{shortReadAccepted=!throws(()=>writeFiles(shortReadBase,{"complete.txt":"shortreads"}),);}',
+          tryDigest:
+            "4ff5d5b46c5ff08a3f46bf1b615062dd05740e4cd6607e5d0652b2a969a6c382",
         },
         {
           catchBodies: [
-            "oversizedReceiptCleanupFailure={error};",
-            "throwerror;",
+            "preservedPrimaryOnlyFailure=error;",
+            "primaryOnlyCleanupFailure={error};",
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
           containerStatements: 1981,
           finallyDigest:
-            "8268d8fcbc7589dc275b36fdcebdd35d28c9883ff7451c6eb772c6b48203586a",
+            "32f032637da212ec0e184608500ffda23e3e97ba7e726ac0a31f4e52421b96f4",
           finallySubstantive: {
             digest:
-              "80a0d580be81df99eee20b3c37206d075d08c87ddf39ddbaf9ef3c98abab5ffd",
-            tokens: 50,
+              "1c2bb217744d17edbf79fdd4232ca424552ce28665463f8abd74f1a721f0eded",
+            tokens: 29,
           },
-          index: 610,
-          preceding:
-            "letoversizedReceiptCleanupFailure:{error:unknown}|undefined;",
+          index: 1891,
+          preceding: "letprimaryOnlyCleanupFailure:{error:unknown}|undefined;",
           substantive: {
             digest:
-              "e445d1acede5834ad309d4c40b7d2f95ef40b711ed939dbf9b308943a8b9af89",
-            tokens: 45,
+              "57483b702ff26ad6458ee96e9314d3f60b6d5bdda08f567d353a57afdaf5afb9",
+            tokens: 12,
           },
           tryBody:
-            '{oversizedReceiptReadRejected=throwsWith(()=>captureBrowserModule.readCaptureInstallReceipt(oversizedReceiptProject,),"exceedsitsmaximumbytelength",);oversizedReceiptPublishRejected=throwsWith(()=>captureBrowserModule.publishCaptureInstallReceipt(oversizedReceiptProject,nextCaptureReceipt,()=>undefined,),"Manuallyadjudicate",);}',
+            '{writeFiles(primaryOnlyFailureBase,{"partial.txt":"primary-onlyevidence",});}',
           tryDigest:
-            "5dfbb8d067b17f2fadc0889b6733d3b74accde8a76472705b58946f9feb061d7",
-        },
-        {
-          catchBodies: [
-            "receiptTargetSwapCleanupFailure={error};",
-            "throwerror;",
-          ],
-          catchVariables: ["error"],
-          containerKind: "TryStatement",
-          containerStatements: 1981,
-          finallyDigest:
-            "3b129d59eb2805ac04b03ed1da557b09ab657b6d0505bcd0605915e2ae13311f",
-          finallySubstantive: {
-            digest:
-              "02e7ff5a09439c462fa1be924045ca0d265a805ead9491bedf59eb79fcf270c1",
-            tokens: 50,
-          },
-          index: 621,
-          preceding:
-            "letreceiptTargetSwapCleanupFailure:{error:unknown}|undefined;",
-          substantive: {
-            digest:
-              "1e5a131c3aa9cb45a58fd2c0809868314910198d668b05d6dadaeb827a99828f",
-            tokens: 24,
-          },
-          tryBody:
-            "{receiptTargetSwapRejected=throws(()=>captureBrowserModule.publishCaptureInstallReceipt(receiptTargetSwapProject,nextCaptureReceipt,()=>undefined,),);}",
-          tryDigest:
-            "8f4c6e749dc76e42c2d03339c82f60f7d5d3a0e8bb8a8268592336749e4cb4dc",
-        },
-        {
-          catchBodies: [
-            "receiptReadDirectoryCleanupFailure={error};",
-            "throwerror;",
-          ],
-          catchVariables: ["error"],
-          containerKind: "TryStatement",
-          containerStatements: 1981,
-          finallyDigest:
-            "0d60c16ccb2344e7c27369368b361367c29720d4333008fc4cba433fc5595035",
-          finallySubstantive: {
-            digest:
-              "19e679ab5f04fb7c9e0c1cfdb50fd936deb4e92a8811e7b320343e8e9ec0e112",
-            tokens: 85,
-          },
-          index: 662,
-          preceding:
-            "letreceiptReadDirectoryCleanupFailure:{error:unknown}|undefined;",
-          substantive: {
-            digest:
-              "2ba1f922204655b3f5f9c9fa2ebb851f2b299850892e2161bca60db5f504fe52",
-            tokens: 16,
-          },
-          tryBody:
-            "{receiptReadDirectoryRejected=throws(()=>captureBrowserModule.readCaptureInstallReceipt(captureProject),);}",
-          tryDigest:
-            "550ae2c36cfc29f42f888bea176760c7945df3265ba77df9d925301296d0528f",
-        },
-        {
-          catchBodies: [
-            "receiptReadRootCleanupFailure={error};",
-            "throwerror;",
-          ],
-          catchVariables: ["error"],
-          containerKind: "TryStatement",
-          containerStatements: 1981,
-          finallyDigest:
-            "b6d7fa6450a72b69e5b2387c5ba5881f934cd85b0f5cba8cf05c21428d520577",
-          finallySubstantive: {
-            digest:
-              "aacf8cb3b0c8c72b76039f985a638dd85816a41f8017742cb39617ee0b57c9e0",
-            tokens: 83,
-          },
-          index: 673,
-          preceding:
-            "letreceiptReadRootCleanupFailure:{error:unknown}|undefined;",
-          substantive: {
-            digest:
-              "c72b65ff85c48b91b1a233792bcf8a0e9198bf0a01bc63c02603c63d3b103de7",
-            tokens: 16,
-          },
-          tryBody:
-            "{receiptReadRootRejected=throws(()=>captureBrowserModule.readCaptureInstallReceipt(captureProject),);}",
-          tryDigest:
-            "24b3e3a54025c459039eb39e61281a6750a38988714d1eec37bb4a985c640445",
+            "23922af85dfd092fb1d87617000734d38b7de60d95efc62d656b5fa7053a8cb6",
         },
       ],
       parseDiagnostics: [],
