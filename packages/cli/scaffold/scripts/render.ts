@@ -183,6 +183,18 @@ const preserveProductionEncoderCleanup = (
     ) => void;
   }
 ).preserveProductionEncoderCleanup;
+const withKokoroRuntimeOverrides = (
+  require("./withKokoroRuntimeOverrides.cjs") as {
+    withKokoroRuntimeOverrides: <Output>(
+      overrides: readonly {
+        resource: string;
+        install: () => unknown;
+        restore: () => unknown;
+      }[],
+      operation: () => Output | Promise<Output>,
+    ) => Promise<Output>;
+  }
+).withKokoroRuntimeOverrides;
 const resolveImportEntry = (packageName: string): string =>
   fileURLToPath(import.meta.resolve(packageName));
 const heldChunkLocks = new Map<
@@ -1897,8 +1909,7 @@ const loadPinnedKokoroRuntime = async (
     fetch: globalThis.fetch,
   };
   const fetcher = globalThis.fetch.bind(globalThis);
-  env.cacheDir = modelCacheRoot;
-  globalThis.fetch = async (input, init) => {
+  const pinnedFetch: typeof globalThis.fetch = async (input, init) => {
     const source =
       typeof input === "string"
         ? input
@@ -1925,29 +1936,48 @@ const loadPinnedKokoroRuntime = async (
         : pinned;
     return fetcher(request, init);
   };
-  try {
-    const loaded = await KokoroTTS.from_pretrained(KOKORO_MODEL, {
-      dtype: "q8",
-      device: KOKORO_DEVICE,
-    });
-    const modelAssets = kokoroModelCacheAssets(modelCacheRoot);
-    if (modelAssets.length === 0)
-      throw new Error(
-        "Pinned Kokoro load produced no revision-scoped model cache assets.",
-      );
-    renderProgress("sound.model.load.complete", {
-      model: KOKORO_MODEL,
-      revision: KOKORO_MODEL_REVISION,
-    });
-    return {
-      runtime: loaded as unknown as IKokoroRuntime,
-      createTextSplitter: () => new TextSplitterStream(),
-      runtimeAssets: [...baseRuntimeAssets, ...modelAssets],
-    };
-  } finally {
-    env.cacheDir = previous.cacheDir;
-    globalThis.fetch = previous.fetch;
-  }
+  return withKokoroRuntimeOverrides(
+    [
+      {
+        resource: "Transformers cache directory",
+        install: () => {
+          env.cacheDir = modelCacheRoot;
+        },
+        restore: () => {
+          env.cacheDir = previous.cacheDir;
+        },
+      },
+      {
+        resource: "global fetch",
+        install: () => {
+          globalThis.fetch = pinnedFetch;
+        },
+        restore: () => {
+          globalThis.fetch = previous.fetch;
+        },
+      },
+    ],
+    async () => {
+      const loaded = await KokoroTTS.from_pretrained(KOKORO_MODEL, {
+        dtype: "q8",
+        device: KOKORO_DEVICE,
+      });
+      const modelAssets = kokoroModelCacheAssets(modelCacheRoot);
+      if (modelAssets.length === 0)
+        throw new Error(
+          "Pinned Kokoro load produced no revision-scoped model cache assets.",
+        );
+      renderProgress("sound.model.load.complete", {
+        model: KOKORO_MODEL,
+        revision: KOKORO_MODEL_REVISION,
+      });
+      return {
+        runtime: loaded as unknown as IKokoroRuntime,
+        createTextSplitter: () => new TextSplitterStream(),
+        runtimeAssets: [...baseRuntimeAssets, ...modelAssets],
+      };
+    },
+  );
 };
 
 const kokoroBaseRuntimeAssets =

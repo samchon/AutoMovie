@@ -1764,6 +1764,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       "scripts/review-status.ts",
       "scripts/runtimePackageSnapshot.ts",
       "scripts/verify.ts",
+      "scripts/withKokoroRuntimeOverrides.cjs",
       "src/examples/lineBattle.ts",
       "src/film.ts",
       "src/shots/opening.ts",
