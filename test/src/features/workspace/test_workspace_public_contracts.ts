@@ -818,6 +818,7 @@ const packagedAssetReviewContract = (
   worksheetEvidence: Array<{
     acceptanceCondition: string;
     acceptanceFrameMatch: string | null;
+    acceptanceInitializer: string | null;
     assetCondition: string | null;
     assetEvidence: string | null;
     exactEvidence: string | null;
@@ -1036,6 +1037,7 @@ const packagedAssetReviewContract = (
   const worksheetEvidence: Array<{
     acceptanceCondition: string;
     acceptanceFrameMatch: string | null;
+    acceptanceInitializer: string | null;
     assetCondition: string | null;
     assetEvidence: string | null;
     exactEvidence: string | null;
@@ -1061,7 +1063,15 @@ const packagedAssetReviewContract = (
           declaration.initializer === undefined
         )
           continue;
+        let acceptanceInitializer: string | null = null;
         const visitWorksheet = (node: ts.Node): void => {
+          if (
+            ts.isVariableDeclaration(node) &&
+            ts.isIdentifier(node.name) &&
+            node.name.text === "acceptance" &&
+            node.initializer !== undefined
+          )
+            acceptanceInitializer = compact(node.initializer);
           if (
             ts.isCallExpression(node) &&
             ts.isPropertyAccessExpression(node.expression) &&
@@ -1117,6 +1127,7 @@ const packagedAssetReviewContract = (
                   ? compact(fallback.whenFalse)
                   : null,
               acceptanceFrameMatch,
+              acceptanceInitializer,
               mapper: compact(node.expression),
               parameters: mapper.parameters.map(compact),
             });
@@ -4189,6 +4200,8 @@ export const test_workspace_public_contracts = (): void => {
           acceptanceCondition: 'criterion==="acceptance-scenarios"',
           acceptanceFrameMatch:
             'item.target.kind==="shot"&&item.target.id===shot&&item.reviewFrame===scenario.criterion.frame&&item.pass===scenario.criterion.pass',
+          acceptanceInitializer:
+            "requiredAcceptance(graph,prepared.target,prepared.frames,)",
           assetCondition: 'prepared.target.kind==="asset"&&index===0',
           assetEvidence: "prepared.frames.map(frameEvidence)",
           exactEvidence: "[exactEvidence(project,prepared,index)]",

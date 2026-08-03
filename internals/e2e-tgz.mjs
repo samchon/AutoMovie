@@ -411,23 +411,41 @@ const exactEvidence = (project, prepared, selectorIndex) => {
     throw new Error("Current visual review has no frame evidence.");
   return frameEvidence(prepared.frames[0]);
 };
-const requiredAcceptance = (graph, target) =>
-  [...graph.acceptance.values()]
+const acceptanceAddressesShot = (scenario, shot) =>
+  (scenario.target.kind === "shot" && scenario.target.id === shot) ||
+  ((scenario.criterion.kind === "frame" ||
+    scenario.criterion.kind === "event") &&
+    scenario.criterion.shot === shot);
+const requiredAcceptance = (graph, target, frames = []) => {
+  const sequenceShots =
+    target.kind === "sequence"
+      ? new Set(
+          frames.flatMap((frame) =>
+            frame.target.kind === "shot" ? [frame.target.id] : [],
+          ),
+        )
+      : undefined;
+  return [...graph.acceptance.values()]
     .filter(
       (scenario) =>
         scenario.required &&
         (target.kind === "film" ||
+          (target.kind === "sequence" &&
+            [...(sequenceShots ?? [])].some((shot) =>
+              acceptanceAddressesShot(scenario, shot),
+            )) ||
           (target.kind === "shot" &&
-            ((scenario.target.kind === "shot" &&
-              scenario.target.id === target.id) ||
-              ((scenario.criterion.kind === "frame" ||
-                scenario.criterion.kind === "event") &&
-                scenario.criterion.shot === target.id)))),
+            acceptanceAddressesShot(scenario, target.id))),
     )
     .sort((left, right) => left.id.localeCompare(right.id));
+};
 const worksheet = (project, prepared) => {
   const graph = project.graph();
-  const acceptance = requiredAcceptance(graph, prepared.target);
+  const acceptance = requiredAcceptance(
+    graph,
+    prepared.target,
+    prepared.frames,
+  );
   return {
     target: prepared.target,
     preparedFingerprint: prepared.fingerprint,
