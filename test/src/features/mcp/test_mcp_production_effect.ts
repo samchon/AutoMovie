@@ -21,6 +21,28 @@ import {
   worldDesign,
 } from "./productionFixtures";
 
+interface IProductionEffectFixtureFailure {
+  error: unknown;
+}
+
+class ProductionEffectFixtureCleanupError extends AggregateError {}
+
+/** Dispose the production-effect fixture without replacing its failure. */
+export const preserveProductionEffectFixtureCleanup = (
+  failure: IProductionEffectFixtureFailure | undefined,
+  cleanup: () => unknown,
+): void => {
+  try {
+    cleanup();
+  } catch (cleanupFailure) {
+    if (failure === undefined) throw cleanupFailure;
+    throw new ProductionEffectFixtureCleanupError(
+      [failure.error, cleanupFailure],
+      "Production-effect fixture teardown failed after the test failed.",
+    );
+  }
+};
+
 /**
  * Effect source compilation, validation, and oracle queries must share one
  * bounded compiler-owned stream. The test exercises the same current generated
@@ -43,6 +65,7 @@ import {
  */
 export const test_mcp_production_effect = (): void => {
   const fixture = productionFixture();
+  let productionEffectFailure: IProductionEffectFixtureFailure | undefined;
   try {
     const project = AutoMovieProductionProject.open(fixture.root);
     project.setWorldDesign(worldDesign());
@@ -360,7 +383,12 @@ export const test_mcp_production_effect = (): void => {
         facingAwaySummary.result?.kind === "measurement" &&
         facingAwaySummary.result.values.cameraIntersectionLength === 0,
     );
+  } catch (error) {
+    productionEffectFailure = { error };
+    throw error;
   } finally {
-    fixture.dispose();
+    preserveProductionEffectFixtureCleanup(productionEffectFailure, () =>
+      fixture.dispose(),
+    );
   }
 };
