@@ -30,6 +30,39 @@ export const preserveProjectTransactionFixtureCleanup = (
   }
 };
 
+interface IProjectTransactionSwapCleanup {
+  cleanup: () => unknown;
+  resource: string;
+}
+
+class ProjectTransactionSwapCleanupError extends AggregateError {}
+
+/** Attempt every transaction root-swap cleanup without hiding failure. */
+export const preserveProjectTransactionSwapCleanup = (
+  failure: IProjectTransactionFixtureFailure | undefined,
+  resources: readonly IProjectTransactionSwapCleanup[],
+): void => {
+  const cleanupFailures: Array<{ error: unknown; resource: string }> = [];
+  for (const resource of resources)
+    try {
+      resource.cleanup();
+    } catch (error) {
+      cleanupFailures.push({ error, resource: resource.resource });
+    }
+  if (cleanupFailures.length === 1 && failure === undefined)
+    throw cleanupFailures[0]!.error;
+  if (cleanupFailures.length !== 0)
+    throw new ProjectTransactionSwapCleanupError(
+      [
+        ...(failure === undefined ? [] : [failure.error]),
+        ...cleanupFailures.map((entry) => entry.error),
+      ],
+      `Project-transaction root-swap cleanup failed${
+        failure === undefined ? "" : " after the guarded check failed"
+      }: ${cleanupFailures.map((entry) => entry.resource).join(", ")}.`,
+    );
+};
+
 const scriptOf = (logline: string): IAutoMovieScript => ({
   logline,
   theme: "durability",
@@ -551,6 +584,7 @@ export const test_mcp_project_transactions = (): void => {
     let replacementUntouched = false;
     let replacedReadRejected = false;
     let replacedMutationRejected = false;
+    let rootSwapFailure: IProjectTransactionFixtureFailure | undefined;
     try {
       replacedReadRejected = throwsError(
         () => a.writableSlate(),
@@ -561,9 +595,20 @@ export const test_mcp_project_transactions = (): void => {
         ["root", "changed physical identity", "Discard this project handle"],
       );
       replacementUntouched = fs.readdirSync(root).length === 0;
+    } catch (error) {
+      rootSwapFailure = { error };
+      throw error;
     } finally {
-      fs.rmSync(root, { recursive: true, force: true });
-      fs.renameSync(parkedRoot, root);
+      preserveProjectTransactionSwapCleanup(rootSwapFailure, [
+        {
+          resource: "active replacement",
+          cleanup: () => fs.rmSync(root, { recursive: true, force: true }),
+        },
+        {
+          resource: "parked original",
+          cleanup: () => fs.renameSync(parkedRoot, root),
+        },
+      ]);
     }
     TestValidator.predicate(
       "a live project handle never follows a replacement root namespace",

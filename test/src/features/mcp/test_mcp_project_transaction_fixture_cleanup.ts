@@ -240,8 +240,8 @@ export const test_mcp_project_transaction_fixture_cleanup = (): void => {
               "a81bbdcffb3eec2261a6d19f4441e610d8197b48cd39746d0da10a743bdb53ce",
             rootStringLiterals: ["automovie-txn-"],
             tryDigest:
-              "94da6458316441ba41660a648581b8c677dce3d65f0c1aa7c4e1f7f7f1cbd012",
-            tryStatements: 128,
+              "56cda35059fd1076288d00b10c71b5c9fac598cf41a789dc6fb97669b6cdc4bf",
+            tryStatements: 129,
           },
           {
             bodyStatements: 6,
