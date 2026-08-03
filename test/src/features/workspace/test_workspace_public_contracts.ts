@@ -1145,6 +1145,7 @@ const packagedAssetReviewContract = (
         const name = compact(node.arguments[0]!);
         if (
           name.includes("starter-png-size:") ||
+          name.includes("starter-acceptance-frame-captured:") ||
           name.includes("starter-asset-view-captured:") ||
           name === '"starter-required-deliverables-parser-complete"'
         ) {
@@ -4089,7 +4090,7 @@ export const test_workspace_public_contracts = (): void => {
           },
           modelInventory:
             'newMap(compiled.assets.map((entry)=>[entry.id,JSON.parse(Buffer.from(project.readGeneratedFile(entry.path)).toString("utf8")),]))',
-          outerBodyStatementCount: 4,
+          outerBodyStatementCount: 5,
           outerExpression: "before.reviews.entries",
           outerInitializer: "constentry",
         },
@@ -4179,6 +4180,16 @@ export const test_workspace_public_contracts = (): void => {
               templateExpression("frame.shot") +
               ":" +
               templateExpression("frame.pass") +
+              "`",
+          },
+          {
+            comparisons: [
+              "captured.frame?.width===160",
+              "captured.frame.height===90",
+            ],
+            name:
+              "`starter-acceptance-frame-captured:" +
+              templateExpression("scenario.id") +
               "`",
           },
           {

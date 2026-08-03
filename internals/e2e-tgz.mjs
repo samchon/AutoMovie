@@ -701,6 +701,41 @@ if (phase === "review") {
   let reviewFailure;
   try {
     for (const entry of before.reviews.entries) {
+      if (entry.target.kind === "shot")
+        for (const scenario of requiredAcceptance(graph, entry.target)) {
+          if (scenario.criterion.kind !== "frame") continue;
+          const reviewFrame = graph.shots
+            .get(entry.target.id)
+            ?.reviewFrames.find(
+              (candidate) => candidate.id === scenario.criterion.frame,
+            );
+          assert(
+            \`starter-acceptance-frame-current:\${scenario.id}\`,
+            reviewFrame !== undefined &&
+              reviewFrame.passes.includes(scenario.criterion.pass),
+            \`required frame \${scenario.criterion.frame} pass \${scenario.criterion.pass} is absent from shot \${entry.target.id}\`,
+          );
+          if (reviewFrame === undefined) continue;
+          const captured = await app.captureFrame({
+            target: {
+              kind: "shot",
+              id: entry.target.id,
+              time: reviewFrame.time,
+              pass: scenario.criterion.pass,
+            },
+          });
+          assert(
+            \`starter-acceptance-frame-captured:\${scenario.id}\`,
+            captured.captured &&
+              captured.reviewTarget?.kind === "shot" &&
+              captured.reviewTarget.id === entry.target.id &&
+              captured.receipt !== null &&
+              captured.frame?.width === 160 &&
+              captured.frame.height === 90 &&
+              captured.diagnostics.every((item) => item.category !== "error"),
+            JSON.stringify(captured.diagnostics),
+          );
+        }
       if (entry.target.kind !== "asset") continue;
       const model = compiledModels.get(entry.target.id);
       assert(

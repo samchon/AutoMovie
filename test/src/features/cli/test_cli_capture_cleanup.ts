@@ -895,7 +895,10 @@ export const test_cli_capture_cleanup = (): void => {
         catches: ["reviewFailure={error};", "throwerror;"],
         failure: { count: 1, initializer: null, kind: "let", type: null },
         finally: ["awaitcloseProductionFrameCapture(reviewFailure);"],
-        operationCalls: [{ callee: "app.captureFrame", guarded: true }],
+        operationCalls: [
+          { callee: "app.captureFrame", guarded: true },
+          { callee: "app.captureFrame", guarded: true },
+        ],
         tries: 1,
         tryActions: ["for"],
         writes: ["reviewFailure={error}"],
