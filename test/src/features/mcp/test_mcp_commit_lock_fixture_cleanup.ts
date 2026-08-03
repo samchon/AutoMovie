@@ -53,6 +53,7 @@ const commitLockFixtureContract = (text: string): unknown => {
     catchVariables: string[];
     finallyBodies: string[];
     index: number;
+    prefixStringLiterals: string[];
     prefixes: string[];
     tryDigest: string;
     tryStatements: number;
@@ -82,6 +83,17 @@ const commitLockFixtureContract = (text: string): unknown => {
           compact(statement, source),
         ),
         index,
+        prefixStringLiterals: [...body.statements]
+          .slice(0, index)
+          .flatMap((statement) => {
+            const values: string[] = [];
+            const visit = (node: ts.Node): void => {
+              if (ts.isStringLiteral(node)) values.push(node.text);
+              ts.forEachChild(node, visit);
+            };
+            visit(statement);
+            return values;
+          }),
         prefixes: [...body.statements]
           .slice(0, index)
           .map((statement) => compact(statement, source)),
@@ -211,6 +223,7 @@ export const test_mcp_commit_lock_fixture_cleanup = (): void => {
               "preserveCommitLockFixtureCleanup(commitLockFailure,()=>fs.rmSync(dir,{recursive:true,force:true}),);",
             ],
             index: 2,
+            prefixStringLiterals: ["automovie-lock-"],
             prefixes: [
               'constdir=fs.mkdtempSync(path.join(os.tmpdir(),"automovie-lock-"));',
               "letcommitLockFailure:ICommitLockFixtureFailure|undefined;",
