@@ -6760,7 +6760,15 @@ export const test_cli_scaffold = async (): Promise<void> => {
       coreBrowsersSwapped && coreBrowsersRaceRejected,
     );
     const descriptorCli = path.join(base, "descriptor-cli.cjs");
-    const descriptorCliMarker = path.join(base, "descriptor-cli.marker");
+    // The runner asserts that the executable's own directory did not change
+    // while the CLI ran, and that version covers the directory's mtime, so the
+    // CLI writes its marker into a child directory created beforehand.
+    const descriptorCliOutput = path.join(base, "descriptor-cli-output");
+    fs.mkdirSync(descriptorCliOutput, { recursive: true });
+    const descriptorCliMarker = path.join(
+      descriptorCliOutput,
+      "descriptor-cli.marker",
+    );
     const descriptorCliBytes = Buffer.from(
       [
         'const fs = require("node:fs");',

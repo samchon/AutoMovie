@@ -111,7 +111,7 @@ export const test_cli_scaffold_capture_snapshot_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1982,
+          containerStatements: 1985,
           finallyDigest:
             "e5d065d9ad2b75eaccd2174d760cac65055b53314fc85d7b8b5c6dbee3805b4e",
           finallySubstantive: {
@@ -119,7 +119,7 @@ export const test_cli_scaffold_capture_snapshot_cleanup = (): void => {
               "6a810e043641b65d2ed6d1dc4260b923971ca3954c0566ed194cc13c9ed7baef",
             tokens: 30,
           },
-          index: 399,
+          index: 400,
           preceding:
             "letcaptureSnapshotCleanupFailure:{error:unknown}|undefined;",
           substantive: {

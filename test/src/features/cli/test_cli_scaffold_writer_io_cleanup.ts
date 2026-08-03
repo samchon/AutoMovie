@@ -116,7 +116,7 @@ export const test_cli_scaffold_writer_io_cleanup = (): void => {
           catchBodies: ["partialWriteCleanupFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1982,
+          containerStatements: 1985,
           finallyDigest:
             "0a151e02cfc830392ec63ca6a918dd6818243798f17d47cc5fee947854e5d847",
           finallySubstantive: {
@@ -124,7 +124,7 @@ export const test_cli_scaffold_writer_io_cleanup = (): void => {
               "0ab96182d834ed54be1d273be1664cbcb8de6e9f6034785ba12770825852f5ac",
             tokens: 29,
           },
-          index: 1790,
+          index: 1793,
           preceding: "letpartialWriteCleanupFailure:{error:unknown}|undefined;",
           substantive: {
             digest:
@@ -140,7 +140,7 @@ export const test_cli_scaffold_writer_io_cleanup = (): void => {
           catchBodies: ["fsyncFailureCleanupFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1982,
+          containerStatements: 1985,
           finallyDigest:
             "ac40b6ee7872ca480591ef274d6960d06068f9883b3647daa5ee8ea59a7936a5",
           finallySubstantive: {
@@ -148,7 +148,7 @@ export const test_cli_scaffold_writer_io_cleanup = (): void => {
               "abd32d245a97be6397972ea7fadccbeb076d9f0b4acf5ad6cc99e530e4ab1698",
             tokens: 29,
           },
-          index: 1798,
+          index: 1801,
           preceding: "letfsyncFailureCleanupFailure:{error:unknown}|undefined;",
           substantive: {
             digest:
@@ -164,7 +164,7 @@ export const test_cli_scaffold_writer_io_cleanup = (): void => {
           catchBodies: ["readFailureCleanupFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1982,
+          containerStatements: 1985,
           finallyDigest:
             "5f70f77aff507b601d1cdd66ce72964e0ed89469e1efacdcd6865779da9f2f5d",
           finallySubstantive: {
@@ -172,7 +172,7 @@ export const test_cli_scaffold_writer_io_cleanup = (): void => {
               "9911b6b3aa06c6ca0ccf26d1d95b8a319e3734f46d00b72e4514e11af83990d6",
             tokens: 29,
           },
-          index: 1806,
+          index: 1809,
           preceding: "letreadFailureCleanupFailure:{error:unknown}|undefined;",
           substantive: {
             digest:
@@ -188,7 +188,7 @@ export const test_cli_scaffold_writer_io_cleanup = (): void => {
           catchBodies: ["mismatchCleanupFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1982,
+          containerStatements: 1985,
           finallyDigest:
             "789da64a344004bcfb07e26d78a34a21112287d3b00f2de05591ca036e5ff083",
           finallySubstantive: {
@@ -196,7 +196,7 @@ export const test_cli_scaffold_writer_io_cleanup = (): void => {
               "21a6bd9a1d348ea46ea144d6d8db11f9672717634d542bb710830533aec133b2",
             tokens: 29,
           },
-          index: 1814,
+          index: 1817,
           preceding: "letmismatchCleanupFailure:{error:unknown}|undefined;",
           substantive: {
             digest:
@@ -212,7 +212,7 @@ export const test_cli_scaffold_writer_io_cleanup = (): void => {
           catchBodies: ["shortReadCleanupFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1982,
+          containerStatements: 1985,
           finallyDigest:
             "c839f99ea9b3bc2ef6d85633e6efdbb566b3c68a0f297e51c76eea79545496f1",
           finallySubstantive: {
@@ -220,7 +220,7 @@ export const test_cli_scaffold_writer_io_cleanup = (): void => {
               "1b430b4ea0b63d256545e8c9e61f17b800302a52b2a7ab7302212d8f81c9bcaa",
             tokens: 29,
           },
-          index: 1822,
+          index: 1825,
           preceding: "letshortReadCleanupFailure:{error:unknown}|undefined;",
           substantive: {
             digest:
@@ -239,7 +239,7 @@ export const test_cli_scaffold_writer_io_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1982,
+          containerStatements: 1985,
           finallyDigest:
             "32f032637da212ec0e184608500ffda23e3e97ba7e726ac0a31f4e52421b96f4",
           finallySubstantive: {
@@ -247,7 +247,7 @@ export const test_cli_scaffold_writer_io_cleanup = (): void => {
               "1c2bb217744d17edbf79fdd4232ca424552ce28665463f8abd74f1a721f0eded",
             tokens: 29,
           },
-          index: 1892,
+          index: 1895,
           preceding: "letprimaryOnlyCleanupFailure:{error:unknown}|undefined;",
           substantive: {
             digest:

@@ -118,7 +118,7 @@ export const test_cli_scaffold_capture_executable_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1982,
+          containerStatements: 1985,
           finallyDigest:
             "5100831c7000fbbf0c6603b92aeaeffe1aede7de5457aa6d0518512f2256346d",
           finallySubstantive: {
@@ -126,7 +126,7 @@ export const test_cli_scaffold_capture_executable_cleanup = (): void => {
               "456e4b22c56a35e3053064578a41b4d87d53b30cc85b594e6d956819a0b0fbc4",
             tokens: 77,
           },
-          index: 406,
+          index: 407,
           preceding: [
             "letcaptureExecutableRaceRejected=false;",
             "letcaptureExecutableRaceCleanupFailure:{error:unknown}|undefined;",
@@ -148,7 +148,7 @@ export const test_cli_scaffold_capture_executable_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1982,
+          containerStatements: 1985,
           finallyDigest:
             "54cdb4ca3530328b7a7d4e95d164d3a245b220f00e3ca496072966ad30f72281",
           finallySubstantive: {
@@ -156,7 +156,7 @@ export const test_cli_scaffold_capture_executable_cleanup = (): void => {
               "740dc3dd13a751fabefd4b899160f45c032519062963edb4dce587c44fb005ee",
             tokens: 71,
           },
-          index: 418,
+          index: 419,
           preceding: [
             "letcombinedCreateSnapshotFailure:unknown;",
             "letcreateSnapshotHookCleanupFailure:{error:unknown}|undefined;",
@@ -178,7 +178,7 @@ export const test_cli_scaffold_capture_executable_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1982,
+          containerStatements: 1985,
           finallyDigest:
             "5810c3e1cbfda3e81e79c603736baf1c7f9405e98b31a71b73e27015bdccfe20",
           finallySubstantive: {
@@ -186,7 +186,7 @@ export const test_cli_scaffold_capture_executable_cleanup = (): void => {
               "bafea6c45938fd60c310c16a00f35299ab4ce299b840bf61560bc674af8b8cb4",
             tokens: 71,
           },
-          index: 430,
+          index: 431,
           preceding: [
             "letcombinedOpenSnapshotFailure:unknown;",
             "letopenSnapshotHookCleanupFailure:{error:unknown}|undefined;",

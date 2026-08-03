@@ -138,7 +138,7 @@ export const test_cli_scaffold_render_chunk_snapshot_cleanup = (): void => {
           catchBodies: ["tempSuccessorCleanupFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1982,
+          containerStatements: 1985,
           finallyDigest:
             "7da45bf78f6faf658138fd804dc9a97d428e768eba28dabe1e0758c9bd19500c",
           finallySubstantive: {
@@ -146,7 +146,7 @@ export const test_cli_scaffold_render_chunk_snapshot_cleanup = (): void => {
               "585022d8d5b7288884c6ceadca0db539aa8041170aa78361a70d339d0e920c35",
             tokens: 29,
           },
-          index: 1262,
+          index: 1265,
           preceding:
             "lettempSuccessorCleanupFailure:{error:unknown}|undefined;",
           substantive: {
@@ -163,7 +163,7 @@ export const test_cli_scaffold_render_chunk_snapshot_cleanup = (): void => {
           catchBodies: ["recoveryDecoyCleanupFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1982,
+          containerStatements: 1985,
           finallyDigest:
             "aef20cbf37a8ba36cfbfd7703d4889962e8ab5165979c1b9c66360044e18b207",
           finallySubstantive: {
@@ -171,7 +171,7 @@ export const test_cli_scaffold_render_chunk_snapshot_cleanup = (): void => {
               "c6d89073be00109d3b1d43c5c264d0dd3973bdabd30d02651f7308fdb8822806",
             tokens: 29,
           },
-          index: 1284,
+          index: 1287,
           preceding:
             "letrecoveryDecoyCleanupFailure:{error:unknown}|undefined;",
           substantive: {
@@ -193,7 +193,7 @@ export const test_cli_scaffold_render_chunk_snapshot_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1982,
+          containerStatements: 1985,
           finallyDigest:
             "f65c0066fb1502f04ee4a0226a7a0e7d22fe7677f649a003f7108159b2b8596b",
           finallySubstantive: {
@@ -201,7 +201,7 @@ export const test_cli_scaffold_render_chunk_snapshot_cleanup = (): void => {
               "de03834995d8cc52b3d59d846a0794012efac49c2c5785776cd595f19c0c169d",
             tokens: 29,
           },
-          index: 1344,
+          index: 1347,
           preceding:
             "letpublicationRootSwapCleanupFailure:{error:unknown}|undefined;",
           substantive: {
