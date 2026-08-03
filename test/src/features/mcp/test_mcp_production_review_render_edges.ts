@@ -53,6 +53,39 @@ export const preserveProductionReviewRenderFixtureCleanup = (
   }
 };
 
+interface IProductionReviewRenderHarnessCleanup {
+  cleanup: () => unknown;
+  resource: string;
+}
+
+class ProductionReviewRenderHarnessCleanupError extends AggregateError {}
+
+/** Attempt every review-render harness cleanup without hiding failure. */
+export const preserveProductionReviewRenderHarnessCleanup = (
+  failure: IProductionReviewRenderFixtureFailure | undefined,
+  resources: readonly IProductionReviewRenderHarnessCleanup[],
+): void => {
+  const cleanupFailures: Array<{ error: unknown; resource: string }> = [];
+  for (const resource of resources)
+    try {
+      resource.cleanup();
+    } catch (error) {
+      cleanupFailures.push({ error, resource: resource.resource });
+    }
+  if (cleanupFailures.length === 1 && failure === undefined)
+    throw cleanupFailures[0]!.error;
+  if (cleanupFailures.length !== 0)
+    throw new ProductionReviewRenderHarnessCleanupError(
+      [
+        ...(failure === undefined ? [] : [failure.error]),
+        ...cleanupFailures.map((entry) => entry.error),
+      ],
+      `Production review-render harness cleanup failed${
+        failure === undefined ? "" : " after the guarded check failed"
+      }: ${cleanupFailures.map((entry) => entry.resource).join(", ")}.`,
+    );
+};
+
 /**
  * Review frame inventory rejects malformed, escaping and raced evidence,
  * including a physical bundle replaced after discovery but before consumption.
@@ -967,6 +1000,9 @@ export const test_mcp_production_review_render_edges =
         }
         return residentReadRenderFile(relativePath);
       }) as typeof project.readRenderFile;
+      let postVerificationFailureState:
+        | IProductionReviewRenderFixtureFailure
+        | undefined;
       try {
         TestValidator.predicate(
           "post-verification byte changes remain actionable",
@@ -992,11 +1028,29 @@ export const test_mcp_production_review_render_edges =
                 item.message.includes("non-error frame read"),
             ),
         );
+      } catch (error) {
+        postVerificationFailureState = { error };
+        throw error;
       } finally {
-        project.verifiedRenderManifest =
-          residentVerifiedRenderManifest as typeof project.verifiedRenderManifest;
-        project.readRenderFile =
-          residentReadRenderFile as typeof project.readRenderFile;
+        preserveProductionReviewRenderHarnessCleanup(
+          postVerificationFailureState,
+          [
+            {
+              resource: "post-verification manifest hook",
+              cleanup: () => {
+                project.verifiedRenderManifest =
+                  residentVerifiedRenderManifest as typeof project.verifiedRenderManifest;
+              },
+            },
+            {
+              resource: "post-verification read hook",
+              cleanup: () => {
+                project.readRenderFile =
+                  residentReadRenderFile as typeof project.readRenderFile;
+              },
+            },
+          ],
+        );
       }
       const racedBundleRoot = path.join(project.renderRoot(), racedBundle);
       const outsideRacedFrame = path.join(
@@ -1019,6 +1073,9 @@ export const test_mcp_production_review_render_edges =
               ),
             };
       }) as typeof project.verifiedRenderManifest;
+      let escapedFrameFailure:
+        | IProductionReviewRenderFixtureFailure
+        | undefined;
       try {
         TestValidator.equals(
           "verified frame paths cannot escape their content-addressed bundle",
@@ -1038,11 +1095,27 @@ export const test_mcp_production_review_render_edges =
           }),
           [true, true, true],
         );
+      } catch (error) {
+        escapedFrameFailure = { error };
+        throw error;
       } finally {
-        project.verifiedRenderManifest =
-          residentVerifiedRenderManifest as typeof project.verifiedRenderManifest;
-        fs.unlinkSync(linkedRacedFrame);
-        fs.rmSync(outsideRacedFrame);
+        preserveProductionReviewRenderHarnessCleanup(escapedFrameFailure, [
+          {
+            resource: "escaped-frame manifest hook",
+            cleanup: () => {
+              project.verifiedRenderManifest =
+                residentVerifiedRenderManifest as typeof project.verifiedRenderManifest;
+            },
+          },
+          {
+            resource: "escaped-frame link",
+            cleanup: () => fs.unlinkSync(linkedRacedFrame),
+          },
+          {
+            resource: "escaped-frame outside file",
+            cleanup: () => fs.rmSync(outsideRacedFrame),
+          },
+        ]);
       }
       fs.rmSync(path.join(project.renderRoot(), racedBundle), {
         recursive: true,
@@ -1148,15 +1221,27 @@ export const test_mcp_production_review_render_edges =
         }
         return { directory, parked, external };
       };
-      const disposeInventoryRaceFixture = (race: {
+      const inventoryRaceCleanup = (race: {
         directory: string;
         parked: string;
         external: string;
-      }): void => {
-        fs.rmSync(race.directory, { recursive: true, force: true });
-        fs.rmSync(race.parked, { recursive: true, force: true });
-        fs.rmSync(race.external, { recursive: true, force: true });
-      };
+      }): IProductionReviewRenderHarnessCleanup[] => [
+        {
+          resource: "inventory active root",
+          cleanup: () =>
+            fs.rmSync(race.directory, { recursive: true, force: true }),
+        },
+        {
+          resource: "inventory parked root",
+          cleanup: () =>
+            fs.rmSync(race.parked, { recursive: true, force: true }),
+        },
+        {
+          resource: "inventory external root",
+          cleanup: () =>
+            fs.rmSync(race.external, { recursive: true, force: true }),
+        },
+      ];
       const postReadDirectoryRace = (
         replacement: "directory" | "file" | "junction",
       ): boolean => {
@@ -1185,6 +1270,9 @@ export const test_mcp_production_review_render_edges =
             return entries;
           },
         );
+        let postReadRaceFailure:
+          | IProductionReviewRenderFixtureFailure
+          | undefined;
         try {
           try {
             review.prepare({ target });
@@ -1193,9 +1281,19 @@ export const test_mcp_production_review_render_edges =
               error instanceof Error &&
               error.message.includes("Render inventory directory");
           }
+        } catch (error) {
+          postReadRaceFailure = { error };
+          throw error;
         } finally {
-          Reflect.set(fs, "readdirSync", residentReaddirSync);
-          disposeInventoryRaceFixture(race);
+          preserveProductionReviewRenderHarnessCleanup(postReadRaceFailure, [
+            {
+              resource: "inventory readdir hook",
+              cleanup: () => {
+                Reflect.set(fs, "readdirSync", residentReaddirSync);
+              },
+            },
+            ...inventoryRaceCleanup(race),
+          ]);
         }
         return swapped && rejected;
       };
@@ -1227,6 +1325,7 @@ export const test_mcp_production_review_render_edges =
           }
           return status;
         });
+        let lstatRaceFailure: IProductionReviewRenderFixtureFailure | undefined;
         try {
           try {
             review.prepare({ target });
@@ -1234,9 +1333,19 @@ export const test_mcp_production_review_render_edges =
             rejected =
               error instanceof Error && error.message.includes(fragment);
           }
+        } catch (error) {
+          lstatRaceFailure = { error };
+          throw error;
         } finally {
-          Reflect.set(fs, "lstatSync", residentLstatSync);
-          disposeInventoryRaceFixture(race);
+          preserveProductionReviewRenderHarnessCleanup(lstatRaceFailure, [
+            {
+              resource: "inventory lstat hook",
+              cleanup: () => {
+                Reflect.set(fs, "lstatSync", residentLstatSync);
+              },
+            },
+            ...inventoryRaceCleanup(race),
+          ]);
         }
         return swapped && rejected;
       };
@@ -1294,6 +1403,7 @@ export const test_mcp_production_review_render_edges =
         }
         return residentVerifiedManifest(manifestPath);
       }) as typeof project.verifiedRenderManifest;
+      let lateBundleFailure: IProductionReviewRenderFixtureFailure | undefined;
       try {
         const prepared = review.prepare({ target });
         TestValidator.predicate(
@@ -1307,13 +1417,42 @@ export const test_mcp_production_review_render_edges =
                   path.resolve(lateManifestPath),
             ),
         );
+      } catch (error) {
+        lateBundleFailure = { error };
+        throw error;
       } finally {
-        project.verifiedRenderManifest =
-          residentVerifiedManifest as typeof project.verifiedRenderManifest;
-        if (lateSwapped) fs.unlinkSync(lateRoot);
-        fs.rmSync(lateSource, { recursive: true, force: true });
-        if (fs.existsSync(lateParked)) fs.renameSync(lateParked, lateRoot);
-        fs.rmSync(lateRoot, { recursive: true, force: true });
+        preserveProductionReviewRenderHarnessCleanup(lateBundleFailure, [
+          {
+            resource: "late-bundle manifest hook",
+            cleanup: () => {
+              project.verifiedRenderManifest =
+                residentVerifiedManifest as typeof project.verifiedRenderManifest;
+            },
+          },
+          {
+            resource: "late-bundle replacement link",
+            cleanup: () => {
+              if (lateSwapped) fs.unlinkSync(lateRoot);
+            },
+          },
+          {
+            resource: "late-bundle external source",
+            cleanup: () =>
+              fs.rmSync(lateSource, { recursive: true, force: true }),
+          },
+          {
+            resource: "late-bundle parked original",
+            cleanup: () => {
+              if (fs.existsSync(lateParked))
+                fs.renameSync(lateParked, lateRoot);
+            },
+          },
+          {
+            resource: "late-bundle restored root",
+            cleanup: () =>
+              fs.rmSync(lateRoot, { recursive: true, force: true }),
+          },
+        ]);
       }
     } catch (error) {
       productionReviewRenderFailure = { error };
