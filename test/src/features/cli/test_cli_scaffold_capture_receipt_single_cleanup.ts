@@ -30,7 +30,7 @@ const leafTokenContract = (
   };
 };
 
-const captureExecutableCleanupContract = (text: string): unknown => {
+const captureReceiptSingleCleanupContract = (text: string): unknown => {
   const source = ts.createSourceFile(
     "test_cli_scaffold.ts",
     text,
@@ -39,9 +39,10 @@ const captureExecutableCleanupContract = (text: string): unknown => {
     ts.ScriptKind.TS,
   );
   const anchors = [
-    "captureexecutablelstathook",
-    "capturecreateopenhook",
-    "captureopenopenhook",
+    "capturereceiptparentswapopenhook",
+    "captureforeignreceiptopenhook",
+    "capturereceiptsegmentstathook",
+    "capturereceiptrootswapopenhook",
   ];
   const lifecycles: Array<{
     catchBodies: string[];
@@ -51,7 +52,7 @@ const captureExecutableCleanupContract = (text: string): unknown => {
     finallyDigest: string;
     finallySubstantive: { digest: string; tokens: number };
     index: number;
-    preceding: string[];
+    preceding: string;
     substantive: { digest: string; tokens: number };
     tryBody: string;
     tryDigest: string;
@@ -62,7 +63,7 @@ const captureExecutableCleanupContract = (text: string): unknown => {
       node.catchClause !== undefined &&
       node.finallyBlock !== undefined &&
       anchors.some((anchor) =>
-        compact(node.finallyBlock!, source).includes(anchor),
+        compact(node.finallyBlock!, source).toLowerCase().includes(anchor),
       ) &&
       ts.isBlock(node.parent)
     ) {
@@ -84,9 +85,7 @@ const captureExecutableCleanupContract = (text: string): unknown => {
           source,
         ),
         index,
-        preceding: statements
-          .slice(Math.max(0, index - 2), index)
-          .map((statement) => compact(statement, source)),
+        preceding: compact(statements[index - 1]!, source),
         substantive: leafTokenContract(node.tryBlock.statements, source),
         tryBody: compact(node.tryBlock, source),
         tryDigest: digestText(node.tryBlock.getText(source)),
@@ -103,103 +102,115 @@ const captureExecutableCleanupContract = (text: string): unknown => {
   };
 };
 
-export const test_cli_scaffold_capture_executable_cleanup = (): void => {
+export const test_cli_scaffold_capture_receipt_single_cleanup = (): void => {
   TestValidator.equals(
-    "CLI scaffold owns three capture executable cleanup lifecycles",
-    captureExecutableCleanupContract(
+    "CLI scaffold owns four capture receipt single-hook cleanup lifecycles",
+    captureReceiptSingleCleanupContract(
       fs.readFileSync(path.join(__dirname, "test_cli_scaffold.ts"), "utf8"),
     ),
     {
       lifecycles: [
         {
           catchBodies: [
-            "captureExecutableRaceCleanupFailure={error};",
+            "receiptParentSwapCleanupFailure={error};",
             "throwerror;",
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
           containerStatements: 1934,
           finallyDigest:
-            "5100831c7000fbbf0c6603b92aeaeffe1aede7de5457aa6d0518512f2256346d",
+            "60a847debefc4d5cd8e5456376d28eea0ac053c0f5b65946e9faa284da06f6d2",
           finallySubstantive: {
             digest:
-              "456e4b22c56a35e3053064578a41b4d87d53b30cc85b594e6d956819a0b0fbc4",
-            tokens: 77,
+              "667f03143daa4a914699abfa8adac3cc34feac843208b8ff5f576c64fe4927fd",
+            tokens: 29,
           },
-          index: 405,
-          preceding: [
-            "letcaptureExecutableRaceRejected=false;",
-            "letcaptureExecutableRaceCleanupFailure:{error:unknown}|undefined;",
-          ],
+          index: 630,
+          preceding:
+            "letreceiptParentSwapCleanupFailure:{error:unknown}|undefined;",
           substantive: {
             digest:
-              "6a7668d286e6988d3678f5906f9340ca5dacb20e9f7b425f0fdd66fa41aeed09",
-            tokens: 16,
+              "0f7fa2ab8ec01668f3a70bd2575bb9125f37dc64830e612d19375c6385b0d27f",
+            tokens: 24,
           },
           tryBody:
-            "{captureExecutableRaceRejected=throws(()=>captureExecutableModule.openCaptureExecutable(captureExecutable),);}",
+            "{receiptParentSwapRejected=throws(()=>captureBrowserModule.publishCaptureInstallReceipt(receiptParentSwapProject,nextCaptureReceipt,()=>undefined,),);}",
           tryDigest:
-            "fe5c113f4151f76dba679d2fcb21020192c20483f34e7193968e005f91c768b6",
+            "b53f2409be596e6c5c41fef9ab0e9c438f725b0eba50644ebcac12ded9eadf81",
         },
         {
-          catchBodies: [
-            "combinedCreateSnapshotFailure=error;",
-            "createSnapshotHookCleanupFailure={error};",
-          ],
+          catchBodies: ["foreignReceiptCleanupFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
           containerStatements: 1934,
           finallyDigest:
-            "54cdb4ca3530328b7a7d4e95d164d3a245b220f00e3ca496072966ad30f72281",
+            "7d83a451aa90abb6575b45dd70ac59e4cc74e1581589f17b5d24ef3fa64253ef",
           finallySubstantive: {
             digest:
-              "740dc3dd13a751fabefd4b899160f45c032519062963edb4dce587c44fb005ee",
-            tokens: 71,
+              "3ebb81ea26340d427fd8d9b6772bf27cde79e9b474b12bcb7c6c5efe7cb51a4b",
+            tokens: 29,
           },
-          index: 417,
-          preceding: [
-            "letcombinedCreateSnapshotFailure:unknown;",
-            "letcreateSnapshotHookCleanupFailure:{error:unknown}|undefined;",
-          ],
+          index: 640,
+          preceding:
+            "letforeignReceiptCleanupFailure:{error:unknown}|undefined;",
           substantive: {
             digest:
-              "0866d55589c8805e1424e143d3ea088f25993fa3a5bd3d08dcd98b7a97f8bce5",
-            tokens: 15,
+              "6873f59f8953eb3761e3b9aa715b5a00c3fcd36a8beb7e48d6b2001d0a31e2a8",
+            tokens: 24,
           },
           tryBody:
-            '{captureExecutableModule.createCaptureExecutableSnapshot(failedCaptureExecutableCreation,Buffer.from("creationbytes"),);}',
+            "{foreignReceiptRejected=throws(()=>captureBrowserModule.publishCaptureInstallReceipt(foreignReceiptProject,nextCaptureReceipt,()=>undefined,),);}",
           tryDigest:
-            "0258333cc547b548e9000d8a1c549766ec3afb5224c57cad515ed62f6e52cfe3",
+            "19072fb4c1950e3cf03ad6056d7c5544063f52d3c702428f6ebfdcd465bcb499",
         },
         {
-          catchBodies: [
-            "combinedOpenSnapshotFailure=error;",
-            "openSnapshotHookCleanupFailure={error};",
-          ],
+          catchBodies: ["receiptSegmentCleanupFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
           containerStatements: 1934,
           finallyDigest:
-            "5810c3e1cbfda3e81e79c603736baf1c7f9405e98b31a71b73e27015bdccfe20",
+            "5b18bd2c6986af9966f9b6e43211f40653f6feabf0854dbdf4770fd1e1956a05",
           finallySubstantive: {
             digest:
-              "bafea6c45938fd60c310c16a00f35299ab4ce299b840bf61560bc674af8b8cb4",
-            tokens: 71,
+              "f4f8f08cc3124762ba53d55ee9d119670e771c627f2f1d466657e9442d9ed625",
+            tokens: 29,
           },
-          index: 429,
-          preceding: [
-            "letcombinedOpenSnapshotFailure:unknown;",
-            "letopenSnapshotHookCleanupFailure:{error:unknown}|undefined;",
-          ],
+          index: 710,
+          preceding:
+            "letreceiptSegmentCleanupFailure:{error:unknown}|undefined;",
           substantive: {
             digest:
-              "0bf2484b01a795dee73b77cfae51d12e388402c447289aae4eab8ee1c9f4389c",
-            tokens: 8,
+              "12d59664e311406e6ad3ad9f24f3c924302c6ba01d719dbf427fba9d87d40648",
+            tokens: 24,
           },
           tryBody:
-            "{captureExecutableModule.openCaptureExecutable(failedCaptureExecutableOpen,);}",
+            "{receiptSegmentRaceRejected=throws(()=>captureBrowserModule.publishCaptureInstallReceipt(segmentReceiptProject,nextCaptureReceipt,()=>undefined,),);}",
           tryDigest:
-            "088db12daa29366e0ba119664263516a8b69abba04bf86e59b257ff0b113350a",
+            "74c072576fc507846a76e94a3ce82145bd2421556d8844a83e38fc835fdac0c5",
+        },
+        {
+          catchBodies: ["receiptRootCleanupFailure={error};", "throwerror;"],
+          catchVariables: ["error"],
+          containerKind: "TryStatement",
+          containerStatements: 1934,
+          finallyDigest:
+            "8b0c484c31978fa0ee66dc681f6a520351cbb95c45fad37b7d06a4e34704cbc3",
+          finallySubstantive: {
+            digest:
+              "7db57acdaf3a11f4566a549cf535893beedfe1ac9d4ee6b3759add1b2f0fdfe6",
+            tokens: 29,
+          },
+          index: 721,
+          preceding: "letreceiptRootCleanupFailure:{error:unknown}|undefined;",
+          substantive: {
+            digest:
+              "acf76d723c47371a0f44c629e0956bf4122118c3ad4eb12c5f3dc76e8bb1a96c",
+            tokens: 24,
+          },
+          tryBody:
+            "{receiptRootRaceRejected=throws(()=>captureBrowserModule.publishCaptureInstallReceipt(captureProject,captureReceiptValue,()=>undefined,),);}",
+          tryDigest:
+            "85ad5d7163e74074ab777fe47c8dee058e354cde9be46cac0b48e5ad1ef70b84",
         },
       ],
       parseDiagnostics: [],

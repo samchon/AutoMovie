@@ -114,7 +114,7 @@ export const test_cli_scaffold_writer_close_identity_cleanup = (): void => {
           catchBodies: ["closeTargetCleanupFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1930,
+          containerStatements: 1934,
           finallyDigest:
             "52e67f87dfae7d03dd506e455a713573833027768e97767664b3166cdc24c078",
           finallySubstantive: {
@@ -122,7 +122,7 @@ export const test_cli_scaffold_writer_close_identity_cleanup = (): void => {
               "ca4c3ac43982ad9a05bcad4072de4c15561a2bdb2ab6c9ae8d352f946286decd",
             tokens: 50,
           },
-          index: 1892,
+          index: 1896,
           preceding: "letcloseTargetCleanupFailure:{error:unknown}|undefined;",
           substantive: {
             digest:
@@ -141,7 +141,7 @@ export const test_cli_scaffold_writer_close_identity_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1930,
+          containerStatements: 1934,
           finallyDigest:
             "d16a1386f2ad61146e107c837fe3e6991847916d672d1ec378f7e9a08b52223e",
           finallySubstantive: {
@@ -149,7 +149,7 @@ export const test_cli_scaffold_writer_close_identity_cleanup = (): void => {
               "30e37c1353efda8eac83094a6d3b950f94ecd27ccdcdd3a83c3272bd42cc0482",
             tokens: 50,
           },
-          index: 1905,
+          index: 1909,
           preceding:
             "letforceCloseTargetCleanupFailure:{error:unknown}|undefined;",
           substantive: {
@@ -166,7 +166,7 @@ export const test_cli_scaffold_writer_close_identity_cleanup = (): void => {
           catchBodies: ["closeParentCleanupFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1930,
+          containerStatements: 1934,
           finallyDigest:
             "78b50ae43ea6548ed997f9445f4a672ffd7c0cd00d2045e6db7aac2f3cb2e679",
           finallySubstantive: {
@@ -174,7 +174,7 @@ export const test_cli_scaffold_writer_close_identity_cleanup = (): void => {
               "0f7b08030b7c4e01ed05de783028451c100be8604ddce8a2fe9a4bf6c52fbab9",
             tokens: 50,
           },
-          index: 1917,
+          index: 1921,
           preceding: "letcloseParentCleanupFailure:{error:unknown}|undefined;",
           substantive: {
             digest:
@@ -190,7 +190,7 @@ export const test_cli_scaffold_writer_close_identity_cleanup = (): void => {
           catchBodies: ["closeRootCleanupFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1930,
+          containerStatements: 1934,
           finallyDigest:
             "a71853ca57f34eeb330845011da025a34b5807a752c04e9477800184071e26e9",
           finallySubstantive: {
@@ -198,7 +198,7 @@ export const test_cli_scaffold_writer_close_identity_cleanup = (): void => {
               "ce88db1ec456c8f1a6f8f93714cc8f7f5fc1085bb136d6fb73ab9d37bcb25453",
             tokens: 50,
           },
-          index: 1928,
+          index: 1932,
           preceding: "letcloseRootCleanupFailure:{error:unknown}|undefined;",
           substantive: {
             digest:

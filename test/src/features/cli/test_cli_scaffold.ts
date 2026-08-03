@@ -7440,6 +7440,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       return descriptor;
     }) as typeof fs.openSync;
     let receiptParentSwapRejected = false;
+    let receiptParentSwapCleanupFailure: { error: unknown } | undefined;
     try {
       receiptParentSwapRejected = throws(() =>
         captureBrowserModule.publishCaptureInstallReceipt(
@@ -7448,8 +7449,18 @@ export const test_cli_scaffold = async (): Promise<void> => {
           () => undefined,
         ),
       );
+    } catch (error) {
+      receiptParentSwapCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.openSync = nativeOpen;
+      preserveCliHarnessCleanup(receiptParentSwapCleanupFailure, [
+        {
+          resource: "capture receipt parent swap open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "capture install preserves a generation-directory successor after descriptor open",
@@ -7487,6 +7498,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       ]) as number;
     }) as typeof fs.openSync;
     let foreignReceiptRejected = false;
+    let foreignReceiptCleanupFailure: { error: unknown } | undefined;
     try {
       foreignReceiptRejected = throws(() =>
         captureBrowserModule.publishCaptureInstallReceipt(
@@ -7495,8 +7507,18 @@ export const test_cli_scaffold = async (): Promise<void> => {
           () => undefined,
         ),
       );
+    } catch (error) {
+      foreignReceiptCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.openSync = nativeOpen;
+      preserveCliHarnessCleanup(foreignReceiptCleanupFailure, [
+        {
+          resource: "capture foreign receipt open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "capture install preserves a foreign generation-slot competitor",
@@ -7809,6 +7831,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       return status;
     }) as typeof fs.statSync;
     let receiptSegmentRaceRejected = false;
+    let receiptSegmentCleanupFailure: { error: unknown } | undefined;
     try {
       receiptSegmentRaceRejected = throws(() =>
         captureBrowserModule.publishCaptureInstallReceipt(
@@ -7817,8 +7840,18 @@ export const test_cli_scaffold = async (): Promise<void> => {
           () => undefined,
         ),
       );
+    } catch (error) {
+      receiptSegmentCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.statSync = nativeStat;
+      preserveCliHarnessCleanup(receiptSegmentCleanupFailure, [
+        {
+          resource: "capture receipt segment stat hook",
+          cleanup: () => {
+            mutableFs.statSync = nativeStat;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "capture install revalidates each created segment before the next write",
@@ -7856,6 +7889,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       return descriptor;
     }) as typeof fs.openSync;
     let receiptRootRaceRejected = false;
+    let receiptRootCleanupFailure: { error: unknown } | undefined;
     try {
       receiptRootRaceRejected = throws(() =>
         captureBrowserModule.publishCaptureInstallReceipt(
@@ -7864,8 +7898,18 @@ export const test_cli_scaffold = async (): Promise<void> => {
           () => undefined,
         ),
       );
+    } catch (error) {
+      receiptRootCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.openSync = nativeOpen;
+      preserveCliHarnessCleanup(receiptRootCleanupFailure, [
+        {
+          resource: "capture receipt root swap open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "capture install rejects a project root successor without cleaning it",
