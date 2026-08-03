@@ -85,6 +85,39 @@ export const preserveBenchmarkRunnerFixtureCleanup = (
   }
 };
 
+interface IBenchmarkRunnerHookCleanup {
+  cleanup: () => unknown;
+  resource: string;
+}
+
+class BenchmarkRunnerHookCleanupError extends AggregateError {}
+
+/** Attempt every benchmark harness hook restoration without hiding failure. */
+export const preserveBenchmarkRunnerHookCleanup = (
+  failure: IBenchmarkRunnerFixtureFailure | undefined,
+  resources: readonly IBenchmarkRunnerHookCleanup[],
+): void => {
+  const cleanupFailures: Array<{ error: unknown; resource: string }> = [];
+  for (const resource of resources)
+    try {
+      resource.cleanup();
+    } catch (error) {
+      cleanupFailures.push({ error, resource: resource.resource });
+    }
+  if (cleanupFailures.length === 1 && failure === undefined)
+    throw cleanupFailures[0]!.error;
+  if (cleanupFailures.length !== 0)
+    throw new BenchmarkRunnerHookCleanupError(
+      [
+        ...(failure === undefined ? [] : [failure.error]),
+        ...cleanupFailures.map((entry) => entry.error),
+      ],
+      `Benchmark runner hook cleanup failed${
+        failure === undefined ? "" : " after the benchmark failed"
+      }: ${cleanupFailures.map((entry) => entry.resource).join(", ")}.`,
+    );
+};
+
 /** The runner is exercised without invoking a model or network service. */
 export const test_benchmark_runner = async (): Promise<void> => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-runner-test-"));
@@ -871,14 +904,35 @@ const exerciseArchivePublicationSealRaces = async (
       }) as typeof fs.readFileSync;
     }
     let message: string;
+    let archiveSealFailure: IBenchmarkRunnerFixtureFailure | undefined;
     try {
       message = await rejected(() =>
         runAutoMovieBenchmark({ ...base, campaign }),
       );
+    } catch (error) {
+      archiveSealFailure = { error };
+      throw error;
     } finally {
-      fs.writeFileSync = nativeWrite;
-      fs.openSync = nativeOpen;
-      fs.readFileSync = nativeRead;
+      preserveBenchmarkRunnerHookCleanup(archiveSealFailure, [
+        {
+          resource: "archive-seal write hook",
+          cleanup: () => {
+            fs.writeFileSync = nativeWrite;
+          },
+        },
+        {
+          resource: "archive-seal open hook",
+          cleanup: () => {
+            fs.openSync = nativeOpen;
+          },
+        },
+        {
+          resource: "archive-seal read hook",
+          cleanup: () => {
+            fs.readFileSync = nativeRead;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       `archive publication rejects a ${phase} seal mutation`,
@@ -933,13 +987,29 @@ const exerciseArchiveVerifierRecordRace = async (
     return bytes;
   }) as typeof fs.readFileSync;
   let message: string;
+  let archiveVerifierFailure: IBenchmarkRunnerFixtureFailure | undefined;
   try {
     message = await rejected(() =>
       runAutoMovieBenchmark({ ...base, campaign }),
     );
+  } catch (error) {
+    archiveVerifierFailure = { error };
+    throw error;
   } finally {
-    fs.openSync = nativeOpen;
-    fs.readFileSync = nativeRead;
+    preserveBenchmarkRunnerHookCleanup(archiveVerifierFailure, [
+      {
+        resource: "archive-verifier open hook",
+        cleanup: () => {
+          fs.openSync = nativeOpen;
+        },
+      },
+      {
+        resource: "archive-verifier read hook",
+        cleanup: () => {
+          fs.readFileSync = nativeRead;
+        },
+      },
+    ]);
   }
   TestValidator.predicate(
     "archive verifier rejects a commit record changed after descriptor read",
@@ -1002,6 +1072,7 @@ const exerciseArchiveShapeLinks = async (
         return target;
       }) as typeof fs.readlinkSync;
     let message = "";
+    let archiveShapeFailure: IBenchmarkRunnerFixtureFailure | undefined;
     try {
       if (phase === "stable")
         await runAutoMovieBenchmark({ ...base, campaign });
@@ -1009,9 +1080,24 @@ const exerciseArchiveShapeLinks = async (
         message = await rejected(() =>
           runAutoMovieBenchmark({ ...base, campaign }),
         );
+    } catch (error) {
+      archiveShapeFailure = { error };
+      throw error;
     } finally {
-      fs.readdirSync = nativeReadDirectory;
-      fs.readlinkSync = nativeReadLink;
+      preserveBenchmarkRunnerHookCleanup(archiveShapeFailure, [
+        {
+          resource: "archive-shape readdir hook",
+          cleanup: () => {
+            fs.readdirSync = nativeReadDirectory;
+          },
+        },
+        {
+          resource: "archive-shape readlink hook",
+          cleanup: () => {
+            fs.readlinkSync = nativeReadLink;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       `archive shape ${phase === "stable" ? "records" : "rejects"} a physical link identity`,
