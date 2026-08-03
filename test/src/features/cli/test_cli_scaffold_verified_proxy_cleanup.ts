@@ -115,7 +115,7 @@ export const test_cli_scaffold_verified_proxy_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1925,
+          containerStatements: 1930,
           finallyDigest:
             "d00876a73d3676827029dede236cbe84ef1e558dc5e4b37b774d41db08ed53cf",
           finallySubstantive: {
@@ -123,7 +123,7 @@ export const test_cli_scaffold_verified_proxy_cleanup = (): void => {
               "1ddd419a3bbd5e5fd81ff927f9fcc84ae3230b225fdce64cbc63f6664c7a58df",
             tokens: 115,
           },
-          index: 336,
+          index: 341,
           preceding:
             "letverifiedProxyTreeCleanupFailure:{error:unknown}|undefined;",
           substantive: {
@@ -143,7 +143,7 @@ export const test_cli_scaffold_verified_proxy_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1925,
+          containerStatements: 1930,
           finallyDigest:
             "700a1adbe2c656b62d88d2efac6ef77f32b3ef96274b83482763fb3d5ae65c3d",
           finallySubstantive: {
@@ -151,7 +151,7 @@ export const test_cli_scaffold_verified_proxy_cleanup = (): void => {
               "70b4dbd7cf747cfa0354387023ede667b69c4b1f0af9b3408d37a09a6e4b3f0b",
             tokens: 99,
           },
-          index: 347,
+          index: 352,
           preceding:
             "letverifiedProxyInventoryCleanupFailure:{error:unknown}|undefined;",
           substantive: {

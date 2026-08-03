@@ -116,7 +116,7 @@ export const test_cli_scaffold_runtime_package_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1925,
+          containerStatements: 1930,
           finallyDigest:
             "e52a087bacf5f1a99cb27b855ed82acb6b02faca8f7a15e8b9d3af1d001feba6",
           finallySubstantive: {
@@ -124,7 +124,7 @@ export const test_cli_scaffold_runtime_package_cleanup = (): void => {
               "5e161ce5989d1165cb7acf34a0311a9704ffd6f893fd3b222b8e7f6b4ec89f20",
             tokens: 77,
           },
-          index: 370,
+          index: 375,
           preceding:
             "letruntimeManifestCleanupFailure:{error:unknown}|undefined;",
           substantive: {
@@ -141,7 +141,7 @@ export const test_cli_scaffold_runtime_package_cleanup = (): void => {
           catchBodies: ["runtimeEntryCleanupFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1925,
+          containerStatements: 1930,
           finallyDigest:
             "966469116e2c84ee8efa23eb5170eb602f9744c74b4acf7df16e4ace28ed334a",
           finallySubstantive: {
@@ -149,7 +149,7 @@ export const test_cli_scaffold_runtime_package_cleanup = (): void => {
               "c80183210cb73942cfccc780198e8be202fdaabd0730d0b241b89b16d4d88b1d",
             tokens: 77,
           },
-          index: 377,
+          index: 382,
           preceding: "letruntimeEntryCleanupFailure:{error:unknown}|undefined;",
           substantive: {
             digest:
@@ -167,7 +167,7 @@ export const test_cli_scaffold_runtime_package_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1925,
+          containerStatements: 1930,
           finallyDigest:
             "668754d6e71a2ddb2f509639f44fded1911cc61dc0015b653c9fe4e19ef71da2",
           finallySubstantive: {
@@ -175,7 +175,7 @@ export const test_cli_scaffold_runtime_package_cleanup = (): void => {
               "bca2541427e5391902b0dbfa59bf8ebe8dcc23a7179740574cb25fd2eadbe85f",
             tokens: 57,
           },
-          index: 385,
+          index: 390,
           preceding:
             "letruntimeInventoryCleanupFailure:{error:unknown}|undefined;",
           substantive: {

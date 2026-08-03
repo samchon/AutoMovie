@@ -4686,6 +4686,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       return Reflect.apply(nativeMkdir, mutableFs, [directory, ...args]);
     }) as typeof fs.mkdirSync;
     let emptySuccessorCompleted = false;
+    let emptySuccessorCleanupFailure: { error: unknown } | undefined;
     try {
       proxyPublisherModule.publishProxyBundle({
         expected: proxyPublishFiles,
@@ -4695,8 +4696,18 @@ export const test_cli_scaffold = async (): Promise<void> => {
         target: emptySuccessorTarget,
       });
       emptySuccessorCompleted = true;
+    } catch (error) {
+      emptySuccessorCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.mkdirSync = nativeMkdir;
+      preserveCliHarnessCleanup(emptySuccessorCleanupFailure, [
+        {
+          resource: "proxy empty successor mkdir hook",
+          cleanup: () => {
+            mutableFs.mkdirSync = nativeMkdir;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "proxy publisher monotonically completes an empty destination competitor",
@@ -4738,6 +4749,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       return Reflect.apply(nativeMkdir, mutableFs, [directory, ...args]);
     }) as typeof fs.mkdirSync;
     let exactSuccessorAccepted = false;
+    let exactSuccessorCleanupFailure: { error: unknown } | undefined;
     try {
       proxyPublisherModule.publishProxyBundle({
         expected: proxyPublishFiles,
@@ -4747,8 +4759,18 @@ export const test_cli_scaffold = async (): Promise<void> => {
         target: exactSuccessorTarget,
       });
       exactSuccessorAccepted = true;
+    } catch (error) {
+      exactSuccessorCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.mkdirSync = nativeMkdir;
+      preserveCliHarnessCleanup(exactSuccessorCleanupFailure, [
+        {
+          resource: "proxy exact successor mkdir hook",
+          cleanup: () => {
+            mutableFs.mkdirSync = nativeMkdir;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "proxy publisher verifies an exact directory competitor without replacing it",
@@ -4790,6 +4812,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       return descriptor;
     }) as typeof fs.openSync;
     let proxyParentSwapRejected = false;
+    let proxyParentSwapCleanupFailure: { error: unknown } | undefined;
     try {
       proxyParentSwapRejected = throws(() =>
         proxyPublisherModule.publishProxyBundle({
@@ -4800,8 +4823,18 @@ export const test_cli_scaffold = async (): Promise<void> => {
           target: parentSwapTarget,
         }),
       );
+    } catch (error) {
+      proxyParentSwapCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.openSync = nativeOpen;
+      preserveCliHarnessCleanup(proxyParentSwapCleanupFailure, [
+        {
+          resource: "proxy parent swap open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "proxy publisher rejects and preserves a physical parent successor",
@@ -4837,6 +4870,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       return descriptor;
     }) as typeof fs.openSync;
     let proxyRootSwapRejected = false;
+    let proxyRootSwapCleanupFailure: { error: unknown } | undefined;
     try {
       proxyRootSwapRejected = throws(() =>
         proxyPublisherModule.publishProxyBundle({
@@ -4847,8 +4881,18 @@ export const test_cli_scaffold = async (): Promise<void> => {
           target: rootSwapTarget,
         }),
       );
+    } catch (error) {
+      proxyRootSwapCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.openSync = nativeOpen;
+      preserveCliHarnessCleanup(proxyRootSwapCleanupFailure, [
+        {
+          resource: "proxy root swap open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "proxy publisher rejects and preserves a physical render-root successor",
@@ -4888,6 +4932,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       ]) as number;
     }) as typeof fs.openSync;
     let partialSuccessorRejected = false;
+    let partialSuccessorCleanupFailure: { error: unknown } | undefined;
     try {
       partialSuccessorRejected = throws(() =>
         proxyPublisherModule.publishProxyBundle({
@@ -4898,8 +4943,18 @@ export const test_cli_scaffold = async (): Promise<void> => {
           target: partialSuccessorTarget,
         }),
       );
+    } catch (error) {
+      partialSuccessorCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.openSync = nativeOpen;
+      preserveCliHarnessCleanup(partialSuccessorCleanupFailure, [
+        {
+          resource: "proxy partial successor open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "proxy publisher preserves a partial file appearing at commit",
