@@ -3771,11 +3771,62 @@ export const test_mcp_production_project = (): void => {
     }) as typeof fs.writeFileSync;
     let outerLease: ReturnType<typeof acquireProductionRootNamespace>;
     let innerLease: ReturnType<typeof acquireProductionRootNamespace>;
+    let reentrantAcquisitionFailure:
+      | IProductionProjectFixtureFailure
+      | undefined;
     try {
       outerLease = acquireProductionRootNamespace(aliasProject);
       innerLease = acquireProductionRootNamespace(aliasProject);
+    } catch (error) {
+      reentrantAcquisitionFailure = { error };
+      throw error;
     } finally {
-      fs.writeFileSync = nativeWriteForReentrancy;
+      const acquiredInnerLease =
+        typeof innerLease === "undefined" ? undefined : innerLease;
+      const acquiredOuterLease =
+        typeof outerLease === "undefined" ? undefined : outerLease;
+      let reentrantHookRestoreFailed = false;
+      preserveProductionProjectFixtureCleanup(reentrantAcquisitionFailure, [
+        {
+          resource: "reentrant namespace write hook",
+          cleanup: () => {
+            try {
+              fs.writeFileSync = nativeWriteForReentrancy;
+            } catch (error) {
+              reentrantHookRestoreFailed = true;
+              throw error;
+            }
+          },
+        },
+        ...(acquiredInnerLease === undefined
+          ? []
+          : [
+              {
+                resource: "reentrant inner namespace lease",
+                cleanup: () => {
+                  if (
+                    reentrantAcquisitionFailure !== undefined ||
+                    reentrantHookRestoreFailed
+                  )
+                    releaseProductionRootNamespace(acquiredInnerLease);
+                },
+              },
+            ]),
+        ...(acquiredOuterLease === undefined
+          ? []
+          : [
+              {
+                resource: "reentrant outer namespace lease",
+                cleanup: () => {
+                  if (
+                    reentrantAcquisitionFailure !== undefined ||
+                    reentrantHookRestoreFailed
+                  )
+                    releaseProductionRootNamespace(acquiredOuterLease);
+                },
+              },
+            ]),
+      ]);
     }
     const heldAfterInnerRelease = ((): boolean => {
       releaseProductionRootNamespace(innerLease);
