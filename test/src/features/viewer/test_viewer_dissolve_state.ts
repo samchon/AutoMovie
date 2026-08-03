@@ -10,18 +10,63 @@ const makeFakeRenderer = (width: number, height: number) => {
   const targets: Array<THREE.WebGLRenderTarget | null> = [];
   const size = new THREE.Vector2(width, height);
   let target: THREE.WebGLRenderTarget | null = null;
+  let autoClear = true;
+  let renderFailure: { error: unknown } | undefined;
+  let autoClearRestorationFailure: { error: unknown } | undefined;
+  let targetRestorationFailure:
+    | { target: THREE.WebGLRenderTarget | null; error: unknown }
+    | undefined;
+  const restorationAttempts = {
+    autoClear: 0,
+    target: 0,
+  };
   const renderer = {
-    autoClear: true,
+    get autoClear(): boolean {
+      return autoClear;
+    },
+    set autoClear(value: boolean) {
+      if (value && autoClearRestorationFailure !== undefined) {
+        restorationAttempts.autoClear += 1;
+        throw autoClearRestorationFailure.error;
+      }
+      autoClear = value;
+    },
     getDrawingBufferSize: (v: THREE.Vector2) => v.copy(size),
     getContextAttributes: () => ({ antialias: true }),
     getRenderTarget: () => target,
     setRenderTarget: (t: THREE.WebGLRenderTarget | null) => {
+      if (
+        targetRestorationFailure !== undefined &&
+        t === targetRestorationFailure.target
+      ) {
+        restorationAttempts.target += 1;
+        throw targetRestorationFailure.error;
+      }
       target = t;
       targets.push(t);
     },
-    render: () => {},
+    render: () => {
+      if (renderFailure !== undefined) throw renderFailure.error;
+    },
   } as unknown as THREE.WebGLRenderer;
-  return { renderer, targets, size };
+  return {
+    renderer,
+    targets,
+    size,
+    restorationAttempts,
+    failRender: (error: unknown): void => {
+      renderFailure = { error };
+    },
+    failAutoClearRestoration: (error: unknown): void => {
+      autoClearRestorationFailure = { error };
+    },
+    failTargetRestoration: (
+      restorationTarget: THREE.WebGLRenderTarget | null,
+      error: unknown,
+    ): void => {
+      targetRestorationFailure = { target: restorationTarget, error };
+    },
+  };
 };
 
 const noop = (): void => {};
@@ -111,23 +156,83 @@ export const test_viewer_dissolve_state = (): void => {
   const prior = new THREE.WebGLRenderTarget(1, 1);
   b.renderer.setRenderTarget(prior);
   renderCrossDissolveFrames(b.renderer, noop, noop, 0.5);
-  const errorTargets = makeFakeRenderer(8, 8);
-  let failedClosed = false;
+  const primaryOnly = makeFakeRenderer(8, 8);
+  const primaryFailure = new Error("outgoing failed");
+  let primaryCaught: unknown;
   try {
     renderCrossDissolveFrames(
-      errorTargets.renderer,
+      primaryOnly.renderer,
       () => {
-        throw new Error("outgoing failed");
+        throw primaryFailure;
       },
       noop,
       0.5,
     );
-  } catch {
-    failedClosed = true;
+  } catch (error) {
+    primaryCaught = error;
+  }
+
+  const standaloneAutoClear = makeFakeRenderer(8, 8);
+  const autoClearFailure = new Error("autoClear restoration failed");
+  standaloneAutoClear.failAutoClearRestoration(autoClearFailure);
+  let standaloneAutoClearCaught: unknown;
+  try {
+    renderCrossDissolveFrames(standaloneAutoClear.renderer, noop, noop, 0.5);
+  } catch (error) {
+    standaloneAutoClearCaught = error;
+  }
+
+  const standaloneTarget = makeFakeRenderer(8, 8);
+  const targetFailure = new Error("render-target restoration failed");
+  const standalonePrior = new THREE.WebGLRenderTarget(1, 1);
+  standaloneTarget.renderer.setRenderTarget(standalonePrior);
+  standaloneTarget.failTargetRestoration(standalonePrior, targetFailure);
+  let standaloneTargetCaught: unknown;
+  try {
+    renderCrossDissolveFrames(standaloneTarget.renderer, noop, noop, 0.5);
+  } catch (error) {
+    standaloneTargetCaught = error;
+  }
+
+  const standaloneMultiple = makeFakeRenderer(8, 8);
+  const standaloneMultiplePrior = new THREE.WebGLRenderTarget(1, 1);
+  const standaloneAutoClearFailure = new Error(
+    "standalone autoClear restoration failed",
+  );
+  const standaloneTargetFailure = new Error(
+    "standalone render-target restoration failed",
+  );
+  standaloneMultiple.renderer.setRenderTarget(standaloneMultiplePrior);
+  standaloneMultiple.failAutoClearRestoration(standaloneAutoClearFailure);
+  standaloneMultiple.failTargetRestoration(
+    standaloneMultiplePrior,
+    standaloneTargetFailure,
+  );
+  let standaloneMultipleCaught: unknown;
+  try {
+    renderCrossDissolveFrames(standaloneMultiple.renderer, noop, noop, 0.5);
+  } catch (error) {
+    standaloneMultipleCaught = error;
+  }
+
+  const combined = makeFakeRenderer(8, 8);
+  const combinedPrior = new THREE.WebGLRenderTarget(1, 1);
+  const combinedPrimaryFailure = new Error("composite render failed");
+  const combinedAutoClearFailure = new Error("autoClear recovery failed");
+  const combinedTargetFailure = new Error("render-target recovery failed");
+  combined.renderer.setRenderTarget(combinedPrior);
+  combined.failRender(combinedPrimaryFailure);
+  combined.failAutoClearRestoration(combinedAutoClearFailure);
+  combined.failTargetRestoration(combinedPrior, combinedTargetFailure);
+  let combinedCaught: unknown;
+  try {
+    renderCrossDissolveFrames(combined.renderer, noop, noop, 0.5);
+  } catch (error) {
+    combinedCaught = error;
   }
   let invalidAlpha = false;
   try {
-    renderCrossDissolveFrames(errorTargets.renderer, noop, noop, 2);
+    renderCrossDissolveFrames(primaryOnly.renderer, noop, noop, 2);
   } catch {
     invalidAlpha = true;
   }
@@ -135,9 +240,29 @@ export const test_viewer_dissolve_state = (): void => {
     "generic dissolve renders both halves and restores GPU state on every exit",
     halves === "out-in" &&
       b.targets.at(-1) === prior &&
-      failedClosed &&
-      errorTargets.targets.at(-1) === null &&
+      primaryCaught === primaryFailure &&
+      primaryOnly.targets.at(-1) === null &&
+      standaloneAutoClearCaught === autoClearFailure &&
+      standaloneAutoClear.restorationAttempts.autoClear === 1 &&
+      standaloneTargetCaught === targetFailure &&
+      standaloneTarget.restorationAttempts.target === 1 &&
+      standaloneMultipleCaught instanceof AggregateError &&
+      standaloneMultipleCaught.errors.length === 2 &&
+      standaloneMultipleCaught.errors[0] === standaloneAutoClearFailure &&
+      standaloneMultipleCaught.errors[1] === standaloneTargetFailure &&
+      standaloneMultiple.restorationAttempts.autoClear === 1 &&
+      standaloneMultiple.restorationAttempts.target === 1 &&
+      combinedCaught instanceof AggregateError &&
+      combinedCaught.errors.length === 3 &&
+      combinedCaught.errors[0] === combinedPrimaryFailure &&
+      combinedCaught.errors[1] === combinedAutoClearFailure &&
+      combinedCaught.errors[2] === combinedTargetFailure &&
+      combined.restorationAttempts.autoClear === 1 &&
+      combined.restorationAttempts.target === 1 &&
       invalidAlpha,
   );
   prior.dispose();
+  standalonePrior.dispose();
+  standaloneMultiplePrior.dispose();
+  combinedPrior.dispose();
 };

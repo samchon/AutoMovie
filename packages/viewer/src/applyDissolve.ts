@@ -28,6 +28,40 @@ interface IDissolveState {
   quadGeometry: THREE.PlaneGeometry;
 }
 
+class DissolveStateRestorationError extends AggregateError {}
+
+const restoreDissolveRendererState = (
+  renderer: THREE.WebGLRenderer,
+  previousAutoClear: boolean,
+  previousTarget: THREE.WebGLRenderTarget | null,
+  restoreTarget: boolean,
+  failure: { error: unknown } | undefined,
+): void => {
+  const restorationFailures: unknown[] = [];
+  try {
+    renderer.autoClear = previousAutoClear;
+  } catch (error) {
+    restorationFailures.push(error);
+  }
+  if (restoreTarget)
+    try {
+      renderer.setRenderTarget(previousTarget);
+    } catch (error) {
+      restorationFailures.push(error);
+    }
+  if (restorationFailures.length === 0) return;
+  if (failure === undefined && restorationFailures.length === 1)
+    throw restorationFailures[0];
+  throw new DissolveStateRestorationError(
+    failure === undefined
+      ? restorationFailures
+      : [failure.error, ...restorationFailures],
+    failure === undefined
+      ? "Cross-dissolve renderer-state restoration failed."
+      : "Cross-dissolve renderer-state restoration failed after rendering failed.",
+  );
+};
+
 const states = new WeakMap<THREE.WebGLRenderer, IDissolveState>();
 
 export const renderCrossDissolveFrames = (
@@ -78,6 +112,7 @@ export const renderCrossDissolveFrames = (
   const previousTarget = renderer.getRenderTarget?.() ?? null;
   const previousAutoClear = renderer.autoClear;
   let screenSelected = false;
+  let failure: { error: unknown } | undefined;
   try {
     // outgoing → offscreen target (autoClear wipes it first)
     renderer.setRenderTarget(state.target);
@@ -92,10 +127,17 @@ export const renderCrossDissolveFrames = (
     state.quadMaterial.opacity = 1 - alpha;
     renderer.autoClear = false;
     renderer.render(state.quadScene, state.quadCamera);
+  } catch (error) {
+    failure = { error };
+    throw error;
   } finally {
-    renderer.autoClear = previousAutoClear;
-    if (screenSelected === false || previousTarget !== null)
-      renderer.setRenderTarget(previousTarget);
+    restoreDissolveRendererState(
+      renderer,
+      previousAutoClear,
+      previousTarget,
+      screenSelected === false || previousTarget !== null,
+      failure,
+    );
   }
 };
 
