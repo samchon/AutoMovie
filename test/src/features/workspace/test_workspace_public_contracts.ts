@@ -791,6 +791,7 @@ const packagedAssetReviewContract = (
     verifierCommands: string[];
   };
   embeddedScripts: number;
+  filmFrameOwnership: string[];
   frameEvidence: Array<Array<[string, string]>>;
   guideLoops: Array<{
     body: string;
@@ -816,6 +817,7 @@ const packagedAssetReviewContract = (
   reviewPhases: number;
   worksheetEvidence: Array<{
     acceptanceCondition: string;
+    acceptanceFrameMatch: string | null;
     assetCondition: string | null;
     assetEvidence: string | null;
     exactEvidence: string | null;
@@ -1033,6 +1035,7 @@ const packagedAssetReviewContract = (
   }> = [];
   const worksheetEvidence: Array<{
     acceptanceCondition: string;
+    acceptanceFrameMatch: string | null;
     assetCondition: string | null;
     assetEvidence: string | null;
     exactEvidence: string | null;
