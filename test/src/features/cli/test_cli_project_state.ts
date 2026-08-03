@@ -48,6 +48,39 @@ export const preserveProjectStateFixtureCleanup = (
   }
 };
 
+interface IProjectStateHarnessCleanup {
+  cleanup: () => unknown;
+  resource: string;
+}
+
+class ProjectStateHarnessCleanupError extends AggregateError {}
+
+/** Attempt every project-state harness restoration without hiding failure. */
+export const preserveProjectStateHarnessCleanup = (
+  failure: IProjectStateFixtureFailure | undefined,
+  resources: readonly IProjectStateHarnessCleanup[],
+): void => {
+  const cleanupFailures: Array<{ error: unknown; resource: string }> = [];
+  for (const resource of resources)
+    try {
+      resource.cleanup();
+    } catch (error) {
+      cleanupFailures.push({ error, resource: resource.resource });
+    }
+  if (cleanupFailures.length === 1 && failure === undefined)
+    throw cleanupFailures[0]!.error;
+  if (cleanupFailures.length !== 0)
+    throw new ProjectStateHarnessCleanupError(
+      [
+        ...(failure === undefined ? [] : [failure.error]),
+        ...cleanupFailures.map((entry) => entry.error),
+      ],
+      `Project-state harness cleanup failed${
+        failure === undefined ? "" : " after the state read failed"
+      }: ${cleanupFailures.map((entry) => entry.resource).join(", ")}.`,
+    );
+};
+
 /**
  * The transport-free project reader authenticates one compiled snapshot, feeds
  * its typed values directly to pure engine geometry, and refuses stale bytes.
@@ -183,13 +216,29 @@ export const test_cli_project_state = (): void => {
           replacements.get(file) ?? readGeneratedFileMethod.call(this, file)
         );
       };
+      let manifestReadFailure: IProjectStateFixtureFailure | undefined;
       try {
         return loadAutoMovieProjectState({ root: fixture.root });
+      } catch (error) {
+        manifestReadFailure = { error };
+        throw error;
       } finally {
-        AutoMovieProductionProject.prototype.generatedManifest =
-          generatedManifestMethod;
-        AutoMovieProductionProject.prototype.readGeneratedFile =
-          readGeneratedFileMethod;
+        preserveProjectStateHarnessCleanup(manifestReadFailure, [
+          {
+            resource: "generated-manifest prototype hook",
+            cleanup: () => {
+              AutoMovieProductionProject.prototype.generatedManifest =
+                generatedManifestMethod;
+            },
+          },
+          {
+            resource: "generated-file prototype hook",
+            cleanup: () => {
+              AutoMovieProductionProject.prototype.readGeneratedFile =
+                readGeneratedFileMethod;
+            },
+          },
+        ]);
       }
     };
     const manifestWith = (
@@ -375,11 +424,27 @@ export const test_cli_project_state = (): void => {
       return output;
     };
     let raced: ReturnType<typeof loadAutoMovieProjectState>;
+    let sourceRaceFailure: IProjectStateFixtureFailure | undefined;
     try {
       raced = loadAutoMovieProjectState({ root: fixture.root });
+    } catch (error) {
+      sourceRaceFailure = { error };
+      throw error;
     } finally {
-      AutoMovieProductionCompiler.prototype.lint = lint;
-      fs.writeFileSync(sourcePath, originalSource);
+      preserveProjectStateHarnessCleanup(sourceRaceFailure, [
+        {
+          resource: "compiler-lint prototype hook",
+          cleanup: () => {
+            AutoMovieProductionCompiler.prototype.lint = lint;
+          },
+        },
+        {
+          resource: "source bytes",
+          cleanup: () => {
+            fs.writeFileSync(sourcePath, originalSource);
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "source changes between fingerprint fences cannot look current",
