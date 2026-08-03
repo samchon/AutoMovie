@@ -77,6 +77,8 @@ const benchmarkResidentCleanupContract = (text: string): unknown => {
       compact(node.finallyBlock, source).includes(
         "preserveBenchmarkRunnerResidentCleanup(",
       ) &&
+      (compact(node.finallyBlock, source).match(/resource:/g)?.length ?? 0) >
+        1 &&
       ts.isBlock(node.parent)
     ) {
       const statements = [...node.parent.statements];

@@ -781,12 +781,23 @@ const exerciseArchivePublicationRaces = async (
       nativeRename(oldPath, newPath);
     }) as typeof fs.renameSync;
     let message: string;
+    let archivePublicationFailure: IBenchmarkRunnerFixtureFailure | undefined;
     try {
       message = await rejected(() =>
         runAutoMovieBenchmark({ ...base, campaign }),
       );
+    } catch (error) {
+      archivePublicationFailure = { error };
+      throw error;
     } finally {
-      fs.renameSync = nativeRename;
+      preserveBenchmarkRunnerHookCleanup(archivePublicationFailure, [
+        {
+          resource: "archive-publication rename hook",
+          cleanup: () => {
+            fs.renameSync = nativeRename;
+          },
+        },
+      ]);
     }
     const retryMessage =
       phase === "final"
@@ -1449,6 +1460,7 @@ const exerciseInputAndFilesystemFences = async (
     await Reflect.apply(nativeClientClose, this, []);
     throw cleanupFailure;
   };
+  let mcpProbeHarnessFailure: IBenchmarkRunnerFixtureFailure | undefined;
   try {
     cleanupOnlyFailure = await rejectedValue(() =>
       mcpTarget.probe({
@@ -1462,8 +1474,18 @@ const exerciseInputAndFilesystemFences = async (
         project: root,
       }),
     );
+  } catch (error) {
+    mcpProbeHarnessFailure = { error };
+    throw error;
   } finally {
-    Client.prototype.close = nativeClientClose;
+    preserveBenchmarkRunnerHookCleanup(mcpProbeHarnessFailure, [
+      {
+        resource: "MCP-probe client-close hook",
+        cleanup: () => {
+          Client.prototype.close = nativeClientClose;
+        },
+      },
+    ]);
   }
   TestValidator.predicate(
     "process MCP probes preserve cleanup failures",
@@ -1883,6 +1905,7 @@ const exerciseSnapshotLink = (root: string): void => {
     linked,
     process.platform === "win32" ? "junction" : "dir",
   );
+  let snapshotLinkFailure: IBenchmarkRunnerFixtureFailure | undefined;
   try {
     const resident = fs.readFileSync(evidence);
     const parked = `${evidence}.parked`;
@@ -1966,8 +1989,16 @@ const exerciseSnapshotLink = (root: string): void => {
         evidenceEntry.bytes === resident.length &&
         evidenceEntry.digest === digestAutoMovieBenchmarkBytes(resident),
     );
+  } catch (error) {
+    snapshotLinkFailure = { error };
+    throw error;
   } finally {
-    fs.unlinkSync(linked);
+    preserveBenchmarkRunnerResidentCleanup(snapshotLinkFailure, [
+      {
+        resource: "snapshot linked view",
+        cleanup: () => fs.unlinkSync(linked),
+      },
+    ]);
   }
 };
 
