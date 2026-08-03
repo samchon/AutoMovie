@@ -5,6 +5,28 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+interface ILegacySceneFixtureFailure {
+  error: unknown;
+}
+
+class LegacySceneFixtureCleanupError extends AggregateError {}
+
+/** Remove the legacy-scene root without replacing its primary failure. */
+export const preserveLegacySceneFixtureCleanup = (
+  failure: ILegacySceneFixtureFailure | undefined,
+  cleanup: () => unknown,
+): void => {
+  try {
+    cleanup();
+  } catch (cleanupFailure) {
+    if (failure === undefined) throw cleanupFailure;
+    throw new LegacySceneFixtureCleanupError(
+      [failure.error, cleanupFailure],
+      "Legacy-scene fixture cleanup failed after the test failed.",
+    );
+  }
+};
+
 const scene: IAutoMovieScene = {
   id: "scene-1",
   name: "a door",
@@ -38,6 +60,7 @@ const scene: IAutoMovieScene = {
  */
 export const test_mcp_project_legacy_scene_slice = (): void => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-legacy-"));
+  let legacySceneFailure: ILegacySceneFixtureFailure | undefined;
   try {
     AutoMovieProject.open(root);
     const legacy = path.join(root, "scene.json");
@@ -77,7 +100,12 @@ export const test_mcp_project_legacy_scene_slice = (): void => {
       AutoMovieProject.open(root).storedSlate().scenes,
       [replaced],
     );
+  } catch (error) {
+    legacySceneFailure = { error };
+    throw error;
   } finally {
-    fs.rmSync(root, { recursive: true, force: true });
+    preserveLegacySceneFixtureCleanup(legacySceneFailure, () =>
+      fs.rmSync(root, { recursive: true, force: true }),
+    );
   }
 };
