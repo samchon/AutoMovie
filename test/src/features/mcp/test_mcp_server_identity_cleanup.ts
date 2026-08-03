@@ -230,6 +230,10 @@ export const test_mcp_server_identity_cleanup = async (): Promise<void> => {
   const serverFailure = { phase: "server close" };
   const fixtureFailure = { phase: "fixture disposal" };
   const success = await captureCleanup({});
+  const fixtureOnlySetup = await captureCleanup({
+    connections: 0,
+    primaryFailure: { error: primaryFailure, present: true },
+  });
   const partialSetup = await captureCleanup({
     connections: 1,
     primaryFailure: { error: primaryFailure, present: true },
@@ -279,6 +283,11 @@ export const test_mcp_server_identity_cleanup = async (): Promise<void> => {
       success.connectionAttempts.join(",") === "1,1" &&
       success.fixtureAttempts === 1 &&
       success.order.join(",") === "connection-0,connection-1,fixture" &&
+      fixtureOnlySetup.caught &&
+      fixtureOnlySetup.failure === primaryFailure &&
+      fixtureOnlySetup.connectionAttempts.length === 0 &&
+      fixtureOnlySetup.fixtureAttempts === 1 &&
+      fixtureOnlySetup.order.join(",") === "fixture" &&
       partialSetup.caught &&
       partialSetup.failure === primaryFailure &&
       partialSetup.connectionAttempts.join(",") === "1" &&
