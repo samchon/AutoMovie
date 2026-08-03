@@ -30,7 +30,7 @@ const leafTokenContract = (
   };
 };
 
-const verifiedProxyCleanupContract = (text: string): unknown => {
+const captureExecutableCleanupContract = (text: string): unknown => {
   const source = ts.createSourceFile(
     "test_cli_scaffold.ts",
     text,
@@ -39,8 +39,9 @@ const verifiedProxyCleanupContract = (text: string): unknown => {
     ts.ScriptKind.TS,
   );
   const anchors = [
-    "verifiedproxytreelstathook",
-    "verifiedproxyinventoryopenhook",
+    "captureexecutablelstathook",
+    "capturecreateopenhook",
+    "captureopenopenhook",
   ];
   const lifecycles: Array<{
     catchBodies: string[];
@@ -50,7 +51,7 @@ const verifiedProxyCleanupContract = (text: string): unknown => {
     finallyDigest: string;
     finallySubstantive: { digest: string; tokens: number };
     index: number;
-    preceding: string;
+    preceding: string[];
     substantive: { digest: string; tokens: number };
     tryBody: string;
     tryDigest: string;
@@ -83,7 +84,9 @@ const verifiedProxyCleanupContract = (text: string): unknown => {
           source,
         ),
         index,
-        preceding: compact(statements[index - 1]!, source),
+        preceding: statements
+          .slice(Math.max(0, index - 2), index)
+          .map((statement) => compact(statement, source)),
         substantive: leafTokenContract(node.tryBlock.statements, source),
         tryBody: compact(node.tryBlock, source),
         tryDigest: digestText(node.tryBlock.getText(source)),
@@ -100,69 +103,103 @@ const verifiedProxyCleanupContract = (text: string): unknown => {
   };
 };
 
-export const test_cli_scaffold_verified_proxy_cleanup = (): void => {
+export const test_cli_scaffold_capture_executable_cleanup = (): void => {
   TestValidator.equals(
-    "CLI scaffold owns two verified proxy cleanup lifecycles",
-    verifiedProxyCleanupContract(
+    "CLI scaffold owns three capture executable cleanup lifecycles",
+    captureExecutableCleanupContract(
       fs.readFileSync(path.join(__dirname, "test_cli_scaffold.ts"), "utf8"),
     ),
     {
       lifecycles: [
         {
           catchBodies: [
-            "verifiedProxyTreeCleanupFailure={error};",
+            "captureExecutableRaceCleanupFailure={error};",
             "throwerror;",
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
           containerStatements: 1891,
           finallyDigest:
-            "d00876a73d3676827029dede236cbe84ef1e558dc5e4b37b774d41db08ed53cf",
+            "5100831c7000fbbf0c6603b92aeaeffe1aede7de5457aa6d0518512f2256346d",
           finallySubstantive: {
             digest:
-              "1ddd419a3bbd5e5fd81ff927f9fcc84ae3230b225fdce64cbc63f6664c7a58df",
-            tokens: 115,
+              "456e4b22c56a35e3053064578a41b4d87d53b30cc85b594e6d956819a0b0fbc4",
+            tokens: 77,
           },
-          index: 336,
-          preceding:
-            "letverifiedProxyTreeCleanupFailure:{error:unknown}|undefined;",
+          index: 400,
+          preceding: [
+            "letcaptureExecutableRaceRejected=false;",
+            "letcaptureExecutableRaceCleanupFailure:{error:unknown}|undefined;",
+          ],
           substantive: {
             digest:
-              "ce3268fc7c1fad4e7c34596cf3a3a2c63dc939da651fb661835639e4ac63ebe9",
-            tokens: 19,
+              "6a7668d286e6988d3678f5906f9340ca5dacb20e9f7b425f0fdd66fa41aeed09",
+            tokens: 16,
           },
           tryBody:
-            "{verifiedProxyTreeSuccessorRejected=throws(()=>proxyModule.inspectPublishedProxyBundle(verifiedProxyRoot,verifiedProxyBundle,),);}",
+            "{captureExecutableRaceRejected=throws(()=>captureExecutableModule.openCaptureExecutable(captureExecutable),);}",
           tryDigest:
-            "b86be392535b10de1b87f6ca31c414725299bc2bdc09fb45f6cd88abf4012814",
+            "fe5c113f4151f76dba679d2fcb21020192c20483f34e7193968e005f91c768b6",
         },
         {
           catchBodies: [
-            "verifiedProxyInventoryCleanupFailure={error};",
-            "throwerror;",
+            "combinedCreateSnapshotFailure=error;",
+            "createSnapshotHookCleanupFailure={error};",
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
           containerStatements: 1891,
           finallyDigest:
-            "700a1adbe2c656b62d88d2efac6ef77f32b3ef96274b83482763fb3d5ae65c3d",
+            "54cdb4ca3530328b7a7d4e95d164d3a245b220f00e3ca496072966ad30f72281",
           finallySubstantive: {
             digest:
-              "70b4dbd7cf747cfa0354387023ede667b69c4b1f0af9b3408d37a09a6e4b3f0b",
-            tokens: 99,
+              "740dc3dd13a751fabefd4b899160f45c032519062963edb4dce587c44fb005ee",
+            tokens: 71,
           },
-          index: 347,
-          preceding:
-            "letverifiedProxyInventoryCleanupFailure:{error:unknown}|undefined;",
+          index: 412,
+          preceding: [
+            "letcombinedCreateSnapshotFailure:unknown;",
+            "letcreateSnapshotHookCleanupFailure:{error:unknown}|undefined;",
+          ],
           substantive: {
             digest:
-              "e1950d54cb638d63807470a9504cbf95901ba090fc5e7cebb9539fa78a6b410b",
-            tokens: 19,
+              "0866d55589c8805e1424e143d3ea088f25993fa3a5bd3d08dcd98b7a97f8bce5",
+            tokens: 15,
           },
           tryBody:
-            "{verifiedProxyLateMutationRejected=throws(()=>proxyModule.inspectPublishedProxyBundle(verifiedProxyRoot,verifiedProxyBundle,),);}",
+            '{captureExecutableModule.createCaptureExecutableSnapshot(failedCaptureExecutableCreation,Buffer.from("creationbytes"),);}',
           tryDigest:
-            "0c0ec72321cd2d85c484246cb26eba2170e1d99fb3b0b715d64563a48ee8af03",
+            "0258333cc547b548e9000d8a1c549766ec3afb5224c57cad515ed62f6e52cfe3",
+        },
+        {
+          catchBodies: [
+            "combinedOpenSnapshotFailure=error;",
+            "openSnapshotHookCleanupFailure={error};",
+          ],
+          catchVariables: ["error"],
+          containerKind: "TryStatement",
+          containerStatements: 1891,
+          finallyDigest:
+            "5810c3e1cbfda3e81e79c603736baf1c7f9405e98b31a71b73e27015bdccfe20",
+          finallySubstantive: {
+            digest:
+              "bafea6c45938fd60c310c16a00f35299ab4ce299b840bf61560bc674af8b8cb4",
+            tokens: 71,
+          },
+          index: 424,
+          preceding: [
+            "letcombinedOpenSnapshotFailure:unknown;",
+            "letopenSnapshotHookCleanupFailure:{error:unknown}|undefined;",
+          ],
+          substantive: {
+            digest:
+              "0bf2484b01a795dee73b77cfae51d12e388402c447289aae4eab8ee1c9f4389c",
+            tokens: 8,
+          },
+          tryBody:
+            "{captureExecutableModule.openCaptureExecutable(failedCaptureExecutableOpen,);}",
+          tryDigest:
+            "088db12daa29366e0ba119664263516a8b69abba04bf86e59b257ff0b113350a",
         },
       ],
       parseDiagnostics: [],

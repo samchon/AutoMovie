@@ -6021,16 +6021,32 @@ export const test_cli_scaffold = async (): Promise<void> => {
       return status;
     }) as typeof fs.lstatSync;
     let captureExecutableRaceRejected = false;
+    let captureExecutableRaceCleanupFailure: { error: unknown } | undefined;
     try {
       captureExecutableRaceRejected = throws(() =>
         captureExecutableModule.openCaptureExecutable(captureExecutable),
       );
+    } catch (error) {
+      captureExecutableRaceCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.lstatSync = nativeLstat;
-      if (fs.existsSync(parkedCaptureExecutable)) {
-        fs.rmSync(captureExecutable, { force: true });
-        fs.renameSync(parkedCaptureExecutable, captureExecutable);
-      }
+      preserveCliHarnessCleanup(captureExecutableRaceCleanupFailure, [
+        {
+          resource: "capture executable lstat hook",
+          cleanup: () => {
+            mutableFs.lstatSync = nativeLstat;
+          },
+        },
+        {
+          resource: "capture resident executable",
+          cleanup: () => {
+            if (fs.existsSync(parkedCaptureExecutable)) {
+              fs.rmSync(captureExecutable, { force: true });
+              fs.renameSync(parkedCaptureExecutable, captureExecutable);
+            }
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "capture executable snapshot rejects a byte-identical successor",
@@ -6073,6 +6089,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       }
     }) as typeof fs.closeSync;
     let combinedCreateSnapshotFailure: unknown;
+    let createSnapshotHookCleanupFailure: { error: unknown } | undefined;
     try {
       captureExecutableModule.createCaptureExecutableSnapshot(
         failedCaptureExecutableCreation,
@@ -6080,10 +6097,28 @@ export const test_cli_scaffold = async (): Promise<void> => {
       );
     } catch (error) {
       combinedCreateSnapshotFailure = error;
+      createSnapshotHookCleanupFailure = { error };
     } finally {
-      mutableFs.openSync = nativeOpen;
-      mutableFs.writeSync = nativeWrite;
-      mutableFs.closeSync = nativeClose;
+      preserveCliHarnessCleanup(createSnapshotHookCleanupFailure, [
+        {
+          resource: "capture create open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+        {
+          resource: "capture create write hook",
+          cleanup: () => {
+            mutableFs.writeSync = nativeWrite;
+          },
+        },
+        {
+          resource: "capture create close hook",
+          cleanup: () => {
+            mutableFs.closeSync = nativeClose;
+          },
+        },
+      ]);
     }
     const failedCaptureExecutableOpen = path.join(
       base,
@@ -6123,16 +6158,35 @@ export const test_cli_scaffold = async (): Promise<void> => {
       }
     }) as typeof fs.closeSync;
     let combinedOpenSnapshotFailure: unknown;
+    let openSnapshotHookCleanupFailure: { error: unknown } | undefined;
     try {
       captureExecutableModule.openCaptureExecutable(
         failedCaptureExecutableOpen,
       );
     } catch (error) {
       combinedOpenSnapshotFailure = error;
+      openSnapshotHookCleanupFailure = { error };
     } finally {
-      mutableFs.openSync = nativeOpen;
-      mutableFs.fstatSync = nativeFstat;
-      mutableFs.closeSync = nativeClose;
+      preserveCliHarnessCleanup(openSnapshotHookCleanupFailure, [
+        {
+          resource: "capture open open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+        {
+          resource: "capture open fstat hook",
+          cleanup: () => {
+            mutableFs.fstatSync = nativeFstat;
+          },
+        },
+        {
+          resource: "capture open close hook",
+          cleanup: () => {
+            mutableFs.closeSync = nativeClose;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "capture executable acquisition preserves primary and close failures",
