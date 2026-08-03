@@ -2126,14 +2126,33 @@ const captureProductionOwnedDescriptorFailure = (
       throw sourceCloseFailure;
   }) as typeof fs.closeSync;
   let caught: unknown;
+  let descriptorReadFailure: IRenderJobFixtureFailure | undefined;
   try {
     readAutoMovieProductionOwnedFile(props);
   } catch (error) {
     caught = error;
+    descriptorReadFailure = { error };
   } finally {
-    fs.openSync = nativeOpen;
-    fs.fstatSync = nativeFstat;
-    fs.closeSync = nativeClose;
+    preserveRenderJobFixtureCleanup(descriptorReadFailure, [
+      {
+        resource: "owned-descriptor open hook",
+        cleanup: () => {
+          fs.openSync = nativeOpen;
+        },
+      },
+      {
+        resource: "owned-descriptor fstat hook",
+        cleanup: () => {
+          fs.fstatSync = nativeFstat;
+        },
+      },
+      {
+        resource: "owned-descriptor close hook",
+        cleanup: () => {
+          fs.closeSync = nativeClose;
+        },
+      },
+    ]);
   }
   return {
     caught,
