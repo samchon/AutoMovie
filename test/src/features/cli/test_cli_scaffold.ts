@@ -11567,6 +11567,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       nativeGcRename(oldPath, newPath);
     }) as typeof fs.renameSync;
     let gcRenameBoundaryRejected = false;
+    let gcRenameBoundaryCleanupFailure: { error: unknown } | undefined;
     try {
       gcRenameBoundaryRejected = throws(() =>
         renderGcModule.removeCapturedRenderGcTarget({
@@ -11575,8 +11576,18 @@ export const test_cli_scaffold = async (): Promise<void> => {
           snapshot: renameBoundarySnapshot,
         }),
       );
+    } catch (error) {
+      gcRenameBoundaryCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.renameSync = nativeGcRename;
+      preserveCliHarnessCleanup(gcRenameBoundaryCleanupFailure, [
+        {
+          resource: "render GC target rename hook",
+          cleanup: () => {
+            mutableFs.renameSync = nativeGcRename;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "render GC preserves a successor crossing rename outside later plans",
@@ -11630,6 +11641,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       }
       nativeGcRename(oldPath, newPath);
     }) as typeof fs.renameSync;
+    let sharedRemovalCleanupFailure: { error: unknown } | undefined;
     try {
       renderGcModule.removeCapturedRenderGcTarget({
         isolated: path.join(sharedRemovalStaging, "first"),
@@ -11641,8 +11653,18 @@ export const test_cli_scaffold = async (): Promise<void> => {
         quarantine: sharedRemovalStaging,
         snapshot: sharedRemovalSecondSnapshot,
       });
+    } catch (error) {
+      sharedRemovalCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.renameSync = nativeGcRename;
+      preserveCliHarnessCleanup(sharedRemovalCleanupFailure, [
+        {
+          resource: "render GC shared removal rename hook",
+          cleanup: () => {
+            mutableFs.renameSync = nativeGcRename;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "render removals share one retained staging parent across sibling mutation",
@@ -11721,6 +11743,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       nativeGcRename(oldPath, newPath);
     }) as typeof fs.renameSync;
     let gcPublicationBoundaryRejected = false;
+    let gcPublicationBoundaryCleanupFailure: { error: unknown } | undefined;
     try {
       gcPublicationBoundaryRejected = throws(() =>
         renderGcModule.removeCapturedRenderGcTarget({
@@ -11729,8 +11752,18 @@ export const test_cli_scaffold = async (): Promise<void> => {
           snapshot: gcPublicationBoundarySnapshot,
         }),
       );
+    } catch (error) {
+      gcPublicationBoundaryCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.renameSync = nativeGcRename;
+      preserveCliHarnessCleanup(gcPublicationBoundaryCleanupFailure, [
+        {
+          resource: "render GC publication rename hook",
+          cleanup: () => {
+            mutableFs.renameSync = nativeGcRename;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "render GC preserves a publication file successor crossing rename",
@@ -11948,6 +11981,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
           fs.existsSync(proxyTierEvidence) === false;
       nativeGcRename(oldPath, newPath);
     }) as typeof fs.renameSync;
+    let tierApplyCleanupFailure: { error: unknown } | undefined;
     try {
       if (tierPair?.evidence !== null && tierPair?.evidence !== undefined)
         renderGcModule.removeCapturedRenderQuarantine({
@@ -11955,8 +11989,18 @@ export const test_cli_scaffold = async (): Promise<void> => {
           marker: tierPair.marker,
           quarantine: tierApplyQuarantine,
         });
+    } catch (error) {
+      tierApplyCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.renameSync = nativeGcRename;
+      preserveCliHarnessCleanup(tierApplyCleanupFailure, [
+        {
+          resource: "render GC tier apply rename hook",
+          cleanup: () => {
+            mutableFs.renameSync = nativeGcRename;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "render GC binds tier-relative evidence, omits cross-tier duplicates, and reclaims the exact pair",
@@ -12008,6 +12052,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       }
       return status;
     }) as typeof fs.statSync;
+    let stableEvidenceCleanupFailure: { error: unknown } | undefined;
     try {
       renderGcModule.quarantineCapturedRenderTarget({
         destination: stableEvidenceMarker,
@@ -12018,8 +12063,18 @@ export const test_cli_scaffold = async (): Promise<void> => {
           stableEvidenceSource,
         ),
       });
+    } catch (error) {
+      stableEvidenceCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.statSync = nativeStat;
+      preserveCliHarnessCleanup(stableEvidenceCleanupFailure, [
+        {
+          resource: "render GC stable evidence stat hook",
+          cleanup: () => {
+            mutableFs.statSync = nativeStat;
+          },
+        },
+      ]);
     }
     const stableEvidenceMarkerSnapshot = renderGcModule.captureRenderGcTarget(
       proxyTierGcRoot,
@@ -12092,14 +12147,25 @@ export const test_cli_scaffold = async (): Promise<void> => {
         parentSuccessorSwapped = true;
       }
     }) as typeof fs.renameSync;
+    let parentSuccessorCleanupFailure: { error: unknown } | undefined;
     try {
       renderGcModule.removeCapturedRenderQuarantine({
         evidence: parentSuccessorInspection.evidence,
         marker: parentSuccessorMarkerSnapshot,
         quarantine: tierApplyQuarantine,
       });
+    } catch (error) {
+      parentSuccessorCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.renameSync = nativeGcRename;
+      preserveCliHarnessCleanup(parentSuccessorCleanupFailure, [
+        {
+          resource: "render GC parent successor rename hook",
+          cleanup: () => {
+            mutableFs.renameSync = nativeGcRename;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "render GC preserves an empty private-container pathname successor",
