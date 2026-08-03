@@ -164,6 +164,45 @@ const captureCleanup = (props: {
   return { caught, failure, order };
 };
 
+const capturePartialSwapCleanup = (props: {
+  active: boolean;
+  parked: boolean;
+  primaryFailure: unknown;
+}): { failure: unknown; order: string[] } => {
+  const order: string[] = [];
+  let failure: unknown;
+  try {
+    preserveProductionProjectFixtureCleanup({ error: props.primaryFailure }, [
+      {
+        resource: "partial-swap hook",
+        cleanup: () => order.push("hook"),
+      },
+      ...(props.parked
+        ? [
+            {
+              resource: "partial-swap active replacement",
+              cleanup: (): void => {
+                order.push("active-check");
+                if (props.active) order.push("active-remove");
+              },
+            },
+            {
+              resource: "partial-swap parked file",
+              cleanup: () => order.push("parked-restore"),
+            },
+          ]
+        : []),
+      {
+        resource: "partial-swap directory",
+        cleanup: () => order.push("directory"),
+      },
+    ]);
+  } catch (error) {
+    failure = error;
+  }
+  return { failure, order };
+};
+
 export const test_mcp_production_project_render_read_cleanup = (): void => {
   const primaryFailure = { phase: "render-read assertion" };
   const hookFailure = { phase: "render-read hook restoration" };
@@ -197,6 +236,16 @@ export const test_mcp_production_project_render_read_cleanup = (): void => {
   const partialSetup = captureCleanup({
     primaryFailure: { error: primaryFailure, present: true },
     resources: 1,
+  });
+  const noSwap = capturePartialSwapCleanup({
+    active: true,
+    parked: false,
+    primaryFailure,
+  });
+  const parkedWithoutActive = capturePartialSwapCleanup({
+    active: false,
+    parked: true,
+    primaryFailure,
   });
   const undefinedStandalone = captureCleanup({
     cleanupFailures: [{ error: undefined, present: true }],
@@ -238,6 +287,11 @@ export const test_mcp_production_project_render_read_cleanup = (): void => {
       partialSetup.caught &&
       partialSetup.failure === primaryFailure &&
       partialSetup.order.join(",") === "cleanup-0" &&
+      noSwap.failure === primaryFailure &&
+      noSwap.order.join(",") === "hook,directory" &&
+      parkedWithoutActive.failure === primaryFailure &&
+      parkedWithoutActive.order.join(",") ===
+        "hook,active-check,parked-restore,directory" &&
       undefinedStandalone.caught &&
       undefinedStandalone.failure === undefined &&
       undefinedStandalone.order.join(",") ===
@@ -295,12 +349,12 @@ export const test_mcp_production_project_render_read_cleanup = (): void => {
             failureHolder:
               "letdescriptorRaceFailure:IProductionProjectFixtureFailure|undefined;",
             finallyDigest:
-              "5c86bd3b80e6835713c6d84b43b4a51565ee4e6da19ebd18edf83d89ad66c528",
-            finallyStatements: 1,
+              "3c44350dd392a1dfe3208b9fceb1acae5409a1249034dd11a12331ceca420352",
+            finallyStatements: 2,
             finallySubstantive: {
               digest:
-                "31e2a2c3abc5a6b8cd0ddbcb906e66e26c3dc59f1eb8c43171ea2793e0018d8a",
-              tokens: 140,
+                "c1d6b9c2761d9dd666433817cc62996ccecbe4cf22685a30285124e449280c1c",
+              tokens: 172,
             },
             index: 10,
             substantive: {
@@ -345,12 +399,12 @@ export const test_mcp_production_project_render_read_cleanup = (): void => {
             failureHolder:
               "letafterReadFailure:IProductionProjectFixtureFailure|undefined;",
             finallyDigest:
-              "3c5bb6200d91eba31dd661a96cf196ad0f41f9b69642e0ce682fe509e8f0955e",
-            finallyStatements: 1,
+              "d24d13cae4bc7b22c4ceb9a8edbbdeae6065b2f5a3b75bb522ce8659b7b07869",
+            finallyStatements: 2,
             finallySubstantive: {
               digest:
-                "91ef2119ecc7f468835742184defb1d30d7b2e80ad16366fc34d2f319f306f58",
-              tokens: 98,
+                "c57addb611498fed5ac66ba13c7cc1b5ca8e1fc6f7f9cadc6570136a5113f80b",
+              tokens: 131,
             },
             index: 41,
             substantive: {

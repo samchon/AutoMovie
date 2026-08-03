@@ -2182,6 +2182,7 @@ export const test_mcp_production_project = (): void => {
           descriptorRaceFailure = { error };
           throw error;
         } finally {
+          const descriptorParked = fs.existsSync(parked);
           preserveProductionProjectFixtureCleanup(descriptorRaceFailure, [
             {
               resource: `descriptor-race ${replacement} open hook`,
@@ -2189,17 +2190,24 @@ export const test_mcp_production_project = (): void => {
                 fs.openSync = nativeOpen;
               },
             },
-            {
-              resource: `descriptor-race ${replacement} active replacement`,
-              cleanup: () => {
-                if (fs.lstatSync(file).isSymbolicLink()) fs.unlinkSync(file);
-                else fs.rmSync(file, { recursive: true, force: true });
-              },
-            },
-            {
-              resource: `descriptor-race ${replacement} parked file`,
-              cleanup: () => fs.renameSync(parked, file),
-            },
+            ...(descriptorParked
+              ? [
+                  {
+                    resource: `descriptor-race ${replacement} active replacement`,
+                    cleanup: () => {
+                      if (fs.existsSync(file)) {
+                        if (fs.lstatSync(file).isSymbolicLink())
+                          fs.unlinkSync(file);
+                        else fs.rmSync(file, { recursive: true, force: true });
+                      }
+                    },
+                  },
+                  {
+                    resource: `descriptor-race ${replacement} parked file`,
+                    cleanup: () => fs.renameSync(parked, file),
+                  },
+                ]
+              : []),
             {
               resource: `descriptor-race ${replacement} directory`,
               cleanup: () =>
@@ -2335,6 +2343,7 @@ export const test_mcp_production_project = (): void => {
         afterReadFailure = { error };
         throw error;
       } finally {
+        const afterReadWasParked = fs.existsSync(afterReadParked);
         preserveProductionProjectFixtureCleanup(afterReadFailure, [
           {
             resource: "post-descriptor read hook",
@@ -2342,14 +2351,20 @@ export const test_mcp_production_project = (): void => {
               fs.readFileSync = nativeDescriptorRead;
             },
           },
-          {
-            resource: "post-descriptor active replacement",
-            cleanup: () => fs.rmSync(afterReadFile),
-          },
-          {
-            resource: "post-descriptor parked file",
-            cleanup: () => fs.renameSync(afterReadParked, afterReadFile),
-          },
+          ...(afterReadWasParked
+            ? [
+                {
+                  resource: "post-descriptor active replacement",
+                  cleanup: () => {
+                    if (fs.existsSync(afterReadFile)) fs.rmSync(afterReadFile);
+                  },
+                },
+                {
+                  resource: "post-descriptor parked file",
+                  cleanup: () => fs.renameSync(afterReadParked, afterReadFile),
+                },
+              ]
+            : []),
           {
             resource: "post-descriptor directory",
             cleanup: () =>
