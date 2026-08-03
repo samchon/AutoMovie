@@ -59,6 +59,41 @@ const fail = (message) => {
   throw new Error(message);
 };
 
+const capturePackagedRenderPlanGeneration = (renderStateRoot) => {
+  const generationRoot = join(renderStateRoot, "plan.json.generations");
+  const generations = readdirSync(generationRoot, { withFileTypes: true })
+    .filter((entry) => entry.isFile() && entry.name.endsWith(".json"))
+    .map((entry) => {
+      const path = join(generationRoot, entry.name);
+      const text = readFileSync(path, "utf8");
+      const record = JSON.parse(text);
+      if (
+        typeof record !== "object" ||
+        record === null ||
+        typeof record.generation !== "string" ||
+        (record.predecessor !== null &&
+          typeof record.predecessor !== "string") ||
+        typeof record.plan !== "object" ||
+        record.plan === null
+      )
+        fail("packaged final render published an invalid plan generation");
+      return { path, record, text };
+    });
+  const predecessors = new Set(
+    generations
+      .map(({ record }) => record.predecessor)
+      .filter((predecessor) => predecessor !== null),
+  );
+  const heads = generations.filter(
+    ({ record }) => predecessors.has(record.generation) === false,
+  );
+  if (heads.length !== 1)
+    fail(
+      `packaged final render published ${heads.length} current plan generations`,
+    );
+  return heads[0];
+};
+
 const writeCommandOutput = (result) => {
   process.stderr.write(result.stdout ?? "");
   process.stderr.write(result.stderr ?? "");
@@ -1585,8 +1620,10 @@ PNG.sync.read = function (input) {
     "render-job",
     "final",
   );
-  const renderPlanPath = join(renderStateRoot, "plan.json");
-  const renderPlanText = readFileSync(renderPlanPath, "utf8");
+  const renderPlanGeneration =
+    capturePackagedRenderPlanGeneration(renderStateRoot);
+  const renderPlanPath = renderPlanGeneration.path;
+  const renderPlanText = renderPlanGeneration.text;
   const onnxNativeBindingPath = join(
     starterDir,
     "node_modules",
@@ -1621,7 +1658,7 @@ PNG.sync.read = function (input) {
     );
   }
   const tamperedRenderPlan = JSON.parse(renderPlanText);
-  tamperedRenderPlan.tracks.captions += "\nNOTE tampered\n";
+  tamperedRenderPlan.plan.tracks.captions += "\nNOTE tampered\n";
   writeFileSync(
     renderPlanPath,
     `${JSON.stringify(tamperedRenderPlan, null, 2)}\n`,
@@ -1644,9 +1681,13 @@ PNG.sync.read = function (input) {
       () => writeFileSync(renderPlanPath, renderPlanText),
     );
   }
-  const renderPlan = JSON.parse(renderPlanText);
+  const renderPlanRecord = JSON.parse(renderPlanText);
+  const renderPlan = renderPlanRecord.plan;
   renderPlan.runtimeIdentity.encoder.version = "0.0.0-stale";
-  writeFileSync(renderPlanPath, `${JSON.stringify(renderPlan, null, 2)}\n`);
+  writeFileSync(
+    renderPlanPath,
+    `${JSON.stringify(renderPlanRecord, null, 2)}\n`,
+  );
   let staleRenderRuntimeFailure;
   try {
     runExpectedFailure(
