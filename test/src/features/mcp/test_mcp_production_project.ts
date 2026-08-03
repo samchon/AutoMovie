@@ -2470,11 +2470,29 @@ export const test_mcp_production_project = (): void => {
         rollbackPathRead = true;
         fs.renameSync(renderFramePath, rollbackReadParked);
         fs.writeFileSync(renderFramePath, "transient rollback baseline");
+        let rollbackTransientReadFailure:
+          | IProductionProjectFixtureFailure
+          | undefined;
         try {
           return Reflect.apply(nativeRollbackRead, fs, [target, ...args]);
+        } catch (error) {
+          rollbackTransientReadFailure = { error };
+          throw error;
         } finally {
-          fs.rmSync(renderFramePath);
-          fs.renameSync(rollbackReadParked, renderFramePath);
+          preserveProductionProjectFixtureCleanup(
+            rollbackTransientReadFailure,
+            [
+              {
+                resource: "rollback-read transient replacement",
+                cleanup: () => fs.rmSync(renderFramePath),
+              },
+              {
+                resource: "rollback-read parked frame",
+                cleanup: () =>
+                  fs.renameSync(rollbackReadParked, renderFramePath),
+              },
+            ],
+          );
         }
       }
       return Reflect.apply(nativeRollbackRead, fs, [target, ...args]);
@@ -2485,6 +2503,7 @@ export const test_mcp_production_project = (): void => {
         throw new Error("injected manifest rename failure");
       return renameSync(oldPath, newPath);
     }) as typeof fs.renameSync;
+    let renderRollbackFailure: IProductionProjectFixtureFailure | undefined;
     try {
       TestValidator.predicate(
         "multi-file commit rolls back updated and newly created files",
@@ -2508,13 +2527,38 @@ export const test_mcp_production_project = (): void => {
           ) === false &&
           ownerProject.revision() === revisionBeforeFailure,
       );
+    } catch (error) {
+      renderRollbackFailure = { error };
+      throw error;
     } finally {
-      fs.renameSync = renameSync;
-      fs.readFileSync = nativeRollbackRead;
-      if (fs.existsSync(rollbackReadParked)) {
-        fs.rmSync(renderFramePath, { force: true });
-        fs.renameSync(rollbackReadParked, renderFramePath);
-      }
+      const rollbackFrameParked = fs.existsSync(rollbackReadParked);
+      preserveProductionProjectFixtureCleanup(renderRollbackFailure, [
+        {
+          resource: "rollback rename hook",
+          cleanup: () => {
+            fs.renameSync = renameSync;
+          },
+        },
+        {
+          resource: "rollback read hook",
+          cleanup: () => {
+            fs.readFileSync = nativeRollbackRead;
+          },
+        },
+        ...(rollbackFrameParked
+          ? [
+              {
+                resource: "rollback transient frame",
+                cleanup: () => fs.rmSync(renderFramePath, { force: true }),
+              },
+              {
+                resource: "rollback parked frame",
+                cleanup: () =>
+                  fs.renameSync(rollbackReadParked, renderFramePath),
+              },
+            ]
+          : []),
+      ]);
     }
     let renameFailures = 0;
     fs.renameSync = ((oldPath, newPath) => {
@@ -2528,6 +2572,7 @@ export const test_mcp_production_project = (): void => {
       }
       return renameSync(oldPath, newPath);
     }) as typeof fs.renameSync;
+    let rollbackAggregateFailure: IProductionProjectFixtureFailure | undefined;
     try {
       let aggregate = false;
       try {
@@ -2543,10 +2588,27 @@ export const test_mcp_production_project = (): void => {
         "rollback failure is surfaced as an aggregate instead of hidden",
         aggregate && ownerProject.revision() === revisionBeforeFailure,
       );
+    } catch (error) {
+      rollbackAggregateFailure = { error };
+      throw error;
     } finally {
-      fs.renameSync = renameSync;
-      fs.writeFileSync(renderFramePath, frameBeforeFailure);
-      fs.writeFileSync(renderManifestPath, manifestBeforeFailure);
+      preserveProductionProjectFixtureCleanup(rollbackAggregateFailure, [
+        {
+          resource: "rollback-aggregate rename hook",
+          cleanup: () => {
+            fs.renameSync = renameSync;
+          },
+        },
+        {
+          resource: "rollback-aggregate frame baseline",
+          cleanup: () => fs.writeFileSync(renderFramePath, frameBeforeFailure),
+        },
+        {
+          resource: "rollback-aggregate manifest baseline",
+          cleanup: () =>
+            fs.writeFileSync(renderManifestPath, manifestBeforeFailure),
+        },
+      ]);
     }
     fs.rmSync(renderFramePath);
     let outsideRenderTargetFailure:

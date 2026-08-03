@@ -287,7 +287,7 @@ export const test_mcp_production_project_resident_read_cleanup = (): void => {
             catchBodies: ["sourceReadFailure={error};", "throwerror;"],
             catchVariables: ["error"],
             containerKind: "TryStatement",
-            containerStatements: 292,
+            containerStatements: 294,
             failureHolder:
               "letsourceReadFailure:IProductionProjectFixtureFailure|undefined;",
             finallyDigest:
@@ -337,7 +337,7 @@ export const test_mcp_production_project_resident_read_cleanup = (): void => {
             catchBodies: ["stateReadFailure={error};", "throwerror;"],
             catchVariables: ["error"],
             containerKind: "TryStatement",
-            containerStatements: 292,
+            containerStatements: 294,
             failureHolder:
               "letstateReadFailure:IProductionProjectFixtureFailure|undefined;",
             finallyDigest:
@@ -390,7 +390,7 @@ export const test_mcp_production_project_resident_read_cleanup = (): void => {
             catchBodies: ["generatedReadFailure={error};", "throwerror;"],
             catchVariables: ["error"],
             containerKind: "TryStatement",
-            containerStatements: 292,
+            containerStatements: 294,
             failureHolder:
               "letgeneratedReadFailure:IProductionProjectFixtureFailure|undefined;",
             finallyDigest:
@@ -446,7 +446,7 @@ export const test_mcp_production_project_resident_read_cleanup = (): void => {
             ],
             catchVariables: ["error"],
             containerKind: "TryStatement",
-            containerStatements: 292,
+            containerStatements: 294,
             failureHolder:
               "letgeneratedManifestReadFailure:|IProductionProjectFixtureFailure|undefined;",
             finallyDigest:
