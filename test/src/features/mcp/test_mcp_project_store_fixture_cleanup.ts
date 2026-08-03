@@ -125,9 +125,12 @@ const projectStoreFixtureContract = (text: string): unknown => {
     };
     visit(owner.arrow.body, owner.arrow.body, []);
   }
+  const ownerStatements = owners.flatMap((owner) =>
+    ts.isBlock(owner.arrow.body) ? [...owner.arrow.body.statements] : [],
+  );
   const caseTables = ["invalidShapeCases", "invalidKeyedShapeCases"].map(
     (name) => {
-      const entry = source.statements
+      const entry = ownerStatements
         .flatMap((statement) =>
           ts.isVariableStatement(statement)
             ? [...statement.declarationList.declarations].map(
