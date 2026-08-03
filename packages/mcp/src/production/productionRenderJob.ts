@@ -601,6 +601,29 @@ export const verifyProductionRenderChunkReceipt = (props: {
     throw new Error(`Chunk "${chunk.slot}" has no verified encoded output.`);
 };
 
+interface IProductionRenderChunkFailure {
+  error: unknown;
+}
+
+class ProductionRenderChunkLifecycleError extends AggregateError {}
+
+/** Preserve one acquired chunk's complete fatal lifecycle in phase order. */
+const productionRenderChunkLifecycleFailure = (
+  attempt: IProductionRenderChunkFailure | undefined,
+  failureRecord: IProductionRenderChunkFailure | undefined,
+  release: IProductionRenderChunkFailure | undefined,
+): unknown => {
+  const failures = [attempt, failureRecord, release].filter(
+    (failure): failure is IProductionRenderChunkFailure =>
+      failure !== undefined,
+  );
+  if (failures.length === 1) return failures[0]!.error;
+  return new ProductionRenderChunkLifecycleError(
+    failures.map((failure) => failure.error),
+    "Production render chunk cleanup failed after the render attempt failed.",
+  );
+};
+
 /** Schedule only non-current chunks through host-owned lock/byte adapters. */
 export const runProductionRenderJob = async (props: {
   plan: IAutoMovieProductionRenderJobPlan;
@@ -651,9 +674,16 @@ export const runProductionRenderJob = async (props: {
     failed: [] as Array<{ slot: string; correction: string }>,
   };
   let cursor = 0;
-  const fatalFailures: unknown[] = [];
+  const fatalFailures: IProductionRenderChunkFailure[] = [];
+  const reserveFatalFailure = (): IProductionRenderChunkFailure | undefined => {
+    if (fatalFailures.length !== 0) return undefined;
+    const failure: IProductionRenderChunkFailure = { error: undefined };
+    fatalFailures.push(failure);
+    return failure;
+  };
   const recordFatalFailure = (error: unknown): void => {
-    if (fatalFailures.length === 0) fatalFailures.push(error);
+    const failure = reserveFatalFailure();
+    if (failure !== undefined) failure.error = error;
   };
   const worker = async (): Promise<void> => {
     try {
@@ -673,6 +703,10 @@ export const runProductionRenderJob = async (props: {
           output.busy.push(chunk.slot);
           continue;
         }
+        let attemptFailure: IProductionRenderChunkFailure | undefined;
+        let failureRecordFailure: IProductionRenderChunkFailure | undefined;
+        let releaseFailure: IProductionRenderChunkFailure | undefined;
+        let fatalFailure: IProductionRenderChunkFailure | undefined;
         try {
           const receipt = await props.adapters.render(chunk);
           verifyProductionRenderChunkReceipt({
@@ -682,20 +716,29 @@ export const runProductionRenderJob = async (props: {
           });
           output.rendered.push(chunk.slot);
         } catch (error) {
+          attemptFailure = { error };
           const correction =
             error instanceof Error ? error.message : String(error);
           try {
             await props.adapters.fail(chunk, correction);
             output.failed.push({ slot: chunk.slot, correction });
           } catch (failure) {
-            recordFatalFailure(failure);
+            failureRecordFailure = { error: failure };
+            fatalFailure = reserveFatalFailure();
           }
         } finally {
           try {
             await props.adapters.release(chunk);
           } catch (failure) {
-            recordFatalFailure(failure);
+            releaseFailure = { error: failure };
+            fatalFailure ??= reserveFatalFailure();
           }
+          if (fatalFailure !== undefined)
+            fatalFailure.error = productionRenderChunkLifecycleFailure(
+              attemptFailure,
+              failureRecordFailure,
+              releaseFailure,
+            );
         }
       }
     } catch (error) {
@@ -708,7 +751,7 @@ export const runProductionRenderJob = async (props: {
       worker,
     ),
   );
-  if (fatalFailures.length !== 0) throw fatalFailures[0];
+  if (fatalFailures.length !== 0) throw fatalFailures[0]!.error;
   const order = new Map(queue.map((chunk, index) => [chunk.slot, index]));
   output.complete.sort((left, right) => order.get(left)! - order.get(right)!);
   output.rendered.sort((left, right) => order.get(left)! - order.get(right)!);

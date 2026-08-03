@@ -1205,6 +1205,62 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
       released.length === 2 &&
       failed[0]?.endsWith(":encoder failed") === true,
   );
+  const lifecyclePlan = {
+    ...renderPlan,
+    chunks: renderPlan.chunks.slice(0, 1),
+  };
+  const ATTEMPT_FAILURE: unknown = { phase: "render attempt" };
+  const FAILURE_RECORD_FAILURE: unknown = { phase: "failure record" };
+  const RELEASE_FAILURE: unknown = { phase: "release" };
+  const captureLifecycleFailure = async (props: {
+    attempt?: unknown;
+    failureRecord?: unknown;
+    release?: unknown;
+  }): Promise<{
+    failure: unknown;
+    failureRecordAttempts: number;
+    releaseAttempts: number;
+  }> => {
+    let failure: unknown;
+    let failureRecordAttempts = 0;
+    let releaseAttempts = 0;
+    try {
+      await runProductionRenderJob({
+        plan: lifecyclePlan,
+        workers: 1,
+        adapters: {
+          current: async () => null,
+          acquire: async () => true,
+          render: async () => {
+            if (props.attempt !== undefined) throw props.attempt;
+            return receipt(lifecyclePlan, 0);
+          },
+          fail: async () => {
+            ++failureRecordAttempts;
+            if (props.failureRecord !== undefined) throw props.failureRecord;
+          },
+          release: async () => {
+            ++releaseAttempts;
+            if (props.release !== undefined) throw props.release;
+          },
+        },
+      });
+    } catch (error) {
+      failure = error;
+    }
+    return { failure, failureRecordAttempts, releaseAttempts };
+  };
+  const releaseOnlyFailure = await captureLifecycleFailure({
+    release: RELEASE_FAILURE,
+  });
+  const attemptAndFailureRecord = await captureLifecycleFailure({
+    attempt: ATTEMPT_FAILURE,
+    failureRecord: FAILURE_RECORD_FAILURE,
+  });
+  const attemptAndRelease = await captureLifecycleFailure({
+    attempt: ATTEMPT_FAILURE,
+    release: RELEASE_FAILURE,
+  });
   const drainingPlan = {
     ...renderPlan,
     chunks: renderPlan.chunks.slice(0, 3),
@@ -1229,8 +1285,8 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
     });
   let peerDrained = false;
   let releaseStarted = false;
+  let drainingReleaseAttempts = 0;
   const currentCalls: string[] = [];
-  const RELEASE_FAILURE: unknown = "release failure";
   const draining = runProductionRenderJob({
     plan: drainingPlan,
     workers: 2,
@@ -1247,13 +1303,14 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
       },
       acquire: async () => true,
       render: async () => {
-        throw new Error("encoder failure");
+        throw ATTEMPT_FAILURE;
       },
       fail: async () => {
-        throw NON_ERROR_FAILURE;
+        throw FAILURE_RECORD_FAILURE;
       },
       release: async () => {
         releaseStarted = true;
+        ++drainingReleaseAttempts;
         await releaseBarrier;
         throw RELEASE_FAILURE;
       },
@@ -1309,9 +1366,32 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
       peerDrained &&
       thirdStartedBeforeRelease === false &&
       releaseStarted &&
+      drainingReleaseAttempts === 1 &&
       settledBeforeRelease === false &&
-      fatalReason === NON_ERROR_FAILURE &&
+      aggregateContainsExactly(fatalReason, [
+        ATTEMPT_FAILURE,
+        FAILURE_RECORD_FAILURE,
+        RELEASE_FAILURE,
+      ]) &&
       currentFatalReason === NON_ERROR_FAILURE,
+  );
+  TestValidator.predicate(
+    "scheduler preserves acquired-chunk attempt, failure-record, and release failures in phase order",
+    releaseOnlyFailure.failure === RELEASE_FAILURE &&
+      releaseOnlyFailure.failureRecordAttempts === 0 &&
+      releaseOnlyFailure.releaseAttempts === 1 &&
+      aggregateContainsExactly(attemptAndFailureRecord.failure, [
+        ATTEMPT_FAILURE,
+        FAILURE_RECORD_FAILURE,
+      ]) &&
+      attemptAndFailureRecord.failureRecordAttempts === 1 &&
+      attemptAndFailureRecord.releaseAttempts === 1 &&
+      aggregateContainsExactly(attemptAndRelease.failure, [
+        ATTEMPT_FAILURE,
+        RELEASE_FAILURE,
+      ]) &&
+      attemptAndRelease.failureRecordAttempts === 1 &&
+      attemptAndRelease.releaseAttempts === 1,
   );
   TestValidator.predicate(
     "scheduler rejects invalid workers and missing deliverables",
