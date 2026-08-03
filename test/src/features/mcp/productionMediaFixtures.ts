@@ -3,6 +3,28 @@ import * as HME from "h264-mp4-encoder";
 import { BoxParser, createFile } from "mp4box";
 import { PNG } from "pngjs";
 
+interface IProductionMediaEncoderFailure {
+  error: unknown;
+}
+
+class ProductionMediaEncoderCleanupError extends AggregateError {}
+
+/** Delete one fixture encoder without replacing an earlier generation error. */
+export const preserveProductionMediaEncoderCleanup = (
+  failure: IProductionMediaEncoderFailure | undefined,
+  cleanup: () => unknown,
+): void => {
+  try {
+    cleanup();
+  } catch (cleanupFailure) {
+    if (failure === undefined) throw cleanupFailure;
+    throw new ProductionMediaEncoderCleanupError(
+      [failure.error, cleanupFailure],
+      "Production media encoder cleanup failed after fixture generation failed.",
+    );
+  }
+};
+
 /** Encode a small real H.264/MP4 stream without relying on a host ffmpeg. */
 export const productionH264Mp4 = async (props: {
   width: number;
@@ -11,6 +33,7 @@ export const productionH264Mp4 = async (props: {
   frameCount: number;
 }): Promise<Uint8Array> => {
   const encoder = await HME.createH264MP4Encoder();
+  let failure: IProductionMediaEncoderFailure | undefined;
   try {
     encoder.width = props.width;
     encoder.height = props.height;
@@ -31,8 +54,11 @@ export const productionH264Mp4 = async (props: {
     }
     encoder.finalize();
     return Uint8Array.from(encoder.FS.readFile(encoder.outputFilename));
+  } catch (error) {
+    failure = { error };
+    throw error;
   } finally {
-    encoder.delete();
+    preserveProductionMediaEncoderCleanup(failure, () => encoder.delete());
   }
 };
 
