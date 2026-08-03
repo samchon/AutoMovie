@@ -1965,11 +1965,23 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
         swapped = true;
         fs.renameSync(resident, preserved);
         fs.renameSync(replacement, resident);
+        let pathnameReadFailure: IRenderJobFixtureFailure | undefined;
         try {
           return Reflect.apply(nativeRead, fs, [file, ...args]) as unknown;
+        } catch (error) {
+          pathnameReadFailure = { error };
+          throw error;
         } finally {
-          fs.renameSync(resident, replacement);
-          fs.renameSync(preserved, resident);
+          preserveRenderJobFixtureCleanup(pathnameReadFailure, [
+            {
+              resource: "pathname replacement",
+              cleanup: () => fs.renameSync(resident, replacement),
+            },
+            {
+              resource: "pathname resident",
+              cleanup: () => fs.renameSync(preserved, resident),
+            },
+          ]);
         }
       }
       return Reflect.apply(nativeRead, fs, [file, ...args]) as unknown;
