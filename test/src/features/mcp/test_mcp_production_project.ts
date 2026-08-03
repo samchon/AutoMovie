@@ -158,6 +158,43 @@ const aggregateContainsExactly = (
   error.errors.length === expected.length &&
   expected.every((failure, index) => error.errors[index] === failure);
 
+interface IProductionProjectFixtureFailure {
+  error: unknown;
+}
+
+interface IProductionProjectFixtureCleanup {
+  cleanup: () => unknown;
+  resource: string;
+}
+
+class ProductionProjectFixtureCleanupError extends AggregateError {}
+
+/** Attempt every acquired project fixture cleanup without hiding failure. */
+export const preserveProductionProjectFixtureCleanup = (
+  failure: IProductionProjectFixtureFailure | undefined,
+  resources: readonly IProductionProjectFixtureCleanup[],
+): void => {
+  const cleanupFailures: Array<{ error: unknown; resource: string }> = [];
+  for (const resource of resources)
+    try {
+      resource.cleanup();
+    } catch (error) {
+      cleanupFailures.push({ error, resource: resource.resource });
+    }
+  if (cleanupFailures.length === 1 && failure === undefined)
+    throw cleanupFailures[0]!.error;
+  if (cleanupFailures.length !== 0)
+    throw new ProductionProjectFixtureCleanupError(
+      [
+        ...(failure === undefined ? [] : [failure.error]),
+        ...cleanupFailures.map((entry) => entry.error),
+      ],
+      `Production-project fixture cleanup failed${
+        failure === undefined ? "" : " after the test failed"
+      }: ${cleanupFailures.map((entry) => entry.resource).join(", ")}.`,
+    );
+};
+
 type ProductionAtomicFailureMode =
   | "combined-cleanup"
   | "combined-recovery"
@@ -1281,10 +1318,12 @@ export const test_mcp_production_project = (): void => {
         Buffer.from(generatedReadBytes).equals(generatedReadBefore),
     );
     const linkedGenerated = productionFixture();
-    const outsideGenerated = fs.mkdtempSync(
-      path.join(os.tmpdir(), "automovie-generated-outside-"),
-    );
+    let outsideGenerated: string | undefined;
+    let linkedGeneratedFailure: IProductionProjectFixtureFailure | undefined;
     try {
+      outsideGenerated = fs.mkdtempSync(
+        path.join(os.tmpdir(), "automovie-generated-outside-"),
+      );
       const linkedProject = AutoMovieProductionProject.open(
         linkedGenerated.root,
       );
@@ -1313,15 +1352,37 @@ export const test_mcp_production_project = (): void => {
             (item) => item.code === "generated-path-outside",
           ),
       );
+    } catch (error) {
+      linkedGeneratedFailure = { error };
+      throw error;
     } finally {
-      linkedGenerated.dispose();
-      fs.rmSync(outsideGenerated, { force: true, recursive: true });
+      const completedOutsideGenerated = outsideGenerated;
+      preserveProductionProjectFixtureCleanup(linkedGeneratedFailure, [
+        {
+          resource: "linked-generated production fixture",
+          cleanup: () => linkedGenerated.dispose(),
+        },
+        ...(completedOutsideGenerated === undefined
+          ? []
+          : [
+              {
+                resource: "linked-generated outside root",
+                cleanup: () =>
+                  fs.rmSync(completedOutsideGenerated, {
+                    force: true,
+                    recursive: true,
+                  }),
+              },
+            ]),
+      ]);
     }
     const linkedState = productionFixture();
-    const outsideState = fs.mkdtempSync(
-      path.join(os.tmpdir(), "automovie-state-outside-"),
-    );
+    let outsideState: string | undefined;
+    let linkedStateFailure: IProductionProjectFixtureFailure | undefined;
     try {
+      outsideState = fs.mkdtempSync(
+        path.join(os.tmpdir(), "automovie-state-outside-"),
+      );
       const stateProject = AutoMovieProductionProject.open(linkedState.root);
       const modelRoot = path.join(
         linkedState.root,
@@ -1337,15 +1398,37 @@ export const test_mcp_production_project = (): void => {
         "tracked design reads refuse a nested state junction",
         throws(() => stateProject.graph()),
       );
+    } catch (error) {
+      linkedStateFailure = { error };
+      throw error;
     } finally {
-      linkedState.dispose();
-      fs.rmSync(outsideState, { force: true, recursive: true });
+      const completedOutsideState = outsideState;
+      preserveProductionProjectFixtureCleanup(linkedStateFailure, [
+        {
+          resource: "linked-state production fixture",
+          cleanup: () => linkedState.dispose(),
+        },
+        ...(completedOutsideState === undefined
+          ? []
+          : [
+              {
+                resource: "linked-state outside root",
+                cleanup: () =>
+                  fs.rmSync(completedOutsideState, {
+                    force: true,
+                    recursive: true,
+                  }),
+              },
+            ]),
+      ]);
     }
     const linkedStateFile = productionFixture();
-    const outsideStateFile = fs.mkdtempSync(
-      path.join(os.tmpdir(), "automovie-state-file-outside-"),
-    );
+    let outsideStateFile: string | undefined;
+    let linkedStateFileFailure: IProductionProjectFixtureFailure | undefined;
     try {
+      outsideStateFile = fs.mkdtempSync(
+        path.join(os.tmpdir(), "automovie-state-file-outside-"),
+      );
       const stateProject = AutoMovieProductionProject.open(
         linkedStateFile.root,
       );
@@ -1361,9 +1444,29 @@ export const test_mcp_production_project = (): void => {
         "tracked keyed design refuses a symbolic JSON entry",
         throws(() => stateProject.graph()),
       );
+    } catch (error) {
+      linkedStateFileFailure = { error };
+      throw error;
     } finally {
-      linkedStateFile.dispose();
-      fs.rmSync(outsideStateFile, { force: true, recursive: true });
+      const completedOutsideStateFile = outsideStateFile;
+      preserveProductionProjectFixtureCleanup(linkedStateFileFailure, [
+        {
+          resource: "linked-state-file production fixture",
+          cleanup: () => linkedStateFile.dispose(),
+        },
+        ...(completedOutsideStateFile === undefined
+          ? []
+          : [
+              {
+                resource: "linked-state-file outside root",
+                cleanup: () =>
+                  fs.rmSync(completedOutsideStateFile, {
+                    force: true,
+                    recursive: true,
+                  }),
+              },
+            ]),
+      ]);
     }
     const ownerProject = AutoMovieProductionProject.open(fixture.root);
     TestValidator.predicate(
@@ -2522,10 +2625,12 @@ export const test_mcp_production_project = (): void => {
   }
 
   const nestedContentFileFixture = productionFixture();
-  const outsideContentFile = fs.mkdtempSync(
-    path.join(os.tmpdir(), "automovie-content-file-junction-"),
-  );
+  let outsideContentFile: string | undefined;
+  let nestedContentFileFailure: IProductionProjectFixtureFailure | undefined;
   try {
+    outsideContentFile = fs.mkdtempSync(
+      path.join(os.tmpdir(), "automovie-content-file-junction-"),
+    );
     fs.writeFileSync(
       path.join(outsideContentFile, "escape.ts"),
       "export {};\n",
@@ -2554,16 +2659,38 @@ export const test_mcp_production_project = (): void => {
       "declared content files cannot escape through an intermediate junction",
       throws(() => contentProject.contentInputs()),
     );
+  } catch (error) {
+    nestedContentFileFailure = { error };
+    throw error;
   } finally {
-    nestedContentFileFixture.dispose();
-    fs.rmSync(outsideContentFile, { force: true, recursive: true });
+    const completedOutsideContentFile = outsideContentFile;
+    preserveProductionProjectFixtureCleanup(nestedContentFileFailure, [
+      {
+        resource: "nested-content-file production fixture",
+        cleanup: () => nestedContentFileFixture.dispose(),
+      },
+      ...(completedOutsideContentFile === undefined
+        ? []
+        : [
+            {
+              resource: "nested-content-file outside root",
+              cleanup: () =>
+                fs.rmSync(completedOutsideContentFile, {
+                  force: true,
+                  recursive: true,
+                }),
+            },
+          ]),
+    ]);
   }
 
   const parentJunctionFixture = productionFixture();
-  const outsideContentRoot = fs.mkdtempSync(
-    path.join(os.tmpdir(), "automovie-content-root-junction-"),
-  );
+  let outsideContentRoot: string | undefined;
+  let parentJunctionFailure: IProductionProjectFixtureFailure | undefined;
   try {
+    outsideContentRoot = fs.mkdtempSync(
+      path.join(os.tmpdir(), "automovie-content-root-junction-"),
+    );
     fs.mkdirSync(path.join(outsideContentRoot, "viewer"));
     fs.writeFileSync(
       path.join(outsideContentRoot, "viewer", "escape.ts"),
@@ -2590,9 +2717,29 @@ export const test_mcp_production_project = (): void => {
       "a declared content root cannot escape through a parent junction",
       throws(() => AutoMovieProductionProject.open(parentJunctionFixture.root)),
     );
+  } catch (error) {
+    parentJunctionFailure = { error };
+    throw error;
   } finally {
-    parentJunctionFixture.dispose();
-    fs.rmSync(outsideContentRoot, { force: true, recursive: true });
+    const completedOutsideContentRoot = outsideContentRoot;
+    preserveProductionProjectFixtureCleanup(parentJunctionFailure, [
+      {
+        resource: "parent-junction production fixture",
+        cleanup: () => parentJunctionFixture.dispose(),
+      },
+      ...(completedOutsideContentRoot === undefined
+        ? []
+        : [
+            {
+              resource: "parent-junction outside root",
+              cleanup: () =>
+                fs.rmSync(completedOutsideContentRoot, {
+                  force: true,
+                  recursive: true,
+                }),
+            },
+          ]),
+    ]);
   }
 
   for (const [name, contentRoots, contentFiles, prepare] of [
