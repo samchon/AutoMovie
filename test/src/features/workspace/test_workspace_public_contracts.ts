@@ -4244,12 +4244,12 @@ export const test_workspace_public_contracts = (): void => {
           },
           {
             comparisons: [
-              'receiptByDeliverable.get("starter-preview")?.probe?.width===160',
-              'receiptByDeliverable.get("starter-preview")?.probe?.height===90',
-              'receiptByDeliverable.get("starter-feature")?.probe?.width===160',
-              'receiptByDeliverable.get("starter-feature")?.probe?.height===90',
-              'receiptByDeliverable.get("starter-pose-guide")?.probe?.width===160',
-              'receiptByDeliverable.get("starter-pose-guide")?.probe?.height===90',
+              "previewImage?.probe?.width===160",
+              "previewImage?.probe?.height===90",
+              "featureVideo?.probe?.width===160",
+              "featureVideo?.probe?.height===90",
+              "guideVideo?.probe?.width===160",
+              "guideVideo?.probe?.height===90",
             ],
             name: '"starter-required-deliverables-parser-complete"',
           },

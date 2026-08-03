@@ -932,67 +932,116 @@ if (phase === "review") {
   const receipt = readJson(
     project.trackedStatePath("render-manifest-receipt.json"),
   );
+  const ownedFiles = (aggregate.deliverables ?? []).flatMap((deliverable) =>
+    (deliverable.files ?? []).map((file) => ({
+      deliverable: deliverable.id,
+      ...file,
+    })),
+  );
+  const ownedFilesByPath = new Map(ownedFiles.map((file) => [file.path, file]));
   assert(
     "starter-aggregate-receipt",
     receipt.version === 2 &&
       receipt.manifestDigest === digestAutoMovieBytes(aggregateBytes) &&
       Array.isArray(receipt.files) &&
-      receipt.files.length === 5 &&
-      receipt.files.every(
-        (file) =>
-          aggregate.deliverables
-            ?.find((deliverable) => deliverable.id === file.deliverable)
-            ?.files?.some(
-              (owned) =>
-                owned.path === file.path &&
-                owned.digest === file.digest &&
-                owned.bytes === file.bytes &&
-                owned.mediaType === file.mediaType,
-            ) === true,
-      ),
+      ownedFilesByPath.size === ownedFiles.length &&
+      receipt.files.length === ownedFiles.length &&
+      receipt.files.every((file) => {
+        const owned = ownedFilesByPath.get(file.path);
+        return (
+          owned !== undefined &&
+          owned.deliverable === file.deliverable &&
+          owned.digest === file.digest &&
+          owned.bytes === file.bytes &&
+          owned.mediaType === file.mediaType
+        );
+      }),
     JSON.stringify(receipt),
   );
-  const receiptByDeliverable = new Map(
-    receipt.files.map((file) => [file.deliverable, file]),
+  const receiptFilesByDeliverable = new Map();
+  for (const file of receipt.files) {
+    const owned = receiptFilesByDeliverable.get(file.deliverable);
+    if (owned === undefined)
+      receiptFilesByDeliverable.set(file.deliverable, [file]);
+    else owned.push(file);
+  }
+  const deliverableFile = (deliverable, name) => {
+    const matched = (receiptFilesByDeliverable.get(deliverable) ?? []).filter(
+      (file) => file.path.endsWith(\`/\${name}\`),
+    );
+    return matched.length === 1 ? matched[0] : undefined;
+  };
+  const previewImage = deliverableFile("starter-preview", "preview.png");
+  const featureVideo = deliverableFile("starter-feature", "feature.mp4");
+  const guideVideo = deliverableFile("starter-pose-guide", "pose.mp4");
+  const guideFrames = Array.from(
+    {
+      length:
+        guideVideo?.probe?.kind === "video" ? guideVideo.probe.frameCount : 0,
+    },
+    (_unused, index) =>
+      deliverableFile(
+        "starter-pose-guide",
+        \`frames/pose/frame_\${String(index).padStart(8, "0")}.png\`,
+      ),
   );
+  const captionsTrack = deliverableFile("starter-captions", "captions.vtt");
+  const audioMix = deliverableFile("starter-audio", "audio.mp4");
+  const audioWaveform = deliverableFile("starter-audio", "waveform.png");
+  const audioSpectrogram = deliverableFile("starter-audio", "spectrogram.png");
+  const audioEvidence = deliverableFile("starter-audio", "evidence.json");
+  const requiredDeliverableFiles = [
+    ["starter-preview", [previewImage]],
+    ["starter-feature", [featureVideo]],
+    ["starter-pose-guide", [guideVideo, ...guideFrames]],
+    ["starter-captions", [captionsTrack]],
+    [
+      "starter-audio",
+      [audioMix, audioWaveform, audioSpectrogram, audioEvidence],
+    ],
+  ];
   assert(
     "starter-required-deliverables-parser-complete",
     aggregate.compileFingerprint === generated.inputFingerprint &&
-      aggregate.deliverables.length === 5 &&
-      [
-        "starter-preview",
-        "starter-feature",
-        "starter-pose-guide",
-        "starter-captions",
-        "starter-audio",
-      ].every((id) =>
-        aggregate.deliverables.some(
-          (deliverable) =>
-            deliverable.id === id && deliverable.files.length === 1,
-        ),
+      aggregate.deliverables.length === requiredDeliverableFiles.length &&
+      requiredDeliverableFiles.every(
+        ([id, expected]) =>
+          expected.every((file) => file !== undefined) &&
+          (receiptFilesByDeliverable.get(id) ?? []).length ===
+            expected.length &&
+          aggregate.deliverables.some(
+            (deliverable) =>
+              deliverable.id === id &&
+              deliverable.files.length === expected.length,
+          ),
       ) &&
-      receiptByDeliverable.get("starter-preview")?.probe?.kind === "png" &&
-      receiptByDeliverable.get("starter-preview")?.probe?.width === 160 &&
-      receiptByDeliverable.get("starter-preview")?.probe?.height === 90 &&
-      receiptByDeliverable.get("starter-feature")?.probe?.kind === "video" &&
-      receiptByDeliverable.get("starter-feature")?.probe?.frameCount === 23 &&
-      receiptByDeliverable.get("starter-feature")?.probe?.width === 160 &&
-      receiptByDeliverable.get("starter-feature")?.probe?.height === 90 &&
-      receiptByDeliverable.get("starter-pose-guide")?.probe?.kind ===
-        "video" &&
-      receiptByDeliverable.get("starter-pose-guide")?.probe?.frameCount ===
-        23 &&
-      receiptByDeliverable.get("starter-pose-guide")?.probe?.width === 160 &&
-      receiptByDeliverable.get("starter-pose-guide")?.probe?.height === 90 &&
-      receiptByDeliverable.get("starter-captions")?.probe?.kind ===
-        "webvtt" &&
-      receiptByDeliverable.get("starter-captions")?.probe?.cueCount === 1 &&
+      guideFrames.every(
+        (frame) =>
+          frame?.probe?.kind === "png" &&
+          frame?.probe?.width === 160 &&
+          frame?.probe?.height === 90,
+      ) &&
+      previewImage?.probe?.kind === "png" &&
+      previewImage?.probe?.width === 160 &&
+      previewImage?.probe?.height === 90 &&
+      featureVideo?.probe?.kind === "video" &&
+      featureVideo?.probe?.frameCount === 23 &&
+      featureVideo?.probe?.width === 160 &&
+      featureVideo?.probe?.height === 90 &&
+      guideVideo?.probe?.kind === "video" &&
+      guideVideo?.probe?.frameCount === 23 &&
+      guideVideo?.probe?.width === 160 &&
+      guideVideo?.probe?.height === 90 &&
+      captionsTrack?.probe?.kind === "webvtt" &&
+      captionsTrack?.probe?.cueCount === 1 &&
       aggregate.deliverables.find(
         (deliverable) => deliverable.id === "starter-captions",
       )?.runtimeSeconds === 11.5 &&
-      receiptByDeliverable.get("starter-audio")?.probe?.kind === "audio" &&
-      receiptByDeliverable.get("starter-audio")?.probe?.runtimeSeconds ===
-        11.5,
+      audioMix?.probe?.kind === "audio" &&
+      audioMix?.probe?.runtimeSeconds === 11.5 &&
+      audioWaveform?.probe?.kind === "png" &&
+      audioSpectrogram?.probe?.kind === "png" &&
+      audioEvidence?.probe?.kind === "sound-evidence",
     JSON.stringify(aggregate),
   );
   const final = services.compiler.compile({ scope: "final" });
