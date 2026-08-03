@@ -11896,6 +11896,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       }
     }) as typeof fs.fsyncSync;
     let workerMarkerSwapRejected = false;
+    let workerMarkerSwapCleanupFailure: { error: unknown } | undefined;
     try {
       workerMarkerSwapRejected = throws(() =>
         renderGcModule.quarantineCapturedRenderTarget({
@@ -11905,9 +11906,24 @@ export const test_cli_scaffold = async (): Promise<void> => {
           snapshot: workerMarkerSwapSnapshot,
         }),
       );
+    } catch (error) {
+      workerMarkerSwapCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.openSync = nativeOpen;
-      mutableFs.fsyncSync = nativeFsync;
+      preserveCliHarnessCleanup(workerMarkerSwapCleanupFailure, [
+        {
+          resource: "render quarantine marker open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+        {
+          resource: "render quarantine marker fsync hook",
+          cleanup: () => {
+            mutableFs.fsyncSync = nativeFsync;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "routine worker cleanup preserves a quarantine marker successor",
@@ -11972,6 +11988,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       }
     }) as typeof fs.closeSync;
     let workerEvidenceSwapRejected = false;
+    let workerEvidenceSwapCleanupFailure: { error: unknown } | undefined;
     try {
       workerEvidenceSwapRejected = throws(() =>
         renderGcModule.quarantineCapturedRenderTarget({
@@ -11981,9 +11998,24 @@ export const test_cli_scaffold = async (): Promise<void> => {
           snapshot: workerEvidenceSwapSnapshot,
         }),
       );
+    } catch (error) {
+      workerEvidenceSwapCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.openSync = nativeOpen;
-      mutableFs.closeSync = nativeClose;
+      preserveCliHarnessCleanup(workerEvidenceSwapCleanupFailure, [
+        {
+          resource: "render quarantine evidence open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+        {
+          resource: "render quarantine evidence close hook",
+          cleanup: () => {
+            mutableFs.closeSync = nativeClose;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "routine worker cleanup rejects private evidence changed after marker publication",

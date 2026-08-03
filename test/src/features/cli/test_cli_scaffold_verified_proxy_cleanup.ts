@@ -115,7 +115,7 @@ export const test_cli_scaffold_verified_proxy_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1911,
+          containerStatements: 1913,
           finallyDigest:
             "d00876a73d3676827029dede236cbe84ef1e558dc5e4b37b774d41db08ed53cf",
           finallySubstantive: {
@@ -143,7 +143,7 @@ export const test_cli_scaffold_verified_proxy_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1911,
+          containerStatements: 1913,
           finallyDigest:
             "700a1adbe2c656b62d88d2efac6ef77f32b3ef96274b83482763fb3d5ae65c3d",
           finallySubstantive: {

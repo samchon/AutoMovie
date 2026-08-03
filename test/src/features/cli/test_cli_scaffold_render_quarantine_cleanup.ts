@@ -30,7 +30,7 @@ const leafTokenContract = (
   };
 };
 
-const renderGcSnapshotCleanupContract = (text: string): unknown => {
+const renderQuarantineCleanupContract = (text: string): unknown => {
   const source = ts.createSourceFile(
     "test_cli_scaffold.ts",
     text,
@@ -38,7 +38,10 @@ const renderGcSnapshotCleanupContract = (text: string): unknown => {
     true,
     ts.ScriptKind.TS,
   );
-  const anchors = ["directrenderfilefsynchook", "directrenderabafsynchook"];
+  const anchors = [
+    "renderquarantinemarkeropenhook",
+    "renderquarantineevidenceopenhook",
+  ];
   const lifecycles: Array<{
     catchBodies: string[];
     catchVariables: string[];
@@ -97,66 +100,69 @@ const renderGcSnapshotCleanupContract = (text: string): unknown => {
   };
 };
 
-export const test_cli_scaffold_render_gc_snapshot_cleanup = (): void => {
+export const test_cli_scaffold_render_quarantine_cleanup = (): void => {
   TestValidator.equals(
-    "CLI scaffold owns two render GC snapshot cleanup lifecycles",
-    renderGcSnapshotCleanupContract(
+    "CLI scaffold owns two render quarantine cleanup lifecycles",
+    renderQuarantineCleanupContract(
       fs.readFileSync(path.join(__dirname, "test_cli_scaffold.ts"), "utf8"),
     ),
     {
       lifecycles: [
         {
           catchBodies: [
-            "directFileFailureCleanupFailure={error};",
+            "workerMarkerSwapCleanupFailure={error};",
             "throwerror;",
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
           containerStatements: 1913,
           finallyDigest:
-            "7d4ae166a68cfcacd5c2760dfb7047a3c24265054eda53f98b2f81d84b8e9688",
+            "80967258ea864f6ca74d5fac7ca56c4078e07de131f1ae61d1e5349af97bda9e",
           finallySubstantive: {
             digest:
-              "40b0b97a7a1eab41a7a3a02f37a482aa92cdca051b06769430e99e5a537c6e23",
-            tokens: 74,
+              "7efa04d234ccca5f485ce3ae00b3dafd09b1537db02cbe36b1bcdd39a5ab8f32",
+            tokens: 50,
           },
-          index: 824,
+          index: 1523,
           preceding:
-            "letdirectFileFailureCleanupFailure:{error:unknown}|undefined;",
+            "letworkerMarkerSwapCleanupFailure:{error:unknown}|undefined;",
           substantive: {
             digest:
-              "223d4fdf93773ee5192d468750e8641ddac24280d17fdb273d91f019015949c9",
-            tokens: 23,
+              "c7ca74f39ff1476fe3a010808c522f1b46cb01d1425ab6c3bded0aff2d18c100",
+            tokens: 33,
           },
           tryBody:
-            '{directFileFailureRejected=throwsWith(()=>renderAttemptGcModule.createRenderGcFileSnapshot(directFileFailureRoot,directFileFailureTarget,directFileFailureBytes,),"changedphysicalidentity",);}',
+            "{workerMarkerSwapRejected=throws(()=>renderGcModule.quarantineCapturedRenderTarget({destination:workerMarkerSwapDestination,isolated:workerMarkerSwapIsolated,quarantine:workerPreserved,snapshot:workerMarkerSwapSnapshot,}),);}",
           tryDigest:
-            "9e6233fd9daa9168b6ef11e0a447e8ef7466e6176376150130e2d32ab4f3765e",
+            "0d2f35cdb0767d40169fe8099b24fd07588868c0906f89b63a0d5b3fa63fb698",
         },
         {
-          catchBodies: ["directFileAbaCleanupFailure={error};", "throwerror;"],
+          catchBodies: [
+            "workerEvidenceSwapCleanupFailure={error};",
+            "throwerror;",
+          ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
           containerStatements: 1913,
           finallyDigest:
-            "bf6b1243bdafeb465a8caf9d29cde77e5d68bd389955391471b8e783284cd958",
+            "8d66835203d10753324ef175833749373493fdf76cdcdac27668ec33883b3607",
           finallySubstantive: {
             digest:
-              "edd4516383b777a9e6114ea970878184806804d4dbd8e7c8bb67e4e2c32cd410",
+              "7096c29ee32ce1631058c7aca855ed40821a500998aa136516a2f4cc45a1799c",
             tokens: 50,
           },
-          index: 842,
+          index: 1538,
           preceding:
-            "letdirectFileAbaCleanupFailure:{error:unknown}|undefined;",
+            "letworkerEvidenceSwapCleanupFailure:{error:unknown}|undefined;",
           substantive: {
             digest:
-              "d4b81b69af3f62ef3a15ea63b4813d5912cdf298cd2bbe0c08a57afb97d740b1",
-            tokens: 21,
+              "f5ca90f0650b0b7e29c4893a2dd3c69b99039f3e3b6fa107b1f39afb52e72a4d",
+            tokens: 33,
           },
           tryBody:
-            "{directFileAbaRejected=throws(()=>renderAttemptGcModule.createRenderGcFileSnapshot(directFileAbaRoot,directFileAbaTarget,directFileFailureBytes,),);}",
+            "{workerEvidenceSwapRejected=throws(()=>renderGcModule.quarantineCapturedRenderTarget({destination:workerEvidenceSwapDestination,isolated:workerEvidenceSwapIsolated,quarantine:workerPreserved,snapshot:workerEvidenceSwapSnapshot,}),);}",
           tryDigest:
-            "5c37ebbf45e1e3ff7147fc907473249d297365303165beb8dbaaf3709c57af2f",
+            "58e5e273541aca21f0bcd43197caf8644b53aa9a022da4c1a47cc4b37b3605d0",
         },
       ],
       parseDiagnostics: [],
