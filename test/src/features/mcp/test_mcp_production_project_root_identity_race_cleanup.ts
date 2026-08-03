@@ -40,7 +40,7 @@ const aggregateContainsExactly = (
   error.errors.length === expected.length &&
   expected.every((failure, index) => error.errors[index] === failure);
 
-const reentrantNamespaceCleanupContract = (text: string): unknown => {
+const rootIdentityRaceCleanupContract = (text: string): unknown => {
   const source = ts.createSourceFile(
     "test_mcp_production_project.ts",
     text,
@@ -60,6 +60,7 @@ const reentrantNamespaceCleanupContract = (text: string): unknown => {
         )
       : [],
   );
+  const holderNames = ["missingIdentityFailure", "preLeaseFailure"] as const;
   const lifecycles: Array<{
     catchBodies: string[];
     catchVariables: string[];
@@ -85,7 +86,7 @@ const reentrantNamespaceCleanupContract = (text: string): unknown => {
         const statements = [...node.parent.statements];
         const index = statements.indexOf(node);
         const failureHolder = compact(statements[index - 1]!, source);
-        if (failureHolder.startsWith("letreentrantAcquisitionFailure:"))
+        if (holderNames.some((name) => failureHolder.startsWith(`let${name}:`)))
           lifecycles.push({
             catchBodies: node.catchClause.block.statements.map((statement) =>
               compact(statement, source),
@@ -130,6 +131,7 @@ const reentrantNamespaceCleanupContract = (text: string): unknown => {
 const captureCleanup = (props: {
   cleanupFailures?: readonly ({ error: unknown; present: true } | undefined)[];
   primaryFailure?: { error: unknown; present: true };
+  resources?: number;
 }): { caught: boolean; failure: unknown; order: string[] } => {
   let caught = false;
   const order: string[] = [];
@@ -139,8 +141,8 @@ const captureCleanup = (props: {
       props.primaryFailure === undefined
         ? undefined
         : { error: props.primaryFailure.error },
-      Array.from({ length: 3 }, (_, index) => ({
-        resource: `reentrant-namespace-${index}`,
+      Array.from({ length: props.resources ?? 4 }, (_, index) => ({
+        resource: `root-identity-race-${index}`,
         cleanup: (): void => {
           order.push(`cleanup-${index}`);
           const cleanupFailure = props.cleanupFailures?.[index];
@@ -156,71 +158,43 @@ const captureCleanup = (props: {
   return { caught, failure, order };
 };
 
-const capturePartialAcquisition = (props: {
-  acquired: 0 | 1 | 2;
-  hookFailure?: { error: unknown; present: true };
-  primaryFailure?: { error: unknown; present: true };
-}): { caught: boolean; failure: unknown; order: string[] } => {
-  let caught = false;
+const capturePartialSwap = (props: {
+  primaryFailure: unknown;
+  swapped: boolean;
+}): { failure: unknown; order: string[] } => {
   const order: string[] = [];
   let failure: unknown;
-  let hookRestoreFailed = false;
   try {
-    preserveProductionProjectFixtureCleanup(
-      props.primaryFailure === undefined
-        ? undefined
-        : { error: props.primaryFailure.error },
-      [
-        {
-          resource: "write hook",
-          cleanup: (): void => {
-            order.push("hook");
-            if (props.hookFailure !== undefined) {
-              hookRestoreFailed = true;
-              throw props.hookFailure.error;
-            }
-          },
-        },
-        ...(props.acquired === 2
-          ? [
-              {
-                resource: "inner lease",
-                cleanup: (): void => {
-                  order.push("inner-check");
-                  if (props.primaryFailure !== undefined || hookRestoreFailed)
-                    order.push("inner-release");
-                },
-              },
-            ]
-          : []),
-        ...(props.acquired >= 1
-          ? [
-              {
-                resource: "outer lease",
-                cleanup: (): void => {
-                  order.push("outer-check");
-                  if (props.primaryFailure !== undefined || hookRestoreFailed)
-                    order.push("outer-release");
-                },
-              },
-            ]
-          : []),
-      ],
-    );
-    if (props.primaryFailure !== undefined) throw props.primaryFailure.error;
+    preserveProductionProjectFixtureCleanup({ error: props.primaryFailure }, [
+      { resource: "read hook", cleanup: () => order.push("hook") },
+      { resource: "observation", cleanup: () => order.push("observe") },
+      ...(props.swapped
+        ? [
+            {
+              resource: "active replacement",
+              cleanup: () => order.push("active-remove"),
+            },
+            {
+              resource: "parked root",
+              cleanup: () => order.push("parked-restore"),
+            },
+          ]
+        : []),
+    ]);
+    throw props.primaryFailure;
   } catch (error) {
-    caught = true;
     failure = error;
   }
-  return { caught, failure, order };
+  return { failure, order };
 };
 
-export const test_mcp_production_project_reentrant_namespace_cleanup =
+export const test_mcp_production_project_root_identity_race_cleanup =
   (): void => {
-    const primaryFailure = { phase: "reentrant namespace acquisition" };
-    const hookFailure = { phase: "reentrant write-hook restoration" };
-    const innerFailure = { phase: "reentrant inner lease release" };
-    const outerFailure = { phase: "reentrant outer lease release" };
+    const primaryFailure = { phase: "root-identity race assertion" };
+    const hookFailure = { phase: "root-identity read-hook restoration" };
+    const observationFailure = { phase: "root-identity observation" };
+    const activeFailure = { phase: "root-identity active replacement" };
+    const parkedFailure = { phase: "root-identity parked root" };
     const success = captureCleanup({});
     const primaryOnly = captureCleanup({
       primaryFailure: { error: primaryFailure, present: true },
@@ -231,35 +205,26 @@ export const test_mcp_production_project_reentrant_namespace_cleanup =
     const multiple = captureCleanup({
       cleanupFailures: [
         { error: hookFailure, present: true },
-        { error: innerFailure, present: true },
-        { error: outerFailure, present: true },
+        { error: observationFailure, present: true },
+        { error: activeFailure, present: true },
+        { error: parkedFailure, present: true },
       ],
     });
     const combined = captureCleanup({
       cleanupFailures: [
         { error: hookFailure, present: true },
-        { error: innerFailure, present: true },
-        { error: outerFailure, present: true },
+        { error: observationFailure, present: true },
+        { error: activeFailure, present: true },
+        { error: parkedFailure, present: true },
       ],
       primaryFailure: { error: primaryFailure, present: true },
     });
-    const successfulBoth = capturePartialAcquisition({ acquired: 2 });
-    const noneAcquired = capturePartialAcquisition({
-      acquired: 0,
+    const partialSetup = captureCleanup({
       primaryFailure: { error: primaryFailure, present: true },
+      resources: 1,
     });
-    const outerAcquired = capturePartialAcquisition({
-      acquired: 1,
-      primaryFailure: { error: primaryFailure, present: true },
-    });
-    const bothAcquired = capturePartialAcquisition({
-      acquired: 2,
-      primaryFailure: { error: primaryFailure, present: true },
-    });
-    const hookFailedAfterAcquisition = capturePartialAcquisition({
-      acquired: 2,
-      hookFailure: { error: hookFailure, present: true },
-    });
+    const noSwap = capturePartialSwap({ primaryFailure, swapped: false });
+    const swapped = capturePartialSwap({ primaryFailure, swapped: true });
     const undefinedStandalone = captureCleanup({
       cleanupFailures: [{ error: undefined, present: true }],
     });
@@ -268,62 +233,60 @@ export const test_mcp_production_project_reentrant_namespace_cleanup =
       primaryFailure: { error: undefined, present: true },
     });
     TestValidator.predicate(
-      "reentrant namespace cleanup preserves failure and release order",
+      "root-identity race cleanup preserves failure and recovery order",
       success.caught === false &&
         success.failure === undefined &&
-        success.order.join(",") === "cleanup-0,cleanup-1,cleanup-2" &&
+        success.order.join(",") === "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
         primaryOnly.caught &&
         primaryOnly.failure === primaryFailure &&
-        primaryOnly.order.join(",") === "cleanup-0,cleanup-1,cleanup-2" &&
+        primaryOnly.order.join(",") ===
+          "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
         standalone.caught &&
         standalone.failure === hookFailure &&
-        standalone.order.join(",") === "cleanup-0,cleanup-1,cleanup-2" &&
+        standalone.order.join(",") ===
+          "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
         multiple.caught &&
         aggregateContainsExactly(multiple.failure, [
           hookFailure,
-          innerFailure,
-          outerFailure,
+          observationFailure,
+          activeFailure,
+          parkedFailure,
         ]) &&
-        multiple.order.join(",") === "cleanup-0,cleanup-1,cleanup-2" &&
+        multiple.order.join(",") ===
+          "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
         combined.caught &&
         aggregateContainsExactly(combined.failure, [
           primaryFailure,
           hookFailure,
-          innerFailure,
-          outerFailure,
+          observationFailure,
+          activeFailure,
+          parkedFailure,
         ]) &&
-        combined.order.join(",") === "cleanup-0,cleanup-1,cleanup-2" &&
-        successfulBoth.caught === false &&
-        successfulBoth.failure === undefined &&
-        successfulBoth.order.join(",") === "hook,inner-check,outer-check" &&
-        noneAcquired.caught &&
-        noneAcquired.failure === primaryFailure &&
-        noneAcquired.order.join(",") === "hook" &&
-        outerAcquired.caught &&
-        outerAcquired.failure === primaryFailure &&
-        outerAcquired.order.join(",") === "hook,outer-check,outer-release" &&
-        bothAcquired.caught &&
-        bothAcquired.failure === primaryFailure &&
-        bothAcquired.order.join(",") ===
-          "hook,inner-check,inner-release,outer-check,outer-release" &&
-        hookFailedAfterAcquisition.caught &&
-        hookFailedAfterAcquisition.failure === hookFailure &&
-        hookFailedAfterAcquisition.order.join(",") ===
-          "hook,inner-check,inner-release,outer-check,outer-release" &&
+        combined.order.join(",") ===
+          "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+        partialSetup.caught &&
+        partialSetup.failure === primaryFailure &&
+        partialSetup.order.join(",") === "cleanup-0" &&
+        noSwap.failure === primaryFailure &&
+        noSwap.order.join(",") === "hook,observe" &&
+        swapped.failure === primaryFailure &&
+        swapped.order.join(",") ===
+          "hook,observe,active-remove,parked-restore" &&
         undefinedStandalone.caught &&
         undefinedStandalone.failure === undefined &&
         undefinedStandalone.order.join(",") ===
-          "cleanup-0,cleanup-1,cleanup-2" &&
+          "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
         undefinedCombined.caught &&
         aggregateContainsExactly(undefinedCombined.failure, [
           undefined,
           undefined,
         ]) &&
-        undefinedCombined.order.join(",") === "cleanup-0,cleanup-1,cleanup-2",
+        undefinedCombined.order.join(",") ===
+          "cleanup-0,cleanup-1,cleanup-2,cleanup-3",
     );
     TestValidator.equals(
-      "production-project test owns one reentrant namespace cleanup lifecycle",
-      reentrantNamespaceCleanupContract(
+      "production-project test owns two root-identity race cleanup lifecycles",
+      rootIdentityRaceCleanupContract(
         fs.readFileSync(
           path.join(__dirname, "test_mcp_production_project.ts"),
           "utf8",
@@ -334,32 +297,54 @@ export const test_mcp_production_project_reentrant_namespace_cleanup =
           count: 1,
           lifecycles: [
             {
-              catchBodies: [
-                "reentrantAcquisitionFailure={error};",
-                "throwerror;",
-              ],
+              catchBodies: ["missingIdentityFailure={error};", "throwerror;"],
               catchVariables: ["error"],
               containerKind: "TryStatement",
               containerStatements: 221,
               failureHolder:
-                "letreentrantAcquisitionFailure:|IProductionProjectFixtureFailure|undefined;",
+                "letmissingIdentityFailure:IProductionProjectFixtureFailure|undefined;",
               finallyDigest:
-                "6ef48d21afe0aae6f2beec4bf2546e9362d439c4a7f7b3ea5aaee32a3e779e9e",
-              finallyStatements: 4,
+                "5ddd2805c85da5229b8f5a0d186c213589eac7d05f2b1a89a77e40254e6a41c5",
+              finallyStatements: 1,
               finallySubstantive: {
                 digest:
-                  "af696ad64a4e425fab3cceb08aee699f6bbf8dc89b2c52cb78e635f2a427be79",
-                tokens: 142,
+                  "474d0df1caf3abe4640ea5182e91ba5a23ab12d6ceda76f7fce78d7968e4c5e0",
+                tokens: 29,
               },
-              index: 85,
+              index: 135,
               substantive: {
                 digest:
-                  "5d087ab79e251353a1af7358b3a63909c44b2486864bbce57e7445784eb3b832",
-                tokens: 14,
+                  "5ee4cdbd2a9fdc2cdf7b4997b112c70bdf984bac60d142e8452f0e0513ffbfee",
+                tokens: 23,
               },
               tryDigest:
-                "e96e4edb5ff8882df61b4f0553cc8f54161e87a36f743cb15e419ac3dc189c39",
-              tryStatements: 2,
+                "e5c330e43e370ff7263a60f722574dd79dae8408dd630101573472f2e6e0c66a",
+              tryStatements: 1,
+            },
+            {
+              catchBodies: ["preLeaseFailure={error};", "throwerror;"],
+              catchVariables: ["error"],
+              containerKind: "TryStatement",
+              containerStatements: 221,
+              failureHolder:
+                "letpreLeaseFailure:IProductionProjectFixtureFailure|undefined;",
+              finallyDigest:
+                "4b7013cddf788926ec8925baa31bc1b5c4a5d8815999675ef1ba21cf2a0037a8",
+              finallyStatements: 2,
+              finallySubstantive: {
+                digest:
+                  "b253516d5cacb655e5c534ec97170f65f6abd60be33faa72d0f9ac64b48f28fc",
+                tokens: 135,
+              },
+              index: 160,
+              substantive: {
+                digest:
+                  "b37c4ffc20e6d1ed19fa9b1b66f197adc761ff6d68a62fff16171cf6cc315944",
+                tokens: 36,
+              },
+              tryDigest:
+                "8bb8103068457632849114189755ff8016fe3cb5c62d5ec689a25b24cd1f4587",
+              tryStatements: 1,
             },
           ],
           statementCounts: [23],

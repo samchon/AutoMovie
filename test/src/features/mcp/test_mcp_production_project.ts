@@ -4188,6 +4188,7 @@ export const test_mcp_production_project = (): void => {
       AutoMovieProductionProject.open(missingIdentityRoot);
     const parkedMissingIdentityRoot = `${missingIdentityRoot}-parked`;
     fs.renameSync(missingIdentityRoot, parkedMissingIdentityRoot);
+    let missingIdentityFailure: IProductionProjectFixtureFailure | undefined;
     try {
       TestValidator.predicate(
         "an absent physical root invalidates a stale handle before any read",
@@ -4196,8 +4197,17 @@ export const test_mcp_production_project = (): void => {
           "root identity changed",
         ),
       );
+    } catch (error) {
+      missingIdentityFailure = { error };
+      throw error;
     } finally {
-      fs.renameSync(parkedMissingIdentityRoot, missingIdentityRoot);
+      preserveProductionProjectFixtureCleanup(missingIdentityFailure, [
+        {
+          resource: "missing-identity parked root",
+          cleanup: () =>
+            fs.renameSync(parkedMissingIdentityRoot, missingIdentityRoot),
+        },
+      ]);
     }
     const acquiredReplacementRoot = path.join(
       invalidRoot,
@@ -4280,6 +4290,8 @@ export const test_mcp_production_project = (): void => {
       return output;
     }) as typeof fs.readFileSync;
     let preLeaseRejected = false;
+    let preLeaseReplacementUntouched = false;
+    let preLeaseFailure: IProductionProjectFixtureFailure | undefined;
     try {
       preLeaseRejected = throws(
         () =>
@@ -4289,14 +4301,42 @@ export const test_mcp_production_project = (): void => {
           ),
         "namespace fence changed",
       );
+    } catch (error) {
+      preLeaseFailure = { error };
+      throw error;
     } finally {
-      fs.readFileSync = nativeReadForPreLease;
-    }
-    const preLeaseReplacementUntouched =
-      fs.readFileSync(preLeaseTarget, "utf8") === "before";
-    if (preLeaseSwapped) {
-      fs.rmSync(preLeaseRoot, { force: true, recursive: true });
-      fs.renameSync(parkedPreLeaseRoot, preLeaseRoot);
+      const preLeaseWasSwapped = fs.existsSync(parkedPreLeaseRoot);
+      preserveProductionProjectFixtureCleanup(preLeaseFailure, [
+        {
+          resource: "pre-lease read hook",
+          cleanup: () => {
+            fs.readFileSync = nativeReadForPreLease;
+          },
+        },
+        {
+          resource: "pre-lease replacement observation",
+          cleanup: () => {
+            preLeaseReplacementUntouched =
+              Reflect.apply(nativeReadForPreLease, fs, [
+                preLeaseTarget,
+                "utf8",
+              ]) === "before";
+          },
+        },
+        ...(preLeaseWasSwapped
+          ? [
+              {
+                resource: "pre-lease active replacement",
+                cleanup: () =>
+                  fs.rmSync(preLeaseRoot, { force: true, recursive: true }),
+              },
+              {
+                resource: "pre-lease parked root",
+                cleanup: () => fs.renameSync(parkedPreLeaseRoot, preLeaseRoot),
+              },
+            ]
+          : []),
+      ]);
     }
     TestValidator.predicate(
       "a root replaced while staging under the namespace lease is refused without mutation",
