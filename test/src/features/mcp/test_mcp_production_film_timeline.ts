@@ -115,6 +115,28 @@ export const preserveFilmSourceFixtureCleanup = (
     );
 };
 
+interface IFilmTimelineFixtureFailure {
+  error: unknown;
+}
+
+class FilmTimelineFixtureCleanupError extends AggregateError {}
+
+/** Dispose the film-timeline fixture without replacing its failure. */
+export const preserveFilmTimelineFixtureCleanup = (
+  failure: IFilmTimelineFixtureFailure | undefined,
+  cleanup: () => unknown,
+): void => {
+  try {
+    cleanup();
+  } catch (cleanupFailure) {
+    if (failure === undefined) throw cleanupFailure;
+    throw new FilmTimelineFixtureCleanupError(
+      [failure.error, cleanupFailure],
+      "Film-timeline fixture teardown failed after the test failed.",
+    );
+  }
+};
+
 const captureBytes = (): Uint8Array => {
   const png = new PNG({ width: 16, height: 16 });
   png.data.fill(200);
@@ -297,6 +319,7 @@ const twoShotEdit = (): IAutoMovieFilmEdit => {
 
 /** Film source compiles into one frame-exact artifact shared downstream. */
 export const test_mcp_production_film_timeline = async (): Promise<void> => {
+  let filmTimelineFailure: IFilmTimelineFixtureFailure | undefined;
   const fixture = productionFixture();
   try {
     const project = AutoMovieProductionProject.open(fixture.root);
@@ -1299,7 +1322,12 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
       );
     }
     fs.writeFileSync(realizationPath, realizationBytes);
+  } catch (error) {
+    filmTimelineFailure = { error };
+    throw error;
   } finally {
-    fixture.dispose();
+    preserveFilmTimelineFixtureCleanup(filmTimelineFailure, () =>
+      fixture.dispose(),
+    );
   }
 };
