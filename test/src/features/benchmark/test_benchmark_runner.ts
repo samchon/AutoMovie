@@ -1456,9 +1456,18 @@ const exerciseInputAndFilesystemFences = async (
   const cleanupFailure = new Error("synthetic MCP client cleanup failure");
   let cleanupOnlyFailure: unknown = null;
   let combinedProbeFailure: unknown = null;
-  Client.prototype.close = async function (): Promise<void> {
-    await Reflect.apply(nativeClientClose, this, []);
-    throw cleanupFailure;
+  Client.prototype.close = function (): Promise<void> {
+    const closed = Reflect.apply(nativeClientClose, this, []).then(() => {
+      throw cleanupFailure;
+    });
+    // The SDK abandons one close() promise when initialize fails
+    // (`void this.close()` in Client.connect), so the injected rejection is
+    // observed here as well. Every awaiting caller still receives this exact
+    // object; without the observer the abandoned rejection reaches the
+    // process-wide unhandledRejection handler h264-mp4-encoder installs, which
+    // aborts the whole suite instead of failing this scenario.
+    void closed.catch(() => {});
+    return closed;
   };
   let mcpProbeHarnessFailure: IBenchmarkRunnerFixtureFailure | undefined;
   try {
