@@ -2098,6 +2098,7 @@ export const test_mcp_production_legacy_import = (): void => {
       }
       return descriptor;
     }) as typeof fs.openSync;
+    let revisionRaceCleanupFailure: ILegacyImportFixtureFailure | undefined;
     try {
       TestValidator.predicate(
         "a changing resident revision cannot produce a mixed import plan",
@@ -2106,12 +2107,32 @@ export const test_mcp_production_legacy_import = (): void => {
           "changed physical identity",
         ) && changed,
       );
+    } catch (error) {
+      revisionRaceCleanupFailure = { error };
+      throw error;
     } finally {
-      fs.openSync = nativeOpen;
-      if (fs.existsSync(revisionParked)) {
-        fs.rmSync(revisionPath, { force: true });
-        fs.renameSync(revisionParked, revisionPath);
-      }
+      preserveLegacyImportFixtureCleanup(revisionRaceCleanupFailure, [
+        {
+          resource: "revision-race open hook",
+          cleanup: () => {
+            fs.openSync = nativeOpen;
+          },
+        },
+        {
+          resource: "revision-race transient revision",
+          cleanup: () => {
+            if (fs.existsSync(revisionParked))
+              fs.rmSync(revisionPath, { force: true });
+          },
+        },
+        {
+          resource: "revision-race resident revision",
+          cleanup: () => {
+            if (fs.existsSync(revisionParked))
+              fs.renameSync(revisionParked, revisionPath);
+          },
+        },
+      ]);
     }
   } finally {
     revisionRace.dispose();
