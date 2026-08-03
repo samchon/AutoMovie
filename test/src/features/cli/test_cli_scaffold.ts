@@ -8301,6 +8301,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       nativeClose(descriptor);
     }) as typeof fs.closeSync;
     let directFileFailureRejected = false;
+    let directFileFailureCleanupFailure: { error: unknown } | undefined;
     try {
       directFileFailureRejected = throwsWith(
         () =>
@@ -8311,11 +8312,31 @@ export const test_cli_scaffold = async (): Promise<void> => {
           ),
         "changed physical identity",
       );
+    } catch (error) {
+      directFileFailureCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.fsyncSync = nativeFsync;
-      mutableFs.closeSync = nativeClose;
-      if (directFileFailureCloseFailed)
-        nativeClose(directFileFailureDescriptor);
+      preserveCliHarnessCleanup(directFileFailureCleanupFailure, [
+        {
+          resource: "direct render file fsync hook",
+          cleanup: () => {
+            mutableFs.fsyncSync = nativeFsync;
+          },
+        },
+        {
+          resource: "direct render file close hook",
+          cleanup: () => {
+            mutableFs.closeSync = nativeClose;
+          },
+        },
+        {
+          resource: "direct render file descriptor",
+          cleanup: () => {
+            if (directFileFailureCloseFailed)
+              nativeClose(directFileFailureDescriptor);
+          },
+        },
+      ]);
     }
     const directFileResident = fs.lstatSync(directFileFailureTarget, {
       bigint: true,
@@ -8381,6 +8402,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       return status;
     }) as typeof fs.fstatSync;
     let directFileAbaRejected = false;
+    let directFileAbaCleanupFailure: { error: unknown } | undefined;
     try {
       directFileAbaRejected = throws(() =>
         renderAttemptGcModule.createRenderGcFileSnapshot(
@@ -8389,9 +8411,24 @@ export const test_cli_scaffold = async (): Promise<void> => {
           directFileFailureBytes,
         ),
       );
+    } catch (error) {
+      directFileAbaCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.fsyncSync = nativeFsync;
-      mutableFs.fstatSync = nativeFstat;
+      preserveCliHarnessCleanup(directFileAbaCleanupFailure, [
+        {
+          resource: "direct render ABA fsync hook",
+          cleanup: () => {
+            mutableFs.fsyncSync = nativeFsync;
+          },
+        },
+        {
+          resource: "direct render ABA fstat hook",
+          cleanup: () => {
+            mutableFs.fstatSync = nativeFstat;
+          },
+        },
+      ]);
     }
     const directFileAbaOriginal = fs.lstatSync(directFileAbaTarget, {
       bigint: true,

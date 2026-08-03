@@ -30,7 +30,7 @@ const leafTokenContract = (
   };
 };
 
-const verifiedProxyCleanupContract = (text: string): unknown => {
+const renderGcSnapshotCleanupContract = (text: string): unknown => {
   const source = ts.createSourceFile(
     "test_cli_scaffold.ts",
     text,
@@ -38,10 +38,7 @@ const verifiedProxyCleanupContract = (text: string): unknown => {
     true,
     ts.ScriptKind.TS,
   );
-  const anchors = [
-    "verifiedproxytreelstathook",
-    "verifiedproxyinventoryopenhook",
-  ];
+  const anchors = ["directrenderfilefsynchook", "directrenderabafsynchook"];
   const lifecycles: Array<{
     catchBodies: string[];
     catchVariables: string[];
@@ -61,7 +58,7 @@ const verifiedProxyCleanupContract = (text: string): unknown => {
       node.catchClause !== undefined &&
       node.finallyBlock !== undefined &&
       anchors.some((anchor) =>
-        compact(node.finallyBlock!, source).includes(anchor),
+        compact(node.finallyBlock!, source).toLowerCase().includes(anchor),
       ) &&
       ts.isBlock(node.parent)
     ) {
@@ -100,69 +97,66 @@ const verifiedProxyCleanupContract = (text: string): unknown => {
   };
 };
 
-export const test_cli_scaffold_verified_proxy_cleanup = (): void => {
+export const test_cli_scaffold_render_gc_snapshot_cleanup = (): void => {
   TestValidator.equals(
-    "CLI scaffold owns two verified proxy cleanup lifecycles",
-    verifiedProxyCleanupContract(
+    "CLI scaffold owns two render GC snapshot cleanup lifecycles",
+    renderGcSnapshotCleanupContract(
       fs.readFileSync(path.join(__dirname, "test_cli_scaffold.ts"), "utf8"),
     ),
     {
       lifecycles: [
         {
           catchBodies: [
-            "verifiedProxyTreeCleanupFailure={error};",
+            "directFileFailureCleanupFailure={error};",
             "throwerror;",
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
           containerStatements: 1903,
           finallyDigest:
-            "d00876a73d3676827029dede236cbe84ef1e558dc5e4b37b774d41db08ed53cf",
+            "7d4ae166a68cfcacd5c2760dfb7047a3c24265054eda53f98b2f81d84b8e9688",
           finallySubstantive: {
             digest:
-              "1ddd419a3bbd5e5fd81ff927f9fcc84ae3230b225fdce64cbc63f6664c7a58df",
-            tokens: 115,
+              "40b0b97a7a1eab41a7a3a02f37a482aa92cdca051b06769430e99e5a537c6e23",
+            tokens: 74,
           },
-          index: 336,
+          index: 824,
           preceding:
-            "letverifiedProxyTreeCleanupFailure:{error:unknown}|undefined;",
+            "letdirectFileFailureCleanupFailure:{error:unknown}|undefined;",
           substantive: {
             digest:
-              "ce3268fc7c1fad4e7c34596cf3a3a2c63dc939da651fb661835639e4ac63ebe9",
-            tokens: 19,
+              "223d4fdf93773ee5192d468750e8641ddac24280d17fdb273d91f019015949c9",
+            tokens: 23,
           },
           tryBody:
-            "{verifiedProxyTreeSuccessorRejected=throws(()=>proxyModule.inspectPublishedProxyBundle(verifiedProxyRoot,verifiedProxyBundle,),);}",
+            '{directFileFailureRejected=throwsWith(()=>renderAttemptGcModule.createRenderGcFileSnapshot(directFileFailureRoot,directFileFailureTarget,directFileFailureBytes,),"changedphysicalidentity",);}',
           tryDigest:
-            "b86be392535b10de1b87f6ca31c414725299bc2bdc09fb45f6cd88abf4012814",
+            "9e6233fd9daa9168b6ef11e0a447e8ef7466e6176376150130e2d32ab4f3765e",
         },
         {
-          catchBodies: [
-            "verifiedProxyInventoryCleanupFailure={error};",
-            "throwerror;",
-          ],
+          catchBodies: ["directFileAbaCleanupFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
           containerStatements: 1903,
           finallyDigest:
-            "700a1adbe2c656b62d88d2efac6ef77f32b3ef96274b83482763fb3d5ae65c3d",
+            "bf6b1243bdafeb465a8caf9d29cde77e5d68bd389955391471b8e783284cd958",
           finallySubstantive: {
             digest:
-              "70b4dbd7cf747cfa0354387023ede667b69c4b1f0af9b3408d37a09a6e4b3f0b",
-            tokens: 99,
+              "edd4516383b777a9e6114ea970878184806804d4dbd8e7c8bb67e4e2c32cd410",
+            tokens: 50,
           },
-          index: 347,
+          index: 842,
           preceding:
-            "letverifiedProxyInventoryCleanupFailure:{error:unknown}|undefined;",
+            "letdirectFileAbaCleanupFailure:{error:unknown}|undefined;",
           substantive: {
             digest:
-              "e1950d54cb638d63807470a9504cbf95901ba090fc5e7cebb9539fa78a6b410b",
-            tokens: 19,
+              "d4b81b69af3f62ef3a15ea63b4813d5912cdf298cd2bbe0c08a57afb97d740b1",
+            tokens: 21,
           },
           tryBody:
-            "{verifiedProxyLateMutationRejected=throws(()=>proxyModule.inspectPublishedProxyBundle(verifiedProxyRoot,verifiedProxyBundle,),);}",
+            "{directFileAbaRejected=throws(()=>renderAttemptGcModule.createRenderGcFileSnapshot(directFileAbaRoot,directFileAbaTarget,directFileFailureBytes,),);}",
           tryDigest:
-            "0c0ec72321cd2d85c484246cb26eba2170e1d99fb3b0b715d64563a48ee8af03",
+            "5c37ebbf45e1e3ff7147fc907473249d297365303165beb8dbaaf3709c57af2f",
         },
       ],
       parseDiagnostics: [],
