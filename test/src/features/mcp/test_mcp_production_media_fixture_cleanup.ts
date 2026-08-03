@@ -93,6 +93,12 @@ const productionMediaFixtureContract = (text: string): unknown => {
       catchBodies,
       cleanupCalls,
       finallyBodies,
+      statements:
+        owner.length === 1 && ts.isBlock(owner[0]!.body)
+          ? owner[0]!.body.statements.map((statement) =>
+              compact(statement, source),
+            )
+          : [],
       tryBodies,
     },
     policy: {
@@ -174,6 +180,11 @@ export const test_mcp_production_media_fixture_cleanup = (): void => {
           [
             "preserveProductionMediaEncoderCleanup(failure,()=>encoder.delete());",
           ],
+        ],
+        statements: [
+          "constencoder=awaitHME.createH264MP4Encoder();",
+          "letfailure:IProductionMediaEncoderFailure|undefined;",
+          "try{encoder.width=props.width;encoder.height=props.height;encoder.frameRate=props.fps;encoder.speed=10;encoder.groupOfPictures=props.fps;encoder.initialize();constframe=newUint8Array(props.width*props.height*4);for(letindex=0;index<props.frameCount;++index){for(letpixel=0;pixel<props.width*props.height;++pixel){constoffset=pixel*4;frame[offset]=(index*7+pixel)%256;frame[offset+1]=(index*11+pixel*3)%256;frame[offset+2]=(index*13+pixel*5)%256;frame[offset+3]=255;}encoder.addFrameRgba(frame);}encoder.finalize();returnUint8Array.from(encoder.FS.readFile(encoder.outputFilename));}catch(error){failure={error};throwerror;}finally{preserveProductionMediaEncoderCleanup(failure,()=>encoder.delete());}",
         ],
         tryBodies: [
           "{encoder.width=props.width;encoder.height=props.height;encoder.frameRate=props.fps;encoder.speed=10;encoder.groupOfPictures=props.fps;encoder.initialize();constframe=newUint8Array(props.width*props.height*4);for(letindex=0;index<props.frameCount;++index){for(letpixel=0;pixel<props.width*props.height;++pixel){constoffset=pixel*4;frame[offset]=(index*7+pixel)%256;frame[offset+1]=(index*11+pixel*3)%256;frame[offset+2]=(index*13+pixel*5)%256;frame[offset+3]=255;}encoder.addFrameRgba(frame);}encoder.finalize();returnUint8Array.from(encoder.FS.readFile(encoder.outputFilename));}",
