@@ -23,6 +23,28 @@ import {
   worldDesign,
 } from "./productionFixtures";
 
+interface IProductionInstancesFixtureFailure {
+  error: unknown;
+}
+
+class ProductionInstancesFixtureCleanupError extends AggregateError {}
+
+/** Dispose the production-instances fixture without replacing its failure. */
+export const preserveProductionInstancesFixtureCleanup = (
+  failure: IProductionInstancesFixtureFailure | undefined,
+  cleanup: () => unknown,
+): void => {
+  try {
+    cleanup();
+  } catch (cleanupFailure) {
+    if (failure === undefined) throw cleanupFailure;
+    throw new ProductionInstancesFixtureCleanupError(
+      [failure.error, cleanupFailure],
+      "Production-instances fixture teardown failed after the test failed.",
+    );
+  }
+};
+
 const instanceSet = (
   id: string,
   count: number,
@@ -181,6 +203,9 @@ export const test_mcp_production_instances = (): void => {
       inventory.trees?.route === null,
   );
 
+  let productionInstancesFailure:
+    | IProductionInstancesFixtureFailure
+    | undefined;
   const fixture = productionFixture();
   try {
     const project = AutoMovieProductionProject.open(fixture.root);
@@ -234,7 +259,12 @@ export const test_mcp_production_instances = (): void => {
           1_000 &&
         compiled.models.some((model) => model.id.endsWith(":sentinel")),
     );
+  } catch (error) {
+    productionInstancesFailure = { error };
+    throw error;
   } finally {
-    fixture.dispose();
+    preserveProductionInstancesFixtureCleanup(productionInstancesFailure, () =>
+      fixture.dispose(),
+    );
   }
 };
