@@ -118,6 +118,39 @@ export const preserveBenchmarkRunnerHookCleanup = (
     );
 };
 
+interface IBenchmarkRunnerResidentCleanup {
+  cleanup: () => unknown;
+  resource: string;
+}
+
+class BenchmarkRunnerResidentCleanupError extends AggregateError {}
+
+/** Attempt every benchmark resident recovery without hiding failure. */
+export const preserveBenchmarkRunnerResidentCleanup = (
+  failure: IBenchmarkRunnerFixtureFailure | undefined,
+  resources: readonly IBenchmarkRunnerResidentCleanup[],
+): void => {
+  const cleanupFailures: Array<{ error: unknown; resource: string }> = [];
+  for (const resource of resources)
+    try {
+      resource.cleanup();
+    } catch (error) {
+      cleanupFailures.push({ error, resource: resource.resource });
+    }
+  if (cleanupFailures.length === 1 && failure === undefined)
+    throw cleanupFailures[0]!.error;
+  if (cleanupFailures.length !== 0)
+    throw new BenchmarkRunnerResidentCleanupError(
+      [
+        ...(failure === undefined ? [] : [failure.error]),
+        ...cleanupFailures.map((entry) => entry.error),
+      ],
+      `Benchmark runner resident cleanup failed${
+        failure === undefined ? "" : " after the guarded operation failed"
+      }: ${cleanupFailures.map((entry) => entry.resource).join(", ")}.`,
+    );
+};
+
 /** The runner is exercised without invoking a model or network service. */
 export const test_benchmark_runner = async (): Promise<void> => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-runner-test-"));
@@ -176,17 +209,35 @@ export const test_benchmark_runner = async (): Promise<void> => {
         const resident = nativeArchiveRead(resolved);
         fs.renameSync(resolved, parked);
         fs.writeFileSync(resolved, resident);
+        let archiveTaskReadFailure: IBenchmarkRunnerFixtureFailure | undefined;
         try {
           return Reflect.apply(nativeArchiveRead, fs, [file, ...args]);
+        } catch (error) {
+          archiveTaskReadFailure = { error };
+          throw error;
         } finally {
-          fs.rmSync(resolved);
-          fs.renameSync(parked, resolved);
-          archiveTaskParked = null;
+          preserveBenchmarkRunnerResidentCleanup(archiveTaskReadFailure, [
+            {
+              resource: "archive-task transient",
+              cleanup: () => fs.rmSync(resolved),
+            },
+            {
+              resource: "archive-task resident",
+              cleanup: () => fs.renameSync(parked, resolved),
+            },
+            {
+              resource: "archive-task parked marker",
+              cleanup: () => {
+                if (fs.existsSync(parked) === false) archiveTaskParked = null;
+              },
+            },
+          ]);
         }
       }
       return Reflect.apply(nativeArchiveRead, fs, [file, ...args]);
     }) as typeof fs.readFileSync;
     const output = await (async () => {
+      let archiveRunFailure: IBenchmarkRunnerFixtureFailure | undefined;
       try {
         return await runAutoMovieBenchmark({
           taskId: current.taskId,
@@ -200,14 +251,42 @@ export const test_benchmark_runner = async (): Promise<void> => {
           agent,
           collect: collectCompleteEvidence,
         });
+      } catch (error) {
+        archiveRunFailure = { error };
+        throw error;
       } finally {
-        fs.readFileSync = nativeArchiveRead;
         const parked = archiveTaskParked as string | null;
-        if (parked !== null && fs.existsSync(parked)) {
-          const resident = parked.slice(0, -".read-parked".length);
-          fs.rmSync(resident, { force: true });
-          fs.renameSync(parked, resident);
-        }
+        preserveBenchmarkRunnerResidentCleanup(archiveRunFailure, [
+          {
+            resource: "archive-task read hook",
+            cleanup: () => {
+              fs.readFileSync = nativeArchiveRead;
+            },
+          },
+          ...(parked === null
+            ? []
+            : [
+                {
+                  resource: "archive-task fallback transient",
+                  cleanup: () => {
+                    if (fs.existsSync(parked))
+                      fs.rmSync(parked.slice(0, -".read-parked".length), {
+                        force: true,
+                      });
+                  },
+                },
+                {
+                  resource: "archive-task fallback resident",
+                  cleanup: () => {
+                    if (fs.existsSync(parked))
+                      fs.renameSync(
+                        parked,
+                        parked.slice(0, -".read-parked".length),
+                      );
+                  },
+                },
+              ]),
+        ]);
       }
     })();
     const submission = readJson<{
@@ -1820,24 +1899,55 @@ const exerciseSnapshotLink = (root: string): void => {
         pathnameRead = true;
         fs.renameSync(evidence, parked);
         fs.writeFileSync(evidence, "transient benchmark evidence");
+        let snapshotReadFailure: IBenchmarkRunnerFixtureFailure | undefined;
         try {
           return Reflect.apply(nativeRead, fs, [file, ...args]);
+        } catch (error) {
+          snapshotReadFailure = { error };
+          throw error;
         } finally {
-          fs.rmSync(evidence);
-          fs.renameSync(parked, evidence);
+          preserveBenchmarkRunnerResidentCleanup(snapshotReadFailure, [
+            {
+              resource: "snapshot transient evidence",
+              cleanup: () => fs.rmSync(evidence),
+            },
+            {
+              resource: "snapshot parked evidence",
+              cleanup: () => fs.renameSync(parked, evidence),
+            },
+          ]);
         }
       }
       return Reflect.apply(nativeRead, fs, [file, ...args]);
     }) as typeof fs.readFileSync;
     const snapshot = (() => {
+      let snapshotFailure: IBenchmarkRunnerFixtureFailure | undefined;
       try {
         return snapshotAutoMovieBenchmarkProject(project);
+      } catch (error) {
+        snapshotFailure = { error };
+        throw error;
       } finally {
-        fs.readFileSync = nativeRead;
-        if (fs.existsSync(parked)) {
-          fs.rmSync(evidence, { force: true });
-          fs.renameSync(parked, evidence);
-        }
+        preserveBenchmarkRunnerResidentCleanup(snapshotFailure, [
+          {
+            resource: "snapshot read hook",
+            cleanup: () => {
+              fs.readFileSync = nativeRead;
+            },
+          },
+          {
+            resource: "snapshot fallback transient evidence",
+            cleanup: () => {
+              if (fs.existsSync(parked)) fs.rmSync(evidence, { force: true });
+            },
+          },
+          {
+            resource: "snapshot fallback parked evidence",
+            cleanup: () => {
+              if (fs.existsSync(parked)) fs.renameSync(parked, evidence);
+            },
+          },
+        ]);
       }
     })();
     const evidenceEntry = snapshot.entries.find(

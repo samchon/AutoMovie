@@ -175,7 +175,7 @@ export const test_benchmark_runner_fixture_cleanup = (): void => {
               "preserveBenchmarkRunnerFixtureCleanup(benchmarkFailure,()=>fs.rmSync(root,{force:true,maxRetries:3,recursive:true,retryDelay:100,}),);",
             ],
             tryDigest:
-              "8ee2aa5f4d5fb22fdb92bd4ba1f79d8857f92672cd8e2f4ddc44f089d08f2e12",
+              "bcd4984833d806a8d5af23757d0823dcbd564e1c6f2f7690aae67c9fd50f4a01",
           },
         ],
         prefixes: [
