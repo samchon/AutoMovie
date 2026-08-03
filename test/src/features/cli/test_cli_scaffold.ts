@@ -6795,6 +6795,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
     const parkedLaunchExecutable = `${launchExecutable}.parked`;
     let rejectedLaunchClosed = false;
     let launchBoundaryRejected = false;
+    let launchBoundaryCleanupFailure: { error: unknown } | undefined;
     try {
       await captureBrowserModule.launchWithCaptureExecutableSnapshot({
         snapshot: launchBoundarySnapshot,
@@ -6807,12 +6808,32 @@ export const test_cli_scaffold = async (): Promise<void> => {
           rejectedLaunchClosed = true;
         },
       });
-    } catch {
+    } catch (error) {
       launchBoundaryRejected = true;
+      launchBoundaryCleanupFailure = { error };
     } finally {
-      captureExecutableModule.closeCaptureExecutable(launchBoundarySnapshot);
-      fs.rmSync(launchExecutable, { force: true });
-      fs.renameSync(parkedLaunchExecutable, launchExecutable);
+      preserveCliHarnessCleanup(launchBoundaryCleanupFailure, [
+        {
+          resource: "capture launch boundary snapshot",
+          cleanup: () => {
+            captureExecutableModule.closeCaptureExecutable(
+              launchBoundarySnapshot,
+            );
+          },
+        },
+        {
+          resource: "capture launch boundary successor",
+          cleanup: () => {
+            fs.rmSync(launchExecutable, { force: true });
+          },
+        },
+        {
+          resource: "capture launch boundary resident executable",
+          cleanup: () => {
+            fs.renameSync(parkedLaunchExecutable, launchExecutable);
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "capture launch closes and rejects an executable successor during launch",
@@ -6823,6 +6844,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
     const failedLaunchCleanupParked = `${launchExecutable}.cleanup-parked`;
     const launchCleanupFailure = new Error("launch cleanup failed");
     let failedLaunchCleanupError: unknown;
+    let failedLaunchHarnessCleanupFailure: { error: unknown } | undefined;
     try {
       await captureBrowserModule.launchWithCaptureExecutableSnapshot({
         snapshot: failedLaunchCleanupSnapshot,
@@ -6837,12 +6859,30 @@ export const test_cli_scaffold = async (): Promise<void> => {
       });
     } catch (error) {
       failedLaunchCleanupError = error;
+      failedLaunchHarnessCleanupFailure = { error };
     } finally {
-      captureExecutableModule.closeCaptureExecutable(
-        failedLaunchCleanupSnapshot,
-      );
-      fs.rmSync(launchExecutable, { force: true });
-      fs.renameSync(failedLaunchCleanupParked, launchExecutable);
+      preserveCliHarnessCleanup(failedLaunchHarnessCleanupFailure, [
+        {
+          resource: "capture rejected launch snapshot",
+          cleanup: () => {
+            captureExecutableModule.closeCaptureExecutable(
+              failedLaunchCleanupSnapshot,
+            );
+          },
+        },
+        {
+          resource: "capture rejected launch successor",
+          cleanup: () => {
+            fs.rmSync(launchExecutable, { force: true });
+          },
+        },
+        {
+          resource: "capture rejected launch resident executable",
+          cleanup: () => {
+            fs.renameSync(failedLaunchCleanupParked, launchExecutable);
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "capture launch retains identity failure before rejected cleanup",

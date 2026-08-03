@@ -30,7 +30,7 @@ const leafTokenContract = (
   };
 };
 
-const captureMetadataCleanupContract = (text: string): unknown => {
+const captureLaunchCleanupContract = (text: string): unknown => {
   const source = ts.createSourceFile(
     "test_cli_scaffold.ts",
     text,
@@ -38,7 +38,10 @@ const captureMetadataCleanupContract = (text: string): unknown => {
     true,
     ts.ScriptKind.TS,
   );
-  const anchors = ["capturemetadatalstathook", "capturecorebrowserslstathook"];
+  const anchors = [
+    "capturelaunchboundarysnapshot",
+    "capturerejectedlaunchsnapshot",
+  ];
   const lifecycles: Array<{
     catchBodies: string[];
     catchVariables: string[];
@@ -47,7 +50,7 @@ const captureMetadataCleanupContract = (text: string): unknown => {
     finallyDigest: string;
     finallySubstantive: { digest: string; tokens: number };
     index: number;
-    preceding: string;
+    preceding: string[];
     substantive: { digest: string; tokens: number };
     tryBody: string;
     tryDigest: string;
@@ -80,7 +83,9 @@ const captureMetadataCleanupContract = (text: string): unknown => {
           source,
         ),
         index,
-        preceding: compact(statements[index - 1]!, source),
+        preceding: statements
+          .slice(Math.max(0, index - 2), index)
+          .map((statement) => compact(statement, source)),
         substantive: leafTokenContract(node.tryBlock.statements, source),
         tryBody: compact(node.tryBlock, source),
         tryDigest: digestText(node.tryBlock.getText(source)),
@@ -97,63 +102,73 @@ const captureMetadataCleanupContract = (text: string): unknown => {
   };
 };
 
-export const test_cli_scaffold_capture_metadata_cleanup = (): void => {
+export const test_cli_scaffold_capture_launch_cleanup = (): void => {
   TestValidator.equals(
-    "CLI scaffold owns two capture metadata cleanup lifecycles",
-    captureMetadataCleanupContract(
+    "CLI scaffold owns two capture launch cleanup lifecycles",
+    captureLaunchCleanupContract(
       fs.readFileSync(path.join(__dirname, "test_cli_scaffold.ts"), "utf8"),
     ),
     {
       lifecycles: [
         {
           catchBodies: [
-            "compositeMetadataCleanupFailure={error};",
-            "throwerror;",
+            "launchBoundaryRejected=true;",
+            "launchBoundaryCleanupFailure={error};",
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
           containerStatements: 1895,
           finallyDigest:
-            "0aa5288af368b96dbae9edb653410c88d2e17bf136e47a8ebe214d85d5d5c77e",
+            "5e9526da18da593cbb6793a558dc5b7ab5e3064d51dc99ab0170422d8e237561",
           finallySubstantive: {
             digest:
-              "f874d84fa888ef99fe1effbc945cf6152a9830f500b095ef9ff7a48aa354346d",
-            tokens: 77,
+              "1b0bd2ab48ea5e92dc27facfc7611dab7baad21b5ebc5c575ba1d815ec2693cd",
+            tokens: 83,
           },
-          index: 496,
-          preceding:
-            "letcompositeMetadataCleanupFailure:{error:unknown}|undefined;",
+          index: 536,
+          preceding: [
+            "letlaunchBoundaryRejected=false;",
+            "letlaunchBoundaryCleanupFailure:{error:unknown}|undefined;",
+          ],
           substantive: {
             digest:
-              "884210cbfd37f2768b27d3e8dd3b3b959e1844b17a48d1a7bdd31e8add19e834",
-            tokens: 7,
+              "667389d46dd1cfe0d30539d4a453453a0183311c2cef94c5b0bfcc366eedbcfb",
+            tokens: 56,
           },
-          tryBody: "{compositeMetadataRaceRejected=throws(metadataFixture);}",
+          tryBody:
+            '{awaitcaptureBrowserModule.launchWithCaptureExecutableSnapshot({snapshot:launchBoundarySnapshot,launch:async()=>{fs.renameSync(launchExecutable,parkedLaunchExecutable);fs.writeFileSync(launchExecutable,captureExecutableBytes);return"opened";},close:async()=>{rejectedLaunchClosed=true;},});}',
           tryDigest:
-            "84de95fa2ea707d5dd2ca50198bcae29470b6eb0cfc9937bb02026b029d94517",
+            "fd08e08af435461868cade993070054eed8ff08f5ba1f065c78815c64c1960e3",
         },
         {
-          catchBodies: ["coreBrowsersCleanupFailure={error};", "throwerror;"],
+          catchBodies: [
+            "failedLaunchCleanupError=error;",
+            "failedLaunchHarnessCleanupFailure={error};",
+          ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
           containerStatements: 1895,
           finallyDigest:
-            "c448f1fc024246e74a18e9da9a774d11270de00f3f8f59da226a4ec3690f9693",
+            "d9584d9210c82b23ee5ff644144239fe5c33de67eecb7a15dfc732479b382514",
           finallySubstantive: {
             digest:
-              "c9186643a6144facce6a179f20d0666c53acaf0a8ec16a5f05a164991bb1ea89",
-            tokens: 77,
+              "b075f9c2595f59cccd895f155d7ab0017db5ef973f0d148b7b22466447db462a",
+            tokens: 83,
           },
-          index: 504,
-          preceding: "letcoreBrowsersCleanupFailure:{error:unknown}|undefined;",
+          index: 543,
+          preceding: [
+            "letfailedLaunchCleanupError:unknown;",
+            "letfailedLaunchHarnessCleanupFailure:{error:unknown}|undefined;",
+          ],
           substantive: {
             digest:
-              "ed4885bd102f2cc7fc3f7ab8751cc0ce1ed4e5fcd5c229a222ee60d68c458292",
-            tokens: 7,
+              "9664558d8493f380ca393194a0d516e14583aa769b8b82fa2c3ba050aa1bd251",
+            tokens: 55,
           },
-          tryBody: "{coreBrowsersRaceRejected=throws(metadataFixture);}",
+          tryBody:
+            '{awaitcaptureBrowserModule.launchWithCaptureExecutableSnapshot({snapshot:failedLaunchCleanupSnapshot,launch:async()=>{fs.renameSync(launchExecutable,failedLaunchCleanupParked);fs.writeFileSync(launchExecutable,captureExecutableBytes);return"opened";},close:async()=>{throwlaunchCleanupFailure;},});}',
           tryDigest:
-            "9f73593eef6965ec338e636e8423a0c41f7f7290f680edd669a82d6084d3a68f",
+            "e69378525ad6b070a5d3d5941bfb54e74c467ab171abe5d54483a2e0f18a93f1",
         },
       ],
       parseDiagnostics: [],
