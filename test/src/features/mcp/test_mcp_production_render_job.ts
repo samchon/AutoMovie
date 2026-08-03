@@ -52,6 +52,43 @@ const rejects = async (task: Promise<unknown>): Promise<boolean> => {
  */
 const NON_ERROR_FAILURE: unknown = "string failure";
 
+interface IRenderJobFixtureFailure {
+  error: unknown;
+}
+
+interface IRenderJobFixtureCleanup {
+  cleanup: () => unknown;
+  resource: string;
+}
+
+class RenderJobFixtureCleanupError extends AggregateError {}
+
+/** Attempt every acquired render-job fixture cleanup without hiding failure. */
+export const preserveRenderJobFixtureCleanup = (
+  failure: IRenderJobFixtureFailure | undefined,
+  resources: readonly IRenderJobFixtureCleanup[],
+): void => {
+  const cleanupFailures: Array<{ error: unknown; resource: string }> = [];
+  for (const resource of resources)
+    try {
+      resource.cleanup();
+    } catch (error) {
+      cleanupFailures.push({ error, resource: resource.resource });
+    }
+  if (cleanupFailures.length === 1 && failure === undefined)
+    throw cleanupFailures[0]!.error;
+  if (cleanupFailures.length !== 0)
+    throw new RenderJobFixtureCleanupError(
+      [
+        ...(failure === undefined ? [] : [failure.error]),
+        ...cleanupFailures.map((entry) => entry.error),
+      ],
+      `Render-job fixture cleanup failed${
+        failure === undefined ? "" : " after the test failed"
+      }: ${cleanupFailures.map((entry) => entry.resource).join(", ")}.`,
+    );
+};
+
 const audioAssets = () => [
   {
     path: "public/audio/silent.json",
@@ -1811,10 +1848,12 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
   const ownedRoot = fs.mkdtempSync(
     path.join(os.tmpdir(), "automovie-render-owned-"),
   );
-  const outsideRoot = fs.mkdtempSync(
-    path.join(os.tmpdir(), "automovie-render-outside-"),
-  );
+  let outsideRoot: string | undefined;
+  let renderJobFixtureFailure: IRenderJobFixtureFailure | undefined;
   try {
+    outsideRoot = fs.mkdtempSync(
+      path.join(os.tmpdir(), "automovie-render-outside-"),
+    );
     const chunk = path.join(ownedRoot, "chunk");
     const frames = path.join(chunk, "frames");
     const direct = path.join(ownedRoot, "direct.json");
@@ -1977,9 +2016,29 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
     } finally {
       fs.readFileSync = nativeRead;
     }
+  } catch (error) {
+    renderJobFixtureFailure = { error };
+    throw error;
   } finally {
-    fs.rmSync(ownedRoot, { force: true, recursive: true });
-    fs.rmSync(outsideRoot, { force: true, recursive: true });
+    const completedOutsideRoot = outsideRoot;
+    preserveRenderJobFixtureCleanup(renderJobFixtureFailure, [
+      {
+        resource: "owned fixture root",
+        cleanup: () => fs.rmSync(ownedRoot, { force: true, recursive: true }),
+      },
+      ...(completedOutsideRoot === undefined
+        ? []
+        : [
+            {
+              resource: "outside fixture root",
+              cleanup: () =>
+                fs.rmSync(completedOutsideRoot, {
+                  force: true,
+                  recursive: true,
+                }),
+            },
+          ]),
+    ]);
   }
 };
 
