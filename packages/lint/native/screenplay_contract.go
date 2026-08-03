@@ -1644,7 +1644,7 @@ func automovieProjectFiles(
 				return nil
 			}
 			candidate := filepath.ToSlash(relative)
-			if entry.Type()&os.ModeSymlink != 0 {
+			if isLinkedPathMode(entry.Type()) {
 				matched, _ := matchProjectGlobOrPrefix(
 					root,
 					strings.Split(pattern, "/"),
