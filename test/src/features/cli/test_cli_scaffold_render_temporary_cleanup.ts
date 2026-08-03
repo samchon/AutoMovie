@@ -30,7 +30,7 @@ const leafTokenContract = (
   };
 };
 
-const writerCloseIdentityCleanupContract = (text: string): unknown => {
+const renderTemporaryCleanupContract = (text: string): unknown => {
   const source = ts.createSourceFile(
     "test_cli_scaffold.ts",
     text,
@@ -39,10 +39,8 @@ const writerCloseIdentityCleanupContract = (text: string): unknown => {
     ts.ScriptKind.TS,
   );
   const anchors = [
-    "scaffoldclosetargetopenhook",
-    "scaffoldforceclosetargetopenhook",
-    "scaffoldcloseparentopenhook",
-    "scaffoldcloserootopenhook",
+    "rendertemporarystatemkdirhook",
+    "rendertemporaryparentmkdirhook",
   ];
   const lifecycles: Array<{
     catchBodies: string[];
@@ -102,113 +100,66 @@ const writerCloseIdentityCleanupContract = (text: string): unknown => {
   };
 };
 
-export const test_cli_scaffold_writer_close_identity_cleanup = (): void => {
+export const test_cli_scaffold_render_temporary_cleanup = (): void => {
   TestValidator.equals(
-    "CLI scaffold owns four writer close identity cleanup lifecycles",
-    writerCloseIdentityCleanupContract(
+    "CLI scaffold owns two render temporary cleanup lifecycles",
+    renderTemporaryCleanupContract(
       fs.readFileSync(path.join(__dirname, "test_cli_scaffold.ts"), "utf8"),
     ),
     {
       lifecycles: [
         {
-          catchBodies: ["closeTargetCleanupFailure={error};", "throwerror;"],
+          catchBodies: ["temporaryStateCleanupFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
           containerStatements: 1954,
           finallyDigest:
-            "52e67f87dfae7d03dd506e455a713573833027768e97767664b3166cdc24c078",
+            "90a1a79a2eb0c1af7f02ecc4031a8f9e27639a80baf52a6e869aa23038a23d9d",
           finallySubstantive: {
             digest:
-              "ca4c3ac43982ad9a05bcad4072de4c15561a2bdb2ab6c9ae8d352f946286decd",
-            tokens: 50,
+              "64800bffc271e38840e35828d39cd99ebbf0da33b779b1dba70a47bb366e341a",
+            tokens: 29,
           },
-          index: 1916,
-          preceding: "letcloseTargetCleanupFailure:{error:unknown}|undefined;",
+          index: 1209,
+          preceding:
+            "lettemporaryStateCleanupFailure:{error:unknown}|undefined;",
           substantive: {
             digest:
-              "217bf95e42840af13a6eaee373880e8d8390c2c7035d7ae3bb3bc0dda6980791",
-            tokens: 20,
+              "e53e03161cf5a1c021a5e7c57bd0a4aeb33eb7d3dc08861b1cf8269ebec314c6",
+            tokens: 25,
           },
           tryBody:
-            '{closeTargetRejected=throws(()=>writeFiles(closeTargetBase,{"owned.txt":"scaffoldgeneration"}),);}',
+            '{temporaryStateRejected=throws(()=>renderTemporarySnapshotModule.createRenderChunkTemporaryTree({name:"state-race",state:temporaryStateOwnership,}),);}',
           tryDigest:
-            "4449d5fc284a96e969939f967372bb0486403bb92a089e64fc8e3475e8fda61c",
+            "11f42e31881305380afc9512c7b43ddc59c8fcf764162df1965fd9b680673996",
         },
         {
           catchBodies: [
-            "forceCloseTargetCleanupFailure={error};",
+            "temporaryParentCleanupFailure={error};",
             "throwerror;",
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
           containerStatements: 1954,
           finallyDigest:
-            "d16a1386f2ad61146e107c837fe3e6991847916d672d1ec378f7e9a08b52223e",
+            "34b489ed659556c93ead50ffd1390f61ce13282c4895b5ec426b2f00af0c582c",
           finallySubstantive: {
             digest:
-              "30e37c1353efda8eac83094a6d3b950f94ecd27ccdcdd3a83c3272bd42cc0482",
-            tokens: 50,
+              "89359f1160add6ffecc8c4a2db61b3c312eab1ada1ea065b39abcebb7e1c7233",
+            tokens: 29,
           },
-          index: 1929,
+          index: 1223,
           preceding:
-            "letforceCloseTargetCleanupFailure:{error:unknown}|undefined;",
+            "lettemporaryParentCleanupFailure:{error:unknown}|undefined;",
           substantive: {
             digest:
-              "8dad24288fc32f054d3c399ecc94c126168a449a379d464a305c3454a18831ee",
-            tokens: 27,
+              "2d6193ffe8d8fccdd7964519df5f614b4ac3e77ee13b219aeeec1d261abaa7b6",
+            tokens: 25,
           },
           tryBody:
-            '{forceCloseTargetRejected=throws(()=>writeFiles(forceCloseTargetBase,{"owned.txt":"forcedscaffoldgeneration"},{force:true},),);}',
+            '{temporaryParentRejected=throws(()=>renderTemporarySnapshotModule.createRenderChunkTemporaryTree({name:"parent-race",state:temporaryParentOwnership,}),);}',
           tryDigest:
-            "b357b28dbcbce69e96dc64cab282555f593c423e0e1d744d6e7eb1c79ec72a81",
-        },
-        {
-          catchBodies: ["closeParentCleanupFailure={error};", "throwerror;"],
-          catchVariables: ["error"],
-          containerKind: "TryStatement",
-          containerStatements: 1954,
-          finallyDigest:
-            "78b50ae43ea6548ed997f9445f4a672ffd7c0cd00d2045e6db7aac2f3cb2e679",
-          finallySubstantive: {
-            digest:
-              "0f7b08030b7c4e01ed05de783028451c100be8604ddce8a2fe9a4bf6c52fbab9",
-            tokens: 50,
-          },
-          index: 1941,
-          preceding: "letcloseParentCleanupFailure:{error:unknown}|undefined;",
-          substantive: {
-            digest:
-              "db18b8af75829158461dcf235be40dc358d275b39c9771e344c85a127fcb8c86",
-            tokens: 21,
-          },
-          tryBody:
-            '{closeParentRejected=throws(()=>writeFiles(closeParentBase,{"nested/owned.txt":"scaffoldgeneration",}),);}',
-          tryDigest:
-            "49d34574ed18ae185fb0bc6312038073e40f55ae791b6f023a728d296b01a07d",
-        },
-        {
-          catchBodies: ["closeRootCleanupFailure={error};", "throwerror;"],
-          catchVariables: ["error"],
-          containerKind: "TryStatement",
-          containerStatements: 1954,
-          finallyDigest:
-            "a71853ca57f34eeb330845011da025a34b5807a752c04e9477800184071e26e9",
-          finallySubstantive: {
-            digest:
-              "ce88db1ec456c8f1a6f8f93714cc8f7f5fc1085bb136d6fb73ab9d37bcb25453",
-            tokens: 50,
-          },
-          index: 1952,
-          preceding: "letcloseRootCleanupFailure:{error:unknown}|undefined;",
-          substantive: {
-            digest:
-              "6a68c7e5af6e81bdd16883facb24394ab0e6efbd74b06cdcb07e918c717ef9d6",
-            tokens: 20,
-          },
-          tryBody:
-            '{closeRootRejected=throws(()=>writeFiles(closeRootBase,{"owned.txt":"scaffoldgeneration"}),);}',
-          tryDigest:
-            "56f3d7f7070546cad064fb53cf1425b66a3d1debbdff16d176680a7816b813c2",
+            "7e159f51008124386750548a2c07d2ad7a49572bd5ec09df4b8ca3ae5c5e6c6e",
         },
       ],
       parseDiagnostics: [],

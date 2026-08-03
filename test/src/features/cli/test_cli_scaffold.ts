@@ -10672,6 +10672,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       return Reflect.apply(nativeMkdir, mutableFs, [directory, ...args]);
     }) as typeof fs.mkdirSync;
     let temporaryStateRejected = false;
+    let temporaryStateCleanupFailure: { error: unknown } | undefined;
     try {
       temporaryStateRejected = throws(() =>
         renderTemporarySnapshotModule.createRenderChunkTemporaryTree({
@@ -10679,8 +10680,18 @@ export const test_cli_scaffold = async (): Promise<void> => {
           state: temporaryStateOwnership,
         }),
       );
+    } catch (error) {
+      temporaryStateCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.mkdirSync = nativeMkdir;
+      preserveCliHarnessCleanup(temporaryStateCleanupFailure, [
+        {
+          resource: "render temporary state mkdir hook",
+          cleanup: () => {
+            mutableFs.mkdirSync = nativeMkdir;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "render temporary creation rejects a render-state successor",
@@ -10715,6 +10726,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       return Reflect.apply(nativeMkdir, mutableFs, [directory, ...args]);
     }) as typeof fs.mkdirSync;
     let temporaryParentRejected = false;
+    let temporaryParentCleanupFailure: { error: unknown } | undefined;
     try {
       temporaryParentRejected = throws(() =>
         renderTemporarySnapshotModule.createRenderChunkTemporaryTree({
@@ -10722,8 +10734,18 @@ export const test_cli_scaffold = async (): Promise<void> => {
           state: temporaryParentOwnership,
         }),
       );
+    } catch (error) {
+      temporaryParentCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.mkdirSync = nativeMkdir;
+      preserveCliHarnessCleanup(temporaryParentCleanupFailure, [
+        {
+          resource: "render temporary parent mkdir hook",
+          cleanup: () => {
+            mutableFs.mkdirSync = nativeMkdir;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "render temporary creation rejects a tmp-parent successor",

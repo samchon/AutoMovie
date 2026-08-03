@@ -117,7 +117,7 @@ export const test_cli_scaffold_writer_descriptor_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1952,
+          containerStatements: 1954,
           finallyDigest:
             "0e423586e3a6b89ec0a28e9aa5371254be28eb1a946eeafec0713daff2dc78aa",
           finallySubstantive: {
@@ -125,7 +125,7 @@ export const test_cli_scaffold_writer_descriptor_cleanup = (): void => {
               "dbe6880b4145fea9973da5053a4a60c3114e959115c6c9241fba979d511c761a",
             tokens: 50,
           },
-          index: 1856,
+          index: 1858,
           preceding:
             "letstandaloneScaffoldHarnessCleanupFailure:{error:unknown}|undefined;",
           substantive: {
@@ -145,7 +145,7 @@ export const test_cli_scaffold_writer_descriptor_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1952,
+          containerStatements: 1954,
           finallyDigest:
             "903daf3528f7e750d53c3fe62c1077e494e6003d323de55b1897ca1dc013cc23",
           finallySubstantive: {
@@ -153,7 +153,7 @@ export const test_cli_scaffold_writer_descriptor_cleanup = (): void => {
               "6f94ec7030cbf3f2a8fc6a79c167f9acf0fe017010817b4944dff56bfcc95caf",
             tokens: 71,
           },
-          index: 1874,
+          index: 1876,
           preceding:
             "letdoubleFailureHarnessCleanupFailure:{error:unknown}|undefined;",
           substantive: {
@@ -173,7 +173,7 @@ export const test_cli_scaffold_writer_descriptor_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1952,
+          containerStatements: 1954,
           finallyDigest:
             "ab395882c726decd4351299602bf69784115042f82479d6a53e7b8cedf5a4664",
           finallySubstantive: {
@@ -181,7 +181,7 @@ export const test_cli_scaffold_writer_descriptor_cleanup = (): void => {
               "406ee4dac892e791fbdee311ac74edb44889463fcc278215e99e9bea3893ec0e",
             tokens: 71,
           },
-          index: 1888,
+          index: 1890,
           preceding:
             "letoverwriteDoubleFailureHarnessCleanupFailure:|{error:unknown}|undefined;",
           substantive: {
@@ -201,7 +201,7 @@ export const test_cli_scaffold_writer_descriptor_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1952,
+          containerStatements: 1954,
           finallyDigest:
             "73a8c47e4d40b564edc1b30d7ae4a9cbb760c833a5527d9a38f36e5020aa7df3",
           finallySubstantive: {
@@ -209,7 +209,7 @@ export const test_cli_scaffold_writer_descriptor_cleanup = (): void => {
               "a2a15303a61ce48d2fad36c2ede9e533752aa4af186cceea37c8ae03b28b1ab1",
             tokens: 71,
           },
-          index: 1903,
+          index: 1905,
           preceding:
             "letnestedDescriptorHarnessCleanupFailure:{error:unknown}|undefined;",
           substantive: {
