@@ -310,7 +310,7 @@ export const test_workspace_face_photo_assets = (): void => {
       windowAssignments: [
         "(windowasunknownas{__loadSkin:unknown}).__loadSkin=selectSkin",
         "(windowasunknownas{__setSkin:unknown}).__setSkin=(on:boolean)=>{faceMesh.material=on?photoMaterial:faceMaterial;faceGeometry.setIndex(on?[...CANONICAL_FACE_INDICES]:faceIndices);for(constmofeyeMeshes)m.visible=!on;skinModeOn=on;applySkullTone();applyShellLighting();}",
-        "(windowasunknownas{__setPhotoHead:unknown}).__setPhotoHead=(on:boolean)=>{photoHeadOn=on;if(photoHead)photoHead.visible=on;faceMesh.visible=!on;if(skullMesh)skullMesh.visible=!on;if(hairMesh)hairMesh.visible=!on;if(bunMesh)bunMesh.visible=!on;if(bustMesh)bustMesh.visible=!on;for(constmoftailMeshes)m.visible=!on;for(constmofeyeMeshes)m.visible=false;}",
+        "(windowasunknownas{__setPhotoHead:unknown}).__setPhotoHead=(on:boolean,)=>{photoHeadOn=on;if(photoHead)photoHead.visible=on;faceMesh.visible=!on;if(skullMesh)skullMesh.visible=!on;if(hairMesh)hairMesh.visible=!on;if(bunMesh)bunMesh.visible=!on;if(bustMesh)bustMesh.visible=!on;for(constmoftailMeshes)m.visible=!on;for(constmofeyeMeshes)m.visible=false;}",
       ],
     },
   );

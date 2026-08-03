@@ -2430,9 +2430,14 @@ export const test_mcp_production_project = (): void => {
           },
         ]);
       }
-      TestValidator.predicate(
+      TestValidator.equals(
         "render reads revalidate after descriptor I/O and preserve non-absence errors",
-        swappedAfterRead && afterReadRejected && deniedOpenRejected,
+        { afterReadRejected, deniedOpenRejected, swappedAfterRead },
+        {
+          afterReadRejected: true,
+          deniedOpenRejected: true,
+          swappedAfterRead: true,
+        },
       );
     } catch (error) {
       outsideRenderReadFailure = { error };

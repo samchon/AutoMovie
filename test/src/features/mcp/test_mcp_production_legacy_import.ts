@@ -353,39 +353,58 @@ export const test_mcp_production_legacy_import = (): void => {
         ]),
       ]);
     }
-    TestValidator.predicate(
+    // Name each planning fact instead of collapsing them into one boolean, so a
+    // regression reports which observation drifted.
+    TestValidator.equals(
       "planning is read-only and captures drafts, source gaps, and exact bytes",
-      equalFiles(before, legacyFiles(fixture.root)) &&
-        fs.existsSync(path.join(fixture.root, ".automovie")) === false &&
-        planPathReads.size === 0 &&
-        planLockPaths.length === 2 &&
-        planLockPaths.every((file) => fs.existsSync(file) === false) &&
-        plan.legacyRevision === 2 &&
-        plan.productionDraft.frameFormat.fps === 24 &&
-        plan.shotContractDrafts[0]?.id === shot.id &&
-        plan.sourceTodos[0]?.shot === shot.id &&
-        plan.diagnostics.some(
-          (diagnostic) => diagnostic.code === "legacy-source-unrecoverable",
-        ) &&
-        plan.inventory.some(
-          (entry) =>
-            entry.path === "automovie.json" &&
-            entry.digest === digestAutoMovieBytes(planManifestBytes),
-        ) &&
-        plan.inventory.some(
-          (entry) =>
-            entry.path === "actors/archive/README.txt" &&
-            entry.digest === digestAutoMovieBytes(planNestedBytes),
-        ) &&
-        plan.inventory.some(
+      {
+        assetInventoryDigested: plan.inventory.some(
           (entry) =>
             entry.path === "assets/reference.bin" &&
             entry.kind === "asset" &&
             entry.digest !== null,
-        ) &&
-        plan.inventory.some(
-          (entry) => entry.path === "actors/archive/README.txt",
         ),
+        draftFps: plan.productionDraft.frameFormat.fps,
+        firstShotDraft: plan.shotContractDrafts[0]?.id,
+        legacyRevision: plan.legacyRevision,
+        legacyStateAbsent:
+          fs.existsSync(path.join(fixture.root, ".automovie")) === false,
+        lockPaths: planLockPaths.length,
+        lockPathsAbsent: planLockPaths.every(
+          (file) => fs.existsSync(file) === false,
+        ),
+        manifestInventoryDigest: plan.inventory.some(
+          (entry) =>
+            entry.path === "automovie.json" &&
+            entry.digest === digestAutoMovieBytes(planManifestBytes),
+        ),
+        nestedInventoryDigest: plan.inventory.some(
+          (entry) =>
+            entry.path === "actors/archive/README.txt" &&
+            entry.digest === digestAutoMovieBytes(planNestedBytes),
+        ),
+        pathReads: planPathReads.size,
+        sourceTodoShot: plan.sourceTodos[0]?.shot,
+        unchangedBytes: equalFiles(before, legacyFiles(fixture.root)),
+        unrecoverableSource: plan.diagnostics.some(
+          (diagnostic) => diagnostic.code === "legacy-source-unrecoverable",
+        ),
+      },
+      {
+        assetInventoryDigested: true,
+        draftFps: 24,
+        firstShotDraft: shot.id,
+        legacyRevision: 2,
+        legacyStateAbsent: true,
+        lockPaths: 2,
+        lockPathsAbsent: true,
+        manifestInventoryDigest: true,
+        nestedInventoryDigest: true,
+        pathReads: 0,
+        sourceTodoShot: shot.id,
+        unchangedBytes: true,
+        unrecoverableSource: true,
+      },
     );
     const legacyLockPath = path.join(fixture.root, "revision.lock");
     const legacyLockParked = `${legacyLockPath}.read-parked`;

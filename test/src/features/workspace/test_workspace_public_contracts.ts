@@ -874,15 +874,20 @@ const packagedAssetReviewContract = (
       for (const element of array.elements) {
         if (ts.isSpreadElement(element)) {
           spreads.push(compact(element));
+          // A spread conditional is written parenthesized, so read through the
+          // parentheses instead of silently skipping the conditional.
+          let spread: ts.Expression = element.expression;
+          while (ts.isParenthesizedExpression(spread))
+            spread = spread.expression;
           if (
-            ts.isConditionalExpression(element.expression) &&
-            ts.isArrayLiteralExpression(element.expression.whenTrue) &&
-            ts.isArrayLiteralExpression(element.expression.whenFalse)
+            ts.isConditionalExpression(spread) &&
+            ts.isArrayLiteralExpression(spread.whenTrue) &&
+            ts.isArrayLiteralExpression(spread.whenFalse)
           )
             conditionals.push({
-              condition: compact(element.expression.condition),
-              whenFalse: properties(element.expression.whenFalse),
-              whenTrue: properties(element.expression.whenTrue),
+              condition: compact(spread.condition),
+              whenFalse: properties(spread.whenFalse),
+              whenTrue: properties(spread.whenTrue),
             });
           continue;
         }
@@ -1309,6 +1314,19 @@ const packagedAssetReviewContract = (
             compact(candidate.expression) === "before.reviews.entries",
         );
         if (captureAction === undefined) return;
+        const outerBody = ts.isBlock(captureAction.statement)
+          ? captureAction.statement.statements
+          : ts.factory.createNodeArray([captureAction.statement]);
+        const inner = outerBody.find(
+          (statement): statement is ts.ForOfStatement =>
+            ts.isForOfStatement(statement) &&
+            compact(statement.expression) === "packagedAssetReviewViews(model)",
+        );
+        // The verifier walks the review queue twice: once to capture asset
+        // evidence and once to prepare and submit the reviews. Only the loop
+        // that owns the canonical asset-view walk is the capture loop this
+        // contract pins.
+        if (inner === undefined) return;
         flow.capture = index;
         if (captureTry !== undefined)
           captureCleanup.push({
@@ -1318,9 +1336,6 @@ const packagedAssetReviewContract = (
                 compact(statement),
               ) ?? [],
           });
-        const outerBody = ts.isBlock(captureAction.statement)
-          ? captureAction.statement.statements
-          : ts.factory.createNodeArray([captureAction.statement]);
         const assetGuard = outerBody.find(
           (statement): statement is ts.IfStatement =>
             ts.isIfStatement(statement) &&
@@ -1345,17 +1360,9 @@ const packagedAssetReviewContract = (
               expression.arguments[1] !== undefined &&
               compact(expression.arguments[1]) === "model!==undefined",
           );
-        const inner = outerBody.find(
-          (statement): statement is ts.ForOfStatement =>
-            ts.isForOfStatement(statement) &&
-            compact(statement.expression) === "packagedAssetReviewViews(model)",
-        );
-        const body =
-          inner === undefined
-            ? ts.factory.createNodeArray<ts.Statement>()
-            : ts.isBlock(inner.statement)
-              ? inner.statement.statements
-              : ts.factory.createNodeArray([inner.statement]);
+        const body = ts.isBlock(inner.statement)
+          ? inner.statement.statements
+          : ts.factory.createNodeArray([inner.statement]);
         const first = body[0];
         const second = body[1];
         const captureDeclaration =
@@ -1385,8 +1392,8 @@ const packagedAssetReviewContract = (
             captureDeclaration?.initializer === undefined
               ? null
               : compact(captureDeclaration.initializer),
-          expression: inner === undefined ? "" : compact(inner.expression),
-          initializer: inner === undefined ? "" : compact(inner.initializer),
+          expression: compact(inner.expression),
+          initializer: compact(inner.initializer),
           model:
             modelDeclaration?.initializer === undefined
               ? null
@@ -4121,7 +4128,7 @@ export const test_workspace_public_contracts = (): void => {
               "`",
           },
           modelInventory:
-            'newMap(compiled.assets.map((entry)=>[entry.id,JSON.parse(Buffer.from(project.readGeneratedFile(entry.path)).toString("utf8")),]))',
+            'newMap(compiled.assets.map((entry)=>[entry.id,JSON.parse(Buffer.from(project.readGeneratedFile(entry.path)).toString("utf8"),),]),)',
           outerBodyStatementCount: 5,
           outerExpression: "before.reviews.entries",
           outerInitializer: "constentry",
@@ -4175,7 +4182,7 @@ export const test_workspace_public_contracts = (): void => {
         {
           body: "app.getGuideDocument({name});",
           expression:
-            'newSet([...Object.values(AUTOMOVIE_REVIEW_GUIDES),"CAPTURE_FRAME"])',
+            'newSet([...Object.values(AUTOMOVIE_REVIEW_GUIDES),"CAPTURE_FRAME",])',
           initializer: "constname",
         },
       ],
