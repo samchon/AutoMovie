@@ -3769,8 +3769,12 @@ export const test_mcp_production_project = (): void => {
       )
         reentrantLocks.push(path.resolve(file.toString()));
     }) as typeof fs.writeFileSync;
-    let outerLease: ReturnType<typeof acquireProductionRootNamespace>;
-    let innerLease: ReturnType<typeof acquireProductionRootNamespace>;
+    let outerLease:
+      | ReturnType<typeof acquireProductionRootNamespace>
+      | undefined;
+    let innerLease:
+      | ReturnType<typeof acquireProductionRootNamespace>
+      | undefined;
     let reentrantAcquisitionFailure:
       | IProductionProjectFixtureFailure
       | undefined;
@@ -3781,10 +3785,8 @@ export const test_mcp_production_project = (): void => {
       reentrantAcquisitionFailure = { error };
       throw error;
     } finally {
-      const acquiredInnerLease =
-        typeof innerLease === "undefined" ? undefined : innerLease;
-      const acquiredOuterLease =
-        typeof outerLease === "undefined" ? undefined : outerLease;
+      const acquiredInnerLease = innerLease;
+      const acquiredOuterLease = outerLease;
       let reentrantHookRestoreFailed = false;
       preserveProductionProjectFixtureCleanup(reentrantAcquisitionFailure, [
         {
@@ -3829,16 +3831,16 @@ export const test_mcp_production_project = (): void => {
       ]);
     }
     const heldAfterInnerRelease = ((): boolean => {
-      releaseProductionRootNamespace(innerLease);
+      releaseProductionRootNamespace(innerLease!);
       return reentrantLocks.every((file) => fs.existsSync(file));
     })();
-    releaseProductionRootNamespace(outerLease);
+    releaseProductionRootNamespace(outerLease!);
     TestValidator.equals(
       "one process reaches the same root coordinate twice without deadlocking",
       {
         coordinates: reentrantLocks.length,
-        sharedTokens: outerLease.locks.every(
-          (lock, index) => lock.token === innerLease.locks[index]?.token,
+        sharedTokens: outerLease!.locks.every(
+          (lock, index) => lock.token === innerLease!.locks[index]?.token,
         ),
         heldAfterInnerRelease,
         releasedAfterOuterRelease: reentrantLocks.every(

@@ -344,12 +344,12 @@ export const test_mcp_production_project_reentrant_namespace_cleanup =
               failureHolder:
                 "letreentrantAcquisitionFailure:|IProductionProjectFixtureFailure|undefined;",
               finallyDigest:
-                "1680a9e5e54d1c1853979109ad47a83f8ca725acb1d487e151802bbecc3a99ce",
+                "6ef48d21afe0aae6f2beec4bf2546e9362d439c4a7f7b3ea5aaee32a3e779e9e",
               finallyStatements: 4,
               finallySubstantive: {
                 digest:
-                  "dde0a7344361b7dbf7b244be22f699a6d6b66fe48bac6d112156916008eba0d4",
-                tokens: 156,
+                  "af696ad64a4e425fab3cceb08aee699f6bbf8dc89b2c52cb78e635f2a427be79",
+                tokens: 142,
               },
               index: 85,
               substantive: {
