@@ -58,6 +58,14 @@ const legacyImportFixtureContract = (text: string): unknown => {
     tryDigest: string;
     tryPrefixes: string[];
   }> = [];
+  const ownedFixturePair = (node: ts.FinallyBlock): boolean =>
+    [
+      "linked-root legacy fixture",
+      "linked-revision legacy fixture",
+      "changing-lock legacy fixture",
+      "linked-applied-state legacy fixture",
+      "unsafe-inventory legacy fixture",
+    ].some((resource) => node.getText(source).includes(resource));
   for (const owner of owners) {
     const visit = (node: ts.Node): void => {
       if (
@@ -66,6 +74,7 @@ const legacyImportFixtureContract = (text: string): unknown => {
         node.finallyBlock
           ?.getText(source)
           .includes("preserveLegacyImportFixtureCleanup") === true &&
+        ownedFixturePair(node.finallyBlock) &&
         ts.isBlock(node.parent)
       ) {
         const statements = [...node.parent.statements];
