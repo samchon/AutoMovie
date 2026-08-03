@@ -1876,274 +1876,287 @@ export const test_mcp_production_project = (): void => {
       throws(() => ownerProject.readRenderFile("absent.bin")) &&
         throws(() => ownerProject.readRenderFile(renderBundle)),
     );
+    let outsideRenderReadFailure:
+      | ISingleProductionProjectFixtureFailure
+      | undefined;
     const outsideRenderRead = fs.mkdtempSync(
       path.join(os.tmpdir(), "automovie-render-read-"),
     );
-    const renderReadJunction = path.join(
-      ownerProject.renderRoot(),
-      "read-junction",
-    );
-    fs.writeFileSync(path.join(outsideRenderRead, "escape.bin"), "escape");
-    fs.writeFileSync(path.join(outsideRenderRead, "frame.bin"), "outside");
-    fs.symlinkSync(outsideRenderRead, renderReadJunction, "junction");
-    TestValidator.predicate(
-      "render reads reject nested junction escapes",
-      throws(() => ownerProject.readRenderFile("read-junction/escape.bin")),
-    );
-    fs.rmSync(renderReadJunction);
-    const renderFileLink = path.join(
-      ownerProject.renderRoot(),
-      "read-file-link.bin",
-    );
-    fs.symlinkSync(
-      path.join(outsideRenderRead, "escape.bin"),
-      renderFileLink,
-      "file",
-    );
-    const renderParentFile = path.join(
-      ownerProject.renderRoot(),
-      "read-parent-file",
-    );
-    fs.writeFileSync(renderParentFile, "not a directory");
-    TestValidator.predicate(
-      "render reads reject linked files and non-directory ancestry",
-      throws(() => ownerProject.readRenderFile("read-file-link.bin")) &&
-        throws(() =>
-          ownerProject.readRenderFile("read-parent-file/escape.bin"),
-        ),
-    );
-    fs.unlinkSync(renderFileLink);
-    fs.rmSync(renderParentFile);
-
-    const crossApiIdentityFile = path.join(
-      ownerProject.renderRoot(),
-      "read-cross-api-identity.bin",
-    );
-    fs.writeFileSync(crossApiIdentityFile, "resident");
-    const nativeCrossApiStat = fs.statSync;
-    const mutableCrossApiStatFs = fs as { statSync: typeof fs.statSync };
-    let divergentPathIdentityObserved = false;
-    mutableCrossApiStatFs.statSync = ((
-      target: fs.PathLike,
-      ...args: unknown[]
-    ): unknown => {
-      const status = Reflect.apply(nativeCrossApiStat, fs, [
-        target,
-        ...args,
-      ]) as fs.Stats | fs.BigIntStats;
-      if (
-        path.resolve(target.toString()) === path.resolve(crossApiIdentityFile)
-      ) {
-        divergentPathIdentityObserved = true;
-        return {
-          ...status,
-          ino:
-            typeof status.ino === "bigint"
-              ? status.ino + BigInt(1)
-              : status.ino + 1,
-        };
-      }
-      return status;
-    }) as typeof fs.statSync;
-    let crossApiIdentityRead = "";
     try {
-      fs.statSync(crossApiIdentityFile, { bigint: true });
-      crossApiIdentityRead = Buffer.from(
-        ownerProject.readRenderFile("read-cross-api-identity.bin"),
-      ).toString("utf8");
-    } finally {
-      mutableCrossApiStatFs.statSync = nativeCrossApiStat;
-      fs.rmSync(crossApiIdentityFile);
-    }
-    TestValidator.predicate(
-      "render reads compare descriptor identities within one platform API domain",
-      divergentPathIdentityObserved && crossApiIdentityRead === "resident",
-    );
-
-    const descriptorCleanupFile = path.join(
-      ownerProject.renderRoot(),
-      "read-descriptor-cleanup.bin",
-    );
-    fs.writeFileSync(descriptorCleanupFile, "resident");
-    exerciseRenderFileDescriptorCleanup(
-      ownerProject,
-      path.relative(ownerProject.renderRoot(), descriptorCleanupFile),
-    );
-    fs.rmSync(descriptorCleanupFile);
-
-    const descriptorRace = (
-      replacement: "directory" | "regular" | "symlink",
-    ): boolean => {
-      const directory = path.join(
+      const renderReadJunction = path.join(
         ownerProject.renderRoot(),
-        `read-descriptor-${replacement}`,
+        "read-junction",
       );
-      const file = path.join(directory, "frame.bin");
-      const parked = `${file}.parked`;
-      fs.mkdirSync(directory);
-      fs.writeFileSync(file, "resident");
-      const nativeOpen = fs.openSync;
-      let swapped = false;
-      fs.openSync = ((target: fs.PathLike, ...args: unknown[]): number => {
-        const descriptor = Reflect.apply(nativeOpen, fs, [target, ...args]);
-        if (
-          swapped === false &&
-          path.resolve(target.toString()) === path.resolve(file)
-        ) {
-          fs.renameSync(file, parked);
-          if (replacement === "directory") fs.mkdirSync(file);
-          else if (replacement === "regular")
-            fs.writeFileSync(file, "replacement");
-          else
-            fs.symlinkSync(
-              path.join(outsideRenderRead, "escape.bin"),
-              file,
-              "file",
-            );
-          swapped = true;
-        }
-        return descriptor;
-      }) as typeof fs.openSync;
-      let rejected = false;
-      try {
-        rejected = throws(() =>
-          ownerProject.readRenderFile(
-            path.relative(ownerProject.renderRoot(), file),
+      fs.writeFileSync(path.join(outsideRenderRead, "escape.bin"), "escape");
+      fs.writeFileSync(path.join(outsideRenderRead, "frame.bin"), "outside");
+      fs.symlinkSync(outsideRenderRead, renderReadJunction, "junction");
+      TestValidator.predicate(
+        "render reads reject nested junction escapes",
+        throws(() => ownerProject.readRenderFile("read-junction/escape.bin")),
+      );
+      fs.rmSync(renderReadJunction);
+      const renderFileLink = path.join(
+        ownerProject.renderRoot(),
+        "read-file-link.bin",
+      );
+      fs.symlinkSync(
+        path.join(outsideRenderRead, "escape.bin"),
+        renderFileLink,
+        "file",
+      );
+      const renderParentFile = path.join(
+        ownerProject.renderRoot(),
+        "read-parent-file",
+      );
+      fs.writeFileSync(renderParentFile, "not a directory");
+      TestValidator.predicate(
+        "render reads reject linked files and non-directory ancestry",
+        throws(() => ownerProject.readRenderFile("read-file-link.bin")) &&
+          throws(() =>
+            ownerProject.readRenderFile("read-parent-file/escape.bin"),
           ),
-        );
+      );
+      fs.unlinkSync(renderFileLink);
+      fs.rmSync(renderParentFile);
+
+      const crossApiIdentityFile = path.join(
+        ownerProject.renderRoot(),
+        "read-cross-api-identity.bin",
+      );
+      fs.writeFileSync(crossApiIdentityFile, "resident");
+      const nativeCrossApiStat = fs.statSync;
+      const mutableCrossApiStatFs = fs as { statSync: typeof fs.statSync };
+      let divergentPathIdentityObserved = false;
+      mutableCrossApiStatFs.statSync = ((
+        target: fs.PathLike,
+        ...args: unknown[]
+      ): unknown => {
+        const status = Reflect.apply(nativeCrossApiStat, fs, [
+          target,
+          ...args,
+        ]) as fs.Stats | fs.BigIntStats;
+        if (
+          path.resolve(target.toString()) === path.resolve(crossApiIdentityFile)
+        ) {
+          divergentPathIdentityObserved = true;
+          return {
+            ...status,
+            ino:
+              typeof status.ino === "bigint"
+                ? status.ino + BigInt(1)
+                : status.ino + 1,
+          };
+        }
+        return status;
+      }) as typeof fs.statSync;
+      let crossApiIdentityRead = "";
+      try {
+        fs.statSync(crossApiIdentityFile, { bigint: true });
+        crossApiIdentityRead = Buffer.from(
+          ownerProject.readRenderFile("read-cross-api-identity.bin"),
+        ).toString("utf8");
       } finally {
-        fs.openSync = nativeOpen;
-        if (fs.lstatSync(file).isSymbolicLink()) fs.unlinkSync(file);
-        else fs.rmSync(file, { recursive: true, force: true });
-        fs.renameSync(parked, file);
-        fs.rmSync(directory, { recursive: true, force: true });
+        mutableCrossApiStatFs.statSync = nativeCrossApiStat;
+        fs.rmSync(crossApiIdentityFile);
       }
-      return swapped && rejected;
-    };
-    TestValidator.predicate(
-      "an opened descriptor cannot bless a replaced render filename",
-      descriptorRace("symlink") &&
-        descriptorRace("directory") &&
-        descriptorRace("regular"),
-    );
-
-    const ancestryRace = (
-      replacement: "directory" | "junction" | "missing",
-    ): boolean => {
-      const directory = path.join(
-        ownerProject.renderRoot(),
-        `read-ancestry-${replacement}`,
+      TestValidator.predicate(
+        "render reads compare descriptor identities within one platform API domain",
+        divergentPathIdentityObserved && crossApiIdentityRead === "resident",
       );
-      const parked = `${directory}.parked`;
-      const file = path.join(directory, "frame.bin");
-      fs.mkdirSync(directory);
-      fs.writeFileSync(file, "resident");
-      const nativeOpen = fs.openSync;
-      let swapped = false;
-      fs.openSync = ((target: fs.PathLike, ...args: unknown[]): number => {
-        if (
-          swapped === false &&
-          path.resolve(target.toString()) === path.resolve(file)
-        ) {
-          fs.renameSync(directory, parked);
-          if (replacement === "directory") {
-            fs.mkdirSync(directory);
-            fs.writeFileSync(file, "replacement");
-          } else if (replacement === "junction")
-            fs.symlinkSync(outsideRenderRead, directory, "junction");
-          swapped = true;
-        }
-        return Reflect.apply(nativeOpen, fs, [target, ...args]);
-      }) as typeof fs.openSync;
-      let rejected = false;
-      try {
-        rejected = throws(() =>
-          ownerProject.readRenderFile(
-            path.relative(ownerProject.renderRoot(), file),
-          ),
+
+      const descriptorCleanupFile = path.join(
+        ownerProject.renderRoot(),
+        "read-descriptor-cleanup.bin",
+      );
+      fs.writeFileSync(descriptorCleanupFile, "resident");
+      exerciseRenderFileDescriptorCleanup(
+        ownerProject,
+        path.relative(ownerProject.renderRoot(), descriptorCleanupFile),
+      );
+      fs.rmSync(descriptorCleanupFile);
+
+      const descriptorRace = (
+        replacement: "directory" | "regular" | "symlink",
+      ): boolean => {
+        const directory = path.join(
+          ownerProject.renderRoot(),
+          `read-descriptor-${replacement}`,
         );
-      } finally {
-        fs.openSync = nativeOpen;
-        if (fs.existsSync(parked)) {
-          if (fs.existsSync(directory)) {
-            if (fs.lstatSync(directory).isSymbolicLink())
-              fs.unlinkSync(directory);
-            else fs.rmSync(directory, { recursive: true, force: true });
+        const file = path.join(directory, "frame.bin");
+        const parked = `${file}.parked`;
+        fs.mkdirSync(directory);
+        fs.writeFileSync(file, "resident");
+        const nativeOpen = fs.openSync;
+        let swapped = false;
+        fs.openSync = ((target: fs.PathLike, ...args: unknown[]): number => {
+          const descriptor = Reflect.apply(nativeOpen, fs, [target, ...args]);
+          if (
+            swapped === false &&
+            path.resolve(target.toString()) === path.resolve(file)
+          ) {
+            fs.renameSync(file, parked);
+            if (replacement === "directory") fs.mkdirSync(file);
+            else if (replacement === "regular")
+              fs.writeFileSync(file, "replacement");
+            else
+              fs.symlinkSync(
+                path.join(outsideRenderRead, "escape.bin"),
+                file,
+                "file",
+              );
+            swapped = true;
           }
-          fs.renameSync(parked, directory);
+          return descriptor;
+        }) as typeof fs.openSync;
+        let rejected = false;
+        try {
+          rejected = throws(() =>
+            ownerProject.readRenderFile(
+              path.relative(ownerProject.renderRoot(), file),
+            ),
+          );
+        } finally {
+          fs.openSync = nativeOpen;
+          if (fs.lstatSync(file).isSymbolicLink()) fs.unlinkSync(file);
+          else fs.rmSync(file, { recursive: true, force: true });
+          fs.renameSync(parked, file);
+          fs.rmSync(directory, { recursive: true, force: true });
         }
-        fs.rmSync(directory, { recursive: true, force: true });
-      }
-      return swapped && rejected;
-    };
-    TestValidator.predicate(
-      "render reads retain exact physical ancestry across descriptor acquisition",
-      ancestryRace("missing") &&
-        ancestryRace("junction") &&
-        ancestryRace("directory"),
-    );
+        return swapped && rejected;
+      };
+      TestValidator.predicate(
+        "an opened descriptor cannot bless a replaced render filename",
+        descriptorRace("symlink") &&
+          descriptorRace("directory") &&
+          descriptorRace("regular"),
+      );
 
-    const afterReadDirectory = path.join(
-      ownerProject.renderRoot(),
-      "read-after-descriptor",
-    );
-    const afterReadFile = path.join(afterReadDirectory, "frame.bin");
-    const afterReadParked = `${afterReadFile}.parked`;
-    fs.mkdirSync(afterReadDirectory);
-    fs.writeFileSync(afterReadFile, "resident");
-    const nativeDescriptorRead = fs.readFileSync;
-    let swappedAfterRead = false;
-    fs.readFileSync = ((
-      target: fs.PathOrFileDescriptor,
-      ...args: unknown[]
-    ): unknown => {
-      const bytes = Reflect.apply(nativeDescriptorRead, fs, [target, ...args]);
-      if (swappedAfterRead === false && typeof target === "number") {
-        fs.renameSync(afterReadFile, afterReadParked);
-        fs.writeFileSync(afterReadFile, "replacement");
-        swappedAfterRead = true;
-      }
-      return bytes;
-    }) as typeof fs.readFileSync;
-    let afterReadRejected = false;
-    try {
-      afterReadRejected = throws(() =>
-        ownerProject.readRenderFile("read-after-descriptor/frame.bin"),
+      const ancestryRace = (
+        replacement: "directory" | "junction" | "missing",
+      ): boolean => {
+        const directory = path.join(
+          ownerProject.renderRoot(),
+          `read-ancestry-${replacement}`,
+        );
+        const parked = `${directory}.parked`;
+        const file = path.join(directory, "frame.bin");
+        fs.mkdirSync(directory);
+        fs.writeFileSync(file, "resident");
+        const nativeOpen = fs.openSync;
+        let swapped = false;
+        fs.openSync = ((target: fs.PathLike, ...args: unknown[]): number => {
+          if (
+            swapped === false &&
+            path.resolve(target.toString()) === path.resolve(file)
+          ) {
+            fs.renameSync(directory, parked);
+            if (replacement === "directory") {
+              fs.mkdirSync(directory);
+              fs.writeFileSync(file, "replacement");
+            } else if (replacement === "junction")
+              fs.symlinkSync(outsideRenderRead, directory, "junction");
+            swapped = true;
+          }
+          return Reflect.apply(nativeOpen, fs, [target, ...args]);
+        }) as typeof fs.openSync;
+        let rejected = false;
+        try {
+          rejected = throws(() =>
+            ownerProject.readRenderFile(
+              path.relative(ownerProject.renderRoot(), file),
+            ),
+          );
+        } finally {
+          fs.openSync = nativeOpen;
+          if (fs.existsSync(parked)) {
+            if (fs.existsSync(directory)) {
+              if (fs.lstatSync(directory).isSymbolicLink())
+                fs.unlinkSync(directory);
+              else fs.rmSync(directory, { recursive: true, force: true });
+            }
+            fs.renameSync(parked, directory);
+          }
+          fs.rmSync(directory, { recursive: true, force: true });
+        }
+        return swapped && rejected;
+      };
+      TestValidator.predicate(
+        "render reads retain exact physical ancestry across descriptor acquisition",
+        ancestryRace("missing") &&
+          ancestryRace("junction") &&
+          ancestryRace("directory"),
       );
-    } finally {
-      fs.readFileSync = nativeDescriptorRead;
-      fs.rmSync(afterReadFile);
-      fs.renameSync(afterReadParked, afterReadFile);
-      fs.rmSync(afterReadDirectory, { recursive: true, force: true });
-    }
-    const deniedOpenFile = path.join(
-      ownerProject.renderRoot(),
-      "read-open-denied.bin",
-    );
-    fs.writeFileSync(deniedOpenFile, "resident");
-    const nativeDeniedOpen = fs.openSync;
-    fs.openSync = ((target: fs.PathLike, ...args: unknown[]): number => {
-      if (path.resolve(target.toString()) === path.resolve(deniedOpenFile)) {
-        const error = new Error("injected render open denial");
-        Object.assign(error, { code: "EACCES" });
-        throw error;
-      }
-      return Reflect.apply(nativeDeniedOpen, fs, [target, ...args]);
-    }) as typeof fs.openSync;
-    let deniedOpenRejected = false;
-    try {
-      deniedOpenRejected = throws(() =>
-        ownerProject.readRenderFile("read-open-denied.bin"),
+
+      const afterReadDirectory = path.join(
+        ownerProject.renderRoot(),
+        "read-after-descriptor",
       );
+      const afterReadFile = path.join(afterReadDirectory, "frame.bin");
+      const afterReadParked = `${afterReadFile}.parked`;
+      fs.mkdirSync(afterReadDirectory);
+      fs.writeFileSync(afterReadFile, "resident");
+      const nativeDescriptorRead = fs.readFileSync;
+      let swappedAfterRead = false;
+      fs.readFileSync = ((
+        target: fs.PathOrFileDescriptor,
+        ...args: unknown[]
+      ): unknown => {
+        // prettier-ignore
+        const bytes = Reflect.apply(nativeDescriptorRead, fs, [target, ...args]);
+        if (swappedAfterRead === false && typeof target === "number") {
+          fs.renameSync(afterReadFile, afterReadParked);
+          fs.writeFileSync(afterReadFile, "replacement");
+          swappedAfterRead = true;
+        }
+        return bytes;
+      }) as typeof fs.readFileSync;
+      let afterReadRejected = false;
+      try {
+        afterReadRejected = throws(() =>
+          ownerProject.readRenderFile("read-after-descriptor/frame.bin"),
+        );
+      } finally {
+        fs.readFileSync = nativeDescriptorRead;
+        fs.rmSync(afterReadFile);
+        fs.renameSync(afterReadParked, afterReadFile);
+        fs.rmSync(afterReadDirectory, { recursive: true, force: true });
+      }
+      const deniedOpenFile = path.join(
+        ownerProject.renderRoot(),
+        "read-open-denied.bin",
+      );
+      fs.writeFileSync(deniedOpenFile, "resident");
+      const nativeDeniedOpen = fs.openSync;
+      fs.openSync = ((target: fs.PathLike, ...args: unknown[]): number => {
+        if (path.resolve(target.toString()) === path.resolve(deniedOpenFile)) {
+          const error = new Error("injected render open denial");
+          Object.assign(error, { code: "EACCES" });
+          throw error;
+        }
+        return Reflect.apply(nativeDeniedOpen, fs, [target, ...args]);
+      }) as typeof fs.openSync;
+      let deniedOpenRejected = false;
+      try {
+        deniedOpenRejected = throws(() =>
+          ownerProject.readRenderFile("read-open-denied.bin"),
+        );
+      } finally {
+        fs.openSync = nativeDeniedOpen;
+        fs.rmSync(deniedOpenFile);
+      }
+      TestValidator.predicate(
+        "render reads revalidate after descriptor I/O and preserve non-absence errors",
+        swappedAfterRead && afterReadRejected && deniedOpenRejected,
+      );
+    } catch (error) {
+      outsideRenderReadFailure = { error };
+      throw error;
     } finally {
-      fs.openSync = nativeDeniedOpen;
-      fs.rmSync(deniedOpenFile);
+      preserveSingleProductionProjectFixtureCleanup(
+        outsideRenderReadFailure,
+        () => fs.rmSync(outsideRenderRead, { force: true, recursive: true }),
+      );
     }
-    TestValidator.predicate(
-      "render reads revalidate after descriptor I/O and preserve non-absence errors",
-      swappedAfterRead && afterReadRejected && deniedOpenRejected,
-    );
-    fs.rmSync(outsideRenderRead, { force: true, recursive: true });
     const deliverableFiles = ownerProject.commitProductionDeliverableFiles(
       "feature*CON",
       new Map([
@@ -2286,22 +2299,34 @@ export const test_mcp_production_project = (): void => {
       fs.writeFileSync(renderManifestPath, manifestBeforeFailure);
     }
     fs.rmSync(renderFramePath);
+    let outsideRenderTargetFailure:
+      | ISingleProductionProjectFixtureFailure
+      | undefined;
     const outsideRenderTarget = fs.mkdtempSync(
       path.join(os.tmpdir(), "automovie-render-target-"),
     );
-    fs.symlinkSync(outsideRenderTarget, renderFramePath, "junction");
-    TestValidator.predicate(
-      "commit target cannot be replaced through a symlink or junction",
-      throws(() =>
-        ownerProject.commitRenderBundle(
-          renderBundle,
-          new Map([["frame.bin", Buffer.from("unsafe")]]),
-          renderManifest,
+    try {
+      fs.symlinkSync(outsideRenderTarget, renderFramePath, "junction");
+      TestValidator.predicate(
+        "commit target cannot be replaced through a symlink or junction",
+        throws(() =>
+          ownerProject.commitRenderBundle(
+            renderBundle,
+            new Map([["frame.bin", Buffer.from("unsafe")]]),
+            renderManifest,
+          ),
         ),
-      ),
-    );
-    fs.rmSync(renderFramePath, { force: true, recursive: true });
-    fs.rmSync(outsideRenderTarget, { force: true, recursive: true });
+      );
+      fs.rmSync(renderFramePath, { force: true, recursive: true });
+    } catch (error) {
+      outsideRenderTargetFailure = { error };
+      throw error;
+    } finally {
+      preserveSingleProductionProjectFixtureCleanup(
+        outsideRenderTargetFailure,
+        () => fs.rmSync(outsideRenderTarget, { force: true, recursive: true }),
+      );
+    }
     const lstatSync = fs.lstatSync;
     Object.defineProperty(fs, "lstatSync", {
       configurable: true,
@@ -2563,59 +2588,71 @@ export const test_mcp_production_project = (): void => {
           );
         }),
     );
+    let outsideContentFailure:
+      | ISingleProductionProjectFixtureFailure
+      | undefined;
     const outsideContent = fs.mkdtempSync(
       path.join(os.tmpdir(), "automovie-content-junction-"),
     );
-    const nestedContentJunction = path.join(
-      contentFixture.root,
-      "viewer",
-      "linked",
-    );
-    fs.writeFileSync(path.join(outsideContent, "escape.ts"), "export {};\n");
-    fs.symlinkSync(outsideContent, nestedContentJunction, "junction");
-    TestValidator.predicate(
-      "declared content inventory refuses nested junctions",
-      throws(() => contentProject.contentInputs()),
-    );
-    fs.rmSync(nestedContentJunction);
-    fs.rmSync(outsideContent, { force: true, recursive: true });
+    try {
+      const nestedContentJunction = path.join(
+        contentFixture.root,
+        "viewer",
+        "linked",
+      );
+      fs.writeFileSync(path.join(outsideContent, "escape.ts"), "export {};\n");
+      fs.symlinkSync(outsideContent, nestedContentJunction, "junction");
+      TestValidator.predicate(
+        "declared content inventory refuses nested junctions",
+        throws(() => contentProject.contentInputs()),
+      );
+      fs.rmSync(nestedContentJunction);
+    } catch (error) {
+      outsideContentFailure = { error };
+      throw error;
+    } finally {
+      preserveSingleProductionProjectFixtureCleanup(outsideContentFailure, () =>
+        fs.rmSync(outsideContent, { force: true, recursive: true }),
+      );
+    }
+    let racedOutsideFailure: ISingleProductionProjectFixtureFailure | undefined;
     const racedOutside = fs.mkdtempSync(
       path.join(os.tmpdir(), "automovie-content-race-"),
     );
-    const racedOutsideFile = path.join(racedOutside, "outside.ts");
-    fs.writeFileSync(racedOutsideFile, "export {};\n");
-    const viewerRoot = path.join(contentFixture.root, "viewer");
-    const viewerFile = path.join(viewerRoot, "src/main.ts");
-    const residentRealpathSync = fs.realpathSync;
-    const withRacedRealpath = (
-      select: (absolute: string, occurrence: number) => string | null,
-    ): boolean => {
-      const occurrences = new Map<string, number>();
-      Reflect.set(
-        fs,
-        "realpathSync",
-        (candidate: fs.PathLike, ...args: unknown[]) => {
-          const absolute = path.resolve(String(candidate));
-          const occurrence = (occurrences.get(absolute) ?? 0) + 1;
-          occurrences.set(absolute, occurrence);
-          const replacement = select(absolute, occurrence);
-          return replacement === null
-            ? (
-                residentRealpathSync as (
-                  file: fs.PathLike,
-                  ...options: unknown[]
-                ) => unknown
-              )(candidate, ...args)
-            : replacement;
-        },
-      );
-      try {
-        return throws(() => contentProject.contentInputs());
-      } finally {
-        Reflect.set(fs, "realpathSync", residentRealpathSync);
-      }
-    };
     try {
+      const racedOutsideFile = path.join(racedOutside, "outside.ts");
+      fs.writeFileSync(racedOutsideFile, "export {};\n");
+      const viewerRoot = path.join(contentFixture.root, "viewer");
+      const viewerFile = path.join(viewerRoot, "src/main.ts");
+      const residentRealpathSync = fs.realpathSync;
+      const withRacedRealpath = (
+        select: (absolute: string, occurrence: number) => string | null,
+      ): boolean => {
+        const occurrences = new Map<string, number>();
+        Reflect.set(
+          fs,
+          "realpathSync",
+          (candidate: fs.PathLike, ...args: unknown[]) => {
+            const absolute = path.resolve(String(candidate));
+            const occurrence = (occurrences.get(absolute) ?? 0) + 1;
+            occurrences.set(absolute, occurrence);
+            const replacement = select(absolute, occurrence);
+            return replacement === null
+              ? (
+                  residentRealpathSync as (
+                    file: fs.PathLike,
+                    ...options: unknown[]
+                  ) => unknown
+                )(candidate, ...args)
+              : replacement;
+          },
+        );
+        try {
+          return throws(() => contentProject.contentInputs());
+        } finally {
+          Reflect.set(fs, "realpathSync", residentRealpathSync);
+        }
+      };
       TestValidator.predicate(
         "a content root cannot race its physical-root realpath outside the project",
         withRacedRealpath((absolute, occurrence) =>
@@ -2644,8 +2681,13 @@ export const test_mcp_production_project = (): void => {
         "a declared content root replaced after project open is refused",
         throws(() => contentProject.contentInputs()),
       );
+    } catch (error) {
+      racedOutsideFailure = { error };
+      throw error;
     } finally {
-      fs.rmSync(racedOutside, { force: true, recursive: true });
+      preserveSingleProductionProjectFixtureCleanup(racedOutsideFailure, () =>
+        fs.rmSync(racedOutside, { force: true, recursive: true }),
+      );
     }
   } catch (error) {
     contentFixtureFailure = { error };

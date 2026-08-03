@@ -283,19 +283,19 @@ export const test_mcp_production_project_single_fixture_cleanup = (): void => {
             index: 3,
             substantive: {
               digest:
-                "430c334da6aedd972e31e19425d9fc9d5ba6383937c12a1def920b1ee40add8d",
-              tokens: 11124,
+                "4e80f8565c4ce4bb6c457fe4d78e4404a5544c96626a0303e5dc6bd7fbc2bf1d",
+              tokens: 11200,
             },
             tryDigest:
-              "5775f1c1a5b46b95ba370c2397c0b40a824af173d95a352183e88850fab8b081",
-            tryStatements: 336,
+              "31299a4f2ff50217d94c960d4e1ef2418e3b7aa24bc1ba629e936a6ec862b882",
+            tryStatements: 288,
           },
           {
             acquisition: "constdependencyCycleFixture=productionFixture();",
             catchBodies: ["dependencyCycleFailure={error};", "throwerror;"],
             catchVariables: ["error"],
             containerKind: "TryStatement",
-            containerStatements: 336,
+            containerStatements: 288,
             failureHolder:
               "letdependencyCycleFailure:|ISingleProductionProjectFixtureFailure|undefined;",
             finallyBodies: [
@@ -325,12 +325,12 @@ export const test_mcp_production_project_single_fixture_cleanup = (): void => {
             index: 6,
             substantive: {
               digest:
-                "97b60655b843f06fa2a458efad2be1ce41cd0efb6d7fb089c7eab6a9cd5834aa",
-              tokens: 1195,
+                "e9f5e199c167384803476ec5d4600259f8a2cfe76ac1ab2b68d69d0185dfa0ae",
+              tokens: 1264,
             },
             tryDigest:
-              "a5f34359e6ec3881da59aacb5ef27a733c16469de269bd20556d7ba8235eb85e",
-            tryStatements: 28,
+              "bc9093d82067dcb31bd3a4713028f679ed65ef863317af814e10a555e706101d",
+            tryStatements: 19,
           },
           {
             acquisition: "constassetManifestFixture=productionFixture();",
