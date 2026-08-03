@@ -15,6 +15,27 @@ import path from "node:path";
 
 import { productionFixture, shotContract } from "./productionFixtures";
 
+interface IProductionShotContinuityFixtureFailure {
+  error: unknown;
+}
+
+class ProductionShotContinuityFixtureCleanupError extends AggregateError {}
+
+export const preserveProductionShotContinuityFixtureCleanup = (
+  failure: IProductionShotContinuityFixtureFailure | undefined,
+  cleanup: () => void,
+): void => {
+  try {
+    cleanup();
+  } catch (cleanupFailure) {
+    if (failure === undefined) throw cleanupFailure;
+    throw new ProductionShotContinuityFixtureCleanupError(
+      [failure.error, cleanupFailure],
+      "Production shot-continuity fixture teardown failed after the test failed.",
+    );
+  }
+};
+
 const registrationOf = (
   contract: IAutoMovieShotContract,
 ): IAutoMovieDefinedShotContract => {
@@ -187,6 +208,9 @@ export const answer = defineShot("answer", {
  *    successor, even though its direct `compileDefinedShot` step succeeded.
  */
 export const test_mcp_production_shot_continuity = async (): Promise<void> => {
+  let productionShotContinuityFailure:
+    | IProductionShotContinuityFixtureFailure
+    | undefined;
   const fixture = productionFixture();
   try {
     const sourceModule = "src/shots/continuity.ts";
@@ -491,7 +515,13 @@ export const test_mcp_production_shot_continuity = async (): Promise<void> => {
             diagnostic.code !== "contract-realization-failed",
         ),
     );
+  } catch (error) {
+    productionShotContinuityFailure = { error };
+    throw error;
   } finally {
-    fixture.dispose();
+    preserveProductionShotContinuityFixtureCleanup(
+      productionShotContinuityFailure,
+      () => fixture.dispose(),
+    );
   }
 };
