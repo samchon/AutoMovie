@@ -7,6 +7,29 @@ import path from "node:path";
 
 import { throwsError } from "../internal/predicates";
 
+interface IProjectTransactionFixtureFailure {
+  error: unknown;
+}
+
+class ProjectTransactionFixtureCleanupError extends AggregateError {}
+
+/** Remove one transaction root without replacing its primary failure. */
+export const preserveProjectTransactionFixtureCleanup = (
+  failure: IProjectTransactionFixtureFailure | undefined,
+  cleanup: () => unknown,
+  resource: string,
+): void => {
+  try {
+    cleanup();
+  } catch (cleanupFailure) {
+    if (failure === undefined) throw cleanupFailure;
+    throw new ProjectTransactionFixtureCleanupError(
+      [failure.error, cleanupFailure],
+      `Project-transaction ${resource} cleanup failed after the test failed.`,
+    );
+  }
+};
+
 const scriptOf = (logline: string): IAutoMovieScript => ({
   logline,
   theme: "durability",
@@ -62,6 +85,7 @@ const slateOf = (logline: string): IAutoMovieMcpWritableSlate => ({
  */
 export const test_mcp_project_transactions = (): void => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-txn-"));
+  let transactionFailure: IProjectTransactionFixtureFailure | undefined;
   try {
     const a = AutoMovieProject.open(root);
     a.writableSlate();
@@ -545,13 +569,21 @@ export const test_mcp_project_transactions = (): void => {
       "a live project handle never follows a replacement root namespace",
       replacedReadRejected && replacedMutationRejected && replacementUntouched,
     );
+  } catch (error) {
+    transactionFailure = { error };
+    throw error;
   } finally {
-    fs.rmSync(root, { recursive: true, force: true });
+    preserveProjectTransactionFixtureCleanup(
+      transactionFailure,
+      () => fs.rmSync(root, { recursive: true, force: true }),
+      "main-root",
+    );
   }
 
   const aliasSandbox = fs.mkdtempSync(
     path.join(os.tmpdir(), "automovie-txn-alias-"),
   );
+  let aliasFailure: IProjectTransactionFixtureFailure | undefined;
   try {
     const physicalA = path.join(aliasSandbox, "physical-a");
     const physicalB = path.join(aliasSandbox, "physical-b");
@@ -601,7 +633,14 @@ export const test_mcp_project_transactions = (): void => {
           .includes("canonical physical root") &&
         fs.readdirSync(path.join(physicalB, "project")).length === 0,
     );
+  } catch (error) {
+    aliasFailure = { error };
+    throw error;
   } finally {
-    fs.rmSync(aliasSandbox, { recursive: true, force: true });
+    preserveProjectTransactionFixtureCleanup(
+      aliasFailure,
+      () => fs.rmSync(aliasSandbox, { recursive: true, force: true }),
+      "alias-sandbox",
+    );
   }
 };
