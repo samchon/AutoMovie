@@ -3627,10 +3627,17 @@ export const test_cli_scaffold = async (): Promise<void> => {
     ]),
     [],
   );
+  // Match the renderer's token shape rather than a bare `{{`: prettier
+  // normalizes a JSDoc object type to `{{ error: unknown } | undefined}`, so a
+  // scaffold `.cjs` helper legitimately carries the character pair while no
+  // substitutable token ever survives with a space after the braces.
+  const placeholderToken = /\{\{[A-Za-z][A-Za-z0-9:]*\}\}/u;
   TestValidator.predicate(
     "no placeholder token survives any rendered path or payload",
     Object.entries(files).every(
-      ([key, content]) => !key.includes("{{") && !content.includes("{{"),
+      ([key, content]) =>
+        placeholderToken.test(key) === false &&
+        placeholderToken.test(content) === false,
     ),
   );
   TestValidator.predicate(
