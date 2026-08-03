@@ -299,10 +299,21 @@ const exerciseSplitPathDescriptorIdentity = (dir: string): void => {
       ? mutateLockStatus(status as fs.BigIntStats, "identity")
       : status;
   }) as typeof fs.lstatSync;
+  let splitPathFailure: ICommitLockFixtureFailure | undefined;
   try {
     releaseCommitLock(lockPath, token);
+  } catch (error) {
+    splitPathFailure = { error };
+    throw error;
   } finally {
-    mutableFs.lstatSync = nativeLstat;
+    preserveCommitLockHookCleanup(splitPathFailure, [
+      {
+        resource: "split-path lstat hook",
+        cleanup: () => {
+          mutableFs.lstatSync = nativeLstat;
+        },
+      },
+    ]);
   }
   TestValidator.equals(
     "release accepts stable pathname and descriptor identity domains",
@@ -587,10 +598,21 @@ const exerciseReleaseFailures = (dir: string): void => {
       throw new Error("quarantine rename failed");
     nativeRename(oldPath, newPath);
   }) as typeof fs.renameSync;
+  let releaseRenameFailure: ICommitLockFixtureFailure | undefined;
   try {
     releaseCommitLock(renamePath, renameToken);
+  } catch (error) {
+    releaseRenameFailure = { error };
+    throw error;
   } finally {
-    fs.renameSync = nativeRename;
+    preserveCommitLockHookCleanup(releaseRenameFailure, [
+      {
+        resource: "release-rename hook",
+        cleanup: () => {
+          fs.renameSync = nativeRename;
+        },
+      },
+    ]);
   }
   TestValidator.equals(
     "a failed quarantine rename leaves the owner lock resident",
@@ -608,10 +630,21 @@ const exerciseReleaseFailures = (dir: string): void => {
       throw new Error("initial snapshot failed");
     return nativeLstat(target, options);
   }) as typeof fs.lstatSync;
+  let releaseSnapshotFailure: ICommitLockFixtureFailure | undefined;
   try {
     releaseCommitLock(snapshotPath, snapshotToken);
+  } catch (error) {
+    releaseSnapshotFailure = { error };
+    throw error;
   } finally {
-    mutableFs.lstatSync = nativeLstat;
+    preserveCommitLockHookCleanup(releaseSnapshotFailure, [
+      {
+        resource: "release-snapshot lstat hook",
+        cleanup: () => {
+          mutableFs.lstatSync = nativeLstat;
+        },
+      },
+    ]);
   }
   TestValidator.equals(
     "a failed initial snapshot leaves the owner lock resident",
