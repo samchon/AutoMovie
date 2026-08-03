@@ -6587,14 +6587,30 @@ export const test_cli_scaffold = async (): Promise<void> => {
       return status;
     }) as typeof fs.lstatSync;
     let compositeMetadataRaceRejected = false;
+    let compositeMetadataCleanupFailure: { error: unknown } | undefined;
     try {
       compositeMetadataRaceRejected = throws(metadataFixture);
+    } catch (error) {
+      compositeMetadataCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.lstatSync = nativeLstat;
-      if (fs.existsSync(parkedPlaywrightCli)) {
-        fs.rmSync(playwrightCli, { force: true });
-        fs.renameSync(parkedPlaywrightCli, playwrightCli);
-      }
+      preserveCliHarnessCleanup(compositeMetadataCleanupFailure, [
+        {
+          resource: "capture metadata lstat hook",
+          cleanup: () => {
+            mutableFs.lstatSync = nativeLstat;
+          },
+        },
+        {
+          resource: "capture metadata resident CLI",
+          cleanup: () => {
+            if (fs.existsSync(parkedPlaywrightCli)) {
+              fs.rmSync(playwrightCli, { force: true });
+              fs.renameSync(parkedPlaywrightCli, playwrightCli);
+            }
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "capture metadata rejects a CLI successor between package snapshots",
@@ -6616,14 +6632,30 @@ export const test_cli_scaffold = async (): Promise<void> => {
       return status;
     }) as typeof fs.lstatSync;
     let coreBrowsersRaceRejected = false;
+    let coreBrowsersCleanupFailure: { error: unknown } | undefined;
     try {
       coreBrowsersRaceRejected = throws(metadataFixture);
+    } catch (error) {
+      coreBrowsersCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.lstatSync = nativeLstat;
-      if (fs.existsSync(parkedCoreBrowsers)) {
-        fs.rmSync(coreBrowsers, { force: true });
-        fs.renameSync(parkedCoreBrowsers, coreBrowsers);
-      }
+      preserveCliHarnessCleanup(coreBrowsersCleanupFailure, [
+        {
+          resource: "capture core browsers lstat hook",
+          cleanup: () => {
+            mutableFs.lstatSync = nativeLstat;
+          },
+        },
+        {
+          resource: "capture resident core browsers",
+          cleanup: () => {
+            if (fs.existsSync(parkedCoreBrowsers)) {
+              fs.rmSync(coreBrowsers, { force: true });
+              fs.renameSync(parkedCoreBrowsers, coreBrowsers);
+            }
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "capture metadata rejects a core browsers successor while captured",

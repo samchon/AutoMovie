@@ -30,7 +30,7 @@ const leafTokenContract = (
   };
 };
 
-const verifiedProxyCleanupContract = (text: string): unknown => {
+const captureMetadataCleanupContract = (text: string): unknown => {
   const source = ts.createSourceFile(
     "test_cli_scaffold.ts",
     text,
@@ -38,10 +38,7 @@ const verifiedProxyCleanupContract = (text: string): unknown => {
     true,
     ts.ScriptKind.TS,
   );
-  const anchors = [
-    "verifiedproxytreelstathook",
-    "verifiedproxyinventoryopenhook",
-  ];
+  const anchors = ["capturemetadatalstathook", "capturecorebrowserslstathook"];
   const lifecycles: Array<{
     catchBodies: string[];
     catchVariables: string[];
@@ -100,69 +97,63 @@ const verifiedProxyCleanupContract = (text: string): unknown => {
   };
 };
 
-export const test_cli_scaffold_verified_proxy_cleanup = (): void => {
+export const test_cli_scaffold_capture_metadata_cleanup = (): void => {
   TestValidator.equals(
-    "CLI scaffold owns two verified proxy cleanup lifecycles",
-    verifiedProxyCleanupContract(
+    "CLI scaffold owns two capture metadata cleanup lifecycles",
+    captureMetadataCleanupContract(
       fs.readFileSync(path.join(__dirname, "test_cli_scaffold.ts"), "utf8"),
     ),
     {
       lifecycles: [
         {
           catchBodies: [
-            "verifiedProxyTreeCleanupFailure={error};",
+            "compositeMetadataCleanupFailure={error};",
             "throwerror;",
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
           containerStatements: 1893,
           finallyDigest:
-            "d00876a73d3676827029dede236cbe84ef1e558dc5e4b37b774d41db08ed53cf",
+            "0aa5288af368b96dbae9edb653410c88d2e17bf136e47a8ebe214d85d5d5c77e",
           finallySubstantive: {
             digest:
-              "1ddd419a3bbd5e5fd81ff927f9fcc84ae3230b225fdce64cbc63f6664c7a58df",
-            tokens: 115,
+              "f874d84fa888ef99fe1effbc945cf6152a9830f500b095ef9ff7a48aa354346d",
+            tokens: 77,
           },
-          index: 336,
+          index: 496,
           preceding:
-            "letverifiedProxyTreeCleanupFailure:{error:unknown}|undefined;",
+            "letcompositeMetadataCleanupFailure:{error:unknown}|undefined;",
           substantive: {
             digest:
-              "ce3268fc7c1fad4e7c34596cf3a3a2c63dc939da651fb661835639e4ac63ebe9",
-            tokens: 19,
+              "884210cbfd37f2768b27d3e8dd3b3b959e1844b17a48d1a7bdd31e8add19e834",
+            tokens: 7,
           },
-          tryBody:
-            "{verifiedProxyTreeSuccessorRejected=throws(()=>proxyModule.inspectPublishedProxyBundle(verifiedProxyRoot,verifiedProxyBundle,),);}",
+          tryBody: "{compositeMetadataRaceRejected=throws(metadataFixture);}",
           tryDigest:
-            "b86be392535b10de1b87f6ca31c414725299bc2bdc09fb45f6cd88abf4012814",
+            "84de95fa2ea707d5dd2ca50198bcae29470b6eb0cfc9937bb02026b029d94517",
         },
         {
-          catchBodies: [
-            "verifiedProxyInventoryCleanupFailure={error};",
-            "throwerror;",
-          ],
+          catchBodies: ["coreBrowsersCleanupFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
           containerStatements: 1893,
           finallyDigest:
-            "700a1adbe2c656b62d88d2efac6ef77f32b3ef96274b83482763fb3d5ae65c3d",
+            "c448f1fc024246e74a18e9da9a774d11270de00f3f8f59da226a4ec3690f9693",
           finallySubstantive: {
             digest:
-              "70b4dbd7cf747cfa0354387023ede667b69c4b1f0af9b3408d37a09a6e4b3f0b",
-            tokens: 99,
+              "c9186643a6144facce6a179f20d0666c53acaf0a8ec16a5f05a164991bb1ea89",
+            tokens: 77,
           },
-          index: 347,
-          preceding:
-            "letverifiedProxyInventoryCleanupFailure:{error:unknown}|undefined;",
+          index: 504,
+          preceding: "letcoreBrowsersCleanupFailure:{error:unknown}|undefined;",
           substantive: {
             digest:
-              "e1950d54cb638d63807470a9504cbf95901ba090fc5e7cebb9539fa78a6b410b",
-            tokens: 19,
+              "ed4885bd102f2cc7fc3f7ab8751cc0ce1ed4e5fcd5c229a222ee60d68c458292",
+            tokens: 7,
           },
-          tryBody:
-            "{verifiedProxyLateMutationRejected=throws(()=>proxyModule.inspectPublishedProxyBundle(verifiedProxyRoot,verifiedProxyBundle,),);}",
+          tryBody: "{coreBrowsersRaceRejected=throws(metadataFixture);}",
           tryDigest:
-            "0c0ec72321cd2d85c484246cb26eba2170e1d99fb3b0b715d64563a48ee8af03",
+            "9f73593eef6965ec338e636e8423a0c41f7f7290f680edd669a82d6084d3a68f",
         },
       ],
       parseDiagnostics: [],
