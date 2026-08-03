@@ -36,6 +36,28 @@ import {
   worldDesign,
 } from "./productionFixtures";
 
+interface IProductionMaterializationFixtureFailure {
+  error: unknown;
+}
+
+class ProductionMaterializationFixtureCleanupError extends AggregateError {}
+
+/** Dispose the materialization fixture without replacing its failure. */
+export const preserveProductionMaterializationFixtureCleanup = (
+  failure: IProductionMaterializationFixtureFailure | undefined,
+  cleanup: () => unknown,
+): void => {
+  try {
+    cleanup();
+  } catch (cleanupFailure) {
+    if (failure === undefined) throw cleanupFailure;
+    throw new ProductionMaterializationFixtureCleanupError(
+      [failure.error, cleanupFailure],
+      "Production-materialization fixture teardown failed after the test failed.",
+    );
+  }
+};
+
 const recipe = (
   id: string,
   archetype: IAutoMovieModelRecipe["archetype"],
@@ -262,6 +284,9 @@ export const test_mcp_production_materialization = (): void => {
       Object.keys(inventory).length === layouts.length,
   );
 
+  let productionMaterializationFailure:
+    | IProductionMaterializationFixtureFailure
+    | undefined;
   const fixture = productionFixture();
   try {
     const project = AutoMovieProductionProject.open(fixture.root);
@@ -641,7 +666,13 @@ export const test_mcp_production_materialization = (): void => {
           Number(highCountSummary.result.values.culled) ===
           highCount.count - highCount.heroOverrides.length,
     );
+  } catch (error) {
+    productionMaterializationFailure = { error };
+    throw error;
   } finally {
-    fixture.dispose();
+    preserveProductionMaterializationFixtureCleanup(
+      productionMaterializationFailure,
+      () => fixture.dispose(),
+    );
   }
 };
