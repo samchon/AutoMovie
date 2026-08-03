@@ -7009,12 +7009,16 @@ export const test_cli_scaffold = async (): Promise<void> => {
       "capture launch retains identity failure before rejected cleanup",
       failedLaunchCleanupError instanceof AggregateError
         ? {
+            // A rename moves the inode's ctime, so the descriptor check can
+            // notice the successor before the pathname check does. The scenario
+            // owns the ordering and the retention, not which check spoke.
             errors: failedLaunchCleanupError.errors.map((error) =>
               error === launchCleanupFailure
                 ? "launch-cleanup-failure"
                 : error instanceof Error
-                  ? error.message.includes("changed physical identity")
-                    ? "changed physical identity"
+                  ? error.message.includes("changed physical identity") ||
+                    error.message.includes("changed open descriptor bytes")
+                    ? "identity-refusal"
                     : error.message
                   : String(error),
             ),
@@ -7028,7 +7032,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
             kind: failedLaunchCleanupError instanceof Error ? "error" : "other",
           },
       {
-        errors: ["changed physical identity", "launch-cleanup-failure"],
+        errors: ["identity-refusal", "launch-cleanup-failure"],
         kind: "aggregate",
       },
     );
