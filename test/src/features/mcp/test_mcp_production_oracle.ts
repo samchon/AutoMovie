@@ -58,6 +58,39 @@ export const preserveProductionOracleFixtureCleanup = (
   }
 };
 
+interface IProductionOracleHookCleanup {
+  cleanup: () => unknown;
+  resource: string;
+}
+
+class ProductionOracleHookCleanupError extends AggregateError {}
+
+/** Attempt every oracle harness hook restoration without hiding failure. */
+export const preserveProductionOracleHookCleanup = (
+  failure: IProductionOracleFixtureFailure | undefined,
+  resources: readonly IProductionOracleHookCleanup[],
+): void => {
+  const cleanupFailures: Array<{ error: unknown; resource: string }> = [];
+  for (const resource of resources)
+    try {
+      resource.cleanup();
+    } catch (error) {
+      cleanupFailures.push({ error, resource: resource.resource });
+    }
+  if (cleanupFailures.length === 1 && failure === undefined)
+    throw cleanupFailures[0]!.error;
+  if (cleanupFailures.length !== 0)
+    throw new ProductionOracleHookCleanupError(
+      [
+        ...(failure === undefined ? [] : [failure.error]),
+        ...cleanupFailures.map((entry) => entry.error),
+      ],
+      `Production oracle hook cleanup failed${
+        failure === undefined ? "" : " after the preview failed"
+      }: ${cleanupFailures.map((entry) => entry.resource).join(", ")}.`,
+    );
+};
+
 /**
  * Geometry queries and preview frames use current compiler-owned artifacts,
  * including scale-aware promoted-hero visibility at the camera boundary.
@@ -1875,6 +1908,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         throw new Error("retained frame disappeared after verification");
       }) as typeof project.readRenderFile;
       let retainedReadRace: Awaited<ReturnType<typeof actual.preview>>;
+      let retainedReadRaceFailure: IProductionOracleFixtureFailure | undefined;
       try {
         retainedReadRace = await actual.preview({
           target: { kind: "shot", id: "opening" },
@@ -1882,9 +1916,24 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
           width: 2,
           height: 2,
         });
+      } catch (error) {
+        retainedReadRaceFailure = { error };
+        throw error;
       } finally {
-        project.verifiedRenderManifest = residentVerifiedRenderManifest;
-        project.readRenderFile = residentReadRenderFile;
+        preserveProductionOracleHookCleanup(retainedReadRaceFailure, [
+          {
+            resource: "retained-read verified-manifest hook",
+            cleanup: () => {
+              project.verifiedRenderManifest = residentVerifiedRenderManifest;
+            },
+          },
+          {
+            resource: "retained-read file hook",
+            cleanup: () => {
+              project.readRenderFile = residentReadRenderFile;
+            },
+          },
+        ]);
       }
       const retainedRaceResult = project.verifiedRenderManifest(
         path.join(bundleRoot, "manifest.json"),
