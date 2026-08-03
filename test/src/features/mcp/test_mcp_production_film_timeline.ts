@@ -78,6 +78,43 @@ const throws = (closure: () => unknown): boolean => {
   }
 };
 
+interface IFilmSourceFixtureFailure {
+  error: unknown;
+}
+
+interface IFilmSourceFixtureCleanup {
+  cleanup: () => unknown;
+  resource: string;
+}
+
+class FilmSourceFixtureCleanupError extends AggregateError {}
+
+/** Attempt each independent film-source cleanup without hiding failure. */
+export const preserveFilmSourceFixtureCleanup = (
+  failure: IFilmSourceFixtureFailure | undefined,
+  resources: readonly IFilmSourceFixtureCleanup[],
+): void => {
+  const cleanupFailures: Array<{ error: unknown; resource: string }> = [];
+  for (const resource of resources)
+    try {
+      resource.cleanup();
+    } catch (error) {
+      cleanupFailures.push({ error, resource: resource.resource });
+    }
+  if (cleanupFailures.length === 1 && failure === undefined)
+    throw cleanupFailures[0]!.error;
+  if (cleanupFailures.length !== 0)
+    throw new FilmSourceFixtureCleanupError(
+      [
+        ...(failure === undefined ? [] : [failure.error]),
+        ...cleanupFailures.map((entry) => entry.error),
+      ],
+      `Film-source fixture cleanup failed${
+        failure === undefined ? "" : " after the test failed"
+      }: ${cleanupFailures.map((entry) => entry.resource).join(", ")}.`,
+    );
+};
+
 const captureBytes = (): Uint8Array => {
   const png = new PNG({ width: 16, height: 16 });
   png.data.fill(200);
@@ -687,6 +724,7 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
     const outsideFilmRoot = fs.mkdtempSync(
       path.join(os.tmpdir(), "automovie-film-source-outside-"),
     );
+    let filmSourceFixtureFailure: IFilmSourceFixtureFailure | undefined;
     try {
       const outsideFilm = path.join(outsideFilmRoot, "film.ts");
       fs.writeFileSync(outsideFilm, originalSource);
@@ -698,10 +736,24 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
           "source-path-outside-root",
         ),
       );
+    } catch (error) {
+      filmSourceFixtureFailure = { error };
+      throw error;
     } finally {
-      fs.rmSync(filmPath, { force: true });
-      fs.writeFileSync(filmPath, originalSource);
-      fs.rmSync(outsideFilmRoot, { force: true, recursive: true });
+      preserveFilmSourceFixtureCleanup(filmSourceFixtureFailure, [
+        {
+          resource: "resident film source",
+          cleanup: (): void => {
+            fs.rmSync(filmPath, { force: true });
+            fs.writeFileSync(filmPath, originalSource);
+          },
+        },
+        {
+          resource: "outside film-source root",
+          cleanup: () =>
+            fs.rmSync(outsideFilmRoot, { force: true, recursive: true }),
+        },
+      ]);
     }
 
     const answer = JSON.parse(
