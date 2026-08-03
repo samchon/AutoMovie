@@ -30,7 +30,7 @@ const leafTokenContract = (
   };
 };
 
-const chunkGcInventoryCleanupContract = (text: string): unknown => {
+const captureSnapshotCleanupContract = (text: string): unknown => {
   const source = ts.createSourceFile(
     "test_cli_scaffold.ts",
     text,
@@ -58,7 +58,7 @@ const chunkGcInventoryCleanupContract = (text: string): unknown => {
       node.finallyBlock !== undefined &&
       compact(node.finallyBlock, source)
         .toLowerCase()
-        .includes("chunkgcinventoryreaddirhook") &&
+        .includes("captureacceptedsnapshotdescriptor") &&
       ts.isBlock(node.parent)
     ) {
       const statements = [...node.parent.statements];
@@ -96,40 +96,41 @@ const chunkGcInventoryCleanupContract = (text: string): unknown => {
   };
 };
 
-export const test_cli_scaffold_chunk_gc_inventory_cleanup = (): void => {
+export const test_cli_scaffold_capture_snapshot_cleanup = (): void => {
   TestValidator.equals(
-    "CLI scaffold owns the chunk GC inventory cleanup lifecycle",
-    chunkGcInventoryCleanupContract(
+    "CLI scaffold preserves accepted capture snapshot cleanup",
+    captureSnapshotCleanupContract(
       fs.readFileSync(path.join(__dirname, "test_cli_scaffold.ts"), "utf8"),
     ),
     {
       lifecycles: [
         {
           catchBodies: [
-            "chunkGcInventoryCleanupFailure={error};",
+            "captureSnapshotCleanupFailure={error};",
             "throwerror;",
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
           containerStatements: 1935,
           finallyDigest:
-            "615b4d6b2e4fbec464675adc51a10c4c9d3235c640a3a6905fc1b6852f0ac64f",
+            "e5d065d9ad2b75eaccd2174d760cac65055b53314fc85d7b8b5c6dbee3805b4e",
           finallySubstantive: {
             digest:
-              "7bbe1147531bff8a0205a82780f3094ddab86013335f2ca2df67f1d3a35afcab",
-            tokens: 53,
+              "6a810e043641b65d2ed6d1dc4260b923971ca3954c0566ed194cc13c9ed7baef",
+            tokens: 30,
           },
-          index: 1297,
+          index: 399,
           preceding:
-            "letchunkGcInventoryCleanupFailure:{error:unknown}|undefined;",
+            "letcaptureSnapshotCleanupFailure:{error:unknown}|undefined;",
           substantive: {
             digest:
-              "a28cc6e5bdb6b4b4d070ac8abec194d3d11905bd5d92196e975f4a7233c0b8f5",
-            tokens: 6,
+              "634bf95e381ea4115a277a1b07e7eaefa831e7b1b958c7556c1d9f885dfa363a",
+            tokens: 24,
           },
-          tryBody: "{mutatedChunkGcInventory=inventoryChunkGarbage();}",
+          tryBody:
+            "{captureExecutableModule.assertCaptureExecutable(captureSnapshot);captureSnapshotAccepted=captureSnapshot.path===captureExecutable&&captureSnapshot.digest===fixtureDigest(captureExecutableBytes);}",
           tryDigest:
-            "f0f7d4b6c38a14c66bea917af382082e8bdd6ef7afa020c9c07c8ab9fed64b4f",
+            "ab89b47db06295c348ba93b80bbe86c492d9a64f957fecefe453e714c9219b9f",
         },
       ],
       parseDiagnostics: [],

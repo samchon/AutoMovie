@@ -6049,13 +6049,24 @@ export const test_cli_scaffold = async (): Promise<void> => {
     const captureSnapshot =
       captureExecutableModule.openCaptureExecutable(captureExecutable);
     let captureSnapshotAccepted = false;
+    let captureSnapshotCleanupFailure: { error: unknown } | undefined;
     try {
       captureExecutableModule.assertCaptureExecutable(captureSnapshot);
       captureSnapshotAccepted =
         captureSnapshot.path === captureExecutable &&
         captureSnapshot.digest === fixtureDigest(captureExecutableBytes);
+    } catch (error) {
+      captureSnapshotCleanupFailure = { error };
+      throw error;
     } finally {
-      captureExecutableModule.closeCaptureExecutable(captureSnapshot);
+      preserveCliHarnessCleanup(captureSnapshotCleanupFailure, [
+        {
+          resource: "capture accepted snapshot descriptor",
+          cleanup: () => {
+            captureExecutableModule.closeCaptureExecutable(captureSnapshot);
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "capture executable snapshot preserves exact resident bytes and identity",

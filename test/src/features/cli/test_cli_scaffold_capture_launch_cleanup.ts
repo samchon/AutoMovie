@@ -117,7 +117,7 @@ export const test_cli_scaffold_capture_launch_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1934,
+          containerStatements: 1935,
           finallyDigest:
             "5e9526da18da593cbb6793a558dc5b7ab5e3064d51dc99ab0170422d8e237561",
           finallySubstantive: {
@@ -125,7 +125,7 @@ export const test_cli_scaffold_capture_launch_cleanup = (): void => {
               "1b0bd2ab48ea5e92dc27facfc7611dab7baad21b5ebc5c575ba1d815ec2693cd",
             tokens: 83,
           },
-          index: 541,
+          index: 542,
           preceding: [
             "letlaunchBoundaryRejected=false;",
             "letlaunchBoundaryCleanupFailure:{error:unknown}|undefined;",
@@ -147,7 +147,7 @@ export const test_cli_scaffold_capture_launch_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1934,
+          containerStatements: 1935,
           finallyDigest:
             "d9584d9210c82b23ee5ff644144239fe5c33de67eecb7a15dfc732479b382514",
           finallySubstantive: {
@@ -155,7 +155,7 @@ export const test_cli_scaffold_capture_launch_cleanup = (): void => {
               "b075f9c2595f59cccd895f155d7ab0017db5ef973f0d148b7b22466447db462a",
             tokens: 83,
           },
-          index: 548,
+          index: 549,
           preceding: [
             "letfailedLaunchCleanupError:unknown;",
             "letfailedLaunchHarnessCleanupFailure:{error:unknown}|undefined;",
