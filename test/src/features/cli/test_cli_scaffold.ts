@@ -4977,6 +4977,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
         judge: (snapshot, evidence) => {
           nativeRename(gcAbaProductionTarget, gcAbaProductionParked);
           nativeRename(gcAbaProductionSuccessor, gcAbaProductionTarget);
+          let gcAbaJudgeCleanupFailure: { error: unknown } | undefined;
           try {
             const receipt = proxyModule.inspectCapturedProxyBundle(
               snapshot,
@@ -4987,11 +4988,24 @@ export const test_cli_scaffold = async (): Promise<void> => {
               receipt.compileFingerprint === gcAbaCompile &&
               receipt.editFingerprint === gcAbaEdit
             );
-          } catch {
+          } catch (error) {
+            gcAbaJudgeCleanupFailure = { error };
             return false;
           } finally {
-            nativeRename(gcAbaProductionTarget, gcAbaProductionSuccessor);
-            nativeRename(gcAbaProductionParked, gcAbaProductionTarget);
+            preserveCliHarnessCleanup(gcAbaJudgeCleanupFailure, [
+              {
+                resource: "proxy GC ABA successor target",
+                cleanup: () => {
+                  nativeRename(gcAbaProductionTarget, gcAbaProductionSuccessor);
+                },
+              },
+              {
+                resource: "proxy GC ABA resident target",
+                cleanup: () => {
+                  nativeRename(gcAbaProductionParked, gcAbaProductionTarget);
+                },
+              },
+            ]);
           }
         },
       });
@@ -5044,6 +5058,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
         readBytes += length;
         return length;
       }) as typeof fs.readSync;
+      let scaleCleanupFailure: { error: unknown } | undefined;
       try {
         proxyPublisherModule.publishProxyBundle({
           expected: entries,
@@ -5052,9 +5067,24 @@ export const test_cli_scaffold = async (): Promise<void> => {
           renderRoot: proxyPublishRoot,
           target,
         });
+      } catch (error) {
+        scaleCleanupFailure = { error };
+        throw error;
       } finally {
-        mutableFs.lstatSync = nativeLstat;
-        mutableFs.readSync = nativeRead;
+        preserveCliHarnessCleanup(scaleCleanupFailure, [
+          {
+            resource: "proxy scale lstat hook",
+            cleanup: () => {
+              mutableFs.lstatSync = nativeLstat;
+            },
+          },
+          {
+            resource: "proxy scale read hook",
+            cleanup: () => {
+              mutableFs.readSync = nativeRead;
+            },
+          },
+        ]);
       }
       return {
         observations,
@@ -5109,16 +5139,32 @@ export const test_cli_scaffold = async (): Promise<void> => {
       return status;
     }) as typeof fs.lstatSync;
     let proxyRaceRejected = false;
+    let proxyMediaCleanupFailure: { error: unknown } | undefined;
     try {
       proxyRaceRejected = throws(() =>
         proxyModule.assertPublishedProxyBundle(proxy, proxyFiles),
       );
+    } catch (error) {
+      proxyMediaCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.lstatSync = nativeLstat;
-      if (fs.existsSync(parkedProxyMedia)) {
-        fs.rmSync(proxyMedia, { force: true });
-        fs.renameSync(parkedProxyMedia, proxyMedia);
-      }
+      preserveCliHarnessCleanup(proxyMediaCleanupFailure, [
+        {
+          resource: "proxy media lstat hook",
+          cleanup: () => {
+            mutableFs.lstatSync = nativeLstat;
+          },
+        },
+        {
+          resource: "proxy resident media",
+          cleanup: () => {
+            if (fs.existsSync(parkedProxyMedia)) {
+              fs.rmSync(proxyMedia, { force: true });
+              fs.renameSync(parkedProxyMedia, proxyMedia);
+            }
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "proxy verification rejects a byte-identical successor after inventory",
@@ -5153,20 +5199,44 @@ export const test_cli_scaffold = async (): Promise<void> => {
       return status;
     }) as typeof fs.lstatSync;
     let proxyDirectoryRaceRejected = false;
+    let proxyDirectoryCleanupFailure: { error: unknown } | undefined;
     try {
       proxyDirectoryRaceRejected = throws(() =>
         proxyModule.assertPublishedProxyBundle(proxy, proxyFiles),
       );
+    } catch (error) {
+      proxyDirectoryCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.lstatSync = nativeLstat;
-      if (fs.existsSync(parkedProxyMediaDirectory)) {
-        fs.rmSync(proxyMediaDirectory, { recursive: true, force: true });
-        fs.renameSync(parkedProxyMediaDirectory, proxyMediaDirectory);
-      }
-      fs.rmSync(successorProxyMediaDirectory, {
-        recursive: true,
-        force: true,
-      });
+      preserveCliHarnessCleanup(proxyDirectoryCleanupFailure, [
+        {
+          resource: "proxy directory lstat hook",
+          cleanup: () => {
+            mutableFs.lstatSync = nativeLstat;
+          },
+        },
+        {
+          resource: "proxy resident media directory",
+          cleanup: () => {
+            if (fs.existsSync(parkedProxyMediaDirectory)) {
+              fs.rmSync(proxyMediaDirectory, {
+                recursive: true,
+                force: true,
+              });
+              fs.renameSync(parkedProxyMediaDirectory, proxyMediaDirectory);
+            }
+          },
+        },
+        {
+          resource: "proxy successor media directory",
+          cleanup: () => {
+            fs.rmSync(successorProxyMediaDirectory, {
+              recursive: true,
+              force: true,
+            });
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "proxy verification rejects a hard-linked directory successor",
@@ -5187,13 +5257,29 @@ export const test_cli_scaffold = async (): Promise<void> => {
       return status;
     }) as typeof fs.lstatSync;
     let proxyInventoryRaceRejected = false;
+    let proxyInventoryCleanupFailure: { error: unknown } | undefined;
     try {
       proxyInventoryRaceRejected = throws(() =>
         proxyModule.assertPublishedProxyBundle(proxy, proxyFiles),
       );
+    } catch (error) {
+      proxyInventoryCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.lstatSync = nativeLstat;
-      fs.rmSync(lateProxyFile, { force: true });
+      preserveCliHarnessCleanup(proxyInventoryCleanupFailure, [
+        {
+          resource: "proxy inventory lstat hook",
+          cleanup: () => {
+            mutableFs.lstatSync = nativeLstat;
+          },
+        },
+        {
+          resource: "proxy late inventory file",
+          cleanup: () => {
+            fs.rmSync(lateProxyFile, { force: true });
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "proxy verification rejects a late unexpected inventory entry",
