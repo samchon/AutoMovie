@@ -1439,7 +1439,8 @@ export const test_cli_scaffold = async (): Promise<void> => {
       policies: [
         {
           actions: [
-            "try{cleanup();}catch(cleanupFailure){if(failure===undefined)throwcleanupFailure;thrownewCaptureDescriptorCleanupError([failure.error,cleanupFailure],`\${resource}cleanupfailedaftertheoperationfailed.`,);}",
+            "try{cleanup();}catch(cleanupFailure){if(failure===undefined)throwcleanupFailure;thrownewCaptureDescriptorCleanupError([failure.error,cleanupFailure],`$" +
+              "{resource}cleanupfailedaftertheoperationfailed.`,);}",
           ],
           parameters: [
             "failure:CaptureDescriptorFailure|undefined",

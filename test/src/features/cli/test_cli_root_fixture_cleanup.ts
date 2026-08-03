@@ -167,7 +167,8 @@ export const test_cli_root_fixture_cleanup = (): void => {
     ),
     {
       bodies: [
-        "{try{cleanup();}catch(cleanupFailure){if(failure===undefined)throwcleanupFailure;thrownewCliRootFixtureCleanupError([failure.error,cleanupFailure],`CLI\${resource}cleanupfailedafterthetestfailed.`,);}}",
+        "{try{cleanup();}catch(cleanupFailure){if(failure===undefined)throwcleanupFailure;thrownewCliRootFixtureCleanupError([failure.error,cleanupFailure],`CLI$" +
+          "{resource}cleanupfailedafterthetestfailed.`,);}}",
       ],
       classes: ["AggregateError"],
       parameters: [

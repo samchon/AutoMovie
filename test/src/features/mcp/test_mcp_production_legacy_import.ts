@@ -159,7 +159,7 @@ const createLegacy = (): {
       dispose: () => fs.rmSync(root, { force: true, recursive: true }),
     };
   } catch (error) {
-    throwLegacyFixtureConstructionFailure(error, () =>
+    return throwLegacyFixtureConstructionFailure(error, () =>
       fs.rmSync(root, { force: true, recursive: true }),
     );
   }

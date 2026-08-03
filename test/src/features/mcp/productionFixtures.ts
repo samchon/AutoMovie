@@ -137,7 +137,7 @@ export const film = {
       dispose: () => fs.rmSync(root, { force: true, recursive: true }),
     };
   } catch (error) {
-    throwProductionFixtureConstructionFailure(error, () =>
+    return throwProductionFixtureConstructionFailure(error, () =>
       fs.rmSync(root, { force: true, recursive: true }),
     );
   }

@@ -847,7 +847,9 @@ export const test_cli_capture_cleanup = (): void => {
       policy: {
         classes: ["AggregateError"],
         functions: [
-          '{constcleanupFailures=[];for(constresourceofresources)try{resource.cleanup();}catch(error){cleanupFailures.push({error,resource:resource.resource});}if(cleanupFailures.length===0){if(failure!==undefined)throwfailure.error;return;}if(failure===undefined&&cleanupFailures.length===1)throwcleanupFailures[0].error;thrownewProductionEncoderCleanupError([...(failure===undefined?[]:[failure.error]),...cleanupFailures.map((entry)=>entry.error),],`Productionencodercleanupfailed\${failure===undefined?"":"aftertheoperationfailed"}:\${cleanupFailures.map((entry)=>entry.resource).join(",")}.`,);}',
+          "{constcleanupFailures=[];for(constresourceofresources)try{resource.cleanup();}catch(error){cleanupFailures.push({error,resource:resource.resource});}if(cleanupFailures.length===0){if(failure!==undefined)throwfailure.error;return;}if(failure===undefined&&cleanupFailures.length===1)throwcleanupFailures[0].error;thrownewProductionEncoderCleanupError([...(failure===undefined?[]:[failure.error]),...cleanupFailures.map((entry)=>entry.error),],`Productionencodercleanupfailed$" +
+            '{failure===undefined?"":"aftertheoperationfailed"}:$' +
+            '{cleanupFailures.map((entry)=>entry.resource).join(",")}.`,);}',
         ],
       },
     },

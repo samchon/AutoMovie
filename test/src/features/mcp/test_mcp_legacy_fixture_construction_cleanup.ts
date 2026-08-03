@@ -114,13 +114,13 @@ export const test_mcp_legacy_fixture_construction_cleanup = (): void => {
     {
       owner: {
         bodies: [
-          '{constroot=fs.mkdtempSync(path.join(os.tmpdir(),"automovie-import-test-"));try{constproject=AutoMovieProject.open(root);project.saveSlate(slate);project.registerAsset("assets/reference.bin",Buffer.from("legacy-asset"));fs.mkdirSync(path.join(root,"actors/archive"),{recursive:true});fs.writeFileSync(path.join(root,"actors/archive/README.txt"),"legacy");return{root,dispose:()=>fs.rmSync(root,{force:true,recursive:true}),};}catch(error){throwLegacyFixtureConstructionFailure(error,()=>fs.rmSync(root,{force:true,recursive:true}),);}}',
+          '{constroot=fs.mkdtempSync(path.join(os.tmpdir(),"automovie-import-test-"));try{constproject=AutoMovieProject.open(root);project.saveSlate(slate);project.registerAsset("assets/reference.bin",Buffer.from("legacy-asset"));fs.mkdirSync(path.join(root,"actors/archive"),{recursive:true});fs.writeFileSync(path.join(root,"actors/archive/README.txt"),"legacy");return{root,dispose:()=>fs.rmSync(root,{force:true,recursive:true}),};}catch(error){returnthrowLegacyFixtureConstructionFailure(error,()=>fs.rmSync(root,{force:true,recursive:true}),);}}',
         ],
         count: 1,
       },
       policy: {
         bodies: [
-          '{try{cleanup();}catch(cleanupFailure){thrownewLegacyFixtureConstructionCleanupError([failure,cleanupFailure],"Legacyfixtureconstructionandpartial-rootcleanupfailed.",);}throwfailure;}',
+          '{try{cleanup();}catch(cleanupFailure){thrownewLegacyFixtureConstructionCleanupError([failure,cleanupFailure],"Legacyfixtureconstructionandpartial-rootcleanupfailed.",);}throwfailureasError;}',
         ],
         classes: ["AggregateError"],
         parameters: [["failure:unknown", "cleanup:()=>unknown"]],

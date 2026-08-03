@@ -214,7 +214,7 @@ export const test_mcp_production_fixture_construction_cleanup = (): void => {
         lifecycles: [
           {
             catchBodies: [
-              "throwProductionFixtureConstructionFailure(error,()=>fs.rmSync(root,{force:true,recursive:true}),);",
+              "returnthrowProductionFixtureConstructionFailure(error,()=>fs.rmSync(root,{force:true,recursive:true}),);",
             ],
             catchVariables: ["error"],
             constructionCalls: [
@@ -246,7 +246,7 @@ export const test_mcp_production_fixture_construction_cleanup = (): void => {
       },
       policy: {
         bodies: [
-          '{try{cleanup();}catch(cleanupFailure){thrownewProductionFixtureConstructionCleanupError([failure,cleanupFailure],"Productionfixtureconstructionandpartial-rootcleanupfailed.",);}throwfailure;}',
+          '{try{cleanup();}catch(cleanupFailure){thrownewProductionFixtureConstructionCleanupError([failure,cleanupFailure],"Productionfixtureconstructionandpartial-rootcleanupfailed.",);}throwfailureasError;}',
         ],
         classes: ["AggregateError"],
         parameters: [["failure:unknown", "cleanup:()=>unknown"]],

@@ -330,7 +330,9 @@ export const test_cli_kokoro_runtime_overrides = async (): Promise<void> => {
           { assignment: "globalThis.fetch=previous.fetch", guarded: true },
         ],
         pinnedFetchDeclarations: [
-          'constpinnedFetch:typeofglobalThis.fetch=async(input,init)=>{constsource=typeofinput==="string"?input:inputinstanceofURL?input.href:input.url;constmarker=`huggingface.co/\${KOKORO_MODEL}/resolve/`;constmarkerIndex=source.indexOf(marker);if(markerIndex<0)returnfetcher(input,init);constsuffix=source.slice(markerIndex+marker.length);constseparator=suffix.indexOf("/");if(separator<0)thrownewError(`KokoromodelURLhasnoassetpath:\${source}`);constpinned=source.slice(0,markerIndex+marker.length)+KOKORO_MODEL_REVISION+suffix.slice(separator);constrequest=typeofinput==="object"&&input!==null&&"url"ininput&&inputinstanceofRequest?newRequest(pinned,input):pinned;returnfetcher(request,init);};',
+          'constpinnedFetch:typeofglobalThis.fetch=async(input,init)=>{constsource=typeofinput==="string"?input:inputinstanceofURL?input.href:input.url;constmarker=`huggingface.co/$' +
+            '{KOKORO_MODEL}/resolve/`;constmarkerIndex=source.indexOf(marker);if(markerIndex<0)returnfetcher(input,init);constsuffix=source.slice(markerIndex+marker.length);constseparator=suffix.indexOf("/");if(separator<0)thrownewError(`KokoromodelURLhasnoassetpath:$' +
+            '{source}`);constpinned=source.slice(0,markerIndex+marker.length)+KOKORO_MODEL_REVISION+suffix.slice(separator);constrequest=typeofinput==="object"&&input!==null&&"url"ininput&&inputinstanceofRequest?newRequest(pinned,input):pinned;returnfetcher(request,init);};',
         ],
         calls: [
           {
@@ -346,7 +348,9 @@ export const test_cli_kokoro_runtime_overrides = async (): Promise<void> => {
       },
       policy: {
         bodies: [
-          '{constattempted=[];letfailure;try{for(constoverrideofoverrides){attempted.push(override);override.install();}returnawaitoperation();}catch(error){failure={error};throwerror;}finally{constrestorationFailures=[];for(constoverrideofattempted)try{override.restore();}catch(error){restorationFailures.push({error,resource:override.resource});}if(restorationFailures.length===1&&failure===undefined)throwrestorationFailures[0].error;if(restorationFailures.length!==0)thrownewKokoroRuntimeOverrideError([...(failure===undefined?[]:[failure.error]),...restorationFailures.map((entry)=>entry.error),],`Kokororuntimeoverriderestorationfailed\${failure===undefined?"":"aftersetuporloadingfailed"}:\${restorationFailures.map((entry)=>entry.resource).join(",")}.`,);}}',
+          "{constattempted=[];letfailure;try{for(constoverrideofoverrides){attempted.push(override);override.install();}returnawaitoperation();}catch(error){failure={error};throwerror;}finally{constrestorationFailures=[];for(constoverrideofattempted)try{override.restore();}catch(error){restorationFailures.push({error,resource:override.resource});}if(restorationFailures.length===1&&failure===undefined)throwrestorationFailures[0].error;if(restorationFailures.length!==0)thrownewKokoroRuntimeOverrideError([...(failure===undefined?[]:[failure.error]),...restorationFailures.map((entry)=>entry.error),],`Kokororuntimeoverriderestorationfailed$" +
+            '{failure===undefined?"":"aftersetuporloadingfailed"}:$' +
+            '{restorationFailures.map((entry)=>entry.resource).join(",")}.`,);}}',
         ],
         classes: ["AggregateError"],
         parameters: [["overrides", "operation"]],
