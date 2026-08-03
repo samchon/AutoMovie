@@ -4,7 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import ts from "typescript-compiler";
 
-import { preserveSingleProductionProjectFixtureCleanup } from "./test_mcp_production_project";
+import { preserveProductionProjectFixtureCleanup } from "./test_mcp_production_project";
 
 const compact = (node: ts.Node, source: ts.SourceFile): string =>
   node.getText(source).replace(/\s+/g, "");
@@ -40,7 +40,7 @@ const aggregateContainsExactly = (
   error.errors.length === expected.length &&
   expected.every((failure, index) => error.errors[index] === failure);
 
-const invalidProductionRootCleanupContract = (text: string): unknown => {
+const atomicDeleteCleanupContract = (text: string): unknown => {
   const source = ts.createSourceFile(
     "test_mcp_production_project.ts",
     text,
@@ -61,13 +61,14 @@ const invalidProductionRootCleanupContract = (text: string): unknown => {
       : [],
   );
   const lifecycles: Array<{
-    acquisition: string;
     catchBodies: string[];
     catchVariables: string[];
     containerKind: string;
     containerStatements: number;
     failureHolder: string;
-    finallyBodies: string[];
+    finallyDigest: string;
+    finallyStatements: number;
+    finallySubstantive: { digest: string; tokens: number };
     index: number;
     substantive: { digest: string; tokens: number };
     tryDigest: string;
@@ -78,17 +79,14 @@ const invalidProductionRootCleanupContract = (text: string): unknown => {
       if (
         ts.isTryStatement(node) &&
         node.catchClause !== undefined &&
-        node.finallyBlock
-          ?.getText(source)
-          .includes("preserveSingleProductionProjectFixtureCleanup") === true &&
+        node.finallyBlock !== undefined &&
         ts.isBlock(node.parent)
       ) {
         const statements = [...node.parent.statements];
         const index = statements.indexOf(node);
-        const acquisition = compact(statements[index - 1]!, source);
-        if (acquisition.startsWith("constinvalidRoot=fs.mkdtempSync(") === true)
+        const failureHolder = compact(statements[index - 1]!, source);
+        if (failureHolder.startsWith("letatomicDeleteFailure:"))
           lifecycles.push({
-            acquisition,
             catchBodies: node.catchClause.block.statements.map((statement) =>
               compact(statement, source),
             ),
@@ -98,9 +96,12 @@ const invalidProductionRootCleanupContract = (text: string): unknown => {
                 : [compact(node.catchClause.variableDeclaration, source)],
             containerKind: ts.SyntaxKind[node.parent.parent.kind]!,
             containerStatements: statements.length,
-            failureHolder: compact(statements[index - 2]!, source),
-            finallyBodies: node.finallyBlock.statements.map((statement) =>
-              compact(statement, source),
+            failureHolder,
+            finallyDigest: digestText(node.finallyBlock.getText(source)),
+            finallyStatements: node.finallyBlock.statements.length,
+            finallySubstantive: leafTokenContract(
+              node.finallyBlock.statements,
+              source,
             ),
             index,
             substantive: leafTokenContract(node.tryBlock.statements, source),
@@ -129,38 +130,37 @@ const invalidProductionRootCleanupContract = (text: string): unknown => {
 const captureCleanup = (props: {
   cleanupFailure?: { error: unknown; present: true };
   primaryFailure?: { error: unknown; present: true };
-}): { attempts: number; caught: boolean; failure: unknown } => {
-  let attempts = 0;
+}): { caught: boolean; failure: unknown; order: string[] } => {
   let caught = false;
+  const order: string[] = [];
   let failure: unknown;
-  let primaryState: { error: unknown } | undefined;
   try {
-    try {
-      if (props.primaryFailure !== undefined) throw props.primaryFailure.error;
-    } catch (error) {
-      primaryState = { error };
-      throw error;
-    } finally {
-      preserveSingleProductionProjectFixtureCleanup(primaryState, (): void => {
-        ++attempts;
-        if (props.cleanupFailure !== undefined)
-          throw props.cleanupFailure.error;
-      });
-    }
+    preserveProductionProjectFixtureCleanup(
+      props.primaryFailure === undefined
+        ? undefined
+        : { error: props.primaryFailure.error },
+      [
+        {
+          resource: "atomic-delete rm hook",
+          cleanup: (): void => {
+            order.push("hook");
+            if (props.cleanupFailure !== undefined)
+              throw props.cleanupFailure.error;
+          },
+        },
+      ],
+    );
+    if (props.primaryFailure !== undefined) throw props.primaryFailure.error;
   } catch (error) {
     caught = true;
     failure = error;
   }
-  return { attempts, caught, failure };
+  return { caught, failure, order };
 };
 
-export const test_mcp_production_project_invalid_root_cleanup = (): void => {
-  const primaryFailure = { phase: "invalid production-root assertion" };
-  const cleanupFailure = { phase: "invalid production-root removal" };
-  const nestedPrimaryFailure = new AggregateError(
-    [{ phase: "nested invalid production-root cleanup" }],
-    "Nested invalid production-root cleanup failed.",
-  );
+export const test_mcp_production_project_atomic_delete_cleanup = (): void => {
+  const primaryFailure = { phase: "atomic-delete assertion" };
+  const cleanupFailure = { phase: "atomic-delete rm-hook restoration" };
   const success = captureCleanup({});
   const primaryOnly = captureCleanup({
     primaryFailure: { error: primaryFailure, present: true },
@@ -172,13 +172,6 @@ export const test_mcp_production_project_invalid_root_cleanup = (): void => {
     cleanupFailure: { error: cleanupFailure, present: true },
     primaryFailure: { error: primaryFailure, present: true },
   });
-  const nestedCombined = captureCleanup({
-    cleanupFailure: { error: cleanupFailure, present: true },
-    primaryFailure: { error: nestedPrimaryFailure, present: true },
-  });
-  const undefinedPrimary = captureCleanup({
-    primaryFailure: { error: undefined, present: true },
-  });
   const undefinedStandalone = captureCleanup({
     cleanupFailure: { error: undefined, present: true },
   });
@@ -187,44 +180,35 @@ export const test_mcp_production_project_invalid_root_cleanup = (): void => {
     primaryFailure: { error: undefined, present: true },
   });
   TestValidator.predicate(
-    "invalid production-root cleanup preserves failure identity and order",
+    "atomic-delete cleanup preserves primary and restoration failures",
     success.caught === false &&
       success.failure === undefined &&
-      success.attempts === 1 &&
+      success.order.join(",") === "hook" &&
       primaryOnly.caught &&
       primaryOnly.failure === primaryFailure &&
-      primaryOnly.attempts === 1 &&
+      primaryOnly.order.join(",") === "hook" &&
       standalone.caught &&
       standalone.failure === cleanupFailure &&
-      standalone.attempts === 1 &&
+      standalone.order.join(",") === "hook" &&
       combined.caught &&
       aggregateContainsExactly(combined.failure, [
         primaryFailure,
         cleanupFailure,
       ]) &&
-      combined.attempts === 1 &&
-      nestedCombined.caught &&
-      aggregateContainsExactly(nestedCombined.failure, [
-        nestedPrimaryFailure,
-        cleanupFailure,
-      ]) &&
-      nestedCombined.attempts === 1 &&
-      undefinedPrimary.caught &&
-      undefinedPrimary.failure === undefined &&
-      undefinedPrimary.attempts === 1 &&
+      combined.order.join(",") === "hook" &&
       undefinedStandalone.caught &&
       undefinedStandalone.failure === undefined &&
-      undefinedStandalone.attempts === 1 &&
+      undefinedStandalone.order.join(",") === "hook" &&
       undefinedCombined.caught &&
       aggregateContainsExactly(undefinedCombined.failure, [
         undefined,
         undefined,
       ]) &&
-      undefinedCombined.attempts === 1,
+      undefinedCombined.order.join(",") === "hook",
   );
   TestValidator.equals(
-    "production-project test owns one invalid-root lifecycle",
-    invalidProductionRootCleanupContract(
+    "production-project test owns one atomic-delete cleanup lifecycle",
+    atomicDeleteCleanupContract(
       fs.readFileSync(
         path.join(__dirname, "test_mcp_production_project.ts"),
         "utf8",
@@ -235,26 +219,29 @@ export const test_mcp_production_project_invalid_root_cleanup = (): void => {
         count: 1,
         lifecycles: [
           {
-            acquisition:
-              'constinvalidRoot=fs.mkdtempSync(path.join(os.tmpdir(),"automovie-production-root-"),);',
-            catchBodies: ["invalidRootFailure={error};", "throwerror;"],
+            catchBodies: ["atomicDeleteFailure={error};", "throwerror;"],
             catchVariables: ["error"],
-            containerKind: "ArrowFunction",
-            containerStatements: 23,
+            containerKind: "TryStatement",
+            containerStatements: 222,
             failureHolder:
-              "letinvalidRootFailure:ISingleProductionProjectFixtureFailure|undefined;",
-            finallyBodies: [
-              "preserveSingleProductionProjectFixtureCleanup(invalidRootFailure,()=>fs.rmSync(invalidRoot,{force:true,recursive:true}),);",
-            ],
-            index: 22,
+              "letatomicDeleteFailure:IProductionProjectFixtureFailure|undefined;",
+            finallyDigest:
+              "eaa9a35d1e09f4a57ae44136fd93f9320aa9c941fe018467b708d2922fb6134e",
+            finallyStatements: 1,
+            finallySubstantive: {
+              digest:
+                "530bdcf0db3dcf53ebd560e729046516e0128c6b7d04a736835512b779b242e0",
+              tokens: 34,
+            },
+            index: 173,
             substantive: {
               digest:
-                "77ece3bd0c22ebf0ef04b2b02f4de623869e424b5b7e192ca9136aecd91f0938",
-              tokens: 7907,
+                "9568a897450833653b48fea2eb1f405e252908b5eb82fd34e823901e53a5faf8",
+              tokens: 29,
             },
             tryDigest:
-              "bba794eccbb6b285334bff5fdf022d2638a9ea5d6fb5a453c8aaa5ee2ea726e7",
-            tryStatements: 222,
+              "61a08d878286100026dfe77308582aa7f852ddac5dcf9cdbf7101868bbf7c3a6",
+            tryStatements: 1,
           },
         ],
         statementCounts: [23],

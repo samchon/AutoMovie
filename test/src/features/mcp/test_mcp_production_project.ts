@@ -4379,6 +4379,7 @@ export const test_mcp_production_project = (): void => {
       );
     });
     let atomicDeleteRejected = false;
+    let atomicDeleteFailure: IProductionProjectFixtureFailure | undefined;
     try {
       atomicDeleteRejected = throws(
         () =>
@@ -4388,8 +4389,18 @@ export const test_mcp_production_project = (): void => {
           }),
         "injected quarantine delete denial",
       );
+    } catch (error) {
+      atomicDeleteFailure = { error };
+      throw error;
     } finally {
-      Reflect.set(fs, "rmSync", nativeRmForAtomicDelete);
+      preserveProductionProjectFixtureCleanup(atomicDeleteFailure, [
+        {
+          resource: "atomic-delete rm hook",
+          cleanup: () => {
+            Reflect.set(fs, "rmSync", nativeRmForAtomicDelete);
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "a failed quarantine cleanup restores the exact deleted file and revision",
