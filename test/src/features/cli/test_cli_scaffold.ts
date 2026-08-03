@@ -11700,10 +11700,19 @@ export const test_cli_scaffold = async (): Promise<void> => {
     const gcSparsePublication = path.join(gcBase, "large-publication.mp4");
     const gcSparseBytes = 2 * 1024 * 1024 + 17;
     const gcSparseDescriptor = fs.openSync(gcSparsePublication, "wx");
+    let gcSparseDescriptorFailure: { error: unknown } | undefined;
     try {
       fs.ftruncateSync(gcSparseDescriptor, gcSparseBytes);
+    } catch (error) {
+      gcSparseDescriptorFailure = { error };
+      throw error;
     } finally {
-      fs.closeSync(gcSparseDescriptor);
+      preserveCliHarnessCleanup(gcSparseDescriptorFailure, [
+        {
+          resource: "render GC sparse publication descriptor",
+          cleanup: () => fs.closeSync(gcSparseDescriptor),
+        },
+      ]);
     }
     const gcSparseSnapshot = renderGcModule.captureRenderGcTarget(
       gcBase,
