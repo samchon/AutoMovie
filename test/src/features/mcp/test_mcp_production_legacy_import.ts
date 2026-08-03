@@ -88,6 +88,43 @@ const aggregateContainsExactly = (
   error.errors.length === expected.length &&
   expected.every((failure, index) => error.errors[index] === failure);
 
+interface ILegacyImportFixtureFailure {
+  error: unknown;
+}
+
+interface ILegacyImportFixtureCleanup {
+  cleanup: () => unknown;
+  resource: string;
+}
+
+class LegacyImportFixtureCleanupError extends AggregateError {}
+
+/** Attempt every acquired legacy-import cleanup without hiding failure. */
+export const preserveLegacyImportFixtureCleanup = (
+  failure: ILegacyImportFixtureFailure | undefined,
+  resources: readonly ILegacyImportFixtureCleanup[],
+): void => {
+  const cleanupFailures: Array<{ error: unknown; resource: string }> = [];
+  for (const resource of resources)
+    try {
+      resource.cleanup();
+    } catch (error) {
+      cleanupFailures.push({ error, resource: resource.resource });
+    }
+  if (cleanupFailures.length === 1 && failure === undefined)
+    throw cleanupFailures[0]!.error;
+  if (cleanupFailures.length !== 0)
+    throw new LegacyImportFixtureCleanupError(
+      [
+        ...(failure === undefined ? [] : [failure.error]),
+        ...cleanupFailures.map((entry) => entry.error),
+      ],
+      `Legacy-import fixture cleanup failed${
+        failure === undefined ? "" : " after the test failed"
+      }: ${cleanupFailures.map((entry) => entry.resource).join(", ")}.`,
+    );
+};
+
 class LegacyFixtureConstructionCleanupError extends AggregateError {}
 
 /** Remove a partial legacy fixture without replacing its setup failure. */
@@ -1326,10 +1363,12 @@ export const test_mcp_production_legacy_import = (): void => {
   }
 
   const linkedRoot = createLegacy();
-  const linkedParent = fs.mkdtempSync(
-    path.join(os.tmpdir(), "automovie-linked-import-root-"),
-  );
+  let linkedParent: string | undefined;
+  let linkedRootFailure: ILegacyImportFixtureFailure | undefined;
   try {
+    linkedParent = fs.mkdtempSync(
+      path.join(os.tmpdir(), "automovie-linked-import-root-"),
+    );
     const link = path.join(linkedParent, "project");
     fs.symlinkSync(linkedRoot.root, link, "junction");
     TestValidator.predicate(
@@ -1339,9 +1378,29 @@ export const test_mcp_production_legacy_import = (): void => {
         "physical, dedicated",
       ) && fs.existsSync(path.join(linkedRoot.root, "revision.lock")) === false,
     );
+  } catch (error) {
+    linkedRootFailure = { error };
+    throw error;
   } finally {
-    linkedRoot.dispose();
-    fs.rmSync(linkedParent, { force: true, recursive: true });
+    const completedLinkedParent = linkedParent;
+    preserveLegacyImportFixtureCleanup(linkedRootFailure, [
+      {
+        resource: "linked-root legacy fixture",
+        cleanup: () => linkedRoot.dispose(),
+      },
+      ...(completedLinkedParent === undefined
+        ? []
+        : [
+            {
+              resource: "linked-root outside root",
+              cleanup: () =>
+                fs.rmSync(completedLinkedParent, {
+                  force: true,
+                  recursive: true,
+                }),
+            },
+          ]),
+    ]);
   }
 
   const replacedDuringAcquire = createLegacy();
@@ -1808,10 +1867,12 @@ export const test_mcp_production_legacy_import = (): void => {
   }
 
   const linkedRevision = createLegacy();
-  const linkedRevisionTarget = fs.mkdtempSync(
-    path.join(os.tmpdir(), "automovie-linked-revision-"),
-  );
+  let linkedRevisionTarget: string | undefined;
+  let linkedRevisionFailure: ILegacyImportFixtureFailure | undefined;
   try {
+    linkedRevisionTarget = fs.mkdtempSync(
+      path.join(os.tmpdir(), "automovie-linked-revision-"),
+    );
     const revisionPath = path.join(linkedRevision.root, "revision.json");
     fs.writeFileSync(
       path.join(linkedRevisionTarget, "revision.json"),
@@ -1829,9 +1890,29 @@ export const test_mcp_production_legacy_import = (): void => {
         "symlink or junction",
       ),
     );
+  } catch (error) {
+    linkedRevisionFailure = { error };
+    throw error;
   } finally {
-    linkedRevision.dispose();
-    fs.rmSync(linkedRevisionTarget, { force: true, recursive: true });
+    const completedLinkedRevisionTarget = linkedRevisionTarget;
+    preserveLegacyImportFixtureCleanup(linkedRevisionFailure, [
+      {
+        resource: "linked-revision legacy fixture",
+        cleanup: () => linkedRevision.dispose(),
+      },
+      ...(completedLinkedRevisionTarget === undefined
+        ? []
+        : [
+            {
+              resource: "linked-revision outside root",
+              cleanup: () =>
+                fs.rmSync(completedLinkedRevisionTarget, {
+                  force: true,
+                  recursive: true,
+                }),
+            },
+          ]),
+    ]);
   }
 
   for (const lockMutation of [
@@ -1841,10 +1922,12 @@ export const test_mcp_production_legacy_import = (): void => {
     "foreign-token",
   ] as const) {
     const changingLock = createLegacy();
-    const outsideLock = fs.mkdtempSync(
-      path.join(os.tmpdir(), "automovie-changing-lock-"),
-    );
+    let outsideLock: string | undefined;
+    let changingLockFailure: ILegacyImportFixtureFailure | undefined;
     try {
+      outsideLock = fs.mkdtempSync(
+        path.join(os.tmpdir(), "automovie-changing-lock-"),
+      );
       const manifestPath = path.join(changingLock.root, "automovie.json");
       const lockPath = path.join(changingLock.root, "revision.lock");
       const outsideLockPath = path.join(outsideLock, "revision.lock");
@@ -1881,9 +1964,29 @@ export const test_mcp_production_legacy_import = (): void => {
       } finally {
         fs.openSync = nativeOpen;
       }
+    } catch (error) {
+      changingLockFailure = { error };
+      throw error;
     } finally {
-      changingLock.dispose();
-      fs.rmSync(outsideLock, { force: true, recursive: true });
+      const completedOutsideLock = outsideLock;
+      preserveLegacyImportFixtureCleanup(changingLockFailure, [
+        {
+          resource: "changing-lock legacy fixture",
+          cleanup: () => changingLock.dispose(),
+        },
+        ...(completedOutsideLock === undefined
+          ? []
+          : [
+              {
+                resource: "changing-lock outside root",
+                cleanup: () =>
+                  fs.rmSync(completedOutsideLock, {
+                    force: true,
+                    recursive: true,
+                  }),
+              },
+            ]),
+      ]);
     }
   }
 
@@ -1924,10 +2027,12 @@ export const test_mcp_production_legacy_import = (): void => {
   }
 
   const linkedAppliedState = createLegacy();
-  const linkedAppliedStateTarget = fs.mkdtempSync(
-    path.join(os.tmpdir(), "automovie-linked-applied-state-"),
-  );
+  let linkedAppliedStateTarget: string | undefined;
+  let linkedAppliedStateFailure: ILegacyImportFixtureFailure | undefined;
   try {
+    linkedAppliedStateTarget = fs.mkdtempSync(
+      path.join(os.tmpdir(), "automovie-linked-applied-state-"),
+    );
     const importer = new AutoMovieLegacyImporter(linkedAppliedState.root);
     importer.apply();
     const linkedPath = path.join(linkedAppliedState.root, ".automovie/linked");
@@ -1938,9 +2043,29 @@ export const test_mcp_production_legacy_import = (): void => {
       "symbolic links cannot enter an applied import state tree",
       throws(() => importer.rollback(), "changed after import"),
     );
+  } catch (error) {
+    linkedAppliedStateFailure = { error };
+    throw error;
   } finally {
-    linkedAppliedState.dispose();
-    fs.rmSync(linkedAppliedStateTarget, { force: true, recursive: true });
+    const completedLinkedAppliedStateTarget = linkedAppliedStateTarget;
+    preserveLegacyImportFixtureCleanup(linkedAppliedStateFailure, [
+      {
+        resource: "linked-applied-state legacy fixture",
+        cleanup: () => linkedAppliedState.dispose(),
+      },
+      ...(completedLinkedAppliedStateTarget === undefined
+        ? []
+        : [
+            {
+              resource: "linked-applied-state outside root",
+              cleanup: () =>
+                fs.rmSync(completedLinkedAppliedStateTarget, {
+                  force: true,
+                  recursive: true,
+                }),
+            },
+          ]),
+    ]);
   }
 
   const directoryImportPlan = createLegacy();
@@ -2063,8 +2188,10 @@ export const test_mcp_production_legacy_import = (): void => {
   }
 
   const unsafe = createLegacy();
-  const outside = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-outside-"));
+  let outside: string | undefined;
+  let unsafeFailure: ILegacyImportFixtureFailure | undefined;
   try {
+    outside = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-outside-"));
     fs.writeFileSync(path.join(outside, "shot.json"), "{}");
     fs.symlinkSync(
       path.join(outside, "shot.json"),
@@ -2077,8 +2204,28 @@ export const test_mcp_production_legacy_import = (): void => {
         "symlink or junction",
       ),
     );
+  } catch (error) {
+    unsafeFailure = { error };
+    throw error;
   } finally {
-    unsafe.dispose();
-    fs.rmSync(outside, { force: true, recursive: true });
+    const completedOutside = outside;
+    preserveLegacyImportFixtureCleanup(unsafeFailure, [
+      {
+        resource: "unsafe-inventory legacy fixture",
+        cleanup: () => unsafe.dispose(),
+      },
+      ...(completedOutside === undefined
+        ? []
+        : [
+            {
+              resource: "unsafe-inventory outside root",
+              cleanup: () =>
+                fs.rmSync(completedOutside, {
+                  force: true,
+                  recursive: true,
+                }),
+            },
+          ]),
+    ]);
   }
 };
