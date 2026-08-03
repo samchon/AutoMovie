@@ -4489,6 +4489,7 @@ export const test_mcp_production_project = (): void => {
       const acquiredReplacementToken = replacementToken;
       const acquiredAbandonedToken = abandonedToken;
       const mutationRootWasParked = fs.existsSync(parkedMutationRoot);
+      let mutationRootRestored = false;
       preserveProductionProjectFixtureCleanup(mutationHarnessFailure, [
         {
           resource: "mutation-root rename hook",
@@ -4514,7 +4515,10 @@ export const test_mcp_production_project = (): void => {
               },
               {
                 resource: "mutation-root parked original",
-                cleanup: () => fs.renameSync(parkedMutationRoot, mutationRoot),
+                cleanup: () => {
+                  fs.renameSync(parkedMutationRoot, mutationRoot);
+                  mutationRootRestored = true;
+                },
               },
             ]
           : []),
@@ -4524,8 +4528,15 @@ export const test_mcp_production_project = (): void => {
               {
                 resource: "mutation-root abandoned lock",
                 cleanup: () => {
-                  releaseCommitLock(mutationLock, acquiredAbandonedToken);
-                  abandonedLockReleased = fs.existsSync(mutationLock) === false;
+                  const abandonedLock = mutationRootRestored
+                    ? mutationLock
+                    : path.join(
+                        parkedMutationRoot,
+                        ".automovie/productions/mutation-root/revision.lock",
+                      );
+                  releaseCommitLock(abandonedLock, acquiredAbandonedToken);
+                  abandonedLockReleased =
+                    fs.existsSync(abandonedLock) === false;
                 },
               },
             ]),

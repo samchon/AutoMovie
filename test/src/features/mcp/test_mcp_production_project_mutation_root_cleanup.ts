@@ -218,12 +218,21 @@ const captureCleanup = (props: {
 
 const capturePartialAcquisition = (props: {
   acquired: "abandoned" | "none" | "parked" | "replacement";
+  activeFailure?: { error: unknown; present: true };
   hookFailure?: { error: unknown; present: true };
+  parkedFailure?: { error: unknown; present: true };
   primaryFailure?: { error: unknown; present: true };
-}): { caught: boolean; failure: unknown; order: string[] } => {
+}): {
+  abandonedPath: "canonical" | "parked" | undefined;
+  caught: boolean;
+  failure: unknown;
+  order: string[];
+} => {
+  let abandonedPath: "canonical" | "parked" | undefined;
   let caught = false;
   const order: string[] = [];
   let failure: unknown;
+  let rootRestored = false;
   try {
     preserveProductionProjectFixtureCleanup(
       props.primaryFailure === undefined
@@ -254,12 +263,17 @@ const capturePartialAcquisition = (props: {
                 resource: "mutation-root active replacement",
                 cleanup: (): void => {
                   order.push("active-remove");
+                  if (props.activeFailure !== undefined)
+                    throw props.activeFailure.error;
                 },
               },
               {
                 resource: "mutation-root parked original",
                 cleanup: (): void => {
                   order.push("parked-restore");
+                  if (props.parkedFailure !== undefined)
+                    throw props.parkedFailure.error;
+                  rootRestored = true;
                 },
               },
             ]),
@@ -269,6 +283,7 @@ const capturePartialAcquisition = (props: {
                 resource: "mutation-root abandoned lock",
                 cleanup: (): void => {
                   order.push("abandoned-release");
+                  abandonedPath = rootRestored ? "canonical" : "parked";
                 },
               },
             ]
@@ -280,7 +295,7 @@ const capturePartialAcquisition = (props: {
     caught = true;
     failure = error;
   }
-  return { caught, failure, order };
+  return { abandonedPath, caught, failure, order };
 };
 
 export const test_mcp_production_project_mutation_root_cleanup = (): void => {
@@ -329,6 +344,12 @@ export const test_mcp_production_project_mutation_root_cleanup = (): void => {
     acquired: "replacement",
     hookFailure: { error: hookFailure, present: true },
   });
+  const physicalRecoveryFailed = capturePartialAcquisition({
+    acquired: "replacement",
+    activeFailure: { error: activeFailure, present: true },
+    parkedFailure: { error: parkedFailure, present: true },
+    primaryFailure: { error: primaryFailure, present: true },
+  });
   const undefinedStandalone = captureCleanup({
     cleanupFailures: [{ error: undefined, present: true }],
   });
@@ -370,20 +391,33 @@ export const test_mcp_production_project_mutation_root_cleanup = (): void => {
       combined.order.join(",") === fullOrder &&
       noSwap.caught &&
       noSwap.failure === primaryFailure &&
+      noSwap.abandonedPath === undefined &&
       noSwap.order.join(",") === "hook" &&
       parked.caught &&
       parked.failure === primaryFailure &&
+      parked.abandonedPath === undefined &&
       parked.order.join(",") === "hook,active-remove,parked-restore" &&
       abandoned.caught &&
       abandoned.failure === primaryFailure &&
+      abandoned.abandonedPath === "canonical" &&
       abandoned.order.join(",") ===
         "hook,active-remove,parked-restore,abandoned-release" &&
       replacement.caught &&
       replacement.failure === primaryFailure &&
+      replacement.abandonedPath === "canonical" &&
       replacement.order.join(",") === fullOrder &&
       hookFailedAfterReplacement.caught &&
       hookFailedAfterReplacement.failure === hookFailure &&
+      hookFailedAfterReplacement.abandonedPath === "canonical" &&
       hookFailedAfterReplacement.order.join(",") === fullOrder &&
+      physicalRecoveryFailed.caught &&
+      aggregateContainsExactly(physicalRecoveryFailed.failure, [
+        primaryFailure,
+        activeFailure,
+        parkedFailure,
+      ]) &&
+      physicalRecoveryFailed.abandonedPath === "parked" &&
+      physicalRecoveryFailed.order.join(",") === fullOrder &&
       undefinedStandalone.caught &&
       undefinedStandalone.failure === undefined &&
       undefinedStandalone.order.join(",") === fullOrder &&
@@ -414,12 +448,12 @@ export const test_mcp_production_project_mutation_root_cleanup = (): void => {
             failureHolder:
               "letmutationHarnessFailure:IProductionProjectFixtureFailure|undefined;",
             finallyDigest:
-              "74c03f33b1657c7b033ced76ba8adb7ffc98959c5a4d8c2f962f7c2a4009f9b9",
-            finallyStatements: 4,
+              "6466151d9b98ee451e6daef69733165d426022eb6270525262e54a70709a1240",
+            finallyStatements: 5,
             finallySubstantive: {
               digest:
-                "776eb1b64edd84ebc41046dfe656d669c76cbee42d9bb1cf7fe20365e51aed0f",
-              tokens: 188,
+                "095df184c9e10fe0379eb8bf8d09e2159805fb20ed453ad7f68bb1a994421f48",
+              tokens: 217,
             },
             guardedBodies: [
               {
