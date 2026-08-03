@@ -197,6 +197,7 @@ const capturePartialSwapCleanup = (props: {
         cleanup: () => order.push("directory"),
       },
     ]);
+    throw props.primaryFailure;
   } catch (error) {
     failure = error;
   }
