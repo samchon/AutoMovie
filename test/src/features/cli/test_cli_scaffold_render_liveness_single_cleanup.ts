@@ -30,7 +30,7 @@ const leafTokenContract = (
   };
 };
 
-const captureExecutableCleanupContract = (text: string): unknown => {
+const renderLivenessSingleCleanupContract = (text: string): unknown => {
   const source = ts.createSourceFile(
     "test_cli_scaffold.ts",
     text,
@@ -39,9 +39,8 @@ const captureExecutableCleanupContract = (text: string): unknown => {
     ts.ScriptKind.TS,
   );
   const anchors = [
-    "captureexecutablelstathook",
-    "capturecreateopenhook",
-    "captureopenopenhook",
+    "renderlivenessinventoryreaddirhook",
+    "renderlivenessstalesuccessorrenamehook",
   ];
   const lifecycles: Array<{
     catchBodies: string[];
@@ -51,7 +50,7 @@ const captureExecutableCleanupContract = (text: string): unknown => {
     finallyDigest: string;
     finallySubstantive: { digest: string; tokens: number };
     index: number;
-    preceding: string[];
+    preceding: string;
     substantive: { digest: string; tokens: number };
     tryBody: string;
     tryDigest: string;
@@ -62,7 +61,7 @@ const captureExecutableCleanupContract = (text: string): unknown => {
       node.catchClause !== undefined &&
       node.finallyBlock !== undefined &&
       anchors.some((anchor) =>
-        compact(node.finallyBlock!, source).includes(anchor),
+        compact(node.finallyBlock!, source).toLowerCase().includes(anchor),
       ) &&
       ts.isBlock(node.parent)
     ) {
@@ -84,9 +83,7 @@ const captureExecutableCleanupContract = (text: string): unknown => {
           source,
         ),
         index,
-        preceding: statements
-          .slice(Math.max(0, index - 2), index)
-          .map((statement) => compact(statement, source)),
+        preceding: compact(statements[index - 1]!, source),
         substantive: leafTokenContract(node.tryBlock.statements, source),
         tryBody: compact(node.tryBlock, source),
         tryDigest: digestText(node.tryBlock.getText(source)),
@@ -103,103 +100,62 @@ const captureExecutableCleanupContract = (text: string): unknown => {
   };
 };
 
-export const test_cli_scaffold_capture_executable_cleanup = (): void => {
+export const test_cli_scaffold_render_liveness_single_cleanup = (): void => {
   TestValidator.equals(
-    "CLI scaffold owns three capture executable cleanup lifecycles",
-    captureExecutableCleanupContract(
+    "CLI scaffold owns two render liveness single-hook cleanup lifecycles",
+    renderLivenessSingleCleanupContract(
       fs.readFileSync(path.join(__dirname, "test_cli_scaffold.ts"), "utf8"),
     ),
     {
       lifecycles: [
         {
-          catchBodies: [
-            "captureExecutableRaceCleanupFailure={error};",
-            "throwerror;",
-          ],
+          catchBodies: ["inventoryGcCleanupFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
           containerStatements: 1952,
           finallyDigest:
-            "5100831c7000fbbf0c6603b92aeaeffe1aede7de5457aa6d0518512f2256346d",
+            "7e99a8246127f0be124c61e4cf988be0a8b53c5bce324c636090f08304d9f864",
           finallySubstantive: {
             digest:
-              "456e4b22c56a35e3053064578a41b4d87d53b30cc85b594e6d956819a0b0fbc4",
-            tokens: 77,
+              "ba4f25b6c77a1a9b452102cfc0516203d5291838f3994163f89a5d1b6429aa85",
+            tokens: 29,
           },
-          index: 406,
-          preceding: [
-            "letcaptureExecutableRaceRejected=false;",
-            "letcaptureExecutableRaceCleanupFailure:{error:unknown}|undefined;",
-          ],
+          index: 1090,
+          preceding: "letinventoryGcCleanupFailure:{error:unknown}|undefined;",
           substantive: {
             digest:
-              "6a7668d286e6988d3678f5906f9340ca5dacb20e9f7b425f0fdd66fa41aeed09",
-            tokens: 16,
+              "1430fb068c589a7b3c7b183977d4a13dd26ae79b2a2e0104d2a85f84d9f33e19",
+            tokens: 36,
           },
           tryBody:
-            "{captureExecutableRaceRejected=throws(()=>captureExecutableModule.openCaptureExecutable(captureExecutable),);}",
+            "{inventoryGc=renderLivenessModule.acquireRenderGcLease({coordinationRoot:livenessRoot,pid:31013,processAlive:(pid)=>pid===31013||pid===31014,scope:livenessScope,});}",
           tryDigest:
-            "fe5c113f4151f76dba679d2fcb21020192c20483f34e7193968e005f91c768b6",
+            "d8ba57d31b6717e8d61fe5a66e1b58718c9e8507e0c55350af848a5d30af1bda",
         },
         {
-          catchBodies: [
-            "combinedCreateSnapshotFailure=error;",
-            "createSnapshotHookCleanupFailure={error};",
-          ],
+          catchBodies: ["staleSuccessorCleanupFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
           containerStatements: 1952,
           finallyDigest:
-            "54cdb4ca3530328b7a7d4e95d164d3a245b220f00e3ca496072966ad30f72281",
+            "336e319210c323cd757e73f05aadba6f9dee89b84030485d3affad7535f2c7ee",
           finallySubstantive: {
             digest:
-              "740dc3dd13a751fabefd4b899160f45c032519062963edb4dce587c44fb005ee",
-            tokens: 71,
+              "618761dd8a19c4ae2bfa29b77e57a84f1fbc05bd55cf5cf7715ea381f9179d1c",
+            tokens: 29,
           },
-          index: 418,
-          preceding: [
-            "letcombinedCreateSnapshotFailure:unknown;",
-            "letcreateSnapshotHookCleanupFailure:{error:unknown}|undefined;",
-          ],
+          index: 1124,
+          preceding:
+            "letstaleSuccessorCleanupFailure:{error:unknown}|undefined;",
           substantive: {
             digest:
-              "0866d55589c8805e1424e143d3ea088f25993fa3a5bd3d08dcd98b7a97f8bce5",
-            tokens: 15,
+              "4b5f927bde6252aabce49a1a390dbfcd0d5b6fd7d1c741a91a9292eb614480e9",
+            tokens: 43,
           },
           tryBody:
-            '{captureExecutableModule.createCaptureExecutableSnapshot(failedCaptureExecutableCreation,Buffer.from("creationbytes"),);}',
+            '{staleSuccessorRejected=throws(()=>renderLivenessModule.acquireRenderSessionLease({coordinationRoot:livenessRoot,pid:31016,processAlive:(pid)=>pid===31016,scope:livenessScope,tier:"proxy",}),);}',
           tryDigest:
-            "0258333cc547b548e9000d8a1c549766ec3afb5224c57cad515ed62f6e52cfe3",
-        },
-        {
-          catchBodies: [
-            "combinedOpenSnapshotFailure=error;",
-            "openSnapshotHookCleanupFailure={error};",
-          ],
-          catchVariables: ["error"],
-          containerKind: "TryStatement",
-          containerStatements: 1952,
-          finallyDigest:
-            "5810c3e1cbfda3e81e79c603736baf1c7f9405e98b31a71b73e27015bdccfe20",
-          finallySubstantive: {
-            digest:
-              "bafea6c45938fd60c310c16a00f35299ab4ce299b840bf61560bc674af8b8cb4",
-            tokens: 71,
-          },
-          index: 430,
-          preceding: [
-            "letcombinedOpenSnapshotFailure:unknown;",
-            "letopenSnapshotHookCleanupFailure:{error:unknown}|undefined;",
-          ],
-          substantive: {
-            digest:
-              "0bf2484b01a795dee73b77cfae51d12e388402c447289aae4eab8ee1c9f4389c",
-            tokens: 8,
-          },
-          tryBody:
-            "{captureExecutableModule.openCaptureExecutable(failedCaptureExecutableOpen,);}",
-          tryDigest:
-            "088db12daa29366e0ba119664263516a8b69abba04bf86e59b257ff0b113350a",
+            "c1428513eda6080951560796707d662638300f2d65edebc068920a9d1b7e9138",
         },
       ],
       parseDiagnostics: [],

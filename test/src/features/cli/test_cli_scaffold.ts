@@ -9885,6 +9885,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       return entries;
     }) as typeof fs.readdirSync;
     let inventoryGc: unknown;
+    let inventoryGcCleanupFailure: { error: unknown } | undefined;
     try {
       inventoryGc = renderLivenessModule.acquireRenderGcLease({
         coordinationRoot: livenessRoot,
@@ -9892,8 +9893,18 @@ export const test_cli_scaffold = async (): Promise<void> => {
         processAlive: (pid) => pid === 31013 || pid === 31014,
         scope: livenessScope,
       });
+    } catch (error) {
+      inventoryGcCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.readdirSync = nativeReaddir;
+      preserveCliHarnessCleanup(inventoryGcCleanupFailure, [
+        {
+          resource: "render liveness inventory readdir hook",
+          cleanup: () => {
+            mutableFs.readdirSync = nativeReaddir;
+          },
+        },
+      ]);
     }
     if (inventoryGc !== undefined)
       renderLivenessModule.releaseRenderLivenessLease(inventoryGc);
@@ -10028,6 +10039,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       nativeLivenessRename(oldPath, newPath);
     }) as typeof fs.renameSync;
     let staleSuccessorRejected = false;
+    let staleSuccessorCleanupFailure: { error: unknown } | undefined;
     try {
       staleSuccessorRejected = throws(() =>
         renderLivenessModule.acquireRenderSessionLease({
@@ -10038,8 +10050,18 @@ export const test_cli_scaffold = async (): Promise<void> => {
           tier: "proxy",
         }),
       );
+    } catch (error) {
+      staleSuccessorCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.renameSync = nativeLivenessRename;
+      preserveCliHarnessCleanup(staleSuccessorCleanupFailure, [
+        {
+          resource: "render liveness stale successor rename hook",
+          cleanup: () => {
+            mutableFs.renameSync = nativeLivenessRename;
+          },
+        },
+      ]);
     }
     const isolatedStaleSuccessorPath = isolatedStaleSuccessor as string | null;
     const staleSuccessorPreserved =
