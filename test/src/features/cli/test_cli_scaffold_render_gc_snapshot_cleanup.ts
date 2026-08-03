@@ -112,7 +112,7 @@ export const test_cli_scaffold_render_gc_snapshot_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1905,
+          containerStatements: 1910,
           finallyDigest:
             "7d4ae166a68cfcacd5c2760dfb7047a3c24265054eda53f98b2f81d84b8e9688",
           finallySubstantive: {
@@ -137,7 +137,7 @@ export const test_cli_scaffold_render_gc_snapshot_cleanup = (): void => {
           catchBodies: ["directFileAbaCleanupFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1905,
+          containerStatements: 1910,
           finallyDigest:
             "bf6b1243bdafeb465a8caf9d29cde77e5d68bd389955391471b8e783284cd958",
           finallySubstantive: {

@@ -112,7 +112,7 @@ export const test_cli_scaffold_render_liveness_cleanup = (): void => {
           catchBodies: ["partialLeaseCleanupFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1905,
+          containerStatements: 1910,
           finallyDigest:
             "b7bc7cab73fc086fbda73971b38e2c57bcc0c460bfda572c175b97f4a11565fe",
           finallySubstantive: {
@@ -139,7 +139,7 @@ export const test_cli_scaffold_render_liveness_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1905,
+          containerStatements: 1910,
           finallyDigest:
             "cc05c8f86dfafe28e5dc1f3c58ccfc234ffdc8841a47b2d53fdfb5155e97c5dd",
           finallySubstantive: {

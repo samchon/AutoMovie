@@ -275,7 +275,7 @@ export const test_cli_scaffold_viewer_hook_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1905,
+          containerStatements: 1910,
           finallyDigest:
             "40f6224d5b4058fe8a8510ac327836f74585d357c65595d456d61e1ac301e77f",
           finallySubstantive: {
@@ -305,7 +305,7 @@ export const test_cli_scaffold_viewer_hook_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1905,
+          containerStatements: 1910,
           finallyDigest:
             "58efab235de1dc652eca4e91a5a4d17d335caae43408293457d99ea50204a4b5",
           finallySubstantive: {
@@ -335,7 +335,7 @@ export const test_cli_scaffold_viewer_hook_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1905,
+          containerStatements: 1910,
           finallyDigest:
             "c313cc0ec8c8adc2523e466c851a0072506afeb7c82912b1794ec278c96e0985",
           finallySubstantive: {

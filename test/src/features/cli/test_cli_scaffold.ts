@@ -9929,13 +9929,27 @@ export const test_cli_scaffold = async (): Promise<void> => {
         throw standaloneRenderGcCloseFailure;
     }) as typeof fs.closeSync;
     let standaloneRenderGcCloseError: unknown;
+    let standaloneRenderGcHarnessCleanupFailure: { error: unknown } | undefined;
     try {
       renderGcModule.readCapturedRenderGcFile(renderGcCleanupSnapshot, 1024);
     } catch (error) {
       standaloneRenderGcCloseError = error;
+      standaloneRenderGcHarnessCleanupFailure = { error };
     } finally {
-      mutableFs.openSync = nativeOpen;
-      mutableFs.closeSync = nativeClose;
+      preserveCliHarnessCleanup(standaloneRenderGcHarnessCleanupFailure, [
+        {
+          resource: "render GC standalone open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+        {
+          resource: "render GC standalone close hook",
+          cleanup: () => {
+            mutableFs.closeSync = nativeClose;
+          },
+        },
+      ]);
     }
     const primaryOnlyRenderGcFailure = new Error(
       "primary-only render GC read failed",
@@ -9960,13 +9974,29 @@ export const test_cli_scaffold = async (): Promise<void> => {
       return Reflect.apply(nativeFstat, mutableFs, [descriptor, ...args]);
     }) as typeof fs.fstatSync;
     let preservedPrimaryOnlyRenderGcFailure: unknown;
+    let primaryOnlyRenderGcHarnessCleanupFailure:
+      | { error: unknown }
+      | undefined;
     try {
       renderGcModule.readCapturedRenderGcFile(renderGcCleanupSnapshot, 1024);
     } catch (error) {
       preservedPrimaryOnlyRenderGcFailure = error;
+      primaryOnlyRenderGcHarnessCleanupFailure = { error };
     } finally {
-      mutableFs.openSync = nativeOpen;
-      mutableFs.fstatSync = nativeFstat;
+      preserveCliHarnessCleanup(primaryOnlyRenderGcHarnessCleanupFailure, [
+        {
+          resource: "render GC primary-only open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+        {
+          resource: "render GC primary-only fstat hook",
+          cleanup: () => {
+            mutableFs.fstatSync = nativeFstat;
+          },
+        },
+      ]);
     }
     const combinedRenderGcPrimary = new Error("render GC read failed");
     const combinedRenderGcClose = new Error("render GC read close failed");
@@ -9995,14 +10025,33 @@ export const test_cli_scaffold = async (): Promise<void> => {
         throw combinedRenderGcClose;
     }) as typeof fs.closeSync;
     let combinedRenderGcFailure: unknown;
+    let combinedRenderGcHarnessCleanupFailure: { error: unknown } | undefined;
     try {
       renderGcModule.readCapturedRenderGcFile(renderGcCleanupSnapshot, 1024);
     } catch (error) {
       combinedRenderGcFailure = error;
+      combinedRenderGcHarnessCleanupFailure = { error };
     } finally {
-      mutableFs.openSync = nativeOpen;
-      mutableFs.fstatSync = nativeFstat;
-      mutableFs.closeSync = nativeClose;
+      preserveCliHarnessCleanup(combinedRenderGcHarnessCleanupFailure, [
+        {
+          resource: "render GC combined open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+        {
+          resource: "render GC combined fstat hook",
+          cleanup: () => {
+            mutableFs.fstatSync = nativeFstat;
+          },
+        },
+        {
+          resource: "render GC combined close hook",
+          cleanup: () => {
+            mutableFs.closeSync = nativeClose;
+          },
+        },
+      ]);
     }
     const failedRenderGcCreate = path.join(
       renderGcCleanupRoot,
@@ -10035,6 +10084,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
         throw renderGcCreateClose;
     }) as typeof fs.closeSync;
     let combinedRenderGcCreateFailure: unknown;
+    let renderGcCreateHarnessCleanupFailure: { error: unknown } | undefined;
     try {
       renderGcModule.createRenderGcFileSnapshot(
         renderGcCleanupRoot,
@@ -10043,10 +10093,28 @@ export const test_cli_scaffold = async (): Promise<void> => {
       );
     } catch (error) {
       combinedRenderGcCreateFailure = error;
+      renderGcCreateHarnessCleanupFailure = { error };
     } finally {
-      mutableFs.openSync = nativeOpen;
-      mutableFs.writeSync = nativeWrite;
-      mutableFs.closeSync = nativeClose;
+      preserveCliHarnessCleanup(renderGcCreateHarnessCleanupFailure, [
+        {
+          resource: "render GC create open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+        {
+          resource: "render GC create write hook",
+          cleanup: () => {
+            mutableFs.writeSync = nativeWrite;
+          },
+        },
+        {
+          resource: "render GC create close hook",
+          cleanup: () => {
+            mutableFs.closeSync = nativeClose;
+          },
+        },
+      ]);
     }
     const nestedRenderGcCreate = path.join(
       renderGcCleanupRoot,
@@ -10087,6 +10155,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
         throw nestedRenderGcCreateClose;
     }) as typeof fs.closeSync;
     let combinedNestedRenderGcFailure: unknown;
+    let nestedRenderGcHarnessCleanupFailure: { error: unknown } | undefined;
     try {
       renderGcModule.createRenderGcFileSnapshot(
         renderGcCleanupRoot,
@@ -10095,10 +10164,28 @@ export const test_cli_scaffold = async (): Promise<void> => {
       );
     } catch (error) {
       combinedNestedRenderGcFailure = error;
+      nestedRenderGcHarnessCleanupFailure = { error };
     } finally {
-      mutableFs.openSync = nativeOpen;
-      mutableFs.fstatSync = nativeFstat;
-      mutableFs.closeSync = nativeClose;
+      preserveCliHarnessCleanup(nestedRenderGcHarnessCleanupFailure, [
+        {
+          resource: "render GC nested open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+        {
+          resource: "render GC nested fstat hook",
+          cleanup: () => {
+            mutableFs.fstatSync = nativeFstat;
+          },
+        },
+        {
+          resource: "render GC nested close hook",
+          cleanup: () => {
+            mutableFs.closeSync = nativeClose;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "render GC descriptor cleanup preserves operation and resource order",

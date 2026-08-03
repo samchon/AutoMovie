@@ -116,7 +116,7 @@ export const test_cli_scaffold_runtime_package_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1905,
+          containerStatements: 1910,
           finallyDigest:
             "e52a087bacf5f1a99cb27b855ed82acb6b02faca8f7a15e8b9d3af1d001feba6",
           finallySubstantive: {
@@ -141,7 +141,7 @@ export const test_cli_scaffold_runtime_package_cleanup = (): void => {
           catchBodies: ["runtimeEntryCleanupFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1905,
+          containerStatements: 1910,
           finallyDigest:
             "966469116e2c84ee8efa23eb5170eb602f9744c74b4acf7df16e4ace28ed334a",
           finallySubstantive: {
@@ -167,7 +167,7 @@ export const test_cli_scaffold_runtime_package_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1905,
+          containerStatements: 1910,
           finallyDigest:
             "668754d6e71a2ddb2f509639f44fded1911cc61dc0015b653c9fe4e19ef71da2",
           finallySubstantive: {

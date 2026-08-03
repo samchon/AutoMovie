@@ -30,7 +30,7 @@ const leafTokenContract = (
   };
 };
 
-const proxyPublicationCleanupContract = (text: string): unknown => {
+const renderGcDescriptorCleanupContract = (text: string): unknown => {
   const source = ts.createSourceFile(
     "test_cli_scaffold.ts",
     text,
@@ -39,11 +39,11 @@ const proxyPublicationCleanupContract = (text: string): unknown => {
     ts.ScriptKind.TS,
   );
   const anchors = [
-    "proxygcabasuccessortarget",
-    "proxyscalelstathook",
-    "proxymedialstathook",
-    "proxydirectorylstathook",
-    "proxyinventorylstathook",
+    "rendergcstandaloneopenhook",
+    "rendergcprimary-onlyopenhook",
+    "rendergccombinedopenhook",
+    "rendergccreateopenhook",
+    "rendergcnestedopenhook",
   ];
   const lifecycles: Array<{
     catchBodies: string[];
@@ -103,135 +103,153 @@ const proxyPublicationCleanupContract = (text: string): unknown => {
   };
 };
 
-export const test_cli_scaffold_proxy_publication_cleanup = (): void => {
+export const test_cli_scaffold_render_gc_descriptor_cleanup = (): void => {
   TestValidator.equals(
-    "CLI scaffold owns five proxy publication cleanup lifecycles",
-    proxyPublicationCleanupContract(
+    "CLI scaffold owns five render GC descriptor cleanup lifecycles",
+    renderGcDescriptorCleanupContract(
       fs.readFileSync(path.join(__dirname, "test_cli_scaffold.ts"), "utf8"),
     ),
     {
       lifecycles: [
         {
-          catchBodies: ["gcAbaJudgeCleanupFailure={error};", "returnfalse;"],
+          catchBodies: [
+            "standaloneRenderGcCloseError=error;",
+            "standaloneRenderGcHarnessCleanupFailure={error};",
+          ],
           catchVariables: ["error"],
-          containerKind: "ArrowFunction",
-          containerStatements: 4,
+          containerKind: "TryStatement",
+          containerStatements: 1910,
           finallyDigest:
-            "ed4cab470cd25e9d81a8030dc699ce2ce7b8bc8c95cfa20f7b3ebb3eea545392",
+            "2a9944070d82bed555181099bdd1a318d6b339e47539a7736415848457017d71",
           finallySubstantive: {
             digest:
-              "5e461d49e3062a4f48f44c90972b0546e857552af7a4411d13b646c663a7632c",
-            tokens: 52,
-          },
-          index: 3,
-          preceding: "letgcAbaJudgeCleanupFailure:{error:unknown}|undefined;",
-          substantive: {
-            digest:
-              "2625c90836449fe65e32ff3d9d83ec4f723469aad3dc1466ed3ef375b569670b",
-            tokens: 34,
-          },
-          tryBody:
-            "{constreceipt=proxyModule.inspectCapturedProxyBundle(snapshot,evidence,);return(receipt.publicationFingerprint===gcAbaPublication&&receipt.compileFingerprint===gcAbaCompile&&receipt.editFingerprint===gcAbaEdit);}",
-          tryDigest:
-            "9af57d78c790e4558b85380711279bddd480ce8fbbee8c242176655b3ab18c1d",
-        },
-        {
-          catchBodies: ["scaleCleanupFailure={error};", "throwerror;"],
-          catchVariables: ["error"],
-          containerKind: "ArrowFunction",
-          containerStatements: 9,
-          finallyDigest:
-            "a650574d2a794dcc54e39ad5dafe516b285174a1ae5e2b9a65ff5f9d63d8d9e9",
-          finallySubstantive: {
-            digest:
-              "897625c74157c7385c10d1e4561c99c80f4c80f3479e40ea1c46f3c1e907ab1e",
+              "87993a4f3441b48c952b6f46f64edf37326c2de90b302489fccfc5216a825a90",
             tokens: 50,
           },
-          index: 7,
-          preceding: "letscaleCleanupFailure:{error:unknown}|undefined;",
-          substantive: {
-            digest:
-              "22b0817ea1ee5bc4d18dc80b7573c59fb46749e8dee5b539b1485237303c96b5",
-            tokens: 29,
-          },
-          tryBody:
-            "{proxyPublisherModule.publishProxyBundle({expected:entries,parent:proxyPublishParent,processAlive:()=>false,renderRoot:proxyPublishRoot,target,});}",
-          tryDigest:
-            "f6ed11ef237417fc2b6d39b74bb8288d1f0a2898563428d3147012c91eb1a051",
-        },
-        {
-          catchBodies: ["proxyMediaCleanupFailure={error};", "throwerror;"],
-          catchVariables: ["error"],
-          containerKind: "TryStatement",
-          containerStatements: 1910,
-          finallyDigest:
-            "336d561f3977f4f70c9c466b439a71475977b26f816dd39d5a6741a29e100901",
-          finallySubstantive: {
-            digest:
-              "bd271a550085c118abb12e96c7dafefa650fc32b0d8d6b0e726f16ab2dd2192c",
-            tokens: 77,
-          },
-          index: 234,
-          preceding: "letproxyMediaCleanupFailure:{error:unknown}|undefined;",
-          substantive: {
-            digest:
-              "36d8a11cdd802083f4fa08a3ae1e39b89a3af8ecbcfc6d2a845c0e7d78823565",
-            tokens: 18,
-          },
-          tryBody:
-            "{proxyRaceRejected=throws(()=>proxyModule.assertPublishedProxyBundle(proxy,proxyFiles),);}",
-          tryDigest:
-            "2c9762a7c23888586dead353860bf0366b92a5af33c63cc21210bcd1fb120a43",
-        },
-        {
-          catchBodies: ["proxyDirectoryCleanupFailure={error};", "throwerror;"],
-          catchVariables: ["error"],
-          containerKind: "TryStatement",
-          containerStatements: 1910,
-          finallyDigest:
-            "7df6ead084071ac936ca19cc7a04d8c226a343f6ecbeab5b4d97be6d747341ab",
-          finallySubstantive: {
-            digest:
-              "bd15a15073ea7d1dcc9d669772b0dbfd31cc335c6a1640ecb9b448f22fbc69a8",
-            tokens: 115,
-          },
-          index: 246,
+          index: 1121,
           preceding:
-            "letproxyDirectoryCleanupFailure:{error:unknown}|undefined;",
+            "letstandaloneRenderGcHarnessCleanupFailure:{error:unknown}|undefined;",
           substantive: {
             digest:
-              "d7261520bc3a5f7fc43be80091f66ae28488188ed765e12f70e0d94248beb395",
-            tokens: 18,
+              "b13e8a6419a33e2ab4a7162c54084e2e1703a7b883f066b83725dfb405e7cf81",
+            tokens: 9,
           },
           tryBody:
-            "{proxyDirectoryRaceRejected=throws(()=>proxyModule.assertPublishedProxyBundle(proxy,proxyFiles),);}",
+            "{renderGcModule.readCapturedRenderGcFile(renderGcCleanupSnapshot,1024);}",
           tryDigest:
-            "e9ce493067a4fa4df5951bd75eeb548678623b67a55a0940f2a4d64983d39bae",
+            "98aaf663117e9cfe2cf90c85a8c359382a4f0d41c61433ecef997acf4bf94670",
         },
         {
-          catchBodies: ["proxyInventoryCleanupFailure={error};", "throwerror;"],
+          catchBodies: [
+            "preservedPrimaryOnlyRenderGcFailure=error;",
+            "primaryOnlyRenderGcHarnessCleanupFailure={error};",
+          ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
           containerStatements: 1910,
           finallyDigest:
-            "f25be1e62a4c8cbfffbffb7a2d9d3747e7097015180c1b25cb3c2b2be57971f6",
+            "4a22ec047a926dadf2a201c13ccdee1576cbed299982087e811d9cce9580ad90",
           finallySubstantive: {
             digest:
-              "0d3dcc8e981dd047aff55d6162bdb8a780c3702601563e862d5f01620b84b1f9",
-            tokens: 57,
+              "149431daeb3ed3561cb658e429eb1279d9acccc3673afebb78b167bd2f7b9478",
+            tokens: 50,
           },
-          index: 254,
+          index: 1128,
           preceding:
-            "letproxyInventoryCleanupFailure:{error:unknown}|undefined;",
+            "letprimaryOnlyRenderGcHarnessCleanupFailure:|{error:unknown}|undefined;",
           substantive: {
             digest:
-              "b7e79ac9819f518464e4e8a10acafcb937ccb5a28dd8f8d0745cec04ceb10c10",
-            tokens: 18,
+              "b13e8a6419a33e2ab4a7162c54084e2e1703a7b883f066b83725dfb405e7cf81",
+            tokens: 9,
           },
           tryBody:
-            "{proxyInventoryRaceRejected=throws(()=>proxyModule.assertPublishedProxyBundle(proxy,proxyFiles),);}",
+            "{renderGcModule.readCapturedRenderGcFile(renderGcCleanupSnapshot,1024);}",
           tryDigest:
-            "75eb19f38866fe4490f969eefae268acbffd6cb6a6d0297a7eaf463a3e4ed053",
+            "98aaf663117e9cfe2cf90c85a8c359382a4f0d41c61433ecef997acf4bf94670",
+        },
+        {
+          catchBodies: [
+            "combinedRenderGcFailure=error;",
+            "combinedRenderGcHarnessCleanupFailure={error};",
+          ],
+          catchVariables: ["error"],
+          containerKind: "TryStatement",
+          containerStatements: 1910,
+          finallyDigest:
+            "e045cfeb4b5f91a00e06aecd20b2f9595f443e3105acf87e54109a5baee33e07",
+          finallySubstantive: {
+            digest:
+              "2f577e4f64cd7497594cc5a5fe5b23245fd360d9dad7ecb33901f13528b38ec9",
+            tokens: 71,
+          },
+          index: 1137,
+          preceding:
+            "letcombinedRenderGcHarnessCleanupFailure:{error:unknown}|undefined;",
+          substantive: {
+            digest:
+              "b13e8a6419a33e2ab4a7162c54084e2e1703a7b883f066b83725dfb405e7cf81",
+            tokens: 9,
+          },
+          tryBody:
+            "{renderGcModule.readCapturedRenderGcFile(renderGcCleanupSnapshot,1024);}",
+          tryDigest:
+            "98aaf663117e9cfe2cf90c85a8c359382a4f0d41c61433ecef997acf4bf94670",
+        },
+        {
+          catchBodies: [
+            "combinedRenderGcCreateFailure=error;",
+            "renderGcCreateHarnessCleanupFailure={error};",
+          ],
+          catchVariables: ["error"],
+          containerKind: "TryStatement",
+          containerStatements: 1910,
+          finallyDigest:
+            "e967432aed91bfa40ad068334a5a9743a12cdfc7b73aa82619b64a82f74ac498",
+          finallySubstantive: {
+            digest:
+              "57d79a891064d0d85352a5f403f7b628f30597aa15ee375c4fed18cb719c4e9b",
+            tokens: 71,
+          },
+          index: 1147,
+          preceding:
+            "letrenderGcCreateHarnessCleanupFailure:{error:unknown}|undefined;",
+          substantive: {
+            digest:
+              "a9b075af011c47ea8ae357c8b86664c7b976c614a26196594b8de1a9e628a2f1",
+            tokens: 17,
+          },
+          tryBody:
+            '{renderGcModule.createRenderGcFileSnapshot(renderGcCleanupRoot,failedRenderGcCreate,Buffer.from("failedcreationbytes"),);}',
+          tryDigest:
+            "0639691c27aeafed08c33d93c14064437982405251133ad708ce45f17d7a9a0c",
+        },
+        {
+          catchBodies: [
+            "combinedNestedRenderGcFailure=error;",
+            "nestedRenderGcHarnessCleanupFailure={error};",
+          ],
+          catchVariables: ["error"],
+          containerKind: "TryStatement",
+          containerStatements: 1910,
+          finallyDigest:
+            "e78a963517ca712885dc497298981265fae2ab5fca31f8fbf38fed23d2807803",
+          finallySubstantive: {
+            digest:
+              "bd1664a072f342b680b78d2c1c6051cfff76a9ff1d76f0493c6eae593db3ccc4",
+            tokens: 71,
+          },
+          index: 1159,
+          preceding:
+            "letnestedRenderGcHarnessCleanupFailure:{error:unknown}|undefined;",
+          substantive: {
+            digest:
+              "44a8f581c968a32c9c08aff676bd6a1aaefb416a99e58daae922b33bfe2fc58b",
+            tokens: 17,
+          },
+          tryBody:
+            '{renderGcModule.createRenderGcFileSnapshot(renderGcCleanupRoot,nestedRenderGcCreate,Buffer.from("nestedcreationbytes"),);}',
+          tryDigest:
+            "29989171efd24a6a4113cbf2a5dd866ed9e4857ca604c011e0ff5273ef5225ae",
         },
       ],
       parseDiagnostics: [],
