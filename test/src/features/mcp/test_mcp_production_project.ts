@@ -2911,6 +2911,7 @@ export const test_mcp_production_project = (): void => {
     );
   }
 
+  let invalidRootFailure: ISingleProductionProjectFixtureFailure | undefined;
   const invalidRoot = fs.mkdtempSync(
     path.join(os.tmpdir(), "automovie-production-root-"),
   );
@@ -4180,7 +4181,12 @@ export const test_mcp_production_project = (): void => {
         () => invalidRevision.dispose(),
       );
     }
+  } catch (error) {
+    invalidRootFailure = { error };
+    throw error;
   } finally {
-    fs.rmSync(invalidRoot, { force: true, recursive: true });
+    preserveSingleProductionProjectFixtureCleanup(invalidRootFailure, () =>
+      fs.rmSync(invalidRoot, { force: true, recursive: true }),
+    );
   }
 };

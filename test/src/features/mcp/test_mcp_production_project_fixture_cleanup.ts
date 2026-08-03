@@ -308,7 +308,7 @@ export const test_mcp_production_project_fixture_cleanup = (): void => {
           {
             catchBodies: ["nestedContentFileFailure={error};", "throwerror;"],
             catchVariables: ["error"],
-            containerStatements: 22,
+            containerStatements: 23,
             finallyBodies: [
               "constcompletedOutsideContentFile=outsideContentFile;",
               'preserveProductionProjectFixtureCleanup(nestedContentFileFailure,[{resource:"nested-content-fileproductionfixture",cleanup:()=>nestedContentFileFixture.dispose(),},...(completedOutsideContentFile===undefined?[]:[{resource:"nested-content-fileoutsideroot",cleanup:()=>fs.rmSync(completedOutsideContentFile,{force:true,recursive:true,}),},]),]);',
@@ -328,7 +328,7 @@ export const test_mcp_production_project_fixture_cleanup = (): void => {
           {
             catchBodies: ["parentJunctionFailure={error};", "throwerror;"],
             catchVariables: ["error"],
-            containerStatements: 22,
+            containerStatements: 23,
             finallyBodies: [
               "constcompletedOutsideContentRoot=outsideContentRoot;",
               'preserveProductionProjectFixtureCleanup(parentJunctionFailure,[{resource:"parent-junctionproductionfixture",cleanup:()=>parentJunctionFixture.dispose(),},...(completedOutsideContentRoot===undefined?[]:[{resource:"parent-junctionoutsideroot",cleanup:()=>fs.rmSync(completedOutsideContentRoot,{force:true,recursive:true,}),},]),]);',
@@ -346,7 +346,7 @@ export const test_mcp_production_project_fixture_cleanup = (): void => {
             ],
           },
         ],
-        statementCounts: [22],
+        statementCounts: [23],
       },
       policy: {
         bodies: [

@@ -92,6 +92,14 @@ const productionProjectSingleFixtureContract = (text: string): unknown => {
       ) {
         const statements = [...node.parent.statements];
         const index = statements.indexOf(node);
+        if (
+          compact(statements[index - 1]!, source).endsWith(
+            "=productionFixture();",
+          ) === false
+        ) {
+          ts.forEachChild(node, visit);
+          return;
+        }
         lifecycles.push({
           acquisition: compact(statements[index - 1]!, source),
           catchBodies: node.catchClause.block.statements.map((statement) =>
@@ -266,7 +274,7 @@ export const test_mcp_production_project_single_fixture_cleanup = (): void => {
             catchBodies: ["productionProjectFailure={error};", "throwerror;"],
             catchVariables: ["error"],
             containerKind: "ArrowFunction",
-            containerStatements: 22,
+            containerStatements: 23,
             failureHolder:
               "letproductionProjectFailure:|ISingleProductionProjectFixtureFailure|undefined;",
             finallyBodies: [
@@ -308,7 +316,7 @@ export const test_mcp_production_project_single_fixture_cleanup = (): void => {
             catchBodies: ["contentFixtureFailure={error};", "throwerror;"],
             catchVariables: ["error"],
             containerKind: "ArrowFunction",
-            containerStatements: 22,
+            containerStatements: 23,
             failureHolder:
               "letcontentFixtureFailure:ISingleProductionProjectFixtureFailure|undefined;",
             finallyBodies: [
@@ -374,7 +382,7 @@ export const test_mcp_production_project_single_fixture_cleanup = (): void => {
             catchBodies: ["replacedOwnerFailure={error};", "throwerror;"],
             catchVariables: ["error"],
             containerKind: "ArrowFunction",
-            containerStatements: 22,
+            containerStatements: 23,
             failureHolder:
               "letreplacedOwnerFailure:ISingleProductionProjectFixtureFailure|undefined;",
             finallyBodies: [
@@ -454,7 +462,7 @@ export const test_mcp_production_project_single_fixture_cleanup = (): void => {
             tryStatements: 2,
           },
         ],
-        statementCounts: [22],
+        statementCounts: [23],
       },
       parseDiagnostics: [],
       policy: {
