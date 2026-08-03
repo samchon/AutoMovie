@@ -4448,9 +4448,14 @@ export const test_mcp_production_project = (): void => {
           : []),
       ]);
     }
-    TestValidator.predicate(
+    TestValidator.equals(
       "a root replaced while staging under the namespace lease is refused without mutation",
-      preLeaseSwapped && preLeaseRejected && preLeaseReplacementUntouched,
+      {
+        rejected: preLeaseRejected,
+        replacementUntouched: preLeaseReplacementUntouched,
+        swapped: preLeaseSwapped,
+      },
+      { rejected: true, replacementUntouched: true, swapped: true },
     );
     const atomicDeleteBase = modelRecipe();
     const atomicDeleteModel = {

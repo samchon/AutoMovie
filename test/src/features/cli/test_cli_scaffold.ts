@@ -3876,17 +3876,24 @@ export const test_cli_scaffold = async (): Promise<void> => {
     TestValidator.equals(
       "the generated viewer serves the exact resident artifact and headers",
       {
+        artifactResident: fs.existsSync(artifact),
         body: positiveResponse.body,
         cacheControl: positiveHeaders.get("Cache-Control") ?? null,
         contentType: positiveHeaders.get("Content-Type") ?? null,
+        generatedRootReal:
+          fs.realpathSync(generatedRoot) === path.resolve(generatedRoot),
         installed: middleware !== undefined,
+        projectRootReal: fs.realpathSync(target) === path.resolve(target),
         statusCode: positiveResponse.statusCode,
       },
       {
+        artifactResident: true,
         body: JSON.stringify({ resident: true }) + String.fromCharCode(10),
         cacheControl: "no-store",
         contentType: "application/json; charset=utf-8",
+        generatedRootReal: true,
         installed: true,
+        projectRootReal: true,
         statusCode: 200,
       },
     );
