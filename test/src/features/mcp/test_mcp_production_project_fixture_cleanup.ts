@@ -69,10 +69,14 @@ const productionProjectFixtureContract = (text: string): unknown => {
       ) {
         const statements = [...node.parent.statements];
         const index = statements.indexOf(node);
+        // A lifecycle owned by this contract always follows its fixture
+        // acquisition three statements earlier; anything nearer the block start
+        // belongs to another owner rather than being an out-of-range read.
+        const acquisition = statements[index - 3];
         if (
-          compact(statements[index - 3]!, source).endsWith(
-            "=productionFixture();",
-          ) === false
+          acquisition === undefined ||
+          compact(acquisition, source).endsWith("=productionFixture();") ===
+            false
         ) {
           ts.forEachChild(node, visit);
           return;

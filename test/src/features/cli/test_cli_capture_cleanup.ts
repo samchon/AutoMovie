@@ -628,7 +628,7 @@ export const test_cli_capture_cleanup = (): void => {
               "Browserdiagnostics:" +
               templateExpression('diagnostics.join("|")||"nonereported"') +
               "`,);",
-            'awaitpreserveProductionCaptureCleanup({error:failure},[{resource:"capturepage",cleanup:()=>page.close()}],);',
+            'awaitpreserveProductionCaptureCleanup({error:failure},[{resource:"capturepage",cleanup:()=>page.close()},]);',
             "throwfailure;",
           ],
         ],
@@ -647,7 +647,7 @@ export const test_cli_capture_cleanup = (): void => {
           [
             "constkey=capturePageKey(input);",
             "session.pages.delete(key);",
-            'awaitpreserveProductionCaptureCleanup({error},[{resource:"capturepage",cleanup:()=>resident.page.close()}],);',
+            'awaitpreserveProductionCaptureCleanup({error},[{resource:"capturepage",cleanup:()=>resident.page.close()},]);',
             "throwerror;",
           ],
         ],
@@ -659,7 +659,7 @@ export const test_cli_capture_cleanup = (): void => {
         ],
         startSession: [
           [
-            'awaitpreserveProductionCaptureCleanup({error},[{resource:"captureserver",cleanup:()=>server.close()}],);',
+            'awaitpreserveProductionCaptureCleanup({error},[{resource:"captureserver",cleanup:()=>server.close()},]);',
             "throwerror;",
           ],
         ],
@@ -725,12 +725,12 @@ export const test_cli_capture_cleanup = (): void => {
       ],
       preserveCalls: [
         {
-          call: 'preserveProductionCaptureCleanup({error},[{resource:"captureserver",cleanup:()=>server.close()}],)',
+          call: 'preserveProductionCaptureCleanup({error},[{resource:"captureserver",cleanup:()=>server.close()},])',
           owner: "startSession",
           region: "catch",
         },
         {
-          call: 'preserveProductionCaptureCleanup({error:failure},[{resource:"capturepage",cleanup:()=>page.close()}],)',
+          call: 'preserveProductionCaptureCleanup({error:failure},[{resource:"capturepage",cleanup:()=>page.close()},])',
           owner: "capturePage",
           region: "catch",
         },
@@ -745,7 +745,7 @@ export const test_cli_capture_cleanup = (): void => {
           region: "body",
         },
         {
-          call: 'preserveProductionCaptureCleanup({error},[{resource:"capturepage",cleanup:()=>resident.page.close()}],)',
+          call: 'preserveProductionCaptureCleanup({error},[{resource:"capturepage",cleanup:()=>resident.page.close()},])',
           owner: "captureProductionFrame",
           region: "catch",
         },

@@ -1496,16 +1496,34 @@ const exerciseInputAndFilesystemFences = async (
       },
     ]);
   }
-  TestValidator.predicate(
+  // Name every observed failure instead of collapsing the contract into one
+  // boolean: a mismatch has to report which failure arrived and from where.
+  const describeProbeFailure = (value: unknown): unknown =>
+    value === cleanupFailure
+      ? "cleanup-failure"
+      : value instanceof AggregateError
+        ? {
+            errors: value.errors.map(describeProbeFailure),
+            kind: "aggregate",
+          }
+        : value instanceof Error
+          ? value.message.includes('MCP probe "missing-process" failed')
+            ? 'MCP probe "missing-process" failed'
+            : { kind: "error", message: value.message }
+          : { kind: typeof value, value: String(value) };
+  TestValidator.equals(
     "process MCP probes preserve cleanup failures",
-    cleanupOnlyFailure === cleanupFailure &&
-      combinedProbeFailure instanceof AggregateError &&
-      combinedProbeFailure.errors.length === 2 &&
-      combinedProbeFailure.errors[0] instanceof Error &&
-      combinedProbeFailure.errors[0].message.includes(
-        'MCP probe "missing-process" failed',
-      ) &&
-      combinedProbeFailure.errors[1] === cleanupFailure,
+    {
+      cleanupOnly: describeProbeFailure(cleanupOnlyFailure),
+      combined: describeProbeFailure(combinedProbeFailure),
+    },
+    {
+      cleanupOnly: "cleanup-failure",
+      combined: {
+        errors: ['MCP probe "missing-process" failed', "cleanup-failure"],
+        kind: "aggregate",
+      },
+    },
   );
   expectErrorMessage(
     "process MCP targets validate command and timeout",

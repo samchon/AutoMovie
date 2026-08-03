@@ -193,10 +193,10 @@ export const test_benchmark_runner_single_resource_cleanup = (): void => {
   const expected = {
     count: 3,
     parentDigest:
-      "af4619b6eab57b6180f9d9117cc064fe4c299b298f2bca858b804dd2ec4d28bc",
+      "d8e28fb5720097431c8d9b5c4600ea5b3bcc38b0def07517261c93028e941eaf",
     parseDiagnostics: [],
     rootDigest:
-      "a07807d7bc53b10292f7f1f6dd87d572cca52b4d266d21f04005fb1de9f70865",
+      "a4f3dc24520c481b8483a382544a45d5bfd896e062ff95afa4a52c73af89b76e",
     rows: [
       {
         catchBodies: ["archivePublicationFailure={error};", "throwerror;"],
@@ -230,7 +230,7 @@ export const test_benchmark_runner_single_resource_cleanup = (): void => {
         catchVariables: ["error"],
         cleanup: "()=>{Client.prototype.close=nativeClientClose;}",
         containerKind: "ArrowFunction",
-        containerStatements: 32,
+        containerStatements: 33,
         failureHolder:
           "letmcpProbeHarnessFailure:IBenchmarkRunnerFixtureFailure|undefined;",
         finallyDigest:

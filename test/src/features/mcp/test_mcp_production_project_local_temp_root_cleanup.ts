@@ -257,11 +257,11 @@ export const test_mcp_production_project_local_temp_root_cleanup = (): void => {
             index: 240,
             substantive: {
               digest:
-                "d2af13b9ce5250b4154cdaefab23d4c89aab9347714655956bb1a0d4c894af44",
-              tokens: 2019,
+                "71156f11b12e7e9bbddbcfe840791f04516a1c8947ac35248e8070b2e41ed966",
+              tokens: 2084,
             },
             tryDigest:
-              "d5ba5952b76284625723e903afc6cb819bc01e18708dada103286adedf62ca67",
+              "0c430fb3194c4fec7f83aaabe30471330544b597fe1dbba6d332c57e61019ad2",
             tryStatements: 50,
           },
           {

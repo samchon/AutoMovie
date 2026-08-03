@@ -1133,32 +1133,32 @@ export const test_cli_scaffold = async (): Promise<void> => {
     viewerDescriptorCleanupContract(generatedShotPluginScript),
     {
       classDigests: [
-        "eefff5716d3364d1f5f1acd619fc2871f17b24a27e2b44f2062c578b420a0275",
+        "24603bba7c089c763866f215fdca93ad3cfd0a3805dd70ebc550a30732389755",
       ],
       cleanupCalls: [
         {
           callDigest:
-            "8894bf8e87125a16f43daaf122e6d098ed6e29ede2d1cd9de6cb7e6be7aba42f",
+            "4e8915b921c01ae7866480599a999b9f91cf8ee0149bbd20f5871a3b9cb86f4f",
           owner: "readPhysicalFileSnapshot",
         },
       ],
       descriptorOwners: [
         {
           cleanupCalls: [
-            "8894bf8e87125a16f43daaf122e6d098ed6e29ede2d1cd9de6cb7e6be7aba42f",
+            "4e8915b921c01ae7866480599a999b9f91cf8ee0149bbd20f5871a3b9cb86f4f",
           ],
           openCalls: [
-            "6543588ab798e8cc62ff1ad7a065cde59f2a81c7cab119417ffd384fc06b9945",
+            "c9d38a4c9b794cd433e3514dc42a16ebc3f5d69b0927fe7426c297b884778196",
           ],
           owner: "readPhysicalFileSnapshot",
         },
       ],
       functionDigests: {
         closeViewerFileDescriptor: [
-          "e8cd2aa42eeb157986d608a28be73e92ae779fb3bf312031f008ec315ee1087c",
+          "1d8eca684989d811d1bed376abc2bf4cf53d0f225a4816e9dff8d6a40c2897ff",
         ],
         readPhysicalFileSnapshot: [
-          "71adc2c6648d10d1590b00724414cd2e9a7b44cd5c9a73baf787deffe95562be",
+          "d0c22b60d40c282c72377a251b018ed132404220cef77ec656364a42d87634fa",
         ],
       },
     },
@@ -1211,7 +1211,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
             "58c837a699766e0882e960f3cf737e2b6ddc54ed34453f7a5c1d58607ba5a7c1",
           ],
           openCalls: [
-            "6543588ab798e8cc62ff1ad7a065cde59f2a81c7cab119417ffd384fc06b9945",
+            "c9d38a4c9b794cd433e3514dc42a16ebc3f5d69b0927fe7426c297b884778196",
           ],
           owner: "readFileEntry",
         },

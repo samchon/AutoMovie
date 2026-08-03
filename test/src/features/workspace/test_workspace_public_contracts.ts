@@ -3577,7 +3577,7 @@ export const test_workspace_public_contracts = (): void => {
             templateExpression("process.pid") +
             "-" +
             templateExpression("randomUUID()") +
-            ".cjs`)",
+            ".cjs`,)",
           writes: 0,
         },
         cleanupImports: 1,
