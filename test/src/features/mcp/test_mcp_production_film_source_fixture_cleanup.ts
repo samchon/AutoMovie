@@ -275,7 +275,7 @@ export const test_mcp_production_film_source_fixture_cleanup = (): void => {
               "b2983702a57d8938aaf162ed3f62f020ceb48834f2393262bed21c379d7845dc",
           },
         ],
-        statementCounts: [2],
+        statementCounts: [3],
       },
       policy: {
         bodies: [
