@@ -293,26 +293,65 @@ export const test_mcp_production_legacy_import = (): void => {
         planPathReads.add(resolved!);
         fs.renameSync(target.file, target.parked);
         fs.writeFileSync(target.file, target.transient);
+        let planReadFailure: ILegacyImportFixtureFailure | undefined;
         try {
           return Reflect.apply(nativePlanRead, fs, [file, ...args]);
+        } catch (error) {
+          planReadFailure = { error };
+          throw error;
         } finally {
-          fs.rmSync(target.file);
-          fs.renameSync(target.parked, target.file);
+          preserveLegacyImportFixtureCleanup(planReadFailure, [
+            {
+              resource: "plan-read transient source",
+              cleanup: () => fs.rmSync(target.file),
+            },
+            {
+              resource: "plan-read resident source",
+              cleanup: () => fs.renameSync(target.parked, target.file),
+            },
+          ]);
         }
       }
       return Reflect.apply(nativePlanRead, fs, [file, ...args]);
     }) as typeof fs.readFileSync;
     let plan: IAutoMovieLegacyImportPlan;
+    let planFailure: ILegacyImportFixtureFailure | undefined;
     try {
       plan = importer.plan();
+    } catch (error) {
+      planFailure = { error };
+      throw error;
     } finally {
-      fs.readFileSync = nativePlanRead;
-      fs.writeFileSync = nativePlanWrite;
-      for (const target of planReadTargets.values())
-        if (fs.existsSync(target.parked)) {
-          fs.rmSync(target.file, { force: true });
-          fs.renameSync(target.parked, target.file);
-        }
+      preserveLegacyImportFixtureCleanup(planFailure, [
+        {
+          resource: "plan read hook",
+          cleanup: () => {
+            fs.readFileSync = nativePlanRead;
+          },
+        },
+        {
+          resource: "plan write hook",
+          cleanup: () => {
+            fs.writeFileSync = nativePlanWrite;
+          },
+        },
+        ...Array.from(planReadTargets.values()).flatMap((target) => [
+          {
+            resource: `plan fallback transient ${target.file}`,
+            cleanup: () => {
+              if (fs.existsSync(target.parked))
+                fs.rmSync(target.file, { force: true });
+            },
+          },
+          {
+            resource: `plan fallback resident ${target.file}`,
+            cleanup: () => {
+              if (fs.existsSync(target.parked))
+                fs.renameSync(target.parked, target.file);
+            },
+          },
+        ]),
+      ]);
     }
     TestValidator.predicate(
       "planning is read-only and captures drafts, source gaps, and exact bytes",
@@ -367,24 +406,57 @@ export const test_mcp_production_legacy_import = (): void => {
           legacyLockPath,
           nativeLegacyLockRead(legacyLockParked),
         );
+        let legacyLockReadFailure: ILegacyImportFixtureFailure | undefined;
         try {
           return Reflect.apply(nativeLegacyLockRead, fs, [file, ...args]);
+        } catch (error) {
+          legacyLockReadFailure = { error };
+          throw error;
         } finally {
-          fs.rmSync(legacyLockPath);
-          fs.renameSync(legacyLockParked, legacyLockPath);
+          preserveLegacyImportFixtureCleanup(legacyLockReadFailure, [
+            {
+              resource: "legacy-lock transient",
+              cleanup: () => fs.rmSync(legacyLockPath),
+            },
+            {
+              resource: "legacy-lock resident",
+              cleanup: () => fs.renameSync(legacyLockParked, legacyLockPath),
+            },
+          ]);
         }
       }
       return Reflect.apply(nativeLegacyLockRead, fs, [file, ...args]);
     }) as typeof fs.readFileSync;
     const applied = (() => {
+      let legacyApplyFailure: ILegacyImportFixtureFailure | undefined;
       try {
         return importer.apply();
+      } catch (error) {
+        legacyApplyFailure = { error };
+        throw error;
       } finally {
-        fs.readFileSync = nativeLegacyLockRead;
-        if (fs.existsSync(legacyLockParked)) {
-          fs.rmSync(legacyLockPath, { force: true });
-          fs.renameSync(legacyLockParked, legacyLockPath);
-        }
+        preserveLegacyImportFixtureCleanup(legacyApplyFailure, [
+          {
+            resource: "legacy-lock read hook",
+            cleanup: () => {
+              fs.readFileSync = nativeLegacyLockRead;
+            },
+          },
+          {
+            resource: "legacy-lock fallback transient",
+            cleanup: () => {
+              if (fs.existsSync(legacyLockParked))
+                fs.rmSync(legacyLockPath, { force: true });
+            },
+          },
+          {
+            resource: "legacy-lock fallback resident",
+            cleanup: () => {
+              if (fs.existsSync(legacyLockParked))
+                fs.renameSync(legacyLockParked, legacyLockPath);
+            },
+          },
+        ]);
       }
     })();
     const appliedPlanPath = path.join(
@@ -409,11 +481,23 @@ export const test_mcp_production_legacy_import = (): void => {
           appliedPlanPath,
           Buffer.concat([appliedPlanBytes, Buffer.from(" ")]),
         );
+        let appliedPlanReadFailure: ILegacyImportFixtureFailure | undefined;
         try {
           return Reflect.apply(nativeAppliedPlanRead, fs, [file, ...args]);
+        } catch (error) {
+          appliedPlanReadFailure = { error };
+          throw error;
         } finally {
-          fs.rmSync(appliedPlanPath);
-          fs.renameSync(appliedPlanParked, appliedPlanPath);
+          preserveLegacyImportFixtureCleanup(appliedPlanReadFailure, [
+            {
+              resource: "applied-plan transient",
+              cleanup: () => fs.rmSync(appliedPlanPath),
+            },
+            {
+              resource: "applied-plan resident",
+              cleanup: () => fs.renameSync(appliedPlanParked, appliedPlanPath),
+            },
+          ]);
         }
       }
       return Reflect.apply(nativeAppliedPlanRead, fs, [file, ...args]);
@@ -425,11 +509,28 @@ export const test_mcp_production_legacy_import = (): void => {
     } catch {
       repeatedRejected = true;
     } finally {
-      fs.readFileSync = nativeAppliedPlanRead;
-      if (fs.existsSync(appliedPlanParked)) {
-        fs.rmSync(appliedPlanPath, { force: true });
-        fs.renameSync(appliedPlanParked, appliedPlanPath);
-      }
+      preserveLegacyImportFixtureCleanup(undefined, [
+        {
+          resource: "applied-plan read hook",
+          cleanup: () => {
+            fs.readFileSync = nativeAppliedPlanRead;
+          },
+        },
+        {
+          resource: "applied-plan fallback transient",
+          cleanup: () => {
+            if (fs.existsSync(appliedPlanParked))
+              fs.rmSync(appliedPlanPath, { force: true });
+          },
+        },
+        {
+          resource: "applied-plan fallback resident",
+          cleanup: () => {
+            if (fs.existsSync(appliedPlanParked))
+              fs.renameSync(appliedPlanParked, appliedPlanPath);
+          },
+        },
+      ]);
     }
     const production = AutoMovieProductionProject.open(fixture.root);
     TestValidator.predicate(
