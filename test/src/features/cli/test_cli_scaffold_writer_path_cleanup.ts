@@ -30,7 +30,7 @@ const leafTokenContract = (
   };
 };
 
-const renderGcRemovalCleanupContract = (text: string): unknown => {
+const writerPathCleanupContract = (text: string): unknown => {
   const source = ts.createSourceFile(
     "test_cli_scaffold.ts",
     text,
@@ -39,12 +39,13 @@ const renderGcRemovalCleanupContract = (text: string): unknown => {
     ts.ScriptKind.TS,
   );
   const anchors = [
-    "rendergctargetrenamehook",
-    "rendergcsharedremovalrenamehook",
-    "rendergcpublicationrenamehook",
-    "rendergctierapplyrenamehook",
-    "rendergcstableevidencestathook",
-    "rendergcparentsuccessorrenamehook",
+    "scaffoldwritersplitidentitylstathook",
+    "scaffoldwriternonemptybasemkdirhook",
+    "scaffoldwriternonemptyparentmkdirhook",
+    "scaffoldwriterno-forcecompetitoropenhook",
+    "scaffoldwriterforcesuccessoropenhook",
+    "scaffoldwriterrootsuccessoropenhook",
+    "scaffoldwriterparentsuccessoropenhook",
   ];
   const lifecycles: Array<{
     catchBodies: string[];
@@ -104,171 +105,196 @@ const renderGcRemovalCleanupContract = (text: string): unknown => {
   };
 };
 
-export const test_cli_scaffold_render_gc_removal_cleanup = (): void => {
+export const test_cli_scaffold_writer_path_cleanup = (): void => {
   TestValidator.equals(
-    "CLI scaffold owns six render GC removal cleanup lifecycles",
-    renderGcRemovalCleanupContract(
+    "CLI scaffold owns seven writer path cleanup lifecycles",
+    writerPathCleanupContract(
       fs.readFileSync(path.join(__dirname, "test_cli_scaffold.ts"), "utf8"),
     ),
     {
       lifecycles: [
         {
+          catchBodies: ["splitIdentityCleanupFailure={error};", "throwerror;"],
+          catchVariables: ["error"],
+          containerKind: "TryStatement",
+          containerStatements: 1975,
+          finallyDigest:
+            "03c112bc81313496c606221c1f95d3abc741e37a077287d95f9251ee5f3d1ebb",
+          finallySubstantive: {
+            digest:
+              "ddc18e787b25622c3ff2ef59b3cfcbbf8f7990c19e3d3d62a0036ca27845ba64",
+            tokens: 29,
+          },
+          index: 1687,
+          preceding:
+            "letsplitIdentityCleanupFailure:{error:unknown}|undefined;",
+          substantive: {
+            digest:
+              "d63f90c5e54e95e209ca5c36a0e770e88cf17492fa676cbc10af6e6886ed0f23",
+            tokens: 15,
+          },
+          tryBody:
+            '{writeFiles(splitIdentityScaffold,{"owned.txt":"scaffoldidentity"});splitIdentityWritten=true;}',
+          tryDigest:
+            "ff130d47acb157e7badb4bdde29cbe1dfb00db20d48665cf3ba6cf8602085aa1",
+        },
+        {
           catchBodies: [
-            "gcRenameBoundaryCleanupFailure={error};",
+            "nonemptyBaseSuccessorCleanupFailure={error};",
             "throwerror;",
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
           containerStatements: 1975,
           finallyDigest:
-            "181133e16bace432fcd2fae85df617750647d6a8c8614ec0c07ffd3d62227650",
+            "14d6aa765dbd554bb41b494400aa183db5cc345e38b3a253b2ac7964d6b1c94e",
           finallySubstantive: {
             digest:
-              "8e16d9326db34536d2416e337b6a0885ac5b66c026ab617ace2f6dffd350b0d9",
+              "a468b13c0219872a3b92feceae32b31e3789b8ebc1d641f8dcb5cfce40c3fa5c",
             tokens: 29,
           },
-          index: 1389,
+          index: 1704,
           preceding:
-            "letgcRenameBoundaryCleanupFailure:{error:unknown}|undefined;",
+            "letnonemptyBaseSuccessorCleanupFailure:{error:unknown}|undefined;",
           substantive: {
             digest:
-              "b8bcf1cc1cc2523373328ad1d973d6b0959a6832879467610ba0c61a48c5a0f9",
-            tokens: 29,
+              "bc26006f6f78d7a0f62dc719b360ce106d268ea7563a3556890d0eaaa0b21060",
+            tokens: 27,
           },
           tryBody:
-            "{gcRenameBoundaryRejected=throws(()=>renderGcModule.removeCapturedRenderGcTarget({isolated:renameBoundaryIsolated,quarantine:gcQuarantine,snapshot:renameBoundarySnapshot,}),);}",
+            '{nonemptyBaseSuccessorRejected=throws(()=>writeFiles(nonemptySuccessorBase,{"owned.txt":"scaffoldbytes"},{force:true},),);}',
           tryDigest:
-            "abd9022ad5b88fac0ca2b7d219fc810df913d165b235da98ff3bd5599cd54440",
-        },
-        {
-          catchBodies: ["sharedRemovalCleanupFailure={error};", "throwerror;"],
-          catchVariables: ["error"],
-          containerKind: "TryStatement",
-          containerStatements: 1975,
-          finallyDigest:
-            "60735d07af041548a97ca502017fce4ca8eea6dffbd59523e09ef11ef61d7c38",
-          finallySubstantive: {
-            digest:
-              "932ebdad023f043a8be07619ec425c8fb3b7bbd218aeb6ec6a4b1ce7235602b4",
-            tokens: 29,
-          },
-          index: 1404,
-          preceding:
-            "letsharedRemovalCleanupFailure:{error:unknown}|undefined;",
-          substantive: {
-            digest:
-              "d4140d0ce68eb2defed1a924e1d65e7987e2d26deb8518c5f6369059aa265571",
-            tokens: 54,
-          },
-          tryBody:
-            '{renderGcModule.removeCapturedRenderGcTarget({isolated:path.join(sharedRemovalStaging,"first"),quarantine:sharedRemovalStaging,snapshot:sharedRemovalFirstSnapshot,});renderGcModule.removeCapturedRenderGcTarget({isolated:path.join(sharedRemovalStaging,"second"),quarantine:sharedRemovalStaging,snapshot:sharedRemovalSecondSnapshot,});}',
-          tryDigest:
-            "08eaffa1a02af12ff626f57e246512d688f9be1118e71cd257ea6fe444dd7b76",
+            "2288e390c98370b0fd0281128a392f6a4a6141002eea44b7a7961b55b09153ab",
         },
         {
           catchBodies: [
-            "gcPublicationBoundaryCleanupFailure={error};",
+            "nonemptyParentSuccessorCleanupFailure={error};",
             "throwerror;",
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
           containerStatements: 1975,
           finallyDigest:
-            "ebaded5080136b8f034940c2c55fa573489a844c51360118953a8fa63e02e007",
+            "612226db6726a0312e6a3fe5161a4bcfdeb518ce9d55a5ce3dc0245f48aeddbe",
           finallySubstantive: {
             digest:
-              "ba90a4e3f5ed026e80fc0cc9e0f7be3594704de956c42679df8036c65d2b9fbd",
+              "9d7bbbf34eef931d341367bfeb35461adb125b21f907dc0b5bf407dd8a03862d",
             tokens: 29,
           },
-          index: 1429,
+          index: 1714,
           preceding:
-            "letgcPublicationBoundaryCleanupFailure:{error:unknown}|undefined;",
+            "letnonemptyParentSuccessorCleanupFailure:{error:unknown}|undefined;",
           substantive: {
             digest:
-              "b01b01521e4a301528c955487cb4544cc011c6c34b595444a61634ebefb88d83",
-            tokens: 29,
+              "5aa2c846c085d9d7ad8be0eccfdd5369817aae9e60f2227ccf6309e9147518fd",
+            tokens: 21,
           },
           tryBody:
-            "{gcPublicationBoundaryRejected=throws(()=>renderGcModule.removeCapturedRenderGcTarget({isolated:gcPublicationBoundaryIsolated,quarantine:gcQuarantine,snapshot:gcPublicationBoundarySnapshot,}),);}",
+            '{nonemptyParentSuccessorRejected=throws(()=>writeFiles(nonemptyParentSuccessorBase,{"nested/owned.txt":"scaffoldbytes",}),);}',
           tryDigest:
-            "df415ba3b61423c64b613cf49083a85a6f72ef3b551fa26cb65f3e0c592352f2",
-        },
-        {
-          catchBodies: ["tierApplyCleanupFailure={error};", "throwerror;"],
-          catchVariables: ["error"],
-          containerKind: "TryStatement",
-          containerStatements: 1975,
-          finallyDigest:
-            "3ba98141df0b189046c2ae63ac05979ee5f9d4fb98f2cf2929e22ee2a445e685",
-          finallySubstantive: {
-            digest:
-              "f11e6b13255b930775cd1b234a530abfe24651c68892fc563b5f6363a7e9f2f0",
-            tokens: 29,
-          },
-          index: 1487,
-          preceding: "lettierApplyCleanupFailure:{error:unknown}|undefined;",
-          substantive: {
-            digest:
-              "5068ee82465507a2fa72f9bff6498aca0aa6e5da51df9113446e277c13a05599",
-            tokens: 38,
-          },
-          tryBody:
-            "{if(tierPair?.evidence!==null&&tierPair?.evidence!==undefined)renderGcModule.removeCapturedRenderQuarantine({evidence:tierPair.evidence,marker:tierPair.marker,quarantine:tierApplyQuarantine,});}",
-          tryDigest:
-            "1d400b33d807e5ec623dbe3371dc4d86ba2320873b9717a87ae8f777d2b39fb9",
-        },
-        {
-          catchBodies: ["stableEvidenceCleanupFailure={error};", "throwerror;"],
-          catchVariables: ["error"],
-          containerKind: "TryStatement",
-          containerStatements: 1975,
-          finallyDigest:
-            "ba5c206bc2332ed551d68868f5c3832a1940c6b03b0775f3258f452d72929181",
-          finallySubstantive: {
-            digest:
-              "a062ea464f7f837b36fe62c30ea2c1f782adc094fc8670427a6a0bc7038c7802",
-            tokens: 29,
-          },
-          index: 1498,
-          preceding:
-            "letstableEvidenceCleanupFailure:{error:unknown}|undefined;",
-          substantive: {
-            digest:
-              "7e86674dc795c32d9c3b205bdb2ce569fa0c799a6b3597135d80c4b6c7c880c5",
-            tokens: 32,
-          },
-          tryBody:
-            "{renderGcModule.quarantineCapturedRenderTarget({destination:stableEvidenceMarker,isolated:stableEvidenceTarget,quarantine:stableEvidenceParent,snapshot:renderGcModule.captureRenderGcTarget(proxyTierGcRoot,stableEvidenceSource,),});}",
-          tryDigest:
-            "c03810e523a4a33dccdc37b41739e69badb5994b0c222e2f5ba67b2a29efab57",
+            "90eb8b8d17dfc1f4a5c8568424ee5a7a71ba67f083d77389628858959f6941ee",
         },
         {
           catchBodies: [
-            "parentSuccessorCleanupFailure={error};",
+            "noForceCompetitorCleanupFailure={error};",
             "throwerror;",
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
           containerStatements: 1975,
           finallyDigest:
-            "8a5fe44fea7d4a8efec33b89b142abf9f54d16425724eb6aa149011a8abd15c2",
+            "73edd59c7008be18d02b2b659ab103d02f4a5b7ca9149f34b0b6843a84f9ffce",
           finallySubstantive: {
             digest:
-              "a782d299c2788ddd7ef24f76a4ef6994d1a9ea3b63cfd4e68f1414679730143b",
+              "156354e862c9be9232c3ecb24bf3b0474d8ee1d18278f52414251225535880c7",
             tokens: 29,
           },
-          index: 1515,
+          index: 1749,
           preceding:
-            "letparentSuccessorCleanupFailure:{error:unknown}|undefined;",
+            "letnoForceCompetitorCleanupFailure:{error:unknown}|undefined;",
           substantive: {
             digest:
-              "c90fa05908abff5dddb285f408f027cbabd2de038f69f5ffeb781a06f8850558",
-            tokens: 22,
+              "eabbbffda6ca8a03969c5d9629bdcd2526eba1db54eb47a66007d742af6481e0",
+            tokens: 20,
           },
           tryBody:
-            "{renderGcModule.removeCapturedRenderQuarantine({evidence:parentSuccessorInspection.evidence,marker:parentSuccessorMarkerSnapshot,quarantine:tierApplyQuarantine,});}",
+            '{noForceCompetitorRejected=throws(()=>writeFiles(noForceRaceBase,{"winner.txt":"scaffoldbytes"}),);}',
           tryDigest:
-            "c9a0e0faa88b4ab8902721d6ea5e387c44dc985606d2bf68eea73533c5bde66c",
+            "74cc6b0dea19d7021d3a441315164c3bdabf1524adabab3715721f5fae04e411",
+        },
+        {
+          catchBodies: ["forceSuccessorCleanupFailure={error};", "throwerror;"],
+          catchVariables: ["error"],
+          containerKind: "TryStatement",
+          containerStatements: 1975,
+          finallyDigest:
+            "d8abc97b4fbcc795e002519cfd2885b7efe0556c024f992aa587ed9507418b69",
+          finallySubstantive: {
+            digest:
+              "62dfc0688e9b7606fb3b4aec0e2bf848b34192378e3eeae3eb810d2e69f38f1b",
+            tokens: 29,
+          },
+          index: 1760,
+          preceding:
+            "letforceSuccessorCleanupFailure:{error:unknown}|undefined;",
+          substantive: {
+            digest:
+              "2dd7ab0dc872a1347f766043e816a1024ebf13986837309ac10d01d8105e24e8",
+            tokens: 27,
+          },
+          tryBody:
+            '{forceSuccessorRejected=throws(()=>writeFiles(forceRaceBase,{"owned.txt":"scaffoldbytes"},{force:true},),);}',
+          tryDigest:
+            "24ac7ad0ad691b20b8edd2df5b36df3147e1a53d55bd2d34b37ff5fee3d6cdd8",
+        },
+        {
+          catchBodies: ["scaffoldRootCleanupFailure={error};", "throwerror;"],
+          catchVariables: ["error"],
+          containerKind: "TryStatement",
+          containerStatements: 1975,
+          finallyDigest:
+            "630d8b539fcd5187cb6b2dfc615fe08aee16b327428ecce3fbe4ea8b56003edb",
+          finallySubstantive: {
+            digest:
+              "ffb034e277f4daa4cd1e35d28cbbcb2f0505c9cde2ba56f6b7b0c411c8318b4d",
+            tokens: 29,
+          },
+          index: 1770,
+          preceding: "letscaffoldRootCleanupFailure:{error:unknown}|undefined;",
+          substantive: {
+            digest:
+              "d221ba6f3298e6b956de95d976a033a644b707172f7e297a0774e70803d0f2ea",
+            tokens: 20,
+          },
+          tryBody:
+            '{scaffoldRootRejected=throws(()=>writeFiles(rootRaceBase,{"created.txt":"scaffoldbytes"}),);}',
+          tryDigest:
+            "aa2caeb6add25d64b115133b4ad80383b6c37e5bc4df77b097a4119b877ad577",
+        },
+        {
+          catchBodies: ["scaffoldParentCleanupFailure={error};", "throwerror;"],
+          catchVariables: ["error"],
+          containerKind: "TryStatement",
+          containerStatements: 1975,
+          finallyDigest:
+            "97884fec49029073a4ba75dec1c1948ebad99383c080bb3e87de9022745d34cb",
+          finallySubstantive: {
+            digest:
+              "747cc8b7cd334bbc1e4dae8f5dbf78cb8224294bbd0ce0ca848773aeef9e370a",
+            tokens: 29,
+          },
+          index: 1781,
+          preceding:
+            "letscaffoldParentCleanupFailure:{error:unknown}|undefined;",
+          substantive: {
+            digest:
+              "32c3b287b7783d7936d5ab692bb68d9a05308acfee7d3a7dcfbace90044d3952",
+            tokens: 27,
+          },
+          tryBody:
+            '{scaffoldParentRejected=throws(()=>writeFiles(parentRaceBase,{"nested/created.txt":"scaffoldbytes"},{force:true},),);}',
+          tryDigest:
+            "34f1ce3c2dfa9da2bd70fb97bb4f6ebd9e6c455dca49c6c73335a9d6b3c56d5d",
         },
       ],
       parseDiagnostics: [],

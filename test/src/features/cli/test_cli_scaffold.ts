@@ -12882,11 +12882,22 @@ export const test_cli_scaffold = async (): Promise<void> => {
       });
     }) as typeof fs.lstatSync;
     let splitIdentityWritten = false;
+    let splitIdentityCleanupFailure: { error: unknown } | undefined;
     try {
       writeFiles(splitIdentityScaffold, { "owned.txt": "scaffold identity" });
       splitIdentityWritten = true;
+    } catch (error) {
+      splitIdentityCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.lstatSync = nativeLstat;
+      preserveCliHarnessCleanup(splitIdentityCleanupFailure, [
+        {
+          resource: "scaffold writer split identity lstat hook",
+          cleanup: () => {
+            mutableFs.lstatSync = nativeLstat;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "scaffold writes separate stable pathname and descriptor identity domains",
@@ -12962,6 +12973,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       return result;
     }) as typeof fs.mkdirSync;
     let nonemptyBaseSuccessorRejected = false;
+    let nonemptyBaseSuccessorCleanupFailure: { error: unknown } | undefined;
     try {
       nonemptyBaseSuccessorRejected = throws(() =>
         writeFiles(
@@ -12970,8 +12982,18 @@ export const test_cli_scaffold = async (): Promise<void> => {
           { force: true },
         ),
       );
+    } catch (error) {
+      nonemptyBaseSuccessorCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.mkdirSync = nativeMkdir;
+      preserveCliHarnessCleanup(nonemptyBaseSuccessorCleanupFailure, [
+        {
+          resource: "scaffold writer nonempty base mkdir hook",
+          cleanup: () => {
+            mutableFs.mkdirSync = nativeMkdir;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "scaffold creation rejects a non-empty base successor after mkdir",
@@ -13016,14 +13038,25 @@ export const test_cli_scaffold = async (): Promise<void> => {
       return result;
     }) as typeof fs.mkdirSync;
     let nonemptyParentSuccessorRejected = false;
+    let nonemptyParentSuccessorCleanupFailure: { error: unknown } | undefined;
     try {
       nonemptyParentSuccessorRejected = throws(() =>
         writeFiles(nonemptyParentSuccessorBase, {
           "nested/owned.txt": "scaffold bytes",
         }),
       );
+    } catch (error) {
+      nonemptyParentSuccessorCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.mkdirSync = nativeMkdir;
+      preserveCliHarnessCleanup(nonemptyParentSuccessorCleanupFailure, [
+        {
+          resource: "scaffold writer nonempty parent mkdir hook",
+          cleanup: () => {
+            mutableFs.mkdirSync = nativeMkdir;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "scaffold creation rejects a non-empty descendant successor after mkdir",
@@ -13134,12 +13167,23 @@ export const test_cli_scaffold = async (): Promise<void> => {
       ]) as number;
     }) as typeof fs.openSync;
     let noForceCompetitorRejected = false;
+    let noForceCompetitorCleanupFailure: { error: unknown } | undefined;
     try {
       noForceCompetitorRejected = throws(() =>
         writeFiles(noForceRaceBase, { "winner.txt": "scaffold bytes" }),
       );
+    } catch (error) {
+      noForceCompetitorCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.openSync = nativeOpen;
+      preserveCliHarnessCleanup(noForceCompetitorCleanupFailure, [
+        {
+          resource: "scaffold writer no-force competitor open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "a no-force final competitor is preserved",
@@ -13177,6 +13221,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       return descriptor;
     }) as typeof fs.openSync;
     let forceSuccessorRejected = false;
+    let forceSuccessorCleanupFailure: { error: unknown } | undefined;
     try {
       forceSuccessorRejected = throws(() =>
         writeFiles(
@@ -13185,8 +13230,18 @@ export const test_cli_scaffold = async (): Promise<void> => {
           { force: true },
         ),
       );
+    } catch (error) {
+      forceSuccessorCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.openSync = nativeOpen;
+      preserveCliHarnessCleanup(forceSuccessorCleanupFailure, [
+        {
+          resource: "scaffold writer force successor open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "force preserves a target successor installed after descriptor open",
@@ -13221,12 +13276,23 @@ export const test_cli_scaffold = async (): Promise<void> => {
       return descriptor;
     }) as typeof fs.openSync;
     let scaffoldRootRejected = false;
+    let scaffoldRootCleanupFailure: { error: unknown } | undefined;
     try {
       scaffoldRootRejected = throws(() =>
         writeFiles(rootRaceBase, { "created.txt": "scaffold bytes" }),
       );
+    } catch (error) {
+      scaffoldRootCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.openSync = nativeOpen;
+      preserveCliHarnessCleanup(scaffoldRootCleanupFailure, [
+        {
+          resource: "scaffold writer root successor open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "scaffold creation rejects a base successor before writing bytes",
@@ -13262,6 +13328,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       return descriptor;
     }) as typeof fs.openSync;
     let scaffoldParentRejected = false;
+    let scaffoldParentCleanupFailure: { error: unknown } | undefined;
     try {
       scaffoldParentRejected = throws(() =>
         writeFiles(
@@ -13270,8 +13337,18 @@ export const test_cli_scaffold = async (): Promise<void> => {
           { force: true },
         ),
       );
+    } catch (error) {
+      scaffoldParentCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.openSync = nativeOpen;
+      preserveCliHarnessCleanup(scaffoldParentCleanupFailure, [
+        {
+          resource: "scaffold writer parent successor open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "scaffold creation rejects a descendant-parent successor before writing bytes",

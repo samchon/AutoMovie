@@ -111,7 +111,7 @@ export const test_cli_scaffold_chunk_gc_inventory_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1968,
+          containerStatements: 1975,
           finallyDigest:
             "615b4d6b2e4fbec464675adc51a10c4c9d3235c640a3a6905fc1b6852f0ac64f",
           finallySubstantive: {
