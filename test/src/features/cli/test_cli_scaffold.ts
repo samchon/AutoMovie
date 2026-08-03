@@ -261,6 +261,116 @@ const captureBrowserCleanupContract = (
   return { classDigests, cleanupCalls, functionDigests };
 };
 
+type CaptureDescriptorCleanupFunction =
+  | "publishCaptureInstallReceipt"
+  | "readReceiptGeneration"
+  | "runDescriptorBoundNodeCli";
+
+/** Bind every synchronous descriptor consumer to one cleanup policy. */
+const captureDescriptorCleanupContract = (
+  source: string,
+): {
+  classExtensions: string[];
+  lifecycles: Array<{
+    catchActions: string[];
+    catchParameter: string | null;
+    failureDeclarations: string[];
+    finallyActions: string[];
+    owner: CaptureDescriptorCleanupFunction;
+  }>;
+  policies: Array<{ actions: string[]; parameters: string[] }>;
+} => {
+  const parsed = ts.createSourceFile(
+    "scripts/capture-browser.ts",
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TS,
+  );
+  const compact = (node: ts.Node): string =>
+    node.getText(parsed).replace(/\s+/g, "");
+  const owners = new Set<CaptureDescriptorCleanupFunction>([
+    "publishCaptureInstallReceipt",
+    "readReceiptGeneration",
+    "runDescriptorBoundNodeCli",
+  ]);
+  const classExtensions: string[] = [];
+  const lifecycles: Array<{
+    catchActions: string[];
+    catchParameter: string | null;
+    failureDeclarations: string[];
+    finallyActions: string[];
+    owner: CaptureDescriptorCleanupFunction;
+  }> = [];
+  const policies: Array<{ actions: string[]; parameters: string[] }> = [];
+  for (const statement of parsed.statements) {
+    if (
+      ts.isClassDeclaration(statement) &&
+      statement.name?.text === "CaptureDescriptorCleanupError"
+    )
+      classExtensions.push(
+        ...(statement.heritageClauses ?? []).flatMap((clause) =>
+          clause.types.map(compact),
+        ),
+      );
+    if (ts.isVariableStatement(statement) === false) continue;
+    for (const declaration of statement.declarationList.declarations) {
+      if (
+        ts.isIdentifier(declaration.name) === false ||
+        declaration.initializer === undefined ||
+        ts.isArrowFunction(declaration.initializer) === false ||
+        ts.isBlock(declaration.initializer.body) === false
+      )
+        continue;
+      if (declaration.name.text === "preserveCaptureDescriptorCleanup")
+        policies.push({
+          actions: declaration.initializer.body.statements.map(compact),
+          parameters: declaration.initializer.parameters.map(compact),
+        });
+      if (
+        owners.has(
+          declaration.name.text as CaptureDescriptorCleanupFunction,
+        ) === false
+      )
+        continue;
+      const owner = declaration.name.text as CaptureDescriptorCleanupFunction;
+      const lifecycle = declaration.initializer.body.statements.find(
+        (action): action is ts.TryStatement =>
+          ts.isTryStatement(action) &&
+          action.catchClause !== undefined &&
+          action.finallyBlock !== undefined &&
+          action.finallyBlock
+            .getText(parsed)
+            .includes("preserveCaptureDescriptorCleanup"),
+      );
+      if (lifecycle === undefined) continue;
+      lifecycles.push({
+        catchActions: lifecycle.catchClause.block.statements.map(compact),
+        catchParameter:
+          lifecycle.catchClause.variableDeclaration === undefined
+            ? null
+            : compact(lifecycle.catchClause.variableDeclaration),
+        failureDeclarations: declaration.initializer.body.statements.flatMap(
+          (action) =>
+            ts.isVariableStatement(action)
+              ? [...action.declarationList.declarations]
+                  .filter(
+                    (binding) =>
+                      binding.type
+                        ?.getText(parsed)
+                        .includes("CaptureDescriptorFailure") === true,
+                  )
+                  .map(compact)
+              : [],
+        ),
+        finallyActions: lifecycle.finallyBlock.statements.map(compact),
+        owner,
+      });
+    }
+  }
+  return { classExtensions, lifecycles, policies };
+};
+
 type CaptureExecutableCleanupFunction =
   | "createCaptureExecutableSnapshot"
   | "openCaptureExecutable"
@@ -1275,6 +1385,60 @@ export const test_cli_scaffold = async (): Promise<void> => {
           "46c31408dbb9945de5d4ad5a526c2d94b4fcd9b3a0c7638752a20eb72fd464f2",
         ],
       },
+    },
+  );
+  TestValidator.equals(
+    "capture descriptor consumers own failure-preserving cleanup",
+    captureDescriptorCleanupContract(captureBrowserScript),
+    {
+      classExtensions: ["AggregateError"],
+      lifecycles: [
+        {
+          catchActions: ["receiptReadFailure={error};", "throwerror;"],
+          catchParameter: "error",
+          failureDeclarations: [
+            "receiptReadFailure:CaptureDescriptorFailure|undefined",
+          ],
+          finallyActions: [
+            'preserveCaptureDescriptorCleanup(receiptReadFailure,"capturereceiptgenerationdescriptor",()=>closeCaptureExecutable(opened),);',
+          ],
+          owner: "readReceiptGeneration",
+        },
+        {
+          catchActions: ["receiptPublicationFailure={error};", "throwerror;"],
+          catchParameter: "error",
+          failureDeclarations: [
+            "receiptPublicationFailure:CaptureDescriptorFailure|undefined",
+          ],
+          finallyActions: [
+            'preserveCaptureDescriptorCleanup(receiptPublicationFailure,"capturereceiptpublicationdescriptor",()=>closeCaptureExecutable(published),);',
+          ],
+          owner: "publishCaptureInstallReceipt",
+        },
+        {
+          catchActions: ["descriptorCliFailure={error};", "throwerror;"],
+          catchParameter: "error",
+          failureDeclarations: [
+            "descriptorCliFailure:CaptureDescriptorFailure|undefined",
+          ],
+          finallyActions: [
+            'preserveCaptureDescriptorCleanup(descriptorCliFailure,"descriptor-boundPlaywrightCLI",()=>closeCaptureExecutable(cli),);',
+          ],
+          owner: "runDescriptorBoundNodeCli",
+        },
+      ],
+      policies: [
+        {
+          actions: [
+            "try{cleanup();}catch(cleanupFailure){if(failure===undefined)throwcleanupFailure;thrownewCaptureDescriptorCleanupError([failure.error,cleanupFailure],`${resource}cleanupfailedaftertheoperationfailed.`,);}",
+          ],
+          parameters: [
+            "failure:CaptureDescriptorFailure|undefined",
+            "resource:string",
+            "cleanup:()=>void",
+          ],
+        },
+      ],
     },
   );
   TestValidator.equals(
@@ -5672,6 +5836,11 @@ export const test_cli_scaffold = async (): Promise<void> => {
           resource: string;
         }>,
       ) => Promise<void>;
+      preserveCaptureDescriptorCleanup: (
+        failure: { error: unknown } | undefined,
+        resource: string,
+        cleanup: () => void,
+      ) => void;
       publishCaptureInstallReceipt: (
         projectRoot: string,
         receipt: unknown,
@@ -5689,6 +5858,97 @@ export const test_cli_scaffold = async (): Promise<void> => {
         env: NodeJS.ProcessEnv;
       }) => CaptureInstallCommandResult;
     };
+    const exerciseCaptureDescriptorCleanup = <Output>(
+      operation: () => Output,
+      cleanup: () => void,
+    ): Output => {
+      let failure: { error: unknown } | undefined;
+      try {
+        return operation();
+      } catch (error) {
+        failure = { error };
+        throw error;
+      } finally {
+        captureBrowserModule.preserveCaptureDescriptorCleanup(
+          failure,
+          "capture descriptor fixture",
+          cleanup,
+        );
+      }
+    };
+    let successfulDescriptorCleanupAttempts = 0;
+    const successfulDescriptorResult = exerciseCaptureDescriptorCleanup(
+      () => "descriptor result",
+      () => {
+        ++successfulDescriptorCleanupAttempts;
+      },
+    );
+    const descriptorPrimaryFailure = new Error("descriptor operation failed");
+    let primaryDescriptorCleanupAttempts = 0;
+    let primaryDescriptorFailureCaught: unknown;
+    try {
+      exerciseCaptureDescriptorCleanup(
+        () => {
+          throw descriptorPrimaryFailure;
+        },
+        () => {
+          ++primaryDescriptorCleanupAttempts;
+        },
+      );
+    } catch (error) {
+      primaryDescriptorFailureCaught = error;
+    }
+    const standaloneDescriptorCleanupFailure = new Error(
+      "standalone descriptor cleanup failed",
+    );
+    let standaloneDescriptorCleanupAttempts = 0;
+    let standaloneDescriptorCleanupCaught: unknown;
+    try {
+      exerciseCaptureDescriptorCleanup(
+        () => undefined,
+        () => {
+          ++standaloneDescriptorCleanupAttempts;
+          throw standaloneDescriptorCleanupFailure;
+        },
+      );
+    } catch (error) {
+      standaloneDescriptorCleanupCaught = error;
+    }
+    const combinedDescriptorCleanupFailure = new Error(
+      "combined descriptor cleanup failed",
+    );
+    let combinedDescriptorCleanupAttempts = 0;
+    let combinedDescriptorCleanupCaught: unknown;
+    try {
+      exerciseCaptureDescriptorCleanup(
+        () => {
+          throw descriptorPrimaryFailure;
+        },
+        () => {
+          ++combinedDescriptorCleanupAttempts;
+          throw combinedDescriptorCleanupFailure;
+        },
+      );
+    } catch (error) {
+      combinedDescriptorCleanupCaught = error;
+    }
+    TestValidator.predicate(
+      "capture descriptor cleanup preserves exact failure precedence",
+      successfulDescriptorResult === "descriptor result" &&
+        successfulDescriptorCleanupAttempts === 1 &&
+        primaryDescriptorCleanupAttempts === 1 &&
+        primaryDescriptorFailureCaught === descriptorPrimaryFailure &&
+        standaloneDescriptorCleanupAttempts === 1 &&
+        standaloneDescriptorCleanupCaught ===
+          standaloneDescriptorCleanupFailure &&
+        combinedDescriptorCleanupAttempts === 1 &&
+        combinedDescriptorCleanupCaught instanceof AggregateError &&
+        combinedDescriptorCleanupCaught.errors.length === 2 &&
+        combinedDescriptorCleanupCaught.errors[0] ===
+          descriptorPrimaryFailure &&
+        combinedDescriptorCleanupCaught.errors[1] ===
+          combinedDescriptorCleanupFailure,
+    );
     let successfulBrowserCleanup = 0;
     await captureBrowserModule.preserveCaptureBrowserCleanup(undefined, [
       {

@@ -528,7 +528,7 @@ const readReceiptGeneration = (
     generation.file,
     CAPTURE_INSTALL_RECEIPT_MAX_BYTES,
   );
-  let failed = false;
+  let receiptReadFailure: CaptureDescriptorFailure | undefined;
   try {
     const selected = generation.directory.directories.at(-1);
     if (
@@ -568,14 +568,14 @@ const readReceiptGeneration = (
     assertReceiptDirectory(generation.directory);
     return bytes;
   } catch (error) {
-    failed = true;
+    receiptReadFailure = { error };
     throw error;
   } finally {
-    try {
-      closeCaptureExecutable(opened);
-    } catch (error) {
-      if (failed === false) throw error;
-    }
+    preserveCaptureDescriptorCleanup(
+      receiptReadFailure,
+      "capture receipt generation descriptor",
+      () => closeCaptureExecutable(opened),
+    );
   }
 };
 
@@ -594,7 +594,7 @@ export const publishCaptureInstallReceipt = (
   assertCurrent();
   assertReceiptDirectory(owned);
   let published: ICaptureExecutableSnapshot;
-  let failed = false;
+  let receiptPublicationFailure: CaptureDescriptorFailure | undefined;
   try {
     published = createCaptureExecutableSnapshot(file, bytes);
   } catch (error) {
@@ -621,14 +621,14 @@ export const publishCaptureInstallReceipt = (
     assertCaptureExecutableBytes(published);
     assertReceiptDirectory(current);
   } catch (error) {
-    failed = true;
+    receiptPublicationFailure = { error };
     throw error;
   } finally {
-    try {
-      closeCaptureExecutable(published);
-    } catch (error) {
-      if (failed === false) throw error;
-    }
+    preserveCaptureDescriptorCleanup(
+      receiptPublicationFailure,
+      "capture receipt publication descriptor",
+      () => closeCaptureExecutable(published),
+    );
   }
 };
 
@@ -728,6 +728,7 @@ export const runDescriptorBoundNodeCli = (props: {
   env: NodeJS.ProcessEnv;
 }): IAutoMovieCaptureInstallCommandResult => {
   const cli = openCaptureExecutable(props.cliPath);
+  let descriptorCliFailure: CaptureDescriptorFailure | undefined;
   try {
     if (cli.digest !== props.cliDigest)
       throw new Error("Playwright CLI bytes differ from captured metadata.");
@@ -756,8 +757,15 @@ export const runDescriptorBoundNodeCli = (props: {
       stderr: result.stderr ?? "",
       stdout: result.stdout ?? "",
     };
+  } catch (error) {
+    descriptorCliFailure = { error };
+    throw error;
   } finally {
-    closeCaptureExecutable(cli);
+    preserveCaptureDescriptorCleanup(
+      descriptorCliFailure,
+      "descriptor-bound Playwright CLI",
+      () => closeCaptureExecutable(cli),
+    );
   }
 };
 
@@ -799,12 +807,35 @@ interface CaptureBrowserFailure {
   error: unknown;
 }
 
+interface CaptureDescriptorFailure {
+  error: unknown;
+}
+
 interface CaptureBrowserCleanup {
   cleanup: () => unknown;
   resource: string;
 }
 
 class CaptureBrowserCleanupError extends AggregateError {}
+
+class CaptureDescriptorCleanupError extends AggregateError {}
+
+/** Close one synchronous descriptor without replacing a prior failure. */
+export const preserveCaptureDescriptorCleanup = (
+  failure: CaptureDescriptorFailure | undefined,
+  resource: string,
+  cleanup: () => void,
+): void => {
+  try {
+    cleanup();
+  } catch (cleanupFailure) {
+    if (failure === undefined) throw cleanupFailure;
+    throw new CaptureDescriptorCleanupError(
+      [failure.error, cleanupFailure],
+      `${resource} cleanup failed after the operation failed.`,
+    );
+  }
+};
 
 /** Attempt every browser-bootstrap cleanup without replacing prior failures. */
 export const preserveCaptureBrowserCleanup = async (
