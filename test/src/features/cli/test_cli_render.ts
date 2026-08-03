@@ -37,6 +37,43 @@ const captureCli = (args: readonly string[]): ICliResult => {
   }
 };
 
+interface ICliRenderFixtureFailure {
+  error: unknown;
+}
+
+interface ICliRenderFixtureCleanup {
+  cleanup: () => unknown;
+  resource: string;
+}
+
+class CliRenderFixtureCleanupError extends AggregateError {}
+
+/** Attempt every acquired fixture cleanup without replacing earlier failure. */
+export const preserveCliRenderFixtureCleanup = (
+  failure: ICliRenderFixtureFailure | undefined,
+  resources: readonly ICliRenderFixtureCleanup[],
+): void => {
+  const cleanupFailures: Array<{ error: unknown; resource: string }> = [];
+  for (const resource of resources)
+    try {
+      resource.cleanup();
+    } catch (error) {
+      cleanupFailures.push({ error, resource: resource.resource });
+    }
+  if (cleanupFailures.length === 1 && failure === undefined)
+    throw cleanupFailures[0]!.error;
+  if (cleanupFailures.length !== 0)
+    throw new CliRenderFixtureCleanupError(
+      [
+        ...(failure === undefined ? [] : [failure.error]),
+        ...cleanupFailures.map((entry) => entry.error),
+      ],
+      `CLI render fixture cleanup failed${
+        failure === undefined ? "" : " after the test failed"
+      }: ${cleanupFailures.map((entry) => entry.resource).join(", ")}.`,
+    );
+};
+
 /**
  * The public CLI delegates bounded render and verification actions to the
  * current scaffold.
@@ -50,12 +87,15 @@ const captureCli = (args: readonly string[]): ICliResult => {
  * 4. `verify` accepts no arguments and delegates the read-only final verifier.
  */
 export const test_cli_render = (): void => {
-  const outside = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-cli-out-"));
-  const project = fs.mkdtempSync(
-    path.join(os.tmpdir(), "automovie-cli-render-"),
-  );
   const nativeCwd = process.cwd();
+  const outside = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-cli-out-"));
+  let projectRoot: string | undefined;
+  let renderFailure: ICliRenderFixtureFailure | undefined;
   try {
+    const project = fs.mkdtempSync(
+      path.join(os.tmpdir(), "automovie-cli-render-"),
+    );
+    projectRoot = project;
     process.chdir(outside);
     const missingAction = captureCli(["render"]);
     const unknownAction = captureCli(["render", "unknown"]);
@@ -141,9 +181,32 @@ if (process.argv[2]?.endsWith("verify.ts"))
         path.resolve(verifyCall[0]!) === verifyScript &&
         verifyCall.length === 1,
     );
+  } catch (error) {
+    renderFailure = { error };
+    throw error;
   } finally {
-    process.chdir(nativeCwd);
-    fs.rmSync(outside, { force: true, recursive: true });
-    fs.rmSync(project, { force: true, recursive: true });
+    const completedProjectRoot = projectRoot;
+    preserveCliRenderFixtureCleanup(renderFailure, [
+      {
+        resource: "working directory",
+        cleanup: () => process.chdir(nativeCwd),
+      },
+      {
+        resource: "outside fixture root",
+        cleanup: () => fs.rmSync(outside, { force: true, recursive: true }),
+      },
+      ...(completedProjectRoot === undefined
+        ? []
+        : [
+            {
+              resource: "project fixture root",
+              cleanup: () =>
+                fs.rmSync(completedProjectRoot, {
+                  force: true,
+                  recursive: true,
+                }),
+            },
+          ]),
+    ]);
   }
 };
