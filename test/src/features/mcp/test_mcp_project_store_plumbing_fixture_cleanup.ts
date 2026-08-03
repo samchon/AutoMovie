@@ -20,7 +20,7 @@ const aggregateContainsExactly = (
   error.errors.length === expected.length &&
   expected.every((failure, index) => error.errors[index] === failure);
 
-const stringLiterals = (node: ts.Node, source: ts.SourceFile): string[] => {
+const stringLiterals = (node: ts.Node): string[] => {
   const values: string[] = [];
   const visit = (cursor: ts.Node): void => {
     if (ts.isStringLiteral(cursor)) values.push(cursor.text);
@@ -97,7 +97,7 @@ const plumbingFixtureContract = (text: string): unknown => {
         ),
         index,
         rootDigest: digestText(root.getText(source)),
-        rootStringLiterals: stringLiterals(root, source),
+        rootStringLiterals: stringLiterals(root),
         prefixes: prefixes.map((statement) => compact(statement, source)),
         tryDigest: digestText(lifecycle.tryBlock.getText(source)),
         tryStatements: lifecycle.tryBlock.statements.length,
