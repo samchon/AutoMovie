@@ -23,6 +23,28 @@ import {
   testRendererIdentity,
 } from "./productionFixtures";
 
+interface IAtomicPublicationFixtureFailure {
+  error: unknown;
+}
+
+class AtomicPublicationFixtureCleanupError extends AggregateError {}
+
+/** Dispose the atomic-publication fixture without replacing its failure. */
+export const preserveAtomicPublicationFixtureCleanup = (
+  failure: IAtomicPublicationFixtureFailure | undefined,
+  cleanup: () => unknown,
+): void => {
+  try {
+    cleanup();
+  } catch (cleanupFailure) {
+    if (failure === undefined) throw cleanupFailure;
+    throw new AtomicPublicationFixtureCleanupError(
+      [failure.error, cleanupFailure],
+      "Atomic-publication fixture teardown failed after the test failed.",
+    );
+  }
+};
+
 const image = (red: number): Uint8Array => {
   const png = new PNG({ width: 16, height: 16 });
   png.data.fill(255);
@@ -89,6 +111,7 @@ const deliverable = (
  */
 export const test_mcp_production_atomic_publication = (): void => {
   const fixture = productionFixture();
+  let atomicPublicationFailure: IAtomicPublicationFixtureFailure | undefined;
   try {
     const project = AutoMovieProductionProject.open(fixture.root);
     TestValidator.predicate(
@@ -763,7 +786,12 @@ export const test_mcp_production_atomic_publication = (): void => {
         fs.existsSync(path.join(productionStateRoot, "revision.lock")) ===
           false,
     );
+  } catch (error) {
+    atomicPublicationFailure = { error };
+    throw error;
   } finally {
-    fixture.dispose();
+    preserveAtomicPublicationFixtureCleanup(atomicPublicationFailure, () =>
+      fixture.dispose(),
+    );
   }
 };
