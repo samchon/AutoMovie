@@ -283,19 +283,19 @@ export const test_mcp_production_project_single_fixture_cleanup = (): void => {
             index: 3,
             substantive: {
               digest:
-                "f536b11bff82631459bc3a87ed24de3142016c17c1a5765f2e4209220e3d30f1",
-              tokens: 12416,
+                "a90e99950e87297fa00a952a3d1860cac6239f968e5675bbf16de7d693c32bdd",
+              tokens: 12506,
             },
             tryDigest:
-              "a1cdc4995f62afe5319d017aa09b185cd0f8b164a2341a5308bf623d1fe48fac",
-            tryStatements: 294,
+              "640df8d56eab34b31e49e4d23893ccc2ddffc9f39ff26c85a1910dd254f44611",
+            tryStatements: 296,
           },
           {
             acquisition: "constdependencyCycleFixture=productionFixture();",
             catchBodies: ["dependencyCycleFailure={error};", "throwerror;"],
             catchVariables: ["error"],
             containerKind: "TryStatement",
-            containerStatements: 294,
+            containerStatements: 296,
             failureHolder:
               "letdependencyCycleFailure:|ISingleProductionProjectFixtureFailure|undefined;",
             finallyBodies: [

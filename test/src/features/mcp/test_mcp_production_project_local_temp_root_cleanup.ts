@@ -248,7 +248,7 @@ export const test_mcp_production_project_local_temp_root_cleanup = (): void => {
             catchBodies: ["outsideRenderReadFailure={error};", "throwerror;"],
             catchVariables: ["error"],
             containerKind: "TryStatement",
-            containerStatements: 294,
+            containerStatements: 296,
             failureHolder:
               "letoutsideRenderReadFailure:|ISingleProductionProjectFixtureFailure|undefined;",
             finallyBodies: [
@@ -270,7 +270,7 @@ export const test_mcp_production_project_local_temp_root_cleanup = (): void => {
             catchBodies: ["outsideRenderTargetFailure={error};", "throwerror;"],
             catchVariables: ["error"],
             containerKind: "TryStatement",
-            containerStatements: 294,
+            containerStatements: 296,
             failureHolder:
               "letoutsideRenderTargetFailure:|ISingleProductionProjectFixtureFailure|undefined;",
             finallyBodies: [

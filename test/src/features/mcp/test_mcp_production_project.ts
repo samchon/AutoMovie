@@ -2689,16 +2689,27 @@ export const test_mcp_production_project = (): void => {
         return lstatSync(filePath, options as never);
       }) as typeof fs.lstatSync,
     });
+    let deniedLstatHookFailure: IProductionProjectFixtureFailure | undefined;
     try {
       TestValidator.predicate(
         "non-missing lstat errors are not hidden as absent files",
         throws(() => ownerProject.readTrackedStateFile("denied.json")),
       );
+    } catch (error) {
+      deniedLstatHookFailure = { error };
+      throw error;
     } finally {
-      Object.defineProperty(fs, "lstatSync", {
-        configurable: true,
-        value: lstatSync,
-      });
+      preserveProductionProjectFixtureCleanup(deniedLstatHookFailure, [
+        {
+          resource: "tracked-state lstat hook",
+          cleanup: () => {
+            Object.defineProperty(fs, "lstatSync", {
+              configurable: true,
+              value: lstatSync,
+            });
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "all review target paths are owned and encoded",
@@ -2798,13 +2809,24 @@ export const test_mcp_production_project = (): void => {
         ...args,
       );
     }) as typeof fs.readFileSync;
+    let inventoryReadHookFailure: IProductionProjectFixtureFailure | undefined;
     try {
       TestValidator.predicate(
         "a design disappearing during inventory is a loud race",
         throws(() => ownerProject.graph()),
       );
+    } catch (error) {
+      inventoryReadHookFailure = { error };
+      throw error;
     } finally {
-      fs.readFileSync = residentReadFileSync;
+      preserveProductionProjectFixtureCleanup(inventoryReadHookFailure, [
+        {
+          resource: "design-inventory read hook",
+          cleanup: () => {
+            fs.readFileSync = residentReadFileSync;
+          },
+        },
+      ]);
     }
     const invalidTyped = path.join(modelDirectory, "invalid.json");
     fs.writeFileSync(invalidTyped, "null");

@@ -292,7 +292,7 @@ export const test_mcp_production_project_render_rollback_cleanup = (): void => {
             catchBodies: ["renderRollbackFailure={error};", "throwerror;"],
             catchVariables: ["error"],
             containerKind: "TryStatement",
-            containerStatements: 294,
+            containerStatements: 296,
             failureHolder:
               "letrenderRollbackFailure:IProductionProjectFixtureFailure|undefined;",
             finallyDigest:
@@ -317,7 +317,7 @@ export const test_mcp_production_project_render_rollback_cleanup = (): void => {
             catchBodies: ["rollbackAggregateFailure={error};", "throwerror;"],
             catchVariables: ["error"],
             containerKind: "TryStatement",
-            containerStatements: 294,
+            containerStatements: 296,
             failureHolder:
               "letrollbackAggregateFailure:IProductionProjectFixtureFailure|undefined;",
             finallyDigest:
