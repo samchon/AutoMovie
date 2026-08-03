@@ -138,9 +138,9 @@ const productionProjectSingleFixtureContract = (text: string): unknown => {
           : [],
       ),
     },
-    parseDiagnostics: source.parseDiagnostics.map((diagnostic) =>
-      String(diagnostic.messageText),
-    ),
+    parseDiagnostics: (
+      source as ts.SourceFile & { parseDiagnostics: readonly ts.Diagnostic[] }
+    ).parseDiagnostics.map((diagnostic) => String(diagnostic.messageText)),
     policy: {
       bodies: policies.map((entry) => compact(entry.arrow.body, source)),
       bodyDigests: policies.map((entry) =>

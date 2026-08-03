@@ -126,9 +126,9 @@ const renderRollbackCleanupContract = (text: string): unknown => {
         ts.isBlock(owner.body) ? [owner.body.statements.length] : [],
       ),
     },
-    parseDiagnostics: source.parseDiagnostics.map((diagnostic) =>
-      String(diagnostic.messageText),
-    ),
+    parseDiagnostics: (
+      source as ts.SourceFile & { parseDiagnostics: readonly ts.Diagnostic[] }
+    ).parseDiagnostics.map((diagnostic) => String(diagnostic.messageText)),
   };
 };
 

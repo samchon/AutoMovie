@@ -111,9 +111,9 @@ const productionNamespaceAliasCleanupContract = (text: string): unknown => {
   );
   return {
     lifecycles,
-    parseDiagnostics: source.parseDiagnostics.map((diagnostic) =>
-      String(diagnostic.messageText),
-    ),
+    parseDiagnostics: (
+      source as ts.SourceFile & { parseDiagnostics: readonly ts.Diagnostic[] }
+    ).parseDiagnostics.map((diagnostic) => String(diagnostic.messageText)),
     policy: {
       bodies: policies.map((entry) => compact(entry.arrow.body, source)),
       classes: source.statements.flatMap((statement) =>
@@ -277,7 +277,7 @@ export const test_mcp_production_namespace_alias_cleanup = (): void => {
       parseDiagnostics: [],
       policy: {
         bodies: [
-          '{constcleanupFailures:Array<{error:unknown;resource:string}>=[];for(constresourceofresources)try{resource.cleanup();}catch(error){cleanupFailures.push({error,resource:resource.resource});}if(cleanupFailures.length===1&&failure===undefined)throwcleanupFailures[0]!.error;if(cleanupFailures.length!==0)thrownewProductionNamespaceReplacementCleanupError([...(failure===undefined?[]:[failure.error]),...cleanupFailures.map((entry)=>entry.error),],`Production-namespacereplacementcleanupfailed${failure===undefined?"":"afterthetestfailed"}:${cleanupFailures.map((entry)=>entry.resource).join(",")}.`,);}',
+          '{constcleanupFailures:Array<{error:unknown;resource:string}>=[];for(constresourceofresources)try{resource.cleanup();}catch(error){cleanupFailures.push({error,resource:resource.resource});}if(cleanupFailures.length===1&&failure===undefined)throwcleanupFailures[0]!.error;if(cleanupFailures.length!==0)thrownewProductionNamespaceReplacementCleanupError([...(failure===undefined?[]:[failure.error]),...cleanupFailures.map((entry)=>entry.error),],`Production-namespacereplacementcleanupfailed\${failure===undefined?"":"afterthetestfailed"}:\${cleanupFailures.map((entry)=>entry.resource).join(",")}.`,);}',
         ],
         classes: ["AggregateError"],
         count: 1,

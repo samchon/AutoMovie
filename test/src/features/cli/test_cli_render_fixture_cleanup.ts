@@ -111,7 +111,7 @@ const cliRenderFixtureContract = (text: string): unknown => {
 };
 
 const captureCleanup = (props: {
-  cleanupFailures?: readonly (unknown | undefined)[];
+  cleanupFailures?: readonly unknown[];
   primaryFailure?: unknown;
   resources?: number;
 }): { failure: unknown; order: string[] } => {
@@ -127,11 +127,11 @@ const captureCleanup = (props: {
         cleanup: (): void => {
           order.push(`cleanup-${index}`);
           const cleanupFailure = props.cleanupFailures?.[index];
-          if (cleanupFailure !== undefined) throw cleanupFailure;
+          if (cleanupFailure !== undefined) throw cleanupFailure as Error;
         },
       })),
     );
-    if (props.primaryFailure !== undefined) throw props.primaryFailure;
+    if (props.primaryFailure !== undefined) throw props.primaryFailure as Error;
   } catch (error) {
     failure = error;
   }
@@ -206,7 +206,7 @@ export const test_cli_render_fixture_cleanup = (): void => {
       },
       policy: {
         bodies: [
-          '{constcleanupFailures:Array<{error:unknown;resource:string}>=[];for(constresourceofresources)try{resource.cleanup();}catch(error){cleanupFailures.push({error,resource:resource.resource});}if(cleanupFailures.length===1&&failure===undefined)throwcleanupFailures[0]!.error;if(cleanupFailures.length!==0)thrownewCliRenderFixtureCleanupError([...(failure===undefined?[]:[failure.error]),...cleanupFailures.map((entry)=>entry.error),],`CLIrenderfixturecleanupfailed${failure===undefined?"":"afterthetestfailed"}:${cleanupFailures.map((entry)=>entry.resource).join(",")}.`,);}',
+          '{constcleanupFailures:Array<{error:unknown;resource:string}>=[];for(constresourceofresources)try{resource.cleanup();}catch(error){cleanupFailures.push({error,resource:resource.resource});}if(cleanupFailures.length===1&&failure===undefined)throwcleanupFailures[0]!.error;if(cleanupFailures.length!==0)thrownewCliRenderFixtureCleanupError([...(failure===undefined?[]:[failure.error]),...cleanupFailures.map((entry)=>entry.error),],`CLIrenderfixturecleanupfailed\${failure===undefined?"":"afterthetestfailed"}:\${cleanupFailures.map((entry)=>entry.resource).join(",")}.`,);}',
         ],
         classes: ["AggregateError"],
         parameters: [

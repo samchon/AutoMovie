@@ -217,7 +217,7 @@ export const test_workspace_packaged_fixture_cleanup = (): void => {
     {
       classes: ["AggregateError"],
       functions: [
-        "{try{cleanup();}catch(cleanupFailure){if(failure===undefined)throwcleanupFailure;thrownewPackagedE2eCleanupError([failure.error,cleanupFailure],`${resource}cleanupfailedafterthepackagedE2Eoperationfailed.`,);}}",
+        "{try{cleanup();}catch(cleanupFailure){if(failure===undefined)throwcleanupFailure;thrownewPackagedE2eCleanupError([failure.error,cleanupFailure],`\${resource}cleanupfailedafterthepackagedE2Eoperationfailed.`,);}}",
       ],
     },
   );
@@ -244,7 +244,7 @@ export const test_workspace_packaged_fixture_cleanup = (): void => {
         {
           catchActions: ["packagedE2eFailure={error};", "throwerror;"],
           finallyActions: [
-            'preservePackagedE2eCleanup(packagedE2eFailure,"packagedE2Estage",()=>{if(KEEP_STAGE)console.log(`\\nverificationstageretainedat${stage}`);elsermSync(stage,{recursive:true,force:true,maxRetries:5});});',
+            'preservePackagedE2eCleanup(packagedE2eFailure,"packagedE2Estage",()=>{if(KEEP_STAGE)console.log(`\\nverificationstageretainedat\${stage}`);elsermSync(stage,{recursive:true,force:true,maxRetries:5});});',
           ],
         },
         {

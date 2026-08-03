@@ -49,7 +49,7 @@ export const throwProductionFixtureConstructionFailure = (
       "Production fixture construction and partial-root cleanup failed.",
     );
   }
-  throw failure;
+  throw failure as Error;
 };
 
 /** Render the published starter shape into a disposable production root. */

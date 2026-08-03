@@ -1066,7 +1066,9 @@ const packagedAssetReviewContract = (
             ts.isArrowFunction(node.arguments[0]) &&
             ts.isBlock(node.arguments[0].body)
           ) {
-            const mapper = node.arguments[0];
+            const mapper = node.arguments[0] as ts.ArrowFunction & {
+              body: ts.Block;
+            };
             const evidence = mapper.body.statements
               .filter(ts.isVariableStatement)
               .flatMap((action) => [...action.declarationList.declarations])

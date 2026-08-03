@@ -96,9 +96,9 @@ const renderChunkSnapshotCleanupContract = (text: string): unknown => {
   visit(source);
   return {
     lifecycles,
-    parseDiagnostics: source.parseDiagnostics.map((diagnostic) =>
-      String(diagnostic.messageText),
-    ),
+    parseDiagnostics: (
+      source as ts.SourceFile & { parseDiagnostics: readonly ts.Diagnostic[] }
+    ).parseDiagnostics.map((diagnostic) => String(diagnostic.messageText)),
   };
 };
 
@@ -180,7 +180,7 @@ export const test_cli_scaffold_render_chunk_snapshot_cleanup = (): void => {
             tokens: 125,
           },
           tryBody:
-            '{recoveryProtected=renderChunkSnapshotModule.currentRenderChunkPublicationProtectsTree({candidate:recoveryCandidate,candidateName:`${recoveryId.slice(7)}.candidate.999999`,capture:(chunk)=>renderChunkSnapshotModule.captureRenderChunkPublication(chunkPublicationRoot,renderChunkSnapshotModule.renderChunkPublicationPath({chunk:chunk.id,root:chunkPublicationRoot,scope:chunkPublicationScope,tier:"final",}),),chunks:newMap([[recoveryId,{id:recoveryId,slot:recoveryReceipt.slot}],...recoveryDecoys.map((decoy,index)=>[decoy.id,{id:decoy.id,slot:`decoy-${index}`}]asconst,),]),});}',
+            '{recoveryProtected=renderChunkSnapshotModule.currentRenderChunkPublicationProtectsTree({candidate:recoveryCandidate,candidateName:`\${recoveryId.slice(7)}.candidate.999999`,capture:(chunk)=>renderChunkSnapshotModule.captureRenderChunkPublication(chunkPublicationRoot,renderChunkSnapshotModule.renderChunkPublicationPath({chunk:chunk.id,root:chunkPublicationRoot,scope:chunkPublicationScope,tier:"final",}),),chunks:newMap([[recoveryId,{id:recoveryId,slot:recoveryReceipt.slot}],...recoveryDecoys.map((decoy,index)=>[decoy.id,{id:decoy.id,slot:`decoy-\${index}`}]asconst,),]),});}',
           tryDigest:
             "339c76ace056b5a08af8d4eeaa8a9644af155197efce93cf8aeffe3889fb4201",
         },

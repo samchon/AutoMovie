@@ -129,9 +129,9 @@ const atomicFailureHarnessContract = (text: string): unknown => {
   );
   return {
     owner: { count: owners.length, lifecycles },
-    parseDiagnostics: source.parseDiagnostics.map((diagnostic) =>
-      String(diagnostic.messageText),
-    ),
+    parseDiagnostics: (
+      source as ts.SourceFile & { parseDiagnostics: readonly ts.Diagnostic[] }
+    ).parseDiagnostics.map((diagnostic) => String(diagnostic.messageText)),
     policy: {
       bodies: policies.map((entry) => compact(entry.arrow.body, source)),
       bodyDigests: policies.map((entry) =>
@@ -328,7 +328,7 @@ export const test_mcp_production_atomic_failure_harness_cleanup = (): void => {
       parseDiagnostics: [],
       policy: {
         bodies: [
-          '{constcleanupFailures:Array<{error:unknown;resource:string}>=[];for(constresourceofresources)try{resource.cleanup();}catch(error){cleanupFailures.push({error,resource:resource.resource});}if(cleanupFailures.length===1&&failure===undefined)throwcleanupFailures[0]!.error;if(cleanupFailures.length!==0)thrownewProductionProjectFixtureCleanupError([...(failure===undefined?[]:[failure.error]),...cleanupFailures.map((entry)=>entry.error),],`Production-projectfixturecleanupfailed${failure===undefined?"":"afterthetestfailed"}:${cleanupFailures.map((entry)=>entry.resource).join(",")}.`,);}',
+          '{constcleanupFailures:Array<{error:unknown;resource:string}>=[];for(constresourceofresources)try{resource.cleanup();}catch(error){cleanupFailures.push({error,resource:resource.resource});}if(cleanupFailures.length===1&&failure===undefined)throwcleanupFailures[0]!.error;if(cleanupFailures.length!==0)thrownewProductionProjectFixtureCleanupError([...(failure===undefined?[]:[failure.error]),...cleanupFailures.map((entry)=>entry.error),],`Production-projectfixturecleanupfailed\${failure===undefined?"":"afterthetestfailed"}:\${cleanupFailures.map((entry)=>entry.resource).join(",")}.`,);}',
         ],
         bodyDigests: [
           "374defeb06abf28a108b9729632296f834c0134aaad58c1582d7b43a20a9010a",

@@ -111,9 +111,9 @@ const productionEffectFixtureContract = (text: string): unknown => {
   );
   return {
     owner: { count: owners.length, lifecycles },
-    parseDiagnostics: source.parseDiagnostics.map((diagnostic) =>
-      String(diagnostic.messageText),
-    ),
+    parseDiagnostics: (
+      source as ts.SourceFile & { parseDiagnostics: readonly ts.Diagnostic[] }
+    ).parseDiagnostics.map((diagnostic) => String(diagnostic.messageText)),
     policy: {
       bodies: policies.map((entry) => compact(entry.arrow.body, source)),
       classes: source.statements.flatMap((statement) =>

@@ -140,7 +140,7 @@ export const throwLegacyFixtureConstructionFailure = (
       "Legacy fixture construction and partial-root cleanup failed.",
     );
   }
-  throw failure;
+  throw failure as Error;
 };
 
 const createLegacy = (): {

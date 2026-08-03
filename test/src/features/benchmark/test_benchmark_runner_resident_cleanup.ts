@@ -113,9 +113,9 @@ const benchmarkResidentCleanupContract = (text: string): unknown => {
   );
   return {
     lifecycles,
-    parseDiagnostics: source.parseDiagnostics.map((diagnostic) =>
-      String(diagnostic.messageText),
-    ),
+    parseDiagnostics: (
+      source as ts.SourceFile & { parseDiagnostics: readonly ts.Diagnostic[] }
+    ).parseDiagnostics.map((diagnostic) => String(diagnostic.messageText)),
     policy: {
       bodies: policies.map((entry) => compact(entry.arrow.body, source)),
       classes: source.statements.flatMap((statement) =>
@@ -191,7 +191,7 @@ const captureMarker = (props: {
         cleanup: () => {
           order.push("transient");
           if (props.transientFailure !== undefined)
-            throw props.transientFailure;
+            throw props.transientFailure as Error;
         },
       },
       {
@@ -199,7 +199,7 @@ const captureMarker = (props: {
         cleanup: () => {
           order.push("resident");
           if (props.restorationFailure !== undefined)
-            throw props.restorationFailure;
+            throw props.restorationFailure as Error;
           parked = false;
         },
       },
@@ -412,7 +412,7 @@ export const test_benchmark_runner_resident_cleanup = (): void => {
       parseDiagnostics: [],
       policy: {
         bodies: [
-          '{constcleanupFailures:Array<{error:unknown;resource:string}>=[];for(constresourceofresources)try{resource.cleanup();}catch(error){cleanupFailures.push({error,resource:resource.resource});}if(cleanupFailures.length===1&&failure===undefined)throwcleanupFailures[0]!.error;if(cleanupFailures.length!==0)thrownewBenchmarkRunnerResidentCleanupError([...(failure===undefined?[]:[failure.error]),...cleanupFailures.map((entry)=>entry.error),],`Benchmarkrunnerresidentcleanupfailed${failure===undefined?"":"aftertheguardedoperationfailed"}:${cleanupFailures.map((entry)=>entry.resource).join(",")}.`,);}',
+          '{constcleanupFailures:Array<{error:unknown;resource:string}>=[];for(constresourceofresources)try{resource.cleanup();}catch(error){cleanupFailures.push({error,resource:resource.resource});}if(cleanupFailures.length===1&&failure===undefined)throwcleanupFailures[0]!.error;if(cleanupFailures.length!==0)thrownewBenchmarkRunnerResidentCleanupError([...(failure===undefined?[]:[failure.error]),...cleanupFailures.map((entry)=>entry.error),],`Benchmarkrunnerresidentcleanupfailed\${failure===undefined?"":"aftertheguardedoperationfailed"}:\${cleanupFailures.map((entry)=>entry.resource).join(",")}.`,);}',
         ],
         classes: ["AggregateError"],
         count: 1,

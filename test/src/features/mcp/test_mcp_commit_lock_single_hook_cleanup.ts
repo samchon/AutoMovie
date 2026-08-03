@@ -91,10 +91,12 @@ const commitLockSingleHookCleanupContract = (text: string): unknown => {
           ts.isCallExpression(statement.expression) &&
           statement.expression.arguments.length === 2 &&
           ts.isArrayLiteralExpression(statement.expression.arguments[1]!) &&
-          statement.expression.arguments[1]!.elements.length === 1
+          (statement.expression.arguments[1] as ts.ArrayLiteralExpression)
+            .elements.length === 1
         ) {
           const call = statement.expression;
-          const resource = call.arguments[1]!.elements[0]!;
+          const resource = (call.arguments[1] as ts.ArrayLiteralExpression)
+            .elements[0]!;
           if (ts.isObjectLiteralExpression(resource)) {
             const label = resource.properties.find(
               (property): property is ts.PropertyAssignment =>
@@ -173,9 +175,9 @@ const commitLockSingleHookCleanupContract = (text: string): unknown => {
     parent = `${parent.slice(0, replacement.start)}${replacement.text}${parent.slice(replacement.end)}`;
   return {
     parentDigest: digestText(parent.replace(/\s+/g, "")),
-    parseDiagnostics: source.parseDiagnostics.map((diagnostic) =>
-      String(diagnostic.messageText),
-    ),
+    parseDiagnostics: (
+      source as ts.SourceFile & { parseDiagnostics: readonly ts.Diagnostic[] }
+    ).parseDiagnostics.map((diagnostic) => String(diagnostic.messageText)),
     rootDigest: digestText(text.replace(/\s+/g, "")),
     rows,
   };

@@ -266,7 +266,7 @@ export const test_mcp_project_transaction_fixture_cleanup = (): void => {
       },
       policy: {
         bodies: [
-          "{try{cleanup();}catch(cleanupFailure){if(failure===undefined)throwcleanupFailure;thrownewProjectTransactionFixtureCleanupError([failure.error,cleanupFailure],`Project-transaction${resource}cleanupfailedafterthetestfailed.`,);}}",
+          "{try{cleanup();}catch(cleanupFailure){if(failure===undefined)throwcleanupFailure;thrownewProjectTransactionFixtureCleanupError([failure.error,cleanupFailure],`Project-transaction\${resource}cleanupfailedafterthetestfailed.`,);}}",
         ],
         classes: ["AggregateError"],
         parameters: [

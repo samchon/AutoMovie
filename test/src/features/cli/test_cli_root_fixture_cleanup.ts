@@ -127,11 +127,12 @@ const captureCleanup = (props: {
         : { error: props.primaryFailure },
       (): void => {
         ++attempts;
-        if (props.cleanupFailure !== undefined) throw props.cleanupFailure;
+        if (props.cleanupFailure !== undefined)
+          throw props.cleanupFailure as Error;
       },
       "fixture root",
     );
-    if (props.primaryFailure !== undefined) throw props.primaryFailure;
+    if (props.primaryFailure !== undefined) throw props.primaryFailure as Error;
   } catch (error) {
     failure = error;
   }
@@ -166,7 +167,7 @@ export const test_cli_root_fixture_cleanup = (): void => {
     ),
     {
       bodies: [
-        "{try{cleanup();}catch(cleanupFailure){if(failure===undefined)throwcleanupFailure;thrownewCliRootFixtureCleanupError([failure.error,cleanupFailure],`CLI${resource}cleanupfailedafterthetestfailed.`,);}}",
+        "{try{cleanup();}catch(cleanupFailure){if(failure===undefined)throwcleanupFailure;thrownewCliRootFixtureCleanupError([failure.error,cleanupFailure],`CLI\${resource}cleanupfailedafterthetestfailed.`,);}}",
       ],
       classes: ["AggregateError"],
       parameters: [

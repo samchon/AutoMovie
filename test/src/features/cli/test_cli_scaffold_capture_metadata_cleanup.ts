@@ -91,9 +91,9 @@ const captureMetadataCleanupContract = (text: string): unknown => {
   visit(source);
   return {
     lifecycles,
-    parseDiagnostics: source.parseDiagnostics.map((diagnostic) =>
-      String(diagnostic.messageText),
-    ),
+    parseDiagnostics: (
+      source as ts.SourceFile & { parseDiagnostics: readonly ts.Diagnostic[] }
+    ).parseDiagnostics.map((diagnostic) => String(diagnostic.messageText)),
   };
 };
 

@@ -127,14 +127,16 @@ const captureCleanup = (props: {
   try {
     let primary: { error: unknown } | undefined;
     try {
-      if (props.primaryFailure !== undefined) throw props.primaryFailure;
+      if (props.primaryFailure !== undefined)
+        throw props.primaryFailure as Error;
     } catch (error) {
       primary = { error };
       throw error;
     } finally {
       preserveProductionMediaEncoderCleanup(primary, () => {
         ++attempts;
-        if (props.cleanupFailure !== undefined) throw props.cleanupFailure;
+        if (props.cleanupFailure !== undefined)
+          throw props.cleanupFailure as Error;
       });
     }
   } catch (error) {

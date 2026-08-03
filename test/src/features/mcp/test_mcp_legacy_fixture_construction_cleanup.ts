@@ -80,7 +80,7 @@ const captureConstructionFailure = (
   try {
     throwLegacyFixtureConstructionFailure(primaryFailure, () => {
       ++attempts;
-      if (cleanupFailure !== undefined) throw cleanupFailure;
+      if (cleanupFailure !== undefined) throw cleanupFailure as Error;
     });
   } catch (error) {
     failure = error;

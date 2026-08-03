@@ -180,7 +180,7 @@ const captureConstructionFailure = (
   try {
     throwProductionFixtureConstructionFailure(primaryFailure, () => {
       ++attempts;
-      if (cleanupFailure !== undefined) throw cleanupFailure;
+      if (cleanupFailure !== undefined) throw cleanupFailure as Error;
     });
   } catch (error) {
     failure = error;

@@ -129,10 +129,11 @@ const captureCleanup = (props: {
         : { error: props.primaryFailure },
       () => {
         ++attempts;
-        if (props.cleanupFailure !== undefined) throw props.cleanupFailure;
+        if (props.cleanupFailure !== undefined)
+          throw props.cleanupFailure as Error;
       },
     );
-    if (props.primaryFailure !== undefined) throw props.primaryFailure;
+    if (props.primaryFailure !== undefined) throw props.primaryFailure as Error;
   } catch (error) {
     failure = error;
   }

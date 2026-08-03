@@ -440,7 +440,7 @@ export const test_mcp_project_store_fixture_cleanup = (): void => {
       },
       policy: {
         bodies: [
-          "{try{cleanup();}catch(cleanupFailure){if(failure===undefined)throwcleanupFailure;thrownewProjectStoreFixtureCleanupError([failure.error,cleanupFailure],`Project-store${resource}fixturecleanupfailedafterthetestfailed.`,);}}",
+          "{try{cleanup();}catch(cleanupFailure){if(failure===undefined)throwcleanupFailure;thrownewProjectStoreFixtureCleanupError([failure.error,cleanupFailure],`Project-store\${resource}fixturecleanupfailedafterthetestfailed.`,);}}",
         ],
         classes: ["AggregateError"],
         parameters: [

@@ -1269,16 +1269,17 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
           current: async () => null,
           acquire: async () => true,
           render: async () => {
-            if (props.attempt !== undefined) throw props.attempt;
+            if (props.attempt !== undefined) throw props.attempt as Error;
             return receipt(lifecyclePlan, 0);
           },
           fail: async () => {
             ++failureRecordAttempts;
-            if (props.failureRecord !== undefined) throw props.failureRecord;
+            if (props.failureRecord !== undefined)
+              throw props.failureRecord as Error;
           },
           release: async () => {
             ++releaseAttempts;
-            if (props.release !== undefined) throw props.release;
+            if (props.release !== undefined) throw props.release as Error;
           },
         },
       });
