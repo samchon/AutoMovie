@@ -88,20 +88,44 @@ const aggregateContainsExactly = (
   error.errors.length === expected.length &&
   expected.every((failure, index) => error.errors[index] === failure);
 
+class LegacyFixtureConstructionCleanupError extends AggregateError {}
+
+/** Remove a partial legacy fixture without replacing its setup failure. */
+export const throwLegacyFixtureConstructionFailure = (
+  failure: unknown,
+  cleanup: () => unknown,
+): never => {
+  try {
+    cleanup();
+  } catch (cleanupFailure) {
+    throw new LegacyFixtureConstructionCleanupError(
+      [failure, cleanupFailure],
+      "Legacy fixture construction and partial-root cleanup failed.",
+    );
+  }
+  throw failure;
+};
+
 const createLegacy = (): {
   root: string;
   dispose: () => void;
 } => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-import-test-"));
-  const project = AutoMovieProject.open(root);
-  project.saveSlate(slate);
-  project.registerAsset("assets/reference.bin", Buffer.from("legacy-asset"));
-  fs.mkdirSync(path.join(root, "actors/archive"), { recursive: true });
-  fs.writeFileSync(path.join(root, "actors/archive/README.txt"), "legacy");
-  return {
-    root,
-    dispose: () => fs.rmSync(root, { force: true, recursive: true }),
-  };
+  try {
+    const project = AutoMovieProject.open(root);
+    project.saveSlate(slate);
+    project.registerAsset("assets/reference.bin", Buffer.from("legacy-asset"));
+    fs.mkdirSync(path.join(root, "actors/archive"), { recursive: true });
+    fs.writeFileSync(path.join(root, "actors/archive/README.txt"), "legacy");
+    return {
+      root,
+      dispose: () => fs.rmSync(root, { force: true, recursive: true }),
+    };
+  } catch (error) {
+    throwLegacyFixtureConstructionFailure(error, () =>
+      fs.rmSync(root, { force: true, recursive: true }),
+    );
+  }
 };
 
 const legacyFiles = (root: string): Map<string, Uint8Array> => {
