@@ -10971,11 +10971,27 @@ export const test_cli_scaffold = async (): Promise<void> => {
     let mutatedChunkGcInventory: ReturnType<
       typeof inventoryChunkGarbage
     > | null = null;
+    let chunkGcInventoryCleanupFailure: { error: unknown } | undefined;
     try {
       mutatedChunkGcInventory = inventoryChunkGarbage();
+    } catch (error) {
+      chunkGcInventoryCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.readdirSync = nativeReaddir;
-      fs.writeFileSync(chunkGcCurrentPayload, chunkVideoBytes);
+      preserveCliHarnessCleanup(chunkGcInventoryCleanupFailure, [
+        {
+          resource: "chunk GC inventory readdir hook",
+          cleanup: () => {
+            mutableFs.readdirSync = nativeReaddir;
+          },
+        },
+        {
+          resource: "chunk GC current payload",
+          cleanup: () => {
+            fs.writeFileSync(chunkGcCurrentPayload, chunkVideoBytes);
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "chunk GC refuses same-inode tree content changed after pointer authentication",
