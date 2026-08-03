@@ -14,8 +14,32 @@ import {
   worldDesign,
 } from "./productionFixtures";
 
+interface IProductionReviewDesignFixtureFailure {
+  error: unknown;
+}
+
+class ProductionReviewDesignFixtureCleanupError extends AggregateError {}
+
+export const preserveProductionReviewDesignFixtureCleanup = (
+  failure: IProductionReviewDesignFixtureFailure | undefined,
+  cleanup: () => void,
+): void => {
+  try {
+    cleanup();
+  } catch (cleanupFailure) {
+    if (failure === undefined) throw cleanupFailure;
+    throw new ProductionReviewDesignFixtureCleanupError(
+      [failure.error, cleanupFailure],
+      "Production review-design fixture teardown failed after the test failed.",
+    );
+  }
+};
+
 /** Design dependencies and quotable selectors stay explicit and bounded. */
 export const test_mcp_production_review_design_edges = (): void => {
+  let productionReviewDesignFailure:
+    | IProductionReviewDesignFixtureFailure
+    | undefined;
   const fixture = productionFixture();
   try {
     const project = AutoMovieProductionProject.open(fixture.root);
@@ -407,7 +431,13 @@ export const test_mcp_production_review_design_edges = (): void => {
             item.path?.endsWith("production.json"),
         ),
     );
+  } catch (error) {
+    productionReviewDesignFailure = { error };
+    throw error;
   } finally {
-    fixture.dispose();
+    preserveProductionReviewDesignFixtureCleanup(
+      productionReviewDesignFailure,
+      () => fixture.dispose(),
+    );
   }
 };
