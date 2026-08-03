@@ -418,12 +418,12 @@ export const test_mcp_production_namespace_fixture_cleanup = (): void => {
             kind: "replacement-alias",
             substantive: {
               digest:
-                "3155f6c0130a15a750d5bab122796fff8bbc1385ea4342f8991b87ca99a10331",
-              tokens: 160,
+                "80e98a96d781eafbe242f4dd2967888ddde474002525e95ab9d55c4adb87ac8f",
+              tokens: 217,
             },
             tryDigest:
-              "6d6c463f254a3e74ae1062e1378bd370740513776adcb6ed5bc64ef12d972d0e",
-            tryStatements: 7,
+              "133d2c2dd3c06a5ef042765a43fe59c67f8d50ec533fc713ed509d7be898f3b7",
+            tryStatements: 8,
           },
         ],
         parameters: [[]],

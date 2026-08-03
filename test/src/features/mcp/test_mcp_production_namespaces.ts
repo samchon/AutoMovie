@@ -47,6 +47,39 @@ export const preserveProductionNamespaceFixtureCleanup = (
   }
 };
 
+interface IProductionNamespaceReplacementCleanup {
+  cleanup: () => unknown;
+  resource: string;
+}
+
+class ProductionNamespaceReplacementCleanupError extends AggregateError {}
+
+/** Attempt every replacement-alias recovery without hiding failure. */
+export const preserveProductionNamespaceReplacementCleanup = (
+  failure: IProductionNamespaceFixtureFailure | undefined,
+  resources: readonly IProductionNamespaceReplacementCleanup[],
+): void => {
+  const cleanupFailures: Array<{ error: unknown; resource: string }> = [];
+  for (const resource of resources)
+    try {
+      resource.cleanup();
+    } catch (error) {
+      cleanupFailures.push({ error, resource: resource.resource });
+    }
+  if (cleanupFailures.length === 1 && failure === undefined)
+    throw cleanupFailures[0]!.error;
+  if (cleanupFailures.length !== 0)
+    throw new ProductionNamespaceReplacementCleanupError(
+      [
+        ...(failure === undefined ? [] : [failure.error]),
+        ...cleanupFailures.map((entry) => entry.error),
+      ],
+      `Production-namespace replacement cleanup failed${
+        failure === undefined ? "" : " after the test failed"
+      }: ${cleanupFailures.map((entry) => entry.resource).join(", ")}.`,
+    );
+};
+
 interface INamespaceAuditFixtureFailure {
   error: unknown;
 }
@@ -552,6 +585,7 @@ export const test_mcp_production_namespaces = (): void => {
     );
     const parkedBetaDesignRoot = `${betaDesignRoot}.parked`;
     fs.renameSync(betaDesignRoot, parkedBetaDesignRoot);
+    let replacementAliasFailure: IProductionNamespaceFixtureFailure | undefined;
     try {
       fs.symlinkSync(
         alphaDesignRoot,
@@ -565,9 +599,22 @@ export const test_mcp_production_namespaces = (): void => {
           "changed physical identity",
         ) && alpha.summary().productionId === "fixture-film",
       );
+    } catch (error) {
+      replacementAliasFailure = { error };
+      throw error;
     } finally {
-      if (lstatLink(betaDesignRoot)) fs.unlinkSync(betaDesignRoot);
-      fs.renameSync(parkedBetaDesignRoot, betaDesignRoot);
+      preserveProductionNamespaceReplacementCleanup(replacementAliasFailure, [
+        {
+          resource: "replacement alias transient link",
+          cleanup: () => {
+            if (lstatLink(betaDesignRoot)) fs.unlinkSync(betaDesignRoot);
+          },
+        },
+        {
+          resource: "replacement alias resident design root",
+          cleanup: () => fs.renameSync(parkedBetaDesignRoot, betaDesignRoot),
+        },
+      ]);
     }
   } catch (error) {
     replacementFixtureFailure = { error };
