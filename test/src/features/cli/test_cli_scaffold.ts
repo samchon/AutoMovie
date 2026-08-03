@@ -6998,15 +6998,32 @@ export const test_cli_scaffold = async (): Promise<void> => {
         },
       ]);
     }
-    TestValidator.predicate(
+    TestValidator.equals(
       "capture launch retains identity failure before rejected cleanup",
-      failedLaunchCleanupError instanceof AggregateError &&
-        failedLaunchCleanupError.errors.length === 2 &&
-        failedLaunchCleanupError.errors[0] instanceof Error &&
-        failedLaunchCleanupError.errors[0].message.includes(
-          "changed physical identity",
-        ) &&
-        failedLaunchCleanupError.errors[1] === launchCleanupFailure,
+      failedLaunchCleanupError instanceof AggregateError
+        ? {
+            errors: failedLaunchCleanupError.errors.map((error) =>
+              error === launchCleanupFailure
+                ? "launch-cleanup-failure"
+                : error instanceof Error
+                  ? error.message.includes("changed physical identity")
+                    ? "changed physical identity"
+                    : error.message
+                  : String(error),
+            ),
+            kind: "aggregate",
+          }
+        : {
+            errors:
+              failedLaunchCleanupError instanceof Error
+                ? [failedLaunchCleanupError.message]
+                : [String(failedLaunchCleanupError)],
+            kind: failedLaunchCleanupError instanceof Error ? "error" : "other",
+          },
+      {
+        errors: ["changed physical identity", "launch-cleanup-failure"],
+        kind: "aggregate",
+      },
     );
     const captureProject = path.join(base, "capture-project");
     const captureReceipt = path.join(
