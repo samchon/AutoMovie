@@ -23,7 +23,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import packagedE2eCleanup from "./preservePackagedE2eCleanup.cjs";
@@ -92,6 +92,54 @@ const capturePackagedRenderPlanGeneration = (renderStateRoot) => {
       `packaged final render published ${heads.length} current plan generations`,
     );
   return heads[0];
+};
+
+const capturePackagedRenderChunkPublication = (starterDir, tier, chunk) => {
+  if (/^sha256:[0-9a-f]{64}$/u.test(chunk.id) === false)
+    fail("packaged final render published an invalid chunk identity");
+  const suffix = `.${tier}.${chunk.id.slice(7)}.publication.json`;
+  const pointers = readdirSync(starterDir, { withFileTypes: true }).filter(
+    (entry) =>
+      entry.isFile() &&
+      entry.name.startsWith(".automovie-chunk-") &&
+      entry.name.endsWith(suffix),
+  );
+  if (pointers.length !== 1)
+    fail(
+      `packaged final render published ${pointers.length} current pointers for chunk ${chunk.id}`,
+    );
+  const path = join(starterDir, pointers[0].name);
+  const text = readFileSync(path, "utf8");
+  const receipt = JSON.parse(text);
+  if (
+    receipt.chunk !== chunk.id ||
+    typeof receipt.publication !== "object" ||
+    receipt.publication === null ||
+    receipt.publication.version !== 1 ||
+    receipt.publication.tier !== tier ||
+    typeof receipt.publication.scope !== "string" ||
+    /^[0-9a-f]{64}$/u.test(receipt.publication.scope) === false ||
+    typeof receipt.publication.tree !== "string" ||
+    typeof receipt.publication.treeIdentity !== "string"
+  )
+    fail("packaged final render published an invalid chunk pointer");
+  const segments = receipt.publication.tree.split("/");
+  if (
+    segments.some(
+      (segment) => segment === "" || segment === "." || segment === "..",
+    )
+  )
+    fail("packaged final render published a non-relative chunk tree");
+  const directory = resolve(starterDir, ...segments);
+  const owned = relative(starterDir, directory);
+  if (
+    owned === "" ||
+    owned === ".." ||
+    owned.startsWith(`..${sep}`) ||
+    isAbsolute(owned)
+  )
+    fail("packaged final render published an outside-root chunk tree");
+  return { directory, path, receipt, text };
 };
 
 const writeCommandOutput = (result) => {
@@ -1710,25 +1758,21 @@ PNG.sync.read = function (input) {
   const retainedChunk = renderPlan.chunks[1];
   if (damagedChunk === undefined || retainedChunk === undefined)
     fail("packaged render did not produce multiple resumable chunks");
-  const damagedDirectory = join(
-    renderStateRoot,
-    "chunks",
-    damagedChunk.id.slice(7),
+  const damagedPublication = capturePackagedRenderChunkPublication(
+    starterDir,
+    "final",
+    damagedChunk,
   );
-  const damagedReceipt = JSON.parse(
-    readFileSync(join(damagedDirectory, "receipt.json"), "utf8"),
-  );
+  const damagedReceipt = damagedPublication.receipt;
   writeFileSync(
-    join(damagedDirectory, damagedReceipt.frames[0].path),
+    join(damagedPublication.directory, damagedReceipt.frames[0].path),
     Buffer.alloc(0),
   );
-  const retainedMarker = join(
-    renderStateRoot,
-    "chunks",
-    retainedChunk.id.slice(7),
-    "reuse-proof.marker",
+  const retainedPublication = capturePackagedRenderChunkPublication(
+    starterDir,
+    "final",
+    retainedChunk,
   );
-  writeFileSync(retainedMarker, "must survive fresh-process reuse\n");
   const abandonedPid = 2_147_483_647;
   const abandonedTemporary = join(
     renderStateRoot,
@@ -1777,8 +1821,16 @@ PNG.sync.read = function (input) {
     starterDir,
   );
   const quarantine = readdirSync(join(renderStateRoot, "quarantine"));
+  const retainedCurrent = capturePackagedRenderChunkPublication(
+    starterDir,
+    "final",
+    retainedChunk,
+  );
   if (
-    existsSync(retainedMarker) === false ||
+    retainedCurrent.path !== retainedPublication.path ||
+    retainedCurrent.directory !== retainedPublication.directory ||
+    retainedCurrent.text !== retainedPublication.text ||
+    existsSync(retainedCurrent.directory) === false ||
     existsSync(join(renderStateRoot, "attempts", `${slotSegment}.json`)) ||
     quarantine.some((entry) => entry.includes("abandoned-partial")) === false ||
     quarantine.some((entry) => entry.includes("abandoned-lock-candidate")) ===
