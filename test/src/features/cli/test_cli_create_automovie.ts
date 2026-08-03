@@ -4,6 +4,43 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+interface ICreateAutoMovieFixtureFailure {
+  error: unknown;
+}
+
+interface ICreateAutoMovieFixtureCleanup {
+  cleanup: () => unknown;
+  resource: string;
+}
+
+class CreateAutoMovieFixtureCleanupError extends AggregateError {}
+
+/** Attempt every acquired fixture cleanup without replacing earlier failure. */
+export const preserveCreateAutoMovieFixtureCleanup = (
+  failure: ICreateAutoMovieFixtureFailure | undefined,
+  resources: readonly ICreateAutoMovieFixtureCleanup[],
+): void => {
+  const cleanupFailures: Array<{ error: unknown; resource: string }> = [];
+  for (const resource of resources)
+    try {
+      resource.cleanup();
+    } catch (error) {
+      cleanupFailures.push({ error, resource: resource.resource });
+    }
+  if (cleanupFailures.length === 1 && failure === undefined)
+    throw cleanupFailures[0]!.error;
+  if (cleanupFailures.length !== 0)
+    throw new CreateAutoMovieFixtureCleanupError(
+      [
+        ...(failure === undefined ? [] : [failure.error]),
+        ...cleanupFailures.map((entry) => entry.error),
+      ],
+      `Create-automovie fixture cleanup failed${
+        failure === undefined ? "" : " after the test failed"
+      }: ${cleanupFailures.map((entry) => entry.resource).join(", ")}.`,
+    );
+};
+
 /**
  * The package-manager-native creator delegates to the canonical scaffold.
  *
@@ -12,16 +49,19 @@ import path from "node:path";
  * surfaces; it must not install dependencies or fetch a browser implicitly.
  */
 export const test_cli_create_automovie = (): void => {
-  const base = fs.mkdtempSync(path.join(os.tmpdir(), "create-automovie-"));
-  const target = path.join(base, "my-film");
   const nativeStdout = process.stdout.write;
-  let stdout = "";
+  const base = fs.mkdtempSync(path.join(os.tmpdir(), "create-automovie-"));
+  let stdoutCaptureInstalled = false;
+  let createFailure: ICreateAutoMovieFixtureFailure | undefined;
   try {
+    const target = path.join(base, "my-film");
+    let stdout = "";
     process.stdout.write = ((chunk: string | Uint8Array): boolean => {
       stdout +=
         typeof chunk === "string" ? chunk : Buffer.from(chunk).toString("utf8");
       return true;
     }) as typeof process.stdout.write;
+    stdoutCaptureInstalled = true;
     const status = runCreateAutoMovie([
       process.execPath,
       "create-automovie",
@@ -56,8 +96,26 @@ export const test_cli_create_automovie = (): void => {
         fs.existsSync(path.join(target, "node_modules")) === false &&
         fs.existsSync(path.join(target, ".automovie", "capture")) === false,
     );
+  } catch (error) {
+    createFailure = { error };
+    throw error;
   } finally {
-    process.stdout.write = nativeStdout;
-    fs.rmSync(base, { force: true, recursive: true });
+    const completedStdoutCapture = stdoutCaptureInstalled;
+    preserveCreateAutoMovieFixtureCleanup(createFailure, [
+      ...(completedStdoutCapture
+        ? [
+            {
+              resource: "standard output",
+              cleanup: (): void => {
+                process.stdout.write = nativeStdout;
+              },
+            },
+          ]
+        : []),
+      {
+        resource: "temporary project root",
+        cleanup: () => fs.rmSync(base, { force: true, recursive: true }),
+      },
+    ]);
   }
 };
