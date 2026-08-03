@@ -118,7 +118,7 @@ export const test_cli_scaffold_dialogue_cache_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1946,
+          containerStatements: 1950,
           finallyDigest:
             "82bf93a82d33ec9ccaca05ef1eca7b6d82d09a43898eea6c1487d3b2fc347bc7",
           finallySubstantive: {
@@ -143,7 +143,7 @@ export const test_cli_scaffold_dialogue_cache_cleanup = (): void => {
           catchBodies: ["pcmSuccessorCleanupFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1946,
+          containerStatements: 1950,
           finallyDigest:
             "6ee43ae006515e8527df651f5618a54280b360654bc91c996e70bc159e4c6764",
           finallySubstantive: {
@@ -170,7 +170,7 @@ export const test_cli_scaffold_dialogue_cache_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1946,
+          containerStatements: 1950,
           finallyDigest:
             "015266ad94bd00d0338147a13ee22386a127037b73f44a7d0b1f66d12f742fa5",
           finallySubstantive: {
@@ -195,7 +195,7 @@ export const test_cli_scaffold_dialogue_cache_cleanup = (): void => {
           catchBodies: ["abaDialogueCleanupFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1946,
+          containerStatements: 1950,
           finallyDigest:
             "967b7d5e8cbca269410064ba269d1de0d41d68ce87a5a68dcd6c768ba2b204d5",
           finallySubstantive: {
@@ -222,7 +222,7 @@ export const test_cli_scaffold_dialogue_cache_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1946,
+          containerStatements: 1950,
           finallyDigest:
             "f508077e4f310325dd66c62d2f159326ccb30722f7016fcbf9d725c7e186794d",
           finallySubstantive: {

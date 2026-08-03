@@ -9332,6 +9332,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       ]) as number;
     }) as typeof fs.openSync;
     let exactPlanAccepted: RenderPlanFixtureSnapshot | undefined;
+    let exactPlanCleanupFailure: { error: unknown } | undefined;
     try {
       exactPlanAccepted = await renderPlanModule.publishRenderPlan({
         base: exactPlanRoot,
@@ -9340,8 +9341,18 @@ export const test_cli_scaffold = async (): Promise<void> => {
         predecessor: null,
         target: exactPlanTarget,
       });
+    } catch (error) {
+      exactPlanCleanupFailure = { error };
+      throw error;
     } finally {
-      mutableFs.openSync = nativeOpen;
+      preserveCliHarnessCleanup(exactPlanCleanupFailure, [
+        {
+          resource: "render plan exact competitor open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "render plan accepts an exact no-overwrite commit competitor",
@@ -9387,6 +9398,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       ]) as number;
     }) as typeof fs.openSync;
     let foreignPlanRejected = false;
+    let foreignPlanCleanupFailure: { error: unknown } | undefined;
     try {
       await renderPlanModule.publishRenderPlan({
         base: foreignPlanRoot,
@@ -9395,10 +9407,18 @@ export const test_cli_scaffold = async (): Promise<void> => {
         predecessor: null,
         target: foreignPlanTarget,
       });
-    } catch {
+    } catch (error) {
       foreignPlanRejected = true;
+      foreignPlanCleanupFailure = { error };
     } finally {
-      mutableFs.openSync = nativeOpen;
+      preserveCliHarnessCleanup(foreignPlanCleanupFailure, [
+        {
+          resource: "render plan foreign competitor open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "render plan preserves a foreign destination generation competitor",
@@ -9438,6 +9458,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       return descriptor;
     }) as typeof fs.openSync;
     let planRootSwapRejected = false;
+    let planRootSwapCleanupFailure: { error: unknown } | undefined;
     try {
       await renderPlanModule.publishRenderPlan({
         base: rootSwapPlanRoot,
@@ -9446,10 +9467,18 @@ export const test_cli_scaffold = async (): Promise<void> => {
         predecessor: null,
         target: rootSwapPlanTarget,
       });
-    } catch {
+    } catch (error) {
       planRootSwapRejected = true;
+      planRootSwapCleanupFailure = { error };
     } finally {
-      mutableFs.openSync = nativeOpen;
+      preserveCliHarnessCleanup(planRootSwapCleanupFailure, [
+        {
+          resource: "render plan root swap open hook",
+          cleanup: () => {
+            mutableFs.openSync = nativeOpen;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "render plan preserves a render-root and parent successor",
@@ -9610,15 +9639,24 @@ export const test_cli_scaffold = async (): Promise<void> => {
       return status;
     }) as typeof fs.lstatSync;
     let traversalDirectoryRejected = false;
+    let traversalDirectoryCleanupFailure: { error: unknown } | undefined;
     try {
       renderPlanModule.captureRenderPlan(
         traversalPlanRoot,
         traversalPlanTarget,
       );
-    } catch {
+    } catch (error) {
       traversalDirectoryRejected = true;
+      traversalDirectoryCleanupFailure = { error };
     } finally {
-      mutableFs.lstatSync = nativeLstat;
+      preserveCliHarnessCleanup(traversalDirectoryCleanupFailure, [
+        {
+          resource: "render plan traversal lstat hook",
+          cleanup: () => {
+            mutableFs.lstatSync = nativeLstat;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "render plan traversal rejects a generation-directory successor",

@@ -112,7 +112,7 @@ export const test_cli_scaffold_render_liveness_cleanup = (): void => {
           catchBodies: ["partialLeaseCleanupFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1946,
+          containerStatements: 1950,
           finallyDigest:
             "b7bc7cab73fc086fbda73971b38e2c57bcc0c460bfda572c175b97f4a11565fe",
           finallySubstantive: {
@@ -120,7 +120,7 @@ export const test_cli_scaffold_render_liveness_cleanup = (): void => {
               "b7476a2529d3f59dcddc7041fdd223898d57ddb9b12f9b71f0c5ba31d356ec32",
             tokens: 50,
           },
-          index: 1068,
+          index: 1072,
           preceding: "letpartialLeaseCleanupFailure:{error:unknown}|undefined;",
           substantive: {
             digest:
@@ -139,7 +139,7 @@ export const test_cli_scaffold_render_liveness_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1946,
+          containerStatements: 1950,
           finallyDigest:
             "cc05c8f86dfafe28e5dc1f3c58ccfc234ffdc8841a47b2d53fdfb5155e97c5dd",
           finallySubstantive: {
@@ -147,7 +147,7 @@ export const test_cli_scaffold_render_liveness_cleanup = (): void => {
               "a0f07e55820efa7a6704d2dc546cb4deb4864e78672b039d4bcb5d54c186e4dc",
             tokens: 57,
           },
-          index: 1078,
+          index: 1082,
           preceding:
             "letinterleavedWorkerCleanupFailure:{error:unknown}|undefined;",
           substantive: {

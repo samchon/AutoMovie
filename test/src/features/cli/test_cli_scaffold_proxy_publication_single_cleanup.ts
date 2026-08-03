@@ -115,7 +115,7 @@ export const test_cli_scaffold_proxy_publication_single_cleanup = (): void => {
           catchBodies: ["emptySuccessorCleanupFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1946,
+          containerStatements: 1950,
           finallyDigest:
             "fc97051e3b37056de4addcdb8df9b4d939eaa392c4b76bb1b028162ce9deabeb",
           finallySubstantive: {
@@ -140,7 +140,7 @@ export const test_cli_scaffold_proxy_publication_single_cleanup = (): void => {
           catchBodies: ["exactSuccessorCleanupFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1946,
+          containerStatements: 1950,
           finallyDigest:
             "6c9fc37a863b442f1f2bcaaa9787d1cbb842fab73519efe210c6dbdb8b03afb7",
           finallySubstantive: {
@@ -168,7 +168,7 @@ export const test_cli_scaffold_proxy_publication_single_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1946,
+          containerStatements: 1950,
           finallyDigest:
             "067a617e605d0a76545f310bdb5f6142fa2706438bbbbe5d93d785da9191778b",
           finallySubstantive: {
@@ -193,7 +193,7 @@ export const test_cli_scaffold_proxy_publication_single_cleanup = (): void => {
           catchBodies: ["proxyRootSwapCleanupFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1946,
+          containerStatements: 1950,
           finallyDigest:
             "1885008df301204a283cf4690885af4c8efb553753f101d40313cd408060978d",
           finallySubstantive: {
@@ -221,7 +221,7 @@ export const test_cli_scaffold_proxy_publication_single_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1946,
+          containerStatements: 1950,
           finallyDigest:
             "f31b2a0be5053ffecd6b4f4c08ba003d903350d5515fac41b3a5048a34f91c57",
           finallySubstantive: {
