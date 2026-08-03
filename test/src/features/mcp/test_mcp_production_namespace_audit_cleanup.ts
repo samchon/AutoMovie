@@ -235,14 +235,14 @@ export const test_mcp_production_namespace_audit_cleanup = (): void => {
         count: 1,
         lifecycles: [
           {
-            bodyStatements: 18,
+            bodyStatements: 25,
             catchBodies: ["auditFailure={error};", "throwerror;"],
             catchVariables: ["error"],
             finallyBodies: [
               "constcompletedExternalAudit=externalAudit;",
               'preserveNamespaceAuditFixtureCleanup(auditFailure,[{resource:"auditproductionfixture",cleanup:()=>auditFixture.dispose(),},...(completedExternalAudit===undefined?[]:[{resource:"externalauditroot",cleanup:()=>fs.rmSync(completedExternalAudit,{force:true,recursive:true,}),},]),]);',
             ],
-            index: 17,
+            index: 24,
             prefixes: [
               "constauditFixture=productionFixture();",
               "letexternalAudit:string|undefined;",

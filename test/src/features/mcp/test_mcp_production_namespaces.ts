@@ -26,6 +26,27 @@ const throws = (closure: () => unknown, signal?: string): boolean => {
   }
 };
 
+interface IProductionNamespaceFixtureFailure {
+  error: unknown;
+}
+
+class ProductionNamespaceFixtureCleanupError extends AggregateError {}
+
+export const preserveProductionNamespaceFixtureCleanup = (
+  failure: IProductionNamespaceFixtureFailure | undefined,
+  cleanup: () => void,
+): void => {
+  try {
+    cleanup();
+  } catch (cleanupFailure) {
+    if (failure === undefined) throw cleanupFailure;
+    throw new ProductionNamespaceFixtureCleanupError(
+      [failure.error, cleanupFailure],
+      "Production-namespace fixture teardown failed after the test failed.",
+    );
+  }
+};
+
 interface INamespaceAuditFixtureFailure {
   error: unknown;
 }
@@ -77,6 +98,7 @@ export const preserveNamespaceAuditFixtureCleanup = (
  *    first production and shared assets byte-present.
  */
 export const test_mcp_production_namespaces = (): void => {
+  let unsafeIdsFailure: IProductionNamespaceFixtureFailure | undefined;
   const unsafeIds = productionFixture();
   try {
     for (const productionId of [".", "..", "shared.", "film."])
@@ -86,10 +108,16 @@ export const test_mcp_production_namespaces = (): void => {
           AutoMovieProductionProject.open(unsafeIds.root, productionId),
         ),
       );
+  } catch (error) {
+    unsafeIdsFailure = { error };
+    throw error;
   } finally {
-    unsafeIds.dispose();
+    preserveProductionNamespaceFixtureCleanup(unsafeIdsFailure, () =>
+      unsafeIds.dispose(),
+    );
   }
 
+  let mismatchedLegacyFailure: IProductionNamespaceFixtureFailure | undefined;
   const mismatchedLegacy = productionFixture();
   try {
     TestValidator.predicate(
@@ -99,10 +127,16 @@ export const test_mcp_production_namespaces = (): void => {
         'declares id "fixture-film"',
       ),
     );
+  } catch (error) {
+    mismatchedLegacyFailure = { error };
+    throw error;
   } finally {
-    mismatchedLegacy.dispose();
+    preserveProductionNamespaceFixtureCleanup(mismatchedLegacyFailure, () =>
+      mismatchedLegacy.dispose(),
+    );
   }
 
+  let namespaceFixtureFailure: IProductionNamespaceFixtureFailure | undefined;
   const fixture = productionFixture();
   try {
     const legacyScreenplay = path.join(
@@ -360,10 +394,16 @@ export const test_mcp_production_namespaces = (): void => {
         fs.existsSync(betaRenders) === false &&
         throws(() => beta.summary(), "was deleted"),
     );
+  } catch (error) {
+    namespaceFixtureFailure = { error };
+    throw error;
   } finally {
-    fixture.dispose();
+    preserveProductionNamespaceFixtureCleanup(namespaceFixtureFailure, () =>
+      fixture.dispose(),
+    );
   }
 
+  let aliasFixtureFailure: IProductionNamespaceFixtureFailure | undefined;
   const aliasFixture = productionFixture();
   try {
     AutoMovieProductionProject.open(aliasFixture.root);
@@ -390,10 +430,16 @@ export const test_mcp_production_namespaces = (): void => {
           .productionIds()
           .includes("beta") === false,
     );
+  } catch (error) {
+    aliasFixtureFailure = { error };
+    throw error;
   } finally {
-    aliasFixture.dispose();
+    preserveProductionNamespaceFixtureCleanup(aliasFixtureFailure, () =>
+      aliasFixture.dispose(),
+    );
   }
 
+  let incarnationFixtureFailure: IProductionNamespaceFixtureFailure | undefined;
   const incarnationFixture = productionFixture();
   try {
     const erasing = AutoMovieProductionProject.open(incarnationFixture.root);
@@ -441,10 +487,16 @@ export const test_mcp_production_namespaces = (): void => {
           throws(mutate, "deleted or recreated"),
         ),
     );
+  } catch (error) {
+    incarnationFixtureFailure = { error };
+    throw error;
   } finally {
-    incarnationFixture.dispose();
+    preserveProductionNamespaceFixtureCleanup(incarnationFixtureFailure, () =>
+      incarnationFixture.dispose(),
+    );
   }
 
+  let protoFixtureFailure: IProductionNamespaceFixtureFailure | undefined;
   const protoFixture = productionFixture();
   try {
     AutoMovieProductionProject.open(protoFixture.root);
@@ -473,10 +525,16 @@ export const test_mcp_production_namespaces = (): void => {
         recreated.summary().productionId === "__proto__" &&
         throws(() => stale.generatedRoot(), "deleted or recreated"),
     );
+  } catch (error) {
+    protoFixtureFailure = { error };
+    throw error;
   } finally {
-    protoFixture.dispose();
+    preserveProductionNamespaceFixtureCleanup(protoFixtureFailure, () =>
+      protoFixture.dispose(),
+    );
   }
 
+  let replacementFixtureFailure: IProductionNamespaceFixtureFailure | undefined;
   const replacementFixture = productionFixture();
   try {
     const alpha = AutoMovieProductionProject.open(replacementFixture.root);
@@ -511,8 +569,13 @@ export const test_mcp_production_namespaces = (): void => {
       if (lstatLink(betaDesignRoot)) fs.unlinkSync(betaDesignRoot);
       fs.renameSync(parkedBetaDesignRoot, betaDesignRoot);
     }
+  } catch (error) {
+    replacementFixtureFailure = { error };
+    throw error;
   } finally {
-    replacementFixture.dispose();
+    preserveProductionNamespaceFixtureCleanup(replacementFixtureFailure, () =>
+      replacementFixture.dispose(),
+    );
   }
 
   const auditFixture = productionFixture();
