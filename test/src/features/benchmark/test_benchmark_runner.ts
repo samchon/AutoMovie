@@ -63,40 +63,63 @@ const completeLifecycle = (): IAutoMovieBenchmarkGateResult[] => [
   { gate: "final-compile", status: "pass", detail: "Final compile passed." },
 ];
 
+interface IBenchmarkRunnerFixtureFailure {
+  error: unknown;
+}
+
+class BenchmarkRunnerFixtureCleanupError extends AggregateError {}
+
+/** Remove the runner fixture root without replacing an earlier failure. */
+export const preserveBenchmarkRunnerFixtureCleanup = (
+  failure: IBenchmarkRunnerFixtureFailure | undefined,
+  cleanup: () => unknown,
+): void => {
+  try {
+    cleanup();
+  } catch (cleanupFailure) {
+    if (failure === undefined) throw cleanupFailure;
+    throw new BenchmarkRunnerFixtureCleanupError(
+      [failure.error, cleanupFailure],
+      "Benchmark runner fixture cleanup failed after the benchmark failed.",
+    );
+  }
+};
+
 /** The runner is exercised without invoking a model or network service. */
 export const test_benchmark_runner = async (): Promise<void> => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "automovie-runner-test-"));
-  const repositoryRoot = path.resolve(__dirname, "../../../..");
-  const current = austerlitzTeaserDraft();
-  const identity: IAutoMovieBenchmarkRunIdentity = {
-    repository: current.repository,
-    client: current.client,
-    runtime: current.runtime,
-  };
-  const ttsxEntry = path.join(
-    path.dirname(createRequire(__filename).resolve("ttsc/package.json")),
-    "lib/launcher/ttsx.js",
-  );
-  const mcpTarget = createProcessAutoMovieBenchmarkMcpTarget({
-    surface: "five-tool",
-    provenance: "@automovie/mcp:workspace",
-    command: process.execPath,
-    args: [
-      ttsxEntry,
-      "-P",
-      path.join(repositoryRoot, "packages/mcp/tsconfig.json"),
-      path.join(repositoryRoot, "packages/mcp/src/bin.ts"),
-    ],
-    timeoutMs: 30_000,
-    startupTimeoutMs: SOURCE_MCP_STARTUP_TIMEOUT_MS,
-  });
-  const archivedBaseline = {
-    surface: "legacy-compact" as const,
-    provenance: "@automovie/mcp:legacy-compact:archived",
-    probe: async (): Promise<IAutoMovieBenchmarkMcpSession> =>
-      austerlitzSignalDraft("legacy-compact").mcp,
-  };
+  let benchmarkFailure: IBenchmarkRunnerFixtureFailure | undefined;
   try {
+    const repositoryRoot = path.resolve(__dirname, "../../../..");
+    const current = austerlitzTeaserDraft();
+    const identity: IAutoMovieBenchmarkRunIdentity = {
+      repository: current.repository,
+      client: current.client,
+      runtime: current.runtime,
+    };
+    const ttsxEntry = path.join(
+      path.dirname(createRequire(__filename).resolve("ttsc/package.json")),
+      "lib/launcher/ttsx.js",
+    );
+    const mcpTarget = createProcessAutoMovieBenchmarkMcpTarget({
+      surface: "five-tool",
+      provenance: "@automovie/mcp:workspace",
+      command: process.execPath,
+      args: [
+        ttsxEntry,
+        "-P",
+        path.join(repositoryRoot, "packages/mcp/tsconfig.json"),
+        path.join(repositoryRoot, "packages/mcp/src/bin.ts"),
+      ],
+      timeoutMs: 30_000,
+      startupTimeoutMs: SOURCE_MCP_STARTUP_TIMEOUT_MS,
+    });
+    const archivedBaseline = {
+      surface: "legacy-compact" as const,
+      provenance: "@automovie/mcp:legacy-compact:archived",
+      probe: async (): Promise<IAutoMovieBenchmarkMcpSession> =>
+        austerlitzSignalDraft("legacy-compact").mcp,
+    };
     const agent = materializingAgent(current.generation);
     const nativeArchiveRead = fs.readFileSync;
     let archiveTaskPathRead = false;
@@ -575,13 +598,18 @@ export {};
     await exerciseProcessAdapter(root);
     await exerciseProviderAdapters(root);
     exerciseSnapshotLink(root);
+  } catch (error) {
+    benchmarkFailure = { error };
+    throw error;
   } finally {
-    fs.rmSync(root, {
-      force: true,
-      maxRetries: 3,
-      recursive: true,
-      retryDelay: 100,
-    });
+    preserveBenchmarkRunnerFixtureCleanup(benchmarkFailure, () =>
+      fs.rmSync(root, {
+        force: true,
+        maxRetries: 3,
+        recursive: true,
+        retryDelay: 100,
+      }),
+    );
   }
 };
 
