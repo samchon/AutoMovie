@@ -2829,20 +2829,24 @@ export const test_mcp_production_project = (): void => {
       vanished,
       JSON.stringify({ ...modelRecipe(), id: "vanished" }),
     );
-    const residentReadFileSync = fs.readFileSync;
-    fs.readFileSync = ((file: fs.PathOrFileDescriptor, ...args: unknown[]) => {
+    // Owned reads acquire a descriptor and read bytes through it, so the race
+    // window is the acquisition: removing the enumerated file just before its
+    // open makes the inventory observe the disappearance instead of reading an
+    // already-opened inode.
+    const residentInventoryOpen = fs.openSync;
+    fs.openSync = ((file: fs.PathLike, ...args: unknown[]) => {
       if (path.resolve(String(file)) === path.resolve(vanished))
         fs.rmSync(vanished, { force: true });
-      return (residentReadFileSync as (...parameters: unknown[]) => unknown)(
+      return (residentInventoryOpen as (...parameters: unknown[]) => number)(
         file,
         ...args,
       );
-    }) as typeof fs.readFileSync;
+    }) as typeof fs.openSync;
     let inventoryReadHookFailure: IProductionProjectFixtureFailure | undefined;
     try {
       TestValidator.predicate(
         "a design disappearing during inventory is a loud race",
-        throws(() => ownerProject.graph()),
+        throws(() => ownerProject.graph(), "disappeared while reading"),
       );
     } catch (error) {
       inventoryReadHookFailure = { error };
@@ -2850,9 +2854,9 @@ export const test_mcp_production_project = (): void => {
     } finally {
       preserveProductionProjectFixtureCleanup(inventoryReadHookFailure, [
         {
-          resource: "design-inventory read hook",
+          resource: "design-inventory open hook",
           cleanup: () => {
-            fs.readFileSync = residentReadFileSync;
+            fs.openSync = residentInventoryOpen;
           },
         },
       ]);

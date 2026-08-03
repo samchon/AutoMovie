@@ -283,11 +283,11 @@ export const test_mcp_production_project_single_fixture_cleanup = (): void => {
             index: 3,
             substantive: {
               digest:
-                "865583a9eeb732eacba3589f2c564ac03a826fe14928f4603460525c48410969",
-              tokens: 12657,
+                "8569b2ddf976fc5fabe5fcbac974dea85e1d369d00b6cab14835699e5451a270",
+              tokens: 12659,
             },
             tryDigest:
-              "a26628b2806712c24967a44ca68899a175b032efdb6573a10ca0c422a6fad678",
+              "25cf5b88182570b97bef4afe55016fc7d8048573dc7f178780972e14f24ff862",
             tryStatements: 296,
           },
           {
