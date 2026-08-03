@@ -115,31 +115,33 @@ const renderJobFixtureContract = (text: string): unknown => {
 };
 
 const captureCleanup = (props: {
-  cleanupFailures?: readonly (unknown | undefined)[];
-  primaryFailure?: unknown;
+  cleanupFailures?: readonly ({ error: unknown; present: true } | undefined)[];
+  primaryFailure?: { error: unknown; present: true };
   resources?: number;
-}): { failure: unknown; order: string[] } => {
+}): { caught: boolean; failure: unknown; order: string[] } => {
+  let caught = false;
   const order: string[] = [];
   let failure: unknown;
   try {
     preserveRenderJobFixtureCleanup(
       props.primaryFailure === undefined
         ? undefined
-        : { error: props.primaryFailure },
+        : { error: props.primaryFailure.error },
       Array.from({ length: props.resources ?? 2 }, (_, index) => ({
         resource: `resource-${index}`,
         cleanup: (): void => {
           order.push(`cleanup-${index}`);
           const cleanupFailure = props.cleanupFailures?.[index];
-          if (cleanupFailure !== undefined) throw cleanupFailure;
+          if (cleanupFailure !== undefined) throw cleanupFailure.error;
         },
       })),
     );
-    if (props.primaryFailure !== undefined) throw props.primaryFailure;
+    if (props.primaryFailure !== undefined) throw props.primaryFailure.error;
   } catch (error) {
+    caught = true;
     failure = error;
   }
-  return { failure, order };
+  return { caught, failure, order };
 };
 
 export const test_mcp_production_render_job_fixture_cleanup = (): void => {
@@ -147,39 +149,78 @@ export const test_mcp_production_render_job_fixture_cleanup = (): void => {
   const firstCleanupFailure = { phase: "owned root removal" };
   const secondCleanupFailure = { phase: "outside root removal" };
   const success = captureCleanup({});
-  const partialSetup = captureCleanup({ primaryFailure, resources: 1 });
-  const primaryOnly = captureCleanup({ primaryFailure });
+  const partialSetup = captureCleanup({
+    primaryFailure: { error: primaryFailure, present: true },
+    resources: 1,
+  });
+  const primaryOnly = captureCleanup({
+    primaryFailure: { error: primaryFailure, present: true },
+  });
   const standalone = captureCleanup({
-    cleanupFailures: [firstCleanupFailure],
+    cleanupFailures: [{ error: firstCleanupFailure, present: true }],
   });
   const multiple = captureCleanup({
-    cleanupFailures: [firstCleanupFailure, secondCleanupFailure],
+    cleanupFailures: [
+      { error: firstCleanupFailure, present: true },
+      { error: secondCleanupFailure, present: true },
+    ],
   });
   const combined = captureCleanup({
-    cleanupFailures: [firstCleanupFailure, secondCleanupFailure],
-    primaryFailure,
+    cleanupFailures: [
+      { error: firstCleanupFailure, present: true },
+      { error: secondCleanupFailure, present: true },
+    ],
+    primaryFailure: { error: primaryFailure, present: true },
+  });
+  const undefinedPrimary = captureCleanup({
+    primaryFailure: { error: undefined, present: true },
+  });
+  const undefinedStandalone = captureCleanup({
+    cleanupFailures: [{ error: undefined, present: true }],
+  });
+  const undefinedCombined = captureCleanup({
+    cleanupFailures: [{ error: undefined, present: true }],
+    primaryFailure: { error: undefined, present: true },
   });
   TestValidator.predicate(
     "render-job fixture cleanup preserves acquisition and failure order",
-    success.failure === undefined &&
+    success.caught === false &&
+      success.failure === undefined &&
       success.order.join(",") === "cleanup-0,cleanup-1" &&
+      partialSetup.caught &&
       partialSetup.failure === primaryFailure &&
       partialSetup.order.join(",") === "cleanup-0" &&
+      primaryOnly.caught &&
       primaryOnly.failure === primaryFailure &&
       primaryOnly.order.join(",") === "cleanup-0,cleanup-1" &&
+      standalone.caught &&
       standalone.failure === firstCleanupFailure &&
       standalone.order.join(",") === "cleanup-0,cleanup-1" &&
+      multiple.caught &&
       aggregateContainsExactly(multiple.failure, [
         firstCleanupFailure,
         secondCleanupFailure,
       ]) &&
       multiple.order.join(",") === "cleanup-0,cleanup-1" &&
+      combined.caught &&
       aggregateContainsExactly(combined.failure, [
         primaryFailure,
         firstCleanupFailure,
         secondCleanupFailure,
       ]) &&
-      combined.order.join(",") === "cleanup-0,cleanup-1",
+      combined.order.join(",") === "cleanup-0,cleanup-1" &&
+      undefinedPrimary.caught &&
+      undefinedPrimary.failure === undefined &&
+      undefinedPrimary.order.join(",") === "cleanup-0,cleanup-1" &&
+      undefinedStandalone.caught &&
+      undefinedStandalone.failure === undefined &&
+      undefinedStandalone.order.join(",") === "cleanup-0,cleanup-1" &&
+      undefinedCombined.caught &&
+      aggregateContainsExactly(undefinedCombined.failure, [
+        undefined,
+        undefined,
+      ]) &&
+      undefinedCombined.order.join(",") === "cleanup-0,cleanup-1",
   );
   TestValidator.equals(
     "render-job regression owns both temporary roots",
