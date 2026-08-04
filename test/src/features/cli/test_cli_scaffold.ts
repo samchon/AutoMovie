@@ -9157,8 +9157,13 @@ export const test_cli_scaffold = async (): Promise<void> => {
         parkedReceiptGenerationResident: true,
       },
     );
-    fs.rmSync(captureProject, { recursive: true, force: true });
-    fs.renameSync(parkedCaptureProject, captureProject);
+    // Restore only what the injection managed to park: Windows refuses to
+    // rename a directory holding an open descriptor, so on that platform the
+    // project root was never moved.
+    if (fs.existsSync(parkedCaptureProject)) {
+      fs.rmSync(captureProject, { recursive: true, force: true });
+      fs.renameSync(parkedCaptureProject, captureProject);
+    }
 
     const dialogueCacheModule = createRequire(__filename)(
       path.join(scaffoldDir, "scripts", "dialogueCacheSnapshot.ts"),
