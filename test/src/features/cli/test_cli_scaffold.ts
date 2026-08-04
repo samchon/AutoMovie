@@ -7129,19 +7129,27 @@ export const test_cli_scaffold = async (): Promise<void> => {
         ],
         [
           "combinedDescriptorCleanupCaughtCount",
-          () => combinedDescriptorCleanupCaught.errors.length === 2,
+          () =>
+            combinedDescriptorCleanupCaught instanceof AggregateError &&
+            combinedDescriptorCleanupCaught.errors.length === 2,
         ],
         [
           "combinedDescriptorCleanupCaughtErrors",
           () =>
+            combinedDescriptorCleanupCaught instanceof AggregateError &&
+            combinedDescriptorCleanupCaught.errors.length === 2 &&
             combinedDescriptorCleanupCaught.errors[0] ===
-            descriptorPrimaryFailure,
+              descriptorPrimaryFailure,
         ],
         [
           "combinedDescriptorCleanupCaughtErrors2",
           () =>
+            combinedDescriptorCleanupCaught instanceof AggregateError &&
+            combinedDescriptorCleanupCaught.errors.length === 2 &&
+            combinedDescriptorCleanupCaught.errors[0] ===
+              descriptorPrimaryFailure &&
             combinedDescriptorCleanupCaught.errors[1] ===
-            combinedDescriptorCleanupFailure,
+              combinedDescriptorCleanupFailure,
         ],
       ]),
       {
@@ -7269,28 +7277,47 @@ export const test_cli_scaffold = async (): Promise<void> => {
         ],
         [
           "combinedBrowserCleanupErrorCount",
-          () => combinedBrowserCleanupError.errors.length === 3,
+          () =>
+            combinedBrowserCleanupError instanceof AggregateError &&
+            combinedBrowserCleanupError.errors.length === 3,
         ],
         [
           "combinedBrowserCleanupErrorErrors",
           () =>
+            combinedBrowserCleanupError instanceof AggregateError &&
+            combinedBrowserCleanupError.errors.length === 3 &&
             combinedBrowserCleanupError.errors[0] === browserBootstrapFailure,
         ],
         [
           "combinedBrowserCleanupErrorErrors2",
           () =>
+            combinedBrowserCleanupError instanceof AggregateError &&
+            combinedBrowserCleanupError.errors.length === 3 &&
+            combinedBrowserCleanupError.errors[0] === browserBootstrapFailure &&
             combinedBrowserCleanupError.errors[1] ===
-            firstBrowserCleanupFailure,
+              firstBrowserCleanupFailure,
         ],
         [
           "combinedBrowserCleanupErrorErrors3",
           () =>
+            combinedBrowserCleanupError instanceof AggregateError &&
+            combinedBrowserCleanupError.errors.length === 3 &&
+            combinedBrowserCleanupError.errors[0] === browserBootstrapFailure &&
+            combinedBrowserCleanupError.errors[1] ===
+              firstBrowserCleanupFailure &&
             combinedBrowserCleanupError.errors[2] ===
-            secondBrowserCleanupFailure,
+              secondBrowserCleanupFailure,
         ],
         [
           "combinedBrowserCleanupErrorMessage",
           () =>
+            combinedBrowserCleanupError instanceof AggregateError &&
+            combinedBrowserCleanupError.errors.length === 3 &&
+            combinedBrowserCleanupError.errors[0] === browserBootstrapFailure &&
+            combinedBrowserCleanupError.errors[1] ===
+              firstBrowserCleanupFailure &&
+            combinedBrowserCleanupError.errors[2] ===
+              secondBrowserCleanupFailure &&
             combinedBrowserCleanupError.message.includes(
               "first cleanup, second cleanup",
             ),
@@ -7301,30 +7328,52 @@ export const test_cli_scaffold = async (): Promise<void> => {
         ],
         [
           "flattenedBrowserCleanupErrorCount",
-          () => flattenedBrowserCleanupError.errors.length === 4,
+          () =>
+            flattenedBrowserCleanupError instanceof AggregateError &&
+            flattenedBrowserCleanupError.errors.length === 4,
         ],
         [
           "flattenedBrowserCleanupErrorErrors",
           () =>
+            flattenedBrowserCleanupError instanceof AggregateError &&
+            flattenedBrowserCleanupError.errors.length === 4 &&
             flattenedBrowserCleanupError.errors[0] === browserBootstrapFailure,
         ],
         [
           "flattenedBrowserCleanupErrorErrors2",
           () =>
+            flattenedBrowserCleanupError instanceof AggregateError &&
+            flattenedBrowserCleanupError.errors.length === 4 &&
+            flattenedBrowserCleanupError.errors[0] ===
+              browserBootstrapFailure &&
             flattenedBrowserCleanupError.errors[1] ===
-            firstBrowserCleanupFailure,
+              firstBrowserCleanupFailure,
         ],
         [
           "flattenedBrowserCleanupErrorErrors3",
           () =>
+            flattenedBrowserCleanupError instanceof AggregateError &&
+            flattenedBrowserCleanupError.errors.length === 4 &&
+            flattenedBrowserCleanupError.errors[0] ===
+              browserBootstrapFailure &&
+            flattenedBrowserCleanupError.errors[1] ===
+              firstBrowserCleanupFailure &&
             flattenedBrowserCleanupError.errors[2] ===
-            secondBrowserCleanupFailure,
+              secondBrowserCleanupFailure,
         ],
         [
           "flattenedBrowserCleanupErrorErrors4",
           () =>
+            flattenedBrowserCleanupError instanceof AggregateError &&
+            flattenedBrowserCleanupError.errors.length === 4 &&
+            flattenedBrowserCleanupError.errors[0] ===
+              browserBootstrapFailure &&
+            flattenedBrowserCleanupError.errors[1] ===
+              firstBrowserCleanupFailure &&
+            flattenedBrowserCleanupError.errors[2] ===
+              secondBrowserCleanupFailure &&
             flattenedBrowserCleanupError.errors[3] ===
-            trailingBrowserCleanupFailure,
+              trailingBrowserCleanupFailure,
         ],
         [
           "multipleStandaloneBrowserCleanupErrorInstanceof",
@@ -7332,19 +7381,27 @@ export const test_cli_scaffold = async (): Promise<void> => {
         ],
         [
           "multipleStandaloneBrowserCleanupErrorCount",
-          () => multipleStandaloneBrowserCleanupError.errors.length === 2,
+          () =>
+            multipleStandaloneBrowserCleanupError instanceof AggregateError &&
+            multipleStandaloneBrowserCleanupError.errors.length === 2,
         ],
         [
           "multipleStandaloneBrowserCleanupErrorErrors",
           () =>
+            multipleStandaloneBrowserCleanupError instanceof AggregateError &&
+            multipleStandaloneBrowserCleanupError.errors.length === 2 &&
             multipleStandaloneBrowserCleanupError.errors[0] ===
-            firstBrowserCleanupFailure,
+              firstBrowserCleanupFailure,
         ],
         [
           "multipleStandaloneBrowserCleanupErrorErrors2",
           () =>
+            multipleStandaloneBrowserCleanupError instanceof AggregateError &&
+            multipleStandaloneBrowserCleanupError.errors.length === 2 &&
+            multipleStandaloneBrowserCleanupError.errors[0] ===
+              firstBrowserCleanupFailure &&
             multipleStandaloneBrowserCleanupError.errors[1] ===
-            secondBrowserCleanupFailure,
+              secondBrowserCleanupFailure,
         ],
       ]),
       {
@@ -7445,15 +7502,24 @@ export const test_cli_scaffold = async (): Promise<void> => {
         ],
         [
           "combinedHandoffFailureCount",
-          () => combinedHandoffFailure.errors.length === 2,
+          () =>
+            combinedHandoffFailure instanceof AggregateError &&
+            combinedHandoffFailure.errors.length === 2,
         ],
         [
           "combinedHandoffFailureErrors",
-          () => combinedHandoffFailure.errors[0] === handoffSnapshotFailure,
+          () =>
+            combinedHandoffFailure instanceof AggregateError &&
+            combinedHandoffFailure.errors.length === 2 &&
+            combinedHandoffFailure.errors[0] === handoffSnapshotFailure,
         ],
         [
           "combinedHandoffFailureErrors2",
-          () => combinedHandoffFailure.errors[1] === handoffBrowserFailure,
+          () =>
+            combinedHandoffFailure instanceof AggregateError &&
+            combinedHandoffFailure.errors.length === 2 &&
+            combinedHandoffFailure.errors[0] === handoffSnapshotFailure &&
+            combinedHandoffFailure.errors[1] === handoffBrowserFailure,
         ],
       ]),
       {
@@ -12070,15 +12136,24 @@ export const test_cli_scaffold = async (): Promise<void> => {
         ],
         [
           "combinedRenderGcFailureCount",
-          () => combinedRenderGcFailure.errors.length === 2,
+          () =>
+            combinedRenderGcFailure instanceof AggregateError &&
+            combinedRenderGcFailure.errors.length === 2,
         ],
         [
           "combinedRenderGcFailureErrors",
-          () => combinedRenderGcFailure.errors[0] === combinedRenderGcPrimary,
+          () =>
+            combinedRenderGcFailure instanceof AggregateError &&
+            combinedRenderGcFailure.errors.length === 2 &&
+            combinedRenderGcFailure.errors[0] === combinedRenderGcPrimary,
         ],
         [
           "combinedRenderGcFailureErrors2",
-          () => combinedRenderGcFailure.errors[1] === combinedRenderGcClose,
+          () =>
+            combinedRenderGcFailure instanceof AggregateError &&
+            combinedRenderGcFailure.errors.length === 2 &&
+            combinedRenderGcFailure.errors[0] === combinedRenderGcPrimary &&
+            combinedRenderGcFailure.errors[1] === combinedRenderGcClose,
         ],
         [
           "combinedRenderGcCreateFailureInstanceof",
@@ -12086,16 +12161,24 @@ export const test_cli_scaffold = async (): Promise<void> => {
         ],
         [
           "combinedRenderGcCreateFailureCount",
-          () => combinedRenderGcCreateFailure.errors.length === 2,
+          () =>
+            combinedRenderGcCreateFailure instanceof AggregateError &&
+            combinedRenderGcCreateFailure.errors.length === 2,
         ],
         [
           "combinedRenderGcCreateFailureErrors",
           () =>
+            combinedRenderGcCreateFailure instanceof AggregateError &&
+            combinedRenderGcCreateFailure.errors.length === 2 &&
             combinedRenderGcCreateFailure.errors[0] === renderGcCreatePrimary,
         ],
         [
           "combinedRenderGcCreateFailureErrors2",
-          () => combinedRenderGcCreateFailure.errors[1] === renderGcCreateClose,
+          () =>
+            combinedRenderGcCreateFailure instanceof AggregateError &&
+            combinedRenderGcCreateFailure.errors.length === 2 &&
+            combinedRenderGcCreateFailure.errors[0] === renderGcCreatePrimary &&
+            combinedRenderGcCreateFailure.errors[1] === renderGcCreateClose,
         ],
         [
           "combinedNestedRenderGcFailureInstanceof",
@@ -12103,23 +12186,35 @@ export const test_cli_scaffold = async (): Promise<void> => {
         ],
         [
           "combinedNestedRenderGcFailureCount",
-          () => combinedNestedRenderGcFailure.errors.length === 3,
+          () =>
+            combinedNestedRenderGcFailure instanceof AggregateError &&
+            combinedNestedRenderGcFailure.errors.length === 3,
         ],
         [
           "combinedNestedRenderGcFailureErrors",
           () =>
+            combinedNestedRenderGcFailure instanceof AggregateError &&
+            combinedNestedRenderGcFailure.errors.length === 3 &&
             combinedNestedRenderGcFailure.errors[0] === nestedRenderGcPrimary,
         ],
         [
           "combinedNestedRenderGcFailureErrors2",
           () =>
+            combinedNestedRenderGcFailure instanceof AggregateError &&
+            combinedNestedRenderGcFailure.errors.length === 3 &&
+            combinedNestedRenderGcFailure.errors[0] === nestedRenderGcPrimary &&
             combinedNestedRenderGcFailure.errors[1] === nestedRenderGcReadClose,
         ],
         [
           "combinedNestedRenderGcFailureErrors3",
           () =>
+            combinedNestedRenderGcFailure instanceof AggregateError &&
+            combinedNestedRenderGcFailure.errors.length === 3 &&
+            combinedNestedRenderGcFailure.errors[0] === nestedRenderGcPrimary &&
+            combinedNestedRenderGcFailure.errors[1] ===
+              nestedRenderGcReadClose &&
             combinedNestedRenderGcFailure.errors[2] ===
-            nestedRenderGcCreateClose,
+              nestedRenderGcCreateClose,
         ],
       ]),
       {
@@ -13117,7 +13212,9 @@ export const test_cli_scaffold = async (): Promise<void> => {
         ["mutatedChunkGcInventory", () => mutatedChunkGcInventory !== null],
         [
           "mutatedChunkGcInventoryCount",
-          () => mutatedChunkGcInventory.retainedChunkPaths.length === 0,
+          () =>
+            mutatedChunkGcInventory !== null &&
+            mutatedChunkGcInventory.retainedChunkPaths.length === 0,
         ],
       ]),
       {
@@ -14000,10 +14097,14 @@ export const test_cli_scaffold = async (): Promise<void> => {
         ],
         ["tierInventoryCount", () => tierInventory.length === 2],
         ["tierPair", () => tierPair !== undefined],
-        ["tierPairEvidence", () => tierPair.evidence !== null],
+        [
+          "tierPairEvidence",
+          () => tierPair !== undefined && tierPair.evidence !== null,
+        ],
         [
           "tierPairBytes",
           () =>
+            tierPair !== undefined &&
             tierPair.bytes === tierPair.marker.bytes + tierPair.evidence.bytes,
         ],
         ["tierLegacyEvidence", () => tierLegacy?.evidence === null],
@@ -16527,15 +16628,24 @@ export const test_cli_scaffold = async (): Promise<void> => {
         ],
         [
           "combinedDoubleFailureCount",
-          () => combinedDoubleFailure.errors.length === 2,
+          () =>
+            combinedDoubleFailure instanceof AggregateError &&
+            combinedDoubleFailure.errors.length === 2,
         ],
         [
           "combinedDoubleFailureErrors",
-          () => combinedDoubleFailure.errors[0] === doubleFailurePrimary,
+          () =>
+            combinedDoubleFailure instanceof AggregateError &&
+            combinedDoubleFailure.errors.length === 2 &&
+            combinedDoubleFailure.errors[0] === doubleFailurePrimary,
         ],
         [
           "combinedDoubleFailureErrors2",
-          () => combinedDoubleFailure.errors[1] === doubleFailureClose,
+          () =>
+            combinedDoubleFailure instanceof AggregateError &&
+            combinedDoubleFailure.errors.length === 2 &&
+            combinedDoubleFailure.errors[0] === doubleFailurePrimary &&
+            combinedDoubleFailure.errors[1] === doubleFailureClose,
         ],
         [
           "doubleFailureTargetUtf8",
@@ -16635,19 +16745,27 @@ export const test_cli_scaffold = async (): Promise<void> => {
         ],
         [
           "combinedOverwriteDoubleFailureCount",
-          () => combinedOverwriteDoubleFailure.errors.length === 2,
+          () =>
+            combinedOverwriteDoubleFailure instanceof AggregateError &&
+            combinedOverwriteDoubleFailure.errors.length === 2,
         ],
         [
           "combinedOverwriteDoubleFailureErrors",
           () =>
+            combinedOverwriteDoubleFailure instanceof AggregateError &&
+            combinedOverwriteDoubleFailure.errors.length === 2 &&
             combinedOverwriteDoubleFailure.errors[0] ===
-            overwriteDoubleFailurePrimary,
+              overwriteDoubleFailurePrimary,
         ],
         [
           "combinedOverwriteDoubleFailureErrors2",
           () =>
+            combinedOverwriteDoubleFailure instanceof AggregateError &&
+            combinedOverwriteDoubleFailure.errors.length === 2 &&
+            combinedOverwriteDoubleFailure.errors[0] ===
+              overwriteDoubleFailurePrimary &&
             combinedOverwriteDoubleFailure.errors[1] ===
-            overwriteDoubleFailureClose,
+              overwriteDoubleFailureClose,
         ],
       ]),
       {
@@ -16746,25 +16864,39 @@ export const test_cli_scaffold = async (): Promise<void> => {
         ],
         [
           "combinedNestedDescriptorFailureCount",
-          () => combinedNestedDescriptorFailure.errors.length === 3,
+          () =>
+            combinedNestedDescriptorFailure instanceof AggregateError &&
+            combinedNestedDescriptorFailure.errors.length === 3,
         ],
         [
           "combinedNestedDescriptorFailureErrors",
           () =>
+            combinedNestedDescriptorFailure instanceof AggregateError &&
+            combinedNestedDescriptorFailure.errors.length === 3 &&
             combinedNestedDescriptorFailure.errors[0] ===
-            nestedDescriptorPrimary,
+              nestedDescriptorPrimary,
         ],
         [
           "combinedNestedDescriptorFailureErrors2",
           () =>
+            combinedNestedDescriptorFailure instanceof AggregateError &&
+            combinedNestedDescriptorFailure.errors.length === 3 &&
+            combinedNestedDescriptorFailure.errors[0] ===
+              nestedDescriptorPrimary &&
             combinedNestedDescriptorFailure.errors[1] ===
-            nestedResidentCloseFailure,
+              nestedResidentCloseFailure,
         ],
         [
           "combinedNestedDescriptorFailureErrors3",
           () =>
+            combinedNestedDescriptorFailure instanceof AggregateError &&
+            combinedNestedDescriptorFailure.errors.length === 3 &&
+            combinedNestedDescriptorFailure.errors[0] ===
+              nestedDescriptorPrimary &&
+            combinedNestedDescriptorFailure.errors[1] ===
+              nestedResidentCloseFailure &&
             combinedNestedDescriptorFailure.errors[2] ===
-            nestedOwnerCloseFailure,
+              nestedOwnerCloseFailure,
         ],
       ]),
       {

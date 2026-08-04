@@ -399,11 +399,11 @@ export const test_mcp_production_project_root_coordination_hook_cleanup =
               index: 125,
               substantive: {
                 digest:
-                  "d020ca4a7c34d38ab8275576953988e180eb24310644171a5a945ae67f00ac1f",
-                tokens: 49,
+                  "4d25e80a05394aaa60cc6fa73830db1d71099639643b43a1d8861e82463d9b61",
+                tokens: 94,
               },
               tryDigest:
-                "fde000a27de637c6d4f25e1e9ced8dbf4433cb2b58c4ea4cd1e34eb3e7ab455d",
+                "ef445cde77941bdcbe6284c638f1cd8b385179f298c91265902f0d3e6d3c0e87",
               tryStatements: 1,
             },
           ],

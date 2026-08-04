@@ -272,7 +272,7 @@ export const test_mcp_production_project_fixture_cleanup = (): void => {
               "letlinkedGeneratedFailure:IProductionProjectFixtureFailure|undefined;",
             ],
             tryDigest:
-              "b19d40e910cc079db4da9e8a2630038df198165ddb3ab56437dd9d9fcb3a8ec0",
+              "d02123369276fbff199736fc5bd6c7f6f8f4e1a4a9fc1c5bf4962ecb92509d06",
             tryPrefixes: [
               'outsideGenerated=fs.mkdtempSync(path.join(os.tmpdir(),"automovie-generated-outside-"),);',
             ],

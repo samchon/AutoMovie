@@ -283,11 +283,11 @@ export const test_mcp_production_legacy_import_resident_lock_cleanup =
               "letapplyResidentLockCleanupFailure:|ILegacyImportFixtureFailure|undefined;",
             substantive: {
               digest:
-                "fd61883962b09f9246642515bd262b9ecfb926a10f59acfa0722628c011d80a9",
-              tokens: 263,
+                "e6e9eae1d850495b8d84c2d82cec082861e6256e4a05933ecb723e079b9efecd",
+              tokens: 307,
             },
             tryDigest:
-              "06850169b40aaaff48d84589494250e91e4220b9c23b7623b0895783f9d99a2d",
+              "2504545369ee8b910570e96f752ee5bd9f5e828434d66c2a9a9e74792d760fd0",
             tryPrefixes: [
               'constresidentLock=path.join(replacedAfterResidentLock.root,"revision.lock",);',
               "constnativeWrite=fs.writeFileSync;",

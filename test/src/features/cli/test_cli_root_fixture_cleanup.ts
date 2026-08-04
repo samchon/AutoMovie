@@ -255,7 +255,7 @@ export const test_cli_root_fixture_cleanup = (): void => {
                 "letscaffoldFailure:{error:unknown}|undefined;",
               ],
               tryDigest:
-                "fbd455d8688602c2211cd1fa0d444f236d03355e411b2500df7403646a884a51",
+                "5918485593ff1372d26cd41615e50d3dda1292e3432d34c1c8bf1d3a05a5265f",
             },
           ],
         },

@@ -282,9 +282,9 @@ export const test_mcp_production_oracle_fixture_cleanup = (): void => {
             ownerParameters: [],
             substantiveStatements: 282,
             substantiveTokenDigest:
-              "ff7b758a89df0545a49e03e45dc5285138cc4f66f6960023e1343f958f8d054b",
+              "25d2ca2ecab4153a3df4cfd5ab21c61b7cbced9b327b00fa9b5ebace89be0cf3",
             tryDigest:
-              "45e6daecbffb309b0889c27c8938093e247a10a42d8942913e1e2d55da013bb8",
+              "5e09f0d74733d511d32fa17dda64f12f941fb2b522c8046c1922816ebcbad3b5",
             tryStatements: 281,
           },
           {

@@ -301,9 +301,9 @@ export const test_mcp_production_compiler_fixture_cleanup = (): void => {
             ownerParameters: [],
             substantiveStatements: 593,
             substantiveTokenDigest:
-              "a26b4e8aaf0939ecd183e2761057fc9aa29fed1a97565e3773ccf380fce2896c",
+              "d0deef169be3c13c6c769090fe27e2db7ee4d8f571f2d6741609bf52035741aa",
             tryDigest:
-              "be76955f04f1cc59e3c7ca88d33f9bd603188537eadc6fb3bab2d4a448ae6e71",
+              "0dee42fde9e6b7484ddc9fb5f13f1b005df53331b366e9d3f8c7a356330030b6",
             tryStatements: 597,
           },
           {

@@ -329,13 +329,13 @@ export const test_mcp_production_legacy_import_hook_cleanup = (): void => {
             "letrollbackHookFailure:ILegacyImportFixtureFailure|undefined;",
           substantive: {
             digest:
-              "35f79c505335c7074fcf8b80bab535b6ac7943b179a18b3fa9c2d0b29c4f5b3a",
-            tokens: 50,
+              "affed27c5aec1742efb29d0cf1ce7540aa7382be4c4f5fcb10865570730e121d",
+            tokens: 105,
           },
           tryBody:
-            '{TestValidator.predicate("apartialrollbackfailurerestoresthecompleteappliedstate",throws(()=>importer.rollback(),"statewasrestored")&&fs.existsSync(path.join(rollbackFailure.root,".automovie"))&&importer.apply().status==="unchanged"&&quarantineCleanupDenied,);}',
+            '{TestValidator.equals("apartialrollbackfailurerestoresthecompleteappliedstate",namedFacts([["rejected",()=>throws(()=>importer.rollback(),"statewasrestored"),],["rollbackFailureResident",()=>fs.existsSync(path.join(rollbackFailure.root,".automovie")),],["importerApply",()=>importer.apply().status==="unchanged"],["quarantineCleanupDenied",()=>quarantineCleanupDenied],]),{rejected:true,rollbackFailureResident:true,importerApply:true,quarantineCleanupDenied:true,},);}',
           tryDigest:
-            "8d0d834ea3fe16c11f20efa94a3c67afe14915cffeb6b53ec1f91550956a53f2",
+            "673c787ca9d1e99cc393b26c68b294197a567679b0ea227ddcc8019c08b96624",
         },
         {
           catchBodies: [

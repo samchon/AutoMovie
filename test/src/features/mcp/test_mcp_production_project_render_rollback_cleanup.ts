@@ -306,11 +306,11 @@ export const test_mcp_production_project_render_rollback_cleanup = (): void => {
             index: 254,
             substantive: {
               digest:
-                "f859370d8d75540f57fa7f5583b74106bdb2375b420d53955fd6d0ed8e8c2f48",
-              tokens: 110,
+                "fc3bb18e2adaf32501737b3228a28d15e4b75e057ae07bc4f5efc3d99212ce11",
+              tokens: 190,
             },
             tryDigest:
-              "3e2de59b454eb04c0e7929ee84e1305ac65a258be727f93ee7a62f96319d20a7",
+              "f57e6d5e9c2cbb44c15c5fb2127d267c7ab03b4481caeb1cc0c5d2641cd5b700",
             tryStatements: 1,
           },
           {
