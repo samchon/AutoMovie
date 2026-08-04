@@ -14766,7 +14766,10 @@ export const test_cli_scaffold = async (): Promise<void> => {
       workerEvidenceSwapClaim,
     );
     let workerEvidenceMarkerDescriptor = -1;
-    let workerEvidenceSwapped = false;
+    // One holder carries the injection's progress: pending, the marker opened,
+    // swapped, or the message the swap failed with. A boolean could not say
+    // whether the trigger never matched or the mutation itself was refused.
+    let workerEvidenceSwap = "pending";
     mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
       const descriptor = Reflect.apply(nativeOpen, mutableFs, [
         file,
@@ -14777,22 +14780,29 @@ export const test_cli_scaffold = async (): Promise<void> => {
         typeof file !== "number" &&
         flags === "wx+" &&
         path.resolve(file.toString()) === workerEvidenceSwapDestination
-      )
+      ) {
         workerEvidenceMarkerDescriptor = descriptor;
+        workerEvidenceSwap = "marker opened";
+      }
       return descriptor;
     }) as typeof fs.openSync;
     mutableFs.closeSync = ((descriptor: number): void => {
       nativeClose(descriptor);
       if (
-        workerEvidenceSwapped === false &&
+        workerEvidenceSwap === "marker opened" &&
         descriptor === workerEvidenceMarkerDescriptor
       ) {
-        nativeRename(workerEvidenceSwapIsolated, parkedWorkerEvidence);
-        nativeWriteFile(
-          workerEvidenceSwapIsolated,
-          workerEvidenceSuccessorBytes,
-        );
-        workerEvidenceSwapped = true;
+        workerEvidenceSwap = "swapped";
+        try {
+          nativeRename(workerEvidenceSwapIsolated, parkedWorkerEvidence);
+          nativeWriteFile(
+            workerEvidenceSwapIsolated,
+            workerEvidenceSuccessorBytes,
+          );
+        } catch (error) {
+          workerEvidenceSwap =
+            error instanceof Error ? error.message : String(error);
+        }
       }
     }) as typeof fs.closeSync;
     let workerEvidenceSwapRejected = false;
@@ -14827,39 +14837,42 @@ export const test_cli_scaffold = async (): Promise<void> => {
     }
     TestValidator.equals(
       "routine worker cleanup rejects private evidence changed after marker publication",
-      namedFacts([
-        ["workerEvidenceSwapped", () => workerEvidenceSwapped],
-        ["workerEvidenceSwapRejected", () => workerEvidenceSwapRejected],
-        [
-          "parkedWorkerEvidenceWorkerClaimBytes",
-          () => fs.readFileSync(parkedWorkerEvidence).equals(workerClaimBytes),
-        ],
-        [
-          "workerEvidenceSwapIsolatedWorkerEvidenceSuccessorBytes",
-          () =>
-            fs
-              .readFileSync(workerEvidenceSwapIsolated)
-              .equals(workerEvidenceSuccessorBytes),
-        ],
-        [
-          "workerEvidenceSwapDestinationResident",
-          () => fs.existsSync(workerEvidenceSwapDestination),
-        ],
-        [
-          "rejected",
-          () =>
-            throws(() =>
-              renderGcModule.inspectRenderQuarantineMarker(
-                renderGcModule.captureRenderGcTarget(
-                  gcBase,
-                  workerEvidenceSwapDestination,
+      {
+        swap: workerEvidenceSwap,
+        ...namedFacts([
+          ["workerEvidenceSwapRejected", () => workerEvidenceSwapRejected],
+          [
+            "parkedWorkerEvidenceWorkerClaimBytes",
+            () =>
+              fs.readFileSync(parkedWorkerEvidence).equals(workerClaimBytes),
+          ],
+          [
+            "workerEvidenceSwapIsolatedWorkerEvidenceSuccessorBytes",
+            () =>
+              fs
+                .readFileSync(workerEvidenceSwapIsolated)
+                .equals(workerEvidenceSuccessorBytes),
+          ],
+          [
+            "workerEvidenceSwapDestinationResident",
+            () => fs.existsSync(workerEvidenceSwapDestination),
+          ],
+          [
+            "rejected",
+            () =>
+              throws(() =>
+                renderGcModule.inspectRenderQuarantineMarker(
+                  renderGcModule.captureRenderGcTarget(
+                    gcBase,
+                    workerEvidenceSwapDestination,
+                  ),
                 ),
               ),
-            ),
-        ],
-      ]),
+          ],
+        ]),
+      },
       {
-        workerEvidenceSwapped: true,
+        swap: "swapped",
         workerEvidenceSwapRejected: true,
         parkedWorkerEvidenceWorkerClaimBytes: true,
         workerEvidenceSwapIsolatedWorkerEvidenceSuccessorBytes: true,
