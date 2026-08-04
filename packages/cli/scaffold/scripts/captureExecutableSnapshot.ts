@@ -322,7 +322,9 @@ const physicalDirectory = (
   )
     throw new Error(`${label} "${namespacePath}" changed while resolved.`);
   return {
-    identity: physicalFileIdentity(status),
+    // A directory identity is compared against another pathname stat, including
+    // one taken by a different module, so it keeps its device.
+    identity: `${status.dev}\0${status.ino}`,
     path: namespacePath,
     real,
     version,
