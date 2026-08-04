@@ -5967,15 +5967,26 @@ export const test_cli_scaffold = async (): Promise<void> => {
         invalidRenditionBundle,
       ),
     );
-    TestValidator.predicate(
+    TestValidator.equals(
       "the final proxy consumer rejects unowned and malformed manifests",
-      unmanifestedProxyRejected &&
-        receiptOnlyProxyRejected &&
-        escapingProxyRejected &&
-        malformedProxyRejected &&
-        duplicateProxyRejected &&
-        malformedMetadataRejected &&
-        invalidRenditionRejected,
+      {
+        duplicate: duplicateProxyRejected,
+        escaping: escapingProxyRejected,
+        invalidRendition: invalidRenditionRejected,
+        malformed: malformedProxyRejected,
+        malformedMetadata: malformedMetadataRejected,
+        receiptOnly: receiptOnlyProxyRejected,
+        unmanifested: unmanifestedProxyRejected,
+      },
+      {
+        duplicate: true,
+        escaping: true,
+        invalidRendition: true,
+        malformed: true,
+        malformedMetadata: true,
+        receiptOnly: true,
+        unmanifested: true,
+      },
     );
 
     const parkedVerifiedProxyBundle = `${verifiedProxyBundle}.parked`;
@@ -6167,14 +6178,24 @@ export const test_cli_scaffold = async (): Promise<void> => {
         packageName: "fixture-runtime",
       });
     const runtimeSnapshot = snapshotRuntimeFixture();
-    TestValidator.predicate(
+    TestValidator.equals(
       "runtime package identity captures exact manifest-owned entry and assets",
-      runtimeSnapshot.package === "fixture-runtime" &&
-        runtimeSnapshot.version === "1.2.3" &&
-        runtimeSnapshot.entryDigest === fixtureDigest(runtimeEntryBytes) &&
-        runtimeSnapshot.assets.length === 1 &&
-        runtimeSnapshot.assets[0]?.path === "native/runtime.node" &&
-        runtimeSnapshot.assets[0]?.digest === fixtureDigest(runtimeAssetBytes),
+      {
+        assetDigest: runtimeSnapshot.assets[0]?.digest ?? null,
+        assetPath: runtimeSnapshot.assets[0]?.path ?? null,
+        assets: runtimeSnapshot.assets.length,
+        entryDigest: runtimeSnapshot.entryDigest,
+        package: runtimeSnapshot.package,
+        version: runtimeSnapshot.version,
+      },
+      {
+        assetDigest: fixtureDigest(runtimeAssetBytes),
+        assetPath: "native/runtime.node",
+        assets: 1,
+        entryDigest: fixtureDigest(runtimeEntryBytes),
+        package: "fixture-runtime",
+        version: "1.2.3",
+      },
     );
     const parkedRuntimeManifest = `${runtimeManifest}.parked`;
     let runtimeManifestSwapped = false;
