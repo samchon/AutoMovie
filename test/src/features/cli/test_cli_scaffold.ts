@@ -10385,6 +10385,11 @@ export const test_cli_scaffold = async (): Promise<void> => {
         path.resolve(file.toString()) === postPublicationLock.snapshot.target &&
         fs.existsSync(attemptTarget)
       ) {
+        // Claim the injection before mutating. `fs.rmSync` stats the path it
+        // removes, which re-enters this very hook, and the flag was set last:
+        // the run reported "Maximum call stack size exceeded" instead of the
+        // relink this scenario is about.
+        postPublicationRelinked = true;
         nativeLink(attemptTarget, postPublicationParked);
         fs.rmSync(attemptTarget);
         nativeLink(postPublicationParked, attemptTarget);
@@ -10394,7 +10399,6 @@ export const test_cli_scaffold = async (): Promise<void> => {
           postPublicationLock.snapshot.target,
           postPublicationLockSuccessor,
         );
-        postPublicationRelinked = true;
       }
       return status;
     }) as typeof fs.lstatSync;

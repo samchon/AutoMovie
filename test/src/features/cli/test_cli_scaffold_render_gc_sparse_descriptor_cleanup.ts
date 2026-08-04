@@ -219,12 +219,12 @@ export const test_cli_scaffold_render_gc_sparse_descriptor_cleanup =
         },
       ],
       outerDigest:
-        "682c00a669300e3469db05cfa91592cfd5dc034d277f6248ad8a89960369bdc7",
+        "565d5e7ea71b1cf9bc5e07e2d9e11ceca4e7b04d83c8308397c9c7910fa56d90",
       parentDigest:
-        "1d48156a737a9d9211b3d8ec764e9861e3fe09c82deb45fc7e8ff3acb1b7145c",
+        "66ac400bb559b692debb5455539f3ffdfc9465f6e4eb1c534890f0c677e01266",
       parseDiagnostics: [],
       rootDigest:
-        "020b6604725b93f08c0552cbe9675ea57ef43cef2bc14d772a6b4bfbca7570f3",
+        "0a6e769427d23c76bae0134bb1ac9000d9d14636f6be259382e1aa4b38e8ea3c",
     };
     TestValidator.equals(
       "CLI scaffold protects sparse publication descriptor cleanup",
