@@ -8616,20 +8616,31 @@ export const test_cli_scaffold = async (): Promise<void> => {
       path.join(parkedDirectFileFailureParent, "final.json"),
       { bigint: true },
     );
-    TestValidator.predicate(
+    TestValidator.equals(
       "direct render file creation preserves a same-inode parent successor on failure",
-      directFileFailureRelinked &&
-        directFileFailureCloseFailed &&
-        directFileFailureRejected &&
-        directFileResident.dev === parkedDirectFileResident.dev &&
-        directFileResident.ino === parkedDirectFileResident.ino &&
-        fs
+      {
+        closeFailed: directFileFailureCloseFailed,
+        parentDevice: directFileResident.dev === parkedDirectFileResident.dev,
+        parentInode: directFileResident.ino === parkedDirectFileResident.ino,
+        rejected: directFileFailureRejected,
+        relinked: directFileFailureRelinked,
+        residentBytes: fs
           .readFileSync(directFileFailureTarget)
-          .equals(directFileFailureBytes) &&
-        fs.readFileSync(
+          .equals(directFileFailureBytes),
+        successorMarker: fs.readFileSync(
           path.join(directFileFailureParent, "successor.marker"),
           "utf8",
-        ) === "successor",
+        ),
+      },
+      {
+        closeFailed: true,
+        parentDevice: true,
+        parentInode: true,
+        rejected: true,
+        relinked: true,
+        residentBytes: true,
+        successorMarker: "successor",
+      },
     );
 
     const directFileAbaRoot = path.join(base, "direct-file-root-aba");
