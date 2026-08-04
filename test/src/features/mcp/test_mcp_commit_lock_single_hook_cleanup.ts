@@ -190,10 +190,10 @@ export const test_mcp_commit_lock_single_hook_cleanup = (): void => {
   );
   const expected = {
     parentDigest:
-      "f7241ef25499bb6ecf84ab835bddf0942dcabb63a324afe7e378e22ed806545f",
+      "4e99bc648715030efb2043be64ee9b44597c41b697225b0eae3808e8255242b4",
     parseDiagnostics: [],
     rootDigest:
-      "0453643a2f2fc7194c8d8dfd102f697c7b3851cd14b84dfc3432c84142d8a0bd",
+      "7f51e24698768f243742358e2cbc79f6fdb88769b570894b7dbfce0cf5300655",
     rows: [
       {
         catchBodies: ["splitPathFailure={error};", "throwerror;"],

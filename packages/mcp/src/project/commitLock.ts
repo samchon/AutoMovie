@@ -46,6 +46,43 @@ interface ICommitLockSnapshot {
   token: string;
 }
 
+interface ICommitLockDescriptorFailure {
+  error: unknown;
+}
+
+/** Aggregate of one lock-read failure and the descriptor cleanup that followed. */
+export class CommitLockDescriptorCleanupError extends AggregateError {}
+
+/**
+ * Close one lock-read descriptor without letting the close replace the read
+ * failure it happened under.
+ *
+ * The lock reader is the evidence source for every acquisition and release
+ * decision, so a caller that sees only `EBADF` has lost the identity or token
+ * mismatch that actually occurred. A close failure with no read failure in
+ * flight is itself the failure and propagates unchanged.
+ */
+const closeCommitLockDescriptor = (
+  descriptor: number,
+  failure: ICommitLockDescriptorFailure | undefined,
+  lockPath: string,
+): void => {
+  try {
+    fs.closeSync(descriptor);
+  } catch (closeFailure) {
+    if (failure === undefined) throw closeFailure;
+    throw new CommitLockDescriptorCleanupError(
+      [
+        ...(failure.error instanceof CommitLockDescriptorCleanupError
+          ? failure.error.errors
+          : [failure.error]),
+        closeFailure,
+      ],
+      `Commit-lock descriptor cleanup failed after the read failed: ${lockPath}.`,
+    );
+  }
+};
+
 const lockIdentity = (status: fs.BigIntStats): string =>
   `${status.dev}\0${status.ino}`;
 
@@ -56,6 +93,7 @@ const readCommitLockSnapshot = (
   if (linked.isSymbolicLink() || linked.isFile() === false) return null;
   const linkedIdentity = lockIdentity(linked);
   const descriptor = fs.openSync(lockPath, "r");
+  let failure: ICommitLockDescriptorFailure | undefined;
   try {
     const opened = fs.fstatSync(descriptor, { bigint: true });
     if (opened.isFile() === false) return null;
@@ -68,6 +106,7 @@ const readCommitLockSnapshot = (
     )
       return null;
     const residentDescriptor = fs.openSync(lockPath, "r");
+    let residentFailure: ICommitLockDescriptorFailure | undefined;
     try {
       const current = fs.fstatSync(residentDescriptor, { bigint: true });
       if (
@@ -75,12 +114,18 @@ const readCommitLockSnapshot = (
         lockIdentity(current) !== lockIdentity(opened)
       )
         return null;
+    } catch (error) {
+      residentFailure = { error };
+      throw error;
     } finally {
-      fs.closeSync(residentDescriptor);
+      closeCommitLockDescriptor(residentDescriptor, residentFailure, lockPath);
     }
     return { identity: lockIdentity(opened), token };
+  } catch (error) {
+    failure = { error };
+    throw error;
   } finally {
-    fs.closeSync(descriptor);
+    closeCommitLockDescriptor(descriptor, failure, lockPath);
   }
 };
 

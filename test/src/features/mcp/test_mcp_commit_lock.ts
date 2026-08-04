@@ -221,6 +221,7 @@ export const test_mcp_commit_lock = (): void => {
     exerciseSplitPathDescriptorIdentity(dir);
     exerciseRejectedSnapshots(dir);
     exerciseQuarantineRecovery(dir);
+    exerciseReaderDescriptorCleanup(dir);
     exerciseReleaseFailures(dir);
     TestValidator.equals(
       "release defenses leave no quarantine after test cleanup",
@@ -583,6 +584,78 @@ const exerciseQuarantineRecovery = (dir: string): void => {
     nativeRm(lockPath, { force: true });
     if (quarantine !== undefined) nativeRm(quarantine, { force: true });
   }
+};
+
+/**
+ * The lock reader closes two descriptors, and a close failure must not replace
+ * the read failure it happened under. Release swallows both to stay
+ * fail-closed, so what the caller can observe is that the owner lock is still
+ * resident.
+ */
+const exerciseReaderDescriptorCleanup = (dir: string): void => {
+  const closePath = path.join(dir, "reader-close-failure.lock");
+  const closeToken = "reader-close-failure-token";
+  fs.writeFileSync(closePath, closeToken);
+  const nativeReaderClose = fs.closeSync;
+  const nativeReaderOpen = fs.openSync;
+  let readerDescriptor: number | null = null;
+  let readerCloseAttempts = 0;
+  fs.openSync = ((file: fs.PathLike, ...args: unknown[]): number => {
+    const descriptor = Reflect.apply(nativeReaderOpen, fs, [
+      file,
+      ...args,
+    ]) as number;
+    if (
+      readerDescriptor === null &&
+      path.resolve(file.toString()) === path.resolve(closePath)
+    )
+      readerDescriptor = descriptor;
+    return descriptor;
+  }) as typeof fs.openSync;
+  fs.closeSync = ((descriptor: number): void => {
+    if (descriptor === readerDescriptor) {
+      readerCloseAttempts += 1;
+      Reflect.apply(nativeReaderClose, fs, [descriptor]);
+      throw new Error("reader descriptor close failed");
+    }
+    Reflect.apply(nativeReaderClose, fs, [descriptor]);
+  }) as typeof fs.closeSync;
+  let readerCloseFailure: ICommitLockFixtureFailure | undefined;
+  try {
+    releaseCommitLock(closePath, closeToken);
+  } catch (error) {
+    readerCloseFailure = { error };
+    throw error;
+  } finally {
+    preserveCommitLockHookCleanup(readerCloseFailure, [
+      {
+        resource: "reader-close open hook",
+        cleanup: () => {
+          fs.openSync = nativeReaderOpen;
+        },
+      },
+      {
+        resource: "reader-close close hook",
+        cleanup: () => {
+          fs.closeSync = nativeReaderClose;
+        },
+      },
+    ]);
+  }
+  TestValidator.equals(
+    "a failed reader descriptor close leaves the owner lock resident",
+    {
+      attempts: readerCloseAttempts,
+      resident: fs.existsSync(closePath)
+        ? fs.readFileSync(closePath, "utf8")
+        : null,
+    },
+    {
+      attempts: 1,
+      resident: closeToken,
+    },
+  );
+  fs.rmSync(closePath, { force: true });
 };
 
 const exerciseReleaseFailures = (dir: string): void => {
