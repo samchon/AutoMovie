@@ -4566,24 +4566,33 @@ export const test_mcp_production_project = (): void => {
         },
       ]);
     }
-    TestValidator.predicate(
+    TestValidator.equals(
       "a failed quarantine cleanup restores the exact deleted file and revision",
-      quarantineDeleteDenied &&
-        atomicDeleteRejected &&
-        fs.readFileSync(atomicDeleteTarget).equals(atomicDeleteBytes) &&
-        initialized.revision() === atomicDeleteRevision &&
-        fs
-          .readdirSync(path.dirname(atomicDeleteTarget))
-          .every(
-            (entry) =>
-              entry.startsWith(
-                `${path.basename(atomicDeleteTarget)}.delete.`,
-              ) === false,
-          ) &&
-        initialized.eraseDesignArtifact({
+      {
+        denied: quarantineDeleteDenied,
+        erasable: initialized.eraseDesignArtifact({
           kind: "model",
           id: atomicDeleteModel.id,
         }).accepted,
+        quarantineLeftovers: fs
+          .readdirSync(path.dirname(atomicDeleteTarget))
+          .filter((entry) =>
+            entry.startsWith(`${path.basename(atomicDeleteTarget)}.delete.`),
+          ),
+        rejected: atomicDeleteRejected,
+        residentBytes: fs
+          .readFileSync(atomicDeleteTarget)
+          .equals(atomicDeleteBytes),
+        revision: initialized.revision(),
+      },
+      {
+        denied: true,
+        erasable: true,
+        quarantineLeftovers: [],
+        rejected: true,
+        residentBytes: true,
+        revision: atomicDeleteRevision,
+      },
     );
     const mutationRoot = path.join(invalidRoot, "mutation-root");
     const mutationProject = AutoMovieProductionProject.open(mutationRoot);
