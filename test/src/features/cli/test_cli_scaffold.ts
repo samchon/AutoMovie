@@ -9252,7 +9252,10 @@ export const test_cli_scaffold = async (): Promise<void> => {
       "audio.f32",
     );
     let reuseAbaDialogueOpens = 0;
-    let reuseAbaDialogueSwapped = false;
+    // One holder carries the swap's outcome — pending, swapped, or the message
+    // the swap failed with. Windows refuses to rename a directory that holds an
+    // open descriptor, and this injection fires while one is open.
+    let reuseAbaDialogueSwap = "pending";
     mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
       const descriptor = Reflect.apply(nativeOpen, mutableFs, [
         file,
@@ -9264,9 +9267,14 @@ export const test_cli_scaffold = async (): Promise<void> => {
         path.resolve(file.toString()) === reuseAbaDialogueAudio &&
         ++reuseAbaDialogueOpens === 3
       ) {
-        nativeRename(reuseAbaDialogueTarget, reuseAbaDialogueParked);
-        nativeRename(reuseAbaDialogueSuccessor, reuseAbaDialogueTarget);
-        reuseAbaDialogueSwapped = true;
+        reuseAbaDialogueSwap = "swapped";
+        try {
+          nativeRename(reuseAbaDialogueTarget, reuseAbaDialogueParked);
+          nativeRename(reuseAbaDialogueSuccessor, reuseAbaDialogueTarget);
+        } catch (error) {
+          reuseAbaDialogueSwap =
+            error instanceof Error ? error.message : String(error);
+        }
       }
       return descriptor;
     }) as typeof fs.openSync;
@@ -9296,23 +9304,33 @@ export const test_cli_scaffold = async (): Promise<void> => {
     }
     TestValidator.equals(
       "dialogue cache publication reuse rejects a directory successor",
-      namedFacts([
-        ["reuseAbaDialogueSwapped", () => reuseAbaDialogueSwapped],
-        ["reuseAbaDialogueRejected", () => reuseAbaDialogueRejected],
-        [
-          "reuseAbaDialogueTargetAudio",
-          () =>
-            fs
-              .readFileSync(path.join(reuseAbaDialogueTarget, "audio.f32"))
-              .equals(reuseAbaDialoguePcm),
-        ],
-        [
-          "reuseAbaDialogueParkedResident",
-          () => fs.existsSync(reuseAbaDialogueParked),
-        ],
-      ]),
       {
-        reuseAbaDialogueSwapped: true,
+        swap: /(EPERM|EBUSY|EACCES|EXDEV)/u.test(reuseAbaDialogueSwap)
+          ? "rename refused"
+          : reuseAbaDialogueSwap,
+        ...namedFacts([
+          [
+            "reuseAbaDialogueRejected",
+            () =>
+              reuseAbaDialogueRejected === (reuseAbaDialogueSwap === "swapped"),
+          ],
+          [
+            "reuseAbaDialogueTargetAudio",
+            () =>
+              fs
+                .readFileSync(path.join(reuseAbaDialogueTarget, "audio.f32"))
+                .equals(reuseAbaDialoguePcm),
+          ],
+          [
+            "reuseAbaDialogueParkedResident",
+            () =>
+              reuseAbaDialogueSwap !== "swapped" ||
+              fs.existsSync(reuseAbaDialogueParked),
+          ],
+        ]),
+      },
+      {
+        swap: reuseAbaDialogueSwap === "swapped" ? "swapped" : "rename refused",
         reuseAbaDialogueRejected: true,
         reuseAbaDialogueTargetAudio: true,
         reuseAbaDialogueParkedResident: true,
