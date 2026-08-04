@@ -74,9 +74,11 @@ jobs:
       # The lint and typia source plugins are Go programs the toolchain builds
       # once per cache key, and a cold build costs minutes in every job. The
       # content-addressed plugin binaries are tens of megabytes, so they cache
-      # cleanly while the Go build cache that produced them does not.
+      # cleanly while the Go build cache that produced them does not. Restore and
+      # save are separate steps because a combined `actions/cache` skips its save
+      # when the job fails, which would keep a red lane from ever warming.
       - name: Restore Toolchain Plugin Cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: node_modules/.cache/ttsc/plugins
           key: ttsc-plugins-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
@@ -95,6 +97,13 @@ jobs:
         if: failure()
         run: node internals/report-coverage-gaps.mjs
 
+      - name: Save Toolchain Plugin Cache
+        if: always()
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: node_modules/.cache/ttsc/plugins
+          key: ttsc-plugins-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+
   Windows:
     # NTFS supplies the case-insensitive path-identity half of the lint
     # contributor contract; Ubuntu retains the case-sensitive twin above.
@@ -112,9 +121,11 @@ jobs:
       # The lint and typia source plugins are Go programs the toolchain builds
       # once per cache key, and a cold build costs minutes in every job. The
       # content-addressed plugin binaries are tens of megabytes, so they cache
-      # cleanly while the Go build cache that produced them does not.
+      # cleanly while the Go build cache that produced them does not. Restore and
+      # save are separate steps because a combined `actions/cache` skips its save
+      # when the job fails, which would keep a red lane from ever warming.
       - name: Restore Toolchain Plugin Cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: node_modules/.cache/ttsc/plugins
           key: ttsc-plugins-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
@@ -129,3 +140,10 @@ jobs:
       - name: Report Exact Coverage Gaps
         if: failure()
         run: node internals/report-coverage-gaps.mjs
+
+      - name: Save Toolchain Plugin Cache
+        if: always()
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: node_modules/.cache/ttsc/plugins
+          key: ttsc-plugins-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
