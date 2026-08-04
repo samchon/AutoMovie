@@ -112,7 +112,11 @@ export const test_cli_scaffold_proxy_publication_cleanup = (): void => {
     {
       lifecycles: [
         {
-          catchBodies: ["gcAbaJudgeCleanupFailure={error};", "returnfalse;"],
+          catchBodies: [
+            "gcAbaJudgeCleanupFailure={error};",
+            "gcAbaJudgment=errorinstanceofError?error.message:String(error);",
+            "returnfalse;",
+          ],
           catchVariables: ["error"],
           containerKind: "ArrowFunction",
           containerStatements: 4,
@@ -127,13 +131,13 @@ export const test_cli_scaffold_proxy_publication_cleanup = (): void => {
           preceding: "letgcAbaJudgeCleanupFailure:{error:unknown}|undefined;",
           substantive: {
             digest:
-              "4c43978d369515e0023f43eff79f7d2145676ecfd08ecb39572830ec8497a74f",
-            tokens: 36,
+              "0400784abe0c7573e7d66285ad1c8966824b04bd35d9ab1c558f8b75abbace36",
+            tokens: 38,
           },
           tryBody:
-            "{constreceipt=proxyModule.inspectCapturedProxyBundle(snapshot,evidence,);gcAbaJudged=receipt.publicationFingerprint===gcAbaPublication&&receipt.compileFingerprint===gcAbaCompile&&receipt.editFingerprint===gcAbaEdit;returngcAbaJudged;}",
+            "{constreceipt=proxyModule.inspectCapturedProxyBundle(snapshot,evidence,);gcAbaJudgment=receipt.publicationFingerprint===gcAbaPublication&&receipt.compileFingerprint===gcAbaCompile&&receipt.editFingerprint===gcAbaEdit;returngcAbaJudgment===true;}",
           tryDigest:
-            "a3f746e425fc1c4934d8bd2949e3395eff3aecd4e1e223a3f4f7087738fedb81",
+            "9f790dfdcb57638e695ef30f7dad4b52b0cf8b210f267b34505a7a64fc7a62e7",
         },
         {
           catchBodies: ["scaleCleanupFailure={error};", "throwerror;"],

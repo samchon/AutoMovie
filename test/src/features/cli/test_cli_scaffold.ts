@@ -5006,12 +5006,20 @@ export const test_cli_scaffold = async (): Promise<void> => {
         },
       ]);
     }
-    TestValidator.predicate(
+    TestValidator.equals(
       "proxy publisher rejects and preserves a physical parent successor",
-      proxyParentSwapped &&
-        proxyParentSwapRejected &&
-        fs.existsSync(proxyPublishParent) &&
-        fs.existsSync(parkedProxyPublishParent),
+      {
+        parkedParentResident: fs.existsSync(parkedProxyPublishParent),
+        rejected: proxyParentSwapRejected,
+        successorParentResident: fs.existsSync(proxyPublishParent),
+        swapped: proxyParentSwapped,
+      },
+      {
+        parkedParentResident: true,
+        rejected: true,
+        successorParentResident: true,
+        swapped: true,
+      },
     );
     fs.rmSync(proxyPublishParent, { recursive: true, force: true });
     nativeRename(parkedProxyPublishParent, proxyPublishParent);
@@ -5199,7 +5207,9 @@ export const test_cli_scaffold = async (): Promise<void> => {
     // swapped, so its verdict is recorded separately: restoring the resident
     // directory by rename moves its `ctime`, which the target version covers, so
     // the collector must refuse to act on evidence it can no longer prove.
-    let gcAbaJudged = false;
+    // Record the judge's own outcome: when its inspection of the captured
+    // evidence throws, the verdict alone cannot say why.
+    let gcAbaJudgment: boolean | string = false;
     const gcAbaProductionRefused = throwsWith(
       () =>
         proxyPublisherModule.captureProxyPublicationGcTarget({
@@ -5214,13 +5224,15 @@ export const test_cli_scaffold = async (): Promise<void> => {
                 snapshot,
                 evidence,
               );
-              gcAbaJudged =
+              gcAbaJudgment =
                 receipt.publicationFingerprint === gcAbaPublication &&
                 receipt.compileFingerprint === gcAbaCompile &&
                 receipt.editFingerprint === gcAbaEdit;
-              return gcAbaJudged;
+              return gcAbaJudgment === true;
             } catch (error) {
               gcAbaJudgeCleanupFailure = { error };
+              gcAbaJudgment =
+                error instanceof Error ? error.message : String(error);
               return false;
             } finally {
               preserveCliHarnessCleanup(gcAbaJudgeCleanupFailure, [
@@ -5248,7 +5260,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
     TestValidator.equals(
       "proxy GC production adjudication derives ABA status from captured evidence",
       {
-        judged: gcAbaJudged,
+        judgment: gcAbaJudgment,
         refused: gcAbaProductionRefused,
         residentPublished: !throws(() =>
           proxyModule.inspectPublishedProxyBundle(
@@ -5263,7 +5275,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
           ) === "invalid directory",
       },
       {
-        judged: true,
+        judgment: true,
         refused: true,
         residentPublished: true,
         successorIntact: true,
