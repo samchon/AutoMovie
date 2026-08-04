@@ -11497,15 +11497,19 @@ export const test_cli_scaffold = async (): Promise<void> => {
     }
     TestValidator.equals(
       "a worker rechecks a GC guard published after its first check",
-      namedFacts([
-        ["workerOpenInterleaved", () => workerOpenInterleaved],
-        ["interleavedWorkerRejected", () => interleavedWorkerRejected],
-        ["livenessRootCount", () => fs.readdirSync(livenessRoot).length === 0],
-      ]),
       {
+        // Report what is left rather than that something is: an empty-count
+        // boolean cannot say which lease survived the scenario.
+        livenessRootEntries: fs.readdirSync(livenessRoot),
+        ...namedFacts([
+          ["workerOpenInterleaved", () => workerOpenInterleaved],
+          ["interleavedWorkerRejected", () => interleavedWorkerRejected],
+        ]),
+      },
+      {
+        livenessRootEntries: [],
         workerOpenInterleaved: true,
         interleavedWorkerRejected: true,
-        livenessRootCount: true,
       },
     );
     let inventoryWorker: unknown;
