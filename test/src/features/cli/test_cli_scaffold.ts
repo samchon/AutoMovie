@@ -9315,8 +9315,12 @@ export const test_cli_scaffold = async (): Promise<void> => {
               reuseAbaDialogueRejected === (reuseAbaDialogueSwap === "swapped"),
           ],
           [
+            // Without the swap the reuse publication completes and owns the
+            // target, so the bytes this checks are only the scenario's when the
+            // injection actually installed the successor.
             "reuseAbaDialogueTargetAudio",
             () =>
+              reuseAbaDialogueSwap !== "swapped" ||
               fs
                 .readFileSync(path.join(reuseAbaDialogueTarget, "audio.f32"))
                 .equals(reuseAbaDialoguePcm),
