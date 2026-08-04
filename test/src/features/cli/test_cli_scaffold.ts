@@ -9580,13 +9580,21 @@ export const test_cli_scaffold = async (): Promise<void> => {
     }
     if (concurrentWinner === undefined)
       throw new Error("fixture concurrent render-plan winner is missing");
-    TestValidator.predicate(
+    TestValidator.equals(
       "a stale slow planner cannot replace a different chunk-size winner",
-      slowPlannerRejected &&
-        concurrentWinner.plan.chunkFrames === 24 &&
-        renderPlanModule.captureRenderPlan(planRoot, planTarget).generation ===
-          concurrentWinner.generation &&
-        fs.existsSync(secondPlan.snapshot.target),
+      {
+        head: renderPlanModule.captureRenderPlan(planRoot, planTarget)
+          .generation,
+        predecessorResident: fs.existsSync(secondPlan.snapshot.target),
+        rejected: slowPlannerRejected,
+        winnerChunkFrames: concurrentWinner.plan.chunkFrames,
+      },
+      {
+        head: concurrentWinner.generation,
+        predecessorResident: true,
+        rejected: true,
+        winnerChunkFrames: 24,
+      },
     );
     const activeWorkerPlan = concurrentWinner.plan;
     const replacementPlan = await renderPlanModule.publishRenderPlan({
@@ -9596,13 +9604,21 @@ export const test_cli_scaffold = async (): Promise<void> => {
       predecessor: concurrentWinner,
       target: planTarget,
     });
-    TestValidator.predicate(
+    TestValidator.equals(
       "an active worker keeps its session plan across later replacement",
-      activeWorkerPlan.name === "winner" &&
-        activeWorkerPlan.chunkFrames === 24 &&
-        replacementPlan.plan.name === "replacement" &&
-        renderPlanModule.captureRenderPlan(planRoot, planTarget).generation ===
-          replacementPlan.generation,
+      {
+        head: renderPlanModule.captureRenderPlan(planRoot, planTarget)
+          .generation,
+        replacementName: replacementPlan.plan.name,
+        sessionChunkFrames: activeWorkerPlan.chunkFrames,
+        sessionName: activeWorkerPlan.name,
+      },
+      {
+        head: replacementPlan.generation,
+        replacementName: "replacement",
+        sessionChunkFrames: 24,
+        sessionName: "winner",
+      },
     );
 
     const exactPlanRoot = path.join(base, "render-plan-exact-competitor");
@@ -9663,15 +9679,21 @@ export const test_cli_scaffold = async (): Promise<void> => {
         },
       ]);
     }
-    TestValidator.predicate(
+    TestValidator.equals(
       "render plan accepts an exact no-overwrite commit competitor",
-      exactPlanInserted &&
-        exactPlanAccepted !== undefined &&
-        exactPlanAccepted.plan.name === "exact-competitor" &&
-        (() => {
+      {
+        acceptedName: exactPlanAccepted?.plan.name ?? null,
+        inserted: exactPlanInserted,
+        slotIdentityKept: ((): boolean => {
           const status = fs.lstatSync(exactPlanSlot, { bigint: true });
           return `${status.dev}\0${status.ino}` === exactPlanIdentity;
         })(),
+      },
+      {
+        acceptedName: "exact-competitor",
+        inserted: true,
+        slotIdentityKept: true,
+      },
     );
 
     const foreignPlanRoot = path.join(base, "render-plan-foreign-competitor");
