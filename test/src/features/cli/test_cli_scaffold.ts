@@ -5044,7 +5044,9 @@ export const test_cli_scaffold = async (): Promise<void> => {
 
     const rootSwapTarget = path.join(proxyPublishParent, "root-swap");
     const parkedProxyPublishRoot = `${proxyPublishRoot}.parked`;
-    let proxyRootSwapped = false;
+    // Same rename boundary as the parent successor above: replace the render
+    // root when the publisher closes the file it created inside the target.
+    let proxyRootSwap: number | "swapped" | null = null;
     mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
       const descriptor = Reflect.apply(nativeOpen, mutableFs, [
         file,
@@ -5052,16 +5054,22 @@ export const test_cli_scaffold = async (): Promise<void> => {
         ...args,
       ]) as number;
       if (
-        proxyRootSwapped === false &&
+        proxyRootSwap === null &&
         typeof file !== "number" &&
         flags === "wx+" &&
         path
           .resolve(file.toString())
           .startsWith(`${path.resolve(rootSwapTarget)}${path.sep}`)
       ) {
-        nativeRename(proxyPublishRoot, parkedProxyPublishRoot);
-        nativeMkdir(proxyPublishParent, { recursive: true });
-        proxyRootSwapped = true;
+        proxyRootSwap = descriptor;
+        mutableFs.closeSync = ((closing: number): void => {
+          Reflect.apply(nativeClose, mutableFs, [closing]);
+          if (proxyRootSwap === closing) {
+            proxyRootSwap = "swapped";
+            nativeRename(proxyPublishRoot, parkedProxyPublishRoot);
+            nativeMkdir(proxyPublishParent, { recursive: true });
+          }
+        }) as typeof fs.closeSync;
       }
       return descriptor;
     }) as typeof fs.openSync;
@@ -5088,14 +5096,28 @@ export const test_cli_scaffold = async (): Promise<void> => {
             mutableFs.openSync = nativeOpen;
           },
         },
+        {
+          resource: "proxy root swap close hook",
+          cleanup: () => {
+            mutableFs.closeSync = nativeClose;
+          },
+        },
       ]);
     }
-    TestValidator.predicate(
+    TestValidator.equals(
       "proxy publisher rejects and preserves a physical render-root successor",
-      proxyRootSwapped &&
-        proxyRootSwapRejected &&
-        fs.existsSync(proxyPublishRoot) &&
-        fs.existsSync(parkedProxyPublishRoot),
+      {
+        parkedRootResident: fs.existsSync(parkedProxyPublishRoot),
+        rejected: proxyRootSwapRejected,
+        successorRootResident: fs.existsSync(proxyPublishRoot),
+        swapped: proxyRootSwap === "swapped",
+      },
+      {
+        parkedRootResident: true,
+        rejected: true,
+        successorRootResident: true,
+        swapped: true,
+      },
     );
     fs.rmSync(proxyPublishRoot, { recursive: true, force: true });
     nativeRename(parkedProxyPublishRoot, proxyPublishRoot);
@@ -5228,63 +5250,78 @@ export const test_cli_scaffold = async (): Promise<void> => {
     // Record the judge's own outcome: neither a folded verdict nor a thrown
     // failure alone can say which fingerprint the captured evidence carried.
     let gcAbaJudgment: unknown = null;
-    const gcAbaProductionRefused = throwsWith(
-      () =>
-        proxyPublisherModule.captureProxyPublicationGcTarget({
-          renderRoot: proxyPublishRoot,
-          target: gcAbaProductionTarget,
-          judge: (snapshot, evidence) => {
-            nativeRename(gcAbaProductionTarget, gcAbaProductionParked);
-            nativeRename(gcAbaProductionSuccessor, gcAbaProductionTarget);
-            let gcAbaJudgeCleanupFailure: { error: unknown } | undefined;
-            try {
-              const receipt = proxyModule.inspectCapturedProxyBundle(
-                snapshot,
-                evidence,
-              );
-              gcAbaJudgment = {
-                compile: receipt.compileFingerprint,
-                edit: receipt.editFingerprint,
-                publication: receipt.publicationFingerprint,
-              };
-              return (
-                receipt.publicationFingerprint === gcAbaPublication &&
-                receipt.compileFingerprint === gcAbaCompile &&
-                receipt.editFingerprint === gcAbaEdit
-              );
-            } catch (error) {
-              gcAbaJudgeCleanupFailure = { error };
-              gcAbaJudgment =
-                error instanceof Error ? error.message : String(error);
-              return false;
-            } finally {
-              preserveCliHarnessCleanup(gcAbaJudgeCleanupFailure, [
-                {
-                  resource: "proxy GC ABA successor target",
-                  cleanup: () => {
-                    nativeRename(
-                      gcAbaProductionTarget,
-                      gcAbaProductionSuccessor,
-                    );
+    // The judge never ran on the previous head, so the collector's own outcome
+    // is what has to be named: a message when it refuses, or "collected" when
+    // it returns without ever adjudicating.
+    const gcAbaProductionRefused = ((): unknown => {
+      try {
+        return ((): "collected" => {
+          proxyPublisherModule.captureProxyPublicationGcTarget({
+            renderRoot: proxyPublishRoot,
+            target: gcAbaProductionTarget,
+            judge: (snapshot, evidence) => {
+              nativeRename(gcAbaProductionTarget, gcAbaProductionParked);
+              nativeRename(gcAbaProductionSuccessor, gcAbaProductionTarget);
+              let gcAbaJudgeCleanupFailure: { error: unknown } | undefined;
+              try {
+                const receipt = proxyModule.inspectCapturedProxyBundle(
+                  snapshot,
+                  evidence,
+                );
+                gcAbaJudgment = {
+                  compile: receipt.compileFingerprint,
+                  edit: receipt.editFingerprint,
+                  publication: receipt.publicationFingerprint,
+                };
+                return (
+                  receipt.publicationFingerprint === gcAbaPublication &&
+                  receipt.compileFingerprint === gcAbaCompile &&
+                  receipt.editFingerprint === gcAbaEdit
+                );
+              } catch (error) {
+                gcAbaJudgeCleanupFailure = { error };
+                gcAbaJudgment =
+                  error instanceof Error ? error.message : String(error);
+                return false;
+              } finally {
+                preserveCliHarnessCleanup(gcAbaJudgeCleanupFailure, [
+                  {
+                    resource: "proxy GC ABA successor target",
+                    cleanup: () => {
+                      nativeRename(
+                        gcAbaProductionTarget,
+                        gcAbaProductionSuccessor,
+                      );
+                    },
                   },
-                },
-                {
-                  resource: "proxy GC ABA resident target",
-                  cleanup: () => {
-                    nativeRename(gcAbaProductionParked, gcAbaProductionTarget);
+                  {
+                    resource: "proxy GC ABA resident target",
+                    cleanup: () => {
+                      nativeRename(
+                        gcAbaProductionParked,
+                        gcAbaProductionTarget,
+                      );
+                    },
                   },
-                },
-              ]);
-            }
-          },
-        }),
-      "changed after inventory",
-    );
+                ]);
+              }
+            },
+          });
+          return "collected";
+        })();
+      } catch (error) {
+        return error instanceof Error ? error.message : String(error);
+      }
+    })();
     TestValidator.equals(
       "proxy GC production adjudication derives ABA status from captured evidence",
       {
         judgment: gcAbaJudgment,
-        refused: gcAbaProductionRefused,
+        outcome:
+          typeof gcAbaProductionRefused === "string" &&
+          gcAbaProductionRefused.includes("changed after inventory")
+            ? "changed after inventory"
+            : gcAbaProductionRefused,
         residentPublished: !throws(() =>
           proxyModule.inspectPublishedProxyBundle(
             proxyPublishRoot,
@@ -5303,7 +5340,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
           edit: gcAbaEdit,
           publication: gcAbaPublication,
         },
-        refused: true,
+        outcome: "changed after inventory",
         residentPublished: true,
         successorIntact: true,
       },

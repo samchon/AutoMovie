@@ -121,11 +121,11 @@ export const test_cli_scaffold_proxy_publication_cleanup = (): void => {
           containerKind: "ArrowFunction",
           containerStatements: 4,
           finallyDigest:
-            "c880292843706f4309ac38037361032c9934315f0d7c6a97c543fa446dfddbe6",
+            "740ba8872fd6a1d7fdd0a96a157c3547769f6f522c93061bd28cda204cb4ccdb",
           finallySubstantive: {
             digest:
-              "4de1e3985e1ee1956a7a431b71ba9c9a873a0cf802869f875d0c6ad7a09c7503",
-            tokens: 53,
+              "9486ab31f6af59071f8d7aee249107d1e394f17fb88eb6618bdbd65416f0e649",
+            tokens: 54,
           },
           index: 3,
           preceding: "letgcAbaJudgeCleanupFailure:{error:unknown}|undefined;",
@@ -137,7 +137,7 @@ export const test_cli_scaffold_proxy_publication_cleanup = (): void => {
           tryBody:
             "{constreceipt=proxyModule.inspectCapturedProxyBundle(snapshot,evidence,);gcAbaJudgment={compile:receipt.compileFingerprint,edit:receipt.editFingerprint,publication:receipt.publicationFingerprint,};return(receipt.publicationFingerprint===gcAbaPublication&&receipt.compileFingerprint===gcAbaCompile&&receipt.editFingerprint===gcAbaEdit);}",
           tryDigest:
-            "7532ad282014eb54ef31e83f13d33adb38d7daaa4aa01e161962494adac16d84",
+            "d5081b09f5b5cd2a8d6da58b55e1856fade007b3d4eb8e65da1efeb98788eb02",
         },
         {
           catchBodies: ["scaleCleanupFailure={error};", "throwerror;"],

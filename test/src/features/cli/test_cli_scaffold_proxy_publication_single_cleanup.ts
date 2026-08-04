@@ -195,11 +195,11 @@ export const test_cli_scaffold_proxy_publication_single_cleanup = (): void => {
           containerKind: "TryStatement",
           containerStatements: 1986,
           finallyDigest:
-            "1885008df301204a283cf4690885af4c8efb553753f101d40313cd408060978d",
+            "fe4098310699985264756f737581264e0917096ed65af56093bd53810a5e400d",
           finallySubstantive: {
             digest:
-              "1ddaa3c2c9a90ab922db7898759cc8a2d76e1540ebafc58ea119911373ed748b",
-            tokens: 29,
+              "5a3e299c6b175d190e05c7571a34e247363a5759657b359d3e7fd892fcd8269f",
+            tokens: 50,
           },
           index: 195,
           preceding:
