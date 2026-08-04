@@ -5174,11 +5174,20 @@ export const test_cli_scaffold = async (): Promise<void> => {
         },
       ]);
     }
-    TestValidator.predicate(
+    TestValidator.equals(
       "proxy publisher preserves a partial file appearing at commit",
-      partialSuccessorInserted &&
-        partialSuccessorRejected &&
-        fs.readFileSync(partialSuccessorFile).equals(partialSuccessorBytes),
+      {
+        inserted: partialSuccessorInserted,
+        rejected: partialSuccessorRejected,
+        residentBytes: fs
+          .readFileSync(partialSuccessorFile)
+          .equals(partialSuccessorBytes),
+      },
+      {
+        inserted: true,
+        rejected: true,
+        residentBytes: true,
+      },
     );
     fs.rmSync(partialSuccessorTarget, { recursive: true, force: true });
 
@@ -5439,11 +5448,18 @@ export const test_cli_scaffold = async (): Promise<void> => {
       "feature",
       "feature.mp4",
     );
-    TestValidator.predicate(
+    TestValidator.equals(
       "proxy publication keeps large media materialized as a regular file",
-      fs.lstatSync(volumeProxyTarget).isDirectory() &&
-        fs.lstatSync(volumeProxyFile).isFile() &&
-        fs.statSync(volumeProxyFile).size === volumeProxyBytes.length,
+      {
+        bundleIsDirectory: fs.lstatSync(volumeProxyTarget).isDirectory(),
+        mediaIsFile: fs.lstatSync(volumeProxyFile).isFile(),
+        mediaSize: fs.statSync(volumeProxyFile).size,
+      },
+      {
+        bundleIsDirectory: true,
+        mediaIsFile: true,
+        mediaSize: volumeProxyBytes.length,
+      },
     );
     const proxyMedia = path.join(proxy, "media", "proxy.mp4");
     const parkedProxyMedia = `${proxyMedia}.parked`;
@@ -5731,12 +5747,20 @@ export const test_cli_scaffold = async (): Promise<void> => {
       verifiedProxyRoot,
       verifiedProxyBundle,
     );
-    TestValidator.predicate(
+    TestValidator.equals(
       "the final proxy consumer accepts one exact manifest-backed bundle",
-      inspectedProxy.tier.kind === "proxy" &&
-        inspectedProxy.publicationFingerprint === verifiedProxyPublication &&
-        inspectedProxy.compileFingerprint === verifiedProxyCompile &&
-        inspectedProxy.editFingerprint === verifiedProxyEdit,
+      {
+        compile: inspectedProxy.compileFingerprint,
+        edit: inspectedProxy.editFingerprint,
+        publication: inspectedProxy.publicationFingerprint,
+        tier: inspectedProxy.tier.kind,
+      },
+      {
+        compile: verifiedProxyCompile,
+        edit: verifiedProxyEdit,
+        publication: verifiedProxyPublication,
+        tier: "proxy",
+      },
     );
 
     const sameLengthProxyMutation = Buffer.from(verifiedProxyPayloadBytes);
