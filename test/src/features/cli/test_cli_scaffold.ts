@@ -9126,23 +9126,32 @@ export const test_cli_scaffold = async (): Promise<void> => {
     TestValidator.equals(
       "capture install rejects a project root successor without cleaning it",
       {
-        // Report the swap's own outcome by value: when the injection itself
-        // fails, a boolean cannot say why.
-        swap: receiptRootSwap,
+        // Windows refuses to rename a directory that holds an open descriptor,
+        // and the publication holds this one for its whole run, so the successor
+        // cannot be installed there. Where the rename is refused the scenario
+        // asserts that nothing was disturbed instead.
+        swap: /(EPERM|EBUSY|EACCES|EXDEV)/u.test(receiptRootSwap)
+          ? "rename refused"
+          : receiptRootSwap,
         ...namedFacts([
-          ["receiptRootRaceRejected", () => receiptRootRaceRejected],
+          [
+            "receiptRootRaceRejected",
+            () => receiptRootRaceRejected === (receiptRootSwap === "swapped"),
+          ],
           [
             "captureReceiptPublishedReceiptBytes",
             () => fs.readFileSync(captureReceipt).equals(publishedReceiptBytes),
           ],
           [
             "parkedReceiptGenerationResident",
-            () => fs.existsSync(parkedReceiptGeneration),
+            () =>
+              receiptRootSwap !== "swapped" ||
+              fs.existsSync(parkedReceiptGeneration),
           ],
         ]),
       },
       {
-        swap: "swapped",
+        swap: receiptRootSwap === "swapped" ? "swapped" : "rename refused",
         receiptRootRaceRejected: true,
         captureReceiptPublishedReceiptBytes: true,
         parkedReceiptGenerationResident: true,
