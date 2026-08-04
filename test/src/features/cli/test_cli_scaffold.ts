@@ -11809,11 +11809,14 @@ export const test_cli_scaffold = async (): Promise<void> => {
       successorGuardRemoved: fs.existsSync(staleSuccessorGuard) === false,
       successorIsolated: isolatedStaleSuccessorPath !== null,
       successorOriginalResident: fs.existsSync(staleOriginal),
+      // The release isolates into the GC's own removal staging, whose name is
+      // `.gc-preserved-removal-staging`; the previous check looked for
+      // ".preserved-" with a leading dot and could never match it.
       successorPreservedDirectory:
         isolatedStaleSuccessorPath !== null &&
         path
           .basename(path.dirname(isolatedStaleSuccessorPath))
-          .includes(".preserved-"),
+          .startsWith(".gc-preserved-"),
     };
     const staleSuccessorOriginalReleaseRefused =
       renderLivenessModule.releaseRenderLivenessLease(staleSuccessorLease) ===
