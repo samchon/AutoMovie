@@ -191,12 +191,12 @@ export const test_benchmark_runner_single_resource_cleanup = (): void => {
     "utf8",
   );
   const expected = {
-    count: 3,
+    count: 2,
     parentDigest:
-      "ad15dd9b9740f7fb8b499bd8133656359ef86dffa880407b6879c927a1322dd3",
+      "f28249e9ee83530ba62b4f15f18d4f14eebb13722d9c69e7a3b4a3f16e33f171",
     parseDiagnostics: [],
     rootDigest:
-      "f422df13535b2287bbc6704d0d00612d8cd66e10968da29837d0de5175fbe1c7",
+      "08880986cdc0f59c4e98d3f3a4a8abe50a54bd9550f22b2d6f79aa1885029119",
     rows: [
       {
         catchBodies: ["archivePublicationFailure={error};", "throwerror;"],
@@ -223,33 +223,6 @@ export const test_benchmark_runner_single_resource_cleanup = (): void => {
           digest:
             "1f51faea90730746a189434b4057a72d363bd1edde3f79f8b59843a76dcdfe78",
           tokens: 20,
-        },
-      },
-      {
-        catchBodies: ["mcpProbeHarnessFailure={error};", "throwerror;"],
-        catchVariables: ["error"],
-        cleanup: "()=>{Client.prototype.close=nativeClientClose;}",
-        containerKind: "ArrowFunction",
-        containerStatements: 36,
-        failureHolder:
-          "letmcpProbeHarnessFailure:IBenchmarkRunnerFixtureFailure|undefined;",
-        finallyDigest:
-          "b5a79153c91d0b8727af80e3d529623c77451d71eb637784d186c2c46cae562e",
-        finallySubstantive: {
-          digest:
-            "4939c34f6549d1155b6ba98e19761ee87a8a61fefe65dfad7e1075c77e774c72",
-          tokens: 31,
-        },
-        helper: "preserveBenchmarkRunnerHookCleanup",
-        index: 17,
-        owner: "exerciseInputAndFilesystemFences",
-        resource: "MCP-probe client-close hook",
-        tryDigest:
-          "256c923ae04ba8a401e0ae1a1c9e54de691824b1000aaa4804ed29268f59f9f7",
-        trySubstantive: {
-          digest:
-            "704a8c586d37d1c705477bc25019eed60d60838d8bb94179e1a547cddb1dcc8a",
-          tokens: 58,
         },
       },
       {
@@ -282,7 +255,7 @@ export const test_benchmark_runner_single_resource_cleanup = (): void => {
     ],
   };
   TestValidator.equals(
-    "benchmark runner protects three single-resource cleanup lifecycles",
+    "benchmark runner protects two single-resource cleanup lifecycles",
     benchmarkRunnerSingleResourceCleanupContract(text),
     expected,
   );

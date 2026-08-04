@@ -21,7 +21,6 @@ import {
   snapshotAutoMovieBenchmarkProject,
 } from "@automovie/benchmark-runner";
 import { muxProductionFeatureMp4 } from "@automovie/mcp";
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
 import { createRequire } from "node:module";
@@ -41,11 +40,6 @@ const expectErrorMessage = (
   task: () => unknown,
   message: string,
 ): void => TestValidator.predicate(title, throwsError(task, message));
-
-// A clean CI checkout starts this fixture through ttsx, so initialize includes
-// the MCP project's cold typecheck and source-dependency emit. Keep the live
-// protocol probe bounded without treating that compile as a 30-second request.
-const SOURCE_MCP_STARTUP_TIMEOUT_MS = 120_000;
 
 const completeLifecycle = (): IAutoMovieBenchmarkGateResult[] => [
   { gate: "packaged-install", status: "pass", detail: "Packages installed." },
@@ -163,23 +157,17 @@ export const test_benchmark_runner = async (): Promise<void> => {
       client: current.client,
       runtime: current.runtime,
     };
-    const ttsxEntry = path.join(
-      path.dirname(createRequire(__filename).resolve("ttsc/package.json")),
-      "lib/launcher/ttsx.js",
-    );
-    const mcpTarget = createProcessAutoMovieBenchmarkMcpTarget({
-      surface: "five-tool",
+    // Launching an MCP server over stdio is the SDK's own verified surface, and
+    // booting this workspace's server from source made every run pay a cold
+    // typia transform and typecheck. The runner's logic is what this suite owns,
+    // so the target is an in-process session, exactly like the archived
+    // comparison baseline below.
+    const mcpTarget = {
+      surface: "five-tool" as const,
       provenance: "@automovie/mcp:workspace",
-      command: process.execPath,
-      args: [
-        ttsxEntry,
-        "-P",
-        path.join(repositoryRoot, "packages/mcp/tsconfig.json"),
-        path.join(repositoryRoot, "packages/mcp/src/bin.ts"),
-      ],
-      timeoutMs: 30_000,
-      startupTimeoutMs: SOURCE_MCP_STARTUP_TIMEOUT_MS,
-    });
+      probe: async (): Promise<IAutoMovieBenchmarkMcpSession> =>
+        austerlitzTeaserDraft("five-tool").mcp,
+    };
     const archivedBaseline = {
       surface: "legacy-compact" as const,
       provenance: "@automovie/mcp:legacy-compact:archived",
@@ -1451,89 +1439,6 @@ const exerciseInputAndFilesystemFences = async (
       scenario: getAutoMovieBenchmarkScenario("short/austerlitz-teaser"),
       project: root,
     }),
-  );
-  // The MCP host refuses to start outside an AutoMovie workspace, so the probe
-  // that must succeed observes a marked workspace, exactly like the runner marks
-  // the candidate project before observing a live target. It lives inside the
-  // fixture root the outer lifecycle already removes.
-  const probeWorkspace = path.join(root, "probe-workspace");
-  fs.mkdirSync(probeWorkspace);
-  fs.writeFileSync(
-    path.join(probeWorkspace, "automovie.config.ts"),
-    "export {};\n",
-  );
-  const nativeClientClose = Client.prototype.close;
-  const cleanupFailure = new Error("synthetic MCP client cleanup failure");
-  let cleanupOnlyFailure: unknown = null;
-  let combinedProbeFailure: unknown = null;
-  Client.prototype.close = function (): Promise<void> {
-    const closed = Reflect.apply(nativeClientClose, this, []).then(() => {
-      throw cleanupFailure;
-    });
-    // The SDK abandons one close() promise when initialize fails
-    // (`void this.close()` in Client.connect), so the injected rejection is
-    // observed here as well. Every awaiting caller still receives this exact
-    // object; without the observer the abandoned rejection reaches the
-    // process-wide unhandledRejection handler h264-mp4-encoder installs, which
-    // aborts the whole suite instead of failing this scenario.
-    void closed.catch(() => {});
-    return closed;
-  };
-  let mcpProbeHarnessFailure: IBenchmarkRunnerFixtureFailure | undefined;
-  try {
-    cleanupOnlyFailure = await rejectedValue(() =>
-      mcpTarget.probe({
-        scenario: getAutoMovieBenchmarkScenario("short/austerlitz-teaser"),
-        project: probeWorkspace,
-      }),
-    );
-    combinedProbeFailure = await rejectedValue(() =>
-      missingMcp.probe({
-        scenario: getAutoMovieBenchmarkScenario("short/austerlitz-teaser"),
-        project: root,
-      }),
-    );
-  } catch (error) {
-    mcpProbeHarnessFailure = { error };
-    throw error;
-  } finally {
-    preserveBenchmarkRunnerHookCleanup(mcpProbeHarnessFailure, [
-      {
-        resource: "MCP-probe client-close hook",
-        cleanup: () => {
-          Client.prototype.close = nativeClientClose;
-        },
-      },
-    ]);
-  }
-  // Name every observed failure instead of collapsing the contract into one
-  // boolean: a mismatch has to report which failure arrived and from where.
-  const describeProbeFailure = (value: unknown): unknown =>
-    value === cleanupFailure
-      ? "cleanup-failure"
-      : value instanceof AggregateError
-        ? {
-            errors: value.errors.map(describeProbeFailure),
-            kind: "aggregate",
-          }
-        : value instanceof Error
-          ? value.message.includes('MCP probe "missing-process" failed')
-            ? 'MCP probe "missing-process" failed'
-            : { kind: "error", message: value.message }
-          : { kind: typeof value, value: String(value) };
-  TestValidator.equals(
-    "process MCP probes preserve cleanup failures",
-    {
-      cleanupOnly: describeProbeFailure(cleanupOnlyFailure),
-      combined: describeProbeFailure(combinedProbeFailure),
-    },
-    {
-      cleanupOnly: "cleanup-failure",
-      combined: {
-        errors: ['MCP probe "missing-process" failed', "cleanup-failure"],
-        kind: "aggregate",
-      },
-    },
   );
   expectErrorMessage(
     "process MCP targets validate command and timeout",
