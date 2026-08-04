@@ -4,6 +4,23 @@ import { TestValidator } from "@nestia/e2e";
 
 import { nclose, vclose } from "../internal/predicates";
 
+/**
+ * Evaluate named facts in order and stop at the first false one, so a failed
+ * comparison names the fact instead of collapsing into one boolean. Stopping
+ * keeps the short-circuit semantics the original conjunction had, which some
+ * facts depend on to guard the ones after them.
+ */
+const namedFacts = (
+  entries: ReadonlyArray<readonly [string, () => boolean]>,
+): Record<string, boolean> => {
+  const output: Record<string, boolean> = {};
+  for (const [name, evaluate] of entries) {
+    output[name] = evaluate();
+    if (output[name] === false) break;
+  }
+  return output;
+};
+
 const W = (p: IAutoMovieVector3): number[] =>
   Matrix4.compose(p, { x: 0, y: 0, z: 0, w: 1 }, { x: 1, y: 1, z: 1 });
 
@@ -97,11 +114,18 @@ export const test_resolve_fabrik_ik = (): void => {
     "long chain converges",
     dist(at(w3, "d"), { x: 1.5, y: 1.5, z: 0 }) <= 1e-3,
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "long chain keeps every segment length",
-    nclose(dist(at(w3, "a"), at(w3, "b")), 1, 1e-9) &&
-      nclose(dist(at(w3, "b"), at(w3, "c")), 1, 1e-9) &&
-      nclose(dist(at(w3, "c"), at(w3, "d")), 1, 1e-9),
+    namedFacts([
+      ["ncloseDist", () => nclose(dist(at(w3, "a"), at(w3, "b")), 1, 1e-9)],
+      ["ncloseDist2", () => nclose(dist(at(w3, "b"), at(w3, "c")), 1, 1e-9)],
+      ["ncloseDist3", () => nclose(dist(at(w3, "c"), at(w3, "d")), 1, 1e-9)],
+    ]),
+    {
+      ncloseDist: true,
+      ncloseDist2: true,
+      ncloseDist3: true,
+    },
   );
 
   // 4. coincident-joint degenerate: straight chain folded onto its own mid

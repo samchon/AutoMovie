@@ -15,6 +15,23 @@ import {
 } from "../internal/filmFixtures";
 import { createSkeleton } from "../internal/fixtures";
 
+/**
+ * Evaluate named facts in order and stop at the first false one, so a failed
+ * comparison names the fact instead of collapsing into one boolean. Stopping
+ * keeps the short-circuit semantics the original conjunction had, which some
+ * facts depend on to guard the ones after them.
+ */
+const namedFacts = (
+  entries: ReadonlyArray<readonly [string, () => boolean]>,
+): Record<string, boolean> => {
+  const output: Record<string, boolean> = {};
+  for (const [name, evaluate] of entries) {
+    output[name] = evaluate();
+    if (output[name] === false) break;
+  }
+  return output;
+};
+
 const program = (): IAutoMovieShotProgram => {
   const blocking = makeBlockingWrite();
   const performance = makePerformanceWrite();
@@ -102,29 +119,65 @@ export const test_film_defined_shot = (): void => {
       ],
     },
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "registered code reaches the complete engine pipeline",
-    compiled.success &&
-      compiled.source.shot.id === "SB-012" &&
-      compiled.source.shot.scene === "scene-duel" &&
-      compiled.continuity.opening.shot === "SB-012" &&
-      compiled.continuity.closing.shot === "SB-012" &&
-      compiled.realization.camera.every((outcome) => outcome.passed) &&
-      compiled.continuity.closing.actors.every(
-        (actor) =>
-          "gaitPhase" in actor &&
-          "rootVelocity" in actor &&
-          "footPlants" in actor &&
-          "mount" in actor,
-      ),
+    namedFacts([
+      ["compiledSuccess", () => compiled.success],
+      ["compiledSource", () => compiled.source.shot.id === "SB-012"],
+      ["compiledSource2", () => compiled.source.shot.scene === "scene-duel"],
+      [
+        "compiledContinuity",
+        () => compiled.continuity.opening.shot === "SB-012",
+      ],
+      [
+        "compiledContinuity2",
+        () => compiled.continuity.closing.shot === "SB-012",
+      ],
+      [
+        "compiledRealization",
+        () => compiled.realization.camera.every((outcome) => outcome.passed),
+      ],
+      [
+        "compiledContinuity3",
+        () =>
+          compiled.continuity.closing.actors.every(
+            (actor) =>
+              "gaitPhase" in actor &&
+              "rootVelocity" in actor &&
+              "footPlants" in actor &&
+              "mount" in actor,
+          ),
+      ],
+    ]),
+    {
+      compiledSuccess: true,
+      compiledSource: true,
+      compiledSource2: true,
+      compiledContinuity: true,
+      compiledContinuity2: true,
+      compiledRealization: true,
+      compiledContinuity3: true,
+    },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "D010 response remains optional data",
-    compiled.success &&
-      compiled.advice[0]?.id === "duel-contact" &&
-      compiled.advice[0].decision === null &&
-      compiled.advice[0].proposal.impact.impulse.z !== 0 &&
-      compiled.advice[0].selected === null,
+    namedFacts([
+      ["compiledSuccess", () => compiled.success],
+      ["compiledAdvice", () => compiled.advice[0]?.id === "duel-contact"],
+      ["compiledAdvice2", () => compiled.advice[0].decision === null],
+      [
+        "compiledAdvice3",
+        () => compiled.advice[0].proposal.impact.impulse.z !== 0,
+      ],
+      ["compiledAdvice4", () => compiled.advice[0].selected === null],
+    ]),
+    {
+      compiledSuccess: true,
+      compiledAdvice: true,
+      compiledAdvice2: true,
+      compiledAdvice3: true,
+      compiledAdvice4: true,
+    },
   );
 
   const modifiedResponse = structuredClone(advice);
@@ -165,15 +218,29 @@ export const test_film_defined_shot = (): void => {
       ],
     },
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "D010 accepted, modified, and rejected decisions remain distinguishable",
-    decisions.success &&
-      decisions.advice[0]?.decision === "accepted" &&
-      decisions.advice[1]?.decision === "modified" &&
-      decisions.advice[1].selected?.push.flexion ===
-        modifiedResponse.push.flexion &&
-      decisions.advice[2]?.decision === "rejected" &&
-      decisions.advice[2].selected === null,
+    namedFacts([
+      ["decisionsSuccess", () => decisions.success],
+      ["decisionsAdvice", () => decisions.advice[0]?.decision === "accepted"],
+      ["decisionsAdvice2", () => decisions.advice[1]?.decision === "modified"],
+      [
+        "decisionsAdvice3",
+        () =>
+          decisions.advice[1].selected?.push.flexion ===
+          modifiedResponse.push.flexion,
+      ],
+      ["decisionsAdvice4", () => decisions.advice[2]?.decision === "rejected"],
+      ["decisionsAdvice5", () => decisions.advice[2].selected === null],
+    ]),
+    {
+      decisionsSuccess: true,
+      decisionsAdvice: true,
+      decisionsAdvice2: true,
+      decisionsAdvice3: true,
+      decisionsAdvice4: true,
+      decisionsAdvice5: true,
+    },
   );
 
   const mismatched = compileDefinedShot({
@@ -235,17 +302,32 @@ export const test_film_defined_shot = (): void => {
       frameFormat: { width: 1920, height: 1080 },
     },
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "source output cannot self-certify an unrealized state contract",
-    unrealized.success === false &&
-      unrealized.diagnostics.some(
-        (diagnostic) =>
-          diagnostic.code === "contract-realization-failed" &&
-          diagnostic.fact.includes("impossible-opening"),
-      ) &&
-      unrealized.diagnostics.some((diagnostic) =>
-        diagnostic.fact.includes('actor "ghost"'),
-      ),
+    namedFacts([
+      ["unrealizedSuccess", () => unrealized.success === false],
+      [
+        "unrealizedDiagnostics",
+        () =>
+          unrealized.diagnostics.some(
+            (diagnostic) =>
+              diagnostic.code === "contract-realization-failed" &&
+              diagnostic.fact.includes("impossible-opening"),
+          ),
+      ],
+      [
+        "unrealizedDiagnostics2",
+        () =>
+          unrealized.diagnostics.some((diagnostic) =>
+            diagnostic.fact.includes('actor "ghost"'),
+          ),
+      ],
+    ]),
+    {
+      unrealizedSuccess: true,
+      unrealizedDiagnostics: true,
+      unrealizedDiagnostics2: true,
+    },
   );
 
   const runtimeFailure = compileDefinedShot({

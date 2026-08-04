@@ -10,6 +10,23 @@ import {
 } from "../internal/fixtures";
 import { nclose } from "../internal/predicates";
 
+/**
+ * Evaluate named facts in order and stop at the first false one, so a failed
+ * comparison names the fact instead of collapsing into one boolean. Stopping
+ * keeps the short-circuit semantics the original conjunction had, which some
+ * facts depend on to guard the ones after them.
+ */
+const namedFacts = (
+  entries: ReadonlyArray<readonly [string, () => boolean]>,
+): Record<string, boolean> => {
+  const output: Record<string, boolean> = {};
+  for (const [name, evaluate] of entries) {
+    output[name] = evaluate();
+    if (output[name] === false) break;
+  }
+  return output;
+};
+
 const rest = makePose([joint("leftLowerArm", { flexion: 0 })]);
 
 /**
@@ -39,9 +56,18 @@ export const test_motion_sample_expression_neutral = (): void => {
   const early = sampleMotion(rampIn, 0.1).expression;
   const mid = sampleMotion(rampIn, 0.5).expression;
   TestValidator.equals("ramp keeps the authored preset", mid!.preset, "happy");
-  TestValidator.predicate(
+  TestValidator.equals(
     "the intensity ramps from neutral, not a pop to full",
-    early !== null && early.intensity < 0.2 && nclose(mid!.intensity, 0.5),
+    namedFacts([
+      ["early", () => early !== null],
+      ["earlyIntensity", () => early !== null && early.intensity < 0.2],
+      ["ncloseMid", () => nclose(mid!.intensity, 0.5)],
+    ]),
+    {
+      early: true,
+      earlyIntensity: true,
+      ncloseMid: true,
+    },
   );
 
   // 2. an expression authored only at the NEAR keyframe fades out to neutral

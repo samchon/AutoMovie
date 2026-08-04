@@ -4,6 +4,23 @@ import { TestValidator } from "@nestia/e2e";
 
 import { nclose } from "../internal/predicates";
 
+/**
+ * Evaluate named facts in order and stop at the first false one, so a failed
+ * comparison names the fact instead of collapsing into one boolean. Stopping
+ * keeps the short-circuit semantics the original conjunction had, which some
+ * facts depend on to guard the ones after them.
+ */
+const namedFacts = (
+  entries: ReadonlyArray<readonly [string, () => boolean]>,
+): Record<string, boolean> => {
+  const output: Record<string, boolean> = {};
+  for (const [name, evaluate] of entries) {
+    output[name] = evaluate();
+    if (output[name] === false) break;
+  }
+  return output;
+};
+
 const throws = (task: () => void): boolean => {
   try {
     task();
@@ -42,10 +59,17 @@ export const test_motion_gait_period = (): void => {
     );
 
   const short = gaitMotion("short", "sk", gait(0.25), 1);
-  TestValidator.predicate(
+  TestValidator.equals(
     "positive period is preserved",
-    nclose(short.duration, 0.25) &&
-      nclose(short.keyframes[0]!.time, 0) &&
-      nclose(short.keyframes[1]!.time, 0.25),
+    namedFacts([
+      ["ncloseShort", () => nclose(short.duration, 0.25)],
+      ["ncloseShort2", () => nclose(short.keyframes[0]!.time, 0)],
+      ["ncloseShort3", () => nclose(short.keyframes[1]!.time, 0.25)],
+    ]),
+    {
+      ncloseShort: true,
+      ncloseShort2: true,
+      ncloseShort3: true,
+    },
   );
 };

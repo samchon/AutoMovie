@@ -11,6 +11,23 @@ import {
 } from "@automovie/benchmark";
 import { TestValidator } from "@nestia/e2e";
 
+/**
+ * Evaluate named facts in order and stop at the first false one, so a failed
+ * comparison names the fact instead of collapsing into one boolean. Stopping
+ * keeps the short-circuit semantics the original conjunction had, which some
+ * facts depend on to guard the ones after them.
+ */
+const namedFacts = (
+  entries: ReadonlyArray<readonly [string, () => boolean]>,
+): Record<string, boolean> => {
+  const output: Record<string, boolean> = {};
+  for (const [name, evaluate] of entries) {
+    output[name] = evaluate();
+    if (output[name] === false) break;
+  }
+  return output;
+};
+
 const throws = (task: () => unknown, fragment: string): boolean => {
   try {
     task();
@@ -160,77 +177,121 @@ export const test_benchmark_surface_report = (): void => {
     rationale: "The signal reads as a decision rather than a gesture.",
     evidence: ["frame:opening@2:beauty", "source:src/shots/opening.ts"],
   };
-  TestValidator.predicate(
+  TestValidator.equals(
     "a rubric verdict that reads like a measurement is refused",
-    throws(
-      () =>
-        reportAutoMovieBenchmark(
-          [productionVerdict],
-          [{ ...rubric, evidence: [] }],
-        ),
-      "carries no evidence address",
-    ) &&
-      throws(
+    namedFacts([
+      [
+        "rejected",
         () =>
-          reportAutoMovieBenchmark(
-            [productionVerdict],
-            [{ ...rubric, evidence: [" "] }],
+          throws(
+            () =>
+              reportAutoMovieBenchmark(
+                [productionVerdict],
+                [{ ...rubric, evidence: [] }],
+              ),
+            "carries no evidence address",
           ),
-        "carries no evidence address",
-      ) &&
-      throws(
+      ],
+      [
+        "rejected2",
         () =>
-          reportAutoMovieBenchmark(
-            [productionVerdict],
-            [{ ...rubric, reviewer: " " }],
+          throws(
+            () =>
+              reportAutoMovieBenchmark(
+                [productionVerdict],
+                [{ ...rubric, evidence: [" "] }],
+              ),
+            "carries no evidence address",
           ),
-        "reviewer and rationale",
-      ) &&
-      throws(
+      ],
+      [
+        "rejected3",
         () =>
-          reportAutoMovieBenchmark(
-            [productionVerdict],
-            [{ ...rubric, rationale: " " }],
+          throws(
+            () =>
+              reportAutoMovieBenchmark(
+                [productionVerdict],
+                [{ ...rubric, reviewer: " " }],
+              ),
+            "reviewer and rationale",
           ),
-        "reviewer and rationale",
-      ) &&
-      throws(
+      ],
+      [
+        "rejected4",
         () =>
-          reportAutoMovieBenchmark(
-            [productionVerdict],
-            [{ ...rubric, score: 2 }],
+          throws(
+            () =>
+              reportAutoMovieBenchmark(
+                [productionVerdict],
+                [{ ...rubric, rationale: " " }],
+              ),
+            "reviewer and rationale",
           ),
-        "outside the 0..1 rubric range",
-      ) &&
-      throws(
+      ],
+      [
+        "rejected5",
         () =>
-          reportAutoMovieBenchmark(
-            [productionVerdict],
-            [{ ...rubric, score: -0.1 }],
+          throws(
+            () =>
+              reportAutoMovieBenchmark(
+                [productionVerdict],
+                [{ ...rubric, score: 2 }],
+              ),
+            "outside the 0..1 rubric range",
           ),
-        "outside the 0..1 rubric range",
-      ) &&
-      throws(
+      ],
+      [
+        "rejected6",
         () =>
-          reportAutoMovieBenchmark(
-            [productionVerdict],
-            [{ ...rubric, score: Number.NaN }],
+          throws(
+            () =>
+              reportAutoMovieBenchmark(
+                [productionVerdict],
+                [{ ...rubric, score: -0.1 }],
+              ),
+            "outside the 0..1 rubric range",
           ),
-        "outside the 0..1 rubric range",
-      ) &&
-      throws(
+      ],
+      [
+        "rejected7",
         () =>
-          reportAutoMovieBenchmark(
-            [productionVerdict],
-            [
-              {
-                ...rubric,
-                runId: digestBenchmarkValue("orphan-rubric-run"),
-              },
-            ],
+          throws(
+            () =>
+              reportAutoMovieBenchmark(
+                [productionVerdict],
+                [{ ...rubric, score: Number.NaN }],
+              ),
+            "outside the 0..1 rubric range",
           ),
-        "has no measured verdict",
-      ),
+      ],
+      [
+        "rejected8",
+        () =>
+          throws(
+            () =>
+              reportAutoMovieBenchmark(
+                [productionVerdict],
+                [
+                  {
+                    ...rubric,
+                    runId: digestBenchmarkValue("orphan-rubric-run"),
+                  },
+                ],
+              ),
+            "has no measured verdict",
+          ),
+      ],
+    ]),
+    {
+      rejected: true,
+      rejected2: true,
+      rejected3: true,
+      rejected4: true,
+      rejected5: true,
+      rejected6: true,
+      rejected7: true,
+      rejected8: true,
+    },
   );
   TestValidator.equals(
     "a complete rubric verdict rides beside the measured axes",

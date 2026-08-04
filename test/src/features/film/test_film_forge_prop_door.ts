@@ -5,6 +5,23 @@ import { TestValidator } from "@nestia/e2e";
 import { nclose } from "../internal/predicates";
 import { createDoorPropSpec } from "./test_film_forge_prop";
 
+/**
+ * Evaluate named facts in order and stop at the first false one, so a failed
+ * comparison names the fact instead of collapsing into one boolean. Stopping
+ * keeps the short-circuit semantics the original conjunction had, which some
+ * facts depend on to guard the ones after them.
+ */
+const namedFacts = (
+  entries: ReadonlyArray<readonly [string, () => boolean]>,
+): Record<string, boolean> => {
+  const output: Record<string, boolean> = {};
+  for (const [name, evaluate] of entries) {
+    output[name] = evaluate();
+    if (output[name] === false) break;
+  }
+  return output;
+};
+
 /** Quat values for a rotation of `deg` about +Y. */
 const yQuat = (deg: number): number[] => {
   const half = (deg * Math.PI) / 360;
@@ -83,10 +100,17 @@ export const test_film_forge_prop_door = (): void => {
   const cos110 = Math.cos((110 * Math.PI) / 180);
   const sin110 = Math.sin((110 * Math.PI) / 180);
   const slammedX = basisX(slammed.world.get("hinge")!);
-  TestValidator.predicate(
+  TestValidator.equals(
     "over-swing clamps to exactly 110°",
-    nclose(slammedX[0], cos110) &&
-      nclose(slammedX[1], 0) &&
-      nclose(slammedX[2], -sin110),
+    namedFacts([
+      ["ncloseSlammedX", () => nclose(slammedX[0], cos110)],
+      ["ncloseSlammedX2", () => nclose(slammedX[1], 0)],
+      ["ncloseSlammedX3", () => nclose(slammedX[2], -sin110)],
+    ]),
+    {
+      ncloseSlammedX: true,
+      ncloseSlammedX2: true,
+      ncloseSlammedX3: true,
+    },
   );
 };

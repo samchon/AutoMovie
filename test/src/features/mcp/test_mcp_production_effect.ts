@@ -21,6 +21,23 @@ import {
   worldDesign,
 } from "./productionFixtures";
 
+/**
+ * Evaluate named facts in order and stop at the first false one, so a failed
+ * comparison names the fact instead of collapsing into one boolean. Stopping
+ * keeps the short-circuit semantics the original conjunction had, which some
+ * facts depend on to guard the ones after them.
+ */
+const namedFacts = (
+  entries: ReadonlyArray<readonly [string, () => boolean]>,
+): Record<string, boolean> => {
+  const output: Record<string, boolean> = {};
+  for (const [name, evaluate] of entries) {
+    output[name] = evaluate();
+    if (output[name] === false) break;
+  }
+  return output;
+};
+
 interface IProductionEffectFixtureFailure {
   error: unknown;
 }
@@ -141,29 +158,81 @@ export const test_mcp_production_effect = (): void => {
         time: 2,
       },
     });
-    TestValidator.predicate(
+    TestValidator.equals(
       "source cue becomes one current deterministic effect stream and oracle summary",
-      compileSucceeded &&
-        compiled?.effects.length === 1 &&
-        compiled.effects[0]?.kind === "smoke" &&
-        compiled.effects[0]?.event === "signal-raised" &&
-        summary.result?.kind === "measurement" &&
-        summary.result.values.active === true &&
-        Number(summary.result.values.particleCount) > 0 &&
-        Number(summary.result.values.particleCount) <=
-          Number(summary.result.values.particleCap) &&
-        Number(summary.result.values.visibilityRisk) >= 0 &&
-        summary.result.values.effectDigest === compiled.effects[0]?.digest &&
-        inactive.result?.kind === "measurement" &&
-        inactive.result.values.active === false &&
-        unsafeSubjects.result === null &&
-        unsafeSubjects.diagnostics[0]?.message.includes("256 unique") &&
-        missingZone.result === null &&
-        invalidTimes.every((output) => output.result === null) &&
-        missingCompiledShot.result === null &&
-        missingCompiledShot.diagnostics[0]?.message.includes(
-          "no current compiled source",
-        ),
+      namedFacts([
+        ["compileSucceeded", () => compileSucceeded],
+        ["compiledCount", () => compiled?.effects.length === 1],
+        ["compiledEffects", () => compiled.effects[0]?.kind === "smoke"],
+        [
+          "compiledEffects2",
+          () => compiled.effects[0]?.event === "signal-raised",
+        ],
+        ["summaryResult", () => summary.result?.kind === "measurement"],
+        ["summaryResult2", () => summary.result.values.active === true],
+        [
+          "summaryResult3",
+          () => Number(summary.result.values.particleCount) > 0,
+        ],
+        [
+          "summaryResult4",
+          () =>
+            Number(summary.result.values.particleCount) <=
+            Number(summary.result.values.particleCap),
+        ],
+        [
+          "summaryResult5",
+          () => Number(summary.result.values.visibilityRisk) >= 0,
+        ],
+        [
+          "summaryResult6",
+          () =>
+            summary.result.values.effectDigest === compiled.effects[0]?.digest,
+        ],
+        ["inactiveResult", () => inactive.result?.kind === "measurement"],
+        ["inactiveResult2", () => inactive.result.values.active === false],
+        ["unsafeSubjectsResult", () => unsafeSubjects.result === null],
+        [
+          "unsafeSubjectsDiagnostics",
+          () => unsafeSubjects.diagnostics[0]?.message.includes("256 unique"),
+        ],
+        ["missingZoneResult", () => missingZone.result === null],
+        [
+          "invalidTimesOutput",
+          () => invalidTimes.every((output) => output.result === null),
+        ],
+        [
+          "missingCompiledShotResult",
+          () => missingCompiledShot.result === null,
+        ],
+        [
+          "missingCompiledShotDiagnostics",
+          () =>
+            missingCompiledShot.diagnostics[0]?.message.includes(
+              "no current compiled source",
+            ),
+        ],
+      ]),
+      {
+        compileSucceeded: true,
+        compiledCount: true,
+        compiledEffects: true,
+        compiledEffects2: true,
+        summaryResult: true,
+        summaryResult2: true,
+        summaryResult3: true,
+        summaryResult4: true,
+        summaryResult5: true,
+        summaryResult6: true,
+        inactiveResult: true,
+        inactiveResult2: true,
+        unsafeSubjectsResult: true,
+        unsafeSubjectsDiagnostics: true,
+        missingZoneResult: true,
+        invalidTimesOutput: true,
+        missingCompiledShotResult: true,
+        missingCompiledShotDiagnostics: true,
+      },
     );
 
     const cue = compiled!.effectCues![0]!;
@@ -215,25 +284,42 @@ export const test_mcp_production_effect = (): void => {
         effectCues: undefined,
       }),
     ];
-    TestValidator.predicate(
+    TestValidator.equals(
       "effect validation rejects every unsafe cue and compiler-stream mismatch",
-      valid.length === 0 &&
+      namedFacts([
+        ["validCount", () => valid.length === 0],
         [
-          "at most 128",
-          "unique inside the shot",
-          "compiler-materialized world zone",
-          "positive interval",
-          "bounded 0..1",
-          "compiled event realized inside",
-          "must not overlap prior zone cue",
-          "exactly one compiler-owned stream",
-        ].every((message) =>
-          invalid.some((diagnostic) => diagnostic.message.includes(message)),
-        ) &&
-        materializeCompiledEffects({
-          contract: shotContract(),
-          cues: [cue],
-        }).length === 0,
+          "mostUnique",
+          () =>
+            [
+              "at most 128",
+              "unique inside the shot",
+              "compiler-materialized world zone",
+              "positive interval",
+              "bounded 0..1",
+              "compiled event realized inside",
+              "must not overlap prior zone cue",
+              "exactly one compiler-owned stream",
+            ].every((message) =>
+              invalid.some((diagnostic) =>
+                diagnostic.message.includes(message),
+              ),
+            ),
+        ],
+        [
+          "materializeCompiledEffectsCount",
+          () =>
+            materializeCompiledEffects({
+              contract: shotContract(),
+              cues: [cue],
+            }).length === 0,
+        ],
+      ]),
+      {
+        validCount: true,
+        mostUnique: true,
+        materializeCompiledEffectsCount: true,
+      },
     );
 
     const shotPath = path.join(
@@ -368,20 +454,61 @@ export const test_mcp_production_effect = (): void => {
     });
     fs.writeFileSync(shotPath, originalShot);
     fs.writeFileSync(manifestPath, originalManifest);
-    TestValidator.predicate(
+    TestValidator.equals(
       "effect oracle refuses ambiguous streams and a missing compiled camera while bounding subjects and camera rays",
-      ambiguousSummary.result === null &&
-        ambiguousSummary.diagnostics[0]?.message.includes("unambiguous") &&
-        missingCameraSummary.result === null &&
-        missingCameraSummary.diagnostics[0]?.message.includes(
-          "no current compiled camera",
-        ) &&
-        JSON.stringify(subjectInsideCounts) ===
-          JSON.stringify([0, 0, 0, 0, 0, 1]) &&
-        parallelOutsideSummary.result?.kind === "measurement" &&
-        parallelOutsideSummary.result.values.cameraIntersectionLength === 0 &&
-        facingAwaySummary.result?.kind === "measurement" &&
-        facingAwaySummary.result.values.cameraIntersectionLength === 0,
+      namedFacts([
+        ["ambiguousSummaryResult", () => ambiguousSummary.result === null],
+        [
+          "ambiguousSummaryDiagnostics",
+          () =>
+            ambiguousSummary.diagnostics[0]?.message.includes("unambiguous"),
+        ],
+        [
+          "missingCameraSummaryResult",
+          () => missingCameraSummary.result === null,
+        ],
+        [
+          "missingCameraSummaryDiagnostics",
+          () =>
+            missingCameraSummary.diagnostics[0]?.message.includes(
+              "no current compiled camera",
+            ),
+        ],
+        [
+          "stringifySubjectInsideCounts",
+          () =>
+            JSON.stringify(subjectInsideCounts) ===
+            JSON.stringify([0, 0, 0, 0, 0, 1]),
+        ],
+        [
+          "parallelOutsideSummaryResult",
+          () => parallelOutsideSummary.result?.kind === "measurement",
+        ],
+        [
+          "parallelOutsideSummaryResult2",
+          () =>
+            parallelOutsideSummary.result.values.cameraIntersectionLength === 0,
+        ],
+        [
+          "facingAwaySummaryResult",
+          () => facingAwaySummary.result?.kind === "measurement",
+        ],
+        [
+          "facingAwaySummaryResult2",
+          () => facingAwaySummary.result.values.cameraIntersectionLength === 0,
+        ],
+      ]),
+      {
+        ambiguousSummaryResult: true,
+        ambiguousSummaryDiagnostics: true,
+        missingCameraSummaryResult: true,
+        missingCameraSummaryDiagnostics: true,
+        stringifySubjectInsideCounts: true,
+        parallelOutsideSummaryResult: true,
+        parallelOutsideSummaryResult2: true,
+        facingAwaySummaryResult: true,
+        facingAwaySummaryResult2: true,
+      },
     );
   } catch (error) {
     productionEffectFailure = { error };

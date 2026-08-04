@@ -10,6 +10,23 @@ import { TestValidator } from "@nestia/e2e";
 import { IDENTITY_TRANSFORM } from "../internal/fixtures";
 import { nclose, throwsError } from "../internal/predicates";
 
+/**
+ * Evaluate named facts in order and stop at the first false one, so a failed
+ * comparison names the fact instead of collapsing into one boolean. Stopping
+ * keeps the short-circuit semantics the original conjunction had, which some
+ * facts depend on to guard the ones after them.
+ */
+const namedFacts = (
+  entries: ReadonlyArray<readonly [string, () => boolean]>,
+): Record<string, boolean> => {
+  const output: Record<string, boolean> = {};
+  for (const [name, evaluate] of entries) {
+    output[name] = evaluate();
+    if (output[name] === false) break;
+  }
+  return output;
+};
+
 const WARM = { r: 1, g: 0.8, b: 0.5, a: null, hex: "#ffcc80" };
 
 const candle: IAutoMovieLight = {
@@ -161,9 +178,18 @@ export const test_resolve_shot_lighting = (): void => {
     clips: [BLOWOUT],
     seconds: 3,
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "a light no clip addresses comes back by identity",
-    resolved[1] === sun && resolved[2] === lamp && resolved[0] !== candle,
+    namedFacts([
+      ["resolvedSun", () => resolved[1] === sun],
+      ["resolvedLamp", () => resolved[2] === lamp],
+      ["resolvedCandle", () => resolved[0] !== candle],
+    ]),
+    {
+      resolvedSun: true,
+      resolvedLamp: true,
+      resolvedCandle: true,
+    },
   );
   TestValidator.predicate(
     "and a shot with no light clips changes nothing at all",
@@ -186,12 +212,20 @@ export const test_resolve_shot_lighting = (): void => {
     ],
     seconds: 1,
   })[0]!;
-  TestValidator.predicate(
+  TestValidator.equals(
     "a linear colour ramp reads its midpoint, and drops the stale hex label",
-    nclose(ramp.color.r, 0.5) &&
-      nclose(ramp.color.g, 0.4) &&
-      nclose(ramp.color.b, 0.25) &&
-      ramp.color.hex === null,
+    namedFacts([
+      ["ncloseRamp", () => nclose(ramp.color.r, 0.5)],
+      ["ncloseRamp2", () => nclose(ramp.color.g, 0.4)],
+      ["ncloseRamp3", () => nclose(ramp.color.b, 0.25)],
+      ["rampColor", () => ramp.color.hex === null],
+    ]),
+    {
+      ncloseRamp: true,
+      ncloseRamp2: true,
+      ncloseRamp3: true,
+      rampColor: true,
+    },
   );
   const widened = resolveShotLighting({
     lights: LIGHTS,
@@ -280,51 +314,75 @@ export const test_resolve_shot_lighting = (): void => {
       () => resolveShotLighting({ lights: LIGHTS, clips, seconds: 1 }),
       [fragment],
     );
-  TestValidator.predicate(
+  TestValidator.equals(
     "a node channel, a foreign pointer, a missing light, and a kind mismatch all throw",
-    throwsOn(
+    namedFacts([
       [
-        clip(
-          "nodeTrack",
-          { kind: "node", node: "candleGlow", path: "translation" },
-          [0, 3],
-          [0, 0, 0, 1, 0, 0],
-        ),
+        "throwsOnClip",
+        () =>
+          throwsOn(
+            [
+              clip(
+                "nodeTrack",
+                { kind: "node", node: "candleGlow", path: "translation" },
+                [0, 3],
+                [0, 0, 0, 1, 0, 0],
+              ),
+            ],
+            "must address /lights/<id>/<property>",
+          ),
       ],
-      "must address /lights/<id>/<property>",
-    ) &&
-      throwsOn(
-        [
-          clip(
-            "materialTrack",
-            pointer("/materials/2/baseColor", "vec3"),
-            [0, 3],
-            [1, 1, 1, 0, 0, 0],
+      [
+        "throwsOnClip2",
+        () =>
+          throwsOn(
+            [
+              clip(
+                "materialTrack",
+                pointer("/materials/2/baseColor", "vec3"),
+                [0, 3],
+                [1, 1, 1, 0, 0, 0],
+              ),
+            ],
+            "must address /lights/<id>/<property>",
           ),
-        ],
-        "must address /lights/<id>/<property>",
-      ) &&
-      throwsOn(
-        [
-          clip(
-            "ghostTrack",
-            pointer("/lights/ghost/intensity", "scalar"),
-            [0, 3],
-            [1, 0],
+      ],
+      [
+        "throwsOnClip3",
+        () =>
+          throwsOn(
+            [
+              clip(
+                "ghostTrack",
+                pointer("/lights/ghost/intensity", "scalar"),
+                [0, 3],
+                [1, 0],
+              ),
+            ],
+            'addresses missing light "ghost"',
           ),
-        ],
-        'addresses missing light "ghost"',
-      ) &&
-      throwsOn(
-        [
-          clip(
-            "sunRange",
-            pointer("/lights/sun/range", "scalar"),
-            [0, 3],
-            [1, 0],
+      ],
+      [
+        "throwsOnClip4",
+        () =>
+          throwsOn(
+            [
+              clip(
+                "sunRange",
+                pointer("/lights/sun/range", "scalar"),
+                [0, 3],
+                [1, 0],
+              ),
+            ],
+            "which a directional light does not carry",
           ),
-        ],
-        "which a directional light does not carry",
-      ),
+      ],
+    ]),
+    {
+      throwsOnClip: true,
+      throwsOnClip2: true,
+      throwsOnClip3: true,
+      throwsOnClip4: true,
+    },
   );
 };

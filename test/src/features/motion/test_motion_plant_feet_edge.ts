@@ -8,6 +8,23 @@ import { TestValidator } from "@nestia/e2e";
 
 import { throwsError } from "../internal/predicates";
 
+/**
+ * Evaluate named facts in order and stop at the first false one, so a failed
+ * comparison names the fact instead of collapsing into one boolean. Stopping
+ * keeps the short-circuit semantics the original conjunction had, which some
+ * facts depend on to guard the ones after them.
+ */
+const namedFacts = (
+  entries: ReadonlyArray<readonly [string, () => boolean]>,
+): Record<string, boolean> => {
+  const output: Record<string, boolean> = {};
+  for (const [name, evaluate] of entries) {
+    output[name] = evaluate();
+    if (output[name] === false) break;
+  }
+  return output;
+};
+
 const t = (x: number, y: number, z: number): IAutoMovieTransform => ({
   translation: { x, y, z },
   rotation: { x: 0, y: 0, z: 0, w: 1 },
@@ -188,11 +205,18 @@ export const test_motion_plant_feet_edge = (): void => {
   const foot = resolvePose(sampleMotion(far.motion, 1).pose, reachLeg).find(
     (b) => b.bone === "leftFoot",
   )!.worldPosition;
-  TestValidator.predicate(
+  TestValidator.equals(
     "unreachable pin extends the leg without NaN",
-    Number.isFinite(foot.x) &&
-      Number.isFinite(foot.y) &&
-      Number.isFinite(foot.z),
+    namedFacts([
+      ["isFiniteFoot", () => Number.isFinite(foot.x)],
+      ["isFiniteFoot2", () => Number.isFinite(foot.y)],
+      ["isFiniteFoot3", () => Number.isFinite(foot.z)],
+    ]),
+    {
+      isFiniteFoot: true,
+      isFiniteFoot2: true,
+      isFiniteFoot3: true,
+    },
   );
 
   const branched = plantStanceFeet({
@@ -222,20 +246,36 @@ export const test_motion_plant_feet_edge = (): void => {
     legs: [LEG],
     sampleRate: 8,
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "both ancestry edges are enforced without rejecting indirect descendants",
-    split.plants.length === 1 &&
-      split.motion.keyframes.every((keyframe) =>
-        keyframe.pose.joints.every(
-          (joint) => joint.bone !== LEG.upper && joint.bone !== LEG.lower,
-        ),
-      ) &&
-      indirect.plants.length === 1 &&
-      indirect.motion.keyframes.some((keyframe) =>
-        keyframe.pose.joints.some(
-          (joint) => joint.bone === LEG.upper || joint.bone === LEG.lower,
-        ),
-      ),
+    namedFacts([
+      ["splitCount", () => split.plants.length === 1],
+      [
+        "splitMotion",
+        () =>
+          split.motion.keyframes.every((keyframe) =>
+            keyframe.pose.joints.every(
+              (joint) => joint.bone !== LEG.upper && joint.bone !== LEG.lower,
+            ),
+          ),
+      ],
+      ["indirectCount", () => indirect.plants.length === 1],
+      [
+        "indirectMotion",
+        () =>
+          indirect.motion.keyframes.some((keyframe) =>
+            keyframe.pose.joints.some(
+              (joint) => joint.bone === LEG.upper || joint.bone === LEG.lower,
+            ),
+          ),
+      ],
+    ]),
+    {
+      splitCount: true,
+      splitMotion: true,
+      indirectCount: true,
+      indirectMotion: true,
+    },
   );
 
   TestValidator.predicate(

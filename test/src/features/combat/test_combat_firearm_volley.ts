@@ -10,6 +10,23 @@ import {
 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
+/**
+ * Evaluate named facts in order and stop at the first false one, so a failed
+ * comparison names the fact instead of collapsing into one boolean. Stopping
+ * keeps the short-circuit semantics the original conjunction had, which some
+ * facts depend on to guard the ones after them.
+ */
+const namedFacts = (
+  entries: ReadonlyArray<readonly [string, () => boolean]>,
+): Record<string, boolean> => {
+  const output: Record<string, boolean> = {};
+  for (const [name, evaluate] of entries) {
+    output[name] = evaluate();
+    if (output[name] === false) break;
+  }
+  return output;
+};
+
 const musket = (): IAutoMovieFirearm => ({
   kind: "firearm",
   id: "musket",
@@ -59,19 +76,36 @@ export const test_combat_firearm_volley = (): void => {
   const deterministicSamples =
     repeatedSamples[0] === repeatedSamples[1] &&
     repeatedSamples[0] !== seededValue(1 + 4_294_967_296, 2, 3);
-  TestValidator.predicate(
+  TestValidator.equals(
     "a 500-member volley is reproducible, ordered, and inspectable",
-    first.length === 500 &&
-      JSON.stringify(first) === JSON.stringify(second) &&
-      first.every(
-        (event, slot) =>
-          event.slot === slot &&
-          event.shooter === `ranker-${slot}` &&
-          event.muzzleVelocity === 305,
-      ) &&
-      first.some((event) => event.outcome === "hit") &&
-      first.some((event) => event.outcome === "miss") &&
-      deterministicSamples,
+    namedFacts([
+      ["firstCount", () => first.length === 500],
+      [
+        "stringifyFirst",
+        () => JSON.stringify(first) === JSON.stringify(second),
+      ],
+      [
+        "firstEvent",
+        () =>
+          first.every(
+            (event, slot) =>
+              event.slot === slot &&
+              event.shooter === `ranker-${slot}` &&
+              event.muzzleVelocity === 305,
+          ),
+      ],
+      ["firstEvent2", () => first.some((event) => event.outcome === "hit")],
+      ["firstEvent3", () => first.some((event) => event.outcome === "miss")],
+      ["deterministicSamples", () => deterministicSamples],
+    ]),
+    {
+      firstCount: true,
+      stringifyFirst: true,
+      firstEvent: true,
+      firstEvent2: true,
+      firstEvent3: true,
+      deterministicSamples: true,
+    },
   );
   const exactVector = resolveFirearmVolley({
     model: model([
@@ -163,18 +197,50 @@ export const test_combat_firearm_volley = (): void => {
       { id: "zero-modifier", distance: 10, accuracyMultiplier: 0 },
     ],
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "reload, misfire, range interpolation and effective-range refusal are separate states",
-    stateCases[0]?.outcome === "reloading" &&
-      stateCases[0].misfireSample === null &&
-      stateCases[0].reloadRemainingSeconds === 10 &&
-      stateCases[1]?.outcome === "misfire" &&
-      stateCases[1].accuracySample === null &&
-      rangeCases[0]?.accuracyProbability === 1 &&
-      rangeCases[1]?.accuracyProbability === 0.625 &&
-      rangeCases[2]?.accuracyProbability === 0.1 &&
-      rangeCases[3]?.accuracyProbability === 0 &&
-      rangeCases[4]?.accuracyProbability === 0,
+    namedFacts([
+      ["stateCasesOutcome", () => stateCases[0]?.outcome === "reloading"],
+      ["stateCasesMisfireSample", () => stateCases[0].misfireSample === null],
+      [
+        "stateCasesReloadRemainingSeconds",
+        () => stateCases[0].reloadRemainingSeconds === 10,
+      ],
+      ["stateCasesOutcome2", () => stateCases[1]?.outcome === "misfire"],
+      ["stateCasesAccuracySample", () => stateCases[1].accuracySample === null],
+      [
+        "rangeCasesAccuracyProbability",
+        () => rangeCases[0]?.accuracyProbability === 1,
+      ],
+      [
+        "rangeCasesAccuracyProbability2",
+        () => rangeCases[1]?.accuracyProbability === 0.625,
+      ],
+      [
+        "rangeCasesAccuracyProbability3",
+        () => rangeCases[2]?.accuracyProbability === 0.1,
+      ],
+      [
+        "rangeCasesAccuracyProbability4",
+        () => rangeCases[3]?.accuracyProbability === 0,
+      ],
+      [
+        "rangeCasesAccuracyProbability5",
+        () => rangeCases[4]?.accuracyProbability === 0,
+      ],
+    ]),
+    {
+      stateCasesOutcome: true,
+      stateCasesMisfireSample: true,
+      stateCasesReloadRemainingSeconds: true,
+      stateCasesOutcome2: true,
+      stateCasesAccuracySample: true,
+      rangeCasesAccuracyProbability: true,
+      rangeCasesAccuracyProbability2: true,
+      rangeCasesAccuracyProbability3: true,
+      rangeCasesAccuracyProbability4: true,
+      rangeCasesAccuracyProbability5: true,
+    },
   );
 
   const shooter = findProfileTrait(profile(), "shooter");

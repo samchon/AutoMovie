@@ -27,6 +27,23 @@ import {
 import { nclose, vclose } from "../internal/predicates";
 
 /**
+ * Evaluate named facts in order and stop at the first false one, so a failed
+ * comparison names the fact instead of collapsing into one boolean. Stopping
+ * keeps the short-circuit semantics the original conjunction had, which some
+ * facts depend on to guard the ones after them.
+ */
+const namedFacts = (
+  entries: ReadonlyArray<readonly [string, () => boolean]>,
+): Record<string, boolean> => {
+  const output: Record<string, boolean> = {};
+  for (const [name, evaluate] of entries) {
+    output[name] = evaluate();
+    if (output[name] === false) break;
+  }
+  return output;
+};
+
+/**
  * Like the shared content seam, but a `launch` produces no actor motion: it
  * animates the projectile object and schedules a react, not the shooter.
  */
@@ -218,26 +235,59 @@ export const test_film_perform_shot_launch = (): void => {
     launchEvents.map((event) => event.kind),
     ["contact", "hit", "fall"],
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "the contact event lands with the projectile",
-    launchEvents[0]!.source === "collisionSolver" &&
-      launchEvents[0]!.time === times[times.length - 1] &&
-      launchEvents[0]!.actionIndex === 0 &&
-      launchEvents[0]!.target === "foe" &&
-      launchEvents[0]!.object === "arrow",
+    namedFacts([
+      [
+        "launchEventsSource",
+        () => launchEvents[0]!.source === "collisionSolver",
+      ],
+      [
+        "launchEventsCount",
+        () => launchEvents[0]!.time === times[times.length - 1],
+      ],
+      ["launchEventsActionIndex", () => launchEvents[0]!.actionIndex === 0],
+      ["launchEventsTarget", () => launchEvents[0]!.target === "foe"],
+      ["launchEventsObject", () => launchEvents[0]!.object === "arrow"],
+    ]),
+    {
+      launchEventsSource: true,
+      launchEventsCount: true,
+      launchEventsActionIndex: true,
+      launchEventsTarget: true,
+      launchEventsObject: true,
+    },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "the hit event drives the downstream reaction",
-    launchEvents[1]!.source === "impactOutput" &&
-      launchEvents[1]!.reaction === "foe" &&
-      launchEvents[1]!.actionIndex === 0 &&
-      nclose(launchEvents[1]!.time, times[times.length - 1]!),
+    namedFacts([
+      ["launchEventsSource", () => launchEvents[1]!.source === "impactOutput"],
+      ["launchEventsReaction", () => launchEvents[1]!.reaction === "foe"],
+      ["launchEventsActionIndex", () => launchEvents[1]!.actionIndex === 0],
+      [
+        "ncloseCount",
+        () => nclose(launchEvents[1]!.time, times[times.length - 1]!),
+      ],
+    ]),
+    {
+      launchEventsSource: true,
+      launchEventsReaction: true,
+      launchEventsActionIndex: true,
+      ncloseCount: true,
+    },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "the fall event records the unbalance response",
-    launchEvents[2]!.kind === "fall" &&
-      launchEvents[2]!.actor === "foe" &&
-      launchEvents[2]!.reaction === "foe",
+    namedFacts([
+      ["launchEventsFall", () => launchEvents[2]!.kind === "fall"],
+      ["launchEventsActor", () => launchEvents[2]!.actor === "foe"],
+      ["launchEventsReaction", () => launchEvents[2]!.reaction === "foe"],
+    ]),
+    {
+      launchEventsFall: true,
+      launchEventsActor: true,
+      launchEventsReaction: true,
+    },
   );
   const faster = perform([
     {

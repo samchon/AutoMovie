@@ -16,6 +16,23 @@ import { createSkeleton, joint, makePose } from "../internal/fixtures";
 import { nclose, qclose, vclose } from "../internal/predicates";
 
 /**
+ * Evaluate named facts in order and stop at the first false one, so a failed
+ * comparison names the fact instead of collapsing into one boolean. Stopping
+ * keeps the short-circuit semantics the original conjunction had, which some
+ * facts depend on to guard the ones after them.
+ */
+const namedFacts = (
+  entries: ReadonlyArray<readonly [string, () => boolean]>,
+): Record<string, boolean> => {
+  const output: Record<string, boolean> = {};
+  for (const [name, evaluate] of entries) {
+    output[name] = evaluate();
+    if (output[name] === false) break;
+  }
+  return output;
+};
+
+/**
  * The rest-frame angle maps that let a pose be authored in one **clinical**
  * convention (e.g. +abduction raises either arm) while the rig articulates in
  * its own per-side rest-relative space: `jointToQuaternion` reads clinical and
@@ -104,11 +121,18 @@ export const test_kinematics_rest_frame_angles = (): void => {
   const c = { flexion: 20, abduction: 150, twist: 10 };
   const q = jointToQuaternion(c, DEFAULT_JOINT_AXES, frame);
   const back = decomposeJointRotation(q, DEFAULT_JOINT_AXES, frame);
-  TestValidator.predicate(
+  TestValidator.equals(
     "decompose lifts back to the clinical angles",
-    nclose(back.flexion, 20, 1e-6) &&
-      nclose(back.abduction, 150, 1e-6) &&
-      nclose(back.twist, 10, 1e-6),
+    namedFacts([
+      ["ncloseBack", () => nclose(back.flexion, 20, 1e-6)],
+      ["ncloseBack2", () => nclose(back.abduction, 150, 1e-6)],
+      ["ncloseBack3", () => nclose(back.twist, 10, 1e-6)],
+    ]),
+    {
+      ncloseBack: true,
+      ncloseBack2: true,
+      ncloseBack3: true,
+    },
   );
   TestValidator.predicate(
     "and re-composing them reproduces the rotation",

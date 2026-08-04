@@ -10,6 +10,23 @@ import {
 } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
 
+/**
+ * Evaluate named facts in order and stop at the first false one, so a failed
+ * comparison names the fact instead of collapsing into one boolean. Stopping
+ * keeps the short-circuit semantics the original conjunction had, which some
+ * facts depend on to guard the ones after them.
+ */
+const namedFacts = (
+  entries: ReadonlyArray<readonly [string, () => boolean]>,
+): Record<string, boolean> => {
+  const output: Record<string, boolean> = {};
+  for (const [name, evaluate] of entries) {
+    output[name] = evaluate();
+    if (output[name] === false) break;
+  }
+  return output;
+};
+
 const throws = (closure: () => unknown): boolean => {
   try {
     closure();
@@ -37,11 +54,18 @@ export const test_mcp_production_content_identity = (): void => {
     Buffer.from(canonicalAutoMovieJsonBytes({ b: 2, a: 1 })).toString("utf8"),
     '{"a":1,"b":2}',
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "unsupported canonical values fail loudly",
-    throws(() => canonicalizeAutoMovieJson(Number.NaN)) &&
-      throws(() => canonicalizeAutoMovieJson(1n)) &&
-      throws(() => canonicalizeAutoMovieJson(undefined)),
+    namedFacts([
+      ["rejected", () => throws(() => canonicalizeAutoMovieJson(Number.NaN))],
+      ["rejected2", () => throws(() => canonicalizeAutoMovieJson(1n))],
+      ["rejected3", () => throws(() => canonicalizeAutoMovieJson(undefined))],
+    ]),
+    {
+      rejected: true,
+      rejected2: true,
+      rejected3: true,
+    },
   );
   TestValidator.equals(
     "source BOM and EOL normalization",
@@ -84,24 +108,66 @@ export const test_mcp_production_content_identity = (): void => {
     encodeAutoMoviePathSegment("a*!'()"),
     "a%2A%21%27%28%29",
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "portable path segments escape Windows devices",
-    encodeAutoMoviePathSegment("CON") === "%43ON" &&
-      encodeAutoMoviePathSegment("lpt9.json") === "%6Cpt9.json" &&
-      decodeAutoMoviePathSegment("%43ON") === "CON",
+    namedFacts([
+      [
+        "encodeAutoMoviePathSegmentCON",
+        () => encodeAutoMoviePathSegment("CON") === "%43ON",
+      ],
+      [
+        "encodeAutoMoviePathSegmentLpt9",
+        () => encodeAutoMoviePathSegment("lpt9.json") === "%6Cpt9.json",
+      ],
+      [
+        "decodeAutoMoviePathSegmentON",
+        () => decodeAutoMoviePathSegment("%43ON") === "CON",
+      ],
+    ]),
+    {
+      encodeAutoMoviePathSegmentCON: true,
+      encodeAutoMoviePathSegmentLpt9: true,
+      decodeAutoMoviePathSegmentON: true,
+    },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "portable path segments escape dot aliases",
-    encodeAutoMoviePathSegment(".") === "%2E" &&
-      encodeAutoMoviePathSegment("..") === ".%2E" &&
-      encodeAutoMoviePathSegment("shared.") === "shared%2E",
+    namedFacts([
+      [
+        "encodeAutoMoviePathSegmentE",
+        () => encodeAutoMoviePathSegment(".") === "%2E",
+      ],
+      [
+        "encodeAutoMoviePathSegmentE2",
+        () => encodeAutoMoviePathSegment("..") === ".%2E",
+      ],
+      [
+        "encodeAutoMoviePathSegmentShared",
+        () => encodeAutoMoviePathSegment("shared.") === "shared%2E",
+      ],
+    ]),
+    {
+      encodeAutoMoviePathSegmentE: true,
+      encodeAutoMoviePathSegmentE2: true,
+      encodeAutoMoviePathSegmentShared: true,
+    },
   );
   const longId = "장편-전투-".repeat(64);
   const longSegment = encodeAutoMoviePathSegment(longId);
-  TestValidator.predicate(
+  TestValidator.equals(
     "long ids use stable content-addressed segments",
-    /^~sha256-[0-9a-f]{64}$/.test(longSegment) &&
-      longSegment === encodeAutoMoviePathSegment(longId) &&
-      throws(() => decodeAutoMoviePathSegment(longSegment)),
+    namedFacts([
+      ["sha256A", () => /^~sha256-[0-9a-f]{64}$/.test(longSegment)],
+      [
+        "longSegmentEncodeAutoMoviePathSegment",
+        () => longSegment === encodeAutoMoviePathSegment(longId),
+      ],
+      ["rejected", () => throws(() => decodeAutoMoviePathSegment(longSegment))],
+    ]),
+    {
+      sha256A: true,
+      longSegmentEncodeAutoMoviePathSegment: true,
+      rejected: true,
+    },
   );
 };

@@ -4,6 +4,23 @@ import { TestValidator } from "@nestia/e2e";
 
 import { nclose } from "../internal/predicates";
 
+/**
+ * Evaluate named facts in order and stop at the first false one, so a failed
+ * comparison names the fact instead of collapsing into one boolean. Stopping
+ * keeps the short-circuit semantics the original conjunction had, which some
+ * facts depend on to guard the ones after them.
+ */
+const namedFacts = (
+  entries: ReadonlyArray<readonly [string, () => boolean]>,
+): Record<string, boolean> => {
+  const output: Record<string, boolean> = {};
+  for (const [name, evaluate] of entries) {
+    output[name] = evaluate();
+    if (output[name] === false) break;
+  }
+  return output;
+};
+
 const W = (x: number, y: number, z: number): number[] =>
   Matrix4.compose(
     { x, y, z },
@@ -68,11 +85,18 @@ export const test_resolve_aim_precision = (): void => {
     runAim(aim({}), { x: dir.x * 10, y: 0, z: dir.z * 10 }),
     { x: 0, y: 0, z: -1 },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "0.05° off-axis target is tracked exactly (no deadzone snap)",
-    nclose(tracked.x, dir.x, 1e-9) &&
-      nclose(tracked.y, 0, 1e-9) &&
-      nclose(tracked.z, dir.z, 1e-9),
+    namedFacts([
+      ["ncloseTracked", () => nclose(tracked.x, dir.x, 1e-9)],
+      ["ncloseTracked2", () => nclose(tracked.y, 0, 1e-9)],
+      ["ncloseTracked3", () => nclose(tracked.z, dir.z, 1e-9)],
+    ]),
+    {
+      ncloseTracked: true,
+      ncloseTracked2: true,
+      ncloseTracked3: true,
+    },
   );
   TestValidator.predicate(
     "the rotation is real, not the old identity (x ≈ sin 0.05° ≠ 0)",
@@ -84,21 +108,35 @@ export const test_resolve_aim_precision = (): void => {
     y: 0,
     z: -1,
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "antiparallel flip lands on the target (|a.x| < 0.9 branch)",
-    nclose(behindZ.x, 0, 1e-9) &&
-      nclose(behindZ.y, 0, 1e-9) &&
-      nclose(behindZ.z, 1, 1e-9),
+    namedFacts([
+      ["ncloseBehindZ", () => nclose(behindZ.x, 0, 1e-9)],
+      ["ncloseBehindZ2", () => nclose(behindZ.y, 0, 1e-9)],
+      ["ncloseBehindZ3", () => nclose(behindZ.z, 1, 1e-9)],
+    ]),
+    {
+      ncloseBehindZ: true,
+      ncloseBehindZ2: true,
+      ncloseBehindZ3: true,
+    },
   );
 
   const behindX = aimedDir(
     runAim(aim({ aimAxis: { x: 1, y: 0, z: 0 } }), { x: -5, y: 0, z: 0 }),
     { x: 1, y: 0, z: 0 },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "antiparallel flip lands on the target (|a.x| >= 0.9 branch)",
-    nclose(behindX.x, -1, 1e-9) &&
-      nclose(behindX.y, 0, 1e-9) &&
-      nclose(behindX.z, 0, 1e-9),
+    namedFacts([
+      ["ncloseBehindX", () => nclose(behindX.x, -1, 1e-9)],
+      ["ncloseBehindX2", () => nclose(behindX.y, 0, 1e-9)],
+      ["ncloseBehindX3", () => nclose(behindX.z, 0, 1e-9)],
+    ]),
+    {
+      ncloseBehindX: true,
+      ncloseBehindX2: true,
+      ncloseBehindX3: true,
+    },
   );
 };

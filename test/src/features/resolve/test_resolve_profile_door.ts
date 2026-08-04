@@ -10,6 +10,23 @@ import { TestValidator } from "@nestia/e2e";
 
 import { nclose } from "../internal/predicates";
 
+/**
+ * Evaluate named facts in order and stop at the first false one, so a failed
+ * comparison names the fact instead of collapsing into one boolean. Stopping
+ * keeps the short-circuit semantics the original conjunction had, which some
+ * facts depend on to guard the ones after them.
+ */
+const namedFacts = (
+  entries: ReadonlyArray<readonly [string, () => boolean]>,
+): Record<string, boolean> => {
+  const output: Record<string, boolean> = {};
+  for (const [name, evaluate] of entries) {
+    output[name] = evaluate();
+    if (output[name] === false) break;
+  }
+  return output;
+};
+
 const IDENTITY: IAutoMovieTransform = {
   translation: { x: 0, y: 0, z: 0 },
   rotation: { x: 0, y: 0, z: 0, w: 1 },
@@ -124,9 +141,18 @@ export const test_resolve_profile_door = (): void => {
   });
   TestValidator.equals("90° swing passes", open.violations.length, 0);
   const openX = basisX(open.world.get("hinge")!);
-  TestValidator.predicate(
+  TestValidator.equals(
     "hinge world rotated 90°",
-    nclose(openX[0], 0) && nclose(openX[1], 0) && nclose(openX[2], -1),
+    namedFacts([
+      ["ncloseOpenX", () => nclose(openX[0], 0)],
+      ["ncloseOpenX2", () => nclose(openX[1], 0)],
+      ["ncloseOpenX3", () => nclose(openX[2], -1)],
+    ]),
+    {
+      ncloseOpenX: true,
+      ncloseOpenX2: true,
+      ncloseOpenX3: true,
+    },
   );
   const mirrorX = basisX(open.world.get("handleMirror")!);
   TestValidator.predicate(
@@ -161,10 +187,17 @@ export const test_resolve_profile_door = (): void => {
   const cos110 = Math.cos((110 * Math.PI) / 180);
   const sin110 = Math.sin((110 * Math.PI) / 180);
   const slammedX = basisX(slammed.world.get("hinge")!);
-  TestValidator.predicate(
+  TestValidator.equals(
     "over-swing clamps to exactly 110°",
-    nclose(slammedX[0], cos110) &&
-      nclose(slammedX[1], 0) &&
-      nclose(slammedX[2], -sin110),
+    namedFacts([
+      ["ncloseSlammedX", () => nclose(slammedX[0], cos110)],
+      ["ncloseSlammedX2", () => nclose(slammedX[1], 0)],
+      ["ncloseSlammedX3", () => nclose(slammedX[2], -sin110)],
+    ]),
+    {
+      ncloseSlammedX: true,
+      ncloseSlammedX2: true,
+      ncloseSlammedX3: true,
+    },
   );
 };

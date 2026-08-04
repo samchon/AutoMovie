@@ -14105,12 +14105,15 @@ export const test_cli_scaffold = async (): Promise<void> => {
           "tierPairBytes",
           () =>
             tierPair !== undefined &&
+            tierPair.evidence !== null &&
             tierPair.bytes === tierPair.marker.bytes + tierPair.evidence.bytes,
         ],
         ["tierLegacyEvidence", () => tierLegacy?.evidence === null],
         [
           "tierLegacyBytes",
-          () => tierLegacy.bytes === legacyTierMarkerSnapshot.bytes,
+          () =>
+            tierLegacy !== undefined &&
+            tierLegacy.bytes === legacyTierMarkerSnapshot.bytes,
         ],
         ["tierEvidenceGoneBeforeMarker", () => tierEvidenceGoneBeforeMarker],
         [

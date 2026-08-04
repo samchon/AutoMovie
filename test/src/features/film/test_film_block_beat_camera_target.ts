@@ -12,6 +12,23 @@ import {
 } from "../internal/filmFixtures";
 import { hasViolation } from "../internal/predicates";
 
+/**
+ * Evaluate named facts in order and stop at the first false one, so a failed
+ * comparison names the fact instead of collapsing into one boolean. Stopping
+ * keeps the short-circuit semantics the original conjunction had, which some
+ * facts depend on to guard the ones after them.
+ */
+const namedFacts = (
+  entries: ReadonlyArray<readonly [string, () => boolean]>,
+): Record<string, boolean> => {
+  const output: Record<string, boolean> = {};
+  for (const [name, evaluate] of entries) {
+    output[name] = evaluate();
+    if (output[name] === false) break;
+  }
+  return output;
+};
+
 type ICameraIntent = IAutoMovieBlockingCamera;
 type ICoverageIntent = IAutoMovieBlockingCoverage;
 
@@ -116,22 +133,50 @@ export const test_film_block_beat_camera_target = (): void => {
 
   // 3. the negative twins: an id nothing placed.
   const heroGhost = block({ on: { kind: "node", node: "nobody" } });
-  TestValidator.predicate(
+  TestValidator.equals(
     "an unplaced hero subject is still refused, naming every placement flavour",
-    hasViolation(heroGhost, "type", "$input.camera.on.node") &&
-      heroGhost.success === false &&
-      heroGhost.violations.some((item) =>
-        item.expected.includes("an actor, a set piece, or another camera"),
-      ),
+    namedFacts([
+      [
+        "hasViolationHeroGhost",
+        () => hasViolation(heroGhost, "type", "$input.camera.on.node"),
+      ],
+      ["heroGhostSuccess", () => heroGhost.success === false],
+      [
+        "heroGhostViolations",
+        () =>
+          heroGhost.violations.some((item) =>
+            item.expected.includes("an actor, a set piece, or another camera"),
+          ),
+      ],
+    ]),
+    {
+      hasViolationHeroGhost: true,
+      heroGhostSuccess: true,
+      heroGhostViolations: true,
+    },
   );
   const coverGhost = block({}, coverageOf({ kind: "node", node: "nobody" }));
-  TestValidator.predicate(
+  TestValidator.equals(
     "an unplaced coverage subject is still refused the same way",
-    hasViolation(coverGhost, "type", "$input.coverage[0].on.node") &&
-      coverGhost.success === false &&
-      coverGhost.violations.some((item) =>
-        item.expected.includes("an actor, a set piece, or another camera"),
-      ),
+    namedFacts([
+      [
+        "hasViolationCoverGhost",
+        () => hasViolation(coverGhost, "type", "$input.coverage[0].on.node"),
+      ],
+      ["coverGhostSuccess", () => coverGhost.success === false],
+      [
+        "coverGhostViolations",
+        () =>
+          coverGhost.violations.some((item) =>
+            item.expected.includes("an actor, a set piece, or another camera"),
+          ),
+      ],
+    ]),
+    {
+      hasViolationCoverGhost: true,
+      coverGhostSuccess: true,
+      coverGhostViolations: true,
+    },
   );
 
   // 4. covering with a camera the staging never placed is still refused.

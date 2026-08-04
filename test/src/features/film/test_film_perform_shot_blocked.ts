@@ -11,6 +11,23 @@ import {
 import { createSkeleton } from "../internal/fixtures";
 import { hasViolation } from "../internal/predicates";
 
+/**
+ * Evaluate named facts in order and stop at the first false one, so a failed
+ * comparison names the fact instead of collapsing into one boolean. Stopping
+ * keeps the short-circuit semantics the original conjunction had, which some
+ * facts depend on to guard the ones after them.
+ */
+const namedFacts = (
+  entries: ReadonlyArray<readonly [string, () => boolean]>,
+): Record<string, boolean> => {
+  const output: Record<string, boolean> = {};
+  for (const [name, evaluate] of entries) {
+    output[name] = evaluate();
+    if (output[name] === false) break;
+  }
+  return output;
+};
+
 const run = (
   blocking: ReturnType<typeof makeBlockingWrite>,
   performance = makePerformanceWrite(),
@@ -125,11 +142,24 @@ export const test_film_perform_shot_blocked = (): void => {
       },
     }),
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "camera intent mismatch rejected on framing and move",
-    wrongCamera.success === false &&
-      hasViolation(wrongCamera, "type", "$input.draft[2].framing") &&
-      hasViolation(wrongCamera, "type", "$input.draft[2].move"),
+    namedFacts([
+      ["wrongCameraSuccess", () => wrongCamera.success === false],
+      [
+        "hasViolationWrongCamera",
+        () => hasViolation(wrongCamera, "type", "$input.draft[2].framing"),
+      ],
+      [
+        "hasViolationWrongCamera2",
+        () => hasViolation(wrongCamera, "type", "$input.draft[2].move"),
+      ],
+    ]),
+    {
+      wrongCameraSuccess: true,
+      hasViolationWrongCamera: true,
+      hasViolationWrongCamera2: true,
+    },
   );
 
   const unframed = run(

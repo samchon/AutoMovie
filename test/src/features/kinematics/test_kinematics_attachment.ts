@@ -15,6 +15,23 @@ import { createSkeleton, joint, makePose } from "../internal/fixtures";
 import { nclose, throwsError, vclose } from "../internal/predicates";
 
 /**
+ * Evaluate named facts in order and stop at the first false one, so a failed
+ * comparison names the fact instead of collapsing into one boolean. Stopping
+ * keeps the short-circuit semantics the original conjunction had, which some
+ * facts depend on to guard the ones after them.
+ */
+const namedFacts = (
+  entries: ReadonlyArray<readonly [string, () => boolean]>,
+): Record<string, boolean> => {
+  const output: Record<string, boolean> = {};
+  for (const [name, evaluate] of entries) {
+    output[name] = evaluate();
+    if (output[name] === false) break;
+  }
+  return output;
+};
+
+/**
  * `resolveAttachment`: the cross-skeleton joint that fixes a child model's root
  * into a bone of a posed parent (a rider in a horse's saddle). It runs FK on
  * the parent, reads the attachment bone's world position + orientation, and
@@ -49,11 +66,18 @@ export const test_kinematics_attachment = (): void => {
   };
   const att1: IAutoMovieAttachment = { parentBone: "chest", offset: idOffset };
   const r1 = resolveAttachment(restPose, skeleton, att1);
-  TestValidator.predicate(
+  TestValidator.equals(
     "child sits on chest world pos (0,1.4,0)",
-    nclose(r1.translation.x, 0) &&
-      nclose(r1.translation.y, 1.4) &&
-      nclose(r1.translation.z, 0),
+    namedFacts([
+      ["ncloseR1", () => nclose(r1.translation.x, 0)],
+      ["ncloseR12", () => nclose(r1.translation.y, 1.4)],
+      ["ncloseR13", () => nclose(r1.translation.z, 0)],
+    ]),
+    {
+      ncloseR1: true,
+      ncloseR12: true,
+      ncloseR13: true,
+    },
   );
   TestValidator.predicate(
     "identity rotation at rest",
@@ -97,11 +121,27 @@ export const test_kinematics_attachment = (): void => {
     "child inherits chest world rotation (90° yaw, w≈cos45)",
     nclose(r3.rotation.w, Math.cos((45 * Math.PI) / 180)),
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "offset translation carried into the rotated frame",
-    nclose(r3.translation.x, chest.worldPosition.x + expectedT.x) &&
-      nclose(r3.translation.y, chest.worldPosition.y + expectedT.y) &&
-      nclose(r3.translation.z, chest.worldPosition.z + expectedT.z),
+    namedFacts([
+      [
+        "ncloseR3",
+        () => nclose(r3.translation.x, chest.worldPosition.x + expectedT.x),
+      ],
+      [
+        "ncloseR32",
+        () => nclose(r3.translation.y, chest.worldPosition.y + expectedT.y),
+      ],
+      [
+        "ncloseR33",
+        () => nclose(r3.translation.z, chest.worldPosition.z + expectedT.z),
+      ],
+    ]),
+    {
+      ncloseR3: true,
+      ncloseR32: true,
+      ncloseR33: true,
+    },
   );
 
   // 4. unknown bone → throws (the fixture skeleton has no rightFoot)

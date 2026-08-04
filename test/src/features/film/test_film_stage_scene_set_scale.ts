@@ -5,6 +5,23 @@ import { TestValidator } from "@nestia/e2e";
 import { makeScriptWrite, makeStagingWrite } from "../internal/filmFixtures";
 import { hasViolation } from "../internal/predicates";
 
+/**
+ * Evaluate named facts in order and stop at the first false one, so a failed
+ * comparison names the fact instead of collapsing into one boolean. Stopping
+ * keeps the short-circuit semantics the original conjunction had, which some
+ * facts depend on to guard the ones after them.
+ */
+const namedFacts = (
+  entries: ReadonlyArray<readonly [string, () => boolean]>,
+): Record<string, boolean> => {
+  const output: Record<string, boolean> = {};
+  for (const [name, evaluate] of entries) {
+    output[name] = evaluate();
+    if (output[name] === false) break;
+  }
+  return output;
+};
+
 type SetPlacement = IAutoMovieStageSetPiece;
 
 const stageSet = (set: SetPlacement[]) =>
@@ -91,13 +108,34 @@ export const test_film_stage_scene_set_scale = (): void => {
       scale: { x: 1, y: 1, z: Number.POSITIVE_INFINITY },
     },
   ]);
-  TestValidator.predicate(
+  TestValidator.equals(
     "zero, negative, and non-finite scales are each refused at their path",
-    refused.success === false &&
-      hasViolation(refused, "range", "$input.set[0].scale") &&
-      hasViolation(refused, "range", "$input.set[1].scale") &&
-      hasViolation(refused, "range", "$input.set[2].scale") &&
-      hasViolation(refused, "range", "$input.set[3].scale"),
+    namedFacts([
+      ["refusedSuccess", () => refused.success === false],
+      [
+        "hasViolationRefused",
+        () => hasViolation(refused, "range", "$input.set[0].scale"),
+      ],
+      [
+        "hasViolationRefused2",
+        () => hasViolation(refused, "range", "$input.set[1].scale"),
+      ],
+      [
+        "hasViolationRefused3",
+        () => hasViolation(refused, "range", "$input.set[2].scale"),
+      ],
+      [
+        "hasViolationRefused4",
+        () => hasViolation(refused, "range", "$input.set[3].scale"),
+      ],
+    ]),
+    {
+      refusedSuccess: true,
+      hasViolationRefused: true,
+      hasViolationRefused2: true,
+      hasViolationRefused3: true,
+      hasViolationRefused4: true,
+    },
   );
 
   // 3. the negative twin: positive-but-tiny is a size, not a collapse.

@@ -11,6 +11,23 @@ import { createSkeleton } from "../internal/fixtures";
 import { hasViolation } from "../internal/predicates";
 
 /**
+ * Evaluate named facts in order and stop at the first false one, so a failed
+ * comparison names the fact instead of collapsing into one boolean. Stopping
+ * keeps the short-circuit semantics the original conjunction had, which some
+ * facts depend on to guard the ones after them.
+ */
+const namedFacts = (
+  entries: ReadonlyArray<readonly [string, () => boolean]>,
+): Record<string, boolean> => {
+  const output: Record<string, boolean> = {};
+  for (const [name, evaluate] of entries) {
+    output[name] = evaluate();
+    if (output[name] === false) break;
+  }
+  return output;
+};
+
+/**
  * Pins the one-live-camera rule: `frame` must name a staged camera, and a
  * second camera fighting over the take is a contradiction, not a cut (cuts live
  * in the ASSEMBLE stage, between shots).
@@ -69,11 +86,24 @@ export const test_film_perform_shot_camera_conflict = (): void => {
     performed.success === false &&
       hasViolation(performed, "type", "$input.draft[0].actor"),
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "second live camera rejected",
-    performed.success === false &&
-      hasViolation(performed, "type", "$input.draft[2].actor") &&
-      performed.violations.some((v) => v.value === "cam-b"),
+    namedFacts([
+      ["performedSuccess", () => performed.success === false],
+      [
+        "hasViolationPerformed",
+        () => hasViolation(performed, "type", "$input.draft[2].actor"),
+      ],
+      [
+        "performedViolations",
+        () => performed.violations.some((v) => v.value === "cam-b"),
+      ],
+    ]),
+    {
+      performedSuccess: true,
+      hasViolationPerformed: true,
+      performedViolations: true,
+    },
   );
 
   const listed = performShot({

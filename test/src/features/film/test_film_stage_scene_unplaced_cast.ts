@@ -5,6 +5,23 @@ import { makeScriptWrite, makeStagingWrite } from "../internal/filmFixtures";
 import { hasViolation } from "../internal/predicates";
 
 /**
+ * Evaluate named facts in order and stop at the first false one, so a failed
+ * comparison names the fact instead of collapsing into one boolean. Stopping
+ * keeps the short-circuit semantics the original conjunction had, which some
+ * facts depend on to guard the ones after them.
+ */
+const namedFacts = (
+  entries: ReadonlyArray<readonly [string, () => boolean]>,
+): Record<string, boolean> => {
+  const output: Record<string, boolean> = {};
+  for (const [name, evaluate] of entries) {
+    output[name] = evaluate();
+    if (output[name] === false) break;
+  }
+  return output;
+};
+
+/**
  * Pins the "everyone in the cast must stand somewhere" gate: a cast member
  * staging never places can never appear on screen, so staging fails rather than
  * silently dropping the character.
@@ -25,10 +42,23 @@ export const test_film_stage_scene_unplaced_cast = (): void => {
     }),
   );
   TestValidator.equals("fails", staged.success, false);
-  TestValidator.predicate(
+  TestValidator.equals(
     "names the unplaced cast node",
-    staged.success === false &&
-      hasViolation(staged, "type", "$input.actors") &&
-      staged.violations.some((v) => v.value === "knightB"),
+    namedFacts([
+      ["stagedSuccess", () => staged.success === false],
+      [
+        "hasViolationStaged",
+        () => hasViolation(staged, "type", "$input.actors"),
+      ],
+      [
+        "stagedViolations",
+        () => staged.violations.some((v) => v.value === "knightB"),
+      ],
+    ]),
+    {
+      stagedSuccess: true,
+      hasViolationStaged: true,
+      stagedViolations: true,
+    },
   );
 };

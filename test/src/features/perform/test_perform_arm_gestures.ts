@@ -21,6 +21,23 @@ import { TestValidator } from "@nestia/e2e";
 import { createSkeleton, makePose } from "../internal/fixtures";
 import { nclose } from "../internal/predicates";
 
+/**
+ * Evaluate named facts in order and stop at the first false one, so a failed
+ * comparison names the fact instead of collapsing into one boolean. Stopping
+ * keeps the short-circuit semantics the original conjunction had, which some
+ * facts depend on to guard the ones after them.
+ */
+const namedFacts = (
+  entries: ReadonlyArray<readonly [string, () => boolean]>,
+): Record<string, boolean> => {
+  const output: Record<string, boolean> = {};
+  for (const [name, evaluate] of entries) {
+    output[name] = evaluate();
+    if (output[name] === false) break;
+  }
+  return output;
+};
+
 const bone = (
   b: AutoMovieHumanoidBone,
   parent: AutoMovieHumanoidBone | null,
@@ -232,11 +249,24 @@ export const test_perform_arm_gestures = (): void => {
     undefined,
     0,
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "a bone target applies its FK root travel exactly once",
-    rootedTarget !== null &&
-      nclose(rootedTarget.x, 6.75) &&
-      nclose(rootedTarget.y, 1.4),
+    namedFacts([
+      ["rootedTarget", () => rootedTarget !== null],
+      [
+        "ncloseRootedTarget",
+        () => rootedTarget !== null && nclose(rootedTarget.x, 6.75),
+      ],
+      [
+        "ncloseRootedTarget2",
+        () => rootedTarget !== null && nclose(rootedTarget.y, 1.4),
+      ],
+    ]),
+    {
+      rootedTarget: true,
+      ncloseRootedTarget: true,
+      ncloseRootedTarget2: true,
+    },
   );
 
   const constantTarget = makeActorSynthesizer(
@@ -398,9 +428,18 @@ export const test_perform_arm_gestures = (): void => {
   const rigClip = rigSpace(pointAt, "hero");
   const clinicalClip = clinical(pointAt, "hero");
   const clinAbd = abdOf(clinicalClip);
-  TestValidator.predicate(
+  TestValidator.equals(
     "both frames synthesise a point clip, each in its own space",
-    rigClip !== null && clinicalClip !== null && clinAbd !== null,
+    namedFacts([
+      ["rigClip", () => rigClip !== null],
+      ["clinicalClip", () => clinicalClip !== null],
+      ["clinAbd", () => clinAbd !== null],
+    ]),
+    {
+      rigClip: true,
+      clinicalClip: true,
+      clinAbd: true,
+    },
   );
   TestValidator.predicate(
     "and the elbow's hinge angle is identical across the two frames",

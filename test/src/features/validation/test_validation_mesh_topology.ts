@@ -4,6 +4,23 @@ import { TestValidator } from "@nestia/e2e";
 
 import { hasViolation, violationCount } from "../internal/predicates";
 
+/**
+ * Evaluate named facts in order and stop at the first false one, so a failed
+ * comparison names the fact instead of collapsing into one boolean. Stopping
+ * keeps the short-circuit semantics the original conjunction had, which some
+ * facts depend on to guard the ones after them.
+ */
+const namedFacts = (
+  entries: ReadonlyArray<readonly [string, () => boolean]>,
+): Record<string, boolean> => {
+  const output: Record<string, boolean> = {};
+  for (const [name, evaluate] of entries) {
+    output[name] = evaluate();
+    if (output[name] === false) break;
+  }
+  return output;
+};
+
 const mesh = (
   positions: number[],
   indices: number[] | null,
@@ -82,11 +99,25 @@ export const test_validation_mesh_topology = (): void => {
   // 2. a fin: three triangles share edge 0–1 → non-manifold.
   const fin = mesh(P, [0, 1, 2, 1, 0, 3, 0, 1, 4]);
   const finResult = topo(fin);
-  TestValidator.predicate(
+  TestValidator.equals(
     "a third triangle on one edge is a non-manifold error",
-    finResult.success === false &&
-      hasViolation(finResult, "topology", "$input.indices") &&
-      finResult.violations.some((v) => v.expected.includes("2-manifold")),
+    namedFacts([
+      ["finResultSuccess", () => finResult.success === false],
+      [
+        "hasViolationFinResult",
+        () => hasViolation(finResult, "topology", "$input.indices"),
+      ],
+      [
+        "finResultViolations",
+        () =>
+          finResult.violations.some((v) => v.expected.includes("2-manifold")),
+      ],
+    ]),
+    {
+      finResultSuccess: true,
+      hasViolationFinResult: true,
+      finResultViolations: true,
+    },
   );
 
   // 3. two triangles winding edge 0–1 the same way → flipped.

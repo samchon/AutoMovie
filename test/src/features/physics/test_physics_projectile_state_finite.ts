@@ -3,6 +3,23 @@ import { TestValidator } from "@nestia/e2e";
 
 import { nclose } from "../internal/predicates";
 
+/**
+ * Evaluate named facts in order and stop at the first false one, so a failed
+ * comparison names the fact instead of collapsing into one boolean. Stopping
+ * keeps the short-circuit semantics the original conjunction had, which some
+ * facts depend on to guard the ones after them.
+ */
+const namedFacts = (
+  entries: ReadonlyArray<readonly [string, () => boolean]>,
+): Record<string, boolean> => {
+  const output: Record<string, boolean> = {};
+  for (const [name, evaluate] of entries) {
+    output[name] = evaluate();
+    if (output[name] === false) break;
+  }
+  return output;
+};
+
 const PROJECTILE: IAutoMovieProjectile = {
   origin: { x: 1, y: 2, z: 3 },
   velocity: { x: 4, y: 5, z: 6 },
@@ -66,16 +83,30 @@ export const test_physics_projectile_state_finite = (): void => {
   );
 
   const state = projectileAt(PROJECTILE, 2);
-  TestValidator.predicate(
+  TestValidator.equals(
     "finite position follows closed-form projectile equation",
-    nclose(state.position.x, 9) &&
-      nclose(state.position.y, -8) &&
-      nclose(state.position.z, 19),
+    namedFacts([
+      ["ncloseState", () => nclose(state.position.x, 9)],
+      ["ncloseState2", () => nclose(state.position.y, -8)],
+      ["ncloseState3", () => nclose(state.position.z, 19)],
+    ]),
+    {
+      ncloseState: true,
+      ncloseState2: true,
+      ncloseState3: true,
+    },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "finite velocity follows closed-form projectile equation",
-    nclose(state.velocity.x, 4) &&
-      nclose(state.velocity.y, -15) &&
-      nclose(state.velocity.z, 10),
+    namedFacts([
+      ["ncloseState", () => nclose(state.velocity.x, 4)],
+      ["ncloseState2", () => nclose(state.velocity.y, -15)],
+      ["ncloseState3", () => nclose(state.velocity.z, 10)],
+    ]),
+    {
+      ncloseState: true,
+      ncloseState2: true,
+      ncloseState3: true,
+    },
   );
 };

@@ -6,6 +6,23 @@ import ts from "typescript-compiler";
 
 import { preserveCommitLockHookCleanup } from "./test_mcp_commit_lock";
 
+/**
+ * Evaluate named facts in order and stop at the first false one, so a failed
+ * comparison names the fact instead of collapsing into one boolean. Stopping
+ * keeps the short-circuit semantics the original conjunction had, which some
+ * facts depend on to guard the ones after them.
+ */
+const namedFacts = (
+  entries: ReadonlyArray<readonly [string, () => boolean]>,
+): Record<string, boolean> => {
+  const output: Record<string, boolean> = {};
+  for (const [name, evaluate] of entries) {
+    output[name] = evaluate();
+    if (output[name] === false) break;
+  }
+  return output;
+};
+
 const compact = (node: ts.Node, source: ts.SourceFile): string =>
   node.getText(source).replace(/\s+/g, "");
 
@@ -222,54 +239,116 @@ export const test_mcp_commit_lock_hook_cleanup = (): void => {
     primaryFailure: { error: undefined, present: true },
   });
   const fullOrder = "cleanup-0,cleanup-1,cleanup-2,cleanup-3,cleanup-4";
-  TestValidator.predicate(
+  TestValidator.equals(
     "commit-lock hook cleanup preserves failure and restoration order",
-    success.caught === false &&
-      success.failure === undefined &&
-      success.order.join(",") === fullOrder &&
-      primaryOnly.caught &&
-      primaryOnly.failure === primaryFailure &&
-      primaryOnly.order.join(",") === fullOrder &&
-      standalone.caught &&
-      standalone.failure === renameFailure &&
-      standalone.order.join(",") === fullOrder &&
-      multiple.caught &&
-      aggregateContainsExactly(multiple.failure, [
-        renameFailure,
-        linkFailure,
-        copyFailure,
-        removeFailure,
-        lstatFailure,
-      ]) &&
-      multiple.order.join(",") === fullOrder &&
-      combined.caught &&
-      aggregateContainsExactly(combined.failure, [
-        primaryFailure,
-        renameFailure,
-        linkFailure,
-        copyFailure,
-        removeFailure,
-        lstatFailure,
-      ]) &&
-      combined.order.join(",") === fullOrder &&
-      twoHooks.caught &&
-      aggregateContainsExactly(twoHooks.failure, [
-        primaryFailure,
-        renameFailure,
-      ]) &&
-      twoHooks.order.join(",") === "cleanup-0,cleanup-1" &&
-      undefinedPrimary.caught &&
-      undefinedPrimary.failure === undefined &&
-      undefinedPrimary.order.join(",") === fullOrder &&
-      undefinedStandalone.caught &&
-      undefinedStandalone.failure === undefined &&
-      undefinedStandalone.order.join(",") === fullOrder &&
-      undefinedCombined.caught &&
-      aggregateContainsExactly(undefinedCombined.failure, [
-        undefined,
-        undefined,
-      ]) &&
-      undefinedCombined.order.join(",") === fullOrder,
+    namedFacts([
+      ["successCaught", () => success.caught === false],
+      ["successFailure", () => success.failure === undefined],
+      ["successOrder", () => success.order.join(",") === fullOrder],
+      ["primaryOnlyCaught", () => primaryOnly.caught],
+      ["primaryOnlyFailure", () => primaryOnly.failure === primaryFailure],
+      ["primaryOnlyOrder", () => primaryOnly.order.join(",") === fullOrder],
+      ["standaloneCaught", () => standalone.caught],
+      ["standaloneFailure", () => standalone.failure === renameFailure],
+      ["standaloneOrder", () => standalone.order.join(",") === fullOrder],
+      ["multipleCaught", () => multiple.caught],
+      [
+        "aggregateContainsExactlyMultiple",
+        () =>
+          aggregateContainsExactly(multiple.failure, [
+            renameFailure,
+            linkFailure,
+            copyFailure,
+            removeFailure,
+            lstatFailure,
+          ]),
+      ],
+      ["multipleOrder", () => multiple.order.join(",") === fullOrder],
+      ["combinedCaught", () => combined.caught],
+      [
+        "aggregateContainsExactlyCombined",
+        () =>
+          aggregateContainsExactly(combined.failure, [
+            primaryFailure,
+            renameFailure,
+            linkFailure,
+            copyFailure,
+            removeFailure,
+            lstatFailure,
+          ]),
+      ],
+      ["combinedOrder", () => combined.order.join(",") === fullOrder],
+      ["twoHooksCaught", () => twoHooks.caught],
+      [
+        "aggregateContainsExactlyTwoHooks",
+        () =>
+          aggregateContainsExactly(twoHooks.failure, [
+            primaryFailure,
+            renameFailure,
+          ]),
+      ],
+      [
+        "twoHooksOrder",
+        () => twoHooks.order.join(",") === "cleanup-0,cleanup-1",
+      ],
+      ["undefinedPrimaryCaught", () => undefinedPrimary.caught],
+      ["undefinedPrimaryFailure", () => undefinedPrimary.failure === undefined],
+      [
+        "undefinedPrimaryOrder",
+        () => undefinedPrimary.order.join(",") === fullOrder,
+      ],
+      ["undefinedStandaloneCaught", () => undefinedStandalone.caught],
+      [
+        "undefinedStandaloneFailure",
+        () => undefinedStandalone.failure === undefined,
+      ],
+      [
+        "undefinedStandaloneOrder",
+        () => undefinedStandalone.order.join(",") === fullOrder,
+      ],
+      ["undefinedCombinedCaught", () => undefinedCombined.caught],
+      [
+        "aggregateContainsExactlyUndefinedCombined",
+        () =>
+          aggregateContainsExactly(undefinedCombined.failure, [
+            undefined,
+            undefined,
+          ]),
+      ],
+      [
+        "undefinedCombinedOrder",
+        () => undefinedCombined.order.join(",") === fullOrder,
+      ],
+    ]),
+    {
+      successCaught: true,
+      successFailure: true,
+      successOrder: true,
+      primaryOnlyCaught: true,
+      primaryOnlyFailure: true,
+      primaryOnlyOrder: true,
+      standaloneCaught: true,
+      standaloneFailure: true,
+      standaloneOrder: true,
+      multipleCaught: true,
+      aggregateContainsExactlyMultiple: true,
+      multipleOrder: true,
+      combinedCaught: true,
+      aggregateContainsExactlyCombined: true,
+      combinedOrder: true,
+      twoHooksCaught: true,
+      aggregateContainsExactlyTwoHooks: true,
+      twoHooksOrder: true,
+      undefinedPrimaryCaught: true,
+      undefinedPrimaryFailure: true,
+      undefinedPrimaryOrder: true,
+      undefinedStandaloneCaught: true,
+      undefinedStandaloneFailure: true,
+      undefinedStandaloneOrder: true,
+      undefinedCombinedCaught: true,
+      aggregateContainsExactlyUndefinedCombined: true,
+      undefinedCombinedOrder: true,
+    },
   );
   TestValidator.equals(
     "commit-lock test owns three multi-hook cleanup lifecycles",

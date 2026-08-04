@@ -10,6 +10,23 @@ import { joint } from "../internal/fixtures";
 import { nclose } from "../internal/predicates";
 
 /**
+ * Evaluate named facts in order and stop at the first false one, so a failed
+ * comparison names the fact instead of collapsing into one boolean. Stopping
+ * keeps the short-circuit semantics the original conjunction had, which some
+ * facts depend on to guard the ones after them.
+ */
+const namedFacts = (
+  entries: ReadonlyArray<readonly [string, () => boolean]>,
+): Record<string, boolean> => {
+  const output: Record<string, boolean> = {};
+  for (const [name, evaluate] of entries) {
+    output[name] = evaluate();
+    if (output[name] === false) break;
+  }
+  return output;
+};
+
+/**
  * Detect and enforce must be one calculation: `validateJointRom` used to skip
  * `angle === 0` unconditionally, but a per-bone override may legally EXCLUDE
  * zero (`flexion: [10, 90]`, only min ≤ max is enforced), and `clampJointRom`
@@ -41,11 +58,18 @@ export const test_rom_validate_zero_excluding_override = (): void => {
     path: "$input",
     collector,
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "zero against a zero-excluding override is a rom violation",
-    collector.items.length === 1 &&
-      collector.items[0]!.kind === "rom" &&
-      collector.items[0]!.path === "$input.flexion",
+    namedFacts([
+      ["collectorCount", () => collector.items.length === 1],
+      ["collectorItems", () => collector.items[0]!.kind === "rom"],
+      ["collectorItems2", () => collector.items[0]!.path === "$input.flexion"],
+    ]),
+    {
+      collectorCount: true,
+      collectorItems: true,
+      collectorItems2: true,
+    },
   );
   const clamped = clampJointRom(
     joint("leftLowerArm", { flexion: 0, abduction: 0, twist: 0 }),

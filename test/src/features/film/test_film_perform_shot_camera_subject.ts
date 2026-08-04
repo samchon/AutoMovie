@@ -29,6 +29,23 @@ import {
 } from "../internal/fixtures";
 import { vclose, violationCount } from "../internal/predicates";
 
+/**
+ * Evaluate named facts in order and stop at the first false one, so a failed
+ * comparison names the fact instead of collapsing into one boolean. Stopping
+ * keeps the short-circuit semantics the original conjunction had, which some
+ * facts depend on to guard the ones after them.
+ */
+const namedFacts = (
+  entries: ReadonlyArray<readonly [string, () => boolean]>,
+): Record<string, boolean> => {
+  const output: Record<string, boolean> = {};
+  for (const [name, evaluate] of entries) {
+    output[name] = evaluate();
+    if (output[name] === false) break;
+  }
+  return output;
+};
+
 type ICoverage = IAutoMovieBlockingCoverage;
 
 /**
@@ -308,11 +325,29 @@ export const test_film_perform_shot_camera_subject = (): void => {
     undefined,
     (_target, seconds) => ({ x: 6 + seconds, y: 1.2, z: 0 }),
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "a moving bone drives both the follow subject and camera intent focus",
-    boneFrame.success === true &&
-      keysOf(boneFrame.shot.cameraMotion!.tracks[0]!.values).length > 1 &&
-      vclose(boneFrame.shot.cameraIntent![0]!.focus!, { x: 6, y: 1.2, z: 0 }),
+    namedFacts([
+      ["boneFrameSuccess", () => boneFrame.success === true],
+      [
+        "keysOfCount",
+        () => keysOf(boneFrame.shot.cameraMotion!.tracks[0]!.values).length > 1,
+      ],
+      [
+        "vcloseBoneFrame",
+        () =>
+          vclose(boneFrame.shot.cameraIntent![0]!.focus!, {
+            x: 6,
+            y: 1.2,
+            z: 0,
+          }),
+      ],
+    ]),
+    {
+      boneFrameSuccess: true,
+      keysOfCount: true,
+      vcloseBoneFrame: true,
+    },
   );
   const fallbackBoneFrame = perform(
     [

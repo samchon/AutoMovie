@@ -26,6 +26,23 @@ import {
   shotContract,
 } from "../mcp/productionFixtures";
 
+/**
+ * Evaluate named facts in order and stop at the first false one, so a failed
+ * comparison names the fact instead of collapsing into one boolean. Stopping
+ * keeps the short-circuit semantics the original conjunction had, which some
+ * facts depend on to guard the ones after them.
+ */
+const namedFacts = (
+  entries: ReadonlyArray<readonly [string, () => boolean]>,
+): Record<string, boolean> => {
+  const output: Record<string, boolean> = {};
+  for (const [name, evaluate] of entries) {
+    output[name] = evaluate();
+    if (output[name] === false) break;
+  }
+  return output;
+};
+
 interface IProjectStateFixtureFailure {
   error: unknown;
 }
@@ -115,12 +132,23 @@ export const test_cli_project_state = (): void => {
     );
     const originalSource = fs.readFileSync(sourcePath, "utf8");
     const missing = loadAutoMovieProjectState({ root: fixture.root });
-    TestValidator.predicate(
+    TestValidator.equals(
       "uncompiled project state is explicit",
-      missing.productionId === "fixture-film" &&
-        missing.freshness.status === "missing" &&
-        missing.freshness.compileFingerprint === null &&
-        missing.generated.registry === null,
+      namedFacts([
+        ["missingProductionId", () => missing.productionId === "fixture-film"],
+        ["missingFreshness", () => missing.freshness.status === "missing"],
+        [
+          "missingFreshness2",
+          () => missing.freshness.compileFingerprint === null,
+        ],
+        ["missingGenerated", () => missing.generated.registry === null],
+      ]),
+      {
+        missingProductionId: true,
+        missingFreshness: true,
+        missingFreshness2: true,
+        missingGenerated: true,
+      },
     );
     TestValidator.predicate(
       "missing project state cannot be narrowed",
@@ -168,25 +196,65 @@ export const test_cli_project_state = (): void => {
       model.skeleton === null
         ? null
         : reachPose(model.skeleton, "left", landmark);
-    TestValidator.predicate(
+    TestValidator.equals(
       "loaded state feeds deterministic engine reach distance and formation queries",
-      current.revision === compiled.revision &&
-        current.freshness.compileFingerprint ===
-          compiled.compiler.inputFingerprint &&
-        current.freshness.currentFingerprint ===
-          compiled.compiler.inputFingerprint &&
-        current.freshness.problems.length === 0 &&
-        current.generated.registry.inputFingerprint ===
-          compiled.compiler.inputFingerprint &&
-        current.generated.registry.shots.some(
-          (candidate) => candidate.id === "opening",
-        ) &&
-        current.generated.film?.id === "fixture-film" &&
-        moved.x === 3 &&
-        moved.z === -5 &&
-        Math.abs(meters - Math.sqrt(34)) < 1e-12 &&
-        left !== null &&
-        JSON.stringify(left) === JSON.stringify(repeatedLeft),
+      namedFacts([
+        ["currentRevision", () => current.revision === compiled.revision],
+        [
+          "currentFreshness",
+          () =>
+            current.freshness.compileFingerprint ===
+            compiled.compiler.inputFingerprint,
+        ],
+        [
+          "currentFreshness2",
+          () =>
+            current.freshness.currentFingerprint ===
+            compiled.compiler.inputFingerprint,
+        ],
+        ["currentCount", () => current.freshness.problems.length === 0],
+        [
+          "currentGenerated",
+          () =>
+            current.generated.registry.inputFingerprint ===
+            compiled.compiler.inputFingerprint,
+        ],
+        [
+          "currentGenerated2",
+          () =>
+            current.generated.registry.shots.some(
+              (candidate) => candidate.id === "opening",
+            ),
+        ],
+        [
+          "currentGenerated3",
+          () => current.generated.film?.id === "fixture-film",
+        ],
+        ["movedX", () => moved.x === 3],
+        ["movedZ", () => moved.z === -5],
+        ["absMeters", () => Math.abs(meters - Math.sqrt(34)) < 1e-12],
+        ["left", () => left !== null],
+        [
+          "stringifyLeft",
+          () =>
+            left !== null &&
+            JSON.stringify(left) === JSON.stringify(repeatedLeft),
+        ],
+      ]),
+      {
+        currentRevision: true,
+        currentFreshness: true,
+        currentFreshness2: true,
+        currentCount: true,
+        currentGenerated: true,
+        currentGenerated2: true,
+        currentGenerated3: true,
+        movedX: true,
+        movedZ: true,
+        absMeters: true,
+        left: true,
+        stringifyLeft: true,
+      },
     );
 
     const generatedManifest = project.generatedManifest()!;
@@ -295,23 +363,52 @@ export const test_cli_project_state = (): void => {
       manifestWith("shots/duplicate.json", duplicateShotBytes),
       new Map([["shots/duplicate.json", duplicateShotBytes]]),
     );
-    TestValidator.predicate(
+    TestValidator.equals(
       "ownership manifest and generated JSON boundaries are explicit",
-      duplicateFile.freshness.problems.some(
-        (problem) => problem.code === "generated-file-duplicate",
-      ) &&
-        unreadableFile.freshness.problems.some(
-          (problem) => problem.code === "generated-file-unreadable",
-        ) &&
-        invalidJson.freshness.problems.some(
-          (problem) => problem.code === "generated-json-invalid",
-        ) &&
-        duplicateModel.freshness.problems.some(
-          (problem) => problem.code === "generated-id-duplicate",
-        ) &&
-        duplicateShot.freshness.problems.some(
-          (problem) => problem.code === "generated-id-duplicate",
-        ),
+      namedFacts([
+        [
+          "duplicateFileFreshness",
+          () =>
+            duplicateFile.freshness.problems.some(
+              (problem) => problem.code === "generated-file-duplicate",
+            ),
+        ],
+        [
+          "unreadableFileFreshness",
+          () =>
+            unreadableFile.freshness.problems.some(
+              (problem) => problem.code === "generated-file-unreadable",
+            ),
+        ],
+        [
+          "invalidJsonFreshness",
+          () =>
+            invalidJson.freshness.problems.some(
+              (problem) => problem.code === "generated-json-invalid",
+            ),
+        ],
+        [
+          "duplicateModelFreshness",
+          () =>
+            duplicateModel.freshness.problems.some(
+              (problem) => problem.code === "generated-id-duplicate",
+            ),
+        ],
+        [
+          "duplicateShotFreshness",
+          () =>
+            duplicateShot.freshness.problems.some(
+              (problem) => problem.code === "generated-id-duplicate",
+            ),
+        ],
+      ]),
+      {
+        duplicateFileFreshness: true,
+        unreadableFileFreshness: true,
+        invalidJsonFreshness: true,
+        duplicateModelFreshness: true,
+        duplicateShotFreshness: true,
+      },
     );
 
     const mismatchedRegistryBytes = Buffer.from(
@@ -344,19 +441,38 @@ export const test_cli_project_state = (): void => {
         (file) => file.path !== "contracts/world.json",
       ),
     });
-    TestValidator.predicate(
+    TestValidator.equals(
       "registry joins and required generated contracts fail closed",
-      mismatchedRegistry.freshness.problems.filter(
-        (problem) => problem.code === "generated-registry-mismatch",
-      ).length >= 4 &&
-        mismatchedFilm.freshness.problems.some(
-          (problem) =>
-            problem.code === "generated-registry-mismatch" &&
-            problem.path === "film-timeline.json",
-        ) &&
-        incomplete.freshness.problems.some(
-          (problem) => problem.code === "generated-state-incomplete",
-        ),
+      namedFacts([
+        [
+          "mismatchedRegistryCount",
+          () =>
+            mismatchedRegistry.freshness.problems.filter(
+              (problem) => problem.code === "generated-registry-mismatch",
+            ).length >= 4,
+        ],
+        [
+          "mismatchedFilmFreshness",
+          () =>
+            mismatchedFilm.freshness.problems.some(
+              (problem) =>
+                problem.code === "generated-registry-mismatch" &&
+                problem.path === "film-timeline.json",
+            ),
+        ],
+        [
+          "incompleteFreshness",
+          () =>
+            incomplete.freshness.problems.some(
+              (problem) => problem.code === "generated-state-incomplete",
+            ),
+        ],
+      ]),
+      {
+        mismatchedRegistryCount: true,
+        mismatchedFilmFreshness: true,
+        incompleteFreshness: true,
+      },
     );
 
     AutoMovieProductionProject.prototype.generatedManifest = () => {
@@ -446,28 +562,61 @@ export const test_cli_project_state = (): void => {
         },
       ]);
     }
-    TestValidator.predicate(
+    TestValidator.equals(
       "source changes between fingerprint fences cannot look current",
-      raced.freshness.status === "stale" &&
-        raced.freshness.problems.some(
-          (problem) => problem.code === "project-state-changed",
-        ) &&
-        raced.freshness.currentFingerprint !==
-          raced.freshness.compileFingerprint &&
-        refusesCurrent(raced),
+      namedFacts([
+        ["racedFreshness", () => raced.freshness.status === "stale"],
+        [
+          "racedFreshness2",
+          () =>
+            raced.freshness.problems.some(
+              (problem) => problem.code === "project-state-changed",
+            ),
+        ],
+        [
+          "racedFreshness3",
+          () =>
+            raced.freshness.currentFingerprint !==
+            raced.freshness.compileFingerprint,
+        ],
+        ["refusesCurrentRaced", () => refusesCurrent(raced)],
+      ]),
+      {
+        racedFreshness: true,
+        racedFreshness2: true,
+        racedFreshness3: true,
+        refusesCurrentRaced: true,
+      },
     );
 
     fs.appendFileSync(sourcePath, "\n// stale reader fixture\n");
     const stale = loadAutoMovieProjectState({ root: fixture.root });
-    TestValidator.predicate(
+    TestValidator.equals(
       "source drift preserves the identified old snapshot but marks it stale",
-      stale.freshness.status === "stale" &&
-        stale.freshness.compileFingerprint ===
-          compiled.compiler.inputFingerprint &&
-        stale.freshness.currentFingerprint !==
-          stale.freshness.compileFingerprint &&
-        stale.generated.shots.has("opening") &&
-        refusesCurrent(stale),
+      namedFacts([
+        ["staleFreshness", () => stale.freshness.status === "stale"],
+        [
+          "staleFreshness2",
+          () =>
+            stale.freshness.compileFingerprint ===
+            compiled.compiler.inputFingerprint,
+        ],
+        [
+          "staleFreshness3",
+          () =>
+            stale.freshness.currentFingerprint !==
+            stale.freshness.compileFingerprint,
+        ],
+        ["staleGenerated", () => stale.generated.shots.has("opening")],
+        ["refusesCurrentStale", () => refusesCurrent(stale)],
+      ]),
+      {
+        staleFreshness: true,
+        staleFreshness2: true,
+        staleFreshness3: true,
+        staleGenerated: true,
+        refusesCurrentStale: true,
+      },
     );
 
     fs.writeFileSync(sourcePath, originalSource);
@@ -477,16 +626,31 @@ export const test_cli_project_state = (): void => {
     );
     fs.appendFileSync(generatedShot, "\n");
     const modified = loadAutoMovieProjectState({ root: fixture.root });
-    TestValidator.predicate(
+    TestValidator.equals(
       "modified compiler bytes are excluded and reported stale",
-      modified.freshness.status === "stale" &&
-        modified.freshness.problems.some(
-          (problem) =>
-            problem.code === "generated-file-modified" &&
-            problem.path === "shots/opening.json",
-        ) &&
-        modified.generated.shots.has("opening") === false &&
-        refusesCurrent(modified),
+      namedFacts([
+        ["modifiedFreshness", () => modified.freshness.status === "stale"],
+        [
+          "modifiedFreshness2",
+          () =>
+            modified.freshness.problems.some(
+              (problem) =>
+                problem.code === "generated-file-modified" &&
+                problem.path === "shots/opening.json",
+            ),
+        ],
+        [
+          "modifiedGenerated",
+          () => modified.generated.shots.has("opening") === false,
+        ],
+        ["refusesCurrentModified", () => refusesCurrent(modified)],
+      ]),
+      {
+        modifiedFreshness: true,
+        modifiedFreshness2: true,
+        modifiedGenerated: true,
+        refusesCurrentModified: true,
+      },
     );
   } catch (error) {
     projectStateFailure = { error };

@@ -13,6 +13,23 @@ import { TestValidator } from "@nestia/e2e";
 import { keyframe, makeMotion, makePose } from "../internal/fixtures";
 import { nclose } from "../internal/predicates";
 
+/**
+ * Evaluate named facts in order and stop at the first false one, so a failed
+ * comparison names the fact instead of collapsing into one boolean. Stopping
+ * keeps the short-circuit semantics the original conjunction had, which some
+ * facts depend on to guard the ones after them.
+ */
+const namedFacts = (
+  entries: ReadonlyArray<readonly [string, () => boolean]>,
+): Record<string, boolean> => {
+  const output: Record<string, boolean> = {};
+  for (const [name, evaluate] of entries) {
+    output[name] = evaluate();
+    if (output[name] === false) break;
+  }
+  return output;
+};
+
 /** Real engine gesture content; a simple face clip for emote; null otherwise. */
 const synth: IAutoMovieActionSynthesizer = (
   action: IAutoMovieActionCall,
@@ -93,20 +110,52 @@ export const test_perform_gesture_region_content = (): void => {
   const crouch = compilePerformance([gesture("crouch")], synth).performances
     .hero!;
   const crouchStop = jointsAt(crouch, 0.3);
-  TestValidator.predicate(
+  TestValidator.equals(
     "a lone crouch keeps its knee bend and spine lean",
-    nclose(crouchStop.map.get("leftLowerLeg")!.flexion!, 65) &&
-      nclose(crouchStop.map.get("rightLowerLeg")!.flexion!, 65) &&
-      nclose(crouchStop.map.get("spine")!.flexion!, 15),
+    namedFacts([
+      [
+        "ncloseCrouchStop",
+        () => nclose(crouchStop.map.get("leftLowerLeg")!.flexion!, 65),
+      ],
+      [
+        "ncloseCrouchStop2",
+        () => nclose(crouchStop.map.get("rightLowerLeg")!.flexion!, 65),
+      ],
+      [
+        "ncloseCrouchStop3",
+        () => nclose(crouchStop.map.get("spine")!.flexion!, 15),
+      ],
+    ]),
+    {
+      ncloseCrouchStop: true,
+      ncloseCrouchStop2: true,
+      ncloseCrouchStop3: true,
+    },
   );
 
   const kick = compilePerformance([gesture("kick")], synth).performances.hero!;
   const kickStop = jointsAt(kick, 0.22);
-  TestValidator.predicate(
+  TestValidator.equals(
     "a lone kick keeps the leg snap and the spine counterbalance",
-    nclose(kickStop.map.get("rightUpperLeg")!.flexion!, 55) &&
-      nclose(kickStop.map.get("rightLowerLeg")!.flexion!, 75) &&
-      nclose(kickStop.map.get("spine")!.flexion!, -6),
+    namedFacts([
+      [
+        "ncloseKickStop",
+        () => nclose(kickStop.map.get("rightUpperLeg")!.flexion!, 55),
+      ],
+      [
+        "ncloseKickStop2",
+        () => nclose(kickStop.map.get("rightLowerLeg")!.flexion!, 75),
+      ],
+      [
+        "ncloseKickStop3",
+        () => nclose(kickStop.map.get("spine")!.flexion!, -6),
+      ],
+    ]),
+    {
+      ncloseKickStop: true,
+      ncloseKickStop2: true,
+      ncloseKickStop3: true,
+    },
   );
 
   const emote: IAutoMovieActionCall = {

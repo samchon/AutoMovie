@@ -5,6 +5,23 @@ import { makeScriptWrite, makeStagingWrite } from "../internal/filmFixtures";
 import { hasViolation } from "../internal/predicates";
 
 /**
+ * Evaluate named facts in order and stop at the first false one, so a failed
+ * comparison names the fact instead of collapsing into one boolean. Stopping
+ * keeps the short-circuit semantics the original conjunction had, which some
+ * facts depend on to guard the ones after them.
+ */
+const namedFacts = (
+  entries: ReadonlyArray<readonly [string, () => boolean]>,
+): Record<string, boolean> => {
+  const output: Record<string, boolean> = {};
+  for (const [name, evaluate] of entries) {
+    output[name] = evaluate();
+    if (output[name] === false) break;
+  }
+  return output;
+};
+
+/**
  * Pins mount-coupling integrity: a rider must ride a _different, placed_ actor.
  * Self-mounts and dangling parents are both contradictions staging must hear
  * about before any shot is performed.
@@ -42,10 +59,23 @@ export const test_film_stage_scene_mount_invalid = (): void => {
     staged.success === false &&
       hasViolation(staged, "type", "$input.actors[0].attach.parent"),
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "dangling parent rejected",
-    staged.success === false &&
-      hasViolation(staged, "type", "$input.actors[1].attach.parent") &&
-      staged.violations.some((v) => v.value === "horse"),
+    namedFacts([
+      ["stagedSuccess", () => staged.success === false],
+      [
+        "hasViolationStaged",
+        () => hasViolation(staged, "type", "$input.actors[1].attach.parent"),
+      ],
+      [
+        "stagedViolations",
+        () => staged.violations.some((v) => v.value === "horse"),
+      ],
+    ]),
+    {
+      stagedSuccess: true,
+      hasViolationStaged: true,
+      stagedViolations: true,
+    },
   );
 };

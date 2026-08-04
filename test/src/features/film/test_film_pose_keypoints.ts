@@ -12,6 +12,23 @@ import { TestValidator } from "@nestia/e2e";
 
 import { nclose } from "../internal/predicates";
 
+/**
+ * Evaluate named facts in order and stop at the first false one, so a failed
+ * comparison names the fact instead of collapsing into one boolean. Stopping
+ * keeps the short-circuit semantics the original conjunction had, which some
+ * facts depend on to guard the ones after them.
+ */
+const namedFacts = (
+  entries: ReadonlyArray<readonly [string, () => boolean]>,
+): Record<string, boolean> => {
+  const output: Record<string, boolean> = {};
+  for (const [name, evaluate] of entries) {
+    output[name] = evaluate();
+    if (output[name] === false) break;
+  }
+  return output;
+};
+
 const IDENTITY_Q = { x: 0, y: 0, z: 0, w: 1 };
 const t3 = (x: number, y: number, z: number): IAutoMovieTransform => ({
   translation: { x, y, z },
@@ -92,13 +109,31 @@ export const test_film_pose_keypoints = (): void => {
   TestValidator.equals("hips + head keypoints", centered.length, 2);
   const hips = of(centered, "hips");
   const head = of(centered, "head");
-  TestValidator.predicate(
+  TestValidator.equals(
     "hips project to frame center, in frame",
-    nclose(hips.x, 0.5) && nclose(hips.y, 0.5) && hips.inFrame,
+    namedFacts([
+      ["ncloseHips", () => nclose(hips.x, 0.5)],
+      ["ncloseHips2", () => nclose(hips.y, 0.5)],
+      ["hipsInFrame", () => hips.inFrame],
+    ]),
+    {
+      ncloseHips: true,
+      ncloseHips2: true,
+      hipsInFrame: true,
+    },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "the head 1 m up projects above center, in frame",
-    nclose(head.x, 0.5) && nclose(head.y, 0.3267949, 1e-6) && head.inFrame,
+    namedFacts([
+      ["ncloseHead", () => nclose(head.x, 0.5)],
+      ["ncloseHead2", () => nclose(head.y, 0.3267949, 1e-6)],
+      ["headInFrame", () => head.inFrame],
+    ]),
+    {
+      ncloseHead: true,
+      ncloseHead2: true,
+      headInFrame: true,
+    },
   );
 
   // 2. out-of-frame joints project honestly (unclamped) with inFrame false.

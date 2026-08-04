@@ -6,6 +6,23 @@ import ts from "typescript-compiler";
 
 import { preserveProductionProjectFixtureCleanup } from "./test_mcp_production_project";
 
+/**
+ * Evaluate named facts in order and stop at the first false one, so a failed
+ * comparison names the fact instead of collapsing into one boolean. Stopping
+ * keeps the short-circuit semantics the original conjunction had, which some
+ * facts depend on to guard the ones after them.
+ */
+const namedFacts = (
+  entries: ReadonlyArray<readonly [string, () => boolean]>,
+): Record<string, boolean> => {
+  const output: Record<string, boolean> = {};
+  for (const [name, evaluate] of entries) {
+    output[name] = evaluate();
+    if (output[name] === false) break;
+  }
+  return output;
+};
+
 const compact = (node: ts.Node, source: ts.SourceFile): string =>
   node.getText(source).replace(/\s+/g, "");
 
@@ -267,59 +284,163 @@ export const test_mcp_production_project_reentrant_namespace_cleanup =
       cleanupFailures: [{ error: undefined, present: true }],
       primaryFailure: { error: undefined, present: true },
     });
-    TestValidator.predicate(
+    TestValidator.equals(
       "reentrant namespace cleanup preserves failure and release order",
-      success.caught === false &&
-        success.failure === undefined &&
-        success.order.join(",") === "cleanup-0,cleanup-1,cleanup-2" &&
-        primaryOnly.caught &&
-        primaryOnly.failure === primaryFailure &&
-        primaryOnly.order.join(",") === "cleanup-0,cleanup-1,cleanup-2" &&
-        standalone.caught &&
-        standalone.failure === hookFailure &&
-        standalone.order.join(",") === "cleanup-0,cleanup-1,cleanup-2" &&
-        multiple.caught &&
-        aggregateContainsExactly(multiple.failure, [
-          hookFailure,
-          innerFailure,
-          outerFailure,
-        ]) &&
-        multiple.order.join(",") === "cleanup-0,cleanup-1,cleanup-2" &&
-        combined.caught &&
-        aggregateContainsExactly(combined.failure, [
-          primaryFailure,
-          hookFailure,
-          innerFailure,
-          outerFailure,
-        ]) &&
-        combined.order.join(",") === "cleanup-0,cleanup-1,cleanup-2" &&
-        successfulBoth.caught === false &&
-        successfulBoth.failure === undefined &&
-        successfulBoth.order.join(",") === "hook,inner-check,outer-check" &&
-        noneAcquired.caught &&
-        noneAcquired.failure === primaryFailure &&
-        noneAcquired.order.join(",") === "hook" &&
-        outerAcquired.caught &&
-        outerAcquired.failure === primaryFailure &&
-        outerAcquired.order.join(",") === "hook,outer-check,outer-release" &&
-        bothAcquired.caught &&
-        bothAcquired.failure === primaryFailure &&
-        bothAcquired.order.join(",") ===
-          "hook,inner-check,inner-release,outer-check,outer-release" &&
-        hookFailedAfterAcquisition.caught &&
-        hookFailedAfterAcquisition.failure === hookFailure &&
-        hookFailedAfterAcquisition.order.join(",") ===
-          "hook,inner-check,inner-release,outer-check,outer-release" &&
-        undefinedStandalone.caught &&
-        undefinedStandalone.failure === undefined &&
-        undefinedStandalone.order.join(",") ===
-          "cleanup-0,cleanup-1,cleanup-2" &&
-        undefinedCombined.caught &&
-        aggregateContainsExactly(undefinedCombined.failure, [
-          undefined,
-          undefined,
-        ]) &&
-        undefinedCombined.order.join(",") === "cleanup-0,cleanup-1,cleanup-2",
+      namedFacts([
+        ["successCaught", () => success.caught === false],
+        ["successFailure", () => success.failure === undefined],
+        [
+          "successOrder",
+          () => success.order.join(",") === "cleanup-0,cleanup-1,cleanup-2",
+        ],
+        ["primaryOnlyCaught", () => primaryOnly.caught],
+        ["primaryOnlyFailure", () => primaryOnly.failure === primaryFailure],
+        [
+          "primaryOnlyOrder",
+          () => primaryOnly.order.join(",") === "cleanup-0,cleanup-1,cleanup-2",
+        ],
+        ["standaloneCaught", () => standalone.caught],
+        ["standaloneFailure", () => standalone.failure === hookFailure],
+        [
+          "standaloneOrder",
+          () => standalone.order.join(",") === "cleanup-0,cleanup-1,cleanup-2",
+        ],
+        ["multipleCaught", () => multiple.caught],
+        [
+          "aggregateContainsExactlyMultiple",
+          () =>
+            aggregateContainsExactly(multiple.failure, [
+              hookFailure,
+              innerFailure,
+              outerFailure,
+            ]),
+        ],
+        [
+          "multipleOrder",
+          () => multiple.order.join(",") === "cleanup-0,cleanup-1,cleanup-2",
+        ],
+        ["combinedCaught", () => combined.caught],
+        [
+          "aggregateContainsExactlyCombined",
+          () =>
+            aggregateContainsExactly(combined.failure, [
+              primaryFailure,
+              hookFailure,
+              innerFailure,
+              outerFailure,
+            ]),
+        ],
+        [
+          "combinedOrder",
+          () => combined.order.join(",") === "cleanup-0,cleanup-1,cleanup-2",
+        ],
+        ["successfulBothCaught", () => successfulBoth.caught === false],
+        ["successfulBothFailure", () => successfulBoth.failure === undefined],
+        [
+          "successfulBothOrder",
+          () =>
+            successfulBoth.order.join(",") === "hook,inner-check,outer-check",
+        ],
+        ["noneAcquiredCaught", () => noneAcquired.caught],
+        ["noneAcquiredFailure", () => noneAcquired.failure === primaryFailure],
+        ["noneAcquiredOrder", () => noneAcquired.order.join(",") === "hook"],
+        ["outerAcquiredCaught", () => outerAcquired.caught],
+        [
+          "outerAcquiredFailure",
+          () => outerAcquired.failure === primaryFailure,
+        ],
+        [
+          "outerAcquiredOrder",
+          () =>
+            outerAcquired.order.join(",") === "hook,outer-check,outer-release",
+        ],
+        ["bothAcquiredCaught", () => bothAcquired.caught],
+        ["bothAcquiredFailure", () => bothAcquired.failure === primaryFailure],
+        [
+          "bothAcquiredOrder",
+          () =>
+            bothAcquired.order.join(",") ===
+            "hook,inner-check,inner-release,outer-check,outer-release",
+        ],
+        [
+          "hookFailedAfterAcquisitionCaught",
+          () => hookFailedAfterAcquisition.caught,
+        ],
+        [
+          "hookFailedAfterAcquisitionFailure",
+          () => hookFailedAfterAcquisition.failure === hookFailure,
+        ],
+        [
+          "hookFailedAfterAcquisitionOrder",
+          () =>
+            hookFailedAfterAcquisition.order.join(",") ===
+            "hook,inner-check,inner-release,outer-check,outer-release",
+        ],
+        ["undefinedStandaloneCaught", () => undefinedStandalone.caught],
+        [
+          "undefinedStandaloneFailure",
+          () => undefinedStandalone.failure === undefined,
+        ],
+        [
+          "undefinedStandaloneOrder",
+          () =>
+            undefinedStandalone.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2",
+        ],
+        ["undefinedCombinedCaught", () => undefinedCombined.caught],
+        [
+          "aggregateContainsExactlyUndefinedCombined",
+          () =>
+            aggregateContainsExactly(undefinedCombined.failure, [
+              undefined,
+              undefined,
+            ]),
+        ],
+        [
+          "undefinedCombinedOrder",
+          () =>
+            undefinedCombined.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2",
+        ],
+      ]),
+      {
+        successCaught: true,
+        successFailure: true,
+        successOrder: true,
+        primaryOnlyCaught: true,
+        primaryOnlyFailure: true,
+        primaryOnlyOrder: true,
+        standaloneCaught: true,
+        standaloneFailure: true,
+        standaloneOrder: true,
+        multipleCaught: true,
+        aggregateContainsExactlyMultiple: true,
+        multipleOrder: true,
+        combinedCaught: true,
+        aggregateContainsExactlyCombined: true,
+        combinedOrder: true,
+        successfulBothCaught: true,
+        successfulBothFailure: true,
+        successfulBothOrder: true,
+        noneAcquiredCaught: true,
+        noneAcquiredFailure: true,
+        noneAcquiredOrder: true,
+        outerAcquiredCaught: true,
+        outerAcquiredFailure: true,
+        outerAcquiredOrder: true,
+        bothAcquiredCaught: true,
+        bothAcquiredFailure: true,
+        bothAcquiredOrder: true,
+        hookFailedAfterAcquisitionCaught: true,
+        hookFailedAfterAcquisitionFailure: true,
+        hookFailedAfterAcquisitionOrder: true,
+        undefinedStandaloneCaught: true,
+        undefinedStandaloneFailure: true,
+        undefinedStandaloneOrder: true,
+        undefinedCombinedCaught: true,
+        aggregateContainsExactlyUndefinedCombined: true,
+        undefinedCombinedOrder: true,
+      },
     );
     TestValidator.equals(
       "production-project test owns one reentrant namespace cleanup lifecycle",

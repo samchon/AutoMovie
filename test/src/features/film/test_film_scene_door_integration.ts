@@ -11,6 +11,23 @@ import { createModel } from "../internal/fixtures";
 import { nclose, vclose } from "../internal/predicates";
 import { createDoorPropSpec } from "./test_film_forge_prop";
 
+/**
+ * Evaluate named facts in order and stop at the first false one, so a failed
+ * comparison names the fact instead of collapsing into one boolean. Stopping
+ * keeps the short-circuit semantics the original conjunction had, which some
+ * facts depend on to guard the ones after them.
+ */
+const namedFacts = (
+  entries: ReadonlyArray<readonly [string, () => boolean]>,
+): Record<string, boolean> => {
+  const output: Record<string, boolean> = {};
+  for (const [name, evaluate] of entries) {
+    output[name] = evaluate();
+    if (output[name] === false) break;
+  }
+  return output;
+};
+
 /** Quat values for a rotation of `deg` about +Y. */
 const yQuat = (deg: number): number[] => {
   const half = (deg * Math.PI) / 360;
@@ -136,9 +153,18 @@ export const test_film_scene_door_integration = (): void => {
     vclose(Matrix4.position(hinge), { x: 5, y: 1, z: 2 }),
   );
   const openX = basisX(hinge);
-  TestValidator.predicate(
+  TestValidator.equals(
     "hinge world rotated 90° through the scene",
-    nclose(openX[0], 0) && nclose(openX[1], 0) && nclose(openX[2], -1),
+    namedFacts([
+      ["ncloseOpenX", () => nclose(openX[0], 0)],
+      ["ncloseOpenX2", () => nclose(openX[1], 0)],
+      ["ncloseOpenX3", () => nclose(openX[2], -1)],
+    ]),
+    {
+      ncloseOpenX: true,
+      ncloseOpenX2: true,
+      ncloseOpenX3: true,
+    },
   );
   const mirrorX = basisX(open.world.get("frontDoor/handleMirror")!);
   TestValidator.predicate(
@@ -165,11 +191,18 @@ export const test_film_scene_door_integration = (): void => {
   const cos110 = Math.cos((110 * Math.PI) / 180);
   const sin110 = Math.sin((110 * Math.PI) / 180);
   const slammedX = basisX(slammed.world.get("frontDoor/hinge")!);
-  TestValidator.predicate(
+  TestValidator.equals(
     "over-swing clamps to exactly 110° through the scene",
-    nclose(slammedX[0], cos110) &&
-      nclose(slammedX[1], 0) &&
-      nclose(slammedX[2], -sin110),
+    namedFacts([
+      ["ncloseSlammedX", () => nclose(slammedX[0], cos110)],
+      ["ncloseSlammedX2", () => nclose(slammedX[1], 0)],
+      ["ncloseSlammedX3", () => nclose(slammedX[2], -sin110)],
+    ]),
+    {
+      ncloseSlammedX: true,
+      ncloseSlammedX2: true,
+      ncloseSlammedX3: true,
+    },
   );
 
   TestValidator.predicate(

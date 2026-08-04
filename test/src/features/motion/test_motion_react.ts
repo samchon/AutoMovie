@@ -8,6 +8,23 @@ import { TestValidator } from "@nestia/e2e";
 
 import { nclose, validationHasNoWarnings } from "../internal/predicates";
 
+/**
+ * Evaluate named facts in order and stop at the first false one, so a failed
+ * comparison names the fact instead of collapsing into one boolean. Stopping
+ * keeps the short-circuit semantics the original conjunction had, which some
+ * facts depend on to guard the ones after them.
+ */
+const namedFacts = (
+  entries: ReadonlyArray<readonly [string, () => boolean]>,
+): Record<string, boolean> => {
+  const output: Record<string, boolean> = {};
+  for (const [name, evaluate] of entries) {
+    output[name] = evaluate();
+    if (output[name] === false) break;
+  }
+  return output;
+};
+
 const rest: IAutoMovieTransform = {
   translation: { x: 0, y: 0, z: 0 },
   rotation: { x: 0, y: 0, z: 0, w: 1 },
@@ -71,11 +88,18 @@ export const test_motion_react = (): void => {
 
   // 1. shape
   TestValidator.equals("three keyframes", clip.keyframes.length, 3);
-  TestValidator.predicate(
+  TestValidator.equals(
     "times 0, peak, duration",
-    nclose(clip.keyframes[0]!.time, 0) &&
-      nclose(clip.keyframes[1]!.time, 0.2) &&
-      nclose(clip.keyframes[2]!.time, 1.0),
+    namedFacts([
+      ["ncloseClip", () => nclose(clip.keyframes[0]!.time, 0)],
+      ["ncloseClip2", () => nclose(clip.keyframes[1]!.time, 0.2)],
+      ["ncloseClip3", () => nclose(clip.keyframes[2]!.time, 1.0)],
+    ]),
+    {
+      ncloseClip: true,
+      ncloseClip2: true,
+      ncloseClip3: true,
+    },
   );
   TestValidator.equals("skeleton id carried", clip.skeleton, "react-rig");
 
@@ -128,17 +152,34 @@ export const test_motion_react = (): void => {
     1,
     0.2,
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "zero-excluding react rests at null and validates through its flinch",
-    zeroExcluding.keyframes[0]!.pose.joints[0]!.flexion === null &&
-      zeroExcluding.keyframes[2]!.pose.joints[0]!.abduction === null &&
-      validationHasNoWarnings(
-        "zero-excluding react clip",
-        validateMotion({
-          motion: zeroExcluding,
-          skeleton: zeroExcludingSkeleton,
-        }),
-      ),
+    namedFacts([
+      [
+        "zeroExcludingKeyframes",
+        () => zeroExcluding.keyframes[0]!.pose.joints[0]!.flexion === null,
+      ],
+      [
+        "zeroExcludingKeyframes2",
+        () => zeroExcluding.keyframes[2]!.pose.joints[0]!.abduction === null,
+      ],
+      [
+        "validationHasNoWarningsZero",
+        () =>
+          validationHasNoWarnings(
+            "zero-excluding react clip",
+            validateMotion({
+              motion: zeroExcluding,
+              skeleton: zeroExcludingSkeleton,
+            }),
+          ),
+      ],
+    ]),
+    {
+      zeroExcludingKeyframes: true,
+      zeroExcludingKeyframes2: true,
+      validationHasNoWarningsZero: true,
+    },
   );
   // 4. invalid timing rejects before emitting non-increasing keyframes
   for (const duration of [Number.NaN, 0, -1])

@@ -10,6 +10,23 @@ import fs from "node:fs";
 import path from "node:path";
 import ts from "typescript-compiler";
 
+/**
+ * Evaluate named facts in order and stop at the first false one, so a failed
+ * comparison names the fact instead of collapsing into one boolean. Stopping
+ * keeps the short-circuit semantics the original conjunction had, which some
+ * facts depend on to guard the ones after them.
+ */
+const namedFacts = (
+  entries: ReadonlyArray<readonly [string, () => boolean]>,
+): Record<string, boolean> => {
+  const output: Record<string, boolean> = {};
+  for (const [name, evaluate] of entries) {
+    output[name] = evaluate();
+    if (output[name] === false) break;
+  }
+  return output;
+};
+
 interface IGuideSnippetFixtureFailure {
   error: unknown;
 }
@@ -66,51 +83,133 @@ export const test_mcp_guide_corpus = (): void => {
       corpus.includes(tool),
     );
 
-  TestValidator.predicate(
+  TestValidator.equals(
     "every gate guide is linked to its actual tool declaration",
-    AUTOMOVIE_TOOL_GUIDES.captureFrame.includes("CAPTURE_FRAME") &&
-      AUTOMOVIE_TOOL_GUIDES.repaintShot.includes("REPAINT_SHOT") &&
-      AUTOMOVIE_REPAINT_GUIDE === "DIFFUSION_ENHANCE" &&
-      new Set<string>(AUTOMOVIE_TOOL_GUIDES.repaintShot).has(
-        AUTOMOVIE_REPAINT_GUIDE,
-      ) === false &&
-      AUTOMOVIE_TOOL_GUIDES.prepareReview.includes("AUTOMOVIE_OVERALL") &&
-      AUTOMOVIE_TOOL_GUIDES.submitReview.includes("AUTOMOVIE_OVERALL") &&
-      Object.values(AUTOMOVIE_REVIEW_GUIDES).every(
-        (guide) => documents.get(guide)?.includes("prepareReview") === true,
-      ) &&
-      Object.values(AUTOMOVIE_REVIEW_GUIDES).every(
-        (guide) => documents.get(guide)?.includes("submitReview") === true,
-      ),
+    namedFacts([
+      [
+        "aUTOMOVIE_TOOL_GUIDESCaptureFrame",
+        () => AUTOMOVIE_TOOL_GUIDES.captureFrame.includes("CAPTURE_FRAME"),
+      ],
+      [
+        "aUTOMOVIE_TOOL_GUIDESRepaintShot",
+        () => AUTOMOVIE_TOOL_GUIDES.repaintShot.includes("REPAINT_SHOT"),
+      ],
+      [
+        "aUTOMOVIE_REPAINT_GUIDEDIFFUSION_ENHANCE",
+        () => AUTOMOVIE_REPAINT_GUIDE === "DIFFUSION_ENHANCE",
+      ],
+      [
+        "newSet",
+        () =>
+          new Set<string>(AUTOMOVIE_TOOL_GUIDES.repaintShot).has(
+            AUTOMOVIE_REPAINT_GUIDE,
+          ) === false,
+      ],
+      [
+        "aUTOMOVIE_TOOL_GUIDESPrepareReview",
+        () => AUTOMOVIE_TOOL_GUIDES.prepareReview.includes("AUTOMOVIE_OVERALL"),
+      ],
+      [
+        "aUTOMOVIE_TOOL_GUIDESSubmitReview",
+        () => AUTOMOVIE_TOOL_GUIDES.submitReview.includes("AUTOMOVIE_OVERALL"),
+      ],
+      [
+        "valuesAUTOMOVIE_REVIEW_GUIDES",
+        () =>
+          Object.values(AUTOMOVIE_REVIEW_GUIDES).every(
+            (guide) => documents.get(guide)?.includes("prepareReview") === true,
+          ),
+      ],
+      [
+        "valuesAUTOMOVIE_REVIEW_GUIDES2",
+        () =>
+          Object.values(AUTOMOVIE_REVIEW_GUIDES).every(
+            (guide) => documents.get(guide)?.includes("submitReview") === true,
+          ),
+      ],
+    ]),
+    {
+      aUTOMOVIE_TOOL_GUIDESCaptureFrame: true,
+      aUTOMOVIE_TOOL_GUIDESRepaintShot: true,
+      aUTOMOVIE_REPAINT_GUIDEDIFFUSION_ENHANCE: true,
+      newSet: true,
+      aUTOMOVIE_TOOL_GUIDESPrepareReview: true,
+      aUTOMOVIE_TOOL_GUIDESSubmitReview: true,
+      valuesAUTOMOVIE_REVIEW_GUIDES: true,
+      valuesAUTOMOVIE_REVIEW_GUIDES2: true,
+    },
   );
 
   const overall = documents.get("AUTOMOVIE_OVERALL")!;
-  TestValidator.predicate(
+  TestValidator.equals(
     "the constitution alone routes every next guide",
-    overall.includes("## Flow") &&
-      overall.includes("## Guide selection") &&
-      AUTOMOVIE_PRODUCTION_GUIDE_NAMES.every(
-        (name) =>
-          name === "AUTOMOVIE_OVERALL" || overall.includes(`\`${name}\``),
-      ),
+    namedFacts([
+      ["overallFlow", () => overall.includes("## Flow")],
+      ["overallGuide", () => overall.includes("## Guide selection")],
+      [
+        "aUTOMOVIE_PRODUCTION_GUIDE_NAMESName",
+        () =>
+          AUTOMOVIE_PRODUCTION_GUIDE_NAMES.every(
+            (name) =>
+              name === "AUTOMOVIE_OVERALL" || overall.includes(`\`${name}\``),
+          ),
+      ],
+    ]),
+    {
+      overallFlow: true,
+      overallGuide: true,
+      aUTOMOVIE_PRODUCTION_GUIDE_NAMESName: true,
+    },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "the handbook doctrine is pinned",
-    documents
-      .get("CINEMATOGRAPHY")!
-      .includes(
-        "emotion, story, rhythm, eye trace, two-dimensional screen plane, then three-dimensional continuity",
-      ) &&
-      documents.get("BATTLE_SIM")!.includes("Fact") &&
-      documents.get("BATTLE_SIM")!.includes("Hint") &&
-      documents.get("BATTLE_SIM")!.includes("Authored response") &&
-      documents
-        .get("DIFFUSION_ENHANCE")!
-        .includes("search current official model cards") &&
-      documents
-        .get("DIFFUSION_ENHANCE")!
-        .includes("The repaint receives a separate `rendition` review") &&
-      documents.get("REPAINT_SHOT")!.includes("visual delivery `repainted`"),
+    namedFacts([
+      [
+        "documentsGet",
+        () =>
+          documents
+            .get("CINEMATOGRAPHY")!
+            .includes(
+              "emotion, story, rhythm, eye trace, two-dimensional screen plane, then three-dimensional continuity",
+            ),
+      ],
+      ["documentsGet2", () => documents.get("BATTLE_SIM")!.includes("Fact")],
+      ["documentsGet3", () => documents.get("BATTLE_SIM")!.includes("Hint")],
+      [
+        "documentsGet4",
+        () => documents.get("BATTLE_SIM")!.includes("Authored response"),
+      ],
+      [
+        "documentsGet5",
+        () =>
+          documents
+            .get("DIFFUSION_ENHANCE")!
+            .includes("search current official model cards"),
+      ],
+      [
+        "documentsGet6",
+        () =>
+          documents
+            .get("DIFFUSION_ENHANCE")!
+            .includes("The repaint receives a separate `rendition` review"),
+      ],
+      [
+        "documentsGet7",
+        () =>
+          documents
+            .get("REPAINT_SHOT")!
+            .includes("visual delivery `repainted`"),
+      ],
+    ]),
+    {
+      documentsGet: true,
+      documentsGet2: true,
+      documentsGet3: true,
+      documentsGet4: true,
+      documentsGet5: true,
+      documentsGet6: true,
+      documentsGet7: true,
+    },
   );
 
   for (const retired of [
@@ -134,15 +233,33 @@ export const test_mcp_guide_corpus = (): void => {
     path.join(root, "packages/mcp/src/dto.ts"),
     "utf8",
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "the public DTO aliases the canonical guide union without retired names",
-    canonicalDtoName === "AUTOMOVIE_OVERALL" &&
-      dtoSource.includes(
-        "export type AutoMovieGuideName = AutoMovieProductionGuideName;",
-      ) &&
-      ["STAGING", "BLOCKING", "PERFORMANCE", "FORGE", "REVIEW"].every(
-        (name) => dtoSource.includes(`| "${name}"`) === false,
-      ),
+    namedFacts([
+      [
+        "canonicalDtoNameAUTOMOVIE_OVERALL",
+        () => canonicalDtoName === "AUTOMOVIE_OVERALL",
+      ],
+      [
+        "dtoSourceExport",
+        () =>
+          dtoSource.includes(
+            "export type AutoMovieGuideName = AutoMovieProductionGuideName;",
+          ),
+      ],
+      [
+        "sTAGINGBLOCKING",
+        () =>
+          ["STAGING", "BLOCKING", "PERFORMANCE", "FORGE", "REVIEW"].every(
+            (name) => dtoSource.includes(`| "${name}"`) === false,
+          ),
+      ],
+    ]),
+    {
+      canonicalDtoNameAUTOMOVIE_OVERALL: true,
+      dtoSourceExport: true,
+      sTAGINGBLOCKING: true,
+    },
   );
   for (const retiredCall of [
     "queryGeometry",

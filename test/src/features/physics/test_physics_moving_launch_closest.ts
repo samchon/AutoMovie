@@ -4,6 +4,23 @@ import { TestValidator } from "@nestia/e2e";
 
 import { nclose } from "../internal/predicates";
 
+/**
+ * Evaluate named facts in order and stop at the first false one, so a failed
+ * comparison names the fact instead of collapsing into one boolean. Stopping
+ * keeps the short-circuit semantics the original conjunction had, which some
+ * facts depend on to guard the ones after them.
+ */
+const namedFacts = (
+  entries: ReadonlyArray<readonly [string, () => boolean]>,
+): Record<string, boolean> => {
+  const output: Record<string, boolean> = {};
+  for (const [name, evaluate] of entries) {
+    output[name] = evaluate();
+    if (output[name] === false) break;
+  }
+  return output;
+};
+
 const origin: IAutoMovieVector3 = { x: 0, y: 1.6, z: 0 };
 const GRAVITY: IAutoMovieVector3 = { x: 0, y: -9.81, z: 0 };
 
@@ -56,10 +73,23 @@ export const test_physics_moving_launch_closest = (): void => {
   // Capped at four iterates the moving-launch solve must be the closest iterate
   // (iterate 2, hitTime ~1.7355), NOT the last one visited (iterate 3, ~1.9894).
   const led = solveMovingLaunch(origin, accel, speed, GRAVITY, "direct", 4);
-  TestValidator.predicate(
+  TestValidator.equals(
     "the capped moving launch returns the closest iterate, not the last",
-    led !== null &&
-      nclose(led.hitTime, closest.hitTime, 1e-9) &&
-      !nclose(led.hitTime, last.hitTime, 1e-6),
+    namedFacts([
+      ["led", () => led !== null],
+      [
+        "ncloseLed",
+        () => led !== null && nclose(led.hitTime, closest.hitTime, 1e-9),
+      ],
+      [
+        "ncloseLed2",
+        () => led !== null && !nclose(led.hitTime, last.hitTime, 1e-6),
+      ],
+    ]),
+    {
+      led: true,
+      ncloseLed: true,
+      ncloseLed2: true,
+    },
   );
 };

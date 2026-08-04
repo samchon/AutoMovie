@@ -6,6 +6,23 @@ import { TestValidator } from "@nestia/e2e";
 
 import { nclose, vclose } from "../internal/predicates";
 
+/**
+ * Evaluate named facts in order and stop at the first false one, so a failed
+ * comparison names the fact instead of collapsing into one boolean. Stopping
+ * keeps the short-circuit semantics the original conjunction had, which some
+ * facts depend on to guard the ones after them.
+ */
+const namedFacts = (
+  entries: ReadonlyArray<readonly [string, () => boolean]>,
+): Record<string, boolean> => {
+  const output: Record<string, boolean> = {};
+  for (const [name, evaluate] of entries) {
+    output[name] = evaluate();
+    if (output[name] === false) break;
+  }
+  return output;
+};
+
 const find = (bones: IAutoMovieBone[], bone: string): IAutoMovieBone => {
   const b = bones.find((x) => x.bone === bone);
   if (b === undefined) throw new Error(`bone ${bone} missing`);
@@ -145,11 +162,21 @@ export const test_ingest_humanoid_skeleton = (): void => {
   rolled.createScene().addChild(rHips);
   const rolledSkel = humanoidSkeleton(rolled, "rolled")!;
   const rolledSpine = find(rolledSkel.bones, "spine");
-  TestValidator.predicate(
+  TestValidator.equals(
     "a rotated helper rotates the child's rest offset and rolls its rotation",
-    vclose(rolledSpine.rest.translation, { x: -0.2, y: 0, z: 0 }) &&
-      nclose(rolledSpine.rest.rotation.z, sq) &&
-      nclose(rolledSpine.rest.rotation.w, sq),
+    namedFacts([
+      [
+        "vcloseRolledSpine",
+        () => vclose(rolledSpine.rest.translation, { x: -0.2, y: 0, z: 0 }),
+      ],
+      ["ncloseRolledSpine", () => nclose(rolledSpine.rest.rotation.z, sq)],
+      ["ncloseRolledSpine2", () => nclose(rolledSpine.rest.rotation.w, sq)],
+    ]),
+    {
+      vcloseRolledSpine: true,
+      ncloseRolledSpine: true,
+      ncloseRolledSpine2: true,
+    },
   );
   TestValidator.predicate(
     "FK lands the rolled spine beside the hips",

@@ -2,6 +2,23 @@ import { bodyRegionBones } from "@automovie/engine";
 import { AutoMovieHumanoidBone } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
+/**
+ * Evaluate named facts in order and stop at the first false one, so a failed
+ * comparison names the fact instead of collapsing into one boolean. Stopping
+ * keeps the short-circuit semantics the original conjunction had, which some
+ * facts depend on to guard the ones after them.
+ */
+const namedFacts = (
+  entries: ReadonlyArray<readonly [string, () => boolean]>,
+): Record<string, boolean> => {
+  const output: Record<string, boolean> = {};
+  for (const [name, evaluate] of entries) {
+    output[name] = evaluate();
+    if (output[name] === false) break;
+  }
+  return output;
+};
+
 const disjoint = (
   a: readonly AutoMovieHumanoidBone[],
   b: readonly AutoMovieHumanoidBone[],
@@ -48,11 +65,18 @@ export const test_perform_body_region_bones = (): void => {
     lower.includes("hips") && lower.includes("leftFoot"),
   );
   TestValidator.equals("upperBody owns 41 bones", upper.length, 41);
-  TestValidator.predicate(
+  TestValidator.equals(
     "upperBody has spine, a hand, a finger",
-    upper.includes("spine") &&
-      upper.includes("leftHand") &&
-      upper.includes("rightLittleDistal"),
+    namedFacts([
+      ["upperSpine", () => upper.includes("spine")],
+      ["upperLeftHand", () => upper.includes("leftHand")],
+      ["upperRightLittleDistal", () => upper.includes("rightLittleDistal")],
+    ]),
+    {
+      upperSpine: true,
+      upperLeftHand: true,
+      upperRightLittleDistal: true,
+    },
   );
   TestValidator.equals("head owns 5 bones", head.length, 5);
   TestValidator.predicate(

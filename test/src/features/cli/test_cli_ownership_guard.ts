@@ -7,6 +7,23 @@ import path from "node:path";
 
 import { preserveCliRootFixtureCleanup } from "./CliRootFixtureCleanup";
 
+/**
+ * Evaluate named facts in order and stop at the first false one, so a failed
+ * comparison names the fact instead of collapsing into one boolean. Stopping
+ * keeps the short-circuit semantics the original conjunction had, which some
+ * facts depend on to guard the ones after them.
+ */
+const namedFacts = (
+  entries: ReadonlyArray<readonly [string, () => boolean]>,
+): Record<string, boolean> => {
+  const output: Record<string, boolean> = {};
+  for (const [name, evaluate] of entries) {
+    output[name] = evaluate();
+    if (output[name] === false) break;
+  }
+  return output;
+};
+
 interface IGuardResult {
   status: number | null;
   stderr: string;
@@ -84,21 +101,44 @@ export const test_cli_ownership_guard = (): void => {
     const aliasedBash = guard(root, "Bash", {
       command: "Set-Content generated-alias/through-shell.json forged",
     });
-    TestValidator.predicate(
+    TestValidator.equals(
       "authored design is writable while direct, shell, MCP, and linked derived paths are blocked",
-      authored.status === 0 &&
-        generated.status === 2 &&
-        generated.stderr.includes("npm run compile") &&
-        rendered.status === 2 &&
-        rendered.stderr.includes("npm run render") &&
-        production.status === 2 &&
-        production.stderr.includes("npm run compile or npm run render") &&
-        bash.status === 2 &&
-        bash.stderr.includes("npm run compile") &&
-        aliased.status === 2 &&
-        aliased.stderr.includes("npm run compile") &&
-        aliasedBash.status === 2 &&
-        aliasedBash.stderr.includes("npm run compile"),
+      namedFacts([
+        ["authoredStatus", () => authored.status === 0],
+        ["generatedStatus", () => generated.status === 2],
+        ["generatedStderr", () => generated.stderr.includes("npm run compile")],
+        ["renderedStatus", () => rendered.status === 2],
+        ["renderedStderr", () => rendered.stderr.includes("npm run render")],
+        ["productionStatus", () => production.status === 2],
+        [
+          "productionStderr",
+          () => production.stderr.includes("npm run compile or npm run render"),
+        ],
+        ["bashStatus", () => bash.status === 2],
+        ["bashStderr", () => bash.stderr.includes("npm run compile")],
+        ["aliasedStatus", () => aliased.status === 2],
+        ["aliasedStderr", () => aliased.stderr.includes("npm run compile")],
+        ["aliasedBashStatus", () => aliasedBash.status === 2],
+        [
+          "aliasedBashStderr",
+          () => aliasedBash.stderr.includes("npm run compile"),
+        ],
+      ]),
+      {
+        authoredStatus: true,
+        generatedStatus: true,
+        generatedStderr: true,
+        renderedStatus: true,
+        renderedStderr: true,
+        productionStatus: true,
+        productionStderr: true,
+        bashStatus: true,
+        bashStderr: true,
+        aliasedStatus: true,
+        aliasedStderr: true,
+        aliasedBashStatus: true,
+        aliasedBashStderr: true,
+      },
     );
 
     const manifest = path.join(root, ".automovie", "manifest.json");
@@ -110,11 +150,21 @@ export const test_cli_ownership_guard = (): void => {
     const malformed = guard(root, "Write", {
       file_path: path.join(root, "generated", "film.json"),
     });
-    TestValidator.predicate(
+    TestValidator.equals(
       "missing config is fail-open but malformed existing config blocks",
-      absent.status === 0 &&
-        malformed.status === 2 &&
-        malformed.stderr.includes("manifest.json is unreadable"),
+      namedFacts([
+        ["absentStatus", () => absent.status === 0],
+        ["malformedStatus", () => malformed.status === 2],
+        [
+          "malformedStderr",
+          () => malformed.stderr.includes("manifest.json is unreadable"),
+        ],
+      ]),
+      {
+        absentStatus: true,
+        malformedStatus: true,
+        malformedStderr: true,
+      },
     );
   } catch (error) {
     ownershipFailure = { error };

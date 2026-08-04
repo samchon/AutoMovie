@@ -17,6 +17,23 @@ import { TestValidator } from "@nestia/e2e";
 
 import { throwsError } from "../internal/predicates";
 
+/**
+ * Evaluate named facts in order and stop at the first false one, so a failed
+ * comparison names the fact instead of collapsing into one boolean. Stopping
+ * keeps the short-circuit semantics the original conjunction had, which some
+ * facts depend on to guard the ones after them.
+ */
+const namedFacts = (
+  entries: ReadonlyArray<readonly [string, () => boolean]>,
+): Record<string, boolean> => {
+  const output: Record<string, boolean> = {};
+  for (const [name, evaluate] of entries) {
+    output[name] = evaluate();
+    if (output[name] === false) break;
+  }
+  return output;
+};
+
 const expectErrorMessage = (
   title: string,
   task: () => unknown,
@@ -36,28 +53,78 @@ export const test_benchmark_scenario_registry = (): void => {
       "short/austerlitz-teaser",
     ],
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "the deterministic demo family fixes one, five, and twenty minute laws",
-    getAutoMovieBenchmarkScenario("short/austerlitz-teaser").brief ===
-      AUSTERLITZ_TEASER_BRIEF &&
-      getAutoMovieBenchmarkScenario("medium/austerlitz-volley-exchange")
-        .brief === AUSTERLITZ_VOLLEY_EXCHANGE_BRIEF &&
-      getAutoMovieBenchmarkScenario("long/austerlitz-battle-film").brief ===
-        AUSTERLITZ_BATTLE_FILM_BRIEF &&
-      austerlitzTeaserTask().delivery.minRuntimeSeconds === 55 &&
-      austerlitzTeaserTask().productionLaw.some(
-        (assertion) => assertion.id === "production/object-registration",
-      ) &&
-      austerlitzVolleyExchangeTask().delivery.minRuntimeSeconds === 285 &&
-      austerlitzBattleFilmTask().delivery.minRuntimeSeconds === 1_140 &&
-      austerlitzTeaserDraft().surface === "five-tool" &&
-      getAutoMovieBenchmarkScenario("short/austerlitz-teaser").lanes.join(
-        ",",
-      ) === "deterministic,repaint" &&
-      scenarios.every(
-        (scenario) =>
-          Object.isFrozen(scenario) && Object.isFrozen(scenario.lanes),
-      ),
+    namedFacts([
+      [
+        "getAutoMovieBenchmarkScenarioShort",
+        () =>
+          getAutoMovieBenchmarkScenario("short/austerlitz-teaser").brief ===
+          AUSTERLITZ_TEASER_BRIEF,
+      ],
+      [
+        "getAutoMovieBenchmarkScenarioMedium",
+        () =>
+          getAutoMovieBenchmarkScenario("medium/austerlitz-volley-exchange")
+            .brief === AUSTERLITZ_VOLLEY_EXCHANGE_BRIEF,
+      ],
+      [
+        "getAutoMovieBenchmarkScenarioLong",
+        () =>
+          getAutoMovieBenchmarkScenario("long/austerlitz-battle-film").brief ===
+          AUSTERLITZ_BATTLE_FILM_BRIEF,
+      ],
+      [
+        "austerlitzTeaserTaskDelivery",
+        () => austerlitzTeaserTask().delivery.minRuntimeSeconds === 55,
+      ],
+      [
+        "austerlitzTeaserTaskProductionLaw",
+        () =>
+          austerlitzTeaserTask().productionLaw.some(
+            (assertion) => assertion.id === "production/object-registration",
+          ),
+      ],
+      [
+        "austerlitzVolleyExchangeTaskDelivery",
+        () => austerlitzVolleyExchangeTask().delivery.minRuntimeSeconds === 285,
+      ],
+      [
+        "austerlitzBattleFilmTaskDelivery",
+        () => austerlitzBattleFilmTask().delivery.minRuntimeSeconds === 1_140,
+      ],
+      [
+        "austerlitzTeaserDraftSurface",
+        () => austerlitzTeaserDraft().surface === "five-tool",
+      ],
+      [
+        "getAutoMovieBenchmarkScenarioShort2",
+        () =>
+          getAutoMovieBenchmarkScenario("short/austerlitz-teaser").lanes.join(
+            ",",
+          ) === "deterministic,repaint",
+      ],
+      [
+        "scenariosScenario",
+        () =>
+          scenarios.every(
+            (scenario) =>
+              Object.isFrozen(scenario) && Object.isFrozen(scenario.lanes),
+          ),
+      ],
+    ]),
+    {
+      getAutoMovieBenchmarkScenarioShort: true,
+      getAutoMovieBenchmarkScenarioMedium: true,
+      getAutoMovieBenchmarkScenarioLong: true,
+      austerlitzTeaserTaskDelivery: true,
+      austerlitzTeaserTaskProductionLaw: true,
+      austerlitzVolleyExchangeTaskDelivery: true,
+      austerlitzBattleFilmTaskDelivery: true,
+      austerlitzTeaserDraftSurface: true,
+      getAutoMovieBenchmarkScenarioShort2: true,
+      scenariosScenario: true,
+    },
   );
   for (const scenario of scenarios)
     TestValidator.predicate(
@@ -132,16 +199,43 @@ export const test_benchmark_scenario_registry = (): void => {
     { surface: "legacy-compact", mcp: oldSession },
     { surface: "five-tool", mcp: currentSession },
   ]);
-  TestValidator.predicate(
+  TestValidator.equals(
     "actual new and retired handshakes produce a tool-budget comparison",
-    inventory.surfaces.length === 2 &&
-      inventory.surfaces.find((entry) => entry.surface === "five-tool")
-        ?.tools === 5 &&
-      inventory.comparisons.length === 1 &&
-      inventory.comparisons[0]!.from === "legacy-compact" &&
-      inventory.comparisons[0]!.to === "five-tool" &&
-      inventory.comparisons[0]!.added.includes("captureFrame") &&
-      inventory.comparisons[0]!.removed.includes("compile"),
+    namedFacts([
+      ["inventoryCount", () => inventory.surfaces.length === 2],
+      [
+        "inventorySurfaces",
+        () =>
+          inventory.surfaces.find((entry) => entry.surface === "five-tool")
+            ?.tools === 5,
+      ],
+      ["inventoryCount2", () => inventory.comparisons.length === 1],
+      [
+        "inventoryComparisons",
+        () => inventory.comparisons[0]!.from === "legacy-compact",
+      ],
+      [
+        "inventoryComparisons2",
+        () => inventory.comparisons[0]!.to === "five-tool",
+      ],
+      [
+        "inventoryComparisons3",
+        () => inventory.comparisons[0]!.added.includes("captureFrame"),
+      ],
+      [
+        "inventoryComparisons4",
+        () => inventory.comparisons[0]!.removed.includes("compile"),
+      ],
+    ]),
+    {
+      inventoryCount: true,
+      inventorySurfaces: true,
+      inventoryCount2: true,
+      inventoryComparisons: true,
+      inventoryComparisons2: true,
+      inventoryComparisons3: true,
+      inventoryComparisons4: true,
+    },
   );
   expectErrorMessage(
     "inventory reports require one measured handshake",

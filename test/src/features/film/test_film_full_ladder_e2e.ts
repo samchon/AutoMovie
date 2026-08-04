@@ -21,6 +21,23 @@ import { createSkeleton } from "../internal/fixtures";
 import { nclose } from "../internal/predicates";
 
 /**
+ * Evaluate named facts in order and stop at the first false one, so a failed
+ * comparison names the fact instead of collapsing into one boolean. Stopping
+ * keeps the short-circuit semantics the original conjunction had, which some
+ * facts depend on to guard the ones after them.
+ */
+const namedFacts = (
+  entries: ReadonlyArray<readonly [string, () => boolean]>,
+): Record<string, boolean> => {
+  const output: Record<string, boolean> = {};
+  for (const [name, evaluate] of entries) {
+    output[name] = evaluate();
+    if (output[name] === false) break;
+  }
+  return output;
+};
+
+/**
  * The whole stage ladder in one take. Every harness stage's payload flows
  * through its engine consumer with every gate passing: the script's stand-in is
  * forged, the world staged, the beat blocked, the performance realized against
@@ -83,11 +100,18 @@ export const test_film_full_ladder_e2e = (): void => {
     verdict: "pass",
     notes: [],
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "review passes with an empty backlog",
-    reviewed.success === true &&
-      reviewed.verdict === "pass" &&
-      reviewed.notes.length === 0,
+    namedFacts([
+      ["reviewedSuccess", () => reviewed.success === true],
+      ["reviewedVerdict", () => reviewed.verdict === "pass"],
+      ["reviewedCount", () => reviewed.notes.length === 0],
+    ]),
+    {
+      reviewedSuccess: true,
+      reviewedVerdict: true,
+      reviewedCount: true,
+    },
   );
 
   const cut = cutSequence(

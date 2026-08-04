@@ -5,6 +5,23 @@ import { makeScriptWrite } from "../internal/filmFixtures";
 import { hasViolation } from "../internal/predicates";
 
 /**
+ * Evaluate named facts in order and stop at the first false one, so a failed
+ * comparison names the fact instead of collapsing into one boolean. Stopping
+ * keeps the short-circuit semantics the original conjunction had, which some
+ * facts depend on to guard the ones after them.
+ */
+const namedFacts = (
+  entries: ReadonlyArray<readonly [string, () => boolean]>,
+): Record<string, boolean> => {
+  const output: Record<string, boolean> = {};
+  for (const [name, evaluate] of entries) {
+    output[name] = evaluate();
+    if (output[name] === false) break;
+  }
+  return output;
+};
+
+/**
  * Pins the completeness gate: a cast member without a `modelRef` is an actor
  * with no body until forged: an empty forge is a violation naming exactly that
  * member, not a silent no-op.
@@ -18,11 +35,28 @@ import { hasViolation } from "../internal/predicates";
 export const test_film_forge_cast_missing = (): void => {
   const forged = forgeCast(makeScriptWrite(), { entries: [] });
   TestValidator.equals("fails", forged.success, false);
-  TestValidator.predicate(
+  TestValidator.equals(
     "names the unforged stand-in member only",
-    forged.success === false &&
-      hasViolation(forged, "type", "$input.entries") &&
-      forged.violations.some((v) => v.value === "knightB") &&
-      forged.violations.every((v) => v.value !== "knightA"),
+    namedFacts([
+      ["forgedSuccess", () => forged.success === false],
+      [
+        "hasViolationForged",
+        () => hasViolation(forged, "type", "$input.entries"),
+      ],
+      [
+        "forgedViolations",
+        () => forged.violations.some((v) => v.value === "knightB"),
+      ],
+      [
+        "forgedViolations2",
+        () => forged.violations.every((v) => v.value !== "knightA"),
+      ],
+    ]),
+    {
+      forgedSuccess: true,
+      hasViolationForged: true,
+      forgedViolations: true,
+      forgedViolations2: true,
+    },
   );
 };

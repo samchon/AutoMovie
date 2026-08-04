@@ -11,6 +11,23 @@ import {
   makePose,
 } from "../internal/fixtures";
 
+/**
+ * Evaluate named facts in order and stop at the first false one, so a failed
+ * comparison names the fact instead of collapsing into one boolean. Stopping
+ * keeps the short-circuit semantics the original conjunction had, which some
+ * facts depend on to guard the ones after them.
+ */
+const namedFacts = (
+  entries: ReadonlyArray<readonly [string, () => boolean]>,
+): Record<string, boolean> => {
+  const output: Record<string, boolean> = {};
+  for (const [name, evaluate] of entries) {
+    output[name] = evaluate();
+    if (output[name] === false) break;
+  }
+  return output;
+};
+
 const SKELETON: IAutoMovieSkeleton = {
   id: "spring-rig",
   bones: [
@@ -105,11 +122,22 @@ export const test_viewer_player_spring_clamp = (): void => {
     if (t > 2.51 && firstAbsent === null) firstAbsent = flexion;
     if (t > 5.9) settled = flexion;
   }
-  TestValidator.predicate(
+  TestValidator.equals(
     "vanished joints decay their follow-through smoothly to neutral",
-    firstAbsent !== null &&
-      Math.abs(firstAbsent) > 0.5 &&
-      settled !== null &&
-      Math.abs(settled) < 0.5,
+    namedFacts([
+      ["firstAbsent", () => firstAbsent !== null],
+      [
+        "absFirstAbsent",
+        () => firstAbsent !== null && Math.abs(firstAbsent) > 0.5,
+      ],
+      ["settled", () => settled !== null],
+      ["absSettled", () => settled !== null && Math.abs(settled) < 0.5],
+    ]),
+    {
+      firstAbsent: true,
+      absFirstAbsent: true,
+      settled: true,
+      absSettled: true,
+    },
   );
 };

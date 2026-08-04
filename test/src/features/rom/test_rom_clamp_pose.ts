@@ -7,6 +7,23 @@ import {
 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
+/**
+ * Evaluate named facts in order and stop at the first false one, so a failed
+ * comparison names the fact instead of collapsing into one boolean. Stopping
+ * keeps the short-circuit semantics the original conjunction had, which some
+ * facts depend on to guard the ones after them.
+ */
+const namedFacts = (
+  entries: ReadonlyArray<readonly [string, () => boolean]>,
+): Record<string, boolean> => {
+  const output: Record<string, boolean> = {};
+  for (const [name, evaluate] of entries) {
+    output[name] = evaluate();
+    if (output[name] === false) break;
+  }
+  return output;
+};
+
 const REST = {
   translation: { x: 0, y: 0, z: 0 },
   rotation: { x: 0, y: 0, z: 0, w: 1 },
@@ -151,10 +168,17 @@ export const test_rom_clamp_pose = (): void => {
     sanitizedArm.abduction,
     0,
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "pose clamp output axes are finite",
-    Number.isFinite(sanitizedArm.flexion) &&
-      Number.isFinite(sanitizedArm.abduction) &&
-      Number.isFinite(sanitizedArm.twist),
+    namedFacts([
+      ["isFiniteSanitizedArm", () => Number.isFinite(sanitizedArm.flexion)],
+      ["isFiniteSanitizedArm2", () => Number.isFinite(sanitizedArm.abduction)],
+      ["isFiniteSanitizedArm3", () => Number.isFinite(sanitizedArm.twist)],
+    ]),
+    {
+      isFiniteSanitizedArm: true,
+      isFiniteSanitizedArm2: true,
+      isFiniteSanitizedArm3: true,
+    },
   );
 };

@@ -4,6 +4,23 @@ import { TestValidator } from "@nestia/e2e";
 import { nclose } from "../internal/predicates";
 
 /**
+ * Evaluate named facts in order and stop at the first false one, so a failed
+ * comparison names the fact instead of collapsing into one boolean. Stopping
+ * keeps the short-circuit semantics the original conjunction had, which some
+ * facts depend on to guard the ones after them.
+ */
+const namedFacts = (
+  entries: ReadonlyArray<readonly [string, () => boolean]>,
+): Record<string, boolean> => {
+  const output: Record<string, boolean> = {};
+  for (const [name, evaluate] of entries) {
+    output[name] = evaluate();
+    if (output[name] === false) break;
+  }
+  return output;
+};
+
+/**
  * `projectileAt`, closed-form ballistic evaluation: `p = origin + v·t +
  * ½·g·t²`, `v(t) = v + g·t`.
  *
@@ -26,12 +43,20 @@ export const test_physics_projectile = (): void => {
     },
     0,
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "t=0 is the launch state",
-    nclose(s0.position.x, 1) &&
-      nclose(s0.position.y, 2) &&
-      nclose(s0.position.z, 3) &&
-      nclose(s0.velocity.y, 5),
+    namedFacts([
+      ["ncloseS0", () => nclose(s0.position.x, 1)],
+      ["ncloseS02", () => nclose(s0.position.y, 2)],
+      ["ncloseS03", () => nclose(s0.position.z, 3)],
+      ["ncloseS04", () => nclose(s0.velocity.y, 5)],
+    ]),
+    {
+      ncloseS0: true,
+      ncloseS02: true,
+      ncloseS03: true,
+      ncloseS04: true,
+    },
   );
 
   // 2. arc after 1s
@@ -43,11 +68,18 @@ export const test_physics_projectile = (): void => {
     },
     1,
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "position after 1s",
-    nclose(s1.position.x, 5) &&
-      nclose(s1.position.y, 5) &&
-      nclose(s1.position.z, 0),
+    namedFacts([
+      ["ncloseS1", () => nclose(s1.position.x, 5)],
+      ["ncloseS12", () => nclose(s1.position.y, 5)],
+      ["ncloseS13", () => nclose(s1.position.z, 0)],
+    ]),
+    {
+      ncloseS1: true,
+      ncloseS12: true,
+      ncloseS13: true,
+    },
   );
   TestValidator.predicate(
     "velocity after 1s",

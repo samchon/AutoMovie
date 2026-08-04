@@ -5,6 +5,23 @@ import { createRequire } from "node:module";
 import path from "node:path";
 import ts from "typescript-compiler";
 
+/**
+ * Evaluate named facts in order and stop at the first false one, so a failed
+ * comparison names the fact instead of collapsing into one boolean. Stopping
+ * keeps the short-circuit semantics the original conjunction had, which some
+ * facts depend on to guard the ones after them.
+ */
+const namedFacts = (
+  entries: ReadonlyArray<readonly [string, () => boolean]>,
+): Record<string, boolean> => {
+  const output: Record<string, boolean> = {};
+  for (const [name, evaluate] of entries) {
+    output[name] = evaluate();
+    if (output[name] === false) break;
+  }
+  return output;
+};
+
 /** Repository root, four levels above `test/src/features/cli`. */
 const ROOT = path.resolve(__dirname, "..", "..", "..", "..");
 
@@ -528,25 +545,56 @@ const exerciseProductionEncoderCleanup = (): void => {
     firstCleanupFailure,
     secondCleanupFailure,
   ]);
-  TestValidator.predicate(
+  TestValidator.equals(
     "scaffold encoder cleanup preserves every exact failure in resource order",
-    success.caught === undefined &&
-      success.order.join(",") === "0,1" &&
-      primaryOnly.caught === primaryFailure &&
-      primaryOnly.order.join(",") === "0,1" &&
-      standaloneSingle.caught === firstCleanupFailure &&
-      standaloneSingle.order.join(",") === "0,1" &&
-      aggregateContainsExactly(standaloneMultiple.caught, [
-        firstCleanupFailure,
-        secondCleanupFailure,
-      ]) &&
-      standaloneMultiple.order.join(",") === "0,1" &&
-      aggregateContainsExactly(combined.caught, [
-        primaryFailure,
-        firstCleanupFailure,
-        secondCleanupFailure,
-      ]) &&
-      combined.order.join(",") === "0,1",
+    namedFacts([
+      ["successCaught", () => success.caught === undefined],
+      ["successOrder", () => success.order.join(",") === "0,1"],
+      ["primaryOnlyCaught", () => primaryOnly.caught === primaryFailure],
+      ["primaryOnlyOrder", () => primaryOnly.order.join(",") === "0,1"],
+      [
+        "standaloneSingleCaught",
+        () => standaloneSingle.caught === firstCleanupFailure,
+      ],
+      [
+        "standaloneSingleOrder",
+        () => standaloneSingle.order.join(",") === "0,1",
+      ],
+      [
+        "aggregateContainsExactlyStandaloneMultiple",
+        () =>
+          aggregateContainsExactly(standaloneMultiple.caught, [
+            firstCleanupFailure,
+            secondCleanupFailure,
+          ]),
+      ],
+      [
+        "standaloneMultipleOrder",
+        () => standaloneMultiple.order.join(",") === "0,1",
+      ],
+      [
+        "aggregateContainsExactlyCombined",
+        () =>
+          aggregateContainsExactly(combined.caught, [
+            primaryFailure,
+            firstCleanupFailure,
+            secondCleanupFailure,
+          ]),
+      ],
+      ["combinedOrder", () => combined.order.join(",") === "0,1"],
+    ]),
+    {
+      successCaught: true,
+      successOrder: true,
+      primaryOnlyCaught: true,
+      primaryOnlyOrder: true,
+      standaloneSingleCaught: true,
+      standaloneSingleOrder: true,
+      aggregateContainsExactlyStandaloneMultiple: true,
+      standaloneMultipleOrder: true,
+      aggregateContainsExactlyCombined: true,
+      combinedOrder: true,
+    },
   );
 };
 

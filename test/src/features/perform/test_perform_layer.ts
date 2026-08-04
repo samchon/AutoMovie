@@ -15,6 +15,23 @@ import { TestValidator } from "@nestia/e2e";
 import { joint, keyframe, makeMotion, makePose } from "../internal/fixtures";
 import { nclose } from "../internal/predicates";
 
+/**
+ * Evaluate named facts in order and stop at the first false one, so a failed
+ * comparison names the fact instead of collapsing into one boolean. Stopping
+ * keeps the short-circuit semantics the original conjunction had, which some
+ * facts depend on to guard the ones after them.
+ */
+const namedFacts = (
+  entries: ReadonlyArray<readonly [string, () => boolean]>,
+): Record<string, boolean> => {
+  const output: Record<string, boolean> = {};
+  for (const [name, evaluate] of entries) {
+    output[name] = evaluate();
+    if (output[name] === false) break;
+  }
+  return output;
+};
+
 const HAPPY: IAutoMovieExpression = {
   preset: "happy",
   intensity: 0.8,
@@ -208,11 +225,24 @@ export const test_perform_layer = (): void => {
     boneAt(0, "head") === undefined && boneAt(1, "head") === undefined,
   );
   const at3 = frameAt(late, 3);
-  TestValidator.predicate(
+  TestValidator.equals(
     "past its envelope the locomotion keeps only its root",
-    at3.pose.root !== null &&
-      nclose(at3.pose.root.translation.x, 1) &&
-      at3.pose.joints.every((j) => j.bone !== "leftUpperLeg"),
+    namedFacts([
+      ["at3Pose", () => at3.pose.root !== null],
+      [
+        "ncloseAt3",
+        () => at3.pose.root !== null && nclose(at3.pose.root.translation.x, 1),
+      ],
+      [
+        "at3Pose2",
+        () => at3.pose.joints.every((j) => j.bone !== "leftUpperLeg"),
+      ],
+    ]),
+    {
+      at3Pose: true,
+      ncloseAt3: true,
+      at3Pose2: true,
+    },
   );
   TestValidator.predicate(
     "the late lookAt plays inside its own span",
@@ -245,26 +275,47 @@ export const test_perform_layer = (): void => {
   const spineAfter = frameAt(undiluted, 2.5).pose.joints.find(
     (j) => j.bone === "spine",
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "a finished react stops claiming its explicit-zero joints",
-    bowEnd !== undefined &&
-      nclose(bowEnd.flexion!, 20) &&
-      spineAfter === undefined,
+    namedFacts([
+      ["bowEnd", () => bowEnd !== undefined],
+      [
+        "ncloseBowEnd",
+        () => bowEnd !== undefined && nclose(bowEnd.flexion!, 20),
+      ],
+      ["spineAfter", () => spineAfter === undefined],
+    ]),
+    {
+      bowEnd: true,
+      ncloseBowEnd: true,
+      spineAfter: true,
+    },
   );
 
   // 4. a late-starting composite holds rest until its authored start (the
   //    `step` lead-in pad plus its `first − ε` twin, #1060), instead of
   //    clamping the first pose backward
   const padded = compilePerformance([lateLook], synth).performances.hero!;
-  TestValidator.predicate(
+  TestValidator.equals(
     "a late composite pads rest keyframes up to its authored start",
-    padded.keyframes[0]!.time === 0 &&
-      padded.keyframes[0]!.easing === "step" &&
-      padded.keyframes[0]!.pose.joints.length === 0 &&
-      padded.keyframes[1]!.time < 3 &&
-      padded.keyframes[1]!.pose.joints.length === 0 &&
-      padded.keyframes[1]!.expression === null &&
-      nclose(padded.keyframes[2]!.time, 3),
+    namedFacts([
+      ["paddedKeyframes", () => padded.keyframes[0]!.time === 0],
+      ["paddedKeyframes2", () => padded.keyframes[0]!.easing === "step"],
+      ["paddedCount", () => padded.keyframes[0]!.pose.joints.length === 0],
+      ["paddedKeyframes3", () => padded.keyframes[1]!.time < 3],
+      ["paddedCount2", () => padded.keyframes[1]!.pose.joints.length === 0],
+      ["paddedKeyframes4", () => padded.keyframes[1]!.expression === null],
+      ["nclosePadded", () => nclose(padded.keyframes[2]!.time, 3)],
+    ]),
+    {
+      paddedKeyframes: true,
+      paddedKeyframes2: true,
+      paddedCount: true,
+      paddedKeyframes3: true,
+      paddedCount2: true,
+      paddedKeyframes4: true,
+      nclosePadded: true,
+    },
   );
 
   // 5. the envelope holds BETWEEN union keyframes too (#1060): off-grid
@@ -294,11 +345,27 @@ export const test_perform_layer = (): void => {
   };
   const layeredEmote = compilePerformance([locomote, lateEmote], synth)
     .performances.hero!;
-  TestValidator.predicate(
+  TestValidator.equals(
     "off-grid: a layered late emote's expression stays null before its start",
-    sampleMotion(layeredEmote, 0.1).expression === null &&
-      sampleMotion(layeredEmote, 2).expression === null &&
-      sampleMotion(layeredEmote, 3.5).expression?.preset === "happy",
+    namedFacts([
+      [
+        "sampleMotionLayeredEmote",
+        () => sampleMotion(layeredEmote, 0.1).expression === null,
+      ],
+      [
+        "sampleMotionLayeredEmote2",
+        () => sampleMotion(layeredEmote, 2).expression === null,
+      ],
+      [
+        "sampleMotionLayeredEmote3",
+        () => sampleMotion(layeredEmote, 3.5).expression?.preset === "happy",
+      ],
+    ]),
+    {
+      sampleMotionLayeredEmote: true,
+      sampleMotionLayeredEmote2: true,
+      sampleMotionLayeredEmote3: true,
+    },
   );
   const paddedEmote = compilePerformance([lateEmote], synth).performances.hero!;
   TestValidator.predicate(
@@ -312,13 +379,24 @@ export const test_perform_layer = (): void => {
   // increasing keyframe contract
   const hairline = compilePerformance([{ ...lateEmote, start: 5e-7 }], synth)
     .performances.hero!;
-  TestValidator.predicate(
+  TestValidator.equals(
     "a hairline start pads t=0 only, keeping times strictly increasing",
-    hairline.keyframes[0]!.time === 0 &&
-      nclose(hairline.keyframes[1]!.time, 5e-7) &&
-      hairline.keyframes.every(
-        (k, i, all) => i === 0 || k.time > all[i - 1]!.time,
-      ),
+    namedFacts([
+      ["hairlineKeyframes", () => hairline.keyframes[0]!.time === 0],
+      ["ncloseHairline", () => nclose(hairline.keyframes[1]!.time, 5e-7)],
+      [
+        "hairlineKeyframes2",
+        () =>
+          hairline.keyframes.every(
+            (k, i, all) => i === 0 || k.time > all[i - 1]!.time,
+          ),
+      ],
+    ]),
+    {
+      hairlineKeyframes: true,
+      ncloseHairline: true,
+      hairlineKeyframes2: true,
+    },
   );
 
   // 6. an inserted boundary time where NO clip contributes is honestly rest:
@@ -327,11 +405,18 @@ export const test_perform_layer = (): void => {
   const gapLook = compilePerformance([react, lateLook], synth).performances
     .hero!;
   const gap = sampleMotion(gapLook, 2);
-  TestValidator.predicate(
+  TestValidator.equals(
     "a fully-released gap samples as rest",
-    gap.pose.joints.length === 0 &&
-      gap.pose.root === null &&
-      gap.expression === null,
+    namedFacts([
+      ["gapCount", () => gap.pose.joints.length === 0],
+      ["gapPose", () => gap.pose.root === null],
+      ["gapExpression", () => gap.expression === null],
+    ]),
+    {
+      gapCount: true,
+      gapPose: true,
+      gapExpression: true,
+    },
   );
 
   const leftLane: IAutoMovieActionCall = {

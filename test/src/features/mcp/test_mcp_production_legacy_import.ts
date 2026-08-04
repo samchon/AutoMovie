@@ -18,23 +18,6 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-/**
- * Evaluate named facts in order and stop at the first false one, so a failed
- * comparison names the fact instead of collapsing into one boolean. Stopping
- * keeps the short-circuit semantics the original conjunction had, which some
- * facts depend on to guard the ones after them.
- */
-const namedFacts = (
-  entries: ReadonlyArray<readonly [string, () => boolean]>,
-): Record<string, boolean> => {
-  const output: Record<string, boolean> = {};
-  for (const [name, evaluate] of entries) {
-    output[name] = evaluate();
-    if (output[name] === false) break;
-  }
-  return output;
-};
-
 const script: IAutoMovieScript = {
   logline: "A legacy door opens.",
   theme: "recovery",
@@ -572,53 +555,22 @@ export const test_mcp_production_legacy_import = (): void => {
       ]);
     }
     const production = AutoMovieProductionProject.open(fixture.root);
-    TestValidator.equals(
+    TestValidator.predicate(
       "apply is atomic and idempotent until production provenance reopens",
-      namedFacts([
-        ["appliedStatus", () => applied.status === "applied"],
-        ["legacyAssertionPathRead", () => legacyAssertionPathRead === false],
-        ["repeatedRejected", () => repeatedRejected === false],
-        ["appliedPlanPathRead", () => appliedPlanPathRead === false],
-        ["repeatedStatus", () => repeated?.status === "unchanged"],
-        ["repeatedPlan", () => repeated.plan.fingerprint === plan.fingerprint],
-        [
-          "productionManifest",
-          () => production.manifest().importedLegacy?.revision === 2,
-        ],
-        [
-          "productionManifest2",
-          () => production.manifest().importedLegacy?.sourceRoot === ".",
-        ],
-        [
-          "equalFilesBefore",
-          () => equalFiles(before, legacyFiles(fixture.root)),
-        ],
-        [
-          "rejected",
-          () =>
-            throws(
-              () => importer.apply(),
-              "already exists with a different or incomplete import",
-            ),
-        ],
-        [
-          "rejected2",
-          () => throws(() => importer.rollback(), "changed after import"),
-        ],
-      ]),
-      {
-        appliedStatus: true,
-        legacyAssertionPathRead: true,
-        repeatedRejected: true,
-        appliedPlanPathRead: true,
-        repeatedStatus: true,
-        repeatedPlan: true,
-        productionManifest: true,
-        productionManifest2: true,
-        equalFilesBefore: true,
-        rejected: true,
-        rejected2: true,
-      },
+      applied.status === "applied" &&
+        legacyAssertionPathRead === false &&
+        repeatedRejected === false &&
+        appliedPlanPathRead === false &&
+        repeated?.status === "unchanged" &&
+        repeated.plan.fingerprint === plan.fingerprint &&
+        production.manifest().importedLegacy?.revision === 2 &&
+        production.manifest().importedLegacy?.sourceRoot === "." &&
+        equalFiles(before, legacyFiles(fixture.root)) &&
+        throws(
+          () => importer.apply(),
+          "already exists with a different or incomplete import",
+        ) &&
+        throws(() => importer.rollback(), "changed after import"),
     );
   } finally {
     fixture.dispose();
@@ -632,56 +584,17 @@ export const test_mcp_production_legacy_import = (): void => {
     importer.apply();
     createMissingOwnedRoots(untouched.root, plan);
     const rolledBack = importer.rollback();
-    TestValidator.equals(
+    TestValidator.predicate(
       "rollback removes only untouched import state and empty owned roots",
-      namedFacts([
-        [
-          "rolledBackFingerprint",
-          () => rolledBack.fingerprint === plan.fingerprint,
-        ],
-        [
-          "untouchedResident",
-          () =>
-            fs.existsSync(path.join(untouched.root, ".automovie")) === false,
-        ],
-        [
-          "untouchedResident2",
-          () => fs.existsSync(path.join(untouched.root, "src")) === false,
-        ],
-        [
-          "untouchedResident3",
-          () => fs.existsSync(path.join(untouched.root, "generated")) === false,
-        ],
-        [
-          "planRollbackBaseline",
-          () =>
-            plan.rollbackBaseline.find(
-              (baseline) => baseline.path === "renders",
-            )?.existed === true,
-        ],
-        [
-          "untouchedResident4",
-          () => fs.existsSync(path.join(untouched.root, "renders")),
-        ],
-        [
-          "equalFilesBefore",
-          () => equalFiles(before, legacyFiles(untouched.root)),
-        ],
-        [
-          "rejected",
-          () => throws(() => importer.rollback(), "Nothing was rolled back"),
-        ],
-      ]),
-      {
-        rolledBackFingerprint: true,
-        untouchedResident: true,
-        untouchedResident2: true,
-        untouchedResident3: true,
-        planRollbackBaseline: true,
-        untouchedResident4: true,
-        equalFilesBefore: true,
-        rejected: true,
-      },
+      rolledBack.fingerprint === plan.fingerprint &&
+        fs.existsSync(path.join(untouched.root, ".automovie")) === false &&
+        fs.existsSync(path.join(untouched.root, "src")) === false &&
+        fs.existsSync(path.join(untouched.root, "generated")) === false &&
+        plan.rollbackBaseline.find((baseline) => baseline.path === "renders")
+          ?.existed === true &&
+        fs.existsSync(path.join(untouched.root, "renders")) &&
+        equalFiles(before, legacyFiles(untouched.root)) &&
+        throws(() => importer.rollback(), "Nothing was rolled back"),
     );
   } finally {
     untouched.dispose();
@@ -713,26 +626,12 @@ export const test_mcp_production_legacy_import = (): void => {
   try {
     AutoMovieProject.open(empty);
     const plan = new AutoMovieLegacyImporter(empty).plan();
-    TestValidator.equals(
+    TestValidator.predicate(
       "an empty legacy project gets a one-frame conservative draft",
-      namedFacts([
-        [
-          "planProductionDraft",
-          () => plan.productionDraft.targetRuntimeSeconds === 1 / 30,
-        ],
-        [
-          "planProductionDraft2",
-          () => plan.productionDraft.visualDelivery === "deterministic",
-        ],
-        ["planCount", () => plan.shotContractDrafts.length === 0],
-        ["planCount2", () => plan.sourceTodos.length === 0],
-      ]),
-      {
-        planProductionDraft: true,
-        planProductionDraft2: true,
-        planCount: true,
-        planCount2: true,
-      },
+      plan.productionDraft.targetRuntimeSeconds === 1 / 30 &&
+        plan.productionDraft.visualDelivery === "deterministic" &&
+        plan.shotContractDrafts.length === 0 &&
+        plan.sourceTodos.length === 0,
     );
   } finally {
     fs.rmSync(empty, { force: true, recursive: true });
@@ -1012,29 +911,14 @@ export const test_mcp_production_legacy_import = (): void => {
         | ILegacyImportFixtureFailure
         | undefined;
       try {
-        TestValidator.equals(
+        TestValidator.predicate(
           "a root replaced immediately after import publication receives no stale cleanup",
-          namedFacts([
-            [
-              "rejected",
-              () =>
-                throws(
-                  () =>
-                    new AutoMovieLegacyImporter(publishRootSwap.root).apply(),
-                  "root identity",
-                ),
-            ],
-            ["swapped", () => swapped],
-            [
-              "publishRootSwapCount",
-              () => fs.readdirSync(publishRootSwap.root).length === 0,
-            ],
-          ]),
-          {
-            rejected: true,
-            swapped: true,
-            publishRootSwapCount: true,
-          },
+          throws(
+            () => new AutoMovieLegacyImporter(publishRootSwap.root).apply(),
+            "root identity",
+          ) &&
+            swapped &&
+            fs.readdirSync(publishRootSwap.root).length === 0,
         );
       } catch (error) {
         publishRootSwapRecoveryFailure = { error };
@@ -1189,30 +1073,13 @@ export const test_mcp_production_legacy_import = (): void => {
     const plan = importer.plan();
     importer.apply();
     fs.writeFileSync(path.join(sourceRoot, "new-work.ts"), "new work");
-    TestValidator.equals(
+    TestValidator.predicate(
       "a changed pre-existing source baseline refuses rollback",
-      namedFacts([
-        [
-          "planRollbackBaseline",
-          () => plan.rollbackBaseline[0]?.existed === true,
-        ],
-        [
-          "planRollbackBaseline2",
-          () =>
-            plan.rollbackBaseline[0].files.some(
-              (entry) => entry.path === "src/preserved.ts",
-            ),
-        ],
-        [
-          "rejected",
-          () => throws(() => importer.rollback(), "changed after import"),
-        ],
-      ]),
-      {
-        planRollbackBaseline: true,
-        planRollbackBaseline2: true,
-        rejected: true,
-      },
+      plan.rollbackBaseline[0]?.existed === true &&
+        plan.rollbackBaseline[0].files.some(
+          (entry) => entry.path === "src/preserved.ts",
+        ) &&
+        throws(() => importer.rollback(), "changed after import"),
     );
     fs.rmSync(path.join(sourceRoot, "new-work.ts"));
     importer.rollback();
@@ -1331,26 +1198,12 @@ export const test_mcp_production_legacy_import = (): void => {
     );
     const plan = importer.plan();
     const directories = plan.rollbackBaseline[0]?.directories ?? [];
-    TestValidator.equals(
+    TestValidator.predicate(
       "nested empty directories use one global canonical order",
-      namedFacts([
-        [
-          "directoriesSrc",
-          () => directories.join("|") === "src/a|src/a-|src/a/z",
-        ],
-        ["importerApply", () => importer.apply().status === "applied"],
-        ["importerApply2", () => importer.apply().status === "unchanged"],
-        [
-          "importerRollback",
-          () => importer.rollback().status === "rolled-back",
-        ],
-      ]),
-      {
-        directoriesSrc: true,
-        importerApply: true,
-        importerApply2: true,
-        importerRollback: true,
-      },
+      directories.join("|") === "src/a|src/a-|src/a/z" &&
+        importer.apply().status === "applied" &&
+        importer.apply().status === "unchanged" &&
+        importer.rollback().status === "rolled-back",
     );
   } finally {
     sortedEmptyDirectoryTopology.dispose();
@@ -1430,26 +1283,12 @@ export const test_mcp_production_legacy_import = (): void => {
     }) as typeof fs.rmSync;
     let rollbackHookFailure: ILegacyImportFixtureFailure | undefined;
     try {
-      TestValidator.equals(
+      TestValidator.predicate(
         "a partial rollback failure restores the complete applied state",
-        namedFacts([
-          [
-            "rejected",
-            () => throws(() => importer.rollback(), "state was restored"),
-          ],
-          [
-            "rollbackFailureResident",
-            () => fs.existsSync(path.join(rollbackFailure.root, ".automovie")),
-          ],
-          ["importerApply", () => importer.apply().status === "unchanged"],
-          ["quarantineCleanupDenied", () => quarantineCleanupDenied],
-        ]),
-        {
-          rejected: true,
-          rollbackFailureResident: true,
-          importerApply: true,
-          quarantineCleanupDenied: true,
-        },
+        throws(() => importer.rollback(), "state was restored") &&
+          fs.existsSync(path.join(rollbackFailure.root, ".automovie")) &&
+          importer.apply().status === "unchanged" &&
+          quarantineCleanupDenied,
       );
     } catch (error) {
       rollbackHookFailure = { error };
@@ -1515,25 +1354,11 @@ export const test_mcp_production_legacy_import = (): void => {
         | ILegacyImportFixtureFailure
         | undefined;
       try {
-        TestValidator.equals(
+        TestValidator.predicate(
           "rollback abandons restoration when the physical root changes",
-          namedFacts([
-            [
-              "rejected",
-              () =>
-                throws(() => importer.rollback(), "changed physical identity"),
-            ],
-            ["swapped", () => swapped],
-            [
-              "rollbackRootSwapCount",
-              () => fs.readdirSync(rollbackRootSwap.root).length === 0,
-            ],
-          ]),
-          {
-            rejected: true,
-            swapped: true,
-            rollbackRootSwapCount: true,
-          },
+          throws(() => importer.rollback(), "changed physical identity") &&
+            swapped &&
+            fs.readdirSync(rollbackRootSwap.root).length === 0,
         );
       } catch (error) {
         rollbackRootSwapRecoveryFailure = { error };
@@ -1876,24 +1701,11 @@ export const test_mcp_production_legacy_import = (): void => {
       fs.readFileSync(reappliedLock, "utf8") === reappliedToken;
     releaseCommitLock(reappliedLock, reappliedToken);
     const fresh = AutoMovieProductionProject.open(incarnationRace.root);
-    TestValidator.equals(
+    TestValidator.predicate(
       "a retired rollback lock owner cannot cross re-apply ABA",
-      namedFacts([
-        ["freshReappliedLock", () => freshReappliedLock],
-        [
-          "retiredOwnerPreservesFreshLock",
-          () => retiredOwnerPreservesFreshLock,
-        ],
-        [
-          "freshManifest",
-          () => fresh.manifest().importedLegacy?.revision === 2,
-        ],
-      ]),
-      {
-        freshReappliedLock: true,
-        retiredOwnerPreservesFreshLock: true,
-        freshManifest: true,
-      },
+      freshReappliedLock &&
+        retiredOwnerPreservesFreshLock &&
+        fresh.manifest().importedLegacy?.revision === 2,
     );
   } finally {
     incarnationRace.dispose();
@@ -2030,42 +1842,20 @@ export const test_mcp_production_legacy_import = (): void => {
         | ILegacyImportFixtureFailure
         | undefined;
       try {
-        TestValidator.equals(
+        TestValidator.predicate(
           "root replacement after namespace acquisition is detected before import",
-          namedFacts([
-            [
-              "rejected",
-              () =>
-                throws(
-                  () =>
-                    new AutoMovieLegacyImporter(
-                      replacedDuringAcquire.root,
-                    ).apply(),
-                  // Whichever fence catches it, the refusal names the root identity.
-                  // The claim is that the swap is caught before any import writes, and
-                  // the absent resident lock below is what proves that.
-                  "root identity",
-                ),
-            ],
-            [
-              "replacementTargetResident",
-              () =>
-                fs.existsSync(path.join(replacementTarget, "revision.lock")) ===
-                false,
-            ],
-            ["namespaceLocksCount", () => namespaceLocks.length === 2],
-            [
-              "namespaceLocksFile",
-              () =>
-                namespaceLocks.every((file) => fs.existsSync(file) === false),
-            ],
-          ]),
-          {
-            rejected: true,
-            replacementTargetResident: true,
-            namespaceLocksCount: true,
-            namespaceLocksFile: true,
-          },
+          throws(
+            () =>
+              new AutoMovieLegacyImporter(replacedDuringAcquire.root).apply(),
+            // Whichever fence catches it, the refusal names the root identity.
+            // The claim is that the swap is caught before any import writes, and
+            // the absent resident lock below is what proves that.
+            "root identity",
+          ) &&
+            fs.existsSync(path.join(replacementTarget, "revision.lock")) ===
+              false &&
+            namespaceLocks.length === 2 &&
+            namespaceLocks.every((file) => fs.existsSync(file) === false),
         );
       } catch (error) {
         acquireRootSwapRecoveryFailure = { error };
@@ -2175,26 +1965,12 @@ export const test_mcp_production_legacy_import = (): void => {
       const replacementLock = path.join(residentReplacement, "revision.lock");
       const retryToken = acquireCommitLock(residentLock);
       try {
-        TestValidator.equals(
+        TestValidator.predicate(
           "the replacement namespace receives a fresh resident lock instead of a poisoned re-entrant token",
-          namedFacts([
-            ["retryTokenParkedToken", () => retryToken !== parkedToken],
-            [
-              "replacementLockUtf8",
-              () => fs.readFileSync(replacementLock, "utf8") === retryToken,
-            ],
-            [
-              "residentReplacementResident",
-              () =>
-                fs.existsSync(path.join(residentReplacement, ".automovie")) ===
-                false,
-            ],
-          ]),
-          {
-            retryTokenParkedToken: true,
-            replacementLockUtf8: true,
-            residentReplacementResident: true,
-          },
+          retryToken !== parkedToken &&
+            fs.readFileSync(replacementLock, "utf8") === retryToken &&
+            fs.existsSync(path.join(residentReplacement, ".automovie")) ===
+              false,
         );
       } finally {
         releaseCommitLock(residentLock, retryToken);

@@ -5,6 +5,23 @@ import { TestValidator } from "@nestia/e2e";
 import { makeScriptWrite, makeStagingWrite } from "../internal/filmFixtures";
 import { hasViolation, vclose } from "../internal/predicates";
 
+/**
+ * Evaluate named facts in order and stop at the first false one, so a failed
+ * comparison names the fact instead of collapsing into one boolean. Stopping
+ * keeps the short-circuit semantics the original conjunction had, which some
+ * facts depend on to guard the ones after them.
+ */
+const namedFacts = (
+  entries: ReadonlyArray<readonly [string, () => boolean]>,
+): Record<string, boolean> => {
+  const output: Record<string, boolean> = {};
+  for (const [name, evaluate] of entries) {
+    output[name] = evaluate();
+    if (output[name] === false) break;
+  }
+  return output;
+};
+
 const script = makeScriptWrite();
 
 const LENS_A: IAutoMovieVector3 = { x: 2, y: 1.5, z: 0.35 };
@@ -109,13 +126,27 @@ export const test_film_stage_scene_camera_target = (): void => {
   const ghost = stage([
     camera("cam-a", LENS_A, { kind: "node", node: "nobody" }),
   ]);
-  TestValidator.predicate(
+  TestValidator.equals(
     "an unplaced camera target is still refused, naming every placement flavour",
-    hasViolation(ghost, "type", "$input.cameras[0].lookAt.node") &&
-      ghost.success === false &&
-      ghost.violations.some((item) =>
-        item.expected.includes("placed actor, set piece, or camera"),
-      ),
+    namedFacts([
+      [
+        "hasViolationGhost",
+        () => hasViolation(ghost, "type", "$input.cameras[0].lookAt.node"),
+      ],
+      ["ghostSuccess", () => ghost.success === false],
+      [
+        "ghostViolations",
+        () =>
+          ghost.violations.some((item) =>
+            item.expected.includes("placed actor, set piece, or camera"),
+          ),
+      ],
+    ]),
+    {
+      hasViolationGhost: true,
+      ghostSuccess: true,
+      ghostViolations: true,
+    },
   );
 
   // 5. the boundary: a camera aimed at itself.

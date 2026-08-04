@@ -6,6 +6,23 @@ import { forgeEntry, makeScriptWrite } from "../internal/filmFixtures";
 import { IDENTITY_TRANSFORM } from "../internal/fixtures";
 import { hasViolation } from "../internal/predicates";
 
+/**
+ * Evaluate named facts in order and stop at the first false one, so a failed
+ * comparison names the fact instead of collapsing into one boolean. Stopping
+ * keeps the short-circuit semantics the original conjunction had, which some
+ * facts depend on to guard the ones after them.
+ */
+const namedFacts = (
+  entries: ReadonlyArray<readonly [string, () => boolean]>,
+): Record<string, boolean> => {
+  const output: Record<string, boolean> = {};
+  for (const [name, evaluate] of entries) {
+    output[name] = evaluate();
+    if (output[name] === false) break;
+  }
+  return output;
+};
+
 const b = (
   bone: AutoMovieHumanoidBone,
   parent: AutoMovieHumanoidBone | null,
@@ -88,11 +105,24 @@ export const test_film_forge_cast_skeleton_graph = (): void => {
     ],
   });
   TestValidator.equals("cycle fails", cyclic.success, false);
-  TestValidator.predicate(
+  TestValidator.equals(
     "both detached-cycle bones unreachable",
-    cyclic.success === false &&
-      hasViolation(cyclic, "type", ".skeleton.bones[2]") &&
-      hasViolation(cyclic, "type", ".skeleton.bones[3]"),
+    namedFacts([
+      ["cyclicSuccess", () => cyclic.success === false],
+      [
+        "hasViolationCyclic",
+        () => hasViolation(cyclic, "type", ".skeleton.bones[2]"),
+      ],
+      [
+        "hasViolationCyclic2",
+        () => hasViolation(cyclic, "type", ".skeleton.bones[3]"),
+      ],
+    ]),
+    {
+      cyclicSuccess: true,
+      hasViolationCyclic: true,
+      hasViolationCyclic2: true,
+    },
   );
 
   const doubled = forgeCast(makeScriptWrite(), {
@@ -106,12 +136,26 @@ export const test_film_forge_cast_skeleton_graph = (): void => {
     ],
   });
   TestValidator.equals("doubled fails", doubled.success, false);
-  TestValidator.predicate(
+  TestValidator.equals(
     "only the duplicate field is reported (walk terminates, nothing unreachable)",
-    doubled.success === false &&
-      hasViolation(doubled, "type", ".skeleton.bones[2].bone") &&
-      doubled.violations.every((v) =>
-        v.path.endsWith(".skeleton.bones[2].bone"),
-      ),
+    namedFacts([
+      ["doubledSuccess", () => doubled.success === false],
+      [
+        "hasViolationDoubled",
+        () => hasViolation(doubled, "type", ".skeleton.bones[2].bone"),
+      ],
+      [
+        "doubledViolations",
+        () =>
+          doubled.violations.every((v) =>
+            v.path.endsWith(".skeleton.bones[2].bone"),
+          ),
+      ],
+    ]),
+    {
+      doubledSuccess: true,
+      hasViolationDoubled: true,
+      doubledViolations: true,
+    },
   );
 };

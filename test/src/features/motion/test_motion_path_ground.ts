@@ -8,6 +8,23 @@ import { TestValidator } from "@nestia/e2e";
 
 import { nclose } from "../internal/predicates";
 
+/**
+ * Evaluate named facts in order and stop at the first false one, so a failed
+ * comparison names the fact instead of collapsing into one boolean. Stopping
+ * keeps the short-circuit semantics the original conjunction had, which some
+ * facts depend on to guard the ones after them.
+ */
+const namedFacts = (
+  entries: ReadonlyArray<readonly [string, () => boolean]>,
+): Record<string, boolean> => {
+  const output: Record<string, boolean> = {};
+  for (const [name, evaluate] of entries) {
+    output[name] = evaluate();
+    if (output[name] === false) break;
+  }
+  return output;
+};
+
 const BOB = 0.05;
 
 const kf = (time: number): IAutoMovieKeyframe => ({
@@ -105,10 +122,17 @@ export const test_motion_path_ground = (): void => {
     nclose(rootAt(flat.motion, 3).translation.y, BOB),
   );
 
-  TestValidator.predicate(
+  TestValidator.equals(
     "horizontal progress ignores height",
-    nclose(rootAt(slope.motion, 1).translation.x, 1) &&
-      nclose(rootAt(plane.motion, 1).translation.x, 1) &&
-      nclose(rootAt(flat.motion, 1).translation.x, 1),
+    namedFacts([
+      ["ncloseRootAt", () => nclose(rootAt(slope.motion, 1).translation.x, 1)],
+      ["ncloseRootAt2", () => nclose(rootAt(plane.motion, 1).translation.x, 1)],
+      ["ncloseRootAt3", () => nclose(rootAt(flat.motion, 1).translation.x, 1)],
+    ]),
+    {
+      ncloseRootAt: true,
+      ncloseRootAt2: true,
+      ncloseRootAt3: true,
+    },
   );
 };

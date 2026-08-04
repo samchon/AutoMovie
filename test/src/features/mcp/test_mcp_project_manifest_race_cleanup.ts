@@ -6,6 +6,23 @@ import ts from "typescript-compiler";
 
 import { preserveProjectManifestRaceCleanup } from "./test_mcp_project_manifest";
 
+/**
+ * Evaluate named facts in order and stop at the first false one, so a failed
+ * comparison names the fact instead of collapsing into one boolean. Stopping
+ * keeps the short-circuit semantics the original conjunction had, which some
+ * facts depend on to guard the ones after them.
+ */
+const namedFacts = (
+  entries: ReadonlyArray<readonly [string, () => boolean]>,
+): Record<string, boolean> => {
+  const output: Record<string, boolean> = {};
+  for (const [name, evaluate] of entries) {
+    output[name] = evaluate();
+    if (output[name] === false) break;
+  }
+  return output;
+};
+
 const compact = (node: ts.Node, source: ts.SourceFile): string =>
   node.getText(source).replace(/\s+/g, "");
 
@@ -204,46 +221,108 @@ export const test_mcp_project_manifest_race_cleanup = (): void => {
     primaryFailure: { error: undefined, present: true },
   });
   const fullOrder = "cleanup-0,cleanup-1,cleanup-2,cleanup-3";
-  TestValidator.predicate(
+  TestValidator.equals(
     "project-manifest race cleanup preserves failure and resource order",
-    success.caught === false &&
-      success.failure === undefined &&
-      success.order.join(",") === fullOrder &&
-      primaryOnly.caught &&
-      primaryOnly.failure === primaryFailure &&
-      primaryOnly.order.join(",") === fullOrder &&
-      standalone.caught &&
-      standalone.failure === hookFailure &&
-      standalone.order.join(",") === fullOrder &&
-      multiple.caught &&
-      aggregateContainsExactly(multiple.failure, [
-        hookFailure,
-        residentFailure,
-      ]) &&
-      multiple.message.includes("resource-0") &&
-      multiple.message.includes("resource-3") &&
-      multiple.message.includes("resource-1") === false &&
-      multiple.message.includes("resource-2") === false &&
-      multiple.order.join(",") === fullOrder &&
-      combined.caught &&
-      aggregateContainsExactly(combined.failure, [
-        primaryFailure,
-        hookFailure,
-        residentFailure,
-      ]) &&
-      combined.order.join(",") === fullOrder &&
-      undefinedPrimary.caught &&
-      undefinedPrimary.failure === undefined &&
-      undefinedPrimary.order.join(",") === fullOrder &&
-      undefinedStandalone.caught &&
-      undefinedStandalone.failure === undefined &&
-      undefinedStandalone.order.join(",") === fullOrder &&
-      undefinedCombined.caught &&
-      aggregateContainsExactly(undefinedCombined.failure, [
-        undefined,
-        undefined,
-      ]) &&
-      undefinedCombined.order.join(",") === fullOrder,
+    namedFacts([
+      ["successCaught", () => success.caught === false],
+      ["successFailure", () => success.failure === undefined],
+      ["successOrder", () => success.order.join(",") === fullOrder],
+      ["primaryOnlyCaught", () => primaryOnly.caught],
+      ["primaryOnlyFailure", () => primaryOnly.failure === primaryFailure],
+      ["primaryOnlyOrder", () => primaryOnly.order.join(",") === fullOrder],
+      ["standaloneCaught", () => standalone.caught],
+      ["standaloneFailure", () => standalone.failure === hookFailure],
+      ["standaloneOrder", () => standalone.order.join(",") === fullOrder],
+      ["multipleCaught", () => multiple.caught],
+      [
+        "aggregateContainsExactlyMultiple",
+        () =>
+          aggregateContainsExactly(multiple.failure, [
+            hookFailure,
+            residentFailure,
+          ]),
+      ],
+      ["multipleMessage", () => multiple.message.includes("resource-0")],
+      ["multipleMessage2", () => multiple.message.includes("resource-3")],
+      [
+        "multipleMessage3",
+        () => multiple.message.includes("resource-1") === false,
+      ],
+      [
+        "multipleMessage4",
+        () => multiple.message.includes("resource-2") === false,
+      ],
+      ["multipleOrder", () => multiple.order.join(",") === fullOrder],
+      ["combinedCaught", () => combined.caught],
+      [
+        "aggregateContainsExactlyCombined",
+        () =>
+          aggregateContainsExactly(combined.failure, [
+            primaryFailure,
+            hookFailure,
+            residentFailure,
+          ]),
+      ],
+      ["combinedOrder", () => combined.order.join(",") === fullOrder],
+      ["undefinedPrimaryCaught", () => undefinedPrimary.caught],
+      ["undefinedPrimaryFailure", () => undefinedPrimary.failure === undefined],
+      [
+        "undefinedPrimaryOrder",
+        () => undefinedPrimary.order.join(",") === fullOrder,
+      ],
+      ["undefinedStandaloneCaught", () => undefinedStandalone.caught],
+      [
+        "undefinedStandaloneFailure",
+        () => undefinedStandalone.failure === undefined,
+      ],
+      [
+        "undefinedStandaloneOrder",
+        () => undefinedStandalone.order.join(",") === fullOrder,
+      ],
+      ["undefinedCombinedCaught", () => undefinedCombined.caught],
+      [
+        "aggregateContainsExactlyUndefinedCombined",
+        () =>
+          aggregateContainsExactly(undefinedCombined.failure, [
+            undefined,
+            undefined,
+          ]),
+      ],
+      [
+        "undefinedCombinedOrder",
+        () => undefinedCombined.order.join(",") === fullOrder,
+      ],
+    ]),
+    {
+      successCaught: true,
+      successFailure: true,
+      successOrder: true,
+      primaryOnlyCaught: true,
+      primaryOnlyFailure: true,
+      primaryOnlyOrder: true,
+      standaloneCaught: true,
+      standaloneFailure: true,
+      standaloneOrder: true,
+      multipleCaught: true,
+      aggregateContainsExactlyMultiple: true,
+      multipleMessage: true,
+      multipleMessage2: true,
+      multipleMessage3: true,
+      multipleMessage4: true,
+      multipleOrder: true,
+      combinedCaught: true,
+      aggregateContainsExactlyCombined: true,
+      combinedOrder: true,
+      undefinedPrimaryCaught: true,
+      undefinedPrimaryFailure: true,
+      undefinedPrimaryOrder: true,
+      undefinedStandaloneCaught: true,
+      undefinedStandaloneFailure: true,
+      undefinedStandaloneOrder: true,
+      undefinedCombinedCaught: true,
+      aggregateContainsExactlyUndefinedCombined: true,
+      undefinedCombinedOrder: true,
+    },
   );
   TestValidator.equals(
     "project-manifest test owns two nested race cleanup lifecycles",

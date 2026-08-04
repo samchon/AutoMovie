@@ -7,6 +7,23 @@ import { TestValidator } from "@nestia/e2e";
 
 import { throwsError } from "../internal/predicates";
 
+/**
+ * Evaluate named facts in order and stop at the first false one, so a failed
+ * comparison names the fact instead of collapsing into one boolean. Stopping
+ * keeps the short-circuit semantics the original conjunction had, which some
+ * facts depend on to guard the ones after them.
+ */
+const namedFacts = (
+  entries: ReadonlyArray<readonly [string, () => boolean]>,
+): Record<string, boolean> => {
+  const output: Record<string, boolean> = {};
+  for (const [name, evaluate] of entries) {
+    output[name] = evaluate();
+    if (output[name] === false) break;
+  }
+  return output;
+};
+
 /** A clip carrying one track, whose payload the caller states. */
 const clip = (
   channel: Record<string, unknown>,
@@ -116,11 +133,27 @@ export const test_validation_clip_stride_diagnostic = (): void => {
   // 3. a channel that fixes no width claims none.
   const weights = clip(NODE("weights"), [0, 1], [0, 0, 1]);
   const weightsFault = faultOn(weights);
-  TestValidator.predicate(
+  TestValidator.equals(
     "a weights track states the counts and no invented width",
-    weightsFault.expected.includes("keyframe count 2") &&
-      weightsFault.expected.includes("3 does not") &&
-      !weightsFault.expected.includes("per keyframe"),
+    namedFacts([
+      [
+        "weightsFaultExpected",
+        () => weightsFault.expected.includes("keyframe count 2"),
+      ],
+      [
+        "weightsFaultExpected2",
+        () => weightsFault.expected.includes("3 does not"),
+      ],
+      [
+        "weightsFaultExpected3",
+        () => !weightsFault.expected.includes("per keyframe"),
+      ],
+    ]),
+    {
+      weightsFaultExpected: true,
+      weightsFaultExpected2: true,
+      weightsFaultExpected3: true,
+    },
   );
 
   // 4. cubicspline stores in-tangent / value / out-tangent per keyframe.

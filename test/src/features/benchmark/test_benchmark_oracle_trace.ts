@@ -8,6 +8,23 @@ import {
 import { TestValidator } from "@nestia/e2e";
 import { gzipSync } from "node:zlib";
 
+/**
+ * Evaluate named facts in order and stop at the first false one, so a failed
+ * comparison names the fact instead of collapsing into one boolean. Stopping
+ * keeps the short-circuit semantics the original conjunction had, which some
+ * facts depend on to guard the ones after them.
+ */
+const namedFacts = (
+  entries: ReadonlyArray<readonly [string, () => boolean]>,
+): Record<string, boolean> => {
+  const output: Record<string, boolean> = {};
+  for (const [name, evaluate] of entries) {
+    output[name] = evaluate();
+    if (output[name] === false) break;
+  }
+  return output;
+};
+
 const digest = (digit: string): `sha256:${string}` =>
   `sha256:${digit.repeat(64)}`;
 
@@ -124,11 +141,18 @@ export const test_benchmark_oracle_trace = (): void => {
       ),
     ),
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "a killed writer still yields every complete line before the cut",
-    killed.truncated &&
-      killed.events.length === all.length - 1 &&
-      killed.events[3]?.kind === "capture",
+    namedFacts([
+      ["killedTruncated", () => killed.truncated],
+      ["killedCount", () => killed.events.length === all.length - 1],
+      ["killedEvents", () => killed.events[3]?.kind === "capture"],
+    ]),
+    {
+      killedTruncated: true,
+      killedCount: true,
+      killedEvents: true,
+    },
   );
   TestValidator.equals(
     "an archive that lost only its gzip trailer still replays whole",
@@ -165,134 +189,230 @@ export const test_benchmark_oracle_trace = (): void => {
     throw new Error("benchmark trace UTF-8 fixture marker changed");
   malformedUtf8[malformedOffset] = 0xff;
 
-  TestValidator.predicate(
+  TestValidator.equals(
     "corruption is refused instead of read as truncation",
-    throws(() => replayAutoMovieBenchmarkTrace(malformedUtf8), "valid UTF-8") &&
-      throws(
-        () => replayAutoMovieBenchmarkTrace(Buffer.from("{not json\n", "utf8")),
-        "not JSON",
-      ) &&
-      throws(
+    namedFacts([
+      [
+        "rejected",
         () =>
-          replayAutoMovieBenchmarkTrace(
-            Buffer.from('{"sequence":0,"atMs":0,"kind":"nope"}\n', "utf8"),
+          throws(
+            () => replayAutoMovieBenchmarkTrace(malformedUtf8),
+            "valid UTF-8",
           ),
-        "not an observed event",
-      ) &&
-      throws(
+      ],
+      [
+        "rejected2",
         () =>
-          replayAutoMovieBenchmarkTrace(
-            appendAutoMovieBenchmarkTrace(new Uint8Array(), [
-              all[0]!,
-              { ...all[2]!, sequence: 2 },
-            ]),
+          throws(
+            () =>
+              replayAutoMovieBenchmarkTrace(Buffer.from("{not json\n", "utf8")),
+            "not JSON",
           ),
-        "has no gaps",
-      ) &&
-      throws(
+      ],
+      [
+        "rejected3",
         () =>
-          replayAutoMovieBenchmarkTrace(
-            appendAutoMovieBenchmarkTrace(new Uint8Array(), [
-              { ...all[0]!, atMs: 1_200 },
-              { ...all[1]!, sequence: 1, atMs: 600 },
-            ]),
+          throws(
+            () =>
+              replayAutoMovieBenchmarkTrace(
+                Buffer.from('{"sequence":0,"atMs":0,"kind":"nope"}\n', "utf8"),
+              ),
+            "not an observed event",
           ),
-        "monotonic clock backwards",
-      ),
+      ],
+      [
+        "rejected4",
+        () =>
+          throws(
+            () =>
+              replayAutoMovieBenchmarkTrace(
+                appendAutoMovieBenchmarkTrace(new Uint8Array(), [
+                  all[0]!,
+                  { ...all[2]!, sequence: 2 },
+                ]),
+              ),
+            "has no gaps",
+          ),
+      ],
+      [
+        "rejected5",
+        () =>
+          throws(
+            () =>
+              replayAutoMovieBenchmarkTrace(
+                appendAutoMovieBenchmarkTrace(new Uint8Array(), [
+                  { ...all[0]!, atMs: 1_200 },
+                  { ...all[1]!, sequence: 1, atMs: 600 },
+                ]),
+              ),
+            "monotonic clock backwards",
+          ),
+      ],
+    ]),
+    {
+      rejected: true,
+      rejected2: true,
+      rejected3: true,
+      rejected4: true,
+      rejected5: true,
+    },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "trace numbers stay inside their physical domains",
-    throws(
-      () =>
-        appendAutoMovieBenchmarkTrace(new Uint8Array(), [
-          { ...all[0]!, sequence: 0.5 },
-        ]),
-      "non-negative safe integer",
-    ) &&
-      throws(
+    namedFacts([
+      [
+        "rejected",
         () =>
-          appendAutoMovieBenchmarkTrace(new Uint8Array(), [
-            { ...capture, bytes: -1 },
-          ]),
-        "non-negative safe integer",
-      ) &&
-      throws(
+          throws(
+            () =>
+              appendAutoMovieBenchmarkTrace(new Uint8Array(), [
+                { ...all[0]!, sequence: 0.5 },
+              ]),
+            "non-negative safe integer",
+          ),
+      ],
+      [
+        "rejected2",
         () =>
-          appendAutoMovieBenchmarkTrace(new Uint8Array(), [
-            { ...all[0]!, atMs: Number.NaN },
-          ]),
-        "non-negative finite number",
-      ) &&
-      throws(
+          throws(
+            () =>
+              appendAutoMovieBenchmarkTrace(new Uint8Array(), [
+                { ...capture, bytes: -1 },
+              ]),
+            "non-negative safe integer",
+          ),
+      ],
+      [
+        "rejected3",
         () =>
-          appendAutoMovieBenchmarkTrace(new Uint8Array(), [
-            { ...capture, timeSeconds: -1 },
-          ]),
-        "non-negative finite number",
-      ),
+          throws(
+            () =>
+              appendAutoMovieBenchmarkTrace(new Uint8Array(), [
+                { ...all[0]!, atMs: Number.NaN },
+              ]),
+            "non-negative finite number",
+          ),
+      ],
+      [
+        "rejected4",
+        () =>
+          throws(
+            () =>
+              appendAutoMovieBenchmarkTrace(new Uint8Array(), [
+                { ...capture, timeSeconds: -1 },
+              ]),
+            "non-negative finite number",
+          ),
+      ],
+    ]),
+    {
+      rejected: true,
+      rejected2: true,
+      rejected3: true,
+      rejected4: true,
+    },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "trace verdict scores preserve their taxonomy and range",
-    replayAutoMovieBenchmarkTrace(
-      appendAutoMovieBenchmarkTrace(new Uint8Array(), [
-        {
-          ...verdict,
-          sequence: 0,
-          outcome: "infra-excluded",
-          filmScore: null,
-        },
-      ]),
-    ).events.length === 1 &&
-      throws(
+    namedFacts([
+      [
+        "replayAutoMovieBenchmarkTraceCount",
         () =>
-          appendAutoMovieBenchmarkTrace(new Uint8Array(), [
-            {
-              ...verdict,
-              outcome: "infra-excluded",
-              filmScore: 0,
-            },
-          ]),
-        "null exactly",
-      ) &&
-      throws(
+          replayAutoMovieBenchmarkTrace(
+            appendAutoMovieBenchmarkTrace(new Uint8Array(), [
+              {
+                ...verdict,
+                sequence: 0,
+                outcome: "infra-excluded",
+                filmScore: null,
+              },
+            ]),
+          ).events.length === 1,
+      ],
+      [
+        "rejected",
         () =>
-          appendAutoMovieBenchmarkTrace(new Uint8Array(), [
-            { ...verdict, filmScore: null },
-          ]),
-        "null exactly",
-      ) &&
-      throws(
+          throws(
+            () =>
+              appendAutoMovieBenchmarkTrace(new Uint8Array(), [
+                {
+                  ...verdict,
+                  outcome: "infra-excluded",
+                  filmScore: 0,
+                },
+              ]),
+            "null exactly",
+          ),
+      ],
+      [
+        "rejected2",
         () =>
-          appendAutoMovieBenchmarkTrace(new Uint8Array(), [
-            { ...verdict, filmScore: Number.NaN },
-          ]),
-        "inside 0..1",
-      ) &&
-      throws(
+          throws(
+            () =>
+              appendAutoMovieBenchmarkTrace(new Uint8Array(), [
+                { ...verdict, filmScore: null },
+              ]),
+            "null exactly",
+          ),
+      ],
+      [
+        "rejected3",
         () =>
-          appendAutoMovieBenchmarkTrace(new Uint8Array(), [
-            { ...verdict, filmScore: -0.1 },
-          ]),
-        "inside 0..1",
-      ) &&
-      throws(
+          throws(
+            () =>
+              appendAutoMovieBenchmarkTrace(new Uint8Array(), [
+                { ...verdict, filmScore: Number.NaN },
+              ]),
+            "inside 0..1",
+          ),
+      ],
+      [
+        "rejected4",
         () =>
-          appendAutoMovieBenchmarkTrace(new Uint8Array(), [
-            { ...verdict, filmScore: 1.1 },
-          ]),
-        "inside 0..1",
-      ) &&
-      throws(
+          throws(
+            () =>
+              appendAutoMovieBenchmarkTrace(new Uint8Array(), [
+                { ...verdict, filmScore: -0.1 },
+              ]),
+            "inside 0..1",
+          ),
+      ],
+      [
+        "rejected5",
         () =>
-          appendAutoMovieBenchmarkTrace(new Uint8Array(), [
-            {
-              ...verdict,
-              outcome: "gate-failed",
-              filmScore: 0.7,
-            },
-          ]),
-        "must have filmScore 0",
-      ),
+          throws(
+            () =>
+              appendAutoMovieBenchmarkTrace(new Uint8Array(), [
+                { ...verdict, filmScore: 1.1 },
+              ]),
+            "inside 0..1",
+          ),
+      ],
+      [
+        "rejected6",
+        () =>
+          throws(
+            () =>
+              appendAutoMovieBenchmarkTrace(new Uint8Array(), [
+                {
+                  ...verdict,
+                  outcome: "gate-failed",
+                  filmScore: 0.7,
+                },
+              ]),
+            "must have filmScore 0",
+          ),
+      ],
+    ]),
+    {
+      replayAutoMovieBenchmarkTraceCount: true,
+      rejected: true,
+      rejected2: true,
+      rejected3: true,
+      rejected4: true,
+      rejected5: true,
+      rejected6: true,
+    },
   );
 
   TestValidator.equals(

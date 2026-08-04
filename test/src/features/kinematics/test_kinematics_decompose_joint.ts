@@ -9,6 +9,23 @@ import { TestValidator } from "@nestia/e2e";
 
 import { vclose } from "../internal/predicates";
 
+/**
+ * Evaluate named facts in order and stop at the first false one, so a failed
+ * comparison names the fact instead of collapsing into one boolean. Stopping
+ * keeps the short-circuit semantics the original conjunction had, which some
+ * facts depend on to guard the ones after them.
+ */
+const namedFacts = (
+  entries: ReadonlyArray<readonly [string, () => boolean]>,
+): Record<string, boolean> => {
+  const output: Record<string, boolean> = {};
+  for (const [name, evaluate] of entries) {
+    output[name] = evaluate();
+    if (output[name] === false) break;
+  }
+  return output;
+};
+
 const DEFAULT_AXES: IAutoMovieJointAxes = {
   flexion: { x: 1, y: 0, z: 0 },
   abduction: { x: 0, y: 0, z: 1 },
@@ -99,10 +116,17 @@ export const test_kinematics_decompose_joint = (): void => {
     jointToQuaternion({ flexion: 40, abduction: 0, twist: 0 }, ARM_AXES),
     ARM_AXES,
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "a pure 40° flexion decomposes back to (40, 0, 0)",
-    Math.abs(pure.flexion - 40) < 1e-4 &&
-      Math.abs(pure.abduction) < 1e-4 &&
-      Math.abs(pure.twist) < 1e-4,
+    namedFacts([
+      ["absPure", () => Math.abs(pure.flexion - 40) < 1e-4],
+      ["absPure2", () => Math.abs(pure.abduction) < 1e-4],
+      ["absPure3", () => Math.abs(pure.twist) < 1e-4],
+    ]),
+    {
+      absPure: true,
+      absPure2: true,
+      absPure3: true,
+    },
   );
 };

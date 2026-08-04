@@ -24,23 +24,6 @@ import {
   worldDesign,
 } from "./productionFixtures";
 
-/**
- * Evaluate named facts in order and stop at the first false one, so a failed
- * comparison names the fact instead of collapsing into one boolean. Stopping
- * keeps the short-circuit semantics the original conjunction had, which some
- * facts depend on to guard the ones after them.
- */
-const namedFacts = (
-  entries: ReadonlyArray<readonly [string, () => boolean]>,
-): Record<string, boolean> => {
-  const output: Record<string, boolean> = {};
-  for (const [name, evaluate] of entries) {
-    output[name] = evaluate();
-    if (output[name] === false) break;
-  }
-  return output;
-};
-
 const png = (width: number, height: number): Uint8Array => {
   const image = new PNG({ width, height });
   image.data.fill(255);
@@ -153,27 +136,14 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
     const filmFrame = oracle.query({
       request: { query: "film-time", at: { seconds: 2 } },
     });
-    TestValidator.equals(
+    TestValidator.predicate(
       "film-global time resolves through the compiler-owned timeline",
-      namedFacts([
-        ["filmFrameResult", () => filmFrame.result?.kind === "measurement"],
-        [
-          "filmFrameResult2",
-          () => filmFrame.result.values.film === "fixture-film",
-        ],
-        ["filmFrameResult3", () => filmFrame.result.values.globalFrame === 48],
-        ["filmFrameResult4", () => filmFrame.result.values.shot === "opening"],
-        ["filmFrameResult5", () => filmFrame.result.values.sourceFrame === 48],
-        ["filmFrameResult6", () => filmFrame.result.values.shotTime === 2],
-      ]),
-      {
-        filmFrameResult: true,
-        filmFrameResult2: true,
-        filmFrameResult3: true,
-        filmFrameResult4: true,
-        filmFrameResult5: true,
-        filmFrameResult6: true,
-      },
+      filmFrame.result?.kind === "measurement" &&
+        filmFrame.result.values.film === "fixture-film" &&
+        filmFrame.result.values.globalFrame === 48 &&
+        filmFrame.result.values.shot === "opening" &&
+        filmFrame.result.values.sourceFrame === 48 &&
+        filmFrame.result.values.shotTime === 2,
     );
     TestValidator.predicate(
       "film-global oracle rejects off-grid and out-of-range selectors",
@@ -202,58 +172,39 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
       }).result,
       { kind: "distance", meters: 5 },
     );
-    TestValidator.equals(
+    TestValidator.predicate(
       "distance and actor samples reject dishonest times",
-      namedFacts([
-        [
-          "naNTime",
-          () =>
-            [-1, Number.NaN].every(
-              (time) =>
-                oracle.query({
-                  request: {
-                    query: "distance",
-                    from: { kind: "point", position: { x: 0, y: 0, z: 0 } },
-                    to: { kind: "point", position: { x: 1, y: 0, z: 0 } },
-                    time,
-                  },
-                }).result === null,
-            ),
-        ],
-        [
-          "timeOracle",
-          () =>
-            [-1, 999].every(
-              (time) =>
-                oracle.query({
-                  request: {
-                    query: "pose",
-                    actor: "sentinel",
-                    shot: "opening",
-                    time,
-                  },
-                }).result === null,
-            ),
-        ],
-        [
-          "oracleQuery",
-          () =>
+      [-1, Number.NaN].every(
+        (time) =>
+          oracle.query({
+            request: {
+              query: "distance",
+              from: { kind: "point", position: { x: 0, y: 0, z: 0 } },
+              to: { kind: "point", position: { x: 1, y: 0, z: 0 } },
+              time,
+            },
+          }).result === null,
+      ) &&
+        [-1, 999].every(
+          (time) =>
             oracle.query({
               request: {
-                query: "distance",
-                from: { kind: "actor", actor: "sentinel" },
-                to: { kind: "point", position: { x: 0, y: 0, z: 0 } },
+                query: "pose",
+                actor: "sentinel",
                 shot: "opening",
-                time: 999,
+                time,
               },
             }).result === null,
-        ],
-      ]),
-      {
-        naNTime: true,
-        timeOracle: true,
-        oracleQuery: true,
-      },
+        ) &&
+        oracle.query({
+          request: {
+            query: "distance",
+            from: { kind: "actor", actor: "sentinel" },
+            to: { kind: "point", position: { x: 0, y: 0, z: 0 } },
+            shot: "opening",
+            time: 999,
+          },
+        }).result === null,
     );
     const physicalReach = oracle.query({
       request: {
@@ -264,32 +215,12 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         time: 2,
       },
     });
-    TestValidator.equals(
+    TestValidator.predicate(
       "actor-to-landmark reach uses the compiled arm chains",
-      namedFacts([
-        [
-          "physicalReachResult",
-          () => physicalReach.result?.kind === "measurement",
-        ],
-        [
-          "physicalReachResult2",
-          () => physicalReach.result.values.leftMeasurable === true,
-        ],
-        [
-          "physicalReachResult3",
-          () => physicalReach.result.values.rightMeasurable === true,
-        ],
-        [
-          "typeofPhysicalReach",
-          () => typeof physicalReach.result.values.leftGap === "number",
-        ],
-      ]),
-      {
-        physicalReachResult: true,
-        physicalReachResult2: true,
-        physicalReachResult3: true,
-        typeofPhysicalReach: true,
-      },
+      physicalReach.result?.kind === "measurement" &&
+        physicalReach.result.values.leftMeasurable === true &&
+        physicalReach.result.values.rightMeasurable === true &&
+        typeof physicalReach.result.values.leftGap === "number",
     );
     TestValidator.predicate(
       "reach defaults its sampled time",
@@ -336,94 +267,42 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         shot: "absent",
       },
     });
-    TestValidator.equals(
+    TestValidator.predicate(
       "formation and sampled pose measurements use compiler-owned slots",
-      namedFacts([
-        [
-          "formationMeasurementMeasurement",
-          () => formationMeasurement?.kind === "measurement",
-        ],
-        [
-          "formationMeasurementValues",
-          () => formationMeasurement.values.designCount === 6,
-        ],
-        [
-          "formationMeasurementValues2",
-          () => formationMeasurement.values.materializedCount === 6,
-        ],
-        [
-          "formationMeasurementValues3",
-          () => formationMeasurement.values.participatingShots === 1,
-        ],
-        [
-          "formationMeasurementValues4",
-          () => Number(formationMeasurement.values.routeClearance) > 0,
-        ],
-        [
-          "formationMeasurementValues5",
-          () => formationMeasurement.values.heroVisible === 1,
-        ],
-        [
-          "nonParticipatingFormationShotResult",
-          () => nonParticipatingFormationShot.result === null,
-        ],
-        [
-          "nonParticipatingFormationShotDiagnostics",
-          () =>
-            nonParticipatingFormationShot.diagnostics[0]?.message.includes(
-              "does not participate",
-            ),
-        ],
-        [
-          "oracleQuery",
-          () =>
-            oracle.query({
-              request: {
-                query: "formation",
-                formation: "line",
-                shot: "opening",
-                time: -1,
-              },
-            }).result === null,
-        ],
-        [
-          "oracleQuery2",
-          () =>
-            oracle.query({
-              request: {
-                query: "formation",
-                formation: "line",
-                shot: "opening",
-                time: 7,
-              },
-            }).result === null,
-        ],
-        [
-          "oracleQuery3",
-          () =>
-            oracle.query({
-              request: {
-                query: "pose",
-                actor: "sentinel",
-                shot: "opening",
-                time: 2,
-              },
-            }).result?.kind === "measurement",
-        ],
-      ]),
-      {
-        formationMeasurementMeasurement: true,
-        formationMeasurementValues: true,
-        formationMeasurementValues2: true,
-        formationMeasurementValues3: true,
-        formationMeasurementValues4: true,
-        formationMeasurementValues5: true,
-        nonParticipatingFormationShotResult: true,
-        nonParticipatingFormationShotDiagnostics: true,
-        oracleQuery: true,
-        oracleQuery2: true,
-        oracleQuery3: true,
-      },
+      formationMeasurement?.kind === "measurement" &&
+        formationMeasurement.values.designCount === 6 &&
+        formationMeasurement.values.materializedCount === 6 &&
+        formationMeasurement.values.participatingShots === 1 &&
+        Number(formationMeasurement.values.routeClearance) > 0 &&
+        formationMeasurement.values.heroVisible === 1 &&
+        nonParticipatingFormationShot.result === null &&
+        nonParticipatingFormationShot.diagnostics[0]?.message.includes(
+          "does not participate",
+        ) &&
+        oracle.query({
+          request: {
+            query: "formation",
+            formation: "line",
+            shot: "opening",
+            time: -1,
+          },
+        }).result === null &&
+        oracle.query({
+          request: {
+            query: "formation",
+            formation: "line",
+            shot: "opening",
+            time: 7,
+          },
+        }).result === null &&
+        oracle.query({
+          request: {
+            query: "pose",
+            actor: "sentinel",
+            shot: "opening",
+            time: 2,
+          },
+        }).result?.kind === "measurement",
     );
     const cameraMeasurement = oracle.query({
       request: {
@@ -433,93 +312,42 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         subjects: ["sentinel", "absent"],
       },
     }).result;
-    TestValidator.equals(
+    TestValidator.predicate(
       "camera query projects current animated root points and distinguishes the occlusion contract",
-      namedFacts([
-        [
-          "cameraMeasurementMeasurement",
-          () => cameraMeasurement?.kind === "measurement",
-        ],
-        [
-          "cameraMeasurementValues",
-          () => cameraMeasurement.values.requestedSubjects === 2,
-        ],
-        [
-          "cameraMeasurementValues2",
-          () => cameraMeasurement.values.resolvedSubjectRootPoints === 1,
-        ],
-        [
-          "cameraMeasurementValues3",
-          () => cameraMeasurement.values.inFrameRootPoints === 1,
-        ],
-        [
-          "cameraMeasurementValues4",
-          () => cameraMeasurement.values.missingSubjects === 1,
-        ],
-        [
-          "cameraMeasurementValues5",
-          () => cameraMeasurement.values.maxAllowedOcclusionRatio === 0.05,
-        ],
-        [
-          "cameraMeasurementValues6",
-          () => cameraMeasurement.values.occlusionMeasured === false,
-        ],
-      ]),
-      {
-        cameraMeasurementMeasurement: true,
-        cameraMeasurementValues: true,
-        cameraMeasurementValues2: true,
-        cameraMeasurementValues3: true,
-        cameraMeasurementValues4: true,
-        cameraMeasurementValues5: true,
-        cameraMeasurementValues6: true,
-      },
+      cameraMeasurement?.kind === "measurement" &&
+        cameraMeasurement.values.requestedSubjects === 2 &&
+        cameraMeasurement.values.resolvedSubjectRootPoints === 1 &&
+        cameraMeasurement.values.inFrameRootPoints === 1 &&
+        cameraMeasurement.values.missingSubjects === 1 &&
+        cameraMeasurement.values.maxAllowedOcclusionRatio === 0.05 &&
+        cameraMeasurement.values.occlusionMeasured === false,
     );
-    TestValidator.equals(
+    TestValidator.predicate(
       "camera query rejects dishonest empty, duplicate and out-of-range samples",
-      namedFacts([
-        [
-          "oracleQuery",
-          () =>
-            oracle.query({
-              request: {
-                query: "camera",
-                shot: "opening",
-                time: 2,
-                subjects: [],
-              },
-            }).result === null,
-        ],
-        [
-          "oracleQuery2",
-          () =>
-            oracle.query({
-              request: {
-                query: "camera",
-                shot: "opening",
-                time: 2,
-                subjects: ["sentinel", "sentinel"],
-              },
-            }).result === null,
-        ],
-        [
-          "oracleQuery3",
-          () =>
-            oracle.query({
-              request: {
-                query: "camera",
-                shot: "opening",
-                time: 7,
-                subjects: ["sentinel"],
-              },
-            }).result === null,
-        ],
-      ]),
-      {
-        oracleQuery: true,
-        oracleQuery2: true,
-        oracleQuery3: true,
-      },
+      oracle.query({
+        request: {
+          query: "camera",
+          shot: "opening",
+          time: 2,
+          subjects: [],
+        },
+      }).result === null &&
+        oracle.query({
+          request: {
+            query: "camera",
+            shot: "opening",
+            time: 2,
+            subjects: ["sentinel", "sentinel"],
+          },
+        }).result === null &&
+        oracle.query({
+          request: {
+            query: "camera",
+            shot: "opening",
+            time: 7,
+            subjects: ["sentinel"],
+          },
+        }).result === null,
     );
     const missingOnlyCameraMeasurement = oracle.query({
       request: {
@@ -529,81 +357,39 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         subjects: ["absent"],
       },
     }).result;
-    TestValidator.equals(
+    TestValidator.predicate(
       "camera query reports a deterministic negative margin when no requested root resolves",
-      namedFacts([
-        [
-          "missingOnlyCameraMeasurementMeasurement",
-          () => missingOnlyCameraMeasurement?.kind === "measurement",
-        ],
-        [
-          "missingOnlyCameraMeasurementValues",
-          () =>
-            missingOnlyCameraMeasurement.values.resolvedSubjectRootPoints === 0,
-        ],
-        [
-          "missingOnlyCameraMeasurementValues2",
-          () =>
-            missingOnlyCameraMeasurement.values.minimumRootPointMargin === -1,
-        ],
-      ]),
-      {
-        missingOnlyCameraMeasurementMeasurement: true,
-        missingOnlyCameraMeasurementValues: true,
-        missingOnlyCameraMeasurementValues2: true,
-      },
+      missingOnlyCameraMeasurement?.kind === "measurement" &&
+        missingOnlyCameraMeasurement.values.resolvedSubjectRootPoints === 0 &&
+        missingOnlyCameraMeasurement.values.minimumRootPointMargin === -1,
     );
-    TestValidator.equals(
+    TestValidator.predicate(
       "bad selectors return compact diagnostics",
-      namedFacts([
-        [
-          "oracleQuery",
-          () =>
-            oracle.query({
-              request: {
-                query: "distance",
-                from: { kind: "landmark", landmark: "absent" },
-                to: { kind: "actor", actor: "absent" },
-              },
-            }).diagnostics[0]?.code === "geometry-selector-invalid",
-        ],
-        [
-          "oracleQuery2",
-          () =>
-            oracle.query({
-              request: { query: "formation", formation: "absent" },
-            }).result === null,
-        ],
-        [
-          "oracleQuery3",
-          () =>
-            oracle.query({
-              request: {
-                query: "camera",
-                shot: "absent",
-                time: 0,
-                subjects: [],
-              },
-            }).result === null,
-        ],
-        [
-          "oracleQuery4",
-          () =>
-            oracle.query({
-              request: {
-                query: "distance",
-                from: { kind: "actor", actor: "absent" },
-                to: { kind: "point", position: { x: 0, y: 0, z: 0 } },
-              },
-            }).result === null,
-        ],
-      ]),
-      {
-        oracleQuery: true,
-        oracleQuery2: true,
-        oracleQuery3: true,
-        oracleQuery4: true,
-      },
+      oracle.query({
+        request: {
+          query: "distance",
+          from: { kind: "landmark", landmark: "absent" },
+          to: { kind: "actor", actor: "absent" },
+        },
+      }).diagnostics[0]?.code === "geometry-selector-invalid" &&
+        oracle.query({
+          request: { query: "formation", formation: "absent" },
+        }).result === null &&
+        oracle.query({
+          request: {
+            query: "camera",
+            shot: "absent",
+            time: 0,
+            subjects: [],
+          },
+        }).result === null &&
+        oracle.query({
+          request: {
+            query: "distance",
+            from: { kind: "actor", actor: "absent" },
+            to: { kind: "point", position: { x: 0, y: 0, z: 0 } },
+          },
+        }).result === null,
     );
     const explosiveSelector = new Proxy(
       {
@@ -768,41 +554,21 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
       request: { query: "formation", formation: "line" },
     });
     fs.writeFileSync(generatedManifestPath, generatedManifestBytes);
-    TestValidator.equals(
+    TestValidator.predicate(
       "formation measurement refuses partial slots, missing chunks, and missing compiled shots",
-      namedFacts([
-        [
-          "partialFormationResultEmptyFormationChunksResult",
-          () =>
-            [
-              partialFormationResult,
-              emptyFormationChunksResult,
-              missingCompiledFormationResult,
-            ].every(
-              (output) =>
-                output.result === null &&
-                output.diagnostics[0]?.message.includes(
-                  "not fully materialized",
-                ),
-            ),
-        ],
-        [
-          "missingFormationCameraResultResult",
-          () => missingFormationCameraResult.result === null,
-        ],
-        [
-          "missingFormationCameraResultDiagnostics",
-          () =>
-            missingFormationCameraResult.diagnostics[0]?.message.includes(
-              "no current compiled camera",
-            ),
-        ],
-      ]),
-      {
-        partialFormationResultEmptyFormationChunksResult: true,
-        missingFormationCameraResultResult: true,
-        missingFormationCameraResultDiagnostics: true,
-      },
+      [
+        partialFormationResult,
+        emptyFormationChunksResult,
+        missingCompiledFormationResult,
+      ].every(
+        (output) =>
+          output.result === null &&
+          output.diagnostics[0]?.message.includes("not fully materialized"),
+      ) &&
+        missingFormationCameraResult.result === null &&
+        missingFormationCameraResult.diagnostics[0]?.message.includes(
+          "no current compiled camera",
+        ),
     );
     const recurringShot = corrupted();
     recurringShot.shot.id = "second";
@@ -838,27 +604,13 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
     });
     fs.writeFileSync(generatedManifestPath, generatedManifestBytes);
     fs.rmSync(recurringPath);
-    TestValidator.equals(
+    TestValidator.predicate(
       "recurring actors require an explicit shot selector",
-      namedFacts([
-        ["ambiguousActorResult", () => ambiguousActor.result === null],
-        [
-          "ambiguousActorDiagnostics",
-          () =>
-            ambiguousActor.diagnostics[0]?.message.includes(
-              "multiple compiled shots",
-            ),
-        ],
-        [
-          "explicitActorResult",
-          () => explicitActor.result?.kind === "distance",
-        ],
-      ]),
-      {
-        ambiguousActorResult: true,
-        ambiguousActorDiagnostics: true,
-        explicitActorResult: true,
-      },
+      ambiguousActor.result === null &&
+        ambiguousActor.diagnostics[0]?.message.includes(
+          "multiple compiled shots",
+        ) &&
+        explicitActor.result?.kind === "distance",
     );
     fs.writeFileSync(
       generatedShotPath,
@@ -1170,89 +922,31 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         to: { kind: "point", position: { x: 0, y: 0, z: 0 } },
       },
     });
-    TestValidator.equals(
+    TestValidator.predicate(
       "reach and bone oracles refuse corrupt rigs and preserve one-sided measurements",
-      namedFacts([
-        [
-          "degenerateReachUnriggedReach",
-          () =>
-            [
-              degenerateReach,
-              unriggedReach,
-              unriggedBone,
-              missingBone,
-              missingActorModel,
-              missingActorInShot,
-              armlessReach,
-              zeroLengthReach,
-            ].every((output) => output.result === null),
-        ],
-        [
-          "rightOnlyReachResult",
-          () => rightOnlyReach.result?.kind === "measurement",
-        ],
-        [
-          "rightOnlyReachResult2",
-          () => rightOnlyReach.result.values.leftMeasurable === false,
-        ],
-        [
-          "leftOnlyReachResult",
-          () => leftOnlyReach.result?.kind === "measurement",
-        ],
-        [
-          "leftOnlyReachResult2",
-          () => leftOnlyReach.result.values.rightMeasurable === false,
-        ],
-        ["rootedReachResult", () => rootedReach.result?.kind === "measurement"],
-        [
-          "rootedActorDistanceResult",
-          () => rootedActorDistance.result?.kind === "distance",
-        ],
-        [
-          "rootedFormationResult",
-          () => rootedFormation.result?.kind === "measurement",
-        ],
-        [
-          "rootedFormationResult2",
-          () => rootedFormation.result.values.heroVisible === 0,
-        ],
-        [
-          "scaledHeroFormationResult",
-          () => scaledHeroFormation.result?.kind === "measurement",
-        ],
-        [
-          "scaledHeroFormationResult2",
-          () => scaledHeroFormation.result.values.heroVisible === 1,
-        ],
-        [
-          "missingHeroFormationResult",
-          () => missingHeroFormation.result?.kind === "measurement",
-        ],
-        [
-          "missingHeroFormationResult2",
-          () => missingHeroFormation.result.values.heroVisible === 0,
-        ],
-        [
-          "heldActorDistanceResult",
-          () => heldActorDistance.result?.kind === "distance",
-        ],
-      ]),
-      {
-        degenerateReachUnriggedReach: true,
-        rightOnlyReachResult: true,
-        rightOnlyReachResult2: true,
-        leftOnlyReachResult: true,
-        leftOnlyReachResult2: true,
-        rootedReachResult: true,
-        rootedActorDistanceResult: true,
-        rootedFormationResult: true,
-        rootedFormationResult2: true,
-        scaledHeroFormationResult: true,
-        scaledHeroFormationResult2: true,
-        missingHeroFormationResult: true,
-        missingHeroFormationResult2: true,
-        heldActorDistanceResult: true,
-      },
+      [
+        degenerateReach,
+        unriggedReach,
+        unriggedBone,
+        missingBone,
+        missingActorModel,
+        missingActorInShot,
+        armlessReach,
+        zeroLengthReach,
+      ].every((output) => output.result === null) &&
+        rightOnlyReach.result?.kind === "measurement" &&
+        rightOnlyReach.result.values.leftMeasurable === false &&
+        leftOnlyReach.result?.kind === "measurement" &&
+        leftOnlyReach.result.values.rightMeasurable === false &&
+        rootedReach.result?.kind === "measurement" &&
+        rootedActorDistance.result?.kind === "distance" &&
+        rootedFormation.result?.kind === "measurement" &&
+        rootedFormation.result.values.heroVisible === 0 &&
+        scaledHeroFormation.result?.kind === "measurement" &&
+        scaledHeroFormation.result.values.heroVisible === 1 &&
+        missingHeroFormation.result?.kind === "measurement" &&
+        missingHeroFormation.result.values.heroVisible === 0 &&
+        heldActorDistance.result?.kind === "distance",
     );
 
     writeCorrupted(generatedShot);
@@ -1446,30 +1140,14 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
     const unroutedFormation = oracle.query({
       request: { query: "formation", formation: "line" },
     });
-    TestValidator.equals(
+    TestValidator.predicate(
       "ground oracle handles planes and an absent bounded world",
-      namedFacts([
-        ["slopedGroundResult", () => slopedGround.result?.kind === "ground"],
-        ["slopedGroundResult2", () => slopedGround.result.height === 2.5],
-        ["absentWorldResult", () => absentWorld.result?.kind === "ground"],
-        ["absentWorldResult2", () => absentWorld.result.surface === null],
-        [
-          "unroutedFormationResult",
-          () => unroutedFormation.result?.kind === "measurement",
-        ],
-        [
-          "unroutedFormationResult2",
-          () => unroutedFormation.result.values.routeClearance === 0,
-        ],
-      ]),
-      {
-        slopedGroundResult: true,
-        slopedGroundResult2: true,
-        absentWorldResult: true,
-        absentWorldResult2: true,
-        unroutedFormationResult: true,
-        unroutedFormationResult2: true,
-      },
+      slopedGround.result?.kind === "ground" &&
+        slopedGround.result.height === 2.5 &&
+        absentWorld.result?.kind === "ground" &&
+        absentWorld.result.surface === null &&
+        unroutedFormation.result?.kind === "measurement" &&
+        unroutedFormation.result.values.routeClearance === 0,
     );
 
     fs.rmSync(
@@ -1541,35 +1219,17 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         ],
       }),
     );
-    TestValidator.equals(
+    TestValidator.predicate(
       "oracle freshness covers stale and invalid current compiler states",
-      namedFacts([
-        [
-          "stalePreviewDiagnostics",
-          () => stalePreview.diagnostics[0]?.code === "generated-stale",
-        ],
-        [
-          "invalidStatusOracleQuery",
-          () =>
-            invalidStatusOracle.query({
-              request: { query: "ground", point: { x: 0, z: 0 } },
-            }).diagnostics[0]?.code === "compile-current-invalid",
-        ],
-        [
-          "diagnosticStatusOracleQuery",
-          () =>
-            diagnosticStatusOracle
-              .query({
-                request: { query: "ground", point: { x: 0, z: 0 } },
-              })
-              .diagnostics[0]?.message.includes("current compiler error"),
-        ],
-      ]),
-      {
-        stalePreviewDiagnostics: true,
-        invalidStatusOracleQuery: true,
-        diagnosticStatusOracleQuery: true,
-      },
+      stalePreview.diagnostics[0]?.code === "generated-stale" &&
+        invalidStatusOracle.query({
+          request: { query: "ground", point: { x: 0, z: 0 } },
+        }).diagnostics[0]?.code === "compile-current-invalid" &&
+        diagnosticStatusOracle
+          .query({
+            request: { query: "ground", point: { x: 0, z: 0 } },
+          })
+          .diagnostics[0]?.message.includes("current compiler error"),
     );
 
     const unavailable = await oracle.preview({
@@ -1924,56 +1584,28 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
     } finally {
       project.commitRenderBundle = residentCommitRenderBundle;
     }
-    TestValidator.equals(
+    TestValidator.predicate(
       "capture refuses every manifest, compiler and renderer-input race",
-      namedFacts([
-        [
-          "missingManifestCaptureMismatchedManifestCapture",
-          () =>
-            [
-              missingManifestCapture,
-              mismatchedManifestCapture,
-              invalidatedCompileCapture,
-            ].every(
-              (output) =>
-                output.captured === false &&
-                output.renderBundle === null &&
-                output.frame === null &&
-                output.diagnostics[0]?.code === "capture-input-changed",
-            ),
-        ],
-        ["racedCaptureCaptured", () => racedCapture.captured === false],
-        ["racedCaptureRenderBundle", () => racedCapture.renderBundle === null],
-        ["racedCaptureFrame", () => racedCapture.frame === null],
-        [
-          "racedCaptureDiagnostics",
-          () => racedCapture.diagnostics[0]?.code === "capture-input-changed",
-        ],
-        ["lateRacedCaptureCaptured", () => lateRacedCapture.captured === false],
-        [
-          "lateRacedCaptureRenderBundle",
-          () => lateRacedCapture.renderBundle === null,
-        ],
-        ["lateRacedCaptureFrame", () => lateRacedCapture.frame === null],
-        [
-          "lateRacedCaptureDiagnostics",
-          () =>
-            lateRacedCapture.diagnostics[0]?.code === "capture-input-changed",
-        ],
-        ["genericCommitRejected", () => genericCommitRejected],
-      ]),
-      {
-        missingManifestCaptureMismatchedManifestCapture: true,
-        racedCaptureCaptured: true,
-        racedCaptureRenderBundle: true,
-        racedCaptureFrame: true,
-        racedCaptureDiagnostics: true,
-        lateRacedCaptureCaptured: true,
-        lateRacedCaptureRenderBundle: true,
-        lateRacedCaptureFrame: true,
-        lateRacedCaptureDiagnostics: true,
-        genericCommitRejected: true,
-      },
+      [
+        missingManifestCapture,
+        mismatchedManifestCapture,
+        invalidatedCompileCapture,
+      ].every(
+        (output) =>
+          output.captured === false &&
+          output.renderBundle === null &&
+          output.frame === null &&
+          output.diagnostics[0]?.code === "capture-input-changed",
+      ) &&
+        racedCapture.captured === false &&
+        racedCapture.renderBundle === null &&
+        racedCapture.frame === null &&
+        racedCapture.diagnostics[0]?.code === "capture-input-changed" &&
+        lateRacedCapture.captured === false &&
+        lateRacedCapture.renderBundle === null &&
+        lateRacedCapture.frame === null &&
+        lateRacedCapture.diagnostics[0]?.code === "capture-input-changed" &&
+        genericCommitRejected,
     );
     TestValidator.predicate(
       "uniform captures cannot become visual review evidence",
@@ -2056,43 +1688,19 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
       width: 2,
       height: 2,
     });
-    TestValidator.equals(
+    TestValidator.predicate(
       "verified frames are target-, renderer-, and frame-addressed",
-      namedFacts([
-        ["defaultSizedCaptured", () => defaultSized.captured],
-        ["beautyCaptured", () => beauty.captured],
-        ["beautyFrame", () => beauty.frame?.time === 1 / 24],
-        [
-          "fixtureResident",
-          () => fs.existsSync(path.join(fixture.root, beauty.frame.path)),
-        ],
-        ["maskCaptured", () => mask.captured],
-        ["maskRenderBundle", () => mask.renderBundle === beauty.renderBundle],
-        ["maskFrame", () => mask.frame?.path.endsWith(".mask.png") === true],
-        ["alternateRendererCaptured", () => alternateRenderer.captured],
-        [
-          "alternateRendererRenderBundle",
-          () => alternateRenderer.renderBundle !== beauty.renderBundle,
-        ],
-        [
-          "blankRendererDiagnostics",
-          () =>
-            blankRenderer.diagnostics[0]?.code ===
-            "capture-renderer-identity-invalid",
-        ],
-      ]),
-      {
-        defaultSizedCaptured: true,
-        beautyCaptured: true,
-        beautyFrame: true,
-        fixtureResident: true,
-        maskCaptured: true,
-        maskRenderBundle: true,
-        maskFrame: true,
-        alternateRendererCaptured: true,
-        alternateRendererRenderBundle: true,
-        blankRendererDiagnostics: true,
-      },
+      defaultSized.captured &&
+        beauty.captured &&
+        beauty.frame?.time === 1 / 24 &&
+        fs.existsSync(path.join(fixture.root, beauty.frame.path)) &&
+        mask.captured &&
+        mask.renderBundle === beauty.renderBundle &&
+        mask.frame?.path.endsWith(".mask.png") === true &&
+        alternateRenderer.captured &&
+        alternateRenderer.renderBundle !== beauty.renderBundle &&
+        blankRenderer.diagnostics[0]?.code ===
+          "capture-renderer-identity-invalid",
     );
     if (
       beauty.renderBundle !== null &&
@@ -2282,29 +1890,12 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
       const repairedManifest = project.verifiedRenderManifest(
         path.join(bundleRoot, "manifest.json"),
       );
-      TestValidator.equals(
+      TestValidator.predicate(
         "preview replaces a bundle whose manifest contains unverified evidence",
-        namedFacts([
-          ["afterForgedLedgerCaptured", () => afterForgedLedger.captured],
-          [
-            "repairedManifestCount",
-            () => repairedManifest?.frames.length === 1,
-          ],
-          [
-            "repairedManifestFrames",
-            () => repairedManifest.frames[0]?.index === 2,
-          ],
-          [
-            "repairedManifestFrames2",
-            () => repairedManifest.frames[0].pass === "beauty",
-          ],
-        ]),
-        {
-          afterForgedLedgerCaptured: true,
-          repairedManifestCount: true,
-          repairedManifestFrames: true,
-          repairedManifestFrames2: true,
-        },
+        afterForgedLedger.captured &&
+          repairedManifest?.frames.length === 1 &&
+          repairedManifest.frames[0]?.index === 2 &&
+          repairedManifest.frames[0].pass === "beauty",
       );
       const retainedRaceManifest = project.verifiedRenderManifest(
         path.join(bundleRoot, "manifest.json"),
@@ -2347,24 +1938,11 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
       const retainedRaceResult = project.verifiedRenderManifest(
         path.join(bundleRoot, "manifest.json"),
       );
-      TestValidator.equals(
+      TestValidator.predicate(
         "a retained frame read race discards stale evidence without aborting the new capture",
-        namedFacts([
-          ["retainedReadRaceCaptured", () => retainedReadRace.captured],
-          [
-            "retainedRaceResultCount",
-            () => retainedRaceResult?.frames.length === 1,
-          ],
-          [
-            "retainedRaceResultFrames",
-            () => retainedRaceResult.frames[0]?.index === 3,
-          ],
-        ]),
-        {
-          retainedReadRaceCaptured: true,
-          retainedRaceResultCount: true,
-          retainedRaceResultFrames: true,
-        },
+        retainedReadRace.captured &&
+          retainedRaceResult?.frames.length === 1 &&
+          retainedRaceResult.frames[0]?.index === 3,
       );
     }
     if (beauty.renderBundle !== null) {

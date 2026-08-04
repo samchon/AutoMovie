@@ -6,6 +6,23 @@ import ts from "typescript-compiler";
 
 import { preserveCreateAutoMovieFixtureCleanup } from "./test_cli_create_automovie";
 
+/**
+ * Evaluate named facts in order and stop at the first false one, so a failed
+ * comparison names the fact instead of collapsing into one boolean. Stopping
+ * keeps the short-circuit semantics the original conjunction had, which some
+ * facts depend on to guard the ones after them.
+ */
+const namedFacts = (
+  entries: ReadonlyArray<readonly [string, () => boolean]>,
+): Record<string, boolean> => {
+  const output: Record<string, boolean> = {};
+  for (const [name, evaluate] of entries) {
+    output[name] = evaluate();
+    if (output[name] === false) break;
+  }
+  return output;
+};
+
 const compact = (node: ts.Node, source: ts.SourceFile): string =>
   node.getText(source).replace(/\s+/g, "");
 
@@ -157,27 +174,63 @@ export const test_cli_create_automovie_fixture_cleanup = (): void => {
     cleanupFailures: [firstCleanupFailure, secondCleanupFailure],
     primaryFailure,
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "create-automovie fixture cleanup preserves acquisition and failure order",
-    success.failure === undefined &&
-      success.order.join(",") === "cleanup-0,cleanup-1" &&
-      partialSetup.failure === primaryFailure &&
-      partialSetup.order.join(",") === "cleanup-0" &&
-      primaryOnly.failure === primaryFailure &&
-      primaryOnly.order.join(",") === "cleanup-0,cleanup-1" &&
-      standalone.failure === firstCleanupFailure &&
-      standalone.order.join(",") === "cleanup-0,cleanup-1" &&
-      aggregateContainsExactly(multiple.failure, [
-        firstCleanupFailure,
-        secondCleanupFailure,
-      ]) &&
-      multiple.order.join(",") === "cleanup-0,cleanup-1" &&
-      aggregateContainsExactly(combined.failure, [
-        primaryFailure,
-        firstCleanupFailure,
-        secondCleanupFailure,
-      ]) &&
-      combined.order.join(",") === "cleanup-0,cleanup-1",
+    namedFacts([
+      ["successFailure", () => success.failure === undefined],
+      ["successOrder", () => success.order.join(",") === "cleanup-0,cleanup-1"],
+      ["partialSetupFailure", () => partialSetup.failure === primaryFailure],
+      ["partialSetupOrder", () => partialSetup.order.join(",") === "cleanup-0"],
+      ["primaryOnlyFailure", () => primaryOnly.failure === primaryFailure],
+      [
+        "primaryOnlyOrder",
+        () => primaryOnly.order.join(",") === "cleanup-0,cleanup-1",
+      ],
+      ["standaloneFailure", () => standalone.failure === firstCleanupFailure],
+      [
+        "standaloneOrder",
+        () => standalone.order.join(",") === "cleanup-0,cleanup-1",
+      ],
+      [
+        "aggregateContainsExactlyMultiple",
+        () =>
+          aggregateContainsExactly(multiple.failure, [
+            firstCleanupFailure,
+            secondCleanupFailure,
+          ]),
+      ],
+      [
+        "multipleOrder",
+        () => multiple.order.join(",") === "cleanup-0,cleanup-1",
+      ],
+      [
+        "aggregateContainsExactlyCombined",
+        () =>
+          aggregateContainsExactly(combined.failure, [
+            primaryFailure,
+            firstCleanupFailure,
+            secondCleanupFailure,
+          ]),
+      ],
+      [
+        "combinedOrder",
+        () => combined.order.join(",") === "cleanup-0,cleanup-1",
+      ],
+    ]),
+    {
+      successFailure: true,
+      successOrder: true,
+      partialSetupFailure: true,
+      partialSetupOrder: true,
+      primaryOnlyFailure: true,
+      primaryOnlyOrder: true,
+      standaloneFailure: true,
+      standaloneOrder: true,
+      aggregateContainsExactlyMultiple: true,
+      multipleOrder: true,
+      aggregateContainsExactlyCombined: true,
+      combinedOrder: true,
+    },
   );
   TestValidator.equals(
     "create-automovie test owns stdout capture and its temporary root",
