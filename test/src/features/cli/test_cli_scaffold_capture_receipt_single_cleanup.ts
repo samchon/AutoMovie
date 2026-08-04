@@ -194,11 +194,11 @@ export const test_cli_scaffold_capture_receipt_single_cleanup = (): void => {
           containerKind: "TryStatement",
           containerStatements: 1986,
           finallyDigest:
-            "8b0c484c31978fa0ee66dc681f6a520351cbb95c45fad37b7d06a4e34704cbc3",
+            "d5df2c4b9debd21bd5eaf6a5e34327786fde8c44e557d783d238d8e19902b37c",
           finallySubstantive: {
             digest:
-              "7db57acdaf3a11f4566a549cf535893beedfe1ac9d4ee6b3759add1b2f0fdfe6",
-            tokens: 29,
+              "ea4b74faca29a088a64e924a5c767b7bf67c163aea70c1b3689fdd9aa1a3a9cb",
+            tokens: 50,
           },
           index: 726,
           preceding: "letreceiptRootCleanupFailure:{error:unknown}|undefined;",

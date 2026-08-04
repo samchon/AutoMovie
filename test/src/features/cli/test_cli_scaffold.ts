@@ -8973,9 +8973,17 @@ export const test_cli_scaffold = async (): Promise<void> => {
           parkedCaptureProject,
           path.relative(captureProject, path.resolve(file.toString())),
         );
-        fs.renameSync(captureProject, parkedCaptureProject);
-        fs.mkdirSync(path.dirname(captureReceipt), { recursive: true });
-        nativeWriteFile(captureReceipt, publishedReceiptBytes);
+        // Replace the project root when this descriptor closes. Windows refuses
+        // to rename a directory that still holds an open handle, so renaming it
+        // here would make the hook itself the failure.
+        mutableFs.closeSync = ((closing: number): void => {
+          Reflect.apply(nativeClose, mutableFs, [closing]);
+          if (closing !== descriptor) return;
+          mutableFs.closeSync = nativeClose;
+          fs.renameSync(captureProject, parkedCaptureProject);
+          fs.mkdirSync(path.dirname(captureReceipt), { recursive: true });
+          nativeWriteFile(captureReceipt, publishedReceiptBytes);
+        }) as typeof fs.closeSync;
       }
       return descriptor;
     }) as typeof fs.openSync;
@@ -8998,6 +9006,12 @@ export const test_cli_scaffold = async (): Promise<void> => {
           resource: "capture receipt root swap open hook",
           cleanup: () => {
             mutableFs.openSync = nativeOpen;
+          },
+        },
+        {
+          resource: "capture receipt root swap close hook",
+          cleanup: () => {
+            mutableFs.closeSync = nativeClose;
           },
         },
       ]);
