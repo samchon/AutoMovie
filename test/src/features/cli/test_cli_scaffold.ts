@@ -4253,11 +4253,18 @@ export const test_cli_scaffold = async (): Promise<void> => {
         },
       ]);
     }
-    TestValidator.predicate(
+    TestValidator.equals(
       "the generated viewer refuses an ancestry replacement during canonicalization",
-      ancestorSwapped &&
-        ancestorResponse.statusCode === 400 &&
-        ancestorResponse.body === "invalid compiled viewer artifact request",
+      {
+        body: ancestorResponse.body,
+        statusCode: ancestorResponse.statusCode,
+        swapped: ancestorSwapped,
+      },
+      {
+        body: "invalid compiled viewer artifact request",
+        statusCode: 400,
+        swapped: true,
+      },
     );
     const parkedArtifact = `${artifact}.parked`;
     let artifactSwapped = false;
@@ -4312,12 +4319,20 @@ export const test_cli_scaffold = async (): Promise<void> => {
         },
       ]);
     }
-    TestValidator.predicate(
+    TestValidator.equals(
       "the generated viewer refuses an artifact replaced after linked identity",
-      middleware !== undefined &&
-        artifactSwapped &&
-        viewerResponse.statusCode === 400 &&
-        viewerResponse.body === "invalid compiled viewer artifact request",
+      {
+        body: viewerResponse.body,
+        installed: middleware !== undefined,
+        statusCode: viewerResponse.statusCode,
+        swapped: artifactSwapped,
+      },
+      {
+        body: "invalid compiled viewer artifact request",
+        installed: true,
+        statusCode: 400,
+        swapped: true,
+      },
     );
     const asset = path.join(target, "public", "audio", "starter-tone.json");
     const assetBytes = fs.readFileSync(asset);
@@ -4415,11 +4430,18 @@ export const test_cli_scaffold = async (): Promise<void> => {
         },
       ]);
     }
-    TestValidator.predicate(
+    TestValidator.equals(
       "the generated viewer refuses a byte-identical asset ledger successor",
-      ledgerSwapped &&
-        ledgerResponse.statusCode === 400 &&
-        ledgerResponse.body === "invalid registered asset request",
+      {
+        body: ledgerResponse.body,
+        statusCode: ledgerResponse.statusCode,
+        swapped: ledgerSwapped,
+      },
+      {
+        body: "invalid registered asset request",
+        statusCode: 400,
+        swapped: true,
+      },
     );
     const modelBytes = fs.readFileSync(model);
     const parkedModel = `${model}.parked`;
@@ -4459,11 +4481,18 @@ export const test_cli_scaffold = async (): Promise<void> => {
         },
       ]);
     }
-    TestValidator.predicate(
+    TestValidator.equals(
       "the generated viewer refuses a byte-identical compiled model successor",
-      modelSwapped &&
-        modelResponse.statusCode === 400 &&
-        modelResponse.body === "invalid registered asset request",
+      {
+        body: modelResponse.body,
+        statusCode: modelResponse.statusCode,
+        swapped: modelSwapped,
+      },
+      {
+        body: "invalid registered asset request",
+        statusCode: 400,
+        swapped: true,
+      },
     );
     const modelsDirectory = path.dirname(model);
     const extraModel = path.join(modelsDirectory, "late-inventory.json");
@@ -4506,11 +4535,18 @@ export const test_cli_scaffold = async (): Promise<void> => {
         },
       ]);
     }
-    TestValidator.predicate(
+    TestValidator.equals(
       "the generated viewer refuses compiled model inventory mutation",
-      inventoryMutated &&
-        inventoryResponse.statusCode === 400 &&
-        inventoryResponse.body === "invalid registered asset request",
+      {
+        body: inventoryResponse.body,
+        mutated: inventoryMutated,
+        statusCode: inventoryResponse.statusCode,
+      },
+      {
+        body: "invalid registered asset request",
+        mutated: true,
+        statusCode: 400,
+      },
     );
     const parkedAsset = `${asset}.parked`;
     let assetSwapped = false;
@@ -4562,11 +4598,18 @@ export const test_cli_scaffold = async (): Promise<void> => {
         },
       ]);
     }
-    TestValidator.predicate(
+    TestValidator.equals(
       "the generated viewer refuses a byte-identical registered asset successor",
-      assetSwapped &&
-        assetResponse.statusCode === 400 &&
-        assetResponse.body === "invalid registered asset request",
+      {
+        body: assetResponse.body,
+        statusCode: assetResponse.statusCode,
+        swapped: assetSwapped,
+      },
+      {
+        body: "invalid registered asset request",
+        statusCode: 400,
+        swapped: true,
+      },
     );
     const proxy = path.join(base, "proxy-publication");
     const proxyFiles = new Map<string, Uint8Array>([
