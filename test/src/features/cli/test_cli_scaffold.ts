@@ -3918,25 +3918,30 @@ export const test_cli_scaffold = async (): Promise<void> => {
       } catch (error) {
         // Name the stat fields that disagree between the pathname and the
         // descriptor, so a residual identity refusal says which one moved
-        // instead of only that something did.
-        const linked = fs.lstatSync(artifact, { bigint: true });
-        const descriptor = fs.openSync(artifact, "r");
+        // instead of only that something did. An unreadable artifact must
+        // still reach the comparison below rather than abort the test.
         const drift = ((): string[] => {
           try {
-            const opened = fs.fstatSync(descriptor, { bigint: true });
-            return (
-              [
-                ["dev", linked.dev === opened.dev],
-                ["ino", linked.ino === opened.ino],
-                ["size", linked.size === opened.size],
-                ["mtimeNs", linked.mtimeNs === opened.mtimeNs],
-                ["ctimeNs", linked.ctimeNs === opened.ctimeNs],
-              ] as const
-            )
-              .filter(([, agrees]) => agrees === false)
-              .map(([field]) => field);
-          } finally {
-            fs.closeSync(descriptor);
+            const linked = fs.lstatSync(artifact, { bigint: true });
+            const descriptor = fs.openSync(artifact, "r");
+            try {
+              const opened = fs.fstatSync(descriptor, { bigint: true });
+              return (
+                [
+                  ["dev", linked.dev === opened.dev],
+                  ["ino", linked.ino === opened.ino],
+                  ["size", linked.size === opened.size],
+                  ["mtimeNs", linked.mtimeNs === opened.mtimeNs],
+                  ["ctimeNs", linked.ctimeNs === opened.ctimeNs],
+                ] as const
+              )
+                .filter(([, agrees]) => agrees === false)
+                .map(([field]) => field);
+            } finally {
+              fs.closeSync(descriptor);
+            }
+          } catch {
+            return ["unreadable"];
           }
         })();
         const message = error instanceof Error ? error.message : String(error);
