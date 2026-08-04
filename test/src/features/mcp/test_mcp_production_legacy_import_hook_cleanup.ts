@@ -372,7 +372,7 @@ export const test_mcp_production_legacy_import_hook_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 21,
+          containerStatements: 22,
           finallyDigest:
             "ef86e0d7d1e4a65bafb75289629498a605bc58b755e07866568a10a74e3d9b72",
           finallySubstantive: {
@@ -380,7 +380,7 @@ export const test_mcp_production_legacy_import_hook_cleanup = (): void => {
               "da09a57361a5e39020919e648d46028fb8d1cfa366748d6552292f5fb859fc19",
             tokens: 71,
           },
-          index: 17,
+          index: 18,
           preceding:
             "letrestorationCleanupHookFailure:ILegacyImportFixtureFailure|undefined;",
           substantive: {

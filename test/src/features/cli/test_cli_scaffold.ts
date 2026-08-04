@@ -8979,11 +8979,18 @@ export const test_cli_scaffold = async (): Promise<void> => {
       target: attemptTarget,
       token: secondAttemptToken,
     });
-    TestValidator.predicate(
+    TestValidator.equals(
       "render attempt stale recovery replaces only a dead exact owner",
-      staleRunningAttempt.snapshot.targetIdentity !==
-        recoveredStaleAttempt.snapshot.targetIdentity &&
-        recoveredStaleAttempt.record.token === secondAttemptToken,
+      {
+        identityReplaced:
+          staleRunningAttempt.snapshot.targetIdentity !==
+          recoveredStaleAttempt.snapshot.targetIdentity,
+        token: recoveredStaleAttempt.record.token,
+      },
+      {
+        identityReplaced: true,
+        token: secondAttemptToken,
+      },
     );
     renderAttemptModule.completeRenderAttempt(recoveredStaleAttempt);
 

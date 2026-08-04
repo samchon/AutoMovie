@@ -1516,6 +1516,10 @@ export const test_mcp_production_legacy_import = (): void => {
     const nativeRename = fs.renameSync;
     const nativeRm = fs.rmSync;
     let removals = 0;
+    // Record where the injection fired. The rollback keeps removing
+    // directories along its recovery path afterwards, so the total count is
+    // incidental while the injection point is the fact this scenario owns.
+    let injectedRemoval: number | null = null;
     fs.rmdirSync = ((directory: fs.PathLike): void => {
       if (++removals === 2) {
         const quarantine = fs
@@ -1523,6 +1527,7 @@ export const test_mcp_production_legacy_import = (): void => {
           .find((entry) => entry.startsWith(".automovie-rollback-"));
         if (quarantine === undefined)
           throw new Error("rollback quarantine was not published");
+        injectedRemoval = removals;
         fs.writeFileSync(
           path.join(
             restorationCleanupFailure.root,
@@ -1587,6 +1592,7 @@ export const test_mcp_production_legacy_import = (): void => {
     TestValidator.equals(
       "legacy rollback retains restoration and staging cleanup failures",
       {
+        injectedRemoval: injectedRemoval as number | null,
         nested:
           nestedCleanup instanceof AggregateError &&
           aggregateContainsExactly(nestedCleanup, [
@@ -1605,17 +1611,16 @@ export const test_mcp_production_legacy_import = (): void => {
           fs.existsSync(
             path.join(restorationCleanupFailure.root, retainedQuarantine),
           ),
-        removals,
         stagingLeftovers: fs
           .readdirSync(restorationCleanupFailure.root)
           .filter((entry) => entry.startsWith(".automovie-restore-")),
         stateRootResident: fs.existsSync(stateRoot),
       },
       {
+        injectedRemoval: 2,
         nested: true,
         outer: true,
         quarantineResident: true,
-        removals: 2,
         stagingLeftovers: [],
         stateRootResident: false,
       },

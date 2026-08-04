@@ -238,7 +238,7 @@ export const test_mcp_production_project_invalid_root_setup_hook_cleanup =
               catchBodies: ["existingRootHookFailure={error};", "throwerror;"],
               catchVariables: ["error"],
               containerKind: "TryStatement",
-              containerStatements: 236,
+              containerStatements: 240,
               failureHolder:
                 "letexistingRootHookFailure:IProductionProjectFixtureFailure|undefined;",
               finallyDigest:
@@ -265,7 +265,7 @@ export const test_mcp_production_project_invalid_root_setup_hook_cleanup =
               catchBodies: ["aliasOpenHookFailure={error};", "throwerror;"],
               catchVariables: ["error"],
               containerKind: "TryStatement",
-              containerStatements: 236,
+              containerStatements: 240,
               failureHolder:
                 "letaliasOpenHookFailure:IProductionProjectFixtureFailure|undefined;",
               finallyDigest:
@@ -291,7 +291,7 @@ export const test_mcp_production_project_invalid_root_setup_hook_cleanup =
               catchBodies: ["missingBaseHookFailure={error};", "throwerror;"],
               catchVariables: ["error"],
               containerKind: "TryStatement",
-              containerStatements: 236,
+              containerStatements: 240,
               failureHolder:
                 "letmissingBaseHookFailure:IProductionProjectFixtureFailure|undefined;",
               finallyDigest:

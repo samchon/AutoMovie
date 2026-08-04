@@ -444,7 +444,7 @@ export const test_mcp_production_project_mutation_root_cleanup = (): void => {
             catchBodies: ["mutationHarnessFailure={error};", "throwerror;"],
             catchVariables: ["error"],
             containerKind: "TryStatement",
-            containerStatements: 236,
+            containerStatements: 240,
             failureHolder:
               "letmutationHarnessFailure:IProductionProjectFixtureFailure|undefined;",
             finallyDigest:
@@ -475,7 +475,7 @@ export const test_mcp_production_project_mutation_root_cleanup = (): void => {
                 tryStatements: 1,
               },
             ],
-            index: 201,
+            index: 205,
             substantive: {
               digest:
                 "6c5fbe085cd13d9a291d835ee7889739b4917eb2a2e7798b924995955b81a746",

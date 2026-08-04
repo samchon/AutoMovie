@@ -300,7 +300,7 @@ export const test_mcp_production_project_root_identity_race_cleanup =
               catchBodies: ["missingIdentityFailure={error};", "throwerror;"],
               catchVariables: ["error"],
               containerKind: "TryStatement",
-              containerStatements: 236,
+              containerStatements: 240,
               failureHolder:
                 "letmissingIdentityFailure:IProductionProjectFixtureFailure|undefined;",
               finallyDigest:
@@ -325,7 +325,7 @@ export const test_mcp_production_project_root_identity_race_cleanup =
               catchBodies: ["preLeaseFailure={error};", "throwerror;"],
               catchVariables: ["error"],
               containerKind: "TryStatement",
-              containerStatements: 236,
+              containerStatements: 240,
               failureHolder:
                 "letpreLeaseFailure:IProductionProjectFixtureFailure|undefined;",
               finallyDigest:

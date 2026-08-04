@@ -4566,24 +4566,31 @@ export const test_mcp_production_project = (): void => {
         },
       ]);
     }
+    // Observe in the scenario's own order: the erase is a mutation and has to
+    // follow every reading of the restored file, which an object literal's
+    // property order would otherwise decide.
+    const atomicDeleteResident = fs
+      .readFileSync(atomicDeleteTarget)
+      .equals(atomicDeleteBytes);
+    const atomicDeleteRevisionAfter = initialized.revision();
+    const atomicDeleteLeftovers = fs
+      .readdirSync(path.dirname(atomicDeleteTarget))
+      .filter((entry) =>
+        entry.startsWith(`${path.basename(atomicDeleteTarget)}.delete.`),
+      );
+    const atomicDeleteErasable = initialized.eraseDesignArtifact({
+      kind: "model",
+      id: atomicDeleteModel.id,
+    }).accepted;
     TestValidator.equals(
       "a failed quarantine cleanup restores the exact deleted file and revision",
       {
         denied: quarantineDeleteDenied,
-        erasable: initialized.eraseDesignArtifact({
-          kind: "model",
-          id: atomicDeleteModel.id,
-        }).accepted,
-        quarantineLeftovers: fs
-          .readdirSync(path.dirname(atomicDeleteTarget))
-          .filter((entry) =>
-            entry.startsWith(`${path.basename(atomicDeleteTarget)}.delete.`),
-          ),
+        erasable: atomicDeleteErasable,
+        quarantineLeftovers: atomicDeleteLeftovers,
         rejected: atomicDeleteRejected,
-        residentBytes: fs
-          .readFileSync(atomicDeleteTarget)
-          .equals(atomicDeleteBytes),
-        revision: initialized.revision(),
+        residentBytes: atomicDeleteResident,
+        revision: atomicDeleteRevisionAfter,
       },
       {
         denied: true,
