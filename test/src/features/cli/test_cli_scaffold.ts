@@ -8144,15 +8144,30 @@ export const test_cli_scaffold = async (): Promise<void> => {
       nextCaptureReceipt,
       () => undefined,
     );
-    TestValidator.predicate(
+    TestValidator.equals(
       "capture install converges on one exact immutable receipt generation",
-      (() => {
-        const status = fs.lstatSync(receiptGenerationFile, { bigint: true });
-        return (
-          status.dev === receiptGenerationStatus.dev &&
-          status.ino === receiptGenerationStatus.ino
-        );
-      })() && fs.readdirSync(receiptGenerationDirectory).length === 1,
+      namedFacts([
+        [
+          "generationIdentityKept",
+          () => {
+            const status = fs.lstatSync(receiptGenerationFile, {
+              bigint: true,
+            });
+            return (
+              status.dev === receiptGenerationStatus.dev &&
+              status.ino === receiptGenerationStatus.ino
+            );
+          },
+        ],
+        [
+          "oneGeneration",
+          () => fs.readdirSync(receiptGenerationDirectory).length === 1,
+        ],
+      ]),
+      {
+        generationIdentityKept: true,
+        oneGeneration: true,
+      },
     );
 
     const partialReceiptProject = path.join(base, "partial-receipt-project");
@@ -8498,7 +8513,11 @@ export const test_cli_scaffold = async (): Promise<void> => {
     fs.mkdirSync(receiptParentSwapProject);
     let receiptParentSwapPath = "";
     let parkedReceiptParent = "";
-    let receiptParentSwapped = false;
+    // One holder carries the swap's outcome — pending, swapped, or the message
+    // the swap itself failed with. This renames a directory that holds the
+    // descriptor just opened inside it, and a refusal from the injection is
+    // otherwise indistinguishable from the product's own.
+    let receiptParentSwap = "pending";
     mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
       const descriptor = Reflect.apply(nativeOpen, mutableFs, [
         file,
@@ -8506,7 +8525,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
         ...args,
       ]) as number;
       if (
-        receiptParentSwapped === false &&
+        receiptParentSwap === "pending" &&
         typeof file !== "number" &&
         flags === "wx+" &&
         path.basename(path.dirname(file.toString())) === "install-receipts"
@@ -8514,10 +8533,15 @@ export const test_cli_scaffold = async (): Promise<void> => {
         receiptParentSwapPath = path.resolve(file.toString());
         const parent = path.dirname(receiptParentSwapPath);
         parkedReceiptParent = `${parent}.parked`;
-        nativeRename(parent, parkedReceiptParent);
-        nativeMkdir(parent);
-        nativeWriteFile(path.join(parent, "successor.marker"), "successor");
-        receiptParentSwapped = true;
+        receiptParentSwap = "swapped";
+        try {
+          nativeRename(parent, parkedReceiptParent);
+          nativeMkdir(parent);
+          nativeWriteFile(path.join(parent, "successor.marker"), "successor");
+        } catch (error) {
+          receiptParentSwap =
+            error instanceof Error ? error.message : String(error);
+        }
       }
       return descriptor;
     }) as typeof fs.openSync;
@@ -8546,33 +8570,35 @@ export const test_cli_scaffold = async (): Promise<void> => {
     }
     TestValidator.equals(
       "capture install preserves a generation-directory successor after descriptor open",
-      namedFacts([
-        ["receiptParentSwapped", () => receiptParentSwapped],
-        ["receiptParentSwapRejected", () => receiptParentSwapRejected],
-        [
-          "receiptParentSwapPathSuccessor",
-          () =>
-            fs.readFileSync(
-              path.join(
-                path.dirname(receiptParentSwapPath),
-                "successor.marker",
-              ),
-              "utf8",
-            ) === "successor",
-        ],
-        [
-          "parkedReceiptParentResident",
-          () =>
-            fs.existsSync(
-              path.join(
-                parkedReceiptParent,
-                path.basename(receiptParentSwapPath),
-              ),
-            ),
-        ],
-      ]),
       {
-        receiptParentSwapped: true,
+        swap: receiptParentSwap,
+        ...namedFacts([
+          ["receiptParentSwapRejected", () => receiptParentSwapRejected],
+          [
+            "receiptParentSwapPathSuccessor",
+            () =>
+              fs.readFileSync(
+                path.join(
+                  path.dirname(receiptParentSwapPath),
+                  "successor.marker",
+                ),
+                "utf8",
+              ) === "successor",
+          ],
+          [
+            "parkedReceiptParentResident",
+            () =>
+              fs.existsSync(
+                path.join(
+                  parkedReceiptParent,
+                  path.basename(receiptParentSwapPath),
+                ),
+              ),
+          ],
+        ]),
+      },
+      {
+        swap: "swapped",
         receiptParentSwapRejected: true,
         receiptParentSwapPathSuccessor: true,
         parkedReceiptParentResident: true,
@@ -9277,21 +9303,36 @@ export const test_cli_scaffold = async (): Promise<void> => {
       receipt: dialogueReceipt,
       target: partialDialogueTarget,
     });
-    TestValidator.predicate(
+    TestValidator.equals(
       "dialogue cache monotonically completes an exact partial generation",
-      (() => {
-        const status = fs.lstatSync(partialDialogueTarget, { bigint: true });
-        return (
-          status.dev === partialDialogueStatus.dev &&
-          status.ino === partialDialogueStatus.ino
-        );
-      })() &&
-        !throws(() =>
-          dialogueCacheModule.captureDialogueCache(
-            dialogueRoot,
-            partialDialogueTarget,
-          ),
-        ),
+      namedFacts([
+        [
+          "targetIdentityKept",
+          () => {
+            const status = fs.lstatSync(partialDialogueTarget, {
+              bigint: true,
+            });
+            return (
+              status.dev === partialDialogueStatus.dev &&
+              status.ino === partialDialogueStatus.ino
+            );
+          },
+        ],
+        [
+          "captureAccepted",
+          () =>
+            !throws(() =>
+              dialogueCacheModule.captureDialogueCache(
+                dialogueRoot,
+                partialDialogueTarget,
+              ),
+            ),
+        ],
+      ]),
+      {
+        targetIdentityKept: true,
+        captureAccepted: true,
+      },
     );
 
     const receiptOnlyDialogueTarget = path.join(dialogueRoot, "receipt-only");
@@ -10441,17 +10482,22 @@ export const test_cli_scaffold = async (): Promise<void> => {
           .readFileSync(postPublicationLock.snapshot.target)
           .equals(postPublicationLockSuccessor),
         recordResident: fs.existsSync(attemptTarget),
+        // The injection fires on the lock's own `lstat`, which is the first of
+        // the two stats the capture takes, so the replacement lands between
+        // them and the capture reports it as an ownership escape rather than a
+        // changed generation. Either way the attempt is refused; the message
+        // recorded here is the one the product actually produces.
         rejection:
           postPublicationRejected !== null &&
-          postPublicationRejected.includes("changed physical generation")
-            ? "changed physical generation"
+          postPublicationRejected.includes("escapes renderer ownership")
+            ? "escapes renderer ownership"
             : postPublicationRejected,
         relinked: postPublicationRelinked,
       },
       {
         lockSuccessorResident: true,
         recordResident: true,
-        rejection: "changed physical generation",
+        rejection: "escapes renderer ownership",
         relinked: true,
       },
     );
@@ -12882,12 +12928,26 @@ export const test_cli_scaffold = async (): Promise<void> => {
           tree: handoffTree,
         }),
       );
-      TestValidator.predicate(
+      TestValidator.equals(
         `publication refuses a byte-identical ${targetKind} successor after tree capture`,
-        handoffRejected &&
-          fs.existsSync(parkedHandoffTarget) &&
-          fs.readFileSync(handoffTarget).equals(handoffBytes) &&
-          fs.existsSync(handoffPointer) === false,
+        namedFacts([
+          ["handoffRejected", () => handoffRejected],
+          ["parkedHandoffResident", () => fs.existsSync(parkedHandoffTarget)],
+          [
+            "handoffBytesKept",
+            () => fs.readFileSync(handoffTarget).equals(handoffBytes),
+          ],
+          [
+            "handoffPointerAbsent",
+            () => fs.existsSync(handoffPointer) === false,
+          ],
+        ]),
+        {
+          handoffRejected: true,
+          parkedHandoffResident: true,
+          handoffBytesKept: true,
+          handoffPointerAbsent: true,
+        },
       );
     }
 
