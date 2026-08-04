@@ -1176,7 +1176,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
           "1d8eca684989d811d1bed376abc2bf4cf53d0f225a4816e9dff8d6a40c2897ff",
         ],
         readPhysicalFileSnapshot: [
-          "d0c22b60d40c282c72377a251b018ed132404220cef77ec656364a42d87634fa",
+          "168164dd2609afba22da6841a028753531b64641398bf167e97470041117bedd",
         ],
       },
     },

@@ -1582,25 +1582,43 @@ export const test_mcp_production_legacy_import = (): void => {
     const retainedQuarantine = fs
       .readdirSync(restorationCleanupFailure.root)
       .find((entry) => entry.startsWith(".automovie-rollback-"));
-    TestValidator.predicate(
+    // Name each retained failure and each surviving path: seven facts folded
+    // into one boolean can only report that the condition was not satisfied.
+    TestValidator.equals(
       "legacy rollback retains restoration and staging cleanup failures",
-      nestedCleanup instanceof AggregateError &&
-        aggregateContainsExactly(nestedCleanup, [
-          restorationFailure,
-          cleanupFailure,
-        ]) &&
-        aggregateContainsExactly(caught, [rollbackFailure, nestedCleanup]) &&
-        removals === 2 &&
-        fs.existsSync(stateRoot) === false &&
-        fs
+      {
+        nested:
+          nestedCleanup instanceof AggregateError &&
+          aggregateContainsExactly(nestedCleanup, [
+            restorationFailure,
+            cleanupFailure,
+          ]),
+        outer:
+          nestedCleanup === undefined
+            ? false
+            : aggregateContainsExactly(caught, [
+                rollbackFailure,
+                nestedCleanup,
+              ]),
+        quarantineResident:
+          retainedQuarantine !== undefined &&
+          fs.existsSync(
+            path.join(restorationCleanupFailure.root, retainedQuarantine),
+          ),
+        removals,
+        stagingLeftovers: fs
           .readdirSync(restorationCleanupFailure.root)
-          .every(
-            (entry) => entry.startsWith(".automovie-restore-") === false,
-          ) &&
-        retainedQuarantine !== undefined &&
-        fs.existsSync(
-          path.join(restorationCleanupFailure.root, retainedQuarantine),
-        ),
+          .filter((entry) => entry.startsWith(".automovie-restore-")),
+        stateRootResident: fs.existsSync(stateRoot),
+      },
+      {
+        nested: true,
+        outer: true,
+        quarantineResident: true,
+        removals: 2,
+        stagingLeftovers: [],
+        stateRootResident: false,
+      },
     );
   } finally {
     restorationCleanupFailure.dispose();
