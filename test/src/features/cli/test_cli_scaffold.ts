@@ -9159,11 +9159,12 @@ export const test_cli_scaffold = async (): Promise<void> => {
     );
     // Restore only what the injection managed to park: Windows refuses to
     // rename a directory holding an open descriptor, so on that platform the
-    // project root was never moved.
-    if (fs.existsSync(parkedCaptureProject)) {
+    // project root was never moved. Each step guards itself, because this
+    // test's static contracts pin the top-level statement indices.
+    if (fs.existsSync(parkedCaptureProject))
       fs.rmSync(captureProject, { recursive: true, force: true });
+    if (fs.existsSync(parkedCaptureProject))
       fs.renameSync(parkedCaptureProject, captureProject);
-    }
 
     const dialogueCacheModule = createRequire(__filename)(
       path.join(scaffoldDir, "scripts", "dialogueCacheSnapshot.ts"),
