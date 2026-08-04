@@ -9328,13 +9328,24 @@ export const test_cli_scaffold = async (): Promise<void> => {
         },
       ]);
     }
-    TestValidator.predicate(
+    TestValidator.equals(
       "render attempt preserves an attempts-directory successor at publication",
-      attemptParentSwapped &&
-        attemptParentRejected &&
-        fs.readFileSync(attemptParentSuccessorMarker, "utf8") === "successor" &&
-        fs.existsSync(attemptTarget) === false &&
-        fs.existsSync(path.join(parkedAttemptDirectory, "slot-0001.json")),
+      {
+        parkedRecordResident: fs.existsSync(
+          path.join(parkedAttemptDirectory, "slot-0001.json"),
+        ),
+        rejected: attemptParentRejected,
+        successorMarker: fs.readFileSync(attemptParentSuccessorMarker, "utf8"),
+        successorRecordResident: fs.existsSync(attemptTarget),
+        swapped: attemptParentSwapped,
+      },
+      {
+        parkedRecordResident: true,
+        rejected: true,
+        successorMarker: "successor",
+        successorRecordResident: false,
+        swapped: true,
+      },
     );
     fs.rmSync(attemptDirectory, { recursive: true, force: true });
     nativeRename(parkedAttemptDirectory, attemptDirectory);
@@ -9395,15 +9406,24 @@ export const test_cli_scaffold = async (): Promise<void> => {
         },
       ]);
     }
-    TestValidator.predicate(
+    TestValidator.equals(
       "render attempt preserves a render-root successor at publication",
-      attemptRootSwapped &&
-        attemptRootRejected &&
-        fs.readFileSync(attemptRootSuccessorMarker, "utf8") === "successor" &&
-        fs.existsSync(attemptTarget) === false &&
-        fs.existsSync(
+      {
+        parkedRecordResident: fs.existsSync(
           path.join(parkedAttemptRoot, "attempts", "slot-0001.json"),
         ),
+        rejected: attemptRootRejected,
+        successorMarker: fs.readFileSync(attemptRootSuccessorMarker, "utf8"),
+        successorRecordResident: fs.existsSync(attemptTarget),
+        swapped: attemptRootSwapped,
+      },
+      {
+        parkedRecordResident: true,
+        rejected: true,
+        successorMarker: "successor",
+        successorRecordResident: false,
+        swapped: true,
+      },
     );
     fs.rmSync(attemptRoot, { recursive: true, force: true });
     nativeRename(parkedAttemptRoot, attemptRoot);
@@ -9455,11 +9475,18 @@ export const test_cli_scaffold = async (): Promise<void> => {
       planRoot,
       planTarget,
     );
-    TestValidator.predicate(
+    TestValidator.equals(
       "render plan publishes an immutable genesis generation",
-      fs.existsSync(planTarget) === false &&
-        firstPlan.generation === capturedFirstPlan.generation &&
-        capturedFirstPlan.plan.name === "first",
+      {
+        capturedGeneration: capturedFirstPlan.generation,
+        capturedName: capturedFirstPlan.plan.name,
+        headResident: fs.existsSync(planTarget),
+      },
+      {
+        capturedGeneration: firstPlan.generation,
+        capturedName: "first",
+        headResident: false,
+      },
     );
     const reusedFirstPlan = await renderPlanModule.publishRenderPlan({
       base: planRoot,
@@ -9468,10 +9495,16 @@ export const test_cli_scaffold = async (): Promise<void> => {
       predecessor: firstPlan,
       target: planTarget,
     });
-    TestValidator.predicate(
+    TestValidator.equals(
       "render plan reuses an unchanged sequential predecessor",
-      reusedFirstPlan.generation === firstPlan.generation &&
-        fs.readdirSync(`${planTarget}.generations`).length === 1,
+      {
+        generation: reusedFirstPlan.generation,
+        generations: fs.readdirSync(`${planTarget}.generations`).length,
+      },
+      {
+        generation: firstPlan.generation,
+        generations: 1,
+      },
     );
     const secondPlan = await renderPlanModule.publishRenderPlan({
       base: planRoot,
@@ -9480,12 +9513,19 @@ export const test_cli_scaffold = async (): Promise<void> => {
       predecessor: firstPlan,
       target: planTarget,
     });
-    TestValidator.predicate(
+    TestValidator.equals(
       "render plan replacement appends one predecessor-bound successor",
-      secondPlan.generation !== firstPlan.generation &&
-        renderPlanModule.captureRenderPlan(planRoot, planTarget).generation ===
-          secondPlan.generation &&
-        fs.existsSync(firstPlan.snapshot.target),
+      {
+        appended: secondPlan.generation !== firstPlan.generation,
+        head: renderPlanModule.captureRenderPlan(planRoot, planTarget)
+          .generation,
+        predecessorResident: fs.existsSync(firstPlan.snapshot.target),
+      },
+      {
+        appended: true,
+        head: secondPlan.generation,
+        predecessorResident: true,
+      },
     );
     let staleInputChecked = false;
     let staleInputRejected = false;
@@ -9503,12 +9543,19 @@ export const test_cli_scaffold = async (): Promise<void> => {
     } catch {
       staleInputRejected = true;
     }
-    TestValidator.predicate(
+    TestValidator.equals(
       "render plan rejects stale inputs without changing its head",
-      staleInputChecked &&
-        staleInputRejected &&
-        renderPlanModule.captureRenderPlan(planRoot, planTarget).generation ===
-          secondPlan.generation,
+      {
+        checked: staleInputChecked,
+        head: renderPlanModule.captureRenderPlan(planRoot, planTarget)
+          .generation,
+        rejected: staleInputRejected,
+      },
+      {
+        checked: true,
+        head: secondPlan.generation,
+        rejected: true,
+      },
     );
     let concurrentWinner: RenderPlanFixtureSnapshot | undefined;
     let slowPlannerRejected = false;
