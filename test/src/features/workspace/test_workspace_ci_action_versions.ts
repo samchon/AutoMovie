@@ -9,6 +9,9 @@ const ACTIONS = [
   "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1",
   "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0",
   "pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9",
+  // The toolchain's Go source plugins cost minutes to build cold, so every job
+  // restores their content-addressed binaries after installing dependencies.
+  "actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0",
 ] as const;
 
 interface IActionStep {

@@ -1337,10 +1337,10 @@ export const test_cli_scaffold = async (): Promise<void> => {
       ],
       functionDigests: {
         createCaptureExecutableSnapshot: [
-          "4e94943826b74986395a03dd6988fa45bfc9cad705b68f589cd750846d6cadb7",
+          "8e17f26b509518d517c3656100387de2e7f6b8b2bb241e8b1325444ab153029a",
         ],
         openCaptureExecutable: [
-          "d267f5a4c0e13a183b03566ccae9836a36b42d921d4b8087f1f5ac89128ee8cd",
+          "28555ecca859c9211277c00f1ff2281ea3ca07b0e230f64e90341db2b0caa35f",
         ],
         throwCaptureExecutableSnapshotFailure: [
           "1bac8de7acb0c6ca423cfcc0eda233aea7e2138a8764fe0651d4dfc9a690ba3b",
@@ -6566,19 +6566,50 @@ export const test_cli_scaffold = async (): Promise<void> => {
         },
       ]);
     }
-    TestValidator.predicate(
+    TestValidator.equals(
       "capture executable acquisition preserves primary and close failures",
-      createSnapshotCloseAttempts === 1 &&
-        combinedCreateSnapshotFailure instanceof AggregateError &&
-        combinedCreateSnapshotFailure.errors.length === 2 &&
-        combinedCreateSnapshotFailure.errors[0] === createSnapshotFailure &&
-        combinedCreateSnapshotFailure.errors[1] ===
-          createSnapshotCloseFailure &&
-        openSnapshotCloseAttempts === 1 &&
-        combinedOpenSnapshotFailure instanceof AggregateError &&
-        combinedOpenSnapshotFailure.errors.length === 2 &&
-        combinedOpenSnapshotFailure.errors[0] === openSnapshotFailure &&
-        combinedOpenSnapshotFailure.errors[1] === openSnapshotCloseFailure,
+      {
+        createAttempts: createSnapshotCloseAttempts,
+        createErrors:
+          combinedCreateSnapshotFailure instanceof AggregateError
+            ? combinedCreateSnapshotFailure.errors.map((error) =>
+                error === createSnapshotFailure
+                  ? "primary"
+                  : error === createSnapshotCloseFailure
+                    ? "close"
+                    : error instanceof Error
+                      ? error.message
+                      : String(error),
+              )
+            : [
+                combinedCreateSnapshotFailure instanceof Error
+                  ? combinedCreateSnapshotFailure.message
+                  : String(combinedCreateSnapshotFailure),
+              ],
+        openAttempts: openSnapshotCloseAttempts,
+        openErrors:
+          combinedOpenSnapshotFailure instanceof AggregateError
+            ? combinedOpenSnapshotFailure.errors.map((error) =>
+                error === openSnapshotFailure
+                  ? "primary"
+                  : error === openSnapshotCloseFailure
+                    ? "close"
+                    : error instanceof Error
+                      ? error.message
+                      : String(error),
+              )
+            : [
+                combinedOpenSnapshotFailure instanceof Error
+                  ? combinedOpenSnapshotFailure.message
+                  : String(combinedOpenSnapshotFailure),
+              ],
+      },
+      {
+        createAttempts: 1,
+        createErrors: ["primary", "close"],
+        openAttempts: 1,
+        openErrors: ["primary", "close"],
+      },
     );
     const captureBrowserModule = createRequire(__filename)(
       path.join(scaffoldDir, "scripts", "capture-browser.ts"),
@@ -9347,21 +9378,25 @@ export const test_cli_scaffold = async (): Promise<void> => {
       }
       return status;
     }) as typeof fs.lstatSync;
-    let postPublicationRejected = false;
+    // Name the refusal rather than counting it: the relink hook did not fire on
+    // the previous head, so what this call actually refused is the fact needed.
+    let postPublicationRejected: string | null = null;
     let postPublicationCleanupFailure: { error: unknown } | undefined;
     try {
-      postPublicationRejected = throws(() =>
-        renderAttemptModule.beginRenderAttempt({
-          base: attemptRoot,
-          chunk: attemptChunk,
-          lock: postPublicationLock,
-          pid: 32012,
-          processAlive: () => false,
-          slot: "slot-0001",
-          target: attemptTarget,
-          token: secondAttemptToken,
-        }),
-      );
+      postPublicationRejected = messagesOf(
+        captureFailure(() =>
+          renderAttemptModule.beginRenderAttempt({
+            base: attemptRoot,
+            chunk: attemptChunk,
+            lock: postPublicationLock,
+            pid: 32012,
+            processAlive: () => false,
+            slot: "slot-0001",
+            target: attemptTarget,
+            token: secondAttemptToken,
+          }),
+        ),
+      ).join(" | ");
     } catch (error) {
       postPublicationCleanupFailure = { error };
       throw error;
@@ -9382,13 +9417,17 @@ export const test_cli_scaffold = async (): Promise<void> => {
           .readFileSync(postPublicationLock.snapshot.target)
           .equals(postPublicationLockSuccessor),
         recordResident: fs.existsSync(attemptTarget),
-        rejected: postPublicationRejected,
+        rejection:
+          postPublicationRejected !== null &&
+          postPublicationRejected.includes("changed physical generation")
+            ? "changed physical generation"
+            : postPublicationRejected,
         relinked: postPublicationRelinked,
       },
       {
         lockSuccessorResident: true,
         recordResident: true,
-        rejected: true,
+        rejection: "changed physical generation",
         relinked: true,
       },
     );

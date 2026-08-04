@@ -4,6 +4,8 @@ import path from "node:path";
 
 export interface ICaptureExecutableSnapshot {
   descriptor: number;
+  /** Version read from this descriptor; compare only against another fstat. */
+  descriptorVersion: string;
   digest: `sha256:${string}`;
   directory: IPhysicalDirectory;
   identity: string;
@@ -78,20 +80,20 @@ export const createCaptureExecutableSnapshot = (
         `Capture executable directory "${directory.path}" changed while created.`,
       );
     const resident = fs.lstatSync(namespacePath, { bigint: true });
-    const identity = physicalVersion(opened);
     if (
       resident.isSymbolicLink() ||
       resident.isFile() === false ||
-      physicalVersion(resident) !== identity
+      physicalFileIdentity(resident) !== physicalFileIdentity(opened)
     )
       throw new Error(
         `Capture executable "${namespacePath}" changed while created.`,
       );
     const snapshot: ICaptureExecutableSnapshot = {
       descriptor,
+      descriptorVersion: physicalVersion(opened),
       digest: digestDescriptor(descriptor, bytes.length),
       directory,
-      identity,
+      identity: physicalVersion(resident),
       maximumBytes: bytes.length,
       path: namespacePath,
       physicalIdentity: physicalFileIdentity(opened),
@@ -127,7 +129,10 @@ export const openCaptureExecutable = (
   const descriptor = fs.openSync(namespacePath, "r");
   try {
     const opened = fs.fstatSync(descriptor, { bigint: true });
-    if (opened.isFile() === false || physicalVersion(opened) !== identity)
+    if (
+      opened.isFile() === false ||
+      physicalFileIdentity(opened) !== physicalFileIdentity(linked)
+    )
       throw new Error(
         `Capture executable "${namespacePath}" changed before open.`,
       );
@@ -137,12 +142,17 @@ export const openCaptureExecutable = (
       );
     const digest = digestDescriptor(descriptor, maximumBytes);
     const completed = fs.fstatSync(descriptor, { bigint: true });
-    if (completed.isFile() === false || physicalVersion(completed) !== identity)
+    const descriptorVersion = physicalVersion(opened);
+    if (
+      completed.isFile() === false ||
+      physicalVersion(completed) !== descriptorVersion
+    )
       throw new Error(
         `Capture executable "${namespacePath}" changed while hashed.`,
       );
     const snapshot: ICaptureExecutableSnapshot = {
       descriptor,
+      descriptorVersion,
       digest,
       directory,
       identity,
@@ -181,7 +191,7 @@ export const assertCaptureExecutableDescriptor = (
   const opened = fs.fstatSync(expected.descriptor, { bigint: true });
   if (
     opened.isFile() === false ||
-    physicalVersion(opened) !== expected.identity ||
+    physicalVersion(opened) !== expected.descriptorVersion ||
     physicalFileIdentity(opened) !== expected.physicalIdentity
   )
     throw new Error(
@@ -204,7 +214,7 @@ export const assertCaptureExecutableBytes = (
   const completed = fs.fstatSync(expected.descriptor, { bigint: true });
   if (
     completed.isFile() === false ||
-    physicalVersion(completed) !== expected.identity
+    physicalVersion(completed) !== expected.descriptorVersion
   )
     throw new Error(
       `Capture executable "${expected.path}" changed while revalidated.`,
@@ -331,5 +341,9 @@ const assertPhysicalDirectory = (
 const physicalVersion = (status: fs.BigIntStats): string =>
   `${status.dev}\0${status.ino}\0${status.size}\0${status.mtimeNs}\0${status.ctimeNs}`;
 
+// A pathname stat and a descriptor stat do not agree on every field: Windows
+// reads the volume serial through a different API for each, so one resident,
+// unmodified file can report two devices. The file id is what both sources
+// agree on, so every cross-source comparison binds by it.
 const physicalFileIdentity = (status: fs.BigIntStats): string =>
-  `${status.dev}\0${status.ino}`;
+  `${status.ino}`;

@@ -21,12 +21,11 @@ interface IFixture {
 }
 
 const repositoryRoot = path.resolve(__dirname, "../../../..");
-const pluginCache = path.join(
-  repositoryRoot,
-  "node_modules",
-  ".cache",
-  "automovie-lint-test",
-);
+// Share the toolchain's own plugin cache instead of a private one. The Go lint
+// and typia plugins are content-addressed there and the suite has already built
+// them by the time this test runs, so a private directory only bought this test
+// a second multi-minute build of the same binaries.
+const pluginCache = path.join(repositoryRoot, "node_modules", ".cache", "ttsc");
 
 /**
  * Environment for a toolchain process that represents an independent user

@@ -212,13 +212,13 @@ export const test_cli_scaffold_render_attempt_cleanup = (): void => {
             "letpostPublicationCleanupFailure:{error:unknown}|undefined;",
           substantive: {
             digest:
-              "be46287f496652c85f8dc5b9c7a374f399f65227b147b466b32f5eda27245f31",
-            tokens: 52,
+              "72835fe266e1ea9bbecbc3f933d70e4634550db4f84b5b000033cc8fa9c332cb",
+            tokens: 61,
           },
           tryBody:
-            '{postPublicationRejected=throws(()=>renderAttemptModule.beginRenderAttempt({base:attemptRoot,chunk:attemptChunk,lock:postPublicationLock,pid:32012,processAlive:()=>false,slot:"slot-0001",target:attemptTarget,token:secondAttemptToken,}),);}',
+            '{postPublicationRejected=messagesOf(captureFailure(()=>renderAttemptModule.beginRenderAttempt({base:attemptRoot,chunk:attemptChunk,lock:postPublicationLock,pid:32012,processAlive:()=>false,slot:"slot-0001",target:attemptTarget,token:secondAttemptToken,}),),).join("|");}',
           tryDigest:
-            "83a33979c48346f05e369f7bb9db09b9dbec007c3e1db4f2a6f43b176410f9a4",
+            "1b6e5e63244daf7a17cb755dbc1af5316d95f880be138e1c993c6573cfc922f7",
         },
         {
           catchBodies: ["attemptParentCleanupFailure={error};", "throwerror;"],
