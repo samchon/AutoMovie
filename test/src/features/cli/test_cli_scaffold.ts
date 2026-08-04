@@ -9020,7 +9020,10 @@ export const test_cli_scaffold = async (): Promise<void> => {
     fs.renameSync(parkedSegmentAutomovie, segmentAutomovie);
     const publishedReceiptBytes = fs.readFileSync(captureReceipt);
     const parkedCaptureProject = `${captureProject}.parked`;
-    let receiptRootSwapped = false;
+    // One holder carries the swap's outcome — pending, swapped, or the message
+    // the swap itself failed with — because this test's static contracts pin the
+    // top-level statement indices around it.
+    let receiptRootSwap = "pending";
     let parkedReceiptGeneration = "";
     mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
       const descriptor = Reflect.apply(nativeOpen, mutableFs, [
@@ -9029,27 +9032,29 @@ export const test_cli_scaffold = async (): Promise<void> => {
         ...args,
       ]) as number;
       if (
-        receiptRootSwapped === false &&
+        receiptRootSwap === "pending" &&
         typeof file !== "number" &&
         flags === "wx+" &&
         path.basename(path.dirname(file.toString())) === "install-receipts"
       ) {
-        receiptRootSwapped = true;
+        receiptRootSwap = "swapped";
         parkedReceiptGeneration = path.join(
           parkedCaptureProject,
           path.relative(captureProject, path.resolve(file.toString())),
         );
-        // Replace the project root when this descriptor closes. Windows refuses
-        // to rename a directory that still holds an open handle, so renaming it
-        // here would make the hook itself the failure.
-        mutableFs.closeSync = ((closing: number): void => {
-          Reflect.apply(nativeClose, mutableFs, [closing]);
-          if (closing !== descriptor) return;
-          mutableFs.closeSync = nativeClose;
+        // The publication holds this descriptor for its whole run, so the swap
+        // has to happen here, while it is open. Record what the swap itself did:
+        // moving it to the descriptor's close put it after the ancestry checks
+        // and the publication stopped refusing, and a refusal from this hook
+        // would otherwise be indistinguishable from the product's own.
+        try {
           fs.renameSync(captureProject, parkedCaptureProject);
           fs.mkdirSync(path.dirname(captureReceipt), { recursive: true });
           nativeWriteFile(captureReceipt, publishedReceiptBytes);
-        }) as typeof fs.closeSync;
+        } catch (error) {
+          receiptRootSwap =
+            error instanceof Error ? error.message : String(error);
+        }
       }
       return descriptor;
     }) as typeof fs.openSync;
@@ -9074,30 +9079,28 @@ export const test_cli_scaffold = async (): Promise<void> => {
             mutableFs.openSync = nativeOpen;
           },
         },
-        {
-          resource: "capture receipt root swap close hook",
-          cleanup: () => {
-            mutableFs.closeSync = nativeClose;
-          },
-        },
       ]);
     }
     TestValidator.equals(
       "capture install rejects a project root successor without cleaning it",
-      namedFacts([
-        ["receiptRootSwapped", () => receiptRootSwapped],
-        ["receiptRootRaceRejected", () => receiptRootRaceRejected],
-        [
-          "captureReceiptPublishedReceiptBytes",
-          () => fs.readFileSync(captureReceipt).equals(publishedReceiptBytes),
-        ],
-        [
-          "parkedReceiptGenerationResident",
-          () => fs.existsSync(parkedReceiptGeneration),
-        ],
-      ]),
       {
-        receiptRootSwapped: true,
+        // Report the swap's own outcome by value: when the injection itself
+        // fails, a boolean cannot say why.
+        swap: receiptRootSwap,
+        ...namedFacts([
+          ["receiptRootRaceRejected", () => receiptRootRaceRejected],
+          [
+            "captureReceiptPublishedReceiptBytes",
+            () => fs.readFileSync(captureReceipt).equals(publishedReceiptBytes),
+          ],
+          [
+            "parkedReceiptGenerationResident",
+            () => fs.existsSync(parkedReceiptGeneration),
+          ],
+        ]),
+      },
+      {
+        swap: "swapped",
         receiptRootRaceRejected: true,
         captureReceiptPublishedReceiptBytes: true,
         parkedReceiptGenerationResident: true,
