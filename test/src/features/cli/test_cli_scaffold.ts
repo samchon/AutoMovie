@@ -8979,16 +8979,23 @@ export const test_cli_scaffold = async (): Promise<void> => {
       target: attemptTarget,
       token: secondAttemptToken,
     });
+    // Removing the dead owner and creating its successor at the same pathname
+    // lets the filesystem hand back the same inode, so the physical identity
+    // is not the evidence of replacement. The resident record and the refusal
+    // the dead owner's handle now meets are. Property order is the evaluation
+    // order here: the record is read before the refused transition.
     TestValidator.equals(
       "render attempt stale recovery replaces only a dead exact owner",
       {
-        identityReplaced:
-          staleRunningAttempt.snapshot.targetIdentity !==
-          recoveredStaleAttempt.snapshot.targetIdentity,
+        residentToken: JSON.parse(fs.readFileSync(attemptTarget, "utf8")).token,
+        staleHandleRefused: throws(() =>
+          renderAttemptModule.completeRenderAttempt(staleRunningAttempt),
+        ),
         token: recoveredStaleAttempt.record.token,
       },
       {
-        identityReplaced: true,
+        residentToken: secondAttemptToken,
+        staleHandleRefused: true,
         token: secondAttemptToken,
       },
     );
