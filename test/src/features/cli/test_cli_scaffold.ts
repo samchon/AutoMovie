@@ -41,6 +41,24 @@ const throwsWith = (fn: () => unknown, message: string): boolean => {
   }
 };
 
+/** The thrown value of `fn`, or `null` when it returned. */
+const captureFailure = (fn: () => unknown): unknown => {
+  try {
+    fn();
+    return null;
+  } catch (error) {
+    return error;
+  }
+};
+
+/** Every leaf failure message, flattening aggregate cleanup wrappers. */
+const messagesOf = (failure: unknown): string[] =>
+  failure instanceof AggregateError
+    ? failure.errors.flatMap((error) => messagesOf(error))
+    : failure === null
+      ? []
+      : [failure instanceof Error ? failure.message : String(failure)];
+
 const templateExpression = (expression: string): string =>
   "$" + "{" + expression + "}";
 
@@ -3898,7 +3916,31 @@ export const test_cli_scaffold = async (): Promise<void> => {
         );
         return null;
       } catch (error) {
-        return error instanceof Error ? error.message : String(error);
+        // Name the stat fields that disagree between the pathname and the
+        // descriptor, so a residual identity refusal says which one moved
+        // instead of only that something did.
+        const linked = fs.lstatSync(artifact, { bigint: true });
+        const descriptor = fs.openSync(artifact, "r");
+        const drift = ((): string[] => {
+          try {
+            const opened = fs.fstatSync(descriptor, { bigint: true });
+            return (
+              [
+                ["dev", linked.dev === opened.dev],
+                ["ino", linked.ino === opened.ino],
+                ["size", linked.size === opened.size],
+                ["mtimeNs", linked.mtimeNs === opened.mtimeNs],
+                ["ctimeNs", linked.ctimeNs === opened.ctimeNs],
+              ] as const
+            )
+              .filter(([, agrees]) => agrees === false)
+              .map(([field]) => field);
+          } finally {
+            fs.closeSync(descriptor);
+          }
+        })();
+        const message = error instanceof Error ? error.message : String(error);
+        return `${message} [drift: ${drift.length === 0 ? "none" : drift.join(",")}]`;
       }
     })();
     TestValidator.equals(
@@ -4112,14 +4154,38 @@ export const test_cli_scaffold = async (): Promise<void> => {
         },
       ]);
     }
-    TestValidator.predicate(
+    // Name each preserved failure: six facts folded into one boolean report
+    // only that something differed, and this chain first runs on a platform
+    // whose descriptor behaviour is what the scenario is about.
+    TestValidator.equals(
       "generated viewer preserves descriptor operation and cleanup failures",
-      standaloneViewerCloseError === standaloneViewerCloseFailure &&
-        preservedPrimaryOnlyViewerFailure === primaryOnlyViewerFailure &&
-        combinedViewerFailure instanceof AggregateError &&
-        combinedViewerFailure.errors.length === 2 &&
-        combinedViewerFailure.errors[0] === combinedViewerPrimary &&
-        combinedViewerFailure.errors[1] === combinedViewerClose,
+      {
+        combined:
+          combinedViewerFailure instanceof AggregateError
+            ? combinedViewerFailure.errors.map((error) =>
+                error === combinedViewerPrimary
+                  ? "primary"
+                  : error === combinedViewerClose
+                    ? "close"
+                    : error instanceof Error
+                      ? error.message
+                      : String(error),
+              )
+            : [
+                combinedViewerFailure instanceof Error
+                  ? combinedViewerFailure.message
+                  : String(combinedViewerFailure),
+              ],
+        primaryOnly:
+          preservedPrimaryOnlyViewerFailure === primaryOnlyViewerFailure,
+        standaloneClose:
+          standaloneViewerCloseError === standaloneViewerCloseFailure,
+      },
+      {
+        combined: ["primary", "close"],
+        primaryOnly: true,
+        standaloneClose: true,
+      },
     );
     const shotsDirectory = path.dirname(artifact);
     const parkedShots = `${shotsDirectory}.parked`;
@@ -8571,17 +8637,20 @@ export const test_cli_scaffold = async (): Promise<void> => {
       }
       nativeClose(descriptor);
     }) as typeof fs.closeSync;
-    let directFileFailureRejected = false;
+    let directFileFailureMessages: string[] = [];
     let directFileFailureCleanupFailure: { error: unknown } | undefined;
     try {
-      directFileFailureRejected = throwsWith(
-        () =>
+      // The refusal travels inside the descriptor cleanup aggregate, whose own
+      // message names the cleanup rather than the identity change, so read
+      // every leaf failure instead of only the thrown error's message.
+      directFileFailureMessages = messagesOf(
+        captureFailure(() =>
           renderAttemptGcModule.createRenderGcFileSnapshot(
             directFileFailureRoot,
             directFileFailureTarget,
             directFileFailureBytes,
           ),
-        "changed physical identity",
+        ),
       );
     } catch (error) {
       directFileFailureCleanupFailure = { error };
@@ -8620,9 +8689,14 @@ export const test_cli_scaffold = async (): Promise<void> => {
       "direct render file creation preserves a same-inode parent successor on failure",
       {
         closeFailed: directFileFailureCloseFailed,
+        closePreserved: directFileFailureMessages.some((message) =>
+          message.includes("fixture direct file close failure"),
+        ),
         parentDevice: directFileResident.dev === parkedDirectFileResident.dev,
         parentInode: directFileResident.ino === parkedDirectFileResident.ino,
-        rejected: directFileFailureRejected,
+        rejected: directFileFailureMessages.some((message) =>
+          message.includes("changed physical identity"),
+        ),
         relinked: directFileFailureRelinked,
         residentBytes: fs
           .readFileSync(directFileFailureTarget)
@@ -8634,6 +8708,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       },
       {
         closeFailed: true,
+        closePreserved: true,
         parentDevice: true,
         parentInode: true,
         rejected: true,

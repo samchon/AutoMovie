@@ -4381,12 +4381,18 @@ export const test_mcp_production_project = (): void => {
       "deliverables/pre-lease/frame.bin",
     );
     const parkedPreLeaseRoot = `${preLeaseRoot}-parked`;
+    // An owned read reaches the target through the owner's real path, which a
+    // temporary root can spell differently from the fixture's own join.
+    const preLeaseTargetReal = fs.realpathSync(preLeaseTarget);
     const nativeReadForPreLease = fs.readFileSync;
+    const nativeOpenForPreLease = fs.openSync;
+    const nativeCloseForPreLease = fs.closeSync;
     let preLeaseSwapped = false;
-    // Record what the staging read actually opens: a descriptor read, or a
-    // pathname the fixture spells differently, both defeat a path comparison.
+    // Record what the staging read actually opens: an owned read reaches its
+    // target through a descriptor, so a pathname comparison never sees it.
     const preLeasePathReads: string[] = [];
     let preLeaseDescriptorReads = 0;
+    let preLeaseDescriptor: number | null = null;
     fs.readFileSync = ((
       file: fs.PathOrFileDescriptor,
       ...args: unknown[]
@@ -4394,17 +4400,32 @@ export const test_mcp_production_project = (): void => {
       const output = Reflect.apply(nativeReadForPreLease, fs, [file, ...args]);
       if (typeof file === "number") preLeaseDescriptorReads += 1;
       else preLeasePathReads.push(path.resolve(file.toString()));
+      return output;
+    }) as typeof fs.readFileSync;
+    fs.openSync = ((file: fs.PathLike, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpenForPreLease, fs, [
+        file,
+        ...args,
+      ]) as number;
+      const resolved = path.resolve(file.toString());
       if (
-        preLeaseSwapped === false &&
-        typeof file !== "number" &&
-        path.resolve(file.toString()) === preLeaseTarget
-      ) {
+        preLeaseDescriptor === null &&
+        (resolved === preLeaseTarget || resolved === preLeaseTargetReal)
+      )
+        preLeaseDescriptor = descriptor;
+      return descriptor;
+    }) as typeof fs.openSync;
+    // Replace the root when the staging read closes its own descriptor: the
+    // lease is still held, and no handle is open inside the tree, which a
+    // directory rename requires on Windows.
+    fs.closeSync = ((descriptor: number): void => {
+      Reflect.apply(nativeCloseForPreLease, fs, [descriptor]);
+      if (preLeaseSwapped === false && descriptor === preLeaseDescriptor) {
         preLeaseSwapped = true;
         fs.renameSync(preLeaseRoot, parkedPreLeaseRoot);
         fs.cpSync(parkedPreLeaseRoot, preLeaseRoot, { recursive: true });
       }
-      return output;
-    }) as typeof fs.readFileSync;
+    }) as typeof fs.closeSync;
     let preLeaseRejected = false;
     let preLeaseReplacementUntouched = false;
     let preLeaseFailure: IProductionProjectFixtureFailure | undefined;
@@ -4427,6 +4448,18 @@ export const test_mcp_production_project = (): void => {
           resource: "pre-lease read hook",
           cleanup: () => {
             fs.readFileSync = nativeReadForPreLease;
+          },
+        },
+        {
+          resource: "pre-lease open hook",
+          cleanup: () => {
+            fs.openSync = nativeOpenForPreLease;
+          },
+        },
+        {
+          resource: "pre-lease close hook",
+          cleanup: () => {
+            fs.closeSync = nativeCloseForPreLease;
           },
         },
         {
@@ -4461,6 +4494,7 @@ export const test_mcp_production_project = (): void => {
         rejected: preLeaseRejected,
         replacementUntouched: preLeaseReplacementUntouched,
         swapped: preLeaseSwapped,
+        targetDescriptorOpened: preLeaseDescriptor !== null,
         targetPathRead: preLeasePathReads.includes(preLeaseTarget),
       },
       {
@@ -4468,7 +4502,8 @@ export const test_mcp_production_project = (): void => {
         rejected: true,
         replacementUntouched: true,
         swapped: true,
-        targetPathRead: true,
+        targetDescriptorOpened: true,
+        targetPathRead: false,
       },
     );
     const atomicDeleteBase = modelRecipe();

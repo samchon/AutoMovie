@@ -403,13 +403,13 @@ export const test_mcp_production_project_single_fixture_cleanup = (): void => {
             catchBodies: ["internalAliasFailure={error};", "throwerror;"],
             catchVariables: ["error"],
             containerKind: "TryStatement",
-            containerStatements: 230,
+            containerStatements: 236,
             failureHolder:
               "letinternalAliasFailure:|ISingleProductionProjectFixtureFailure|undefined;",
             finallyBodies: [
               "preserveSingleProductionProjectFixtureCleanup(internalAliasFailure,()=>internalAlias.dispose(),);",
             ],
-            index: 213,
+            index: 219,
             substantive: {
               digest:
                 "8ac7e322bb9c8e1d50a51f06739da0337772cca992d6bdfff5ee950ebcfbf1da",
@@ -424,13 +424,13 @@ export const test_mcp_production_project_single_fixture_cleanup = (): void => {
             catchBodies: ["malformedDesignFailure={error};", "throwerror;"],
             catchVariables: ["error"],
             containerKind: "TryStatement",
-            containerStatements: 230,
+            containerStatements: 236,
             failureHolder:
               "letmalformedDesignFailure:|ISingleProductionProjectFixtureFailure|undefined;",
             finallyBodies: [
               "preserveSingleProductionProjectFixtureCleanup(malformedDesignFailure,()=>malformedDesign.dispose(),);",
             ],
-            index: 226,
+            index: 232,
             substantive: {
               digest:
                 "53acaa5ffa6c86ed6b53ba0ef0314a1649ab490d01b0f693877ec9d50c3a1f42",
@@ -445,13 +445,13 @@ export const test_mcp_production_project_single_fixture_cleanup = (): void => {
             catchBodies: ["invalidRevisionFailure={error};", "throwerror;"],
             catchVariables: ["error"],
             containerKind: "TryStatement",
-            containerStatements: 230,
+            containerStatements: 236,
             failureHolder:
               "letinvalidRevisionFailure:|ISingleProductionProjectFixtureFailure|undefined;",
             finallyBodies: [
               "preserveSingleProductionProjectFixtureCleanup(invalidRevisionFailure,()=>invalidRevision.dispose(),);",
             ],
-            index: 229,
+            index: 235,
             substantive: {
               digest:
                 "99a96969a91cfad1e46a15fefca532351084eeef9188b2f1dd26e6c0a06f5b38",

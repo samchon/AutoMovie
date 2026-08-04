@@ -232,7 +232,7 @@ export const test_mcp_production_project_root_coordination_hook_cleanup =
               catchBodies: ["parentSwapFailure={error};", "throwerror;"],
               catchVariables: ["error"],
               containerKind: "TryStatement",
-              containerStatements: 230,
+              containerStatements: 236,
               failureHolder:
                 "letparentSwapFailure:IProductionProjectFixtureFailure|undefined;",
               finallyDigest:
@@ -282,7 +282,7 @@ export const test_mcp_production_project_root_coordination_hook_cleanup =
               catchBodies: ["coordinationMkdirFailure={error};", "throwerror;"],
               catchVariables: ["error"],
               containerKind: "TryStatement",
-              containerStatements: 230,
+              containerStatements: 236,
               failureHolder:
                 "letcoordinationMkdirFailure:IProductionProjectFixtureFailure|undefined;",
               finallyDigest:
@@ -335,7 +335,7 @@ export const test_mcp_production_project_root_coordination_hook_cleanup =
               catchBodies: ["deniedRootLstatFailure={error};", "throwerror;"],
               catchVariables: ["error"],
               containerKind: "TryStatement",
-              containerStatements: 230,
+              containerStatements: 236,
               failureHolder:
                 "letdeniedRootLstatFailure:IProductionProjectFixtureFailure|undefined;",
               finallyDigest:
@@ -360,7 +360,7 @@ export const test_mcp_production_project_root_coordination_hook_cleanup =
               catchBodies: ["coordinationChmodFailure={error};", "throwerror;"],
               catchVariables: ["error"],
               containerKind: "TryStatement",
-              containerStatements: 230,
+              containerStatements: 236,
               failureHolder:
                 "letcoordinationChmodFailure:IProductionProjectFixtureFailure|undefined;",
               finallyDigest:
@@ -385,7 +385,7 @@ export const test_mcp_production_project_root_coordination_hook_cleanup =
               catchBodies: ["partialCoordinateFailure={error};", "throwerror;"],
               catchVariables: ["error"],
               containerKind: "TryStatement",
-              containerStatements: 230,
+              containerStatements: 236,
               failureHolder:
                 "letpartialCoordinateFailure:IProductionProjectFixtureFailure|undefined;",
               finallyDigest:

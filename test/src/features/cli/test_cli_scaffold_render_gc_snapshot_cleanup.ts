@@ -125,13 +125,13 @@ export const test_cli_scaffold_render_gc_snapshot_cleanup = (): void => {
             "letdirectFileFailureCleanupFailure:{error:unknown}|undefined;",
           substantive: {
             digest:
-              "223d4fdf93773ee5192d468750e8641ddac24280d17fdb273d91f019015949c9",
-            tokens: 23,
+              "3709772c1f1d05887d67f9147413bcdb52b76761f46ed6f053e8003e1ae593ab",
+            tokens: 25,
           },
           tryBody:
-            '{directFileFailureRejected=throwsWith(()=>renderAttemptGcModule.createRenderGcFileSnapshot(directFileFailureRoot,directFileFailureTarget,directFileFailureBytes,),"changedphysicalidentity",);}',
+            "{//Therefusaltravelsinsidethedescriptorcleanupaggregate,whoseown//messagenamesthecleanupratherthantheidentitychange,soread//everyleaffailureinsteadofonlythethrownerror'smessage.directFileFailureMessages=messagesOf(captureFailure(()=>renderAttemptGcModule.createRenderGcFileSnapshot(directFileFailureRoot,directFileFailureTarget,directFileFailureBytes,),),);}",
           tryDigest:
-            "9e6233fd9daa9168b6ef11e0a447e8ef7466e6176376150130e2d32ab4f3765e",
+            "22f42ca82f79a7658d4c8c46c1472951e01fa4226d02e22caf437b3aa6b2825d",
         },
         {
           catchBodies: ["directFileAbaCleanupFailure={error};", "throwerror;"],

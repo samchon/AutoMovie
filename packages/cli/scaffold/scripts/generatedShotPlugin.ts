@@ -556,19 +556,23 @@ export const readPhysicalFileSnapshot = (
   let failure: IViewerFileDescriptorFailure | undefined;
   try {
     const opened = fs.fstatSync(descriptor, { bigint: true });
+    // A pathname stat and a descriptor stat are two different sources, and
+    // their timestamps are not guaranteed to agree at the same instant on
+    // every filesystem. Bind the two by physical identity, and compare a
+    // version only against another reading of the same source.
     if (
       opened.isFile() === false ||
       opened.dev !== linked.dev ||
-      opened.ino !== linked.ino ||
-      physicalVersion(opened) !== identity
+      opened.ino !== linked.ino
     )
       throw new Error("viewer file changed physical identity before open");
+    const openedIdentity = physicalVersion(opened);
     const bytes = fs.readFileSync(descriptor);
     const completed = fs.fstatSync(descriptor, { bigint: true });
     const resident = fs.lstatSync(file, { bigint: true });
     if (
       completed.isFile() === false ||
-      physicalVersion(completed) !== identity ||
+      physicalVersion(completed) !== openedIdentity ||
       resident.isSymbolicLink() ||
       resident.isFile() === false ||
       resident.dev !== opened.dev ||

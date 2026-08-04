@@ -763,9 +763,18 @@ export const test_mcp_production_legacy_import = (): void => {
   const renameFailure = createLegacy();
   try {
     const nativeRename = fs.renameSync;
-    fs.renameSync = () => {
-      throw new Error("injected rename failure");
-    };
+    // Scope the injection to the importer's atomic publish. A process-wide
+    // rename failure also breaks the commit lock's release, which quarantines
+    // the resident lock by rename and abandons it when that rename fails, so
+    // every later acquisition of that coordinate sees a foreign owner.
+    fs.renameSync = ((oldPath: fs.PathLike, newPath: fs.PathLike): void => {
+      if (
+        path.basename(oldPath.toString()).startsWith(".automovie-import-") &&
+        path.basename(newPath.toString()) === ".automovie"
+      )
+        throw new Error("injected rename failure");
+      nativeRename(oldPath, newPath);
+    }) as typeof fs.renameSync;
     try {
       // Name the observed failure and the leftover entries: a cleanup that
       // cannot remove the staging tree must be reported as itself rather than
