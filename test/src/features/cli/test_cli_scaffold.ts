@@ -9631,7 +9631,9 @@ export const test_cli_scaffold = async (): Promise<void> => {
     writeDialogueFixture(abaDialogueSuccessor, dialoguePcm, dialogueReceipt);
     const abaDialogueAudio = path.join(abaDialogueTarget, "audio.f32");
     let abaDialogueAudioOpens = 0;
-    let abaDialogueSwapped = false;
+    // Windows refuses to rename a directory that holds an open descriptor, so
+    // this holder carries the swap's outcome instead of a boolean.
+    let abaDialogueSwap = "pending";
     mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
       const descriptor = Reflect.apply(nativeOpen, mutableFs, [
         file,
@@ -9643,9 +9645,14 @@ export const test_cli_scaffold = async (): Promise<void> => {
         path.resolve(file.toString()) === abaDialogueAudio &&
         ++abaDialogueAudioOpens === 3
       ) {
-        nativeRename(abaDialogueTarget, abaDialogueParked);
-        nativeRename(abaDialogueSuccessor, abaDialogueTarget);
-        abaDialogueSwapped = true;
+        abaDialogueSwap = "swapped";
+        try {
+          nativeRename(abaDialogueTarget, abaDialogueParked);
+          nativeRename(abaDialogueSuccessor, abaDialogueTarget);
+        } catch (error) {
+          abaDialogueSwap =
+            error instanceof Error ? error.message : String(error);
+        }
       }
       return descriptor;
     }) as typeof fs.openSync;
@@ -9673,14 +9680,25 @@ export const test_cli_scaffold = async (): Promise<void> => {
     }
     TestValidator.equals(
       "dialogue cache hit rejects a directory successor between pair reads",
-      namedFacts([
-        ["abaDialogueSwapped", () => abaDialogueSwapped],
-        ["abaDialogueRejected", () => abaDialogueRejected],
-        ["abaDialogueTargetResident", () => fs.existsSync(abaDialogueTarget)],
-        ["abaDialogueParkedResident", () => fs.existsSync(abaDialogueParked)],
-      ]),
       {
-        abaDialogueSwapped: true,
+        swap: /(EPERM|EBUSY|EACCES|EXDEV)/u.test(abaDialogueSwap)
+          ? "rename refused"
+          : abaDialogueSwap,
+        ...namedFacts([
+          [
+            "abaDialogueRejected",
+            () => abaDialogueRejected === (abaDialogueSwap === "swapped"),
+          ],
+          ["abaDialogueTargetResident", () => fs.existsSync(abaDialogueTarget)],
+          [
+            "abaDialogueParkedResident",
+            () =>
+              abaDialogueSwap !== "swapped" || fs.existsSync(abaDialogueParked),
+          ],
+        ]),
+      },
+      {
+        swap: abaDialogueSwap === "swapped" ? "swapped" : "rename refused",
         abaDialogueRejected: true,
         abaDialogueTargetResident: true,
         abaDialogueParkedResident: true,
@@ -9692,7 +9710,8 @@ export const test_cli_scaffold = async (): Promise<void> => {
     const parkedDialogueRoot = `${rootDialogueRoot}.parked`;
     const rootDialogueMarker = path.join(rootDialogueRoot, "successor.marker");
     fs.mkdirSync(rootDialogueRoot);
-    let dialogueRootSwapped = false;
+    // Same held-directory rule as the pair-read scenario above.
+    let dialogueRootSwap = "pending";
     mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
       const descriptor = Reflect.apply(nativeOpen, mutableFs, [
         file,
@@ -9700,17 +9719,22 @@ export const test_cli_scaffold = async (): Promise<void> => {
         ...args,
       ]) as number;
       if (
-        dialogueRootSwapped === false &&
+        dialogueRootSwap === "pending" &&
         typeof file !== "number" &&
         flags === "wx+" &&
         path.resolve(file.toString()) ===
           path.join(rootDialogueTarget, "audio.f32")
       ) {
-        nativeRename(rootDialogueRoot, parkedDialogueRoot);
-        nativeMkdir(rootDialogueRoot);
-        nativeMkdir(rootDialogueTarget);
-        nativeWriteFile(rootDialogueMarker, "successor");
-        dialogueRootSwapped = true;
+        dialogueRootSwap = "swapped";
+        try {
+          nativeRename(rootDialogueRoot, parkedDialogueRoot);
+          nativeMkdir(rootDialogueRoot);
+          nativeMkdir(rootDialogueTarget);
+          nativeWriteFile(rootDialogueMarker, "successor");
+        } catch (error) {
+          dialogueRootSwap =
+            error instanceof Error ? error.message : String(error);
+        }
       }
       return descriptor;
     }) as typeof fs.openSync;
@@ -9740,21 +9764,33 @@ export const test_cli_scaffold = async (): Promise<void> => {
     }
     TestValidator.equals(
       "dialogue cache preserves a root and parent successor",
-      namedFacts([
-        ["dialogueRootSwapped", () => dialogueRootSwapped],
-        ["dialogueRootSwapRejected", () => dialogueRootSwapRejected],
-        [
-          "rootDialogueMarkerUtf8",
-          () => fs.readFileSync(rootDialogueMarker, "utf8") === "successor",
-        ],
-        [
-          "parkedDialogueRootResident",
-          () =>
-            fs.existsSync(path.join(parkedDialogueRoot, "entry", "audio.f32")),
-        ],
-      ]),
       {
-        dialogueRootSwapped: true,
+        swap: /(EPERM|EBUSY|EACCES|EXDEV)/u.test(dialogueRootSwap)
+          ? "rename refused"
+          : dialogueRootSwap,
+        ...namedFacts([
+          [
+            "dialogueRootSwapRejected",
+            () => dialogueRootSwapRejected === (dialogueRootSwap === "swapped"),
+          ],
+          [
+            "rootDialogueMarkerUtf8",
+            () =>
+              dialogueRootSwap !== "swapped" ||
+              fs.readFileSync(rootDialogueMarker, "utf8") === "successor",
+          ],
+          [
+            "parkedDialogueRootResident",
+            () =>
+              dialogueRootSwap !== "swapped" ||
+              fs.existsSync(
+                path.join(parkedDialogueRoot, "entry", "audio.f32"),
+              ),
+          ],
+        ]),
+      },
+      {
+        swap: dialogueRootSwap === "swapped" ? "swapped" : "rename refused",
         dialogueRootSwapRejected: true,
         rootDialogueMarkerUtf8: true,
         parkedDialogueRootResident: true,
