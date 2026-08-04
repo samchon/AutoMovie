@@ -1239,13 +1239,13 @@ export const test_cli_scaffold = async (): Promise<void> => {
           "64155196bcfdd8402264f23e2dd169e90c7283945a915fd16caff53c137da759",
         ],
         createRenderGcFileSnapshot: [
-          "71ac573a2c04921be47d3e6519c5792da6f11d903f2521f1696550fe9f283e43",
+          "1c6cbfcddd3d1750b0a9c657c7584cd0ce11a4e7e2bf94855d1d4da8322d0870",
         ],
         readCapturedRenderGcFile: [
-          "9d136dbd921cfd8af3ea6d8daec3e2ff2c4e865f255a131581c914ce7e6857c8",
+          "2918838c61f2d06e81c55fd01e3464eec4752ef3963a1cb28e1e442e5fb374d2",
         ],
         readFileEntry: [
-          "86cfb31e19bff5d3a9b59d069bd79d170c89d85ec6970481300ab57f6e535d48",
+          "074c9a3a094e810b1a98e705f3c2890ef94855f006c73926a1ce577c9a984f6e",
         ],
       },
     },
@@ -9254,14 +9254,22 @@ export const test_cli_scaffold = async (): Promise<void> => {
         },
       ]);
     }
-    TestValidator.predicate(
+    TestValidator.equals(
       "render attempt preserves a relinked final record after lock authority loss",
-      postPublicationRelinked &&
-        postPublicationRejected &&
-        fs.existsSync(attemptTarget) &&
-        fs
+      {
+        lockSuccessorResident: fs
           .readFileSync(postPublicationLock.snapshot.target)
           .equals(postPublicationLockSuccessor),
+        recordResident: fs.existsSync(attemptTarget),
+        rejected: postPublicationRejected,
+        relinked: postPublicationRelinked,
+      },
+      {
+        lockSuccessorResident: true,
+        recordResident: true,
+        rejected: true,
+        relinked: true,
+      },
     );
     fs.rmSync(attemptTarget);
     fs.rmSync(postPublicationLock.snapshot.target);

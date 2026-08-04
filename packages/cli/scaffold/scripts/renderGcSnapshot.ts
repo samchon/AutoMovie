@@ -202,11 +202,11 @@ export const createRenderGcFileSnapshot = (
     const opened = fs.fstatSync(descriptor, { bigint: true });
     if (opened.isFile() === false)
       throw new Error(`Render file "${target}" is not one physical file.`);
+    const openedVersion = physicalVersion(opened);
     const snapshot = captureRenderGcTarget(root.path, absolute);
     if (
       snapshot.kind !== "file" ||
-      snapshot.targetIdentity !== physicalIdentity(opened) ||
-      snapshot.targetVersion !== physicalVersion(opened) ||
+      identityFileId(snapshot.targetIdentity) !== physicalFileId(opened) ||
       Buffer.from(readCapturedRenderGcFile(snapshot, source.length)).equals(
         source,
       ) === false
@@ -215,7 +215,7 @@ export const createRenderGcFileSnapshot = (
         `Render file "${target}" changed after descriptor publication.`,
       );
     const completed = fs.fstatSync(descriptor, { bigint: true });
-    if (physicalVersion(completed) !== snapshot.targetVersion)
+    if (physicalVersion(completed) !== openedVersion)
       throw new Error(`Render file "${target}" changed while published.`);
     if (
       snapshot.base.path !== root.path ||
@@ -565,13 +565,13 @@ export const readCapturedRenderGcFile = (
     const opened = fs.fstatSync(descriptor, { bigint: true });
     if (
       opened.isFile() === false ||
-      physicalIdentity(opened) !== snapshot.targetIdentity ||
-      physicalVersion(opened) !== snapshot.targetVersion
+      physicalFileId(opened) !== identityFileId(snapshot.targetIdentity)
     )
       throw new Error(
         `Render target "${snapshot.target}" opened a different file.`,
       );
-    openedIdentity = physicalIdentity(opened);
+    const openedVersion = physicalVersion(opened);
+    openedIdentity = physicalFileId(opened);
     while (offset < bytes.length) {
       const length = fs.readSync(
         descriptor,
@@ -587,7 +587,7 @@ export const readCapturedRenderGcFile = (
       offset += length;
     }
     const completed = fs.fstatSync(descriptor, { bigint: true });
-    if (physicalVersion(completed) !== snapshot.targetVersion)
+    if (physicalVersion(completed) !== openedVersion)
       throw new Error(
         `Render target "${snapshot.target}" changed while descriptor-read.`,
       );
@@ -820,8 +820,12 @@ const readFileEntry = (
   let failure: IRenderGcDescriptorFailure | undefined;
   try {
     const opened = fs.fstatSync(descriptor, { bigint: true });
-    if (opened.isFile() === false || physicalVersion(opened) !== version)
+    if (
+      opened.isFile() === false ||
+      physicalFileId(opened) !== physicalFileId(linked)
+    )
       throw new Error(`Render GC content "${file}" changed before open.`);
+    const openedVersion = physicalVersion(opened);
     const hash = createHash("sha256");
     const chunk = Buffer.allocUnsafe(1024 * 1024);
     for (;;) {
@@ -832,7 +836,10 @@ const readFileEntry = (
     }
     digest = `sha256:${hash.digest("hex")}`;
     const completed = fs.fstatSync(descriptor, { bigint: true });
-    if (completed.isFile() === false || physicalVersion(completed) !== version)
+    if (
+      completed.isFile() === false ||
+      physicalVersion(completed) !== openedVersion
+    )
       throw new Error(`Render GC content "${file}" changed while hashed.`);
   } catch (error) {
     failure = { error };
@@ -850,7 +857,7 @@ const readFileEntry = (
   return {
     bytes,
     digest,
-    identity: physicalIdentity(linked),
+    identity: physicalFileId(linked),
     kind: "file",
     path: relative,
   };
@@ -924,6 +931,17 @@ const assertSamePhysicalDirectory = (
 
 const physicalIdentity = (status: fs.BigIntStats): string =>
   `${status.dev}\0${status.ino}`;
+
+// A pathname stat and a descriptor stat are two different sources and do not
+// agree on every field: Windows reads the volume serial through a different
+// API for each, so one resident, unmodified file can report two devices. The
+// file id is what both sources agree on, so cross-source comparisons bind by
+// it, and a full version is only ever compared against another reading of the
+// same source.
+const physicalFileId = (status: fs.BigIntStats): string => `${status.ino}`;
+
+const identityFileId = (identity: string): string =>
+  identity.slice(identity.indexOf("\0") + 1);
 
 const physicalVersion = (status: fs.BigIntStats): string =>
   `${physicalIdentity(status)}\0${status.size}\0${status.mtimeNs}\0${status.ctimeNs}`;
