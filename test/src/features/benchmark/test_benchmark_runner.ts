@@ -23,7 +23,6 @@ import {
 import { muxProductionFeatureMp4 } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
-import { createRequire } from "node:module";
 import os from "node:os";
 import path from "node:path";
 
@@ -1966,16 +1965,5 @@ const rejected = async (closure: () => Promise<unknown>): Promise<string> => {
     return "";
   } catch (error) {
     return error instanceof Error ? error.message : String(error);
-  }
-};
-
-const rejectedValue = async (
-  closure: () => Promise<unknown>,
-): Promise<unknown> => {
-  try {
-    await closure();
-    return null;
-  } catch (error) {
-    return error;
   }
 };
