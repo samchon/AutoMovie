@@ -722,7 +722,12 @@ const captureResidentTarget = (
     throw new Error(
       `Render GC target "${absolute}" escapes renderer ownership.`,
     );
-  const targetIdentity = physicalIdentity(status);
+  // A file's identity has to match the entry its directory inventory records,
+  // and those entries carry the file id so a pathname stat and a descriptor
+  // stat agree on them. A directory keeps its device.
+  const targetIdentity = status.isFile()
+    ? physicalFileId(status)
+    : physicalIdentity(status);
   let entries: IRenderGcContentEntry[];
   let kind: "directory" | "file";
   if (status.isFile()) {
