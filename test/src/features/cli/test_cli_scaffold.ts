@@ -4960,7 +4960,13 @@ export const test_cli_scaffold = async (): Promise<void> => {
 
     const parentSwapTarget = path.join(proxyPublishParent, "parent-swap");
     const parkedProxyPublishParent = `${proxyPublishParent}.parked`;
-    let proxyParentSwapped = false;
+    // Replace the parent when the publisher closes the file it just created
+    // inside the target, not while that descriptor is still open: Windows
+    // refuses to rename a directory that holds an open handle, and the
+    // scenario is about a successor parent appearing during publication. One
+    // holder carries both states, because this test's static contracts pin the
+    // top-level statement indices around it.
+    let proxyParentSwap: number | "swapped" | null = null;
     mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
       const descriptor = Reflect.apply(nativeOpen, mutableFs, [
         file,
@@ -4968,16 +4974,22 @@ export const test_cli_scaffold = async (): Promise<void> => {
         ...args,
       ]) as number;
       if (
-        proxyParentSwapped === false &&
+        proxyParentSwap === null &&
         typeof file !== "number" &&
         flags === "wx+" &&
         path
           .resolve(file.toString())
           .startsWith(`${path.resolve(parentSwapTarget)}${path.sep}`)
       ) {
-        nativeRename(proxyPublishParent, parkedProxyPublishParent);
-        nativeMkdir(proxyPublishParent, { recursive: true });
-        proxyParentSwapped = true;
+        proxyParentSwap = descriptor;
+        mutableFs.closeSync = ((closing: number): void => {
+          Reflect.apply(nativeClose, mutableFs, [closing]);
+          if (proxyParentSwap === closing) {
+            proxyParentSwap = "swapped";
+            nativeRename(proxyPublishParent, parkedProxyPublishParent);
+            nativeMkdir(proxyPublishParent, { recursive: true });
+          }
+        }) as typeof fs.closeSync;
       }
       return descriptor;
     }) as typeof fs.openSync;
@@ -5004,6 +5016,12 @@ export const test_cli_scaffold = async (): Promise<void> => {
             mutableFs.openSync = nativeOpen;
           },
         },
+        {
+          resource: "proxy parent swap close hook",
+          cleanup: () => {
+            mutableFs.closeSync = nativeClose;
+          },
+        },
       ]);
     }
     TestValidator.equals(
@@ -5012,7 +5030,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
         parkedParentResident: fs.existsSync(parkedProxyPublishParent),
         rejected: proxyParentSwapRejected,
         successorParentResident: fs.existsSync(proxyPublishParent),
-        swapped: proxyParentSwapped,
+        swapped: proxyParentSwap === "swapped",
       },
       {
         parkedParentResident: true,
@@ -5207,9 +5225,9 @@ export const test_cli_scaffold = async (): Promise<void> => {
     // swapped, so its verdict is recorded separately: restoring the resident
     // directory by rename moves its `ctime`, which the target version covers, so
     // the collector must refuse to act on evidence it can no longer prove.
-    // Record the judge's own outcome: when its inspection of the captured
-    // evidence throws, the verdict alone cannot say why.
-    let gcAbaJudgment: boolean | string = false;
+    // Record the judge's own outcome: neither a folded verdict nor a thrown
+    // failure alone can say which fingerprint the captured evidence carried.
+    let gcAbaJudgment: unknown = null;
     const gcAbaProductionRefused = throwsWith(
       () =>
         proxyPublisherModule.captureProxyPublicationGcTarget({
@@ -5224,11 +5242,16 @@ export const test_cli_scaffold = async (): Promise<void> => {
                 snapshot,
                 evidence,
               );
-              gcAbaJudgment =
+              gcAbaJudgment = {
+                compile: receipt.compileFingerprint,
+                edit: receipt.editFingerprint,
+                publication: receipt.publicationFingerprint,
+              };
+              return (
                 receipt.publicationFingerprint === gcAbaPublication &&
                 receipt.compileFingerprint === gcAbaCompile &&
-                receipt.editFingerprint === gcAbaEdit;
-              return gcAbaJudgment === true;
+                receipt.editFingerprint === gcAbaEdit
+              );
             } catch (error) {
               gcAbaJudgeCleanupFailure = { error };
               gcAbaJudgment =
@@ -5275,7 +5298,11 @@ export const test_cli_scaffold = async (): Promise<void> => {
           ) === "invalid directory",
       },
       {
-        judgment: true,
+        judgment: {
+          compile: gcAbaCompile,
+          edit: gcAbaEdit,
+          publication: gcAbaPublication,
+        },
         refused: true,
         residentPublished: true,
         successorIntact: true,

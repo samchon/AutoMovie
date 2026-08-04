@@ -131,13 +131,13 @@ export const test_cli_scaffold_proxy_publication_cleanup = (): void => {
           preceding: "letgcAbaJudgeCleanupFailure:{error:unknown}|undefined;",
           substantive: {
             digest:
-              "0400784abe0c7573e7d66285ad1c8966824b04bd35d9ab1c558f8b75abbace36",
-            tokens: 38,
+              "9845ffb7280876f4b371c88e6c6a00f9d858f76f9858a8586139df8efbed6268",
+            tokens: 57,
           },
           tryBody:
-            "{constreceipt=proxyModule.inspectCapturedProxyBundle(snapshot,evidence,);gcAbaJudgment=receipt.publicationFingerprint===gcAbaPublication&&receipt.compileFingerprint===gcAbaCompile&&receipt.editFingerprint===gcAbaEdit;returngcAbaJudgment===true;}",
+            "{constreceipt=proxyModule.inspectCapturedProxyBundle(snapshot,evidence,);gcAbaJudgment={compile:receipt.compileFingerprint,edit:receipt.editFingerprint,publication:receipt.publicationFingerprint,};return(receipt.publicationFingerprint===gcAbaPublication&&receipt.compileFingerprint===gcAbaCompile&&receipt.editFingerprint===gcAbaEdit);}",
           tryDigest:
-            "9f790dfdcb57638e695ef30f7dad4b52b0cf8b210f267b34505a7a64fc7a62e7",
+            "7532ad282014eb54ef31e83f13d33adb38d7daaa4aa01e161962494adac16d84",
         },
         {
           catchBodies: ["scaleCleanupFailure={error};", "throwerror;"],
