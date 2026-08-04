@@ -11586,12 +11586,19 @@ export const test_cli_scaffold = async (): Promise<void> => {
       namedFacts([
         ["gcInventoryInterleaved", () => gcInventoryInterleaved],
         ["inventoryWorkerRejected", () => inventoryWorkerRejected],
-        ["livenessRootCount", () => fs.readdirSync(livenessRoot).length === 0],
+        [
+          // The GC's own removal staging is a preserved path by design, so what
+          // this asserts is that no lease survived beside it.
+          "livenessRootEntries",
+          () =>
+            fs.readdirSync(livenessRoot).join() ===
+            ".gc-preserved-removal-staging",
+        ],
       ]),
       {
         gcInventoryInterleaved: true,
         inventoryWorkerRejected: true,
-        livenessRootCount: true,
+        livenessRootEntries: true,
       },
     );
     const gcFirstAlive = new Set([31001, 31002]);
@@ -11626,13 +11633,20 @@ export const test_cli_scaffold = async (): Promise<void> => {
         ["gcFirstWorkerRejected", () => gcFirstWorkerRejected],
         ["gcFirstPeerRejected", () => gcFirstPeerRejected],
         ["gcFirstReleased", () => gcFirstReleased],
-        ["livenessRootCount", () => fs.readdirSync(livenessRoot).length === 0],
+        [
+          // The GC's own removal staging is a preserved path by design, so what
+          // this asserts is that no lease survived beside it.
+          "livenessRootEntries",
+          () =>
+            fs.readdirSync(livenessRoot).join() ===
+            ".gc-preserved-removal-staging",
+        ],
       ]),
       {
         gcFirstWorkerRejected: true,
         gcFirstPeerRejected: true,
         gcFirstReleased: true,
-        livenessRootCount: true,
+        livenessRootEntries: true,
       },
     );
     const workerFirstAlive = new Set([31003, 31004]);
@@ -11706,12 +11720,19 @@ export const test_cli_scaffold = async (): Promise<void> => {
       namedFacts([
         ["staleGcAlreadyRemoved", () => staleGcAlreadyRemoved],
         ["staleSessionAlreadyRemoved", () => staleSessionAlreadyRemoved],
-        ["livenessRootCount", () => fs.readdirSync(livenessRoot).length === 0],
+        [
+          // The GC's own removal staging is a preserved path by design, so what
+          // this asserts is that no lease survived beside it.
+          "livenessRootEntries",
+          () =>
+            fs.readdirSync(livenessRoot).join() ===
+            ".gc-preserved-removal-staging",
+        ],
       ]),
       {
         staleGcAlreadyRemoved: true,
         staleSessionAlreadyRemoved: true,
-        livenessRootCount: true,
+        livenessRootEntries: true,
       },
     );
     const staleSuccessorLease = renderLivenessModule.acquireRenderGcLease({
