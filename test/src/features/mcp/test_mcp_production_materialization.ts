@@ -36,23 +36,6 @@ import {
   worldDesign,
 } from "./productionFixtures";
 
-/**
- * Evaluate named facts in order and stop at the first false one, so a failed
- * comparison names the fact instead of collapsing into one boolean. Stopping
- * keeps the short-circuit semantics the original conjunction had, which some
- * facts depend on to guard the ones after them.
- */
-const namedFacts = (
-  entries: ReadonlyArray<readonly [string, () => boolean]>,
-): Record<string, boolean> => {
-  const output: Record<string, boolean> = {};
-  for (const [name, evaluate] of entries) {
-    output[name] = evaluate();
-    if (output[name] === false) break;
-  }
-  return output;
-};
-
 interface IProductionMaterializationFixtureFailure {
   error: unknown;
 }
@@ -172,87 +155,28 @@ export const test_mcp_production_materialization = (): void => {
   const models = materializeProductionModels(
     new Map(recipes.map((item) => [item.id, item])),
   );
-  TestValidator.equals(
+  TestValidator.predicate(
     "all bounded model archetypes materialize",
-    namedFacts([
-      ["modelsCount", () => models.size === recipes.length],
-      [
-        "modelsGet",
-        () => models.get("stick")?.id === productionRuntimeModelId("stick"),
-      ],
-      [
-        "modelsGet2",
-        () =>
-          models.get("stick")?.skeleton?.id ===
-          productionRuntimeSkeletonId("stick"),
-      ],
-      ["modelsCount2", () => models.get("stick")?.parts.length === 13],
-      ["modelsCount3", () => models.get("horse")?.parts.length === 6],
-      ["modelsCount4", () => models.get("artillery")?.parts.length === 3],
-      ["modelsCount5", () => models.get("flag")?.parts.length === 2],
-      [
-        "modelsGet3",
-        () => models.get("weapon")?.materials[0]?.metallic === 0.7,
-      ],
-      [
-        "modelsGet4",
-        () => models.get("weapon")?.materials[0]?.roughness === 0.35,
-      ],
-      [
-        "modelsGet5",
-        () => models.get("box")?.parts[0]?.geometry.type === "primitive",
-      ],
-      [
-        "modelsGet6",
-        () => models.get("sphere")?.parts[0]?.geometry.type === "primitive",
-      ],
-      [
-        "modelsGet7",
-        () => models.get("capsule")?.parts[0]?.geometry.type === "primitive",
-      ],
-      [
-        "modelsGet8",
-        () => models.get("cylinder")?.parts[0]?.geometry.type === "primitive",
-      ],
-      [
-        "modelsGet9",
-        () => models.get("cone")?.parts[0]?.geometry.type === "primitive",
-      ],
-      [
-        "modelsGet10",
-        () => models.get("plane")?.parts[0]?.geometry.type === "primitive",
-      ],
-      [
-        "boxSphere",
-        () =>
-          ["box", "sphere", "capsule", "cylinder", "cone", "plane"].every(
-            (id) => {
-              const geometry = models.get(id)?.parts[0]?.geometry;
-              return (
-                geometry?.type === "primitive" && geometry.shape.type === id
-              );
-            },
-          ),
-      ],
-    ]),
-    {
-      modelsCount: true,
-      modelsGet: true,
-      modelsGet2: true,
-      modelsCount2: true,
-      modelsCount3: true,
-      modelsCount4: true,
-      modelsCount5: true,
-      modelsGet3: true,
-      modelsGet4: true,
-      modelsGet5: true,
-      modelsGet6: true,
-      modelsGet7: true,
-      modelsGet8: true,
-      modelsGet9: true,
-      modelsGet10: true,
-      boxSphere: true,
-    },
+    models.size === recipes.length &&
+      models.get("stick")?.id === productionRuntimeModelId("stick") &&
+      models.get("stick")?.skeleton?.id ===
+        productionRuntimeSkeletonId("stick") &&
+      models.get("stick")?.parts.length === 13 &&
+      models.get("horse")?.parts.length === 6 &&
+      models.get("artillery")?.parts.length === 3 &&
+      models.get("flag")?.parts.length === 2 &&
+      models.get("weapon")?.materials[0]?.metallic === 0.7 &&
+      models.get("weapon")?.materials[0]?.roughness === 0.35 &&
+      models.get("box")?.parts[0]?.geometry.type === "primitive" &&
+      models.get("sphere")?.parts[0]?.geometry.type === "primitive" &&
+      models.get("capsule")?.parts[0]?.geometry.type === "primitive" &&
+      models.get("cylinder")?.parts[0]?.geometry.type === "primitive" &&
+      models.get("cone")?.parts[0]?.geometry.type === "primitive" &&
+      models.get("plane")?.parts[0]?.geometry.type === "primitive" &&
+      ["box", "sphere", "capsule", "cylinder", "cone", "plane"].every((id) => {
+        const geometry = models.get(id)?.parts[0]?.geometry;
+        return geometry?.type === "primitive" && geometry.shape.type === id;
+      }),
   );
   const recipeMap = new Map(recipes.map((item) => [item.id, item]));
   const projectionRadii = recipes.map(
@@ -347,48 +271,17 @@ export const test_mcp_production_materialization = (): void => {
   const inventory = materializeFormationInventory(
     new Map(layouts.map((item) => [item.id, item])),
   );
-  TestValidator.equals(
+  TestValidator.predicate(
     "every compact formation layout has deterministic slots",
-    namedFacts([
-      [
-        "slotSetsCount",
-        () =>
-          slotSets.every(
-            (slots, index) => slots.length === layouts[index]!.count,
-          ),
-      ],
-      ["slotSetsNode", () => slotSets[0]![0]?.node === "captain"],
-      ["slotSetsNode2", () => slotSets[3]![0]?.node === "arc-hero"],
-      ["absSlotSets", () => Math.abs(slotSets[3]![0]!.position.x - 4) < 1e-12],
-      ["absSlotSets2", () => Math.abs(slotSets[3]![0]!.position.z) < 1e-12],
-      [
-        "stringifySlotSets",
-        () => JSON.stringify(slotSets[4]) === JSON.stringify(repeatedScatter),
-      ],
-      [
-        "stringifySlotSets2",
-        () => JSON.stringify(slotSets[4]) !== JSON.stringify(swappedScatter),
-      ],
-      [
-        "stringifySlotSets3",
-        () => JSON.stringify(slotSets[4]) !== JSON.stringify(highWordScatter),
-      ],
-      [
-        "inventoryCount",
-        () => Object.keys(inventory).length === layouts.length,
-      ],
-    ]),
-    {
-      slotSetsCount: true,
-      slotSetsNode: true,
-      slotSetsNode2: true,
-      absSlotSets: true,
-      absSlotSets2: true,
-      stringifySlotSets: true,
-      stringifySlotSets2: true,
-      stringifySlotSets3: true,
-      inventoryCount: true,
-    },
+    slotSets.every((slots, index) => slots.length === layouts[index]!.count) &&
+      slotSets[0]![0]?.node === "captain" &&
+      slotSets[3]![0]?.node === "arc-hero" &&
+      Math.abs(slotSets[3]![0]!.position.x - 4) < 1e-12 &&
+      Math.abs(slotSets[3]![0]!.position.z) < 1e-12 &&
+      JSON.stringify(slotSets[4]) === JSON.stringify(repeatedScatter) &&
+      JSON.stringify(slotSets[4]) !== JSON.stringify(swappedScatter) &&
+      JSON.stringify(slotSets[4]) !== JSON.stringify(highWordScatter) &&
+      Object.keys(inventory).length === layouts.length,
   );
 
   let productionMaterializationFailure:
@@ -633,80 +526,27 @@ export const test_mcp_production_materialization = (): void => {
       runtimeModels,
       source: optionalCueSource,
     });
-    TestValidator.equals(
+    TestValidator.predicate(
       "compiler owns compact anonymous batches, hero placement and collision reporting",
-      namedFacts([
-        [
-          "materializedScene",
-          () =>
-            materialized.value.scene.nodes.find((node) => node.id === "captain")
-              ?.transform.translation.x === formationSlots.line![0]!.position.x,
-        ],
-        [
-          "materializedScene2",
-          () =>
-            materialized.value.scene.nodes.find((node) => node.id === "captain")
-              ?.model === productionRuntimeModelId(formation.modelRecipe),
-        ],
-        [
-          "materializedModels",
-          () =>
-            materialized.value.models.every(
-              (model) => model.id !== "source-only-model",
-            ),
-        ],
-        [
-          "materializedFormations",
-          () =>
-            materialized.value.formations[0]?.anonymousCount ===
-            formation.count - 1,
-        ],
-        [
-          "materializedScene3",
-          () =>
-            materialized.value.scene.nodes.every(
-              (node) => node.id !== "formation:line:slot:000001",
-            ),
-        ],
-        [
-          "collisionCollisions",
-          () => collision.collisions.includes("formation:line:slot:000001"),
-        ],
-        [
-          "instanceCollisionCollisions",
-          () =>
-            instanceCollision.collisions.includes("instance:trees:slot:000001"),
-        ],
-        [
-          "absentFormationCount",
-          () =>
-            absentFormation.value.scene.nodes.length ===
-            source.scene.nodes.length,
-        ],
-        [
-          "absentModelCount",
-          () =>
-            absentModel.value.scene.nodes.length === source.scene.nodes.length,
-        ],
-        ["defaultedCuesCount", () => defaultedCues.value.effects.length === 0],
-        [
-          "defaultedCuesCount2",
-          () => defaultedCues.value.formationMotions.length === 0,
-        ],
-      ]),
-      {
-        materializedScene: true,
-        materializedScene2: true,
-        materializedModels: true,
-        materializedFormations: true,
-        materializedScene3: true,
-        collisionCollisions: true,
-        instanceCollisionCollisions: true,
-        absentFormationCount: true,
-        absentModelCount: true,
-        defaultedCuesCount: true,
-        defaultedCuesCount2: true,
-      },
+      materialized.value.scene.nodes.find((node) => node.id === "captain")
+        ?.transform.translation.x === formationSlots.line![0]!.position.x &&
+        materialized.value.scene.nodes.find((node) => node.id === "captain")
+          ?.model === productionRuntimeModelId(formation.modelRecipe) &&
+        materialized.value.models.every(
+          (model) => model.id !== "source-only-model",
+        ) &&
+        materialized.value.formations[0]?.anonymousCount ===
+          formation.count - 1 &&
+        materialized.value.scene.nodes.every(
+          (node) => node.id !== "formation:line:slot:000001",
+        ) &&
+        collision.collisions.includes("formation:line:slot:000001") &&
+        instanceCollision.collisions.includes("instance:trees:slot:000001") &&
+        absentFormation.value.scene.nodes.length ===
+          source.scene.nodes.length &&
+        absentModel.value.scene.nodes.length === source.scene.nodes.length &&
+        defaultedCues.value.effects.length === 0 &&
+        defaultedCues.value.formationMotions.length === 0,
     );
 
     const highCount = {
@@ -736,72 +576,29 @@ export const test_mcp_production_materialization = (): void => {
       { ...highCount },
       0,
     );
-    TestValidator.equals(
+    TestValidator.predicate(
       "high counts stay compact across stable chunk boundaries and exact slot regeneration",
-      namedFacts([
-        [
-          "compactCount",
-          () => compact.count === AUTOMOVIE_FORMATION_CHUNK_SIZE * 2 + 1,
-        ],
-        ["compactCount2", () => compact.chunks.length === 3],
-        [
-          "compactChunks",
-          () => compact.chunks[0]?.count === AUTOMOVIE_FORMATION_CHUNK_SIZE,
-        ],
-        [
-          "compactChunks2",
-          () => compact.chunks[1]?.start === AUTOMOVIE_FORMATION_CHUNK_SIZE,
-        ],
-        [
-          "compactChunks3",
-          () =>
-            compact.chunks[1]?.anonymousCount ===
-            AUTOMOVIE_FORMATION_CHUNK_SIZE - 1,
-        ],
-        ["compactChunks4", () => compact.chunks[2]?.count === 1],
-        [
-          "compactHeroes",
-          () => compact.heroes[0]?.slot === AUTOMOVIE_FORMATION_CHUNK_SIZE,
-        ],
-        ["compactDigest", () => compact.digest === compactAgain.digest],
-        [
-          "materializeFormationSlotHighCount",
-          () =>
-            materializeFormationSlot(highCount, AUTOMOVIE_FORMATION_CHUNK_SIZE)
-              .actor === "boundary-hero",
-        ],
-        [
-          "firstRegeneratedSlotMotionPhase",
-          () =>
-            firstRegeneratedSlot.motionPhase ===
-            repeatedRegeneratedSlot.motionPhase,
-        ],
-        [
-          "tryMaterializeFormationSlot",
-          () =>
-            (() => {
-              try {
-                materializeFormationSlot(highCount, highCount.count);
-                return false;
-              } catch {
-                return true;
-              }
-            })(),
-        ],
-      ]),
-      {
-        compactCount: true,
-        compactCount2: true,
-        compactChunks: true,
-        compactChunks2: true,
-        compactChunks3: true,
-        compactChunks4: true,
-        compactHeroes: true,
-        compactDigest: true,
-        materializeFormationSlotHighCount: true,
-        firstRegeneratedSlotMotionPhase: true,
-        tryMaterializeFormationSlot: true,
-      },
+      compact.count === AUTOMOVIE_FORMATION_CHUNK_SIZE * 2 + 1 &&
+        compact.chunks.length === 3 &&
+        compact.chunks[0]?.count === AUTOMOVIE_FORMATION_CHUNK_SIZE &&
+        compact.chunks[1]?.start === AUTOMOVIE_FORMATION_CHUNK_SIZE &&
+        compact.chunks[1]?.anonymousCount ===
+          AUTOMOVIE_FORMATION_CHUNK_SIZE - 1 &&
+        compact.chunks[2]?.count === 1 &&
+        compact.heroes[0]?.slot === AUTOMOVIE_FORMATION_CHUNK_SIZE &&
+        compact.digest === compactAgain.digest &&
+        materializeFormationSlot(highCount, AUTOMOVIE_FORMATION_CHUNK_SIZE)
+          .actor === "boundary-hero" &&
+        firstRegeneratedSlot.motionPhase ===
+          repeatedRegeneratedSlot.motionPhase &&
+        (() => {
+          try {
+            materializeFormationSlot(highCount, highCount.count);
+            return false;
+          } catch {
+            return true;
+          }
+        })(),
     );
     project.setFormationDesign(highCount);
     setProductionFixtureShotContract(project, {
@@ -848,74 +645,26 @@ export const test_mcp_production_materialization = (): void => {
         time: 3,
       },
     });
-    TestValidator.equals(
+    TestValidator.predicate(
       "shot sandbox regenerates a high slot and preserves one compact formation motion",
-      namedFacts([
-        ["highCountCompileSucceeded", () => highCountCompileSucceeded],
-        [
-          "highCountShotFormations",
-          () => highCountShot?.formations[0]?.count === highCount.count,
-        ],
-        [
-          "highCountShotScene",
-          () =>
-            highCountShot.scene.nodes.every(
-              (node) =>
-                node.id !==
-                `formation:${highCount.id}:slot:${String(highCount.count - 1).padStart(6, "0")}`,
-            ),
-        ],
-        [
-          "highCountShotFormationMotions",
-          () => highCountShot.formationMotions[0]?.formation === highCount.id,
-        ],
-        [
-          "highCountShotFormationMotions2",
-          () => highCountShot.formationMotions[0]?.action === "advance",
-        ],
-        [
-          "highCountSummaryResult",
-          () => highCountSummary.result?.kind === "measurement",
-        ],
-        [
-          "highCountSummaryResult2",
-          () => highCountSummary.result.values.motionOffsetZ === -1,
-        ],
-        [
-          "highCountSummaryResult3",
-          () => highCountSummary.result.values.motionFacingOffsetDeg === 2,
-        ],
-        [
-          "highCountSummaryResult4",
-          () => highCountSummary.result.values.lateralSpacingScale === 1.025,
-        ],
-        [
-          "highCountSummaryResult5",
-          () =>
-            Number(highCountSummary.result.values.minimumProjectedPixels) > 0,
-        ],
-        [
-          "highCountSummaryCount",
-          () =>
-            Number(highCountSummary.result.values.nearVisible) +
-              Number(highCountSummary.result.values.farVisible) +
-              Number(highCountSummary.result.values.culled) ===
-            highCount.count - highCount.heroOverrides.length,
-        ],
-      ]),
-      {
-        highCountCompileSucceeded: true,
-        highCountShotFormations: true,
-        highCountShotScene: true,
-        highCountShotFormationMotions: true,
-        highCountShotFormationMotions2: true,
-        highCountSummaryResult: true,
-        highCountSummaryResult2: true,
-        highCountSummaryResult3: true,
-        highCountSummaryResult4: true,
-        highCountSummaryResult5: true,
-        highCountSummaryCount: true,
-      },
+      highCountCompileSucceeded &&
+        highCountShot?.formations[0]?.count === highCount.count &&
+        highCountShot.scene.nodes.every(
+          (node) =>
+            node.id !==
+            `formation:${highCount.id}:slot:${String(highCount.count - 1).padStart(6, "0")}`,
+        ) &&
+        highCountShot.formationMotions[0]?.formation === highCount.id &&
+        highCountShot.formationMotions[0]?.action === "advance" &&
+        highCountSummary.result?.kind === "measurement" &&
+        highCountSummary.result.values.motionOffsetZ === -1 &&
+        highCountSummary.result.values.motionFacingOffsetDeg === 2 &&
+        highCountSummary.result.values.lateralSpacingScale === 1.025 &&
+        Number(highCountSummary.result.values.minimumProjectedPixels) > 0 &&
+        Number(highCountSummary.result.values.nearVisible) +
+          Number(highCountSummary.result.values.farVisible) +
+          Number(highCountSummary.result.values.culled) ===
+          highCount.count - highCount.heroOverrides.length,
     );
   } catch (error) {
     productionMaterializationFailure = { error };

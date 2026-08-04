@@ -8,23 +8,6 @@ import { TestValidator } from "@nestia/e2e";
 
 import { nclose } from "../internal/predicates";
 
-/**
- * Evaluate named facts in order and stop at the first false one, so a failed
- * comparison names the fact instead of collapsing into one boolean. Stopping
- * keeps the short-circuit semantics the original conjunction had, which some
- * facts depend on to guard the ones after them.
- */
-const namedFacts = (
-  entries: ReadonlyArray<readonly [string, () => boolean]>,
-): Record<string, boolean> => {
-  const output: Record<string, boolean> = {};
-  for (const [name, evaluate] of entries) {
-    output[name] = evaluate();
-    if (output[name] === false) break;
-  }
-  return output;
-};
-
 const IDENTITY = { x: 0, y: 0, z: 0, w: 1 };
 const AT_ORIGIN = {
   worldPosition: { x: 0, y: 0, z: 0 },
@@ -106,18 +89,11 @@ export const test_kinematics_hinged_arm_articulation = (): void => {
   // far segment back onto a `+0.3X` near one is a half turn about the hinge, so
   // the delta is `(0, 1, 0, 0)`: `w = cos(180/2) = 0`.
   const near = chain({ target: { x: 0.01, y: 0, z: 0 } });
-  TestValidator.equals(
+  TestValidator.predicate(
     "a target inside the fold clamps to the folded chain instead of failing",
-    namedFacts([
-      ["near", () => near !== null],
-      ["ncloseNear", () => near !== null && nclose(near.lower.w, 0, 1e-9)],
-      ["ncloseNear2", () => near !== null && nclose(near.lower.y, 1, 1e-9)],
-    ]),
-    {
-      near: true,
-      ncloseNear: true,
-      ncloseNear2: true,
-    },
+    near !== null &&
+      nclose(near.lower.w, 0, 1e-9) &&
+      nclose(near.lower.y, 1, 1e-9),
   );
 
   // 4. DEGENERATE: the hinge lies along the far segment, so flexion is a roll

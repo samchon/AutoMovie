@@ -4,23 +4,6 @@ import { createRequire } from "node:module";
 import path from "node:path";
 import ts from "typescript-compiler";
 
-/**
- * Evaluate named facts in order and stop at the first false one, so a failed
- * comparison names the fact instead of collapsing into one boolean. Stopping
- * keeps the short-circuit semantics the original conjunction had, which some
- * facts depend on to guard the ones after them.
- */
-const namedFacts = (
-  entries: ReadonlyArray<readonly [string, () => boolean]>,
-): Record<string, boolean> => {
-  const output: Record<string, boolean> = {};
-  for (const [name, evaluate] of entries) {
-    output[name] = evaluate();
-    if (output[name] === false) break;
-  }
-  return output;
-};
-
 /** Repository root, four levels above `test/src/features/cli`. */
 const ROOT = path.resolve(__dirname, "..", "..", "..", "..");
 
@@ -296,67 +279,29 @@ const exerciseKokoroOverridePolicy = async (): Promise<void> => {
   });
   const completedOrder = "install-0,install-1,operation,restore-0,restore-1";
   const setupOrder = "install-0,install-1,restore-0,restore-1";
-  TestValidator.equals(
+  TestValidator.predicate(
     "Kokoro override policy rolls back partial setup and preserves every failure",
-    namedFacts([
-      ["successOutput", () => success.output === "loaded runtime"],
-      ["successCaught", () => success.caught === undefined],
-      ["successOrder", () => success.order.join(",") === completedOrder],
-      ["setupOnlyOutput", () => setupOnly.output === undefined],
-      ["setupOnlyCaught", () => setupOnly.caught === setupFailure],
-      ["setupOnlyOrder", () => setupOnly.order.join(",") === setupOrder],
-      ["operationOnlyCaught", () => operationOnly.caught === operationFailure],
-      [
-        "operationOnlyOrder",
-        () => operationOnly.order.join(",") === completedOrder,
-      ],
-      [
-        "standaloneRestorationCaught",
-        () => standaloneRestoration.caught === firstRestorationFailure,
-      ],
-      [
-        "standaloneRestorationOrder",
-        () => standaloneRestoration.order.join(",") === completedOrder,
-      ],
-      [
-        "aggregateContainsExactlyMultipleRestorations",
-        () =>
-          aggregateContainsExactly(multipleRestorations.caught, [
-            firstRestorationFailure,
-            secondRestorationFailure,
-          ]),
-      ],
-      [
-        "multipleRestorationsOrder",
-        () => multipleRestorations.order.join(",") === completedOrder,
-      ],
-      [
-        "aggregateContainsExactlyCombined",
-        () =>
-          aggregateContainsExactly(combined.caught, [
-            operationFailure,
-            firstRestorationFailure,
-            secondRestorationFailure,
-          ]),
-      ],
-      ["combinedOrder", () => combined.order.join(",") === completedOrder],
-    ]),
-    {
-      successOutput: true,
-      successCaught: true,
-      successOrder: true,
-      setupOnlyOutput: true,
-      setupOnlyCaught: true,
-      setupOnlyOrder: true,
-      operationOnlyCaught: true,
-      operationOnlyOrder: true,
-      standaloneRestorationCaught: true,
-      standaloneRestorationOrder: true,
-      aggregateContainsExactlyMultipleRestorations: true,
-      multipleRestorationsOrder: true,
-      aggregateContainsExactlyCombined: true,
-      combinedOrder: true,
-    },
+    success.output === "loaded runtime" &&
+      success.caught === undefined &&
+      success.order.join(",") === completedOrder &&
+      setupOnly.output === undefined &&
+      setupOnly.caught === setupFailure &&
+      setupOnly.order.join(",") === setupOrder &&
+      operationOnly.caught === operationFailure &&
+      operationOnly.order.join(",") === completedOrder &&
+      standaloneRestoration.caught === firstRestorationFailure &&
+      standaloneRestoration.order.join(",") === completedOrder &&
+      aggregateContainsExactly(multipleRestorations.caught, [
+        firstRestorationFailure,
+        secondRestorationFailure,
+      ]) &&
+      multipleRestorations.order.join(",") === completedOrder &&
+      aggregateContainsExactly(combined.caught, [
+        operationFailure,
+        firstRestorationFailure,
+        secondRestorationFailure,
+      ]) &&
+      combined.order.join(",") === completedOrder,
   );
 };
 

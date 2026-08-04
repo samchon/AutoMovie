@@ -18,23 +18,6 @@ import {
   worldDesign,
 } from "./productionFixtures";
 
-/**
- * Evaluate named facts in order and stop at the first false one, so a failed
- * comparison names the fact instead of collapsing into one boolean. Stopping
- * keeps the short-circuit semantics the original conjunction had, which some
- * facts depend on to guard the ones after them.
- */
-const namedFacts = (
-  entries: ReadonlyArray<readonly [string, () => boolean]>,
-): Record<string, boolean> => {
-  const output: Record<string, boolean> = {};
-  for (const [name, evaluate] of entries) {
-    output[name] = evaluate();
-    if (output[name] === false) break;
-  }
-  return output;
-};
-
 const capabilityProfile = (): IAutoMovieProfile => ({
   id: "battle-object",
   name: "Typed battle object",
@@ -254,32 +237,12 @@ export const test_mcp_production_capability_validation = (): void => {
   const invalidCapability = codes(
     graph({ ...model, profiles: [invalidProfile] }, world),
   );
-  TestValidator.equals(
+  TestValidator.predicate(
     "invalid profile facts fail as typed capability diagnostics",
-    namedFacts([
-      [
-        "invalidCapabilityHas",
-        () => invalidCapability.has("design-text-empty"),
-      ],
-      [
-        "invalidCapabilityHas2",
-        () => invalidCapability.has("design-capability-invalid"),
-      ],
-      [
-        "invalidCapabilityHas3",
-        () => invalidCapability.has("design-capability-duplicate"),
-      ],
-      [
-        "invalidCapabilityHas4",
-        () => invalidCapability.has("design-range-invalid"),
-      ],
-    ]),
-    {
-      invalidCapabilityHas: true,
-      invalidCapabilityHas2: true,
-      invalidCapabilityHas3: true,
-      invalidCapabilityHas4: true,
-    },
+    invalidCapability.has("design-text-empty") &&
+      invalidCapability.has("design-capability-invalid") &&
+      invalidCapability.has("design-capability-duplicate") &&
+      invalidCapability.has("design-range-invalid"),
   );
 
   const invalidInstances = codes(
@@ -333,42 +296,14 @@ export const test_mcp_production_capability_validation = (): void => {
       ],
     }),
   );
-  TestValidator.equals(
+  TestValidator.predicate(
     "invalid layouts, routes, references, palettes and trait ranges are rejected",
-    namedFacts([
-      [
-        "invalidInstancesHas",
-        () => invalidInstances.has("design-route-invalid"),
-      ],
-      [
-        "invalidInstancesHas2",
-        () => invalidInstances.has("design-reference-missing"),
-      ],
-      [
-        "invalidInstancesHas3",
-        () => invalidInstances.has("design-range-invalid"),
-      ],
-      [
-        "invalidInstancesHas4",
-        () => invalidInstances.has("design-collection-empty"),
-      ],
-      [
-        "invalidInstancesHas5",
-        () => invalidInstances.has("design-color-invalid"),
-      ],
-      [
-        "invalidInstancesHas6",
-        () => invalidInstances.has("design-duplicate-id"),
-      ],
-    ]),
-    {
-      invalidInstancesHas: true,
-      invalidInstancesHas2: true,
-      invalidInstancesHas3: true,
-      invalidInstancesHas4: true,
-      invalidInstancesHas5: true,
-      invalidInstancesHas6: true,
-    },
+    invalidInstances.has("design-route-invalid") &&
+      invalidInstances.has("design-reference-missing") &&
+      invalidInstances.has("design-range-invalid") &&
+      invalidInstances.has("design-collection-empty") &&
+      invalidInstances.has("design-color-invalid") &&
+      invalidInstances.has("design-duplicate-id"),
   );
 
   const derivedRangeMessages = [
@@ -502,23 +437,10 @@ export const test_mcp_production_capability_validation = (): void => {
       ],
     }),
   );
-  TestValidator.equals(
+  TestValidator.predicate(
     "aggregate general-instance count and buffer budgets fail independently",
-    namedFacts([
-      [
-        "aUTOMOVIE_MAX_GENERAL_INSTANCES_000",
-        () => AUTOMOVIE_MAX_GENERAL_INSTANCES === 250_000,
-      ],
-      ["excessiveCountHas", () => excessiveCount.has("design-range-invalid")],
-      [
-        "excessiveBufferHas",
-        () => excessiveBuffer.has("design-budget-exceeded"),
-      ],
-    ]),
-    {
-      aUTOMOVIE_MAX_GENERAL_INSTANCES_000: true,
-      excessiveCountHas: true,
-      excessiveBufferHas: true,
-    },
+    AUTOMOVIE_MAX_GENERAL_INSTANCES === 250_000 &&
+      excessiveCount.has("design-range-invalid") &&
+      excessiveBuffer.has("design-budget-exceeded"),
   );
 };

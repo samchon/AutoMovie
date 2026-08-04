@@ -15,23 +15,6 @@ import path from "node:path";
 
 import { productionFixture, shotContract } from "./productionFixtures";
 
-/**
- * Evaluate named facts in order and stop at the first false one, so a failed
- * comparison names the fact instead of collapsing into one boolean. Stopping
- * keeps the short-circuit semantics the original conjunction had, which some
- * facts depend on to guard the ones after them.
- */
-const namedFacts = (
-  entries: ReadonlyArray<readonly [string, () => boolean]>,
-): Record<string, boolean> => {
-  const output: Record<string, boolean> = {};
-  for (const [name, evaluate] of entries) {
-    output[name] = evaluate();
-    if (output[name] === false) break;
-  }
-  return output;
-};
-
 interface IProductionShotContinuityFixtureFailure {
   error: unknown;
 }
@@ -473,34 +456,19 @@ export const test_mcp_production_shot_continuity = async (): Promise<void> => {
       'build: () => { throw new Error("opening source failure"); },',
     );
     const sourceFailure = compileFilm(fullHardCut(), 12, failingOpeningSource);
-    TestValidator.equals(
+    TestValidator.predicate(
       "a failed predecessor source does not poison successor realization",
-      namedFacts([
-        ["sourceFailureSuccess", () => sourceFailure.success === false],
-        [
-          "sourceFailureDiagnostics",
-          () =>
-            sourceFailure.diagnostics.some(
-              (diagnostic) =>
-                diagnostic.code === "source-execution-failed" &&
-                diagnostic.target === "shot:opening",
-            ),
-        ],
-        [
-          "sourceFailureDiagnostics2",
-          () =>
-            sourceFailure.diagnostics.every(
-              (diagnostic) =>
-                diagnostic.target !== "shot:answer" ||
-                diagnostic.code !== "contract-realization-failed",
-            ),
-        ],
-      ]),
-      {
-        sourceFailureSuccess: true,
-        sourceFailureDiagnostics: true,
-        sourceFailureDiagnostics2: true,
-      },
+      sourceFailure.success === false &&
+        sourceFailure.diagnostics.some(
+          (diagnostic) =>
+            diagnostic.code === "source-execution-failed" &&
+            diagnostic.target === "shot:opening",
+        ) &&
+        sourceFailure.diagnostics.every(
+          (diagnostic) =>
+            diagnostic.target !== "shot:answer" ||
+            diagnostic.code !== "contract-realization-failed",
+        ),
     );
 
     const invalidFormationSource = continuitySource(
@@ -533,37 +501,19 @@ export const test_mcp_production_shot_continuity = async (): Promise<void> => {
       12,
       invalidFormationSource,
     );
-    TestValidator.equals(
+    TestValidator.predicate(
       "a post-materialization failure cannot seed the successor",
-      namedFacts([
-        [
-          "postMaterializationFailureSuccess",
-          () => postMaterializationFailure.success === false,
-        ],
-        [
-          "postMaterializationFailureDiagnostics",
-          () =>
-            postMaterializationFailure.diagnostics.some(
-              (diagnostic) =>
-                diagnostic.code === "engine-validation-failed" &&
-                diagnostic.target === "shot:opening",
-            ),
-        ],
-        [
-          "postMaterializationFailureDiagnostics2",
-          () =>
-            postMaterializationFailure.diagnostics.every(
-              (diagnostic) =>
-                diagnostic.target !== "shot:answer" ||
-                diagnostic.code !== "contract-realization-failed",
-            ),
-        ],
-      ]),
-      {
-        postMaterializationFailureSuccess: true,
-        postMaterializationFailureDiagnostics: true,
-        postMaterializationFailureDiagnostics2: true,
-      },
+      postMaterializationFailure.success === false &&
+        postMaterializationFailure.diagnostics.some(
+          (diagnostic) =>
+            diagnostic.code === "engine-validation-failed" &&
+            diagnostic.target === "shot:opening",
+        ) &&
+        postMaterializationFailure.diagnostics.every(
+          (diagnostic) =>
+            diagnostic.target !== "shot:answer" ||
+            diagnostic.code !== "contract-realization-failed",
+        ),
     );
   } catch (error) {
     productionShotContinuityFailure = { error };

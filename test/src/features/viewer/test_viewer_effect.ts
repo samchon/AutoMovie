@@ -10,23 +10,6 @@ import * as THREE from "three";
 
 import { shotContract, worldDesign } from "../mcp/productionFixtures";
 
-/**
- * Evaluate named facts in order and stop at the first false one, so a failed
- * comparison names the fact instead of collapsing into one boolean. Stopping
- * keeps the short-circuit semantics the original conjunction had, which some
- * facts depend on to guard the ones after them.
- */
-const namedFacts = (
-  entries: ReadonlyArray<readonly [string, () => boolean]>,
-): Record<string, boolean> => {
-  const output: Record<string, boolean> = {};
-  for (const [name, evaluate] of entries) {
-    output[name] = evaluate();
-    if (output[name] === false) break;
-  }
-  return output;
-};
-
 const effectRecipe = (
   kind: IAutoMovieEffectRecipe["kind"],
 ): IAutoMovieEffectRecipe => ({
@@ -224,100 +207,41 @@ export const test_viewer_effect = (): void => {
     effect!.bounds.max.x * legacyEffectValue(effect!.seed, 0, 0x706f7358) +
     (effect!.recipe.motion.wind.x + Math.cos(firstAngle) * firstSpeed) *
       firstAge;
-  TestValidator.equals(
+  TestValidator.predicate(
     "compiled effects preserve exact seeds, kinds and fixed-step replay",
-    namedFacts([
-      [
-        "stringifyRepeated",
-        () => JSON.stringify(repeated) === JSON.stringify(sameStep),
-      ],
-      ["repeatedCount", () => repeated.particles.length > 0],
-      [
-        "repeatedCount2",
-        () => repeated.particles.length <= effect!.recipe.budget.maxParticles,
-      ],
-      ["nearCount", () => near.particles.length > far.particles.length],
-      [
-        "lateParticles",
-        () => late.particles.every((particle) => particle.ageRatio < 1),
-      ],
-      ["cappedCount", () => capped.particles.length === 1],
-      ["beforeActive", () => before.active === false],
-      ["afterActive", () => after.active === false],
-      [
-        "fractionalDurationCount",
-        () => fractionalDuration.particles.length === 1,
-      ],
-      [
-        "fractionalDurationParticles",
-        () => fractionalDuration.particles[0]?.index === 0,
-      ],
-      ["exactBurstExpiryCount", () => exactBurstExpiry.particles.length === 1],
-      [
-        "exactBurstExpiryParticles",
-        () => exactBurstExpiry.particles[0]?.index === 1,
-      ],
-      [
-        "defaultClockFixedStepSeconds",
-        () => defaultClock.fixedStepSeconds === 1 / 24,
-      ],
-      ["defaultClockEvent", () => defaultClock.event === undefined],
-      ["effectDigest", () => effect!.digest !== differentSeed.digest],
-      ["kindsFog", () => kinds.join(",") === "fog,smoke,dust"],
-      [
-        "firstParticleAgeRatio",
-        () => firstParticle.ageRatio === firstAge / firstLifetime,
-      ],
-      [
-        "firstParticlePosition",
-        () => firstParticle.position.x === expectedFirstX,
-      ],
-      [
-        "materializeCompiledEffectsCount",
-        () =>
-          materializeCompiledEffects({
-            contract,
-            world: effectWorld(),
-            fps: 24,
-            cues: [{ ...cues[0]!, zone: "missing" }],
-          }).length === 0,
-      ],
-      [
-        "materializeCompiledEffectsCount2",
-        () =>
-          materializeCompiledEffects({
-            contract,
-            world: {
-              ...effectWorld(),
-              effectRecipes: [],
-            },
-            fps: 24,
-            cues,
-          }).length === 0,
-      ],
-    ]),
-    {
-      stringifyRepeated: true,
-      repeatedCount: true,
-      repeatedCount2: true,
-      nearCount: true,
-      lateParticles: true,
-      cappedCount: true,
-      beforeActive: true,
-      afterActive: true,
-      fractionalDurationCount: true,
-      fractionalDurationParticles: true,
-      exactBurstExpiryCount: true,
-      exactBurstExpiryParticles: true,
-      defaultClockFixedStepSeconds: true,
-      defaultClockEvent: true,
-      effectDigest: true,
-      kindsFog: true,
-      firstParticleAgeRatio: true,
-      firstParticlePosition: true,
-      materializeCompiledEffectsCount: true,
-      materializeCompiledEffectsCount2: true,
-    },
+    JSON.stringify(repeated) === JSON.stringify(sameStep) &&
+      repeated.particles.length > 0 &&
+      repeated.particles.length <= effect!.recipe.budget.maxParticles &&
+      near.particles.length > far.particles.length &&
+      late.particles.every((particle) => particle.ageRatio < 1) &&
+      capped.particles.length === 1 &&
+      before.active === false &&
+      after.active === false &&
+      fractionalDuration.particles.length === 1 &&
+      fractionalDuration.particles[0]?.index === 0 &&
+      exactBurstExpiry.particles.length === 1 &&
+      exactBurstExpiry.particles[0]?.index === 1 &&
+      defaultClock.fixedStepSeconds === 1 / 24 &&
+      defaultClock.event === undefined &&
+      effect!.digest !== differentSeed.digest &&
+      kinds.join(",") === "fog,smoke,dust" &&
+      firstParticle.ageRatio === firstAge / firstLifetime &&
+      firstParticle.position.x === expectedFirstX &&
+      materializeCompiledEffects({
+        contract,
+        world: effectWorld(),
+        fps: 24,
+        cues: [{ ...cues[0]!, zone: "missing" }],
+      }).length === 0 &&
+      materializeCompiledEffects({
+        contract,
+        world: {
+          ...effectWorld(),
+          effectRecipes: [],
+        },
+        fps: 24,
+        cues,
+      }).length === 0,
   );
 
   const built = buildInstancedEffect(effect!);
@@ -326,49 +250,23 @@ export const test_viewer_effect = (): void => {
   camera.lookAt(0, 1, 0);
   camera.updateMatrixWorld(true);
   built.update(camera, 2);
-  TestValidator.equals(
+  TestValidator.predicate(
     "viewer renders bounded camera-facing billboard instances with debug identity",
-    namedFacts([
-      ["builtObject", () => built.object.count === built.stats.particles],
-      ["builtStats", () => built.stats.active],
-      ["builtStats2", () => built.stats.particles > 0],
-      ["builtStats3", () => built.stats.particles <= built.stats.cap],
-      ["builtObject2", () => built.object.visible],
-      ["builtObject3", () => built.object.frustumCulled === false],
-      [
-        "builtObject4",
-        () =>
-          built.object.geometry.getAttribute("automovieOpacity")?.count ===
-          effect!.recipe.budget.maxParticles,
-      ],
-      [
-        "builtObject5",
-        () => built.object.userData.automovieEffect.digest === effect!.digest,
-      ],
-    ]),
-    {
-      builtObject: true,
-      builtStats: true,
-      builtStats2: true,
-      builtStats3: true,
-      builtObject2: true,
-      builtObject3: true,
-      builtObject4: true,
-      builtObject5: true,
-    },
+    built.object.count === built.stats.particles &&
+      built.stats.active &&
+      built.stats.particles > 0 &&
+      built.stats.particles <= built.stats.cap &&
+      built.object.visible &&
+      built.object.frustumCulled === false &&
+      built.object.geometry.getAttribute("automovieOpacity")?.count ===
+        effect!.recipe.budget.maxParticles &&
+      built.object.userData.automovieEffect.digest === effect!.digest,
   );
   built.update(camera, 0);
-  TestValidator.equals(
+  TestValidator.predicate(
     "inactive cues hide their billboard batch",
-    namedFacts([
-      ["builtObject", () => built.object.visible === false],
-      ["builtObject2", () => built.object.count === 0],
-      ["builtStats", () => built.stats.active === false],
-    ]),
-    {
-      builtObject: true,
-      builtObject2: true,
-      builtStats: true,
-    },
+    built.object.visible === false &&
+      built.object.count === 0 &&
+      built.stats.active === false,
   );
 };

@@ -12,23 +12,6 @@ import { TestValidator } from "@nestia/e2e";
 import { joint, keyframe, makeMotion, makePose } from "../internal/fixtures";
 import { nclose } from "../internal/predicates";
 
-/**
- * Evaluate named facts in order and stop at the first false one, so a failed
- * comparison names the fact instead of collapsing into one boolean. Stopping
- * keeps the short-circuit semantics the original conjunction had, which some
- * facts depend on to guard the ones after them.
- */
-const namedFacts = (
-  entries: ReadonlyArray<readonly [string, () => boolean]>,
-): Record<string, boolean> => {
-  const output: Record<string, boolean> = {};
-  for (const [name, evaluate] of entries) {
-    output[name] = evaluate();
-    if (output[name] === false) break;
-  }
-  return output;
-};
-
 const WALK: IAutoMovieGait = {
   name: "walk",
   period: 0.8,
@@ -107,33 +90,12 @@ export const test_motion_gait_cycle_meta = (): void => {
     { start: 0, motion: oneShot() },
     { start: 2.3, motion: travel },
   ]);
-  TestValidator.equals(
+  TestValidator.predicate(
     "arrange shifts the last placement's phase by its start",
-    namedFacts([
-      ["arrangedWalkLastGaitCycle", () => arrangedWalkLast.gaitCycle !== null],
-      [
-        "arrangedWalkLastGaitCycle2",
-        () => arrangedWalkLast.gaitCycle !== undefined,
-      ],
-      [
-        "ncloseArrangedWalkLast",
-        () =>
-          arrangedWalkLast.gaitCycle !== undefined &&
-          nclose(arrangedWalkLast.gaitCycle.period, 0.8),
-      ],
-      [
-        "ncloseArrangedWalkLast2",
-        () =>
-          arrangedWalkLast.gaitCycle !== undefined &&
-          nclose(arrangedWalkLast.gaitCycle.phaseAt, ((0 - 2.3) % 0.8) + 0.8),
-      ],
-    ]),
-    {
-      arrangedWalkLastGaitCycle: true,
-      arrangedWalkLastGaitCycle2: true,
-      ncloseArrangedWalkLast: true,
-      ncloseArrangedWalkLast2: true,
-    },
+    arrangedWalkLast.gaitCycle !== null &&
+      arrangedWalkLast.gaitCycle !== undefined &&
+      nclose(arrangedWalkLast.gaitCycle.period, 0.8) &&
+      nclose(arrangedWalkLast.gaitCycle.phaseAt, ((0 - 2.3) % 0.8) + 0.8),
   );
   TestValidator.equals(
     "an in-range arranged phase stays exact",

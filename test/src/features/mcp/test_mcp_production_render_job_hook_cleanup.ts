@@ -6,23 +6,6 @@ import ts from "typescript-compiler";
 
 import { preserveRenderJobFixtureCleanup } from "./test_mcp_production_render_job";
 
-/**
- * Evaluate named facts in order and stop at the first false one, so a failed
- * comparison names the fact instead of collapsing into one boolean. Stopping
- * keeps the short-circuit semantics the original conjunction had, which some
- * facts depend on to guard the ones after them.
- */
-const namedFacts = (
-  entries: ReadonlyArray<readonly [string, () => boolean]>,
-): Record<string, boolean> => {
-  const output: Record<string, boolean> = {};
-  for (const [name, evaluate] of entries) {
-    output[name] = evaluate();
-    if (output[name] === false) break;
-  }
-  return output;
-};
-
 const compact = (node: ts.Node, source: ts.SourceFile): string =>
   node.getText(source).replace(/\s+/g, "");
 
@@ -245,155 +228,59 @@ export const test_mcp_production_render_job_hook_cleanup = (): void => {
     primaryFailure: { error: undefined, present: true },
   });
   const fullOrder = "cleanup-0,cleanup-1,cleanup-2";
-  TestValidator.equals(
+  TestValidator.predicate(
     "owned-descriptor harness cleanup preserves capture and restoration order",
-    namedFacts([
-      ["successReturned", () => success.returned],
-      ["successCaptured", () => success.captured === false],
-      ["successCleanupCaught", () => success.cleanupCaught === false],
-      ["successOrder", () => success.order.join(",") === fullOrder],
-      ["primaryOnlyReturned", () => primaryOnly.returned],
-      ["primaryOnlyCaptured", () => primaryOnly.captured],
-      [
-        "primaryOnlyCapturedFailure",
-        () => primaryOnly.capturedFailure === primaryFailure,
-      ],
-      ["primaryOnlyCleanupCaught", () => primaryOnly.cleanupCaught === false],
-      ["primaryOnlyOrder", () => primaryOnly.order.join(",") === fullOrder],
-      ["standaloneReturned", () => standalone.returned === false],
-      ["standaloneCaptured", () => standalone.captured === false],
-      ["standaloneCleanupCaught", () => standalone.cleanupCaught],
-      [
-        "standaloneCleanupFailure",
-        () => standalone.cleanupFailure === openFailure,
-      ],
-      ["standaloneOrder", () => standalone.order.join(",") === fullOrder],
-      ["multipleCleanupCaught", () => multiple.cleanupCaught],
-      [
-        "aggregateContainsExactlyMultiple",
-        () =>
-          aggregateContainsExactly(multiple.cleanupFailure, [
-            openFailure,
-            closeFailure,
-          ]),
-      ],
-      ["multipleMessage", () => multiple.message.includes("hook-0")],
-      ["multipleMessage2", () => multiple.message.includes("hook-2")],
-      ["multipleMessage3", () => multiple.message.includes("hook-1") === false],
-      ["multipleOrder", () => multiple.order.join(",") === fullOrder],
-      ["combinedCaptured", () => combined.captured],
-      [
-        "combinedCapturedFailure",
-        () => combined.capturedFailure === primaryFailure,
-      ],
-      ["combinedCleanupCaught", () => combined.cleanupCaught],
-      [
-        "aggregateContainsExactlyCombined",
-        () =>
-          aggregateContainsExactly(combined.cleanupFailure, [
-            primaryFailure,
-            openFailure,
-            closeFailure,
-          ]),
-      ],
-      ["combinedOrder", () => combined.order.join(",") === fullOrder],
-      ["undefinedPrimaryReturned", () => undefinedPrimary.returned],
-      ["undefinedPrimaryCaptured", () => undefinedPrimary.captured],
-      [
-        "undefinedPrimaryCapturedFailure",
-        () => undefinedPrimary.capturedFailure === undefined,
-      ],
-      [
-        "undefinedPrimaryCleanupCaught",
-        () => undefinedPrimary.cleanupCaught === false,
-      ],
-      [
-        "undefinedPrimaryOrder",
-        () => undefinedPrimary.order.join(",") === fullOrder,
-      ],
-      [
-        "undefinedStandaloneReturned",
-        () => undefinedStandalone.returned === false,
-      ],
-      [
-        "undefinedStandaloneCaptured",
-        () => undefinedStandalone.captured === false,
-      ],
-      [
-        "undefinedStandaloneCleanupCaught",
-        () => undefinedStandalone.cleanupCaught,
-      ],
-      [
-        "undefinedStandaloneCleanupFailure",
-        () => undefinedStandalone.cleanupFailure === undefined,
-      ],
-      [
-        "undefinedStandaloneOrder",
-        () => undefinedStandalone.order.join(",") === fullOrder,
-      ],
-      ["undefinedCombinedReturned", () => undefinedCombined.returned === false],
-      ["undefinedCombinedCaptured", () => undefinedCombined.captured],
-      [
-        "undefinedCombinedCapturedFailure",
-        () => undefinedCombined.capturedFailure === undefined,
-      ],
-      ["undefinedCombinedCleanupCaught", () => undefinedCombined.cleanupCaught],
-      [
-        "aggregateContainsExactlyUndefinedCombined",
-        () =>
-          aggregateContainsExactly(undefinedCombined.cleanupFailure, [
-            undefined,
-            undefined,
-          ]),
-      ],
-      [
-        "undefinedCombinedOrder",
-        () => undefinedCombined.order.join(",") === fullOrder,
-      ],
-    ]),
-    {
-      successReturned: true,
-      successCaptured: true,
-      successCleanupCaught: true,
-      successOrder: true,
-      primaryOnlyReturned: true,
-      primaryOnlyCaptured: true,
-      primaryOnlyCapturedFailure: true,
-      primaryOnlyCleanupCaught: true,
-      primaryOnlyOrder: true,
-      standaloneReturned: true,
-      standaloneCaptured: true,
-      standaloneCleanupCaught: true,
-      standaloneCleanupFailure: true,
-      standaloneOrder: true,
-      multipleCleanupCaught: true,
-      aggregateContainsExactlyMultiple: true,
-      multipleMessage: true,
-      multipleMessage2: true,
-      multipleMessage3: true,
-      multipleOrder: true,
-      combinedCaptured: true,
-      combinedCapturedFailure: true,
-      combinedCleanupCaught: true,
-      aggregateContainsExactlyCombined: true,
-      combinedOrder: true,
-      undefinedPrimaryReturned: true,
-      undefinedPrimaryCaptured: true,
-      undefinedPrimaryCapturedFailure: true,
-      undefinedPrimaryCleanupCaught: true,
-      undefinedPrimaryOrder: true,
-      undefinedStandaloneReturned: true,
-      undefinedStandaloneCaptured: true,
-      undefinedStandaloneCleanupCaught: true,
-      undefinedStandaloneCleanupFailure: true,
-      undefinedStandaloneOrder: true,
-      undefinedCombinedReturned: true,
-      undefinedCombinedCaptured: true,
-      undefinedCombinedCapturedFailure: true,
-      undefinedCombinedCleanupCaught: true,
-      aggregateContainsExactlyUndefinedCombined: true,
-      undefinedCombinedOrder: true,
-    },
+    success.returned &&
+      success.captured === false &&
+      success.cleanupCaught === false &&
+      success.order.join(",") === fullOrder &&
+      primaryOnly.returned &&
+      primaryOnly.captured &&
+      primaryOnly.capturedFailure === primaryFailure &&
+      primaryOnly.cleanupCaught === false &&
+      primaryOnly.order.join(",") === fullOrder &&
+      standalone.returned === false &&
+      standalone.captured === false &&
+      standalone.cleanupCaught &&
+      standalone.cleanupFailure === openFailure &&
+      standalone.order.join(",") === fullOrder &&
+      multiple.cleanupCaught &&
+      aggregateContainsExactly(multiple.cleanupFailure, [
+        openFailure,
+        closeFailure,
+      ]) &&
+      multiple.message.includes("hook-0") &&
+      multiple.message.includes("hook-2") &&
+      multiple.message.includes("hook-1") === false &&
+      multiple.order.join(",") === fullOrder &&
+      combined.captured &&
+      combined.capturedFailure === primaryFailure &&
+      combined.cleanupCaught &&
+      aggregateContainsExactly(combined.cleanupFailure, [
+        primaryFailure,
+        openFailure,
+        closeFailure,
+      ]) &&
+      combined.order.join(",") === fullOrder &&
+      undefinedPrimary.returned &&
+      undefinedPrimary.captured &&
+      undefinedPrimary.capturedFailure === undefined &&
+      undefinedPrimary.cleanupCaught === false &&
+      undefinedPrimary.order.join(",") === fullOrder &&
+      undefinedStandalone.returned === false &&
+      undefinedStandalone.captured === false &&
+      undefinedStandalone.cleanupCaught &&
+      undefinedStandalone.cleanupFailure === undefined &&
+      undefinedStandalone.order.join(",") === fullOrder &&
+      undefinedCombined.returned === false &&
+      undefinedCombined.captured &&
+      undefinedCombined.capturedFailure === undefined &&
+      undefinedCombined.cleanupCaught &&
+      aggregateContainsExactly(undefinedCombined.cleanupFailure, [
+        undefined,
+        undefined,
+      ]) &&
+      undefinedCombined.order.join(",") === fullOrder,
   );
   TestValidator.equals(
     "render-job descriptor capture owns its three hook restorations",

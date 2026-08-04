@@ -4,23 +4,6 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-/**
- * Evaluate named facts in order and stop at the first false one, so a failed
- * comparison names the fact instead of collapsing into one boolean. Stopping
- * keeps the short-circuit semantics the original conjunction had, which some
- * facts depend on to guard the ones after them.
- */
-const namedFacts = (
-  entries: ReadonlyArray<readonly [string, () => boolean]>,
-): Record<string, boolean> => {
-  const output: Record<string, boolean> = {};
-  for (const [name, evaluate] of entries) {
-    output[name] = evaluate();
-    if (output[name] === false) break;
-  }
-  return output;
-};
-
 interface ICreateAutoMovieFixtureFailure {
   error: unknown;
 }
@@ -88,86 +71,30 @@ export const test_cli_create_automovie = (): void => {
       fs.readFileSync(path.join(target, "package.json"), "utf8"),
     ) as { scripts?: Record<string, string> };
     const readme = fs.readFileSync(path.join(target, "README.md"), "utf8");
-    TestValidator.equals(
+    TestValidator.predicate(
       "one creator call writes every project workflow without hidden installs",
-      namedFacts([
-        ["status", () => status === 0],
-        ["pkgScripts", () => pkg.scripts?.build === "npm run compile"],
-        [
-          "pkgScripts2",
-          () =>
-            pkg.scripts?.lint ===
-            "npm run lint:source && ttsx -P tsconfig.json scripts/lint.ts",
-        ],
-        [
-          "pkgScripts3",
-          () =>
-            pkg.scripts?.["lint:source"] === "ttsc --noEmit -p tsconfig.json",
-        ],
-        ["pkgScripts4", () => pkg.scripts?.verify === "tsx scripts/verify.ts"],
-        ["typeofPkg", () => typeof pkg.scripts?.render === "string"],
-        ["typeofPkg2", () => typeof pkg.scripts?.viewer === "string"],
-        [
-          "typeofPkg3",
-          () => typeof pkg.scripts?.["capture:doctor"] === "string",
-        ],
-        ["targetResident", () => fs.existsSync(path.join(target, ".mcp.json"))],
-        [
-          "targetNpmrc",
-          () =>
-            fs.readFileSync(path.join(target, ".npmrc"), "utf8") ===
-            "onnxruntime-node-install-cuda=skip\n",
-        ],
-        [
-          "targetResident2",
-          () =>
-            fs.existsSync(path.join(target, "automovie.mcp.jsonc")) === false,
-        ],
-        ["readmeNnpm", () => readme.includes("\nnpm run lint:source\n")],
-        ["readmeNnpm2", () => readme.includes("\nnpm run lint\n")],
-        [
-          "stdoutN",
-          () => stdout.includes("\n  npm run lint:source\n  npm run lint\n"),
-        ],
-        ["readmeNpm", () => readme.includes("npm run verify")],
-        ["readmeRender", () => readme.includes("render all --tier proxy")],
-        ["readmeHttp", () => readme.includes("http://127.0.0.1:5173")],
-        [
-          "readmePLAYWRIGHT_DOWNLOAD_HOST",
-          () => readme.includes("PLAYWRIGHT_DOWNLOAD_HOST"),
-        ],
-        [
-          "targetResident3",
-          () => fs.existsSync(path.join(target, "node_modules")) === false,
-        ],
-        [
-          "targetResident4",
-          () =>
-            fs.existsSync(path.join(target, ".automovie", "capture")) === false,
-        ],
-      ]),
-      {
-        status: true,
-        pkgScripts: true,
-        pkgScripts2: true,
-        pkgScripts3: true,
-        pkgScripts4: true,
-        typeofPkg: true,
-        typeofPkg2: true,
-        typeofPkg3: true,
-        targetResident: true,
-        targetNpmrc: true,
-        targetResident2: true,
-        readmeNnpm: true,
-        readmeNnpm2: true,
-        stdoutN: true,
-        readmeNpm: true,
-        readmeRender: true,
-        readmeHttp: true,
-        readmePLAYWRIGHT_DOWNLOAD_HOST: true,
-        targetResident3: true,
-        targetResident4: true,
-      },
+      status === 0 &&
+        pkg.scripts?.build === "npm run compile" &&
+        pkg.scripts?.lint ===
+          "npm run lint:source && ttsx -P tsconfig.json scripts/lint.ts" &&
+        pkg.scripts?.["lint:source"] === "ttsc --noEmit -p tsconfig.json" &&
+        pkg.scripts?.verify === "tsx scripts/verify.ts" &&
+        typeof pkg.scripts?.render === "string" &&
+        typeof pkg.scripts?.viewer === "string" &&
+        typeof pkg.scripts?.["capture:doctor"] === "string" &&
+        fs.existsSync(path.join(target, ".mcp.json")) &&
+        fs.readFileSync(path.join(target, ".npmrc"), "utf8") ===
+          "onnxruntime-node-install-cuda=skip\n" &&
+        fs.existsSync(path.join(target, "automovie.mcp.jsonc")) === false &&
+        readme.includes("\nnpm run lint:source\n") &&
+        readme.includes("\nnpm run lint\n") &&
+        stdout.includes("\n  npm run lint:source\n  npm run lint\n") &&
+        readme.includes("npm run verify") &&
+        readme.includes("render all --tier proxy") &&
+        readme.includes("http://127.0.0.1:5173") &&
+        readme.includes("PLAYWRIGHT_DOWNLOAD_HOST") &&
+        fs.existsSync(path.join(target, "node_modules")) === false &&
+        fs.existsSync(path.join(target, ".automovie", "capture")) === false,
     );
   } catch (error) {
     createFailure = { error };

@@ -6,23 +6,6 @@ import ts from "typescript-compiler";
 
 import { preserveLegacyImportFixtureCleanup } from "./test_mcp_production_legacy_import";
 
-/**
- * Evaluate named facts in order and stop at the first false one, so a failed
- * comparison names the fact instead of collapsing into one boolean. Stopping
- * keeps the short-circuit semantics the original conjunction had, which some
- * facts depend on to guard the ones after them.
- */
-const namedFacts = (
-  entries: ReadonlyArray<readonly [string, () => boolean]>,
-): Record<string, boolean> => {
-  const output: Record<string, boolean> = {};
-  for (const [name, evaluate] of entries) {
-    output[name] = evaluate();
-    if (output[name] === false) break;
-  }
-  return output;
-};
-
 const compact = (node: ts.Node, source: ts.SourceFile): string =>
   node.getText(source).replace(/\s+/g, "");
 
@@ -229,102 +212,46 @@ export const test_mcp_production_legacy_import_hook_cleanup = (): void => {
     primaryFailure: { error: undefined, present: true },
   });
   const fullOrder = "cleanup-0,cleanup-1,cleanup-2,cleanup-3";
-  TestValidator.equals(
+  TestValidator.predicate(
     "legacy hook cleanup preserves failure and restoration order",
-    namedFacts([
-      ["successCaught", () => success.caught === false],
-      ["successFailure", () => success.failure === undefined],
-      ["successOrder", () => success.order.join(",") === fullOrder],
-      ["primaryOnlyCaught", () => primaryOnly.caught],
-      ["primaryOnlyFailure", () => primaryOnly.failure === primaryFailure],
-      ["primaryOnlyOrder", () => primaryOnly.order.join(",") === fullOrder],
-      ["standaloneCaught", () => standalone.caught],
-      ["standaloneFailure", () => standalone.failure === firstHookFailure],
-      ["standaloneOrder", () => standalone.order.join(",") === fullOrder],
-      ["multipleCaught", () => multiple.caught],
-      [
-        "aggregateContainsExactlyMultiple",
-        () =>
-          aggregateContainsExactly(multiple.failure, [
-            firstHookFailure,
-            lastHookFailure,
-          ]),
-      ],
-      ["multipleMessage", () => multiple.message.includes("hook-0")],
-      ["multipleMessage2", () => multiple.message.includes("hook-3")],
-      ["multipleMessage3", () => multiple.message.includes("hook-1") === false],
-      ["multipleMessage4", () => multiple.message.includes("hook-2") === false],
-      ["multipleOrder", () => multiple.order.join(",") === fullOrder],
-      ["combinedCaught", () => combined.caught],
-      [
-        "aggregateContainsExactlyCombined",
-        () =>
-          aggregateContainsExactly(combined.failure, [
-            primaryFailure,
-            firstHookFailure,
-            lastHookFailure,
-          ]),
-      ],
-      ["combinedOrder", () => combined.order.join(",") === fullOrder],
-      ["undefinedPrimaryCaught", () => undefinedPrimary.caught],
-      ["undefinedPrimaryFailure", () => undefinedPrimary.failure === undefined],
-      [
-        "undefinedPrimaryOrder",
-        () => undefinedPrimary.order.join(",") === fullOrder,
-      ],
-      ["undefinedStandaloneCaught", () => undefinedStandalone.caught],
-      [
-        "undefinedStandaloneFailure",
-        () => undefinedStandalone.failure === undefined,
-      ],
-      [
-        "undefinedStandaloneOrder",
-        () => undefinedStandalone.order.join(",") === fullOrder,
-      ],
-      ["undefinedCombinedCaught", () => undefinedCombined.caught],
-      [
-        "aggregateContainsExactlyUndefinedCombined",
-        () =>
-          aggregateContainsExactly(undefinedCombined.failure, [
-            undefined,
-            undefined,
-          ]),
-      ],
-      [
-        "undefinedCombinedOrder",
-        () => undefinedCombined.order.join(",") === fullOrder,
-      ],
-    ]),
-    {
-      successCaught: true,
-      successFailure: true,
-      successOrder: true,
-      primaryOnlyCaught: true,
-      primaryOnlyFailure: true,
-      primaryOnlyOrder: true,
-      standaloneCaught: true,
-      standaloneFailure: true,
-      standaloneOrder: true,
-      multipleCaught: true,
-      aggregateContainsExactlyMultiple: true,
-      multipleMessage: true,
-      multipleMessage2: true,
-      multipleMessage3: true,
-      multipleMessage4: true,
-      multipleOrder: true,
-      combinedCaught: true,
-      aggregateContainsExactlyCombined: true,
-      combinedOrder: true,
-      undefinedPrimaryCaught: true,
-      undefinedPrimaryFailure: true,
-      undefinedPrimaryOrder: true,
-      undefinedStandaloneCaught: true,
-      undefinedStandaloneFailure: true,
-      undefinedStandaloneOrder: true,
-      undefinedCombinedCaught: true,
-      aggregateContainsExactlyUndefinedCombined: true,
-      undefinedCombinedOrder: true,
-    },
+    success.caught === false &&
+      success.failure === undefined &&
+      success.order.join(",") === fullOrder &&
+      primaryOnly.caught &&
+      primaryOnly.failure === primaryFailure &&
+      primaryOnly.order.join(",") === fullOrder &&
+      standalone.caught &&
+      standalone.failure === firstHookFailure &&
+      standalone.order.join(",") === fullOrder &&
+      multiple.caught &&
+      aggregateContainsExactly(multiple.failure, [
+        firstHookFailure,
+        lastHookFailure,
+      ]) &&
+      multiple.message.includes("hook-0") &&
+      multiple.message.includes("hook-3") &&
+      multiple.message.includes("hook-1") === false &&
+      multiple.message.includes("hook-2") === false &&
+      multiple.order.join(",") === fullOrder &&
+      combined.caught &&
+      aggregateContainsExactly(combined.failure, [
+        primaryFailure,
+        firstHookFailure,
+        lastHookFailure,
+      ]) &&
+      combined.order.join(",") === fullOrder &&
+      undefinedPrimary.caught &&
+      undefinedPrimary.failure === undefined &&
+      undefinedPrimary.order.join(",") === fullOrder &&
+      undefinedStandalone.caught &&
+      undefinedStandalone.failure === undefined &&
+      undefinedStandalone.order.join(",") === fullOrder &&
+      undefinedCombined.caught &&
+      aggregateContainsExactly(undefinedCombined.failure, [
+        undefined,
+        undefined,
+      ]) &&
+      undefinedCombined.order.join(",") === fullOrder,
   );
   TestValidator.equals(
     "legacy import owns seven multi-hook cleanup lifecycles",
@@ -402,13 +329,13 @@ export const test_mcp_production_legacy_import_hook_cleanup = (): void => {
             "letrollbackHookFailure:ILegacyImportFixtureFailure|undefined;",
           substantive: {
             digest:
-              "affed27c5aec1742efb29d0cf1ce7540aa7382be4c4f5fcb10865570730e121d",
-            tokens: 105,
+              "35f79c505335c7074fcf8b80bab535b6ac7943b179a18b3fa9c2d0b29c4f5b3a",
+            tokens: 50,
           },
           tryBody:
-            '{TestValidator.equals("apartialrollbackfailurerestoresthecompleteappliedstate",namedFacts([["rejected",()=>throws(()=>importer.rollback(),"statewasrestored"),],["rollbackFailureResident",()=>fs.existsSync(path.join(rollbackFailure.root,".automovie")),],["importerApply",()=>importer.apply().status==="unchanged"],["quarantineCleanupDenied",()=>quarantineCleanupDenied],]),{rejected:true,rollbackFailureResident:true,importerApply:true,quarantineCleanupDenied:true,},);}',
+            '{TestValidator.predicate("apartialrollbackfailurerestoresthecompleteappliedstate",throws(()=>importer.rollback(),"statewasrestored")&&fs.existsSync(path.join(rollbackFailure.root,".automovie"))&&importer.apply().status==="unchanged"&&quarantineCleanupDenied,);}',
           tryDigest:
-            "673c787ca9d1e99cc393b26c68b294197a567679b0ea227ddcc8019c08b96624",
+            "8d0d834ea3fe16c11f20efa94a3c67afe14915cffeb6b53ec1f91550956a53f2",
         },
         {
           catchBodies: [

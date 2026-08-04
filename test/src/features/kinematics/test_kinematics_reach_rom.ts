@@ -15,23 +15,6 @@ import { TestValidator } from "@nestia/e2e";
 import { createSkeleton } from "../internal/fixtures";
 import { nclose, vclose, violationCount } from "../internal/predicates";
 
-/**
- * Evaluate named facts in order and stop at the first false one, so a failed
- * comparison names the fact instead of collapsing into one boolean. Stopping
- * keeps the short-circuit semantics the original conjunction had, which some
- * facts depend on to guard the ones after them.
- */
-const namedFacts = (
-  entries: ReadonlyArray<readonly [string, () => boolean]>,
-): Record<string, boolean> => {
-  const output: Record<string, boolean> = {};
-  for (const [name, evaluate] of entries) {
-    output[name] = evaluate();
-    if (output[name] === false) break;
-  }
-  return output;
-};
-
 const SHOULDER: IAutoMovieVector3 = { x: 0.2, y: 1.4, z: 0 };
 
 /** Where the left hand lands, read back through the frame the pose is in. */
@@ -174,24 +157,14 @@ export const test_kinematics_reach_rom = (): void => {
   const rest = reachPose(skeleton, "left", restTarget)!;
   const restUpper = rest.joints.find((j) => j.bone === "leftUpperArm")!;
   const restLower = rest.joints.find((j) => j.bone === "leftLowerArm")!;
-  TestValidator.equals(
+  TestValidator.predicate(
     "the rest-pose target returns the identity articulation",
-    namedFacts([
-      ["ncloseRestUpper", () => nclose(restUpper.flexion!, 0, 0)],
-      ["ncloseRestUpper2", () => nclose(restUpper.abduction!, 90, 0)],
-      ["ncloseRestUpper3", () => nclose(restUpper.twist!, 0, 0)],
-      ["ncloseRestLower", () => nclose(restLower.flexion!, 0, 0)],
-      ["ncloseRestLower2", () => nclose(restLower.abduction!, 0, 0)],
-      ["ncloseRestLower3", () => nclose(restLower.twist!, 0, 0)],
-    ]),
-    {
-      ncloseRestUpper: true,
-      ncloseRestUpper2: true,
-      ncloseRestUpper3: true,
-      ncloseRestLower: true,
-      ncloseRestLower2: true,
-      ncloseRestLower3: true,
-    },
+    nclose(restUpper.flexion!, 0, 0) &&
+      nclose(restUpper.abduction!, 90, 0) &&
+      nclose(restUpper.twist!, 0, 0) &&
+      nclose(restLower.flexion!, 0, 0) &&
+      nclose(restLower.abduction!, 0, 0) &&
+      nclose(restLower.twist!, 0, 0),
   );
   TestValidator.equals(
     "and it is ROM-clean",

@@ -12,23 +12,6 @@ import { TestValidator } from "@nestia/e2e";
 
 import { throwsError } from "../internal/predicates";
 
-/**
- * Evaluate named facts in order and stop at the first false one, so a failed
- * comparison names the fact instead of collapsing into one boolean. Stopping
- * keeps the short-circuit semantics the original conjunction had, which some
- * facts depend on to guard the ones after them.
- */
-const namedFacts = (
-  entries: ReadonlyArray<readonly [string, () => boolean]>,
-): Record<string, boolean> => {
-  const output: Record<string, boolean> = {};
-  for (const [name, evaluate] of entries) {
-    output[name] = evaluate();
-    if (output[name] === false) break;
-  }
-  return output;
-};
-
 const shot = (id: string, duration: number): IAutoMovieShot => ({
   id,
   name: null,
@@ -220,27 +203,11 @@ export const test_render_chunk_sequence = (): void => {
     chunked.reassembly.concatListLines[0],
     "file 'seq_duel.chunk_0.mp4'",
   );
-  TestValidator.equals(
+  TestValidator.predicate(
     "reassembly concat args are lossless",
-    namedFacts([
-      [
-        "chunkedReassembly",
-        () => chunked.reassembly.ffmpegArgs.includes("concat"),
-      ],
-      [
-        "chunkedReassembly2",
-        () => chunked.reassembly.ffmpegArgs.includes("copy"),
-      ],
-      [
-        "chunkedReassembly3",
-        () => chunked.reassembly.ffmpegArgs.includes("seq_duel.mp4"),
-      ],
-    ]),
-    {
-      chunkedReassembly: true,
-      chunkedReassembly2: true,
-      chunkedReassembly3: true,
-    },
+    chunked.reassembly.ffmpegArgs.includes("concat") &&
+      chunked.reassembly.ffmpegArgs.includes("copy") &&
+      chunked.reassembly.ffmpegArgs.includes("seq_duel.mp4"),
   );
 
   const noExt = planChunkedSequenceRender({

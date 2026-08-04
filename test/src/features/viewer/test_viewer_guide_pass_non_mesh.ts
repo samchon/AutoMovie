@@ -10,23 +10,6 @@ import * as THREE from "three";
 
 import { IDENTITY_TRANSFORM, createModel } from "../internal/fixtures";
 
-/**
- * Evaluate named facts in order and stop at the first false one, so a failed
- * comparison names the fact instead of collapsing into one boolean. Stopping
- * keeps the short-circuit semantics the original conjunction had, which some
- * facts depend on to guard the ones after them.
- */
-const namedFacts = (
-  entries: ReadonlyArray<readonly [string, () => boolean]>,
-): Record<string, boolean> => {
-  const output: Record<string, boolean> = {};
-  for (const [name, evaluate] of entries) {
-    output[name] = evaluate();
-    if (output[name] === false) break;
-  }
-  return output;
-};
-
 /** A scene with one mesh node plus every non-mesh renderable class. */
 const sceneWithHelpers = () => {
   const objects = new Map([
@@ -132,21 +115,11 @@ export const test_viewer_guide_pass_non_mesh = (): void => {
       "the pre-existing non-mesh renderables are hidden under pose",
       nonMesh.every((object) => object.visible === false),
     );
-    TestValidator.equals(
+    TestValidator.predicate(
       "the pose skeleton overlay stays visible with its lines",
-      namedFacts([
-        ["overlayVisible", () => overlay.visible === true],
-        ["overlayCount", () => overlay.children.length > 0],
-        [
-          "overlayChildren",
-          () => overlay.children.every((child) => child.visible === true),
-        ],
-      ]),
-      {
-        overlayVisible: true,
-        overlayCount: true,
-        overlayChildren: true,
-      },
+      overlay.visible === true &&
+        overlay.children.length > 0 &&
+        overlay.children.every((child) => child.visible === true),
     );
     handle.restore();
     TestValidator.predicate(

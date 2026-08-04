@@ -17,23 +17,6 @@ import {
   productionWebVtt,
 } from "./productionMediaFixtures";
 
-/**
- * Evaluate named facts in order and stop at the first false one, so a failed
- * comparison names the fact instead of collapsing into one boolean. Stopping
- * keeps the short-circuit semantics the original conjunction had, which some
- * facts depend on to guard the ones after them.
- */
-const namedFacts = (
-  entries: ReadonlyArray<readonly [string, () => boolean]>,
-): Record<string, boolean> => {
-  const output: Record<string, boolean> = {};
-  for (const [name, evaluate] of entries) {
-    output[name] = evaluate();
-    if (output[name] === false) break;
-  }
-  return output;
-};
-
 const refused = (closure: () => unknown, message: string): boolean => {
   try {
     closure();
@@ -111,61 +94,42 @@ export const test_mcp_production_media_probe = async (): Promise<void> => {
       eventAlignmentPassed: true,
     },
   );
-  TestValidator.equals(
+  TestValidator.predicate(
     "sound evidence must be UTF-8 JSON with complete event analysis",
-    namedFacts([
-      [
-        "refusedProbeProductionMedia",
+    refused(
+      () =>
+        probeProductionMedia({
+          kind: "audio-mix",
+          mediaType: "application/json",
+          bytes: Buffer.from([0xc3]),
+        }),
+      "UTF-8 JSON",
+    ) &&
+      refused(
         () =>
-          refused(
-            () =>
-              probeProductionMedia({
-                kind: "audio-mix",
-                mediaType: "application/json",
-                bytes: Buffer.from([0xc3]),
+          probeProductionMedia({
+            kind: "audio-mix",
+            mediaType: "application/json",
+            bytes: Buffer.from(
+              JSON.stringify({
+                version: 1,
+                plan: { events: [{}] },
+                analysis: { clippingSamples: 0, eventAlignment: [] },
+                tts: [],
               }),
-            "UTF-8 JSON",
-          ),
-      ],
-      [
-        "refusedProbeProductionMedia2",
+            ),
+          }),
+        "does not cover",
+      ) &&
+      refused(
         () =>
-          refused(
-            () =>
-              probeProductionMedia({
-                kind: "audio-mix",
-                mediaType: "application/json",
-                bytes: Buffer.from(
-                  JSON.stringify({
-                    version: 1,
-                    plan: { events: [{}] },
-                    analysis: { clippingSamples: 0, eventAlignment: [] },
-                    tts: [],
-                  }),
-                ),
-              }),
-            "does not cover",
-          ),
-      ],
-      [
-        "refusedProbeProductionMedia3",
-        () =>
-          refused(
-            () =>
-              probeProductionMedia({
-                kind: "audio-mix",
-                mediaType: "application/json",
-                bytes: Buffer.from("{}"),
-              }),
-            "lacks a versioned plan",
-          ),
-      ],
-    ]),
-    {
-      refusedProbeProductionMedia: true,
-      refusedProbeProductionMedia2: true,
-      refusedProbeProductionMedia3: true,
-    },
+          probeProductionMedia({
+            kind: "audio-mix",
+            mediaType: "application/json",
+            bytes: Buffer.from("{}"),
+          }),
+        "lacks a versioned plan",
+      ),
   );
   TestValidator.equals(
     "audio-mix PNG evidence is decoded as a raster",
@@ -409,31 +373,16 @@ export const test_mcp_production_media_probe = async (): Promise<void> => {
     mediaType: "video/mp4",
     bytes: video,
   });
-  TestValidator.equals(
+  TestValidator.predicate(
     "the guide probe derives H.264 geometry and frame timing",
-    namedFacts([
-      ["videoProbeVideo", () => videoProbe.kind === "video"],
-      ["videoProbeContainer", () => videoProbe.container === "mp4"],
-      ["videoProbeCodec", () => videoProbe.codec === "h264"],
-      ["videoProbeWidth", () => videoProbe.width === 16],
-      ["videoProbeHeight", () => videoProbe.height === 16],
-      ["videoProbeFrameCount", () => videoProbe.frameCount === 4],
-      ["videoProbeFps", () => videoProbe.fps === 24],
-      [
-        "absVideoProbe",
-        () => Math.abs(videoProbe.runtimeSeconds - 4 / 24) < 1e-9,
-      ],
-    ]),
-    {
-      videoProbeVideo: true,
-      videoProbeContainer: true,
-      videoProbeCodec: true,
-      videoProbeWidth: true,
-      videoProbeHeight: true,
-      videoProbeFrameCount: true,
-      videoProbeFps: true,
-      absVideoProbe: true,
-    },
+    videoProbe.kind === "video" &&
+      videoProbe.container === "mp4" &&
+      videoProbe.codec === "h264" &&
+      videoProbe.width === 16 &&
+      videoProbe.height === 16 &&
+      videoProbe.frameCount === 4 &&
+      videoProbe.fps === 24 &&
+      Math.abs(videoProbe.runtimeSeconds - 4 / 24) < 1e-9,
   );
   const featureBytes = muxProductionFeatureMp4({
     video,
@@ -444,20 +393,12 @@ export const test_mcp_production_media_probe = async (): Promise<void> => {
     mediaType: "video/mp4",
     bytes: featureBytes,
   });
-  TestValidator.equals(
+  TestValidator.predicate(
     "a feature requires and preserves exact-runtime H.264 plus stereo Opus",
-    namedFacts([
-      ["featureVideo", () => feature.kind === "video"],
-      ["featureFrameCount", () => feature.frameCount === 4],
-      ["featureFps", () => feature.fps === 24],
-      ["absFeature", () => Math.abs(feature.runtimeSeconds - 4 / 24) < 1e-9],
-    ]),
-    {
-      featureVideo: true,
-      featureFrameCount: true,
-      featureFps: true,
-      absFeature: true,
-    },
+    feature.kind === "video" &&
+      feature.frameCount === 4 &&
+      feature.fps === 24 &&
+      Math.abs(feature.runtimeSeconds - 4 / 24) < 1e-9,
   );
   TestValidator.predicate(
     "video-only MP4 cannot satisfy the final feature contract",
@@ -471,32 +412,14 @@ export const test_mcp_production_media_probe = async (): Promise<void> => {
       "exactly 2",
     ),
   );
-  TestValidator.equals(
+  TestValidator.predicate(
     "the intermediate production-video probe accepts only H.264-only MP4",
-    namedFacts([
-      [
-        "probeProductionVideoMp4Video",
-        () => probeProductionVideoMp4(video).frameCount === 4,
-      ],
-      [
-        "refusedProbeProductionVideoMp4",
-        () =>
-          refused(() => probeProductionVideoMp4(featureBytes), "exactly one"),
-      ],
-      [
-        "refusedProbeProductionVideoMp42",
-        () =>
-          refused(
-            () => probeProductionVideoMp4(productionOpusMp4(8_000)),
-            "0 video tracks",
-          ),
-      ],
-    ]),
-    {
-      probeProductionVideoMp4Video: true,
-      refusedProbeProductionVideoMp4: true,
-      refusedProbeProductionVideoMp42: true,
-    },
+    probeProductionVideoMp4(video).frameCount === 4 &&
+      refused(() => probeProductionVideoMp4(featureBytes), "exactly one") &&
+      refused(
+        () => probeProductionVideoMp4(productionOpusMp4(8_000)),
+        "0 video tracks",
+      ),
   );
   TestValidator.predicate(
     "feature mux refuses unequal track clocks",
@@ -529,80 +452,56 @@ export const test_mcp_production_media_probe = async (): Promise<void> => {
     media_duration: 960,
     duration: 960,
   });
-  TestValidator.equals(
+  TestValidator.predicate(
     "audio presentation edits reject malformed clocks and duplicate edits",
-    namedFacts([
-      [
-        "refusedTrimProductionAudioPresentation",
+    refused(
+      () =>
+        trimProductionAudioPresentation({
+          file: editFile,
+          track: 0,
+          mediaTimescale: 48_000,
+          movieTimescale: 48_000,
+          primingSamples: 0,
+          presentationSamples: 960,
+        }),
+      "finite sample counts",
+    ) &&
+      refused(
         () =>
-          refused(
-            () =>
-              trimProductionAudioPresentation({
-                file: editFile,
-                track: 0,
-                mediaTimescale: 48_000,
-                movieTimescale: 48_000,
-                primingSamples: 0,
-                presentationSamples: 960,
-              }),
-            "finite sample counts",
-          ),
-      ],
-      [
-        "refusedTrimProductionAudioPresentation2",
+          trimProductionAudioPresentation({
+            file: editFile,
+            track: editTrack,
+            mediaTimescale: 48_000,
+            movieTimescale: 48_000,
+            primingSamples: -1,
+            presentationSamples: 960,
+          }),
+        "finite sample counts",
+      ) &&
+      refused(
         () =>
-          refused(
-            () =>
-              trimProductionAudioPresentation({
-                file: editFile,
-                track: editTrack,
-                mediaTimescale: 48_000,
-                movieTimescale: 48_000,
-                primingSamples: -1,
-                presentationSamples: 960,
-              }),
-            "finite sample counts",
-          ),
-      ],
-      [
-        "refusedTrimProductionAudioPresentation3",
+          trimProductionAudioPresentation({
+            file: editFile,
+            track: editTrack,
+            mediaTimescale: 3,
+            movieTimescale: 2,
+            primingSamples: 0,
+            presentationSamples: 1,
+          }),
+        "does not land",
+      ) &&
+      refused(
         () =>
-          refused(
-            () =>
-              trimProductionAudioPresentation({
-                file: editFile,
-                track: editTrack,
-                mediaTimescale: 3,
-                movieTimescale: 2,
-                primingSamples: 0,
-                presentationSamples: 1,
-              }),
-            "does not land",
-          ),
-      ],
-      [
-        "refusedTrimProductionAudioPresentation4",
-        () =>
-          refused(
-            () =>
-              trimProductionAudioPresentation({
-                file: editFile,
-                track: editTrack + 1,
-                mediaTimescale: 48_000,
-                movieTimescale: 48_000,
-                primingSamples: 0,
-                presentationSamples: 960,
-              }),
-            "existing track",
-          ),
-      ],
-    ]),
-    {
-      refusedTrimProductionAudioPresentation: true,
-      refusedTrimProductionAudioPresentation2: true,
-      refusedTrimProductionAudioPresentation3: true,
-      refusedTrimProductionAudioPresentation4: true,
-    },
+          trimProductionAudioPresentation({
+            file: editFile,
+            track: editTrack + 1,
+            mediaTimescale: 48_000,
+            movieTimescale: 48_000,
+            primingSamples: 0,
+            presentationSamples: 960,
+          }),
+        "existing track",
+      ),
   );
   trimProductionAudioPresentation({
     file: editFile,
@@ -871,31 +770,16 @@ export const test_mcp_production_media_probe = async (): Promise<void> => {
     mediaType: "audio/mp4",
     bytes: audio,
   });
-  TestValidator.equals(
+  TestValidator.predicate(
     "the audio probe derives presentation clock, profile, packets and priming",
-    namedFacts([
-      ["audioProbeAudio", () => audioProbe.kind === "audio"],
-      ["audioProbeContainer", () => audioProbe.container === "mp4"],
-      [
-        "audioProbeCodec",
-        () => audioProbe.codec.toLowerCase().startsWith("opus"),
-      ],
-      ["audioProbeRuntimeSeconds", () => audioProbe.runtimeSeconds === 1],
-      ["audioProbeChannels", () => audioProbe.channels === 2],
-      ["audioProbeSampleRate", () => audioProbe.sampleRate === 48_000],
-      ["audioProbeSampleCount", () => audioProbe.sampleCount > 0],
-      ["audioProbePrimingSamples", () => audioProbe.primingSamples === 312],
-    ]),
-    {
-      audioProbeAudio: true,
-      audioProbeContainer: true,
-      audioProbeCodec: true,
-      audioProbeRuntimeSeconds: true,
-      audioProbeChannels: true,
-      audioProbeSampleRate: true,
-      audioProbeSampleCount: true,
-      audioProbePrimingSamples: true,
-    },
+    audioProbe.kind === "audio" &&
+      audioProbe.container === "mp4" &&
+      audioProbe.codec.toLowerCase().startsWith("opus") &&
+      audioProbe.runtimeSeconds === 1 &&
+      audioProbe.channels === 2 &&
+      audioProbe.sampleRate === 48_000 &&
+      audioProbe.sampleCount > 0 &&
+      audioProbe.primingSamples === 312,
   );
   TestValidator.predicate(
     "audio-mix rejects a resident mono AAC track",

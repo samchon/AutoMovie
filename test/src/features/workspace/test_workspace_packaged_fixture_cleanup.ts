@@ -4,23 +4,6 @@ import { createRequire } from "node:module";
 import path from "node:path";
 import ts from "typescript-compiler";
 
-/**
- * Evaluate named facts in order and stop at the first false one, so a failed
- * comparison names the fact instead of collapsing into one boolean. Stopping
- * keeps the short-circuit semantics the original conjunction had, which some
- * facts depend on to guard the ones after them.
- */
-const namedFacts = (
-  entries: ReadonlyArray<readonly [string, () => boolean]>,
-): Record<string, boolean> => {
-  const output: Record<string, boolean> = {};
-  for (const [name, evaluate] of entries) {
-    output[name] = evaluate();
-    if (output[name] === false) break;
-  }
-  return output;
-};
-
 /** Repository root, four levels above `test/src/features/workspace`. */
 const ROOT = path.resolve(__dirname, "..", "..", "..", "..");
 
@@ -168,35 +151,19 @@ const exercisePackagedFixtureCleanup = (): void => {
   const primaryOnly = capture(primaryFailure, undefined);
   const standalone = capture(undefined, cleanupFailure);
   const combined = capture(primaryFailure, cleanupFailure);
-  TestValidator.equals(
+  TestValidator.predicate(
     "packaged fixture cleanup retains exact primary-first failure ownership",
-    namedFacts([
-      ["successCaught", () => success.caught === undefined],
-      ["successAttempts", () => success.attempts === 1],
-      ["primaryOnlyCaught", () => primaryOnly.caught === primaryFailure],
-      ["primaryOnlyAttempts", () => primaryOnly.attempts === 1],
-      ["standaloneCaught", () => standalone.caught === cleanupFailure],
-      ["standaloneAttempts", () => standalone.attempts === 1],
-      [
-        "aggregateContainsExactlyCombined",
-        () =>
-          aggregateContainsExactly(combined.caught, [
-            primaryFailure,
-            cleanupFailure,
-          ]),
-      ],
-      ["combinedAttempts", () => combined.attempts === 1],
-    ]),
-    {
-      successCaught: true,
-      successAttempts: true,
-      primaryOnlyCaught: true,
-      primaryOnlyAttempts: true,
-      standaloneCaught: true,
-      standaloneAttempts: true,
-      aggregateContainsExactlyCombined: true,
-      combinedAttempts: true,
-    },
+    success.caught === undefined &&
+      success.attempts === 1 &&
+      primaryOnly.caught === primaryFailure &&
+      primaryOnly.attempts === 1 &&
+      standalone.caught === cleanupFailure &&
+      standalone.attempts === 1 &&
+      aggregateContainsExactly(combined.caught, [
+        primaryFailure,
+        cleanupFailure,
+      ]) &&
+      combined.attempts === 1,
   );
 };
 

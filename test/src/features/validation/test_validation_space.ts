@@ -4,23 +4,6 @@ import { TestValidator } from "@nestia/e2e";
 
 import { hasViolation } from "../internal/predicates";
 
-/**
- * Evaluate named facts in order and stop at the first false one, so a failed
- * comparison names the fact instead of collapsing into one boolean. Stopping
- * keeps the short-circuit semantics the original conjunction had, which some
- * facts depend on to guard the ones after them.
- */
-const namedFacts = (
-  entries: ReadonlyArray<readonly [string, () => boolean]>,
-): Record<string, boolean> => {
-  const output: Record<string, boolean> = {};
-  for (const [name, evaluate] of entries) {
-    output[name] = evaluate();
-    if (output[name] === false) break;
-  }
-  return output;
-};
-
 const v = (x: number, z: number, y = 0) => ({ x, y, z });
 
 const floor: IAutoMovieSurface = {
@@ -202,21 +185,11 @@ export const test_validation_space = (): void => {
   const junkRampZ = validateSpace({
     space: withSurface({ rampTo: { x: 8, y: 2, z: Number.NaN } }),
   });
-  TestValidator.equals(
+  TestValidator.predicate(
     "non-finite rampTo z likewise skips the degeneracy math",
-    namedFacts([
-      [
-        "hasViolationJunkRampZ",
-        () => hasViolation(junkRampZ, "range", ".rampTo.z"),
-      ],
-      ["junkRampZSuccess", () => junkRampZ.success === false],
-      ["junkRampZCount", () => junkRampZ.violations.length === 1],
-    ]),
-    {
-      hasViolationJunkRampZ: true,
-      junkRampZSuccess: true,
-      junkRampZCount: true,
-    },
+    hasViolation(junkRampZ, "range", ".rampTo.z") &&
+      junkRampZ.success === false &&
+      junkRampZ.violations.length === 1,
   );
   TestValidator.predicate(
     "unresolved walkable id",

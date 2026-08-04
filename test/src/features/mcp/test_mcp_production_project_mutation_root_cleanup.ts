@@ -6,23 +6,6 @@ import ts from "typescript-compiler";
 
 import { preserveProductionProjectFixtureCleanup } from "./test_mcp_production_project";
 
-/**
- * Evaluate named facts in order and stop at the first false one, so a failed
- * comparison names the fact instead of collapsing into one boolean. Stopping
- * keeps the short-circuit semantics the original conjunction had, which some
- * facts depend on to guard the ones after them.
- */
-const namedFacts = (
-  entries: ReadonlyArray<readonly [string, () => boolean]>,
-): Record<string, boolean> => {
-  const output: Record<string, boolean> = {};
-  for (const [name, evaluate] of entries) {
-    output[name] = evaluate();
-    if (output[name] === false) break;
-  }
-  return output;
-};
-
 const compact = (node: ts.Node, source: ts.SourceFile): string =>
   node.getText(source).replace(/\s+/g, "");
 
@@ -376,176 +359,74 @@ export const test_mcp_production_project_mutation_root_cleanup = (): void => {
   });
   const fullOrder =
     "hook,replacement-release,active-remove,parked-restore,abandoned-release";
-  TestValidator.equals(
+  TestValidator.predicate(
     "mutation-root cleanup preserves failures and partial recovery order",
-    namedFacts([
-      ["successCaught", () => success.caught === false],
-      ["successFailure", () => success.failure === undefined],
-      ["successOrder", () => success.order.join(",") === fullOrder],
-      ["primaryOnlyCaught", () => primaryOnly.caught],
-      ["primaryOnlyFailure", () => primaryOnly.failure === primaryFailure],
-      ["primaryOnlyOrder", () => primaryOnly.order.join(",") === fullOrder],
-      ["standaloneCaught", () => standalone.caught],
-      ["standaloneFailure", () => standalone.failure === hookFailure],
-      ["standaloneOrder", () => standalone.order.join(",") === fullOrder],
-      ["multipleCaught", () => multiple.caught],
-      [
-        "aggregateContainsExactlyMultiple",
-        () =>
-          aggregateContainsExactly(multiple.failure, [
-            hookFailure,
-            replacementFailure,
-            activeFailure,
-            parkedFailure,
-            abandonedFailure,
-          ]),
-      ],
-      ["multipleOrder", () => multiple.order.join(",") === fullOrder],
-      ["combinedCaught", () => combined.caught],
-      [
-        "aggregateContainsExactlyCombined",
-        () =>
-          aggregateContainsExactly(combined.failure, [
-            primaryFailure,
-            hookFailure,
-            replacementFailure,
-            activeFailure,
-            parkedFailure,
-            abandonedFailure,
-          ]),
-      ],
-      ["combinedOrder", () => combined.order.join(",") === fullOrder],
-      ["noSwapCaught", () => noSwap.caught],
-      ["noSwapFailure", () => noSwap.failure === primaryFailure],
-      ["noSwapAbandonedPath", () => noSwap.abandonedPath === undefined],
-      ["noSwapOrder", () => noSwap.order.join(",") === "hook"],
-      ["parkedCaught", () => parked.caught],
-      ["parkedFailure", () => parked.failure === primaryFailure],
-      ["parkedAbandonedPath", () => parked.abandonedPath === undefined],
-      [
-        "parkedOrder",
-        () => parked.order.join(",") === "hook,active-remove,parked-restore",
-      ],
-      ["abandonedCaught", () => abandoned.caught],
-      ["abandonedFailure", () => abandoned.failure === primaryFailure],
-      ["abandonedAbandonedPath", () => abandoned.abandonedPath === "canonical"],
-      [
-        "abandonedOrder",
-        () =>
-          abandoned.order.join(",") ===
-          "hook,active-remove,parked-restore,abandoned-release",
-      ],
-      ["replacementCaught", () => replacement.caught],
-      ["replacementFailure", () => replacement.failure === primaryFailure],
-      [
-        "replacementAbandonedPath",
-        () => replacement.abandonedPath === "canonical",
-      ],
-      ["replacementOrder", () => replacement.order.join(",") === fullOrder],
-      [
-        "hookFailedAfterReplacementCaught",
-        () => hookFailedAfterReplacement.caught,
-      ],
-      [
-        "hookFailedAfterReplacementFailure",
-        () => hookFailedAfterReplacement.failure === hookFailure,
-      ],
-      [
-        "hookFailedAfterReplacementAbandonedPath",
-        () => hookFailedAfterReplacement.abandonedPath === "canonical",
-      ],
-      [
-        "hookFailedAfterReplacementOrder",
-        () => hookFailedAfterReplacement.order.join(",") === fullOrder,
-      ],
-      ["physicalRecoveryFailedCaught", () => physicalRecoveryFailed.caught],
-      [
-        "aggregateContainsExactlyPhysicalRecoveryFailed",
-        () =>
-          aggregateContainsExactly(physicalRecoveryFailed.failure, [
-            primaryFailure,
-            activeFailure,
-            parkedFailure,
-          ]),
-      ],
-      [
-        "physicalRecoveryFailedAbandonedPath",
-        () => physicalRecoveryFailed.abandonedPath === "parked",
-      ],
-      [
-        "physicalRecoveryFailedOrder",
-        () => physicalRecoveryFailed.order.join(",") === fullOrder,
-      ],
-      ["undefinedStandaloneCaught", () => undefinedStandalone.caught],
-      [
-        "undefinedStandaloneFailure",
-        () => undefinedStandalone.failure === undefined,
-      ],
-      [
-        "undefinedStandaloneOrder",
-        () => undefinedStandalone.order.join(",") === fullOrder,
-      ],
-      ["undefinedCombinedCaught", () => undefinedCombined.caught],
-      [
-        "aggregateContainsExactlyUndefinedCombined",
-        () =>
-          aggregateContainsExactly(undefinedCombined.failure, [
-            undefined,
-            undefined,
-          ]),
-      ],
-      [
-        "undefinedCombinedOrder",
-        () => undefinedCombined.order.join(",") === fullOrder,
-      ],
-    ]),
-    {
-      successCaught: true,
-      successFailure: true,
-      successOrder: true,
-      primaryOnlyCaught: true,
-      primaryOnlyFailure: true,
-      primaryOnlyOrder: true,
-      standaloneCaught: true,
-      standaloneFailure: true,
-      standaloneOrder: true,
-      multipleCaught: true,
-      aggregateContainsExactlyMultiple: true,
-      multipleOrder: true,
-      combinedCaught: true,
-      aggregateContainsExactlyCombined: true,
-      combinedOrder: true,
-      noSwapCaught: true,
-      noSwapFailure: true,
-      noSwapAbandonedPath: true,
-      noSwapOrder: true,
-      parkedCaught: true,
-      parkedFailure: true,
-      parkedAbandonedPath: true,
-      parkedOrder: true,
-      abandonedCaught: true,
-      abandonedFailure: true,
-      abandonedAbandonedPath: true,
-      abandonedOrder: true,
-      replacementCaught: true,
-      replacementFailure: true,
-      replacementAbandonedPath: true,
-      replacementOrder: true,
-      hookFailedAfterReplacementCaught: true,
-      hookFailedAfterReplacementFailure: true,
-      hookFailedAfterReplacementAbandonedPath: true,
-      hookFailedAfterReplacementOrder: true,
-      physicalRecoveryFailedCaught: true,
-      aggregateContainsExactlyPhysicalRecoveryFailed: true,
-      physicalRecoveryFailedAbandonedPath: true,
-      physicalRecoveryFailedOrder: true,
-      undefinedStandaloneCaught: true,
-      undefinedStandaloneFailure: true,
-      undefinedStandaloneOrder: true,
-      undefinedCombinedCaught: true,
-      aggregateContainsExactlyUndefinedCombined: true,
-      undefinedCombinedOrder: true,
-    },
+    success.caught === false &&
+      success.failure === undefined &&
+      success.order.join(",") === fullOrder &&
+      primaryOnly.caught &&
+      primaryOnly.failure === primaryFailure &&
+      primaryOnly.order.join(",") === fullOrder &&
+      standalone.caught &&
+      standalone.failure === hookFailure &&
+      standalone.order.join(",") === fullOrder &&
+      multiple.caught &&
+      aggregateContainsExactly(multiple.failure, [
+        hookFailure,
+        replacementFailure,
+        activeFailure,
+        parkedFailure,
+        abandonedFailure,
+      ]) &&
+      multiple.order.join(",") === fullOrder &&
+      combined.caught &&
+      aggregateContainsExactly(combined.failure, [
+        primaryFailure,
+        hookFailure,
+        replacementFailure,
+        activeFailure,
+        parkedFailure,
+        abandonedFailure,
+      ]) &&
+      combined.order.join(",") === fullOrder &&
+      noSwap.caught &&
+      noSwap.failure === primaryFailure &&
+      noSwap.abandonedPath === undefined &&
+      noSwap.order.join(",") === "hook" &&
+      parked.caught &&
+      parked.failure === primaryFailure &&
+      parked.abandonedPath === undefined &&
+      parked.order.join(",") === "hook,active-remove,parked-restore" &&
+      abandoned.caught &&
+      abandoned.failure === primaryFailure &&
+      abandoned.abandonedPath === "canonical" &&
+      abandoned.order.join(",") ===
+        "hook,active-remove,parked-restore,abandoned-release" &&
+      replacement.caught &&
+      replacement.failure === primaryFailure &&
+      replacement.abandonedPath === "canonical" &&
+      replacement.order.join(",") === fullOrder &&
+      hookFailedAfterReplacement.caught &&
+      hookFailedAfterReplacement.failure === hookFailure &&
+      hookFailedAfterReplacement.abandonedPath === "canonical" &&
+      hookFailedAfterReplacement.order.join(",") === fullOrder &&
+      physicalRecoveryFailed.caught &&
+      aggregateContainsExactly(physicalRecoveryFailed.failure, [
+        primaryFailure,
+        activeFailure,
+        parkedFailure,
+      ]) &&
+      physicalRecoveryFailed.abandonedPath === "parked" &&
+      physicalRecoveryFailed.order.join(",") === fullOrder &&
+      undefinedStandalone.caught &&
+      undefinedStandalone.failure === undefined &&
+      undefinedStandalone.order.join(",") === fullOrder &&
+      undefinedCombined.caught &&
+      aggregateContainsExactly(undefinedCombined.failure, [
+        undefined,
+        undefined,
+      ]) &&
+      undefinedCombined.order.join(",") === fullOrder,
   );
   TestValidator.equals(
     "production-project test owns one mutation-root cleanup lifecycle",

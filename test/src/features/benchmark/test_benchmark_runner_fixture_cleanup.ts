@@ -6,23 +6,6 @@ import ts from "typescript-compiler";
 
 import { preserveBenchmarkRunnerFixtureCleanup } from "./test_benchmark_runner";
 
-/**
- * Evaluate named facts in order and stop at the first false one, so a failed
- * comparison names the fact instead of collapsing into one boolean. Stopping
- * keeps the short-circuit semantics the original conjunction had, which some
- * facts depend on to guard the ones after them.
- */
-const namedFacts = (
-  entries: ReadonlyArray<readonly [string, () => boolean]>,
-): Record<string, boolean> => {
-  const output: Record<string, boolean> = {};
-  for (const [name, evaluate] of entries) {
-    output[name] = evaluate();
-    if (output[name] === false) break;
-  }
-  return output;
-};
-
 const compact = (node: ts.Node, source: ts.SourceFile): string =>
   node.getText(source).replace(/\s+/g, "");
 
@@ -164,35 +147,18 @@ export const test_benchmark_runner_fixture_cleanup = (): void => {
   const primaryOnly = captureCleanup({ primaryFailure });
   const cleanupOnly = captureCleanup({ cleanupFailure });
   const combined = captureCleanup({ cleanupFailure, primaryFailure });
-  TestValidator.equals(
+  TestValidator.predicate(
     "benchmark runner fixture cleanup preserves phase identity and order",
-    namedFacts([
-      ["successFailure", () => success.failure === undefined],
-      ["primaryOnlyFailure", () => primaryOnly.failure === primaryFailure],
-      ["cleanupOnlyFailure", () => cleanupOnly.failure === cleanupFailure],
-      [
-        "aggregateContainsExactlyCombined",
-        () =>
-          aggregateContainsExactly(combined.failure, [
-            primaryFailure,
-            cleanupFailure,
-          ]),
-      ],
-      [
-        "successPrimaryOnly",
-        () =>
-          [success, primaryOnly, cleanupOnly, combined].every(
-            (capture) => capture.attempts === 1,
-          ),
-      ],
-    ]),
-    {
-      successFailure: true,
-      primaryOnlyFailure: true,
-      cleanupOnlyFailure: true,
-      aggregateContainsExactlyCombined: true,
-      successPrimaryOnly: true,
-    },
+    success.failure === undefined &&
+      primaryOnly.failure === primaryFailure &&
+      cleanupOnly.failure === cleanupFailure &&
+      aggregateContainsExactly(combined.failure, [
+        primaryFailure,
+        cleanupFailure,
+      ]) &&
+      [success, primaryOnly, cleanupOnly, combined].every(
+        (capture) => capture.attempts === 1,
+      ),
   );
   TestValidator.equals(
     "benchmark runner owns its root through setup, execution, and cleanup",
@@ -210,7 +176,7 @@ export const test_benchmark_runner_fixture_cleanup = (): void => {
               "preserveBenchmarkRunnerFixtureCleanup(benchmarkFailure,()=>fs.rmSync(root,{force:true,maxRetries:3,recursive:true,retryDelay:100,}),);",
             ],
             tryDigest:
-              "7c45f3f44ddf22fe0475ee30fe28cd11af98c5469a548344359724749bc5d7cc",
+              "11023824459375d205fd5c9f9537debe104f58cac999b656aa6cbb7a8a0f3553",
           },
         ],
         prefixes: [

@@ -5,23 +5,6 @@ import { TestValidator } from "@nestia/e2e";
 import { createModel } from "../internal/fixtures";
 import { hasViolation } from "../internal/predicates";
 
-/**
- * Evaluate named facts in order and stop at the first false one, so a failed
- * comparison names the fact instead of collapsing into one boolean. Stopping
- * keeps the short-circuit semantics the original conjunction had, which some
- * facts depend on to guard the ones after them.
- */
-const namedFacts = (
-  entries: ReadonlyArray<readonly [string, () => boolean]>,
-): Record<string, boolean> => {
-  const output: Record<string, boolean> = {};
-  for (const [name, evaluate] of entries) {
-    output[name] = evaluate();
-    if (output[name] === false) break;
-  }
-  return output;
-};
-
 const modelWithMesh = (mesh: IAutoMovieMesh): IAutoMovieModel => {
   const base = createModel(null);
   return {
@@ -81,33 +64,18 @@ export const test_validation_model_mesh_empty = (): void => {
     withEmptyBuffers.success,
     false,
   );
-  TestValidator.equals(
+  TestValidator.predicate(
     "empty positions is the only fault",
-    namedFacts([
-      [
-        "hasViolationWithEmptyBuffers",
-        () =>
-          hasViolation(
-            withEmptyBuffers,
-            "type",
-            "$input.parts[0].geometry.mesh.positions",
-          ),
-      ],
-      ["withEmptyBuffersSuccess", () => withEmptyBuffers.success === false],
-      [
-        "withEmptyBuffersViolations",
-        () =>
-          withEmptyBuffers.violations.every(
-            (violation) =>
-              violation.path === "$input.parts[0].geometry.mesh.positions",
-          ),
-      ],
-    ]),
-    {
-      hasViolationWithEmptyBuffers: true,
-      withEmptyBuffersSuccess: true,
-      withEmptyBuffersViolations: true,
-    },
+    hasViolation(
+      withEmptyBuffers,
+      "type",
+      "$input.parts[0].geometry.mesh.positions",
+    ) &&
+      withEmptyBuffers.success === false &&
+      withEmptyBuffers.violations.every(
+        (violation) =>
+          violation.path === "$input.parts[0].geometry.mesh.positions",
+      ),
   );
 
   TestValidator.equals(

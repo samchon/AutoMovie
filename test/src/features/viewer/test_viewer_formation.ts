@@ -17,23 +17,6 @@ import * as THREE from "three";
 import { nclose } from "../internal/predicates";
 import { formationDesign, modelRecipe } from "../mcp/productionFixtures";
 
-/**
- * Evaluate named facts in order and stop at the first false one, so a failed
- * comparison names the fact instead of collapsing into one boolean. Stopping
- * keeps the short-circuit semantics the original conjunction had, which some
- * facts depend on to guard the ones after them.
- */
-const namedFacts = (
-  entries: ReadonlyArray<readonly [string, () => boolean]>,
-): Record<string, boolean> => {
-  const output: Record<string, boolean> = {};
-  for (const [name, evaluate] of entries) {
-    output[name] = evaluate();
-    if (output[name] === false) break;
-  }
-  return output;
-};
-
 const propRecipe = (id: string, size: number): IAutoMovieModelRecipe => ({
   ...modelRecipe(),
   id,
@@ -174,52 +157,22 @@ export const test_viewer_formation = (): void => {
   }
   const compilerBoundary = materializeFormationSlot(design, 1_024);
   const viewerBoundary = regenerateFormationSlot(formation, 1_024);
-  TestValidator.equals(
+  TestValidator.predicate(
     "chunk batches exclude heroes and preserve exact compiler slot regeneration",
-    namedFacts([
-      ["formationCount", () => formation.chunks.length === 3],
-      [
-        "meshesCount",
-        () => meshes.length === formation.chunks.length * formation.lod.length,
-      ],
-      [
-        "perTierValues",
-        () =>
-          [...perTier.values()].every(
-            (count) => count === formation.anonymousCount,
-          ),
-      ],
-      [
-        "meshesMesh",
-        () =>
-          meshes.every(
-            (mesh) =>
-              mesh.geometry.getAttribute("automoviePhase")?.count ===
-                mesh.count && mesh.frustumCulled === false,
-          ),
-      ],
-      [
-        "stringifyCompilerBoundary",
-        () =>
-          JSON.stringify(compilerBoundary) === JSON.stringify(viewerBoundary),
-      ],
-      ["formationDigest", () => formation.digest !== changedFormation.digest],
-      [
-        "formationLod",
-        () =>
-          formation.lod.find((lod) => lod.tier === "near")?.recipeDigest !==
-          changedFormation.lod.find((lod) => lod.tier === "near")?.recipeDigest,
-      ],
-    ]),
-    {
-      formationCount: true,
-      meshesCount: true,
-      perTierValues: true,
-      meshesMesh: true,
-      stringifyCompilerBoundary: true,
-      formationDigest: true,
-      formationLod: true,
-    },
+    formation.chunks.length === 3 &&
+      meshes.length === formation.chunks.length * formation.lod.length &&
+      [...perTier.values()].every(
+        (count) => count === formation.anonymousCount,
+      ) &&
+      meshes.every(
+        (mesh) =>
+          mesh.geometry.getAttribute("automoviePhase")?.count === mesh.count &&
+          mesh.frustumCulled === false,
+      ) &&
+      JSON.stringify(compilerBoundary) === JSON.stringify(viewerBoundary) &&
+      formation.digest !== changedFormation.digest &&
+      formation.lod.find((lod) => lod.tier === "near")?.recipeDigest !==
+        changedFormation.lod.find((lod) => lod.tier === "near")?.recipeDigest,
   );
 
   const nearSelection = selectFormationLod({
@@ -283,56 +236,31 @@ export const test_viewer_formation = (): void => {
     projectedPixels: 24,
     previous: null,
   });
-  TestValidator.equals(
+  TestValidator.predicate(
     "automatic LOD combines distance, projected size and hysteresis",
-    namedFacts([
-      ["nearSelectionLod", () => nearSelection.lod.tier === "near"],
-      ["retainedNearLod", () => retainedNear.lod.tier === "near"],
-      [
-        "retainedWithExplicitHysteresisLod",
-        () => retainedWithExplicitHysteresis.lod.tier === "near",
-      ],
-      ["farSelectionLod", () => farSelection.lod.tier === "far"],
-      ["projectedFarLod", () => projectedFar.lod.tier === "far"],
-      ["zeroProjectedFarLod", () => zeroProjectedFar.lod.tier === "far"],
-      ["retainedFarLod", () => retainedFar.lod.tier === "far"],
-      ["switchedNearLod", () => switchedNear.lod.tier === "near"],
-      ["unchangedNearLod", () => unchangedNear.lod.tier === "near"],
-      [
-        "missingUnboundedFallbackLod",
-        () => missingUnboundedFallback.lod.tier === "far",
-      ],
-      [
-        "trySelectFormationLod",
-        () =>
-          (() => {
-            try {
-              selectFormationLod({
-                lod: [],
-                distance: 1,
-                projectedPixels: 1,
-                previous: null,
-              });
-              return false;
-            } catch {
-              return true;
-            }
-          })(),
-      ],
-    ]),
-    {
-      nearSelectionLod: true,
-      retainedNearLod: true,
-      retainedWithExplicitHysteresisLod: true,
-      farSelectionLod: true,
-      projectedFarLod: true,
-      zeroProjectedFarLod: true,
-      retainedFarLod: true,
-      switchedNearLod: true,
-      unchangedNearLod: true,
-      missingUnboundedFallbackLod: true,
-      trySelectFormationLod: true,
-    },
+    nearSelection.lod.tier === "near" &&
+      retainedNear.lod.tier === "near" &&
+      retainedWithExplicitHysteresis.lod.tier === "near" &&
+      farSelection.lod.tier === "far" &&
+      projectedFar.lod.tier === "far" &&
+      zeroProjectedFar.lod.tier === "far" &&
+      retainedFar.lod.tier === "far" &&
+      switchedNear.lod.tier === "near" &&
+      unchangedNear.lod.tier === "near" &&
+      missingUnboundedFallback.lod.tier === "far" &&
+      (() => {
+        try {
+          selectFormationLod({
+            lod: [],
+            distance: 1,
+            projectedPixels: 1,
+            previous: null,
+          });
+          return false;
+        } catch {
+          return true;
+        }
+      })(),
   );
 
   const camera = new THREE.PerspectiveCamera(45, 16 / 9, 0.1, 2_000);

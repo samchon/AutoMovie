@@ -35,23 +35,6 @@ import {
 } from "../internal/fixtures";
 import { vclose } from "../internal/predicates";
 
-/**
- * Evaluate named facts in order and stop at the first false one, so a failed
- * comparison names the fact instead of collapsing into one boolean. Stopping
- * keeps the short-circuit semantics the original conjunction had, which some
- * facts depend on to guard the ones after them.
- */
-const namedFacts = (
-  entries: ReadonlyArray<readonly [string, () => boolean]>,
-): Record<string, boolean> => {
-  const output: Record<string, boolean> = {};
-  for (const [name, evaluate] of entries) {
-    output[name] = evaluate();
-    if (output[name] === false) break;
-  }
-  return output;
-};
-
 const CUSTOM_JOINT_AXES = {
   ...HUMANOID_JOINT_AXES,
   leftUpperArm: DEFAULT_JOINT_AXES,
@@ -217,38 +200,22 @@ export const test_film_perform_shot_attach = (): void => {
   const swordAttach = attachEvents.find(
     (event) => event.kind === "attach" && event.object === "sword",
   )!;
-  TestValidator.equals(
+  TestValidator.predicate(
     "the sword attach event points at the parent action",
-    namedFacts([
-      ["swordAttachSource", () => swordAttach.source === "scriptedCue"],
-      ["swordAttachTime", () => swordAttach.time === 0],
-      ["swordAttachActor", () => swordAttach.actor === "sword"],
-      ["swordAttachTarget", () => swordAttach.target === "knight"],
-      ["swordAttachActionIndex", () => swordAttach.actionIndex === 1],
-    ]),
-    {
-      swordAttachSource: true,
-      swordAttachTime: true,
-      swordAttachActor: true,
-      swordAttachTarget: true,
-      swordAttachActionIndex: true,
-    },
+    swordAttach.source === "scriptedCue" &&
+      swordAttach.time === 0 &&
+      swordAttach.actor === "sword" &&
+      swordAttach.target === "knight" &&
+      swordAttach.actionIndex === 1,
   );
   const shieldRelease = attachEvents.find(
     (event) => event.kind === "release" && event.object === "shield",
   )!;
-  TestValidator.equals(
+  TestValidator.predicate(
     "the shield release event marks the auto-duration handoff end",
-    namedFacts([
-      ["shieldReleaseTime", () => shieldRelease.time === 2],
-      ["shieldReleaseTarget", () => shieldRelease.target === "knight"],
-      ["shieldReleaseActionIndex", () => shieldRelease.actionIndex === 2],
-    ]),
-    {
-      shieldReleaseTime: true,
-      shieldReleaseTarget: true,
-      shieldReleaseActionIndex: true,
-    },
+    shieldRelease.time === 2 &&
+      shieldRelease.target === "knight" &&
+      shieldRelease.actionIndex === 2,
   );
 
   // 2. custom jointAxes and restFrames reach the baked objectMotion FK.

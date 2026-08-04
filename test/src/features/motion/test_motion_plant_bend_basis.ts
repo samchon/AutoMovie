@@ -14,23 +14,6 @@ import {
 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-/**
- * Evaluate named facts in order and stop at the first false one, so a failed
- * comparison names the fact instead of collapsing into one boolean. Stopping
- * keeps the short-circuit semantics the original conjunction had, which some
- * facts depend on to guard the ones after them.
- */
-const namedFacts = (
-  entries: ReadonlyArray<readonly [string, () => boolean]>,
-): Record<string, boolean> => {
-  const output: Record<string, boolean> = {};
-  for (const [name, evaluate] of entries) {
-    output[name] = evaluate();
-    if (output[name] === false) break;
-  }
-  return output;
-};
-
 const transform = (translation: IAutoMovieVector3): IAutoMovieTransform => ({
   translation,
   rotation: { x: 0, y: 0, z: 0, w: 1 },
@@ -264,30 +247,12 @@ export const test_motion_plant_bend_basis = (): void => {
   const resolved = resolvePose(continuous, exactSkeleton).find(
     (bone) => bone.bone === CHAIN.effector,
   )!.worldPosition;
-  TestValidator.equals(
+  TestValidator.predicate(
     "equal-residual exact pin preserves the prior quaternion branch",
-    namedFacts([
-      ["distanceResolved", () => distance(resolved, exactTarget) <= 1e-7],
-      [
-        "rotationDistanceContinuous",
-        () => rotationDistance(continuous, reference) <= 1e-12,
-      ],
-      [
-        "rotationDistanceContinuous2",
-        () =>
-          rotationDistance(continuous, reference) <
-          rotationDistance(pole, reference),
-      ],
-      [
-        "rotationDistanceAuthoredExact",
-        () => rotationDistance(authoredExact, reference) <= 1e-12,
-      ],
-    ]),
-    {
-      distanceResolved: true,
-      rotationDistanceContinuous: true,
-      rotationDistanceContinuous2: true,
-      rotationDistanceAuthoredExact: true,
-    },
+    distance(resolved, exactTarget) <= 1e-7 &&
+      rotationDistance(continuous, reference) <= 1e-12 &&
+      rotationDistance(continuous, reference) <
+        rotationDistance(pole, reference) &&
+      rotationDistance(authoredExact, reference) <= 1e-12,
   );
 };

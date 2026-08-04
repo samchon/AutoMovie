@@ -3,23 +3,6 @@ import { TestValidator } from "@nestia/e2e";
 
 import { nclose } from "../internal/predicates";
 
-/**
- * Evaluate named facts in order and stop at the first false one, so a failed
- * comparison names the fact instead of collapsing into one boolean. Stopping
- * keeps the short-circuit semantics the original conjunction had, which some
- * facts depend on to guard the ones after them.
- */
-const namedFacts = (
-  entries: ReadonlyArray<readonly [string, () => boolean]>,
-): Record<string, boolean> => {
-  const output: Record<string, boolean> = {};
-  for (const [name, evaluate] of entries) {
-    output[name] = evaluate();
-    if (output[name] === false) break;
-  }
-  return output;
-};
-
 const throws = (task: () => void): boolean => {
   try {
     task();
@@ -78,18 +61,9 @@ export const test_motion_cubic_bezier = (): void => {
 
   // 3. degenerate slope safeguard: result stays finite and in range
   const degenerate = cubicBezierEasing([0, 0, 0, 0], 1e-4);
-  TestValidator.equals(
+  TestValidator.predicate(
     "degenerate slope stays finite & in [0,1]",
-    namedFacts([
-      ["isFiniteDegenerate", () => Number.isFinite(degenerate)],
-      ["degenerate", () => degenerate >= 0],
-      ["degenerate2", () => degenerate <= 1],
-    ]),
-    {
-      isFiniteDegenerate: true,
-      degenerate: true,
-      degenerate2: true,
-    },
+    Number.isFinite(degenerate) && degenerate >= 0 && degenerate <= 1,
   );
 
   // 4. ease() fallback for the cubicBezier name

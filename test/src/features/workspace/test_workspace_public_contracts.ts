@@ -6,23 +6,6 @@ import os from "node:os";
 import path from "node:path";
 import ts from "typescript-compiler";
 
-/**
- * Evaluate named facts in order and stop at the first false one, so a failed
- * comparison names the fact instead of collapsing into one boolean. Stopping
- * keeps the short-circuit semantics the original conjunction had, which some
- * facts depend on to guard the ones after them.
- */
-const namedFacts = (
-  entries: ReadonlyArray<readonly [string, () => boolean]>,
-): Record<string, boolean> => {
-  const output: Record<string, boolean> = {};
-  for (const [name, evaluate] of entries) {
-    output[name] = evaluate();
-    if (output[name] === false) break;
-  }
-  return output;
-};
-
 interface ILauncherCleanupOracleFixtureFailure {
   error: unknown;
 }
@@ -732,55 +715,19 @@ const verifyLauncherBundleCleanup = (
     const standalone = run(undefined, standaloneCleanupFailure);
     const primaryOnly = run(primaryOnlyFailure, undefined);
     const combined = run(combinedPrimaryFailure, combinedCleanupFailure);
-    TestValidator.equals(
+    TestValidator.predicate(
       "playground launcher bundle cleanup preserves operation and cleanup failures",
-      namedFacts([
-        ["successCaught", () => success.caught === undefined],
-        ["successRemoved", () => success.removed],
-        [
-          "standaloneCaught",
-          () => standalone.caught === standaloneCleanupFailure,
-        ],
-        ["standaloneRemoved", () => standalone.removed],
-        ["primaryOnlyCaught", () => primaryOnly.caught === primaryOnlyFailure],
-        ["primaryOnlyRemoved", () => primaryOnly.removed],
-        ["combinedCaught", () => combined.caught instanceof AggregateError],
-        [
-          "combinedCount",
-          () =>
-            combined.caught instanceof AggregateError &&
-            combined.caught.errors.length === 2,
-        ],
-        [
-          "combinedCaught2",
-          () =>
-            combined.caught instanceof AggregateError &&
-            combined.caught.errors.length === 2 &&
-            combined.caught.errors[0] === combinedPrimaryFailure,
-        ],
-        [
-          "combinedCaught3",
-          () =>
-            combined.caught instanceof AggregateError &&
-            combined.caught.errors.length === 2 &&
-            combined.caught.errors[0] === combinedPrimaryFailure &&
-            combined.caught.errors[1] === combinedCleanupFailure,
-        ],
-        ["combinedRemoved", () => combined.removed],
-      ]),
-      {
-        successCaught: true,
-        successRemoved: true,
-        standaloneCaught: true,
-        standaloneRemoved: true,
-        primaryOnlyCaught: true,
-        primaryOnlyRemoved: true,
-        combinedCaught: true,
-        combinedCount: true,
-        combinedCaught2: true,
-        combinedCaught3: true,
-        combinedRemoved: true,
-      },
+      success.caught === undefined &&
+        success.removed &&
+        standalone.caught === standaloneCleanupFailure &&
+        standalone.removed &&
+        primaryOnly.caught === primaryOnlyFailure &&
+        primaryOnly.removed &&
+        combined.caught instanceof AggregateError &&
+        combined.caught.errors.length === 2 &&
+        combined.caught.errors[0] === combinedPrimaryFailure &&
+        combined.caught.errors[1] === combinedCleanupFailure &&
+        combined.removed,
     );
   } catch (error) {
     launcherOracleFailure = { error };

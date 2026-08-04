@@ -5,23 +5,6 @@ import path from "node:path";
 
 import { captureCliOutput as captureCli } from "./CliOutputCapture";
 
-/**
- * Evaluate named facts in order and stop at the first false one, so a failed
- * comparison names the fact instead of collapsing into one boolean. Stopping
- * keeps the short-circuit semantics the original conjunction had, which some
- * facts depend on to guard the ones after them.
- */
-const namedFacts = (
-  entries: ReadonlyArray<readonly [string, () => boolean]>,
-): Record<string, boolean> => {
-  const output: Record<string, boolean> = {};
-  for (const [name, evaluate] of entries) {
-    output[name] = evaluate();
-    if (output[name] === false) break;
-  }
-  return output;
-};
-
 interface ICliRenderFixtureFailure {
   error: unknown;
 }
@@ -93,54 +76,20 @@ export const test_cli_render = (): void => {
       "// missing tsx runtime\n",
     );
     const missingTsx = captureCli(["render", "status"]);
-    TestValidator.equals(
+    TestValidator.predicate(
       "render CLI rejects bad actions and missing project runtime",
-      namedFacts([
-        ["missingActionStatus", () => missingAction.status === 1],
-        [
-          "missingActionStderr",
-          () => missingAction.stderr.includes("render needs one of"),
-        ],
-        ["unknownActionStatus", () => unknownAction.status === 1],
-        [
-          "unknownActionStderr",
-          () => unknownAction.stderr.includes("render needs one of"),
-        ],
-        ["missingProjectStatus", () => missingProject.status === 1],
-        [
-          "missingProjectStderr",
-          () => missingProject.stderr.includes("scaffolded project"),
-        ],
-        ["missingVerifyStatus", () => missingVerify.status === 1],
-        [
-          "missingVerifyStderr",
-          () => missingVerify.stderr.includes("scaffolded project"),
-        ],
-        ["invalidVerifyStatus", () => invalidVerify.status === 1],
-        [
-          "invalidVerifyStderr",
-          () => invalidVerify.stderr.includes("takes no arguments"),
-        ],
-        ["missingTsxStatus", () => missingTsx.status === 1],
-        [
-          "missingTsxStderr",
-          () => missingTsx.stderr.includes("scaffolded project"),
-        ],
-      ]),
-      {
-        missingActionStatus: true,
-        missingActionStderr: true,
-        unknownActionStatus: true,
-        unknownActionStderr: true,
-        missingProjectStatus: true,
-        missingProjectStderr: true,
-        missingVerifyStatus: true,
-        missingVerifyStderr: true,
-        invalidVerifyStatus: true,
-        invalidVerifyStderr: true,
-        missingTsxStatus: true,
-        missingTsxStderr: true,
-      },
+      missingAction.status === 1 &&
+        missingAction.stderr.includes("render needs one of") &&
+        unknownAction.status === 1 &&
+        unknownAction.stderr.includes("render needs one of") &&
+        missingProject.status === 1 &&
+        missingProject.stderr.includes("scaffolded project") &&
+        missingVerify.status === 1 &&
+        missingVerify.stderr.includes("scaffolded project") &&
+        invalidVerify.status === 1 &&
+        invalidVerify.stderr.includes("takes no arguments") &&
+        missingTsx.status === 1 &&
+        missingTsx.stderr.includes("scaffolded project"),
     );
 
     const script = path.join(project, "scripts", "render.ts");
@@ -185,43 +134,20 @@ if (process.argv[2]?.endsWith("verify.ts"))
     const verifyCall = JSON.parse(
       fs.readFileSync(path.join(project, "verify-call.json"), "utf8"),
     ) as string[];
-    TestValidator.equals(
+    TestValidator.predicate(
       "render CLI delegates exact argv and propagates child status",
-      namedFacts([
-        ["delegatedStatus", () => delegated.status === 0],
-        ["callScript", () => path.resolve(call[0]!) === script],
-        [
-          "callRun",
-          () =>
-            call.slice(1).join(",") === "run,--deliverable,feature,--workers,3",
-        ],
-        ["plannedStatus", () => planned.status === 0],
-        ["statusStatus", () => status.status === 0],
-        ["allStatus", () => all.status === 0],
-        ["gcStatus", () => gc.status === 0],
-        ["propagatedStatus", () => propagated.status === 7],
-        ["signaledStatus", () => signaled.status === 1],
-        ["verifiedStatus", () => verified.status === 0],
-        [
-          "verifyCallVerifyScript",
-          () => path.resolve(verifyCall[0]!) === verifyScript,
-        ],
-        ["verifyCallCount", () => verifyCall.length === 1],
-      ]),
-      {
-        delegatedStatus: true,
-        callScript: true,
-        callRun: true,
-        plannedStatus: true,
-        statusStatus: true,
-        allStatus: true,
-        gcStatus: true,
-        propagatedStatus: true,
-        signaledStatus: true,
-        verifiedStatus: true,
-        verifyCallVerifyScript: true,
-        verifyCallCount: true,
-      },
+      delegated.status === 0 &&
+        path.resolve(call[0]!) === script &&
+        call.slice(1).join(",") === "run,--deliverable,feature,--workers,3" &&
+        planned.status === 0 &&
+        status.status === 0 &&
+        all.status === 0 &&
+        gc.status === 0 &&
+        propagated.status === 7 &&
+        signaled.status === 1 &&
+        verified.status === 0 &&
+        path.resolve(verifyCall[0]!) === verifyScript &&
+        verifyCall.length === 1,
     );
   } catch (error) {
     renderFailure = { error };

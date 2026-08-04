@@ -6,23 +6,6 @@ import ts from "typescript-compiler";
 
 import { preserveProductionReviewRenderFixtureCleanup } from "./test_mcp_production_review_render_edges";
 
-/**
- * Evaluate named facts in order and stop at the first false one, so a failed
- * comparison names the fact instead of collapsing into one boolean. Stopping
- * keeps the short-circuit semantics the original conjunction had, which some
- * facts depend on to guard the ones after them.
- */
-const namedFacts = (
-  entries: ReadonlyArray<readonly [string, () => boolean]>,
-): Record<string, boolean> => {
-  const output: Record<string, boolean> = {};
-  for (const [name, evaluate] of entries) {
-    output[name] = evaluate();
-    if (output[name] === false) break;
-  }
-  return output;
-};
-
 const compact = (node: ts.Node, source: ts.SourceFile): string =>
   node.getText(source).replace(/\s+/g, "");
 
@@ -214,84 +197,41 @@ export const test_mcp_production_review_render_fixture_cleanup = (): void => {
     cleanupFailure: { error: undefined, present: true },
     primaryFailure: { error: undefined, present: true },
   });
-  TestValidator.equals(
+  TestValidator.predicate(
     "production review-render cleanup preserves failure identity and order",
-    namedFacts([
-      ["successCaught", () => success.caught === false],
-      ["successFailure", () => success.failure === undefined],
-      ["successAttempts", () => success.attempts === 1],
-      ["primaryOnlyCaught", () => primaryOnly.caught],
-      ["primaryOnlyFailure", () => primaryOnly.failure === primaryFailure],
-      ["primaryOnlyAttempts", () => primaryOnly.attempts === 1],
-      ["standaloneCaught", () => standalone.caught],
-      ["standaloneFailure", () => standalone.failure === cleanupFailure],
-      ["standaloneAttempts", () => standalone.attempts === 1],
-      ["combinedCaught", () => combined.caught],
-      [
-        "aggregateContainsExactlyCombined",
-        () =>
-          aggregateContainsExactly(combined.failure, [
-            primaryFailure,
-            cleanupFailure,
-          ]),
-      ],
-      ["combinedAttempts", () => combined.attempts === 1],
-      ["nestedCombinedCaught", () => nestedCombined.caught],
-      [
-        "aggregateContainsExactlyNestedCombined",
-        () =>
-          aggregateContainsExactly(nestedCombined.failure, [
-            nestedPrimaryFailure,
-            cleanupFailure,
-          ]),
-      ],
-      ["nestedCombinedAttempts", () => nestedCombined.attempts === 1],
-      ["undefinedPrimaryCaught", () => undefinedPrimary.caught],
-      ["undefinedPrimaryFailure", () => undefinedPrimary.failure === undefined],
-      ["undefinedPrimaryAttempts", () => undefinedPrimary.attempts === 1],
-      ["undefinedStandaloneCaught", () => undefinedStandalone.caught],
-      [
-        "undefinedStandaloneFailure",
-        () => undefinedStandalone.failure === undefined,
-      ],
-      ["undefinedStandaloneAttempts", () => undefinedStandalone.attempts === 1],
-      ["undefinedCombinedCaught", () => undefinedCombined.caught],
-      [
-        "aggregateContainsExactlyUndefinedCombined",
-        () =>
-          aggregateContainsExactly(undefinedCombined.failure, [
-            undefined,
-            undefined,
-          ]),
-      ],
-      ["undefinedCombinedAttempts", () => undefinedCombined.attempts === 1],
-    ]),
-    {
-      successCaught: true,
-      successFailure: true,
-      successAttempts: true,
-      primaryOnlyCaught: true,
-      primaryOnlyFailure: true,
-      primaryOnlyAttempts: true,
-      standaloneCaught: true,
-      standaloneFailure: true,
-      standaloneAttempts: true,
-      combinedCaught: true,
-      aggregateContainsExactlyCombined: true,
-      combinedAttempts: true,
-      nestedCombinedCaught: true,
-      aggregateContainsExactlyNestedCombined: true,
-      nestedCombinedAttempts: true,
-      undefinedPrimaryCaught: true,
-      undefinedPrimaryFailure: true,
-      undefinedPrimaryAttempts: true,
-      undefinedStandaloneCaught: true,
-      undefinedStandaloneFailure: true,
-      undefinedStandaloneAttempts: true,
-      undefinedCombinedCaught: true,
-      aggregateContainsExactlyUndefinedCombined: true,
-      undefinedCombinedAttempts: true,
-    },
+    success.caught === false &&
+      success.failure === undefined &&
+      success.attempts === 1 &&
+      primaryOnly.caught &&
+      primaryOnly.failure === primaryFailure &&
+      primaryOnly.attempts === 1 &&
+      standalone.caught &&
+      standalone.failure === cleanupFailure &&
+      standalone.attempts === 1 &&
+      combined.caught &&
+      aggregateContainsExactly(combined.failure, [
+        primaryFailure,
+        cleanupFailure,
+      ]) &&
+      combined.attempts === 1 &&
+      nestedCombined.caught &&
+      aggregateContainsExactly(nestedCombined.failure, [
+        nestedPrimaryFailure,
+        cleanupFailure,
+      ]) &&
+      nestedCombined.attempts === 1 &&
+      undefinedPrimary.caught &&
+      undefinedPrimary.failure === undefined &&
+      undefinedPrimary.attempts === 1 &&
+      undefinedStandalone.caught &&
+      undefinedStandalone.failure === undefined &&
+      undefinedStandalone.attempts === 1 &&
+      undefinedCombined.caught &&
+      aggregateContainsExactly(undefinedCombined.failure, [
+        undefined,
+        undefined,
+      ]) &&
+      undefinedCombined.attempts === 1,
   );
   TestValidator.equals(
     "production review-render test owns its complete fixture lifecycle",

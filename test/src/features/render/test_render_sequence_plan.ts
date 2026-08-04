@@ -8,23 +8,6 @@ import { TestValidator } from "@nestia/e2e";
 
 import { nclose, throwsError } from "../internal/predicates";
 
-/**
- * Evaluate named facts in order and stop at the first false one, so a failed
- * comparison names the fact instead of collapsing into one boolean. Stopping
- * keeps the short-circuit semantics the original conjunction had, which some
- * facts depend on to guard the ones after them.
- */
-const namedFacts = (
-  entries: ReadonlyArray<readonly [string, () => boolean]>,
-): Record<string, boolean> => {
-  const output: Record<string, boolean> = {};
-  for (const [name, evaluate] of entries) {
-    output[name] = evaluate();
-    if (output[name] === false) break;
-  }
-  return output;
-};
-
 const shot = (id: string, duration: number): IAutoMovieShot => ({
   id,
   name: null,
@@ -163,38 +146,15 @@ export const test_render_sequence_plan = (): void => {
     blend: { shot: "shot:a", shotTimeSeconds: 1, alpha: 0 },
   });
   const midDissolve = plan.frames[3]!;
-  TestValidator.equals(
+  TestValidator.predicate(
     "mid dissolve sample",
-    namedFacts([
-      ["midDissolveShot", () => midDissolve.shot === "shot:b"],
-      ["ncloseMidDissolve", () => nclose(midDissolve.timeSeconds, 0.75)],
-      ["ncloseMidDissolve2", () => nclose(midDissolve.shotTimeSeconds, 1.25)],
-      ["midDissolveBlend", () => midDissolve.blend !== null],
-      [
-        "midDissolveBlend2",
-        () => midDissolve.blend !== null && midDissolve.blend.shot === "shot:a",
-      ],
-      [
-        "ncloseMidDissolve3",
-        () =>
-          midDissolve.blend !== null &&
-          nclose(midDissolve.blend.shotTimeSeconds, 1.25),
-      ],
-      [
-        "ncloseMidDissolve4",
-        () =>
-          midDissolve.blend !== null && nclose(midDissolve.blend.alpha, 0.5),
-      ],
-    ]),
-    {
-      midDissolveShot: true,
-      ncloseMidDissolve: true,
-      ncloseMidDissolve2: true,
-      midDissolveBlend: true,
-      midDissolveBlend2: true,
-      ncloseMidDissolve3: true,
-      ncloseMidDissolve4: true,
-    },
+    midDissolve.shot === "shot:b" &&
+      nclose(midDissolve.timeSeconds, 0.75) &&
+      nclose(midDissolve.shotTimeSeconds, 1.25) &&
+      midDissolve.blend !== null &&
+      midDissolve.blend.shot === "shot:a" &&
+      nclose(midDissolve.blend.shotTimeSeconds, 1.25) &&
+      nclose(midDissolve.blend.alpha, 0.5),
   );
   TestValidator.equals("past dissolve", plan.frames[4]!.blend, null);
 

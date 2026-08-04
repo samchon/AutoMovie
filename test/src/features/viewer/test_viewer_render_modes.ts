@@ -14,23 +14,6 @@ import * as THREE from "three";
 import { IDENTITY_TRANSFORM, createModel } from "../internal/fixtures";
 import { throwsError } from "../internal/predicates";
 
-/**
- * Evaluate named facts in order and stop at the first false one, so a failed
- * comparison names the fact instead of collapsing into one boolean. Stopping
- * keeps the short-circuit semantics the original conjunction had, which some
- * facts depend on to guard the ones after them.
- */
-const namedFacts = (
-  entries: ReadonlyArray<readonly [string, () => boolean]>,
-): Record<string, boolean> => {
-  const output: Record<string, boolean> = {};
-  for (const [name, evaluate] of entries) {
-    output[name] = evaluate();
-    if (output[name] === false) break;
-  }
-  return output;
-};
-
 const buildTwoNodeScene = () => {
   const objects = new Map([
     ["model-a", buildModel({ ...createModel(), id: "model-a" })],
@@ -205,24 +188,11 @@ export const test_viewer_render_modes = (): void => {
       scene.background.getHex() === 0x000000,
   );
   outline.restore();
-  TestValidator.equals(
+  TestValidator.predicate(
     "outline restore removes shells and returns materials and background",
-    namedFacts([
-      [
-        "meshesOfScene",
-        () => meshesOf(scene).every((m) => m.name !== EDGE_SHELL_NAME),
-      ],
-      [
-        "meshesMesh",
-        () => meshes.every((mesh, i) => mesh.material === originals[i]),
-      ],
-      ["sceneBackground", () => scene.background === outlineBackground],
-    ]),
-    {
-      meshesOfScene: true,
-      meshesMesh: true,
-      sceneBackground: true,
-    },
+    meshesOf(scene).every((m) => m.name !== EDGE_SHELL_NAME) &&
+      meshes.every((mesh, i) => mesh.material === originals[i]) &&
+      scene.background === outlineBackground,
   );
 
   const wideEdge = applyRenderMode(scene, "outline", { edgeWidth: 0.05 });

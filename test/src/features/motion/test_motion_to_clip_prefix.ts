@@ -20,23 +20,6 @@ import {
 import { qclose, vclose } from "../internal/predicates";
 
 /**
- * Evaluate named facts in order and stop at the first false one, so a failed
- * comparison names the fact instead of collapsing into one boolean. Stopping
- * keeps the short-circuit semantics the original conjunction had, which some
- * facts depend on to guard the ones after them.
- */
-const namedFacts = (
-  entries: ReadonlyArray<readonly [string, () => boolean]>,
-): Record<string, boolean> => {
-  const output: Record<string, boolean> = {};
-  for (const [name, evaluate] of entries) {
-    output[name] = evaluate();
-    if (output[name] === false) break;
-  }
-  return output;
-};
-
-/**
  * `motionToClip`'s `nodePrefix` gives a multi-actor node graph per-actor
  * channel namespaces (S3): every lowered node id AND every clip channel ref
  * (bones and the synthetic root alike) carries the prefix, while the default
@@ -73,28 +56,11 @@ export const test_motion_to_clip_prefix = (): void => {
     track.channel.kind === "node" ? track.channel.node : "";
 
   const bare = motionToClip({ motion, skeleton });
-  TestValidator.equals(
+  TestValidator.predicate(
     "default keeps the bare S1 naming",
-    namedFacts([
-      [
-        "bareNodes",
-        () => bare.nodes.some((node) => node.id === MOTION_ROOT_NODE_ID),
-      ],
-      [
-        "bareNodes2",
-        () => bare.nodes.some((node) => node.id === "leftLowerArm"),
-      ],
-      [
-        "bareClip",
-        () =>
-          bare.clip.tracks.every((track) => !channelNode(track).includes("/")),
-      ],
-    ]),
-    {
-      bareNodes: true,
-      bareNodes2: true,
-      bareClip: true,
-    },
+    bare.nodes.some((node) => node.id === MOTION_ROOT_NODE_ID) &&
+      bare.nodes.some((node) => node.id === "leftLowerArm") &&
+      bare.clip.tracks.every((track) => !channelNode(track).includes("/")),
   );
 
   const prefixed = motionToClip({ motion, skeleton, nodePrefix: "knightA/" });

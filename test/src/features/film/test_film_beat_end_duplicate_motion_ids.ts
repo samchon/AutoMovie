@@ -13,23 +13,6 @@ import {
   makePose,
 } from "../internal/fixtures";
 
-/**
- * Evaluate named facts in order and stop at the first false one, so a failed
- * comparison names the fact instead of collapsing into one boolean. Stopping
- * keeps the short-circuit semantics the original conjunction had, which some
- * facts depend on to guard the ones after them.
- */
-const namedFacts = (
-  entries: ReadonlyArray<readonly [string, () => boolean]>,
-): Record<string, boolean> => {
-  const output: Record<string, boolean> = {};
-  for (const [name, evaluate] of entries) {
-    output[name] = evaluate();
-    if (output[name] === false) break;
-  }
-  return output;
-};
-
 const motion: IAutoMovieMotion = {
   ...makeMotion([keyframe(0, makePose([])), keyframe(1, makePose([]))], 1),
   id: "walk",
@@ -87,37 +70,11 @@ export const test_film_beat_end_duplicate_motion_ids = (): void => {
     "duplicate motion ids throw",
     thrown instanceof Error,
   );
-  TestValidator.equals(
+  TestValidator.predicate(
     "duplicate motion id names both entries",
-    namedFacts([
-      ["thrownInstanceof", () => thrown instanceof Error],
-      [
-        "thrownMessage",
-        () =>
-          thrown instanceof Error &&
-          thrown.message.includes('motion "walk" is duplicated'),
-      ],
-      [
-        "thrownMessage2",
-        () =>
-          thrown instanceof Error &&
-          thrown.message.includes('motion "walk" is duplicated') &&
-          thrown.message.includes("props.motions[0].id"),
-      ],
-      [
-        "thrownMessage3",
-        () =>
-          thrown instanceof Error &&
-          thrown.message.includes('motion "walk" is duplicated') &&
-          thrown.message.includes("props.motions[0].id") &&
-          thrown.message.includes("props.motions[1].id"),
-      ],
-    ]),
-    {
-      thrownInstanceof: true,
-      thrownMessage: true,
-      thrownMessage2: true,
-      thrownMessage3: true,
-    },
+    thrown instanceof Error &&
+      thrown.message.includes('motion "walk" is duplicated') &&
+      thrown.message.includes("props.motions[0].id") &&
+      thrown.message.includes("props.motions[1].id"),
   );
 };

@@ -4,23 +4,6 @@ import { TestValidator } from "@nestia/e2e";
 import { nclose } from "../internal/predicates";
 
 /**
- * Evaluate named facts in order and stop at the first false one, so a failed
- * comparison names the fact instead of collapsing into one boolean. Stopping
- * keeps the short-circuit semantics the original conjunction had, which some
- * facts depend on to guard the ones after them.
- */
-const namedFacts = (
-  entries: ReadonlyArray<readonly [string, () => boolean]>,
-): Record<string, boolean> => {
-  const output: Record<string, boolean> = {};
-  for (const [name, evaluate] of entries) {
-    output[name] = evaluate();
-    if (output[name] === false) break;
-  }
-  return output;
-};
-
-/**
  * The triangular smoothing kernel is normalized: a constant band passes through
  * bit-exact (no drift to lock in), while a step edge is softened, which is the
  * property that keeps band rows from reading as ring banding on the lofted clay
@@ -46,17 +29,8 @@ export const test_face_clean_bands_smooth = (): void => {
   );
   const before = step[5]!.max;
   const after = step[6]!.max;
-  TestValidator.equals(
+  TestValidator.predicate(
     "step softened symmetrically",
-    namedFacts([
-      ["before", () => before > 0],
-      ["after", () => after < 10],
-      ["ncloseBefore", () => nclose(before + after, 10, 1e-9)],
-    ]),
-    {
-      before: true,
-      after: true,
-      ncloseBefore: true,
-    },
+    before > 0 && after < 10 && nclose(before + after, 10, 1e-9),
   );
 };

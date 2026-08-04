@@ -8,23 +8,6 @@ import { TestValidator } from "@nestia/e2e";
 
 import { nclose, qclose, throwsError } from "../internal/predicates";
 
-/**
- * Evaluate named facts in order and stop at the first false one, so a failed
- * comparison names the fact instead of collapsing into one boolean. Stopping
- * keeps the short-circuit semantics the original conjunction had, which some
- * facts depend on to guard the ones after them.
- */
-const namedFacts = (
-  entries: ReadonlyArray<readonly [string, () => boolean]>,
-): Record<string, boolean> => {
-  const output: Record<string, boolean> = {};
-  for (const [name, evaluate] of entries) {
-    output[name] = evaluate();
-    if (output[name] === false) break;
-  }
-  return output;
-};
-
 const NODE = (
   path: "translation" | "rotation" | "scale" | "weights",
 ): IAutoMovieChannel => ({ kind: "node", node: "n", path });
@@ -138,20 +121,12 @@ export const test_resolve_sample_clip = (): void => {
   // frame-aligned hits the norm, so holding the PREVIOUS key here played
   // every step change one sample late (#1054)
   const stepThree = clip([track(PTR, [0, 1, 2], [10, 20, 30], "step")], 2);
-  TestValidator.equals(
+  TestValidator.predicate(
     "step exact interior hit takes the hit key, asymptotes stay held",
-    namedFacts([
-      ["closeVal", () => close(val(stepThree, 1, "ptr:/x"), [20])],
-      ["closeVal2", () => close(val(stepThree, 1 - 1e-9, "ptr:/x"), [10])],
-      ["closeVal3", () => close(val(stepThree, 1.999, "ptr:/x"), [20])],
-      ["closeVal4", () => close(val(stepThree, 2, "ptr:/x"), [30])],
-    ]),
-    {
-      closeVal: true,
-      closeVal2: true,
-      closeVal3: true,
-      closeVal4: true,
-    },
+    close(val(stepThree, 1, "ptr:/x"), [20]) &&
+      close(val(stepThree, 1 - 1e-9, "ptr:/x"), [10]) &&
+      close(val(stepThree, 1.999, "ptr:/x"), [20]) &&
+      close(val(stepThree, 2, "ptr:/x"), [30]),
   );
 
   const weights = clip(

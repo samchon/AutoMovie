@@ -4,23 +4,6 @@ import { TestValidator } from "@nestia/e2e";
 
 import { nclose, vclose } from "../internal/predicates";
 
-/**
- * Evaluate named facts in order and stop at the first false one, so a failed
- * comparison names the fact instead of collapsing into one boolean. Stopping
- * keeps the short-circuit semantics the original conjunction had, which some
- * facts depend on to guard the ones after them.
- */
-const namedFacts = (
-  entries: ReadonlyArray<readonly [string, () => boolean]>,
-): Record<string, boolean> => {
-  const output: Record<string, boolean> = {};
-  for (const [name, evaluate] of entries) {
-    output[name] = evaluate();
-    if (output[name] === false) break;
-  }
-  return output;
-};
-
 const CAMERA: IAutoMovieCamera = {
   id: "cam",
   transform: {
@@ -148,18 +131,11 @@ export const test_film_camera_move_paths = (): void => {
     truck.tracks[0]!.times.length,
     9,
   );
-  TestValidator.equals(
+  TestValidator.predicate(
     "truck finishes screen-left while holding staged depth",
-    namedFacts([
-      ["ncloseTruck", () => nclose(truck.tracks[0]!.values[24]!, -1.15)],
-      ["ncloseTruck2", () => nclose(truck.tracks[0]!.values[25]!, 1)],
-      ["ncloseTruck3", () => nclose(truck.tracks[0]!.values[26]!, 1.15)],
-    ]),
-    {
-      ncloseTruck: true,
-      ncloseTruck2: true,
-      ncloseTruck3: true,
-    },
+    nclose(truck.tracks[0]!.values[24]!, -1.15) &&
+      nclose(truck.tracks[0]!.values[25]!, 1) &&
+      nclose(truck.tracks[0]!.values[26]!, 1.15),
   );
   const movingTruck = compileCameraMove({
     clipId: "clip",
@@ -183,27 +159,11 @@ export const test_film_camera_move_paths = (): void => {
     entries: [{ action: frame("truck", 0, 2), subject }],
     shotDuration: 2,
   })!;
-  TestValidator.equals(
+  TestValidator.predicate(
     "a vertical staged bearing uses the total screen-left fallback",
-    namedFacts([
-      [
-        "ncloseVerticalTruck",
-        () => nclose(verticalTruck.tracks[0]!.values[24]!, -1.15),
-      ],
-      [
-        "ncloseVerticalTruck2",
-        () => nclose(verticalTruck.tracks[0]!.values[25]!, 2.15),
-      ],
-      [
-        "ncloseVerticalTruck3",
-        () => nclose(verticalTruck.tracks[0]!.values[26]!, 0),
-      ],
-    ]),
-    {
-      ncloseVerticalTruck: true,
-      ncloseVerticalTruck2: true,
-      ncloseVerticalTruck3: true,
-    },
+    nclose(verticalTruck.tracks[0]!.values[24]!, -1.15) &&
+      nclose(verticalTruck.tracks[0]!.values[25]!, 2.15) &&
+      nclose(verticalTruck.tracks[0]!.values[26]!, 0),
   );
 
   const abutted = compileCameraMove({

@@ -25,23 +25,6 @@ import {
   testRendererIdentity,
 } from "./productionFixtures";
 
-/**
- * Evaluate named facts in order and stop at the first false one, so a failed
- * comparison names the fact instead of collapsing into one boolean. Stopping
- * keeps the short-circuit semantics the original conjunction had, which some
- * facts depend on to guard the ones after them.
- */
-const namedFacts = (
-  entries: ReadonlyArray<readonly [string, () => boolean]>,
-): Record<string, boolean> => {
-  const output: Record<string, boolean> = {};
-  for (const [name, evaluate] of entries) {
-    output[name] = evaluate();
-    if (output[name] === false) break;
-  }
-  return output;
-};
-
 const png = (width = 16, height = 16): Uint8Array => {
   const image = new PNG({ width, height });
   image.data.fill(180);
@@ -361,28 +344,11 @@ export const test_mcp_production_review_render_edges =
       const linkedAggregate = review.prepare({
         target: { kind: "film", id: "fixture-film" },
       });
-      TestValidator.equals(
+      TestValidator.predicate(
         "terminal publication stays outside human review identity and never follows linked aggregate bytes",
-        namedFacts([
-          [
-            "beforeAggregateFingerprint",
-            () => beforeAggregate.fingerprint === validAggregate.fingerprint,
-          ],
-          [
-            "validAggregateFingerprint",
-            () => validAggregate.fingerprint === malformedAggregate.fingerprint,
-          ],
-          [
-            "malformedAggregateFingerprint",
-            () =>
-              malformedAggregate.fingerprint === linkedAggregate.fingerprint,
-          ],
-        ]),
-        {
-          beforeAggregateFingerprint: true,
-          validAggregateFingerprint: true,
-          malformedAggregateFingerprint: true,
-        },
+        beforeAggregate.fingerprint === validAggregate.fingerprint &&
+          validAggregate.fingerprint === malformedAggregate.fingerprint &&
+          malformedAggregate.fingerprint === linkedAggregate.fingerprint,
       );
       fs.rmSync(aggregateManifest, { force: true, recursive: true });
       fs.rmSync(outsideAggregate, { force: true, recursive: true });
@@ -1331,24 +1297,11 @@ export const test_mcp_production_review_render_edges =
         }
         return swapped && rejected;
       };
-      TestValidator.equals(
+      TestValidator.predicate(
         "render inventory rejects every post-read directory replacement",
-        namedFacts([
-          [
-            "postReadDirectoryRaceJunction",
-            () => postReadDirectoryRace("junction"),
-          ],
-          ["postReadDirectoryRaceFile", () => postReadDirectoryRace("file")],
-          [
-            "postReadDirectoryRaceDirectory",
-            () => postReadDirectoryRace("directory"),
-          ],
-        ]),
-        {
-          postReadDirectoryRaceJunction: true,
-          postReadDirectoryRaceFile: true,
-          postReadDirectoryRaceDirectory: true,
-        },
+        postReadDirectoryRace("junction") &&
+          postReadDirectoryRace("file") &&
+          postReadDirectoryRace("directory"),
       );
 
       const lstatToRealpathRace = (
@@ -1453,31 +1406,16 @@ export const test_mcp_production_review_render_edges =
       let lateBundleFailure: IProductionReviewRenderFixtureFailure | undefined;
       try {
         const prepared = review.prepare({ target });
-        TestValidator.equals(
+        TestValidator.predicate(
           "a bundle replaced after inventory cannot become review evidence",
-          namedFacts([
-            ["lateSwapped", () => lateSwapped],
-            [
-              "preparedFrames",
-              () =>
-                prepared.frames.every((frame) => frame.digest !== lateDigest),
-            ],
-            [
-              "preparedDiagnostics",
-              () =>
-                prepared.diagnostics.some(
-                  (item) =>
-                    item.code === "render-bundle-unowned" &&
-                    path.resolve(fixture.root, item.path ?? "") ===
-                      path.resolve(lateManifestPath),
-                ),
-            ],
-          ]),
-          {
-            lateSwapped: true,
-            preparedFrames: true,
-            preparedDiagnostics: true,
-          },
+          lateSwapped &&
+            prepared.frames.every((frame) => frame.digest !== lateDigest) &&
+            prepared.diagnostics.some(
+              (item) =>
+                item.code === "render-bundle-unowned" &&
+                path.resolve(fixture.root, item.path ?? "") ===
+                  path.resolve(lateManifestPath),
+            ),
         );
       } catch (error) {
         lateBundleFailure = { error };

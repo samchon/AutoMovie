@@ -14,23 +14,6 @@ import {
   shotContract,
 } from "./productionFixtures";
 
-/**
- * Evaluate named facts in order and stop at the first false one, so a failed
- * comparison names the fact instead of collapsing into one boolean. Stopping
- * keeps the short-circuit semantics the original conjunction had, which some
- * facts depend on to guard the ones after them.
- */
-const namedFacts = (
-  entries: ReadonlyArray<readonly [string, () => boolean]>,
-): Record<string, boolean> => {
-  const output: Record<string, boolean> = {};
-  for (const [name, evaluate] of entries) {
-    output[name] = evaluate();
-    if (output[name] === false) break;
-  }
-  return output;
-};
-
 const throws = (closure: () => unknown, signal?: string): boolean => {
   try {
     closure();
@@ -220,42 +203,19 @@ export const test_mcp_production_namespaces = (): void => {
       fixture.root,
       ".automovie/design/fixture-film/screenplay/index.json",
     );
-    TestValidator.equals(
+    TestValidator.predicate(
       "legacy outputs migrate without byte loss",
-      namedFacts([
-        [
-          "alphaGeneratedRoot",
-          () =>
-            fs.readFileSync(
-              path.join(alpha.generatedRoot(), "legacy-generated.bin"),
-              "utf8",
-            ) === "generated",
-        ],
-        [
-          "migratedSameNamedLegacyChildUtf8",
-          () =>
-            fs.readFileSync(migratedSameNamedLegacyChild, "utf8") ===
-            "same-name-child",
-        ],
-        [
-          "alphaRenderRoot",
-          () =>
-            fs.readFileSync(
-              path.join(alpha.renderRoot(), "legacy-render.bin"),
-              "utf8",
-            ) === "render",
-        ],
-        [
-          "migratedScreenplayUtf8",
-          () => fs.readFileSync(migratedScreenplay, "utf8") === '{"version":1}',
-        ],
-      ]),
-      {
-        alphaGeneratedRoot: true,
-        migratedSameNamedLegacyChildUtf8: true,
-        alphaRenderRoot: true,
-        migratedScreenplayUtf8: true,
-      },
+      fs.readFileSync(
+        path.join(alpha.generatedRoot(), "legacy-generated.bin"),
+        "utf8",
+      ) === "generated" &&
+        fs.readFileSync(migratedSameNamedLegacyChild, "utf8") ===
+          "same-name-child" &&
+        fs.readFileSync(
+          path.join(alpha.renderRoot(), "legacy-render.bin"),
+          "utf8",
+        ) === "render" &&
+        fs.readFileSync(migratedScreenplay, "utf8") === '{"version":1}',
     );
     fs.writeFileSync(migratedScreenplay, originalLegacyScreenplay);
     fs.rmSync(path.join(alpha.generatedRoot(), "legacy-generated.bin"));
@@ -274,46 +234,24 @@ export const test_mcp_production_namespaces = (): void => {
         "contains 2 productions",
       ),
     );
-    TestValidator.equals(
+    TestValidator.predicate(
       "production-owned paths are disjoint",
-      namedFacts([
-        [
-          "alphaGeneratedRoot",
-          () => alpha.generatedRoot() !== beta.generatedRoot(),
-        ],
-        ["alphaRenderRoot", () => alpha.renderRoot() !== beta.renderRoot()],
-        [
-          "alphaReviewPath",
-          () =>
-            alpha.reviewPath({
-              kind: "design",
-              design: { kind: "production" },
-            }) !==
-            beta.reviewPath({
-              kind: "design",
-              design: { kind: "production" },
-            }),
-        ],
-        [
-          "fixtureResident",
-          () =>
-            fs.existsSync(
-              path.join(
-                fixture.root,
-                ".automovie",
-                "design",
-                "fixture-film",
-                "production.json",
-              ),
-            ),
-        ],
-      ]),
-      {
-        alphaGeneratedRoot: true,
-        alphaRenderRoot: true,
-        alphaReviewPath: true,
-        fixtureResident: true,
-      },
+      alpha.generatedRoot() !== beta.generatedRoot() &&
+        alpha.renderRoot() !== beta.renderRoot() &&
+        alpha.reviewPath({ kind: "design", design: { kind: "production" } }) !==
+          beta.reviewPath({
+            kind: "design",
+            design: { kind: "production" },
+          }) &&
+        fs.existsSync(
+          path.join(
+            fixture.root,
+            ".automovie",
+            "design",
+            "fixture-film",
+            "production.json",
+          ),
+        ),
     );
     TestValidator.predicate(
       "shared model is visible to both productions",
@@ -421,32 +359,12 @@ export const test_mcp_production_namespaces = (): void => {
         complete: false,
       });
     }
-    TestValidator.equals(
+    TestValidator.predicate(
       "both production review ledgers remain independent",
-      namedFacts([
-        [
-          "alphaReview",
-          () =>
-            alpha
-              .review(reviewTarget)
-              ?.observations.includes("fixture-film") === true,
-        ],
-        [
-          "betaReview",
-          () =>
-            beta.review(reviewTarget)?.observations.includes("beta") === true,
-        ],
-        [
-          "alphaReviewPath",
-          () =>
-            alpha.reviewPath(reviewTarget) !== beta.reviewPath(reviewTarget),
-        ],
-      ]),
-      {
-        alphaReview: true,
-        betaReview: true,
-        alphaReviewPath: true,
-      },
+      alpha.review(reviewTarget)?.observations.includes("fixture-film") ===
+        true &&
+        beta.review(reviewTarget)?.observations.includes("beta") === true &&
+        alpha.reviewPath(reviewTarget) !== beta.reviewPath(reviewTarget),
     );
 
     const alphaBefore = alphaCompiler.lint({
@@ -467,32 +385,16 @@ export const test_mcp_production_namespaces = (): void => {
     const betaAfter = betaCompiler.lint({
       scope: "source",
     }).compiler.inputFingerprint;
-    TestValidator.equals(
+    TestValidator.predicate(
       "shared model stales both compile and review identities",
-      namedFacts([
-        ["alphaBeforeAlphaAfter", () => alphaBefore !== alphaAfter],
-        ["betaBeforeBetaAfter", () => betaBefore !== betaAfter],
-        [
-          "newAutoMovieProductionReviewService",
-          () =>
-            new AutoMovieProductionReviewService(alpha).prepare({
-              target: reviewTarget,
-            }).fingerprint !== alpha.review(reviewTarget)?.fingerprint,
-        ],
-        [
-          "newAutoMovieProductionReviewService2",
-          () =>
-            new AutoMovieProductionReviewService(beta).prepare({
-              target: reviewTarget,
-            }).fingerprint !== beta.review(reviewTarget)?.fingerprint,
-        ],
-      ]),
-      {
-        alphaBeforeAlphaAfter: true,
-        betaBeforeBetaAfter: true,
-        newAutoMovieProductionReviewService: true,
-        newAutoMovieProductionReviewService2: true,
-      },
+      alphaBefore !== alphaAfter &&
+        betaBefore !== betaAfter &&
+        new AutoMovieProductionReviewService(alpha).prepare({
+          target: reviewTarget,
+        }).fingerprint !== alpha.review(reviewTarget)?.fingerprint &&
+        new AutoMovieProductionReviewService(beta).prepare({
+          target: reviewTarget,
+        }).fingerprint !== beta.review(reviewTarget)?.fingerprint,
     );
 
     const sharedModel = path.join(
@@ -513,30 +415,17 @@ export const test_mcp_production_namespaces = (): void => {
     const betaGenerated = beta.generatedRoot();
     const betaRenders = beta.renderRoot();
     const erased = beta.eraseProduction("remove the beta acceptance fixture");
-    TestValidator.equals(
+    TestValidator.predicate(
       "production deletion preserves sibling and shared bytes",
-      namedFacts([
-        ["erasedErased", () => erased.erased],
-        ["erasedCount", () => erased.remaining.length === 1],
-        ["erasedRemaining", () => erased.remaining[0] === "fixture-film"],
-        ["sharedModelResident", () => fs.existsSync(sharedModel)],
-        ["alphaDesignResident", () => fs.existsSync(alphaDesign)],
-        ["alphaRenderResident", () => fs.existsSync(alphaRender)],
-        ["betaGeneratedResident", () => fs.existsSync(betaGenerated) === false],
-        ["betaRendersResident", () => fs.existsSync(betaRenders) === false],
-        ["rejected", () => throws(() => beta.summary(), "was deleted")],
-      ]),
-      {
-        erasedErased: true,
-        erasedCount: true,
-        erasedRemaining: true,
-        sharedModelResident: true,
-        alphaDesignResident: true,
-        alphaRenderResident: true,
-        betaGeneratedResident: true,
-        betaRendersResident: true,
-        rejected: true,
-      },
+      erased.erased &&
+        erased.remaining.length === 1 &&
+        erased.remaining[0] === "fixture-film" &&
+        fs.existsSync(sharedModel) &&
+        fs.existsSync(alphaDesign) &&
+        fs.existsSync(alphaRender) &&
+        fs.existsSync(betaGenerated) === false &&
+        fs.existsSync(betaRenders) === false &&
+        throws(() => beta.summary(), "was deleted"),
     );
   } catch (error) {
     namespaceFixtureFailure = { error };
@@ -622,36 +511,14 @@ export const test_mcp_production_namespaces = (): void => {
           id: "absent",
         }),
     ];
-    TestValidator.equals(
+    TestValidator.predicate(
       "every production-scoped read, path and mutation rejects same-id recreation",
-      namedFacts([
-        [
-          "recreatedSummary",
-          () => recreated.summary().productionId === "fixture-film",
-        ],
-        [
-          "rejected",
-          () => throws(() => stale.summary(), "deleted or recreated"),
-        ],
-        [
-          "staleReadsRead",
-          () =>
-            staleReads.every((read) => throws(read, "deleted or recreated")),
-        ],
-        [
-          "staleMutationsMutate",
-          () =>
-            staleMutations.every((mutate) =>
-              throws(mutate, "deleted or recreated"),
-            ),
-        ],
-      ]),
-      {
-        recreatedSummary: true,
-        rejected: true,
-        staleReadsRead: true,
-        staleMutationsMutate: true,
-      },
+      recreated.summary().productionId === "fixture-film" &&
+        throws(() => stale.summary(), "deleted or recreated") &&
+        staleReads.every((read) => throws(read, "deleted or recreated")) &&
+        staleMutations.every((mutate) =>
+          throws(mutate, "deleted or recreated"),
+        ),
     );
   } catch (error) {
     incarnationFixtureFailure = { error };
@@ -685,27 +552,11 @@ export const test_mcp_production_namespaces = (): void => {
       protoFixture.root,
       "__proto__",
     );
-    TestValidator.equals(
+    TestValidator.predicate(
       "prototype-named production receives an own ABA incarnation",
-      namedFacts([
-        [
-          "hasOwnRegistryBefore",
-          () => Object.hasOwn(registryBefore.incarnations, "__proto__"),
-        ],
-        [
-          "recreatedSummary",
-          () => recreated.summary().productionId === "__proto__",
-        ],
-        [
-          "rejected",
-          () => throws(() => stale.generatedRoot(), "deleted or recreated"),
-        ],
-      ]),
-      {
-        hasOwnRegistryBefore: true,
-        recreatedSummary: true,
-        rejected: true,
-      },
+      Object.hasOwn(registryBefore.incarnations, "__proto__") &&
+        recreated.summary().productionId === "__proto__" &&
+        throws(() => stale.generatedRoot(), "deleted or recreated"),
     );
   } catch (error) {
     protoFixtureFailure = { error };
@@ -788,31 +639,11 @@ export const test_mcp_production_namespaces = (): void => {
       auditRoot,
       process.platform === "win32" ? "junction" : "dir",
     );
-    TestValidator.equals(
+    TestValidator.predicate(
       "production erase refuses an aliased global audit directory",
-      namedFacts([
-        [
-          "rejected",
-          () =>
-            throws(
-              () => project.eraseProduction("must not escape"),
-              "physical",
-            ),
-        ],
-        [
-          "externalAuditCount",
-          () => fs.readdirSync(externalAudit).length === 0,
-        ],
-        [
-          "projectSummary",
-          () => project.summary().productionId === "fixture-film",
-        ],
-      ]),
-      {
-        rejected: true,
-        externalAuditCount: true,
-        projectSummary: true,
-      },
+      throws(() => project.eraseProduction("must not escape"), "physical") &&
+        fs.readdirSync(externalAudit).length === 0 &&
+        project.summary().productionId === "fixture-film",
     );
   } catch (error) {
     auditFailure = { error };

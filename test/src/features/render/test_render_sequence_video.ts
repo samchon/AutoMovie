@@ -11,23 +11,6 @@ import { TestValidator } from "@nestia/e2e";
 
 import { nclose } from "../internal/predicates";
 
-/**
- * Evaluate named facts in order and stop at the first false one, so a failed
- * comparison names the fact instead of collapsing into one boolean. Stopping
- * keeps the short-circuit semantics the original conjunction had, which some
- * facts depend on to guard the ones after them.
- */
-const namedFacts = (
-  entries: ReadonlyArray<readonly [string, () => boolean]>,
-): Record<string, boolean> => {
-  const output: Record<string, boolean> = {};
-  for (const [name, evaluate] of entries) {
-    output[name] = evaluate();
-    if (output[name] === false) break;
-  }
-  return output;
-};
-
 const shot = (id: string, duration: number): IAutoMovieShot => ({
   id,
   name: null,
@@ -132,35 +115,19 @@ export const test_render_sequence_video = async (): Promise<void> => {
   );
 
   // 2. transition sample semantics
-  TestValidator.equals(
+  TestValidator.predicate(
     "entry transition begins at frame 6",
-    namedFacts([
-      ["capturedShot", () => captured[6]!.shot === "shot:b"],
-      ["ncloseCaptured", () => nclose(captured[6]!.time, 1)],
-      ["capturedBlend", () => captured[6]!.blend === "shot:a"],
-      ["ncloseCaptured2", () => nclose(captured[6]!.alpha ?? -1, 0)],
-    ]),
-    {
-      capturedShot: true,
-      ncloseCaptured: true,
-      capturedBlend: true,
-      ncloseCaptured2: true,
-    },
+    captured[6]!.shot === "shot:b" &&
+      nclose(captured[6]!.time, 1) &&
+      captured[6]!.blend === "shot:a" &&
+      nclose(captured[6]!.alpha ?? -1, 0),
   );
-  TestValidator.equals(
+  TestValidator.predicate(
     "mid transition alpha",
-    namedFacts([
-      ["capturedShot", () => captured[7]!.shot === "shot:b"],
-      ["ncloseCaptured", () => nclose(captured[7]!.time, 1.25)],
-      ["capturedBlend", () => captured[7]!.blend === "shot:a"],
-      ["ncloseCaptured2", () => nclose(captured[7]!.alpha ?? -1, 0.5)],
-    ]),
-    {
-      capturedShot: true,
-      ncloseCaptured: true,
-      capturedBlend: true,
-      ncloseCaptured2: true,
-    },
+    captured[7]!.shot === "shot:b" &&
+      nclose(captured[7]!.time, 1.25) &&
+      captured[7]!.blend === "shot:a" &&
+      nclose(captured[7]!.alpha ?? -1, 0.5),
   );
   TestValidator.equals("past transition", captured[8]!.blend, null);
 

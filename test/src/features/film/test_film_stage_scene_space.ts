@@ -5,23 +5,6 @@ import { TestValidator } from "@nestia/e2e";
 import { makeScriptWrite, makeStagingWrite } from "../internal/filmFixtures";
 import { hasViolation, nclose } from "../internal/predicates";
 
-/**
- * Evaluate named facts in order and stop at the first false one, so a failed
- * comparison names the fact instead of collapsing into one boolean. Stopping
- * keeps the short-circuit semantics the original conjunction had, which some
- * facts depend on to guard the ones after them.
- */
-const namedFacts = (
-  entries: ReadonlyArray<readonly [string, () => boolean]>,
-): Record<string, boolean> => {
-  const output: Record<string, boolean> = {};
-  for (const [name, evaluate] of entries) {
-    output[name] = evaluate();
-    if (output[name] === false) break;
-  }
-  return output;
-};
-
 /** A floor square and a ramp climbing 1 m over the 2 m east of it. */
 const makeSpace = (
   partial: Partial<IAutoMovieSpace> = {},
@@ -98,20 +81,12 @@ export const test_film_stage_scene_space = (): void => {
   // The composed scene plugs straight into the ground callback the motion
   // seams consume: flat over the floor, half-climbed at the ramp's midpoint.
   const ground = spaceGround(space!);
-  TestValidator.equals(
+  TestValidator.predicate(
     "the staged space answers ground height",
-    namedFacts([
-      ["ncloseGround", () => nclose(ground(0, 0), 0)],
-      ["ncloseGround2", () => nclose(ground(3, 0), 0.5)],
-      ["ncloseGround3", () => nclose(ground(4, 0), 1)],
-      ["ncloseGround4", () => nclose(ground(20, 20), 0)],
-    ]),
-    {
-      ncloseGround: true,
-      ncloseGround2: true,
-      ncloseGround3: true,
-      ncloseGround4: true,
-    },
+    nclose(ground(0, 0), 0) &&
+      nclose(ground(3, 0), 0.5) &&
+      nclose(ground(4, 0), 1) &&
+      nclose(ground(20, 20), 0),
   );
 
   // 2. an omitted space is stated as null, not left absent.
@@ -159,29 +134,12 @@ export const test_film_stage_scene_space = (): void => {
       }),
     }),
   );
-  TestValidator.equals(
+  TestValidator.predicate(
     "every space gate fires under $input.space in one round",
-    namedFacts([
-      ["refusedSuccess", () => refused.success === false],
-      [
-        "hasViolationRefused",
-        () => hasViolation(refused, "type", "$input.space.surfaces[0].polygon"),
-      ],
-      [
-        "hasViolationRefused2",
-        () => hasViolation(refused, "range", "$input.space.surfaces[1].rampTo"),
-      ],
-      [
-        "hasViolationRefused3",
-        () => hasViolation(refused, "type", "$input.space.walkable[1]"),
-      ],
-    ]),
-    {
-      refusedSuccess: true,
-      hasViolationRefused: true,
-      hasViolationRefused2: true,
-      hasViolationRefused3: true,
-    },
+    refused.success === false &&
+      hasViolation(refused, "type", "$input.space.surfaces[0].polygon") &&
+      hasViolation(refused, "range", "$input.space.surfaces[1].rampTo") &&
+      hasViolation(refused, "type", "$input.space.walkable[1]"),
   );
 
   // 4. the negative twin: the notch vertex pulled back onto the hull edge.

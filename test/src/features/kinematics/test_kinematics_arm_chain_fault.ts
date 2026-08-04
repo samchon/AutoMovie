@@ -14,23 +14,6 @@ import { TestValidator } from "@nestia/e2e";
 
 import { nclose } from "../internal/predicates";
 
-/**
- * Evaluate named facts in order and stop at the first false one, so a failed
- * comparison names the fact instead of collapsing into one boolean. Stopping
- * keeps the short-circuit semantics the original conjunction had, which some
- * facts depend on to guard the ones after them.
- */
-const namedFacts = (
-  entries: ReadonlyArray<readonly [string, () => boolean]>,
-): Record<string, boolean> => {
-  const output: Record<string, boolean> = {};
-  for (const [name, evaluate] of entries) {
-    output[name] = evaluate();
-    if (output[name] === false) break;
-  }
-  return output;
-};
-
 const bone = (
   name: AutoMovieHumanoidBone,
   parent: AutoMovieHumanoidBone | null,
@@ -174,23 +157,12 @@ export const test_kinematics_arm_chain_fault = (): void => {
 
   // 3. the diagnosis agrees with the measurement on both sides
   const fault = armChainFault(down, "right");
-  TestValidator.equals(
+  TestValidator.predicate(
     "the arms-down rig is faulted, at its elbow, with a reason that says why",
-    namedFacts([
-      ["fault", () => fault !== null],
-      ["faultSide", () => fault !== null && fault.side === "right"],
-      ["faultBone", () => fault !== null && fault.bone === "rightLowerArm"],
-      [
-        "faultReason",
-        () => fault !== null && fault.reason.includes("parallel"),
-      ],
-    ]),
-    {
-      fault: true,
-      faultSide: true,
-      faultBone: true,
-      faultReason: true,
-    },
+    fault !== null &&
+      fault.side === "right" &&
+      fault.bone === "rightLowerArm" &&
+      fault.reason.includes("parallel"),
   );
   TestValidator.equals(
     "the conforming rig is not faulted",

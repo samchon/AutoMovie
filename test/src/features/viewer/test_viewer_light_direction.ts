@@ -10,23 +10,6 @@ import * as THREE from "three";
 
 import { vclose } from "../internal/predicates";
 
-/**
- * Evaluate named facts in order and stop at the first false one, so a failed
- * comparison names the fact instead of collapsing into one boolean. Stopping
- * keeps the short-circuit semantics the original conjunction had, which some
- * facts depend on to guard the ones after them.
- */
-const namedFacts = (
-  entries: ReadonlyArray<readonly [string, () => boolean]>,
-): Record<string, boolean> => {
-  const output: Record<string, boolean> = {};
-  for (const [name, evaluate] of entries) {
-    output[name] = evaluate();
-    if (output[name] === false) break;
-  }
-  return output;
-};
-
 /** Stage a scene carrying exactly the given light placements. */
 const stagedWith = (lights: IAutoMovieStageLight[]): IAutoMovieScene => {
   const staged = stageScene(
@@ -184,21 +167,12 @@ export const test_viewer_light_direction = (): void => {
     ]),
   );
   const point = lightsOf(pointScene)[0] as THREE.PointLight;
-  TestValidator.equals(
+  TestValidator.predicate(
     "a point light keeps its position and range and carries no aiming target",
-    namedFacts([
-      ["pointPosition", () => point.position.x === 1],
-      ["pointPosition2", () => point.position.y === 2],
-      ["pointPosition3", () => point.position.z === -1],
-      ["pointDistance", () => point.distance === 8],
-      ["pointCount", () => point.children.length === 0],
-    ]),
-    {
-      pointPosition: true,
-      pointPosition2: true,
-      pointPosition3: true,
-      pointDistance: true,
-      pointCount: true,
-    },
+    point.position.x === 1 &&
+      point.position.y === 2 &&
+      point.position.z === -1 &&
+      point.distance === 8 &&
+      point.children.length === 0,
   );
 };

@@ -25,23 +25,6 @@ import {
 import { nclose, throwsError } from "../internal/predicates";
 
 /**
- * Evaluate named facts in order and stop at the first false one, so a failed
- * comparison names the fact instead of collapsing into one boolean. Stopping
- * keeps the short-circuit semantics the original conjunction had, which some
- * facts depend on to guard the ones after them.
- */
-const namedFacts = (
-  entries: ReadonlyArray<readonly [string, () => boolean]>,
-): Record<string, boolean> => {
-  const output: Record<string, boolean> = {};
-  for (const [name, evaluate] of entries) {
-    output[name] = evaluate();
-    if (output[name] === false) break;
-  }
-  return output;
-};
-
-/**
  * The viewer production-asset runtime contract: skinned mesh parts bind to the
  * model skeleton, rigid attachments keep precedence over a stray skin payload,
  * imported three/VRM-like objects accept pose/expression playback through the
@@ -169,35 +152,20 @@ export const test_viewer_production_asset_runtime = async (): Promise<void> => {
   );
   player.update(0.25);
   player.update(0.5);
-  TestValidator.equals(
+  TestValidator.predicate(
     "root transform applied",
-    namedFacts([
-      ["ncloseImported", () => nclose(imported.object.position.x, 1.25)],
-      ["ncloseImported2", () => nclose(imported.object.position.y, 0.5)],
-      ["ncloseImported3", () => nclose(imported.object.position.z, -0.25)],
-    ]),
-    {
-      ncloseImported: true,
-      ncloseImported2: true,
-      ncloseImported3: true,
-    },
+    nclose(imported.object.position.x, 1.25) &&
+      nclose(imported.object.position.y, 0.5) &&
+      nclose(imported.object.position.z, -0.25),
   );
   // even a Group input gets a viewer-owned wrapper (#1047): the pose root
   // landed on the wrapper, and the caller's baked π yaw survived beneath it
-  TestValidator.equals(
+  TestValidator.predicate(
     "an imported Group is wrapped, its baked transform preserved",
-    namedFacts([
-      ["importedObject", () => imported.object !== importedRoot],
-      ["ncloseAbs", () => nclose(Math.abs(importedRoot.quaternion.y), 1)],
-      ["ncloseImportedRoot", () => nclose(importedRoot.quaternion.w, 0)],
-      ["ncloseImportedRoot2", () => nclose(importedRoot.position.x, 0)],
-    ]),
-    {
-      importedObject: true,
-      ncloseAbs: true,
-      ncloseImportedRoot: true,
-      ncloseImportedRoot2: true,
-    },
+    imported.object !== importedRoot &&
+      nclose(Math.abs(importedRoot.quaternion.y), 1) &&
+      nclose(importedRoot.quaternion.w, 0) &&
+      nclose(importedRoot.position.x, 0),
   );
   TestValidator.equals("frame hook count", frames.length, 2);
   TestValidator.equals("first frame time", frames[0]!.seconds, 0.25);
@@ -218,18 +186,11 @@ export const test_viewer_production_asset_runtime = async (): Promise<void> => {
     ),
   );
   player.update(0.75);
-  TestValidator.equals(
+  TestValidator.predicate(
     "a null root resets to the staged base, not the last rooted pose",
-    namedFacts([
-      ["ncloseImported", () => nclose(imported.object.position.x, 0)],
-      ["ncloseImported2", () => nclose(imported.object.position.y, 0)],
-      ["ncloseImported3", () => nclose(imported.object.position.z, 0)],
-    ]),
-    {
-      ncloseImported: true,
-      ncloseImported2: true,
-      ncloseImported3: true,
-    },
+    nclose(imported.object.position.x, 0) &&
+      nclose(imported.object.position.y, 0) &&
+      nclose(imported.object.position.z, 0),
   );
 
   let renders = 0;

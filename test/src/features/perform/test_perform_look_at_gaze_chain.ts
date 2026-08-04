@@ -19,23 +19,6 @@ import { TestValidator } from "@nestia/e2e";
 import { createSkeleton, joint, makePose } from "../internal/fixtures";
 import { nclose, violationCount } from "../internal/predicates";
 
-/**
- * Evaluate named facts in order and stop at the first false one, so a failed
- * comparison names the fact instead of collapsing into one boolean. Stopping
- * keeps the short-circuit semantics the original conjunction had, which some
- * facts depend on to guard the ones after them.
- */
-const namedFacts = (
-  entries: ReadonlyArray<readonly [string, () => boolean]>,
-): Record<string, boolean> => {
-  const output: Record<string, boolean> = {};
-  for (const [name, evaluate] of entries) {
-    output[name] = evaluate();
-    if (output[name] === false) break;
-  }
-  return output;
-};
-
 /** The context needs gaits; no locomotion is exercised here. */
 const WALK: IAutoMovieGait = {
   name: "walk",
@@ -215,41 +198,21 @@ export const test_perform_look_at_gaze_chain = (): void => {
     shallow.joints.map((entry) => entry.bone),
     ["head"],
   );
-  TestValidator.equals(
+  TestValidator.predicate(
     "that single joint carries the whole shallow aim",
-    namedFacts([
-      [
-        "ncloseShallow",
-        () => nclose(shallow.joints[0]!.flexion!, flexionFor(-0.3, 1)),
-      ],
-      ["shallowJoints", () => shallow.joints[0]!.abduction === null],
-      ["ncloseShallow2", () => nclose(shallow.joints[0]!.twist!, 0)],
-    ]),
-    {
-      ncloseShallow: true,
-      shallowJoints: true,
-      ncloseShallow2: true,
-    },
+    nclose(shallow.joints[0]!.flexion!, flexionFor(-0.3, 1)) &&
+      shallow.joints[0]!.abduction === null &&
+      nclose(shallow.joints[0]!.twist!, 0),
   );
 
   // 3. the opposite hemisphere: an upward aim splits through the min side.
   const up = aim(rig, { x: 0, y: EYE_HEIGHT + 1.4, z: 1 });
   const upward = flexionFor(1.4, 1);
-  TestValidator.equals(
+  TestValidator.predicate(
     "an upward gaze splits at the head's minimum, not its maximum",
-    namedFacts([
-      ["ncloseBoneOf", () => nclose(boneOf(up, "head")!.flexion!, -30)],
-      [
-        "ncloseBoneOf2",
-        () => nclose(boneOf(up, "neck")!.flexion!, upward + 30),
-      ],
-      ["upward", () => upward < -30],
-    ]),
-    {
-      ncloseBoneOf: true,
-      ncloseBoneOf2: true,
-      upward: true,
-    },
+    nclose(boneOf(up, "head")!.flexion!, -30) &&
+      nclose(boneOf(up, "neck")!.flexion!, upward + 30) &&
+      upward < -30,
   );
   TestValidator.equals(
     "the upward gaze breaks no declared range",
@@ -259,34 +222,17 @@ export const test_perform_look_at_gaze_chain = (): void => {
 
   // 4. the twist axis splits on the same rule, and flexion stays out of it.
   const turned = aim(rig, { x: 1, y: EYE_HEIGHT, z: 0 });
-  TestValidator.equals(
+  TestValidator.predicate(
     "a 90 degree turn splits twist 30 + 60 across the chain",
-    namedFacts([
-      ["ncloseTwistFor", () => nclose(twistFor(1, 0), 90)],
-      ["ncloseBoneOf", () => nclose(boneOf(turned, "head")!.twist!, 30)],
-      ["ncloseBoneOf2", () => nclose(boneOf(turned, "neck")!.twist!, 60)],
-    ]),
-    {
-      ncloseTwistFor: true,
-      ncloseBoneOf: true,
-      ncloseBoneOf2: true,
-    },
+    nclose(twistFor(1, 0), 90) &&
+      nclose(boneOf(turned, "head")!.twist!, 30) &&
+      nclose(boneOf(turned, "neck")!.twist!, 60),
   );
-  TestValidator.equals(
+  TestValidator.predicate(
     "the axis that needed no help contributes nothing",
-    namedFacts([
-      ["ncloseBoneOf", () => nclose(boneOf(turned, "head")!.flexion!, 0)],
-      ["boneOfTurned", () => boneOf(turned, "neck")!.flexion === null],
-      [
-        "violationCountValidatePoseResult",
-        () => violationCount(validatePoseResult(turned, rig)) === 0,
-      ],
-    ]),
-    {
-      ncloseBoneOf: true,
-      boneOfTurned: true,
-      violationCountValidatePoseResult: true,
-    },
+    nclose(boneOf(turned, "head")!.flexion!, 0) &&
+      boneOf(turned, "neck")!.flexion === null &&
+      violationCount(validatePoseResult(turned, rig)) === 0,
   );
 
   // 5. an immobile head axis sends the whole turn to the neck.
@@ -295,23 +241,12 @@ export const test_perform_look_at_gaze_chain = (): void => {
     head: cervical(range(-30, 30), null),
   });
   const rolled = aim(immobile, { x: Math.sqrt(3), y: EYE_HEIGHT, z: 1 });
-  TestValidator.equals(
+  TestValidator.predicate(
     "an immobile head twist leaves the head at 0 and the neck at 60",
-    namedFacts([
-      ["ncloseTwistFor", () => nclose(twistFor(Math.sqrt(3), 1), 60)],
-      ["boneOfRolled", () => boneOf(rolled, "head")!.twist === 0],
-      ["ncloseBoneOf", () => nclose(boneOf(rolled, "neck")!.twist!, 60)],
-      [
-        "violationCountValidatePoseResult",
-        () => violationCount(validatePoseResult(rolled, immobile)) === 0,
-      ],
-    ]),
-    {
-      ncloseTwistFor: true,
-      boneOfRolled: true,
-      ncloseBoneOf: true,
-      violationCountValidatePoseResult: true,
-    },
+    nclose(twistFor(Math.sqrt(3), 1), 60) &&
+      boneOf(rolled, "head")!.twist === 0 &&
+      nclose(boneOf(rolled, "neck")!.twist!, 60) &&
+      violationCount(validatePoseResult(rolled, immobile)) === 0,
   );
 
   // 6. a chain that cannot span the aim fails unclamped, like a reach.
@@ -321,21 +256,11 @@ export const test_perform_look_at_gaze_chain = (): void => {
   });
   const impossible = aim(narrow, DESK);
   const deficit = required - 40;
-  TestValidator.equals(
+  TestValidator.predicate(
     "what neither joint can take rides the head, unclamped",
-    namedFacts([
-      ["ncloseBoneOf", () => nclose(boneOf(impossible, "neck")!.flexion!, 10)],
-      [
-        "ncloseBoneOf2",
-        () => nclose(boneOf(impossible, "head")!.flexion!, 30 + deficit),
-      ],
-      ["deficit", () => deficit > 0],
-    ]),
-    {
-      ncloseBoneOf: true,
-      ncloseBoneOf2: true,
-      deficit: true,
-    },
+    nclose(boneOf(impossible, "neck")!.flexion!, 10) &&
+      nclose(boneOf(impossible, "head")!.flexion!, 30 + deficit) &&
+      deficit > 0,
   );
   TestValidator.equals(
     "the saturated chain still reports, once",
@@ -350,18 +275,11 @@ export const test_perform_look_at_gaze_chain = (): void => {
     rigless.joints.map((entry) => entry.bone),
     ["head"],
   );
-  TestValidator.equals(
+  TestValidator.predicate(
     "a rig-less context keeps the whole angle on the head",
-    namedFacts([
-      ["ncloseRigless", () => nclose(rigless.joints[0]!.flexion!, required)],
-      ["riglessJoints", () => rigless.joints[0]!.abduction === null],
-      ["ncloseRigless2", () => nclose(rigless.joints[0]!.twist!, 0)],
-    ]),
-    {
-      ncloseRigless: true,
-      riglessJoints: true,
-      ncloseRigless2: true,
-    },
+    nclose(rigless.joints[0]!.flexion!, required) &&
+      rigless.joints[0]!.abduction === null &&
+      nclose(rigless.joints[0]!.twist!, 0),
   );
 
   // 8. a rig with no neck bone never names one.

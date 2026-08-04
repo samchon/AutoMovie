@@ -6,23 +6,6 @@ import ts from "typescript-compiler";
 
 import { preserveCliRootFixtureCleanup } from "./CliRootFixtureCleanup";
 
-/**
- * Evaluate named facts in order and stop at the first false one, so a failed
- * comparison names the fact instead of collapsing into one boolean. Stopping
- * keeps the short-circuit semantics the original conjunction had, which some
- * facts depend on to guard the ones after them.
- */
-const namedFacts = (
-  entries: ReadonlyArray<readonly [string, () => boolean]>,
-): Record<string, boolean> => {
-  const output: Record<string, boolean> = {};
-  for (const [name, evaluate] of entries) {
-    output[name] = evaluate();
-    if (output[name] === false) break;
-  }
-  return output;
-};
-
 const compact = (node: ts.Node, source: ts.SourceFile): string =>
   node.getText(source).replace(/\s+/g, "");
 
@@ -163,35 +146,19 @@ export const test_cli_root_fixture_cleanup = (): void => {
   const primaryOnly = captureCleanup({ primaryFailure });
   const standalone = captureCleanup({ cleanupFailure });
   const combined = captureCleanup({ cleanupFailure, primaryFailure });
-  TestValidator.equals(
+  TestValidator.predicate(
     "single-root CLI cleanup preserves exact failure identity and order",
-    namedFacts([
-      ["successFailure", () => success.failure === undefined],
-      ["successAttempts", () => success.attempts === 1],
-      ["primaryOnlyFailure", () => primaryOnly.failure === primaryFailure],
-      ["primaryOnlyAttempts", () => primaryOnly.attempts === 1],
-      ["standaloneFailure", () => standalone.failure === cleanupFailure],
-      ["standaloneAttempts", () => standalone.attempts === 1],
-      [
-        "aggregateContainsExactlyCombined",
-        () =>
-          aggregateContainsExactly(combined.failure, [
-            primaryFailure,
-            cleanupFailure,
-          ]),
-      ],
-      ["combinedAttempts", () => combined.attempts === 1],
-    ]),
-    {
-      successFailure: true,
-      successAttempts: true,
-      primaryOnlyFailure: true,
-      primaryOnlyAttempts: true,
-      standaloneFailure: true,
-      standaloneAttempts: true,
-      aggregateContainsExactlyCombined: true,
-      combinedAttempts: true,
-    },
+    success.failure === undefined &&
+      success.attempts === 1 &&
+      primaryOnly.failure === primaryFailure &&
+      primaryOnly.attempts === 1 &&
+      standalone.failure === cleanupFailure &&
+      standalone.attempts === 1 &&
+      aggregateContainsExactly(combined.failure, [
+        primaryFailure,
+        cleanupFailure,
+      ]) &&
+      combined.attempts === 1,
   );
   TestValidator.equals(
     "single-root CLI cleanup policy preserves both phases",
@@ -288,7 +255,7 @@ export const test_cli_root_fixture_cleanup = (): void => {
                 "letscaffoldFailure:{error:unknown}|undefined;",
               ],
               tryDigest:
-                "5918485593ff1372d26cd41615e50d3dda1292e3432d34c1c8bf1d3a05a5265f",
+                "57cad8d7906991c48224aca9887eba6b566b6f1fa9a765b9675ce75bfdd2ef8c",
             },
           ],
         },

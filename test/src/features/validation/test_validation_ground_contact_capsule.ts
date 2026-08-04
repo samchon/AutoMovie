@@ -14,23 +14,6 @@ import {
   validationHasWarning,
 } from "../internal/predicates";
 
-/**
- * Evaluate named facts in order and stop at the first false one, so a failed
- * comparison names the fact instead of collapsing into one boolean. Stopping
- * keeps the short-circuit semantics the original conjunction had, which some
- * facts depend on to guard the ones after them.
- */
-const namedFacts = (
-  entries: ReadonlyArray<readonly [string, () => boolean]>,
-): Record<string, boolean> => {
-  const output: Record<string, boolean> = {};
-  for (const [name, evaluate] of entries) {
-    output[name] = evaluate();
-    if (output[name] === false) break;
-  }
-  return output;
-};
-
 const restAt = (x: number, y: number, z: number): IAutoMovieTransform => ({
   translation: { x, y, z },
   rotation: { x: 0, y: 0, z: 0, w: 1 },
@@ -176,23 +159,10 @@ export const test_validation_ground_contact_capsule = (): void => {
     capsules: [{ from: "hips", to: "leftFoot", radius: 0.2 }],
     sampleRate: 1,
   });
-  TestValidator.equals(
+  TestValidator.predicate(
     "a detached capsule endpoint is a reachability error, not a crash",
-    namedFacts([
-      ["badSuccess", () => bad.success === false],
-      [
-        "hasViolationBad",
-        () => hasViolation(bad, "type", "$input.capsules[0].to"),
-      ],
-      [
-        "badViolations",
-        () => bad.violations.some((v) => v.expected.includes("not reachable")),
-      ],
-    ]),
-    {
-      badSuccess: true,
-      hasViolationBad: true,
-      badViolations: true,
-    },
+    bad.success === false &&
+      hasViolation(bad, "type", "$input.capsules[0].to") &&
+      bad.violations.some((v) => v.expected.includes("not reachable")),
   );
 };

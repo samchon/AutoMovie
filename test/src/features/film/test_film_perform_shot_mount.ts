@@ -35,23 +35,6 @@ import {
 } from "../internal/fixtures";
 import { vclose } from "../internal/predicates";
 
-/**
- * Evaluate named facts in order and stop at the first false one, so a failed
- * comparison names the fact instead of collapsing into one boolean. Stopping
- * keeps the short-circuit semantics the original conjunction had, which some
- * facts depend on to guard the ones after them.
- */
-const namedFacts = (
-  entries: ReadonlyArray<readonly [string, () => boolean]>,
-): Record<string, boolean> => {
-  const output: Record<string, boolean> = {};
-  for (const [name, evaluate] of entries) {
-    output[name] = evaluate();
-    if (output[name] === false) break;
-  }
-  return output;
-};
-
 /** The horse walks +x by 2 m over the 2 s shot (root translation only). */
 const horseWalk: IAutoMovieMotion = makeMotion(
   [
@@ -285,18 +268,11 @@ export const test_film_perform_shot_mount = (): void => {
     "the rider's beat-end is NOT its airborne staged coordinate",
     !vclose(riderEnd.transform.translation, { x: 5, y: 5, z: 5 }, 1e-3),
   );
-  TestValidator.equals(
+  TestValidator.predicate(
     "the rider inherits the horse's trailing velocity (nonzero +x)",
-    namedFacts([
-      ["riderEndRootVelocity", () => riderEnd.rootVelocity!.x > 0.5],
-      ["absRiderEnd", () => Math.abs(riderEnd.rootVelocity!.y) < 1e-6],
-      ["absRiderEnd2", () => Math.abs(riderEnd.rootVelocity!.z) < 1e-6],
-    ]),
-    {
-      riderEndRootVelocity: true,
-      absRiderEnd: true,
-      absRiderEnd2: true,
-    },
+    riderEnd.rootVelocity!.x > 0.5 &&
+      Math.abs(riderEnd.rootVelocity!.y) < 1e-6 &&
+      Math.abs(riderEnd.rootVelocity!.z) < 1e-6,
   );
   TestValidator.equals("the mount binding is carried", riderEnd.mount, {
     parent: "horse",

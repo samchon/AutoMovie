@@ -5,23 +5,6 @@ import { makeScriptWrite, makeStagingWrite } from "../internal/filmFixtures";
 import { hasViolation, vclose } from "../internal/predicates";
 
 /**
- * Evaluate named facts in order and stop at the first false one, so a failed
- * comparison names the fact instead of collapsing into one boolean. Stopping
- * keeps the short-circuit semantics the original conjunction had, which some
- * facts depend on to guard the ones after them.
- */
-const namedFacts = (
-  entries: ReadonlyArray<readonly [string, () => boolean]>,
-): Record<string, boolean> => {
-  const output: Record<string, boolean> = {};
-  for (const [name, evaluate] of entries) {
-    output[name] = evaluate();
-    if (output[name] === false) break;
-  }
-  return output;
-};
-
-/**
  * Set pieces (#1173): staging may drop environment geometry (a floor slab, a
  * wall) as static scene nodes realising skeleton-less models, so the guide
  * passes describe a world instead of actors floating in a void.
@@ -126,38 +109,13 @@ export const test_film_stage_scene_set = (): void => {
       ],
     }),
   );
-  TestValidator.equals(
+  TestValidator.predicate(
     "every malformed piece is refused at its own path in one round",
-    namedFacts([
-      ["refusedSuccess", () => refused.success === false],
-      [
-        "hasViolationRefused",
-        () => hasViolation(refused, "type", "$input.set[0].node"),
-      ],
-      [
-        "hasViolationRefused2",
-        () => hasViolation(refused, "type", "$input.set[1].node"),
-      ],
-      [
-        "hasViolationRefused3",
-        () => hasViolation(refused, "type", "$input.set[2].model"),
-      ],
-      [
-        "hasViolationRefused4",
-        () => hasViolation(refused, "range", "$input.set[3].position"),
-      ],
-      [
-        "hasViolationRefused5",
-        () => hasViolation(refused, "range", "$input.set[4].facingDeg"),
-      ],
-    ]),
-    {
-      refusedSuccess: true,
-      hasViolationRefused: true,
-      hasViolationRefused2: true,
-      hasViolationRefused3: true,
-      hasViolationRefused4: true,
-      hasViolationRefused5: true,
-    },
+    refused.success === false &&
+      hasViolation(refused, "type", "$input.set[0].node") &&
+      hasViolation(refused, "type", "$input.set[1].node") &&
+      hasViolation(refused, "type", "$input.set[2].model") &&
+      hasViolation(refused, "range", "$input.set[3].position") &&
+      hasViolation(refused, "range", "$input.set[4].facingDeg"),
   );
 };

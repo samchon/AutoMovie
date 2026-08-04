@@ -14,23 +14,6 @@ import { TestValidator } from "@nestia/e2e";
 import { joint, makePose } from "../internal/fixtures";
 import { nclose } from "../internal/predicates";
 
-/**
- * Evaluate named facts in order and stop at the first false one, so a failed
- * comparison names the fact instead of collapsing into one boolean. Stopping
- * keeps the short-circuit semantics the original conjunction had, which some
- * facts depend on to guard the ones after them.
- */
-const namedFacts = (
-  entries: ReadonlyArray<readonly [string, () => boolean]>,
-): Record<string, boolean> => {
-  const output: Record<string, boolean> = {};
-  for (const [name, evaluate] of entries) {
-    output[name] = evaluate();
-    if (output[name] === false) break;
-  }
-  return output;
-};
-
 const WALK: IAutoMovieGait = {
   name: "walk",
   period: 1,
@@ -151,18 +134,15 @@ export const test_perform_look_at_eye_level = (): void => {
     nclose(level.flexion, 0) && nclose(level.twist, 0),
   );
   const ground = headOf(look({ kind: "point", point: GUARD_PLACEMENT })!);
-  TestValidator.equals(
+  TestValidator.predicate(
     "the same subject's placement point still demands the ROM-breaking tilt",
-    namedFacts([
-      ["ncloseGround", () => nclose(ground.flexion, flexionFor(-1.6, 0.7))],
-      ["ncloseGround2", () => nclose(ground.flexion, 66.3706, 1e-4)],
-      ["groundFlexion", () => ground.flexion > 45],
-    ]),
-    {
-      ncloseGround: true,
-      ncloseGround2: true,
-      groundFlexion: true,
-    },
+    nclose(ground.flexion, flexionFor(-1.6, 0.7)) &&
+      // atan2(1.6, 0.7) = 66.3706 degrees, well past DEFAULT_HUMANOID_ROM.head's
+      // 45 degree flexion maximum: the stoop this issue is about. These contexts
+      // carry no rig, so the whole angle stays on the head (#1360 spreads it
+      // over the declared neck/head chain only when a rig declares one).
+      nclose(ground.flexion, 66.3706, 1e-4) &&
+      ground.flexion > 45,
   );
 
   // 2. each subject's own eye height, not a shared constant.

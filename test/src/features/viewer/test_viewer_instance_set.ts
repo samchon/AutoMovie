@@ -16,23 +16,6 @@ import * as THREE from "three";
 
 import { modelRecipe, worldDesign } from "../mcp/productionFixtures";
 
-/**
- * Evaluate named facts in order and stop at the first false one, so a failed
- * comparison names the fact instead of collapsing into one boolean. Stopping
- * keeps the short-circuit semantics the original conjunction had, which some
- * facts depend on to guard the ones after them.
- */
-const namedFacts = (
-  entries: ReadonlyArray<readonly [string, () => boolean]>,
-): Record<string, boolean> => {
-  const output: Record<string, boolean> = {};
-  for (const [name, evaluate] of entries) {
-    output[name] = evaluate();
-    if (output[name] === false) break;
-  }
-  return output;
-};
-
 /** General instance sets render as colored, trait-bearing bounded batches. */
 export const test_viewer_instance_set = (): void => {
   const recipe: IAutoMovieModelRecipe = {
@@ -95,53 +78,30 @@ export const test_viewer_instance_set = (): void => {
   const firstSlot = materializeInstanceSlot(design, world, 0);
   const firstColor = new THREE.Color();
   meshes[0]?.getColorAt(0, firstColor);
-  TestValidator.equals(
+  TestValidator.predicate(
     "viewer batches preserve compiler slot, scale, palette and trait streams",
-    namedFacts([
-      [
-        "stringifyCompilerSlot",
-        () => JSON.stringify(compilerSlot) === JSON.stringify(viewerSlot),
-      ],
-      [
-        "meshesCount",
-        () => meshes.length === compiled.chunks.length * compiled.lod.length,
-      ],
-      [
-        "meshesMesh",
-        () =>
-          meshes.every(
-            (mesh) =>
-              mesh.count > 0 &&
-              mesh.instanceColor?.count === mesh.count &&
-              mesh.geometry.getAttribute("automovieTrait0")?.count ===
-                mesh.count &&
-              mesh.geometry.getAttribute("automovieTrait1")?.count ===
-                mesh.count &&
-              mesh.userData.automovieTraitNames[0] === "wind" &&
-              mesh.userData.automovieTraitNames[1] === "__proto__" &&
-              mesh.frustumCulled === false &&
-              (Array.isArray(mesh.material)
-                ? mesh.material
-                : [mesh.material]
-              ).every(
-                (material) =>
-                  "color" in material &&
-                  material.color instanceof THREE.Color &&
-                  material.color.getHex() === 0xffffff,
-              ),
+    JSON.stringify(compilerSlot) === JSON.stringify(viewerSlot) &&
+      meshes.length === compiled.chunks.length * compiled.lod.length &&
+      meshes.every(
+        (mesh) =>
+          mesh.count > 0 &&
+          mesh.instanceColor?.count === mesh.count &&
+          mesh.geometry.getAttribute("automovieTrait0")?.count === mesh.count &&
+          mesh.geometry.getAttribute("automovieTrait1")?.count === mesh.count &&
+          mesh.userData.automovieTraitNames[0] === "wind" &&
+          mesh.userData.automovieTraitNames[1] === "__proto__" &&
+          mesh.frustumCulled === false &&
+          (Array.isArray(mesh.material)
+            ? mesh.material
+            : [mesh.material]
+          ).every(
+            (material) =>
+              "color" in material &&
+              material.color instanceof THREE.Color &&
+              material.color.getHex() === 0xffffff,
           ),
-      ],
-      [
-        "firstColorGetHexString",
-        () => firstColor.getHexString() === firstSlot.palette.slice(1),
-      ],
-    ]),
-    {
-      stringifyCompilerSlot: true,
-      meshesCount: true,
-      meshesMesh: true,
-      firstColorGetHexString: true,
-    },
+      ) &&
+      firstColor.getHexString() === firstSlot.palette.slice(1),
   );
 
   const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 500);

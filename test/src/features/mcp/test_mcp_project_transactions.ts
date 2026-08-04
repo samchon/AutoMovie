@@ -7,23 +7,6 @@ import path from "node:path";
 
 import { throwsError } from "../internal/predicates";
 
-/**
- * Evaluate named facts in order and stop at the first false one, so a failed
- * comparison names the fact instead of collapsing into one boolean. Stopping
- * keeps the short-circuit semantics the original conjunction had, which some
- * facts depend on to guard the ones after them.
- */
-const namedFacts = (
-  entries: ReadonlyArray<readonly [string, () => boolean]>,
-): Record<string, boolean> => {
-  const output: Record<string, boolean> = {};
-  for (const [name, evaluate] of entries) {
-    output[name] = evaluate();
-    if (output[name] === false) break;
-  }
-  return output;
-};
-
 interface IProjectTransactionFixtureFailure {
   error: unknown;
 }
@@ -302,27 +285,13 @@ export const test_mcp_project_transactions = (): void => {
       () => manifestRaceB.saveSlate(staleSlate),
       ["another session committed", "nothing was written"],
     );
-    TestValidator.equals(
+    TestValidator.predicate(
       "a failed manifest refresh cannot advance the stale slate base",
-      namedFacts([
-        ["missingManifestRejected", () => missingManifestRejected],
-        [
-          "staleAfterManifestFailureRejected",
-          () => staleAfterManifestFailureRejected,
-        ],
-        [
-          "rootScript",
-          () =>
-            fs
-              .readFileSync(path.join(root, "script.json"), "utf8")
-              .includes("manifest race winner"),
-        ],
-      ]),
-      {
-        missingManifestRejected: true,
-        staleAfterManifestFailureRejected: true,
-        rootScript: true,
-      },
+      missingManifestRejected &&
+        staleAfterManifestFailureRejected &&
+        fs
+          .readFileSync(path.join(root, "script.json"), "utf8")
+          .includes("manifest race winner"),
     );
     a.writableSlate();
 
@@ -364,28 +333,13 @@ export const test_mcp_project_transactions = (): void => {
         },
       ]);
     }
-    TestValidator.equals(
+    TestValidator.predicate(
       "an ordinary atomic-write failure cleans its current-namespace temporary",
-      namedFacts([
-        ["cleanupRejected", () => cleanupRejected],
-        ["failedTemp", () => failedTemp !== undefined],
-        [
-          "failedTempResident",
-          () => failedTemp !== undefined && fs.existsSync(failedTemp) === false,
-        ],
-        [
-          "rootResident",
-          () =>
-            fs.existsSync(path.join(root, "actors", "cleanupFailure.json")) ===
-            false,
-        ],
-      ]),
-      {
-        cleanupRejected: true,
-        failedTemp: true,
-        failedTempResident: true,
-        rootResident: true,
-      },
+      cleanupRejected &&
+        failedTemp !== undefined &&
+        fs.existsSync(failedTemp) === false &&
+        fs.existsSync(path.join(root, "actors", "cleanupFailure.json")) ===
+          false,
     );
 
     const nativeRename = fs.renameSync;
@@ -458,31 +412,14 @@ export const test_mcp_project_transactions = (): void => {
         },
       ]);
     }
-    TestValidator.equals(
+    TestValidator.predicate(
       "a failed quarantine delete restores the actor slice",
-      namedFacts([
-        ["quarantineRemoveFailed", () => quarantineRemoveFailed],
-        ["restoredRemoval", () => restoredRemoval],
-        [
-          "rootResident",
-          () => fs.existsSync(path.join(root, "actors", "knightA.json")),
-        ],
-        [
-          "rootActors",
-          () =>
-            fs
-              .readdirSync(path.join(root, "actors"))
-              .every(
-                (file) => file.startsWith("knightA.json.delete.") === false,
-              ),
-        ],
-      ]),
-      {
-        quarantineRemoveFailed: true,
-        restoredRemoval: true,
-        rootResident: true,
-        rootActors: true,
-      },
+      quarantineRemoveFailed &&
+        restoredRemoval &&
+        fs.existsSync(path.join(root, "actors", "knightA.json")) &&
+        fs
+          .readdirSync(path.join(root, "actors"))
+          .every((file) => file.startsWith("knightA.json.delete.") === false),
     );
 
     let externallyRestored = false;
@@ -522,21 +459,11 @@ export const test_mcp_project_transactions = (): void => {
         },
       ]);
     }
-    TestValidator.equals(
+    TestValidator.predicate(
       "an already-restored quarantine failure never clobbers the resident actor",
-      namedFacts([
-        ["externallyRestored", () => externallyRestored],
-        ["lateDeleteRejected", () => lateDeleteRejected],
-        [
-          "rootResident",
-          () => fs.existsSync(path.join(root, "actors", "knightA.json")),
-        ],
-      ]),
-      {
-        externallyRestored: true,
-        lateDeleteRejected: true,
-        rootResident: true,
-      },
+      externallyRestored &&
+        lateDeleteRejected &&
+        fs.existsSync(path.join(root, "actors", "knightA.json")),
     );
 
     const removalParkedRoot = `${root}.removal-parked`;
@@ -587,31 +514,15 @@ export const test_mcp_project_transactions = (): void => {
         path.join(root, "actors", quarantinedActor),
         path.join(root, "actors", "knightA.json"),
       );
-    TestValidator.equals(
+    TestValidator.predicate(
       "a removal-time root swap preserves the quarantined original and replacement",
-      namedFacts([
-        ["removalSwapped", () => removalSwapped],
-        [
-          "removalSwapMessageRoot",
-          () =>
-            removalSwapMessage.includes(
-              "root identity or namespace fence changed",
-            ),
-        ],
-        ["removalReplacementEmpty", () => removalReplacementEmpty],
-        ["quarantinedActor", () => quarantinedActor !== undefined],
-        [
-          "rootResident",
-          () => fs.existsSync(path.join(root, "actors", "knightA.json")),
-        ],
-      ]),
-      {
-        removalSwapped: true,
-        removalSwapMessageRoot: true,
-        removalReplacementEmpty: true,
-        quarantinedActor: true,
-        rootResident: true,
-      },
+      removalSwapped &&
+        removalSwapMessage.includes(
+          "root identity or namespace fence changed",
+        ) &&
+        removalReplacementEmpty &&
+        quarantinedActor !== undefined &&
+        fs.existsSync(path.join(root, "actors", "knightA.json")),
     );
     a.writableSlate();
 
@@ -665,24 +576,11 @@ export const test_mcp_project_transactions = (): void => {
     fs.rmSync(root, { recursive: true, force: true });
     fs.renameSync(lockParkedRoot, root);
     fs.rmSync(path.join(root, "revision.lock"), { force: true });
-    TestValidator.equals(
+    TestValidator.predicate(
       "a root swap after lock acquisition cannot unlink a copied replacement token",
-      namedFacts([
-        ["lockSwapped", () => lockSwapped],
-        [
-          "lockSwapMessageRoot",
-          () =>
-            lockSwapMessage.includes(
-              "root identity or namespace fence changed",
-            ),
-        ],
-        ["replacementLockPreserved", () => replacementLockPreserved],
-      ]),
-      {
-        lockSwapped: true,
-        lockSwapMessageRoot: true,
-        replacementLockPreserved: true,
-      },
+      lockSwapped &&
+        lockSwapMessage.includes("root identity or namespace fence changed") &&
+        replacementLockPreserved,
     );
 
     const operationParkedRoot = `${root}.operation-parked`;
@@ -747,30 +645,14 @@ export const test_mcp_project_transactions = (): void => {
     for (const file of fs.readdirSync(path.join(root, "actors")))
       if (file.startsWith("rootSwap.json.tmp."))
         fs.rmSync(path.join(root, "actors", file), { force: true });
-    TestValidator.equals(
+    TestValidator.predicate(
       "an operation-time root swap cannot publish or release through the replacement",
-      namedFacts([
-        ["operationSwapped", () => operationSwapped],
-        [
-          "operationMessageRoot",
-          () =>
-            operationMessage.includes(
-              "root identity or namespace fence changed",
-            ),
-        ],
-        ["replacementStayedEmpty", () => replacementStayedEmpty],
-        ["originalLockPreserved", () => originalLockPreserved],
-        ["originalPublishPrevented", () => originalPublishPrevented],
-        ["replacementLeaseReacquired", () => replacementLeaseReacquired],
-      ]),
-      {
-        operationSwapped: true,
-        operationMessageRoot: true,
-        replacementStayedEmpty: true,
-        originalLockPreserved: true,
-        originalPublishPrevented: true,
-        replacementLeaseReacquired: true,
-      },
+      operationSwapped &&
+        operationMessage.includes("root identity or namespace fence changed") &&
+        replacementStayedEmpty &&
+        originalLockPreserved &&
+        originalPublishPrevented &&
+        replacementLeaseReacquired,
     );
 
     const parkedRoot = `${root}.owner-parked`;
@@ -805,18 +687,9 @@ export const test_mcp_project_transactions = (): void => {
         },
       ]);
     }
-    TestValidator.equals(
+    TestValidator.predicate(
       "a live project handle never follows a replacement root namespace",
-      namedFacts([
-        ["replacedReadRejected", () => replacedReadRejected],
-        ["replacedMutationRejected", () => replacedMutationRejected],
-        ["replacementUntouched", () => replacementUntouched],
-      ]),
-      {
-        replacedReadRejected: true,
-        replacedMutationRejected: true,
-        replacementUntouched: true,
-      },
+      replacedReadRejected && replacedMutationRejected && replacementUntouched,
     );
   } catch (error) {
     transactionFailure = { error };
@@ -885,27 +758,13 @@ export const test_mcp_project_transactions = (): void => {
         },
       ]);
     }
-    TestValidator.equals(
+    TestValidator.predicate(
       "an operation-time ancestor alias retarget cannot redirect a live handle",
-      namedFacts([
-        ["aliasRetargeted", () => aliasRetargeted],
-        [
-          "canonicalRootScript",
-          () =>
-            fs
-              .readFileSync(path.join(canonicalRoot, "script.json"), "utf8")
-              .includes("canonical physical root"),
-        ],
-        [
-          "physicalBCount",
-          () => fs.readdirSync(path.join(physicalB, "project")).length === 0,
-        ],
-      ]),
-      {
-        aliasRetargeted: true,
-        canonicalRootScript: true,
-        physicalBCount: true,
-      },
+      aliasRetargeted &&
+        fs
+          .readFileSync(path.join(canonicalRoot, "script.json"), "utf8")
+          .includes("canonical physical root") &&
+        fs.readdirSync(path.join(physicalB, "project")).length === 0,
     );
   } catch (error) {
     aliasFailure = { error };

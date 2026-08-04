@@ -8,23 +8,6 @@ import {
 import { IAutoMovieVector3 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-/**
- * Evaluate named facts in order and stop at the first false one, so a failed
- * comparison names the fact instead of collapsing into one boolean. Stopping
- * keeps the short-circuit semantics the original conjunction had, which some
- * facts depend on to guard the ones after them.
- */
-const namedFacts = (
-  entries: ReadonlyArray<readonly [string, () => boolean]>,
-): Record<string, boolean> => {
-  const output: Record<string, boolean> = {};
-  for (const [name, evaluate] of entries) {
-    output[name] = evaluate();
-    if (output[name] === false) break;
-  }
-  return output;
-};
-
 const point = (x: number, y: number, z: number): IAutoMovieVector3 => ({
   x,
   y,
@@ -505,27 +488,11 @@ export const test_film_grammar = (): void => {
     classifyGrammarShotSize(1 / 4),
     "wide",
   );
-  TestValidator.equals(
+  TestValidator.predicate(
     "all framing-height classes are reachable",
-    namedFacts([
-      [
-        "classifyGrammarShotSizeFull",
-        () => classifyGrammarShotSize(1 / 1.15) === "full",
-      ],
-      [
-        "classifyGrammarShotSizeMedium",
-        () => classifyGrammarShotSize(1 / 0.62) === "medium",
-      ],
-      [
-        "classifyGrammarShotSizeClose",
-        () => classifyGrammarShotSize(1 / 0.28) === "close",
-      ],
-    ]),
-    {
-      classifyGrammarShotSizeFull: true,
-      classifyGrammarShotSizeMedium: true,
-      classifyGrammarShotSizeClose: true,
-    },
+    classifyGrammarShotSize(1 / 1.15) === "full" &&
+      classifyGrammarShotSize(1 / 0.62) === "medium" &&
+      classifyGrammarShotSize(1 / 0.28) === "close",
   );
   TestValidator.predicate(
     "matching measured and declared framing stays silent",

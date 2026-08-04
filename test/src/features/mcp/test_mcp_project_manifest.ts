@@ -6,23 +6,6 @@ import path from "node:path";
 
 import { throwsError } from "../internal/predicates";
 
-/**
- * Evaluate named facts in order and stop at the first false one, so a failed
- * comparison names the fact instead of collapsing into one boolean. Stopping
- * keeps the short-circuit semantics the original conjunction had, which some
- * facts depend on to guard the ones after them.
- */
-const namedFacts = (
-  entries: ReadonlyArray<readonly [string, () => boolean]>,
-): Record<string, boolean> => {
-  const output: Record<string, boolean> = {};
-  for (const [name, evaluate] of entries) {
-    output[name] = evaluate();
-    if (output[name] === false) break;
-  }
-  return output;
-};
-
 const mutableFs = fs as {
   lstatSync: typeof fs.lstatSync;
 };
@@ -366,18 +349,11 @@ export const test_mcp_project_manifest = (): void => {
         },
       ]);
     }
-    TestValidator.equals(
+    TestValidator.predicate(
       "optional absence revalidates its captured project ancestry",
-      namedFacts([
-        ["optionalRootSwapped", () => optionalRootSwapped],
-        ["optionalSwapRejected", () => optionalSwapRejected],
-        ["optionalReplacementUntouched", () => optionalReplacementUntouched],
-      ]),
-      {
-        optionalRootSwapped: true,
-        optionalSwapRejected: true,
-        optionalReplacementUntouched: true,
-      },
+      optionalRootSwapped &&
+        optionalSwapRejected &&
+        optionalReplacementUntouched,
     );
     fs.rmSync(optionalRoot, { recursive: true, force: true });
 

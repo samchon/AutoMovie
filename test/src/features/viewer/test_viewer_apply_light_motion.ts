@@ -6,23 +6,6 @@ import * as THREE from "three";
 import { IDENTITY_TRANSFORM } from "../internal/fixtures";
 import { nclose } from "../internal/predicates";
 
-/**
- * Evaluate named facts in order and stop at the first false one, so a failed
- * comparison names the fact instead of collapsing into one boolean. Stopping
- * keeps the short-circuit semantics the original conjunction had, which some
- * facts depend on to guard the ones after them.
- */
-const namedFacts = (
-  entries: ReadonlyArray<readonly [string, () => boolean]>,
-): Record<string, boolean> => {
-  const output: Record<string, boolean> = {};
-  for (const [name, evaluate] of entries) {
-    output[name] = evaluate();
-    if (output[name] === false) break;
-  }
-  return output;
-};
-
 const scene: IAutoMovieScene = {
   id: "scene-1",
   name: null,
@@ -126,24 +109,14 @@ export const test_viewer_apply_light_motion = (): void => {
   // 2. the staged values, the baseline the animation is measured against.
   const candle = built.lights.get("candleGlow") as THREE.PointLight;
   const lamp = built.lights.get("lamp") as THREE.SpotLight;
-  TestValidator.equals(
+  TestValidator.predicate(
     "a staged light lands with its authored colour, intensity, range and cone",
-    namedFacts([
-      ["ncloseCandle", () => nclose(candle.color.r, 1)],
-      ["ncloseCandle2", () => nclose(candle.color.g, 0.8)],
-      ["ncloseCandle3", () => nclose(candle.color.b, 0.5)],
-      ["ncloseCandle4", () => nclose(candle.intensity, 1.4)],
-      ["ncloseCandle5", () => nclose(candle.distance, 4)],
-      ["ncloseLamp", () => nclose(lamp.angle, (40 * Math.PI) / 180)],
-    ]),
-    {
-      ncloseCandle: true,
-      ncloseCandle2: true,
-      ncloseCandle3: true,
-      ncloseCandle4: true,
-      ncloseCandle5: true,
-      ncloseLamp: true,
-    },
+    nclose(candle.color.r, 1) &&
+      nclose(candle.color.g, 0.8) &&
+      nclose(candle.color.b, 0.5) &&
+      nclose(candle.intensity, 1.4) &&
+      nclose(candle.distance, 4) &&
+      nclose(lamp.angle, (40 * Math.PI) / 180),
   );
 
   // 3. the clip drives them.
@@ -178,22 +151,13 @@ export const test_viewer_apply_light_motion = (): void => {
     1.6,
     (id) => built.lights.get(id),
   );
-  TestValidator.equals(
+  TestValidator.predicate(
     "the candle dims at the cue and the lamp's cone opens, in three.js units",
-    namedFacts([
-      ["ncloseCandle", () => nclose(candle.intensity, 0.04)],
-      ["ncloseCandle2", () => nclose(candle.color.r, 0.5)],
-      ["ncloseCandle3", () => nclose(candle.color.g, 0.4)],
-      ["ncloseCandle4", () => nclose(candle.color.b, 0.25)],
-      ["ncloseLamp", () => nclose(lamp.angle, (70 * Math.PI) / 180)],
-    ]),
-    {
-      ncloseCandle: true,
-      ncloseCandle2: true,
-      ncloseCandle3: true,
-      ncloseCandle4: true,
-      ncloseLamp: true,
-    },
+    nclose(candle.intensity, 0.04) &&
+      nclose(candle.color.r, 0.5) &&
+      nclose(candle.color.g, 0.4) &&
+      nclose(candle.color.b, 0.25) &&
+      nclose(lamp.angle, (70 * Math.PI) / 180),
   );
 
   // 4. an unresolved light is skipped, not thrown at.

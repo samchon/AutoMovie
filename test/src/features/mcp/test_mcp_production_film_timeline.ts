@@ -34,23 +34,6 @@ import {
   worldDesign,
 } from "./productionFixtures";
 
-/**
- * Evaluate named facts in order and stop at the first false one, so a failed
- * comparison names the fact instead of collapsing into one boolean. Stopping
- * keeps the short-circuit semantics the original conjunction had, which some
- * facts depend on to guard the ones after them.
- */
-const namedFacts = (
-  entries: ReadonlyArray<readonly [string, () => boolean]>,
-): Record<string, boolean> => {
-  const output: Record<string, boolean> = {};
-  for (const [name, evaluate] of entries) {
-    output[name] = evaluate();
-    if (output[name] === false) break;
-  }
-  return output;
-};
-
 const editSource = (edit: unknown): string =>
   `export const film = { build() { return ${JSON.stringify(edit)}; } };\n`;
 
@@ -369,74 +352,26 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
       "reopened film timeline fixture",
       reopened,
     );
-    TestValidator.equals(
+    TestValidator.predicate(
       "valid film materializes deterministic edit and timeline bytes",
-      namedFacts([
-        ["firstSucceeded", () => firstSucceeded],
-        ["timelineId", () => timeline.id === "fixture-film"],
-        ["timelineTotalFrames", () => timeline.totalFrames === 144],
-        ["timelineCount", () => timeline.segments.length === 1],
-        ["timelineSegments", () => timeline.segments[0]?.shot === "opening"],
-        ["timelineSegments2", () => timeline.segments[0]?.sourceInFrame === 0],
-        ["timelineSegments3", () => timeline.segments[0]?.endFrame === 144],
-        [
-          "compiledEditSource",
-          () => compiledEdit.source.path === "src/film.ts",
-        ],
-        ["compiledEditSource2", () => compiledEdit.source.export === "film"],
-        [
-          "compiledEditInputFingerprint",
-          () =>
-            compiledEdit.inputFingerprint === first.compiler.inputFingerprint,
-        ],
-        [
-          "timelineInputFingerprint",
-          () => timeline.inputFingerprint === first.compiler.inputFingerprint,
-        ],
-        ["reopenedSucceeded", () => reopenedSucceeded],
-        [
-          "reopenedCompiler",
-          () =>
-            reopened.compiler.inputFingerprint ===
-            first.compiler.inputFingerprint,
-        ],
-        [
-          "reopenedMaterialized",
-          () =>
-            reopened.materialized.every((file) => file.status === "unchanged"),
-        ],
-        [
-          "timelinePathFirstTimelineBytes",
-          () => fs.readFileSync(timelinePath).equals(firstTimelineBytes),
-        ],
-        [
-          "timelinePathMtimeMs",
-          () => fs.statSync(timelinePath).mtimeMs === firstTimelineMtime,
-        ],
-        [
-          "filmPathOriginalSource",
-          () => fs.readFileSync(filmPath).equals(originalSource),
-        ],
-      ]),
-      {
-        firstSucceeded: true,
-        timelineId: true,
-        timelineTotalFrames: true,
-        timelineCount: true,
-        timelineSegments: true,
-        timelineSegments2: true,
-        timelineSegments3: true,
-        compiledEditSource: true,
-        compiledEditSource2: true,
-        compiledEditInputFingerprint: true,
-        timelineInputFingerprint: true,
-        reopenedSucceeded: true,
-        reopenedCompiler: true,
-        reopenedMaterialized: true,
-        timelinePathFirstTimelineBytes: true,
-        timelinePathMtimeMs: true,
-        filmPathOriginalSource: true,
-      },
+      firstSucceeded &&
+        timeline.id === "fixture-film" &&
+        timeline.totalFrames === 144 &&
+        timeline.segments.length === 1 &&
+        timeline.segments[0]?.shot === "opening" &&
+        timeline.segments[0]?.sourceInFrame === 0 &&
+        timeline.segments[0]?.endFrame === 144 &&
+        compiledEdit.source.path === "src/film.ts" &&
+        compiledEdit.source.export === "film" &&
+        compiledEdit.inputFingerprint === first.compiler.inputFingerprint &&
+        timeline.inputFingerprint === first.compiler.inputFingerprint &&
+        reopenedSucceeded &&
+        reopened.compiler.inputFingerprint ===
+          first.compiler.inputFingerprint &&
+        reopened.materialized.every((file) => file.status === "unchanged") &&
+        fs.readFileSync(timelinePath).equals(firstTimelineBytes) &&
+        fs.statSync(timelinePath).mtimeMs === firstTimelineMtime &&
+        fs.readFileSync(filmPath).equals(originalSource),
     );
 
     const compileEdit = (
@@ -892,64 +827,19 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
     const overlapFrame = new AutoMovieProductionOracleService(project).query({
       request: { query: "film-time", at: { frame: 132 } },
     });
-    TestValidator.equals(
+    TestValidator.predicate(
       "cut, dissolve and fade law materializes an overlap without changing total frames",
-      namedFacts([
-        ["twoShotSucceeded", () => twoShotSucceeded],
-        [
-          "twoShotTimelineTotalFrames",
-          () => twoShotTimeline.totalFrames === 276,
-        ],
-        [
-          "twoShotTimelineSegments",
-          () => twoShotTimeline.segments[0]?.transitionIn.kind === "cut",
-        ],
-        [
-          "twoShotTimelineSegments2",
-          () => twoShotTimeline.segments[0]?.transitionOut.kind === "dissolve",
-        ],
-        [
-          "twoShotTimelineSegments3",
-          () => twoShotTimeline.segments[1]?.transitionIn.kind === "dissolve",
-        ],
-        [
-          "twoShotTimelineSegments4",
-          () => twoShotTimeline.segments[1]?.transitionOut.kind === "fade",
-        ],
-        [
-          "twoShotTimelineSegments5",
-          () => twoShotTimeline.segments[1]?.startFrame === 132,
-        ],
-        [
-          "twoShotTimelineCount",
-          () => twoShotTimeline.tracks.audio.length === 1,
-        ],
-        [
-          "twoShotTimelineCount2",
-          () => twoShotTimeline.tracks.captions.length === 1,
-        ],
-        [
-          "overlapFrameResult",
-          () => overlapFrame.result?.kind === "measurement",
-        ],
-        [
-          "overlapFrameResult2",
-          () => overlapFrame.result.values.shot === "answer",
-        ],
-      ]),
-      {
-        twoShotSucceeded: true,
-        twoShotTimelineTotalFrames: true,
-        twoShotTimelineSegments: true,
-        twoShotTimelineSegments2: true,
-        twoShotTimelineSegments3: true,
-        twoShotTimelineSegments4: true,
-        twoShotTimelineSegments5: true,
-        twoShotTimelineCount: true,
-        twoShotTimelineCount2: true,
-        overlapFrameResult: true,
-        overlapFrameResult2: true,
-      },
+      twoShotSucceeded &&
+        twoShotTimeline.totalFrames === 276 &&
+        twoShotTimeline.segments[0]?.transitionIn.kind === "cut" &&
+        twoShotTimeline.segments[0]?.transitionOut.kind === "dissolve" &&
+        twoShotTimeline.segments[1]?.transitionIn.kind === "dissolve" &&
+        twoShotTimeline.segments[1]?.transitionOut.kind === "fade" &&
+        twoShotTimeline.segments[1]?.startFrame === 132 &&
+        twoShotTimeline.tracks.audio.length === 1 &&
+        twoShotTimeline.tracks.captions.length === 1 &&
+        overlapFrame.result?.kind === "measurement" &&
+        overlapFrame.result.values.shot === "answer",
     );
     const answerSourcePath = path.join(fixture.root, answer.source.module);
     const answerSourceBytes = fs.readFileSync(answerSourcePath);
@@ -1146,119 +1036,58 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
     })();
     fs.writeFileSync(timelineFilePath, currentTimelineBytes);
     fs.writeFileSync(generatedManifestPath, JSON.stringify(currentManifest));
-    TestValidator.equals(
+    TestValidator.predicate(
       "an explicit current-shot omission controls review evidence and shared timeline validation",
-      namedFacts([
-        ["legalOmissionSucceeded", () => legalOmissionSucceeded],
-        [
-          "validTimelineOmissions",
-          () => validTimeline.omissions[0]?.shot === "answer",
-        ],
-        ["gapFrameResult", () => gapFrame.result === null],
-        [
-          "gapFrameDiagnostics",
-          () =>
-            gapFrame.diagnostics[0]?.message.includes(
-              "no owning video segment",
-            ),
-        ],
-        [
-          "invalidTimelineReviewCount",
-          () => invalidTimelineReview.frames.length === 0,
-        ],
-        [
-          "invalidTimelineReviewDiagnostics",
-          () =>
-            invalidTimelineReview.diagnostics.some(
-              (diagnostic) => diagnostic.code === "review-evidence-stale",
-            ),
-        ],
-        [
-          "invalidTimelineSubmissionDiagnostics",
-          () =>
-            invalidTimelineSubmission.diagnostics.some(
-              (diagnostic) =>
-                diagnostic.code === "review-acceptance-coverage-incomplete",
-            ),
-        ],
-        [
-          "nonErrorTimelineReviewDiagnostics",
-          () =>
-            nonErrorTimelineReview.diagnostics.some(
-              (diagnostic) =>
-                diagnostic.code === "review-evidence-stale" &&
-                diagnostic.message.includes("non-error timeline read failure"),
-            ),
-        ],
-        [
-          "omissionReviewDiagnostics",
-          () =>
-            omissionReview.diagnostics.every(
-              (diagnostic) =>
-                diagnostic.code !== "review-evidence-missing" ||
-                diagnostic.target.startsWith("answer:") === false,
-            ),
-        ],
-        [
-          "rejected",
-          () =>
-            throws(() =>
-              parseAutoMovieFilmTimeline({
-                manifest: null,
-                fingerprint: legalOmission.compiler.inputFingerprint,
-                read: () => currentTimelineBytes,
-              }),
-            ),
-        ],
-        [
-          "rejected2",
-          () =>
-            throws(() =>
-              parseAutoMovieFilmTimeline({
-                manifest: currentManifest,
-                fingerprint: legalOmission.compiler.inputFingerprint,
-                read: () => invalidTimelineBytes,
-              }),
-            ),
-        ],
-        [
-          "rejected3",
-          () =>
-            throws(() =>
-              parseAutoMovieFilmTimeline({
-                manifest: invalidTimelineManifest,
-                fingerprint: legalOmission.compiler.inputFingerprint,
-                read: () => invalidTimelineBytes,
-              }),
-            ),
-        ],
-        [
-          "rejected4",
-          () =>
-            throws(() =>
-              parseAutoMovieFilmTimeline({
-                manifest: staleTimelineManifest,
-                fingerprint: legalOmission.compiler.inputFingerprint,
-                read: () => staleTimelineBytes,
-              }),
-            ),
-        ],
-      ]),
-      {
-        legalOmissionSucceeded: true,
-        validTimelineOmissions: true,
-        gapFrameResult: true,
-        gapFrameDiagnostics: true,
-        invalidTimelineReviewCount: true,
-        invalidTimelineReviewDiagnostics: true,
-        invalidTimelineSubmissionDiagnostics: true,
-        nonErrorTimelineReviewDiagnostics: true,
-        omissionReviewDiagnostics: true,
-        rejected: true,
-        rejected2: true,
-        rejected3: true,
-        rejected4: true,
-      },
+      legalOmissionSucceeded &&
+        validTimeline.omissions[0]?.shot === "answer" &&
+        gapFrame.result === null &&
+        gapFrame.diagnostics[0]?.message.includes("no owning video segment") &&
+        invalidTimelineReview.frames.length === 0 &&
+        invalidTimelineReview.diagnostics.some(
+          (diagnostic) => diagnostic.code === "review-evidence-stale",
+        ) &&
+        invalidTimelineSubmission.diagnostics.some(
+          (diagnostic) =>
+            diagnostic.code === "review-acceptance-coverage-incomplete",
+        ) &&
+        nonErrorTimelineReview.diagnostics.some(
+          (diagnostic) =>
+            diagnostic.code === "review-evidence-stale" &&
+            diagnostic.message.includes("non-error timeline read failure"),
+        ) &&
+        omissionReview.diagnostics.every(
+          (diagnostic) =>
+            diagnostic.code !== "review-evidence-missing" ||
+            diagnostic.target.startsWith("answer:") === false,
+        ) &&
+        throws(() =>
+          parseAutoMovieFilmTimeline({
+            manifest: null,
+            fingerprint: legalOmission.compiler.inputFingerprint,
+            read: () => currentTimelineBytes,
+          }),
+        ) &&
+        throws(() =>
+          parseAutoMovieFilmTimeline({
+            manifest: currentManifest,
+            fingerprint: legalOmission.compiler.inputFingerprint,
+            read: () => invalidTimelineBytes,
+          }),
+        ) &&
+        throws(() =>
+          parseAutoMovieFilmTimeline({
+            manifest: invalidTimelineManifest,
+            fingerprint: legalOmission.compiler.inputFingerprint,
+            read: () => invalidTimelineBytes,
+          }),
+        ) &&
+        throws(() =>
+          parseAutoMovieFilmTimeline({
+            manifest: staleTimelineManifest,
+            fingerprint: legalOmission.compiler.inputFingerprint,
+            read: () => staleTimelineBytes,
+          }),
+        ),
     );
     const openingWithBoundaryEvents = structuredClone(
       project.graph().shots.get("opening")!,
@@ -1363,80 +1192,39 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
     const submittedAcceptance = trimWorksheet.checks.find(
       (check) => check.criterion === "acceptance-scenarios",
     )?.acceptanceScenarios;
-    TestValidator.equals(
+    TestValidator.predicate(
       "a legal trim uses one in-range fallback and submits exact half-open event coverage",
-      namedFacts([
-        ["legalTrimSucceeded", () => legalTrimSucceeded],
-        ["trimSelectionCount", () => trimSelection.length === 1],
-        [
-          "trimSelectionId",
-          () => trimSelection[0]?.id === "film-segment-entry",
-        ],
-        ["trimSelectionIndex", () => trimSelection[0]?.index === 72],
-        ["trimSelectionTime", () => trimSelection[0]?.time === 3],
-        ["trimSelectionPasses", () => trimSelection[0]?.passes[0] === "beauty"],
-        [
-          "trimReviewDiagnostics",
-          () =>
-            trimReview.diagnostics.some(
-              (diagnostic) =>
-                diagnostic.code === "review-evidence-missing" &&
-                diagnostic.target === "opening:film-segment-entry:beauty",
-            ),
-        ],
-        [
-          "trimReviewDiagnostics2",
-          () =>
-            trimReview.diagnostics.every(
-              (diagnostic) =>
-                (diagnostic.code !== "review-evidence-missing" ||
-                  diagnostic.target.includes("signal-apex") === false) &&
-                (diagnostic.code !== "review-outcome-missing" ||
-                  diagnostic.message.includes("film-opening-event") === false),
-            ),
-        ],
-        ["capturedTrimEntryCaptured", () => capturedTrimEntry.captured],
-        [
-          "completeTrimReviewOutcomes",
-          () =>
-            completeTrimReview.outcomes.some(
-              (outcome) => outcome.scenario === "film-source-in-event",
-            ),
-        ],
-        [
-          "completeTrimReviewOutcomes2",
-          () =>
-            completeTrimReview.outcomes.every(
-              (outcome) =>
-                outcome.scenario !== "film-opening-event" &&
-                outcome.scenario !== "film-source-out-event",
-            ),
-        ],
-        [
-          "submittedAcceptanceFilm",
-          () =>
-            submittedAcceptance?.join(",") ===
-            "film-runtime,film-source-in-event",
-        ],
-        ["trimSubmissionAccepted", () => trimSubmission.accepted],
-        ["trimSubmissionState", () => trimSubmission.state === "complete"],
-      ]),
-      {
-        legalTrimSucceeded: true,
-        trimSelectionCount: true,
-        trimSelectionId: true,
-        trimSelectionIndex: true,
-        trimSelectionTime: true,
-        trimSelectionPasses: true,
-        trimReviewDiagnostics: true,
-        trimReviewDiagnostics2: true,
-        capturedTrimEntryCaptured: true,
-        completeTrimReviewOutcomes: true,
-        completeTrimReviewOutcomes2: true,
-        submittedAcceptanceFilm: true,
-        trimSubmissionAccepted: true,
-        trimSubmissionState: true,
-      },
+      legalTrimSucceeded &&
+        trimSelection.length === 1 &&
+        trimSelection[0]?.id === "film-segment-entry" &&
+        trimSelection[0]?.index === 72 &&
+        trimSelection[0]?.time === 3 &&
+        trimSelection[0]?.passes[0] === "beauty" &&
+        trimReview.diagnostics.some(
+          (diagnostic) =>
+            diagnostic.code === "review-evidence-missing" &&
+            diagnostic.target === "opening:film-segment-entry:beauty",
+        ) &&
+        trimReview.diagnostics.every(
+          (diagnostic) =>
+            (diagnostic.code !== "review-evidence-missing" ||
+              diagnostic.target.includes("signal-apex") === false) &&
+            (diagnostic.code !== "review-outcome-missing" ||
+              diagnostic.message.includes("film-opening-event") === false),
+        ) &&
+        capturedTrimEntry.captured &&
+        completeTrimReview.outcomes.some(
+          (outcome) => outcome.scenario === "film-source-in-event",
+        ) &&
+        completeTrimReview.outcomes.every(
+          (outcome) =>
+            outcome.scenario !== "film-opening-event" &&
+            outcome.scenario !== "film-source-out-event",
+        ) &&
+        submittedAcceptance?.join(",") ===
+          "film-runtime,film-source-in-event" &&
+        trimSubmission.accepted &&
+        trimSubmission.state === "complete",
     );
     const realizationPath = path.join(
       fixture.root,

@@ -8,23 +8,6 @@ import { TestValidator } from "@nestia/e2e";
 
 import { nclose, throwsError } from "../internal/predicates";
 
-/**
- * Evaluate named facts in order and stop at the first false one, so a failed
- * comparison names the fact instead of collapsing into one boolean. Stopping
- * keeps the short-circuit semantics the original conjunction had, which some
- * facts depend on to guard the ones after them.
- */
-const namedFacts = (
-  entries: ReadonlyArray<readonly [string, () => boolean]>,
-): Record<string, boolean> => {
-  const output: Record<string, boolean> = {};
-  for (const [name, evaluate] of entries) {
-    output[name] = evaluate();
-    if (output[name] === false) break;
-  }
-  return output;
-};
-
 const shot = (id: string, duration: number): IAutoMovieShot => ({
   id,
   name: null,
@@ -130,23 +113,12 @@ export const test_film_playback_resolver = (): void => {
   const t47 = at(4.7)!;
   TestValidator.equals("T=4.7 live shot", t47.shot, "shot:beat-1");
   TestValidator.predicate("T=4.7 live local", nclose(t47.time, 0.2));
-  TestValidator.equals(
+  TestValidator.predicate(
     "T=4.7 outgoing tail",
-    namedFacts([
-      ["t47Blend", () => t47.blend !== null],
-      [
-        "t47Blend2",
-        () => t47.blend !== null && t47.blend.shot === "shot:beat-2",
-      ],
-      ["ncloseT47", () => t47.blend !== null && nclose(t47.blend.time, 2.2)],
-      ["ncloseT472", () => t47.blend !== null && nclose(t47.blend.alpha, 0.4)],
-    ]),
-    {
-      t47Blend: true,
-      t47Blend2: true,
-      ncloseT47: true,
-      ncloseT472: true,
-    },
+    t47.blend !== null &&
+      t47.blend.shot === "shot:beat-2" &&
+      nclose(t47.blend.time, 2.2) &&
+      nclose(t47.blend.alpha, 0.4),
   );
 
   TestValidator.equals("T=5.1 past the dissolve", at(5.1)!.blend, null);
@@ -259,36 +231,20 @@ export const test_film_playback_resolver = (): void => {
     events.map((e) => e.id),
     ["a-in", "a-z", "b-in"],
   );
-  TestValidator.equals(
+  TestValidator.predicate(
     "shot-local events are placed on the global clock",
-    namedFacts([
-      ["ncloseEvents", () => nclose(events[0]!.shotTime, 1.25)],
-      ["ncloseEvents2", () => nclose(events[0]!.globalTime, 0.25)],
-      ["eventsEntry", () => events[0]!.entry === 0],
-      ["eventsShot", () => events[0]!.shot === "shot:beat-1"],
-      ["ncloseEvents3", () => nclose(events[1]!.shotTime, 1.25)],
-      ["ncloseEvents4", () => nclose(events[1]!.globalTime, 0.25)],
-      ["eventsEntry2", () => events[1]!.entry === 0],
-      ["eventsShot2", () => events[1]!.shot === "shot:beat-1"],
-      ["ncloseEvents5", () => nclose(events[2]!.shotTime, 1)],
-      ["ncloseEvents6", () => nclose(events[2]!.globalTime, 1.75)],
-      ["eventsEntry3", () => events[2]!.entry === 1],
-      ["eventsShot3", () => events[2]!.shot === "shot:beat-2"],
-    ]),
-    {
-      ncloseEvents: true,
-      ncloseEvents2: true,
-      eventsEntry: true,
-      eventsShot: true,
-      ncloseEvents3: true,
-      ncloseEvents4: true,
-      eventsEntry2: true,
-      eventsShot2: true,
-      ncloseEvents5: true,
-      ncloseEvents6: true,
-      eventsEntry3: true,
-      eventsShot3: true,
-    },
+    nclose(events[0]!.shotTime, 1.25) &&
+      nclose(events[0]!.globalTime, 0.25) &&
+      events[0]!.entry === 0 &&
+      events[0]!.shot === "shot:beat-1" &&
+      nclose(events[1]!.shotTime, 1.25) &&
+      nclose(events[1]!.globalTime, 0.25) &&
+      events[1]!.entry === 0 &&
+      events[1]!.shot === "shot:beat-1" &&
+      nclose(events[2]!.shotTime, 1) &&
+      nclose(events[2]!.globalTime, 1.75) &&
+      events[2]!.entry === 1 &&
+      events[2]!.shot === "shot:beat-2",
   );
   TestValidator.equals(
     "shots without interaction metadata produce no sequence events",

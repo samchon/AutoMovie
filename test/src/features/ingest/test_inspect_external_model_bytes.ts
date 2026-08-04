@@ -2,23 +2,6 @@ import { inspectAutoMovieExternalModelBytes } from "@automovie/ingest";
 import { TestValidator } from "@nestia/e2e";
 
 /**
- * Evaluate named facts in order and stop at the first false one, so a failed
- * comparison names the fact instead of collapsing into one boolean. Stopping
- * keeps the short-circuit semantics the original conjunction had, which some
- * facts depend on to guard the ones after them.
- */
-const namedFacts = (
-  entries: ReadonlyArray<readonly [string, () => boolean]>,
-): Record<string, boolean> => {
-  const output: Record<string, boolean> = {};
-  for (const [name, evaluate] of entries) {
-    output[name] = evaluate();
-    if (output[name] === false) break;
-  }
-  return output;
-};
-
-/**
  * External model inspection binds exact containers, profiles and sidecars.
  *
  * Scenarios:
@@ -125,101 +108,67 @@ export const test_inspect_external_model_bytes = (): void => {
         mapping.bone === "hips" && mapping.node === 1 && mapping.weighted,
     ),
   );
-  TestValidator.equals(
+  TestValidator.predicate(
     "malformed bytes, unsupported profiles and missing rigs are refused",
-    namedFacts([
-      [
-        "rejected",
-        () =>
-          throws(() =>
-            inspectAutoMovieExternalModelBytes({
-              path: "public/models/actor.glb",
-              bytes: vrm.subarray(0, vrm.length - 1),
-              profile: "vrm-humanoid-v1",
+    throws(() =>
+      inspectAutoMovieExternalModelBytes({
+        path: "public/models/actor.glb",
+        bytes: vrm.subarray(0, vrm.length - 1),
+        profile: "vrm-humanoid-v1",
+      }),
+    ) &&
+      throws(() =>
+        inspectAutoMovieExternalModelBytes({
+          path: "public/models/actor.gltf",
+          bytes: gltf,
+          profile: "future-profile",
+        }),
+      ) &&
+      throws(() =>
+        inspectAutoMovieExternalModelBytes({
+          path: "public/models/actor.gltf",
+          bytes: Buffer.from(
+            JSON.stringify({
+              ...source,
+              nodes: source.nodes.slice(0, 1),
+              skins: undefined,
+              scenes: [{ nodes: [0] }],
             }),
           ),
-      ],
-      [
-        "rejected2",
-        () =>
-          throws(() =>
-            inspectAutoMovieExternalModelBytes({
-              path: "public/models/actor.gltf",
-              bytes: gltf,
-              profile: "future-profile",
-            }),
-          ),
-      ],
-      [
-        "rejected3",
-        () =>
-          throws(() =>
-            inspectAutoMovieExternalModelBytes({
-              path: "public/models/actor.gltf",
-              bytes: Buffer.from(
-                JSON.stringify({
-                  ...source,
-                  nodes: source.nodes.slice(0, 1),
-                  skins: undefined,
-                  scenes: [{ nodes: [0] }],
-                }),
-              ),
-              profile: "gltf-humanoid-v1",
-              resolveResource: (uri) =>
-                uri === "actor.bin" ? modelPayload() : Buffer.from([1]),
-            }),
-          ),
-      ],
-      [
-        "rejected4",
-        () =>
-          throws(() =>
-            inspectAutoMovieExternalModelBytes({
-              path: "public/models/actor.gltf",
-              bytes: gltf,
-              profile: "gltf-static-v1",
-              resolveResource: (uri) =>
-                uri === "actor.bin" ? Buffer.alloc(1) : Buffer.from([1]),
-            }),
-          ),
-      ],
-      [
-        "rejected5",
-        () =>
-          throws(() =>
-            inspectAutoMovieExternalModelBytes({
-              path: "public/models/actor.glb",
-              bytes: glb({
-                ...source,
-                buffers: [{ byteLength: 60 }],
-                images: [],
-              }),
-              profile: "gltf-static-v1",
-            }),
-          ),
-      ],
-      [
-        "rejected6",
-        () =>
-          throws(() =>
-            inspectAutoMovieExternalModelBytes({
-              path: "public/models/actor.gltf",
-              bytes: gltf,
-              profile: "gltf-humanoid-v1",
-              resolveResource: (uri) =>
-                uri === "actor.bin" ? Buffer.alloc(60) : Buffer.from([1]),
-            }),
-          ),
-      ],
-    ]),
-    {
-      rejected: true,
-      rejected2: true,
-      rejected3: true,
-      rejected4: true,
-      rejected5: true,
-      rejected6: true,
-    },
+          profile: "gltf-humanoid-v1",
+          resolveResource: (uri) =>
+            uri === "actor.bin" ? modelPayload() : Buffer.from([1]),
+        }),
+      ) &&
+      throws(() =>
+        inspectAutoMovieExternalModelBytes({
+          path: "public/models/actor.gltf",
+          bytes: gltf,
+          profile: "gltf-static-v1",
+          resolveResource: (uri) =>
+            uri === "actor.bin" ? Buffer.alloc(1) : Buffer.from([1]),
+        }),
+      ) &&
+      throws(() =>
+        inspectAutoMovieExternalModelBytes({
+          path: "public/models/actor.glb",
+          bytes: glb({
+            ...source,
+            buffers: [{ byteLength: 60 }],
+            images: [],
+          }),
+          profile: "gltf-static-v1",
+        }),
+      ) &&
+      throws(() =>
+        inspectAutoMovieExternalModelBytes({
+          path: "public/models/actor.gltf",
+          bytes: gltf,
+          profile: "gltf-humanoid-v1",
+          resolveResource: (uri) =>
+            uri === "actor.bin" ? Buffer.alloc(60) : Buffer.from([1]),
+        }),
+      ),
   );
 };
 

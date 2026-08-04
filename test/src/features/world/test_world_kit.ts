@@ -11,23 +11,6 @@ import {
 import { IAutoMovieInstanceSetDesign } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-/**
- * Evaluate named facts in order and stop at the first false one, so a failed
- * comparison names the fact instead of collapsing into one boolean. Stopping
- * keeps the short-circuit semantics the original conjunction had, which some
- * facts depend on to guard the ones after them.
- */
-const namedFacts = (
-  entries: ReadonlyArray<readonly [string, () => boolean]>,
-): Record<string, boolean> => {
-  const output: Record<string, boolean> = {};
-  for (const [name, evaluate] of entries) {
-    output[name] = evaluate();
-    if (output[name] === false) break;
-  }
-  return output;
-};
-
 const instanceBase = (): Omit<IAutoMovieInstanceSetDesign, "layout"> => ({
   id: "trees",
   modelRecipe: "tree",
@@ -138,36 +121,17 @@ export const test_world_kit = (): void => {
     route: route.id,
     lateralJitter: 0.5,
   });
-  TestValidator.equals(
+  TestValidator.predicate(
     "terrain, ramp, blocks, and compact placement helpers retain exact facts",
-    namedFacts([
-      ["buildingRecipe", () => building.recipe.parameters.shape === "box"],
-      ["buildingNode", () => building.node.model.endsWith(":house")],
-      ["buildingBounds", () => building.bounds.min.y === 0],
-      [
-        "worldSurfaceHeightGround",
-        () => worldSurfaceHeight(ground, { x: 0, z: 0 }) === 0,
-      ],
-      [
-        "worldSurfaceHeightRamp",
-        () => worldSurfaceHeight(ramp, { x: -4, z: 4 }) === 2,
-      ],
-      ["gridLayout", () => grid.layout.kind === "grid"],
-      ["scatterLayout", () => scatter.layout.kind === "scatter"],
-      ["alongRouteLayout", () => alongRoute.layout.kind === "along-route"],
-      ["gridInstanceBase", () => grid !== instanceBase()],
-    ]),
-    {
-      buildingRecipe: true,
-      buildingNode: true,
-      buildingBounds: true,
-      worldSurfaceHeightGround: true,
-      worldSurfaceHeightRamp: true,
-      gridLayout: true,
-      scatterLayout: true,
-      alongRouteLayout: true,
-      gridInstanceBase: true,
-    },
+    building.recipe.parameters.shape === "box" &&
+      building.node.model.endsWith(":house") &&
+      building.bounds.min.y === 0 &&
+      worldSurfaceHeight(ground, { x: 0, z: 0 }) === 0 &&
+      worldSurfaceHeight(ramp, { x: -4, z: 4 }) === 2 &&
+      grid.layout.kind === "grid" &&
+      scatter.layout.kind === "scatter" &&
+      alongRoute.layout.kind === "along-route" &&
+      grid !== instanceBase(),
   );
 
   const routeLandmark = {

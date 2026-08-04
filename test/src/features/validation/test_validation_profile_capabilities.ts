@@ -4,23 +4,6 @@ import { TestValidator } from "@nestia/e2e";
 
 import { createModel } from "../internal/fixtures";
 
-/**
- * Evaluate named facts in order and stop at the first false one, so a failed
- * comparison names the fact instead of collapsing into one boolean. Stopping
- * keeps the short-circuit semantics the original conjunction had, which some
- * facts depend on to guard the ones after them.
- */
-const namedFacts = (
-  entries: ReadonlyArray<readonly [string, () => boolean]>,
-): Record<string, boolean> => {
-  const output: Record<string, boolean> = {};
-  for (const [name, evaluate] of entries) {
-    output[name] = evaluate();
-    if (output[name] === false) break;
-  }
-  return output;
-};
-
 const profile = (): IAutoMovieProfile => ({
   id: "battle-object",
   name: "Battle object",
@@ -219,72 +202,33 @@ export const test_validation_profile_capabilities = (): void => {
     mutate(weapon);
     return failsAt([invalid], fragment);
   };
-  TestValidator.equals(
+  TestValidator.predicate(
     "firearm numeric and accuracy families fail independently",
-    namedFacts([
-      [
-        "invalidFirearmWeapon",
-        () =>
-          invalidFirearm((weapon) => {
-            if (weapon.kind === "firearm") weapon.reloadSeconds = 0;
-          }, "reloadSeconds"),
-      ],
-      [
-        "invalidFirearmWeapon2",
-        () =>
-          invalidFirearm((weapon) => {
-            if (weapon.kind === "firearm") weapon.effectiveRange = 0;
-          }, "effectiveRange"),
-      ],
-      [
-        "invalidFirearmWeapon3",
-        () =>
-          invalidFirearm((weapon) => {
-            if (weapon.kind === "firearm") weapon.muzzleVelocity = 0;
-          }, "muzzleVelocity"),
-      ],
-      [
-        "invalidFirearmWeapon4",
-        () =>
-          invalidFirearm((weapon) => {
-            if (weapon.kind === "firearm") weapon.misfireProbability = 2;
-          }, "misfireProbability"),
-      ],
-      [
-        "invalidFirearmWeapon5",
-        () =>
-          invalidFirearm((weapon) => {
-            if (weapon.kind === "firearm") weapon.accuracy = [];
-          }, ".accuracy"),
-      ],
-      [
-        "invalidFirearmWeapon6",
-        () =>
-          invalidFirearm((weapon) => {
-            if (weapon.kind === "firearm")
-              weapon.accuracy = [
-                { distance: 10, probability: 0.5 },
-                { distance: 5, probability: 0.5 },
-              ];
-          }, "accuracy[1].distance"),
-      ],
-      [
-        "invalidFirearmWeapon7",
-        () =>
-          invalidFirearm((weapon) => {
-            if (weapon.kind === "firearm") weapon.accuracy[0]!.probability = 2;
-          }, "accuracy[0].probability"),
-      ],
-    ]),
-    {
-      invalidFirearmWeapon: true,
-      invalidFirearmWeapon2: true,
-      invalidFirearmWeapon3: true,
-      invalidFirearmWeapon4: true,
-      invalidFirearmWeapon5: true,
-      invalidFirearmWeapon6: true,
-      invalidFirearmWeapon7: true,
-    },
+    invalidFirearm((weapon) => {
+      if (weapon.kind === "firearm") weapon.reloadSeconds = 0;
+    }, "reloadSeconds") &&
+      invalidFirearm((weapon) => {
+        if (weapon.kind === "firearm") weapon.effectiveRange = 0;
+      }, "effectiveRange") &&
+      invalidFirearm((weapon) => {
+        if (weapon.kind === "firearm") weapon.muzzleVelocity = 0;
+      }, "muzzleVelocity") &&
+      invalidFirearm((weapon) => {
+        if (weapon.kind === "firearm") weapon.misfireProbability = 2;
+      }, "misfireProbability") &&
+      invalidFirearm((weapon) => {
+        if (weapon.kind === "firearm") weapon.accuracy = [];
+      }, ".accuracy") &&
+      invalidFirearm((weapon) => {
+        if (weapon.kind === "firearm")
+          weapon.accuracy = [
+            { distance: 10, probability: 0.5 },
+            { distance: 5, probability: 0.5 },
+          ];
+      }, "accuracy[1].distance") &&
+      invalidFirearm((weapon) => {
+        if (weapon.kind === "firearm") weapon.accuracy[0]!.probability = 2;
+      }, "accuracy[0].probability"),
   );
 
   TestValidator.predicate(
@@ -300,79 +244,51 @@ export const test_validation_profile_capabilities = (): void => {
     }),
   );
 
-  TestValidator.equals(
+  TestValidator.predicate(
     "cannon collection and ammunition families fail independently",
-    namedFacts([
-      [
-        "constInvalid",
-        () =>
-          (() => {
-            const invalid = structuredClone(profile());
-            const shooter = invalid.traits![0]!;
-            if (shooter.kind !== "shooter") return false;
-            const cannon = shooter.weapons[1]!;
-            if (cannon.kind !== "cannon") return false;
-            cannon.ammunition = [];
-            return failsAt([invalid], ".ammunition");
-          })(),
-      ],
-      [
-        "constInvalid2",
-        () =>
-          (() => {
-            const invalid = structuredClone(profile());
-            const shooter = invalid.traits![0]!;
-            if (shooter.kind !== "shooter") return false;
-            const cannon = shooter.weapons[1]!;
-            if (cannon.kind !== "cannon") return false;
-            cannon.ammunition.push(structuredClone(cannon.ammunition[0]!));
-            return failsAt([invalid], "ammunition[2].kind");
-          })(),
-      ],
-      [
-        "massMaxRicochets",
-        () =>
-          ["mass", "maxRicochets", "ricochetRetention"].every(
-            (fragment, index) => {
-              const invalid = structuredClone(profile());
-              const shooter = invalid.traits![0]!;
-              if (shooter.kind !== "shooter") return false;
-              const cannon = shooter.weapons[1]!;
-              if (cannon.kind !== "cannon") return false;
-              const round = cannon.ammunition[0]!;
-              if (round.kind !== "round-shot") return false;
-              if (index === 0) round.mass = 0;
-              else if (index === 1) round.maxRicochets = -1;
-              else round.ricochetRetention = 2;
-              return failsAt([invalid], fragment);
-            },
-          ),
-      ],
-      [
-        "pelletsSpreadDegrees",
-        () =>
-          ["pellets", "spreadDegrees", "pelletMass"].every(
-            (fragment, index) => {
-              const invalid = structuredClone(profile());
-              const shooter = invalid.traits![0]!;
-              if (shooter.kind !== "shooter") return false;
-              const cannon = shooter.weapons[1]!;
-              if (cannon.kind !== "cannon") return false;
-              const canister = cannon.ammunition[1]!;
-              if (canister.kind !== "canister") return false;
-              if (index === 0) canister.pellets = 0;
-              else if (index === 1) canister.spreadDegrees = 181;
-              else canister.pelletMass = 0;
-              return failsAt([invalid], fragment);
-            },
-          ),
-      ],
-    ]),
-    {
-      constInvalid: true,
-      constInvalid2: true,
-      massMaxRicochets: true,
-      pelletsSpreadDegrees: true,
-    },
+    (() => {
+      const invalid = structuredClone(profile());
+      const shooter = invalid.traits![0]!;
+      if (shooter.kind !== "shooter") return false;
+      const cannon = shooter.weapons[1]!;
+      if (cannon.kind !== "cannon") return false;
+      cannon.ammunition = [];
+      return failsAt([invalid], ".ammunition");
+    })() &&
+      (() => {
+        const invalid = structuredClone(profile());
+        const shooter = invalid.traits![0]!;
+        if (shooter.kind !== "shooter") return false;
+        const cannon = shooter.weapons[1]!;
+        if (cannon.kind !== "cannon") return false;
+        cannon.ammunition.push(structuredClone(cannon.ammunition[0]!));
+        return failsAt([invalid], "ammunition[2].kind");
+      })() &&
+      ["mass", "maxRicochets", "ricochetRetention"].every((fragment, index) => {
+        const invalid = structuredClone(profile());
+        const shooter = invalid.traits![0]!;
+        if (shooter.kind !== "shooter") return false;
+        const cannon = shooter.weapons[1]!;
+        if (cannon.kind !== "cannon") return false;
+        const round = cannon.ammunition[0]!;
+        if (round.kind !== "round-shot") return false;
+        if (index === 0) round.mass = 0;
+        else if (index === 1) round.maxRicochets = -1;
+        else round.ricochetRetention = 2;
+        return failsAt([invalid], fragment);
+      }) &&
+      ["pellets", "spreadDegrees", "pelletMass"].every((fragment, index) => {
+        const invalid = structuredClone(profile());
+        const shooter = invalid.traits![0]!;
+        if (shooter.kind !== "shooter") return false;
+        const cannon = shooter.weapons[1]!;
+        if (cannon.kind !== "cannon") return false;
+        const canister = cannon.ammunition[1]!;
+        if (canister.kind !== "canister") return false;
+        if (index === 0) canister.pellets = 0;
+        else if (index === 1) canister.spreadDegrees = 181;
+        else canister.pelletMass = 0;
+        return failsAt([invalid], fragment);
+      }),
   );
 };

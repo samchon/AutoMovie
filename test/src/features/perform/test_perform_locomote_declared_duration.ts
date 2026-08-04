@@ -14,23 +14,6 @@ import { TestValidator } from "@nestia/e2e";
 import { joint, makePose } from "../internal/fixtures";
 import { nclose } from "../internal/predicates";
 
-/**
- * Evaluate named facts in order and stop at the first false one, so a failed
- * comparison names the fact instead of collapsing into one boolean. Stopping
- * keeps the short-circuit semantics the original conjunction had, which some
- * facts depend on to guard the ones after them.
- */
-const namedFacts = (
-  entries: ReadonlyArray<readonly [string, () => boolean]>,
-): Record<string, boolean> => {
-  const output: Record<string, boolean> = {};
-  for (const [name, evaluate] of entries) {
-    output[name] = evaluate();
-    if (output[name] === false) break;
-  }
-  return output;
-};
-
 /** One second per cycle, so the natural sizing is countable by hand. */
 const WALK: IAutoMovieGait = {
   name: "walk",
@@ -163,18 +146,11 @@ export const test_perform_locomote_declared_duration = (): void => {
 
   // 4. the other direction: a span shorter than the natural one.
   const quick = synth(walkTo(1.5), "hero")!;
-  TestValidator.equals(
+  TestValidator.predicate(
     "a shorter declared span compresses the same walk",
-    namedFacts([
-      ["ncloseQuick", () => nclose(quick.duration, 1.5)],
-      ["ncloseArrival", () => nclose(arrival(quick), 3)],
-      ["ncloseQuick2", () => nclose(quick.gaitCycle!.period, 0.5)],
-    ]),
-    {
-      ncloseQuick: true,
-      ncloseArrival: true,
-      ncloseQuick2: true,
-    },
+    nclose(quick.duration, 1.5) &&
+      nclose(arrival(quick), 3) &&
+      nclose(quick.gaitCycle!.period, 0.5),
   );
 
   // 5. the boundary: declaring exactly the natural duration changes nothing.

@@ -4,23 +4,6 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-/**
- * Evaluate named facts in order and stop at the first false one, so a failed
- * comparison names the fact instead of collapsing into one boolean. Stopping
- * keeps the short-circuit semantics the original conjunction had, which some
- * facts depend on to guard the ones after them.
- */
-const namedFacts = (
-  entries: ReadonlyArray<readonly [string, () => boolean]>,
-): Record<string, boolean> => {
-  const output: Record<string, boolean> = {};
-  for (const [name, evaluate] of entries) {
-    output[name] = evaluate();
-    if (output[name] === false) break;
-  }
-  return output;
-};
-
 const mutableFs = fs as {
   lstatSync: typeof fs.lstatSync;
 };
@@ -213,44 +196,20 @@ export const test_mcp_commit_lock = (): void => {
         },
       ]);
     }
-    TestValidator.equals(
+    TestValidator.predicate(
       "release cannot delete a foreign lock swapped in after owner verification",
-      namedFacts([
-        ["releaseTargetSwapped", () => releaseTargetSwapped],
-        ["releaseRacePathResident", () => fs.existsSync(releaseRacePath)],
-        [
-          "releaseRacePathUtf8",
-          () => fs.readFileSync(releaseRacePath, "utf8") === foreignToken,
-        ],
-      ]),
-      {
-        releaseTargetSwapped: true,
-        releaseRacePathResident: true,
-        releaseRacePathUtf8: true,
-      },
+      releaseTargetSwapped &&
+        fs.existsSync(releaseRacePath) &&
+        fs.readFileSync(releaseRacePath, "utf8") === foreignToken,
     );
     nativeRm(releaseRacePath, { force: true });
     nativeRm(releaseRaceParked, { force: true });
     const reacquiredRaceToken = acquireCommitLock(releaseRacePath);
-    TestValidator.equals(
+    TestValidator.predicate(
       "a raced release permits a genuinely fresh owner",
-      namedFacts([
-        [
-          "reacquiredRaceTokenReleaseRaceToken",
-          () => reacquiredRaceToken !== releaseRaceToken,
-        ],
-        ["releaseRacePathResident", () => fs.existsSync(releaseRacePath)],
-        [
-          "releaseRacePathUtf8",
-          () =>
-            fs.readFileSync(releaseRacePath, "utf8") === reacquiredRaceToken,
-        ],
-      ]),
-      {
-        reacquiredRaceTokenReleaseRaceToken: true,
-        releaseRacePathResident: true,
-        releaseRacePathUtf8: true,
-      },
+      reacquiredRaceToken !== releaseRaceToken &&
+        fs.existsSync(releaseRacePath) &&
+        fs.readFileSync(releaseRacePath, "utf8") === reacquiredRaceToken,
     );
     releaseCommitLock(releaseRacePath, reacquiredRaceToken);
     TestValidator.equals(

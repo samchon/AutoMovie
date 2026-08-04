@@ -6,23 +6,6 @@ import ts from "typescript-compiler";
 
 import { preserveCliRenderFixtureCleanup } from "./test_cli_render";
 
-/**
- * Evaluate named facts in order and stop at the first false one, so a failed
- * comparison names the fact instead of collapsing into one boolean. Stopping
- * keeps the short-circuit semantics the original conjunction had, which some
- * facts depend on to guard the ones after them.
- */
-const namedFacts = (
-  entries: ReadonlyArray<readonly [string, () => boolean]>,
-): Record<string, boolean> => {
-  const output: Record<string, boolean> = {};
-  for (const [name, evaluate] of entries) {
-    output[name] = evaluate();
-    if (output[name] === false) break;
-  }
-  return output;
-};
-
 const compact = (node: ts.Node, source: ts.SourceFile): string =>
   node.getText(source).replace(/\s+/g, "");
 
@@ -172,69 +155,27 @@ export const test_cli_render_fixture_cleanup = (): void => {
     cleanupFailures: [firstCleanupFailure, secondCleanupFailure],
     primaryFailure,
   });
-  TestValidator.equals(
+  TestValidator.predicate(
     "CLI render fixture cleanup preserves acquisition and failure order",
-    namedFacts([
-      ["successFailure", () => success.failure === undefined],
-      [
-        "successOrder",
-        () => success.order.join(",") === "cleanup-0,cleanup-1,cleanup-2",
-      ],
-      ["partialSetupFailure", () => partialSetup.failure === primaryFailure],
-      [
-        "partialSetupOrder",
-        () => partialSetup.order.join(",") === "cleanup-0,cleanup-1",
-      ],
-      ["primaryOnlyFailure", () => primaryOnly.failure === primaryFailure],
-      [
-        "primaryOnlyOrder",
-        () => primaryOnly.order.join(",") === "cleanup-0,cleanup-1,cleanup-2",
-      ],
-      ["standaloneFailure", () => standalone.failure === firstCleanupFailure],
-      [
-        "standaloneOrder",
-        () => standalone.order.join(",") === "cleanup-0,cleanup-1,cleanup-2",
-      ],
-      [
-        "aggregateContainsExactlyMultiple",
-        () =>
-          aggregateContainsExactly(multiple.failure, [
-            firstCleanupFailure,
-            secondCleanupFailure,
-          ]),
-      ],
-      [
-        "multipleOrder",
-        () => multiple.order.join(",") === "cleanup-0,cleanup-1,cleanup-2",
-      ],
-      [
-        "aggregateContainsExactlyCombined",
-        () =>
-          aggregateContainsExactly(combined.failure, [
-            primaryFailure,
-            firstCleanupFailure,
-            secondCleanupFailure,
-          ]),
-      ],
-      [
-        "combinedOrder",
-        () => combined.order.join(",") === "cleanup-0,cleanup-1,cleanup-2",
-      ],
-    ]),
-    {
-      successFailure: true,
-      successOrder: true,
-      partialSetupFailure: true,
-      partialSetupOrder: true,
-      primaryOnlyFailure: true,
-      primaryOnlyOrder: true,
-      standaloneFailure: true,
-      standaloneOrder: true,
-      aggregateContainsExactlyMultiple: true,
-      multipleOrder: true,
-      aggregateContainsExactlyCombined: true,
-      combinedOrder: true,
-    },
+    success.failure === undefined &&
+      success.order.join(",") === "cleanup-0,cleanup-1,cleanup-2" &&
+      partialSetup.failure === primaryFailure &&
+      partialSetup.order.join(",") === "cleanup-0,cleanup-1" &&
+      primaryOnly.failure === primaryFailure &&
+      primaryOnly.order.join(",") === "cleanup-0,cleanup-1,cleanup-2" &&
+      standalone.failure === firstCleanupFailure &&
+      standalone.order.join(",") === "cleanup-0,cleanup-1,cleanup-2" &&
+      aggregateContainsExactly(multiple.failure, [
+        firstCleanupFailure,
+        secondCleanupFailure,
+      ]) &&
+      multiple.order.join(",") === "cleanup-0,cleanup-1,cleanup-2" &&
+      aggregateContainsExactly(combined.failure, [
+        primaryFailure,
+        firstCleanupFailure,
+        secondCleanupFailure,
+      ]) &&
+      combined.order.join(",") === "cleanup-0,cleanup-1,cleanup-2",
   );
   TestValidator.equals(
     "CLI render test owns cwd and every acquired temporary root",

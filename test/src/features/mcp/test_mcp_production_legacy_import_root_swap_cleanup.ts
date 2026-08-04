@@ -6,23 +6,6 @@ import ts from "typescript-compiler";
 
 import { preserveLegacyImportFixtureCleanup } from "./test_mcp_production_legacy_import";
 
-/**
- * Evaluate named facts in order and stop at the first false one, so a failed
- * comparison names the fact instead of collapsing into one boolean. Stopping
- * keeps the short-circuit semantics the original conjunction had, which some
- * facts depend on to guard the ones after them.
- */
-const namedFacts = (
-  entries: ReadonlyArray<readonly [string, () => boolean]>,
-): Record<string, boolean> => {
-  const output: Record<string, boolean> = {};
-  for (const [name, evaluate] of entries) {
-    output[name] = evaluate();
-    if (output[name] === false) break;
-  }
-  return output;
-};
-
 const compact = (node: ts.Node, source: ts.SourceFile): string =>
   node.getText(source).replace(/\s+/g, "");
 
@@ -229,103 +212,45 @@ export const test_mcp_production_legacy_import_root_swap_cleanup = (): void => {
     primaryFailure: { error: undefined, present: true },
   });
   const fullOrder = "cleanup-0,cleanup-1,cleanup-2";
-  TestValidator.equals(
+  TestValidator.predicate(
     "legacy root-swap cleanup preserves failure and resource order",
-    namedFacts([
-      ["successCaught", () => success.caught === false],
-      ["successFailure", () => success.failure === undefined],
-      ["successOrder", () => success.order.join(",") === fullOrder],
-      ["primaryOnlyCaught", () => primaryOnly.caught],
-      ["primaryOnlyFailure", () => primaryOnly.failure === primaryFailure],
-      ["primaryOnlyOrder", () => primaryOnly.order.join(",") === fullOrder],
-      ["standaloneCaught", () => standalone.caught],
-      ["standaloneFailure", () => standalone.failure === firstCleanupFailure],
-      ["standaloneOrder", () => standalone.order.join(",") === fullOrder],
-      ["multipleCaught", () => multiple.caught],
-      [
-        "aggregateContainsExactlyMultiple",
-        () =>
-          aggregateContainsExactly(multiple.failure, [
-            firstCleanupFailure,
-            lastCleanupFailure,
-          ]),
-      ],
-      ["multipleMessage", () => multiple.message.includes("resource-0")],
-      ["multipleMessage2", () => multiple.message.includes("resource-2")],
-      [
-        "multipleMessage3",
-        () => multiple.message.includes("resource-1") === false,
-      ],
-      ["multipleOrder", () => multiple.order.join(",") === fullOrder],
-      ["combinedCaught", () => combined.caught],
-      [
-        "aggregateContainsExactlyCombined",
-        () =>
-          aggregateContainsExactly(combined.failure, [
-            primaryFailure,
-            firstCleanupFailure,
-            lastCleanupFailure,
-          ]),
-      ],
-      ["combinedOrder", () => combined.order.join(",") === fullOrder],
-      ["undefinedPrimaryCaught", () => undefinedPrimary.caught],
-      ["undefinedPrimaryFailure", () => undefinedPrimary.failure === undefined],
-      [
-        "undefinedPrimaryOrder",
-        () => undefinedPrimary.order.join(",") === fullOrder,
-      ],
-      ["undefinedStandaloneCaught", () => undefinedStandalone.caught],
-      [
-        "undefinedStandaloneFailure",
-        () => undefinedStandalone.failure === undefined,
-      ],
-      [
-        "undefinedStandaloneOrder",
-        () => undefinedStandalone.order.join(",") === fullOrder,
-      ],
-      ["undefinedCombinedCaught", () => undefinedCombined.caught],
-      [
-        "aggregateContainsExactlyUndefinedCombined",
-        () =>
-          aggregateContainsExactly(undefinedCombined.failure, [
-            undefined,
-            undefined,
-          ]),
-      ],
-      [
-        "undefinedCombinedOrder",
-        () => undefinedCombined.order.join(",") === fullOrder,
-      ],
-    ]),
-    {
-      successCaught: true,
-      successFailure: true,
-      successOrder: true,
-      primaryOnlyCaught: true,
-      primaryOnlyFailure: true,
-      primaryOnlyOrder: true,
-      standaloneCaught: true,
-      standaloneFailure: true,
-      standaloneOrder: true,
-      multipleCaught: true,
-      aggregateContainsExactlyMultiple: true,
-      multipleMessage: true,
-      multipleMessage2: true,
-      multipleMessage3: true,
-      multipleOrder: true,
-      combinedCaught: true,
-      aggregateContainsExactlyCombined: true,
-      combinedOrder: true,
-      undefinedPrimaryCaught: true,
-      undefinedPrimaryFailure: true,
-      undefinedPrimaryOrder: true,
-      undefinedStandaloneCaught: true,
-      undefinedStandaloneFailure: true,
-      undefinedStandaloneOrder: true,
-      undefinedCombinedCaught: true,
-      aggregateContainsExactlyUndefinedCombined: true,
-      undefinedCombinedOrder: true,
-    },
+    success.caught === false &&
+      success.failure === undefined &&
+      success.order.join(",") === fullOrder &&
+      primaryOnly.caught &&
+      primaryOnly.failure === primaryFailure &&
+      primaryOnly.order.join(",") === fullOrder &&
+      standalone.caught &&
+      standalone.failure === firstCleanupFailure &&
+      standalone.order.join(",") === fullOrder &&
+      multiple.caught &&
+      aggregateContainsExactly(multiple.failure, [
+        firstCleanupFailure,
+        lastCleanupFailure,
+      ]) &&
+      multiple.message.includes("resource-0") &&
+      multiple.message.includes("resource-2") &&
+      multiple.message.includes("resource-1") === false &&
+      multiple.order.join(",") === fullOrder &&
+      combined.caught &&
+      aggregateContainsExactly(combined.failure, [
+        primaryFailure,
+        firstCleanupFailure,
+        lastCleanupFailure,
+      ]) &&
+      combined.order.join(",") === fullOrder &&
+      undefinedPrimary.caught &&
+      undefinedPrimary.failure === undefined &&
+      undefinedPrimary.order.join(",") === fullOrder &&
+      undefinedStandalone.caught &&
+      undefinedStandalone.failure === undefined &&
+      undefinedStandalone.order.join(",") === fullOrder &&
+      undefinedCombined.caught &&
+      aggregateContainsExactly(undefinedCombined.failure, [
+        undefined,
+        undefined,
+      ]) &&
+      undefinedCombined.order.join(",") === fullOrder,
   );
   TestValidator.equals(
     "legacy import owns six root-swap cleanup lifecycles",
@@ -354,11 +279,11 @@ export const test_mcp_production_legacy_import_root_swap_cleanup = (): void => {
             "letpublishRootSwapFailure:ILegacyImportFixtureFailure|undefined;",
           substantive: {
             digest:
-              "f4ffa88055d72e586769219a75201954c3458a4cb9c2a517102c682c011292d6",
-            tokens: 319,
+              "c618c9b581abef3ffdb78b26655cf5cd4938be49ab48fed79fcc3e02f453d2f2",
+            tokens: 275,
           },
           tryDigest:
-            "7408521bffe416dfe1309a82f74a4f8032bc1fa4f3c6bc4afd2714beaa75baf4",
+            "2f3e6829c2a44e8ecffa60542d6dfbecb74dd201e66cdaa66df5aaec71f342cb",
           tryPrefixes: [
             'conststateRoot=path.join(publishRootSwap.root,".automovie");',
             "constnativeRename=fs.renameSync;",
@@ -384,13 +309,13 @@ export const test_mcp_production_legacy_import_root_swap_cleanup = (): void => {
             "letpublishRootSwapRecoveryFailure:|ILegacyImportFixtureFailure|undefined;",
           substantive: {
             digest:
-              "6c44339e29798720c47c4f1cf3172f92c39c40d43b4f461882a0533c3b219ebb",
-            tokens: 88,
+              "ecf3f0a8aae72f6e4022be2f3ddd82863e23afd41fc1e4ed28807e504ffad578",
+            tokens: 44,
           },
           tryDigest:
-            "cb36a12184924e2707446855e68880b38e50644e19f51297ab495e6ad9283d53",
+            "06751c14ce651d3920d7701738856fef3f7d8d2bd055e9111ab8a642d51e1734",
           tryPrefixes: [
-            'TestValidator.equals("arootreplacedimmediatelyafterimportpublicationreceivesnostalecleanup",namedFacts([["rejected",()=>throws(()=>newAutoMovieLegacyImporter(publishRootSwap.root).apply(),"rootidentity",),],["swapped",()=>swapped],["publishRootSwapCount",()=>fs.readdirSync(publishRootSwap.root).length===0,],]),{rejected:true,swapped:true,publishRootSwapCount:true,},);',
+            'TestValidator.predicate("arootreplacedimmediatelyafterimportpublicationreceivesnostalecleanup",throws(()=>newAutoMovieLegacyImporter(publishRootSwap.root).apply(),"rootidentity",)&&swapped&&fs.readdirSync(publishRootSwap.root).length===0,);',
           ],
         },
         {
@@ -410,11 +335,11 @@ export const test_mcp_production_legacy_import_root_swap_cleanup = (): void => {
             "letrollbackRootSwapFailure:ILegacyImportFixtureFailure|undefined;",
           substantive: {
             digest:
-              "3057e4cdf6632e6cfcf2853c642b7a0d55f6dbb6b40aac0dc1c4d9d50e6c3f3e",
-            tokens: 323,
+              "8143575c4ec471e49b38cd11eb8b0d8132e588cf349305e1b7275898b0ae3d8a",
+            tokens: 279,
           },
           tryDigest:
-            "2c532133847e3685208196192595a89533abf57844253fe28860ffcf19e12502",
+            "1e77bc50975cfcf129e38cc43b2472e9a6db8517a2e58973dc3fa1df7b40afe2",
           tryPrefixes: [
             "constimporter=newAutoMovieLegacyImporter(rollbackRootSwap.root);",
             "constplan=importer.plan();",
@@ -440,13 +365,13 @@ export const test_mcp_production_legacy_import_root_swap_cleanup = (): void => {
             "letrollbackRootSwapRecoveryFailure:|ILegacyImportFixtureFailure|undefined;",
           substantive: {
             digest:
-              "3c747c51bec843ea359f466206d4f8bb9527652ef47c191d2a44285d62413acf",
-            tokens: 81,
+              "a50a9c811c741630d15adceaa72df94022765a1245d38e00386adb0778176133",
+            tokens: 37,
           },
           tryDigest:
-            "e54dd59ddc2048307ddd0a4ab21071e8541622f1a26c5a864c1ac3fff1f90404",
+            "cf359750f80222b6be0eb74ce8f8171ccb9da99c39dec7ea870b7d5abb8f1683",
           tryPrefixes: [
-            'TestValidator.equals("rollbackabandonsrestorationwhenthephysicalrootchanges",namedFacts([["rejected",()=>throws(()=>importer.rollback(),"changedphysicalidentity"),],["swapped",()=>swapped],["rollbackRootSwapCount",()=>fs.readdirSync(rollbackRootSwap.root).length===0,],]),{rejected:true,swapped:true,rollbackRootSwapCount:true,},);',
+            'TestValidator.predicate("rollbackabandonsrestorationwhenthephysicalrootchanges",throws(()=>importer.rollback(),"changedphysicalidentity")&&swapped&&fs.readdirSync(rollbackRootSwap.root).length===0,);',
           ],
         },
         {
@@ -466,11 +391,11 @@ export const test_mcp_production_legacy_import_root_swap_cleanup = (): void => {
             "letacquireRootSwapFailure:ILegacyImportFixtureFailure|undefined;",
           substantive: {
             digest:
-              "39578c6e95813f97d611557181920c5bf4289bb42ed3fa1388de0fd450b584d8",
-            tokens: 423,
+              "1668b9bcf7ea8599fb290a932ac48778692ff1c0fe883e13b65809f5c67418d3",
+            tokens: 366,
           },
           tryDigest:
-            "c2a1e6426d4e828304f6b5290f30003c191507f8663b0e13ad6758057300bb3c",
+            "2ea908af2601ed4b0a202fe56768987959e227a135bbfe668af63c7b8b683f9a",
           tryPrefixes: [
             "constnamespaceLocks:string[]=[];",
             "constnativeWrite=fs.writeFileSync;",
@@ -496,13 +421,13 @@ export const test_mcp_production_legacy_import_root_swap_cleanup = (): void => {
             "letacquireRootSwapRecoveryFailure:|ILegacyImportFixtureFailure|undefined;",
           substantive: {
             digest:
-              "5d02e59d9674cfc9323cd93fa1c5cc56dae8863aa1abc6610347dffb2e3b679d",
-            tokens: 126,
+              "a086f2aee757381a8418698a43de0d2ef7b7d9bc2c544a8c0445017ce7de1419",
+            tokens: 69,
           },
           tryDigest:
-            "7e77769db9d55a3a9e801411b1a3d01b66f1bbd6cc912f5ba00b6d37e9c83cb7",
+            "1a624c6219a965350ff55adf271f6df96a56972c6315b9768845c72bad126723",
           tryPrefixes: [
-            'TestValidator.equals("rootreplacementafternamespaceacquisitionisdetectedbeforeimport",namedFacts([["rejected",()=>throws(()=>newAutoMovieLegacyImporter(replacedDuringAcquire.root,).apply(),//Whicheverfencecatchesit,therefusalnamestherootidentity.//Theclaimisthattheswapiscaughtbeforeanyimportwrites,and//theabsentresidentlockbelowiswhatprovesthat."rootidentity",),],["replacementTargetResident",()=>fs.existsSync(path.join(replacementTarget,"revision.lock"))===false,],["namespaceLocksCount",()=>namespaceLocks.length===2],["namespaceLocksFile",()=>namespaceLocks.every((file)=>fs.existsSync(file)===false),],]),{rejected:true,replacementTargetResident:true,namespaceLocksCount:true,namespaceLocksFile:true,},);',
+            'TestValidator.predicate("rootreplacementafternamespaceacquisitionisdetectedbeforeimport",throws(()=>newAutoMovieLegacyImporter(replacedDuringAcquire.root).apply(),//Whicheverfencecatchesit,therefusalnamestherootidentity.//Theclaimisthattheswapiscaughtbeforeanyimportwrites,and//theabsentresidentlockbelowiswhatprovesthat."rootidentity",)&&fs.existsSync(path.join(replacementTarget,"revision.lock"))===false&&namespaceLocks.length===2&&namespaceLocks.every((file)=>fs.existsSync(file)===false),);',
           ],
         },
       ],

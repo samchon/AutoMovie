@@ -23,23 +23,6 @@ import {
   worldDesign,
 } from "./productionFixtures";
 
-/**
- * Evaluate named facts in order and stop at the first false one, so a failed
- * comparison names the fact instead of collapsing into one boolean. Stopping
- * keeps the short-circuit semantics the original conjunction had, which some
- * facts depend on to guard the ones after them.
- */
-const namedFacts = (
-  entries: ReadonlyArray<readonly [string, () => boolean]>,
-): Record<string, boolean> => {
-  const output: Record<string, boolean> = {};
-  for (const [name, evaluate] of entries) {
-    output[name] = evaluate();
-    if (output[name] === false) break;
-  }
-  return output;
-};
-
 interface IProductionInstancesFixtureFailure {
   error: unknown;
 }
@@ -124,57 +107,32 @@ export const test_mcp_production_instances = (): void => {
     world,
   );
   const routeSlots = materializeInstanceSlots(alongRoute, world);
-  TestValidator.equals(
+  TestValidator.predicate(
     "100 civilians, 1000 trees, and route instances derive stable variation",
-    namedFacts([
-      ["gridSlotsCount", () => gridSlots.length === 100],
-      ["scatterSlotsCount", () => scatterSlots.length === 1_000],
-      ["routeSlotsCount", () => routeSlots.length === 12],
-      [
-        "stringifyScatterSlots",
-        () => JSON.stringify(scatterSlots) === JSON.stringify(repeatedScatter),
-      ],
-      [
-        "stringifyScatterSlots2",
-        () => JSON.stringify(scatterSlots) !== JSON.stringify(highWordScatter),
-      ],
-      [
-        "gridSlotsSlot",
-        () =>
-          gridSlots.every((slot) => {
-            const prototypeTrait = Object.getOwnPropertyDescriptor(
-              slot.traits,
-              "__proto__",
-            )?.value;
-            return (
-              slot.scale >= 0.8 &&
-              slot.scale <= 1.2 &&
-              slot.palette.startsWith("#") &&
-              slot.traits.pace! >= 0.5 &&
-              slot.traits.pace! <= 1.5 &&
-              typeof prototypeTrait === "number" &&
-              prototypeTrait >= 2 &&
-              prototypeTrait <= 3
-            );
-          }),
-      ],
-      [
-        "routeSlotsSlot",
-        () =>
-          routeSlots.every(
-            (slot) => slot.position.x >= -10 && slot.position.x <= 10,
-          ),
-      ],
-    ]),
-    {
-      gridSlotsCount: true,
-      scatterSlotsCount: true,
-      routeSlotsCount: true,
-      stringifyScatterSlots: true,
-      stringifyScatterSlots2: true,
-      gridSlotsSlot: true,
-      routeSlotsSlot: true,
-    },
+    gridSlots.length === 100 &&
+      scatterSlots.length === 1_000 &&
+      routeSlots.length === 12 &&
+      JSON.stringify(scatterSlots) === JSON.stringify(repeatedScatter) &&
+      JSON.stringify(scatterSlots) !== JSON.stringify(highWordScatter) &&
+      gridSlots.every((slot) => {
+        const prototypeTrait = Object.getOwnPropertyDescriptor(
+          slot.traits,
+          "__proto__",
+        )?.value;
+        return (
+          slot.scale >= 0.8 &&
+          slot.scale <= 1.2 &&
+          slot.palette.startsWith("#") &&
+          slot.traits.pace! >= 0.5 &&
+          slot.traits.pace! <= 1.5 &&
+          typeof prototypeTrait === "number" &&
+          prototypeTrait >= 2 &&
+          prototypeTrait <= 3
+        );
+      }) &&
+      routeSlots.every(
+        (slot) => slot.position.x >= -10 && slot.position.x <= 10,
+      ),
   );
   TestValidator.error("negative instance slot is refused", () =>
     materializeInstanceSlot(grid, world, -1),
@@ -233,31 +191,16 @@ export const test_mcp_production_instances = (): void => {
     recipes,
   );
   const inventory = materializeCompiledInstanceSetInventory(world, recipes);
-  TestValidator.equals(
+  TestValidator.predicate(
     "compiled instance sets retain only bounded chunks and resolved route data",
-    namedFacts([
-      ["compactCount", () => compact.chunks.length === 3],
-      [
-        "compactChunks",
-        () => compact.chunks[0]?.count === AUTOMOVIE_INSTANCE_CHUNK_SIZE,
-      ],
-      ["compactChunks2", () => compact.chunks[2]?.count === 1],
-      ["compactDigest", () => compact.digest === compactAgain.digest],
-      ["compactProjectionRadius", () => compact.projectionRadius > 0],
-      ["inventoryCount", () => Object.keys(inventory).length === 3],
-      ["inventoryRoadside", () => inventory.roadside?.route?.id === route.id],
-      ["inventoryTrees", () => inventory.trees?.route === null],
-    ]),
-    {
-      compactCount: true,
-      compactChunks: true,
-      compactChunks2: true,
-      compactDigest: true,
-      compactProjectionRadius: true,
-      inventoryCount: true,
-      inventoryRoadside: true,
-      inventoryTrees: true,
-    },
+    compact.chunks.length === 3 &&
+      compact.chunks[0]?.count === AUTOMOVIE_INSTANCE_CHUNK_SIZE &&
+      compact.chunks[2]?.count === 1 &&
+      compact.digest === compactAgain.digest &&
+      compact.projectionRadius > 0 &&
+      Object.keys(inventory).length === 3 &&
+      inventory.roadside?.route?.id === route.id &&
+      inventory.trees?.route === null,
   );
 
   let productionInstancesFailure:
@@ -306,35 +249,15 @@ export const test_mcp_production_instances = (): void => {
         "utf8",
       ),
     ) as IAutoMovieCompiledShotSource;
-    TestValidator.equals(
+    TestValidator.predicate(
       "compiler and sandbox oracle publish compact world instance runtimes",
-      namedFacts([
-        ["outputSucceeded", () => outputSucceeded],
-        ["compiledCount", () => compiled.instanceSets.length === 3],
-        [
-          "compiledInstanceSets",
-          () =>
-            compiled.instanceSets.find((item) => item.id === "civilians")
-              ?.count === 100,
-        ],
-        [
-          "compiledInstanceSets2",
-          () =>
-            compiled.instanceSets.find((item) => item.id === "trees")?.count ===
-            1_000,
-        ],
-        [
-          "compiledModels",
-          () => compiled.models.some((model) => model.id.endsWith(":sentinel")),
-        ],
-      ]),
-      {
-        outputSucceeded: true,
-        compiledCount: true,
-        compiledInstanceSets: true,
-        compiledInstanceSets2: true,
-        compiledModels: true,
-      },
+      outputSucceeded &&
+        compiled.instanceSets.length === 3 &&
+        compiled.instanceSets.find((item) => item.id === "civilians")?.count ===
+          100 &&
+        compiled.instanceSets.find((item) => item.id === "trees")?.count ===
+          1_000 &&
+        compiled.models.some((model) => model.id.endsWith(":sentinel")),
     );
   } catch (error) {
     productionInstancesFailure = { error };

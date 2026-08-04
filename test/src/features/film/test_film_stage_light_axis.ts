@@ -10,23 +10,6 @@ import { TestValidator } from "@nestia/e2e";
 import { makeScriptWrite, makeStagingWrite } from "../internal/filmFixtures";
 import { hasViolation, qclose, vclose } from "../internal/predicates";
 
-/**
- * Evaluate named facts in order and stop at the first false one, so a failed
- * comparison names the fact instead of collapsing into one boolean. Stopping
- * keeps the short-circuit semantics the original conjunction had, which some
- * facts depend on to guard the ones after them.
- */
-const namedFacts = (
-  entries: ReadonlyArray<readonly [string, () => boolean]>,
-): Record<string, boolean> => {
-  const output: Record<string, boolean> = {};
-  for (const [name, evaluate] of entries) {
-    output[name] = evaluate();
-    if (output[name] === false) break;
-  }
-  return output;
-};
-
 const script = makeScriptWrite();
 
 /** Stage the duel with `lights` replaced, everything else untouched. */
@@ -113,46 +96,15 @@ export const test_film_stage_light_axis = (): void => {
     legacyLight?.type,
     "directional",
   );
-  TestValidator.equals(
+  TestValidator.predicate(
     "at the origin, in neutral white, as before",
-    namedFacts([
-      ["legacyLight", () => legacyLight !== undefined],
-      [
-        "vcloseLegacyLight",
-        () =>
-          legacyLight !== undefined &&
-          vclose(legacyLight.transform.translation, { x: 0, y: 0, z: 0 }),
-      ],
-      [
-        "legacyLightColor",
-        () => legacyLight !== undefined && legacyLight.color.r === 1,
-      ],
-      [
-        "legacyLightColor2",
-        () => legacyLight !== undefined && legacyLight.color.g === 1,
-      ],
-      [
-        "legacyLightColor3",
-        () => legacyLight !== undefined && legacyLight.color.b === 1,
-      ],
-      [
-        "legacyLightColor4",
-        () => legacyLight !== undefined && legacyLight.color.a === null,
-      ],
-      [
-        "legacyLightIntensity",
-        () => legacyLight !== undefined && legacyLight.intensity === 1,
-      ],
-    ]),
-    {
-      legacyLight: true,
-      vcloseLegacyLight: true,
-      legacyLightColor: true,
-      legacyLightColor2: true,
-      legacyLightColor3: true,
-      legacyLightColor4: true,
-      legacyLightIntensity: true,
-    },
+    legacyLight !== undefined &&
+      vclose(legacyLight.transform.translation, { x: 0, y: 0, z: 0 }) &&
+      legacyLight.color.r === 1 &&
+      legacyLight.color.g === 1 &&
+      legacyLight.color.b === 1 &&
+      legacyLight.color.a === null &&
+      legacyLight.intensity === 1,
   );
 
   // 2. `role` is annotation: removing it changes nothing
@@ -180,40 +132,18 @@ export const test_film_stage_light_axis = (): void => {
       },
     ]),
   )[0];
-  TestValidator.equals(
+  TestValidator.predicate(
     "a warm point light lowers with its place, color, and range",
-    namedFacts([
-      ["point", () => point !== undefined],
-      ["pointType", () => point !== undefined && point.type === "point"],
-      ["pointRange", () => point !== undefined && point.range === 3],
-      ["pointIntensity", () => point !== undefined && point.intensity === 1.4],
-      [
-        "vclosePoint",
-        () =>
-          point !== undefined &&
-          vclose(point.transform.translation, { x: 0.2, y: 0.9, z: 0.35 }),
-      ],
-      ["pointColor", () => point !== undefined && point.color.r === WARM.r],
-      ["pointColor2", () => point !== undefined && point.color.g === WARM.g],
-      ["pointColor3", () => point !== undefined && point.color.b === WARM.b],
-      [
-        "qclosePoint",
-        () =>
-          point !== undefined &&
-          qclose(point.transform.rotation, { x: 0, y: 0, z: 0, w: 1 }),
-      ],
-    ]),
-    {
-      point: true,
-      pointType: true,
-      pointRange: true,
-      pointIntensity: true,
-      vclosePoint: true,
-      pointColor: true,
-      pointColor2: true,
-      pointColor3: true,
-      qclosePoint: true,
-    },
+    point !== undefined &&
+      point.type === "point" &&
+      point.range === 3 &&
+      point.intensity === 1.4 &&
+      vclose(point.transform.translation, { x: 0.2, y: 0.9, z: 0.35 }) &&
+      point.color.r === WARM.r &&
+      point.color.g === WARM.g &&
+      point.color.b === WARM.b &&
+      // a point light radiates every way, so it takes no turn
+      qclose(point.transform.rotation, { x: 0, y: 0, z: 0, w: 1 }),
   );
   const spot = lightsOf(
     stageLights([
@@ -228,27 +158,13 @@ export const test_film_stage_light_axis = (): void => {
       },
     ]),
   )[0];
-  TestValidator.equals(
+  TestValidator.predicate(
     "a spot lowers with its cone, its range, and its aim",
-    namedFacts([
-      ["spot", () => spot !== undefined],
-      ["spotType", () => spot !== undefined && spot.type === "spot"],
-      ["spotRange", () => spot !== undefined && spot.range === 6],
-      ["spotConeAngle", () => spot !== undefined && spot.coneAngle === 25],
-      [
-        "vcloseSpot",
-        () =>
-          spot !== undefined &&
-          vclose(spot.transform.translation, { x: 0, y: 2.4, z: 0 }),
-      ],
-    ]),
-    {
-      spot: true,
-      spotType: true,
-      spotRange: true,
-      spotConeAngle: true,
-      vcloseSpot: true,
-    },
+    spot !== undefined &&
+      spot.type === "spot" &&
+      spot.range === 6 &&
+      spot.coneAngle === 25 &&
+      vclose(spot.transform.translation, { x: 0, y: 2.4, z: 0 }),
   );
 
   // 4. DEFAULTS
@@ -269,24 +185,14 @@ export const test_film_stage_light_axis = (): void => {
       },
     ]),
   );
-  TestValidator.equals(
+  TestValidator.predicate(
     "an omitted range is infinite and an omitted cone is 45 degrees",
-    namedFacts([
-      ["defaultsCount", () => defaults.length === 2],
-      ["defaultsType", () => defaults[0]!.type === "point"],
-      ["defaultsRange", () => defaults[0]!.range === 0],
-      ["defaultsType2", () => defaults[1]!.type === "spot"],
-      ["defaultsRange2", () => defaults[1]!.range === 0],
-      ["defaultsConeAngle", () => defaults[1]!.coneAngle === 45],
-    ]),
-    {
-      defaultsCount: true,
-      defaultsType: true,
-      defaultsRange: true,
-      defaultsType2: true,
-      defaultsRange2: true,
-      defaultsConeAngle: true,
-    },
+    defaults.length === 2 &&
+      defaults[0]!.type === "point" &&
+      defaults[0]!.range === 0 &&
+      defaults[1]!.type === "spot" &&
+      defaults[1]!.range === 0 &&
+      defaults[1]!.coneAngle === 45,
   );
 
   // 5. NEGATIVE TWINS: a parameter the kind cannot use is refused, not dropped
@@ -443,27 +349,11 @@ export const test_film_stage_light_axis = (): void => {
     spotAt(90).success,
     true,
   );
-  TestValidator.equals(
+  TestValidator.predicate(
     "and both sides just past it are not",
-    namedFacts([
-      [
-        "hasViolationFailure",
-        () => hasViolation(failure(spotAt(90.0001)), "range", "coneAngle"),
-      ],
-      [
-        "hasViolationFailure2",
-        () => hasViolation(failure(spotAt(0)), "range", "coneAngle"),
-      ],
-      [
-        "hasViolationFailure3",
-        () => hasViolation(failure(spotAt(Number.NaN)), "range", "coneAngle"),
-      ],
-    ]),
-    {
-      hasViolationFailure: true,
-      hasViolationFailure2: true,
-      hasViolationFailure3: true,
-    },
+    hasViolation(failure(spotAt(90.0001)), "range", "coneAngle") &&
+      hasViolation(failure(spotAt(0)), "range", "coneAngle") &&
+      hasViolation(failure(spotAt(Number.NaN)), "range", "coneAngle"),
   );
   TestValidator.predicate(
     "range 0 is infinite while a negative range is refused",

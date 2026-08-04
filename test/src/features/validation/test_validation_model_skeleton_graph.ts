@@ -5,23 +5,6 @@ import { TestValidator } from "@nestia/e2e";
 import { IDENTITY_TRANSFORM, createModel } from "../internal/fixtures";
 import { hasViolation } from "../internal/predicates";
 
-/**
- * Evaluate named facts in order and stop at the first false one, so a failed
- * comparison names the fact instead of collapsing into one boolean. Stopping
- * keeps the short-circuit semantics the original conjunction had, which some
- * facts depend on to guard the ones after them.
- */
-const namedFacts = (
-  entries: ReadonlyArray<readonly [string, () => boolean]>,
-): Record<string, boolean> => {
-  const output: Record<string, boolean> = {};
-  for (const [name, evaluate] of entries) {
-    output[name] = evaluate();
-    if (output[name] === false) break;
-  }
-  return output;
-};
-
 const b = (
   bone: AutoMovieHumanoidBone,
   parent: AutoMovieHumanoidBone | null,
@@ -96,23 +79,10 @@ export const test_validation_model_skeleton_graph = (): void => {
     },
   });
   TestValidator.equals("detached cycle fails", detachedCycle.success, false);
-  TestValidator.equals(
+  TestValidator.predicate(
     "detached cycle bones unreachable",
-    namedFacts([
-      ["detachedCycleSuccess", () => detachedCycle.success === false],
-      [
-        "hasViolationDetachedCycle",
-        () => hasViolation(detachedCycle, "type", "$input.skeleton.bones[2]"),
-      ],
-      [
-        "hasViolationDetachedCycle2",
-        () => hasViolation(detachedCycle, "type", "$input.skeleton.bones[3]"),
-      ],
-    ]),
-    {
-      detachedCycleSuccess: true,
-      hasViolationDetachedCycle: true,
-      hasViolationDetachedCycle2: true,
-    },
+    detachedCycle.success === false &&
+      hasViolation(detachedCycle, "type", "$input.skeleton.bones[2]") &&
+      hasViolation(detachedCycle, "type", "$input.skeleton.bones[3]"),
   );
 };

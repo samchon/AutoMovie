@@ -5,23 +5,6 @@ import { TestValidator } from "@nestia/e2e";
 import { makeScriptWrite } from "../internal/filmFixtures";
 import { hasViolation } from "../internal/predicates";
 
-/**
- * Evaluate named facts in order and stop at the first false one, so a failed
- * comparison names the fact instead of collapsing into one boolean. Stopping
- * keeps the short-circuit semantics the original conjunction had, which some
- * facts depend on to guard the ones after them.
- */
-const namedFacts = (
-  entries: ReadonlyArray<readonly [string, () => boolean]>,
-): Record<string, boolean> => {
-  const output: Record<string, boolean> = {};
-  for (const [name, evaluate] of entries) {
-    output[name] = evaluate();
-    if (output[name] === false) break;
-  }
-  return output;
-};
-
 const NOTE: IAutoMovieReviewNote = {
   beat: "beat-1",
   tier: "physical",
@@ -93,23 +76,10 @@ export const test_film_review_shot = (): void => {
     verdict: "revise",
     notes: [{ ...NOTE, beat: "beat-2" }],
   });
-  TestValidator.equals(
+  TestValidator.predicate(
     "unknown beat and misfiled note rejected",
-    namedFacts([
-      ["misfiledSuccess", () => misfiled.success === false],
-      [
-        "hasViolationMisfiled",
-        () => hasViolation(misfiled, "type", "$input.beat"),
-      ],
-      [
-        "hasViolationMisfiled2",
-        () => hasViolation(misfiled, "type", "$input.notes[0].beat"),
-      ],
-    ]),
-    {
-      misfiledSuccess: true,
-      hasViolationMisfiled: true,
-      hasViolationMisfiled2: true,
-    },
+    misfiled.success === false &&
+      hasViolation(misfiled, "type", "$input.beat") &&
+      hasViolation(misfiled, "type", "$input.notes[0].beat"),
   );
 };

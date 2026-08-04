@@ -6,23 +6,6 @@ import ts from "typescript-compiler";
 
 import { preserveProductionProjectFixtureCleanup } from "./test_mcp_production_project";
 
-/**
- * Evaluate named facts in order and stop at the first false one, so a failed
- * comparison names the fact instead of collapsing into one boolean. Stopping
- * keeps the short-circuit semantics the original conjunction had, which some
- * facts depend on to guard the ones after them.
- */
-const namedFacts = (
-  entries: ReadonlyArray<readonly [string, () => boolean]>,
-): Record<string, boolean> => {
-  const output: Record<string, boolean> = {};
-  for (const [name, evaluate] of entries) {
-    output[name] = evaluate();
-    if (output[name] === false) break;
-  }
-  return output;
-};
-
 const compact = (node: ts.Node, source: ts.SourceFile): string =>
   node.getText(source).replace(/\s+/g, "");
 
@@ -222,112 +205,45 @@ export const test_mcp_production_project_fixture_cleanup = (): void => {
     cleanupFailures: [{ error: undefined, present: true }],
     primaryFailure: { error: undefined, present: true },
   });
-  TestValidator.equals(
+  TestValidator.predicate(
     "paired production-project cleanup preserves acquisition and failure order",
-    namedFacts([
-      ["successCaught", () => success.caught === false],
-      ["successFailure", () => success.failure === undefined],
-      ["successOrder", () => success.order.join(",") === "cleanup-0,cleanup-1"],
-      ["partialSetupCaught", () => partialSetup.caught],
-      ["partialSetupFailure", () => partialSetup.failure === primaryFailure],
-      ["partialSetupOrder", () => partialSetup.order.join(",") === "cleanup-0"],
-      ["primaryOnlyCaught", () => primaryOnly.caught],
-      ["primaryOnlyFailure", () => primaryOnly.failure === primaryFailure],
-      [
-        "primaryOnlyOrder",
-        () => primaryOnly.order.join(",") === "cleanup-0,cleanup-1",
-      ],
-      ["standaloneCaught", () => standalone.caught],
-      ["standaloneFailure", () => standalone.failure === firstCleanupFailure],
-      [
-        "standaloneOrder",
-        () => standalone.order.join(",") === "cleanup-0,cleanup-1",
-      ],
-      ["multipleCaught", () => multiple.caught],
-      [
-        "aggregateContainsExactlyMultiple",
-        () =>
-          aggregateContainsExactly(multiple.failure, [
-            firstCleanupFailure,
-            secondCleanupFailure,
-          ]),
-      ],
-      [
-        "multipleOrder",
-        () => multiple.order.join(",") === "cleanup-0,cleanup-1",
-      ],
-      ["combinedCaught", () => combined.caught],
-      [
-        "aggregateContainsExactlyCombined",
-        () =>
-          aggregateContainsExactly(combined.failure, [
-            primaryFailure,
-            firstCleanupFailure,
-            secondCleanupFailure,
-          ]),
-      ],
-      [
-        "combinedOrder",
-        () => combined.order.join(",") === "cleanup-0,cleanup-1",
-      ],
-      ["undefinedPrimaryCaught", () => undefinedPrimary.caught],
-      ["undefinedPrimaryFailure", () => undefinedPrimary.failure === undefined],
-      [
-        "undefinedPrimaryOrder",
-        () => undefinedPrimary.order.join(",") === "cleanup-0,cleanup-1",
-      ],
-      ["undefinedStandaloneCaught", () => undefinedStandalone.caught],
-      [
-        "undefinedStandaloneFailure",
-        () => undefinedStandalone.failure === undefined,
-      ],
-      [
-        "undefinedStandaloneOrder",
-        () => undefinedStandalone.order.join(",") === "cleanup-0,cleanup-1",
-      ],
-      ["undefinedCombinedCaught", () => undefinedCombined.caught],
-      [
-        "aggregateContainsExactlyUndefinedCombined",
-        () =>
-          aggregateContainsExactly(undefinedCombined.failure, [
-            undefined,
-            undefined,
-          ]),
-      ],
-      [
-        "undefinedCombinedOrder",
-        () => undefinedCombined.order.join(",") === "cleanup-0,cleanup-1",
-      ],
-    ]),
-    {
-      successCaught: true,
-      successFailure: true,
-      successOrder: true,
-      partialSetupCaught: true,
-      partialSetupFailure: true,
-      partialSetupOrder: true,
-      primaryOnlyCaught: true,
-      primaryOnlyFailure: true,
-      primaryOnlyOrder: true,
-      standaloneCaught: true,
-      standaloneFailure: true,
-      standaloneOrder: true,
-      multipleCaught: true,
-      aggregateContainsExactlyMultiple: true,
-      multipleOrder: true,
-      combinedCaught: true,
-      aggregateContainsExactlyCombined: true,
-      combinedOrder: true,
-      undefinedPrimaryCaught: true,
-      undefinedPrimaryFailure: true,
-      undefinedPrimaryOrder: true,
-      undefinedStandaloneCaught: true,
-      undefinedStandaloneFailure: true,
-      undefinedStandaloneOrder: true,
-      undefinedCombinedCaught: true,
-      aggregateContainsExactlyUndefinedCombined: true,
-      undefinedCombinedOrder: true,
-    },
+    success.caught === false &&
+      success.failure === undefined &&
+      success.order.join(",") === "cleanup-0,cleanup-1" &&
+      partialSetup.caught &&
+      partialSetup.failure === primaryFailure &&
+      partialSetup.order.join(",") === "cleanup-0" &&
+      primaryOnly.caught &&
+      primaryOnly.failure === primaryFailure &&
+      primaryOnly.order.join(",") === "cleanup-0,cleanup-1" &&
+      standalone.caught &&
+      standalone.failure === firstCleanupFailure &&
+      standalone.order.join(",") === "cleanup-0,cleanup-1" &&
+      multiple.caught &&
+      aggregateContainsExactly(multiple.failure, [
+        firstCleanupFailure,
+        secondCleanupFailure,
+      ]) &&
+      multiple.order.join(",") === "cleanup-0,cleanup-1" &&
+      combined.caught &&
+      aggregateContainsExactly(combined.failure, [
+        primaryFailure,
+        firstCleanupFailure,
+        secondCleanupFailure,
+      ]) &&
+      combined.order.join(",") === "cleanup-0,cleanup-1" &&
+      undefinedPrimary.caught &&
+      undefinedPrimary.failure === undefined &&
+      undefinedPrimary.order.join(",") === "cleanup-0,cleanup-1" &&
+      undefinedStandalone.caught &&
+      undefinedStandalone.failure === undefined &&
+      undefinedStandalone.order.join(",") === "cleanup-0,cleanup-1" &&
+      undefinedCombined.caught &&
+      aggregateContainsExactly(undefinedCombined.failure, [
+        undefined,
+        undefined,
+      ]) &&
+      undefinedCombined.order.join(",") === "cleanup-0,cleanup-1",
   );
   TestValidator.equals(
     "production-project regression owns all five paired fixtures",

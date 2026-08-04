@@ -4,23 +4,6 @@ import { TestValidator } from "@nestia/e2e";
 
 import { nclose } from "../internal/predicates";
 
-/**
- * Evaluate named facts in order and stop at the first false one, so a failed
- * comparison names the fact instead of collapsing into one boolean. Stopping
- * keeps the short-circuit semantics the original conjunction had, which some
- * facts depend on to guard the ones after them.
- */
-const namedFacts = (
-  entries: ReadonlyArray<readonly [string, () => boolean]>,
-): Record<string, boolean> => {
-  const output: Record<string, boolean> = {};
-  for (const [name, evaluate] of entries) {
-    output[name] = evaluate();
-    if (output[name] === false) break;
-  }
-  return output;
-};
-
 const IDENTITY = { x: 0, y: 0, z: 0, w: 1 };
 
 const at = (position: IAutoMovieVector3) => ({
@@ -77,46 +60,29 @@ const leg = (overrides: {
 export const test_kinematics_two_bone_chain_articulation = (): void => {
   // 1. an ordinary solve
   const solved = leg({ target: { x: 0.2, y: -0.4, z: 0.1 } });
-  TestValidator.equals(
+  TestValidator.predicate(
     "a reachable target solves into two unit deltas",
-    namedFacts([
-      ["solved", () => solved !== null],
-      [
-        "ncloseHypot",
-        () =>
-          solved !== null &&
-          nclose(
-            Math.hypot(
-              solved.upper.x,
-              solved.upper.y,
-              solved.upper.z,
-              solved.upper.w,
-            ),
-            1,
-            1e-9,
-          ),
-      ],
-      [
-        "ncloseHypot2",
-        () =>
-          solved !== null &&
-          nclose(
-            Math.hypot(
-              solved.lower.x,
-              solved.lower.y,
-              solved.lower.z,
-              solved.lower.w,
-            ),
-            1,
-            1e-9,
-          ),
-      ],
-    ]),
-    {
-      solved: true,
-      ncloseHypot: true,
-      ncloseHypot2: true,
-    },
+    solved !== null &&
+      nclose(
+        Math.hypot(
+          solved.upper.x,
+          solved.upper.y,
+          solved.upper.z,
+          solved.upper.w,
+        ),
+        1,
+        1e-9,
+      ) &&
+      nclose(
+        Math.hypot(
+          solved.lower.x,
+          solved.lower.y,
+          solved.lower.z,
+          solved.lower.w,
+        ),
+        1,
+        1e-9,
+      ),
   );
 
   // 2. the pole fallback: reach axis parallel to world-down
@@ -134,21 +100,11 @@ export const test_kinematics_two_bone_chain_articulation = (): void => {
     target: { x: 0.2, y: -0.4, z: 0.1 },
     bendNormal: { x: -1, y: 0, z: 0 },
   });
-  TestValidator.equals(
+  TestValidator.predicate(
     "the two hinge branches are genuinely different solves",
-    namedFacts([
-      ["plus", () => plus !== null],
-      ["minus", () => minus !== null],
-      [
-        "nclosePlus",
-        () => minus !== null && !nclose(plus.upper.x, minus.upper.x, 1e-6),
-      ],
-    ]),
-    {
-      plus: true,
-      minus: true,
-      nclosePlus: true,
-    },
+    plus !== null &&
+      minus !== null &&
+      !nclose(plus.upper.x, minus.upper.x, 1e-6),
   );
 
   // 4. the degenerate chains

@@ -19,23 +19,6 @@ import {
   validationHasWarnings,
 } from "../internal/predicates";
 
-/**
- * Evaluate named facts in order and stop at the first false one, so a failed
- * comparison names the fact instead of collapsing into one boolean. Stopping
- * keeps the short-circuit semantics the original conjunction had, which some
- * facts depend on to guard the ones after them.
- */
-const namedFacts = (
-  entries: ReadonlyArray<readonly [string, () => boolean]>,
-): Record<string, boolean> => {
-  const output: Record<string, boolean> = {};
-  for (const [name, evaluate] of entries) {
-    output[name] = evaluate();
-    if (output[name] === false) break;
-  }
-  return output;
-};
-
 const t = (x: number, y: number, z: number): IAutoMovieTransform => ({
   translation: { x, y, z },
   rotation: { x: 0, y: 0, z: 0, w: 1 },
@@ -212,20 +195,12 @@ export const test_motion_plant_feet = (): void => {
   );
 
   TestValidator.equals("one stance run", planted.plants.length, 1);
-  TestValidator.equals(
+  TestValidator.predicate(
     "run spans the clip pinned to ground",
-    namedFacts([
-      ["plantedPlants", () => planted.plants[0]!.foot === "leftFoot"],
-      ["nclosePlanted", () => nclose(planted.plants[0]!.start, 0)],
-      ["nclosePlanted2", () => nclose(planted.plants[0]!.end, 1)],
-      ["nclosePlanted3", () => nclose(planted.plants[0]!.position.y, 0)],
-    ]),
-    {
-      plantedPlants: true,
-      nclosePlanted: true,
-      nclosePlanted2: true,
-      nclosePlanted3: true,
-    },
+    planted.plants[0]!.foot === "leftFoot" &&
+      nclose(planted.plants[0]!.start, 0) &&
+      nclose(planted.plants[0]!.end, 1) &&
+      nclose(planted.plants[0]!.position.y, 0),
   );
   TestValidator.equals(
     "ground IK stays inside ROM without temporal branch jumps",

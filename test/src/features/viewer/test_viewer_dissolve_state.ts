@@ -6,23 +6,6 @@ import {
 import { TestValidator } from "@nestia/e2e";
 import * as THREE from "three";
 
-/**
- * Evaluate named facts in order and stop at the first false one, so a failed
- * comparison names the fact instead of collapsing into one boolean. Stopping
- * keeps the short-circuit semantics the original conjunction had, which some
- * facts depend on to guard the ones after them.
- */
-const namedFacts = (
-  entries: ReadonlyArray<readonly [string, () => boolean]>,
-): Record<string, boolean> => {
-  const output: Record<string, boolean> = {};
-  for (const [name, evaluate] of entries) {
-    output[name] = evaluate();
-    if (output[name] === false) break;
-  }
-  return output;
-};
-
 const makeFakeRenderer = (width: number, height: number) => {
   const targets: Array<THREE.WebGLRenderTarget | null> = [];
   const size = new THREE.Vector2(width, height);
@@ -126,41 +109,22 @@ export const test_viewer_dissolve_state = (): void => {
   dissolve(b.renderer);
   const aTarget = a.targets[0] as THREE.WebGLRenderTarget;
   const bTarget = b.targets[0] as THREE.WebGLRenderTarget;
-  TestValidator.equals(
+  TestValidator.predicate(
     "one target per renderer, reused across calls",
-    namedFacts([
-      ["aTarget", () => aTarget !== null],
-      ["aTargets", () => a.targets[1] === null],
-      ["aTargets2", () => aTarget !== null && a.targets[2] === aTarget],
-      ["bTargetATarget", () => aTarget !== null && bTarget !== aTarget],
-      ["aTargetWidth", () => aTarget !== null && aTarget.width === 64],
-      ["bTargetWidth", () => bTarget.width === 128],
-    ]),
-    {
-      aTarget: true,
-      aTargets: true,
-      aTargets2: true,
-      bTargetATarget: true,
-      aTargetWidth: true,
-      bTargetWidth: true,
-    },
+    aTarget !== null &&
+      a.targets[1] === null && // reset to screen after the offscreen pass
+      a.targets[2] === aTarget &&
+      bTarget !== aTarget &&
+      aTarget.width === 64 &&
+      bTarget.width === 128,
   );
 
   // 2. resize follows the owning renderer only
   a.size.set(320, 240);
   dissolve(a.renderer);
-  TestValidator.equals(
+  TestValidator.predicate(
     "a resize follows the owning renderer only",
-    namedFacts([
-      ["aTargetWidth", () => aTarget.width === 320],
-      ["aTargetHeight", () => aTarget.height === 240],
-      ["bTargetWidth", () => bTarget.width === 128],
-    ]),
-    {
-      aTargetWidth: true,
-      aTargetHeight: true,
-      bTargetWidth: true,
-    },
+    aTarget.width === 320 && aTarget.height === 240 && bTarget.width === 128,
   );
 
   // 3. dispose exactly once, twice-safe, lazy re-init afterwards
@@ -272,130 +236,30 @@ export const test_viewer_dissolve_state = (): void => {
   } catch {
     invalidAlpha = true;
   }
-  TestValidator.equals(
+  TestValidator.predicate(
     "generic dissolve renders both halves and restores GPU state on every exit",
-    namedFacts([
-      ["halvesOut", () => halves === "out-in"],
-      ["bTargets", () => b.targets.at(-1) === prior],
-      ["primaryCaughtPrimaryFailure", () => primaryCaught === primaryFailure],
-      ["primaryOnlyTargets", () => primaryOnly.targets.at(-1) === null],
-      [
-        "standaloneAutoClearCaughtAutoClearFailure",
-        () => standaloneAutoClearCaught === autoClearFailure,
-      ],
-      [
-        "standaloneAutoClearRestorationAttempts",
-        () => standaloneAutoClear.restorationAttempts.autoClear === 1,
-      ],
-      [
-        "standaloneTargetCaughtTargetFailure",
-        () => standaloneTargetCaught === targetFailure,
-      ],
-      [
-        "standaloneTargetRestorationAttempts",
-        () => standaloneTarget.restorationAttempts.target === 1,
-      ],
-      [
-        "standaloneMultipleCaughtInstanceof",
-        () => standaloneMultipleCaught instanceof AggregateError,
-      ],
-      [
-        "standaloneMultipleCaughtCount",
-        () =>
-          standaloneMultipleCaught instanceof AggregateError &&
-          standaloneMultipleCaught.errors.length === 2,
-      ],
-      [
-        "standaloneMultipleCaughtErrors",
-        () =>
-          standaloneMultipleCaught instanceof AggregateError &&
-          standaloneMultipleCaught.errors.length === 2 &&
-          standaloneMultipleCaught.errors[0] === standaloneAutoClearFailure,
-      ],
-      [
-        "standaloneMultipleCaughtErrors2",
-        () =>
-          standaloneMultipleCaught instanceof AggregateError &&
-          standaloneMultipleCaught.errors.length === 2 &&
-          standaloneMultipleCaught.errors[0] === standaloneAutoClearFailure &&
-          standaloneMultipleCaught.errors[1] === standaloneTargetFailure,
-      ],
-      [
-        "standaloneMultipleRestorationAttempts",
-        () => standaloneMultiple.restorationAttempts.autoClear === 1,
-      ],
-      [
-        "standaloneMultipleRestorationAttempts2",
-        () => standaloneMultiple.restorationAttempts.target === 1,
-      ],
-      [
-        "combinedCaughtInstanceof",
-        () => combinedCaught instanceof AggregateError,
-      ],
-      [
-        "combinedCaughtCount",
-        () =>
-          combinedCaught instanceof AggregateError &&
-          combinedCaught.errors.length === 3,
-      ],
-      [
-        "combinedCaughtErrors",
-        () =>
-          combinedCaught instanceof AggregateError &&
-          combinedCaught.errors.length === 3 &&
-          combinedCaught.errors[0] === combinedPrimaryFailure,
-      ],
-      [
-        "combinedCaughtErrors2",
-        () =>
-          combinedCaught instanceof AggregateError &&
-          combinedCaught.errors.length === 3 &&
-          combinedCaught.errors[0] === combinedPrimaryFailure &&
-          combinedCaught.errors[1] === combinedAutoClearFailure,
-      ],
-      [
-        "combinedCaughtErrors3",
-        () =>
-          combinedCaught instanceof AggregateError &&
-          combinedCaught.errors.length === 3 &&
-          combinedCaught.errors[0] === combinedPrimaryFailure &&
-          combinedCaught.errors[1] === combinedAutoClearFailure &&
-          combinedCaught.errors[2] === combinedTargetFailure,
-      ],
-      [
-        "combinedRestorationAttempts",
-        () => combined.restorationAttempts.autoClear === 1,
-      ],
-      [
-        "combinedRestorationAttempts2",
-        () => combined.restorationAttempts.target === 1,
-      ],
-      ["invalidAlpha", () => invalidAlpha],
-    ]),
-    {
-      halvesOut: true,
-      bTargets: true,
-      primaryCaughtPrimaryFailure: true,
-      primaryOnlyTargets: true,
-      standaloneAutoClearCaughtAutoClearFailure: true,
-      standaloneAutoClearRestorationAttempts: true,
-      standaloneTargetCaughtTargetFailure: true,
-      standaloneTargetRestorationAttempts: true,
-      standaloneMultipleCaughtInstanceof: true,
-      standaloneMultipleCaughtCount: true,
-      standaloneMultipleCaughtErrors: true,
-      standaloneMultipleCaughtErrors2: true,
-      standaloneMultipleRestorationAttempts: true,
-      standaloneMultipleRestorationAttempts2: true,
-      combinedCaughtInstanceof: true,
-      combinedCaughtCount: true,
-      combinedCaughtErrors: true,
-      combinedCaughtErrors2: true,
-      combinedCaughtErrors3: true,
-      combinedRestorationAttempts: true,
-      combinedRestorationAttempts2: true,
-      invalidAlpha: true,
-    },
+    halves === "out-in" &&
+      b.targets.at(-1) === prior &&
+      primaryCaught === primaryFailure &&
+      primaryOnly.targets.at(-1) === null &&
+      standaloneAutoClearCaught === autoClearFailure &&
+      standaloneAutoClear.restorationAttempts.autoClear === 1 &&
+      standaloneTargetCaught === targetFailure &&
+      standaloneTarget.restorationAttempts.target === 1 &&
+      standaloneMultipleCaught instanceof AggregateError &&
+      standaloneMultipleCaught.errors.length === 2 &&
+      standaloneMultipleCaught.errors[0] === standaloneAutoClearFailure &&
+      standaloneMultipleCaught.errors[1] === standaloneTargetFailure &&
+      standaloneMultiple.restorationAttempts.autoClear === 1 &&
+      standaloneMultiple.restorationAttempts.target === 1 &&
+      combinedCaught instanceof AggregateError &&
+      combinedCaught.errors.length === 3 &&
+      combinedCaught.errors[0] === combinedPrimaryFailure &&
+      combinedCaught.errors[1] === combinedAutoClearFailure &&
+      combinedCaught.errors[2] === combinedTargetFailure &&
+      combined.restorationAttempts.autoClear === 1 &&
+      combined.restorationAttempts.target === 1 &&
+      invalidAlpha,
   );
   prior.dispose();
   standalonePrior.dispose();
