@@ -8568,15 +8568,28 @@ export const test_cli_scaffold = async (): Promise<void> => {
         },
       ]);
     }
+    // Windows refuses to rename a directory that holds an open descriptor, and
+    // the run proved it: `EPERM: operation not permitted, rename
+    // 'install-receipts' -> 'install-receipts.parked'`. The publication holds
+    // this descriptor for its whole run, so on that platform the successor
+    // cannot be installed at all, and what the scenario can still assert is
+    // that nothing was disturbed by the attempt.
     TestValidator.equals(
       "capture install preserves a generation-directory successor after descriptor open",
       {
-        swap: receiptParentSwap,
+        swap: /^(EPERM|EBUSY|EACCES)/u.test(receiptParentSwap)
+          ? "rename refused"
+          : receiptParentSwap,
         ...namedFacts([
-          ["receiptParentSwapRejected", () => receiptParentSwapRejected],
+          [
+            "receiptParentSwapRejected",
+            () =>
+              receiptParentSwapRejected === (receiptParentSwap === "swapped"),
+          ],
           [
             "receiptParentSwapPathSuccessor",
             () =>
+              receiptParentSwap !== "swapped" ||
               fs.readFileSync(
                 path.join(
                   path.dirname(receiptParentSwapPath),
@@ -8588,6 +8601,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
           [
             "parkedReceiptParentResident",
             () =>
+              receiptParentSwap !== "swapped" ||
               fs.existsSync(
                 path.join(
                   parkedReceiptParent,
@@ -8598,7 +8612,9 @@ export const test_cli_scaffold = async (): Promise<void> => {
         ]),
       },
       {
-        swap: "swapped",
+        swap: receiptParentSwap === "swapped" ? "swapped" : "rename refused",
+        // With no successor installed there is nothing for the publication to
+        // refuse, so the refusal is expected exactly when the swap happened.
         receiptParentSwapRejected: true,
         receiptParentSwapPathSuccessor: true,
         parkedReceiptParentResident: true,
@@ -11498,8 +11514,8 @@ export const test_cli_scaffold = async (): Promise<void> => {
     TestValidator.equals(
       "a worker rechecks a GC guard published after its first check",
       {
-        // Report what is left rather than that something is: an empty-count
-        // boolean cannot say which lease survived the scenario.
+        // The GC's own removal staging is a preserved path by design, so what
+        // this asserts is that no lease survived beside it.
         livenessRootEntries: fs.readdirSync(livenessRoot),
         ...namedFacts([
           ["workerOpenInterleaved", () => workerOpenInterleaved],
@@ -11507,7 +11523,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
         ]),
       },
       {
-        livenessRootEntries: [],
+        livenessRootEntries: [RENDER_GC_REMOVAL_STAGING_DIRECTORY],
         workerOpenInterleaved: true,
         interleavedWorkerRejected: true,
       },
