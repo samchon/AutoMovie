@@ -8577,7 +8577,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
     TestValidator.equals(
       "capture install preserves a generation-directory successor after descriptor open",
       {
-        swap: /^(EPERM|EBUSY|EACCES)/u.test(receiptParentSwap)
+        swap: /^(EPERM|EBUSY|EACCES)\b/u.test(receiptParentSwap)
           ? "rename refused"
           : receiptParentSwap,
         ...namedFacts([
@@ -11670,15 +11670,26 @@ export const test_cli_scaffold = async (): Promise<void> => {
       "a worker-first session makes GC release its guard and refuse apply",
       namedFacts([
         ["workerFirstGcRejected", () => workerFirstGcRejected],
-        ["workerFirstEntriesCount", () => workerFirstEntries.length === 1],
+        [
+          // The GC's removal staging is a preserved path, so the session lease
+          // is what this counts.
+          "workerFirstLeaseCount",
+          () =>
+            workerFirstEntries.filter(
+              (entry) => entry.startsWith(".gc-preserved-") === false,
+            ).length === 1,
+        ],
         [
           "workerFirstEntriesSession",
-          () => workerFirstEntries[0]!.includes(".session."),
+          () =>
+            workerFirstEntries
+              .filter((entry) => entry.startsWith(".gc-preserved-") === false)
+              .every((entry) => entry.includes(".session.")),
         ],
       ]),
       {
         workerFirstGcRejected: true,
-        workerFirstEntriesCount: true,
+        workerFirstLeaseCount: true,
         workerFirstEntriesSession: true,
       },
     );
