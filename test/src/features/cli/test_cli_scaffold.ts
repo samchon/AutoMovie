@@ -11523,7 +11523,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
         ]),
       },
       {
-        livenessRootEntries: [RENDER_GC_REMOVAL_STAGING_DIRECTORY],
+        livenessRootEntries: [".gc-preserved-removal-staging"],
         workerOpenInterleaved: true,
         interleavedWorkerRejected: true,
       },
