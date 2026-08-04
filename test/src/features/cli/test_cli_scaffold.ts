@@ -11799,30 +11799,44 @@ export const test_cli_scaffold = async (): Promise<void> => {
       ]);
     }
     const isolatedStaleSuccessorPath = isolatedStaleSuccessor as string | null;
-    const staleSuccessorPreserved =
-      isolatedStaleSuccessorPath !== null &&
-      fs.existsSync(staleSuccessorGuard) === false &&
-      fs.existsSync(staleOriginal) &&
-      fs.readFileSync(isolatedStaleSuccessorPath).equals(staleSuccessorBytes) &&
-      path
-        .basename(path.dirname(isolatedStaleSuccessorPath))
-        .includes(".preserved-");
+    // Five facts in one holder said only that preservation failed. They keep
+    // their single statement, because this test's static contracts pin the
+    // top-level statement indices, and become named values in the comparison.
+    const staleSuccessorPreserved = {
+      successorBytesKept:
+        isolatedStaleSuccessorPath !== null &&
+        fs.readFileSync(isolatedStaleSuccessorPath).equals(staleSuccessorBytes),
+      successorGuardRemoved: fs.existsSync(staleSuccessorGuard) === false,
+      successorIsolated: isolatedStaleSuccessorPath !== null,
+      successorOriginalResident: fs.existsSync(staleOriginal),
+      successorPreservedDirectory:
+        isolatedStaleSuccessorPath !== null &&
+        path
+          .basename(path.dirname(isolatedStaleSuccessorPath))
+          .includes(".preserved-"),
+    };
     const staleSuccessorOriginalReleaseRefused =
       renderLivenessModule.releaseRenderLivenessLease(staleSuccessorLease) ===
       false;
     TestValidator.equals(
       "stale guard cleanup preserves a pathname successor and refuses the worker",
-      namedFacts([
-        ["staleSuccessorRejected", () => staleSuccessorRejected],
-        ["staleSuccessorPreserved", () => staleSuccessorPreserved],
-        [
-          "staleSuccessorOriginalReleaseRefused",
-          () => staleSuccessorOriginalReleaseRefused,
-        ],
-      ]),
       {
+        ...staleSuccessorPreserved,
+        ...namedFacts([
+          ["staleSuccessorRejected", () => staleSuccessorRejected],
+          [
+            "staleSuccessorOriginalReleaseRefused",
+            () => staleSuccessorOriginalReleaseRefused,
+          ],
+        ]),
+      },
+      {
+        successorBytesKept: true,
+        successorGuardRemoved: true,
+        successorIsolated: true,
+        successorOriginalResident: true,
+        successorPreservedDirectory: true,
         staleSuccessorRejected: true,
-        staleSuccessorPreserved: true,
         staleSuccessorOriginalReleaseRefused: true,
       },
     );
