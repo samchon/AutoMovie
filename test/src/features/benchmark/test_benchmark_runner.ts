@@ -1439,6 +1439,47 @@ const exerciseInputAndFilesystemFences = async (
       project: root,
     }),
   );
+  // A comparison target that cannot be probed is the runner's own incident, and
+  // the only path that reached it was the live boot this suite no longer does.
+  const comparisonFailure = await runAutoMovieBenchmark({
+    ...base,
+    campaign: "comparison-failure",
+    inventoryBaselines: [
+      {
+        surface: "production" as const,
+        provenance: "@automovie/mcp:comparison-unreachable",
+        probe: async (): Promise<IAutoMovieBenchmarkMcpSession> => {
+          throw new Error("comparison handshake refused");
+        },
+      },
+    ],
+  });
+  TestValidator.equals(
+    "a comparison MCP target failure is the runner's own handshake incident",
+    {
+      detail: (comparisonFailure.verdict.outcome === "infra-excluded"
+        ? comparisonFailure.verdict.incident.detail
+        : ""
+      ).includes(
+        'Comparison MCP target "@automovie/mcp:comparison-unreachable" failed',
+      ),
+      gate:
+        comparisonFailure.verdict.outcome === "infra-excluded"
+          ? comparisonFailure.verdict.incident.gate
+          : null,
+      kind:
+        comparisonFailure.verdict.outcome === "infra-excluded"
+          ? comparisonFailure.verdict.incident.kind
+          : null,
+      outcome: comparisonFailure.verdict.outcome,
+    },
+    {
+      detail: true,
+      gate: "mcp-handshake",
+      kind: "harness-error",
+      outcome: "infra-excluded",
+    },
+  );
   expectErrorMessage(
     "process MCP targets validate command and timeout",
     () =>
