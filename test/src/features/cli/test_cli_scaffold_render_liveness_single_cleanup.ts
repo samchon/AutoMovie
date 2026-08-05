@@ -112,7 +112,7 @@ export const test_cli_scaffold_render_liveness_single_cleanup = (): void => {
           catchBodies: ["inventoryGcCleanupFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1999,
+          containerStatements: 2011,
           finallyDigest:
             "7e99a8246127f0be124c61e4cf988be0a8b53c5bce324c636090f08304d9f864",
           finallySubstantive: {
@@ -136,7 +136,7 @@ export const test_cli_scaffold_render_liveness_single_cleanup = (): void => {
           catchBodies: ["staleSuccessorCleanupFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1999,
+          containerStatements: 2011,
           finallyDigest:
             "336e319210c323cd757e73f05aadba6f9dee89b84030485d3affad7535f2c7ee",
           finallySubstantive: {

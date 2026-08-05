@@ -11539,6 +11539,10 @@ export const test_cli_scaffold = async (): Promise<void> => {
         scope: string;
         tier: "final" | "proxy";
       }) => unknown;
+      preserveRenderLivenessLease: (
+        failure: { error: unknown } | undefined,
+        lease: unknown,
+      ) => void;
       releaseRenderLivenessLease: (lease: unknown) => boolean;
     };
     const livenessRoot = path.join(base, "render-liveness");
@@ -12031,6 +12035,101 @@ export const test_cli_scaffold = async (): Promise<void> => {
       malformedGuardRejected && fs.existsSync(malformedGuard),
     );
     fs.rmSync(malformedGuard);
+    // The render command releases its lease at the end of the body that is the
+    // whole command. A raw release in `finally` replaced the command's own
+    // diagnostic whenever both failed, so the policy is asserted three ways:
+    // a clean release rethrows the body failure untouched, a release failure
+    // alone travels alone, and both together arrive primary-first.
+    const policyLease = renderLivenessModule.acquireRenderGcLease({
+      coordinationRoot: livenessRoot,
+      pid: 31019,
+      processAlive: (pid) => pid === 31019,
+      scope: livenessScope,
+    });
+    const policyBodyFailure = new Error("fixture render body failure");
+    const policyCleanRelease = messagesOf(
+      captureFailure(() =>
+        renderLivenessModule.preserveRenderLivenessLease(
+          { error: policyBodyFailure },
+          policyLease,
+        ),
+      ),
+    );
+    const policyHeldLease = renderLivenessModule.acquireRenderGcLease({
+      coordinationRoot: livenessRoot,
+      pid: 31020,
+      processAlive: (pid) => pid === 31020,
+      scope: livenessScope,
+    });
+    let policyReleaseRefused = 0;
+    mutableFs.renameSync = ((): never => {
+      policyReleaseRefused += 1;
+      throw new Error("fixture lease release failure");
+    }) as typeof fs.renameSync;
+    let policyAlone: string[] = [];
+    let policyBoth: string[] = [];
+    let policyCleanupFailure: { error: unknown } | undefined;
+    try {
+      policyAlone = messagesOf(
+        captureFailure(() =>
+          renderLivenessModule.preserveRenderLivenessLease(
+            undefined,
+            policyHeldLease,
+          ),
+        ),
+      );
+      policyBoth = messagesOf(
+        captureFailure(() =>
+          renderLivenessModule.preserveRenderLivenessLease(
+            { error: policyBodyFailure },
+            policyHeldLease,
+          ),
+        ),
+      );
+    } catch (error) {
+      policyCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(policyCleanupFailure, [
+        {
+          resource: "render liveness lease release hook",
+          cleanup: () => {
+            mutableFs.renameSync = nativeRename;
+          },
+        },
+      ]);
+    }
+    TestValidator.equals(
+      "render liveness lease release preserves the guarded failure",
+      namedFacts([
+        [
+          "policyCleanRelease",
+          () =>
+            policyCleanRelease.join(" | ") === "fixture render body failure",
+        ],
+        ["policyReleaseAttempted", () => policyReleaseRefused === 2],
+        [
+          "policyAlone",
+          () =>
+            policyAlone.length === 1 &&
+            policyAlone[0]!.includes("fixture lease release failure"),
+        ],
+        [
+          "policyBothPrimaryFirst",
+          () =>
+            policyBoth.length === 2 &&
+            policyBoth[0] === "fixture render body failure" &&
+            policyBoth[1]!.includes("fixture lease release failure"),
+        ],
+      ]),
+      {
+        policyCleanRelease: true,
+        policyReleaseAttempted: true,
+        policyAlone: true,
+        policyBothPrimaryFirst: true,
+      },
+    );
+    renderLivenessModule.releaseRenderLivenessLease(policyHeldLease);
     const renderGcModule = createRequire(__filename)(
       path.join(scaffoldDir, "scripts", "renderGcSnapshot.ts"),
     ) as {

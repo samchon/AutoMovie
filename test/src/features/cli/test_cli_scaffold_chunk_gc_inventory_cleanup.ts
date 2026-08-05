@@ -111,7 +111,7 @@ export const test_cli_scaffold_chunk_gc_inventory_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1999,
+          containerStatements: 2011,
           finallyDigest:
             "615b4d6b2e4fbec464675adc51a10c4c9d3235c640a3a6905fc1b6852f0ac64f",
           finallySubstantive: {
@@ -119,7 +119,7 @@ export const test_cli_scaffold_chunk_gc_inventory_cleanup = (): void => {
               "7bbe1147531bff8a0205a82780f3094ddab86013335f2ca2df67f1d3a35afcab",
             tokens: 53,
           },
-          index: 1322,
+          index: 1334,
           preceding:
             "letchunkGcInventoryCleanupFailure:{error:unknown}|undefined;",
           substantive: {

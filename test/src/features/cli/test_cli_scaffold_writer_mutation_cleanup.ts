@@ -117,7 +117,7 @@ export const test_cli_scaffold_writer_mutation_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1999,
+          containerStatements: 2011,
           finallyDigest:
             "f67b4c2bd34e98b18375178299e2953f29b5605ebde4daf5ab1983c8a834829b",
           finallySubstantive: {
@@ -125,7 +125,7 @@ export const test_cli_scaffold_writer_mutation_cleanup = (): void => {
               "d51400177f28d9e908c10ae27a481c310c00c33918290d412e6eca60ffbe2546",
             tokens: 50,
           },
-          index: 1850,
+          index: 1862,
           preceding:
             "letlateCreateMutationCleanupFailure:{error:unknown}|undefined;",
           substantive: {
@@ -145,7 +145,7 @@ export const test_cli_scaffold_writer_mutation_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1999,
+          containerStatements: 2011,
           finallyDigest:
             "792ace9b3784dff220b9bdc13343a066d0cfea799dceb9a5785abcffd073c5d9",
           finallySubstantive: {
@@ -153,7 +153,7 @@ export const test_cli_scaffold_writer_mutation_cleanup = (): void => {
               "d4a30948f625f5ad354536caa2f08ad5890753439cfa4efe3d65f99aa1a164ea",
             tokens: 50,
           },
-          index: 1863,
+          index: 1875,
           preceding:
             "letlateForceMutationCleanupFailure:{error:unknown}|undefined;",
           substantive: {
@@ -173,7 +173,7 @@ export const test_cli_scaffold_writer_mutation_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1999,
+          containerStatements: 2011,
           finallyDigest:
             "1ee054979b4e2ea9ad25f87c29b2e69feb7c2953ee49f28931b8153d53b86ba8",
           finallySubstantive: {
@@ -181,7 +181,7 @@ export const test_cli_scaffold_writer_mutation_cleanup = (): void => {
               "053a12e9e29a5b0894ef21f6e600f389e3b9d48a19c3395aac72a2e8102928d8",
             tokens: 71,
           },
-          index: 1876,
+          index: 1888,
           preceding:
             "letfinalCreateMutationCleanupFailure:{error:unknown}|undefined;",
           substantive: {
@@ -201,7 +201,7 @@ export const test_cli_scaffold_writer_mutation_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1999,
+          containerStatements: 2011,
           finallyDigest:
             "daeab11b6674f05f06b125b652250f8dc06116935cb33f377f90ebd8440b9eb4",
           finallySubstantive: {
@@ -209,7 +209,7 @@ export const test_cli_scaffold_writer_mutation_cleanup = (): void => {
               "28b0f4c18c46e0d9e73dca974dae0d9c4b8e408e6c2038c4cf45ff5ccb5c040e",
             tokens: 71,
           },
-          index: 1891,
+          index: 1903,
           preceding:
             "letfinalForceMutationCleanupFailure:{error:unknown}|undefined;",
           substantive: {

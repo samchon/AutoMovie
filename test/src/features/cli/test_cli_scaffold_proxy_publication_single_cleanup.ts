@@ -115,7 +115,7 @@ export const test_cli_scaffold_proxy_publication_single_cleanup = (): void => {
           catchBodies: ["emptySuccessorCleanupFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1999,
+          containerStatements: 2011,
           finallyDigest:
             "fc97051e3b37056de4addcdb8df9b4d939eaa392c4b76bb1b028162ce9deabeb",
           finallySubstantive: {
@@ -140,7 +140,7 @@ export const test_cli_scaffold_proxy_publication_single_cleanup = (): void => {
           catchBodies: ["exactSuccessorCleanupFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1999,
+          containerStatements: 2011,
           finallyDigest:
             "6c9fc37a863b442f1f2bcaaa9787d1cbb842fab73519efe210c6dbdb8b03afb7",
           finallySubstantive: {
@@ -168,7 +168,7 @@ export const test_cli_scaffold_proxy_publication_single_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1999,
+          containerStatements: 2011,
           finallyDigest:
             "4ce22ddb331dd5745669414cc13031ccb8d2898edeacda1897ab92d379627c49",
           finallySubstantive: {
@@ -193,7 +193,7 @@ export const test_cli_scaffold_proxy_publication_single_cleanup = (): void => {
           catchBodies: ["proxyRootSwapCleanupFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1999,
+          containerStatements: 2011,
           finallyDigest:
             "fe4098310699985264756f737581264e0917096ed65af56093bd53810a5e400d",
           finallySubstantive: {
@@ -221,7 +221,7 @@ export const test_cli_scaffold_proxy_publication_single_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1999,
+          containerStatements: 2011,
           finallyDigest:
             "f31b2a0be5053ffecd6b4f4c08ba003d903350d5515fac41b3a5048a34f91c57",
           finallySubstantive: {
