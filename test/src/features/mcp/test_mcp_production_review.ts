@@ -1605,10 +1605,21 @@ export const test_mcp_production_review = async (): Promise<void> => {
             project,
             sourcePath,
           )) as typeof project.readSource;
+    let shortenedSourceFailure: IProductionReviewFixtureFailure | undefined;
     try {
       shortenedSource = review.submit(worksheet(project, sourcePrepared));
+    } catch (error) {
+      shortenedSourceFailure = { error };
+      throw error;
     } finally {
-      project.readSource = residentReadSource;
+      preserveProductionReviewHarnessCleanup(shortenedSourceFailure, [
+        {
+          resource: "shortened source read override",
+          cleanup: () => {
+            project.readSource = residentReadSource;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "a source line-removal race becomes stale evidence",
@@ -1629,11 +1640,22 @@ export const test_mcp_production_review = async (): Promise<void> => {
       return new AutoMovieProductionCompiler(project).lint({ scope: "source" });
     });
     let racedSubmission: ReturnType<AutoMovieProductionReviewService["submit"]>;
+    let racedSubmissionFailure: IProductionReviewFixtureFailure | undefined;
     try {
       const racedPrepared = racingReview.prepare({ target: shotTarget });
       racedSubmission = racingReview.submit(worksheet(project, racedPrepared));
+    } catch (error) {
+      racedSubmissionFailure = { error };
+      throw error;
     } finally {
-      fs.writeFileSync(sourceFile, sourceBeforeRace);
+      preserveProductionReviewHarnessCleanup(racedSubmissionFailure, [
+        {
+          resource: "raced source bytes",
+          cleanup: () => {
+            fs.writeFileSync(sourceFile, sourceBeforeRace);
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "a target mutation during worksheet validation is refused",
