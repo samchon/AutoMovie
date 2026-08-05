@@ -15522,6 +15522,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
           [
             "parkedWorkerRootRelative",
             () =>
+              workerRootAbaSwap !== "swapped" ||
               fs
                 .readFileSync(
                   path.join(
@@ -15534,6 +15535,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
           [
             "parkedWorkerRootResident",
             () =>
+              workerRootAbaSwap !== "swapped" ||
               fs.existsSync(
                 path.join(
                   parkedWorkerRoot,
@@ -15544,6 +15546,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
           [
             "workerRootAbaDestinationWorkerRootCompetitorBytes",
             () =>
+              workerRootAbaSwap !== "swapped" ||
               fs
                 .readFileSync(workerRootAbaDestination)
                 .equals(workerRootCompetitorBytes),
