@@ -2,7 +2,6 @@ import { validateFaceResult } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import { makeFace } from "../internal/fixtures";
-import { namedFacts } from "../internal/predicates";
 
 /**
  * Weights are rough plain numbers, so the [-2, 2] bound is enforced at runtime
@@ -19,19 +18,12 @@ export const test_validation_face_weight_range = (): void => {
     makeFace({ eyes: { left: { size: 2.1 } } }),
   );
   TestValidator.equals("out-of-range weight fails", result.success, false);
-  TestValidator.equals(
+  TestValidator.predicate(
     "both mirrored targets violate at the source field",
-    namedFacts([
-      ["resultSuccess", () => result.success === false],
-      ["resultViolations", () => result.violations.length === 2],
-      [
-        "resultViolationsV",
-        () =>
-          result.violations.every(
-            (v) => v.kind === "range" && v.path.includes(".eyes.left.size"),
-          ),
-      ],
-    ]),
-    { resultSuccess: true, resultViolations: true, resultViolationsV: true },
+    result.success === false &&
+      result.violations.length === 2 &&
+      result.violations.every(
+        (v) => v.kind === "range" && v.path.includes(".eyes.left.size"),
+      ),
   );
 };

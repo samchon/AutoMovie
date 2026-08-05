@@ -12,7 +12,6 @@ import {
   makeMotion,
   makePose,
 } from "../internal/fixtures";
-import { namedFacts } from "../internal/predicates";
 
 const motion: IAutoMovieMotion = {
   ...makeMotion([keyframe(0, makePose([])), keyframe(1, makePose([]))], 1),
@@ -71,28 +70,11 @@ export const test_film_beat_end_duplicate_motion_ids = (): void => {
     "duplicate motion ids throw",
     thrown instanceof Error,
   );
-  TestValidator.equals(
+  TestValidator.predicate(
     "duplicate motion id names both entries",
-    namedFacts([
-      ["thrownError", () => thrown instanceof Error],
-      [
-        "thrownMessageIncludes",
-        () => thrown.message.includes('motion "walk" is duplicated'),
-      ],
-      [
-        "thrownMessageIncludes2",
-        () => thrown.message.includes("props.motions[0].id"),
-      ],
-      [
-        "thrownMessageIncludes3",
-        () => thrown.message.includes("props.motions[1].id"),
-      ],
-    ]),
-    {
-      thrownError: true,
-      thrownMessageIncludes: true,
-      thrownMessageIncludes2: true,
-      thrownMessageIncludes3: true,
-    },
+    thrown instanceof Error &&
+      thrown.message.includes('motion "walk" is duplicated') &&
+      thrown.message.includes("props.motions[0].id") &&
+      thrown.message.includes("props.motions[1].id"),
   );
 };

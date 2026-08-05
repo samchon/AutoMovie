@@ -12,7 +12,7 @@ import {
 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { hasViolation, namedFacts } from "../internal/predicates";
+import { hasViolation } from "../internal/predicates";
 
 const restAt = (x: number, y: number, z: number): IAutoMovieTransform => ({
   translation: { x, y, z },
@@ -164,21 +164,11 @@ export const test_validation_detached_bone_totality = (): void => {
     skeleton: DETACHED_SKELETON,
     contacts: [{ bone: "rightFoot", start: 0, end: 1 }],
   });
-  TestValidator.equals(
+  TestValidator.predicate(
     "footskate: an absent bone reports must-exist, not unreachable",
-    namedFacts([
-      ["absentSuccess", () => absent.success === false],
-      [
-        "absentViolationsV",
-        () => absent.violations.some((v) => v.expected.includes("must exist")),
-      ],
-      [
-        "absentViolationsV2",
-        () =>
-          !absent.violations.some((v) => v.expected.includes("not reachable")),
-      ],
-    ]),
-    { absentSuccess: true, absentViolationsV: true, absentViolationsV2: true },
+    absent.success === false &&
+      absent.violations.some((v) => v.expected.includes("must exist")) &&
+      !absent.violations.some((v) => v.expected.includes("not reachable")),
   );
 
   // A fully-reachable rig validates with no bone-structure violations (the

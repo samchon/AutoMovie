@@ -12,7 +12,6 @@ import {
   makeMotion,
   makePose,
 } from "../internal/fixtures";
-import { namedFacts } from "../internal/predicates";
 
 const motion: IAutoMovieMotion = {
   ...makeMotion([keyframe(0, makePose([])), keyframe(1, makePose([]))], 1),
@@ -74,29 +73,11 @@ export const test_film_beat_end_duplicate_performance_nodes = (): void => {
     "duplicate performance nodes throw",
     thrown instanceof Error,
   );
-  TestValidator.equals(
+  TestValidator.predicate(
     "duplicate performance node names both entries",
-    namedFacts([
-      ["thrownError", () => thrown instanceof Error],
-      [
-        "thrownMessageIncludes",
-        () =>
-          thrown.message.includes('performance for node "hero" is duplicated'),
-      ],
-      [
-        "thrownMessageIncludes2",
-        () => thrown.message.includes("props.shot.performances[0].node"),
-      ],
-      [
-        "thrownMessageIncludes3",
-        () => thrown.message.includes("props.shot.performances[1].node"),
-      ],
-    ]),
-    {
-      thrownError: true,
-      thrownMessageIncludes: true,
-      thrownMessageIncludes2: true,
-      thrownMessageIncludes3: true,
-    },
+    thrown instanceof Error &&
+      thrown.message.includes('performance for node "hero" is duplicated') &&
+      thrown.message.includes("props.shot.performances[0].node") &&
+      thrown.message.includes("props.shot.performances[1].node"),
   );
 };

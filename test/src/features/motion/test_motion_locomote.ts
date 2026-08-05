@@ -2,7 +2,7 @@ import { Quaternion, locomoteMotion } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import { joint, keyframe, makeMotion, makePose } from "../internal/fixtures";
-import { namedFacts, nclose, vclose } from "../internal/predicates";
+import { nclose, vclose } from "../internal/predicates";
 
 const throws = (task: () => void): boolean => {
   try {
@@ -81,14 +81,11 @@ export const test_motion_locomote = (): void => {
     "the effective speed floors at half the nominal speed",
     nclose(0.2 / tiny.duration, 0.5),
   );
-  TestValidator.equals(
+  TestValidator.predicate(
     "the gait-cycle meta scales with the compression",
-    namedFacts([
-      ["tinyGaitCycle", () => tiny.gaitCycle !== null],
-      ["tinyGaitCycle2", () => tiny.gaitCycle !== undefined],
-      ["ncloseTinyGaitCycle", () => nclose(tiny.gaitCycle.period, 0.4)],
-    ]),
-    { tinyGaitCycle: true, tinyGaitCycle2: true, ncloseTinyGaitCycle: true },
+    tiny.gaitCycle !== null &&
+      tiny.gaitCycle !== undefined &&
+      nclose(tiny.gaitCycle.period, 0.4),
   );
   // negative twin: past the half-stride point the cycle stays uncompressed
   const halfStride = locomoteMotion("h", gait, 0.6, 1, { x: 0, y: 0, z: 1 });

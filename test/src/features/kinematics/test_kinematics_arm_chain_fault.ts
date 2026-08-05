@@ -12,7 +12,7 @@ import {
 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { namedFacts, nclose } from "../internal/predicates";
+import { nclose } from "../internal/predicates";
 
 const bone = (
   name: AutoMovieHumanoidBone,
@@ -157,20 +157,12 @@ export const test_kinematics_arm_chain_fault = (): void => {
 
   // 3. the diagnosis agrees with the measurement on both sides
   const fault = armChainFault(down, "right");
-  TestValidator.equals(
+  TestValidator.predicate(
     "the arms-down rig is faulted, at its elbow, with a reason that says why",
-    namedFacts([
-      ["fault", () => fault !== null],
-      ["faultSideRight", () => fault.side === "right"],
-      ["faultBoneRightLowerArm", () => fault.bone === "rightLowerArm"],
-      ["faultReasonIncludes", () => fault.reason.includes("parallel")],
-    ]),
-    {
-      fault: true,
-      faultSideRight: true,
-      faultBoneRightLowerArm: true,
-      faultReasonIncludes: true,
-    },
+    fault !== null &&
+      fault.side === "right" &&
+      fault.bone === "rightLowerArm" &&
+      fault.reason.includes("parallel"),
   );
   TestValidator.equals(
     "the conforming rig is not faulted",

@@ -8,7 +8,7 @@ import {
   makeMotion,
   makePose,
 } from "../internal/fixtures";
-import { namedFacts, nclose } from "../internal/predicates";
+import { nclose } from "../internal/predicates";
 
 const rest = makePose([joint("leftLowerArm", { flexion: 0 })]);
 
@@ -39,14 +39,9 @@ export const test_motion_sample_expression_neutral = (): void => {
   const early = sampleMotion(rampIn, 0.1).expression;
   const mid = sampleMotion(rampIn, 0.5).expression;
   TestValidator.equals("ramp keeps the authored preset", mid!.preset, "happy");
-  TestValidator.equals(
+  TestValidator.predicate(
     "the intensity ramps from neutral, not a pop to full",
-    namedFacts([
-      ["early", () => early !== null],
-      ["earlyIntensity", () => early.intensity < 0.2],
-      ["ncloseMidIntensity", () => nclose(mid!.intensity, 0.5)],
-    ]),
-    { early: true, earlyIntensity: true, ncloseMidIntensity: true },
+    early !== null && early.intensity < 0.2 && nclose(mid!.intensity, 0.5),
   );
 
   // 2. an expression authored only at the NEAR keyframe fades out to neutral

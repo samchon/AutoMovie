@@ -10,7 +10,7 @@ import { IAutoMovieGait, IAutoMovieMotion } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { joint, keyframe, makeMotion, makePose } from "../internal/fixtures";
-import { namedFacts, nclose } from "../internal/predicates";
+import { nclose } from "../internal/predicates";
 
 const WALK: IAutoMovieGait = {
   name: "walk",
@@ -90,30 +90,12 @@ export const test_motion_gait_cycle_meta = (): void => {
     { start: 0, motion: oneShot() },
     { start: 2.3, motion: travel },
   ]);
-  TestValidator.equals(
+  TestValidator.predicate(
     "arrange shifts the last placement's phase by its start",
-    namedFacts([
-      ["arrangedWalkLastGaitCycle", () => arrangedWalkLast.gaitCycle !== null],
-      [
-        "arrangedWalkLastGaitCycle2",
-        () => arrangedWalkLast.gaitCycle !== undefined,
-      ],
-      [
-        "ncloseArrangedWalkLastGaitCycle",
-        () => nclose(arrangedWalkLast.gaitCycle.period, 0.8),
-      ],
-      [
-        "ncloseArrangedWalkLastGaitCycle2",
-        () =>
-          nclose(arrangedWalkLast.gaitCycle.phaseAt, ((0 - 2.3) % 0.8) + 0.8),
-      ],
-    ]),
-    {
-      arrangedWalkLastGaitCycle: true,
-      arrangedWalkLastGaitCycle2: true,
-      ncloseArrangedWalkLastGaitCycle: true,
-      ncloseArrangedWalkLastGaitCycle2: true,
-    },
+    arrangedWalkLast.gaitCycle !== null &&
+      arrangedWalkLast.gaitCycle !== undefined &&
+      nclose(arrangedWalkLast.gaitCycle.period, 0.8) &&
+      nclose(arrangedWalkLast.gaitCycle.phaseAt, ((0 - 2.3) % 0.8) + 0.8),
   );
   TestValidator.equals(
     "an in-range arranged phase stays exact",

@@ -2,7 +2,7 @@ import { solveBallisticLaunch, solveMovingLaunch } from "@automovie/engine";
 import { IAutoMovieVector3 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { namedFacts, nclose } from "../internal/predicates";
+import { nclose } from "../internal/predicates";
 
 const origin: IAutoMovieVector3 = { x: 0, y: 1.6, z: 0 };
 const GRAVITY: IAutoMovieVector3 = { x: 0, y: -9.81, z: 0 };
@@ -56,13 +56,10 @@ export const test_physics_moving_launch_closest = (): void => {
   // Capped at four iterates the moving-launch solve must be the closest iterate
   // (iterate 2, hitTime ~1.7355), NOT the last one visited (iterate 3, ~1.9894).
   const led = solveMovingLaunch(origin, accel, speed, GRAVITY, "direct", 4);
-  TestValidator.equals(
+  TestValidator.predicate(
     "the capped moving launch returns the closest iterate, not the last",
-    namedFacts([
-      ["led", () => led !== null],
-      ["ncloseLedHitTime", () => nclose(led.hitTime, closest.hitTime, 1e-9)],
-      ["ncloseLedHitTime2", () => !nclose(led.hitTime, last.hitTime, 1e-6)],
-    ]),
-    { led: true, ncloseLedHitTime: true, ncloseLedHitTime2: true },
+    led !== null &&
+      nclose(led.hitTime, closest.hitTime, 1e-9) &&
+      !nclose(led.hitTime, last.hitTime, 1e-6),
   );
 };

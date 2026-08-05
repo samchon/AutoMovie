@@ -6,7 +6,7 @@ import {
 import { planSequenceRender } from "@automovie/render";
 import { TestValidator } from "@nestia/e2e";
 
-import { namedFacts, nclose, throwsError } from "../internal/predicates";
+import { nclose, throwsError } from "../internal/predicates";
 
 const shot = (id: string, duration: number): IAutoMovieShot => ({
   id,
@@ -146,35 +146,15 @@ export const test_render_sequence_plan = (): void => {
     blend: { shot: "shot:a", shotTimeSeconds: 1, alpha: 0 },
   });
   const midDissolve = plan.frames[3]!;
-  TestValidator.equals(
+  TestValidator.predicate(
     "mid dissolve sample",
-    namedFacts([
-      ["midDissolveShotShot", () => midDissolve.shot === "shot:b"],
-      [
-        "ncloseMidDissolveTimeSeconds",
-        () => nclose(midDissolve.timeSeconds, 0.75),
-      ],
-      [
-        "ncloseMidDissolveShotTimeSeconds",
-        () => nclose(midDissolve.shotTimeSeconds, 1.25),
-      ],
-      ["midDissolveBlend", () => midDissolve.blend !== null],
-      ["midDissolveBlendShot", () => midDissolve.blend.shot === "shot:a"],
-      [
-        "ncloseMidDissolveBlend",
-        () => nclose(midDissolve.blend.shotTimeSeconds, 1.25),
-      ],
-      ["ncloseMidDissolveBlend2", () => nclose(midDissolve.blend.alpha, 0.5)],
-    ]),
-    {
-      midDissolveShotShot: true,
-      ncloseMidDissolveTimeSeconds: true,
-      ncloseMidDissolveShotTimeSeconds: true,
-      midDissolveBlend: true,
-      midDissolveBlendShot: true,
-      ncloseMidDissolveBlend: true,
-      ncloseMidDissolveBlend2: true,
-    },
+    midDissolve.shot === "shot:b" &&
+      nclose(midDissolve.timeSeconds, 0.75) &&
+      nclose(midDissolve.shotTimeSeconds, 1.25) &&
+      midDissolve.blend !== null &&
+      midDissolve.blend.shot === "shot:a" &&
+      nclose(midDissolve.blend.shotTimeSeconds, 1.25) &&
+      nclose(midDissolve.blend.alpha, 0.5),
   );
   TestValidator.equals("past dissolve", plan.frames[4]!.blend, null);
 

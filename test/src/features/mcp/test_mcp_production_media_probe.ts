@@ -7,7 +7,6 @@ import {
 import { TestValidator } from "@nestia/e2e";
 import { createFile } from "mp4box";
 
-import { namedFacts } from "../internal/predicates";
 import {
   productionAudioMp4,
   productionH264Mp4,
@@ -374,31 +373,16 @@ export const test_mcp_production_media_probe = async (): Promise<void> => {
     mediaType: "video/mp4",
     bytes: video,
   });
-  TestValidator.equals(
+  TestValidator.predicate(
     "the guide probe derives H.264 geometry and frame timing",
-    namedFacts([
-      ["videoProbeKindVideo", () => videoProbe.kind === "video"],
-      ["videoProbeContainerMp4", () => videoProbe.container === "mp4"],
-      ["videoProbeCodecH264", () => videoProbe.codec === "h264"],
-      ["videoProbeWidth", () => videoProbe.width === 16],
-      ["videoProbeHeight", () => videoProbe.height === 16],
-      ["videoProbeFrameCount", () => videoProbe.frameCount === 4],
-      ["videoProbeFps", () => videoProbe.fps === 24],
-      [
-        "MathAbsVideoProbe",
-        () => Math.abs(videoProbe.runtimeSeconds - 4 / 24) < 1e-9,
-      ],
-    ]),
-    {
-      videoProbeKindVideo: true,
-      videoProbeContainerMp4: true,
-      videoProbeCodecH264: true,
-      videoProbeWidth: true,
-      videoProbeHeight: true,
-      videoProbeFrameCount: true,
-      videoProbeFps: true,
-      MathAbsVideoProbe: true,
-    },
+    videoProbe.kind === "video" &&
+      videoProbe.container === "mp4" &&
+      videoProbe.codec === "h264" &&
+      videoProbe.width === 16 &&
+      videoProbe.height === 16 &&
+      videoProbe.frameCount === 4 &&
+      videoProbe.fps === 24 &&
+      Math.abs(videoProbe.runtimeSeconds - 4 / 24) < 1e-9,
   );
   const featureBytes = muxProductionFeatureMp4({
     video,
@@ -409,23 +393,12 @@ export const test_mcp_production_media_probe = async (): Promise<void> => {
     mediaType: "video/mp4",
     bytes: featureBytes,
   });
-  TestValidator.equals(
+  TestValidator.predicate(
     "a feature requires and preserves exact-runtime H.264 plus stereo Opus",
-    namedFacts([
-      ["featureKindVideo", () => feature.kind === "video"],
-      ["featureFrameCount", () => feature.frameCount === 4],
-      ["featureFps", () => feature.fps === 24],
-      [
-        "MathAbsFeature",
-        () => Math.abs(feature.runtimeSeconds - 4 / 24) < 1e-9,
-      ],
-    ]),
-    {
-      featureKindVideo: true,
-      featureFrameCount: true,
-      featureFps: true,
-      MathAbsFeature: true,
-    },
+    feature.kind === "video" &&
+      feature.frameCount === 4 &&
+      feature.fps === 24 &&
+      Math.abs(feature.runtimeSeconds - 4 / 24) < 1e-9,
   );
   TestValidator.predicate(
     "video-only MP4 cannot satisfy the final feature contract",
@@ -797,31 +770,16 @@ export const test_mcp_production_media_probe = async (): Promise<void> => {
     mediaType: "audio/mp4",
     bytes: audio,
   });
-  TestValidator.equals(
+  TestValidator.predicate(
     "the audio probe derives presentation clock, profile, packets and priming",
-    namedFacts([
-      ["audioProbeKindAudio", () => audioProbe.kind === "audio"],
-      ["audioProbeContainerMp4", () => audioProbe.container === "mp4"],
-      [
-        "audioProbeCodecToLowerCase",
-        () => audioProbe.codec.toLowerCase().startsWith("opus"),
-      ],
-      ["audioProbeRuntimeSeconds", () => audioProbe.runtimeSeconds === 1],
-      ["audioProbeChannels", () => audioProbe.channels === 2],
-      ["audioProbeSampleRate000", () => audioProbe.sampleRate === 48_000],
-      ["audioProbeSampleCount", () => audioProbe.sampleCount > 0],
-      ["audioProbePrimingSamples", () => audioProbe.primingSamples === 312],
-    ]),
-    {
-      audioProbeKindAudio: true,
-      audioProbeContainerMp4: true,
-      audioProbeCodecToLowerCase: true,
-      audioProbeRuntimeSeconds: true,
-      audioProbeChannels: true,
-      audioProbeSampleRate000: true,
-      audioProbeSampleCount: true,
-      audioProbePrimingSamples: true,
-    },
+    audioProbe.kind === "audio" &&
+      audioProbe.container === "mp4" &&
+      audioProbe.codec.toLowerCase().startsWith("opus") &&
+      audioProbe.runtimeSeconds === 1 &&
+      audioProbe.channels === 2 &&
+      audioProbe.sampleRate === 48_000 &&
+      audioProbe.sampleCount > 0 &&
+      audioProbe.primingSamples === 312,
   );
   TestValidator.predicate(
     "audio-mix rejects a resident mono AAC track",

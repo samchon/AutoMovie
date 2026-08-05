@@ -16,7 +16,6 @@ import {
 import { TestValidator } from "@nestia/e2e";
 
 import {
-  namedFacts,
   nclose,
   validationHasNoWarnings,
   validationHasWarnings,
@@ -212,35 +211,21 @@ const plantAndAssert = (turnWindow: number, label: string): void => {
       run.end,
     ].filter((s) => s >= run.start && s <= run.end)) {
       const p = footAt(planted.motion, time);
-      TestValidator.equals(
+      TestValidator.predicate(
         `${label}: foot XZ pinned through t=${time.toFixed(3)}`,
-        namedFacts([
-          ["nclosePX", () => nclose(p.x, pin.x, 1e-4)],
-          ["nclosePZ", () => nclose(p.z, pin.z, 1e-4)],
-          ["nclosePY", () => nclose(p.y, 0, 1e-4)],
-        ]),
-        { nclosePX: true, nclosePZ: true, nclosePY: true },
+        nclose(p.x, pin.x, 1e-4) &&
+          nclose(p.z, pin.z, 1e-4) &&
+          nclose(p.y, 0, 1e-4),
       );
     }
   }
 
-  TestValidator.equals(
+  TestValidator.predicate(
     `${label}: stride clock survives the corner`,
-    namedFacts([
-      ["motionGaitCycle", () => path.motion.gaitCycle !== undefined],
-      ["motionGaitCycle2", () => path.motion.gaitCycle !== null],
-      ["ncloseMotionGaitCycle", () => nclose(path.motion.gaitCycle.period, 1)],
-      [
-        "ncloseMotionGaitCycle2",
-        () => nclose(path.motion.gaitCycle.phaseAt, 0),
-      ],
-    ]),
-    {
-      motionGaitCycle: true,
-      motionGaitCycle2: true,
-      ncloseMotionGaitCycle: true,
-      ncloseMotionGaitCycle2: true,
-    },
+    path.motion.gaitCycle !== undefined &&
+      path.motion.gaitCycle !== null &&
+      nclose(path.motion.gaitCycle.period, 1) &&
+      nclose(path.motion.gaitCycle.phaseAt, 0),
   );
 };
 
