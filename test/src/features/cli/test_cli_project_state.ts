@@ -363,11 +363,22 @@ export const test_cli_project_state = (): void => {
       throw new Error("manifest unreadable");
     };
     let invalidManifest: ReturnType<typeof loadAutoMovieProjectState>;
+    let invalidManifestFailure: IProjectStateFixtureFailure | undefined;
     try {
       invalidManifest = loadAutoMovieProjectState({ root: fixture.root });
+    } catch (error) {
+      invalidManifestFailure = { error };
+      throw error;
     } finally {
-      AutoMovieProductionProject.prototype.generatedManifest =
-        generatedManifestMethod;
+      preserveProjectStateHarnessCleanup(invalidManifestFailure, [
+        {
+          resource: "invalid generated-manifest prototype override",
+          cleanup: () => {
+            AutoMovieProductionProject.prototype.generatedManifest =
+              generatedManifestMethod;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "a malformed ownership manifest is stale rather than missing",
