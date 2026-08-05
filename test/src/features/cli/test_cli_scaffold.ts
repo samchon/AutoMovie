@@ -4241,6 +4241,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       readSync: typeof fs.readSync;
       readFileSync: typeof fs.readFileSync;
       readdirSync: typeof fs.readdirSync;
+      realpathSync: typeof fs.realpathSync;
       renameSync: typeof fs.renameSync;
       statSync: typeof fs.statSync;
       writeSync: typeof fs.writeSync;
@@ -13839,8 +13840,10 @@ export const test_cli_scaffold = async (): Promise<void> => {
         fs.appendFileSync(gcResolveTarget, "raced");
         return resolved;
       },
+      // The product reads `realpathSync.native` elsewhere, so the replacement
+      // has to carry it rather than shadow the whole export.
       { native: nativeRealpath.native },
-    ) as typeof fs.realpathSync;
+    ) as unknown as typeof fs.realpathSync;
     let gcResolveEscape = "pending";
     let gcResolveRace = "pending";
     let gcResolveCleanupFailure: { error: unknown } | undefined;
