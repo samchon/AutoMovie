@@ -4,8 +4,6 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { throwsError } from "../internal/predicates";
-
 interface IFilmArtifactFixtureFailure {
   error: unknown;
 }
@@ -166,19 +164,36 @@ export const test_mcp_project_film_artifact_edges = (): void => {
         path.join(root, "shots", `${beat}.json`),
         `${JSON.stringify(storedShot(beat, duration), null, 2)}\n`,
       );
-    for (const item of cases) {
+    // Report the message each case actually produced, not merely whether it
+    // matched. A slice fixture that fails its own read validator throws about
+    // the shot instead, and a boolean would send the next round guessing.
+    const reported = (value: unknown): string => {
       fs.writeFileSync(
         path.join(root, "film.json"),
-        `${JSON.stringify(item.value, null, 2)}\n`,
+        `${JSON.stringify(value, null, 2)}\n`,
       );
-      TestValidator.predicate(
-        item.title,
-        throwsError(
-          () => AutoMovieProject.open(root).writableSlate(),
-          item.fragments,
-        ),
-      );
-    }
+      try {
+        AutoMovieProject.open(root).writableSlate();
+        return "accepted";
+      } catch (error) {
+        return error instanceof Error ? error.message : String(error);
+      }
+    };
+    TestValidator.equals(
+      "the film validator reports the located violation for each malformed cut",
+      Object.fromEntries(
+        cases.map((item) => {
+          const message = reported(item.value);
+          return [
+            item.title,
+            item.fragments.every((fragment) => message.includes(fragment))
+              ? "located"
+              : message.slice(0, 160),
+          ];
+        }),
+      ),
+      Object.fromEntries(cases.map((item) => [item.title, "located"])),
+    );
   } catch (error) {
     filmArtifactFailure = { error };
     throw error;
