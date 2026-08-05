@@ -1,3 +1,4 @@
+import { compareCodeUnits } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
 import path from "node:path";
@@ -46,7 +47,9 @@ const declaredExports = (text: string): string[] => {
     for (const declaration of statement.declarationList.declarations)
       if (ts.isIdentifier(declaration.name)) names.push(declaration.name.text);
   }
-  return names.sort();
+  // The lint requires an explicit comparator, and this repository's own
+  // code-unit order is the one every other sorted contract uses.
+  return names.sort(compareCodeUnits);
 };
 
 /**
