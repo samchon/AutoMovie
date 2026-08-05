@@ -715,12 +715,17 @@ const captureResidentTarget = (
     throw new Error(`Render GC target "${absolute}" is linked.`);
   const resident = fs.realpathSync(absolute);
   const physical = fs.statSync(resident, { bigint: true });
-  if (
-    inside(base.real, resident) === false ||
-    physicalVersion(physical) !== physicalVersion(status)
-  )
+  // Two different conditions used to share one message. A real path that leaves
+  // the owned root is an ownership escape; a version that moved between this
+  // function's own lstat and the stat of the resolved path is a race, and
+  // naming it an escape sends the reader looking for a path that left its root.
+  if (inside(base.real, resident) === false)
     throw new Error(
       `Render GC target "${absolute}" escapes renderer ownership.`,
+    );
+  if (physicalVersion(physical) !== physicalVersion(status))
+    throw new Error(
+      `Render GC target "${absolute}" changed while it was resolved.`,
     );
   // A file's identity has to match the entry its directory inventory records,
   // and those entries carry the file id so a pathname stat and a descriptor

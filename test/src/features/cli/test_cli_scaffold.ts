@@ -10661,20 +10661,20 @@ export const test_cli_scaffold = async (): Promise<void> => {
         recordResident: fs.existsSync(attemptTarget),
         // The injection fires on the lock's own `lstat`, which is the first of
         // the two stats the capture takes, so the replacement lands between
-        // them and the capture reports it as an ownership escape rather than a
-        // changed generation. Either way the attempt is refused; the message
-        // recorded here is the one the product actually produces.
+        // them. That is a mid-resolve race, not a path leaving its root, and
+        // the capture now says so; the message recorded here is the one the
+        // product actually produces.
         rejection:
           postPublicationRejected !== null &&
-          postPublicationRejected.includes("escapes renderer ownership")
-            ? "escapes renderer ownership"
+          postPublicationRejected.includes("changed while it was resolved")
+            ? "changed while it was resolved"
             : postPublicationRejected,
         relinked: postPublicationRelinked,
       },
       {
         lockSuccessorResident: true,
         recordResident: true,
-        rejection: "escapes renderer ownership",
+        rejection: "changed while it was resolved",
         relinked: true,
       },
     );
@@ -13715,6 +13715,86 @@ export const test_cli_scaffold = async (): Promise<void> => {
         gcQuarantineResident: true,
       },
     );
+    // A resolved path that leaves the owned root and a target that moved
+    // between the pathname stat and the stat of its resolved path are two
+    // different conditions. They used to share the escape message, which sent a
+    // reader of the second looking for a path that had left its root. Each
+    // branch is pinned to the message it now produces.
+    const gcResolveTarget = path.join(gcBase, "resolve-candidate.bin");
+    const gcResolveOutside = path.join(base, "render-gc-outside");
+    fs.mkdirSync(gcResolveOutside, { recursive: true });
+    fs.writeFileSync(gcResolveTarget, gcBytes);
+    const nativeRealpath = mutableFs.realpathSync;
+    let gcResolveMode = "escape";
+    mutableFs.realpathSync = Object.assign(
+      (target: fs.PathLike, ...args: unknown[]): unknown => {
+        const resolved = Reflect.apply(nativeRealpath, mutableFs, [
+          target,
+          ...args,
+        ]) as unknown;
+        if (path.resolve(target.toString()) !== gcResolveTarget)
+          return resolved;
+        // The hook runs between the reader's own lstat and the stat of the
+        // resolved path, which is exactly the window each branch describes.
+        if (gcResolveMode === "escape") return gcResolveOutside;
+        fs.appendFileSync(gcResolveTarget, "raced");
+        return resolved;
+      },
+      { native: nativeRealpath.native },
+    ) as typeof fs.realpathSync;
+    let gcResolveEscape = "pending";
+    let gcResolveRace = "pending";
+    let gcResolveCleanupFailure: { error: unknown } | undefined;
+    try {
+      gcResolveEscape = messagesOf(
+        captureFailure(() =>
+          renderGcModule.captureRenderGcTarget(gcBase, gcResolveTarget),
+        ),
+      ).join(" | ");
+      gcResolveMode = "race";
+      gcResolveRace = messagesOf(
+        captureFailure(() =>
+          renderGcModule.captureRenderGcTarget(gcBase, gcResolveTarget),
+        ),
+      ).join(" | ");
+    } catch (error) {
+      gcResolveCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(gcResolveCleanupFailure, [
+        {
+          resource: "render GC resolve hook",
+          cleanup: () => {
+            mutableFs.realpathSync = nativeRealpath;
+          },
+        },
+      ]);
+    }
+    TestValidator.equals(
+      "render GC separates an ownership escape from a mid-resolve race",
+      namedFacts([
+        [
+          "gcResolveEscape",
+          () => gcResolveEscape.includes("escapes renderer ownership"),
+        ],
+        [
+          "gcResolveRace",
+          () => gcResolveRace.includes("changed while it was resolved"),
+        ],
+        [
+          "gcResolveRaceIsNotEscape",
+          () => gcResolveRace.includes("escapes renderer ownership") === false,
+        ],
+        ["gcResolveTargetResident", () => fs.existsSync(gcResolveTarget)],
+      ]),
+      {
+        gcResolveEscape: true,
+        gcResolveRace: true,
+        gcResolveRaceIsNotEscape: true,
+        gcResolveTargetResident: true,
+      },
+    );
+    fs.rmSync(gcResolveTarget);
     const gcPhysicalRoot = path.join(base, "render-gc-physical-root");
     const gcAliasRoot = path.join(base, "render-gc-alias-root");
     const gcAliasedBase = path.join(gcAliasRoot, "nested");
