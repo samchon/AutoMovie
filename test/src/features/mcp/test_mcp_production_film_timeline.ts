@@ -1026,12 +1026,18 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
         }
         return residentReadGenerated.call(project, relativePath);
       }) as typeof project.readGeneratedFile;
+      let invalidTimelineFailure: IFilmTimelineFixtureFailure | undefined;
       try {
         return invalidTimelineReviewService.prepare({
           target: { kind: "film", id: validTimeline.id },
         });
+      } catch (error) {
+        invalidTimelineFailure = { error };
+        throw error;
       } finally {
-        project.readGeneratedFile = residentReadGenerated;
+        preserveFilmTimelineFixtureCleanup(invalidTimelineFailure, () => {
+          project.readGeneratedFile = residentReadGenerated;
+        });
       }
     })();
     fs.writeFileSync(timelineFilePath, currentTimelineBytes);

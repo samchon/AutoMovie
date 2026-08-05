@@ -1184,6 +1184,9 @@ export const test_mcp_production_review_render_edges =
           ...args,
         );
       });
+      let disappearingManifestFailure:
+        | IProductionReviewRenderFixtureFailure
+        | undefined;
       try {
         TestValidator.predicate(
           "a disappearing manifest is invalid rather than absent",
@@ -1191,8 +1194,21 @@ export const test_mcp_production_review_render_edges =
             .prepare({ target })
             .diagnostics.some((item) => item.code === "render-bundle-invalid"),
         );
+      } catch (error) {
+        disappearingManifestFailure = { error };
+        throw error;
       } finally {
-        Reflect.set(fs, "openSync", stableOpenSync);
+        preserveProductionReviewRenderHarnessCleanup(
+          disappearingManifestFailure,
+          [
+            {
+              resource: "disappearing manifest open hook",
+              cleanup: () => {
+                Reflect.set(fs, "openSync", stableOpenSync);
+              },
+            },
+          ],
+        );
       }
 
       const inventoryRaceFixture = (name: string) => {

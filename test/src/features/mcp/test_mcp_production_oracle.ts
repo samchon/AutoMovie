@@ -1876,6 +1876,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         frames: badFrames,
       })) as typeof project.verifiedRenderManifest;
       let afterForgedLedger: Awaited<ReturnType<typeof actual.preview>>;
+      let forgedLedgerFailure: IProductionOracleFixtureFailure | undefined;
       try {
         afterForgedLedger = await actual.preview({
           target: { kind: "shot", id: "opening" },
@@ -1883,9 +1884,19 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
           width: 2,
           height: 2,
         });
+      } catch (error) {
+        forgedLedgerFailure = { error };
+        throw error;
       } finally {
-        project.verifiedRenderManifest =
-          residentVerifiedRenderManifestForForgery;
+        preserveProductionOracleHookCleanup(forgedLedgerFailure, [
+          {
+            resource: "forged ledger manifest override",
+            cleanup: () => {
+              project.verifiedRenderManifest =
+                residentVerifiedRenderManifestForForgery;
+            },
+          },
+        ]);
       }
       const repairedManifest = project.verifiedRenderManifest(
         path.join(bundleRoot, "manifest.json"),
