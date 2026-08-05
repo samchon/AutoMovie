@@ -30,9 +30,10 @@ export const preserveFilmArtifactFixtureCleanup = (
  * A stored shot the read validator accepts.
  *
  * A shot lives at `shots/<beat>.json` and its id is `shot:<beat>`, never
- * free-form, and `cameraMotion` must be present even when it is null. The
- * metadata and light-motion passes are absent-tolerant, so nothing else is
- * needed to make the slice readable.
+ * free-form. `cameraMotion` must be present even when null, and `performances`
+ * and `objectMotions` are both read through `validateArrayArtifact`, which
+ * refuses an absent value rather than treating it as empty. The metadata and
+ * light-motion passes are the absent-tolerant ones.
  */
 const storedShot = (beat: string, duration: number): unknown => ({
   id: `shot:${beat}`,
@@ -41,6 +42,7 @@ const storedShot = (beat: string, duration: number): unknown => ({
   duration,
   cameraMotion: null,
   performances: [],
+  objectMotions: [],
 });
 
 /** A cut entry the validator accepts, so a case reports only what it broke. */
@@ -188,7 +190,7 @@ export const test_mcp_project_film_artifact_edges = (): void => {
             item.title,
             item.fragments.every((fragment) => message.includes(fragment))
               ? "located"
-              : message.slice(0, 160),
+              : message.slice(0, 400),
           ];
         }),
       ),
