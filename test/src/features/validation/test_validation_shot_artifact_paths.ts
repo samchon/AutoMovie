@@ -157,7 +157,12 @@ export const test_validation_shot_artifact_paths = (): void => {
               const reported = pathsOf(
                 validateShotArtifact(entry.shot, scene(), new Set(["walk"])),
               );
-              return reported.includes(entry.path);
+              // A prefix, because a uniqueness violation locates the entry it
+              // found second (`$input.objectMotions[1].id`) while the field
+              // this case names is the list itself.
+              return reported.some((reportedPath) =>
+                reportedPath.startsWith(entry.path),
+              );
             },
           ] as const,
       ),
