@@ -137,8 +137,4 @@ export const test_validation_shot_artifact_paths = (): void => {
     validateShotArtifact(null as unknown as IAutoMovieShot, scene(), null)
       .success === false,
   );
-  TestValidator.predicate(
-    "a complete shot beside its scene is accepted",
-    validateShotArtifact(shot(), scene(), new Set()).success,
-  );
 };

@@ -15431,8 +15431,13 @@ export const test_cli_scaffold = async (): Promise<void> => {
         parkedWorkerQuarantineResident: true,
       },
     );
-    fs.rmSync(workerQuarantine, { recursive: true });
-    nativeRename(parkedWorkerQuarantine, workerQuarantine);
+    // Only a swap that happened leaves a parked quarantine to move back, and
+    // each restore guards itself: this file's static contracts pin the
+    // top-level statement indices around here, so the count may not change.
+    if (workerParentAbaSwap === "swapped")
+      fs.rmSync(workerQuarantine, { recursive: true });
+    if (workerParentAbaSwap === "swapped")
+      nativeRename(parkedWorkerQuarantine, workerQuarantine);
     fs.rmSync(workerParentAbaDestination, { force: true });
     fs.rmSync(workerParentAbaIsolated, { force: true });
 

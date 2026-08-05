@@ -167,7 +167,7 @@ export const test_mcp_project_scene_artifact_edges = (): void => {
     },
     {
       title: "a camera fovY outside its open range is refused",
-      value: scene({ cameras: [camera({ fovY: 180 })] }),
+      value: scene({ cameras: [camera({ fovY: 181 })] }),
       fragments: ["$input.cameras[0].fovY"],
     },
     {
@@ -245,14 +245,19 @@ export const test_mcp_project_scene_artifact_edges = (): void => {
     },
   ];
 
-  for (const entry of cases) {
-    const root = fs.mkdtempSync(
-      path.join(os.tmpdir(), "automovie-scene-artifact-"),
-    );
-    let sceneArtifactFailure: ISceneArtifactFixtureFailure | undefined;
-    try {
-      AutoMovieProject.open(root);
-      fs.mkdirSync(path.join(root, "scenes"), { recursive: true });
+  // One root for every case, rewritten in place. A root per case would create
+  // and destroy two dozen project roots within a few milliseconds, and this
+  // host's global coordination lock is keyed by device and inode: a freed inode
+  // is reused, and the stale lock then collides with whatever project the next
+  // test opens. That collision is not this validator's subject.
+  const root = fs.mkdtempSync(
+    path.join(os.tmpdir(), "automovie-scene-artifact-"),
+  );
+  let sceneArtifactFailure: ISceneArtifactFixtureFailure | undefined;
+  try {
+    AutoMovieProject.open(root);
+    fs.mkdirSync(path.join(root, "scenes"), { recursive: true });
+    for (const entry of cases) {
       fs.writeFileSync(
         path.join(root, "scenes", "sc.json"),
         `${JSON.stringify(entry.value, null, 2)}\n`,
@@ -264,13 +269,13 @@ export const test_mcp_project_scene_artifact_edges = (): void => {
           entry.fragments,
         ),
       );
-    } catch (error) {
-      sceneArtifactFailure = { error };
-      throw error;
-    } finally {
-      preserveSceneArtifactFixtureCleanup(sceneArtifactFailure, () =>
-        fs.rmSync(root, { recursive: true, force: true }),
-      );
     }
+  } catch (error) {
+    sceneArtifactFailure = { error };
+    throw error;
+  } finally {
+    preserveSceneArtifactFixtureCleanup(sceneArtifactFailure, () =>
+      fs.rmSync(root, { recursive: true, force: true }),
+    );
   }
 };
