@@ -1412,12 +1412,7 @@ export const test_mcp_production_legacy_import = (): void => {
           () => directories.join("|") === "src/a|src/a-|src/a/z",
         ],
         ["importerApplyStatus", () => importer.apply().status === "applied"],
-        [
-          "importerApplyStatus2",
-          () =>
-            importer.apply().status === "applied" &&
-            importer.apply().status === "unchanged",
-        ],
+        ["importerApplyStatus2", () => importer.apply().status === "unchanged"],
         [
           "importerRollbackStatus",
           () => importer.rollback().status === "rolled-back",

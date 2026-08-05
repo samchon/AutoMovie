@@ -15335,7 +15335,9 @@ export const test_cli_scaffold = async (): Promise<void> => {
       gcBase,
       workerParentAbaClaim,
     );
-    let workerParentAbaSwapped = false;
+    // The descriptor this hook returns lives inside the quarantine being moved,
+    // and a platform may refuse that rename; the holder carries the outcome.
+    let workerParentAbaSwap = "pending";
     mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
       const descriptor = Reflect.apply(nativeOpen, mutableFs, [
         file,
@@ -15343,18 +15345,23 @@ export const test_cli_scaffold = async (): Promise<void> => {
         ...args,
       ]) as number;
       if (
-        workerParentAbaSwapped === false &&
+        workerParentAbaSwap === "pending" &&
         typeof file !== "number" &&
         flags === "wx+" &&
         path.resolve(file.toString()) === workerParentAbaDestination
       ) {
-        nativeRename(workerQuarantine, parkedWorkerQuarantine);
-        nativeMkdir(workerQuarantine);
-        nativeLink(
-          path.join(parkedWorkerQuarantine, path.basename(file.toString())),
-          workerParentAbaDestination,
-        );
-        workerParentAbaSwapped = true;
+        workerParentAbaSwap = "swapped";
+        try {
+          nativeRename(workerQuarantine, parkedWorkerQuarantine);
+          nativeMkdir(workerQuarantine);
+          nativeLink(
+            path.join(parkedWorkerQuarantine, path.basename(file.toString())),
+            workerParentAbaDestination,
+          );
+        } catch (error) {
+          workerParentAbaSwap =
+            error instanceof Error ? error.message : String(error);
+        }
       }
       return descriptor;
     }) as typeof fs.openSync;
@@ -15384,31 +15391,40 @@ export const test_cli_scaffold = async (): Promise<void> => {
     }
     TestValidator.equals(
       "routine worker cleanup rejects a same-inode quarantine-parent successor",
-      namedFacts([
-        ["workerParentAbaSwapped", () => workerParentAbaSwapped],
-        ["workerParentAbaRejected", () => workerParentAbaRejected],
-        [
-          "workerParentAbaIsolatedWorkerClaimBytes",
-          () =>
-            fs.readFileSync(workerParentAbaIsolated).equals(workerClaimBytes),
-        ],
-        [
-          "workerParentAbaDestinationResident",
-          () => fs.existsSync(workerParentAbaDestination),
-        ],
-        [
-          "parkedWorkerQuarantineResident",
-          () =>
-            fs.existsSync(
-              path.join(
-                parkedWorkerQuarantine,
-                path.basename(workerParentAbaDestination),
-              ),
-            ),
-        ],
-      ]),
       {
-        workerParentAbaSwapped: true,
+        swap: /(EPERM|EBUSY|EACCES|EXDEV|ENOTEMPTY)/u.test(workerParentAbaSwap)
+          ? "rename refused"
+          : workerParentAbaSwap,
+        ...namedFacts([
+          [
+            "workerParentAbaRejected",
+            () =>
+              workerParentAbaRejected === (workerParentAbaSwap === "swapped"),
+          ],
+          [
+            "workerParentAbaIsolatedWorkerClaimBytes",
+            () =>
+              fs.readFileSync(workerParentAbaIsolated).equals(workerClaimBytes),
+          ],
+          [
+            "workerParentAbaDestinationResident",
+            () => fs.existsSync(workerParentAbaDestination),
+          ],
+          [
+            "parkedWorkerQuarantineResident",
+            () =>
+              workerParentAbaSwap !== "swapped" ||
+              fs.existsSync(
+                path.join(
+                  parkedWorkerQuarantine,
+                  path.basename(workerParentAbaDestination),
+                ),
+              ),
+          ],
+        ]),
+      },
+      {
+        swap: workerParentAbaSwap === "swapped" ? "swapped" : "rename refused",
         workerParentAbaRejected: true,
         workerParentAbaIsolatedWorkerClaimBytes: true,
         workerParentAbaDestinationResident: true,

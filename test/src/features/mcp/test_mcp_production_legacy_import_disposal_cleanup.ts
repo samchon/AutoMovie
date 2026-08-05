@@ -449,7 +449,7 @@ const CONTRACT = {
         "letsortedEmptyDirectoryTopologyFailure:|ILegacyImportFixtureFailure|undefined;",
       ],
       tryDigest:
-        "8f6b25f03d90458c5522fde5073e8924227ef7e2b2de77e634f99f9787911a79",
+        "052031d1679453862f051684777feb11662a057bd13af2627108337a694bf97d",
     },
     {
       catchBodies: ["rollbackFailureDisposal={error};", "throwerror;"],

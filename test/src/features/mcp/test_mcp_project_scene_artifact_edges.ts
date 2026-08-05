@@ -102,9 +102,11 @@ export const test_mcp_project_scene_artifact_edges = (): void => {
   const cases: ISceneCase[] = [
     // 1. scene identity
     {
-      title: "a blank scene id reports the identity violation",
+      // The keyed layout checks the filename against the id before the artifact
+      // validator runs, so a blank id is reported as the mismatch it is.
+      title: "a blank scene id reports the keyed-slice mismatch",
       value: scene({ id: "  " }),
-      fragments: ["$input.id"],
+      fragments: ["keyed-slice mismatch"],
     },
     {
       title: "duplicate node ids report the uniqueness violation",
