@@ -206,6 +206,7 @@ const rejectsTamperedRollbackBaseline = (
   mutate: (plan: IAutoMovieLegacyImportPlan) => void,
 ): boolean => {
   const fixture = createLegacy();
+  let fixtureFailure: ILegacyImportFixtureFailure | undefined;
   try {
     prepare(fixture.root);
     const importer = new AutoMovieLegacyImporter(fixture.root);
@@ -220,8 +221,16 @@ const rejectsTamperedRollbackBaseline = (
     mutate(plan);
     fs.writeFileSync(planPath, `${JSON.stringify(plan, null, 2)}\n`);
     return throws(() => importer.rollback(), "changed after import");
+  } catch (error) {
+    fixtureFailure = { error };
+    throw error;
   } finally {
-    fixture.dispose();
+    preserveLegacyImportFixtureCleanup(fixtureFailure, [
+      {
+        resource: "tampered rollback baseline legacy fixture",
+        cleanup: () => fixture.dispose(),
+      },
+    ]);
   }
 };
 
@@ -243,6 +252,7 @@ const rejectsTamperedRollbackBaseline = (
  */
 export const test_mcp_production_legacy_import = (): void => {
   const fixture = createLegacy();
+  let fixtureFailure: ILegacyImportFixtureFailure | undefined;
   try {
     const before = legacyFiles(fixture.root);
     const importer = new AutoMovieLegacyImporter(fixture.root);
@@ -572,11 +582,20 @@ export const test_mcp_production_legacy_import = (): void => {
         ) &&
         throws(() => importer.rollback(), "changed after import"),
     );
+  } catch (error) {
+    fixtureFailure = { error };
+    throw error;
   } finally {
-    fixture.dispose();
+    preserveLegacyImportFixtureCleanup(fixtureFailure, [
+      {
+        resource: "applied provenance legacy fixture",
+        cleanup: () => fixture.dispose(),
+      },
+    ]);
   }
 
   const untouched = createLegacy();
+  let untouchedFailure: ILegacyImportFixtureFailure | undefined;
   try {
     const before = legacyFiles(untouched.root);
     const importer = new AutoMovieLegacyImporter(untouched.root);
@@ -596,11 +615,20 @@ export const test_mcp_production_legacy_import = (): void => {
         equalFiles(before, legacyFiles(untouched.root)) &&
         throws(() => importer.rollback(), "Nothing was rolled back"),
     );
+  } catch (error) {
+    untouchedFailure = { error };
+    throw error;
   } finally {
-    untouched.dispose();
+    preserveLegacyImportFixtureCleanup(untouchedFailure, [
+      {
+        resource: "untouched legacy fixture",
+        cleanup: () => untouched.dispose(),
+      },
+    ]);
   }
 
   const actorless = createLegacy();
+  let actorlessFailure: ILegacyImportFixtureFailure | undefined;
   try {
     AutoMovieProject.open(actorless.root).saveSlate({
       ...slate,
@@ -616,8 +644,16 @@ export const test_mcp_production_legacy_import = (): void => {
             diagnostic.code === "legacy-camera-subject-reconstruction-required",
         ),
     );
+  } catch (error) {
+    actorlessFailure = { error };
+    throw error;
   } finally {
-    actorless.dispose();
+    preserveLegacyImportFixtureCleanup(actorlessFailure, [
+      {
+        resource: "actorless legacy fixture",
+        cleanup: () => actorless.dispose(),
+      },
+    ]);
   }
 
   const empty = fs.mkdtempSync(
@@ -660,6 +696,7 @@ export const test_mcp_production_legacy_import = (): void => {
   }
 
   const planningCleanup = createLegacy();
+  let planningCleanupFailure: ILegacyImportFixtureFailure | undefined;
   try {
     const importer = new AutoMovieLegacyImporter(planningCleanup.root);
     const nativeWrite = fs.writeFileSync;
@@ -733,11 +770,20 @@ export const test_mcp_production_legacy_import = (): void => {
           combinedCleanupFailure,
         ]),
     );
+  } catch (error) {
+    planningCleanupFailure = { error };
+    throw error;
   } finally {
-    planningCleanup.dispose();
+    preserveLegacyImportFixtureCleanup(planningCleanupFailure, [
+      {
+        resource: "planning cleanup legacy fixture",
+        cleanup: () => planningCleanup.dispose(),
+      },
+    ]);
   }
 
   const collisions = createLegacy();
+  let collisionsFailure: ILegacyImportFixtureFailure | undefined;
   try {
     fs.mkdirSync(path.join(collisions.root, ".automovie"));
     TestValidator.predicate(
@@ -756,11 +802,20 @@ export const test_mcp_production_legacy_import = (): void => {
         "not a physical directory",
       ),
     );
+  } catch (error) {
+    collisionsFailure = { error };
+    throw error;
   } finally {
-    collisions.dispose();
+    preserveLegacyImportFixtureCleanup(collisionsFailure, [
+      {
+        resource: "collisions legacy fixture",
+        cleanup: () => collisions.dispose(),
+      },
+    ]);
   }
 
   const renameFailure = createLegacy();
+  let renameFailureDisposal: ILegacyImportFixtureFailure | undefined;
   try {
     const nativeRename = fs.renameSync;
     // Scope the injection to the importer's atomic publish. A process-wide
@@ -824,11 +879,20 @@ export const test_mcp_production_legacy_import = (): void => {
     } finally {
       fs.renameSync = nativeRename;
     }
+  } catch (error) {
+    renameFailureDisposal = { error };
+    throw error;
   } finally {
-    renameFailure.dispose();
+    preserveLegacyImportFixtureCleanup(renameFailureDisposal, [
+      {
+        resource: "rename failure legacy fixture",
+        cleanup: () => renameFailure.dispose(),
+      },
+    ]);
   }
 
   const importCleanupFailure = createLegacy();
+  let importCleanupFailureDisposal: ILegacyImportFixtureFailure | undefined;
   try {
     const publicationFailure = new Error("injected import publication failure");
     const stagingCleanupFailure = new Error(
@@ -884,8 +948,16 @@ export const test_mcp_production_legacy_import = (): void => {
           .readdirSync(importCleanupFailure.root)
           .every((entry) => entry.startsWith(".automovie-import-") === false),
     );
+  } catch (error) {
+    importCleanupFailureDisposal = { error };
+    throw error;
   } finally {
-    importCleanupFailure.dispose();
+    preserveLegacyImportFixtureCleanup(importCleanupFailureDisposal, [
+      {
+        resource: "import cleanup failure legacy fixture",
+        cleanup: () => importCleanupFailure.dispose(),
+      },
+    ]);
   }
 
   const publishRootSwap = createLegacy();
@@ -974,6 +1046,7 @@ export const test_mcp_production_legacy_import = (): void => {
   }
 
   const tampered = createLegacy();
+  let tamperedFailure: ILegacyImportFixtureFailure | undefined;
   try {
     const importer = new AutoMovieLegacyImporter(tampered.root);
     importer.apply();
@@ -986,8 +1059,16 @@ export const test_mcp_production_legacy_import = (): void => {
       "a changed import plan refuses rollback",
       throws(() => importer.rollback(), "changed after import"),
     );
+  } catch (error) {
+    tamperedFailure = { error };
+    throw error;
   } finally {
-    tampered.dispose();
+    preserveLegacyImportFixtureCleanup(tamperedFailure, [
+      {
+        resource: "tampered legacy fixture",
+        cleanup: () => tampered.dispose(),
+      },
+    ]);
   }
 
   TestValidator.predicate(
@@ -1025,6 +1106,7 @@ export const test_mcp_production_legacy_import = (): void => {
   );
 
   const tamperedState = createLegacy();
+  let tamperedStateFailure: ILegacyImportFixtureFailure | undefined;
   try {
     const importer = new AutoMovieLegacyImporter(tamperedState.root);
     importer.apply();
@@ -1045,11 +1127,20 @@ export const test_mcp_production_legacy_import = (): void => {
       throws(() => importer.apply(), "different or incomplete import") &&
         throws(() => importer.rollback(), "changed after import"),
     );
+  } catch (error) {
+    tamperedStateFailure = { error };
+    throw error;
   } finally {
-    tamperedState.dispose();
+    preserveLegacyImportFixtureCleanup(tamperedStateFailure, [
+      {
+        resource: "tampered state legacy fixture",
+        cleanup: () => tamperedState.dispose(),
+      },
+    ]);
   }
 
   const productionWork = createLegacy();
+  let productionWorkFailure: ILegacyImportFixtureFailure | undefined;
   try {
     const importer = new AutoMovieLegacyImporter(productionWork.root);
     importer.apply();
@@ -1059,11 +1150,20 @@ export const test_mcp_production_legacy_import = (): void => {
       "production work in a newly owned directory refuses rollback",
       throws(() => importer.rollback(), "contains work"),
     );
+  } catch (error) {
+    productionWorkFailure = { error };
+    throw error;
   } finally {
-    productionWork.dispose();
+    preserveLegacyImportFixtureCleanup(productionWorkFailure, [
+      {
+        resource: "production work legacy fixture",
+        cleanup: () => productionWork.dispose(),
+      },
+    ]);
   }
 
   const preexistingSource = createLegacy();
+  let preexistingSourceFailure: ILegacyImportFixtureFailure | undefined;
   try {
     const sourceRoot = path.join(preexistingSource.root, "src");
     const sourceFile = path.join(sourceRoot, "preserved.ts");
@@ -1088,11 +1188,20 @@ export const test_mcp_production_legacy_import = (): void => {
       fs.readFileSync(sourceFile, "utf8") ===
         "export const preserved = true;\n" && fs.existsSync(sourceRoot),
     );
+  } catch (error) {
+    preexistingSourceFailure = { error };
+    throw error;
   } finally {
-    preexistingSource.dispose();
+    preserveLegacyImportFixtureCleanup(preexistingSourceFailure, [
+      {
+        resource: "preexisting source legacy fixture",
+        cleanup: () => preexistingSource.dispose(),
+      },
+    ]);
   }
 
   const missingPreexistingSource = createLegacy();
+  let missingPreexistingSourceFailure: ILegacyImportFixtureFailure | undefined;
   try {
     const sourceRoot = path.join(missingPreexistingSource.root, "src");
     fs.mkdirSync(sourceRoot);
@@ -1104,11 +1213,20 @@ export const test_mcp_production_legacy_import = (): void => {
       "a disappeared pre-import owned directory refuses rollback",
       throws(() => importer.rollback(), "Restore its pre-import contents"),
     );
+  } catch (error) {
+    missingPreexistingSourceFailure = { error };
+    throw error;
   } finally {
-    missingPreexistingSource.dispose();
+    preserveLegacyImportFixtureCleanup(missingPreexistingSourceFailure, [
+      {
+        resource: "missing preexisting source legacy fixture",
+        cleanup: () => missingPreexistingSource.dispose(),
+      },
+    ]);
   }
 
   const deniedImportState = createLegacy();
+  let deniedImportStateFailure: ILegacyImportFixtureFailure | undefined;
   try {
     const importer = new AutoMovieLegacyImporter(deniedImportState.root);
     importer.apply();
@@ -1151,11 +1269,20 @@ export const test_mcp_production_legacy_import = (): void => {
     } finally {
       Object.defineProperty(fs, "lstatSync", nativeLstatDescriptor);
     }
+  } catch (error) {
+    deniedImportStateFailure = { error };
+    throw error;
   } finally {
-    deniedImportState.dispose();
+    preserveLegacyImportFixtureCleanup(deniedImportStateFailure, [
+      {
+        resource: "denied import state legacy fixture",
+        cleanup: () => deniedImportState.dispose(),
+      },
+    ]);
   }
 
   const emptyDirectoryTopology = createLegacy();
+  let emptyDirectoryTopologyFailure: ILegacyImportFixtureFailure | undefined;
   try {
     const original = path.join(
       emptyDirectoryTopology.root,
@@ -1183,11 +1310,22 @@ export const test_mcp_production_legacy_import = (): void => {
       "unchanged empty-directory topology survives rollback",
       fs.existsSync(original),
     );
+  } catch (error) {
+    emptyDirectoryTopologyFailure = { error };
+    throw error;
   } finally {
-    emptyDirectoryTopology.dispose();
+    preserveLegacyImportFixtureCleanup(emptyDirectoryTopologyFailure, [
+      {
+        resource: "empty directory topology legacy fixture",
+        cleanup: () => emptyDirectoryTopology.dispose(),
+      },
+    ]);
   }
 
   const sortedEmptyDirectoryTopology = createLegacy();
+  let sortedEmptyDirectoryTopologyFailure:
+    | ILegacyImportFixtureFailure
+    | undefined;
   try {
     fs.mkdirSync(path.join(sortedEmptyDirectoryTopology.root, "src/a/z"), {
       recursive: true,
@@ -1205,11 +1343,20 @@ export const test_mcp_production_legacy_import = (): void => {
         importer.apply().status === "unchanged" &&
         importer.rollback().status === "rolled-back",
     );
+  } catch (error) {
+    sortedEmptyDirectoryTopologyFailure = { error };
+    throw error;
   } finally {
-    sortedEmptyDirectoryTopology.dispose();
+    preserveLegacyImportFixtureCleanup(sortedEmptyDirectoryTopologyFailure, [
+      {
+        resource: "sorted empty directory topology legacy fixture",
+        cleanup: () => sortedEmptyDirectoryTopology.dispose(),
+      },
+    ]);
   }
 
   const rollbackFailure = createLegacy();
+  let rollbackFailureDisposal: ILegacyImportFixtureFailure | undefined;
   try {
     const importer = new AutoMovieLegacyImporter(rollbackFailure.root);
     const plan = importer.plan();
@@ -1326,8 +1473,16 @@ export const test_mcp_production_legacy_import = (): void => {
       importer.rollback().status === "rolled-back" &&
         fs.existsSync(path.join(rollbackFailure.root, ".automovie")) === false,
     );
+  } catch (error) {
+    rollbackFailureDisposal = { error };
+    throw error;
   } finally {
-    rollbackFailure.dispose();
+    preserveLegacyImportFixtureCleanup(rollbackFailureDisposal, [
+      {
+        resource: "rollback failure legacy fixture",
+        cleanup: () => rollbackFailure.dispose(),
+      },
+    ]);
   }
 
   const rollbackRootSwap = createLegacy();
@@ -1414,6 +1569,7 @@ export const test_mcp_production_legacy_import = (): void => {
   }
 
   const incompleteRestoration = createLegacy();
+  let incompleteRestorationFailure: ILegacyImportFixtureFailure | undefined;
   try {
     const importer = new AutoMovieLegacyImporter(incompleteRestoration.root);
     const plan = importer.plan();
@@ -1492,11 +1648,22 @@ export const test_mcp_production_legacy_import = (): void => {
         },
       ]);
     }
+  } catch (error) {
+    incompleteRestorationFailure = { error };
+    throw error;
   } finally {
-    incompleteRestoration.dispose();
+    preserveLegacyImportFixtureCleanup(incompleteRestorationFailure, [
+      {
+        resource: "incomplete restoration legacy fixture",
+        cleanup: () => incompleteRestoration.dispose(),
+      },
+    ]);
   }
 
   const restorationCleanupFailure = createLegacy();
+  let restorationCleanupFailureDisposal:
+    | ILegacyImportFixtureFailure
+    | undefined;
   try {
     const importer = new AutoMovieLegacyImporter(
       restorationCleanupFailure.root,
@@ -1625,11 +1792,20 @@ export const test_mcp_production_legacy_import = (): void => {
         stateRootResident: false,
       },
     );
+  } catch (error) {
+    restorationCleanupFailureDisposal = { error };
+    throw error;
   } finally {
-    restorationCleanupFailure.dispose();
+    preserveLegacyImportFixtureCleanup(restorationCleanupFailureDisposal, [
+      {
+        resource: "restoration cleanup failure legacy fixture",
+        cleanup: () => restorationCleanupFailure.dispose(),
+      },
+    ]);
   }
 
   const preservedQuarantine = createLegacy();
+  let preservedQuarantineFailure: ILegacyImportFixtureFailure | undefined;
   try {
     const importer = new AutoMovieLegacyImporter(preservedQuarantine.root);
     const plan = importer.plan();
@@ -1677,11 +1853,20 @@ export const test_mcp_production_legacy_import = (): void => {
         },
       ]);
     }
+  } catch (error) {
+    preservedQuarantineFailure = { error };
+    throw error;
   } finally {
-    preservedQuarantine.dispose();
+    preserveLegacyImportFixtureCleanup(preservedQuarantineFailure, [
+      {
+        resource: "preserved quarantine legacy fixture",
+        cleanup: () => preservedQuarantine.dispose(),
+      },
+    ]);
   }
 
   const incarnationRace = createLegacy();
+  let incarnationRaceFailure: ILegacyImportFixtureFailure | undefined;
   try {
     const importer = new AutoMovieLegacyImporter(incarnationRace.root);
     importer.apply();
@@ -1707,11 +1892,20 @@ export const test_mcp_production_legacy_import = (): void => {
         retiredOwnerPreservesFreshLock &&
         fresh.manifest().importedLegacy?.revision === 2,
     );
+  } catch (error) {
+    incarnationRaceFailure = { error };
+    throw error;
   } finally {
-    incarnationRace.dispose();
+    preserveLegacyImportFixtureCleanup(incarnationRaceFailure, [
+      {
+        resource: "incarnation race legacy fixture",
+        cleanup: () => incarnationRace.dispose(),
+      },
+    ]);
   }
 
   const extraState = createLegacy();
+  let extraStateFailure: ILegacyImportFixtureFailure | undefined;
   try {
     const importer = new AutoMovieLegacyImporter(extraState.root);
     importer.apply();
@@ -1723,11 +1917,20 @@ export const test_mcp_production_legacy_import = (): void => {
       "new tracked production state refuses rollback",
       throws(() => importer.rollback(), "changed after import"),
     );
+  } catch (error) {
+    extraStateFailure = { error };
+    throw error;
   } finally {
-    extraState.dispose();
+    preserveLegacyImportFixtureCleanup(extraStateFailure, [
+      {
+        resource: "extra state legacy fixture",
+        cleanup: () => extraState.dispose(),
+      },
+    ]);
   }
 
   const malformedAppliedState = createLegacy();
+  let malformedAppliedStateFailure: ILegacyImportFixtureFailure | undefined;
   try {
     const importer = new AutoMovieLegacyImporter(malformedAppliedState.root);
     importer.apply();
@@ -1743,11 +1946,20 @@ export const test_mcp_production_legacy_import = (): void => {
       throws(() => importer.apply(), "different or incomplete") &&
         throws(() => importer.rollback(), "changed after import"),
     );
+  } catch (error) {
+    malformedAppliedStateFailure = { error };
+    throw error;
   } finally {
-    malformedAppliedState.dispose();
+    preserveLegacyImportFixtureCleanup(malformedAppliedStateFailure, [
+      {
+        resource: "malformed applied state legacy fixture",
+        cleanup: () => malformedAppliedState.dispose(),
+      },
+    ]);
   }
 
   const activeCommit = createLegacy();
+  let activeCommitFailure: ILegacyImportFixtureFailure | undefined;
   try {
     const lockPath = path.join(activeCommit.root, "revision.lock");
     fs.writeFileSync(lockPath, "external-owner");
@@ -1759,8 +1971,16 @@ export const test_mcp_production_legacy_import = (): void => {
       ),
     );
     fs.rmSync(lockPath);
+  } catch (error) {
+    activeCommitFailure = { error };
+    throw error;
   } finally {
-    activeCommit.dispose();
+    preserveLegacyImportFixtureCleanup(activeCommitFailure, [
+      {
+        resource: "active commit legacy fixture",
+        cleanup: () => activeCommit.dispose(),
+      },
+    ]);
   }
 
   const linkedRoot = createLegacy();
@@ -2164,6 +2384,7 @@ export const test_mcp_production_legacy_import = (): void => {
   }
 
   const revisionRace = createLegacy();
+  let revisionRaceFailure: ILegacyImportFixtureFailure | undefined;
   try {
     const revisionPath = path.join(revisionRace.root, "revision.json");
     const revisionParked = `${revisionPath}.read-parked`;
@@ -2223,11 +2444,20 @@ export const test_mcp_production_legacy_import = (): void => {
         },
       ]);
     }
+  } catch (error) {
+    revisionRaceFailure = { error };
+    throw error;
   } finally {
-    revisionRace.dispose();
+    preserveLegacyImportFixtureCleanup(revisionRaceFailure, [
+      {
+        resource: "revision race legacy fixture",
+        cleanup: () => revisionRace.dispose(),
+      },
+    ]);
   }
 
   const revisionAfterReadRace = createLegacy();
+  let revisionAfterReadRaceFailure: ILegacyImportFixtureFailure | undefined;
   try {
     const revisionPath = path.join(revisionAfterReadRace.root, "revision.json");
     const nativeOpen = fs.openSync;
@@ -2287,11 +2517,20 @@ export const test_mcp_production_legacy_import = (): void => {
         },
       ]);
     }
+  } catch (error) {
+    revisionAfterReadRaceFailure = { error };
+    throw error;
   } finally {
-    revisionAfterReadRace.dispose();
+    preserveLegacyImportFixtureCleanup(revisionAfterReadRaceFailure, [
+      {
+        resource: "revision after read race legacy fixture",
+        cleanup: () => revisionAfterReadRace.dispose(),
+      },
+    ]);
   }
 
   const invalidRollbackBaseline = createLegacy();
+  let invalidRollbackBaselineFailure: ILegacyImportFixtureFailure | undefined;
   try {
     fs.writeFileSync(path.join(invalidRollbackBaseline.root, "src"), "file");
     TestValidator.predicate(
@@ -2301,11 +2540,20 @@ export const test_mcp_production_legacy_import = (): void => {
         "rollback baseline",
       ),
     );
+  } catch (error) {
+    invalidRollbackBaselineFailure = { error };
+    throw error;
   } finally {
-    invalidRollbackBaseline.dispose();
+    preserveLegacyImportFixtureCleanup(invalidRollbackBaselineFailure, [
+      {
+        resource: "invalid rollback baseline legacy fixture",
+        cleanup: () => invalidRollbackBaseline.dispose(),
+      },
+    ]);
   }
 
   const requiredLegacyDirectory = createLegacy();
+  let requiredLegacyDirectoryFailure: ILegacyImportFixtureFailure | undefined;
   try {
     const manifestPath = path.join(
       requiredLegacyDirectory.root,
@@ -2320,11 +2568,20 @@ export const test_mcp_production_legacy_import = (): void => {
         "not a regular file",
       ),
     );
+  } catch (error) {
+    requiredLegacyDirectoryFailure = { error };
+    throw error;
   } finally {
-    requiredLegacyDirectory.dispose();
+    preserveLegacyImportFixtureCleanup(requiredLegacyDirectoryFailure, [
+      {
+        resource: "required legacy directory legacy fixture",
+        cleanup: () => requiredLegacyDirectory.dispose(),
+      },
+    ]);
   }
 
   const collidingCase = createLegacy();
+  let collidingCaseFailure: ILegacyImportFixtureFailure | undefined;
   try {
     fs.writeFileSync(path.join(collidingCase.root, "actors/Officer.txt"), "A");
     fs.writeFileSync(path.join(collidingCase.root, "actors/officer.txt"), "B");
@@ -2369,11 +2626,20 @@ export const test_mcp_production_legacy_import = (): void => {
     } finally {
       fs.readdirSync = nativeReaddir;
     }
+  } catch (error) {
+    collidingCaseFailure = { error };
+    throw error;
   } finally {
-    collidingCase.dispose();
+    preserveLegacyImportFixtureCleanup(collidingCaseFailure, [
+      {
+        resource: "colliding case legacy fixture",
+        cleanup: () => collidingCase.dispose(),
+      },
+    ]);
   }
 
   const inventoryRootFile = createLegacy();
+  let inventoryRootFileFailure: ILegacyImportFixtureFailure | undefined;
   try {
     fs.rmSync(path.join(inventoryRootFile.root, "actors"), {
       recursive: true,
@@ -2386,11 +2652,20 @@ export const test_mcp_production_legacy_import = (): void => {
         "inventory directory",
       ),
     );
+  } catch (error) {
+    inventoryRootFileFailure = { error };
+    throw error;
   } finally {
-    inventoryRootFile.dispose();
+    preserveLegacyImportFixtureCleanup(inventoryRootFileFailure, [
+      {
+        resource: "inventory root file legacy fixture",
+        cleanup: () => inventoryRootFile.dispose(),
+      },
+    ]);
   }
 
   const specialInventoryEntry = createLegacy();
+  let specialInventoryEntryFailure: ILegacyImportFixtureFailure | undefined;
   try {
     const nativeReaddir = fs.readdirSync;
     fs.readdirSync = ((
@@ -2428,8 +2703,16 @@ export const test_mcp_production_legacy_import = (): void => {
     } finally {
       fs.readdirSync = nativeReaddir;
     }
+  } catch (error) {
+    specialInventoryEntryFailure = { error };
+    throw error;
   } finally {
-    specialInventoryEntry.dispose();
+    preserveLegacyImportFixtureCleanup(specialInventoryEntryFailure, [
+      {
+        resource: "special inventory entry legacy fixture",
+        cleanup: () => specialInventoryEntry.dispose(),
+      },
+    ]);
   }
 
   const linkedRevision = createLegacy();
@@ -2557,6 +2840,7 @@ export const test_mcp_production_legacy_import = (): void => {
   }
 
   const mismatchedRollbackLock = createLegacy();
+  let mismatchedRollbackLockFailure: ILegacyImportFixtureFailure | undefined;
   try {
     const importer = new AutoMovieLegacyImporter(mismatchedRollbackLock.root);
     importer.apply();
@@ -2588,8 +2872,16 @@ export const test_mcp_production_legacy_import = (): void => {
     } finally {
       fs.writeFileSync = nativeWrite;
     }
+  } catch (error) {
+    mismatchedRollbackLockFailure = { error };
+    throw error;
   } finally {
-    mismatchedRollbackLock.dispose();
+    preserveLegacyImportFixtureCleanup(mismatchedRollbackLockFailure, [
+      {
+        resource: "mismatched rollback lock legacy fixture",
+        cleanup: () => mismatchedRollbackLock.dispose(),
+      },
+    ]);
   }
 
   const linkedAppliedState = createLegacy();
@@ -2635,6 +2927,7 @@ export const test_mcp_production_legacy_import = (): void => {
   }
 
   const directoryImportPlan = createLegacy();
+  let directoryImportPlanFailure: ILegacyImportFixtureFailure | undefined;
   try {
     const importer = new AutoMovieLegacyImporter(directoryImportPlan.root);
     importer.apply();
@@ -2648,11 +2941,20 @@ export const test_mcp_production_legacy_import = (): void => {
       "import metadata must remain a physical regular file",
       throws(() => importer.rollback(), "not a physical file"),
     );
+  } catch (error) {
+    directoryImportPlanFailure = { error };
+    throw error;
   } finally {
-    directoryImportPlan.dispose();
+    preserveLegacyImportFixtureCleanup(directoryImportPlanFailure, [
+      {
+        resource: "directory import plan legacy fixture",
+        cleanup: () => directoryImportPlan.dispose(),
+      },
+    ]);
   }
 
   const specialAppliedState = createLegacy();
+  let specialAppliedStateFailure: ILegacyImportFixtureFailure | undefined;
   try {
     const importer = new AutoMovieLegacyImporter(specialAppliedState.root);
     importer.apply();
@@ -2689,8 +2991,16 @@ export const test_mcp_production_legacy_import = (): void => {
     } finally {
       fs.readdirSync = nativeReaddir;
     }
+  } catch (error) {
+    specialAppliedStateFailure = { error };
+    throw error;
   } finally {
-    specialAppliedState.dispose();
+    preserveLegacyImportFixtureCleanup(specialAppliedStateFailure, [
+      {
+        resource: "special applied state legacy fixture",
+        cleanup: () => specialAppliedState.dispose(),
+      },
+    ]);
   }
 
   const malformedRoots = [

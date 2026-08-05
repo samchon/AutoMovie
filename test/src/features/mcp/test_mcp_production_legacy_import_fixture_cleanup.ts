@@ -268,12 +268,12 @@ export const test_mcp_production_legacy_import_fixture_cleanup = (): void => {
           {
             catchBodies: ["linkedRootFailure={error};", "throwerror;"],
             catchVariables: ["error"],
-            containerStatements: 110,
+            containerStatements: 143,
             finallyBodies: [
               "constcompletedLinkedParent=linkedParent;",
               'preserveLegacyImportFixtureCleanup(linkedRootFailure,[{resource:"linked-rootlegacyfixture",cleanup:()=>linkedRoot.dispose(),},...(completedLinkedParent===undefined?[]:[{resource:"linked-rootoutsideroot",cleanup:()=>fs.rmSync(completedLinkedParent,{force:true,recursive:true,}),},]),]);',
             ],
-            index: 62,
+            index: 85,
             loopHeaders: [],
             prefixes: [
               "constlinkedRoot=createLegacy();",
@@ -289,12 +289,12 @@ export const test_mcp_production_legacy_import_fixture_cleanup = (): void => {
           {
             catchBodies: ["linkedRevisionFailure={error};", "throwerror;"],
             catchVariables: ["error"],
-            containerStatements: 110,
+            containerStatements: 143,
             finallyBodies: [
               "constcompletedLinkedRevisionTarget=linkedRevisionTarget;",
               'preserveLegacyImportFixtureCleanup(linkedRevisionFailure,[{resource:"linked-revisionlegacyfixture",cleanup:()=>linkedRevision.dispose(),},...(completedLinkedRevisionTarget===undefined?[]:[{resource:"linked-revisionoutsideroot",cleanup:()=>fs.rmSync(completedLinkedRevisionTarget,{force:true,recursive:true,}),},]),]);',
             ],
-            index: 92,
+            index: 122,
             loopHeaders: [],
             prefixes: [
               "constlinkedRevision=createLegacy();",
@@ -334,12 +334,12 @@ export const test_mcp_production_legacy_import_fixture_cleanup = (): void => {
           {
             catchBodies: ["linkedAppliedStateFailure={error};", "throwerror;"],
             catchVariables: ["error"],
-            containerStatements: 110,
+            containerStatements: 143,
             finallyBodies: [
               "constcompletedLinkedAppliedStateTarget=linkedAppliedStateTarget;",
               'preserveLegacyImportFixtureCleanup(linkedAppliedStateFailure,[{resource:"linked-applied-statelegacyfixture",cleanup:()=>linkedAppliedState.dispose(),},...(completedLinkedAppliedStateTarget===undefined?[]:[{resource:"linked-applied-stateoutsideroot",cleanup:()=>fs.rmSync(completedLinkedAppliedStateTarget,{force:true,recursive:true,}),},]),]);',
             ],
-            index: 99,
+            index: 130,
             loopHeaders: [],
             prefixes: [
               "constlinkedAppliedState=createLegacy();",
@@ -355,12 +355,12 @@ export const test_mcp_production_legacy_import_fixture_cleanup = (): void => {
           {
             catchBodies: ["unsafeFailure={error};", "throwerror;"],
             catchVariables: ["error"],
-            containerStatements: 110,
+            containerStatements: 143,
             finallyBodies: [
               "constcompletedOutside=outside;",
               'preserveLegacyImportFixtureCleanup(unsafeFailure,[{resource:"unsafe-inventorylegacyfixture",cleanup:()=>unsafe.dispose(),},...(completedOutside===undefined?[]:[{resource:"unsafe-inventoryoutsideroot",cleanup:()=>fs.rmSync(completedOutside,{force:true,recursive:true,}),},]),]);',
             ],
-            index: 109,
+            index: 142,
             loopHeaders: [],
             prefixes: [
               "constunsafe=createLegacy();",
@@ -374,7 +374,7 @@ export const test_mcp_production_legacy_import_fixture_cleanup = (): void => {
             ],
           },
         ],
-        statementCounts: [110],
+        statementCounts: [143],
       },
       policy: {
         bodies: [
