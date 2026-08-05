@@ -10,6 +10,7 @@ import {
   makeMotion,
   makePose,
 } from "../internal/fixtures";
+import { namedFacts } from "../internal/predicates";
 
 const SKELETON: IAutoMovieSkeleton = {
   id: "spring-rig",
@@ -105,11 +106,22 @@ export const test_viewer_player_spring_clamp = (): void => {
     if (t > 2.51 && firstAbsent === null) firstAbsent = flexion;
     if (t > 5.9) settled = flexion;
   }
-  TestValidator.predicate(
+  TestValidator.equals(
     "vanished joints decay their follow-through smoothly to neutral",
-    firstAbsent !== null &&
-      Math.abs(firstAbsent) > 0.5 &&
-      settled !== null &&
-      Math.abs(settled) < 0.5,
+    namedFacts([
+      ["firstAbsent", () => firstAbsent !== null],
+      [
+        "MathAbsFirstAbsent",
+        () => firstAbsent !== null && Math.abs(firstAbsent) > 0.5,
+      ],
+      ["settled", () => settled !== null],
+      ["MathAbsSettled", () => settled !== null && Math.abs(settled) < 0.5],
+    ]),
+    {
+      firstAbsent: true,
+      MathAbsFirstAbsent: true,
+      settled: true,
+      MathAbsSettled: true,
+    },
   );
 };

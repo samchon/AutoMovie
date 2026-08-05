@@ -27,7 +27,7 @@ import {
   makeMotion,
   makePose,
 } from "../internal/fixtures";
-import { vclose, violationCount } from "../internal/predicates";
+import { namedFacts, vclose, violationCount } from "../internal/predicates";
 
 type ICoverage = IAutoMovieBlockingCoverage;
 
@@ -308,11 +308,35 @@ export const test_film_perform_shot_camera_subject = (): void => {
     undefined,
     (_target, seconds) => ({ x: 6 + seconds, y: 1.2, z: 0 }),
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "a moving bone drives both the follow subject and camera intent focus",
-    boneFrame.success === true &&
-      keysOf(boneFrame.shot.cameraMotion!.tracks[0]!.values).length > 1 &&
-      vclose(boneFrame.shot.cameraIntent![0]!.focus!, { x: 6, y: 1.2, z: 0 }),
+    namedFacts([
+      [
+        "boneFrameSuccess",
+        () => result.success === true && boneFrame.success === true,
+      ],
+      [
+        "keysOfBoneFrameShot",
+        () =>
+          boneFrame.success === true &&
+          keysOf(boneFrame.shot.cameraMotion!.tracks[0]!.values).length > 1,
+      ],
+      [
+        "vcloseBoneFrameShot",
+        () =>
+          boneFrame.success === true &&
+          vclose(boneFrame.shot.cameraIntent![0]!.focus!, {
+            x: 6,
+            y: 1.2,
+            z: 0,
+          }),
+      ],
+    ]),
+    {
+      boneFrameSuccess: true,
+      keysOfBoneFrameShot: true,
+      vcloseBoneFrameShot: true,
+    },
   );
   const fallbackBoneFrame = perform(
     [

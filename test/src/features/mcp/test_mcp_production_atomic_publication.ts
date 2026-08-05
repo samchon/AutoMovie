@@ -550,24 +550,47 @@ export const test_mcp_production_atomic_publication = (): void => {
         readFileSyncReceiptPathEquals: true,
       },
     );
-    TestValidator.predicate(
+    TestValidator.equals(
       "staged final-gate failure also restores prior valid publication",
-      throws(
-        () =>
-          project.commitProductionPublication({
-            files: new Map([[relative, second]]),
-            manifest: replacement,
-            expectedRevision: revision,
-            publicationCurrent: () => {
-              throw new Error("injected staged final failure");
-            },
-          }),
-        "staged final failure",
-      ) &&
-        project.revision() === revision &&
-        fs.readFileSync(outputPath).equals(first) &&
-        fs.readFileSync(manifestPath).equals(manifestBytes) &&
-        fs.readFileSync(receiptPath).equals(receiptBytes),
+      namedFacts([
+        [
+          "throwsProjectCommitProductionPublication",
+          () =>
+            failure !== undefined &&
+            throws(
+              () =>
+                project.commitProductionPublication({
+                  files: new Map([[relative, second]]),
+                  manifest: replacement,
+                  expectedRevision: revision,
+                  publicationCurrent: () => {
+                    throw new Error("injected staged final failure");
+                  },
+                }),
+              "staged final failure",
+            ),
+        ],
+        ["projectRevisionRevision", () => project.revision() === revision],
+        [
+          "readFileSyncOutputPathEquals",
+          () => fs.readFileSync(outputPath).equals(first),
+        ],
+        [
+          "readFileSyncManifestPathEquals",
+          () => fs.readFileSync(manifestPath).equals(manifestBytes),
+        ],
+        [
+          "readFileSyncReceiptPathEquals",
+          () => fs.readFileSync(receiptPath).equals(receiptBytes),
+        ],
+      ]),
+      {
+        throwsProjectCommitProductionPublication: true,
+        projectRevisionRevision: true,
+        readFileSyncOutputPathEquals: true,
+        readFileSyncManifestPathEquals: true,
+        readFileSyncReceiptPathEquals: true,
+      },
     );
     const readRenderFile = project.readRenderFile;
     project.readRenderFile = ((candidate: string): Uint8Array =>
@@ -615,24 +638,48 @@ export const test_mcp_production_atomic_publication = (): void => {
         fs.readFileSync(receiptPath).equals(receiptBytes),
     );
     let terminalObservations = 0;
-    TestValidator.predicate(
+    TestValidator.equals(
       "input race after the staged final gate restores prior publication",
-      throws(
-        () =>
-          project.commitProductionPublication({
-            files: new Map([[relative, second]]),
-            manifest: replacement,
-            expectedRevision: revision,
-            inputCurrent: () => ++terminalObservations < 3,
-            publicationCurrent: () => undefined,
-          }),
-        "final gate",
-      ) &&
-        terminalObservations === 3 &&
-        project.revision() === revision &&
-        fs.readFileSync(outputPath).equals(first) &&
-        fs.readFileSync(manifestPath).equals(manifestBytes) &&
-        fs.readFileSync(receiptPath).equals(receiptBytes),
+      namedFacts([
+        [
+          "throwsProjectCommitProductionPublication",
+          () =>
+            failure !== undefined &&
+            throws(
+              () =>
+                project.commitProductionPublication({
+                  files: new Map([[relative, second]]),
+                  manifest: replacement,
+                  expectedRevision: revision,
+                  inputCurrent: () => ++terminalObservations < 3,
+                  publicationCurrent: () => undefined,
+                }),
+              "final gate",
+            ),
+        ],
+        ["terminalObservations", () => terminalObservations === 3],
+        ["projectRevisionRevision", () => project.revision() === revision],
+        [
+          "readFileSyncOutputPathEquals",
+          () => fs.readFileSync(outputPath).equals(first),
+        ],
+        [
+          "readFileSyncManifestPathEquals",
+          () => fs.readFileSync(manifestPath).equals(manifestBytes),
+        ],
+        [
+          "readFileSyncReceiptPathEquals",
+          () => fs.readFileSync(receiptPath).equals(receiptBytes),
+        ],
+      ]),
+      {
+        throwsProjectCommitProductionPublication: true,
+        terminalObservations: true,
+        projectRevisionRevision: true,
+        readFileSyncOutputPathEquals: true,
+        readFileSyncManifestPathEquals: true,
+        readFileSyncReceiptPathEquals: true,
+      },
     );
 
     const stateRoot = path.join(fixture.root, ".automovie");

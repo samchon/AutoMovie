@@ -137,14 +137,53 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
     const filmFrame = oracle.query({
       request: { query: "film-time", at: { seconds: 2 } },
     });
-    TestValidator.predicate(
+    TestValidator.equals(
       "film-global time resolves through the compiler-owned timeline",
-      filmFrame.result?.kind === "measurement" &&
-        filmFrame.result.values.film === "fixture-film" &&
-        filmFrame.result.values.globalFrame === 48 &&
-        filmFrame.result.values.shot === "opening" &&
-        filmFrame.result.values.sourceFrame === 48 &&
-        filmFrame.result.values.shotTime === 2,
+      namedFacts([
+        [
+          "filmFrameResultKind",
+          () => property !== "kind" && filmFrame.result?.kind === "measurement",
+        ],
+        [
+          "filmFrameResultValues",
+          () =>
+            filmFrame.result?.kind === "measurement" &&
+            filmFrame.result.values.film === "fixture-film",
+        ],
+        [
+          "filmFrameResultValues2",
+          () =>
+            filmFrame.result?.kind === "measurement" &&
+            filmFrame.result.values.globalFrame === 48,
+        ],
+        [
+          "filmFrameResultValues3",
+          () =>
+            opening !== undefined &&
+            filmFrame.result?.kind === "measurement" &&
+            filmFrame.result.values.shot === "opening",
+        ],
+        [
+          "filmFrameResultValues4",
+          () =>
+            filmFrame.result?.kind === "measurement" &&
+            filmFrame.result.values.sourceFrame === 48,
+        ],
+        [
+          "filmFrameResultValues5",
+          () =>
+            filmFrame.result?.kind === "measurement" &&
+            filmFrame.result.values.shotTime === 2,
+        ],
+      ]),
+      {
+        filmFrameResultKind: true,
+        filmFrameResultValues: true,
+        filmFrameResultValues2: true,
+        filmFrameResultValues3: true,
+        filmFrameResultValues4: true,
+        filmFrameResultValues5: true,
+      },
     );
     TestValidator.predicate(
       "film-global oracle rejects off-grid and out-of-range selectors",
@@ -216,12 +255,39 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         time: 2,
       },
     });
-    TestValidator.predicate(
+    TestValidator.equals(
       "actor-to-landmark reach uses the compiled arm chains",
-      physicalReach.result?.kind === "measurement" &&
-        physicalReach.result.values.leftMeasurable === true &&
-        physicalReach.result.values.rightMeasurable === true &&
-        typeof physicalReach.result.values.leftGap === "number",
+      namedFacts([
+        [
+          "physicalReachResultKind",
+          () =>
+            property !== "kind" && physicalReach.result?.kind === "measurement",
+        ],
+        [
+          "physicalReachResultValues",
+          () =>
+            physicalReach.result?.kind === "measurement" &&
+            physicalReach.result.values.leftMeasurable === true,
+        ],
+        [
+          "physicalReachResultValues2",
+          () =>
+            physicalReach.result?.kind === "measurement" &&
+            physicalReach.result.values.rightMeasurable === true,
+        ],
+        [
+          "physicalReachResultValues3",
+          () =>
+            physicalReach.result?.kind === "measurement" &&
+            typeof physicalReach.result.values.leftGap === "number",
+        ],
+      ]),
+      {
+        physicalReachResultKind: true,
+        physicalReachResultValues: true,
+        physicalReachResultValues2: true,
+        physicalReachResultValues3: true,
+      },
     );
     TestValidator.predicate(
       "reach defaults its sampled time",
@@ -313,15 +379,61 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         subjects: ["sentinel", "absent"],
       },
     }).result;
-    TestValidator.predicate(
+    TestValidator.equals(
       "camera query projects current animated root points and distinguishes the occlusion contract",
-      cameraMeasurement?.kind === "measurement" &&
-        cameraMeasurement.values.requestedSubjects === 2 &&
-        cameraMeasurement.values.resolvedSubjectRootPoints === 1 &&
-        cameraMeasurement.values.inFrameRootPoints === 1 &&
-        cameraMeasurement.values.missingSubjects === 1 &&
-        cameraMeasurement.values.maxAllowedOcclusionRatio === 0.05 &&
-        cameraMeasurement.values.occlusionMeasured === false,
+      namedFacts([
+        [
+          "cameraMeasurementKindMeasurement",
+          () =>
+            property !== "kind" && cameraMeasurement?.kind === "measurement",
+        ],
+        [
+          "cameraMeasurementValuesRequestedSubjects",
+          () =>
+            cameraMeasurement?.kind === "measurement" &&
+            cameraMeasurement.values.requestedSubjects === 2,
+        ],
+        [
+          "cameraMeasurementValuesResolvedSubjectRootPoints",
+          () =>
+            cameraMeasurement?.kind === "measurement" &&
+            cameraMeasurement.values.resolvedSubjectRootPoints === 1,
+        ],
+        [
+          "cameraMeasurementValuesInFrameRootPoints",
+          () =>
+            cameraMeasurement?.kind === "measurement" &&
+            cameraMeasurement.values.inFrameRootPoints === 1,
+        ],
+        [
+          "cameraMeasurementValuesMissingSubjects",
+          () =>
+            cameraMeasurement?.kind === "measurement" &&
+            cameraMeasurement.values.missingSubjects === 1,
+        ],
+        [
+          "cameraMeasurementValuesMaxAllowedOcclusionRatio",
+          () =>
+            cameraMeasurement?.kind === "measurement" &&
+            cameraMeasurement.values.maxAllowedOcclusionRatio === 0.05,
+        ],
+        [
+          "cameraMeasurementValuesOcclusionMeasured",
+          () =>
+            initialCompile.success !== false &&
+            cameraMeasurement?.kind === "measurement" &&
+            cameraMeasurement.values.occlusionMeasured === false,
+        ],
+      ]),
+      {
+        cameraMeasurementKindMeasurement: true,
+        cameraMeasurementValuesRequestedSubjects: true,
+        cameraMeasurementValuesResolvedSubjectRootPoints: true,
+        cameraMeasurementValuesInFrameRootPoints: true,
+        cameraMeasurementValuesMissingSubjects: true,
+        cameraMeasurementValuesMaxAllowedOcclusionRatio: true,
+        cameraMeasurementValuesOcclusionMeasured: true,
+      },
     );
     TestValidator.predicate(
       "camera query rejects dishonest empty, duplicate and out-of-range samples",
@@ -358,11 +470,33 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         subjects: ["absent"],
       },
     }).result;
-    TestValidator.predicate(
+    TestValidator.equals(
       "camera query reports a deterministic negative margin when no requested root resolves",
-      missingOnlyCameraMeasurement?.kind === "measurement" &&
-        missingOnlyCameraMeasurement.values.resolvedSubjectRootPoints === 0 &&
-        missingOnlyCameraMeasurement.values.minimumRootPointMargin === -1,
+      namedFacts([
+        [
+          "missingOnlyCameraMeasurementKindMeasurement",
+          () =>
+            property !== "kind" &&
+            missingOnlyCameraMeasurement?.kind === "measurement",
+        ],
+        [
+          "missingOnlyCameraMeasurementValuesResolvedSubjectRootPoints",
+          () =>
+            missingOnlyCameraMeasurement?.kind === "measurement" &&
+            missingOnlyCameraMeasurement.values.resolvedSubjectRootPoints === 0,
+        ],
+        [
+          "missingOnlyCameraMeasurementValuesMinimumRootPointMargin",
+          () =>
+            missingOnlyCameraMeasurement?.kind === "measurement" &&
+            missingOnlyCameraMeasurement.values.minimumRootPointMargin === -1,
+        ],
+      ]),
+      {
+        missingOnlyCameraMeasurementKindMeasurement: true,
+        missingOnlyCameraMeasurementValuesResolvedSubjectRootPoints: true,
+        missingOnlyCameraMeasurementValuesMinimumRootPointMargin: true,
+      },
     );
     TestValidator.predicate(
       "bad selectors return compact diagnostics",

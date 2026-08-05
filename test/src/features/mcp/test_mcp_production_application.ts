@@ -337,15 +337,34 @@ export const test_mcp_production_application = async (): Promise<void> => {
         },
       }),
     );
-    TestValidator.predicate(
+    TestValidator.equals(
       "guide credit survives and the recovery script lists only missing reads",
-      partiallyGated?.includes("1/2 required guides") === true &&
-        partiallyGated.includes(
-          'getGuideDocument({ name: "CAPTURE_FRAME" })',
-        ) &&
-        partiallyGated.includes(
-          'getGuideDocument({ name: "AUTOMOVIE_OVERALL" })',
-        ) === false,
+      namedFacts([
+        [
+          "partiallyGatedIncludesRequired",
+          () => partiallyGated?.includes("1/2 required guides") === true,
+        ],
+        [
+          "partiallyGatedIncludesGetGuideDocument",
+          () =>
+            partiallyGated.includes(
+              'getGuideDocument({ name: "CAPTURE_FRAME" })',
+            ),
+        ],
+        [
+          "partiallyGatedIncludesGetGuideDocument2",
+          () =>
+            firstCompile.success !== false &&
+            partiallyGated.includes(
+              'getGuideDocument({ name: "AUTOMOVIE_OVERALL" })',
+            ) === false,
+        ],
+      ]),
+      {
+        partiallyGatedIncludesRequired: true,
+        partiallyGatedIncludesGetGuideDocument: true,
+        partiallyGatedIncludesGetGuideDocument2: true,
+      },
     );
     application.getGuideDocument({ name: "CAPTURE_FRAME" });
     const reviewGated = await rejected(async () =>
@@ -485,12 +504,31 @@ export const test_mcp_production_application = async (): Promise<void> => {
       references: [{ role: "style", path: reference.path }],
       parameters: { prompt: "Preserve the signal.", seed: 17, strength: 0.8 },
     });
-    TestValidator.predicate(
+    TestValidator.equals(
       "deterministic delivery refuses repaint without requiring diffusion knowledge",
-      deterministicRepaint.repainted === false &&
-        deterministicRepaint.diagnostics[0]?.code ===
-          "repaint-delivery-disabled" &&
-        AUTOMOVIE_REPAINT_GUIDE === "DIFFUSION_ENHANCE",
+      namedFacts([
+        [
+          "deterministicRepaintRepainted",
+          () =>
+            firstCompile.success !== false &&
+            deterministicRepaint.repainted === false,
+        ],
+        [
+          "deterministicRepaintDiagnosticsCode",
+          () =>
+            deterministicRepaint.diagnostics[0]?.code ===
+            "repaint-delivery-disabled",
+        ],
+        [
+          "AUTOMOVIEREPAINTGUIDEDIFFUSIONENHANCE",
+          () => AUTOMOVIE_REPAINT_GUIDE === "DIFFUSION_ENHANCE",
+        ],
+      ]),
+      {
+        deterministicRepaintRepainted: true,
+        deterministicRepaintDiagnosticsCode: true,
+        AUTOMOVIEREPAINTGUIDEDIFFUSIONENHANCE: true,
+      },
     );
     const stateRoot = path.join(fixture.root, ".automovie");
     const stateRegistryPath = path.join(stateRoot, "productions.json");
@@ -761,13 +799,31 @@ export const test_mcp_production_application = async (): Promise<void> => {
       references: [{ role: "style", path: reference.path }],
       parameters: { prompt: "Preserve the signal.", seed: 17, strength: 0.8 },
     });
-    TestValidator.predicate(
+    TestValidator.equals(
       "a missing repaint adapter returns provisioning guidance",
-      unavailable.repainted === false &&
-        unavailable.diagnostics[0]?.code === "repaint-host-unavailable" &&
-        unavailable.diagnostics[0].message.includes(
-          "AutoMovieProductionShotRepaint",
-        ),
+      namedFacts([
+        [
+          "unavailableRepainted",
+          () =>
+            firstCompile.success !== false && unavailable.repainted === false,
+        ],
+        [
+          "unavailableDiagnosticsCode",
+          () => unavailable.diagnostics[0]?.code === "repaint-host-unavailable",
+        ],
+        [
+          "unavailableDiagnosticsMessage",
+          () =>
+            unavailable.diagnostics[0].message.includes(
+              "AutoMovieProductionShotRepaint",
+            ),
+        ],
+      ]),
+      {
+        unavailableRepainted: true,
+        unavailableDiagnosticsCode: true,
+        unavailableDiagnosticsMessage: true,
+      },
     );
 
     const frameGrid: IAutoMovieCaptureFrame[] = [
@@ -941,11 +997,25 @@ export const test_mcp_production_application = async (): Promise<void> => {
         strength: 0.8,
       },
     });
-    TestValidator.predicate(
+    TestValidator.equals(
       "non-rendition asset bytes are refused before adapter disclosure",
-      restricted.repainted === false &&
-        restricted.diagnostics[0]?.code === "repaint-reference-invalid" &&
-        repaintAdapterCalls === 0,
+      namedFacts([
+        [
+          "restrictedRepainted",
+          () =>
+            firstCompile.success !== false && restricted.repainted === false,
+        ],
+        [
+          "restrictedDiagnosticsCode",
+          () => restricted.diagnostics[0]?.code === "repaint-reference-invalid",
+        ],
+        ["repaintAdapterCalls", () => repaintAdapterCalls === 0],
+      ]),
+      {
+        restrictedRepainted: true,
+        restrictedDiagnosticsCode: true,
+        repaintAdapterCalls: true,
+      },
     );
     const shortRendition = await repainting.repaintShot({
       productionId: "fixture-film",
@@ -953,11 +1023,27 @@ export const test_mcp_production_application = async (): Promise<void> => {
       references: [{ role: "style", path: reference.path }],
       parameters: { prompt: "Return a short clip.", seed: 17, strength: 0.8 },
     });
-    TestValidator.predicate(
+    TestValidator.equals(
       "repaint output must match exact shot raster, clock and frame count",
-      shortRendition.repainted === false &&
-        shortRendition.diagnostics[0]?.code === "repaint-output-invalid" &&
-        repaintAdapterCalls === 1,
+      namedFacts([
+        [
+          "shortRenditionRepainted",
+          () =>
+            firstCompile.success !== false &&
+            shortRendition.repainted === false,
+        ],
+        [
+          "shortRenditionDiagnosticsCode",
+          () =>
+            shortRendition.diagnostics[0]?.code === "repaint-output-invalid",
+        ],
+        ["repaintAdapterCalls", () => repaintAdapterCalls === 1],
+      ]),
+      {
+        shortRenditionRepainted: true,
+        shortRenditionDiagnosticsCode: true,
+        repaintAdapterCalls: true,
+      },
     );
     const repainted = await repainting.repaintShot({
       productionId: "fixture-film",
@@ -992,23 +1078,40 @@ export const test_mcp_production_application = async (): Promise<void> => {
       target: { kind: "rendition", id: "opening" },
     });
     const acceptedReceipt = repainted.receipt;
-    TestValidator.predicate(
+    TestValidator.equals(
       "repainted delivery enters separate receipt-bound review evidence",
-      acceptedReceipt !== null &&
-        renditionReview.renditions.some(
-          (rendition) =>
-            rendition.shot === "opening" &&
-            rendition.path === acceptedReceipt.output.path &&
-            rendition.digest === acceptedReceipt.output.digest &&
-            rendition.receiptDigest.startsWith("sha256:") &&
-            rendition.sourceRenderFingerprint ===
-              acceptedReceipt.sourceRenderFingerprint &&
-            rendition.sourceReviewFingerprint ===
-              acceptedReceipt.sourceReviewFingerprint,
-        ) &&
-        renditionReview.diagnostics.some(
-          (diagnostic) => diagnostic.code === "review-rendition-missing",
-        ) === false,
+      namedFacts([
+        ["acceptedReceipt", () => acceptedReceipt !== null],
+        [
+          "renditionReviewRenditionsRendition",
+          () =>
+            acceptedReceipt !== null &&
+            renditionReview.renditions.some(
+              (rendition) =>
+                rendition.shot === "opening" &&
+                rendition.path === acceptedReceipt.output.path &&
+                rendition.digest === acceptedReceipt.output.digest &&
+                rendition.receiptDigest.startsWith("sha256:") &&
+                rendition.sourceRenderFingerprint ===
+                  acceptedReceipt.sourceRenderFingerprint &&
+                rendition.sourceReviewFingerprint ===
+                  acceptedReceipt.sourceReviewFingerprint,
+            ),
+        ],
+        [
+          "renditionReviewDiagnosticsDiagnostic",
+          () =>
+            firstCompile.success !== false &&
+            renditionReview.diagnostics.some(
+              (diagnostic) => diagnostic.code === "review-rendition-missing",
+            ) === false,
+        ],
+      ]),
+      {
+        acceptedReceipt: true,
+        renditionReviewRenditionsRendition: true,
+        renditionReviewDiagnosticsDiagnostic: true,
+      },
     );
     const rerolled = await repainting.repaintShot({
       productionId: "fixture-film",

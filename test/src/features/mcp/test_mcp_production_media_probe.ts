@@ -95,42 +95,61 @@ export const test_mcp_production_media_probe = async (): Promise<void> => {
       eventAlignmentPassed: true,
     },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "sound evidence must be UTF-8 JSON with complete event analysis",
-    refused(
-      () =>
-        probeProductionMedia({
-          kind: "audio-mix",
-          mediaType: "application/json",
-          bytes: Buffer.from([0xc3]),
-        }),
-      "UTF-8 JSON",
-    ) &&
-      refused(
+    namedFacts([
+      [
+        "refusedProbeProductionMediaKind",
         () =>
-          probeProductionMedia({
-            kind: "audio-mix",
-            mediaType: "application/json",
-            bytes: Buffer.from(
-              JSON.stringify({
-                version: 1,
-                plan: { events: [{}] },
-                analysis: { clippingSamples: 0, eventAlignment: [] },
-                tts: [],
+          refused(
+            () =>
+              probeProductionMedia({
+                kind: "audio-mix",
+                mediaType: "application/json",
+                bytes: Buffer.from([0xc3]),
               }),
-            ),
-          }),
-        "does not cover",
-      ) &&
-      refused(
+            "UTF-8 JSON",
+          ),
+      ],
+      [
+        "refusedProbeProductionMediaKind2",
         () =>
-          probeProductionMedia({
-            kind: "audio-mix",
-            mediaType: "application/json",
-            bytes: Buffer.from("{}"),
-          }),
-        "lacks a versioned plan",
-      ),
+          refused(
+            () =>
+              probeProductionMedia({
+                kind: "audio-mix",
+                mediaType: "application/json",
+                bytes: Buffer.from(
+                  JSON.stringify({
+                    version: 1,
+                    plan: { events: [{}] },
+                    analysis: { clippingSamples: 0, eventAlignment: [] },
+                    tts: [],
+                  }),
+                ),
+              }),
+            "does not cover",
+          ),
+      ],
+      [
+        "refusedProbeProductionMediaKind3",
+        () =>
+          refused(
+            () =>
+              probeProductionMedia({
+                kind: "audio-mix",
+                mediaType: "application/json",
+                bytes: Buffer.from("{}"),
+              }),
+            "lacks a versioned plan",
+          ),
+      ],
+    ]),
+    {
+      refusedProbeProductionMediaKind: true,
+      refusedProbeProductionMediaKind2: true,
+      refusedProbeProductionMediaKind3: true,
+    },
   );
   TestValidator.equals(
     "audio-mix PNG evidence is decoded as a raster",
@@ -464,14 +483,32 @@ export const test_mcp_production_media_probe = async (): Promise<void> => {
       "exactly 2",
     ),
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "the intermediate production-video probe accepts only H.264-only MP4",
-    probeProductionVideoMp4(video).frameCount === 4 &&
-      refused(() => probeProductionVideoMp4(featureBytes), "exactly one") &&
-      refused(
-        () => probeProductionVideoMp4(productionOpusMp4(8_000)),
-        "0 video tracks",
-      ),
+    namedFacts([
+      [
+        "probeProductionVideoMp4VideoFrameCount",
+        () => probeProductionVideoMp4(video).frameCount === 4,
+      ],
+      [
+        "refusedProbeProductionVideoMp4FeatureBytes",
+        () =>
+          refused(() => probeProductionVideoMp4(featureBytes), "exactly one"),
+      ],
+      [
+        "refusedProbeProductionVideoMp4ProductionOpusMp4",
+        () =>
+          refused(
+            () => probeProductionVideoMp4(productionOpusMp4(8_000)),
+            "0 video tracks",
+          ),
+      ],
+    ]),
+    {
+      probeProductionVideoMp4VideoFrameCount: true,
+      refusedProbeProductionVideoMp4FeatureBytes: true,
+      refusedProbeProductionVideoMp4ProductionOpusMp4: true,
+    },
   );
   TestValidator.predicate(
     "feature mux refuses unequal track clocks",
@@ -504,56 +541,80 @@ export const test_mcp_production_media_probe = async (): Promise<void> => {
     media_duration: 960,
     duration: 960,
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "audio presentation edits reject malformed clocks and duplicate edits",
-    refused(
-      () =>
-        trimProductionAudioPresentation({
-          file: editFile,
-          track: 0,
-          mediaTimescale: 48_000,
-          movieTimescale: 48_000,
-          primingSamples: 0,
-          presentationSamples: 960,
-        }),
-      "finite sample counts",
-    ) &&
-      refused(
+    namedFacts([
+      [
+        "refusedTrimProductionAudioPresentationFile",
         () =>
-          trimProductionAudioPresentation({
-            file: editFile,
-            track: editTrack,
-            mediaTimescale: 48_000,
-            movieTimescale: 48_000,
-            primingSamples: -1,
-            presentationSamples: 960,
-          }),
-        "finite sample counts",
-      ) &&
-      refused(
+          refused(
+            () =>
+              trimProductionAudioPresentation({
+                file: editFile,
+                track: 0,
+                mediaTimescale: 48_000,
+                movieTimescale: 48_000,
+                primingSamples: 0,
+                presentationSamples: 960,
+              }),
+            "finite sample counts",
+          ),
+      ],
+      [
+        "refusedTrimProductionAudioPresentationFile2",
         () =>
-          trimProductionAudioPresentation({
-            file: editFile,
-            track: editTrack,
-            mediaTimescale: 3,
-            movieTimescale: 2,
-            primingSamples: 0,
-            presentationSamples: 1,
-          }),
-        "does not land",
-      ) &&
-      refused(
+          refused(
+            () =>
+              trimProductionAudioPresentation({
+                file: editFile,
+                track: editTrack,
+                mediaTimescale: 48_000,
+                movieTimescale: 48_000,
+                primingSamples: -1,
+                presentationSamples: 960,
+              }),
+            "finite sample counts",
+          ),
+      ],
+      [
+        "refusedTrimProductionAudioPresentationFile3",
         () =>
-          trimProductionAudioPresentation({
-            file: editFile,
-            track: editTrack + 1,
-            mediaTimescale: 48_000,
-            movieTimescale: 48_000,
-            primingSamples: 0,
-            presentationSamples: 960,
-          }),
-        "existing track",
-      ),
+          refused(
+            () =>
+              trimProductionAudioPresentation({
+                file: editFile,
+                track: editTrack,
+                mediaTimescale: 3,
+                movieTimescale: 2,
+                primingSamples: 0,
+                presentationSamples: 1,
+              }),
+            "does not land",
+          ),
+      ],
+      [
+        "refusedTrimProductionAudioPresentationFile4",
+        () =>
+          refused(
+            () =>
+              trimProductionAudioPresentation({
+                file: editFile,
+                track: editTrack + 1,
+                mediaTimescale: 48_000,
+                movieTimescale: 48_000,
+                primingSamples: 0,
+                presentationSamples: 960,
+              }),
+            "existing track",
+          ),
+      ],
+    ]),
+    {
+      refusedTrimProductionAudioPresentationFile: true,
+      refusedTrimProductionAudioPresentationFile2: true,
+      refusedTrimProductionAudioPresentationFile3: true,
+      refusedTrimProductionAudioPresentationFile4: true,
+    },
   );
   trimProductionAudioPresentation({
     file: editFile,

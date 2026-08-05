@@ -5,6 +5,8 @@ import { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
 import { ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import { TestValidator } from "@nestia/e2e";
 
+import { namedFacts } from "../internal/predicates";
+
 /**
  * One measured MCP handshake, driven over a linked in-memory pair.
  *
@@ -145,13 +147,36 @@ export const test_benchmark_mcp_transport_probe = async (): Promise<void> => {
       transport: new FailingTransport({ closeFailure, startFailure }),
     }),
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "a probe failure and a close failure travel together",
-    combined instanceof AggregateError &&
-      combined.errors.length === 2 &&
-      message(combined.errors[0]) ===
-        'MCP probe "unstartable-and-unclosable" failed: transport refused to start' &&
-      combined.errors[1] === closeFailure,
+    namedFacts([
+      ["combinedAggregateError", () => combined instanceof AggregateError],
+      [
+        "combinedErrors",
+        () =>
+          combined instanceof AggregateError && combined.errors.length === 2,
+      ],
+      [
+        "messageCombinedErrors",
+        () =>
+          combined instanceof AggregateError &&
+          message(combined.errors[0]) ===
+            'MCP probe "unstartable-and-unclosable" failed: transport refused to start',
+      ],
+      [
+        "combinedErrorsCloseFailure",
+        () =>
+          this.props.closeFailure === undefined &&
+          combined instanceof AggregateError &&
+          combined.errors[1] === closeFailure,
+      ],
+    ]),
+    {
+      combinedAggregateError: true,
+      combinedErrors: true,
+      messageCombinedErrors: true,
+      combinedErrorsCloseFailure: true,
+    },
   );
 
   const closedServer = measuredServer();

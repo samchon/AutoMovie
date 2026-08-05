@@ -507,83 +507,131 @@ export const test_film_production_sound = (): void => {
       silenceAnalysisLongestSilenceSeconds: true,
     },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "sound rasters reject malformed dimensions and PCM",
-    refused(
-      () => productionSoundWaveform(first.pcm, 0, 10),
-      "positive integers",
-    ) &&
-      refused(
-        () => productionSoundWaveform(new Float32Array(1), 10, 10),
-        "interleaved stereo",
-      ) &&
-      refused(
-        () => productionSoundSpectrogram(first.pcm, 1.5, 10),
-        "positive integers",
-      ) &&
-      refused(
-        () => productionSoundSpectrogram(new Float32Array(1), 10, 10),
-        "interleaved stereo",
-      ),
+    namedFacts([
+      [
+        "refusedProductionSoundWaveformFirst",
+        () =>
+          refused(
+            () => productionSoundWaveform(first.pcm, 0, 10),
+            "positive integers",
+          ),
+      ],
+      [
+        "refusedProductionSoundWaveformNew",
+        () =>
+          refused(
+            () => productionSoundWaveform(new Float32Array(1), 10, 10),
+            "interleaved stereo",
+          ),
+      ],
+      [
+        "refusedProductionSoundSpectrogramFirst",
+        () =>
+          refused(
+            () => productionSoundSpectrogram(first.pcm, 1.5, 10),
+            "positive integers",
+          ),
+      ],
+      [
+        "refusedProductionSoundSpectrogramNew",
+        () =>
+          refused(
+            () => productionSoundSpectrogram(new Float32Array(1), 10, 10),
+            "interleaved stereo",
+          ),
+      ],
+    ]),
+    {
+      refusedProductionSoundWaveformFirst: true,
+      refusedProductionSoundWaveformNew: true,
+      refusedProductionSoundSpectrogramFirst: true,
+      refusedProductionSoundSpectrogramNew: true,
+    },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "sound planning refuses missing and inconsistent compiled evidence",
-    refused(
-      () =>
-        deriveProductionSoundPlan({
-          timeline: timeline(),
-          contracts: new Map(),
-          compiled: new Map(),
-        }),
-      "current contract and compiled",
-    ) &&
-      refused(
+    namedFacts([
+      [
+        "refusedDeriveProductionSoundPlanTimeline",
         () =>
-          deriveProductionSoundPlan({
-            timeline: timeline(),
-            contracts: new Map([["volley-shot", contract()]]),
-            compiled: new Map([
-              [
-                "volley-shot",
-                {
-                  ...source,
-                  scene: { ...source.scene, cameras: [] },
-                },
-              ],
-            ]),
-          }),
-        "cannot find",
-      ) &&
-      refused(
+          refused(
+            () =>
+              deriveProductionSoundPlan({
+                timeline: timeline(),
+                contracts: new Map(),
+                compiled: new Map(),
+              }),
+            "current contract and compiled",
+          ),
+      ],
+      [
+        "refusedDeriveProductionSoundPlanTimeline2",
         () =>
-          deriveProductionSoundPlan({
-            timeline: timeline(),
-            contracts: new Map([
-              ["volley-shot", { ...contract(), events: [] }],
-            ]),
-            compiled: new Map([["volley-shot", source]]),
-          }),
-        "sampled undeclared",
-      ) &&
-      refused(
+          refused(
+            () =>
+              deriveProductionSoundPlan({
+                timeline: timeline(),
+                contracts: new Map([["volley-shot", contract()]]),
+                compiled: new Map([
+                  [
+                    "volley-shot",
+                    {
+                      ...source,
+                      scene: { ...source.scene, cameras: [] },
+                    },
+                  ],
+                ]),
+              }),
+            "cannot find",
+          ),
+      ],
+      [
+        "refusedDeriveProductionSoundPlanTimeline3",
         () =>
-          deriveProductionSoundPlan({
-            timeline: timeline(),
-            contracts: new Map([
-              [
-                "volley-shot",
-                {
-                  ...contract(),
-                  events: contract().events.map((event) => ({
-                    ...event,
-                    subjects: ["missing"],
-                  })),
-                },
-              ],
-            ]),
-            compiled: new Map([["volley-shot", source]]),
-          }),
-        "no spatially resolved subject",
-      ),
+          refused(
+            () =>
+              deriveProductionSoundPlan({
+                timeline: timeline(),
+                contracts: new Map([
+                  ["volley-shot", { ...contract(), events: [] }],
+                ]),
+                compiled: new Map([["volley-shot", source]]),
+              }),
+            "sampled undeclared",
+          ),
+      ],
+      [
+        "refusedDeriveProductionSoundPlanTimeline4",
+        () =>
+          refused(
+            () =>
+              deriveProductionSoundPlan({
+                timeline: timeline(),
+                contracts: new Map([
+                  [
+                    "volley-shot",
+                    {
+                      ...contract(),
+                      events: contract().events.map((event) => ({
+                        ...event,
+                        subjects: ["missing"],
+                      })),
+                    },
+                  ],
+                ]),
+                compiled: new Map([["volley-shot", source]]),
+              }),
+            "no spatially resolved subject",
+          ),
+      ],
+    ]),
+    {
+      refusedDeriveProductionSoundPlanTimeline: true,
+      refusedDeriveProductionSoundPlanTimeline2: true,
+      refusedDeriveProductionSoundPlanTimeline3: true,
+      refusedDeriveProductionSoundPlanTimeline4: true,
+    },
   );
 };

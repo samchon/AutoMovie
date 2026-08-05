@@ -743,11 +743,34 @@ export const test_mcp_production_namespaces = (): void => {
       auditRoot,
       process.platform === "win32" ? "junction" : "dir",
     );
-    TestValidator.predicate(
+    TestValidator.equals(
       "production erase refuses an aliased global audit directory",
-      throws(() => project.eraseProduction("must not escape"), "physical") &&
-        fs.readdirSync(externalAudit).length === 0 &&
-        project.summary().productionId === "fixture-film",
+      namedFacts([
+        [
+          "throwsProjectEraseProduction",
+          () =>
+            throws(
+              () => project.eraseProduction("must not escape"),
+              "physical",
+            ),
+        ],
+        [
+          "readdirSyncExternalAudit",
+          () =>
+            externalAudit !== undefined &&
+            cleanupFailures.length === 0 &&
+            fs.readdirSync(externalAudit).length === 0,
+        ],
+        [
+          "projectSummaryProductionId",
+          () => project.summary().productionId === "fixture-film",
+        ],
+      ]),
+      {
+        throwsProjectEraseProduction: true,
+        readdirSyncExternalAudit: true,
+        projectSummaryProductionId: true,
+      },
     );
   } catch (error) {
     auditFailure = { error };

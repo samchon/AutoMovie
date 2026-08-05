@@ -169,20 +169,46 @@ if (process.argv[2]?.endsWith("verify.ts"))
     const verifyCall = JSON.parse(
       fs.readFileSync(path.join(project, "verify-call.json"), "utf8"),
     ) as string[];
-    TestValidator.predicate(
+    TestValidator.equals(
       "render CLI delegates exact argv and propagates child status",
-      delegated.status === 0 &&
-        path.resolve(call[0]!) === script &&
-        call.slice(1).join(",") === "run,--deliverable,feature,--workers,3" &&
-        planned.status === 0 &&
-        status.status === 0 &&
-        all.status === 0 &&
-        gc.status === 0 &&
-        propagated.status === 7 &&
-        signaled.status === 1 &&
-        verified.status === 0 &&
-        path.resolve(verifyCall[0]!) === verifyScript &&
-        verifyCall.length === 1,
+      namedFacts([
+        ["delegatedStatus", () => delegated.status === 0],
+        ["callScript", () => path.resolve(call[0]!) === script],
+        [
+          "callSliceRun",
+          () =>
+            call.slice(1).join(",") === "run,--deliverable,feature,--workers,3",
+        ],
+        ["plannedStatus", () => planned.status === 0],
+        ["statusStatus", () => status.status === 0],
+        ["allStatus", () => all.status === 0],
+        ["gcStatus", () => gc.status === 0],
+        ["propagatedStatus", () => propagated.status === 7],
+        ["signaledStatus", () => signaled.status === 1],
+        ["verifiedStatus", () => verified.status === 0],
+        [
+          "verifyCallVerifyScript",
+          () => path.resolve(verifyCall[0]!) === verifyScript,
+        ],
+        [
+          "verifyCall",
+          () => cleanupFailures.length === 0 && verifyCall.length === 1,
+        ],
+      ]),
+      {
+        delegatedStatus: true,
+        callScript: true,
+        callSliceRun: true,
+        plannedStatus: true,
+        statusStatus: true,
+        allStatus: true,
+        gcStatus: true,
+        propagatedStatus: true,
+        signaledStatus: true,
+        verifiedStatus: true,
+        verifyCallVerifyScript: true,
+        verifyCall: true,
+      },
     );
   } catch (error) {
     renderFailure = { error };

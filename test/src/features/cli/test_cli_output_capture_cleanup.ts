@@ -287,7 +287,7 @@ export const test_cli_output_capture_cleanup = (): void => {
     [
       {
         functions: [
-          "5d4c340c0f6950ed0eaecb0043d27a6573f5703888259ab8790a66c384b725c5",
+          "85d2b08e6ecc4832ffda6b03b8fec206c2067c866e312ff6171a597091d5dca9",
         ],
         imports: ["captureCliOutput:captureCli"],
         localCaptures: 0,
