@@ -219,7 +219,7 @@ export const test_mcp_project_scene_artifact_edges = (): void => {
     {
       title: "a spot light with an out of range cone angle is refused",
       value: scene({
-        lights: [light({ type: "spot", range: 5, coneAngle: 90 })],
+        lights: [light({ type: "spot", range: 5, coneAngle: 91 })],
       }),
       fragments: ["$input.lights[0].coneAngle"],
     },

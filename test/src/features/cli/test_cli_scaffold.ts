@@ -15456,7 +15456,8 @@ export const test_cli_scaffold = async (): Promise<void> => {
       gcBase,
       workerRootAbaClaim,
     );
-    let workerRootAbaSwapped = false;
+    // Same held-descriptor rule as the quarantine-parent swap above.
+    let workerRootAbaSwap = "pending";
     mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
       const descriptor = Reflect.apply(nativeOpen, mutableFs, [
         file,
@@ -15464,17 +15465,22 @@ export const test_cli_scaffold = async (): Promise<void> => {
         ...args,
       ]) as number;
       if (
-        workerRootAbaSwapped === false &&
+        workerRootAbaSwap === "pending" &&
         typeof file !== "number" &&
         flags === "wx+" &&
         path.resolve(file.toString()) === workerRootAbaDestination
       ) {
-        nativeRename(gcBase, parkedWorkerRoot);
-        nativeMkdir(path.dirname(workerRootAbaDestination), {
-          recursive: true,
-        });
-        nativeWriteFile(workerRootAbaDestination, workerRootCompetitorBytes);
-        workerRootAbaSwapped = true;
+        workerRootAbaSwap = "swapped";
+        try {
+          nativeRename(gcBase, parkedWorkerRoot);
+          nativeMkdir(path.dirname(workerRootAbaDestination), {
+            recursive: true,
+          });
+          nativeWriteFile(workerRootAbaDestination, workerRootCompetitorBytes);
+        } catch (error) {
+          workerRootAbaSwap =
+            error instanceof Error ? error.message : String(error);
+        }
       }
       return descriptor;
     }) as typeof fs.openSync;
@@ -15504,49 +15510,56 @@ export const test_cli_scaffold = async (): Promise<void> => {
     }
     TestValidator.equals(
       "routine worker cleanup rejects a replacement render-root competitor",
-      namedFacts([
-        ["workerRootAbaSwapped", () => workerRootAbaSwapped],
-        ["workerRootAbaRejected", () => workerRootAbaRejected],
-        [
-          "parkedWorkerRootRelative",
-          () =>
-            fs
-              .readFileSync(
+      {
+        swap: /(EPERM|EBUSY|EACCES|EXDEV|ENOTEMPTY)/u.test(workerRootAbaSwap)
+          ? "rename refused"
+          : workerRootAbaSwap,
+        ...namedFacts([
+          [
+            "workerRootAbaRejected",
+            () => workerRootAbaRejected === (workerRootAbaSwap === "swapped"),
+          ],
+          [
+            "parkedWorkerRootRelative",
+            () =>
+              fs
+                .readFileSync(
+                  path.join(
+                    parkedWorkerRoot,
+                    path.relative(gcBase, workerRootAbaIsolated),
+                  ),
+                )
+                .equals(workerClaimBytes),
+          ],
+          [
+            "parkedWorkerRootResident",
+            () =>
+              fs.existsSync(
                 path.join(
                   parkedWorkerRoot,
-                  path.relative(gcBase, workerRootAbaIsolated),
+                  path.relative(gcBase, workerRootAbaDestination),
                 ),
-              )
-              .equals(workerClaimBytes),
-        ],
-        [
-          "parkedWorkerRootResident",
-          () =>
-            fs.existsSync(
-              path.join(
-                parkedWorkerRoot,
-                path.relative(gcBase, workerRootAbaDestination),
               ),
-            ),
-        ],
-        [
-          "workerRootAbaDestinationWorkerRootCompetitorBytes",
-          () =>
-            fs
-              .readFileSync(workerRootAbaDestination)
-              .equals(workerRootCompetitorBytes),
-        ],
-      ]),
+          ],
+          [
+            "workerRootAbaDestinationWorkerRootCompetitorBytes",
+            () =>
+              fs
+                .readFileSync(workerRootAbaDestination)
+                .equals(workerRootCompetitorBytes),
+          ],
+        ]),
+      },
       {
-        workerRootAbaSwapped: true,
+        swap: workerRootAbaSwap === "swapped" ? "swapped" : "rename refused",
         workerRootAbaRejected: true,
         parkedWorkerRootRelative: true,
         parkedWorkerRootResident: true,
         workerRootAbaDestinationWorkerRootCompetitorBytes: true,
       },
     );
-    fs.rmSync(gcBase, { recursive: true });
-    nativeRename(parkedWorkerRoot, gcBase);
+    if (workerRootAbaSwap === "swapped") fs.rmSync(gcBase, { recursive: true });
+    if (workerRootAbaSwap === "swapped") nativeRename(parkedWorkerRoot, gcBase);
     fs.rmSync(workerRootAbaDestination, { force: true });
     fs.rmSync(workerRootAbaIsolated, { force: true });
 

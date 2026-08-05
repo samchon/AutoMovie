@@ -50,8 +50,6 @@ const continuitySource = (
 ): string => `
 import { defineShot } from "@automovie/engine";
 
-import { namedFacts } from "../internal/predicates";
-
 const OPENING_CONTRACT = ${JSON.stringify(registrationOf(opening))};
 const ANSWER_CONTRACT = ${JSON.stringify(registrationOf(answer))};
 
