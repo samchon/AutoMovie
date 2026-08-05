@@ -6,7 +6,7 @@ import {
 import { IAutoMovieSequence, IAutoMovieShot } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { nclose, throwsError } from "../internal/predicates";
+import { namedFacts, nclose, throwsError } from "../internal/predicates";
 
 const shot = (id: string, duration: number): IAutoMovieShot => ({
   id,
@@ -113,12 +113,29 @@ export const test_film_playback_resolver = (): void => {
   const t47 = at(4.7)!;
   TestValidator.equals("T=4.7 live shot", t47.shot, "shot:beat-1");
   TestValidator.predicate("T=4.7 live local", nclose(t47.time, 0.2));
-  TestValidator.predicate(
+  TestValidator.equals(
     "T=4.7 outgoing tail",
-    t47.blend !== null &&
-      t47.blend.shot === "shot:beat-2" &&
-      nclose(t47.blend.time, 2.2) &&
-      nclose(t47.blend.alpha, 0.4),
+    namedFacts([
+      ["t47Blend", () => t47.blend !== null],
+      [
+        "t47BlendShot",
+        () => t47.blend !== null && t47.blend.shot === "shot:beat-2",
+      ],
+      [
+        "ncloseT47Blend",
+        () => t47.blend !== null && nclose(t47.blend.time, 2.2),
+      ],
+      [
+        "ncloseT47Blend2",
+        () => t47.blend !== null && nclose(t47.blend.alpha, 0.4),
+      ],
+    ]),
+    {
+      t47Blend: true,
+      t47BlendShot: true,
+      ncloseT47Blend: true,
+      ncloseT47Blend2: true,
+    },
   );
 
   TestValidator.equals("T=5.1 past the dissolve", at(5.1)!.blend, null);
@@ -231,20 +248,36 @@ export const test_film_playback_resolver = (): void => {
     events.map((e) => e.id),
     ["a-in", "a-z", "b-in"],
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "shot-local events are placed on the global clock",
-    nclose(events[0]!.shotTime, 1.25) &&
-      nclose(events[0]!.globalTime, 0.25) &&
-      events[0]!.entry === 0 &&
-      events[0]!.shot === "shot:beat-1" &&
-      nclose(events[1]!.shotTime, 1.25) &&
-      nclose(events[1]!.globalTime, 0.25) &&
-      events[1]!.entry === 0 &&
-      events[1]!.shot === "shot:beat-1" &&
-      nclose(events[2]!.shotTime, 1) &&
-      nclose(events[2]!.globalTime, 1.75) &&
-      events[2]!.entry === 1 &&
-      events[2]!.shot === "shot:beat-2",
+    namedFacts([
+      ["ncloseEventsShotTime", () => nclose(events[0]!.shotTime, 1.25)],
+      ["ncloseEventsGlobalTime", () => nclose(events[0]!.globalTime, 0.25)],
+      ["eventsEntry", () => events[0]!.entry === 0],
+      ["eventsShotShot", () => events[0]!.shot === "shot:beat-1"],
+      ["ncloseEventsShotTime2", () => nclose(events[1]!.shotTime, 1.25)],
+      ["ncloseEventsGlobalTime2", () => nclose(events[1]!.globalTime, 0.25)],
+      ["eventsEntry2", () => events[1]!.entry === 0],
+      ["eventsShotShot2", () => events[1]!.shot === "shot:beat-1"],
+      ["ncloseEventsShotTime3", () => nclose(events[2]!.shotTime, 1)],
+      ["ncloseEventsGlobalTime3", () => nclose(events[2]!.globalTime, 1.75)],
+      ["eventsEntry3", () => events[2]!.entry === 1],
+      ["eventsShotShot3", () => events[2]!.shot === "shot:beat-2"],
+    ]),
+    {
+      ncloseEventsShotTime: true,
+      ncloseEventsGlobalTime: true,
+      eventsEntry: true,
+      eventsShotShot: true,
+      ncloseEventsShotTime2: true,
+      ncloseEventsGlobalTime2: true,
+      eventsEntry2: true,
+      eventsShotShot2: true,
+      ncloseEventsShotTime3: true,
+      ncloseEventsGlobalTime3: true,
+      eventsEntry3: true,
+      eventsShotShot3: true,
+    },
   );
   TestValidator.equals(
     "shots without interaction metadata produce no sequence events",

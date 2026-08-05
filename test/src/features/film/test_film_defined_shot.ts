@@ -14,6 +14,7 @@ import {
   validSynthesizer,
 } from "../internal/filmFixtures";
 import { createSkeleton } from "../internal/fixtures";
+import { namedFacts } from "../internal/predicates";
 
 const program = (): IAutoMovieShotProgram => {
   const blocking = makeBlockingWrite();
@@ -235,17 +236,34 @@ export const test_film_defined_shot = (): void => {
       frameFormat: { width: 1920, height: 1080 },
     },
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "source output cannot self-certify an unrealized state contract",
-    unrealized.success === false &&
-      unrealized.diagnostics.some(
-        (diagnostic) =>
-          diagnostic.code === "contract-realization-failed" &&
-          diagnostic.fact.includes("impossible-opening"),
-      ) &&
-      unrealized.diagnostics.some((diagnostic) =>
-        diagnostic.fact.includes('actor "ghost"'),
-      ),
+    namedFacts([
+      ["unrealizedSuccess", () => unrealized.success === false],
+      [
+        "unrealizedDiagnosticsDiagnostic",
+        () =>
+          unrealized.success === false &&
+          unrealized.diagnostics.some(
+            (diagnostic) =>
+              diagnostic.code === "contract-realization-failed" &&
+              diagnostic.fact.includes("impossible-opening"),
+          ),
+      ],
+      [
+        "unrealizedDiagnosticsDiagnostic2",
+        () =>
+          unrealized.success === false &&
+          unrealized.diagnostics.some((diagnostic) =>
+            diagnostic.fact.includes('actor "ghost"'),
+          ),
+      ],
+    ]),
+    {
+      unrealizedSuccess: true,
+      unrealizedDiagnosticsDiagnostic: true,
+      unrealizedDiagnosticsDiagnostic2: true,
+    },
   );
 
   const runtimeFailure = compileDefinedShot({

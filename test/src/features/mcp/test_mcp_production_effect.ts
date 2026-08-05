@@ -14,6 +14,7 @@ import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
 import path from "node:path";
 
+import { namedFacts } from "../internal/predicates";
 import {
   productionCompileSucceeded,
   productionFixture,
@@ -215,25 +216,42 @@ export const test_mcp_production_effect = (): void => {
         effectCues: undefined,
       }),
     ];
-    TestValidator.predicate(
+    TestValidator.equals(
       "effect validation rejects every unsafe cue and compiler-stream mismatch",
-      valid.length === 0 &&
+      namedFacts([
+        ["valid", () => valid.length === 0],
         [
-          "at most 128",
-          "unique inside the shot",
-          "compiler-materialized world zone",
-          "positive interval",
-          "bounded 0..1",
-          "compiled event realized inside",
-          "must not overlap prior zone cue",
-          "exactly one compiler-owned stream",
-        ].every((message) =>
-          invalid.some((diagnostic) => diagnostic.message.includes(message)),
-        ) &&
-        materializeCompiledEffects({
-          contract: shotContract(),
-          cues: [cue],
-        }).length === 0,
+          "atMostUnique",
+          () =>
+            [
+              "at most 128",
+              "unique inside the shot",
+              "compiler-materialized world zone",
+              "positive interval",
+              "bounded 0..1",
+              "compiled event realized inside",
+              "must not overlap prior zone cue",
+              "exactly one compiler-owned stream",
+            ].every((message) =>
+              invalid.some((diagnostic) =>
+                diagnostic.message.includes(message),
+              ),
+            ),
+        ],
+        [
+          "materializeCompiledEffectsContractShotContract",
+          () =>
+            materializeCompiledEffects({
+              contract: shotContract(),
+              cues: [cue],
+            }).length === 0,
+        ],
+      ]),
+      {
+        valid: true,
+        atMostUnique: true,
+        materializeCompiledEffectsContractShotContract: true,
+      },
     );
 
     const shotPath = path.join(
@@ -368,20 +386,66 @@ export const test_mcp_production_effect = (): void => {
     });
     fs.writeFileSync(shotPath, originalShot);
     fs.writeFileSync(manifestPath, originalManifest);
-    TestValidator.predicate(
+    TestValidator.equals(
       "effect oracle refuses ambiguous streams and a missing compiled camera while bounding subjects and camera rays",
-      ambiguousSummary.result === null &&
-        ambiguousSummary.diagnostics[0]?.message.includes("unambiguous") &&
-        missingCameraSummary.result === null &&
-        missingCameraSummary.diagnostics[0]?.message.includes(
-          "no current compiled camera",
-        ) &&
-        JSON.stringify(subjectInsideCounts) ===
-          JSON.stringify([0, 0, 0, 0, 0, 1]) &&
-        parallelOutsideSummary.result?.kind === "measurement" &&
-        parallelOutsideSummary.result.values.cameraIntersectionLength === 0 &&
-        facingAwaySummary.result?.kind === "measurement" &&
-        facingAwaySummary.result.values.cameraIntersectionLength === 0,
+      namedFacts([
+        ["ambiguousSummaryResult", () => ambiguousSummary.result === null],
+        [
+          "ambiguousSummaryDiagnosticsMessage",
+          () =>
+            ambiguousSummary.result === null &&
+            ambiguousSummary.diagnostics[0]?.message.includes("unambiguous"),
+        ],
+        [
+          "missingCameraSummaryResult",
+          () => missingCameraSummary.result === null,
+        ],
+        [
+          "missingCameraSummaryDiagnosticsMessage",
+          () =>
+            missingCameraSummary.result === null &&
+            missingCameraSummary.diagnostics[0]?.message.includes(
+              "no current compiled camera",
+            ),
+        ],
+        [
+          "stringifySubjectInsideCountsStringify",
+          () =>
+            JSON.stringify(subjectInsideCounts) ===
+            JSON.stringify([0, 0, 0, 0, 0, 1]),
+        ],
+        [
+          "parallelOutsideSummaryResultKind",
+          () => parallelOutsideSummary.result?.kind === "measurement",
+        ],
+        [
+          "parallelOutsideSummaryResultValues",
+          () =>
+            parallelOutsideSummary.result?.kind === "measurement" &&
+            parallelOutsideSummary.result.values.cameraIntersectionLength === 0,
+        ],
+        [
+          "facingAwaySummaryResultKind",
+          () => facingAwaySummary.result?.kind === "measurement",
+        ],
+        [
+          "facingAwaySummaryResultValues",
+          () =>
+            facingAwaySummary.result?.kind === "measurement" &&
+            facingAwaySummary.result.values.cameraIntersectionLength === 0,
+        ],
+      ]),
+      {
+        ambiguousSummaryResult: true,
+        ambiguousSummaryDiagnosticsMessage: true,
+        missingCameraSummaryResult: true,
+        missingCameraSummaryDiagnosticsMessage: true,
+        stringifySubjectInsideCountsStringify: true,
+        parallelOutsideSummaryResultKind: true,
+        parallelOutsideSummaryResultValues: true,
+        facingAwaySummaryResultKind: true,
+        facingAwaySummaryResultValues: true,
+      },
     );
   } catch (error) {
     productionEffectFailure = { error };

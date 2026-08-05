@@ -28,6 +28,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { PNG } from "pngjs";
 
+import { namedFacts } from "../internal/predicates";
 import {
   productionCompileSucceeded,
   productionDesign,
@@ -297,12 +298,33 @@ export const test_mcp_production_application = async (): Promise<void> => {
         },
       }),
     );
-    TestValidator.predicate(
+    TestValidator.equals(
       "missing knowledge is a plain recovery script with partial credit",
-      gated?.includes("0/2 required guides") === true &&
-        gated.includes('getGuideDocument({ name: "AUTOMOVIE_OVERALL" })') &&
-        gated.includes('getGuideDocument({ name: "CAPTURE_FRAME" })') &&
-        gated.includes("not a payload validation error"),
+      namedFacts([
+        [
+          "gatedIncludesRequired",
+          () => gated?.includes("0/2 required guides") === true,
+        ],
+        [
+          "gatedIncludesGetGuideDocument",
+          () =>
+            gated.includes('getGuideDocument({ name: "AUTOMOVIE_OVERALL" })'),
+        ],
+        [
+          "gatedIncludesGetGuideDocument2",
+          () => gated.includes('getGuideDocument({ name: "CAPTURE_FRAME" })'),
+        ],
+        [
+          "gatedIncludesNot",
+          () => gated.includes("not a payload validation error"),
+        ],
+      ]),
+      {
+        gatedIncludesRequired: true,
+        gatedIncludesGetGuideDocument: true,
+        gatedIncludesGetGuideDocument2: true,
+        gatedIncludesNot: true,
+      },
     );
     application.getGuideDocument({ name: "AUTOMOVIE_OVERALL" });
     const partiallyGated = await rejected(() =>
@@ -331,17 +353,58 @@ export const test_mcp_production_application = async (): Promise<void> => {
         target: { kind: "asset", id: "sentinel" },
       }),
     );
-    TestValidator.predicate(
+    TestValidator.equals(
       "review knowledge is selected from the exact target surface",
-      reviewGated?.includes("1/2 required guides") === true &&
-        reviewGated.includes('getGuideDocument({ name: "REVIEW_ASSET" })') &&
-        AUTOMOVIE_REVIEW_GUIDES.asset === "REVIEW_ASSET" &&
-        AUTOMOVIE_REVIEW_GUIDES.shot === "REVIEW_SHOT" &&
-        AUTOMOVIE_REVIEW_GUIDES.rendition === "REVIEW_SHOT" &&
-        AUTOMOVIE_REVIEW_GUIDES.sequence === "REVIEW_SEQUENCE" &&
-        AUTOMOVIE_REVIEW_GUIDES.film === "REVIEW_FILM" &&
-        AUTOMOVIE_REVIEW_GUIDES.design === "REVIEW_DEPENDENCY" &&
-        AUTOMOVIE_REVIEW_GUIDES.source === "REVIEW_DEPENDENCY",
+      namedFacts([
+        [
+          "reviewGatedIncludesRequired",
+          () => reviewGated?.includes("1/2 required guides") === true,
+        ],
+        [
+          "reviewGatedIncludesGetGuideDocument",
+          () =>
+            reviewGated.includes('getGuideDocument({ name: "REVIEW_ASSET" })'),
+        ],
+        [
+          "AUTOMOVIEREVIEWGUIDESAssetREVIEWASSET",
+          () => AUTOMOVIE_REVIEW_GUIDES.asset === "REVIEW_ASSET",
+        ],
+        [
+          "AUTOMOVIEREVIEWGUIDESShotREVIEWSHOT",
+          () => AUTOMOVIE_REVIEW_GUIDES.shot === "REVIEW_SHOT",
+        ],
+        [
+          "AUTOMOVIEREVIEWGUIDESRenditionREVIEWSHOT",
+          () => AUTOMOVIE_REVIEW_GUIDES.rendition === "REVIEW_SHOT",
+        ],
+        [
+          "AUTOMOVIEREVIEWGUIDESSequenceREVIEWSEQUENCE",
+          () => AUTOMOVIE_REVIEW_GUIDES.sequence === "REVIEW_SEQUENCE",
+        ],
+        [
+          "AUTOMOVIEREVIEWGUIDESFilmREVIEWFILM",
+          () => AUTOMOVIE_REVIEW_GUIDES.film === "REVIEW_FILM",
+        ],
+        [
+          "AUTOMOVIEREVIEWGUIDESDesignREVIEWDEPENDENCY",
+          () => AUTOMOVIE_REVIEW_GUIDES.design === "REVIEW_DEPENDENCY",
+        ],
+        [
+          "AUTOMOVIEREVIEWGUIDESSourceREVIEWDEPENDENCY",
+          () => AUTOMOVIE_REVIEW_GUIDES.source === "REVIEW_DEPENDENCY",
+        ],
+      ]),
+      {
+        reviewGatedIncludesRequired: true,
+        reviewGatedIncludesGetGuideDocument: true,
+        AUTOMOVIEREVIEWGUIDESAssetREVIEWASSET: true,
+        AUTOMOVIEREVIEWGUIDESShotREVIEWSHOT: true,
+        AUTOMOVIEREVIEWGUIDESRenditionREVIEWSHOT: true,
+        AUTOMOVIEREVIEWGUIDESSequenceREVIEWSEQUENCE: true,
+        AUTOMOVIEREVIEWGUIDESFilmREVIEWFILM: true,
+        AUTOMOVIEREVIEWGUIDESDesignREVIEWDEPENDENCY: true,
+        AUTOMOVIEREVIEWGUIDESSourceREVIEWDEPENDENCY: true,
+      },
     );
     const reviewTargets: IAutoMovieReviewTarget[] = [
       { kind: "asset", id: "sentinel" },
@@ -448,16 +511,44 @@ export const test_mcp_production_application = async (): Promise<void> => {
       references: [{ role: "style", path: reference.path }],
       parameters: { prompt: "Preserve the signal.", seed: 17, strength: 0.8 },
     });
-    TestValidator.predicate(
+    TestValidator.equals(
       "unknown production ids are read-only refusals",
-      unknownProductionCapture.diagnostics[0]?.code ===
-        "capture-production-unregistered" &&
-        unknownProductionRepaint.diagnostics[0]?.code ===
-          "repaint-production-unregistered" &&
-        fs.readFileSync(stateRegistryPath).equals(registryBeforeUnknown) &&
-        first.project.revision() === revisionBeforeUnknown &&
-        JSON.stringify(directorySnapshot(stateRoot)) ===
-          JSON.stringify(treeBeforeUnknown),
+      namedFacts([
+        [
+          "unknownProductionCaptureDiagnosticsCode",
+          () =>
+            unknownProductionCapture.diagnostics[0]?.code ===
+            "capture-production-unregistered",
+        ],
+        [
+          "unknownProductionRepaintDiagnosticsCode",
+          () =>
+            unknownProductionRepaint.diagnostics[0]?.code ===
+            "repaint-production-unregistered",
+        ],
+        [
+          "readFileSyncStateRegistryPathEquals",
+          () =>
+            fs.readFileSync(stateRegistryPath).equals(registryBeforeUnknown),
+        ],
+        [
+          "firstProjectRevision",
+          () => first.project.revision() === revisionBeforeUnknown,
+        ],
+        [
+          "stringifyDirectorySnapshotStateRoot",
+          () =>
+            JSON.stringify(directorySnapshot(stateRoot)) ===
+            JSON.stringify(treeBeforeUnknown),
+        ],
+      ]),
+      {
+        unknownProductionCaptureDiagnosticsCode: true,
+        unknownProductionRepaintDiagnosticsCode: true,
+        readFileSyncStateRegistryPathEquals: true,
+        firstProjectRevision: true,
+        stringifyDirectorySnapshotStateRoot: true,
+      },
     );
     const unknownGuide = await rejected(async () =>
       application.getGuideDocument({
