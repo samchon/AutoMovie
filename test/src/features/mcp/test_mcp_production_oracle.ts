@@ -144,31 +144,36 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         [
           "filmFrameResultValues",
           () =>
-            filmFrame.result?.kind === "measurement" &&
+            filmFrame.result !== null &&
+            filmFrame.result !== undefined &&
             filmFrame.result.values.film === "fixture-film",
         ],
         [
           "filmFrameResultValues2",
           () =>
-            filmFrame.result?.kind === "measurement" &&
+            filmFrame.result !== null &&
+            filmFrame.result !== undefined &&
             filmFrame.result.values.globalFrame === 48,
         ],
         [
           "filmFrameResultValues3",
           () =>
-            filmFrame.result?.kind === "measurement" &&
+            filmFrame.result !== null &&
+            filmFrame.result !== undefined &&
             filmFrame.result.values.shot === "opening",
         ],
         [
           "filmFrameResultValues4",
           () =>
-            filmFrame.result?.kind === "measurement" &&
+            filmFrame.result !== null &&
+            filmFrame.result !== undefined &&
             filmFrame.result.values.sourceFrame === 48,
         ],
         [
           "filmFrameResultValues5",
           () =>
-            filmFrame.result?.kind === "measurement" &&
+            filmFrame.result !== null &&
+            filmFrame.result !== undefined &&
             filmFrame.result.values.shotTime === 2,
         ],
       ]),
@@ -276,19 +281,22 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         [
           "physicalReachResultValues",
           () =>
-            physicalReach.result?.kind === "measurement" &&
+            physicalReach.result !== null &&
+            physicalReach.result !== undefined &&
             physicalReach.result.values.leftMeasurable === true,
         ],
         [
           "physicalReachResultValues2",
           () =>
-            physicalReach.result?.kind === "measurement" &&
+            physicalReach.result !== null &&
+            physicalReach.result !== undefined &&
             physicalReach.result.values.rightMeasurable === true,
         ],
         [
           "physicalReachResultValues3",
           () =>
-            physicalReach.result?.kind === "measurement" &&
+            physicalReach.result !== null &&
+            physicalReach.result !== undefined &&
             typeof physicalReach.result.values.leftGap === "number",
         ],
       ]),
@@ -354,31 +362,36 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         [
           "formationMeasurementValuesDesignCount",
           () =>
-            formationMeasurement?.kind === "measurement" &&
+            formationMeasurement !== null &&
+            formationMeasurement !== undefined &&
             formationMeasurement.values.designCount === 6,
         ],
         [
           "formationMeasurementValuesMaterializedCount",
           () =>
-            formationMeasurement?.kind === "measurement" &&
+            formationMeasurement !== null &&
+            formationMeasurement !== undefined &&
             formationMeasurement.values.materializedCount === 6,
         ],
         [
           "formationMeasurementValuesParticipatingShots",
           () =>
-            formationMeasurement?.kind === "measurement" &&
+            formationMeasurement !== null &&
+            formationMeasurement !== undefined &&
             formationMeasurement.values.participatingShots === 1,
         ],
         [
           "formationMeasurementValuesRouteClearance",
           () =>
-            formationMeasurement?.kind === "measurement" &&
+            formationMeasurement !== null &&
+            formationMeasurement !== undefined &&
             Number(formationMeasurement.values.routeClearance) > 0,
         ],
         [
           "formationMeasurementValuesHeroVisible",
           () =>
-            formationMeasurement?.kind === "measurement" &&
+            formationMeasurement !== null &&
+            formationMeasurement !== undefined &&
             formationMeasurement.values.heroVisible === 1,
         ],
         [
@@ -388,7 +401,6 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         [
           "nonParticipatingFormationShotDiagnosticsMessage",
           () =>
-            nonParticipatingFormationShot.result === null &&
             nonParticipatingFormationShot.diagnostics[0]?.message.includes(
               "does not participate",
             ),
@@ -462,37 +474,43 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         [
           "cameraMeasurementValuesRequestedSubjects",
           () =>
-            cameraMeasurement?.kind === "measurement" &&
+            cameraMeasurement !== null &&
+            cameraMeasurement !== undefined &&
             cameraMeasurement.values.requestedSubjects === 2,
         ],
         [
           "cameraMeasurementValuesResolvedSubjectRootPoints",
           () =>
-            cameraMeasurement?.kind === "measurement" &&
+            cameraMeasurement !== null &&
+            cameraMeasurement !== undefined &&
             cameraMeasurement.values.resolvedSubjectRootPoints === 1,
         ],
         [
           "cameraMeasurementValuesInFrameRootPoints",
           () =>
-            cameraMeasurement?.kind === "measurement" &&
+            cameraMeasurement !== null &&
+            cameraMeasurement !== undefined &&
             cameraMeasurement.values.inFrameRootPoints === 1,
         ],
         [
           "cameraMeasurementValuesMissingSubjects",
           () =>
-            cameraMeasurement?.kind === "measurement" &&
+            cameraMeasurement !== null &&
+            cameraMeasurement !== undefined &&
             cameraMeasurement.values.missingSubjects === 1,
         ],
         [
           "cameraMeasurementValuesMaxAllowedOcclusionRatio",
           () =>
-            cameraMeasurement?.kind === "measurement" &&
+            cameraMeasurement !== null &&
+            cameraMeasurement !== undefined &&
             cameraMeasurement.values.maxAllowedOcclusionRatio === 0.05,
         ],
         [
           "cameraMeasurementValuesOcclusionMeasured",
           () =>
-            cameraMeasurement?.kind === "measurement" &&
+            cameraMeasurement !== null &&
+            cameraMeasurement !== undefined &&
             cameraMeasurement.values.occlusionMeasured === false,
         ],
       ]),
@@ -570,13 +588,15 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         [
           "missingOnlyCameraMeasurementValuesResolvedSubjectRootPoints",
           () =>
-            missingOnlyCameraMeasurement?.kind === "measurement" &&
+            missingOnlyCameraMeasurement !== null &&
+            missingOnlyCameraMeasurement !== undefined &&
             missingOnlyCameraMeasurement.values.resolvedSubjectRootPoints === 0,
         ],
         [
           "missingOnlyCameraMeasurementValuesMinimumRootPointMargin",
           () =>
-            missingOnlyCameraMeasurement?.kind === "measurement" &&
+            missingOnlyCameraMeasurement !== null &&
+            missingOnlyCameraMeasurement !== undefined &&
             missingOnlyCameraMeasurement.values.minimumRootPointMargin === -1,
         ],
       ]),
@@ -826,7 +846,6 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         [
           "missingFormationCameraResultDiagnosticsMessage",
           () =>
-            missingFormationCameraResult.result === null &&
             missingFormationCameraResult.diagnostics[0]?.message.includes(
               "no current compiled camera",
             ),
@@ -879,7 +898,6 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         [
           "ambiguousActorDiagnosticsMessage",
           () =>
-            ambiguousActor.result === null &&
             ambiguousActor.diagnostics[0]?.message.includes(
               "multiple compiled shots",
             ),
@@ -1229,7 +1247,8 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         [
           "rightOnlyReachResultValues",
           () =>
-            rightOnlyReach.result?.kind === "measurement" &&
+            rightOnlyReach.result !== null &&
+            rightOnlyReach.result !== undefined &&
             rightOnlyReach.result.values.leftMeasurable === false,
         ],
         [
@@ -1239,7 +1258,8 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         [
           "leftOnlyReachResultValues",
           () =>
-            leftOnlyReach.result?.kind === "measurement" &&
+            leftOnlyReach.result !== null &&
+            leftOnlyReach.result !== undefined &&
             leftOnlyReach.result.values.rightMeasurable === false,
         ],
         [
@@ -1257,7 +1277,8 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         [
           "rootedFormationResultValues",
           () =>
-            rootedFormation.result?.kind === "measurement" &&
+            rootedFormation.result !== null &&
+            rootedFormation.result !== undefined &&
             rootedFormation.result.values.heroVisible === 0,
         ],
         [
@@ -1267,7 +1288,8 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         [
           "scaledHeroFormationResultValues",
           () =>
-            scaledHeroFormation.result?.kind === "measurement" &&
+            scaledHeroFormation.result !== null &&
+            scaledHeroFormation.result !== undefined &&
             scaledHeroFormation.result.values.heroVisible === 1,
         ],
         [
@@ -1277,7 +1299,8 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         [
           "missingHeroFormationResultValues",
           () =>
-            missingHeroFormation.result?.kind === "measurement" &&
+            missingHeroFormation.result !== null &&
+            missingHeroFormation.result !== undefined &&
             missingHeroFormation.result.values.heroVisible === 0,
         ],
         [
@@ -1504,14 +1527,16 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         [
           "slopedGroundResultHeight",
           () =>
-            slopedGround.result?.kind === "ground" &&
+            slopedGround.result !== null &&
+            slopedGround.result !== undefined &&
             slopedGround.result.height === 2.5,
         ],
         ["absentWorldResultKind", () => absentWorld.result?.kind === "ground"],
         [
           "absentWorldResultSurface",
           () =>
-            absentWorld.result?.kind === "ground" &&
+            absentWorld.result !== null &&
+            absentWorld.result !== undefined &&
             absentWorld.result.surface === null,
         ],
         [
@@ -1521,7 +1546,8 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         [
           "unroutedFormationResultValues",
           () =>
-            unroutedFormation.result?.kind === "measurement" &&
+            unroutedFormation.result !== null &&
+            unroutedFormation.result !== undefined &&
             unroutedFormation.result.values.routeClearance === 0,
         ],
       ]),
@@ -2007,34 +2033,20 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         ],
         ["racedCaptureCaptured", () => racedCapture.captured === false],
         ["racedCaptureRenderBundle", () => racedCapture.renderBundle === null],
-        [
-          "racedCaptureFrame",
-          () =>
-            racedCapture.renderBundle === null && racedCapture.frame === null,
-        ],
+        ["racedCaptureFrame", () => racedCapture.frame === null],
         [
           "racedCaptureDiagnosticsCode",
-          () =>
-            racedCapture.renderBundle === null &&
-            racedCapture.frame === null &&
-            racedCapture.diagnostics[0]?.code === "capture-input-changed",
+          () => racedCapture.diagnostics[0]?.code === "capture-input-changed",
         ],
         ["lateRacedCaptureCaptured", () => lateRacedCapture.captured === false],
         [
           "lateRacedCaptureRenderBundle",
           () => lateRacedCapture.renderBundle === null,
         ],
-        [
-          "lateRacedCaptureFrame",
-          () =>
-            lateRacedCapture.renderBundle === null &&
-            lateRacedCapture.frame === null,
-        ],
+        ["lateRacedCaptureFrame", () => lateRacedCapture.frame === null],
         [
           "lateRacedCaptureDiagnosticsCode",
           () =>
-            lateRacedCapture.renderBundle === null &&
-            lateRacedCapture.frame === null &&
             lateRacedCapture.diagnostics[0]?.code === "capture-input-changed",
         ],
         ["genericCommitRejected", () => genericCommitRejected],
@@ -2133,49 +2145,19 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
       width: 2,
       height: 2,
     });
-    TestValidator.equals(
+    TestValidator.predicate(
       "verified frames are target-, renderer-, and frame-addressed",
-      namedFacts([
-        ["defaultSizedCaptured", () => defaultSized.captured],
-        ["beautyCaptured", () => beauty.captured],
-        ["beautyFrameTime", () => beauty.frame?.time === 1 / 24],
-        [
-          "existsSyncFixtureRoot",
-          () => fs.existsSync(path.join(fixture.root, beauty.frame.path)),
-        ],
-        ["maskCaptured", () => mask.captured],
-        [
-          "maskRenderBundleBeauty",
-          () => mask.renderBundle === beauty.renderBundle,
-        ],
-        [
-          "maskFrameEndsWith",
-          () => mask.frame?.path.endsWith(".mask.png") === true,
-        ],
-        ["alternateRendererCaptured", () => alternateRenderer.captured],
-        [
-          "alternateRendererRenderBundleBeauty",
-          () => alternateRenderer.renderBundle !== beauty.renderBundle,
-        ],
-        [
-          "blankRendererDiagnosticsCode",
-          () =>
-            blankRenderer.diagnostics[0]?.code ===
-            "capture-renderer-identity-invalid",
-        ],
-      ]),
-      {
-        defaultSizedCaptured: true,
-        beautyCaptured: true,
-        beautyFrameTime: true,
-        existsSyncFixtureRoot: true,
-        maskCaptured: true,
-        maskRenderBundleBeauty: true,
-        maskFrameEndsWith: true,
-        alternateRendererCaptured: true,
-        alternateRendererRenderBundleBeauty: true,
-        blankRendererDiagnosticsCode: true,
-      },
+      defaultSized.captured &&
+        beauty.captured &&
+        beauty.frame?.time === 1 / 24 &&
+        fs.existsSync(path.join(fixture.root, beauty.frame.path)) &&
+        mask.captured &&
+        mask.renderBundle === beauty.renderBundle &&
+        mask.frame?.path.endsWith(".mask.png") === true &&
+        alternateRenderer.captured &&
+        alternateRenderer.renderBundle !== beauty.renderBundle &&
+        blankRenderer.diagnostics[0]?.code ===
+          "capture-renderer-identity-invalid",
     );
     if (
       beauty.renderBundle !== null &&

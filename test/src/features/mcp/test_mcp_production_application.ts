@@ -326,19 +326,15 @@ export const test_mcp_production_application = async (): Promise<void> => {
         [
           "gatedIncludesGetGuideDocument",
           () =>
-            gated?.includes(
-              'getGuideDocument({ name: "AUTOMOVIE_OVERALL" })',
-            ) === true,
+            gated.includes('getGuideDocument({ name: "AUTOMOVIE_OVERALL" })'),
         ],
         [
           "gatedIncludesGetGuideDocument2",
-          () =>
-            gated?.includes('getGuideDocument({ name: "CAPTURE_FRAME" })') ===
-            true,
+          () => gated.includes('getGuideDocument({ name: "CAPTURE_FRAME" })'),
         ],
         [
           "gatedIncludesNot",
-          () => gated?.includes("not a payload validation error") === true,
+          () => gated.includes("not a payload validation error"),
         ],
       ]),
       {
@@ -369,6 +365,8 @@ export const test_mcp_production_application = async (): Promise<void> => {
         [
           "partiallyGatedIncludesGetGuideDocument",
           () =>
+            partiallyGated !== null &&
+            partiallyGated !== undefined &&
             partiallyGated.includes(
               'getGuideDocument({ name: "CAPTURE_FRAME" })',
             ),
@@ -376,6 +374,8 @@ export const test_mcp_production_application = async (): Promise<void> => {
         [
           "partiallyGatedIncludesGetGuideDocument2",
           () =>
+            partiallyGated !== null &&
+            partiallyGated !== undefined &&
             partiallyGated.includes(
               'getGuideDocument({ name: "AUTOMOVIE_OVERALL" })',
             ) === false,
@@ -403,9 +403,7 @@ export const test_mcp_production_application = async (): Promise<void> => {
         [
           "reviewGatedIncludesGetGuideDocument",
           () =>
-            reviewGated?.includes(
-              'getGuideDocument({ name: "REVIEW_ASSET" })',
-            ) === true,
+            reviewGated.includes('getGuideDocument({ name: "REVIEW_ASSET" })'),
         ],
         [
           "AUTOMOVIEREVIEWGUIDESAssetREVIEWASSET",
@@ -831,6 +829,8 @@ export const test_mcp_production_application = async (): Promise<void> => {
         [
           "unavailableDiagnosticsMessage",
           () =>
+            unavailable.diagnostics[0] !== null &&
+            unavailable.diagnostics[0] !== undefined &&
             unavailable.diagnostics[0].message.includes(
               "AutoMovieProductionShotRepaint",
             ),
@@ -1074,71 +1074,27 @@ export const test_mcp_production_application = async (): Promise<void> => {
       references: [{ role: "style", path: reference.path }],
       parameters: { prompt: "Preserve the signal.", seed: 17, strength: 0.8 },
     });
-    TestValidator.equals(
+    TestValidator.predicate(
       "attached repaint commits the complete provenance chain",
-      namedFacts([
-        ["repaintedRepainted", () => repainted.repainted],
-        [
-          "repaintedReceiptSourceRenderFingerprint",
-          () =>
-            repainted.receipt?.sourceRenderFingerprint.startsWith("sha256:") ===
-            true,
-        ],
-        [
-          "repaintedReceiptSourceReviewFingerprint",
-          () =>
-            repainted.receipt.sourceReviewFingerprint ===
-            sourceReview.fingerprint,
-        ],
-        [
-          "repaintedReceiptAttemptId",
-          () => repainted.receipt.attemptId.length === 36,
-        ],
-        [
-          "repaintedReceiptControls",
-          () =>
-            repainted.receipt.controls.some(
-              (control) => control.pass === "pose",
-            ),
-        ],
-        [
-          "repaintedReceiptReferences",
-          () => repainted.receipt.references[0]?.digest === reference.digest,
-        ],
-        [
-          "repaintedReceiptAdapterIdentity",
-          () => repainted.receipt.adapterIdentity.includes("fixture-video"),
-        ],
-        [
-          "repaintedReceiptOutput",
-          () => repainted.receipt.output.digest.startsWith("sha256:"),
-        ],
-        ["repaintAdapterCalls", () => repaintAdapterCalls === 2],
-        [
-          "existsSyncFixtureRoot",
-          () =>
-            fs.existsSync(
-              path.join(
-                fixture.root,
-                "renders",
-                "fixture-film",
-                repainted.receipt.output.path,
-              ),
-            ),
-        ],
-      ]),
-      {
-        repaintedRepainted: true,
-        repaintedReceiptSourceRenderFingerprint: true,
-        repaintedReceiptSourceReviewFingerprint: true,
-        repaintedReceiptAttemptId: true,
-        repaintedReceiptControls: true,
-        repaintedReceiptReferences: true,
-        repaintedReceiptAdapterIdentity: true,
-        repaintedReceiptOutput: true,
-        repaintAdapterCalls: true,
-        existsSyncFixtureRoot: true,
-      },
+      repainted.repainted &&
+        repainted.receipt?.sourceRenderFingerprint.startsWith("sha256:") ===
+          true &&
+        repainted.receipt.sourceReviewFingerprint ===
+          sourceReview.fingerprint &&
+        repainted.receipt.attemptId.length === 36 &&
+        repainted.receipt.controls.some((control) => control.pass === "pose") &&
+        repainted.receipt.references[0]?.digest === reference.digest &&
+        repainted.receipt.adapterIdentity.includes("fixture-video") &&
+        repainted.receipt.output.digest.startsWith("sha256:") &&
+        repaintAdapterCalls === 2 &&
+        fs.existsSync(
+          path.join(
+            fixture.root,
+            "renders",
+            "fixture-film",
+            repainted.receipt.output.path,
+          ),
+        ),
     );
     repainting.getGuideDocument({ name: "REVIEW_SHOT" });
     const renditionReview = repainting.prepareReview({
@@ -1206,7 +1162,10 @@ export const test_mcp_production_application = async (): Promise<void> => {
         ],
         [
           "rerolledReceiptOutput",
-          () => rerolled.receipt?.output.path !== acceptedReceipt?.output.path,
+          () =>
+            rerolled.receipt !== null &&
+            rerolled.receipt !== undefined &&
+            rerolled.receipt?.output.path !== acceptedReceipt?.output.path,
         ],
         [
           "rerolledReviewFingerprintRenditionReview",
@@ -1219,8 +1178,10 @@ export const test_mcp_production_application = async (): Promise<void> => {
         [
           "rerolledReviewRenditionsRerolled",
           () =>
+            rerolled.receipt !== null &&
+            rerolled.receipt !== undefined &&
             rerolledReview.renditions[0]?.path ===
-            rerolled.receipt?.output.path,
+              rerolled.receipt?.output.path,
         ],
       ]),
       {
