@@ -1883,14 +1883,25 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
       });
     }) as typeof fs.lstatSync;
     const splitIdentityBytes = (() => {
+      let splitIdentityFailure: IRenderJobFixtureFailure | undefined;
       try {
         return readAutoMovieProductionOwnedFile({
           root: ownedRoot,
           directory: ownedRoot,
           relative: "split-identity.json",
         });
+      } catch (error) {
+        splitIdentityFailure = { error };
+        throw error;
       } finally {
-        mutableFs.lstatSync = nativeLstat;
+        preserveRenderJobFixtureCleanup(splitIdentityFailure, [
+          {
+            resource: "split-identity lstat hook",
+            cleanup: () => {
+              mutableFs.lstatSync = nativeLstat;
+            },
+          },
+        ]);
       }
     })();
     TestValidator.equals(
@@ -1987,6 +1998,7 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
       }
       return Reflect.apply(nativeRead, fs, [file, ...args]) as unknown;
     }) as typeof fs.readFileSync;
+    let pathnameSwapFailure: IRenderJobFixtureFailure | undefined;
     try {
       TestValidator.predicate(
         "render-state reads bind bytes to the verified descriptor across a pathname swap",
@@ -1998,8 +2010,18 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
           }),
         ).toString("utf8") === "resident" && swapped === false,
       );
+    } catch (error) {
+      pathnameSwapFailure = { error };
+      throw error;
     } finally {
-      fs.readFileSync = nativeRead;
+      preserveRenderJobFixtureCleanup(pathnameSwapFailure, [
+        {
+          resource: "pathname swap read hook",
+          cleanup: () => {
+            fs.readFileSync = nativeRead;
+          },
+        },
+      ]);
     }
 
     let replaced = false;
@@ -2015,6 +2037,7 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
       }
       return bytes;
     }) as typeof fs.readFileSync;
+    let replacementFailure: IRenderJobFixtureFailure | undefined;
     try {
       TestValidator.predicate(
         "render-state reads reject a physical file replacement after read",
@@ -2026,8 +2049,18 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
           }),
         ) && replaced,
       );
+    } catch (error) {
+      replacementFailure = { error };
+      throw error;
     } finally {
-      fs.readFileSync = nativeRead;
+      preserveRenderJobFixtureCleanup(replacementFailure, [
+        {
+          resource: "physical replacement read hook",
+          cleanup: () => {
+            fs.readFileSync = nativeRead;
+          },
+        },
+      ]);
     }
   } catch (error) {
     renderJobFixtureFailure = { error };
