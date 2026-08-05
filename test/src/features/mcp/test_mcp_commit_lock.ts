@@ -694,6 +694,64 @@ const exerciseReleaseFailures = (dir: string): void => {
   );
   fs.rmSync(renamePath);
 
+  // A resident lock the release could not remove used to have no owner
+  // anywhere: the ownership entry was dropped before the rename was attempted,
+  // so the next acquisition of the same coordinate -- from this very process --
+  // spun to its deadline and reported itself as another session.
+  const ownedPath = path.join(dir, "release-rename-owned.lock");
+  const ownedToken = acquireCommitLock(ownedPath);
+  const nativeOwnedRename = fs.renameSync;
+  fs.renameSync = ((oldPath, newPath) => {
+    if (
+      path.resolve(oldPath.toString()) === path.resolve(ownedPath) &&
+      path.basename(newPath.toString()).startsWith(".automovie-lock-release-")
+    )
+      throw new Error("quarantine rename failed");
+    nativeOwnedRename(oldPath, newPath);
+  }) as typeof fs.renameSync;
+  let ownedRenameFailure: ICommitLockFixtureFailure | undefined;
+  let reacquired = "";
+  let residentAfterFailedRelease = "";
+  try {
+    releaseCommitLock(ownedPath, ownedToken);
+    residentAfterFailedRelease = fs.readFileSync(ownedPath, "utf8");
+    // Re-entrant, because the reclaimed entry is this process's own ownership
+    // rather than a foreign holder to wait out.
+    reacquired = acquireCommitLock(ownedPath);
+  } catch (error) {
+    ownedRenameFailure = { error };
+    throw error;
+  } finally {
+    preserveCommitLockHookCleanup(ownedRenameFailure, [
+      {
+        resource: "release-rename ownership hook",
+        cleanup: () => {
+          fs.renameSync = nativeOwnedRename;
+        },
+      },
+    ]);
+  }
+  // One release for the re-acquisition and one for the removal the failed
+  // release still owes.
+  releaseCommitLock(ownedPath, reacquired);
+  const residentAfterInnerRelease = fs.existsSync(ownedPath);
+  releaseCommitLock(ownedPath, reacquired);
+  TestValidator.equals(
+    "a failed quarantine rename keeps the lock re-entrant for its owner",
+    {
+      reacquired: reacquired === ownedToken,
+      residentAfterFailedRelease,
+      residentAfterInnerRelease,
+      removed: fs.existsSync(ownedPath) === false,
+    },
+    {
+      reacquired: true,
+      residentAfterFailedRelease: ownedToken,
+      residentAfterInnerRelease: true,
+      removed: true,
+    },
+  );
+
   const snapshotPath = path.join(dir, "release-snapshot-failure.lock");
   const snapshotToken = "release-snapshot-failure-token";
   fs.writeFileSync(snapshotPath, snapshotToken);

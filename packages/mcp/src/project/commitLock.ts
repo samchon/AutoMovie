@@ -149,6 +149,24 @@ const restoreQuarantinedLock = (quarantine: string, lockPath: string): void => {
 };
 
 /**
+ * Take this process's ownership back when a release could not remove the file.
+ *
+ * The entry is restored only while the resident lock still carries this
+ * session's token, so a successor written by another session is never adopted.
+ * The lock stays re-entrant for this process and the next release retries the
+ * removal, which turns a permanent fence into a retry.
+ */
+const reclaimCommitLock = (lockPath: string, token: string): void => {
+  try {
+    const resident = readCommitLockSnapshot(lockPath);
+    if (resident !== null && resident.token === token)
+      held.set(lockPath, { token, depth: 1 });
+  } catch {
+    // nothing resident to reclaim
+  }
+};
+
+/**
  * Take the commit lock, returning the owner token to pass to
  * {@link releaseCommitLock}. Throws after ~2 s if the lock never frees.
  */
@@ -196,9 +214,11 @@ export const releaseCommitLock = (
   options: { unlink?: boolean; retire?: boolean } = {},
 ): void => {
   const current = held.get(lockPath);
+  let owned = false;
   if (current !== undefined && current.token === token) {
     if (options.retire !== true && --current.depth !== 0) return;
     held.delete(lockPath);
+    owned = true;
   }
   if (options.retire === true || options.unlink === false) return;
   try {
@@ -211,6 +231,13 @@ export const releaseCommitLock = (
     try {
       fs.renameSync(lockPath, quarantine);
     } catch {
+      // The ownership entry is already gone and the resident lock still holds
+      // this session's token, so returning here leaves the file with no owner
+      // anywhere: every later acquisition of this coordinate, including one
+      // from this very process, waits out its deadline and reports itself as a
+      // foreign holder. One transient EPERM would fence the namespace until
+      // somebody deleted the file by hand.
+      if (owned) reclaimCommitLock(lockPath, token);
       return;
     }
     try {
@@ -224,6 +251,7 @@ export const releaseCommitLock = (
       else restoreQuarantinedLock(quarantine, lockPath);
     } catch {
       restoreQuarantinedLock(quarantine, lockPath);
+      if (owned) reclaimCommitLock(lockPath, token);
     }
   } catch {
     // already gone, nothing of ours to release
