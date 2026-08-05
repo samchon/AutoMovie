@@ -61,6 +61,16 @@ const event = (overrides: Record<string, unknown> = {}): unknown => ({
   ...overrides,
 });
 
+/** A camera intent span the validator accepts. */
+const intent = (overrides: Record<string, unknown> = {}): unknown => ({
+  start: 0,
+  framing: "medium",
+  move: "static",
+  focus: null,
+  focalLength: null,
+  ...overrides,
+});
+
 const pathsOf = (validation: IAutoMovieValidation): string[] =>
   validation.success === true
     ? []
@@ -211,6 +221,43 @@ export const test_validation_shot_artifact_paths = (): void => {
       title: "an event whose action index is not a whole number",
       shot: shot({ events: [event({ actionIndex: 1.5 })] }),
       path: "$input.events[0].actionIndex",
+    },
+    {
+      title: "a camera intent field that is not an array",
+      shot: shot({ cameraIntent: "wide" }),
+      path: "$input.cameraIntent",
+    },
+    {
+      title: "a non-object camera intent span",
+      shot: shot({ cameraIntent: [7] }),
+      path: "$input.cameraIntent[0]",
+    },
+    {
+      title: "a camera intent starting after the shot ends",
+      shot: shot({ cameraIntent: [intent({ start: 9 })] }),
+      path: "$input.cameraIntent[0].start",
+    },
+    {
+      title: "a camera framing outside the closed union",
+      shot: shot({ cameraIntent: [intent({ framing: "dutch" })] }),
+      path: "$input.cameraIntent[0].framing",
+    },
+    {
+      title: "a camera move outside the closed union",
+      shot: shot({ cameraIntent: [intent({ move: "teleport" })] }),
+      path: "$input.cameraIntent[0].move",
+    },
+    {
+      title: "a camera focus that is not a finite vector",
+      shot: shot({
+        cameraIntent: [intent({ focus: { x: 0, y: Number.NaN, z: 0 } })],
+      }),
+      path: "$input.cameraIntent[0].focus",
+    },
+    {
+      title: "a non-positive camera focal length",
+      shot: shot({ cameraIntent: [intent({ focalLength: 0 })] }),
+      path: "$input.cameraIntent[0].focalLength",
     },
   ];
   TestValidator.equals(
