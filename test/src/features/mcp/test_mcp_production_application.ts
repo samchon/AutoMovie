@@ -308,15 +308,19 @@ export const test_mcp_production_application = async (): Promise<void> => {
         [
           "gatedIncludesGetGuideDocument",
           () =>
-            gated.includes('getGuideDocument({ name: "AUTOMOVIE_OVERALL" })'),
+            gated?.includes(
+              'getGuideDocument({ name: "AUTOMOVIE_OVERALL" })',
+            ) === true,
         ],
         [
           "gatedIncludesGetGuideDocument2",
-          () => gated.includes('getGuideDocument({ name: "CAPTURE_FRAME" })'),
+          () =>
+            gated?.includes('getGuideDocument({ name: "CAPTURE_FRAME" })') ===
+            true,
         ],
         [
           "gatedIncludesNot",
-          () => gated.includes("not a payload validation error"),
+          () => gated?.includes("not a payload validation error") === true,
         ],
       ]),
       {
@@ -382,7 +386,9 @@ export const test_mcp_production_application = async (): Promise<void> => {
         [
           "reviewGatedIncludesGetGuideDocument",
           () =>
-            reviewGated.includes('getGuideDocument({ name: "REVIEW_ASSET" })'),
+            reviewGated?.includes(
+              'getGuideDocument({ name: "REVIEW_ASSET" })',
+            ) === true,
         ],
         [
           "AUTOMOVIEREVIEWGUIDESAssetREVIEWASSET",
