@@ -10688,7 +10688,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       attemptDirectory,
       "successor.marker",
     );
-    let attemptParentSwapped = false;
+    let attemptParentSwap = "pending";
     mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
       const descriptor = Reflect.apply(nativeOpen, mutableFs, [
         file,
@@ -10696,15 +10696,25 @@ export const test_cli_scaffold = async (): Promise<void> => {
         ...args,
       ]) as number;
       if (
-        attemptParentSwapped === false &&
+        attemptParentSwap === "pending" &&
         typeof file !== "number" &&
         flags === "wx+" &&
         path.resolve(file.toString()) === attemptTarget
       ) {
-        nativeRename(attemptDirectory, parkedAttemptDirectory);
-        nativeMkdir(attemptDirectory);
-        nativeWriteFile(attemptParentSuccessorMarker, "successor");
-        attemptParentSwapped = true;
+        // The descriptor this hook just returned lives inside the directory
+        // being moved, and Windows refuses that rename. Claim the flag before
+        // mutating and record the platform's answer by value.
+        attemptParentSwap = "swapped";
+        try {
+          nativeRename(attemptDirectory, parkedAttemptDirectory);
+          nativeMkdir(attemptDirectory);
+          nativeWriteFile(attemptParentSuccessorMarker, "successor");
+        } catch (swapFailure) {
+          attemptParentSwap =
+            swapFailure instanceof Error
+              ? swapFailure.message
+              : String(swapFailure);
+        }
       }
       return descriptor;
     }) as typeof fs.openSync;
@@ -10739,24 +10749,57 @@ export const test_cli_scaffold = async (): Promise<void> => {
     TestValidator.equals(
       "render attempt preserves an attempts-directory successor at publication",
       {
-        parkedRecordResident: fs.existsSync(
-          path.join(parkedAttemptDirectory, "slot-0001.json"),
-        ),
-        rejected: attemptParentRejected,
-        successorMarker: fs.readFileSync(attemptParentSuccessorMarker, "utf8"),
-        successorRecordResident: fs.existsSync(attemptTarget),
-        swapped: attemptParentSwapped,
+        swap: /(EPERM|EBUSY|EACCES|EXDEV)/u.test(attemptParentSwap)
+          ? "rename refused"
+          : attemptParentSwap,
+        ...namedFacts([
+          [
+            "parkedRecordResident",
+            () =>
+              attemptParentSwap !== "swapped" ||
+              fs.existsSync(
+                path.join(parkedAttemptDirectory, "slot-0001.json"),
+              ),
+          ],
+          [
+            "rejected",
+            () => attemptParentRejected === (attemptParentSwap === "swapped"),
+          ],
+          [
+            "successorMarker",
+            () =>
+              attemptParentSwap !== "swapped" ||
+              fs.readFileSync(attemptParentSuccessorMarker, "utf8") ===
+                "successor",
+          ],
+          [
+            "successorRecordResident",
+            () =>
+              fs.existsSync(attemptTarget) ===
+              (attemptParentSwap !== "swapped"),
+          ],
+        ]),
       },
       {
         parkedRecordResident: true,
         rejected: true,
-        successorMarker: "successor",
-        successorRecordResident: false,
-        swapped: true,
+        successorMarker: true,
+        successorRecordResident: true,
+        swap:
+          attemptParentSwap === "swapped" || attemptParentSwap === "pending"
+            ? attemptParentSwap
+            : "rename refused",
       },
     );
-    fs.rmSync(attemptDirectory, { recursive: true, force: true });
-    nativeRename(parkedAttemptDirectory, attemptDirectory);
+    // Both branches leave the same state behind: the swap removes the successor
+    // directory and restores the parked original, and a refusal removes only
+    // the record the product wrote into the original directory.
+    fs.rmSync(
+      attemptParentSwap === "swapped" ? attemptDirectory : attemptTarget,
+      { recursive: true, force: true },
+    );
+    if (attemptParentSwap === "swapped")
+      nativeRename(parkedAttemptDirectory, attemptDirectory);
     fs.rmSync(attemptTarget, { force: true });
 
     const rootFenceLock = createAttemptLock(32010, secondAttemptToken);
@@ -10765,7 +10808,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       attemptRoot,
       "successor.marker",
     );
-    let attemptRootSwapped = false;
+    let attemptRootSwap = "pending";
     mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
       const descriptor = Reflect.apply(nativeOpen, mutableFs, [
         file,
@@ -10773,16 +10816,23 @@ export const test_cli_scaffold = async (): Promise<void> => {
         ...args,
       ]) as number;
       if (
-        attemptRootSwapped === false &&
+        attemptRootSwap === "pending" &&
         typeof file !== "number" &&
         flags === "wx+" &&
         path.resolve(file.toString()) === attemptTarget
       ) {
-        nativeRename(attemptRoot, parkedAttemptRoot);
-        nativeMkdir(path.join(attemptRoot, "attempts"), { recursive: true });
-        nativeMkdir(path.join(attemptRoot, "locks"), { recursive: true });
-        nativeWriteFile(attemptRootSuccessorMarker, "successor");
-        attemptRootSwapped = true;
+        attemptRootSwap = "swapped";
+        try {
+          nativeRename(attemptRoot, parkedAttemptRoot);
+          nativeMkdir(path.join(attemptRoot, "attempts"), { recursive: true });
+          nativeMkdir(path.join(attemptRoot, "locks"), { recursive: true });
+          nativeWriteFile(attemptRootSuccessorMarker, "successor");
+        } catch (swapFailure) {
+          attemptRootSwap =
+            swapFailure instanceof Error
+              ? swapFailure.message
+              : String(swapFailure);
+        }
       }
       return descriptor;
     }) as typeof fs.openSync;
@@ -10817,24 +10867,53 @@ export const test_cli_scaffold = async (): Promise<void> => {
     TestValidator.equals(
       "render attempt preserves a render-root successor at publication",
       {
-        parkedRecordResident: fs.existsSync(
-          path.join(parkedAttemptRoot, "attempts", "slot-0001.json"),
-        ),
-        rejected: attemptRootRejected,
-        successorMarker: fs.readFileSync(attemptRootSuccessorMarker, "utf8"),
-        successorRecordResident: fs.existsSync(attemptTarget),
-        swapped: attemptRootSwapped,
+        swap: /(EPERM|EBUSY|EACCES|EXDEV)/u.test(attemptRootSwap)
+          ? "rename refused"
+          : attemptRootSwap,
+        ...namedFacts([
+          [
+            "parkedRecordResident",
+            () =>
+              attemptRootSwap !== "swapped" ||
+              fs.existsSync(
+                path.join(parkedAttemptRoot, "attempts", "slot-0001.json"),
+              ),
+          ],
+          [
+            "rejected",
+            () => attemptRootRejected === (attemptRootSwap === "swapped"),
+          ],
+          [
+            "successorMarker",
+            () =>
+              attemptRootSwap !== "swapped" ||
+              fs.readFileSync(attemptRootSuccessorMarker, "utf8") ===
+                "successor",
+          ],
+          [
+            "successorRecordResident",
+            () =>
+              fs.existsSync(attemptTarget) === (attemptRootSwap !== "swapped"),
+          ],
+        ]),
       },
       {
         parkedRecordResident: true,
         rejected: true,
-        successorMarker: "successor",
-        successorRecordResident: false,
-        swapped: true,
+        successorMarker: true,
+        successorRecordResident: true,
+        swap:
+          attemptRootSwap === "swapped" || attemptRootSwap === "pending"
+            ? attemptRootSwap
+            : "rename refused",
       },
     );
-    fs.rmSync(attemptRoot, { recursive: true, force: true });
-    nativeRename(parkedAttemptRoot, attemptRoot);
+    fs.rmSync(attemptRootSwap === "swapped" ? attemptRoot : attemptTarget, {
+      recursive: true,
+      force: true,
+    });
+    if (attemptRootSwap === "swapped")
+      nativeRename(parkedAttemptRoot, attemptRoot);
     fs.rmSync(attemptTarget, { force: true });
 
     interface RenderPlanFixture {
@@ -11190,7 +11269,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
     const parkedRootSwapPlan = `${rootSwapPlanRoot}.parked`;
     const rootSwapPlanMarker = path.join(rootSwapPlanRoot, "successor.marker");
     fs.mkdirSync(rootSwapPlanRoot);
-    let planRootSwapped = false;
+    let planRootSwap = "pending";
     mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
       const descriptor = Reflect.apply(nativeOpen, mutableFs, [
         file,
@@ -11198,18 +11277,25 @@ export const test_cli_scaffold = async (): Promise<void> => {
         ...args,
       ]) as number;
       if (
-        planRootSwapped === false &&
+        planRootSwap === "pending" &&
         typeof file !== "number" &&
         flags === "wx+" &&
         path.resolve(file.toString()) ===
           path.join(rootSwapPlanRoot, "plan.json.generations", "genesis.json")
       ) {
-        nativeRename(rootSwapPlanRoot, parkedRootSwapPlan);
-        nativeMkdir(path.join(rootSwapPlanRoot, "plan.json.generations"), {
-          recursive: true,
-        });
-        nativeWriteFile(rootSwapPlanMarker, "successor");
-        planRootSwapped = true;
+        planRootSwap = "swapped";
+        try {
+          nativeRename(rootSwapPlanRoot, parkedRootSwapPlan);
+          nativeMkdir(path.join(rootSwapPlanRoot, "plan.json.generations"), {
+            recursive: true,
+          });
+          nativeWriteFile(rootSwapPlanMarker, "successor");
+        } catch (swapFailure) {
+          planRootSwap =
+            swapFailure instanceof Error
+              ? swapFailure.message
+              : String(swapFailure);
+        }
       }
       return descriptor;
     }) as typeof fs.openSync;
@@ -11238,27 +11324,40 @@ export const test_cli_scaffold = async (): Promise<void> => {
     }
     TestValidator.equals(
       "render plan preserves a render-root and parent successor",
-      namedFacts([
-        ["planRootSwapped", () => planRootSwapped],
-        ["planRootSwapRejected", () => planRootSwapRejected],
-        [
-          "rootSwapPlanMarkerUtf8",
-          () => fs.readFileSync(rootSwapPlanMarker, "utf8") === "successor",
-        ],
-        [
-          "parkedRootSwapPlanResident",
-          () =>
-            fs.existsSync(
-              path.join(
-                parkedRootSwapPlan,
-                "plan.json.generations",
-                "genesis.json",
-              ),
-            ),
-        ],
-      ]),
       {
-        planRootSwapped: true,
+        planRootSwap: /(EPERM|EBUSY|EACCES|EXDEV)/u.test(planRootSwap)
+          ? "rename refused"
+          : planRootSwap,
+        ...namedFacts([
+          [
+            "planRootSwapRejected",
+            () => planRootSwapRejected === (planRootSwap === "swapped"),
+          ],
+          [
+            "rootSwapPlanMarkerUtf8",
+            () =>
+              planRootSwap !== "swapped" ||
+              fs.readFileSync(rootSwapPlanMarker, "utf8") === "successor",
+          ],
+          [
+            "parkedRootSwapPlanResident",
+            () =>
+              planRootSwap !== "swapped" ||
+              fs.existsSync(
+                path.join(
+                  parkedRootSwapPlan,
+                  "plan.json.generations",
+                  "genesis.json",
+                ),
+              ),
+          ],
+        ]),
+      },
+      {
+        planRootSwap:
+          planRootSwap === "swapped" || planRootSwap === "pending"
+            ? planRootSwap
+            : "rename refused",
         planRootSwapRejected: true,
         rootSwapPlanMarkerUtf8: true,
         parkedRootSwapPlanResident: true,
@@ -16177,7 +16276,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
     const rootRaceTarget = path.join(rootRaceBase, "created.txt");
     const parkedRootRaceBase = `${rootRaceBase}.parked`;
     fs.mkdirSync(rootRaceBase);
-    let scaffoldRootSwapped = false;
+    let scaffoldRootSwap = "pending";
     mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
       const descriptor = Reflect.apply(nativeOpen, mutableFs, [
         file,
@@ -16185,14 +16284,21 @@ export const test_cli_scaffold = async (): Promise<void> => {
         ...args,
       ]) as number;
       if (
-        scaffoldRootSwapped === false &&
+        scaffoldRootSwap === "pending" &&
         typeof file !== "number" &&
         path.resolve(file.toString()) === rootRaceTarget &&
         flags === "wx+"
       ) {
-        nativeRename(rootRaceBase, parkedRootRaceBase);
-        Reflect.apply(nativeMkdir, mutableFs, [rootRaceBase]);
-        scaffoldRootSwapped = true;
+        scaffoldRootSwap = "swapped";
+        try {
+          nativeRename(rootRaceBase, parkedRootRaceBase);
+          Reflect.apply(nativeMkdir, mutableFs, [rootRaceBase]);
+        } catch (swapFailure) {
+          scaffoldRootSwap =
+            swapFailure instanceof Error
+              ? swapFailure.message
+              : String(swapFailure);
+        }
       }
       return descriptor;
     }) as typeof fs.openSync;
@@ -16217,22 +16323,35 @@ export const test_cli_scaffold = async (): Promise<void> => {
     }
     TestValidator.equals(
       "scaffold creation rejects a base successor before writing bytes",
-      namedFacts([
-        ["scaffoldRootSwapped", () => scaffoldRootSwapped],
-        ["scaffoldRootRejected", () => scaffoldRootRejected],
-        [
-          "rootRaceTargetResident",
-          () => fs.existsSync(rootRaceTarget) === false,
-        ],
-        [
-          "parkedRootRaceBaseCount",
-          () =>
-            fs.readFileSync(path.join(parkedRootRaceBase, "created.txt"))
-              .length === 0,
-        ],
-      ]),
       {
-        scaffoldRootSwapped: true,
+        scaffoldRootSwap: /(EPERM|EBUSY|EACCES|EXDEV)/u.test(scaffoldRootSwap)
+          ? "rename refused"
+          : scaffoldRootSwap,
+        ...namedFacts([
+          [
+            "scaffoldRootRejected",
+            () => scaffoldRootRejected === (scaffoldRootSwap === "swapped"),
+          ],
+          [
+            "rootRaceTargetResident",
+            () =>
+              fs.existsSync(rootRaceTarget) ===
+              (scaffoldRootSwap !== "swapped"),
+          ],
+          [
+            "parkedRootRaceBaseCount",
+            () =>
+              scaffoldRootSwap !== "swapped" ||
+              fs.readFileSync(path.join(parkedRootRaceBase, "created.txt"))
+                .length === 0,
+          ],
+        ]),
+      },
+      {
+        scaffoldRootSwap:
+          scaffoldRootSwap === "swapped" || scaffoldRootSwap === "pending"
+            ? scaffoldRootSwap
+            : "rename refused",
         scaffoldRootRejected: true,
         rootRaceTargetResident: true,
         parkedRootRaceBaseCount: true,
@@ -16244,7 +16363,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
     const parentRaceTarget = path.join(parentRaceParent, "created.txt");
     const parkedParentRace = `${parentRaceParent}.parked`;
     fs.mkdirSync(parentRaceParent, { recursive: true });
-    let scaffoldParentSwapped = false;
+    let scaffoldParentSwap = "pending";
     mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
       const descriptor = Reflect.apply(nativeOpen, mutableFs, [
         file,
@@ -16252,14 +16371,21 @@ export const test_cli_scaffold = async (): Promise<void> => {
         ...args,
       ]) as number;
       if (
-        scaffoldParentSwapped === false &&
+        scaffoldParentSwap === "pending" &&
         typeof file !== "number" &&
         path.resolve(file.toString()) === parentRaceTarget &&
         flags === "wx+"
       ) {
-        nativeRename(parentRaceParent, parkedParentRace);
-        Reflect.apply(nativeMkdir, mutableFs, [parentRaceParent]);
-        scaffoldParentSwapped = true;
+        scaffoldParentSwap = "swapped";
+        try {
+          nativeRename(parentRaceParent, parkedParentRace);
+          Reflect.apply(nativeMkdir, mutableFs, [parentRaceParent]);
+        } catch (swapFailure) {
+          scaffoldParentSwap =
+            swapFailure instanceof Error
+              ? swapFailure.message
+              : String(swapFailure);
+        }
       }
       return descriptor;
     }) as typeof fs.openSync;
@@ -16288,22 +16414,37 @@ export const test_cli_scaffold = async (): Promise<void> => {
     }
     TestValidator.equals(
       "scaffold creation rejects a descendant-parent successor before writing bytes",
-      namedFacts([
-        ["scaffoldParentSwapped", () => scaffoldParentSwapped],
-        ["scaffoldParentRejected", () => scaffoldParentRejected],
-        [
-          "parentRaceTargetResident",
-          () => fs.existsSync(parentRaceTarget) === false,
-        ],
-        [
-          "parkedParentRaceCount",
-          () =>
-            fs.readFileSync(path.join(parkedParentRace, "created.txt"))
-              .length === 0,
-        ],
-      ]),
       {
-        scaffoldParentSwapped: true,
+        scaffoldParentSwap: /(EPERM|EBUSY|EACCES|EXDEV)/u.test(
+          scaffoldParentSwap,
+        )
+          ? "rename refused"
+          : scaffoldParentSwap,
+        ...namedFacts([
+          [
+            "scaffoldParentRejected",
+            () => scaffoldParentRejected === (scaffoldParentSwap === "swapped"),
+          ],
+          [
+            "parentRaceTargetResident",
+            () =>
+              fs.existsSync(parentRaceTarget) ===
+              (scaffoldParentSwap !== "swapped"),
+          ],
+          [
+            "parkedParentRaceCount",
+            () =>
+              scaffoldParentSwap !== "swapped" ||
+              fs.readFileSync(path.join(parkedParentRace, "created.txt"))
+                .length === 0,
+          ],
+        ]),
+      },
+      {
+        scaffoldParentSwap:
+          scaffoldParentSwap === "swapped" || scaffoldParentSwap === "pending"
+            ? scaffoldParentSwap
+            : "rename refused",
         scaffoldParentRejected: true,
         parentRaceTargetResident: true,
         parkedParentRaceCount: true,

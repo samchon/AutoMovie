@@ -121,7 +121,7 @@ export const legacyImportSingleHookContract = (text: string): unknown => {
       ...text.matchAll(
         /finally\s*\{\s*(?:fs\.([A-Za-z]+)\s*=|Object\.defineProperty\(\s*fs,\s*"([A-Za-z]+)")/gu,
       ),
-    ].map((found) => found[1] ?? found[2]!),
+    ].map((found) => (found[1] ?? found[2])!),
   };
 };
 
