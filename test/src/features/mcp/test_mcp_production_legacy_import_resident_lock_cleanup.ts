@@ -283,11 +283,11 @@ export const test_mcp_production_legacy_import_resident_lock_cleanup =
               "letapplyResidentLockCleanupFailure:|ILegacyImportFixtureFailure|undefined;",
             substantive: {
               digest:
-                "fd61883962b09f9246642515bd262b9ecfb926a10f59acfa0722628c011d80a9",
-              tokens: 263,
+                "b9dcf5b74c222c6ac7fde1488996bc288a218b9ed1ff95fbb1389c5eb78c6d91",
+              tokens: 350,
             },
             tryDigest:
-              "06850169b40aaaff48d84589494250e91e4220b9c23b7623b0895783f9d99a2d",
+              "752169b68040f336500283ff22ee77c609b0b79545b45ad25cedba9e078164ab",
             tryPrefixes: [
               'constresidentLock=path.join(replacedAfterResidentLock.root,"revision.lock",);',
               "constnativeWrite=fs.writeFileSync;",
@@ -314,11 +314,11 @@ export const test_mcp_production_legacy_import_resident_lock_cleanup =
               "letrollbackResidentLockCleanupFailure:|ILegacyImportFixtureFailure|undefined;",
             substantive: {
               digest:
-                "87e84fe4b64f682b45eb1cdbb4fe791cd7bfd8970f2e171b9d35099013005036",
-              tokens: 273,
+                "c4001b28e9b8d4b5193f6405da178dcd91d4a42450da534b34e0a7a1e7d36a50",
+              tokens: 360,
             },
             tryDigest:
-              "97722c245cd421dbc1ccb234f715ffdfece032e41b9f97e815b8f0a5ef91ba62",
+              "5a094dd7be516a1bf84d0de6ac6045a4716c2db860a43668d48e36430adbe91e",
             tryPrefixes: [
               "constimporter=newAutoMovieLegacyImporter(replacedAfterRollbackLock.root,);",
               "importer.apply();",

@@ -731,10 +731,21 @@ export const test_mcp_production_legacy_import = (): void => {
         throw standaloneCleanupFailure;
     }) as typeof fs.rmSync;
     let standaloneCaught: unknown;
+    let rmSyncFailure: ILegacyImportFixtureFailure | undefined;
     try {
       standaloneCaught = captureFailure(() => importer.plan());
+    } catch (error) {
+      rmSyncFailure = { error };
+      throw error;
     } finally {
-      fs.rmSync = nativeRm;
+      preserveLegacyImportFixtureCleanup(rmSyncFailure, [
+        {
+          resource: "planning cleanup remove hook",
+          cleanup: () => {
+            fs.rmSync = nativeRm;
+          },
+        },
+      ]);
     }
 
     const planningFailure = new Error("injected legacy planning failure");
@@ -849,6 +860,7 @@ export const test_mcp_production_legacy_import = (): void => {
         throw new Error("injected rename failure");
       nativeRename(oldPath, newPath);
     }) as typeof fs.renameSync;
+    let renameSyncFailure: ILegacyImportFixtureFailure | undefined;
     try {
       // Name the observed failure and the leftover entries: a cleanup that
       // cannot remove the staging tree must be reported as itself rather than
@@ -895,8 +907,18 @@ export const test_mcp_production_legacy_import = (): void => {
           staging: [],
         },
       );
+    } catch (error) {
+      renameSyncFailure = { error };
+      throw error;
     } finally {
-      fs.renameSync = nativeRename;
+      preserveLegacyImportFixtureCleanup(renameSyncFailure, [
+        {
+          resource: "collision staging rename hook",
+          cleanup: () => {
+            fs.renameSync = nativeRename;
+          },
+        },
+      ]);
     }
   } catch (error) {
     renameFailureDisposal = { error };
@@ -1276,6 +1298,7 @@ export const test_mcp_production_legacy_import = (): void => {
           | fs.BigIntStats;
       }) as typeof fs.lstatSync,
     });
+    let deniedImportStateLstatFailure: ILegacyImportFixtureFailure | undefined;
     try {
       TestValidator.predicate(
         "an unexpected import-state lstat denial propagates through apply and rollback",
@@ -1285,8 +1308,17 @@ export const test_mcp_production_legacy_import = (): void => {
             "injected import-state lstat denial",
           ),
       );
+    } catch (error) {
+      deniedImportStateLstatFailure = { error };
+      throw error;
     } finally {
-      Object.defineProperty(fs, "lstatSync", nativeLstatDescriptor);
+      preserveLegacyImportFixtureCleanup(deniedImportStateLstatFailure, [
+        {
+          resource: "denied import state lstat descriptor hook",
+          cleanup: () =>
+            Object.defineProperty(fs, "lstatSync", nativeLstatDescriptor),
+        },
+      ]);
     }
   } catch (error) {
     deniedImportStateFailure = { error };
@@ -2183,6 +2215,7 @@ export const test_mcp_production_legacy_import = (): void => {
           );
         }
       }) as typeof fs.writeFileSync;
+      let writeFileSyncFailure: ILegacyImportFixtureFailure | undefined;
       try {
         TestValidator.predicate(
           "root replacement after resident lock acquisition abandons only process-local ownership",
@@ -2194,8 +2227,18 @@ export const test_mcp_production_legacy_import = (): void => {
             "root identity",
           ),
         );
+      } catch (error) {
+        writeFileSyncFailure = { error };
+        throw error;
       } finally {
-        fs.writeFileSync = nativeWrite;
+        preserveLegacyImportFixtureCleanup(writeFileSyncFailure, [
+          {
+            resource: "apply resident-lock write hook",
+            cleanup: () => {
+              fs.writeFileSync = nativeWrite;
+            },
+          },
+        ]);
       }
       const parkedToken = fs.readFileSync(
         path.join(parkedResidentRoot, "revision.lock"),
@@ -2203,6 +2246,7 @@ export const test_mcp_production_legacy_import = (): void => {
       );
       const replacementLock = path.join(residentReplacement, "revision.lock");
       const retryToken = acquireCommitLock(residentLock);
+      let residentLockFailure: ILegacyImportFixtureFailure | undefined;
       try {
         TestValidator.predicate(
           "the replacement namespace receives a fresh resident lock instead of a poisoned re-entrant token",
@@ -2211,8 +2255,16 @@ export const test_mcp_production_legacy_import = (): void => {
             fs.existsSync(path.join(residentReplacement, ".automovie")) ===
               false,
         );
+      } catch (error) {
+        residentLockFailure = { error };
+        throw error;
       } finally {
-        releaseCommitLock(residentLock, retryToken);
+        preserveLegacyImportFixtureCleanup(residentLockFailure, [
+          {
+            resource: "apply resident-lock retry token",
+            cleanup: () => releaseCommitLock(residentLock, retryToken),
+          },
+        ]);
       }
     } catch (error) {
       applyResidentLockCleanupFailure = { error };
@@ -2315,13 +2367,24 @@ export const test_mcp_production_legacy_import = (): void => {
           );
         }
       }) as typeof fs.writeFileSync;
+      let writeFileSyncFailure2: ILegacyImportFixtureFailure | undefined;
       try {
         TestValidator.predicate(
           "root replacement after rollback lock acquisition abandons only process-local ownership",
           throws(() => importer.rollback(), "root identity"),
         );
+      } catch (error) {
+        writeFileSyncFailure2 = { error };
+        throw error;
       } finally {
-        fs.writeFileSync = nativeWrite;
+        preserveLegacyImportFixtureCleanup(writeFileSyncFailure2, [
+          {
+            resource: "rollback resident-lock write hook",
+            cleanup: () => {
+              fs.writeFileSync = nativeWrite;
+            },
+          },
+        ]);
       }
       const parkedToken = fs.readFileSync(
         path.join(parkedRollbackResidentRoot, ".automovie/revision.lock"),
@@ -2332,14 +2395,23 @@ export const test_mcp_production_legacy_import = (): void => {
         ".automovie/revision.lock",
       );
       const retryToken = acquireCommitLock(residentLock);
+      let residentLockFailure2: ILegacyImportFixtureFailure | undefined;
       try {
         TestValidator.predicate(
           "the rollback replacement namespace receives a fresh resident lock instead of a poisoned re-entrant token",
           retryToken !== parkedToken &&
             fs.readFileSync(replacementLock, "utf8") === retryToken,
         );
+      } catch (error) {
+        residentLockFailure2 = { error };
+        throw error;
       } finally {
-        releaseCommitLock(residentLock, retryToken);
+        preserveLegacyImportFixtureCleanup(residentLockFailure2, [
+          {
+            resource: "rollback resident-lock retry token",
+            cleanup: () => releaseCommitLock(residentLock, retryToken),
+          },
+        ]);
       }
     } catch (error) {
       rollbackResidentLockCleanupFailure = { error };
@@ -2634,6 +2706,7 @@ export const test_mcp_production_legacy_import = (): void => {
         ];
       return entries;
     }) as typeof fs.readdirSync;
+    let readdirSyncFailure: ILegacyImportFixtureFailure | undefined;
     try {
       TestValidator.predicate(
         "portable legacy inventory refuses case-colliding paths",
@@ -2642,8 +2715,18 @@ export const test_mcp_production_legacy_import = (): void => {
           "collide by case",
         ),
       );
+    } catch (error) {
+      readdirSyncFailure = { error };
+      throw error;
     } finally {
-      fs.readdirSync = nativeReaddir;
+      preserveLegacyImportFixtureCleanup(readdirSyncFailure, [
+        {
+          resource: "case-colliding inventory readdir hook",
+          cleanup: () => {
+            fs.readdirSync = nativeReaddir;
+          },
+        },
+      ]);
     }
   } catch (error) {
     collidingCaseFailure = { error };
@@ -2711,6 +2794,7 @@ export const test_mcp_production_legacy_import = (): void => {
         ];
       return entries;
     }) as typeof fs.readdirSync;
+    let readdirSyncFailure2: ILegacyImportFixtureFailure | undefined;
     try {
       TestValidator.predicate(
         "special filesystem entries cannot enter legacy inventory",
@@ -2719,8 +2803,18 @@ export const test_mcp_production_legacy_import = (): void => {
           "not a regular file or directory",
         ),
       );
+    } catch (error) {
+      readdirSyncFailure2 = { error };
+      throw error;
     } finally {
-      fs.readdirSync = nativeReaddir;
+      preserveLegacyImportFixtureCleanup(readdirSyncFailure2, [
+        {
+          resource: "special-entry inventory readdir hook",
+          cleanup: () => {
+            fs.readdirSync = nativeReaddir;
+          },
+        },
+      ]);
     }
   } catch (error) {
     specialInventoryEntryFailure = { error };
@@ -2821,6 +2915,7 @@ export const test_mcp_production_legacy_import = (): void => {
         }
         return descriptor;
       }) as typeof fs.openSync;
+      let openSyncFailure: ILegacyImportFixtureFailure | undefined;
       try {
         TestValidator.predicate(
           `resident lock mutation ${lockMutation} aborts legacy apply`,
@@ -2829,8 +2924,18 @@ export const test_mcp_production_legacy_import = (): void => {
             "changed during import apply",
           ) && changed,
         );
+      } catch (error) {
+        openSyncFailure = { error };
+        throw error;
       } finally {
-        fs.openSync = nativeOpen;
+        preserveLegacyImportFixtureCleanup(openSyncFailure, [
+          {
+            resource: "resident lock mutation open hook",
+            cleanup: () => {
+              fs.openSync = nativeOpen;
+            },
+          },
+        ]);
       }
     } catch (error) {
       changingLockFailure = { error };
@@ -2883,13 +2988,24 @@ export const test_mcp_production_legacy_import = (): void => {
         nativeWrite(lockPath, "foreign-owner");
       }
     }) as typeof fs.writeFileSync;
+    let writeFileSyncFailure3: ILegacyImportFixtureFailure | undefined;
     try {
       TestValidator.predicate(
         "rollback verifies the exact resident lock token",
         throws(() => importer.rollback(), "changed after import") && corrupted,
       );
+    } catch (error) {
+      writeFileSyncFailure3 = { error };
+      throw error;
     } finally {
-      fs.writeFileSync = nativeWrite;
+      preserveLegacyImportFixtureCleanup(writeFileSyncFailure3, [
+        {
+          resource: "rollback lock token write hook",
+          cleanup: () => {
+            fs.writeFileSync = nativeWrite;
+          },
+        },
+      ]);
     }
   } catch (error) {
     mismatchedRollbackLockFailure = { error };
@@ -3002,13 +3118,24 @@ export const test_mcp_production_legacy_import = (): void => {
         ];
       return entries;
     }) as typeof fs.readdirSync;
+    let readdirSyncFailure3: ILegacyImportFixtureFailure | undefined;
     try {
       TestValidator.predicate(
         "special applied-state entries invalidate rollback verification",
         throws(() => importer.rollback(), "changed after import"),
       );
+    } catch (error) {
+      readdirSyncFailure3 = { error };
+      throw error;
     } finally {
-      fs.readdirSync = nativeReaddir;
+      preserveLegacyImportFixtureCleanup(readdirSyncFailure3, [
+        {
+          resource: "special applied-state readdir hook",
+          cleanup: () => {
+            fs.readdirSync = nativeReaddir;
+          },
+        },
+      ]);
     }
   } catch (error) {
     specialAppliedStateFailure = { error };

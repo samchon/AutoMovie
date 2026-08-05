@@ -326,7 +326,7 @@ export const test_mcp_production_legacy_import_fixture_cleanup = (): void => {
               "letchangingLockFailure:ILegacyImportFixtureFailure|undefined;",
             ],
             tryDigest:
-              "b4aea634e377e417e5594e2d1c291eed69ef43c66e28c78d27017b6079f22c7a",
+              "3b6a1b83f9a107771ed596e10c08877ffa1e6d434856a54dd0baeaf47b816ea4",
             tryPrefixes: [
               'outsideLock=fs.mkdtempSync(path.join(os.tmpdir(),"automovie-changing-lock-"),);',
             ],

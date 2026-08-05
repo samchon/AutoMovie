@@ -267,7 +267,7 @@ export const test_mcp_production_legacy_import_hook_cleanup = (): void => {
           catchBodies: ["combinedPlanningHookFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 16,
+          containerStatements: 17,
           finallyDigest:
             "79910de95a56489ab3a38c2b8c4572ba9dafc3da6e46c585a70cfccfa2965d6e",
           finallySubstantive: {
@@ -275,7 +275,7 @@ export const test_mcp_production_legacy_import_hook_cleanup = (): void => {
               "6faca8c8688989a3be5c5b1bac4af88d420c41ace2aeee8c8e2dc966a4dadccb",
             tokens: 50,
           },
-          index: 14,
+          index: 15,
           preceding:
             "letcombinedPlanningHookFailure:ILegacyImportFixtureFailure|undefined;",
           substantive: {

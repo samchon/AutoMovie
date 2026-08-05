@@ -281,7 +281,7 @@ const CONTRACT = {
         "letplanningCleanupFailure:ILegacyImportFixtureFailure|undefined;",
       ],
       tryDigest:
-        "65ff92ac7b69461123cb71fd86065a04456e0a2f88b252fb4dc97e8d2d5a0d6b",
+        "f234868b066454d79d6e152f2e2d4896aa861f4776f2e9ed40339b104c6a58ae",
     },
     {
       catchBodies: ["collisionsFailure={error};", "throwerror;"],
@@ -311,7 +311,7 @@ const CONTRACT = {
         "letrenameFailureDisposal:ILegacyImportFixtureFailure|undefined;",
       ],
       tryDigest:
-        "d46456b622ecbd0d89b31d66836922e41e427770c1746d456ea59d5ed9840c41",
+        "a80f113d015561932a729bab018493da4e930a2be06d26bde8dc58a2253f7727",
     },
     {
       catchBodies: ["importCleanupFailureDisposal={error};", "throwerror;"],
@@ -416,7 +416,7 @@ const CONTRACT = {
         "letdeniedImportStateFailure:ILegacyImportFixtureFailure|undefined;",
       ],
       tryDigest:
-        "19ac63be02d8467e56dce11bbc6c506f2b8aa655904dae77c4e5296c6026749c",
+        "681383da495f3297735679a4b407b0953cbca33f70fa52ee64cda13fecc5bf14",
     },
     {
       catchBodies: ["emptyDirectoryTopologyFailure={error};", "throwerror;"],
@@ -647,7 +647,7 @@ const CONTRACT = {
         "letcollidingCaseFailure:ILegacyImportFixtureFailure|undefined;",
       ],
       tryDigest:
-        "379534a4bbb8de7ea51348fb03b85eac2951780b01b29dc489bd8c8ad4697623",
+        "46d1f12bc8c8dcd08612b1dd85fd2373a3cbb6f5b907968c835dceb8ad35db3d",
     },
     {
       catchBodies: ["inventoryRootFileFailure={error};", "throwerror;"],
@@ -677,7 +677,7 @@ const CONTRACT = {
         "letspecialInventoryEntryFailure:ILegacyImportFixtureFailure|undefined;",
       ],
       tryDigest:
-        "1f8935c12e6d7c606bc328b06750074bc0262b3b21516556310b19d183ff3486",
+        "696df6a5a95ee17d73f35bbd109137f8af8905111ad15390c4012116ce7ae169",
     },
     {
       catchBodies: ["mismatchedRollbackLockFailure={error};", "throwerror;"],
@@ -692,7 +692,7 @@ const CONTRACT = {
         "letmismatchedRollbackLockFailure:ILegacyImportFixtureFailure|undefined;",
       ],
       tryDigest:
-        "8e333e6ffec09e2677707d116b9521d863e05734ff98ea67e7d650bccd04c385",
+        "6a88816a6a9787e6e9389f2d01d82c4844998122a2c016e267c19d86e5adff89",
     },
     {
       catchBodies: ["directoryImportPlanFailure={error};", "throwerror;"],
@@ -722,7 +722,7 @@ const CONTRACT = {
         "letspecialAppliedStateFailure:ILegacyImportFixtureFailure|undefined;",
       ],
       tryDigest:
-        "73f9132baad68dabde520d7afcea87ff743d38e6239d14b74be4f5aa446614d6",
+        "e0e86ba83f0209b0b85c8c5506b171bd4f540b8fad6743070be7357f6a2d1831",
     },
   ],
   rawDisposals: [],
