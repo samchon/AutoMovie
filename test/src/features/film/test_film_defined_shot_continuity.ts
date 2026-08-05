@@ -425,11 +425,13 @@ export const test_film_defined_shot_continuity = (): void => {
       ["airborneSuccess", () => airborne.success],
       [
         "airborneSourceScene",
-        () => airborne.source.scene.space?.id === "flat-ground",
+        () =>
+          airborne.success && airborne.source.scene.space?.id === "flat-ground",
       ],
       [
         "airborneContinuityClosing",
         () =>
+          airborne.success &&
           airborne.continuity.closing.actors.find(
             (actor) => actor.node === "knightA",
           )?.footPlants === null,

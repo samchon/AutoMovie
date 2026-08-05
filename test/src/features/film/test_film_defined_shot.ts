@@ -107,26 +107,32 @@ export const test_film_defined_shot = (): void => {
     "registered code reaches the complete engine pipeline",
     namedFacts([
       ["compiledSuccess", () => compiled.success],
-      ["compiledSourceShot", () => compiled.source.shot.id === "SB-012"],
+      [
+        "compiledSourceShot",
+        () => compiled.success && compiled.source.shot.id === "SB-012",
+      ],
       [
         "compiledSourceShot2",
-        () => compiled.source.shot.scene === "scene-duel",
+        () => compiled.success && compiled.source.shot.scene === "scene-duel",
       ],
       [
         "compiledContinuityOpening",
-        () => compiled.continuity.opening.shot === "SB-012",
+        () => compiled.success && compiled.continuity.opening.shot === "SB-012",
       ],
       [
         "compiledContinuityClosing",
-        () => compiled.continuity.closing.shot === "SB-012",
+        () => compiled.success && compiled.continuity.closing.shot === "SB-012",
       ],
       [
         "compiledRealizationCamera",
-        () => compiled.realization.camera.every((outcome) => outcome.passed),
+        () =>
+          compiled.success &&
+          compiled.realization.camera.every((outcome) => outcome.passed),
       ],
       [
         "compiledContinuityClosing2",
         () =>
+          compiled.success &&
           compiled.continuity.closing.actors.every(
             (actor) =>
               "gaitPhase" in actor &&
@@ -150,17 +156,25 @@ export const test_film_defined_shot = (): void => {
     "D010 response remains optional data",
     namedFacts([
       ["compiledSuccess", () => compiled.success],
-      ["compiledAdviceId", () => compiled.advice[0]?.id === "duel-contact"],
-      ["compiledAdviceDecision", () => compiled.advice[0].decision === null],
+      [
+        "compiledAdviceId",
+        () => compiled.success && compiled.advice[0]?.id === "duel-contact",
+      ],
+      [
+        "compiledAdviceDecision",
+        () => compiled.success && compiled.advice[0].decision === null,
+      ],
       [
         "compiledAdviceProposal",
         () =>
+          compiled.success &&
           compiled.advice[0].decision === null &&
           compiled.advice[0].proposal.impact.impulse.z !== 0,
       ],
       [
         "compiledAdviceSelected",
         () =>
+          compiled.success &&
           compiled.advice[0].decision === null &&
           compiled.advice[0].selected === null,
       ],
@@ -218,23 +232,27 @@ export const test_film_defined_shot = (): void => {
       ["decisionsSuccess", () => decisions.success],
       [
         "decisionsAdviceDecision",
-        () => decisions.advice[0]?.decision === "accepted",
+        () => decisions.success && decisions.advice[0]?.decision === "accepted",
       ],
       [
         "decisionsAdviceDecision2",
-        () => decisions.advice[1]?.decision === "modified",
+        () => decisions.success && decisions.advice[1]?.decision === "modified",
       ],
       [
         "decisionsAdviceSelected",
         () =>
+          decisions.success &&
           decisions.advice[1].selected?.push.flexion ===
-          modifiedResponse.push.flexion,
+            modifiedResponse.push.flexion,
       ],
       [
         "decisionsAdviceDecision3",
-        () => decisions.advice[2]?.decision === "rejected",
+        () => decisions.success && decisions.advice[2]?.decision === "rejected",
       ],
-      ["decisionsAdviceSelected2", () => decisions.advice[2].selected === null],
+      [
+        "decisionsAdviceSelected2",
+        () => decisions.success && decisions.advice[2].selected === null,
+      ],
     ]),
     {
       decisionsSuccess: true,
