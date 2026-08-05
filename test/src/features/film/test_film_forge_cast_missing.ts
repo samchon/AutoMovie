@@ -2,7 +2,7 @@ import { forgeCast } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import { makeScriptWrite } from "../internal/filmFixtures";
-import { hasViolation } from "../internal/predicates";
+import { hasViolation, namedFacts } from "../internal/predicates";
 
 /**
  * Pins the completeness gate: a cast member without a `modelRef` is an actor
@@ -18,11 +18,34 @@ import { hasViolation } from "../internal/predicates";
 export const test_film_forge_cast_missing = (): void => {
   const forged = forgeCast(makeScriptWrite(), { entries: [] });
   TestValidator.equals("fails", forged.success, false);
-  TestValidator.predicate(
+  TestValidator.equals(
     "names the unforged stand-in member only",
-    forged.success === false &&
-      hasViolation(forged, "type", "$input.entries") &&
-      forged.violations.some((v) => v.value === "knightB") &&
-      forged.violations.every((v) => v.value !== "knightA"),
+    namedFacts([
+      ["forgedSuccess", () => forged.success === false],
+      [
+        "hasViolationForgedType",
+        () =>
+          forged.success === false &&
+          hasViolation(forged, "type", "$input.entries"),
+      ],
+      [
+        "forgedViolationsV",
+        () =>
+          forged.success === false &&
+          forged.violations.some((v) => v.value === "knightB"),
+      ],
+      [
+        "forgedViolationsV2",
+        () =>
+          forged.success === false &&
+          forged.violations.every((v) => v.value !== "knightA"),
+      ],
+    ]),
+    {
+      forgedSuccess: true,
+      hasViolationForgedType: true,
+      forgedViolationsV: true,
+      forgedViolationsV2: true,
+    },
   );
 };

@@ -18,6 +18,8 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+import { namedFacts } from "../internal/predicates";
+
 const script: IAutoMovieScript = {
   logline: "A legacy door opens.",
   theme: "recovery",
@@ -1387,12 +1389,31 @@ export const test_mcp_production_legacy_import = (): void => {
     );
     const plan = importer.plan();
     const directories = plan.rollbackBaseline[0]?.directories ?? [];
-    TestValidator.predicate(
+    TestValidator.equals(
       "nested empty directories use one global canonical order",
-      directories.join("|") === "src/a|src/a-|src/a/z" &&
-        importer.apply().status === "applied" &&
-        importer.apply().status === "unchanged" &&
-        importer.rollback().status === "rolled-back",
+      namedFacts([
+        [
+          "directoriesSrcA",
+          () => directories.join("|") === "src/a|src/a-|src/a/z",
+        ],
+        ["importerApplyStatus", () => importer.apply().status === "applied"],
+        [
+          "importerApplyStatus2",
+          () =>
+            importer.apply().status === "applied" &&
+            importer.apply().status === "unchanged",
+        ],
+        [
+          "importerRollbackStatus",
+          () => importer.rollback().status === "rolled-back",
+        ],
+      ]),
+      {
+        directoriesSrcA: true,
+        importerApplyStatus: true,
+        importerApplyStatus2: true,
+        importerRollbackStatus: true,
+      },
     );
   } catch (error) {
     sortedEmptyDirectoryTopologyFailure = { error };

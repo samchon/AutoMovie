@@ -103,29 +103,75 @@ export const test_film_defined_shot = (): void => {
       ],
     },
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "registered code reaches the complete engine pipeline",
-    compiled.success &&
-      compiled.source.shot.id === "SB-012" &&
-      compiled.source.shot.scene === "scene-duel" &&
-      compiled.continuity.opening.shot === "SB-012" &&
-      compiled.continuity.closing.shot === "SB-012" &&
-      compiled.realization.camera.every((outcome) => outcome.passed) &&
-      compiled.continuity.closing.actors.every(
-        (actor) =>
-          "gaitPhase" in actor &&
-          "rootVelocity" in actor &&
-          "footPlants" in actor &&
-          "mount" in actor,
-      ),
+    namedFacts([
+      ["compiledSuccess", () => compiled.success],
+      ["compiledSourceShot", () => compiled.source.shot.id === "SB-012"],
+      [
+        "compiledSourceShot2",
+        () => compiled.source.shot.scene === "scene-duel",
+      ],
+      [
+        "compiledContinuityOpening",
+        () => compiled.continuity.opening.shot === "SB-012",
+      ],
+      [
+        "compiledContinuityClosing",
+        () => compiled.continuity.closing.shot === "SB-012",
+      ],
+      [
+        "compiledRealizationCamera",
+        () => compiled.realization.camera.every((outcome) => outcome.passed),
+      ],
+      [
+        "compiledContinuityClosing2",
+        () =>
+          compiled.continuity.closing.actors.every(
+            (actor) =>
+              "gaitPhase" in actor &&
+              "rootVelocity" in actor &&
+              "footPlants" in actor &&
+              "mount" in actor,
+          ),
+      ],
+    ]),
+    {
+      compiledSuccess: true,
+      compiledSourceShot: true,
+      compiledSourceShot2: true,
+      compiledContinuityOpening: true,
+      compiledContinuityClosing: true,
+      compiledRealizationCamera: true,
+      compiledContinuityClosing2: true,
+    },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "D010 response remains optional data",
-    compiled.success &&
-      compiled.advice[0]?.id === "duel-contact" &&
-      compiled.advice[0].decision === null &&
-      compiled.advice[0].proposal.impact.impulse.z !== 0 &&
-      compiled.advice[0].selected === null,
+    namedFacts([
+      ["compiledSuccess", () => compiled.success],
+      ["compiledAdviceId", () => compiled.advice[0]?.id === "duel-contact"],
+      ["compiledAdviceDecision", () => compiled.advice[0].decision === null],
+      [
+        "compiledAdviceProposal",
+        () =>
+          compiled.advice[0].decision === null &&
+          compiled.advice[0].proposal.impact.impulse.z !== 0,
+      ],
+      [
+        "compiledAdviceSelected",
+        () =>
+          compiled.advice[0].decision === null &&
+          compiled.advice[0].selected === null,
+      ],
+    ]),
+    {
+      compiledSuccess: true,
+      compiledAdviceId: true,
+      compiledAdviceDecision: true,
+      compiledAdviceProposal: true,
+      compiledAdviceSelected: true,
+    },
   );
 
   const modifiedResponse = structuredClone(advice);
@@ -166,15 +212,38 @@ export const test_film_defined_shot = (): void => {
       ],
     },
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "D010 accepted, modified, and rejected decisions remain distinguishable",
-    decisions.success &&
-      decisions.advice[0]?.decision === "accepted" &&
-      decisions.advice[1]?.decision === "modified" &&
-      decisions.advice[1].selected?.push.flexion ===
-        modifiedResponse.push.flexion &&
-      decisions.advice[2]?.decision === "rejected" &&
-      decisions.advice[2].selected === null,
+    namedFacts([
+      ["decisionsSuccess", () => decisions.success],
+      [
+        "decisionsAdviceDecision",
+        () => decisions.advice[0]?.decision === "accepted",
+      ],
+      [
+        "decisionsAdviceDecision2",
+        () => decisions.advice[1]?.decision === "modified",
+      ],
+      [
+        "decisionsAdviceSelected",
+        () =>
+          decisions.advice[1].selected?.push.flexion ===
+          modifiedResponse.push.flexion,
+      ],
+      [
+        "decisionsAdviceDecision3",
+        () => decisions.advice[2]?.decision === "rejected",
+      ],
+      ["decisionsAdviceSelected2", () => decisions.advice[2].selected === null],
+    ]),
+    {
+      decisionsSuccess: true,
+      decisionsAdviceDecision: true,
+      decisionsAdviceDecision2: true,
+      decisionsAdviceSelected: true,
+      decisionsAdviceDecision3: true,
+      decisionsAdviceSelected2: true,
+    },
   );
 
   const mismatched = compileDefinedShot({

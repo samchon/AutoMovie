@@ -188,11 +188,14 @@ export const test_motion_plant_feet_edge = (): void => {
   const foot = resolvePose(sampleMotion(far.motion, 1).pose, reachLeg).find(
     (b) => b.bone === "leftFoot",
   )!.worldPosition;
-  TestValidator.predicate(
+  TestValidator.equals(
     "unreachable pin extends the leg without NaN",
-    Number.isFinite(foot.x) &&
-      Number.isFinite(foot.y) &&
-      Number.isFinite(foot.z),
+    namedFacts([
+      ["isFiniteFootX", () => Number.isFinite(foot.x)],
+      ["isFiniteFootY", () => Number.isFinite(foot.y)],
+      ["isFiniteFootZ", () => Number.isFinite(foot.z)],
+    ]),
+    { isFiniteFootX: true, isFiniteFootY: true, isFiniteFootZ: true },
   );
 
   const branched = plantStanceFeet({

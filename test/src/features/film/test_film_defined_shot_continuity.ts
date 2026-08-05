@@ -32,7 +32,11 @@ import {
   makeStagingWrite,
 } from "../internal/filmFixtures";
 import { createSkeleton, joint, makePose } from "../internal/fixtures";
-import { validationHasNoWarnings, vclose } from "../internal/predicates";
+import {
+  namedFacts,
+  validationHasNoWarnings,
+  vclose,
+} from "../internal/predicates";
 
 const restAt = (x: number, y: number, z: number): IAutoMovieTransform => ({
   translation: { x, y, z },
@@ -341,25 +345,48 @@ export const test_film_defined_shot_continuity = (): void => {
   const clinicalPlants = clinical.continuity.closing.actors.find(
     (actor) => actor.node === "knightA",
   )?.footPlants;
-  TestValidator.predicate(
+  TestValidator.equals(
     "defined-shot planting preserves the actor clinical rig mappings",
-    clinicalPlants !== null &&
-      clinicalPlants !== undefined &&
-      clinicalPlants.length > 0 &&
-      validationHasNoWarnings(
-        "defined-shot clinical foot plant",
-        validateFootSkate({
-          motion: clinicalMotion,
-          skeleton: clinicalRig,
-          contacts: clinicalPlants.map((plant) => ({
-            bone: plant.foot,
-            start: plant.start,
-            end: plant.end,
-          })),
-          jointAxes: clinicalJointAxes,
-          restFrames: clinicalRestFrames,
-        }),
-      ),
+    namedFacts([
+      ["clinicalPlants", () => clinicalPlants !== null],
+      [
+        "clinicalPlants2",
+        () => clinicalPlants !== null && clinicalPlants !== undefined,
+      ],
+      [
+        "clinicalPlants3",
+        () =>
+          clinicalPlants !== null &&
+          clinicalPlants !== undefined &&
+          clinicalPlants.length > 0,
+      ],
+      [
+        "validationHasNoWarningsDefinedShot",
+        () =>
+          clinicalPlants !== null &&
+          clinicalPlants !== undefined &&
+          validationHasNoWarnings(
+            "defined-shot clinical foot plant",
+            validateFootSkate({
+              motion: clinicalMotion,
+              skeleton: clinicalRig,
+              contacts: clinicalPlants.map((plant) => ({
+                bone: plant.foot,
+                start: plant.start,
+                end: plant.end,
+              })),
+              jointAxes: clinicalJointAxes,
+              restFrames: clinicalRestFrames,
+            }),
+          ),
+      ],
+    ]),
+    {
+      clinicalPlants: true,
+      clinicalPlants2: true,
+      clinicalPlants3: true,
+      validationHasNoWarningsDefinedShot: true,
+    },
   );
 
   const airborneStage = makeStagingWrite({
@@ -392,13 +419,27 @@ export const test_film_defined_shot_continuity = (): void => {
     stage: airborneStage,
     target: { x: 4, y: 1, z: 4 },
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "scene space prevents a model-plane false plant above world ground",
-    airborne.success &&
-      airborne.source.scene.space?.id === "flat-ground" &&
-      airborne.continuity.closing.actors.find(
-        (actor) => actor.node === "knightA",
-      )?.footPlants === null,
+    namedFacts([
+      ["airborneSuccess", () => airborne.success],
+      [
+        "airborneSourceScene",
+        () => airborne.source.scene.space?.id === "flat-ground",
+      ],
+      [
+        "airborneContinuityClosing",
+        () =>
+          airborne.continuity.closing.actors.find(
+            (actor) => actor.node === "knightA",
+          )?.footPlants === null,
+      ],
+    ]),
+    {
+      airborneSuccess: true,
+      airborneSourceScene: true,
+      airborneContinuityClosing: true,
+    },
   );
 
   const slopeSpace = {
@@ -448,13 +489,32 @@ export const test_film_defined_shot_continuity = (): void => {
       : slopeFirst.continuity.closing.actors.find(
           (actor) => actor.node === "knightA",
         )!;
-  TestValidator.predicate(
+  TestValidator.equals(
     "a translated and rotated gait reaches its ramp target and plant",
-    slopeFirst.success &&
-      slopeFirstActor !== null &&
-      vclose(slopeFirstActor.transform.translation, slopeFirstTarget, 1e-9) &&
-      slopeFirstActor.footPlants?.some((plant) => plant.foot === "leftFoot") ===
-        true,
+    namedFacts([
+      ["slopeFirstSuccess", () => slopeFirst.success],
+      ["slopeFirstActor", () => slopeFirstActor !== null],
+      [
+        "vcloseSlopeFirstActorTransform",
+        () =>
+          slopeFirstActor !== null &&
+          vclose(slopeFirstActor.transform.translation, slopeFirstTarget, 1e-9),
+      ],
+      [
+        "slopeFirstActorFootPlantsPlant",
+        () =>
+          slopeFirstActor !== null &&
+          slopeFirstActor.footPlants?.some(
+            (plant) => plant.foot === "leftFoot",
+          ) === true,
+      ],
+    ]),
+    {
+      slopeFirstSuccess: true,
+      slopeFirstActor: true,
+      vcloseSlopeFirstActorTransform: true,
+      slopeFirstActorFootPlantsPlant: true,
+    },
   );
   if (slopeFirst.success === false) return;
   const slopeActor = slopeFirstActor!;
@@ -503,20 +563,53 @@ export const test_film_defined_shot_continuity = (): void => {
             )!.worldPosition,
           ),
         );
-  TestValidator.predicate(
+  TestValidator.equals(
     "ramp world height and the next opening share the same plant authority",
-    Math.abs(slopePin.y - rampGround(slopePin.x, slopePin.z)) <= 1e-6 &&
-      slopeSecond.success &&
-      slopeSecondNode !== null &&
-      vclose(
-        slopeSecondNode.transform.translation,
-        slopeActor.transform.translation,
-        1e-9,
-      ) &&
-      slopeSecondActor !== null &&
-      vclose(slopeSecondActor.transform.translation, slopeSecondTarget, 1e-9) &&
-      slopeSecondFoot !== null &&
-      vclose(slopeSecondFoot, slopePin, 1e-4),
+    namedFacts([
+      [
+        "MathAbsSlopePin",
+        () => Math.abs(slopePin.y - rampGround(slopePin.x, slopePin.z)) <= 1e-6,
+      ],
+      ["slopeSecondSuccess", () => slopeSecond.success],
+      ["slopeSecondNode", () => slopeSecondNode !== null],
+      [
+        "vcloseSlopeSecondNodeTransform",
+        () =>
+          slopeSecondNode !== null &&
+          vclose(
+            slopeSecondNode.transform.translation,
+            slopeActor.transform.translation,
+            1e-9,
+          ),
+      ],
+      ["slopeSecondActor", () => slopeSecondActor !== null],
+      [
+        "vcloseSlopeSecondActorTransform",
+        () =>
+          slopeSecondActor !== null &&
+          vclose(
+            slopeSecondActor.transform.translation,
+            slopeSecondTarget,
+            1e-9,
+          ),
+      ],
+      ["slopeSecondFoot", () => slopeSecondFoot !== null],
+      [
+        "vcloseSlopeSecondFootSlopePin",
+        () =>
+          slopeSecondFoot !== null && vclose(slopeSecondFoot, slopePin, 1e-4),
+      ],
+    ]),
+    {
+      MathAbsSlopePin: true,
+      slopeSecondSuccess: true,
+      slopeSecondNode: true,
+      vcloseSlopeSecondNodeTransform: true,
+      slopeSecondActor: true,
+      vcloseSlopeSecondActorTransform: true,
+      slopeSecondFoot: true,
+      vcloseSlopeSecondFootSlopePin: true,
+    },
   );
 
   const firstActor = first.continuity.closing.actors.find(
@@ -615,13 +708,30 @@ export const test_film_defined_shot_continuity = (): void => {
             )!.worldPosition,
           ),
         );
-  TestValidator.predicate(
+  TestValidator.equals(
     "a plant that ended before the cut never becomes the next opening pin",
-    staleClosing.actors.find((actor) => actor.node === "knightA")
-      ?.footPlants === null &&
-      afterStale.success &&
-      afterStaleFoot !== null &&
-      vclose(afterStaleFoot, stalePin.position, 1e-4) === false,
+    namedFacts([
+      [
+        "staleClosingActorsFind",
+        () =>
+          staleClosing.actors.find((actor) => actor.node === "knightA")
+            ?.footPlants === null,
+      ],
+      ["afterStaleSuccess", () => afterStale.success],
+      ["afterStaleFoot", () => afterStaleFoot !== null],
+      [
+        "vcloseAfterStaleFootStalePin",
+        () =>
+          afterStaleFoot !== null &&
+          vclose(afterStaleFoot, stalePin.position, 1e-4) === false,
+      ],
+    ]),
+    {
+      staleClosingActorsFind: true,
+      afterStaleSuccess: true,
+      afterStaleFoot: true,
+      vcloseAfterStaleFootStalePin: true,
+    },
   );
 
   const velocityRig = createSkeleton();

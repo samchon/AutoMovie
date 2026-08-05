@@ -6,7 +6,12 @@ import {
 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { nclose, qclose, throwsError } from "../internal/predicates";
+import {
+  namedFacts,
+  nclose,
+  qclose,
+  throwsError,
+} from "../internal/predicates";
 
 const NODE = (
   path: "translation" | "rotation" | "scale" | "weights",
@@ -121,12 +126,26 @@ export const test_resolve_sample_clip = (): void => {
   // frame-aligned hits the norm, so holding the PREVIOUS key here played
   // every step change one sample late (#1054)
   const stepThree = clip([track(PTR, [0, 1, 2], [10, 20, 30], "step")], 2);
-  TestValidator.predicate(
+  TestValidator.equals(
     "step exact interior hit takes the hit key, asymptotes stay held",
-    close(val(stepThree, 1, "ptr:/x"), [20]) &&
-      close(val(stepThree, 1 - 1e-9, "ptr:/x"), [10]) &&
-      close(val(stepThree, 1.999, "ptr:/x"), [20]) &&
-      close(val(stepThree, 2, "ptr:/x"), [30]),
+    namedFacts([
+      ["closeValStepThree", () => close(val(stepThree, 1, "ptr:/x"), [20])],
+      [
+        "closeValStepThree2",
+        () => close(val(stepThree, 1 - 1e-9, "ptr:/x"), [10]),
+      ],
+      [
+        "closeValStepThree3",
+        () => close(val(stepThree, 1.999, "ptr:/x"), [20]),
+      ],
+      ["closeValStepThree4", () => close(val(stepThree, 2, "ptr:/x"), [30])],
+    ]),
+    {
+      closeValStepThree: true,
+      closeValStepThree2: true,
+      closeValStepThree3: true,
+      closeValStepThree4: true,
+    },
   );
 
   const weights = clip(

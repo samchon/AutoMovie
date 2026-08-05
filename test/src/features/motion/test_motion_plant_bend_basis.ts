@@ -183,13 +183,22 @@ export const test_motion_plant_bend_basis = (): void => {
     });
     const afterPosition = position(fitted);
     const after = distance(afterPosition, entry.target);
-    TestValidator.predicate(
+    TestValidator.equals(
       `${entry.skeleton.id} bend basis stays finite and non-destructive`,
-      Number.isFinite(afterPosition.x) &&
-        Number.isFinite(afterPosition.y) &&
-        Number.isFinite(afterPosition.z) &&
-        fitted !== pose &&
-        after < before - 1e-9,
+      namedFacts([
+        ["isFiniteAfterPositionX", () => Number.isFinite(afterPosition.x)],
+        ["isFiniteAfterPositionY", () => Number.isFinite(afterPosition.y)],
+        ["isFiniteAfterPositionZ", () => Number.isFinite(afterPosition.z)],
+        ["fittedPose", () => fitted !== pose],
+        ["afterBeforeE", () => after < before - 1e-9],
+      ]),
+      {
+        isFiniteAfterPositionX: true,
+        isFiniteAfterPositionY: true,
+        isFiniteAfterPositionZ: true,
+        fittedPose: true,
+        afterBeforeE: true,
+      },
     );
   }
 

@@ -119,19 +119,11 @@ export const test_viewer_guide_pass_non_mesh = (): void => {
     TestValidator.equals(
       "the pose skeleton overlay stays visible with its lines",
       namedFacts([
-        [
-          "overlayVisible",
-          () => overlay !== undefined && overlay.visible === true,
-        ],
-        [
-          "overlayChildren",
-          () => overlay !== undefined && overlay.children.length > 0,
-        ],
+        ["overlayVisible", () => overlay.visible === true],
+        ["overlayChildren", () => overlay.children.length > 0],
         [
           "overlayChildrenChild",
-          () =>
-            overlay !== undefined &&
-            overlay.children.every((child) => child.visible === true),
+          () => overlay.children.every((child) => child.visible === true),
         ],
       ]),
       {

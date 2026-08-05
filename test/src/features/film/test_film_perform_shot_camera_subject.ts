@@ -311,10 +311,7 @@ export const test_film_perform_shot_camera_subject = (): void => {
   TestValidator.equals(
     "a moving bone drives both the follow subject and camera intent focus",
     namedFacts([
-      [
-        "boneFrameSuccess",
-        () => result.success === true && boneFrame.success === true,
-      ],
+      ["boneFrameSuccess", () => boneFrame.success === true],
       [
         "keysOfBoneFrameShot",
         () =>

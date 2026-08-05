@@ -78,13 +78,28 @@ export const test_benchmark_submission_seal = (): void => {
       "final-compile",
     ],
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "the sealed archive is frozen through its nested evidence",
-    Object.isFrozen(reference) &&
-      Object.isFrozen(reference.frames) &&
-      Object.isFrozen(reference.frames[0]) &&
-      Object.isFrozen(reference.repository.artifacts[0]) &&
-      Object.isFrozen(reference.observations),
+    namedFacts([
+      ["isFrozenReference", () => Object.isFrozen(reference)],
+      ["isFrozenReferenceFrames", () => Object.isFrozen(reference.frames)],
+      ["isFrozenReferenceFrames2", () => Object.isFrozen(reference.frames[0])],
+      [
+        "isFrozenReferenceRepository",
+        () => Object.isFrozen(reference.repository.artifacts[0]),
+      ],
+      [
+        "isFrozenReferenceObservations",
+        () => Object.isFrozen(reference.observations),
+      ],
+    ]),
+    {
+      isFrozenReference: true,
+      isFrozenReferenceFrames: true,
+      isFrozenReferenceFrames2: true,
+      isFrozenReferenceRepository: true,
+      isFrozenReferenceObservations: true,
+    },
   );
   TestValidator.predicate(
     "a malformed draft is refused with its failing path",

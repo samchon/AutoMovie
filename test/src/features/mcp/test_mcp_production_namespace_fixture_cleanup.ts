@@ -272,7 +272,7 @@ export const test_mcp_production_namespace_fixture_cleanup = (): void => {
             "letauditFailure:INamespaceAuditFixtureFailure|undefined;",
           ],
           tryDigest:
-            "70ea217e877a360d80ff53f75d5d4a9c4f949f1d33bbcb687d088b167ffd492b",
+            "db961ec4e8dea64dafbc6ea35f2979fcb6310e92f27c284b294b1fb7abfa7f52",
         },
       ],
       owner: {
@@ -334,11 +334,11 @@ export const test_mcp_production_namespace_fixture_cleanup = (): void => {
             kind: "migration-isolation",
             substantive: {
               digest:
-                "be769c150dbe5843336c8127be9b128c6cd58812a1132551aedaa25a32b86d11",
-              tokens: 1656,
+                "a74253bd36420a85c8f32370239501cdcda00a7040db6fadcda1620cb6f0e283",
+              tokens: 1767,
             },
             tryDigest:
-              "0eb8604e44deacb59f5be83018d1bb00b7eaa80c63991fbd227e782f44259a74",
+              "dde81cef024eca2bded2feedbcfc4e2bd63c876d22355a6308943acf07a7a762",
             tryStatements: 59,
           },
           {

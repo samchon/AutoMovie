@@ -497,17 +497,39 @@ export const test_mcp_production_namespaces = (): void => {
     const betaGenerated = beta.generatedRoot();
     const betaRenders = beta.renderRoot();
     const erased = beta.eraseProduction("remove the beta acceptance fixture");
-    TestValidator.predicate(
+    TestValidator.equals(
       "production deletion preserves sibling and shared bytes",
-      erased.erased &&
-        erased.remaining.length === 1 &&
-        erased.remaining[0] === "fixture-film" &&
-        fs.existsSync(sharedModel) &&
-        fs.existsSync(alphaDesign) &&
-        fs.existsSync(alphaRender) &&
-        fs.existsSync(betaGenerated) === false &&
-        fs.existsSync(betaRenders) === false &&
-        throws(() => beta.summary(), "was deleted"),
+      namedFacts([
+        ["erasedErased", () => erased.erased],
+        ["erasedRemaining", () => erased.remaining.length === 1],
+        [
+          "erasedRemainingFixture",
+          () => erased.remaining[0] === "fixture-film",
+        ],
+        ["existsSyncSharedModel", () => fs.existsSync(sharedModel)],
+        ["existsSyncAlphaDesign", () => fs.existsSync(alphaDesign)],
+        ["existsSyncAlphaRender", () => fs.existsSync(alphaRender)],
+        [
+          "existsSyncBetaGenerated",
+          () => fs.existsSync(betaGenerated) === false,
+        ],
+        ["existsSyncBetaRenders", () => fs.existsSync(betaRenders) === false],
+        [
+          "throwsBetaSummary",
+          () => throws(() => beta.summary(), "was deleted"),
+        ],
+      ]),
+      {
+        erasedErased: true,
+        erasedRemaining: true,
+        erasedRemainingFixture: true,
+        existsSyncSharedModel: true,
+        existsSyncAlphaDesign: true,
+        existsSyncAlphaRender: true,
+        existsSyncBetaGenerated: true,
+        existsSyncBetaRenders: true,
+        throwsBetaSummary: true,
+      },
     );
   } catch (error) {
     namespaceFixtureFailure = { error };
@@ -758,7 +780,6 @@ export const test_mcp_production_namespaces = (): void => {
           "readdirSyncExternalAudit",
           () =>
             externalAudit !== undefined &&
-            cleanupFailures.length === 0 &&
             fs.readdirSync(externalAudit).length === 0,
         ],
         [

@@ -166,7 +166,6 @@ export const test_benchmark_mcp_transport_probe = async (): Promise<void> => {
       [
         "combinedErrorsCloseFailure",
         () =>
-          this.props.closeFailure === undefined &&
           combined instanceof AggregateError &&
           combined.errors[1] === closeFailure,
       ],

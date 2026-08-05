@@ -95,12 +95,7 @@ export const test_mcp_production_realization = (): void => {
     TestValidator.equals(
       "the starter contract passes from actual pose and camera output",
       namedFacts([
-        [
-          "baseOutcomeDiagnostics",
-          () =>
-            measured.diagnostics.length === 0 &&
-            baseOutcome.diagnostics.length === 0,
-        ],
+        ["baseOutcomeDiagnostics", () => baseOutcome.diagnostics.length === 0],
         [
           "baseOutcomeRealizationOpening",
           () => baseOutcome.realization.opening.every((item) => item.passed),
@@ -401,7 +396,6 @@ export const test_mcp_production_realization = (): void => {
         [
           "measuredRealizationOpening",
           () =>
-            measured.diagnostics.length === 0 &&
             measured.realization.opening[0]?.predicates.every(
               (item) => item.passed,
             ) === true,
@@ -409,28 +403,21 @@ export const test_mcp_production_realization = (): void => {
         [
           "measuredRealizationClosing",
           () =>
-            measured.diagnostics.length === 0 &&
             measured.realization.closing[0]?.predicates.every(
               (item) => item.passed,
             ) === true,
         ],
         [
           "measuredRealizationEvents",
-          () =>
-            measured.diagnostics.length === 0 &&
-            measured.realization.events[0]?.passed === true,
+          () => measured.realization.events[0]?.passed === true,
         ],
         [
           "measuredRealizationFormations",
-          () =>
-            measured.diagnostics.length === 0 &&
-            measured.realization.formations[0]?.count === formation.count,
+          () => measured.realization.formations[0]?.count === formation.count,
         ],
         [
           "measuredRealizationFormations2",
-          () =>
-            measured.diagnostics.length === 0 &&
-            measured.realization.formations[0]?.passed === true,
+          () => measured.realization.formations[0]?.passed === true,
         ],
       ]),
       {
@@ -516,7 +503,6 @@ export const test_mcp_production_realization = (): void => {
         [
           "missingFormationDesignOutcomeDiagnosticsItem",
           () =>
-            measured.diagnostics.length === 0 &&
             missingFormationDesignOutcome.diagnostics.some((item) =>
               item.message.includes("compact 0-slot runtime"),
             ),
@@ -653,7 +639,6 @@ export const test_mcp_production_realization = (): void => {
         [
           "missingCameraOutcomeDiagnosticsItem",
           () =>
-            measured.diagnostics.length === 0 &&
             missingCameraOutcome.diagnostics.some((item) =>
               item.message.includes("collides"),
             ),
@@ -661,7 +646,6 @@ export const test_mcp_production_realization = (): void => {
         [
           "missingCameraOutcomeDiagnosticsItem2",
           () =>
-            measured.diagnostics.length === 0 &&
             missingCameraOutcome.diagnostics.some((item) =>
               item.message.includes('actor "sentinel"'),
             ),

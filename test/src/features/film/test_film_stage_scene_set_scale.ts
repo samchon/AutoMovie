@@ -3,7 +3,7 @@ import { IAutoMovieStageSetPiece } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { makeScriptWrite, makeStagingWrite } from "../internal/filmFixtures";
-import { hasViolation } from "../internal/predicates";
+import { hasViolation, namedFacts } from "../internal/predicates";
 
 type SetPlacement = IAutoMovieStageSetPiece;
 
@@ -91,13 +91,42 @@ export const test_film_stage_scene_set_scale = (): void => {
       scale: { x: 1, y: 1, z: Number.POSITIVE_INFINITY },
     },
   ]);
-  TestValidator.predicate(
+  TestValidator.equals(
     "zero, negative, and non-finite scales are each refused at their path",
-    refused.success === false &&
-      hasViolation(refused, "range", "$input.set[0].scale") &&
-      hasViolation(refused, "range", "$input.set[1].scale") &&
-      hasViolation(refused, "range", "$input.set[2].scale") &&
-      hasViolation(refused, "range", "$input.set[3].scale"),
+    namedFacts([
+      ["refusedSuccess", () => refused.success === false],
+      [
+        "hasViolationRefusedRange",
+        () =>
+          refused.success === false &&
+          hasViolation(refused, "range", "$input.set[0].scale"),
+      ],
+      [
+        "hasViolationRefusedRange2",
+        () =>
+          refused.success === false &&
+          hasViolation(refused, "range", "$input.set[1].scale"),
+      ],
+      [
+        "hasViolationRefusedRange3",
+        () =>
+          refused.success === false &&
+          hasViolation(refused, "range", "$input.set[2].scale"),
+      ],
+      [
+        "hasViolationRefusedRange4",
+        () =>
+          refused.success === false &&
+          hasViolation(refused, "range", "$input.set[3].scale"),
+      ],
+    ]),
+    {
+      refusedSuccess: true,
+      hasViolationRefusedRange: true,
+      hasViolationRefusedRange2: true,
+      hasViolationRefusedRange3: true,
+      hasViolationRefusedRange4: true,
+    },
   );
 
   // 3. the negative twin: positive-but-tiny is a size, not a collapse.

@@ -2,7 +2,7 @@ import { validateSpace } from "@automovie/engine";
 import { IAutoMovieSpace, IAutoMovieSurface } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { hasViolation } from "../internal/predicates";
+import { hasViolation, namedFacts } from "../internal/predicates";
 
 const v = (x: number, z: number, y = 0) => ({ x, y, z });
 
@@ -185,11 +185,24 @@ export const test_validation_space = (): void => {
   const junkRampZ = validateSpace({
     space: withSurface({ rampTo: { x: 8, y: 2, z: Number.NaN } }),
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "non-finite rampTo z likewise skips the degeneracy math",
-    hasViolation(junkRampZ, "range", ".rampTo.z") &&
-      junkRampZ.success === false &&
-      junkRampZ.violations.length === 1,
+    namedFacts([
+      [
+        "hasViolationJunkRampZRange",
+        () => hasViolation(junkRampZ, "range", ".rampTo.z"),
+      ],
+      ["junkRampZSuccess", () => junkRampZ.success === false],
+      [
+        "junkRampZViolations",
+        () => junkRampZ.success === false && junkRampZ.violations.length === 1,
+      ],
+    ]),
+    {
+      hasViolationJunkRampZRange: true,
+      junkRampZSuccess: true,
+      junkRampZViolations: true,
+    },
   );
   TestValidator.predicate(
     "unresolved walkable id",

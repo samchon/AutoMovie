@@ -190,10 +190,7 @@ if (process.argv[2]?.endsWith("verify.ts"))
           "verifyCallVerifyScript",
           () => path.resolve(verifyCall[0]!) === verifyScript,
         ],
-        [
-          "verifyCall",
-          () => cleanupFailures.length === 0 && verifyCall.length === 1,
-        ],
+        ["verifyCall", () => verifyCall.length === 1],
       ]),
       {
         delegatedStatus: true,

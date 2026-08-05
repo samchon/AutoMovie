@@ -10,6 +10,7 @@ import { TestValidator } from "@nestia/e2e";
 import { makeMotion } from "../internal/fixtures";
 import {
   hasViolation,
+  namedFacts,
   validationHasNoWarnings,
   validationHasWarning,
 } from "../internal/predicates";
@@ -159,10 +160,23 @@ export const test_validation_ground_contact_capsule = (): void => {
     capsules: [{ from: "hips", to: "leftFoot", radius: 0.2 }],
     sampleRate: 1,
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "a detached capsule endpoint is a reachability error, not a crash",
-    bad.success === false &&
-      hasViolation(bad, "type", "$input.capsules[0].to") &&
-      bad.violations.some((v) => v.expected.includes("not reachable")),
+    namedFacts([
+      ["badSuccess", () => bad.success === false],
+      [
+        "hasViolationBadType",
+        () =>
+          bad.success === false &&
+          hasViolation(bad, "type", "$input.capsules[0].to"),
+      ],
+      [
+        "badViolationsV",
+        () =>
+          bad.success === false &&
+          bad.violations.some((v) => v.expected.includes("not reachable")),
+      ],
+    ]),
+    { badSuccess: true, hasViolationBadType: true, badViolationsV: true },
   );
 };

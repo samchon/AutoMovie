@@ -207,9 +207,7 @@ export const test_cli_project_state = (): void => {
         ],
         [
           "currentFreshnessProblems",
-          () =>
-            cleanupFailures.length === 0 &&
-            current.freshness.problems.length === 0,
+          () => current.freshness.problems.length === 0,
         ],
         [
           "currentGeneratedRegistry",
@@ -445,7 +443,6 @@ export const test_cli_project_state = (): void => {
         [
           "mismatchedRegistryFreshnessProblems",
           () =>
-            cleanupFailures.length === 0 &&
             mismatchedRegistry.freshness.problems.filter(
               (problem) => problem.code === "generated-registry-mismatch",
             ).length >= 4,

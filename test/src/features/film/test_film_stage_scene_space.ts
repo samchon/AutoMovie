@@ -142,12 +142,35 @@ export const test_film_stage_scene_space = (): void => {
       }),
     }),
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "every space gate fires under $input.space in one round",
-    refused.success === false &&
-      hasViolation(refused, "type", "$input.space.surfaces[0].polygon") &&
-      hasViolation(refused, "range", "$input.space.surfaces[1].rampTo") &&
-      hasViolation(refused, "type", "$input.space.walkable[1]"),
+    namedFacts([
+      ["refusedSuccess", () => refused.success === false],
+      [
+        "hasViolationRefusedType",
+        () =>
+          refused.success === false &&
+          hasViolation(refused, "type", "$input.space.surfaces[0].polygon"),
+      ],
+      [
+        "hasViolationRefusedRange",
+        () =>
+          refused.success === false &&
+          hasViolation(refused, "range", "$input.space.surfaces[1].rampTo"),
+      ],
+      [
+        "hasViolationRefusedType2",
+        () =>
+          refused.success === false &&
+          hasViolation(refused, "type", "$input.space.walkable[1]"),
+      ],
+    ]),
+    {
+      refusedSuccess: true,
+      hasViolationRefusedType: true,
+      hasViolationRefusedRange: true,
+      hasViolationRefusedType2: true,
+    },
   );
 
   // 4. the negative twin: the notch vertex pulled back onto the hull edge.

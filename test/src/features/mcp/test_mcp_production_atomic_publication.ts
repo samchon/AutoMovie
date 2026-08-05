@@ -556,7 +556,6 @@ export const test_mcp_production_atomic_publication = (): void => {
         [
           "throwsProjectCommitProductionPublication",
           () =>
-            failure !== undefined &&
             throws(
               () =>
                 project.commitProductionPublication({
@@ -644,7 +643,6 @@ export const test_mcp_production_atomic_publication = (): void => {
         [
           "throwsProjectCommitProductionPublication",
           () =>
-            failure !== undefined &&
             throws(
               () =>
                 project.commitProductionPublication({

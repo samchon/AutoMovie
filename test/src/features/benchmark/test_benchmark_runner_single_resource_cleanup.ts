@@ -193,10 +193,10 @@ export const test_benchmark_runner_single_resource_cleanup = (): void => {
   const expected = {
     count: 2,
     parentDigest:
-      "db0e499fe1b83153931efe95e31d4a4af2cac381810527e06e00888059cee089",
+      "e626df64133c68f9d3806350bdcf5e088e8aa0a977829bb681d8eac1887c1272",
     parseDiagnostics: [],
     rootDigest:
-      "b237eba03682d508886052bccdc9d14457a15218fa6ce24888964d3b1b445dd0",
+      "89f89414b99a3baad2dc44fbdf58d62109164947e62452a54033656f5dca1211",
     rows: [
       {
         catchBodies: ["archivePublicationFailure={error};", "throwerror;"],
@@ -245,11 +245,11 @@ export const test_benchmark_runner_single_resource_cleanup = (): void => {
         owner: "exerciseSnapshotLink",
         resource: "snapshot linked view",
         tryDigest:
-          "b68513b4bf533a55f09cf457b9fa9800b3407beed6c76160a3d59f20d3b3e060",
+          "cdceef774690711cb3d288dd5c58510da46b3d81d0ac068cab997204758da81b",
         trySubstantive: {
           digest:
-            "f1047515a6befc0e22ffbeb244a199acaf3c6d7654a115b03745ac1a361bf81e",
-          tokens: 453,
+            "5eeaa9e056ec1b91fd80a55efa877f54faab958893889e2ba838881d514cbc2b",
+          tokens: 520,
         },
       },
     ],

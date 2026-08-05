@@ -3,7 +3,7 @@ import { IAutoMovieMesh, IAutoMovieModel } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { createModel } from "../internal/fixtures";
-import { hasViolation } from "../internal/predicates";
+import { hasViolation, namedFacts } from "../internal/predicates";
 
 const modelWithMesh = (mesh: IAutoMovieMesh): IAutoMovieModel => {
   const base = createModel(null);
@@ -64,18 +64,34 @@ export const test_validation_model_mesh_empty = (): void => {
     withEmptyBuffers.success,
     false,
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "empty positions is the only fault",
-    hasViolation(
-      withEmptyBuffers,
-      "type",
-      "$input.parts[0].geometry.mesh.positions",
-    ) &&
-      withEmptyBuffers.success === false &&
-      withEmptyBuffers.violations.every(
-        (violation) =>
-          violation.path === "$input.parts[0].geometry.mesh.positions",
-      ),
+    namedFacts([
+      [
+        "hasViolationWithEmptyBuffersType",
+        () =>
+          hasViolation(
+            withEmptyBuffers,
+            "type",
+            "$input.parts[0].geometry.mesh.positions",
+          ),
+      ],
+      ["withEmptyBuffersSuccess", () => withEmptyBuffers.success === false],
+      [
+        "withEmptyBuffersViolationsViolation",
+        () =>
+          withEmptyBuffers.success === false &&
+          withEmptyBuffers.violations.every(
+            (violation) =>
+              violation.path === "$input.parts[0].geometry.mesh.positions",
+          ),
+      ],
+    ]),
+    {
+      hasViolationWithEmptyBuffersType: true,
+      withEmptyBuffersSuccess: true,
+      withEmptyBuffersViolationsViolation: true,
+    },
   );
 
   TestValidator.equals(

@@ -2,7 +2,11 @@ import { tessellateToMesh, validateMeshTopology } from "@automovie/engine";
 import { IAutoMovieMesh } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { hasViolation, violationCount } from "../internal/predicates";
+import {
+  hasViolation,
+  namedFacts,
+  violationCount,
+} from "../internal/predicates";
 
 const mesh = (
   positions: number[],
@@ -82,11 +86,28 @@ export const test_validation_mesh_topology = (): void => {
   // 2. a fin: three triangles share edge 0–1 → non-manifold.
   const fin = mesh(P, [0, 1, 2, 1, 0, 3, 0, 1, 4]);
   const finResult = topo(fin);
-  TestValidator.predicate(
+  TestValidator.equals(
     "a third triangle on one edge is a non-manifold error",
-    finResult.success === false &&
-      hasViolation(finResult, "topology", "$input.indices") &&
-      finResult.violations.some((v) => v.expected.includes("2-manifold")),
+    namedFacts([
+      ["finResultSuccess", () => finResult.success === false],
+      [
+        "hasViolationFinResultTopology",
+        () =>
+          finResult.success === false &&
+          hasViolation(finResult, "topology", "$input.indices"),
+      ],
+      [
+        "finResultViolationsV",
+        () =>
+          finResult.success === false &&
+          finResult.violations.some((v) => v.expected.includes("2-manifold")),
+      ],
+    ]),
+    {
+      finResultSuccess: true,
+      hasViolationFinResultTopology: true,
+      finResultViolationsV: true,
+    },
   );
 
   // 3. two triangles winding edge 0–1 the same way → flipped.

@@ -478,11 +478,27 @@ export const test_film_stage_light_axis = (): void => {
     spotAt(90).success,
     true,
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "and both sides just past it are not",
-    hasViolation(failure(spotAt(90.0001)), "range", "coneAngle") &&
-      hasViolation(failure(spotAt(0)), "range", "coneAngle") &&
-      hasViolation(failure(spotAt(Number.NaN)), "range", "coneAngle"),
+    namedFacts([
+      [
+        "hasViolationFailureSpotAt",
+        () => hasViolation(failure(spotAt(90.0001)), "range", "coneAngle"),
+      ],
+      [
+        "hasViolationFailureSpotAt2",
+        () => hasViolation(failure(spotAt(0)), "range", "coneAngle"),
+      ],
+      [
+        "hasViolationFailureSpotAt3",
+        () => hasViolation(failure(spotAt(Number.NaN)), "range", "coneAngle"),
+      ],
+    ]),
+    {
+      hasViolationFailureSpotAt: true,
+      hasViolationFailureSpotAt2: true,
+      hasViolationFailureSpotAt3: true,
+    },
   );
   TestValidator.predicate(
     "range 0 is infinite while a negative range is refused",

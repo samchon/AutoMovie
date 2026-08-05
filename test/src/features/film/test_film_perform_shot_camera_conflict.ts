@@ -8,7 +8,7 @@ import {
   validSynthesizer,
 } from "../internal/filmFixtures";
 import { createSkeleton } from "../internal/fixtures";
-import { hasViolation } from "../internal/predicates";
+import { hasViolation, namedFacts } from "../internal/predicates";
 
 /**
  * Pins the one-live-camera rule: `frame` must name a staged camera, and a
@@ -69,11 +69,28 @@ export const test_film_perform_shot_camera_conflict = (): void => {
     performed.success === false &&
       hasViolation(performed, "type", "$input.draft[0].actor"),
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "second live camera rejected",
-    performed.success === false &&
-      hasViolation(performed, "type", "$input.draft[2].actor") &&
-      performed.violations.some((v) => v.value === "cam-b"),
+    namedFacts([
+      ["performedSuccess", () => performed.success === false],
+      [
+        "hasViolationPerformedType",
+        () =>
+          performed.success === false &&
+          hasViolation(performed, "type", "$input.draft[2].actor"),
+      ],
+      [
+        "performedViolationsV",
+        () =>
+          performed.success === false &&
+          performed.violations.some((v) => v.value === "cam-b"),
+      ],
+    ]),
+    {
+      performedSuccess: true,
+      hasViolationPerformedType: true,
+      performedViolationsV: true,
+    },
   );
 
   const listed = performShot({

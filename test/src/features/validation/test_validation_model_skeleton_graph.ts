@@ -3,7 +3,7 @@ import { AutoMovieHumanoidBone, IAutoMovieBone } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { IDENTITY_TRANSFORM, createModel } from "../internal/fixtures";
-import { hasViolation } from "../internal/predicates";
+import { hasViolation, namedFacts } from "../internal/predicates";
 
 const b = (
   bone: AutoMovieHumanoidBone,
@@ -79,10 +79,27 @@ export const test_validation_model_skeleton_graph = (): void => {
     },
   });
   TestValidator.equals("detached cycle fails", detachedCycle.success, false);
-  TestValidator.predicate(
+  TestValidator.equals(
     "detached cycle bones unreachable",
-    detachedCycle.success === false &&
-      hasViolation(detachedCycle, "type", "$input.skeleton.bones[2]") &&
-      hasViolation(detachedCycle, "type", "$input.skeleton.bones[3]"),
+    namedFacts([
+      ["detachedCycleSuccess", () => detachedCycle.success === false],
+      [
+        "hasViolationDetachedCycleType",
+        () =>
+          detachedCycle.success === false &&
+          hasViolation(detachedCycle, "type", "$input.skeleton.bones[2]"),
+      ],
+      [
+        "hasViolationDetachedCycleType2",
+        () =>
+          detachedCycle.success === false &&
+          hasViolation(detachedCycle, "type", "$input.skeleton.bones[3]"),
+      ],
+    ]),
+    {
+      detachedCycleSuccess: true,
+      hasViolationDetachedCycleType: true,
+      hasViolationDetachedCycleType2: true,
+    },
   );
 };

@@ -672,40 +672,29 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
       [
         "proxyPlanChunksChunk",
         () =>
-          chunk.slot !== scheduledPlan.chunks[3]!.slot &&
           proxyPlan.chunks.every((chunk) =>
             chunk.slot.startsWith("render-film:proxy:"),
           ),
       ],
       [
         "proxyPlanChunksId",
-        () =>
-          chunk.slot !== scheduledPlan.chunks[3]!.slot &&
-          proxyPlan.chunks[0]?.id !== renderPlan.chunks[0]?.id,
+        () => proxyPlan.chunks[0]?.id !== renderPlan.chunks[0]?.id,
       ],
       [
         "proxyPlanChunksFrames",
-        () =>
-          chunk.slot !== scheduledPlan.chunks[3]!.slot &&
-          proxyPlan.chunks[0]?.frames[0]?.timelineFrame === 0,
+        () => proxyPlan.chunks[0]?.frames[0]?.timelineFrame === 0,
       ],
       [
         "proxyPlanChunksFrames2",
-        () =>
-          chunk.slot !== scheduledPlan.chunks[3]!.slot &&
-          proxyPlan.chunks[0]?.frames[1]?.timelineFrame === 2,
+        () => proxyPlan.chunks[0]?.frames[1]?.timelineFrame === 2,
       ],
       [
         "proxyPlanChunksFrames3",
-        () =>
-          chunk.slot !== scheduledPlan.chunks[3]!.slot &&
-          proxyPlan.chunks[1]?.frames[0]?.timelineFrame === 4,
+        () => proxyPlan.chunks[1]?.frames[0]?.timelineFrame === 4,
       ],
       [
         "proxyPlanChunksFrames4",
-        () =>
-          chunk.slot !== scheduledPlan.chunks[3]!.slot &&
-          proxyPlan.chunks[1]?.frames[0]?.timeSeconds === 2,
+        () => proxyPlan.chunks[1]?.frames[0]?.timeSeconds === 2,
       ],
       [
         "resolveProductionRenderTierFrameFormatRenderPlanSourceFrameFormat",
@@ -766,39 +755,27 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
     namedFacts([
       [
         "selectivelyChangedChunksId",
-        () =>
-          chunk.slot !== scheduledPlan.chunks[3]!.slot &&
-          selectivelyChanged.chunks[0]?.id !== renderPlan.chunks[0]?.id,
+        () => selectivelyChanged.chunks[0]?.id !== renderPlan.chunks[0]?.id,
       ],
       [
         "selectivelyChangedChunksId2",
-        () =>
-          chunk.slot !== scheduledPlan.chunks[3]!.slot &&
-          selectivelyChanged.chunks[1]?.id !== renderPlan.chunks[1]?.id,
+        () => selectivelyChanged.chunks[1]?.id !== renderPlan.chunks[1]?.id,
       ],
       [
         "selectivelyChangedChunksId3",
-        () =>
-          chunk.slot !== scheduledPlan.chunks[3]!.slot &&
-          selectivelyChanged.chunks[2]?.id === renderPlan.chunks[2]?.id,
+        () => selectivelyChanged.chunks[2]?.id === renderPlan.chunks[2]?.id,
       ],
       [
         "selectivelyChangedChunksId4",
-        () =>
-          chunk.slot !== scheduledPlan.chunks[3]!.slot &&
-          selectivelyChanged.chunks[3]?.id !== renderPlan.chunks[3]?.id,
+        () => selectivelyChanged.chunks[3]?.id !== renderPlan.chunks[3]?.id,
       ],
       [
         "selectivelyChangedChunksId5",
-        () =>
-          chunk.slot !== scheduledPlan.chunks[3]!.slot &&
-          selectivelyChanged.chunks[4]?.id !== renderPlan.chunks[4]?.id,
+        () => selectivelyChanged.chunks[4]?.id !== renderPlan.chunks[4]?.id,
       ],
       [
         "selectivelyChangedChunksId6",
-        () =>
-          chunk.slot !== scheduledPlan.chunks[3]!.slot &&
-          selectivelyChanged.chunks[5]?.id === renderPlan.chunks[5]?.id,
+        () => selectivelyChanged.chunks[5]?.id === renderPlan.chunks[5]?.id,
       ],
     ]),
     {
@@ -875,13 +852,11 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
       [
         "productionRenderLayersForPassDissolveMiddleBeauty",
         () =>
-          cleanupFailures.length === 0 &&
           productionRenderLayersForPass(dissolveMiddle, "beauty").length === 2,
       ],
       [
         "productionRenderLayersForPassDissolveMiddleDepth",
         () =>
-          cleanupFailures.length === 0 &&
           productionRenderLayersForPass(dissolveMiddle, "depth").length === 1,
       ],
       [
@@ -1265,9 +1240,7 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
       ],
       [
         "escapedCaptionsMatchGu",
-        () =>
-          cleanupFailures.length === 0 &&
-          escapedCaptions.match(/-->/gu)?.length === 1,
+        () => escapedCaptions.match(/-->/gu)?.length === 1,
       ],
       [
         "escapedCaptionsIncludesNunsafe",
@@ -1487,21 +1460,15 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
   TestValidator.equals(
     "scheduler resumes, locks, records failure, and always releases",
     namedFacts([
-      [
-        "runComplete",
-        () => cleanupFailures.length === 0 && run.complete.length === 1,
-      ],
-      ["runBusy", () => cleanupFailures.length === 0 && run.busy.length === 1],
-      [
-        "runRendered",
-        () => cleanupFailures.length === 0 && run.rendered.length === 1,
-      ],
+      ["runComplete", () => run.complete.length === 1],
+      ["runBusy", () => run.busy.length === 1],
+      ["runRendered", () => run.rendered.length === 1],
       [
         "runFailedCorrection",
         () => run.failed[0]?.correction === "encoder failed",
       ],
-      ["acquired", () => cleanupFailures.length === 0 && acquired.length === 3],
-      ["released", () => cleanupFailures.length === 0 && released.length === 2],
+      ["acquired", () => acquired.length === 3],
+      ["released", () => released.length === 2],
       [
         "failedEndsWithEncoder",
         () => failed[0]?.endsWith(":encoder failed") === true,
@@ -2124,7 +2091,6 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
       [
         "throwsPlanProductionRenderJobTimeline12",
         () =>
-          props.attempt === undefined &&
           throws(() =>
             planProductionRenderJob({
               timeline: timeline(),
@@ -2311,33 +2277,51 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
     fs.symlinkSync(outsideRoot, linkedDirectory, "junction");
     fs.symlinkSync(outside, linkedFile, "file");
     fs.writeFileSync(blockingFile, "not a directory");
-    TestValidator.predicate(
+    TestValidator.equals(
       "render-state reads stay inside stable physical files",
-      Buffer.from(directBytes).toString("utf8") === "direct" &&
-        Buffer.from(residentBytes).toString("utf8") === "resident" &&
+      namedFacts([
         [
-          {
-            root: ownedRoot,
-            directory: outsideRoot,
-            relative: "outside.png",
-          },
-          { root: ownedRoot, directory: chunk, relative: "../direct.json" },
-          { root: ownedRoot, directory: chunk, relative: "." },
-          {
-            root: ownedRoot,
-            directory: chunk,
-            relative: "linked/outside.png",
-          },
-          { root: ownedRoot, directory: chunk, relative: "linked.png" },
-          { root: ownedRoot, directory: chunk, relative: "frames" },
-          {
-            root: ownedRoot,
-            directory: chunk,
-            relative: "blocking/resident.png",
-          },
-        ].every((candidate) =>
-          throws(() => readAutoMovieProductionOwnedFile(candidate)),
-        ),
+          "BufferFromDirectBytes",
+          () => Buffer.from(directBytes).toString("utf8") === "direct",
+        ],
+        [
+          "BufferFromResidentBytes",
+          () => Buffer.from(residentBytes).toString("utf8") === "resident",
+        ],
+        [
+          "rootOwnedRootDirectory",
+          () =>
+            outsideRoot !== undefined &&
+            [
+              {
+                root: ownedRoot,
+                directory: outsideRoot,
+                relative: "outside.png",
+              },
+              { root: ownedRoot, directory: chunk, relative: "../direct.json" },
+              { root: ownedRoot, directory: chunk, relative: "." },
+              {
+                root: ownedRoot,
+                directory: chunk,
+                relative: "linked/outside.png",
+              },
+              { root: ownedRoot, directory: chunk, relative: "linked.png" },
+              { root: ownedRoot, directory: chunk, relative: "frames" },
+              {
+                root: ownedRoot,
+                directory: chunk,
+                relative: "blocking/resident.png",
+              },
+            ].every((candidate) =>
+              throws(() => readAutoMovieProductionOwnedFile(candidate)),
+            ),
+        ],
+      ]),
+      {
+        BufferFromDirectBytes: true,
+        BufferFromResidentBytes: true,
+        rootOwnedRootDirectory: true,
+      },
     );
 
     const replacement = path.join(frames, "replacement.png");

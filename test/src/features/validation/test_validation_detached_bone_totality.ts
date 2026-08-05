@@ -81,11 +81,22 @@ export const test_validation_detached_bone_totality = (): void => {
     skeleton: DETACHED_SKELETON,
     contacts: [{ bone: "leftFoot", start: 0, end: 1 }],
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "footskate: detached contact bone is a reachability violation, not a crash",
-    hasViolation(foot, "type", "contacts[0].bone") &&
-      foot.success === false &&
-      foot.violations.some((v) => v.expected.includes("not reachable")),
+    namedFacts([
+      [
+        "hasViolationFootType",
+        () => hasViolation(foot, "type", "contacts[0].bone"),
+      ],
+      ["footSuccess", () => foot.success === false],
+      [
+        "footViolationsV",
+        () =>
+          foot.success === false &&
+          foot.violations.some((v) => v.expected.includes("not reachable")),
+      ],
+    ]),
+    { hasViolationFootType: true, footSuccess: true, footViolationsV: true },
   );
 
   // balance: a detached centerBone reports, does not crash.
@@ -96,11 +107,26 @@ export const test_validation_detached_bone_totality = (): void => {
       { centerBone: "leftFoot", supportBones: ["hips"], start: 0, end: 1 },
     ],
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "balance: detached centerBone is a reachability violation, not a crash",
-    hasViolation(center, "type", "supports[0].centerBone") &&
-      center.success === false &&
-      center.violations.some((v) => v.expected.includes("not reachable")),
+    namedFacts([
+      [
+        "hasViolationCenterType",
+        () => hasViolation(center, "type", "supports[0].centerBone"),
+      ],
+      ["centerSuccess", () => center.success === false],
+      [
+        "centerViolationsV",
+        () =>
+          center.success === false &&
+          center.violations.some((v) => v.expected.includes("not reachable")),
+      ],
+    ]),
+    {
+      hasViolationCenterType: true,
+      centerSuccess: true,
+      centerViolationsV: true,
+    },
   );
 
   // balance: a detached support bone reports, does not crash.
@@ -111,11 +137,26 @@ export const test_validation_detached_bone_totality = (): void => {
       { centerBone: "hips", supportBones: ["leftFoot"], start: 0, end: 1 },
     ],
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "balance: detached support bone is a reachability violation, not a crash",
-    hasViolation(support, "type", "supports[0].supportBones") &&
-      support.success === false &&
-      support.violations.some((v) => v.expected.includes("not reachable")),
+    namedFacts([
+      [
+        "hasViolationSupportType",
+        () => hasViolation(support, "type", "supports[0].supportBones"),
+      ],
+      ["supportSuccess", () => support.success === false],
+      [
+        "supportViolationsV",
+        () =>
+          support.success === false &&
+          support.violations.some((v) => v.expected.includes("not reachable")),
+      ],
+    ]),
+    {
+      hasViolationSupportType: true,
+      supportSuccess: true,
+      supportViolationsV: true,
+    },
   );
 
   // self-intersection: a capsule endpoint on the detached bone reports at the
@@ -130,12 +171,31 @@ export const test_validation_detached_bone_totality = (): void => {
       },
     ],
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "self-intersection: detached capsule endpoint is a reachability violation, not a crash",
-    hasViolation(capsule, "type", "pairs[0].first.to") &&
-      hasViolation(capsule, "type", "pairs[0].second.from") &&
-      capsule.success === false &&
-      capsule.violations.some((v) => v.expected.includes("not reachable")),
+    namedFacts([
+      [
+        "hasViolationCapsuleType",
+        () => hasViolation(capsule, "type", "pairs[0].first.to"),
+      ],
+      [
+        "hasViolationCapsuleType2",
+        () => hasViolation(capsule, "type", "pairs[0].second.from"),
+      ],
+      ["capsuleSuccess", () => capsule.success === false],
+      [
+        "capsuleViolationsV",
+        () =>
+          capsule.success === false &&
+          capsule.violations.some((v) => v.expected.includes("not reachable")),
+      ],
+    ]),
+    {
+      hasViolationCapsuleType: true,
+      hasViolationCapsuleType2: true,
+      capsuleSuccess: true,
+      capsuleViolationsV: true,
+    },
   );
 
   // body collision: a detached endpoint on either actor reports, does not
@@ -148,13 +208,31 @@ export const test_validation_detached_bone_totality = (): void => {
     body: null,
   });
   const collision = detectBodyCollision({ a: actor("a"), b: actor("b") });
-  TestValidator.predicate(
+  TestValidator.equals(
     "body collision: detached capsule endpoint is a reachability violation, not a crash",
-    hasViolation(collision.validation, "type", "a.capsules[0].to") &&
-      hasViolation(collision.validation, "type", "b.capsules[0].to") &&
-      collision.validation.success === false &&
-      collision.events.length === 0 &&
-      collision.response === null,
+    namedFacts([
+      [
+        "hasViolationCollisionValidation",
+        () => hasViolation(collision.validation, "type", "a.capsules[0].to"),
+      ],
+      [
+        "hasViolationCollisionValidation2",
+        () => hasViolation(collision.validation, "type", "b.capsules[0].to"),
+      ],
+      [
+        "collisionValidationSuccess",
+        () => collision.validation.success === false,
+      ],
+      ["collisionEvents", () => collision.events.length === 0],
+      ["collisionResponse", () => collision.response === null],
+    ]),
+    {
+      hasViolationCollisionValidation: true,
+      hasViolationCollisionValidation2: true,
+      collisionValidationSuccess: true,
+      collisionEvents: true,
+      collisionResponse: true,
+    },
   );
 
   // A bone entirely absent from the skeleton still reports "must exist", NOT
