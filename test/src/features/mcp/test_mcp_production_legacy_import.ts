@@ -1026,14 +1026,29 @@ export const test_mcp_production_legacy_import = (): void => {
         | ILegacyImportFixtureFailure
         | undefined;
       try {
-        TestValidator.predicate(
+        TestValidator.equals(
           "a root replaced immediately after import publication receives no stale cleanup",
-          throws(
-            () => new AutoMovieLegacyImporter(publishRootSwap.root).apply(),
-            "root identity",
-          ) &&
-            swapped &&
-            fs.readdirSync(publishRootSwap.root).length === 0,
+          namedFacts([
+            [
+              "throwsNewAutoMovieLegacyImporter",
+              () =>
+                throws(
+                  () =>
+                    new AutoMovieLegacyImporter(publishRootSwap.root).apply(),
+                  "root identity",
+                ),
+            ],
+            ["swapped", () => swapped],
+            [
+              "readdirSyncPublishRootSwapRoot",
+              () => fs.readdirSync(publishRootSwap.root).length === 0,
+            ],
+          ]),
+          {
+            throwsNewAutoMovieLegacyImporter: true,
+            swapped: true,
+            readdirSyncPublishRootSwapRoot: true,
+          },
         );
       } catch (error) {
         publishRootSwapRecoveryFailure = { error };
@@ -1581,11 +1596,25 @@ export const test_mcp_production_legacy_import = (): void => {
         | ILegacyImportFixtureFailure
         | undefined;
       try {
-        TestValidator.predicate(
+        TestValidator.equals(
           "rollback abandons restoration when the physical root changes",
-          throws(() => importer.rollback(), "changed physical identity") &&
-            swapped &&
-            fs.readdirSync(rollbackRootSwap.root).length === 0,
+          namedFacts([
+            [
+              "throwsImporterRollback",
+              () =>
+                throws(() => importer.rollback(), "changed physical identity"),
+            ],
+            ["swapped", () => swapped],
+            [
+              "readdirSyncRollbackRootSwapRoot",
+              () => fs.readdirSync(rollbackRootSwap.root).length === 0,
+            ],
+          ]),
+          {
+            throwsImporterRollback: true,
+            swapped: true,
+            readdirSyncRollbackRootSwapRoot: true,
+          },
         );
       } catch (error) {
         rollbackRootSwapRecoveryFailure = { error };

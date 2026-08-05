@@ -1440,16 +1440,31 @@ export const test_mcp_production_review_render_edges =
       let lateBundleFailure: IProductionReviewRenderFixtureFailure | undefined;
       try {
         const prepared = review.prepare({ target });
-        TestValidator.predicate(
+        TestValidator.equals(
           "a bundle replaced after inventory cannot become review evidence",
-          lateSwapped &&
-            prepared.frames.every((frame) => frame.digest !== lateDigest) &&
-            prepared.diagnostics.some(
-              (item) =>
-                item.code === "render-bundle-unowned" &&
-                path.resolve(fixture.root, item.path ?? "") ===
-                  path.resolve(lateManifestPath),
-            ),
+          namedFacts([
+            ["lateSwapped", () => lateSwapped],
+            [
+              "preparedFramesFrame",
+              () =>
+                prepared.frames.every((frame) => frame.digest !== lateDigest),
+            ],
+            [
+              "preparedDiagnosticsItem",
+              () =>
+                prepared.diagnostics.some(
+                  (item) =>
+                    item.code === "render-bundle-unowned" &&
+                    path.resolve(fixture.root, item.path ?? "") ===
+                      path.resolve(lateManifestPath),
+                ),
+            ],
+          ]),
+          {
+            lateSwapped: true,
+            preparedFramesFrame: true,
+            preparedDiagnosticsItem: true,
+          },
         );
       } catch (error) {
         lateBundleFailure = { error };

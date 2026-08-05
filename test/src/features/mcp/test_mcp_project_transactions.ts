@@ -5,7 +5,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { throwsError } from "../internal/predicates";
+import { namedFacts, throwsError } from "../internal/predicates";
 
 interface IProjectTransactionFixtureFailure {
   error: unknown;
@@ -333,13 +333,28 @@ export const test_mcp_project_transactions = (): void => {
         },
       ]);
     }
-    TestValidator.predicate(
+    TestValidator.equals(
       "an ordinary atomic-write failure cleans its current-namespace temporary",
-      cleanupRejected &&
-        failedTemp !== undefined &&
-        fs.existsSync(failedTemp) === false &&
-        fs.existsSync(path.join(root, "actors", "cleanupFailure.json")) ===
-          false,
+      namedFacts([
+        ["cleanupRejected", () => cleanupRejected],
+        ["failedTemp", () => failedTemp !== undefined],
+        [
+          "existsSyncFailedTemp",
+          () => failedTemp !== undefined && fs.existsSync(failedTemp) === false,
+        ],
+        [
+          "existsSyncRootActors",
+          () =>
+            fs.existsSync(path.join(root, "actors", "cleanupFailure.json")) ===
+            false,
+        ],
+      ]),
+      {
+        cleanupRejected: true,
+        failedTemp: true,
+        existsSyncFailedTemp: true,
+        existsSyncRootActors: true,
+      },
     );
 
     const nativeRename = fs.renameSync;
@@ -412,14 +427,31 @@ export const test_mcp_project_transactions = (): void => {
         },
       ]);
     }
-    TestValidator.predicate(
+    TestValidator.equals(
       "a failed quarantine delete restores the actor slice",
-      quarantineRemoveFailed &&
-        restoredRemoval &&
-        fs.existsSync(path.join(root, "actors", "knightA.json")) &&
-        fs
-          .readdirSync(path.join(root, "actors"))
-          .every((file) => file.startsWith("knightA.json.delete.") === false),
+      namedFacts([
+        ["quarantineRemoveFailed", () => quarantineRemoveFailed],
+        ["restoredRemoval", () => restoredRemoval],
+        [
+          "existsSyncRootActors",
+          () => fs.existsSync(path.join(root, "actors", "knightA.json")),
+        ],
+        [
+          "readdirSyncRootActors",
+          () =>
+            fs
+              .readdirSync(path.join(root, "actors"))
+              .every(
+                (file) => file.startsWith("knightA.json.delete.") === false,
+              ),
+        ],
+      ]),
+      {
+        quarantineRemoveFailed: true,
+        restoredRemoval: true,
+        existsSyncRootActors: true,
+        readdirSyncRootActors: true,
+      },
     );
 
     let externallyRestored = false;
@@ -459,11 +491,21 @@ export const test_mcp_project_transactions = (): void => {
         },
       ]);
     }
-    TestValidator.predicate(
+    TestValidator.equals(
       "an already-restored quarantine failure never clobbers the resident actor",
-      externallyRestored &&
-        lateDeleteRejected &&
-        fs.existsSync(path.join(root, "actors", "knightA.json")),
+      namedFacts([
+        ["externallyRestored", () => externallyRestored],
+        ["lateDeleteRejected", () => lateDeleteRejected],
+        [
+          "existsSyncRootActors",
+          () => fs.existsSync(path.join(root, "actors", "knightA.json")),
+        ],
+      ]),
+      {
+        externallyRestored: true,
+        lateDeleteRejected: true,
+        existsSyncRootActors: true,
+      },
     );
 
     const removalParkedRoot = `${root}.removal-parked`;
@@ -687,9 +729,18 @@ export const test_mcp_project_transactions = (): void => {
         },
       ]);
     }
-    TestValidator.predicate(
+    TestValidator.equals(
       "a live project handle never follows a replacement root namespace",
-      replacedReadRejected && replacedMutationRejected && replacementUntouched,
+      namedFacts([
+        ["replacedReadRejected", () => replacedReadRejected],
+        ["replacedMutationRejected", () => replacedMutationRejected],
+        ["replacementUntouched", () => replacementUntouched],
+      ]),
+      {
+        replacedReadRejected: true,
+        replacedMutationRejected: true,
+        replacementUntouched: true,
+      },
     );
   } catch (error) {
     transactionFailure = { error };
@@ -758,13 +809,27 @@ export const test_mcp_project_transactions = (): void => {
         },
       ]);
     }
-    TestValidator.predicate(
+    TestValidator.equals(
       "an operation-time ancestor alias retarget cannot redirect a live handle",
-      aliasRetargeted &&
-        fs
-          .readFileSync(path.join(canonicalRoot, "script.json"), "utf8")
-          .includes("canonical physical root") &&
-        fs.readdirSync(path.join(physicalB, "project")).length === 0,
+      namedFacts([
+        ["aliasRetargeted", () => aliasRetargeted],
+        [
+          "readFileSyncCanonicalRootScript",
+          () =>
+            fs
+              .readFileSync(path.join(canonicalRoot, "script.json"), "utf8")
+              .includes("canonical physical root"),
+        ],
+        [
+          "readdirSyncPhysicalBProject",
+          () => fs.readdirSync(path.join(physicalB, "project")).length === 0,
+        ],
+      ]),
+      {
+        aliasRetargeted: true,
+        readFileSyncCanonicalRootScript: true,
+        readdirSyncPhysicalBProject: true,
+      },
     );
   } catch (error) {
     aliasFailure = { error };

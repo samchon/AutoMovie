@@ -239,7 +239,7 @@ export const test_mcp_atomic_publication_fixture_cleanup = (): void => {
             nestedTryStatements: 3,
             ownerParameters: [],
             tryDigest:
-              "ffb2adea1987746a315025a306371cd74d37ba0247bf396396bfa2010c1b5713",
+              "40cbb63131798ef8e2bce1f3b0d431998109e331c794c3509f85bfc32b04ccef",
             tryStatements: 126,
           },
         ],

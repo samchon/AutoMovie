@@ -502,13 +502,31 @@ export const test_mcp_production_atomic_publication = (): void => {
     } finally {
       fs.writeFileSync(productionPath, productionBytes);
     }
-    TestValidator.predicate(
+    TestValidator.equals(
       "direct design race after staged final gate restores prior publication",
-      directDesignRace &&
-        project.revision() === revision &&
-        fs.readFileSync(outputPath).equals(first) &&
-        fs.readFileSync(manifestPath).equals(manifestBytes) &&
-        fs.readFileSync(receiptPath).equals(receiptBytes),
+      namedFacts([
+        ["directDesignRace", () => directDesignRace],
+        ["projectRevisionRevision", () => project.revision() === revision],
+        [
+          "readFileSyncOutputPathEquals",
+          () => fs.readFileSync(outputPath).equals(first),
+        ],
+        [
+          "readFileSyncManifestPathEquals",
+          () => fs.readFileSync(manifestPath).equals(manifestBytes),
+        ],
+        [
+          "readFileSyncReceiptPathEquals",
+          () => fs.readFileSync(receiptPath).equals(receiptBytes),
+        ],
+      ]),
+      {
+        directDesignRace: true,
+        projectRevisionRevision: true,
+        readFileSyncOutputPathEquals: true,
+        readFileSyncManifestPathEquals: true,
+        readFileSyncReceiptPathEquals: true,
+      },
     );
     let observations = 0;
     TestValidator.equals(
@@ -804,12 +822,23 @@ export const test_mcp_production_atomic_publication = (): void => {
     } finally {
       Reflect.set(fs, "writeFileSync", residentWriteFileSync);
     }
-    TestValidator.predicate(
+    TestValidator.equals(
       "state replacement during lock acquisition does not retain this attempt's lock",
-      lockRootSwapped &&
-        lockRaceRejected &&
-        fs.existsSync(path.join(productionStateRoot, "revision.lock")) ===
-          false,
+      namedFacts([
+        ["lockRootSwapped", () => lockRootSwapped],
+        ["lockRaceRejected", () => lockRaceRejected],
+        [
+          "existsSyncProductionStateRootRevision",
+          () =>
+            fs.existsSync(path.join(productionStateRoot, "revision.lock")) ===
+            false,
+        ],
+      ]),
+      {
+        lockRootSwapped: true,
+        lockRaceRejected: true,
+        existsSyncProductionStateRootRevision: true,
+      },
     );
 
     const missingStateProject = AutoMovieProductionProject.open(fixture.root);
@@ -908,20 +937,43 @@ export const test_mcp_production_atomic_publication = (): void => {
     } finally {
       Reflect.set(fs, "mkdirSync", residentMkdirSync);
     }
-    TestValidator.predicate(
+    TestValidator.equals(
       "rollback staging cannot publish into a replacement state root",
-      rollbackRootSwapped &&
-        rollbackRaceRejected &&
-        fs
-          .readFileSync(path.join(productionStateRoot, "render-manifest.json"))
-          .equals(replacementManifest) &&
-        fs
-          .readFileSync(
-            path.join(productionStateRoot, "render-manifest-receipt.json"),
-          )
-          .equals(replacementReceipt) &&
-        fs.existsSync(path.join(productionStateRoot, "revision.lock")) ===
-          false,
+      namedFacts([
+        ["rollbackRootSwapped", () => rollbackRootSwapped],
+        ["rollbackRaceRejected", () => rollbackRaceRejected],
+        [
+          "readFileSyncProductionStateRootRender",
+          () =>
+            fs
+              .readFileSync(
+                path.join(productionStateRoot, "render-manifest.json"),
+              )
+              .equals(replacementManifest),
+        ],
+        [
+          "readFileSyncProductionStateRootRender2",
+          () =>
+            fs
+              .readFileSync(
+                path.join(productionStateRoot, "render-manifest-receipt.json"),
+              )
+              .equals(replacementReceipt),
+        ],
+        [
+          "existsSyncProductionStateRootRevision",
+          () =>
+            fs.existsSync(path.join(productionStateRoot, "revision.lock")) ===
+            false,
+        ],
+      ]),
+      {
+        rollbackRootSwapped: true,
+        rollbackRaceRejected: true,
+        readFileSyncProductionStateRootRender: true,
+        readFileSyncProductionStateRootRender2: true,
+        existsSyncProductionStateRootRevision: true,
+      },
     );
   } catch (error) {
     atomicPublicationFailure = { error };

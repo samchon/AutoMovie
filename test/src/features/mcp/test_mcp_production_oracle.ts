@@ -1987,28 +1987,70 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
     } finally {
       project.commitRenderBundle = residentCommitRenderBundle;
     }
-    TestValidator.predicate(
+    TestValidator.equals(
       "capture refuses every manifest, compiler and renderer-input race",
-      [
-        missingManifestCapture,
-        mismatchedManifestCapture,
-        invalidatedCompileCapture,
-      ].every(
-        (output) =>
-          output.captured === false &&
-          output.renderBundle === null &&
-          output.frame === null &&
-          output.diagnostics[0]?.code === "capture-input-changed",
-      ) &&
-        racedCapture.captured === false &&
-        racedCapture.renderBundle === null &&
-        racedCapture.frame === null &&
-        racedCapture.diagnostics[0]?.code === "capture-input-changed" &&
-        lateRacedCapture.captured === false &&
-        lateRacedCapture.renderBundle === null &&
-        lateRacedCapture.frame === null &&
-        lateRacedCapture.diagnostics[0]?.code === "capture-input-changed" &&
-        genericCommitRejected,
+      namedFacts([
+        [
+          "missingManifestCaptureMismatchedManifestCaptureInvalidatedCompileCapture",
+          () =>
+            [
+              missingManifestCapture,
+              mismatchedManifestCapture,
+              invalidatedCompileCapture,
+            ].every(
+              (output) =>
+                output.captured === false &&
+                output.renderBundle === null &&
+                output.frame === null &&
+                output.diagnostics[0]?.code === "capture-input-changed",
+            ),
+        ],
+        ["racedCaptureCaptured", () => racedCapture.captured === false],
+        ["racedCaptureRenderBundle", () => racedCapture.renderBundle === null],
+        [
+          "racedCaptureFrame",
+          () =>
+            racedCapture.renderBundle === null && racedCapture.frame === null,
+        ],
+        [
+          "racedCaptureDiagnosticsCode",
+          () =>
+            racedCapture.renderBundle === null &&
+            racedCapture.frame === null &&
+            racedCapture.diagnostics[0]?.code === "capture-input-changed",
+        ],
+        ["lateRacedCaptureCaptured", () => lateRacedCapture.captured === false],
+        [
+          "lateRacedCaptureRenderBundle",
+          () => lateRacedCapture.renderBundle === null,
+        ],
+        [
+          "lateRacedCaptureFrame",
+          () =>
+            lateRacedCapture.renderBundle === null &&
+            lateRacedCapture.frame === null,
+        ],
+        [
+          "lateRacedCaptureDiagnosticsCode",
+          () =>
+            lateRacedCapture.renderBundle === null &&
+            lateRacedCapture.frame === null &&
+            lateRacedCapture.diagnostics[0]?.code === "capture-input-changed",
+        ],
+        ["genericCommitRejected", () => genericCommitRejected],
+      ]),
+      {
+        missingManifestCaptureMismatchedManifestCaptureInvalidatedCompileCapture: true,
+        racedCaptureCaptured: true,
+        racedCaptureRenderBundle: true,
+        racedCaptureFrame: true,
+        racedCaptureDiagnosticsCode: true,
+        lateRacedCaptureCaptured: true,
+        lateRacedCaptureRenderBundle: true,
+        lateRacedCaptureFrame: true,
+        lateRacedCaptureDiagnosticsCode: true,
+        genericCommitRejected: true,
+      },
     );
     TestValidator.predicate(
       "uniform captures cannot become visual review evidence",

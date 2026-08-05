@@ -4,7 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { throwsError } from "../internal/predicates";
+import { namedFacts, throwsError } from "../internal/predicates";
 
 const mutableFs = fs as {
   lstatSync: typeof fs.lstatSync;
@@ -349,11 +349,18 @@ export const test_mcp_project_manifest = (): void => {
         },
       ]);
     }
-    TestValidator.predicate(
+    TestValidator.equals(
       "optional absence revalidates its captured project ancestry",
-      optionalRootSwapped &&
-        optionalSwapRejected &&
-        optionalReplacementUntouched,
+      namedFacts([
+        ["optionalRootSwapped", () => optionalRootSwapped],
+        ["optionalSwapRejected", () => optionalSwapRejected],
+        ["optionalReplacementUntouched", () => optionalReplacementUntouched],
+      ]),
+      {
+        optionalRootSwapped: true,
+        optionalSwapRejected: true,
+        optionalReplacementUntouched: true,
+      },
     );
     fs.rmSync(optionalRoot, { recursive: true, force: true });
 

@@ -416,13 +416,13 @@ export const test_mcp_production_review_render_harness_cleanup = (): void => {
           index: 169,
           substantive: {
             digest:
-              "9e9eeb847aa36ebd2fce93a5f021388d8e5ebf7e07caf2247f9c6eb92002a52b",
-            tokens: 79,
+              "93cd8f733e25b8d390a3ad64b90dbce0525c168dcd062387b2f1b16faa33eed1",
+            tokens: 123,
           },
           tryBody:
-            '{constprepared=review.prepare({target});TestValidator.predicate("abundlereplacedafterinventorycannotbecomereviewevidence",lateSwapped&&prepared.frames.every((frame)=>frame.digest!==lateDigest)&&prepared.diagnostics.some((item)=>item.code==="render-bundle-unowned"&&path.resolve(fixture.root,item.path??"")===path.resolve(lateManifestPath),),);}',
+            '{constprepared=review.prepare({target});TestValidator.equals("abundlereplacedafterinventorycannotbecomereviewevidence",namedFacts([["lateSwapped",()=>lateSwapped],["preparedFramesFrame",()=>prepared.frames.every((frame)=>frame.digest!==lateDigest),],["preparedDiagnosticsItem",()=>prepared.diagnostics.some((item)=>item.code==="render-bundle-unowned"&&path.resolve(fixture.root,item.path??"")===path.resolve(lateManifestPath),),],]),{lateSwapped:true,preparedFramesFrame:true,preparedDiagnosticsItem:true,},);}',
           tryDigest:
-            "0ce4650d9781858a58e3ed40988b78e4e6f64d9096925e6b0ce2597399fec03b",
+            "dd951b7eff47460215278fd53c784149b3066901fe91d9b5946c54bc0e18cc9d",
         },
       ],
       parseDiagnostics: [],

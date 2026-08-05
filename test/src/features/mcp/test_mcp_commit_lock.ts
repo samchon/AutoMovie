@@ -198,11 +198,21 @@ export const test_mcp_commit_lock = (): void => {
         },
       ]);
     }
-    TestValidator.predicate(
+    TestValidator.equals(
       "release cannot delete a foreign lock swapped in after owner verification",
-      releaseTargetSwapped &&
-        fs.existsSync(releaseRacePath) &&
-        fs.readFileSync(releaseRacePath, "utf8") === foreignToken,
+      namedFacts([
+        ["releaseTargetSwapped", () => releaseTargetSwapped],
+        ["existsSyncReleaseRacePath", () => fs.existsSync(releaseRacePath)],
+        [
+          "readFileSyncReleaseRacePathUtf8",
+          () => fs.readFileSync(releaseRacePath, "utf8") === foreignToken,
+        ],
+      ]),
+      {
+        releaseTargetSwapped: true,
+        existsSyncReleaseRacePath: true,
+        readFileSyncReleaseRacePathUtf8: true,
+      },
     );
     nativeRm(releaseRacePath, { force: true });
     nativeRm(releaseRaceParked, { force: true });

@@ -213,21 +213,21 @@ export const test_mcp_project_transaction_single_hook_cleanup = (): void => {
       {
         index: 2,
         tryDigest:
-          "fa7bbc08b58608b208d971dbd28a2dc1b49c9bbf44160b2b9f80d4823c4803dd",
+          "753a7e3630a369dd891e66c00564165ddb5c92ddc8f68be641ce1a698a50ca0c",
         tryStatements: 136,
       },
       {
         index: 5,
         tryDigest:
-          "50395f59f182d0c45f0fe5bf817c8247ac0d8c61fa114663a00f75d77e087e5a",
+          "145928807ad8e93420c2d75cda4ca9ca8254f375f77dd3a04b71ce0f61d0ea59",
         tryStatements: 14,
       },
     ],
     parentDigest:
-      "2bbc107ce499571aed643644a33edb90187c1d421c635be2e37936a9c139eaac",
+      "f688644c8ac4a4aeec10b6d7058c7377f5a76560e2706c66d9d2185de1d54659",
     parseDiagnostics: [],
     rootDigest:
-      "5b0bdbdf32c9eca2790580e6113c3b657388ff3b16e0e2dedb4b422115379790",
+      "48e4094dc5574ccf5b5f776f979c74f2b27783a0ea79f11a913b0dae2b144830",
     rows: [
       {
         catchBodies: ["cleanupWriteFailure={error};", "throwerror;"],

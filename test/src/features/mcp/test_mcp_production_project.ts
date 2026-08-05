@@ -4970,13 +4970,28 @@ export const test_mcp_production_project = (): void => {
           },
         ]);
       }
-      TestValidator.predicate(
+      TestValidator.equals(
         `a ${replacement} creation parent fails closed and releases both coordinates`,
-        rejected &&
-          fs.existsSync(projectPath) === false &&
-          fs.existsSync(path.join(archived, "project")) === false &&
-          lockPaths.length === 2 &&
-          lockPaths.every((file) => fs.existsSync(file) === false),
+        namedFacts([
+          ["rejected", () => rejected],
+          ["existsSyncProjectPath", () => fs.existsSync(projectPath) === false],
+          [
+            "existsSyncArchivedProject",
+            () => fs.existsSync(path.join(archived, "project")) === false,
+          ],
+          ["lockPaths", () => lockPaths.length === 2],
+          [
+            "lockPathsFileExistsSync",
+            () => lockPaths.every((file) => fs.existsSync(file) === false),
+          ],
+        ]),
+        {
+          rejected: true,
+          existsSyncProjectPath: true,
+          existsSyncArchivedProject: true,
+          lockPaths: true,
+          lockPathsFileExistsSync: true,
+        },
       );
     }
     const nativeCoordinationMkdir = fs.mkdirSync;
