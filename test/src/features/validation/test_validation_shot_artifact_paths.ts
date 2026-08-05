@@ -84,6 +84,32 @@ const take = (overrides: Record<string, unknown> = {}): unknown => ({
   ...overrides,
 });
 
+/**
+ * A light-time clip the validator accepts.
+ *
+ * The scene stages `key` as a spot light, so `/lights/key/intensity` addresses
+ * a property that light actually carries.
+ */
+const lightClip = (overrides: Record<string, unknown> = {}): unknown => ({
+  id: "key-fade",
+  name: null,
+  duration: 2,
+  loop: false,
+  tracks: [
+    {
+      channel: {
+        kind: "pointer",
+        pointer: "/lights/key/intensity",
+        valueType: "scalar",
+      },
+      times: [0, 1],
+      values: [1, 0],
+      interpolation: "linear",
+      ...overrides,
+    },
+  ],
+});
+
 const pathsOf = (validation: IAutoMovieValidation): string[] =>
   validation.success === true
     ? []
@@ -308,6 +334,68 @@ export const test_validation_shot_artifact_paths = (): void => {
         coverage: [take({ cameraIntent: [intent({ framing: "dutch" })] })],
       }),
       path: "$input.coverage[0].cameraIntent[0].framing",
+    },
+    {
+      title: "a light clip channel that does not address by pointer",
+      shot: shot({
+        lightMotions: [
+          lightClip({ channel: { kind: "node", node: "key", property: "x" } }),
+        ],
+      }),
+      path: "$input.lightMotions[0].tracks[0].channel.kind",
+    },
+    {
+      title: "a light pointer that names no light property",
+      shot: shot({
+        lightMotions: [
+          lightClip({
+            channel: {
+              kind: "pointer",
+              pointer: "/lights/key",
+              valueType: "scalar",
+            },
+          }),
+        ],
+      }),
+      path: "$input.lightMotions[0].tracks[0].channel.pointer",
+    },
+    {
+      title: "a light pointer whose value type is not what the property is",
+      shot: shot({
+        lightMotions: [
+          lightClip({
+            channel: {
+              kind: "pointer",
+              pointer: "/lights/key/intensity",
+              valueType: "vector3",
+            },
+            values: [0, 0, 0, 1, 1, 1],
+          }),
+        ],
+      }),
+      path: "$input.lightMotions[0].tracks[0].channel.valueType",
+    },
+    {
+      title: "a light pointer addressing a light the scene does not stage",
+      shot: shot({
+        lightMotions: [
+          lightClip({
+            channel: {
+              kind: "pointer",
+              pointer: "/lights/ghost/intensity",
+              valueType: "scalar",
+            },
+          }),
+        ],
+      }),
+      path: "$input.lightMotions[0].tracks[0].channel.pointer",
+    },
+    {
+      title: "duplicate light motion clip ids",
+      shot: shot({ lightMotions: [lightClip(), lightClip()] }),
+      // Both clips carry `key-fade`; the second is where the duplicate is
+      // located, and the list path is the prefix that binds either report.
+      path: "$input.lightMotions",
     },
   ];
   TestValidator.equals(
