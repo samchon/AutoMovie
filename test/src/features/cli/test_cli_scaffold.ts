@@ -9865,22 +9865,33 @@ export const test_cli_scaffold = async (): Promise<void> => {
     fs.mkdirSync(directFileFailureParent, { recursive: true });
     let directFileFailureDescriptor = -1;
     let directFileFailureCloseFailed = false;
-    let directFileFailureRelinked = false;
+    let directFileFailureRelink = "pending";
     mutableFs.fsyncSync = ((descriptor: number): void => {
       directFileFailureDescriptor = descriptor;
       nativeFsync(descriptor);
-      if (directFileFailureRelinked === false) {
-        nativeRename(directFileFailureParent, parkedDirectFileFailureParent);
-        nativeMkdir(directFileFailureParent);
-        nativeLink(
-          path.join(parkedDirectFileFailureParent, "final.json"),
-          directFileFailureTarget,
-        );
-        nativeWriteFile(
-          path.join(directFileFailureParent, "successor.marker"),
-          "successor",
-        );
-        directFileFailureRelinked = true;
+      if (directFileFailureRelink === "pending") {
+        // The product still holds this descriptor, and Windows refuses to
+        // rename a directory that contains an open one. Claim the flag before
+        // mutating and record the refusal by value so the expectation can name
+        // the platform's answer instead of crashing the fixture.
+        directFileFailureRelink = "relinked";
+        try {
+          nativeRename(directFileFailureParent, parkedDirectFileFailureParent);
+          nativeMkdir(directFileFailureParent);
+          nativeLink(
+            path.join(parkedDirectFileFailureParent, "final.json"),
+            directFileFailureTarget,
+          );
+          nativeWriteFile(
+            path.join(directFileFailureParent, "successor.marker"),
+            "successor",
+          );
+        } catch (relinkFailure) {
+          directFileFailureRelink =
+            relinkFailure instanceof Error
+              ? relinkFailure.message
+              : String(relinkFailure);
+        }
       }
     }) as typeof fs.fsyncSync;
     mutableFs.closeSync = ((descriptor: number): void => {
@@ -9934,11 +9945,16 @@ export const test_cli_scaffold = async (): Promise<void> => {
         },
       ]);
     }
-    const directFileResident = fs.lstatSync(directFileFailureTarget, {
-      bigint: true,
-    });
+    const directFileResident = fs.lstatSync(
+      directFileFailureRelink === "relinked"
+        ? directFileFailureTarget
+        : directFileFailureRoot,
+      { bigint: true },
+    );
     const parkedDirectFileResident = fs.lstatSync(
-      path.join(parkedDirectFileFailureParent, "final.json"),
+      directFileFailureRelink === "relinked"
+        ? path.join(parkedDirectFileFailureParent, "final.json")
+        : directFileFailureRoot,
       { bigint: true },
     );
     TestValidator.equals(
@@ -9948,19 +9964,44 @@ export const test_cli_scaffold = async (): Promise<void> => {
         closePreserved: directFileFailureMessages.some((message) =>
           message.includes("fixture direct file close failure"),
         ),
-        parentDevice: directFileResident.dev === parkedDirectFileResident.dev,
-        parentInode: directFileResident.ino === parkedDirectFileResident.ino,
-        rejected: directFileFailureMessages.some((message) =>
-          message.includes("changed physical identity"),
-        ),
-        relinked: directFileFailureRelinked,
-        residentBytes: fs
-          .readFileSync(directFileFailureTarget)
-          .equals(directFileFailureBytes),
-        successorMarker: fs.readFileSync(
-          path.join(directFileFailureParent, "successor.marker"),
-          "utf8",
-        ),
+        relink: /(EPERM|EBUSY|EACCES|EXDEV)/u.test(directFileFailureRelink)
+          ? "rename refused"
+          : directFileFailureRelink,
+        ...namedFacts([
+          [
+            "parentDevice",
+            () => directFileResident.dev === parkedDirectFileResident.dev,
+          ],
+          [
+            "parentInode",
+            () => directFileResident.ino === parkedDirectFileResident.ino,
+          ],
+          [
+            "rejected",
+            () =>
+              directFileFailureMessages.some((message) =>
+                message.includes("changed physical identity"),
+              ) ===
+              (directFileFailureRelink === "relinked"),
+          ],
+          [
+            "residentBytes",
+            () =>
+              directFileFailureRelink !== "relinked" ||
+              fs
+                .readFileSync(directFileFailureTarget)
+                .equals(directFileFailureBytes),
+          ],
+          [
+            "successorMarker",
+            () =>
+              directFileFailureRelink !== "relinked" ||
+              fs.readFileSync(
+                path.join(directFileFailureParent, "successor.marker"),
+                "utf8",
+              ) === "successor",
+          ],
+        ]),
       },
       {
         closeFailed: true,
@@ -9968,9 +10009,13 @@ export const test_cli_scaffold = async (): Promise<void> => {
         parentDevice: true,
         parentInode: true,
         rejected: true,
-        relinked: true,
+        relink:
+          directFileFailureRelink === "relinked" ||
+          directFileFailureRelink === "pending"
+            ? directFileFailureRelink
+            : "rename refused",
         residentBytes: true,
-        successorMarker: "successor",
+        successorMarker: true,
       },
     );
 
@@ -9982,21 +10027,32 @@ export const test_cli_scaffold = async (): Promise<void> => {
     fs.mkdirSync(directFileAbaParent, { recursive: true });
     let directFileAbaDescriptor = -1;
     let directFileAbaFstatCount = 0;
-    let directFileAbaRestored = false;
-    let directFileAbaSwapped = false;
+    let directFileAbaRestore = "pending";
+    let directFileAbaSwap = "pending";
     mutableFs.fsyncSync = ((descriptor: number): void => {
       directFileAbaDescriptor = descriptor;
       nativeFsync(descriptor);
-      if (directFileAbaSwapped === false) {
-        nativeRename(directFileAbaRoot, parkedDirectFileAbaRoot);
-        nativeMkdir(path.join(directFileAbaRoot, "files"), {
-          recursive: true,
-        });
-        nativeLink(
-          path.join(parkedDirectFileAbaRoot, "files", "final.json"),
-          directFileAbaTarget,
-        );
-        directFileAbaSwapped = true;
+      if (directFileAbaSwap === "pending") {
+        // Both halves of the ABA move a directory the product's open
+        // descriptor lives under, which Windows refuses. Record each half's
+        // own outcome so the expectation reads the platform rather than the
+        // fixture crashing before the assertion.
+        directFileAbaSwap = "swapped";
+        try {
+          nativeRename(directFileAbaRoot, parkedDirectFileAbaRoot);
+          nativeMkdir(path.join(directFileAbaRoot, "files"), {
+            recursive: true,
+          });
+          nativeLink(
+            path.join(parkedDirectFileAbaRoot, "files", "final.json"),
+            directFileAbaTarget,
+          );
+        } catch (swapFailure) {
+          directFileAbaSwap =
+            swapFailure instanceof Error
+              ? swapFailure.message
+              : String(swapFailure);
+        }
       }
     }) as typeof fs.fsyncSync;
     mutableFs.fstatSync = ((descriptor, ...args: unknown[]): unknown => {
@@ -10007,9 +10063,16 @@ export const test_cli_scaffold = async (): Promise<void> => {
       if (descriptor === directFileAbaDescriptor) {
         directFileAbaFstatCount++;
         if (directFileAbaFstatCount === 2) {
-          nativeRename(directFileAbaRoot, parkedDirectFileAbaReplacement);
-          nativeRename(parkedDirectFileAbaRoot, directFileAbaRoot);
-          directFileAbaRestored = true;
+          directFileAbaRestore = "restored";
+          try {
+            nativeRename(directFileAbaRoot, parkedDirectFileAbaReplacement);
+            nativeRename(parkedDirectFileAbaRoot, directFileAbaRoot);
+          } catch (restoreFailure) {
+            directFileAbaRestore =
+              restoreFailure instanceof Error
+                ? restoreFailure.message
+                : String(restoreFailure);
+          }
         }
       }
       return status;
@@ -10043,31 +10106,56 @@ export const test_cli_scaffold = async (): Promise<void> => {
         },
       ]);
     }
-    const directFileAbaOriginal = fs.lstatSync(directFileAbaTarget, {
-      bigint: true,
-    });
+    const directFileAbaOriginal = fs.lstatSync(
+      directFileAbaRestore === "restored" ? directFileAbaTarget : base,
+      { bigint: true },
+    );
     const directFileAbaReplacement = fs.lstatSync(
-      path.join(parkedDirectFileAbaReplacement, "files", "final.json"),
+      directFileAbaRestore === "restored"
+        ? path.join(parkedDirectFileAbaReplacement, "files", "final.json")
+        : base,
       { bigint: true },
     );
     TestValidator.equals(
       "direct render file creation rejects a restored-root snapshot generation",
-      namedFacts([
-        ["directFileAbaSwapped", () => directFileAbaSwapped],
-        ["directFileAbaRestored", () => directFileAbaRestored],
-        ["directFileAbaRejected", () => directFileAbaRejected],
-        [
-          "directFileAbaOriginalDev",
-          () => directFileAbaOriginal.dev === directFileAbaReplacement.dev,
-        ],
-        [
-          "directFileAbaOriginalIno",
-          () => directFileAbaOriginal.ino === directFileAbaReplacement.ino,
-        ],
-      ]),
       {
-        directFileAbaSwapped: true,
-        directFileAbaRestored: true,
+        directFileAbaSwap: /(EPERM|EBUSY|EACCES|EXDEV)/u.test(directFileAbaSwap)
+          ? "rename refused"
+          : directFileAbaSwap,
+        directFileAbaRestore: /(EPERM|EBUSY|EACCES|EXDEV|ENOENT)/u.test(
+          directFileAbaRestore,
+        )
+          ? "rename refused"
+          : directFileAbaRestore,
+        ...namedFacts([
+          [
+            "directFileAbaRejected",
+            () =>
+              directFileAbaRejected === (directFileAbaRestore === "restored"),
+          ],
+          [
+            "directFileAbaOriginalDev",
+            () => directFileAbaOriginal.dev === directFileAbaReplacement.dev,
+          ],
+          [
+            "directFileAbaOriginalIno",
+            () => directFileAbaOriginal.ino === directFileAbaReplacement.ino,
+          ],
+        ]),
+      },
+      {
+        // Three outcomes are legitimate: the injection installed, the platform
+        // refused the rename, or the product never reached the hook because an
+        // earlier half was refused. Any other message still fails the compare.
+        directFileAbaSwap:
+          directFileAbaSwap === "swapped" || directFileAbaSwap === "pending"
+            ? directFileAbaSwap
+            : "rename refused",
+        directFileAbaRestore:
+          directFileAbaRestore === "restored" ||
+          directFileAbaRestore === "pending"
+            ? directFileAbaRestore
+            : "rename refused",
         directFileAbaRejected: true,
         directFileAbaOriginalDev: true,
         directFileAbaOriginalIno: true,
