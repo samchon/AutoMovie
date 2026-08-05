@@ -659,6 +659,7 @@ export const test_mcp_production_legacy_import = (): void => {
   const empty = fs.mkdtempSync(
     path.join(os.tmpdir(), "automovie-empty-import-"),
   );
+  let emptyFailure: ILegacyImportFixtureFailure | undefined;
   try {
     AutoMovieProject.open(empty);
     const plan = new AutoMovieLegacyImporter(empty).plan();
@@ -669,13 +670,22 @@ export const test_mcp_production_legacy_import = (): void => {
         plan.shotContractDrafts.length === 0 &&
         plan.sourceTodos.length === 0,
     );
+  } catch (error) {
+    emptyFailure = { error };
+    throw error;
   } finally {
-    fs.rmSync(empty, { force: true, recursive: true });
+    preserveLegacyImportFixtureCleanup(emptyFailure, [
+      {
+        resource: "empty-project draft temporary root",
+        cleanup: () => fs.rmSync(empty, { force: true, recursive: true }),
+      },
+    ]);
   }
 
   const missingAsset = fs.mkdtempSync(
     path.join(os.tmpdir(), "automovie-missing-asset-"),
   );
+  let missingAssetFailure: ILegacyImportFixtureFailure | undefined;
   try {
     AutoMovieProject.open(missingAsset).registerAsset("assets/missing.bin");
     const plan = new AutoMovieLegacyImporter(missingAsset).plan();
@@ -691,8 +701,17 @@ export const test_mcp_production_legacy_import = (): void => {
           (diagnostic) => diagnostic.code === "legacy-asset-missing",
         ),
     );
+  } catch (error) {
+    missingAssetFailure = { error };
+    throw error;
   } finally {
-    fs.rmSync(missingAsset, { force: true, recursive: true });
+    preserveLegacyImportFixtureCleanup(missingAssetFailure, [
+      {
+        resource: "missing-asset draft temporary root",
+        cleanup: () =>
+          fs.rmSync(missingAsset, { force: true, recursive: true }),
+      },
+    ]);
   }
 
   const planningCleanup = createLegacy();
@@ -3049,6 +3068,7 @@ export const test_mcp_production_legacy_import = (): void => {
     const root = fs.mkdtempSync(
       path.join(os.tmpdir(), "automovie-bad-import-"),
     );
+    let rootFailure: ILegacyImportFixtureFailure | undefined;
     try {
       malformed.prepare(root);
       TestValidator.predicate(
@@ -3058,8 +3078,16 @@ export const test_mcp_production_legacy_import = (): void => {
           malformed.fragment,
         ),
       );
+    } catch (error) {
+      rootFailure = { error };
+      throw error;
     } finally {
-      fs.rmSync(root, { force: true, recursive: true });
+      preserveLegacyImportFixtureCleanup(rootFailure, [
+        {
+          resource: "unsafe-inventory outer temporary root",
+          cleanup: () => fs.rmSync(root, { force: true, recursive: true }),
+        },
+      ]);
     }
   }
 

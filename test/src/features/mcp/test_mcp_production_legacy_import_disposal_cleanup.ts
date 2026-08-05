@@ -226,7 +226,7 @@ const CONTRACT = {
     {
       catchBodies: ["fixtureFailure={error};", "throwerror;"],
       catchVariables: ["error"],
-      containerStatements: 143,
+      containerStatements: 145,
       finallyBodies: [
         'preserveLegacyImportFixtureCleanup(fixtureFailure,[{resource:"appliedprovenancelegacyfixture",cleanup:()=>fixture.dispose(),},]);',
       ],
@@ -241,7 +241,7 @@ const CONTRACT = {
     {
       catchBodies: ["untouchedFailure={error};", "throwerror;"],
       catchVariables: ["error"],
-      containerStatements: 143,
+      containerStatements: 145,
       finallyBodies: [
         'preserveLegacyImportFixtureCleanup(untouchedFailure,[{resource:"untouchedlegacyfixture",cleanup:()=>untouched.dispose(),},]);',
       ],
@@ -256,7 +256,7 @@ const CONTRACT = {
     {
       catchBodies: ["actorlessFailure={error};", "throwerror;"],
       catchVariables: ["error"],
-      containerStatements: 143,
+      containerStatements: 145,
       finallyBodies: [
         'preserveLegacyImportFixtureCleanup(actorlessFailure,[{resource:"actorlesslegacyfixture",cleanup:()=>actorless.dispose(),},]);',
       ],
@@ -271,11 +271,11 @@ const CONTRACT = {
     {
       catchBodies: ["planningCleanupFailure={error};", "throwerror;"],
       catchVariables: ["error"],
-      containerStatements: 143,
+      containerStatements: 145,
       finallyBodies: [
         'preserveLegacyImportFixtureCleanup(planningCleanupFailure,[{resource:"planningcleanuplegacyfixture",cleanup:()=>planningCleanup.dispose(),},]);',
       ],
-      index: 15,
+      index: 17,
       prefixes: [
         "constplanningCleanup=createLegacy();",
         "letplanningCleanupFailure:ILegacyImportFixtureFailure|undefined;",
@@ -286,11 +286,11 @@ const CONTRACT = {
     {
       catchBodies: ["collisionsFailure={error};", "throwerror;"],
       catchVariables: ["error"],
-      containerStatements: 143,
+      containerStatements: 145,
       finallyBodies: [
         'preserveLegacyImportFixtureCleanup(collisionsFailure,[{resource:"collisionslegacyfixture",cleanup:()=>collisions.dispose(),},]);',
       ],
-      index: 18,
+      index: 20,
       prefixes: [
         "constcollisions=createLegacy();",
         "letcollisionsFailure:ILegacyImportFixtureFailure|undefined;",
@@ -301,11 +301,11 @@ const CONTRACT = {
     {
       catchBodies: ["renameFailureDisposal={error};", "throwerror;"],
       catchVariables: ["error"],
-      containerStatements: 143,
+      containerStatements: 145,
       finallyBodies: [
         'preserveLegacyImportFixtureCleanup(renameFailureDisposal,[{resource:"renamefailurelegacyfixture",cleanup:()=>renameFailure.dispose(),},]);',
       ],
-      index: 21,
+      index: 23,
       prefixes: [
         "constrenameFailure=createLegacy();",
         "letrenameFailureDisposal:ILegacyImportFixtureFailure|undefined;",
@@ -316,11 +316,11 @@ const CONTRACT = {
     {
       catchBodies: ["importCleanupFailureDisposal={error};", "throwerror;"],
       catchVariables: ["error"],
-      containerStatements: 143,
+      containerStatements: 145,
       finallyBodies: [
         'preserveLegacyImportFixtureCleanup(importCleanupFailureDisposal,[{resource:"importcleanupfailurelegacyfixture",cleanup:()=>importCleanupFailure.dispose(),},]);',
       ],
-      index: 24,
+      index: 26,
       prefixes: [
         "constimportCleanupFailure=createLegacy();",
         "letimportCleanupFailureDisposal:ILegacyImportFixtureFailure|undefined;",
@@ -331,11 +331,11 @@ const CONTRACT = {
     {
       catchBodies: ["tamperedFailure={error};", "throwerror;"],
       catchVariables: ["error"],
-      containerStatements: 143,
+      containerStatements: 145,
       finallyBodies: [
         'preserveLegacyImportFixtureCleanup(tamperedFailure,[{resource:"tamperedlegacyfixture",cleanup:()=>tampered.dispose(),},]);',
       ],
-      index: 30,
+      index: 32,
       prefixes: [
         "consttampered=createLegacy();",
         "lettamperedFailure:ILegacyImportFixtureFailure|undefined;",
@@ -346,11 +346,11 @@ const CONTRACT = {
     {
       catchBodies: ["tamperedStateFailure={error};", "throwerror;"],
       catchVariables: ["error"],
-      containerStatements: 143,
+      containerStatements: 145,
       finallyBodies: [
         'preserveLegacyImportFixtureCleanup(tamperedStateFailure,[{resource:"tamperedstatelegacyfixture",cleanup:()=>tamperedState.dispose(),},]);',
       ],
-      index: 36,
+      index: 38,
       prefixes: [
         "consttamperedState=createLegacy();",
         "lettamperedStateFailure:ILegacyImportFixtureFailure|undefined;",
@@ -361,11 +361,11 @@ const CONTRACT = {
     {
       catchBodies: ["productionWorkFailure={error};", "throwerror;"],
       catchVariables: ["error"],
-      containerStatements: 143,
+      containerStatements: 145,
       finallyBodies: [
         'preserveLegacyImportFixtureCleanup(productionWorkFailure,[{resource:"productionworklegacyfixture",cleanup:()=>productionWork.dispose(),},]);',
       ],
-      index: 39,
+      index: 41,
       prefixes: [
         "constproductionWork=createLegacy();",
         "letproductionWorkFailure:ILegacyImportFixtureFailure|undefined;",
@@ -376,11 +376,11 @@ const CONTRACT = {
     {
       catchBodies: ["preexistingSourceFailure={error};", "throwerror;"],
       catchVariables: ["error"],
-      containerStatements: 143,
+      containerStatements: 145,
       finallyBodies: [
         'preserveLegacyImportFixtureCleanup(preexistingSourceFailure,[{resource:"preexistingsourcelegacyfixture",cleanup:()=>preexistingSource.dispose(),},]);',
       ],
-      index: 42,
+      index: 44,
       prefixes: [
         "constpreexistingSource=createLegacy();",
         "letpreexistingSourceFailure:ILegacyImportFixtureFailure|undefined;",
@@ -391,11 +391,11 @@ const CONTRACT = {
     {
       catchBodies: ["missingPreexistingSourceFailure={error};", "throwerror;"],
       catchVariables: ["error"],
-      containerStatements: 143,
+      containerStatements: 145,
       finallyBodies: [
         'preserveLegacyImportFixtureCleanup(missingPreexistingSourceFailure,[{resource:"missingpreexistingsourcelegacyfixture",cleanup:()=>missingPreexistingSource.dispose(),},]);',
       ],
-      index: 45,
+      index: 47,
       prefixes: [
         "constmissingPreexistingSource=createLegacy();",
         "letmissingPreexistingSourceFailure:ILegacyImportFixtureFailure|undefined;",
@@ -406,11 +406,11 @@ const CONTRACT = {
     {
       catchBodies: ["deniedImportStateFailure={error};", "throwerror;"],
       catchVariables: ["error"],
-      containerStatements: 143,
+      containerStatements: 145,
       finallyBodies: [
         'preserveLegacyImportFixtureCleanup(deniedImportStateFailure,[{resource:"deniedimportstatelegacyfixture",cleanup:()=>deniedImportState.dispose(),},]);',
       ],
-      index: 48,
+      index: 50,
       prefixes: [
         "constdeniedImportState=createLegacy();",
         "letdeniedImportStateFailure:ILegacyImportFixtureFailure|undefined;",
@@ -421,11 +421,11 @@ const CONTRACT = {
     {
       catchBodies: ["emptyDirectoryTopologyFailure={error};", "throwerror;"],
       catchVariables: ["error"],
-      containerStatements: 143,
+      containerStatements: 145,
       finallyBodies: [
         'preserveLegacyImportFixtureCleanup(emptyDirectoryTopologyFailure,[{resource:"emptydirectorytopologylegacyfixture",cleanup:()=>emptyDirectoryTopology.dispose(),},]);',
       ],
-      index: 51,
+      index: 53,
       prefixes: [
         "constemptyDirectoryTopology=createLegacy();",
         "letemptyDirectoryTopologyFailure:ILegacyImportFixtureFailure|undefined;",
@@ -439,11 +439,11 @@ const CONTRACT = {
         "throwerror;",
       ],
       catchVariables: ["error"],
-      containerStatements: 143,
+      containerStatements: 145,
       finallyBodies: [
         'preserveLegacyImportFixtureCleanup(sortedEmptyDirectoryTopologyFailure,[{resource:"sortedemptydirectorytopologylegacyfixture",cleanup:()=>sortedEmptyDirectoryTopology.dispose(),},]);',
       ],
-      index: 54,
+      index: 56,
       prefixes: [
         "constsortedEmptyDirectoryTopology=createLegacy();",
         "letsortedEmptyDirectoryTopologyFailure:|ILegacyImportFixtureFailure|undefined;",
@@ -454,11 +454,11 @@ const CONTRACT = {
     {
       catchBodies: ["rollbackFailureDisposal={error};", "throwerror;"],
       catchVariables: ["error"],
-      containerStatements: 143,
+      containerStatements: 145,
       finallyBodies: [
         'preserveLegacyImportFixtureCleanup(rollbackFailureDisposal,[{resource:"rollbackfailurelegacyfixture",cleanup:()=>rollbackFailure.dispose(),},]);',
       ],
-      index: 57,
+      index: 59,
       prefixes: [
         "constrollbackFailure=createLegacy();",
         "letrollbackFailureDisposal:ILegacyImportFixtureFailure|undefined;",
@@ -469,11 +469,11 @@ const CONTRACT = {
     {
       catchBodies: ["incompleteRestorationFailure={error};", "throwerror;"],
       catchVariables: ["error"],
-      containerStatements: 143,
+      containerStatements: 145,
       finallyBodies: [
         'preserveLegacyImportFixtureCleanup(incompleteRestorationFailure,[{resource:"incompleterestorationlegacyfixture",cleanup:()=>incompleteRestoration.dispose(),},]);',
       ],
-      index: 63,
+      index: 65,
       prefixes: [
         "constincompleteRestoration=createLegacy();",
         "letincompleteRestorationFailure:ILegacyImportFixtureFailure|undefined;",
@@ -487,11 +487,11 @@ const CONTRACT = {
         "throwerror;",
       ],
       catchVariables: ["error"],
-      containerStatements: 143,
+      containerStatements: 145,
       finallyBodies: [
         'preserveLegacyImportFixtureCleanup(restorationCleanupFailureDisposal,[{resource:"restorationcleanupfailurelegacyfixture",cleanup:()=>restorationCleanupFailure.dispose(),},]);',
       ],
-      index: 66,
+      index: 68,
       prefixes: [
         "constrestorationCleanupFailure=createLegacy();",
         "letrestorationCleanupFailureDisposal:|ILegacyImportFixtureFailure|undefined;",
@@ -502,11 +502,11 @@ const CONTRACT = {
     {
       catchBodies: ["preservedQuarantineFailure={error};", "throwerror;"],
       catchVariables: ["error"],
-      containerStatements: 143,
+      containerStatements: 145,
       finallyBodies: [
         'preserveLegacyImportFixtureCleanup(preservedQuarantineFailure,[{resource:"preservedquarantinelegacyfixture",cleanup:()=>preservedQuarantine.dispose(),},]);',
       ],
-      index: 69,
+      index: 71,
       prefixes: [
         "constpreservedQuarantine=createLegacy();",
         "letpreservedQuarantineFailure:ILegacyImportFixtureFailure|undefined;",
@@ -517,11 +517,11 @@ const CONTRACT = {
     {
       catchBodies: ["incarnationRaceFailure={error};", "throwerror;"],
       catchVariables: ["error"],
-      containerStatements: 143,
+      containerStatements: 145,
       finallyBodies: [
         'preserveLegacyImportFixtureCleanup(incarnationRaceFailure,[{resource:"incarnationracelegacyfixture",cleanup:()=>incarnationRace.dispose(),},]);',
       ],
-      index: 72,
+      index: 74,
       prefixes: [
         "constincarnationRace=createLegacy();",
         "letincarnationRaceFailure:ILegacyImportFixtureFailure|undefined;",
@@ -532,11 +532,11 @@ const CONTRACT = {
     {
       catchBodies: ["extraStateFailure={error};", "throwerror;"],
       catchVariables: ["error"],
-      containerStatements: 143,
+      containerStatements: 145,
       finallyBodies: [
         'preserveLegacyImportFixtureCleanup(extraStateFailure,[{resource:"extrastatelegacyfixture",cleanup:()=>extraState.dispose(),},]);',
       ],
-      index: 75,
+      index: 77,
       prefixes: [
         "constextraState=createLegacy();",
         "letextraStateFailure:ILegacyImportFixtureFailure|undefined;",
@@ -547,11 +547,11 @@ const CONTRACT = {
     {
       catchBodies: ["malformedAppliedStateFailure={error};", "throwerror;"],
       catchVariables: ["error"],
-      containerStatements: 143,
+      containerStatements: 145,
       finallyBodies: [
         'preserveLegacyImportFixtureCleanup(malformedAppliedStateFailure,[{resource:"malformedappliedstatelegacyfixture",cleanup:()=>malformedAppliedState.dispose(),},]);',
       ],
-      index: 78,
+      index: 80,
       prefixes: [
         "constmalformedAppliedState=createLegacy();",
         "letmalformedAppliedStateFailure:ILegacyImportFixtureFailure|undefined;",
@@ -562,11 +562,11 @@ const CONTRACT = {
     {
       catchBodies: ["activeCommitFailure={error};", "throwerror;"],
       catchVariables: ["error"],
-      containerStatements: 143,
+      containerStatements: 145,
       finallyBodies: [
         'preserveLegacyImportFixtureCleanup(activeCommitFailure,[{resource:"activecommitlegacyfixture",cleanup:()=>activeCommit.dispose(),},]);',
       ],
-      index: 81,
+      index: 83,
       prefixes: [
         "constactiveCommit=createLegacy();",
         "letactiveCommitFailure:ILegacyImportFixtureFailure|undefined;",
@@ -577,11 +577,11 @@ const CONTRACT = {
     {
       catchBodies: ["revisionRaceFailure={error};", "throwerror;"],
       catchVariables: ["error"],
-      containerStatements: 143,
+      containerStatements: 145,
       finallyBodies: [
         'preserveLegacyImportFixtureCleanup(revisionRaceFailure,[{resource:"revisionracelegacyfixture",cleanup:()=>revisionRace.dispose(),},]);',
       ],
-      index: 100,
+      index: 102,
       prefixes: [
         "constrevisionRace=createLegacy();",
         "letrevisionRaceFailure:ILegacyImportFixtureFailure|undefined;",
@@ -592,11 +592,11 @@ const CONTRACT = {
     {
       catchBodies: ["revisionAfterReadRaceFailure={error};", "throwerror;"],
       catchVariables: ["error"],
-      containerStatements: 143,
+      containerStatements: 145,
       finallyBodies: [
         'preserveLegacyImportFixtureCleanup(revisionAfterReadRaceFailure,[{resource:"revisionafterreadracelegacyfixture",cleanup:()=>revisionAfterReadRace.dispose(),},]);',
       ],
-      index: 103,
+      index: 105,
       prefixes: [
         "constrevisionAfterReadRace=createLegacy();",
         "letrevisionAfterReadRaceFailure:ILegacyImportFixtureFailure|undefined;",
@@ -607,11 +607,11 @@ const CONTRACT = {
     {
       catchBodies: ["invalidRollbackBaselineFailure={error};", "throwerror;"],
       catchVariables: ["error"],
-      containerStatements: 143,
+      containerStatements: 145,
       finallyBodies: [
         'preserveLegacyImportFixtureCleanup(invalidRollbackBaselineFailure,[{resource:"invalidrollbackbaselinelegacyfixture",cleanup:()=>invalidRollbackBaseline.dispose(),},]);',
       ],
-      index: 106,
+      index: 108,
       prefixes: [
         "constinvalidRollbackBaseline=createLegacy();",
         "letinvalidRollbackBaselineFailure:ILegacyImportFixtureFailure|undefined;",
@@ -622,11 +622,11 @@ const CONTRACT = {
     {
       catchBodies: ["requiredLegacyDirectoryFailure={error};", "throwerror;"],
       catchVariables: ["error"],
-      containerStatements: 143,
+      containerStatements: 145,
       finallyBodies: [
         'preserveLegacyImportFixtureCleanup(requiredLegacyDirectoryFailure,[{resource:"requiredlegacydirectorylegacyfixture",cleanup:()=>requiredLegacyDirectory.dispose(),},]);',
       ],
-      index: 109,
+      index: 111,
       prefixes: [
         "constrequiredLegacyDirectory=createLegacy();",
         "letrequiredLegacyDirectoryFailure:ILegacyImportFixtureFailure|undefined;",
@@ -637,11 +637,11 @@ const CONTRACT = {
     {
       catchBodies: ["collidingCaseFailure={error};", "throwerror;"],
       catchVariables: ["error"],
-      containerStatements: 143,
+      containerStatements: 145,
       finallyBodies: [
         'preserveLegacyImportFixtureCleanup(collidingCaseFailure,[{resource:"collidingcaselegacyfixture",cleanup:()=>collidingCase.dispose(),},]);',
       ],
-      index: 112,
+      index: 114,
       prefixes: [
         "constcollidingCase=createLegacy();",
         "letcollidingCaseFailure:ILegacyImportFixtureFailure|undefined;",
@@ -652,11 +652,11 @@ const CONTRACT = {
     {
       catchBodies: ["inventoryRootFileFailure={error};", "throwerror;"],
       catchVariables: ["error"],
-      containerStatements: 143,
+      containerStatements: 145,
       finallyBodies: [
         'preserveLegacyImportFixtureCleanup(inventoryRootFileFailure,[{resource:"inventoryrootfilelegacyfixture",cleanup:()=>inventoryRootFile.dispose(),},]);',
       ],
-      index: 115,
+      index: 117,
       prefixes: [
         "constinventoryRootFile=createLegacy();",
         "letinventoryRootFileFailure:ILegacyImportFixtureFailure|undefined;",
@@ -667,11 +667,11 @@ const CONTRACT = {
     {
       catchBodies: ["specialInventoryEntryFailure={error};", "throwerror;"],
       catchVariables: ["error"],
-      containerStatements: 143,
+      containerStatements: 145,
       finallyBodies: [
         'preserveLegacyImportFixtureCleanup(specialInventoryEntryFailure,[{resource:"specialinventoryentrylegacyfixture",cleanup:()=>specialInventoryEntry.dispose(),},]);',
       ],
-      index: 118,
+      index: 120,
       prefixes: [
         "constspecialInventoryEntry=createLegacy();",
         "letspecialInventoryEntryFailure:ILegacyImportFixtureFailure|undefined;",
@@ -682,11 +682,11 @@ const CONTRACT = {
     {
       catchBodies: ["mismatchedRollbackLockFailure={error};", "throwerror;"],
       catchVariables: ["error"],
-      containerStatements: 143,
+      containerStatements: 145,
       finallyBodies: [
         'preserveLegacyImportFixtureCleanup(mismatchedRollbackLockFailure,[{resource:"mismatchedrollbacklocklegacyfixture",cleanup:()=>mismatchedRollbackLock.dispose(),},]);',
       ],
-      index: 126,
+      index: 128,
       prefixes: [
         "constmismatchedRollbackLock=createLegacy();",
         "letmismatchedRollbackLockFailure:ILegacyImportFixtureFailure|undefined;",
@@ -697,11 +697,11 @@ const CONTRACT = {
     {
       catchBodies: ["directoryImportPlanFailure={error};", "throwerror;"],
       catchVariables: ["error"],
-      containerStatements: 143,
+      containerStatements: 145,
       finallyBodies: [
         'preserveLegacyImportFixtureCleanup(directoryImportPlanFailure,[{resource:"directoryimportplanlegacyfixture",cleanup:()=>directoryImportPlan.dispose(),},]);',
       ],
-      index: 133,
+      index: 135,
       prefixes: [
         "constdirectoryImportPlan=createLegacy();",
         "letdirectoryImportPlanFailure:ILegacyImportFixtureFailure|undefined;",
@@ -712,11 +712,11 @@ const CONTRACT = {
     {
       catchBodies: ["specialAppliedStateFailure={error};", "throwerror;"],
       catchVariables: ["error"],
-      containerStatements: 143,
+      containerStatements: 145,
       finallyBodies: [
         'preserveLegacyImportFixtureCleanup(specialAppliedStateFailure,[{resource:"specialappliedstatelegacyfixture",cleanup:()=>specialAppliedState.dispose(),},]);',
       ],
-      index: 136,
+      index: 138,
       prefixes: [
         "constspecialAppliedState=createLegacy();",
         "letspecialAppliedStateFailure:ILegacyImportFixtureFailure|undefined;",
