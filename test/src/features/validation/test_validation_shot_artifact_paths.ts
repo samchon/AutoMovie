@@ -46,6 +46,21 @@ const shot = (overrides: Record<string, unknown> = {}): IAutoMovieShot =>
     ...overrides,
   }) as unknown as IAutoMovieShot;
 
+/** An event the validator accepts, so a case reports only what it broke. */
+const event = (overrides: Record<string, unknown> = {}): unknown => ({
+  id: "contact-1",
+  kind: "contact",
+  source: "collisionSolver",
+  time: 1,
+  actor: null,
+  target: null,
+  object: null,
+  reaction: null,
+  point: null,
+  actionIndex: null,
+  ...overrides,
+});
+
 const pathsOf = (validation: IAutoMovieValidation): string[] =>
   validation.success === true
     ? []
@@ -144,6 +159,58 @@ export const test_validation_shot_artifact_paths = (): void => {
         objectMotions: [{ id: "twin" }, { id: "twin" }],
       }),
       path: "$input.objectMotions",
+    },
+    {
+      title: "an events field that is not an array",
+      shot: shot({ events: 7 }),
+      path: "$input.events",
+    },
+    {
+      title: "a non-object event entry",
+      shot: shot({ events: [7] }),
+      path: "$input.events[0]",
+    },
+    {
+      title: "an event with a blank id",
+      shot: shot({ events: [event({ id: " " })] }),
+      path: "$input.events[0].id",
+    },
+    {
+      title: "an event whose kind is not one the engine emits",
+      shot: shot({ events: [event({ kind: "sneeze" })] }),
+      path: "$input.events[0].kind",
+    },
+    {
+      title: "an event whose source is not one the engine emits",
+      shot: shot({ events: [event({ source: "vibes" })] }),
+      path: "$input.events[0].source",
+    },
+    {
+      title: "an event timed outside the shot's own clock",
+      shot: shot({ events: [event({ time: 9 })] }),
+      path: "$input.events[0].time",
+    },
+    {
+      title: "an event timed before the shot starts",
+      shot: shot({ events: [event({ time: -1 })] }),
+      path: "$input.events[0].time",
+    },
+    {
+      title: "an event naming a blank actor",
+      shot: shot({ events: [event({ actor: " " })] }),
+      path: "$input.events[0].actor",
+    },
+    {
+      title: "an event whose contact point is not a finite vector",
+      shot: shot({
+        events: [event({ point: { x: Number.NaN, y: 0, z: 0 } })],
+      }),
+      path: "$input.events[0].point",
+    },
+    {
+      title: "an event whose action index is not a whole number",
+      shot: shot({ events: [event({ actionIndex: 1.5 })] }),
+      path: "$input.events[0].actionIndex",
     },
   ];
   TestValidator.equals(
