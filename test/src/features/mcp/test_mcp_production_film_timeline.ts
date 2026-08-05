@@ -24,6 +24,7 @@ import os from "node:os";
 import path from "node:path";
 import { PNG } from "pngjs";
 
+import { namedFacts } from "../internal/predicates";
 import {
   fixtureWorldDesign,
   productionCompileSucceeded,
@@ -612,11 +613,24 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
     ];
     for (const testCase of cases) {
       const output = compileEdit(testCase.mutate);
-      TestValidator.predicate(
+      TestValidator.equals(
         `${testCase.name} is refused without publishing a partial film`,
-        output.success === false &&
-          diagnosticCodes(output).has(testCase.code) &&
-          fs.readFileSync(timelinePath).equals(firstTimelineBytes),
+        namedFacts([
+          ["outputSuccess", () => output.success === false],
+          [
+            "diagnosticCodesOutputHas",
+            () => diagnosticCodes(output).has(testCase.code),
+          ],
+          [
+            "readFileSyncTimelinePathEquals",
+            () => fs.readFileSync(timelinePath).equals(firstTimelineBytes),
+          ],
+        ]),
+        {
+          outputSuccess: true,
+          diagnosticCodesOutputHas: true,
+          readFileSyncTimelinePathEquals: true,
+        },
       );
     }
 

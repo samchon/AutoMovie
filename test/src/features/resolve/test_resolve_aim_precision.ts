@@ -2,7 +2,7 @@ import { Matrix4, Quaternion, resolveWorldDrivers } from "@automovie/engine";
 import { IAutoMovieAimDriver, IAutoMovieVector3 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { nclose } from "../internal/predicates";
+import { namedFacts, nclose } from "../internal/predicates";
 
 const W = (x: number, y: number, z: number): number[] =>
   Matrix4.compose(
@@ -68,11 +68,14 @@ export const test_resolve_aim_precision = (): void => {
     runAim(aim({}), { x: dir.x * 10, y: 0, z: dir.z * 10 }),
     { x: 0, y: 0, z: -1 },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "0.05° off-axis target is tracked exactly (no deadzone snap)",
-    nclose(tracked.x, dir.x, 1e-9) &&
-      nclose(tracked.y, 0, 1e-9) &&
-      nclose(tracked.z, dir.z, 1e-9),
+    namedFacts([
+      ["ncloseTrackedX", () => nclose(tracked.x, dir.x, 1e-9)],
+      ["ncloseTrackedY", () => nclose(tracked.y, 0, 1e-9)],
+      ["ncloseTrackedZ", () => nclose(tracked.z, dir.z, 1e-9)],
+    ]),
+    { ncloseTrackedX: true, ncloseTrackedY: true, ncloseTrackedZ: true },
   );
   TestValidator.predicate(
     "the rotation is real, not the old identity (x ≈ sin 0.05° ≠ 0)",
@@ -84,21 +87,27 @@ export const test_resolve_aim_precision = (): void => {
     y: 0,
     z: -1,
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "antiparallel flip lands on the target (|a.x| < 0.9 branch)",
-    nclose(behindZ.x, 0, 1e-9) &&
-      nclose(behindZ.y, 0, 1e-9) &&
-      nclose(behindZ.z, 1, 1e-9),
+    namedFacts([
+      ["ncloseBehindZX", () => nclose(behindZ.x, 0, 1e-9)],
+      ["ncloseBehindZY", () => nclose(behindZ.y, 0, 1e-9)],
+      ["ncloseBehindZZ", () => nclose(behindZ.z, 1, 1e-9)],
+    ]),
+    { ncloseBehindZX: true, ncloseBehindZY: true, ncloseBehindZZ: true },
   );
 
   const behindX = aimedDir(
     runAim(aim({ aimAxis: { x: 1, y: 0, z: 0 } }), { x: -5, y: 0, z: 0 }),
     { x: 1, y: 0, z: 0 },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "antiparallel flip lands on the target (|a.x| >= 0.9 branch)",
-    nclose(behindX.x, -1, 1e-9) &&
-      nclose(behindX.y, 0, 1e-9) &&
-      nclose(behindX.z, 0, 1e-9),
+    namedFacts([
+      ["ncloseBehindXX", () => nclose(behindX.x, -1, 1e-9)],
+      ["ncloseBehindXY", () => nclose(behindX.y, 0, 1e-9)],
+      ["ncloseBehindXZ", () => nclose(behindX.z, 0, 1e-9)],
+    ]),
+    { ncloseBehindXX: true, ncloseBehindXY: true, ncloseBehindXZ: true },
   );
 };

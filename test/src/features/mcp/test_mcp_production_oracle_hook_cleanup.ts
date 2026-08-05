@@ -261,10 +261,35 @@ export const test_mcp_production_oracle_hook_cleanup = (): void => {
     {
       lifecycles: [
         {
+          catchBodies: ["forgedLedgerFailure={error};", "throwerror;"],
+          catchVariables: ["error"],
+          containerKind: "IfStatement",
+          containerStatements: 29,
+          failureHolder:
+            "letforgedLedgerFailure:IProductionOracleFixtureFailure|undefined;",
+          finallyDigest:
+            "c4e82c48dd74750c0c570371ad81f948a855d3b47bf4a2e96541bceedda17350",
+          finallySubstantive: {
+            digest:
+              "96ab43af503ec6f82521f6f8bf44b385727c4547f227fad8536bbc77c0ebbc3d",
+            tokens: 29,
+          },
+          index: 16,
+          substantive: {
+            digest:
+              "a10405ef6c42a355e304d6ff5fd29f93ca8d59bae8577bba071f3c108094078c",
+            tokens: 37,
+          },
+          tryBody:
+            '{afterForgedLedger=awaitactual.preview({target:{kind:"shot",id:"opening"},time:2/24,width:2,height:2,});}',
+          tryDigest:
+            "626e6f8d496cec6aa5be132436c3d85292972c6830ed359186a2ac5f5dda0b67",
+        },
+        {
           catchBodies: ["retainedReadRaceFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "IfStatement",
-          containerStatements: 28,
+          containerStatements: 29,
           failureHolder:
             "letretainedReadRaceFailure:IProductionOracleFixtureFailure|undefined;",
           finallyDigest:
@@ -274,7 +299,7 @@ export const test_mcp_production_oracle_hook_cleanup = (): void => {
               "8c38c6b586a8dd81f93ae92bac314408ff651823e119c4bf8514394b5ae47a6e",
             tokens: 50,
           },
-          index: 25,
+          index: 26,
           substantive: {
             digest:
               "3a412ec6181fa49d02ecdb3538ca08bc06ccb2e0b8d19b0155c150def01b6dab",
@@ -289,9 +314,7 @@ export const test_mcp_production_oracle_hook_cleanup = (): void => {
       parseDiagnostics: [],
       policy: {
         bodies: [
-          "{constcleanupFailures:Array<{error:unknown;resource:string}>=[];for(constresourceofresources)try{resource.cleanup();}catch(error){cleanupFailures.push({error,resource:resource.resource});}if(cleanupFailures.length===1&&failure===undefined)throwcleanupFailures[0]!.error;if(cleanupFailures.length!==0)thrownewProductionOracleHookCleanupError([...(failure===undefined?[]:[failure.error]),...cleanupFailures.map((entry)=>entry.error),],`Productionoraclehookcleanupfailed$" +
-            '{failure===undefined?"":"afterthepreviewfailed"}:$' +
-            '{cleanupFailures.map((entry)=>entry.resource).join(",")}.`,);}',
+          '{constcleanupFailures:Array<{error:unknown;resource:string}>=[];for(constresourceofresources)try{resource.cleanup();}catch(error){cleanupFailures.push({error,resource:resource.resource});}if(cleanupFailures.length===1&&failure===undefined)throwcleanupFailures[0]!.error;if(cleanupFailures.length!==0)thrownewProductionOracleHookCleanupError([...(failure===undefined?[]:[failure.error]),...cleanupFailures.map((entry)=>entry.error),],`Productionoraclehookcleanupfailed${failure===undefined?"":"afterthepreviewfailed"}:${cleanupFailures.map((entry)=>entry.resource).join(",")}.`,);}',
         ],
         classes: ["AggregateError"],
         count: 1,

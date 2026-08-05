@@ -4,6 +4,8 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+import { namedFacts } from "../internal/predicates";
+
 interface ICreateAutoMovieFixtureFailure {
   error: unknown;
 }
@@ -71,30 +73,98 @@ export const test_cli_create_automovie = (): void => {
       fs.readFileSync(path.join(target, "package.json"), "utf8"),
     ) as { scripts?: Record<string, string> };
     const readme = fs.readFileSync(path.join(target, "README.md"), "utf8");
-    TestValidator.predicate(
+    TestValidator.equals(
       "one creator call writes every project workflow without hidden installs",
-      status === 0 &&
-        pkg.scripts?.build === "npm run compile" &&
-        pkg.scripts?.lint ===
-          "npm run lint:source && ttsx -P tsconfig.json scripts/lint.ts" &&
-        pkg.scripts?.["lint:source"] === "ttsc --noEmit -p tsconfig.json" &&
-        pkg.scripts?.verify === "tsx scripts/verify.ts" &&
-        typeof pkg.scripts?.render === "string" &&
-        typeof pkg.scripts?.viewer === "string" &&
-        typeof pkg.scripts?.["capture:doctor"] === "string" &&
-        fs.existsSync(path.join(target, ".mcp.json")) &&
-        fs.readFileSync(path.join(target, ".npmrc"), "utf8") ===
-          "onnxruntime-node-install-cuda=skip\n" &&
-        fs.existsSync(path.join(target, "automovie.mcp.jsonc")) === false &&
-        readme.includes("\nnpm run lint:source\n") &&
-        readme.includes("\nnpm run lint\n") &&
-        stdout.includes("\n  npm run lint:source\n  npm run lint\n") &&
-        readme.includes("npm run verify") &&
-        readme.includes("render all --tier proxy") &&
-        readme.includes("http://127.0.0.1:5173") &&
-        readme.includes("PLAYWRIGHT_DOWNLOAD_HOST") &&
-        fs.existsSync(path.join(target, "node_modules")) === false &&
-        fs.existsSync(path.join(target, ".automovie", "capture")) === false,
+      namedFacts([
+        ["status", () => status === 0],
+        ["pkgScriptsBuild", () => pkg.scripts?.build === "npm run compile"],
+        [
+          "pkgScriptsLint",
+          () =>
+            pkg.scripts?.lint ===
+            "npm run lint:source && ttsx -P tsconfig.json scripts/lint.ts",
+        ],
+        [
+          "pkgScriptsLint2",
+          () =>
+            pkg.scripts?.["lint:source"] === "ttsc --noEmit -p tsconfig.json",
+        ],
+        [
+          "pkgScriptsVerify",
+          () => pkg.scripts?.verify === "tsx scripts/verify.ts",
+        ],
+        ["pkgScriptsRender", () => typeof pkg.scripts?.render === "string"],
+        ["pkgScriptsViewer", () => typeof pkg.scripts?.viewer === "string"],
+        [
+          "pkgScriptsCapture",
+          () => typeof pkg.scripts?.["capture:doctor"] === "string",
+        ],
+        [
+          "existsSyncTargetMcp",
+          () => fs.existsSync(path.join(target, ".mcp.json")),
+        ],
+        [
+          "readFileSyncTargetNpmrc",
+          () =>
+            fs.readFileSync(path.join(target, ".npmrc"), "utf8") ===
+            "onnxruntime-node-install-cuda=skip\n",
+        ],
+        [
+          "existsSyncTargetAutomovie",
+          () =>
+            fs.existsSync(path.join(target, "automovie.mcp.jsonc")) === false,
+        ],
+        [
+          "readmeIncludesNnpm",
+          () => readme.includes("\nnpm run lint:source\n"),
+        ],
+        ["readmeIncludesNnpm2", () => readme.includes("\nnpm run lint\n")],
+        [
+          "stdoutIncludesN",
+          () => stdout.includes("\n  npm run lint:source\n  npm run lint\n"),
+        ],
+        ["readmeIncludesNpm", () => readme.includes("npm run verify")],
+        [
+          "readmeIncludesRender",
+          () => readme.includes("render all --tier proxy"),
+        ],
+        ["readmeIncludesHttp", () => readme.includes("http://127.0.0.1:5173")],
+        [
+          "readmeIncludesPLAYWRIGHTDOWNLOADHOST",
+          () => readme.includes("PLAYWRIGHT_DOWNLOAD_HOST"),
+        ],
+        [
+          "existsSyncTargetNodemodules",
+          () => fs.existsSync(path.join(target, "node_modules")) === false,
+        ],
+        [
+          "existsSyncTargetAutomovie2",
+          () =>
+            fs.existsSync(path.join(target, ".automovie", "capture")) === false,
+        ],
+      ]),
+      {
+        status: true,
+        pkgScriptsBuild: true,
+        pkgScriptsLint: true,
+        pkgScriptsLint2: true,
+        pkgScriptsVerify: true,
+        pkgScriptsRender: true,
+        pkgScriptsViewer: true,
+        pkgScriptsCapture: true,
+        existsSyncTargetMcp: true,
+        readFileSyncTargetNpmrc: true,
+        existsSyncTargetAutomovie: true,
+        readmeIncludesNnpm: true,
+        readmeIncludesNnpm2: true,
+        stdoutIncludesN: true,
+        readmeIncludesNpm: true,
+        readmeIncludesRender: true,
+        readmeIncludesHttp: true,
+        readmeIncludesPLAYWRIGHTDOWNLOADHOST: true,
+        existsSyncTargetNodemodules: true,
+        existsSyncTargetAutomovie2: true,
+      },
     );
   } catch (error) {
     createFailure = { error };

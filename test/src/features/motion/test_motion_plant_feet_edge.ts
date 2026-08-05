@@ -6,7 +6,7 @@ import {
 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { throwsError } from "../internal/predicates";
+import { namedFacts, throwsError } from "../internal/predicates";
 
 const t = (x: number, y: number, z: number): IAutoMovieTransform => ({
   translation: { x, y, z },
@@ -222,20 +222,36 @@ export const test_motion_plant_feet_edge = (): void => {
     legs: [LEG],
     sampleRate: 8,
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "both ancestry edges are enforced without rejecting indirect descendants",
-    split.plants.length === 1 &&
-      split.motion.keyframes.every((keyframe) =>
-        keyframe.pose.joints.every(
-          (joint) => joint.bone !== LEG.upper && joint.bone !== LEG.lower,
-        ),
-      ) &&
-      indirect.plants.length === 1 &&
-      indirect.motion.keyframes.some((keyframe) =>
-        keyframe.pose.joints.some(
-          (joint) => joint.bone === LEG.upper || joint.bone === LEG.lower,
-        ),
-      ),
+    namedFacts([
+      ["splitPlants", () => split.plants.length === 1],
+      [
+        "splitMotionKeyframes",
+        () =>
+          split.motion.keyframes.every((keyframe) =>
+            keyframe.pose.joints.every(
+              (joint) => joint.bone !== LEG.upper && joint.bone !== LEG.lower,
+            ),
+          ),
+      ],
+      ["indirectPlants", () => indirect.plants.length === 1],
+      [
+        "indirectMotionKeyframes",
+        () =>
+          indirect.motion.keyframes.some((keyframe) =>
+            keyframe.pose.joints.some(
+              (joint) => joint.bone === LEG.upper || joint.bone === LEG.lower,
+            ),
+          ),
+      ],
+    ]),
+    {
+      splitPlants: true,
+      splitMotionKeyframes: true,
+      indirectPlants: true,
+      indirectMotionKeyframes: true,
+    },
   );
 
   TestValidator.predicate(

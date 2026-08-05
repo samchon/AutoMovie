@@ -2,7 +2,7 @@ import { Vector3, compileCameraMove } from "@automovie/engine";
 import { IAutoMovieCamera, IAutoMovieCameraAction } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { nclose, vclose } from "../internal/predicates";
+import { namedFacts, nclose, vclose } from "../internal/predicates";
 
 const CAMERA: IAutoMovieCamera = {
   id: "cam",
@@ -131,11 +131,18 @@ export const test_film_camera_move_paths = (): void => {
     truck.tracks[0]!.times.length,
     9,
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "truck finishes screen-left while holding staged depth",
-    nclose(truck.tracks[0]!.values[24]!, -1.15) &&
-      nclose(truck.tracks[0]!.values[25]!, 1) &&
-      nclose(truck.tracks[0]!.values[26]!, 1.15),
+    namedFacts([
+      ["ncloseTruckTracks", () => nclose(truck.tracks[0]!.values[24]!, -1.15)],
+      ["ncloseTruckTracks2", () => nclose(truck.tracks[0]!.values[25]!, 1)],
+      ["ncloseTruckTracks3", () => nclose(truck.tracks[0]!.values[26]!, 1.15)],
+    ]),
+    {
+      ncloseTruckTracks: true,
+      ncloseTruckTracks2: true,
+      ncloseTruckTracks3: true,
+    },
   );
   const movingTruck = compileCameraMove({
     clipId: "clip",
@@ -159,11 +166,27 @@ export const test_film_camera_move_paths = (): void => {
     entries: [{ action: frame("truck", 0, 2), subject }],
     shotDuration: 2,
   })!;
-  TestValidator.predicate(
+  TestValidator.equals(
     "a vertical staged bearing uses the total screen-left fallback",
-    nclose(verticalTruck.tracks[0]!.values[24]!, -1.15) &&
-      nclose(verticalTruck.tracks[0]!.values[25]!, 2.15) &&
-      nclose(verticalTruck.tracks[0]!.values[26]!, 0),
+    namedFacts([
+      [
+        "ncloseVerticalTruckTracks",
+        () => nclose(verticalTruck.tracks[0]!.values[24]!, -1.15),
+      ],
+      [
+        "ncloseVerticalTruckTracks2",
+        () => nclose(verticalTruck.tracks[0]!.values[25]!, 2.15),
+      ],
+      [
+        "ncloseVerticalTruckTracks3",
+        () => nclose(verticalTruck.tracks[0]!.values[26]!, 0),
+      ],
+    ]),
+    {
+      ncloseVerticalTruckTracks: true,
+      ncloseVerticalTruckTracks2: true,
+      ncloseVerticalTruckTracks3: true,
+    },
   );
 
   const abutted = compileCameraMove({

@@ -138,3 +138,23 @@ const reportValidation = (
   console.error(
     `${context} validation:\n${JSON.stringify(validation, null, 2)}`,
   );
+
+/**
+ * Evaluate named facts in order and stop at the first false one.
+ *
+ * A folded conjunction reports only `false`, which costs a whole CI round to
+ * localize. Asserting the returned record against `{ fact: true, ... }` names
+ * the fact that failed instead. Evaluation is lazy and ordered because several
+ * facts guard the ones after them: evaluating eagerly would throw where the
+ * conjunction merely short-circuited.
+ */
+export const namedFacts = (
+  entries: ReadonlyArray<readonly [string, () => boolean]>,
+): Record<string, boolean> => {
+  const output: Record<string, boolean> = {};
+  for (const [name, evaluate] of entries) {
+    output[name] = evaluate();
+    if (output[name] === false) break;
+  }
+  return output;
+};

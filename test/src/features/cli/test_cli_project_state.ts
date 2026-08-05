@@ -19,6 +19,7 @@ import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
 import path from "node:path";
 
+import { namedFacts } from "../internal/predicates";
 import {
   formationDesign,
   productionFixture,
@@ -115,12 +116,29 @@ export const test_cli_project_state = (): void => {
     );
     const originalSource = fs.readFileSync(sourcePath, "utf8");
     const missing = loadAutoMovieProjectState({ root: fixture.root });
-    TestValidator.predicate(
+    TestValidator.equals(
       "uncompiled project state is explicit",
-      missing.productionId === "fixture-film" &&
-        missing.freshness.status === "missing" &&
-        missing.freshness.compileFingerprint === null &&
-        missing.generated.registry === null,
+      namedFacts([
+        [
+          "missingProductionIdFixture",
+          () => missing.productionId === "fixture-film",
+        ],
+        [
+          "missingFreshnessStatus",
+          () => missing.freshness.status === "missing",
+        ],
+        [
+          "missingFreshnessCompileFingerprint",
+          () => missing.freshness.compileFingerprint === null,
+        ],
+        ["missingGeneratedRegistry", () => missing.generated.registry === null],
+      ]),
+      {
+        missingProductionIdFixture: true,
+        missingFreshnessStatus: true,
+        missingFreshnessCompileFingerprint: true,
+        missingGeneratedRegistry: true,
+      },
     );
     TestValidator.predicate(
       "missing project state cannot be narrowed",
@@ -295,23 +313,52 @@ export const test_cli_project_state = (): void => {
       manifestWith("shots/duplicate.json", duplicateShotBytes),
       new Map([["shots/duplicate.json", duplicateShotBytes]]),
     );
-    TestValidator.predicate(
+    TestValidator.equals(
       "ownership manifest and generated JSON boundaries are explicit",
-      duplicateFile.freshness.problems.some(
-        (problem) => problem.code === "generated-file-duplicate",
-      ) &&
-        unreadableFile.freshness.problems.some(
-          (problem) => problem.code === "generated-file-unreadable",
-        ) &&
-        invalidJson.freshness.problems.some(
-          (problem) => problem.code === "generated-json-invalid",
-        ) &&
-        duplicateModel.freshness.problems.some(
-          (problem) => problem.code === "generated-id-duplicate",
-        ) &&
-        duplicateShot.freshness.problems.some(
-          (problem) => problem.code === "generated-id-duplicate",
-        ),
+      namedFacts([
+        [
+          "duplicateFileFreshnessProblems",
+          () =>
+            duplicateFile.freshness.problems.some(
+              (problem) => problem.code === "generated-file-duplicate",
+            ),
+        ],
+        [
+          "unreadableFileFreshnessProblems",
+          () =>
+            unreadableFile.freshness.problems.some(
+              (problem) => problem.code === "generated-file-unreadable",
+            ),
+        ],
+        [
+          "invalidJsonFreshnessProblems",
+          () =>
+            invalidJson.freshness.problems.some(
+              (problem) => problem.code === "generated-json-invalid",
+            ),
+        ],
+        [
+          "duplicateModelFreshnessProblems",
+          () =>
+            duplicateModel.freshness.problems.some(
+              (problem) => problem.code === "generated-id-duplicate",
+            ),
+        ],
+        [
+          "duplicateShotFreshnessProblems",
+          () =>
+            duplicateShot.freshness.problems.some(
+              (problem) => problem.code === "generated-id-duplicate",
+            ),
+        ],
+      ]),
+      {
+        duplicateFileFreshnessProblems: true,
+        unreadableFileFreshnessProblems: true,
+        invalidJsonFreshnessProblems: true,
+        duplicateModelFreshnessProblems: true,
+        duplicateShotFreshnessProblems: true,
+      },
     );
 
     const mismatchedRegistryBytes = Buffer.from(

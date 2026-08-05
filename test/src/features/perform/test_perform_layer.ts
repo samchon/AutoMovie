@@ -13,7 +13,7 @@ import {
 import { TestValidator } from "@nestia/e2e";
 
 import { joint, keyframe, makeMotion, makePose } from "../internal/fixtures";
-import { nclose } from "../internal/predicates";
+import { namedFacts, nclose } from "../internal/predicates";
 
 const HAPPY: IAutoMovieExpression = {
   preset: "happy",
@@ -208,11 +208,17 @@ export const test_perform_layer = (): void => {
     boneAt(0, "head") === undefined && boneAt(1, "head") === undefined,
   );
   const at3 = frameAt(late, 3);
-  TestValidator.predicate(
+  TestValidator.equals(
     "past its envelope the locomotion keeps only its root",
-    at3.pose.root !== null &&
-      nclose(at3.pose.root.translation.x, 1) &&
-      at3.pose.joints.every((j) => j.bone !== "leftUpperLeg"),
+    namedFacts([
+      ["at3PoseRoot", () => at3.pose.root !== null],
+      ["ncloseAt3Pose", () => nclose(at3.pose.root.translation.x, 1)],
+      [
+        "at3PoseJoints",
+        () => at3.pose.joints.every((j) => j.bone !== "leftUpperLeg"),
+      ],
+    ]),
+    { at3PoseRoot: true, ncloseAt3Pose: true, at3PoseJoints: true },
   );
   TestValidator.predicate(
     "the late lookAt plays inside its own span",
@@ -245,26 +251,49 @@ export const test_perform_layer = (): void => {
   const spineAfter = frameAt(undiluted, 2.5).pose.joints.find(
     (j) => j.bone === "spine",
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "a finished react stops claiming its explicit-zero joints",
-    bowEnd !== undefined &&
-      nclose(bowEnd.flexion!, 20) &&
-      spineAfter === undefined,
+    namedFacts([
+      ["bowEnd", () => bowEnd !== undefined],
+      ["ncloseBowEndFlexion", () => nclose(bowEnd.flexion!, 20)],
+      ["spineAfter", () => spineAfter === undefined],
+    ]),
+    { bowEnd: true, ncloseBowEndFlexion: true, spineAfter: true },
   );
 
   // 4. a late-starting composite holds rest until its authored start (the
   //    `step` lead-in pad plus its `first − ε` twin, #1060), instead of
   //    clamping the first pose backward
   const padded = compilePerformance([lateLook], synth).performances.hero!;
-  TestValidator.predicate(
+  TestValidator.equals(
     "a late composite pads rest keyframes up to its authored start",
-    padded.keyframes[0]!.time === 0 &&
-      padded.keyframes[0]!.easing === "step" &&
-      padded.keyframes[0]!.pose.joints.length === 0 &&
-      padded.keyframes[1]!.time < 3 &&
-      padded.keyframes[1]!.pose.joints.length === 0 &&
-      padded.keyframes[1]!.expression === null &&
-      nclose(padded.keyframes[2]!.time, 3),
+    namedFacts([
+      ["paddedKeyframesTime", () => padded.keyframes[0]!.time === 0],
+      ["paddedKeyframesEasing", () => padded.keyframes[0]!.easing === "step"],
+      [
+        "paddedKeyframesPose",
+        () => padded.keyframes[0]!.pose.joints.length === 0,
+      ],
+      ["paddedKeyframesTime2", () => padded.keyframes[1]!.time < 3],
+      [
+        "paddedKeyframesPose2",
+        () => padded.keyframes[1]!.pose.joints.length === 0,
+      ],
+      [
+        "paddedKeyframesExpression",
+        () => padded.keyframes[1]!.expression === null,
+      ],
+      ["nclosePaddedKeyframes", () => nclose(padded.keyframes[2]!.time, 3)],
+    ]),
+    {
+      paddedKeyframesTime: true,
+      paddedKeyframesEasing: true,
+      paddedKeyframesPose: true,
+      paddedKeyframesTime2: true,
+      paddedKeyframesPose2: true,
+      paddedKeyframesExpression: true,
+      nclosePaddedKeyframes: true,
+    },
   );
 
   // 5. the envelope holds BETWEEN union keyframes too (#1060): off-grid
@@ -294,11 +323,27 @@ export const test_perform_layer = (): void => {
   };
   const layeredEmote = compilePerformance([locomote, lateEmote], synth)
     .performances.hero!;
-  TestValidator.predicate(
+  TestValidator.equals(
     "off-grid: a layered late emote's expression stays null before its start",
-    sampleMotion(layeredEmote, 0.1).expression === null &&
-      sampleMotion(layeredEmote, 2).expression === null &&
-      sampleMotion(layeredEmote, 3.5).expression?.preset === "happy",
+    namedFacts([
+      [
+        "sampleMotionLayeredEmoteExpression",
+        () => sampleMotion(layeredEmote, 0.1).expression === null,
+      ],
+      [
+        "sampleMotionLayeredEmoteExpression2",
+        () => sampleMotion(layeredEmote, 2).expression === null,
+      ],
+      [
+        "sampleMotionLayeredEmoteExpression3",
+        () => sampleMotion(layeredEmote, 3.5).expression?.preset === "happy",
+      ],
+    ]),
+    {
+      sampleMotionLayeredEmoteExpression: true,
+      sampleMotionLayeredEmoteExpression2: true,
+      sampleMotionLayeredEmoteExpression3: true,
+    },
   );
   const paddedEmote = compilePerformance([lateEmote], synth).performances.hero!;
   TestValidator.predicate(
@@ -312,13 +357,27 @@ export const test_perform_layer = (): void => {
   // increasing keyframe contract
   const hairline = compilePerformance([{ ...lateEmote, start: 5e-7 }], synth)
     .performances.hero!;
-  TestValidator.predicate(
+  TestValidator.equals(
     "a hairline start pads t=0 only, keeping times strictly increasing",
-    hairline.keyframes[0]!.time === 0 &&
-      nclose(hairline.keyframes[1]!.time, 5e-7) &&
-      hairline.keyframes.every(
-        (k, i, all) => i === 0 || k.time > all[i - 1]!.time,
-      ),
+    namedFacts([
+      ["hairlineKeyframesTime", () => hairline.keyframes[0]!.time === 0],
+      [
+        "ncloseHairlineKeyframes",
+        () => nclose(hairline.keyframes[1]!.time, 5e-7),
+      ],
+      [
+        "hairlineKeyframesK",
+        () =>
+          hairline.keyframes.every(
+            (k, i, all) => i === 0 || k.time > all[i - 1]!.time,
+          ),
+      ],
+    ]),
+    {
+      hairlineKeyframesTime: true,
+      ncloseHairlineKeyframes: true,
+      hairlineKeyframesK: true,
+    },
   );
 
   // 6. an inserted boundary time where NO clip contributes is honestly rest:
@@ -327,11 +386,14 @@ export const test_perform_layer = (): void => {
   const gapLook = compilePerformance([react, lateLook], synth).performances
     .hero!;
   const gap = sampleMotion(gapLook, 2);
-  TestValidator.predicate(
+  TestValidator.equals(
     "a fully-released gap samples as rest",
-    gap.pose.joints.length === 0 &&
-      gap.pose.root === null &&
-      gap.expression === null,
+    namedFacts([
+      ["gapPoseJoints", () => gap.pose.joints.length === 0],
+      ["gapPoseRoot", () => gap.pose.root === null],
+      ["gapExpression", () => gap.expression === null],
+    ]),
+    { gapPoseJoints: true, gapPoseRoot: true, gapExpression: true },
   );
 
   const leftLane: IAutoMovieActionCall = {

@@ -302,10 +302,36 @@ export const test_cli_project_state_harness_cleanup = (): void => {
             "f133edf862c958ec85ba202489835295546201013005165d1f5a9395eb473297",
         },
         {
+          catchBodies: ["invalidManifestFailure={error};", "throwerror;"],
+          catchVariables: ["error"],
+          containerKind: "TryStatement",
+          containerStatements: 85,
+          failureHolder:
+            "letinvalidManifestFailure:IProjectStateFixtureFailure|undefined;",
+          finallyDigest:
+            "e6ee6e25c75b8a085626e443f1f1c200a332d1df612cb6d6be74becdb0aee278",
+          finallySubstantive: {
+            digest:
+              "59dfa54c437dde2c90fcce4a08b10cdac602af1437b0e1dcffa3534de164b7f8",
+            tokens: 31,
+          },
+          index: 57,
+          owner: "test_cli_project_state",
+          substantive: {
+            digest:
+              "4368fd950c43c1ba9bec89e4bcfeb5755e03427dbabc04566b7acc66d31ac017",
+            tokens: 13,
+          },
+          tryBody:
+            "{invalidManifest=loadAutoMovieProjectState({root:fixture.root});}",
+          tryDigest:
+            "681a66885044226d31f44bf128885a051e9a9dc6380a9c97fe62070357c24727",
+        },
+        {
           catchBodies: ["sourceRaceFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 84,
+          containerStatements: 85,
           failureHolder:
             "letsourceRaceFailure:IProjectStateFixtureFailure|undefined;",
           finallyDigest:
@@ -315,7 +341,7 @@ export const test_cli_project_state_harness_cleanup = (): void => {
               "2ca5132d1d8338d32a350f839e514544ba0d4deabb7cf50a31a28ca2b9862e48",
             tokens: 55,
           },
-          index: 74,
+          index: 75,
           owner: "test_cli_project_state",
           substantive: {
             digest:
@@ -330,9 +356,7 @@ export const test_cli_project_state_harness_cleanup = (): void => {
       parseDiagnostics: [],
       policy: {
         bodies: [
-          "{constcleanupFailures:Array<{error:unknown;resource:string}>=[];for(constresourceofresources)try{resource.cleanup();}catch(error){cleanupFailures.push({error,resource:resource.resource});}if(cleanupFailures.length===1&&failure===undefined)throwcleanupFailures[0]!.error;if(cleanupFailures.length!==0)thrownewProjectStateHarnessCleanupError([...(failure===undefined?[]:[failure.error]),...cleanupFailures.map((entry)=>entry.error),],`Project-stateharnesscleanupfailed$" +
-            '{failure===undefined?"":"afterthestatereadfailed"}:$' +
-            '{cleanupFailures.map((entry)=>entry.resource).join(",")}.`,);}',
+          '{constcleanupFailures:Array<{error:unknown;resource:string}>=[];for(constresourceofresources)try{resource.cleanup();}catch(error){cleanupFailures.push({error,resource:resource.resource});}if(cleanupFailures.length===1&&failure===undefined)throwcleanupFailures[0]!.error;if(cleanupFailures.length!==0)thrownewProjectStateHarnessCleanupError([...(failure===undefined?[]:[failure.error]),...cleanupFailures.map((entry)=>entry.error),],`Project-stateharnesscleanupfailed${failure===undefined?"":"afterthestatereadfailed"}:${cleanupFailures.map((entry)=>entry.resource).join(",")}.`,);}',
         ],
         classes: ["AggregateError"],
         count: 1,

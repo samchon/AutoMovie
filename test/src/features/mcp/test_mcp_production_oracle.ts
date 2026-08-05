@@ -14,6 +14,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { PNG } from "pngjs";
 
+import { namedFacts } from "../internal/predicates";
 import {
   formationDesign,
   productionDesign,
@@ -1219,17 +1220,35 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         ],
       }),
     );
-    TestValidator.predicate(
+    TestValidator.equals(
       "oracle freshness covers stale and invalid current compiler states",
-      stalePreview.diagnostics[0]?.code === "generated-stale" &&
-        invalidStatusOracle.query({
-          request: { query: "ground", point: { x: 0, z: 0 } },
-        }).diagnostics[0]?.code === "compile-current-invalid" &&
-        diagnosticStatusOracle
-          .query({
-            request: { query: "ground", point: { x: 0, z: 0 } },
-          })
-          .diagnostics[0]?.message.includes("current compiler error"),
+      namedFacts([
+        [
+          "stalePreviewDiagnosticsCode",
+          () => stalePreview.diagnostics[0]?.code === "generated-stale",
+        ],
+        [
+          "invalidStatusOracleQueryRequest",
+          () =>
+            invalidStatusOracle.query({
+              request: { query: "ground", point: { x: 0, z: 0 } },
+            }).diagnostics[0]?.code === "compile-current-invalid",
+        ],
+        [
+          "diagnosticStatusOracleQueryRequest",
+          () =>
+            diagnosticStatusOracle
+              .query({
+                request: { query: "ground", point: { x: 0, z: 0 } },
+              })
+              .diagnostics[0]?.message.includes("current compiler error"),
+        ],
+      ]),
+      {
+        stalePreviewDiagnosticsCode: true,
+        invalidStatusOracleQueryRequest: true,
+        diagnosticStatusOracleQueryRequest: true,
+      },
     );
 
     const unavailable = await oracle.preview({

@@ -27,6 +27,7 @@ import { createRequire } from "node:module";
 import os from "node:os";
 import path from "node:path";
 
+import { namedFacts } from "../internal/predicates";
 import {
   productionDesign,
   testCaptureRuntimeIdentity,
@@ -720,19 +721,58 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
   const dissolveStart = sampleProductionRenderFrame(timeline(), 2);
   const dissolveMiddle = sampleProductionRenderFrame(timeline(), 3);
   const fadedOut = sampleProductionRenderFrame(timeline(), 5);
-  TestValidator.predicate(
+  TestValidator.equals(
     "film-global samples preserve fades and dissolve source frames",
-    fadedIn.layers[0]?.weight === 0 &&
-      opaque.layers[0]?.weight === 0.5 &&
-      dissolveStart.layers[0]?.shot === "outgoing" &&
-      dissolveStart.layers[0]?.sourceFrame === 2 &&
-      dissolveStart.layers[0]?.weight === 1 &&
-      dissolveStart.layers[1]?.shot === "incoming" &&
-      dissolveStart.layers[1]?.sourceFrame === 0 &&
-      dissolveStart.layers[1]?.weight === 0 &&
-      dissolveMiddle.layers[0]?.weight === 0.5 &&
-      dissolveMiddle.layers[1]?.weight === 0.5 &&
-      fadedOut.layers[0]?.weight === 0.5,
+    namedFacts([
+      ["fadedInLayersWeight", () => fadedIn.layers[0]?.weight === 0],
+      ["opaqueLayersWeight", () => opaque.layers[0]?.weight === 0.5],
+      [
+        "dissolveStartLayersShot",
+        () => dissolveStart.layers[0]?.shot === "outgoing",
+      ],
+      [
+        "dissolveStartLayersSourceFrame",
+        () => dissolveStart.layers[0]?.sourceFrame === 2,
+      ],
+      [
+        "dissolveStartLayersWeight",
+        () => dissolveStart.layers[0]?.weight === 1,
+      ],
+      [
+        "dissolveStartLayersShot2",
+        () => dissolveStart.layers[1]?.shot === "incoming",
+      ],
+      [
+        "dissolveStartLayersSourceFrame2",
+        () => dissolveStart.layers[1]?.sourceFrame === 0,
+      ],
+      [
+        "dissolveStartLayersWeight2",
+        () => dissolveStart.layers[1]?.weight === 0,
+      ],
+      [
+        "dissolveMiddleLayersWeight",
+        () => dissolveMiddle.layers[0]?.weight === 0.5,
+      ],
+      [
+        "dissolveMiddleLayersWeight2",
+        () => dissolveMiddle.layers[1]?.weight === 0.5,
+      ],
+      ["fadedOutLayersWeight", () => fadedOut.layers[0]?.weight === 0.5],
+    ]),
+    {
+      fadedInLayersWeight: true,
+      opaqueLayersWeight: true,
+      dissolveStartLayersShot: true,
+      dissolveStartLayersSourceFrame: true,
+      dissolveStartLayersWeight: true,
+      dissolveStartLayersShot2: true,
+      dissolveStartLayersSourceFrame2: true,
+      dissolveStartLayersWeight2: true,
+      dissolveMiddleLayersWeight: true,
+      dissolveMiddleLayersWeight2: true,
+      fadedOutLayersWeight: true,
+    },
   );
   TestValidator.predicate(
     "structural passes select one semantic dissolve layer while beauty blends",
@@ -1099,15 +1139,29 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
       },
     ],
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "status distinguishes every resume state",
-    statuses[0]?.status === "complete" &&
-      statuses[1]?.status === "running" &&
-      statuses[2]?.status === "failed" &&
-      statuses[2]?.correction === "recapture" &&
-      statuses[3]?.status === "stale" &&
-      statuses[4]?.status === "stale" &&
-      statuses[5]?.status === "planned",
+    namedFacts([
+      ["statusesStatusComplete", () => statuses[0]?.status === "complete"],
+      ["statusesStatusRunning", () => statuses[1]?.status === "running"],
+      ["statusesStatusFailed", () => statuses[2]?.status === "failed"],
+      [
+        "statusesCorrectionRecapture",
+        () => statuses[2]?.correction === "recapture",
+      ],
+      ["statusesStatusStale", () => statuses[3]?.status === "stale"],
+      ["statusesStatusStale2", () => statuses[4]?.status === "stale"],
+      ["statusesStatusPlanned", () => statuses[5]?.status === "planned"],
+    ]),
+    {
+      statusesStatusComplete: true,
+      statusesStatusRunning: true,
+      statusesStatusFailed: true,
+      statusesCorrectionRecapture: true,
+      statusesStatusStale: true,
+      statusesStatusStale2: true,
+      statusesStatusPlanned: true,
+    },
   );
 
   const production = {

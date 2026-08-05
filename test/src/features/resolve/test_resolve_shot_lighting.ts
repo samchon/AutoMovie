@@ -8,7 +8,7 @@ import {
 import { TestValidator } from "@nestia/e2e";
 
 import { IDENTITY_TRANSFORM } from "../internal/fixtures";
-import { nclose, throwsError } from "../internal/predicates";
+import { namedFacts, nclose, throwsError } from "../internal/predicates";
 
 const WARM = { r: 1, g: 0.8, b: 0.5, a: null, hex: "#ffcc80" };
 
@@ -161,9 +161,14 @@ export const test_resolve_shot_lighting = (): void => {
     clips: [BLOWOUT],
     seconds: 3,
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "a light no clip addresses comes back by identity",
-    resolved[1] === sun && resolved[2] === lamp && resolved[0] !== candle,
+    namedFacts([
+      ["resolvedSun", () => resolved[1] === sun],
+      ["resolvedLamp", () => resolved[2] === lamp],
+      ["resolvedCandle", () => resolved[0] !== candle],
+    ]),
+    { resolvedSun: true, resolvedLamp: true, resolvedCandle: true },
   );
   TestValidator.predicate(
     "and a shot with no light clips changes nothing at all",
@@ -186,12 +191,20 @@ export const test_resolve_shot_lighting = (): void => {
     ],
     seconds: 1,
   })[0]!;
-  TestValidator.predicate(
+  TestValidator.equals(
     "a linear colour ramp reads its midpoint, and drops the stale hex label",
-    nclose(ramp.color.r, 0.5) &&
-      nclose(ramp.color.g, 0.4) &&
-      nclose(ramp.color.b, 0.25) &&
-      ramp.color.hex === null,
+    namedFacts([
+      ["ncloseRampColor", () => nclose(ramp.color.r, 0.5)],
+      ["ncloseRampColor2", () => nclose(ramp.color.g, 0.4)],
+      ["ncloseRampColor3", () => nclose(ramp.color.b, 0.25)],
+      ["rampColorHex", () => ramp.color.hex === null],
+    ]),
+    {
+      ncloseRampColor: true,
+      ncloseRampColor2: true,
+      ncloseRampColor3: true,
+      rampColorHex: true,
+    },
   );
   const widened = resolveShotLighting({
     lights: LIGHTS,

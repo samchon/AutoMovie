@@ -4,6 +4,8 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+import { namedFacts } from "../internal/predicates";
+
 interface ILicensePolicyFixtureFailure {
   error: unknown;
 }
@@ -493,37 +495,121 @@ export const test_workspace_license_policy = (): void => {
       dependencies: { "transitive-missing": "1.0.0" },
     });
     const missingTransitive = check(root);
-    TestValidator.predicate(
+    TestValidator.equals(
       "package identity, SPDX, optional, and shipped-template dependency boundaries fail closed",
-      rejected.status === 1 &&
-        rejected.stderr.includes("GPL-3.0-only") &&
-        disguised.status === 1 &&
-        disguised.stderr.includes("disallowed license or exception") &&
-        accepted.status === 0 &&
-        accepted.stdout.includes("policy passed") &&
-        expression.status === 0 &&
-        importOnly.status === 0 &&
-        builtinAndAlias.status === 0 &&
-        missingOptional.status === 1 &&
-        missingOptional.stderr.includes("absent-optional") &&
-        missingOptional.stderr.includes("absent-peer") &&
-        shippedTemplate.status === 1 &&
-        shippedTemplate.stderr.includes("shipped-scaffold") &&
-        resolvedTemplate.status === 0 &&
-        unownedTemplate.status === 1 &&
-        unownedTemplate.stderr.includes("unowned-template") &&
-        missingTemplate.status === 1 &&
-        missingTemplate.stderr.includes("absent-template") &&
-        disallowedLocalTemplate.status === 1 &&
-        disallowedLocalTemplate.stderr.includes("GPL-3.0-only") &&
-        resolvedLocalTemplate.status === 0 &&
-        mismatchedLocalTemplate.status === 1 &&
-        mismatchedLocalTemplate.stderr.includes("local-dependency") &&
-        missingWorkspaceOptionals.status === 1 &&
-        missingWorkspaceOptionals.stderr.includes("shared-optional") &&
-        missingWorkspaceOptionals.stderr.includes("shared-peer") &&
-        missingTransitive.status === 1 &&
-        missingTransitive.stderr.includes("transitive-missing"),
+      namedFacts([
+        ["rejectedStatus", () => rejected.status === 1],
+        [
+          "rejectedStderrIncludes",
+          () => rejected.stderr.includes("GPL-3.0-only"),
+        ],
+        ["disguisedStatus", () => disguised.status === 1],
+        [
+          "disguisedStderrIncludes",
+          () => disguised.stderr.includes("disallowed license or exception"),
+        ],
+        ["acceptedStatus", () => accepted.status === 0],
+        [
+          "acceptedStdoutIncludes",
+          () => accepted.stdout.includes("policy passed"),
+        ],
+        ["expressionStatus", () => expression.status === 0],
+        ["importOnlyStatus", () => importOnly.status === 0],
+        ["builtinAndAliasStatus", () => builtinAndAlias.status === 0],
+        ["missingOptionalStatus", () => missingOptional.status === 1],
+        [
+          "missingOptionalStderrIncludes",
+          () => missingOptional.stderr.includes("absent-optional"),
+        ],
+        [
+          "missingOptionalStderrIncludes2",
+          () => missingOptional.stderr.includes("absent-peer"),
+        ],
+        ["shippedTemplateStatus", () => shippedTemplate.status === 1],
+        [
+          "shippedTemplateStderrIncludes",
+          () => shippedTemplate.stderr.includes("shipped-scaffold"),
+        ],
+        ["resolvedTemplateStatus", () => resolvedTemplate.status === 0],
+        ["unownedTemplateStatus", () => unownedTemplate.status === 1],
+        [
+          "unownedTemplateStderrIncludes",
+          () => unownedTemplate.stderr.includes("unowned-template"),
+        ],
+        ["missingTemplateStatus", () => missingTemplate.status === 1],
+        [
+          "missingTemplateStderrIncludes",
+          () => missingTemplate.stderr.includes("absent-template"),
+        ],
+        [
+          "disallowedLocalTemplateStatus",
+          () => disallowedLocalTemplate.status === 1,
+        ],
+        [
+          "disallowedLocalTemplateStderrIncludes",
+          () => disallowedLocalTemplate.stderr.includes("GPL-3.0-only"),
+        ],
+        [
+          "resolvedLocalTemplateStatus",
+          () => resolvedLocalTemplate.status === 0,
+        ],
+        [
+          "mismatchedLocalTemplateStatus",
+          () => mismatchedLocalTemplate.status === 1,
+        ],
+        [
+          "mismatchedLocalTemplateStderrIncludes",
+          () => mismatchedLocalTemplate.stderr.includes("local-dependency"),
+        ],
+        [
+          "missingWorkspaceOptionalsStatus",
+          () => missingWorkspaceOptionals.status === 1,
+        ],
+        [
+          "missingWorkspaceOptionalsStderrIncludes",
+          () => missingWorkspaceOptionals.stderr.includes("shared-optional"),
+        ],
+        [
+          "missingWorkspaceOptionalsStderrIncludes2",
+          () => missingWorkspaceOptionals.stderr.includes("shared-peer"),
+        ],
+        ["missingTransitiveStatus", () => missingTransitive.status === 1],
+        [
+          "missingTransitiveStderrIncludes",
+          () => missingTransitive.stderr.includes("transitive-missing"),
+        ],
+      ]),
+      {
+        rejectedStatus: true,
+        rejectedStderrIncludes: true,
+        disguisedStatus: true,
+        disguisedStderrIncludes: true,
+        acceptedStatus: true,
+        acceptedStdoutIncludes: true,
+        expressionStatus: true,
+        importOnlyStatus: true,
+        builtinAndAliasStatus: true,
+        missingOptionalStatus: true,
+        missingOptionalStderrIncludes: true,
+        missingOptionalStderrIncludes2: true,
+        shippedTemplateStatus: true,
+        shippedTemplateStderrIncludes: true,
+        resolvedTemplateStatus: true,
+        unownedTemplateStatus: true,
+        unownedTemplateStderrIncludes: true,
+        missingTemplateStatus: true,
+        missingTemplateStderrIncludes: true,
+        disallowedLocalTemplateStatus: true,
+        disallowedLocalTemplateStderrIncludes: true,
+        resolvedLocalTemplateStatus: true,
+        mismatchedLocalTemplateStatus: true,
+        mismatchedLocalTemplateStderrIncludes: true,
+        missingWorkspaceOptionalsStatus: true,
+        missingWorkspaceOptionalsStderrIncludes: true,
+        missingWorkspaceOptionalsStderrIncludes2: true,
+        missingTransitiveStatus: true,
+        missingTransitiveStderrIncludes: true,
+      },
     );
   } catch (error) {
     licensePolicyFailure = { error };

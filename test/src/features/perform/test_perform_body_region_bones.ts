@@ -2,6 +2,8 @@ import { bodyRegionBones } from "@automovie/engine";
 import { AutoMovieHumanoidBone } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
+import { namedFacts } from "../internal/predicates";
+
 const disjoint = (
   a: readonly AutoMovieHumanoidBone[],
   b: readonly AutoMovieHumanoidBone[],
@@ -48,11 +50,21 @@ export const test_perform_body_region_bones = (): void => {
     lower.includes("hips") && lower.includes("leftFoot"),
   );
   TestValidator.equals("upperBody owns 41 bones", upper.length, 41);
-  TestValidator.predicate(
+  TestValidator.equals(
     "upperBody has spine, a hand, a finger",
-    upper.includes("spine") &&
-      upper.includes("leftHand") &&
-      upper.includes("rightLittleDistal"),
+    namedFacts([
+      ["upperIncludesSpine", () => upper.includes("spine")],
+      ["upperIncludesLeftHand", () => upper.includes("leftHand")],
+      [
+        "upperIncludesRightLittleDistal",
+        () => upper.includes("rightLittleDistal"),
+      ],
+    ]),
+    {
+      upperIncludesSpine: true,
+      upperIncludesLeftHand: true,
+      upperIncludesRightLittleDistal: true,
+    },
   );
   TestValidator.equals("head owns 5 bones", head.length, 5);
   TestValidator.predicate(

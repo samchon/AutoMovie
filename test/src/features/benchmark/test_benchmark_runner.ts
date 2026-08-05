@@ -26,7 +26,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { throwsError } from "../internal/predicates";
+import { namedFacts, throwsError } from "../internal/predicates";
 import {
   productionH264Mp4,
   productionOpusMp4,
@@ -1854,24 +1854,62 @@ const exerciseProviderAdapters = async (root: string): Promise<void> => {
       };
     };
   }>(path.join(inputRoot, "claude-mcp.json"));
-  TestValidator.predicate(
+  TestValidator.equals(
     "concrete provider adapters fix MCP configuration and parse non-scoring usage",
-    codex.generation.toolCalls === 1 &&
-      codex.generation.inputTokens === 12 &&
-      codex.generation.outputTokens === 5 &&
-      codexInput.command === "codex" &&
-      codexInput.args?.includes(
-        "--dangerously-bypass-approvals-and-sandbox",
-      ) === true &&
-      codexInput.args?.includes(
-        'mcp_servers.automovie.env.BENCHMARK_MODE="1"',
-      ) === true &&
-      claude.generation.toolCalls === 3 &&
-      claude.generation.costUsd === 0.25 &&
-      claudeInput.command === "claude" &&
-      claudeInput.args?.includes("bypassPermissions") === true &&
-      claudeConfig.mcpServers.automovie.command === "mcp-command" &&
-      claudeConfig.mcpServers.automovie.env.AUTOMOVIE_PROJECT_ROOT === project,
+    namedFacts([
+      ["codexGenerationToolCalls", () => codex.generation.toolCalls === 1],
+      ["codexGenerationInputTokens", () => codex.generation.inputTokens === 12],
+      [
+        "codexGenerationOutputTokens",
+        () => codex.generation.outputTokens === 5,
+      ],
+      ["codexInputCommandCodex", () => codexInput.command === "codex"],
+      [
+        "codexInputArgsIncludes",
+        () =>
+          codexInput.args?.includes(
+            "--dangerously-bypass-approvals-and-sandbox",
+          ) === true,
+      ],
+      [
+        "codexInputArgsIncludes2",
+        () =>
+          codexInput.args?.includes(
+            'mcp_servers.automovie.env.BENCHMARK_MODE="1"',
+          ) === true,
+      ],
+      ["claudeGenerationToolCalls", () => claude.generation.toolCalls === 3],
+      ["claudeGenerationCostUsd", () => claude.generation.costUsd === 0.25],
+      ["claudeInputCommandClaude", () => claudeInput.command === "claude"],
+      [
+        "claudeInputArgsIncludes",
+        () => claudeInput.args?.includes("bypassPermissions") === true,
+      ],
+      [
+        "claudeConfigMcpServersAutomovie",
+        () => claudeConfig.mcpServers.automovie.command === "mcp-command",
+      ],
+      [
+        "claudeConfigMcpServersAutomovie2",
+        () =>
+          claudeConfig.mcpServers.automovie.env.AUTOMOVIE_PROJECT_ROOT ===
+          project,
+      ],
+    ]),
+    {
+      codexGenerationToolCalls: true,
+      codexGenerationInputTokens: true,
+      codexGenerationOutputTokens: true,
+      codexInputCommandCodex: true,
+      codexInputArgsIncludes: true,
+      codexInputArgsIncludes2: true,
+      claudeGenerationToolCalls: true,
+      claudeGenerationCostUsd: true,
+      claudeInputCommandClaude: true,
+      claudeInputArgsIncludes: true,
+      claudeConfigMcpServersAutomovie: true,
+      claudeConfigMcpServersAutomovie2: true,
+    },
   );
 };
 

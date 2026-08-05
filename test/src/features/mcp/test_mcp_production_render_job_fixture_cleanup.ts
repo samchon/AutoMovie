@@ -249,7 +249,7 @@ export const test_mcp_production_render_job_fixture_cleanup = (): void => {
               "letrenderJobFixtureFailure:IRenderJobFixtureFailure|undefined;",
             ],
             tryDigest:
-              "f45adc6f6fbd623263d4c20dce90f08167f3c840b87cf529e3015bbffdad25fe",
+              "e06e1d4fabcbc9d2b790dc7cb70c805560ced51528d207e87754fcc71dcd08ed",
             tryPrefixes: [
               'outsideRoot=fs.mkdtempSync(path.join(os.tmpdir(),"automovie-render-outside-"),);',
             ],

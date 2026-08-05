@@ -313,14 +313,14 @@ export const test_mcp_production_atomic_failure_harness_cleanup = (): void => {
             ],
             substantive: {
               digest:
-                "e24667b2e38b31131a5a4475251d57a2450173ffd8e9e95e72a85bc85bcbd4c3",
+                "bbd38854323505aab169981cf15f2e090729b3beaa1a30d6192c3316e8c75726",
               leafDigest:
-                "46f49a87343f2bf6456c3a96cca44e5679bfe955aad6ff713827de4433ea75e4",
+                "bd2c3c5b001793b9abd87e1b4d0d879e0ece4a8e0fff026e46dbb83011bed5e8",
               statements: 19,
-              tokens: 607,
+              tokens: 660,
             },
             tryDigest:
-              "75ece55dbce264631e4f105943743dad8d00e3f6d0ac401ba0edaec0212d7d63",
+              "3d7ebbe48cb6f333bf8bd2b956e69b84223ea16320642b62d548d90b80d35135",
             tryStatements: 21,
           },
         ],

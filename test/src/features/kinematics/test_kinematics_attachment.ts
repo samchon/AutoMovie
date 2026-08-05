@@ -12,7 +12,12 @@ import {
 import { TestValidator } from "@nestia/e2e";
 
 import { createSkeleton, joint, makePose } from "../internal/fixtures";
-import { nclose, throwsError, vclose } from "../internal/predicates";
+import {
+  namedFacts,
+  nclose,
+  throwsError,
+  vclose,
+} from "../internal/predicates";
 
 /**
  * `resolveAttachment`: the cross-skeleton joint that fixes a child model's root
@@ -49,11 +54,18 @@ export const test_kinematics_attachment = (): void => {
   };
   const att1: IAutoMovieAttachment = { parentBone: "chest", offset: idOffset };
   const r1 = resolveAttachment(restPose, skeleton, att1);
-  TestValidator.predicate(
+  TestValidator.equals(
     "child sits on chest world pos (0,1.4,0)",
-    nclose(r1.translation.x, 0) &&
-      nclose(r1.translation.y, 1.4) &&
-      nclose(r1.translation.z, 0),
+    namedFacts([
+      ["ncloseR1Translation", () => nclose(r1.translation.x, 0)],
+      ["ncloseR1Translation2", () => nclose(r1.translation.y, 1.4)],
+      ["ncloseR1Translation3", () => nclose(r1.translation.z, 0)],
+    ]),
+    {
+      ncloseR1Translation: true,
+      ncloseR1Translation2: true,
+      ncloseR1Translation3: true,
+    },
   );
   TestValidator.predicate(
     "identity rotation at rest",
@@ -97,11 +109,27 @@ export const test_kinematics_attachment = (): void => {
     "child inherits chest world rotation (90° yaw, w≈cos45)",
     nclose(r3.rotation.w, Math.cos((45 * Math.PI) / 180)),
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "offset translation carried into the rotated frame",
-    nclose(r3.translation.x, chest.worldPosition.x + expectedT.x) &&
-      nclose(r3.translation.y, chest.worldPosition.y + expectedT.y) &&
-      nclose(r3.translation.z, chest.worldPosition.z + expectedT.z),
+    namedFacts([
+      [
+        "ncloseR3Translation",
+        () => nclose(r3.translation.x, chest.worldPosition.x + expectedT.x),
+      ],
+      [
+        "ncloseR3Translation2",
+        () => nclose(r3.translation.y, chest.worldPosition.y + expectedT.y),
+      ],
+      [
+        "ncloseR3Translation3",
+        () => nclose(r3.translation.z, chest.worldPosition.z + expectedT.z),
+      ],
+    ]),
+    {
+      ncloseR3Translation: true,
+      ncloseR3Translation2: true,
+      ncloseR3Translation3: true,
+    },
   );
 
   // 4. unknown bone → throws (the fixture skeleton has no rightFoot)

@@ -3,6 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+import { namedFacts } from "../internal/predicates";
 import { captureCliOutput as captureCli } from "./CliOutputCapture";
 
 interface ICliRenderFixtureFailure {
@@ -76,20 +77,54 @@ export const test_cli_render = (): void => {
       "// missing tsx runtime\n",
     );
     const missingTsx = captureCli(["render", "status"]);
-    TestValidator.predicate(
+    TestValidator.equals(
       "render CLI rejects bad actions and missing project runtime",
-      missingAction.status === 1 &&
-        missingAction.stderr.includes("render needs one of") &&
-        unknownAction.status === 1 &&
-        unknownAction.stderr.includes("render needs one of") &&
-        missingProject.status === 1 &&
-        missingProject.stderr.includes("scaffolded project") &&
-        missingVerify.status === 1 &&
-        missingVerify.stderr.includes("scaffolded project") &&
-        invalidVerify.status === 1 &&
-        invalidVerify.stderr.includes("takes no arguments") &&
-        missingTsx.status === 1 &&
-        missingTsx.stderr.includes("scaffolded project"),
+      namedFacts([
+        ["missingActionStatus", () => missingAction.status === 1],
+        [
+          "missingActionStderrIncludes",
+          () => missingAction.stderr.includes("render needs one of"),
+        ],
+        ["unknownActionStatus", () => unknownAction.status === 1],
+        [
+          "unknownActionStderrIncludes",
+          () => unknownAction.stderr.includes("render needs one of"),
+        ],
+        ["missingProjectStatus", () => missingProject.status === 1],
+        [
+          "missingProjectStderrIncludes",
+          () => missingProject.stderr.includes("scaffolded project"),
+        ],
+        ["missingVerifyStatus", () => missingVerify.status === 1],
+        [
+          "missingVerifyStderrIncludes",
+          () => missingVerify.stderr.includes("scaffolded project"),
+        ],
+        ["invalidVerifyStatus", () => invalidVerify.status === 1],
+        [
+          "invalidVerifyStderrIncludes",
+          () => invalidVerify.stderr.includes("takes no arguments"),
+        ],
+        ["missingTsxStatus", () => missingTsx.status === 1],
+        [
+          "missingTsxStderrIncludes",
+          () => missingTsx.stderr.includes("scaffolded project"),
+        ],
+      ]),
+      {
+        missingActionStatus: true,
+        missingActionStderrIncludes: true,
+        unknownActionStatus: true,
+        unknownActionStderrIncludes: true,
+        missingProjectStatus: true,
+        missingProjectStderrIncludes: true,
+        missingVerifyStatus: true,
+        missingVerifyStderrIncludes: true,
+        invalidVerifyStatus: true,
+        invalidVerifyStderrIncludes: true,
+        missingTsxStatus: true,
+        missingTsxStderrIncludes: true,
+      },
     );
 
     const script = path.join(project, "scripts", "render.ts");

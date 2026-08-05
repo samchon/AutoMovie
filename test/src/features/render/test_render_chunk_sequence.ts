@@ -10,7 +10,7 @@ import {
 } from "@automovie/render";
 import { TestValidator } from "@nestia/e2e";
 
-import { throwsError } from "../internal/predicates";
+import { namedFacts, throwsError } from "../internal/predicates";
 
 const shot = (id: string, duration: number): IAutoMovieShot => ({
   id,
@@ -203,11 +203,27 @@ export const test_render_chunk_sequence = (): void => {
     chunked.reassembly.concatListLines[0],
     "file 'seq_duel.chunk_0.mp4'",
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "reassembly concat args are lossless",
-    chunked.reassembly.ffmpegArgs.includes("concat") &&
-      chunked.reassembly.ffmpegArgs.includes("copy") &&
-      chunked.reassembly.ffmpegArgs.includes("seq_duel.mp4"),
+    namedFacts([
+      [
+        "chunkedReassemblyFfmpegArgs",
+        () => chunked.reassembly.ffmpegArgs.includes("concat"),
+      ],
+      [
+        "chunkedReassemblyFfmpegArgs2",
+        () => chunked.reassembly.ffmpegArgs.includes("copy"),
+      ],
+      [
+        "chunkedReassemblyFfmpegArgs3",
+        () => chunked.reassembly.ffmpegArgs.includes("seq_duel.mp4"),
+      ],
+    ]),
+    {
+      chunkedReassemblyFfmpegArgs: true,
+      chunkedReassemblyFfmpegArgs2: true,
+      chunkedReassemblyFfmpegArgs3: true,
+    },
   );
 
   const noExt = planChunkedSequenceRender({

@@ -14,6 +14,7 @@ import {
 import { TestValidator } from "@nestia/e2e";
 import * as THREE from "three";
 
+import { namedFacts } from "../internal/predicates";
 import { modelRecipe, worldDesign } from "../mcp/productionFixtures";
 
 /** General instance sets render as colored, trait-bearing bounded batches. */
@@ -78,30 +79,53 @@ export const test_viewer_instance_set = (): void => {
   const firstSlot = materializeInstanceSlot(design, world, 0);
   const firstColor = new THREE.Color();
   meshes[0]?.getColorAt(0, firstColor);
-  TestValidator.predicate(
+  TestValidator.equals(
     "viewer batches preserve compiler slot, scale, palette and trait streams",
-    JSON.stringify(compilerSlot) === JSON.stringify(viewerSlot) &&
-      meshes.length === compiled.chunks.length * compiled.lod.length &&
-      meshes.every(
-        (mesh) =>
-          mesh.count > 0 &&
-          mesh.instanceColor?.count === mesh.count &&
-          mesh.geometry.getAttribute("automovieTrait0")?.count === mesh.count &&
-          mesh.geometry.getAttribute("automovieTrait1")?.count === mesh.count &&
-          mesh.userData.automovieTraitNames[0] === "wind" &&
-          mesh.userData.automovieTraitNames[1] === "__proto__" &&
-          mesh.frustumCulled === false &&
-          (Array.isArray(mesh.material)
-            ? mesh.material
-            : [mesh.material]
-          ).every(
-            (material) =>
-              "color" in material &&
-              material.color instanceof THREE.Color &&
-              material.color.getHex() === 0xffffff,
+    namedFacts([
+      [
+        "stringifyCompilerSlotStringify",
+        () => JSON.stringify(compilerSlot) === JSON.stringify(viewerSlot),
+      ],
+      [
+        "meshesCompiledChunks",
+        () => meshes.length === compiled.chunks.length * compiled.lod.length,
+      ],
+      [
+        "meshesMeshMesh",
+        () =>
+          meshes.every(
+            (mesh) =>
+              mesh.count > 0 &&
+              mesh.instanceColor?.count === mesh.count &&
+              mesh.geometry.getAttribute("automovieTrait0")?.count ===
+                mesh.count &&
+              mesh.geometry.getAttribute("automovieTrait1")?.count ===
+                mesh.count &&
+              mesh.userData.automovieTraitNames[0] === "wind" &&
+              mesh.userData.automovieTraitNames[1] === "__proto__" &&
+              mesh.frustumCulled === false &&
+              (Array.isArray(mesh.material)
+                ? mesh.material
+                : [mesh.material]
+              ).every(
+                (material) =>
+                  "color" in material &&
+                  material.color instanceof THREE.Color &&
+                  material.color.getHex() === 0xffffff,
+              ),
           ),
-      ) &&
-      firstColor.getHexString() === firstSlot.palette.slice(1),
+      ],
+      [
+        "firstColorGetHexStringFirstSlot",
+        () => firstColor.getHexString() === firstSlot.palette.slice(1),
+      ],
+    ]),
+    {
+      stringifyCompilerSlotStringify: true,
+      meshesCompiledChunks: true,
+      meshesMeshMesh: true,
+      firstColorGetHexStringFirstSlot: true,
+    },
   );
 
   const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 500);

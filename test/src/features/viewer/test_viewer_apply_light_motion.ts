@@ -4,7 +4,7 @@ import { TestValidator } from "@nestia/e2e";
 import * as THREE from "three";
 
 import { IDENTITY_TRANSFORM } from "../internal/fixtures";
-import { nclose } from "../internal/predicates";
+import { namedFacts, nclose } from "../internal/predicates";
 
 const scene: IAutoMovieScene = {
   id: "scene-1",
@@ -109,14 +109,24 @@ export const test_viewer_apply_light_motion = (): void => {
   // 2. the staged values, the baseline the animation is measured against.
   const candle = built.lights.get("candleGlow") as THREE.PointLight;
   const lamp = built.lights.get("lamp") as THREE.SpotLight;
-  TestValidator.predicate(
+  TestValidator.equals(
     "a staged light lands with its authored colour, intensity, range and cone",
-    nclose(candle.color.r, 1) &&
-      nclose(candle.color.g, 0.8) &&
-      nclose(candle.color.b, 0.5) &&
-      nclose(candle.intensity, 1.4) &&
-      nclose(candle.distance, 4) &&
-      nclose(lamp.angle, (40 * Math.PI) / 180),
+    namedFacts([
+      ["ncloseCandleColor", () => nclose(candle.color.r, 1)],
+      ["ncloseCandleColor2", () => nclose(candle.color.g, 0.8)],
+      ["ncloseCandleColor3", () => nclose(candle.color.b, 0.5)],
+      ["ncloseCandleIntensity", () => nclose(candle.intensity, 1.4)],
+      ["ncloseCandleDistance", () => nclose(candle.distance, 4)],
+      ["ncloseLampAngle", () => nclose(lamp.angle, (40 * Math.PI) / 180)],
+    ]),
+    {
+      ncloseCandleColor: true,
+      ncloseCandleColor2: true,
+      ncloseCandleColor3: true,
+      ncloseCandleIntensity: true,
+      ncloseCandleDistance: true,
+      ncloseLampAngle: true,
+    },
   );
 
   // 3. the clip drives them.
@@ -151,13 +161,22 @@ export const test_viewer_apply_light_motion = (): void => {
     1.6,
     (id) => built.lights.get(id),
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "the candle dims at the cue and the lamp's cone opens, in three.js units",
-    nclose(candle.intensity, 0.04) &&
-      nclose(candle.color.r, 0.5) &&
-      nclose(candle.color.g, 0.4) &&
-      nclose(candle.color.b, 0.25) &&
-      nclose(lamp.angle, (70 * Math.PI) / 180),
+    namedFacts([
+      ["ncloseCandleIntensity", () => nclose(candle.intensity, 0.04)],
+      ["ncloseCandleColor", () => nclose(candle.color.r, 0.5)],
+      ["ncloseCandleColor2", () => nclose(candle.color.g, 0.4)],
+      ["ncloseCandleColor3", () => nclose(candle.color.b, 0.25)],
+      ["ncloseLampAngle", () => nclose(lamp.angle, (70 * Math.PI) / 180)],
+    ]),
+    {
+      ncloseCandleIntensity: true,
+      ncloseCandleColor: true,
+      ncloseCandleColor2: true,
+      ncloseCandleColor3: true,
+      ncloseLampAngle: true,
+    },
   );
 
   // 4. an unresolved light is skipped, not thrown at.

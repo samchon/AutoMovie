@@ -17,6 +17,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { PNG } from "pngjs";
 
+import { namedFacts } from "../internal/predicates";
 import {
   fixtureWorldDesign,
   productionCompileSucceeded,
@@ -344,11 +345,28 @@ export const test_mcp_production_review_render_edges =
       const linkedAggregate = review.prepare({
         target: { kind: "film", id: "fixture-film" },
       });
-      TestValidator.predicate(
+      TestValidator.equals(
         "terminal publication stays outside human review identity and never follows linked aggregate bytes",
-        beforeAggregate.fingerprint === validAggregate.fingerprint &&
-          validAggregate.fingerprint === malformedAggregate.fingerprint &&
-          malformedAggregate.fingerprint === linkedAggregate.fingerprint,
+        namedFacts([
+          [
+            "beforeAggregateFingerprintValidAggregate",
+            () => beforeAggregate.fingerprint === validAggregate.fingerprint,
+          ],
+          [
+            "validAggregateFingerprintMalformedAggregate",
+            () => validAggregate.fingerprint === malformedAggregate.fingerprint,
+          ],
+          [
+            "malformedAggregateFingerprintLinkedAggregate",
+            () =>
+              malformedAggregate.fingerprint === linkedAggregate.fingerprint,
+          ],
+        ]),
+        {
+          beforeAggregateFingerprintValidAggregate: true,
+          validAggregateFingerprintMalformedAggregate: true,
+          malformedAggregateFingerprintLinkedAggregate: true,
+        },
       );
       fs.rmSync(aggregateManifest, { force: true, recursive: true });
       fs.rmSync(outsideAggregate, { force: true, recursive: true });

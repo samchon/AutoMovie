@@ -4,6 +4,8 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+import { namedFacts } from "../internal/predicates";
+
 const mutableFs = fs as {
   lstatSync: typeof fs.lstatSync;
 };
@@ -205,11 +207,25 @@ export const test_mcp_commit_lock = (): void => {
     nativeRm(releaseRacePath, { force: true });
     nativeRm(releaseRaceParked, { force: true });
     const reacquiredRaceToken = acquireCommitLock(releaseRacePath);
-    TestValidator.predicate(
+    TestValidator.equals(
       "a raced release permits a genuinely fresh owner",
-      reacquiredRaceToken !== releaseRaceToken &&
-        fs.existsSync(releaseRacePath) &&
-        fs.readFileSync(releaseRacePath, "utf8") === reacquiredRaceToken,
+      namedFacts([
+        [
+          "reacquiredRaceTokenReleaseRaceToken",
+          () => reacquiredRaceToken !== releaseRaceToken,
+        ],
+        ["existsSyncReleaseRacePath", () => fs.existsSync(releaseRacePath)],
+        [
+          "readFileSyncReleaseRacePathUtf8",
+          () =>
+            fs.readFileSync(releaseRacePath, "utf8") === reacquiredRaceToken,
+        ],
+      ]),
+      {
+        reacquiredRaceTokenReleaseRaceToken: true,
+        existsSyncReleaseRacePath: true,
+        readFileSyncReleaseRacePathUtf8: true,
+      },
     );
     releaseCommitLock(releaseRacePath, reacquiredRaceToken);
     TestValidator.equals(

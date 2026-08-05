@@ -1,7 +1,7 @@
 import { cleanSilhouetteBands } from "@automovie/face";
 import { TestValidator } from "@nestia/e2e";
 
-import { nclose } from "../internal/predicates";
+import { namedFacts, nclose } from "../internal/predicates";
 
 /**
  * The triangular smoothing kernel is normalized: a constant band passes through
@@ -29,8 +29,13 @@ export const test_face_clean_bands_smooth = (): void => {
   );
   const before = step[5]!.max;
   const after = step[6]!.max;
-  TestValidator.predicate(
+  TestValidator.equals(
     "step softened symmetrically",
-    before > 0 && after < 10 && nclose(before + after, 10, 1e-9),
+    namedFacts([
+      ["before", () => before > 0],
+      ["after", () => after < 10],
+      ["ncloseBeforeAfter", () => nclose(before + after, 10, 1e-9)],
+    ]),
+    { before: true, after: true, ncloseBeforeAfter: true },
   );
 };

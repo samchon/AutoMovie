@@ -18,7 +18,7 @@ import {
   validSynthesizer,
 } from "../internal/filmFixtures";
 import { createSkeleton } from "../internal/fixtures";
-import { nclose } from "../internal/predicates";
+import { namedFacts, nclose } from "../internal/predicates";
 
 /**
  * The whole stage ladder in one take. Every harness stage's payload flows
@@ -83,11 +83,14 @@ export const test_film_full_ladder_e2e = (): void => {
     verdict: "pass",
     notes: [],
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "review passes with an empty backlog",
-    reviewed.success === true &&
-      reviewed.verdict === "pass" &&
-      reviewed.notes.length === 0,
+    namedFacts([
+      ["reviewedSuccess", () => reviewed.success === true],
+      ["reviewedVerdictPass", () => reviewed.verdict === "pass"],
+      ["reviewedNotes", () => reviewed.notes.length === 0],
+    ]),
+    { reviewedSuccess: true, reviewedVerdictPass: true, reviewedNotes: true },
   );
 
   const cut = cutSequence(

@@ -7,7 +7,7 @@ import { IAutoMovieJointConstraint } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { joint } from "../internal/fixtures";
-import { nclose } from "../internal/predicates";
+import { namedFacts, nclose } from "../internal/predicates";
 
 /**
  * Detect and enforce must be one calculation: `validateJointRom` used to skip
@@ -41,11 +41,21 @@ export const test_rom_validate_zero_excluding_override = (): void => {
     path: "$input",
     collector,
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "zero against a zero-excluding override is a rom violation",
-    collector.items.length === 1 &&
-      collector.items[0]!.kind === "rom" &&
-      collector.items[0]!.path === "$input.flexion",
+    namedFacts([
+      ["collectorItems", () => collector.items.length === 1],
+      ["collectorItemsKind", () => collector.items[0]!.kind === "rom"],
+      [
+        "collectorItemsinput",
+        () => collector.items[0]!.path === "$input.flexion",
+      ],
+    ]),
+    {
+      collectorItems: true,
+      collectorItemsKind: true,
+      collectorItemsinput: true,
+    },
   );
   const clamped = clampJointRom(
     joint("leftLowerArm", { flexion: 0, abduction: 0, twist: 0 }),

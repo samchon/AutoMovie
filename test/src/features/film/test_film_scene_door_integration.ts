@@ -8,7 +8,7 @@ import { IAutoMovieClip, IAutoMovieScene } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { createModel } from "../internal/fixtures";
-import { nclose, vclose } from "../internal/predicates";
+import { namedFacts, nclose, vclose } from "../internal/predicates";
 import { createDoorPropSpec } from "./test_film_forge_prop";
 
 /** Quat values for a rotation of `deg` about +Y. */
@@ -136,9 +136,14 @@ export const test_film_scene_door_integration = (): void => {
     vclose(Matrix4.position(hinge), { x: 5, y: 1, z: 2 }),
   );
   const openX = basisX(hinge);
-  TestValidator.predicate(
+  TestValidator.equals(
     "hinge world rotated 90° through the scene",
-    nclose(openX[0], 0) && nclose(openX[1], 0) && nclose(openX[2], -1),
+    namedFacts([
+      ["ncloseOpenX", () => nclose(openX[0], 0)],
+      ["ncloseOpenX2", () => nclose(openX[1], 0)],
+      ["ncloseOpenX3", () => nclose(openX[2], -1)],
+    ]),
+    { ncloseOpenX: true, ncloseOpenX2: true, ncloseOpenX3: true },
   );
   const mirrorX = basisX(open.world.get("frontDoor/handleMirror")!);
   TestValidator.predicate(
@@ -165,11 +170,18 @@ export const test_film_scene_door_integration = (): void => {
   const cos110 = Math.cos((110 * Math.PI) / 180);
   const sin110 = Math.sin((110 * Math.PI) / 180);
   const slammedX = basisX(slammed.world.get("frontDoor/hinge")!);
-  TestValidator.predicate(
+  TestValidator.equals(
     "over-swing clamps to exactly 110° through the scene",
-    nclose(slammedX[0], cos110) &&
-      nclose(slammedX[1], 0) &&
-      nclose(slammedX[2], -sin110),
+    namedFacts([
+      ["ncloseSlammedXCos110", () => nclose(slammedX[0], cos110)],
+      ["ncloseSlammedX", () => nclose(slammedX[1], 0)],
+      ["ncloseSlammedXSin110", () => nclose(slammedX[2], -sin110)],
+    ]),
+    {
+      ncloseSlammedXCos110: true,
+      ncloseSlammedX: true,
+      ncloseSlammedXSin110: true,
+    },
   );
 
   TestValidator.predicate(

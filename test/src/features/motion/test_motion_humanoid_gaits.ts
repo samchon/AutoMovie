@@ -12,7 +12,7 @@ import {
 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { nclose } from "../internal/predicates";
+import { namedFacts, nclose } from "../internal/predicates";
 
 const bone = (b: AutoMovieHumanoidBone): IAutoMovieBone => ({
   bone: b,
@@ -120,12 +120,20 @@ export const test_motion_humanoid_gaits = (): void => {
     const rightArm = gait.limbs.find((limb) => limb.bone === "rightUpperArm")!;
     const leftLeg = gait.limbs.find((limb) => limb.bone === "leftUpperLeg")!;
     const rightLeg = gait.limbs.find((limb) => limb.bone === "rightUpperLeg")!;
-    TestValidator.predicate(
+    TestValidator.equals(
       `${name} carries visible contralateral arm swing`,
-      leftArm.amplitude > 0 &&
-        rightArm.amplitude > 0 &&
-        nclose(leftArm.phase, rightLeg.phase) &&
-        nclose(rightArm.phase, leftLeg.phase),
+      namedFacts([
+        ["leftArmAmplitude", () => leftArm.amplitude > 0],
+        ["rightArmAmplitude", () => rightArm.amplitude > 0],
+        ["ncloseLeftArmPhase", () => nclose(leftArm.phase, rightLeg.phase)],
+        ["ncloseRightArmPhase", () => nclose(rightArm.phase, leftLeg.phase)],
+      ]),
+      {
+        leftArmAmplitude: true,
+        rightArmAmplitude: true,
+        ncloseLeftArmPhase: true,
+        ncloseRightArmPhase: true,
+      },
     );
   }
 

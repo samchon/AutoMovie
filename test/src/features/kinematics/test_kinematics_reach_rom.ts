@@ -13,7 +13,12 @@ import {
 import { TestValidator } from "@nestia/e2e";
 
 import { createSkeleton } from "../internal/fixtures";
-import { nclose, vclose, violationCount } from "../internal/predicates";
+import {
+  namedFacts,
+  nclose,
+  vclose,
+  violationCount,
+} from "../internal/predicates";
 
 const SHOULDER: IAutoMovieVector3 = { x: 0.2, y: 1.4, z: 0 };
 
@@ -157,14 +162,24 @@ export const test_kinematics_reach_rom = (): void => {
   const rest = reachPose(skeleton, "left", restTarget)!;
   const restUpper = rest.joints.find((j) => j.bone === "leftUpperArm")!;
   const restLower = rest.joints.find((j) => j.bone === "leftLowerArm")!;
-  TestValidator.predicate(
+  TestValidator.equals(
     "the rest-pose target returns the identity articulation",
-    nclose(restUpper.flexion!, 0, 0) &&
-      nclose(restUpper.abduction!, 90, 0) &&
-      nclose(restUpper.twist!, 0, 0) &&
-      nclose(restLower.flexion!, 0, 0) &&
-      nclose(restLower.abduction!, 0, 0) &&
-      nclose(restLower.twist!, 0, 0),
+    namedFacts([
+      ["ncloseRestUpperFlexion", () => nclose(restUpper.flexion!, 0, 0)],
+      ["ncloseRestUpperAbduction", () => nclose(restUpper.abduction!, 90, 0)],
+      ["ncloseRestUpperTwist", () => nclose(restUpper.twist!, 0, 0)],
+      ["ncloseRestLowerFlexion", () => nclose(restLower.flexion!, 0, 0)],
+      ["ncloseRestLowerAbduction", () => nclose(restLower.abduction!, 0, 0)],
+      ["ncloseRestLowerTwist", () => nclose(restLower.twist!, 0, 0)],
+    ]),
+    {
+      ncloseRestUpperFlexion: true,
+      ncloseRestUpperAbduction: true,
+      ncloseRestUpperTwist: true,
+      ncloseRestLowerFlexion: true,
+      ncloseRestLowerAbduction: true,
+      ncloseRestLowerTwist: true,
+    },
   );
   TestValidator.equals(
     "and it is ROM-clean",

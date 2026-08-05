@@ -1,7 +1,7 @@
 import { fitSimilarity2 } from "@automovie/face";
 import { TestValidator } from "@nestia/e2e";
 
-import { nclose } from "../internal/predicates";
+import { namedFacts, nclose } from "../internal/predicates";
 
 /**
  * The 2D similarity fit recovers a known transform exactly when the
@@ -31,11 +31,14 @@ export const test_face_similarity2 = (): void => {
   TestValidator.predicate("rotation recovered", nclose(fit.rotation, th));
   for (let i = 0; i < 4; i++) {
     const p = fit.apply([src[i * 3]!, src[i * 3 + 1]!, src[i * 3 + 2]!]);
-    TestValidator.predicate(
+    TestValidator.equals(
       `point ${i} mapped`,
-      nclose(p[0], dst[i * 3]!) &&
-        nclose(p[1], dst[i * 3 + 1]!) &&
-        nclose(p[2], dst[i * 3 + 2]!),
+      namedFacts([
+        ["nclosePDst", () => nclose(p[0], dst[i * 3]!)],
+        ["nclosePDst2", () => nclose(p[1], dst[i * 3 + 1]!)],
+        ["nclosePDst3", () => nclose(p[2], dst[i * 3 + 2]!)],
+      ]),
+      { nclosePDst: true, nclosePDst2: true, nclosePDst3: true },
     );
   }
 };

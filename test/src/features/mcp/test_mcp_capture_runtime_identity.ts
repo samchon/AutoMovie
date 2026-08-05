@@ -5,6 +5,7 @@ import {
 } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
 
+import { namedFacts } from "../internal/predicates";
 import { testCaptureRuntimeIdentity } from "./productionFixtures";
 
 const throws = (task: () => unknown, fragment: string): boolean => {
@@ -36,23 +37,45 @@ export const test_mcp_capture_runtime_identity = (): void => {
     ),
     canonical,
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "capture identity rejects schema and canonical encoding drift",
-    throws(
-      () =>
-        canonicalAutoMovieCaptureRuntimeIdentity(
-          {} as IAutoMovieCaptureRuntimeIdentity,
-        ),
-      "Invalid AutoMovie",
-    ) &&
-      throws(() => parseAutoMovieCaptureRuntimeIdentity("{bad"), "not JSON") &&
-      throws(
+    namedFacts([
+      [
+        "throwsCanonicalAutoMovieCaptureRuntimeIdentityAs",
         () =>
-          parseAutoMovieCaptureRuntimeIdentity(
-            JSON.stringify(identity, null, 2),
+          throws(
+            () =>
+              canonicalAutoMovieCaptureRuntimeIdentity(
+                {} as IAutoMovieCaptureRuntimeIdentity,
+              ),
+            "Invalid AutoMovie",
           ),
-        "not canonical",
-      ),
+      ],
+      [
+        "throwsParseAutoMovieCaptureRuntimeIdentityBad",
+        () =>
+          throws(
+            () => parseAutoMovieCaptureRuntimeIdentity("{bad"),
+            "not JSON",
+          ),
+      ],
+      [
+        "throwsParseAutoMovieCaptureRuntimeIdentityStringify",
+        () =>
+          throws(
+            () =>
+              parseAutoMovieCaptureRuntimeIdentity(
+                JSON.stringify(identity, null, 2),
+              ),
+            "not canonical",
+          ),
+      ],
+    ]),
+    {
+      throwsCanonicalAutoMovieCaptureRuntimeIdentityAs: true,
+      throwsParseAutoMovieCaptureRuntimeIdentityBad: true,
+      throwsParseAutoMovieCaptureRuntimeIdentityStringify: true,
+    },
   );
 
   const blank = structuredClone(identity);
@@ -63,24 +86,48 @@ export const test_mcp_capture_runtime_identity = (): void => {
   notPositive.mode.deviceScaleFactor = 0;
   const invalidDigest = structuredClone(identity);
   invalidDigest.browser.executableDigest = "sha256:bad" as `sha256:${string}`;
-  TestValidator.predicate(
+  TestValidator.equals(
     "capture identity rejects blank and dishonest raster fields",
-    throws(
-      () => canonicalAutoMovieCaptureRuntimeIdentity(blank),
-      "non-blank",
-    ) &&
-      throws(
-        () => canonicalAutoMovieCaptureRuntimeIdentity(notFinite),
-        "finite and positive",
-      ) &&
-      throws(
-        () => canonicalAutoMovieCaptureRuntimeIdentity(notPositive),
-        "finite and positive",
-      ) &&
-      throws(
-        () => canonicalAutoMovieCaptureRuntimeIdentity(invalidDigest),
-        "exact SHA-256",
-      ),
+    namedFacts([
+      [
+        "throwsCanonicalAutoMovieCaptureRuntimeIdentityBlank",
+        () =>
+          throws(
+            () => canonicalAutoMovieCaptureRuntimeIdentity(blank),
+            "non-blank",
+          ),
+      ],
+      [
+        "throwsCanonicalAutoMovieCaptureRuntimeIdentityNotFinite",
+        () =>
+          throws(
+            () => canonicalAutoMovieCaptureRuntimeIdentity(notFinite),
+            "finite and positive",
+          ),
+      ],
+      [
+        "throwsCanonicalAutoMovieCaptureRuntimeIdentityNotPositive",
+        () =>
+          throws(
+            () => canonicalAutoMovieCaptureRuntimeIdentity(notPositive),
+            "finite and positive",
+          ),
+      ],
+      [
+        "throwsCanonicalAutoMovieCaptureRuntimeIdentityInvalidDigest",
+        () =>
+          throws(
+            () => canonicalAutoMovieCaptureRuntimeIdentity(invalidDigest),
+            "exact SHA-256",
+          ),
+      ],
+    ]),
+    {
+      throwsCanonicalAutoMovieCaptureRuntimeIdentityBlank: true,
+      throwsCanonicalAutoMovieCaptureRuntimeIdentityNotFinite: true,
+      throwsCanonicalAutoMovieCaptureRuntimeIdentityNotPositive: true,
+      throwsCanonicalAutoMovieCaptureRuntimeIdentityInvalidDigest: true,
+    },
   );
 
   const packageWithoutRevision = structuredClone(identity);
@@ -108,47 +155,108 @@ export const test_mcp_capture_runtime_identity = (): void => {
   systemWithPackageProduct.browser.source = "system-channel";
   systemWithPackageProduct.browser.revision = null;
   systemWithPackageProduct.browser.executableDigest = null;
-  TestValidator.predicate(
+  TestValidator.equals(
     "capture identity enforces provenance rules for each browser source",
-    throws(
-      () => canonicalAutoMovieCaptureRuntimeIdentity(packageWithoutRevision),
-      "requires",
-    ) &&
-      throws(
+    namedFacts([
+      [
+        "throwsCanonicalAutoMovieCaptureRuntimeIdentityPackageWithoutRevision",
         () =>
-          canonicalAutoMovieCaptureRuntimeIdentity(packageWithBlankRevision),
-        "requires",
-      ) &&
-      throws(
-        () => canonicalAutoMovieCaptureRuntimeIdentity(packageWithoutDigest),
-        "requires",
-      ) &&
-      throws(
+          throws(
+            () =>
+              canonicalAutoMovieCaptureRuntimeIdentity(packageWithoutRevision),
+            "requires",
+          ),
+      ],
+      [
+        "throwsCanonicalAutoMovieCaptureRuntimeIdentityPackageWithBlankRevision",
         () =>
-          canonicalAutoMovieCaptureRuntimeIdentity(packageWithSystemProduct),
-        "requires",
-      ) &&
-      throws(
-        () => canonicalAutoMovieCaptureRuntimeIdentity(configuredWithoutDigest),
-        "exact executable",
-      ) &&
-      throws(
-        () => canonicalAutoMovieCaptureRuntimeIdentity(configuredWithRevision),
-        "exact executable",
-      ) &&
-      throws(
-        () => canonicalAutoMovieCaptureRuntimeIdentity(systemWithProvenance),
-        "must leave",
-      ) &&
-      throws(
-        () => canonicalAutoMovieCaptureRuntimeIdentity(systemWithDigestOnly),
-        "must leave",
-      ) &&
-      throws(
+          throws(
+            () =>
+              canonicalAutoMovieCaptureRuntimeIdentity(
+                packageWithBlankRevision,
+              ),
+            "requires",
+          ),
+      ],
+      [
+        "throwsCanonicalAutoMovieCaptureRuntimeIdentityPackageWithoutDigest",
         () =>
-          canonicalAutoMovieCaptureRuntimeIdentity(systemWithPackageProduct),
-        "must leave",
-      ),
+          throws(
+            () =>
+              canonicalAutoMovieCaptureRuntimeIdentity(packageWithoutDigest),
+            "requires",
+          ),
+      ],
+      [
+        "throwsCanonicalAutoMovieCaptureRuntimeIdentityPackageWithSystemProduct",
+        () =>
+          throws(
+            () =>
+              canonicalAutoMovieCaptureRuntimeIdentity(
+                packageWithSystemProduct,
+              ),
+            "requires",
+          ),
+      ],
+      [
+        "throwsCanonicalAutoMovieCaptureRuntimeIdentityConfiguredWithoutDigest",
+        () =>
+          throws(
+            () =>
+              canonicalAutoMovieCaptureRuntimeIdentity(configuredWithoutDigest),
+            "exact executable",
+          ),
+      ],
+      [
+        "throwsCanonicalAutoMovieCaptureRuntimeIdentityConfiguredWithRevision",
+        () =>
+          throws(
+            () =>
+              canonicalAutoMovieCaptureRuntimeIdentity(configuredWithRevision),
+            "exact executable",
+          ),
+      ],
+      [
+        "throwsCanonicalAutoMovieCaptureRuntimeIdentitySystemWithProvenance",
+        () =>
+          throws(
+            () =>
+              canonicalAutoMovieCaptureRuntimeIdentity(systemWithProvenance),
+            "must leave",
+          ),
+      ],
+      [
+        "throwsCanonicalAutoMovieCaptureRuntimeIdentitySystemWithDigestOnly",
+        () =>
+          throws(
+            () =>
+              canonicalAutoMovieCaptureRuntimeIdentity(systemWithDigestOnly),
+            "must leave",
+          ),
+      ],
+      [
+        "throwsCanonicalAutoMovieCaptureRuntimeIdentitySystemWithPackageProduct",
+        () =>
+          throws(
+            () =>
+              canonicalAutoMovieCaptureRuntimeIdentity(
+                systemWithPackageProduct,
+              ),
+            "must leave",
+          ),
+      ],
+    ]),
+    {
+      throwsCanonicalAutoMovieCaptureRuntimeIdentityPackageWithoutRevision: true,
+      throwsCanonicalAutoMovieCaptureRuntimeIdentityPackageWithBlankRevision: true,
+      throwsCanonicalAutoMovieCaptureRuntimeIdentityPackageWithoutDigest: true,
+      throwsCanonicalAutoMovieCaptureRuntimeIdentityPackageWithSystemProduct: true,
+      throwsCanonicalAutoMovieCaptureRuntimeIdentityConfiguredWithoutDigest: true,
+      throwsCanonicalAutoMovieCaptureRuntimeIdentityConfiguredWithRevision: true,
+      throwsCanonicalAutoMovieCaptureRuntimeIdentitySystemWithProvenance: true,
+      throwsCanonicalAutoMovieCaptureRuntimeIdentitySystemWithDigestOnly: true,
+      throwsCanonicalAutoMovieCaptureRuntimeIdentitySystemWithPackageProduct: true,
+    },
   );
 
   const system = structuredClone(identity);

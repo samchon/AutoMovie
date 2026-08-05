@@ -19,7 +19,7 @@ import {
 import { TestValidator } from "@nestia/e2e";
 
 import { createSkeleton, makePose } from "../internal/fixtures";
-import { nclose } from "../internal/predicates";
+import { namedFacts, nclose } from "../internal/predicates";
 
 const bone = (
   b: AutoMovieHumanoidBone,
@@ -232,11 +232,18 @@ export const test_perform_arm_gestures = (): void => {
     undefined,
     0,
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "a bone target applies its FK root travel exactly once",
-    rootedTarget !== null &&
-      nclose(rootedTarget.x, 6.75) &&
-      nclose(rootedTarget.y, 1.4),
+    namedFacts([
+      ["rootedTarget", () => rootedTarget !== null],
+      ["ncloseRootedTargetX", () => nclose(rootedTarget.x, 6.75)],
+      ["ncloseRootedTargetY", () => nclose(rootedTarget.y, 1.4)],
+    ]),
+    {
+      rootedTarget: true,
+      ncloseRootedTargetX: true,
+      ncloseRootedTargetY: true,
+    },
   );
 
   const constantTarget = makeActorSynthesizer(
@@ -398,9 +405,14 @@ export const test_perform_arm_gestures = (): void => {
   const rigClip = rigSpace(pointAt, "hero");
   const clinicalClip = clinical(pointAt, "hero");
   const clinAbd = abdOf(clinicalClip);
-  TestValidator.predicate(
+  TestValidator.equals(
     "both frames synthesise a point clip, each in its own space",
-    rigClip !== null && clinicalClip !== null && clinAbd !== null,
+    namedFacts([
+      ["rigClip", () => rigClip !== null],
+      ["clinicalClip", () => clinicalClip !== null],
+      ["clinAbd", () => clinAbd !== null],
+    ]),
+    { rigClip: true, clinicalClip: true, clinAbd: true },
   );
   TestValidator.predicate(
     "and the elbow's hinge angle is identical across the two frames",

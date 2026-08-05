@@ -6,7 +6,7 @@ import {
 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { nclose } from "../internal/predicates";
+import { namedFacts, nclose } from "../internal/predicates";
 
 const BOB = 0.05;
 
@@ -105,10 +105,26 @@ export const test_motion_path_ground = (): void => {
     nclose(rootAt(flat.motion, 3).translation.y, BOB),
   );
 
-  TestValidator.predicate(
+  TestValidator.equals(
     "horizontal progress ignores height",
-    nclose(rootAt(slope.motion, 1).translation.x, 1) &&
-      nclose(rootAt(plane.motion, 1).translation.x, 1) &&
-      nclose(rootAt(flat.motion, 1).translation.x, 1),
+    namedFacts([
+      [
+        "ncloseRootAtSlope",
+        () => nclose(rootAt(slope.motion, 1).translation.x, 1),
+      ],
+      [
+        "ncloseRootAtPlane",
+        () => nclose(rootAt(plane.motion, 1).translation.x, 1),
+      ],
+      [
+        "ncloseRootAtFlat",
+        () => nclose(rootAt(flat.motion, 1).translation.x, 1),
+      ],
+    ]),
+    {
+      ncloseRootAtSlope: true,
+      ncloseRootAtPlane: true,
+      ncloseRootAtFlat: true,
+    },
   );
 };

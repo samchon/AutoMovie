@@ -17,6 +17,7 @@ import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
 import path from "node:path";
 
+import { namedFacts } from "../internal/predicates";
 import {
   formationDesign,
   modelRecipe,
@@ -648,12 +649,32 @@ export const test_mcp_production_realization = (): void => {
         return item?.actual === null && item.passed === false;
       }),
     );
-    TestValidator.predicate(
+    TestValidator.equals(
       "node transforms and omitted joint channels remain measurable",
-      missingOperandPredicates[5]?.actual === 2 &&
-        missingOperandPredicates[5].passed === false &&
-        missingOperandPredicates[7]?.actual === 0 &&
-        missingOperandPredicates[7].passed === true,
+      namedFacts([
+        [
+          "missingOperandPredicatesActual",
+          () => missingOperandPredicates[5]?.actual === 2,
+        ],
+        [
+          "missingOperandPredicatesPassed",
+          () => missingOperandPredicates[5].passed === false,
+        ],
+        [
+          "missingOperandPredicatesActual2",
+          () => missingOperandPredicates[7]?.actual === 0,
+        ],
+        [
+          "missingOperandPredicatesPassed2",
+          () => missingOperandPredicates[7].passed === true,
+        ],
+      ]),
+      {
+        missingOperandPredicatesActual: true,
+        missingOperandPredicatesPassed: true,
+        missingOperandPredicatesActual2: true,
+        missingOperandPredicatesPassed2: true,
+      },
     );
   } catch (error) {
     productionRealizationFailure = { error };

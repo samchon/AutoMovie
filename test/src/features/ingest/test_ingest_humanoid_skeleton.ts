@@ -4,7 +4,7 @@ import { IAutoMovieBone } from "@automovie/interface";
 import { Document } from "@gltf-transform/core";
 import { TestValidator } from "@nestia/e2e";
 
-import { nclose, vclose } from "../internal/predicates";
+import { namedFacts, nclose, vclose } from "../internal/predicates";
 
 const find = (bones: IAutoMovieBone[], bone: string): IAutoMovieBone => {
   const b = bones.find((x) => x.bone === bone);
@@ -145,11 +145,21 @@ export const test_ingest_humanoid_skeleton = (): void => {
   rolled.createScene().addChild(rHips);
   const rolledSkel = humanoidSkeleton(rolled, "rolled")!;
   const rolledSpine = find(rolledSkel.bones, "spine");
-  TestValidator.predicate(
+  TestValidator.equals(
     "a rotated helper rotates the child's rest offset and rolls its rotation",
-    vclose(rolledSpine.rest.translation, { x: -0.2, y: 0, z: 0 }) &&
-      nclose(rolledSpine.rest.rotation.z, sq) &&
-      nclose(rolledSpine.rest.rotation.w, sq),
+    namedFacts([
+      [
+        "vcloseRolledSpineRest",
+        () => vclose(rolledSpine.rest.translation, { x: -0.2, y: 0, z: 0 }),
+      ],
+      ["ncloseRolledSpineRest", () => nclose(rolledSpine.rest.rotation.z, sq)],
+      ["ncloseRolledSpineRest2", () => nclose(rolledSpine.rest.rotation.w, sq)],
+    ]),
+    {
+      vcloseRolledSpineRest: true,
+      ncloseRolledSpineRest: true,
+      ncloseRolledSpineRest2: true,
+    },
   );
   TestValidator.predicate(
     "FK lands the rolled spine beside the hips",

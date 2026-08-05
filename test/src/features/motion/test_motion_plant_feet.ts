@@ -14,6 +14,7 @@ import {
 import { TestValidator } from "@nestia/e2e";
 
 import {
+  namedFacts,
   nclose,
   validationHasNoWarnings,
   validationHasWarnings,
@@ -195,12 +196,20 @@ export const test_motion_plant_feet = (): void => {
   );
 
   TestValidator.equals("one stance run", planted.plants.length, 1);
-  TestValidator.predicate(
+  TestValidator.equals(
     "run spans the clip pinned to ground",
-    planted.plants[0]!.foot === "leftFoot" &&
-      nclose(planted.plants[0]!.start, 0) &&
-      nclose(planted.plants[0]!.end, 1) &&
-      nclose(planted.plants[0]!.position.y, 0),
+    namedFacts([
+      ["plantedPlantsFoot", () => planted.plants[0]!.foot === "leftFoot"],
+      ["nclosePlantedPlants", () => nclose(planted.plants[0]!.start, 0)],
+      ["nclosePlantedPlants2", () => nclose(planted.plants[0]!.end, 1)],
+      ["nclosePlantedPlants3", () => nclose(planted.plants[0]!.position.y, 0)],
+    ]),
+    {
+      plantedPlantsFoot: true,
+      nclosePlantedPlants: true,
+      nclosePlantedPlants2: true,
+      nclosePlantedPlants3: true,
+    },
   );
   TestValidator.equals(
     "ground IK stays inside ROM without temporal branch jumps",

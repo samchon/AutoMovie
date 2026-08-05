@@ -15,7 +15,7 @@ import {
 } from "@automovie/benchmark";
 import { TestValidator } from "@nestia/e2e";
 
-import { throwsError } from "../internal/predicates";
+import { namedFacts, throwsError } from "../internal/predicates";
 
 const expectErrorMessage = (
   title: string,
@@ -36,28 +36,78 @@ export const test_benchmark_scenario_registry = (): void => {
       "short/austerlitz-teaser",
     ],
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "the deterministic demo family fixes one, five, and twenty minute laws",
-    getAutoMovieBenchmarkScenario("short/austerlitz-teaser").brief ===
-      AUSTERLITZ_TEASER_BRIEF &&
-      getAutoMovieBenchmarkScenario("medium/austerlitz-volley-exchange")
-        .brief === AUSTERLITZ_VOLLEY_EXCHANGE_BRIEF &&
-      getAutoMovieBenchmarkScenario("long/austerlitz-battle-film").brief ===
-        AUSTERLITZ_BATTLE_FILM_BRIEF &&
-      austerlitzTeaserTask().delivery.minRuntimeSeconds === 55 &&
-      austerlitzTeaserTask().productionLaw.some(
-        (assertion) => assertion.id === "production/object-registration",
-      ) &&
-      austerlitzVolleyExchangeTask().delivery.minRuntimeSeconds === 285 &&
-      austerlitzBattleFilmTask().delivery.minRuntimeSeconds === 1_140 &&
-      austerlitzTeaserDraft().surface === "five-tool" &&
-      getAutoMovieBenchmarkScenario("short/austerlitz-teaser").lanes.join(
-        ",",
-      ) === "deterministic,repaint" &&
-      scenarios.every(
-        (scenario) =>
-          Object.isFrozen(scenario) && Object.isFrozen(scenario.lanes),
-      ),
+    namedFacts([
+      [
+        "getAutoMovieBenchmarkScenarioShortAusterlitz",
+        () =>
+          getAutoMovieBenchmarkScenario("short/austerlitz-teaser").brief ===
+          AUSTERLITZ_TEASER_BRIEF,
+      ],
+      [
+        "getAutoMovieBenchmarkScenarioMediumAusterlitz",
+        () =>
+          getAutoMovieBenchmarkScenario("medium/austerlitz-volley-exchange")
+            .brief === AUSTERLITZ_VOLLEY_EXCHANGE_BRIEF,
+      ],
+      [
+        "getAutoMovieBenchmarkScenarioLongAusterlitz",
+        () =>
+          getAutoMovieBenchmarkScenario("long/austerlitz-battle-film").brief ===
+          AUSTERLITZ_BATTLE_FILM_BRIEF,
+      ],
+      [
+        "austerlitzTeaserTaskDeliveryMinRuntimeSeconds",
+        () => austerlitzTeaserTask().delivery.minRuntimeSeconds === 55,
+      ],
+      [
+        "austerlitzTeaserTaskProductionLawAssertion",
+        () =>
+          austerlitzTeaserTask().productionLaw.some(
+            (assertion) => assertion.id === "production/object-registration",
+          ),
+      ],
+      [
+        "austerlitzVolleyExchangeTaskDeliveryMinRuntimeSeconds",
+        () => austerlitzVolleyExchangeTask().delivery.minRuntimeSeconds === 285,
+      ],
+      [
+        "austerlitzBattleFilmTaskDeliveryMinRuntimeSeconds",
+        () => austerlitzBattleFilmTask().delivery.minRuntimeSeconds === 1_140,
+      ],
+      [
+        "austerlitzTeaserDraftSurfaceFive",
+        () => austerlitzTeaserDraft().surface === "five-tool",
+      ],
+      [
+        "getAutoMovieBenchmarkScenarioShortAusterlitz2",
+        () =>
+          getAutoMovieBenchmarkScenario("short/austerlitz-teaser").lanes.join(
+            ",",
+          ) === "deterministic,repaint",
+      ],
+      [
+        "scenariosScenarioIsFrozen",
+        () =>
+          scenarios.every(
+            (scenario) =>
+              Object.isFrozen(scenario) && Object.isFrozen(scenario.lanes),
+          ),
+      ],
+    ]),
+    {
+      getAutoMovieBenchmarkScenarioShortAusterlitz: true,
+      getAutoMovieBenchmarkScenarioMediumAusterlitz: true,
+      getAutoMovieBenchmarkScenarioLongAusterlitz: true,
+      austerlitzTeaserTaskDeliveryMinRuntimeSeconds: true,
+      austerlitzTeaserTaskProductionLawAssertion: true,
+      austerlitzVolleyExchangeTaskDeliveryMinRuntimeSeconds: true,
+      austerlitzBattleFilmTaskDeliveryMinRuntimeSeconds: true,
+      austerlitzTeaserDraftSurfaceFive: true,
+      getAutoMovieBenchmarkScenarioShortAusterlitz2: true,
+      scenariosScenarioIsFrozen: true,
+    },
   );
   for (const scenario of scenarios)
     TestValidator.predicate(
@@ -132,16 +182,43 @@ export const test_benchmark_scenario_registry = (): void => {
     { surface: "legacy-compact", mcp: oldSession },
     { surface: "five-tool", mcp: currentSession },
   ]);
-  TestValidator.predicate(
+  TestValidator.equals(
     "actual new and retired handshakes produce a tool-budget comparison",
-    inventory.surfaces.length === 2 &&
-      inventory.surfaces.find((entry) => entry.surface === "five-tool")
-        ?.tools === 5 &&
-      inventory.comparisons.length === 1 &&
-      inventory.comparisons[0]!.from === "legacy-compact" &&
-      inventory.comparisons[0]!.to === "five-tool" &&
-      inventory.comparisons[0]!.added.includes("captureFrame") &&
-      inventory.comparisons[0]!.removed.includes("compile"),
+    namedFacts([
+      ["inventorySurfaces", () => inventory.surfaces.length === 2],
+      [
+        "inventorySurfacesFind",
+        () =>
+          inventory.surfaces.find((entry) => entry.surface === "five-tool")
+            ?.tools === 5,
+      ],
+      ["inventoryComparisons", () => inventory.comparisons.length === 1],
+      [
+        "inventoryComparisonsFrom",
+        () => inventory.comparisons[0]!.from === "legacy-compact",
+      ],
+      [
+        "inventoryComparisonsTo",
+        () => inventory.comparisons[0]!.to === "five-tool",
+      ],
+      [
+        "inventoryComparisonsAdded",
+        () => inventory.comparisons[0]!.added.includes("captureFrame"),
+      ],
+      [
+        "inventoryComparisonsRemoved",
+        () => inventory.comparisons[0]!.removed.includes("compile"),
+      ],
+    ]),
+    {
+      inventorySurfaces: true,
+      inventorySurfacesFind: true,
+      inventoryComparisons: true,
+      inventoryComparisonsFrom: true,
+      inventoryComparisonsTo: true,
+      inventoryComparisonsAdded: true,
+      inventoryComparisonsRemoved: true,
+    },
   );
   expectErrorMessage(
     "inventory reports require one measured handshake",

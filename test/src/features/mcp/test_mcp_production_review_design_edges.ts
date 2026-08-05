@@ -6,6 +6,7 @@ import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
 import path from "node:path";
 
+import { namedFacts } from "../internal/predicates";
 import {
   formationDesign,
   modelRecipe,
@@ -342,11 +343,27 @@ export const test_mcp_production_review_design_edges = (): void => {
       },
     });
     fs.writeFileSync(acceptanceFile, acceptanceBytes);
-    TestValidator.predicate(
+    TestValidator.equals(
       "missing design dependencies are fingerprinted as absent",
-      missingFormationDependency.fingerprint.startsWith("sha256:") &&
-        missingShotDependency.fingerprint.startsWith("sha256:") &&
-        missingAcceptanceDependencies.fingerprint.startsWith("sha256:"),
+      namedFacts([
+        [
+          "missingFormationDependencyFingerprintStartsWith",
+          () => missingFormationDependency.fingerprint.startsWith("sha256:"),
+        ],
+        [
+          "missingShotDependencyFingerprintStartsWith",
+          () => missingShotDependency.fingerprint.startsWith("sha256:"),
+        ],
+        [
+          "missingAcceptanceDependenciesFingerprintStartsWith",
+          () => missingAcceptanceDependencies.fingerprint.startsWith("sha256:"),
+        ],
+      ]),
+      {
+        missingFormationDependencyFingerprintStartsWith: true,
+        missingShotDependencyFingerprintStartsWith: true,
+        missingAcceptanceDependenciesFingerprintStartsWith: true,
+      },
     );
     TestValidator.predicate(
       "absent formation and shot design targets remain fingerprintable",

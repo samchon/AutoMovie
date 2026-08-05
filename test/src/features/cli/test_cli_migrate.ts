@@ -4,6 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+import { namedFacts } from "../internal/predicates";
 import { captureCliOutput as captureCli } from "./CliOutputCapture";
 import { preserveCliRootFixtureCleanup } from "./CliRootFixtureCleanup";
 
@@ -18,43 +19,96 @@ export const test_cli_migrate = (): void => {
       version: number;
       fingerprint: string;
     };
-    TestValidator.predicate(
+    TestValidator.equals(
       "CLI dry-run prints a plan and writes no production state",
-      dryRun.status === 0 &&
-        dryRun.stderr === "" &&
-        dryPlan.version === 1 &&
-        dryPlan.fingerprint.startsWith("sha256:") &&
-        fs.existsSync(path.join(root, ".automovie")) === false,
+      namedFacts([
+        ["dryRunStatus", () => dryRun.status === 0],
+        ["dryRunStderr", () => dryRun.stderr === ""],
+        ["dryPlanVersion", () => dryPlan.version === 1],
+        [
+          "dryPlanFingerprintStartsWith",
+          () => dryPlan.fingerprint.startsWith("sha256:"),
+        ],
+        [
+          "existsSyncRootAutomovie",
+          () => fs.existsSync(path.join(root, ".automovie")) === false,
+        ],
+      ]),
+      {
+        dryRunStatus: true,
+        dryRunStderr: true,
+        dryPlanVersion: true,
+        dryPlanFingerprintStartsWith: true,
+        existsSyncRootAutomovie: true,
+      },
     );
 
     const conflict = captureCli(["migrate", root, "--dry-run", "--rollback"]);
-    TestValidator.predicate(
+    TestValidator.equals(
       "CLI migrate rejects conflicting modes",
-      conflict.status === 1 &&
-        conflict.stdout === "" &&
-        conflict.stderr.includes("only one"),
+      namedFacts([
+        ["conflictStatus", () => conflict.status === 1],
+        ["conflictStdout", () => conflict.stdout === ""],
+        ["conflictStderrIncludes", () => conflict.stderr.includes("only one")],
+      ]),
+      {
+        conflictStatus: true,
+        conflictStdout: true,
+        conflictStderrIncludes: true,
+      },
     );
 
     const applied = captureCli(["migrate", root]);
     const appliedOutput = JSON.parse(applied.stdout) as { status: string };
     const repeated = captureCli(["migrate", root]);
     const repeatedOutput = JSON.parse(repeated.stdout) as { status: string };
-    TestValidator.predicate(
+    TestValidator.equals(
       "CLI migrate applies once and then reports the identical import",
-      applied.status === 0 &&
-        appliedOutput.status === "applied" &&
-        repeated.status === 0 &&
-        repeatedOutput.status === "unchanged" &&
-        fs.existsSync(path.join(root, ".automovie/manifest.json")),
+      namedFacts([
+        ["appliedStatus", () => applied.status === 0],
+        [
+          "appliedOutputStatusApplied",
+          () => appliedOutput.status === "applied",
+        ],
+        ["repeatedStatus", () => repeated.status === 0],
+        [
+          "repeatedOutputStatusUnchanged",
+          () => repeatedOutput.status === "unchanged",
+        ],
+        [
+          "existsSyncRootAutomovie",
+          () => fs.existsSync(path.join(root, ".automovie/manifest.json")),
+        ],
+      ]),
+      {
+        appliedStatus: true,
+        appliedOutputStatusApplied: true,
+        repeatedStatus: true,
+        repeatedOutputStatusUnchanged: true,
+        existsSyncRootAutomovie: true,
+      },
     );
 
     const rolledBack = captureCli(["migrate", root, "--rollback"]);
     const rollbackOutput = JSON.parse(rolledBack.stdout) as { status: string };
-    TestValidator.predicate(
+    TestValidator.equals(
       "CLI rollback removes only the untouched applied import",
-      rolledBack.status === 0 &&
-        rollbackOutput.status === "rolled-back" &&
-        fs.existsSync(path.join(root, ".automovie")) === false,
+      namedFacts([
+        ["rolledBackStatus", () => rolledBack.status === 0],
+        [
+          "rollbackOutputStatusRolled",
+          () => rollbackOutput.status === "rolled-back",
+        ],
+        [
+          "existsSyncRootAutomovie",
+          () => fs.existsSync(path.join(root, ".automovie")) === false,
+        ],
+      ]),
+      {
+        rolledBackStatus: true,
+        rollbackOutputStatusRolled: true,
+        existsSyncRootAutomovie: true,
+      },
     );
   } catch (error) {
     migrateFailure = { error };

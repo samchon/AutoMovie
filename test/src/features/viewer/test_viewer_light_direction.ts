@@ -8,7 +8,7 @@ import { buildScene } from "@automovie/viewer";
 import { TestValidator } from "@nestia/e2e";
 import * as THREE from "three";
 
-import { vclose } from "../internal/predicates";
+import { namedFacts, vclose } from "../internal/predicates";
 
 /** Stage a scene carrying exactly the given light placements. */
 const stagedWith = (lights: IAutoMovieStageLight[]): IAutoMovieScene => {
@@ -167,12 +167,21 @@ export const test_viewer_light_direction = (): void => {
     ]),
   );
   const point = lightsOf(pointScene)[0] as THREE.PointLight;
-  TestValidator.predicate(
+  TestValidator.equals(
     "a point light keeps its position and range and carries no aiming target",
-    point.position.x === 1 &&
-      point.position.y === 2 &&
-      point.position.z === -1 &&
-      point.distance === 8 &&
-      point.children.length === 0,
+    namedFacts([
+      ["pointPositionX", () => point.position.x === 1],
+      ["pointPositionY", () => point.position.y === 2],
+      ["pointPositionZ", () => point.position.z === -1],
+      ["pointDistance", () => point.distance === 8],
+      ["pointChildren", () => point.children.length === 0],
+    ]),
+    {
+      pointPositionX: true,
+      pointPositionY: true,
+      pointPositionZ: true,
+      pointDistance: true,
+      pointChildren: true,
+    },
   );
 };
