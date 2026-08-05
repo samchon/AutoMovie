@@ -113,6 +113,38 @@ export const test_validation_shot_artifact_paths = (): void => {
       shot: shot({ performances: [{ node: " ", motion: null }] }),
       path: "$input.performances[0].node",
     },
+    {
+      title: "a performance naming a node the scene does not stage",
+      shot: shot({ performances: [{ node: "ghost", motion: null }] }),
+      path: "$input.performances[0].node",
+    },
+    {
+      title: "a performance starting after the shot ends",
+      shot: shot({
+        performances: [{ node: "hero", motion: null, startOffset: 9 }],
+      }),
+      path: "$input.performances[0].startOffset",
+    },
+    {
+      title: "a performance naming a motion outside the resolved registry",
+      shot: shot({
+        performances: [{ node: "hero", motion: "sprint", startOffset: 0 }],
+      }),
+      path: "$input.performances[0].motion",
+    },
+    {
+      title: "an absent cameraMotion, which is not an explicit null",
+      shot: shot({ cameraMotion: undefined }),
+      path: "$input.cameraMotion",
+    },
+    {
+      title: "duplicate object motion clip ids",
+      shot: shot({
+        cameraMotion: null,
+        objectMotions: [{ id: "twin" }, { id: "twin" }],
+      }),
+      path: "$input.objectMotions",
+    },
   ];
   TestValidator.equals(
     "the shot validator reports the located violation for each malformed field",
