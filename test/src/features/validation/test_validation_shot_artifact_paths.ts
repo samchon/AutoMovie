@@ -21,6 +21,7 @@ const scene = (): IAutoMovieScene =>
     nodes: [{ id: "hero", model: "m", transform: transform() }],
     cameras: [
       { id: "cam", transform: transform(), fovY: 50, near: 0.1, far: 100 },
+      { id: "wide", transform: transform(), fovY: 70, near: 0.1, far: 100 },
     ],
     lights: [
       {
@@ -68,6 +69,18 @@ const intent = (overrides: Record<string, unknown> = {}): unknown => ({
   move: "static",
   focus: null,
   focalLength: null,
+  ...overrides,
+});
+
+/**
+ * A coverage take the validator accepts.
+ *
+ * Coverage plays ANOTHER angle, so its camera is never the shot's own `cam`.
+ */
+const take = (overrides: Record<string, unknown> = {}): unknown => ({
+  camera: "wide",
+  cameraMotion: null,
+  cameraIntent: [],
   ...overrides,
 });
 
@@ -258,6 +271,43 @@ export const test_validation_shot_artifact_paths = (): void => {
       title: "a non-positive camera focal length",
       shot: shot({ cameraIntent: [intent({ focalLength: 0 })] }),
       path: "$input.cameraIntent[0].focalLength",
+    },
+    {
+      title: "a coverage field that is not an array",
+      shot: shot({ coverage: "cam" }),
+      path: "$input.coverage",
+    },
+    {
+      title: "a non-object coverage take",
+      shot: shot({ coverage: [7] }),
+      path: "$input.coverage[0]",
+    },
+    {
+      title: "a coverage take naming a camera the scene does not stage",
+      shot: shot({ coverage: [take({ camera: "absent" })] }),
+      path: "$input.coverage[0].camera",
+    },
+    {
+      title: "a coverage take playing the shot's own live camera",
+      shot: shot({ coverage: [take({ camera: "cam" })] }),
+      path: "$input.coverage[0].camera",
+    },
+    {
+      title: "the same coverage camera declared twice",
+      shot: shot({ coverage: [take(), take()] }),
+      path: "$input.coverage[1].camera",
+    },
+    {
+      title: "a coverage take whose cameraMotion is absent, not null",
+      shot: shot({ coverage: [{ camera: "wide", cameraIntent: [] }] }),
+      path: "$input.coverage[0].cameraMotion",
+    },
+    {
+      title: "a coverage take carrying a malformed camera intent",
+      shot: shot({
+        coverage: [take({ cameraIntent: [intent({ framing: "dutch" })] })],
+      }),
+      path: "$input.coverage[0].cameraIntent[0].framing",
     },
   ];
   TestValidator.equals(
