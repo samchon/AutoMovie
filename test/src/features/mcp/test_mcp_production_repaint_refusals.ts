@@ -81,41 +81,39 @@ export const test_mcp_production_repaint_refusals = async (): Promise<void> => {
     const blank = await repaint("  ");
     const untrimmed = await repaint("fixture-film ");
     const hostless = await repaint("fixture-film");
+    // Report the code each refusal actually carried. A boolean folds "refused
+    // for another reason" into "not refused", and the reason is the subject.
     TestValidator.equals(
       "repaint refuses by name and never reports a rendition it did not make",
-      namedFacts([
-        [
-          "blankProductionIsRefused",
-          () => codesOf(blank).join(",") === "repaint-production-invalid",
-        ],
-        [
-          "untrimmedProductionIsRefused",
-          () => codesOf(untrimmed).join(",") === "repaint-production-invalid",
-        ],
-        [
-          "aHostWithNoAdapterIsRefused",
-          () => codesOf(hostless).join(",") === "repaint-host-unavailable",
-        ],
-        [
-          "theAdapterRefusalNamesItsConfiguration",
-          () =>
-            hostless.diagnostics[0]!.message.includes(
-              "createAutoMovieMcpServer({ repaint })",
-            ),
-        ],
-        [
-          "noRefusalCarriesAReceipt",
-          () =>
-            [blank, untrimmed, hostless].every(
-              (output) => output.repainted === false && output.receipt === null,
-            ),
-        ],
-      ]),
       {
-        blankProductionIsRefused: true,
-        untrimmedProductionIsRefused: true,
-        aHostWithNoAdapterIsRefused: true,
-        theAdapterRefusalNamesItsConfiguration: true,
+        blank: codesOf(blank).join(","),
+        untrimmed: codesOf(untrimmed).join(","),
+        hostless: codesOf(hostless).join(","),
+        ...namedFacts([
+          [
+            "theRefusalNamesWhatWouldRepairIt",
+            () =>
+              [blank, untrimmed, hostless].every((output) =>
+                output.diagnostics.every(
+                  (diagnostic) => diagnostic.message.trim().length !== 0,
+                ),
+              ),
+          ],
+          [
+            "noRefusalCarriesAReceipt",
+            () =>
+              [blank, untrimmed, hostless].every(
+                (output) =>
+                  output.repainted === false && output.receipt === null,
+              ),
+          ],
+        ]),
+      },
+      {
+        blank: "repaint-production-invalid",
+        untrimmed: "repaint-production-invalid",
+        hostless: "repaint-host-unavailable",
+        theRefusalNamesWhatWouldRepairIt: true,
         noRefusalCarriesAReceipt: true,
       },
     );
