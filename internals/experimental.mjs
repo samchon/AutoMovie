@@ -4,22 +4,29 @@
 //
 // This is repository-local tooling on purpose. `packages/cli/scaffold/**` and
 // the published `@automovie/cli` surface stay untouched: a real user's project
-// must keep targeting released versions and `tsx`, and only the workspace-local
-// sandbox differs from that.
+// must keep targeting released versions and `tsx`, and only the sandbox differs
+// from that.
 //
-// Two rewrites separate a sandbox from a released project.
+// Three rewrites separate a sandbox from a released project. Each one is
+// explained at the function that performs it.
 //
-// 1. Every `@automovie/*` dependency becomes `workspace:^`, so pnpm links the
-//    package directories rather than installing tarballs.
-// 2. The MCP host runs under `ttsx`, not `tsx`. A workspace link resolves
-//    `@automovie/mcp` through its `exports` to `src/*.ts`, and that source has
-//    not been through typia's compile-time transform yet. `tsx` erases types
-//    and runs no transformer, so the host dies on
+// 1. `renderSandbox` points every `@automovie/*` dependency at its package
+//    directory with `link:`, so the sandbox reads source instead of tarballs
+//    without joining the root workspace.
+// 2. `mcpConfig` launches the MCP host under `ttsx` rather than `tsx`, because
+//    a link resolves `@automovie/mcp` through its `exports` to `src/*.ts` and
+//    that source has not been through typia's compile-time transform yet.
+//    `tsx` runs no transformer, so the host dies on
 //    `typia.llm.controller(): no transform has been configured` before it can
-//    serve a single tool. `ttsx` applies the transform, including to the linked
-//    dependency's own source. `publishConfig.main` does not help here: it
-//    applies at publish time, so building the workspace does not change what
-//    the link resolves to.
+//    serve a single tool. `publishConfig.main` does not rescue this: it applies
+//    at publish time, so building the workspace never changes what the link
+//    resolves to.
+// 3. `hostTsconfig` gives the host a lint config of its own, so ttsx's project
+//    check cannot gate the server on a review contract the sandbox has not had
+//    the chance to satisfy yet.
+//
+// `sandboxManifest` then restores the two settings the root workspace used to
+// supply to an installed project.
 import { spawnSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
@@ -33,14 +40,14 @@ import {
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const SCAFFOLD = path.join(ROOT, "packages", "cli", "scaffold");
 
-const USAGE = `create a workspace-linked automovie sandbox
+const USAGE = `create a source-linked automovie sandbox
 
 Usage:
   pnpm run experimental <name> [--force] [--no-install]
 
 Options:
-  --force       Render into an existing experimental/<name>.
-  --no-install  Skip the pnpm install that creates the workspace links.
+  --force       Render over a non-empty experimental/<name>.
+  --no-install  Render only, skipping the install that creates the links.
 `;
 
 /**
