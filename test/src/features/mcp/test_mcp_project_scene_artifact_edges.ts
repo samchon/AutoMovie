@@ -95,7 +95,10 @@ interface ISceneCase {
  * 4. Lights: a non-object entry, a blank id, a malformed color, a negative
  *    intensity, an unknown type, a point light with a bad range, and a spot
  *    light with an out of range cone angle.
- * 5. Space: a declared space whose surface geometry is invalid reports its
+ * 5. Transform primitives, reached through a node's own transform: a non-positive
+ *    scale component, a rotation component that is not finite, and a rotation
+ *    that is not a unit quaternion.
+ * 6. Space: a declared space whose surface geometry is invalid reports its
  *    violation re-rooted under the scene's own `space` path.
  */
 export const test_mcp_project_scene_artifact_edges = (): void => {
@@ -223,7 +226,59 @@ export const test_mcp_project_scene_artifact_edges = (): void => {
       }),
       fragments: ["$input.lights[0].coneAngle"],
     },
-    // 5. space
+    // 5. transform primitives, reached through a node's own transform
+    {
+      title: "a non-positive transform scale component is refused",
+      value: scene({
+        nodes: [
+          {
+            id: "n",
+            model: "m",
+            transform: {
+              translation: { x: 0, y: 0, z: 0 },
+              rotation: { x: 0, y: 0, z: 0, w: 1 },
+              scale: { x: 1, y: 0, z: 1 },
+            },
+          },
+        ],
+      }),
+      fragments: ["$input.nodes[0].transform.scale.y"],
+    },
+    {
+      title: "a transform rotation component that is not finite is refused",
+      value: scene({
+        nodes: [
+          {
+            id: "n",
+            model: "m",
+            transform: {
+              translation: { x: 0, y: 0, z: 0 },
+              rotation: { x: 0, y: 0, z: "spin", w: 1 },
+              scale: { x: 1, y: 1, z: 1 },
+            },
+          },
+        ],
+      }),
+      fragments: ["$input.nodes[0].transform.rotation.z"],
+    },
+    {
+      title: "a rotation that is not a unit quaternion is refused",
+      value: scene({
+        nodes: [
+          {
+            id: "n",
+            model: "m",
+            transform: {
+              translation: { x: 0, y: 0, z: 0 },
+              rotation: { x: 0, y: 0, z: 0, w: 2 },
+              scale: { x: 1, y: 1, z: 1 },
+            },
+          },
+        ],
+      }),
+      fragments: ["$input.nodes[0].transform.rotation", "unit quaternion"],
+    },
+    // 6. space
     {
       title: "a declared space reports its violation under the scene space",
       value: scene({
