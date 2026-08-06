@@ -1,5 +1,7 @@
 .claude/
 .discussions/
+# disposable workspace-linked sandboxes (`pnpm run experimental <name>`)
+experimental/
 .models/
 .wiki/
 .references/
