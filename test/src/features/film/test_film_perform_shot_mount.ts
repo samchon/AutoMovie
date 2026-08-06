@@ -33,7 +33,7 @@ import {
   makeMotion,
   makePose,
 } from "../internal/fixtures";
-import { vclose } from "../internal/predicates";
+import { namedFacts, vclose } from "../internal/predicates";
 
 /** The horse walks +x by 2 m over the 2 s shot (root translation only). */
 const horseWalk: IAutoMovieMotion = makeMotion(
@@ -268,11 +268,18 @@ export const test_film_perform_shot_mount = (): void => {
     "the rider's beat-end is NOT its airborne staged coordinate",
     !vclose(riderEnd.transform.translation, { x: 5, y: 5, z: 5 }, 1e-3),
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "the rider inherits the horse's trailing velocity (nonzero +x)",
-    riderEnd.rootVelocity!.x > 0.5 &&
-      Math.abs(riderEnd.rootVelocity!.y) < 1e-6 &&
-      Math.abs(riderEnd.rootVelocity!.z) < 1e-6,
+    namedFacts([
+      ["riderEndRootVelocityX", () => riderEnd.rootVelocity!.x > 0.5],
+      ["MathAbsRiderEnd", () => Math.abs(riderEnd.rootVelocity!.y) < 1e-6],
+      ["MathAbsRiderEnd2", () => Math.abs(riderEnd.rootVelocity!.z) < 1e-6],
+    ]),
+    {
+      riderEndRootVelocityX: true,
+      MathAbsRiderEnd: true,
+      MathAbsRiderEnd2: true,
+    },
   );
   TestValidator.equals("the mount binding is carried", riderEnd.mount, {
     parent: "horse",

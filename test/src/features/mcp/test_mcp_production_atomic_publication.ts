@@ -17,6 +17,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { PNG } from "pngjs";
 
+import { namedFacts } from "../internal/predicates";
 import {
   productionCompileSucceeded,
   productionFixture,
@@ -276,15 +277,35 @@ export const test_mcp_production_atomic_publication = (): void => {
     const outputPath = path.join(project.renderRoot(), relative);
     const manifestBytes = fs.readFileSync(manifestPath);
     const receiptBytes = fs.readFileSync(receiptPath);
-    TestValidator.predicate(
+    TestValidator.equals(
       "terminal publication writes exact output and ledgers at one revision",
-      revision === before + 1 &&
-        finalChecks === 1 &&
-        fs.readFileSync(outputPath).equals(first) &&
-        JSON.parse(manifestBytes.toString("utf8")).compileFingerprint ===
-          compileFingerprint &&
-        JSON.parse(receiptBytes.toString("utf8")).files[0]?.probe.kind ===
-          "png",
+      namedFacts([
+        ["revisionBefore", () => revision === before + 1],
+        ["finalChecks", () => finalChecks === 1],
+        [
+          "readFileSyncOutputPathEquals",
+          () => fs.readFileSync(outputPath).equals(first),
+        ],
+        [
+          "parseManifestBytesUtf8",
+          () =>
+            JSON.parse(manifestBytes.toString("utf8")).compileFingerprint ===
+            compileFingerprint,
+        ],
+        [
+          "parseReceiptBytesUtf8",
+          () =>
+            JSON.parse(receiptBytes.toString("utf8")).files[0]?.probe.kind ===
+            "png",
+        ],
+      ]),
+      {
+        revisionBefore: true,
+        finalChecks: true,
+        readFileSyncOutputPathEquals: true,
+        parseManifestBytesUtf8: true,
+        parseReceiptBytesUtf8: true,
+      },
     );
 
     const duplicateClaim: IAutoMovieProductionRenderManifest = {
@@ -309,71 +330,120 @@ export const test_mcp_production_atomic_publication = (): void => {
       ...manifest,
       deliverables: [deliverable(relative, invalidMedia)],
     };
-    TestValidator.predicate(
+    TestValidator.equals(
       "terminal publication rejects every unowned or unverified inventory",
-      throws(() =>
-        project.commitProductionPublication({
-          files: new Map(),
-          manifest: {} as never,
-        }),
-      ) &&
-        throws(() =>
-          project.commitProductionPublication({
-            files: new Map([[relative, first]]),
-            manifest: {
-              ...manifest,
-              compileFingerprint: `sha256:${"9".repeat(64)}`,
-            },
-          }),
-        ) &&
-        throws(() =>
-          project.commitProductionPublication({
-            files: new Map([["../escape.png", first]]),
-            manifest,
-          }),
-        ) &&
-        throws(() =>
-          project.commitProductionPublication({
-            files: new Map([
-              ["Frame.png", first],
-              ["frame.png", first],
-            ]),
-            manifest,
-          }),
-        ) &&
-        throws(() =>
-          project.commitProductionPublication({
-            files: new Map([[relative, first]]),
-            manifest: duplicateClaim,
-          }),
-        ) &&
-        throws(() =>
-          project.commitProductionPublication({
-            files: new Map(),
-            manifest,
-          }),
-        ) &&
-        throws(() =>
-          project.commitProductionPublication({
-            files: new Map([
-              [relative, first],
-              ["unclaimed.png", first],
-            ]),
-            manifest,
-          }),
-        ) &&
-        throws(() =>
-          project.commitProductionPublication({
-            files: new Map([[relative, first]]),
-            manifest: wrongFacts,
-          }),
-        ) &&
-        throws(() =>
-          project.commitProductionPublication({
-            files: new Map([[relative, invalidMedia]]),
-            manifest: invalidMediaManifest,
-          }),
-        ),
+      namedFacts([
+        [
+          "throwsProjectCommitProductionPublication",
+          () =>
+            throws(() =>
+              project.commitProductionPublication({
+                files: new Map(),
+                manifest: {} as never,
+              }),
+            ),
+        ],
+        [
+          "throwsProjectCommitProductionPublication2",
+          () =>
+            throws(() =>
+              project.commitProductionPublication({
+                files: new Map([[relative, first]]),
+                manifest: {
+                  ...manifest,
+                  compileFingerprint: `sha256:${"9".repeat(64)}`,
+                },
+              }),
+            ),
+        ],
+        [
+          "throwsProjectCommitProductionPublication3",
+          () =>
+            throws(() =>
+              project.commitProductionPublication({
+                files: new Map([["../escape.png", first]]),
+                manifest,
+              }),
+            ),
+        ],
+        [
+          "throwsProjectCommitProductionPublication4",
+          () =>
+            throws(() =>
+              project.commitProductionPublication({
+                files: new Map([
+                  ["Frame.png", first],
+                  ["frame.png", first],
+                ]),
+                manifest,
+              }),
+            ),
+        ],
+        [
+          "throwsProjectCommitProductionPublication5",
+          () =>
+            throws(() =>
+              project.commitProductionPublication({
+                files: new Map([[relative, first]]),
+                manifest: duplicateClaim,
+              }),
+            ),
+        ],
+        [
+          "throwsProjectCommitProductionPublication6",
+          () =>
+            throws(() =>
+              project.commitProductionPublication({
+                files: new Map(),
+                manifest,
+              }),
+            ),
+        ],
+        [
+          "throwsProjectCommitProductionPublication7",
+          () =>
+            throws(() =>
+              project.commitProductionPublication({
+                files: new Map([
+                  [relative, first],
+                  ["unclaimed.png", first],
+                ]),
+                manifest,
+              }),
+            ),
+        ],
+        [
+          "throwsProjectCommitProductionPublication8",
+          () =>
+            throws(() =>
+              project.commitProductionPublication({
+                files: new Map([[relative, first]]),
+                manifest: wrongFacts,
+              }),
+            ),
+        ],
+        [
+          "throwsProjectCommitProductionPublication9",
+          () =>
+            throws(() =>
+              project.commitProductionPublication({
+                files: new Map([[relative, invalidMedia]]),
+                manifest: invalidMediaManifest,
+              }),
+            ),
+        ],
+      ]),
+      {
+        throwsProjectCommitProductionPublication: true,
+        throwsProjectCommitProductionPublication2: true,
+        throwsProjectCommitProductionPublication3: true,
+        throwsProjectCommitProductionPublication4: true,
+        throwsProjectCommitProductionPublication5: true,
+        throwsProjectCommitProductionPublication6: true,
+        throwsProjectCommitProductionPublication7: true,
+        throwsProjectCommitProductionPublication8: true,
+        throwsProjectCommitProductionPublication9: true,
+      },
     );
 
     TestValidator.predicate(
@@ -432,50 +502,112 @@ export const test_mcp_production_atomic_publication = (): void => {
     } finally {
       fs.writeFileSync(productionPath, productionBytes);
     }
-    TestValidator.predicate(
+    TestValidator.equals(
       "direct design race after staged final gate restores prior publication",
-      directDesignRace &&
-        project.revision() === revision &&
-        fs.readFileSync(outputPath).equals(first) &&
-        fs.readFileSync(manifestPath).equals(manifestBytes) &&
-        fs.readFileSync(receiptPath).equals(receiptBytes),
+      namedFacts([
+        ["directDesignRace", () => directDesignRace],
+        ["projectRevisionRevision", () => project.revision() === revision],
+        [
+          "readFileSyncOutputPathEquals",
+          () => fs.readFileSync(outputPath).equals(first),
+        ],
+        [
+          "readFileSyncManifestPathEquals",
+          () => fs.readFileSync(manifestPath).equals(manifestBytes),
+        ],
+        [
+          "readFileSyncReceiptPathEquals",
+          () => fs.readFileSync(receiptPath).equals(receiptBytes),
+        ],
+      ]),
+      {
+        directDesignRace: true,
+        projectRevisionRevision: true,
+        readFileSyncOutputPathEquals: true,
+        readFileSyncManifestPathEquals: true,
+        readFileSyncReceiptPathEquals: true,
+      },
     );
     let observations = 0;
-    TestValidator.predicate(
+    TestValidator.equals(
       "post-write input race restores prior valid publication",
-      throws(
-        () =>
-          project.commitProductionPublication({
-            files: new Map([[relative, second]]),
-            manifest: replacement,
-            expectedRevision: revision,
-            inputCurrent: () => ++observations === 1,
-          }),
-        "changed while",
-      ) &&
-        project.revision() === revision &&
-        fs.readFileSync(outputPath).equals(first) &&
-        fs.readFileSync(manifestPath).equals(manifestBytes) &&
-        fs.readFileSync(receiptPath).equals(receiptBytes),
+      namedFacts([
+        [
+          "throwsProjectCommitProductionPublication",
+          () =>
+            throws(
+              () =>
+                project.commitProductionPublication({
+                  files: new Map([[relative, second]]),
+                  manifest: replacement,
+                  expectedRevision: revision,
+                  inputCurrent: () => ++observations === 1,
+                }),
+              "changed while",
+            ),
+        ],
+        ["projectRevisionRevision", () => project.revision() === revision],
+        [
+          "readFileSyncOutputPathEquals",
+          () => fs.readFileSync(outputPath).equals(first),
+        ],
+        [
+          "readFileSyncManifestPathEquals",
+          () => fs.readFileSync(manifestPath).equals(manifestBytes),
+        ],
+        [
+          "readFileSyncReceiptPathEquals",
+          () => fs.readFileSync(receiptPath).equals(receiptBytes),
+        ],
+      ]),
+      {
+        throwsProjectCommitProductionPublication: true,
+        projectRevisionRevision: true,
+        readFileSyncOutputPathEquals: true,
+        readFileSyncManifestPathEquals: true,
+        readFileSyncReceiptPathEquals: true,
+      },
     );
-    TestValidator.predicate(
+    TestValidator.equals(
       "staged final-gate failure also restores prior valid publication",
-      throws(
-        () =>
-          project.commitProductionPublication({
-            files: new Map([[relative, second]]),
-            manifest: replacement,
-            expectedRevision: revision,
-            publicationCurrent: () => {
-              throw new Error("injected staged final failure");
-            },
-          }),
-        "staged final failure",
-      ) &&
-        project.revision() === revision &&
-        fs.readFileSync(outputPath).equals(first) &&
-        fs.readFileSync(manifestPath).equals(manifestBytes) &&
-        fs.readFileSync(receiptPath).equals(receiptBytes),
+      namedFacts([
+        [
+          "throwsProjectCommitProductionPublication",
+          () =>
+            throws(
+              () =>
+                project.commitProductionPublication({
+                  files: new Map([[relative, second]]),
+                  manifest: replacement,
+                  expectedRevision: revision,
+                  publicationCurrent: () => {
+                    throw new Error("injected staged final failure");
+                  },
+                }),
+              "staged final failure",
+            ),
+        ],
+        ["projectRevisionRevision", () => project.revision() === revision],
+        [
+          "readFileSyncOutputPathEquals",
+          () => fs.readFileSync(outputPath).equals(first),
+        ],
+        [
+          "readFileSyncManifestPathEquals",
+          () => fs.readFileSync(manifestPath).equals(manifestBytes),
+        ],
+        [
+          "readFileSyncReceiptPathEquals",
+          () => fs.readFileSync(receiptPath).equals(receiptBytes),
+        ],
+      ]),
+      {
+        throwsProjectCommitProductionPublication: true,
+        projectRevisionRevision: true,
+        readFileSyncOutputPathEquals: true,
+        readFileSyncManifestPathEquals: true,
+        readFileSyncReceiptPathEquals: true,
+      },
     );
     const readRenderFile = project.readRenderFile;
     project.readRenderFile = ((candidate: string): Uint8Array =>
@@ -523,24 +655,47 @@ export const test_mcp_production_atomic_publication = (): void => {
         fs.readFileSync(receiptPath).equals(receiptBytes),
     );
     let terminalObservations = 0;
-    TestValidator.predicate(
+    TestValidator.equals(
       "input race after the staged final gate restores prior publication",
-      throws(
-        () =>
-          project.commitProductionPublication({
-            files: new Map([[relative, second]]),
-            manifest: replacement,
-            expectedRevision: revision,
-            inputCurrent: () => ++terminalObservations < 3,
-            publicationCurrent: () => undefined,
-          }),
-        "final gate",
-      ) &&
-        terminalObservations === 3 &&
-        project.revision() === revision &&
-        fs.readFileSync(outputPath).equals(first) &&
-        fs.readFileSync(manifestPath).equals(manifestBytes) &&
-        fs.readFileSync(receiptPath).equals(receiptBytes),
+      namedFacts([
+        [
+          "throwsProjectCommitProductionPublication",
+          () =>
+            throws(
+              () =>
+                project.commitProductionPublication({
+                  files: new Map([[relative, second]]),
+                  manifest: replacement,
+                  expectedRevision: revision,
+                  inputCurrent: () => ++terminalObservations < 3,
+                  publicationCurrent: () => undefined,
+                }),
+              "final gate",
+            ),
+        ],
+        ["terminalObservations", () => terminalObservations === 3],
+        ["projectRevisionRevision", () => project.revision() === revision],
+        [
+          "readFileSyncOutputPathEquals",
+          () => fs.readFileSync(outputPath).equals(first),
+        ],
+        [
+          "readFileSyncManifestPathEquals",
+          () => fs.readFileSync(manifestPath).equals(manifestBytes),
+        ],
+        [
+          "readFileSyncReceiptPathEquals",
+          () => fs.readFileSync(receiptPath).equals(receiptBytes),
+        ],
+      ]),
+      {
+        throwsProjectCommitProductionPublication: true,
+        terminalObservations: true,
+        projectRevisionRevision: true,
+        readFileSyncOutputPathEquals: true,
+        readFileSyncManifestPathEquals: true,
+        readFileSyncReceiptPathEquals: true,
+      },
     );
 
     const stateRoot = path.join(fixture.root, ".automovie");
@@ -667,12 +822,23 @@ export const test_mcp_production_atomic_publication = (): void => {
     } finally {
       Reflect.set(fs, "writeFileSync", residentWriteFileSync);
     }
-    TestValidator.predicate(
+    TestValidator.equals(
       "state replacement during lock acquisition does not retain this attempt's lock",
-      lockRootSwapped &&
-        lockRaceRejected &&
-        fs.existsSync(path.join(productionStateRoot, "revision.lock")) ===
-          false,
+      namedFacts([
+        ["lockRootSwapped", () => lockRootSwapped],
+        ["lockRaceRejected", () => lockRaceRejected],
+        [
+          "existsSyncProductionStateRootRevision",
+          () =>
+            fs.existsSync(path.join(productionStateRoot, "revision.lock")) ===
+            false,
+        ],
+      ]),
+      {
+        lockRootSwapped: true,
+        lockRaceRejected: true,
+        existsSyncProductionStateRootRevision: true,
+      },
     );
 
     const missingStateProject = AutoMovieProductionProject.open(fixture.root);
@@ -771,20 +937,43 @@ export const test_mcp_production_atomic_publication = (): void => {
     } finally {
       Reflect.set(fs, "mkdirSync", residentMkdirSync);
     }
-    TestValidator.predicate(
+    TestValidator.equals(
       "rollback staging cannot publish into a replacement state root",
-      rollbackRootSwapped &&
-        rollbackRaceRejected &&
-        fs
-          .readFileSync(path.join(productionStateRoot, "render-manifest.json"))
-          .equals(replacementManifest) &&
-        fs
-          .readFileSync(
-            path.join(productionStateRoot, "render-manifest-receipt.json"),
-          )
-          .equals(replacementReceipt) &&
-        fs.existsSync(path.join(productionStateRoot, "revision.lock")) ===
-          false,
+      namedFacts([
+        ["rollbackRootSwapped", () => rollbackRootSwapped],
+        ["rollbackRaceRejected", () => rollbackRaceRejected],
+        [
+          "readFileSyncProductionStateRootRender",
+          () =>
+            fs
+              .readFileSync(
+                path.join(productionStateRoot, "render-manifest.json"),
+              )
+              .equals(replacementManifest),
+        ],
+        [
+          "readFileSyncProductionStateRootRender2",
+          () =>
+            fs
+              .readFileSync(
+                path.join(productionStateRoot, "render-manifest-receipt.json"),
+              )
+              .equals(replacementReceipt),
+        ],
+        [
+          "existsSyncProductionStateRootRevision",
+          () =>
+            fs.existsSync(path.join(productionStateRoot, "revision.lock")) ===
+            false,
+        ],
+      ]),
+      {
+        rollbackRootSwapped: true,
+        rollbackRaceRejected: true,
+        readFileSyncProductionStateRootRender: true,
+        readFileSyncProductionStateRootRender2: true,
+        existsSyncProductionStateRootRevision: true,
+      },
     );
   } catch (error) {
     atomicPublicationFailure = { error };

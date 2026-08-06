@@ -46,6 +46,43 @@ interface ICommitLockSnapshot {
   token: string;
 }
 
+interface ICommitLockDescriptorFailure {
+  error: unknown;
+}
+
+/** Aggregate of one lock-read failure and the descriptor cleanup that followed. */
+export class CommitLockDescriptorCleanupError extends AggregateError {}
+
+/**
+ * Close one lock-read descriptor without letting the close replace the read
+ * failure it happened under.
+ *
+ * The lock reader is the evidence source for every acquisition and release
+ * decision, so a caller that sees only `EBADF` has lost the identity or token
+ * mismatch that actually occurred. A close failure with no read failure in
+ * flight is itself the failure and propagates unchanged.
+ */
+const closeCommitLockDescriptor = (
+  descriptor: number,
+  failure: ICommitLockDescriptorFailure | undefined,
+  lockPath: string,
+): void => {
+  try {
+    fs.closeSync(descriptor);
+  } catch (closeFailure) {
+    if (failure === undefined) throw closeFailure;
+    throw new CommitLockDescriptorCleanupError(
+      [
+        ...(failure.error instanceof CommitLockDescriptorCleanupError
+          ? failure.error.errors
+          : [failure.error]),
+        closeFailure,
+      ],
+      `Commit-lock descriptor cleanup failed after the read failed: ${lockPath}.`,
+    );
+  }
+};
+
 const lockIdentity = (status: fs.BigIntStats): string =>
   `${status.dev}\0${status.ino}`;
 
@@ -56,6 +93,7 @@ const readCommitLockSnapshot = (
   if (linked.isSymbolicLink() || linked.isFile() === false) return null;
   const linkedIdentity = lockIdentity(linked);
   const descriptor = fs.openSync(lockPath, "r");
+  let failure: ICommitLockDescriptorFailure | undefined;
   try {
     const opened = fs.fstatSync(descriptor, { bigint: true });
     if (opened.isFile() === false) return null;
@@ -68,6 +106,7 @@ const readCommitLockSnapshot = (
     )
       return null;
     const residentDescriptor = fs.openSync(lockPath, "r");
+    let residentFailure: ICommitLockDescriptorFailure | undefined;
     try {
       const current = fs.fstatSync(residentDescriptor, { bigint: true });
       if (
@@ -75,12 +114,18 @@ const readCommitLockSnapshot = (
         lockIdentity(current) !== lockIdentity(opened)
       )
         return null;
+    } catch (error) {
+      residentFailure = { error };
+      throw error;
     } finally {
-      fs.closeSync(residentDescriptor);
+      closeCommitLockDescriptor(residentDescriptor, residentFailure, lockPath);
     }
     return { identity: lockIdentity(opened), token };
+  } catch (error) {
+    failure = { error };
+    throw error;
   } finally {
-    fs.closeSync(descriptor);
+    closeCommitLockDescriptor(descriptor, failure, lockPath);
   }
 };
 
@@ -100,6 +145,24 @@ const restoreQuarantinedLock = (quarantine: string, lockPath: string): void => {
   } catch {
     // The canonical foreign lock is restored; an extra hard link or backup
     // is fail-closed evidence and must not endanger the resident owner.
+  }
+};
+
+/**
+ * Take this process's ownership back when a release could not remove the file.
+ *
+ * The entry is restored only while the resident lock still carries this
+ * session's token, so a successor written by another session is never adopted.
+ * The lock stays re-entrant for this process and the next release retries the
+ * removal, which turns a permanent fence into a retry.
+ */
+const reclaimCommitLock = (lockPath: string, token: string): void => {
+  try {
+    const resident = readCommitLockSnapshot(lockPath);
+    if (resident !== null && resident.token === token)
+      held.set(lockPath, { token, depth: 1 });
+  } catch {
+    // nothing resident to reclaim
   }
 };
 
@@ -151,9 +214,11 @@ export const releaseCommitLock = (
   options: { unlink?: boolean; retire?: boolean } = {},
 ): void => {
   const current = held.get(lockPath);
+  let owned = false;
   if (current !== undefined && current.token === token) {
     if (options.retire !== true && --current.depth !== 0) return;
     held.delete(lockPath);
+    owned = true;
   }
   if (options.retire === true || options.unlink === false) return;
   try {
@@ -166,6 +231,13 @@ export const releaseCommitLock = (
     try {
       fs.renameSync(lockPath, quarantine);
     } catch {
+      // The ownership entry is already gone and the resident lock still holds
+      // this session's token, so returning here leaves the file with no owner
+      // anywhere: every later acquisition of this coordinate, including one
+      // from this very process, waits out its deadline and reports itself as a
+      // foreign holder. One transient EPERM would fence the namespace until
+      // somebody deleted the file by hand.
+      if (owned) reclaimCommitLock(lockPath, token);
       return;
     }
     try {
@@ -179,6 +251,7 @@ export const releaseCommitLock = (
       else restoreQuarantinedLock(quarantine, lockPath);
     } catch {
       restoreQuarantinedLock(quarantine, lockPath);
+      if (owned) reclaimCommitLock(lockPath, token);
     }
   } catch {
     // already gone, nothing of ours to release

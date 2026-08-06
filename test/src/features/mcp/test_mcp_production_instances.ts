@@ -16,6 +16,7 @@ import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
 import path from "node:path";
 
+import { namedFacts } from "../internal/predicates";
 import {
   modelRecipe,
   productionCompileSucceeded,
@@ -107,32 +108,57 @@ export const test_mcp_production_instances = (): void => {
     world,
   );
   const routeSlots = materializeInstanceSlots(alongRoute, world);
-  TestValidator.predicate(
+  TestValidator.equals(
     "100 civilians, 1000 trees, and route instances derive stable variation",
-    gridSlots.length === 100 &&
-      scatterSlots.length === 1_000 &&
-      routeSlots.length === 12 &&
-      JSON.stringify(scatterSlots) === JSON.stringify(repeatedScatter) &&
-      JSON.stringify(scatterSlots) !== JSON.stringify(highWordScatter) &&
-      gridSlots.every((slot) => {
-        const prototypeTrait = Object.getOwnPropertyDescriptor(
-          slot.traits,
-          "__proto__",
-        )?.value;
-        return (
-          slot.scale >= 0.8 &&
-          slot.scale <= 1.2 &&
-          slot.palette.startsWith("#") &&
-          slot.traits.pace! >= 0.5 &&
-          slot.traits.pace! <= 1.5 &&
-          typeof prototypeTrait === "number" &&
-          prototypeTrait >= 2 &&
-          prototypeTrait <= 3
-        );
-      }) &&
-      routeSlots.every(
-        (slot) => slot.position.x >= -10 && slot.position.x <= 10,
-      ),
+    namedFacts([
+      ["gridSlots", () => gridSlots.length === 100],
+      ["scatterSlots000", () => scatterSlots.length === 1_000],
+      ["routeSlots", () => routeSlots.length === 12],
+      [
+        "stringifyScatterSlotsStringify",
+        () => JSON.stringify(scatterSlots) === JSON.stringify(repeatedScatter),
+      ],
+      [
+        "stringifyScatterSlotsStringify2",
+        () => JSON.stringify(scatterSlots) !== JSON.stringify(highWordScatter),
+      ],
+      [
+        "gridSlotsSlotConst",
+        () =>
+          gridSlots.every((slot) => {
+            const prototypeTrait = Object.getOwnPropertyDescriptor(
+              slot.traits,
+              "__proto__",
+            )?.value;
+            return (
+              slot.scale >= 0.8 &&
+              slot.scale <= 1.2 &&
+              slot.palette.startsWith("#") &&
+              slot.traits.pace! >= 0.5 &&
+              slot.traits.pace! <= 1.5 &&
+              typeof prototypeTrait === "number" &&
+              prototypeTrait >= 2 &&
+              prototypeTrait <= 3
+            );
+          }),
+      ],
+      [
+        "routeSlotsSlotSlot",
+        () =>
+          routeSlots.every(
+            (slot) => slot.position.x >= -10 && slot.position.x <= 10,
+          ),
+      ],
+    ]),
+    {
+      gridSlots: true,
+      scatterSlots000: true,
+      routeSlots: true,
+      stringifyScatterSlotsStringify: true,
+      stringifyScatterSlotsStringify2: true,
+      gridSlotsSlotConst: true,
+      routeSlotsSlotSlot: true,
+    },
   );
   TestValidator.error("negative instance slot is refused", () =>
     materializeInstanceSlot(grid, world, -1),
@@ -191,16 +217,37 @@ export const test_mcp_production_instances = (): void => {
     recipes,
   );
   const inventory = materializeCompiledInstanceSetInventory(world, recipes);
-  TestValidator.predicate(
+  TestValidator.equals(
     "compiled instance sets retain only bounded chunks and resolved route data",
-    compact.chunks.length === 3 &&
-      compact.chunks[0]?.count === AUTOMOVIE_INSTANCE_CHUNK_SIZE &&
-      compact.chunks[2]?.count === 1 &&
-      compact.digest === compactAgain.digest &&
-      compact.projectionRadius > 0 &&
-      Object.keys(inventory).length === 3 &&
-      inventory.roadside?.route?.id === route.id &&
-      inventory.trees?.route === null,
+    namedFacts([
+      ["compactChunks", () => compact.chunks.length === 3],
+      [
+        "compactChunksCount",
+        () => compact.chunks[0]?.count === AUTOMOVIE_INSTANCE_CHUNK_SIZE,
+      ],
+      ["compactChunksCount2", () => compact.chunks[2]?.count === 1],
+      [
+        "compactDigestCompactAgain",
+        () => compact.digest === compactAgain.digest,
+      ],
+      ["compactProjectionRadius", () => compact.projectionRadius > 0],
+      ["keysInventory", () => Object.keys(inventory).length === 3],
+      [
+        "inventoryRoadsideRoute",
+        () => inventory.roadside?.route?.id === route.id,
+      ],
+      ["inventoryTreesRoute", () => inventory.trees?.route === null],
+    ]),
+    {
+      compactChunks: true,
+      compactChunksCount: true,
+      compactChunksCount2: true,
+      compactDigestCompactAgain: true,
+      compactProjectionRadius: true,
+      keysInventory: true,
+      inventoryRoadsideRoute: true,
+      inventoryTreesRoute: true,
+    },
   );
 
   let productionInstancesFailure:

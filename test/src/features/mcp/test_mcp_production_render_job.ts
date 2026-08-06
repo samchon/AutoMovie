@@ -27,6 +27,7 @@ import { createRequire } from "node:module";
 import os from "node:os";
 import path from "node:path";
 
+import { namedFacts } from "../internal/predicates";
 import {
   productionDesign,
   testCaptureRuntimeIdentity,
@@ -656,26 +657,70 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
       ) &&
       booleanIdentityPlan.chunks.length === 1,
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "proxy and final tiers preserve one edit while owning distinct clocks and chunks",
-    proxyPlan.editFingerprint === renderPlan.editFingerprint &&
-      proxyPlan.tier.kind === "proxy" &&
-      proxyPlan.frameFormat.width === 8 &&
-      proxyPlan.frameFormat.height === 8 &&
-      proxyPlan.frameFormat.fps === 1 &&
-      proxyPlan.totalFrames === 3 &&
-      proxyPlan.chunks.every((chunk) =>
-        chunk.slot.startsWith("render-film:proxy:"),
-      ) &&
-      proxyPlan.chunks[0]?.id !== renderPlan.chunks[0]?.id &&
-      proxyPlan.chunks[0]?.frames[0]?.timelineFrame === 0 &&
-      proxyPlan.chunks[0]?.frames[1]?.timelineFrame === 2 &&
-      proxyPlan.chunks[1]?.frames[0]?.timelineFrame === 4 &&
-      proxyPlan.chunks[1]?.frames[0]?.timeSeconds === 2 &&
-      resolveProductionRenderTierFrameFormat(
-        renderPlan.sourceFrameFormat,
-        proxyPlan.tier,
-      ).fps === 1,
+    namedFacts([
+      [
+        "proxyPlanEditFingerprintRenderPlan",
+        () => proxyPlan.editFingerprint === renderPlan.editFingerprint,
+      ],
+      ["proxyPlanTierKind", () => proxyPlan.tier.kind === "proxy"],
+      ["proxyPlanFrameFormatWidth", () => proxyPlan.frameFormat.width === 8],
+      ["proxyPlanFrameFormatHeight", () => proxyPlan.frameFormat.height === 8],
+      ["proxyPlanFrameFormatFps", () => proxyPlan.frameFormat.fps === 1],
+      ["proxyPlanTotalFrames", () => proxyPlan.totalFrames === 3],
+      [
+        "proxyPlanChunksChunk",
+        () =>
+          proxyPlan.chunks.every((chunk) =>
+            chunk.slot.startsWith("render-film:proxy:"),
+          ),
+      ],
+      [
+        "proxyPlanChunksId",
+        () => proxyPlan.chunks[0]?.id !== renderPlan.chunks[0]?.id,
+      ],
+      [
+        "proxyPlanChunksFrames",
+        () => proxyPlan.chunks[0]?.frames[0]?.timelineFrame === 0,
+      ],
+      [
+        "proxyPlanChunksFrames2",
+        () => proxyPlan.chunks[0]?.frames[1]?.timelineFrame === 2,
+      ],
+      [
+        "proxyPlanChunksFrames3",
+        () => proxyPlan.chunks[1]?.frames[0]?.timelineFrame === 4,
+      ],
+      [
+        "proxyPlanChunksFrames4",
+        () => proxyPlan.chunks[1]?.frames[0]?.timeSeconds === 2,
+      ],
+      [
+        "resolveProductionRenderTierFrameFormatRenderPlanSourceFrameFormat",
+        () =>
+          proxyPlan.tier.kind === "proxy" &&
+          resolveProductionRenderTierFrameFormat(
+            renderPlan.sourceFrameFormat,
+            proxyPlan.tier,
+          ).fps === 1,
+      ],
+    ]),
+    {
+      proxyPlanEditFingerprintRenderPlan: true,
+      proxyPlanTierKind: true,
+      proxyPlanFrameFormatWidth: true,
+      proxyPlanFrameFormatHeight: true,
+      proxyPlanFrameFormatFps: true,
+      proxyPlanTotalFrames: true,
+      proxyPlanChunksChunk: true,
+      proxyPlanChunksId: true,
+      proxyPlanChunksFrames: true,
+      proxyPlanChunksFrames2: true,
+      proxyPlanChunksFrames3: true,
+      proxyPlanChunksFrames4: true,
+      resolveProductionRenderTierFrameFormatRenderPlanSourceFrameFormat: true,
+    },
   );
   TestValidator.predicate(
     "render tiers reject ambiguous quality policies and inexact proxy clocks",
@@ -705,14 +750,42 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
         }),
       ),
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "shot source identity invalidates only ranges that sample that shot",
-    selectivelyChanged.chunks[0]?.id !== renderPlan.chunks[0]?.id &&
-      selectivelyChanged.chunks[1]?.id !== renderPlan.chunks[1]?.id &&
-      selectivelyChanged.chunks[2]?.id === renderPlan.chunks[2]?.id &&
-      selectivelyChanged.chunks[3]?.id !== renderPlan.chunks[3]?.id &&
-      selectivelyChanged.chunks[4]?.id !== renderPlan.chunks[4]?.id &&
-      selectivelyChanged.chunks[5]?.id === renderPlan.chunks[5]?.id,
+    namedFacts([
+      [
+        "selectivelyChangedChunksId",
+        () => selectivelyChanged.chunks[0]?.id !== renderPlan.chunks[0]?.id,
+      ],
+      [
+        "selectivelyChangedChunksId2",
+        () => selectivelyChanged.chunks[1]?.id !== renderPlan.chunks[1]?.id,
+      ],
+      [
+        "selectivelyChangedChunksId3",
+        () => selectivelyChanged.chunks[2]?.id === renderPlan.chunks[2]?.id,
+      ],
+      [
+        "selectivelyChangedChunksId4",
+        () => selectivelyChanged.chunks[3]?.id !== renderPlan.chunks[3]?.id,
+      ],
+      [
+        "selectivelyChangedChunksId5",
+        () => selectivelyChanged.chunks[4]?.id !== renderPlan.chunks[4]?.id,
+      ],
+      [
+        "selectivelyChangedChunksId6",
+        () => selectivelyChanged.chunks[5]?.id === renderPlan.chunks[5]?.id,
+      ],
+    ]),
+    {
+      selectivelyChangedChunksId: true,
+      selectivelyChangedChunksId2: true,
+      selectivelyChangedChunksId3: true,
+      selectivelyChangedChunksId4: true,
+      selectivelyChangedChunksId5: true,
+      selectivelyChangedChunksId6: true,
+    },
   );
 
   const fadedIn = sampleProductionRenderFrame(timeline(), 0);
@@ -720,31 +793,103 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
   const dissolveStart = sampleProductionRenderFrame(timeline(), 2);
   const dissolveMiddle = sampleProductionRenderFrame(timeline(), 3);
   const fadedOut = sampleProductionRenderFrame(timeline(), 5);
-  TestValidator.predicate(
+  TestValidator.equals(
     "film-global samples preserve fades and dissolve source frames",
-    fadedIn.layers[0]?.weight === 0 &&
-      opaque.layers[0]?.weight === 0.5 &&
-      dissolveStart.layers[0]?.shot === "outgoing" &&
-      dissolveStart.layers[0]?.sourceFrame === 2 &&
-      dissolveStart.layers[0]?.weight === 1 &&
-      dissolveStart.layers[1]?.shot === "incoming" &&
-      dissolveStart.layers[1]?.sourceFrame === 0 &&
-      dissolveStart.layers[1]?.weight === 0 &&
-      dissolveMiddle.layers[0]?.weight === 0.5 &&
-      dissolveMiddle.layers[1]?.weight === 0.5 &&
-      fadedOut.layers[0]?.weight === 0.5,
+    namedFacts([
+      ["fadedInLayersWeight", () => fadedIn.layers[0]?.weight === 0],
+      ["opaqueLayersWeight", () => opaque.layers[0]?.weight === 0.5],
+      [
+        "dissolveStartLayersShot",
+        () => dissolveStart.layers[0]?.shot === "outgoing",
+      ],
+      [
+        "dissolveStartLayersSourceFrame",
+        () => dissolveStart.layers[0]?.sourceFrame === 2,
+      ],
+      [
+        "dissolveStartLayersWeight",
+        () => dissolveStart.layers[0]?.weight === 1,
+      ],
+      [
+        "dissolveStartLayersShot2",
+        () => dissolveStart.layers[1]?.shot === "incoming",
+      ],
+      [
+        "dissolveStartLayersSourceFrame2",
+        () => dissolveStart.layers[1]?.sourceFrame === 0,
+      ],
+      [
+        "dissolveStartLayersWeight2",
+        () => dissolveStart.layers[1]?.weight === 0,
+      ],
+      [
+        "dissolveMiddleLayersWeight",
+        () => dissolveMiddle.layers[0]?.weight === 0.5,
+      ],
+      [
+        "dissolveMiddleLayersWeight2",
+        () => dissolveMiddle.layers[1]?.weight === 0.5,
+      ],
+      ["fadedOutLayersWeight", () => fadedOut.layers[0]?.weight === 0.5],
+    ]),
+    {
+      fadedInLayersWeight: true,
+      opaqueLayersWeight: true,
+      dissolveStartLayersShot: true,
+      dissolveStartLayersSourceFrame: true,
+      dissolveStartLayersWeight: true,
+      dissolveStartLayersShot2: true,
+      dissolveStartLayersSourceFrame2: true,
+      dissolveStartLayersWeight2: true,
+      dissolveMiddleLayersWeight: true,
+      dissolveMiddleLayersWeight2: true,
+      fadedOutLayersWeight: true,
+    },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "structural passes select one semantic dissolve layer while beauty blends",
-    productionRenderLayersForPass(dissolveMiddle, "beauty").length === 2 &&
-      productionRenderLayersForPass(dissolveMiddle, "depth").length === 1 &&
-      productionRenderLayersForPass(dissolveMiddle, "normal")[0]?.shot ===
-        "incoming" &&
-      productionRenderLayersForPass(dissolveMiddle, "normal")[0]?.weight ===
-        1 &&
-      productionRenderLayersForPass(dissolveStart, "pose")[0]?.shot ===
-        "outgoing" &&
-      productionRenderLayersForPass(fadedOut, "mask")[0]?.weight === 1,
+    namedFacts([
+      [
+        "productionRenderLayersForPassDissolveMiddleBeauty",
+        () =>
+          productionRenderLayersForPass(dissolveMiddle, "beauty").length === 2,
+      ],
+      [
+        "productionRenderLayersForPassDissolveMiddleDepth",
+        () =>
+          productionRenderLayersForPass(dissolveMiddle, "depth").length === 1,
+      ],
+      [
+        "productionRenderLayersForPassDissolveMiddleNormal",
+        () =>
+          productionRenderLayersForPass(dissolveMiddle, "normal")[0]?.shot ===
+          "incoming",
+      ],
+      [
+        "productionRenderLayersForPassDissolveMiddleNormal2",
+        () =>
+          productionRenderLayersForPass(dissolveMiddle, "normal")[0]?.weight ===
+          1,
+      ],
+      [
+        "productionRenderLayersForPassDissolveStartPose",
+        () =>
+          productionRenderLayersForPass(dissolveStart, "pose")[0]?.shot ===
+          "outgoing",
+      ],
+      [
+        "productionRenderLayersForPassFadedOutMask",
+        () => productionRenderLayersForPass(fadedOut, "mask")[0]?.weight === 1,
+      ],
+    ]),
+    {
+      productionRenderLayersForPassDissolveMiddleBeauty: true,
+      productionRenderLayersForPassDissolveMiddleDepth: true,
+      productionRenderLayersForPassDissolveMiddleNormal: true,
+      productionRenderLayersForPassDissolveMiddleNormal2: true,
+      productionRenderLayersForPassDissolveStartPose: true,
+      productionRenderLayersForPassFadedOutMask: true,
+    },
   );
 
   const retainedPointer = `final/pointers/${renderPlan.chunks[0]!.id.slice(7)}`;
@@ -1051,26 +1196,92 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
     mediaType: "text/vtt",
     bytes: Buffer.from(escapedCaptions.replaceAll("\n", "\r"), "utf8"),
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "caption track becomes canonical WebVTT",
-    captions.startsWith("WEBVTT render-film\n\n") &&
-      captions.indexOf("earlier") < captions.indexOf("later") &&
-      captions.includes("00:00:00.000 --> 00:00:01.000") &&
-      captions.includes("<lang en><v sentinel>First.</v></lang>") &&
-      captions.includes("\n<lang en>Second.</lang>\n") &&
-      tiedCaptions.indexOf("\na\n") < tiedCaptions.indexOf("\nb\n") &&
-      tiedCaptions.indexOf("\nb\n") < tiedCaptions.indexOf("\nc\n") &&
-      longCaptions.includes("01:00:00.000 --> 01:00:01.000") &&
-      escapedCaptions.startsWith("WEBVTT unsafe film\u2028\u2029--&gt;\n\n") &&
-      escapedCaptions.match(/-->/gu)?.length === 1 &&
-      escapedCaptions.includes("\nunsafe id --&gt;\n") &&
-      escapedCaptions.includes(
-        "<lang en><v sentinel&gt; voice>A &amp; &lt;B&gt; --&gt; C  D</v></lang>",
-      ) &&
-      escapedProbe.kind === "webvtt" &&
-      escapedProbe.cueCount === 1 &&
-      crOnlyProbe.kind === "webvtt" &&
-      crOnlyProbe.cueCount === 1,
+    namedFacts([
+      [
+        "captionsStartsWithWEBVTT",
+        () => captions.startsWith("WEBVTT render-film\n\n"),
+      ],
+      [
+        "captionsIndexOfEarlier",
+        () => captions.indexOf("earlier") < captions.indexOf("later"),
+      ],
+      [
+        "captionsIncludes",
+        () => captions.includes("00:00:00.000 --> 00:00:01.000"),
+      ],
+      [
+        "captionsIncludesLang",
+        () => captions.includes("<lang en><v sentinel>First.</v></lang>"),
+      ],
+      [
+        "captionsIncludesN",
+        () => captions.includes("\n<lang en>Second.</lang>\n"),
+      ],
+      [
+        "tiedCaptionsIndexOfNa",
+        () => tiedCaptions.indexOf("\na\n") < tiedCaptions.indexOf("\nb\n"),
+      ],
+      [
+        "tiedCaptionsIndexOfNb",
+        () => tiedCaptions.indexOf("\nb\n") < tiedCaptions.indexOf("\nc\n"),
+      ],
+      [
+        "longCaptionsIncludes",
+        () => longCaptions.includes("01:00:00.000 --> 01:00:01.000"),
+      ],
+      [
+        "escapedCaptionsStartsWithWEBVTT",
+        () =>
+          escapedCaptions.startsWith(
+            "WEBVTT unsafe film\u2028\u2029--&gt;\n\n",
+          ),
+      ],
+      [
+        "escapedCaptionsMatchGu",
+        () => escapedCaptions.match(/-->/gu)?.length === 1,
+      ],
+      [
+        "escapedCaptionsIncludesNunsafe",
+        () => escapedCaptions.includes("\nunsafe id --&gt;\n"),
+      ],
+      [
+        "escapedCaptionsIncludesLang",
+        () =>
+          escapedCaptions.includes(
+            "<lang en><v sentinel&gt; voice>A &amp; &lt;B&gt; --&gt; C  D</v></lang>",
+          ),
+      ],
+      ["escapedProbeKindWebvtt", () => escapedProbe.kind === "webvtt"],
+      [
+        "escapedProbeCueCount",
+        () => escapedProbe.kind === "webvtt" && escapedProbe.cueCount === 1,
+      ],
+      ["crOnlyProbeKindWebvtt", () => crOnlyProbe.kind === "webvtt"],
+      [
+        "crOnlyProbeCueCount",
+        () => crOnlyProbe.kind === "webvtt" && crOnlyProbe.cueCount === 1,
+      ],
+    ]),
+    {
+      captionsStartsWithWEBVTT: true,
+      captionsIndexOfEarlier: true,
+      captionsIncludes: true,
+      captionsIncludesLang: true,
+      captionsIncludesN: true,
+      tiedCaptionsIndexOfNa: true,
+      tiedCaptionsIndexOfNb: true,
+      longCaptionsIncludes: true,
+      escapedCaptionsStartsWithWEBVTT: true,
+      escapedCaptionsMatchGu: true,
+      escapedCaptionsIncludesNunsafe: true,
+      escapedCaptionsIncludesLang: true,
+      escapedProbeKindWebvtt: true,
+      escapedProbeCueCount: true,
+      crOnlyProbeKindWebvtt: true,
+      crOnlyProbeCueCount: true,
+    },
   );
 
   const complete = receipt(renderPlan, 0);
@@ -1099,15 +1310,29 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
       },
     ],
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "status distinguishes every resume state",
-    statuses[0]?.status === "complete" &&
-      statuses[1]?.status === "running" &&
-      statuses[2]?.status === "failed" &&
-      statuses[2]?.correction === "recapture" &&
-      statuses[3]?.status === "stale" &&
-      statuses[4]?.status === "stale" &&
-      statuses[5]?.status === "planned",
+    namedFacts([
+      ["statusesStatusComplete", () => statuses[0]?.status === "complete"],
+      ["statusesStatusRunning", () => statuses[1]?.status === "running"],
+      ["statusesStatusFailed", () => statuses[2]?.status === "failed"],
+      [
+        "statusesCorrectionRecapture",
+        () => statuses[2]?.correction === "recapture",
+      ],
+      ["statusesStatusStale", () => statuses[3]?.status === "stale"],
+      ["statusesStatusStale2", () => statuses[4]?.status === "stale"],
+      ["statusesStatusPlanned", () => statuses[5]?.status === "planned"],
+    ]),
+    {
+      statusesStatusComplete: true,
+      statusesStatusRunning: true,
+      statusesStatusFailed: true,
+      statusesCorrectionRecapture: true,
+      statusesStatusStale: true,
+      statusesStatusStale2: true,
+      statusesStatusPlanned: true,
+    },
   );
 
   const production = {
@@ -1232,15 +1457,32 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
       },
     },
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "scheduler resumes, locks, records failure, and always releases",
-    run.complete.length === 1 &&
-      run.busy.length === 1 &&
-      run.rendered.length === 1 &&
-      run.failed[0]?.correction === "encoder failed" &&
-      acquired.length === 3 &&
-      released.length === 2 &&
-      failed[0]?.endsWith(":encoder failed") === true,
+    namedFacts([
+      ["runComplete", () => run.complete.length === 1],
+      ["runBusy", () => run.busy.length === 1],
+      ["runRendered", () => run.rendered.length === 1],
+      [
+        "runFailedCorrection",
+        () => run.failed[0]?.correction === "encoder failed",
+      ],
+      ["acquired", () => acquired.length === 3],
+      ["released", () => released.length === 2],
+      [
+        "failedEndsWithEncoder",
+        () => failed[0]?.endsWith(":encoder failed") === true,
+      ],
+    ]),
+    {
+      runComplete: true,
+      runBusy: true,
+      runRendered: true,
+      runFailedCorrection: true,
+      acquired: true,
+      released: true,
+      failedEndsWithEncoder: true,
+    },
   );
   const lifecyclePlan = {
     ...renderPlan,
@@ -1595,255 +1837,359 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
       transitionIn: { kind: "dissolve", durationFrames: 1 },
     },
   ];
-  TestValidator.predicate(
+  TestValidator.equals(
     "planner and sampler fail closed on invalid boundaries and identities",
-    throws(() =>
-      planProductionRenderJob({
-        timeline: timeline(),
-        audioAssets: audioAssets(),
-        sourceFingerprints: sourceFingerprints(),
-        production: productionDesign(),
-        runtimeIdentity: renderPlan.runtimeIdentity,
-        chunkFrames: 0,
-      }),
-    ) &&
-      throws(() =>
-        planProductionRenderJob({
-          timeline: timeline(),
-          audioAssets: audioAssets(),
-          sourceFingerprints: sourceFingerprints(),
-          production: productionDesign(),
-          runtimeIdentity: renderPlan.runtimeIdentity,
-          chunkFrames: 1.5,
-        }),
-      ) &&
-      throws(() =>
-        planProductionRenderJob({
-          timeline: badClock,
-          audioAssets: audioAssets(),
-          sourceFingerprints: sourceFingerprints(),
-          production: productionDesign({
-            id: "render-film",
-            targetRuntimeSeconds: 3,
-          }),
-          runtimeIdentity: renderPlan.runtimeIdentity,
-          chunkFrames: 2,
-        }),
-      ) &&
-      throws(() =>
-        planProductionRenderJob({
-          timeline: timeline(),
-          audioAssets: audioAssets(),
-          sourceFingerprints: sourceFingerprints(),
-          production: oddRaster,
-          runtimeIdentity: renderPlan.runtimeIdentity,
-          chunkFrames: 2,
-        }),
-      ) &&
-      throws(() =>
-        planProductionRenderJob({
-          timeline: timeline(),
-          audioAssets: audioAssets(),
-          sourceFingerprints: sourceFingerprints(),
-          production: oddHeight,
-          runtimeIdentity: renderPlan.runtimeIdentity,
-          chunkFrames: 2,
-        }),
-      ) &&
-      throws(() =>
-        planProductionRenderJob({
-          timeline: badFilmIdentity,
-          audioAssets: audioAssets(),
-          sourceFingerprints: sourceFingerprints(),
-          production: productionDesign({
-            id: "render-film",
-            targetRuntimeSeconds: 3,
-          }),
-          runtimeIdentity: renderPlan.runtimeIdentity,
-          chunkFrames: 2,
-        }),
-      ) &&
-      throws(() =>
-        planProductionRenderJob({
-          timeline: timeline(),
-          audioAssets: audioAssets(),
-          sourceFingerprints: sourceFingerprints(),
-          production: badRuntime,
-          runtimeIdentity: renderPlan.runtimeIdentity,
-          chunkFrames: 2,
-        }),
-      ) &&
-      throws(() => sampleProductionRenderFrame(timeline(), -1)) &&
-      throws(() => sampleProductionRenderFrame(timeline(), Number.NaN)) &&
-      throws(() => sampleProductionRenderFrame(timeline(), 6)) &&
-      throws(() => sampleProductionRenderFrame(gap, 0)) &&
-      throws(() => sampleProductionRenderFrame(firstDissolve, 0)) &&
-      throws(() =>
-        planProductionRenderJob({
-          timeline: timeline(),
-          audioAssets: audioAssets(),
-          sourceFingerprints: sourceFingerprints(),
-          production: {
-            ...productionDesign({
-              id: "render-film",
-              targetRuntimeSeconds: 3,
-              frameFormat: {
-                width: 16,
-                height: 16,
-                fps: 2,
-                colorSpace: "srgb",
-              },
+    namedFacts([
+      [
+        "throwsPlanProductionRenderJobTimeline",
+        () =>
+          throws(() =>
+            planProductionRenderJob({
+              timeline: timeline(),
+              audioAssets: audioAssets(),
+              sourceFingerprints: sourceFingerprints(),
+              production: productionDesign(),
+              runtimeIdentity: renderPlan.runtimeIdentity,
+              chunkFrames: 0,
             }),
-            deliverables: [
-              { id: "guides", kind: "guide-pass", required: true },
-            ],
-          },
-          runtimeIdentity: renderPlan.runtimeIdentity,
-          chunkFrames: 2,
-          guidePasses: ["beauty" as "depth"],
-        }),
-      ) &&
-      throws(() =>
-        planProductionRenderJob({
-          timeline: timeline(),
-          audioAssets: audioAssets(),
-          sourceFingerprints: sourceFingerprints(),
-          production: {
-            ...productionDesign({
-              id: "render-film",
-              targetRuntimeSeconds: 3,
-              frameFormat: {
-                width: 16,
-                height: 16,
-                fps: 2,
-                colorSpace: "srgb",
-              },
+          ),
+      ],
+      [
+        "throwsPlanProductionRenderJobTimeline2",
+        () =>
+          throws(() =>
+            planProductionRenderJob({
+              timeline: timeline(),
+              audioAssets: audioAssets(),
+              sourceFingerprints: sourceFingerprints(),
+              production: productionDesign(),
+              runtimeIdentity: renderPlan.runtimeIdentity,
+              chunkFrames: 1.5,
             }),
-            deliverables: [
-              { id: "guides", kind: "guide-pass", required: true },
-            ],
-          },
-          runtimeIdentity: renderPlan.runtimeIdentity,
-          chunkFrames: 2,
-          guidePasses: ["mask", "pose"],
-        }),
-      ) &&
-      throws(() =>
-        planProductionRenderJob({
-          timeline: timeline(),
-          audioAssets: audioAssets(),
-          sourceFingerprints: sourceFingerprints(),
-          production: {
-            ...productionDesign({
-              id: "render-film",
-              targetRuntimeSeconds: 3,
-              frameFormat: {
-                width: 16,
-                height: 16,
-                fps: 2,
-                colorSpace: "srgb",
-              },
+          ),
+      ],
+      [
+        "throwsPlanProductionRenderJobTimeline3",
+        () =>
+          throws(() =>
+            planProductionRenderJob({
+              timeline: badClock,
+              audioAssets: audioAssets(),
+              sourceFingerprints: sourceFingerprints(),
+              production: productionDesign({
+                id: "render-film",
+                targetRuntimeSeconds: 3,
+              }),
+              runtimeIdentity: renderPlan.runtimeIdentity,
+              chunkFrames: 2,
             }),
-            deliverables: [
-              { id: "guides", kind: "guide-pass", required: true },
-            ],
-          },
-          runtimeIdentity: renderPlan.runtimeIdentity,
-          chunkFrames: 2,
-          guidePasses: [],
-        }),
-      ) &&
-      throws(() =>
-        planProductionRenderJob({
-          timeline: timeline(),
-          audioAssets: audioAssets(),
-          sourceFingerprints: sourceFingerprints(),
-          production: {
-            ...productionDesign({
-              id: "render-film",
-              targetRuntimeSeconds: 3,
-              frameFormat: {
-                width: 16,
-                height: 16,
-                fps: 2,
-                colorSpace: "srgb",
-              },
+          ),
+      ],
+      [
+        "throwsPlanProductionRenderJobTimeline4",
+        () =>
+          throws(() =>
+            planProductionRenderJob({
+              timeline: timeline(),
+              audioAssets: audioAssets(),
+              sourceFingerprints: sourceFingerprints(),
+              production: oddRaster,
+              runtimeIdentity: renderPlan.runtimeIdentity,
+              chunkFrames: 2,
             }),
-            deliverables: [{ id: "feature", kind: "feature", required: true }],
-          },
-          runtimeIdentity: {
-            ...renderPlan.runtimeIdentity,
-            encoder: {
-              ...renderPlan.runtimeIdentity.encoder,
-              arguments: {
-                ...renderPlan.runtimeIdentity.encoder.arguments,
-                speed: Number.NaN,
-              },
-            },
-          },
-          chunkFrames: 2,
-        }),
-      ) &&
-      throws(() =>
-        planProductionRenderJob({
-          timeline: timeline(),
-          audioAssets: audioAssets(),
-          sourceFingerprints: sourceFingerprints(),
-          production: {
-            ...productionDesign({
-              id: "render-film",
-              targetRuntimeSeconds: 3,
-              frameFormat: {
-                width: 16,
-                height: 16,
-                fps: 2,
-                colorSpace: "srgb",
-              },
+          ),
+      ],
+      [
+        "throwsPlanProductionRenderJobTimeline5",
+        () =>
+          throws(() =>
+            planProductionRenderJob({
+              timeline: timeline(),
+              audioAssets: audioAssets(),
+              sourceFingerprints: sourceFingerprints(),
+              production: oddHeight,
+              runtimeIdentity: renderPlan.runtimeIdentity,
+              chunkFrames: 2,
             }),
-            deliverables: [{ id: "feature", kind: "feature", required: true }],
-          },
-          runtimeIdentity: {
-            ...renderPlan.runtimeIdentity,
-            encoder: {
-              ...renderPlan.runtimeIdentity.encoder,
-              package: (() => undefined) as unknown as string,
-            },
-          },
-          chunkFrames: 2,
-        }),
-      ) &&
-      throws(() => plan({ incoming: digest("7") })) &&
-      throws(() =>
-        plan({
-          ...sourceFingerprints(),
-          outgoing: "sha256:no" as AutoMovieContentDigest,
-        }),
-      ) &&
-      throws(() =>
-        planProductionRenderJob({
-          timeline: timeline(),
-          audioAssets: audioAssets(),
-          sourceFingerprints: sourceFingerprints(),
-          production: {
-            ...productionDesign({
-              id: "render-film",
-              targetRuntimeSeconds: 3,
-              frameFormat: {
-                width: 16,
-                height: 16,
-                fps: 2,
-                colorSpace: "srgb",
-              },
+          ),
+      ],
+      [
+        "throwsPlanProductionRenderJobTimeline6",
+        () =>
+          throws(() =>
+            planProductionRenderJob({
+              timeline: badFilmIdentity,
+              audioAssets: audioAssets(),
+              sourceFingerprints: sourceFingerprints(),
+              production: productionDesign({
+                id: "render-film",
+                targetRuntimeSeconds: 3,
+              }),
+              runtimeIdentity: renderPlan.runtimeIdentity,
+              chunkFrames: 2,
             }),
-            deliverables: [{ id: "feature", kind: "feature", required: true }],
-          },
-          runtimeIdentity: {
-            ...renderPlan.runtimeIdentity,
-            sourceDigest: "sha256:no" as AutoMovieContentDigest,
-          },
-          chunkFrames: 2,
-        }),
-      ),
+          ),
+      ],
+      [
+        "throwsPlanProductionRenderJobTimeline7",
+        () =>
+          throws(() =>
+            planProductionRenderJob({
+              timeline: timeline(),
+              audioAssets: audioAssets(),
+              sourceFingerprints: sourceFingerprints(),
+              production: badRuntime,
+              runtimeIdentity: renderPlan.runtimeIdentity,
+              chunkFrames: 2,
+            }),
+          ),
+      ],
+      [
+        "throwsSampleProductionRenderFrameTimeline",
+        () => throws(() => sampleProductionRenderFrame(timeline(), -1)),
+      ],
+      [
+        "throwsSampleProductionRenderFrameTimeline2",
+        () => throws(() => sampleProductionRenderFrame(timeline(), Number.NaN)),
+      ],
+      [
+        "throwsSampleProductionRenderFrameTimeline3",
+        () => throws(() => sampleProductionRenderFrame(timeline(), 6)),
+      ],
+      [
+        "throwsSampleProductionRenderFrameGap",
+        () => throws(() => sampleProductionRenderFrame(gap, 0)),
+      ],
+      [
+        "throwsSampleProductionRenderFrameFirstDissolve",
+        () => throws(() => sampleProductionRenderFrame(firstDissolve, 0)),
+      ],
+      [
+        "throwsPlanProductionRenderJobTimeline8",
+        () =>
+          throws(() =>
+            planProductionRenderJob({
+              timeline: timeline(),
+              audioAssets: audioAssets(),
+              sourceFingerprints: sourceFingerprints(),
+              production: {
+                ...productionDesign({
+                  id: "render-film",
+                  targetRuntimeSeconds: 3,
+                  frameFormat: {
+                    width: 16,
+                    height: 16,
+                    fps: 2,
+                    colorSpace: "srgb",
+                  },
+                }),
+                deliverables: [
+                  { id: "guides", kind: "guide-pass", required: true },
+                ],
+              },
+              runtimeIdentity: renderPlan.runtimeIdentity,
+              chunkFrames: 2,
+              guidePasses: ["beauty" as "depth"],
+            }),
+          ),
+      ],
+      [
+        "throwsPlanProductionRenderJobTimeline9",
+        () =>
+          throws(() =>
+            planProductionRenderJob({
+              timeline: timeline(),
+              audioAssets: audioAssets(),
+              sourceFingerprints: sourceFingerprints(),
+              production: {
+                ...productionDesign({
+                  id: "render-film",
+                  targetRuntimeSeconds: 3,
+                  frameFormat: {
+                    width: 16,
+                    height: 16,
+                    fps: 2,
+                    colorSpace: "srgb",
+                  },
+                }),
+                deliverables: [
+                  { id: "guides", kind: "guide-pass", required: true },
+                ],
+              },
+              runtimeIdentity: renderPlan.runtimeIdentity,
+              chunkFrames: 2,
+              guidePasses: ["mask", "pose"],
+            }),
+          ),
+      ],
+      [
+        "throwsPlanProductionRenderJobTimeline10",
+        () =>
+          throws(() =>
+            planProductionRenderJob({
+              timeline: timeline(),
+              audioAssets: audioAssets(),
+              sourceFingerprints: sourceFingerprints(),
+              production: {
+                ...productionDesign({
+                  id: "render-film",
+                  targetRuntimeSeconds: 3,
+                  frameFormat: {
+                    width: 16,
+                    height: 16,
+                    fps: 2,
+                    colorSpace: "srgb",
+                  },
+                }),
+                deliverables: [
+                  { id: "guides", kind: "guide-pass", required: true },
+                ],
+              },
+              runtimeIdentity: renderPlan.runtimeIdentity,
+              chunkFrames: 2,
+              guidePasses: [],
+            }),
+          ),
+      ],
+      [
+        "throwsPlanProductionRenderJobTimeline11",
+        () =>
+          throws(() =>
+            planProductionRenderJob({
+              timeline: timeline(),
+              audioAssets: audioAssets(),
+              sourceFingerprints: sourceFingerprints(),
+              production: {
+                ...productionDesign({
+                  id: "render-film",
+                  targetRuntimeSeconds: 3,
+                  frameFormat: {
+                    width: 16,
+                    height: 16,
+                    fps: 2,
+                    colorSpace: "srgb",
+                  },
+                }),
+                deliverables: [
+                  { id: "feature", kind: "feature", required: true },
+                ],
+              },
+              runtimeIdentity: {
+                ...renderPlan.runtimeIdentity,
+                encoder: {
+                  ...renderPlan.runtimeIdentity.encoder,
+                  arguments: {
+                    ...renderPlan.runtimeIdentity.encoder.arguments,
+                    speed: Number.NaN,
+                  },
+                },
+              },
+              chunkFrames: 2,
+            }),
+          ),
+      ],
+      [
+        "throwsPlanProductionRenderJobTimeline12",
+        () =>
+          throws(() =>
+            planProductionRenderJob({
+              timeline: timeline(),
+              audioAssets: audioAssets(),
+              sourceFingerprints: sourceFingerprints(),
+              production: {
+                ...productionDesign({
+                  id: "render-film",
+                  targetRuntimeSeconds: 3,
+                  frameFormat: {
+                    width: 16,
+                    height: 16,
+                    fps: 2,
+                    colorSpace: "srgb",
+                  },
+                }),
+                deliverables: [
+                  { id: "feature", kind: "feature", required: true },
+                ],
+              },
+              runtimeIdentity: {
+                ...renderPlan.runtimeIdentity,
+                encoder: {
+                  ...renderPlan.runtimeIdentity.encoder,
+                  package: (() => undefined) as unknown as string,
+                },
+              },
+              chunkFrames: 2,
+            }),
+          ),
+      ],
+      [
+        "throwsPlanIncoming",
+        () => throws(() => plan({ incoming: digest("7") })),
+      ],
+      [
+        "throwsPlanSourceFingerprints",
+        () =>
+          throws(() =>
+            plan({
+              ...sourceFingerprints(),
+              outgoing: "sha256:no" as AutoMovieContentDigest,
+            }),
+          ),
+      ],
+      [
+        "throwsPlanProductionRenderJobTimeline13",
+        () =>
+          throws(() =>
+            planProductionRenderJob({
+              timeline: timeline(),
+              audioAssets: audioAssets(),
+              sourceFingerprints: sourceFingerprints(),
+              production: {
+                ...productionDesign({
+                  id: "render-film",
+                  targetRuntimeSeconds: 3,
+                  frameFormat: {
+                    width: 16,
+                    height: 16,
+                    fps: 2,
+                    colorSpace: "srgb",
+                  },
+                }),
+                deliverables: [
+                  { id: "feature", kind: "feature", required: true },
+                ],
+              },
+              runtimeIdentity: {
+                ...renderPlan.runtimeIdentity,
+                sourceDigest: "sha256:no" as AutoMovieContentDigest,
+              },
+              chunkFrames: 2,
+            }),
+          ),
+      ],
+    ]),
+    {
+      throwsPlanProductionRenderJobTimeline: true,
+      throwsPlanProductionRenderJobTimeline2: true,
+      throwsPlanProductionRenderJobTimeline3: true,
+      throwsPlanProductionRenderJobTimeline4: true,
+      throwsPlanProductionRenderJobTimeline5: true,
+      throwsPlanProductionRenderJobTimeline6: true,
+      throwsPlanProductionRenderJobTimeline7: true,
+      throwsSampleProductionRenderFrameTimeline: true,
+      throwsSampleProductionRenderFrameTimeline2: true,
+      throwsSampleProductionRenderFrameTimeline3: true,
+      throwsSampleProductionRenderFrameGap: true,
+      throwsSampleProductionRenderFrameFirstDissolve: true,
+      throwsPlanProductionRenderJobTimeline8: true,
+      throwsPlanProductionRenderJobTimeline9: true,
+      throwsPlanProductionRenderJobTimeline10: true,
+      throwsPlanProductionRenderJobTimeline11: true,
+      throwsPlanProductionRenderJobTimeline12: true,
+      throwsPlanIncoming: true,
+      throwsPlanSourceFingerprints: true,
+      throwsPlanProductionRenderJobTimeline13: true,
+    },
   );
 
   const ownedRoot = fs.mkdtempSync(
@@ -1883,14 +2229,25 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
       });
     }) as typeof fs.lstatSync;
     const splitIdentityBytes = (() => {
+      let splitIdentityFailure: IRenderJobFixtureFailure | undefined;
       try {
         return readAutoMovieProductionOwnedFile({
           root: ownedRoot,
           directory: ownedRoot,
           relative: "split-identity.json",
         });
+      } catch (error) {
+        splitIdentityFailure = { error };
+        throw error;
       } finally {
-        mutableFs.lstatSync = nativeLstat;
+        preserveRenderJobFixtureCleanup(splitIdentityFailure, [
+          {
+            resource: "split-identity lstat hook",
+            cleanup: () => {
+              mutableFs.lstatSync = nativeLstat;
+            },
+          },
+        ]);
       }
     })();
     TestValidator.equals(
@@ -1920,33 +2277,51 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
     fs.symlinkSync(outsideRoot, linkedDirectory, "junction");
     fs.symlinkSync(outside, linkedFile, "file");
     fs.writeFileSync(blockingFile, "not a directory");
-    TestValidator.predicate(
+    TestValidator.equals(
       "render-state reads stay inside stable physical files",
-      Buffer.from(directBytes).toString("utf8") === "direct" &&
-        Buffer.from(residentBytes).toString("utf8") === "resident" &&
+      namedFacts([
         [
-          {
-            root: ownedRoot,
-            directory: outsideRoot,
-            relative: "outside.png",
-          },
-          { root: ownedRoot, directory: chunk, relative: "../direct.json" },
-          { root: ownedRoot, directory: chunk, relative: "." },
-          {
-            root: ownedRoot,
-            directory: chunk,
-            relative: "linked/outside.png",
-          },
-          { root: ownedRoot, directory: chunk, relative: "linked.png" },
-          { root: ownedRoot, directory: chunk, relative: "frames" },
-          {
-            root: ownedRoot,
-            directory: chunk,
-            relative: "blocking/resident.png",
-          },
-        ].every((candidate) =>
-          throws(() => readAutoMovieProductionOwnedFile(candidate)),
-        ),
+          "BufferFromDirectBytes",
+          () => Buffer.from(directBytes).toString("utf8") === "direct",
+        ],
+        [
+          "BufferFromResidentBytes",
+          () => Buffer.from(residentBytes).toString("utf8") === "resident",
+        ],
+        [
+          "rootOwnedRootDirectory",
+          () =>
+            outsideRoot !== undefined &&
+            [
+              {
+                root: ownedRoot,
+                directory: outsideRoot,
+                relative: "outside.png",
+              },
+              { root: ownedRoot, directory: chunk, relative: "../direct.json" },
+              { root: ownedRoot, directory: chunk, relative: "." },
+              {
+                root: ownedRoot,
+                directory: chunk,
+                relative: "linked/outside.png",
+              },
+              { root: ownedRoot, directory: chunk, relative: "linked.png" },
+              { root: ownedRoot, directory: chunk, relative: "frames" },
+              {
+                root: ownedRoot,
+                directory: chunk,
+                relative: "blocking/resident.png",
+              },
+            ].every((candidate) =>
+              throws(() => readAutoMovieProductionOwnedFile(candidate)),
+            ),
+        ],
+      ]),
+      {
+        BufferFromDirectBytes: true,
+        BufferFromResidentBytes: true,
+        rootOwnedRootDirectory: true,
+      },
     );
 
     const replacement = path.join(frames, "replacement.png");
@@ -1987,6 +2362,7 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
       }
       return Reflect.apply(nativeRead, fs, [file, ...args]) as unknown;
     }) as typeof fs.readFileSync;
+    let pathnameSwapFailure: IRenderJobFixtureFailure | undefined;
     try {
       TestValidator.predicate(
         "render-state reads bind bytes to the verified descriptor across a pathname swap",
@@ -1998,8 +2374,18 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
           }),
         ).toString("utf8") === "resident" && swapped === false,
       );
+    } catch (error) {
+      pathnameSwapFailure = { error };
+      throw error;
     } finally {
-      fs.readFileSync = nativeRead;
+      preserveRenderJobFixtureCleanup(pathnameSwapFailure, [
+        {
+          resource: "pathname swap read hook",
+          cleanup: () => {
+            fs.readFileSync = nativeRead;
+          },
+        },
+      ]);
     }
 
     let replaced = false;
@@ -2015,6 +2401,7 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
       }
       return bytes;
     }) as typeof fs.readFileSync;
+    let replacementFailure: IRenderJobFixtureFailure | undefined;
     try {
       TestValidator.predicate(
         "render-state reads reject a physical file replacement after read",
@@ -2026,8 +2413,18 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
           }),
         ) && replaced,
       );
+    } catch (error) {
+      replacementFailure = { error };
+      throw error;
     } finally {
-      fs.readFileSync = nativeRead;
+      preserveRenderJobFixtureCleanup(replacementFailure, [
+        {
+          resource: "physical replacement read hook",
+          cleanup: () => {
+            fs.readFileSync = nativeRead;
+          },
+        },
+      ]);
     }
   } catch (error) {
     renderJobFixtureFailure = { error };

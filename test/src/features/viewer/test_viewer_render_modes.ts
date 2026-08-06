@@ -12,7 +12,7 @@ import { TestValidator } from "@nestia/e2e";
 import * as THREE from "three";
 
 import { IDENTITY_TRANSFORM, createModel } from "../internal/fixtures";
-import { throwsError } from "../internal/predicates";
+import { namedFacts, throwsError } from "../internal/predicates";
 
 const buildTwoNodeScene = () => {
   const objects = new Map([
@@ -188,11 +188,27 @@ export const test_viewer_render_modes = (): void => {
       scene.background.getHex() === 0x000000,
   );
   outline.restore();
-  TestValidator.predicate(
+  TestValidator.equals(
     "outline restore removes shells and returns materials and background",
-    meshesOf(scene).every((m) => m.name !== EDGE_SHELL_NAME) &&
-      meshes.every((mesh, i) => mesh.material === originals[i]) &&
-      scene.background === outlineBackground,
+    namedFacts([
+      [
+        "meshesOfSceneM",
+        () => meshesOf(scene).every((m) => m.name !== EDGE_SHELL_NAME),
+      ],
+      [
+        "meshesMeshI",
+        () => meshes.every((mesh, i) => mesh.material === originals[i]),
+      ],
+      [
+        "sceneBackgroundOutlineBackground",
+        () => scene.background === outlineBackground,
+      ],
+    ]),
+    {
+      meshesOfSceneM: true,
+      meshesMeshI: true,
+      sceneBackgroundOutlineBackground: true,
+    },
   );
 
   const wideEdge = applyRenderMode(scene, "outline", { edgeWidth: 0.05 });

@@ -254,10 +254,10 @@ export const test_mcp_production_materialization_fixture_cleanup = (): void => {
             nestedTryStatements: 1,
             ownerParameters: [],
             prefixDigest:
-              "d7a0d64bf7070abe142a89a416b00ba5329c99df25a7d71a27fef210d34f8a26",
+              "2f675886a0bb5ed23eeceb4463f9cbd25d79e04514109cf5ace94ab2bdef6a91",
             prefixStatements: 15,
             tryDigest:
-              "f62f89d790c78f8628120efff2b9dd05e4674355c2dde866b6f31016e10c4d45",
+              "064451f5880f572ed7c12015b5ead4d11f3efd5e5af146243dd12e177322bfed",
             tryStatements: 54,
           },
         ],

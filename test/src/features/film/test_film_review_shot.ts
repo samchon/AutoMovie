@@ -3,7 +3,7 @@ import { IAutoMovieReviewNote } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { makeScriptWrite } from "../internal/filmFixtures";
-import { hasViolation } from "../internal/predicates";
+import { hasViolation, namedFacts } from "../internal/predicates";
 
 const NOTE: IAutoMovieReviewNote = {
   beat: "beat-1",
@@ -76,10 +76,27 @@ export const test_film_review_shot = (): void => {
     verdict: "revise",
     notes: [{ ...NOTE, beat: "beat-2" }],
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "unknown beat and misfiled note rejected",
-    misfiled.success === false &&
-      hasViolation(misfiled, "type", "$input.beat") &&
-      hasViolation(misfiled, "type", "$input.notes[0].beat"),
+    namedFacts([
+      ["misfiledSuccess", () => misfiled.success === false],
+      [
+        "hasViolationMisfiledType",
+        () =>
+          misfiled.success === false &&
+          hasViolation(misfiled, "type", "$input.beat"),
+      ],
+      [
+        "hasViolationMisfiledType2",
+        () =>
+          misfiled.success === false &&
+          hasViolation(misfiled, "type", "$input.notes[0].beat"),
+      ],
+    ]),
+    {
+      misfiledSuccess: true,
+      hasViolationMisfiledType: true,
+      hasViolationMisfiledType2: true,
+    },
   );
 };

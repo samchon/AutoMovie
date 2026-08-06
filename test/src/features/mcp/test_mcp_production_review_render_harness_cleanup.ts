@@ -278,7 +278,7 @@ export const test_mcp_production_review_render_harness_cleanup = (): void => {
           catchBodies: ["postVerificationFailureState={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 169,
+          containerStatements: 170,
           failureHolder:
             "letpostVerificationFailureState:|IProductionReviewRenderFixtureFailure|undefined;",
           finallyDigest:
@@ -303,7 +303,7 @@ export const test_mcp_production_review_render_harness_cleanup = (): void => {
           catchBodies: ["escapedFrameFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 169,
+          containerStatements: 170,
           failureHolder:
             "letescapedFrameFailure:|IProductionReviewRenderFixtureFailure|undefined;",
           finallyDigest:
@@ -323,6 +323,31 @@ export const test_mcp_production_review_render_harness_cleanup = (): void => {
             '{TestValidator.equals("verifiedframepathscannotescapetheircontent-addressedbundle",[[path.resolve(outsideRacedFrame),"mustbebundle-relative"],["../outside.png","escapesitsbundle"],["linked.png","frameescapesitsbundlethroughasymlink"],].map(([framePath,message])=>{injectedFramePath=framePath!;returnreview.prepare({target}).diagnostics.some((item)=>item.code==="render-frame-invalid"&&item.message.includes(message!),);}),[true,true,true],);}',
           tryDigest:
             "16066e0260a44ba6d84223acd9c6e06cfe18a78a067525fc5777602747b72b53",
+        },
+        {
+          catchBodies: ["disappearingManifestFailure={error};", "throwerror;"],
+          catchVariables: ["error"],
+          containerKind: "TryStatement",
+          containerStatements: 170,
+          failureHolder:
+            "letdisappearingManifestFailure:|IProductionReviewRenderFixtureFailure|undefined;",
+          finallyDigest:
+            "25231ca3548437117c62fe095242dae359517d4a694b8a8c435db5f7a5a8b151",
+          finallySubstantive: {
+            digest:
+              "339ca243137c88bf53a20443bbedd1e53cc27f6b8f96b8f217994204e6933f74",
+            tokens: 35,
+          },
+          index: 144,
+          substantive: {
+            digest:
+              "c76c304fc1a701723f2c80643b31bf6c8e4b46f0b0506027c8b0ff2bf975f34b",
+            tokens: 32,
+          },
+          tryBody:
+            '{TestValidator.predicate("adisappearingmanifestisinvalidratherthanabsent",review.prepare({target}).diagnostics.some((item)=>item.code==="render-bundle-invalid"),);}',
+          tryDigest:
+            "069dcb1909826b0df9c9cb92adcbd9e100c789dc9a77f219f62b84262606a799",
         },
         {
           catchBodies: ["postReadRaceFailure={error};", "throwerror;"],
@@ -378,7 +403,7 @@ export const test_mcp_production_review_render_harness_cleanup = (): void => {
           catchBodies: ["lateBundleFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 169,
+          containerStatements: 170,
           failureHolder:
             "letlateBundleFailure:IProductionReviewRenderFixtureFailure|undefined;",
           finallyDigest:
@@ -388,16 +413,16 @@ export const test_mcp_production_review_render_harness_cleanup = (): void => {
               "03caf4b593cdab078e5fa0b3fe0f0ba1fecc125d06fa940ef170a166d7135fdd",
             tokens: 151,
           },
-          index: 168,
+          index: 169,
           substantive: {
             digest:
-              "9e9eeb847aa36ebd2fce93a5f021388d8e5ebf7e07caf2247f9c6eb92002a52b",
-            tokens: 79,
+              "93cd8f733e25b8d390a3ad64b90dbce0525c168dcd062387b2f1b16faa33eed1",
+            tokens: 123,
           },
           tryBody:
-            '{constprepared=review.prepare({target});TestValidator.predicate("abundlereplacedafterinventorycannotbecomereviewevidence",lateSwapped&&prepared.frames.every((frame)=>frame.digest!==lateDigest)&&prepared.diagnostics.some((item)=>item.code==="render-bundle-unowned"&&path.resolve(fixture.root,item.path??"")===path.resolve(lateManifestPath),),);}',
+            '{constprepared=review.prepare({target});TestValidator.equals("abundlereplacedafterinventorycannotbecomereviewevidence",namedFacts([["lateSwapped",()=>lateSwapped],["preparedFramesFrame",()=>prepared.frames.every((frame)=>frame.digest!==lateDigest),],["preparedDiagnosticsItem",()=>prepared.diagnostics.some((item)=>item.code==="render-bundle-unowned"&&path.resolve(fixture.root,item.path??"")===path.resolve(lateManifestPath),),],]),{lateSwapped:true,preparedFramesFrame:true,preparedDiagnosticsItem:true,},);}',
           tryDigest:
-            "0ce4650d9781858a58e3ed40988b78e4e6f64d9096925e6b0ce2597399fec03b",
+            "dd951b7eff47460215278fd53c784149b3066901fe91d9b5946c54bc0e18cc9d",
         },
       ],
       parseDiagnostics: [],

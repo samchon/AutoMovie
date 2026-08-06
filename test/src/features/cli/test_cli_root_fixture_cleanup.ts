@@ -213,7 +213,7 @@ export const test_cli_root_fixture_cleanup = (): void => {
                 "letmigrateFailure:{error:unknown}|undefined;",
               ],
               tryDigest:
-                "656158968ce09341eb3d7ae454a89d7bf6651f45fcb172fa99aca55db612c6ae",
+                "531b24cbaef1e2b05180fa85a28a59fc0756aa2cacad32fa79d9cbf1257c0c2e",
             },
           ],
         },
@@ -234,7 +234,7 @@ export const test_cli_root_fixture_cleanup = (): void => {
                 "letownershipFailure:{error:unknown}|undefined;",
               ],
               tryDigest:
-                "a1eeb09006e2f294e5515fb658bf305135b419554a94eac22c272f55d69cd004",
+                "f5b6db8b7ce67763547d8640a4f1564d683d3058f8c87e93d16b5b062b6b8060",
             },
           ],
         },
@@ -255,7 +255,7 @@ export const test_cli_root_fixture_cleanup = (): void => {
                 "letscaffoldFailure:{error:unknown}|undefined;",
               ],
               tryDigest:
-                "e53e6f7ca6a7909901afafe66274cb5572266108f731c6b464447aa96ef78dbf",
+                "6a2a256a7c0142d7ff5ac7ef879dc9e29dd3b5f9cf5e8bf4b02692bf9fec2ed8",
             },
           ],
         },

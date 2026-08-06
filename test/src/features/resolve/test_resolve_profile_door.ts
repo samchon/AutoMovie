@@ -8,7 +8,7 @@ import {
 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { nclose } from "../internal/predicates";
+import { namedFacts, nclose } from "../internal/predicates";
 
 const IDENTITY: IAutoMovieTransform = {
   translation: { x: 0, y: 0, z: 0 },
@@ -124,9 +124,14 @@ export const test_resolve_profile_door = (): void => {
   });
   TestValidator.equals("90° swing passes", open.violations.length, 0);
   const openX = basisX(open.world.get("hinge")!);
-  TestValidator.predicate(
+  TestValidator.equals(
     "hinge world rotated 90°",
-    nclose(openX[0], 0) && nclose(openX[1], 0) && nclose(openX[2], -1),
+    namedFacts([
+      ["ncloseOpenX", () => nclose(openX[0], 0)],
+      ["ncloseOpenX2", () => nclose(openX[1], 0)],
+      ["ncloseOpenX3", () => nclose(openX[2], -1)],
+    ]),
+    { ncloseOpenX: true, ncloseOpenX2: true, ncloseOpenX3: true },
   );
   const mirrorX = basisX(open.world.get("handleMirror")!);
   TestValidator.predicate(
@@ -161,10 +166,17 @@ export const test_resolve_profile_door = (): void => {
   const cos110 = Math.cos((110 * Math.PI) / 180);
   const sin110 = Math.sin((110 * Math.PI) / 180);
   const slammedX = basisX(slammed.world.get("hinge")!);
-  TestValidator.predicate(
+  TestValidator.equals(
     "over-swing clamps to exactly 110°",
-    nclose(slammedX[0], cos110) &&
-      nclose(slammedX[1], 0) &&
-      nclose(slammedX[2], -sin110),
+    namedFacts([
+      ["ncloseSlammedXCos110", () => nclose(slammedX[0], cos110)],
+      ["ncloseSlammedX", () => nclose(slammedX[1], 0)],
+      ["ncloseSlammedXSin110", () => nclose(slammedX[2], -sin110)],
+    ]),
+    {
+      ncloseSlammedXCos110: true,
+      ncloseSlammedX: true,
+      ncloseSlammedXSin110: true,
+    },
   );
 };

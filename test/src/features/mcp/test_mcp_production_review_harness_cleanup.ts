@@ -261,10 +261,60 @@ export const test_mcp_production_review_harness_cleanup = (): void => {
     {
       lifecycles: [
         {
+          catchBodies: ["shortenedSourceFailure={error};", "throwerror;"],
+          catchVariables: ["error"],
+          containerKind: "TryStatement",
+          containerStatements: 355,
+          failureHolder:
+            "letshortenedSourceFailure:IProductionReviewFixtureFailure|undefined;",
+          finallyDigest:
+            "4dd9897010b12a91b191804e3cd29ed76401febc69f64b4d0aeddcdae80b2b0a",
+          finallySubstantive: {
+            digest:
+              "81f5103d8d75f9048a9450fc8a828507628be79e7c357d9e5550e1290a3b2b6f",
+            tokens: 29,
+          },
+          index: 219,
+          substantive: {
+            digest:
+              "a1c3de0aafa63a2a6df6a031f82f4b8622f2d3590671cb509d0191ab9cd76269",
+            tokens: 14,
+          },
+          tryBody:
+            "{shortenedSource=review.submit(worksheet(project,sourcePrepared));}",
+          tryDigest:
+            "fefc8412001513663bfcc6b23406fc98cb9cb9e3f5e0eadd154e864628f8c2b0",
+        },
+        {
+          catchBodies: ["racedSubmissionFailure={error};", "throwerror;"],
+          catchVariables: ["error"],
+          containerKind: "TryStatement",
+          containerStatements: 355,
+          failureHolder:
+            "letracedSubmissionFailure:IProductionReviewFixtureFailure|undefined;",
+          finallyDigest:
+            "ee6c30f1be82acc1ef4a9fcd7122beb86692881200c2edf2147878d4c14e4092",
+          finallySubstantive: {
+            digest:
+              "cf19c355a3de64cad02e885a0050d809e54a5e9e9283a662adfe92bb406c3b4a",
+            tokens: 32,
+          },
+          index: 229,
+          substantive: {
+            digest:
+              "1727a6cd05214ed215715cb6d2911306cd1d8b30fdc51d9d5e14b1f5f5aa3856",
+            tokens: 28,
+          },
+          tryBody:
+            "{constracedPrepared=racingReview.prepare({target:shotTarget});racedSubmission=racingReview.submit(worksheet(project,racedPrepared));}",
+          tryDigest:
+            "a855bcb127a79404f5e7bc4aba42c221e38cfbedcc18d29c20d08f9bb73aaa03",
+        },
+        {
           catchBodies: ["shotCommitRaceFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 353,
+          containerStatements: 355,
           failureHolder:
             "letshotCommitRaceFailure:IProductionReviewFixtureFailure|undefined;",
           finallyDigest:
@@ -274,7 +324,7 @@ export const test_mcp_production_review_harness_cleanup = (): void => {
               "9936ef82e2e0585d260eb2bea817304f894170b09d04261027166053534be2e9",
             tokens: 53,
           },
-          index: 238,
+          index: 240,
           substantive: {
             digest:
               "f882404d2adb78528e533a0f71f1f2a15c6c914e6bf5d6fe00e1366fdbe31046",
@@ -289,7 +339,7 @@ export const test_mcp_production_review_harness_cleanup = (): void => {
           catchBodies: ["filmCommitRaceFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 353,
+          containerStatements: 355,
           failureHolder:
             "letfilmCommitRaceFailure:IProductionReviewFixtureFailure|undefined;",
           finallyDigest:
@@ -299,7 +349,7 @@ export const test_mcp_production_review_harness_cleanup = (): void => {
               "65b882b614126085108eb44926fc1cf4c3535a2ba678ff179afec7df6abe02cc",
             tokens: 53,
           },
-          index: 325,
+          index: 327,
           substantive: {
             digest:
               "b16980cf80d3f785fe617b72e6a0273c73e3a9947669dbe2d2bd8e95e249424e",

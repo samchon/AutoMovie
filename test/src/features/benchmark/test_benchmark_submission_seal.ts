@@ -12,6 +12,8 @@ import {
 } from "@automovie/benchmark";
 import { TestValidator } from "@nestia/e2e";
 
+import { namedFacts } from "../internal/predicates";
+
 const throws = (task: () => unknown, fragment: string): boolean => {
   try {
     task();
@@ -76,13 +78,28 @@ export const test_benchmark_submission_seal = (): void => {
       "final-compile",
     ],
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "the sealed archive is frozen through its nested evidence",
-    Object.isFrozen(reference) &&
-      Object.isFrozen(reference.frames) &&
-      Object.isFrozen(reference.frames[0]) &&
-      Object.isFrozen(reference.repository.artifacts[0]) &&
-      Object.isFrozen(reference.observations),
+    namedFacts([
+      ["isFrozenReference", () => Object.isFrozen(reference)],
+      ["isFrozenReferenceFrames", () => Object.isFrozen(reference.frames)],
+      ["isFrozenReferenceFrames2", () => Object.isFrozen(reference.frames[0])],
+      [
+        "isFrozenReferenceRepository",
+        () => Object.isFrozen(reference.repository.artifacts[0]),
+      ],
+      [
+        "isFrozenReferenceObservations",
+        () => Object.isFrozen(reference.observations),
+      ],
+    ]),
+    {
+      isFrozenReference: true,
+      isFrozenReferenceFrames: true,
+      isFrozenReferenceFrames2: true,
+      isFrozenReferenceRepository: true,
+      isFrozenReferenceObservations: true,
+    },
   );
   TestValidator.predicate(
     "a malformed draft is refused with its failing path",
@@ -94,143 +111,207 @@ export const test_benchmark_submission_seal = (): void => {
       "Invalid AutoMovie benchmark submission",
     ),
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "physically impossible archive numbers are refused before sealing",
-    throws(
-      () =>
-        sealAutoMovieBenchmarkSubmission({
-          ...draft,
-          client: { ...draft.client, seed: 0.5 },
-        }),
-      "client seed",
-    ) &&
-      throws(
-        () =>
-          sealAutoMovieBenchmarkSubmission({
-            ...draft,
-            repository: {
-              ...draft.repository,
-              artifacts: [
-                { ...draft.repository.artifacts[0]!, bytes: 0.5 },
-                ...draft.repository.artifacts.slice(1),
-              ],
-            },
-          }),
-        "positive safe integer",
-      ) &&
-      throws(
-        () =>
-          sealAutoMovieBenchmarkSubmission({
-            ...draft,
-            repository: {
-              ...draft.repository,
-              artifacts: [
-                { ...draft.repository.artifacts[0]!, bytes: 0 },
-                ...draft.repository.artifacts.slice(1),
-              ],
-            },
-          }),
-        "positive safe integer",
-      ) &&
-      throws(
-        () =>
-          sealAutoMovieBenchmarkSubmission({
-            ...draft,
-            versions: { ...draft.versions, scenarioHelper: 0.5 },
-          }),
-        "scenario-helper revision",
-      ) &&
-      throws(
-        () =>
-          sealAutoMovieBenchmarkSubmission({
-            ...draft,
-            versions: { ...draft.versions, scenarioHelper: -1 },
-          }),
-        "scenario-helper revision",
-      ) &&
-      throws(
-        () =>
-          sealAutoMovieBenchmarkSubmission({
-            ...draft,
-            generation: { ...draft.generation, toolCalls: 0.5 },
-          }),
-        "non-negative safe integer",
-      ) &&
-      throws(
-        () =>
-          sealAutoMovieBenchmarkSubmission({
-            ...draft,
-            generation: { ...draft.generation, corrections: -1 },
-          }),
-        "non-negative safe integer",
-      ) &&
-      throws(
-        () =>
-          sealAutoMovieBenchmarkSubmission({
-            ...draft,
-            observations: {
-              ...draft.observations,
-              "production:fps": Number.NaN,
-            },
-          }),
-        "finite number",
-      ) &&
-      throws(
-        () =>
-          sealAutoMovieBenchmarkSubmission({
-            ...draft,
-            frames: [
-              { ...draft.frames[0]!, timeSeconds: Number.NaN },
-              ...draft.frames.slice(1),
-            ],
-          }),
-        "non-negative finite number",
-      ) &&
-      throws(
-        () =>
-          sealAutoMovieBenchmarkSubmission({
-            ...draft,
-            frames: [
-              { ...draft.frames[0]!, timeSeconds: -1 },
-              ...draft.frames.slice(1),
-            ],
-          }),
-        "non-negative finite number",
-      ) &&
+    namedFacts([
       [
-        "evidence\\frames\\escape.png",
-        "evidence/frames/folder\\escape.png",
-        "evidence/frames//escape.png",
-        "evidence/frames/./escape.png",
-        "evidence/frames/../escape.png",
-        "evidence/frames/\0escape.png",
-      ].every((evidencePath) =>
-        throws(
-          () =>
-            sealAutoMovieBenchmarkSubmission({
-              ...draft,
-              frames: [
-                {
-                  ...draft.frames[0]!,
-                  path: evidencePath,
-                },
-                ...draft.frames.slice(1),
-              ],
-            }),
-          "normalized archive-relative path",
-        ),
-      ) &&
-      throws(
+        "throwsSealAutoMovieBenchmarkSubmissionDraft",
         () =>
-          sealAutoMovieBenchmarkSubmission({
-            ...draft,
-            frames: [
-              draft.frames[0]!,
-              { ...draft.frames[1]!, path: draft.frames[0]!.path },
-            ],
-          }),
-        "owned more than once",
-      ),
+          throws(
+            () =>
+              sealAutoMovieBenchmarkSubmission({
+                ...draft,
+                client: { ...draft.client, seed: 0.5 },
+              }),
+            "client seed",
+          ),
+      ],
+      [
+        "throwsSealAutoMovieBenchmarkSubmissionDraft2",
+        () =>
+          throws(
+            () =>
+              sealAutoMovieBenchmarkSubmission({
+                ...draft,
+                repository: {
+                  ...draft.repository,
+                  artifacts: [
+                    { ...draft.repository.artifacts[0]!, bytes: 0.5 },
+                    ...draft.repository.artifacts.slice(1),
+                  ],
+                },
+              }),
+            "positive safe integer",
+          ),
+      ],
+      [
+        "throwsSealAutoMovieBenchmarkSubmissionDraft3",
+        () =>
+          throws(
+            () =>
+              sealAutoMovieBenchmarkSubmission({
+                ...draft,
+                repository: {
+                  ...draft.repository,
+                  artifacts: [
+                    { ...draft.repository.artifacts[0]!, bytes: 0 },
+                    ...draft.repository.artifacts.slice(1),
+                  ],
+                },
+              }),
+            "positive safe integer",
+          ),
+      ],
+      [
+        "throwsSealAutoMovieBenchmarkSubmissionDraft4",
+        () =>
+          throws(
+            () =>
+              sealAutoMovieBenchmarkSubmission({
+                ...draft,
+                versions: { ...draft.versions, scenarioHelper: 0.5 },
+              }),
+            "scenario-helper revision",
+          ),
+      ],
+      [
+        "throwsSealAutoMovieBenchmarkSubmissionDraft5",
+        () =>
+          throws(
+            () =>
+              sealAutoMovieBenchmarkSubmission({
+                ...draft,
+                versions: { ...draft.versions, scenarioHelper: -1 },
+              }),
+            "scenario-helper revision",
+          ),
+      ],
+      [
+        "throwsSealAutoMovieBenchmarkSubmissionDraft6",
+        () =>
+          throws(
+            () =>
+              sealAutoMovieBenchmarkSubmission({
+                ...draft,
+                generation: { ...draft.generation, toolCalls: 0.5 },
+              }),
+            "non-negative safe integer",
+          ),
+      ],
+      [
+        "throwsSealAutoMovieBenchmarkSubmissionDraft7",
+        () =>
+          throws(
+            () =>
+              sealAutoMovieBenchmarkSubmission({
+                ...draft,
+                generation: { ...draft.generation, corrections: -1 },
+              }),
+            "non-negative safe integer",
+          ),
+      ],
+      [
+        "throwsSealAutoMovieBenchmarkSubmissionDraft8",
+        () =>
+          throws(
+            () =>
+              sealAutoMovieBenchmarkSubmission({
+                ...draft,
+                observations: {
+                  ...draft.observations,
+                  "production:fps": Number.NaN,
+                },
+              }),
+            "finite number",
+          ),
+      ],
+      [
+        "throwsSealAutoMovieBenchmarkSubmissionDraft9",
+        () =>
+          throws(
+            () =>
+              sealAutoMovieBenchmarkSubmission({
+                ...draft,
+                frames: [
+                  { ...draft.frames[0]!, timeSeconds: Number.NaN },
+                  ...draft.frames.slice(1),
+                ],
+              }),
+            "non-negative finite number",
+          ),
+      ],
+      [
+        "throwsSealAutoMovieBenchmarkSubmissionDraft10",
+        () =>
+          throws(
+            () =>
+              sealAutoMovieBenchmarkSubmission({
+                ...draft,
+                frames: [
+                  { ...draft.frames[0]!, timeSeconds: -1 },
+                  ...draft.frames.slice(1),
+                ],
+              }),
+            "non-negative finite number",
+          ),
+      ],
+      [
+        "evidenceFramesEscape",
+        () =>
+          [
+            "evidence\\frames\\escape.png",
+            "evidence/frames/folder\\escape.png",
+            "evidence/frames//escape.png",
+            "evidence/frames/./escape.png",
+            "evidence/frames/../escape.png",
+            "evidence/frames/\0escape.png",
+          ].every((evidencePath) =>
+            throws(
+              () =>
+                sealAutoMovieBenchmarkSubmission({
+                  ...draft,
+                  frames: [
+                    {
+                      ...draft.frames[0]!,
+                      path: evidencePath,
+                    },
+                    ...draft.frames.slice(1),
+                  ],
+                }),
+              "normalized archive-relative path",
+            ),
+          ),
+      ],
+      [
+        "throwsSealAutoMovieBenchmarkSubmissionDraft11",
+        () =>
+          throws(
+            () =>
+              sealAutoMovieBenchmarkSubmission({
+                ...draft,
+                frames: [
+                  draft.frames[0]!,
+                  { ...draft.frames[1]!, path: draft.frames[0]!.path },
+                ],
+              }),
+            "owned more than once",
+          ),
+      ],
+    ]),
+    {
+      throwsSealAutoMovieBenchmarkSubmissionDraft: true,
+      throwsSealAutoMovieBenchmarkSubmissionDraft2: true,
+      throwsSealAutoMovieBenchmarkSubmissionDraft3: true,
+      throwsSealAutoMovieBenchmarkSubmissionDraft4: true,
+      throwsSealAutoMovieBenchmarkSubmissionDraft5: true,
+      throwsSealAutoMovieBenchmarkSubmissionDraft6: true,
+      throwsSealAutoMovieBenchmarkSubmissionDraft7: true,
+      throwsSealAutoMovieBenchmarkSubmissionDraft8: true,
+      throwsSealAutoMovieBenchmarkSubmissionDraft9: true,
+      throwsSealAutoMovieBenchmarkSubmissionDraft10: true,
+      evidenceFramesEscape: true,
+      throwsSealAutoMovieBenchmarkSubmissionDraft11: true,
+    },
   );
   const repaintAdapterIdentity =
     '{"execution":"local","model":"fixture","protocolVersion":"automovie.repaint-runtime.v1","provider":"fixture","version":"1"}';
@@ -279,91 +360,154 @@ export const test_benchmark_submission_seal = (): void => {
     ...reloaded,
     lifecycle: [...reloaded.lifecycle].reverse(),
   };
-  TestValidator.predicate(
+  TestValidator.equals(
     "public scoring revalidates serialized archive integrity",
-    Object.isFrozen(reloaded) === false &&
-      throws(
+    namedFacts([
+      ["isFrozenReloaded", () => Object.isFrozen(reloaded) === false],
+      [
+        "throwsAssertAutoMovieBenchmarkBindingTask",
         () =>
-          assertAutoMovieBenchmarkBinding(
-            task,
-            {} as IAutoMovieBenchmarkSubmission,
+          throws(
+            () =>
+              assertAutoMovieBenchmarkBinding(
+                task,
+                {} as IAutoMovieBenchmarkSubmission,
+              ),
+            "Invalid sealed AutoMovie benchmark submission",
           ),
-        "Invalid sealed AutoMovie benchmark submission",
-      ) &&
-      throws(
+      ],
+      [
+        "throwsAssertAutoMovieBenchmarkBindingTask2",
         () =>
-          assertAutoMovieBenchmarkBinding(task, {
-            ...reloaded,
-            generation: { ...reloaded.generation, costUsd: -1 },
-          }),
-        "generation cost",
-      ) &&
-      throws(
-        () => assertAutoMovieBenchmarkBinding(task, nonCanonicalLifecycle),
-        "canonical lifecycle order",
-      ) &&
-      throws(
-        () => assertAutoMovieBenchmarkBinding(task, forgedObservation),
-        "does not match its archived evidence digest",
-      ) &&
-      throws(
-        () => benchmarkComparisonDrift(forgedObservation, reloaded),
-        "does not match its archived evidence digest",
-      ) &&
-      throws(
-        () => benchmarkComparisonDrift(reloaded, forgedObservation),
-        "does not match its archived evidence digest",
-      ),
+          throws(
+            () =>
+              assertAutoMovieBenchmarkBinding(task, {
+                ...reloaded,
+                generation: { ...reloaded.generation, costUsd: -1 },
+              }),
+            "generation cost",
+          ),
+      ],
+      [
+        "throwsAssertAutoMovieBenchmarkBindingTask3",
+        () =>
+          throws(
+            () => assertAutoMovieBenchmarkBinding(task, nonCanonicalLifecycle),
+            "canonical lifecycle order",
+          ),
+      ],
+      [
+        "throwsAssertAutoMovieBenchmarkBindingTask4",
+        () =>
+          throws(
+            () => assertAutoMovieBenchmarkBinding(task, forgedObservation),
+            "does not match its archived evidence digest",
+          ),
+      ],
+      [
+        "throwsBenchmarkComparisonDriftForgedObservation",
+        () =>
+          throws(
+            () => benchmarkComparisonDrift(forgedObservation, reloaded),
+            "does not match its archived evidence digest",
+          ),
+      ],
+      [
+        "throwsBenchmarkComparisonDriftReloaded",
+        () =>
+          throws(
+            () => benchmarkComparisonDrift(reloaded, forgedObservation),
+            "does not match its archived evidence digest",
+          ),
+      ],
+    ]),
+    {
+      isFrozenReloaded: true,
+      throwsAssertAutoMovieBenchmarkBindingTask: true,
+      throwsAssertAutoMovieBenchmarkBindingTask2: true,
+      throwsAssertAutoMovieBenchmarkBindingTask3: true,
+      throwsAssertAutoMovieBenchmarkBindingTask4: true,
+      throwsBenchmarkComparisonDriftForgedObservation: true,
+      throwsBenchmarkComparisonDriftReloaded: true,
+    },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "binding refuses evidence produced under another law",
-    throws(
-      () =>
-        assertAutoMovieBenchmarkBinding(
-          { ...task, taskId: "short/other" },
-          reference,
-        ),
-      "was produced for task",
-    ) &&
-      throws(
+    namedFacts([
+      [
+        "throwsAssertAutoMovieBenchmarkBindingTask",
         () =>
-          assertAutoMovieBenchmarkBinding(
-            {
-              ...task,
-              weights: {
-                historical: 0.1,
-                production: 0.3,
-                frame: 0.25,
-                invariant: 0.2,
-                delivery: 0.15,
-              },
-            },
-            reference,
+          throws(
+            () =>
+              assertAutoMovieBenchmarkBinding(
+                { ...task, taskId: "short/other" },
+                reference,
+              ),
+            "was produced for task",
           ),
-        "produced under task law",
-      ) &&
-      throws(
+      ],
+      [
+        "throwsAssertAutoMovieBenchmarkBindingTask2",
         () =>
-          assertAutoMovieBenchmarkBinding(
-            {
-              ...task,
-              brief: { ...task.brief, digest: `sha256:${"9".repeat(64)}` },
-            },
-            reference,
+          throws(
+            () =>
+              assertAutoMovieBenchmarkBinding(
+                {
+                  ...task,
+                  weights: {
+                    historical: 0.1,
+                    production: 0.3,
+                    frame: 0.25,
+                    invariant: 0.2,
+                    delivery: 0.15,
+                  },
+                },
+                reference,
+              ),
+            "produced under task law",
           ),
-        "received brief",
-      ) &&
-      throws(
+      ],
+      [
+        "throwsAssertAutoMovieBenchmarkBindingTask3",
         () =>
-          assertAutoMovieBenchmarkBinding(
-            {
-              ...task,
-              versions: { ...task.versions, task: "2.0.0", scenarioHelper: 4 },
-            },
-            reference,
+          throws(
+            () =>
+              assertAutoMovieBenchmarkBinding(
+                {
+                  ...task,
+                  brief: { ...task.brief, digest: `sha256:${"9".repeat(64)}` },
+                },
+                reference,
+              ),
+            "received brief",
           ),
-        "task 1.0.0 against 2.0.0; scenarioHelper 1 against 4",
-      ),
+      ],
+      [
+        "throwsAssertAutoMovieBenchmarkBindingTask4",
+        () =>
+          throws(
+            () =>
+              assertAutoMovieBenchmarkBinding(
+                {
+                  ...task,
+                  versions: {
+                    ...task.versions,
+                    task: "2.0.0",
+                    scenarioHelper: 4,
+                  },
+                },
+                reference,
+              ),
+            "task 1.0.0 against 2.0.0; scenarioHelper 1 against 4",
+          ),
+      ],
+    ]),
+    {
+      throwsAssertAutoMovieBenchmarkBindingTask: true,
+      throwsAssertAutoMovieBenchmarkBindingTask2: true,
+      throwsAssertAutoMovieBenchmarkBindingTask3: true,
+      throwsAssertAutoMovieBenchmarkBindingTask4: true,
+    },
   );
   const overBudget = (
     generation: Partial<IAutoMovieBenchmarkSubmissionDraft["generation"]>,

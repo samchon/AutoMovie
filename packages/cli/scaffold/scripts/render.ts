@@ -127,7 +127,7 @@ import {
 import {
   acquireRenderGcLease,
   acquireRenderSessionLease,
-  releaseRenderLivenessLease,
+  preserveRenderLivenessLease,
 } from "./renderLiveness";
 import {
   captureExistingRenderPlan,
@@ -287,6 +287,7 @@ const main = async (): Promise<void> => {
     scope: renderLivenessScope,
     tier: renderTier.kind,
   });
+  let sessionFailure: { error: unknown } | undefined;
   try {
     if (action === "finalize") {
       output(await finalize(await currentStoredPlan()));
@@ -328,8 +329,11 @@ const main = async (): Promise<void> => {
       if (action === "run" || process.exitCode === 1) return;
     }
     output(await finalize(current));
+  } catch (error) {
+    sessionFailure = { error };
+    throw error;
   } finally {
-    releaseRenderLivenessLease(session);
+    preserveRenderLivenessLease(sessionFailure, session);
   }
 };
 
@@ -2435,11 +2439,15 @@ const renderGarbageCollection = (apply: boolean) => {
     processAlive,
     scope: renderLivenessScope,
   });
+  let gcFailure: { error: unknown } | undefined;
   try {
     assertNoLiveRenderWorkers();
     return collectRenderGarbage(true);
+  } catch (error) {
+    gcFailure = { error };
+    throw error;
   } finally {
-    releaseRenderLivenessLease(lease);
+    preserveRenderLivenessLease(gcFailure, lease);
   }
 };
 

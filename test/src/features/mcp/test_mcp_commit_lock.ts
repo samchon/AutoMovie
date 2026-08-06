@@ -4,6 +4,8 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+import { namedFacts } from "../internal/predicates";
+
 const mutableFs = fs as {
   lstatSync: typeof fs.lstatSync;
 };
@@ -196,20 +198,44 @@ export const test_mcp_commit_lock = (): void => {
         },
       ]);
     }
-    TestValidator.predicate(
+    TestValidator.equals(
       "release cannot delete a foreign lock swapped in after owner verification",
-      releaseTargetSwapped &&
-        fs.existsSync(releaseRacePath) &&
-        fs.readFileSync(releaseRacePath, "utf8") === foreignToken,
+      namedFacts([
+        ["releaseTargetSwapped", () => releaseTargetSwapped],
+        ["existsSyncReleaseRacePath", () => fs.existsSync(releaseRacePath)],
+        [
+          "readFileSyncReleaseRacePathUtf8",
+          () => fs.readFileSync(releaseRacePath, "utf8") === foreignToken,
+        ],
+      ]),
+      {
+        releaseTargetSwapped: true,
+        existsSyncReleaseRacePath: true,
+        readFileSyncReleaseRacePathUtf8: true,
+      },
     );
     nativeRm(releaseRacePath, { force: true });
     nativeRm(releaseRaceParked, { force: true });
     const reacquiredRaceToken = acquireCommitLock(releaseRacePath);
-    TestValidator.predicate(
+    TestValidator.equals(
       "a raced release permits a genuinely fresh owner",
-      reacquiredRaceToken !== releaseRaceToken &&
-        fs.existsSync(releaseRacePath) &&
-        fs.readFileSync(releaseRacePath, "utf8") === reacquiredRaceToken,
+      namedFacts([
+        [
+          "reacquiredRaceTokenReleaseRaceToken",
+          () => reacquiredRaceToken !== releaseRaceToken,
+        ],
+        ["existsSyncReleaseRacePath", () => fs.existsSync(releaseRacePath)],
+        [
+          "readFileSyncReleaseRacePathUtf8",
+          () =>
+            fs.readFileSync(releaseRacePath, "utf8") === reacquiredRaceToken,
+        ],
+      ]),
+      {
+        reacquiredRaceTokenReleaseRaceToken: true,
+        existsSyncReleaseRacePath: true,
+        readFileSyncReleaseRacePathUtf8: true,
+      },
     );
     releaseCommitLock(releaseRacePath, reacquiredRaceToken);
     TestValidator.equals(
@@ -221,6 +247,7 @@ export const test_mcp_commit_lock = (): void => {
     exerciseSplitPathDescriptorIdentity(dir);
     exerciseRejectedSnapshots(dir);
     exerciseQuarantineRecovery(dir);
+    exerciseReaderDescriptorCleanup(dir);
     exerciseReleaseFailures(dir);
     TestValidator.equals(
       "release defenses leave no quarantine after test cleanup",
@@ -585,6 +612,78 @@ const exerciseQuarantineRecovery = (dir: string): void => {
   }
 };
 
+/**
+ * The lock reader closes two descriptors, and a close failure must not replace
+ * the read failure it happened under. Release swallows both to stay
+ * fail-closed, so what the caller can observe is that the owner lock is still
+ * resident.
+ */
+const exerciseReaderDescriptorCleanup = (dir: string): void => {
+  const closePath = path.join(dir, "reader-close-failure.lock");
+  const closeToken = "reader-close-failure-token";
+  fs.writeFileSync(closePath, closeToken);
+  const nativeReaderClose = fs.closeSync;
+  const nativeReaderOpen = fs.openSync;
+  let readerDescriptor: number | null = null;
+  let readerCloseAttempts = 0;
+  fs.openSync = ((file: fs.PathLike, ...args: unknown[]): number => {
+    const descriptor = Reflect.apply(nativeReaderOpen, fs, [
+      file,
+      ...args,
+    ]) as number;
+    if (
+      readerDescriptor === null &&
+      path.resolve(file.toString()) === path.resolve(closePath)
+    )
+      readerDescriptor = descriptor;
+    return descriptor;
+  }) as typeof fs.openSync;
+  fs.closeSync = ((descriptor: number): void => {
+    if (descriptor === readerDescriptor) {
+      readerCloseAttempts += 1;
+      Reflect.apply(nativeReaderClose, fs, [descriptor]);
+      throw new Error("reader descriptor close failed");
+    }
+    Reflect.apply(nativeReaderClose, fs, [descriptor]);
+  }) as typeof fs.closeSync;
+  let readerCloseFailure: ICommitLockFixtureFailure | undefined;
+  try {
+    releaseCommitLock(closePath, closeToken);
+  } catch (error) {
+    readerCloseFailure = { error };
+    throw error;
+  } finally {
+    preserveCommitLockHookCleanup(readerCloseFailure, [
+      {
+        resource: "reader-close open hook",
+        cleanup: () => {
+          fs.openSync = nativeReaderOpen;
+        },
+      },
+      {
+        resource: "reader-close close hook",
+        cleanup: () => {
+          fs.closeSync = nativeReaderClose;
+        },
+      },
+    ]);
+  }
+  TestValidator.equals(
+    "a failed reader descriptor close leaves the owner lock resident",
+    {
+      attempts: readerCloseAttempts,
+      resident: fs.existsSync(closePath)
+        ? fs.readFileSync(closePath, "utf8")
+        : null,
+    },
+    {
+      attempts: 1,
+      resident: closeToken,
+    },
+  );
+  fs.rmSync(closePath, { force: true });
+};
+
 const exerciseReleaseFailures = (dir: string): void => {
   const renamePath = path.join(dir, "release-rename-failure.lock");
   const renameToken = "release-rename-failure-token";
@@ -620,6 +719,64 @@ const exerciseReleaseFailures = (dir: string): void => {
     renameToken,
   );
   fs.rmSync(renamePath);
+
+  // A resident lock the release could not remove used to have no owner
+  // anywhere: the ownership entry was dropped before the rename was attempted,
+  // so the next acquisition of the same coordinate -- from this very process --
+  // spun to its deadline and reported itself as another session.
+  const ownedPath = path.join(dir, "release-rename-owned.lock");
+  const ownedToken = acquireCommitLock(ownedPath);
+  const nativeOwnedRename = fs.renameSync;
+  fs.renameSync = ((oldPath, newPath) => {
+    if (
+      path.resolve(oldPath.toString()) === path.resolve(ownedPath) &&
+      path.basename(newPath.toString()).startsWith(".automovie-lock-release-")
+    )
+      throw new Error("quarantine rename failed");
+    nativeOwnedRename(oldPath, newPath);
+  }) as typeof fs.renameSync;
+  let ownedRenameFailure: ICommitLockFixtureFailure | undefined;
+  let reacquired = "";
+  let residentAfterFailedRelease = "";
+  try {
+    releaseCommitLock(ownedPath, ownedToken);
+    residentAfterFailedRelease = fs.readFileSync(ownedPath, "utf8");
+    // Re-entrant, because the reclaimed entry is this process's own ownership
+    // rather than a foreign holder to wait out.
+    reacquired = acquireCommitLock(ownedPath);
+  } catch (error) {
+    ownedRenameFailure = { error };
+    throw error;
+  } finally {
+    preserveCommitLockHookCleanup(ownedRenameFailure, [
+      {
+        resource: "release-rename ownership hook",
+        cleanup: () => {
+          fs.renameSync = nativeOwnedRename;
+        },
+      },
+    ]);
+  }
+  // One release for the re-acquisition and one for the removal the failed
+  // release still owes.
+  releaseCommitLock(ownedPath, reacquired);
+  const residentAfterInnerRelease = fs.existsSync(ownedPath);
+  releaseCommitLock(ownedPath, reacquired);
+  TestValidator.equals(
+    "a failed quarantine rename keeps the lock re-entrant for its owner",
+    {
+      reacquired: reacquired === ownedToken,
+      residentAfterFailedRelease,
+      residentAfterInnerRelease,
+      removed: fs.existsSync(ownedPath) === false,
+    },
+    {
+      reacquired: true,
+      residentAfterFailedRelease: ownedToken,
+      residentAfterInnerRelease: true,
+      removed: true,
+    },
+  );
 
   const snapshotPath = path.join(dir, "release-snapshot-failure.lock");
   const snapshotToken = "release-snapshot-failure-token";

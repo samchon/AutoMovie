@@ -12,6 +12,7 @@ import {
 } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
 
+import { namedFacts } from "../internal/predicates";
 import {
   acceptanceScenarios,
   formationDesign,
@@ -179,76 +180,117 @@ export const test_mcp_production_design_validation = (): void => {
     },
     heroOverrides: [{ slot: 0, actor: "hero".repeat(40_000) }],
   };
-  TestValidator.predicate(
+  TestValidator.equals(
     "explicit formation nodes stay inside one honest per-production bound",
-    validateAutoMovieProductionGraph({
-      ...valid,
-      formations: new Map([[oversizedFormation.id, oversizedFormation]]),
-      shots: new Map(),
-      acceptance: new Map(),
-    }).some(
-      (diagnostic) =>
-        diagnostic.code === "design-range-invalid" &&
-        diagnostic.target === `formation:${oversizedFormation.id}`,
-    ) &&
-      validateAutoMovieProductionGraph({
-        ...valid,
-        formations: new Map([
-          [firstCumulativeFormation.id, firstCumulativeFormation],
-          [cumulativeFormation.id, cumulativeFormation],
-        ]),
-        shots: new Map(),
-        acceptance: new Map(),
-      }).some(
-        (diagnostic) =>
-          diagnostic.code === "design-range-invalid" &&
-          diagnostic.target === "formations",
-      ) &&
-      validateAutoMovieProductionGraph({
-        ...valid,
-        models: new Map([[twoTierModel.id, twoTierModel]]),
-        formations: new Map([[matrixHeavyFormation.id, matrixHeavyFormation]]),
-        shots: new Map(),
-        acceptance: new Map(),
-      }).some((diagnostic) => diagnostic.message.includes("viewer budget")) &&
-      validateAutoMovieProductionGraph({
-        ...valid,
-        formations: new Map([
-          [runtimeHeavyFormation.id, runtimeHeavyFormation],
-        ]),
-        shots: new Map(),
-        acceptance: new Map(),
-      }).some((diagnostic) =>
-        diagnostic.message.includes("generated payload budget"),
-      ) &&
-      validateAutoMovieProductionGraph({
-        ...valid,
-        formations: new Map([[heroLimitFormation.id, heroLimitFormation]]),
-        shots: new Map(),
-        acceptance: new Map(),
-      }).some((diagnostic) =>
-        diagnostic.message.includes("above the explicit-node limit"),
-      ) &&
-      validateAutoMovieProductionGraph({
-        ...valid,
-        formations: new Map([[unboundedFormation.id, unboundedFormation]]),
-        shots: new Map(),
-        acceptance: new Map(),
-      }).filter(
-        (diagnostic) =>
-          diagnostic.target === `formation:${unboundedFormation.id}` &&
-          diagnostic.code === "design-range-invalid",
-      ).length >= 3 &&
-      validateAutoMovieProductionGraph({
-        ...valid,
-        formations: new Map([
-          [identityHeavyFormation.id, identityHeavyFormation],
-        ]),
-        shots: new Map(),
-        acceptance: new Map(),
-      }).some((diagnostic) =>
-        diagnostic.message.includes("generated payload budget"),
-      ),
+    namedFacts([
+      [
+        "validateAutoMovieProductionGraphValidFormations",
+        () =>
+          validateAutoMovieProductionGraph({
+            ...valid,
+            formations: new Map([[oversizedFormation.id, oversizedFormation]]),
+            shots: new Map(),
+            acceptance: new Map(),
+          }).some(
+            (diagnostic) =>
+              diagnostic.code === "design-range-invalid" &&
+              diagnostic.target === `formation:${oversizedFormation.id}`,
+          ),
+      ],
+      [
+        "validateAutoMovieProductionGraphValidFormations2",
+        () =>
+          validateAutoMovieProductionGraph({
+            ...valid,
+            formations: new Map([
+              [firstCumulativeFormation.id, firstCumulativeFormation],
+              [cumulativeFormation.id, cumulativeFormation],
+            ]),
+            shots: new Map(),
+            acceptance: new Map(),
+          }).some(
+            (diagnostic) =>
+              diagnostic.code === "design-range-invalid" &&
+              diagnostic.target === "formations",
+          ),
+      ],
+      [
+        "validateAutoMovieProductionGraphValidModels",
+        () =>
+          validateAutoMovieProductionGraph({
+            ...valid,
+            models: new Map([[twoTierModel.id, twoTierModel]]),
+            formations: new Map([
+              [matrixHeavyFormation.id, matrixHeavyFormation],
+            ]),
+            shots: new Map(),
+            acceptance: new Map(),
+          }).some((diagnostic) => diagnostic.message.includes("viewer budget")),
+      ],
+      [
+        "validateAutoMovieProductionGraphValidFormations3",
+        () =>
+          validateAutoMovieProductionGraph({
+            ...valid,
+            formations: new Map([
+              [runtimeHeavyFormation.id, runtimeHeavyFormation],
+            ]),
+            shots: new Map(),
+            acceptance: new Map(),
+          }).some((diagnostic) =>
+            diagnostic.message.includes("generated payload budget"),
+          ),
+      ],
+      [
+        "validateAutoMovieProductionGraphValidFormations4",
+        () =>
+          validateAutoMovieProductionGraph({
+            ...valid,
+            formations: new Map([[heroLimitFormation.id, heroLimitFormation]]),
+            shots: new Map(),
+            acceptance: new Map(),
+          }).some((diagnostic) =>
+            diagnostic.message.includes("above the explicit-node limit"),
+          ),
+      ],
+      [
+        "validateAutoMovieProductionGraphValidFormations5",
+        () =>
+          validateAutoMovieProductionGraph({
+            ...valid,
+            formations: new Map([[unboundedFormation.id, unboundedFormation]]),
+            shots: new Map(),
+            acceptance: new Map(),
+          }).filter(
+            (diagnostic) =>
+              diagnostic.target === `formation:${unboundedFormation.id}` &&
+              diagnostic.code === "design-range-invalid",
+          ).length >= 3,
+      ],
+      [
+        "validateAutoMovieProductionGraphValidFormations6",
+        () =>
+          validateAutoMovieProductionGraph({
+            ...valid,
+            formations: new Map([
+              [identityHeavyFormation.id, identityHeavyFormation],
+            ]),
+            shots: new Map(),
+            acceptance: new Map(),
+          }).some((diagnostic) =>
+            diagnostic.message.includes("generated payload budget"),
+          ),
+      ],
+    ]),
+    {
+      validateAutoMovieProductionGraphValidFormations: true,
+      validateAutoMovieProductionGraphValidFormations2: true,
+      validateAutoMovieProductionGraphValidModels: true,
+      validateAutoMovieProductionGraphValidFormations3: true,
+      validateAutoMovieProductionGraphValidFormations4: true,
+      validateAutoMovieProductionGraphValidFormations5: true,
+      validateAutoMovieProductionGraphValidFormations6: true,
+    },
   );
   const noReviewFrames = shotContract();
   noReviewFrames.reviewFrames = [];
@@ -347,22 +389,41 @@ export const test_mcp_production_design_validation = (): void => {
     ...maximumRaster,
     frameFormat: { ...maximumRaster.frameFormat, width: 4_097 },
   };
-  TestValidator.predicate(
+  TestValidator.equals(
     "the shared preview pixel budget accepts its boundary and rejects one pixel column beyond it",
-    maximumRaster.frameFormat.width * maximumRaster.frameFormat.height ===
-      AUTOMOVIE_MAX_FRAME_PIXELS &&
-      validateAutoMovieProductionGraph({
-        ...valid,
-        production: maximumRaster,
-      }).every((diagnostic) => diagnostic.code !== "design-range-invalid") &&
-      validateAutoMovieProductionGraph({
-        ...valid,
-        production: oversizedRaster,
-      }).some(
-        (diagnostic) =>
-          diagnostic.code === "design-range-invalid" &&
-          diagnostic.message.includes("width times height"),
-      ),
+    namedFacts([
+      [
+        "maximumRasterFrameFormatWidth",
+        () =>
+          maximumRaster.frameFormat.width * maximumRaster.frameFormat.height ===
+          AUTOMOVIE_MAX_FRAME_PIXELS,
+      ],
+      [
+        "validateAutoMovieProductionGraphValidProduction",
+        () =>
+          validateAutoMovieProductionGraph({
+            ...valid,
+            production: maximumRaster,
+          }).every((diagnostic) => diagnostic.code !== "design-range-invalid"),
+      ],
+      [
+        "validateAutoMovieProductionGraphValidProduction2",
+        () =>
+          validateAutoMovieProductionGraph({
+            ...valid,
+            production: oversizedRaster,
+          }).some(
+            (diagnostic) =>
+              diagnostic.code === "design-range-invalid" &&
+              diagnostic.message.includes("width times height"),
+          ),
+      ],
+    ]),
+    {
+      maximumRasterFrameFormatWidth: true,
+      validateAutoMovieProductionGraphValidProduction: true,
+      validateAutoMovieProductionGraphValidProduction2: true,
+    },
   );
   const missingShotMembers = {
     ...valid,
@@ -1243,16 +1304,35 @@ export const test_mcp_production_design_validation = (): void => {
     ...valid,
     shots: new Map([[predicateShot.id, predicateShot]]),
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "typed predicates validate point vectors, graph selectors, scalar bounds and actor text",
-    predicateDiagnostics.filter(
-      (diagnostic) => diagnostic.code === "design-reference-missing",
-    ).length === 2 &&
-      predicateDiagnostics.some(
-        (diagnostic) => diagnostic.code === "design-range-invalid",
-      ) &&
-      predicateDiagnostics.some(
-        (diagnostic) => diagnostic.code === "design-text-empty",
-      ),
+    namedFacts([
+      [
+        "predicateDiagnosticsDiagnosticDiagnostic",
+        () =>
+          predicateDiagnostics.filter(
+            (diagnostic) => diagnostic.code === "design-reference-missing",
+          ).length === 2,
+      ],
+      [
+        "predicateDiagnosticsDiagnosticDiagnostic2",
+        () =>
+          predicateDiagnostics.some(
+            (diagnostic) => diagnostic.code === "design-range-invalid",
+          ),
+      ],
+      [
+        "predicateDiagnosticsDiagnosticDiagnostic3",
+        () =>
+          predicateDiagnostics.some(
+            (diagnostic) => diagnostic.code === "design-text-empty",
+          ),
+      ],
+    ]),
+    {
+      predicateDiagnosticsDiagnosticDiagnostic: true,
+      predicateDiagnosticsDiagnosticDiagnostic2: true,
+      predicateDiagnosticsDiagnosticDiagnostic3: true,
+    },
   );
 };

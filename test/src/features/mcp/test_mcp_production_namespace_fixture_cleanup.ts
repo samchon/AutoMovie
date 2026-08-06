@@ -272,7 +272,7 @@ export const test_mcp_production_namespace_fixture_cleanup = (): void => {
             "letauditFailure:INamespaceAuditFixtureFailure|undefined;",
           ],
           tryDigest:
-            "1db2e207c524a3d8b9b81a2cf2e497bb3d05cfea9ec3cc34d60abd66d0056fa1",
+            "db961ec4e8dea64dafbc6ea35f2979fcb6310e92f27c284b294b1fb7abfa7f52",
         },
       ],
       owner: {
@@ -334,11 +334,11 @@ export const test_mcp_production_namespace_fixture_cleanup = (): void => {
             kind: "migration-isolation",
             substantive: {
               digest:
-                "4a7aec75d81eb42ea9a25d951b576e636d518700710ab9e4cc50925391d5e2e5",
-              tokens: 1442,
+                "a74253bd36420a85c8f32370239501cdcda00a7040db6fadcda1620cb6f0e283",
+              tokens: 1767,
             },
             tryDigest:
-              "723db0375d5c8b42c9986145cef785448814adfc1ac67f01f4230a4bfe4af9f9",
+              "dde81cef024eca2bded2feedbcfc4e2bd63c876d22355a6308943acf07a7a762",
             tryStatements: 59,
           },
           {
@@ -376,11 +376,11 @@ export const test_mcp_production_namespace_fixture_cleanup = (): void => {
             kind: "incarnation",
             substantive: {
               digest:
-                "9741e028fd4971799ed29c92a2ccf67fa5187dc4cb42cd7330b1c34f7513f30f",
-              tokens: 259,
+                "65c7211a1122135072c8d36aeb00e87bf8dfbf3346be6eb82559e1918d2a44cb",
+              tokens: 316,
             },
             tryDigest:
-              "5aeda46d3fc5639551949a0cc360ba54aa6882e4f7f366bf349f1b85ece150fb",
+              "f212f5f49f3350aa759888026be49b0820b94a8f9d8cb56a12e05278972e2c89",
             tryStatements: 7,
           },
           {

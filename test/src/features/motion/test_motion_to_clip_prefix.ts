@@ -17,7 +17,7 @@ import {
   makeMotion,
   makePose,
 } from "../internal/fixtures";
-import { qclose, vclose } from "../internal/predicates";
+import { namedFacts, qclose, vclose } from "../internal/predicates";
 
 /**
  * `motionToClip`'s `nodePrefix` gives a multi-actor node graph per-actor
@@ -56,11 +56,24 @@ export const test_motion_to_clip_prefix = (): void => {
     track.channel.kind === "node" ? track.channel.node : "";
 
   const bare = motionToClip({ motion, skeleton });
-  TestValidator.predicate(
+  TestValidator.equals(
     "default keeps the bare S1 naming",
-    bare.nodes.some((node) => node.id === MOTION_ROOT_NODE_ID) &&
-      bare.nodes.some((node) => node.id === "leftLowerArm") &&
-      bare.clip.tracks.every((track) => !channelNode(track).includes("/")),
+    namedFacts([
+      [
+        "bareNodesNode",
+        () => bare.nodes.some((node) => node.id === MOTION_ROOT_NODE_ID),
+      ],
+      [
+        "bareNodesNode2",
+        () => bare.nodes.some((node) => node.id === "leftLowerArm"),
+      ],
+      [
+        "bareClipTracks",
+        () =>
+          bare.clip.tracks.every((track) => !channelNode(track).includes("/")),
+      ],
+    ]),
+    { bareNodesNode: true, bareNodesNode2: true, bareClipTracks: true },
   );
 
   const prefixed = motionToClip({ motion, skeleton, nodePrefix: "knightA/" });

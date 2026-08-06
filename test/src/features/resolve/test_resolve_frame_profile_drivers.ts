@@ -8,7 +8,7 @@ import {
 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { nclose } from "../internal/predicates";
+import { namedFacts, nclose } from "../internal/predicates";
 
 const IDENTITY: IAutoMovieTransform = {
   translation: { x: 0, y: 0, z: 0 },
@@ -134,13 +134,23 @@ export const test_resolve_frame_profile_drivers = (): void => {
   });
   const hingeX = basisX(driven.world.get("actor/hinge")!);
   const handleX = basisX(driven.world.get("actor/handle")!);
-  TestValidator.predicate(
+  TestValidator.equals(
     "hinge rotated 90° about Y",
-    nclose(hingeX[0], 0) && nclose(hingeX[1], 0) && nclose(hingeX[2], -1),
+    namedFacts([
+      ["ncloseHingeX", () => nclose(hingeX[0], 0)],
+      ["ncloseHingeX2", () => nclose(hingeX[1], 0)],
+      ["ncloseHingeX3", () => nclose(hingeX[2], -1)],
+    ]),
+    { ncloseHingeX: true, ncloseHingeX2: true, ncloseHingeX3: true },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "profile copy drove the handle",
-    nclose(handleX[0], 0) && nclose(handleX[1], 0) && nclose(handleX[2], -1),
+    namedFacts([
+      ["ncloseHandleX", () => nclose(handleX[0], 0)],
+      ["ncloseHandleX2", () => nclose(handleX[1], 0)],
+      ["ncloseHandleX3", () => nclose(handleX[2], -1)],
+    ]),
+    { ncloseHandleX: true, ncloseHandleX2: true, ncloseHandleX3: true },
   );
 
   const bare = resolveFrame({

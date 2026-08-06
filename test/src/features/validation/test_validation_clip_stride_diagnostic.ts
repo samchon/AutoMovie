@@ -5,7 +5,7 @@ import {
 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { throwsError } from "../internal/predicates";
+import { namedFacts, throwsError } from "../internal/predicates";
 
 /** A clip carrying one track, whose payload the caller states. */
 const clip = (
@@ -116,11 +116,27 @@ export const test_validation_clip_stride_diagnostic = (): void => {
   // 3. a channel that fixes no width claims none.
   const weights = clip(NODE("weights"), [0, 1], [0, 0, 1]);
   const weightsFault = faultOn(weights);
-  TestValidator.predicate(
+  TestValidator.equals(
     "a weights track states the counts and no invented width",
-    weightsFault.expected.includes("keyframe count 2") &&
-      weightsFault.expected.includes("3 does not") &&
-      !weightsFault.expected.includes("per keyframe"),
+    namedFacts([
+      [
+        "weightsFaultExpectedIncludes",
+        () => weightsFault.expected.includes("keyframe count 2"),
+      ],
+      [
+        "weightsFaultExpectedIncludes2",
+        () => weightsFault.expected.includes("3 does not"),
+      ],
+      [
+        "weightsFaultExpectedIncludes3",
+        () => !weightsFault.expected.includes("per keyframe"),
+      ],
+    ]),
+    {
+      weightsFaultExpectedIncludes: true,
+      weightsFaultExpectedIncludes2: true,
+      weightsFaultExpectedIncludes3: true,
+    },
   );
 
   // 4. cubicspline stores in-tangent / value / out-tangent per keyframe.

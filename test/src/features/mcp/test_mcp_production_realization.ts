@@ -17,6 +17,7 @@ import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
 import path from "node:path";
 
+import { namedFacts } from "../internal/predicates";
 import {
   formationDesign,
   modelRecipe,
@@ -91,13 +92,34 @@ export const test_mcp_production_realization = (): void => {
       compiled: base,
       collisions: [],
     });
-    TestValidator.predicate(
+    TestValidator.equals(
       "the starter contract passes from actual pose and camera output",
-      baseOutcome.diagnostics.length === 0 &&
-        baseOutcome.realization.opening.every((item) => item.passed) &&
-        baseOutcome.realization.closing.every((item) => item.passed) &&
-        baseOutcome.realization.events.every((item) => item.passed) &&
-        baseOutcome.realization.camera.every((item) => item.passed),
+      namedFacts([
+        ["baseOutcomeDiagnostics", () => baseOutcome.diagnostics.length === 0],
+        [
+          "baseOutcomeRealizationOpening",
+          () => baseOutcome.realization.opening.every((item) => item.passed),
+        ],
+        [
+          "baseOutcomeRealizationClosing",
+          () => baseOutcome.realization.closing.every((item) => item.passed),
+        ],
+        [
+          "baseOutcomeRealizationEvents",
+          () => baseOutcome.realization.events.every((item) => item.passed),
+        ],
+        [
+          "baseOutcomeRealizationCamera",
+          () => baseOutcome.realization.camera.every((item) => item.passed),
+        ],
+      ]),
+      {
+        baseOutcomeDiagnostics: true,
+        baseOutcomeRealizationOpening: true,
+        baseOutcomeRealizationClosing: true,
+        baseOutcomeRealizationEvents: true,
+        baseOutcomeRealizationCamera: true,
+      },
     );
     const held = structuredClone(base);
     held.shot.performances = [
@@ -368,17 +390,43 @@ export const test_mcp_production_realization = (): void => {
       throw new Error(
         `Measured realization fixture failed:\n${JSON.stringify(measured, null, 2)}`,
       );
-    TestValidator.predicate(
+    TestValidator.equals(
       "typed predicates and formations pass only from measured output",
-      measured.realization.opening[0]?.predicates.every(
-        (item) => item.passed,
-      ) === true &&
-        measured.realization.closing[0]?.predicates.every(
-          (item) => item.passed,
-        ) === true &&
-        measured.realization.events[0]?.passed === true &&
-        measured.realization.formations[0]?.count === formation.count &&
-        measured.realization.formations[0]?.passed === true,
+      namedFacts([
+        [
+          "measuredRealizationOpening",
+          () =>
+            measured.realization.opening[0]?.predicates.every(
+              (item) => item.passed,
+            ) === true,
+        ],
+        [
+          "measuredRealizationClosing",
+          () =>
+            measured.realization.closing[0]?.predicates.every(
+              (item) => item.passed,
+            ) === true,
+        ],
+        [
+          "measuredRealizationEvents",
+          () => measured.realization.events[0]?.passed === true,
+        ],
+        [
+          "measuredRealizationFormations",
+          () => measured.realization.formations[0]?.count === formation.count,
+        ],
+        [
+          "measuredRealizationFormations2",
+          () => measured.realization.formations[0]?.passed === true,
+        ],
+      ]),
+      {
+        measuredRealizationOpening: true,
+        measuredRealizationClosing: true,
+        measuredRealizationEvents: true,
+        measuredRealizationFormations: true,
+        measuredRealizationFormations2: true,
+      },
     );
     const ghostSubjectContract = structuredClone(contract);
     ghostSubjectContract.events[0]!.subjects = ["ghost"];
@@ -425,18 +473,48 @@ export const test_mcp_production_realization = (): void => {
       compiled: materialized,
       collisions: [],
     });
-    TestValidator.predicate(
+    TestValidator.equals(
       "formation realization reports absent compact runtimes and designs",
-      missingFormationRuntimeOutcome.realization.formations[0]?.count === 0 &&
-        missingFormationRuntimeOutcome.realization.formations[0]?.passed ===
-          false &&
-        missingFormationDesignOutcome.realization.formations[0]?.count ===
-          formation.count &&
-        missingFormationDesignOutcome.realization.formations[0]?.passed ===
-          false &&
-        missingFormationDesignOutcome.diagnostics.some((item) =>
-          item.message.includes("compact 0-slot runtime"),
-        ),
+      namedFacts([
+        [
+          "missingFormationRuntimeOutcomeRealizationFormations",
+          () =>
+            missingFormationRuntimeOutcome.realization.formations[0]?.count ===
+            0,
+        ],
+        [
+          "missingFormationRuntimeOutcomeRealizationFormations2",
+          () =>
+            missingFormationRuntimeOutcome.realization.formations[0]?.passed ===
+            false,
+        ],
+        [
+          "missingFormationDesignOutcomeRealizationFormations",
+          () =>
+            missingFormationDesignOutcome.realization.formations[0]?.count ===
+            formation.count,
+        ],
+        [
+          "missingFormationDesignOutcomeRealizationFormations2",
+          () =>
+            missingFormationDesignOutcome.realization.formations[0]?.passed ===
+            false,
+        ],
+        [
+          "missingFormationDesignOutcomeDiagnosticsItem",
+          () =>
+            missingFormationDesignOutcome.diagnostics.some((item) =>
+              item.message.includes("compact 0-slot runtime"),
+            ),
+        ],
+      ]),
+      {
+        missingFormationRuntimeOutcomeRealizationFormations: true,
+        missingFormationRuntimeOutcomeRealizationFormations2: true,
+        missingFormationDesignOutcomeRealizationFormations: true,
+        missingFormationDesignOutcomeRealizationFormations2: true,
+        missingFormationDesignOutcomeDiagnosticsItem: true,
+      },
     );
     const heroModelTampered = structuredClone(materialized);
     heroModelTampered.scene.nodes.find((node) => node.id === "captain")!.model =
@@ -509,36 +587,80 @@ export const test_mcp_production_realization = (): void => {
       },
       collisions: ["formation:line:slot:000001"],
     });
-    TestValidator.predicate(
+    TestValidator.equals(
       "unreadable, absent, duplicate and colliding evidence all fail closed",
-      unreadableOutcome.realization.camera.some(
-        (item) => item.passed === false,
-      ) &&
-        missingCameraOutcome.realization.opening.some(
-          (item) => item.passed === false,
-        ) &&
-        missingCameraOutcome.realization.closing.some(
-          (item) => item.passed === false,
-        ) &&
-        missingCameraOutcome.realization.events.some(
-          (item) => item.passed === false,
-        ) &&
-        missingCameraOutcome.realization.camera.every(
-          (item) => item.passed === false,
-        ) &&
-        missingCameraOutcome.realization.formations.some(
-          (item) =>
-            item.count === 0 &&
-            item.min.x === 0 &&
-            item.max.z === 0 &&
-            item.passed === false,
-        ) &&
-        missingCameraOutcome.diagnostics.some((item) =>
-          item.message.includes("collides"),
-        ) &&
-        missingCameraOutcome.diagnostics.some((item) =>
-          item.message.includes('actor "sentinel"'),
-        ),
+      namedFacts([
+        [
+          "unreadableOutcomeRealizationCamera",
+          () =>
+            unreadableOutcome.realization.camera.some(
+              (item) => item.passed === false,
+            ),
+        ],
+        [
+          "missingCameraOutcomeRealizationOpening",
+          () =>
+            missingCameraOutcome.realization.opening.some(
+              (item) => item.passed === false,
+            ),
+        ],
+        [
+          "missingCameraOutcomeRealizationClosing",
+          () =>
+            missingCameraOutcome.realization.closing.some(
+              (item) => item.passed === false,
+            ),
+        ],
+        [
+          "missingCameraOutcomeRealizationEvents",
+          () =>
+            missingCameraOutcome.realization.events.some(
+              (item) => item.passed === false,
+            ),
+        ],
+        [
+          "missingCameraOutcomeRealizationCamera",
+          () =>
+            missingCameraOutcome.realization.camera.every(
+              (item) => item.passed === false,
+            ),
+        ],
+        [
+          "missingCameraOutcomeRealizationFormations",
+          () =>
+            missingCameraOutcome.realization.formations.some(
+              (item) =>
+                item.count === 0 &&
+                item.min.x === 0 &&
+                item.max.z === 0 &&
+                item.passed === false,
+            ),
+        ],
+        [
+          "missingCameraOutcomeDiagnosticsItem",
+          () =>
+            missingCameraOutcome.diagnostics.some((item) =>
+              item.message.includes("collides"),
+            ),
+        ],
+        [
+          "missingCameraOutcomeDiagnosticsItem2",
+          () =>
+            missingCameraOutcome.diagnostics.some((item) =>
+              item.message.includes('actor "sentinel"'),
+            ),
+        ],
+      ]),
+      {
+        unreadableOutcomeRealizationCamera: true,
+        missingCameraOutcomeRealizationOpening: true,
+        missingCameraOutcomeRealizationClosing: true,
+        missingCameraOutcomeRealizationEvents: true,
+        missingCameraOutcomeRealizationCamera: true,
+        missingCameraOutcomeRealizationFormations: true,
+        missingCameraOutcomeDiagnosticsItem: true,
+        missingCameraOutcomeDiagnosticsItem2: true,
+      },
     );
 
     const brokenCompiled = structuredClone(materialized);
@@ -648,12 +770,32 @@ export const test_mcp_production_realization = (): void => {
         return item?.actual === null && item.passed === false;
       }),
     );
-    TestValidator.predicate(
+    TestValidator.equals(
       "node transforms and omitted joint channels remain measurable",
-      missingOperandPredicates[5]?.actual === 2 &&
-        missingOperandPredicates[5].passed === false &&
-        missingOperandPredicates[7]?.actual === 0 &&
-        missingOperandPredicates[7].passed === true,
+      namedFacts([
+        [
+          "missingOperandPredicatesActual",
+          () => missingOperandPredicates[5]?.actual === 2,
+        ],
+        [
+          "missingOperandPredicatesPassed",
+          () => missingOperandPredicates[5].passed === false,
+        ],
+        [
+          "missingOperandPredicatesActual2",
+          () => missingOperandPredicates[7]?.actual === 0,
+        ],
+        [
+          "missingOperandPredicatesPassed2",
+          () => missingOperandPredicates[7].passed === true,
+        ],
+      ]),
+      {
+        missingOperandPredicatesActual: true,
+        missingOperandPredicatesPassed: true,
+        missingOperandPredicatesActual2: true,
+        missingOperandPredicatesPassed2: true,
+      },
     );
   } catch (error) {
     productionRealizationFailure = { error };

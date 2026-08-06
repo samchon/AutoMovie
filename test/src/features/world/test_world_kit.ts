@@ -11,6 +11,8 @@ import {
 import { IAutoMovieInstanceSetDesign } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
+import { namedFacts } from "../internal/predicates";
+
 const instanceBase = (): Omit<IAutoMovieInstanceSetDesign, "layout"> => ({
   id: "trees",
   modelRecipe: "tree",
@@ -121,17 +123,39 @@ export const test_world_kit = (): void => {
     route: route.id,
     lateralJitter: 0.5,
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "terrain, ramp, blocks, and compact placement helpers retain exact facts",
-    building.recipe.parameters.shape === "box" &&
-      building.node.model.endsWith(":house") &&
-      building.bounds.min.y === 0 &&
-      worldSurfaceHeight(ground, { x: 0, z: 0 }) === 0 &&
-      worldSurfaceHeight(ramp, { x: -4, z: 4 }) === 2 &&
-      grid.layout.kind === "grid" &&
-      scatter.layout.kind === "scatter" &&
-      alongRoute.layout.kind === "along-route" &&
-      grid !== instanceBase(),
+    namedFacts([
+      [
+        "buildingRecipeParameters",
+        () => building.recipe.parameters.shape === "box",
+      ],
+      ["buildingNodeModel", () => building.node.model.endsWith(":house")],
+      ["buildingBoundsMin", () => building.bounds.min.y === 0],
+      [
+        "worldSurfaceHeightGroundX",
+        () => worldSurfaceHeight(ground, { x: 0, z: 0 }) === 0,
+      ],
+      [
+        "worldSurfaceHeightRampX",
+        () => worldSurfaceHeight(ramp, { x: -4, z: 4 }) === 2,
+      ],
+      ["gridLayoutKind", () => grid.layout.kind === "grid"],
+      ["scatterLayoutKind", () => scatter.layout.kind === "scatter"],
+      ["alongRouteLayoutKind", () => alongRoute.layout.kind === "along-route"],
+      ["gridInstanceBase", () => grid !== instanceBase()],
+    ]),
+    {
+      buildingRecipeParameters: true,
+      buildingNodeModel: true,
+      buildingBoundsMin: true,
+      worldSurfaceHeightGroundX: true,
+      worldSurfaceHeightRampX: true,
+      gridLayoutKind: true,
+      scatterLayoutKind: true,
+      alongRouteLayoutKind: true,
+      gridInstanceBase: true,
+    },
   );
 
   const routeLandmark = {

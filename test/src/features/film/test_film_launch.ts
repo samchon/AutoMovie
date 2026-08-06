@@ -5,7 +5,7 @@ import {
 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { nclose, vclose } from "../internal/predicates";
+import { namedFacts, nclose, vclose } from "../internal/predicates";
 
 /** A launch action carrying the fields `compileLaunch` reads. */
 const launch = (
@@ -108,28 +108,77 @@ export const test_film_launch = (): void => {
     hit.events.map((event) => event.kind),
     ["contact", "hit", "fall"],
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "the contact event is the collision-solver landing",
-    hit.events[0]!.source === "collisionSolver" &&
-      hit.events[0]!.target === "foe" &&
-      hit.events[0]!.object === "arrow" &&
-      hit.events[0]!.actionIndex === null &&
-      nclose(hit.events[0]!.time, react.start) &&
-      hit.events[0]!.point !== null &&
-      vclose(hit.events[0]!.point, target, 2e-3),
+    namedFacts([
+      ["hitEventsSource", () => hit.events[0]!.source === "collisionSolver"],
+      ["hitEventsTarget", () => hit.events[0]!.target === "foe"],
+      ["hitEventsObject", () => hit.events[0]!.object === "arrow"],
+      ["hitEventsActionIndex", () => hit.events[0]!.actionIndex === null],
+      [
+        "ncloseHitEvents",
+        () =>
+          hit.events[0]!.actionIndex === null &&
+          nclose(hit.events[0]!.time, react.start),
+      ],
+      [
+        "hitEventsPoint",
+        () =>
+          hit.events[0]!.actionIndex === null && hit.events[0]!.point !== null,
+      ],
+      [
+        "vcloseHitEvents",
+        () =>
+          hit.events[0]!.actionIndex === null &&
+          hit.events[0]!.point !== null &&
+          vclose(hit.events[0]!.point, target, 2e-3),
+      ],
+    ]),
+    {
+      hitEventsSource: true,
+      hitEventsTarget: true,
+      hitEventsObject: true,
+      hitEventsActionIndex: true,
+      ncloseHitEvents: true,
+      hitEventsPoint: true,
+      vcloseHitEvents: true,
+    },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "the hit event names the downstream reaction",
-    hit.events[1]!.source === "impactOutput" &&
-      hit.events[1]!.reaction === "foe" &&
-      nclose(hit.events[1]!.time, react.start),
+    namedFacts([
+      ["hitEventsSource", () => hit.events[1]!.source === "impactOutput"],
+      ["hitEventsReaction", () => hit.events[1]!.reaction === "foe"],
+      ["ncloseHitEvents", () => nclose(hit.events[1]!.time, react.start)],
+    ]),
+    { hitEventsSource: true, hitEventsReaction: true, ncloseHitEvents: true },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "unbalance emits a fall event",
-    hit.events[2]!.kind === "fall" &&
-      hit.events[2]!.actor === "foe" &&
-      hit.events[2]!.source === "impactOutput" &&
-      hit.events[2]!.reaction === "foe",
+    namedFacts([
+      ["hitEventsKind", () => hit.events[2]!.kind === "fall"],
+      [
+        "hitEventsActor",
+        () => hit.events[2]!.kind === "fall" && hit.events[2]!.actor === "foe",
+      ],
+      [
+        "hitEventsSource",
+        () =>
+          hit.events[2]!.kind === "fall" &&
+          hit.events[2]!.source === "impactOutput",
+      ],
+      [
+        "hitEventsReaction",
+        () =>
+          hit.events[2]!.kind === "fall" && hit.events[2]!.reaction === "foe",
+      ],
+    ]),
+    {
+      hitEventsKind: true,
+      hitEventsActor: true,
+      hitEventsSource: true,
+      hitEventsReaction: true,
+    },
   );
 
   // 3. `from` sits upstream of the incoming velocity: the body is knocked the

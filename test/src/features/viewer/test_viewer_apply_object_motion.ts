@@ -3,7 +3,7 @@ import { applyObjectMotion, applyObjectMotions } from "@automovie/viewer";
 import { TestValidator } from "@nestia/e2e";
 import * as THREE from "three";
 
-import { nclose } from "../internal/predicates";
+import { namedFacts, nclose } from "../internal/predicates";
 
 const node = (
   // The FULL node-channel union on purpose: a helper that cannot express
@@ -94,16 +94,34 @@ export const test_viewer_apply_object_motion = (): void => {
   const prop = new THREE.Object3D();
   applyObjectMotion(clip, 0.5, (n) => (n === "prop" ? prop : undefined));
   const halfAngle = Math.PI / 8; // slerp(identity, 90°@Y, 0.5) = 45° about Y
-  TestValidator.predicate(
+  TestValidator.equals(
     "translation, rotation, and scale all land on the object",
-    nclose(prop.position.x, 1) &&
-      nclose(prop.position.y, 2) &&
-      nclose(prop.position.z, 3) &&
-      nclose(prop.quaternion.y, Math.sin(halfAngle)) &&
-      nclose(prop.quaternion.w, Math.cos(halfAngle)) &&
-      nclose(prop.scale.x, 1.5) &&
-      nclose(prop.scale.y, 1.5) &&
-      nclose(prop.scale.z, 1.5),
+    namedFacts([
+      ["nclosePropPosition", () => nclose(prop.position.x, 1)],
+      ["nclosePropPosition2", () => nclose(prop.position.y, 2)],
+      ["nclosePropPosition3", () => nclose(prop.position.z, 3)],
+      [
+        "nclosePropQuaternion",
+        () => nclose(prop.quaternion.y, Math.sin(halfAngle)),
+      ],
+      [
+        "nclosePropQuaternion2",
+        () => nclose(prop.quaternion.w, Math.cos(halfAngle)),
+      ],
+      ["nclosePropScale", () => nclose(prop.scale.x, 1.5)],
+      ["nclosePropScale2", () => nclose(prop.scale.y, 1.5)],
+      ["nclosePropScale3", () => nclose(prop.scale.z, 1.5)],
+    ]),
+    {
+      nclosePropPosition: true,
+      nclosePropPosition2: true,
+      nclosePropPosition3: true,
+      nclosePropQuaternion: true,
+      nclosePropQuaternion2: true,
+      nclosePropScale: true,
+      nclosePropScale2: true,
+      nclosePropScale3: true,
+    },
   );
 
   // 2. unresolved node + pointer channel skipped (nothing throws, prop keeps
@@ -137,12 +155,32 @@ export const test_viewer_apply_object_motion = (): void => {
   carrier.add(direct);
   carrier.add(nested);
   applyObjectMotion(morphs, 0.5, (n) => (n === "prop" ? carrier : undefined));
-  TestValidator.predicate(
+  TestValidator.equals(
     "a weights track writes the sampled vector onto every morphable mesh",
-    nclose(direct.morphTargetInfluences![0]!, 0.5) &&
-      nclose(direct.morphTargetInfluences![1]!, 0.25) &&
-      nclose(buried.morphTargetInfluences![0]!, 0.5) &&
-      nclose(buried.morphTargetInfluences![1]!, 0.25),
+    namedFacts([
+      [
+        "ncloseDirectMorphTargetInfluences",
+        () => nclose(direct.morphTargetInfluences![0]!, 0.5),
+      ],
+      [
+        "ncloseDirectMorphTargetInfluences2",
+        () => nclose(direct.morphTargetInfluences![1]!, 0.25),
+      ],
+      [
+        "ncloseBuriedMorphTargetInfluences",
+        () => nclose(buried.morphTargetInfluences![0]!, 0.5),
+      ],
+      [
+        "ncloseBuriedMorphTargetInfluences2",
+        () => nclose(buried.morphTargetInfluences![1]!, 0.25),
+      ],
+    ]),
+    {
+      ncloseDirectMorphTargetInfluences: true,
+      ncloseDirectMorphTargetInfluences2: true,
+      ncloseBuriedMorphTargetInfluences: true,
+      ncloseBuriedMorphTargetInfluences2: true,
+    },
   );
 
   // 5. BOUNDARIES: no morphable mesh, a shorter influence array, a longer one
@@ -160,13 +198,37 @@ export const test_viewer_apply_object_motion = (): void => {
   mixed.add(short);
   mixed.add(long);
   applyObjectMotion(morphs, 0.5, (n) => (n === "prop" ? mixed : undefined));
-  TestValidator.predicate(
+  TestValidator.equals(
     "a shorter influence array fills as far as it goes and a longer one keeps its tail",
-    short.morphTargetInfluences!.length === 1 &&
-      nclose(short.morphTargetInfluences![0]!, 0.5) &&
-      nclose(long.morphTargetInfluences![0]!, 0.5) &&
-      nclose(long.morphTargetInfluences![1]!, 0.25) &&
-      nclose(long.morphTargetInfluences![2]!, 0.9),
+    namedFacts([
+      [
+        "shortMorphTargetInfluences",
+        () => short.morphTargetInfluences!.length === 1,
+      ],
+      [
+        "ncloseShortMorphTargetInfluences",
+        () => nclose(short.morphTargetInfluences![0]!, 0.5),
+      ],
+      [
+        "ncloseLongMorphTargetInfluences",
+        () => nclose(long.morphTargetInfluences![0]!, 0.5),
+      ],
+      [
+        "ncloseLongMorphTargetInfluences2",
+        () => nclose(long.morphTargetInfluences![1]!, 0.25),
+      ],
+      [
+        "ncloseLongMorphTargetInfluences3",
+        () => nclose(long.morphTargetInfluences![2]!, 0.9),
+      ],
+    ]),
+    {
+      shortMorphTargetInfluences: true,
+      ncloseShortMorphTargetInfluences: true,
+      ncloseLongMorphTargetInfluences: true,
+      ncloseLongMorphTargetInfluences2: true,
+      ncloseLongMorphTargetInfluences3: true,
+    },
   );
 
   const handoffA: IAutoMovieClip = {

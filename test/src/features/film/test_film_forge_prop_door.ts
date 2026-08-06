@@ -2,7 +2,7 @@ import { forgeProp, resolveFrame } from "@automovie/engine";
 import { IAutoMovieClip } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { nclose } from "../internal/predicates";
+import { namedFacts, nclose } from "../internal/predicates";
 import { createDoorPropSpec } from "./test_film_forge_prop";
 
 /** Quat values for a rotation of `deg` about +Y. */
@@ -83,10 +83,17 @@ export const test_film_forge_prop_door = (): void => {
   const cos110 = Math.cos((110 * Math.PI) / 180);
   const sin110 = Math.sin((110 * Math.PI) / 180);
   const slammedX = basisX(slammed.world.get("hinge")!);
-  TestValidator.predicate(
+  TestValidator.equals(
     "over-swing clamps to exactly 110°",
-    nclose(slammedX[0], cos110) &&
-      nclose(slammedX[1], 0) &&
-      nclose(slammedX[2], -sin110),
+    namedFacts([
+      ["ncloseSlammedXCos110", () => nclose(slammedX[0], cos110)],
+      ["ncloseSlammedX", () => nclose(slammedX[1], 0)],
+      ["ncloseSlammedXSin110", () => nclose(slammedX[2], -sin110)],
+    ]),
+    {
+      ncloseSlammedXCos110: true,
+      ncloseSlammedX: true,
+      ncloseSlammedXSin110: true,
+    },
   );
 };

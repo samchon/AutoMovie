@@ -367,9 +367,32 @@ const captureProductionAtomicFailure = (
     } catch (error) {
       caught = error;
     } finally {
-      fs.renameSync = nativeRename;
-      Reflect.set(fs, "rmSync", nativeRemove);
-      hooksInstalled = false;
+      // The guarded body records its product failure in `caught` instead of
+      // propagating it, so no primary failure is ever in flight at this
+      // boundary. What the policy adds is independence: the three restorations
+      // form one lifecycle -- the flag exists to keep the two hooks consistent
+      // -- and a failure in the first must not leave the second installed for
+      // every later scenario in this process.
+      preserveProductionProjectFixtureCleanup(undefined, [
+        {
+          resource: "atomic rename hook",
+          cleanup: () => {
+            fs.renameSync = nativeRename;
+          },
+        },
+        {
+          resource: "atomic remove hook",
+          cleanup: () => {
+            Reflect.set(fs, "rmSync", nativeRemove);
+          },
+        },
+        {
+          resource: "atomic hook installation flag",
+          cleanup: () => {
+            hooksInstalled = false;
+          },
+        },
+      ]);
     }
     const entries = fs.readdirSync(path.dirname(target));
     return {
@@ -4947,13 +4970,28 @@ export const test_mcp_production_project = (): void => {
           },
         ]);
       }
-      TestValidator.predicate(
+      TestValidator.equals(
         `a ${replacement} creation parent fails closed and releases both coordinates`,
-        rejected &&
-          fs.existsSync(projectPath) === false &&
-          fs.existsSync(path.join(archived, "project")) === false &&
-          lockPaths.length === 2 &&
-          lockPaths.every((file) => fs.existsSync(file) === false),
+        namedFacts([
+          ["rejected", () => rejected],
+          ["existsSyncProjectPath", () => fs.existsSync(projectPath) === false],
+          [
+            "existsSyncArchivedProject",
+            () => fs.existsSync(path.join(archived, "project")) === false,
+          ],
+          ["lockPaths", () => lockPaths.length === 2],
+          [
+            "lockPathsFileExistsSync",
+            () => lockPaths.every((file) => fs.existsSync(file) === false),
+          ],
+        ]),
+        {
+          rejected: true,
+          existsSyncProjectPath: true,
+          existsSyncArchivedProject: true,
+          lockPaths: true,
+          lockPathsFileExistsSync: true,
+        },
       );
     }
     const nativeCoordinationMkdir = fs.mkdirSync;

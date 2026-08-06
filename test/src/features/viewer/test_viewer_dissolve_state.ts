@@ -6,6 +6,8 @@ import {
 import { TestValidator } from "@nestia/e2e";
 import * as THREE from "three";
 
+import { namedFacts } from "../internal/predicates";
+
 const makeFakeRenderer = (width: number, height: number) => {
   const targets: Array<THREE.WebGLRenderTarget | null> = [];
   const size = new THREE.Vector2(width, height);
@@ -109,22 +111,37 @@ export const test_viewer_dissolve_state = (): void => {
   dissolve(b.renderer);
   const aTarget = a.targets[0] as THREE.WebGLRenderTarget;
   const bTarget = b.targets[0] as THREE.WebGLRenderTarget;
-  TestValidator.predicate(
+  TestValidator.equals(
     "one target per renderer, reused across calls",
-    aTarget !== null &&
-      a.targets[1] === null && // reset to screen after the offscreen pass
-      a.targets[2] === aTarget &&
-      bTarget !== aTarget &&
-      aTarget.width === 64 &&
-      bTarget.width === 128,
+    namedFacts([
+      ["aTarget", () => aTarget !== null],
+      ["aTargets", () => a.targets[1] === null],
+      ["aTargetsATarget", () => a.targets[2] === aTarget],
+      ["bTargetATarget", () => bTarget !== aTarget],
+      ["aTargetWidth", () => aTarget.width === 64],
+      ["bTargetWidth", () => bTarget.width === 128],
+    ]),
+    {
+      aTarget: true,
+      aTargets: true,
+      aTargetsATarget: true,
+      bTargetATarget: true,
+      aTargetWidth: true,
+      bTargetWidth: true,
+    },
   );
 
   // 2. resize follows the owning renderer only
   a.size.set(320, 240);
   dissolve(a.renderer);
-  TestValidator.predicate(
+  TestValidator.equals(
     "a resize follows the owning renderer only",
-    aTarget.width === 320 && aTarget.height === 240 && bTarget.width === 128,
+    namedFacts([
+      ["aTargetWidth", () => aTarget.width === 320],
+      ["aTargetHeight", () => aTarget.height === 240],
+      ["bTargetWidth", () => bTarget.width === 128],
+    ]),
+    { aTargetWidth: true, aTargetHeight: true, bTargetWidth: true },
   );
 
   // 3. dispose exactly once, twice-safe, lazy re-init afterwards

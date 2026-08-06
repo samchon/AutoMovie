@@ -12,7 +12,7 @@ import {
 import { TestValidator } from "@nestia/e2e";
 
 import { joint, makePose } from "../internal/fixtures";
-import { nclose } from "../internal/predicates";
+import { namedFacts, nclose } from "../internal/predicates";
 
 /** One second per cycle, so the natural sizing is countable by hand. */
 const WALK: IAutoMovieGait = {
@@ -146,11 +146,18 @@ export const test_perform_locomote_declared_duration = (): void => {
 
   // 4. the other direction: a span shorter than the natural one.
   const quick = synth(walkTo(1.5), "hero")!;
-  TestValidator.predicate(
+  TestValidator.equals(
     "a shorter declared span compresses the same walk",
-    nclose(quick.duration, 1.5) &&
-      nclose(arrival(quick), 3) &&
-      nclose(quick.gaitCycle!.period, 0.5),
+    namedFacts([
+      ["ncloseQuickDuration", () => nclose(quick.duration, 1.5)],
+      ["ncloseArrivalQuick", () => nclose(arrival(quick), 3)],
+      ["ncloseQuickGaitCycle", () => nclose(quick.gaitCycle!.period, 0.5)],
+    ]),
+    {
+      ncloseQuickDuration: true,
+      ncloseArrivalQuick: true,
+      ncloseQuickGaitCycle: true,
+    },
   );
 
   // 5. the boundary: declaring exactly the natural duration changes nothing.

@@ -13,7 +13,7 @@ import {
 import { TestValidator } from "@nestia/e2e";
 
 import { createSkeleton, joint, makePose } from "../internal/fixtures";
-import { nclose, qclose, vclose } from "../internal/predicates";
+import { namedFacts, nclose, qclose, vclose } from "../internal/predicates";
 
 /**
  * The rest-frame angle maps that let a pose be authored in one **clinical**
@@ -104,11 +104,18 @@ export const test_kinematics_rest_frame_angles = (): void => {
   const c = { flexion: 20, abduction: 150, twist: 10 };
   const q = jointToQuaternion(c, DEFAULT_JOINT_AXES, frame);
   const back = decomposeJointRotation(q, DEFAULT_JOINT_AXES, frame);
-  TestValidator.predicate(
+  TestValidator.equals(
     "decompose lifts back to the clinical angles",
-    nclose(back.flexion, 20, 1e-6) &&
-      nclose(back.abduction, 150, 1e-6) &&
-      nclose(back.twist, 10, 1e-6),
+    namedFacts([
+      ["ncloseBackFlexion", () => nclose(back.flexion, 20, 1e-6)],
+      ["ncloseBackAbduction", () => nclose(back.abduction, 150, 1e-6)],
+      ["ncloseBackTwist", () => nclose(back.twist, 10, 1e-6)],
+    ]),
+    {
+      ncloseBackFlexion: true,
+      ncloseBackAbduction: true,
+      ncloseBackTwist: true,
+    },
   );
   TestValidator.predicate(
     "and re-composing them reproduces the rotation",

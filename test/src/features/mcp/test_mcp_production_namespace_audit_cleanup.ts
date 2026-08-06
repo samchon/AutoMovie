@@ -249,7 +249,7 @@ export const test_mcp_production_namespace_audit_cleanup = (): void => {
               "letauditFailure:INamespaceAuditFixtureFailure|undefined;",
             ],
             tryDigest:
-              "1db2e207c524a3d8b9b81a2cf2e497bb3d05cfea9ec3cc34d60abd66d0056fa1",
+              "db961ec4e8dea64dafbc6ea35f2979fcb6310e92f27c284b294b1fb7abfa7f52",
             tryPrefixes: [
               'externalAudit=fs.mkdtempSync(path.join(path.dirname(auditFixture.root),"automovie-external-audit-"),);',
             ],

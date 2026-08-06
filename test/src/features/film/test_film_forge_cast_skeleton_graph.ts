@@ -4,7 +4,7 @@ import { TestValidator } from "@nestia/e2e";
 
 import { forgeEntry, makeScriptWrite } from "../internal/filmFixtures";
 import { IDENTITY_TRANSFORM } from "../internal/fixtures";
-import { hasViolation } from "../internal/predicates";
+import { hasViolation, namedFacts } from "../internal/predicates";
 
 const b = (
   bone: AutoMovieHumanoidBone,
@@ -88,11 +88,28 @@ export const test_film_forge_cast_skeleton_graph = (): void => {
     ],
   });
   TestValidator.equals("cycle fails", cyclic.success, false);
-  TestValidator.predicate(
+  TestValidator.equals(
     "both detached-cycle bones unreachable",
-    cyclic.success === false &&
-      hasViolation(cyclic, "type", ".skeleton.bones[2]") &&
-      hasViolation(cyclic, "type", ".skeleton.bones[3]"),
+    namedFacts([
+      ["cyclicSuccess", () => cyclic.success === false],
+      [
+        "hasViolationCyclicType",
+        () =>
+          cyclic.success === false &&
+          hasViolation(cyclic, "type", ".skeleton.bones[2]"),
+      ],
+      [
+        "hasViolationCyclicType2",
+        () =>
+          cyclic.success === false &&
+          hasViolation(cyclic, "type", ".skeleton.bones[3]"),
+      ],
+    ]),
+    {
+      cyclicSuccess: true,
+      hasViolationCyclicType: true,
+      hasViolationCyclicType2: true,
+    },
   );
 
   const doubled = forgeCast(makeScriptWrite(), {
@@ -106,12 +123,29 @@ export const test_film_forge_cast_skeleton_graph = (): void => {
     ],
   });
   TestValidator.equals("doubled fails", doubled.success, false);
-  TestValidator.predicate(
+  TestValidator.equals(
     "only the duplicate field is reported (walk terminates, nothing unreachable)",
-    doubled.success === false &&
-      hasViolation(doubled, "type", ".skeleton.bones[2].bone") &&
-      doubled.violations.every((v) =>
-        v.path.endsWith(".skeleton.bones[2].bone"),
-      ),
+    namedFacts([
+      ["doubledSuccess", () => doubled.success === false],
+      [
+        "hasViolationDoubledType",
+        () =>
+          doubled.success === false &&
+          hasViolation(doubled, "type", ".skeleton.bones[2].bone"),
+      ],
+      [
+        "doubledViolationsV",
+        () =>
+          doubled.success === false &&
+          doubled.violations.every((v) =>
+            v.path.endsWith(".skeleton.bones[2].bone"),
+          ),
+      ],
+    ]),
+    {
+      doubledSuccess: true,
+      hasViolationDoubledType: true,
+      doubledViolationsV: true,
+    },
   );
 };

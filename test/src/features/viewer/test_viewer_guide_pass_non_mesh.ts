@@ -9,6 +9,7 @@ import { TestValidator } from "@nestia/e2e";
 import * as THREE from "three";
 
 import { IDENTITY_TRANSFORM, createModel } from "../internal/fixtures";
+import { namedFacts } from "../internal/predicates";
 
 /** A scene with one mesh node plus every non-mesh renderable class. */
 const sceneWithHelpers = () => {
@@ -115,11 +116,21 @@ export const test_viewer_guide_pass_non_mesh = (): void => {
       "the pre-existing non-mesh renderables are hidden under pose",
       nonMesh.every((object) => object.visible === false),
     );
-    TestValidator.predicate(
+    TestValidator.equals(
       "the pose skeleton overlay stays visible with its lines",
-      overlay.visible === true &&
-        overlay.children.length > 0 &&
-        overlay.children.every((child) => child.visible === true),
+      namedFacts([
+        ["overlayVisible", () => overlay.visible === true],
+        ["overlayChildren", () => overlay.children.length > 0],
+        [
+          "overlayChildrenChild",
+          () => overlay.children.every((child) => child.visible === true),
+        ],
+      ]),
+      {
+        overlayVisible: true,
+        overlayChildren: true,
+        overlayChildrenChild: true,
+      },
     );
     handle.restore();
     TestValidator.predicate(

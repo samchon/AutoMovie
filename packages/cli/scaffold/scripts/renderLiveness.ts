@@ -132,6 +132,41 @@ export const releaseRenderLivenessLease = (
   }
 };
 
+interface IRenderLivenessLeaseFailure {
+  error: unknown;
+}
+
+class RenderLivenessLeaseCleanupError extends AggregateError {}
+
+/**
+ * Release one lease at the end of a guarded body without discarding either
+ * failure.
+ *
+ * The release removes a captured GC target and rethrows everything that is not
+ * `ENOENT`, so a raw call in `finally` replaces the guarded body's own
+ * diagnostic with the release error whenever both fail.
+ */
+export const preserveRenderLivenessLease = (
+  failure: IRenderLivenessLeaseFailure | undefined,
+  lease: IRenderLivenessLease,
+): void => {
+  try {
+    releaseRenderLivenessLease(lease);
+  } catch (releaseFailure) {
+    if (failure === undefined) throw releaseFailure;
+    throw new RenderLivenessLeaseCleanupError(
+      [
+        ...(failure.error instanceof RenderLivenessLeaseCleanupError
+          ? failure.error.errors
+          : [failure.error]),
+        releaseFailure,
+      ],
+      `Render liveness lease release failed after the ${lease.kind} body failed.`,
+    );
+  }
+  if (failure !== undefined) throw failure.error;
+};
+
 const assertNoActiveGcGuard = (props: IRenderLivenessProps): void => {
   for (;;) {
     const snapshot = captureExisting(

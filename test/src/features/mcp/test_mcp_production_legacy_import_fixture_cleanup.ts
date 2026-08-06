@@ -268,12 +268,12 @@ export const test_mcp_production_legacy_import_fixture_cleanup = (): void => {
           {
             catchBodies: ["linkedRootFailure={error};", "throwerror;"],
             catchVariables: ["error"],
-            containerStatements: 110,
+            containerStatements: 145,
             finallyBodies: [
               "constcompletedLinkedParent=linkedParent;",
               'preserveLegacyImportFixtureCleanup(linkedRootFailure,[{resource:"linked-rootlegacyfixture",cleanup:()=>linkedRoot.dispose(),},...(completedLinkedParent===undefined?[]:[{resource:"linked-rootoutsideroot",cleanup:()=>fs.rmSync(completedLinkedParent,{force:true,recursive:true,}),},]),]);',
             ],
-            index: 62,
+            index: 87,
             loopHeaders: [],
             prefixes: [
               "constlinkedRoot=createLegacy();",
@@ -289,12 +289,12 @@ export const test_mcp_production_legacy_import_fixture_cleanup = (): void => {
           {
             catchBodies: ["linkedRevisionFailure={error};", "throwerror;"],
             catchVariables: ["error"],
-            containerStatements: 110,
+            containerStatements: 145,
             finallyBodies: [
               "constcompletedLinkedRevisionTarget=linkedRevisionTarget;",
               'preserveLegacyImportFixtureCleanup(linkedRevisionFailure,[{resource:"linked-revisionlegacyfixture",cleanup:()=>linkedRevision.dispose(),},...(completedLinkedRevisionTarget===undefined?[]:[{resource:"linked-revisionoutsideroot",cleanup:()=>fs.rmSync(completedLinkedRevisionTarget,{force:true,recursive:true,}),},]),]);',
             ],
-            index: 92,
+            index: 124,
             loopHeaders: [],
             prefixes: [
               "constlinkedRevision=createLegacy();",
@@ -326,7 +326,7 @@ export const test_mcp_production_legacy_import_fixture_cleanup = (): void => {
               "letchangingLockFailure:ILegacyImportFixtureFailure|undefined;",
             ],
             tryDigest:
-              "b4aea634e377e417e5594e2d1c291eed69ef43c66e28c78d27017b6079f22c7a",
+              "3b6a1b83f9a107771ed596e10c08877ffa1e6d434856a54dd0baeaf47b816ea4",
             tryPrefixes: [
               'outsideLock=fs.mkdtempSync(path.join(os.tmpdir(),"automovie-changing-lock-"),);',
             ],
@@ -334,12 +334,12 @@ export const test_mcp_production_legacy_import_fixture_cleanup = (): void => {
           {
             catchBodies: ["linkedAppliedStateFailure={error};", "throwerror;"],
             catchVariables: ["error"],
-            containerStatements: 110,
+            containerStatements: 145,
             finallyBodies: [
               "constcompletedLinkedAppliedStateTarget=linkedAppliedStateTarget;",
               'preserveLegacyImportFixtureCleanup(linkedAppliedStateFailure,[{resource:"linked-applied-statelegacyfixture",cleanup:()=>linkedAppliedState.dispose(),},...(completedLinkedAppliedStateTarget===undefined?[]:[{resource:"linked-applied-stateoutsideroot",cleanup:()=>fs.rmSync(completedLinkedAppliedStateTarget,{force:true,recursive:true,}),},]),]);',
             ],
-            index: 99,
+            index: 132,
             loopHeaders: [],
             prefixes: [
               "constlinkedAppliedState=createLegacy();",
@@ -355,12 +355,12 @@ export const test_mcp_production_legacy_import_fixture_cleanup = (): void => {
           {
             catchBodies: ["unsafeFailure={error};", "throwerror;"],
             catchVariables: ["error"],
-            containerStatements: 110,
+            containerStatements: 145,
             finallyBodies: [
               "constcompletedOutside=outside;",
               'preserveLegacyImportFixtureCleanup(unsafeFailure,[{resource:"unsafe-inventorylegacyfixture",cleanup:()=>unsafe.dispose(),},...(completedOutside===undefined?[]:[{resource:"unsafe-inventoryoutsideroot",cleanup:()=>fs.rmSync(completedOutside,{force:true,recursive:true,}),},]),]);',
             ],
-            index: 109,
+            index: 144,
             loopHeaders: [],
             prefixes: [
               "constunsafe=createLegacy();",
@@ -374,7 +374,7 @@ export const test_mcp_production_legacy_import_fixture_cleanup = (): void => {
             ],
           },
         ],
-        statementCounts: [110],
+        statementCounts: [145],
       },
       policy: {
         bodies: [

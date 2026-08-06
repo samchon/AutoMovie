@@ -6,7 +6,7 @@ import {
 import { IAutoMovieVector3 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { nclose } from "../internal/predicates";
+import { namedFacts, nclose } from "../internal/predicates";
 
 const IDENTITY = { x: 0, y: 0, z: 0, w: 1 };
 const AT_ORIGIN = {
@@ -89,11 +89,17 @@ export const test_kinematics_hinged_arm_articulation = (): void => {
   // far segment back onto a `+0.3X` near one is a half turn about the hinge, so
   // the delta is `(0, 1, 0, 0)`: `w = cos(180/2) = 0`.
   const near = chain({ target: { x: 0.01, y: 0, z: 0 } });
-  TestValidator.predicate(
+  TestValidator.equals(
     "a target inside the fold clamps to the folded chain instead of failing",
-    near !== null &&
-      nclose(near.lower.w, 0, 1e-9) &&
-      nclose(near.lower.y, 1, 1e-9),
+    namedFacts([
+      ["near", () => near !== null],
+      ["ncloseNearLower", () => near !== null && nclose(near.lower.w, 0, 1e-9)],
+      [
+        "ncloseNearLower2",
+        () => near !== null && nclose(near.lower.y, 1, 1e-9),
+      ],
+    ]),
+    { near: true, ncloseNearLower: true, ncloseNearLower2: true },
   );
 
   // 4. DEGENERATE: the hinge lies along the far segment, so flexion is a roll

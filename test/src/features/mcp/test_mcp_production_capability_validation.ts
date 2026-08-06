@@ -12,6 +12,7 @@ import {
 } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
 
+import { namedFacts } from "../internal/predicates";
 import {
   modelRecipe,
   productionDesign,
@@ -237,12 +238,32 @@ export const test_mcp_production_capability_validation = (): void => {
   const invalidCapability = codes(
     graph({ ...model, profiles: [invalidProfile] }, world),
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "invalid profile facts fail as typed capability diagnostics",
-    invalidCapability.has("design-text-empty") &&
-      invalidCapability.has("design-capability-invalid") &&
-      invalidCapability.has("design-capability-duplicate") &&
-      invalidCapability.has("design-range-invalid"),
+    namedFacts([
+      [
+        "invalidCapabilityHasDesign",
+        () => invalidCapability.has("design-text-empty"),
+      ],
+      [
+        "invalidCapabilityHasDesign2",
+        () => invalidCapability.has("design-capability-invalid"),
+      ],
+      [
+        "invalidCapabilityHasDesign3",
+        () => invalidCapability.has("design-capability-duplicate"),
+      ],
+      [
+        "invalidCapabilityHasDesign4",
+        () => invalidCapability.has("design-range-invalid"),
+      ],
+    ]),
+    {
+      invalidCapabilityHasDesign: true,
+      invalidCapabilityHasDesign2: true,
+      invalidCapabilityHasDesign3: true,
+      invalidCapabilityHasDesign4: true,
+    },
   );
 
   const invalidInstances = codes(
@@ -296,14 +317,42 @@ export const test_mcp_production_capability_validation = (): void => {
       ],
     }),
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "invalid layouts, routes, references, palettes and trait ranges are rejected",
-    invalidInstances.has("design-route-invalid") &&
-      invalidInstances.has("design-reference-missing") &&
-      invalidInstances.has("design-range-invalid") &&
-      invalidInstances.has("design-collection-empty") &&
-      invalidInstances.has("design-color-invalid") &&
-      invalidInstances.has("design-duplicate-id"),
+    namedFacts([
+      [
+        "invalidInstancesHasDesign",
+        () => invalidInstances.has("design-route-invalid"),
+      ],
+      [
+        "invalidInstancesHasDesign2",
+        () => invalidInstances.has("design-reference-missing"),
+      ],
+      [
+        "invalidInstancesHasDesign3",
+        () => invalidInstances.has("design-range-invalid"),
+      ],
+      [
+        "invalidInstancesHasDesign4",
+        () => invalidInstances.has("design-collection-empty"),
+      ],
+      [
+        "invalidInstancesHasDesign5",
+        () => invalidInstances.has("design-color-invalid"),
+      ],
+      [
+        "invalidInstancesHasDesign6",
+        () => invalidInstances.has("design-duplicate-id"),
+      ],
+    ]),
+    {
+      invalidInstancesHasDesign: true,
+      invalidInstancesHasDesign2: true,
+      invalidInstancesHasDesign3: true,
+      invalidInstancesHasDesign4: true,
+      invalidInstancesHasDesign5: true,
+      invalidInstancesHasDesign6: true,
+    },
   );
 
   const derivedRangeMessages = [
@@ -437,10 +486,26 @@ export const test_mcp_production_capability_validation = (): void => {
       ],
     }),
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "aggregate general-instance count and buffer budgets fail independently",
-    AUTOMOVIE_MAX_GENERAL_INSTANCES === 250_000 &&
-      excessiveCount.has("design-range-invalid") &&
-      excessiveBuffer.has("design-budget-exceeded"),
+    namedFacts([
+      [
+        "AUTOMOVIEMAXGENERALINSTANCES000",
+        () => AUTOMOVIE_MAX_GENERAL_INSTANCES === 250_000,
+      ],
+      [
+        "excessiveCountHasDesign",
+        () => excessiveCount.has("design-range-invalid"),
+      ],
+      [
+        "excessiveBufferHasDesign",
+        () => excessiveBuffer.has("design-budget-exceeded"),
+      ],
+    ]),
+    {
+      AUTOMOVIEMAXGENERALINSTANCES000: true,
+      excessiveCountHasDesign: true,
+      excessiveBufferHasDesign: true,
+    },
   );
 };

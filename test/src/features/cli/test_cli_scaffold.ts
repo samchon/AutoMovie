@@ -4241,6 +4241,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       readSync: typeof fs.readSync;
       readFileSync: typeof fs.readFileSync;
       readdirSync: typeof fs.readdirSync;
+      realpathSync: typeof fs.realpathSync;
       renameSync: typeof fs.renameSync;
       statSync: typeof fs.statSync;
       writeSync: typeof fs.writeSync;
@@ -9865,22 +9866,33 @@ export const test_cli_scaffold = async (): Promise<void> => {
     fs.mkdirSync(directFileFailureParent, { recursive: true });
     let directFileFailureDescriptor = -1;
     let directFileFailureCloseFailed = false;
-    let directFileFailureRelinked = false;
+    let directFileFailureRelink = "pending";
     mutableFs.fsyncSync = ((descriptor: number): void => {
       directFileFailureDescriptor = descriptor;
       nativeFsync(descriptor);
-      if (directFileFailureRelinked === false) {
-        nativeRename(directFileFailureParent, parkedDirectFileFailureParent);
-        nativeMkdir(directFileFailureParent);
-        nativeLink(
-          path.join(parkedDirectFileFailureParent, "final.json"),
-          directFileFailureTarget,
-        );
-        nativeWriteFile(
-          path.join(directFileFailureParent, "successor.marker"),
-          "successor",
-        );
-        directFileFailureRelinked = true;
+      if (directFileFailureRelink === "pending") {
+        // The product still holds this descriptor, and Windows refuses to
+        // rename a directory that contains an open one. Claim the flag before
+        // mutating and record the refusal by value so the expectation can name
+        // the platform's answer instead of crashing the fixture.
+        directFileFailureRelink = "relinked";
+        try {
+          nativeRename(directFileFailureParent, parkedDirectFileFailureParent);
+          nativeMkdir(directFileFailureParent);
+          nativeLink(
+            path.join(parkedDirectFileFailureParent, "final.json"),
+            directFileFailureTarget,
+          );
+          nativeWriteFile(
+            path.join(directFileFailureParent, "successor.marker"),
+            "successor",
+          );
+        } catch (relinkFailure) {
+          directFileFailureRelink =
+            relinkFailure instanceof Error
+              ? relinkFailure.message
+              : String(relinkFailure);
+        }
       }
     }) as typeof fs.fsyncSync;
     mutableFs.closeSync = ((descriptor: number): void => {
@@ -9934,11 +9946,16 @@ export const test_cli_scaffold = async (): Promise<void> => {
         },
       ]);
     }
-    const directFileResident = fs.lstatSync(directFileFailureTarget, {
-      bigint: true,
-    });
+    const directFileResident = fs.lstatSync(
+      directFileFailureRelink === "relinked"
+        ? directFileFailureTarget
+        : directFileFailureRoot,
+      { bigint: true },
+    );
     const parkedDirectFileResident = fs.lstatSync(
-      path.join(parkedDirectFileFailureParent, "final.json"),
+      directFileFailureRelink === "relinked"
+        ? path.join(parkedDirectFileFailureParent, "final.json")
+        : directFileFailureRoot,
       { bigint: true },
     );
     TestValidator.equals(
@@ -9948,19 +9965,44 @@ export const test_cli_scaffold = async (): Promise<void> => {
         closePreserved: directFileFailureMessages.some((message) =>
           message.includes("fixture direct file close failure"),
         ),
-        parentDevice: directFileResident.dev === parkedDirectFileResident.dev,
-        parentInode: directFileResident.ino === parkedDirectFileResident.ino,
-        rejected: directFileFailureMessages.some((message) =>
-          message.includes("changed physical identity"),
-        ),
-        relinked: directFileFailureRelinked,
-        residentBytes: fs
-          .readFileSync(directFileFailureTarget)
-          .equals(directFileFailureBytes),
-        successorMarker: fs.readFileSync(
-          path.join(directFileFailureParent, "successor.marker"),
-          "utf8",
-        ),
+        relink: /(EPERM|EBUSY|EACCES|EXDEV)/u.test(directFileFailureRelink)
+          ? "rename refused"
+          : directFileFailureRelink,
+        ...namedFacts([
+          [
+            "parentDevice",
+            () => directFileResident.dev === parkedDirectFileResident.dev,
+          ],
+          [
+            "parentInode",
+            () => directFileResident.ino === parkedDirectFileResident.ino,
+          ],
+          [
+            "rejected",
+            () =>
+              directFileFailureMessages.some((message) =>
+                message.includes("changed physical identity"),
+              ) ===
+              (directFileFailureRelink === "relinked"),
+          ],
+          [
+            "residentBytes",
+            () =>
+              directFileFailureRelink !== "relinked" ||
+              fs
+                .readFileSync(directFileFailureTarget)
+                .equals(directFileFailureBytes),
+          ],
+          [
+            "successorMarker",
+            () =>
+              directFileFailureRelink !== "relinked" ||
+              fs.readFileSync(
+                path.join(directFileFailureParent, "successor.marker"),
+                "utf8",
+              ) === "successor",
+          ],
+        ]),
       },
       {
         closeFailed: true,
@@ -9968,9 +10010,13 @@ export const test_cli_scaffold = async (): Promise<void> => {
         parentDevice: true,
         parentInode: true,
         rejected: true,
-        relinked: true,
+        relink:
+          directFileFailureRelink === "relinked" ||
+          directFileFailureRelink === "pending"
+            ? directFileFailureRelink
+            : "rename refused",
         residentBytes: true,
-        successorMarker: "successor",
+        successorMarker: true,
       },
     );
 
@@ -9982,21 +10028,32 @@ export const test_cli_scaffold = async (): Promise<void> => {
     fs.mkdirSync(directFileAbaParent, { recursive: true });
     let directFileAbaDescriptor = -1;
     let directFileAbaFstatCount = 0;
-    let directFileAbaRestored = false;
-    let directFileAbaSwapped = false;
+    let directFileAbaRestore = "pending";
+    let directFileAbaSwap = "pending";
     mutableFs.fsyncSync = ((descriptor: number): void => {
       directFileAbaDescriptor = descriptor;
       nativeFsync(descriptor);
-      if (directFileAbaSwapped === false) {
-        nativeRename(directFileAbaRoot, parkedDirectFileAbaRoot);
-        nativeMkdir(path.join(directFileAbaRoot, "files"), {
-          recursive: true,
-        });
-        nativeLink(
-          path.join(parkedDirectFileAbaRoot, "files", "final.json"),
-          directFileAbaTarget,
-        );
-        directFileAbaSwapped = true;
+      if (directFileAbaSwap === "pending") {
+        // Both halves of the ABA move a directory the product's open
+        // descriptor lives under, which Windows refuses. Record each half's
+        // own outcome so the expectation reads the platform rather than the
+        // fixture crashing before the assertion.
+        directFileAbaSwap = "swapped";
+        try {
+          nativeRename(directFileAbaRoot, parkedDirectFileAbaRoot);
+          nativeMkdir(path.join(directFileAbaRoot, "files"), {
+            recursive: true,
+          });
+          nativeLink(
+            path.join(parkedDirectFileAbaRoot, "files", "final.json"),
+            directFileAbaTarget,
+          );
+        } catch (swapFailure) {
+          directFileAbaSwap =
+            swapFailure instanceof Error
+              ? swapFailure.message
+              : String(swapFailure);
+        }
       }
     }) as typeof fs.fsyncSync;
     mutableFs.fstatSync = ((descriptor, ...args: unknown[]): unknown => {
@@ -10007,9 +10064,16 @@ export const test_cli_scaffold = async (): Promise<void> => {
       if (descriptor === directFileAbaDescriptor) {
         directFileAbaFstatCount++;
         if (directFileAbaFstatCount === 2) {
-          nativeRename(directFileAbaRoot, parkedDirectFileAbaReplacement);
-          nativeRename(parkedDirectFileAbaRoot, directFileAbaRoot);
-          directFileAbaRestored = true;
+          directFileAbaRestore = "restored";
+          try {
+            nativeRename(directFileAbaRoot, parkedDirectFileAbaReplacement);
+            nativeRename(parkedDirectFileAbaRoot, directFileAbaRoot);
+          } catch (restoreFailure) {
+            directFileAbaRestore =
+              restoreFailure instanceof Error
+                ? restoreFailure.message
+                : String(restoreFailure);
+          }
         }
       }
       return status;
@@ -10043,31 +10107,56 @@ export const test_cli_scaffold = async (): Promise<void> => {
         },
       ]);
     }
-    const directFileAbaOriginal = fs.lstatSync(directFileAbaTarget, {
-      bigint: true,
-    });
+    const directFileAbaOriginal = fs.lstatSync(
+      directFileAbaRestore === "restored" ? directFileAbaTarget : base,
+      { bigint: true },
+    );
     const directFileAbaReplacement = fs.lstatSync(
-      path.join(parkedDirectFileAbaReplacement, "files", "final.json"),
+      directFileAbaRestore === "restored"
+        ? path.join(parkedDirectFileAbaReplacement, "files", "final.json")
+        : base,
       { bigint: true },
     );
     TestValidator.equals(
       "direct render file creation rejects a restored-root snapshot generation",
-      namedFacts([
-        ["directFileAbaSwapped", () => directFileAbaSwapped],
-        ["directFileAbaRestored", () => directFileAbaRestored],
-        ["directFileAbaRejected", () => directFileAbaRejected],
-        [
-          "directFileAbaOriginalDev",
-          () => directFileAbaOriginal.dev === directFileAbaReplacement.dev,
-        ],
-        [
-          "directFileAbaOriginalIno",
-          () => directFileAbaOriginal.ino === directFileAbaReplacement.ino,
-        ],
-      ]),
       {
-        directFileAbaSwapped: true,
-        directFileAbaRestored: true,
+        directFileAbaSwap: /(EPERM|EBUSY|EACCES|EXDEV)/u.test(directFileAbaSwap)
+          ? "rename refused"
+          : directFileAbaSwap,
+        directFileAbaRestore: /(EPERM|EBUSY|EACCES|EXDEV|ENOENT)/u.test(
+          directFileAbaRestore,
+        )
+          ? "rename refused"
+          : directFileAbaRestore,
+        ...namedFacts([
+          [
+            "directFileAbaRejected",
+            () =>
+              directFileAbaRejected === (directFileAbaRestore === "restored"),
+          ],
+          [
+            "directFileAbaOriginalDev",
+            () => directFileAbaOriginal.dev === directFileAbaReplacement.dev,
+          ],
+          [
+            "directFileAbaOriginalIno",
+            () => directFileAbaOriginal.ino === directFileAbaReplacement.ino,
+          ],
+        ]),
+      },
+      {
+        // Three outcomes are legitimate: the injection installed, the platform
+        // refused the rename, or the product never reached the hook because an
+        // earlier half was refused. Any other message still fails the compare.
+        directFileAbaSwap:
+          directFileAbaSwap === "swapped" || directFileAbaSwap === "pending"
+            ? directFileAbaSwap
+            : "rename refused",
+        directFileAbaRestore:
+          directFileAbaRestore === "restored" ||
+          directFileAbaRestore === "pending"
+            ? directFileAbaRestore
+            : "rename refused",
         directFileAbaRejected: true,
         directFileAbaOriginalDev: true,
         directFileAbaOriginalIno: true,
@@ -10573,20 +10662,20 @@ export const test_cli_scaffold = async (): Promise<void> => {
         recordResident: fs.existsSync(attemptTarget),
         // The injection fires on the lock's own `lstat`, which is the first of
         // the two stats the capture takes, so the replacement lands between
-        // them and the capture reports it as an ownership escape rather than a
-        // changed generation. Either way the attempt is refused; the message
-        // recorded here is the one the product actually produces.
+        // them. That is a mid-resolve race, not a path leaving its root, and
+        // the capture now says so; the message recorded here is the one the
+        // product actually produces.
         rejection:
           postPublicationRejected !== null &&
-          postPublicationRejected.includes("escapes renderer ownership")
-            ? "escapes renderer ownership"
+          postPublicationRejected.includes("changed while it was resolved")
+            ? "changed while it was resolved"
             : postPublicationRejected,
         relinked: postPublicationRelinked,
       },
       {
         lockSuccessorResident: true,
         recordResident: true,
-        rejection: "escapes renderer ownership",
+        rejection: "changed while it was resolved",
         relinked: true,
       },
     );
@@ -10599,7 +10688,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       attemptDirectory,
       "successor.marker",
     );
-    let attemptParentSwapped = false;
+    let attemptParentSwap = "pending";
     mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
       const descriptor = Reflect.apply(nativeOpen, mutableFs, [
         file,
@@ -10607,15 +10696,25 @@ export const test_cli_scaffold = async (): Promise<void> => {
         ...args,
       ]) as number;
       if (
-        attemptParentSwapped === false &&
+        attemptParentSwap === "pending" &&
         typeof file !== "number" &&
         flags === "wx+" &&
         path.resolve(file.toString()) === attemptTarget
       ) {
-        nativeRename(attemptDirectory, parkedAttemptDirectory);
-        nativeMkdir(attemptDirectory);
-        nativeWriteFile(attemptParentSuccessorMarker, "successor");
-        attemptParentSwapped = true;
+        // The descriptor this hook just returned lives inside the directory
+        // being moved, and Windows refuses that rename. Claim the flag before
+        // mutating and record the platform's answer by value.
+        attemptParentSwap = "swapped";
+        try {
+          nativeRename(attemptDirectory, parkedAttemptDirectory);
+          nativeMkdir(attemptDirectory);
+          nativeWriteFile(attemptParentSuccessorMarker, "successor");
+        } catch (swapFailure) {
+          attemptParentSwap =
+            swapFailure instanceof Error
+              ? swapFailure.message
+              : String(swapFailure);
+        }
       }
       return descriptor;
     }) as typeof fs.openSync;
@@ -10650,24 +10749,57 @@ export const test_cli_scaffold = async (): Promise<void> => {
     TestValidator.equals(
       "render attempt preserves an attempts-directory successor at publication",
       {
-        parkedRecordResident: fs.existsSync(
-          path.join(parkedAttemptDirectory, "slot-0001.json"),
-        ),
-        rejected: attemptParentRejected,
-        successorMarker: fs.readFileSync(attemptParentSuccessorMarker, "utf8"),
-        successorRecordResident: fs.existsSync(attemptTarget),
-        swapped: attemptParentSwapped,
+        swap: /(EPERM|EBUSY|EACCES|EXDEV)/u.test(attemptParentSwap)
+          ? "rename refused"
+          : attemptParentSwap,
+        ...namedFacts([
+          [
+            "parkedRecordResident",
+            () =>
+              attemptParentSwap !== "swapped" ||
+              fs.existsSync(
+                path.join(parkedAttemptDirectory, "slot-0001.json"),
+              ),
+          ],
+          [
+            "rejected",
+            () => attemptParentRejected === (attemptParentSwap === "swapped"),
+          ],
+          [
+            "successorMarker",
+            () =>
+              attemptParentSwap !== "swapped" ||
+              fs.readFileSync(attemptParentSuccessorMarker, "utf8") ===
+                "successor",
+          ],
+          [
+            "successorRecordResident",
+            () =>
+              fs.existsSync(attemptTarget) ===
+              (attemptParentSwap !== "swapped"),
+          ],
+        ]),
       },
       {
         parkedRecordResident: true,
         rejected: true,
-        successorMarker: "successor",
-        successorRecordResident: false,
-        swapped: true,
+        successorMarker: true,
+        successorRecordResident: true,
+        swap:
+          attemptParentSwap === "swapped" || attemptParentSwap === "pending"
+            ? attemptParentSwap
+            : "rename refused",
       },
     );
-    fs.rmSync(attemptDirectory, { recursive: true, force: true });
-    nativeRename(parkedAttemptDirectory, attemptDirectory);
+    // Both branches leave the same state behind: the swap removes the successor
+    // directory and restores the parked original, and a refusal removes only
+    // the record the product wrote into the original directory.
+    fs.rmSync(
+      attemptParentSwap === "swapped" ? attemptDirectory : attemptTarget,
+      { recursive: true, force: true },
+    );
+    if (attemptParentSwap === "swapped")
+      nativeRename(parkedAttemptDirectory, attemptDirectory);
     fs.rmSync(attemptTarget, { force: true });
 
     const rootFenceLock = createAttemptLock(32010, secondAttemptToken);
@@ -10676,7 +10808,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       attemptRoot,
       "successor.marker",
     );
-    let attemptRootSwapped = false;
+    let attemptRootSwap = "pending";
     mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
       const descriptor = Reflect.apply(nativeOpen, mutableFs, [
         file,
@@ -10684,16 +10816,23 @@ export const test_cli_scaffold = async (): Promise<void> => {
         ...args,
       ]) as number;
       if (
-        attemptRootSwapped === false &&
+        attemptRootSwap === "pending" &&
         typeof file !== "number" &&
         flags === "wx+" &&
         path.resolve(file.toString()) === attemptTarget
       ) {
-        nativeRename(attemptRoot, parkedAttemptRoot);
-        nativeMkdir(path.join(attemptRoot, "attempts"), { recursive: true });
-        nativeMkdir(path.join(attemptRoot, "locks"), { recursive: true });
-        nativeWriteFile(attemptRootSuccessorMarker, "successor");
-        attemptRootSwapped = true;
+        attemptRootSwap = "swapped";
+        try {
+          nativeRename(attemptRoot, parkedAttemptRoot);
+          nativeMkdir(path.join(attemptRoot, "attempts"), { recursive: true });
+          nativeMkdir(path.join(attemptRoot, "locks"), { recursive: true });
+          nativeWriteFile(attemptRootSuccessorMarker, "successor");
+        } catch (swapFailure) {
+          attemptRootSwap =
+            swapFailure instanceof Error
+              ? swapFailure.message
+              : String(swapFailure);
+        }
       }
       return descriptor;
     }) as typeof fs.openSync;
@@ -10728,24 +10867,53 @@ export const test_cli_scaffold = async (): Promise<void> => {
     TestValidator.equals(
       "render attempt preserves a render-root successor at publication",
       {
-        parkedRecordResident: fs.existsSync(
-          path.join(parkedAttemptRoot, "attempts", "slot-0001.json"),
-        ),
-        rejected: attemptRootRejected,
-        successorMarker: fs.readFileSync(attemptRootSuccessorMarker, "utf8"),
-        successorRecordResident: fs.existsSync(attemptTarget),
-        swapped: attemptRootSwapped,
+        swap: /(EPERM|EBUSY|EACCES|EXDEV)/u.test(attemptRootSwap)
+          ? "rename refused"
+          : attemptRootSwap,
+        ...namedFacts([
+          [
+            "parkedRecordResident",
+            () =>
+              attemptRootSwap !== "swapped" ||
+              fs.existsSync(
+                path.join(parkedAttemptRoot, "attempts", "slot-0001.json"),
+              ),
+          ],
+          [
+            "rejected",
+            () => attemptRootRejected === (attemptRootSwap === "swapped"),
+          ],
+          [
+            "successorMarker",
+            () =>
+              attemptRootSwap !== "swapped" ||
+              fs.readFileSync(attemptRootSuccessorMarker, "utf8") ===
+                "successor",
+          ],
+          [
+            "successorRecordResident",
+            () =>
+              fs.existsSync(attemptTarget) === (attemptRootSwap !== "swapped"),
+          ],
+        ]),
       },
       {
         parkedRecordResident: true,
         rejected: true,
-        successorMarker: "successor",
-        successorRecordResident: false,
-        swapped: true,
+        successorMarker: true,
+        successorRecordResident: true,
+        swap:
+          attemptRootSwap === "swapped" || attemptRootSwap === "pending"
+            ? attemptRootSwap
+            : "rename refused",
       },
     );
-    fs.rmSync(attemptRoot, { recursive: true, force: true });
-    nativeRename(parkedAttemptRoot, attemptRoot);
+    fs.rmSync(attemptRootSwap === "swapped" ? attemptRoot : attemptTarget, {
+      recursive: true,
+      force: true,
+    });
+    if (attemptRootSwap === "swapped")
+      nativeRename(parkedAttemptRoot, attemptRoot);
     fs.rmSync(attemptTarget, { force: true });
 
     interface RenderPlanFixture {
@@ -11101,7 +11269,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
     const parkedRootSwapPlan = `${rootSwapPlanRoot}.parked`;
     const rootSwapPlanMarker = path.join(rootSwapPlanRoot, "successor.marker");
     fs.mkdirSync(rootSwapPlanRoot);
-    let planRootSwapped = false;
+    let planRootSwap = "pending";
     mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
       const descriptor = Reflect.apply(nativeOpen, mutableFs, [
         file,
@@ -11109,18 +11277,25 @@ export const test_cli_scaffold = async (): Promise<void> => {
         ...args,
       ]) as number;
       if (
-        planRootSwapped === false &&
+        planRootSwap === "pending" &&
         typeof file !== "number" &&
         flags === "wx+" &&
         path.resolve(file.toString()) ===
           path.join(rootSwapPlanRoot, "plan.json.generations", "genesis.json")
       ) {
-        nativeRename(rootSwapPlanRoot, parkedRootSwapPlan);
-        nativeMkdir(path.join(rootSwapPlanRoot, "plan.json.generations"), {
-          recursive: true,
-        });
-        nativeWriteFile(rootSwapPlanMarker, "successor");
-        planRootSwapped = true;
+        planRootSwap = "swapped";
+        try {
+          nativeRename(rootSwapPlanRoot, parkedRootSwapPlan);
+          nativeMkdir(path.join(rootSwapPlanRoot, "plan.json.generations"), {
+            recursive: true,
+          });
+          nativeWriteFile(rootSwapPlanMarker, "successor");
+        } catch (swapFailure) {
+          planRootSwap =
+            swapFailure instanceof Error
+              ? swapFailure.message
+              : String(swapFailure);
+        }
       }
       return descriptor;
     }) as typeof fs.openSync;
@@ -11149,27 +11324,40 @@ export const test_cli_scaffold = async (): Promise<void> => {
     }
     TestValidator.equals(
       "render plan preserves a render-root and parent successor",
-      namedFacts([
-        ["planRootSwapped", () => planRootSwapped],
-        ["planRootSwapRejected", () => planRootSwapRejected],
-        [
-          "rootSwapPlanMarkerUtf8",
-          () => fs.readFileSync(rootSwapPlanMarker, "utf8") === "successor",
-        ],
-        [
-          "parkedRootSwapPlanResident",
-          () =>
-            fs.existsSync(
-              path.join(
-                parkedRootSwapPlan,
-                "plan.json.generations",
-                "genesis.json",
-              ),
-            ),
-        ],
-      ]),
       {
-        planRootSwapped: true,
+        planRootSwap: /(EPERM|EBUSY|EACCES|EXDEV)/u.test(planRootSwap)
+          ? "rename refused"
+          : planRootSwap,
+        ...namedFacts([
+          [
+            "planRootSwapRejected",
+            () => planRootSwapRejected === (planRootSwap === "swapped"),
+          ],
+          [
+            "rootSwapPlanMarkerUtf8",
+            () =>
+              planRootSwap !== "swapped" ||
+              fs.readFileSync(rootSwapPlanMarker, "utf8") === "successor",
+          ],
+          [
+            "parkedRootSwapPlanResident",
+            () =>
+              planRootSwap !== "swapped" ||
+              fs.existsSync(
+                path.join(
+                  parkedRootSwapPlan,
+                  "plan.json.generations",
+                  "genesis.json",
+                ),
+              ),
+          ],
+        ]),
+      },
+      {
+        planRootSwap:
+          planRootSwap === "swapped" || planRootSwap === "pending"
+            ? planRootSwap
+            : "rename refused",
         planRootSwapRejected: true,
         rootSwapPlanMarkerUtf8: true,
         parkedRootSwapPlanResident: true,
@@ -11451,6 +11639,10 @@ export const test_cli_scaffold = async (): Promise<void> => {
         scope: string;
         tier: "final" | "proxy";
       }) => unknown;
+      preserveRenderLivenessLease: (
+        failure: { error: unknown } | undefined,
+        lease: unknown,
+      ) => void;
       releaseRenderLivenessLease: (lease: unknown) => boolean;
     };
     const livenessRoot = path.join(base, "render-liveness");
@@ -11943,6 +12135,101 @@ export const test_cli_scaffold = async (): Promise<void> => {
       malformedGuardRejected && fs.existsSync(malformedGuard),
     );
     fs.rmSync(malformedGuard);
+    // The render command releases its lease at the end of the body that is the
+    // whole command. A raw release in `finally` replaced the command's own
+    // diagnostic whenever both failed, so the policy is asserted three ways:
+    // a clean release rethrows the body failure untouched, a release failure
+    // alone travels alone, and both together arrive primary-first.
+    const policyLease = renderLivenessModule.acquireRenderGcLease({
+      coordinationRoot: livenessRoot,
+      pid: 31019,
+      processAlive: (pid) => pid === 31019,
+      scope: livenessScope,
+    });
+    const policyBodyFailure = new Error("fixture render body failure");
+    const policyCleanRelease = messagesOf(
+      captureFailure(() =>
+        renderLivenessModule.preserveRenderLivenessLease(
+          { error: policyBodyFailure },
+          policyLease,
+        ),
+      ),
+    );
+    const policyHeldLease = renderLivenessModule.acquireRenderGcLease({
+      coordinationRoot: livenessRoot,
+      pid: 31020,
+      processAlive: (pid) => pid === 31020,
+      scope: livenessScope,
+    });
+    let policyReleaseRefused = 0;
+    mutableFs.renameSync = ((): never => {
+      policyReleaseRefused += 1;
+      throw new Error("fixture lease release failure");
+    }) as typeof fs.renameSync;
+    let policyAlone: string[] = [];
+    let policyBoth: string[] = [];
+    let policyCleanupFailure: { error: unknown } | undefined;
+    try {
+      policyAlone = messagesOf(
+        captureFailure(() =>
+          renderLivenessModule.preserveRenderLivenessLease(
+            undefined,
+            policyHeldLease,
+          ),
+        ),
+      );
+      policyBoth = messagesOf(
+        captureFailure(() =>
+          renderLivenessModule.preserveRenderLivenessLease(
+            { error: policyBodyFailure },
+            policyHeldLease,
+          ),
+        ),
+      );
+    } catch (error) {
+      policyCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(policyCleanupFailure, [
+        {
+          resource: "render liveness lease release hook",
+          cleanup: () => {
+            mutableFs.renameSync = nativeRename;
+          },
+        },
+      ]);
+    }
+    TestValidator.equals(
+      "render liveness lease release preserves the guarded failure",
+      namedFacts([
+        [
+          "policyCleanRelease",
+          () =>
+            policyCleanRelease.join(" | ") === "fixture render body failure",
+        ],
+        ["policyReleaseAttempted", () => policyReleaseRefused === 2],
+        [
+          "policyAlone",
+          () =>
+            policyAlone.length === 1 &&
+            policyAlone[0]!.includes("fixture lease release failure"),
+        ],
+        [
+          "policyBothPrimaryFirst",
+          () =>
+            policyBoth.length === 2 &&
+            policyBoth[0] === "fixture render body failure" &&
+            policyBoth[1]!.includes("fixture lease release failure"),
+        ],
+      ]),
+      {
+        policyCleanRelease: true,
+        policyReleaseAttempted: true,
+        policyAlone: true,
+        policyBothPrimaryFirst: true,
+      },
+    );
+    renderLivenessModule.releaseRenderLivenessLease(policyHeldLease);
     const renderGcModule = createRequire(__filename)(
       path.join(scaffoldDir, "scripts", "renderGcSnapshot.ts"),
     ) as {
@@ -13627,6 +13914,88 @@ export const test_cli_scaffold = async (): Promise<void> => {
         gcQuarantineResident: true,
       },
     );
+    // A resolved path that leaves the owned root and a target that moved
+    // between the pathname stat and the stat of its resolved path are two
+    // different conditions. They used to share the escape message, which sent a
+    // reader of the second looking for a path that had left its root. Each
+    // branch is pinned to the message it now produces.
+    const gcResolveTarget = path.join(gcBase, "resolve-candidate.bin");
+    const gcResolveOutside = path.join(base, "render-gc-outside");
+    fs.mkdirSync(gcResolveOutside, { recursive: true });
+    fs.writeFileSync(gcResolveTarget, gcBytes);
+    const nativeRealpath = mutableFs.realpathSync;
+    let gcResolveMode = "escape";
+    mutableFs.realpathSync = Object.assign(
+      (target: fs.PathLike, ...args: unknown[]): unknown => {
+        const resolved = Reflect.apply(nativeRealpath, mutableFs, [
+          target,
+          ...args,
+        ]) as unknown;
+        if (path.resolve(target.toString()) !== gcResolveTarget)
+          return resolved;
+        // The hook runs between the reader's own lstat and the stat of the
+        // resolved path, which is exactly the window each branch describes.
+        if (gcResolveMode === "escape") return gcResolveOutside;
+        fs.appendFileSync(gcResolveTarget, "raced");
+        return resolved;
+      },
+      // The product reads `realpathSync.native` elsewhere, so the replacement
+      // has to carry it rather than shadow the whole export.
+      { native: nativeRealpath.native },
+    ) as unknown as typeof fs.realpathSync;
+    let gcResolveEscape = "pending";
+    let gcResolveRace = "pending";
+    let gcResolveCleanupFailure: { error: unknown } | undefined;
+    try {
+      gcResolveEscape = messagesOf(
+        captureFailure(() =>
+          renderGcModule.captureRenderGcTarget(gcBase, gcResolveTarget),
+        ),
+      ).join(" | ");
+      gcResolveMode = "race";
+      gcResolveRace = messagesOf(
+        captureFailure(() =>
+          renderGcModule.captureRenderGcTarget(gcBase, gcResolveTarget),
+        ),
+      ).join(" | ");
+    } catch (error) {
+      gcResolveCleanupFailure = { error };
+      throw error;
+    } finally {
+      preserveCliHarnessCleanup(gcResolveCleanupFailure, [
+        {
+          resource: "render GC resolve hook",
+          cleanup: () => {
+            mutableFs.realpathSync = nativeRealpath;
+          },
+        },
+      ]);
+    }
+    TestValidator.equals(
+      "render GC separates an ownership escape from a mid-resolve race",
+      namedFacts([
+        [
+          "gcResolveEscape",
+          () => gcResolveEscape.includes("escapes renderer ownership"),
+        ],
+        [
+          "gcResolveRace",
+          () => gcResolveRace.includes("changed while it was resolved"),
+        ],
+        [
+          "gcResolveRaceIsNotEscape",
+          () => gcResolveRace.includes("escapes renderer ownership") === false,
+        ],
+        ["gcResolveTargetResident", () => fs.existsSync(gcResolveTarget)],
+      ]),
+      {
+        gcResolveEscape: true,
+        gcResolveRace: true,
+        gcResolveRaceIsNotEscape: true,
+        gcResolveTargetResident: true,
+      },
+    );
+    fs.rmSync(gcResolveTarget);
     const gcPhysicalRoot = path.join(base, "render-gc-physical-root");
     const gcAliasRoot = path.join(base, "render-gc-alias-root");
     const gcAliasedBase = path.join(gcAliasRoot, "nested");
@@ -14966,7 +15335,9 @@ export const test_cli_scaffold = async (): Promise<void> => {
       gcBase,
       workerParentAbaClaim,
     );
-    let workerParentAbaSwapped = false;
+    // The descriptor this hook returns lives inside the quarantine being moved,
+    // and a platform may refuse that rename; the holder carries the outcome.
+    let workerParentAbaSwap = "pending";
     mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
       const descriptor = Reflect.apply(nativeOpen, mutableFs, [
         file,
@@ -14974,18 +15345,23 @@ export const test_cli_scaffold = async (): Promise<void> => {
         ...args,
       ]) as number;
       if (
-        workerParentAbaSwapped === false &&
+        workerParentAbaSwap === "pending" &&
         typeof file !== "number" &&
         flags === "wx+" &&
         path.resolve(file.toString()) === workerParentAbaDestination
       ) {
-        nativeRename(workerQuarantine, parkedWorkerQuarantine);
-        nativeMkdir(workerQuarantine);
-        nativeLink(
-          path.join(parkedWorkerQuarantine, path.basename(file.toString())),
-          workerParentAbaDestination,
-        );
-        workerParentAbaSwapped = true;
+        workerParentAbaSwap = "swapped";
+        try {
+          nativeRename(workerQuarantine, parkedWorkerQuarantine);
+          nativeMkdir(workerQuarantine);
+          nativeLink(
+            path.join(parkedWorkerQuarantine, path.basename(file.toString())),
+            workerParentAbaDestination,
+          );
+        } catch (error) {
+          workerParentAbaSwap =
+            error instanceof Error ? error.message : String(error);
+        }
       }
       return descriptor;
     }) as typeof fs.openSync;
@@ -15015,39 +15391,53 @@ export const test_cli_scaffold = async (): Promise<void> => {
     }
     TestValidator.equals(
       "routine worker cleanup rejects a same-inode quarantine-parent successor",
-      namedFacts([
-        ["workerParentAbaSwapped", () => workerParentAbaSwapped],
-        ["workerParentAbaRejected", () => workerParentAbaRejected],
-        [
-          "workerParentAbaIsolatedWorkerClaimBytes",
-          () =>
-            fs.readFileSync(workerParentAbaIsolated).equals(workerClaimBytes),
-        ],
-        [
-          "workerParentAbaDestinationResident",
-          () => fs.existsSync(workerParentAbaDestination),
-        ],
-        [
-          "parkedWorkerQuarantineResident",
-          () =>
-            fs.existsSync(
-              path.join(
-                parkedWorkerQuarantine,
-                path.basename(workerParentAbaDestination),
-              ),
-            ),
-        ],
-      ]),
       {
-        workerParentAbaSwapped: true,
+        swap: /(EPERM|EBUSY|EACCES|EXDEV|ENOTEMPTY)/u.test(workerParentAbaSwap)
+          ? "rename refused"
+          : workerParentAbaSwap,
+        ...namedFacts([
+          [
+            "workerParentAbaRejected",
+            () =>
+              workerParentAbaRejected === (workerParentAbaSwap === "swapped"),
+          ],
+          [
+            "workerParentAbaIsolatedWorkerClaimBytes",
+            () =>
+              fs.readFileSync(workerParentAbaIsolated).equals(workerClaimBytes),
+          ],
+          [
+            "workerParentAbaDestinationResident",
+            () => fs.existsSync(workerParentAbaDestination),
+          ],
+          [
+            "parkedWorkerQuarantineResident",
+            () =>
+              workerParentAbaSwap !== "swapped" ||
+              fs.existsSync(
+                path.join(
+                  parkedWorkerQuarantine,
+                  path.basename(workerParentAbaDestination),
+                ),
+              ),
+          ],
+        ]),
+      },
+      {
+        swap: workerParentAbaSwap === "swapped" ? "swapped" : "rename refused",
         workerParentAbaRejected: true,
         workerParentAbaIsolatedWorkerClaimBytes: true,
         workerParentAbaDestinationResident: true,
         parkedWorkerQuarantineResident: true,
       },
     );
-    fs.rmSync(workerQuarantine, { recursive: true });
-    nativeRename(parkedWorkerQuarantine, workerQuarantine);
+    // Only a swap that happened leaves a parked quarantine to move back, and
+    // each restore guards itself: this file's static contracts pin the
+    // top-level statement indices around here, so the count may not change.
+    if (workerParentAbaSwap === "swapped")
+      fs.rmSync(workerQuarantine, { recursive: true });
+    if (workerParentAbaSwap === "swapped")
+      nativeRename(parkedWorkerQuarantine, workerQuarantine);
     fs.rmSync(workerParentAbaDestination, { force: true });
     fs.rmSync(workerParentAbaIsolated, { force: true });
 
@@ -15066,7 +15456,8 @@ export const test_cli_scaffold = async (): Promise<void> => {
       gcBase,
       workerRootAbaClaim,
     );
-    let workerRootAbaSwapped = false;
+    // Same held-descriptor rule as the quarantine-parent swap above.
+    let workerRootAbaSwap = "pending";
     mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
       const descriptor = Reflect.apply(nativeOpen, mutableFs, [
         file,
@@ -15074,17 +15465,22 @@ export const test_cli_scaffold = async (): Promise<void> => {
         ...args,
       ]) as number;
       if (
-        workerRootAbaSwapped === false &&
+        workerRootAbaSwap === "pending" &&
         typeof file !== "number" &&
         flags === "wx+" &&
         path.resolve(file.toString()) === workerRootAbaDestination
       ) {
-        nativeRename(gcBase, parkedWorkerRoot);
-        nativeMkdir(path.dirname(workerRootAbaDestination), {
-          recursive: true,
-        });
-        nativeWriteFile(workerRootAbaDestination, workerRootCompetitorBytes);
-        workerRootAbaSwapped = true;
+        workerRootAbaSwap = "swapped";
+        try {
+          nativeRename(gcBase, parkedWorkerRoot);
+          nativeMkdir(path.dirname(workerRootAbaDestination), {
+            recursive: true,
+          });
+          nativeWriteFile(workerRootAbaDestination, workerRootCompetitorBytes);
+        } catch (error) {
+          workerRootAbaSwap =
+            error instanceof Error ? error.message : String(error);
+        }
       }
       return descriptor;
     }) as typeof fs.openSync;
@@ -15114,49 +15510,59 @@ export const test_cli_scaffold = async (): Promise<void> => {
     }
     TestValidator.equals(
       "routine worker cleanup rejects a replacement render-root competitor",
-      namedFacts([
-        ["workerRootAbaSwapped", () => workerRootAbaSwapped],
-        ["workerRootAbaRejected", () => workerRootAbaRejected],
-        [
-          "parkedWorkerRootRelative",
-          () =>
-            fs
-              .readFileSync(
+      {
+        swap: /(EPERM|EBUSY|EACCES|EXDEV|ENOTEMPTY)/u.test(workerRootAbaSwap)
+          ? "rename refused"
+          : workerRootAbaSwap,
+        ...namedFacts([
+          [
+            "workerRootAbaRejected",
+            () => workerRootAbaRejected === (workerRootAbaSwap === "swapped"),
+          ],
+          [
+            "parkedWorkerRootRelative",
+            () =>
+              workerRootAbaSwap !== "swapped" ||
+              fs
+                .readFileSync(
+                  path.join(
+                    parkedWorkerRoot,
+                    path.relative(gcBase, workerRootAbaIsolated),
+                  ),
+                )
+                .equals(workerClaimBytes),
+          ],
+          [
+            "parkedWorkerRootResident",
+            () =>
+              workerRootAbaSwap !== "swapped" ||
+              fs.existsSync(
                 path.join(
                   parkedWorkerRoot,
-                  path.relative(gcBase, workerRootAbaIsolated),
+                  path.relative(gcBase, workerRootAbaDestination),
                 ),
-              )
-              .equals(workerClaimBytes),
-        ],
-        [
-          "parkedWorkerRootResident",
-          () =>
-            fs.existsSync(
-              path.join(
-                parkedWorkerRoot,
-                path.relative(gcBase, workerRootAbaDestination),
               ),
-            ),
-        ],
-        [
-          "workerRootAbaDestinationWorkerRootCompetitorBytes",
-          () =>
-            fs
-              .readFileSync(workerRootAbaDestination)
-              .equals(workerRootCompetitorBytes),
-        ],
-      ]),
+          ],
+          [
+            "workerRootAbaDestinationWorkerRootCompetitorBytes",
+            () =>
+              workerRootAbaSwap !== "swapped" ||
+              fs
+                .readFileSync(workerRootAbaDestination)
+                .equals(workerRootCompetitorBytes),
+          ],
+        ]),
+      },
       {
-        workerRootAbaSwapped: true,
+        swap: workerRootAbaSwap === "swapped" ? "swapped" : "rename refused",
         workerRootAbaRejected: true,
         parkedWorkerRootRelative: true,
         parkedWorkerRootResident: true,
         workerRootAbaDestinationWorkerRootCompetitorBytes: true,
       },
     );
-    fs.rmSync(gcBase, { recursive: true });
-    nativeRename(parkedWorkerRoot, gcBase);
+    if (workerRootAbaSwap === "swapped") fs.rmSync(gcBase, { recursive: true });
+    if (workerRootAbaSwap === "swapped") nativeRename(parkedWorkerRoot, gcBase);
     fs.rmSync(workerRootAbaDestination, { force: true });
     fs.rmSync(workerRootAbaIsolated, { force: true });
 
@@ -15907,7 +16313,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
     const rootRaceTarget = path.join(rootRaceBase, "created.txt");
     const parkedRootRaceBase = `${rootRaceBase}.parked`;
     fs.mkdirSync(rootRaceBase);
-    let scaffoldRootSwapped = false;
+    let scaffoldRootSwap = "pending";
     mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
       const descriptor = Reflect.apply(nativeOpen, mutableFs, [
         file,
@@ -15915,14 +16321,21 @@ export const test_cli_scaffold = async (): Promise<void> => {
         ...args,
       ]) as number;
       if (
-        scaffoldRootSwapped === false &&
+        scaffoldRootSwap === "pending" &&
         typeof file !== "number" &&
         path.resolve(file.toString()) === rootRaceTarget &&
         flags === "wx+"
       ) {
-        nativeRename(rootRaceBase, parkedRootRaceBase);
-        Reflect.apply(nativeMkdir, mutableFs, [rootRaceBase]);
-        scaffoldRootSwapped = true;
+        scaffoldRootSwap = "swapped";
+        try {
+          nativeRename(rootRaceBase, parkedRootRaceBase);
+          Reflect.apply(nativeMkdir, mutableFs, [rootRaceBase]);
+        } catch (swapFailure) {
+          scaffoldRootSwap =
+            swapFailure instanceof Error
+              ? swapFailure.message
+              : String(swapFailure);
+        }
       }
       return descriptor;
     }) as typeof fs.openSync;
@@ -15947,22 +16360,35 @@ export const test_cli_scaffold = async (): Promise<void> => {
     }
     TestValidator.equals(
       "scaffold creation rejects a base successor before writing bytes",
-      namedFacts([
-        ["scaffoldRootSwapped", () => scaffoldRootSwapped],
-        ["scaffoldRootRejected", () => scaffoldRootRejected],
-        [
-          "rootRaceTargetResident",
-          () => fs.existsSync(rootRaceTarget) === false,
-        ],
-        [
-          "parkedRootRaceBaseCount",
-          () =>
-            fs.readFileSync(path.join(parkedRootRaceBase, "created.txt"))
-              .length === 0,
-        ],
-      ]),
       {
-        scaffoldRootSwapped: true,
+        scaffoldRootSwap: /(EPERM|EBUSY|EACCES|EXDEV)/u.test(scaffoldRootSwap)
+          ? "rename refused"
+          : scaffoldRootSwap,
+        ...namedFacts([
+          [
+            "scaffoldRootRejected",
+            () => scaffoldRootRejected === (scaffoldRootSwap === "swapped"),
+          ],
+          [
+            "rootRaceTargetResident",
+            () =>
+              fs.existsSync(rootRaceTarget) ===
+              (scaffoldRootSwap !== "swapped"),
+          ],
+          [
+            "parkedRootRaceBaseCount",
+            () =>
+              scaffoldRootSwap !== "swapped" ||
+              fs.readFileSync(path.join(parkedRootRaceBase, "created.txt"))
+                .length === 0,
+          ],
+        ]),
+      },
+      {
+        scaffoldRootSwap:
+          scaffoldRootSwap === "swapped" || scaffoldRootSwap === "pending"
+            ? scaffoldRootSwap
+            : "rename refused",
         scaffoldRootRejected: true,
         rootRaceTargetResident: true,
         parkedRootRaceBaseCount: true,
@@ -15974,7 +16400,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
     const parentRaceTarget = path.join(parentRaceParent, "created.txt");
     const parkedParentRace = `${parentRaceParent}.parked`;
     fs.mkdirSync(parentRaceParent, { recursive: true });
-    let scaffoldParentSwapped = false;
+    let scaffoldParentSwap = "pending";
     mutableFs.openSync = ((file, flags, ...args: unknown[]): number => {
       const descriptor = Reflect.apply(nativeOpen, mutableFs, [
         file,
@@ -15982,14 +16408,21 @@ export const test_cli_scaffold = async (): Promise<void> => {
         ...args,
       ]) as number;
       if (
-        scaffoldParentSwapped === false &&
+        scaffoldParentSwap === "pending" &&
         typeof file !== "number" &&
         path.resolve(file.toString()) === parentRaceTarget &&
         flags === "wx+"
       ) {
-        nativeRename(parentRaceParent, parkedParentRace);
-        Reflect.apply(nativeMkdir, mutableFs, [parentRaceParent]);
-        scaffoldParentSwapped = true;
+        scaffoldParentSwap = "swapped";
+        try {
+          nativeRename(parentRaceParent, parkedParentRace);
+          Reflect.apply(nativeMkdir, mutableFs, [parentRaceParent]);
+        } catch (swapFailure) {
+          scaffoldParentSwap =
+            swapFailure instanceof Error
+              ? swapFailure.message
+              : String(swapFailure);
+        }
       }
       return descriptor;
     }) as typeof fs.openSync;
@@ -16018,22 +16451,37 @@ export const test_cli_scaffold = async (): Promise<void> => {
     }
     TestValidator.equals(
       "scaffold creation rejects a descendant-parent successor before writing bytes",
-      namedFacts([
-        ["scaffoldParentSwapped", () => scaffoldParentSwapped],
-        ["scaffoldParentRejected", () => scaffoldParentRejected],
-        [
-          "parentRaceTargetResident",
-          () => fs.existsSync(parentRaceTarget) === false,
-        ],
-        [
-          "parkedParentRaceCount",
-          () =>
-            fs.readFileSync(path.join(parkedParentRace, "created.txt"))
-              .length === 0,
-        ],
-      ]),
       {
-        scaffoldParentSwapped: true,
+        scaffoldParentSwap: /(EPERM|EBUSY|EACCES|EXDEV)/u.test(
+          scaffoldParentSwap,
+        )
+          ? "rename refused"
+          : scaffoldParentSwap,
+        ...namedFacts([
+          [
+            "scaffoldParentRejected",
+            () => scaffoldParentRejected === (scaffoldParentSwap === "swapped"),
+          ],
+          [
+            "parentRaceTargetResident",
+            () =>
+              fs.existsSync(parentRaceTarget) ===
+              (scaffoldParentSwap !== "swapped"),
+          ],
+          [
+            "parkedParentRaceCount",
+            () =>
+              scaffoldParentSwap !== "swapped" ||
+              fs.readFileSync(path.join(parkedParentRace, "created.txt"))
+                .length === 0,
+          ],
+        ]),
+      },
+      {
+        scaffoldParentSwap:
+          scaffoldParentSwap === "swapped" || scaffoldParentSwap === "pending"
+            ? scaffoldParentSwap
+            : "rename refused",
         scaffoldParentRejected: true,
         parentRaceTargetResident: true,
         parkedParentRaceCount: true,

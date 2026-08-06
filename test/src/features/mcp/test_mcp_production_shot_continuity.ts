@@ -13,6 +13,7 @@ import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
 import path from "node:path";
 
+import { namedFacts } from "../internal/predicates";
 import { productionFixture, shotContract } from "./productionFixtures";
 
 interface IProductionShotContinuityFixtureFailure {
@@ -456,19 +457,36 @@ export const test_mcp_production_shot_continuity = async (): Promise<void> => {
       'build: () => { throw new Error("opening source failure"); },',
     );
     const sourceFailure = compileFilm(fullHardCut(), 12, failingOpeningSource);
-    TestValidator.predicate(
+    TestValidator.equals(
       "a failed predecessor source does not poison successor realization",
-      sourceFailure.success === false &&
-        sourceFailure.diagnostics.some(
-          (diagnostic) =>
-            diagnostic.code === "source-execution-failed" &&
-            diagnostic.target === "shot:opening",
-        ) &&
-        sourceFailure.diagnostics.every(
-          (diagnostic) =>
-            diagnostic.target !== "shot:answer" ||
-            diagnostic.code !== "contract-realization-failed",
-        ),
+      namedFacts([
+        ["sourceFailureSuccess", () => sourceFailure.success === false],
+        [
+          "sourceFailureDiagnosticsDiagnostic",
+          () =>
+            sourceFailure.success === false &&
+            sourceFailure.diagnostics.some(
+              (diagnostic) =>
+                diagnostic.code === "source-execution-failed" &&
+                diagnostic.target === "shot:opening",
+            ),
+        ],
+        [
+          "sourceFailureDiagnosticsDiagnostic2",
+          () =>
+            sourceFailure.success === false &&
+            sourceFailure.diagnostics.every(
+              (diagnostic) =>
+                diagnostic.target !== "shot:answer" ||
+                diagnostic.code !== "contract-realization-failed",
+            ),
+        ],
+      ]),
+      {
+        sourceFailureSuccess: true,
+        sourceFailureDiagnosticsDiagnostic: true,
+        sourceFailureDiagnosticsDiagnostic2: true,
+      },
     );
 
     const invalidFormationSource = continuitySource(
@@ -501,19 +519,39 @@ export const test_mcp_production_shot_continuity = async (): Promise<void> => {
       12,
       invalidFormationSource,
     );
-    TestValidator.predicate(
+    TestValidator.equals(
       "a post-materialization failure cannot seed the successor",
-      postMaterializationFailure.success === false &&
-        postMaterializationFailure.diagnostics.some(
-          (diagnostic) =>
-            diagnostic.code === "engine-validation-failed" &&
-            diagnostic.target === "shot:opening",
-        ) &&
-        postMaterializationFailure.diagnostics.every(
-          (diagnostic) =>
-            diagnostic.target !== "shot:answer" ||
-            diagnostic.code !== "contract-realization-failed",
-        ),
+      namedFacts([
+        [
+          "postMaterializationFailureSuccess",
+          () => postMaterializationFailure.success === false,
+        ],
+        [
+          "postMaterializationFailureDiagnosticsDiagnostic",
+          () =>
+            postMaterializationFailure.success === false &&
+            postMaterializationFailure.diagnostics.some(
+              (diagnostic) =>
+                diagnostic.code === "engine-validation-failed" &&
+                diagnostic.target === "shot:opening",
+            ),
+        ],
+        [
+          "postMaterializationFailureDiagnosticsDiagnostic2",
+          () =>
+            postMaterializationFailure.success === false &&
+            postMaterializationFailure.diagnostics.every(
+              (diagnostic) =>
+                diagnostic.target !== "shot:answer" ||
+                diagnostic.code !== "contract-realization-failed",
+            ),
+        ],
+      ]),
+      {
+        postMaterializationFailureSuccess: true,
+        postMaterializationFailureDiagnosticsDiagnostic: true,
+        postMaterializationFailureDiagnosticsDiagnostic2: true,
+      },
     );
   } catch (error) {
     productionShotContinuityFailure = { error };

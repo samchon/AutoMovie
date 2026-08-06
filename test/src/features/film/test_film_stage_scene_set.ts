@@ -2,7 +2,7 @@ import { Quaternion, Vector3, stageScene } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import { makeScriptWrite, makeStagingWrite } from "../internal/filmFixtures";
-import { hasViolation, vclose } from "../internal/predicates";
+import { hasViolation, namedFacts, vclose } from "../internal/predicates";
 
 /**
  * Set pieces (#1173): staging may drop environment geometry (a floor slab, a
@@ -109,13 +109,48 @@ export const test_film_stage_scene_set = (): void => {
       ],
     }),
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "every malformed piece is refused at its own path in one round",
-    refused.success === false &&
-      hasViolation(refused, "type", "$input.set[0].node") &&
-      hasViolation(refused, "type", "$input.set[1].node") &&
-      hasViolation(refused, "type", "$input.set[2].model") &&
-      hasViolation(refused, "range", "$input.set[3].position") &&
-      hasViolation(refused, "range", "$input.set[4].facingDeg"),
+    namedFacts([
+      ["refusedSuccess", () => refused.success === false],
+      [
+        "hasViolationRefusedType",
+        () =>
+          refused.success === false &&
+          hasViolation(refused, "type", "$input.set[0].node"),
+      ],
+      [
+        "hasViolationRefusedType2",
+        () =>
+          refused.success === false &&
+          hasViolation(refused, "type", "$input.set[1].node"),
+      ],
+      [
+        "hasViolationRefusedType3",
+        () =>
+          refused.success === false &&
+          hasViolation(refused, "type", "$input.set[2].model"),
+      ],
+      [
+        "hasViolationRefusedRange",
+        () =>
+          refused.success === false &&
+          hasViolation(refused, "range", "$input.set[3].position"),
+      ],
+      [
+        "hasViolationRefusedRange2",
+        () =>
+          refused.success === false &&
+          hasViolation(refused, "range", "$input.set[4].facingDeg"),
+      ],
+    ]),
+    {
+      refusedSuccess: true,
+      hasViolationRefusedType: true,
+      hasViolationRefusedType2: true,
+      hasViolationRefusedType3: true,
+      hasViolationRefusedRange: true,
+      hasViolationRefusedRange2: true,
+    },
   );
 };

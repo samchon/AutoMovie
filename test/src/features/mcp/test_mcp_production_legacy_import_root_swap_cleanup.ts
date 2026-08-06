@@ -279,11 +279,11 @@ export const test_mcp_production_legacy_import_root_swap_cleanup = (): void => {
             "letpublishRootSwapFailure:ILegacyImportFixtureFailure|undefined;",
           substantive: {
             digest:
-              "c618c9b581abef3ffdb78b26655cf5cd4938be49ab48fed79fcc3e02f453d2f2",
-            tokens: 275,
+              "408d75daac5f15fd0762fc4f682bb5cd130b14b683e403e67bb8dca5a9fe6616",
+            tokens: 319,
           },
           tryDigest:
-            "2f3e6829c2a44e8ecffa60542d6dfbecb74dd201e66cdaa66df5aaec71f342cb",
+            "2024e9673c227602b400e44ec99189ddda8efc9d5d3b494e55b45aac0a2a651d",
           tryPrefixes: [
             'conststateRoot=path.join(publishRootSwap.root,".automovie");',
             "constnativeRename=fs.renameSync;",
@@ -309,13 +309,13 @@ export const test_mcp_production_legacy_import_root_swap_cleanup = (): void => {
             "letpublishRootSwapRecoveryFailure:|ILegacyImportFixtureFailure|undefined;",
           substantive: {
             digest:
-              "ecf3f0a8aae72f6e4022be2f3ddd82863e23afd41fc1e4ed28807e504ffad578",
-            tokens: 44,
+              "95fbfbc1d6f646fccdf1b6c67a86b0daf45aef0c64b224c02a78e54680b54840",
+            tokens: 88,
           },
           tryDigest:
-            "06751c14ce651d3920d7701738856fef3f7d8d2bd055e9111ab8a642d51e1734",
+            "3d85bc0c76601ac33dc31627f25dec53eca2d343fcfea3846c917c80ffc34e1f",
           tryPrefixes: [
-            'TestValidator.predicate("arootreplacedimmediatelyafterimportpublicationreceivesnostalecleanup",throws(()=>newAutoMovieLegacyImporter(publishRootSwap.root).apply(),"rootidentity",)&&swapped&&fs.readdirSync(publishRootSwap.root).length===0,);',
+            'TestValidator.equals("arootreplacedimmediatelyafterimportpublicationreceivesnostalecleanup",namedFacts([["throwsNewAutoMovieLegacyImporter",()=>throws(()=>newAutoMovieLegacyImporter(publishRootSwap.root).apply(),"rootidentity",),],["swapped",()=>swapped],["readdirSyncPublishRootSwapRoot",()=>fs.readdirSync(publishRootSwap.root).length===0,],]),{throwsNewAutoMovieLegacyImporter:true,swapped:true,readdirSyncPublishRootSwapRoot:true,},);',
           ],
         },
         {
@@ -335,11 +335,11 @@ export const test_mcp_production_legacy_import_root_swap_cleanup = (): void => {
             "letrollbackRootSwapFailure:ILegacyImportFixtureFailure|undefined;",
           substantive: {
             digest:
-              "8143575c4ec471e49b38cd11eb8b0d8132e588cf349305e1b7275898b0ae3d8a",
-            tokens: 279,
+              "6357cc746938050d27551190baa77cd47099c222d42e2c8a6bc3be7858490c61",
+            tokens: 323,
           },
           tryDigest:
-            "1e77bc50975cfcf129e38cc43b2472e9a6db8517a2e58973dc3fa1df7b40afe2",
+            "96f216242a9fd40a69c7d8b15356da68641bc72bd0d7b25f8d44c25fb27ad6ac",
           tryPrefixes: [
             "constimporter=newAutoMovieLegacyImporter(rollbackRootSwap.root);",
             "constplan=importer.plan();",
@@ -365,13 +365,13 @@ export const test_mcp_production_legacy_import_root_swap_cleanup = (): void => {
             "letrollbackRootSwapRecoveryFailure:|ILegacyImportFixtureFailure|undefined;",
           substantive: {
             digest:
-              "a50a9c811c741630d15adceaa72df94022765a1245d38e00386adb0778176133",
-            tokens: 37,
+              "abd397ff810c0a777144e70efed24175fdc3ae38c0136581a88bcfd3e376ae99",
+            tokens: 81,
           },
           tryDigest:
-            "cf359750f80222b6be0eb74ce8f8171ccb9da99c39dec7ea870b7d5abb8f1683",
+            "eb21598a735dc46df51a973d3efdd7c12b76af79bd6d6fad563c2a1a1d2fe47a",
           tryPrefixes: [
-            'TestValidator.predicate("rollbackabandonsrestorationwhenthephysicalrootchanges",throws(()=>importer.rollback(),"changedphysicalidentity")&&swapped&&fs.readdirSync(rollbackRootSwap.root).length===0,);',
+            'TestValidator.equals("rollbackabandonsrestorationwhenthephysicalrootchanges",namedFacts([["throwsImporterRollback",()=>throws(()=>importer.rollback(),"changedphysicalidentity"),],["swapped",()=>swapped],["readdirSyncRollbackRootSwapRoot",()=>fs.readdirSync(rollbackRootSwap.root).length===0,],]),{throwsImporterRollback:true,swapped:true,readdirSyncRollbackRootSwapRoot:true,},);',
           ],
         },
         {

@@ -167,7 +167,7 @@ export const test_cli_scaffold_proxy_publication_cleanup = (): void => {
           catchBodies: ["proxyMediaCleanupFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1986,
+          containerStatements: 2011,
           finallyDigest:
             "336d561f3977f4f70c9c466b439a71475977b26f816dd39d5a6741a29e100901",
           finallySubstantive: {
@@ -191,7 +191,7 @@ export const test_cli_scaffold_proxy_publication_cleanup = (): void => {
           catchBodies: ["proxyDirectoryCleanupFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1986,
+          containerStatements: 2011,
           finallyDigest:
             "7df6ead084071ac936ca19cc7a04d8c226a343f6ecbeab5b4d97be6d747341ab",
           finallySubstantive: {
@@ -216,7 +216,7 @@ export const test_cli_scaffold_proxy_publication_cleanup = (): void => {
           catchBodies: ["proxyInventoryCleanupFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1986,
+          containerStatements: 2011,
           finallyDigest:
             "f25be1e62a4c8cbfffbffb7a2d9d3747e7097015180c1b25cb3c2b2be57971f6",
           finallySubstantive: {

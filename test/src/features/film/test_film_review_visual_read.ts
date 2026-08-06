@@ -12,6 +12,7 @@ import {
 import { TestValidator } from "@nestia/e2e";
 
 import { keyframe, makeMotion, makePose } from "../internal/fixtures";
+import { namedFacts } from "../internal/predicates";
 
 const IDENTITY_Q = { x: 0, y: 0, z: 0, w: 1 };
 const t3 = (x: number, y: number, z: number): IAutoMovieTransform => ({
@@ -206,12 +207,20 @@ export const test_film_review_visual_read = (): void => {
   );
 
   const above = framing(camera(), rootMotion("m1", 0, 10, -5));
-  TestValidator.predicate(
+  TestValidator.equals(
     "a subject above the frame earns one visual note",
-    above.length === 1 &&
-      above[0]!.tier === "visual" &&
-      above[0]!.beat === "b1" &&
-      above[0]!.issue.includes("hero"),
+    namedFacts([
+      ["above", () => above.length === 1],
+      ["aboveTierVisual", () => above[0]!.tier === "visual"],
+      ["aboveBeatB1", () => above[0]!.beat === "b1"],
+      ["aboveIssueIncludes", () => above[0]!.issue.includes("hero")],
+    ]),
+    {
+      above: true,
+      aboveTierVisual: true,
+      aboveBeatB1: true,
+      aboveIssueIncludes: true,
+    },
   );
   TestValidator.equals(
     "a subject behind the camera earns a note",
@@ -344,12 +353,20 @@ export const test_film_review_visual_read = (): void => {
   const miss = contact(heroAtOrigin, [
     hitEvent({ point: { x: 5, y: 0, z: 0 } }),
   ]);
-  TestValidator.predicate(
+  TestValidator.equals(
     "a hit that lands off the body reads as a miss",
-    miss.length === 1 &&
-      miss[0]!.tier === "visual" &&
-      miss[0]!.issue.includes("hero") &&
-      miss[0]!.issue.includes("hit"),
+    namedFacts([
+      ["miss", () => miss.length === 1],
+      ["missTierVisual", () => miss[0]!.tier === "visual"],
+      ["missIssueIncludes", () => miss[0]!.issue.includes("hero")],
+      ["missIssueIncludes2", () => miss[0]!.issue.includes("hit")],
+    ]),
+    {
+      miss: true,
+      missTierVisual: true,
+      missIssueIncludes: true,
+      missIssueIncludes2: true,
+    },
   );
   TestValidator.equals(
     "a contact-kind event off the body also reads as a miss",
@@ -411,12 +428,23 @@ export const test_film_review_visual_read = (): void => {
     rootMotion("ma", 0, 0, -5),
     rootMotion("mb", 0.1, 0, -5),
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "two actors stacked on the camera line merge in silhouette",
-    merged.length === 1 &&
-      merged[0]!.issue.includes("merge in silhouette") &&
-      merged[0]!.issue.includes('"a"') &&
-      merged[0]!.issue.includes('"b"'),
+    namedFacts([
+      ["merged", () => merged.length === 1],
+      [
+        "mergedIssueIncludes",
+        () => merged[0]!.issue.includes("merge in silhouette"),
+      ],
+      ["mergedIssueIncludes2", () => merged[0]!.issue.includes('"a"')],
+      ["mergedIssueIncludes3", () => merged[0]!.issue.includes('"b"')],
+    ]),
+    {
+      merged: true,
+      mergedIssueIncludes: true,
+      mergedIssueIncludes2: true,
+      mergedIssueIncludes3: true,
+    },
   );
   TestValidator.equals(
     "two actors spread across the frame do not merge",
@@ -434,11 +462,20 @@ export const test_film_review_visual_read = (): void => {
     rootMotion("ma", 0, 0, -0.05),
     rootMotion("mb", 0, 0, -5),
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "an actor inside the near plane is a framing note, not a silhouette merge",
-    nearGuard.length === 1 &&
-      nearGuard[0]!.issue.includes("leaves the camera frame") &&
-      !nearGuard.some((n) => n.issue.includes("silhouette")),
+    namedFacts([
+      ["nearGuard", () => nearGuard.length === 1],
+      [
+        "nearGuardIssueIncludes",
+        () => nearGuard[0]!.issue.includes("leaves the camera frame"),
+      ],
+      [
+        "nearGuardNN",
+        () => !nearGuard.some((n) => n.issue.includes("silhouette")),
+      ],
+    ]),
+    { nearGuard: true, nearGuardIssueIncludes: true, nearGuardNN: true },
   );
   const grammar = reviewVisualRead({
     beat: "b1",
@@ -457,12 +494,27 @@ export const test_film_review_visual_read = (): void => {
       },
     ],
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "grammar diagnostics share the visual review-note socket",
-    grammar.length === 1 &&
-      grammar[0]!.beat === "b1" &&
-      grammar[0]!.tier === "visual" &&
-      grammar[0]!.issue.startsWith("grammar-jump-cut:") &&
-      grammar[0]!.suggestion.includes("30 degrees"),
+    namedFacts([
+      ["grammar", () => grammar.length === 1],
+      ["grammarBeatB1", () => grammar[0]!.beat === "b1"],
+      ["grammarTierVisual", () => grammar[0]!.tier === "visual"],
+      [
+        "grammarIssueStartsWith",
+        () => grammar[0]!.issue.startsWith("grammar-jump-cut:"),
+      ],
+      [
+        "grammarSuggestionIncludes",
+        () => grammar[0]!.suggestion.includes("30 degrees"),
+      ],
+    ]),
+    {
+      grammar: true,
+      grammarBeatB1: true,
+      grammarTierVisual: true,
+      grammarIssueStartsWith: true,
+      grammarSuggestionIncludes: true,
+    },
   );
 };

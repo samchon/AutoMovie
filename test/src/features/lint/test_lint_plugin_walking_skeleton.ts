@@ -20,6 +20,34 @@ interface IFixture {
   directory: string;
 }
 
+interface ILintFixtureFailure {
+  error: unknown;
+}
+
+class LintFixtureCleanupError extends AggregateError {}
+
+/**
+ * Dispose a walking-skeleton fixture without hiding the failure it guarded.
+ *
+ * Disposal removes a temporary tree recursively, which throws on a busy or
+ * partially locked directory. Without this the disposal exception replaces the
+ * lint diagnostic the run exists to report.
+ */
+export const preserveLintFixtureCleanup = (
+  failure: ILintFixtureFailure | undefined,
+  cleanup: () => unknown,
+): void => {
+  try {
+    cleanup();
+  } catch (cleanupFailure) {
+    if (failure === undefined) throw cleanupFailure;
+    throw new LintFixtureCleanupError(
+      [failure.error, cleanupFailure],
+      "Lint walking-skeleton fixture disposal failed after the run failed.",
+    );
+  }
+};
+
 const repositoryRoot = path.resolve(__dirname, "../../../..");
 // Share the toolchain's own plugin cache instead of a private one. The Go lint
 // and typia plugins are content-addressed there and the suite has already built
@@ -256,6 +284,7 @@ const runScaffoldSourceLint = (props: {
   name: string;
 }): IRunResult => {
   const fixture = createScaffoldFixture(props.name);
+  let scaffoldRunFailure: ILintFixtureFailure | undefined;
   try {
     props.mutate?.(fixture.directory);
     const invocation =
@@ -289,8 +318,13 @@ const runScaffoldSourceLint = (props: {
       output: `${result.stdout ?? ""}${result.stderr ?? ""}${String(result.error ?? "")}`,
       status: result.status,
     };
+  } catch (error) {
+    scaffoldRunFailure = { error };
+    throw error;
   } finally {
-    fixture.cleanup();
+    preserveLintFixtureCleanup(scaffoldRunFailure, () => {
+      fixture.cleanup();
+    });
   }
 };
 
@@ -301,11 +335,17 @@ const runFixture = (props: {
   name: string;
 }): IRunResult => {
   const fixture = createFixture(props);
+  let fixtureRunFailure: ILintFixtureFailure | undefined;
   try {
     props.mutate?.(fixture.directory);
     return runCheck(fixture.directory);
+  } catch (error) {
+    fixtureRunFailure = { error };
+    throw error;
   } finally {
-    fixture.cleanup();
+    preserveLintFixtureCleanup(fixtureRunFailure, () => {
+      fixture.cleanup();
+    });
   }
 };
 

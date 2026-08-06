@@ -33,7 +33,7 @@ import {
   makeMotion,
   makePose,
 } from "../internal/fixtures";
-import { vclose } from "../internal/predicates";
+import { namedFacts, vclose } from "../internal/predicates";
 
 const CUSTOM_JOINT_AXES = {
   ...HUMANOID_JOINT_AXES,
@@ -200,22 +200,41 @@ export const test_film_perform_shot_attach = (): void => {
   const swordAttach = attachEvents.find(
     (event) => event.kind === "attach" && event.object === "sword",
   )!;
-  TestValidator.predicate(
+  TestValidator.equals(
     "the sword attach event points at the parent action",
-    swordAttach.source === "scriptedCue" &&
-      swordAttach.time === 0 &&
-      swordAttach.actor === "sword" &&
-      swordAttach.target === "knight" &&
-      swordAttach.actionIndex === 1,
+    namedFacts([
+      [
+        "swordAttachSourceScriptedCue",
+        () => swordAttach.source === "scriptedCue",
+      ],
+      ["swordAttachTime", () => swordAttach.time === 0],
+      ["swordAttachActorSword", () => swordAttach.actor === "sword"],
+      ["swordAttachTargetKnight", () => swordAttach.target === "knight"],
+      ["swordAttachActionIndex", () => swordAttach.actionIndex === 1],
+    ]),
+    {
+      swordAttachSourceScriptedCue: true,
+      swordAttachTime: true,
+      swordAttachActorSword: true,
+      swordAttachTargetKnight: true,
+      swordAttachActionIndex: true,
+    },
   );
   const shieldRelease = attachEvents.find(
     (event) => event.kind === "release" && event.object === "shield",
   )!;
-  TestValidator.predicate(
+  TestValidator.equals(
     "the shield release event marks the auto-duration handoff end",
-    shieldRelease.time === 2 &&
-      shieldRelease.target === "knight" &&
-      shieldRelease.actionIndex === 2,
+    namedFacts([
+      ["shieldReleaseTime", () => shieldRelease.time === 2],
+      ["shieldReleaseTargetKnight", () => shieldRelease.target === "knight"],
+      ["shieldReleaseActionIndex", () => shieldRelease.actionIndex === 2],
+    ]),
+    {
+      shieldReleaseTime: true,
+      shieldReleaseTargetKnight: true,
+      shieldReleaseActionIndex: true,
+    },
   );
 
   // 2. custom jointAxes and restFrames reach the baked objectMotion FK.

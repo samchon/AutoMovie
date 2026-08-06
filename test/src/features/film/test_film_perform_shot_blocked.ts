@@ -9,7 +9,7 @@ import {
   validSynthesizer,
 } from "../internal/filmFixtures";
 import { createSkeleton } from "../internal/fixtures";
-import { hasViolation } from "../internal/predicates";
+import { hasViolation, namedFacts } from "../internal/predicates";
 
 const run = (
   blocking: ReturnType<typeof makeBlockingWrite>,
@@ -125,11 +125,28 @@ export const test_film_perform_shot_blocked = (): void => {
       },
     }),
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "camera intent mismatch rejected on framing and move",
-    wrongCamera.success === false &&
-      hasViolation(wrongCamera, "type", "$input.draft[2].framing") &&
-      hasViolation(wrongCamera, "type", "$input.draft[2].move"),
+    namedFacts([
+      ["wrongCameraSuccess", () => wrongCamera.success === false],
+      [
+        "hasViolationWrongCameraType",
+        () =>
+          wrongCamera.success === false &&
+          hasViolation(wrongCamera, "type", "$input.draft[2].framing"),
+      ],
+      [
+        "hasViolationWrongCameraType2",
+        () =>
+          wrongCamera.success === false &&
+          hasViolation(wrongCamera, "type", "$input.draft[2].move"),
+      ],
+    ]),
+    {
+      wrongCameraSuccess: true,
+      hasViolationWrongCameraType: true,
+      hasViolationWrongCameraType2: true,
+    },
   );
 
   const unframed = run(
