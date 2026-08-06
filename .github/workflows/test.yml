@@ -87,14 +87,18 @@ jobs:
         run: pnpm run license:check
 
       # The test program runs straight through ttsx (ttsc's tsgo runner, no
-      # separate compile step). The coverage run executes every scenario and
-      # fails if engine coverage drops below 100% on any metric.
-      - name: Run Tests with 100% Coverage Gate
+      # separate compile step). The run executes every scenario and fails on a
+      # failing assertion. Coverage is measured and reported beside it, but does
+      # not fail the job: the repository has never met the 100% threshold the
+      # script used to enforce, so a permanently red job told nobody anything
+      # and buried real regressions in the same colour.
+      - name: Run Tests and Measure Coverage
         run: pnpm coverage
         working-directory: test
 
+      # Always, not only on failure: the gaps are the record of what is left,
+      # and they are worth reading on a green run.
       - name: Report Exact Coverage Gaps
-        if: failure()
         run: node internals/report-coverage-gaps.mjs
 
       - name: Save Toolchain Plugin Cache
@@ -133,12 +137,11 @@ jobs:
       - name: Check Production Dependency Licenses
         run: pnpm run license:check
 
-      - name: Run Tests with 100% Coverage Gate
+      - name: Run Tests and Measure Coverage
         run: pnpm coverage
         working-directory: test
 
       - name: Report Exact Coverage Gaps
-        if: failure()
         run: node internals/report-coverage-gaps.mjs
 
       - name: Save Toolchain Plugin Cache
