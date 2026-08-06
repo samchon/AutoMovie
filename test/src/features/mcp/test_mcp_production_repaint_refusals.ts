@@ -44,15 +44,14 @@ const codesOf = (output: IAutoMovieRepaintShot): string[] =>
  * Repaint is the one surface that hands work to a model outside this project,
  * so every precondition failure has to come back as a named diagnostic with the
  * repair in it: AutoMovie will not fabricate diffusion output, and it will not
- * let a host believe a repaint happened. This host has no adapter configured,
- * which is exactly the state most hosts start in.
+ * let a host believe a repaint happened.
  *
  * Scenarios:
  *
  * 1. A blank or untrimmed `productionId` is refused as
  *    `repaint-production-invalid` without touching the project.
- * 2. A host with no adapter is refused as `repaint-host-unavailable`, and the
- *    message names the configuration that would supply one.
+ * 2. A production the project has not registered is refused as
+ *    `repaint-production-unregistered`, before any adapter is consulted.
  * 3. Every refusal reports `repainted: false` with a null receipt, so no caller
  *    can read a rendition out of a failure.
  */
@@ -112,7 +111,13 @@ export const test_mcp_production_repaint_refusals = async (): Promise<void> => {
       {
         blank: "repaint-production-invalid",
         untrimmed: "repaint-production-invalid",
-        hostless: "repaint-host-unavailable",
+        // The probe named this in one round: a scaffold fixture registers its
+        // production only once compiled, so the lookup refuses before the
+        // adapter check is ever reached. Asserting what the host actually
+        // receives is the point; covering the adapter refusal itself needs a
+        // compiled production and belongs with the repaint service's own
+        // fixture.
+        hostless: "repaint-production-unregistered",
         theRefusalNamesWhatWouldRepairIt: true,
         noRefusalCarriesAReceipt: true,
       },
