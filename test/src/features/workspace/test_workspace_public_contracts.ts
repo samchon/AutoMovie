@@ -2762,6 +2762,30 @@ export const test_workspace_public_contracts = (): void => {
     bin: Record<string, string>;
     publishConfig: { bin: Record<string, string> };
   };
+  const lintPackage = JSON.parse(
+    readPackageFile("packages", "lint", "package.json"),
+  ) as PackageMetadata;
+  // Every workspace manifest, so a retired claim cannot reappear in one this
+  // contract does not name individually. The registry and every package
+  // manager read these before anyone reads a README (#1444, #1792).
+  const retiredVocabulary = ["structured-output", "function-calling"];
+  const manifestsClaimingRetiredProducts = fs
+    .readdirSync(path.join(ROOT, "packages"))
+    .flatMap((entry) => {
+      const file = path.join(ROOT, "packages", entry, "package.json");
+      if (fs.existsSync(file) === false) return [];
+      const manifest = JSON.parse(
+        fs.readFileSync(file, "utf8"),
+      ) as Partial<PackageMetadata>;
+      const claimed = [
+        ...(manifest.keywords ?? []),
+        manifest.description ?? "",
+      ].filter((value) =>
+        retiredVocabulary.some((retired) => value.includes(retired)),
+      );
+      return claimed.length === 0 ? [] : [`${entry}: ${claimed.join(", ")}`];
+    })
+    .sort(compareCodeUnits);
   const testPackage = JSON.parse(readPackageFile("test", "package.json")) as {
     scripts: { coverage: string };
   };
@@ -2970,6 +2994,11 @@ export const test_workspace_public_contracts = (): void => {
         description: mcpPackage.description,
         keywords: mcpPackage.keywords,
       },
+      lint: {
+        description: lintPackage.description,
+        keywords: lintPackage.keywords,
+      },
+      manifestsClaimingRetiredProducts,
     },
     {
       root: {
@@ -3005,6 +3034,11 @@ export const test_workspace_public_contracts = (): void => {
           "filmmaking",
         ],
       },
+      lint: {
+        description: "AutoMovie project-contract rules for @ttsc/lint.",
+        keywords: ["automovie", "ttsc", "lint"],
+      },
+      manifestsClaimingRetiredProducts: [],
     },
   );
   TestValidator.equals(
