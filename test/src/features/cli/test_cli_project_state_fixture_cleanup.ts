@@ -239,8 +239,8 @@ export const test_cli_project_state_fixture_cleanup = (): void => {
             nestedTryStatements: 3,
             ownerParameters: [],
             tryDigest:
-              "26c4777950ed795d9df7eed8201d9a677f95afda16be2937292561c70bf0edb2",
-            tryStatements: 84,
+              "3fc6ee1509e7b392527225cc97791d92265a379f2c5e40ba612802f0d9598aa8",
+            tryStatements: 85,
           },
         ],
       },

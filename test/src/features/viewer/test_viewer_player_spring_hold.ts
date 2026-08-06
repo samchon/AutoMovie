@@ -10,6 +10,7 @@ import {
   makeMotion,
   makePose,
 } from "../internal/fixtures";
+import { namedFacts } from "../internal/predicates";
 
 const SKELETON: IAutoMovieSkeleton = {
   id: "spring-hold-rig",
@@ -72,15 +73,28 @@ export const test_viewer_player_spring_hold = (): void => {
   decaying.update(2.7 + 1 / 30);
   decaying.update(2.7 + 1 / 30);
   const [frozen1, frozen2] = decayRecord.slice(-2).map(flexionOf);
-  TestValidator.predicate(
+  TestValidator.equals(
     "repeated same-t updates hold the decayed angle without vanishing",
-    frozen1 !== null && frozen2 !== null && frozen1 === frozen2,
+    namedFacts([
+      ["frozen1", () => frozen1 !== null],
+      ["frozen2", () => frozen2 !== null],
+      [
+        "frozen1Frozen2",
+        () => frozen1 !== null && frozen2 !== null && frozen1 === frozen2,
+      ],
+    ]),
+    { frozen1: true, frozen2: true, frozen1Frozen2: true },
   );
   decaying.update(2.7 + 2 / 30);
   const resumed = flexionOf(decayRecord[decayRecord.length - 1]!);
-  TestValidator.predicate(
+  TestValidator.equals(
     "the next advancing frame continues the decay from the held state",
-    resumed !== null && resumed !== 0 && resumed !== frozen1,
+    namedFacts([
+      ["resumed", () => resumed !== null],
+      ["resumed2", () => resumed !== null && resumed !== 0],
+      ["resumedFrozen1", () => resumed !== null && resumed !== frozen1],
+    ]),
+    { resumed: true, resumed2: true, resumedFrozen1: true },
   );
 
   // 2. mid-lag hold: a paused frame must not pop to the target
@@ -110,9 +124,14 @@ export const test_viewer_player_spring_hold = (): void => {
   const chased = flexionOf(lagRecord[lagRecord.length - 1]!);
   lagging.update(1.0001 + 1 / 30);
   const paused = flexionOf(lagRecord[lagRecord.length - 1]!);
-  TestValidator.predicate(
+  TestValidator.equals(
     "a paused frame holds the lagged angle instead of popping to the target",
-    chased !== null && paused === chased && paused !== 40,
+    namedFacts([
+      ["chased", () => chased !== null],
+      ["pausedChased", () => chased !== null && paused === chased],
+      ["paused", () => paused !== 40],
+    ]),
+    { chased: true, pausedChased: true, paused: true },
   );
 
   // 3. negative twin: no live state → a dt=0 first frame seeds at the target

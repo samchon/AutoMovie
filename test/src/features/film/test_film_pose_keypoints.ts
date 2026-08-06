@@ -10,7 +10,7 @@ import {
 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { nclose } from "../internal/predicates";
+import { namedFacts, nclose } from "../internal/predicates";
 
 const IDENTITY_Q = { x: 0, y: 0, z: 0, w: 1 };
 const t3 = (x: number, y: number, z: number): IAutoMovieTransform => ({
@@ -92,13 +92,23 @@ export const test_film_pose_keypoints = (): void => {
   TestValidator.equals("hips + head keypoints", centered.length, 2);
   const hips = of(centered, "hips");
   const head = of(centered, "head");
-  TestValidator.predicate(
+  TestValidator.equals(
     "hips project to frame center, in frame",
-    nclose(hips.x, 0.5) && nclose(hips.y, 0.5) && hips.inFrame,
+    namedFacts([
+      ["ncloseHipsX", () => nclose(hips.x, 0.5)],
+      ["ncloseHipsY", () => nclose(hips.y, 0.5)],
+      ["hipsInFrame", () => hips.inFrame],
+    ]),
+    { ncloseHipsX: true, ncloseHipsY: true, hipsInFrame: true },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "the head 1 m up projects above center, in frame",
-    nclose(head.x, 0.5) && nclose(head.y, 0.3267949, 1e-6) && head.inFrame,
+    namedFacts([
+      ["ncloseHeadX", () => nclose(head.x, 0.5)],
+      ["ncloseHeadY", () => nclose(head.y, 0.3267949, 1e-6)],
+      ["headInFrame", () => head.inFrame],
+    ]),
+    { ncloseHeadX: true, ncloseHeadY: true, headInFrame: true },
   );
 
   // 2. out-of-frame joints project honestly (unclamped) with inFrame false.

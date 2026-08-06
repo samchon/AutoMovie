@@ -2,7 +2,7 @@ import { gaitMotion } from "@automovie/engine";
 import { IAutoMovieGait } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { nclose } from "../internal/predicates";
+import { namedFacts, nclose } from "../internal/predicates";
 
 const throws = (task: () => void): boolean => {
   try {
@@ -42,10 +42,17 @@ export const test_motion_gait_period = (): void => {
     );
 
   const short = gaitMotion("short", "sk", gait(0.25), 1);
-  TestValidator.predicate(
+  TestValidator.equals(
     "positive period is preserved",
-    nclose(short.duration, 0.25) &&
-      nclose(short.keyframes[0]!.time, 0) &&
-      nclose(short.keyframes[1]!.time, 0.25),
+    namedFacts([
+      ["ncloseShortDuration", () => nclose(short.duration, 0.25)],
+      ["ncloseShortKeyframes", () => nclose(short.keyframes[0]!.time, 0)],
+      ["ncloseShortKeyframes2", () => nclose(short.keyframes[1]!.time, 0.25)],
+    ]),
+    {
+      ncloseShortDuration: true,
+      ncloseShortKeyframes: true,
+      ncloseShortKeyframes2: true,
+    },
   );
 };

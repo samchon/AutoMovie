@@ -283,7 +283,7 @@ export const test_cli_scaffold_viewer_hook_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1982,
+          containerStatements: 2011,
           finallyDigest:
             "40f6224d5b4058fe8a8510ac327836f74585d357c65595d456d61e1ac301e77f",
           finallySubstantive: {
@@ -291,7 +291,7 @@ export const test_cli_scaffold_viewer_hook_cleanup = (): void => {
               "da28e44721da177d69418d0ca8d298885c52b42c759551e633a461234477effc",
             tokens: 50,
           },
-          index: 42,
+          index: 43,
           preceding: [
             "letstandaloneViewerCloseError:unknown;",
             "letstandaloneViewerHookFailure:{error:unknown}|undefined;",
@@ -313,7 +313,7 @@ export const test_cli_scaffold_viewer_hook_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1982,
+          containerStatements: 2011,
           finallyDigest:
             "58efab235de1dc652eca4e91a5a4d17d335caae43408293457d99ea50204a4b5",
           finallySubstantive: {
@@ -321,7 +321,7 @@ export const test_cli_scaffold_viewer_hook_cleanup = (): void => {
               "4c8f4a749bfa5695b4a4cfb9bb973d0df459ef207d258c4e306cc171a77a8331",
             tokens: 50,
           },
-          index: 49,
+          index: 50,
           preceding: [
             "letpreservedPrimaryOnlyViewerFailure:unknown;",
             "letprimaryOnlyViewerHookFailure:{error:unknown}|undefined;",
@@ -343,7 +343,7 @@ export const test_cli_scaffold_viewer_hook_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1982,
+          containerStatements: 2011,
           finallyDigest:
             "c313cc0ec8c8adc2523e466c851a0072506afeb7c82912b1794ec278c96e0985",
           finallySubstantive: {
@@ -351,7 +351,7 @@ export const test_cli_scaffold_viewer_hook_cleanup = (): void => {
               "5efb64d4ccf08110e222bae87ab0ace3c1ed09e19c7240689531de4d79c12407",
             tokens: 71,
           },
-          index: 58,
+          index: 59,
           preceding: [
             "letcombinedViewerFailure:unknown;",
             "letcombinedViewerHookFailure:{error:unknown}|undefined;",

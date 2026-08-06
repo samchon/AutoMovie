@@ -6,6 +6,7 @@ import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
 import path from "node:path";
 
+import { namedFacts } from "../internal/predicates";
 import {
   formationDesign,
   modelRecipe,
@@ -106,18 +107,35 @@ export const test_mcp_production_review_design_edges = (): void => {
         },
       ],
     };
-    TestValidator.predicate(
+    TestValidator.equals(
       "cyclic LOD references have a finite review identity",
-      project.setModelRecipe(cyclicDependent).accepted &&
-        project.setModelRecipe(cyclicSentinel).accepted &&
-        review
-          .prepare({
-            target: {
-              kind: "design",
-              design: { kind: "model", id: cyclicSentinel.id },
-            },
-          })
-          .fingerprint.startsWith("sha256:"),
+      namedFacts([
+        [
+          "projectSetModelRecipeCyclicDependent",
+          () => project.setModelRecipe(cyclicDependent).accepted,
+        ],
+        [
+          "projectSetModelRecipeCyclicSentinel",
+          () => project.setModelRecipe(cyclicSentinel).accepted,
+        ],
+        [
+          "reviewPrepareTarget",
+          () =>
+            review
+              .prepare({
+                target: {
+                  kind: "design",
+                  design: { kind: "model", id: cyclicSentinel.id },
+                },
+              })
+              .fingerprint.startsWith("sha256:"),
+        ],
+      ]),
+      {
+        projectSetModelRecipeCyclicDependent: true,
+        projectSetModelRecipeCyclicSentinel: true,
+        reviewPrepareTarget: true,
+      },
     );
     project.setModelRecipe(modelRecipe());
     project.setModelRecipe(dependentModel);
@@ -224,31 +242,58 @@ export const test_mcp_production_review_design_edges = (): void => {
       },
       required: true,
     };
-    TestValidator.predicate(
+    TestValidator.equals(
       "film acceptance fingerprints include production and criterion-shot dependencies",
-      project.setAcceptanceScenario(filmAcceptance).accepted &&
-        project.setAcceptanceScenario(filmEventAcceptance).accepted &&
-        review
-          .prepare({
-            target: {
-              kind: "design",
-              design: { kind: "acceptance", id: filmAcceptance.id },
-            },
-          })
-          .fingerprint.startsWith("sha256:") &&
-        review
-          .prepare({
-            target: {
-              kind: "design",
-              design: { kind: "acceptance", id: filmEventAcceptance.id },
-            },
-          })
-          .fingerprint.startsWith("sha256:") &&
-        review
-          .prepare({
-            target: { kind: "shot", id: "opening" },
-          })
-          .fingerprint.startsWith("sha256:"),
+      namedFacts([
+        [
+          "projectSetAcceptanceScenarioFilmAcceptance",
+          () => project.setAcceptanceScenario(filmAcceptance).accepted,
+        ],
+        [
+          "projectSetAcceptanceScenarioFilmEventAcceptance",
+          () => project.setAcceptanceScenario(filmEventAcceptance).accepted,
+        ],
+        [
+          "reviewPrepareTarget",
+          () =>
+            review
+              .prepare({
+                target: {
+                  kind: "design",
+                  design: { kind: "acceptance", id: filmAcceptance.id },
+                },
+              })
+              .fingerprint.startsWith("sha256:"),
+        ],
+        [
+          "reviewPrepareTarget2",
+          () =>
+            review
+              .prepare({
+                target: {
+                  kind: "design",
+                  design: { kind: "acceptance", id: filmEventAcceptance.id },
+                },
+              })
+              .fingerprint.startsWith("sha256:"),
+        ],
+        [
+          "reviewPrepareTarget3",
+          () =>
+            review
+              .prepare({
+                target: { kind: "shot", id: "opening" },
+              })
+              .fingerprint.startsWith("sha256:"),
+        ],
+      ]),
+      {
+        projectSetAcceptanceScenarioFilmAcceptance: true,
+        projectSetAcceptanceScenarioFilmEventAcceptance: true,
+        reviewPrepareTarget: true,
+        reviewPrepareTarget2: true,
+        reviewPrepareTarget3: true,
+      },
     );
     TestValidator.predicate(
       "film acceptance erasure uses the same tracked path as its setter",
@@ -342,11 +387,27 @@ export const test_mcp_production_review_design_edges = (): void => {
       },
     });
     fs.writeFileSync(acceptanceFile, acceptanceBytes);
-    TestValidator.predicate(
+    TestValidator.equals(
       "missing design dependencies are fingerprinted as absent",
-      missingFormationDependency.fingerprint.startsWith("sha256:") &&
-        missingShotDependency.fingerprint.startsWith("sha256:") &&
-        missingAcceptanceDependencies.fingerprint.startsWith("sha256:"),
+      namedFacts([
+        [
+          "missingFormationDependencyFingerprintStartsWith",
+          () => missingFormationDependency.fingerprint.startsWith("sha256:"),
+        ],
+        [
+          "missingShotDependencyFingerprintStartsWith",
+          () => missingShotDependency.fingerprint.startsWith("sha256:"),
+        ],
+        [
+          "missingAcceptanceDependenciesFingerprintStartsWith",
+          () => missingAcceptanceDependencies.fingerprint.startsWith("sha256:"),
+        ],
+      ]),
+      {
+        missingFormationDependencyFingerprintStartsWith: true,
+        missingShotDependencyFingerprintStartsWith: true,
+        missingAcceptanceDependenciesFingerprintStartsWith: true,
+      },
     );
     TestValidator.predicate(
       "absent formation and shot design targets remain fingerprintable",

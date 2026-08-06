@@ -240,7 +240,7 @@ export const test_mcp_project_transaction_fixture_cleanup = (): void => {
               "a81bbdcffb3eec2261a6d19f4441e610d8197b48cd39746d0da10a743bdb53ce",
             rootStringLiterals: ["automovie-txn-"],
             tryDigest:
-              "fa7bbc08b58608b208d971dbd28a2dc1b49c9bbf44160b2b9f80d4823c4803dd",
+              "753a7e3630a369dd891e66c00564165ddb5c92ddc8f68be641ce1a698a50ca0c",
             tryStatements: 136,
           },
           {
@@ -259,7 +259,7 @@ export const test_mcp_project_transaction_fixture_cleanup = (): void => {
               "a0b7ebd5e86c6f9a9599a8971c0e63c52e574bdcd89e324da392bc945cc7c1b9",
             rootStringLiterals: ["automovie-txn-alias-"],
             tryDigest:
-              "50395f59f182d0c45f0fe5bf817c8247ac0d8c61fa114663a00f75d77e087e5a",
+              "145928807ad8e93420c2d75cda4ca9ca8254f375f77dd3a04b71ce0f61d0ea59",
             tryStatements: 14,
           },
         ],

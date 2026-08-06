@@ -213,7 +213,7 @@ export const test_cli_root_fixture_cleanup = (): void => {
                 "letmigrateFailure:{error:unknown}|undefined;",
               ],
               tryDigest:
-                "656158968ce09341eb3d7ae454a89d7bf6651f45fcb172fa99aca55db612c6ae",
+                "531b24cbaef1e2b05180fa85a28a59fc0756aa2cacad32fa79d9cbf1257c0c2e",
             },
           ],
         },
@@ -234,14 +234,14 @@ export const test_cli_root_fixture_cleanup = (): void => {
                 "letownershipFailure:{error:unknown}|undefined;",
               ],
               tryDigest:
-                "a1eeb09006e2f294e5515fb658bf305135b419554a94eac22c272f55d69cd004",
+                "f5b6db8b7ce67763547d8640a4f1564d683d3058f8c87e93d16b5b062b6b8060",
             },
           ],
         },
       ],
       [
         {
-          bodyStatements: 70,
+          bodyStatements: 71,
           lifecycles: [
             {
               catchBodies: ["scaffoldFailure={error};", "throwerror;"],
@@ -249,13 +249,13 @@ export const test_cli_root_fixture_cleanup = (): void => {
               finallyBodies: [
                 'preserveCliRootFixtureCleanup(scaffoldFailure,()=>fs.rmSync(base,{recursive:true,force:true}),"scaffoldfixtureroot",);',
               ],
-              index: 69,
+              index: 70,
               prefixes: [
                 'constbase=fs.mkdtempSync(path.join(os.tmpdir(),"automovie-scaffold-"));',
                 "letscaffoldFailure:{error:unknown}|undefined;",
               ],
               tryDigest:
-                "da7271ab65dc5f7db798050d7c39b8ab78e5579127b7887bd4c3a893e4617dec",
+                "6a2a256a7c0142d7ff5ac7ef879dc9e29dd3b5f9cf5e8bf4b02692bf9fec2ed8",
             },
           ],
         },

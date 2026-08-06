@@ -26,6 +26,7 @@ import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
 import path from "node:path";
 
+import { namedFacts } from "../internal/predicates";
 import {
   formationDesign,
   modelRecipe,
@@ -155,28 +156,87 @@ export const test_mcp_production_materialization = (): void => {
   const models = materializeProductionModels(
     new Map(recipes.map((item) => [item.id, item])),
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "all bounded model archetypes materialize",
-    models.size === recipes.length &&
-      models.get("stick")?.id === productionRuntimeModelId("stick") &&
-      models.get("stick")?.skeleton?.id ===
-        productionRuntimeSkeletonId("stick") &&
-      models.get("stick")?.parts.length === 13 &&
-      models.get("horse")?.parts.length === 6 &&
-      models.get("artillery")?.parts.length === 3 &&
-      models.get("flag")?.parts.length === 2 &&
-      models.get("weapon")?.materials[0]?.metallic === 0.7 &&
-      models.get("weapon")?.materials[0]?.roughness === 0.35 &&
-      models.get("box")?.parts[0]?.geometry.type === "primitive" &&
-      models.get("sphere")?.parts[0]?.geometry.type === "primitive" &&
-      models.get("capsule")?.parts[0]?.geometry.type === "primitive" &&
-      models.get("cylinder")?.parts[0]?.geometry.type === "primitive" &&
-      models.get("cone")?.parts[0]?.geometry.type === "primitive" &&
-      models.get("plane")?.parts[0]?.geometry.type === "primitive" &&
-      ["box", "sphere", "capsule", "cylinder", "cone", "plane"].every((id) => {
-        const geometry = models.get(id)?.parts[0]?.geometry;
-        return geometry?.type === "primitive" && geometry.shape.type === id;
-      }),
+    namedFacts([
+      ["modelsSizeRecipes", () => models.size === recipes.length],
+      [
+        "modelsGetStick",
+        () => models.get("stick")?.id === productionRuntimeModelId("stick"),
+      ],
+      [
+        "modelsGetStick2",
+        () =>
+          models.get("stick")?.skeleton?.id ===
+          productionRuntimeSkeletonId("stick"),
+      ],
+      ["modelsGetStick3", () => models.get("stick")?.parts.length === 13],
+      ["modelsGetHorse", () => models.get("horse")?.parts.length === 6],
+      ["modelsGetArtillery", () => models.get("artillery")?.parts.length === 3],
+      ["modelsGetFlag", () => models.get("flag")?.parts.length === 2],
+      [
+        "modelsGetWeapon",
+        () => models.get("weapon")?.materials[0]?.metallic === 0.7,
+      ],
+      [
+        "modelsGetWeapon2",
+        () => models.get("weapon")?.materials[0]?.roughness === 0.35,
+      ],
+      [
+        "modelsGetBox",
+        () => models.get("box")?.parts[0]?.geometry.type === "primitive",
+      ],
+      [
+        "modelsGetSphere",
+        () => models.get("sphere")?.parts[0]?.geometry.type === "primitive",
+      ],
+      [
+        "modelsGetCapsule",
+        () => models.get("capsule")?.parts[0]?.geometry.type === "primitive",
+      ],
+      [
+        "modelsGetCylinder",
+        () => models.get("cylinder")?.parts[0]?.geometry.type === "primitive",
+      ],
+      [
+        "modelsGetCone",
+        () => models.get("cone")?.parts[0]?.geometry.type === "primitive",
+      ],
+      [
+        "modelsGetPlane",
+        () => models.get("plane")?.parts[0]?.geometry.type === "primitive",
+      ],
+      [
+        "boxSphereCapsule",
+        () =>
+          ["box", "sphere", "capsule", "cylinder", "cone", "plane"].every(
+            (id) => {
+              const geometry = models.get(id)?.parts[0]?.geometry;
+              return (
+                geometry?.type === "primitive" && geometry.shape.type === id
+              );
+            },
+          ),
+      ],
+    ]),
+    {
+      modelsSizeRecipes: true,
+      modelsGetStick: true,
+      modelsGetStick2: true,
+      modelsGetStick3: true,
+      modelsGetHorse: true,
+      modelsGetArtillery: true,
+      modelsGetFlag: true,
+      modelsGetWeapon: true,
+      modelsGetWeapon2: true,
+      modelsGetBox: true,
+      modelsGetSphere: true,
+      modelsGetCapsule: true,
+      modelsGetCylinder: true,
+      modelsGetCone: true,
+      modelsGetPlane: true,
+      boxSphereCapsule: true,
+    },
   );
   const recipeMap = new Map(recipes.map((item) => [item.id, item]));
   const projectionRadii = recipes.map(
@@ -271,17 +331,51 @@ export const test_mcp_production_materialization = (): void => {
   const inventory = materializeFormationInventory(
     new Map(layouts.map((item) => [item.id, item])),
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "every compact formation layout has deterministic slots",
-    slotSets.every((slots, index) => slots.length === layouts[index]!.count) &&
-      slotSets[0]![0]?.node === "captain" &&
-      slotSets[3]![0]?.node === "arc-hero" &&
-      Math.abs(slotSets[3]![0]!.position.x - 4) < 1e-12 &&
-      Math.abs(slotSets[3]![0]!.position.z) < 1e-12 &&
-      JSON.stringify(slotSets[4]) === JSON.stringify(repeatedScatter) &&
-      JSON.stringify(slotSets[4]) !== JSON.stringify(swappedScatter) &&
-      JSON.stringify(slotSets[4]) !== JSON.stringify(highWordScatter) &&
-      Object.keys(inventory).length === layouts.length,
+    namedFacts([
+      [
+        "slotSetsSlotsIndex",
+        () =>
+          slotSets.every(
+            (slots, index) => slots.length === layouts[index]!.count,
+          ),
+      ],
+      ["slotSetsNodeCaptain", () => slotSets[0]![0]?.node === "captain"],
+      ["slotSetsNodeArc", () => slotSets[3]![0]?.node === "arc-hero"],
+      [
+        "MathAbsSlotSets",
+        () => Math.abs(slotSets[3]![0]!.position.x - 4) < 1e-12,
+      ],
+      ["MathAbsSlotSets2", () => Math.abs(slotSets[3]![0]!.position.z) < 1e-12],
+      [
+        "stringifySlotSetsStringify",
+        () => JSON.stringify(slotSets[4]) === JSON.stringify(repeatedScatter),
+      ],
+      [
+        "stringifySlotSetsStringify2",
+        () => JSON.stringify(slotSets[4]) !== JSON.stringify(swappedScatter),
+      ],
+      [
+        "stringifySlotSetsStringify3",
+        () => JSON.stringify(slotSets[4]) !== JSON.stringify(highWordScatter),
+      ],
+      [
+        "keysInventoryLayouts",
+        () => Object.keys(inventory).length === layouts.length,
+      ],
+    ]),
+    {
+      slotSetsSlotsIndex: true,
+      slotSetsNodeCaptain: true,
+      slotSetsNodeArc: true,
+      MathAbsSlotSets: true,
+      MathAbsSlotSets2: true,
+      stringifySlotSetsStringify: true,
+      stringifySlotSetsStringify2: true,
+      stringifySlotSetsStringify3: true,
+      keysInventoryLayouts: true,
+    },
   );
 
   let productionMaterializationFailure:
@@ -526,27 +620,83 @@ export const test_mcp_production_materialization = (): void => {
       runtimeModels,
       source: optionalCueSource,
     });
-    TestValidator.predicate(
+    TestValidator.equals(
       "compiler owns compact anonymous batches, hero placement and collision reporting",
-      materialized.value.scene.nodes.find((node) => node.id === "captain")
-        ?.transform.translation.x === formationSlots.line![0]!.position.x &&
-        materialized.value.scene.nodes.find((node) => node.id === "captain")
-          ?.model === productionRuntimeModelId(formation.modelRecipe) &&
-        materialized.value.models.every(
-          (model) => model.id !== "source-only-model",
-        ) &&
-        materialized.value.formations[0]?.anonymousCount ===
-          formation.count - 1 &&
-        materialized.value.scene.nodes.every(
-          (node) => node.id !== "formation:line:slot:000001",
-        ) &&
-        collision.collisions.includes("formation:line:slot:000001") &&
-        instanceCollision.collisions.includes("instance:trees:slot:000001") &&
-        absentFormation.value.scene.nodes.length ===
-          source.scene.nodes.length &&
-        absentModel.value.scene.nodes.length === source.scene.nodes.length &&
-        defaultedCues.value.effects.length === 0 &&
-        defaultedCues.value.formationMotions.length === 0,
+      namedFacts([
+        [
+          "materializedValueScene",
+          () =>
+            materialized.value.scene.nodes.find((node) => node.id === "captain")
+              ?.transform.translation.x === formationSlots.line![0]!.position.x,
+        ],
+        [
+          "materializedValueScene2",
+          () =>
+            materialized.value.scene.nodes.find((node) => node.id === "captain")
+              ?.model === productionRuntimeModelId(formation.modelRecipe),
+        ],
+        [
+          "materializedValueModels",
+          () =>
+            materialized.value.models.every(
+              (model) => model.id !== "source-only-model",
+            ),
+        ],
+        [
+          "materializedValueFormations",
+          () =>
+            materialized.value.formations[0]?.anonymousCount ===
+            formation.count - 1,
+        ],
+        [
+          "materializedValueScene3",
+          () =>
+            materialized.value.scene.nodes.every(
+              (node) => node.id !== "formation:line:slot:000001",
+            ),
+        ],
+        [
+          "collisionCollisionsIncludes",
+          () => collision.collisions.includes("formation:line:slot:000001"),
+        ],
+        [
+          "instanceCollisionCollisionsIncludes",
+          () =>
+            instanceCollision.collisions.includes("instance:trees:slot:000001"),
+        ],
+        [
+          "absentFormationValueScene",
+          () =>
+            absentFormation.value.scene.nodes.length ===
+            source.scene.nodes.length,
+        ],
+        [
+          "absentModelValueScene",
+          () =>
+            absentModel.value.scene.nodes.length === source.scene.nodes.length,
+        ],
+        [
+          "defaultedCuesValueEffects",
+          () => defaultedCues.value.effects.length === 0,
+        ],
+        [
+          "defaultedCuesValueFormationMotions",
+          () => defaultedCues.value.formationMotions.length === 0,
+        ],
+      ]),
+      {
+        materializedValueScene: true,
+        materializedValueScene2: true,
+        materializedValueModels: true,
+        materializedValueFormations: true,
+        materializedValueScene3: true,
+        collisionCollisionsIncludes: true,
+        instanceCollisionCollisionsIncludes: true,
+        absentFormationValueScene: true,
+        absentModelValueScene: true,
+        defaultedCuesValueEffects: true,
+        defaultedCuesValueFormationMotions: true,
+      },
     );
 
     const highCount = {

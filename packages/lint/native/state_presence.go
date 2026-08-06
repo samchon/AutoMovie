@@ -12,6 +12,14 @@ import (
 
 const statePresenceRuleName = "automovie/state-presence"
 
+// isLinkedPathMode reports whether a filesystem entry leaves project-owned
+// regular files. A Windows junction is a reparse point that Go reports as an
+// irregular file rather than a symbolic link, so both bits mark a path whose
+// ownership this rule cannot prove.
+func isLinkedPathMode(mode os.FileMode) bool {
+	return mode&(os.ModeSymlink|os.ModeIrregular) != 0
+}
+
 type statePresenceOptions struct {
 	Slots []statePresenceSlot `json:"slots"`
 }
@@ -204,7 +212,7 @@ func slotPresent(root string, patterns []string) (bool, string) {
 			if err == nil && info.Mode().IsRegular() {
 				return true, ""
 			}
-			if err == nil && info.Mode()&os.ModeSymlink != 0 {
+			if err == nil && isLinkedPathMode(info.Mode()) {
 				problems = append(
 					problems,
 					"path '"+pattern+"' is a symbolic link rather than one project-owned regular file",
@@ -265,7 +273,7 @@ func projectGlobPresent(root string, pattern string) (bool, string) {
 		}
 		return false, err.Error()
 	}
-	if baseInfo.Mode()&os.ModeSymlink != 0 {
+	if isLinkedPathMode(baseInfo.Mode()) {
 		return false, "glob prefix '" +
 			filepath.ToSlash(strings.TrimPrefix(base, root+string(filepath.Separator))) +
 			"' is a symbolic link rather than a project-owned directory"
@@ -308,7 +316,7 @@ func projectGlobPresent(root string, pattern string) (bool, string) {
 			return relativeError
 		}
 		candidate := filepath.ToSlash(relative)
-		if entry.Type()&os.ModeSymlink != 0 {
+		if isLinkedPathMode(entry.Type()) {
 			patternSegments := strings.Split(pattern, "/")
 			candidateSegments := strings.Split(candidate, "/")
 			matched, matchError := matchProjectGlobOrPrefix(
@@ -405,7 +413,7 @@ func inspectPhysicalProjectPath(root string, location string) (bool, string) {
 			}
 			return false, pathError.Error()
 		}
-		if info.Mode()&os.ModeSymlink != 0 {
+		if isLinkedPathMode(info.Mode()) {
 			return false, "path '" + filepath.ToSlash(relative) +
 				"' crosses symbolic link '" +
 				filepath.ToSlash(strings.TrimPrefix(

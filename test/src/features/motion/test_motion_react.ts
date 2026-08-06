@@ -6,7 +6,11 @@ import {
 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { nclose, validationHasNoWarnings } from "../internal/predicates";
+import {
+  namedFacts,
+  nclose,
+  validationHasNoWarnings,
+} from "../internal/predicates";
 
 const rest: IAutoMovieTransform = {
   translation: { x: 0, y: 0, z: 0 },
@@ -71,11 +75,18 @@ export const test_motion_react = (): void => {
 
   // 1. shape
   TestValidator.equals("three keyframes", clip.keyframes.length, 3);
-  TestValidator.predicate(
+  TestValidator.equals(
     "times 0, peak, duration",
-    nclose(clip.keyframes[0]!.time, 0) &&
-      nclose(clip.keyframes[1]!.time, 0.2) &&
-      nclose(clip.keyframes[2]!.time, 1.0),
+    namedFacts([
+      ["ncloseClipKeyframes", () => nclose(clip.keyframes[0]!.time, 0)],
+      ["ncloseClipKeyframes2", () => nclose(clip.keyframes[1]!.time, 0.2)],
+      ["ncloseClipKeyframes3", () => nclose(clip.keyframes[2]!.time, 1.0)],
+    ]),
+    {
+      ncloseClipKeyframes: true,
+      ncloseClipKeyframes2: true,
+      ncloseClipKeyframes3: true,
+    },
   );
   TestValidator.equals("skeleton id carried", clip.skeleton, "react-rig");
 
@@ -128,17 +139,34 @@ export const test_motion_react = (): void => {
     1,
     0.2,
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "zero-excluding react rests at null and validates through its flinch",
-    zeroExcluding.keyframes[0]!.pose.joints[0]!.flexion === null &&
-      zeroExcluding.keyframes[2]!.pose.joints[0]!.abduction === null &&
-      validationHasNoWarnings(
-        "zero-excluding react clip",
-        validateMotion({
-          motion: zeroExcluding,
-          skeleton: zeroExcludingSkeleton,
-        }),
-      ),
+    namedFacts([
+      [
+        "zeroExcludingKeyframesPose",
+        () => zeroExcluding.keyframes[0]!.pose.joints[0]!.flexion === null,
+      ],
+      [
+        "zeroExcludingKeyframesPose2",
+        () => zeroExcluding.keyframes[2]!.pose.joints[0]!.abduction === null,
+      ],
+      [
+        "validationHasNoWarningsZeroExcluding",
+        () =>
+          validationHasNoWarnings(
+            "zero-excluding react clip",
+            validateMotion({
+              motion: zeroExcluding,
+              skeleton: zeroExcludingSkeleton,
+            }),
+          ),
+      ],
+    ]),
+    {
+      zeroExcludingKeyframesPose: true,
+      zeroExcludingKeyframesPose2: true,
+      validationHasNoWarningsZeroExcluding: true,
+    },
   );
   // 4. invalid timing rejects before emitting non-increasing keyframes
   for (const duration of [Number.NaN, 0, -1])

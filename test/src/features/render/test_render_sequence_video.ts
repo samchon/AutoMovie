@@ -9,7 +9,7 @@ import {
 } from "@automovie/render";
 import { TestValidator } from "@nestia/e2e";
 
-import { nclose } from "../internal/predicates";
+import { namedFacts, nclose } from "../internal/predicates";
 
 const shot = (id: string, duration: number): IAutoMovieShot => ({
   id,
@@ -115,19 +115,35 @@ export const test_render_sequence_video = async (): Promise<void> => {
   );
 
   // 2. transition sample semantics
-  TestValidator.predicate(
+  TestValidator.equals(
     "entry transition begins at frame 6",
-    captured[6]!.shot === "shot:b" &&
-      nclose(captured[6]!.time, 1) &&
-      captured[6]!.blend === "shot:a" &&
-      nclose(captured[6]!.alpha ?? -1, 0),
+    namedFacts([
+      ["capturedShotShot", () => captured[6]!.shot === "shot:b"],
+      ["ncloseCapturedTime", () => nclose(captured[6]!.time, 1)],
+      ["capturedBlendShot", () => captured[6]!.blend === "shot:a"],
+      ["ncloseCapturedAlpha", () => nclose(captured[6]!.alpha ?? -1, 0)],
+    ]),
+    {
+      capturedShotShot: true,
+      ncloseCapturedTime: true,
+      capturedBlendShot: true,
+      ncloseCapturedAlpha: true,
+    },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "mid transition alpha",
-    captured[7]!.shot === "shot:b" &&
-      nclose(captured[7]!.time, 1.25) &&
-      captured[7]!.blend === "shot:a" &&
-      nclose(captured[7]!.alpha ?? -1, 0.5),
+    namedFacts([
+      ["capturedShotShot", () => captured[7]!.shot === "shot:b"],
+      ["ncloseCapturedTime", () => nclose(captured[7]!.time, 1.25)],
+      ["capturedBlendShot", () => captured[7]!.blend === "shot:a"],
+      ["ncloseCapturedAlpha", () => nclose(captured[7]!.alpha ?? -1, 0.5)],
+    ]),
+    {
+      capturedShotShot: true,
+      ncloseCapturedTime: true,
+      capturedBlendShot: true,
+      ncloseCapturedAlpha: true,
+    },
   );
   TestValidator.equals("past transition", captured[8]!.blend, null);
 

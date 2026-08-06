@@ -117,7 +117,7 @@ export const test_cli_scaffold_capture_receipt_single_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1982,
+          containerStatements: 2011,
           finallyDigest:
             "60a847debefc4d5cd8e5456376d28eea0ac053c0f5b65946e9faa284da06f6d2",
           finallySubstantive: {
@@ -125,7 +125,7 @@ export const test_cli_scaffold_capture_receipt_single_cleanup = (): void => {
               "667f03143daa4a914699abfa8adac3cc34feac843208b8ff5f576c64fe4927fd",
             tokens: 29,
           },
-          index: 631,
+          index: 635,
           preceding:
             "letreceiptParentSwapCleanupFailure:{error:unknown}|undefined;",
           substantive: {
@@ -142,7 +142,7 @@ export const test_cli_scaffold_capture_receipt_single_cleanup = (): void => {
           catchBodies: ["foreignReceiptCleanupFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1982,
+          containerStatements: 2011,
           finallyDigest:
             "7d83a451aa90abb6575b45dd70ac59e4cc74e1581589f17b5d24ef3fa64253ef",
           finallySubstantive: {
@@ -150,7 +150,7 @@ export const test_cli_scaffold_capture_receipt_single_cleanup = (): void => {
               "3ebb81ea26340d427fd8d9b6772bf27cde79e9b474b12bcb7c6c5efe7cb51a4b",
             tokens: 29,
           },
-          index: 641,
+          index: 645,
           preceding:
             "letforeignReceiptCleanupFailure:{error:unknown}|undefined;",
           substantive: {
@@ -167,7 +167,7 @@ export const test_cli_scaffold_capture_receipt_single_cleanup = (): void => {
           catchBodies: ["receiptSegmentCleanupFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1982,
+          containerStatements: 2011,
           finallyDigest:
             "5b18bd2c6986af9966f9b6e43211f40653f6feabf0854dbdf4770fd1e1956a05",
           finallySubstantive: {
@@ -175,7 +175,7 @@ export const test_cli_scaffold_capture_receipt_single_cleanup = (): void => {
               "f4f8f08cc3124762ba53d55ee9d119670e771c627f2f1d466657e9442d9ed625",
             tokens: 29,
           },
-          index: 711,
+          index: 715,
           preceding:
             "letreceiptSegmentCleanupFailure:{error:unknown}|undefined;",
           substantive: {
@@ -192,7 +192,7 @@ export const test_cli_scaffold_capture_receipt_single_cleanup = (): void => {
           catchBodies: ["receiptRootCleanupFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1982,
+          containerStatements: 2011,
           finallyDigest:
             "8b0c484c31978fa0ee66dc681f6a520351cbb95c45fad37b7d06a4e34704cbc3",
           finallySubstantive: {
@@ -200,7 +200,7 @@ export const test_cli_scaffold_capture_receipt_single_cleanup = (): void => {
               "7db57acdaf3a11f4566a549cf535893beedfe1ac9d4ee6b3759add1b2f0fdfe6",
             tokens: 29,
           },
-          index: 722,
+          index: 726,
           preceding: "letreceiptRootCleanupFailure:{error:unknown}|undefined;",
           substantive: {
             digest:

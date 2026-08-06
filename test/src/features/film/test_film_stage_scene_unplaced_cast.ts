@@ -2,7 +2,7 @@ import { stageScene } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import { makeScriptWrite, makeStagingWrite } from "../internal/filmFixtures";
-import { hasViolation } from "../internal/predicates";
+import { hasViolation, namedFacts } from "../internal/predicates";
 
 /**
  * Pins the "everyone in the cast must stand somewhere" gate: a cast member
@@ -25,10 +25,27 @@ export const test_film_stage_scene_unplaced_cast = (): void => {
     }),
   );
   TestValidator.equals("fails", staged.success, false);
-  TestValidator.predicate(
+  TestValidator.equals(
     "names the unplaced cast node",
-    staged.success === false &&
-      hasViolation(staged, "type", "$input.actors") &&
-      staged.violations.some((v) => v.value === "knightB"),
+    namedFacts([
+      ["stagedSuccess", () => staged.success === false],
+      [
+        "hasViolationStagedType",
+        () =>
+          staged.success === false &&
+          hasViolation(staged, "type", "$input.actors"),
+      ],
+      [
+        "stagedViolationsV",
+        () =>
+          staged.success === false &&
+          staged.violations.some((v) => v.value === "knightB"),
+      ],
+    ]),
+    {
+      stagedSuccess: true,
+      hasViolationStagedType: true,
+      stagedViolationsV: true,
+    },
   );
 };

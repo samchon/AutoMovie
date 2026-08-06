@@ -282,7 +282,7 @@ export const test_mcp_commit_lock_hook_cleanup = (): void => {
           catchBodies: ["releaseRaceFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 50,
+          containerStatements: 51,
           failureHolder:
             "letreleaseRaceFailure:ICommitLockFixtureFailure|undefined;",
           finallyDigest:

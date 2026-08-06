@@ -106,7 +106,7 @@ export const validateTransformArtifact = (
   }
 };
 
-export const validateQuaternionArtifact = (
+const validateQuaternionArtifact = (
   quaternion: unknown,
   path: string,
   label: string,
@@ -135,55 +135,6 @@ export const validateQuaternionArtifact = (
       `${label} must be a unit quaternion (length 1), but length was ${length}`,
       quaternion,
     );
-};
-
-/** Validate a per-bone clinical rest-frame table shared by MCP entry points. */
-export const validateActorRestFramesArtifact = (
-  restFrames: unknown,
-  path: string,
-  violations: IAutoMovieConstraintViolation[],
-): void => {
-  if (
-    !validateObjectArtifact(restFrames, path, "actor rest frames", violations)
-  )
-    return;
-  Object.entries(restFrames).forEach(([bone, frame]) => {
-    const bonePath = `${path}.${bone}`;
-    if (
-      !validateObjectArtifact(frame, bonePath, "actor rest frame", violations)
-    )
-      return;
-    for (const axis of ["flexion", "abduction", "twist"] as const) {
-      const axisFrame = frame[axis];
-      if (axisFrame === undefined) continue;
-      const axisPath = `${bonePath}.${axis}`;
-      if (
-        !validateObjectArtifact(
-          axisFrame,
-          axisPath,
-          "actor rest frame axis",
-          violations,
-        )
-      )
-        continue;
-      if (axisFrame.sign !== 1 && axisFrame.sign !== -1)
-        pushViolation(
-          violations,
-          "type",
-          `${axisPath}.sign`,
-          "actor rest frame sign must be 1 or -1",
-          axisFrame.sign,
-        );
-      if (!Number.isFinite(axisFrame.neutral))
-        pushViolation(
-          violations,
-          "type",
-          `${axisPath}.neutral`,
-          "actor rest frame neutral must be a finite number",
-          axisFrame.neutral,
-        );
-    }
-  });
 };
 
 export const validateColorArtifact = (
@@ -246,69 +197,4 @@ export const validateBeatIdCaseCollisions = (
       );
     if (prior === undefined) byLower.set(lower, { id: beat.id, index });
   });
-};
-
-/**
- * The clock a motion clip is ordered by: strictly increasing keyframe times.
- *
- * `sampleMotion` declares this as its precondition and names the contract that
- * enforces it (`validateMotion`), but a host-supplied motion arriving over MCP
- * never reaches that validator. Ungated, the sampler's binary search selects a
- * segment that does not straddle the queried instant, silently skipping
- * keyframes and interpolating across the wrong pair: a finite, deterministic,
- * wrong pose reported as if it had been measured (#1322, #1328). Every entry
- * point whose motions reach `sampleMotion` applies this same rule.
- *
- * Order is a property of the LIST, so no single keyframe can carry it and a
- * single-keyframe clip orders nothing. A keyframe whose time is not a finite
- * number is skipped here and left to the per-keyframe floor that owns
- * finiteness, so one bad value yields one violation.
- */
-export const appendMotionClockShape = (
-  keyframes: unknown,
-  path: string,
-  violations: IAutoMovieConstraintViolation[],
-): void => {
-  let previous: number | null = null;
-  asArray(keyframes).forEach((keyframe, index) => {
-    const time = isRecord(keyframe) ? keyframe.time : undefined;
-    if (typeof time !== "number" || !Number.isFinite(time)) return;
-    if (previous !== null && time <= previous)
-      pushViolation(
-        violations,
-        "temporal",
-        `${path}[${index}].time`,
-        `motion keyframe times must strictly increase; ${time} is not greater than ${previous}`,
-        time,
-      );
-    previous = time;
-  });
-};
-
-/**
- * A pixel dimension usable as an encoded frame size: a positive EVEN whole
- * number. `yuv420p` chroma subsampling halves each axis, so an odd width or
- * height cannot be encoded without a silent rounding, and a silent rounding is
- * exactly what would desync the pose-keypoint sidecar's `width/height` aspect
- * from the rendered frame the render pins with `-s` (#1231/#1251). Finiteness
- * and positivity are a preceding {@link validateRange}'s job; this adds only the
- * even-whole-number constraint and stays silent on values `validateRange`
- * already rejects, so one bad dimension yields one violation, not two.
- */
-export const validateEvenDimension = (
-  value: unknown,
-  path: string,
-  label: string,
-  violations: IAutoMovieConstraintViolation[],
-): void => {
-  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0)
-    return;
-  if (!Number.isInteger(value) || value % 2 !== 0)
-    pushViolation(
-      violations,
-      "range",
-      path,
-      `${label} must be an even whole number of pixels (yuv420p needs both axes even), but was ${value}`,
-      value,
-    );
 };

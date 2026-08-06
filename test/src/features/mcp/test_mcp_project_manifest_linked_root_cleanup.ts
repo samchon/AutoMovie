@@ -223,18 +223,18 @@ export const test_mcp_project_manifest_linked_root_cleanup = (): void => {
     outer: {
       substantive: {
         digest:
-          "4ccc401e5f1759e8bc75b4c663914cf388b9b9d336683e498977ae683edf1b43",
-        tokens: 1384,
+          "08954072dee93ebad51cefb83e6b88ada6e1982a39ccc306bf6633b12f3478a7",
+        tokens: 1426,
       },
       tryDigest:
-        "506f26f1f9a584006bf271f586790d5edcb03fb2bbcb6ca356dd35e252ab6e97",
+        "403a83b3ff53349a376ed44cbf2dc820536cbde5a39ef3bb8b498d81afa7169e",
       tryStatements: 49,
     },
     parentDigest:
-      "1d9d16eb79efeb07215db69c5460c754d99f6a930df48779cced1a566bca0e56",
+      "fba8d7d2e233375d96b169f6d7aad431739b5b5faedeaa6bd70dd3ef3c672d99",
     parseDiagnostics: [],
     rootDigest:
-      "7a8837dcc034d79285739ff8183cebbbaabee23414ac9b7aa6f9e49a24d4dc1e",
+      "ee09c1b5a7c721ee832d5e6eaca3eee6085f641829981ce368c44848257dc08d",
   };
   TestValidator.equals(
     "project-manifest protects linked-root cleanup",

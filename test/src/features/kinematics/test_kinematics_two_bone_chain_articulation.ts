@@ -2,7 +2,7 @@ import { twoBoneChainArticulation } from "@automovie/engine";
 import { IAutoMovieVector3 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { nclose } from "../internal/predicates";
+import { namedFacts, nclose } from "../internal/predicates";
 
 const IDENTITY = { x: 0, y: 0, z: 0, w: 1 };
 
@@ -60,29 +60,42 @@ const leg = (overrides: {
 export const test_kinematics_two_bone_chain_articulation = (): void => {
   // 1. an ordinary solve
   const solved = leg({ target: { x: 0.2, y: -0.4, z: 0.1 } });
-  TestValidator.predicate(
+  TestValidator.equals(
     "a reachable target solves into two unit deltas",
-    solved !== null &&
-      nclose(
-        Math.hypot(
-          solved.upper.x,
-          solved.upper.y,
-          solved.upper.z,
-          solved.upper.w,
-        ),
-        1,
-        1e-9,
-      ) &&
-      nclose(
-        Math.hypot(
-          solved.lower.x,
-          solved.lower.y,
-          solved.lower.z,
-          solved.lower.w,
-        ),
-        1,
-        1e-9,
-      ),
+    namedFacts([
+      ["solved", () => solved !== null],
+      [
+        "ncloseMathHypot",
+        () =>
+          solved !== null &&
+          nclose(
+            Math.hypot(
+              solved.upper.x,
+              solved.upper.y,
+              solved.upper.z,
+              solved.upper.w,
+            ),
+            1,
+            1e-9,
+          ),
+      ],
+      [
+        "ncloseMathHypot2",
+        () =>
+          solved !== null &&
+          nclose(
+            Math.hypot(
+              solved.lower.x,
+              solved.lower.y,
+              solved.lower.z,
+              solved.lower.w,
+            ),
+            1,
+            1e-9,
+          ),
+      ],
+    ]),
+    { solved: true, ncloseMathHypot: true, ncloseMathHypot2: true },
   );
 
   // 2. the pole fallback: reach axis parallel to world-down
@@ -100,11 +113,20 @@ export const test_kinematics_two_bone_chain_articulation = (): void => {
     target: { x: 0.2, y: -0.4, z: 0.1 },
     bendNormal: { x: -1, y: 0, z: 0 },
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "the two hinge branches are genuinely different solves",
-    plus !== null &&
-      minus !== null &&
-      !nclose(plus.upper.x, minus.upper.x, 1e-6),
+    namedFacts([
+      ["plus", () => plus !== null],
+      ["minus", () => minus !== null],
+      [
+        "nclosePlusUpper",
+        () =>
+          plus !== null &&
+          minus !== null &&
+          !nclose(plus.upper.x, minus.upper.x, 1e-6),
+      ],
+    ]),
+    { plus: true, minus: true, nclosePlusUpper: true },
   );
 
   // 4. the degenerate chains

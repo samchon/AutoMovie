@@ -8,6 +8,7 @@ import { buildInstancedEffect, sampleCompiledEffect } from "@automovie/viewer";
 import { TestValidator } from "@nestia/e2e";
 import * as THREE from "three";
 
+import { namedFacts } from "../internal/predicates";
 import { shotContract, worldDesign } from "../mcp/productionFixtures";
 
 const effectRecipe = (
@@ -207,41 +208,106 @@ export const test_viewer_effect = (): void => {
     effect!.bounds.max.x * legacyEffectValue(effect!.seed, 0, 0x706f7358) +
     (effect!.recipe.motion.wind.x + Math.cos(firstAngle) * firstSpeed) *
       firstAge;
-  TestValidator.predicate(
+  TestValidator.equals(
     "compiled effects preserve exact seeds, kinds and fixed-step replay",
-    JSON.stringify(repeated) === JSON.stringify(sameStep) &&
-      repeated.particles.length > 0 &&
-      repeated.particles.length <= effect!.recipe.budget.maxParticles &&
-      near.particles.length > far.particles.length &&
-      late.particles.every((particle) => particle.ageRatio < 1) &&
-      capped.particles.length === 1 &&
-      before.active === false &&
-      after.active === false &&
-      fractionalDuration.particles.length === 1 &&
-      fractionalDuration.particles[0]?.index === 0 &&
-      exactBurstExpiry.particles.length === 1 &&
-      exactBurstExpiry.particles[0]?.index === 1 &&
-      defaultClock.fixedStepSeconds === 1 / 24 &&
-      defaultClock.event === undefined &&
-      effect!.digest !== differentSeed.digest &&
-      kinds.join(",") === "fog,smoke,dust" &&
-      firstParticle.ageRatio === firstAge / firstLifetime &&
-      firstParticle.position.x === expectedFirstX &&
-      materializeCompiledEffects({
-        contract,
-        world: effectWorld(),
-        fps: 24,
-        cues: [{ ...cues[0]!, zone: "missing" }],
-      }).length === 0 &&
-      materializeCompiledEffects({
-        contract,
-        world: {
-          ...effectWorld(),
-          effectRecipes: [],
-        },
-        fps: 24,
-        cues,
-      }).length === 0,
+    namedFacts([
+      [
+        "stringifyRepeatedStringify",
+        () => JSON.stringify(repeated) === JSON.stringify(sameStep),
+      ],
+      ["repeatedParticles", () => repeated.particles.length > 0],
+      [
+        "repeatedParticlesEffect",
+        () => repeated.particles.length <= effect!.recipe.budget.maxParticles,
+      ],
+      ["nearParticlesFar", () => near.particles.length > far.particles.length],
+      [
+        "lateParticlesParticle",
+        () => late.particles.every((particle) => particle.ageRatio < 1),
+      ],
+      ["cappedParticles", () => capped.particles.length === 1],
+      ["beforeActive", () => before.active === false],
+      ["afterActive", () => after.active === false],
+      [
+        "fractionalDurationParticles",
+        () => fractionalDuration.particles.length === 1,
+      ],
+      [
+        "fractionalDurationParticlesIndex",
+        () => fractionalDuration.particles[0]?.index === 0,
+      ],
+      [
+        "exactBurstExpiryParticles",
+        () => exactBurstExpiry.particles.length === 1,
+      ],
+      [
+        "exactBurstExpiryParticlesIndex",
+        () => exactBurstExpiry.particles[0]?.index === 1,
+      ],
+      [
+        "defaultClockFixedStepSeconds",
+        () => defaultClock.fixedStepSeconds === 1 / 24,
+      ],
+      ["defaultClockEvent", () => defaultClock.event === undefined],
+      [
+        "effectDigestDifferentSeed",
+        () => effect!.digest !== differentSeed.digest,
+      ],
+      ["kindsFogSmoke", () => kinds.join(",") === "fog,smoke,dust"],
+      [
+        "firstParticleAgeRatioFirstAge",
+        () => firstParticle.ageRatio === firstAge / firstLifetime,
+      ],
+      [
+        "firstParticlePositionX",
+        () => firstParticle.position.x === expectedFirstX,
+      ],
+      [
+        "materializeCompiledEffectsContractWorld",
+        () =>
+          materializeCompiledEffects({
+            contract,
+            world: effectWorld(),
+            fps: 24,
+            cues: [{ ...cues[0]!, zone: "missing" }],
+          }).length === 0,
+      ],
+      [
+        "materializeCompiledEffectsContractWorld2",
+        () =>
+          materializeCompiledEffects({
+            contract,
+            world: {
+              ...effectWorld(),
+              effectRecipes: [],
+            },
+            fps: 24,
+            cues,
+          }).length === 0,
+      ],
+    ]),
+    {
+      stringifyRepeatedStringify: true,
+      repeatedParticles: true,
+      repeatedParticlesEffect: true,
+      nearParticlesFar: true,
+      lateParticlesParticle: true,
+      cappedParticles: true,
+      beforeActive: true,
+      afterActive: true,
+      fractionalDurationParticles: true,
+      fractionalDurationParticlesIndex: true,
+      exactBurstExpiryParticles: true,
+      exactBurstExpiryParticlesIndex: true,
+      defaultClockFixedStepSeconds: true,
+      defaultClockEvent: true,
+      effectDigestDifferentSeed: true,
+      kindsFogSmoke: true,
+      firstParticleAgeRatioFirstAge: true,
+      firstParticlePositionX: true,
+      materializeCompiledEffectsContractWorld: true,
+      materializeCompiledEffectsContractWorld2: true,
+    },
   );
 
   const built = buildInstancedEffect(effect!);
@@ -263,10 +329,17 @@ export const test_viewer_effect = (): void => {
       built.object.userData.automovieEffect.digest === effect!.digest,
   );
   built.update(camera, 0);
-  TestValidator.predicate(
+  TestValidator.equals(
     "inactive cues hide their billboard batch",
-    built.object.visible === false &&
-      built.object.count === 0 &&
-      built.stats.active === false,
+    namedFacts([
+      ["builtObjectVisible", () => built.object.visible === false],
+      ["builtObjectCount", () => built.object.count === 0],
+      ["builtStatsActive", () => built.stats.active === false],
+    ]),
+    {
+      builtObjectVisible: true,
+      builtObjectCount: true,
+      builtStatsActive: true,
+    },
   );
 };

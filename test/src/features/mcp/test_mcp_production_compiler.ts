@@ -36,6 +36,23 @@ import {
   productionPng,
 } from "./productionMediaFixtures";
 
+/**
+ * Evaluate named facts in order and stop at the first false one, so a failed
+ * comparison names the fact instead of collapsing into one boolean. Stopping
+ * keeps the short-circuit semantics the original conjunction had, which some
+ * facts depend on to guard the ones after them.
+ */
+const namedFacts = (
+  entries: ReadonlyArray<readonly [string, () => boolean]>,
+): Record<string, boolean> => {
+  const output: Record<string, boolean> = {};
+  for (const [name, evaluate] of entries) {
+    output[name] = evaluate();
+    if (output[name] === false) break;
+  }
+  return output;
+};
+
 interface IProductionCompilerFixtureFailure {
   error: unknown;
 }
@@ -215,17 +232,36 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     }) as typeof project.contentInputs;
     const first = compiler.compile({ scope: "source" });
     project.contentInputs = firstContentInputs;
-    TestValidator.predicate(
+    TestValidator.equals(
       "starter source compiles from one shared snapshot and two commit guards",
-      productionCompileSucceeded("starter source fixture", first) &&
-        firstContentReads === 3 &&
-        first.materialized.some(
-          (file) =>
-            file.path === "shots/opening.json" && file.status === "created",
-        ) &&
-        first.reviews.entries.every(
-          (entry) => entry.currentFingerprint !== null,
-        ),
+      namedFacts([
+        [
+          "productionCompileSucceededStarter",
+          () => productionCompileSucceeded("starter source fixture", first),
+        ],
+        ["firstContentReads", () => firstContentReads === 3],
+        [
+          "firstMaterialized",
+          () =>
+            first.materialized.some(
+              (file) =>
+                file.path === "shots/opening.json" && file.status === "created",
+            ),
+        ],
+        [
+          "firstReviews",
+          () =>
+            first.reviews.entries.every(
+              (entry) => entry.currentFingerprint !== null,
+            ),
+        ],
+      ]),
+      {
+        productionCompileSucceededStarter: true,
+        firstContentReads: true,
+        firstMaterialized: true,
+        firstReviews: true,
+      },
     );
 
     const assetManifestPath = path.join(fixture.root, ".automovie/assets.json");
@@ -1045,12 +1081,29 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
       `${original}\nexport const compilerDiagnostic = ;\n`,
     );
     const ordinaryDiagnostic = compiler.compile({ scope: "source" });
-    TestValidator.predicate(
+    TestValidator.equals(
       "ordinary compiler diagnostics preserve the current review queue",
-      ordinaryDiagnostic.success === false &&
-        diagnosticCodes(ordinaryDiagnostic).has("compile-input-changed") ===
-          false &&
-        ordinaryDiagnostic.reviews.entries.length !== 0,
+      namedFacts([
+        [
+          "ordinaryDiagnosticSuccess",
+          () => ordinaryDiagnostic.success === false,
+        ],
+        [
+          "diagnosticCodesOrdinaryDiagnostic",
+          () =>
+            diagnosticCodes(ordinaryDiagnostic).has("compile-input-changed") ===
+            false,
+        ],
+        [
+          "ordinaryDiagnosticCount",
+          () => ordinaryDiagnostic.reviews.entries.length !== 0,
+        ],
+      ]),
+      {
+        ordinaryDiagnosticSuccess: true,
+        diagnosticCodesOrdinaryDiagnostic: true,
+        ordinaryDiagnosticCount: true,
+      },
     );
     const diagnosticRevisionRacer = AutoMovieProductionProject.open(
       fixture.root,
@@ -1066,12 +1119,26 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
       },
     ).compile({ scope: "source" });
     fs.writeFileSync(sourcePath, original);
-    TestValidator.predicate(
+    TestValidator.equals(
       "diagnostic responses discard a review queue derived across an input race",
-      racedDiagnostic.success === false &&
-        diagnosticCodes(racedDiagnostic).has("compile-input-changed") &&
-        racedDiagnostic.reviews.entries.length === 0 &&
-        diagnosticRevisionRaced,
+      namedFacts([
+        ["racedDiagnosticSuccess", () => racedDiagnostic.success === false],
+        [
+          "diagnosticCodesRacedDiagnostic",
+          () => diagnosticCodes(racedDiagnostic).has("compile-input-changed"),
+        ],
+        [
+          "racedDiagnosticCount",
+          () => racedDiagnostic.reviews.entries.length === 0,
+        ],
+        ["diagnosticRevisionRaced", () => diagnosticRevisionRaced],
+      ]),
+      {
+        racedDiagnosticSuccess: true,
+        diagnosticCodesRacedDiagnostic: true,
+        racedDiagnosticCount: true,
+        diagnosticRevisionRaced: true,
+      },
     );
     let lintRevisionRaced = false;
     const racedLint = new AutoMovieProductionCompiler(
@@ -1083,12 +1150,23 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
         return queue;
       },
     ).lint({ scope: "source" });
-    TestValidator.predicate(
+    TestValidator.equals(
       "read-only compile responses are fenced after review derivation",
-      racedLint.success === false &&
-        diagnosticCodes(racedLint).has("compile-input-changed") &&
-        racedLint.reviews.entries.length === 0 &&
-        lintRevisionRaced,
+      namedFacts([
+        ["racedLintSuccess", () => racedLint.success === false],
+        [
+          "diagnosticCodesRacedLint",
+          () => diagnosticCodes(racedLint).has("compile-input-changed"),
+        ],
+        ["racedLintCount", () => racedLint.reviews.entries.length === 0],
+        ["lintRevisionRaced", () => lintRevisionRaced],
+      ]),
+      {
+        racedLintSuccess: true,
+        diagnosticCodesRacedLint: true,
+        racedLintCount: true,
+        lintRevisionRaced: true,
+      },
     );
     const residentGraph = project.graph;
     let graphRecheckCalls = 0;
@@ -1102,12 +1180,32 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
       () => ({ entries: [] }),
     ).lint({ scope: "source" });
     project.graph = residentGraph;
-    TestValidator.predicate(
+    TestValidator.equals(
       "an unreadable current graph invalidates a read-only compiler response",
-      unavailableGraphRecheck.success === false &&
-        diagnosticCodes(unavailableGraphRecheck).has("compile-input-changed") &&
-        unavailableGraphRecheck.reviews.entries.length === 0 &&
-        graphRecheckCalls === 2,
+      namedFacts([
+        [
+          "unavailableGraphRecheckSuccess",
+          () => unavailableGraphRecheck.success === false,
+        ],
+        [
+          "diagnosticCodesUnavailableGraphRecheck",
+          () =>
+            diagnosticCodes(unavailableGraphRecheck).has(
+              "compile-input-changed",
+            ),
+        ],
+        [
+          "unavailableGraphRecheckCount",
+          () => unavailableGraphRecheck.reviews.entries.length === 0,
+        ],
+        ["graphRecheckCalls", () => graphRecheckCalls === 2],
+      ]),
+      {
+        unavailableGraphRecheckSuccess: true,
+        diagnosticCodesUnavailableGraphRecheck: true,
+        unavailableGraphRecheckCount: true,
+        graphRecheckCalls: true,
+      },
     );
     const residentConfirmCurrentSnapshot = project.confirmCurrentSnapshot;
     project.confirmCurrentSnapshot = (() => {
@@ -1209,14 +1307,33 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     })).compile({ scope: "source" });
     project.revision = postFenceRevision;
     fs.writeFileSync(sourcePath, original);
-    TestValidator.predicate(
+    TestValidator.equals(
       "ordinary diagnostics return the fenced revision without a later read",
-      stableDiagnostic.success === false &&
-        diagnosticCodes(stableDiagnostic).has("compile-input-changed") ===
-          false &&
-        diagnosticReadBudget > 0 &&
-        postFenceDiagnosticReads === diagnosticReadBudget &&
-        postFenceDiagnosticMutation === false,
+      namedFacts([
+        ["stableDiagnosticSuccess", () => stableDiagnostic.success === false],
+        [
+          "diagnosticCodesStableDiagnostic",
+          () =>
+            diagnosticCodes(stableDiagnostic).has("compile-input-changed") ===
+            false,
+        ],
+        ["diagnosticReadBudget", () => diagnosticReadBudget > 0],
+        [
+          "postFenceDiagnosticReadsDiagnosticReadBudget",
+          () => postFenceDiagnosticReads === diagnosticReadBudget,
+        ],
+        [
+          "postFenceDiagnosticMutation",
+          () => postFenceDiagnosticMutation === false,
+        ],
+      ]),
+      {
+        stableDiagnosticSuccess: true,
+        diagnosticCodesStableDiagnostic: true,
+        diagnosticReadBudget: true,
+        postFenceDiagnosticReadsDiagnosticReadBudget: true,
+        postFenceDiagnosticMutation: true,
+      },
     );
     const recipeFile = path.join(
       fixture.root,
@@ -1252,12 +1369,27 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     fs.writeFileSync(formationFile, JSON.stringify(oversizedFormation));
     const oversizedDesign = compiler.lint({ scope: "source" });
     fs.writeFileSync(formationFile, formationBytes);
-    TestValidator.predicate(
+    TestValidator.equals(
       "invalid huge formation is diagnosed before allocating explicit slots",
-      oversizedDesign.success === false &&
-        diagnosticCodes(oversizedDesign).has("design-range-invalid") &&
-        diagnosticCodes(oversizedDesign).has("model-materialization-failed") ===
-          false,
+      namedFacts([
+        ["oversizedDesignSuccess", () => oversizedDesign.success === false],
+        [
+          "diagnosticCodesOversizedDesign",
+          () => diagnosticCodes(oversizedDesign).has("design-range-invalid"),
+        ],
+        [
+          "diagnosticCodesOversizedDesign2",
+          () =>
+            diagnosticCodes(oversizedDesign).has(
+              "model-materialization-failed",
+            ) === false,
+        ],
+      ]),
+      {
+        oversizedDesignSuccess: true,
+        diagnosticCodesOversizedDesign: true,
+        diagnosticCodesOversizedDesign2: true,
+      },
     );
     const generatedManifestPath = path.join(
       fixture.root,
@@ -1268,15 +1400,44 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
       "utf8",
     );
     const compileDesignOnly = compiler.compile({ scope: "design" });
-    TestValidator.predicate(
+    TestValidator.equals(
       "design scope never replaces current generated source output",
-      productionCompileSucceeded("design-only compile", compileDesignOnly) &&
-        compileDesignOnly.materialized.length === 0 &&
-        fs.readFileSync(generatedManifestPath, "utf8") ===
-          generatedBeforeDesignGate &&
-        fs.existsSync(
-          path.join(fixture.root, "generated/fixture-film/shots/opening.json"),
-        ),
+      namedFacts([
+        [
+          "productionCompileSucceededDesign",
+          () =>
+            productionCompileSucceeded(
+              "design-only compile",
+              compileDesignOnly,
+            ),
+        ],
+        [
+          "compileDesignOnlyCount",
+          () => compileDesignOnly.materialized.length === 0,
+        ],
+        [
+          "generatedManifestPathUtf8",
+          () =>
+            fs.readFileSync(generatedManifestPath, "utf8") ===
+            generatedBeforeDesignGate,
+        ],
+        [
+          "fixtureResident",
+          () =>
+            fs.existsSync(
+              path.join(
+                fixture.root,
+                "generated/fixture-film/shots/opening.json",
+              ),
+            ),
+        ],
+      ]),
+      {
+        productionCompileSucceededDesign: true,
+        compileDesignOnlyCount: true,
+        generatedManifestPathUtf8: true,
+        fixtureResident: true,
+      },
     );
     const designRevisionRacer = AutoMovieProductionProject.open(fixture.root);
     const residentRevision = project.revision;
@@ -1295,12 +1456,26 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     }) as typeof project.confirmCurrentSnapshot;
     const racedDesignOnly = compiler.compile({ scope: "design" });
     project.confirmCurrentSnapshot = designConfirmCurrentSnapshot;
-    TestValidator.predicate(
+    TestValidator.equals(
       "design-only success cannot cross a concurrent design revision",
-      racedDesignOnly.success === false &&
-        diagnosticCodes(racedDesignOnly).has("compile-input-changed") &&
-        racedDesignOnly.reviews.entries.length === 0 &&
-        designRevisionRaced,
+      namedFacts([
+        ["racedDesignOnlySuccess", () => racedDesignOnly.success === false],
+        [
+          "diagnosticCodesRacedDesignOnly",
+          () => diagnosticCodes(racedDesignOnly).has("compile-input-changed"),
+        ],
+        [
+          "racedDesignOnlyCount",
+          () => racedDesignOnly.reviews.entries.length === 0,
+        ],
+        ["designRevisionRaced", () => designRevisionRaced],
+      ]),
+      {
+        racedDesignOnlySuccess: true,
+        diagnosticCodesRacedDesignOnly: true,
+        racedDesignOnlyCount: true,
+        designRevisionRaced: true,
+      },
     );
     let postFenceDesignReads = 0;
     let postFenceDesignMutation = false;
@@ -1314,14 +1489,25 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     }) as typeof project.revision;
     const stableDesignOnly = compiler.compile({ scope: "design" });
     project.revision = residentRevision;
-    TestValidator.predicate(
+    TestValidator.equals(
       "design-only success returns the fenced revision without a later read",
-      productionCompileSucceeded(
-        "fenced design-only compile",
-        stableDesignOnly,
-      ) &&
-        postFenceDesignReads === 5 &&
-        postFenceDesignMutation === false,
+      namedFacts([
+        [
+          "productionCompileSucceededFenced",
+          () =>
+            productionCompileSucceeded(
+              "fenced design-only compile",
+              stableDesignOnly,
+            ),
+        ],
+        ["postFenceDesignReads", () => postFenceDesignReads === 5],
+        ["postFenceDesignMutation", () => postFenceDesignMutation === false],
+      ]),
+      {
+        productionCompileSucceededFenced: true,
+        postFenceDesignReads: true,
+        postFenceDesignMutation: true,
+      },
     );
     const reopenedWithFormation = new AutoMovieProductionCompiler(
       AutoMovieProductionProject.open(fixture.root),
@@ -1398,13 +1584,31 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     const changedContent = compiler.lint({ scope: "source" });
     fs.writeFileSync(viewerInput, viewerBytes);
     const restoredContent = compiler.compile({ scope: "source" });
-    TestValidator.predicate(
+    TestValidator.equals(
       "declared viewer and runtime content participates in compile identity",
-      changedContent.compiler.inputFingerprint !==
-        reopened.compiler.inputFingerprint &&
-        diagnosticCodes(changedContent).has("generated-stale") &&
-        restoredContent.compiler.inputFingerprint ===
-          reopened.compiler.inputFingerprint,
+      namedFacts([
+        [
+          "changedContentCompiler",
+          () =>
+            changedContent.compiler.inputFingerprint !==
+            reopened.compiler.inputFingerprint,
+        ],
+        [
+          "diagnosticCodesChangedContent",
+          () => diagnosticCodes(changedContent).has("generated-stale"),
+        ],
+        [
+          "restoredContentCompiler",
+          () =>
+            restoredContent.compiler.inputFingerprint ===
+            reopened.compiler.inputFingerprint,
+        ],
+      ]),
+      {
+        changedContentCompiler: true,
+        diagnosticCodesChangedContent: true,
+        restoredContentCompiler: true,
+      },
     );
 
     const generatedShot = path.join(
@@ -1419,53 +1623,121 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
         diagnosticCodes(tamperedLint).has("generated-tampered"),
     );
     const repaired = compiler.compile({ scope: "source" });
-    TestValidator.predicate(
+    TestValidator.equals(
       "compile repairs a declared generated file",
-      productionCompileSucceeded("tampered generated repair", repaired) &&
-        repaired.materialized.some(
-          (file) =>
-            file.path === "shots/opening.json" && file.status === "updated",
-        ) &&
-        repaired.diagnostics.some(
-          (item) =>
-            item.code === "generated-tampered" && item.category === "warning",
-        ) &&
-        JSON.parse(fs.readFileSync(generatedShot, "utf8")).shot.id ===
-          "opening",
+      namedFacts([
+        [
+          "productionCompileSucceededTampered",
+          () =>
+            productionCompileSucceeded("tampered generated repair", repaired),
+        ],
+        [
+          "repairedMaterialized",
+          () =>
+            repaired.materialized.some(
+              (file) =>
+                file.path === "shots/opening.json" && file.status === "updated",
+            ),
+        ],
+        [
+          "repairedDiagnostics",
+          () =>
+            repaired.diagnostics.some(
+              (item) =>
+                item.code === "generated-tampered" &&
+                item.category === "warning",
+            ),
+        ],
+        [
+          "generatedShotUtf8",
+          () =>
+            JSON.parse(fs.readFileSync(generatedShot, "utf8")).shot.id ===
+            "opening",
+        ],
+      ]),
+      {
+        productionCompileSucceededTampered: true,
+        repairedMaterialized: true,
+        repairedDiagnostics: true,
+        generatedShotUtf8: true,
+      },
     );
     fs.rmSync(generatedShot);
     const missingLint = compiler.lint({ scope: "source" });
     const recreated = compiler.compile({ scope: "source" });
-    TestValidator.predicate(
+    TestValidator.equals(
       "lint rejects and compile recreates a missing declared generated file",
-      missingLint.diagnostics.some(
-        (item) =>
-          item.code === "generated-tampered" && item.message.includes("null"),
-      ) &&
-        productionCompileSucceeded("missing generated repair", recreated) &&
-        recreated.materialized.some(
-          (file) =>
-            file.path === "shots/opening.json" && file.status === "created",
-        ),
+      namedFacts([
+        [
+          "missingLintDiagnostics",
+          () =>
+            missingLint.diagnostics.some(
+              (item) =>
+                item.code === "generated-tampered" &&
+                item.message.includes("null"),
+            ),
+        ],
+        [
+          "productionCompileSucceededMissing",
+          () =>
+            productionCompileSucceeded("missing generated repair", recreated),
+        ],
+        [
+          "recreatedMaterialized",
+          () =>
+            recreated.materialized.some(
+              (file) =>
+                file.path === "shots/opening.json" && file.status === "created",
+            ),
+        ],
+      ]),
+      {
+        missingLintDiagnostics: true,
+        productionCompileSucceededMissing: true,
+        recreatedMaterialized: true,
+      },
     );
     fs.rmSync(generatedManifestPath);
     const missingOwnershipManifest = compiler.lint({ scope: "source" });
     const repairedOwnershipManifest = compiler.compile({ scope: "source" });
-    TestValidator.predicate(
+    TestValidator.equals(
       "lint rejects a missing ownership manifest and compile recreates it",
-      diagnosticCodes(missingOwnershipManifest).has(
-        "generated-manifest-missing",
-      ) &&
-        productionCompileSucceeded(
-          "missing ownership-manifest repair",
-          repairedOwnershipManifest,
-        ) &&
-        repairedOwnershipManifest.diagnostics.some(
-          (diagnostic) =>
-            diagnostic.code === "generated-manifest-missing" &&
-            diagnostic.category === "warning",
-        ) &&
-        fs.existsSync(generatedManifestPath),
+      namedFacts([
+        [
+          "diagnosticCodesMissingOwnershipManifest",
+          () =>
+            diagnosticCodes(missingOwnershipManifest).has(
+              "generated-manifest-missing",
+            ),
+        ],
+        [
+          "productionCompileSucceededMissing",
+          () =>
+            productionCompileSucceeded(
+              "missing ownership-manifest repair",
+              repairedOwnershipManifest,
+            ),
+        ],
+        [
+          "repairedOwnershipManifestDiagnostics",
+          () =>
+            repairedOwnershipManifest.diagnostics.some(
+              (diagnostic) =>
+                diagnostic.code === "generated-manifest-missing" &&
+                diagnostic.category === "warning",
+            ),
+        ],
+        [
+          "generatedManifestPathResident",
+          () => fs.existsSync(generatedManifestPath),
+        ],
+      ]),
+      {
+        diagnosticCodesMissingOwnershipManifest: true,
+        productionCompileSucceededMissing: true,
+        repairedOwnershipManifestDiagnostics: true,
+        generatedManifestPathResident: true,
+      },
     );
     const unowned = path.join(
       fixture.root,
@@ -1497,14 +1769,32 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     )!.digest = digestAutoMovieBytes(forgedBytes);
     fs.writeFileSync(generatedManifestPath, JSON.stringify(forgedManifest));
     const forgedOwnership = compiler.lint({ scope: "source" });
-    TestValidator.predicate(
+    TestValidator.equals(
       "a self-consistent forged generated manifest cannot redefine compiler truth",
-      diagnosticCodes(forgedOwnership).has("generated-tampered") &&
-        diagnosticCodes(forgedOwnership).has("generated-manifest-stale") &&
-        productionCompileSucceeded(
-          "forged generated manifest recovery",
-          compiler.compile({ scope: "source" }),
-        ),
+      namedFacts([
+        [
+          "diagnosticCodesForgedOwnership",
+          () => diagnosticCodes(forgedOwnership).has("generated-tampered"),
+        ],
+        [
+          "diagnosticCodesForgedOwnership2",
+          () =>
+            diagnosticCodes(forgedOwnership).has("generated-manifest-stale"),
+        ],
+        [
+          "productionCompileSucceededForged",
+          () =>
+            productionCompileSucceeded(
+              "forged generated manifest recovery",
+              compiler.compile({ scope: "source" }),
+            ),
+        ],
+      ]),
+      {
+        diagnosticCodesForgedOwnership: true,
+        diagnosticCodesForgedOwnership2: true,
+        productionCompileSucceededForged: true,
+      },
     );
     const stalePath = path.join(
       fixture.root,
@@ -1524,15 +1814,30 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     fs.writeFileSync(generatedManifestPath, JSON.stringify(withStale));
     const staleDeclaredLint = compiler.lint({ scope: "source" });
     const staleDeclaredCompile = compiler.compile({ scope: "source" });
-    TestValidator.predicate(
+    TestValidator.equals(
       "prior compiler-owned files are diagnosed then removed by materialization",
-      diagnosticCodes(staleDeclaredLint).has("generated-stale-output") &&
-        staleDeclaredCompile.diagnostics.some(
-          (diagnostic) =>
-            diagnostic.code === "generated-stale-output" &&
-            diagnostic.category === "warning",
-        ) &&
-        fs.existsSync(stalePath) === false,
+      namedFacts([
+        [
+          "diagnosticCodesStaleDeclaredLint",
+          () =>
+            diagnosticCodes(staleDeclaredLint).has("generated-stale-output"),
+        ],
+        [
+          "staleDeclaredCompileDiagnostics",
+          () =>
+            staleDeclaredCompile.diagnostics.some(
+              (diagnostic) =>
+                diagnostic.code === "generated-stale-output" &&
+                diagnostic.category === "warning",
+            ),
+        ],
+        ["stalePathResident", () => fs.existsSync(stalePath) === false],
+      ]),
+      {
+        diagnosticCodesStaleDeclaredLint: true,
+        staleDeclaredCompileDiagnostics: true,
+        stalePathResident: true,
+      },
     );
     const unreadableManifest = JSON.parse(
       fs.readFileSync(generatedManifestPath, "utf8"),
@@ -1575,15 +1880,33 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     const missingOutsideNamedMutation =
       project.setShotContract(missingOutsideNamed);
     const missingOutsideNamedCompile = compiler.compile({ scope: "source" });
-    TestValidator.predicate(
+    TestValidator.equals(
       "missing source names cannot impersonate an outside-root failure",
-      missingOutsideNamedMutation.accepted &&
-        diagnosticCodes(missingOutsideNamedCompile).has(
-          "source-path-missing",
-        ) &&
-        diagnosticCodes(missingOutsideNamedCompile).has(
-          "source-path-outside-root",
-        ) === false,
+      namedFacts([
+        [
+          "missingOutsideNamedMutationAccepted",
+          () => missingOutsideNamedMutation.accepted,
+        ],
+        [
+          "diagnosticCodesMissingOutsideNamedCompile",
+          () =>
+            diagnosticCodes(missingOutsideNamedCompile).has(
+              "source-path-missing",
+            ),
+        ],
+        [
+          "diagnosticCodesMissingOutsideNamedCompile2",
+          () =>
+            diagnosticCodes(missingOutsideNamedCompile).has(
+              "source-path-outside-root",
+            ) === false,
+        ],
+      ]),
+      {
+        missingOutsideNamedMutationAccepted: true,
+        diagnosticCodesMissingOutsideNamedCompile: true,
+        diagnosticCodesMissingOutsideNamedCompile2: true,
+      },
     );
     project.setShotContract(shotContract());
     const outsideRoot = {
@@ -1640,14 +1963,32 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     );
     const capabilityOutput = compiler.compile({ scope: "source" });
     const capabilities = diagnosticCodes(capabilityOutput);
-    TestValidator.predicate(
+    TestValidator.equals(
       "runtime imports, entropy and ambient capabilities are rejected",
-      capabilities.has("source-import-unsupported") &&
-        capabilities.has("source-nondeterministic") &&
-        capabilities.has("source-capability-forbidden") &&
-        capabilityOutput.diagnostics.some((diagnostic) =>
-          diagnostic.message.includes("Intl"),
-        ),
+      namedFacts([
+        [
+          "capabilitiesHas",
+          () => capabilities.has("source-import-unsupported"),
+        ],
+        ["capabilitiesHas2", () => capabilities.has("source-nondeterministic")],
+        [
+          "capabilitiesHas3",
+          () => capabilities.has("source-capability-forbidden"),
+        ],
+        [
+          "capabilityOutputDiagnostics",
+          () =>
+            capabilityOutput.diagnostics.some((diagnostic) =>
+              diagnostic.message.includes("Intl"),
+            ),
+        ],
+      ]),
+      {
+        capabilitiesHas: true,
+        capabilitiesHas2: true,
+        capabilitiesHas3: true,
+        capabilityOutputDiagnostics: true,
+      },
     );
     fs.writeFileSync(
       sourcePath,
@@ -1961,15 +2302,42 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     }) as typeof project.contentInputs;
     const noWriteContentRace = compiler.compile({ scope: "source" });
     project.contentInputs = residentContentInputs;
-    TestValidator.predicate(
+    TestValidator.equals(
       "no-write compile confirms current inputs under the commit lock",
-      noWriteContentRace.success === false &&
-        diagnosticCodes(noWriteContentRace).has("compile-input-changed") &&
-        noWriteContentRace.reviews.entries.length === 0 &&
-        noWriteRaceReads === 2 &&
-        project.revision() === revisionBeforeContentRace &&
-        fs.readFileSync(generatedManifestPath, "utf8") ===
-          generatedBeforeContentRace,
+      namedFacts([
+        [
+          "noWriteContentRaceSuccess",
+          () => noWriteContentRace.success === false,
+        ],
+        [
+          "diagnosticCodesNoWriteContentRace",
+          () =>
+            diagnosticCodes(noWriteContentRace).has("compile-input-changed"),
+        ],
+        [
+          "noWriteContentRaceCount",
+          () => noWriteContentRace.reviews.entries.length === 0,
+        ],
+        ["noWriteRaceReads", () => noWriteRaceReads === 2],
+        [
+          "projectRevision",
+          () => project.revision() === revisionBeforeContentRace,
+        ],
+        [
+          "generatedManifestPathUtf8",
+          () =>
+            fs.readFileSync(generatedManifestPath, "utf8") ===
+            generatedBeforeContentRace,
+        ],
+      ]),
+      {
+        noWriteContentRaceSuccess: true,
+        diagnosticCodesNoWriteContentRace: true,
+        noWriteContentRaceCount: true,
+        noWriteRaceReads: true,
+        projectRevision: true,
+        generatedManifestPathUtf8: true,
+      },
     );
     let noWriteLateRaceReads = 0;
     project.contentInputs = (() => {
@@ -1990,15 +2358,44 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     }) as typeof project.contentInputs;
     const noWriteLateContentRace = compiler.compile({ scope: "source" });
     project.contentInputs = residentContentInputs;
-    TestValidator.predicate(
+    TestValidator.equals(
       "no-write confirmation rejects changes between its two guarded reads",
-      noWriteLateContentRace.success === false &&
-        diagnosticCodes(noWriteLateContentRace).has("compile-input-changed") &&
-        noWriteLateContentRace.reviews.entries.length === 0 &&
-        noWriteLateRaceReads === 3 &&
-        project.revision() === revisionBeforeContentRace &&
-        fs.readFileSync(generatedManifestPath, "utf8") ===
-          generatedBeforeContentRace,
+      namedFacts([
+        [
+          "noWriteLateContentRaceSuccess",
+          () => noWriteLateContentRace.success === false,
+        ],
+        [
+          "diagnosticCodesNoWriteLateContentRace",
+          () =>
+            diagnosticCodes(noWriteLateContentRace).has(
+              "compile-input-changed",
+            ),
+        ],
+        [
+          "noWriteLateContentRaceCount",
+          () => noWriteLateContentRace.reviews.entries.length === 0,
+        ],
+        ["noWriteLateRaceReads", () => noWriteLateRaceReads === 3],
+        [
+          "projectRevision",
+          () => project.revision() === revisionBeforeContentRace,
+        ],
+        [
+          "generatedManifestPathUtf8",
+          () =>
+            fs.readFileSync(generatedManifestPath, "utf8") ===
+            generatedBeforeContentRace,
+        ],
+      ]),
+      {
+        noWriteLateContentRaceSuccess: true,
+        diagnosticCodesNoWriteLateContentRace: true,
+        noWriteLateContentRaceCount: true,
+        noWriteLateRaceReads: true,
+        projectRevision: true,
+        generatedManifestPathUtf8: true,
+      },
     );
     const generatedShotBeforeOutputRace = fs.readFileSync(generatedShot);
     let noWriteFileRaceReads = 0;
@@ -2010,13 +2407,31 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     const noWriteFileRace = compiler.compile({ scope: "source" });
     project.contentInputs = residentContentInputs;
     fs.writeFileSync(generatedShot, generatedShotBeforeOutputRace);
-    TestValidator.predicate(
+    TestValidator.equals(
       "no-write publication rejects raw generated file tampering after its plan",
-      noWriteFileRace.success === false &&
-        diagnosticCodes(noWriteFileRace).has("compile-input-changed") &&
-        noWriteFileRace.reviews.entries.length === 0 &&
-        noWriteFileRaceReads === 3 &&
-        project.revision() === revisionBeforeContentRace,
+      namedFacts([
+        ["noWriteFileRaceSuccess", () => noWriteFileRace.success === false],
+        [
+          "diagnosticCodesNoWriteFileRace",
+          () => diagnosticCodes(noWriteFileRace).has("compile-input-changed"),
+        ],
+        [
+          "noWriteFileRaceCount",
+          () => noWriteFileRace.reviews.entries.length === 0,
+        ],
+        ["noWriteFileRaceReads", () => noWriteFileRaceReads === 3],
+        [
+          "projectRevision",
+          () => project.revision() === revisionBeforeContentRace,
+        ],
+      ]),
+      {
+        noWriteFileRaceSuccess: true,
+        diagnosticCodesNoWriteFileRace: true,
+        noWriteFileRaceCount: true,
+        noWriteFileRaceReads: true,
+        projectRevision: true,
+      },
     );
     let noWriteManifestRaceReads = 0;
     project.contentInputs = (() => {
@@ -2031,13 +2446,35 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     const noWriteManifestRace = compiler.compile({ scope: "source" });
     project.contentInputs = residentContentInputs;
     fs.writeFileSync(generatedManifestPath, generatedBeforeContentRace);
-    TestValidator.predicate(
+    TestValidator.equals(
       "no-write publication rejects raw generated manifest tampering after its plan",
-      noWriteManifestRace.success === false &&
-        diagnosticCodes(noWriteManifestRace).has("compile-input-changed") &&
-        noWriteManifestRace.reviews.entries.length === 0 &&
-        noWriteManifestRaceReads === 3 &&
-        project.revision() === revisionBeforeContentRace,
+      namedFacts([
+        [
+          "noWriteManifestRaceSuccess",
+          () => noWriteManifestRace.success === false,
+        ],
+        [
+          "diagnosticCodesNoWriteManifestRace",
+          () =>
+            diagnosticCodes(noWriteManifestRace).has("compile-input-changed"),
+        ],
+        [
+          "noWriteManifestRaceCount",
+          () => noWriteManifestRace.reviews.entries.length === 0,
+        ],
+        ["noWriteManifestRaceReads", () => noWriteManifestRaceReads === 3],
+        [
+          "projectRevision",
+          () => project.revision() === revisionBeforeContentRace,
+        ],
+      ]),
+      {
+        noWriteManifestRaceSuccess: true,
+        diagnosticCodesNoWriteManifestRace: true,
+        noWriteManifestRaceCount: true,
+        noWriteManifestRaceReads: true,
+        projectRevision: true,
+      },
     );
     const rawGeneratedIntruder = path.join(
       fixture.root,
@@ -2053,13 +2490,35 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     const noWriteInventoryRace = compiler.compile({ scope: "source" });
     project.contentInputs = residentContentInputs;
     fs.rmSync(rawGeneratedIntruder);
-    TestValidator.predicate(
+    TestValidator.equals(
       "no-write publication rejects raw generated inventory growth after its plan",
-      noWriteInventoryRace.success === false &&
-        diagnosticCodes(noWriteInventoryRace).has("compile-input-changed") &&
-        noWriteInventoryRace.reviews.entries.length === 0 &&
-        noWriteInventoryRaceReads === 3 &&
-        project.revision() === revisionBeforeContentRace,
+      namedFacts([
+        [
+          "noWriteInventoryRaceSuccess",
+          () => noWriteInventoryRace.success === false,
+        ],
+        [
+          "diagnosticCodesNoWriteInventoryRace",
+          () =>
+            diagnosticCodes(noWriteInventoryRace).has("compile-input-changed"),
+        ],
+        [
+          "noWriteInventoryRaceCount",
+          () => noWriteInventoryRace.reviews.entries.length === 0,
+        ],
+        ["noWriteInventoryRaceReads", () => noWriteInventoryRaceReads === 3],
+        [
+          "projectRevision",
+          () => project.revision() === revisionBeforeContentRace,
+        ],
+      ]),
+      {
+        noWriteInventoryRaceSuccess: true,
+        diagnosticCodesNoWriteInventoryRace: true,
+        noWriteInventoryRaceCount: true,
+        noWriteInventoryRaceReads: true,
+        projectRevision: true,
+      },
     );
     const outputVerificationReadGenerated = project.readGeneratedFile;
     project.readGeneratedFile = ((relativePath: string) => {
@@ -2073,17 +2532,43 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     }) as typeof project.readGeneratedFile;
     const unreadableOutputRace = compiler.compile({ scope: "source" });
     project.readGeneratedFile = outputVerificationReadGenerated;
-    TestValidator.predicate(
+    TestValidator.equals(
       "unreadable final generated verification becomes a structured input race",
-      unreadableOutputRace.success === false &&
-        diagnosticCodes(unreadableOutputRace).has("compile-input-changed") &&
-        unreadableOutputRace.reviews.entries.length === 0 &&
-        unreadableOutputRace.diagnostics.some((diagnostic) =>
-          diagnostic.message.includes(
-            "generated output verification read raced",
-          ),
-        ) &&
-        project.revision() === revisionBeforeContentRace,
+      namedFacts([
+        [
+          "unreadableOutputRaceSuccess",
+          () => unreadableOutputRace.success === false,
+        ],
+        [
+          "diagnosticCodesUnreadableOutputRace",
+          () =>
+            diagnosticCodes(unreadableOutputRace).has("compile-input-changed"),
+        ],
+        [
+          "unreadableOutputRaceCount",
+          () => unreadableOutputRace.reviews.entries.length === 0,
+        ],
+        [
+          "unreadableOutputRaceDiagnostics",
+          () =>
+            unreadableOutputRace.diagnostics.some((diagnostic) =>
+              diagnostic.message.includes(
+                "generated output verification read raced",
+              ),
+            ),
+        ],
+        [
+          "projectRevision",
+          () => project.revision() === revisionBeforeContentRace,
+        ],
+      ]),
+      {
+        unreadableOutputRaceSuccess: true,
+        diagnosticCodesUnreadableOutputRace: true,
+        unreadableOutputRaceCount: true,
+        unreadableOutputRaceDiagnostics: true,
+        projectRevision: true,
+      },
     );
     const writeManifestVerificationReadGenerated = project.readGeneratedFile;
     let writeManifestRaceInjected = false;
@@ -2106,16 +2591,46 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     const writeManifestRace = compiler.compile({ scope: "source" });
     project.readGeneratedFile = writeManifestVerificationReadGenerated;
     fs.writeFileSync(sourcePath, original);
-    TestValidator.predicate(
+    TestValidator.equals(
       "write publication rolls back when its staged manifest changes during the final guard",
-      writeManifestRace.success === false &&
-        diagnosticCodes(writeManifestRace).has("compile-input-changed") &&
-        writeManifestRace.reviews.entries.length === 0 &&
-        writeManifestRaceInjected &&
-        project.revision() === revisionBeforeContentRace &&
-        fs.readFileSync(generatedManifestPath, "utf8") ===
-          generatedBeforeContentRace &&
-        fs.readFileSync(generatedShot).equals(generatedShotBeforeOutputRace),
+      namedFacts([
+        ["writeManifestRaceSuccess", () => writeManifestRace.success === false],
+        [
+          "diagnosticCodesWriteManifestRace",
+          () => diagnosticCodes(writeManifestRace).has("compile-input-changed"),
+        ],
+        [
+          "writeManifestRaceCount",
+          () => writeManifestRace.reviews.entries.length === 0,
+        ],
+        ["writeManifestRaceInjected", () => writeManifestRaceInjected],
+        [
+          "projectRevision",
+          () => project.revision() === revisionBeforeContentRace,
+        ],
+        [
+          "generatedManifestPathUtf8",
+          () =>
+            fs.readFileSync(generatedManifestPath, "utf8") ===
+            generatedBeforeContentRace,
+        ],
+        [
+          "generatedShotGeneratedShotBeforeOutputRace",
+          () =>
+            fs
+              .readFileSync(generatedShot)
+              .equals(generatedShotBeforeOutputRace),
+        ],
+      ]),
+      {
+        writeManifestRaceSuccess: true,
+        diagnosticCodesWriteManifestRace: true,
+        writeManifestRaceCount: true,
+        writeManifestRaceInjected: true,
+        projectRevision: true,
+        generatedManifestPathUtf8: true,
+        generatedShotGeneratedShotBeforeOutputRace: true,
+      },
     );
     const revisionRacer = AutoMovieProductionProject.open(fixture.root);
     let revisionRaced = false;
@@ -2130,12 +2645,30 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
         return queue;
       },
     ).compile({ scope: "source" });
-    TestValidator.predicate(
+    TestValidator.equals(
       "no-write confirmation cannot publish another process revision",
-      revisionRaceCompile.success === false &&
-        diagnosticCodes(revisionRaceCompile).has("compile-input-changed") &&
-        revisionRaceCompile.reviews.entries.length === 0 &&
-        revisionRaced,
+      namedFacts([
+        [
+          "revisionRaceCompileSuccess",
+          () => revisionRaceCompile.success === false,
+        ],
+        [
+          "diagnosticCodesRevisionRaceCompile",
+          () =>
+            diagnosticCodes(revisionRaceCompile).has("compile-input-changed"),
+        ],
+        [
+          "revisionRaceCompileCount",
+          () => revisionRaceCompile.reviews.entries.length === 0,
+        ],
+        ["revisionRaced", () => revisionRaced],
+      ]),
+      {
+        revisionRaceCompileSuccess: true,
+        diagnosticCodesRevisionRaceCompile: true,
+        revisionRaceCompileCount: true,
+        revisionRaced: true,
+      },
     );
     const revisionAfterRace = project.revision();
     let contentRaceReads = 0;
@@ -2159,15 +2692,39 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     const racedContentCommit = compiler.compile({ scope: "source" });
     project.contentInputs = residentContentInputs;
     fs.writeFileSync(sourcePath, original);
-    TestValidator.predicate(
+    TestValidator.equals(
       "late content races roll generated output back before revision publication",
-      racedContentCommit.success === false &&
-        diagnosticCodes(racedContentCommit).has("compile-input-changed") &&
-        racedContentCommit.reviews.entries.length === 0 &&
-        contentRaceReads === 3 &&
-        project.revision() === revisionAfterRace &&
-        fs.readFileSync(generatedManifestPath, "utf8") ===
-          generatedBeforeContentRace,
+      namedFacts([
+        [
+          "racedContentCommitSuccess",
+          () => racedContentCommit.success === false,
+        ],
+        [
+          "diagnosticCodesRacedContentCommit",
+          () =>
+            diagnosticCodes(racedContentCommit).has("compile-input-changed"),
+        ],
+        [
+          "racedContentCommitCount",
+          () => racedContentCommit.reviews.entries.length === 0,
+        ],
+        ["contentRaceReads", () => contentRaceReads === 3],
+        ["projectRevision", () => project.revision() === revisionAfterRace],
+        [
+          "generatedManifestPathUtf8",
+          () =>
+            fs.readFileSync(generatedManifestPath, "utf8") ===
+            generatedBeforeContentRace,
+        ],
+      ]),
+      {
+        racedContentCommitSuccess: true,
+        diagnosticCodesRacedContentCommit: true,
+        racedContentCommitCount: true,
+        contentRaceReads: true,
+        projectRevision: true,
+        generatedManifestPathUtf8: true,
+      },
     );
     const residentCommitGenerated = project.commitGenerated;
     project.commitGenerated = (() => {
@@ -2258,28 +2815,47 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     }
     fs.writeFileSync(sourcePath, original);
 
-    TestValidator.predicate(
+    TestValidator.equals(
       "formation witness fixture mutation is accepted",
-      project.setModelRecipe({
-        ...modelRecipe(),
-        id: "formation-sentinel",
-        role: "prop",
-        archetype: "primitive-prop",
-        parameters: { shape: "sphere", radius: 0.25 },
-        capabilities: [],
-        attachments: [],
-      }).accepted &&
-        project.setFormationDesign({
-          ...formationDesign(),
-          modelRecipe: "formation-sentinel",
-        }).accepted &&
-        setProductionFixtureShotContract(project, {
-          ...shotContract(),
-          participants: [
-            { kind: "actor", id: "sentinel" },
-            { kind: "formation", id: "line" },
-          ],
-        }).accepted,
+      namedFacts([
+        [
+          "projectSetModelRecipe",
+          () =>
+            project.setModelRecipe({
+              ...modelRecipe(),
+              id: "formation-sentinel",
+              role: "prop",
+              archetype: "primitive-prop",
+              parameters: { shape: "sphere", radius: 0.25 },
+              capabilities: [],
+              attachments: [],
+            }).accepted,
+        ],
+        [
+          "projectSetFormationDesign",
+          () =>
+            project.setFormationDesign({
+              ...formationDesign(),
+              modelRecipe: "formation-sentinel",
+            }).accepted,
+        ],
+        [
+          "setProductionFixtureShotContractProject",
+          () =>
+            setProductionFixtureShotContract(project, {
+              ...shotContract(),
+              participants: [
+                { kind: "actor", id: "sentinel" },
+                { kind: "formation", id: "line" },
+              ],
+            }).accepted,
+        ],
+      ]),
+      {
+        projectSetModelRecipe: true,
+        projectSetFormationDesign: true,
+        setProductionFixtureShotContractProject: true,
+      },
     );
     const materializedFormation = compiler.compile({ scope: "source" });
     const formationCompileSucceeded = productionCompileSucceeded(
@@ -2310,26 +2886,51 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     ) as {
       formations: Array<{ id: string; count: number; passed: boolean }>;
     };
-    TestValidator.predicate(
+    TestValidator.equals(
       "formation count, compact anonymous runtime, hero identity and realization come from the compiler",
-      formationCompileSucceeded &&
-        formationShot.scene.nodes.some((node) => node.id === "captain") &&
-        formationShot.scene.nodes.filter(
-          (node) =>
-            node.id === "captain" || node.id.startsWith("formation:line:slot:"),
-        ).length === 1 &&
-        formationShot.formations.some(
-          (formation) =>
-            formation.id === "line" &&
-            formation.count === 6 &&
-            formation.anonymousCount === 5,
-        ) &&
-        formationRealization.formations.some(
-          (formation) =>
-            formation.id === "line" &&
-            formation.count === 6 &&
-            formation.passed,
-        ),
+      namedFacts([
+        ["formationCompileSucceeded", () => formationCompileSucceeded],
+        [
+          "formationShotScene",
+          () => formationShot.scene.nodes.some((node) => node.id === "captain"),
+        ],
+        [
+          "formationShotCount",
+          () =>
+            formationShot.scene.nodes.filter(
+              (node) =>
+                node.id === "captain" ||
+                node.id.startsWith("formation:line:slot:"),
+            ).length === 1,
+        ],
+        [
+          "formationShotFormations",
+          () =>
+            formationShot.formations.some(
+              (formation) =>
+                formation.id === "line" &&
+                formation.count === 6 &&
+                formation.anonymousCount === 5,
+            ),
+        ],
+        [
+          "formationRealizationFormations",
+          () =>
+            formationRealization.formations.some(
+              (formation) =>
+                formation.id === "line" &&
+                formation.count === 6 &&
+                formation.passed,
+            ),
+        ],
+      ]),
+      {
+        formationCompileSucceeded: true,
+        formationShotScene: true,
+        formationShotCount: true,
+        formationShotFormations: true,
+        formationRealizationFormations: true,
+      },
     );
     const formationSource = fs.readFileSync(sourcePath, "utf8");
     fs.writeFileSync(

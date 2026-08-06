@@ -36,6 +36,23 @@ import {
   worldDesign,
 } from "./productionFixtures";
 
+/**
+ * Evaluate named facts in order and stop at the first false one, so a failed
+ * comparison names the fact instead of collapsing into one boolean. Stopping
+ * keeps the short-circuit semantics the original conjunction had, which some
+ * facts depend on to guard the ones after them.
+ */
+const namedFacts = (
+  entries: ReadonlyArray<readonly [string, () => boolean]>,
+): Record<string, boolean> => {
+  const output: Record<string, boolean> = {};
+  for (const [name, evaluate] of entries) {
+    output[name] = evaluate();
+    if (output[name] === false) break;
+  }
+  return output;
+};
+
 const throws = (closure: () => unknown, fragment?: string): boolean => {
   try {
     closure();
@@ -350,9 +367,32 @@ const captureProductionAtomicFailure = (
     } catch (error) {
       caught = error;
     } finally {
-      fs.renameSync = nativeRename;
-      Reflect.set(fs, "rmSync", nativeRemove);
-      hooksInstalled = false;
+      // The guarded body records its product failure in `caught` instead of
+      // propagating it, so no primary failure is ever in flight at this
+      // boundary. What the policy adds is independence: the three restorations
+      // form one lifecycle -- the flag exists to keep the two hooks consistent
+      // -- and a failure in the first must not leave the second installed for
+      // every later scenario in this process.
+      preserveProductionProjectFixtureCleanup(undefined, [
+        {
+          resource: "atomic rename hook",
+          cleanup: () => {
+            fs.renameSync = nativeRename;
+          },
+        },
+        {
+          resource: "atomic remove hook",
+          cleanup: () => {
+            Reflect.set(fs, "rmSync", nativeRemove);
+          },
+        },
+        {
+          resource: "atomic hook installation flag",
+          cleanup: () => {
+            hooksInstalled = false;
+          },
+        },
+      ]);
     }
     const entries = fs.readdirSync(path.dirname(target));
     return {
@@ -406,32 +446,98 @@ const exerciseProductionAtomicFailureOwnership = (): void => {
   const primaryOnly = captureProductionAtomicFailure("primary-only");
   const combinedCleanup = captureProductionAtomicFailure("combined-cleanup");
   const combinedRecovery = captureProductionAtomicFailure("combined-recovery");
-  TestValidator.predicate(
+  TestValidator.equals(
     "production atomic cleanup and recovery preserve exact failure ownership",
-    standalone.caught === standalone.cleanupFailure &&
-      standalone.cleanupAttempted &&
-      standalone.targetExists &&
-      standalone.temporaryArtifacts === 0 &&
-      primaryOnly.caught === primaryOnly.primaryFailure &&
-      primaryOnly.cleanupAttempted &&
-      primaryOnly.targetExists === false &&
-      primaryOnly.temporaryArtifacts === 0 &&
-      aggregateContainsExactly(combinedCleanup.caught, [
-        combinedCleanup.primaryFailure,
-        combinedCleanup.cleanupFailure,
-      ]) &&
-      combinedCleanup.cleanupAttempted &&
-      combinedCleanup.targetExists === false &&
-      combinedCleanup.temporaryArtifacts === 1 &&
-      combinedRecovery.fixtureAccepted &&
-      aggregateContainsExactly(combinedRecovery.caught, [
-        combinedRecovery.primaryFailure,
-        combinedRecovery.recoveryFailure,
-      ]) &&
-      combinedRecovery.cleanupAttempted &&
-      combinedRecovery.recoveryAttempted &&
-      combinedRecovery.targetExists === false &&
-      combinedRecovery.quarantineArtifacts === 1,
+    namedFacts([
+      [
+        "standaloneCaught",
+        () => standalone.caught === standalone.cleanupFailure,
+      ],
+      ["standaloneCleanupAttempted", () => standalone.cleanupAttempted],
+      ["standaloneTargetExists", () => standalone.targetExists],
+      [
+        "standaloneTemporaryArtifacts",
+        () => standalone.temporaryArtifacts === 0,
+      ],
+      [
+        "primaryOnlyCaught",
+        () => primaryOnly.caught === primaryOnly.primaryFailure,
+      ],
+      ["primaryOnlyCleanupAttempted", () => primaryOnly.cleanupAttempted],
+      ["primaryOnlyTargetExists", () => primaryOnly.targetExists === false],
+      [
+        "primaryOnlyTemporaryArtifacts",
+        () => primaryOnly.temporaryArtifacts === 0,
+      ],
+      [
+        "aggregateContainsExactlyCombinedCleanup",
+        () =>
+          aggregateContainsExactly(combinedCleanup.caught, [
+            combinedCleanup.primaryFailure,
+            combinedCleanup.cleanupFailure,
+          ]),
+      ],
+      [
+        "combinedCleanupCleanupAttempted",
+        () => combinedCleanup.cleanupAttempted,
+      ],
+      [
+        "combinedCleanupTargetExists",
+        () => combinedCleanup.targetExists === false,
+      ],
+      [
+        "combinedCleanupTemporaryArtifacts",
+        () => combinedCleanup.temporaryArtifacts === 1,
+      ],
+      [
+        "combinedRecoveryFixtureAccepted",
+        () => combinedRecovery.fixtureAccepted,
+      ],
+      [
+        "aggregateContainsExactlyCombinedRecovery",
+        () =>
+          aggregateContainsExactly(combinedRecovery.caught, [
+            combinedRecovery.primaryFailure,
+            combinedRecovery.recoveryFailure,
+          ]),
+      ],
+      [
+        "combinedRecoveryCleanupAttempted",
+        () => combinedRecovery.cleanupAttempted,
+      ],
+      [
+        "combinedRecoveryRecoveryAttempted",
+        () => combinedRecovery.recoveryAttempted,
+      ],
+      [
+        "combinedRecoveryTargetExists",
+        () => combinedRecovery.targetExists === false,
+      ],
+      [
+        "combinedRecoveryQuarantineArtifacts",
+        () => combinedRecovery.quarantineArtifacts === 1,
+      ],
+    ]),
+    {
+      standaloneCaught: true,
+      standaloneCleanupAttempted: true,
+      standaloneTargetExists: true,
+      standaloneTemporaryArtifacts: true,
+      primaryOnlyCaught: true,
+      primaryOnlyCleanupAttempted: true,
+      primaryOnlyTargetExists: true,
+      primaryOnlyTemporaryArtifacts: true,
+      aggregateContainsExactlyCombinedCleanup: true,
+      combinedCleanupCleanupAttempted: true,
+      combinedCleanupTargetExists: true,
+      combinedCleanupTemporaryArtifacts: true,
+      combinedRecoveryFixtureAccepted: true,
+      aggregateContainsExactlyCombinedRecovery: true,
+      combinedRecoveryCleanupAttempted: true,
+      combinedRecoveryRecoveryAttempted: true,
+      combinedRecoveryTargetExists: true,
+      combinedRecoveryQuarantineArtifacts: true,
+    },
   );
 };
 
@@ -469,24 +575,56 @@ const exerciseRenderFileDescriptorCleanup = (
     relativePath,
     "nested",
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "render-file descriptor cleanup preserves every operation and resource failure",
-    standaloneSource.caught === standaloneSource.sourceCloseFailure &&
-      standaloneResident.caught === standaloneResident.residentCloseFailure &&
-      primaryOnly.caught === primaryOnly.primaryFailure &&
-      aggregateContainsExactly(combinedResident.caught, [
-        combinedResident.primaryFailure,
-        combinedResident.residentCloseFailure,
-      ]) &&
-      aggregateContainsExactly(combinedSource.caught, [
-        combinedSource.primaryFailure,
-        combinedSource.sourceCloseFailure,
-      ]) &&
-      aggregateContainsExactly(nested.caught, [
-        nested.primaryFailure,
-        nested.residentCloseFailure,
-        nested.sourceCloseFailure,
-      ]),
+    namedFacts([
+      [
+        "standaloneSourceCaught",
+        () => standaloneSource.caught === standaloneSource.sourceCloseFailure,
+      ],
+      [
+        "standaloneResidentCaught",
+        () =>
+          standaloneResident.caught === standaloneResident.residentCloseFailure,
+      ],
+      [
+        "primaryOnlyCaught",
+        () => primaryOnly.caught === primaryOnly.primaryFailure,
+      ],
+      [
+        "aggregateContainsExactlyCombinedResident",
+        () =>
+          aggregateContainsExactly(combinedResident.caught, [
+            combinedResident.primaryFailure,
+            combinedResident.residentCloseFailure,
+          ]),
+      ],
+      [
+        "aggregateContainsExactlyCombinedSource",
+        () =>
+          aggregateContainsExactly(combinedSource.caught, [
+            combinedSource.primaryFailure,
+            combinedSource.sourceCloseFailure,
+          ]),
+      ],
+      [
+        "aggregateContainsExactlyNested",
+        () =>
+          aggregateContainsExactly(nested.caught, [
+            nested.primaryFailure,
+            nested.residentCloseFailure,
+            nested.sourceCloseFailure,
+          ]),
+      ],
+    ]),
+    {
+      standaloneSourceCaught: true,
+      standaloneResidentCaught: true,
+      primaryOnlyCaught: true,
+      aggregateContainsExactlyCombinedResident: true,
+      aggregateContainsExactlyCombinedSource: true,
+      aggregateContainsExactlyNested: true,
+    },
   );
 };
 
@@ -526,15 +664,32 @@ export const test_mcp_production_project = (): void => {
   const fixture = productionFixture();
   try {
     const project = AutoMovieProductionProject.open(fixture.root);
-    TestValidator.predicate(
+    TestValidator.equals(
       "manifest and summary preserve tracked identity",
-      project.manifest().formatVersion === 2 &&
-        project.summary().initialized === false &&
-        project.productionId === "fixture-film" &&
-        project.generatedRoot() ===
-          path.join(fixture.root, "generated", "fixture-film") &&
-        project.renderRoot() ===
-          path.join(fixture.root, "renders", "fixture-film"),
+      namedFacts([
+        ["projectManifest", () => project.manifest().formatVersion === 2],
+        ["projectSummary", () => project.summary().initialized === false],
+        ["projectProductionId", () => project.productionId === "fixture-film"],
+        [
+          "projectGeneratedRoot",
+          () =>
+            project.generatedRoot() ===
+            path.join(fixture.root, "generated", "fixture-film"),
+        ],
+        [
+          "projectRenderRoot",
+          () =>
+            project.renderRoot() ===
+            path.join(fixture.root, "renders", "fixture-film"),
+        ],
+      ]),
+      {
+        projectManifest: true,
+        projectSummary: true,
+        projectProductionId: true,
+        projectGeneratedRoot: true,
+        projectRenderRoot: true,
+      },
     );
     const caseAliasedRoot =
       fixture.root === fixture.root.toUpperCase()
@@ -555,16 +710,38 @@ export const test_mcp_production_project = (): void => {
     const readOnlyLint = new AutoMovieProductionCompiler(readOnly).lint({
       scope: "source",
     });
-    TestValidator.predicate(
+    TestValidator.equals(
       "read-only open and lint never create, migrate, repair, or mutate state",
-      typeof readOnlyLint.compiler.inputFingerprint === "string" &&
-        readOnly.productionId === project.productionId &&
-        throws(
-          () => readOnly.setWorldDesign(fixtureWorldDesign()),
-          "opened read-only",
-        ) &&
-        JSON.stringify(snapshotTree(fixture.root)) ===
-          JSON.stringify(beforeReadOnly),
+      namedFacts([
+        [
+          "typeofReadOnlyLint",
+          () => typeof readOnlyLint.compiler.inputFingerprint === "string",
+        ],
+        [
+          "readOnlyProductionId",
+          () => readOnly.productionId === project.productionId,
+        ],
+        [
+          "rejected",
+          () =>
+            throws(
+              () => readOnly.setWorldDesign(fixtureWorldDesign()),
+              "opened read-only",
+            ),
+        ],
+        [
+          "stringifySnapshotTree",
+          () =>
+            JSON.stringify(snapshotTree(fixture.root)) ===
+            JSON.stringify(beforeReadOnly),
+        ],
+      ]),
+      {
+        typeofReadOnlyLint: true,
+        readOnlyProductionId: true,
+        rejected: true,
+        stringifySnapshotTree: true,
+      },
     );
     const manifestCopy = project.manifest();
     manifestCopy.generatedRoot = "caller-mutated";
@@ -577,29 +754,71 @@ export const test_mcp_production_project = (): void => {
       "project-level erase audit reasons cannot be blank",
       throws(() => project.eraseDesignArtifact({ kind: "world" }, " ")),
     );
-    TestValidator.predicate(
+    TestValidator.equals(
       "every design target is readable",
-      project.design({ kind: "production" }) !== null &&
-        project.design({ kind: "model", id: "sentinel" }) !== null &&
-        project.design({ kind: "world" }) !== null &&
-        project.design({ kind: "formation", id: "absent" }) === null &&
-        project.design({ kind: "shot", id: "opening" }) !== null &&
-        project.design({ kind: "acceptance", id: "opening-beauty" }) !== null,
+      namedFacts([
+        [
+          "projectDesign",
+          () => project.design({ kind: "production" }) !== null,
+        ],
+        [
+          "projectDesign2",
+          () => project.design({ kind: "model", id: "sentinel" }) !== null,
+        ],
+        ["projectDesign3", () => project.design({ kind: "world" }) !== null],
+        [
+          "projectDesign4",
+          () => project.design({ kind: "formation", id: "absent" }) === null,
+        ],
+        [
+          "projectDesign5",
+          () => project.design({ kind: "shot", id: "opening" }) !== null,
+        ],
+        [
+          "projectDesign6",
+          () =>
+            project.design({ kind: "acceptance", id: "opening-beauty" }) !==
+            null,
+        ],
+      ]),
+      {
+        projectDesign: true,
+        projectDesign2: true,
+        projectDesign3: true,
+        projectDesign4: true,
+        projectDesign5: true,
+        projectDesign6: true,
+      },
     );
     const stagedShot = shotContract();
     stagedShot.reviewFrames[0]!.id = "replacement-apex";
     const stagedDependencyBreak = project.setShotContract(stagedShot);
-    TestValidator.predicate(
+    TestValidator.equals(
       "one-artifact setters accept an orderable dependency migration but expose its new downstream blockers",
-      stagedDependencyBreak.accepted &&
-        stagedDependencyBreak.diagnostics.some(
-          (diagnostic) =>
-            diagnostic.code === "design-downstream-invalidated" &&
-            diagnostic.category === "warning" &&
-            diagnostic.target.startsWith("acceptance:"),
-        ) &&
-        new AutoMovieProductionCompiler(project).lint({ scope: "design" })
-          .success === false,
+      namedFacts([
+        ["stagedDependencyBreakAccepted", () => stagedDependencyBreak.accepted],
+        [
+          "stagedDependencyBreakDiagnostics",
+          () =>
+            stagedDependencyBreak.diagnostics.some(
+              (diagnostic) =>
+                diagnostic.code === "design-downstream-invalidated" &&
+                diagnostic.category === "warning" &&
+                diagnostic.target.startsWith("acceptance:"),
+            ),
+        ],
+        [
+          "newAutoMovieProductionCompiler",
+          () =>
+            new AutoMovieProductionCompiler(project).lint({ scope: "design" })
+              .success === false,
+        ],
+      ]),
+      {
+        stagedDependencyBreakAccepted: true,
+        stagedDependencyBreakDiagnostics: true,
+        newAutoMovieProductionCompiler: true,
+      },
     );
     const unrelatedDuringMigration = project.setWorldDesign(worldDesign());
     TestValidator.predicate(
@@ -615,13 +834,35 @@ export const test_mcp_production_project = (): void => {
         new AutoMovieProductionCompiler(project).lint({ scope: "design" })
           .success,
     );
-    TestValidator.predicate(
+    TestValidator.equals(
       "source ownership rejects absolute, external and non-TypeScript paths",
-      throws(() => project.resolveSourcePath(path.resolve("outside.ts"))) &&
-        throws(() => project.resolveSourcePath("../outside.ts")) &&
-        throws(() => project.resolveSourcePath("outside/source.ts")) &&
-        throws(() => project.resolveSourcePath("src/not-source.json")) &&
-        throws(() => project.readSource("src/missing.ts")),
+      namedFacts([
+        [
+          "rejected",
+          () =>
+            throws(() => project.resolveSourcePath(path.resolve("outside.ts"))),
+        ],
+        [
+          "rejected2",
+          () => throws(() => project.resolveSourcePath("../outside.ts")),
+        ],
+        [
+          "rejected3",
+          () => throws(() => project.resolveSourcePath("outside/source.ts")),
+        ],
+        [
+          "rejected4",
+          () => throws(() => project.resolveSourcePath("src/not-source.json")),
+        ],
+        ["rejected5", () => throws(() => project.readSource("src/missing.ts"))],
+      ]),
+      {
+        rejected: true,
+        rejected2: true,
+        rejected3: true,
+        rejected4: true,
+        rejected5: true,
+      },
     );
     const outsideSource = path.join(fixture.root, "outside-source");
     const sourceJunction = path.join(fixture.root, "src/junction");
@@ -807,16 +1048,35 @@ export const test_mcp_production_project = (): void => {
         }),
       ]);
     }
-    TestValidator.predicate(
+    TestValidator.equals(
       "state reads bind raw records and JSON to verified descriptors across pathname swaps",
-      statePathReads.size === 0 &&
-        Buffer.from(projectStateManifest).equals(
-          stateReadResidents.get(projectManifestPath)!,
-        ) &&
-        Buffer.from(trackedRevision).equals(
-          stateReadResidents.get(trackedRevisionPath)!,
-        ) &&
-        currentRevision === expectedRevision,
+      namedFacts([
+        ["statePathReadsSize", () => statePathReads.size === 0],
+        [
+          "projectStateManifestStateReadResidents",
+          () =>
+            Buffer.from(projectStateManifest).equals(
+              stateReadResidents.get(projectManifestPath)!,
+            ),
+        ],
+        [
+          "trackedRevisionStateReadResidents",
+          () =>
+            Buffer.from(trackedRevision).equals(
+              stateReadResidents.get(trackedRevisionPath)!,
+            ),
+        ],
+        [
+          "currentRevisionExpectedRevision",
+          () => currentRevision === expectedRevision,
+        ],
+      ]),
+      {
+        statePathReadsSize: true,
+        projectStateManifestStateReadResidents: true,
+        trackedRevisionStateReadResidents: true,
+        currentRevisionExpectedRevision: true,
+      },
     );
 
     const invalidSchema = project.setModelRecipe(
@@ -862,27 +1122,62 @@ export const test_mcp_production_project = (): void => {
         module: "SRC/shots/opening.ts",
       },
     });
-    TestValidator.predicate(
+    TestValidator.equals(
       "setter rejects both schema and graph errors before writing",
-      invalidSchema.accepted === false &&
-        invalidSchema.diagnostics[0]?.code === "design-schema-invalid" &&
-        invalidGraph.accepted === false &&
-        invalidGraph.diagnostics.some(
-          (item) => item.code === "model-parameter-invalid",
-        ) &&
-        invalidReference.diagnostics.some(
-          (item) => item.code === "design-reference-missing",
-        ) &&
-        caseCollision.accepted === false &&
-        caseCollision.diagnostics[0]?.code === "design-id-collision" &&
-        nonCanonicalSources.every((mutation) =>
-          mutation.diagnostics.some(
-            (item) => item.code === "design-source-path-invalid",
-          ),
-        ) &&
-        sourceCaseCollision.diagnostics.some(
-          (item) => item.code === "design-source-path-collision",
-        ),
+      namedFacts([
+        ["invalidSchemaAccepted", () => invalidSchema.accepted === false],
+        [
+          "invalidSchemaDiagnostics",
+          () => invalidSchema.diagnostics[0]?.code === "design-schema-invalid",
+        ],
+        ["invalidGraphAccepted", () => invalidGraph.accepted === false],
+        [
+          "invalidGraphDiagnostics",
+          () =>
+            invalidGraph.diagnostics.some(
+              (item) => item.code === "model-parameter-invalid",
+            ),
+        ],
+        [
+          "invalidReferenceDiagnostics",
+          () =>
+            invalidReference.diagnostics.some(
+              (item) => item.code === "design-reference-missing",
+            ),
+        ],
+        ["caseCollisionAccepted", () => caseCollision.accepted === false],
+        [
+          "caseCollisionDiagnostics",
+          () => caseCollision.diagnostics[0]?.code === "design-id-collision",
+        ],
+        [
+          "nonCanonicalSourcesMutation",
+          () =>
+            nonCanonicalSources.every((mutation) =>
+              mutation.diagnostics.some(
+                (item) => item.code === "design-source-path-invalid",
+              ),
+            ),
+        ],
+        [
+          "sourceCaseCollisionDiagnostics",
+          () =>
+            sourceCaseCollision.diagnostics.some(
+              (item) => item.code === "design-source-path-collision",
+            ),
+        ],
+      ]),
+      {
+        invalidSchemaAccepted: true,
+        invalidSchemaDiagnostics: true,
+        invalidGraphAccepted: true,
+        invalidGraphDiagnostics: true,
+        invalidReferenceDiagnostics: true,
+        caseCollisionAccepted: true,
+        caseCollisionDiagnostics: true,
+        nonCanonicalSourcesMutation: true,
+        sourceCaseCollisionDiagnostics: true,
+      },
     );
     const boundedFormationCount =
       Math.floor(AUTOMOVIE_MAX_FORMATION_MEMBERS / 2) + 1;
@@ -902,19 +1197,38 @@ export const test_mcp_production_project = (): void => {
       id: "bounded-b",
       count: boundedFormationCount,
     });
-    TestValidator.predicate(
+    TestValidator.equals(
       "formation setters hard-refuse a graph-wide explicit-slot overflow",
-      firstBoundedFormation.accepted &&
-        aggregateOverflow.accepted === false &&
-        aggregateOverflow.diagnostics.some(
-          (item) =>
-            item.code === "design-range-invalid" &&
-            item.target === "formations",
-        ) &&
-        project.eraseDesignArtifact({
-          kind: "formation",
-          id: "bounded-a",
-        }).accepted,
+      namedFacts([
+        ["firstBoundedFormationAccepted", () => firstBoundedFormation.accepted],
+        [
+          "aggregateOverflowAccepted",
+          () => aggregateOverflow.accepted === false,
+        ],
+        [
+          "aggregateOverflowDiagnostics",
+          () =>
+            aggregateOverflow.diagnostics.some(
+              (item) =>
+                item.code === "design-range-invalid" &&
+                item.target === "formations",
+            ),
+        ],
+        [
+          "projectEraseDesignArtifact",
+          () =>
+            project.eraseDesignArtifact({
+              kind: "formation",
+              id: "bounded-a",
+            }).accepted,
+        ],
+      ]),
+      {
+        firstBoundedFormationAccepted: true,
+        aggregateOverflowAccepted: true,
+        aggregateOverflowDiagnostics: true,
+        projectEraseDesignArtifact: true,
+      },
     );
     TestValidator.predicate(
       "missing design erase is explicit",
@@ -955,20 +1269,42 @@ export const test_mcp_production_project = (): void => {
       },
       required: true,
     };
-    TestValidator.predicate(
+    TestValidator.equals(
       "film-scoped criteria are real shot and production references",
-      project.setAcceptanceScenario(filmAcceptance).accepted &&
-        project.setAcceptanceScenario(filmEventAcceptance).accepted &&
-        project
-          .eraseDesignArtifact({ kind: "shot", id: "opening" })
-          .diagnostics.some((diagnostic) =>
-            diagnostic.message.includes("acceptance:film-opening-beauty"),
-          ) &&
-        project
-          .eraseDesignArtifact({ kind: "production" })
-          .diagnostics.some((diagnostic) =>
-            diagnostic.message.includes("acceptance:film-opening-beauty"),
-          ),
+      namedFacts([
+        [
+          "projectSetAcceptanceScenario",
+          () => project.setAcceptanceScenario(filmAcceptance).accepted,
+        ],
+        [
+          "projectSetAcceptanceScenario2",
+          () => project.setAcceptanceScenario(filmEventAcceptance).accepted,
+        ],
+        [
+          "projectEraseDesignArtifact",
+          () =>
+            project
+              .eraseDesignArtifact({ kind: "shot", id: "opening" })
+              .diagnostics.some((diagnostic) =>
+                diagnostic.message.includes("acceptance:film-opening-beauty"),
+              ),
+        ],
+        [
+          "projectEraseDesignArtifact2",
+          () =>
+            project
+              .eraseDesignArtifact({ kind: "production" })
+              .diagnostics.some((diagnostic) =>
+                diagnostic.message.includes("acceptance:film-opening-beauty"),
+              ),
+        ],
+      ]),
+      {
+        projectSetAcceptanceScenario: true,
+        projectSetAcceptanceScenario2: true,
+        projectEraseDesignArtifact: true,
+        projectEraseDesignArtifact2: true,
+      },
     );
     TestValidator.predicate(
       "temporary film acceptances erase without a cascade",
@@ -1170,28 +1506,56 @@ export const test_mcp_production_project = (): void => {
       kind: "model",
       id: "sentinel",
     });
-    TestValidator.predicate(
+    TestValidator.equals(
       "model consequences and erasure include dependent LOD models and formations",
-      cyclicDependencyTraversal &&
-        dependentModelMutation.accepted &&
-        transitiveDependentMutation.accepted &&
-        refusedModelErase.consequences.staleReviews.some(
-          (target) =>
-            target.kind === "design" &&
-            target.design.kind === "model" &&
-            target.design.id === "sentinel-variant",
-        ) &&
-        refusedModelErase.consequences.staleReviews.some(
-          (target) =>
-            target.kind === "design" &&
-            target.design.kind === "model" &&
-            target.design.id === "sentinel-variant-far",
-        ) &&
-        refusedModelErase.diagnostics.some(
-          (item) =>
-            item.message.includes("model:sentinel-variant") ||
-            item.message.includes("formation:line"),
-        ),
+      namedFacts([
+        ["cyclicDependencyTraversal", () => cyclicDependencyTraversal],
+        [
+          "dependentModelMutationAccepted",
+          () => dependentModelMutation.accepted,
+        ],
+        [
+          "transitiveDependentMutationAccepted",
+          () => transitiveDependentMutation.accepted,
+        ],
+        [
+          "refusedModelEraseConsequences",
+          () =>
+            refusedModelErase.consequences.staleReviews.some(
+              (target) =>
+                target.kind === "design" &&
+                target.design.kind === "model" &&
+                target.design.id === "sentinel-variant",
+            ),
+        ],
+        [
+          "refusedModelEraseConsequences2",
+          () =>
+            refusedModelErase.consequences.staleReviews.some(
+              (target) =>
+                target.kind === "design" &&
+                target.design.kind === "model" &&
+                target.design.id === "sentinel-variant-far",
+            ),
+        ],
+        [
+          "refusedModelEraseDiagnostics",
+          () =>
+            refusedModelErase.diagnostics.some(
+              (item) =>
+                item.message.includes("model:sentinel-variant") ||
+                item.message.includes("formation:line"),
+            ),
+        ],
+      ]),
+      {
+        cyclicDependencyTraversal: true,
+        dependentModelMutationAccepted: true,
+        transitiveDependentMutationAccepted: true,
+        refusedModelEraseConsequences: true,
+        refusedModelEraseConsequences2: true,
+        refusedModelEraseDiagnostics: true,
+      },
     );
     project.setShotContract({
       ...shotContract(),
@@ -1214,33 +1578,88 @@ export const test_mcp_production_project = (): void => {
     const acceptanceMutation = project.setAcceptanceScenario(
       acceptanceScenarios()[0]!,
     );
-    TestValidator.predicate(
+    TestValidator.equals(
       "mutation consequences follow target-local shot and review dependencies",
-      secondShotMutation.accepted &&
-        secondShotMutation.consequences.staleRenders.includes("shot:second") &&
-        secondShotMutation.consequences.staleRenders.includes(
-          "shot:opening",
-        ) === false &&
-        acceptanceMutation.accepted &&
-        acceptanceMutation.consequences.staleRenders.length === 0 &&
-        acceptanceMutation.consequences.staleReviews.some(
-          (target) => target.kind === "shot" && target.id === "opening",
-        ) &&
-        acceptanceMutation.consequences.staleReviews.some(
-          (target) => target.kind === "shot" && target.id === "second",
-        ) === false &&
-        secondShotMutation.consequences.staleReviews.some(
-          (target) => target.kind === "sequence" && target.id === "SEQ-SIGNAL",
-        ) &&
-        secondShotMutation.consequences.staleReviews.some(
-          (target) => target.kind === "sequence" && target.id === "SEQ-ANSWER",
-        ) === false &&
-        secondShotMutation.consequences.staleReviews.some(
-          (target) => target.kind === "rendition",
-        ) === false &&
-        acceptanceMutation.consequences.staleReviews.some(
-          (target) => target.kind === "sequence" && target.id === "SEQ-SIGNAL",
-        ),
+      namedFacts([
+        ["secondShotMutationAccepted", () => secondShotMutation.accepted],
+        [
+          "secondShotMutationConsequences",
+          () =>
+            secondShotMutation.consequences.staleRenders.includes(
+              "shot:second",
+            ),
+        ],
+        [
+          "secondShotMutationConsequences2",
+          () =>
+            secondShotMutation.consequences.staleRenders.includes(
+              "shot:opening",
+            ) === false,
+        ],
+        ["acceptanceMutationAccepted", () => acceptanceMutation.accepted],
+        [
+          "acceptanceMutationCount",
+          () => acceptanceMutation.consequences.staleRenders.length === 0,
+        ],
+        [
+          "acceptanceMutationConsequences",
+          () =>
+            acceptanceMutation.consequences.staleReviews.some(
+              (target) => target.kind === "shot" && target.id === "opening",
+            ),
+        ],
+        [
+          "acceptanceMutationConsequences2",
+          () =>
+            acceptanceMutation.consequences.staleReviews.some(
+              (target) => target.kind === "shot" && target.id === "second",
+            ) === false,
+        ],
+        [
+          "secondShotMutationConsequences3",
+          () =>
+            secondShotMutation.consequences.staleReviews.some(
+              (target) =>
+                target.kind === "sequence" && target.id === "SEQ-SIGNAL",
+            ),
+        ],
+        [
+          "secondShotMutationConsequences4",
+          () =>
+            secondShotMutation.consequences.staleReviews.some(
+              (target) =>
+                target.kind === "sequence" && target.id === "SEQ-ANSWER",
+            ) === false,
+        ],
+        [
+          "secondShotMutationConsequences5",
+          () =>
+            secondShotMutation.consequences.staleReviews.some(
+              (target) => target.kind === "rendition",
+            ) === false,
+        ],
+        [
+          "acceptanceMutationConsequences3",
+          () =>
+            acceptanceMutation.consequences.staleReviews.some(
+              (target) =>
+                target.kind === "sequence" && target.id === "SEQ-SIGNAL",
+            ),
+        ],
+      ]),
+      {
+        secondShotMutationAccepted: true,
+        secondShotMutationConsequences: true,
+        secondShotMutationConsequences2: true,
+        acceptanceMutationAccepted: true,
+        acceptanceMutationCount: true,
+        acceptanceMutationConsequences: true,
+        acceptanceMutationConsequences2: true,
+        secondShotMutationConsequences3: true,
+        secondShotMutationConsequences4: true,
+        secondShotMutationConsequences5: true,
+        acceptanceMutationConsequences3: true,
+      },
     );
     const refusedRepaint = project.setProductionDesign(
       productionDesign({ visualDelivery: "repainted" }),
@@ -1296,65 +1715,186 @@ export const test_mcp_production_project = (): void => {
       facingDeg: 1,
     });
     const worldMutation = project.setWorldDesign(worldDesign());
-    TestValidator.predicate(
+    TestValidator.equals(
       "mutation consequences identify exact sequence and rendition review dependencies",
-      modelMutation.consequences.staleRenders.includes("shot:opening") &&
-        modelMutation.consequences.staleRenders.includes("shot:second") &&
-        worldMutation.consequences.staleReviews.some(
-          (target) => target.kind === "film",
-        ) &&
-        productionMutation.consequences.staleRenders.length > 0 &&
-        repaintedShotMutation.consequences.staleReviews.some(
-          (target) => target.kind === "rendition" && target.id === "second",
-        ) &&
-        repaintedShotMutation.consequences.staleReviews.some(
-          (target) => target.kind === "sequence" && target.id === "SEQ-SIGNAL",
-        ) &&
-        repaintedShotMutation.consequences.staleReviews.some(
-          (target) => target.kind === "sequence" && target.id === "SEQ-ANSWER",
-        ) === false &&
-        movedSequenceShotMutation.consequences.staleReviews.some(
-          (target) => target.kind === "sequence" && target.id === "SEQ-SIGNAL",
-        ) &&
-        movedSequenceShotMutation.consequences.staleReviews.some(
-          (target) => target.kind === "sequence" && target.id === "SEQ-ANSWER",
-        ) &&
-        repaintedAcceptanceMutation.consequences.staleReviews.some(
-          (target) => target.kind === "rendition" && target.id === "opening",
-        ) &&
-        movedAcceptanceMutation.consequences.staleReviews.some(
-          (target) => target.kind === "shot" && target.id === "opening",
-        ) &&
-        movedAcceptanceMutation.consequences.staleReviews.some(
-          (target) => target.kind === "shot" && target.id === "second",
-        ) &&
-        movedAcceptanceMutation.consequences.staleReviews.some(
-          (target) => target.kind === "rendition" && target.id === "opening",
-        ) &&
-        movedAcceptanceMutation.consequences.staleReviews.some(
-          (target) => target.kind === "rendition" && target.id === "second",
-        ) &&
-        movedAcceptanceMutation.consequences.staleReviews.some(
-          (target) => target.kind === "sequence" && target.id === "SEQ-SIGNAL",
-        ) &&
-        movedAcceptanceMutation.consequences.staleReviews.some(
-          (target) => target.kind === "sequence" && target.id === "SEQ-ANSWER",
-        ) &&
-        restoredAcceptanceMutation.accepted &&
-        modelMutation.consequences.staleReviews.some(
-          (target) => target.kind === "rendition" && target.id === "opening",
-        ) &&
-        formationMutation.consequences.staleReviews.some(
-          (target) => target.kind === "rendition" && target.id === "opening",
-        ) &&
-        worldMutation.consequences.staleReviews.some(
-          (target) => target.kind === "sequence" && target.id === "SEQ-SIGNAL",
-        ) &&
-        project.setProductionDesign(productionDesign()).accepted &&
-        project.eraseDesignArtifact({
-          kind: "shot",
-          id: "second",
-        }).accepted,
+      namedFacts([
+        [
+          "modelMutationConsequences",
+          () =>
+            modelMutation.consequences.staleRenders.includes("shot:opening"),
+        ],
+        [
+          "modelMutationConsequences2",
+          () => modelMutation.consequences.staleRenders.includes("shot:second"),
+        ],
+        [
+          "worldMutationConsequences",
+          () =>
+            worldMutation.consequences.staleReviews.some(
+              (target) => target.kind === "film",
+            ),
+        ],
+        [
+          "productionMutationCount",
+          () => productionMutation.consequences.staleRenders.length > 0,
+        ],
+        [
+          "repaintedShotMutationConsequences",
+          () =>
+            repaintedShotMutation.consequences.staleReviews.some(
+              (target) => target.kind === "rendition" && target.id === "second",
+            ),
+        ],
+        [
+          "repaintedShotMutationConsequences2",
+          () =>
+            repaintedShotMutation.consequences.staleReviews.some(
+              (target) =>
+                target.kind === "sequence" && target.id === "SEQ-SIGNAL",
+            ),
+        ],
+        [
+          "repaintedShotMutationConsequences3",
+          () =>
+            repaintedShotMutation.consequences.staleReviews.some(
+              (target) =>
+                target.kind === "sequence" && target.id === "SEQ-ANSWER",
+            ) === false,
+        ],
+        [
+          "movedSequenceShotMutationConsequences",
+          () =>
+            movedSequenceShotMutation.consequences.staleReviews.some(
+              (target) =>
+                target.kind === "sequence" && target.id === "SEQ-SIGNAL",
+            ),
+        ],
+        [
+          "movedSequenceShotMutationConsequences2",
+          () =>
+            movedSequenceShotMutation.consequences.staleReviews.some(
+              (target) =>
+                target.kind === "sequence" && target.id === "SEQ-ANSWER",
+            ),
+        ],
+        [
+          "repaintedAcceptanceMutationConsequences",
+          () =>
+            repaintedAcceptanceMutation.consequences.staleReviews.some(
+              (target) =>
+                target.kind === "rendition" && target.id === "opening",
+            ),
+        ],
+        [
+          "movedAcceptanceMutationConsequences",
+          () =>
+            movedAcceptanceMutation.consequences.staleReviews.some(
+              (target) => target.kind === "shot" && target.id === "opening",
+            ),
+        ],
+        [
+          "movedAcceptanceMutationConsequences2",
+          () =>
+            movedAcceptanceMutation.consequences.staleReviews.some(
+              (target) => target.kind === "shot" && target.id === "second",
+            ),
+        ],
+        [
+          "movedAcceptanceMutationConsequences3",
+          () =>
+            movedAcceptanceMutation.consequences.staleReviews.some(
+              (target) =>
+                target.kind === "rendition" && target.id === "opening",
+            ),
+        ],
+        [
+          "movedAcceptanceMutationConsequences4",
+          () =>
+            movedAcceptanceMutation.consequences.staleReviews.some(
+              (target) => target.kind === "rendition" && target.id === "second",
+            ),
+        ],
+        [
+          "movedAcceptanceMutationConsequences5",
+          () =>
+            movedAcceptanceMutation.consequences.staleReviews.some(
+              (target) =>
+                target.kind === "sequence" && target.id === "SEQ-SIGNAL",
+            ),
+        ],
+        [
+          "movedAcceptanceMutationConsequences6",
+          () =>
+            movedAcceptanceMutation.consequences.staleReviews.some(
+              (target) =>
+                target.kind === "sequence" && target.id === "SEQ-ANSWER",
+            ),
+        ],
+        [
+          "restoredAcceptanceMutationAccepted",
+          () => restoredAcceptanceMutation.accepted,
+        ],
+        [
+          "modelMutationConsequences3",
+          () =>
+            modelMutation.consequences.staleReviews.some(
+              (target) =>
+                target.kind === "rendition" && target.id === "opening",
+            ),
+        ],
+        [
+          "formationMutationConsequences",
+          () =>
+            formationMutation.consequences.staleReviews.some(
+              (target) =>
+                target.kind === "rendition" && target.id === "opening",
+            ),
+        ],
+        [
+          "worldMutationConsequences2",
+          () =>
+            worldMutation.consequences.staleReviews.some(
+              (target) =>
+                target.kind === "sequence" && target.id === "SEQ-SIGNAL",
+            ),
+        ],
+        [
+          "projectSetProductionDesign",
+          () => project.setProductionDesign(productionDesign()).accepted,
+        ],
+        [
+          "projectEraseDesignArtifact",
+          () =>
+            project.eraseDesignArtifact({
+              kind: "shot",
+              id: "second",
+            }).accepted,
+        ],
+      ]),
+      {
+        modelMutationConsequences: true,
+        modelMutationConsequences2: true,
+        worldMutationConsequences: true,
+        productionMutationCount: true,
+        repaintedShotMutationConsequences: true,
+        repaintedShotMutationConsequences2: true,
+        repaintedShotMutationConsequences3: true,
+        movedSequenceShotMutationConsequences: true,
+        movedSequenceShotMutationConsequences2: true,
+        repaintedAcceptanceMutationConsequences: true,
+        movedAcceptanceMutationConsequences: true,
+        movedAcceptanceMutationConsequences2: true,
+        movedAcceptanceMutationConsequences3: true,
+        movedAcceptanceMutationConsequences4: true,
+        movedAcceptanceMutationConsequences5: true,
+        movedAcceptanceMutationConsequences6: true,
+        restoredAcceptanceMutationAccepted: true,
+        modelMutationConsequences3: true,
+        formationMutationConsequences: true,
+        worldMutationConsequences2: true,
+        projectSetProductionDesign: true,
+        projectEraseDesignArtifact: true,
+      },
     );
     const movedReviewKeys =
       movedSequenceShotMutation.consequences.staleReviews.map((target) =>
@@ -1381,14 +1921,28 @@ export const test_mcp_production_project = (): void => {
       title: "fixture-film concurrent revision",
     });
     const concurrentMutation = first.setProductionDesign(concurrentDesign);
-    TestValidator.predicate(
+    TestValidator.equals(
       "optimistic revision rejects stale resident writers",
-      concurrentMutation.accepted &&
-        concurrentMutation.revision > staleRevision &&
-        throws(
-          () => stale.setProductionDesign(productionDesign()),
-          "Production revision changed",
-        ),
+      namedFacts([
+        ["concurrentMutationAccepted", () => concurrentMutation.accepted],
+        [
+          "concurrentMutationRevision",
+          () => concurrentMutation.revision > staleRevision,
+        ],
+        [
+          "rejected",
+          () =>
+            throws(
+              () => stale.setProductionDesign(productionDesign()),
+              "Production revision changed",
+            ),
+        ],
+      ]),
+      {
+        concurrentMutationAccepted: true,
+        concurrentMutationRevision: true,
+        rejected: true,
+      },
     );
     const staleEraser = AutoMovieProductionProject.open(fixture.root);
     const staleEraseRevision = staleEraser.revision();
@@ -1397,22 +1951,41 @@ export const test_mcp_production_project = (): void => {
       id: "stale-erase",
     };
     const formationAddition = first.setFormationDesign(removableFormation);
-    TestValidator.predicate(
+    TestValidator.equals(
       "optimistic revision rejects stale resident erasers",
-      formationAddition.accepted &&
-        formationAddition.revision > staleEraseRevision &&
-        throws(
+      namedFacts([
+        ["formationAdditionAccepted", () => formationAddition.accepted],
+        [
+          "formationAdditionRevision",
+          () => formationAddition.revision > staleEraseRevision,
+        ],
+        [
+          "rejected",
           () =>
-            staleEraser.eraseDesignArtifact({
+            throws(
+              () =>
+                staleEraser.eraseDesignArtifact({
+                  kind: "formation",
+                  id: removableFormation.id,
+                }),
+              "Production revision changed",
+            ),
+        ],
+        [
+          "autoMovieProductionProjectOpen",
+          () =>
+            AutoMovieProductionProject.open(fixture.root).eraseDesignArtifact({
               kind: "formation",
               id: removableFormation.id,
-            }),
-          "Production revision changed",
-        ) &&
-        AutoMovieProductionProject.open(fixture.root).eraseDesignArtifact({
-          kind: "formation",
-          id: removableFormation.id,
-        }).accepted,
+            }).accepted,
+        ],
+      ]),
+      {
+        formationAdditionAccepted: true,
+        formationAdditionRevision: true,
+        rejected: true,
+        autoMovieProductionProjectOpen: true,
+      },
     );
 
     const compiler = new AutoMovieProductionCompiler(
@@ -1531,14 +2104,38 @@ export const test_mcp_production_project = (): void => {
       fs.rmSync(shotsRoot, { force: true, recursive: true });
       fs.symlinkSync(outsideGenerated, shotsRoot, "junction");
       const unsafeGenerated = linkedCompiler.lint({ scope: "source" });
-      TestValidator.predicate(
+      TestValidator.equals(
         "generated reads and compiler ownership refuse a nested junction",
-        throws(() => linkedProject.readGeneratedFile("shots/opening.json")) &&
-          throws(() => linkedProject.readGeneratedFile("shots")) &&
-          throws(() => linkedProject.readGeneratedFile("contracts")) &&
-          unsafeGenerated.diagnostics.some(
-            (item) => item.code === "generated-path-outside",
-          ),
+        namedFacts([
+          [
+            "rejected",
+            () =>
+              throws(() =>
+                linkedProject.readGeneratedFile("shots/opening.json"),
+              ),
+          ],
+          [
+            "rejected2",
+            () => throws(() => linkedProject.readGeneratedFile("shots")),
+          ],
+          [
+            "rejected3",
+            () => throws(() => linkedProject.readGeneratedFile("contracts")),
+          ],
+          [
+            "unsafeGeneratedDiagnostics",
+            () =>
+              unsafeGenerated.diagnostics.some(
+                (item) => item.code === "generated-path-outside",
+              ),
+          ],
+        ]),
+        {
+          rejected: true,
+          rejected2: true,
+          rejected3: true,
+          unsafeGeneratedDiagnostics: true,
+        },
       );
     } catch (error) {
       linkedGeneratedFailure = { error };
@@ -1767,15 +2364,40 @@ export const test_mcp_production_project = (): void => {
           : []),
       ]);
     }
-    TestValidator.predicate(
+    TestValidator.equals(
       "generated manifest guards bind exact bytes to descriptors",
-      stableGeneratedCommitRejected === false &&
-        generatedManifestPathRead === false &&
-        repeatedGeneratedRevision === stableGeneratedRevision &&
-        ownerProject.revision() === stableGeneratedRevision &&
-        nativeGeneratedManifestRead(generatedManifestPath).equals(
-          generatedManifestBefore,
-        ),
+      namedFacts([
+        [
+          "stableGeneratedCommitRejected",
+          () => stableGeneratedCommitRejected === false,
+        ],
+        [
+          "generatedManifestPathRead",
+          () => generatedManifestPathRead === false,
+        ],
+        [
+          "repeatedGeneratedRevisionStableGeneratedRevision",
+          () => repeatedGeneratedRevision === stableGeneratedRevision,
+        ],
+        [
+          "ownerProjectRevision",
+          () => ownerProject.revision() === stableGeneratedRevision,
+        ],
+        [
+          "nativeGeneratedManifestReadGeneratedManifestPath",
+          () =>
+            nativeGeneratedManifestRead(generatedManifestPath).equals(
+              generatedManifestBefore,
+            ),
+        ],
+      ]),
+      {
+        stableGeneratedCommitRejected: true,
+        generatedManifestPathRead: true,
+        repeatedGeneratedRevisionStableGeneratedRevision: true,
+        ownerProjectRevision: true,
+        nativeGeneratedManifestReadGeneratedManifestPath: true,
+      },
     );
     TestValidator.predicate(
       "generated commit deletes formerly declared stale files",
@@ -1863,13 +2485,28 @@ export const test_mcp_production_project = (): void => {
       ]),
       renderManifest,
     );
-    TestValidator.predicate(
+    TestValidator.equals(
       "render bundle commits bytes and manifest atomically",
-      blankRendererRefused &&
-        revision > 0 &&
-        fs.existsSync(
-          path.join(ownerProject.renderRoot(), renderBundle, "manifest.json"),
-        ),
+      namedFacts([
+        ["blankRendererRefused", () => blankRendererRefused],
+        ["revision", () => revision > 0],
+        [
+          "ownerProjectResident",
+          () =>
+            fs.existsSync(
+              path.join(
+                ownerProject.renderRoot(),
+                renderBundle,
+                "manifest.json",
+              ),
+            ),
+        ],
+      ]),
+      {
+        blankRendererRefused: true,
+        revision: true,
+        ownerProjectResident: true,
+      },
     );
     let inputGuardReads = 0;
     const guardedRevision = ownerProject.revision();
@@ -1884,16 +2521,31 @@ export const test_mcp_production_project = (): void => {
         () => inputGuardReads++ === 0,
       ),
     );
-    TestValidator.predicate(
+    TestValidator.equals(
       "guarded render commit rolls back when inputs change during apply",
-      guardedCommitRefused &&
-        inputGuardReads === 2 &&
-        ownerProject.revision() === guardedRevision &&
-        fs
-          .readFileSync(
-            path.join(ownerProject.renderRoot(), renderBundle, "frame.bin"),
-          )
-          .equals(Buffer.from("frame")),
+      namedFacts([
+        ["guardedCommitRefused", () => guardedCommitRefused],
+        ["inputGuardReads", () => inputGuardReads === 2],
+        [
+          "ownerProjectRevision",
+          () => ownerProject.revision() === guardedRevision,
+        ],
+        [
+          "ownerProjectRenderRoot",
+          () =>
+            fs
+              .readFileSync(
+                path.join(ownerProject.renderRoot(), renderBundle, "frame.bin"),
+              )
+              .equals(Buffer.from("frame")),
+        ],
+      ]),
+      {
+        guardedCommitRefused: true,
+        inputGuardReads: true,
+        ownerProjectRevision: true,
+        ownerProjectRenderRoot: true,
+      },
     );
     const renderFramePath = path.join(
       ownerProject.renderRoot(),
@@ -1976,12 +2628,20 @@ export const test_mcp_production_project = (): void => {
       ownerProject.verifiedRenderManifest(renderManifestPath);
     fs.writeFileSync(renderManifestPath, renderManifestBytes);
     fs.writeFileSync(renderReceiptPath, renderReceiptBytes);
-    TestValidator.predicate(
+    TestValidator.equals(
       "render verification rejects duplicate frame ownership and false raster metadata",
-      blankOwnedRenderer === null &&
-        duplicateRenderFrame === null &&
-        mismatchedRenderWidth === null &&
-        mismatchedRenderHeight === null,
+      namedFacts([
+        ["blankOwnedRenderer", () => blankOwnedRenderer === null],
+        ["duplicateRenderFrame", () => duplicateRenderFrame === null],
+        ["mismatchedRenderWidth", () => mismatchedRenderWidth === null],
+        ["mismatchedRenderHeight", () => mismatchedRenderHeight === null],
+      ]),
+      {
+        blankOwnedRenderer: true,
+        duplicateRenderFrame: true,
+        mismatchedRenderWidth: true,
+        mismatchedRenderHeight: true,
+      },
     );
     const nonCanonicalManifest = path.join(
       ownerProject.renderRoot(),
@@ -1990,17 +2650,41 @@ export const test_mcp_production_project = (): void => {
     );
     fs.mkdirSync(path.dirname(nonCanonicalManifest), { recursive: true });
     fs.writeFileSync(nonCanonicalManifest, renderManifestBytes);
-    TestValidator.predicate(
+    TestValidator.equals(
       "render verification refuses absent, non-file, external and non-canonical manifests",
-      ownerProject.verifiedRenderManifest(
-        path.join(ownerProject.renderRoot(), "absent.json"),
-      ) === null &&
-        ownerProject.verifiedRenderManifest(ownerProject.renderRoot()) ===
-          null &&
-        ownerProject.verifiedRenderManifest(
-          path.join(fixture.root, "package.json"),
-        ) === null &&
-        ownerProject.verifiedRenderManifest(nonCanonicalManifest) === null,
+      namedFacts([
+        [
+          "ownerProjectVerifiedRenderManifest",
+          () =>
+            ownerProject.verifiedRenderManifest(
+              path.join(ownerProject.renderRoot(), "absent.json"),
+            ) === null,
+        ],
+        [
+          "ownerProjectVerifiedRenderManifest2",
+          () =>
+            ownerProject.verifiedRenderManifest(ownerProject.renderRoot()) ===
+            null,
+        ],
+        [
+          "ownerProjectVerifiedRenderManifest3",
+          () =>
+            ownerProject.verifiedRenderManifest(
+              path.join(fixture.root, "package.json"),
+            ) === null,
+        ],
+        [
+          "ownerProjectVerifiedRenderManifest4",
+          () =>
+            ownerProject.verifiedRenderManifest(nonCanonicalManifest) === null,
+        ],
+      ]),
+      {
+        ownerProjectVerifiedRenderManifest: true,
+        ownerProjectVerifiedRenderManifest2: true,
+        ownerProjectVerifiedRenderManifest3: true,
+        ownerProjectVerifiedRenderManifest4: true,
+      },
     );
     fs.writeFileSync(renderManifestPath, "{}");
     const invalidRenderManifest =
@@ -2032,13 +2716,26 @@ export const test_mcp_production_project = (): void => {
     const malformedRenderReceipt =
       ownerProject.verifiedRenderManifest(renderManifestPath);
     fs.writeFileSync(renderReceiptPath, renderReceiptBytes);
-    TestValidator.predicate(
+    TestValidator.equals(
       "render verification validates manifest schema, JSON and receipt ownership",
-      invalidRenderManifest === null &&
-        malformedRenderManifest === null &&
-        missingRenderReceipt === null &&
-        malformedRenderReceipt === null &&
-        ownerProject.verifiedRenderManifest(renderManifestPath) !== null,
+      namedFacts([
+        ["invalidRenderManifest", () => invalidRenderManifest === null],
+        ["malformedRenderManifest", () => malformedRenderManifest === null],
+        ["missingRenderReceipt", () => missingRenderReceipt === null],
+        ["malformedRenderReceipt", () => malformedRenderReceipt === null],
+        [
+          "ownerProjectVerifiedRenderManifest",
+          () =>
+            ownerProject.verifiedRenderManifest(renderManifestPath) !== null,
+        ],
+      ]),
+      {
+        invalidRenderManifest: true,
+        malformedRenderManifest: true,
+        missingRenderReceipt: true,
+        malformedRenderReceipt: true,
+        ownerProjectVerifiedRenderManifest: true,
+      },
     );
     TestValidator.predicate(
       "render reads reject absent paths and directories",
@@ -2238,11 +2935,18 @@ export const test_mcp_production_project = (): void => {
         }
         return swapped && rejected;
       };
-      TestValidator.predicate(
+      TestValidator.equals(
         "an opened descriptor cannot bless a replaced render filename",
-        descriptorRace("symlink") &&
-          descriptorRace("directory") &&
-          descriptorRace("regular"),
+        namedFacts([
+          ["descriptorRaceSymlink", () => descriptorRace("symlink")],
+          ["descriptorRaceDirectory", () => descriptorRace("directory")],
+          ["descriptorRaceRegular", () => descriptorRace("regular")],
+        ]),
+        {
+          descriptorRaceSymlink: true,
+          descriptorRaceDirectory: true,
+          descriptorRaceRegular: true,
+        },
       );
 
       const ancestryRace = (
@@ -2324,11 +3028,18 @@ export const test_mcp_production_project = (): void => {
         }
         return swapped && rejected;
       };
-      TestValidator.predicate(
+      TestValidator.equals(
         "render reads retain exact physical ancestry across descriptor acquisition",
-        ancestryRace("missing") &&
-          ancestryRace("junction") &&
-          ancestryRace("directory"),
+        namedFacts([
+          ["ancestryRaceMissing", () => ancestryRace("missing")],
+          ["ancestryRaceJunction", () => ancestryRace("junction")],
+          ["ancestryRaceDirectory", () => ancestryRace("directory")],
+        ]),
+        {
+          ancestryRaceMissing: true,
+          ancestryRaceJunction: true,
+          ancestryRaceDirectory: true,
+        },
       );
 
       const afterReadDirectory = path.join(
@@ -2339,15 +3050,34 @@ export const test_mcp_production_project = (): void => {
       const afterReadParked = `${afterReadFile}.parked`;
       fs.mkdirSync(afterReadDirectory);
       fs.writeFileSync(afterReadFile, "resident");
+      // Render reads are fenced by coordinate locks whose snapshots are also
+      // read through descriptors, so remember the descriptor this file's own
+      // acquisition returns and swap only after that descriptor is read. Stat
+      // identity is not usable here: Windows reports different `dev` values for
+      // a descriptor and its path.
+      const nativeAfterReadOpen = fs.openSync;
       const nativeDescriptorRead = fs.readFileSync;
+      let afterReadDescriptor: number | null = null;
       let swappedAfterRead = false;
+      fs.openSync = ((file: fs.PathLike, ...args: unknown[]): number => {
+        const descriptor = Reflect.apply(nativeAfterReadOpen, fs, [
+          file,
+          ...args,
+        ]) as number;
+        if (
+          afterReadDescriptor === null &&
+          path.resolve(String(file)) === path.resolve(afterReadFile)
+        )
+          afterReadDescriptor = descriptor;
+        return descriptor;
+      }) as typeof fs.openSync;
       fs.readFileSync = ((
         target: fs.PathOrFileDescriptor,
         ...args: unknown[]
       ): unknown => {
         // prettier-ignore
         const bytes = Reflect.apply(nativeDescriptorRead, fs, [target, ...args]);
-        if (swappedAfterRead === false && typeof target === "number") {
+        if (swappedAfterRead === false && target === afterReadDescriptor) {
           fs.renameSync(afterReadFile, afterReadParked);
           fs.writeFileSync(afterReadFile, "replacement");
           swappedAfterRead = true;
@@ -2370,6 +3100,12 @@ export const test_mcp_production_project = (): void => {
             resource: "post-descriptor read hook",
             cleanup: () => {
               fs.readFileSync = nativeDescriptorRead;
+            },
+          },
+          {
+            resource: "post-descriptor open hook",
+            cleanup: () => {
+              fs.openSync = nativeAfterReadOpen;
             },
           },
           ...(afterReadWasParked
@@ -2430,9 +3166,14 @@ export const test_mcp_production_project = (): void => {
           },
         ]);
       }
-      TestValidator.predicate(
+      TestValidator.equals(
         "render reads revalidate after descriptor I/O and preserve non-absence errors",
-        swappedAfterRead && afterReadRejected && deniedOpenRejected,
+        { afterReadRejected, deniedOpenRejected, swappedAfterRead },
+        {
+          afterReadRejected: true,
+          deniedOpenRejected: true,
+          swappedAfterRead: true,
+        },
       );
     } catch (error) {
       outsideRenderReadFailure = { error };
@@ -2450,40 +3191,77 @@ export const test_mcp_production_project = (): void => {
         ["nested/a.bin", Buffer.from("a")],
       ]),
     );
-    TestValidator.predicate(
+    TestValidator.equals(
       "deliverable commits are nonempty, sorted and renderer-owned",
-      deliverableFiles.paths[0]?.endsWith("nested/a.bin") === true &&
-        deliverableFiles.paths[1]?.endsWith("z.bin") === true &&
-        deliverableFiles.paths.every((file) =>
-          fs.existsSync(path.join(ownerProject.renderRoot(), file)),
-        ) &&
-        throws(() =>
-          ownerProject.commitProductionDeliverableFiles("empty", new Map()),
-        ) &&
-        throws(() =>
-          ownerProject.commitProductionDeliverableFiles(
-            "unsafe",
-            new Map([["../escape.bin", Buffer.from("x")]]),
-          ),
-        ) &&
-        throws(() =>
-          ownerProject.commitProductionDeliverableFiles(
-            "duplicate",
-            new Map([
-              ["nested/../same.bin", Buffer.from("first")],
-              ["same.bin", Buffer.from("second")],
-            ]),
-          ),
-        ) &&
-        throws(() =>
-          ownerProject.commitProductionDeliverableFiles(
-            "case-collision",
-            new Map([
-              ["Frame.bin", Buffer.from("first")],
-              ["frame.bin", Buffer.from("second")],
-            ]),
-          ),
-        ),
+      namedFacts([
+        [
+          "deliverableFilesPaths",
+          () => deliverableFiles.paths[0]?.endsWith("nested/a.bin") === true,
+        ],
+        [
+          "deliverableFilesPaths2",
+          () => deliverableFiles.paths[1]?.endsWith("z.bin") === true,
+        ],
+        [
+          "deliverableFilesPaths3",
+          () =>
+            deliverableFiles.paths.every((file) =>
+              fs.existsSync(path.join(ownerProject.renderRoot(), file)),
+            ),
+        ],
+        [
+          "rejected",
+          () =>
+            throws(() =>
+              ownerProject.commitProductionDeliverableFiles("empty", new Map()),
+            ),
+        ],
+        [
+          "rejected2",
+          () =>
+            throws(() =>
+              ownerProject.commitProductionDeliverableFiles(
+                "unsafe",
+                new Map([["../escape.bin", Buffer.from("x")]]),
+              ),
+            ),
+        ],
+        [
+          "rejected3",
+          () =>
+            throws(() =>
+              ownerProject.commitProductionDeliverableFiles(
+                "duplicate",
+                new Map([
+                  ["nested/../same.bin", Buffer.from("first")],
+                  ["same.bin", Buffer.from("second")],
+                ]),
+              ),
+            ),
+        ],
+        [
+          "rejected4",
+          () =>
+            throws(() =>
+              ownerProject.commitProductionDeliverableFiles(
+                "case-collision",
+                new Map([
+                  ["Frame.bin", Buffer.from("first")],
+                  ["frame.bin", Buffer.from("second")],
+                ]),
+              ),
+            ),
+        ],
+      ]),
+      {
+        deliverableFilesPaths: true,
+        deliverableFilesPaths2: true,
+        deliverableFilesPaths3: true,
+        rejected: true,
+        rejected2: true,
+        rejected3: true,
+        rejected4: true,
+      },
     );
     TestValidator.predicate(
       "aggregate render commit validates its public schema",
@@ -2541,27 +3319,56 @@ export const test_mcp_production_project = (): void => {
     }) as typeof fs.renameSync;
     let renderRollbackFailure: IProductionProjectFixtureFailure | undefined;
     try {
-      TestValidator.predicate(
+      TestValidator.equals(
         "multi-file commit rolls back updated and newly created files",
-        throws(() =>
-          ownerProject.commitRenderBundle(
-            renderBundle,
-            new Map([
-              ["frame.bin", Buffer.from("changed")],
-              ["new.bin", Buffer.from("new")],
-            ]),
-            renderManifest,
-          ),
-        ) &&
-          rollbackPathRead === false &&
-          nativeRollbackRead(renderFramePath).equals(frameBeforeFailure) &&
-          nativeRollbackRead(renderManifestPath).equals(
-            manifestBeforeFailure,
-          ) &&
-          fs.existsSync(
-            path.join(ownerProject.renderRoot(), renderBundle, "new.bin"),
-          ) === false &&
-          ownerProject.revision() === revisionBeforeFailure,
+        namedFacts([
+          [
+            "rejected",
+            () =>
+              throws(() =>
+                ownerProject.commitRenderBundle(
+                  renderBundle,
+                  new Map([
+                    ["frame.bin", Buffer.from("changed")],
+                    ["new.bin", Buffer.from("new")],
+                  ]),
+                  renderManifest,
+                ),
+              ),
+          ],
+          ["rollbackPathRead", () => rollbackPathRead === false],
+          [
+            "nativeRollbackReadRenderFramePath",
+            () =>
+              nativeRollbackRead(renderFramePath).equals(frameBeforeFailure),
+          ],
+          [
+            "nativeRollbackReadRenderManifestPath",
+            () =>
+              nativeRollbackRead(renderManifestPath).equals(
+                manifestBeforeFailure,
+              ),
+          ],
+          [
+            "ownerProjectResident",
+            () =>
+              fs.existsSync(
+                path.join(ownerProject.renderRoot(), renderBundle, "new.bin"),
+              ) === false,
+          ],
+          [
+            "ownerProjectRevision",
+            () => ownerProject.revision() === revisionBeforeFailure,
+          ],
+        ]),
+        {
+          rejected: true,
+          rollbackPathRead: true,
+          nativeRollbackReadRenderFramePath: true,
+          nativeRollbackReadRenderManifestPath: true,
+          ownerProjectResident: true,
+          ownerProjectRevision: true,
+        },
       );
     } catch (error) {
       renderRollbackFailure = { error };
@@ -2800,20 +3607,24 @@ export const test_mcp_production_project = (): void => {
       vanished,
       JSON.stringify({ ...modelRecipe(), id: "vanished" }),
     );
-    const residentReadFileSync = fs.readFileSync;
-    fs.readFileSync = ((file: fs.PathOrFileDescriptor, ...args: unknown[]) => {
+    // Owned reads acquire a descriptor and read bytes through it, so the race
+    // window is the acquisition: removing the enumerated file just before its
+    // open makes the inventory observe the disappearance instead of reading an
+    // already-opened inode.
+    const residentInventoryOpen = fs.openSync;
+    fs.openSync = ((file: fs.PathLike, ...args: unknown[]) => {
       if (path.resolve(String(file)) === path.resolve(vanished))
         fs.rmSync(vanished, { force: true });
-      return (residentReadFileSync as (...parameters: unknown[]) => unknown)(
+      return (residentInventoryOpen as (...parameters: unknown[]) => number)(
         file,
         ...args,
       );
-    }) as typeof fs.readFileSync;
+    }) as typeof fs.openSync;
     let inventoryReadHookFailure: IProductionProjectFixtureFailure | undefined;
     try {
       TestValidator.predicate(
         "a design disappearing during inventory is a loud race",
-        throws(() => ownerProject.graph()),
+        throws(() => ownerProject.graph(), "disappeared while reading"),
       );
     } catch (error) {
       inventoryReadHookFailure = { error };
@@ -2821,9 +3632,9 @@ export const test_mcp_production_project = (): void => {
     } finally {
       preserveProductionProjectFixtureCleanup(inventoryReadHookFailure, [
         {
-          resource: "design-inventory read hook",
+          resource: "design-inventory open hook",
           cleanup: () => {
-            fs.readFileSync = residentReadFileSync;
+            fs.openSync = residentInventoryOpen;
           },
         },
       ]);
@@ -2863,32 +3674,62 @@ export const test_mcp_production_project = (): void => {
     );
     const contentProject = AutoMovieProductionProject.open(contentFixture.root);
     const inputs = contentProject.contentInputs();
-    TestValidator.predicate(
+    TestValidator.equals(
       "declared content roots and files enter deterministic compilation identity",
-      inputs.some(
-        (input) => input.path === "viewer/src/main.ts" && input.bytes !== null,
-      ) &&
-        inputs.some(
-          (input) =>
-            input.path === "automovie.config.ts" && input.bytes !== null,
-        ) &&
-        inputs.some(
-          (input) =>
-            input.path === "missing-content.file" && input.bytes === null,
-        ) &&
-        inputs.some(
-          (input) =>
-            input.path === ".automovie/assets.json" &&
-            input.bytes !== null &&
-            input.source === false &&
-            input.render === false,
-        ) &&
-        inputs.some(
-          (input) =>
-            input.path === "src/shots/opening.ts" &&
-            input.source &&
-            input.render,
-        ),
+      namedFacts([
+        [
+          "inputsInput",
+          () =>
+            inputs.some(
+              (input) =>
+                input.path === "viewer/src/main.ts" && input.bytes !== null,
+            ),
+        ],
+        [
+          "inputsInput2",
+          () =>
+            inputs.some(
+              (input) =>
+                input.path === "automovie.config.ts" && input.bytes !== null,
+            ),
+        ],
+        [
+          "inputsInput3",
+          () =>
+            inputs.some(
+              (input) =>
+                input.path === "missing-content.file" && input.bytes === null,
+            ),
+        ],
+        [
+          "inputsInput4",
+          () =>
+            inputs.some(
+              (input) =>
+                input.path === ".automovie/assets.json" &&
+                input.bytes !== null &&
+                input.source === false &&
+                input.render === false,
+            ),
+        ],
+        [
+          "inputsInput5",
+          () =>
+            inputs.some(
+              (input) =>
+                input.path === "src/shots/opening.ts" &&
+                input.source &&
+                input.render,
+            ),
+        ],
+      ]),
+      {
+        inputsInput: true,
+        inputsInput2: true,
+        inputsInput3: true,
+        inputsInput4: true,
+        inputsInput5: true,
+      },
     );
     const contentReadResidents = new Map(
       (
@@ -3379,12 +4220,23 @@ export const test_mcp_production_project = (): void => {
     );
     const fresh = path.join(invalidRoot, "fresh");
     const initialized = AutoMovieProductionProject.open(fresh);
-    TestValidator.predicate(
+    TestValidator.equals(
       "fresh project initializes format and directories",
-      initialized.summary().initialized &&
-        initialized.revision() === 0 &&
-        initialized.inventory().production === false &&
-        initialized.contentInputs().length === 0,
+      namedFacts([
+        ["initializedSummary", () => initialized.summary().initialized],
+        ["initializedRevision", () => initialized.revision() === 0],
+        [
+          "initializedInventory",
+          () => initialized.inventory().production === false,
+        ],
+        ["initializedCount", () => initialized.contentInputs().length === 0],
+      ]),
+      {
+        initializedSummary: true,
+        initializedRevision: true,
+        initializedInventory: true,
+        initializedCount: true,
+      },
     );
     const nativeWriteForExistingRoot = fs.writeFileSync;
     let attemptedParentSiblingLock = false;
@@ -3465,22 +4317,53 @@ export const test_mcp_production_project = (): void => {
         },
       ]);
     }
-    TestValidator.predicate(
+    TestValidator.equals(
       "ancestor aliases create through the physical parent then hold the project-owned namespace",
-      aliasLockPaths.filter((file) => path.basename(file).startsWith("create-"))
-        .length === 2 &&
-        aliasLockPaths.filter((file) => path.basename(file).startsWith("root-"))
-          .length === 2 &&
-        aliasLockPaths.every(
-          (file) =>
-            path.basename(path.dirname(file)) === ".automovie-root-locks",
-        ) &&
-        fs
-          .readdirSync(fs.realpathSync(physicalAliasParent))
-          .every((entry) => entry.includes("automovie-root") === false) &&
-        fs
-          .readdirSync(fs.realpathSync(aliasProject))
-          .every((entry) => entry.includes("automovie-root") === false),
+      namedFacts([
+        [
+          "aliasLockPathsCount",
+          () =>
+            aliasLockPaths.filter((file) =>
+              path.basename(file).startsWith("create-"),
+            ).length === 2,
+        ],
+        [
+          "aliasLockPathsCount2",
+          () =>
+            aliasLockPaths.filter((file) =>
+              path.basename(file).startsWith("root-"),
+            ).length === 2,
+        ],
+        [
+          "aliasLockPathsFile",
+          () =>
+            aliasLockPaths.every(
+              (file) =>
+                path.basename(path.dirname(file)) === ".automovie-root-locks",
+            ),
+        ],
+        [
+          "realpathSyncPhysicalAliasParent",
+          () =>
+            fs
+              .readdirSync(fs.realpathSync(physicalAliasParent))
+              .every((entry) => entry.includes("automovie-root") === false),
+        ],
+        [
+          "realpathSyncAliasProject",
+          () =>
+            fs
+              .readdirSync(fs.realpathSync(aliasProject))
+              .every((entry) => entry.includes("automovie-root") === false),
+        ],
+      ]),
+      {
+        aliasLockPathsCount: true,
+        aliasLockPathsCount2: true,
+        aliasLockPathsFile: true,
+        realpathSyncPhysicalAliasParent: true,
+        realpathSyncAliasProject: true,
+      },
     );
     const alternateAliasParent = path.join(
       invalidRoot,
@@ -3616,11 +4499,21 @@ export const test_mcp_production_project = (): void => {
     } finally {
       fs.writeFileSync = nativeWriteForParentCollision;
     }
-    TestValidator.predicate(
+    TestValidator.equals(
       "a missing parent replaced by a file while creation locks are held is rejected",
-      parentCollisionRejected &&
-        parentCollisionLocks === 2 &&
-        fs.existsSync(collidingParentProject) === false,
+      namedFacts([
+        ["parentCollisionRejected", () => parentCollisionRejected],
+        ["parentCollisionLocks", () => parentCollisionLocks === 2],
+        [
+          "collidingParentProjectResident",
+          () => fs.existsSync(collidingParentProject) === false,
+        ],
+      ]),
+      {
+        parentCollisionRejected: true,
+        parentCollisionLocks: true,
+        collidingParentProjectResident: true,
+      },
     );
     fs.rmSync(collidingParent, { force: true });
     const collidingRoot = path.join(invalidRoot, "colliding-root");
@@ -3650,11 +4543,21 @@ export const test_mcp_production_project = (): void => {
     } finally {
       fs.writeFileSync = nativeWriteForRootCollision;
     }
-    TestValidator.predicate(
+    TestValidator.equals(
       "a missing project root replaced by a file while creation locks are held is rejected",
-      rootCollisionRejected &&
-        rootCollisionLocks === 2 &&
-        fs.readFileSync(collidingRoot, "utf8") === "collision",
+      namedFacts([
+        ["rootCollisionRejected", () => rootCollisionRejected],
+        ["rootCollisionLocks", () => rootCollisionLocks === 2],
+        [
+          "collidingRootUtf8",
+          () => fs.readFileSync(collidingRoot, "utf8") === "collision",
+        ],
+      ]),
+      {
+        rootCollisionRejected: true,
+        rootCollisionLocks: true,
+        collidingRootUtf8: true,
+      },
     );
     fs.rmSync(collidingRoot, { force: true });
     const createdPhysicalParent = path.join(
@@ -3733,12 +4636,29 @@ export const test_mcp_production_project = (): void => {
           : []),
       ]);
     }
-    TestValidator.predicate(
+    TestValidator.equals(
       "a newly created physical root releases its lease when the requested alias changes afterward",
-      createdAliasRejected &&
-        createdAliasLocks.length === 2 &&
-        createdAliasLocks.every((file) => fs.existsSync(file) === false) &&
-        fs.existsSync(path.join(createdAlternateParent, "project")) === false,
+      namedFacts([
+        ["createdAliasRejected", () => createdAliasRejected],
+        ["createdAliasLocksCount", () => createdAliasLocks.length === 2],
+        [
+          "createdAliasLocksFile",
+          () =>
+            createdAliasLocks.every((file) => fs.existsSync(file) === false),
+        ],
+        [
+          "createdAlternateParentResident",
+          () =>
+            fs.existsSync(path.join(createdAlternateParent, "project")) ===
+            false,
+        ],
+      ]),
+      {
+        createdAliasRejected: true,
+        createdAliasLocksCount: true,
+        createdAliasLocksFile: true,
+        createdAlternateParentResident: true,
+      },
     );
     const coordinationRoot = path.dirname(aliasLockPaths[0]!);
     const assertionLease = acquireProductionRootNamespace(aliasProject);
@@ -3975,13 +4895,31 @@ export const test_mcp_production_project = (): void => {
         },
       ]);
     }
-    TestValidator.predicate(
+    TestValidator.equals(
       "a parent replaced while creation fences are acquired is rejected before either tree receives a child",
-      parentSwapRejected &&
-        fs.existsSync(swappedProject) === false &&
-        fs.existsSync(path.join(originalParent, "project")) === false &&
-        swapLockPaths.length === 2 &&
-        swapLockPaths.every((file) => fs.existsSync(file) === false),
+      namedFacts([
+        ["parentSwapRejected", () => parentSwapRejected],
+        [
+          "swappedProjectResident",
+          () => fs.existsSync(swappedProject) === false,
+        ],
+        [
+          "originalParentResident",
+          () => fs.existsSync(path.join(originalParent, "project")) === false,
+        ],
+        ["swapLockPathsCount", () => swapLockPaths.length === 2],
+        [
+          "swapLockPathsFile",
+          () => swapLockPaths.every((file) => fs.existsSync(file) === false),
+        ],
+      ]),
+      {
+        parentSwapRejected: true,
+        swappedProjectResident: true,
+        originalParentResident: true,
+        swapLockPathsCount: true,
+        swapLockPathsFile: true,
+      },
     );
     for (const replacement of ["absent", "file"] as const) {
       const parent = path.join(invalidRoot, `${replacement}-parent`);
@@ -4032,13 +4970,28 @@ export const test_mcp_production_project = (): void => {
           },
         ]);
       }
-      TestValidator.predicate(
+      TestValidator.equals(
         `a ${replacement} creation parent fails closed and releases both coordinates`,
-        rejected &&
-          fs.existsSync(projectPath) === false &&
-          fs.existsSync(path.join(archived, "project")) === false &&
-          lockPaths.length === 2 &&
-          lockPaths.every((file) => fs.existsSync(file) === false),
+        namedFacts([
+          ["rejected", () => rejected],
+          ["existsSyncProjectPath", () => fs.existsSync(projectPath) === false],
+          [
+            "existsSyncArchivedProject",
+            () => fs.existsSync(path.join(archived, "project")) === false,
+          ],
+          ["lockPaths", () => lockPaths.length === 2],
+          [
+            "lockPathsFileExistsSync",
+            () => lockPaths.every((file) => fs.existsSync(file) === false),
+          ],
+        ]),
+        {
+          rejected: true,
+          existsSyncProjectPath: true,
+          existsSyncArchivedProject: true,
+          lockPaths: true,
+          lockPathsFileExistsSync: true,
+        },
       );
     }
     const nativeCoordinationMkdir = fs.mkdirSync;
@@ -4214,16 +5167,34 @@ export const test_mcp_production_project = (): void => {
     }) as typeof fs.writeFileSync;
     let partialCoordinateFailure: IProductionProjectFixtureFailure | undefined;
     try {
-      TestValidator.predicate(
+      TestValidator.equals(
         "partial dual-coordinate acquisition releases the physical identity fence",
-        throws(
-          () => AutoMovieProductionProject.open(fresh),
-          "second root coordinate denied",
-        ) &&
-          partiallyHeldCoordinates.length === 1 &&
-          partiallyHeldCoordinates.every(
-            (file) => fs.existsSync(file) === false,
-          ),
+        namedFacts([
+          [
+            "rejected",
+            () =>
+              throws(
+                () => AutoMovieProductionProject.open(fresh),
+                "second root coordinate denied",
+              ),
+          ],
+          [
+            "partiallyHeldCoordinatesCount",
+            () => partiallyHeldCoordinates.length === 1,
+          ],
+          [
+            "partiallyHeldCoordinatesFile",
+            () =>
+              partiallyHeldCoordinates.every(
+                (file) => fs.existsSync(file) === false,
+              ),
+          ],
+        ]),
+        {
+          rejected: true,
+          partiallyHeldCoordinatesCount: true,
+          partiallyHeldCoordinatesFile: true,
+        },
       );
     } catch (error) {
       partialCoordinateFailure = { error };
@@ -4244,20 +5215,41 @@ export const test_mcp_production_project = (): void => {
     const parkedStaleRoot = `${staleRoot}-parked`;
     fs.renameSync(staleRoot, parkedStaleRoot);
     fs.cpSync(parkedStaleRoot, staleRoot, { recursive: true });
-    TestValidator.predicate(
+    TestValidator.equals(
       "a byte-identical physical root replacement invalidates every stale handle operation",
-      throws(() => staleProject.manifest(), "root identity changed") &&
-        throws(
+      namedFacts([
+        [
+          "rejected",
+          () => throws(() => staleProject.manifest(), "root identity changed"),
+        ],
+        [
+          "rejected2",
           () =>
-            staleProject.commitProductionDeliverableFiles(
-              "stale-root-write",
-              new Map([["frame.bin", Buffer.from("unsafe")]]),
+            throws(
+              () =>
+                staleProject.commitProductionDeliverableFiles(
+                  "stale-root-write",
+                  new Map([["frame.bin", Buffer.from("unsafe")]]),
+                ),
+              "root identity changed",
             ),
-          "root identity changed",
-        ) &&
-        fs.existsSync(
-          path.join(staleRenderRoot, "deliverables/stale-root-write/frame.bin"),
-        ) === false,
+        ],
+        [
+          "staleRenderRootResident",
+          () =>
+            fs.existsSync(
+              path.join(
+                staleRenderRoot,
+                "deliverables/stale-root-write/frame.bin",
+              ),
+            ) === false,
+        ],
+      ]),
+      {
+        rejected: true,
+        rejected2: true,
+        staleRenderRootResident: true,
+      },
     );
     const missingIdentityRoot = path.join(invalidRoot, "missing-identity-root");
     const missingIdentityProject =
@@ -4329,11 +5321,18 @@ export const test_mcp_production_project = (): void => {
       fs.rmSync(acquiredReplacementRoot, { force: true, recursive: true });
       fs.renameSync(parkedAcquiredReplacementRoot, acquiredReplacementRoot);
     }
-    TestValidator.predicate(
+    TestValidator.equals(
       "a replacement acquired after argument staging is rejected against the open handle identity",
-      acquiredReplacementSwapped &&
-        acquiredReplacementRejected &&
-        acquiredReplacementUntouched,
+      namedFacts([
+        ["acquiredReplacementSwapped", () => acquiredReplacementSwapped],
+        ["acquiredReplacementRejected", () => acquiredReplacementRejected],
+        ["acquiredReplacementUntouched", () => acquiredReplacementUntouched],
+      ]),
+      {
+        acquiredReplacementSwapped: true,
+        acquiredReplacementRejected: true,
+        acquiredReplacementUntouched: true,
+      },
     );
     const preLeaseRoot = path.join(invalidRoot, "pre-lease-root-race");
     const preLeaseProject = AutoMovieProductionProject.open(preLeaseRoot);
@@ -4347,24 +5346,51 @@ export const test_mcp_production_project = (): void => {
       "deliverables/pre-lease/frame.bin",
     );
     const parkedPreLeaseRoot = `${preLeaseRoot}-parked`;
+    // An owned read reaches the target through the owner's real path, which a
+    // temporary root can spell differently from the fixture's own join.
+    const preLeaseTargetReal = fs.realpathSync(preLeaseTarget);
     const nativeReadForPreLease = fs.readFileSync;
+    const nativeOpenForPreLease = fs.openSync;
+    const nativeCloseForPreLease = fs.closeSync;
     let preLeaseSwapped = false;
+    // Record what the staging read actually opens: an owned read reaches its
+    // target through a descriptor, so a pathname comparison never sees it.
+    const preLeasePathReads: string[] = [];
+    let preLeaseDescriptorReads = 0;
+    let preLeaseDescriptor: number | null = null;
     fs.readFileSync = ((
       file: fs.PathOrFileDescriptor,
       ...args: unknown[]
     ): unknown => {
       const output = Reflect.apply(nativeReadForPreLease, fs, [file, ...args]);
+      if (typeof file === "number") preLeaseDescriptorReads += 1;
+      else preLeasePathReads.push(path.resolve(file.toString()));
+      return output;
+    }) as typeof fs.readFileSync;
+    fs.openSync = ((file: fs.PathLike, ...args: unknown[]): number => {
+      const descriptor = Reflect.apply(nativeOpenForPreLease, fs, [
+        file,
+        ...args,
+      ]) as number;
+      const resolved = path.resolve(file.toString());
       if (
-        preLeaseSwapped === false &&
-        typeof file !== "number" &&
-        path.resolve(file.toString()) === preLeaseTarget
-      ) {
+        preLeaseDescriptor === null &&
+        (resolved === preLeaseTarget || resolved === preLeaseTargetReal)
+      )
+        preLeaseDescriptor = descriptor;
+      return descriptor;
+    }) as typeof fs.openSync;
+    // Replace the root when the staging read closes its own descriptor: the
+    // lease is still held, and no handle is open inside the tree, which a
+    // directory rename requires on Windows.
+    fs.closeSync = ((descriptor: number): void => {
+      Reflect.apply(nativeCloseForPreLease, fs, [descriptor]);
+      if (preLeaseSwapped === false && descriptor === preLeaseDescriptor) {
         preLeaseSwapped = true;
         fs.renameSync(preLeaseRoot, parkedPreLeaseRoot);
         fs.cpSync(parkedPreLeaseRoot, preLeaseRoot, { recursive: true });
       }
-      return output;
-    }) as typeof fs.readFileSync;
+    }) as typeof fs.closeSync;
     let preLeaseRejected = false;
     let preLeaseReplacementUntouched = false;
     let preLeaseFailure: IProductionProjectFixtureFailure | undefined;
@@ -4387,6 +5413,18 @@ export const test_mcp_production_project = (): void => {
           resource: "pre-lease read hook",
           cleanup: () => {
             fs.readFileSync = nativeReadForPreLease;
+          },
+        },
+        {
+          resource: "pre-lease open hook",
+          cleanup: () => {
+            fs.openSync = nativeOpenForPreLease;
+          },
+        },
+        {
+          resource: "pre-lease close hook",
+          cleanup: () => {
+            fs.closeSync = nativeCloseForPreLease;
           },
         },
         {
@@ -4414,9 +5452,24 @@ export const test_mcp_production_project = (): void => {
           : []),
       ]);
     }
-    TestValidator.predicate(
+    TestValidator.equals(
       "a root replaced while staging under the namespace lease is refused without mutation",
-      preLeaseSwapped && preLeaseRejected && preLeaseReplacementUntouched,
+      {
+        descriptorReads: preLeaseDescriptorReads === 0 ? "none" : "some",
+        rejected: preLeaseRejected,
+        replacementUntouched: preLeaseReplacementUntouched,
+        swapped: preLeaseSwapped,
+        targetDescriptorOpened: preLeaseDescriptor !== null,
+        targetPathRead: preLeasePathReads.includes(preLeaseTarget),
+      },
+      {
+        descriptorReads: "some",
+        rejected: true,
+        replacementUntouched: true,
+        swapped: true,
+        targetDescriptorOpened: true,
+        targetPathRead: false,
+      },
     );
     const atomicDeleteBase = modelRecipe();
     const atomicDeleteModel = {
@@ -4478,24 +5531,40 @@ export const test_mcp_production_project = (): void => {
         },
       ]);
     }
-    TestValidator.predicate(
+    // Observe in the scenario's own order: the erase is a mutation and has to
+    // follow every reading of the restored file, which an object literal's
+    // property order would otherwise decide.
+    const atomicDeleteResident = fs
+      .readFileSync(atomicDeleteTarget)
+      .equals(atomicDeleteBytes);
+    const atomicDeleteRevisionAfter = initialized.revision();
+    const atomicDeleteLeftovers = fs
+      .readdirSync(path.dirname(atomicDeleteTarget))
+      .filter((entry) =>
+        entry.startsWith(`${path.basename(atomicDeleteTarget)}.delete.`),
+      );
+    const atomicDeleteErasable = initialized.eraseDesignArtifact({
+      kind: "model",
+      id: atomicDeleteModel.id,
+    }).accepted;
+    TestValidator.equals(
       "a failed quarantine cleanup restores the exact deleted file and revision",
-      quarantineDeleteDenied &&
-        atomicDeleteRejected &&
-        fs.readFileSync(atomicDeleteTarget).equals(atomicDeleteBytes) &&
-        initialized.revision() === atomicDeleteRevision &&
-        fs
-          .readdirSync(path.dirname(atomicDeleteTarget))
-          .every(
-            (entry) =>
-              entry.startsWith(
-                `${path.basename(atomicDeleteTarget)}.delete.`,
-              ) === false,
-          ) &&
-        initialized.eraseDesignArtifact({
-          kind: "model",
-          id: atomicDeleteModel.id,
-        }).accepted,
+      {
+        denied: quarantineDeleteDenied,
+        erasable: atomicDeleteErasable,
+        quarantineLeftovers: atomicDeleteLeftovers,
+        rejected: atomicDeleteRejected,
+        residentBytes: atomicDeleteResident,
+        revision: atomicDeleteRevisionAfter,
+      },
+      {
+        denied: true,
+        erasable: true,
+        quarantineLeftovers: [],
+        rejected: true,
+        residentBytes: true,
+        revision: atomicDeleteRevision,
+      },
     );
     const mutationRoot = path.join(invalidRoot, "mutation-root");
     const mutationProject = AutoMovieProductionProject.open(mutationRoot);
@@ -4618,13 +5687,22 @@ export const test_mcp_production_project = (): void => {
             ]),
       ]);
     }
-    TestValidator.predicate(
+    TestValidator.equals(
       "a root swapped during publication refuses rollback and stale lock release in the replacement",
-      mutationRootSwapped &&
-        mutationSwapRejected &&
-        replacementUntouched &&
-        processOwnershipReleased &&
-        abandonedLockReleased,
+      namedFacts([
+        ["mutationRootSwapped", () => mutationRootSwapped],
+        ["mutationSwapRejected", () => mutationSwapRejected],
+        ["replacementUntouched", () => replacementUntouched],
+        ["processOwnershipReleased", () => processOwnershipReleased],
+        ["abandonedLockReleased", () => abandonedLockReleased],
+      ]),
+      {
+        mutationRootSwapped: true,
+        mutationSwapRejected: true,
+        replacementUntouched: true,
+        processOwnershipReleased: true,
+        abandonedLockReleased: true,
+      },
     );
     TestValidator.predicate(
       "every absent design discriminator returns one missing mutation",

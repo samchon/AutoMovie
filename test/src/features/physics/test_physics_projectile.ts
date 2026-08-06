@@ -1,7 +1,7 @@
 import { projectileAt } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
-import { nclose } from "../internal/predicates";
+import { namedFacts, nclose } from "../internal/predicates";
 
 /**
  * `projectileAt`, closed-form ballistic evaluation: `p = origin + v·t +
@@ -26,12 +26,20 @@ export const test_physics_projectile = (): void => {
     },
     0,
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "t=0 is the launch state",
-    nclose(s0.position.x, 1) &&
-      nclose(s0.position.y, 2) &&
-      nclose(s0.position.z, 3) &&
-      nclose(s0.velocity.y, 5),
+    namedFacts([
+      ["ncloseS0Position", () => nclose(s0.position.x, 1)],
+      ["ncloseS0Position2", () => nclose(s0.position.y, 2)],
+      ["ncloseS0Position3", () => nclose(s0.position.z, 3)],
+      ["ncloseS0Velocity", () => nclose(s0.velocity.y, 5)],
+    ]),
+    {
+      ncloseS0Position: true,
+      ncloseS0Position2: true,
+      ncloseS0Position3: true,
+      ncloseS0Velocity: true,
+    },
   );
 
   // 2. arc after 1s
@@ -43,11 +51,18 @@ export const test_physics_projectile = (): void => {
     },
     1,
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "position after 1s",
-    nclose(s1.position.x, 5) &&
-      nclose(s1.position.y, 5) &&
-      nclose(s1.position.z, 0),
+    namedFacts([
+      ["ncloseS1Position", () => nclose(s1.position.x, 5)],
+      ["ncloseS1Position2", () => nclose(s1.position.y, 5)],
+      ["ncloseS1Position3", () => nclose(s1.position.z, 0)],
+    ]),
+    {
+      ncloseS1Position: true,
+      ncloseS1Position2: true,
+      ncloseS1Position3: true,
+    },
   );
   TestValidator.predicate(
     "velocity after 1s",

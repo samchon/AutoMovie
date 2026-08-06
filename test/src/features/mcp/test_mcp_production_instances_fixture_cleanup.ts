@@ -233,7 +233,7 @@ export const test_mcp_production_instances_fixture_cleanup = (): void => {
             index: 25,
             ownerParameters: [],
             prefixDigest:
-              "63a7848ce3959eaecbbb158ec132cdafca9d8aff803895d5748ea3a66b5e07a1",
+              "7635a0408a8f6d06e0f6593f955c9add61e044c2d7e8bd68d862e33267a32c00",
             prefixStatements: 23,
             tryDigest:
               "d5fa191a24b54cc64ffc3ff00e3e2962ef1dc80185bdc0428abfc070fa5b8ac1",

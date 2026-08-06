@@ -11,7 +11,7 @@ import {
 import { TestValidator } from "@nestia/e2e";
 
 import { keyframe, makeMotion, makePose } from "../internal/fixtures";
-import { nclose } from "../internal/predicates";
+import { namedFacts, nclose } from "../internal/predicates";
 
 /** Real engine gesture content; a simple face clip for emote; null otherwise. */
 const synth: IAutoMovieActionSynthesizer = (
@@ -93,20 +93,52 @@ export const test_perform_gesture_region_content = (): void => {
   const crouch = compilePerformance([gesture("crouch")], synth).performances
     .hero!;
   const crouchStop = jointsAt(crouch, 0.3);
-  TestValidator.predicate(
+  TestValidator.equals(
     "a lone crouch keeps its knee bend and spine lean",
-    nclose(crouchStop.map.get("leftLowerLeg")!.flexion!, 65) &&
-      nclose(crouchStop.map.get("rightLowerLeg")!.flexion!, 65) &&
-      nclose(crouchStop.map.get("spine")!.flexion!, 15),
+    namedFacts([
+      [
+        "ncloseCrouchStopGet",
+        () => nclose(crouchStop.map.get("leftLowerLeg")!.flexion!, 65),
+      ],
+      [
+        "ncloseCrouchStopGet2",
+        () => nclose(crouchStop.map.get("rightLowerLeg")!.flexion!, 65),
+      ],
+      [
+        "ncloseCrouchStopGet3",
+        () => nclose(crouchStop.map.get("spine")!.flexion!, 15),
+      ],
+    ]),
+    {
+      ncloseCrouchStopGet: true,
+      ncloseCrouchStopGet2: true,
+      ncloseCrouchStopGet3: true,
+    },
   );
 
   const kick = compilePerformance([gesture("kick")], synth).performances.hero!;
   const kickStop = jointsAt(kick, 0.22);
-  TestValidator.predicate(
+  TestValidator.equals(
     "a lone kick keeps the leg snap and the spine counterbalance",
-    nclose(kickStop.map.get("rightUpperLeg")!.flexion!, 55) &&
-      nclose(kickStop.map.get("rightLowerLeg")!.flexion!, 75) &&
-      nclose(kickStop.map.get("spine")!.flexion!, -6),
+    namedFacts([
+      [
+        "ncloseKickStopGet",
+        () => nclose(kickStop.map.get("rightUpperLeg")!.flexion!, 55),
+      ],
+      [
+        "ncloseKickStopGet2",
+        () => nclose(kickStop.map.get("rightLowerLeg")!.flexion!, 75),
+      ],
+      [
+        "ncloseKickStopGet3",
+        () => nclose(kickStop.map.get("spine")!.flexion!, -6),
+      ],
+    ]),
+    {
+      ncloseKickStopGet: true,
+      ncloseKickStopGet2: true,
+      ncloseKickStopGet3: true,
+    },
   );
 
   const emote: IAutoMovieActionCall = {

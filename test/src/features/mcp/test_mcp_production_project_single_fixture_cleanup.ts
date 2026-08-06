@@ -283,11 +283,11 @@ export const test_mcp_production_project_single_fixture_cleanup = (): void => {
             index: 3,
             substantive: {
               digest:
-                "a90e99950e87297fa00a952a3d1860cac6239f968e5675bbf16de7d693c32bdd",
-              tokens: 12506,
+                "13c63e6d75ef92f41135544faa6fa11d727408cb006e873383ec1ba75a496951",
+              tokens: 14493,
             },
             tryDigest:
-              "640df8d56eab34b31e49e4d23893ccc2ddffc9f39ff26c85a1910dd254f44611",
+              "5fe9eb32d42e912a39bd6f758fc89e91db62014d39ab111589290a43a2b8f71c",
             tryStatements: 296,
           },
           {
@@ -325,11 +325,11 @@ export const test_mcp_production_project_single_fixture_cleanup = (): void => {
             index: 6,
             substantive: {
               digest:
-                "c8fec55b939a8316f733fb20fa086fd5393411c3dd21d317c6d5fb6a5e736433",
-              tokens: 1406,
+                "0bc133ff458d73e7343d0858053048ecf278d48d799bd13057d91517dc097101",
+              tokens: 1475,
             },
             tryDigest:
-              "70ca35f004ed6f3e5ca4b15e1fb59fed7b1da8db1e80a6548d0c1219bf790613",
+              "a96eca1531c7c98e20b001f6213a0da453796ae682086882c7e2862e3c827fa2",
             tryStatements: 20,
           },
           {
@@ -403,13 +403,13 @@ export const test_mcp_production_project_single_fixture_cleanup = (): void => {
             catchBodies: ["internalAliasFailure={error};", "throwerror;"],
             catchVariables: ["error"],
             containerKind: "TryStatement",
-            containerStatements: 228,
+            containerStatements: 240,
             failureHolder:
               "letinternalAliasFailure:|ISingleProductionProjectFixtureFailure|undefined;",
             finallyBodies: [
               "preserveSingleProductionProjectFixtureCleanup(internalAliasFailure,()=>internalAlias.dispose(),);",
             ],
-            index: 211,
+            index: 223,
             substantive: {
               digest:
                 "8ac7e322bb9c8e1d50a51f06739da0337772cca992d6bdfff5ee950ebcfbf1da",
@@ -424,13 +424,13 @@ export const test_mcp_production_project_single_fixture_cleanup = (): void => {
             catchBodies: ["malformedDesignFailure={error};", "throwerror;"],
             catchVariables: ["error"],
             containerKind: "TryStatement",
-            containerStatements: 228,
+            containerStatements: 240,
             failureHolder:
               "letmalformedDesignFailure:|ISingleProductionProjectFixtureFailure|undefined;",
             finallyBodies: [
               "preserveSingleProductionProjectFixtureCleanup(malformedDesignFailure,()=>malformedDesign.dispose(),);",
             ],
-            index: 224,
+            index: 236,
             substantive: {
               digest:
                 "53acaa5ffa6c86ed6b53ba0ef0314a1649ab490d01b0f693877ec9d50c3a1f42",
@@ -445,13 +445,13 @@ export const test_mcp_production_project_single_fixture_cleanup = (): void => {
             catchBodies: ["invalidRevisionFailure={error};", "throwerror;"],
             catchVariables: ["error"],
             containerKind: "TryStatement",
-            containerStatements: 228,
+            containerStatements: 240,
             failureHolder:
               "letinvalidRevisionFailure:|ISingleProductionProjectFixtureFailure|undefined;",
             finallyBodies: [
               "preserveSingleProductionProjectFixtureCleanup(invalidRevisionFailure,()=>invalidRevision.dispose(),);",
             ],
-            index: 227,
+            index: 239,
             substantive: {
               digest:
                 "99a96969a91cfad1e46a15fefca532351084eeef9188b2f1dd26e6c0a06f5b38",

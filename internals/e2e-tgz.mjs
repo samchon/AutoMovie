@@ -23,7 +23,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import packagedE2eCleanup from "./preservePackagedE2eCleanup.cjs";
@@ -57,6 +57,89 @@ let tracePath = null;
 const fail = (message) => {
   console.error(`\n✗ e2e:tgz FAILED: ${message}`);
   throw new Error(message);
+};
+
+const capturePackagedRenderPlanGeneration = (renderStateRoot) => {
+  const generationRoot = join(renderStateRoot, "plan.json.generations");
+  const generations = readdirSync(generationRoot, { withFileTypes: true })
+    .filter((entry) => entry.isFile() && entry.name.endsWith(".json"))
+    .map((entry) => {
+      const path = join(generationRoot, entry.name);
+      const text = readFileSync(path, "utf8");
+      const record = JSON.parse(text);
+      if (
+        typeof record !== "object" ||
+        record === null ||
+        typeof record.generation !== "string" ||
+        (record.predecessor !== null &&
+          typeof record.predecessor !== "string") ||
+        typeof record.plan !== "object" ||
+        record.plan === null
+      )
+        fail("packaged final render published an invalid plan generation");
+      return { path, record, text };
+    });
+  const predecessors = new Set(
+    generations
+      .map(({ record }) => record.predecessor)
+      .filter((predecessor) => predecessor !== null),
+  );
+  const heads = generations.filter(
+    ({ record }) => predecessors.has(record.generation) === false,
+  );
+  if (heads.length !== 1)
+    fail(
+      `packaged final render published ${heads.length} current plan generations`,
+    );
+  return heads[0];
+};
+
+const capturePackagedRenderChunkPublication = (starterDir, tier, chunk) => {
+  if (/^sha256:[0-9a-f]{64}$/u.test(chunk.id) === false)
+    fail("packaged final render published an invalid chunk identity");
+  const suffix = `.${tier}.${chunk.id.slice(7)}.publication.json`;
+  const pointers = readdirSync(starterDir, { withFileTypes: true }).filter(
+    (entry) =>
+      entry.isFile() &&
+      entry.name.startsWith(".automovie-chunk-") &&
+      entry.name.endsWith(suffix),
+  );
+  if (pointers.length !== 1)
+    fail(
+      `packaged final render published ${pointers.length} current pointers for chunk ${chunk.id}`,
+    );
+  const path = join(starterDir, pointers[0].name);
+  const text = readFileSync(path, "utf8");
+  const receipt = JSON.parse(text);
+  if (
+    receipt.chunk !== chunk.id ||
+    typeof receipt.publication !== "object" ||
+    receipt.publication === null ||
+    receipt.publication.version !== 1 ||
+    receipt.publication.tier !== tier ||
+    typeof receipt.publication.scope !== "string" ||
+    /^[0-9a-f]{64}$/u.test(receipt.publication.scope) === false ||
+    typeof receipt.publication.tree !== "string" ||
+    typeof receipt.publication.treeIdentity !== "string"
+  )
+    fail("packaged final render published an invalid chunk pointer");
+  const segments = receipt.publication.tree.split("/");
+  if (
+    segments.some(
+      (segment) => segment === "" || segment === "." || segment === "..",
+    )
+  )
+    fail("packaged final render published a non-relative chunk tree");
+  const directory = resolve(starterDir, ...segments);
+  const owned = relative(starterDir, directory);
+  if (
+    owned === "" ||
+    owned === ".." ||
+    owned.startsWith(`..${sep}`) ||
+    isAbsolute(owned)
+  )
+    fail("packaged final render published an outside-root chunk tree");
+  return { directory, path, receipt, text };
 };
 
 const writeCommandOutput = (result) => {
@@ -360,7 +443,6 @@ const visibleVariance = (png) => {
 const frameEvidence = (frame) => ({
   kind: "frame",
   target: frame.target,
-  shot: frame.shot,
   reviewFrame: frame.reviewFrame,
   bundle: frame.bundle,
   frame: frame.frame,
@@ -412,23 +494,41 @@ const exactEvidence = (project, prepared, selectorIndex) => {
     throw new Error("Current visual review has no frame evidence.");
   return frameEvidence(prepared.frames[0]);
 };
-const requiredAcceptance = (graph, target) =>
-  [...graph.acceptance.values()]
+const acceptanceAddressesShot = (scenario, shot) =>
+  (scenario.target.kind === "shot" && scenario.target.id === shot) ||
+  ((scenario.criterion.kind === "frame" ||
+    scenario.criterion.kind === "event") &&
+    scenario.criterion.shot === shot);
+const requiredAcceptance = (graph, target, frames = []) => {
+  const sequenceShots =
+    target.kind === "sequence"
+      ? new Set(
+          frames.flatMap((frame) =>
+            frame.target.kind === "shot" ? [frame.target.id] : [],
+          ),
+        )
+      : undefined;
+  return [...graph.acceptance.values()]
     .filter(
       (scenario) =>
         scenario.required &&
         (target.kind === "film" ||
+          (target.kind === "sequence" &&
+            [...(sequenceShots ?? [])].some((shot) =>
+              acceptanceAddressesShot(scenario, shot),
+            )) ||
           (target.kind === "shot" &&
-            ((scenario.target.kind === "shot" &&
-              scenario.target.id === target.id) ||
-              ((scenario.criterion.kind === "frame" ||
-                scenario.criterion.kind === "event") &&
-                scenario.criterion.shot === target.id)))),
+            acceptanceAddressesShot(scenario, target.id))),
     )
     .sort((left, right) => left.id.localeCompare(right.id));
+};
 const worksheet = (project, prepared) => {
   const graph = project.graph();
-  const acceptance = requiredAcceptance(graph, prepared.target);
+  const acceptance = requiredAcceptance(
+    graph,
+    prepared.target,
+    prepared.frames,
+  );
   return {
     target: prepared.target,
     preparedFingerprint: prepared.fingerprint,
@@ -451,7 +551,8 @@ const worksheet = (project, prepared) => {
                   : undefined);
               const frame = prepared.frames.find(
                 (item) =>
-                  item.shot === shot &&
+                  item.target.kind === "shot" &&
+                  item.target.id === shot &&
                   item.reviewFrame === scenario.criterion.frame &&
                   item.pass === scenario.criterion.pass,
               );
@@ -515,19 +616,38 @@ assert(
   JSON.stringify(compiled.shots) === JSON.stringify(canonicalCompiledShots),
   \`expected both canonical compiled shots, got \${JSON.stringify(compiled.shots)}\`,
 );
+const currentShotRenderManifests = renderManifests.filter(
+  (entry) =>
+    entry.value.target.kind === "shot" &&
+    entry.value.compileFingerprint === generated.inputFingerprint,
+);
 assert(
-  "starter-render-bundle-count",
-  renderManifests.length === 2,
-  \`expected one accumulated content-addressed bundle per shot, got \${renderManifests.length}\`,
+  "starter-render-bundle-shot-coverage",
+  JSON.stringify(
+    [...new Set(currentShotRenderManifests.map((entry) => entry.value.target.id))].sort(),
+  ) === JSON.stringify(canonicalCompiledShots.map((shot) => shot.id).sort()),
+  \`current shot bundles do not cover the canonical compiled shots: \${JSON.stringify(currentShotRenderManifests.map((entry) => entry.value.target))}\`,
 );
-const frames = renderManifests.flatMap((entry) =>
-  entry.value.frames.map((frame) => ({
-    ...frame,
-    shot: entry.value.target.id,
-    manifest: entry.value,
-    directory: path.dirname(entry.file),
-  })),
-);
+const currentShotFrames = new Map();
+for (const entry of currentShotRenderManifests)
+  for (const frame of entry.value.frames) {
+    const current = {
+      ...frame,
+      shot: entry.value.target.id,
+      manifest: entry.value,
+      directory: path.dirname(entry.file),
+    };
+    const identity = JSON.stringify([
+      current.shot,
+      current.index,
+      current.time,
+      current.pass,
+      current.digest,
+    ]);
+    if (currentShotFrames.has(identity) === false)
+      currentShotFrames.set(identity, current);
+  }
+const frames = [...currentShotFrames.values()];
 assert(
   "starter-render-frame-inventory",
   frames.length === 6 &&
@@ -784,7 +904,11 @@ if (phase === "review") {
       assert(
         "starter-film-review-sees-every-shot",
         prepared.frames.length === 6 &&
-          new Set(prepared.frames.map((frame) => frame.shot)).size === 2,
+          new Set(
+            prepared.frames.flatMap((frame) =>
+              frame.target.kind === "shot" ? [frame.target.id] : [],
+            ),
+          ).size === 2,
         JSON.stringify(prepared.frames),
       );
     const submitted = app.submitReview(worksheet(project, prepared));
@@ -808,67 +932,116 @@ if (phase === "review") {
   const receipt = readJson(
     project.trackedStatePath("render-manifest-receipt.json"),
   );
+  const ownedFiles = (aggregate.deliverables ?? []).flatMap((deliverable) =>
+    (deliverable.files ?? []).map((file) => ({
+      deliverable: deliverable.id,
+      ...file,
+    })),
+  );
+  const ownedFilesByPath = new Map(ownedFiles.map((file) => [file.path, file]));
   assert(
     "starter-aggregate-receipt",
     receipt.version === 2 &&
       receipt.manifestDigest === digestAutoMovieBytes(aggregateBytes) &&
       Array.isArray(receipt.files) &&
-      receipt.files.length === 5 &&
-      receipt.files.every(
-        (file) =>
-          aggregate.deliverables
-            ?.find((deliverable) => deliverable.id === file.deliverable)
-            ?.files?.some(
-              (owned) =>
-                owned.path === file.path &&
-                owned.digest === file.digest &&
-                owned.bytes === file.bytes &&
-                owned.mediaType === file.mediaType,
-            ) === true,
-      ),
+      ownedFilesByPath.size === ownedFiles.length &&
+      receipt.files.length === ownedFiles.length &&
+      receipt.files.every((file) => {
+        const owned = ownedFilesByPath.get(file.path);
+        return (
+          owned !== undefined &&
+          owned.deliverable === file.deliverable &&
+          owned.digest === file.digest &&
+          owned.bytes === file.bytes &&
+          owned.mediaType === file.mediaType
+        );
+      }),
     JSON.stringify(receipt),
   );
-  const receiptByDeliverable = new Map(
-    receipt.files.map((file) => [file.deliverable, file]),
+  const receiptFilesByDeliverable = new Map();
+  for (const file of receipt.files) {
+    const owned = receiptFilesByDeliverable.get(file.deliverable);
+    if (owned === undefined)
+      receiptFilesByDeliverable.set(file.deliverable, [file]);
+    else owned.push(file);
+  }
+  const deliverableFile = (deliverable, name) => {
+    const matched = (receiptFilesByDeliverable.get(deliverable) ?? []).filter(
+      (file) => file.path.endsWith(\`/\${name}\`),
+    );
+    return matched.length === 1 ? matched[0] : undefined;
+  };
+  const previewImage = deliverableFile("starter-preview", "preview.png");
+  const featureVideo = deliverableFile("starter-feature", "feature.mp4");
+  const guideVideo = deliverableFile("starter-pose-guide", "pose.mp4");
+  const guideFrames = Array.from(
+    {
+      length:
+        guideVideo?.probe?.kind === "video" ? guideVideo.probe.frameCount : 0,
+    },
+    (_unused, index) =>
+      deliverableFile(
+        "starter-pose-guide",
+        \`frames/pose/frame_\${String(index).padStart(8, "0")}.png\`,
+      ),
   );
+  const captionsTrack = deliverableFile("starter-captions", "captions.vtt");
+  const audioMix = deliverableFile("starter-audio", "audio.mp4");
+  const audioWaveform = deliverableFile("starter-audio", "waveform.png");
+  const audioSpectrogram = deliverableFile("starter-audio", "spectrogram.png");
+  const audioEvidence = deliverableFile("starter-audio", "evidence.json");
+  const requiredDeliverableFiles = [
+    ["starter-preview", [previewImage]],
+    ["starter-feature", [featureVideo]],
+    ["starter-pose-guide", [guideVideo, ...guideFrames]],
+    ["starter-captions", [captionsTrack]],
+    [
+      "starter-audio",
+      [audioMix, audioWaveform, audioSpectrogram, audioEvidence],
+    ],
+  ];
   assert(
     "starter-required-deliverables-parser-complete",
     aggregate.compileFingerprint === generated.inputFingerprint &&
-      aggregate.deliverables.length === 5 &&
-      [
-        "starter-preview",
-        "starter-feature",
-        "starter-pose-guide",
-        "starter-captions",
-        "starter-audio",
-      ].every((id) =>
-        aggregate.deliverables.some(
-          (deliverable) =>
-            deliverable.id === id && deliverable.files.length === 1,
-        ),
+      aggregate.deliverables.length === requiredDeliverableFiles.length &&
+      requiredDeliverableFiles.every(
+        ([id, expected]) =>
+          expected.every((file) => file !== undefined) &&
+          (receiptFilesByDeliverable.get(id) ?? []).length ===
+            expected.length &&
+          aggregate.deliverables.some(
+            (deliverable) =>
+              deliverable.id === id &&
+              deliverable.files.length === expected.length,
+          ),
       ) &&
-      receiptByDeliverable.get("starter-preview")?.probe?.kind === "png" &&
-      receiptByDeliverable.get("starter-preview")?.probe?.width === 160 &&
-      receiptByDeliverable.get("starter-preview")?.probe?.height === 90 &&
-      receiptByDeliverable.get("starter-feature")?.probe?.kind === "video" &&
-      receiptByDeliverable.get("starter-feature")?.probe?.frameCount === 23 &&
-      receiptByDeliverable.get("starter-feature")?.probe?.width === 160 &&
-      receiptByDeliverable.get("starter-feature")?.probe?.height === 90 &&
-      receiptByDeliverable.get("starter-pose-guide")?.probe?.kind ===
-        "video" &&
-      receiptByDeliverable.get("starter-pose-guide")?.probe?.frameCount ===
-        23 &&
-      receiptByDeliverable.get("starter-pose-guide")?.probe?.width === 160 &&
-      receiptByDeliverable.get("starter-pose-guide")?.probe?.height === 90 &&
-      receiptByDeliverable.get("starter-captions")?.probe?.kind ===
-        "webvtt" &&
-      receiptByDeliverable.get("starter-captions")?.probe?.cueCount === 1 &&
+      guideFrames.every(
+        (frame) =>
+          frame?.probe?.kind === "png" &&
+          frame?.probe?.width === 160 &&
+          frame?.probe?.height === 90,
+      ) &&
+      previewImage?.probe?.kind === "png" &&
+      previewImage?.probe?.width === 160 &&
+      previewImage?.probe?.height === 90 &&
+      featureVideo?.probe?.kind === "video" &&
+      featureVideo?.probe?.frameCount === 23 &&
+      featureVideo?.probe?.width === 160 &&
+      featureVideo?.probe?.height === 90 &&
+      guideVideo?.probe?.kind === "video" &&
+      guideVideo?.probe?.frameCount === 23 &&
+      guideVideo?.probe?.width === 160 &&
+      guideVideo?.probe?.height === 90 &&
+      captionsTrack?.probe?.kind === "webvtt" &&
+      captionsTrack?.probe?.cueCount === 1 &&
       aggregate.deliverables.find(
         (deliverable) => deliverable.id === "starter-captions",
       )?.runtimeSeconds === 11.5 &&
-      receiptByDeliverable.get("starter-audio")?.probe?.kind === "audio" &&
-      receiptByDeliverable.get("starter-audio")?.probe?.runtimeSeconds ===
-        11.5,
+      audioMix?.probe?.kind === "audio" &&
+      audioMix?.probe?.runtimeSeconds === 11.5 &&
+      audioWaveform?.probe?.kind === "png" &&
+      audioSpectrogram?.probe?.kind === "png" &&
+      audioEvidence?.probe?.kind === "sound-evidence",
     JSON.stringify(aggregate),
   );
   const final = services.compiler.compile({ scope: "final" });
@@ -1563,8 +1736,10 @@ PNG.sync.read = function (input) {
     "render-job",
     "final",
   );
-  const renderPlanPath = join(renderStateRoot, "plan.json");
-  const renderPlanText = readFileSync(renderPlanPath, "utf8");
+  const renderPlanGeneration =
+    capturePackagedRenderPlanGeneration(renderStateRoot);
+  const renderPlanPath = renderPlanGeneration.path;
+  const renderPlanText = renderPlanGeneration.text;
   const onnxNativeBindingPath = join(
     starterDir,
     "node_modules",
@@ -1599,7 +1774,7 @@ PNG.sync.read = function (input) {
     );
   }
   const tamperedRenderPlan = JSON.parse(renderPlanText);
-  tamperedRenderPlan.tracks.captions += "\nNOTE tampered\n";
+  tamperedRenderPlan.plan.tracks.captions += "\nNOTE tampered\n";
   writeFileSync(
     renderPlanPath,
     `${JSON.stringify(tamperedRenderPlan, null, 2)}\n`,
@@ -1622,9 +1797,13 @@ PNG.sync.read = function (input) {
       () => writeFileSync(renderPlanPath, renderPlanText),
     );
   }
-  const renderPlan = JSON.parse(renderPlanText);
+  const renderPlanRecord = JSON.parse(renderPlanText);
+  const renderPlan = renderPlanRecord.plan;
   renderPlan.runtimeIdentity.encoder.version = "0.0.0-stale";
-  writeFileSync(renderPlanPath, `${JSON.stringify(renderPlan, null, 2)}\n`);
+  writeFileSync(
+    renderPlanPath,
+    `${JSON.stringify(renderPlanRecord, null, 2)}\n`,
+  );
   let staleRenderRuntimeFailure;
   try {
     runExpectedFailure(
@@ -1647,25 +1826,21 @@ PNG.sync.read = function (input) {
   const retainedChunk = renderPlan.chunks[1];
   if (damagedChunk === undefined || retainedChunk === undefined)
     fail("packaged render did not produce multiple resumable chunks");
-  const damagedDirectory = join(
-    renderStateRoot,
-    "chunks",
-    damagedChunk.id.slice(7),
+  const damagedPublication = capturePackagedRenderChunkPublication(
+    starterDir,
+    "final",
+    damagedChunk,
   );
-  const damagedReceipt = JSON.parse(
-    readFileSync(join(damagedDirectory, "receipt.json"), "utf8"),
-  );
+  const damagedReceipt = damagedPublication.receipt;
   writeFileSync(
-    join(damagedDirectory, damagedReceipt.frames[0].path),
+    join(damagedPublication.directory, damagedReceipt.frames[0].path),
     Buffer.alloc(0),
   );
-  const retainedMarker = join(
-    renderStateRoot,
-    "chunks",
-    retainedChunk.id.slice(7),
-    "reuse-proof.marker",
+  const retainedPublication = capturePackagedRenderChunkPublication(
+    starterDir,
+    "final",
+    retainedChunk,
   );
-  writeFileSync(retainedMarker, "must survive fresh-process reuse\n");
   const abandonedPid = 2_147_483_647;
   const abandonedTemporary = join(
     renderStateRoot,
@@ -1714,14 +1889,31 @@ PNG.sync.read = function (input) {
     starterDir,
   );
   const quarantine = readdirSync(join(renderStateRoot, "quarantine"));
+  const damagedCurrent = capturePackagedRenderChunkPublication(
+    starterDir,
+    "final",
+    damagedChunk,
+  );
+  const retainedCurrent = capturePackagedRenderChunkPublication(
+    starterDir,
+    "final",
+    retainedChunk,
+  );
   if (
-    existsSync(retainedMarker) === false ||
+    damagedCurrent.path !== damagedPublication.path ||
+    damagedCurrent.directory === damagedPublication.directory ||
+    damagedCurrent.text === damagedPublication.text ||
+    existsSync(damagedPublication.directory) ||
+    existsSync(damagedCurrent.directory) === false ||
+    retainedCurrent.path !== retainedPublication.path ||
+    retainedCurrent.directory !== retainedPublication.directory ||
+    retainedCurrent.text !== retainedPublication.text ||
+    existsSync(retainedCurrent.directory) === false ||
     existsSync(join(renderStateRoot, "attempts", `${slotSegment}.json`)) ||
     quarantine.some((entry) => entry.includes("abandoned-partial")) === false ||
     quarantine.some((entry) => entry.includes("abandoned-lock-candidate")) ===
       false ||
-    quarantine.some((entry) => entry.includes("abandoned-lock")) === false ||
-    quarantine.some((entry) => entry.includes("replaced")) === false
+    quarantine.some((entry) => entry.includes("abandoned-lock")) === false
   )
     fail(
       "packaged render did not reuse the current chunk and recover interrupted/corrupt state selectively",

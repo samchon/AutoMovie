@@ -2,7 +2,7 @@ import { stageScene } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import { makeScriptWrite, makeStagingWrite } from "../internal/filmFixtures";
-import { hasViolation } from "../internal/predicates";
+import { hasViolation, namedFacts } from "../internal/predicates";
 
 /**
  * Pins mount-coupling integrity: a rider must ride a _different, placed_ actor.
@@ -42,10 +42,27 @@ export const test_film_stage_scene_mount_invalid = (): void => {
     staged.success === false &&
       hasViolation(staged, "type", "$input.actors[0].attach.parent"),
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "dangling parent rejected",
-    staged.success === false &&
-      hasViolation(staged, "type", "$input.actors[1].attach.parent") &&
-      staged.violations.some((v) => v.value === "horse"),
+    namedFacts([
+      ["stagedSuccess", () => staged.success === false],
+      [
+        "hasViolationStagedType",
+        () =>
+          staged.success === false &&
+          hasViolation(staged, "type", "$input.actors[1].attach.parent"),
+      ],
+      [
+        "stagedViolationsV",
+        () =>
+          staged.success === false &&
+          staged.violations.some((v) => v.value === "horse"),
+      ],
+    ]),
+    {
+      stagedSuccess: true,
+      hasViolationStagedType: true,
+      stagedViolationsV: true,
+    },
   );
 };

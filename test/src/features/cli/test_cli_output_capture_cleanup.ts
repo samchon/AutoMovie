@@ -287,14 +287,14 @@ export const test_cli_output_capture_cleanup = (): void => {
     [
       {
         functions: [
-          "8b8bd6630b7ea0b30166560288acf3f1c26f0ad9e5d1dc042e909af02251d2e1",
+          "9de665434cd59cff99726bf2c80b0582107138b22e6a7f2259a24882f68735cb",
         ],
         imports: ["captureCliOutput:captureCli"],
         localCaptures: 0,
       },
       {
         functions: [
-          "e6390f802bebbea8231d45b40e9ad2172ce5367c4313ed8fa6913d81f47a8fba",
+          "4a44aef564ebb19ad0a12efbb9074f0ff45479bcf1be0ed6e0fb3be637b029f9",
         ],
         imports: ["captureCliOutput:captureCli"],
         localCaptures: 0,

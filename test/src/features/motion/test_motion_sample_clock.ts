@@ -1,7 +1,7 @@
 import { sampleTimes, windowSampleTimes } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
-import { nclose } from "../internal/predicates";
+import { namedFacts, nclose } from "../internal/predicates";
 
 /**
  * The shared sampling clock is the engine's one frame-boundary contract: every
@@ -27,11 +27,14 @@ import { nclose } from "../internal/predicates";
 export const test_motion_sample_clock = (): void => {
   const whole = sampleTimes(1, 24);
   TestValidator.equals("1s@24Hz yields 25 instants", whole.length, 25);
-  TestValidator.predicate(
+  TestValidator.equals(
     "instants sit at i/24 with the last at the duration",
-    nclose(whole[0]!, 0) &&
-      nclose(whole[12]!, 12 / 24) &&
-      nclose(whole[24]!, 1),
+    namedFacts([
+      ["ncloseWhole", () => nclose(whole[0]!, 0)],
+      ["ncloseWhole2", () => nclose(whole[12]!, 12 / 24)],
+      ["ncloseWhole3", () => nclose(whole[24]!, 1)],
+    ]),
+    { ncloseWhole: true, ncloseWhole2: true, ncloseWhole3: true },
   );
 
   const fractional = sampleTimes(1.01, 24);
@@ -69,21 +72,37 @@ export const test_motion_sample_clock = (): void => {
     window.length,
     19,
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "window instants step start + i/24 clamped to end",
-    nclose(window[0]!, 0.5) &&
-      nclose(window[1]!, 0.5 + 1 / 24) &&
-      nclose(window[18]!, 1.25),
+    namedFacts([
+      ["ncloseWindow", () => nclose(window[0]!, 0.5)],
+      ["ncloseWindow2", () => nclose(window[1]!, 0.5 + 1 / 24)],
+      ["ncloseWindow3", () => nclose(window[18]!, 1.25)],
+    ]),
+    { ncloseWindow: true, ncloseWindow2: true, ncloseWindow3: true },
   );
 
   // (end − start) × rate landing just above an integer (0.3 × 30 =
   // 9.000000000000002) must not duplicate the clamped final instant: a
   // zero-width segment downstream validators would divide by.
   const fpWindow = windowSampleTimes(0.1, 0.4, 30);
-  TestValidator.predicate(
+  TestValidator.equals(
     "an FP just-above-integer window deduplicates its final instant",
-    fpWindow.length === 10 &&
-      nclose(fpWindow[fpWindow.length - 1]!, 0.4) &&
-      fpWindow[fpWindow.length - 1] !== fpWindow[fpWindow.length - 2],
+    namedFacts([
+      ["fpWindow", () => fpWindow.length === 10],
+      [
+        "ncloseFpWindowFpWindow",
+        () => nclose(fpWindow[fpWindow.length - 1]!, 0.4),
+      ],
+      [
+        "fpWindowFpWindowFpWindow",
+        () => fpWindow[fpWindow.length - 1] !== fpWindow[fpWindow.length - 2],
+      ],
+    ]),
+    {
+      fpWindow: true,
+      ncloseFpWindowFpWindow: true,
+      fpWindowFpWindowFpWindow: true,
+    },
   );
 };

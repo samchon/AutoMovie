@@ -251,11 +251,11 @@ export const test_mcp_production_review_design_fixture_cleanup = (): void => {
             ownerParameters: [],
             substantive: {
               digest:
-                "ddef913627c4c1bd3cd9c4c8c81d2eaef5f8ca572c9396ec5e1569ec471b9cf7",
-              tokens: 1999,
+                "d26ad76874c33a2c4cd03e79152f8caa8a9c72934ce607ddf1072fee4682f292",
+              tokens: 2158,
             },
             tryDigest:
-              "8404beb0ba44776f6171b50fa9ee98b76696c3329a570fecaf7ded36f3e5c9a3",
+              "7b2d688a4313b237a07bc191fbcbb15b36c632c71a01aa02b1249ab25c6a846c",
             tryStatements: 74,
           },
         ],

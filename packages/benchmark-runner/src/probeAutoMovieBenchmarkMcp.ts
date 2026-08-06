@@ -88,76 +88,106 @@ export const createProcessAutoMovieBenchmarkMcpTarget = (
         },
         stderr: "pipe",
       });
-      const transport = new ProtocolObservingTransport(inner);
-      const client = new Client({
-        name: "automovie-benchmark-runner",
-        version: "0.1.0",
-      });
       let stderr = "";
       inner.stderr?.on("data", (chunk: Buffer | string) => {
         stderr += chunk.toString();
       });
-      let probeResult:
-        | { success: true; value: IAutoMovieBenchmarkMcpSession }
-        | { error: unknown; success: false };
-      try {
-        await client.connect(transport, { timeout: startupTimeoutMs });
-        const server = client.getServerVersion();
-        const listed = await client.listTools(undefined, {
-          timeout: input.timeoutMs,
-        });
-        if (server === undefined || transport.protocolVersion === null)
-          throw new Error(
-            "MCP initialize completed without protocol or server identity.",
-          );
-        probeResult = {
-          success: true,
-          value: {
-            protocolVersion: transport.protocolVersion,
-            serverName: server.name,
-            serverVersion: server.version,
-            tools: listed.tools.map((tool) => ({
-              name: tool.name,
-              descriptionBytes: Buffer.byteLength(
-                tool.description ?? "",
-                "utf8",
-              ),
-              schemaBytes: Buffer.byteLength(
-                JSON.stringify(tool.inputSchema),
-                "utf8",
-              ),
-            })),
-          },
-        };
-      } catch (error) {
-        const detail = stderr.trim();
-        probeResult = {
-          error: new Error(
-            `MCP probe "${input.provenance}" failed: ${messageOf(error)}${
-              detail.length === 0 ? "" : `; stderr: ${detail}`
-            }`,
-          ),
-          success: false,
-        };
-      }
-      let cleanupFailure: { error: unknown } | undefined;
-      try {
-        await client.close();
-      } catch (error) {
-        cleanupFailure = { error };
-      }
-      if (probeResult.success === false) {
-        if (cleanupFailure !== undefined)
-          throw new AggregateError(
-            [probeResult.error, cleanupFailure.error],
-            `MCP probe "${input.provenance}" cleanup failed after the probe failed.`,
-          );
-        throw probeResult.error;
-      }
-      if (cleanupFailure !== undefined) throw cleanupFailure.error;
-      return probeResult.value;
+      return probeAutoMovieBenchmarkMcpTransport({
+        diagnostics: () => stderr,
+        provenance: input.provenance,
+        startupTimeoutMs,
+        timeoutMs: input.timeoutMs,
+        transport: inner,
+      });
     },
   };
+};
+
+/** Inputs of one measured MCP handshake over an already-built transport. */
+export interface IAutoMovieBenchmarkMcpTransportProbeInput {
+  /** Extra detail to attach to a failure, such as a server's stderr. */
+  diagnostics?: () => string;
+  /** Stable non-secret identity reported in failures. */
+  provenance: string;
+  /** Initialize timeout including any process startup. */
+  startupTimeoutMs: number;
+  /** Ordinary MCP request timeout in milliseconds. */
+  timeoutMs: number;
+  /** Transport the client speaks over. Ownership passes to this call. */
+  transport: Transport;
+}
+
+/**
+ * Measure one initialize/tools-list handshake over a supplied transport.
+ *
+ * The transport is the only thing a process target adds beyond this: keeping
+ * the measurement here lets it be exercised over any transport the SDK offers,
+ * including a linked in-memory pair, instead of only over a spawned server.
+ */
+export const probeAutoMovieBenchmarkMcpTransport = async (
+  input: IAutoMovieBenchmarkMcpTransportProbeInput,
+): Promise<IAutoMovieBenchmarkMcpSession> => {
+  const transport = new ProtocolObservingTransport(input.transport);
+  const client = new Client({
+    name: "automovie-benchmark-runner",
+    version: "0.1.0",
+  });
+  let probeResult:
+    | { success: true; value: IAutoMovieBenchmarkMcpSession }
+    | { error: unknown; success: false };
+  try {
+    await client.connect(transport, { timeout: input.startupTimeoutMs });
+    const server = client.getServerVersion();
+    const listed = await client.listTools(undefined, {
+      timeout: input.timeoutMs,
+    });
+    if (server === undefined || transport.protocolVersion === null)
+      throw new Error(
+        "MCP initialize completed without protocol or server identity.",
+      );
+    probeResult = {
+      success: true,
+      value: {
+        protocolVersion: transport.protocolVersion,
+        serverName: server.name,
+        serverVersion: server.version,
+        tools: listed.tools.map((tool) => ({
+          name: tool.name,
+          descriptionBytes: Buffer.byteLength(tool.description ?? "", "utf8"),
+          schemaBytes: Buffer.byteLength(
+            JSON.stringify(tool.inputSchema),
+            "utf8",
+          ),
+        })),
+      },
+    };
+  } catch (error) {
+    const detail = (input.diagnostics?.() ?? "").trim();
+    probeResult = {
+      error: new Error(
+        `MCP probe "${input.provenance}" failed: ${messageOf(error)}${
+          detail.length === 0 ? "" : `; stderr: ${detail}`
+        }`,
+      ),
+      success: false,
+    };
+  }
+  let cleanupFailure: { error: unknown } | undefined;
+  try {
+    await client.close();
+  } catch (error) {
+    cleanupFailure = { error };
+  }
+  if (probeResult.success === false) {
+    if (cleanupFailure !== undefined)
+      throw new AggregateError(
+        [probeResult.error, cleanupFailure.error],
+        `MCP probe "${input.provenance}" cleanup failed after the probe failed.`,
+      );
+    throw probeResult.error;
+  }
+  if (cleanupFailure !== undefined) throw cleanupFailure.error;
+  return probeResult.value;
 };
 
 /** Capture the protocol version the SDK otherwise keeps private. */
@@ -167,7 +197,7 @@ class ProtocolObservingTransport implements Transport {
   public onmessage?: Transport["onmessage"];
   public protocolVersion: string | null = null;
 
-  public constructor(private readonly inner: StdioClientTransport) {}
+  public constructor(private readonly inner: Transport) {}
 
   public async start(): Promise<void> {
     this.inner.onclose = () => this.onclose?.();

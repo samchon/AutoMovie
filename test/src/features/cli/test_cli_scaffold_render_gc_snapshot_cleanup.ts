@@ -112,7 +112,7 @@ export const test_cli_scaffold_render_gc_snapshot_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1982,
+          containerStatements: 2011,
           finallyDigest:
             "7d4ae166a68cfcacd5c2760dfb7047a3c24265054eda53f98b2f81d84b8e9688",
           finallySubstantive: {
@@ -120,24 +120,24 @@ export const test_cli_scaffold_render_gc_snapshot_cleanup = (): void => {
               "40b0b97a7a1eab41a7a3a02f37a482aa92cdca051b06769430e99e5a537c6e23",
             tokens: 74,
           },
-          index: 839,
+          index: 843,
           preceding:
             "letdirectFileFailureCleanupFailure:{error:unknown}|undefined;",
           substantive: {
             digest:
-              "223d4fdf93773ee5192d468750e8641ddac24280d17fdb273d91f019015949c9",
-            tokens: 23,
+              "3709772c1f1d05887d67f9147413bcdb52b76761f46ed6f053e8003e1ae593ab",
+            tokens: 25,
           },
           tryBody:
-            '{directFileFailureRejected=throwsWith(()=>renderAttemptGcModule.createRenderGcFileSnapshot(directFileFailureRoot,directFileFailureTarget,directFileFailureBytes,),"changedphysicalidentity",);}',
+            "{//Therefusaltravelsinsidethedescriptorcleanupaggregate,whoseown//messagenamesthecleanupratherthantheidentitychange,soread//everyleaffailureinsteadofonlythethrownerror'smessage.directFileFailureMessages=messagesOf(captureFailure(()=>renderAttemptGcModule.createRenderGcFileSnapshot(directFileFailureRoot,directFileFailureTarget,directFileFailureBytes,),),);}",
           tryDigest:
-            "9e6233fd9daa9168b6ef11e0a447e8ef7466e6176376150130e2d32ab4f3765e",
+            "22f42ca82f79a7658d4c8c46c1472951e01fa4226d02e22caf437b3aa6b2825d",
         },
         {
           catchBodies: ["directFileAbaCleanupFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1982,
+          containerStatements: 2011,
           finallyDigest:
             "bf6b1243bdafeb465a8caf9d29cde77e5d68bd389955391471b8e783284cd958",
           finallySubstantive: {
@@ -145,7 +145,7 @@ export const test_cli_scaffold_render_gc_snapshot_cleanup = (): void => {
               "edd4516383b777a9e6114ea970878184806804d4dbd8e7c8bb67e4e2c32cd410",
             tokens: 50,
           },
-          index: 857,
+          index: 861,
           preceding:
             "letdirectFileAbaCleanupFailure:{error:unknown}|undefined;",
           substantive: {

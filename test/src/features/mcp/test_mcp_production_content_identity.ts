@@ -10,6 +10,8 @@ import {
 } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
 
+import { namedFacts } from "../internal/predicates";
+
 const throws = (closure: () => unknown): boolean => {
   try {
     closure();
@@ -37,11 +39,27 @@ export const test_mcp_production_content_identity = (): void => {
     Buffer.from(canonicalAutoMovieJsonBytes({ b: 2, a: 1 })).toString("utf8"),
     '{"a":1,"b":2}',
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "unsupported canonical values fail loudly",
-    throws(() => canonicalizeAutoMovieJson(Number.NaN)) &&
-      throws(() => canonicalizeAutoMovieJson(1n)) &&
-      throws(() => canonicalizeAutoMovieJson(undefined)),
+    namedFacts([
+      [
+        "throwsCanonicalizeAutoMovieJsonNaN",
+        () => throws(() => canonicalizeAutoMovieJson(Number.NaN)),
+      ],
+      [
+        "throwsCanonicalizeAutoMovieJsonN",
+        () => throws(() => canonicalizeAutoMovieJson(1n)),
+      ],
+      [
+        "throwsCanonicalizeAutoMovieJson",
+        () => throws(() => canonicalizeAutoMovieJson(undefined)),
+      ],
+    ]),
+    {
+      throwsCanonicalizeAutoMovieJsonNaN: true,
+      throwsCanonicalizeAutoMovieJsonN: true,
+      throwsCanonicalizeAutoMovieJson: true,
+    },
   );
   TestValidator.equals(
     "source BOM and EOL normalization",
@@ -84,24 +102,69 @@ export const test_mcp_production_content_identity = (): void => {
     encodeAutoMoviePathSegment("a*!'()"),
     "a%2A%21%27%28%29",
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "portable path segments escape Windows devices",
-    encodeAutoMoviePathSegment("CON") === "%43ON" &&
-      encodeAutoMoviePathSegment("lpt9.json") === "%6Cpt9.json" &&
-      decodeAutoMoviePathSegment("%43ON") === "CON",
+    namedFacts([
+      [
+        "encodeAutoMoviePathSegmentCONON",
+        () => encodeAutoMoviePathSegment("CON") === "%43ON",
+      ],
+      [
+        "encodeAutoMoviePathSegmentLpt9Json",
+        () => encodeAutoMoviePathSegment("lpt9.json") === "%6Cpt9.json",
+      ],
+      [
+        "decodeAutoMoviePathSegmentONCON",
+        () => decodeAutoMoviePathSegment("%43ON") === "CON",
+      ],
+    ]),
+    {
+      encodeAutoMoviePathSegmentCONON: true,
+      encodeAutoMoviePathSegmentLpt9Json: true,
+      decodeAutoMoviePathSegmentONCON: true,
+    },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "portable path segments escape dot aliases",
-    encodeAutoMoviePathSegment(".") === "%2E" &&
-      encodeAutoMoviePathSegment("..") === ".%2E" &&
-      encodeAutoMoviePathSegment("shared.") === "shared%2E",
+    namedFacts([
+      [
+        "encodeAutoMoviePathSegmentE",
+        () => encodeAutoMoviePathSegment(".") === "%2E",
+      ],
+      [
+        "encodeAutoMoviePathSegmentE2",
+        () => encodeAutoMoviePathSegment("..") === ".%2E",
+      ],
+      [
+        "encodeAutoMoviePathSegmentSharedShared",
+        () => encodeAutoMoviePathSegment("shared.") === "shared%2E",
+      ],
+    ]),
+    {
+      encodeAutoMoviePathSegmentE: true,
+      encodeAutoMoviePathSegmentE2: true,
+      encodeAutoMoviePathSegmentSharedShared: true,
+    },
   );
   const longId = "장편-전투-".repeat(64);
   const longSegment = encodeAutoMoviePathSegment(longId);
-  TestValidator.predicate(
+  TestValidator.equals(
     "long ids use stable content-addressed segments",
-    /^~sha256-[0-9a-f]{64}$/.test(longSegment) &&
-      longSegment === encodeAutoMoviePathSegment(longId) &&
-      throws(() => decodeAutoMoviePathSegment(longSegment)),
+    namedFacts([
+      ["sha256AF", () => /^~sha256-[0-9a-f]{64}$/.test(longSegment)],
+      [
+        "longSegmentEncodeAutoMoviePathSegmentLongId",
+        () => longSegment === encodeAutoMoviePathSegment(longId),
+      ],
+      [
+        "throwsDecodeAutoMoviePathSegmentLongSegment",
+        () => throws(() => decodeAutoMoviePathSegment(longSegment)),
+      ],
+    ]),
+    {
+      sha256AF: true,
+      longSegmentEncodeAutoMoviePathSegmentLongId: true,
+      throwsDecodeAutoMoviePathSegmentLongSegment: true,
+    },
   );
 };

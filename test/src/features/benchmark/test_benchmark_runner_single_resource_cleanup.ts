@@ -191,12 +191,12 @@ export const test_benchmark_runner_single_resource_cleanup = (): void => {
     "utf8",
   );
   const expected = {
-    count: 3,
+    count: 2,
     parentDigest:
-      "af4619b6eab57b6180f9d9117cc064fe4c299b298f2bca858b804dd2ec4d28bc",
+      "509d7c59b1744f3c68c9b102605bb02d5821ac6e30ebf6565221010d20bb002e",
     parseDiagnostics: [],
     rootDigest:
-      "a07807d7bc53b10292f7f1f6dd87d572cca52b4d266d21f04005fb1de9f70865",
+      "3d9cbb964f788f9c6d175a8f73d74a0670766085acd73e094554483969eb48ad",
     rows: [
       {
         catchBodies: ["archivePublicationFailure={error};", "throwerror;"],
@@ -226,33 +226,6 @@ export const test_benchmark_runner_single_resource_cleanup = (): void => {
         },
       },
       {
-        catchBodies: ["mcpProbeHarnessFailure={error};", "throwerror;"],
-        catchVariables: ["error"],
-        cleanup: "()=>{Client.prototype.close=nativeClientClose;}",
-        containerKind: "ArrowFunction",
-        containerStatements: 32,
-        failureHolder:
-          "letmcpProbeHarnessFailure:IBenchmarkRunnerFixtureFailure|undefined;",
-        finallyDigest:
-          "b5a79153c91d0b8727af80e3d529623c77451d71eb637784d186c2c46cae562e",
-        finallySubstantive: {
-          digest:
-            "4939c34f6549d1155b6ba98e19761ee87a8a61fefe65dfad7e1075c77e774c72",
-          tokens: 31,
-        },
-        helper: "preserveBenchmarkRunnerHookCleanup",
-        index: 14,
-        owner: "exerciseInputAndFilesystemFences",
-        resource: "MCP-probe client-close hook",
-        tryDigest:
-          "ed4755787a7ac92975dbfca0f30f0738a9c47a355fda755fbac5c85cafe59acd",
-        trySubstantive: {
-          digest:
-            "1a65776a0317f9b206d1c8272e79ea382d33dedc2d65e94a64d4388bfe2afdca",
-          tokens: 58,
-        },
-      },
-      {
         catchBodies: ["snapshotLinkFailure={error};", "throwerror;"],
         catchVariables: ["error"],
         cleanup: "()=>fs.unlinkSync(linked)",
@@ -272,17 +245,17 @@ export const test_benchmark_runner_single_resource_cleanup = (): void => {
         owner: "exerciseSnapshotLink",
         resource: "snapshot linked view",
         tryDigest:
-          "b68513b4bf533a55f09cf457b9fa9800b3407beed6c76160a3d59f20d3b3e060",
+          "cdceef774690711cb3d288dd5c58510da46b3d81d0ac068cab997204758da81b",
         trySubstantive: {
           digest:
-            "f1047515a6befc0e22ffbeb244a199acaf3c6d7654a115b03745ac1a361bf81e",
-          tokens: 453,
+            "5eeaa9e056ec1b91fd80a55efa877f54faab958893889e2ba838881d514cbc2b",
+          tokens: 520,
         },
       },
     ],
   };
   TestValidator.equals(
-    "benchmark runner protects three single-resource cleanup lifecycles",
+    "benchmark runner protects two single-resource cleanup lifecycles",
     benchmarkRunnerSingleResourceCleanupContract(text),
     expected,
   );

@@ -10,7 +10,7 @@ import {
   makeScriptWrite,
   makeStagingWrite,
 } from "../internal/filmFixtures";
-import { hasViolation } from "../internal/predicates";
+import { hasViolation, namedFacts } from "../internal/predicates";
 
 type ICameraIntent = IAutoMovieBlockingCamera;
 type ICoverageIntent = IAutoMovieBlockingCoverage;
@@ -116,22 +116,52 @@ export const test_film_block_beat_camera_target = (): void => {
 
   // 3. the negative twins: an id nothing placed.
   const heroGhost = block({ on: { kind: "node", node: "nobody" } });
-  TestValidator.predicate(
+  TestValidator.equals(
     "an unplaced hero subject is still refused, naming every placement flavour",
-    hasViolation(heroGhost, "type", "$input.camera.on.node") &&
-      heroGhost.success === false &&
-      heroGhost.violations.some((item) =>
-        item.expected.includes("an actor, a set piece, or another camera"),
-      ),
+    namedFacts([
+      [
+        "hasViolationHeroGhostType",
+        () => hasViolation(heroGhost, "type", "$input.camera.on.node"),
+      ],
+      ["heroGhostSuccess", () => heroGhost.success === false],
+      [
+        "heroGhostViolationsItem",
+        () =>
+          heroGhost.success === false &&
+          heroGhost.violations.some((item) =>
+            item.expected.includes("an actor, a set piece, or another camera"),
+          ),
+      ],
+    ]),
+    {
+      hasViolationHeroGhostType: true,
+      heroGhostSuccess: true,
+      heroGhostViolationsItem: true,
+    },
   );
   const coverGhost = block({}, coverageOf({ kind: "node", node: "nobody" }));
-  TestValidator.predicate(
+  TestValidator.equals(
     "an unplaced coverage subject is still refused the same way",
-    hasViolation(coverGhost, "type", "$input.coverage[0].on.node") &&
-      coverGhost.success === false &&
-      coverGhost.violations.some((item) =>
-        item.expected.includes("an actor, a set piece, or another camera"),
-      ),
+    namedFacts([
+      [
+        "hasViolationCoverGhostType",
+        () => hasViolation(coverGhost, "type", "$input.coverage[0].on.node"),
+      ],
+      ["coverGhostSuccess", () => coverGhost.success === false],
+      [
+        "coverGhostViolationsItem",
+        () =>
+          coverGhost.success === false &&
+          coverGhost.violations.some((item) =>
+            item.expected.includes("an actor, a set piece, or another camera"),
+          ),
+      ],
+    ]),
+    {
+      hasViolationCoverGhostType: true,
+      coverGhostSuccess: true,
+      coverGhostViolationsItem: true,
+    },
   );
 
   // 4. covering with a camera the staging never placed is still refused.

@@ -268,23 +268,23 @@ export const test_mcp_production_project_observation_hook_cleanup =
               failureHolder:
                 "letinventoryReadHookFailure:IProductionProjectFixtureFailure|undefined;",
               finallyDigest:
-                "a4c6155357d3b666966d923cc9279ab36310a16a0c82c724bc18a4fe75b9c2f3",
+                "753190f7b0109bef8d1f314bbe03d773ee5b3be65b49eab32c6f5d7086631492",
               finallyStatements: 1,
               finallySubstantive: {
                 digest:
-                  "70e56a2e6773fae0ff20875cf1edbed3a3466e04b8cc1b497bfdba41477357e8",
+                  "4ac88163962d565e8ef16fcbaf79317d144ae500c52e1216cded106c10171187",
                 tokens: 29,
               },
               index: 291,
               substantive: {
                 digest:
-                  "80bd4abd3374acdcd46daaff282f9b11588a3a76c503d074100f4ce70e4dd5df",
-                tokens: 20,
+                  "6ac70764cc4f3eafa1d67f4b2fd102b5db2ed416520fe769a9cc5e05bd0445a5",
+                tokens: 22,
               },
               tryBody:
-                '{TestValidator.predicate("adesigndisappearingduringinventoryisaloudrace",throws(()=>ownerProject.graph()),);}',
+                '{TestValidator.predicate("adesigndisappearingduringinventoryisaloudrace",throws(()=>ownerProject.graph(),"disappearedwhilereading"),);}',
               tryDigest:
-                "cf2b00a9798f0fa8c7c95184464d28c4dc1ded71792c8bba2286708c8b699c0d",
+                "4768706f5b6bece0c5705e7ce4cce20f95ce88fb985967c4d944ba537e5fc901",
               tryStatements: 1,
             },
           ],

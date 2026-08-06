@@ -6,7 +6,7 @@ import {
 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { nclose } from "../internal/predicates";
+import { namedFacts, nclose } from "../internal/predicates";
 
 /**
  * The track sampler now binary-searches the enclosing keyframe segment instead
@@ -71,9 +71,14 @@ export const test_resolve_sample_clip_binary_search = (): void => {
 
   for (const t of queries) {
     const v = xAt(t);
-    TestValidator.predicate(
+    TestValidator.equals(
       `translation.x ramp is exact at t=${t.toFixed(4)}`,
-      nclose(v[0]!, t / DT, 1e-9) && v[1] === 0 && v[2] === 0,
+      namedFacts([
+        ["ncloseVT", () => nclose(v[0]!, t / DT, 1e-9)],
+        ["v", () => v[1] === 0],
+        ["v2", () => v[2] === 0],
+      ]),
+      { ncloseVT: true, v: true, v2: true },
     );
   }
 

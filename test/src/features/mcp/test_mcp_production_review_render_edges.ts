@@ -17,6 +17,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { PNG } from "pngjs";
 
+import { namedFacts } from "../internal/predicates";
 import {
   fixtureWorldDesign,
   productionCompileSucceeded,
@@ -344,11 +345,28 @@ export const test_mcp_production_review_render_edges =
       const linkedAggregate = review.prepare({
         target: { kind: "film", id: "fixture-film" },
       });
-      TestValidator.predicate(
+      TestValidator.equals(
         "terminal publication stays outside human review identity and never follows linked aggregate bytes",
-        beforeAggregate.fingerprint === validAggregate.fingerprint &&
-          validAggregate.fingerprint === malformedAggregate.fingerprint &&
-          malformedAggregate.fingerprint === linkedAggregate.fingerprint,
+        namedFacts([
+          [
+            "beforeAggregateFingerprintValidAggregate",
+            () => beforeAggregate.fingerprint === validAggregate.fingerprint,
+          ],
+          [
+            "validAggregateFingerprintMalformedAggregate",
+            () => validAggregate.fingerprint === malformedAggregate.fingerprint,
+          ],
+          [
+            "malformedAggregateFingerprintLinkedAggregate",
+            () =>
+              malformedAggregate.fingerprint === linkedAggregate.fingerprint,
+          ],
+        ]),
+        {
+          beforeAggregateFingerprintValidAggregate: true,
+          validAggregateFingerprintMalformedAggregate: true,
+          malformedAggregateFingerprintLinkedAggregate: true,
+        },
       );
       fs.rmSync(aggregateManifest, { force: true, recursive: true });
       fs.rmSync(outsideAggregate, { force: true, recursive: true });
@@ -1184,6 +1202,9 @@ export const test_mcp_production_review_render_edges =
           ...args,
         );
       });
+      let disappearingManifestFailure:
+        | IProductionReviewRenderFixtureFailure
+        | undefined;
       try {
         TestValidator.predicate(
           "a disappearing manifest is invalid rather than absent",
@@ -1191,8 +1212,21 @@ export const test_mcp_production_review_render_edges =
             .prepare({ target })
             .diagnostics.some((item) => item.code === "render-bundle-invalid"),
         );
+      } catch (error) {
+        disappearingManifestFailure = { error };
+        throw error;
       } finally {
-        Reflect.set(fs, "openSync", stableOpenSync);
+        preserveProductionReviewRenderHarnessCleanup(
+          disappearingManifestFailure,
+          [
+            {
+              resource: "disappearing manifest open hook",
+              cleanup: () => {
+                Reflect.set(fs, "openSync", stableOpenSync);
+              },
+            },
+          ],
+        );
       }
 
       const inventoryRaceFixture = (name: string) => {
@@ -1406,16 +1440,31 @@ export const test_mcp_production_review_render_edges =
       let lateBundleFailure: IProductionReviewRenderFixtureFailure | undefined;
       try {
         const prepared = review.prepare({ target });
-        TestValidator.predicate(
+        TestValidator.equals(
           "a bundle replaced after inventory cannot become review evidence",
-          lateSwapped &&
-            prepared.frames.every((frame) => frame.digest !== lateDigest) &&
-            prepared.diagnostics.some(
-              (item) =>
-                item.code === "render-bundle-unowned" &&
-                path.resolve(fixture.root, item.path ?? "") ===
-                  path.resolve(lateManifestPath),
-            ),
+          namedFacts([
+            ["lateSwapped", () => lateSwapped],
+            [
+              "preparedFramesFrame",
+              () =>
+                prepared.frames.every((frame) => frame.digest !== lateDigest),
+            ],
+            [
+              "preparedDiagnosticsItem",
+              () =>
+                prepared.diagnostics.some(
+                  (item) =>
+                    item.code === "render-bundle-unowned" &&
+                    path.resolve(fixture.root, item.path ?? "") ===
+                      path.resolve(lateManifestPath),
+                ),
+            ],
+          ]),
+          {
+            lateSwapped: true,
+            preparedFramesFrame: true,
+            preparedDiagnosticsItem: true,
+          },
         );
       } catch (error) {
         lateBundleFailure = { error };

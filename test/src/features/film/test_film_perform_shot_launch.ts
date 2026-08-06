@@ -24,7 +24,7 @@ import {
   makeMotion,
   makePose,
 } from "../internal/fixtures";
-import { nclose, vclose } from "../internal/predicates";
+import { namedFacts, nclose, vclose } from "../internal/predicates";
 
 /**
  * Like the shared content seam, but a `launch` produces no actor motion: it
@@ -218,26 +218,62 @@ export const test_film_perform_shot_launch = (): void => {
     launchEvents.map((event) => event.kind),
     ["contact", "hit", "fall"],
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "the contact event lands with the projectile",
-    launchEvents[0]!.source === "collisionSolver" &&
-      launchEvents[0]!.time === times[times.length - 1] &&
-      launchEvents[0]!.actionIndex === 0 &&
-      launchEvents[0]!.target === "foe" &&
-      launchEvents[0]!.object === "arrow",
+    namedFacts([
+      [
+        "launchEventsSourceCollisionSolver",
+        () => launchEvents[0]!.source === "collisionSolver",
+      ],
+      [
+        "launchEventsTimeTimes",
+        () => launchEvents[0]!.time === times[times.length - 1],
+      ],
+      ["launchEventsActionIndex", () => launchEvents[0]!.actionIndex === 0],
+      ["launchEventsTargetFoe", () => launchEvents[0]!.target === "foe"],
+      ["launchEventsObjectArrow", () => launchEvents[0]!.object === "arrow"],
+    ]),
+    {
+      launchEventsSourceCollisionSolver: true,
+      launchEventsTimeTimes: true,
+      launchEventsActionIndex: true,
+      launchEventsTargetFoe: true,
+      launchEventsObjectArrow: true,
+    },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "the hit event drives the downstream reaction",
-    launchEvents[1]!.source === "impactOutput" &&
-      launchEvents[1]!.reaction === "foe" &&
-      launchEvents[1]!.actionIndex === 0 &&
-      nclose(launchEvents[1]!.time, times[times.length - 1]!),
+    namedFacts([
+      [
+        "launchEventsSourceImpactOutput",
+        () => launchEvents[1]!.source === "impactOutput",
+      ],
+      ["launchEventsReactionFoe", () => launchEvents[1]!.reaction === "foe"],
+      ["launchEventsActionIndex", () => launchEvents[1]!.actionIndex === 0],
+      [
+        "ncloseLaunchEventsTime",
+        () => nclose(launchEvents[1]!.time, times[times.length - 1]!),
+      ],
+    ]),
+    {
+      launchEventsSourceImpactOutput: true,
+      launchEventsReactionFoe: true,
+      launchEventsActionIndex: true,
+      ncloseLaunchEventsTime: true,
+    },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "the fall event records the unbalance response",
-    launchEvents[2]!.kind === "fall" &&
-      launchEvents[2]!.actor === "foe" &&
-      launchEvents[2]!.reaction === "foe",
+    namedFacts([
+      ["launchEventsKindFall", () => launchEvents[2]!.kind === "fall"],
+      ["launchEventsActorFoe", () => launchEvents[2]!.actor === "foe"],
+      ["launchEventsReactionFoe", () => launchEvents[2]!.reaction === "foe"],
+    ]),
+    {
+      launchEventsKindFall: true,
+      launchEventsActorFoe: true,
+      launchEventsReactionFoe: true,
+    },
   );
   const faster = perform([
     {

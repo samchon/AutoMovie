@@ -116,7 +116,7 @@ export const test_cli_scaffold_viewer_race_cleanup = (): void => {
           catchBodies: ["ancestorRaceCleanupFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1982,
+          containerStatements: 2011,
           finallyDigest:
             "79be2444a4921a3048dc93ec4a73aab02b57515f9f1c0343e915bdbdc4595a6f",
           finallySubstantive: {
@@ -124,7 +124,7 @@ export const test_cli_scaffold_viewer_race_cleanup = (): void => {
               "7a1b35e0689ade53aa176ac19900c3757410b2836ba371d060ff33ee671009fe",
             tokens: 113,
           },
-          index: 69,
+          index: 70,
           preceding: "letancestorRaceCleanupFailure:{error:unknown}|undefined;",
           substantive: {
             digest:
@@ -140,7 +140,7 @@ export const test_cli_scaffold_viewer_race_cleanup = (): void => {
           catchBodies: ["artifactRaceCleanupFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1982,
+          containerStatements: 2011,
           finallyDigest:
             "348d543079155e35b90bb1c0f0112561e8ba6273b29c00fe493e8d0ac18185a7",
           finallySubstantive: {
@@ -148,7 +148,7 @@ export const test_cli_scaffold_viewer_race_cleanup = (): void => {
               "36edaab589c1f84e488a0e750d7126c867ebee89103d61f78ed2b185a922f6ad",
             tokens: 77,
           },
-          index: 76,
+          index: 77,
           preceding: "letartifactRaceCleanupFailure:{error:unknown}|undefined;",
           substantive: {
             digest:
@@ -164,7 +164,7 @@ export const test_cli_scaffold_viewer_race_cleanup = (): void => {
           catchBodies: ["ledgerRaceCleanupFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1982,
+          containerStatements: 2011,
           finallyDigest:
             "2e74f40dd2c237b508abc3fb69932d474c11872e8e8c7e8cd4c0671898d53ddf",
           finallySubstantive: {
@@ -172,7 +172,7 @@ export const test_cli_scaffold_viewer_race_cleanup = (): void => {
               "4945926d6e2afc5fac4a6bce09191982470c3a3027a1659a8ee6cbab6b2f3f99",
             tokens: 77,
           },
-          index: 95,
+          index: 96,
           preceding: "letledgerRaceCleanupFailure:{error:unknown}|undefined;",
           substantive: {
             digest:
@@ -187,7 +187,7 @@ export const test_cli_scaffold_viewer_race_cleanup = (): void => {
           catchBodies: ["modelRaceCleanupFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1982,
+          containerStatements: 2011,
           finallyDigest:
             "d58362fc72ab44a081cdba00f71240a5b198212bc860987308d84331af4c59e3",
           finallySubstantive: {
@@ -195,7 +195,7 @@ export const test_cli_scaffold_viewer_race_cleanup = (): void => {
               "9d08e258f8e3354bc8af0f2044b3adfc0f99dd477321de86c1877fdf38451a51",
             tokens: 77,
           },
-          index: 103,
+          index: 104,
           preceding: "letmodelRaceCleanupFailure:{error:unknown}|undefined;",
           substantive: {
             digest:
@@ -210,7 +210,7 @@ export const test_cli_scaffold_viewer_race_cleanup = (): void => {
           catchBodies: ["inventoryRaceCleanupFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1982,
+          containerStatements: 2011,
           finallyDigest:
             "b8b24aff509ffca14288f4adc74df66e29f4635c345912cc057fae715a018883",
           finallySubstantive: {
@@ -218,7 +218,7 @@ export const test_cli_scaffold_viewer_race_cleanup = (): void => {
               "726dee4cf9439c1e7475cd0b3467ed0dce26fb8d561a98c5e054b101412e7ae5",
             tokens: 57,
           },
-          index: 112,
+          index: 113,
           preceding:
             "letinventoryRaceCleanupFailure:{error:unknown}|undefined;",
           substantive: {
@@ -234,7 +234,7 @@ export const test_cli_scaffold_viewer_race_cleanup = (): void => {
           catchBodies: ["assetRaceCleanupFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1982,
+          containerStatements: 2011,
           finallyDigest:
             "716d7864a47395a399ed02c0be44c5b96e9e3c0dc121ac0ea19e65d71d2d1644",
           finallySubstantive: {
@@ -242,7 +242,7 @@ export const test_cli_scaffold_viewer_race_cleanup = (): void => {
               "36701ed599f06a9bbdc3bf8e0e55c1fbae681c3dc2ddc80e9e531e668e41f250",
             tokens: 77,
           },
-          index: 119,
+          index: 120,
           preceding: "letassetRaceCleanupFailure:{error:unknown}|undefined;",
           substantive: {
             digest:

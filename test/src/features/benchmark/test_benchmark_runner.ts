@@ -21,14 +21,12 @@ import {
   snapshotAutoMovieBenchmarkProject,
 } from "@automovie/benchmark-runner";
 import { muxProductionFeatureMp4 } from "@automovie/mcp";
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { TestValidator } from "@nestia/e2e";
 import fs from "node:fs";
-import { createRequire } from "node:module";
 import os from "node:os";
 import path from "node:path";
 
-import { throwsError } from "../internal/predicates";
+import { namedFacts, throwsError } from "../internal/predicates";
 import {
   productionH264Mp4,
   productionOpusMp4,
@@ -41,11 +39,6 @@ const expectErrorMessage = (
   task: () => unknown,
   message: string,
 ): void => TestValidator.predicate(title, throwsError(task, message));
-
-// A clean CI checkout starts this fixture through ttsx, so initialize includes
-// the MCP project's cold typecheck and source-dependency emit. Keep the live
-// protocol probe bounded without treating that compile as a 30-second request.
-const SOURCE_MCP_STARTUP_TIMEOUT_MS = 120_000;
 
 const completeLifecycle = (): IAutoMovieBenchmarkGateResult[] => [
   { gate: "packaged-install", status: "pass", detail: "Packages installed." },
@@ -163,23 +156,17 @@ export const test_benchmark_runner = async (): Promise<void> => {
       client: current.client,
       runtime: current.runtime,
     };
-    const ttsxEntry = path.join(
-      path.dirname(createRequire(__filename).resolve("ttsc/package.json")),
-      "lib/launcher/ttsx.js",
-    );
-    const mcpTarget = createProcessAutoMovieBenchmarkMcpTarget({
-      surface: "five-tool",
+    // Launching an MCP server over stdio is the SDK's own verified surface, and
+    // booting this workspace's server from source made every run pay a cold
+    // typia transform and typecheck. The runner's logic is what this suite owns,
+    // so the target is an in-process session, exactly like the archived
+    // comparison baseline below.
+    const mcpTarget = {
+      surface: "five-tool" as const,
       provenance: "@automovie/mcp:workspace",
-      command: process.execPath,
-      args: [
-        ttsxEntry,
-        "-P",
-        path.join(repositoryRoot, "packages/mcp/tsconfig.json"),
-        path.join(repositoryRoot, "packages/mcp/src/bin.ts"),
-      ],
-      timeoutMs: 30_000,
-      startupTimeoutMs: SOURCE_MCP_STARTUP_TIMEOUT_MS,
-    });
+      probe: async (): Promise<IAutoMovieBenchmarkMcpSession> =>
+        austerlitzTeaserDraft("five-tool").mcp,
+    };
     const archivedBaseline = {
       surface: "legacy-compact" as const,
       provenance: "@automovie/mcp:legacy-compact:archived",
@@ -1452,51 +1439,46 @@ const exerciseInputAndFilesystemFences = async (
       project: root,
     }),
   );
-  const nativeClientClose = Client.prototype.close;
-  const cleanupFailure = new Error("synthetic MCP client cleanup failure");
-  let cleanupOnlyFailure: unknown = null;
-  let combinedProbeFailure: unknown = null;
-  Client.prototype.close = async function (): Promise<void> {
-    await Reflect.apply(nativeClientClose, this, []);
-    throw cleanupFailure;
-  };
-  let mcpProbeHarnessFailure: IBenchmarkRunnerFixtureFailure | undefined;
-  try {
-    cleanupOnlyFailure = await rejectedValue(() =>
-      mcpTarget.probe({
-        scenario: getAutoMovieBenchmarkScenario("short/austerlitz-teaser"),
-        project: root,
-      }),
-    );
-    combinedProbeFailure = await rejectedValue(() =>
-      missingMcp.probe({
-        scenario: getAutoMovieBenchmarkScenario("short/austerlitz-teaser"),
-        project: root,
-      }),
-    );
-  } catch (error) {
-    mcpProbeHarnessFailure = { error };
-    throw error;
-  } finally {
-    preserveBenchmarkRunnerHookCleanup(mcpProbeHarnessFailure, [
+  // A comparison target that cannot be probed is the runner's own incident, and
+  // the only path that reached it was the live boot this suite no longer does.
+  const comparisonFailure = await runAutoMovieBenchmark({
+    ...base,
+    campaign: "comparison-failure",
+    inventoryBaselines: [
       {
-        resource: "MCP-probe client-close hook",
-        cleanup: () => {
-          Client.prototype.close = nativeClientClose;
+        surface: "production" as const,
+        provenance: "@automovie/mcp:comparison-unreachable",
+        probe: async (): Promise<IAutoMovieBenchmarkMcpSession> => {
+          throw new Error("comparison handshake refused");
         },
       },
-    ]);
-  }
-  TestValidator.predicate(
-    "process MCP probes preserve cleanup failures",
-    cleanupOnlyFailure === cleanupFailure &&
-      combinedProbeFailure instanceof AggregateError &&
-      combinedProbeFailure.errors.length === 2 &&
-      combinedProbeFailure.errors[0] instanceof Error &&
-      combinedProbeFailure.errors[0].message.includes(
-        'MCP probe "missing-process" failed',
-      ) &&
-      combinedProbeFailure.errors[1] === cleanupFailure,
+    ],
+  });
+  TestValidator.equals(
+    "a comparison MCP target failure is the runner's own handshake incident",
+    {
+      detail: (comparisonFailure.verdict.outcome === "infra-excluded"
+        ? comparisonFailure.verdict.incident.detail
+        : ""
+      ).includes(
+        'Comparison MCP target "@automovie/mcp:comparison-unreachable" failed',
+      ),
+      gate:
+        comparisonFailure.verdict.outcome === "infra-excluded"
+          ? comparisonFailure.verdict.incident.gate
+          : null,
+      kind:
+        comparisonFailure.verdict.outcome === "infra-excluded"
+          ? comparisonFailure.verdict.incident.kind
+          : null,
+      outcome: comparisonFailure.verdict.outcome,
+    },
+    {
+      detail: true,
+      gate: "mcp-handshake",
+      kind: "harness-error",
+      outcome: "infra-excluded",
+    },
   );
   expectErrorMessage(
     "process MCP targets validate command and timeout",
@@ -1872,24 +1854,62 @@ const exerciseProviderAdapters = async (root: string): Promise<void> => {
       };
     };
   }>(path.join(inputRoot, "claude-mcp.json"));
-  TestValidator.predicate(
+  TestValidator.equals(
     "concrete provider adapters fix MCP configuration and parse non-scoring usage",
-    codex.generation.toolCalls === 1 &&
-      codex.generation.inputTokens === 12 &&
-      codex.generation.outputTokens === 5 &&
-      codexInput.command === "codex" &&
-      codexInput.args?.includes(
-        "--dangerously-bypass-approvals-and-sandbox",
-      ) === true &&
-      codexInput.args?.includes(
-        'mcp_servers.automovie.env.BENCHMARK_MODE="1"',
-      ) === true &&
-      claude.generation.toolCalls === 3 &&
-      claude.generation.costUsd === 0.25 &&
-      claudeInput.command === "claude" &&
-      claudeInput.args?.includes("bypassPermissions") === true &&
-      claudeConfig.mcpServers.automovie.command === "mcp-command" &&
-      claudeConfig.mcpServers.automovie.env.AUTOMOVIE_PROJECT_ROOT === project,
+    namedFacts([
+      ["codexGenerationToolCalls", () => codex.generation.toolCalls === 1],
+      ["codexGenerationInputTokens", () => codex.generation.inputTokens === 12],
+      [
+        "codexGenerationOutputTokens",
+        () => codex.generation.outputTokens === 5,
+      ],
+      ["codexInputCommandCodex", () => codexInput.command === "codex"],
+      [
+        "codexInputArgsIncludes",
+        () =>
+          codexInput.args?.includes(
+            "--dangerously-bypass-approvals-and-sandbox",
+          ) === true,
+      ],
+      [
+        "codexInputArgsIncludes2",
+        () =>
+          codexInput.args?.includes(
+            'mcp_servers.automovie.env.BENCHMARK_MODE="1"',
+          ) === true,
+      ],
+      ["claudeGenerationToolCalls", () => claude.generation.toolCalls === 3],
+      ["claudeGenerationCostUsd", () => claude.generation.costUsd === 0.25],
+      ["claudeInputCommandClaude", () => claudeInput.command === "claude"],
+      [
+        "claudeInputArgsIncludes",
+        () => claudeInput.args?.includes("bypassPermissions") === true,
+      ],
+      [
+        "claudeConfigMcpServersAutomovie",
+        () => claudeConfig.mcpServers.automovie.command === "mcp-command",
+      ],
+      [
+        "claudeConfigMcpServersAutomovie2",
+        () =>
+          claudeConfig.mcpServers.automovie.env.AUTOMOVIE_PROJECT_ROOT ===
+          project,
+      ],
+    ]),
+    {
+      codexGenerationToolCalls: true,
+      codexGenerationInputTokens: true,
+      codexGenerationOutputTokens: true,
+      codexInputCommandCodex: true,
+      codexInputArgsIncludes: true,
+      codexInputArgsIncludes2: true,
+      claudeGenerationToolCalls: true,
+      claudeGenerationCostUsd: true,
+      claudeInputCommandClaude: true,
+      claudeInputArgsIncludes: true,
+      claudeConfigMcpServersAutomovie: true,
+      claudeConfigMcpServersAutomovie2: true,
+    },
   );
 };
 
@@ -1982,12 +2002,30 @@ const exerciseSnapshotLink = (root: string): void => {
         (entry) => entry.kind === "link" && entry.path === "linked-view",
       ),
     );
-    TestValidator.predicate(
+    TestValidator.equals(
       "project snapshots bind regular bytes to the verified descriptor",
-      pathnameRead === false &&
-        evidenceEntry?.kind === "file" &&
-        evidenceEntry.bytes === resident.length &&
-        evidenceEntry.digest === digestAutoMovieBenchmarkBytes(resident),
+      namedFacts([
+        ["pathnameRead", () => pathnameRead === false],
+        ["evidenceEntryKindFile", () => evidenceEntry?.kind === "file"],
+        [
+          "evidenceEntryBytesResident",
+          () =>
+            evidenceEntry?.kind === "file" &&
+            evidenceEntry.bytes === resident.length,
+        ],
+        [
+          "evidenceEntryDigestDigestAutoMovieBenchmarkBytes",
+          () =>
+            evidenceEntry?.kind === "file" &&
+            evidenceEntry.digest === digestAutoMovieBenchmarkBytes(resident),
+        ],
+      ]),
+      {
+        pathnameRead: true,
+        evidenceEntryKindFile: true,
+        evidenceEntryBytesResident: true,
+        evidenceEntryDigestDigestAutoMovieBenchmarkBytes: true,
+      },
     );
   } catch (error) {
     snapshotLinkFailure = { error };
@@ -2024,16 +2062,5 @@ const rejected = async (closure: () => Promise<unknown>): Promise<string> => {
     return "";
   } catch (error) {
     return error instanceof Error ? error.message : String(error);
-  }
-};
-
-const rejectedValue = async (
-  closure: () => Promise<unknown>,
-): Promise<unknown> => {
-  try {
-    await closure();
-    return null;
-  } catch (error) {
-    return error;
   }
 };

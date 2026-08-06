@@ -7,6 +7,8 @@ import {
 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
+import { namedFacts } from "../internal/predicates";
+
 const REST = {
   translation: { x: 0, y: 0, z: 0 },
   rotation: { x: 0, y: 0, z: 0, w: 1 },
@@ -151,10 +153,23 @@ export const test_rom_clamp_pose = (): void => {
     sanitizedArm.abduction,
     0,
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "pose clamp output axes are finite",
-    Number.isFinite(sanitizedArm.flexion) &&
-      Number.isFinite(sanitizedArm.abduction) &&
-      Number.isFinite(sanitizedArm.twist),
+    namedFacts([
+      [
+        "isFiniteSanitizedArmFlexion",
+        () => Number.isFinite(sanitizedArm.flexion),
+      ],
+      [
+        "isFiniteSanitizedArmAbduction",
+        () => Number.isFinite(sanitizedArm.abduction),
+      ],
+      ["isFiniteSanitizedArmTwist", () => Number.isFinite(sanitizedArm.twist)],
+    ]),
+    {
+      isFiniteSanitizedArmFlexion: true,
+      isFiniteSanitizedArmAbduction: true,
+      isFiniteSanitizedArmTwist: true,
+    },
   );
 };

@@ -556,22 +556,24 @@ export const readPhysicalFileSnapshot = (
   let failure: IViewerFileDescriptorFailure | undefined;
   try {
     const opened = fs.fstatSync(descriptor, { bigint: true });
-    if (
-      opened.isFile() === false ||
-      opened.dev !== linked.dev ||
-      opened.ino !== linked.ino ||
-      physicalVersion(opened) !== identity
-    )
+    // A pathname stat and a descriptor stat are two different sources and do
+    // not agree on every field. On Windows the two read the volume serial
+    // through different APIs, and a resident, unmodified artifact was
+    // observed reporting different devices from the same file: the drift the
+    // scaffold contract reports for this read is `dev`. The file id is what
+    // both sources agree on, so bind them by it and compare a full version
+    // only against another reading of the same source.
+    if (opened.isFile() === false || opened.ino !== linked.ino)
       throw new Error("viewer file changed physical identity before open");
+    const openedIdentity = physicalVersion(opened);
     const bytes = fs.readFileSync(descriptor);
     const completed = fs.fstatSync(descriptor, { bigint: true });
     const resident = fs.lstatSync(file, { bigint: true });
     if (
       completed.isFile() === false ||
-      physicalVersion(completed) !== identity ||
+      physicalVersion(completed) !== openedIdentity ||
       resident.isSymbolicLink() ||
       resident.isFile() === false ||
-      resident.dev !== opened.dev ||
       resident.ino !== opened.ino ||
       physicalVersion(resident) !== identity
     )

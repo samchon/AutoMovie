@@ -14,6 +14,8 @@ import {
 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
+import { namedFacts } from "../internal/predicates";
+
 const transform = (translation: IAutoMovieVector3): IAutoMovieTransform => ({
   translation,
   rotation: { x: 0, y: 0, z: 0, w: 1 },
@@ -181,13 +183,22 @@ export const test_motion_plant_bend_basis = (): void => {
     });
     const afterPosition = position(fitted);
     const after = distance(afterPosition, entry.target);
-    TestValidator.predicate(
+    TestValidator.equals(
       `${entry.skeleton.id} bend basis stays finite and non-destructive`,
-      Number.isFinite(afterPosition.x) &&
-        Number.isFinite(afterPosition.y) &&
-        Number.isFinite(afterPosition.z) &&
-        fitted !== pose &&
-        after < before - 1e-9,
+      namedFacts([
+        ["isFiniteAfterPositionX", () => Number.isFinite(afterPosition.x)],
+        ["isFiniteAfterPositionY", () => Number.isFinite(afterPosition.y)],
+        ["isFiniteAfterPositionZ", () => Number.isFinite(afterPosition.z)],
+        ["fittedPose", () => fitted !== pose],
+        ["afterBeforeE", () => after < before - 1e-9],
+      ]),
+      {
+        isFiniteAfterPositionX: true,
+        isFiniteAfterPositionY: true,
+        isFiniteAfterPositionZ: true,
+        fittedPose: true,
+        afterBeforeE: true,
+      },
     );
   }
 
@@ -247,12 +258,33 @@ export const test_motion_plant_bend_basis = (): void => {
   const resolved = resolvePose(continuous, exactSkeleton).find(
     (bone) => bone.bone === CHAIN.effector,
   )!.worldPosition;
-  TestValidator.predicate(
+  TestValidator.equals(
     "equal-residual exact pin preserves the prior quaternion branch",
-    distance(resolved, exactTarget) <= 1e-7 &&
-      rotationDistance(continuous, reference) <= 1e-12 &&
-      rotationDistance(continuous, reference) <
-        rotationDistance(pole, reference) &&
-      rotationDistance(authoredExact, reference) <= 1e-12,
+    namedFacts([
+      [
+        "distanceResolvedExactTarget",
+        () => distance(resolved, exactTarget) <= 1e-7,
+      ],
+      [
+        "rotationDistanceContinuousReference",
+        () => rotationDistance(continuous, reference) <= 1e-12,
+      ],
+      [
+        "rotationDistanceContinuousReference2",
+        () =>
+          rotationDistance(continuous, reference) <
+          rotationDistance(pole, reference),
+      ],
+      [
+        "rotationDistanceAuthoredExactReference",
+        () => rotationDistance(authoredExact, reference) <= 1e-12,
+      ],
+    ]),
+    {
+      distanceResolvedExactTarget: true,
+      rotationDistanceContinuousReference: true,
+      rotationDistanceContinuousReference2: true,
+      rotationDistanceAuthoredExactReference: true,
+    },
   );
 };

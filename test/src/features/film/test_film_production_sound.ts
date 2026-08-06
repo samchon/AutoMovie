@@ -17,6 +17,8 @@ import {
 } from "@automovie/mcp";
 import { TestValidator } from "@nestia/e2e";
 
+import { namedFacts } from "../internal/predicates";
+
 const digest =
   "sha256:0000000000000000000000000000000000000000000000000000000000000000" as AutoMovieContentDigest;
 
@@ -266,11 +268,14 @@ export const test_film_production_sound = (): void => {
           event.pan <= 1,
       ),
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "camera-relative emitters cover nodes, formations and instance sets",
-    plan.events.some((event) => event.pan > 0) &&
-      plan.events.some((event) => event.pan < 0) &&
-      plan.events.some((event) => event.pan === 0),
+    namedFacts([
+      ["planEventsEvent", () => plan.events.some((event) => event.pan > 0)],
+      ["planEventsEvent2", () => plan.events.some((event) => event.pan < 0)],
+      ["planEventsEvent3", () => plan.events.some((event) => event.pan === 0)],
+    ]),
+    { planEventsEvent: true, planEventsEvent2: true, planEventsEvent3: true },
   );
   const formationEvents = plan.events.filter(
     (event) => event.event === "arrival" || event.event === "reveal",
@@ -295,35 +300,100 @@ export const test_film_production_sound = (): void => {
     contracts: new Map([["volley-shot", contract()]]),
     compiled: new Map([["volley-shot", source]]),
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "authored cue source offsets survive planning and change source-clock phase",
-    plan.cues[0]!.sourceOffsetFrame === 0 &&
-      plan.cues[0]!.sourceDurationFrames === 10 &&
-      offsetPlan.cues[0]!.sourceOffsetFrame === 5 &&
-      Buffer.from(
-        renderProductionSound({ plan: offsetPlan, dialogue }).pcm.buffer,
-      ).equals(Buffer.from(first.pcm.buffer)) === false,
+    namedFacts([
+      [
+        "planCuesSourceOffsetFrame",
+        () => plan.cues[0]!.sourceOffsetFrame === 0,
+      ],
+      [
+        "planCuesSourceDurationFrames",
+        () => plan.cues[0]!.sourceDurationFrames === 10,
+      ],
+      [
+        "offsetPlanCuesSourceOffsetFrame",
+        () => offsetPlan.cues[0]!.sourceOffsetFrame === 5,
+      ],
+      [
+        "BufferFromRenderProductionSound",
+        () =>
+          Buffer.from(
+            renderProductionSound({ plan: offsetPlan, dialogue }).pcm.buffer,
+          ).equals(Buffer.from(first.pcm.buffer)) === false,
+      ],
+    ]),
+    {
+      planCuesSourceOffsetFrame: true,
+      planCuesSourceDurationFrames: true,
+      offsetPlanCuesSourceOffsetFrame: true,
+      BufferFromRenderProductionSound: true,
+    },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "mixed sound is exact-runtime, audible, unclipped and event aligned",
-    first.analysis.sampleFrames === 144_000 &&
-      first.analysis.runtimeSeconds === 3 &&
-      first.analysis.integratedLoudness !== null &&
-      first.analysis.samplePeak > 0 &&
-      first.analysis.samplePeak <= 0.95 &&
-      first.analysis.clippingSamples === 0 &&
-      first.analysis.eventAlignment.every((event) => event.passed),
+    namedFacts([
+      [
+        "firstAnalysisSampleFrames",
+        () => first.analysis.sampleFrames === 144_000,
+      ],
+      [
+        "firstAnalysisRuntimeSeconds",
+        () => first.analysis.runtimeSeconds === 3,
+      ],
+      [
+        "firstAnalysisIntegratedLoudness",
+        () => first.analysis.integratedLoudness !== null,
+      ],
+      ["firstAnalysisSamplePeak", () => first.analysis.samplePeak > 0],
+      ["firstAnalysisSamplePeak2", () => first.analysis.samplePeak <= 0.95],
+      [
+        "firstAnalysisClippingSamples",
+        () => first.analysis.clippingSamples === 0,
+      ],
+      [
+        "firstAnalysisEventAlignment",
+        () => first.analysis.eventAlignment.every((event) => event.passed),
+      ],
+    ]),
+    {
+      firstAnalysisSampleFrames: true,
+      firstAnalysisRuntimeSeconds: true,
+      firstAnalysisIntegratedLoudness: true,
+      firstAnalysisSamplePeak: true,
+      firstAnalysisSamplePeak2: true,
+      firstAnalysisClippingSamples: true,
+      firstAnalysisEventAlignment: true,
+    },
   );
   const waveform = productionSoundWaveform(first.pcm, 32, 16);
   const spectrogram = productionSoundSpectrogram(first.pcm, 8, 8);
-  TestValidator.predicate(
+  TestValidator.equals(
     "waveform and spectrogram expose deterministic opaque RGBA rasters",
-    waveform.rgba.length === 32 * 16 * 4 &&
-      spectrogram.rgba.length === 8 * 8 * 4 &&
-      waveform.rgba.every((value, index) => index % 4 !== 3 || value === 255) &&
-      spectrogram.rgba.every(
-        (value, index) => index % 4 !== 3 || value === 255,
-      ),
+    namedFacts([
+      ["waveformRgba", () => waveform.rgba.length === 32 * 16 * 4],
+      ["spectrogramRgba", () => spectrogram.rgba.length === 8 * 8 * 4],
+      [
+        "waveformRgbaValue",
+        () =>
+          waveform.rgba.every(
+            (value, index) => index % 4 !== 3 || value === 255,
+          ),
+      ],
+      [
+        "spectrogramRgbaValue",
+        () =>
+          spectrogram.rgba.every(
+            (value, index) => index % 4 !== 3 || value === 255,
+          ),
+      ],
+    ]),
+    {
+      waveformRgba: true,
+      spectrogramRgba: true,
+      waveformRgbaValue: true,
+      spectrogramRgbaValue: true,
+    },
   );
   const visemes = productionPhonemesToVisemes({
     chunks: [{ phonemes: "a i u e o x", startSample: 0, endSample: 600 }],
@@ -392,101 +462,176 @@ export const test_film_production_sound = (): void => {
     startFrame: 0,
     endFrame: 4,
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "chunk sample clocks preserve timing and no phoneme token is discarded",
-    chunkTimed[0]?.endFrame === 1 &&
-      chunkTimed.every(
-        (item, index) =>
-          index === 0 || item.startFrame >= chunkTimed[index - 1]!.endFrame,
-      ) &&
-      chunkTimed.map((item) => item.phoneme).join("") === "aiueox",
+    namedFacts([
+      ["chunkTimedEndFrame", () => chunkTimed[0]?.endFrame === 1],
+      [
+        "chunkTimedItemIndex",
+        () =>
+          chunkTimed.every(
+            (item, index) =>
+              index === 0 || item.startFrame >= chunkTimed[index - 1]!.endFrame,
+          ),
+      ],
+      [
+        "chunkTimedItemItem",
+        () => chunkTimed.map((item) => item.phoneme).join("") === "aiueox",
+      ],
+    ]),
+    {
+      chunkTimedEndFrame: true,
+      chunkTimedItemIndex: true,
+      chunkTimedItemItem: true,
+    },
   );
   const silence = renderProductionSound({
     plan: { ...plan, events: [], cues: [], dialogue: [] },
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "an empty plan remains exact-runtime measurable silence",
-    silence.analysis.integratedLoudness === null &&
-      silence.analysis.samplePeak === 0 &&
-      silence.analysis.longestSilenceSeconds === 3,
+    namedFacts([
+      [
+        "silenceAnalysisIntegratedLoudness",
+        () => silence.analysis.integratedLoudness === null,
+      ],
+      ["silenceAnalysisSamplePeak", () => silence.analysis.samplePeak === 0],
+      [
+        "silenceAnalysisLongestSilenceSeconds",
+        () => silence.analysis.longestSilenceSeconds === 3,
+      ],
+    ]),
+    {
+      silenceAnalysisIntegratedLoudness: true,
+      silenceAnalysisSamplePeak: true,
+      silenceAnalysisLongestSilenceSeconds: true,
+    },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "sound rasters reject malformed dimensions and PCM",
-    refused(
-      () => productionSoundWaveform(first.pcm, 0, 10),
-      "positive integers",
-    ) &&
-      refused(
-        () => productionSoundWaveform(new Float32Array(1), 10, 10),
-        "interleaved stereo",
-      ) &&
-      refused(
-        () => productionSoundSpectrogram(first.pcm, 1.5, 10),
-        "positive integers",
-      ) &&
-      refused(
-        () => productionSoundSpectrogram(new Float32Array(1), 10, 10),
-        "interleaved stereo",
-      ),
+    namedFacts([
+      [
+        "refusedProductionSoundWaveformFirst",
+        () =>
+          refused(
+            () => productionSoundWaveform(first.pcm, 0, 10),
+            "positive integers",
+          ),
+      ],
+      [
+        "refusedProductionSoundWaveformNew",
+        () =>
+          refused(
+            () => productionSoundWaveform(new Float32Array(1), 10, 10),
+            "interleaved stereo",
+          ),
+      ],
+      [
+        "refusedProductionSoundSpectrogramFirst",
+        () =>
+          refused(
+            () => productionSoundSpectrogram(first.pcm, 1.5, 10),
+            "positive integers",
+          ),
+      ],
+      [
+        "refusedProductionSoundSpectrogramNew",
+        () =>
+          refused(
+            () => productionSoundSpectrogram(new Float32Array(1), 10, 10),
+            "interleaved stereo",
+          ),
+      ],
+    ]),
+    {
+      refusedProductionSoundWaveformFirst: true,
+      refusedProductionSoundWaveformNew: true,
+      refusedProductionSoundSpectrogramFirst: true,
+      refusedProductionSoundSpectrogramNew: true,
+    },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "sound planning refuses missing and inconsistent compiled evidence",
-    refused(
-      () =>
-        deriveProductionSoundPlan({
-          timeline: timeline(),
-          contracts: new Map(),
-          compiled: new Map(),
-        }),
-      "current contract and compiled",
-    ) &&
-      refused(
+    namedFacts([
+      [
+        "refusedDeriveProductionSoundPlanTimeline",
         () =>
-          deriveProductionSoundPlan({
-            timeline: timeline(),
-            contracts: new Map([["volley-shot", contract()]]),
-            compiled: new Map([
-              [
-                "volley-shot",
-                {
-                  ...source,
-                  scene: { ...source.scene, cameras: [] },
-                },
-              ],
-            ]),
-          }),
-        "cannot find",
-      ) &&
-      refused(
+          refused(
+            () =>
+              deriveProductionSoundPlan({
+                timeline: timeline(),
+                contracts: new Map(),
+                compiled: new Map(),
+              }),
+            "current contract and compiled",
+          ),
+      ],
+      [
+        "refusedDeriveProductionSoundPlanTimeline2",
         () =>
-          deriveProductionSoundPlan({
-            timeline: timeline(),
-            contracts: new Map([
-              ["volley-shot", { ...contract(), events: [] }],
-            ]),
-            compiled: new Map([["volley-shot", source]]),
-          }),
-        "sampled undeclared",
-      ) &&
-      refused(
+          refused(
+            () =>
+              deriveProductionSoundPlan({
+                timeline: timeline(),
+                contracts: new Map([["volley-shot", contract()]]),
+                compiled: new Map([
+                  [
+                    "volley-shot",
+                    {
+                      ...source,
+                      scene: { ...source.scene, cameras: [] },
+                    },
+                  ],
+                ]),
+              }),
+            "cannot find",
+          ),
+      ],
+      [
+        "refusedDeriveProductionSoundPlanTimeline3",
         () =>
-          deriveProductionSoundPlan({
-            timeline: timeline(),
-            contracts: new Map([
-              [
-                "volley-shot",
-                {
-                  ...contract(),
-                  events: contract().events.map((event) => ({
-                    ...event,
-                    subjects: ["missing"],
-                  })),
-                },
-              ],
-            ]),
-            compiled: new Map([["volley-shot", source]]),
-          }),
-        "no spatially resolved subject",
-      ),
+          refused(
+            () =>
+              deriveProductionSoundPlan({
+                timeline: timeline(),
+                contracts: new Map([
+                  ["volley-shot", { ...contract(), events: [] }],
+                ]),
+                compiled: new Map([["volley-shot", source]]),
+              }),
+            "sampled undeclared",
+          ),
+      ],
+      [
+        "refusedDeriveProductionSoundPlanTimeline4",
+        () =>
+          refused(
+            () =>
+              deriveProductionSoundPlan({
+                timeline: timeline(),
+                contracts: new Map([
+                  [
+                    "volley-shot",
+                    {
+                      ...contract(),
+                      events: contract().events.map((event) => ({
+                        ...event,
+                        subjects: ["missing"],
+                      })),
+                    },
+                  ],
+                ]),
+                compiled: new Map([["volley-shot", source]]),
+              }),
+            "no spatially resolved subject",
+          ),
+      ],
+    ]),
+    {
+      refusedDeriveProductionSoundPlanTimeline: true,
+      refusedDeriveProductionSoundPlanTimeline2: true,
+      refusedDeriveProductionSoundPlanTimeline3: true,
+      refusedDeriveProductionSoundPlanTimeline4: true,
+    },
   );
 };

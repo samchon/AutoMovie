@@ -22,7 +22,7 @@ import {
   keyframe,
   makeMotion,
 } from "../internal/fixtures";
-import { nclose, throwsError } from "../internal/predicates";
+import { namedFacts, nclose, throwsError } from "../internal/predicates";
 
 /**
  * The viewer production-asset runtime contract: skinned mesh parts bind to the
@@ -152,20 +152,41 @@ export const test_viewer_production_asset_runtime = async (): Promise<void> => {
   );
   player.update(0.25);
   player.update(0.5);
-  TestValidator.predicate(
+  TestValidator.equals(
     "root transform applied",
-    nclose(imported.object.position.x, 1.25) &&
-      nclose(imported.object.position.y, 0.5) &&
-      nclose(imported.object.position.z, -0.25),
+    namedFacts([
+      ["ncloseImportedObject", () => nclose(imported.object.position.x, 1.25)],
+      ["ncloseImportedObject2", () => nclose(imported.object.position.y, 0.5)],
+      [
+        "ncloseImportedObject3",
+        () => nclose(imported.object.position.z, -0.25),
+      ],
+    ]),
+    {
+      ncloseImportedObject: true,
+      ncloseImportedObject2: true,
+      ncloseImportedObject3: true,
+    },
   );
   // even a Group input gets a viewer-owned wrapper (#1047): the pose root
   // landed on the wrapper, and the caller's baked π yaw survived beneath it
-  TestValidator.predicate(
+  TestValidator.equals(
     "an imported Group is wrapped, its baked transform preserved",
-    imported.object !== importedRoot &&
-      nclose(Math.abs(importedRoot.quaternion.y), 1) &&
-      nclose(importedRoot.quaternion.w, 0) &&
-      nclose(importedRoot.position.x, 0),
+    namedFacts([
+      ["importedObjectImportedRoot", () => imported.object !== importedRoot],
+      ["ncloseMathAbs", () => nclose(Math.abs(importedRoot.quaternion.y), 1)],
+      [
+        "ncloseImportedRootQuaternion",
+        () => nclose(importedRoot.quaternion.w, 0),
+      ],
+      ["ncloseImportedRootPosition", () => nclose(importedRoot.position.x, 0)],
+    ]),
+    {
+      importedObjectImportedRoot: true,
+      ncloseMathAbs: true,
+      ncloseImportedRootQuaternion: true,
+      ncloseImportedRootPosition: true,
+    },
   );
   TestValidator.equals("frame hook count", frames.length, 2);
   TestValidator.equals("first frame time", frames[0]!.seconds, 0.25);
@@ -186,11 +207,18 @@ export const test_viewer_production_asset_runtime = async (): Promise<void> => {
     ),
   );
   player.update(0.75);
-  TestValidator.predicate(
+  TestValidator.equals(
     "a null root resets to the staged base, not the last rooted pose",
-    nclose(imported.object.position.x, 0) &&
-      nclose(imported.object.position.y, 0) &&
-      nclose(imported.object.position.z, 0),
+    namedFacts([
+      ["ncloseImportedObject", () => nclose(imported.object.position.x, 0)],
+      ["ncloseImportedObject2", () => nclose(imported.object.position.y, 0)],
+      ["ncloseImportedObject3", () => nclose(imported.object.position.z, 0)],
+    ]),
+    {
+      ncloseImportedObject: true,
+      ncloseImportedObject2: true,
+      ncloseImportedObject3: true,
+    },
   );
 
   let renders = 0;

@@ -3,7 +3,7 @@ import { IAutoMovieVector3 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { makeScriptWrite, makeStagingWrite } from "../internal/filmFixtures";
-import { hasViolation, vclose } from "../internal/predicates";
+import { hasViolation, namedFacts, vclose } from "../internal/predicates";
 
 const script = makeScriptWrite();
 
@@ -109,13 +109,28 @@ export const test_film_stage_scene_camera_target = (): void => {
   const ghost = stage([
     camera("cam-a", LENS_A, { kind: "node", node: "nobody" }),
   ]);
-  TestValidator.predicate(
+  TestValidator.equals(
     "an unplaced camera target is still refused, naming every placement flavour",
-    hasViolation(ghost, "type", "$input.cameras[0].lookAt.node") &&
-      ghost.success === false &&
-      ghost.violations.some((item) =>
-        item.expected.includes("placed actor, set piece, or camera"),
-      ),
+    namedFacts([
+      [
+        "hasViolationGhostType",
+        () => hasViolation(ghost, "type", "$input.cameras[0].lookAt.node"),
+      ],
+      ["ghostSuccess", () => ghost.success === false],
+      [
+        "ghostViolationsItem",
+        () =>
+          ghost.success === false &&
+          ghost.violations.some((item) =>
+            item.expected.includes("placed actor, set piece, or camera"),
+          ),
+      ],
+    ]),
+    {
+      hasViolationGhostType: true,
+      ghostSuccess: true,
+      ghostViolationsItem: true,
+    },
   );
 
   // 5. the boundary: a camera aimed at itself.

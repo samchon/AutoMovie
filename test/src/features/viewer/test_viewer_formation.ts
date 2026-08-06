@@ -14,7 +14,7 @@ import {
 import { TestValidator } from "@nestia/e2e";
 import * as THREE from "three";
 
-import { nclose } from "../internal/predicates";
+import { namedFacts, nclose } from "../internal/predicates";
 import { formationDesign, modelRecipe } from "../mcp/productionFixtures";
 
 const propRecipe = (id: string, size: number): IAutoMovieModelRecipe => ({
@@ -157,22 +157,55 @@ export const test_viewer_formation = (): void => {
   }
   const compilerBoundary = materializeFormationSlot(design, 1_024);
   const viewerBoundary = regenerateFormationSlot(formation, 1_024);
-  TestValidator.predicate(
+  TestValidator.equals(
     "chunk batches exclude heroes and preserve exact compiler slot regeneration",
-    formation.chunks.length === 3 &&
-      meshes.length === formation.chunks.length * formation.lod.length &&
-      [...perTier.values()].every(
-        (count) => count === formation.anonymousCount,
-      ) &&
-      meshes.every(
-        (mesh) =>
-          mesh.geometry.getAttribute("automoviePhase")?.count === mesh.count &&
-          mesh.frustumCulled === false,
-      ) &&
-      JSON.stringify(compilerBoundary) === JSON.stringify(viewerBoundary) &&
-      formation.digest !== changedFormation.digest &&
-      formation.lod.find((lod) => lod.tier === "near")?.recipeDigest !==
-        changedFormation.lod.find((lod) => lod.tier === "near")?.recipeDigest,
+    namedFacts([
+      ["formationChunks", () => formation.chunks.length === 3],
+      [
+        "meshesFormationChunks",
+        () => meshes.length === formation.chunks.length * formation.lod.length,
+      ],
+      [
+        "perTierValuesCount",
+        () =>
+          [...perTier.values()].every(
+            (count) => count === formation.anonymousCount,
+          ),
+      ],
+      [
+        "meshesMeshMesh",
+        () =>
+          meshes.every(
+            (mesh) =>
+              mesh.geometry.getAttribute("automoviePhase")?.count ===
+                mesh.count && mesh.frustumCulled === false,
+          ),
+      ],
+      [
+        "stringifyCompilerBoundaryStringify",
+        () =>
+          JSON.stringify(compilerBoundary) === JSON.stringify(viewerBoundary),
+      ],
+      [
+        "formationDigestChangedFormation",
+        () => formation.digest !== changedFormation.digest,
+      ],
+      [
+        "formationLodFind",
+        () =>
+          formation.lod.find((lod) => lod.tier === "near")?.recipeDigest !==
+          changedFormation.lod.find((lod) => lod.tier === "near")?.recipeDigest,
+      ],
+    ]),
+    {
+      formationChunks: true,
+      meshesFormationChunks: true,
+      perTierValuesCount: true,
+      meshesMeshMesh: true,
+      stringifyCompilerBoundaryStringify: true,
+      formationDigestChangedFormation: true,
+      formationLodFind: true,
+    },
   );
 
   const nearSelection = selectFormationLod({

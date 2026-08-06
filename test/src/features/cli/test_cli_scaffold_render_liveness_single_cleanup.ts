@@ -112,7 +112,7 @@ export const test_cli_scaffold_render_liveness_single_cleanup = (): void => {
           catchBodies: ["inventoryGcCleanupFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1982,
+          containerStatements: 2011,
           finallyDigest:
             "7e99a8246127f0be124c61e4cf988be0a8b53c5bce324c636090f08304d9f864",
           finallySubstantive: {
@@ -120,7 +120,7 @@ export const test_cli_scaffold_render_liveness_single_cleanup = (): void => {
               "ba4f25b6c77a1a9b452102cfc0516203d5291838f3994163f89a5d1b6429aa85",
             tokens: 29,
           },
-          index: 1090,
+          index: 1094,
           preceding: "letinventoryGcCleanupFailure:{error:unknown}|undefined;",
           substantive: {
             digest:
@@ -136,7 +136,7 @@ export const test_cli_scaffold_render_liveness_single_cleanup = (): void => {
           catchBodies: ["staleSuccessorCleanupFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1982,
+          containerStatements: 2011,
           finallyDigest:
             "336e319210c323cd757e73f05aadba6f9dee89b84030485d3affad7535f2c7ee",
           finallySubstantive: {
@@ -144,7 +144,7 @@ export const test_cli_scaffold_render_liveness_single_cleanup = (): void => {
               "618761dd8a19c4ae2bfa29b77e57a84f1fbc05bd55cf5cf7715ea381f9179d1c",
             tokens: 29,
           },
-          index: 1124,
+          index: 1128,
           preceding:
             "letstaleSuccessorCleanupFailure:{error:unknown}|undefined;",
           substantive: {

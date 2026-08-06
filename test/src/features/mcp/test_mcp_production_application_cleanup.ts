@@ -374,9 +374,9 @@ export const test_mcp_production_application_cleanup =
               ],
               substantiveStatements: 164,
               substantiveTokenDigest:
-                "095a628590da7ee547d06c3bd8500853e9fc5c59520229c2ec7f91f13e94cd06",
+                "5ccfd8c2969c8a7cba9327070ba5fa4f939f713538598007bb1bc826d61ebe52",
               tryDigest:
-                "7a8802e83eec36dc9be58c7618b023e4d577dcc9eaab33397a4f3d3d63d31875",
+                "81ba36ee84727c930f5ff2307cd49ce9081853d27305d32512098b18c6ac9983",
               tryStatements: 166,
             },
           ],

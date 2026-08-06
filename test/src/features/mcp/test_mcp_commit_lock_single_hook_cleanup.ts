@@ -190,10 +190,10 @@ export const test_mcp_commit_lock_single_hook_cleanup = (): void => {
   );
   const expected = {
     parentDigest:
-      "f7241ef25499bb6ecf84ab835bddf0942dcabb63a324afe7e378e22ed806545f",
+      "cce6dd2ec5e2c89775fcc78115e1b3c4f33e7cf179154d0d91e928e845f72e3d",
     parseDiagnostics: [],
     rootDigest:
-      "0453643a2f2fc7194c8d8dfd102f697c7b3851cd14b84dfc3432c84142d8a0bd",
+      "221a871edb6930dfd6e607b5d701ad33fb7a8a284bdf9de42b42c17efcde8790",
     rows: [
       {
         catchBodies: ["splitPathFailure={error};", "throwerror;"],
@@ -228,7 +228,7 @@ export const test_mcp_commit_lock_single_hook_cleanup = (): void => {
         catchVariables: ["error"],
         cleanup: "()=>{fs.renameSync=nativeRename;}",
         containerKind: "ArrowFunction",
-        containerStatements: 18,
+        containerStatements: 30,
         failureHolder:
           "letreleaseRenameFailure:ICommitLockFixtureFailure|undefined;",
         finallyDigest:
@@ -256,7 +256,7 @@ export const test_mcp_commit_lock_single_hook_cleanup = (): void => {
         catchVariables: ["error"],
         cleanup: "()=>{mutableFs.lstatSync=nativeLstat;}",
         containerKind: "ArrowFunction",
-        containerStatements: 18,
+        containerStatements: 30,
         failureHolder:
           "letreleaseSnapshotFailure:ICommitLockFixtureFailure|undefined;",
         finallyDigest:
@@ -267,7 +267,7 @@ export const test_mcp_commit_lock_single_hook_cleanup = (): void => {
           tokens: 29,
         },
         helper: "preserveCommitLockHookCleanup",
-        index: 15,
+        index: 27,
         owner: "exerciseReleaseFailures",
         resource: "release-snapshot lstat hook",
         tryBody: "{releaseCommitLock(snapshotPath,snapshotToken);}",

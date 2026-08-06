@@ -7,7 +7,7 @@ import {
 import { IAutoMovieVector3 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { vclose } from "../internal/predicates";
+import { namedFacts, vclose } from "../internal/predicates";
 
 const DEFAULT_AXES: IAutoMovieJointAxes = {
   flexion: { x: 1, y: 0, z: 0 },
@@ -99,10 +99,13 @@ export const test_kinematics_decompose_joint = (): void => {
     jointToQuaternion({ flexion: 40, abduction: 0, twist: 0 }, ARM_AXES),
     ARM_AXES,
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "a pure 40° flexion decomposes back to (40, 0, 0)",
-    Math.abs(pure.flexion - 40) < 1e-4 &&
-      Math.abs(pure.abduction) < 1e-4 &&
-      Math.abs(pure.twist) < 1e-4,
+    namedFacts([
+      ["MathAbsPure", () => Math.abs(pure.flexion - 40) < 1e-4],
+      ["MathAbsPure2", () => Math.abs(pure.abduction) < 1e-4],
+      ["MathAbsPure3", () => Math.abs(pure.twist) < 1e-4],
+    ]),
+    { MathAbsPure: true, MathAbsPure2: true, MathAbsPure3: true },
   );
 };

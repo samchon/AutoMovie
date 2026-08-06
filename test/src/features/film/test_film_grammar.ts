@@ -8,6 +8,8 @@ import {
 import { IAutoMovieVector3 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
+import { namedFacts } from "../internal/predicates";
+
 const point = (x: number, y: number, z: number): IAutoMovieVector3 => ({
   x,
   y,
@@ -488,11 +490,27 @@ export const test_film_grammar = (): void => {
     classifyGrammarShotSize(1 / 4),
     "wide",
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "all framing-height classes are reachable",
-    classifyGrammarShotSize(1 / 1.15) === "full" &&
-      classifyGrammarShotSize(1 / 0.62) === "medium" &&
-      classifyGrammarShotSize(1 / 0.28) === "close",
+    namedFacts([
+      [
+        "classifyGrammarShotSizeFull",
+        () => classifyGrammarShotSize(1 / 1.15) === "full",
+      ],
+      [
+        "classifyGrammarShotSizeMedium",
+        () => classifyGrammarShotSize(1 / 0.62) === "medium",
+      ],
+      [
+        "classifyGrammarShotSizeClose",
+        () => classifyGrammarShotSize(1 / 0.28) === "close",
+      ],
+    ]),
+    {
+      classifyGrammarShotSizeFull: true,
+      classifyGrammarShotSizeMedium: true,
+      classifyGrammarShotSizeClose: true,
+    },
   );
   TestValidator.predicate(
     "matching measured and declared framing stays silent",

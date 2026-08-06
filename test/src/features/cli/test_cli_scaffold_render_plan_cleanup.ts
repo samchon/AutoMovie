@@ -114,7 +114,7 @@ export const test_cli_scaffold_render_plan_cleanup = (): void => {
           catchBodies: ["exactPlanCleanupFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1982,
+          containerStatements: 2011,
           finallyDigest:
             "709ac636f3f741cd1aafd479d10ee85d7fb3c576dd7f52429411026203a4c85a",
           finallySubstantive: {
@@ -122,7 +122,7 @@ export const test_cli_scaffold_render_plan_cleanup = (): void => {
               "1da4ce746d51a76236832bbac69a155796152571ff621a92bdcd940f535b6dd0",
             tokens: 29,
           },
-          index: 983,
+          index: 987,
           preceding: "letexactPlanCleanupFailure:{error:unknown}|undefined;",
           substantive: {
             digest:
@@ -141,7 +141,7 @@ export const test_cli_scaffold_render_plan_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1982,
+          containerStatements: 2011,
           finallyDigest:
             "1b83cf07a900e4b6e86311596e2d6b3fc54bdf7b6b37f1aa86be4d1975eb7b35",
           finallySubstantive: {
@@ -149,7 +149,7 @@ export const test_cli_scaffold_render_plan_cleanup = (): void => {
               "d4119e0080381c56768f090b7773cbdb7fc9f2eddbd6c9a4b8921f5a841c5733",
             tokens: 29,
           },
-          index: 994,
+          index: 998,
           preceding: "letforeignPlanCleanupFailure:{error:unknown}|undefined;",
           substantive: {
             digest:
@@ -168,7 +168,7 @@ export const test_cli_scaffold_render_plan_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1982,
+          containerStatements: 2011,
           finallyDigest:
             "c30ce33c112121613ce4b1a18bb579ed23055722cc75c8713972c7507f7cae01",
           finallySubstantive: {
@@ -176,7 +176,7 @@ export const test_cli_scaffold_render_plan_cleanup = (): void => {
               "70fbdf3f4413dd466208feb3628b28806778ae1e4c04367f8e64492686ac4746",
             tokens: 29,
           },
-          index: 1005,
+          index: 1009,
           preceding: "letplanRootSwapCleanupFailure:{error:unknown}|undefined;",
           substantive: {
             digest:
@@ -195,7 +195,7 @@ export const test_cli_scaffold_render_plan_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1982,
+          containerStatements: 2011,
           finallyDigest:
             "dd2168825844fd9d4de95c19d3137305a711309dd1f399bed9240d299909e54f",
           finallySubstantive: {
@@ -203,7 +203,7 @@ export const test_cli_scaffold_render_plan_cleanup = (): void => {
               "90f385a36e0cfafbb55132b73e57aaf098c49bfa37f1bb3a0c3583aaf815b245",
             tokens: 29,
           },
-          index: 1048,
+          index: 1052,
           preceding:
             "lettraversalDirectoryCleanupFailure:{error:unknown}|undefined;",
           substantive: {

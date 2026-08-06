@@ -20,13 +20,40 @@ interface IFixture {
   directory: string;
 }
 
+interface ILintFixtureFailure {
+  error: unknown;
+}
+
+class LintFixtureCleanupError extends AggregateError {}
+
+/**
+ * Dispose a walking-skeleton fixture without hiding the failure it guarded.
+ *
+ * Disposal removes a temporary tree recursively, which throws on a busy or
+ * partially locked directory. Without this the disposal exception replaces the
+ * lint diagnostic the run exists to report.
+ */
+export const preserveLintFixtureCleanup = (
+  failure: ILintFixtureFailure | undefined,
+  cleanup: () => unknown,
+): void => {
+  try {
+    cleanup();
+  } catch (cleanupFailure) {
+    if (failure === undefined) throw cleanupFailure;
+    throw new LintFixtureCleanupError(
+      [failure.error, cleanupFailure],
+      "Lint walking-skeleton fixture disposal failed after the run failed.",
+    );
+  }
+};
+
 const repositoryRoot = path.resolve(__dirname, "../../../..");
-const pluginCache = path.join(
-  repositoryRoot,
-  "node_modules",
-  ".cache",
-  "automovie-lint-test",
-);
+// Share the toolchain's own plugin cache instead of a private one. The Go lint
+// and typia plugins are content-addressed there and the suite has already built
+// them by the time this test runs, so a private directory only bought this test
+// a second multi-minute build of the same binaries.
+const pluginCache = path.join(repositoryRoot, "node_modules", ".cache", "ttsc");
 
 /**
  * Environment for a toolchain process that represents an independent user
@@ -257,6 +284,7 @@ const runScaffoldSourceLint = (props: {
   name: string;
 }): IRunResult => {
   const fixture = createScaffoldFixture(props.name);
+  let scaffoldRunFailure: ILintFixtureFailure | undefined;
   try {
     props.mutate?.(fixture.directory);
     const invocation =
@@ -290,8 +318,13 @@ const runScaffoldSourceLint = (props: {
       output: `${result.stdout ?? ""}${result.stderr ?? ""}${String(result.error ?? "")}`,
       status: result.status,
     };
+  } catch (error) {
+    scaffoldRunFailure = { error };
+    throw error;
   } finally {
-    fixture.cleanup();
+    preserveLintFixtureCleanup(scaffoldRunFailure, () => {
+      fixture.cleanup();
+    });
   }
 };
 
@@ -302,11 +335,17 @@ const runFixture = (props: {
   name: string;
 }): IRunResult => {
   const fixture = createFixture(props);
+  let fixtureRunFailure: ILintFixtureFailure | undefined;
   try {
     props.mutate?.(fixture.directory);
     return runCheck(fixture.directory);
+  } catch (error) {
+    fixtureRunFailure = { error };
+    throw error;
   } finally {
-    fixture.cleanup();
+    preserveLintFixtureCleanup(fixtureRunFailure, () => {
+      fixture.cleanup();
+    });
   }
 };
 
@@ -399,7 +438,11 @@ const assetProvenanceConfig = [
   '      "error",',
   "      {",
   '        manifests: [".automovie/assets.json"],',
-  '        assets: ["public/assets/*.bin", "public/assets/*.glb"],',
+  "        assets: [",
+  '          "public/assets/*.bin",',
+  '          "public/assets/*.glb",',
+  '          "public/assets/*.gltf",',
+  "        ],",
   "      },",
   "    ],",
   "  },",
@@ -1161,8 +1204,8 @@ export function test_lint_plugin_walking_skeleton(): void {
     ],
     [
       "model-proxy-invalid",
-      "proxy cites unknown manifest asset",
-      "A model proxy must resolve to manifest bytes or a closed generated recipe.",
+      "is not a byte-grounded version-1 JSON proxy",
+      "A model proxy must resolve to byte-grounded version-1 JSON proxy bytes or a closed generated recipe.",
     ],
   ] as const) {
     const result = runFixture({

@@ -3,7 +3,7 @@ import { IAutoMovieSpace } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { makeScriptWrite, makeStagingWrite } from "../internal/filmFixtures";
-import { hasViolation, nclose } from "../internal/predicates";
+import { hasViolation, namedFacts, nclose } from "../internal/predicates";
 
 /** A floor square and a ramp climbing 1 m over the 2 m east of it. */
 const makeSpace = (
@@ -81,12 +81,20 @@ export const test_film_stage_scene_space = (): void => {
   // The composed scene plugs straight into the ground callback the motion
   // seams consume: flat over the floor, half-climbed at the ramp's midpoint.
   const ground = spaceGround(space!);
-  TestValidator.predicate(
+  TestValidator.equals(
     "the staged space answers ground height",
-    nclose(ground(0, 0), 0) &&
-      nclose(ground(3, 0), 0.5) &&
-      nclose(ground(4, 0), 1) &&
-      nclose(ground(20, 20), 0),
+    namedFacts([
+      ["ncloseGround", () => nclose(ground(0, 0), 0)],
+      ["ncloseGround2", () => nclose(ground(3, 0), 0.5)],
+      ["ncloseGround3", () => nclose(ground(4, 0), 1)],
+      ["ncloseGround4", () => nclose(ground(20, 20), 0)],
+    ]),
+    {
+      ncloseGround: true,
+      ncloseGround2: true,
+      ncloseGround3: true,
+      ncloseGround4: true,
+    },
   );
 
   // 2. an omitted space is stated as null, not left absent.
@@ -134,12 +142,35 @@ export const test_film_stage_scene_space = (): void => {
       }),
     }),
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "every space gate fires under $input.space in one round",
-    refused.success === false &&
-      hasViolation(refused, "type", "$input.space.surfaces[0].polygon") &&
-      hasViolation(refused, "range", "$input.space.surfaces[1].rampTo") &&
-      hasViolation(refused, "type", "$input.space.walkable[1]"),
+    namedFacts([
+      ["refusedSuccess", () => refused.success === false],
+      [
+        "hasViolationRefusedType",
+        () =>
+          refused.success === false &&
+          hasViolation(refused, "type", "$input.space.surfaces[0].polygon"),
+      ],
+      [
+        "hasViolationRefusedRange",
+        () =>
+          refused.success === false &&
+          hasViolation(refused, "range", "$input.space.surfaces[1].rampTo"),
+      ],
+      [
+        "hasViolationRefusedType2",
+        () =>
+          refused.success === false &&
+          hasViolation(refused, "type", "$input.space.walkable[1]"),
+      ],
+    ]),
+    {
+      refusedSuccess: true,
+      hasViolationRefusedType: true,
+      hasViolationRefusedRange: true,
+      hasViolationRefusedType2: true,
+    },
   );
 
   // 4. the negative twin: the notch vertex pulled back onto the hull edge.

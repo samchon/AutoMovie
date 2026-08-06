@@ -27,6 +27,23 @@ import {
   testCaptureRuntimeIdentity,
 } from "./productionFixtures";
 
+/**
+ * Evaluate named facts in order and stop at the first false one, so a failed
+ * comparison names the fact instead of collapsing into one boolean. Stopping
+ * keeps the short-circuit semantics the original conjunction had, which some
+ * facts depend on to guard the ones after them.
+ */
+const namedFacts = (
+  entries: ReadonlyArray<readonly [string, () => boolean]>,
+): Record<string, boolean> => {
+  const output: Record<string, boolean> = {};
+  for (const [name, evaluate] of entries) {
+    output[name] = evaluate();
+    if (output[name] === false) break;
+  }
+  return output;
+};
+
 const evidenceOf = (
   project: AutoMovieProductionProject,
   prepared: IAutoMoviePrepareReviewOutput,
@@ -327,23 +344,41 @@ export const test_mcp_production_review = async (): Promise<void> => {
       id: "optional-opening-note",
       required: false,
     };
-    TestValidator.predicate(
+    TestValidator.equals(
       "optional acceptance contracts do not become mandatory review targets",
-      project.setAcceptanceScenario(optionalAcceptance).accepted &&
-        review
-          .queue()
-          .entries.every(
-            (entry) =>
-              !(
-                entry.target.kind === "design" &&
-                entry.target.design.kind === "acceptance" &&
-                entry.target.design.id === optionalAcceptance.id
+      namedFacts([
+        [
+          "projectSetAcceptanceScenario",
+          () => project.setAcceptanceScenario(optionalAcceptance).accepted,
+        ],
+        [
+          "reviewQueue",
+          () =>
+            review
+              .queue()
+              .entries.every(
+                (entry) =>
+                  !(
+                    entry.target.kind === "design" &&
+                    entry.target.design.kind === "acceptance" &&
+                    entry.target.design.id === optionalAcceptance.id
+                  ),
               ),
-          ) &&
-        project.eraseDesignArtifact({
-          kind: "acceptance",
-          id: optionalAcceptance.id,
-        }).accepted,
+        ],
+        [
+          "projectEraseDesignArtifact",
+          () =>
+            project.eraseDesignArtifact({
+              kind: "acceptance",
+              id: optionalAcceptance.id,
+            }).accepted,
+        ],
+      ]),
+      {
+        projectSetAcceptanceScenario: true,
+        reviewQueue: true,
+        projectEraseDesignArtifact: true,
+      },
     );
     const eventAcceptance = {
       id: "opening-event",
@@ -529,22 +564,39 @@ export const test_mcp_production_review = async (): Promise<void> => {
         ),
     );
     const assetSubmitted = review.submit(worksheet(project, assetPrepared));
-    TestValidator.predicate(
+    TestValidator.equals(
       "a consumed asset requires every isolated current view and can then discharge its production-local gate",
-      assetPrepared.frames.length === 6 &&
-        assetPrepared.diagnostics.every(
-          (diagnostic) => diagnostic.category !== "error",
-        ) &&
-        assetSubmitted.accepted &&
-        assetSubmitted.state === "complete" &&
-        review
-          .queue(compiledStatus)
-          .entries.some(
-            (entry) =>
-              entry.target.kind === "asset" &&
-              entry.target.id === "sentinel" &&
-              entry.state === "complete",
-          ),
+      namedFacts([
+        ["assetPreparedCount", () => assetPrepared.frames.length === 6],
+        [
+          "assetPreparedDiagnostics",
+          () =>
+            assetPrepared.diagnostics.every(
+              (diagnostic) => diagnostic.category !== "error",
+            ),
+        ],
+        ["assetSubmittedAccepted", () => assetSubmitted.accepted],
+        ["assetSubmittedState", () => assetSubmitted.state === "complete"],
+        [
+          "reviewQueue",
+          () =>
+            review
+              .queue(compiledStatus)
+              .entries.some(
+                (entry) =>
+                  entry.target.kind === "asset" &&
+                  entry.target.id === "sentinel" &&
+                  entry.state === "complete",
+              ),
+        ],
+      ]),
+      {
+        assetPreparedCount: true,
+        assetPreparedDiagnostics: true,
+        assetSubmittedAccepted: true,
+        assetSubmittedState: true,
+        reviewQueue: true,
+      },
     );
     const secondProject = AutoMovieProductionProject.open(
       fixture.root,
@@ -609,43 +661,106 @@ export const test_mcp_production_review = async (): Promise<void> => {
     const secondAssetSubmitted = secondReview.submit(
       worksheet(secondProject, secondAssetPrepared),
     );
-    TestValidator.predicate(
+    TestValidator.equals(
       "two productions keep independent asset review addresses and fingerprints",
-      secondAssetSubmitted.accepted &&
-        secondAssetSubmitted.state === "complete" &&
-        assetSubmitted.fingerprint !== secondAssetSubmitted.fingerprint &&
-        capturedProductionIds.includes("fixture-film") &&
-        capturedProductionIds.includes("second-film") &&
-        project.reviewPath(assetPrepared.target) !==
-          secondProject.reviewPath(secondAssetPrepared.target) &&
-        project.review(assetPrepared.target)?.complete === true &&
-        secondProject.review(secondAssetPrepared.target)?.complete === true,
+      namedFacts([
+        ["secondAssetSubmittedAccepted", () => secondAssetSubmitted.accepted],
+        [
+          "secondAssetSubmittedState",
+          () => secondAssetSubmitted.state === "complete",
+        ],
+        [
+          "assetSubmittedFingerprint",
+          () => assetSubmitted.fingerprint !== secondAssetSubmitted.fingerprint,
+        ],
+        [
+          "capturedProductionIdsFixture",
+          () => capturedProductionIds.includes("fixture-film"),
+        ],
+        [
+          "capturedProductionIdsSecond",
+          () => capturedProductionIds.includes("second-film"),
+        ],
+        [
+          "projectReviewPath",
+          () =>
+            project.reviewPath(assetPrepared.target) !==
+            secondProject.reviewPath(secondAssetPrepared.target),
+        ],
+        [
+          "projectReview",
+          () => project.review(assetPrepared.target)?.complete === true,
+        ],
+        [
+          "secondProjectReview",
+          () =>
+            secondProject.review(secondAssetPrepared.target)?.complete === true,
+        ],
+      ]),
+      {
+        secondAssetSubmittedAccepted: true,
+        secondAssetSubmittedState: true,
+        assetSubmittedFingerprint: true,
+        capturedProductionIdsFixture: true,
+        capturedProductionIdsSecond: true,
+        projectReviewPath: true,
+        projectReview: true,
+        secondProjectReview: true,
+      },
     );
     const originalModel = modelRecipe();
-    TestValidator.predicate(
+    TestValidator.equals(
       "modifying a consumed model makes its completed asset review stale",
-      project.setModelRecipe({
-        ...originalModel,
-        palette: { body: "#d6b46c" },
-      }).accepted &&
-        review
-          .queue()
-          .entries.some(
-            (entry) =>
-              entry.target.kind === "asset" &&
-              entry.target.id === "sentinel" &&
-              entry.state === "stale",
-          ) &&
-        compiler
-          .lint({ scope: "review" })
-          .diagnostics.some(
-            (diagnostic) => diagnostic.code === "asset-review-stale",
-          ) &&
-        project.setModelRecipe(originalModel).accepted &&
-        productionCompileSucceeded(
-          "restored reviewed model",
-          compiler.compile({ scope: "source" }),
-        ),
+      namedFacts([
+        [
+          "projectSetModelRecipe",
+          () =>
+            project.setModelRecipe({
+              ...originalModel,
+              palette: { body: "#d6b46c" },
+            }).accepted,
+        ],
+        [
+          "reviewQueue",
+          () =>
+            review
+              .queue()
+              .entries.some(
+                (entry) =>
+                  entry.target.kind === "asset" &&
+                  entry.target.id === "sentinel" &&
+                  entry.state === "stale",
+              ),
+        ],
+        [
+          "compilerLint",
+          () =>
+            compiler
+              .lint({ scope: "review" })
+              .diagnostics.some(
+                (diagnostic) => diagnostic.code === "asset-review-stale",
+              ),
+        ],
+        [
+          "projectSetModelRecipe2",
+          () => project.setModelRecipe(originalModel).accepted,
+        ],
+        [
+          "productionCompileSucceededRestored",
+          () =>
+            productionCompileSucceeded(
+              "restored reviewed model",
+              compiler.compile({ scope: "source" }),
+            ),
+        ],
+      ]),
+      {
+        projectSetModelRecipe: true,
+        reviewQueue: true,
+        compilerLint: true,
+        projectSetModelRecipe2: true,
+        productionCompileSucceededRestored: true,
+      },
     );
     const thumbnail = await oracle.preview({
       target: { kind: "shot", id: "opening" },
@@ -674,18 +789,38 @@ export const test_mcp_production_review = async (): Promise<void> => {
     const aliasedFrameEvidence = review.prepare({
       target: { kind: "shot", id: "opening" },
     });
-    TestValidator.predicate(
+    TestValidator.equals(
       "coincident review frames retain both semantic identities",
-      aliasedFrameEvidence.diagnostics.every(
-        (diagnostic) => diagnostic.category !== "error",
-      ) &&
-        aliasedFrameEvidence.frames.filter((frame) => frame.pass === "beauty")
-          .length === 2 &&
-        new Set(
-          aliasedFrameEvidence.frames
-            .filter((frame) => frame.pass === "beauty")
-            .map((frame) => frame.reviewFrame),
-        ).size === 2,
+      namedFacts([
+        [
+          "aliasedFrameEvidenceDiagnostics",
+          () =>
+            aliasedFrameEvidence.diagnostics.every(
+              (diagnostic) => diagnostic.category !== "error",
+            ),
+        ],
+        [
+          "aliasedFrameEvidenceCount",
+          () =>
+            aliasedFrameEvidence.frames.filter(
+              (frame) => frame.pass === "beauty",
+            ).length === 2,
+        ],
+        [
+          "newSet",
+          () =>
+            new Set(
+              aliasedFrameEvidence.frames
+                .filter((frame) => frame.pass === "beauty")
+                .map((frame) => frame.reviewFrame),
+            ).size === 2,
+        ],
+      ]),
+      {
+        aliasedFrameEvidenceDiagnostics: true,
+        aliasedFrameEvidenceCount: true,
+        newSet: true,
+      },
     );
     TestValidator.predicate(
       "event and runtime outcomes are compiler-derived and currently passing",
@@ -887,43 +1022,77 @@ export const test_mcp_production_review = async (): Promise<void> => {
       worksheet(project, ambiguousEventOutcome),
     );
     fs.rmSync(ambiguousEventFile);
-    TestValidator.predicate(
+    TestValidator.equals(
       "missing, malformed and unscoped compiler outcomes fail review preparation",
-      [
-        missingEventOutcome,
-        malformedEventOutcome,
-        missingMetricOutcome,
-        invalidMetricOutcome,
-        ambiguousEventOutcome,
-      ].every((prepared) =>
-        prepared.diagnostics.some(
-          (diagnostic) => diagnostic.code === "review-outcome-missing",
-        ),
-      ) &&
-        incompleteFilmMetricOutcome.outcomes.some(
-          (outcome) =>
-            outcome.kind === "metric" &&
-            outcome.scenario === "film-runtime" &&
-            outcome.actual === 6 &&
-            outcome.passed,
-        ) &&
-        outsideTimelineFilmReview.outcomes.every(
-          (outcome) => outcome.scenario !== outsideTimelineAcceptance.id,
-        ) &&
-        unknownFrameSubmission.diagnostics.some(
-          (diagnostic) =>
-            diagnostic.code === "review-acceptance-coverage-incomplete" &&
-            diagnostic.message.includes(unknownFrameAcceptance.id) &&
-            diagnostic.message.includes("exact current required ids"),
-        ) &&
-        missingTimelineShotReview.outcomes.every(
-          (outcome) =>
-            outcome.scenario !== "opening-beauty" &&
-            outcome.scenario !== "opening-pose",
-        ) &&
-        ambiguousEventSubmission.diagnostics.some(
-          (diagnostic) => diagnostic.code === "review-outcome-missing",
-        ),
+      namedFacts([
+        [
+          "missingEventOutcomeMalformedEventOutcome",
+          () =>
+            [
+              missingEventOutcome,
+              malformedEventOutcome,
+              missingMetricOutcome,
+              invalidMetricOutcome,
+              ambiguousEventOutcome,
+            ].every((prepared) =>
+              prepared.diagnostics.some(
+                (diagnostic) => diagnostic.code === "review-outcome-missing",
+              ),
+            ),
+        ],
+        [
+          "incompleteFilmMetricOutcomeOutcomes",
+          () =>
+            incompleteFilmMetricOutcome.outcomes.some(
+              (outcome) =>
+                outcome.kind === "metric" &&
+                outcome.scenario === "film-runtime" &&
+                outcome.actual === 6 &&
+                outcome.passed,
+            ),
+        ],
+        [
+          "outsideTimelineFilmReviewOutcomes",
+          () =>
+            outsideTimelineFilmReview.outcomes.every(
+              (outcome) => outcome.scenario !== outsideTimelineAcceptance.id,
+            ),
+        ],
+        [
+          "unknownFrameSubmissionDiagnostics",
+          () =>
+            unknownFrameSubmission.diagnostics.some(
+              (diagnostic) =>
+                diagnostic.code === "review-acceptance-coverage-incomplete" &&
+                diagnostic.message.includes(unknownFrameAcceptance.id) &&
+                diagnostic.message.includes("exact current required ids"),
+            ),
+        ],
+        [
+          "missingTimelineShotReviewOutcomes",
+          () =>
+            missingTimelineShotReview.outcomes.every(
+              (outcome) =>
+                outcome.scenario !== "opening-beauty" &&
+                outcome.scenario !== "opening-pose",
+            ),
+        ],
+        [
+          "ambiguousEventSubmissionDiagnostics",
+          () =>
+            ambiguousEventSubmission.diagnostics.some(
+              (diagnostic) => diagnostic.code === "review-outcome-missing",
+            ),
+        ],
+      ]),
+      {
+        missingEventOutcomeMalformedEventOutcome: true,
+        incompleteFilmMetricOutcomeOutcomes: true,
+        outsideTimelineFilmReviewOutcomes: true,
+        unknownFrameSubmissionDiagnostics: true,
+        missingTimelineShotReviewOutcomes: true,
+        ambiguousEventSubmissionDiagnostics: true,
+      },
     );
     const contractOnlyWorksheet = worksheet(project, aliasedFrameEvidence);
     const acceptanceCheck = contractOnlyWorksheet.checks.find(
@@ -1047,18 +1216,29 @@ export const test_mcp_production_review = async (): Promise<void> => {
       check.verdict = "pass";
     });
     const incomplete = review.submit(incompleteSheet);
-    TestValidator.predicate(
+    TestValidator.equals(
       "an actionable false verdict is stored and remains in the queue",
-      incomplete.accepted &&
-        incomplete.state === "incomplete" &&
-        review
-          .queue()
-          .entries.some(
-            (entry) =>
-              entry.target.kind === "source" &&
-              entry.target.path === sourceTarget.path &&
-              entry.state === "incomplete",
-          ),
+      namedFacts([
+        ["incompleteAccepted", () => incomplete.accepted],
+        ["incompleteState", () => incomplete.state === "incomplete"],
+        [
+          "reviewQueue",
+          () =>
+            review
+              .queue()
+              .entries.some(
+                (entry) =>
+                  entry.target.kind === "source" &&
+                  entry.target.path === sourceTarget.path &&
+                  entry.state === "incomplete",
+              ),
+        ],
+      ]),
+      {
+        incompleteAccepted: true,
+        incompleteState: true,
+        reviewQueue: true,
+      },
     );
     const contradictory = worksheet(project, sourcePrepared);
     contradictory.checks[0]!.verdict = "revise";
@@ -1110,21 +1290,46 @@ export const test_mcp_production_review = async (): Promise<void> => {
       { owner: "source", target: "", problem: "", expected: "" },
     ];
     const malformedResult = review.submit(malformed);
-    TestValidator.predicate(
+    TestValidator.equals(
       "worksheet schema is enforced as evidence, not prose ritual",
-      malformedResult.accepted === false &&
-        new Set(malformedResult.diagnostics.map((item) => item.code)).has(
-          "review-checklist-incomplete",
-        ) &&
-        malformedResult.diagnostics.some(
-          (item) => item.code === "review-observation-copied",
-        ) &&
-        malformedResult.diagnostics.some(
-          (item) => item.code === "review-correction-empty",
-        ) &&
-        malformedResult.diagnostics.some(
-          (item) => item.code === "review-acceptance-coverage-misplaced",
-        ),
+      namedFacts([
+        ["malformedResultAccepted", () => malformedResult.accepted === false],
+        [
+          "newSet",
+          () =>
+            new Set(malformedResult.diagnostics.map((item) => item.code)).has(
+              "review-checklist-incomplete",
+            ),
+        ],
+        [
+          "malformedResultDiagnostics",
+          () =>
+            malformedResult.diagnostics.some(
+              (item) => item.code === "review-observation-copied",
+            ),
+        ],
+        [
+          "malformedResultDiagnostics2",
+          () =>
+            malformedResult.diagnostics.some(
+              (item) => item.code === "review-correction-empty",
+            ),
+        ],
+        [
+          "malformedResultDiagnostics3",
+          () =>
+            malformedResult.diagnostics.some(
+              (item) => item.code === "review-acceptance-coverage-misplaced",
+            ),
+        ],
+      ]),
+      {
+        malformedResultAccepted: true,
+        newSet: true,
+        malformedResultDiagnostics: true,
+        malformedResultDiagnostics2: true,
+        malformedResultDiagnostics3: true,
+      },
     );
     const reusedSourceEvidence = worksheet(project, sourcePrepared);
     reusedSourceEvidence.checks[1]!.evidence =
@@ -1166,15 +1371,33 @@ export const test_mcp_production_review = async (): Promise<void> => {
       worksheet(project, invalidSourcePrepared),
     );
     fs.writeFileSync(sourcePath, sourceBytes);
-    TestValidator.predicate(
+    TestValidator.equals(
       "a compiler-invalid source cannot receive a complete review",
-      invalidSourcePrepared.diagnostics.some(
-        (item) => item.code === "source-export-missing",
-      ) &&
-        invalidSourceSubmission.accepted === false &&
-        invalidSourceSubmission.diagnostics.some(
-          (item) => item.code === "source-export-missing",
-        ),
+      namedFacts([
+        [
+          "invalidSourcePreparedDiagnostics",
+          () =>
+            invalidSourcePrepared.diagnostics.some(
+              (item) => item.code === "source-export-missing",
+            ),
+        ],
+        [
+          "invalidSourceSubmissionAccepted",
+          () => invalidSourceSubmission.accepted === false,
+        ],
+        [
+          "invalidSourceSubmissionDiagnostics",
+          () =>
+            invalidSourceSubmission.diagnostics.some(
+              (item) => item.code === "source-export-missing",
+            ),
+        ],
+      ]),
+      {
+        invalidSourcePreparedDiagnostics: true,
+        invalidSourceSubmissionAccepted: true,
+        invalidSourceSubmissionDiagnostics: true,
+      },
     );
     const productionPath = path.join(
       fixture.root,
@@ -1252,26 +1475,52 @@ export const test_mcp_production_review = async (): Promise<void> => {
         exactValue: "absent",
       },
     ];
-    TestValidator.predicate(
+    TestValidator.equals(
       "design pointer existence and exact values are rechecked",
-      review
-        .submit(badPointer)
-        .diagnostics.some(
-          (item) => item.code === "review-evidence-selector-invalid",
-        ) &&
-        review
-          .submit(staleValue)
-          .diagnostics.some((item) => item.code === "review-evidence-stale") &&
-        review
-          .submit(malformedPointer)
-          .diagnostics.some(
-            (item) => item.code === "review-evidence-selector-invalid",
-          ) &&
-        review
-          .submit(primitiveTraversal)
-          .diagnostics.some(
-            (item) => item.code === "review-evidence-selector-invalid",
-          ),
+      namedFacts([
+        [
+          "reviewSubmit",
+          () =>
+            review
+              .submit(badPointer)
+              .diagnostics.some(
+                (item) => item.code === "review-evidence-selector-invalid",
+              ),
+        ],
+        [
+          "reviewSubmit2",
+          () =>
+            review
+              .submit(staleValue)
+              .diagnostics.some(
+                (item) => item.code === "review-evidence-stale",
+              ),
+        ],
+        [
+          "reviewSubmit3",
+          () =>
+            review
+              .submit(malformedPointer)
+              .diagnostics.some(
+                (item) => item.code === "review-evidence-selector-invalid",
+              ),
+        ],
+        [
+          "reviewSubmit4",
+          () =>
+            review
+              .submit(primitiveTraversal)
+              .diagnostics.some(
+                (item) => item.code === "review-evidence-selector-invalid",
+              ),
+        ],
+      ]),
+      {
+        reviewSubmit: true,
+        reviewSubmit2: true,
+        reviewSubmit3: true,
+        reviewSubmit4: true,
+      },
     );
     const badSource = worksheet(project, sourcePrepared);
     badSource.checks[0]!.evidence = [
@@ -1290,19 +1539,42 @@ export const test_mcp_production_review = async (): Promise<void> => {
     emptySource.checks[0]!.evidence = [{ ...selector, exactText: " " }];
     const partialSource = worksheet(project, sourcePrepared);
     partialSource.checks[0]!.evidence = [{ ...selector, exactText: "e" }];
-    TestValidator.predicate(
+    TestValidator.equals(
       "source evidence is selected, non-blank and an exact current line",
-      review
-        .submit(badSource)
-        .diagnostics.some(
-          (item) => item.code === "review-evidence-selector-invalid",
-        ) &&
-        review
-          .submit(emptySource)
-          .diagnostics.some((item) => item.code === "review-evidence-empty") &&
-        review
-          .submit(partialSource)
-          .diagnostics.some((item) => item.code === "review-evidence-stale"),
+      namedFacts([
+        [
+          "reviewSubmit",
+          () =>
+            review
+              .submit(badSource)
+              .diagnostics.some(
+                (item) => item.code === "review-evidence-selector-invalid",
+              ),
+        ],
+        [
+          "reviewSubmit2",
+          () =>
+            review
+              .submit(emptySource)
+              .diagnostics.some(
+                (item) => item.code === "review-evidence-empty",
+              ),
+        ],
+        [
+          "reviewSubmit3",
+          () =>
+            review
+              .submit(partialSource)
+              .diagnostics.some(
+                (item) => item.code === "review-evidence-stale",
+              ),
+        ],
+      ]),
+      {
+        reviewSubmit: true,
+        reviewSubmit2: true,
+        reviewSubmit3: true,
+      },
     );
     const residentReadSource = project.readSource;
     project.readSource = ((sourcePath: string) => {
@@ -1333,10 +1605,21 @@ export const test_mcp_production_review = async (): Promise<void> => {
             project,
             sourcePath,
           )) as typeof project.readSource;
+    let shortenedSourceFailure: IProductionReviewFixtureFailure | undefined;
     try {
       shortenedSource = review.submit(worksheet(project, sourcePrepared));
+    } catch (error) {
+      shortenedSourceFailure = { error };
+      throw error;
     } finally {
-      project.readSource = residentReadSource;
+      preserveProductionReviewHarnessCleanup(shortenedSourceFailure, [
+        {
+          resource: "shortened source read override",
+          cleanup: () => {
+            project.readSource = residentReadSource;
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "a source line-removal race becomes stale evidence",
@@ -1357,11 +1640,22 @@ export const test_mcp_production_review = async (): Promise<void> => {
       return new AutoMovieProductionCompiler(project).lint({ scope: "source" });
     });
     let racedSubmission: ReturnType<AutoMovieProductionReviewService["submit"]>;
+    let racedSubmissionFailure: IProductionReviewFixtureFailure | undefined;
     try {
       const racedPrepared = racingReview.prepare({ target: shotTarget });
       racedSubmission = racingReview.submit(worksheet(project, racedPrepared));
+    } catch (error) {
+      racedSubmissionFailure = { error };
+      throw error;
     } finally {
-      fs.writeFileSync(sourceFile, sourceBeforeRace);
+      preserveProductionReviewHarnessCleanup(racedSubmissionFailure, [
+        {
+          resource: "raced source bytes",
+          cleanup: () => {
+            fs.writeFileSync(sourceFile, sourceBeforeRace);
+          },
+        },
+      ]);
     }
     TestValidator.predicate(
       "a target mutation during worksheet validation is refused",
@@ -1414,16 +1708,35 @@ export const test_mcp_production_review = async (): Promise<void> => {
     const reviewAfterCommitRace = fs.existsSync(reviewPath)
       ? fs.readFileSync(reviewPath)
       : null;
-    TestValidator.predicate(
+    TestValidator.equals(
       "a target mutation during review commit rolls back the stale ledger",
-      commitGuardReads === 2 &&
-        commitBoundarySubmission.diagnostics.some(
-          (item) => item.code === "review-target-raced",
-        ) &&
-        project.revision() === revisionBeforeCommitRace &&
-        (reviewBeforeCommitRace === null
-          ? reviewAfterCommitRace === null
-          : reviewAfterCommitRace?.equals(reviewBeforeCommitRace) === true),
+      namedFacts([
+        ["commitGuardReads", () => commitGuardReads === 2],
+        [
+          "commitBoundarySubmissionDiagnostics",
+          () =>
+            commitBoundarySubmission.diagnostics.some(
+              (item) => item.code === "review-target-raced",
+            ),
+        ],
+        [
+          "projectRevision",
+          () => project.revision() === revisionBeforeCommitRace,
+        ],
+        [
+          "reviewBeforeCommitRaceReviewAfterCommitRace",
+          () =>
+            reviewBeforeCommitRace === null
+              ? reviewAfterCommitRace === null
+              : reviewAfterCommitRace?.equals(reviewBeforeCommitRace) === true,
+        ],
+      ]),
+      {
+        commitGuardReads: true,
+        commitBoundarySubmissionDiagnostics: true,
+        projectRevision: true,
+        reviewBeforeCommitRaceReviewAfterCommitRace: true,
+      },
     );
     const commitFailure = new Error("review storage failed");
     project.commitReview = (() => {
@@ -1490,26 +1803,60 @@ export const test_mcp_production_review = async (): Promise<void> => {
       throw new Error("shot worksheet has no acceptance evidence");
     acceptanceEvidence.exactValue = { stale: true };
     const staleAcceptanceResult = review.submit(staleAcceptance);
-    TestValidator.predicate(
+    TestValidator.equals(
       "visual completion needs a frame and explicit passes for every high-risk basis",
-      noVisualResult.diagnostics.some(
-        (item) => item.code === "review-evidence-missing",
-      ) &&
-        noVisualResult.diagnostics.some(
-          (item) => item.code === "review-completion-basis-incomplete",
-        ) &&
-        highRiskNotApplicableResult.diagnostics.some(
-          (item) => item.code === "review-high-risk-not-passed",
-        ) &&
-        acceptanceCoverageResult.diagnostics.some(
-          (item) => item.code === "review-acceptance-coverage-incomplete",
-        ) &&
-        missingAcceptanceCheckResult.diagnostics.some(
-          (item) => item.code === "review-acceptance-coverage-incomplete",
-        ) &&
-        staleAcceptanceResult.diagnostics.some(
-          (item) => item.code === "review-evidence-stale",
-        ),
+      namedFacts([
+        [
+          "noVisualResultDiagnostics",
+          () =>
+            noVisualResult.diagnostics.some(
+              (item) => item.code === "review-evidence-missing",
+            ),
+        ],
+        [
+          "noVisualResultDiagnostics2",
+          () =>
+            noVisualResult.diagnostics.some(
+              (item) => item.code === "review-completion-basis-incomplete",
+            ),
+        ],
+        [
+          "highRiskNotApplicableResultDiagnostics",
+          () =>
+            highRiskNotApplicableResult.diagnostics.some(
+              (item) => item.code === "review-high-risk-not-passed",
+            ),
+        ],
+        [
+          "acceptanceCoverageResultDiagnostics",
+          () =>
+            acceptanceCoverageResult.diagnostics.some(
+              (item) => item.code === "review-acceptance-coverage-incomplete",
+            ),
+        ],
+        [
+          "missingAcceptanceCheckResultDiagnostics",
+          () =>
+            missingAcceptanceCheckResult.diagnostics.some(
+              (item) => item.code === "review-acceptance-coverage-incomplete",
+            ),
+        ],
+        [
+          "staleAcceptanceResultDiagnostics",
+          () =>
+            staleAcceptanceResult.diagnostics.some(
+              (item) => item.code === "review-evidence-stale",
+            ),
+        ],
+      ]),
+      {
+        noVisualResultDiagnostics: true,
+        noVisualResultDiagnostics2: true,
+        highRiskNotApplicableResultDiagnostics: true,
+        acceptanceCoverageResultDiagnostics: true,
+        missingAcceptanceCheckResultDiagnostics: true,
+        staleAcceptanceResultDiagnostics: true,
+      },
     );
     const badRegion = worksheet(project, shotPrepared);
     const frame = shotPrepared.frames[0]!;
@@ -1707,23 +2054,47 @@ export const test_mcp_production_review = async (): Promise<void> => {
     const filmPreparedBesideLegacyV2 = review.prepare({
       target: { kind: "film", id: "fixture-film" },
     });
-    TestValidator.predicate(
+    TestValidator.equals(
       "retained v2 history is a warning beside current v3 evidence",
-      preparedBesideLegacyV2.frames.length !== 0 &&
-        preparedBesideLegacyV2.diagnostics.some(
-          (item) =>
-            item.code === "render-bundle-legacy" && item.category === "warning",
-        ) &&
-        preparedBesideLegacyV2.diagnostics.every(
-          (item) =>
-            item.code !== "render-bundle-invalid" ||
-            item.path?.includes("retained-v2-history") === false,
-        ) &&
-        filmPreparedBesideLegacyV2.diagnostics.some(
-          (item) =>
-            item.code === "render-bundle-legacy" &&
-            item.path?.includes("retained-v2-film-history"),
-        ),
+      namedFacts([
+        [
+          "preparedBesideLegacyV2Count",
+          () => preparedBesideLegacyV2.frames.length !== 0,
+        ],
+        [
+          "preparedBesideLegacyV2Diagnostics",
+          () =>
+            preparedBesideLegacyV2.diagnostics.some(
+              (item) =>
+                item.code === "render-bundle-legacy" &&
+                item.category === "warning",
+            ),
+        ],
+        [
+          "preparedBesideLegacyV2Diagnostics2",
+          () =>
+            preparedBesideLegacyV2.diagnostics.every(
+              (item) =>
+                item.code !== "render-bundle-invalid" ||
+                item.path?.includes("retained-v2-history") === false,
+            ),
+        ],
+        [
+          "filmPreparedBesideLegacyV2Diagnostics",
+          () =>
+            filmPreparedBesideLegacyV2.diagnostics.some(
+              (item) =>
+                item.code === "render-bundle-legacy" &&
+                item.path?.includes("retained-v2-film-history"),
+            ),
+        ],
+      ]),
+      {
+        preparedBesideLegacyV2Count: true,
+        preparedBesideLegacyV2Diagnostics: true,
+        preparedBesideLegacyV2Diagnostics2: true,
+        filmPreparedBesideLegacyV2Diagnostics: true,
+      },
     );
 
     for (const entry of review.queue().entries) {
@@ -1834,14 +2205,32 @@ export const test_mcp_production_review = async (): Promise<void> => {
         },
       ]);
     }
-    TestValidator.predicate(
+    TestValidator.equals(
       "a film-source mutation during review commit rolls back the stale ledger",
-      filmCommitGuardReads === 2 &&
-        filmCommitSubmission.diagnostics.some(
-          (item) => item.code === "review-target-raced",
-        ) &&
-        project.revision() === revisionBeforeFilmCommitRace &&
-        fs.readFileSync(filmReviewPath).equals(filmReviewBeforeRace),
+      namedFacts([
+        ["filmCommitGuardReads", () => filmCommitGuardReads === 2],
+        [
+          "filmCommitSubmissionDiagnostics",
+          () =>
+            filmCommitSubmission.diagnostics.some(
+              (item) => item.code === "review-target-raced",
+            ),
+        ],
+        [
+          "projectRevision",
+          () => project.revision() === revisionBeforeFilmCommitRace,
+        ],
+        [
+          "filmReviewPathFilmReviewBeforeRace",
+          () => fs.readFileSync(filmReviewPath).equals(filmReviewBeforeRace),
+        ],
+      ]),
+      {
+        filmCommitGuardReads: true,
+        filmCommitSubmissionDiagnostics: true,
+        projectRevision: true,
+        filmReviewPathFilmReviewBeforeRace: true,
+      },
     );
     const storedSourceReview = project.review(sourceTarget)!;
     fs.writeFileSync(
@@ -1930,16 +2319,38 @@ export const test_mcp_production_review = async (): Promise<void> => {
     const staleWorksheetResult = review.submit(
       worksheet(project, noRequiredPrepared),
     );
-    TestValidator.predicate(
+    TestValidator.equals(
       "dependent reviews become stale after a mutation",
-      review.queue().entries.some((entry) => entry.state === "stale") &&
-        staleWorksheetResult.state === "stale" &&
-        staleWorksheetResult.diagnostics.some(
-          (item) => item.code === "review-worksheet-stale",
-        ) &&
-        compiler
-          .compile({ scope: "review" })
-          .diagnostics.some((item) => item.code === "review-stale"),
+      namedFacts([
+        [
+          "reviewQueue",
+          () => review.queue().entries.some((entry) => entry.state === "stale"),
+        ],
+        [
+          "staleWorksheetResultState",
+          () => staleWorksheetResult.state === "stale",
+        ],
+        [
+          "staleWorksheetResultDiagnostics",
+          () =>
+            staleWorksheetResult.diagnostics.some(
+              (item) => item.code === "review-worksheet-stale",
+            ),
+        ],
+        [
+          "compilerCompile",
+          () =>
+            compiler
+              .compile({ scope: "review" })
+              .diagnostics.some((item) => item.code === "review-stale"),
+        ],
+      ]),
+      {
+        reviewQueue: true,
+        staleWorksheetResultState: true,
+        staleWorksheetResultDiagnostics: true,
+        compilerCompile: true,
+      },
     );
   } catch (error) {
     productionReviewFailure = { error };

@@ -10,6 +10,8 @@ import {
 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
+import { namedFacts } from "../internal/predicates";
+
 const musket = (): IAutoMovieFirearm => ({
   kind: "firearm",
   id: "musket",
@@ -163,18 +165,53 @@ export const test_combat_firearm_volley = (): void => {
       { id: "zero-modifier", distance: 10, accuracyMultiplier: 0 },
     ],
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "reload, misfire, range interpolation and effective-range refusal are separate states",
-    stateCases[0]?.outcome === "reloading" &&
-      stateCases[0].misfireSample === null &&
-      stateCases[0].reloadRemainingSeconds === 10 &&
-      stateCases[1]?.outcome === "misfire" &&
-      stateCases[1].accuracySample === null &&
-      rangeCases[0]?.accuracyProbability === 1 &&
-      rangeCases[1]?.accuracyProbability === 0.625 &&
-      rangeCases[2]?.accuracyProbability === 0.1 &&
-      rangeCases[3]?.accuracyProbability === 0 &&
-      rangeCases[4]?.accuracyProbability === 0,
+    namedFacts([
+      [
+        "stateCasesOutcomeReloading",
+        () => stateCases[0]?.outcome === "reloading",
+      ],
+      ["stateCasesMisfireSample", () => stateCases[0].misfireSample === null],
+      [
+        "stateCasesReloadRemainingSeconds",
+        () => stateCases[0].reloadRemainingSeconds === 10,
+      ],
+      ["stateCasesOutcomeMisfire", () => stateCases[1]?.outcome === "misfire"],
+      ["stateCasesAccuracySample", () => stateCases[1].accuracySample === null],
+      [
+        "rangeCasesAccuracyProbability",
+        () => rangeCases[0]?.accuracyProbability === 1,
+      ],
+      [
+        "rangeCasesAccuracyProbability2",
+        () => rangeCases[1]?.accuracyProbability === 0.625,
+      ],
+      [
+        "rangeCasesAccuracyProbability3",
+        () => rangeCases[2]?.accuracyProbability === 0.1,
+      ],
+      [
+        "rangeCasesAccuracyProbability4",
+        () => rangeCases[3]?.accuracyProbability === 0,
+      ],
+      [
+        "rangeCasesAccuracyProbability5",
+        () => rangeCases[4]?.accuracyProbability === 0,
+      ],
+    ]),
+    {
+      stateCasesOutcomeReloading: true,
+      stateCasesMisfireSample: true,
+      stateCasesReloadRemainingSeconds: true,
+      stateCasesOutcomeMisfire: true,
+      stateCasesAccuracySample: true,
+      rangeCasesAccuracyProbability: true,
+      rangeCasesAccuracyProbability2: true,
+      rangeCasesAccuracyProbability3: true,
+      rangeCasesAccuracyProbability4: true,
+      rangeCasesAccuracyProbability5: true,
+    },
   );
 
   const shooter = findProfileTrait(profile(), "shooter");

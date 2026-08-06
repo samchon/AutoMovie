@@ -118,7 +118,7 @@ export const test_cli_scaffold_dialogue_cache_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1982,
+          containerStatements: 2011,
           finallyDigest:
             "82bf93a82d33ec9ccaca05ef1eca7b6d82d09a43898eea6c1487d3b2fc347bc7",
           finallySubstantive: {
@@ -126,7 +126,7 @@ export const test_cli_scaffold_dialogue_cache_cleanup = (): void => {
               "963f2002e93878118f29f2436906b1631b831b1b071efca48858b6baac002abe",
             tokens: 29,
           },
-          index: 748,
+          index: 752,
           preceding:
             "letreuseAbaDialogueCleanupFailure:{error:unknown}|undefined;",
           substantive: {
@@ -143,7 +143,7 @@ export const test_cli_scaffold_dialogue_cache_cleanup = (): void => {
           catchBodies: ["pcmSuccessorCleanupFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1982,
+          containerStatements: 2011,
           finallyDigest:
             "6ee43ae006515e8527df651f5618a54280b360654bc91c996e70bc159e4c6764",
           finallySubstantive: {
@@ -151,7 +151,7 @@ export const test_cli_scaffold_dialogue_cache_cleanup = (): void => {
               "96b4562a838bf89876b5e15033c63cb81a6a57901070c3e0baa675f195f33f4b",
             tokens: 29,
           },
-          index: 773,
+          index: 777,
           preceding: "letpcmSuccessorCleanupFailure:{error:unknown}|undefined;",
           substantive: {
             digest:
@@ -170,7 +170,7 @@ export const test_cli_scaffold_dialogue_cache_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1982,
+          containerStatements: 2011,
           finallyDigest:
             "015266ad94bd00d0338147a13ee22386a127037b73f44a7d0b1f66d12f742fa5",
           finallySubstantive: {
@@ -178,7 +178,7 @@ export const test_cli_scaffold_dialogue_cache_cleanup = (): void => {
               "b6297913e6371d2a09a94ec3a82e8630b06e5d33dba143c1b788ed653098d5f8",
             tokens: 29,
           },
-          index: 782,
+          index: 786,
           preceding:
             "letreceiptSuccessorCleanupFailure:{error:unknown}|undefined;",
           substantive: {
@@ -195,7 +195,7 @@ export const test_cli_scaffold_dialogue_cache_cleanup = (): void => {
           catchBodies: ["abaDialogueCleanupFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1982,
+          containerStatements: 2011,
           finallyDigest:
             "967b7d5e8cbca269410064ba269d1de0d41d68ce87a5a68dcd6c768ba2b204d5",
           finallySubstantive: {
@@ -203,7 +203,7 @@ export const test_cli_scaffold_dialogue_cache_cleanup = (): void => {
               "637869f8d9b7a70bc6eb13e6b8fd50188338ef44a4179a699556730ce465ee12",
             tokens: 29,
           },
-          index: 801,
+          index: 805,
           preceding: "letabaDialogueCleanupFailure:{error:unknown}|undefined;",
           substantive: {
             digest:
@@ -222,7 +222,7 @@ export const test_cli_scaffold_dialogue_cache_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1982,
+          containerStatements: 2011,
           finallyDigest:
             "f508077e4f310325dd66c62d2f159326ccb30722f7016fcbf9d725c7e186794d",
           finallySubstantive: {
@@ -230,7 +230,7 @@ export const test_cli_scaffold_dialogue_cache_cleanup = (): void => {
               "c385783bf222f334b1ad64295c688d12b40dcc0ce709cd73ac0d275cf6395e57",
             tokens: 29,
           },
-          index: 812,
+          index: 816,
           preceding:
             "letdialogueRootSwapCleanupFailure:{error:unknown}|undefined;",
           substantive: {

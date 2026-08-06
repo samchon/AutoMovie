@@ -118,7 +118,7 @@ export const test_cli_scaffold_render_gc_descriptor_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1982,
+          containerStatements: 2011,
           finallyDigest:
             "2a9944070d82bed555181099bdd1a318d6b339e47539a7736415848457017d71",
           finallySubstantive: {
@@ -126,7 +126,7 @@ export const test_cli_scaffold_render_gc_descriptor_cleanup = (): void => {
               "87993a4f3441b48c952b6f46f64edf37326c2de90b302489fccfc5216a825a90",
             tokens: 50,
           },
-          index: 1148,
+          index: 1164,
           preceding:
             "letstandaloneRenderGcHarnessCleanupFailure:{error:unknown}|undefined;",
           substantive: {
@@ -146,7 +146,7 @@ export const test_cli_scaffold_render_gc_descriptor_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1982,
+          containerStatements: 2011,
           finallyDigest:
             "4a22ec047a926dadf2a201c13ccdee1576cbed299982087e811d9cce9580ad90",
           finallySubstantive: {
@@ -154,7 +154,7 @@ export const test_cli_scaffold_render_gc_descriptor_cleanup = (): void => {
               "149431daeb3ed3561cb658e429eb1279d9acccc3673afebb78b167bd2f7b9478",
             tokens: 50,
           },
-          index: 1155,
+          index: 1171,
           preceding:
             "letprimaryOnlyRenderGcHarnessCleanupFailure:|{error:unknown}|undefined;",
           substantive: {
@@ -174,7 +174,7 @@ export const test_cli_scaffold_render_gc_descriptor_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1982,
+          containerStatements: 2011,
           finallyDigest:
             "e045cfeb4b5f91a00e06aecd20b2f9595f443e3105acf87e54109a5baee33e07",
           finallySubstantive: {
@@ -182,7 +182,7 @@ export const test_cli_scaffold_render_gc_descriptor_cleanup = (): void => {
               "2f577e4f64cd7497594cc5a5fe5b23245fd360d9dad7ecb33901f13528b38ec9",
             tokens: 71,
           },
-          index: 1164,
+          index: 1180,
           preceding:
             "letcombinedRenderGcHarnessCleanupFailure:{error:unknown}|undefined;",
           substantive: {
@@ -202,7 +202,7 @@ export const test_cli_scaffold_render_gc_descriptor_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1982,
+          containerStatements: 2011,
           finallyDigest:
             "e967432aed91bfa40ad068334a5a9743a12cdfc7b73aa82619b64a82f74ac498",
           finallySubstantive: {
@@ -210,7 +210,7 @@ export const test_cli_scaffold_render_gc_descriptor_cleanup = (): void => {
               "57d79a891064d0d85352a5f403f7b628f30597aa15ee375c4fed18cb719c4e9b",
             tokens: 71,
           },
-          index: 1174,
+          index: 1190,
           preceding:
             "letrenderGcCreateHarnessCleanupFailure:{error:unknown}|undefined;",
           substantive: {
@@ -230,7 +230,7 @@ export const test_cli_scaffold_render_gc_descriptor_cleanup = (): void => {
           ],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1982,
+          containerStatements: 2011,
           finallyDigest:
             "e78a963517ca712885dc497298981265fae2ab5fca31f8fbf38fed23d2807803",
           finallySubstantive: {
@@ -238,7 +238,7 @@ export const test_cli_scaffold_render_gc_descriptor_cleanup = (): void => {
               "bd1664a072f342b680b78d2c1c6051cfff76a9ff1d76f0493c6eae593db3ccc4",
             tokens: 71,
           },
-          index: 1186,
+          index: 1202,
           preceding:
             "letnestedRenderGcHarnessCleanupFailure:{error:unknown}|undefined;",
           substantive: {

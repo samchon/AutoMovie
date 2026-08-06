@@ -112,28 +112,32 @@ export const test_cli_scaffold_proxy_publication_cleanup = (): void => {
     {
       lifecycles: [
         {
-          catchBodies: ["gcAbaJudgeCleanupFailure={error};", "returnfalse;"],
+          catchBodies: [
+            "gcAbaJudgeCleanupFailure={error};",
+            "gcAbaJudgment=errorinstanceofError?error.message:String(error);",
+            "returnfalse;",
+          ],
           catchVariables: ["error"],
           containerKind: "ArrowFunction",
           containerStatements: 4,
           finallyDigest:
-            "ed4cab470cd25e9d81a8030dc699ce2ce7b8bc8c95cfa20f7b3ebb3eea545392",
+            "740ba8872fd6a1d7fdd0a96a157c3547769f6f522c93061bd28cda204cb4ccdb",
           finallySubstantive: {
             digest:
-              "5e461d49e3062a4f48f44c90972b0546e857552af7a4411d13b646c663a7632c",
-            tokens: 52,
+              "9486ab31f6af59071f8d7aee249107d1e394f17fb88eb6618bdbd65416f0e649",
+            tokens: 54,
           },
           index: 3,
           preceding: "letgcAbaJudgeCleanupFailure:{error:unknown}|undefined;",
           substantive: {
             digest:
-              "2625c90836449fe65e32ff3d9d83ec4f723469aad3dc1466ed3ef375b569670b",
-            tokens: 34,
+              "9845ffb7280876f4b371c88e6c6a00f9d858f76f9858a8586139df8efbed6268",
+            tokens: 57,
           },
           tryBody:
-            "{constreceipt=proxyModule.inspectCapturedProxyBundle(snapshot,evidence,);return(receipt.publicationFingerprint===gcAbaPublication&&receipt.compileFingerprint===gcAbaCompile&&receipt.editFingerprint===gcAbaEdit);}",
+            "{constreceipt=proxyModule.inspectCapturedProxyBundle(snapshot,evidence,);gcAbaJudgment={compile:receipt.compileFingerprint,edit:receipt.editFingerprint,publication:receipt.publicationFingerprint,};return(receipt.publicationFingerprint===gcAbaPublication&&receipt.compileFingerprint===gcAbaCompile&&receipt.editFingerprint===gcAbaEdit);}",
           tryDigest:
-            "9af57d78c790e4558b85380711279bddd480ce8fbbee8c242176655b3ab18c1d",
+            "d5081b09f5b5cd2a8d6da58b55e1856fade007b3d4eb8e65da1efeb98788eb02",
         },
         {
           catchBodies: ["scaleCleanupFailure={error};", "throwerror;"],
@@ -163,7 +167,7 @@ export const test_cli_scaffold_proxy_publication_cleanup = (): void => {
           catchBodies: ["proxyMediaCleanupFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1982,
+          containerStatements: 2011,
           finallyDigest:
             "336d561f3977f4f70c9c466b439a71475977b26f816dd39d5a6741a29e100901",
           finallySubstantive: {
@@ -171,7 +175,7 @@ export const test_cli_scaffold_proxy_publication_cleanup = (): void => {
               "bd271a550085c118abb12e96c7dafefa650fc32b0d8d6b0e726f16ab2dd2192c",
             tokens: 77,
           },
-          index: 239,
+          index: 241,
           preceding: "letproxyMediaCleanupFailure:{error:unknown}|undefined;",
           substantive: {
             digest:
@@ -187,7 +191,7 @@ export const test_cli_scaffold_proxy_publication_cleanup = (): void => {
           catchBodies: ["proxyDirectoryCleanupFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1982,
+          containerStatements: 2011,
           finallyDigest:
             "7df6ead084071ac936ca19cc7a04d8c226a343f6ecbeab5b4d97be6d747341ab",
           finallySubstantive: {
@@ -195,7 +199,7 @@ export const test_cli_scaffold_proxy_publication_cleanup = (): void => {
               "bd15a15073ea7d1dcc9d669772b0dbfd31cc335c6a1640ecb9b448f22fbc69a8",
             tokens: 115,
           },
-          index: 251,
+          index: 253,
           preceding:
             "letproxyDirectoryCleanupFailure:{error:unknown}|undefined;",
           substantive: {
@@ -212,7 +216,7 @@ export const test_cli_scaffold_proxy_publication_cleanup = (): void => {
           catchBodies: ["proxyInventoryCleanupFailure={error};", "throwerror;"],
           catchVariables: ["error"],
           containerKind: "TryStatement",
-          containerStatements: 1982,
+          containerStatements: 2011,
           finallyDigest:
             "f25be1e62a4c8cbfffbffb7a2d9d3747e7097015180c1b25cb3c2b2be57971f6",
           finallySubstantive: {
@@ -220,7 +224,7 @@ export const test_cli_scaffold_proxy_publication_cleanup = (): void => {
               "0d3dcc8e981dd047aff55d6162bdb8a780c3702601563e862d5f01620b84b1f9",
             tokens: 57,
           },
-          index: 259,
+          index: 261,
           preceding:
             "letproxyInventoryCleanupFailure:{error:unknown}|undefined;",
           substantive: {
