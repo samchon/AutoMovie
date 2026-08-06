@@ -33,9 +33,13 @@ const readSandbox = (relative: string): string =>
  * Three of these are not cosmetic. `link:` is what keeps the sandbox out of the
  * tracked lockfile while still resolving through each package's `exports` to
  * `src/*.ts`. The `ttsx` launcher is what applies typia's compile-time
- * transform to that linked source, which `tsx` does not do at all. The host's
- * own lint config is what lets the server start while the production is still
- * mid-work, since ttsx type-checks before it runs and the project's own
+ * transform to that linked source, which `tsx` does not do at all, and what
+ * keeps the linked index's `export * from` lines visible: `tsx` transpiles
+ * source in a package that declares no `"type"` as CommonJS, and an ESM
+ * importer then reads its named exports through a static scan that does not
+ * follow esbuild's re-export helper. The host's own lint config is what lets
+ * the server start while the production is still mid-work, since ttsx
+ * type-checks before it runs and the project's own
  * `automovie/screenplay-contract` rule fails on any unrealized screenplay.
  *
  * Scenarios:
@@ -49,9 +53,13 @@ const readSandbox = (relative: string): string =>
  *    and names `tsx` nowhere.
  * 3. `tsconfig.mcp.json` selects a rule-free lint config by `configFile`, and that
  *    config exists and enables no rules.
- * 4. A second run over the rendered sandbox fails without `--force`, and the
+ * 4. Every script the scaffold launches with bare `tsx` renders on the same
+ *    launcher and host tsconfig, no rendered script invokes `tsx` at all, and
+ *    the project's own `lint` keeps `tsconfig.json` so the full rule set still
+ *    gates the review contract.
+ * 5. A second run over the rendered sandbox fails without `--force`, and the
  *    message names the directory.
- * 5. `--force` renders over the same directory and succeeds.
+ * 6. `--force` renders over the same directory and succeeds.
  */
 export const test_workspace_experimental_sandbox = (): void => {
   let failure: { error: unknown } | undefined = undefined;
@@ -61,6 +69,7 @@ export const test_workspace_experimental_sandbox = (): void => {
     const manifest = JSON.parse(readSandbox("package.json")) as {
       dependencies: Record<string, string>;
       devDependencies: Record<string, string>;
+      scripts: Record<string, string>;
       pnpm: {
         overrides: Record<string, string>;
         onlyBuiltDependencies: string[];
@@ -117,6 +126,54 @@ export const test_workspace_experimental_sandbox = (): void => {
     TestValidator.predicate(
       "the host lint config enables no rules",
       /rules:\s*\{\s*\}/.test(readSandbox("lint.host.config.ts")),
+    );
+
+    // The expectation comes from the scaffold, not from the generator's own
+    // output: whatever the published starter launches with `tsx` is exactly
+    // what a sandbox must relaunch on the working-tree launcher.
+    const scaffold = (
+      JSON.parse(
+        fs.readFileSync(
+          path.join(ROOT, "packages", "cli", "scaffold", "package.json"),
+          "utf8",
+        ),
+      ) as { scripts: Record<string, string> }
+    ).scripts;
+    const relaunched = Object.entries(scaffold).filter(([, command]) =>
+      command.startsWith("tsx "),
+    );
+    TestValidator.predicate(
+      "the scaffold still has scripts to relaunch",
+      relaunched.length !== 0,
+    );
+    TestValidator.predicate(
+      "every scaffold tsx script relaunches on the host launcher",
+      relaunched.every(
+        ([name, command]) =>
+          manifest.scripts[name] ===
+          `ttsx -P tsconfig.mcp.json ${command.slice("tsx ".length)}`,
+      ),
+    );
+    TestValidator.predicate(
+      "no rendered script invokes tsx",
+      Object.values(manifest.scripts).every(
+        (command) => /\btsx\b/.test(command) === false,
+      ),
+    );
+    TestValidator.equals(
+      "the project's own lint keeps the full rule set",
+      manifest.scripts.lint,
+      scaffold.lint,
+    );
+    TestValidator.predicate(
+      "lint is the negative twin, still reading the project tsconfig",
+      manifest.scripts.lint.includes("-P tsconfig.json") &&
+        manifest.scripts.lint.includes("tsconfig.mcp.json") === false,
+    );
+    TestValidator.equals(
+      "a script the scaffold does not launch with tsx is left alone",
+      manifest.scripts.viewer,
+      scaffold.viewer,
     );
 
     const repeated = generate();

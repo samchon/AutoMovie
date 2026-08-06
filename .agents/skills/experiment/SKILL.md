@@ -34,10 +34,12 @@ Read this before debugging a sandbox that will not start. Each item is a failure
 | --- | --- |
 | `@automovie/*` resolve as `link:../../packages/<name>` | The link resolves through each package's `exports` to `src/*.ts`, so the sandbox reads working-tree source with no build |
 | A standalone install, not a root workspace member | A member writes an importer into the tracked `pnpm-lock.yaml`, and `experimental/` is gitignored, so that lock would name a directory no other checkout has |
-| The MCP host runs under `ttsx` | `tsx` runs no transformer, and linked source has not been through typia's compile-time transform, so the host dies before serving a tool |
+| Every TypeScript entry runs under `ttsx`, the host and the project's own scripts alike | `tsx` runs no transformer, so linked source dies on typia's compile-time transform; and it transpiles that source as CommonJS, so an ESM importer loses every `export * from` the linked package's index declares |
 | The host reads `lint.host.config.ts`, which enables no rules | `ttsx` type-checks first and ttsc discovers `@ttsc/lint`, whose `automovie/screenplay-contract` rule fails on any unrealized screenplay. The project's own `npm run lint` still runs the full rule set |
 
-Two symptoms map straight to this table. `typia.llm.controller(): no transform has been configured` means something launched the host through `tsx`. A wall of `automovie/screenplay-contract` errors means it used the project's tsconfig instead of `tsconfig.mcp.json`.
+Three symptoms map straight to this table. `typia.llm.controller(): no transform has been configured` means something launched the host through `tsx`. `does not provide an export named` for a symbol the linked package plainly exports means a script did. A wall of `automovie/screenplay-contract` errors means it used the project's tsconfig instead of `tsconfig.mcp.json`.
+
+A sandbox script fails loudly but exits through a pipe, so `npm run <script> | tail` can print a plausible tail for a command that died. Read the exit code, not the tail.
 
 ## Drive It
 

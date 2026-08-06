@@ -26,7 +26,8 @@
 //    the chance to satisfy yet.
 //
 // `sandboxManifest` then restores the two settings the root workspace used to
-// supply to an installed project.
+// supply to an installed project, and moves the project's own scripts onto the
+// same launcher for the reason `sandboxScripts` explains.
 import { spawnSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
@@ -224,8 +225,43 @@ export default config;
  * builds this dependency graph genuinely needs; Sharp is absent because the
  * override above replaces it with the stub, which has nothing to build.
  */
+/**
+ * The scaffold's script table with every `tsx` entry moved onto the launcher
+ * `.mcp.json` already uses. `link:` breaks `tsx` for a script exactly as it
+ * breaks it for the host, so a sandbox left on the scaffold's runner can start
+ * its MCP server and do nothing else.
+ *
+ * Two independent failures ride on that prefix. A sandbox is `"type": "module"`
+ * and the packages it links declare no `"type"`, so `tsx` transpiles linked
+ * source as CommonJS and an ESM importer reads its named exports through
+ * `cjs-module-lexer`, which does not follow the re-export helper esbuild emits.
+ * Every `export * from` in `@automovie/mcp`'s index disappears, and
+ * `import { digestAutoMovieBytes } from "@automovie/mcp"` throws `does not
+ * provide an export named` even though the symbol is exported. Independently,
+ * `tsx` runs no transformer, so any script reaching typia-backed linked source
+ * dies the way the header above describes. Published projects meet neither:
+ * they resolve to `lib/*.js`, whose `tsc` `__exportStar` form the lexer does
+ * follow and whose typia calls were transformed at build time.
+ *
+ * Rewriting by prefix rather than by name is what makes this hold as the
+ * scaffold grows. `lint` is deliberately left alone: it already runs under
+ * `ttsx` against the project's own `tsconfig.json`, which is where the full
+ * `automovie` rule set gates the review contract, and pointing it at the host's
+ * rule-free config would silently retire that gate.
+ */
+const sandboxScripts = (scripts) =>
+  Object.fromEntries(
+    Object.entries(scripts).map(([name, command]) => [
+      name,
+      command.startsWith("tsx ")
+        ? `ttsx -P ${HOST_TSCONFIG} ${command.slice("tsx ".length)}`
+        : command,
+    ]),
+  );
+
 const sandboxManifest = (rendered) => {
   const manifest = JSON.parse(rendered);
+  manifest.scripts = sandboxScripts(manifest.scripts);
   manifest.pnpm = {
     overrides: {
       "@huggingface/transformers>sharp": "file:vendor/sharp-disabled",
