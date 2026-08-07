@@ -12,6 +12,7 @@ import { inspectAutoMovieExternalModelBytes } from "@automovie/ingest";
 import {
   AutoMovieContentDigest,
   AutoMovieHumanoidBone,
+  IAutoMovieAcceptanceScenario,
   IAutoMovieAssetManifest,
   IAutoMovieAssetProvenance,
   IAutoMovieBeatEndState,
@@ -517,6 +518,7 @@ export class AutoMovieProductionCompiler {
     if (input.scope !== "design")
       diagnostics.push(
         ...screenplayCoverageDiagnostics({
+          acceptance: graph.acceptance,
           contracts: graph.shots,
           realizations,
           scope: input.scope,
@@ -4019,6 +4021,7 @@ const sourceTargetsOf = (
  * production dropped without renumbering the ones around it.
  */
 const screenplayCoverageDiagnostics = (props: {
+  acceptance: ReadonlyMap<string, IAutoMovieAcceptanceScenario>;
   contracts: ReadonlyMap<string, IAutoMovieShotContract>;
   realizations: ReadonlyMap<string, IAutoMovieCompiledContractRealization>;
   scope: IAutoMovieCompileProjectInput["scope"];
@@ -4035,14 +4038,70 @@ const screenplayCoverageDiagnostics = (props: {
   // scene from shot realization with an auditable reason, so honouring it is
   // the difference between a coverage gate and a demand that every scene be
   // shot. Tombstones need no exemption; they are not active.
-  const uncovered = props.screenplay.screenplay.scenes.filter(
+  // A required acceptance scenario citing a scene is what turns a compiled
+  // realization into an observation someone signed for. The review gate refuses
+  // an incomplete review separately, so a scene cited by a required scenario is
+  // a scene a passing review had to answer for.
+  const observed = new Set<string>();
+  for (const scenario of props.acceptance.values()) {
+    if (scenario.required !== true) continue;
+    for (const evidence of scenario.evidence ?? [])
+      observed.add(evidence.scene);
+  }
+  const diagnostics: IAutoMovieDiagnostic[] = [];
+  // A ledger asserting both absence and realization contradicts itself, and
+  // the contradiction is not a scope-dependent "not yet": it is wrong the
+  // moment both records exist.
+  for (const scene of props.screenplay.screenplay.scenes) {
+    const claimed = realized.has(scene.id) || observed.has(scene.id);
+    if (claimed === false) continue;
+    if (scene.status === "OMITTED")
+      diagnostics.push({
+        code: "screenplay-tombstone-realized",
+        category: "error",
+        phase: "compile",
+        target: "screenplay",
+        path: null,
+        message: `Scene "${scene.id}" is an OMITTED tombstone, yet a compiled realization or a required acceptance scenario cites it. The ledger asserts both absence and realized work. Remove the downstream claim or reactivate the scene, then compile again.`,
+      });
+    else if (scene.disposition !== null)
+      diagnostics.push({
+        code: "screenplay-disposition-realized",
+        category: "error",
+        phase: "compile",
+        target: "screenplay",
+        path: null,
+        message: `Scene "${scene.id}" is exempted at the ${scene.disposition.phase} phase, yet a compiled realization or a required acceptance scenario cites it. Intentional omission and realized work contradict each other. Remove the disposition or the downstream claim, then compile again.`,
+      });
+  }
+  const active = props.screenplay.screenplay.scenes.filter(
     (scene) =>
-      scene.status === "active" &&
-      scene.disposition?.phase !== "production" &&
-      realized.has(scene.id) === false,
+      scene.status === "active" && scene.disposition?.phase !== "production",
   );
-  if (uncovered.length === 0) return [];
+  // Observation is the review scopes' bar, not authoring's. A film being built
+  // has scenes nobody has looked at yet by construction; a film presented for
+  // review is claiming somebody did.
+  const unobserved =
+    props.scope === "review" || props.scope === "final"
+      ? active.filter((scene) => observed.has(scene.id) === false)
+      : [];
+  if (unobserved.length !== 0)
+    diagnostics.push({
+      code: "screenplay-scene-unobserved",
+      category: "error",
+      phase: "compile",
+      target: "screenplay",
+      path: null,
+      message: `Active ${unobserved.length === 1 ? "scene" : "scenes"} ${unobserved
+        .map((scene) => `"${scene.id}"`)
+        .join(
+          ", ",
+        )} ${unobserved.length === 1 ? "has" : "have"} no required acceptance scenario citing them. A compiled realization is not an observation, so nothing here was ever looked at. Author a required acceptance scenario citing the scene, or record a phase-local disposition, then compile again.`,
+    });
+  const uncovered = active.filter((scene) => realized.has(scene.id) === false);
+  if (uncovered.length === 0) return diagnostics;
   return [
+    ...diagnostics,
     {
       code: "screenplay-scene-unrealized",
       category: props.scope === "source" ? "warning" : "error",
