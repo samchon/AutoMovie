@@ -81,6 +81,7 @@ import {
 } from "./materializeProduction";
 import { assertProductionFeatureUsesRenditionClips } from "./muxProductionFeatureMp4";
 import { probeProductionMedia } from "./probeProductionMedia";
+import { screenplayLedgerDiagnostics } from "./screenplayLedgerDiagnostics";
 import {
   IAutoMovieProductionDesignGraph,
   validateAutoMovieProductionGraph,
@@ -502,6 +503,7 @@ export class AutoMovieProductionCompiler {
     const screenplay = this.project.screenplayIndex();
     diagnostics.push(
       ...screenplayResidencyDiagnostics({ contracts: graph.shots, screenplay }),
+      ...screenplayLedgerDiagnostics(screenplay),
     );
     if (input.scope !== "design")
       diagnostics.push(
