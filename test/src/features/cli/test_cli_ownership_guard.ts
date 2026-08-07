@@ -134,6 +134,49 @@ export const test_cli_ownership_guard = (): void => {
       },
     );
 
+    // A review is complete only once the current bundle frames have actually
+    // been opened, so the guard has to let an agent look at what it owns. It
+    // guards against mutation; refusing a read would make the inspection the
+    // review contract mandates impossible and push the agent into copying
+    // evidence out to somewhere unowned just to see it.
+    const readFrame = guard(root, "Read", {
+      file_path: path.join(root, "renders", "shot", "frame.png"),
+    });
+    const globFrames = guard(root, "Glob", {
+      pattern: "renders/**/*.png",
+      path: path.join(root, "renders"),
+    });
+    const grepGenerated = guard(root, "Grep", {
+      pattern: "shot",
+      path: path.join(root, "generated"),
+    });
+    // Not an observation: a shell command that happens to read is still a
+    // shell command, and an unrecognized tool stays blocked so the guard keeps
+    // failing closed as the tool surface grows.
+    const shellRead = guard(root, "Bash", {
+      command: "Get-Content renders/shot/frame.png > copy.png",
+    });
+    const unknownTool = guard(root, "mcp__filesystem__read_file", {
+      path: path.join(root, "renders", "shot", "frame.png"),
+    });
+    TestValidator.equals(
+      "the guard blocks mutation without blocking the inspection review requires",
+      namedFacts([
+        ["readFrameStatus", () => readFrame.status === 0],
+        ["globFramesStatus", () => globFrames.status === 0],
+        ["grepGeneratedStatus", () => grepGenerated.status === 0],
+        ["shellReadStatus", () => shellRead.status === 2],
+        ["unknownToolStatus", () => unknownTool.status === 2],
+      ]),
+      {
+        readFrameStatus: true,
+        globFramesStatus: true,
+        grepGeneratedStatus: true,
+        shellReadStatus: true,
+        unknownToolStatus: true,
+      },
+    );
+
     const manifest = path.join(root, ".automovie", "manifest.json");
     fs.rmSync(manifest);
     const absent = guard(root, "Write", {

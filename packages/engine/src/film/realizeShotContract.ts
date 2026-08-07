@@ -20,7 +20,15 @@ import { Quaternion } from "../math/Quaternion";
 import { sampleMotion } from "../motion/sampleMotion";
 import { productionRuntimeModelId } from "../productionIdentity";
 import { sampleClipSequence } from "../resolve/sampleClip";
-import { projectToNdc, resolveCameraAt } from "./cameraProjection";
+import {
+  DEFAULT_SUBJECT_HEIGHT,
+  computeModelRestExtentY,
+  computeRestHeight,
+} from "./cameraMove";
+import {
+  intersectsPerspectiveFrustumSegment,
+  resolveCameraAt,
+} from "./cameraProjection";
 
 /** Derive and validate contract outcomes from actual compiled artifacts. */
 export const realizeShotContract = (props: {
@@ -341,6 +349,40 @@ const resolveSpatial = (
   );
 };
 
+/**
+ * The vertical extent the camera solve assumed for a required subject, so the
+ * readability test and the framing that produced the shot share one subject.
+ *
+ * `performShot` builds each `IAutoMovieFramedSubject` this way: a rigged node
+ * is measured from its rest pose, and anything else — a formation, a prop with
+ * no skeleton, a rig too small to measure — takes `DEFAULT_SUBJECT_HEIGHT`.
+ * Reading it back the same way is what makes the check honest. Measuring here
+ * while the solve assumed a default would frame one subject and grade another.
+ */
+const framedSubjectHeight = (
+  props: Parameters<typeof realizeShotContract>[0],
+  subject: string,
+): number => {
+  const node = props.formations.has(subject)
+    ? undefined
+    : props.compiled.scene.nodes.find((candidate) => candidate.id === subject);
+  const model =
+    node === undefined
+      ? undefined
+      : (props.compiled.models ?? []).find(
+          (candidate) => candidate.id === node.model,
+        );
+  const extent = model === undefined ? null : computeModelRestExtentY(model);
+  const rig = node === undefined ? null : skeletonOf(props, node);
+  const measured =
+    extent === null
+      ? rig === null
+        ? 0
+        : computeRestHeight(rig)
+      : extent.max - extent.min;
+  return measured >= 0.1 ? measured : DEFAULT_SUBJECT_HEIGHT;
+};
+
 const cameraOutcome = (
   props: Parameters<typeof realizeShotContract>[0],
   time: number,
@@ -373,12 +415,17 @@ const cameraOutcome = (
         ? resolveSpatial(props, { kind: "formation", id: subject }, time)
         : resolveSpatial(props, { kind: "node", id: subject }, time);
       ++resolvedSubjects;
-      const projection = projectToNdc(resolvedCamera, point, halfY, aspect);
+      const height = framedSubjectHeight(props, subject);
       if (
-        projection.depth >= camera.near &&
-        projection.depth <= camera.far &&
-        Math.abs(projection.ndcX) <= 1 &&
-        Math.abs(projection.ndcY) <= 1
+        intersectsPerspectiveFrustumSegment({
+          camera: resolvedCamera,
+          from: point,
+          to: { x: point.x, y: point.y + height, z: point.z },
+          near: camera.near,
+          far: camera.far,
+          halfY,
+          aspect,
+        })
       )
         ++readableSubjects;
     } catch {}

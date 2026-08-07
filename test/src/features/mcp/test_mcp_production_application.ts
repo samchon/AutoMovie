@@ -735,6 +735,8 @@ export const test_mcp_production_application = async (): Promise<void> => {
         "SOUND_DESIGN",
         "ASSET_SOURCING",
         "DIFFUSION_ENHANCE",
+        "EVIDENCE_GRAPH",
+        "SOURCE_COMPOSITION",
         "TYPESCRIPT",
         "DEBUGGING",
       ],

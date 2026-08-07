@@ -211,7 +211,7 @@ const createScaffoldFile = (props: {
     );
     assertScaffoldDescriptorBytes(descriptor, props.target, props.bytes);
     const finalStatus = fs.fstatSync(descriptor, { bigint: true });
-    if (physicalVersion(finalStatus) !== physicalVersion(completed))
+    if (writtenVersion(finalStatus) !== writtenVersion(completed))
       throw new Error(
         `scaffold file changed after final readback: ${props.target}`,
       );
@@ -263,7 +263,7 @@ const overwriteScaffoldFile = (props: {
     );
     assertScaffoldDescriptorBytes(descriptor, props.target, props.bytes);
     const finalStatus = fs.fstatSync(descriptor, { bigint: true });
-    if (physicalVersion(finalStatus) !== physicalVersion(completed))
+    if (writtenVersion(finalStatus) !== writtenVersion(completed))
       throw new Error(
         `scaffold file changed after final readback: ${props.target}`,
       );
@@ -439,6 +439,28 @@ const physicalIdentity = (status: fs.BigIntStats): string =>
 
 const physicalVersion = (status: fs.BigIntStats): string =>
   `${physicalIdentity(status)}:${status.size}:${status.mtimeNs}:${status.ctimeNs}`;
+
+/**
+ * The part of a file's identity a writer owns, for comparing two stats of one
+ * held descriptor across this module's own verification reads.
+ *
+ * `ctimeNs` is deliberately absent here and only here. Windows advances a
+ * file's change time when _any_ handle opens the path, including the read-only
+ * handle `captureScaffoldFile` takes to verify the write, so the check's own
+ * probe moved the value the check then compared: measured 20 of 20 with the
+ * probe and 0 of 20 without it, `size` and `mtimeNs` steady throughout. That
+ * made every scaffold write on such a machine report tampering, which is a
+ * false refusal a virus scanner or an indexer can trigger at will.
+ *
+ * Nothing is given up. A substituted file no longer shares the descriptor's
+ * physical identity, a rewrite changes the size or the modification time, and
+ * `assertScaffoldDescriptorBytes` has already read the bytes back through the
+ * descriptor that never let go. Every other comparison keeps
+ * {@link physicalVersion}, including the directory-ownership checks where a
+ * rename's `ctime` move is the signal.
+ */
+const writtenVersion = (status: fs.BigIntStats): string =>
+  `${physicalIdentity(status)}:${status.size}:${status.mtimeNs}`;
 
 const inside = (root: string, target: string): boolean => {
   const relative = path.relative(root, target);

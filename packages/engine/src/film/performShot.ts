@@ -11,6 +11,7 @@ import {
   IAutoMovieClip,
   IAutoMovieConstraintViolation,
   IAutoMovieInteractionEvent,
+  IAutoMovieModel,
   IAutoMovieMotion,
   IAutoMoviePerformance,
   IAutoMovieQuaternion,
@@ -52,6 +53,7 @@ import {
   IAutoMovieFramedSubject,
   compileCameraCoverage,
   compileCameraMove,
+  computeModelRestExtentY,
   computeRestHeight,
 } from "./cameraMove";
 import { compileLaunch } from "./compileLaunch";
@@ -281,6 +283,15 @@ export const performShot = (props: {
   performance: IAutoMoviePerformance;
   synthesize: IAutoMovieActionSynthesizer;
   skeleton: (node: string) => IAutoMovieSkeleton | null;
+  /**
+   * Compiler-owned models for the staged nodes, used to measure what a camera
+   * frames. A rig's joint span is not the figure's height — the generated
+   * `stickman` has no foot or head-top bone and spans 0.680 of its declared
+   * height — so framing solved from the rig alone crops an actor's head off.
+   * Omit only where no model is available; the rig measurement then stands as
+   * the documented fallback.
+   */
+  models?: readonly IAutoMovieModel[];
   hasActorContext?: (node: string) => boolean;
   jointAxes?: (
     node: string,
@@ -1594,10 +1605,33 @@ export const performShot = (props: {
 
   // Compile the live camera's move from its frame actions. Subjects resolve
   // against the staged placements; a node subject's height is measured from
-  // its rig's rest pose (staging doctrine: measure, don't hope), and its
-  // animated base rides either a compiled actor clip or an effective object
-  // motion, so `follow` tracks a walking actor, launched prop, or handoff.
+  // the geometry its model actually draws (staging doctrine: measure, don't
+  // hope), and its animated base rides either a compiled actor clip or an
+  // effective object motion, so `follow` tracks a walking actor, launched
+  // prop, or handoff.
   const cameraObject = staged.scene.cameras.find((c) => c.id === liveCamera)!;
+  /**
+   * A staged node's drawn vertical extent, memoized because a shot frames the
+   * same subject from the hero camera and again from every coverage angle. Null
+   * whenever the model is absent or has nothing to measure, which hands the rig
+   * measurement back its documented fallback role.
+   */
+  const measuredExtents = new Map<
+    string,
+    { min: number; max: number } | null
+  >();
+  const modelExtentOf = (node: string): { min: number; max: number } | null => {
+    const cached = measuredExtents.get(node);
+    if (cached !== undefined) return cached;
+    const staffed = staged.scene.nodes.find((entry) => entry.id === node);
+    const model =
+      staffed === undefined
+        ? undefined
+        : (props.models ?? []).find((entry) => entry.id === staffed.model);
+    const extent = model === undefined ? null : computeModelRestExtentY(model);
+    measuredExtents.set(node, extent);
+    return extent;
+  };
   // What a camera entry frames, resolved once for every take: the hero's frame
   // spans and each coverage angle read the SAME subject, so an alternate camera
   // frames the beat's subject exactly as the hero does, only from its own
@@ -1619,7 +1653,20 @@ export const performShot = (props: {
       (resolveTargetPoint(on, nodePositions) as IAutoMovieVector3);
     const node = on.kind === "node" ? on.node : null;
     const rig = node === null ? null : skeleton(node);
-    const measured = rig === null ? 0 : computeRestHeight(rig);
+    // Measure the figure, not the rig. The extent is model-space, so its floor
+    // is where the geometry actually starts: shifting the framed base by it
+    // keeps `base` meaning "the bottom of what the camera sees", which is what
+    // the framing grammar's aim fractions are written against.
+    const extent = node === null ? null : modelExtentOf(node);
+    const measured =
+      extent === null
+        ? rig === null
+          ? 0
+          : computeRestHeight(rig)
+        : extent.max - extent.min;
+    const floor = extent === null ? 0 : extent.min;
+    const onFloor = (value: IAutoMovieVector3): IAutoMovieVector3 =>
+      floor === 0 ? value : { x: value.x, y: value.y + floor, z: value.z };
     const motion = node === null ? undefined : motions[node];
     const facing = node === null ? undefined : nodeRotations.get(node);
     const objectAt =
@@ -1638,21 +1685,22 @@ export const performShot = (props: {
             track.channel.path === "translation",
         ),
       );
+    const animated =
+      on.kind === "bone" && resolveLiveTarget !== undefined
+        ? (seconds: number) => resolveLiveTarget(on, seconds) ?? point
+        : motion !== undefined && facing !== undefined
+          ? animatedBaseAt(point, facing, motion)
+          : objectAt === null || !hasObjectMotion
+            ? null
+            : (seconds: number) => objectAt(seconds) ?? point;
     return {
-      base: point,
+      base: onFloor(point),
       height: measured >= 0.1 ? measured : DEFAULT_SUBJECT_HEIGHT,
       // Actor root motion rides the staged facing. A skeleton-less prop has no
       // actor clip/facing, so read its effective object authority instead: the
       // same trajectory/attachment handoff the player applies. This runs after
       // coupling, deliberately, so a camera follows a launch into a hand.
-      at:
-        on.kind === "bone" && resolveLiveTarget !== undefined
-          ? (seconds) => resolveLiveTarget(on, seconds) ?? point
-          : motion !== undefined && facing !== undefined
-            ? animatedBaseAt(point, facing, motion)
-            : objectAt === null || !hasObjectMotion
-              ? null
-              : (seconds) => objectAt(seconds) ?? point,
+      at: animated === null ? null : (seconds) => onFloor(animated(seconds)),
     };
   };
   const entries: IAutoMovieCameraFrameEntry[] = frames.map(({ action }) => ({

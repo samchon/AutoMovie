@@ -301,9 +301,9 @@ export const test_mcp_production_compiler_fixture_cleanup = (): void => {
             ownerParameters: [],
             substantiveStatements: 593,
             substantiveTokenDigest:
-              "d0deef169be3c13c6c769090fe27e2db7ee4d8f571f2d6741609bf52035741aa",
+              "cc20403317292020586305a28a2aa3143caf358b4a805fe171a90b9d2e942f87",
             tryDigest:
-              "0dee42fde9e6b7484ddc9fb5f13f1b005df53331b366e9d3f8c7a356330030b6",
+              "bb1fb532db6cfd3ed9ea303a5190249e4f3cf6123171bd95722607fc13a95202",
             tryStatements: 597,
           },
           {
@@ -321,9 +321,9 @@ export const test_mcp_production_compiler_fixture_cleanup = (): void => {
             ownerParameters: [],
             substantiveStatements: 9,
             substantiveTokenDigest:
-              "8233f5fbc62a185b42637b4c81c49b5e0df0f916397d8a2b012eebdd50d0321f",
+              "2c795f14bf89c64648a19730b8f8fcd2e2ac7c2555ca413275057bd250ac234f",
             tryDigest:
-              "af1c585ae92d76e8145379422e6f30c830317e42add7491c161526511a29bfa6",
+              "c3850b70bbf1d9894979cb6c457b0c5bbee880e67f4f2bb3cafac3e3848f5f71",
             tryStatements: 9,
           },
           {

@@ -322,6 +322,7 @@ export const compileDefinedShot = <Context>(props: {
       performance: program.performance,
       synthesize: props.runtime.synthesize,
       skeleton: props.runtime.skeleton,
+      models: props.runtime.models,
       hasActorContext: props.runtime.hasActorContext,
       jointAxes: props.runtime.jointAxes,
       restFrames: props.runtime.restFrames,

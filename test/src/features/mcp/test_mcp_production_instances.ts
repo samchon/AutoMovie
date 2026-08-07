@@ -264,11 +264,12 @@ export const test_mcp_production_instances = (): void => {
     });
     const sourcePath = path.join(fixture.root, "src/shots/opening.ts");
     const source = fs.readFileSync(sourcePath, "utf8");
-    fs.writeFileSync(
-      sourcePath,
-      source.replace(
-        "): IAutoMovieProductionShotProgram => {",
-        `): IAutoMovieProductionShotProgram => {
+    // The oracle only proves anything while it is actually injected; a builder
+    // signature the scaffold no longer writes would leave this case compiling
+    // untouched source and reporting success.
+    const injected = source.replace(
+      "): IAutoMovieProductionShotProgram => {",
+      `): IAutoMovieProductionShotProgram => {
   const sampledGrid = context.engine.instanceSlot("civilians", 0);
   const sampledScatter = context.engine.instanceSlot("trees", 0);
   const sampledRoute = context.engine.instanceSlot("roadside", 0);
@@ -281,8 +282,10 @@ export const test_mcp_production_instances = (): void => {
   if (JSON.stringify(sampledRoute) !== ${JSON.stringify(
     JSON.stringify(routeSlots[0]),
   )}) throw new Error("route instance oracle diverged");`,
-      ),
     );
+    if (injected === source)
+      throw new Error("Scaffold source no longer declares a shot builder.");
+    fs.writeFileSync(sourcePath, injected);
     const output = new AutoMovieProductionCompiler(project).compile({
       scope: "source",
     });

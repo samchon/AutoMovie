@@ -23,7 +23,8 @@
     "viewer": "vite --host 127.0.0.1",
     "test": "tsx test/opening.test.ts",
     "verify": "tsx scripts/verify.ts",
-    "format": "ttsc format -p tsconfig.json"
+    "format": "ttsc format -p tsconfig.json",
+    "design": "tsx scripts/emitDesign.ts"
   },
   "dependencies": {
     "@automovie/cli": "{{version:cli}}",
@@ -53,6 +54,7 @@
     "ttsc": "{{version:ttsc}}",
     "tsx": "^4.19.0",
     "typescript": "{{version:typescript}}",
-    "vite": "{{version:vite}}"
+    "vite": "{{version:vite}}",
+    "@ttsc/evidence": "{{version:ttscEvidence}}"
   }
 }

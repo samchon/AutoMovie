@@ -34,6 +34,17 @@ export interface IAutoMovieTreatmentSequence {
   id: string;
   /** Human-readable sequence title. */
   title: string;
+  /**
+   * Project-relative document holding this sequence's prose, when the treatment
+   * is split one file per sequence.
+   *
+   * Omit it while the treatment is a single document; the index's
+   * `treatment.path` is then the address, exactly as before. A split layout
+   * needs a per-unit address because a folder is only a population of units if
+   * each unit is its own file, and the beats of a later sequence are not in the
+   * first sequence's file.
+   */
+  path?: string;
   /** Ordered beats the screenplay must cover. */
   beats: IAutoMovieTreatmentBeat[];
 }
@@ -67,6 +78,15 @@ export interface IAutoMovieScreenplayScene {
   title: string;
   /** Active prose scene or retained deletion tombstone. */
   status: "active" | "OMITTED";
+  /**
+   * Project-relative document holding this scene's prose, when the screenplay
+   * is split one file per scene.
+   *
+   * Omit it while the screenplay is a single document; the index's
+   * `screenplay.path` is then the address. An `OMITTED` tombstone has no prose
+   * to hold, so it carries no path either.
+   */
+  path?: string;
   /** Exact treatment promises this scene realizes. */
   covers: IAutoMovieSceneBeatCoverage[];
   /** Existing location catalog id for an active scene. */

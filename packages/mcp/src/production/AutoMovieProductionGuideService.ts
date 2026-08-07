@@ -42,6 +42,8 @@ export const AUTOMOVIE_PRODUCTION_GUIDE_NAMES = [
   "SOUND_DESIGN",
   "ASSET_SOURCING",
   "DIFFUSION_ENHANCE",
+  "EVIDENCE_GRAPH",
+  "SOURCE_COMPOSITION",
   "TYPESCRIPT",
   "DEBUGGING",
 ] as const satisfies readonly AutoMovieProductionGuideName[];

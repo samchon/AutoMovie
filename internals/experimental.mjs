@@ -1,33 +1,28 @@
 // Create `experimental/<name>`: the CLI's shipped starter, rewired to consume
 // this working tree instead of npm, so a change to any package can be driven by
-// a live coding agent without a publish, an `npm pack`, or a build step.
+// a live coding agent without publishing anything.
 //
 // This is repository-local tooling on purpose. `packages/cli/scaffold/**` and
 // the published `@automovie/cli` surface stay untouched: a real user's project
-// must keep targeting released versions and `tsx`, and only the sandbox differs
-// from that.
+// targets released versions, and only how the sandbox obtains those packages
+// differs.
 //
-// Three rewrites separate a sandbox from a released project. Each one is
-// explained at the function that performs it.
+// The sandbox consumes **packed working-tree tarballs**, not a `link:` into
+// `packages/`. `packWorkspace` explains why in full; the short version is that a
+// link resolves each package through its `exports` to untransformed `src/*.ts`,
+// and every consumer then pays a full TypeScript build on every process start.
+// For an ordinary script that is merely slow. For the MCP host it is fatal: a
+// client's `initialize` request times out at 60 seconds and the measured host
+// took 133, so a linked sandbox served an agent no tools at all. A tarball
+// carries `publishConfig`, so `exports` resolve to built `lib/*.js` with typia's
+// transform already applied, the host starts in seconds, and the sandbox
+// exercises the same resolution a real user's project does.
 //
-// 1. `renderSandbox` points every `@automovie/*` dependency at its package
-//    directory with `link:`, so the sandbox reads source instead of tarballs
-//    without joining the root workspace.
-// 2. `mcpConfig` launches the MCP host under `ttsx` rather than `tsx`, because
-//    a link resolves `@automovie/mcp` through its `exports` to `src/*.ts` and
-//    that source has not been through typia's compile-time transform yet.
-//    `tsx` runs no transformer, so the host dies on
-//    `typia.llm.controller(): no transform has been configured` before it can
-//    serve a single tool. `publishConfig.main` does not rescue this: it applies
-//    at publish time, so building the workspace never changes what the link
-//    resolves to.
-// 3. `hostTsconfig` gives the host a lint config of its own, so ttsx's project
-//    check cannot gate the server on a review contract the sandbox has not had
-//    the chance to satisfy yet.
-//
-// `sandboxManifest` then restores the two settings the root workspace used to
-// supply to an installed project.
+// `sandboxManifest` then pins every workspace package to its tarball, and
+// `claudeSettings` approves the project's own MCP server so a non-interactive
+// session can reach it.
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -40,15 +35,37 @@ import {
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const SCAFFOLD = path.join(ROOT, "packages", "cli", "scaffold");
 
-const USAGE = `create a source-linked automovie sandbox
+const USAGE = `create a working-tree automovie sandbox
 
 Usage:
-  pnpm run experimental <name> [--force] [--no-install]
+  pnpm run experimental <name> [--force] [--refresh] [--no-install]
 
 Options:
   --force       Render over a non-empty experimental/<name>.
-  --no-install  Render only, skipping the install that creates the links.
+  --refresh     Repack and reinstall without re-rendering, so a package change
+                reaches a sandbox whose production is already under way.
+  --no-install  Render only, skipping the pack and install.
 `;
+
+/**
+ * The workspace packages a sandbox installs, dependencies before consumers.
+ *
+ * This is the scaffold's six (`WORKSPACE_TEMPLATE_VERSION_KEYS`) closed under
+ * `@automovie/*` dependencies, which adds `ingest` and `render` through `mcp`.
+ * The closure matters because `pnpm pack` rewrites a `workspace:^` range to a
+ * plain semver one: any member left unpacked would be resolved from the public
+ * registry at a version this monorepo has never published.
+ */
+const PACKAGES = Object.freeze([
+  "interface",
+  "engine",
+  "render",
+  "ingest",
+  "viewer",
+  "mcp",
+  "lint",
+  "cli",
+]);
 
 /**
  * Files the scaffold ships without a leading dot, because npm strips a real
@@ -101,28 +118,92 @@ const assertPortableName = (name) => {
     throw new Error(`name "${name}" must be one portable directory segment`);
 };
 
+/** Where a sandbox keeps the tarballs it installs from. */
+const TARBALL_DIR = ".tarballs";
+
 /**
- * The scaffold rendered for a source-linked sandbox: the published version
- * tokens, with every package this monorepo publishes replaced by a `link:` to
- * its directory.
+ * Pack every workspace package into `experimental/<name>/.tarballs`, returning
+ * each package's `file:` specifier.
  *
- * `link:` rather than `workspace:^` is what keeps the sandbox out of the root
- * workspace. A workspace member writes its own importer into the tracked
- * `pnpm-lock.yaml`, and `experimental/` is gitignored, so committing that lock
- * would describe an importer whose directory does not exist on any other
- * checkout. `link:` produces the same symlink, and the link resolves through
- * the package's `exports` to `src/*.ts` exactly as a workspace link does, so
- * nothing about consuming working-tree source changes.
+ * Packing rather than linking is the whole design. `pnpm pack` runs each
+ * package's `prepack` build and applies `publishConfig`, so the tarball's
+ * `exports` name built `lib/*.js` instead of `src/*.ts`. Three consequences
+ * follow, and all three were measured before this replaced `link:`.
+ *
+ * The MCP host starts in seconds instead of 133, which is the difference
+ * between a usable sandbox and an unusable one: an MCP client's `initialize`
+ * request times out at 60 seconds, and no environment variable moves it, so a
+ * linked sandbox handed a live agent zero tools no matter how long it waited.
+ *
+ * Typia's compile-time transform is already applied, so no consumer needs
+ * `ttsx` to avoid `typia.llm.controller(): no transform has been configured`,
+ * and the scaffold's own `tsx` scripts run unmodified.
+ *
+ * `lib/index.js` is CommonJS emitted by `tsc`, whose `__exportStar` form
+ * `cjs-module-lexer` does follow, so an ESM importer sees every name the index
+ * re-exports. Under a link the same import lost every `export * from` line.
+ *
+ * The digest in each filename is not decoration. `file:` specifiers are keyed
+ * by path, so a rebuilt package under an unchanged name and version would leave
+ * an existing sandbox installed against stale bytes; changing the specifier is
+ * what forces pnpm to resolve the new tarball.
+ */
+const packWorkspace = (target) => {
+  const directory = path.join(target, TARBALL_DIR);
+  fs.rmSync(directory, { recursive: true, force: true });
+  fs.mkdirSync(directory, { recursive: true });
+
+  const specifiers = {};
+  for (const name of PACKAGES) {
+    process.stdout.write(`Packing @automovie/${name}\n`);
+    const packed = spawnSync(
+      "pnpm",
+      ["pack", "--pack-destination", directory],
+      {
+        cwd: path.join(ROOT, "packages", name),
+        stdio: ["ignore", "pipe", "inherit"],
+        encoding: "utf8",
+        shell: process.platform === "win32",
+      },
+    );
+    if (packed.status !== 0)
+      throw new Error(`pnpm pack failed for @automovie/${name}`);
+    const produced = fs
+      .readdirSync(directory)
+      .filter((entry) => entry.startsWith(`automovie-${name}-`));
+    if (produced.length !== 1)
+      throw new Error(
+        `expected one tarball for @automovie/${name}, found ${produced.length}`,
+      );
+    const original = path.join(directory, produced[0]);
+    const digest = createHash("sha256")
+      .update(fs.readFileSync(original))
+      .digest("hex")
+      .slice(0, 12);
+    const final = produced[0].replace(/\.tgz$/, `-${digest}.tgz`);
+    fs.renameSync(original, path.join(directory, final));
+    specifiers[name] = `file:./${TARBALL_DIR}/${final}`;
+  }
+  return specifiers;
+};
+
+/**
+ * The scaffold rendered for a sandbox: the published version tokens, with every
+ * package this monorepo publishes replaced by its working-tree tarball.
+ *
+ * `specifiers` is empty on a render that skips the install, which leaves the
+ * published ranges in place so the output is still inspectable.
  *
  * Each key names both the `{{version:*}}` token and the directory under
  * `packages/`, which is what makes the substitution a rename.
  */
-const renderSandbox = (name) => {
+const renderSandbox = (name, specifiers) => {
   const variables = { name };
   for (const [key, value] of Object.entries(resolveTemplateVersions()))
     variables[`version:${key}`] = value;
   for (const key of WORKSPACE_TEMPLATE_VERSION_KEYS)
-    variables[`version:${key}`] = `link:../../packages/${key}`;
+    if (specifiers[key] !== undefined)
+      variables[`version:${key}`] = specifiers[key];
 
   const files = {};
   for (const relative of listFiles(SCAFFOLD)) {
@@ -133,10 +214,9 @@ const renderSandbox = (name) => {
       variables,
     );
     files[key] = renderTemplate(
-      fs.readFileSync(path.join(SCAFFOLD, relative), "utf8").replaceAll(
-        "\r\n",
-        "\n",
-      ),
+      fs
+        .readFileSync(path.join(SCAFFOLD, relative), "utf8")
+        .replaceAll("\r\n", "\n"),
       variables,
     );
   }
@@ -144,68 +224,27 @@ const renderSandbox = (name) => {
 };
 
 /**
- * The MCP host launcher. `node <ttsx entry>` rather than the `ttsx` bin keeps
- * this working on Windows, where `node_modules/.bin/ttsx` is a `.CMD` shim that
- * `node` cannot execute, and off a configured PATH.
+ * The scaffold's Claude settings with the project's own MCP server approved.
+ *
+ * A `.mcp.json` server starts life unapproved, and `claude mcp list` reports it
+ * as `Pending approval (run \`claude` to approve)`. Approval is interactive and
+ * per-project, and `--dangerously-skip-permissions`does not grant it, so a
+ * headless`claude -p` session against a fresh sandbox sees no automovie tools
+ * at all and cannot be told to wait for any. Since the whole point of a sandbox
+ * is to be driven by an agent, the generator grants that approval up front.
+ *
+ * The scaffold's own `hooks` block is preserved rather than replaced: it wires
+ * the guard that refuses writes to compiler-owned paths, which a sandbox needs
+ * exactly as much as a real project does.
  */
-const TTSX_ENTRY = "node_modules/ttsc/lib/launcher/ttsx.js";
-
-/** The host's own tsconfig and lint config, separate from the project's. */
-const HOST_TSCONFIG = "tsconfig.mcp.json";
-const HOST_LINT_CONFIG = "lint.host.config.ts";
-
-/**
- * The host's project settings: the scaffold's own tsconfig, pointed at a
- * rule-free lint config.
- *
- * `ttsx` type-checks the project before it runs anything, and ttsc discovers
- * every installed plugin, so a scaffold's `@ttsc/lint` and its `automovie`
- * rules run on the way to starting the MCP server. Those rules gate the
- * production's review contract: a project whose scenes are not yet realized and
- * reviewed fails `automovie/screenplay-contract`, the project check fails, and
- * the host never starts. A freshly created sandbox is exactly that project, so
- * a host gated on it would only start once the film was already finished.
- *
- * The published scaffold does not hit this because `tsx` type-checks nothing.
- * Selecting a rule-free config for the host restores that property for the one
- * process that needs it, without touching the project's own gate: the sandbox's
- * `npm run lint` and `npm run lint:source` still read `lint.config.ts` and run
- * the full rule set, which is where the review contract belongs.
- *
- * Narrowing `include` and pinning `plugins` were both tried first and neither
- * works: the rule reads `.automovie/design/screenplay/index.json` off disk
- * rather than from the program, and an explicit `plugins` entry adds to package
- * auto-discovery instead of replacing it. `configFile` is the documented lever,
- * named by `@ttsc/lint`'s own missing-config error.
- */
-const hostTsconfig = () =>
-  `${JSON.stringify(
-    {
-      extends: "./tsconfig.json",
-      compilerOptions: {
-        plugins: [{ transform: "@ttsc/lint", configFile: `./${HOST_LINT_CONFIG}` }],
-        noEmit: true,
-      },
-    },
+const claudeSettings = (rendered) => {
+  const settings = JSON.parse(rendered);
+  return `${JSON.stringify(
+    { enableAllProjectMcpServers: true, ...settings },
     null,
     2,
   )}\n`;
-
-/** A valid `@ttsc/lint` config that enables nothing. */
-const hostLintConfig = () =>
-  `import type { ITtscLintConfig } from "@ttsc/lint";
-
-/**
- * The MCP host's lint config. Empty on purpose: the host must start while the
- * production is still mid-work, so it cannot be gated on the review contract
- * that \`lint.config.ts\` enforces for the project itself.
- */
-const config = {
-  rules: {},
-} satisfies ITtscLintConfig;
-
-export default config;
-`;
+};
 
 /**
  * The sandbox's manifest: the scaffold's, plus the two settings the root
@@ -224,35 +263,37 @@ export default config;
  * builds this dependency graph genuinely needs; Sharp is absent because the
  * override above replaces it with the stub, which has nothing to build.
  */
-const sandboxManifest = (rendered) => {
+/**
+ * The sandbox's manifest: the scaffold's, with every workspace package pinned
+ * to its sibling tarball.
+ *
+ * Every one of the eight is pinned directly, including `ingest` and `render`
+ * which the scaffold never names. `pnpm pack` rewrites each packed package's
+ * own `workspace:^` ranges into plain semver, so an unpinned member is fetched
+ * from the public registry at a version this monorepo has never published, and
+ * the install dies on `ERR_PNPM_FETCH_404 .../@automovie%2Fengine`. A direct
+ * entry makes npm satisfy those transitive ranges from the siblings instead,
+ * which is the same technique `internals/e2e-tgz.mjs` relies on.
+ *
+ * Pnpm was tried first and its `overrides` do not reach a transitive range from
+ * inside a packed tarball; the same 404 surfaced one package later. Installing
+ * with npm also restores what the pnpm-specific manifest block used to
+ * compensate for: the scaffold's npm-style top-level `overrides` supplies the
+ * Sharp stub on its own, and pnpm 10's lifecycle-script allowlist, whose
+ * refusal exits non-zero, is not npm's rule.
+ */
+const sandboxManifest = (rendered, specifiers) => {
   const manifest = JSON.parse(rendered);
-  manifest.pnpm = {
-    overrides: {
-      "@huggingface/transformers>sharp": "file:vendor/sharp-disabled",
-    },
-    onlyBuiltDependencies: ["esbuild", "onnxruntime-node", "protobufjs"],
-  };
+  for (const name of PACKAGES) {
+    if (specifiers[name] === undefined) continue;
+    const dependency = `@automovie/${name}`;
+    const table = Object.hasOwn(manifest.devDependencies ?? {}, dependency)
+      ? manifest.devDependencies
+      : manifest.dependencies;
+    table[dependency] = specifiers[name];
+  }
   return `${JSON.stringify(manifest, null, 2)}\n`;
 };
-
-const mcpConfig = () =>
-  `${JSON.stringify(
-    {
-      mcpServers: {
-        automovie: {
-          command: "node",
-          args: [
-            `\${CLAUDE_PROJECT_DIR:-.}/${TTSX_ENTRY}`,
-            "-P",
-            `\${CLAUDE_PROJECT_DIR:-.}/${HOST_TSCONFIG}`,
-            "${CLAUDE_PROJECT_DIR:-.}/scripts/mcp.ts",
-          ],
-        },
-      },
-    },
-    null,
-    2,
-  )}\n`;
 
 const main = () => {
   const args = process.argv.slice(2);
@@ -275,39 +316,67 @@ const main = () => {
     if (
       fs.existsSync(target) &&
       fs.readdirSync(target).length !== 0 &&
-      args.includes("--force") === false
+      args.includes("--force") === false &&
+      args.includes("--refresh") === false
     )
       throw new Error(
         `experimental/${name} is not empty. Pass --force to render over it, or remove it first.`,
       );
 
-    const files = renderSandbox(name);
-    files[".mcp.json"] = mcpConfig();
-    files[HOST_TSCONFIG] = hostTsconfig();
-    files[HOST_LINT_CONFIG] = hostLintConfig();
-    files["package.json"] = sandboxManifest(files["package.json"]);
-    for (const [relative, content] of Object.entries(files)) {
-      const file = path.join(target, ...relative.split("/"));
-      fs.mkdirSync(path.dirname(file), { recursive: true });
-      fs.writeFileSync(file, content, "utf8");
-    }
-    process.stdout.write(
-      `Rendered ${Object.keys(files).length} files into experimental/${name}\n`,
-    );
+    // Packing writes into the target, so it precedes the render that fills it.
+    const install = args.includes("--no-install") === false;
+    const specifiers = install ? packWorkspace(target) : {};
 
-    if (args.includes("--no-install") === false) {
-      process.stdout.write("Installing the sandbox (pnpm install)\n");
-      // `--ignore-workspace` keeps this a standalone project. Without it pnpm
-      // walks up, finds the repository's `pnpm-workspace.yaml`, and refuses a
-      // directory that is not one of its members.
-      const install = spawnSync("pnpm", ["install", "--ignore-workspace"], {
-        cwd: target,
-        stdio: "inherit",
-        shell: process.platform === "win32",
-      });
-      if (install.status !== 0)
+    // `--refresh` repacks and reinstalls without re-rendering the scaffold, so
+    // a package fix reaches a sandbox whose production is mid-flight. Without
+    // it the only way to pick up a change is `--force`, which writes the
+    // starter's design, screenplay, and source back over the film in progress
+    // and destroys exactly the work the experiment exists to produce.
+    if (args.includes("--refresh")) {
+      const manifest = path.join(target, "package.json");
+      if (fs.existsSync(manifest) === false)
         throw new Error(
-          `pnpm install failed in experimental/${name}. Fix it there, then re-run with --force.`,
+          `experimental/${name} has no package.json to refresh. Create it first.`,
+        );
+      fs.writeFileSync(
+        manifest,
+        sandboxManifest(fs.readFileSync(manifest, "utf8"), specifiers),
+        "utf8",
+      );
+      process.stdout.write(`Refreshed experimental/${name} against the pack\n`);
+    } else {
+      const files = renderSandbox(name, specifiers);
+      files["package.json"] = sandboxManifest(
+        files["package.json"],
+        specifiers,
+      );
+      files[".claude/settings.json"] = claudeSettings(
+        files[".claude/settings.json"],
+      );
+      for (const [relative, content] of Object.entries(files)) {
+        const file = path.join(target, ...relative.split("/"));
+        fs.mkdirSync(path.dirname(file), { recursive: true });
+        fs.writeFileSync(file, content, "utf8");
+      }
+      process.stdout.write(
+        `Rendered ${Object.keys(files).length} files into experimental/${name}\n`,
+      );
+    }
+
+    if (install) {
+      process.stdout.write("Installing the sandbox (npm install)\n");
+      const installed = spawnSync(
+        "npm",
+        ["install", "--no-audit", "--no-fund"],
+        {
+          cwd: target,
+          stdio: "inherit",
+          shell: process.platform === "win32",
+        },
+      );
+      if (installed.status !== 0)
+        throw new Error(
+          `npm install failed in experimental/${name}. Fix it there, then re-run with --force.`,
         );
     }
 
@@ -316,9 +385,11 @@ const main = () => {
         `  cd experimental/${name}\n` +
         `  claude\n\n` +
         `Drive it with Codex (its MCP servers come from its own config, not .mcp.json):\n` +
-        `  codex mcp add automovie -- node ${path.join(target, ...TTSX_ENTRY.split("/"))} -P ${path.join(target, HOST_TSCONFIG)} ${path.join(target, "scripts", "mcp.ts")}\n` +
+        `  codex mcp add automovie -- npx tsx ${path.join(target, "scripts", "mcp.ts")}\n` +
         `  cd experimental/${name} && codex\n\n` +
-        `The sandbox reads packages/*/src directly, so an edit is live on the next host start.\n` +
+        `The sandbox installs packed working-tree tarballs, so after changing a\n` +
+        `package under packages/ rerun this command with --refresh, which repacks\n` +
+        `and reinstalls without writing the starter back over work in progress.\n` +
         `experimental/ is gitignored: delete the directory when the experiment is done.\n`,
     );
     return 0;

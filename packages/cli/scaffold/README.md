@@ -233,6 +233,13 @@ seek, and capture counts so throughput improvements remain measurable.
 contributors without modifying project state. `npm run lint` runs that source
 lint first, then runs the production compiler through the review gate in
 read-only mode. It deliberately fails while any design, source, shot, or film
-review is missing, stale, revising, or incomplete. `npm run compile` is the
+review is missing, stale, revising, or incomplete.
+
+That review gate is the question a finished film must answer, not the one a
+film in progress can. Pass `--scope` to ask a narrower one:
+`npm run lint -- --scope source` runs the same `automovie` rule set against the
+work so far without demanding a complete review queue, which is the check to use
+while building sequence by sequence. `design`, `review`, and `final` are the
+other scopes; omitting the flag keeps `review`. `npm run compile` is the
 narrower production source gate and the only command that may update generated
 output.

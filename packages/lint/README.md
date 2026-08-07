@@ -13,36 +13,6 @@ export default {
   plugins: { automovie },
   rules: {
     "automovie/template-sentinel": "error",
-    "automovie/asset-provenance": [
-      "error",
-      {
-        manifests: [".automovie/assets.json"],
-        assets: [
-          "public/**/*.bin",
-          "public/**/*.exr",
-          "public/**/*.flac",
-          "public/**/*.glb",
-          "public/**/*.gltf",
-          "public/**/*.hdr",
-          "public/**/*.jpeg",
-          "public/**/*.jpg",
-          "public/**/*.json",
-          "public/**/*.ktx",
-          "public/**/*.ktx2",
-          "public/**/*.mp3",
-          "public/**/*.ogg",
-          "public/**/*.otf",
-          "public/**/*.png",
-          "public/**/*.svg",
-          "public/**/*.ttf",
-          "public/**/*.vrm",
-          "public/**/*.wav",
-          "public/**/*.webp",
-          "public/**/*.woff",
-          "public/**/*.woff2",
-        ],
-      },
-    ],
     "automovie/screenplay-contract": [
       "error",
       {
@@ -147,33 +117,3 @@ lock 뒤 기존 숫자는 `sceneIds` 원장에 남아야 한다. 삭제는 `OMIT
 tombstone으로 보존하고 새 장면은 `SCN-A11` 같은 alpha insertion id만
 허용한다. index가 없으면 rule은 조용하다.
 
-### `automovie/asset-provenance`
-
-설정된 distributable asset 파일마다 `.automovie/assets.json`의 유일한 항목을
-요구하고 현재 바이트의 SHA-256을 원장과 대조한다. source URL, original
-SHA-256, license 식별자/URL, 재현 가능한 processing chain, production 주소와
-typed consumer를 가진 reasoned use가 비어 있으면 실패한다. 외부 모델의 LOD는
-유일한 hero/near/far 순서와 실제 model asset을, proxy는 원장 asset 또는 닫힌
-generated recipe를 요구한다. 원장 없이 asset 파일이 존재하거나 원장 밖 파일이
-생겨도 실패하므로 교체된 바이트와 미등록 배포물을 build-time에 차단한다.
-
-외부 `.gltf`, `.glb`, `.vrm`은 ingest profile, 명시적 LOD manifest 항목,
-collision proxy, measurement proxy를 추가로 기록한다. 이 rule은 파일 계층을
-검증하며 `@automovie/ingest`의 고정 바이트 순수 변환 계약에는 관여하지 않는다.
-
-## Rule 품질 원칙
-
-모든 AutoMovie rule은 다음 여섯 요구사항을 지킨다.
-
-1. **상주 전 침묵.** 디자인 레코드나 sentinel이 없으면 rule은 조용하다. 빈 배열은 존재하는 레코드이며 길이를 준비 상태로 오해하지 않는다.
-2. **사실 범위 stand-down.** 입력을 읽지 못하거나 사실을 결정할 수 없으면 그 불확실성이 숨길 수 있는 의무만 억제하고, 무관한 rule까지 멈추지 않는다.
-3. **축소 구조체.** rule option과 decoder에는 판정에 필요한 구조 필드만 둔다. logline, note 같은 산문 필드를 타입에서 제거해 산문 채점을 구조적으로 불가능하게 한다.
-4. **복구 가능한 메시지.** 모든 진단은 관측 사실, 그 사실이 깨뜨리는 계약, 사용자가 실행할 정확한 복구 행동과 명령을 이 순서로 말한다. `invalid` 하나로 끝내지 않는다.
-5. **checker 심볼 식별.** 엔진·생성 SDK API는 철자가 아니라 checker가 해석한 import symbol로 식별한다. 동명 로컬 변수나 shadow는 해당 API가 아니다.
-6. **미러 rule 골든 벡터.** 엔진과 lint가 같은 정준화·지문을 구현하면 양쪽이 같은 벡터 파일을 읽어 결과를 상호 검증한다.
-
-## Rule 작성과 검증
-
-TypeScript의 plugin descriptor는 `src/index.ts`, 실제 rule은 `native/`가 소유한다.
-새 rule은 발화·침묵 쌍을 한 줄 차이로 만들고, unit 함수 직접 호출이 아니라 임시 소비자 프로젝트에서 실제 `ttsc check`를 실행해 검증한다.
-하네스는 먼저 빈 프로젝트의 성공 상태를 확인하고, 다음 발화 케이스에서 고유 진단 문구를 확인해 “도구가 실행되지 않아 진단이 0개”인 상태를 성공으로 오인하지 않는다.

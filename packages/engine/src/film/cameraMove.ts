@@ -4,12 +4,15 @@ import {
   IAutoMovieCameraAction,
   IAutoMovieCameraIntent,
   IAutoMovieClip,
+  IAutoMovieModel,
   IAutoMovieQuaternion,
   IAutoMovieShotCoverage,
   IAutoMovieSkeleton,
+  IAutoMovieTransform,
   IAutoMovieVector3,
 } from "@automovie/interface";
 
+import { tessellate } from "../geometry/tessellate";
 import { Quaternion } from "../math/Quaternion";
 import { Vector3 } from "../math/Vector3";
 import { ease } from "../motion/easing";
@@ -392,15 +395,45 @@ export const compileCameraCoverage = (props: {
 });
 
 /**
- * A skeleton's rest-pose height: compose each bone's rest transform down the
- * parent chain (rotation and translation; rigs keep unit scale) and take the
- * world-Y extent. This is the subject height the framing grammar measures
- * distance from, the same "measure from the rig, not hope" doctrine as
- * staging's reach/stride.
+ * A skeleton's rest-pose joint span: compose each bone's rest transform down
+ * the parent chain (rotation and translation; rigs keep unit scale) and take
+ * the world-Y extent of the joints.
+ *
+ * This is the span between the extreme **joints**, which is not the subject's
+ * height and must not be used as one. A rig ends at the joints it needs for
+ * animation, and geometry continues past them at both ends: the generated
+ * `stickman` puts its highest joint at 0.92 of the declared height and its
+ * lowest at 0.24, so this returns 0.680 of the real figure. Framing solved from
+ * that number crops an actor's head off. {@link computeModelRestExtentY}
+ * measures what a renderer actually draws; use it for anything the camera
+ * frames, and keep this for questions genuinely about the rig.
  */
 export const computeRestHeight = (skeleton: IAutoMovieSkeleton): number => {
   if (skeleton.bones.length === 0) return 0;
+  const world = restWorldFrames(skeleton);
+  let min = Infinity;
+  let max = -Infinity;
+  for (const bone of skeleton.bones) {
+    const y = world.get(bone.bone)!.pos.y;
+    if (y < min) min = y;
+    if (y > max) max = y;
+  }
+  return max - min;
+};
 
+/** One bone's rest-pose placement in model space. */
+interface IRestFrame {
+  pos: IAutoMovieVector3;
+  rot: IAutoMovieQuaternion;
+}
+
+/**
+ * Every bone's rest-pose model-space frame, composed down the parent chain.
+ * Rigs keep unit scale, so translation and rotation are the whole transform.
+ */
+const restWorldFrames = (
+  skeleton: IAutoMovieSkeleton,
+): ReadonlyMap<AutoMovieHumanoidBone, IRestFrame> => {
   const byName = new Map<
     AutoMovieHumanoidBone,
     { bone: (typeof skeleton.bones)[number]; index: number }
@@ -413,14 +446,9 @@ export const computeRestHeight = (skeleton: IAutoMovieSkeleton): number => {
       );
     byName.set(bone.bone, { bone, index });
   });
-  const world = new Map<
-    string,
-    { pos: IAutoMovieVector3; rot: IAutoMovieQuaternion }
-  >();
+  const world = new Map<AutoMovieHumanoidBone, IRestFrame>();
   const resolving = new Set<AutoMovieHumanoidBone>();
-  const resolve = (
-    name: (typeof skeleton.bones)[number]["bone"],
-  ): { pos: IAutoMovieVector3; rot: IAutoMovieQuaternion } => {
+  const resolve = (name: AutoMovieHumanoidBone): IRestFrame => {
     const cached = world.get(name);
     if (cached !== undefined) return cached;
     if (resolving.has(name))
@@ -454,12 +482,71 @@ export const computeRestHeight = (skeleton: IAutoMovieSkeleton): number => {
       resolving.delete(name);
     }
   };
+  for (const bone of skeleton.bones) resolve(bone.bone);
+  return world;
+};
+
+/**
+ * A model's rest-pose vertical extent in model space: the world-Y range of the
+ * geometry a renderer would actually draw.
+ *
+ * This is the subject height the framing grammar needs, and the reason it is
+ * not {@link computeRestHeight}. A rig stops at the joints animation requires;
+ * the figure does not. The generated `stickman` has no foot bone and no
+ * head-top bone, so its joint span is 0.680 of the declared height, and a
+ * `full` shot solved from that number shows an actor from the shins up.
+ *
+ * Every part is placed the way the renderer places it — its own transform, then
+ * its attached bone's rest frame, or model space when it rides no bone — and
+ * primitives are measured through {@link tessellate}, the same code that
+ * produces the vertices, so the extent cannot drift from the picture. Returns
+ * null when a model has nothing to measure, leaving the caller's own fallback
+ * in charge rather than inventing a height.
+ */
+export const computeModelRestExtentY = (
+  model: IAutoMovieModel,
+): { min: number; max: number } | null => {
+  const frames =
+    model.skeleton === null ? null : restWorldFrames(model.skeleton);
   let min = Infinity;
   let max = -Infinity;
-  for (const bone of skeleton.bones) {
-    const y = resolve(bone.bone).pos.y;
-    if (y < min) min = y;
-    if (y > max) max = y;
+  for (const part of model.parts) {
+    const positions =
+      part.geometry.type === "primitive"
+        ? tessellate(part.geometry.shape).positions
+        : part.geometry.mesh.positions;
+    const local = part.transform;
+    const frame =
+      part.attachedBone === null ? undefined : frames?.get(part.attachedBone);
+    for (let index = 0; index + 2 < positions.length; index += 3) {
+      const point: IAutoMovieVector3 = {
+        x: positions[index]!,
+        y: positions[index + 1]!,
+        z: positions[index + 2]!,
+      };
+      const placed = local === null ? point : placeInParent(local, point);
+      const y =
+        frame === undefined
+          ? placed.y
+          : Vector3.add(frame.pos, Quaternion.rotateVector(frame.rot, placed))
+              .y;
+      if (y < min) min = y;
+      if (y > max) max = y;
+    }
   }
-  return max - min;
+  return min === Infinity ? null : { min, max };
 };
+
+/** Apply one TRS transform to a point, scale first, as a renderer does. */
+const placeInParent = (
+  transform: IAutoMovieTransform,
+  point: IAutoMovieVector3,
+): IAutoMovieVector3 =>
+  Vector3.add(
+    transform.translation,
+    Quaternion.rotateVector(transform.rotation, {
+      x: point.x * transform.scale.x,
+      y: point.y * transform.scale.y,
+      z: point.z * transform.scale.z,
+    }),
+  );

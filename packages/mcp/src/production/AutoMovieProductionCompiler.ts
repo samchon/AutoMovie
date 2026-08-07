@@ -40,6 +40,7 @@ import {
   IAutoMovieProductionRenderReceipt,
   IAutoMovieProductionShotProgram,
   IAutoMovieReviewQueue,
+  IAutoMovieScreenplayIndex,
   IAutoMovieShotBuildContext,
   IAutoMovieShotContract,
   IAutoMovieShotSourceOutput,
@@ -402,6 +403,7 @@ export class AutoMovieProductionCompiler {
         contracts: graph.shots,
         compiled,
         realizations,
+        scope: input.scope,
       });
       diagnostics.push(...film.diagnostics);
       if (film.value !== null) {
@@ -497,6 +499,15 @@ export class AutoMovieProductionCompiler {
       ) || input.scope === "design"
         ? { entries: [] }
         : this.reviewQueue(statusForReview(), reviewSnapshot);
+    if (input.scope !== "design")
+      diagnostics.push(
+        ...screenplayCoverageDiagnostics({
+          contracts: graph.shots,
+          realizations,
+          scope: input.scope,
+          screenplay: this.project.screenplayIndex(),
+        }),
+      );
     if (input.scope === "review" || input.scope === "final")
       diagnostics.push(...reviewGateDiagnostics(reviews));
     if (input.scope === "final")
@@ -1702,6 +1713,8 @@ interface ICompileFilmSourceProps {
   contracts: ReadonlyMap<string, IAutoMovieShotContract>;
   compiled: ReadonlyMap<string, IAutoMovieCompiledShotSource>;
   realizations: ReadonlyMap<string, IAutoMovieCompiledContractRealization>;
+  /** Requested compile scope; the runtime target is only binding from review on. */
+  scope: IAutoMovieCompileProjectInput["scope"];
 }
 
 /** Evaluate the deterministic film module once, before ordered shot compile. */
@@ -1894,13 +1907,26 @@ const compileFilmSource = (
     segments.length === 0
       ? 0
       : Math.max(...segments.map((item) => item.endFrame));
+  // `targetRuntimeSeconds` is the production's *intended finished* runtime, so
+  // a film edit shorter than it is the normal state of an unfinished
+  // production, not an authoring error. Failing `source` scope on the gap would
+  // make a target impossible to declare before the film that fills it exists,
+  // which turns a stated intent into a value derived from whatever is built so
+  // far. Delivery is where the two must agree, and `review` is already the
+  // scope that judges the whole assembled film, so the gap is binding from
+  // there on.
   if (targetFrames !== null && totalFrames !== targetFrames)
-    diagnostics.push(
-      filmDiagnostic(
+    diagnostics.push({
+      ...filmDiagnostic(
         "film-runtime-mismatch",
-        `Film timeline ends at frame ${totalFrames}, but production target runtime is frame ${targetFrames}. Correct placement timing or production runtime.`,
+        `Film timeline ends at frame ${totalFrames}, but production target runtime is frame ${targetFrames}.${
+          props.scope === "source"
+            ? " The film does not yet fill its intended runtime; it must before review."
+            : " Correct placement timing or production runtime."
+        }`,
       ),
-    );
+      category: props.scope === "source" ? "warning" : "error",
+    });
   const audio = normalizeAudioCues(
     edit,
     props.context.assets,
@@ -2123,7 +2149,7 @@ const validateStateContinuity = (
     diagnostics.push(
       filmDiagnostic(
         "film-state-handoff-mismatch",
-        `Closing state of "${previous.shot}" does not equal opening state of "${current.shot}". Correct the adjacent shot predicates or edit boundary.`,
+        `Closing state of "${previous.shot}" does not equal opening state of "${current.shot}". An untrimmed cut hands one measured state across, so both edges must claim it; leave both unclaimed when the cut is a scene break rather than a continuous handoff.`,
       ),
     );
 };
@@ -2329,6 +2355,46 @@ const normalizeEffectCues = (
   return output;
 };
 
+/**
+ * The exact placeholder the scaffold leaves where an author must implement.
+ *
+ * Assembled rather than written whole so this file does not contain the token
+ * it looks for. A checker that trips over its own definition is the same
+ * self-defeating shape as a probe that moves the value it measures.
+ */
+const TEMPLATE_SENTINEL = ["AUTOMOVIE", "IMPLEMENT", "ME"].join("_");
+
+/**
+ * Whether compiled source still carries the scaffold's placeholder.
+ *
+ * Matched on identifier boundaries so prose that merely mentions the sentinel,
+ * or a longer name that contains it, is not the placeholder itself. A project
+ * that never had the scaffold section is silent because the token is absent.
+ */
+const containsTemplateSentinel = (source: string): boolean => {
+  // An identifier character, tested without a character class so the linter's
+  // duplicate-member check has nothing to object to: a letter is what changes
+  // under case folding, and the rest are named outright.
+  const identifier = (character: string): boolean =>
+    character.toLowerCase() !== character.toUpperCase() ||
+    (character >= "0" && character <= "9") ||
+    character === "_" ||
+    character === "$";
+  const boundary = (character: string | undefined): boolean =>
+    character === undefined || identifier(character) === false;
+  for (
+    let index = source.indexOf(TEMPLATE_SENTINEL);
+    index >= 0;
+    index = source.indexOf(TEMPLATE_SENTINEL, index + 1)
+  )
+    if (
+      boundary(source[index - 1]) &&
+      boundary(source[index + TEMPLATE_SENTINEL.length])
+    )
+      return true;
+  return false;
+};
+
 const inspectSource = (
   target: string,
   sourcePath: string,
@@ -2343,6 +2409,15 @@ const inspectSource = (
   );
   const diagnostics: IAutoMovieDiagnostic[] = [];
   const found = new Set<string>();
+  if (containsTemplateSentinel(source))
+    diagnostics.push({
+      code: "source-template-sentinel",
+      category: "error",
+      phase: "compile",
+      target,
+      path: sourcePath,
+      message: `Template sentinel "${TEMPLATE_SENTINEL}" remains in ${sourcePath}. The placeholder says this scaffold section has no implementation, so compile and review cannot treat it as resident work. Implement the marked section and remove the exact sentinel.`,
+    });
   const report = (code: string, capability: string): void => {
     const key = `${code}:${capability}`;
     if (found.has(key)) return;
@@ -3908,6 +3983,67 @@ const sourceTargetsOf = (
       : file === "contracts/world.json"
         ? "world"
         : "compiler",
+  ];
+};
+
+/**
+ * Every active scene must be realized by a shot that actually compiled.
+ *
+ * The screenplay is the only join the compiler did not own, so a scene could
+ * sit in the index forever with nothing built against it and every gate stayed
+ * green. Intent is not realization: a shot contract that cites a scene proves
+ * the author meant to cover it, and only a passing compiled realization proves
+ * the film does.
+ *
+ * Scope decides severity, on the precedent `film-runtime-mismatch` sets. A film
+ * being built sequence by sequence has uncovered scenes by construction, so
+ * `source` reports the gap and lets the work continue; `review` and `final`
+ * refuse, because a film presented for review is claiming to be whole.
+ *
+ * `OMITTED` tombstones are skipped. They exist precisely to record a scene the
+ * production dropped without renumbering the ones around it.
+ */
+const screenplayCoverageDiagnostics = (props: {
+  contracts: ReadonlyMap<string, IAutoMovieShotContract>;
+  realizations: ReadonlyMap<string, IAutoMovieCompiledContractRealization>;
+  scope: IAutoMovieCompileProjectInput["scope"];
+  screenplay: IAutoMovieScreenplayIndex | null;
+}): IAutoMovieDiagnostic[] => {
+  if (props.screenplay === null) return [];
+  const realized = new Set<string>();
+  for (const [id, contract] of props.contracts) {
+    if (props.realizations.get(id) === undefined) continue;
+    for (const evidence of contract.evidence ?? [])
+      realized.add(evidence.scene);
+  }
+  // A `production`-phase disposition is the index's own way of exempting a
+  // scene from shot realization with an auditable reason, so honouring it is
+  // the difference between a coverage gate and a demand that every scene be
+  // shot. Tombstones need no exemption; they are not active.
+  const uncovered = props.screenplay.screenplay.scenes.filter(
+    (scene) =>
+      scene.status === "active" &&
+      scene.disposition?.phase !== "production" &&
+      realized.has(scene.id) === false,
+  );
+  if (uncovered.length === 0) return [];
+  return [
+    {
+      code: "screenplay-scene-unrealized",
+      category: props.scope === "source" ? "warning" : "error",
+      phase: "compile",
+      target: "screenplay",
+      path: null,
+      message: `Active ${uncovered.length === 1 ? "scene" : "scenes"} ${uncovered
+        .map((scene) => `"${scene.id}"`)
+        .join(
+          ", ",
+        )} ${uncovered.length === 1 ? "has" : "have"} no shot with a passing compiled realization.${
+        props.scope === "source"
+          ? " The film does not cover its screenplay yet; it must before review."
+          : " Build and compile a citing shot, or record the scene as OMITTED."
+      }`,
+    },
   ];
 };
 

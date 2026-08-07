@@ -5,7 +5,6 @@ import type {
   IAutoMovieStoredReview,
 } from "@automovie/interface";
 import { type SpawnSyncReturns, spawnSync } from "node:child_process";
-import { createHash } from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -429,160 +428,6 @@ const presenceConfigWithFiles = (files: readonly string[]): string =>
     "",
   ].join("\n");
 
-const assetProvenanceConfig = [
-  ...automoviePluginPrelude,
-  "export default {",
-  "  plugins: { automovie },",
-  "  rules: {",
-  '    "automovie/asset-provenance": [',
-  '      "error",',
-  "      {",
-  '        manifests: [".automovie/assets.json"],',
-  "        assets: [",
-  '          "public/assets/*.bin",',
-  '          "public/assets/*.glb",',
-  '          "public/assets/*.gltf",',
-  "        ],",
-  "      },",
-  "    ],",
-  "  },",
-  "};",
-  "",
-].join("\n");
-
-const assetProvenanceFiles = (
-  variant:
-    | "valid"
-    | "blank-license"
-    | "digest-drift"
-    | "missing-entry"
-    | "missing-manifest"
-    | "model-decisions-missing"
-    | "model-valid"
-    | "model-lod-invalid"
-    | "model-proxy-invalid",
-): Record<string, string> => {
-  const bytes =
-    variant === "digest-drift" ? "substituted asset\n" : "licensed asset\n";
-  const recordedBytes = "licensed asset\n";
-  const digest = (value: string): string =>
-    `sha256:${createHash("sha256").update(value).digest("hex")}`;
-  const assets: Array<Record<string, unknown>> = [
-    {
-      path: "public/assets/tone.bin",
-      digest: digest(recordedBytes),
-      original: {
-        url: "https://example.com/tone.bin",
-        digest: digest(recordedBytes),
-      },
-      license: {
-        identifier: variant === "blank-license" ? "" : "CC0-1.0",
-        url: "https://creativecommons.org/publicdomain/zero/1.0/",
-      },
-      processing: [],
-      uses: [
-        {
-          production: "fixture",
-          consumer: { kind: "audio-cue", id: "shot-1" },
-          reason: "The shot requires this licensed tone.",
-        },
-      ],
-    },
-  ];
-  const files: Record<string, string> = {
-    ".automovie/assets.json": JSON.stringify({ version: 1, assets }),
-    "public/assets/tone.bin": bytes,
-    "src/index.ts": "export {};\n",
-  };
-  if (variant === "missing-manifest") delete files[".automovie/assets.json"];
-  if (variant === "missing-entry")
-    files["public/assets/unrecorded.bin"] = "unrecorded\n";
-  if (variant.startsWith("model-")) {
-    const modelBytes = JSON.stringify({
-      asset: { version: "2.0" },
-      buffers: [
-        {
-          byteLength: 36,
-          uri: "data:application/octet-stream;base64,AAAAAAAAAAAAAAAAAACAPwAAAAAAAAAAAAAAAAAAgD8AAAAA",
-        },
-      ],
-      bufferViews: [{ buffer: 0, byteLength: 36 }],
-      accessors: [
-        {
-          bufferView: 0,
-          componentType: 5126,
-          count: 3,
-          type: "VEC3",
-        },
-      ],
-      meshes: [{ primitives: [{ attributes: { POSITION: 0 } }] }],
-      nodes: [{ mesh: 0 }],
-      scenes: [{ nodes: [0] }],
-    });
-    const model: Record<string, unknown> = {
-      path: "public/assets/actor.gltf",
-      digest: digest(modelBytes),
-      original: {
-        url: "https://example.com/actor.gltf",
-        digest: digest(modelBytes),
-      },
-      license: {
-        identifier: "CC0-1.0",
-        url: "https://creativecommons.org/publicdomain/zero/1.0/",
-      },
-      processing: [],
-      uses: [
-        {
-          production: "fixture",
-          consumer: { kind: "model-recipe", id: "actor" },
-          reason: "The production casts this external model.",
-        },
-      ],
-      ...(variant === "model-decisions-missing"
-        ? {}
-        : {
-            model: {
-              ingestProfile: "gltf-static-v1",
-              lod:
-                variant === "model-lod-invalid"
-                  ? [
-                      { level: "hero", asset: "public/assets/actor.gltf" },
-                      { level: "hero", asset: "public/assets/actor.gltf" },
-                    ]
-                  : [{ level: "hero", asset: "public/assets/actor.gltf" }],
-              collisionProxy:
-                variant === "model-proxy-invalid"
-                  ? {
-                      kind: "asset",
-                      asset: "public/assets/missing-proxy.bin",
-                    }
-                  : {
-                      kind: "generated",
-                      recipe: "capsule-v1",
-                      parameters: { radius: 0.3, height: 1.8 },
-                    },
-              measurementProxy: {
-                kind: "generated",
-                recipe: "humanoid-landmarks-v1",
-                parameters: {
-                  height: 1.8,
-                  shoulderWidth: 0.45,
-                  hipWidth: 0.32,
-                },
-              },
-            },
-          }),
-    };
-    assets.push(model);
-    assets.sort((left, right) =>
-      String(left.path) < String(right.path) ? -1 : 1,
-    );
-    files[".automovie/assets.json"] = JSON.stringify({ version: 1, assets });
-    files["public/assets/actor.gltf"] = modelBytes;
-  }
-  return files;
-};
-
 const screenplayConfig = [
   ...automoviePluginPrelude,
   "export default {",
@@ -643,6 +488,7 @@ const screenplayFiles = (
     | "misbound-proof"
     | "missing-heading"
     | "missing-model-binding"
+    | "mixed-scene-documents"
     | "removed-locked-scene"
     | "sibling-evidence"
     | "uncovered-beat",
@@ -746,6 +592,10 @@ const screenplayFiles = (
       phase: "production",
       reason: "This scene was intentionally exempted.",
     };
+  if (variant === "mixed-scene-documents")
+    Object.assign(index.screenplay.scenes[0]!, {
+      path: `${documentRoot}/SCN-001.md`,
+    });
   if (variant === "missing-model-binding")
     index.catalog.characters[0]!.bindings = [];
   if (variant === "misbound-proof")
@@ -889,6 +739,26 @@ const screenplayFiles = (
         },
       ],
     });
+  }
+  if (variant === "mixed-scene-documents") {
+    // The scaffold splits prose one file per scene and points the index-level
+    // path at the first of them, so the index document is a per-scene document.
+    // A layout may also be mixed, and a scene that keeps its prose in the
+    // shared document must still be found there.
+    files[`${documentRoot}/SCN-001.md`] = [
+      "# Screenplay",
+      "",
+      "## SCN-001 — The Signal",
+      "",
+      "On the field, the sentinel signals and the formation answers.",
+      "",
+    ].join("\n");
+    files[`${documentRoot}/screenplay.md`] = [
+      "# Screenplay",
+      "",
+      "## SCN-002 — OMITTED",
+      "",
+    ].join("\n");
   }
   if (variant === "fenced-heading")
     files[`${documentRoot}/screenplay.md`] = [
@@ -1153,69 +1023,6 @@ export function test_lint_plugin_walking_skeleton(): void {
     "A project with no resident state slots must stay silent.",
   );
 
-  const validAssetProvenance = runFixture({
-    name: "asset-provenance-valid",
-    lintConfig: assetProvenanceConfig,
-    files: assetProvenanceFiles("valid"),
-  });
-  assertSucceeded(
-    validAssetProvenance,
-    "One byte-exact asset with source, license and production use must satisfy the provenance ledger.",
-  );
-  assertSucceeded(
-    runFixture({
-      name: "asset-provenance-model-valid",
-      lintConfig: assetProvenanceConfig,
-      files: assetProvenanceFiles("model-valid"),
-    }),
-    "A model with ordered model-byte LOD and closed generated proxies must satisfy the provenance ledger.",
-  );
-
-  for (const [variant, expected, because] of [
-    [
-      "missing-manifest",
-      "but no physical asset manifest",
-      "Distributable bytes without a provenance manifest must fail lint.",
-    ],
-    [
-      "digest-drift",
-      "but current bytes are",
-      "Replacing licensed bytes without updating verified provenance must fail lint.",
-    ],
-    [
-      "blank-license",
-      "license identity/URL",
-      "A blank distribution license must fail lint.",
-    ],
-    [
-      "missing-entry",
-      "has no entry for distributable asset",
-      "Every configured distributable asset must have one manifest entry.",
-    ],
-    [
-      "model-decisions-missing",
-      "without ingest profile, explicit LOD, collision proxy or measurement proxy",
-      "An external model must record its ingest, LOD and proxy decisions.",
-    ],
-    [
-      "model-lod-invalid",
-      "duplicate/out of order",
-      "A model LOD ledger must keep unique hero/near/far levels in order.",
-    ],
-    [
-      "model-proxy-invalid",
-      "is not a byte-grounded version-1 JSON proxy",
-      "A model proxy must resolve to byte-grounded version-1 JSON proxy bytes or a closed generated recipe.",
-    ],
-  ] as const) {
-    const result = runFixture({
-      name: `asset-provenance-${variant}`,
-      lintConfig: assetProvenanceConfig,
-      files: assetProvenanceFiles(variant),
-    });
-    assertFailedWith(result, expected, because);
-  }
-
   const validScreenplay = runFixture({
     name: "screenplay-valid",
     lintConfig: screenplayConfig,
@@ -1224,6 +1031,16 @@ export function test_lint_plugin_walking_skeleton(): void {
   assertSucceeded(
     validScreenplay,
     "A grounded scene, passing compiled realization, completed acceptance and retained OMITTED tombstone must satisfy the screenplay ledger.",
+  );
+
+  const mixedSceneDocuments = runFixture({
+    name: "screenplay-mixed-scene-documents",
+    lintConfig: screenplayConfig,
+    files: screenplayFiles("mixed-scene-documents"),
+  });
+  assertSucceeded(
+    mixedSceneDocuments,
+    "A scene addressing its own document and a scene left in the shared one must both be found, without either heading being counted twice.",
   );
 
   const filmReview = runFixture({

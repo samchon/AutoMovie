@@ -79,6 +79,66 @@ export const projectToNdc = (
 };
 
 /**
+ * Whether a world-space segment intersects an exact perspective-camera frustum.
+ *
+ * The frustum is the intersection of six half-spaces, so it is convex and the
+ * segment can be clipped against them one plane at a time in its own parameter.
+ * Each plane is linear in camera-local coordinates, which makes every crossing
+ * exact rather than sampled. That exactness is the reason this exists: a close
+ * shot frames the band between roughly 0.71 and 0.99 of a subject's height, so
+ * **neither end** of the subject is on screen while its middle fills the frame.
+ * Testing chosen points — the base, the top, the midpoint — reports such a
+ * subject absent; clipping finds it.
+ */
+export const intersectsPerspectiveFrustumSegment = (props: {
+  camera: IAutoMovieResolvedCamera;
+  from: IAutoMovieVector3;
+  to: IAutoMovieVector3;
+  near: number;
+  far: number;
+  halfY: number;
+  aspect: number;
+}): boolean => {
+  const inverse = Quaternion.inverse(props.camera.rotation);
+  const local = (point: IAutoMovieVector3): IAutoMovieVector3 =>
+    Quaternion.rotateVector(
+      inverse,
+      Vector3.subtract(point, props.camera.position),
+    );
+  const from = local(props.from);
+  const to = local(props.to);
+  const halfX = props.halfY * props.aspect;
+  // Six half-spaces, each written as `f(p) <= 0`. The camera looks down its
+  // local −Z, so the viewing depth is `-p.z` and the side planes open with it.
+  const planes: ((point: IAutoMovieVector3) => number)[] = [
+    (point) => props.near + point.z,
+    (point) => -point.z - props.far,
+    (point) => point.x + point.z * halfX,
+    (point) => -point.x + point.z * halfX,
+    (point) => point.y + point.z * props.halfY,
+    (point) => -point.y + point.z * props.halfY,
+  ];
+  let lower = 0;
+  let upper = 1;
+  for (const plane of planes) {
+    const at0 = plane(from);
+    const at1 = plane(to);
+    const slope = at1 - at0;
+    // Parallel to the plane: the whole segment is on one side of it, so the
+    // sign at either end decides, and there is no crossing to narrow with.
+    if (slope === 0) {
+      if (at0 > 0) return false;
+      continue;
+    }
+    const crossing = -at0 / slope;
+    if (slope > 0) upper = Math.min(upper, crossing);
+    else lower = Math.max(lower, crossing);
+    if (lower > upper) return false;
+  }
+  return true;
+};
+
+/**
  * Whether a world-space sphere intersects an exact perspective-camera frustum.
  * Side-plane distances include plane normalization, so callers must not
  * approximate the radius by padding projected NDC coordinates.

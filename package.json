@@ -28,11 +28,12 @@
   },
   "devDependencies": {
     "@trivago/prettier-plugin-sort-imports": "catalog:typescript",
+    "@ttsc/evidence": "catalog:typescript",
+    "@ttsc/lint": "catalog:typescript",
     "prettier": "catalog:typescript",
     "prettier-plugin-jsdoc": "catalog:typescript",
     "rimraf": "catalog:utils",
     "ttsc": "catalog:typescript",
-    "@ttsc/lint": "catalog:typescript",
     "typescript": "catalog:typescript"
   }
 }
