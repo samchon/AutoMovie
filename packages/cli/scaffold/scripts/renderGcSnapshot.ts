@@ -202,10 +202,7 @@ export const createRenderGcFileSnapshot = (
     const opened = fs.fstatSync(descriptor, { bigint: true });
     if (opened.isFile() === false)
       throw new Error(`Render file "${target}" is not one physical file.`);
-    // Reader-owned: `captureRenderGcTarget` below opens this path to inventory
-    // it, and a by-path open advances change time on Windows even for a
-    // descriptor already held here.
-    const openedVersion = readVersion(opened);
+    const openedVersion = physicalVersion(opened);
     const snapshot = captureRenderGcTarget(root.path, absolute);
     if (
       snapshot.kind !== "file" ||
@@ -218,7 +215,7 @@ export const createRenderGcFileSnapshot = (
         `Render file "${target}" changed after descriptor publication.`,
       );
     const completed = fs.fstatSync(descriptor, { bigint: true });
-    if (readVersion(completed) !== openedVersion)
+    if (physicalVersion(completed) !== openedVersion)
       throw new Error(`Render file "${target}" changed while published.`);
     if (
       snapshot.base.path !== root.path ||
@@ -748,12 +745,9 @@ const captureResidentTarget = (
     entries = captureTree(base, resident);
   }
   const completed = fs.lstatSync(absolute, { bigint: true });
-  // The inventory above opened every file underneath this target, and a
-  // by-path open advances the change time of what it opened on Windows. Compare
-  // the part a reader owns, or the capture reports its own reads as tampering.
   if (
     completed.isSymbolicLink() ||
-    readVersion(completed) !== readVersion(status) ||
+    physicalVersion(completed) !== physicalVersion(status) ||
     fs.realpathSync(absolute) !== resident
   )
     throw new Error(`Render GC target "${absolute}" changed while captured.`);
@@ -771,11 +765,7 @@ const captureResidentTarget = (
           path: path.relative(base.real, identity.real).replaceAll("\\", "/"),
         })),
         contentFingerprint,
-        // A reader-owned version: capturing this target opened every file
-        // under it, and a by-path open advances change time on Windows, so
-        // folding `ctime` in here would make two captures of one unchanged
-        // target disagree.
-        targetVersion: readVersion(status),
+        targetVersion: physicalVersion(status),
       }),
     ),
   );
@@ -833,7 +823,7 @@ const readFileEntry = (
   const linked = fs.lstatSync(file, { bigint: true });
   if (linked.isSymbolicLink() || linked.isFile() === false)
     throw new Error(`Render GC content "${file}" is not one physical file.`);
-  const version = readVersion(linked);
+  const version = physicalVersion(linked);
   const descriptor = fs.openSync(file, "r");
   let bytes = 0;
   let digest: `sha256:${string}`;
@@ -871,7 +861,7 @@ const readFileEntry = (
   if (
     resident.isSymbolicLink() ||
     resident.isFile() === false ||
-    readVersion(resident) !== version
+    physicalVersion(resident) !== version
   )
     throw new Error(`Render GC content "${file}" changed while read.`);
   return {
@@ -965,19 +955,6 @@ const identityFileId = (identity: string): string =>
 
 const physicalVersion = (status: fs.BigIntStats): string =>
   `${physicalIdentity(status)}\0${status.size}\0${status.mtimeNs}\0${status.ctimeNs}`;
-
-/**
- * The part of a file's identity a reader owns, for comparing a stat taken
- * before this module opened the file with one taken after it closed it.
- *
- * `ctimeNs` is left out because opening a path advances it on Windows: the
- * inventory's own read moves the value the inventory then compares, and the
- * file is reported as changed while nothing touched it. Identity, size, and
- * modification time still catch a real substitution, and the content digest
- * taken through the held descriptor is the actual evidence.
- */
-const readVersion = (status: fs.BigIntStats): string =>
-  `${physicalIdentity(status)}\0${status.size}\0${status.mtimeNs}`;
 
 const ownedRelativePath = (
   base: string,

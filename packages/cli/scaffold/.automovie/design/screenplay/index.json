@@ -2,7 +2,7 @@
   "version": 1,
   "production": "{{name}}",
   "treatment": {
-    "path": "docs/{{name}}/treatment.md",
+    "path": "docs/{{name}}/02-treatment/SEQ-SIGNAL.md",
     "sequences": [
       {
         "id": "SEQ-SIGNAL",
@@ -27,7 +27,7 @@
     ]
   },
   "screenplay": {
-    "path": "docs/{{name}}/screenplay.md",
+    "path": "docs/{{name}}/04-scenes/SCN-001.md",
     "lock": {
       "activatedBy": "agent-before-first-shot",
       "reason": "The starter already registers opening and answer shot contracts, so their scene joins require stable numbering.",
