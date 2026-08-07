@@ -175,16 +175,26 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
       source: _fixtureShotSource,
       ...fixtureRegistration
     } = shotContract();
+    // Anchor on the builder's own closing brace rather than on the comment
+    // that follows it. Prose above the next declaration moves whenever the
+    // scaffold's documentation changes, and a mutation that silently fails to
+    // apply turns these cases into assertions about untouched source.
     const mutateSourceOutput = (
       mutation: string,
       source: string = original,
-    ): string =>
-      source
-        .replace("  return {\n    actors:", "  const output = {\n    actors:")
-        .replace(
-          "\n  };\n};\n\n/** Opening source",
-          `\n  };\n${mutation}\n  return output;\n};\n\n/** Opening source`,
-        );
+    ): string => {
+      const opened = source.replace(
+        "  return {\n    actors:",
+        "  const output = {\n    actors:",
+      );
+      if (opened === source)
+        throw new Error("Scaffold source no longer opens its returned output.");
+      const marker = "\n  };\n};\n";
+      const at = opened.indexOf(marker);
+      if (at < 0)
+        throw new Error("Scaffold source no longer closes its shot builder.");
+      return `${opened.slice(0, at)}\n  };\n${mutation}\n  return output;\n};\n${opened.slice(at + marker.length)}`;
+    };
     const injectBuildSignal = (...statements: string[]): string =>
       original.replace(
         "): IAutoMovieProductionShotProgram => {",

@@ -683,7 +683,11 @@ func checkScreenplayIndex(
 	}
 	if screenplayReady || len(sceneDocuments) != 0 {
 		markdownScenes := map[string][]screenplayMarkdownScene{}
-		if screenplayReady {
+		// The index-level document is the whole screenplay only while the prose
+		// is one file. Once scenes address their own documents, reading it too
+		// would parse the same heading twice, since the index path necessarily
+		// names one of those very files.
+		if screenplayReady && len(sceneDocuments) == 0 {
 			markdownScenes = parseScreenplayMarkdown(screenplayText)
 		}
 		// A split screenplay keeps each scene in its own file, so a later scene's
