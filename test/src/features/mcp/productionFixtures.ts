@@ -267,6 +267,52 @@ export const productionDesign = (
   ...overrides,
 });
 
+/**
+ * Author a second production's screenplay ledger beside the fixture's own.
+ *
+ * Scene numbers are production-scoped, so a second production's shots cannot
+ * join to the first one's ledger and the compiler refuses shot contracts whose
+ * upstream slot is absent. Both scenes are exempted at the production phase,
+ * because a registry fixture registers a production rather than shooting one.
+ */
+export const writeSecondProductionScreenplay = (props: {
+  root: string;
+  productionId: string;
+}): void => {
+  const index = scaffoldJson<IAutoMovieScreenplayIndex>(
+    ".automovie/design/screenplay/index.json",
+  );
+  const file = path.join(
+    props.root,
+    ".automovie/design",
+    props.productionId,
+    "screenplay/index.json",
+  );
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(
+    file,
+    `${JSON.stringify(
+      {
+        ...index,
+        production: props.productionId,
+        screenplay: {
+          ...index.screenplay,
+          scenes: index.screenplay.scenes.map((scene) => ({
+            ...scene,
+            disposition: {
+              phase: "production" as const,
+              reason:
+                "This fixture registers a second production rather than shooting one.",
+            },
+          })),
+        },
+      },
+      null,
+      2,
+    )}\n`,
+  );
+};
+
 const oneShotProduction = (
   production: IAutoMovieProductionDesign,
 ): IAutoMovieProductionDesign => ({
