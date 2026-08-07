@@ -345,6 +345,16 @@ export const test_mcp_production_screenplay_ledger = (): void => {
           });
         },
       ],
+      // Downstream citations. The shot contract the fixture keeps cites
+      // SCN-001, so dropping that scene is what strands the citation.
+      [
+        "screenplay-citation-scene-absent",
+        (index) => {
+          index.screenplay.scenes = index.screenplay.scenes.filter(
+            (entry) => entry.id !== "SCN-001",
+          );
+        },
+      ],
     ];
     const observed: Record<string, boolean> = {};
     for (const [code, mutate] of cases) observed[code] = fires(code, mutate)();
@@ -355,8 +365,31 @@ export const test_mcp_production_screenplay_ledger = (): void => {
     );
 
     // The negative twin for the whole set: restoring the record clears every
-    // one of them, so these are checks on the ledger rather than on compiling.
+    // A claim citation lives on the downstream record rather than in the
+    // index, so this one case reaches for the shot contract itself.
     fs.writeFileSync(indexFile, original);
+    const contractFile = [
+      path.join(
+        fixture.root,
+        ".automovie/design/fixture-film/shots/opening.json",
+      ),
+      path.join(fixture.root, ".automovie/design/shots/opening.json"),
+    ].find((file) => fs.existsSync(file))!;
+    const originalContract = fs.readFileSync(contractFile, "utf8");
+    const contract = JSON.parse(originalContract) as {
+      evidence?: Array<{ reason: string; scene: string; claim?: string }>;
+    };
+    contract.evidence![0]!.claim = "CLAIM-404";
+    fs.writeFileSync(contractFile, `${JSON.stringify(contract, null, 2)}\n`);
+    TestValidator.predicate(
+      "a downstream record citing an undeclared claim is refused",
+      new Set(
+        reopen()
+          .compile({ scope: "design" })
+          .diagnostics.map((item) => item.code),
+      ).has("screenplay-citation-claim-absent"),
+    );
+    fs.writeFileSync(contractFile, originalContract);
     const restored = new Set(
       reopen()
         .compile({ scope: "design" })

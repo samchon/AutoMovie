@@ -504,7 +504,11 @@ export class AutoMovieProductionCompiler {
     const screenplay = this.project.screenplayIndex();
     diagnostics.push(
       ...screenplayResidencyDiagnostics({ contracts: graph.shots, screenplay }),
-      ...screenplayLedgerDiagnostics(screenplay),
+      ...screenplayLedgerDiagnostics({
+        acceptance: graph.acceptance,
+        contracts: graph.shots,
+        screenplay,
+      }),
       ...screenplayProseDiagnostics({
         screenplay,
         read: (relative) => this.project.readProseDocument(relative),

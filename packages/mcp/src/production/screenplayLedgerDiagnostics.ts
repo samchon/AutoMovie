@@ -1,7 +1,9 @@
 import type {
+  IAutoMovieAcceptanceScenario,
   IAutoMovieDiagnostic,
   IAutoMovieScreenplayCatalogEntry,
   IAutoMovieScreenplayIndex,
+  IAutoMovieShotContract,
 } from "@automovie/interface";
 
 /**
@@ -33,9 +35,12 @@ const blank = (value: string): boolean => value.trim().length === 0;
  * wrong at the moment it is written, and the earliest compile is the cheapest
  * place to hear it.
  */
-export const screenplayLedgerDiagnostics = (
-  screenplay: IAutoMovieScreenplayIndex | null,
-): IAutoMovieDiagnostic[] => {
+export const screenplayLedgerDiagnostics = (props: {
+  acceptance: ReadonlyMap<string, IAutoMovieAcceptanceScenario>;
+  contracts: ReadonlyMap<string, IAutoMovieShotContract>;
+  screenplay: IAutoMovieScreenplayIndex | null;
+}): IAutoMovieDiagnostic[] => {
+  const screenplay = props.screenplay;
   if (screenplay === null) return [];
   const diagnostics: IAutoMovieDiagnostic[] = [];
   const refuse = (code: string, message: string): void => {
@@ -273,5 +278,36 @@ export const screenplayLedgerDiagnostics = (
       }
     }
   }
+
+  // --- Downstream citations ------------------------------------------------
+  // A shot or acceptance record naming a scene the ledger never declared is a
+  // join dangling outside the screenplay: the citation looks like traceability
+  // and resolves to nothing. Records without evidence are silent here, since
+  // the coverage check owns whether evidence is required at all.
+  const cite = (
+    owner: string,
+    evidence: IAutoMovieShotContract["evidence"],
+  ): void => {
+    for (const entry of evidence ?? []) {
+      if (scenes.has(entry.scene) === false)
+        refuse(
+          "screenplay-citation-scene-absent",
+          `${owner} cites scene "${entry.scene}", which the screenplay index does not declare. The downstream join dangles outside the ledger. Correct the scene id or restore its active or OMITTED record, then compile again.`,
+        );
+      if (
+        entry.claim !== undefined &&
+        entry.claim !== null &&
+        claims.has(entry.claim) === false
+      )
+        refuse(
+          "screenplay-citation-claim-absent",
+          `${owner} cites continuity claim "${entry.claim}", which the screenplay index does not declare. The trace is not attached to a canon fact or a proof owner. Correct or add the claim, then compile again.`,
+        );
+    }
+  };
+  for (const [id, contract] of props.contracts)
+    cite(`Shot contract "${id}"`, contract.evidence);
+  for (const [id, scenario] of props.acceptance)
+    cite(`Acceptance scenario "${id}"`, scenario.evidence);
   return diagnostics;
 };
