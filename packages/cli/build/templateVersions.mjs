@@ -100,6 +100,7 @@ export const resolveTemplateVersions = () => ({
   vite: catalogVersion("vite", "vite"),
   nodeTypes: catalogVersion("utils", "@types/node"),
   ttsc: catalogVersion("typescript", "ttsc"),
+  ttscEvidence: catalogVersion("typescript", "@ttsc/evidence"),
   ttscLint: catalogVersion("typescript", "@ttsc/lint"),
   typescript: catalogVersion("typescript", "typescript"),
 });

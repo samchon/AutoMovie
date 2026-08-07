@@ -1,5 +1,6 @@
 /// <reference types="node" />
 import type {} from "@automovie/lint";
+import { type ITtscEvidenceGraphConfig, evidence } from "@ttsc/evidence";
 import type { ITtscLintConfig, ITtscLintPlugin } from "@ttsc/lint";
 import { createRequire } from "node:module";
 import path from "node:path";
@@ -11,6 +12,111 @@ const automovie = {
     "native",
   ),
 } satisfies ITtscLintPlugin;
+
+/**
+ * The production's obligation graph, expressed as its folder layout.
+ *
+ * A film converges when each stage of definition answers for the one above it.
+ * Screenwriting already works that way, logline to treatment to beat to scene,
+ * each stage removing ambiguity the previous one left. Here that ladder is
+ * mechanical: every claim population owes a citation to its reference
+ * population, every pair is its own 100% obligation, and an unpaid one is a
+ * compile error rather than something a reader has to notice.
+ *
+ * Read each entry as one sentence. Files under `files` must each cite a unit
+ * under `reference`, and a citation toward one reference never counts toward
+ * another.
+ *
+ * The design records under `.automovie/design` are absent on purpose. Evidence
+ * graphs Markdown, Prisma, TypeScript, and Swagger; JSON cannot host a
+ * citation. That is why the typed sources under `src` own the subjects and `npm
+ * run design` emits the records from them.
+ */
+const graph: ITtscEvidenceGraphConfig = {
+  claims: [
+    // The staged prose ladder. Each stage is one file per unit, so a sequence,
+    // a beat, and a scene are each a citable member rather than a heading
+    // inside a document that holds the whole film.
+    {
+      type: "markdown",
+      files: ["docs/*/02-treatment/*.md"],
+      reference: {
+        type: "markdown",
+        files: ["docs/*/01-logline.md"],
+        symbol: "file",
+      },
+    },
+    {
+      type: "markdown",
+      files: ["docs/*/03-beats/*.md"],
+      reference: {
+        type: "markdown",
+        files: ["docs/*/02-treatment/*.md"],
+        symbol: "file",
+      },
+    },
+    {
+      type: "markdown",
+      files: ["docs/*/04-scenes/*.md"],
+      reference: {
+        type: "markdown",
+        files: ["docs/*/03-beats/*.md"],
+        symbol: "file",
+      },
+    },
+    // The spec library. A subject exists because a scene calls for it; one that
+    // no scene calls for is a subject the film does not need.
+    {
+      type: "markdown",
+      files: ["docs/characters/*.md", "docs/objects/*.md", "docs/world/*.md"],
+      reference: {
+        type: "markdown",
+        files: ["docs/*/04-scenes/*.md"],
+        symbol: "file",
+      },
+    },
+    // Implementation answers for its specification. A unit, prop, or place in
+    // source with no spec is a decision nobody wrote down.
+    {
+      type: "typescript",
+      files: ["src/units/*.ts", "src/objects/*.ts", "src/world/*.ts"],
+      symbol: "function",
+      reference: {
+        type: "markdown",
+        files: ["docs/characters/*.md", "docs/objects/*.md", "docs/world/*.md"],
+        symbol: "file",
+      },
+    },
+    // A formation groups a subject that must already be specified. The
+    // reference is every character spec, not the one this formation happens to
+    // group, so a character nothing ever forms up is still an unpaid
+    // obligation somewhere in the graph rather than a silent orphan.
+    // Source grounds source: an action cites the vocabulary it moves, so a
+    // drill cannot outlive the unit it was written for.
+    {
+      type: "typescript",
+      files: ["src/drills/*.ts"],
+      symbol: "function",
+      reference: {
+        type: "typescript",
+        files: ["src/units/*.ts", "src/formations/*.ts"],
+        symbol: "function",
+      },
+    },
+    // A shot realizes a scene. This is the join that stops a film from
+    // accumulating footage nothing asked for.
+    {
+      type: "typescript",
+      files: ["src/shots/*.ts"],
+      symbol: "function",
+      reference: {
+        type: "markdown",
+        files: ["docs/*/04-scenes/*.md"],
+        symbol: "file",
+      },
+    },
+  ],
+};
 
 /**
  * `@ttsc/lint` config for this automovie project, applied automatically by
@@ -61,8 +167,15 @@ const config = {
   },
   plugins: {
     automovie,
+    evidence,
   },
   rules: {
+    // The obligation graph above. Project-scoped, so this entry declares no
+    // `files` of its own.
+    "evidence/graph": ["error", graph],
+    // A remaining `@todo` is an obligation the author wrote down and did not
+    // pay. It fails with its own text rather than being counted as done.
+    "evidence/todo": "error",
     "automovie/asset-provenance": [
       "error",
       {

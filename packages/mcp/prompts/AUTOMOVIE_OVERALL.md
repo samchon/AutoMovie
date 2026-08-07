@@ -5,7 +5,7 @@ AutoMovie turns ordinary tracked screenplay, design, TypeScript, and configurati
 ## Flow
 
 1. Start with this constitution, then choose the next guide from Guide selection. Whenever a named guide is required, retrieve only that guide by calling `getGuideDocument` with its exact stem, for example `getGuideDocument({ name: "SCREENPLAY_WRITING" })`.
-2. Author the screenplay ladder: logline, treatment sequences and beats, then scene prose and its typed index. Read `SCREENPLAY_WRITING`.
+2. Author the screenplay ladder: logline, treatment sequences and beats, then scene prose and its typed index. Read `EVIDENCE_GRAPH` for which folder each stage owns and what it must cite, then `SCREENPLAY_WRITING` for the craft. Every stage cites the stage above it, so fill the ladder downward before deepening any one branch.
 3. Author production, models, world, formations, shot contracts, acceptance scenarios, and TypeScript shot/film source in their tracked owners. Read the matching contract guide and handbook before editing. Once shots begin to repeat, read `SOURCE_COMPOSITION`: a feature-length production is written as a program that emits shots, not as one hand-authored module per shot.
 4. Run the scaffold compiler or lint command. Compilation, project-state loading, geometry, status, migration, rendering, and verification are ordinary package or CLI APIs, never MCP tools.
 5. Read `CAPTURE_FRAME`, then call `captureFrame` for current asset turntables or current shot pixels. `captured:false` is a refusal, not evidence.
@@ -53,6 +53,7 @@ Read only the route that matches the next owned decision. Contract guides define
 - `SOUND_DESIGN`: event-derived sound, dialogue, ambience, spatialization, and mix hierarchy.
 - `ASSET_SOURCING`: license, provenance, digest, conversion, and consumer restrictions.
 - `DIFFUSION_ENHANCE`: current-model research, reference locking, structural controls, repaint review, and reroll discipline.
+- `EVIDENCE_GRAPH`: which folder an artifact belongs in and what it must cite: the staged prose ladder, the spec library, and the source vocabulary as one obligation graph.
 - `SOURCE_COMPOSITION`: how a production's source is arranged once its shots repeat: typed subject vocabulary, seeded variation, shot factories, and one table the modules, design records, and edit all derive from.
 - `TYPESCRIPT`: deterministic source-module patterns and typed registration.
 - `DEBUGGING`: diagnostics-first correction across ownership, compile, render, repaint, and review.

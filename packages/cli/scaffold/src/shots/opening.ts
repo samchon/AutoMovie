@@ -402,14 +402,24 @@ const buildSignal = (
   };
 };
 
-/** Opening source proves a neutral-to-raised transition. */
+/**
+ * Opening source proves a neutral-to-raised transition.
+ *
+ * @evidence docs/{{name}}/04-scenes/SCN-001.md Realizes the raised arm this
+ *   scene stages, with the ranks held ordered behind it.
+ */
 export const opening = defineShot("opening", {
   scene: "opening-scene",
   contract: OPENING_CONTRACT,
   build: (context: IAutoMovieShotBuildContext) => buildSignal(context, 0),
 });
 
-/** Answer source begins from the raised state established by the first shot. */
+/**
+ * Answer source begins from the raised state established by the first shot.
+ *
+ * @evidence docs/{{name}}/04-scenes/SCN-002.md Realizes the answering motion
+ *   this scene stages, keeping the army the visible consequence.
+ */
 export const answer = defineShot("answer", {
   scene: "answer-scene",
   contract: ANSWER_CONTRACT,

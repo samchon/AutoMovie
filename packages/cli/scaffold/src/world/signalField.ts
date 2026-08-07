@@ -1,0 +1,117 @@
+import type { IAutoMovieWorldDesign } from "@automovie/interface";
+
+/**
+ * The signal field, as the one world this production stages on.
+ *
+ * The field exists to give a raised arm an uninterrupted background, so it
+ * carries a single named landmark and nothing that competes with a silhouette.
+ * A shot contract cites that landmark rather than restating a coordinate.
+ *
+ * @evidence docs/world/signal-field.md Implements the open level ground, the
+ *   named ground point, and the extent that specification requires.
+ */
+export const signalField = (): IAutoMovieWorldDesign => ({
+  id: "starter-world",
+  units: "meter",
+  landmarks: [
+    {
+      id: "signal-ground",
+      position: {
+        x: 0,
+        y: 0,
+        z: 0,
+      },
+      radius: 3,
+      meaning: "The readable center of the starter frame.",
+    },
+  ],
+  surfaces: [
+    {
+      id: "ground",
+      polygon: [
+        {
+          x: -10,
+          z: -10,
+        },
+        {
+          x: 10,
+          z: -10,
+        },
+        {
+          x: 10,
+          z: 10,
+        },
+        {
+          x: -10,
+          z: 10,
+        },
+      ],
+      height: {
+        kind: "constant",
+        value: 0,
+      },
+      walkable: true,
+    },
+  ],
+  routes: [],
+  effectRecipes: [
+    {
+      id: "battle-smoke",
+      kind: "smoke",
+      seed: 1416,
+      emission: {
+        rate: 40,
+        burst: 64,
+        duration: 4,
+      },
+      particle: {
+        lifetime: {
+          min: 2,
+          max: 4,
+        },
+        size: {
+          min: 0.25,
+          max: 0.8,
+        },
+        color: "#89918a",
+        opacity: {
+          min: 0.12,
+          max: 0.38,
+        },
+      },
+      motion: {
+        wind: {
+          x: 0.18,
+          y: 0,
+          z: -0.08,
+        },
+        rise: 0.2,
+        turbulence: 0.15,
+      },
+      budget: {
+        maxParticles: 256,
+        lodDistance: 25,
+      },
+      blend: "alpha",
+    },
+  ],
+  effectZones: [
+    {
+      id: "signal-smoke",
+      recipe: "battle-smoke",
+      bounds: {
+        min: {
+          x: -4,
+          y: 0.05,
+          z: -8,
+        },
+        max: {
+          x: 4,
+          y: 1.2,
+          z: -2,
+        },
+      },
+      seed: 7,
+    },
+  ],
+});
