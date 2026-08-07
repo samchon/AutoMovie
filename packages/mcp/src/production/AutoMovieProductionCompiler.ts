@@ -2355,6 +2355,46 @@ const normalizeEffectCues = (
   return output;
 };
 
+/**
+ * The exact placeholder the scaffold leaves where an author must implement.
+ *
+ * Assembled rather than written whole so this file does not contain the token
+ * it looks for. A checker that trips over its own definition is the same
+ * self-defeating shape as a probe that moves the value it measures.
+ */
+const TEMPLATE_SENTINEL = ["AUTOMOVIE", "IMPLEMENT", "ME"].join("_");
+
+/**
+ * Whether compiled source still carries the scaffold's placeholder.
+ *
+ * Matched on identifier boundaries so prose that merely mentions the sentinel,
+ * or a longer name that contains it, is not the placeholder itself. A project
+ * that never had the scaffold section is silent because the token is absent.
+ */
+const containsTemplateSentinel = (source: string): boolean => {
+  // An identifier character, tested without a character class so the linter's
+  // duplicate-member check has nothing to object to: a letter is what changes
+  // under case folding, and the rest are named outright.
+  const identifier = (character: string): boolean =>
+    character.toLowerCase() !== character.toUpperCase() ||
+    (character >= "0" && character <= "9") ||
+    character === "_" ||
+    character === "$";
+  const boundary = (character: string | undefined): boolean =>
+    character === undefined || identifier(character) === false;
+  for (
+    let index = source.indexOf(TEMPLATE_SENTINEL);
+    index >= 0;
+    index = source.indexOf(TEMPLATE_SENTINEL, index + 1)
+  )
+    if (
+      boundary(source[index - 1]) &&
+      boundary(source[index + TEMPLATE_SENTINEL.length])
+    )
+      return true;
+  return false;
+};
+
 const inspectSource = (
   target: string,
   sourcePath: string,
@@ -2369,6 +2409,15 @@ const inspectSource = (
   );
   const diagnostics: IAutoMovieDiagnostic[] = [];
   const found = new Set<string>();
+  if (containsTemplateSentinel(source))
+    diagnostics.push({
+      code: "source-template-sentinel",
+      category: "error",
+      phase: "compile",
+      target,
+      path: sourcePath,
+      message: `Template sentinel "${TEMPLATE_SENTINEL}" remains in ${sourcePath}. The placeholder says this scaffold section has no implementation, so compile and review cannot treat it as resident work. Implement the marked section and remove the exact sentinel.`,
+    });
   const report = (code: string, capability: string): void => {
     const key = `${code}:${capability}`;
     if (found.has(key)) return;

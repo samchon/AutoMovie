@@ -167,7 +167,7 @@ export const test_workspace_experimental_sandbox = (): void => {
     );
 
     // Stand in for a film in progress: any rendered file the production owns.
-    const inProgress = path.join(TARGET, "docs", NAME, "treatment.md");
+    const inProgress = path.join(TARGET, "docs", NAME, "01-logline.md");
     const rendered = fs.readFileSync(inProgress, "utf8");
     fs.writeFileSync(inProgress, `${rendered}\nSEQ-PRATZEN authored here.\n`);
     TestValidator.equals(

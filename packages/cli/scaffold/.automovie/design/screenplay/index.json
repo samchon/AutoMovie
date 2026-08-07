@@ -12,7 +12,8 @@
             "id": "BEAT-SIGNAL",
             "text": "A lone sentinel raises a signal while an ordered army remains visibly under the same command."
           }
-        ]
+        ],
+        "path": "docs/{{name}}/02-treatment/SEQ-SIGNAL.md"
       },
       {
         "id": "SEQ-ANSWER",
@@ -22,7 +23,8 @@
             "id": "BEAT-ANSWER",
             "text": "The answering gesture proves the signal changed the field rather than ending as an isolated pose."
           }
-        ]
+        ],
+        "path": "docs/{{name}}/02-treatment/SEQ-ANSWER.md"
       }
     ]
   },
@@ -31,7 +33,10 @@
     "lock": {
       "activatedBy": "agent-before-first-shot",
       "reason": "The starter already registers opening and answer shot contracts, so their scene joins require stable numbering.",
-      "sceneIds": ["SCN-001", "SCN-002"]
+      "sceneIds": [
+        "SCN-001",
+        "SCN-002"
+      ]
     },
     "scenes": [
       {
@@ -45,7 +50,8 @@
           }
         ],
         "location": "signal-field",
-        "disposition": null
+        "disposition": null,
+        "path": "docs/{{name}}/04-scenes/SCN-001.md"
       },
       {
         "id": "SCN-002",
@@ -58,7 +64,8 @@
           }
         ],
         "location": "signal-field",
-        "disposition": null
+        "disposition": null,
+        "path": "docs/{{name}}/04-scenes/SCN-002.md"
       }
     ]
   },
@@ -73,7 +80,12 @@
             "scene": "SCN-001"
           }
         ],
-        "bindings": [{ "kind": "model", "id": "sentinel" }]
+        "bindings": [
+          {
+            "kind": "model",
+            "id": "sentinel"
+          }
+        ]
       }
     ],
     "factions": [
@@ -86,7 +98,12 @@
             "scene": "SCN-001"
           }
         ],
-        "bindings": [{ "kind": "formation", "id": "army" }]
+        "bindings": [
+          {
+            "kind": "formation",
+            "id": "army"
+          }
+        ]
       }
     ],
     "locations": [
@@ -99,7 +116,12 @@
             "scene": "SCN-001"
           }
         ],
-        "bindings": [{ "kind": "world-landmark", "id": "signal-ground" }]
+        "bindings": [
+          {
+            "kind": "world-landmark",
+            "id": "signal-ground"
+          }
+        ]
       }
     ]
   },

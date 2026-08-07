@@ -49,6 +49,7 @@ type screenplayContractIndex struct {
 type screenplayTreatmentSequence struct {
 	ID    string           `json:"id"`
 	Title string           `json:"title"`
+	Path  string           `json:"path"`
 	Beats []screenplayBeat `json:"beats"`
 }
 
@@ -77,6 +78,7 @@ type screenplayScene struct {
 	ID          string                 `json:"id"`
 	Title       string                 `json:"title"`
 	Status      string                 `json:"status"`
+	Path        string                 `json:"path"`
 	Covers      []screenplayCoverage   `json:"covers"`
 	Location    *string                `json:"location"`
 	Disposition *screenplayDisposition `json:"disposition"`
@@ -516,6 +518,22 @@ func checkScreenplayIndex(
 		)
 	}
 	for sequenceIndex, sequence := range index.Treatment.Sequences {
+		// A split treatment keeps each sequence in its own file, so a later
+		// sequence's beat is not in the first sequence's document. Fall back to
+		// the index-level path while the treatment is still one document.
+		sequenceText, sequenceReady := treatmentText, treatmentReady
+		sequencePath := index.Treatment.Path
+		if strings.TrimSpace(sequence.Path) != "" {
+			sequencePath = sequence.Path
+			sequenceText, sequenceReady = readScreenplayDocument(
+				ctx,
+				root,
+				anchor,
+				"treatment",
+				sequence.Path,
+				options.Documents,
+			)
+		}
 		if strings.TrimSpace(sequence.ID) == "" ||
 			strings.TrimSpace(sequence.Title) == "" {
 			ctx.Report(
@@ -555,15 +573,15 @@ func checkScreenplayIndex(
 			}
 			beatIDs[beat.ID] = true
 			beats[beat.Text] = beat
-			if treatmentReady &&
+			if sequenceReady &&
 				!strings.Contains(
-					screenplayComparableProse(treatmentText),
+					screenplayComparableProse(sequenceText),
 					screenplayComparableProse(beat.Text),
 				) {
 				ctx.Report(
 					anchor + " indexes treatment beat '" + beat.ID +
 						"', but its exact prose is absent from '" +
-						index.Treatment.Path +
+						sequencePath +
 						"'. The machine index would promise text the human document does not contain. Restore the exact prose or update both records, then run lint again.",
 				)
 			}
@@ -656,15 +674,46 @@ func checkScreenplayIndex(
 		}
 	}
 
-	if screenplayReady {
-		markdownScenes := parseScreenplayMarkdown(screenplayText)
+	sceneDocuments := map[string]string{}
+	for _, scene := range index.Screenplay.Scenes {
+		if strings.TrimSpace(scene.Path) == "" {
+			continue
+		}
+		sceneDocuments[scene.ID] = scene.Path
+	}
+	if screenplayReady || len(sceneDocuments) != 0 {
+		markdownScenes := map[string][]screenplayMarkdownScene{}
+		if screenplayReady {
+			markdownScenes = parseScreenplayMarkdown(screenplayText)
+		}
+		// A split screenplay keeps each scene in its own file, so a later scene's
+		// heading is not in the first scene's document.
+		for _, id := range screenplaySortedKeys(sceneDocuments) {
+			text, ready := readScreenplayDocument(
+				ctx,
+				root,
+				anchor,
+				"screenplay",
+				sceneDocuments[id],
+				options.Documents,
+			)
+			if !ready {
+				continue
+			}
+			for parsedID, entries := range parseScreenplayMarkdown(text) {
+				markdownScenes[parsedID] = append(
+					markdownScenes[parsedID],
+					entries...,
+				)
+			}
+		}
 		for _, id := range screenplaySortedKeys(markdownScenes) {
 			entries := markdownScenes[id]
 			if len(entries) != 1 {
 				ctx.Report(
 					anchor + " finds scene heading id '" + id + "' " +
 						itoa(len(entries)) +
-						" times in '" + index.Screenplay.Path +
+						" times in '" + screenplaySceneDocument(index, sceneDocuments, id) +
 						"'. One stable id must occur on exactly one heading line. Keep one heading and run lint again.",
 				)
 				continue
@@ -673,7 +722,7 @@ func checkScreenplayIndex(
 			if !exists {
 				ctx.Report(
 					anchor + " finds undeclared screenplay heading '" + id +
-						"' in '" + index.Screenplay.Path +
+						"' in '" + screenplaySceneDocument(index, sceneDocuments, id) +
 						"'. Downstream records cannot cite an unindexed scene. Add it to the index or remove the heading, then run lint again.",
 				)
 				continue
@@ -699,7 +748,7 @@ func checkScreenplayIndex(
 				ctx.Report(
 					anchor + " indexes scene '" + id +
 						"', but no exact SCN heading exists in '" +
-						index.Screenplay.Path +
+						screenplaySceneDocument(index, sceneDocuments, id) +
 						"'. Downstream citations dangle from the human screenplay. Restore the heading and run lint again.",
 				)
 			}
@@ -1421,6 +1470,19 @@ func screenplayContinuityProven(
 		reviews,
 		allRealized,
 	)
+}
+
+// The document holding one scene's prose: its own file when the screenplay is
+// split one file per scene, otherwise the index-level screenplay document.
+func screenplaySceneDocument(
+	index screenplayContractIndex,
+	documents map[string]string,
+	id string,
+) string {
+	if path, exists := documents[id]; exists && strings.TrimSpace(path) != "" {
+		return path
+	}
+	return index.Screenplay.Path
 }
 
 func screenplayStringMember(values []string, expected string) bool {
