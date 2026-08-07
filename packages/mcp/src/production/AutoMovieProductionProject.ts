@@ -1602,6 +1602,38 @@ export class AutoMovieProductionProject {
     });
   }
 
+  /**
+   * Read one human-authored prose document the screenplay index addresses.
+   *
+   * Prose is the only project content the compiler reads that it does not own,
+   * so the path comes from a record an author edits and is treated as
+   * untrusted: it must resolve inside the project and must not be reached
+   * through a link, exactly as a compiler-owned read is. An absent document
+   * returns `null` rather than throwing, because the screenplay checks report a
+   * missing document as their own diagnostic and would otherwise turn one
+   * authoring mistake into a crash.
+   */
+  public readProseDocument(relativePath: string): string | null {
+    this.assertIncarnation();
+    let file: string;
+    try {
+      file = resolveInside(this.root, relativePath);
+    } catch {
+      return null;
+    }
+    const linked = lstatOrNull(file);
+    if (linked === null || linked.isFile() === false) return null;
+    if (linked.isSymbolicLink()) return null;
+    if (isInside(this.rootReal, fs.realpathSync(file)) === false) return null;
+    return Buffer.from(
+      readAutoMovieProductionOwnedFile({
+        root: this.rootReal,
+        directory: path.dirname(file),
+        relative: path.basename(file),
+      }),
+    ).toString("utf8");
+  }
+
   /** Project-relative path of the render root. */
   public renderRoot(): string {
     this.assertIncarnation();

@@ -82,6 +82,7 @@ import {
 import { assertProductionFeatureUsesRenditionClips } from "./muxProductionFeatureMp4";
 import { probeProductionMedia } from "./probeProductionMedia";
 import { screenplayLedgerDiagnostics } from "./screenplayLedgerDiagnostics";
+import { screenplayProseDiagnostics } from "./screenplayProseDiagnostics";
 import {
   IAutoMovieProductionDesignGraph,
   validateAutoMovieProductionGraph,
@@ -504,6 +505,10 @@ export class AutoMovieProductionCompiler {
     diagnostics.push(
       ...screenplayResidencyDiagnostics({ contracts: graph.shots, screenplay }),
       ...screenplayLedgerDiagnostics(screenplay),
+      ...screenplayProseDiagnostics({
+        screenplay,
+        read: (relative) => this.project.readProseDocument(relative),
+      }),
     );
     if (input.scope !== "design")
       diagnostics.push(
