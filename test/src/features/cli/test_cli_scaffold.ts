@@ -3925,9 +3925,13 @@ export const test_cli_scaffold = async (): Promise<void> => {
           ),
       ],
       [
+        // The compiler owns asset provenance end to end, from manifest order
+        // and canonical paths through byte digests to reasoned uses, so the
+        // scaffold must not re-declare it as a lint rule.
         "filesLint5",
         () =>
-          files["lint.config.ts"]!.includes('"automovie/asset-provenance": ['),
+          files["lint.config.ts"]!.includes("automovie/asset-provenance") ===
+          false,
       ],
       [
         "filesAutomovie",
