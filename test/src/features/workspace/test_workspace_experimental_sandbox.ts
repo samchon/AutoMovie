@@ -26,37 +26,48 @@ const generate = (
 const readSandbox = (relative: string): string =>
   fs.readFileSync(path.join(TARGET, ...relative.split("/")), "utf8");
 
+const readScaffold = (relative: string): string =>
+  fs.readFileSync(
+    path.join(ROOT, "packages", "cli", "scaffold", ...relative.split("/")),
+    "utf8",
+  );
+
 /**
  * Pin what the experimental generator emits, which is the whole reason a
- * sandbox can be driven by a live agent against working-tree source.
+ * sandbox can be driven by a live agent against working-tree code.
  *
- * Three of these are not cosmetic. `link:` is what keeps the sandbox out of the
- * tracked lockfile while still resolving through each package's `exports` to
- * `src/*.ts`. The `ttsx` launcher is what applies typia's compile-time
- * transform to that linked source, which `tsx` does not do at all, and what
- * keeps the linked index's `export * from` lines visible: `tsx` transpiles
- * source in a package that declares no `"type"` as CommonJS, and an ESM
- * importer then reads its named exports through a static scan that does not
- * follow esbuild's re-export helper. The host's own lint config is what lets
- * the server start while the production is still mid-work, since ttsx
- * type-checks before it runs and the project's own
- * `automovie/screenplay-contract` rule fails on any unrealized screenplay.
+ * Two of these are load-bearing and neither is cosmetic. A sandbox must stay
+ * out of the tracked lockfile, because `experimental/` is gitignored and a
+ * workspace member writes an importer no other checkout has. And the project's
+ * own MCP server must be pre-approved, because approval is interactive and
+ * per-project while a driven sandbox is headless by definition, so without it
+ * the agent sees no automovie tools and the sandbox cannot do its one job.
+ *
+ * The generator otherwise leaves the rendered scaffold alone. That is the point
+ * of installing packed tarballs rather than linking `packages/`: resolution
+ * reaches built `lib/*.js` exactly as a published project's does, so the
+ * scaffold's own `tsx` launchers and script table need no rewriting. Earlier
+ * revisions rewrote both, and every one of those rewrites existed only to work
+ * around `link:` resolving to untransformed `src/*.ts`.
+ *
+ * The pack itself is not exercised here: it runs eight package builds and would
+ * dominate this suite. `pnpm run e2e:tgz` covers the equivalent guarantee that
+ * a packed chain resolves and serves, and creating a real sandbox covers the
+ * rest.
  *
  * Scenarios:
  *
- * 1. Every `@automovie/*` dependency renders as `link:../../packages/<name>`,
- *    never `workspace:^`, and the sandbox declares Sharp's stub under `pnpm`
- *    (pnpm ignores the scaffold's npm-style top-level `overrides`) plus the
- *    lifecycle allowlist that keeps a standalone install from exiting
- *    non-zero.
- * 2. `.mcp.json` launches the host through the `ttsx` entry and the host tsconfig,
- *    and names `tsx` nowhere.
- * 3. `tsconfig.mcp.json` selects a rule-free lint config by `configFile`, and that
- *    config exists and enables no rules.
- * 4. Every script the scaffold launches with bare `tsx` renders on the same
- *    launcher and host tsconfig, no rendered script invokes `tsx` at all, and
- *    the project's own `lint` keeps `tsconfig.json` so the full rule set still
- *    gates the review contract.
+ * 1. `--no-install` renders without packing and therefore leaves the scaffold's
+ *    published version ranges in place, with no `link:` or `workspace:` range
+ *    anywhere in the manifest.
+ * 2. The manifest carries the scaffold's own npm-style top-level `overrides`,
+ *    which is what holds the Sharp capability wall, and adds no pnpm-specific
+ *    block: a sandbox installs with npm, whose transitive resolution is what
+ *    makes sibling tarballs satisfy the packed packages' own ranges.
+ * 3. `.claude/settings.json` approves the project's MCP servers while preserving
+ *    the scaffold's own hook block byte for byte.
+ * 4. `.mcp.json` and the script table are the scaffold's own, unrewritten, and no
+ *    host-only tsconfig or lint config is emitted beside them.
  * 5. A second run over the rendered sandbox fails without `--force`, and the
  *    message names the directory.
  * 6. `--force` renders over the same directory and succeeds.
@@ -70,110 +81,76 @@ export const test_workspace_experimental_sandbox = (): void => {
       dependencies: Record<string, string>;
       devDependencies: Record<string, string>;
       scripts: Record<string, string>;
-      pnpm: {
-        overrides: Record<string, string>;
-        onlyBuiltDependencies: string[];
-      };
+      overrides: Record<string, Record<string, string>>;
+      pnpm?: unknown;
     };
-    const automovie = Object.entries({
+    const scaffold = JSON.parse(readScaffold("package.json")) as {
+      dependencies: Record<string, string>;
+      devDependencies: Record<string, string>;
+      scripts: Record<string, string>;
+    };
+    const ranges = Object.entries({
       ...manifest.dependencies,
       ...manifest.devDependencies,
     }).filter(([name]) => name.startsWith("@automovie/"));
     TestValidator.predicate(
-      "every automovie dependency links to a package directory",
-      automovie.length !== 0 &&
-        automovie.every(
-          ([name, range]) =>
-            range === `link:../../packages/${name.slice("@automovie/".length)}`,
-        ),
+      "a render without a pack keeps the published ranges",
+      ranges.length !== 0 &&
+        ranges.every(([, range]) => /^\^\d+\.\d+\.\d+$/.test(range)),
     );
     TestValidator.equals(
-      "pnpm reads the Sharp stub the scaffold declares for npm",
-      manifest.pnpm.overrides["@huggingface/transformers>sharp"],
+      "no dependency reaches into the workspace",
+      Object.values({
+        ...manifest.dependencies,
+        ...manifest.devDependencies,
+      }).some(
+        (range) => range.startsWith("link:") || range.startsWith("workspace:"),
+      ),
+      false,
+    );
+    TestValidator.equals(
+      "the Sharp capability wall stands in the form npm reads",
+      manifest.overrides["@huggingface/transformers"]?.sharp,
       "file:vendor/sharp-disabled",
     );
-    TestValidator.predicate(
-      "a standalone install is allowed to run the builds it needs",
-      ["esbuild", "onnxruntime-node", "protobufjs"].every((dependency) =>
-        manifest.pnpm.onlyBuiltDependencies.includes(dependency),
-      ),
-    );
-
-    const mcp = readSandbox(".mcp.json");
-    TestValidator.predicate(
-      "the host launches through ttsx and the host tsconfig",
-      mcp.includes("node_modules/ttsc/lib/launcher/ttsx.js") &&
-        mcp.includes("tsconfig.mcp.json") &&
-        mcp.includes("scripts/mcp.ts"),
-    );
     TestValidator.equals(
-      "the host never launches through tsx",
-      mcp.includes("tsx/dist/cli.mjs"),
+      "no pnpm-specific block survives the npm install path",
+      Object.hasOwn(manifest, "pnpm"),
       false,
     );
 
-    const host = JSON.parse(readSandbox("tsconfig.mcp.json")) as {
-      compilerOptions: { plugins: Array<Record<string, string>> };
+    const settings = JSON.parse(readSandbox(".claude/settings.json")) as {
+      enableAllProjectMcpServers: boolean;
+      hooks: unknown;
     };
-    TestValidator.predicate(
-      "the host selects a lint config of its own",
-      host.compilerOptions.plugins.some(
-        (plugin) =>
-          plugin.transform === "@ttsc/lint" &&
-          plugin.configFile === "./lint.host.config.ts",
-      ),
+    TestValidator.equals(
+      "the project's own MCP server is approved up front",
+      settings.enableAllProjectMcpServers,
+      true,
     );
-    TestValidator.predicate(
-      "the host lint config enables no rules",
-      /rules:\s*\{\s*\}/.test(readSandbox("lint.host.config.ts")),
+    TestValidator.equals(
+      "the scaffold's own hooks survive that merge",
+      settings.hooks,
+      (JSON.parse(readScaffold(".claude/settings.json")) as { hooks: unknown })
+        .hooks,
     );
 
-    // The expectation comes from the scaffold, not from the generator's own
-    // output: whatever the published starter launches with `tsx` is exactly
-    // what a sandbox must relaunch on the working-tree launcher.
-    const scaffold = (
-      JSON.parse(
-        fs.readFileSync(
-          path.join(ROOT, "packages", "cli", "scaffold", "package.json"),
-          "utf8",
-        ),
-      ) as { scripts: Record<string, string> }
-    ).scripts;
-    const relaunched = Object.entries(scaffold).filter(([, command]) =>
-      command.startsWith("tsx "),
-    );
-    TestValidator.predicate(
-      "the scaffold still has scripts to relaunch",
-      relaunched.length !== 0,
-    );
-    TestValidator.predicate(
-      "every scaffold tsx script relaunches on the host launcher",
-      relaunched.every(
-        ([name, command]) =>
-          manifest.scripts[name] ===
-          `ttsx -P tsconfig.mcp.json ${command.slice("tsx ".length)}`,
-      ),
-    );
-    TestValidator.predicate(
-      "no rendered script invokes tsx",
-      Object.values(manifest.scripts).every(
-        (command) => /\btsx\b/.test(command) === false,
-      ),
+    TestValidator.equals(
+      "the host launcher is the scaffold's own",
+      readSandbox(".mcp.json"),
+      readScaffold(".mcp.json"),
     );
     TestValidator.equals(
-      "the project's own lint keeps the full rule set",
-      manifest.scripts.lint,
-      scaffold.lint,
-    );
-    TestValidator.predicate(
-      "lint is the negative twin, still reading the project tsconfig",
-      manifest.scripts.lint.includes("-P tsconfig.json") &&
-        manifest.scripts.lint.includes("tsconfig.mcp.json") === false,
+      "the script table is the scaffold's own",
+      manifest.scripts,
+      scaffold.scripts,
     );
     TestValidator.equals(
-      "a script the scaffold does not launch with tsx is left alone",
-      manifest.scripts.viewer,
-      scaffold.viewer,
+      "no host-only project config is emitted",
+      ["tsconfig.mcp.json", "lint.host.config.ts"].some((file) =>
+        fs.existsSync(path.join(TARGET, file)),
+      ),
+      false,
     );
 
     const repeated = generate();
