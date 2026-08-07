@@ -262,11 +262,11 @@ export const test_mcp_production_film_source_fixture_cleanup = (): void => {
           {
             catchBodies: ["filmSourceFixtureFailure={error};", "throwerror;"],
             catchVariables: ["error"],
-            containerStatements: 148,
+            containerStatements: 158,
             finallyBodies: [
               'preserveFilmSourceFixtureCleanup(filmSourceFixtureFailure,[{resource:"residentfilmsource",cleanup:():void=>{fs.rmSync(filmPath,{force:true});fs.writeFileSync(filmPath,originalSource);},},{resource:"outsidefilm-sourceroot",cleanup:()=>fs.rmSync(outsideFilmRoot,{force:true,recursive:true}),},]);',
             ],
-            index: 42,
+            index: 52,
             prefixes: [
               'constoutsideFilmRoot=fs.mkdtempSync(path.join(os.tmpdir(),"automovie-film-source-outside-"),);',
               "letfilmSourceFixtureFailure:IFilmSourceFixtureFailure|undefined;",
