@@ -27,6 +27,7 @@ export type AutoMovieProductionGuideName =
   | "SOUND_DESIGN"
   | "ASSET_SOURCING"
   | "DIFFUSION_ENHANCE"
+  | "SOURCE_COMPOSITION"
   | "TYPESCRIPT"
   | "DEBUGGING";
 
