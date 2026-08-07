@@ -38,10 +38,12 @@ const SCAFFOLD = path.join(ROOT, "packages", "cli", "scaffold");
 const USAGE = `create a working-tree automovie sandbox
 
 Usage:
-  pnpm run experimental <name> [--force] [--no-install]
+  pnpm run experimental <name> [--force] [--refresh] [--no-install]
 
 Options:
   --force       Render over a non-empty experimental/<name>.
+  --refresh     Repack and reinstall without re-rendering, so a package change
+                reaches a sandbox whose production is already under way.
   --no-install  Render only, skipping the pack and install.
 `;
 
@@ -133,7 +135,7 @@ const TARBALL_DIR = ".tarballs";
  * request times out at 60 seconds, and no environment variable moves it, so a
  * linked sandbox handed a live agent zero tools no matter how long it waited.
  *
- * typia's compile-time transform is already applied, so no consumer needs
+ * Typia's compile-time transform is already applied, so no consumer needs
  * `ttsx` to avoid `typia.llm.controller(): no transform has been configured`,
  * and the scaffold's own `tsx` scripts run unmodified.
  *
@@ -212,10 +214,9 @@ const renderSandbox = (name, specifiers) => {
       variables,
     );
     files[key] = renderTemplate(
-      fs.readFileSync(path.join(SCAFFOLD, relative), "utf8").replaceAll(
-        "\r\n",
-        "\n",
-      ),
+      fs
+        .readFileSync(path.join(SCAFFOLD, relative), "utf8")
+        .replaceAll("\r\n", "\n"),
       variables,
     );
   }
@@ -226,9 +227,9 @@ const renderSandbox = (name, specifiers) => {
  * The scaffold's Claude settings with the project's own MCP server approved.
  *
  * A `.mcp.json` server starts life unapproved, and `claude mcp list` reports it
- * as `Pending approval (run \`claude\` to approve)`. Approval is interactive and
- * per-project, and `--dangerously-skip-permissions` does not grant it, so a
- * headless `claude -p` session against a fresh sandbox sees no automovie tools
+ * as `Pending approval (run \`claude` to approve)`. Approval is interactive and
+ * per-project, and `--dangerously-skip-permissions`does not grant it, so a
+ * headless`claude -p` session against a fresh sandbox sees no automovie tools
  * at all and cannot be told to wait for any. Since the whole point of a sandbox
  * is to be driven by an agent, the generator grants that approval up front.
  *
@@ -274,7 +275,7 @@ const claudeSettings = (rendered) => {
  * entry makes npm satisfy those transitive ranges from the siblings instead,
  * which is the same technique `internals/e2e-tgz.mjs` relies on.
  *
- * pnpm was tried first and its `overrides` do not reach a transitive range from
+ * Pnpm was tried first and its `overrides` do not reach a transitive range from
  * inside a packed tarball; the same 404 surfaced one package later. Installing
  * with npm also restores what the pnpm-specific manifest block used to
  * compensate for: the scaffold's npm-style top-level `overrides` supplies the
@@ -315,7 +316,8 @@ const main = () => {
     if (
       fs.existsSync(target) &&
       fs.readdirSync(target).length !== 0 &&
-      args.includes("--force") === false
+      args.includes("--force") === false &&
+      args.includes("--refresh") === false
     )
       throw new Error(
         `experimental/${name} is not empty. Pass --force to render over it, or remove it first.`,
@@ -325,19 +327,41 @@ const main = () => {
     const install = args.includes("--no-install") === false;
     const specifiers = install ? packWorkspace(target) : {};
 
-    const files = renderSandbox(name, specifiers);
-    files["package.json"] = sandboxManifest(files["package.json"], specifiers);
-    files[".claude/settings.json"] = claudeSettings(
-      files[".claude/settings.json"],
-    );
-    for (const [relative, content] of Object.entries(files)) {
-      const file = path.join(target, ...relative.split("/"));
-      fs.mkdirSync(path.dirname(file), { recursive: true });
-      fs.writeFileSync(file, content, "utf8");
+    // `--refresh` repacks and reinstalls without re-rendering the scaffold, so
+    // a package fix reaches a sandbox whose production is mid-flight. Without
+    // it the only way to pick up a change is `--force`, which writes the
+    // starter's design, screenplay, and source back over the film in progress
+    // and destroys exactly the work the experiment exists to produce.
+    if (args.includes("--refresh")) {
+      const manifest = path.join(target, "package.json");
+      if (fs.existsSync(manifest) === false)
+        throw new Error(
+          `experimental/${name} has no package.json to refresh. Create it first.`,
+        );
+      fs.writeFileSync(
+        manifest,
+        sandboxManifest(fs.readFileSync(manifest, "utf8"), specifiers),
+        "utf8",
+      );
+      process.stdout.write(`Refreshed experimental/${name} against the pack\n`);
+    } else {
+      const files = renderSandbox(name, specifiers);
+      files["package.json"] = sandboxManifest(
+        files["package.json"],
+        specifiers,
+      );
+      files[".claude/settings.json"] = claudeSettings(
+        files[".claude/settings.json"],
+      );
+      for (const [relative, content] of Object.entries(files)) {
+        const file = path.join(target, ...relative.split("/"));
+        fs.mkdirSync(path.dirname(file), { recursive: true });
+        fs.writeFileSync(file, content, "utf8");
+      }
+      process.stdout.write(
+        `Rendered ${Object.keys(files).length} files into experimental/${name}\n`,
+      );
     }
-    process.stdout.write(
-      `Rendered ${Object.keys(files).length} files into experimental/${name}\n`,
-    );
 
     if (install) {
       process.stdout.write("Installing the sandbox (npm install)\n");
@@ -363,8 +387,9 @@ const main = () => {
         `Drive it with Codex (its MCP servers come from its own config, not .mcp.json):\n` +
         `  codex mcp add automovie -- npx tsx ${path.join(target, "scripts", "mcp.ts")}\n` +
         `  cd experimental/${name} && codex\n\n` +
-        `The sandbox installs packed working-tree tarballs, so rerun this command\n` +
-        `with --force after changing a package under packages/.\n` +
+        `The sandbox installs packed working-tree tarballs, so after changing a\n` +
+        `package under packages/ rerun this command with --refresh, which repacks\n` +
+        `and reinstalls without writing the starter back over work in progress.\n` +
         `experimental/ is gitignored: delete the directory when the experiment is done.\n`,
     );
     return 0;

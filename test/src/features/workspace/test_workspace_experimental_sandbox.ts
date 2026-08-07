@@ -70,7 +70,13 @@ const readScaffold = (relative: string): string =>
  *    host-only tsconfig or lint config is emitted beside them.
  * 5. A second run over the rendered sandbox fails without `--force`, and the
  *    message names the directory.
- * 6. `--force` renders over the same directory and succeeds.
+ * 6. `--refresh` runs against that same non-empty sandbox and leaves the project's
+ *    own files alone, which is the whole reason it exists: a package fix has to
+ *    reach a sandbox whose film is mid-production, and `--force` would write
+ *    the starter back over it.
+ * 7. `--force` renders over the same directory, and the work `--refresh` preserved
+ *    is gone, which is the contrast that makes the two modes distinct rather
+ *    than a preference.
  */
 export const test_workspace_experimental_sandbox = (): void => {
   let failure: { error: unknown } | undefined = undefined;
@@ -159,10 +165,31 @@ export const test_workspace_experimental_sandbox = (): void => {
       "the refusal names the sandbox and the escape",
       repeated.stderr.includes(NAME) && repeated.stderr.includes("--force"),
     );
+
+    // Stand in for a film in progress: any rendered file the production owns.
+    const inProgress = path.join(TARGET, "docs", NAME, "treatment.md");
+    const rendered = fs.readFileSync(inProgress, "utf8");
+    fs.writeFileSync(inProgress, `${rendered}\nSEQ-PRATZEN authored here.\n`);
+    TestValidator.equals(
+      "--refresh runs on a non-empty sandbox",
+      generate("--refresh").status,
+      0,
+    );
+    TestValidator.equals(
+      "--refresh leaves the production in progress alone",
+      fs.readFileSync(inProgress, "utf8").includes("SEQ-PRATZEN"),
+      true,
+    );
+
     TestValidator.equals(
       "--force renders over it",
       generate("--force").status,
       0,
+    );
+    TestValidator.equals(
+      "--force is the mode that writes the starter back over that work",
+      fs.readFileSync(inProgress, "utf8").includes("SEQ-PRATZEN"),
+      false,
     );
   } catch (error) {
     failure = { error };

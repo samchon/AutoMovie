@@ -16,13 +16,16 @@ Read the [project](../project/SKILL.md) and [mcp](../mcp/SKILL.md) skills before
 ## Create The Sandbox
 
 ```bash
-pnpm run experimental <name>          # render experimental/<name> and install it
-pnpm run experimental <name> --force  # render over an existing one
+pnpm run experimental <name>            # render experimental/<name> and install it
+pnpm run experimental <name> --force    # render over an existing one
+pnpm run experimental <name> --refresh  # repack and reinstall, keeping the production
 ```
 
 The name must be one portable directory segment. `--no-install` renders without packing or installing, which is only useful for inspecting the output.
 
-Creation packs every workspace package, so it runs each package's build and takes several minutes. **Rerun it with `--force` after changing anything under `packages/`**; a sandbox holds the tarballs it was created from, not a live view of the working tree.
+Creation packs every workspace package, so it runs each package's build and takes several minutes. A sandbox holds the tarballs it was created from, not a live view of the working tree, so **a change under `packages/` reaches it only when you pack again**.
+
+Use `--refresh` for that once a production is under way. `--force` re-renders the scaffold, which writes the starter's design, screenplay, and source back over the film in progress; `--refresh` repacks, rewrites only the manifest's tarball pins, and reinstalls.
 
 `experimental/` is gitignored. Delete a sandbox when its question is answered, and never commit anything from inside one.
 
