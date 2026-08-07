@@ -20,7 +20,11 @@ import { Quaternion } from "../math/Quaternion";
 import { sampleMotion } from "../motion/sampleMotion";
 import { productionRuntimeModelId } from "../productionIdentity";
 import { sampleClipSequence } from "../resolve/sampleClip";
-import { DEFAULT_SUBJECT_HEIGHT, computeRestHeight } from "./cameraMove";
+import {
+  DEFAULT_SUBJECT_HEIGHT,
+  computeModelRestExtentY,
+  computeRestHeight,
+} from "./cameraMove";
 import {
   intersectsPerspectiveFrustumSegment,
   resolveCameraAt,
@@ -362,8 +366,20 @@ const framedSubjectHeight = (
   const node = props.formations.has(subject)
     ? undefined
     : props.compiled.scene.nodes.find((candidate) => candidate.id === subject);
+  const model =
+    node === undefined
+      ? undefined
+      : (props.compiled.models ?? []).find(
+          (candidate) => candidate.id === node.model,
+        );
+  const extent = model === undefined ? null : computeModelRestExtentY(model);
   const rig = node === undefined ? null : skeletonOf(props, node);
-  const measured = rig === null ? 0 : computeRestHeight(rig);
+  const measured =
+    extent === null
+      ? rig === null
+        ? 0
+        : computeRestHeight(rig)
+      : extent.max - extent.min;
   return measured >= 0.1 ? measured : DEFAULT_SUBJECT_HEIGHT;
 };
 
