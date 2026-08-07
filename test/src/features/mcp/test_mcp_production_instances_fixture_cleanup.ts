@@ -236,8 +236,8 @@ export const test_mcp_production_instances_fixture_cleanup = (): void => {
               "7635a0408a8f6d06e0f6593f955c9add61e044c2d7e8bd68d862e33267a32c00",
             prefixStatements: 23,
             tryDigest:
-              "d5fa191a24b54cc64ffc3ff00e3e2962ef1dc80185bdc0428abfc070fa5b8ac1",
-            tryStatements: 10,
+              "c5fd74eb2682d78ebc060a1682a77668e2d9b9a701747335f692f99514e424d2",
+            tryStatements: 12,
           },
         ],
       },

@@ -163,6 +163,23 @@ const diagnosticCodes = (
   output: ReturnType<AutoMovieProductionCompiler["compile"]>,
 ): Set<string> => new Set(output.diagnostics.map((item) => item.code));
 
+/**
+ * Rewrite scaffold source, refusing to return it unchanged.
+ *
+ * Every refusal case here mutates the starter into the shape it is meant to
+ * reject, so an anchor the scaffold no longer contains does not weaken the
+ * case, it silently inverts it: the compile then runs against valid source and
+ * whatever it says is read as the answer to a question never asked.
+ */
+const mutate = (source: string, from: string, to: string): string => {
+  const next = source.replace(from, to);
+  if (next === source)
+    throw new Error(
+      `Scaffold source no longer contains ${JSON.stringify(from)}.`,
+    );
+  return next;
+};
+
 /** Source compilation is sandboxed, recoverable and stable after reopen. */
 export const test_mcp_production_compiler = async (): Promise<void> => {
   let productionCompilerFailure: IProductionCompilerFixtureFailure | undefined;
@@ -183,12 +200,11 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
       mutation: string,
       source: string = original,
     ): string => {
-      const opened = source.replace(
+      const opened = mutate(
+        source,
         "  return {\n    actors:",
         "  const output = {\n    actors:",
       );
-      if (opened === source)
-        throw new Error("Scaffold source no longer opens its returned output.");
       const marker = "\n  };\n};\n";
       const at = opened.indexOf(marker);
       if (at < 0)
@@ -196,7 +212,8 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
       return `${opened.slice(0, at)}\n  };\n${mutation}\n  return output;\n};\n${opened.slice(at + marker.length)}`;
     };
     const injectBuildSignal = (...statements: string[]): string =>
-      original.replace(
+      mutate(
+        original,
         "): IAutoMovieProductionShotProgram => {",
         ["): IAutoMovieProductionShotProgram => {", ...statements].join("\n"),
       );
@@ -754,7 +771,8 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     const originalFilmSource = fs.readFileSync(filmPath, "utf8");
     fs.writeFileSync(
       filmPath,
-      originalFilmSource.replace(
+      mutate(
+        originalFilmSource,
         "audio: []",
         `audio: [{
           id: "bound-audio",
@@ -1032,7 +1050,8 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
       );
       fs.writeFileSync(
         unmanifestedFilmPath,
-        fs.readFileSync(unmanifestedFilmPath, "utf8").replace(
+        mutate(
+          fs.readFileSync(unmanifestedFilmPath, "utf8"),
           "audio: []",
           `audio: [{
           id: "unmanifested",
@@ -2084,7 +2103,7 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     }
     fs.writeFileSync(
       sourcePath,
-      original.replace('defineShot("opening"', 'defineShot("another-shot"'),
+      mutate(original, 'defineShot("opening"', 'defineShot("another-shot"'),
     );
     TestValidator.predicate(
       "registered export id is bound to contract module and export",
@@ -2094,7 +2113,7 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     );
     fs.writeFileSync(
       sourcePath,
-      original.replace('defineShot("opening"', 'defineShot(""'),
+      mutate(original, 'defineShot("opening"', 'defineShot(""'),
     );
     TestValidator.predicate(
       "registered source export requires an explicit string id",
@@ -2104,7 +2123,7 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     );
     fs.writeFileSync(
       sourcePath,
-      original.replace('scene: "opening-scene"', 'scene: "unregistered-scene"'),
+      mutate(original, 'scene: "opening-scene"', 'scene: "unregistered-scene"'),
     );
     TestValidator.predicate(
       "registered scene remains authoritative over the built stage",
@@ -2161,7 +2180,7 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     );
     fs.writeFileSync(
       sourcePath,
-      original.replace('model: "sentinel",', 'model: "absent-model",'),
+      mutate(original, 'model: "sentinel",', 'model: "absent-model",'),
     );
     TestValidator.predicate(
       "compiled scenes cannot reference an absent model",
@@ -2220,7 +2239,8 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
 
     fs.writeFileSync(
       sourcePath,
-      original.replace(
+      mutate(
+        original,
         "    skeleton: model.skeleton.id,\n    duration:",
         '    skeleton: "missing-skeleton",\n    duration:',
       ),
@@ -2778,7 +2798,8 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
     );
     project.readGeneratedFile = residentReadGenerated;
 
-    const wrongIdentity = original.replace(
+    const wrongIdentity = mutate(
+      original,
       "duration: context.contract.durationSeconds,\n    },\n    eventSamples:",
       "duration: context.contract.durationSeconds - 1,\n    },\n    eventSamples:",
     );
