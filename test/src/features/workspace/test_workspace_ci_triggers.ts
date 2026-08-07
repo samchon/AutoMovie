@@ -189,8 +189,6 @@ const SUITE_INPUTS = [
   "packages/interface/src/skeleton/AutoMovieBodyRegion.ts",
   "packages/interface/src/validation/AutoMovieViolationKind.ts",
   "packages/interface/src/validation/IAutoMovieConstraintViolation.ts",
-  "packages/lint/native/state_presence.go",
-  "packages/lint/go.mod",
   "packages/render/gltfTransformCore.cjs",
   "packages/render/gltfTransformCore.d.cts",
   // test_workspace_pnpm_policy
