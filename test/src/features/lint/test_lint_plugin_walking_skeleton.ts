@@ -488,6 +488,7 @@ const screenplayFiles = (
     | "misbound-proof"
     | "missing-heading"
     | "missing-model-binding"
+    | "mixed-scene-documents"
     | "removed-locked-scene"
     | "sibling-evidence"
     | "uncovered-beat",
@@ -591,6 +592,10 @@ const screenplayFiles = (
       phase: "production",
       reason: "This scene was intentionally exempted.",
     };
+  if (variant === "mixed-scene-documents")
+    Object.assign(index.screenplay.scenes[0]!, {
+      path: `${documentRoot}/SCN-001.md`,
+    });
   if (variant === "missing-model-binding")
     index.catalog.characters[0]!.bindings = [];
   if (variant === "misbound-proof")
@@ -734,6 +739,26 @@ const screenplayFiles = (
         },
       ],
     });
+  }
+  if (variant === "mixed-scene-documents") {
+    // The scaffold splits prose one file per scene and points the index-level
+    // path at the first of them, so the index document is a per-scene document.
+    // A layout may also be mixed, and a scene that keeps its prose in the
+    // shared document must still be found there.
+    files[`${documentRoot}/SCN-001.md`] = [
+      "# Screenplay",
+      "",
+      "## SCN-001 — The Signal",
+      "",
+      "On the field, the sentinel signals and the formation answers.",
+      "",
+    ].join("\n");
+    files[`${documentRoot}/screenplay.md`] = [
+      "# Screenplay",
+      "",
+      "## SCN-002 — OMITTED",
+      "",
+    ].join("\n");
   }
   if (variant === "fenced-heading")
     files[`${documentRoot}/screenplay.md`] = [
@@ -1006,6 +1031,16 @@ export function test_lint_plugin_walking_skeleton(): void {
   assertSucceeded(
     validScreenplay,
     "A grounded scene, passing compiled realization, completed acceptance and retained OMITTED tombstone must satisfy the screenplay ledger.",
+  );
+
+  const mixedSceneDocuments = runFixture({
+    name: "screenplay-mixed-scene-documents",
+    lintConfig: screenplayConfig,
+    files: screenplayFiles("mixed-scene-documents"),
+  });
+  assertSucceeded(
+    mixedSceneDocuments,
+    "A scene addressing its own document and a scene left in the shared one must both be found, without either heading being counted twice.",
   );
 
   const filmReview = runFixture({

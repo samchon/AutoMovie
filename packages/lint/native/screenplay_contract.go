@@ -409,13 +409,35 @@ func checkScreenplayIndex(
 		)
 	}
 	expectedDocumentRoot := "docs/" + index.Production + "/"
-	for _, item := range []struct {
+	documents := []struct {
 		Kind     string
 		Document string
 	}{
 		{"treatment", index.Treatment.Path},
 		{"screenplay", index.Screenplay.Path},
-	} {
+	}
+	// A unit that addresses its own document is constrained exactly as the
+	// index-level document is. Leaving the per-unit paths unchecked would let a
+	// split layout reach prose the whole-file layout could not.
+	for _, sequence := range index.Treatment.Sequences {
+		if strings.TrimSpace(sequence.Path) == "" {
+			continue
+		}
+		documents = append(documents, struct {
+			Kind     string
+			Document string
+		}{"treatment sequence '" + sequence.ID + "'", sequence.Path})
+	}
+	for _, scene := range index.Screenplay.Scenes {
+		if strings.TrimSpace(scene.Path) == "" {
+			continue
+		}
+		documents = append(documents, struct {
+			Kind     string
+			Document string
+		}{"screenplay scene '" + scene.ID + "'", scene.Path})
+	}
+	for _, item := range documents {
 		if !strings.HasPrefix(
 			filepath.ToSlash(item.Document),
 			expectedDocumentRoot,
@@ -683,12 +705,18 @@ func checkScreenplayIndex(
 	}
 	if screenplayReady || len(sceneDocuments) != 0 {
 		markdownScenes := map[string][]screenplayMarkdownScene{}
-		// The index-level document is the whole screenplay only while the prose
-		// is one file. Once scenes address their own documents, reading it too
-		// would parse the same heading twice, since the index path necessarily
-		// names one of those very files.
-		if screenplayReady && len(sceneDocuments) == 0 {
-			markdownScenes = parseScreenplayMarkdown(screenplayText)
+		// The index-level document holds the prose of every scene that does not
+		// address its own, and a layout may be mixed. Take only those scenes
+		// from it: the index path necessarily names one of the per-scene files
+		// once the prose is split, so keeping a scene that owns a document would
+		// parse its heading twice and refuse a correct project.
+		if screenplayReady {
+			for id, entries := range parseScreenplayMarkdown(screenplayText) {
+				if _, owned := sceneDocuments[id]; owned {
+					continue
+				}
+				markdownScenes[id] = entries
+			}
 		}
 		// A split screenplay keeps each scene in its own file, so a later scene's
 		// heading is not in the first scene's document.
