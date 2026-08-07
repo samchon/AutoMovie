@@ -40,6 +40,7 @@ import {
   IAutoMovieProductionRenderReceipt,
   IAutoMovieProductionShotProgram,
   IAutoMovieReviewQueue,
+  IAutoMovieScreenplayIndex,
   IAutoMovieShotBuildContext,
   IAutoMovieShotContract,
   IAutoMovieShotSourceOutput,
@@ -498,6 +499,15 @@ export class AutoMovieProductionCompiler {
       ) || input.scope === "design"
         ? { entries: [] }
         : this.reviewQueue(statusForReview(), reviewSnapshot);
+    if (input.scope !== "design")
+      diagnostics.push(
+        ...screenplayCoverageDiagnostics({
+          contracts: graph.shots,
+          realizations,
+          scope: input.scope,
+          screenplay: this.project.screenplayIndex(),
+        }),
+      );
     if (input.scope === "review" || input.scope === "final")
       diagnostics.push(...reviewGateDiagnostics(reviews));
     if (input.scope === "final")
@@ -3924,6 +3934,60 @@ const sourceTargetsOf = (
       : file === "contracts/world.json"
         ? "world"
         : "compiler",
+  ];
+};
+
+/**
+ * Every active scene must be realized by a shot that actually compiled.
+ *
+ * The screenplay is the only join the compiler did not own, so a scene could
+ * sit in the index forever with nothing built against it and every gate stayed
+ * green. Intent is not realization: a shot contract that cites a scene proves
+ * the author meant to cover it, and only a passing compiled realization proves
+ * the film does.
+ *
+ * Scope decides severity, on the precedent `film-runtime-mismatch` sets. A film
+ * being built sequence by sequence has uncovered scenes by construction, so
+ * `source` reports the gap and lets the work continue; `review` and `final`
+ * refuse, because a film presented for review is claiming to be whole.
+ *
+ * `OMITTED` tombstones are skipped. They exist precisely to record a scene the
+ * production dropped without renumbering the ones around it.
+ */
+const screenplayCoverageDiagnostics = (props: {
+  contracts: ReadonlyMap<string, IAutoMovieShotContract>;
+  realizations: ReadonlyMap<string, IAutoMovieCompiledContractRealization>;
+  scope: IAutoMovieCompileProjectInput["scope"];
+  screenplay: IAutoMovieScreenplayIndex | null;
+}): IAutoMovieDiagnostic[] => {
+  if (props.screenplay === null) return [];
+  const realized = new Set<string>();
+  for (const [id, contract] of props.contracts) {
+    if (props.realizations.get(id) === undefined) continue;
+    for (const evidence of contract.evidence ?? [])
+      realized.add(evidence.scene);
+  }
+  const uncovered = props.screenplay.screenplay.scenes.filter(
+    (scene) => scene.status === "active" && realized.has(scene.id) === false,
+  );
+  if (uncovered.length === 0) return [];
+  return [
+    {
+      code: "screenplay-scene-unrealized",
+      category: props.scope === "source" ? "warning" : "error",
+      phase: "compile",
+      target: "screenplay",
+      path: null,
+      message: `Active ${uncovered.length === 1 ? "scene" : "scenes"} ${uncovered
+        .map((scene) => `"${scene.id}"`)
+        .join(
+          ", ",
+        )} ${uncovered.length === 1 ? "has" : "have"} no shot with a passing compiled realization.${
+        props.scope === "source"
+          ? " The film does not cover its screenplay yet; it must before review."
+          : " Build and compile a citing shot, or record the scene as OMITTED."
+      }`,
+    },
   ];
 };
 
