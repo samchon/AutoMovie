@@ -2139,7 +2139,7 @@ const validateStateContinuity = (
     diagnostics.push(
       filmDiagnostic(
         "film-state-handoff-mismatch",
-        `Closing state of "${previous.shot}" does not equal opening state of "${current.shot}". Correct the adjacent shot predicates or edit boundary.`,
+        `Closing state of "${previous.shot}" does not equal opening state of "${current.shot}". An untrimmed cut hands one measured state across, so both edges must claim it; leave both unclaimed when the cut is a scene break rather than a continuous handoff.`,
       ),
     );
 };
