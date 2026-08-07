@@ -456,13 +456,6 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
         },
       },
       {
-        name: "runtime",
-        code: "film-runtime-mismatch",
-        mutate: (edit) => {
-          edit.tracks.video[0]!.sourceOut = { seconds: 5 };
-        },
-      },
-      {
         name: "nonzero first placement",
         code: "film-global-order-invalid",
         mutate: (edit) => {
@@ -633,6 +626,78 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
         },
       );
     }
+
+    // `targetRuntimeSeconds` states the film's intended finished length, so an
+    // edit that has not reached it yet is an unfinished production rather than
+    // an authoring error. Refusing it at `source` would make the target
+    // impossible to declare before the film exists to fill it. Delivery is
+    // where the two must agree, and `review` judges the assembled film, so the
+    // gap binds from there on.
+    const short = baseEdit();
+    short.tracks.video[0]!.sourceOut = { seconds: 5 };
+    writeEditSource(fixture.root, filmPath, short);
+    const shortSource = compiler.compile({ scope: "source" });
+    const shortSourceGap = shortSource.diagnostics.filter(
+      (item) => item.code === "film-runtime-mismatch",
+    );
+    const shortReview = compiler.compile({ scope: "review" });
+    const shortReviewGap = shortReview.diagnostics.filter(
+      (item) => item.code === "film-runtime-mismatch",
+    );
+    TestValidator.equals(
+      "an edit short of its intended runtime warns while authoring and refuses at review",
+      namedFacts([
+        ["sourceSucceeded", () => shortSource.success === true],
+        [
+          "sourceWarns",
+          () =>
+            shortSourceGap.length === 1 &&
+            shortSourceGap[0]!.category === "warning",
+        ],
+        [
+          "sourceNamesTheGap",
+          () => shortSourceGap[0]!.message.includes("does not yet fill"),
+        ],
+        [
+          "reviewRefuses",
+          () =>
+            shortReviewGap.length === 1 &&
+            shortReviewGap[0]!.category === "error",
+        ],
+        ["reviewFailed", () => shortReview.success === false],
+      ]),
+      {
+        sourceSucceeded: true,
+        sourceWarns: true,
+        sourceNamesTheGap: true,
+        reviewRefuses: true,
+        reviewFailed: true,
+      },
+    );
+    // The negative twin: an edit that exactly fills the declared runtime raises
+    // the diagnostic at neither scope, so the warning tracks the real gap
+    // rather than firing on every authoring compile.
+    writeEditSource(fixture.root, filmPath, baseEdit());
+    TestValidator.equals(
+      "an edit that fills its runtime raises the gap at no scope",
+      namedFacts([
+        [
+          "source",
+          () =>
+            diagnosticCodes(compiler.compile({ scope: "source" })).has(
+              "film-runtime-mismatch",
+            ),
+        ],
+        [
+          "review",
+          () =>
+            diagnosticCodes(compiler.compile({ scope: "review" })).has(
+              "film-runtime-mismatch",
+            ),
+        ],
+      ]),
+      { source: false, review: false },
+    );
 
     const captioned = baseEdit();
     captioned.tracks.captions.push({

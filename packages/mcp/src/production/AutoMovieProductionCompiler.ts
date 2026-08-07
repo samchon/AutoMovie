@@ -402,6 +402,7 @@ export class AutoMovieProductionCompiler {
         contracts: graph.shots,
         compiled,
         realizations,
+        scope: input.scope,
       });
       diagnostics.push(...film.diagnostics);
       if (film.value !== null) {
@@ -1702,6 +1703,8 @@ interface ICompileFilmSourceProps {
   contracts: ReadonlyMap<string, IAutoMovieShotContract>;
   compiled: ReadonlyMap<string, IAutoMovieCompiledShotSource>;
   realizations: ReadonlyMap<string, IAutoMovieCompiledContractRealization>;
+  /** Requested compile scope; the runtime target is only binding from review on. */
+  scope: IAutoMovieCompileProjectInput["scope"];
 }
 
 /** Evaluate the deterministic film module once, before ordered shot compile. */
@@ -1894,13 +1897,26 @@ const compileFilmSource = (
     segments.length === 0
       ? 0
       : Math.max(...segments.map((item) => item.endFrame));
+  // `targetRuntimeSeconds` is the production's *intended finished* runtime, so
+  // a film edit shorter than it is the normal state of an unfinished
+  // production, not an authoring error. Failing `source` scope on the gap would
+  // make a target impossible to declare before the film that fills it exists,
+  // which turns a stated intent into a value derived from whatever is built so
+  // far. Delivery is where the two must agree, and `review` is already the
+  // scope that judges the whole assembled film, so the gap is binding from
+  // there on.
   if (targetFrames !== null && totalFrames !== targetFrames)
-    diagnostics.push(
-      filmDiagnostic(
+    diagnostics.push({
+      ...filmDiagnostic(
         "film-runtime-mismatch",
-        `Film timeline ends at frame ${totalFrames}, but production target runtime is frame ${targetFrames}. Correct placement timing or production runtime.`,
+        `Film timeline ends at frame ${totalFrames}, but production target runtime is frame ${targetFrames}.${
+          props.scope === "source"
+            ? " The film does not yet fill its intended runtime; it must before review."
+            : " Correct placement timing or production runtime."
+        }`,
       ),
-    );
+      category: props.scope === "source" ? "warning" : "error",
+    });
   const audio = normalizeAudioCues(
     edit,
     props.context.assets,
