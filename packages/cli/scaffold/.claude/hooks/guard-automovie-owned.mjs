@@ -165,5 +165,26 @@ const inspectBash = (command) => {
   }
 };
 
+/**
+ * Tools that only observe. AutoMovie owns these paths against *mutation*, and
+ * the review contract requires the agent to open the very frames underneath
+ * them: a review is complete only once the current bundle frames have actually
+ * been looked at. A guard that refuses a read makes the mandated inspection
+ * impossible and pushes an agent into copying evidence somewhere unowned to
+ * see it, which is worse for provenance than reading it in place.
+ *
+ * The list is an allowlist rather than a deny-list of writers on purpose: an
+ * unrecognized tool stays blocked, so the guard keeps failing closed as the
+ * tool surface grows. `Bash` is deliberately absent -- a shell command is not
+ * an observation.
+ */
+const READ_ONLY_TOOLS = new Set([
+  "Glob",
+  "Grep",
+  "NotebookRead",
+  "Read",
+]);
+
+if (READ_ONLY_TOOLS.has(payload?.tool_name)) process.exit(0);
 if (payload?.tool_name === "Bash") inspectBash(payload?.tool_input?.command);
 else inspectPaths(payload?.tool_input);

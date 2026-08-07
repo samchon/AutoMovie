@@ -1256,13 +1256,13 @@ export const test_cli_scaffold = async (): Promise<void> => {
           "64155196bcfdd8402264f23e2dd169e90c7283945a915fd16caff53c137da759",
         ],
         createRenderGcFileSnapshot: [
-          "1c6cbfcddd3d1750b0a9c657c7584cd0ce11a4e7e2bf94855d1d4da8322d0870",
+          "c51b2b51306bfd22efed4ef06405e77eea809c2aa780a5a8328b13a8a23e5f04",
         ],
         readCapturedRenderGcFile: [
           "2918838c61f2d06e81c55fd01e3464eec4752ef3963a1cb28e1e442e5fb374d2",
         ],
         readFileEntry: [
-          "074c9a3a094e810b1a98e705f3c2890ef94855f006c73926a1ce577c9a984f6e",
+          "632118e11ba6cf3435111ac3e6a2ec793d92fcc8c17a5ca975c9951f7e97841b",
         ],
       },
     },
@@ -1328,10 +1328,10 @@ export const test_cli_scaffold = async (): Promise<void> => {
           "ef7a7743640fa6fd1a1628b0fd2443a1363a734ddf0e9538d9b4420ca340297b",
         ],
         createScaffoldFile: [
-          "7cdc7b2f2add34528ed6f14e6a41b6e658aee750cf60a32599b41a10a4497bbf",
+          "1fa0cfeba65f2edc8a02da72e9ac72d88fa003971f1b91852d2529e823ab87c4",
         ],
         overwriteScaffoldFile: [
-          "70ad4f2b6c4ea20e8087a3603875854ea60dd6c111f53c08516b379d6de3ee9e",
+          "71e662d9401c14e8599d8cfebc597919003836ec04c7822958799c7ea9553d16",
         ],
       },
     },
@@ -2179,8 +2179,18 @@ export const test_cli_scaffold = async (): Promise<void> => {
         () => files["scripts/compile.ts"]!.includes('scope: "source"'),
       ],
       [
+        // The default stays the finished-film gate; `--scope` is what lets a
+        // production in progress run the same rule set without a complete
+        // review queue.
         "filesScripts3",
-        () => files["scripts/lint.ts"]!.includes('scope: "review"'),
+        () =>
+          files["scripts/lint.ts"]!.includes(
+            `if (index === -1) return "review";`,
+          ),
+      ],
+      [
+        "filesScripts3Scoped",
+        () => files["scripts/lint.ts"]!.includes(".lint({ scope })"),
       ],
       [
         "filesREADME",
@@ -2200,6 +2210,7 @@ export const test_cli_scaffold = async (): Promise<void> => {
       filesScripts: true,
       filesScripts2: true,
       filesScripts3: true,
+      filesScripts3Scoped: true,
       filesREADME: true,
       filesREADME2: true,
     },
