@@ -232,8 +232,6 @@ export const test_workspace_packaged_fixture_cleanup = (): void => {
         "let:captureReceiptFailure",
         "let:captureExecutableFailure",
         "let:captureConfigFailure",
-        "let:packagedSentinelFailure",
-        "let:packagedPresenceFailure",
         "let:onnxNativeBindingFailure",
         "let:tamperedRenderPlanFailure",
         "let:staleRenderRuntimeFailure",
@@ -265,18 +263,6 @@ export const test_workspace_packaged_fixture_cleanup = (): void => {
           catchActions: ["captureConfigFailure={error};", "throwerror;"],
           finallyActions: [
             'preservePackagedE2eCleanup(captureConfigFailure,"packagedcaptureconfig",()=>writeFileSync(captureConfigPath,captureConfigText),);',
-          ],
-        },
-        {
-          catchActions: ["packagedSentinelFailure={error};", "throwerror;"],
-          finallyActions: [
-            'preservePackagedE2eCleanup(packagedSentinelFailure,"packagedlintsentinel",()=>rmSync(packagedSentinelPath,{force:true}),);',
-          ],
-        },
-        {
-          catchActions: ["packagedPresenceFailure={error};", "throwerror;"],
-          finallyActions: [
-            'preservePackagedE2eCleanup(packagedPresenceFailure,"packagedstate-presencefixture",()=>rmSync(packagedPresenceProject,{force:true,maxRetries:3,recursive:true,retryDelay:100,}),);',
           ],
         },
         {

@@ -250,7 +250,34 @@ export const setProductionFixtureShotContract = (
       contract: definedShotContract(contract),
     }),
   );
+  // The one-shot fixture exempts the scene it does not shoot. Restoring that
+  // shot restores the work the exemption denies, and a ledger asserting both
+  // absence and realization contradicts itself, so the exemption goes with it.
+  if (contract.source.export === "answer")
+    liftFixtureSceneDisposition(project.root, "SCN-002");
   return result;
+};
+
+/** Reactivate a fixture scene whose shot has been restored. */
+export const liftFixtureSceneDisposition = (
+  root: string,
+  sceneId: string,
+): void => {
+  const file = [
+    path.join(root, ".automovie/design/fixture-film/screenplay/index.json"),
+    path.join(root, ".automovie/design/screenplay/index.json"),
+  ].find((candidate) => fs.existsSync(candidate));
+  if (file === undefined) return;
+  const index = JSON.parse(
+    fs.readFileSync(file, "utf8"),
+  ) as IAutoMovieScreenplayIndex;
+  for (const scene of index.screenplay.scenes)
+    if (scene.id === sceneId) scene.disposition = null;
+  fs.writeFileSync(
+    file,
+    `${JSON.stringify(index, null, 2)}
+`,
+  );
 };
 
 /** Starter production design with optional shallow overrides. */
@@ -272,45 +299,56 @@ export const productionDesign = (
  *
  * Scene numbers are production-scoped, so a second production's shots cannot
  * join to the first one's ledger and the compiler refuses shot contracts whose
- * upstream slot is absent. Both scenes are exempted at the production phase,
- * because a registry fixture registers a production rather than shooting one.
+ * upstream slot is absent. The registry fixture keeps one shot, exactly as the
+ * main fixture does, so only the scene it does not shoot is exempted: an
+ * exemption over a scene a shot actually realizes asserts both absence and
+ * realized work.
  */
-export const writeSecondProductionScreenplay = (props: {
+export const writeProductionScreenplay = (props: {
   root: string;
   productionId: string;
 }): void => {
-  const index = scaffoldJson<IAutoMovieScreenplayIndex>(
-    ".automovie/design/screenplay/index.json",
-  );
-  const file = path.join(
-    props.root,
-    ".automovie/design",
-    props.productionId,
-    "screenplay/index.json",
-  );
-  fs.mkdirSync(path.dirname(file), { recursive: true });
-  fs.writeFileSync(
-    file,
-    `${JSON.stringify(
+  // Render the starter under this production's own name so the index, the
+  // treatment and the scene prose all address `docs/<productionId>/`. Copying
+  // the scaffold asset directly would leave the `{{name}}` token in every path
+  // and the index would dangle from documents nobody can open.
+  const rendered = renderScaffold({ name: props.productionId });
+  const index = JSON.parse(
+    rendered[".automovie/design/screenplay/index.json"]!,
+  ) as IAutoMovieScreenplayIndex;
+  const files: Record<string, string> = {
+    [`.automovie/design/${props.productionId}/screenplay/index.json`]: `${JSON.stringify(
       {
         ...index,
-        production: props.productionId,
         screenplay: {
           ...index.screenplay,
           scenes: index.screenplay.scenes.map((scene) => ({
             ...scene,
-            disposition: {
-              phase: "production" as const,
-              reason:
-                "This fixture registers a second production rather than shooting one.",
-            },
+            disposition:
+              scene.id === "SCN-002"
+                ? {
+                    phase: "production" as const,
+                    reason:
+                      "This fixture keeps only the opening shot, so this scene is intentionally unrealized here.",
+                  }
+                : null,
           })),
         },
       },
       null,
       2,
-    )}\n`,
-  );
+    )}
+`,
+  };
+  for (const [file, content] of Object.entries(rendered))
+    if (file.startsWith(`docs/${props.productionId}/`)) files[file] = content;
+  // `writeFiles` refuses a populated root, and this always writes into a
+  // fixture that already exists.
+  for (const [file, content] of Object.entries(files)) {
+    const target = path.join(props.root, file);
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.writeFileSync(target, content);
+  }
 };
 
 const oneShotProduction = (

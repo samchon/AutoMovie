@@ -1538,13 +1538,15 @@ if (
   // five-minute command fence before TypeScript linting itself begins.
   //
   // `npm run lint` runs the compiler at review scope, so this is the compiler's
-  // own refusal rather than a project rule's: a starter whose reviews are not
-  // complete has scenes nothing observed.
+  // own refusal rather than a project rule's. The starter authors required
+  // acceptance scenarios for both scenes, so what it lacks is the reviews that
+  // discharge them; `screenplay-scene-unobserved` covers the other half, a
+  // scene no required scenario cites at all.
   runExpectedFailure(
     "enforce packaged starter review-scope gate",
     "npm run lint",
     starterDir,
-    "A compiled realization is not an observation",
+    "Review state is missing",
     900_000,
   );
   run("test packaged starter", "npm test", starterDir);

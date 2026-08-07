@@ -13,6 +13,7 @@ import {
   productionDesign,
   productionFixture,
   shotContract,
+  writeProductionScreenplay,
 } from "./productionFixtures";
 
 const throws = (closure: () => unknown, signal?: string): boolean => {
@@ -306,9 +307,16 @@ export const test_mcp_production_namespaces = (): void => {
     );
     TestValidator.predicate(
       "second production design binds its namespace",
-      beta.setProductionDesign(
-        productionDesign({ id: "beta", title: "Beta production" }),
-      ).accepted && beta.setShotContract(shotContract()).accepted,
+      (() => {
+        // Scene numbers are production-scoped, so this namespace's shot cannot
+        // join to the alpha production's ledger and needs one of its own.
+        writeProductionScreenplay({ root: fixture.root, productionId: "beta" });
+        return (
+          beta.setProductionDesign(
+            productionDesign({ id: "beta", title: "Beta production" }),
+          ).accepted && beta.setShotContract(shotContract()).accepted
+        );
+      })(),
     );
     const alphaCompiler = new AutoMovieProductionCompiler(alpha);
     const betaCompiler = new AutoMovieProductionCompiler(beta);

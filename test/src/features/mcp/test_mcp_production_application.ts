@@ -35,7 +35,7 @@ import {
   productionFixture,
   shotContract,
   testCaptureRuntimeIdentity,
-  writeSecondProductionScreenplay,
+  writeProductionScreenplay,
 } from "./productionFixtures";
 import { productionH264Mp4 } from "./productionMediaFixtures";
 
@@ -259,7 +259,7 @@ export const test_mcp_production_application = async (): Promise<void> => {
     );
     // Scene numbers are production-scoped, so this production's shots cannot
     // join to the first one's ledger and need one of their own.
-    writeSecondProductionScreenplay({
+    writeProductionScreenplay({
       root: fixture.root,
       productionId: "second-film",
     });

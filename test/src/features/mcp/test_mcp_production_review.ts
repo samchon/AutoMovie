@@ -25,6 +25,7 @@ import {
   setProductionFixtureShotContract,
   shotContract,
   testCaptureRuntimeIdentity,
+  writeProductionScreenplay,
 } from "./productionFixtures";
 
 /**
@@ -604,11 +605,21 @@ export const test_mcp_production_review = async (): Promise<void> => {
     );
     TestValidator.predicate(
       "a second production can bind the same shared model independently",
-      secondProject.setProductionDesign(
-        productionDesign({ id: "second-film", title: "second-film" }),
-      ).accepted &&
-        secondProject.setShotContract(structuredClone(aliasedReviewFrameShot))
-          .accepted,
+      (() => {
+        // Scene numbers are production-scoped, so this production's shot cannot
+        // join to the first one's ledger and needs one of its own.
+        writeProductionScreenplay({
+          root: fixture.root,
+          productionId: "second-film",
+        });
+        return (
+          secondProject.setProductionDesign(
+            productionDesign({ id: "second-film", title: "second-film" }),
+          ).accepted &&
+          secondProject.setShotContract(structuredClone(aliasedReviewFrameShot))
+            .accepted
+        );
+      })(),
     );
     const secondReview = new AutoMovieProductionReviewService(secondProject);
     const secondCompiler = new AutoMovieProductionCompiler(
