@@ -499,13 +499,17 @@ export class AutoMovieProductionCompiler {
       ) || input.scope === "design"
         ? { entries: [] }
         : this.reviewQueue(statusForReview(), reviewSnapshot);
+    const screenplay = this.project.screenplayIndex();
+    diagnostics.push(
+      ...screenplayResidencyDiagnostics({ contracts: graph.shots, screenplay }),
+    );
     if (input.scope !== "design")
       diagnostics.push(
         ...screenplayCoverageDiagnostics({
           contracts: graph.shots,
           realizations,
           scope: input.scope,
-          screenplay: this.project.screenplayIndex(),
+          screenplay,
         }),
       );
     if (input.scope === "review" || input.scope === "final")
@@ -4046,6 +4050,35 @@ const screenplayCoverageDiagnostics = (props: {
     },
   ];
 };
+
+/**
+ * A resident shot contract requires a resident screenplay index.
+ *
+ * Shot ids join to scene ids, so a shot written before the ledger exists is
+ * citing numbering nothing has fixed yet. This is residency only: the index is
+ * never decoded here, so a structurally valid but empty ledger still counts as
+ * present and its content is judged by the checks that own it.
+ *
+ * A project with no shot contracts is silent, which is what keeps a fresh
+ * scaffold and a design-only session from being told to author a screenplay
+ * before there is anything to join it to.
+ */
+const screenplayResidencyDiagnostics = (props: {
+  contracts: ReadonlyMap<string, IAutoMovieShotContract>;
+  screenplay: IAutoMovieScreenplayIndex | null;
+}): IAutoMovieDiagnostic[] =>
+  props.screenplay !== null || props.contracts.size === 0
+    ? []
+    : [
+        {
+          code: "screenplay-index-missing",
+          category: "error",
+          phase: "compile",
+          target: "screenplay",
+          path: null,
+          message: `${props.contracts.size} shot contract(s) are resident with no screenplay index. Their scene citations join to numbering that does not exist, so nothing downstream can be traced to authored work. Author the screenplay index, then compile again.`,
+        },
+      ];
 
 const reviewGateDiagnostics = (
   queue: IAutoMovieReviewQueue,
