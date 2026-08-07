@@ -413,6 +413,24 @@ export type IAutoMovieFormationLayout =
         /** Front-to-back spacing between ranks. */
         depth: number;
       };
+      /**
+       * How far a member may stand off its exact slot, in meters.
+       *
+       * Formed troops are dressed to a tolerance, not to a lattice, and that
+       * tolerance is what makes a unit read as many people holding a line
+       * rather than one figure repeated on a grid. Omit it, or leave both
+       * numbers at zero, for exact geometry.
+       *
+       * The deviation is derived from the formation seed and the slot index, so
+       * it costs no storage, regenerates identically everywhere, and the same
+       * design always compiles to the same army.
+       */
+      dressing?: {
+        /** Maximum left-to-right deviation in meters, zero or above. */
+        lateral: number;
+        /** Maximum front-to-back deviation in meters, zero or above. */
+        depth: number;
+      };
     }
   | {
       /** March column. */
@@ -428,6 +446,24 @@ export type IAutoMovieFormationLayout =
         /** Front-to-back spacing between ranks. */
         depth: number;
       };
+      /**
+       * How far a member may stand off its exact slot, in meters.
+       *
+       * Formed troops are dressed to a tolerance, not to a lattice, and that
+       * tolerance is what makes a unit read as many people holding a line
+       * rather than one figure repeated on a grid. Omit it, or leave both
+       * numbers at zero, for exact geometry.
+       *
+       * The deviation is derived from the formation seed and the slot index, so
+       * it costs no storage, regenerates identically everywhere, and the same
+       * design always compiles to the same army.
+       */
+      dressing?: {
+        /** Maximum left-to-right deviation in meters, zero or above. */
+        lateral: number;
+        /** Maximum front-to-back deviation in meters, zero or above. */
+        depth: number;
+      };
     }
   | {
       /** Wedge layout. */
@@ -441,6 +477,24 @@ export type IAutoMovieFormationLayout =
         /** Front-to-back spacing between rows. */
         depth: number;
       };
+      /**
+       * How far a member may stand off its exact slot, in meters.
+       *
+       * Formed troops are dressed to a tolerance, not to a lattice, and that
+       * tolerance is what makes a unit read as many people holding a line
+       * rather than one figure repeated on a grid. Omit it, or leave both
+       * numbers at zero, for exact geometry.
+       *
+       * The deviation is derived from the formation seed and the slot index, so
+       * it costs no storage, regenerates identically everywhere, and the same
+       * design always compiles to the same army.
+       */
+      dressing?: {
+        /** Maximum left-to-right deviation in meters, zero or above. */
+        lateral: number;
+        /** Maximum front-to-back deviation in meters, zero or above. */
+        depth: number;
+      };
     }
   | {
       /** Arc layout. */
@@ -449,6 +503,24 @@ export type IAutoMovieFormationLayout =
       radius: number;
       /** Finite covered angle, strictly above zero and at most 360 degrees. */
       arcDegrees: number;
+      /**
+       * How far a member may stand off its exact slot, in meters.
+       *
+       * Formed troops are dressed to a tolerance, not to a lattice, and that
+       * tolerance is what makes a unit read as many people holding a line
+       * rather than one figure repeated on a grid. Omit it, or leave both
+       * numbers at zero, for exact geometry.
+       *
+       * The deviation is derived from the formation seed and the slot index, so
+       * it costs no storage, regenerates identically everywhere, and the same
+       * design always compiles to the same army.
+       */
+      dressing?: {
+        /** Maximum left-to-right deviation in meters, zero or above. */
+        lateral: number;
+        /** Maximum front-to-back deviation in meters, zero or above. */
+        depth: number;
+      };
     }
   | {
       /** Seeded scatter layout. */

@@ -2129,6 +2129,38 @@ const validateInstanceSets = (
     );
 };
 
+/**
+ * A dressing tolerance is a distance, so it obeys the same bounds spacing does,
+ * except that zero is meaningful: it is how a layout asks for exact geometry.
+ */
+const validateFormationDressing = (
+  diagnostics: IAutoMovieDiagnostic[],
+  layout: IAutoMovieFormationDesign["layout"],
+  target: string,
+  file: string,
+): void => {
+  const dressing = "dressing" in layout ? layout.dressing : undefined;
+  if (dressing === undefined) return;
+  bounded(
+    diagnostics,
+    dressing.lateral,
+    0,
+    10_000,
+    target,
+    file,
+    "layout.dressing.lateral",
+  );
+  bounded(
+    diagnostics,
+    dressing.depth,
+    0,
+    10_000,
+    target,
+    file,
+    "layout.dressing.depth",
+  );
+};
+
 const validateFormationLayout = (
   diagnostics: IAutoMovieDiagnostic[],
   formation: IAutoMovieFormationDesign,
@@ -2136,6 +2168,7 @@ const validateFormationLayout = (
   file: string,
 ): void => {
   const layout = formation.layout;
+  validateFormationDressing(diagnostics, layout, target, file);
   if (layout.kind === "line" || layout.kind === "column") {
     bounded(
       diagnostics,
