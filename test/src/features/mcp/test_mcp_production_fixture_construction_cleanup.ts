@@ -237,7 +237,7 @@ export const test_mcp_production_fixture_construction_cleanup = (): void => {
               "dispose:()=>fs.rmSync(root,{force:true,recursive:true})",
             ],
             tryDigest:
-              "9aeda34e94626084d3f1d7b695239fa99c0977f493f18e40bfe36bffe17683cd",
+              "015d797553159425e446950c312c2ab588a79451721fe8b5d6c33cd8ac202f32",
           },
         ],
         rootDeclarations: [
