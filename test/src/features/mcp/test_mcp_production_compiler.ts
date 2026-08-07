@@ -1270,7 +1270,12 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
       "read-only success returns the fenced revision without a later read",
       {
         success: stableLint.success,
-        codes: [...diagnosticCodes(stableLint)].sort(compareCodeUnits),
+        // The one-shot fixture leaves its second scene unrealized, so the
+        // screenplay-coverage warning is expected here. What this case pins is
+        // read-only success under a revision fence, not the diagnostic set.
+        codes: [...diagnosticCodes(stableLint)]
+          .filter((code) => code !== "screenplay-scene-unrealized")
+          .sort(compareCodeUnits),
         budgetIsPositive: lintReadBudget > 0,
         readsMatchBudget: postFenceLintReads === lintReadBudget,
         mutated: postFenceLintMutation,

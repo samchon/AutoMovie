@@ -4016,8 +4016,15 @@ const screenplayCoverageDiagnostics = (props: {
     for (const evidence of contract.evidence ?? [])
       realized.add(evidence.scene);
   }
+  // A `production`-phase disposition is the index's own way of exempting a
+  // scene from shot realization with an auditable reason, so honouring it is
+  // the difference between a coverage gate and a demand that every scene be
+  // shot. Tombstones need no exemption; they are not active.
   const uncovered = props.screenplay.screenplay.scenes.filter(
-    (scene) => scene.status === "active" && realized.has(scene.id) === false,
+    (scene) =>
+      scene.status === "active" &&
+      scene.disposition?.phase !== "production" &&
+      realized.has(scene.id) === false,
   );
   if (uncovered.length === 0) return [];
   return [

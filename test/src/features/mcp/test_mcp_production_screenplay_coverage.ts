@@ -77,6 +77,9 @@ const coverage = (
  * 4. The negative twin: with only the realized scene left active, the check goes
  *    silent at every scope, so it tracks the real gap rather than firing on
  *    every compile.
+ * 5. A production-phase disposition, the index's own auditable exemption from shot
+ *    realization, clears the same scene without a tombstone. A coverage gate
+ *    that ignored it would be a demand that every scene be shot.
  */
 export const test_mcp_production_screenplay_coverage = (): void => {
   let failure: IScreenplayCoverageFixtureFailure | undefined;
@@ -113,6 +116,15 @@ export const test_mcp_production_screenplay_coverage = (): void => {
       );
     };
 
+    // The fixture ships SCN-002 exempted, since it deliberately keeps one shot.
+    // Lifting that exemption is what makes the scene genuinely uncovered, and
+    // restoring it below is the exemption case in its own right.
+    rewrite((index) => {
+      const scene = index.screenplay.scenes.find(
+        (entry) => entry.id === "SCN-002",
+      )!;
+      scene.disposition = null;
+    });
     const uncoveredSource = reopen().compile({ scope: "source" });
     TestValidator.equals(
       "an unrealized active scene warns while authoring without failing the compile",
@@ -161,10 +173,43 @@ export const test_mcp_production_screenplay_coverage = (): void => {
       const scene = index.screenplay.scenes.find(
         (entry) => entry.id === "SCN-002",
       )!;
+      scene.disposition = null;
       scene.status = "OMITTED";
     });
     TestValidator.equals(
       "an OMITTED tombstone is not an uncovered scene",
+      namedFacts([
+        [
+          "source",
+          () =>
+            codes(reopen().compile({ scope: "source" })).has(
+              "screenplay-scene-unrealized",
+            ),
+        ],
+        [
+          "review",
+          () =>
+            codes(reopen().compile({ scope: "review" })).has(
+              "screenplay-scene-unrealized",
+            ),
+        ],
+      ]),
+      { source: false, review: false },
+    );
+
+    rewrite((index) => {
+      const scene = index.screenplay.scenes.find(
+        (entry) => entry.id === "SCN-002",
+      )!;
+      scene.status = "active";
+      scene.disposition = {
+        phase: "production",
+        reason:
+          "This scene is deliberately unrealized in this production pass.",
+      };
+    });
+    TestValidator.equals(
+      "a production-phase disposition exempts the scene at every scope",
       namedFacts([
         [
           "source",

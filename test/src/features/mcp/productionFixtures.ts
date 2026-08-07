@@ -10,6 +10,7 @@ import {
   IAutoMovieFormationDesign,
   IAutoMovieModelRecipe,
   IAutoMovieProductionDesign,
+  IAutoMovieScreenplayIndex,
   IAutoMovieShotContract,
   IAutoMovieWorldDesign,
 } from "@automovie/interface";
@@ -79,6 +80,22 @@ export const productionFixture = (): {
       ".automovie/design/shots/answer.json",
     ])
       delete files[file];
+    // Dropping the answering shot leaves its scene without a realization, so
+    // the screenplay index must say the omission is deliberate. That is what a
+    // production-phase disposition is for, and recording it keeps this a
+    // one-shot fixture rather than an incomplete film.
+    const screenplay = JSON.parse(
+      files[".automovie/design/screenplay/index.json"]!,
+    ) as IAutoMovieScreenplayIndex;
+    for (const scene of screenplay.screenplay.scenes)
+      if (scene.id === "SCN-002")
+        scene.disposition = {
+          phase: "production",
+          reason:
+            "The one-shot fixture keeps only the opening shot, so this scene is intentionally unrealized here.",
+        };
+    files[".automovie/design/screenplay/index.json"] =
+      `${JSON.stringify(screenplay, null, 2)}\n`;
     files[".automovie/design/shots/opening.json"] =
       `${JSON.stringify(openingContract, null, 2)}\n`;
     files["src/shots/opening.ts"] = replaceScaffoldRegistrationContract({

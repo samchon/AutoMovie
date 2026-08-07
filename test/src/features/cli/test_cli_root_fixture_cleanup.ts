@@ -234,7 +234,7 @@ export const test_cli_root_fixture_cleanup = (): void => {
                 "letownershipFailure:{error:unknown}|undefined;",
               ],
               tryDigest:
-                "f5b6db8b7ce67763547d8640a4f1564d683d3058f8c87e93d16b5b062b6b8060",
+                "ccdeb71d9ed12516160fa60e108cc8f531ff64f4afdf9b74cc0613e9724be479",
             },
           ],
         },
@@ -255,7 +255,7 @@ export const test_cli_root_fixture_cleanup = (): void => {
                 "letscaffoldFailure:{error:unknown}|undefined;",
               ],
               tryDigest:
-                "6a2a256a7c0142d7ff5ac7ef879dc9e29dd3b5f9cf5e8bf4b02692bf9fec2ed8",
+                "3e53bd6b35c40917d520112ca39c428a7e70fb163a2f80f826ee3de4aed998a9",
             },
           ],
         },
