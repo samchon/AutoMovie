@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import ts from "typescript-compiler";
 
+import { namedFacts } from "../internal/predicates";
 import { preserveRenderJobFixtureCleanup } from "./test_mcp_production_render_job";
 
 const compact = (node: ts.Node, source: ts.SourceFile): string =>
@@ -173,26 +174,70 @@ export const test_mcp_production_render_job_single_hook_cleanup = (): void => {
   const undefinedPrimary = captureCleanup({
     primaryFailure: { error: undefined, present: true },
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "single render-job restoration preserves the guarded failure first",
-    success.caught === false &&
-      success.failure === undefined &&
-      success.order.join(",") === "cleanup-0" &&
-      primaryOnly.caught &&
-      primaryOnly.failure === primaryFailure &&
-      primaryOnly.order.join(",") === "cleanup-0" &&
-      standalone.caught &&
-      standalone.failure === restorationFailure &&
-      standalone.order.join(",") === "cleanup-0" &&
-      combined.caught &&
-      aggregateContainsExactly(combined.failure, [
-        primaryFailure,
-        restorationFailure,
-      ]) &&
-      combined.order.join(",") === "cleanup-0" &&
-      undefinedPrimary.caught &&
-      undefinedPrimary.failure === undefined &&
-      undefinedPrimary.order.join(",") === "cleanup-0",
+    namedFacts([
+      ["successCaught", () => success.caught === false],
+      [
+        "successFailure",
+        () => success.caught === false && success.failure === undefined,
+      ],
+      [
+        "successOrderJoin",
+        () =>
+          success.caught === false &&
+          success.failure === undefined &&
+          success.order.join(",") === "cleanup-0",
+      ],
+      ["primaryOnlyCaught", () => primaryOnly.caught],
+      [
+        "primaryOnlyFailurePrimaryFailure",
+        () => primaryOnly.failure === primaryFailure,
+      ],
+      [
+        "primaryOnlyOrderJoin",
+        () => primaryOnly.order.join(",") === "cleanup-0",
+      ],
+      ["standaloneCaught", () => standalone.caught],
+      [
+        "standaloneFailureRestorationFailure",
+        () => standalone.failure === restorationFailure,
+      ],
+      ["standaloneOrderJoin", () => standalone.order.join(",") === "cleanup-0"],
+      ["combinedCaught", () => combined.caught],
+      [
+        "aggregateContainsExactlyCombinedFailure",
+        () =>
+          aggregateContainsExactly(combined.failure, [
+            primaryFailure,
+            restorationFailure,
+          ]),
+      ],
+      ["combinedOrderJoin", () => combined.order.join(",") === "cleanup-0"],
+      ["undefinedPrimaryCaught", () => undefinedPrimary.caught],
+      ["undefinedPrimaryFailure", () => undefinedPrimary.failure === undefined],
+      [
+        "undefinedPrimaryOrderJoin",
+        () => undefinedPrimary.order.join(",") === "cleanup-0",
+      ],
+    ]),
+    {
+      successCaught: true,
+      successFailure: true,
+      successOrderJoin: true,
+      primaryOnlyCaught: true,
+      primaryOnlyFailurePrimaryFailure: true,
+      primaryOnlyOrderJoin: true,
+      standaloneCaught: true,
+      standaloneFailureRestorationFailure: true,
+      standaloneOrderJoin: true,
+      combinedCaught: true,
+      aggregateContainsExactlyCombinedFailure: true,
+      combinedOrderJoin: true,
+      undefinedPrimaryCaught: true,
+      undefinedPrimaryFailure: true,
+      undefinedPrimaryOrderJoin: true,
+    },
   );
   TestValidator.equals(
     "render-job regression protects every single hook restoration",
@@ -235,7 +280,7 @@ const CONTRACT = {
         "letpathnameSwapFailure:IRenderJobFixtureFailure|undefined;",
       ],
       tryDigest:
-        "136b80b5986a56d2ffd0b9ff4f6804778e22d7f20c2787457ab33178885a1874",
+        "e7685b6741d68ad62f5d68f38f4b99a0685ed405029ec67870c0ef080eb5221a",
     },
     {
       catchBodies: ["replacementFailure={error};", "throwerror;"],
@@ -250,7 +295,7 @@ const CONTRACT = {
         "letreplacementFailure:IRenderJobFixtureFailure|undefined;",
       ],
       tryDigest:
-        "7cddff1824b14840b9b6ed24ed1463042c11632cadade8e061dce82ebc3cc14b",
+        "d967a528aba50f87107cbb961973e09859d8fb2efdfc3b08c02824980fc93f4f",
     },
   ],
   rawFinalizers: [],

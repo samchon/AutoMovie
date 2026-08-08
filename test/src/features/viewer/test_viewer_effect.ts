@@ -316,17 +316,76 @@ export const test_viewer_effect = (): void => {
   camera.lookAt(0, 1, 0);
   camera.updateMatrixWorld(true);
   built.update(camera, 2);
-  TestValidator.predicate(
+  TestValidator.equals(
     "viewer renders bounded camera-facing billboard instances with debug identity",
-    built.object.count === built.stats.particles &&
-      built.stats.active &&
-      built.stats.particles > 0 &&
-      built.stats.particles <= built.stats.cap &&
-      built.object.visible &&
-      built.object.frustumCulled === false &&
-      built.object.geometry.getAttribute("automovieOpacity")?.count ===
-        effect!.recipe.budget.maxParticles &&
-      built.object.userData.automovieEffect.digest === effect!.digest,
+    namedFacts([
+      ["builtObjectCount", () => built.object.count === built.stats.particles],
+      [
+        "builtStatsActive",
+        () =>
+          built.object.count === built.stats.particles && built.stats.active,
+      ],
+      [
+        "builtStatsParticles",
+        () =>
+          built.object.count === built.stats.particles &&
+          built.stats.active &&
+          built.stats.particles > 0,
+      ],
+      [
+        "builtStatsParticles2",
+        () =>
+          built.object.count === built.stats.particles &&
+          built.stats.active &&
+          built.stats.particles > 0 &&
+          built.stats.particles <= built.stats.cap,
+      ],
+      [
+        "builtObjectVisible",
+        () =>
+          built.object.count === built.stats.particles &&
+          built.stats.active &&
+          built.stats.particles > 0 &&
+          built.stats.particles <= built.stats.cap &&
+          built.object.visible,
+      ],
+      [
+        "builtObjectFrustumCulled",
+        () =>
+          built.object.count === built.stats.particles &&
+          built.stats.active &&
+          built.stats.particles > 0 &&
+          built.stats.particles <= built.stats.cap &&
+          built.object.visible &&
+          built.object.frustumCulled === false,
+      ],
+      [
+        "builtObjectGeometry",
+        () =>
+          built.object.count === built.stats.particles &&
+          built.stats.active &&
+          built.stats.particles > 0 &&
+          built.stats.particles <= built.stats.cap &&
+          built.object.visible &&
+          built.object.frustumCulled === false &&
+          built.object.geometry.getAttribute("automovieOpacity")?.count ===
+            effect!.recipe.budget.maxParticles,
+      ],
+      [
+        "builtObjectUserData",
+        () => built.object.userData.automovieEffect.digest === effect!.digest,
+      ],
+    ]),
+    {
+      builtObjectCount: true,
+      builtStatsActive: true,
+      builtStatsParticles: true,
+      builtStatsParticles2: true,
+      builtObjectVisible: true,
+      builtObjectFrustumCulled: true,
+      builtObjectGeometry: true,
+      builtObjectUserData: true,
+    },
   );
   built.update(camera, 0);
   TestValidator.equals(

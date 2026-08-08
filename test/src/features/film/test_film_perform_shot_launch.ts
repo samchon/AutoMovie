@@ -193,9 +193,16 @@ export const test_film_perform_shot_launch = (): void => {
     "the flight launches at the action's start",
     nclose(times[0]!, 0.2),
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "and lands within the shot",
-    times[times.length - 1]! > 0.2 && times[times.length - 1]! < 2,
+    namedFacts([
+      ["refused", () => times[times.length - 1]! > 0.2],
+      [
+        "violated",
+        () => times[times.length - 1]! > 0.2 && times[times.length - 1]! < 2,
+      ],
+    ]),
+    { refused: true, violated: true },
   );
   const preLaunch = sampleClip(flight, 0).get("node:arrow:translation")!.value;
   TestValidator.predicate(
@@ -295,10 +302,18 @@ export const test_film_perform_shot_launch = (): void => {
       "changing hit time moves the reaction event",
       fastHit.time < okHit.time,
     );
-    TestValidator.predicate(
+    TestValidator.equals(
       "the shifted hit still schedules the struck actor",
-      fastHit.reaction === "foe" &&
-        faster.shot.performances.some((p) => p.node === "foe"),
+      namedFacts([
+        ["refused", () => fastHit.reaction === "foe"],
+        [
+          "violated",
+          () =>
+            fastHit.reaction === "foe" &&
+            faster.shot.performances.some((p) => p.node === "foe"),
+        ],
+      ]),
+      { refused: true, violated: true },
     );
   }
 
@@ -709,9 +724,17 @@ export const test_film_perform_shot_launch = (): void => {
     ],
     (_target, seconds) => ({ x: 6 - seconds, y: 1.2, z: 0 }),
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "a launch samples its live bone target while solving the intercept",
-    liveBone.success === true && liveBone.shot.objectMotions.length === 1,
+    namedFacts([
+      ["refused", () => liveBone.success === true],
+      [
+        "violated",
+        () =>
+          liveBone.success === true && liveBone.shot.objectMotions.length === 1,
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 
   const unavailableBone = perform(
@@ -729,10 +752,18 @@ export const test_film_perform_shot_launch = (): void => {
     ],
     (_target, seconds) => (seconds === 0 ? { x: 6, y: 1.2, z: 0 } : null),
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "a missing live bone sample falls back to the validated target",
-    unavailableBone.success === true &&
-      unavailableBone.shot.objectMotions.length === 1,
+    namedFacts([
+      ["refused", () => unavailableBone.success === true],
+      [
+        "violated",
+        () =>
+          unavailableBone.success === true &&
+          unavailableBone.shot.objectMotions.length === 1,
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 
   const unstagedBone = perform(
@@ -749,13 +780,21 @@ export const test_film_perform_shot_launch = (): void => {
     ],
     () => ({ x: 6, y: 1.2, z: 0 }),
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "launch refuses a bone target outside the staged scene",
-    unstagedBone.success === false &&
-      unstagedBone.violations.some(
-        (violation) =>
-          violation.path.endsWith(".at.node") &&
-          violation.expected.includes("staged scene node"),
-      ),
+    namedFacts([
+      ["refused", () => unstagedBone.success === false],
+      [
+        "violated",
+        () =>
+          unstagedBone.success === false &&
+          unstagedBone.violations.some(
+            (violation) =>
+              violation.path.endsWith(".at.node") &&
+              violation.expected.includes("staged scene node"),
+          ),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 };

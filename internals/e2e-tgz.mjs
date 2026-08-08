@@ -272,6 +272,40 @@ const runJson = (label, executable, args, cwd) => {
   return output;
 };
 
+/**
+ * Run a command and require its output to contain an exact phrase.
+ *
+ * A command that succeeds is not the same as a command that did the thing: `npm
+ * run design` exits zero whether it wrote a record or left one alone, and only
+ * the second answers whether the typed source still derives what ships.
+ */
+const runExpectedOutput = (
+  label,
+  command,
+  cwd,
+  expected,
+  timeout = 300_000,
+) => {
+  console.log(`> ${label}`);
+  const result = spawnSync(command, {
+    cwd,
+    shell: true,
+    encoding: "utf8",
+    maxBuffer: 64 * 1024 * 1024,
+    stdio: ["ignore", "pipe", "pipe"],
+    timeout,
+  });
+  if (commandSucceeded(result) === false) failCommand(label, result, timeout);
+  const output = `${result.stdout ?? ""}${result.stderr ?? ""}`;
+  for (const phrase of expected)
+    if (output.includes(phrase) === false)
+      throw new Error(
+        `${label}: expected output to contain ${JSON.stringify(phrase)}.
+${output}`,
+      );
+  console.log(`✓ ${label}`);
+};
+
 const CLIENT_SOURCE = `
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import {
@@ -1548,6 +1582,55 @@ if (
     starterDir,
     "Review state is missing",
     900_000,
+  );
+  // The design records are derived from the typed subjects rather than
+  // transcribed beside them, and nothing else checks that the derivation
+  // settles. The compile above already migrated the shipped records into the
+  // trees the compiler reads, so the first run here must report every record
+  // unchanged: the subjects derive exactly what the compiler just consumed
+  // rather than something new each time.
+  runExpectedOutput(
+    "packaged starter design records derive from their subjects",
+    "npm run design",
+    starterDir,
+    [
+      "unchanged models/sentinel.json",
+      "unchanged models/army-hero.json",
+      "unchanged formations/army.json",
+      "unchanged world.json",
+    ],
+  );
+  // The field must contain the unit standing on it, which is the relation its
+  // own specification states and which two independently authored numbers got
+  // wrong. Reading it back through the packaged project reader checks the
+  // shipped starter rather than the source that produced it, and asks the
+  // owner of the design layout where each record lives instead of restating it.
+  const fieldProbePath = join(starterDir, "verify-packaged-field.mjs");
+  writeFileSync(
+    fieldProbePath,
+    `import { AutoMovieProductionProject } from "@automovie/mcp";
+
+const project = AutoMovieProductionProject.openReadOnly(process.cwd());
+const world = project.design({ kind: "world" });
+const formation = project.design({ kind: "formation", id: "army" });
+const ground = world.surfaces.find((surface) => surface.id === "ground");
+const half = Math.max(...ground.polygon.map((point) => Math.abs(point.x)));
+const width = (formation.layout.files - 1) * formation.layout.spacing.lateral;
+const depth = (formation.layout.ranks - 1) * formation.layout.spacing.depth;
+const reach = Math.max(
+  Math.abs(formation.anchor.x) + width / 2,
+  Math.abs(formation.anchor.z) + depth,
+);
+if (half < reach)
+  throw new Error(
+    \`packaged starter ground half-extent \${half} does not contain an army reaching \${reach}.\`,
+  );
+`,
+  );
+  run(
+    "packaged starter field contains its army",
+    "node verify-packaged-field.mjs",
+    starterDir,
   );
   run("test packaged starter", "npm test", starterDir);
   // First publication acquires the pinned Kokoro model, runs CPU ONNX

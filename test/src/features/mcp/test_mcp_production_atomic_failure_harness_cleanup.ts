@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import ts from "typescript-compiler";
 
+import { namedFacts } from "../internal/predicates";
 import { preserveProductionProjectFixtureCleanup } from "./test_mcp_production_project";
 
 const compact = (node: ts.Node, source: ts.SourceFile): string =>
@@ -231,51 +232,134 @@ export const test_mcp_production_atomic_failure_harness_cleanup = (): void => {
     cleanupFailures: [{ error: undefined, present: true }],
     primaryFailure: { error: undefined, present: true },
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "atomic harness cleanup preserves acquisition and failure order",
-    success.caught === false &&
-      success.failure === undefined &&
-      success.order.join(",") === "0,1,2" &&
-      partial.caught &&
-      partial.failure === primaryFailure &&
-      partial.order.join(",") === "0" &&
-      primaryOnly.caught &&
-      primaryOnly.failure === primaryFailure &&
-      primaryOnly.order.join(",") === "0,1,2" &&
-      standalone.caught &&
-      standalone.failure === removeFailure &&
-      standalone.order.join(",") === "0,1,2" &&
-      multiple.caught &&
-      aggregateContainsExactly(multiple.failure, [
-        renameFailure,
-        fixtureFailure,
-      ]) &&
-      multiple.order.join(",") === "0,1,2" &&
-      combined.caught &&
-      aggregateContainsExactly(combined.failure, [
-        primaryFailure,
-        renameFailure,
-        fixtureFailure,
-      ]) &&
-      combined.order.join(",") === "0,1,2" &&
-      nestedCombined.caught &&
-      aggregateContainsExactly(nestedCombined.failure, [
-        nestedPrimaryFailure,
-        renameFailure,
-      ]) &&
-      nestedCombined.order.join(",") === "0,1,2" &&
-      undefinedPrimary.caught &&
-      undefinedPrimary.failure === undefined &&
-      undefinedPrimary.order.join(",") === "0,1,2" &&
-      undefinedStandalone.caught &&
-      undefinedStandalone.failure === undefined &&
-      undefinedStandalone.order.join(",") === "0,1,2" &&
-      undefinedCombined.caught &&
-      aggregateContainsExactly(undefinedCombined.failure, [
-        undefined,
-        undefined,
-      ]) &&
-      undefinedCombined.order.join(",") === "0,1,2",
+    namedFacts([
+      ["successCaught", () => success.caught === false],
+      [
+        "successFailure",
+        () => success.caught === false && success.failure === undefined,
+      ],
+      [
+        "successOrderJoin",
+        () =>
+          success.caught === false &&
+          success.failure === undefined &&
+          success.order.join(",") === "0,1,2",
+      ],
+      ["partialCaught", () => partial.caught],
+      [
+        "partialFailurePrimaryFailure",
+        () => partial.failure === primaryFailure,
+      ],
+      ["partialOrderJoin", () => partial.order.join(",") === "0"],
+      ["primaryOnlyCaught", () => primaryOnly.caught],
+      [
+        "primaryOnlyFailurePrimaryFailure",
+        () => primaryOnly.failure === primaryFailure,
+      ],
+      ["primaryOnlyOrderJoin", () => primaryOnly.order.join(",") === "0,1,2"],
+      ["standaloneCaught", () => standalone.caught],
+      [
+        "standaloneFailureRemoveFailure",
+        () => standalone.failure === removeFailure,
+      ],
+      ["standaloneOrderJoin", () => standalone.order.join(",") === "0,1,2"],
+      ["multipleCaught", () => multiple.caught],
+      [
+        "aggregateContainsExactlyMultipleFailure",
+        () =>
+          aggregateContainsExactly(multiple.failure, [
+            renameFailure,
+            fixtureFailure,
+          ]),
+      ],
+      ["multipleOrderJoin", () => multiple.order.join(",") === "0,1,2"],
+      ["combinedCaught", () => combined.caught],
+      [
+        "aggregateContainsExactlyCombinedFailure",
+        () =>
+          aggregateContainsExactly(combined.failure, [
+            primaryFailure,
+            renameFailure,
+            fixtureFailure,
+          ]),
+      ],
+      ["combinedOrderJoin", () => combined.order.join(",") === "0,1,2"],
+      ["nestedCombinedCaught", () => nestedCombined.caught],
+      [
+        "aggregateContainsExactlyNestedCombinedFailure",
+        () =>
+          aggregateContainsExactly(nestedCombined.failure, [
+            nestedPrimaryFailure,
+            renameFailure,
+          ]),
+      ],
+      [
+        "nestedCombinedOrderJoin",
+        () => nestedCombined.order.join(",") === "0,1,2",
+      ],
+      ["undefinedPrimaryCaught", () => undefinedPrimary.caught],
+      ["undefinedPrimaryFailure", () => undefinedPrimary.failure === undefined],
+      [
+        "undefinedPrimaryOrderJoin",
+        () => undefinedPrimary.order.join(",") === "0,1,2",
+      ],
+      ["undefinedStandaloneCaught", () => undefinedStandalone.caught],
+      [
+        "undefinedStandaloneFailure",
+        () => undefinedStandalone.failure === undefined,
+      ],
+      [
+        "undefinedStandaloneOrderJoin",
+        () => undefinedStandalone.order.join(",") === "0,1,2",
+      ],
+      ["undefinedCombinedCaught", () => undefinedCombined.caught],
+      [
+        "aggregateContainsExactlyUndefinedCombinedFailure",
+        () =>
+          aggregateContainsExactly(undefinedCombined.failure, [
+            undefined,
+            undefined,
+          ]),
+      ],
+      [
+        "undefinedCombinedOrderJoin",
+        () => undefinedCombined.order.join(",") === "0,1,2",
+      ],
+    ]),
+    {
+      successCaught: true,
+      successFailure: true,
+      successOrderJoin: true,
+      partialCaught: true,
+      partialFailurePrimaryFailure: true,
+      partialOrderJoin: true,
+      primaryOnlyCaught: true,
+      primaryOnlyFailurePrimaryFailure: true,
+      primaryOnlyOrderJoin: true,
+      standaloneCaught: true,
+      standaloneFailureRemoveFailure: true,
+      standaloneOrderJoin: true,
+      multipleCaught: true,
+      aggregateContainsExactlyMultipleFailure: true,
+      multipleOrderJoin: true,
+      combinedCaught: true,
+      aggregateContainsExactlyCombinedFailure: true,
+      combinedOrderJoin: true,
+      nestedCombinedCaught: true,
+      aggregateContainsExactlyNestedCombinedFailure: true,
+      nestedCombinedOrderJoin: true,
+      undefinedPrimaryCaught: true,
+      undefinedPrimaryFailure: true,
+      undefinedPrimaryOrderJoin: true,
+      undefinedStandaloneCaught: true,
+      undefinedStandaloneFailure: true,
+      undefinedStandaloneOrderJoin: true,
+      undefinedCombinedCaught: true,
+      aggregateContainsExactlyUndefinedCombinedFailure: true,
+      undefinedCombinedOrderJoin: true,
+    },
   );
   TestValidator.equals(
     "atomic-failure harness owns hooks and fixture after handoff",

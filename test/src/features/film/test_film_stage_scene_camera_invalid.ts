@@ -2,7 +2,7 @@ import { stageScene } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import { makeScriptWrite, makeStagingWrite } from "../internal/filmFixtures";
-import { hasViolation } from "../internal/predicates";
+import { hasViolation, namedFacts } from "../internal/predicates";
 
 /**
  * Pins the camera gates: a field of view must sit strictly inside (0, 180)° and
@@ -60,29 +60,69 @@ export const test_film_stage_scene_camera_invalid = (): void => {
     }),
   );
   TestValidator.equals("fails", staged.success, false);
-  TestValidator.predicate(
+  TestValidator.equals(
     "fov boundary rejected",
-    staged.success === false &&
-      hasViolation(staged, "range", "$input.cameras[0].fovDeg"),
+    namedFacts([
+      ["refused", () => staged.success === false],
+      [
+        "violated",
+        () =>
+          staged.success === false &&
+          hasViolation(staged, "range", "$input.cameras[0].fovDeg"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "dangling look-at rejected",
-    staged.success === false &&
-      hasViolation(staged, "type", "$input.cameras[1].lookAt.node"),
+    namedFacts([
+      ["refused", () => staged.success === false],
+      [
+        "violated",
+        () =>
+          staged.success === false &&
+          hasViolation(staged, "type", "$input.cameras[1].lookAt.node"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "zero look vector rejected",
-    staged.success === false &&
-      hasViolation(staged, "range", "$input.cameras[2].lookAt"),
+    namedFacts([
+      ["refused", () => staged.success === false],
+      [
+        "violated",
+        () =>
+          staged.success === false &&
+          hasViolation(staged, "range", "$input.cameras[2].lookAt"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "non-finite position rejected",
-    staged.success === false &&
-      hasViolation(staged, "range", "$input.cameras[3].position"),
+    namedFacts([
+      ["refused", () => staged.success === false],
+      [
+        "violated",
+        () =>
+          staged.success === false &&
+          hasViolation(staged, "range", "$input.cameras[3].position"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "non-finite point target rejected",
-    staged.success === false &&
-      hasViolation(staged, "range", "$input.cameras[4].lookAt.point"),
+    namedFacts([
+      ["refused", () => staged.success === false],
+      [
+        "violated",
+        () =>
+          staged.success === false &&
+          hasViolation(staged, "range", "$input.cameras[4].lookAt.point"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 };

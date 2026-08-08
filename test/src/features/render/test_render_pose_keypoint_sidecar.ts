@@ -17,7 +17,7 @@ import {
   makeMotion,
   makePose,
 } from "../internal/fixtures";
-import { nclose, throwsError } from "../internal/predicates";
+import { namedFacts, nclose, throwsError } from "../internal/predicates";
 
 const IDENTITY_Q = { x: 0, y: 0, z: 0, w: 1 };
 const t3 = (x: number, y: number, z: number): IAutoMovieTransform => ({
@@ -137,16 +137,24 @@ export const test_render_pose_keypoint_sidecar = (): void => {
     still.frames[0]!.actors[0]!.node,
     "hero",
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "a still hips stays centered on both frames",
-    nclose(hipsX(still.frames, 0), 0.5) && nclose(hipsX(still.frames, 1), 0.5),
+    namedFacts([
+      ["ncloseHipsXStill", () => nclose(hipsX(still.frames, 0), 0.5)],
+      ["ncloseHipsXStill2", () => nclose(hipsX(still.frames, 1), 0.5)],
+    ]),
+    { ncloseHipsXStill: true, ncloseHipsXStill2: true },
   );
 
   // 2. travelling actor moves between frames.
   const moving = plan({ motion: travel(0, 2) });
-  TestValidator.predicate(
+  TestValidator.equals(
     "a travelling hips is centered on frame 0 and right of center on frame 1",
-    nclose(hipsX(moving.frames, 0), 0.5) && hipsX(moving.frames, 1) > 0.55,
+    namedFacts([
+      ["ncloseHipsXMoving", () => nclose(hipsX(moving.frames, 0), 0.5)],
+      ["hipsXMovingFrames", () => hipsX(moving.frames, 1) > 0.55],
+    ]),
+    { ncloseHipsXMoving: true, hipsXMovingFrames: true },
   );
 
   // 3. startOffset delays the clip.

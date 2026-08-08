@@ -200,10 +200,19 @@ export const test_render_sequence_plan = (): void => {
     "frames/seq_duel/frame_%05d.png",
   );
   TestValidator.equals("default output", plan.outputPath, "seq_duel.mp4");
-  TestValidator.predicate(
+  TestValidator.equals(
     "ffmpeg args include manifest paths",
-    plan.ffmpegArgs.includes("frames/seq_duel/frame_%05d.png") &&
-      plan.ffmpegArgs.includes("seq_duel.mp4"),
+    namedFacts([
+      [
+        "planFfmpegArgsIncludes",
+        () => plan.ffmpegArgs.includes("frames/seq_duel/frame_%05d.png"),
+      ],
+      [
+        "planFfmpegArgsIncludes2",
+        () => plan.ffmpegArgs.includes("seq_duel.mp4"),
+      ],
+    ]),
+    { planFfmpegArgsIncludes: true, planFfmpegArgsIncludes2: true },
   );
 
   const custom = planSequenceRender({

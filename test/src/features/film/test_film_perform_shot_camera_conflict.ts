@@ -64,10 +64,18 @@ export const test_film_perform_shot_camera_conflict = (): void => {
     skeleton: () => createSkeleton(),
   });
   TestValidator.equals("fails", performed.success, false);
-  TestValidator.predicate(
+  TestValidator.equals(
     "non-camera frame actor rejected",
-    performed.success === false &&
-      hasViolation(performed, "type", "$input.draft[0].actor"),
+    namedFacts([
+      ["refused", () => performed.success === false],
+      [
+        "violated",
+        () =>
+          performed.success === false &&
+          hasViolation(performed, "type", "$input.draft[0].actor"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
   TestValidator.equals(
     "second live camera rejected",
@@ -108,9 +116,17 @@ export const test_film_perform_shot_camera_conflict = (): void => {
     synthesize: validSynthesizer,
     skeleton: () => createSkeleton(),
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "frame actor list rejected",
-    listed.success === false &&
-      hasViolation(listed, "type", "$input.draft[0].actor"),
+    namedFacts([
+      ["refused", () => listed.success === false],
+      [
+        "violated",
+        () =>
+          listed.success === false &&
+          hasViolation(listed, "type", "$input.draft[0].actor"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 };

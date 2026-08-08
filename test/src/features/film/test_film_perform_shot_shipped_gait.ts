@@ -17,6 +17,7 @@ import {
   makeStagingWrite,
 } from "../internal/filmFixtures";
 import { createSkeleton } from "../internal/fixtures";
+import { namedFacts } from "../internal/predicates";
 
 const frame: IAutoMovieCameraAction = {
   verb: "frame",
@@ -131,9 +132,17 @@ export const test_film_perform_shot_shipped_gait = (): void => {
         )
       : [],
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "the compiled clip carries every gait row",
-    gaitRows.length > 0 && gaitRows.every((bone) => compiled.has(bone)),
+    namedFacts([
+      ["refused", () => gaitRows.length > 0],
+      [
+        "violated",
+        () =>
+          gaitRows.length > 0 && gaitRows.every((bone) => compiled.has(bone)),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 
   // 3. every shipped gait, under the default region
@@ -166,14 +175,22 @@ export const test_film_perform_shot_shipped_gait = (): void => {
     kind: "wave",
   };
   const walkAndWave = perform([walk(), wave, frame], HUMANOID_GAITS.walk);
-  TestValidator.predicate(
+  TestValidator.equals(
     "a shipped walk conflicts with a wave on their shared arm",
-    walkAndWave.success === false &&
-      walkAndWave.violations.some(
-        (v) =>
-          v.path === "$input.draft[1].start" &&
-          v.expected.includes("rightUpperArm"),
-      ),
+    namedFacts([
+      ["refused", () => walkAndWave.success === false],
+      [
+        "violated",
+        () =>
+          walkAndWave.success === false &&
+          walkAndWave.violations.some(
+            (v) =>
+              v.path === "$input.draft[1].start" &&
+              v.expected.includes("rightUpperArm"),
+          ),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 
   // 5. Content, not the fullBody label, decides the overlap.
@@ -185,14 +202,22 @@ export const test_film_perform_shot_shipped_gait = (): void => {
 
   // 6. An authored narrow override still cannot silently discard the arms.
   const narrowed = perform([walk("lowerBody"), frame], HUMANOID_GAITS.walk);
-  TestValidator.predicate(
+  TestValidator.equals(
     "an explicit lowerBody override reports the masked arm rows",
-    narrowed.success === false &&
-      narrowed.violations.some(
-        (violation) =>
-          violation.path === "$input.draft[0].region" &&
-          violation.expected.includes("leftUpperArm") &&
-          violation.expected.includes("rightUpperArm"),
-      ),
+    namedFacts([
+      ["refused", () => narrowed.success === false],
+      [
+        "violated",
+        () =>
+          narrowed.success === false &&
+          narrowed.violations.some(
+            (violation) =>
+              violation.path === "$input.draft[0].region" &&
+              violation.expected.includes("leftUpperArm") &&
+              violation.expected.includes("rightUpperArm"),
+          ),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 };

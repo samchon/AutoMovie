@@ -128,14 +128,24 @@ export const test_perform_locomote_declared_duration = (): void => {
 
   // 2. same path, same arrival, different cadence.
   const auto = synth(walkTo("auto"), "hero")!;
-  TestValidator.predicate(
+  TestValidator.equals(
     "fitting the span does not move where the walk arrives",
-    nclose(arrival(declared), 3) && nclose(arrival(auto), 3),
+    namedFacts([
+      ["ncloseArrivalDeclared", () => nclose(arrival(declared), 3)],
+      ["ncloseArrivalAuto", () => nclose(arrival(auto), 3)],
+    ]),
+    { ncloseArrivalDeclared: true, ncloseArrivalAuto: true },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "the gait cycle scales with the clip, so the stride phase stays honest",
-    nclose(auto.gaitCycle!.period, 1) &&
-      nclose(declared.gaitCycle!.period, 2.5),
+    namedFacts([
+      ["ncloseAutoGaitCycle", () => nclose(auto.gaitCycle!.period, 1)],
+      [
+        "ncloseDeclaredGaitCycle",
+        () => nclose(declared.gaitCycle!.period, 2.5),
+      ],
+    ]),
+    { ncloseAutoGaitCycle: true, ncloseDeclaredGaitCycle: true },
   );
 
   // 3. "auto" is untouched: the engine's own sizing, three whole cycles.
@@ -169,10 +179,16 @@ export const test_perform_locomote_declared_duration = (): void => {
 
   // 6. the step-in-place arms honour the span as well.
   const stepping = synth(stepInPlace(4), "hero")!;
-  TestValidator.predicate(
+  TestValidator.equals(
     "a relative target steps in place for the declared span",
-    nclose(stepping.duration, 4) &&
-      nclose(synth(stepInPlace("auto"), "hero")!.duration, 1),
+    namedFacts([
+      ["ncloseSteppingDuration", () => nclose(stepping.duration, 4)],
+      [
+        "ncloseSynthStepInPlace",
+        () => nclose(synth(stepInPlace("auto"), "hero")!.duration, 1),
+      ],
+    ]),
+    { ncloseSteppingDuration: true, ncloseSynthStepInPlace: true },
   );
   const standingStill: IAutoMovieActionCall = {
     verb: "locomote",
@@ -182,12 +198,22 @@ export const test_perform_locomote_declared_duration = (): void => {
     start: 0,
     duration: 4,
   };
-  TestValidator.predicate(
+  TestValidator.equals(
     "a destination the actor already stands on honours the span too",
-    nclose(synth(standingStill, "hero")!.duration, 4) &&
-      nclose(
-        synth({ ...standingStill, duration: "auto" }, "hero")!.duration,
-        1,
-      ),
+    namedFacts([
+      [
+        "ncloseSynthStandingStill",
+        () => nclose(synth(standingStill, "hero")!.duration, 4),
+      ],
+      [
+        "ncloseSynthStandingStill2",
+        () =>
+          nclose(
+            synth({ ...standingStill, duration: "auto" }, "hero")!.duration,
+            1,
+          ),
+      ],
+    ]),
+    { ncloseSynthStandingStill: true, ncloseSynthStandingStill2: true },
   );
 };

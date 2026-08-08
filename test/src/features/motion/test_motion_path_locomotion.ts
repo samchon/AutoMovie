@@ -6,7 +6,7 @@ import {
 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { nclose, qclose, vclose } from "../internal/predicates";
+import { namedFacts, nclose, qclose, vclose } from "../internal/predicates";
 
 const kf = (time: number): IAutoMovieKeyframe => ({
   time,
@@ -179,10 +179,19 @@ export const test_motion_path_locomotion = (): void => {
     turnWindow: 0,
   });
   // heading +X is yaw 90°, which maps the model's +X sway to world −Z
-  TestValidator.predicate(
+  TestValidator.equals(
     "model sway rotates with the path facing (X sway → −Z world)",
-    nclose(rootAt(straight.motion, 1).translation.z, -0.1) &&
-      nclose(rootAt(straight.motion, 1).translation.x, 1),
+    namedFacts([
+      [
+        "ncloseRootAtStraight",
+        () => nclose(rootAt(straight.motion, 1).translation.z, -0.1),
+      ],
+      [
+        "ncloseRootAtStraight2",
+        () => nclose(rootAt(straight.motion, 1).translation.x, 1),
+      ],
+    ]),
+    { ncloseRootAtStraight: true, ncloseRootAtStraight2: true },
   );
   TestValidator.equals(
     "path seam carries the incoming cycle's easing",

@@ -15,7 +15,7 @@ import {
   makeStagingWrite,
   validSynthesizer,
 } from "../internal/filmFixtures";
-import { hasViolation } from "../internal/predicates";
+import { hasViolation, namedFacts } from "../internal/predicates";
 
 const bone = (
   name: AutoMovieHumanoidBone,
@@ -131,15 +131,23 @@ export const test_film_perform_shot_arm_chain_gate = (): void => {
     "and is reported at the action's own hand field",
     hasViolation(refused, "type", "$input.draft[0].hand"),
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "with the rig's own geometry as the reason",
-    refused.success === false &&
-      refused.violations.some(
-        (v) =>
-          v.path.includes("[0].hand") &&
-          v.expected.includes("parallel") &&
-          v.expected.includes("knightA"),
-      ),
+    namedFacts([
+      ["refused", () => refused.success === false],
+      [
+        "violated",
+        () =>
+          refused.success === false &&
+          refused.violations.some(
+            (v) =>
+              v.path.includes("[0].hand") &&
+              v.expected.includes("parallel") &&
+              v.expected.includes("knightA"),
+          ),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 
   // 2. NEGATIVE TWIN: the same shot, the same target, a conforming rest
@@ -160,10 +168,18 @@ export const test_film_perform_shot_arm_chain_gate = (): void => {
       at: { kind: "point", point: { x: 0, y: 1.1, z: 0.3 } },
     };
     const gestureRefused = run(armRig("down"), [gesture]);
-    TestValidator.predicate(
+    TestValidator.equals(
       `a ${kind} gesture on an unbendable arm is refused at its kind field`,
-      gestureRefused.success === false &&
-        hasViolation(gestureRefused, "type", "$input.draft[0].kind"),
+      namedFacts([
+        ["refused", () => gestureRefused.success === false],
+        [
+          "violated",
+          () =>
+            gestureRefused.success === false &&
+            hasViolation(gestureRefused, "type", "$input.draft[0].kind"),
+        ],
+      ]),
+      { refused: true, violated: true },
     );
     TestValidator.equals(
       `and the same ${kind} passes on the T-pose twin`,

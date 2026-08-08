@@ -73,20 +73,34 @@ export const test_mcp_production_content_identity = (): void => {
     digestAutoMovieBytes(Buffer.from("abc")),
     "sha256:ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "field roles and kinds separate identical bytes",
-    fingerprintAutoMovieFields([
-      { role: "a", kind: "x", payload: Buffer.from("z") },
-    ]) !==
-      fingerprintAutoMovieFields([
-        { role: "b", kind: "x", payload: Buffer.from("z") },
-      ]) &&
-      fingerprintAutoMovieFields([
-        { role: "a", kind: "x", payload: Buffer.from("z") },
-      ]) !==
-        fingerprintAutoMovieFields([
-          { role: "a", kind: "y", payload: Buffer.from("z") },
-        ]),
+    namedFacts([
+      [
+        "fingerprintAutoMovieFieldsRoleA",
+        () =>
+          fingerprintAutoMovieFields([
+            { role: "a", kind: "x", payload: Buffer.from("z") },
+          ]) !==
+          fingerprintAutoMovieFields([
+            { role: "b", kind: "x", payload: Buffer.from("z") },
+          ]),
+      ],
+      [
+        "fingerprintAutoMovieFieldsRoleA2",
+        () =>
+          fingerprintAutoMovieFields([
+            { role: "a", kind: "x", payload: Buffer.from("z") },
+          ]) !==
+          fingerprintAutoMovieFields([
+            { role: "a", kind: "y", payload: Buffer.from("z") },
+          ]),
+      ],
+    ]),
+    {
+      fingerprintAutoMovieFieldsRoleA: true,
+      fingerprintAutoMovieFieldsRoleA2: true,
+    },
   );
   TestValidator.equals(
     "code-unit comparator",

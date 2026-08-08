@@ -3,6 +3,7 @@ import { IAutoMovieBody } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import {
+  namedFacts,
   nclose,
   validationHasNoWarnings,
   validationHasWarning,
@@ -76,9 +77,18 @@ export const test_validation_free_fall = (): void => {
       1,
     ),
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "no-node arc uses the default node",
-    outside.trajectory !== null && outside.trajectory.id.includes("object"),
+    namedFacts([
+      ["outsideTrajectory", () => outside.trajectory !== null],
+      [
+        "outsideTrajectoryId",
+        () =>
+          outside.trajectory !== null &&
+          outside.trajectory.id.includes("object"),
+      ],
+    ]),
+    { outsideTrajectory: true, outsideTrajectoryId: true },
   );
 
   const supported = detectFreeFall({

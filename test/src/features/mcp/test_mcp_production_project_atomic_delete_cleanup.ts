@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import ts from "typescript-compiler";
 
+import { namedFacts } from "../internal/predicates";
 import { preserveProductionProjectFixtureCleanup } from "./test_mcp_production_project";
 
 const compact = (node: ts.Node, source: ts.SourceFile): string =>
@@ -179,32 +180,86 @@ export const test_mcp_production_project_atomic_delete_cleanup = (): void => {
     cleanupFailure: { error: undefined, present: true },
     primaryFailure: { error: undefined, present: true },
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "atomic-delete cleanup preserves primary and restoration failures",
-    success.caught === false &&
-      success.failure === undefined &&
-      success.order.join(",") === "hook" &&
-      primaryOnly.caught &&
-      primaryOnly.failure === primaryFailure &&
-      primaryOnly.order.join(",") === "hook" &&
-      standalone.caught &&
-      standalone.failure === cleanupFailure &&
-      standalone.order.join(",") === "hook" &&
-      combined.caught &&
-      aggregateContainsExactly(combined.failure, [
-        primaryFailure,
-        cleanupFailure,
-      ]) &&
-      combined.order.join(",") === "hook" &&
-      undefinedStandalone.caught &&
-      undefinedStandalone.failure === undefined &&
-      undefinedStandalone.order.join(",") === "hook" &&
-      undefinedCombined.caught &&
-      aggregateContainsExactly(undefinedCombined.failure, [
-        undefined,
-        undefined,
-      ]) &&
-      undefinedCombined.order.join(",") === "hook",
+    namedFacts([
+      ["successCaught", () => success.caught === false],
+      [
+        "successFailure",
+        () => success.caught === false && success.failure === undefined,
+      ],
+      [
+        "successOrderJoin",
+        () =>
+          success.caught === false &&
+          success.failure === undefined &&
+          success.order.join(",") === "hook",
+      ],
+      ["primaryOnlyCaught", () => primaryOnly.caught],
+      [
+        "primaryOnlyFailurePrimaryFailure",
+        () => primaryOnly.failure === primaryFailure,
+      ],
+      ["primaryOnlyOrderJoin", () => primaryOnly.order.join(",") === "hook"],
+      ["standaloneCaught", () => standalone.caught],
+      [
+        "standaloneFailureCleanupFailure",
+        () => standalone.failure === cleanupFailure,
+      ],
+      ["standaloneOrderJoin", () => standalone.order.join(",") === "hook"],
+      ["combinedCaught", () => combined.caught],
+      [
+        "aggregateContainsExactlyCombinedFailure",
+        () =>
+          aggregateContainsExactly(combined.failure, [
+            primaryFailure,
+            cleanupFailure,
+          ]),
+      ],
+      ["combinedOrderJoin", () => combined.order.join(",") === "hook"],
+      ["undefinedStandaloneCaught", () => undefinedStandalone.caught],
+      [
+        "undefinedStandaloneFailure",
+        () => undefinedStandalone.failure === undefined,
+      ],
+      [
+        "undefinedStandaloneOrderJoin",
+        () => undefinedStandalone.order.join(",") === "hook",
+      ],
+      ["undefinedCombinedCaught", () => undefinedCombined.caught],
+      [
+        "aggregateContainsExactlyUndefinedCombinedFailure",
+        () =>
+          aggregateContainsExactly(undefinedCombined.failure, [
+            undefined,
+            undefined,
+          ]),
+      ],
+      [
+        "undefinedCombinedOrderJoin",
+        () => undefinedCombined.order.join(",") === "hook",
+      ],
+    ]),
+    {
+      successCaught: true,
+      successFailure: true,
+      successOrderJoin: true,
+      primaryOnlyCaught: true,
+      primaryOnlyFailurePrimaryFailure: true,
+      primaryOnlyOrderJoin: true,
+      standaloneCaught: true,
+      standaloneFailureCleanupFailure: true,
+      standaloneOrderJoin: true,
+      combinedCaught: true,
+      aggregateContainsExactlyCombinedFailure: true,
+      combinedOrderJoin: true,
+      undefinedStandaloneCaught: true,
+      undefinedStandaloneFailure: true,
+      undefinedStandaloneOrderJoin: true,
+      undefinedCombinedCaught: true,
+      aggregateContainsExactlyUndefinedCombinedFailure: true,
+      undefinedCombinedOrderJoin: true,
+    },
   );
   TestValidator.equals(
     "production-project test owns one atomic-delete cleanup lifecycle",

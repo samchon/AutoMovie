@@ -84,17 +84,33 @@ export const test_film_perform_shot_blocked = (): void => {
   TestValidator.equals("aligned blocking passes", aligned.success, true);
 
   const wrongBeat = run(makeBlockingWrite({ beat: "beat-99" }));
-  TestValidator.predicate(
+  TestValidator.equals(
     "beat mismatch rejected",
-    wrongBeat.success === false &&
-      hasViolation(wrongBeat, "type", "$input.beat"),
+    namedFacts([
+      ["refused", () => wrongBeat.success === false],
+      [
+        "violated",
+        () =>
+          wrongBeat.success === false &&
+          hasViolation(wrongBeat, "type", "$input.beat"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 
   const wrongDuration = run(makeBlockingWrite({ duration: 3 }));
-  TestValidator.predicate(
+  TestValidator.equals(
     "duration mismatch rejected",
-    wrongDuration.success === false &&
-      hasViolation(wrongDuration, "range", "$input.duration"),
+    namedFacts([
+      ["refused", () => wrongDuration.success === false],
+      [
+        "violated",
+        () =>
+          wrongDuration.success === false &&
+          hasViolation(wrongDuration, "range", "$input.duration"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 
   const dropped = run(
@@ -108,12 +124,21 @@ export const test_film_perform_shot_blocked = (): void => {
       ],
     }),
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "uncovered anchor rejected with its cue",
-    dropped.success === false &&
-      dropped.violations.some(
-        (v) => v.kind === "range" && String(v.expected).includes("the flinch"),
-      ),
+    namedFacts([
+      ["refused", () => dropped.success === false],
+      [
+        "violated",
+        () =>
+          dropped.success === false &&
+          dropped.violations.some(
+            (v) =>
+              v.kind === "range" && String(v.expected).includes("the flinch"),
+          ),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 
   const wrongCamera = run(
@@ -162,12 +187,20 @@ export const test_film_perform_shot_blocked = (): void => {
       revise: { review: "unchanged.", final: null },
     }),
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "unauthored camera move rejected",
-    unframed.success === false &&
-      unframed.violations.some((v) =>
-        String(v.expected).includes('asks for a "follow" camera'),
-      ),
+    namedFacts([
+      ["refused", () => unframed.success === false],
+      [
+        "violated",
+        () =>
+          unframed.success === false &&
+          unframed.violations.some((v) =>
+            String(v.expected).includes('asks for a "follow" camera'),
+          ),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 
   const malformedActor = run(
@@ -186,9 +219,17 @@ export const test_film_perform_shot_blocked = (): void => {
       revise: { review: "unchanged.", final: null },
     }),
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "blocked malformed actor rejected",
-    malformedActor.success === false &&
-      hasViolation(malformedActor, "type", "$input.draft[0].actor"),
+    namedFacts([
+      ["refused", () => malformedActor.success === false],
+      [
+        "violated",
+        () =>
+          malformedActor.success === false &&
+          hasViolation(malformedActor, "type", "$input.draft[0].actor"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 };

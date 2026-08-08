@@ -2,7 +2,7 @@ import { stageScene } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import { makeScriptWrite, makeStagingWrite } from "../internal/filmFixtures";
-import { hasViolation } from "../internal/predicates";
+import { hasViolation, namedFacts } from "../internal/predicates";
 
 /**
  * Staging joins cast members to imported or generated models through `modelRef
@@ -25,9 +25,17 @@ export const test_film_stage_scene_nonempty_model_refs = (): void => {
   );
 
   TestValidator.equals("blank cast modelRef fails", staged.success, false);
-  TestValidator.predicate(
+  TestValidator.equals(
     "modelRef violation",
-    staged.success === false &&
-      hasViolation(staged, "type", "$script.cast[0].modelRef"),
+    namedFacts([
+      ["refused", () => staged.success === false],
+      [
+        "violated",
+        () =>
+          staged.success === false &&
+          hasViolation(staged, "type", "$script.cast[0].modelRef"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 };

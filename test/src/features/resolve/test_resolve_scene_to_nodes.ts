@@ -21,7 +21,7 @@ import {
   makeMotion,
   makePose,
 } from "../internal/fixtures";
-import { qclose, vclose } from "../internal/predicates";
+import { namedFacts, qclose, vclose } from "../internal/predicates";
 
 const T = (
   x: number,
@@ -110,13 +110,24 @@ export const test_resolve_scene_to_nodes = (): void => {
     placement.rotation,
     placement.scale,
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "placement group world equals its scene transform",
-    vclose(Matrix4.position(rest.get("actor")!), placement.translation) &&
-      qclose(
-        Matrix4.decompose(rest.get("actor")!).rotation,
-        placement.rotation,
-      ),
+    namedFacts([
+      [
+        "vcloseMatrix4Position",
+        () =>
+          vclose(Matrix4.position(rest.get("actor")!), placement.translation),
+      ],
+      [
+        "qcloseMatrix4Decompose",
+        () =>
+          qclose(
+            Matrix4.decompose(rest.get("actor")!).rotation,
+            placement.rotation,
+          ),
+      ],
+    ]),
+    { vcloseMatrix4Position: true, qcloseMatrix4Decompose: true },
   );
   TestValidator.predicate(
     "camera node world equals the camera transform",
@@ -133,10 +144,13 @@ export const test_resolve_scene_to_nodes = (): void => {
     nodes.filter((node) => node.id.startsWith("box")).length,
     1,
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "the actor lowers its bone subtree under the placement",
-    nodes.some((node) => node.id === "actor/hips") &&
-      nodes.some((node) => node.id === "actor/root"),
+    namedFacts([
+      ["nodesSomeNode", () => nodes.some((node) => node.id === "actor/hips")],
+      ["nodesSomeNode2", () => nodes.some((node) => node.id === "actor/root")],
+    ]),
+    { nodesSomeNode: true, nodesSomeNode2: true },
   );
 
   // 3.-4. held pose through the clip path ≡ placement ∘ resolvePose(pose)

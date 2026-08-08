@@ -10,7 +10,7 @@ import { IAutoMovieReachAction, IAutoMovieVector3 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { createSkeleton, makePose } from "../internal/fixtures";
-import { nclose, vclose } from "../internal/predicates";
+import { namedFacts, nclose, vclose } from "../internal/predicates";
 
 const ctx = (facingDeg: number): IAutoMovieActorContext => ({
   skeleton: "skeleton-1",
@@ -137,8 +137,12 @@ export const test_perform_reach_synthesis = (): void => {
     null,
   );
   const auto = s0(reach({ duration: "auto" }), "hero");
-  TestValidator.predicate(
+  TestValidator.equals(
     "an auto-duration reach runs the default 0.6 s",
-    auto !== null && nclose(auto.duration, 0.6),
+    namedFacts([
+      ["auto", () => auto !== null],
+      ["ncloseAutoDuration", () => auto !== null && nclose(auto.duration, 0.6)],
+    ]),
+    { auto: true, ncloseAutoDuration: true },
   );
 };

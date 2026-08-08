@@ -2,7 +2,12 @@ import { detectSupportToppling, supportContactsFor } from "@automovie/engine";
 import { IAutoMovieSpace } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { hasViolation, nclose, vclose } from "../internal/predicates";
+import {
+  hasViolation,
+  namedFacts,
+  nclose,
+  vclose,
+} from "../internal/predicates";
 
 const v = (x: number, z: number, y = 0) => ({ x, y, z });
 
@@ -66,9 +71,13 @@ export const test_space_support_contacts = (): void => {
   );
 
   const onRamp = supportContactsFor(space, [v(11, 1), v(13, 1)]);
-  TestValidator.predicate(
+  TestValidator.equals(
     "ramp contacts interpolate",
-    nclose(onRamp[0]!.y, 0.5) && nclose(onRamp[1]!.y, 1.5),
+    namedFacts([
+      ["ncloseOnRamp0", () => nclose(onRamp[0]!.y, 0.5)],
+      ["ncloseOnRamp1", () => nclose(onRamp[1]!.y, 1.5)],
+    ]),
+    { ncloseOnRamp0: true, ncloseOnRamp1: true },
   );
 
   const stable = detectSupportToppling({
@@ -91,9 +100,16 @@ export const test_space_support_contacts = (): void => {
     centerOfMass: { x: 2, y: 1.2, z: 1 },
     support: halfOff,
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "half-off box topples",
-    toppling.toppling !== null && toppling.toppling.overshoot > 0,
+    namedFacts([
+      ["topplingToppling", () => toppling.toppling !== null],
+      [
+        "topplingTopplingOvershoot",
+        () => toppling.toppling !== null && toppling.toppling.overshoot > 0,
+      ],
+    ]),
+    { topplingToppling: true, topplingTopplingOvershoot: true },
   );
 
   const overVoid = supportContactsFor(space, [v(50, 50), v(51, 50)]);

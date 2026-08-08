@@ -10,6 +10,7 @@ import { TestValidator } from "@nestia/e2e";
 import { makeMotion } from "../internal/fixtures";
 import {
   hasViolation,
+  namedFacts,
   nclose,
   validationHasNoWarnings,
   validationHasWarning,
@@ -110,9 +111,16 @@ export const test_validation_foot_skate = (): void => {
     rejected.success === true
       ? (rejected.warnings ?? []).find((v) => v.path.includes("samples[1]"))
       : null;
-  TestValidator.predicate(
+  TestValidator.equals(
     "foot skate overshoot",
-    first?.kind === "physics" && nclose(first.overshoot ?? -1, 0.15),
+    namedFacts([
+      ["firstKindPhysics", () => first?.kind === "physics"],
+      [
+        "ncloseFirstOvershoot",
+        () => first?.kind === "physics" && nclose(first.overshoot ?? -1, 0.15),
+      ],
+    ]),
+    { firstKindPhysics: true, ncloseFirstOvershoot: true },
   );
 
   // physicsIntent (a deliberate moonwalk) suppresses the skate warning.

@@ -53,9 +53,18 @@ export const test_film_review_shot = (): void => {
     verdict: "revise",
     notes: [],
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "empty revise rejected",
-    empty.success === false && hasViolation(empty, "type", "$input.notes"),
+    namedFacts([
+      ["refused", () => empty.success === false],
+      [
+        "violated",
+        () =>
+          empty.success === false &&
+          hasViolation(empty, "type", "$input.notes"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 
   const contradicted = reviewShot(makeScriptWrite(), {
@@ -64,10 +73,18 @@ export const test_film_review_shot = (): void => {
     verdict: "pass",
     notes: [NOTE],
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "pass with open notes rejected",
-    contradicted.success === false &&
-      hasViolation(contradicted, "type", "$input.notes"),
+    namedFacts([
+      ["refused", () => contradicted.success === false],
+      [
+        "violated",
+        () =>
+          contradicted.success === false &&
+          hasViolation(contradicted, "type", "$input.notes"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 
   const misfiled = reviewShot(makeScriptWrite(), {

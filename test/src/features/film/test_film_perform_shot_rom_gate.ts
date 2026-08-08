@@ -13,6 +13,7 @@ import {
   makeMotion,
   makePose,
 } from "../internal/fixtures";
+import { namedFacts } from "../internal/predicates";
 
 /**
  * Pins the ROM gate on the far side of the compile: even a referentially
@@ -57,14 +58,22 @@ export const test_film_perform_shot_rom_gate = (): void => {
     skeleton: () => createSkeleton(),
   });
   TestValidator.equals("fails", performed.success, false);
-  TestValidator.predicate(
+  TestValidator.equals(
     "rom violation remapped onto the compiled clip",
-    performed.success === false &&
-      performed.violations.some(
-        (v) =>
-          v.kind === "rom" &&
-          v.path.startsWith('$compiled["knightA"]') &&
-          (v.overshoot ?? 0) > 0,
-      ),
+    namedFacts([
+      ["refused", () => performed.success === false],
+      [
+        "violated",
+        () =>
+          performed.success === false &&
+          performed.violations.some(
+            (v) =>
+              v.kind === "rom" &&
+              v.path.startsWith('$compiled["knightA"]') &&
+              (v.overshoot ?? 0) > 0,
+          ),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 };

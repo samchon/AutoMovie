@@ -5,7 +5,7 @@ import {
 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { throwsError } from "../internal/predicates";
+import { namedFacts, throwsError } from "../internal/predicates";
 
 const clip = (
   over: { track?: Record<string, unknown> } & Record<string, unknown> = {},
@@ -115,18 +115,29 @@ export const test_validation_clip_shape_contract = (): void => {
       "value width must be 3, but was 2",
     ),
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "an empty keyframe list refuses on both sides",
-    bothRefuse(
-      track({ times: [], values: [] }),
-      "$input.clip.tracks[0].times",
-      "must have keyframes to sample",
-    ) &&
-      refusedAt(
-        track({ times: [], values: [] }),
-        "$input.clip.tracks[0].values",
-        "values must not be empty",
-      ),
+    namedFacts([
+      [
+        "bothRefuseTrackTimes",
+        () =>
+          bothRefuse(
+            track({ times: [], values: [] }),
+            "$input.clip.tracks[0].times",
+            "must have keyframes to sample",
+          ),
+      ],
+      [
+        "refusedAtTrackTimes",
+        () =>
+          refusedAt(
+            track({ times: [], values: [] }),
+            "$input.clip.tracks[0].values",
+            "values must not be empty",
+          ),
+      ],
+    ]),
+    { bothRefuseTrackTimes: true, refusedAtTrackTimes: true },
   );
   TestValidator.predicate(
     "an empty value payload refuses on both sides",
@@ -203,13 +214,24 @@ export const test_validation_clip_shape_contract = (): void => {
   const opacity = track({
     channel: { kind: "node", node: "n", path: "opacity" },
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "an unknown node channel path refuses on both sides",
-    refusedAt(
-      opacity,
-      "$input.clip.tracks[0].channel.path",
-      "must be one of translation, rotation, scale, weights",
-    ) && samplerThrows(opacity, 'unknown channel path "opacity"'),
+    namedFacts([
+      [
+        "refusedAtOpacity$input",
+        () =>
+          refusedAt(
+            opacity,
+            "$input.clip.tracks[0].channel.path",
+            "must be one of translation, rotation, scale, weights",
+          ),
+      ],
+      [
+        "samplerThrowsOpacityUnknown",
+        () => samplerThrows(opacity, 'unknown channel path "opacity"'),
+      ],
+    ]),
+    { refusedAtOpacity$input: true, samplerThrowsOpacityUnknown: true },
   );
 
   // 4. NEGATIVE TWINS: one property away from each refusal above
@@ -251,39 +273,81 @@ export const test_validation_clip_shape_contract = (): void => {
 
   // 5. the deliberate asymmetry: the gate is stricter about duration
   const zero = clip({ duration: 0, track: { times: [0], values: [0, 0, 0] } });
-  TestValidator.predicate(
+  TestValidator.equals(
     "a zero-length clip is refused by the gate and tolerated by the sampler",
-    refusedAt(zero, "$input.clip.duration", "clip duration") &&
-      !throwsError(() => sampleClip(zero as IAutoMovieClip, 5)),
+    namedFacts([
+      [
+        "refusedAtZero$input",
+        () => refusedAt(zero, "$input.clip.duration", "clip duration"),
+      ],
+      [
+        "throwsErrorSampleClipZero",
+        () => !throwsError(() => sampleClip(zero as IAutoMovieClip, 5)),
+      ],
+    ]),
+    { refusedAtZero$input: true, throwsErrorSampleClipZero: true },
   );
 
   // 6. a malformed channel reaches no width lookup crash
-  TestValidator.predicate(
+  TestValidator.equals(
     "a numeric channel refuses on both sides",
-    refusedAt(
-      track({ channel: 7 }),
-      "$input.clip.tracks[0].channel",
-      "JSON object",
-    ) && samplerThrows(track({ channel: 7 }), "unknown channel kind"),
+    namedFacts([
+      [
+        "refusedAtTrackChannel",
+        () =>
+          refusedAt(
+            track({ channel: 7 }),
+            "$input.clip.tracks[0].channel",
+            "JSON object",
+          ),
+      ],
+      [
+        "samplerThrowsTrackChannel",
+        () => samplerThrows(track({ channel: 7 }), "unknown channel kind"),
+      ],
+    ]),
+    { refusedAtTrackChannel: true, samplerThrowsTrackChannel: true },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "a null channel refuses on both sides",
-    refusedAt(
-      track({ channel: null }),
-      "$input.clip.tracks[0].channel",
-      "JSON object",
-    ) && samplerThrows(track({ channel: null })),
+    namedFacts([
+      [
+        "refusedAtTrackChannel",
+        () =>
+          refusedAt(
+            track({ channel: null }),
+            "$input.clip.tracks[0].channel",
+            "JSON object",
+          ),
+      ],
+      [
+        "samplerThrowsTrackChannel",
+        () => samplerThrows(track({ channel: null })),
+      ],
+    ]),
+    { refusedAtTrackChannel: true, samplerThrowsTrackChannel: true },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "an unknown channel discriminator refuses on both sides",
-    refusedAt(
-      track({ channel: { kind: "material", pointer: "/x" } }),
-      "$input.clip.tracks[0].channel.kind",
-      'must be "node"',
-    ) &&
-      samplerThrows(
-        track({ channel: { kind: "material", pointer: "/x" } }),
-        "unknown channel kind",
-      ),
+    namedFacts([
+      [
+        "refusedAtTrackChannel",
+        () =>
+          refusedAt(
+            track({ channel: { kind: "material", pointer: "/x" } }),
+            "$input.clip.tracks[0].channel.kind",
+            'must be "node"',
+          ),
+      ],
+      [
+        "samplerThrowsTrackChannel",
+        () =>
+          samplerThrows(
+            track({ channel: { kind: "material", pointer: "/x" } }),
+            "unknown channel kind",
+          ),
+      ],
+    ]),
+    { refusedAtTrackChannel: true, samplerThrowsTrackChannel: true },
   );
 };

@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import ts from "typescript-compiler";
 
+import { namedFacts } from "../internal/predicates";
 import { preserveProductionMediaEncoderCleanup } from "./productionMediaFixtures";
 
 const compact = (node: ts.Node, source: ts.SourceFile): string =>
@@ -152,18 +153,49 @@ export const test_mcp_production_media_fixture_cleanup = (): void => {
   const primaryOnly = captureCleanup({ primaryFailure });
   const cleanupOnly = captureCleanup({ cleanupFailure });
   const combined = captureCleanup({ cleanupFailure, primaryFailure });
-  TestValidator.predicate(
+  TestValidator.equals(
     "production media fixture cleanup preserves phase identity and order",
-    success.failure === undefined &&
-      primaryOnly.failure === primaryFailure &&
-      cleanupOnly.failure === cleanupFailure &&
-      aggregateContainsExactly(combined.failure, [
-        primaryFailure,
-        cleanupFailure,
-      ]) &&
-      [success, primaryOnly, cleanupOnly, combined].every(
-        (capture) => capture.attempts === 1,
-      ),
+    namedFacts([
+      ["successFailure", () => success.failure === undefined],
+      [
+        "primaryOnlyFailurePrimaryFailure",
+        () =>
+          success.failure === undefined &&
+          primaryOnly.failure === primaryFailure,
+      ],
+      [
+        "cleanupOnlyFailureCleanupFailure",
+        () =>
+          success.failure === undefined &&
+          primaryOnly.failure === primaryFailure &&
+          cleanupOnly.failure === cleanupFailure,
+      ],
+      [
+        "aggregateContainsExactlyCombinedFailure",
+        () =>
+          success.failure === undefined &&
+          primaryOnly.failure === primaryFailure &&
+          cleanupOnly.failure === cleanupFailure &&
+          aggregateContainsExactly(combined.failure, [
+            primaryFailure,
+            cleanupFailure,
+          ]),
+      ],
+      [
+        "successPrimaryOnlyCleanupOnly",
+        () =>
+          [success, primaryOnly, cleanupOnly, combined].every(
+            (capture) => capture.attempts === 1,
+          ),
+      ],
+    ]),
+    {
+      successFailure: true,
+      primaryOnlyFailurePrimaryFailure: true,
+      cleanupOnlyFailureCleanupFailure: true,
+      aggregateContainsExactlyCombinedFailure: true,
+      successPrimaryOnlyCleanupOnly: true,
+    },
   );
   TestValidator.equals(
     "production H.264 fixture owns encoder deletion without changing generation",

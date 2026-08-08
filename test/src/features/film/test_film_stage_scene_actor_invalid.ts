@@ -2,7 +2,7 @@ import { stageScene } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import { makeScriptWrite, makeStagingWrite } from "../internal/filmFixtures";
-import { hasViolation } from "../internal/predicates";
+import { hasViolation, namedFacts } from "../internal/predicates";
 
 /**
  * Pins actor placement numeric gates: staged positions become scene node
@@ -36,14 +36,30 @@ export const test_film_stage_scene_actor_invalid = (): void => {
   );
 
   TestValidator.equals("fails", staged.success, false);
-  TestValidator.predicate(
+  TestValidator.equals(
     "non-finite position rejected",
-    staged.success === false &&
-      hasViolation(staged, "range", "$input.actors[0].position"),
+    namedFacts([
+      ["refused", () => staged.success === false],
+      [
+        "violated",
+        () =>
+          staged.success === false &&
+          hasViolation(staged, "range", "$input.actors[0].position"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "non-finite facing rejected",
-    staged.success === false &&
-      hasViolation(staged, "range", "$input.actors[1].facingDeg"),
+    namedFacts([
+      ["refused", () => staged.success === false],
+      [
+        "violated",
+        () =>
+          staged.success === false &&
+          hasViolation(staged, "range", "$input.actors[1].facingDeg"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 };

@@ -3,6 +3,7 @@ import { TestValidator } from "@nestia/e2e";
 
 import {
   hasViolation,
+  namedFacts,
   nclose,
   validationHasWarningCount,
   vclose,
@@ -64,10 +65,16 @@ export const test_validation_support_topple = (): void => {
   );
   TestValidator.equals("emits one fall event", topple.events.length, 1);
   TestValidator.equals("event kind is fall", topple.events[0]!.kind, "fall");
-  TestValidator.predicate(
+  TestValidator.equals(
     "tip edge lies on x=2",
-    nclose(topple.toppling!.tipEdgeStart.x, 2) &&
-      nclose(topple.toppling!.tipEdgeEnd.x, 2),
+    namedFacts([
+      [
+        "ncloseToppleToppling",
+        () => nclose(topple.toppling!.tipEdgeStart.x, 2),
+      ],
+      ["ncloseToppleToppling2", () => nclose(topple.toppling!.tipEdgeEnd.x, 2)],
+    ]),
+    { ncloseToppleToppling: true, ncloseToppleToppling2: true },
   );
 
   const intended = detectSupportToppling({

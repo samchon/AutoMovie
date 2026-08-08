@@ -6,6 +6,8 @@ import os from "node:os";
 import path from "node:path";
 import ts from "typescript-compiler";
 
+import { namedFacts } from "../internal/predicates";
+
 interface ILauncherCleanupOracleFixtureFailure {
   error: unknown;
 }
@@ -715,19 +717,127 @@ const verifyLauncherBundleCleanup = (
     const standalone = run(undefined, standaloneCleanupFailure);
     const primaryOnly = run(primaryOnlyFailure, undefined);
     const combined = run(combinedPrimaryFailure, combinedCleanupFailure);
-    TestValidator.predicate(
+    TestValidator.equals(
       "playground launcher bundle cleanup preserves operation and cleanup failures",
-      success.caught === undefined &&
-        success.removed &&
-        standalone.caught === standaloneCleanupFailure &&
-        standalone.removed &&
-        primaryOnly.caught === primaryOnlyFailure &&
-        primaryOnly.removed &&
-        combined.caught instanceof AggregateError &&
-        combined.caught.errors.length === 2 &&
-        combined.caught.errors[0] === combinedPrimaryFailure &&
-        combined.caught.errors[1] === combinedCleanupFailure &&
-        combined.removed,
+      namedFacts([
+        ["successCaught", () => success.caught === undefined],
+        [
+          "successRemoved",
+          () => success.caught === undefined && success.removed,
+        ],
+        [
+          "standaloneCaughtStandaloneCleanupFailure",
+          () =>
+            success.caught === undefined &&
+            success.removed &&
+            standalone.caught === standaloneCleanupFailure,
+        ],
+        [
+          "standaloneRemoved",
+          () =>
+            success.caught === undefined &&
+            success.removed &&
+            standalone.caught === standaloneCleanupFailure &&
+            standalone.removed,
+        ],
+        [
+          "primaryOnlyCaughtPrimaryOnlyFailure",
+          () =>
+            success.caught === undefined &&
+            success.removed &&
+            standalone.caught === standaloneCleanupFailure &&
+            standalone.removed &&
+            primaryOnly.caught === primaryOnlyFailure,
+        ],
+        [
+          "primaryOnlyRemoved",
+          () =>
+            success.caught === undefined &&
+            success.removed &&
+            standalone.caught === standaloneCleanupFailure &&
+            standalone.removed &&
+            primaryOnly.caught === primaryOnlyFailure &&
+            primaryOnly.removed,
+        ],
+        [
+          "combinedCaughtInstanceof",
+          () =>
+            success.caught === undefined &&
+            success.removed &&
+            standalone.caught === standaloneCleanupFailure &&
+            standalone.removed &&
+            primaryOnly.caught === primaryOnlyFailure &&
+            primaryOnly.removed &&
+            combined.caught instanceof AggregateError,
+        ],
+        [
+          "combinedCaughtErrors",
+          () =>
+            success.caught === undefined &&
+            success.removed &&
+            standalone.caught === standaloneCleanupFailure &&
+            standalone.removed &&
+            primaryOnly.caught === primaryOnlyFailure &&
+            primaryOnly.removed &&
+            combined.caught instanceof AggregateError &&
+            combined.caught.errors.length === 2,
+        ],
+        [
+          "combinedCaughtErrors2",
+          () =>
+            success.caught === undefined &&
+            success.removed &&
+            standalone.caught === standaloneCleanupFailure &&
+            standalone.removed &&
+            primaryOnly.caught === primaryOnlyFailure &&
+            primaryOnly.removed &&
+            combined.caught instanceof AggregateError &&
+            combined.caught.errors.length === 2 &&
+            combined.caught.errors[0] === combinedPrimaryFailure,
+        ],
+        [
+          "combinedCaughtErrors3",
+          () =>
+            success.caught === undefined &&
+            success.removed &&
+            standalone.caught === standaloneCleanupFailure &&
+            standalone.removed &&
+            primaryOnly.caught === primaryOnlyFailure &&
+            primaryOnly.removed &&
+            combined.caught instanceof AggregateError &&
+            combined.caught.errors.length === 2 &&
+            combined.caught.errors[0] === combinedPrimaryFailure &&
+            combined.caught.errors[1] === combinedCleanupFailure,
+        ],
+        [
+          "combinedRemoved",
+          () =>
+            success.caught === undefined &&
+            success.removed &&
+            standalone.caught === standaloneCleanupFailure &&
+            standalone.removed &&
+            primaryOnly.caught === primaryOnlyFailure &&
+            primaryOnly.removed &&
+            combined.caught instanceof AggregateError &&
+            combined.caught.errors.length === 2 &&
+            combined.caught.errors[0] === combinedPrimaryFailure &&
+            combined.caught.errors[1] === combinedCleanupFailure &&
+            combined.removed,
+        ],
+      ]),
+      {
+        successCaught: true,
+        successRemoved: true,
+        standaloneCaughtStandaloneCleanupFailure: true,
+        standaloneRemoved: true,
+        primaryOnlyCaughtPrimaryOnlyFailure: true,
+        primaryOnlyRemoved: true,
+        combinedCaughtInstanceof: true,
+        combinedCaughtErrors: true,
+        combinedCaughtErrors2: true,
+        combinedCaughtErrors3: true,
+        combinedRemoved: true,
+      },
     );
   } catch (error) {
     launcherOracleFailure = { error };
@@ -2740,6 +2850,10 @@ export const test_workspace_public_contracts = (): void => {
   );
   const runJsonSource = sourceSection(
     "const runJson =",
+    "\nconst runExpectedOutput =",
+  );
+  const expectedOutputSource = sourceSection(
+    "const runExpectedOutput =",
     "\nconst CLIENT_SOURCE =",
   );
   const clientSpawnSource = sourceSection(
@@ -3213,6 +3327,16 @@ export const test_workspace_public_contracts = (): void => {
             null,
         },
         {
+          site: "runExpectedOutput",
+          spawned:
+            expectedOutputSource.match(/const (\w+) = spawnSync\(/)?.[1] ??
+            null,
+          routed:
+            expectedOutputSource.match(
+              /failCommand\(label, (\w+), timeout\)/,
+            )?.[1] ?? null,
+        },
+        {
           site: "stdioClient",
           spawned:
             clientSpawnSource.match(/const (\w+) = spawnSync\(/)?.[1] ?? null,
@@ -3225,7 +3349,7 @@ export const test_workspace_public_contracts = (): void => {
       retiredFallbacks: tgzE2e.match(/status \?\? "signal"/g) ?? [],
     },
     {
-      counts: { spawned: 4, routed: 4 },
+      counts: { spawned: 5, routed: 5 },
       sites: [
         { site: "run", spawned: "result", routed: "result" },
         {
@@ -3234,6 +3358,7 @@ export const test_workspace_public_contracts = (): void => {
           routed: "result",
         },
         { site: "runJson", spawned: "result", routed: "result" },
+        { site: "runExpectedOutput", spawned: "result", routed: "result" },
         { site: "stdioClient", spawned: "client", routed: "client" },
       ],
       retiredFallbacks: [],

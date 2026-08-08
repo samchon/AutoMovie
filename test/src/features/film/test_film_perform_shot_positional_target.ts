@@ -17,6 +17,7 @@ import {
   validSynthesizer,
 } from "../internal/filmFixtures";
 import { createSkeleton } from "../internal/fixtures";
+import { namedFacts } from "../internal/predicates";
 
 const script = makeScriptWrite();
 
@@ -550,10 +551,16 @@ export const test_film_perform_shot_positional_target = (): void => {
       kind: "wave",
     },
   ]);
-  TestValidator.predicate(
+  TestValidator.equals(
     "a camera still cannot act outside frame",
-    says(cameraActor, "$input.draft[0].actor", "is a camera") &&
-      silentAt(cameraActor, "$input.draft[0].at"),
+    namedFacts([
+      [
+        "refused",
+        () => says(cameraActor, "$input.draft[0].actor", "is a camera"),
+      ],
+      ["violated", () => silentAt(cameraActor, "$input.draft[0].at")],
+    ]),
+    { refused: true, violated: true },
   );
 
   // 8. Locomote's in-place fallback belongs only to intentionally relative

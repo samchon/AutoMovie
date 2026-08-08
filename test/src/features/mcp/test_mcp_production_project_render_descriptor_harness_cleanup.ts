@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import ts from "typescript-compiler";
 
+import { namedFacts } from "../internal/predicates";
 import { preserveProductionProjectFixtureCleanup } from "./test_mcp_production_project";
 
 const compact = (node: ts.Node, source: ts.SourceFile): string =>
@@ -206,60 +207,191 @@ export const test_mcp_production_project_render_descriptor_harness_cleanup =
       primaryFailure: { error: undefined, present: true },
     });
     const order = "open,fstat,close";
-    TestValidator.predicate(
+    TestValidator.equals(
       "render descriptor harness cleanup preserves evidence and every hook",
-      success.caught === false &&
-        success.failure === undefined &&
-        success.operationCaught === false &&
-        success.operationFailure === undefined &&
-        success.order.join(",") === order &&
-        primaryOnly.caught === false &&
-        primaryOnly.failure === undefined &&
-        primaryOnly.operationCaught &&
-        primaryOnly.operationFailure === primaryFailure &&
-        primaryOnly.order.join(",") === order &&
-        standalone.caught &&
-        standalone.failure === openFailure &&
-        standalone.operationCaught === false &&
-        standalone.operationFailure === undefined &&
-        standalone.order.join(",") === order &&
-        multiple.caught &&
-        aggregateContainsExactly(multiple.failure, [
-          openFailure,
-          fstatFailure,
-          closeFailure,
-        ]) &&
-        multiple.operationCaught === false &&
-        multiple.operationFailure === undefined &&
-        multiple.order.join(",") === order &&
-        combined.caught &&
-        aggregateContainsExactly(combined.failure, [
-          primaryFailure,
-          openFailure,
-          fstatFailure,
-          closeFailure,
-        ]) &&
-        combined.operationCaught &&
-        combined.operationFailure === primaryFailure &&
-        combined.order.join(",") === order &&
-        undefinedPrimary.caught === false &&
-        undefinedPrimary.failure === undefined &&
-        undefinedPrimary.operationCaught &&
-        undefinedPrimary.operationFailure === undefined &&
-        undefinedPrimary.order.join(",") === order &&
-        undefinedStandalone.caught &&
-        undefinedStandalone.failure === undefined &&
-        undefinedStandalone.operationCaught === false &&
-        undefinedStandalone.operationFailure === undefined &&
-        undefinedStandalone.order.join(",") === order &&
-        undefinedCombined.caught &&
-        aggregateContainsExactly(undefinedCombined.failure, [
-          undefined,
-          undefined,
-        ]) &&
-        undefinedCombined.operationCaught &&
-        undefinedCombined.operationFailure === undefined &&
-        undefinedCombined.order.join(",") === order,
+      namedFacts([
+        ["successCaught", () => success.caught === false],
+        [
+          "successFailure",
+          () => success.caught === false && success.failure === undefined,
+        ],
+        [
+          "successOperationCaught",
+          () =>
+            success.caught === false &&
+            success.failure === undefined &&
+            success.operationCaught === false,
+        ],
+        [
+          "successOperationFailure",
+          () =>
+            success.caught === false &&
+            success.failure === undefined &&
+            success.operationCaught === false &&
+            success.operationFailure === undefined,
+        ],
+        [
+          "successOrderJoin",
+          () =>
+            success.caught === false &&
+            success.failure === undefined &&
+            success.operationCaught === false &&
+            success.operationFailure === undefined &&
+            success.order.join(",") === order,
+        ],
+        ["primaryOnlyCaught", () => primaryOnly.caught === false],
+        ["primaryOnlyFailure", () => primaryOnly.failure === undefined],
+        ["primaryOnlyOperationCaught", () => primaryOnly.operationCaught],
+        [
+          "primaryOnlyOperationFailurePrimaryFailure",
+          () => primaryOnly.operationFailure === primaryFailure,
+        ],
+        ["primaryOnlyOrderJoin", () => primaryOnly.order.join(",") === order],
+        ["standaloneCaught", () => standalone.caught],
+        [
+          "standaloneFailureOpenFailure",
+          () => standalone.failure === openFailure,
+        ],
+        [
+          "standaloneOperationCaught",
+          () => standalone.operationCaught === false,
+        ],
+        [
+          "standaloneOperationFailure",
+          () => standalone.operationFailure === undefined,
+        ],
+        ["standaloneOrderJoin", () => standalone.order.join(",") === order],
+        ["multipleCaught", () => multiple.caught],
+        [
+          "aggregateContainsExactlyMultipleFailure",
+          () =>
+            aggregateContainsExactly(multiple.failure, [
+              openFailure,
+              fstatFailure,
+              closeFailure,
+            ]),
+        ],
+        ["multipleOperationCaught", () => multiple.operationCaught === false],
+        [
+          "multipleOperationFailure",
+          () => multiple.operationFailure === undefined,
+        ],
+        ["multipleOrderJoin", () => multiple.order.join(",") === order],
+        ["combinedCaught", () => combined.caught],
+        [
+          "aggregateContainsExactlyCombinedFailure",
+          () =>
+            aggregateContainsExactly(combined.failure, [
+              primaryFailure,
+              openFailure,
+              fstatFailure,
+              closeFailure,
+            ]),
+        ],
+        ["combinedOperationCaught", () => combined.operationCaught],
+        [
+          "combinedOperationFailurePrimaryFailure",
+          () => combined.operationFailure === primaryFailure,
+        ],
+        ["combinedOrderJoin", () => combined.order.join(",") === order],
+        ["undefinedPrimaryCaught", () => undefinedPrimary.caught === false],
+        [
+          "undefinedPrimaryFailure",
+          () => undefinedPrimary.failure === undefined,
+        ],
+        [
+          "undefinedPrimaryOperationCaught",
+          () => undefinedPrimary.operationCaught,
+        ],
+        [
+          "undefinedPrimaryOperationFailure",
+          () => undefinedPrimary.operationFailure === undefined,
+        ],
+        [
+          "undefinedPrimaryOrderJoin",
+          () => undefinedPrimary.order.join(",") === order,
+        ],
+        ["undefinedStandaloneCaught", () => undefinedStandalone.caught],
+        [
+          "undefinedStandaloneFailure",
+          () => undefinedStandalone.failure === undefined,
+        ],
+        [
+          "undefinedStandaloneOperationCaught",
+          () => undefinedStandalone.operationCaught === false,
+        ],
+        [
+          "undefinedStandaloneOperationFailure",
+          () => undefinedStandalone.operationFailure === undefined,
+        ],
+        [
+          "undefinedStandaloneOrderJoin",
+          () => undefinedStandalone.order.join(",") === order,
+        ],
+        ["undefinedCombinedCaught", () => undefinedCombined.caught],
+        [
+          "aggregateContainsExactlyUndefinedCombinedFailure",
+          () =>
+            aggregateContainsExactly(undefinedCombined.failure, [
+              undefined,
+              undefined,
+            ]),
+        ],
+        [
+          "undefinedCombinedOperationCaught",
+          () => undefinedCombined.operationCaught,
+        ],
+        [
+          "undefinedCombinedOperationFailure",
+          () => undefinedCombined.operationFailure === undefined,
+        ],
+        [
+          "undefinedCombinedOrderJoin",
+          () => undefinedCombined.order.join(",") === order,
+        ],
+      ]),
+      {
+        successCaught: true,
+        successFailure: true,
+        successOperationCaught: true,
+        successOperationFailure: true,
+        successOrderJoin: true,
+        primaryOnlyCaught: true,
+        primaryOnlyFailure: true,
+        primaryOnlyOperationCaught: true,
+        primaryOnlyOperationFailurePrimaryFailure: true,
+        primaryOnlyOrderJoin: true,
+        standaloneCaught: true,
+        standaloneFailureOpenFailure: true,
+        standaloneOperationCaught: true,
+        standaloneOperationFailure: true,
+        standaloneOrderJoin: true,
+        multipleCaught: true,
+        aggregateContainsExactlyMultipleFailure: true,
+        multipleOperationCaught: true,
+        multipleOperationFailure: true,
+        multipleOrderJoin: true,
+        combinedCaught: true,
+        aggregateContainsExactlyCombinedFailure: true,
+        combinedOperationCaught: true,
+        combinedOperationFailurePrimaryFailure: true,
+        combinedOrderJoin: true,
+        undefinedPrimaryCaught: true,
+        undefinedPrimaryFailure: true,
+        undefinedPrimaryOperationCaught: true,
+        undefinedPrimaryOperationFailure: true,
+        undefinedPrimaryOrderJoin: true,
+        undefinedStandaloneCaught: true,
+        undefinedStandaloneFailure: true,
+        undefinedStandaloneOperationCaught: true,
+        undefinedStandaloneOperationFailure: true,
+        undefinedStandaloneOrderJoin: true,
+        undefinedCombinedCaught: true,
+        aggregateContainsExactlyUndefinedCombinedFailure: true,
+        undefinedCombinedOperationCaught: true,
+        undefinedCombinedOperationFailure: true,
+        undefinedCombinedOrderJoin: true,
+      },
     );
     TestValidator.equals(
       "render descriptor harness owns one cleanup lifecycle",

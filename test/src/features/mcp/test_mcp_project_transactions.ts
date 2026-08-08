@@ -214,10 +214,19 @@ export const test_mcp_project_transactions = (): void => {
       revAfterActors.revision,
       revBeforeActors.revision + 1,
     );
-    TestValidator.predicate(
+    TestValidator.equals(
       "both actor files landed under the one cycle",
-      fs.existsSync(path.join(root, "actors", "knightA.json")) &&
-        fs.existsSync(path.join(root, "actors", "knightB.json")),
+      namedFacts([
+        [
+          "fsExistsSyncPath",
+          () => fs.existsSync(path.join(root, "actors", "knightA.json")),
+        ],
+        [
+          "fsExistsSyncPath2",
+          () => fs.existsSync(path.join(root, "actors", "knightB.json")),
+        ],
+      ]),
+      { fsExistsSyncPath: true, fsExistsSyncPath2: true },
     );
 
     // 5. a staging throw on any actor persists NOTHING and does not bump.
@@ -235,10 +244,19 @@ export const test_mcp_project_transactions = (): void => {
         "circular",
       ),
     );
-    TestValidator.predicate(
+    TestValidator.equals(
       "neither actor from the failed registry save landed",
-      !fs.existsSync(path.join(root, "actors", "knightD.json")) &&
-        !fs.existsSync(path.join(root, "actors", "knightC.json")),
+      namedFacts([
+        [
+          "fsExistsSyncPath",
+          () => !fs.existsSync(path.join(root, "actors", "knightD.json")),
+        ],
+        [
+          "fsExistsSyncPath2",
+          () => !fs.existsSync(path.join(root, "actors", "knightC.json")),
+        ],
+      ]),
+      { fsExistsSyncPath: true, fsExistsSyncPath2: true },
     );
     TestValidator.equals(
       "the revision did not move on the failed actor save",
@@ -249,13 +267,28 @@ export const test_mcp_project_transactions = (): void => {
     const assetA = AutoMovieProject.open(root);
     const assetB = AutoMovieProject.open(root);
     assetA.registerAsset("models/asset-a.glb", Buffer.from("asset a"));
-    TestValidator.predicate(
+    TestValidator.equals(
       "a stale asset registrar is refused before writing",
-      throwsError(
-        () =>
-          assetB.registerAsset("models/asset-b.glb", Buffer.from("asset b")),
-        ["another session committed", "nothing was written"],
-      ) && fs.existsSync(path.join(root, "models", "asset-b.glb")) === false,
+      namedFacts([
+        [
+          "throwsErrorAssetBRegisterAsset",
+          () =>
+            throwsError(
+              () =>
+                assetB.registerAsset(
+                  "models/asset-b.glb",
+                  Buffer.from("asset b"),
+                ),
+              ["another session committed", "nothing was written"],
+            ),
+        ],
+        [
+          "fsExistsSyncPath",
+          () =>
+            fs.existsSync(path.join(root, "models", "asset-b.glb")) === false,
+        ],
+      ]),
+      { throwsErrorAssetBRegisterAsset: true, fsExistsSyncPath: true },
     );
     assetB.registerAsset("models/asset-b.glb", Buffer.from("asset b"));
     TestValidator.equals(
@@ -285,13 +318,29 @@ export const test_mcp_project_transactions = (): void => {
       () => manifestRaceB.saveSlate(staleSlate),
       ["another session committed", "nothing was written"],
     );
-    TestValidator.predicate(
+    TestValidator.equals(
       "a failed manifest refresh cannot advance the stale slate base",
-      missingManifestRejected &&
-        staleAfterManifestFailureRejected &&
-        fs
-          .readFileSync(path.join(root, "script.json"), "utf8")
-          .includes("manifest race winner"),
+      namedFacts([
+        ["missingManifestRejected", () => missingManifestRejected],
+        [
+          "staleAfterManifestFailureRejected",
+          () => missingManifestRejected && staleAfterManifestFailureRejected,
+        ],
+        [
+          "fsReadFileSyncPath",
+          () =>
+            missingManifestRejected &&
+            staleAfterManifestFailureRejected &&
+            fs
+              .readFileSync(path.join(root, "script.json"), "utf8")
+              .includes("manifest race winner"),
+        ],
+      ]),
+      {
+        missingManifestRejected: true,
+        staleAfterManifestFailureRejected: true,
+        fsReadFileSyncPath: true,
+      },
     );
     a.writableSlate();
 
@@ -388,9 +437,18 @@ export const test_mcp_project_transactions = (): void => {
         },
       ]);
     }
-    TestValidator.predicate(
+    TestValidator.equals(
       "a non-ENOENT actor quarantine failure preserves the resident slice",
-      deniedRemoval && fs.existsSync(path.join(root, "actors", "knightA.json")),
+      namedFacts([
+        ["deniedRemoval", () => deniedRemoval],
+        [
+          "fsExistsSyncPath",
+          () =>
+            deniedRemoval &&
+            fs.existsSync(path.join(root, "actors", "knightA.json")),
+        ],
+      ]),
+      { deniedRemoval: true, fsExistsSyncPath: true },
     );
 
     const nativeRemove = fs.rmSync;
@@ -556,15 +614,32 @@ export const test_mcp_project_transactions = (): void => {
         path.join(root, "actors", quarantinedActor),
         path.join(root, "actors", "knightA.json"),
       );
-    TestValidator.predicate(
+    TestValidator.equals(
       "a removal-time root swap preserves the quarantined original and replacement",
-      removalSwapped &&
-        removalSwapMessage.includes(
-          "root identity or namespace fence changed",
-        ) &&
-        removalReplacementEmpty &&
-        quarantinedActor !== undefined &&
-        fs.existsSync(path.join(root, "actors", "knightA.json")),
+      namedFacts([
+        ["removalSwapped", () => removalSwapped],
+        [
+          "removalSwapMessageIncludesRoot",
+          () =>
+            removalSwapped &&
+            removalSwapMessage.includes(
+              "root identity or namespace fence changed",
+            ),
+        ],
+        ["removalReplacementEmpty", () => removalReplacementEmpty],
+        ["quarantinedActor", () => quarantinedActor !== undefined],
+        [
+          "fsExistsSyncPath",
+          () => fs.existsSync(path.join(root, "actors", "knightA.json")),
+        ],
+      ]),
+      {
+        removalSwapped: true,
+        removalSwapMessageIncludesRoot: true,
+        removalReplacementEmpty: true,
+        quarantinedActor: true,
+        fsExistsSyncPath: true,
+      },
     );
     a.writableSlate();
 
@@ -618,11 +693,25 @@ export const test_mcp_project_transactions = (): void => {
     fs.rmSync(root, { recursive: true, force: true });
     fs.renameSync(lockParkedRoot, root);
     fs.rmSync(path.join(root, "revision.lock"), { force: true });
-    TestValidator.predicate(
+    TestValidator.equals(
       "a root swap after lock acquisition cannot unlink a copied replacement token",
-      lockSwapped &&
-        lockSwapMessage.includes("root identity or namespace fence changed") &&
-        replacementLockPreserved,
+      namedFacts([
+        ["lockSwapped", () => lockSwapped],
+        [
+          "lockSwapMessageIncludesRoot",
+          () =>
+            lockSwapped &&
+            lockSwapMessage.includes(
+              "root identity or namespace fence changed",
+            ),
+        ],
+        ["replacementLockPreserved", () => replacementLockPreserved],
+      ]),
+      {
+        lockSwapped: true,
+        lockSwapMessageIncludesRoot: true,
+        replacementLockPreserved: true,
+      },
     );
 
     const operationParkedRoot = `${root}.operation-parked`;
@@ -687,14 +776,31 @@ export const test_mcp_project_transactions = (): void => {
     for (const file of fs.readdirSync(path.join(root, "actors")))
       if (file.startsWith("rootSwap.json.tmp."))
         fs.rmSync(path.join(root, "actors", file), { force: true });
-    TestValidator.predicate(
+    TestValidator.equals(
       "an operation-time root swap cannot publish or release through the replacement",
-      operationSwapped &&
-        operationMessage.includes("root identity or namespace fence changed") &&
-        replacementStayedEmpty &&
-        originalLockPreserved &&
-        originalPublishPrevented &&
-        replacementLeaseReacquired,
+      namedFacts([
+        ["operationSwapped", () => operationSwapped],
+        [
+          "operationMessageIncludesRoot",
+          () =>
+            operationSwapped &&
+            operationMessage.includes(
+              "root identity or namespace fence changed",
+            ),
+        ],
+        ["replacementStayedEmpty", () => replacementStayedEmpty],
+        ["originalLockPreserved", () => originalLockPreserved],
+        ["originalPublishPrevented", () => originalPublishPrevented],
+        ["replacementLeaseReacquired", () => replacementLeaseReacquired],
+      ]),
+      {
+        operationSwapped: true,
+        operationMessageIncludesRoot: true,
+        replacementStayedEmpty: true,
+        originalLockPreserved: true,
+        originalPublishPrevented: true,
+        replacementLeaseReacquired: true,
+      },
     );
 
     const parkedRoot = `${root}.owner-parked`;

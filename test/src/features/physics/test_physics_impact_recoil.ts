@@ -6,7 +6,7 @@ import {
 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { nclose } from "../internal/predicates";
+import { namedFacts, nclose } from "../internal/predicates";
 
 const rest: IAutoMovieTransform = {
   translation: { x: 0, y: 0, z: 0 },
@@ -137,9 +137,16 @@ export const test_physics_impact_recoil = (): void => {
     hipSkeleton,
     1,
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "a canonical hip recoil is pulled out of the box corner by its swing cone",
-    hip.joints[0]!.flexion! < 120 && hip.joints[0]!.abduction! < 45,
+    namedFacts([
+      ["hipJoints0", () => hip.joints[0]!.flexion! < 120],
+      [
+        "hipJoints02",
+        () => hip.joints[0]!.flexion! < 120 && hip.joints[0]!.abduction! < 45,
+      ],
+    ]),
+    { hipJoints0: true, hipJoints02: true },
   );
   TestValidator.equals(
     "the swing-coned recoil is legal under the same skeleton",

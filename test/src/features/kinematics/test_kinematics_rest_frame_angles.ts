@@ -178,9 +178,13 @@ export const test_kinematics_rest_frame_angles = (): void => {
   const target = { x: 0.45, y: 1.3, z: 0.3 };
   const reachClinical = reachPose(skel, "left", target, HUMANOID_REST_FRAME);
   const reachRig = reachPose(skel, "left", target, {});
-  TestValidator.predicate(
+  TestValidator.equals(
     "reachPose returns a pose both ways",
-    reachClinical !== null && reachRig !== null,
+    namedFacts([
+      ["reachClinical", () => reachClinical !== null],
+      ["reachRig", () => reachClinical !== null && reachRig !== null],
+    ]),
+    { reachClinical: true, reachRig: true },
   );
   if (reachClinical !== null && reachRig !== null) {
     const handOf = (
@@ -190,10 +194,20 @@ export const test_kinematics_rest_frame_angles = (): void => {
       resolvePose(pose, skel, HUMANOID_JOINT_AXES, frames).find(
         (b) => b.bone === "leftHand",
       )!.worldPosition;
-    TestValidator.predicate(
+    TestValidator.equals(
       "each frame's pose lands the hand on the target, read in its own space",
-      vclose(handOf(reachClinical, HUMANOID_REST_FRAME), target, 1e-9) &&
-        vclose(handOf(reachRig, {}), target, 1e-9),
+      namedFacts([
+        [
+          "vcloseHandOfReachClinical",
+          () =>
+            vclose(handOf(reachClinical, HUMANOID_REST_FRAME), target, 1e-9),
+        ],
+        [
+          "vcloseHandOfReachRig",
+          () => vclose(handOf(reachRig, {}), target, 1e-9),
+        ],
+      ]),
+      { vcloseHandOfReachClinical: true, vcloseHandOfReachRig: true },
     );
     // The sharper invariant the frame cannot touch: the hinge angle is fixed by
     // the shoulder-to-target DISTANCE, and no rest frame moves the target.

@@ -48,9 +48,16 @@ export const test_physics_moving_launch_closest = (): void => {
 
   const closest = iterates.reduce((a, b) => (b.residual < a.residual ? b : a));
   const last = iterates[iterates.length - 1]!;
-  TestValidator.predicate(
+  TestValidator.equals(
     "the residual is non-monotone, the fixed point does not settle within four",
-    closest !== last && last.residual > closest.residual,
+    namedFacts([
+      ["closestLast", () => closest !== last],
+      [
+        "lastResidualClosest",
+        () => closest !== last && last.residual > closest.residual,
+      ],
+    ]),
+    { closestLast: true, lastResidualClosest: true },
   );
 
   // Capped at four iterates the moving-launch solve must be the closest iterate

@@ -315,34 +315,48 @@ export const test_benchmark_submission_seal = (): void => {
   );
   const repaintAdapterIdentity =
     '{"execution":"local","model":"fixture","protocolVersion":"automovie.repaint-runtime.v1","provider":"fixture","version":"1"}';
-  TestValidator.predicate(
+  TestValidator.equals(
     "repaint evidence requires canonical structured runtime identity and concrete shot receipts",
-    throws(
-      () =>
-        sealAutoMovieBenchmarkSubmission({
-          ...draft,
-          lane: "repaint",
-          repaint: {
-            status: "not-produced",
-            adapterIdentity: "nominal-capability-label",
-          },
-        }),
-      "not canonical JSON",
-    ) &&
-      throws(
+    namedFacts([
+      [
+        "throwsSealAutoMovieBenchmarkSubmissionDraft",
         () =>
-          sealAutoMovieBenchmarkSubmission({
-            ...draft,
-            lane: "repaint",
-            repaint: {
-              status: "verified",
-              adapterIdentity: repaintAdapterIdentity,
-              shots: [],
-              featureDigest: draft.deliverables[0]!.digest,
-            },
-          }),
-        "unique non-blank shot receipts",
-      ),
+          throws(
+            () =>
+              sealAutoMovieBenchmarkSubmission({
+                ...draft,
+                lane: "repaint",
+                repaint: {
+                  status: "not-produced",
+                  adapterIdentity: "nominal-capability-label",
+                },
+              }),
+            "not canonical JSON",
+          ),
+      ],
+      [
+        "throwsSealAutoMovieBenchmarkSubmissionDraft2",
+        () =>
+          throws(
+            () =>
+              sealAutoMovieBenchmarkSubmission({
+                ...draft,
+                lane: "repaint",
+                repaint: {
+                  status: "verified",
+                  adapterIdentity: repaintAdapterIdentity,
+                  shots: [],
+                  featureDigest: draft.deliverables[0]!.digest,
+                },
+              }),
+            "unique non-blank shot receipts",
+          ),
+      ],
+    ]),
+    {
+      throwsSealAutoMovieBenchmarkSubmissionDraft: true,
+      throwsSealAutoMovieBenchmarkSubmissionDraft2: true,
+    },
   );
 
   const reloaded = JSON.parse(

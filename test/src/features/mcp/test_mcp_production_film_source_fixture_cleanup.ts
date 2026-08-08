@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import ts from "typescript-compiler";
 
+import { namedFacts } from "../internal/predicates";
 import { preserveFilmSourceFixtureCleanup } from "./test_mcp_production_film_timeline";
 
 const compact = (node: ts.Node, source: ts.SourceFile): string =>
@@ -204,48 +205,141 @@ export const test_mcp_production_film_source_fixture_cleanup = (): void => {
     outsideRemovalFailure: { error: undefined, present: true },
     primaryFailure: { error: undefined, present: true },
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "film-source cleanup preserves dependencies and exact failure order",
-    success.caught === false &&
-      success.order.join(",") === "remove-link,write-source,remove-outside" &&
-      primaryOnly.caught &&
-      primaryOnly.failure === primaryFailure &&
-      primaryOnly.order.join(",") ===
-        "remove-link,write-source,remove-outside" &&
-      dependencyFailure.caught &&
-      dependencyFailure.failure === linkRemovalFailure &&
-      dependencyFailure.order.join(",") === "remove-link,remove-outside" &&
-      standaloneWrite.caught &&
-      standaloneWrite.failure === sourceWriteFailure &&
-      standaloneWrite.order.join(",") ===
-        "remove-link,write-source,remove-outside" &&
-      multiple.caught &&
-      aggregateContainsExactly(multiple.failure, [
-        sourceWriteFailure,
-        outsideRemovalFailure,
-      ]) &&
-      multiple.order.join(",") === "remove-link,write-source,remove-outside" &&
-      combined.caught &&
-      aggregateContainsExactly(combined.failure, [
-        primaryFailure,
-        sourceWriteFailure,
-        outsideRemovalFailure,
-      ]) &&
-      combined.order.join(",") === "remove-link,write-source,remove-outside" &&
-      undefinedPrimary.caught &&
-      undefinedPrimary.failure === undefined &&
-      undefinedPrimary.order.join(",") ===
-        "remove-link,write-source,remove-outside" &&
-      undefinedStandalone.caught &&
-      undefinedStandalone.failure === undefined &&
-      undefinedStandalone.order.join(",") === "remove-link,remove-outside" &&
-      undefinedCombined.caught &&
-      aggregateContainsExactly(undefinedCombined.failure, [
-        undefined,
-        undefined,
-      ]) &&
-      undefinedCombined.order.join(",") ===
-        "remove-link,write-source,remove-outside",
+    namedFacts([
+      ["successCaught", () => success.caught === false],
+      [
+        "successOrderJoin",
+        () =>
+          success.caught === false &&
+          success.order.join(",") === "remove-link,write-source,remove-outside",
+      ],
+      ["primaryOnlyCaught", () => primaryOnly.caught],
+      [
+        "primaryOnlyFailurePrimaryFailure",
+        () => primaryOnly.failure === primaryFailure,
+      ],
+      [
+        "primaryOnlyOrderJoin",
+        () =>
+          primaryOnly.order.join(",") ===
+          "remove-link,write-source,remove-outside",
+      ],
+      ["dependencyFailureCaught", () => dependencyFailure.caught],
+      [
+        "dependencyFailureFailureLinkRemovalFailure",
+        () => dependencyFailure.failure === linkRemovalFailure,
+      ],
+      [
+        "dependencyFailureOrderJoin",
+        () =>
+          dependencyFailure.order.join(",") === "remove-link,remove-outside",
+      ],
+      ["standaloneWriteCaught", () => standaloneWrite.caught],
+      [
+        "standaloneWriteFailureSourceWriteFailure",
+        () => standaloneWrite.failure === sourceWriteFailure,
+      ],
+      [
+        "standaloneWriteOrderJoin",
+        () =>
+          standaloneWrite.order.join(",") ===
+          "remove-link,write-source,remove-outside",
+      ],
+      ["multipleCaught", () => multiple.caught],
+      [
+        "aggregateContainsExactlyMultipleFailure",
+        () =>
+          aggregateContainsExactly(multiple.failure, [
+            sourceWriteFailure,
+            outsideRemovalFailure,
+          ]),
+      ],
+      [
+        "multipleOrderJoin",
+        () =>
+          multiple.order.join(",") ===
+          "remove-link,write-source,remove-outside",
+      ],
+      ["combinedCaught", () => combined.caught],
+      [
+        "aggregateContainsExactlyCombinedFailure",
+        () =>
+          aggregateContainsExactly(combined.failure, [
+            primaryFailure,
+            sourceWriteFailure,
+            outsideRemovalFailure,
+          ]),
+      ],
+      [
+        "combinedOrderJoin",
+        () =>
+          combined.order.join(",") ===
+          "remove-link,write-source,remove-outside",
+      ],
+      ["undefinedPrimaryCaught", () => undefinedPrimary.caught],
+      ["undefinedPrimaryFailure", () => undefinedPrimary.failure === undefined],
+      [
+        "undefinedPrimaryOrderJoin",
+        () =>
+          undefinedPrimary.order.join(",") ===
+          "remove-link,write-source,remove-outside",
+      ],
+      ["undefinedStandaloneCaught", () => undefinedStandalone.caught],
+      [
+        "undefinedStandaloneFailure",
+        () => undefinedStandalone.failure === undefined,
+      ],
+      [
+        "undefinedStandaloneOrderJoin",
+        () =>
+          undefinedStandalone.order.join(",") === "remove-link,remove-outside",
+      ],
+      ["undefinedCombinedCaught", () => undefinedCombined.caught],
+      [
+        "aggregateContainsExactlyUndefinedCombinedFailure",
+        () =>
+          aggregateContainsExactly(undefinedCombined.failure, [
+            undefined,
+            undefined,
+          ]),
+      ],
+      [
+        "undefinedCombinedOrderJoin",
+        () =>
+          undefinedCombined.order.join(",") ===
+          "remove-link,write-source,remove-outside",
+      ],
+    ]),
+    {
+      successCaught: true,
+      successOrderJoin: true,
+      primaryOnlyCaught: true,
+      primaryOnlyFailurePrimaryFailure: true,
+      primaryOnlyOrderJoin: true,
+      dependencyFailureCaught: true,
+      dependencyFailureFailureLinkRemovalFailure: true,
+      dependencyFailureOrderJoin: true,
+      standaloneWriteCaught: true,
+      standaloneWriteFailureSourceWriteFailure: true,
+      standaloneWriteOrderJoin: true,
+      multipleCaught: true,
+      aggregateContainsExactlyMultipleFailure: true,
+      multipleOrderJoin: true,
+      combinedCaught: true,
+      aggregateContainsExactlyCombinedFailure: true,
+      combinedOrderJoin: true,
+      undefinedPrimaryCaught: true,
+      undefinedPrimaryFailure: true,
+      undefinedPrimaryOrderJoin: true,
+      undefinedStandaloneCaught: true,
+      undefinedStandaloneFailure: true,
+      undefinedStandaloneOrderJoin: true,
+      undefinedCombinedCaught: true,
+      aggregateContainsExactlyUndefinedCombinedFailure: true,
+      undefinedCombinedOrderJoin: true,
+    },
   );
   TestValidator.equals(
     "film timeline owns dependency-safe source restoration",

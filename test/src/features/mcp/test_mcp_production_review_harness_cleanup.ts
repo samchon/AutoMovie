@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import ts from "typescript-compiler";
 
+import { namedFacts } from "../internal/predicates";
 import { preserveProductionReviewHarnessCleanup } from "./test_mcp_production_review";
 
 const compact = (node: ts.Node, source: ts.SourceFile): string =>
@@ -204,51 +205,140 @@ export const test_mcp_production_review_harness_cleanup = (): void => {
     primaryFailure: { error: undefined, present: true },
   });
   const fullOrder = "cleanup-0,cleanup-1";
-  TestValidator.predicate(
+  TestValidator.equals(
     "production-review harness cleanup preserves failure and restoration order",
-    success.caught === false &&
-      success.failure === undefined &&
-      success.order.join(",") === fullOrder &&
-      primaryOnly.caught &&
-      primaryOnly.failure === primaryFailure &&
-      primaryOnly.order.join(",") === fullOrder &&
-      standalone.caught &&
-      standalone.failure === hookFailure &&
-      standalone.order.join(",") === fullOrder &&
-      multiple.caught &&
-      aggregateContainsExactly(multiple.failure, [
-        hookFailure,
-        sourceFailure,
-      ]) &&
-      multiple.order.join(",") === fullOrder &&
-      combined.caught &&
-      aggregateContainsExactly(combined.failure, [
-        primaryFailure,
-        hookFailure,
-        sourceFailure,
-      ]) &&
-      combined.order.join(",") === fullOrder &&
-      selective.caught &&
-      aggregateContainsExactly(selective.failure, [
-        hookFailure,
-        sourceFailure,
-      ]) &&
-      selective.message.includes("resource-0") &&
-      selective.message.includes("resource-2") &&
-      selective.message.includes("resource-1") === false &&
-      selective.order.join(",") === "cleanup-0,cleanup-1,cleanup-2" &&
-      undefinedPrimary.caught &&
-      undefinedPrimary.failure === undefined &&
-      undefinedPrimary.order.join(",") === fullOrder &&
-      undefinedStandalone.caught &&
-      undefinedStandalone.failure === undefined &&
-      undefinedStandalone.order.join(",") === fullOrder &&
-      undefinedCombined.caught &&
-      aggregateContainsExactly(undefinedCombined.failure, [
-        undefined,
-        undefined,
-      ]) &&
-      undefinedCombined.order.join(",") === fullOrder,
+    namedFacts([
+      ["successCaught", () => success.caught === false],
+      [
+        "successFailure",
+        () => success.caught === false && success.failure === undefined,
+      ],
+      [
+        "successOrderJoin",
+        () =>
+          success.caught === false &&
+          success.failure === undefined &&
+          success.order.join(",") === fullOrder,
+      ],
+      ["primaryOnlyCaught", () => primaryOnly.caught],
+      [
+        "primaryOnlyFailurePrimaryFailure",
+        () => primaryOnly.failure === primaryFailure,
+      ],
+      ["primaryOnlyOrderJoin", () => primaryOnly.order.join(",") === fullOrder],
+      ["standaloneCaught", () => standalone.caught],
+      [
+        "standaloneFailureHookFailure",
+        () => standalone.failure === hookFailure,
+      ],
+      ["standaloneOrderJoin", () => standalone.order.join(",") === fullOrder],
+      ["multipleCaught", () => multiple.caught],
+      [
+        "aggregateContainsExactlyMultipleFailure",
+        () =>
+          aggregateContainsExactly(multiple.failure, [
+            hookFailure,
+            sourceFailure,
+          ]),
+      ],
+      ["multipleOrderJoin", () => multiple.order.join(",") === fullOrder],
+      ["combinedCaught", () => combined.caught],
+      [
+        "aggregateContainsExactlyCombinedFailure",
+        () =>
+          aggregateContainsExactly(combined.failure, [
+            primaryFailure,
+            hookFailure,
+            sourceFailure,
+          ]),
+      ],
+      ["combinedOrderJoin", () => combined.order.join(",") === fullOrder],
+      ["selectiveCaught", () => selective.caught],
+      [
+        "aggregateContainsExactlySelectiveFailure",
+        () =>
+          aggregateContainsExactly(selective.failure, [
+            hookFailure,
+            sourceFailure,
+          ]),
+      ],
+      [
+        "selectiveMessageIncludes",
+        () => selective.message.includes("resource-0"),
+      ],
+      [
+        "selectiveMessageIncludes2",
+        () => selective.message.includes("resource-2"),
+      ],
+      [
+        "selectiveMessageIncludes3",
+        () => selective.message.includes("resource-1") === false,
+      ],
+      [
+        "selectiveOrderJoin",
+        () => selective.order.join(",") === "cleanup-0,cleanup-1,cleanup-2",
+      ],
+      ["undefinedPrimaryCaught", () => undefinedPrimary.caught],
+      ["undefinedPrimaryFailure", () => undefinedPrimary.failure === undefined],
+      [
+        "undefinedPrimaryOrderJoin",
+        () => undefinedPrimary.order.join(",") === fullOrder,
+      ],
+      ["undefinedStandaloneCaught", () => undefinedStandalone.caught],
+      [
+        "undefinedStandaloneFailure",
+        () => undefinedStandalone.failure === undefined,
+      ],
+      [
+        "undefinedStandaloneOrderJoin",
+        () => undefinedStandalone.order.join(",") === fullOrder,
+      ],
+      ["undefinedCombinedCaught", () => undefinedCombined.caught],
+      [
+        "aggregateContainsExactlyUndefinedCombinedFailure",
+        () =>
+          aggregateContainsExactly(undefinedCombined.failure, [
+            undefined,
+            undefined,
+          ]),
+      ],
+      [
+        "undefinedCombinedOrderJoin",
+        () => undefinedCombined.order.join(",") === fullOrder,
+      ],
+    ]),
+    {
+      successCaught: true,
+      successFailure: true,
+      successOrderJoin: true,
+      primaryOnlyCaught: true,
+      primaryOnlyFailurePrimaryFailure: true,
+      primaryOnlyOrderJoin: true,
+      standaloneCaught: true,
+      standaloneFailureHookFailure: true,
+      standaloneOrderJoin: true,
+      multipleCaught: true,
+      aggregateContainsExactlyMultipleFailure: true,
+      multipleOrderJoin: true,
+      combinedCaught: true,
+      aggregateContainsExactlyCombinedFailure: true,
+      combinedOrderJoin: true,
+      selectiveCaught: true,
+      aggregateContainsExactlySelectiveFailure: true,
+      selectiveMessageIncludes: true,
+      selectiveMessageIncludes2: true,
+      selectiveMessageIncludes3: true,
+      selectiveOrderJoin: true,
+      undefinedPrimaryCaught: true,
+      undefinedPrimaryFailure: true,
+      undefinedPrimaryOrderJoin: true,
+      undefinedStandaloneCaught: true,
+      undefinedStandaloneFailure: true,
+      undefinedStandaloneOrderJoin: true,
+      undefinedCombinedCaught: true,
+      aggregateContainsExactlyUndefinedCombinedFailure: true,
+      undefinedCombinedOrderJoin: true,
+    },
   );
   TestValidator.equals(
     "production-review test owns two commit-race cleanup lifecycles",

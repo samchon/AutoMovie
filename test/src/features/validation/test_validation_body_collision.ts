@@ -3,6 +3,7 @@ import { TestValidator } from "@nestia/e2e";
 
 import { staticActor } from "../internal/collision";
 import {
+  namedFacts,
   validationHasNoWarnings,
   validationHasWarningCount,
   vclose,
@@ -50,10 +51,18 @@ export const test_validation_body_collision = (): void => {
   TestValidator.equals("event names actor A", hit.events[0]?.actor, "A");
   TestValidator.equals("event names target B", hit.events[0]?.target, "B");
   TestValidator.predicate("response suggested", hit.response !== null);
-  TestValidator.predicate(
+  TestValidator.equals(
     "static collision transfers no impulse",
-    hit.response !== null &&
-      vclose(hit.response.impact.impulse, { x: 0, y: 0, z: 0 }),
+    namedFacts([
+      ["hitResponse", () => hit.response !== null],
+      [
+        "vcloseHitResponse",
+        () =>
+          hit.response !== null &&
+          vclose(hit.response.impact.impulse, { x: 0, y: 0, z: 0 }),
+      ],
+    ]),
+    { hitResponse: true, vcloseHitResponse: true },
   );
 
   const apart = detectBodyCollision({

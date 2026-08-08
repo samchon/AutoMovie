@@ -129,9 +129,13 @@ const flexionFor = (dy: number, horizontal: number): number =>
 export const test_perform_look_at_eye_level = (): void => {
   // 1. eyes meet eyes at conversational range.
   const level = headOf(look({ kind: "node", node: "guard" })!);
-  TestValidator.predicate(
+  TestValidator.equals(
     "an actor target at equal eye height needs no head tilt",
-    nclose(level.flexion, 0) && nclose(level.twist, 0),
+    namedFacts([
+      ["ncloseLevelFlexion", () => nclose(level.flexion, 0)],
+      ["ncloseLevelTwist", () => nclose(level.twist, 0)],
+    ]),
+    { ncloseLevelFlexion: true, ncloseLevelTwist: true },
   );
   const ground = headOf(look({ kind: "point", point: GUARD_PLACEMENT })!);
   TestValidator.equals(

@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import ts from "typescript-compiler";
 
+import { namedFacts } from "../internal/predicates";
 import { preserveProductionOracleHookCleanup } from "./test_mcp_production_oracle";
 
 const compact = (node: ts.Node, source: ts.SourceFile): string =>
@@ -170,26 +171,70 @@ export const test_mcp_production_oracle_single_hook_cleanup = (): void => {
   const undefinedPrimary = captureCleanup({
     primaryFailure: { error: undefined, present: true },
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "a single oracle restoration preserves the guarded failure first",
-    success.caught === false &&
-      success.failure === undefined &&
-      success.order.join(",") === "cleanup-0" &&
-      primaryOnly.caught &&
-      primaryOnly.failure === primaryFailure &&
-      primaryOnly.order.join(",") === "cleanup-0" &&
-      standalone.caught &&
-      standalone.failure === restorationFailure &&
-      standalone.order.join(",") === "cleanup-0" &&
-      combined.caught &&
-      aggregateContainsExactly(combined.failure, [
-        primaryFailure,
-        restorationFailure,
-      ]) &&
-      combined.order.join(",") === "cleanup-0" &&
-      undefinedPrimary.caught &&
-      undefinedPrimary.failure === undefined &&
-      undefinedPrimary.order.join(",") === "cleanup-0",
+    namedFacts([
+      ["successCaught", () => success.caught === false],
+      [
+        "successFailure",
+        () => success.caught === false && success.failure === undefined,
+      ],
+      [
+        "successOrderJoin",
+        () =>
+          success.caught === false &&
+          success.failure === undefined &&
+          success.order.join(",") === "cleanup-0",
+      ],
+      ["primaryOnlyCaught", () => primaryOnly.caught],
+      [
+        "primaryOnlyFailurePrimaryFailure",
+        () => primaryOnly.failure === primaryFailure,
+      ],
+      [
+        "primaryOnlyOrderJoin",
+        () => primaryOnly.order.join(",") === "cleanup-0",
+      ],
+      ["standaloneCaught", () => standalone.caught],
+      [
+        "standaloneFailureRestorationFailure",
+        () => standalone.failure === restorationFailure,
+      ],
+      ["standaloneOrderJoin", () => standalone.order.join(",") === "cleanup-0"],
+      ["combinedCaught", () => combined.caught],
+      [
+        "aggregateContainsExactlyCombinedFailure",
+        () =>
+          aggregateContainsExactly(combined.failure, [
+            primaryFailure,
+            restorationFailure,
+          ]),
+      ],
+      ["combinedOrderJoin", () => combined.order.join(",") === "cleanup-0"],
+      ["undefinedPrimaryCaught", () => undefinedPrimary.caught],
+      ["undefinedPrimaryFailure", () => undefinedPrimary.failure === undefined],
+      [
+        "undefinedPrimaryOrderJoin",
+        () => undefinedPrimary.order.join(",") === "cleanup-0",
+      ],
+    ]),
+    {
+      successCaught: true,
+      successFailure: true,
+      successOrderJoin: true,
+      primaryOnlyCaught: true,
+      primaryOnlyFailurePrimaryFailure: true,
+      primaryOnlyOrderJoin: true,
+      standaloneCaught: true,
+      standaloneFailureRestorationFailure: true,
+      standaloneOrderJoin: true,
+      combinedCaught: true,
+      aggregateContainsExactlyCombinedFailure: true,
+      combinedOrderJoin: true,
+      undefinedPrimaryCaught: true,
+      undefinedPrimaryFailure: true,
+      undefinedPrimaryOrderJoin: true,
+    },
   );
   TestValidator.equals(
     "production oracle protects every single-hook restoration",

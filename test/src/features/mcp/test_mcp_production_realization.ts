@@ -133,10 +133,25 @@ export const test_mcp_production_realization = (): void => {
       compiled: held,
       collisions: [],
     });
-    TestValidator.predicate(
+    TestValidator.equals(
       "an explicit null performance holds instead of falling back to the node motion",
-      heldOutcome.realization.opening.every((item) => item.passed) &&
-        heldOutcome.realization.closing.some((item) => item.passed === false),
+      namedFacts([
+        [
+          "heldOutcomeRealizationOpening",
+          () => heldOutcome.realization.opening.every((item) => item.passed),
+        ],
+        [
+          "heldOutcomeRealizationClosing",
+          () =>
+            heldOutcome.realization.closing.some(
+              (item) => item.passed === false,
+            ),
+        ],
+      ]),
+      {
+        heldOutcomeRealizationOpening: true,
+        heldOutcomeRealizationClosing: true,
+      },
     );
 
     const formation = formationDesign();
@@ -163,12 +178,26 @@ export const test_mcp_production_realization = (): void => {
       },
       collisions: [],
     });
-    TestValidator.predicate(
+    TestValidator.equals(
       "source-stage formation realization precedes compiler-owned hero nodes",
-      sourceStageOutcome.diagnostics.length === 0 &&
-        sourceStageOutcome.realization.formations.some(
-          (item) => item.id === formation.id && item.passed,
-        ),
+      namedFacts([
+        [
+          "sourceStageOutcomeDiagnosticsLength",
+          () => sourceStageOutcome.diagnostics.length === 0,
+        ],
+        [
+          "sourceStageOutcomeRealizationFormations",
+          () =>
+            sourceStageOutcome.diagnostics.length === 0 &&
+            sourceStageOutcome.realization.formations.some(
+              (item) => item.id === formation.id && item.passed,
+            ),
+        ],
+      ]),
+      {
+        sourceStageOutcomeDiagnosticsLength: true,
+        sourceStageOutcomeRealizationFormations: true,
+      },
     );
     const {
       models: _baseModels,
@@ -438,12 +467,26 @@ export const test_mcp_production_realization = (): void => {
       compiled: materialized,
       collisions: [],
     });
-    TestValidator.predicate(
+    TestValidator.equals(
       "an event cannot pass while a declared subject is absent",
-      ghostSubjectOutcome.realization.events[0]?.passed === false &&
-        ghostSubjectOutcome.diagnostics.some((item) =>
-          item.message.includes("resolve every declared subject"),
-        ),
+      namedFacts([
+        [
+          "ghostSubjectOutcomeRealizationEvents",
+          () => ghostSubjectOutcome.realization.events[0]?.passed === false,
+        ],
+        [
+          "ghostSubjectOutcomeDiagnosticsSome",
+          () =>
+            ghostSubjectOutcome.realization.events[0]?.passed === false &&
+            ghostSubjectOutcome.diagnostics.some((item) =>
+              item.message.includes("resolve every declared subject"),
+            ),
+        ],
+      ]),
+      {
+        ghostSubjectOutcomeRealizationEvents: true,
+        ghostSubjectOutcomeDiagnosticsSome: true,
+      },
     );
     const emptyFormationSubjectOutcome = realizeShotContract({
       contract,
@@ -539,14 +582,28 @@ export const test_mcp_production_realization = (): void => {
       compiled: missingHeroNode,
       collisions: [],
     });
-    TestValidator.predicate(
+    TestValidator.equals(
       "named heroes must retain their compiler-owned model and scene node",
-      heroModelOutcome.realization.formations.some(
-        (item) => item.id === formation.id && item.passed === false,
-      ) &&
-        missingHeroNodeOutcome.realization.formations.some(
-          (item) => item.id === formation.id && item.passed === false,
-        ),
+      namedFacts([
+        [
+          "heroModelOutcomeRealizationFormations",
+          () =>
+            heroModelOutcome.realization.formations.some(
+              (item) => item.id === formation.id && item.passed === false,
+            ),
+        ],
+        [
+          "missingHeroNodeOutcomeRealizationFormations",
+          () =>
+            missingHeroNodeOutcome.realization.formations.some(
+              (item) => item.id === formation.id && item.passed === false,
+            ),
+        ],
+      ]),
+      {
+        heroModelOutcomeRealizationFormations: true,
+        missingHeroNodeOutcomeRealizationFormations: true,
+      },
     );
 
     const unreadable = structuredClone(base);

@@ -1,7 +1,7 @@
 import { IAutoMovieImpactBody, resolveImpact } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
-import { nclose } from "../internal/predicates";
+import { namedFacts, nclose } from "../internal/predicates";
 
 const v = (x: number, y: number, z: number) => ({ x, y, z });
 const N = v(0, 0, 1); // contact normal, a → b (b sits ahead on +z)
@@ -62,13 +62,21 @@ export const test_physics_impact = (): void => {
     N,
   );
   TestValidator.equals("fast into soft → embed", emb.kind, "embed");
-  TestValidator.predicate(
+  TestValidator.equals(
     "arrow ~stops (no rebound)",
-    emb.velocityA.z >= 0 && emb.velocityA.z < 1,
+    namedFacts([
+      ["embVelocityAZ", () => emb.velocityA.z >= 0],
+      ["embVelocityAZ2", () => emb.velocityA.z >= 0 && emb.velocityA.z < 1],
+    ]),
+    { embVelocityAZ: true, embVelocityAZ2: true },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "heavy target barely moves",
-    emb.velocityB.z > 0 && emb.velocityB.z < 0.3,
+    namedFacts([
+      ["embVelocityBZ", () => emb.velocityB.z > 0],
+      ["embVelocityBZ2", () => emb.velocityB.z > 0 && emb.velocityB.z < 0.3],
+    ]),
+    { embVelocityBZ: true, embVelocityBZ2: true },
   );
 
   // 3. through
@@ -115,8 +123,12 @@ export const test_physics_impact = (): void => {
     N,
   );
   TestValidator.equals("slow scuff → deflect", dfl.kind, "deflect");
-  TestValidator.predicate(
+  TestValidator.equals(
     "inelastic: both end at ~2 m/s",
-    nclose(dfl.velocityA.z, 2) && nclose(dfl.velocityB.z, 2),
+    namedFacts([
+      ["ncloseDflVelocityA", () => nclose(dfl.velocityA.z, 2)],
+      ["ncloseDflVelocityB", () => nclose(dfl.velocityB.z, 2)],
+    ]),
+    { ncloseDflVelocityA: true, ncloseDflVelocityB: true },
   );
 };

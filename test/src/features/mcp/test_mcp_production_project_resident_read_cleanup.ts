@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import ts from "typescript-compiler";
 
+import { namedFacts } from "../internal/predicates";
 import { preserveProductionProjectFixtureCleanup } from "./test_mcp_production_project";
 
 const compact = (node: ts.Node, source: ts.SourceFile): string =>
@@ -207,44 +208,129 @@ export const test_mcp_production_project_resident_read_cleanup = (): void => {
     cleanupFailures: [{ error: undefined, present: true }],
     primaryFailure: { error: undefined, present: true },
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "resident-read cleanup preserves failure and recovery order",
-    success.caught === false &&
-      success.failure === undefined &&
-      success.order.join(",") === "cleanup-0,cleanup-1,cleanup-2" &&
-      primaryOnly.caught &&
-      primaryOnly.failure === primaryFailure &&
-      primaryOnly.order.join(",") === "cleanup-0,cleanup-1,cleanup-2" &&
-      standalone.caught &&
-      standalone.failure === firstCleanupFailure &&
-      standalone.order.join(",") === "cleanup-0,cleanup-1,cleanup-2" &&
-      multiple.caught &&
-      aggregateContainsExactly(multiple.failure, [
-        firstCleanupFailure,
-        secondCleanupFailure,
-        thirdCleanupFailure,
-      ]) &&
-      multiple.order.join(",") === "cleanup-0,cleanup-1,cleanup-2" &&
-      combined.caught &&
-      aggregateContainsExactly(combined.failure, [
-        primaryFailure,
-        firstCleanupFailure,
-        secondCleanupFailure,
-        thirdCleanupFailure,
-      ]) &&
-      combined.order.join(",") === "cleanup-0,cleanup-1,cleanup-2" &&
-      partialSetup.caught &&
-      partialSetup.failure === primaryFailure &&
-      partialSetup.order.join(",") === "cleanup-0" &&
-      undefinedStandalone.caught &&
-      undefinedStandalone.failure === undefined &&
-      undefinedStandalone.order.join(",") === "cleanup-0,cleanup-1,cleanup-2" &&
-      undefinedCombined.caught &&
-      aggregateContainsExactly(undefinedCombined.failure, [
-        undefined,
-        undefined,
-      ]) &&
-      undefinedCombined.order.join(",") === "cleanup-0,cleanup-1,cleanup-2",
+    namedFacts([
+      ["successCaught", () => success.caught === false],
+      [
+        "successFailure",
+        () => success.caught === false && success.failure === undefined,
+      ],
+      [
+        "successOrderJoin",
+        () =>
+          success.caught === false &&
+          success.failure === undefined &&
+          success.order.join(",") === "cleanup-0,cleanup-1,cleanup-2",
+      ],
+      ["primaryOnlyCaught", () => primaryOnly.caught],
+      [
+        "primaryOnlyFailurePrimaryFailure",
+        () => primaryOnly.failure === primaryFailure,
+      ],
+      [
+        "primaryOnlyOrderJoin",
+        () => primaryOnly.order.join(",") === "cleanup-0,cleanup-1,cleanup-2",
+      ],
+      ["standaloneCaught", () => standalone.caught],
+      [
+        "standaloneFailureFirstCleanupFailure",
+        () => standalone.failure === firstCleanupFailure,
+      ],
+      [
+        "standaloneOrderJoin",
+        () => standalone.order.join(",") === "cleanup-0,cleanup-1,cleanup-2",
+      ],
+      ["multipleCaught", () => multiple.caught],
+      [
+        "aggregateContainsExactlyMultipleFailure",
+        () =>
+          aggregateContainsExactly(multiple.failure, [
+            firstCleanupFailure,
+            secondCleanupFailure,
+            thirdCleanupFailure,
+          ]),
+      ],
+      [
+        "multipleOrderJoin",
+        () => multiple.order.join(",") === "cleanup-0,cleanup-1,cleanup-2",
+      ],
+      ["combinedCaught", () => combined.caught],
+      [
+        "aggregateContainsExactlyCombinedFailure",
+        () =>
+          aggregateContainsExactly(combined.failure, [
+            primaryFailure,
+            firstCleanupFailure,
+            secondCleanupFailure,
+            thirdCleanupFailure,
+          ]),
+      ],
+      [
+        "combinedOrderJoin",
+        () => combined.order.join(",") === "cleanup-0,cleanup-1,cleanup-2",
+      ],
+      ["partialSetupCaught", () => partialSetup.caught],
+      [
+        "partialSetupFailurePrimaryFailure",
+        () => partialSetup.failure === primaryFailure,
+      ],
+      [
+        "partialSetupOrderJoin",
+        () => partialSetup.order.join(",") === "cleanup-0",
+      ],
+      ["undefinedStandaloneCaught", () => undefinedStandalone.caught],
+      [
+        "undefinedStandaloneFailure",
+        () => undefinedStandalone.failure === undefined,
+      ],
+      [
+        "undefinedStandaloneOrderJoin",
+        () =>
+          undefinedStandalone.order.join(",") ===
+          "cleanup-0,cleanup-1,cleanup-2",
+      ],
+      ["undefinedCombinedCaught", () => undefinedCombined.caught],
+      [
+        "aggregateContainsExactlyUndefinedCombinedFailure",
+        () =>
+          aggregateContainsExactly(undefinedCombined.failure, [
+            undefined,
+            undefined,
+          ]),
+      ],
+      [
+        "undefinedCombinedOrderJoin",
+        () =>
+          undefinedCombined.order.join(",") === "cleanup-0,cleanup-1,cleanup-2",
+      ],
+    ]),
+    {
+      successCaught: true,
+      successFailure: true,
+      successOrderJoin: true,
+      primaryOnlyCaught: true,
+      primaryOnlyFailurePrimaryFailure: true,
+      primaryOnlyOrderJoin: true,
+      standaloneCaught: true,
+      standaloneFailureFirstCleanupFailure: true,
+      standaloneOrderJoin: true,
+      multipleCaught: true,
+      aggregateContainsExactlyMultipleFailure: true,
+      multipleOrderJoin: true,
+      combinedCaught: true,
+      aggregateContainsExactlyCombinedFailure: true,
+      combinedOrderJoin: true,
+      partialSetupCaught: true,
+      partialSetupFailurePrimaryFailure: true,
+      partialSetupOrderJoin: true,
+      undefinedStandaloneCaught: true,
+      undefinedStandaloneFailure: true,
+      undefinedStandaloneOrderJoin: true,
+      undefinedCombinedCaught: true,
+      aggregateContainsExactlyUndefinedCombinedFailure: true,
+      undefinedCombinedOrderJoin: true,
+    },
   );
   TestValidator.equals(
     "production-project test owns ten resident-read cleanup lifecycles",

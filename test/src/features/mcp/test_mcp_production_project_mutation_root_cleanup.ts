@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import ts from "typescript-compiler";
 
+import { namedFacts } from "../internal/predicates";
 import { preserveProductionProjectFixtureCleanup } from "./test_mcp_production_project";
 
 const compact = (node: ts.Node, source: ts.SourceFile): string =>
@@ -359,74 +360,200 @@ export const test_mcp_production_project_mutation_root_cleanup = (): void => {
   });
   const fullOrder =
     "hook,replacement-release,active-remove,parked-restore,abandoned-release";
-  TestValidator.predicate(
+  TestValidator.equals(
     "mutation-root cleanup preserves failures and partial recovery order",
-    success.caught === false &&
-      success.failure === undefined &&
-      success.order.join(",") === fullOrder &&
-      primaryOnly.caught &&
-      primaryOnly.failure === primaryFailure &&
-      primaryOnly.order.join(",") === fullOrder &&
-      standalone.caught &&
-      standalone.failure === hookFailure &&
-      standalone.order.join(",") === fullOrder &&
-      multiple.caught &&
-      aggregateContainsExactly(multiple.failure, [
-        hookFailure,
-        replacementFailure,
-        activeFailure,
-        parkedFailure,
-        abandonedFailure,
-      ]) &&
-      multiple.order.join(",") === fullOrder &&
-      combined.caught &&
-      aggregateContainsExactly(combined.failure, [
-        primaryFailure,
-        hookFailure,
-        replacementFailure,
-        activeFailure,
-        parkedFailure,
-        abandonedFailure,
-      ]) &&
-      combined.order.join(",") === fullOrder &&
-      noSwap.caught &&
-      noSwap.failure === primaryFailure &&
-      noSwap.abandonedPath === undefined &&
-      noSwap.order.join(",") === "hook" &&
-      parked.caught &&
-      parked.failure === primaryFailure &&
-      parked.abandonedPath === undefined &&
-      parked.order.join(",") === "hook,active-remove,parked-restore" &&
-      abandoned.caught &&
-      abandoned.failure === primaryFailure &&
-      abandoned.abandonedPath === "canonical" &&
-      abandoned.order.join(",") ===
-        "hook,active-remove,parked-restore,abandoned-release" &&
-      replacement.caught &&
-      replacement.failure === primaryFailure &&
-      replacement.abandonedPath === "canonical" &&
-      replacement.order.join(",") === fullOrder &&
-      hookFailedAfterReplacement.caught &&
-      hookFailedAfterReplacement.failure === hookFailure &&
-      hookFailedAfterReplacement.abandonedPath === "canonical" &&
-      hookFailedAfterReplacement.order.join(",") === fullOrder &&
-      physicalRecoveryFailed.caught &&
-      aggregateContainsExactly(physicalRecoveryFailed.failure, [
-        primaryFailure,
-        activeFailure,
-        parkedFailure,
-      ]) &&
-      physicalRecoveryFailed.abandonedPath === "parked" &&
-      physicalRecoveryFailed.order.join(",") === fullOrder &&
-      undefinedStandalone.caught &&
-      undefinedStandalone.failure === undefined &&
-      undefinedStandalone.order.join(",") === fullOrder &&
-      undefinedCombined.caught &&
-      aggregateContainsExactly(undefinedCombined.failure, [
-        undefined,
-        undefined,
-      ]) &&
-      undefinedCombined.order.join(",") === fullOrder,
+    namedFacts([
+      ["successCaught", () => success.caught === false],
+      [
+        "successFailure",
+        () => success.caught === false && success.failure === undefined,
+      ],
+      [
+        "successOrderJoin",
+        () =>
+          success.caught === false &&
+          success.failure === undefined &&
+          success.order.join(",") === fullOrder,
+      ],
+      ["primaryOnlyCaught", () => primaryOnly.caught],
+      [
+        "primaryOnlyFailurePrimaryFailure",
+        () => primaryOnly.failure === primaryFailure,
+      ],
+      ["primaryOnlyOrderJoin", () => primaryOnly.order.join(",") === fullOrder],
+      ["standaloneCaught", () => standalone.caught],
+      [
+        "standaloneFailureHookFailure",
+        () => standalone.failure === hookFailure,
+      ],
+      ["standaloneOrderJoin", () => standalone.order.join(",") === fullOrder],
+      ["multipleCaught", () => multiple.caught],
+      [
+        "aggregateContainsExactlyMultipleFailure",
+        () =>
+          aggregateContainsExactly(multiple.failure, [
+            hookFailure,
+            replacementFailure,
+            activeFailure,
+            parkedFailure,
+            abandonedFailure,
+          ]),
+      ],
+      ["multipleOrderJoin", () => multiple.order.join(",") === fullOrder],
+      ["combinedCaught", () => combined.caught],
+      [
+        "aggregateContainsExactlyCombinedFailure",
+        () =>
+          aggregateContainsExactly(combined.failure, [
+            primaryFailure,
+            hookFailure,
+            replacementFailure,
+            activeFailure,
+            parkedFailure,
+            abandonedFailure,
+          ]),
+      ],
+      ["combinedOrderJoin", () => combined.order.join(",") === fullOrder],
+      ["noSwapCaught", () => noSwap.caught],
+      ["noSwapFailurePrimaryFailure", () => noSwap.failure === primaryFailure],
+      ["noSwapAbandonedPath", () => noSwap.abandonedPath === undefined],
+      ["noSwapOrderJoin", () => noSwap.order.join(",") === "hook"],
+      ["parkedCaught", () => parked.caught],
+      ["parkedFailurePrimaryFailure", () => parked.failure === primaryFailure],
+      ["parkedAbandonedPath", () => parked.abandonedPath === undefined],
+      [
+        "parkedOrderJoin",
+        () => parked.order.join(",") === "hook,active-remove,parked-restore",
+      ],
+      ["abandonedCaught", () => abandoned.caught],
+      [
+        "abandonedFailurePrimaryFailure",
+        () => abandoned.failure === primaryFailure,
+      ],
+      [
+        "abandonedAbandonedPathCanonical",
+        () => abandoned.abandonedPath === "canonical",
+      ],
+      [
+        "abandonedOrderJoin",
+        () =>
+          abandoned.order.join(",") ===
+          "hook,active-remove,parked-restore,abandoned-release",
+      ],
+      ["replacementCaught", () => replacement.caught],
+      [
+        "replacementFailurePrimaryFailure",
+        () => replacement.failure === primaryFailure,
+      ],
+      [
+        "replacementAbandonedPathCanonical",
+        () => replacement.abandonedPath === "canonical",
+      ],
+      ["replacementOrderJoin", () => replacement.order.join(",") === fullOrder],
+      [
+        "hookFailedAfterReplacementCaught",
+        () => hookFailedAfterReplacement.caught,
+      ],
+      [
+        "hookFailedAfterReplacementFailureHookFailure",
+        () => hookFailedAfterReplacement.failure === hookFailure,
+      ],
+      [
+        "hookFailedAfterReplacementAbandonedPathCanonical",
+        () => hookFailedAfterReplacement.abandonedPath === "canonical",
+      ],
+      [
+        "hookFailedAfterReplacementOrderJoin",
+        () => hookFailedAfterReplacement.order.join(",") === fullOrder,
+      ],
+      ["physicalRecoveryFailedCaught", () => physicalRecoveryFailed.caught],
+      [
+        "aggregateContainsExactlyPhysicalRecoveryFailedFailure",
+        () =>
+          aggregateContainsExactly(physicalRecoveryFailed.failure, [
+            primaryFailure,
+            activeFailure,
+            parkedFailure,
+          ]),
+      ],
+      [
+        "physicalRecoveryFailedAbandonedPathParked",
+        () => physicalRecoveryFailed.abandonedPath === "parked",
+      ],
+      [
+        "physicalRecoveryFailedOrderJoin",
+        () => physicalRecoveryFailed.order.join(",") === fullOrder,
+      ],
+      ["undefinedStandaloneCaught", () => undefinedStandalone.caught],
+      [
+        "undefinedStandaloneFailure",
+        () => undefinedStandalone.failure === undefined,
+      ],
+      [
+        "undefinedStandaloneOrderJoin",
+        () => undefinedStandalone.order.join(",") === fullOrder,
+      ],
+      ["undefinedCombinedCaught", () => undefinedCombined.caught],
+      [
+        "aggregateContainsExactlyUndefinedCombinedFailure",
+        () =>
+          aggregateContainsExactly(undefinedCombined.failure, [
+            undefined,
+            undefined,
+          ]),
+      ],
+      [
+        "undefinedCombinedOrderJoin",
+        () => undefinedCombined.order.join(",") === fullOrder,
+      ],
+    ]),
+    {
+      successCaught: true,
+      successFailure: true,
+      successOrderJoin: true,
+      primaryOnlyCaught: true,
+      primaryOnlyFailurePrimaryFailure: true,
+      primaryOnlyOrderJoin: true,
+      standaloneCaught: true,
+      standaloneFailureHookFailure: true,
+      standaloneOrderJoin: true,
+      multipleCaught: true,
+      aggregateContainsExactlyMultipleFailure: true,
+      multipleOrderJoin: true,
+      combinedCaught: true,
+      aggregateContainsExactlyCombinedFailure: true,
+      combinedOrderJoin: true,
+      noSwapCaught: true,
+      noSwapFailurePrimaryFailure: true,
+      noSwapAbandonedPath: true,
+      noSwapOrderJoin: true,
+      parkedCaught: true,
+      parkedFailurePrimaryFailure: true,
+      parkedAbandonedPath: true,
+      parkedOrderJoin: true,
+      abandonedCaught: true,
+      abandonedFailurePrimaryFailure: true,
+      abandonedAbandonedPathCanonical: true,
+      abandonedOrderJoin: true,
+      replacementCaught: true,
+      replacementFailurePrimaryFailure: true,
+      replacementAbandonedPathCanonical: true,
+      replacementOrderJoin: true,
+      hookFailedAfterReplacementCaught: true,
+      hookFailedAfterReplacementFailureHookFailure: true,
+      hookFailedAfterReplacementAbandonedPathCanonical: true,
+      hookFailedAfterReplacementOrderJoin: true,
+      physicalRecoveryFailedCaught: true,
+      aggregateContainsExactlyPhysicalRecoveryFailedFailure: true,
+      physicalRecoveryFailedAbandonedPathParked: true,
+      physicalRecoveryFailedOrderJoin: true,
+      undefinedStandaloneCaught: true,
+      undefinedStandaloneFailure: true,
+      undefinedStandaloneOrderJoin: true,
+      undefinedCombinedCaught: true,
+      aggregateContainsExactlyUndefinedCombinedFailure: true,
+      undefinedCombinedOrderJoin: true,
+    },
   );
   TestValidator.equals(
     "production-project test owns one mutation-root cleanup lifecycle",

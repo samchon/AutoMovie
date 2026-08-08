@@ -21,7 +21,7 @@ import {
   makeStagingWrite,
 } from "../internal/filmFixtures";
 import { joint, keyframe, makeMotion, makePose } from "../internal/fixtures";
-import { hasViolation } from "../internal/predicates";
+import { hasViolation, namedFacts } from "../internal/predicates";
 
 /** The hind legs of a retargeted quadruped: the humanoid `lowerBody` chain. */
 const HIND: AutoMovieHumanoidBone[] = [
@@ -172,16 +172,24 @@ export const test_film_perform_shot_masked_channels = (): void => {
     "the drop is reported on the action's own region field",
     hasViolation(dropped, "type", "$input.draft[0].region"),
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "the violation names every masked bone in code-unit order",
-    dropped.success === false &&
-      dropped.violations.some(
-        (v) =>
-          v.path === "$input.draft[0].region" &&
-          v.expected.includes(FORE_SORTED) &&
-          v.expected.includes('"lowerBody"') &&
-          v.value === "lowerBody",
-      ),
+    namedFacts([
+      ["refused", () => dropped.success === false],
+      [
+        "violated",
+        () =>
+          dropped.success === false &&
+          dropped.violations.some(
+            (v) =>
+              v.path === "$input.draft[0].region" &&
+              v.expected.includes(FORE_SORTED) &&
+              v.expected.includes('"lowerBody"') &&
+              v.value === "lowerBody",
+          ),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 
   // 2. negative twin: the default full-body gait owns every authored bone
@@ -234,26 +242,42 @@ export const test_film_perform_shot_masked_channels = (): void => {
         ? clip({ bones: ["hips"], expression: true })
         : clip({ bones: ["head"], root: true, expression: true }),
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "a layered non-locomotion region reports its dropped root and expression",
-    rootAndFace.success === false &&
-      rootAndFace.violations.some(
-        (v) =>
-          v.path === "$input.draft[1].region" &&
-          v.expected.includes("a root displacement and an expression") &&
-          v.value === "head",
-      ),
+    namedFacts([
+      ["refused", () => rootAndFace.success === false],
+      [
+        "violated",
+        () =>
+          rootAndFace.success === false &&
+          rootAndFace.violations.some(
+            (v) =>
+              v.path === "$input.draft[1].region" &&
+              v.expected.includes("a root displacement and an expression") &&
+              v.value === "head",
+          ),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "a clip losing only its expression names only that",
-    rootAndFace.success === false &&
-      rootAndFace.violations.some(
-        (v) =>
-          v.path === "$input.draft[0].region" &&
-          v.expected.includes("authors an expression") &&
-          !v.expected.includes("root displacement") &&
-          !v.expected.includes("the bones"),
-      ),
+    namedFacts([
+      ["refused", () => rootAndFace.success === false],
+      [
+        "violated",
+        () =>
+          rootAndFace.success === false &&
+          rootAndFace.violations.some(
+            (v) =>
+              v.path === "$input.draft[0].region" &&
+              v.expected.includes("authors an expression") &&
+              !v.expected.includes("root displacement") &&
+              !v.expected.includes("the bones"),
+          ),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 
   // 5. one record per (action, actor), ordered by action index then actor

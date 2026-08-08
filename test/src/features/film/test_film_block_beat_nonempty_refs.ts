@@ -6,7 +6,7 @@ import {
   makeScriptWrite,
   makeStagingWrite,
 } from "../internal/filmFixtures";
-import { hasViolation } from "../internal/predicates";
+import { hasViolation, namedFacts } from "../internal/predicates";
 
 /**
  * Blocking consumes already-staged scene ids, but it is still a public boundary
@@ -47,18 +47,43 @@ export const test_film_block_beat_nonempty_refs = (): void => {
   );
 
   TestValidator.equals("blank blocking refs fail", blocked.success, false);
-  TestValidator.predicate(
+  TestValidator.equals(
     "beat id violation",
-    blocked.success === false && hasViolation(blocked, "type", "$input.beat"),
+    namedFacts([
+      ["refused", () => blocked.success === false],
+      [
+        "violated",
+        () =>
+          blocked.success === false &&
+          hasViolation(blocked, "type", "$input.beat"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "actor node violation",
-    blocked.success === false &&
-      hasViolation(blocked, "type", "$input.actors[0].node"),
+    namedFacts([
+      ["refused", () => blocked.success === false],
+      [
+        "violated",
+        () =>
+          blocked.success === false &&
+          hasViolation(blocked, "type", "$input.actors[0].node"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "camera node violation",
-    blocked.success === false &&
-      hasViolation(blocked, "type", "$input.camera.on.node"),
+    namedFacts([
+      ["refused", () => blocked.success === false],
+      [
+        "violated",
+        () =>
+          blocked.success === false &&
+          hasViolation(blocked, "type", "$input.camera.on.node"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 };

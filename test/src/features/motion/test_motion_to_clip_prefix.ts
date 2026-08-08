@@ -81,14 +81,25 @@ export const test_motion_to_clip_prefix = (): void => {
     "every node id carries the prefix",
     prefixed.nodes.every((node) => node.id.startsWith("knightA/")),
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "every channel ref carries the prefix (root TRS included)",
-    prefixed.clip.tracks.every((track) =>
-      channelNode(track).startsWith("knightA/"),
-    ) &&
-      prefixed.clip.tracks.some(
-        (track) => channelNode(track) === `knightA/${MOTION_ROOT_NODE_ID}`,
-      ),
+    namedFacts([
+      [
+        "prefixedClipTracks",
+        () =>
+          prefixed.clip.tracks.every((track) =>
+            channelNode(track).startsWith("knightA/"),
+          ),
+      ],
+      [
+        "prefixedClipTracks2",
+        () =>
+          prefixed.clip.tracks.some(
+            (track) => channelNode(track) === `knightA/${MOTION_ROOT_NODE_ID}`,
+          ),
+      ],
+    ]),
+    { prefixedClipTracks: true, prefixedClipTracks2: true },
   );
 
   let parity = true;

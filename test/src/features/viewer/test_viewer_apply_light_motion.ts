@@ -195,8 +195,12 @@ export const test_viewer_apply_light_motion = (): void => {
     1.6,
     (id) => (id === "candleGlow" ? undefined : built.lights.get(id)),
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "the unresolved light is skipped, and the un-animated one returns to staged",
-    nclose(candle.intensity, 0.04) && nclose(lamp.angle, (40 * Math.PI) / 180),
+    namedFacts([
+      ["ncloseCandleIntensity", () => nclose(candle.intensity, 0.04)],
+      ["ncloseLampAngle", () => nclose(lamp.angle, (40 * Math.PI) / 180)],
+    ]),
+    { ncloseCandleIntensity: true, ncloseLampAngle: true },
   );
 };

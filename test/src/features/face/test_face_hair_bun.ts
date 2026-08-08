@@ -1,6 +1,8 @@
 import { buildHairBun, buildSkullShell } from "@automovie/face";
 import { TestValidator } from "@nestia/e2e";
 
+import { namedFacts } from "../internal/predicates";
+
 /**
  * The chignon lobe rides the occiput: size `0` must yield empty parts (the
  * preset schema covers bunless styles), a real bun sits wholly BEHIND the
@@ -27,9 +29,13 @@ export const test_face_hair_bun = (): void => {
     for (let i = k; i < p.length; i += 3) s += p[i]!;
     return s / (p.length / 3);
   };
-  TestValidator.predicate(
+  TestValidator.equals(
     "bun sits behind the head",
-    mean(low.positions, 2) < 0 && mean(high.positions, 2) < 0,
+    namedFacts([
+      ["meanLowPositions", () => mean(low.positions, 2) < 0],
+      ["meanHighPositions", () => mean(high.positions, 2) < 0],
+    ]),
+    { meanLowPositions: true, meanHighPositions: true },
   );
   TestValidator.predicate(
     "height raises the bun",
@@ -69,8 +75,12 @@ export const test_face_hair_bun = (): void => {
     }
     return six / 6;
   };
-  TestValidator.predicate(
+  TestValidator.equals(
     "the bun winds outward (positive signed volume)",
-    signedVolume(low) > 0 && signedVolume(high) > 0,
+    namedFacts([
+      ["signedVolumeLow", () => signedVolume(low) > 0],
+      ["signedVolumeHigh", () => signedVolume(high) > 0],
+    ]),
+    { signedVolumeLow: true, signedVolumeHigh: true },
   );
 };

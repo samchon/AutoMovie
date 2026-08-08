@@ -2,6 +2,8 @@ import { solveBallisticLaunch, solveMovingLaunch } from "@automovie/engine";
 import { IAutoMovieVector3 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
+import { namedFacts } from "../internal/predicates";
+
 const origin: IAutoMovieVector3 = { x: 0, y: 1, z: 0 };
 const target: IAutoMovieVector3 = { x: 8, y: 1, z: 0 };
 const invalidArc = "flat" as Parameters<typeof solveBallisticLaunch>[4];
@@ -44,9 +46,24 @@ export const test_physics_ballistic_arc_modes = (): void => {
     false,
   );
 
-  TestValidator.predicate(
+  TestValidator.equals(
     "direct and high remain valid",
-    solveBallisticLaunch(origin, target, 14, undefined, "direct") !== null &&
-      solveBallisticLaunch(origin, target, 14, undefined, "high") !== null,
+    namedFacts([
+      [
+        "solveBallisticLaunchOriginTarget",
+        () =>
+          solveBallisticLaunch(origin, target, 14, undefined, "direct") !==
+          null,
+      ],
+      [
+        "solveBallisticLaunchOriginTarget2",
+        () =>
+          solveBallisticLaunch(origin, target, 14, undefined, "high") !== null,
+      ],
+    ]),
+    {
+      solveBallisticLaunchOriginTarget: true,
+      solveBallisticLaunchOriginTarget2: true,
+    },
   );
 };

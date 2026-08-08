@@ -3,7 +3,7 @@ import { IAutoMovieTransform } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { joint, makePose } from "../internal/fixtures";
-import { nclose, throwsError } from "../internal/predicates";
+import { namedFacts, nclose, throwsError } from "../internal/predicates";
 
 const rootAt = (x: number): IAutoMovieTransform => ({
   translation: { x, y: 0, z: 0 },
@@ -42,9 +42,16 @@ export const test_perform_merge_poses = (): void => {
     "the arm's flexion survives",
     nclose(flexionOf(merged, "leftUpperArm"), 30),
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "root taken from the rooted pose, not cleared by the null one",
-    merged.root !== null && nclose(merged.root.translation.x, 5),
+    namedFacts([
+      ["mergedRoot", () => merged.root !== null],
+      [
+        "ncloseMergedRoot",
+        () => merged.root !== null && nclose(merged.root.translation.x, 5),
+      ],
+    ]),
+    { mergedRoot: true, ncloseMergedRoot: true },
   );
   TestValidator.equals(
     "skeleton from the first pose",
@@ -72,9 +79,16 @@ export const test_perform_merge_poses = (): void => {
     makePose([joint("hips")], rootAt(2)),
     makePose([joint("chest")], rootAt(9)),
   ]);
-  TestValidator.predicate(
+  TestValidator.equals(
     "the last non-null root wins",
-    twoRoots.root !== null && nclose(twoRoots.root.translation.x, 9),
+    namedFacts([
+      ["twoRootsRoot", () => twoRoots.root !== null],
+      [
+        "ncloseTwoRootsRoot",
+        () => twoRoots.root !== null && nclose(twoRoots.root.translation.x, 9),
+      ],
+    ]),
+    { twoRootsRoot: true, ncloseTwoRootsRoot: true },
   );
 
   TestValidator.predicate(

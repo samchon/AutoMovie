@@ -2,7 +2,7 @@ import { gaitMotion } from "@automovie/engine";
 import { IAutoMovieGait } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { nclose } from "../internal/predicates";
+import { namedFacts, nclose } from "../internal/predicates";
 
 const throws = (task: () => void): boolean => {
   try {
@@ -47,9 +47,15 @@ export const test_motion_gait_samples = (): void => {
     boundary.keyframes.length,
     2,
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "boundary times are finite and span one period",
-    nclose(boundary.keyframes[0]!.time, 0) &&
-      nclose(boundary.keyframes[1]!.time, 1),
+    namedFacts([
+      ["ncloseBoundaryKeyframes", () => nclose(boundary.keyframes[0]!.time, 0)],
+      [
+        "ncloseBoundaryKeyframes2",
+        () => nclose(boundary.keyframes[1]!.time, 1),
+      ],
+    ]),
+    { ncloseBoundaryKeyframes: true, ncloseBoundaryKeyframes2: true },
   );
 };

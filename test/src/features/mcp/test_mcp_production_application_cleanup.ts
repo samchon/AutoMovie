@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import ts from "typescript-compiler";
 
+import { namedFacts } from "../internal/predicates";
 import { preserveProductionApplicationCleanup } from "./test_mcp_production_application";
 
 const compact = (node: ts.Node, source: ts.SourceFile): string =>
@@ -271,72 +272,241 @@ export const test_mcp_production_application_cleanup =
       fixtureFailure: { error: undefined, present: true },
       primaryFailure: { error: undefined, present: true },
     });
-    TestValidator.predicate(
+    TestValidator.equals(
       "production-application cleanup preserves acquisition and failure order",
-      success.caught === false &&
-        success.failure === undefined &&
-        success.connectionAttempts.join(",") === "1,1" &&
-        success.fixtureAttempts === 1 &&
-        success.order.join(",") === "connection-0,connection-1,fixture" &&
-        fixtureOnlySetup.caught &&
-        fixtureOnlySetup.failure === primaryFailure &&
-        fixtureOnlySetup.connectionAttempts.length === 0 &&
-        fixtureOnlySetup.fixtureAttempts === 1 &&
-        fixtureOnlySetup.order.join(",") === "fixture" &&
-        partialSetup.caught &&
-        partialSetup.failure === primaryFailure &&
-        partialSetup.connectionAttempts.join(",") === "1" &&
-        partialSetup.fixtureAttempts === 1 &&
-        partialSetup.order.join(",") === "connection-0,fixture" &&
-        primaryOnly.caught &&
-        primaryOnly.failure === primaryFailure &&
-        primaryOnly.connectionAttempts.join(",") === "1,1" &&
-        primaryOnly.fixtureAttempts === 1 &&
-        clientStandalone.caught &&
-        clientStandalone.failure === clientFailure &&
-        clientStandalone.connectionAttempts.join(",") === "1,1" &&
-        clientStandalone.fixtureAttempts === 1 &&
-        serverStandalone.caught &&
-        serverStandalone.failure === serverFailure &&
-        serverStandalone.connectionAttempts.join(",") === "1,1" &&
-        serverStandalone.fixtureAttempts === 1 &&
-        fixtureStandalone.caught &&
-        fixtureStandalone.failure === fixtureFailure &&
-        fixtureStandalone.connectionAttempts.join(",") === "1,1" &&
-        fixtureStandalone.fixtureAttempts === 1 &&
-        multipleCleanup.caught &&
-        aggregateContainsExactly(multipleCleanup.failure, [
-          clientFailure,
-          serverFailure,
-          fixtureFailure,
-        ]) &&
-        multipleCleanup.connectionAttempts.join(",") === "1,1" &&
-        multipleCleanup.fixtureAttempts === 1 &&
-        combined.caught &&
-        aggregateContainsExactly(combined.failure, [
-          primaryFailure,
-          clientFailure,
-          serverFailure,
-          fixtureFailure,
-        ]) &&
-        combined.connectionAttempts.join(",") === "1,1" &&
-        combined.fixtureAttempts === 1 &&
-        undefinedPrimary.caught &&
-        undefinedPrimary.failure === undefined &&
-        undefinedPrimary.connectionAttempts.join(",") === "1,1" &&
-        undefinedPrimary.fixtureAttempts === 1 &&
-        undefinedStandalone.caught &&
-        undefinedStandalone.failure === undefined &&
-        undefinedStandalone.connectionAttempts.join(",") === "1,1" &&
-        undefinedStandalone.fixtureAttempts === 1 &&
-        undefinedCombined.caught &&
-        aggregateContainsExactly(undefinedCombined.failure, [
-          undefined,
-          undefined,
-          undefined,
-        ]) &&
-        undefinedCombined.connectionAttempts.join(",") === "1,1" &&
-        undefinedCombined.fixtureAttempts === 1,
+      namedFacts([
+        ["successCaught", () => success.caught === false],
+        [
+          "successFailure",
+          () => success.caught === false && success.failure === undefined,
+        ],
+        [
+          "successConnectionAttemptsJoin",
+          () =>
+            success.caught === false &&
+            success.failure === undefined &&
+            success.connectionAttempts.join(",") === "1,1",
+        ],
+        ["successFixtureAttempts", () => success.fixtureAttempts === 1],
+        [
+          "successOrderJoin",
+          () => success.order.join(",") === "connection-0,connection-1,fixture",
+        ],
+        ["fixtureOnlySetupCaught", () => fixtureOnlySetup.caught],
+        [
+          "fixtureOnlySetupFailurePrimaryFailure",
+          () => fixtureOnlySetup.failure === primaryFailure,
+        ],
+        [
+          "fixtureOnlySetupConnectionAttemptsLength",
+          () => fixtureOnlySetup.connectionAttempts.length === 0,
+        ],
+        [
+          "fixtureOnlySetupFixtureAttempts",
+          () => fixtureOnlySetup.fixtureAttempts === 1,
+        ],
+        [
+          "fixtureOnlySetupOrderJoin",
+          () => fixtureOnlySetup.order.join(",") === "fixture",
+        ],
+        ["partialSetupCaught", () => partialSetup.caught],
+        [
+          "partialSetupFailurePrimaryFailure",
+          () => partialSetup.failure === primaryFailure,
+        ],
+        [
+          "partialSetupConnectionAttemptsJoin",
+          () => partialSetup.connectionAttempts.join(",") === "1",
+        ],
+        [
+          "partialSetupFixtureAttempts",
+          () => partialSetup.fixtureAttempts === 1,
+        ],
+        [
+          "partialSetupOrderJoin",
+          () => partialSetup.order.join(",") === "connection-0,fixture",
+        ],
+        ["primaryOnlyCaught", () => primaryOnly.caught],
+        [
+          "primaryOnlyFailurePrimaryFailure",
+          () => primaryOnly.failure === primaryFailure,
+        ],
+        [
+          "primaryOnlyConnectionAttemptsJoin",
+          () => primaryOnly.connectionAttempts.join(",") === "1,1",
+        ],
+        ["primaryOnlyFixtureAttempts", () => primaryOnly.fixtureAttempts === 1],
+        ["clientStandaloneCaught", () => clientStandalone.caught],
+        [
+          "clientStandaloneFailureClientFailure",
+          () => clientStandalone.failure === clientFailure,
+        ],
+        [
+          "clientStandaloneConnectionAttemptsJoin",
+          () => clientStandalone.connectionAttempts.join(",") === "1,1",
+        ],
+        [
+          "clientStandaloneFixtureAttempts",
+          () => clientStandalone.fixtureAttempts === 1,
+        ],
+        ["serverStandaloneCaught", () => serverStandalone.caught],
+        [
+          "serverStandaloneFailureServerFailure",
+          () => serverStandalone.failure === serverFailure,
+        ],
+        [
+          "serverStandaloneConnectionAttemptsJoin",
+          () => serverStandalone.connectionAttempts.join(",") === "1,1",
+        ],
+        [
+          "serverStandaloneFixtureAttempts",
+          () => serverStandalone.fixtureAttempts === 1,
+        ],
+        ["fixtureStandaloneCaught", () => fixtureStandalone.caught],
+        [
+          "fixtureStandaloneFailureFixtureFailure",
+          () => fixtureStandalone.failure === fixtureFailure,
+        ],
+        [
+          "fixtureStandaloneConnectionAttemptsJoin",
+          () => fixtureStandalone.connectionAttempts.join(",") === "1,1",
+        ],
+        [
+          "fixtureStandaloneFixtureAttempts",
+          () => fixtureStandalone.fixtureAttempts === 1,
+        ],
+        ["multipleCleanupCaught", () => multipleCleanup.caught],
+        [
+          "aggregateContainsExactlyMultipleCleanupFailure",
+          () =>
+            aggregateContainsExactly(multipleCleanup.failure, [
+              clientFailure,
+              serverFailure,
+              fixtureFailure,
+            ]),
+        ],
+        [
+          "multipleCleanupConnectionAttemptsJoin",
+          () => multipleCleanup.connectionAttempts.join(",") === "1,1",
+        ],
+        [
+          "multipleCleanupFixtureAttempts",
+          () => multipleCleanup.fixtureAttempts === 1,
+        ],
+        ["combinedCaught", () => combined.caught],
+        [
+          "aggregateContainsExactlyCombinedFailure",
+          () =>
+            aggregateContainsExactly(combined.failure, [
+              primaryFailure,
+              clientFailure,
+              serverFailure,
+              fixtureFailure,
+            ]),
+        ],
+        [
+          "combinedConnectionAttemptsJoin",
+          () => combined.connectionAttempts.join(",") === "1,1",
+        ],
+        ["combinedFixtureAttempts", () => combined.fixtureAttempts === 1],
+        ["undefinedPrimaryCaught", () => undefinedPrimary.caught],
+        [
+          "undefinedPrimaryFailure",
+          () => undefinedPrimary.failure === undefined,
+        ],
+        [
+          "undefinedPrimaryConnectionAttemptsJoin",
+          () => undefinedPrimary.connectionAttempts.join(",") === "1,1",
+        ],
+        [
+          "undefinedPrimaryFixtureAttempts",
+          () => undefinedPrimary.fixtureAttempts === 1,
+        ],
+        ["undefinedStandaloneCaught", () => undefinedStandalone.caught],
+        [
+          "undefinedStandaloneFailure",
+          () => undefinedStandalone.failure === undefined,
+        ],
+        [
+          "undefinedStandaloneConnectionAttemptsJoin",
+          () => undefinedStandalone.connectionAttempts.join(",") === "1,1",
+        ],
+        [
+          "undefinedStandaloneFixtureAttempts",
+          () => undefinedStandalone.fixtureAttempts === 1,
+        ],
+        ["undefinedCombinedCaught", () => undefinedCombined.caught],
+        [
+          "aggregateContainsExactlyUndefinedCombinedFailure",
+          () =>
+            aggregateContainsExactly(undefinedCombined.failure, [
+              undefined,
+              undefined,
+              undefined,
+            ]),
+        ],
+        [
+          "undefinedCombinedConnectionAttemptsJoin",
+          () => undefinedCombined.connectionAttempts.join(",") === "1,1",
+        ],
+        [
+          "undefinedCombinedFixtureAttempts",
+          () => undefinedCombined.fixtureAttempts === 1,
+        ],
+      ]),
+      {
+        successCaught: true,
+        successFailure: true,
+        successConnectionAttemptsJoin: true,
+        successFixtureAttempts: true,
+        successOrderJoin: true,
+        fixtureOnlySetupCaught: true,
+        fixtureOnlySetupFailurePrimaryFailure: true,
+        fixtureOnlySetupConnectionAttemptsLength: true,
+        fixtureOnlySetupFixtureAttempts: true,
+        fixtureOnlySetupOrderJoin: true,
+        partialSetupCaught: true,
+        partialSetupFailurePrimaryFailure: true,
+        partialSetupConnectionAttemptsJoin: true,
+        partialSetupFixtureAttempts: true,
+        partialSetupOrderJoin: true,
+        primaryOnlyCaught: true,
+        primaryOnlyFailurePrimaryFailure: true,
+        primaryOnlyConnectionAttemptsJoin: true,
+        primaryOnlyFixtureAttempts: true,
+        clientStandaloneCaught: true,
+        clientStandaloneFailureClientFailure: true,
+        clientStandaloneConnectionAttemptsJoin: true,
+        clientStandaloneFixtureAttempts: true,
+        serverStandaloneCaught: true,
+        serverStandaloneFailureServerFailure: true,
+        serverStandaloneConnectionAttemptsJoin: true,
+        serverStandaloneFixtureAttempts: true,
+        fixtureStandaloneCaught: true,
+        fixtureStandaloneFailureFixtureFailure: true,
+        fixtureStandaloneConnectionAttemptsJoin: true,
+        fixtureStandaloneFixtureAttempts: true,
+        multipleCleanupCaught: true,
+        aggregateContainsExactlyMultipleCleanupFailure: true,
+        multipleCleanupConnectionAttemptsJoin: true,
+        multipleCleanupFixtureAttempts: true,
+        combinedCaught: true,
+        aggregateContainsExactlyCombinedFailure: true,
+        combinedConnectionAttemptsJoin: true,
+        combinedFixtureAttempts: true,
+        undefinedPrimaryCaught: true,
+        undefinedPrimaryFailure: true,
+        undefinedPrimaryConnectionAttemptsJoin: true,
+        undefinedPrimaryFixtureAttempts: true,
+        undefinedStandaloneCaught: true,
+        undefinedStandaloneFailure: true,
+        undefinedStandaloneConnectionAttemptsJoin: true,
+        undefinedStandaloneFixtureAttempts: true,
+        undefinedCombinedCaught: true,
+        aggregateContainsExactlyUndefinedCombinedFailure: true,
+        undefinedCombinedConnectionAttemptsJoin: true,
+        undefinedCombinedFixtureAttempts: true,
+      },
     );
     TestValidator.equals(
       "production-application test owns every acquired cleanup phase",

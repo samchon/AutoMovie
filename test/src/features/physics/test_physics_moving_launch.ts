@@ -6,7 +6,7 @@ import {
 import { IAutoMovieVector3 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { nclose, vclose } from "../internal/predicates";
+import { namedFacts, nclose, vclose } from "../internal/predicates";
 
 const GRAVITY: IAutoMovieVector3 = { x: 0, y: -9.81, z: 0 };
 
@@ -36,10 +36,19 @@ export const test_physics_moving_launch = (): void => {
   const still: IAutoMovieVector3 = { x: 7, y: 1, z: 2 };
   const moving = solveMovingLaunch(origin, () => still, 16)!;
   const staticSol = solveBallisticLaunch(origin, still, 16)!;
-  TestValidator.predicate(
+  TestValidator.equals(
     "a stationary target reduces to the static solve",
-    vclose(moving.velocity, staticSol.velocity, 1e-6) &&
-      nclose(moving.hitTime, staticSol.hitTime, 1e-6),
+    namedFacts([
+      [
+        "vcloseMovingVelocity",
+        () => vclose(moving.velocity, staticSol.velocity, 1e-6),
+      ],
+      [
+        "ncloseMovingHitTime",
+        () => nclose(moving.hitTime, staticSol.hitTime, 1e-6),
+      ],
+    ]),
+    { vcloseMovingVelocity: true, ncloseMovingHitTime: true },
   );
 
   // 2. a target sliding downrange (+x at 3 m/s) is led onto the meeting point
@@ -68,9 +77,16 @@ export const test_physics_moving_launch = (): void => {
     "capped iterations still return a solve",
     partial !== null,
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "and the partial lead has not fully settled onto the meeting point",
-    partial !== null && !nclose(partial.hitTime, lead.hitTime, 1e-6),
+    namedFacts([
+      ["partial", () => partial !== null],
+      [
+        "nclosePartialHitTime",
+        () => partial !== null && !nclose(partial.hitTime, lead.hitTime, 1e-6),
+      ],
+    ]),
+    { partial: true, nclosePartialHitTime: true },
   );
 
   // 4. a target that outruns the shot → out of range → null

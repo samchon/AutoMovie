@@ -5,6 +5,8 @@ import {
 } from "@automovie/face";
 import { TestValidator } from "@nestia/e2e";
 
+import { namedFacts } from "../internal/predicates";
+
 /**
  * Structural oracles of the embedded canonical face: the FaceMesh topology is
  * 468 vertices / 898 triangles with per-vertex UVs in the unit square, the nose
@@ -31,12 +33,22 @@ export const test_face_canonical_face = (): void => {
       CANONICAL_FACE_POSITIONS[argmax * 3 + 2]!
     )
       argmax = i;
-  TestValidator.predicate(
+  TestValidator.equals(
     "front-most vertex is on the nose",
-    [1, 4, 5, 195].includes(argmax) &&
-      CANONICAL_FACE_POSITIONS[argmax * 3 + 2]! -
-        CANONICAL_FACE_POSITIONS[1 * 3 + 2]! <
-        0.002,
+    namedFacts([
+      ["includesArgmax", () => [1, 4, 5, 195].includes(argmax)],
+      [
+        "cANONICAL_FACE_POSITIONSArgmaxCANONICAL_FACE_POSITIONS",
+        () =>
+          CANONICAL_FACE_POSITIONS[argmax * 3 + 2]! -
+            CANONICAL_FACE_POSITIONS[1 * 3 + 2]! <
+          0.002,
+      ],
+    ]),
+    {
+      includesArgmax: true,
+      cANONICAL_FACE_POSITIONSArgmaxCANONICAL_FACE_POSITIONS: true,
+    },
   );
   let meanX = 0;
   for (let i = 0; i < 468; i++) meanX += CANONICAL_FACE_POSITIONS[i * 3]! / 468;

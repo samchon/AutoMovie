@@ -147,6 +147,14 @@ const reportValidation = (
  * the fact that failed instead. Evaluation is lazy and ordered because several
  * facts guard the ones after them: evaluating eagerly would throw where the
  * conjunction merely short-circuited.
+ *
+ * Each fact states its own conjunct and nothing before it. Stopping at the
+ * first false one is what carries the guarding, so restating an earlier fact
+ * buys nothing, and restating one that calls anything runs the call a second
+ * time: an erase asserted twice finds nothing to erase, a stale handle refused
+ * twice is no longer stale, a one-shot hook fires on the wrong read. Repeat an
+ * earlier conjunct only where the compiler needs it to narrow a type, which is
+ * a comparison and cannot move an answer.
  */
 export const namedFacts = (
   entries: ReadonlyArray<readonly [string, () => boolean]>,

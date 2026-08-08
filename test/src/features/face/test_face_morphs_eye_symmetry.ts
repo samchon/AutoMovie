@@ -1,6 +1,8 @@
 import { buildFaceMorphs } from "@automovie/face";
 import { TestValidator } from "@nestia/e2e";
 
+import { namedFacts } from "../internal/predicates";
+
 /**
  * Per-side eye targets must be exact mirrors AND independent. The canonical
  * face is x-mirror-symmetric, so each left-side target's delta magnitude at a
@@ -26,9 +28,13 @@ export const test_face_morphs_eye_symmetry = (): void => {
     const dR = morphs[`${base}R`];
     const dL = morphs[`${base}L`];
     for (const [r, l] of PAIRS) {
-      TestValidator.predicate(
+      TestValidator.equals(
         `${base} mirrors (${r}↔${l})`,
-        Math.abs(mag(dR, r) - mag(dL, l)) < 1e-9 && mag(dL, l) > 1e-5,
+        namedFacts([
+          ["absMagDR", () => Math.abs(mag(dR, r) - mag(dL, l)) < 1e-9],
+          ["magDLL", () => mag(dL, l) > 1e-5],
+        ]),
+        { absMagDR: true, magDLL: true },
       );
       TestValidator.equals(
         `${base}R leaves the left eye untouched (${l})`,

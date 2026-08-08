@@ -5,6 +5,8 @@ import type {
   IAutoMovieShotBuildContext,
 } from "@automovie/interface";
 
+import { sentinel } from "../units/sentinel";
+
 const OPENING_CONTRACT: IAutoMovieDefinedShotContract = {
   beat: "signal",
   evidence: [
@@ -170,87 +172,13 @@ const buildSignal = (
   context: IAutoMovieShotBuildContext,
   openingAbduction: number,
 ): IAutoMovieProductionShotProgram => {
-  const model = context.runtimeModels.sentinel;
-  if (model === undefined || model.skeleton === null)
-    throw new Error(
-      'The compiler-owned "sentinel" stickman model must provide a skeleton.',
-    );
-  const pose = (abduction: number) => ({
-    skeleton: model.skeleton!.id,
-    root: null,
-    joints: [
-      {
-        bone: "leftUpperArm" as const,
-        flexion: null,
-        abduction,
-        twist: null,
-      },
-      {
-        bone: "leftLowerArm" as const,
-        flexion: 25,
-        abduction: null,
-        twist: null,
-      },
-    ],
-  });
-  const motion = {
-    id: `${context.contract.id}-signal`,
-    skeleton: model.skeleton.id,
-    duration: context.contract.durationSeconds,
-    loop: false,
-    keyframes:
-      openingAbduction >= 100
-        ? [
-            {
-              time: 0,
-              pose: pose(openingAbduction),
-              expression: null,
-              easing: "linear" as const,
-              bezier: null,
-            },
-            {
-              time: context.contract.durationSeconds,
-              pose: pose(openingAbduction),
-              expression: null,
-              easing: "linear" as const,
-              bezier: null,
-            },
-          ]
-        : [
-            {
-              time: 0,
-              pose: pose(openingAbduction),
-              expression: null,
-              easing: "easeInOut" as const,
-              bezier: null,
-            },
-            {
-              time: 2,
-              pose: pose(110),
-              expression: null,
-              easing: "linear" as const,
-              bezier: null,
-            },
-            {
-              time: context.contract.durationSeconds,
-              pose: pose(110),
-              expression: null,
-              easing: "linear" as const,
-              bezier: null,
-            },
-          ],
-    gaitCycle: null,
-  };
+  // The sentinel owns its own rig lookup, its raise-and-hold, and what it
+  // stages. This shot states the beat and the frame; it does not rebuild the
+  // figure.
+  const performer = sentinel.render(context, { from: openingAbduction });
   const sceneId = `${context.contract.id}-scene`;
   return {
-    actors: [
-      {
-        node: "sentinel",
-        model: "sentinel",
-        speed: 1.2,
-        eyeHeight: 1.62,
-      },
-    ],
+    actors: [...(performer.actors ?? [])],
     script: {
       logline: "A lone sentinel raises a signal and the field answers.",
       theme: "one readable gesture changes the field",
@@ -258,7 +186,7 @@ const buildSignal = (
         {
           node: "sentinel",
           character: "the sentinel",
-          modelRef: model.id,
+          modelRef: sentinel.modelRef(context),
         },
       ],
       beats: [
@@ -337,7 +265,7 @@ const buildSignal = (
           actor: "sentinel",
           start: 0,
           duration: context.contract.durationSeconds,
-          clip: motion.id,
+          clip: performer.clips![0]!.id,
         },
         {
           verb: "frame",
@@ -359,7 +287,7 @@ const buildSignal = (
       id: event.id,
       time: (event.window.from + event.window.to) / 2,
     })),
-    clips: [motion],
+    clips: [...(performer.clips ?? [])],
     formationMotions: context.contract.participants.some(
       (participant) =>
         participant.kind === "formation" && participant.id === "army",
@@ -423,5 +351,6 @@ export const opening = defineShot("opening", {
 export const answer = defineShot("answer", {
   scene: "answer-scene",
   contract: ANSWER_CONTRACT,
-  build: (context: IAutoMovieShotBuildContext) => buildSignal(context, 110),
+  build: (context: IAutoMovieShotBuildContext) =>
+    buildSignal(context, sentinel.signalAbduction),
 });

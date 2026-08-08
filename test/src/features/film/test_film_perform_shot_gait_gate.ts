@@ -12,7 +12,7 @@ import {
   validSynthesizer,
 } from "../internal/filmFixtures";
 import { createSkeleton } from "../internal/fixtures";
-import { hasViolation } from "../internal/predicates";
+import { hasViolation, namedFacts } from "../internal/predicates";
 
 const locomote = (gait: string): IAutoMovieActionCall => ({
   verb: "locomote",
@@ -78,26 +78,43 @@ export const test_film_perform_shot_gait_gate = (): void => {
     "unsupplied gait is reported on $input.draft[0].gait",
     hasViolation(absent, "type", "$input.draft[0].gait"),
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "the violation lists the actor's available gaits",
-    absent.success === false &&
-      absent.violations.some(
-        (v) =>
-          v.path.includes("[0].gait") &&
-          v.expected.includes("walk, run") &&
-          v.expected.includes('"march"'),
-      ),
+    namedFacts([
+      ["refused", () => absent.success === false],
+      [
+        "violated",
+        () =>
+          absent.success === false &&
+          absent.violations.some(
+            (v) =>
+              v.path.includes("[0].gait") &&
+              v.expected.includes("walk, run") &&
+              v.expected.includes('"march"'),
+          ),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 
   // (c) actor supplies no gaits → "none supplied"
   const none = run("march", () => []);
-  TestValidator.predicate(
+  TestValidator.equals(
     "an actor with no gaits reads 'none supplied'",
-    none.success === false &&
-      none.violations.some(
-        (v) =>
-          v.path.includes("[0].gait") && v.expected.includes("none supplied"),
-      ),
+    namedFacts([
+      ["refused", () => none.success === false],
+      [
+        "violated",
+        () =>
+          none.success === false &&
+          none.violations.some(
+            (v) =>
+              v.path.includes("[0].gait") &&
+              v.expected.includes("none supplied"),
+          ),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 
   // (d) lookup omitted → gate skipped even for an unknown gait (byte-identical)

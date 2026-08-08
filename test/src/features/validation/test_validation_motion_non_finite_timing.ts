@@ -8,7 +8,7 @@ import {
   makeMotion,
   makePose,
 } from "../internal/fixtures";
-import { hasViolation } from "../internal/predicates";
+import { hasViolation, namedFacts } from "../internal/predicates";
 
 const pose = (flexion: number) =>
   makePose([joint("leftLowerArm", { flexion })]);
@@ -39,10 +39,18 @@ export const test_validation_motion_non_finite_timing = (): void => {
     infiniteDuration.success,
     false,
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "infinite duration rejected",
-    infiniteDuration.success === false &&
-      hasViolation(infiniteDuration, "temporal", "$input.duration"),
+    namedFacts([
+      ["refused", () => infiniteDuration.success === false],
+      [
+        "violated",
+        () =>
+          infiniteDuration.success === false &&
+          hasViolation(infiniteDuration, "temporal", "$input.duration"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 
   const zeroDuration = validate(0, [0, 1]);
@@ -51,10 +59,18 @@ export const test_validation_motion_non_finite_timing = (): void => {
     zeroDuration.success,
     false,
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "zero duration rejected at duration",
-    zeroDuration.success === false &&
-      hasViolation(zeroDuration, "temporal", "$input.duration"),
+    namedFacts([
+      ["refused", () => zeroDuration.success === false],
+      [
+        "violated",
+        () =>
+          zeroDuration.success === false &&
+          hasViolation(zeroDuration, "temporal", "$input.duration"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 
   const nanTime = validate(1, [0, Number.NaN]);
@@ -63,9 +79,17 @@ export const test_validation_motion_non_finite_timing = (): void => {
     nanTime.success,
     false,
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "non-finite keyframe time rejected",
-    nanTime.success === false &&
-      hasViolation(nanTime, "temporal", "$input.keyframes[1].time"),
+    namedFacts([
+      ["refused", () => nanTime.success === false],
+      [
+        "violated",
+        () =>
+          nanTime.success === false &&
+          hasViolation(nanTime, "temporal", "$input.keyframes[1].time"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 };

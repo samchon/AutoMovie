@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import ts from "typescript-compiler";
 
+import { namedFacts } from "../internal/predicates";
 import { preserveProductionCompilerFixtureCleanup } from "./test_mcp_production_compiler";
 
 const compact = (node: ts.Node, source: ts.SourceFile): string =>
@@ -95,7 +96,7 @@ const productionCompilerFixtureContract = (text: string): unknown => {
     if (outer === undefined || ts.isTryStatement(outer) === false) return [];
     const statements = outer.tryBlock.statements;
     const unmanifested = statements[104];
-    const noDesign = statements[596];
+    const noDesign = statements[618];
     if (
       unmanifested === undefined ||
       ts.isTryStatement(unmanifested) === false ||
@@ -104,7 +105,7 @@ const productionCompilerFixtureContract = (text: string): unknown => {
     )
       return [];
     const substantive = statements.filter(
-      (_, index) => ![102, 104, 594, 596].includes(index),
+      (_, index) => ![102, 104, 616, 618].includes(index),
     );
     return [
       {
@@ -135,10 +136,10 @@ const productionCompilerFixtureContract = (text: string): unknown => {
         ...lifecycleContract(unmanifested, source),
       },
       {
-        acquisition: compact(statements[595]!, source),
+        acquisition: compact(statements[617]!, source),
         bodyStatements: statements.length,
-        failureHolder: compact(statements[594]!, source),
-        index: 596,
+        failureHolder: compact(statements[616]!, source),
+        index: 618,
         kind: "no-design",
         ownerParameters: [],
         substantiveStatements: noDesign.tryBlock.statements.length,
@@ -238,41 +239,173 @@ export const test_mcp_production_compiler_fixture_cleanup = (): void => {
     cleanupFailure: { error: undefined, present: true },
     primaryFailure: { error: undefined, present: true },
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "production-compiler cleanup preserves nested and outer failures",
-    success.caught === false &&
-      success.failure === undefined &&
-      success.attempts === 1 &&
-      primaryOnly.caught &&
-      primaryOnly.failure === primaryFailure &&
-      primaryOnly.attempts === 1 &&
-      standalone.caught &&
-      standalone.failure === cleanupFailure &&
-      standalone.attempts === 1 &&
-      combined.caught &&
-      aggregateContainsExactly(combined.failure, [
-        primaryFailure,
-        cleanupFailure,
-      ]) &&
-      combined.attempts === 1 &&
-      nestedCombined.caught &&
-      aggregateContainsExactly(nestedCombined.failure, [
-        nestedCleanupFailure,
-        cleanupFailure,
-      ]) &&
-      nestedCombined.attempts === 1 &&
-      undefinedPrimary.caught &&
-      undefinedPrimary.failure === undefined &&
-      undefinedPrimary.attempts === 1 &&
-      undefinedStandalone.caught &&
-      undefinedStandalone.failure === undefined &&
-      undefinedStandalone.attempts === 1 &&
-      undefinedCombined.caught &&
-      aggregateContainsExactly(undefinedCombined.failure, [
-        undefined,
-        undefined,
-      ]) &&
-      undefinedCombined.attempts === 1,
+    namedFacts([
+      ["successCaught", () => success.caught === false],
+      [
+        "successFailure",
+        () => success.caught === false && success.failure === undefined,
+      ],
+      [
+        "successAttempts",
+        () =>
+          success.caught === false &&
+          success.failure === undefined &&
+          success.attempts === 1,
+      ],
+      [
+        "primaryOnlyCaught",
+        () =>
+          success.caught === false &&
+          success.failure === undefined &&
+          success.attempts === 1 &&
+          primaryOnly.caught,
+      ],
+      [
+        "primaryOnlyFailurePrimaryFailure",
+        () =>
+          success.caught === false &&
+          success.failure === undefined &&
+          success.attempts === 1 &&
+          primaryOnly.caught &&
+          primaryOnly.failure === primaryFailure,
+      ],
+      [
+        "primaryOnlyAttempts",
+        () =>
+          success.caught === false &&
+          success.failure === undefined &&
+          success.attempts === 1 &&
+          primaryOnly.caught &&
+          primaryOnly.failure === primaryFailure &&
+          primaryOnly.attempts === 1,
+      ],
+      [
+        "standaloneCaught",
+        () =>
+          success.caught === false &&
+          success.failure === undefined &&
+          success.attempts === 1 &&
+          primaryOnly.caught &&
+          primaryOnly.failure === primaryFailure &&
+          primaryOnly.attempts === 1 &&
+          standalone.caught,
+      ],
+      [
+        "standaloneFailureCleanupFailure",
+        () =>
+          success.caught === false &&
+          success.failure === undefined &&
+          success.attempts === 1 &&
+          primaryOnly.caught &&
+          primaryOnly.failure === primaryFailure &&
+          primaryOnly.attempts === 1 &&
+          standalone.caught &&
+          standalone.failure === cleanupFailure,
+      ],
+      [
+        "standaloneAttempts",
+        () =>
+          success.caught === false &&
+          success.failure === undefined &&
+          success.attempts === 1 &&
+          primaryOnly.caught &&
+          primaryOnly.failure === primaryFailure &&
+          primaryOnly.attempts === 1 &&
+          standalone.caught &&
+          standalone.failure === cleanupFailure &&
+          standalone.attempts === 1,
+      ],
+      [
+        "combinedCaught",
+        () =>
+          success.caught === false &&
+          success.failure === undefined &&
+          success.attempts === 1 &&
+          primaryOnly.caught &&
+          primaryOnly.failure === primaryFailure &&
+          primaryOnly.attempts === 1 &&
+          standalone.caught &&
+          standalone.failure === cleanupFailure &&
+          standalone.attempts === 1 &&
+          combined.caught,
+      ],
+      [
+        "aggregateContainsExactlyCombinedFailure",
+        () =>
+          success.caught === false &&
+          success.failure === undefined &&
+          success.attempts === 1 &&
+          primaryOnly.caught &&
+          primaryOnly.failure === primaryFailure &&
+          primaryOnly.attempts === 1 &&
+          standalone.caught &&
+          standalone.failure === cleanupFailure &&
+          standalone.attempts === 1 &&
+          combined.caught &&
+          aggregateContainsExactly(combined.failure, [
+            primaryFailure,
+            cleanupFailure,
+          ]),
+      ],
+      ["combinedAttempts", () => combined.attempts === 1],
+      ["nestedCombinedCaught", () => nestedCombined.caught],
+      [
+        "aggregateContainsExactlyNestedCombinedFailure",
+        () =>
+          aggregateContainsExactly(nestedCombined.failure, [
+            nestedCleanupFailure,
+            cleanupFailure,
+          ]),
+      ],
+      ["nestedCombinedAttempts", () => nestedCombined.attempts === 1],
+      ["undefinedPrimaryCaught", () => undefinedPrimary.caught],
+      ["undefinedPrimaryFailure", () => undefinedPrimary.failure === undefined],
+      ["undefinedPrimaryAttempts", () => undefinedPrimary.attempts === 1],
+      ["undefinedStandaloneCaught", () => undefinedStandalone.caught],
+      [
+        "undefinedStandaloneFailure",
+        () => undefinedStandalone.failure === undefined,
+      ],
+      ["undefinedStandaloneAttempts", () => undefinedStandalone.attempts === 1],
+      ["undefinedCombinedCaught", () => undefinedCombined.caught],
+      [
+        "aggregateContainsExactlyUndefinedCombinedFailure",
+        () =>
+          aggregateContainsExactly(undefinedCombined.failure, [
+            undefined,
+            undefined,
+          ]),
+      ],
+      ["undefinedCombinedAttempts", () => undefinedCombined.attempts === 1],
+    ]),
+    {
+      successCaught: true,
+      successFailure: true,
+      successAttempts: true,
+      primaryOnlyCaught: true,
+      primaryOnlyFailurePrimaryFailure: true,
+      primaryOnlyAttempts: true,
+      standaloneCaught: true,
+      standaloneFailureCleanupFailure: true,
+      standaloneAttempts: true,
+      combinedCaught: true,
+      aggregateContainsExactlyCombinedFailure: true,
+      combinedAttempts: true,
+      nestedCombinedCaught: true,
+      aggregateContainsExactlyNestedCombinedFailure: true,
+      nestedCombinedAttempts: true,
+      undefinedPrimaryCaught: true,
+      undefinedPrimaryFailure: true,
+      undefinedPrimaryAttempts: true,
+      undefinedStandaloneCaught: true,
+      undefinedStandaloneFailure: true,
+      undefinedStandaloneAttempts: true,
+      undefinedCombinedCaught: true,
+      aggregateContainsExactlyUndefinedCombinedFailure: true,
+      undefinedCombinedAttempts: true,
+    },
   );
   TestValidator.equals(
     "production-compiler test owns all three fixture lifecycles",
@@ -299,16 +432,16 @@ export const test_mcp_production_compiler_fixture_cleanup = (): void => {
             index: 2,
             kind: "main",
             ownerParameters: [],
-            substantiveStatements: 593,
+            substantiveStatements: 615,
             substantiveTokenDigest:
-              "cc20403317292020586305a28a2aa3143caf358b4a805fe171a90b9d2e942f87",
+              "59820005bc94ed6e4aee9a98ade553356c0ab7fdeb4482d0bd7aead82ff1b788",
             tryDigest:
-              "bb1fb532db6cfd3ed9ea303a5190249e4f3cf6123171bd95722607fc13a95202",
-            tryStatements: 597,
+              "b3d4df8366bef7f2610e4bac7347ec9fd9dc7a2f3c62e346e350328819ae88a6",
+            tryStatements: 619,
           },
           {
             acquisition: "constunmanifestedFixture=productionFixture();",
-            bodyStatements: 597,
+            bodyStatements: 619,
             catchBodies: ["unmanifestedFixtureFailure={error};", "throwerror;"],
             catchVariables: ["error"],
             failureHolder:
@@ -329,7 +462,7 @@ export const test_mcp_production_compiler_fixture_cleanup = (): void => {
           {
             acquisition:
               'constnoDesignRoot=fs.mkdtempSync(path.join(os.tmpdir(),"automovie-production-empty-"),);',
-            bodyStatements: 597,
+            bodyStatements: 619,
             catchBodies: ["noDesignFailure={error};", "throwerror;"],
             catchVariables: ["error"],
             failureHolder:
@@ -337,7 +470,7 @@ export const test_mcp_production_compiler_fixture_cleanup = (): void => {
             finallyBodies: [
               "preserveProductionCompilerFixtureCleanup(noDesignFailure,()=>fs.rmSync(noDesignRoot,{force:true,recursive:true}),);",
             ],
-            index: 596,
+            index: 618,
             kind: "no-design",
             ownerParameters: [],
             substantiveStatements: 2,

@@ -8,7 +8,7 @@ import {
   validSynthesizer,
 } from "../internal/filmFixtures";
 import { createSkeleton } from "../internal/fixtures";
-import { hasViolation } from "../internal/predicates";
+import { hasViolation, namedFacts } from "../internal/predicates";
 
 /**
  * Performance consumes script and staged objects directly. Matching blank ids
@@ -65,24 +65,56 @@ export const test_film_perform_shot_nonempty_refs = (): void => {
   });
 
   TestValidator.equals("blank performance refs fail", performed.success, false);
-  TestValidator.predicate(
+  TestValidator.equals(
     "beat id violation",
-    performed.success === false &&
-      hasViolation(performed, "type", "$input.beat"),
+    namedFacts([
+      ["refused", () => performed.success === false],
+      [
+        "violated",
+        () =>
+          performed.success === false &&
+          hasViolation(performed, "type", "$input.beat"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "action actor violation",
-    performed.success === false &&
-      hasViolation(performed, "type", "$input.draft[0].actor"),
+    namedFacts([
+      ["refused", () => performed.success === false],
+      [
+        "violated",
+        () =>
+          performed.success === false &&
+          hasViolation(performed, "type", "$input.draft[0].actor"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "frame camera actor violation",
-    performed.success === false &&
-      hasViolation(performed, "type", "$input.draft[1].actor"),
+    namedFacts([
+      ["refused", () => performed.success === false],
+      [
+        "violated",
+        () =>
+          performed.success === false &&
+          hasViolation(performed, "type", "$input.draft[1].actor"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "frame node target violation",
-    performed.success === false &&
-      hasViolation(performed, "type", "$input.draft[1].on.node"),
+    namedFacts([
+      ["refused", () => performed.success === false],
+      [
+        "violated",
+        () =>
+          performed.success === false &&
+          hasViolation(performed, "type", "$input.draft[1].on.node"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 };

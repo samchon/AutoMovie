@@ -350,9 +350,13 @@ export const test_mcp_production_shot_continuity = async (): Promise<void> => {
           2,
         )}`,
       );
-    TestValidator.predicate(
+    TestValidator.equals(
       "the production hard cut carries the previous measured root",
-      output.success && carriedAnswerX === 1,
+      namedFacts([
+        ["outputSuccess", () => output.success],
+        ["carriedAnswerX", () => output.success && carriedAnswerX === 1],
+      ]),
+      { outputSuccess: true, carriedAnswerX: true },
     );
 
     const previousTrim = fullHardCut();

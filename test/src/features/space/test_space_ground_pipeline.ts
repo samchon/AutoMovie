@@ -15,6 +15,7 @@ import {
 import { TestValidator } from "@nestia/e2e";
 
 import {
+  namedFacts,
   nclose,
   validationHasNoWarnings,
   validationHasWarnings,
@@ -121,9 +122,16 @@ export const test_space_ground_pipeline = (): void => {
     ground,
   });
   const mid = path.frames.find((frame) => nclose(frame.time, 0.5));
-  TestValidator.predicate(
+  TestValidator.equals(
     "mid-path frame follows the ramp height",
-    mid !== undefined && nclose(mid.position.y, 0.015),
+    namedFacts([
+      ["mid", () => mid !== undefined],
+      [
+        "ncloseMidPosition",
+        () => mid !== undefined && nclose(mid.position.y, 0.015),
+      ],
+    ]),
+    { mid: true, ncloseMidPosition: true },
   );
 
   TestValidator.predicate("default fallback is 0", nclose(ground(50, 50), 0));

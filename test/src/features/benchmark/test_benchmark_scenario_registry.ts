@@ -110,13 +110,26 @@ export const test_benchmark_scenario_registry = (): void => {
     },
   );
   for (const scenario of scenarios)
-    TestValidator.predicate(
+    TestValidator.equals(
       `scenario ${scenario.taskId} reproduces its law and calibrated anchors`,
-      scenario.task().taskId === scenario.taskId &&
-        assertAutoMovieBenchmarkCalibrated(
-          scenario.task(),
-          scenario.anchors(),
-        ).every((result) => result.inside),
+      namedFacts([
+        [
+          "scenarioTaskTaskId",
+          () => scenario.task().taskId === scenario.taskId,
+        ],
+        [
+          "assertAutoMovieBenchmarkCalibratedScenarioTask",
+          () =>
+            assertAutoMovieBenchmarkCalibrated(
+              scenario.task(),
+              scenario.anchors(),
+            ).every((result) => result.inside),
+        ],
+      ]),
+      {
+        scenarioTaskTaskId: true,
+        assertAutoMovieBenchmarkCalibratedScenarioTask: true,
+      },
     );
   expectErrorMessage(
     "an unknown task names the complete registry",

@@ -380,69 +380,159 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
             firstDifferingActualByte: number;
           };
         });
-  TestValidator.predicate(
+  TestValidator.equals(
     "repaint conform preserves exact cut-only shot samples and rejects incompatible clips or transitions",
-    probeProductionMedia({
-      kind: "guide-pass",
-      mediaType: "video/mp4",
-      bytes: conformedRepaint,
-    }).kind === "video" &&
-      (() => {
-        assertProductionFeatureUsesRenditionClips({
-          feature: conformedRepaint,
-          timeline: repaintTimeline,
-          clips: repaintClips,
-        });
-        assertProductionFeatureUsesRenditionVideo({
-          feature: conformedRepaint,
-          renditionVideo: conformedRepaint,
-        });
-        return true;
-      })() &&
-      sampleDifferenceDetails !== null &&
-      JSON.stringify(sampleDifferenceDetails.timing.actual) ===
-        JSON.stringify(sampleDifferenceDetails.timing.expected) &&
-      sampleDifferenceDetails.payload.actualBytes > 0 &&
-      sampleDifferenceDetails.payload.actualBytes ===
-        sampleDifferenceDetails.payload.expectedBytes &&
-      sampleDifferenceDetails.flags.actual.isSync === true &&
-      sampleDifferenceDetails.flags.actual.dependsOn === 2 &&
-      sampleDifferenceDetails.flags.expected.isSync === true &&
-      sampleDifferenceDetails.flags.expected.dependsOn === 0 &&
-      sampleDifferenceDetails.flags.match === true &&
-      sampleDifferenceDetails.sampleDescriptionMatches === true &&
-      sampleDifferenceDetails.payload.firstDifferingActualByte === 0 &&
-      throws(() =>
-        assertProductionFeatureUsesRenditionVideo({
-          feature: nonSyncDependencyMismatch,
-          renditionVideo: nonSyncRendition,
-        }),
-      ) &&
-      throws(() =>
-        conformProductionRenditionVideoMp4({
-          timeline: {
-            ...repaintTimeline,
-            segments: repaintTimeline.segments.map((segment, index) =>
-              index === 0
-                ? {
-                    ...segment,
-                    transitionOut: {
-                      kind: "fade" as const,
-                      durationFrames: 1,
-                    },
-                  }
-                : segment,
-            ),
-          },
-          clips: repaintClips,
-        }),
-      ) &&
-      throws(() =>
-        conformProductionRenditionVideoMp4({
-          timeline: repaintTimeline,
-          clips: new Map(repaintClips).set("answer", incompatibleAnswer),
-        }),
-      ),
+    namedFacts([
+      [
+        "probeProductionMediaKindGuide",
+        () =>
+          probeProductionMedia({
+            kind: "guide-pass",
+            mediaType: "video/mp4",
+            bytes: conformedRepaint,
+          }).kind === "video",
+      ],
+      [
+        "assertProductionFeatureUsesRenditionClipsFeatureConformedRepaint",
+        () =>
+          (() => {
+            assertProductionFeatureUsesRenditionClips({
+              feature: conformedRepaint,
+              timeline: repaintTimeline,
+              clips: repaintClips,
+            });
+            assertProductionFeatureUsesRenditionVideo({
+              feature: conformedRepaint,
+              renditionVideo: conformedRepaint,
+            });
+            return true;
+          })(),
+      ],
+      ["sampleDifferenceDetails", () => sampleDifferenceDetails !== null],
+      [
+        "stringifySampleDifferenceDetailsTiming",
+        () =>
+          sampleDifferenceDetails !== null &&
+          JSON.stringify(sampleDifferenceDetails.timing.actual) ===
+            JSON.stringify(sampleDifferenceDetails.timing.expected),
+      ],
+      [
+        "sampleDifferenceDetailsPayloadActualBytes",
+        () =>
+          sampleDifferenceDetails !== null &&
+          sampleDifferenceDetails.payload.actualBytes > 0,
+      ],
+      [
+        "sampleDifferenceDetailsPayloadActualBytes2",
+        () =>
+          sampleDifferenceDetails !== null &&
+          sampleDifferenceDetails.payload.actualBytes ===
+            sampleDifferenceDetails.payload.expectedBytes,
+      ],
+      [
+        "sampleDifferenceDetailsFlagsActual",
+        () =>
+          sampleDifferenceDetails !== null &&
+          sampleDifferenceDetails.flags.actual.isSync === true,
+      ],
+      [
+        "sampleDifferenceDetailsFlagsActual2",
+        () =>
+          sampleDifferenceDetails !== null &&
+          sampleDifferenceDetails.flags.actual.dependsOn === 2,
+      ],
+      [
+        "sampleDifferenceDetailsFlagsExpected",
+        () =>
+          sampleDifferenceDetails !== null &&
+          sampleDifferenceDetails.flags.expected.isSync === true,
+      ],
+      [
+        "sampleDifferenceDetailsFlagsExpected2",
+        () =>
+          sampleDifferenceDetails !== null &&
+          sampleDifferenceDetails.flags.expected.dependsOn === 0,
+      ],
+      [
+        "sampleDifferenceDetailsFlagsMatch",
+        () =>
+          sampleDifferenceDetails !== null &&
+          sampleDifferenceDetails.flags.match === true,
+      ],
+      [
+        "sampleDifferenceDetailsSampleDescriptionMatches",
+        () =>
+          sampleDifferenceDetails !== null &&
+          sampleDifferenceDetails.sampleDescriptionMatches === true,
+      ],
+      [
+        "sampleDifferenceDetailsPayloadFirstDifferingActualByte",
+        () =>
+          sampleDifferenceDetails !== null &&
+          sampleDifferenceDetails.payload.firstDifferingActualByte === 0,
+      ],
+      [
+        "throwsAssertProductionFeatureUsesRenditionVideoFeature",
+        () =>
+          throws(() =>
+            assertProductionFeatureUsesRenditionVideo({
+              feature: nonSyncDependencyMismatch,
+              renditionVideo: nonSyncRendition,
+            }),
+          ),
+      ],
+      [
+        "throwsConformProductionRenditionVideoMp4Timeline",
+        () =>
+          throws(() =>
+            conformProductionRenditionVideoMp4({
+              timeline: {
+                ...repaintTimeline,
+                segments: repaintTimeline.segments.map((segment, index) =>
+                  index === 0
+                    ? {
+                        ...segment,
+                        transitionOut: {
+                          kind: "fade" as const,
+                          durationFrames: 1,
+                        },
+                      }
+                    : segment,
+                ),
+              },
+              clips: repaintClips,
+            }),
+          ),
+      ],
+      [
+        "throwsConformProductionRenditionVideoMp4Timeline2",
+        () =>
+          throws(() =>
+            conformProductionRenditionVideoMp4({
+              timeline: repaintTimeline,
+              clips: new Map(repaintClips).set("answer", incompatibleAnswer),
+            }),
+          ),
+      ],
+    ]),
+    {
+      probeProductionMediaKindGuide: true,
+      assertProductionFeatureUsesRenditionClipsFeatureConformedRepaint: true,
+      sampleDifferenceDetails: true,
+      stringifySampleDifferenceDetailsTiming: true,
+      sampleDifferenceDetailsPayloadActualBytes: true,
+      sampleDifferenceDetailsPayloadActualBytes2: true,
+      sampleDifferenceDetailsFlagsActual: true,
+      sampleDifferenceDetailsFlagsActual2: true,
+      sampleDifferenceDetailsFlagsExpected: true,
+      sampleDifferenceDetailsFlagsExpected2: true,
+      sampleDifferenceDetailsFlagsMatch: true,
+      sampleDifferenceDetailsSampleDescriptionMatches: true,
+      sampleDifferenceDetailsPayloadFirstDifferingActualByte: true,
+      throwsAssertProductionFeatureUsesRenditionVideoFeature: true,
+      throwsConformProductionRenditionVideoMp4Timeline: true,
+      throwsConformProductionRenditionVideoMp4Timeline2: true,
+    },
   );
   const renderPlan = plan();
   const proxyPlan = planProductionRenderJob({
@@ -595,67 +685,141 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
     } as typeof renderPlan.runtimeIdentity,
     chunkFrames: 6,
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "film edit becomes deterministic feature and guide chunks",
-    renderPlan.version === 3 &&
-      renderPlan.productionId === "render-film" &&
-      renderPlan.chunks.every((chunk) =>
-        chunk.slot.startsWith("render-film:final:"),
-      ) &&
-      renderPlan.tier.kind === "final" &&
-      renderPlan.sourceFrameFormat.fps === 2 &&
-      renderPlan.totalFrames === 6 &&
-      renderPlan.chunks.length === 6 &&
-      renderPlan.chunks[0]?.frameStart === 0 &&
-      renderPlan.chunks[0]?.frameEndExclusive === 2 &&
-      renderPlan.chunks[1]?.frameStart === 2 &&
-      renderPlan.chunks[1]?.frames[0]?.layers.length === 2 &&
-      renderPlan.chunks[0]?.id === plan().chunks[0]?.id &&
-      (() => {
-        const changed = timeline();
-        changed.inputFingerprint = digest("6");
-        return (
-          planProductionRenderJob({
-            timeline: changed,
-            audioAssets: audioAssets(),
-            sourceFingerprints: sourceFingerprints(),
-            production: {
-              ...productionDesign({
-                id: "render-film",
-                targetRuntimeSeconds: 3,
-                frameFormat: {
-                  width: 16,
-                  height: 16,
-                  fps: 2,
-                  colorSpace: "srgb",
+    namedFacts([
+      ["renderPlanVersion", () => renderPlan.version === 3],
+      [
+        "renderPlanProductionIdRender",
+        () =>
+          renderPlan.version === 3 && renderPlan.productionId === "render-film",
+      ],
+      [
+        "renderPlanChunksEvery",
+        () =>
+          renderPlan.version === 3 &&
+          renderPlan.productionId === "render-film" &&
+          renderPlan.chunks.every((chunk) =>
+            chunk.slot.startsWith("render-film:final:"),
+          ),
+      ],
+      ["renderPlanTierKind", () => renderPlan.tier.kind === "final"],
+      [
+        "renderPlanSourceFrameFormatFps",
+        () => renderPlan.sourceFrameFormat.fps === 2,
+      ],
+      ["renderPlanTotalFrames", () => renderPlan.totalFrames === 6],
+      ["renderPlanChunksLength", () => renderPlan.chunks.length === 6],
+      ["renderPlanChunks0", () => renderPlan.chunks[0]?.frameStart === 0],
+      [
+        "renderPlanChunks02",
+        () => renderPlan.chunks[0]?.frameEndExclusive === 2,
+      ],
+      ["renderPlanChunks1", () => renderPlan.chunks[1]?.frameStart === 2],
+      [
+        "renderPlanChunks12",
+        () => renderPlan.chunks[1]?.frames[0]?.layers.length === 2,
+      ],
+      [
+        "renderPlanChunks03",
+        () => renderPlan.chunks[0]?.id === plan().chunks[0]?.id,
+      ],
+      [
+        "changedTimelineChanged",
+        () =>
+          (() => {
+            const changed = timeline();
+            changed.inputFingerprint = digest("6");
+            return (
+              planProductionRenderJob({
+                timeline: changed,
+                audioAssets: audioAssets(),
+                sourceFingerprints: sourceFingerprints(),
+                production: {
+                  ...productionDesign({
+                    id: "render-film",
+                    targetRuntimeSeconds: 3,
+                    frameFormat: {
+                      width: 16,
+                      height: 16,
+                      fps: 2,
+                      colorSpace: "srgb",
+                    },
+                  }),
+                  deliverables: [
+                    { id: "feature", kind: "feature", required: true },
+                  ],
                 },
-              }),
-              deliverables: [
-                { id: "feature", kind: "feature", required: true },
-              ],
-            },
-            runtimeIdentity: renderPlan.runtimeIdentity,
-            chunkFrames: 2,
-          }).chunks[0]?.id === renderPlan.chunks[0]?.id
-        );
-      })() &&
-      renderPlan.tracks.audio[0]?.asset === "public/audio/silent.json" &&
-      renderPlan.tracks.audioAssets[0]?.digest === digest("a") &&
-      nonVideoPlan.chunks.length === 0 &&
-      partialPlan.chunks.length === 2 &&
-      partialPlan.chunks[1]?.frameStart === 4 &&
-      partialPlan.chunks[1]?.frameEndExclusive === 6 &&
-      explicitGuide.chunks.length === 1 &&
-      explicitGuide.chunks[0]?.pass === "mask" &&
-      typedGuides.chunks.some(
-        (chunk) =>
-          chunk.deliverable === "depth-guide" && chunk.pass === "depth",
-      ) &&
-      typedGuides.chunks.some(
-        (chunk) =>
-          chunk.deliverable === "normal-guide" && chunk.pass === "normal",
-      ) &&
-      booleanIdentityPlan.chunks.length === 1,
+                runtimeIdentity: renderPlan.runtimeIdentity,
+                chunkFrames: 2,
+              }).chunks[0]?.id === renderPlan.chunks[0]?.id
+            );
+          })(),
+      ],
+      [
+        "renderPlanTracksAudio",
+        () => renderPlan.tracks.audio[0]?.asset === "public/audio/silent.json",
+      ],
+      [
+        "renderPlanTracksAudioAssets",
+        () => renderPlan.tracks.audioAssets[0]?.digest === digest("a"),
+      ],
+      ["nonVideoPlanChunksLength", () => nonVideoPlan.chunks.length === 0],
+      ["partialPlanChunksLength", () => partialPlan.chunks.length === 2],
+      ["partialPlanChunks1", () => partialPlan.chunks[1]?.frameStart === 4],
+      [
+        "partialPlanChunks12",
+        () => partialPlan.chunks[1]?.frameEndExclusive === 6,
+      ],
+      ["explicitGuideChunksLength", () => explicitGuide.chunks.length === 1],
+      ["explicitGuideChunks0", () => explicitGuide.chunks[0]?.pass === "mask"],
+      [
+        "typedGuidesChunksSome",
+        () =>
+          typedGuides.chunks.some(
+            (chunk) =>
+              chunk.deliverable === "depth-guide" && chunk.pass === "depth",
+          ),
+      ],
+      [
+        "typedGuidesChunksSome2",
+        () =>
+          typedGuides.chunks.some(
+            (chunk) =>
+              chunk.deliverable === "normal-guide" && chunk.pass === "normal",
+          ),
+      ],
+      [
+        "booleanIdentityPlanChunksLength",
+        () => booleanIdentityPlan.chunks.length === 1,
+      ],
+    ]),
+    {
+      renderPlanVersion: true,
+      renderPlanProductionIdRender: true,
+      renderPlanChunksEvery: true,
+      renderPlanTierKind: true,
+      renderPlanSourceFrameFormatFps: true,
+      renderPlanTotalFrames: true,
+      renderPlanChunksLength: true,
+      renderPlanChunks0: true,
+      renderPlanChunks02: true,
+      renderPlanChunks1: true,
+      renderPlanChunks12: true,
+      renderPlanChunks03: true,
+      changedTimelineChanged: true,
+      renderPlanTracksAudio: true,
+      renderPlanTracksAudioAssets: true,
+      nonVideoPlanChunksLength: true,
+      partialPlanChunksLength: true,
+      partialPlanChunks1: true,
+      partialPlanChunks12: true,
+      explicitGuideChunksLength: true,
+      explicitGuideChunks0: true,
+      typedGuidesChunksSome: true,
+      typedGuidesChunksSome2: true,
+      booleanIdentityPlanChunksLength: true,
+    },
   );
   TestValidator.equals(
     "proxy and final tiers preserve one edit while owning distinct clocks and chunks",
@@ -722,33 +886,46 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
       resolveProductionRenderTierFrameFormatRenderPlanSourceFrameFormat: true,
     },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "render tiers reject ambiguous quality policies and inexact proxy clocks",
-    [
-      { kind: "invalid", resolutionScale: 0.5, frameStep: 2 },
-      { kind: "final", resolutionScale: 0.5, frameStep: 1 },
-      { kind: "proxy", resolutionScale: 1, frameStep: 1 },
-      { kind: "proxy", resolutionScale: 0, frameStep: 2 },
-      { kind: "proxy", resolutionScale: 2, frameStep: 2 },
-      { kind: "proxy", resolutionScale: Number.NaN, frameStep: 2 },
-      { kind: "proxy", resolutionScale: 0.5, frameStep: 0 },
-      { kind: "proxy", resolutionScale: 0.5, frameStep: 1.5 },
-      { kind: "proxy", resolutionScale: 0.5, frameStep: 17 },
-    ].every((tier) =>
-      throws(() =>
-        resolveProductionRenderTierFrameFormat(
-          renderPlan.sourceFrameFormat,
-          tier as Parameters<typeof resolveProductionRenderTierFrameFormat>[1],
-        ),
-      ),
-    ) &&
-      throws(() =>
-        plan(sourceFingerprints(), {
-          kind: "proxy",
-          resolutionScale: 0.5,
-          frameStep: 4,
-        }),
-      ),
+    namedFacts([
+      [
+        "kindInvalidResolutionScale",
+        () =>
+          [
+            { kind: "invalid", resolutionScale: 0.5, frameStep: 2 },
+            { kind: "final", resolutionScale: 0.5, frameStep: 1 },
+            { kind: "proxy", resolutionScale: 1, frameStep: 1 },
+            { kind: "proxy", resolutionScale: 0, frameStep: 2 },
+            { kind: "proxy", resolutionScale: 2, frameStep: 2 },
+            { kind: "proxy", resolutionScale: Number.NaN, frameStep: 2 },
+            { kind: "proxy", resolutionScale: 0.5, frameStep: 0 },
+            { kind: "proxy", resolutionScale: 0.5, frameStep: 1.5 },
+            { kind: "proxy", resolutionScale: 0.5, frameStep: 17 },
+          ].every((tier) =>
+            throws(() =>
+              resolveProductionRenderTierFrameFormat(
+                renderPlan.sourceFrameFormat,
+                tier as Parameters<
+                  typeof resolveProductionRenderTierFrameFormat
+                >[1],
+              ),
+            ),
+          ),
+      ],
+      [
+        "throwsPlanSourceFingerprints",
+        () =>
+          throws(() =>
+            plan(sourceFingerprints(), {
+              kind: "proxy",
+              resolutionScale: 0.5,
+              frameStep: 4,
+            }),
+          ),
+      ],
+    ]),
+    { kindInvalidResolutionScale: true, throwsPlanSourceFingerprints: true },
   );
   TestValidator.equals(
     "shot source identity invalidates only ranges that sample that shot",
@@ -1028,112 +1205,152 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
       ],
     }),
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "render GC marks both current tiers and sweeps only unreferenced bytes",
-    garbageCollection.keep.length === 5 &&
-      garbageCollection.keep.some(
-        (candidate) => candidate.path === retainedPointer,
-      ) &&
-      garbageCollection.keep.some(
-        (candidate) => candidate.path === retainedTree,
-      ) &&
-      garbageCollection.remove.some(
-        (candidate) => candidate.path === orphanTree,
-      ) &&
-      garbageCollection.remove.some(
-        (candidate) => candidate.path === stalePointer,
-      ) &&
-      garbageCollection.remove.some(
-        (candidate) => candidate.path === staleTree,
-      ) &&
-      garbageCollection.reclaimableBytes === 171 &&
-      rejectsRetainedChunkPaths &&
-      rejectsStaleRetainedPair &&
+    namedFacts([
       [
-        [{ ...validChunk }, { ...validChunk }],
-        [{ ...validChunk, bytes: -1 }],
-        [{ ...validChunk, bytes: 1.5 }],
-        [{ ...validChunk, digest: null }],
-        [{ ...validChunk, digest: digest("f") }],
-        [{ ...validChunk, path: "final/chunks/not-a-digest" }],
-        [
-          {
-            ...validPointer,
-            path: `final/pointer/${renderPlan.chunks[0]!.id.slice(7)}`,
-          },
-        ],
-        [{ ...validPointer, digest: digest("f") }],
-        [
-          {
-            path: `final/tmp/${renderPlan.chunks[0]!.id.slice(7)}.missing-pid`,
-            kind: "chunk-tree" as const,
-            digest: renderPlan.chunks[0]!.id,
-            bytes: 1,
-          },
-        ],
-        [
-          {
-            path: "final/quarantine/nested/old",
-            kind: "quarantine" as const,
-            digest: null,
-            bytes: 1,
-          },
-        ],
-        [
-          {
-            path: "final/quarantine/old",
-            kind: "quarantine" as const,
-            digest: digest("f"),
-            bytes: 1,
-          },
-        ],
-        [
-          {
-            path: "deliverables/stale.mp4",
-            kind: "publication" as const,
-            digest: null,
-            bytes: 1,
-          },
-        ],
-        [
-          {
-            path: "publication/stale.mp4",
-            kind: "publication" as const,
-            digest: digest("f"),
-            bytes: 1,
-          },
-        ],
-        ...[
-          "",
-          "../escape",
-          "a\\b",
-          "/absolute",
-          "C:/drive",
-          "a//b",
-          "a/./b",
-        ].map((path) => [
-          {
-            path,
-            kind: "publication" as const,
-            digest: null,
-            bytes: 1,
-          },
-        ]),
-        [
-          {
-            path: "publication/a",
-            kind: "publication" as const,
-            digest: null,
-            bytes: Number.MAX_SAFE_INTEGER,
-          },
-          {
-            path: "publication/b",
-            kind: "publication" as const,
-            digest: null,
-            bytes: 1,
-          },
-        ],
-      ].every(rejectsGcCandidates),
+        "garbageCollectionKeepLength",
+        () => garbageCollection.keep.length === 5,
+      ],
+      [
+        "garbageCollectionKeepSome",
+        () =>
+          garbageCollection.keep.length === 5 &&
+          garbageCollection.keep.some(
+            (candidate) => candidate.path === retainedPointer,
+          ),
+      ],
+      [
+        "garbageCollectionKeepSome2",
+        () =>
+          garbageCollection.keep.some(
+            (candidate) => candidate.path === retainedTree,
+          ),
+      ],
+      [
+        "garbageCollectionRemoveSome",
+        () =>
+          garbageCollection.remove.some(
+            (candidate) => candidate.path === orphanTree,
+          ),
+      ],
+      [
+        "garbageCollectionRemoveSome2",
+        () =>
+          garbageCollection.remove.some(
+            (candidate) => candidate.path === stalePointer,
+          ),
+      ],
+      [
+        "garbageCollectionRemoveSome3",
+        () =>
+          garbageCollection.remove.some(
+            (candidate) => candidate.path === staleTree,
+          ),
+      ],
+      [
+        "garbageCollectionReclaimableBytes",
+        () => garbageCollection.reclaimableBytes === 171,
+      ],
+      ["rejectsRetainedChunkPaths", () => rejectsRetainedChunkPaths],
+      ["rejectsStaleRetainedPair", () => rejectsStaleRetainedPair],
+      [
+        "validChunkValidChunkValidChunk",
+        () =>
+          [
+            [{ ...validChunk }, { ...validChunk }],
+            [{ ...validChunk, bytes: -1 }],
+            [{ ...validChunk, bytes: 1.5 }],
+            [{ ...validChunk, digest: null }],
+            [{ ...validChunk, digest: digest("f") }],
+            [{ ...validChunk, path: "final/chunks/not-a-digest" }],
+            [
+              {
+                ...validPointer,
+                path: `final/pointer/${renderPlan.chunks[0]!.id.slice(7)}`,
+              },
+            ],
+            [{ ...validPointer, digest: digest("f") }],
+            [
+              {
+                path: `final/tmp/${renderPlan.chunks[0]!.id.slice(7)}.missing-pid`,
+                kind: "chunk-tree" as const,
+                digest: renderPlan.chunks[0]!.id,
+                bytes: 1,
+              },
+            ],
+            [
+              {
+                path: "final/quarantine/nested/old",
+                kind: "quarantine" as const,
+                digest: null,
+                bytes: 1,
+              },
+            ],
+            [
+              {
+                path: "final/quarantine/old",
+                kind: "quarantine" as const,
+                digest: digest("f"),
+                bytes: 1,
+              },
+            ],
+            [
+              {
+                path: "deliverables/stale.mp4",
+                kind: "publication" as const,
+                digest: null,
+                bytes: 1,
+              },
+            ],
+            [
+              {
+                path: "publication/stale.mp4",
+                kind: "publication" as const,
+                digest: digest("f"),
+                bytes: 1,
+              },
+            ],
+            ...[
+              "",
+              "../escape",
+              "a\\b",
+              "/absolute",
+              "C:/drive",
+              "a//b",
+              "a/./b",
+            ].map((path) => [
+              { path, kind: "publication" as const, digest: null, bytes: 1 },
+            ]),
+            [
+              {
+                path: "publication/a",
+                kind: "publication" as const,
+                digest: null,
+                bytes: Number.MAX_SAFE_INTEGER,
+              },
+              {
+                path: "publication/b",
+                kind: "publication" as const,
+                digest: null,
+                bytes: 1,
+              },
+            ],
+          ].every(rejectsGcCandidates),
+      ],
+    ]),
+    {
+      garbageCollectionKeepLength: true,
+      garbageCollectionKeepSome: true,
+      garbageCollectionKeepSome2: true,
+      garbageCollectionRemoveSome: true,
+      garbageCollectionRemoveSome2: true,
+      garbageCollectionRemoveSome3: true,
+      garbageCollectionReclaimableBytes: true,
+      rejectsRetainedChunkPaths: true,
+      rejectsStaleRetainedPair: true,
+      validChunkValidChunkValidChunk: true,
+    },
   );
 
   const captions = canonicalProductionWebVtt(timeline());
@@ -1640,38 +1857,143 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
   } catch (error) {
     currentFatalReason = error;
   }
-  TestValidator.predicate(
+  TestValidator.equals(
     "scheduler drains in-flight peers before preserving fatal failures",
-    settledBeforeDrain === false &&
-      peerDrained &&
-      thirdStartedBeforeRelease === false &&
-      releaseStarted &&
-      drainingReleaseAttempts === 1 &&
-      settledBeforeRelease === false &&
-      aggregateContainsExactly(fatalReason, [
-        ATTEMPT_FAILURE,
-        FAILURE_RECORD_FAILURE,
-        RELEASE_FAILURE,
-      ]) &&
-      currentFatalReason === NON_ERROR_FAILURE,
+    namedFacts([
+      ["settledBeforeDrain", () => settledBeforeDrain === false],
+      ["peerDrained", () => settledBeforeDrain === false && peerDrained],
+      [
+        "thirdStartedBeforeRelease",
+        () =>
+          settledBeforeDrain === false &&
+          peerDrained &&
+          thirdStartedBeforeRelease === false,
+      ],
+      [
+        "releaseStarted",
+        () =>
+          settledBeforeDrain === false &&
+          peerDrained &&
+          thirdStartedBeforeRelease === false &&
+          releaseStarted,
+      ],
+      [
+        "drainingReleaseAttempts",
+        () =>
+          settledBeforeDrain === false &&
+          peerDrained &&
+          thirdStartedBeforeRelease === false &&
+          releaseStarted &&
+          drainingReleaseAttempts === 1,
+      ],
+      [
+        "settledBeforeRelease",
+        () =>
+          settledBeforeDrain === false &&
+          peerDrained &&
+          thirdStartedBeforeRelease === false &&
+          releaseStarted &&
+          drainingReleaseAttempts === 1 &&
+          settledBeforeRelease === false,
+      ],
+      [
+        "aggregateContainsExactlyFatalReasonATTEMPT_FAILURE",
+        () =>
+          settledBeforeDrain === false &&
+          peerDrained &&
+          thirdStartedBeforeRelease === false &&
+          releaseStarted &&
+          drainingReleaseAttempts === 1 &&
+          settledBeforeRelease === false &&
+          aggregateContainsExactly(fatalReason, [
+            ATTEMPT_FAILURE,
+            FAILURE_RECORD_FAILURE,
+            RELEASE_FAILURE,
+          ]),
+      ],
+      [
+        "currentFatalReasonNON_ERROR_FAILURE",
+        () => currentFatalReason === NON_ERROR_FAILURE,
+      ],
+    ]),
+    {
+      settledBeforeDrain: true,
+      peerDrained: true,
+      thirdStartedBeforeRelease: true,
+      releaseStarted: true,
+      drainingReleaseAttempts: true,
+      settledBeforeRelease: true,
+      aggregateContainsExactlyFatalReasonATTEMPT_FAILURE: true,
+      currentFatalReasonNON_ERROR_FAILURE: true,
+    },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "scheduler preserves acquired-chunk attempt, failure-record, and release failures in phase order",
-    releaseOnlyFailure.failure === RELEASE_FAILURE &&
-      releaseOnlyFailure.failureRecordAttempts === 0 &&
-      releaseOnlyFailure.releaseAttempts === 1 &&
-      aggregateContainsExactly(attemptAndFailureRecord.failure, [
-        ATTEMPT_FAILURE,
-        FAILURE_RECORD_FAILURE,
-      ]) &&
-      attemptAndFailureRecord.failureRecordAttempts === 1 &&
-      attemptAndFailureRecord.releaseAttempts === 1 &&
-      aggregateContainsExactly(attemptAndRelease.failure, [
-        ATTEMPT_FAILURE,
-        RELEASE_FAILURE,
-      ]) &&
-      attemptAndRelease.failureRecordAttempts === 1 &&
-      attemptAndRelease.releaseAttempts === 1,
+    namedFacts([
+      [
+        "releaseOnlyFailureFailureRELEASE_FAILURE",
+        () => releaseOnlyFailure.failure === RELEASE_FAILURE,
+      ],
+      [
+        "releaseOnlyFailureFailureRecordAttempts",
+        () =>
+          releaseOnlyFailure.failure === RELEASE_FAILURE &&
+          releaseOnlyFailure.failureRecordAttempts === 0,
+      ],
+      [
+        "releaseOnlyFailureReleaseAttempts",
+        () =>
+          releaseOnlyFailure.failure === RELEASE_FAILURE &&
+          releaseOnlyFailure.failureRecordAttempts === 0 &&
+          releaseOnlyFailure.releaseAttempts === 1,
+      ],
+      [
+        "aggregateContainsExactlyAttemptAndFailureRecordFailure",
+        () =>
+          releaseOnlyFailure.failure === RELEASE_FAILURE &&
+          releaseOnlyFailure.failureRecordAttempts === 0 &&
+          releaseOnlyFailure.releaseAttempts === 1 &&
+          aggregateContainsExactly(attemptAndFailureRecord.failure, [
+            ATTEMPT_FAILURE,
+            FAILURE_RECORD_FAILURE,
+          ]),
+      ],
+      [
+        "attemptAndFailureRecordFailureRecordAttempts",
+        () => attemptAndFailureRecord.failureRecordAttempts === 1,
+      ],
+      [
+        "attemptAndFailureRecordReleaseAttempts",
+        () => attemptAndFailureRecord.releaseAttempts === 1,
+      ],
+      [
+        "aggregateContainsExactlyAttemptAndReleaseFailure",
+        () =>
+          aggregateContainsExactly(attemptAndRelease.failure, [
+            ATTEMPT_FAILURE,
+            RELEASE_FAILURE,
+          ]),
+      ],
+      [
+        "attemptAndReleaseFailureRecordAttempts",
+        () => attemptAndRelease.failureRecordAttempts === 1,
+      ],
+      [
+        "attemptAndReleaseReleaseAttempts",
+        () => attemptAndRelease.releaseAttempts === 1,
+      ],
+    ]),
+    {
+      releaseOnlyFailureFailureRELEASE_FAILURE: true,
+      releaseOnlyFailureFailureRecordAttempts: true,
+      releaseOnlyFailureReleaseAttempts: true,
+      aggregateContainsExactlyAttemptAndFailureRecordFailure: true,
+      attemptAndFailureRecordFailureRecordAttempts: true,
+      attemptAndFailureRecordReleaseAttempts: true,
+      aggregateContainsExactlyAttemptAndReleaseFailure: true,
+      attemptAndReleaseFailureRecordAttempts: true,
+      attemptAndReleaseReleaseAttempts: true,
+    },
   );
   TestValidator.predicate(
     "scheduler rejects invalid workers and missing deliverables",
@@ -1748,13 +2070,46 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
       release: async () => undefined,
     },
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "scheduler handles an empty plan and non-Error adapter failure",
-    emptyRun.complete.length === 0 &&
-      emptyRun.rendered.length === 0 &&
-      emptyRun.busy.length === 0 &&
-      emptyRun.failed.length === 0 &&
-      nonErrorRun.failed[0]?.correction === "string failure",
+    namedFacts([
+      ["emptyRunCompleteLength", () => emptyRun.complete.length === 0],
+      [
+        "emptyRunRenderedLength",
+        () => emptyRun.complete.length === 0 && emptyRun.rendered.length === 0,
+      ],
+      [
+        "emptyRunBusyLength",
+        () =>
+          emptyRun.complete.length === 0 &&
+          emptyRun.rendered.length === 0 &&
+          emptyRun.busy.length === 0,
+      ],
+      [
+        "emptyRunFailedLength",
+        () =>
+          emptyRun.complete.length === 0 &&
+          emptyRun.rendered.length === 0 &&
+          emptyRun.busy.length === 0 &&
+          emptyRun.failed.length === 0,
+      ],
+      [
+        "nonErrorRunFailed0",
+        () =>
+          emptyRun.complete.length === 0 &&
+          emptyRun.rendered.length === 0 &&
+          emptyRun.busy.length === 0 &&
+          emptyRun.failed.length === 0 &&
+          nonErrorRun.failed[0]?.correction === "string failure",
+      ],
+    ]),
+    {
+      emptyRunCompleteLength: true,
+      emptyRunRenderedLength: true,
+      emptyRunBusyLength: true,
+      emptyRunFailedLength: true,
+      nonErrorRunFailed0: true,
+    },
   );
 
   const rejectsAudioAssets = (
@@ -2364,15 +2719,23 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
     }) as typeof fs.readFileSync;
     let pathnameSwapFailure: IRenderJobFixtureFailure | undefined;
     try {
-      TestValidator.predicate(
+      TestValidator.equals(
         "render-state reads bind bytes to the verified descriptor across a pathname swap",
-        Buffer.from(
-          readAutoMovieProductionOwnedFile({
-            root: ownedRoot,
-            directory: chunk,
-            relative: "frames/resident.png",
-          }),
-        ).toString("utf8") === "resident" && swapped === false,
+        namedFacts([
+          [
+            "fromReadAutoMovieProductionOwnedFileRoot",
+            () =>
+              Buffer.from(
+                readAutoMovieProductionOwnedFile({
+                  root: ownedRoot,
+                  directory: chunk,
+                  relative: "frames/resident.png",
+                }),
+              ).toString("utf8") === "resident",
+          ],
+          ["swapped", () => swapped === false],
+        ]),
+        { fromReadAutoMovieProductionOwnedFileRoot: true, swapped: true },
       );
     } catch (error) {
       pathnameSwapFailure = { error };
@@ -2403,15 +2766,23 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
     }) as typeof fs.readFileSync;
     let replacementFailure: IRenderJobFixtureFailure | undefined;
     try {
-      TestValidator.predicate(
+      TestValidator.equals(
         "render-state reads reject a physical file replacement after read",
-        throws(() =>
-          readAutoMovieProductionOwnedFile({
-            root: ownedRoot,
-            directory: chunk,
-            relative: "frames/resident.png",
-          }),
-        ) && replaced,
+        namedFacts([
+          [
+            "throwsReadAutoMovieProductionOwnedFileRoot",
+            () =>
+              throws(() =>
+                readAutoMovieProductionOwnedFile({
+                  root: ownedRoot,
+                  directory: chunk,
+                  relative: "frames/resident.png",
+                }),
+              ),
+          ],
+          ["replaced", () => replaced],
+        ]),
+        { throwsReadAutoMovieProductionOwnedFileRoot: true, replaced: true },
       );
     } catch (error) {
       replacementFailure = { error };
@@ -2606,23 +2977,64 @@ const exerciseProductionOwnedDescriptorCleanup = (props: {
     "combined-source",
   );
   const nested = captureProductionOwnedDescriptorFailure(props, "nested");
-  TestValidator.predicate(
+  TestValidator.equals(
     "production-owned descriptor cleanup preserves every operation and resource failure",
-    standalone.caught === standalone.sourceCloseFailure &&
-      standaloneResident.caught === standaloneResident.residentCloseFailure &&
-      primaryOnly.caught === primaryOnly.primaryFailure &&
-      aggregateContainsExactly(combinedResident.caught, [
-        combinedResident.primaryFailure,
-        combinedResident.residentCloseFailure,
-      ]) &&
-      aggregateContainsExactly(combinedSource.caught, [
-        combinedSource.primaryFailure,
-        combinedSource.sourceCloseFailure,
-      ]) &&
-      aggregateContainsExactly(nested.caught, [
-        nested.primaryFailure,
-        nested.residentCloseFailure,
-        nested.sourceCloseFailure,
-      ]),
+    namedFacts([
+      [
+        "standaloneCaughtStandalone",
+        () => standalone.caught === standalone.sourceCloseFailure,
+      ],
+      [
+        "standaloneResidentCaughtStandaloneResident",
+        () =>
+          standalone.caught === standalone.sourceCloseFailure &&
+          standaloneResident.caught === standaloneResident.residentCloseFailure,
+      ],
+      [
+        "primaryOnlyCaughtPrimaryOnly",
+        () =>
+          standalone.caught === standalone.sourceCloseFailure &&
+          standaloneResident.caught ===
+            standaloneResident.residentCloseFailure &&
+          primaryOnly.caught === primaryOnly.primaryFailure,
+      ],
+      [
+        "aggregateContainsExactlyCombinedResidentCaught",
+        () =>
+          standalone.caught === standalone.sourceCloseFailure &&
+          standaloneResident.caught ===
+            standaloneResident.residentCloseFailure &&
+          primaryOnly.caught === primaryOnly.primaryFailure &&
+          aggregateContainsExactly(combinedResident.caught, [
+            combinedResident.primaryFailure,
+            combinedResident.residentCloseFailure,
+          ]),
+      ],
+      [
+        "aggregateContainsExactlyCombinedSourceCaught",
+        () =>
+          aggregateContainsExactly(combinedSource.caught, [
+            combinedSource.primaryFailure,
+            combinedSource.sourceCloseFailure,
+          ]),
+      ],
+      [
+        "aggregateContainsExactlyNestedCaught",
+        () =>
+          aggregateContainsExactly(nested.caught, [
+            nested.primaryFailure,
+            nested.residentCloseFailure,
+            nested.sourceCloseFailure,
+          ]),
+      ],
+    ]),
+    {
+      standaloneCaughtStandalone: true,
+      standaloneResidentCaughtStandaloneResident: true,
+      primaryOnlyCaughtPrimaryOnly: true,
+      aggregateContainsExactlyCombinedResidentCaught: true,
+      aggregateContainsExactlyCombinedSourceCaught: true,
+      aggregateContainsExactlyNestedCaught: true,
+    },
   );
 };

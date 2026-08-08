@@ -2,6 +2,8 @@ import { releaseViewerRenderer, renderCrossDissolve } from "@automovie/viewer";
 import { TestValidator } from "@nestia/e2e";
 import * as THREE from "three";
 
+import { namedFacts } from "../internal/predicates";
+
 const makeFakeRenderer = (width: number, height: number) => {
   const targets: Array<THREE.WebGLRenderTarget | null> = [];
   const size = new THREE.Vector2(width, height);
@@ -73,9 +75,16 @@ export const test_viewer_release_renderer = (): void => {
   );
   dissolve(used.renderer);
   const fresh = used.targets[used.targets.length - 2];
-  TestValidator.predicate(
+  TestValidator.equals(
     "a later dissolve re-initializes lazily",
-    fresh instanceof THREE.WebGLRenderTarget && fresh !== target,
+    namedFacts([
+      ["freshInstanceofTHREE", () => fresh instanceof THREE.WebGLRenderTarget],
+      [
+        "freshTarget",
+        () => fresh instanceof THREE.WebGLRenderTarget && fresh !== target,
+      ],
+    ]),
+    { freshInstanceofTHREE: true, freshTarget: true },
   );
 
   // 2. negative twin: no dissolve state, release stays safe

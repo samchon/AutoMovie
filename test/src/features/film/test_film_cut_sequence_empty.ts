@@ -1,7 +1,7 @@
 import { cutSequence } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
-import { hasViolation } from "../internal/predicates";
+import { hasViolation, namedFacts } from "../internal/predicates";
 
 /**
  * Pins the film-level gates of the ASSEMBLE consumer: a film needs at least one
@@ -25,12 +25,27 @@ export const test_film_cut_sequence_empty = (): void => {
     [],
   );
   TestValidator.equals("fails", cut.success, false);
-  TestValidator.predicate(
+  TestValidator.equals(
     "zero fps rejected",
-    cut.success === false && hasViolation(cut, "range", "$input.fps"),
+    namedFacts([
+      ["refused", () => cut.success === false],
+      [
+        "violated",
+        () => cut.success === false && hasViolation(cut, "range", "$input.fps"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "empty cut rejected",
-    cut.success === false && hasViolation(cut, "type", "$input.entries"),
+    namedFacts([
+      ["refused", () => cut.success === false],
+      [
+        "violated",
+        () =>
+          cut.success === false && hasViolation(cut, "type", "$input.entries"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 };

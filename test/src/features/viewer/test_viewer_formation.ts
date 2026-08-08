@@ -269,31 +269,140 @@ export const test_viewer_formation = (): void => {
     projectedPixels: 24,
     previous: null,
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "automatic LOD combines distance, projected size and hysteresis",
-    nearSelection.lod.tier === "near" &&
-      retainedNear.lod.tier === "near" &&
-      retainedWithExplicitHysteresis.lod.tier === "near" &&
-      farSelection.lod.tier === "far" &&
-      projectedFar.lod.tier === "far" &&
-      zeroProjectedFar.lod.tier === "far" &&
-      retainedFar.lod.tier === "far" &&
-      switchedNear.lod.tier === "near" &&
-      unchangedNear.lod.tier === "near" &&
-      missingUnboundedFallback.lod.tier === "far" &&
-      (() => {
-        try {
-          selectFormationLod({
-            lod: [],
-            distance: 1,
-            projectedPixels: 1,
-            previous: null,
-          });
-          return false;
-        } catch {
-          return true;
-        }
-      })(),
+    namedFacts([
+      ["nearSelectionLodTier", () => nearSelection.lod.tier === "near"],
+      [
+        "retainedNearLodTier",
+        () =>
+          nearSelection.lod.tier === "near" && retainedNear.lod.tier === "near",
+      ],
+      [
+        "retainedWithExplicitHysteresisLodTier",
+        () =>
+          nearSelection.lod.tier === "near" &&
+          retainedNear.lod.tier === "near" &&
+          retainedWithExplicitHysteresis.lod.tier === "near",
+      ],
+      [
+        "farSelectionLodTier",
+        () =>
+          nearSelection.lod.tier === "near" &&
+          retainedNear.lod.tier === "near" &&
+          retainedWithExplicitHysteresis.lod.tier === "near" &&
+          farSelection.lod.tier === "far",
+      ],
+      [
+        "projectedFarLodTier",
+        () =>
+          nearSelection.lod.tier === "near" &&
+          retainedNear.lod.tier === "near" &&
+          retainedWithExplicitHysteresis.lod.tier === "near" &&
+          farSelection.lod.tier === "far" &&
+          projectedFar.lod.tier === "far",
+      ],
+      [
+        "zeroProjectedFarLodTier",
+        () =>
+          nearSelection.lod.tier === "near" &&
+          retainedNear.lod.tier === "near" &&
+          retainedWithExplicitHysteresis.lod.tier === "near" &&
+          farSelection.lod.tier === "far" &&
+          projectedFar.lod.tier === "far" &&
+          zeroProjectedFar.lod.tier === "far",
+      ],
+      [
+        "retainedFarLodTier",
+        () =>
+          nearSelection.lod.tier === "near" &&
+          retainedNear.lod.tier === "near" &&
+          retainedWithExplicitHysteresis.lod.tier === "near" &&
+          farSelection.lod.tier === "far" &&
+          projectedFar.lod.tier === "far" &&
+          zeroProjectedFar.lod.tier === "far" &&
+          retainedFar.lod.tier === "far",
+      ],
+      [
+        "switchedNearLodTier",
+        () =>
+          nearSelection.lod.tier === "near" &&
+          retainedNear.lod.tier === "near" &&
+          retainedWithExplicitHysteresis.lod.tier === "near" &&
+          farSelection.lod.tier === "far" &&
+          projectedFar.lod.tier === "far" &&
+          zeroProjectedFar.lod.tier === "far" &&
+          retainedFar.lod.tier === "far" &&
+          switchedNear.lod.tier === "near",
+      ],
+      [
+        "unchangedNearLodTier",
+        () =>
+          nearSelection.lod.tier === "near" &&
+          retainedNear.lod.tier === "near" &&
+          retainedWithExplicitHysteresis.lod.tier === "near" &&
+          farSelection.lod.tier === "far" &&
+          projectedFar.lod.tier === "far" &&
+          zeroProjectedFar.lod.tier === "far" &&
+          retainedFar.lod.tier === "far" &&
+          switchedNear.lod.tier === "near" &&
+          unchangedNear.lod.tier === "near",
+      ],
+      [
+        "missingUnboundedFallbackLodTier",
+        () =>
+          nearSelection.lod.tier === "near" &&
+          retainedNear.lod.tier === "near" &&
+          retainedWithExplicitHysteresis.lod.tier === "near" &&
+          farSelection.lod.tier === "far" &&
+          projectedFar.lod.tier === "far" &&
+          zeroProjectedFar.lod.tier === "far" &&
+          retainedFar.lod.tier === "far" &&
+          switchedNear.lod.tier === "near" &&
+          unchangedNear.lod.tier === "near" &&
+          missingUnboundedFallback.lod.tier === "far",
+      ],
+      [
+        "trySelectFormationLodLod",
+        () =>
+          nearSelection.lod.tier === "near" &&
+          retainedNear.lod.tier === "near" &&
+          retainedWithExplicitHysteresis.lod.tier === "near" &&
+          farSelection.lod.tier === "far" &&
+          projectedFar.lod.tier === "far" &&
+          zeroProjectedFar.lod.tier === "far" &&
+          retainedFar.lod.tier === "far" &&
+          switchedNear.lod.tier === "near" &&
+          unchangedNear.lod.tier === "near" &&
+          missingUnboundedFallback.lod.tier === "far" &&
+          (() => {
+            try {
+              selectFormationLod({
+                lod: [],
+                distance: 1,
+                projectedPixels: 1,
+                previous: null,
+              });
+              return false;
+            } catch {
+              return true;
+            }
+          })(),
+      ],
+    ]),
+    {
+      nearSelectionLodTier: true,
+      retainedNearLodTier: true,
+      retainedWithExplicitHysteresisLodTier: true,
+      farSelectionLodTier: true,
+      projectedFarLodTier: true,
+      zeroProjectedFarLodTier: true,
+      retainedFarLodTier: true,
+      switchedNearLodTier: true,
+      unchangedNearLodTier: true,
+      missingUnboundedFallbackLodTier: true,
+      trySelectFormationLodLod: true,
+    },
   );
 
   const camera = new THREE.PerspectiveCamera(45, 16 / 9, 0.1, 2_000);

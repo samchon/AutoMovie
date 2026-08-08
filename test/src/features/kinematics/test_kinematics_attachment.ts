@@ -83,9 +83,13 @@ export const test_kinematics_attachment = (): void => {
     },
   };
   const r2 = resolveAttachment(restPose, skeleton, att2);
-  TestValidator.predicate(
+  TestValidator.equals(
     "seat offset added to chest pos",
-    nclose(r2.translation.y, 1.45) && nclose(r2.translation.z, 0.1),
+    namedFacts([
+      ["ncloseR2Translation", () => nclose(r2.translation.y, 1.45)],
+      ["ncloseR2Translation2", () => nclose(r2.translation.z, 0.1)],
+    ]),
+    { ncloseR2Translation: true, ncloseR2Translation2: true },
   );
 
   // 3. yaw the whole rig via the pose root: child inherits the bone's world

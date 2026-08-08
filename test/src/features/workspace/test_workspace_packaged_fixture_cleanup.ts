@@ -4,6 +4,8 @@ import { createRequire } from "node:module";
 import path from "node:path";
 import ts from "typescript-compiler";
 
+import { namedFacts } from "../internal/predicates";
+
 /** Repository root, four levels above `test/src/features/workspace`. */
 const ROOT = path.resolve(__dirname, "..", "..", "..", "..");
 
@@ -151,19 +153,74 @@ const exercisePackagedFixtureCleanup = (): void => {
   const primaryOnly = capture(primaryFailure, undefined);
   const standalone = capture(undefined, cleanupFailure);
   const combined = capture(primaryFailure, cleanupFailure);
-  TestValidator.predicate(
+  TestValidator.equals(
     "packaged fixture cleanup retains exact primary-first failure ownership",
-    success.caught === undefined &&
-      success.attempts === 1 &&
-      primaryOnly.caught === primaryFailure &&
-      primaryOnly.attempts === 1 &&
-      standalone.caught === cleanupFailure &&
-      standalone.attempts === 1 &&
-      aggregateContainsExactly(combined.caught, [
-        primaryFailure,
-        cleanupFailure,
-      ]) &&
-      combined.attempts === 1,
+    namedFacts([
+      ["successCaught", () => success.caught === undefined],
+      [
+        "successAttempts",
+        () => success.caught === undefined && success.attempts === 1,
+      ],
+      [
+        "primaryOnlyCaughtPrimaryFailure",
+        () =>
+          success.caught === undefined &&
+          success.attempts === 1 &&
+          primaryOnly.caught === primaryFailure,
+      ],
+      [
+        "primaryOnlyAttempts",
+        () =>
+          success.caught === undefined &&
+          success.attempts === 1 &&
+          primaryOnly.caught === primaryFailure &&
+          primaryOnly.attempts === 1,
+      ],
+      [
+        "standaloneCaughtCleanupFailure",
+        () =>
+          success.caught === undefined &&
+          success.attempts === 1 &&
+          primaryOnly.caught === primaryFailure &&
+          primaryOnly.attempts === 1 &&
+          standalone.caught === cleanupFailure,
+      ],
+      [
+        "standaloneAttempts",
+        () =>
+          success.caught === undefined &&
+          success.attempts === 1 &&
+          primaryOnly.caught === primaryFailure &&
+          primaryOnly.attempts === 1 &&
+          standalone.caught === cleanupFailure &&
+          standalone.attempts === 1,
+      ],
+      [
+        "aggregateContainsExactlyCombinedCaught",
+        () =>
+          success.caught === undefined &&
+          success.attempts === 1 &&
+          primaryOnly.caught === primaryFailure &&
+          primaryOnly.attempts === 1 &&
+          standalone.caught === cleanupFailure &&
+          standalone.attempts === 1 &&
+          aggregateContainsExactly(combined.caught, [
+            primaryFailure,
+            cleanupFailure,
+          ]),
+      ],
+      ["combinedAttempts", () => combined.attempts === 1],
+    ]),
+    {
+      successCaught: true,
+      successAttempts: true,
+      primaryOnlyCaughtPrimaryFailure: true,
+      primaryOnlyAttempts: true,
+      standaloneCaughtCleanupFailure: true,
+      standaloneAttempts: true,
+      aggregateContainsExactlyCombinedCaught: true,
+      combinedAttempts: true,
+    },
   );
 };
 

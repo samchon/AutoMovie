@@ -13,7 +13,7 @@ import {
 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { nclose } from "../internal/predicates";
+import { namedFacts, nclose } from "../internal/predicates";
 
 const range = (min: number, max: number) => ({ min, max });
 const con = (
@@ -144,23 +144,58 @@ export const test_motion_horse_gaits = (): void => {
     );
   }
 
-  TestValidator.predicate(
+  TestValidator.equals(
     "stride grows walk < trot < gallop",
-    limbOf(HORSE_GAITS.walk, "leftUpperArm").amplitude <
-      limbOf(HORSE_GAITS.trot, "leftUpperArm").amplitude &&
-      limbOf(HORSE_GAITS.trot, "leftUpperArm").amplitude <
-        limbOf(HORSE_GAITS.gallop, "leftUpperArm").amplitude,
+    namedFacts([
+      [
+        "limbOfHORSE_GAITSWalk",
+        () =>
+          limbOf(HORSE_GAITS.walk, "leftUpperArm").amplitude <
+          limbOf(HORSE_GAITS.trot, "leftUpperArm").amplitude,
+      ],
+      [
+        "limbOfHORSE_GAITSTrot",
+        () =>
+          limbOf(HORSE_GAITS.trot, "leftUpperArm").amplitude <
+          limbOf(HORSE_GAITS.gallop, "leftUpperArm").amplitude,
+      ],
+    ]),
+    { limbOfHORSE_GAITSWalk: true, limbOfHORSE_GAITSTrot: true },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "faster horse gaits have shorter periods",
-    HORSE_GAITS.walk.period > HORSE_GAITS.trot.period &&
-      HORSE_GAITS.trot.period > HORSE_GAITS.gallop.period,
+    namedFacts([
+      [
+        "hORSE_GAITSWalkPeriod",
+        () => HORSE_GAITS.walk.period > HORSE_GAITS.trot.period,
+      ],
+      [
+        "hORSE_GAITSTrotPeriod",
+        () =>
+          HORSE_GAITS.walk.period > HORSE_GAITS.trot.period &&
+          HORSE_GAITS.trot.period > HORSE_GAITS.gallop.period,
+      ],
+    ]),
+    { hORSE_GAITSWalkPeriod: true, hORSE_GAITSTrotPeriod: true },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "rear lifts front and pitches spine beyond locomotion",
-    minimumFlexion(HORSE_GAITS.rear, "leftUpperArm") < -70 &&
-      minimumFlexion(HORSE_GAITS.rear, "spine") <
-        minimumFlexion(HORSE_GAITS.gallop, "spine"),
+    namedFacts([
+      [
+        "minimumFlexionHORSE_GAITSRear",
+        () => minimumFlexion(HORSE_GAITS.rear, "leftUpperArm") < -70,
+      ],
+      [
+        "minimumFlexionHORSE_GAITSRear2",
+        () =>
+          minimumFlexion(HORSE_GAITS.rear, "spine") <
+          minimumFlexion(HORSE_GAITS.gallop, "spine"),
+      ],
+    ]),
+    {
+      minimumFlexionHORSE_GAITSRear: true,
+      minimumFlexionHORSE_GAITSRear2: true,
+    },
   );
 
   const bound = bindProfileGaits(HORSE_PROFILE, RIG.id, 24);

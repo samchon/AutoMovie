@@ -408,16 +408,30 @@ export const test_mcp_production_review_render_edges =
         wrongClockManifest,
       );
       const wrongClockPrepared = review.prepare({ target });
-      TestValidator.predicate(
+      TestValidator.equals(
         "required review frames stay on the current production frame clock",
-        wrongClockPrepared.diagnostics.some(
-          (diagnostic) => diagnostic.code === "render-frame-invalid",
-        ) &&
-          wrongClockPrepared.frames.every(
-            (preparedFrame) =>
-              preparedFrame.reviewFrame !== frame.reviewFrame ||
-              preparedFrame.time === frame.time,
-          ),
+        namedFacts([
+          [
+            "wrongClockPreparedDiagnosticsSome",
+            () =>
+              wrongClockPrepared.diagnostics.some(
+                (diagnostic) => diagnostic.code === "render-frame-invalid",
+              ),
+          ],
+          [
+            "wrongClockPreparedFramesEvery",
+            () =>
+              wrongClockPrepared.frames.every(
+                (preparedFrame) =>
+                  preparedFrame.reviewFrame !== frame.reviewFrame ||
+                  preparedFrame.time === frame.time,
+              ),
+          ],
+        ]),
+        {
+          wrongClockPreparedDiagnosticsSome: true,
+          wrongClockPreparedFramesEvery: true,
+        },
       );
       fs.rmSync(
         path.join(fixture.root, "renders", "fixture-film", wrongClockBundle),
@@ -938,15 +952,29 @@ export const test_mcp_production_review_render_edges =
         JSON.stringify({ ...baseManifest, version: 2 }),
       );
       const legacyPrepared = review.prepare({ target });
-      TestValidator.predicate(
+      TestValidator.equals(
         "v2 render evidence remains historical without blocking current v3 frames",
-        legacyPrepared.frames.length !== 0 &&
-          legacyPrepared.diagnostics.some(
-            (item) =>
-              item.code === "render-bundle-legacy" &&
-              item.category === "warning" &&
-              item.message.includes("Recapture"),
-          ),
+        namedFacts([
+          [
+            "legacyPreparedFramesLength",
+            () => legacyPrepared.frames.length !== 0,
+          ],
+          [
+            "legacyPreparedDiagnosticsSome",
+            () =>
+              legacyPrepared.frames.length !== 0 &&
+              legacyPrepared.diagnostics.some(
+                (item) =>
+                  item.code === "render-bundle-legacy" &&
+                  item.category === "warning" &&
+                  item.message.includes("Recapture"),
+              ),
+          ],
+        ]),
+        {
+          legacyPreparedFramesLength: true,
+          legacyPreparedDiagnosticsSome: true,
+        },
       );
       fs.writeFileSync(
         path.join(invalidDirectory, "manifest.json"),
@@ -1331,11 +1359,24 @@ export const test_mcp_production_review_render_edges =
         }
         return swapped && rejected;
       };
-      TestValidator.predicate(
+      TestValidator.equals(
         "render inventory rejects every post-read directory replacement",
-        postReadDirectoryRace("junction") &&
-          postReadDirectoryRace("file") &&
-          postReadDirectoryRace("directory"),
+        namedFacts([
+          [
+            "postReadDirectoryRaceJunction",
+            () => postReadDirectoryRace("junction"),
+          ],
+          ["postReadDirectoryRaceFile", () => postReadDirectoryRace("file")],
+          [
+            "postReadDirectoryRaceDirectory",
+            () => postReadDirectoryRace("directory"),
+          ],
+        ]),
+        {
+          postReadDirectoryRaceJunction: true,
+          postReadDirectoryRaceFile: true,
+          postReadDirectoryRaceDirectory: true,
+        },
       );
 
       const lstatToRealpathRace = (
@@ -1383,10 +1424,22 @@ export const test_mcp_production_review_render_edges =
         }
         return swapped && rejected;
       };
-      TestValidator.predicate(
+      TestValidator.equals(
         "render inventory refuses ancestry swaps between lstat and realpath",
-        lstatToRealpathRace(1, "Render inventory path") &&
-          lstatToRealpathRace(2, "Render inventory directory"),
+        namedFacts([
+          [
+            "lstatToRealpathRaceRenderInventory",
+            () => lstatToRealpathRace(1, "Render inventory path"),
+          ],
+          [
+            "lstatToRealpathRaceRenderInventory2",
+            () => lstatToRealpathRace(2, "Render inventory directory"),
+          ],
+        ]),
+        {
+          lstatToRealpathRaceRenderInventory: true,
+          lstatToRealpathRaceRenderInventory2: true,
+        },
       );
 
       const lateImage = new PNG({ width: 16, height: 16 });

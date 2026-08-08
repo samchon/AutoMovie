@@ -2,7 +2,7 @@ import { forgeCast } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import { forgeEntry, makeScriptWrite } from "../internal/filmFixtures";
-import { hasViolation } from "../internal/predicates";
+import { hasViolation, namedFacts } from "../internal/predicates";
 
 /**
  * Forge joins entries to the script cast by `node`. Duplicate script cast nodes
@@ -37,9 +37,17 @@ export const test_film_forge_cast_duplicate_script_nodes = (): void => {
     forged.success,
     false,
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "duplicate script cast node violation",
-    forged.success === false &&
-      hasViolation(forged, "type", "$script.cast[1].node"),
+    namedFacts([
+      ["refused", () => forged.success === false],
+      [
+        "violated",
+        () =>
+          forged.success === false &&
+          hasViolation(forged, "type", "$script.cast[1].node"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 };

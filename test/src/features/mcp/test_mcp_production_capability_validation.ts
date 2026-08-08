@@ -173,15 +173,25 @@ export const test_mcp_production_capability_validation = (): void => {
   const runtime = materializeProductionModels(new Map([[model.id, model]])).get(
     model.id,
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "valid firearm, cannon, melee, mountable, destructible and three instance layouts pass",
-    [
-      "design-capability-invalid",
-      "design-capability-duplicate",
-      "design-reference-missing",
-      "design-budget-exceeded",
-    ].every((code) => valid.has(code) === false) &&
-      runtime?.profiles?.[0]?.traits?.[0]?.kind === "shooter",
+    namedFacts([
+      [
+        "designCapabilityInvalid",
+        () =>
+          [
+            "design-capability-invalid",
+            "design-capability-duplicate",
+            "design-reference-missing",
+            "design-budget-exceeded",
+          ].every((code) => valid.has(code) === false),
+      ],
+      [
+        "runtimeProfiles0",
+        () => runtime?.profiles?.[0]?.traits?.[0]?.kind === "shooter",
+      ],
+    ]),
+    { designCapabilityInvalid: true, runtimeProfiles0: true },
   );
 
   const invalidProfile: IAutoMovieProfile = {

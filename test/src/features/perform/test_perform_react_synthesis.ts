@@ -9,7 +9,7 @@ import { IAutoMovieReactAction, IAutoMovieVector3 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { createSkeleton, makePose } from "../internal/fixtures";
-import { nclose } from "../internal/predicates";
+import { namedFacts, nclose } from "../internal/predicates";
 
 const baseCtx: IAutoMovieActorContext = {
   skeleton: "skeleton-1",
@@ -138,9 +138,13 @@ export const test_perform_react_synthesis = (): void => {
 
   // 5. totality of the decomposition
   const auto = synth(react(0.5, { duration: "auto" }), "hero");
-  TestValidator.predicate(
+  TestValidator.equals(
     "auto duration runs the default 0.5 s",
-    auto !== null && nclose(auto.duration, 0.5),
+    namedFacts([
+      ["auto", () => auto !== null],
+      ["ncloseAutoDuration", () => auto !== null && nclose(auto.duration, 0.5)],
+    ]),
+    { auto: true, ncloseAutoDuration: true },
   );
   const directional = synth(
     react(0.7, { from: { kind: "direction", headingDeg: 90 } }),

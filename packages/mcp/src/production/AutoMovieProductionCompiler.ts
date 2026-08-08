@@ -74,6 +74,11 @@ import {
 } from "./contentIdentity";
 import { readAutoMovieFilmTimeline } from "./filmTimeline";
 import {
+  AUTOMOVIE_SANDBOX_ENGINE_EXPORTS,
+  isProjectSourceSpecifier,
+  linkProductionSource,
+} from "./linkProductionSource";
+import {
   IAutoMovieExternalModelRuntimeBinding,
   materializeCompiledFormationInventory,
   materializeCompiledInstanceSetInventory,
@@ -168,6 +173,14 @@ export class AutoMovieProductionCompiler {
     const designReady = diagnostics.every(
       (diagnostic) => diagnostic.category !== "error",
     );
+    // One reader for every deterministic module the linker follows. A shot and
+    // the film edit are the same kind of source, so they must reach project
+    // source through the same owned-source read and the same normalization; two
+    // readers is two chances for one of them to widen what may be opened.
+    const readLinkedSource = (relative: string): string =>
+      Buffer.from(
+        normalizeAutoMovieSource(this.project.readSource(relative)),
+      ).toString("utf8");
     const sourceFields: IAutoMovieFingerprintField[] = [];
     const contentFields: IAutoMovieFingerprintField[] = [];
     let contentInputs: IAutoMovieProductionContentInput[] | undefined;
@@ -312,6 +325,7 @@ export class AutoMovieProductionCompiler {
       };
       filmEditSource = compileFilmEditSource({
         source: Buffer.from(filmSource).toString("utf8"),
+        readSource: readLinkedSource,
         context: filmContext,
       });
     }
@@ -340,6 +354,7 @@ export class AutoMovieProductionCompiler {
             path: entry.contract.source.module,
             exportName: entry.contract.source.export,
             source: Buffer.from(normalized).toString("utf8"),
+            readSource: readLinkedSource,
             context: {
               contract: entry.contract,
               models: Object.fromEntries(graph.models),
@@ -780,6 +795,8 @@ interface ICompileShotSourceProps {
   path: string;
   exportName: string;
   source: string;
+  /** Reader for project source this shot imports. */
+  readSource: (relativePath: string) => string;
   context: {
     contract: IAutoMovieShotContract;
     models: IAutoMovieShotBuildContext["models"];
@@ -894,6 +911,8 @@ interface ICompileDeterministicSourceProps<T> {
   exportName: string;
   source: string;
   context: unknown;
+  /** Reader for project source this module imports. */
+  readSource: (relativePath: string) => string;
   /** Expected source-owned defineShot registration, for one shot module. */
   registration?: {
     id: string;
@@ -980,19 +999,109 @@ const SANDBOX_BOOTSTRAP = `
   };
   const defineShot = (id, definition) =>
     freeze({ id, ...definition });
-  const sourceModules = freeze({
-    "@automovie/engine": freeze({ defineShot: Object.freeze(defineShot) }),
-  });
+  // The subject vocabulary is reimplemented here rather than loaded from the
+  // package, exactly as defineShot already is. A deterministic build may not
+  // reach outside its sandbox for behavior, so the sandbox owns a stand-in for
+  // every engine name a source module is allowed to import.
+  class AutoMovieSubject {
+    design() {
+      throw new Error("A subject must implement design().");
+    }
+    render() {
+      throw new Error("A subject must implement render().");
+    }
+  }
+  // Exactly the keys of IAutoMovieSubjectContribution. The stand-in and the
+  // engine are two spellings of one contract, and a key here that the type
+  // does not declare is a merge that silently carries a field nothing else
+  // knows about.
+  const CONTRIBUTION_KEYS = [
+    "actors",
+    "clips",
+    "formationMotions",
+    "effectCues",
+    "landmarks",
+    "surfaces",
+    "routes",
+    "effectRecipes",
+    "effectZones",
+    "instanceSets",
+  ];
+  const mergeAutoMovieSubjectContributions = (contributions) => {
+    const merged = {};
+    for (const contribution of contributions)
+      for (const key of CONTRIBUTION_KEYS) {
+        const values = contribution?.[key];
+        if (values === undefined || values.length === 0) continue;
+        if (merged[key] === undefined) merged[key] = [];
+        for (const value of values) merged[key].push(value);
+      }
+    return merged;
+  };
+  class AutoMovieSubjectGroup extends AutoMovieSubject {
+    members() {
+      throw new Error("A subject group must implement members().");
+    }
+    render(context) {
+      return mergeAutoMovieSubjectContributions(
+        this.members().map((member) => member.render(context)),
+      );
+    }
+  }
+  const sourceModules = {
+    "@automovie/engine": freeze({
+      defineShot: Object.freeze(defineShot),
+      AutoMovieSubject: Object.freeze(AutoMovieSubject),
+      AutoMovieSubjectGroup: Object.freeze(AutoMovieSubjectGroup),
+      mergeAutoMovieSubjectContributions: Object.freeze(
+        mergeAutoMovieSubjectContributions,
+      ),
+    }),
+  };
+  // A module's own import map, resolved once by the compiler and handed in.
+  // The sandbox looks a specifier up rather than resolving it a second time,
+  // so there is no arithmetic here that could disagree with the linker about
+  // which module a spelling names.
+  const makeRequire = (imports) => (specifier) => {
+    const key = imports[specifier] ?? specifier;
+    const selected = sourceModules[key];
+    if (selected === undefined)
+      throw new Error(
+        'Runtime module "' +
+          specifier +
+          '" is unavailable; a deterministic source module may import the engine surface and other project source only.',
+      );
+    return selected;
+  };
+  let entryImports = null;
   Object.defineProperty(globalThis, "require", {
-    value: (specifier) => {
-      const selected = sourceModules[specifier];
-      if (selected === undefined)
+    value: (specifier) => makeRequire(entryImports ?? {})(specifier),
+    writable: false,
+    configurable: false,
+  });
+  // One-shot, so the entry module resolves through its own map.
+  Object.defineProperty(globalThis, "__automovieSetEntry", {
+    value: (imports) => {
+      if (entryImports !== null)
+        throw new Error("The sandbox entry module is already set.");
+      entryImports = freeze({ ...imports });
+    },
+    writable: false,
+    configurable: false,
+  });
+  // One loader, used by the compiler to register each linked project module in
+  // dependency order. Registration is one-shot: a specifier that is already
+  // present cannot be replaced, so a linked module can never shadow the engine
+  // surface or redefine a sibling that has already been evaluated.
+  Object.defineProperty(globalThis, "__automovieDefine", {
+    value: (specifier, imports, factory) => {
+      if (Object.prototype.hasOwnProperty.call(sourceModules, specifier))
         throw new Error(
-          'Runtime module "' +
-            specifier +
-            '" is unavailable; deterministic shot source may import only defineShot from @automovie/engine.',
+          'Runtime module "' + specifier + '" is already registered.',
         );
-      return selected;
+      const linked = { exports: {} };
+      factory(linked, linked.exports, makeRequire(imports));
+      sourceModules[specifier] = freeze(linked.exports);
     },
     writable: false,
     configurable: false,
@@ -1525,12 +1634,12 @@ const actorRuntimeOf = (
   return { actors, nodes, models, diagnostics };
 };
 
-const compileDeterministicSource = <T>(
-  props: ICompileDeterministicSourceProps<T>,
-): ICompileDeterministicSourceResult<T> => {
-  const diagnostics = inspectSource(props.target, props.path, props.source);
-  if (diagnostics.some((diagnostic) => diagnostic.category === "error"))
-    return { value: null, diagnostics };
+const transpileDeterministicSource = (props: {
+  target: string;
+  path: string;
+  source: string;
+}): { output: string | null; diagnostics: IAutoMovieDiagnostic[] } => {
+  const diagnostics: IAutoMovieDiagnostic[] = [];
   const transpiled = ts.transpileModule(props.source, {
     compilerOptions: {
       target: ts.ScriptTarget.ES2022,
@@ -1551,8 +1660,72 @@ const compileDeterministicSource = <T>(
         path: props.path,
         message: `${ts.flattenDiagnosticMessageText(diagnostic.messageText, " ")} Fix ${props.path} before running the compiler.`,
       });
+  return {
+    output: diagnostics.length === 0 ? transpiled.outputText : null,
+    diagnostics,
+  };
+};
+
+const compileDeterministicSource = <T>(
+  props: ICompileDeterministicSourceProps<T>,
+): ICompileDeterministicSourceResult<T> => {
+  const diagnostics = inspectSource(props.target, props.path, props.source);
+  // Imported project source is inspected and transpiled exactly as the entry
+  // is. A determinism rule that applied only to the module a shot happens to
+  // live in would be no rule at all once the work moved one import away.
+  const linked = linkProductionSource({
+    entryPath: props.path,
+    entrySource: props.source,
+    read: props.readSource,
+  });
+  for (const failure of linked.failures)
+    diagnostics.push({
+      code: "source-import-unresolved",
+      category: "error",
+      phase: "source",
+      target: props.target,
+      path: failure.path,
+      message: failure.reason,
+    });
+  const imported = linked.modules.filter(
+    (module) => module.path !== props.path,
+  );
+  for (const module of imported)
+    diagnostics.push(
+      ...inspectSource(props.target, module.path, module.source),
+    );
   if (diagnostics.some((diagnostic) => diagnostic.category === "error"))
     return { value: null, diagnostics };
+  const transpiledImports: Array<{
+    path: string;
+    imports: Record<string, string>;
+    output: string;
+  }> = [];
+  for (const module of imported) {
+    const result = transpileDeterministicSource({
+      target: props.target,
+      path: module.path,
+      source: module.source,
+    });
+    diagnostics.push(...result.diagnostics);
+    if (result.output !== null)
+      transpiledImports.push({
+        path: module.path,
+        imports: module.imports,
+        output: result.output,
+      });
+  }
+  if (diagnostics.some((diagnostic) => diagnostic.category === "error"))
+    return { value: null, diagnostics };
+  // The entry transpiles through the same helper its imports do, so an option
+  // that changes for one cannot fail to change for the other.
+  const transpiled = transpileDeterministicSource({
+    target: props.target,
+    path: props.path,
+    source: props.source,
+  });
+  diagnostics.push(...transpiled.diagnostics);
+  if (transpiled.output === null) return { value: null, diagnostics };
   const sandbox = vm.createContext(
     {},
     {
@@ -1566,7 +1739,13 @@ const compileDeterministicSource = <T>(
     new vm.Script(SANDBOX_BOOTSTRAP, {
       filename: `${props.path}#sandbox`,
     }).runInContext(sandbox, { timeout: 1_000 });
-    new vm.Script(transpiled.outputText, {
+    sandbox.__automovieSetEntry(linked.entryImports);
+    for (const module of transpiledImports)
+      new vm.Script(
+        `__automovieDefine(${JSON.stringify(module.path)}, ${JSON.stringify(module.imports)}, (module, exports, require) => {\n${module.output}\n});`,
+        { filename: module.path },
+      ).runInContext(sandbox, { timeout: 1_000 });
+    new vm.Script(transpiled.output, {
       filename: props.path,
     }).runInContext(sandbox, { timeout: 1_000 });
     sandbox.__automovieExportName = props.exportName;
@@ -1734,9 +1913,17 @@ interface ICompileFilmSourceProps {
   scope: IAutoMovieCompileProjectInput["scope"];
 }
 
-/** Evaluate the deterministic film module once, before ordered shot compile. */
+/**
+ * Evaluate the deterministic film module once, before ordered shot compile.
+ *
+ * The edit links project source exactly as a shot does. `SOURCE_COMPOSITION.md`
+ * tells an author to assemble the edit by walking the same table its shots are
+ * derived from, and an edit that could not import that table would have to
+ * restate the order it already holds.
+ */
 const compileFilmEditSource = (props: {
   source: string;
+  readSource: (relativePath: string) => string;
   context: IAutoMovieFilmBuildContext;
 }): ICompileDeterministicSourceResult<IAutoMovieFilmEdit> =>
   compileDeterministicSource<IAutoMovieFilmEdit>({
@@ -1745,6 +1932,7 @@ const compileFilmEditSource = (props: {
     path: FILM_SOURCE_PATH,
     exportName: FILM_SOURCE_EXPORT,
     source: props.source,
+    readSource: props.readSource,
     context: props.context,
     validate: (input) => typia.validateEquals<IAutoMovieFilmEdit>(input),
   });
@@ -2459,7 +2647,7 @@ const inspectSource = (
     if (
       ts.isImportDeclaration(node) &&
       importDeclarationHasRuntimeBinding(node) &&
-      isDefineShotImport(node) === false
+      isLinkableImport(node) === false
     )
       report("source-import-unsupported", "runtime import");
     if (
@@ -2522,12 +2710,23 @@ const importDeclarationHasRuntimeBinding = (
 };
 
 /** The one deterministic runtime import exposed by the source VM. */
-const isDefineShotImport = (declaration: ts.ImportDeclaration): boolean => {
-  if (
-    ts.isStringLiteralLike(declaration.moduleSpecifier) === false ||
-    declaration.moduleSpecifier.text !== "@automovie/engine"
-  )
+/**
+ * Whether a runtime import is one the sandbox can actually satisfy.
+ *
+ * Two kinds resolve. The engine surface is reimplemented inside the sandbox, so
+ * a name absent from that stand-in must be refused here rather than fail at
+ * execution with a message about a missing property. Project-relative source is
+ * linked from the project's own reader, which keeps path escape and symlinks
+ * refused exactly as they are for an entry module.
+ *
+ * A default or namespace import is refused for both. The sandbox registry hands
+ * out a frozen exports object, and binding it as a whole hides which names a
+ * module actually depends on from the link graph that has to resolve them.
+ */
+const isLinkableImport = (declaration: ts.ImportDeclaration): boolean => {
+  if (ts.isStringLiteralLike(declaration.moduleSpecifier) === false)
     return false;
+  const specifier = declaration.moduleSpecifier.text;
   const clause = declaration.importClause;
   if (
     clause === undefined ||
@@ -2540,9 +2739,13 @@ const isDefineShotImport = (declaration: ts.ImportDeclaration): boolean => {
   const runtime = clause.namedBindings.elements.filter(
     (element) => element.isTypeOnly === false,
   );
-  if (runtime.length !== 1) return false;
-  return (
-    (runtime[0]!.propertyName?.text ?? runtime[0]!.name.text) === "defineShot"
+  if (runtime.length === 0) return false;
+  if (isProjectSourceSpecifier(specifier)) return true;
+  if (specifier !== "@automovie/engine") return false;
+  return runtime.every((element) =>
+    AUTOMOVIE_SANDBOX_ENGINE_EXPORTS.has(
+      element.propertyName?.text ?? element.name.text,
+    ),
   );
 };
 

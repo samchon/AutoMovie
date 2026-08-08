@@ -219,11 +219,19 @@ export const test_kinematics_reach_rom = (): void => {
   const fusedRig = withElbow(FUSED);
   const fused = reachPose(fusedRig, "left", WITNESSED[0]!)!;
   const fusedResult = validatePoseResult(fused, fusedRig);
-  TestValidator.predicate(
+  TestValidator.equals(
     "a fused elbow still fails the ROM gate, naming its flexion",
-    fusedResult.success === false &&
-      fusedResult.violations.some(
-        (v) => v.kind === "rom" && v.path.endsWith(".flexion"),
-      ),
+    namedFacts([
+      ["refused", () => fusedResult.success === false],
+      [
+        "violated",
+        () =>
+          fusedResult.success === false &&
+          fusedResult.violations.some(
+            (v) => v.kind === "rom" && v.path.endsWith(".flexion"),
+          ),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 };

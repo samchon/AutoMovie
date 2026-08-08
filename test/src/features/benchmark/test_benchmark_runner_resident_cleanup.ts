@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import ts from "typescript-compiler";
 
+import { namedFacts } from "../internal/predicates";
 import { preserveBenchmarkRunnerResidentCleanup } from "./test_benchmark_runner";
 
 const compact = (node: ts.Node, source: ts.SourceFile): string =>
@@ -255,53 +256,152 @@ export const test_benchmark_runner_resident_cleanup = (): void => {
     restorationFailure: residentFailure,
   });
   const fullOrder = "cleanup-0,cleanup-1,cleanup-2";
-  TestValidator.predicate(
+  TestValidator.equals(
     "benchmark resident cleanup preserves failure, resource, and marker order",
-    success.caught === false &&
-      success.failure === undefined &&
-      success.order.join(",") === fullOrder &&
-      primaryOnly.caught &&
-      primaryOnly.failure === primaryFailure &&
-      primaryOnly.order.join(",") === fullOrder &&
-      standalone.caught &&
-      standalone.failure === transientFailure &&
-      standalone.order.join(",") === fullOrder &&
-      multiple.caught &&
-      aggregateContainsExactly(multiple.failure, [
-        transientFailure,
-        residentFailure,
-      ]) &&
-      multiple.message.includes("resource-0") &&
-      multiple.message.includes("resource-2") &&
-      multiple.message.includes("resource-1") === false &&
-      multiple.order.join(",") === fullOrder &&
-      combined.caught &&
-      aggregateContainsExactly(combined.failure, [
-        primaryFailure,
-        transientFailure,
-        residentFailure,
-      ]) &&
-      combined.order.join(",") === fullOrder &&
-      undefinedPrimary.caught &&
-      undefinedPrimary.failure === undefined &&
-      undefinedPrimary.order.join(",") === fullOrder &&
-      undefinedStandalone.caught &&
-      undefinedStandalone.failure === undefined &&
-      undefinedStandalone.order.join(",") === fullOrder &&
-      undefinedCombined.caught &&
-      aggregateContainsExactly(undefinedCombined.failure, [
-        undefined,
-        undefined,
-      ]) &&
-      undefinedCombined.order.join(",") === fullOrder &&
-      markerCleared.caught === transientFailure &&
-      markerCleared.marker === null &&
-      markerCleared.parked === false &&
-      markerCleared.order.join(",") === "transient,resident,marker" &&
-      markerRetained.caught === residentFailure &&
-      markerRetained.marker === "parked" &&
-      markerRetained.parked &&
-      markerRetained.order.join(",") === "transient,resident,marker",
+    namedFacts([
+      ["successCaught", () => success.caught === false],
+      [
+        "successFailure",
+        () => success.caught === false && success.failure === undefined,
+      ],
+      [
+        "successOrderJoin",
+        () =>
+          success.caught === false &&
+          success.failure === undefined &&
+          success.order.join(",") === fullOrder,
+      ],
+      ["primaryOnlyCaught", () => primaryOnly.caught],
+      [
+        "primaryOnlyFailurePrimaryFailure",
+        () => primaryOnly.failure === primaryFailure,
+      ],
+      ["primaryOnlyOrderJoin", () => primaryOnly.order.join(",") === fullOrder],
+      ["standaloneCaught", () => standalone.caught],
+      [
+        "standaloneFailureTransientFailure",
+        () => standalone.failure === transientFailure,
+      ],
+      ["standaloneOrderJoin", () => standalone.order.join(",") === fullOrder],
+      ["multipleCaught", () => multiple.caught],
+      [
+        "aggregateContainsExactlyMultipleFailure",
+        () =>
+          aggregateContainsExactly(multiple.failure, [
+            transientFailure,
+            residentFailure,
+          ]),
+      ],
+      [
+        "multipleMessageIncludes",
+        () => multiple.message.includes("resource-0"),
+      ],
+      [
+        "multipleMessageIncludes2",
+        () => multiple.message.includes("resource-2"),
+      ],
+      [
+        "multipleMessageIncludes3",
+        () => multiple.message.includes("resource-1") === false,
+      ],
+      ["multipleOrderJoin", () => multiple.order.join(",") === fullOrder],
+      ["combinedCaught", () => combined.caught],
+      [
+        "aggregateContainsExactlyCombinedFailure",
+        () =>
+          aggregateContainsExactly(combined.failure, [
+            primaryFailure,
+            transientFailure,
+            residentFailure,
+          ]),
+      ],
+      ["combinedOrderJoin", () => combined.order.join(",") === fullOrder],
+      ["undefinedPrimaryCaught", () => undefinedPrimary.caught],
+      ["undefinedPrimaryFailure", () => undefinedPrimary.failure === undefined],
+      [
+        "undefinedPrimaryOrderJoin",
+        () => undefinedPrimary.order.join(",") === fullOrder,
+      ],
+      ["undefinedStandaloneCaught", () => undefinedStandalone.caught],
+      [
+        "undefinedStandaloneFailure",
+        () => undefinedStandalone.failure === undefined,
+      ],
+      [
+        "undefinedStandaloneOrderJoin",
+        () => undefinedStandalone.order.join(",") === fullOrder,
+      ],
+      ["undefinedCombinedCaught", () => undefinedCombined.caught],
+      [
+        "aggregateContainsExactlyUndefinedCombinedFailure",
+        () =>
+          aggregateContainsExactly(undefinedCombined.failure, [
+            undefined,
+            undefined,
+          ]),
+      ],
+      [
+        "undefinedCombinedOrderJoin",
+        () => undefinedCombined.order.join(",") === fullOrder,
+      ],
+      [
+        "markerClearedCaughtTransientFailure",
+        () => markerCleared.caught === transientFailure,
+      ],
+      ["markerClearedMarker", () => markerCleared.marker === null],
+      ["markerClearedParked", () => markerCleared.parked === false],
+      [
+        "markerClearedOrderJoin",
+        () => markerCleared.order.join(",") === "transient,resident,marker",
+      ],
+      [
+        "markerRetainedCaughtResidentFailure",
+        () => markerRetained.caught === residentFailure,
+      ],
+      ["markerRetainedMarkerParked", () => markerRetained.marker === "parked"],
+      ["markerRetainedParked", () => markerRetained.parked],
+      [
+        "markerRetainedOrderJoin",
+        () => markerRetained.order.join(",") === "transient,resident,marker",
+      ],
+    ]),
+    {
+      successCaught: true,
+      successFailure: true,
+      successOrderJoin: true,
+      primaryOnlyCaught: true,
+      primaryOnlyFailurePrimaryFailure: true,
+      primaryOnlyOrderJoin: true,
+      standaloneCaught: true,
+      standaloneFailureTransientFailure: true,
+      standaloneOrderJoin: true,
+      multipleCaught: true,
+      aggregateContainsExactlyMultipleFailure: true,
+      multipleMessageIncludes: true,
+      multipleMessageIncludes2: true,
+      multipleMessageIncludes3: true,
+      multipleOrderJoin: true,
+      combinedCaught: true,
+      aggregateContainsExactlyCombinedFailure: true,
+      combinedOrderJoin: true,
+      undefinedPrimaryCaught: true,
+      undefinedPrimaryFailure: true,
+      undefinedPrimaryOrderJoin: true,
+      undefinedStandaloneCaught: true,
+      undefinedStandaloneFailure: true,
+      undefinedStandaloneOrderJoin: true,
+      undefinedCombinedCaught: true,
+      aggregateContainsExactlyUndefinedCombinedFailure: true,
+      undefinedCombinedOrderJoin: true,
+      markerClearedCaughtTransientFailure: true,
+      markerClearedMarker: true,
+      markerClearedParked: true,
+      markerClearedOrderJoin: true,
+      markerRetainedCaughtResidentFailure: true,
+      markerRetainedMarkerParked: true,
+      markerRetainedParked: true,
+      markerRetainedOrderJoin: true,
+    },
   );
   TestValidator.equals(
     "benchmark runner owns four resident-swap cleanup lifecycles",

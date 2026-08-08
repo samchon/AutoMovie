@@ -133,10 +133,19 @@ export const test_viewer_guide_pass_non_mesh = (): void => {
       },
     );
     handle.restore();
-    TestValidator.predicate(
+    TestValidator.equals(
       "pose restore removes the overlay and unhides the non-mesh renderables",
-      scene.getObjectByName(POSE_OVERLAY_NAME) === undefined &&
-        nonMesh.every((object) => object.visible === true),
+      namedFacts([
+        [
+          "sceneGetObjectByNamePOSE_OVERLAY_NAME",
+          () => scene.getObjectByName(POSE_OVERLAY_NAME) === undefined,
+        ],
+        [
+          "nonMeshEveryObject",
+          () => nonMesh.every((object) => object.visible === true),
+        ],
+      ]),
+      { sceneGetObjectByNamePOSE_OVERLAY_NAME: true, nonMeshEveryObject: true },
     );
   }
 };

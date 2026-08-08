@@ -1,117 +1,226 @@
-import type { IAutoMovieWorldDesign } from "@automovie/interface";
+import {
+  AutoMovieSubject,
+  AutoMovieSubjectGroup,
+  type IAutoMovieSubjectContribution,
+  mergeAutoMovieSubjectContributions,
+} from "@automovie/engine";
+import type {
+  IAutoMovieShotBuildContext,
+  IAutoMovieWorldDesign,
+} from "@automovie/interface";
+
+import { army } from "../formations/army";
+
+/**
+ * A piece of the world: a surface, a landmark, a region where something
+ * happens.
+ *
+ * A place is made of things the same way a unit is made of members, and each of
+ * those things is a subject. Its geometry does not depend on the shot it
+ * appears in, so a piece states it through {@link place} and its `render` simply
+ * hands the same answer to whichever shot asks. That split is the point:
+ * geometry is context-free and performance is not, and a class that pretended
+ * otherwise would need a shot before it could say where it is.
+ */
+export abstract class WorldPiece extends AutoMovieSubject<IAutoMovieSubjectContribution> {
+  /** What this piece puts into the world, independent of any shot. */
+  public abstract place(): IAutoMovieSubjectContribution;
+
+  public design(): IAutoMovieSubjectContribution {
+    return this.place();
+  }
+
+  public render(
+    _context: IAutoMovieShotBuildContext,
+  ): IAutoMovieSubjectContribution {
+    return this.place();
+  }
+}
+
+/**
+ * The level ground everything stands on.
+ *
+ * Its extent is one number rather than four corners, because the shape the
+ * specification asks for is a square of open ground and a polygon spelled out
+ * corner by corner is four chances to disagree with itself.
+ */
+export class SignalGround extends WorldPiece {
+  public readonly id = "ground";
+
+  /** Clear ground kept beyond the farthest member, in metres. */
+  public readonly margin = 1;
+
+  /**
+   * Half-extent of the square field, in metres.
+   *
+   * Derived from the unit that stands on it rather than authored beside it. The
+   * specification states its requirement as a relation, that the ranks must end
+   * inside the place, and two independently authored numbers is how this field
+   * came to be a third the size of its own army. Deriving makes the relation
+   * true by construction, so a change to the unit carries the ground with it.
+   */
+  public halfExtent(): number {
+    return army.reach() + this.margin;
+  }
+
+  public place(): IAutoMovieSubjectContribution {
+    const half = this.halfExtent();
+    return {
+      surfaces: [
+        {
+          id: this.id,
+          polygon: [
+            { x: -half, z: -half },
+            { x: half, z: -half },
+            { x: half, z: half },
+            { x: -half, z: half },
+          ],
+          height: { kind: "constant", value: 0 },
+          walkable: true,
+        },
+      ],
+    };
+  }
+}
+
+/**
+ * The named point the sentinel steps to.
+ *
+ * A landmark exists so a shot contract can say where the gesture happened
+ * without restating a coordinate, which is exactly why it is a subject with an
+ * id rather than three numbers inside a shot.
+ */
+export class SignalGroundMark extends WorldPiece {
+  public readonly id = "signal-ground";
+
+  /** Readable radius around the marked point, in metres. */
+  public readonly radius = 3;
+
+  public place(): IAutoMovieSubjectContribution {
+    return {
+      landmarks: [
+        {
+          id: this.id,
+          position: { x: 0, y: 0, z: 0 },
+          radius: this.radius,
+          meaning: "The readable center of the starter frame.",
+        },
+      ],
+    };
+  }
+}
+
+/**
+ * Drifting smoke, and the region it drifts in.
+ *
+ * The recipe and the zone travel together because neither means anything alone:
+ * a recipe nothing activates is dead configuration, and a zone with no recipe
+ * has nothing to emit.
+ */
+export class BattleSmoke extends WorldPiece {
+  public readonly id = "signal-smoke";
+
+  /** Recipe identity the zone activates. */
+  public readonly recipe = "battle-smoke";
+
+  /** Deterministic seed for the emission, declared rather than drawn. */
+  public readonly seed = 1416;
+
+  public place(): IAutoMovieSubjectContribution {
+    return {
+      effectRecipes: [
+        {
+          id: this.recipe,
+          kind: "smoke",
+          seed: this.seed,
+          emission: { rate: 40, burst: 64, duration: 4 },
+          particle: {
+            lifetime: { min: 2, max: 4 },
+            size: { min: 0.25, max: 0.8 },
+            color: "#89918a",
+            opacity: { min: 0.12, max: 0.38 },
+          },
+          motion: {
+            wind: { x: 0.18, y: 0, z: -0.08 },
+            rise: 0.2,
+            turbulence: 0.15,
+          },
+          budget: { maxParticles: 256, lodDistance: 25 },
+          blend: "alpha",
+        },
+      ],
+      effectZones: [
+        {
+          id: this.id,
+          recipe: this.recipe,
+          bounds: {
+            min: { x: -4, y: 0.05, z: -8 },
+            max: { x: 4, y: 1.2, z: -2 },
+          },
+          seed: 7,
+        },
+      ],
+    };
+  }
+}
 
 /**
  * The signal field, as the one world this production stages on.
  *
- * The field exists to give a raised arm an uninterrupted background, so it
- * carries a single named landmark and nothing that competes with a silhouette.
- * A shot contract cites that landmark rather than restating a coordinate.
+ * The world is a group like any other: it holds pieces and is composed from
+ * them. Its record is the merge of what its pieces place, so adding a hill
+ * means adding a piece rather than editing an array in the middle of a blob.
+ */
+export class SignalField extends AutoMovieSubjectGroup<
+  IAutoMovieWorldDesign,
+  WorldPiece
+> {
+  public readonly id = "starter-world";
+
+  /** The ground, its named point, and the smoke that drifts over it. */
+  public readonly ground = new SignalGround();
+  public readonly mark = new SignalGroundMark();
+  public readonly smoke = new BattleSmoke();
+
+  public members(): readonly WorldPiece[] {
+    return [this.ground, this.mark, this.smoke];
+  }
+
+  /**
+   * The world record, assembled from what its pieces place.
+   *
+   * @evidence docs/world/signal-field.md Requires one place carrying the named
+   *   point and the extent, which this composes rather than transcribes.
+   */
+  public design(): IAutoMovieWorldDesign {
+    const placed = mergeAutoMovieSubjectContributions(
+      this.members().map((piece) => piece.place()),
+    );
+    return {
+      id: this.id,
+      units: "meter",
+      landmarks: [...(placed.landmarks ?? [])],
+      surfaces: [...(placed.surfaces ?? [])],
+      routes: [...(placed.routes ?? [])],
+      effectRecipes: [...(placed.effectRecipes ?? [])],
+      effectZones: [...(placed.effectZones ?? [])],
+      // A piece that places a population (a forest, a field of rubble) must
+      // reach the record. Omitting the key would drop what the piece placed
+      // without saying so, which is worse than refusing it.
+      ...(placed.instanceSets === undefined
+        ? {}
+        : { instanceSets: [...placed.instanceSets] }),
+    };
+  }
+}
+
+/**
+ * The production's one world.
+ *
+ * Carries the citation for the field and every piece standing on it, until a
+ * class can carry its own (samchon/ttsc#1121).
  *
  * @evidence docs/world/signal-field.md Implements the open level ground, the
  *   named ground point, and the extent that specification requires.
  */
-export const signalField = (): IAutoMovieWorldDesign => ({
-  id: "starter-world",
-  units: "meter",
-  landmarks: [
-    {
-      id: "signal-ground",
-      position: {
-        x: 0,
-        y: 0,
-        z: 0,
-      },
-      radius: 3,
-      meaning: "The readable center of the starter frame.",
-    },
-  ],
-  surfaces: [
-    {
-      id: "ground",
-      polygon: [
-        {
-          x: -10,
-          z: -10,
-        },
-        {
-          x: 10,
-          z: -10,
-        },
-        {
-          x: 10,
-          z: 10,
-        },
-        {
-          x: -10,
-          z: 10,
-        },
-      ],
-      height: {
-        kind: "constant",
-        value: 0,
-      },
-      walkable: true,
-    },
-  ],
-  routes: [],
-  effectRecipes: [
-    {
-      id: "battle-smoke",
-      kind: "smoke",
-      seed: 1416,
-      emission: {
-        rate: 40,
-        burst: 64,
-        duration: 4,
-      },
-      particle: {
-        lifetime: {
-          min: 2,
-          max: 4,
-        },
-        size: {
-          min: 0.25,
-          max: 0.8,
-        },
-        color: "#89918a",
-        opacity: {
-          min: 0.12,
-          max: 0.38,
-        },
-      },
-      motion: {
-        wind: {
-          x: 0.18,
-          y: 0,
-          z: -0.08,
-        },
-        rise: 0.2,
-        turbulence: 0.15,
-      },
-      budget: {
-        maxParticles: 256,
-        lodDistance: 25,
-      },
-      blend: "alpha",
-    },
-  ],
-  effectZones: [
-    {
-      id: "signal-smoke",
-      recipe: "battle-smoke",
-      bounds: {
-        min: {
-          x: -4,
-          y: 0.05,
-          z: -8,
-        },
-        max: {
-          x: 4,
-          y: 1.2,
-          z: -2,
-        },
-      },
-      seed: 7,
-    },
-  ],
-});
+export const signalField = new SignalField();

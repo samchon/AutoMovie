@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import ts from "typescript-compiler";
 
+import { namedFacts } from "../internal/predicates";
 import { preserveFilmTimelineFixtureCleanup } from "./test_mcp_production_film_timeline";
 
 const compact = (node: ts.Node, source: ts.SourceFile): string =>
@@ -125,21 +126,157 @@ export const test_mcp_production_film_timeline_single_resource_cleanup =
     const undefinedPrimary = capture({
       primaryFailure: { error: undefined, present: true },
     });
-    TestValidator.predicate(
+    TestValidator.equals(
       "a timeline restoration preserves the guarded failure first",
-      success.attempted &&
-        success.caught === false &&
-        primaryOnly.caught &&
-        primaryOnly.failure === primaryFailure &&
-        standalone.caught &&
-        standalone.failure === restorationFailure &&
-        combined.caught &&
-        combined.failure instanceof AggregateError &&
-        combined.failure.errors.length === 2 &&
-        combined.failure.errors[0] === primaryFailure &&
-        combined.failure.errors[1] === restorationFailure &&
-        undefinedPrimary.caught &&
-        undefinedPrimary.failure === undefined,
+      namedFacts([
+        ["successAttempted", () => success.attempted],
+        ["successCaught", () => success.attempted && success.caught === false],
+        [
+          "primaryOnlyCaught",
+          () =>
+            success.attempted && success.caught === false && primaryOnly.caught,
+        ],
+        [
+          "primaryOnlyFailurePrimaryFailure",
+          () =>
+            success.attempted &&
+            success.caught === false &&
+            primaryOnly.caught &&
+            primaryOnly.failure === primaryFailure,
+        ],
+        [
+          "standaloneCaught",
+          () =>
+            success.attempted &&
+            success.caught === false &&
+            primaryOnly.caught &&
+            primaryOnly.failure === primaryFailure &&
+            standalone.caught,
+        ],
+        [
+          "standaloneFailureRestorationFailure",
+          () =>
+            success.attempted &&
+            success.caught === false &&
+            primaryOnly.caught &&
+            primaryOnly.failure === primaryFailure &&
+            standalone.caught &&
+            standalone.failure === restorationFailure,
+        ],
+        [
+          "combinedCaught",
+          () =>
+            success.attempted &&
+            success.caught === false &&
+            primaryOnly.caught &&
+            primaryOnly.failure === primaryFailure &&
+            standalone.caught &&
+            standalone.failure === restorationFailure &&
+            combined.caught,
+        ],
+        [
+          "combinedFailureInstanceof",
+          () =>
+            success.attempted &&
+            success.caught === false &&
+            primaryOnly.caught &&
+            primaryOnly.failure === primaryFailure &&
+            standalone.caught &&
+            standalone.failure === restorationFailure &&
+            combined.caught &&
+            combined.failure instanceof AggregateError,
+        ],
+        [
+          "combinedFailureErrors",
+          () =>
+            success.attempted &&
+            success.caught === false &&
+            primaryOnly.caught &&
+            primaryOnly.failure === primaryFailure &&
+            standalone.caught &&
+            standalone.failure === restorationFailure &&
+            combined.caught &&
+            combined.failure instanceof AggregateError &&
+            combined.failure.errors.length === 2,
+        ],
+        [
+          "combinedFailureErrors2",
+          () =>
+            success.attempted &&
+            success.caught === false &&
+            primaryOnly.caught &&
+            primaryOnly.failure === primaryFailure &&
+            standalone.caught &&
+            standalone.failure === restorationFailure &&
+            combined.caught &&
+            combined.failure instanceof AggregateError &&
+            combined.failure.errors.length === 2 &&
+            combined.failure.errors[0] === primaryFailure,
+        ],
+        [
+          "combinedFailureErrors3",
+          () =>
+            success.attempted &&
+            success.caught === false &&
+            primaryOnly.caught &&
+            primaryOnly.failure === primaryFailure &&
+            standalone.caught &&
+            standalone.failure === restorationFailure &&
+            combined.caught &&
+            combined.failure instanceof AggregateError &&
+            combined.failure.errors.length === 2 &&
+            combined.failure.errors[0] === primaryFailure &&
+            combined.failure.errors[1] === restorationFailure,
+        ],
+        [
+          "undefinedPrimaryCaught",
+          () =>
+            success.attempted &&
+            success.caught === false &&
+            primaryOnly.caught &&
+            primaryOnly.failure === primaryFailure &&
+            standalone.caught &&
+            standalone.failure === restorationFailure &&
+            combined.caught &&
+            combined.failure instanceof AggregateError &&
+            combined.failure.errors.length === 2 &&
+            combined.failure.errors[0] === primaryFailure &&
+            combined.failure.errors[1] === restorationFailure &&
+            undefinedPrimary.caught,
+        ],
+        [
+          "undefinedPrimaryFailure",
+          () =>
+            success.attempted &&
+            success.caught === false &&
+            primaryOnly.caught &&
+            primaryOnly.failure === primaryFailure &&
+            standalone.caught &&
+            standalone.failure === restorationFailure &&
+            combined.caught &&
+            combined.failure instanceof AggregateError &&
+            combined.failure.errors.length === 2 &&
+            combined.failure.errors[0] === primaryFailure &&
+            combined.failure.errors[1] === restorationFailure &&
+            undefinedPrimary.caught &&
+            undefinedPrimary.failure === undefined,
+        ],
+      ]),
+      {
+        successAttempted: true,
+        successCaught: true,
+        primaryOnlyCaught: true,
+        primaryOnlyFailurePrimaryFailure: true,
+        standaloneCaught: true,
+        standaloneFailureRestorationFailure: true,
+        combinedCaught: true,
+        combinedFailureInstanceof: true,
+        combinedFailureErrors: true,
+        combinedFailureErrors2: true,
+        combinedFailureErrors3: true,
+        undefinedPrimaryCaught: true,
+        undefinedPrimaryFailure: true,
+      },
     );
     TestValidator.equals(
       "film timeline protects its injected reader restoration",

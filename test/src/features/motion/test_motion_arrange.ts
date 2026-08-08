@@ -2,7 +2,7 @@ import { arrangeMotion, holdMotion } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import { joint, keyframe, makeMotion, makePose } from "../internal/fixtures";
-import { nclose, throwsError } from "../internal/predicates";
+import { namedFacts, nclose, throwsError } from "../internal/predicates";
 
 const spine = (m: ReturnType<typeof makePose>) =>
   m.joints.find((x) => x.bone === "spine");
@@ -37,10 +37,19 @@ export const test_motion_arrange = (): void => {
     held.skeleton,
     "skeleton-1",
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "both frames hold the same pose",
-    nclose(spine(held.keyframes[0]!.pose)!.flexion!, 12) &&
-      nclose(spine(held.keyframes[1]!.pose)!.flexion!, 12),
+    namedFacts([
+      [
+        "ncloseSpineHeld",
+        () => nclose(spine(held.keyframes[0]!.pose)!.flexion!, 12),
+      ],
+      [
+        "ncloseSpineHeld2",
+        () => nclose(spine(held.keyframes[1]!.pose)!.flexion!, 12),
+      ],
+    ]),
+    { ncloseSpineHeld: true, ncloseSpineHeld2: true },
   );
 
   // 2. empty

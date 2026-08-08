@@ -8,7 +8,11 @@ import {
 import { TestValidator } from "@nestia/e2e";
 
 import { makeMotion } from "../internal/fixtures";
-import { nclose, validationHasWarning } from "../internal/predicates";
+import {
+  namedFacts,
+  nclose,
+  validationHasWarning,
+} from "../internal/predicates";
 
 const restAt = (x: number, y: number, z: number): IAutoMovieTransform => ({
   translation: { x, y, z },
@@ -110,9 +114,16 @@ export const test_validation_self_intersection_crossing = (): void => {
           entry.path.includes("samples[0]"),
         )
       : null;
-  TestValidator.predicate(
+  TestValidator.equals(
     "X-crossing overshoot is the full radius sum",
-    fired?.kind === "physics" && nclose(fired.overshoot ?? -1, 0.2),
+    namedFacts([
+      ["firedKindPhysics", () => fired?.kind === "physics"],
+      [
+        "ncloseFiredOvershoot",
+        () => fired?.kind === "physics" && nclose(fired.overshoot ?? -1, 0.2),
+      ],
+    ]),
+    { firedKindPhysics: true, ncloseFiredOvershoot: true },
   );
 
   // Shift armB entirely off to +z (spanning z in [2,3]) so the centerlines no

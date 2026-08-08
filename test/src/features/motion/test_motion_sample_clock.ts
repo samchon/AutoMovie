@@ -43,9 +43,13 @@ export const test_motion_sample_clock = (): void => {
     fractional.length,
     26,
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "final instant clamps to the duration",
-    nclose(fractional[25]!, 1.01) && fractional[25]! <= 1.01,
+    namedFacts([
+      ["ncloseFractional25", () => nclose(fractional[25]!, 1.01)],
+      ["fractional25", () => fractional[25]! <= 1.01],
+    ]),
+    { ncloseFractional25: true, fractional25: true },
   );
 
   const tiny = sampleTimes(0.01, 24);
@@ -54,9 +58,13 @@ export const test_motion_sample_clock = (): void => {
     tiny.length,
     2,
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "the two endpoints are 0 and the duration",
-    nclose(tiny[0]!, 0) && nclose(tiny[1]!, 0.01),
+    namedFacts([
+      ["ncloseTiny0", () => nclose(tiny[0]!, 0)],
+      ["ncloseTiny1", () => nclose(tiny[1]!, 0.01)],
+    ]),
+    { ncloseTiny0: true, ncloseTiny1: true },
   );
 
   const viaWindow = windowSampleTimes(0, 1.01, 24);

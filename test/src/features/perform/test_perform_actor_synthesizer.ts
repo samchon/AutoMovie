@@ -15,7 +15,12 @@ import {
 import { TestValidator } from "@nestia/e2e";
 
 import { joint, makePose } from "../internal/fixtures";
-import { nclose, throwsError, vclose } from "../internal/predicates";
+import {
+  namedFacts,
+  nclose,
+  throwsError,
+  vclose,
+} from "../internal/predicates";
 
 const WALK: IAutoMovieGait = {
   name: "walk",
@@ -216,17 +221,25 @@ export const test_perform_actor_synthesizer = (): void => {
     { verb: "gesture", kind: "bow", actor: "hero", start: 0, duration: "auto" },
     "hero",
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "a postural gesture (bow, auto duration) synthesises a 1 s clip",
-    bow !== null && nclose(bow.duration, 1),
+    namedFacts([
+      ["bow", () => bow !== null],
+      ["ncloseBowDuration", () => bow !== null && nclose(bow.duration, 1)],
+    ]),
+    { bow: true, ncloseBowDuration: true },
   );
   const nod = synth(
     { verb: "gesture", kind: "nod", actor: "hero", start: 0, duration: 2 },
     "hero",
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "an explicit gesture duration is honoured (a 2 s nod)",
-    nod !== null && nclose(nod.duration, 2),
+    namedFacts([
+      ["nod", () => nod !== null],
+      ["ncloseNodDuration", () => nod !== null && nclose(nod.duration, 2)],
+    ]),
+    { nod: true, ncloseNodDuration: true },
   );
   TestValidator.equals(
     "a verb with no reference synthesis (attachTo) → null",
@@ -262,10 +275,18 @@ export const test_perform_actor_synthesizer = (): void => {
     face.keyframes[0]!.pose.joints.length,
     0,
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "emote carries the expression",
-    face.keyframes[0]!.expression !== null &&
-      face.keyframes[0]!.expression.preset === "happy",
+    namedFacts([
+      ["faceKeyframes0", () => face.keyframes[0]!.expression !== null],
+      [
+        "faceKeyframes02",
+        () =>
+          face.keyframes[0]!.expression !== null &&
+          face.keyframes[0]!.expression.preset === "happy",
+      ],
+    ]),
+    { faceKeyframes0: true, faceKeyframes02: true },
   );
   TestValidator.predicate(
     "emote auto-duration falls back to 1s",
@@ -370,10 +391,18 @@ export const test_perform_actor_synthesizer = (): void => {
   const movingEnd = sampleMotion(movingLook, 1).pose.joints.find(
     (joint) => joint.bone === "head",
   )!;
-  TestValidator.predicate(
+  TestValidator.equals(
     "lookAt samples the moving observer eye rather than its staged origin",
-    movingLook.keyframes.length > 2 &&
-      !nclose(movingStart.flexion!, movingEnd.flexion!),
+    namedFacts([
+      ["movingLookKeyframesLength", () => movingLook.keyframes.length > 2],
+      [
+        "ncloseMovingStartFlexion",
+        () =>
+          movingLook.keyframes.length > 2 &&
+          !nclose(movingStart.flexion!, movingEnd.flexion!),
+      ],
+    ]),
+    { movingLookKeyframesLength: true, ncloseMovingStartFlexion: true },
   );
 
   // 8. actor gait names are lookup keys, so duplicates are ambiguous

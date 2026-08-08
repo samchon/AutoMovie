@@ -137,9 +137,13 @@ export const test_viewer_apply_object_motion = (): void => {
     tracks: [node("translation", [0, 0, 0, 2, 4, 6])],
   };
   applyObjectMotion(rigid, 1, (n) => (n === "prop" ? prop : undefined));
-  TestValidator.predicate(
+  TestValidator.equals(
     "a channel absent from the clip keeps the object's existing value",
-    nclose(prop.position.x, 2) && nclose(prop.scale.x, 1.5),
+    namedFacts([
+      ["nclosePropPosition", () => nclose(prop.position.x, 2)],
+      ["nclosePropScale", () => nclose(prop.scale.x, 1.5)],
+    ]),
+    { nclosePropPosition: true, nclosePropScale: true },
   );
 
   // 4. weights land on every morphable mesh under the object, by index
@@ -296,10 +300,16 @@ export const test_viewer_apply_object_motion = (): void => {
     1.5,
     () => authoritySink,
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "disjoint channels compose independently",
-    nclose(authoritySink.position.x, 1.5) &&
-      nclose(authoritySink.scale.x, 1.75),
+    namedFacts([
+      [
+        "ncloseAuthoritySinkPosition",
+        () => nclose(authoritySink.position.x, 1.5),
+      ],
+      ["ncloseAuthoritySinkScale", () => nclose(authoritySink.scale.x, 1.75)],
+    ]),
+    { ncloseAuthoritySinkPosition: true, ncloseAuthoritySinkScale: true },
   );
   const tied = {
     ...handoffB,

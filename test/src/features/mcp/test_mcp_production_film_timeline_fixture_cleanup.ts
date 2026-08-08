@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import ts from "typescript-compiler";
 
+import { namedFacts } from "../internal/predicates";
 import { preserveFilmTimelineFixtureCleanup } from "./test_mcp_production_film_timeline";
 
 const compact = (node: ts.Node, source: ts.SourceFile): string =>
@@ -196,41 +197,173 @@ export const test_mcp_production_film_timeline_fixture_cleanup = (): void => {
     cleanupFailure: { error: undefined, present: true },
     primaryFailure: { error: undefined, present: true },
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "film-timeline cleanup preserves nested and outer failure identity",
-    success.caught === false &&
-      success.failure === undefined &&
-      success.attempts === 1 &&
-      primaryOnly.caught &&
-      primaryOnly.failure === primaryFailure &&
-      primaryOnly.attempts === 1 &&
-      standalone.caught &&
-      standalone.failure === cleanupFailure &&
-      standalone.attempts === 1 &&
-      combined.caught &&
-      aggregateContainsExactly(combined.failure, [
-        primaryFailure,
-        cleanupFailure,
-      ]) &&
-      combined.attempts === 1 &&
-      nestedCombined.caught &&
-      aggregateContainsExactly(nestedCombined.failure, [
-        nestedCleanupFailure,
-        cleanupFailure,
-      ]) &&
-      nestedCombined.attempts === 1 &&
-      undefinedPrimary.caught &&
-      undefinedPrimary.failure === undefined &&
-      undefinedPrimary.attempts === 1 &&
-      undefinedStandalone.caught &&
-      undefinedStandalone.failure === undefined &&
-      undefinedStandalone.attempts === 1 &&
-      undefinedCombined.caught &&
-      aggregateContainsExactly(undefinedCombined.failure, [
-        undefined,
-        undefined,
-      ]) &&
-      undefinedCombined.attempts === 1,
+    namedFacts([
+      ["successCaught", () => success.caught === false],
+      [
+        "successFailure",
+        () => success.caught === false && success.failure === undefined,
+      ],
+      [
+        "successAttempts",
+        () =>
+          success.caught === false &&
+          success.failure === undefined &&
+          success.attempts === 1,
+      ],
+      [
+        "primaryOnlyCaught",
+        () =>
+          success.caught === false &&
+          success.failure === undefined &&
+          success.attempts === 1 &&
+          primaryOnly.caught,
+      ],
+      [
+        "primaryOnlyFailurePrimaryFailure",
+        () =>
+          success.caught === false &&
+          success.failure === undefined &&
+          success.attempts === 1 &&
+          primaryOnly.caught &&
+          primaryOnly.failure === primaryFailure,
+      ],
+      [
+        "primaryOnlyAttempts",
+        () =>
+          success.caught === false &&
+          success.failure === undefined &&
+          success.attempts === 1 &&
+          primaryOnly.caught &&
+          primaryOnly.failure === primaryFailure &&
+          primaryOnly.attempts === 1,
+      ],
+      [
+        "standaloneCaught",
+        () =>
+          success.caught === false &&
+          success.failure === undefined &&
+          success.attempts === 1 &&
+          primaryOnly.caught &&
+          primaryOnly.failure === primaryFailure &&
+          primaryOnly.attempts === 1 &&
+          standalone.caught,
+      ],
+      [
+        "standaloneFailureCleanupFailure",
+        () =>
+          success.caught === false &&
+          success.failure === undefined &&
+          success.attempts === 1 &&
+          primaryOnly.caught &&
+          primaryOnly.failure === primaryFailure &&
+          primaryOnly.attempts === 1 &&
+          standalone.caught &&
+          standalone.failure === cleanupFailure,
+      ],
+      [
+        "standaloneAttempts",
+        () =>
+          success.caught === false &&
+          success.failure === undefined &&
+          success.attempts === 1 &&
+          primaryOnly.caught &&
+          primaryOnly.failure === primaryFailure &&
+          primaryOnly.attempts === 1 &&
+          standalone.caught &&
+          standalone.failure === cleanupFailure &&
+          standalone.attempts === 1,
+      ],
+      [
+        "combinedCaught",
+        () =>
+          success.caught === false &&
+          success.failure === undefined &&
+          success.attempts === 1 &&
+          primaryOnly.caught &&
+          primaryOnly.failure === primaryFailure &&
+          primaryOnly.attempts === 1 &&
+          standalone.caught &&
+          standalone.failure === cleanupFailure &&
+          standalone.attempts === 1 &&
+          combined.caught,
+      ],
+      [
+        "aggregateContainsExactlyCombinedFailure",
+        () =>
+          success.caught === false &&
+          success.failure === undefined &&
+          success.attempts === 1 &&
+          primaryOnly.caught &&
+          primaryOnly.failure === primaryFailure &&
+          primaryOnly.attempts === 1 &&
+          standalone.caught &&
+          standalone.failure === cleanupFailure &&
+          standalone.attempts === 1 &&
+          combined.caught &&
+          aggregateContainsExactly(combined.failure, [
+            primaryFailure,
+            cleanupFailure,
+          ]),
+      ],
+      ["combinedAttempts", () => combined.attempts === 1],
+      ["nestedCombinedCaught", () => nestedCombined.caught],
+      [
+        "aggregateContainsExactlyNestedCombinedFailure",
+        () =>
+          aggregateContainsExactly(nestedCombined.failure, [
+            nestedCleanupFailure,
+            cleanupFailure,
+          ]),
+      ],
+      ["nestedCombinedAttempts", () => nestedCombined.attempts === 1],
+      ["undefinedPrimaryCaught", () => undefinedPrimary.caught],
+      ["undefinedPrimaryFailure", () => undefinedPrimary.failure === undefined],
+      ["undefinedPrimaryAttempts", () => undefinedPrimary.attempts === 1],
+      ["undefinedStandaloneCaught", () => undefinedStandalone.caught],
+      [
+        "undefinedStandaloneFailure",
+        () => undefinedStandalone.failure === undefined,
+      ],
+      ["undefinedStandaloneAttempts", () => undefinedStandalone.attempts === 1],
+      ["undefinedCombinedCaught", () => undefinedCombined.caught],
+      [
+        "aggregateContainsExactlyUndefinedCombinedFailure",
+        () =>
+          aggregateContainsExactly(undefinedCombined.failure, [
+            undefined,
+            undefined,
+          ]),
+      ],
+      ["undefinedCombinedAttempts", () => undefinedCombined.attempts === 1],
+    ]),
+    {
+      successCaught: true,
+      successFailure: true,
+      successAttempts: true,
+      primaryOnlyCaught: true,
+      primaryOnlyFailurePrimaryFailure: true,
+      primaryOnlyAttempts: true,
+      standaloneCaught: true,
+      standaloneFailureCleanupFailure: true,
+      standaloneAttempts: true,
+      combinedCaught: true,
+      aggregateContainsExactlyCombinedFailure: true,
+      combinedAttempts: true,
+      nestedCombinedCaught: true,
+      aggregateContainsExactlyNestedCombinedFailure: true,
+      nestedCombinedAttempts: true,
+      undefinedPrimaryCaught: true,
+      undefinedPrimaryFailure: true,
+      undefinedPrimaryAttempts: true,
+      undefinedStandaloneCaught: true,
+      undefinedStandaloneFailure: true,
+      undefinedStandaloneAttempts: true,
+      undefinedCombinedCaught: true,
+      aggregateContainsExactlyUndefinedCombinedFailure: true,
+      undefinedCombinedAttempts: true,
+    },
   );
   TestValidator.equals(
     "film-timeline test owns its complete outer fixture lifecycle",
@@ -259,7 +392,7 @@ export const test_mcp_production_film_timeline_fixture_cleanup = (): void => {
             nestedTryStatements: 2,
             ownerParameters: [],
             tryDigest:
-              "a9eda92bb9783e59d26d55b8874d7c913fb7d8b6ed8f0dfa1b4ad788c0557d23",
+              "31cc1bc49df3e51c1431e001309b6bcad98d8f25d700441c8e5e05db6050a410",
             tryStatements: 158,
           },
         ],

@@ -3,7 +3,12 @@ import { AutoMovieHumanoidBone, IAutoMovieGait } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { createSkeleton } from "../internal/fixtures";
-import { hasViolation, nclose, throwsError } from "../internal/predicates";
+import {
+  hasViolation,
+  namedFacts,
+  nclose,
+  throwsError,
+} from "../internal/predicates";
 
 const GAIT: IAutoMovieGait = {
   name: "walk",
@@ -111,9 +116,13 @@ export const test_motion_gait = (): void => {
     gaitMotion("bent", sk.id, kneeGait(25), 4),
     "leftLowerLeg",
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "the centered swing is 25 ± 22 (every sample positive)",
-    knee.every((v) => v >= 0) && nclose(Math.max(...knee), 47),
+    namedFacts([
+      ["kneeEveryV", () => knee.every((v) => v >= 0)],
+      ["ncloseMaxKnee", () => nclose(Math.max(...knee), 47)],
+    ]),
+    { kneeEveryV: true, ncloseMaxKnee: true },
   );
 
   // 5. non-flexion axis target

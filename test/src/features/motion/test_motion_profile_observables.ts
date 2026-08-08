@@ -6,7 +6,7 @@ import {
 import { AutoMovieHumanoidBone, IAutoMovieMotion } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { nclose } from "../internal/predicates";
+import { namedFacts, nclose } from "../internal/predicates";
 
 interface NumericRange {
   min: number;
@@ -124,68 +124,137 @@ export const test_motion_profile_observables = (): void => {
     "horse rear duration matches handwritten clip",
     nclose(horse.rear!.duration, horseHandAuthored.rear.duration),
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "horse walk preserves left foreleg envelope",
-    coversRange(
-      flexionRange(horse.walk!, "leftUpperArm"),
-      horseHandAuthored.walk.leftUpperArm,
-      3,
-    ) &&
-      coversRange(
-        flexionRange(horse.walk!, "leftLowerArm"),
-        horseHandAuthored.walk.leftLowerArm,
-        2,
-      ),
+    namedFacts([
+      [
+        "coversRangeFlexionRangeHorse",
+        () =>
+          coversRange(
+            flexionRange(horse.walk!, "leftUpperArm"),
+            horseHandAuthored.walk.leftUpperArm,
+            3,
+          ),
+      ],
+      [
+        "coversRangeFlexionRangeHorse2",
+        () =>
+          coversRange(
+            flexionRange(horse.walk!, "leftLowerArm"),
+            horseHandAuthored.walk.leftLowerArm,
+            2,
+          ),
+      ],
+    ]),
+    { coversRangeFlexionRangeHorse: true, coversRangeFlexionRangeHorse2: true },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "horse trot preserves left foreleg and high-root envelope",
-    coversRange(
-      flexionRange(horse.trot!, "leftUpperArm"),
-      horseHandAuthored.trot.leftUpperArm,
-      4,
-    ) &&
-      coversRange(
-        flexionRange(horse.trot!, "leftLowerArm"),
-        horseHandAuthored.trot.leftLowerArm,
-        2,
-      ) &&
-      rootYRange(horse.trot!).max >= horseHandAuthored.trot.rootY.max - 0.005,
+    namedFacts([
+      [
+        "coversRangeFlexionRangeHorse",
+        () =>
+          coversRange(
+            flexionRange(horse.trot!, "leftUpperArm"),
+            horseHandAuthored.trot.leftUpperArm,
+            4,
+          ),
+      ],
+      [
+        "coversRangeFlexionRangeHorse2",
+        () =>
+          coversRange(
+            flexionRange(horse.trot!, "leftLowerArm"),
+            horseHandAuthored.trot.leftLowerArm,
+            2,
+          ),
+      ],
+      [
+        "rootYRangeHorseTrot",
+        () =>
+          rootYRange(horse.trot!).max >=
+          horseHandAuthored.trot.rootY.max - 0.005,
+      ],
+    ]),
+    {
+      coversRangeFlexionRangeHorse: true,
+      coversRangeFlexionRangeHorse2: true,
+      rootYRangeHorseTrot: true,
+    },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "horse gallop preserves gather and suspension envelope",
-    coversRange(
-      flexionRange(horse.gallop!, "leftUpperArm"),
-      horseHandAuthored.gallop.leftUpperArm,
-      4,
-    ) &&
-      coversRange(
-        flexionRange(horse.gallop!, "leftLowerArm"),
-        horseHandAuthored.gallop.leftLowerArm,
-        3,
-      ) &&
-      closesRange(
-        rootYRange(horse.gallop!),
-        horseHandAuthored.gallop.rootY,
-        0.01,
-      ),
+    namedFacts([
+      [
+        "coversRangeFlexionRangeHorse",
+        () =>
+          coversRange(
+            flexionRange(horse.gallop!, "leftUpperArm"),
+            horseHandAuthored.gallop.leftUpperArm,
+            4,
+          ),
+      ],
+      [
+        "coversRangeFlexionRangeHorse2",
+        () =>
+          coversRange(
+            flexionRange(horse.gallop!, "leftLowerArm"),
+            horseHandAuthored.gallop.leftLowerArm,
+            3,
+          ),
+      ],
+      [
+        "closesRangeRootYRangeHorse",
+        () =>
+          closesRange(
+            rootYRange(horse.gallop!),
+            horseHandAuthored.gallop.rootY,
+            0.01,
+          ),
+      ],
+    ]),
+    {
+      coversRangeFlexionRangeHorse: true,
+      coversRangeFlexionRangeHorse2: true,
+      closesRangeRootYRangeHorse: true,
+    },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "horse rear preserves paw and spine envelope",
-    coversRange(
-      flexionRange(horse.rear!, "leftUpperArm"),
-      horseHandAuthored.rear.leftUpperArm,
-      5,
-    ) &&
-      coversRange(
-        flexionRange(horse.rear!, "leftLowerArm"),
-        horseHandAuthored.rear.leftLowerArm,
-        5,
-      ) &&
-      coversRange(
-        flexionRange(horse.rear!, "spine"),
-        horseHandAuthored.rear.spine,
-        4,
-      ),
+    namedFacts([
+      [
+        "coversRangeFlexionRangeHorse",
+        () =>
+          coversRange(
+            flexionRange(horse.rear!, "leftUpperArm"),
+            horseHandAuthored.rear.leftUpperArm,
+            5,
+          ),
+      ],
+      [
+        "coversRangeFlexionRangeHorse2",
+        () =>
+          coversRange(
+            flexionRange(horse.rear!, "leftLowerArm"),
+            horseHandAuthored.rear.leftLowerArm,
+            5,
+          ),
+      ],
+      [
+        "coversRangeFlexionRangeHorse3",
+        () =>
+          coversRange(
+            flexionRange(horse.rear!, "spine"),
+            horseHandAuthored.rear.spine,
+            4,
+          ),
+      ],
+    ]),
+    {
+      coversRangeFlexionRangeHorse: true,
+      coversRangeFlexionRangeHorse2: true,
+      coversRangeFlexionRangeHorse3: true,
+    },
   );
 
   const cat = bindProfileGaits(CAT_PROFILE, "cat", 48);
@@ -197,51 +266,104 @@ export const test_motion_profile_observables = (): void => {
     "cat leap duration matches handwritten clip",
     nclose(cat.leap!.duration, catHandAuthored.leap.duration),
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "cat walk preserves diagonal gait envelopes",
-    coversRange(
-      flexionRange(cat.walk!, "leftUpperArm"),
-      catHandAuthored.walk.leftUpperArm,
-      3,
-    ) &&
-      coversRange(
-        flexionRange(cat.walk!, "leftLowerArm"),
-        catHandAuthored.walk.leftLowerArm,
-        2,
-      ) &&
-      coversRange(
-        flexionRange(cat.walk!, "leftUpperLeg"),
-        catHandAuthored.walk.leftUpperLeg,
-        3,
-      ) &&
-      coversRange(
-        flexionRange(cat.walk!, "rightLowerLeg"),
-        catHandAuthored.walk.rightLowerLeg,
-        2,
-      ),
+    namedFacts([
+      [
+        "coversRangeFlexionRangeCat",
+        () =>
+          coversRange(
+            flexionRange(cat.walk!, "leftUpperArm"),
+            catHandAuthored.walk.leftUpperArm,
+            3,
+          ),
+      ],
+      [
+        "coversRangeFlexionRangeCat2",
+        () =>
+          coversRange(
+            flexionRange(cat.walk!, "leftLowerArm"),
+            catHandAuthored.walk.leftLowerArm,
+            2,
+          ),
+      ],
+      [
+        "coversRangeFlexionRangeCat3",
+        () =>
+          coversRange(
+            flexionRange(cat.walk!, "leftUpperLeg"),
+            catHandAuthored.walk.leftUpperLeg,
+            3,
+          ),
+      ],
+      [
+        "coversRangeFlexionRangeCat4",
+        () =>
+          coversRange(
+            flexionRange(cat.walk!, "rightLowerLeg"),
+            catHandAuthored.walk.rightLowerLeg,
+            2,
+          ),
+      ],
+    ]),
+    {
+      coversRangeFlexionRangeCat: true,
+      coversRangeFlexionRangeCat2: true,
+      coversRangeFlexionRangeCat3: true,
+      coversRangeFlexionRangeCat4: true,
+    },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "cat leap preserves crouch and airborne envelope",
-    coversRange(
-      flexionRange(cat.leap!, "leftUpperArm"),
-      catHandAuthored.leap.leftUpperArm,
-      3,
-    ) &&
-      coversRange(
-        flexionRange(cat.leap!, "leftLowerArm"),
-        catHandAuthored.leap.leftLowerArm,
-        2,
-      ) &&
-      coversRange(
-        flexionRange(cat.leap!, "leftUpperLeg"),
-        catHandAuthored.leap.leftUpperLeg,
-        4,
-      ) &&
-      coversRange(
-        flexionRange(cat.leap!, "leftLowerLeg"),
-        catHandAuthored.leap.leftLowerLeg,
-        3,
-      ) &&
-      closesRange(rootYRange(cat.leap!), catHandAuthored.leap.rootY, 0.02),
+    namedFacts([
+      [
+        "coversRangeFlexionRangeCat",
+        () =>
+          coversRange(
+            flexionRange(cat.leap!, "leftUpperArm"),
+            catHandAuthored.leap.leftUpperArm,
+            3,
+          ),
+      ],
+      [
+        "coversRangeFlexionRangeCat2",
+        () =>
+          coversRange(
+            flexionRange(cat.leap!, "leftLowerArm"),
+            catHandAuthored.leap.leftLowerArm,
+            2,
+          ),
+      ],
+      [
+        "coversRangeFlexionRangeCat3",
+        () =>
+          coversRange(
+            flexionRange(cat.leap!, "leftUpperLeg"),
+            catHandAuthored.leap.leftUpperLeg,
+            4,
+          ),
+      ],
+      [
+        "coversRangeFlexionRangeCat4",
+        () =>
+          coversRange(
+            flexionRange(cat.leap!, "leftLowerLeg"),
+            catHandAuthored.leap.leftLowerLeg,
+            3,
+          ),
+      ],
+      [
+        "closesRangeRootYRangeCat",
+        () =>
+          closesRange(rootYRange(cat.leap!), catHandAuthored.leap.rootY, 0.02),
+      ],
+    ]),
+    {
+      coversRangeFlexionRangeCat: true,
+      coversRangeFlexionRangeCat2: true,
+      coversRangeFlexionRangeCat3: true,
+      coversRangeFlexionRangeCat4: true,
+      closesRangeRootYRangeCat: true,
+    },
   );
 };

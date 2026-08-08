@@ -1,6 +1,8 @@
 import { CANONICAL_FACE_POSITIONS, buildFaceMorphs } from "@automovie/face";
 import { TestValidator } from "@nestia/e2e";
 
+import { namedFacts } from "../internal/predicates";
+
 /**
  * A paired feature's side-ownership gate must split an exact tie, not double
  * it. A vertex on the mirror midline (`x === 0`) is equidistant from a paired
@@ -41,9 +43,13 @@ export const test_face_morphs_midline = (): void => {
 
   // 1. each side takes exactly half at the tie
   for (const v of touched)
-    TestValidator.predicate(
+    TestValidator.equals(
       `midline vertex ${v} splits the tie evenly`,
-      Math.abs(dyR(v) - dyL(v)) < 1e-12 && dyR(v) > 0,
+      namedFacts([
+        ["absDyRV", () => Math.abs(dyR(v) - dyL(v)) < 1e-12],
+        ["dyRV", () => dyR(v) > 0],
+      ]),
+      { absDyRV: true, dyRV: true },
     );
 
   // 2. continuity across the midline: nudge one midline vertex off-axis so one
@@ -56,10 +62,19 @@ export const test_face_morphs_midline = (): void => {
   nudged[v * 3] = 1e-6; // a hair to the +x side
   const off = buildFaceMorphs(nudged);
   const combinedOff = off.browHeightR[v * 3 + 1]! + off.browHeightL[v * 3 + 1]!;
-  TestValidator.predicate(
+  TestValidator.equals(
     "the combined brow delta is continuous across the midline (no 2x spike)",
-    Math.abs(combinedMid - combinedOff) < 1e-4 &&
-      // and it is NOT twice the off-midline value (the pre-fix symptom)
-      Math.abs(combinedMid - 2 * combinedOff) > Math.abs(combinedMid) * 0.4,
+    namedFacts([
+      [
+        "absCombinedMidCombinedOff",
+        () => Math.abs(combinedMid - combinedOff) < 1e-4,
+      ],
+      [
+        "absCombinedMidCombinedOff2",
+        () =>
+          Math.abs(combinedMid - 2 * combinedOff) > Math.abs(combinedMid) * 0.4,
+      ],
+    ]),
+    { absCombinedMidCombinedOff: true, absCombinedMidCombinedOff2: true },
   );
 };

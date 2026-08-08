@@ -2,7 +2,7 @@ import { cutSequence } from "@automovie/engine";
 import { IAutoMovieShot } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { hasViolation } from "../internal/predicates";
+import { hasViolation, namedFacts } from "../internal/predicates";
 
 const SHOT: IAutoMovieShot = {
   id: "shot:beat-1",
@@ -134,14 +134,22 @@ export const test_film_cut_sequence_invalid_entries = (): void => {
     overPrevious.success,
     false,
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "overlong outgoing transition rejected",
-    overPrevious.success === false &&
-      hasViolation(
-        overPrevious,
-        "range",
-        "$input.entries[1].transition.duration",
-      ),
+    namedFacts([
+      ["refused", () => overPrevious.success === false],
+      [
+        "violated",
+        () =>
+          overPrevious.success === false &&
+          hasViolation(
+            overPrevious,
+            "range",
+            "$input.entries[1].transition.duration",
+          ),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 
   const overlappingAdjacent = cutSequence(
@@ -171,13 +179,21 @@ export const test_film_cut_sequence_invalid_entries = (): void => {
     overlappingAdjacent.success,
     false,
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "nested transition overlap rejected",
-    overlappingAdjacent.success === false &&
-      hasViolation(
-        overlappingAdjacent,
-        "range",
-        "$input.entries[2].transition.duration",
-      ),
+    namedFacts([
+      ["refused", () => overlappingAdjacent.success === false],
+      [
+        "violated",
+        () =>
+          overlappingAdjacent.success === false &&
+          hasViolation(
+            overlappingAdjacent,
+            "range",
+            "$input.entries[2].transition.duration",
+          ),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 };

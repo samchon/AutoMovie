@@ -61,10 +61,13 @@ export const test_resolve_fabrik_ik = (): void => {
     "tip converges onto the goal",
     dist(at(w1, "t"), { x: 1.2, y: 0.5, z: 0 }) <= 1e-3,
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "segment lengths exact",
-    nclose(dist(at(w1, "r"), at(w1, "m")), 1, 1e-9) &&
-      nclose(dist(at(w1, "m"), at(w1, "t")), 1, 1e-9),
+    namedFacts([
+      ["ncloseDistAt", () => nclose(dist(at(w1, "r"), at(w1, "m")), 1, 1e-9)],
+      ["ncloseDistAt2", () => nclose(dist(at(w1, "m"), at(w1, "t")), 1, 1e-9)],
+    ]),
+    { ncloseDistAt: true, ncloseDistAt2: true },
   );
 
   // 2. unreachable goal → closed-form full extension along the ray
@@ -115,18 +118,25 @@ export const test_resolve_fabrik_ik = (): void => {
     ["g", W({ x: 1, y: 0, z: 0 })],
   ]);
   resolveWorldDrivers([fabrik({})], w4, new Map(), new Map());
-  TestValidator.predicate(
+  TestValidator.equals(
     "degenerate fold terminates with exact lengths",
-    nclose(dist(at(w4, "r"), at(w4, "m")), 1, 1e-9) &&
-      nclose(dist(at(w4, "m"), at(w4, "t")), 1, 1e-9),
+    namedFacts([
+      ["ncloseDistAt", () => nclose(dist(at(w4, "r"), at(w4, "m")), 1, 1e-9)],
+      ["ncloseDistAt2", () => nclose(dist(at(w4, "m"), at(w4, "t")), 1, 1e-9)],
+    ]),
+    { ncloseDistAt: true, ncloseDistAt2: true },
   );
 
   // 5. determinism
   const w5 = bentWorld({ x: 1.2, y: 0.5, z: 0 });
   resolveWorldDrivers([fabrik({})], w5, new Map(), new Map());
-  TestValidator.predicate(
+  TestValidator.equals(
     "deterministic replay",
-    vclose(at(w5, "m"), at(w1, "m"), 0) && vclose(at(w5, "t"), at(w1, "t"), 0),
+    namedFacts([
+      ["vcloseAtW5", () => vclose(at(w5, "m"), at(w1, "m"), 0)],
+      ["vcloseAtW52", () => vclose(at(w5, "t"), at(w1, "t"), 0)],
+    ]),
+    { vcloseAtW5: true, vcloseAtW52: true },
   );
 
   // 6. influence blend

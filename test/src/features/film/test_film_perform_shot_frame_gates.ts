@@ -9,7 +9,7 @@ import {
   validSynthesizer,
 } from "../internal/filmFixtures";
 import { createSkeleton } from "../internal/fixtures";
-import { hasViolation } from "../internal/predicates";
+import { hasViolation, namedFacts } from "../internal/predicates";
 
 const frame = (
   overrides: Partial<IAutoMovieCameraAction>,
@@ -60,10 +60,13 @@ export const test_film_perform_shot_frame_gates = (): void => {
     skeleton: () => createSkeleton(),
   });
   TestValidator.equals("directional subject fails", directed.success, false);
-  TestValidator.predicate(
+  TestValidator.equals(
     "non-positional frame subject rejected",
-    directed.success === false &&
-      hasViolation(directed, "type", "$input.draft[0].on"),
+    namedFacts([
+      ["refused", () => directed.success === false],
+      ["violated", () => hasViolation(directed, "type", "$input.draft[0].on")],
+    ]),
+    { refused: true, violated: true },
   );
 
   const doubled = performShot({
@@ -80,10 +83,16 @@ export const test_film_perform_shot_frame_gates = (): void => {
     skeleton: () => createSkeleton(),
   });
   TestValidator.equals("overlapping moves fail", doubled.success, false);
-  TestValidator.predicate(
+  TestValidator.equals(
     "double-booked camera rejected",
-    doubled.success === false &&
-      hasViolation(doubled, "range", "$input.draft[1].start"),
+    namedFacts([
+      ["refused", () => doubled.success === false],
+      [
+        "violated",
+        () => hasViolation(doubled, "range", "$input.draft[1].start"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 
   const sameStart = performShot({
@@ -97,10 +106,16 @@ export const test_film_perform_shot_frame_gates = (): void => {
     skeleton: () => createSkeleton(),
   });
   TestValidator.equals("same-start frame moves fail", sameStart.success, false);
-  TestValidator.predicate(
+  TestValidator.equals(
     "same-start camera moves rejected",
-    sameStart.success === false &&
-      hasViolation(sameStart, "range", "$input.draft[1].start"),
+    namedFacts([
+      ["refused", () => sameStart.success === false],
+      [
+        "violated",
+        () => hasViolation(sameStart, "range", "$input.draft[1].start"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 
   const invalidFraming = performShot({
@@ -118,10 +133,16 @@ export const test_film_perform_shot_frame_gates = (): void => {
     invalidFraming.success,
     false,
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "unknown frame framing rejected",
-    invalidFraming.success === false &&
-      hasViolation(invalidFraming, "type", "$input.draft[0].framing"),
+    namedFacts([
+      ["refused", () => invalidFraming.success === false],
+      [
+        "violated",
+        () => hasViolation(invalidFraming, "type", "$input.draft[0].framing"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 
   const invalidMove = performShot({
@@ -139,10 +160,16 @@ export const test_film_perform_shot_frame_gates = (): void => {
     invalidMove.success,
     false,
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "unknown frame move rejected",
-    invalidMove.success === false &&
-      hasViolation(invalidMove, "type", "$input.draft[0].move"),
+    namedFacts([
+      ["refused", () => invalidMove.success === false],
+      [
+        "violated",
+        () => hasViolation(invalidMove, "type", "$input.draft[0].move"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 
   const malformedActor = performShot({
@@ -155,10 +182,16 @@ export const test_film_perform_shot_frame_gates = (): void => {
     synthesize: validSynthesizer,
     skeleton: () => createSkeleton(),
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "malformed frame actor rejected",
-    malformedActor.success === false &&
-      hasViolation(malformedActor, "type", "$input.draft[0].actor"),
+    namedFacts([
+      ["refused", () => malformedActor.success === false],
+      [
+        "violated",
+        () => hasViolation(malformedActor, "type", "$input.draft[0].actor"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 
   const missingTarget = performShot({
@@ -171,10 +204,16 @@ export const test_film_perform_shot_frame_gates = (): void => {
     synthesize: validSynthesizer,
     skeleton: () => createSkeleton(),
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "missing frame target rejected",
-    missingTarget.success === false &&
-      hasViolation(missingTarget, "type", "$input.draft[0].on"),
+    namedFacts([
+      ["refused", () => missingTarget.success === false],
+      [
+        "violated",
+        () => hasViolation(missingTarget, "type", "$input.draft[0].on"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 
   const malformedGroup = performShot({
@@ -191,10 +230,16 @@ export const test_film_perform_shot_frame_gates = (): void => {
     synthesize: validSynthesizer,
     skeleton: () => createSkeleton(),
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "malformed group target rejected",
-    malformedGroup.success === false &&
-      hasViolation(malformedGroup, "type", "$input.draft[0].on.nodes"),
+    namedFacts([
+      ["refused", () => malformedGroup.success === false],
+      [
+        "violated",
+        () => hasViolation(malformedGroup, "type", "$input.draft[0].on.nodes"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 
   const malformedKind = performShot({
@@ -207,9 +252,15 @@ export const test_film_perform_shot_frame_gates = (): void => {
     synthesize: validSynthesizer,
     skeleton: () => createSkeleton(),
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "malformed target kind rejected",
-    malformedKind.success === false &&
-      hasViolation(malformedKind, "type", "$input.draft[0].on"),
+    namedFacts([
+      ["refused", () => malformedKind.success === false],
+      [
+        "violated",
+        () => hasViolation(malformedKind, "type", "$input.draft[0].on"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 };

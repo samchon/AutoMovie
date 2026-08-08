@@ -6,7 +6,7 @@ import {
   makeScriptWrite,
   makeStagingWrite,
 } from "../internal/filmFixtures";
-import { hasViolation } from "../internal/predicates";
+import { hasViolation, namedFacts } from "../internal/predicates";
 
 /**
  * Pins non-finite timeline values that comparison-only gates can miss.
@@ -30,10 +30,18 @@ export const test_film_block_beat_non_finite_timeline = (): void => {
     infiniteDuration.success,
     false,
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "infinite duration rejected",
-    infiniteDuration.success === false &&
-      hasViolation(infiniteDuration, "range", "$input.duration"),
+    namedFacts([
+      ["refused", () => infiniteDuration.success === false],
+      [
+        "violated",
+        () =>
+          infiniteDuration.success === false &&
+          hasViolation(infiniteDuration, "range", "$input.duration"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 
   const nanAnchor = blockBeat(
@@ -50,9 +58,17 @@ export const test_film_block_beat_non_finite_timeline = (): void => {
     }),
   );
   TestValidator.equals("nan anchor fails", nanAnchor.success, false);
-  TestValidator.predicate(
+  TestValidator.equals(
     "nan anchor rejected",
-    nanAnchor.success === false &&
-      hasViolation(nanAnchor, "range", "$input.actors[0].anchors[0].t"),
+    namedFacts([
+      ["refused", () => nanAnchor.success === false],
+      [
+        "violated",
+        () =>
+          nanAnchor.success === false &&
+          hasViolation(nanAnchor, "range", "$input.actors[0].anchors[0].t"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 };

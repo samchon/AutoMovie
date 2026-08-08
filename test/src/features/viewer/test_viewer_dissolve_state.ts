@@ -154,9 +154,16 @@ export const test_viewer_dissolve_state = (): void => {
   TestValidator.equals("target disposed exactly once", disposed, 1);
   dissolve(a.renderer);
   const fresh = a.targets[a.targets.length - 2];
-  TestValidator.predicate(
+  TestValidator.equals(
     "the next dissolve re-initializes a fresh target",
-    fresh instanceof THREE.WebGLRenderTarget && fresh !== aTarget,
+    namedFacts([
+      ["freshInstanceofTHREE", () => fresh instanceof THREE.WebGLRenderTarget],
+      [
+        "freshATarget",
+        () => fresh instanceof THREE.WebGLRenderTarget && fresh !== aTarget,
+      ],
+    ]),
+    { freshInstanceofTHREE: true, freshATarget: true },
   );
 
   let halves = "";
@@ -253,30 +260,121 @@ export const test_viewer_dissolve_state = (): void => {
   } catch {
     invalidAlpha = true;
   }
-  TestValidator.predicate(
+  TestValidator.equals(
     "generic dissolve renders both halves and restores GPU state on every exit",
-    halves === "out-in" &&
-      b.targets.at(-1) === prior &&
-      primaryCaught === primaryFailure &&
-      primaryOnly.targets.at(-1) === null &&
-      standaloneAutoClearCaught === autoClearFailure &&
-      standaloneAutoClear.restorationAttempts.autoClear === 1 &&
-      standaloneTargetCaught === targetFailure &&
-      standaloneTarget.restorationAttempts.target === 1 &&
-      standaloneMultipleCaught instanceof AggregateError &&
-      standaloneMultipleCaught.errors.length === 2 &&
-      standaloneMultipleCaught.errors[0] === standaloneAutoClearFailure &&
-      standaloneMultipleCaught.errors[1] === standaloneTargetFailure &&
-      standaloneMultiple.restorationAttempts.autoClear === 1 &&
-      standaloneMultiple.restorationAttempts.target === 1 &&
-      combinedCaught instanceof AggregateError &&
-      combinedCaught.errors.length === 3 &&
-      combinedCaught.errors[0] === combinedPrimaryFailure &&
-      combinedCaught.errors[1] === combinedAutoClearFailure &&
-      combinedCaught.errors[2] === combinedTargetFailure &&
-      combined.restorationAttempts.autoClear === 1 &&
-      combined.restorationAttempts.target === 1 &&
-      invalidAlpha,
+    namedFacts([
+      ["halvesOut", () => halves === "out-in"],
+      ["bTargetsAt", () => halves === "out-in" && b.targets.at(-1) === prior],
+      ["primaryCaughtPrimaryFailure", () => primaryCaught === primaryFailure],
+      ["primaryOnlyTargetsAt", () => primaryOnly.targets.at(-1) === null],
+      [
+        "standaloneAutoClearCaughtAutoClearFailure",
+        () => standaloneAutoClearCaught === autoClearFailure,
+      ],
+      [
+        "standaloneAutoClearRestorationAttemptsAutoClear",
+        () => standaloneAutoClear.restorationAttempts.autoClear === 1,
+      ],
+      [
+        "standaloneTargetCaughtTargetFailure",
+        () => standaloneTargetCaught === targetFailure,
+      ],
+      [
+        "standaloneTargetRestorationAttemptsTarget",
+        () => standaloneTarget.restorationAttempts.target === 1,
+      ],
+      [
+        "standaloneMultipleCaughtInstanceofAggregateError",
+        () => standaloneMultipleCaught instanceof AggregateError,
+      ],
+      [
+        "standaloneMultipleCaughtErrorsLength",
+        () =>
+          standaloneMultipleCaught instanceof AggregateError &&
+          standaloneMultipleCaught.errors.length === 2,
+      ],
+      [
+        "standaloneMultipleCaughtErrors0",
+        () =>
+          standaloneMultipleCaught instanceof AggregateError &&
+          standaloneMultipleCaught.errors[0] === standaloneAutoClearFailure,
+      ],
+      [
+        "standaloneMultipleCaughtErrors1",
+        () =>
+          standaloneMultipleCaught instanceof AggregateError &&
+          standaloneMultipleCaught.errors[1] === standaloneTargetFailure,
+      ],
+      [
+        "standaloneMultipleRestorationAttemptsAutoClear",
+        () => standaloneMultiple.restorationAttempts.autoClear === 1,
+      ],
+      [
+        "standaloneMultipleRestorationAttemptsTarget",
+        () => standaloneMultiple.restorationAttempts.target === 1,
+      ],
+      [
+        "combinedCaughtInstanceofAggregateError",
+        () => combinedCaught instanceof AggregateError,
+      ],
+      [
+        "combinedCaughtErrorsLength",
+        () =>
+          combinedCaught instanceof AggregateError &&
+          combinedCaught.errors.length === 3,
+      ],
+      [
+        "combinedCaughtErrors0",
+        () =>
+          combinedCaught instanceof AggregateError &&
+          combinedCaught.errors[0] === combinedPrimaryFailure,
+      ],
+      [
+        "combinedCaughtErrors1",
+        () =>
+          combinedCaught instanceof AggregateError &&
+          combinedCaught.errors[1] === combinedAutoClearFailure,
+      ],
+      [
+        "combinedCaughtErrors2",
+        () =>
+          combinedCaught instanceof AggregateError &&
+          combinedCaught.errors[2] === combinedTargetFailure,
+      ],
+      [
+        "combinedRestorationAttemptsAutoClear",
+        () => combined.restorationAttempts.autoClear === 1,
+      ],
+      [
+        "combinedRestorationAttemptsTarget",
+        () => combined.restorationAttempts.target === 1,
+      ],
+      ["invalidAlpha", () => invalidAlpha],
+    ]),
+    {
+      halvesOut: true,
+      bTargetsAt: true,
+      primaryCaughtPrimaryFailure: true,
+      primaryOnlyTargetsAt: true,
+      standaloneAutoClearCaughtAutoClearFailure: true,
+      standaloneAutoClearRestorationAttemptsAutoClear: true,
+      standaloneTargetCaughtTargetFailure: true,
+      standaloneTargetRestorationAttemptsTarget: true,
+      standaloneMultipleCaughtInstanceofAggregateError: true,
+      standaloneMultipleCaughtErrorsLength: true,
+      standaloneMultipleCaughtErrors0: true,
+      standaloneMultipleCaughtErrors1: true,
+      standaloneMultipleRestorationAttemptsAutoClear: true,
+      standaloneMultipleRestorationAttemptsTarget: true,
+      combinedCaughtInstanceofAggregateError: true,
+      combinedCaughtErrorsLength: true,
+      combinedCaughtErrors0: true,
+      combinedCaughtErrors1: true,
+      combinedCaughtErrors2: true,
+      combinedRestorationAttemptsAutoClear: true,
+      combinedRestorationAttemptsTarget: true,
+      invalidAlpha: true,
+    },
   );
   prior.dispose();
   standalonePrior.dispose();

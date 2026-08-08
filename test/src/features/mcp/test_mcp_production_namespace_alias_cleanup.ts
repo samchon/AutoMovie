@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import ts from "typescript-compiler";
 
+import { namedFacts } from "../internal/predicates";
 import { preserveProductionNamespaceReplacementCleanup } from "./test_mcp_production_namespaces";
 
 const compact = (node: ts.Node, source: ts.SourceFile): string =>
@@ -199,44 +200,119 @@ export const test_mcp_production_namespace_alias_cleanup = (): void => {
     primaryFailure: { error: undefined, present: true },
   });
   const fullOrder = "cleanup-0,cleanup-1";
-  TestValidator.predicate(
+  TestValidator.equals(
     "namespace alias cleanup preserves failure and resource order",
-    success.caught === false &&
-      success.failure === undefined &&
-      success.order.join(",") === fullOrder &&
-      primaryOnly.caught &&
-      primaryOnly.failure === primaryFailure &&
-      primaryOnly.order.join(",") === fullOrder &&
-      standalone.caught &&
-      standalone.failure === unlinkFailure &&
-      standalone.order.join(",") === fullOrder &&
-      multiple.caught &&
-      aggregateContainsExactly(multiple.failure, [
-        unlinkFailure,
-        renameFailure,
-      ]) &&
-      multiple.message.includes("resource-0") &&
-      multiple.message.includes("resource-1") &&
-      multiple.order.join(",") === fullOrder &&
-      combined.caught &&
-      aggregateContainsExactly(combined.failure, [
-        primaryFailure,
-        unlinkFailure,
-        renameFailure,
-      ]) &&
-      combined.order.join(",") === fullOrder &&
-      undefinedPrimary.caught &&
-      undefinedPrimary.failure === undefined &&
-      undefinedPrimary.order.join(",") === fullOrder &&
-      undefinedStandalone.caught &&
-      undefinedStandalone.failure === undefined &&
-      undefinedStandalone.order.join(",") === fullOrder &&
-      undefinedCombined.caught &&
-      aggregateContainsExactly(undefinedCombined.failure, [
-        undefined,
-        undefined,
-      ]) &&
-      undefinedCombined.order.join(",") === fullOrder,
+    namedFacts([
+      ["successCaught", () => success.caught === false],
+      [
+        "successFailure",
+        () => success.caught === false && success.failure === undefined,
+      ],
+      [
+        "successOrderJoin",
+        () =>
+          success.caught === false &&
+          success.failure === undefined &&
+          success.order.join(",") === fullOrder,
+      ],
+      ["primaryOnlyCaught", () => primaryOnly.caught],
+      [
+        "primaryOnlyFailurePrimaryFailure",
+        () => primaryOnly.failure === primaryFailure,
+      ],
+      ["primaryOnlyOrderJoin", () => primaryOnly.order.join(",") === fullOrder],
+      ["standaloneCaught", () => standalone.caught],
+      [
+        "standaloneFailureUnlinkFailure",
+        () => standalone.failure === unlinkFailure,
+      ],
+      ["standaloneOrderJoin", () => standalone.order.join(",") === fullOrder],
+      ["multipleCaught", () => multiple.caught],
+      [
+        "aggregateContainsExactlyMultipleFailure",
+        () =>
+          aggregateContainsExactly(multiple.failure, [
+            unlinkFailure,
+            renameFailure,
+          ]),
+      ],
+      [
+        "multipleMessageIncludes",
+        () => multiple.message.includes("resource-0"),
+      ],
+      [
+        "multipleMessageIncludes2",
+        () => multiple.message.includes("resource-1"),
+      ],
+      ["multipleOrderJoin", () => multiple.order.join(",") === fullOrder],
+      ["combinedCaught", () => combined.caught],
+      [
+        "aggregateContainsExactlyCombinedFailure",
+        () =>
+          aggregateContainsExactly(combined.failure, [
+            primaryFailure,
+            unlinkFailure,
+            renameFailure,
+          ]),
+      ],
+      ["combinedOrderJoin", () => combined.order.join(",") === fullOrder],
+      ["undefinedPrimaryCaught", () => undefinedPrimary.caught],
+      ["undefinedPrimaryFailure", () => undefinedPrimary.failure === undefined],
+      [
+        "undefinedPrimaryOrderJoin",
+        () => undefinedPrimary.order.join(",") === fullOrder,
+      ],
+      ["undefinedStandaloneCaught", () => undefinedStandalone.caught],
+      [
+        "undefinedStandaloneFailure",
+        () => undefinedStandalone.failure === undefined,
+      ],
+      [
+        "undefinedStandaloneOrderJoin",
+        () => undefinedStandalone.order.join(",") === fullOrder,
+      ],
+      ["undefinedCombinedCaught", () => undefinedCombined.caught],
+      [
+        "aggregateContainsExactlyUndefinedCombinedFailure",
+        () =>
+          aggregateContainsExactly(undefinedCombined.failure, [
+            undefined,
+            undefined,
+          ]),
+      ],
+      [
+        "undefinedCombinedOrderJoin",
+        () => undefinedCombined.order.join(",") === fullOrder,
+      ],
+    ]),
+    {
+      successCaught: true,
+      successFailure: true,
+      successOrderJoin: true,
+      primaryOnlyCaught: true,
+      primaryOnlyFailurePrimaryFailure: true,
+      primaryOnlyOrderJoin: true,
+      standaloneCaught: true,
+      standaloneFailureUnlinkFailure: true,
+      standaloneOrderJoin: true,
+      multipleCaught: true,
+      aggregateContainsExactlyMultipleFailure: true,
+      multipleMessageIncludes: true,
+      multipleMessageIncludes2: true,
+      multipleOrderJoin: true,
+      combinedCaught: true,
+      aggregateContainsExactlyCombinedFailure: true,
+      combinedOrderJoin: true,
+      undefinedPrimaryCaught: true,
+      undefinedPrimaryFailure: true,
+      undefinedPrimaryOrderJoin: true,
+      undefinedStandaloneCaught: true,
+      undefinedStandaloneFailure: true,
+      undefinedStandaloneOrderJoin: true,
+      undefinedCombinedCaught: true,
+      aggregateContainsExactlyUndefinedCombinedFailure: true,
+      undefinedCombinedOrderJoin: true,
+    },
   );
   TestValidator.equals(
     "production namespaces own the replacement-alias cleanup lifecycle",
@@ -265,13 +341,13 @@ export const test_mcp_production_namespace_alias_cleanup = (): void => {
             "letreplacementAliasFailure:IProductionNamespaceFixtureFailure|undefined;",
           substantive: {
             digest:
-              "5906bc9372d26a3fba63f5fa7813fc6e066a0a146e4ad567f03346eabdebe2d5",
-            tokens: 58,
+              "3335e4df811209f187399dcf60a68e696dbe4de53267efb4dd352422cd1ef933",
+            tokens: 90,
           },
           tryBody:
-            '{fs.symlinkSync(alphaDesignRoot,betaDesignRoot,process.platform==="win32"?"junction":"dir",);TestValidator.predicate("anopenedhandlerejectsalaterinternalnamespacealias",throws(()=>beta.design({kind:"production"}),"changedphysicalidentity",)&&alpha.summary().productionId==="fixture-film",);}',
+            '{fs.symlinkSync(alphaDesignRoot,betaDesignRoot,process.platform==="win32"?"junction":"dir",);TestValidator.equals("anopenedhandlerejectsalaterinternalnamespacealias",namedFacts([["throwsBetaDesign",()=>throws(()=>beta.design({kind:"production"}),"changedphysicalidentity",),],["alphaSummaryProductionId",()=>alpha.summary().productionId==="fixture-film",],]),{throwsBetaDesign:true,alphaSummaryProductionId:true},);}',
           tryDigest:
-            "86d20de7713cb4660fd7f953d97e1726d8ad59ef5e4658983c98cd7666ad242b",
+            "de31a70920ade48543648d1c61d1f6f923105471eaf7be8da147da688dbceef2",
         },
       ],
       parseDiagnostics: [],

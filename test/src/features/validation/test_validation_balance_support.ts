@@ -10,6 +10,7 @@ import { TestValidator } from "@nestia/e2e";
 import { makeMotion } from "../internal/fixtures";
 import {
   hasViolation,
+  namedFacts,
   nclose,
   validationHasNoWarnings,
   validationHasWarning,
@@ -135,9 +136,16 @@ export const test_validation_balance_support = (): void => {
     rejected.success === true
       ? (rejected.warnings ?? []).find((v) => v.path.includes("samples[0]"))
       : null;
-  TestValidator.predicate(
+  TestValidator.equals(
     "balance support overshoot",
-    first?.kind === "physics" && nclose(first.overshoot ?? -1, 0.25),
+    namedFacts([
+      ["firstKindPhysics", () => first?.kind === "physics"],
+      [
+        "ncloseFirstOvershoot",
+        () => first?.kind === "physics" && nclose(first.overshoot ?? -1, 0.25),
+      ],
+    ]),
+    { firstKindPhysics: true, ncloseFirstOvershoot: true },
   );
 
   // physicsIntent (wire-fu / a deliberately off-balance pose) suppresses it.

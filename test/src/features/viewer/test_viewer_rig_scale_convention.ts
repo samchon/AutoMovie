@@ -8,6 +8,7 @@ import { TestValidator } from "@nestia/e2e";
 import * as THREE from "three";
 
 import { IDENTITY_TRANSFORM, createModel } from "../internal/fixtures";
+import { namedFacts } from "../internal/predicates";
 
 const ROOT_ONLY: IAutoMovieSkeleton = {
   id: "root-only",
@@ -46,9 +47,16 @@ export const test_viewer_rig_scale_convention = (): void => {
     },
     ROOT_ONLY,
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "a pose-root scale is dropped while its translation applies",
-    model.object.position.x === 1 && model.object.scale.x === 1,
+    namedFacts([
+      ["modelObjectPosition", () => model.object.position.x === 1],
+      [
+        "modelObjectScale",
+        () => model.object.position.x === 1 && model.object.scale.x === 1,
+      ],
+    ]),
+    { modelObjectPosition: true, modelObjectScale: true },
   );
 
   // 2. bone-rest scale is dropped, its translation applies
@@ -72,8 +80,12 @@ export const test_viewer_rig_scale_convention = (): void => {
     },
   });
   const hips = built.bones.get("hips")!;
-  TestValidator.predicate(
+  TestValidator.equals(
     "a bone-rest scale is dropped while its translation applies",
-    hips.position.y === 1 && hips.scale.x === 1,
+    namedFacts([
+      ["hipsPositionY", () => hips.position.y === 1],
+      ["hipsScaleX", () => hips.position.y === 1 && hips.scale.x === 1],
+    ]),
+    { hipsPositionY: true, hipsScaleX: true },
   );
 };

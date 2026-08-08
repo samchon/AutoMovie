@@ -84,9 +84,18 @@ export const test_kinematics_decompose_joint = (): void => {
       ARM_AXES,
     );
     const back = decomposeJointRotation(q, ARM_AXES);
-    TestValidator.predicate(
+    TestValidator.equals(
       `gimbal ${abduction}° pins flexion 0, keeps abduction`,
-      back.flexion === 0 && Math.abs(Math.abs(back.abduction) - 90) < 1e-6,
+      namedFacts([
+        ["backFlexion", () => back.flexion === 0],
+        [
+          "absAbsBack",
+          () =>
+            back.flexion === 0 &&
+            Math.abs(Math.abs(back.abduction) - 90) < 1e-6,
+        ],
+      ]),
+      { backFlexion: true, absAbsBack: true },
     );
     TestValidator.predicate(
       `gimbal ${abduction}° still round-trips`,

@@ -2,7 +2,7 @@ import { stageScene } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import { makeScriptWrite, makeStagingWrite } from "../internal/filmFixtures";
-import { hasViolation } from "../internal/predicates";
+import { hasViolation, namedFacts } from "../internal/predicates";
 
 /**
  * Staging joins placed actors to the script cast by `node`, then chooses each
@@ -39,9 +39,17 @@ export const test_film_stage_scene_duplicate_script_nodes = (): void => {
     staged.success,
     false,
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "duplicate script cast node violation",
-    staged.success === false &&
-      hasViolation(staged, "type", "$script.cast[1].node"),
+    namedFacts([
+      ["refused", () => staged.success === false],
+      [
+        "violated",
+        () =>
+          staged.success === false &&
+          hasViolation(staged, "type", "$script.cast[1].node"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 };

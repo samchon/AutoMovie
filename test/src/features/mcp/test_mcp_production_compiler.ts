@@ -2171,6 +2171,155 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
         "  });",
       ].join("\n"),
     );
+    // Linking widened what a shot may import, so the refusals that bound it
+    // have to be exercised through the compiler rather than only through the
+    // linker: a rule the compiler never applies is not a rule.
+    fs.writeFileSync(
+      sourcePath,
+      `import { missing } from "../units/missing";
+${original}`,
+    );
+    TestValidator.predicate(
+      "a shot importing a module that does not exist is refused",
+      diagnosticCodes(compiler.compile({ scope: "source" })).has(
+        "source-import-unresolved",
+      ),
+    );
+    fs.writeFileSync(
+      sourcePath,
+      `import { readFileSync } from "node:fs";
+${original}`,
+    );
+    TestValidator.predicate(
+      "a shot importing outside the project is still refused",
+      diagnosticCodes(compiler.compile({ scope: "source" })).has(
+        "source-import-unsupported",
+      ),
+    );
+    fs.writeFileSync(sourcePath, original);
+
+    // The film edit is the same kind of deterministic source as a shot, and
+    // `SOURCE_COMPOSITION.md` tells an author to assemble it by walking the
+    // same table its shots derive from. It therefore links the same way: a
+    // missing import is refused at compile time by the rule that owns imports,
+    // not met as an unavailable module once the sandbox is already running.
+    const filmSourcePath = path.join(fixture.root, "src/film.ts");
+    const linkedFilmSource = fs.readFileSync(filmSourcePath, "utf8");
+    fs.writeFileSync(
+      filmSourcePath,
+      `import { headHandleFrames } from "./editTable";
+${linkedFilmSource}`,
+    );
+    TestValidator.predicate(
+      "a film edit importing a module that does not exist is refused",
+      diagnosticCodes(compiler.compile({ scope: "source" })).has(
+        "source-import-unresolved",
+      ),
+    );
+    const editTablePath = path.join(fixture.root, "src/editTable.ts");
+    fs.writeFileSync(editTablePath, "export const headHandleFrames = 0;\n");
+    fs.writeFileSync(
+      filmSourcePath,
+      `import { headHandleFrames } from "./editTable";
+${mutate(
+  linkedFilmSource,
+  "head: { frame: 0 }",
+  "head: { frame: headHandleFrames }",
+)}`,
+    );
+    TestValidator.equals(
+      "a film edit reads the table module it imports",
+      namedFacts([
+        [
+          "sourceImportUnresolved",
+          () =>
+            diagnosticCodes(compiler.compile({ scope: "source" })).has(
+              "source-import-unresolved",
+            ) === false,
+        ],
+        [
+          "sourceExecutionFailed",
+          () =>
+            diagnosticCodes(compiler.compile({ scope: "source" })).has(
+              "source-execution-failed",
+            ) === false,
+        ],
+      ]),
+      { sourceImportUnresolved: true, sourceExecutionFailed: true },
+    );
+    fs.rmSync(editTablePath);
+    fs.writeFileSync(filmSourcePath, linkedFilmSource);
+
+    // The sandbox reimplements the subject vocabulary rather than loading it,
+    // so a group whose `render` composes its members only works if the
+    // stand-in composes them the same way the engine does. Nothing else
+    // executes that stand-in: the starter's shot stages one performer, not a
+    // group. Here the shot's actor and its clip both arrive through a group,
+    // so a stand-in that dropped either key would leave the clip the
+    // performance references unbuilt and the compile would say so.
+    const beforeEnsemble = [
+      ...diagnosticCodes(compiler.compile({ scope: "source" })),
+    ].sort(compareCodeUnits);
+    const ensemblePath = path.join(fixture.root, "src/units/ensemble.ts");
+    fs.writeFileSync(
+      ensemblePath,
+      `import {
+  AutoMovieSubject,
+  AutoMovieSubjectGroup,
+  type IAutoMovieSubjectContribution,
+} from "@automovie/engine";
+import type { IAutoMovieShotBuildContext } from "@automovie/interface";
+
+import { sentinel } from "./sentinel";
+
+class Staged extends AutoMovieSubject<null> {
+  public readonly id = "staged";
+
+  public design(): null {
+    return null;
+  }
+
+  public render(
+    context: IAutoMovieShotBuildContext,
+  ): IAutoMovieSubjectContribution {
+    return sentinel.render(context, { from: 0 });
+  }
+}
+
+export class Ensemble extends AutoMovieSubjectGroup<null, Staged> {
+  public readonly id = "ensemble";
+
+  public design(): null {
+    return null;
+  }
+
+  public members(): readonly Staged[] {
+    return [new Staged()];
+  }
+}
+
+export const ensemble = new Ensemble();
+`,
+    );
+    fs.writeFileSync(
+      sourcePath,
+      mutate(
+        `import { ensemble } from "../units/ensemble";
+${original}`,
+        "const performer = sentinel.render(context, { from: openingAbduction });",
+        "const performer = ensemble.render(context);",
+      ),
+    );
+    TestValidator.equals(
+      "a shot stages what a subject group composes from its members",
+      [...diagnosticCodes(compiler.compile({ scope: "source" }))].sort(
+        compareCodeUnits,
+      ),
+      beforeEnsemble,
+    );
+    fs.rmSync(ensemblePath);
+    fs.writeFileSync(sourcePath, original);
+
     fs.writeFileSync(sourcePath, getterSource);
     TestValidator.predicate(
       "returned getters are snapshotted inside the VM timeout",
@@ -2178,9 +2327,13 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
         "source-execution-timeout",
       ),
     );
+    // The actor is authored by the subject class rather than spelled in the
+    // shot, so the mutation retargets the returned program instead of the
+    // literal. What the case pins is unchanged: a staged actor naming a model
+    // the compiler did not build is refused.
     fs.writeFileSync(
       sourcePath,
-      mutate(original, 'model: "sentinel",', 'model: "absent-model",'),
+      mutateSourceOutput('  output.actors[0].model = "absent-model";'),
     );
     TestValidator.predicate(
       "compiled scenes cannot reference an absent model",
@@ -2239,11 +2392,10 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
 
     fs.writeFileSync(
       sourcePath,
-      mutate(
-        original,
-        "    skeleton: model.skeleton.id,\n    duration:",
-        '    skeleton: "missing-skeleton",\n    duration:',
-      ),
+      // The clip is authored by the subject class, so the mutation retargets
+      // the returned program. What the case pins is unchanged: a motion naming
+      // a skeleton the compiler did not build is refused.
+      mutateSourceOutput('  output.clips[0].skeleton = "missing-skeleton";'),
     );
     const missingSkeleton = compiler.compile({ scope: "source" });
     const missingSkeletonIsRejected = missingSkeleton.diagnostics.some(

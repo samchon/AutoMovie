@@ -8,7 +8,7 @@ import {
   makeMotion,
   makePose,
 } from "../internal/fixtures";
-import { nclose } from "../internal/predicates";
+import { namedFacts, nclose } from "../internal/predicates";
 
 const rest = makePose([joint("leftLowerArm", { flexion: 0 })]);
 
@@ -45,9 +45,16 @@ export const test_motion_sample_expression_blendshapes = (): void => {
     1,
   );
   const blended = sampleMotion(clip, 0.5).expression;
-  TestValidator.predicate(
+  TestValidator.equals(
     "blendshapes present",
-    blended !== null && blended.blendshapes !== null,
+    namedFacts([
+      ["blended", () => blended !== null],
+      [
+        "blendedBlendshapes",
+        () => blended !== null && blended.blendshapes !== null,
+      ],
+    ]),
+    { blended: true, blendedBlendshapes: true },
   );
 
   const channels = new Map(
