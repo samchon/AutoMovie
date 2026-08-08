@@ -2,7 +2,10 @@ import type {
   IAutoMovieDesignMutationOutput,
   IAutoMovieDesignTarget,
 } from "@automovie/interface";
-import { AutoMovieProductionProject } from "@automovie/mcp";
+import {
+  AutoMovieProductionProject,
+  findAutoMovieProjectRoot,
+} from "@automovie/mcp";
 
 import config from "../automovie.config";
 import { army } from "../src/formations/army";
@@ -22,9 +25,13 @@ import { signalField } from "../src/world/signalField";
  *
  * This runs outside the compile sandbox on purpose: it performs filesystem I/O,
  * which a shot or film build function must never do.
+ *
+ * The workspace is located from the working directory the same way `npm run
+ * compile` locates it, so running this from a subdirectory reaches the same
+ * project rather than failing on a root it happened to be started in.
  */
 const project = AutoMovieProductionProject.open(
-  process.cwd(),
+  findAutoMovieProjectRoot(process.cwd()),
   config.productionId,
 );
 
