@@ -55,6 +55,10 @@ Run with `pnpm --filter @automovie/test start`; type-check with `pnpm --filter @
 
 **A case that arranges its own subject must fail when the arrangement fails.** A refusal case that rewrites scaffold source by string anchor, an oracle injected into a fixture, a probe spliced into a generated file: when the anchor is gone, `String.replace` returns the input and the case proceeds against unmutated material, so it does not go red, it quietly starts asserting something else. Route every such rewrite through a helper that throws when it changed nothing, rather than trusting that the anchor still exists.
 
+**A structural guard re-pins from the failure's own output, never from a hash you found nearby.** Guards that pin a source digest, a statement index or a token count go red on every legitimate edit to the file they read, which is what they are for. Read the reported actual value at its own key and replace the expected value at that key; picking hashes out of the surrounding text in output order writes a real digest into the wrong field and produces a guard that passes while measuring nothing.
+
+**A new compiler obligation is first a claim about every existing fixture.** A gate the compiler did not have is a gate no fixture was written against, so the first run after adding one reports defects the fixtures were already carrying. Read each as a finding about the fixture before treating it as evidence the gate is too strict; a fixture is the cheapest place a real contradiction shows up.
+
 ## Coverage is always 100%
 
 Coverage is held at **100% on statements, branches, functions, and lines** at all times, across the whole measured set: `engine`, `face`, `ingest`, `render`, and `mcp` (see the `--src` list in the `coverage` script). Measure with `pnpm --filter @automovie/test coverage` (c8 writes only under `node_modules/.cache/`; an absolute `/tmp` path silently measured nothing on Windows. Never leave `coverage/` or `.nyc_output/` in the tree, and never paper over them with `.gitignore`). The `test` CI workflow gates this: a drop fails the build.
