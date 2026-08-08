@@ -165,6 +165,28 @@ const scaffoldJson = <T>(relative: string): T =>
     fs.readFileSync(path.resolve(scaffoldAssetDirectory(), relative), "utf8"),
   ) as T;
 
+/**
+ * Rewrite fixture source by anchor, refusing to return it unchanged.
+ *
+ * A case that arranges its own subject must fail when the arrangement fails.
+ * `String.replace` answers a missing anchor by handing the input back, so the
+ * case stays green and quietly starts asserting something else: the probe this
+ * helper exists for stopped being injected the moment the shot moved its rig
+ * lookup into a subject, and nothing went red.
+ */
+export const rewriteSource = (
+  source: string,
+  from: string,
+  to: string,
+): string => {
+  const next = source.replace(from, to);
+  if (next === source)
+    throw new Error(
+      `Fixture source no longer contains ${JSON.stringify(from)}.`,
+    );
+  return next;
+};
+
 const definedShotContract = (
   contract: IAutoMovieShotContract,
 ): Omit<IAutoMovieShotContract, "id" | "source"> => {

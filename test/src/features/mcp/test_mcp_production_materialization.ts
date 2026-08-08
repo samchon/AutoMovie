@@ -32,6 +32,7 @@ import {
   modelRecipe,
   productionCompileSucceeded,
   productionFixture,
+  rewriteSource,
   setProductionFixtureShotContract,
   shotContract,
   worldDesign,
@@ -880,15 +881,40 @@ export const test_mcp_production_materialization = (): void => {
       ],
     });
     const openingSourcePath = path.join(fixture.root, "src/shots/opening.ts");
-    const openingSource = fs
-      .readFileSync(openingSourcePath, "utf8")
-      .replace(
-        "  const model = context.runtimeModels.sentinel;",
-        `  const boundary = context.engine.formationSlot("${highCount.id}", ${highCount.count - 1});
+    const anchor =
+      "  const performer = sentinel.render(context, { from: openingAbduction });";
+    const openingSource = rewriteSource(
+      // The unit is 1024 files across, far wider than the field the starter's
+      // world derives for its own army. A shot must stage ground that carries
+      // what it stages, so this fixture stages its own; the compiler's own
+      // gate is what proves the number is large enough.
+      rewriteSource(
+        fs.readFileSync(openingSourcePath, "utf8"),
+        "      space: signalField.space(),",
+        `      space: {
+        id: "high-count-space",
+        surfaces: [
+          {
+            id: "ground",
+            kind: "floor" as const,
+            polygon: [
+              { x: -512, y: 0, z: -512 },
+              { x: 512, y: 0, z: -512 },
+              { x: 512, y: 0, z: 512 },
+              { x: -512, y: 0, z: 512 },
+            ],
+            anchor: { x: 0, y: 0, z: 0 },
+            rampTo: null,
+          },
+        ],
+        walkable: ["ground"],
+      },`,
+      ),
+      anchor,
+      `  const boundary = context.engine.formationSlot("${highCount.id}", ${highCount.count - 1});
   if (boundary.slot !== ${highCount.count - 1}) throw new Error("formation slot mismatch");
-  const model = context.runtimeModels.sentinel;`,
-      )
-      .replaceAll('"army"', `"${highCount.id}"`);
+${anchor}`,
+    ).replaceAll('"army"', `"${highCount.id}"`);
     fs.writeFileSync(openingSourcePath, openingSource);
     const highCountCompile = compiler.compile({ scope: "source" });
     const highCountCompileSucceeded = productionCompileSucceeded(

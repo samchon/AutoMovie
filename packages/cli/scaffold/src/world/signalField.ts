@@ -6,6 +6,8 @@ import {
 } from "@automovie/engine";
 import type {
   IAutoMovieShotBuildContext,
+  IAutoMovieSpace,
+  IAutoMovieSurface,
   IAutoMovieWorldDesign,
 } from "@automovie/interface";
 
@@ -25,6 +27,19 @@ import { army } from "../formations/army";
 export abstract class WorldPiece extends AutoMovieSubject<IAutoMovieSubjectContribution> {
   /** What this piece puts into the world, independent of any shot. */
   public abstract place(): IAutoMovieSubjectContribution;
+
+  /**
+   * The standable patches this piece contributes to a staged scene, if any.
+   *
+   * A world surface and a scene surface are two readings of one piece of
+   * ground: the first answers where the terrain is, the second is what the
+   * engine stands feet on and what the viewer draws. A piece that is ground
+   * answers both from the same measurement; a landmark or an effect region is
+   * neither and answers with nothing.
+   */
+  public patches(): readonly IAutoMovieSurface[] {
+    return [];
+  }
 
   public design(): IAutoMovieSubjectContribution {
     return this.place();
@@ -80,6 +95,37 @@ export class SignalGround extends WorldPiece {
         },
       ],
     };
+  }
+
+  /**
+   * The same square, as the patch a scene stands on and the viewer draws.
+   *
+   * Measured once. A shot that spelled these corners out again would be a
+   * second ground beside this one, and the second is the one that decides
+   * pixels: the scene keeps the space a shot staged, and the viewer builds its
+   * meshes from it. That is how a field corrected in the design record went on
+   * drawing a floor a third the size of the unit standing on it.
+   *
+   * @evidence docs/world/signal-field.md Requires the ranks to end inside the
+   *   place, which is a claim about the ground the audience sees.
+   */
+  public patches(): readonly IAutoMovieSurface[] {
+    const half = this.halfExtent();
+    return [
+      {
+        id: this.id,
+        kind: "floor",
+        // Only `x` and `z` are read; the height comes from the anchor.
+        polygon: [
+          { x: -half, y: 0, z: -half },
+          { x: half, y: 0, z: -half },
+          { x: half, y: 0, z: half },
+          { x: -half, y: 0, z: half },
+        ],
+        anchor: { x: 0, y: 0, z: 0 },
+        rampTo: null,
+      },
+    ];
   }
 }
 
@@ -184,6 +230,26 @@ export class SignalField extends AutoMovieSubjectGroup<
 
   public members(): readonly WorldPiece[] {
     return [this.ground, this.mark, this.smoke];
+  }
+
+  /**
+   * The space a shot stages, composed from the pieces that are ground.
+   *
+   * A shot names the world and stands on it rather than restating its corners.
+   * Everything a piece calls a patch is walkable here, because this world has
+   * no standable-but-forbidden top; a world that grows one states it where the
+   * piece is defined rather than here.
+   *
+   * @evidence docs/world/signal-field.md Requires one open level place, which
+   *   is what a shot stands its figures on.
+   */
+  public space(): IAutoMovieSpace {
+    const surfaces = this.members().flatMap((piece) => [...piece.patches()]);
+    return {
+      id: `${this.id}-space`,
+      surfaces,
+      walkable: surfaces.map((surface) => surface.id),
+    };
   }
 
   /**

@@ -2,6 +2,7 @@ import {
   IAutoMovieActorContext,
   compileDefinedShot,
   defineShot,
+  isWalkable,
   makeActorSynthesizer,
   realizeShotContract,
   validateModel,
@@ -20,6 +21,7 @@ import {
   IAutoMovieCompileProjectOutput,
   IAutoMovieCompiledContractRealization,
   IAutoMovieCompiledFilmEdit,
+  IAutoMovieCompiledFormation,
   IAutoMovieCompiledShotSource,
   IAutoMovieDefinedShotContract,
   IAutoMovieDiagnostic,
@@ -41,6 +43,7 @@ import {
   IAutoMovieProductionRenderReceipt,
   IAutoMovieProductionShotProgram,
   IAutoMovieReviewQueue,
+  IAutoMovieScene,
   IAutoMovieScreenplayIndex,
   IAutoMovieShotBuildContext,
   IAutoMovieShotContract,
@@ -2788,6 +2791,7 @@ const validateCompiledShot = (
     validateShotArtifact(value.shot, value.scene, motionIds),
   );
   diagnostics.push(...validateAutoMovieFormationMotions(contract, value));
+  diagnostics.push(...validateAutoMovieFormationGround(contract, value));
   diagnostics.push(...validateAutoMovieEffects(contract, value));
   for (const model of value.models)
     appendValidation(diagnostics, id, validateModel({ model }));
@@ -2810,6 +2814,62 @@ const validateCompiledShot = (
       );
     else
       appendValidation(diagnostics, id, validateMotion({ motion, skeleton }));
+  }
+  return diagnostics;
+};
+
+/**
+ * Refuse a staged unit the ground it was staged on does not carry.
+ *
+ * A shot's space is what the scene keeps and what the viewer turns into real
+ * meshes, so a formation reaching past it is a unit standing over a void. That
+ * is not caught by the world design: a world surface is authored terrain and is
+ * a different record from the space a shot stages, which is how a field
+ * corrected in one went on drawing a floor a third the size of its unit in the
+ * other.
+ *
+ * The bounds are the compiler's own and the containment question goes to the
+ * engine that owns it, so this compares two existing answers rather than
+ * deriving a third that could disagree with both.
+ *
+ * A shot that stages no space is not measured. The engine then falls back to
+ * the scalar ground plane it assumed before spaces existed, and there is no
+ * authored extent for a unit to leave.
+ *
+ * This measures the unit where it was staged, not where a cue takes it. A
+ * formation motion translates and rescales the whole unit, so one that advances
+ * off the staged ground is the same defect and is not caught here; the bounds
+ * under a sampled cue are `transformFormationBounds`, which is private to the
+ * oracle service today and has to gain one owner before this can ask it.
+ */
+export const validateAutoMovieFormationGround = (
+  contract: Pick<IAutoMovieShotContract, "id">,
+  value: {
+    scene: Pick<IAutoMovieScene, "space">;
+    formations: ReadonlyArray<
+      Pick<IAutoMovieCompiledFormation, "id" | "bounds">
+    >;
+  },
+): IAutoMovieDiagnostic[] => {
+  const space = value.scene.space;
+  if (space === undefined || space === null) return [];
+  const diagnostics: IAutoMovieDiagnostic[] = [];
+  for (const formation of value.formations) {
+    const { min, max } = formation.bounds;
+    const outside = [
+      { x: min.x, z: min.z },
+      { x: max.x, z: min.z },
+      { x: max.x, z: max.z },
+      { x: min.x, z: max.z },
+    ].find((corner) => isWalkable(space, corner.x, corner.z) === false);
+    if (outside === undefined) continue;
+    diagnostics.push(
+      engineDiagnostic(
+        contract.id,
+        `formation:${formation.id}.bounds`,
+        `must stand on the space this shot staged, but the unit reaches (${outside.x}, ${outside.z}) where no walkable surface carries it`,
+      ),
+    );
   }
   return diagnostics;
 };

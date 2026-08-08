@@ -6,6 +6,7 @@ import type {
 } from "@automovie/interface";
 
 import { sentinel } from "../units/sentinel";
+import { signalField } from "../world/signalField";
 
 const OPENING_CONTRACT: IAutoMovieDefinedShotContract = {
   beat: "signal",
@@ -225,24 +226,10 @@ const buildSignal = (
           intensity: 2.5,
         },
       ],
-      space: {
-        id: "ground-space",
-        surfaces: [
-          {
-            id: "ground",
-            kind: "floor",
-            polygon: [
-              { x: -8, y: 0, z: -8 },
-              { x: 8, y: 0, z: -8 },
-              { x: 8, y: 0, z: 8 },
-              { x: -8, y: 0, z: 8 },
-            ],
-            anchor: { x: 0, y: 0, z: 0 },
-            rampTo: null,
-          },
-        ],
-        walkable: ["ground"],
-      },
+      // The world owns its ground, and the ground derives its extent from the
+      // unit standing on it. A polygon spelled out here would be a second
+      // field, and it is the one the viewer draws.
+      space: signalField.space(),
     },
     blocking: {
       beat: context.contract.beat,
