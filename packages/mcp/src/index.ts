@@ -13,6 +13,7 @@ export * from "./production/AutoMovieProductionReviewService";
 export * from "./production/captureRuntimeIdentity";
 export * from "./production/contentIdentity";
 export * from "./production/filmTimeline";
+export * from "./production/linkProductionSource";
 export * from "./production/materializeProduction";
 export * from "./production/probeProductionMedia";
 export * from "./production/muxProductionFeatureMp4";
