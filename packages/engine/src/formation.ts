@@ -1,5 +1,6 @@
 import {
   IAutoMovieCompiledFormationLod,
+  IAutoMovieFormationBounds,
   IAutoMovieFormationDesign,
   IAutoMovieFormationMotion,
   IAutoMovieFormationMotionState,
@@ -207,11 +208,11 @@ export const transformFormationPoint = (
  * private copy in one of them is how the two come to disagree.
  */
 export const transformFormationBounds = (
-  bounds: { min: IAutoMovieVector3; max: IAutoMovieVector3 },
+  bounds: IAutoMovieFormationBounds,
   anchor: IAutoMovieVector3,
   motion: IAutoMovieFormationMotionState,
   baseFacingDeg = 0,
-): { min: IAutoMovieVector3; max: IAutoMovieVector3 } => {
+): IAutoMovieFormationBounds => {
   const corners = [bounds.min.x, bounds.max.x].flatMap((x) =>
     [bounds.min.y, bounds.max.y].flatMap((y) =>
       [bounds.min.z, bounds.max.z].map((z) =>
