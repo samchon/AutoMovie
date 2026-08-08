@@ -14,9 +14,6 @@ import { sentinel } from "./sentinel";
  * not an individual inside it. So this subject renders nothing on its own and
  * the formation that holds it is what a shot stages. What it owns is the
  * member's measured facts and the LOD ladder those facts imply.
- *
- * @evidence docs/characters/army.md Implements the member scale and the
- *   rank-and-file readability that specification requires at every distance.
  */
 export class ArmyMember extends AutoMovieSubject<IAutoMovieModelRecipe> {
   public readonly id = "army-hero";
@@ -25,9 +22,6 @@ export class ArmyMember extends AutoMovieSubject<IAutoMovieModelRecipe> {
    * A head, in metres, at this production's human scale.
    *
    * The one place the phrase "a head shorter" becomes a number.
-   *
-   * @evidence docs/characters/army.md Uses a head as its unit of difference
-   *   between the member and the sentinel.
    */
   public static readonly HEAD = 0.1;
 
@@ -37,9 +31,6 @@ export class ArmyMember extends AutoMovieSubject<IAutoMovieModelRecipe> {
    * "A head shorter than the sentinel" is the specification's own phrasing, so
    * it is derived from the sentinel rather than restated as a second number
    * that could drift from it.
-   *
-   * @evidence docs/characters/army.md States members are a head shorter than
-   *   the sentinel so the two subjects read apart without a scale break.
    */
   public readonly height = sentinel.height - ArmyMember.HEAD;
 
@@ -92,5 +83,13 @@ export class ArmyMember extends AutoMovieSubject<IAutoMovieModelRecipe> {
   }
 }
 
-/** The production's one army-member recipe. */
+/**
+ * The production's one army-member recipe.
+ *
+ * Carries the subject's citation until a class can carry its own
+ * (samchon/ttsc#1121).
+ *
+ * @evidence docs/characters/army.md Implements the member scale and the
+ *   rank-and-file readability that specification requires at every distance.
+ */
 export const armyHero = new ArmyMember();

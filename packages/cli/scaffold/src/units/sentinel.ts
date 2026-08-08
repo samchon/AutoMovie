@@ -14,10 +14,6 @@ import type {
  * field can cite the line of the specification that fixes it; the capability is
  * a method, because a capability nobody can call is a string that claims work
  * the source never did.
- *
- * @evidence docs/characters/sentinel.md Implements the silhouette, scale, and
- *   single capability that specification states, and claims nothing it does
- *   not.
  */
 export class Sentinel extends AutoMovieSubject<IAutoMovieModelRecipe> {
   public readonly id = "sentinel";
@@ -28,9 +24,6 @@ export class Sentinel extends AutoMovieSubject<IAutoMovieModelRecipe> {
    * Every other subject states its size against this number rather than against
    * a second opinion, which is why it is public: a subject that needs human
    * scale reads it from here instead of restating 1.8.
-   *
-   * @evidence docs/characters/sentinel.md States 1.8 m, taller than the ranks
-   *   by design, so the figure ahead of the line reads as the one to follow.
    */
   public readonly height = 1.8;
 
@@ -40,9 +33,6 @@ export class Sentinel extends AutoMovieSubject<IAutoMovieModelRecipe> {
    * The specification says the arm is raised and held; this is what "raised"
    * measures, kept here so a shot that wants a partly raised arm scales one
    * declared extent rather than inventing an angle.
-   *
-   * @evidence docs/characters/sentinel.md States the figure raises and holds
-   *   one arm, which is the travel this value measures.
    */
   public readonly signalAbduction = 110;
 
@@ -52,9 +42,6 @@ export class Sentinel extends AutoMovieSubject<IAutoMovieModelRecipe> {
    * The gesture has to be complete while the event that measures it is sampled,
    * so this is the subject's own claim about its timing rather than a number
    * each shot rediscovers.
-   *
-   * @evidence docs/characters/sentinel.md States the arm is raised and held,
-   *   which is a claim that the raise finishes before the hold begins.
    */
   public readonly arrivalSeconds = 2;
 
@@ -226,5 +213,16 @@ export class Sentinel extends AutoMovieSubject<IAutoMovieModelRecipe> {
   }
 }
 
-/** The production's one sentinel. */
+/**
+ * The production's one sentinel.
+ *
+ * The subject's citation lives on the instance rather than on {@link Sentinel}
+ * itself, because `@ttsc/evidence` does not yet select a class as a unit
+ * (samchon/ttsc#1121). Its measured facts cannot cite at all for the same
+ * reason, so this one tag answers for the whole subject until they can.
+ *
+ * @evidence docs/characters/sentinel.md Implements the silhouette, the scale,
+ *   and the single capability that specification states, and claims nothing it
+ *   does not.
+ */
 export const sentinel = new Sentinel();

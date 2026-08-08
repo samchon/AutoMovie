@@ -41,9 +41,6 @@ export abstract class WorldPiece extends AutoMovieSubject<IAutoMovieSubjectContr
  * Its extent is one number rather than four corners, because the shape the
  * specification asks for is a square of open ground and a polygon spelled out
  * corner by corner is four chances to disagree with itself.
- *
- * @evidence docs/world/signal-field.md Implements the open level ground and
- *   the extent that specification requires the ranks to end inside.
  */
 export class SignalGround extends WorldPiece {
   public readonly id = "ground";
@@ -55,9 +52,6 @@ export class SignalGround extends WorldPiece {
    * states the requirement as a relation — the ranks must end inside frame —
    * and `army.footprint()` now makes that relation checkable, which is a
    * separate question from what this starter ships.
-   *
-   * @evidence docs/world/signal-field.md States the extent must contain the
-   *   army's ranks at the film's widest shot.
    */
   public readonly halfExtent = 10;
 
@@ -87,9 +81,6 @@ export class SignalGround extends WorldPiece {
  * A landmark exists so a shot contract can say where the gesture happened
  * without restating a coordinate, which is exactly why it is a subject with an
  * id rather than three numbers inside a shot.
- *
- * @evidence docs/world/signal-field.md Names `signal-ground` as the point a
- *   shot contract cites instead of restating a coordinate.
  */
 export class SignalGroundMark extends WorldPiece {
   public readonly id = "signal-ground";
@@ -117,9 +108,6 @@ export class SignalGroundMark extends WorldPiece {
  * The recipe and the zone travel together because neither means anything alone:
  * a recipe nothing activates is dead configuration, and a zone with no recipe
  * has nothing to emit.
- *
- * @evidence docs/world/signal-field.md States the field carries no feature
- *   that competes with a silhouette, which is the budget this stays inside.
  */
 export class BattleSmoke extends WorldPiece {
   public readonly id = "signal-smoke";
@@ -174,9 +162,6 @@ export class BattleSmoke extends WorldPiece {
  * The world is a group like any other: it holds pieces and is composed from
  * them. Its record is the merge of what its pieces place, so adding a hill
  * means adding a piece rather than editing an array in the middle of a blob.
- *
- * @evidence docs/world/signal-field.md Implements the open level ground, the
- *   named ground point, and the extent that specification requires.
  */
 export class SignalField extends AutoMovieSubjectGroup<
   IAutoMovieWorldDesign,
@@ -215,5 +200,13 @@ export class SignalField extends AutoMovieSubjectGroup<
   }
 }
 
-/** The production's one world. */
+/**
+ * The production's one world.
+ *
+ * Carries the citation for the field and every piece standing on it, until a
+ * class can carry its own (samchon/ttsc#1121).
+ *
+ * @evidence docs/world/signal-field.md Implements the open level ground, the
+ *   named ground point, and the extent that specification requires.
+ */
 export const signalField = new SignalField();

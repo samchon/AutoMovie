@@ -19,9 +19,6 @@ import { ArmyMember, armyHero } from "../units/armyHero";
  *
  * The seed is declared here rather than chosen in source, so the same design
  * always materializes the same army.
- *
- * @evidence docs/characters/army.md Implements the ranks-and-files silhouette
- *   and the cohesion that specification requires while the signal is given.
  */
 export class Army extends AutoMovieSubjectGroup<
   IAutoMovieFormationDesign,
@@ -35,9 +32,6 @@ export class Army extends AutoMovieSubjectGroup<
    * Authored rather than derived from ranks times files, because the last rank
    * is deliberately short: a unit whose every rank is exactly full reads as a
    * lattice, and the silhouette this specification asks for is a real edge.
-   *
-   * @evidence docs/characters/army.md Requires the unit to read by its edges
-   *   and its intervals.
    */
   public readonly count = 2049;
 
@@ -53,18 +47,10 @@ export class Army extends AutoMovieSubjectGroup<
    * The specification says anything that destroys the interval destroys the
    * subject, which makes this the unit's load-bearing measurement rather than a
    * layout convenience.
-   *
-   * @evidence docs/characters/army.md States the unit reads by its edges and
-   *   its intervals.
    */
   public readonly spacing = { lateral: 0.5, depth: 1 };
 
-  /**
-   * The deterministic seed every per-member variation is drawn from.
-   *
-   * @evidence docs/characters/army.md Requires that any loosening be authored
-   *   rather than left to chance, which a declared seed is what enforces.
-   */
+  /** The deterministic seed every per-member variation is drawn from. */
   public readonly seed = 1415;
 
   public members(): readonly ArmyMember[] {
@@ -210,5 +196,13 @@ export class Army extends AutoMovieSubjectGroup<
   }
 }
 
-/** The production's one army. */
+/**
+ * The production's one army.
+ *
+ * Carries the subject's citation until a class can carry its own
+ * (samchon/ttsc#1121).
+ *
+ * @evidence docs/characters/army.md Implements the ranks-and-files silhouette
+ *   and the cohesion that specification requires while the signal is given.
+ */
 export const army = new Army();

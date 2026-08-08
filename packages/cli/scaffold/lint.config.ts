@@ -84,6 +84,11 @@ const graph: ITtscEvidenceGraphConfig = {
     // reference is every character spec, not the one this formation happens to
     // group, so a character nothing ever forms up is still an unpaid
     // obligation somewhere in the graph rather than a silent orphan.
+    //
+    // There is no separate population for actions. An action belongs to the
+    // subject that performs it — `Army.advance` is a method on the class the
+    // specification describes — and a choreography spanning subjects that
+    // belongs to none of them is a shot, which cites its scene instead.
     {
       type: "typescript",
       files: ["src/formations/*.ts"],
@@ -92,20 +97,6 @@ const graph: ITtscEvidenceGraphConfig = {
         type: "markdown",
         files: ["docs/characters/*.md"],
         symbol: "file",
-      },
-    },
-    // Source grounds source: an action cites the vocabulary it moves, so a
-    // drill cannot outlive the unit it was written for.
-    {
-      type: "typescript",
-      files: ["src/drills/*.ts"],
-      symbol: ["type", "property", "function"],
-      reference: {
-        // A drill cites the subject it moves, which is now a class rather
-        // than a factory function.
-        type: "typescript",
-        files: ["src/units/*.ts", "src/formations/*.ts"],
-        symbol: "type",
       },
     },
     // A shot realizes a scene. This is the join that stops a film from
