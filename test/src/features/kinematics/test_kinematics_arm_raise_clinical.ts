@@ -11,7 +11,7 @@ import {
 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { nclose } from "../internal/predicates";
+import { namedFacts, nclose } from "../internal/predicates";
 
 /**
  * The **clinical arm-raise semantics** the rest-frame decode must deliver on a
@@ -100,25 +100,52 @@ export const test_kinematics_arm_raise_clinical = (): void => {
   const shoulderR = yOf(pose([]), "rightUpperArm");
 
   // 1. at rest the hands hang level with the shoulders (a horizontal T-pose arm)
-  TestValidator.predicate(
+  TestValidator.equals(
     "at rest each hand sits at shoulder height",
-    nclose(yOf(pose([]), "leftHand"), shoulderL, 1e-9) &&
-      nclose(yOf(pose([]), "rightHand"), shoulderR, 1e-9),
+    namedFacts([
+      [
+        "ncloseYOfPose",
+        () => nclose(yOf(pose([]), "leftHand"), shoulderL, 1e-9),
+      ],
+      [
+        "ncloseYOfPose2",
+        () =>
+          nclose(yOf(pose([]), "leftHand"), shoulderL, 1e-9) &&
+          nclose(yOf(pose([]), "rightHand"), shoulderR, 1e-9),
+      ],
+    ]),
+    { ncloseYOfPose: true, ncloseYOfPose2: true },
   );
 
   // 2. clinical abduction 180 raises BOTH arms overhead with the same value; 0
   //    drops both: the no-mirror semantic the flip delivers.
   const up = pose([arm("leftUpperArm", 180), arm("rightUpperArm", 180)]);
-  TestValidator.predicate(
+  TestValidator.equals(
     "clinical abduction 180 lifts both hands overhead (same value, no mirror)",
-    yOf(up, "leftHand", true) > shoulderL + 0.3 &&
-      yOf(up, "rightHand", true) > shoulderR + 0.3,
+    namedFacts([
+      ["yOfUpLeftHand", () => yOf(up, "leftHand", true) > shoulderL + 0.3],
+      [
+        "yOfUpRightHand",
+        () =>
+          yOf(up, "leftHand", true) > shoulderL + 0.3 &&
+          yOf(up, "rightHand", true) > shoulderR + 0.3,
+      ],
+    ]),
+    { yOfUpLeftHand: true, yOfUpRightHand: true },
   );
   const down = pose([arm("leftUpperArm", 0), arm("rightUpperArm", 0)]);
-  TestValidator.predicate(
+  TestValidator.equals(
     "clinical abduction 0 lets both hands hang below the shoulders",
-    yOf(down, "leftHand", true) < shoulderL - 0.3 &&
-      yOf(down, "rightHand", true) < shoulderR - 0.3,
+    namedFacts([
+      ["yOfDownLeftHand", () => yOf(down, "leftHand", true) < shoulderL - 0.3],
+      [
+        "yOfDownRightHand",
+        () =>
+          yOf(down, "leftHand", true) < shoulderL - 0.3 &&
+          yOf(down, "rightHand", true) < shoulderR - 0.3,
+      ],
+    ]),
+    { yOfDownLeftHand: true, yOfDownRightHand: true },
   );
 
   // 3. the clinical read equals the pre-converted rig pose (left 180 ≡ rig 90,

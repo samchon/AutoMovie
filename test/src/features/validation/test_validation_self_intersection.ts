@@ -10,6 +10,7 @@ import { TestValidator } from "@nestia/e2e";
 import { makeMotion } from "../internal/fixtures";
 import {
   hasViolation,
+  namedFacts,
   nclose,
   validationHasNoWarnings,
   validationHasWarning,
@@ -126,9 +127,16 @@ export const test_validation_self_intersection = (): void => {
     rejected.success === true
       ? (rejected.warnings ?? []).find((v) => v.path.includes("samples[0]"))
       : null;
-  TestValidator.predicate(
+  TestValidator.equals(
     "self-intersection overshoot",
-    first?.kind === "physics" && nclose(first.overshoot ?? -1, 0.25),
+    namedFacts([
+      ["firstKindPhysics", () => first?.kind === "physics"],
+      [
+        "ncloseFirstOvershoot",
+        () => first?.kind === "physics" && nclose(first.overshoot ?? -1, 0.25),
+      ],
+    ]),
+    { firstKindPhysics: true, ncloseFirstOvershoot: true },
   );
 
   // physicsIntent (close choreography, a grapple) suppresses the warning.

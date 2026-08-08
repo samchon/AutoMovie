@@ -121,10 +121,21 @@ export const test_viewer_render_modes = (): void => {
         mesh.material.vertexShader.includes("skinning_vertex"),
     ),
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "depth renders over a black (far) background",
-    scene.background instanceof THREE.Color &&
-      scene.background.getHex() === 0x000000,
+    namedFacts([
+      [
+        "sceneBackgroundInstanceof",
+        () => scene.background instanceof THREE.Color,
+      ],
+      [
+        "sceneBackgroundGetHex",
+        () =>
+          scene.background instanceof THREE.Color &&
+          scene.background.getHex() === 0x000000,
+      ],
+    ]),
+    { sceneBackgroundInstanceof: true, sceneBackgroundGetHex: true },
   );
   depth.restore();
   TestValidator.predicate(
@@ -182,10 +193,21 @@ export const test_viewer_render_modes = (): void => {
         shell.material.vertexShader.includes("instanceMatrix"),
     ),
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "outline renders over a black background",
-    scene.background instanceof THREE.Color &&
-      scene.background.getHex() === 0x000000,
+    namedFacts([
+      [
+        "sceneBackgroundInstanceof",
+        () => scene.background instanceof THREE.Color,
+      ],
+      [
+        "sceneBackgroundGetHex",
+        () =>
+          scene.background instanceof THREE.Color &&
+          scene.background.getHex() === 0x000000,
+      ],
+    ]),
+    { sceneBackgroundInstanceof: true, sceneBackgroundGetHex: true },
   );
   outline.restore();
   TestValidator.equals(
@@ -250,10 +272,21 @@ export const test_viewer_render_modes = (): void => {
     0x000000,
   );
   mask.restore();
-  TestValidator.predicate(
+  TestValidator.equals(
     "mask restore returns materials and background",
-    meshes.every((mesh, i) => mesh.material === originals[i]) &&
-      scene.background === background,
+    namedFacts([
+      [
+        "meshesEveryMesh",
+        () => meshes.every((mesh, i) => mesh.material === originals[i]),
+      ],
+      [
+        "sceneBackgroundBackground",
+        () =>
+          meshes.every((mesh, i) => mesh.material === originals[i]) &&
+          scene.background === background,
+      ],
+    ]),
+    { meshesEveryMesh: true, sceneBackgroundBackground: true },
   );
 
   const pose = applyRenderMode(scene, "pose");
@@ -269,10 +302,21 @@ export const test_viewer_render_modes = (): void => {
     22,
   );
   pose.restore();
-  TestValidator.predicate(
+  TestValidator.equals(
     "pose restore removes the overlay and unhides",
-    scene.getObjectByName(POSE_OVERLAY_NAME) === undefined &&
-      meshes.every((mesh) => mesh.visible === true),
+    namedFacts([
+      [
+        "sceneGetObjectByNamePOSE_OVERLAY_NAME",
+        () => scene.getObjectByName(POSE_OVERLAY_NAME) === undefined,
+      ],
+      [
+        "meshesEveryMesh",
+        () =>
+          scene.getObjectByName(POSE_OVERLAY_NAME) === undefined &&
+          meshes.every((mesh) => mesh.visible === true),
+      ],
+    ]),
+    { sceneGetObjectByNamePOSE_OVERLAY_NAME: true, meshesEveryMesh: true },
   );
 
   TestValidator.predicate(

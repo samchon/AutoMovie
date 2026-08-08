@@ -68,9 +68,18 @@ export const test_kinematics_hinged_arm_articulation = (): void => {
   const solved = chain({ target: { x: 0.3, y: 0, z: 0.3 } });
   TestValidator.predicate("a target inside the span solves", solved !== null);
   if (solved !== null) {
-    TestValidator.predicate(
+    TestValidator.equals(
       "the mid joint rotates about the hinge and nothing else",
-      nclose(solved.lower.x, 0, 1e-12) && nclose(solved.lower.z, 0, 1e-12),
+      namedFacts([
+        ["ncloseSolvedLower", () => nclose(solved.lower.x, 0, 1e-12)],
+        [
+          "ncloseSolvedLower2",
+          () =>
+            nclose(solved.lower.x, 0, 1e-12) &&
+            nclose(solved.lower.z, 0, 1e-12),
+        ],
+      ]),
+      { ncloseSolvedLower: true, ncloseSolvedLower2: true },
     );
     TestValidator.predicate(
       "and the scored overshoot rides back out",
@@ -80,9 +89,13 @@ export const test_kinematics_hinged_arm_articulation = (): void => {
 
   // 2. BOUNDARY: past the span, the chain straightens
   const far = chain({ target: { x: 2, y: 0, z: 0 } });
-  TestValidator.predicate(
+  TestValidator.equals(
     "a target past the span clamps to the straight chain",
-    far !== null && nclose(far.lower.w, 1, 1e-9),
+    namedFacts([
+      ["far", () => far !== null],
+      ["ncloseFarLower", () => far !== null && nclose(far.lower.w, 1, 1e-9)],
+    ]),
+    { far: true, ncloseFarLower: true },
   );
 
   // 3. BOUNDARY: nearer than the fold, the chain folds shut. Folding a `+0.25X`

@@ -2,7 +2,7 @@ import { IAutoMovieScript } from "@automovie/interface";
 import { renderScreenplay } from "@automovie/render";
 import { TestValidator } from "@nestia/e2e";
 
-import { throwsError } from "../internal/predicates";
+import { namedFacts, throwsError } from "../internal/predicates";
 import { TREE_SCRIPT, screenplayNode } from "./test_render_screenplay";
 
 /**
@@ -22,15 +22,38 @@ import { TREE_SCRIPT, screenplayNode } from "./test_render_screenplay";
 export const test_render_screenplay_fallback = (): void => {
   const flat: IAutoMovieScript = { ...TREE_SCRIPT, tree: null };
   const text = renderScreenplay(flat);
-  TestValidator.predicate(
+  TestValidator.equals(
     "flat header from the script fields",
-    text.includes("LOGLINE: flat logline (ignored when a tree exists)") &&
-      text.includes("THEME: flat theme"),
+    namedFacts([
+      [
+        "textIncludesLOGLINE",
+        () =>
+          text.includes("LOGLINE: flat logline (ignored when a tree exists)"),
+      ],
+      [
+        "textIncludesTHEME",
+        () =>
+          text.includes("LOGLINE: flat logline (ignored when a tree exists)") &&
+          text.includes("THEME: flat theme"),
+      ],
+    ]),
+    { textIncludesLOGLINE: true, textIncludesTHEME: true },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "flat beats render name over summary",
-    text.includes("BEAT, The duel\nThe duel summary") &&
-      text.includes("BEAT, The aftermath\nThe aftermath summary"),
+    namedFacts([
+      [
+        "textIncludesBEAT",
+        () => text.includes("BEAT, The duel\nThe duel summary"),
+      ],
+      [
+        "textIncludesBEAT2",
+        () =>
+          text.includes("BEAT, The duel\nThe duel summary") &&
+          text.includes("BEAT, The aftermath\nThe aftermath summary"),
+      ],
+    ]),
+    { textIncludesBEAT: true, textIncludesBEAT2: true },
   );
 
   const ghost: IAutoMovieScript = {

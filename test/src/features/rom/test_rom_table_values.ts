@@ -1,7 +1,7 @@
 import { DEFAULT_HUMANOID_ROM, swingConeAngle } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
-import { nclose } from "../internal/predicates";
+import { namedFacts, nclose } from "../internal/predicates";
 
 /**
  * The default humanoid ROM table is where automovie's core differentiator
@@ -46,11 +46,24 @@ export const test_rom_table_values = (): void => {
   // metric caps at 180°, so even the per-axis-maximal corner never exceeds
   // it: a live cap would reject the canonical pure-plane overhead pose,
   // whose swing is already exactly 180
-  TestValidator.predicate(
+  TestValidator.equals(
     "the shoulder cone is headroom: the maximal corner never trips it",
-    swingConeAngle(shoulder.flexion!.max, shoulder.abduction!.max) <=
-      shoulder.swingDeg! &&
-      nclose(swingConeAngle(shoulder.flexion!.max, 0), 180),
+    namedFacts([
+      [
+        "swingConeAngleShoulderFlexion",
+        () =>
+          swingConeAngle(shoulder.flexion!.max, shoulder.abduction!.max) <=
+          shoulder.swingDeg!,
+      ],
+      [
+        "ncloseSwingConeAngleShoulder",
+        () =>
+          swingConeAngle(shoulder.flexion!.max, shoulder.abduction!.max) <=
+            shoulder.swingDeg! &&
+          nclose(swingConeAngle(shoulder.flexion!.max, 0), 180),
+      ],
+    ]),
+    { swingConeAngleShoulderFlexion: true, ncloseSwingConeAngleShoulder: true },
   );
 
   const hip = DEFAULT_HUMANOID_ROM.leftUpperLeg!;

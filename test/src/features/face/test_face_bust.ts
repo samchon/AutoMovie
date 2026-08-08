@@ -5,6 +5,8 @@ import {
 } from "@automovie/face";
 import { TestValidator } from "@nestia/e2e";
 
+import { namedFacts } from "../internal/predicates";
+
 /**
  * The bust grounds the head: its top must tuck behind the jaw (above the chin
  * line, so no gap opens at any chin length), the neck must be narrower than the
@@ -45,10 +47,21 @@ export const test_face_bust = (): void => {
   const shoulderX = maxXAt(slim.positions, -Infinity, top - 0.06);
   TestValidator.predicate("shoulders wider than the face", shoulderX > halfW);
 
-  TestValidator.predicate(
+  TestValidator.equals(
     "controls steer their spans",
-    maxXAt(wide.positions, top - 0.02, top) > neckX &&
-      maxXAt(wide.positions, -Infinity, top - 0.06) > shoulderX,
+    namedFacts([
+      [
+        "maxXAtWidePositions",
+        () => maxXAt(wide.positions, top - 0.02, top) > neckX,
+      ],
+      [
+        "maxXAtWidePositions2",
+        () =>
+          maxXAt(wide.positions, top - 0.02, top) > neckX &&
+          maxXAt(wide.positions, -Infinity, top - 0.06) > shoulderX,
+      ],
+    ]),
+    { maxXAtWidePositions: true, maxXAtWidePositions2: true },
   );
 
   // sanity against the skull: the bust must start below the dome's bottom

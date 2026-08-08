@@ -2,7 +2,7 @@ import { aimYawPitch } from "@automovie/engine";
 import { IAutoMovieVector3 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { nclose, throwsError } from "../internal/predicates";
+import { namedFacts, nclose, throwsError } from "../internal/predicates";
 
 const O: IAutoMovieVector3 = { x: 0, y: 0, z: 0 };
 const at = (x: number, y: number, z: number): IAutoMovieVector3 => ({
@@ -26,16 +26,30 @@ const at = (x: number, y: number, z: number): IAutoMovieVector3 => ({
 export const test_kinematics_aim_yaw_pitch = (): void => {
   // 1. degenerate
   const zero = aimYawPitch(O, O, 0);
-  TestValidator.predicate(
+  TestValidator.equals(
     "zero-length aim → 0/0",
-    nclose(zero.yawDeg, 0) && nclose(zero.pitchDeg, 0),
+    namedFacts([
+      ["ncloseZeroYawDeg", () => nclose(zero.yawDeg, 0)],
+      [
+        "ncloseZeroPitchDeg",
+        () => nclose(zero.yawDeg, 0) && nclose(zero.pitchDeg, 0),
+      ],
+    ]),
+    { ncloseZeroYawDeg: true, ncloseZeroPitchDeg: true },
   );
 
   // 2. facing +Z (0°)
   const ahead = aimYawPitch(O, at(0, 0, 5), 0);
-  TestValidator.predicate(
+  TestValidator.equals(
     "dead ahead → 0 yaw, 0 pitch",
-    nclose(ahead.yawDeg, 0) && nclose(ahead.pitchDeg, 0),
+    namedFacts([
+      ["ncloseAheadYawDeg", () => nclose(ahead.yawDeg, 0)],
+      [
+        "ncloseAheadPitchDeg",
+        () => nclose(ahead.yawDeg, 0) && nclose(ahead.pitchDeg, 0),
+      ],
+    ]),
+    { ncloseAheadYawDeg: true, ncloseAheadPitchDeg: true },
   );
   TestValidator.predicate(
     "+X target → +90 yaw (the actor's left)",

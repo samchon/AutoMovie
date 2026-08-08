@@ -10,6 +10,7 @@ import {
 import { TestValidator } from "@nestia/e2e";
 
 import {
+  namedFacts,
   validationHasNoWarnings,
   validationHasWarningCount,
   vclose,
@@ -104,9 +105,17 @@ export const test_validation_affordance_stack = (): void => {
       1,
     ),
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "toppling falls toward the overhang (+X)",
-    overhung.toppling !== null &&
-      vclose(overhung.toppling.fallDirection, { x: 1, y: 0, z: 0 }),
+    namedFacts([
+      ["overhungToppling", () => overhung.toppling !== null],
+      [
+        "vcloseOverhungToppling",
+        () =>
+          overhung.toppling !== null &&
+          vclose(overhung.toppling.fallDirection, { x: 1, y: 0, z: 0 }),
+      ],
+    ]),
+    { overhungToppling: true, vcloseOverhungToppling: true },
   );
 };

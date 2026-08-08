@@ -71,9 +71,13 @@ export const test_viewer_player_spring_clamp = (): void => {
     (pose) => pose.joints.find((j) => j.bone === "hips")?.flexion ?? 0,
   );
   const peak = Math.max(...flexions);
-  TestValidator.predicate(
+  TestValidator.equals(
     "the rendered spring never exceeds the ROM cap yet reaches it",
-    peak <= 40 + 1e-9 && peak >= 39.5,
+    namedFacts([
+      ["peakE", () => peak <= 40 + 1e-9],
+      ["peak", () => peak <= 40 + 1e-9 && peak >= 39.5],
+    ]),
+    { peakE: true, peak: true },
   );
 
   // 2. follow-through decays instead of popping when the joint vanishes

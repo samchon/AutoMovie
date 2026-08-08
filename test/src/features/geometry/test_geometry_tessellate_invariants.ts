@@ -2,6 +2,8 @@ import { tessellate } from "@automovie/engine";
 import { AutoMoviePrimitiveShape } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
+import { namedFacts } from "../internal/predicates";
+
 const SHAPES: AutoMoviePrimitiveShape[] = [
   { type: "box", width: 0.4, height: 0.6, depth: 0.2 },
   { type: "sphere", radius: 0.5 },
@@ -44,9 +46,13 @@ export const test_geometry_tessellate_invariants = (): void => {
       `${shape.type}: indices are triangles`,
       t.indices.length % 3 === 0,
     );
-    TestValidator.predicate(
+    TestValidator.equals(
       `${shape.type}: non-empty`,
-      vertexCount > 0 && t.indices.length > 0,
+      namedFacts([
+        ["vertexCount", () => vertexCount > 0],
+        ["tIndicesLength", () => vertexCount > 0 && t.indices.length > 0],
+      ]),
+      { vertexCount: true, tIndicesLength: true },
     );
     TestValidator.predicate(
       `${shape.type}: positions finite`,

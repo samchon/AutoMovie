@@ -7,7 +7,7 @@ import { IAutoMovieJointConstraint } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { joint } from "../internal/fixtures";
-import { nclose } from "../internal/predicates";
+import { namedFacts, nclose } from "../internal/predicates";
 
 /** A ball-joint constraint: axes wide open, only the combined swing capped. */
 const CONE: IAutoMovieJointConstraint = {
@@ -98,9 +98,16 @@ export const test_rom_clamp_swing_cone = (): void => {
     joint("leftUpperArm", { flexion: 150, abduction: 0 }),
     CONE,
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "a resting axis does not exempt the clamp: flexion is pulled onto the cone",
-    nclose(restingPast.flexion!, 100) && passesCone(restingPast),
+    namedFacts([
+      ["ncloseRestingPastFlexion", () => nclose(restingPast.flexion!, 100)],
+      [
+        "passesConeRestingPast",
+        () => nclose(restingPast.flexion!, 100) && passesCone(restingPast),
+      ],
+    ]),
+    { ncloseRestingPastFlexion: true, passesConeRestingPast: true },
   );
   TestValidator.equals(
     "the resting axis stays resting rather than becoming 0",

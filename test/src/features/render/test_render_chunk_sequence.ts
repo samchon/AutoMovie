@@ -162,11 +162,25 @@ export const test_render_chunk_sequence = (): void => {
     [chunked.chunks[1]!.startSeconds, chunked.chunks[1]!.endSeconds],
     [whole.frames[3]!.timeSeconds, whole.frames[5]!.timeSeconds],
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "chunk ffmpeg args reference chunk paths",
-    chunked.chunks[1]!.ffmpegArgs.includes(
-      "frames/seq_duel/chunk_1/frame_%05d.png",
-    ) && chunked.chunks[1]!.ffmpegArgs.includes("seq_duel.chunk_1.mp4"),
+    namedFacts([
+      [
+        "chunkedChunks1",
+        () =>
+          chunked.chunks[1]!.ffmpegArgs.includes(
+            "frames/seq_duel/chunk_1/frame_%05d.png",
+          ),
+      ],
+      [
+        "chunkedChunks12",
+        () =>
+          chunked.chunks[1]!.ffmpegArgs.includes(
+            "frames/seq_duel/chunk_1/frame_%05d.png",
+          ) && chunked.chunks[1]!.ffmpegArgs.includes("seq_duel.chunk_1.mp4"),
+      ],
+    ]),
+    { chunkedChunks1: true, chunkedChunks12: true },
   );
 
   // 5. single chunk == whole samples

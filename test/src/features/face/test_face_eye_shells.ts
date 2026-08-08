@@ -1,7 +1,7 @@
 import { CANONICAL_FACE_POSITIONS, buildEyeShells } from "@automovie/face";
 import { TestValidator } from "@nestia/e2e";
 
-import { nclose } from "../internal/predicates";
+import { namedFacts, nclose } from "../internal/predicates";
 
 /**
  * Eyeballs fit their lid rings: each sphere's lateral center matches its ring
@@ -14,10 +14,21 @@ import { nclose } from "../internal/predicates";
  */
 export const test_face_eye_shells = (): void => {
   const { right, left } = buildEyeShells();
-  TestValidator.predicate(
+  TestValidator.equals(
     "mirror twins",
-    nclose(right.center[0]!, -left.center[0]!, 1e-3) &&
-      nclose(right.radius, left.radius, 1e-3),
+    namedFacts([
+      [
+        "ncloseRightCenter",
+        () => nclose(right.center[0]!, -left.center[0]!, 1e-3),
+      ],
+      [
+        "ncloseRightRadius",
+        () =>
+          nclose(right.center[0]!, -left.center[0]!, 1e-3) &&
+          nclose(right.radius, left.radius, 1e-3),
+      ],
+    ]),
+    { ncloseRightCenter: true, ncloseRightRadius: true },
   );
   const RING_R = [
     33, 7, 163, 144, 145, 153, 154, 155, 133, 173, 157, 158, 159, 160, 161, 246,

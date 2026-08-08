@@ -143,10 +143,18 @@ export const test_viewer_instance_set = (): void => {
   camera.position.set(0, 10, 24);
   camera.lookAt(0, 0, 500);
   built.update(camera, 720);
-  TestValidator.predicate(
+  TestValidator.equals(
     "off-frustum chunks are hidden without expanding nodes",
-    built.stats.culled === compiled.count &&
-      meshes.every((mesh) => mesh.visible === false),
+    namedFacts([
+      ["builtStatsCulled", () => built.stats.culled === compiled.count],
+      [
+        "meshesEveryMesh",
+        () =>
+          built.stats.culled === compiled.count &&
+          meshes.every((mesh) => mesh.visible === false),
+      ],
+    ]),
+    { builtStatsCulled: true, meshesEveryMesh: true },
   );
 
   TestValidator.error("missing instance LOD model throws", () =>

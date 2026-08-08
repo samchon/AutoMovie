@@ -149,10 +149,18 @@ export const test_kinematics_arm_chain_fault = (): void => {
       nclose(spanAt(out, flexion), expected, 1e-9),
     );
   }
-  TestValidator.predicate(
+  TestValidator.equals(
     "and that sweep really moves: 0.600000 at 0 deg down to 0.160026 at 150",
-    nclose(spanAt(out, 0), 0.6, 1e-9) &&
-      nclose(spanAt(out, 150), 0.160026, 1e-6),
+    namedFacts([
+      ["ncloseSpanAtOut", () => nclose(spanAt(out, 0), 0.6, 1e-9)],
+      [
+        "ncloseSpanAtOut2",
+        () =>
+          nclose(spanAt(out, 0), 0.6, 1e-9) &&
+          nclose(spanAt(out, 150), 0.160026, 1e-6),
+      ],
+    ]),
+    { ncloseSpanAtOut: true, ncloseSpanAtOut2: true },
   );
 
   // 3. the diagnosis agrees with the measurement on both sides
@@ -207,10 +215,18 @@ export const test_kinematics_arm_chain_fault = (): void => {
       bone("leftHand", "leftLowerArm", { x: 0.28, y: 0, z: 0 }),
     ],
   };
-  TestValidator.predicate(
+  TestValidator.equals(
     "a mixed rig faults only the hanging side",
-    armChainFault(mixed, "right") !== null &&
-      armChainFault(mixed, "left") === null,
+    namedFacts([
+      ["armChainFaultMixedRight", () => armChainFault(mixed, "right") !== null],
+      [
+        "armChainFaultMixedLeft",
+        () =>
+          armChainFault(mixed, "right") !== null &&
+          armChainFault(mixed, "left") === null,
+      ],
+    ]),
+    { armChainFaultMixedRight: true, armChainFaultMixedLeft: true },
   );
 
   // 6. BOUNDARY: an absent chain is a different fact from an unbendable one.
