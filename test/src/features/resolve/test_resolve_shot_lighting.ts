@@ -293,51 +293,141 @@ export const test_resolve_shot_lighting = (): void => {
       () => resolveShotLighting({ lights: LIGHTS, clips, seconds: 1 }),
       [fragment],
     );
-  TestValidator.predicate(
+  TestValidator.equals(
     "a node channel, a foreign pointer, a missing light, and a kind mismatch all throw",
-    throwsOn(
+    namedFacts([
       [
-        clip(
-          "nodeTrack",
-          { kind: "node", node: "candleGlow", path: "translation" },
-          [0, 3],
-          [0, 0, 0, 1, 0, 0],
-        ),
+        "throwsOnClipNodeTrack",
+        () =>
+          throwsOn(
+            [
+              clip(
+                "nodeTrack",
+                { kind: "node", node: "candleGlow", path: "translation" },
+                [0, 3],
+                [0, 0, 0, 1, 0, 0],
+              ),
+            ],
+            "must address /lights/<id>/<property>",
+          ),
       ],
-      "must address /lights/<id>/<property>",
-    ) &&
-      throwsOn(
-        [
-          clip(
-            "materialTrack",
-            pointer("/materials/2/baseColor", "vec3"),
-            [0, 3],
-            [1, 1, 1, 0, 0, 0],
+      [
+        "throwsOnClipMaterialTrack",
+        () =>
+          throwsOn(
+            [
+              clip(
+                "nodeTrack",
+                { kind: "node", node: "candleGlow", path: "translation" },
+                [0, 3],
+                [0, 0, 0, 1, 0, 0],
+              ),
+            ],
+            "must address /lights/<id>/<property>",
+          ) &&
+          throwsOn(
+            [
+              clip(
+                "materialTrack",
+                pointer("/materials/2/baseColor", "vec3"),
+                [0, 3],
+                [1, 1, 1, 0, 0, 0],
+              ),
+            ],
+            "must address /lights/<id>/<property>",
           ),
-        ],
-        "must address /lights/<id>/<property>",
-      ) &&
-      throwsOn(
-        [
-          clip(
-            "ghostTrack",
-            pointer("/lights/ghost/intensity", "scalar"),
-            [0, 3],
-            [1, 0],
+      ],
+      [
+        "throwsOnClipGhostTrack",
+        () =>
+          throwsOn(
+            [
+              clip(
+                "nodeTrack",
+                { kind: "node", node: "candleGlow", path: "translation" },
+                [0, 3],
+                [0, 0, 0, 1, 0, 0],
+              ),
+            ],
+            "must address /lights/<id>/<property>",
+          ) &&
+          throwsOn(
+            [
+              clip(
+                "materialTrack",
+                pointer("/materials/2/baseColor", "vec3"),
+                [0, 3],
+                [1, 1, 1, 0, 0, 0],
+              ),
+            ],
+            "must address /lights/<id>/<property>",
+          ) &&
+          throwsOn(
+            [
+              clip(
+                "ghostTrack",
+                pointer("/lights/ghost/intensity", "scalar"),
+                [0, 3],
+                [1, 0],
+              ),
+            ],
+            'addresses missing light "ghost"',
           ),
-        ],
-        'addresses missing light "ghost"',
-      ) &&
-      throwsOn(
-        [
-          clip(
-            "sunRange",
-            pointer("/lights/sun/range", "scalar"),
-            [0, 3],
-            [1, 0],
+      ],
+      [
+        "throwsOnClipSunRange",
+        () =>
+          throwsOn(
+            [
+              clip(
+                "nodeTrack",
+                { kind: "node", node: "candleGlow", path: "translation" },
+                [0, 3],
+                [0, 0, 0, 1, 0, 0],
+              ),
+            ],
+            "must address /lights/<id>/<property>",
+          ) &&
+          throwsOn(
+            [
+              clip(
+                "materialTrack",
+                pointer("/materials/2/baseColor", "vec3"),
+                [0, 3],
+                [1, 1, 1, 0, 0, 0],
+              ),
+            ],
+            "must address /lights/<id>/<property>",
+          ) &&
+          throwsOn(
+            [
+              clip(
+                "ghostTrack",
+                pointer("/lights/ghost/intensity", "scalar"),
+                [0, 3],
+                [1, 0],
+              ),
+            ],
+            'addresses missing light "ghost"',
+          ) &&
+          throwsOn(
+            [
+              clip(
+                "sunRange",
+                pointer("/lights/sun/range", "scalar"),
+                [0, 3],
+                [1, 0],
+              ),
+            ],
+            "which a directional light does not carry",
           ),
-        ],
-        "which a directional light does not carry",
-      ),
+      ],
+    ]),
+    {
+      throwsOnClipNodeTrack: true,
+      throwsOnClipMaterialTrack: true,
+      throwsOnClipGhostTrack: true,
+      throwsOnClipSunRange: true,
+    },
   );
 };

@@ -134,9 +134,13 @@ export const test_resolve_profile_door = (): void => {
     { ncloseOpenX: true, ncloseOpenX2: true, ncloseOpenX3: true },
   );
   const mirrorX = basisX(open.world.get("handleMirror")!);
-  TestValidator.predicate(
+  TestValidator.equals(
     "profile driver mirrors the hinge",
-    nclose(mirrorX[0], 0) && nclose(mirrorX[2], -1),
+    namedFacts([
+      ["ncloseMirrorX0", () => nclose(mirrorX[0], 0)],
+      ["ncloseMirrorX2", () => nclose(mirrorX[0], 0) && nclose(mirrorX[2], -1)],
+    ]),
+    { ncloseMirrorX0: true, ncloseMirrorX2: true },
   );
 
   const slammed = resolveFrame({

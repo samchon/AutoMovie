@@ -61,19 +61,79 @@ export const test_combat_firearm_volley = (): void => {
   const deterministicSamples =
     repeatedSamples[0] === repeatedSamples[1] &&
     repeatedSamples[0] !== seededValue(1 + 4_294_967_296, 2, 3);
-  TestValidator.predicate(
+  TestValidator.equals(
     "a 500-member volley is reproducible, ordered, and inspectable",
-    first.length === 500 &&
-      JSON.stringify(first) === JSON.stringify(second) &&
-      first.every(
-        (event, slot) =>
-          event.slot === slot &&
-          event.shooter === `ranker-${slot}` &&
-          event.muzzleVelocity === 305,
-      ) &&
-      first.some((event) => event.outcome === "hit") &&
-      first.some((event) => event.outcome === "miss") &&
-      deterministicSamples,
+    namedFacts([
+      ["firstLength", () => first.length === 500],
+      [
+        "stringifyFirstStringify",
+        () =>
+          first.length === 500 &&
+          JSON.stringify(first) === JSON.stringify(second),
+      ],
+      [
+        "firstEveryEvent",
+        () =>
+          first.length === 500 &&
+          JSON.stringify(first) === JSON.stringify(second) &&
+          first.every(
+            (event, slot) =>
+              event.slot === slot &&
+              event.shooter === `ranker-${slot}` &&
+              event.muzzleVelocity === 305,
+          ),
+      ],
+      [
+        "firstSomeEvent",
+        () =>
+          first.length === 500 &&
+          JSON.stringify(first) === JSON.stringify(second) &&
+          first.every(
+            (event, slot) =>
+              event.slot === slot &&
+              event.shooter === `ranker-${slot}` &&
+              event.muzzleVelocity === 305,
+          ) &&
+          first.some((event) => event.outcome === "hit"),
+      ],
+      [
+        "firstSomeEvent2",
+        () =>
+          first.length === 500 &&
+          JSON.stringify(first) === JSON.stringify(second) &&
+          first.every(
+            (event, slot) =>
+              event.slot === slot &&
+              event.shooter === `ranker-${slot}` &&
+              event.muzzleVelocity === 305,
+          ) &&
+          first.some((event) => event.outcome === "hit") &&
+          first.some((event) => event.outcome === "miss"),
+      ],
+      [
+        "deterministicSamples",
+        () =>
+          first.length === 500 &&
+          JSON.stringify(first) === JSON.stringify(second) &&
+          first.every(
+            (event, slot) =>
+              event.slot === slot &&
+              event.shooter === `ranker-${slot}` &&
+              event.muzzleVelocity === 305,
+          ) &&
+          first.some((event) => event.outcome === "hit") &&
+          first.some((event) => event.outcome === "miss") &&
+          deterministicSamples,
+      ],
+    ]),
+    {
+      firstLength: true,
+      stringifyFirstStringify: true,
+      firstEveryEvent: true,
+      firstSomeEvent: true,
+      firstSomeEvent2: true,
+      deterministicSamples: true,
+    },
   );
   const exactVector = resolveFirearmVolley({
     model: model([
@@ -215,10 +275,18 @@ export const test_combat_firearm_volley = (): void => {
   );
 
   const shooter = findProfileTrait(profile(), "shooter");
-  TestValidator.predicate(
+  TestValidator.equals(
     "trait lookup reads typed data and never infers from a name",
-    shooter?.weapons[0]?.id === "musket" &&
-      findProfileTrait({ ...profile(), traits: [] }, "shooter") === null,
+    namedFacts([
+      ["shooterWeapons0", () => shooter?.weapons[0]?.id === "musket"],
+      [
+        "findProfileTraitProfileTraits",
+        () =>
+          shooter?.weapons[0]?.id === "musket" &&
+          findProfileTrait({ ...profile(), traits: [] }, "shooter") === null,
+      ],
+    ]),
+    { shooterWeapons0: true, findProfileTraitProfileTraits: true },
   );
 
   const invalidWeaponMutations: Array<Partial<IAutoMovieFirearm>> = [

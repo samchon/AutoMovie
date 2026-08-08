@@ -2,7 +2,7 @@ import { projectileAt, solveBallisticLaunch } from "@automovie/engine";
 import { IAutoMovieVector3 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { nclose, vclose } from "../internal/predicates";
+import { namedFacts, nclose, vclose } from "../internal/predicates";
 
 const GRAVITY: IAutoMovieVector3 = { x: 0, y: -9.81, z: 0 };
 const ORIGIN: IAutoMovieVector3 = { x: 0, y: 0, z: 0 };
@@ -39,9 +39,13 @@ export const test_physics_ballistic_vertical_first_contact = (): void => {
     "overhead hit time is the rising root (first contact)",
     nclose(up.hitTime, 0.5835012, 1e-4),
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "the rising root is well before the descending re-crossing",
-    up.hitTime < 1 && up.hitTime * 5 < 3.4939157,
+    namedFacts([
+      ["upHitTime", () => up.hitTime < 1],
+      ["upHitTime2", () => up.hitTime < 1 && up.hitTime * 5 < 3.4939157],
+    ]),
+    { upHitTime: true, upHitTime2: true },
   );
   TestValidator.predicate(
     "a vertical shot fires straight up at the requested speed",

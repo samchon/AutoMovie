@@ -1,7 +1,7 @@
 import { projectileSphereHit, segmentSphere } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
-import { nclose } from "../internal/predicates";
+import { namedFacts, nclose } from "../internal/predicates";
 
 const v = (x: number, y: number, z: number) => ({ x, y, z });
 
@@ -68,9 +68,13 @@ export const test_physics_collision = (): void => {
   TestValidator.predicate("projectile hit detected", hit !== null);
   // the path reaches the centre at t=1, so it ENTERS the r=1 sphere a touch
   // earlier (~0.9s): contact is the surface crossing, not the centre crossing
-  TestValidator.predicate(
+  TestValidator.equals(
     "hit time just before the centre crossing",
-    hit!.time > 0.8 && hit!.time <= 1.0,
+    namedFacts([
+      ["hitTime", () => hit!.time > 0.8],
+      ["hitTime2", () => hit!.time > 0.8 && hit!.time <= 1.0],
+    ]),
+    { hitTime: true, hitTime2: true },
   );
   TestValidator.predicate(
     "hit point on/inside the sphere",

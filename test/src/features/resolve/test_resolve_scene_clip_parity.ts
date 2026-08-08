@@ -21,7 +21,7 @@ import {
   validSynthesizer,
 } from "../internal/filmFixtures";
 import { createModel, createSkeleton } from "../internal/fixtures";
-import { qclose, vclose } from "../internal/predicates";
+import { namedFacts, qclose, vclose } from "../internal/predicates";
 
 /**
  * The convergence proof of #594 S3: a real performed film shot plays back
@@ -73,14 +73,31 @@ export const test_resolve_scene_clip_parity = (): void => {
   const nodes = sceneToNodes({ scene: staged.scene, models });
 
   const actors = ["knightA", "knightB"] as const;
-  TestValidator.predicate(
+  TestValidator.equals(
     "every motion fits the shot and one spans it (a shorter one holds)",
-    actors.every(
-      (node) => performed.motions[node]!.duration <= performed.shot.duration,
-    ) &&
-      actors.some(
-        (node) => performed.motions[node]!.duration === performed.shot.duration,
-      ),
+    namedFacts([
+      [
+        "actorsEveryNode",
+        () =>
+          actors.every(
+            (node) =>
+              performed.motions[node]!.duration <= performed.shot.duration,
+          ),
+      ],
+      [
+        "actorsSomeNode",
+        () =>
+          actors.every(
+            (node) =>
+              performed.motions[node]!.duration <= performed.shot.duration,
+          ) &&
+          actors.some(
+            (node) =>
+              performed.motions[node]!.duration === performed.shot.duration,
+          ),
+      ],
+    ]),
+    { actorsEveryNode: true, actorsSomeNode: true },
   );
 
   const merged: IAutoMovieClip = {

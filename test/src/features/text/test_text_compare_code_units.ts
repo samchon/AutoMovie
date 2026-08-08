@@ -1,6 +1,8 @@
 import { compareCodeUnits } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
+import { namedFacts } from "../internal/predicates";
+
 /**
  * `compareCodeUnits` is the locale-independent total order the engine and store
  * use wherever an order feeds the render event stream, tool-visible arrays, or
@@ -52,9 +54,16 @@ export const test_text_compare_code_units = (): void => {
   // literal types the checker would flag as a never-equal comparison.
   const nfcCafe = `caf${String.fromCharCode(0x00e9)}`; // precomposed U+00E9
   const nfdCafe = `cafe${String.fromCharCode(0x0301)}`; // e + combining U+0301
-  TestValidator.predicate(
+  TestValidator.equals(
     "distinct Unicode-equivalent strings are ordered, not equal",
-    nfcCafe !== nfdCafe && compareCodeUnits(nfcCafe, nfdCafe) !== 0,
+    namedFacts([
+      ["nfcCafeNfdCafe", () => nfcCafe !== nfdCafe],
+      [
+        "compareCodeUnitsNfcCafeNfdCafe",
+        () => nfcCafe !== nfdCafe && compareCodeUnits(nfcCafe, nfdCafe) !== 0,
+      ],
+    ]),
+    { nfcCafeNfdCafe: true, compareCodeUnitsNfcCafeNfdCafe: true },
   );
 
   // 4. a full sort matches the hand-written code-unit oracle

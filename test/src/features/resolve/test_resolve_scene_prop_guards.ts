@@ -4,7 +4,7 @@ import { TestValidator } from "@nestia/e2e";
 
 import { createDoorPropSpec } from "../film/test_film_forge_prop";
 import { createModel } from "../internal/fixtures";
-import { throwsError } from "../internal/predicates";
+import { namedFacts, throwsError } from "../internal/predicates";
 
 const scene = (
   placements: ReadonlyArray<readonly [string, string]>,
@@ -54,10 +54,21 @@ export const test_resolve_scene_prop_guards = (): void => {
     props: { door },
     models: { hero },
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "a mixed scene lowers both subtrees into one graph",
-    mixed.some((node) => node.id === "frontDoor/hinge") &&
-      mixed.some((node) => node.id === "knight/hips"),
+    namedFacts([
+      [
+        "mixedSomeNode",
+        () => mixed.some((node) => node.id === "frontDoor/hinge"),
+      ],
+      [
+        "mixedSomeNode2",
+        () =>
+          mixed.some((node) => node.id === "frontDoor/hinge") &&
+          mixed.some((node) => node.id === "knight/hips"),
+      ],
+    ]),
+    { mixedSomeNode: true, mixedSomeNode2: true },
   );
 
   TestValidator.predicate(

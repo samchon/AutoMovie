@@ -6,7 +6,7 @@ import {
 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { nclose } from "../internal/predicates";
+import { namedFacts, nclose } from "../internal/predicates";
 
 const rest: IAutoMovieTransform = {
   translation: { x: 0, y: 0, z: 0 },
@@ -57,16 +57,35 @@ export const test_physics_impact_recoil_falloff = (): void => {
     skeleton,
     0,
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "falloff zero stops at the next joint",
-    nclose(contactOnly.joints[0]!.flexion!, 10) &&
-      contactOnly.joints[1]!.flexion === null,
+    namedFacts([
+      [
+        "ncloseContactOnlyJoints",
+        () => nclose(contactOnly.joints[0]!.flexion!, 10),
+      ],
+      [
+        "contactOnlyJoints1",
+        () =>
+          nclose(contactOnly.joints[0]!.flexion!, 10) &&
+          contactOnly.joints[1]!.flexion === null,
+      ],
+    ]),
+    { ncloseContactOnlyJoints: true, contactOnlyJoints1: true },
   );
 
   const noLoss = impactRecoil({ flexion: 10 }, ["spine", "chest"], skeleton, 1);
-  TestValidator.predicate(
+  TestValidator.equals(
     "falloff one preserves the push",
-    nclose(noLoss.joints[0]!.flexion!, 10) &&
-      nclose(noLoss.joints[1]!.flexion!, 10),
+    namedFacts([
+      ["ncloseNoLossJoints", () => nclose(noLoss.joints[0]!.flexion!, 10)],
+      [
+        "ncloseNoLossJoints2",
+        () =>
+          nclose(noLoss.joints[0]!.flexion!, 10) &&
+          nclose(noLoss.joints[1]!.flexion!, 10),
+      ],
+    ]),
+    { ncloseNoLossJoints: true, ncloseNoLossJoints2: true },
   );
 };

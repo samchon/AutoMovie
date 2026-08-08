@@ -7,7 +7,7 @@ import { IAutoMovieScene } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { createModel } from "../internal/fixtures";
-import { throwsError } from "../internal/predicates";
+import { namedFacts, throwsError } from "../internal/predicates";
 
 const scene = (nodeId: string, modelRef: string): IAutoMovieScene => ({
   id: "scene-g",
@@ -95,9 +95,21 @@ export const test_resolve_scene_to_nodes_guards = (): void => {
   );
 
   const defaults = lowerSkeletonNodes({ skeleton: model.skeleton! });
-  TestValidator.predicate(
+  TestValidator.equals(
     "lowerSkeletonNodes defaults to bare names and a graph root",
-    defaults.some((node) => node.id === "root" && node.parent === null) &&
-      defaults.some((node) => node.id === "hips"),
+    namedFacts([
+      [
+        "defaultsSomeNode",
+        () =>
+          defaults.some((node) => node.id === "root" && node.parent === null),
+      ],
+      [
+        "defaultsSomeNode2",
+        () =>
+          defaults.some((node) => node.id === "root" && node.parent === null) &&
+          defaults.some((node) => node.id === "hips"),
+      ],
+    ]),
+    { defaultsSomeNode: true, defaultsSomeNode2: true },
   );
 };

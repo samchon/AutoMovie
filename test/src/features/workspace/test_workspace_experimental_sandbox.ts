@@ -3,6 +3,7 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 
+import { namedFacts } from "../internal/predicates";
 import { preserveExperimentalSandboxCleanup } from "./ExperimentalSandboxCleanup";
 
 /** Repository root, four levels above `test/src/features/workspace`. */
@@ -99,10 +100,18 @@ export const test_workspace_experimental_sandbox = (): void => {
       ...manifest.dependencies,
       ...manifest.devDependencies,
     }).filter(([name]) => name.startsWith("@automovie/"));
-    TestValidator.predicate(
+    TestValidator.equals(
       "a render without a pack keeps the published ranges",
-      ranges.length !== 0 &&
-        ranges.every(([, range]) => /^\^\d+\.\d+\.\d+$/.test(range)),
+      namedFacts([
+        ["rangesLength", () => ranges.length !== 0],
+        [
+          "rangesEveryRange",
+          () =>
+            ranges.length !== 0 &&
+            ranges.every(([, range]) => /^\^\d+\.\d+\.\d+$/.test(range)),
+        ],
+      ]),
+      { rangesLength: true, rangesEveryRange: true },
     );
     TestValidator.equals(
       "no dependency reaches into the workspace",
@@ -161,9 +170,18 @@ export const test_workspace_experimental_sandbox = (): void => {
 
     const repeated = generate();
     TestValidator.equals("a non-empty sandbox is refused", repeated.status, 1);
-    TestValidator.predicate(
+    TestValidator.equals(
       "the refusal names the sandbox and the escape",
-      repeated.stderr.includes(NAME) && repeated.stderr.includes("--force"),
+      namedFacts([
+        ["repeatedStderrIncludes", () => repeated.stderr.includes(NAME)],
+        [
+          "repeatedStderrIncludes2",
+          () =>
+            repeated.stderr.includes(NAME) &&
+            repeated.stderr.includes("--force"),
+        ],
+      ]),
+      { repeatedStderrIncludes: true, repeatedStderrIncludes2: true },
     );
 
     // Stand in for a film in progress: any rendered file the production owns.

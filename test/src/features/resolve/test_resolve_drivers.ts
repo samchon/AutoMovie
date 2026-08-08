@@ -12,7 +12,7 @@ import {
 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { nclose, throwsError } from "../internal/predicates";
+import { namedFacts, nclose, throwsError } from "../internal/predicates";
 
 const IDENTITY: IAutoMovieTransform = {
   translation: { x: 0, y: 0, z: 0 },
@@ -122,9 +122,13 @@ export const test_resolve_drivers_copy = (): void => {
     [4, 4, 4],
   );
   const rot = sampled.get("node:o:rotation")!.value;
-  TestValidator.predicate(
+  TestValidator.equals(
     "rotation slerped to source rest",
-    nclose(rot[1]!, s) && nclose(rot[3]!, s),
+    namedFacts([
+      ["ncloseRot1", () => nclose(rot[1]!, s)],
+      ["ncloseRot3", () => nclose(rot[1]!, s) && nclose(rot[3]!, s)],
+    ]),
+    { ncloseRot1: true, ncloseRot3: true },
   );
 
   // 2. translation-only, influence 0.5, both sides animated, owner overwritten

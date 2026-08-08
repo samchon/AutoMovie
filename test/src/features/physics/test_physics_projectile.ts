@@ -64,9 +64,16 @@ export const test_physics_projectile = (): void => {
       ncloseS1Position3: true,
     },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "velocity after 1s",
-    nclose(s1.velocity.x, 5) && nclose(s1.velocity.y, -10),
+    namedFacts([
+      ["ncloseS1Velocity", () => nclose(s1.velocity.x, 5)],
+      [
+        "ncloseS1Velocity2",
+        () => nclose(s1.velocity.x, 5) && nclose(s1.velocity.y, -10),
+      ],
+    ]),
+    { ncloseS1Velocity: true, ncloseS1Velocity2: true },
   );
 
   // 3. apex of a vertical throw (v0=10, g=10) is at t=1, vy=0

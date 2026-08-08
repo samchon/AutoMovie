@@ -2,7 +2,12 @@ import { Matrix4, resolveWorldDrivers } from "@automovie/engine";
 import { IAutoMovieIKDriver, IAutoMovieVector3 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { nclose, throwsError, vclose } from "../internal/predicates";
+import {
+  namedFacts,
+  nclose,
+  throwsError,
+  vclose,
+} from "../internal/predicates";
 
 const W = (p: IAutoMovieVector3): number[] =>
   Matrix4.compose(p, { x: 0, y: 0, z: 0, w: 1 }, { x: 1, y: 1, z: 1 });
@@ -95,10 +100,18 @@ export const test_resolve_ccd_ik = (): void => {
     "unreachable goal fully extends the chain",
     dist(at(w3, "t"), { x: 0, y: 2, z: 0 }) <= 1e-2,
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "extension keeps segment lengths",
-    nclose(dist(at(w3, "r"), at(w3, "m")), 1, 1e-9) &&
-      nclose(dist(at(w3, "m"), at(w3, "t")), 1, 1e-9),
+    namedFacts([
+      ["ncloseDistAt", () => nclose(dist(at(w3, "r"), at(w3, "m")), 1, 1e-9)],
+      [
+        "ncloseDistAt2",
+        () =>
+          nclose(dist(at(w3, "r"), at(w3, "m")), 1, 1e-9) &&
+          nclose(dist(at(w3, "m"), at(w3, "t")), 1, 1e-9),
+      ],
+    ]),
+    { ncloseDistAt: true, ncloseDistAt2: true },
   );
 
   // 4. influence 0.5 = halfway between original and solved tip
@@ -129,10 +142,18 @@ export const test_resolve_ccd_ik = (): void => {
   // 6. goal on the tip → early-out, nothing moves
   const w6 = bentWorld({ x: 1, y: 1, z: 0 });
   resolveWorldDrivers([ccd({})], w6, new Map(), new Map());
-  TestValidator.predicate(
+  TestValidator.equals(
     "converged input early-outs unchanged",
-    vclose(at(w6, "m"), { x: 1, y: 0, z: 0 }, 0) &&
-      vclose(at(w6, "t"), { x: 1, y: 1, z: 0 }, 0),
+    namedFacts([
+      ["vcloseAtW6", () => vclose(at(w6, "m"), { x: 1, y: 0, z: 0 }, 0)],
+      [
+        "vcloseAtW62",
+        () =>
+          vclose(at(w6, "m"), { x: 1, y: 0, z: 0 }, 0) &&
+          vclose(at(w6, "t"), { x: 1, y: 1, z: 0 }, 0),
+      ],
+    ]),
+    { vcloseAtW6: true, vcloseAtW62: true },
   );
 
   // 7. guards

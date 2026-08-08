@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import ts from "typescript-compiler";
 
+import { namedFacts } from "../internal/predicates";
 import { preserveBenchmarkRunnerFixtureCleanup } from "./test_benchmark_runner";
 
 const compact = (node: ts.Node, source: ts.SourceFile): string =>
@@ -147,18 +148,56 @@ export const test_benchmark_runner_fixture_cleanup = (): void => {
   const primaryOnly = captureCleanup({ primaryFailure });
   const cleanupOnly = captureCleanup({ cleanupFailure });
   const combined = captureCleanup({ cleanupFailure, primaryFailure });
-  TestValidator.predicate(
+  TestValidator.equals(
     "benchmark runner fixture cleanup preserves phase identity and order",
-    success.failure === undefined &&
-      primaryOnly.failure === primaryFailure &&
-      cleanupOnly.failure === cleanupFailure &&
-      aggregateContainsExactly(combined.failure, [
-        primaryFailure,
-        cleanupFailure,
-      ]) &&
-      [success, primaryOnly, cleanupOnly, combined].every(
-        (capture) => capture.attempts === 1,
-      ),
+    namedFacts([
+      ["successFailure", () => success.failure === undefined],
+      [
+        "primaryOnlyFailurePrimaryFailure",
+        () =>
+          success.failure === undefined &&
+          primaryOnly.failure === primaryFailure,
+      ],
+      [
+        "cleanupOnlyFailureCleanupFailure",
+        () =>
+          success.failure === undefined &&
+          primaryOnly.failure === primaryFailure &&
+          cleanupOnly.failure === cleanupFailure,
+      ],
+      [
+        "aggregateContainsExactlyCombinedFailure",
+        () =>
+          success.failure === undefined &&
+          primaryOnly.failure === primaryFailure &&
+          cleanupOnly.failure === cleanupFailure &&
+          aggregateContainsExactly(combined.failure, [
+            primaryFailure,
+            cleanupFailure,
+          ]),
+      ],
+      [
+        "successPrimaryOnlyCleanupOnly",
+        () =>
+          success.failure === undefined &&
+          primaryOnly.failure === primaryFailure &&
+          cleanupOnly.failure === cleanupFailure &&
+          aggregateContainsExactly(combined.failure, [
+            primaryFailure,
+            cleanupFailure,
+          ]) &&
+          [success, primaryOnly, cleanupOnly, combined].every(
+            (capture) => capture.attempts === 1,
+          ),
+      ],
+    ]),
+    {
+      successFailure: true,
+      primaryOnlyFailurePrimaryFailure: true,
+      cleanupOnlyFailureCleanupFailure: true,
+      aggregateContainsExactlyCombinedFailure: true,
+      successPrimaryOnlyCleanupOnly: true,
+    },
   );
   TestValidator.equals(
     "benchmark runner owns its root through setup, execution, and cleanup",

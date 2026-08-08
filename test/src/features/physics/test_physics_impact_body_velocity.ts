@@ -1,7 +1,7 @@
 import { IAutoMovieImpactBody, resolveImpact } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
-import { nclose } from "../internal/predicates";
+import { namedFacts, nclose } from "../internal/predicates";
 
 const v = (x: number, y: number, z: number) => ({ x, y, z });
 
@@ -62,8 +62,15 @@ export const test_physics_impact_body_velocity = (): void => {
     "finite impulse remains 5",
     nclose(impact.impulse.z, 5),
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "finite post-impact velocities remain inelastic",
-    nclose(impact.velocityA.z, 5) && nclose(impact.velocityB.z, 5),
+    namedFacts([
+      ["ncloseImpactVelocityA", () => nclose(impact.velocityA.z, 5)],
+      [
+        "ncloseImpactVelocityB",
+        () => nclose(impact.velocityA.z, 5) && nclose(impact.velocityB.z, 5),
+      ],
+    ]),
+    { ncloseImpactVelocityA: true, ncloseImpactVelocityB: true },
   );
 };

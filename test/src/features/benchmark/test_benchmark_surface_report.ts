@@ -121,37 +121,69 @@ export const test_benchmark_surface_report = (): void => {
       "repeats run",
     ),
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "one report cannot average verdicts produced under different laws",
-    throws(
-      () =>
-        reportAutoMovieBenchmark([
-          productionVerdict,
-          {
-            ...legacyVerdict,
-            taskId: "short/other",
-            taskDigest: digestBenchmarkValue("other-task-law"),
-            versions: {
-              task: "2.0.0",
-              harness: "2.0.0",
-              reference: "2.0.0",
-              scenarioHelper: 2,
-            },
-          },
-        ]),
-      "taskId: short/austerlitz-signal -> short/other",
-    ) &&
-      throws(
+    namedFacts([
+      [
+        "throwsReportAutoMovieBenchmarkProductionVerdict",
         () =>
-          reportAutoMovieBenchmark([
-            productionVerdict,
-            {
-              ...legacyVerdict,
-              taskDigest: digestBenchmarkValue("other-task-law"),
-            },
-          ]),
-        "taskDigest:",
-      ),
+          throws(
+            () =>
+              reportAutoMovieBenchmark([
+                productionVerdict,
+                {
+                  ...legacyVerdict,
+                  taskId: "short/other",
+                  taskDigest: digestBenchmarkValue("other-task-law"),
+                  versions: {
+                    task: "2.0.0",
+                    harness: "2.0.0",
+                    reference: "2.0.0",
+                    scenarioHelper: 2,
+                  },
+                },
+              ]),
+            "taskId: short/austerlitz-signal -> short/other",
+          ),
+      ],
+      [
+        "throwsReportAutoMovieBenchmarkProductionVerdict2",
+        () =>
+          throws(
+            () =>
+              reportAutoMovieBenchmark([
+                productionVerdict,
+                {
+                  ...legacyVerdict,
+                  taskId: "short/other",
+                  taskDigest: digestBenchmarkValue("other-task-law"),
+                  versions: {
+                    task: "2.0.0",
+                    harness: "2.0.0",
+                    reference: "2.0.0",
+                    scenarioHelper: 2,
+                  },
+                },
+              ]),
+            "taskId: short/austerlitz-signal -> short/other",
+          ) &&
+          throws(
+            () =>
+              reportAutoMovieBenchmark([
+                productionVerdict,
+                {
+                  ...legacyVerdict,
+                  taskDigest: digestBenchmarkValue("other-task-law"),
+                },
+              ]),
+            "taskDigest:",
+          ),
+      ],
+    ]),
+    {
+      throwsReportAutoMovieBenchmarkProductionVerdict: true,
+      throwsReportAutoMovieBenchmarkProductionVerdict2: true,
+    },
   );
 
   const rubric: IAutoMovieBenchmarkRubricVerdict = {

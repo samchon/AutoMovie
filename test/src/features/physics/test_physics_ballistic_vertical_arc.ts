@@ -2,7 +2,7 @@ import { projectileAt, solveBallisticLaunch } from "@automovie/engine";
 import { IAutoMovieVector3 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { nclose, vclose } from "../internal/predicates";
+import { namedFacts, nclose, vclose } from "../internal/predicates";
 
 const GRAVITY: IAutoMovieVector3 = { x: 0, y: -9.81, z: 0 };
 const ORIGIN: IAutoMovieVector3 = { x: 0, y: 0, z: 0 };
@@ -105,18 +105,43 @@ export const test_physics_ballistic_vertical_arc = (): void => {
     "high overhead still fires straight up",
     vclose(highUp.velocity, { x: 0, y: 20, z: 0 }, 1e-9),
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "both overhead arcs land on the target",
-    landsOn(directUp, overhead) && landsOn(highUp, overhead),
+    namedFacts([
+      ["landsOnDirectUpOverhead", () => landsOn(directUp, overhead)],
+      [
+        "landsOnHighUpOverhead",
+        () => landsOn(directUp, overhead) && landsOn(highUp, overhead),
+      ],
+    ]),
+    { landsOnDirectUpOverhead: true, landsOnHighUpOverhead: true },
   );
 
   // 5. Negative twins.
   //    Out of range overhead: s²/2g = 100/19.62 = 5.0968 m < 6 m at s = 10.
   const unreachable: IAutoMovieVector3 = { x: 0, y: 6, z: 0 };
-  TestValidator.predicate(
+  TestValidator.equals(
     "an overhead target beyond s²/2g is out of range for both arcs",
-    solveBallisticLaunch(ORIGIN, unreachable, 10, GRAVITY, "direct") === null &&
-      solveBallisticLaunch(ORIGIN, unreachable, 10, GRAVITY, "high") === null,
+    namedFacts([
+      [
+        "solveBallisticLaunchORIGINUnreachable",
+        () =>
+          solveBallisticLaunch(ORIGIN, unreachable, 10, GRAVITY, "direct") ===
+          null,
+      ],
+      [
+        "solveBallisticLaunchORIGINUnreachable2",
+        () =>
+          solveBallisticLaunch(ORIGIN, unreachable, 10, GRAVITY, "direct") ===
+            null &&
+          solveBallisticLaunch(ORIGIN, unreachable, 10, GRAVITY, "high") ===
+            null,
+      ],
+    ]),
+    {
+      solveBallisticLaunchORIGINUnreachable: true,
+      solveBallisticLaunchORIGINUnreachable2: true,
+    },
   );
   const weightless: IAutoMovieVector3 = { x: 0, y: 0, z: 0 };
   const straight = solveBallisticLaunch(
@@ -126,9 +151,20 @@ export const test_physics_ballistic_vertical_arc = (): void => {
     { x: 0, y: 0, z: 0 },
     "high",
   )!;
-  TestValidator.predicate(
+  TestValidator.equals(
     "zero gravity keeps the straight sightline shot for either arc",
-    vclose(straight.velocity, { x: 0, y: -10, z: 0 }, 1e-9) &&
-      nclose(straight.hitTime, 0.5, 1e-9),
+    namedFacts([
+      [
+        "vcloseStraightVelocity",
+        () => vclose(straight.velocity, { x: 0, y: -10, z: 0 }, 1e-9),
+      ],
+      [
+        "ncloseStraightHitTime",
+        () =>
+          vclose(straight.velocity, { x: 0, y: -10, z: 0 }, 1e-9) &&
+          nclose(straight.hitTime, 0.5, 1e-9),
+      ],
+    ]),
+    { vcloseStraightVelocity: true, ncloseStraightHitTime: true },
   );
 };

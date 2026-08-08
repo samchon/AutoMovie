@@ -160,9 +160,16 @@ export const test_resolve_frame_profile_drivers = (): void => {
     seconds: 0,
   });
   const bareHandleX = basisX(bare.world.get("actor/handle")!);
-  TestValidator.predicate(
+  TestValidator.equals(
     "without the profile the handle rests",
-    nclose(bareHandleX[0], 1) && nclose(bareHandleX[2], 0),
+    namedFacts([
+      ["ncloseBareHandleX0", () => nclose(bareHandleX[0], 1)],
+      [
+        "ncloseBareHandleX2",
+        () => nclose(bareHandleX[0], 1) && nclose(bareHandleX[2], 0),
+      ],
+    ]),
+    { ncloseBareHandleX0: true, ncloseBareHandleX2: true },
   );
 
   const gazeNodes = [
@@ -189,9 +196,16 @@ export const test_resolve_frame_profile_drivers = (): void => {
     seconds: 0,
   });
   const contestedX = basisX(contested.world.get("eye")!);
-  TestValidator.predicate(
+  TestValidator.equals(
     "direct aim applies after the profile's and wins",
-    nclose(contestedX[0], -1) && nclose(contestedX[2], 0),
+    namedFacts([
+      ["ncloseContestedX0", () => nclose(contestedX[0], -1)],
+      [
+        "ncloseContestedX2",
+        () => nclose(contestedX[0], -1) && nclose(contestedX[2], 0),
+      ],
+    ]),
+    { ncloseContestedX0: true, ncloseContestedX2: true },
   );
 
   const profileOnly = resolveFrame({
@@ -202,8 +216,15 @@ export const test_resolve_frame_profile_drivers = (): void => {
     seconds: 0,
   });
   const profileOnlyX = basisX(profileOnly.world.get("eye")!);
-  TestValidator.predicate(
+  TestValidator.equals(
     "profile aim alone points at +X",
-    nclose(profileOnlyX[0], 1) && nclose(profileOnlyX[2], 0),
+    namedFacts([
+      ["ncloseProfileOnlyX0", () => nclose(profileOnlyX[0], 1)],
+      [
+        "ncloseProfileOnlyX2",
+        () => nclose(profileOnlyX[0], 1) && nclose(profileOnlyX[2], 0),
+      ],
+    ]),
+    { ncloseProfileOnlyX0: true, ncloseProfileOnlyX2: true },
   );
 };
