@@ -247,313 +247,49 @@ export const test_mcp_production_atomic_failure_harness_cleanup = (): void => {
           success.failure === undefined &&
           success.order.join(",") === "0,1,2",
       ],
-      [
-        "partialCaught",
-        () =>
-          success.caught === false &&
-          success.failure === undefined &&
-          success.order.join(",") === "0,1,2" &&
-          partial.caught,
-      ],
+      ["partialCaught", () => partial.caught],
       [
         "partialFailurePrimaryFailure",
-        () =>
-          success.caught === false &&
-          success.failure === undefined &&
-          success.order.join(",") === "0,1,2" &&
-          partial.caught &&
-          partial.failure === primaryFailure,
+        () => partial.failure === primaryFailure,
       ],
-      [
-        "partialOrderJoin",
-        () =>
-          success.caught === false &&
-          success.failure === undefined &&
-          success.order.join(",") === "0,1,2" &&
-          partial.caught &&
-          partial.failure === primaryFailure &&
-          partial.order.join(",") === "0",
-      ],
-      [
-        "primaryOnlyCaught",
-        () =>
-          success.caught === false &&
-          success.failure === undefined &&
-          success.order.join(",") === "0,1,2" &&
-          partial.caught &&
-          partial.failure === primaryFailure &&
-          partial.order.join(",") === "0" &&
-          primaryOnly.caught,
-      ],
+      ["partialOrderJoin", () => partial.order.join(",") === "0"],
+      ["primaryOnlyCaught", () => primaryOnly.caught],
       [
         "primaryOnlyFailurePrimaryFailure",
-        () =>
-          success.caught === false &&
-          success.failure === undefined &&
-          success.order.join(",") === "0,1,2" &&
-          partial.caught &&
-          partial.failure === primaryFailure &&
-          partial.order.join(",") === "0" &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure,
+        () => primaryOnly.failure === primaryFailure,
       ],
-      [
-        "primaryOnlyOrderJoin",
-        () =>
-          success.caught === false &&
-          success.failure === undefined &&
-          success.order.join(",") === "0,1,2" &&
-          partial.caught &&
-          partial.failure === primaryFailure &&
-          partial.order.join(",") === "0" &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.order.join(",") === "0,1,2",
-      ],
-      [
-        "standaloneCaught",
-        () =>
-          success.caught === false &&
-          success.failure === undefined &&
-          success.order.join(",") === "0,1,2" &&
-          partial.caught &&
-          partial.failure === primaryFailure &&
-          partial.order.join(",") === "0" &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.order.join(",") === "0,1,2" &&
-          standalone.caught,
-      ],
+      ["primaryOnlyOrderJoin", () => primaryOnly.order.join(",") === "0,1,2"],
+      ["standaloneCaught", () => standalone.caught],
       [
         "standaloneFailureRemoveFailure",
-        () =>
-          success.caught === false &&
-          success.failure === undefined &&
-          success.order.join(",") === "0,1,2" &&
-          partial.caught &&
-          partial.failure === primaryFailure &&
-          partial.order.join(",") === "0" &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.order.join(",") === "0,1,2" &&
-          standalone.caught &&
-          standalone.failure === removeFailure,
+        () => standalone.failure === removeFailure,
       ],
-      [
-        "standaloneOrderJoin",
-        () =>
-          success.caught === false &&
-          success.failure === undefined &&
-          success.order.join(",") === "0,1,2" &&
-          partial.caught &&
-          partial.failure === primaryFailure &&
-          partial.order.join(",") === "0" &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.order.join(",") === "0,1,2" &&
-          standalone.caught &&
-          standalone.failure === removeFailure &&
-          standalone.order.join(",") === "0,1,2",
-      ],
-      [
-        "multipleCaught",
-        () =>
-          success.caught === false &&
-          success.failure === undefined &&
-          success.order.join(",") === "0,1,2" &&
-          partial.caught &&
-          partial.failure === primaryFailure &&
-          partial.order.join(",") === "0" &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.order.join(",") === "0,1,2" &&
-          standalone.caught &&
-          standalone.failure === removeFailure &&
-          standalone.order.join(",") === "0,1,2" &&
-          multiple.caught,
-      ],
+      ["standaloneOrderJoin", () => standalone.order.join(",") === "0,1,2"],
+      ["multipleCaught", () => multiple.caught],
       [
         "aggregateContainsExactlyMultipleFailure",
         () =>
-          success.caught === false &&
-          success.failure === undefined &&
-          success.order.join(",") === "0,1,2" &&
-          partial.caught &&
-          partial.failure === primaryFailure &&
-          partial.order.join(",") === "0" &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.order.join(",") === "0,1,2" &&
-          standalone.caught &&
-          standalone.failure === removeFailure &&
-          standalone.order.join(",") === "0,1,2" &&
-          multiple.caught &&
           aggregateContainsExactly(multiple.failure, [
             renameFailure,
             fixtureFailure,
           ]),
       ],
-      [
-        "multipleOrderJoin",
-        () =>
-          success.caught === false &&
-          success.failure === undefined &&
-          success.order.join(",") === "0,1,2" &&
-          partial.caught &&
-          partial.failure === primaryFailure &&
-          partial.order.join(",") === "0" &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.order.join(",") === "0,1,2" &&
-          standalone.caught &&
-          standalone.failure === removeFailure &&
-          standalone.order.join(",") === "0,1,2" &&
-          multiple.caught &&
-          aggregateContainsExactly(multiple.failure, [
-            renameFailure,
-            fixtureFailure,
-          ]) &&
-          multiple.order.join(",") === "0,1,2",
-      ],
-      [
-        "combinedCaught",
-        () =>
-          success.caught === false &&
-          success.failure === undefined &&
-          success.order.join(",") === "0,1,2" &&
-          partial.caught &&
-          partial.failure === primaryFailure &&
-          partial.order.join(",") === "0" &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.order.join(",") === "0,1,2" &&
-          standalone.caught &&
-          standalone.failure === removeFailure &&
-          standalone.order.join(",") === "0,1,2" &&
-          multiple.caught &&
-          aggregateContainsExactly(multiple.failure, [
-            renameFailure,
-            fixtureFailure,
-          ]) &&
-          multiple.order.join(",") === "0,1,2" &&
-          combined.caught,
-      ],
+      ["multipleOrderJoin", () => multiple.order.join(",") === "0,1,2"],
+      ["combinedCaught", () => combined.caught],
       [
         "aggregateContainsExactlyCombinedFailure",
         () =>
-          success.caught === false &&
-          success.failure === undefined &&
-          success.order.join(",") === "0,1,2" &&
-          partial.caught &&
-          partial.failure === primaryFailure &&
-          partial.order.join(",") === "0" &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.order.join(",") === "0,1,2" &&
-          standalone.caught &&
-          standalone.failure === removeFailure &&
-          standalone.order.join(",") === "0,1,2" &&
-          multiple.caught &&
-          aggregateContainsExactly(multiple.failure, [
-            renameFailure,
-            fixtureFailure,
-          ]) &&
-          multiple.order.join(",") === "0,1,2" &&
-          combined.caught &&
           aggregateContainsExactly(combined.failure, [
             primaryFailure,
             renameFailure,
             fixtureFailure,
           ]),
       ],
-      [
-        "combinedOrderJoin",
-        () =>
-          success.caught === false &&
-          success.failure === undefined &&
-          success.order.join(",") === "0,1,2" &&
-          partial.caught &&
-          partial.failure === primaryFailure &&
-          partial.order.join(",") === "0" &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.order.join(",") === "0,1,2" &&
-          standalone.caught &&
-          standalone.failure === removeFailure &&
-          standalone.order.join(",") === "0,1,2" &&
-          multiple.caught &&
-          aggregateContainsExactly(multiple.failure, [
-            renameFailure,
-            fixtureFailure,
-          ]) &&
-          multiple.order.join(",") === "0,1,2" &&
-          combined.caught &&
-          aggregateContainsExactly(combined.failure, [
-            primaryFailure,
-            renameFailure,
-            fixtureFailure,
-          ]) &&
-          combined.order.join(",") === "0,1,2",
-      ],
-      [
-        "nestedCombinedCaught",
-        () =>
-          success.caught === false &&
-          success.failure === undefined &&
-          success.order.join(",") === "0,1,2" &&
-          partial.caught &&
-          partial.failure === primaryFailure &&
-          partial.order.join(",") === "0" &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.order.join(",") === "0,1,2" &&
-          standalone.caught &&
-          standalone.failure === removeFailure &&
-          standalone.order.join(",") === "0,1,2" &&
-          multiple.caught &&
-          aggregateContainsExactly(multiple.failure, [
-            renameFailure,
-            fixtureFailure,
-          ]) &&
-          multiple.order.join(",") === "0,1,2" &&
-          combined.caught &&
-          aggregateContainsExactly(combined.failure, [
-            primaryFailure,
-            renameFailure,
-            fixtureFailure,
-          ]) &&
-          combined.order.join(",") === "0,1,2" &&
-          nestedCombined.caught,
-      ],
+      ["combinedOrderJoin", () => combined.order.join(",") === "0,1,2"],
+      ["nestedCombinedCaught", () => nestedCombined.caught],
       [
         "aggregateContainsExactlyNestedCombinedFailure",
         () =>
-          success.caught === false &&
-          success.failure === undefined &&
-          success.order.join(",") === "0,1,2" &&
-          partial.caught &&
-          partial.failure === primaryFailure &&
-          partial.order.join(",") === "0" &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.order.join(",") === "0,1,2" &&
-          standalone.caught &&
-          standalone.failure === removeFailure &&
-          standalone.order.join(",") === "0,1,2" &&
-          multiple.caught &&
-          aggregateContainsExactly(multiple.failure, [
-            renameFailure,
-            fixtureFailure,
-          ]) &&
-          multiple.order.join(",") === "0,1,2" &&
-          combined.caught &&
-          aggregateContainsExactly(combined.failure, [
-            primaryFailure,
-            renameFailure,
-            fixtureFailure,
-          ]) &&
-          combined.order.join(",") === "0,1,2" &&
-          nestedCombined.caught &&
           aggregateContainsExactly(nestedCombined.failure, [
             nestedPrimaryFailure,
             renameFailure,
@@ -561,353 +297,27 @@ export const test_mcp_production_atomic_failure_harness_cleanup = (): void => {
       ],
       [
         "nestedCombinedOrderJoin",
-        () =>
-          success.caught === false &&
-          success.failure === undefined &&
-          success.order.join(",") === "0,1,2" &&
-          partial.caught &&
-          partial.failure === primaryFailure &&
-          partial.order.join(",") === "0" &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.order.join(",") === "0,1,2" &&
-          standalone.caught &&
-          standalone.failure === removeFailure &&
-          standalone.order.join(",") === "0,1,2" &&
-          multiple.caught &&
-          aggregateContainsExactly(multiple.failure, [
-            renameFailure,
-            fixtureFailure,
-          ]) &&
-          multiple.order.join(",") === "0,1,2" &&
-          combined.caught &&
-          aggregateContainsExactly(combined.failure, [
-            primaryFailure,
-            renameFailure,
-            fixtureFailure,
-          ]) &&
-          combined.order.join(",") === "0,1,2" &&
-          nestedCombined.caught &&
-          aggregateContainsExactly(nestedCombined.failure, [
-            nestedPrimaryFailure,
-            renameFailure,
-          ]) &&
-          nestedCombined.order.join(",") === "0,1,2",
+        () => nestedCombined.order.join(",") === "0,1,2",
       ],
-      [
-        "undefinedPrimaryCaught",
-        () =>
-          success.caught === false &&
-          success.failure === undefined &&
-          success.order.join(",") === "0,1,2" &&
-          partial.caught &&
-          partial.failure === primaryFailure &&
-          partial.order.join(",") === "0" &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.order.join(",") === "0,1,2" &&
-          standalone.caught &&
-          standalone.failure === removeFailure &&
-          standalone.order.join(",") === "0,1,2" &&
-          multiple.caught &&
-          aggregateContainsExactly(multiple.failure, [
-            renameFailure,
-            fixtureFailure,
-          ]) &&
-          multiple.order.join(",") === "0,1,2" &&
-          combined.caught &&
-          aggregateContainsExactly(combined.failure, [
-            primaryFailure,
-            renameFailure,
-            fixtureFailure,
-          ]) &&
-          combined.order.join(",") === "0,1,2" &&
-          nestedCombined.caught &&
-          aggregateContainsExactly(nestedCombined.failure, [
-            nestedPrimaryFailure,
-            renameFailure,
-          ]) &&
-          nestedCombined.order.join(",") === "0,1,2" &&
-          undefinedPrimary.caught,
-      ],
-      [
-        "undefinedPrimaryFailure",
-        () =>
-          success.caught === false &&
-          success.failure === undefined &&
-          success.order.join(",") === "0,1,2" &&
-          partial.caught &&
-          partial.failure === primaryFailure &&
-          partial.order.join(",") === "0" &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.order.join(",") === "0,1,2" &&
-          standalone.caught &&
-          standalone.failure === removeFailure &&
-          standalone.order.join(",") === "0,1,2" &&
-          multiple.caught &&
-          aggregateContainsExactly(multiple.failure, [
-            renameFailure,
-            fixtureFailure,
-          ]) &&
-          multiple.order.join(",") === "0,1,2" &&
-          combined.caught &&
-          aggregateContainsExactly(combined.failure, [
-            primaryFailure,
-            renameFailure,
-            fixtureFailure,
-          ]) &&
-          combined.order.join(",") === "0,1,2" &&
-          nestedCombined.caught &&
-          aggregateContainsExactly(nestedCombined.failure, [
-            nestedPrimaryFailure,
-            renameFailure,
-          ]) &&
-          nestedCombined.order.join(",") === "0,1,2" &&
-          undefinedPrimary.caught &&
-          undefinedPrimary.failure === undefined,
-      ],
+      ["undefinedPrimaryCaught", () => undefinedPrimary.caught],
+      ["undefinedPrimaryFailure", () => undefinedPrimary.failure === undefined],
       [
         "undefinedPrimaryOrderJoin",
-        () =>
-          success.caught === false &&
-          success.failure === undefined &&
-          success.order.join(",") === "0,1,2" &&
-          partial.caught &&
-          partial.failure === primaryFailure &&
-          partial.order.join(",") === "0" &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.order.join(",") === "0,1,2" &&
-          standalone.caught &&
-          standalone.failure === removeFailure &&
-          standalone.order.join(",") === "0,1,2" &&
-          multiple.caught &&
-          aggregateContainsExactly(multiple.failure, [
-            renameFailure,
-            fixtureFailure,
-          ]) &&
-          multiple.order.join(",") === "0,1,2" &&
-          combined.caught &&
-          aggregateContainsExactly(combined.failure, [
-            primaryFailure,
-            renameFailure,
-            fixtureFailure,
-          ]) &&
-          combined.order.join(",") === "0,1,2" &&
-          nestedCombined.caught &&
-          aggregateContainsExactly(nestedCombined.failure, [
-            nestedPrimaryFailure,
-            renameFailure,
-          ]) &&
-          nestedCombined.order.join(",") === "0,1,2" &&
-          undefinedPrimary.caught &&
-          undefinedPrimary.failure === undefined &&
-          undefinedPrimary.order.join(",") === "0,1,2",
+        () => undefinedPrimary.order.join(",") === "0,1,2",
       ],
-      [
-        "undefinedStandaloneCaught",
-        () =>
-          success.caught === false &&
-          success.failure === undefined &&
-          success.order.join(",") === "0,1,2" &&
-          partial.caught &&
-          partial.failure === primaryFailure &&
-          partial.order.join(",") === "0" &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.order.join(",") === "0,1,2" &&
-          standalone.caught &&
-          standalone.failure === removeFailure &&
-          standalone.order.join(",") === "0,1,2" &&
-          multiple.caught &&
-          aggregateContainsExactly(multiple.failure, [
-            renameFailure,
-            fixtureFailure,
-          ]) &&
-          multiple.order.join(",") === "0,1,2" &&
-          combined.caught &&
-          aggregateContainsExactly(combined.failure, [
-            primaryFailure,
-            renameFailure,
-            fixtureFailure,
-          ]) &&
-          combined.order.join(",") === "0,1,2" &&
-          nestedCombined.caught &&
-          aggregateContainsExactly(nestedCombined.failure, [
-            nestedPrimaryFailure,
-            renameFailure,
-          ]) &&
-          nestedCombined.order.join(",") === "0,1,2" &&
-          undefinedPrimary.caught &&
-          undefinedPrimary.failure === undefined &&
-          undefinedPrimary.order.join(",") === "0,1,2" &&
-          undefinedStandalone.caught,
-      ],
+      ["undefinedStandaloneCaught", () => undefinedStandalone.caught],
       [
         "undefinedStandaloneFailure",
-        () =>
-          success.caught === false &&
-          success.failure === undefined &&
-          success.order.join(",") === "0,1,2" &&
-          partial.caught &&
-          partial.failure === primaryFailure &&
-          partial.order.join(",") === "0" &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.order.join(",") === "0,1,2" &&
-          standalone.caught &&
-          standalone.failure === removeFailure &&
-          standalone.order.join(",") === "0,1,2" &&
-          multiple.caught &&
-          aggregateContainsExactly(multiple.failure, [
-            renameFailure,
-            fixtureFailure,
-          ]) &&
-          multiple.order.join(",") === "0,1,2" &&
-          combined.caught &&
-          aggregateContainsExactly(combined.failure, [
-            primaryFailure,
-            renameFailure,
-            fixtureFailure,
-          ]) &&
-          combined.order.join(",") === "0,1,2" &&
-          nestedCombined.caught &&
-          aggregateContainsExactly(nestedCombined.failure, [
-            nestedPrimaryFailure,
-            renameFailure,
-          ]) &&
-          nestedCombined.order.join(",") === "0,1,2" &&
-          undefinedPrimary.caught &&
-          undefinedPrimary.failure === undefined &&
-          undefinedPrimary.order.join(",") === "0,1,2" &&
-          undefinedStandalone.caught &&
-          undefinedStandalone.failure === undefined,
+        () => undefinedStandalone.failure === undefined,
       ],
       [
         "undefinedStandaloneOrderJoin",
-        () =>
-          success.caught === false &&
-          success.failure === undefined &&
-          success.order.join(",") === "0,1,2" &&
-          partial.caught &&
-          partial.failure === primaryFailure &&
-          partial.order.join(",") === "0" &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.order.join(",") === "0,1,2" &&
-          standalone.caught &&
-          standalone.failure === removeFailure &&
-          standalone.order.join(",") === "0,1,2" &&
-          multiple.caught &&
-          aggregateContainsExactly(multiple.failure, [
-            renameFailure,
-            fixtureFailure,
-          ]) &&
-          multiple.order.join(",") === "0,1,2" &&
-          combined.caught &&
-          aggregateContainsExactly(combined.failure, [
-            primaryFailure,
-            renameFailure,
-            fixtureFailure,
-          ]) &&
-          combined.order.join(",") === "0,1,2" &&
-          nestedCombined.caught &&
-          aggregateContainsExactly(nestedCombined.failure, [
-            nestedPrimaryFailure,
-            renameFailure,
-          ]) &&
-          nestedCombined.order.join(",") === "0,1,2" &&
-          undefinedPrimary.caught &&
-          undefinedPrimary.failure === undefined &&
-          undefinedPrimary.order.join(",") === "0,1,2" &&
-          undefinedStandalone.caught &&
-          undefinedStandalone.failure === undefined &&
-          undefinedStandalone.order.join(",") === "0,1,2",
+        () => undefinedStandalone.order.join(",") === "0,1,2",
       ],
-      [
-        "undefinedCombinedCaught",
-        () =>
-          success.caught === false &&
-          success.failure === undefined &&
-          success.order.join(",") === "0,1,2" &&
-          partial.caught &&
-          partial.failure === primaryFailure &&
-          partial.order.join(",") === "0" &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.order.join(",") === "0,1,2" &&
-          standalone.caught &&
-          standalone.failure === removeFailure &&
-          standalone.order.join(",") === "0,1,2" &&
-          multiple.caught &&
-          aggregateContainsExactly(multiple.failure, [
-            renameFailure,
-            fixtureFailure,
-          ]) &&
-          multiple.order.join(",") === "0,1,2" &&
-          combined.caught &&
-          aggregateContainsExactly(combined.failure, [
-            primaryFailure,
-            renameFailure,
-            fixtureFailure,
-          ]) &&
-          combined.order.join(",") === "0,1,2" &&
-          nestedCombined.caught &&
-          aggregateContainsExactly(nestedCombined.failure, [
-            nestedPrimaryFailure,
-            renameFailure,
-          ]) &&
-          nestedCombined.order.join(",") === "0,1,2" &&
-          undefinedPrimary.caught &&
-          undefinedPrimary.failure === undefined &&
-          undefinedPrimary.order.join(",") === "0,1,2" &&
-          undefinedStandalone.caught &&
-          undefinedStandalone.failure === undefined &&
-          undefinedStandalone.order.join(",") === "0,1,2" &&
-          undefinedCombined.caught,
-      ],
+      ["undefinedCombinedCaught", () => undefinedCombined.caught],
       [
         "aggregateContainsExactlyUndefinedCombinedFailure",
         () =>
-          success.caught === false &&
-          success.failure === undefined &&
-          success.order.join(",") === "0,1,2" &&
-          partial.caught &&
-          partial.failure === primaryFailure &&
-          partial.order.join(",") === "0" &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.order.join(",") === "0,1,2" &&
-          standalone.caught &&
-          standalone.failure === removeFailure &&
-          standalone.order.join(",") === "0,1,2" &&
-          multiple.caught &&
-          aggregateContainsExactly(multiple.failure, [
-            renameFailure,
-            fixtureFailure,
-          ]) &&
-          multiple.order.join(",") === "0,1,2" &&
-          combined.caught &&
-          aggregateContainsExactly(combined.failure, [
-            primaryFailure,
-            renameFailure,
-            fixtureFailure,
-          ]) &&
-          combined.order.join(",") === "0,1,2" &&
-          nestedCombined.caught &&
-          aggregateContainsExactly(nestedCombined.failure, [
-            nestedPrimaryFailure,
-            renameFailure,
-          ]) &&
-          nestedCombined.order.join(",") === "0,1,2" &&
-          undefinedPrimary.caught &&
-          undefinedPrimary.failure === undefined &&
-          undefinedPrimary.order.join(",") === "0,1,2" &&
-          undefinedStandalone.caught &&
-          undefinedStandalone.failure === undefined &&
-          undefinedStandalone.order.join(",") === "0,1,2" &&
-          undefinedCombined.caught &&
           aggregateContainsExactly(undefinedCombined.failure, [
             undefined,
             undefined,
@@ -915,50 +325,7 @@ export const test_mcp_production_atomic_failure_harness_cleanup = (): void => {
       ],
       [
         "undefinedCombinedOrderJoin",
-        () =>
-          success.caught === false &&
-          success.failure === undefined &&
-          success.order.join(",") === "0,1,2" &&
-          partial.caught &&
-          partial.failure === primaryFailure &&
-          partial.order.join(",") === "0" &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.order.join(",") === "0,1,2" &&
-          standalone.caught &&
-          standalone.failure === removeFailure &&
-          standalone.order.join(",") === "0,1,2" &&
-          multiple.caught &&
-          aggregateContainsExactly(multiple.failure, [
-            renameFailure,
-            fixtureFailure,
-          ]) &&
-          multiple.order.join(",") === "0,1,2" &&
-          combined.caught &&
-          aggregateContainsExactly(combined.failure, [
-            primaryFailure,
-            renameFailure,
-            fixtureFailure,
-          ]) &&
-          combined.order.join(",") === "0,1,2" &&
-          nestedCombined.caught &&
-          aggregateContainsExactly(nestedCombined.failure, [
-            nestedPrimaryFailure,
-            renameFailure,
-          ]) &&
-          nestedCombined.order.join(",") === "0,1,2" &&
-          undefinedPrimary.caught &&
-          undefinedPrimary.failure === undefined &&
-          undefinedPrimary.order.join(",") === "0,1,2" &&
-          undefinedStandalone.caught &&
-          undefinedStandalone.failure === undefined &&
-          undefinedStandalone.order.join(",") === "0,1,2" &&
-          undefinedCombined.caught &&
-          aggregateContainsExactly(undefinedCombined.failure, [
-            undefined,
-            undefined,
-          ]) &&
-          undefinedCombined.order.join(",") === "0,1,2",
+        () => undefinedCombined.order.join(",") === "0,1,2",
       ],
     ]),
     {

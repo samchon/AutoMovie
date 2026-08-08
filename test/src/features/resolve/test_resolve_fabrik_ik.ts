@@ -65,12 +65,7 @@ export const test_resolve_fabrik_ik = (): void => {
     "segment lengths exact",
     namedFacts([
       ["ncloseDistAt", () => nclose(dist(at(w1, "r"), at(w1, "m")), 1, 1e-9)],
-      [
-        "ncloseDistAt2",
-        () =>
-          nclose(dist(at(w1, "r"), at(w1, "m")), 1, 1e-9) &&
-          nclose(dist(at(w1, "m"), at(w1, "t")), 1, 1e-9),
-      ],
+      ["ncloseDistAt2", () => nclose(dist(at(w1, "m"), at(w1, "t")), 1, 1e-9)],
     ]),
     { ncloseDistAt: true, ncloseDistAt2: true },
   );
@@ -127,12 +122,7 @@ export const test_resolve_fabrik_ik = (): void => {
     "degenerate fold terminates with exact lengths",
     namedFacts([
       ["ncloseDistAt", () => nclose(dist(at(w4, "r"), at(w4, "m")), 1, 1e-9)],
-      [
-        "ncloseDistAt2",
-        () =>
-          nclose(dist(at(w4, "r"), at(w4, "m")), 1, 1e-9) &&
-          nclose(dist(at(w4, "m"), at(w4, "t")), 1, 1e-9),
-      ],
+      ["ncloseDistAt2", () => nclose(dist(at(w4, "m"), at(w4, "t")), 1, 1e-9)],
     ]),
     { ncloseDistAt: true, ncloseDistAt2: true },
   );
@@ -144,12 +134,7 @@ export const test_resolve_fabrik_ik = (): void => {
     "deterministic replay",
     namedFacts([
       ["vcloseAtW5", () => vclose(at(w5, "m"), at(w1, "m"), 0)],
-      [
-        "vcloseAtW52",
-        () =>
-          vclose(at(w5, "m"), at(w1, "m"), 0) &&
-          vclose(at(w5, "t"), at(w1, "t"), 0),
-      ],
+      ["vcloseAtW52", () => vclose(at(w5, "t"), at(w1, "t"), 0)],
     ]),
     { vcloseAtW5: true, vcloseAtW52: true },
   );

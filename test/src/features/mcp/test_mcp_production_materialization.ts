@@ -287,10 +287,7 @@ export const test_mcp_production_materialization = (): void => {
       ],
       [
         "boundedInvalidProjectionProjectionRadius",
-        () =>
-          projectionRadii.every(
-            (radius) => Number.isFinite(radius) && radius > 0,
-          ) && boundedInvalidProjection.projectionRadius === 0.5,
+        () => boundedInvalidProjection.projectionRadius === 0.5,
       ],
     ]),
     {
@@ -844,36 +841,12 @@ export const test_mcp_production_materialization = (): void => {
         [
           "firstRegeneratedSlotMotionPhaseRepeatedRegeneratedSlot",
           () =>
-            compact.count === AUTOMOVIE_FORMATION_CHUNK_SIZE * 2 + 1 &&
-            compact.chunks.length === 3 &&
-            compact.chunks[0]?.count === AUTOMOVIE_FORMATION_CHUNK_SIZE &&
-            compact.chunks[1]?.start === AUTOMOVIE_FORMATION_CHUNK_SIZE &&
-            compact.chunks[1]?.anonymousCount ===
-              AUTOMOVIE_FORMATION_CHUNK_SIZE - 1 &&
-            compact.chunks[2]?.count === 1 &&
-            compact.heroes[0]?.slot === AUTOMOVIE_FORMATION_CHUNK_SIZE &&
-            compact.digest === compactAgain.digest &&
-            materializeFormationSlot(highCount, AUTOMOVIE_FORMATION_CHUNK_SIZE)
-              .actor === "boundary-hero" &&
             firstRegeneratedSlot.motionPhase ===
-              repeatedRegeneratedSlot.motionPhase,
+            repeatedRegeneratedSlot.motionPhase,
         ],
         [
           "tryMaterializeFormationSlotHighCount",
           () =>
-            compact.count === AUTOMOVIE_FORMATION_CHUNK_SIZE * 2 + 1 &&
-            compact.chunks.length === 3 &&
-            compact.chunks[0]?.count === AUTOMOVIE_FORMATION_CHUNK_SIZE &&
-            compact.chunks[1]?.start === AUTOMOVIE_FORMATION_CHUNK_SIZE &&
-            compact.chunks[1]?.anonymousCount ===
-              AUTOMOVIE_FORMATION_CHUNK_SIZE - 1 &&
-            compact.chunks[2]?.count === 1 &&
-            compact.heroes[0]?.slot === AUTOMOVIE_FORMATION_CHUNK_SIZE &&
-            compact.digest === compactAgain.digest &&
-            materializeFormationSlot(highCount, AUTOMOVIE_FORMATION_CHUNK_SIZE)
-              .actor === "boundary-hero" &&
-            firstRegeneratedSlot.motionPhase ===
-              repeatedRegeneratedSlot.motionPhase &&
             (() => {
               try {
                 materializeFormationSlot(highCount, highCount.count);
@@ -967,125 +940,47 @@ export const test_mcp_production_materialization = (): void => {
         [
           "highCountShotFormationMotions0",
           () =>
-            highCountCompileSucceeded &&
-            highCountShot?.formations[0]?.count === highCount.count &&
-            highCountShot.scene.nodes.every(
-              (node) =>
-                node.id !==
-                `formation:${highCount.id}:slot:${String(highCount.count - 1).padStart(6, "0")}`,
-            ) &&
+            highCountShot !== null &&
             highCountShot.formationMotions[0]?.formation === highCount.id,
         ],
         [
           "highCountShotFormationMotions02",
           () =>
-            highCountCompileSucceeded &&
-            highCountShot?.formations[0]?.count === highCount.count &&
-            highCountShot.scene.nodes.every(
-              (node) =>
-                node.id !==
-                `formation:${highCount.id}:slot:${String(highCount.count - 1).padStart(6, "0")}`,
-            ) &&
-            highCountShot.formationMotions[0]?.formation === highCount.id &&
+            highCountShot !== null &&
             highCountShot.formationMotions[0]?.action === "advance",
         ],
         [
           "highCountSummaryResultKind",
-          () =>
-            highCountCompileSucceeded &&
-            highCountShot?.formations[0]?.count === highCount.count &&
-            highCountShot.scene.nodes.every(
-              (node) =>
-                node.id !==
-                `formation:${highCount.id}:slot:${String(highCount.count - 1).padStart(6, "0")}`,
-            ) &&
-            highCountShot.formationMotions[0]?.formation === highCount.id &&
-            highCountShot.formationMotions[0]?.action === "advance" &&
-            highCountSummary.result?.kind === "measurement",
+          () => highCountSummary.result?.kind === "measurement",
         ],
         [
           "highCountSummaryResultValues",
           () =>
-            highCountCompileSucceeded &&
-            highCountShot?.formations[0]?.count === highCount.count &&
-            highCountShot.scene.nodes.every(
-              (node) =>
-                node.id !==
-                `formation:${highCount.id}:slot:${String(highCount.count - 1).padStart(6, "0")}`,
-            ) &&
-            highCountShot.formationMotions[0]?.formation === highCount.id &&
-            highCountShot.formationMotions[0]?.action === "advance" &&
             highCountSummary.result?.kind === "measurement" &&
             highCountSummary.result.values.motionOffsetZ === -1,
         ],
         [
           "highCountSummaryResultValues2",
           () =>
-            highCountCompileSucceeded &&
-            highCountShot?.formations[0]?.count === highCount.count &&
-            highCountShot.scene.nodes.every(
-              (node) =>
-                node.id !==
-                `formation:${highCount.id}:slot:${String(highCount.count - 1).padStart(6, "0")}`,
-            ) &&
-            highCountShot.formationMotions[0]?.formation === highCount.id &&
-            highCountShot.formationMotions[0]?.action === "advance" &&
             highCountSummary.result?.kind === "measurement" &&
-            highCountSummary.result.values.motionOffsetZ === -1 &&
             highCountSummary.result.values.motionFacingOffsetDeg === 2,
         ],
         [
           "highCountSummaryResultValues3",
           () =>
-            highCountCompileSucceeded &&
-            highCountShot?.formations[0]?.count === highCount.count &&
-            highCountShot.scene.nodes.every(
-              (node) =>
-                node.id !==
-                `formation:${highCount.id}:slot:${String(highCount.count - 1).padStart(6, "0")}`,
-            ) &&
-            highCountShot.formationMotions[0]?.formation === highCount.id &&
-            highCountShot.formationMotions[0]?.action === "advance" &&
             highCountSummary.result?.kind === "measurement" &&
-            highCountSummary.result.values.motionOffsetZ === -1 &&
-            highCountSummary.result.values.motionFacingOffsetDeg === 2 &&
             highCountSummary.result.values.lateralSpacingScale === 1.025,
         ],
         [
           "highCountSummaryResultValues4",
           () =>
-            highCountCompileSucceeded &&
-            highCountShot?.formations[0]?.count === highCount.count &&
-            highCountShot.scene.nodes.every(
-              (node) =>
-                node.id !==
-                `formation:${highCount.id}:slot:${String(highCount.count - 1).padStart(6, "0")}`,
-            ) &&
-            highCountShot.formationMotions[0]?.formation === highCount.id &&
-            highCountShot.formationMotions[0]?.action === "advance" &&
             highCountSummary.result?.kind === "measurement" &&
-            highCountSummary.result.values.motionOffsetZ === -1 &&
-            highCountSummary.result.values.motionFacingOffsetDeg === 2 &&
-            highCountSummary.result.values.lateralSpacingScale === 1.025 &&
             Number(highCountSummary.result.values.minimumProjectedPixels) > 0,
         ],
         [
           "highCountSummaryResultValues5",
           () =>
-            highCountCompileSucceeded &&
-            highCountShot?.formations[0]?.count === highCount.count &&
-            highCountShot.scene.nodes.every(
-              (node) =>
-                node.id !==
-                `formation:${highCount.id}:slot:${String(highCount.count - 1).padStart(6, "0")}`,
-            ) &&
-            highCountShot.formationMotions[0]?.formation === highCount.id &&
-            highCountShot.formationMotions[0]?.action === "advance" &&
             highCountSummary.result?.kind === "measurement" &&
-            highCountSummary.result.values.motionOffsetZ === -1 &&
-            highCountSummary.result.values.motionFacingOffsetDeg === 2 &&
-            highCountSummary.result.values.lateralSpacingScale === 1.025 &&
-            Number(highCountSummary.result.values.minimumProjectedPixels) > 0 &&
             Number(highCountSummary.result.values.nearVisible) +
               Number(highCountSummary.result.values.farVisible) +
               Number(highCountSummary.result.values.culled) ===

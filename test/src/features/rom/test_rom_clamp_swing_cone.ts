@@ -102,10 +102,7 @@ export const test_rom_clamp_swing_cone = (): void => {
     "a resting axis does not exempt the clamp: flexion is pulled onto the cone",
     namedFacts([
       ["ncloseRestingPastFlexion", () => nclose(restingPast.flexion!, 100)],
-      [
-        "passesConeRestingPast",
-        () => nclose(restingPast.flexion!, 100) && passesCone(restingPast),
-      ],
+      ["passesConeRestingPast", () => passesCone(restingPast)],
     ]),
     { ncloseRestingPastFlexion: true, passesConeRestingPast: true },
   );

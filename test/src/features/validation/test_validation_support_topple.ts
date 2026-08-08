@@ -72,12 +72,7 @@ export const test_validation_support_topple = (): void => {
         "ncloseToppleToppling",
         () => nclose(topple.toppling!.tipEdgeStart.x, 2),
       ],
-      [
-        "ncloseToppleToppling2",
-        () =>
-          nclose(topple.toppling!.tipEdgeStart.x, 2) &&
-          nclose(topple.toppling!.tipEdgeEnd.x, 2),
-      ],
+      ["ncloseToppleToppling2", () => nclose(topple.toppling!.tipEdgeEnd.x, 2)],
     ]),
     { ncloseToppleToppling: true, ncloseToppleToppling2: true },
   );

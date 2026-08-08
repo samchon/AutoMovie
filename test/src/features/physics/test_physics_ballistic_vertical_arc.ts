@@ -109,10 +109,7 @@ export const test_physics_ballistic_vertical_arc = (): void => {
     "both overhead arcs land on the target",
     namedFacts([
       ["landsOnDirectUpOverhead", () => landsOn(directUp, overhead)],
-      [
-        "landsOnHighUpOverhead",
-        () => landsOn(directUp, overhead) && landsOn(highUp, overhead),
-      ],
+      ["landsOnHighUpOverhead", () => landsOn(highUp, overhead)],
     ]),
     { landsOnDirectUpOverhead: true, landsOnHighUpOverhead: true },
   );
@@ -132,10 +129,8 @@ export const test_physics_ballistic_vertical_arc = (): void => {
       [
         "solveBallisticLaunchORIGINUnreachable2",
         () =>
-          solveBallisticLaunch(ORIGIN, unreachable, 10, GRAVITY, "direct") ===
-            null &&
           solveBallisticLaunch(ORIGIN, unreachable, 10, GRAVITY, "high") ===
-            null,
+          null,
       ],
     ]),
     {
@@ -158,12 +153,7 @@ export const test_physics_ballistic_vertical_arc = (): void => {
         "vcloseStraightVelocity",
         () => vclose(straight.velocity, { x: 0, y: -10, z: 0 }, 1e-9),
       ],
-      [
-        "ncloseStraightHitTime",
-        () =>
-          vclose(straight.velocity, { x: 0, y: -10, z: 0 }, 1e-9) &&
-          nclose(straight.hitTime, 0.5, 1e-9),
-      ],
+      ["ncloseStraightHitTime", () => nclose(straight.hitTime, 0.5, 1e-9)],
     ]),
     { vcloseStraightVelocity: true, ncloseStraightHitTime: true },
   );

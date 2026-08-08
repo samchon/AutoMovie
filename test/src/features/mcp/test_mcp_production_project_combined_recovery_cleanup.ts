@@ -183,49 +183,16 @@ export const test_mcp_production_project_combined_recovery_cleanup =
             success.caught === false &&
             success.order.join(",") === "cleanup-0,cleanup-1,cleanup-2",
         ],
-        [
-          "leadingCaught",
-          () =>
-            success.caught === false &&
-            success.order.join(",") === "cleanup-0,cleanup-1,cleanup-2" &&
-            leading.caught,
-        ],
-        [
-          "leadingFailureFirstFailure",
-          () =>
-            success.caught === false &&
-            success.order.join(",") === "cleanup-0,cleanup-1,cleanup-2" &&
-            leading.caught &&
-            leading.failure === firstFailure,
-        ],
+        ["leadingCaught", () => leading.caught],
+        ["leadingFailureFirstFailure", () => leading.failure === firstFailure],
         [
           "leadingOrderJoin",
-          () =>
-            success.caught === false &&
-            success.order.join(",") === "cleanup-0,cleanup-1,cleanup-2" &&
-            leading.caught &&
-            leading.failure === firstFailure &&
-            leading.order.join(",") === "cleanup-0,cleanup-1,cleanup-2",
+          () => leading.order.join(",") === "cleanup-0,cleanup-1,cleanup-2",
         ],
-        [
-          "bothCaught",
-          () =>
-            success.caught === false &&
-            success.order.join(",") === "cleanup-0,cleanup-1,cleanup-2" &&
-            leading.caught &&
-            leading.failure === firstFailure &&
-            leading.order.join(",") === "cleanup-0,cleanup-1,cleanup-2" &&
-            both.caught,
-        ],
+        ["bothCaught", () => both.caught],
         [
           "aggregateContainsExactlyBothFailure",
           () =>
-            success.caught === false &&
-            success.order.join(",") === "cleanup-0,cleanup-1,cleanup-2" &&
-            leading.caught &&
-            leading.failure === firstFailure &&
-            leading.order.join(",") === "cleanup-0,cleanup-1,cleanup-2" &&
-            both.caught &&
             aggregateContainsExactly(both.failure, [firstFailure, lastFailure]),
         ],
         [

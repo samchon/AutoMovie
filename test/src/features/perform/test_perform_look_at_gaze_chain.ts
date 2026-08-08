@@ -176,10 +176,7 @@ export const test_perform_look_at_gaze_chain = (): void => {
     "the head takes its declared maximum and the neck takes the rest",
     namedFacts([
       ["ncloseHeadFlexion", () => nclose(head.flexion!, 30)],
-      [
-        "ncloseNeckFlexion",
-        () => nclose(head.flexion!, 30) && nclose(neck.flexion!, required - 30),
-      ],
+      ["ncloseNeckFlexion", () => nclose(neck.flexion!, required - 30)],
     ]),
     { ncloseHeadFlexion: true, ncloseNeckFlexion: true },
   );
@@ -368,12 +365,7 @@ export const test_perform_look_at_gaze_chain = (): void => {
     "a rig declaring no neck keeps the single-bone aim",
     namedFacts([
       ["nclosePosedJoints", () => nclose(posed.joints[0]!.flexion!, required)],
-      [
-        "nclosePosedJoints2",
-        () =>
-          nclose(posed.joints[0]!.flexion!, required) &&
-          nclose(posed.joints[0]!.twist!, 0),
-      ],
+      ["nclosePosedJoints2", () => nclose(posed.joints[0]!.twist!, 0)],
     ]),
     { nclosePosedJoints: true, nclosePosedJoints2: true },
   );

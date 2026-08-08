@@ -46,9 +46,7 @@ export const test_motion_arrange = (): void => {
       ],
       [
         "ncloseSpineHeld2",
-        () =>
-          nclose(spine(held.keyframes[0]!.pose)!.flexion!, 12) &&
-          nclose(spine(held.keyframes[1]!.pose)!.flexion!, 12),
+        () => nclose(spine(held.keyframes[1]!.pose)!.flexion!, 12),
       ],
     ]),
     { ncloseSpineHeld: true, ncloseSpineHeld2: true },

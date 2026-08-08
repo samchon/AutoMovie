@@ -187,182 +187,42 @@ export const test_mcp_production_legacy_import_temporary_root_cleanup =
             success.failure === undefined &&
             success.order.join(",") === "cleanup-0",
         ],
-        [
-          "primaryOnlyCaught",
-          () =>
-            success.caught === false &&
-            success.failure === undefined &&
-            success.order.join(",") === "cleanup-0" &&
-            primaryOnly.caught,
-        ],
+        ["primaryOnlyCaught", () => primaryOnly.caught],
         [
           "primaryOnlyFailurePrimaryFailure",
-          () =>
-            success.caught === false &&
-            success.failure === undefined &&
-            success.order.join(",") === "cleanup-0" &&
-            primaryOnly.caught &&
-            primaryOnly.failure === primaryFailure,
+          () => primaryOnly.failure === primaryFailure,
         ],
         [
           "primaryOnlyOrderJoin",
-          () =>
-            success.caught === false &&
-            success.failure === undefined &&
-            success.order.join(",") === "cleanup-0" &&
-            primaryOnly.caught &&
-            primaryOnly.failure === primaryFailure &&
-            primaryOnly.order.join(",") === "cleanup-0",
+          () => primaryOnly.order.join(",") === "cleanup-0",
         ],
-        [
-          "standaloneCaught",
-          () =>
-            success.caught === false &&
-            success.failure === undefined &&
-            success.order.join(",") === "cleanup-0" &&
-            primaryOnly.caught &&
-            primaryOnly.failure === primaryFailure &&
-            primaryOnly.order.join(",") === "cleanup-0" &&
-            standalone.caught,
-        ],
+        ["standaloneCaught", () => standalone.caught],
         [
           "standaloneFailureRemovalFailure",
-          () =>
-            success.caught === false &&
-            success.failure === undefined &&
-            success.order.join(",") === "cleanup-0" &&
-            primaryOnly.caught &&
-            primaryOnly.failure === primaryFailure &&
-            primaryOnly.order.join(",") === "cleanup-0" &&
-            standalone.caught &&
-            standalone.failure === removalFailure,
+          () => standalone.failure === removalFailure,
         ],
         [
           "standaloneOrderJoin",
-          () =>
-            success.caught === false &&
-            success.failure === undefined &&
-            success.order.join(",") === "cleanup-0" &&
-            primaryOnly.caught &&
-            primaryOnly.failure === primaryFailure &&
-            primaryOnly.order.join(",") === "cleanup-0" &&
-            standalone.caught &&
-            standalone.failure === removalFailure &&
-            standalone.order.join(",") === "cleanup-0",
+          () => standalone.order.join(",") === "cleanup-0",
         ],
-        [
-          "combinedCaught",
-          () =>
-            success.caught === false &&
-            success.failure === undefined &&
-            success.order.join(",") === "cleanup-0" &&
-            primaryOnly.caught &&
-            primaryOnly.failure === primaryFailure &&
-            primaryOnly.order.join(",") === "cleanup-0" &&
-            standalone.caught &&
-            standalone.failure === removalFailure &&
-            standalone.order.join(",") === "cleanup-0" &&
-            combined.caught,
-        ],
+        ["combinedCaught", () => combined.caught],
         [
           "aggregateContainsExactlyCombinedFailure",
           () =>
-            success.caught === false &&
-            success.failure === undefined &&
-            success.order.join(",") === "cleanup-0" &&
-            primaryOnly.caught &&
-            primaryOnly.failure === primaryFailure &&
-            primaryOnly.order.join(",") === "cleanup-0" &&
-            standalone.caught &&
-            standalone.failure === removalFailure &&
-            standalone.order.join(",") === "cleanup-0" &&
-            combined.caught &&
             aggregateContainsExactly(combined.failure, [
               primaryFailure,
               removalFailure,
             ]),
         ],
-        [
-          "combinedOrderJoin",
-          () =>
-            success.caught === false &&
-            success.failure === undefined &&
-            success.order.join(",") === "cleanup-0" &&
-            primaryOnly.caught &&
-            primaryOnly.failure === primaryFailure &&
-            primaryOnly.order.join(",") === "cleanup-0" &&
-            standalone.caught &&
-            standalone.failure === removalFailure &&
-            standalone.order.join(",") === "cleanup-0" &&
-            combined.caught &&
-            aggregateContainsExactly(combined.failure, [
-              primaryFailure,
-              removalFailure,
-            ]) &&
-            combined.order.join(",") === "cleanup-0",
-        ],
-        [
-          "undefinedPrimaryCaught",
-          () =>
-            success.caught === false &&
-            success.failure === undefined &&
-            success.order.join(",") === "cleanup-0" &&
-            primaryOnly.caught &&
-            primaryOnly.failure === primaryFailure &&
-            primaryOnly.order.join(",") === "cleanup-0" &&
-            standalone.caught &&
-            standalone.failure === removalFailure &&
-            standalone.order.join(",") === "cleanup-0" &&
-            combined.caught &&
-            aggregateContainsExactly(combined.failure, [
-              primaryFailure,
-              removalFailure,
-            ]) &&
-            combined.order.join(",") === "cleanup-0" &&
-            undefinedPrimary.caught,
-        ],
+        ["combinedOrderJoin", () => combined.order.join(",") === "cleanup-0"],
+        ["undefinedPrimaryCaught", () => undefinedPrimary.caught],
         [
           "undefinedPrimaryFailure",
-          () =>
-            success.caught === false &&
-            success.failure === undefined &&
-            success.order.join(",") === "cleanup-0" &&
-            primaryOnly.caught &&
-            primaryOnly.failure === primaryFailure &&
-            primaryOnly.order.join(",") === "cleanup-0" &&
-            standalone.caught &&
-            standalone.failure === removalFailure &&
-            standalone.order.join(",") === "cleanup-0" &&
-            combined.caught &&
-            aggregateContainsExactly(combined.failure, [
-              primaryFailure,
-              removalFailure,
-            ]) &&
-            combined.order.join(",") === "cleanup-0" &&
-            undefinedPrimary.caught &&
-            undefinedPrimary.failure === undefined,
+          () => undefinedPrimary.failure === undefined,
         ],
         [
           "undefinedPrimaryOrderJoin",
-          () =>
-            success.caught === false &&
-            success.failure === undefined &&
-            success.order.join(",") === "cleanup-0" &&
-            primaryOnly.caught &&
-            primaryOnly.failure === primaryFailure &&
-            primaryOnly.order.join(",") === "cleanup-0" &&
-            standalone.caught &&
-            standalone.failure === removalFailure &&
-            standalone.order.join(",") === "cleanup-0" &&
-            combined.caught &&
-            aggregateContainsExactly(combined.failure, [
-              primaryFailure,
-              removalFailure,
-            ]) &&
-            combined.order.join(",") === "cleanup-0" &&
-            undefinedPrimary.caught &&
-            undefinedPrimary.failure === undefined &&
-            undefinedPrimary.order.join(",") === "cleanup-0",
+          () => undefinedPrimary.order.join(",") === "cleanup-0",
         ],
       ]),
       {

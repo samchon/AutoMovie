@@ -127,10 +127,7 @@ export const test_physics_impact = (): void => {
     "inelastic: both end at ~2 m/s",
     namedFacts([
       ["ncloseDflVelocityA", () => nclose(dfl.velocityA.z, 2)],
-      [
-        "ncloseDflVelocityB",
-        () => nclose(dfl.velocityA.z, 2) && nclose(dfl.velocityB.z, 2),
-      ],
+      ["ncloseDflVelocityB", () => nclose(dfl.velocityB.z, 2)],
     ]),
     { ncloseDflVelocityA: true, ncloseDflVelocityB: true },
   );

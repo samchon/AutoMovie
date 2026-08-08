@@ -56,9 +56,7 @@ export const test_face_bust = (): void => {
       ],
       [
         "maxXAtWidePositions2",
-        () =>
-          maxXAt(wide.positions, top - 0.02, top) > neckX &&
-          maxXAt(wide.positions, -Infinity, top - 0.06) > shoulderX,
+        () => maxXAt(wide.positions, -Infinity, top - 0.06) > shoulderX,
       ],
     ]),
     { maxXAtWidePositions: true, maxXAtWidePositions2: true },

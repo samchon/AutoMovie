@@ -309,9 +309,7 @@ export const test_mcp_production_namespaces = (): void => {
         ],
         [
           "betaDesignKind",
-          () =>
-            alpha.design({ kind: "model", id: "sentinel" }) !== null &&
-            beta.design({ kind: "model", id: "sentinel" }) !== null,
+          () => beta.design({ kind: "model", id: "sentinel" }) !== null,
         ],
       ]),
       { alphaDesignKind: true, betaDesignKind: true },
@@ -398,9 +396,7 @@ export const test_mcp_production_namespaces = (): void => {
         ],
         [
           "fsReadFileSyncBetaRender",
-          () =>
-            fs.readFileSync(alphaRender, "utf8") === "alpha" &&
-            fs.readFileSync(betaRender, "utf8") === "beta",
+          () => fs.readFileSync(betaRender, "utf8") === "beta",
         ],
       ]),
       { fsReadFileSyncAlphaRender: true, fsReadFileSyncBetaRender: true },
@@ -601,10 +597,6 @@ export const test_mcp_production_namespaces = (): void => {
         [
           "autoMovieProductionProjectOpenAliasFixture",
           () =>
-            throws(
-              () => AutoMovieProductionProject.open(aliasFixture.root, "beta"),
-              "not a physical directory",
-            ) &&
             AutoMovieProductionProject.open(aliasFixture.root, "fixture-film")
               .productionIds()
               .includes("beta") === false,
@@ -735,16 +727,11 @@ export const test_mcp_production_namespaces = (): void => {
         ],
         [
           "recreatedSummaryProductionId",
-          () =>
-            Object.hasOwn(registryBefore.incarnations, "__proto__") &&
-            recreated.summary().productionId === "__proto__",
+          () => recreated.summary().productionId === "__proto__",
         ],
         [
           "throwsStaleGeneratedRoot",
-          () =>
-            Object.hasOwn(registryBefore.incarnations, "__proto__") &&
-            recreated.summary().productionId === "__proto__" &&
-            throws(() => stale.generatedRoot(), "deleted or recreated"),
+          () => throws(() => stale.generatedRoot(), "deleted or recreated"),
         ],
       ]),
       {
@@ -800,11 +787,7 @@ export const test_mcp_production_namespaces = (): void => {
           ],
           [
             "alphaSummaryProductionId",
-            () =>
-              throws(
-                () => beta.design({ kind: "production" }),
-                "changed physical identity",
-              ) && alpha.summary().productionId === "fixture-film",
+            () => alpha.summary().productionId === "fixture-film",
           ],
         ]),
         { throwsBetaDesign: true, alphaSummaryProductionId: true },

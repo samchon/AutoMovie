@@ -163,10 +163,7 @@ export const test_motion_gesture = (): void => {
     "kick chambers then snaps the knee (folded → near-straight)",
     namedFacts([
       ["maxKneeFlex", () => Math.max(...kneeFlex) > 60],
-      [
-        "minKneeFlex",
-        () => Math.max(...kneeFlex) > 60 && Math.min(...kneeFlex) < 15,
-      ],
+      ["minKneeFlex", () => Math.min(...kneeFlex) < 15],
     ]),
     { maxKneeFlex: true, minKneeFlex: true },
   );
@@ -180,9 +177,7 @@ export const test_motion_gesture = (): void => {
       ["maxAbsStaggerSpine", () => maxAbs(stagger, "spine", "abduction") > 15],
       [
         "maxAbsStaggerRightUpperLeg",
-        () =>
-          maxAbs(stagger, "spine", "abduction") > 15 &&
-          maxAbs(stagger, "rightUpperLeg", "flexion") > 15,
+        () => maxAbs(stagger, "rightUpperLeg", "flexion") > 15,
       ],
     ]),
     { maxAbsStaggerSpine: true, maxAbsStaggerRightUpperLeg: true },
@@ -224,7 +219,6 @@ export const test_motion_gesture = (): void => {
       [
         "nclosePeakAbdCelebrate",
         () =>
-          peakAbd(celebrate, "leftUpperArm") > 120 &&
           nclose(
             peakAbd(celebrate, "leftUpperArm"),
             peakAbd(celebrate, "rightUpperArm"),
@@ -246,9 +240,7 @@ export const test_motion_gesture = (): void => {
       ],
       [
         "maxAbsDrawRightLowerArm",
-        () =>
-          maxAbs(draw, "leftUpperArm", "flexion") > 60 &&
-          maxAbs(draw, "rightLowerArm", "flexion") > 90,
+        () => maxAbs(draw, "rightLowerArm", "flexion") > 90,
       ],
     ]),
     { maxAbsDrawLeftUpperArm: true, maxAbsDrawRightLowerArm: true },
@@ -265,10 +257,7 @@ export const test_motion_gesture = (): void => {
     "throw winds the arm back then whips it forward",
     namedFacts([
       ["minThrowArmFlex", () => Math.min(...throwArmFlex) < -20],
-      [
-        "maxThrowArmFlex",
-        () => Math.min(...throwArmFlex) < -20 && Math.max(...throwArmFlex) > 40,
-      ],
+      ["maxThrowArmFlex", () => Math.max(...throwArmFlex) > 40],
     ]),
     { minThrowArmFlex: true, maxThrowArmFlex: true },
   );
@@ -303,10 +292,7 @@ export const test_motion_gesture = (): void => {
     "jump opens and closes grounded (root y = 0)",
     namedFacts([
       ["ncloseRootYs0", () => nclose(rootYs[0]!, 0)],
-      [
-        "ncloseRootYsRootYs",
-        () => nclose(rootYs[0]!, 0) && nclose(rootYs[rootYs.length - 1]!, 0),
-      ],
+      ["ncloseRootYsRootYs", () => nclose(rootYs[rootYs.length - 1]!, 0)],
     ]),
     { ncloseRootYs0: true, ncloseRootYsRootYs: true },
   );

@@ -109,9 +109,7 @@ export const test_kinematics_arm_raise_clinical = (): void => {
       ],
       [
         "ncloseYOfPose2",
-        () =>
-          nclose(yOf(pose([]), "leftHand"), shoulderL, 1e-9) &&
-          nclose(yOf(pose([]), "rightHand"), shoulderR, 1e-9),
+        () => nclose(yOf(pose([]), "rightHand"), shoulderR, 1e-9),
       ],
     ]),
     { ncloseYOfPose: true, ncloseYOfPose2: true },
@@ -124,12 +122,7 @@ export const test_kinematics_arm_raise_clinical = (): void => {
     "clinical abduction 180 lifts both hands overhead (same value, no mirror)",
     namedFacts([
       ["yOfUpLeftHand", () => yOf(up, "leftHand", true) > shoulderL + 0.3],
-      [
-        "yOfUpRightHand",
-        () =>
-          yOf(up, "leftHand", true) > shoulderL + 0.3 &&
-          yOf(up, "rightHand", true) > shoulderR + 0.3,
-      ],
+      ["yOfUpRightHand", () => yOf(up, "rightHand", true) > shoulderR + 0.3],
     ]),
     { yOfUpLeftHand: true, yOfUpRightHand: true },
   );
@@ -140,9 +133,7 @@ export const test_kinematics_arm_raise_clinical = (): void => {
       ["yOfDownLeftHand", () => yOf(down, "leftHand", true) < shoulderL - 0.3],
       [
         "yOfDownRightHand",
-        () =>
-          yOf(down, "leftHand", true) < shoulderL - 0.3 &&
-          yOf(down, "rightHand", true) < shoulderR - 0.3,
+        () => yOf(down, "rightHand", true) < shoulderR - 0.3,
       ],
     ]),
     { yOfDownLeftHand: true, yOfDownRightHand: true },

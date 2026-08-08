@@ -30,10 +30,7 @@ export const test_kinematics_aim_yaw_pitch = (): void => {
     "zero-length aim → 0/0",
     namedFacts([
       ["ncloseZeroYawDeg", () => nclose(zero.yawDeg, 0)],
-      [
-        "ncloseZeroPitchDeg",
-        () => nclose(zero.yawDeg, 0) && nclose(zero.pitchDeg, 0),
-      ],
+      ["ncloseZeroPitchDeg", () => nclose(zero.pitchDeg, 0)],
     ]),
     { ncloseZeroYawDeg: true, ncloseZeroPitchDeg: true },
   );
@@ -44,10 +41,7 @@ export const test_kinematics_aim_yaw_pitch = (): void => {
     "dead ahead → 0 yaw, 0 pitch",
     namedFacts([
       ["ncloseAheadYawDeg", () => nclose(ahead.yawDeg, 0)],
-      [
-        "ncloseAheadPitchDeg",
-        () => nclose(ahead.yawDeg, 0) && nclose(ahead.pitchDeg, 0),
-      ],
+      ["ncloseAheadPitchDeg", () => nclose(ahead.pitchDeg, 0)],
     ]),
     { ncloseAheadYawDeg: true, ncloseAheadPitchDeg: true },
   );

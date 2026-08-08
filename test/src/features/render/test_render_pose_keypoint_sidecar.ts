@@ -141,12 +141,7 @@ export const test_render_pose_keypoint_sidecar = (): void => {
     "a still hips stays centered on both frames",
     namedFacts([
       ["ncloseHipsXStill", () => nclose(hipsX(still.frames, 0), 0.5)],
-      [
-        "ncloseHipsXStill2",
-        () =>
-          nclose(hipsX(still.frames, 0), 0.5) &&
-          nclose(hipsX(still.frames, 1), 0.5),
-      ],
+      ["ncloseHipsXStill2", () => nclose(hipsX(still.frames, 1), 0.5)],
     ]),
     { ncloseHipsXStill: true, ncloseHipsXStill2: true },
   );
@@ -157,12 +152,7 @@ export const test_render_pose_keypoint_sidecar = (): void => {
     "a travelling hips is centered on frame 0 and right of center on frame 1",
     namedFacts([
       ["ncloseHipsXMoving", () => nclose(hipsX(moving.frames, 0), 0.5)],
-      [
-        "hipsXMovingFrames",
-        () =>
-          nclose(hipsX(moving.frames, 0), 0.5) &&
-          hipsX(moving.frames, 1) > 0.55,
-      ],
+      ["hipsXMovingFrames", () => hipsX(moving.frames, 1) > 0.55],
     ]),
     { ncloseHipsXMoving: true, hipsXMovingFrames: true },
   );

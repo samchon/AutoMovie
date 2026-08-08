@@ -94,9 +94,6 @@ export const test_motion_to_clip_prefix = (): void => {
       [
         "prefixedClipTracks2",
         () =>
-          prefixed.clip.tracks.every((track) =>
-            channelNode(track).startsWith("knightA/"),
-          ) &&
           prefixed.clip.tracks.some(
             (track) => channelNode(track) === `knightA/${MOTION_ROOT_NODE_ID}`,
           ),

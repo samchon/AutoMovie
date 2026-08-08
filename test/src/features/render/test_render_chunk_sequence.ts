@@ -174,10 +174,7 @@ export const test_render_chunk_sequence = (): void => {
       ],
       [
         "chunkedChunks12",
-        () =>
-          chunked.chunks[1]!.ffmpegArgs.includes(
-            "frames/seq_duel/chunk_1/frame_%05d.png",
-          ) && chunked.chunks[1]!.ffmpegArgs.includes("seq_duel.chunk_1.mp4"),
+        () => chunked.chunks[1]!.ffmpegArgs.includes("seq_duel.chunk_1.mp4"),
       ],
     ]),
     { chunkedChunks1: true, chunkedChunks12: true },

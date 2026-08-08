@@ -279,12 +279,7 @@ export const test_viewer_render_modes = (): void => {
         "meshesEveryMesh",
         () => meshes.every((mesh, i) => mesh.material === originals[i]),
       ],
-      [
-        "sceneBackgroundBackground",
-        () =>
-          meshes.every((mesh, i) => mesh.material === originals[i]) &&
-          scene.background === background,
-      ],
+      ["sceneBackgroundBackground", () => scene.background === background],
     ]),
     { meshesEveryMesh: true, sceneBackgroundBackground: true },
   );
@@ -309,12 +304,7 @@ export const test_viewer_render_modes = (): void => {
         "sceneGetObjectByNamePOSE_OVERLAY_NAME",
         () => scene.getObjectByName(POSE_OVERLAY_NAME) === undefined,
       ],
-      [
-        "meshesEveryMesh",
-        () =>
-          scene.getObjectByName(POSE_OVERLAY_NAME) === undefined &&
-          meshes.every((mesh) => mesh.visible === true),
-      ],
+      ["meshesEveryMesh", () => meshes.every((mesh) => mesh.visible === true)],
     ]),
     { sceneGetObjectByNamePOSE_OVERLAY_NAME: true, meshesEveryMesh: true },
   );

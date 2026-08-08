@@ -45,9 +45,7 @@ export const test_physics_moving_launch = (): void => {
       ],
       [
         "ncloseMovingHitTime",
-        () =>
-          vclose(moving.velocity, staticSol.velocity, 1e-6) &&
-          nclose(moving.hitTime, staticSol.hitTime, 1e-6),
+        () => nclose(moving.hitTime, staticSol.hitTime, 1e-6),
       ],
     ]),
     { vcloseMovingVelocity: true, ncloseMovingHitTime: true },

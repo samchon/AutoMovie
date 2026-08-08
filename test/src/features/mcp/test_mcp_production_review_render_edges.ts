@@ -421,9 +421,6 @@ export const test_mcp_production_review_render_edges =
           [
             "wrongClockPreparedFramesEvery",
             () =>
-              wrongClockPrepared.diagnostics.some(
-                (diagnostic) => diagnostic.code === "render-frame-invalid",
-              ) &&
               wrongClockPrepared.frames.every(
                 (preparedFrame) =>
                   preparedFrame.reviewFrame !== frame.reviewFrame ||
@@ -1369,18 +1366,10 @@ export const test_mcp_production_review_render_edges =
             "postReadDirectoryRaceJunction",
             () => postReadDirectoryRace("junction"),
           ],
-          [
-            "postReadDirectoryRaceFile",
-            () =>
-              postReadDirectoryRace("junction") &&
-              postReadDirectoryRace("file"),
-          ],
+          ["postReadDirectoryRaceFile", () => postReadDirectoryRace("file")],
           [
             "postReadDirectoryRaceDirectory",
-            () =>
-              postReadDirectoryRace("junction") &&
-              postReadDirectoryRace("file") &&
-              postReadDirectoryRace("directory"),
+            () => postReadDirectoryRace("directory"),
           ],
         ]),
         {
@@ -1444,9 +1433,7 @@ export const test_mcp_production_review_render_edges =
           ],
           [
             "lstatToRealpathRaceRenderInventory2",
-            () =>
-              lstatToRealpathRace(1, "Render inventory path") &&
-              lstatToRealpathRace(2, "Render inventory directory"),
+            () => lstatToRealpathRace(2, "Render inventory directory"),
           ],
         ]),
         {

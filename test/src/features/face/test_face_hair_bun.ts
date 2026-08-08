@@ -33,10 +33,7 @@ export const test_face_hair_bun = (): void => {
     "bun sits behind the head",
     namedFacts([
       ["meanLowPositions", () => mean(low.positions, 2) < 0],
-      [
-        "meanHighPositions",
-        () => mean(low.positions, 2) < 0 && mean(high.positions, 2) < 0,
-      ],
+      ["meanHighPositions", () => mean(high.positions, 2) < 0],
     ]),
     { meanLowPositions: true, meanHighPositions: true },
   );
@@ -82,10 +79,7 @@ export const test_face_hair_bun = (): void => {
     "the bun winds outward (positive signed volume)",
     namedFacts([
       ["signedVolumeLow", () => signedVolume(low) > 0],
-      [
-        "signedVolumeHigh",
-        () => signedVolume(low) > 0 && signedVolume(high) > 0,
-      ],
+      ["signedVolumeHigh", () => signedVolume(high) > 0],
     ]),
     { signedVolumeLow: true, signedVolumeHigh: true },
   );

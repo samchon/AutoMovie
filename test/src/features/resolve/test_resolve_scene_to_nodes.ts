@@ -121,7 +121,6 @@ export const test_resolve_scene_to_nodes = (): void => {
       [
         "qcloseMatrix4Decompose",
         () =>
-          vclose(Matrix4.position(rest.get("actor")!), placement.translation) &&
           qclose(
             Matrix4.decompose(rest.get("actor")!).rotation,
             placement.rotation,
@@ -149,12 +148,7 @@ export const test_resolve_scene_to_nodes = (): void => {
     "the actor lowers its bone subtree under the placement",
     namedFacts([
       ["nodesSomeNode", () => nodes.some((node) => node.id === "actor/hips")],
-      [
-        "nodesSomeNode2",
-        () =>
-          nodes.some((node) => node.id === "actor/hips") &&
-          nodes.some((node) => node.id === "actor/root"),
-      ],
+      ["nodesSomeNode2", () => nodes.some((node) => node.id === "actor/root")],
     ]),
     { nodesSomeNode: true, nodesSomeNode2: true },
   );

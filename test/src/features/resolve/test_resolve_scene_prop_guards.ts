@@ -61,12 +61,7 @@ export const test_resolve_scene_prop_guards = (): void => {
         "mixedSomeNode",
         () => mixed.some((node) => node.id === "frontDoor/hinge"),
       ],
-      [
-        "mixedSomeNode2",
-        () =>
-          mixed.some((node) => node.id === "frontDoor/hinge") &&
-          mixed.some((node) => node.id === "knight/hips"),
-      ],
+      ["mixedSomeNode2", () => mixed.some((node) => node.id === "knight/hips")],
     ]),
     { mixedSomeNode: true, mixedSomeNode2: true },
   );

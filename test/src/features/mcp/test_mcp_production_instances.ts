@@ -318,23 +318,12 @@ export const test_mcp_production_instances = (): void => {
         [
           "compiledInstanceSetsFind2",
           () =>
-            outputSucceeded &&
-            compiled.instanceSets.length === 3 &&
-            compiled.instanceSets.find((item) => item.id === "civilians")
-              ?.count === 100 &&
             compiled.instanceSets.find((item) => item.id === "trees")?.count ===
-              1_000,
+            1_000,
         ],
         [
           "compiledModelsSome",
-          () =>
-            outputSucceeded &&
-            compiled.instanceSets.length === 3 &&
-            compiled.instanceSets.find((item) => item.id === "civilians")
-              ?.count === 100 &&
-            compiled.instanceSets.find((item) => item.id === "trees")?.count ===
-              1_000 &&
-            compiled.models.some((model) => model.id.endsWith(":sentinel")),
+          () => compiled.models.some((model) => model.id.endsWith(":sentinel")),
         ],
       ]),
       {

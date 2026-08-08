@@ -228,96 +228,22 @@ export const test_mcp_production_legacy_import_root_swap_cleanup = (): void => {
           success.failure === undefined &&
           success.order.join(",") === fullOrder,
       ],
-      [
-        "primaryOnlyCaught",
-        () =>
-          success.caught === false &&
-          success.failure === undefined &&
-          success.order.join(",") === fullOrder &&
-          primaryOnly.caught,
-      ],
+      ["primaryOnlyCaught", () => primaryOnly.caught],
       [
         "primaryOnlyFailurePrimaryFailure",
-        () =>
-          success.caught === false &&
-          success.failure === undefined &&
-          success.order.join(",") === fullOrder &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure,
+        () => primaryOnly.failure === primaryFailure,
       ],
-      [
-        "primaryOnlyOrderJoin",
-        () =>
-          success.caught === false &&
-          success.failure === undefined &&
-          success.order.join(",") === fullOrder &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.order.join(",") === fullOrder,
-      ],
-      [
-        "standaloneCaught",
-        () =>
-          success.caught === false &&
-          success.failure === undefined &&
-          success.order.join(",") === fullOrder &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.order.join(",") === fullOrder &&
-          standalone.caught,
-      ],
+      ["primaryOnlyOrderJoin", () => primaryOnly.order.join(",") === fullOrder],
+      ["standaloneCaught", () => standalone.caught],
       [
         "standaloneFailureFirstCleanupFailure",
-        () =>
-          success.caught === false &&
-          success.failure === undefined &&
-          success.order.join(",") === fullOrder &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.order.join(",") === fullOrder &&
-          standalone.caught &&
-          standalone.failure === firstCleanupFailure,
+        () => standalone.failure === firstCleanupFailure,
       ],
-      [
-        "standaloneOrderJoin",
-        () =>
-          success.caught === false &&
-          success.failure === undefined &&
-          success.order.join(",") === fullOrder &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.order.join(",") === fullOrder &&
-          standalone.caught &&
-          standalone.failure === firstCleanupFailure &&
-          standalone.order.join(",") === fullOrder,
-      ],
-      [
-        "multipleCaught",
-        () =>
-          success.caught === false &&
-          success.failure === undefined &&
-          success.order.join(",") === fullOrder &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.order.join(",") === fullOrder &&
-          standalone.caught &&
-          standalone.failure === firstCleanupFailure &&
-          standalone.order.join(",") === fullOrder &&
-          multiple.caught,
-      ],
+      ["standaloneOrderJoin", () => standalone.order.join(",") === fullOrder],
+      ["multipleCaught", () => multiple.caught],
       [
         "aggregateContainsExactlyMultipleFailure",
         () =>
-          success.caught === false &&
-          success.failure === undefined &&
-          success.order.join(",") === fullOrder &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.order.join(",") === fullOrder &&
-          standalone.caught &&
-          standalone.failure === firstCleanupFailure &&
-          standalone.order.join(",") === fullOrder &&
-          multiple.caught &&
           aggregateContainsExactly(multiple.failure, [
             firstCleanupFailure,
             lastCleanupFailure,
@@ -325,432 +251,47 @@ export const test_mcp_production_legacy_import_root_swap_cleanup = (): void => {
       ],
       [
         "multipleMessageIncludes",
-        () =>
-          success.caught === false &&
-          success.failure === undefined &&
-          success.order.join(",") === fullOrder &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.order.join(",") === fullOrder &&
-          standalone.caught &&
-          standalone.failure === firstCleanupFailure &&
-          standalone.order.join(",") === fullOrder &&
-          multiple.caught &&
-          aggregateContainsExactly(multiple.failure, [
-            firstCleanupFailure,
-            lastCleanupFailure,
-          ]) &&
-          multiple.message.includes("resource-0"),
+        () => multiple.message.includes("resource-0"),
       ],
       [
         "multipleMessageIncludes2",
-        () =>
-          success.caught === false &&
-          success.failure === undefined &&
-          success.order.join(",") === fullOrder &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.order.join(",") === fullOrder &&
-          standalone.caught &&
-          standalone.failure === firstCleanupFailure &&
-          standalone.order.join(",") === fullOrder &&
-          multiple.caught &&
-          aggregateContainsExactly(multiple.failure, [
-            firstCleanupFailure,
-            lastCleanupFailure,
-          ]) &&
-          multiple.message.includes("resource-0") &&
-          multiple.message.includes("resource-2"),
+        () => multiple.message.includes("resource-2"),
       ],
       [
         "multipleMessageIncludes3",
-        () =>
-          success.caught === false &&
-          success.failure === undefined &&
-          success.order.join(",") === fullOrder &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.order.join(",") === fullOrder &&
-          standalone.caught &&
-          standalone.failure === firstCleanupFailure &&
-          standalone.order.join(",") === fullOrder &&
-          multiple.caught &&
-          aggregateContainsExactly(multiple.failure, [
-            firstCleanupFailure,
-            lastCleanupFailure,
-          ]) &&
-          multiple.message.includes("resource-0") &&
-          multiple.message.includes("resource-2") &&
-          multiple.message.includes("resource-1") === false,
+        () => multiple.message.includes("resource-1") === false,
       ],
-      [
-        "multipleOrderJoin",
-        () =>
-          success.caught === false &&
-          success.failure === undefined &&
-          success.order.join(",") === fullOrder &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.order.join(",") === fullOrder &&
-          standalone.caught &&
-          standalone.failure === firstCleanupFailure &&
-          standalone.order.join(",") === fullOrder &&
-          multiple.caught &&
-          aggregateContainsExactly(multiple.failure, [
-            firstCleanupFailure,
-            lastCleanupFailure,
-          ]) &&
-          multiple.message.includes("resource-0") &&
-          multiple.message.includes("resource-2") &&
-          multiple.message.includes("resource-1") === false &&
-          multiple.order.join(",") === fullOrder,
-      ],
-      [
-        "combinedCaught",
-        () =>
-          success.caught === false &&
-          success.failure === undefined &&
-          success.order.join(",") === fullOrder &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.order.join(",") === fullOrder &&
-          standalone.caught &&
-          standalone.failure === firstCleanupFailure &&
-          standalone.order.join(",") === fullOrder &&
-          multiple.caught &&
-          aggregateContainsExactly(multiple.failure, [
-            firstCleanupFailure,
-            lastCleanupFailure,
-          ]) &&
-          multiple.message.includes("resource-0") &&
-          multiple.message.includes("resource-2") &&
-          multiple.message.includes("resource-1") === false &&
-          multiple.order.join(",") === fullOrder &&
-          combined.caught,
-      ],
+      ["multipleOrderJoin", () => multiple.order.join(",") === fullOrder],
+      ["combinedCaught", () => combined.caught],
       [
         "aggregateContainsExactlyCombinedFailure",
         () =>
-          success.caught === false &&
-          success.failure === undefined &&
-          success.order.join(",") === fullOrder &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.order.join(",") === fullOrder &&
-          standalone.caught &&
-          standalone.failure === firstCleanupFailure &&
-          standalone.order.join(",") === fullOrder &&
-          multiple.caught &&
-          aggregateContainsExactly(multiple.failure, [
-            firstCleanupFailure,
-            lastCleanupFailure,
-          ]) &&
-          multiple.message.includes("resource-0") &&
-          multiple.message.includes("resource-2") &&
-          multiple.message.includes("resource-1") === false &&
-          multiple.order.join(",") === fullOrder &&
-          combined.caught &&
           aggregateContainsExactly(combined.failure, [
             primaryFailure,
             firstCleanupFailure,
             lastCleanupFailure,
           ]),
       ],
-      [
-        "combinedOrderJoin",
-        () =>
-          success.caught === false &&
-          success.failure === undefined &&
-          success.order.join(",") === fullOrder &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.order.join(",") === fullOrder &&
-          standalone.caught &&
-          standalone.failure === firstCleanupFailure &&
-          standalone.order.join(",") === fullOrder &&
-          multiple.caught &&
-          aggregateContainsExactly(multiple.failure, [
-            firstCleanupFailure,
-            lastCleanupFailure,
-          ]) &&
-          multiple.message.includes("resource-0") &&
-          multiple.message.includes("resource-2") &&
-          multiple.message.includes("resource-1") === false &&
-          multiple.order.join(",") === fullOrder &&
-          combined.caught &&
-          aggregateContainsExactly(combined.failure, [
-            primaryFailure,
-            firstCleanupFailure,
-            lastCleanupFailure,
-          ]) &&
-          combined.order.join(",") === fullOrder,
-      ],
-      [
-        "undefinedPrimaryCaught",
-        () =>
-          success.caught === false &&
-          success.failure === undefined &&
-          success.order.join(",") === fullOrder &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.order.join(",") === fullOrder &&
-          standalone.caught &&
-          standalone.failure === firstCleanupFailure &&
-          standalone.order.join(",") === fullOrder &&
-          multiple.caught &&
-          aggregateContainsExactly(multiple.failure, [
-            firstCleanupFailure,
-            lastCleanupFailure,
-          ]) &&
-          multiple.message.includes("resource-0") &&
-          multiple.message.includes("resource-2") &&
-          multiple.message.includes("resource-1") === false &&
-          multiple.order.join(",") === fullOrder &&
-          combined.caught &&
-          aggregateContainsExactly(combined.failure, [
-            primaryFailure,
-            firstCleanupFailure,
-            lastCleanupFailure,
-          ]) &&
-          combined.order.join(",") === fullOrder &&
-          undefinedPrimary.caught,
-      ],
-      [
-        "undefinedPrimaryFailure",
-        () =>
-          success.caught === false &&
-          success.failure === undefined &&
-          success.order.join(",") === fullOrder &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.order.join(",") === fullOrder &&
-          standalone.caught &&
-          standalone.failure === firstCleanupFailure &&
-          standalone.order.join(",") === fullOrder &&
-          multiple.caught &&
-          aggregateContainsExactly(multiple.failure, [
-            firstCleanupFailure,
-            lastCleanupFailure,
-          ]) &&
-          multiple.message.includes("resource-0") &&
-          multiple.message.includes("resource-2") &&
-          multiple.message.includes("resource-1") === false &&
-          multiple.order.join(",") === fullOrder &&
-          combined.caught &&
-          aggregateContainsExactly(combined.failure, [
-            primaryFailure,
-            firstCleanupFailure,
-            lastCleanupFailure,
-          ]) &&
-          combined.order.join(",") === fullOrder &&
-          undefinedPrimary.caught &&
-          undefinedPrimary.failure === undefined,
-      ],
+      ["combinedOrderJoin", () => combined.order.join(",") === fullOrder],
+      ["undefinedPrimaryCaught", () => undefinedPrimary.caught],
+      ["undefinedPrimaryFailure", () => undefinedPrimary.failure === undefined],
       [
         "undefinedPrimaryOrderJoin",
-        () =>
-          success.caught === false &&
-          success.failure === undefined &&
-          success.order.join(",") === fullOrder &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.order.join(",") === fullOrder &&
-          standalone.caught &&
-          standalone.failure === firstCleanupFailure &&
-          standalone.order.join(",") === fullOrder &&
-          multiple.caught &&
-          aggregateContainsExactly(multiple.failure, [
-            firstCleanupFailure,
-            lastCleanupFailure,
-          ]) &&
-          multiple.message.includes("resource-0") &&
-          multiple.message.includes("resource-2") &&
-          multiple.message.includes("resource-1") === false &&
-          multiple.order.join(",") === fullOrder &&
-          combined.caught &&
-          aggregateContainsExactly(combined.failure, [
-            primaryFailure,
-            firstCleanupFailure,
-            lastCleanupFailure,
-          ]) &&
-          combined.order.join(",") === fullOrder &&
-          undefinedPrimary.caught &&
-          undefinedPrimary.failure === undefined &&
-          undefinedPrimary.order.join(",") === fullOrder,
+        () => undefinedPrimary.order.join(",") === fullOrder,
       ],
-      [
-        "undefinedStandaloneCaught",
-        () =>
-          success.caught === false &&
-          success.failure === undefined &&
-          success.order.join(",") === fullOrder &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.order.join(",") === fullOrder &&
-          standalone.caught &&
-          standalone.failure === firstCleanupFailure &&
-          standalone.order.join(",") === fullOrder &&
-          multiple.caught &&
-          aggregateContainsExactly(multiple.failure, [
-            firstCleanupFailure,
-            lastCleanupFailure,
-          ]) &&
-          multiple.message.includes("resource-0") &&
-          multiple.message.includes("resource-2") &&
-          multiple.message.includes("resource-1") === false &&
-          multiple.order.join(",") === fullOrder &&
-          combined.caught &&
-          aggregateContainsExactly(combined.failure, [
-            primaryFailure,
-            firstCleanupFailure,
-            lastCleanupFailure,
-          ]) &&
-          combined.order.join(",") === fullOrder &&
-          undefinedPrimary.caught &&
-          undefinedPrimary.failure === undefined &&
-          undefinedPrimary.order.join(",") === fullOrder &&
-          undefinedStandalone.caught,
-      ],
+      ["undefinedStandaloneCaught", () => undefinedStandalone.caught],
       [
         "undefinedStandaloneFailure",
-        () =>
-          success.caught === false &&
-          success.failure === undefined &&
-          success.order.join(",") === fullOrder &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.order.join(",") === fullOrder &&
-          standalone.caught &&
-          standalone.failure === firstCleanupFailure &&
-          standalone.order.join(",") === fullOrder &&
-          multiple.caught &&
-          aggregateContainsExactly(multiple.failure, [
-            firstCleanupFailure,
-            lastCleanupFailure,
-          ]) &&
-          multiple.message.includes("resource-0") &&
-          multiple.message.includes("resource-2") &&
-          multiple.message.includes("resource-1") === false &&
-          multiple.order.join(",") === fullOrder &&
-          combined.caught &&
-          aggregateContainsExactly(combined.failure, [
-            primaryFailure,
-            firstCleanupFailure,
-            lastCleanupFailure,
-          ]) &&
-          combined.order.join(",") === fullOrder &&
-          undefinedPrimary.caught &&
-          undefinedPrimary.failure === undefined &&
-          undefinedPrimary.order.join(",") === fullOrder &&
-          undefinedStandalone.caught &&
-          undefinedStandalone.failure === undefined,
+        () => undefinedStandalone.failure === undefined,
       ],
       [
         "undefinedStandaloneOrderJoin",
-        () =>
-          success.caught === false &&
-          success.failure === undefined &&
-          success.order.join(",") === fullOrder &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.order.join(",") === fullOrder &&
-          standalone.caught &&
-          standalone.failure === firstCleanupFailure &&
-          standalone.order.join(",") === fullOrder &&
-          multiple.caught &&
-          aggregateContainsExactly(multiple.failure, [
-            firstCleanupFailure,
-            lastCleanupFailure,
-          ]) &&
-          multiple.message.includes("resource-0") &&
-          multiple.message.includes("resource-2") &&
-          multiple.message.includes("resource-1") === false &&
-          multiple.order.join(",") === fullOrder &&
-          combined.caught &&
-          aggregateContainsExactly(combined.failure, [
-            primaryFailure,
-            firstCleanupFailure,
-            lastCleanupFailure,
-          ]) &&
-          combined.order.join(",") === fullOrder &&
-          undefinedPrimary.caught &&
-          undefinedPrimary.failure === undefined &&
-          undefinedPrimary.order.join(",") === fullOrder &&
-          undefinedStandalone.caught &&
-          undefinedStandalone.failure === undefined &&
-          undefinedStandalone.order.join(",") === fullOrder,
+        () => undefinedStandalone.order.join(",") === fullOrder,
       ],
-      [
-        "undefinedCombinedCaught",
-        () =>
-          success.caught === false &&
-          success.failure === undefined &&
-          success.order.join(",") === fullOrder &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.order.join(",") === fullOrder &&
-          standalone.caught &&
-          standalone.failure === firstCleanupFailure &&
-          standalone.order.join(",") === fullOrder &&
-          multiple.caught &&
-          aggregateContainsExactly(multiple.failure, [
-            firstCleanupFailure,
-            lastCleanupFailure,
-          ]) &&
-          multiple.message.includes("resource-0") &&
-          multiple.message.includes("resource-2") &&
-          multiple.message.includes("resource-1") === false &&
-          multiple.order.join(",") === fullOrder &&
-          combined.caught &&
-          aggregateContainsExactly(combined.failure, [
-            primaryFailure,
-            firstCleanupFailure,
-            lastCleanupFailure,
-          ]) &&
-          combined.order.join(",") === fullOrder &&
-          undefinedPrimary.caught &&
-          undefinedPrimary.failure === undefined &&
-          undefinedPrimary.order.join(",") === fullOrder &&
-          undefinedStandalone.caught &&
-          undefinedStandalone.failure === undefined &&
-          undefinedStandalone.order.join(",") === fullOrder &&
-          undefinedCombined.caught,
-      ],
+      ["undefinedCombinedCaught", () => undefinedCombined.caught],
       [
         "aggregateContainsExactlyUndefinedCombinedFailure",
         () =>
-          success.caught === false &&
-          success.failure === undefined &&
-          success.order.join(",") === fullOrder &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.order.join(",") === fullOrder &&
-          standalone.caught &&
-          standalone.failure === firstCleanupFailure &&
-          standalone.order.join(",") === fullOrder &&
-          multiple.caught &&
-          aggregateContainsExactly(multiple.failure, [
-            firstCleanupFailure,
-            lastCleanupFailure,
-          ]) &&
-          multiple.message.includes("resource-0") &&
-          multiple.message.includes("resource-2") &&
-          multiple.message.includes("resource-1") === false &&
-          multiple.order.join(",") === fullOrder &&
-          combined.caught &&
-          aggregateContainsExactly(combined.failure, [
-            primaryFailure,
-            firstCleanupFailure,
-            lastCleanupFailure,
-          ]) &&
-          combined.order.join(",") === fullOrder &&
-          undefinedPrimary.caught &&
-          undefinedPrimary.failure === undefined &&
-          undefinedPrimary.order.join(",") === fullOrder &&
-          undefinedStandalone.caught &&
-          undefinedStandalone.failure === undefined &&
-          undefinedStandalone.order.join(",") === fullOrder &&
-          undefinedCombined.caught &&
           aggregateContainsExactly(undefinedCombined.failure, [
             undefined,
             undefined,
@@ -758,44 +299,7 @@ export const test_mcp_production_legacy_import_root_swap_cleanup = (): void => {
       ],
       [
         "undefinedCombinedOrderJoin",
-        () =>
-          success.caught === false &&
-          success.failure === undefined &&
-          success.order.join(",") === fullOrder &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.order.join(",") === fullOrder &&
-          standalone.caught &&
-          standalone.failure === firstCleanupFailure &&
-          standalone.order.join(",") === fullOrder &&
-          multiple.caught &&
-          aggregateContainsExactly(multiple.failure, [
-            firstCleanupFailure,
-            lastCleanupFailure,
-          ]) &&
-          multiple.message.includes("resource-0") &&
-          multiple.message.includes("resource-2") &&
-          multiple.message.includes("resource-1") === false &&
-          multiple.order.join(",") === fullOrder &&
-          combined.caught &&
-          aggregateContainsExactly(combined.failure, [
-            primaryFailure,
-            firstCleanupFailure,
-            lastCleanupFailure,
-          ]) &&
-          combined.order.join(",") === fullOrder &&
-          undefinedPrimary.caught &&
-          undefinedPrimary.failure === undefined &&
-          undefinedPrimary.order.join(",") === fullOrder &&
-          undefinedStandalone.caught &&
-          undefinedStandalone.failure === undefined &&
-          undefinedStandalone.order.join(",") === fullOrder &&
-          undefinedCombined.caught &&
-          aggregateContainsExactly(undefinedCombined.failure, [
-            undefined,
-            undefined,
-          ]) &&
-          undefinedCombined.order.join(",") === fullOrder,
+        () => undefinedCombined.order.join(",") === fullOrder,
       ],
     ]),
     {

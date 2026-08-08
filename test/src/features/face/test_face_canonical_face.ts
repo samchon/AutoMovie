@@ -40,10 +40,9 @@ export const test_face_canonical_face = (): void => {
       [
         "cANONICAL_FACE_POSITIONSArgmaxCANONICAL_FACE_POSITIONS",
         () =>
-          [1, 4, 5, 195].includes(argmax) &&
           CANONICAL_FACE_POSITIONS[argmax * 3 + 2]! -
             CANONICAL_FACE_POSITIONS[1 * 3 + 2]! <
-            0.002,
+          0.002,
       ],
     ]),
     {

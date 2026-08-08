@@ -47,10 +47,7 @@ export const test_motion_sample_clock = (): void => {
     "final instant clamps to the duration",
     namedFacts([
       ["ncloseFractional25", () => nclose(fractional[25]!, 1.01)],
-      [
-        "fractional25",
-        () => nclose(fractional[25]!, 1.01) && fractional[25]! <= 1.01,
-      ],
+      ["fractional25", () => fractional[25]! <= 1.01],
     ]),
     { ncloseFractional25: true, fractional25: true },
   );
@@ -65,7 +62,7 @@ export const test_motion_sample_clock = (): void => {
     "the two endpoints are 0 and the duration",
     namedFacts([
       ["ncloseTiny0", () => nclose(tiny[0]!, 0)],
-      ["ncloseTiny1", () => nclose(tiny[0]!, 0) && nclose(tiny[1]!, 0.01)],
+      ["ncloseTiny1", () => nclose(tiny[1]!, 0.01)],
     ]),
     { ncloseTiny0: true, ncloseTiny1: true },
   );

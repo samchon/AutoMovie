@@ -373,16 +373,7 @@ export const test_viewer_effect = (): void => {
       ],
       [
         "builtObjectUserData",
-        () =>
-          built.object.count === built.stats.particles &&
-          built.stats.active &&
-          built.stats.particles > 0 &&
-          built.stats.particles <= built.stats.cap &&
-          built.object.visible &&
-          built.object.frustumCulled === false &&
-          built.object.geometry.getAttribute("automovieOpacity")?.count ===
-            effect!.recipe.budget.maxParticles &&
-          built.object.userData.automovieEffect.digest === effect!.digest,
+        () => built.object.userData.automovieEffect.digest === effect!.digest,
       ],
     ]),
     {

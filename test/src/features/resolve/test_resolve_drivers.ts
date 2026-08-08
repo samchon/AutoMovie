@@ -126,7 +126,7 @@ export const test_resolve_drivers_copy = (): void => {
     "rotation slerped to source rest",
     namedFacts([
       ["ncloseRot1", () => nclose(rot[1]!, s)],
-      ["ncloseRot3", () => nclose(rot[1]!, s) && nclose(rot[3]!, s)],
+      ["ncloseRot3", () => nclose(rot[3]!, s)],
     ]),
     { ncloseRot1: true, ncloseRot3: true },
   );

@@ -142,9 +142,7 @@ export const test_viewer_guide_pass_non_mesh = (): void => {
         ],
         [
           "nonMeshEveryObject",
-          () =>
-            scene.getObjectByName(POSE_OVERLAY_NAME) === undefined &&
-            nonMesh.every((object) => object.visible === true),
+          () => nonMesh.every((object) => object.visible === true),
         ],
       ]),
       { sceneGetObjectByNamePOSE_OVERLAY_NAME: true, nonMeshEveryObject: true },

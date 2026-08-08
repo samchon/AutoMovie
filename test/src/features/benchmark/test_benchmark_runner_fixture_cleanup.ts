@@ -179,13 +179,6 @@ export const test_benchmark_runner_fixture_cleanup = (): void => {
       [
         "successPrimaryOnlyCleanupOnly",
         () =>
-          success.failure === undefined &&
-          primaryOnly.failure === primaryFailure &&
-          cleanupOnly.failure === cleanupFailure &&
-          aggregateContainsExactly(combined.failure, [
-            primaryFailure,
-            cleanupFailure,
-          ]) &&
           [success, primaryOnly, cleanupOnly, combined].every(
             (capture) => capture.attempts === 1,
           ),

@@ -53,9 +53,7 @@ export const test_motion_gait_samples = (): void => {
       ["ncloseBoundaryKeyframes", () => nclose(boundary.keyframes[0]!.time, 0)],
       [
         "ncloseBoundaryKeyframes2",
-        () =>
-          nclose(boundary.keyframes[0]!.time, 0) &&
-          nclose(boundary.keyframes[1]!.time, 1),
+        () => nclose(boundary.keyframes[1]!.time, 1),
       ],
     ]),
     { ncloseBoundaryKeyframes: true, ncloseBoundaryKeyframes2: true },

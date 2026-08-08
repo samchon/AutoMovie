@@ -175,10 +175,7 @@ export const test_perform_gesture_region_content = (): void => {
     "a nod and a wave layer on disjoint regions",
     namedFacts([
       ["bothMapHas", () => both.map.has("head")],
-      [
-        "bothMapHas2",
-        () => both.map.has("head") && both.map.has("rightUpperArm"),
-      ],
+      ["bothMapHas2", () => both.map.has("rightUpperArm")],
     ]),
     { bothMapHas: true, bothMapHas2: true },
   );
@@ -190,11 +187,7 @@ export const test_perform_gesture_region_content = (): void => {
     "an explicit narrower region still masks the clip to its bones",
     namedFacts([
       ["maskedStopMapHas", () => maskedStop.map.has("spine")],
-      [
-        "maskedStopMapHas2",
-        () =>
-          maskedStop.map.has("spine") && !maskedStop.map.has("rightUpperLeg"),
-      ],
+      ["maskedStopMapHas2", () => !maskedStop.map.has("rightUpperLeg")],
     ]),
     { maskedStopMapHas: true, maskedStopMapHas2: true },
   );

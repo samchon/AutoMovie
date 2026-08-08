@@ -119,10 +119,7 @@ export const test_perform_scene = (): void => {
     "hero layers the walking legs and the turned head at once",
     namedFacts([
       ["heroBonesHasLeftUpperLeg", () => heroBones.has("leftUpperLeg")],
-      [
-        "heroBonesHasHead",
-        () => heroBones.has("leftUpperLeg") && heroBones.has("head"),
-      ],
+      ["heroBonesHasHead", () => heroBones.has("head")],
     ]),
     { heroBonesHasLeftUpperLeg: true, heroBonesHasHead: true },
   );

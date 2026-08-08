@@ -87,10 +87,7 @@ export const test_kinematics_attachment = (): void => {
     "seat offset added to chest pos",
     namedFacts([
       ["ncloseR2Translation", () => nclose(r2.translation.y, 1.45)],
-      [
-        "ncloseR2Translation2",
-        () => nclose(r2.translation.y, 1.45) && nclose(r2.translation.z, 0.1),
-      ],
+      ["ncloseR2Translation2", () => nclose(r2.translation.z, 0.1)],
     ]),
     { ncloseR2Translation: true, ncloseR2Translation2: true },
   );

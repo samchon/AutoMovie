@@ -141,10 +141,7 @@ export const test_viewer_apply_object_motion = (): void => {
     "a channel absent from the clip keeps the object's existing value",
     namedFacts([
       ["nclosePropPosition", () => nclose(prop.position.x, 2)],
-      [
-        "nclosePropScale",
-        () => nclose(prop.position.x, 2) && nclose(prop.scale.x, 1.5),
-      ],
+      ["nclosePropScale", () => nclose(prop.scale.x, 1.5)],
     ]),
     { nclosePropPosition: true, nclosePropScale: true },
   );
@@ -310,12 +307,7 @@ export const test_viewer_apply_object_motion = (): void => {
         "ncloseAuthoritySinkPosition",
         () => nclose(authoritySink.position.x, 1.5),
       ],
-      [
-        "ncloseAuthoritySinkScale",
-        () =>
-          nclose(authoritySink.position.x, 1.5) &&
-          nclose(authoritySink.scale.x, 1.75),
-      ],
+      ["ncloseAuthoritySinkScale", () => nclose(authoritySink.scale.x, 1.75)],
     ]),
     { ncloseAuthoritySinkPosition: true, ncloseAuthoritySinkScale: true },
   );

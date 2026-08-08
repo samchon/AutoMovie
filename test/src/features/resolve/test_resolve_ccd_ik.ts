@@ -104,12 +104,7 @@ export const test_resolve_ccd_ik = (): void => {
     "extension keeps segment lengths",
     namedFacts([
       ["ncloseDistAt", () => nclose(dist(at(w3, "r"), at(w3, "m")), 1, 1e-9)],
-      [
-        "ncloseDistAt2",
-        () =>
-          nclose(dist(at(w3, "r"), at(w3, "m")), 1, 1e-9) &&
-          nclose(dist(at(w3, "m"), at(w3, "t")), 1, 1e-9),
-      ],
+      ["ncloseDistAt2", () => nclose(dist(at(w3, "m"), at(w3, "t")), 1, 1e-9)],
     ]),
     { ncloseDistAt: true, ncloseDistAt2: true },
   );
@@ -146,12 +141,7 @@ export const test_resolve_ccd_ik = (): void => {
     "converged input early-outs unchanged",
     namedFacts([
       ["vcloseAtW6", () => vclose(at(w6, "m"), { x: 1, y: 0, z: 0 }, 0)],
-      [
-        "vcloseAtW62",
-        () =>
-          vclose(at(w6, "m"), { x: 1, y: 0, z: 0 }, 0) &&
-          vclose(at(w6, "t"), { x: 1, y: 1, z: 0 }, 0),
-      ],
+      ["vcloseAtW62", () => vclose(at(w6, "t"), { x: 1, y: 1, z: 0 }, 0)],
     ]),
     { vcloseAtW6: true, vcloseAtW62: true },
   );

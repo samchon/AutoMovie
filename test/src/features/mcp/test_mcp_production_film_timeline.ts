@@ -537,50 +537,11 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
         ],
         [
           "fsStatSyncTimelinePath",
-          () =>
-            firstSucceeded &&
-            timeline.id === "fixture-film" &&
-            timeline.totalFrames === 144 &&
-            timeline.segments.length === 1 &&
-            timeline.segments[0]?.shot === "opening" &&
-            timeline.segments[0]?.sourceInFrame === 0 &&
-            timeline.segments[0]?.endFrame === 144 &&
-            compiledEdit.source.path === "src/film.ts" &&
-            compiledEdit.source.export === "film" &&
-            compiledEdit.inputFingerprint === first.compiler.inputFingerprint &&
-            timeline.inputFingerprint === first.compiler.inputFingerprint &&
-            reopenedSucceeded &&
-            reopened.compiler.inputFingerprint ===
-              first.compiler.inputFingerprint &&
-            reopened.materialized.every(
-              (file) => file.status === "unchanged",
-            ) &&
-            fs.readFileSync(timelinePath).equals(firstTimelineBytes) &&
-            fs.statSync(timelinePath).mtimeMs === firstTimelineMtime,
+          () => fs.statSync(timelinePath).mtimeMs === firstTimelineMtime,
         ],
         [
           "fsReadFileSyncFilmPath",
-          () =>
-            firstSucceeded &&
-            timeline.id === "fixture-film" &&
-            timeline.totalFrames === 144 &&
-            timeline.segments.length === 1 &&
-            timeline.segments[0]?.shot === "opening" &&
-            timeline.segments[0]?.sourceInFrame === 0 &&
-            timeline.segments[0]?.endFrame === 144 &&
-            compiledEdit.source.path === "src/film.ts" &&
-            compiledEdit.source.export === "film" &&
-            compiledEdit.inputFingerprint === first.compiler.inputFingerprint &&
-            timeline.inputFingerprint === first.compiler.inputFingerprint &&
-            reopenedSucceeded &&
-            reopened.compiler.inputFingerprint ===
-              first.compiler.inputFingerprint &&
-            reopened.materialized.every(
-              (file) => file.status === "unchanged",
-            ) &&
-            fs.readFileSync(timelinePath).equals(firstTimelineBytes) &&
-            fs.statSync(timelinePath).mtimeMs === firstTimelineMtime &&
-            fs.readFileSync(filmPath).equals(originalSource),
+          () => fs.readFileSync(filmPath).equals(originalSource),
         ],
       ]),
       {
@@ -1286,13 +1247,6 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
         [
           "filmReviewQuotableSome",
           () =>
-            filmReview.outcomes.some(
-              (outcome) =>
-                outcome.kind === "metric" &&
-                outcome.scenario === "film-runtime" &&
-                outcome.actual === 11.5 &&
-                outcome.passed,
-            ) &&
             filmReview.quotable.some(
               (selector) =>
                 selector.kind === "source" && selector.path === "src/film.ts",
@@ -1505,25 +1459,11 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
         ],
         [
           "invalidTimelineReviewFramesLength",
-          () =>
-            legalOmissionSucceeded &&
-            validTimeline.omissions[0]?.shot === "answer" &&
-            gapFrame.result === null &&
-            gapFrame.diagnostics[0]?.message.includes(
-              "no owning video segment",
-            ) &&
-            invalidTimelineReview.frames.length === 0,
+          () => invalidTimelineReview.frames.length === 0,
         ],
         [
           "invalidTimelineReviewDiagnosticsSome",
           () =>
-            legalOmissionSucceeded &&
-            validTimeline.omissions[0]?.shot === "answer" &&
-            gapFrame.result === null &&
-            gapFrame.diagnostics[0]?.message.includes(
-              "no owning video segment",
-            ) &&
-            invalidTimelineReview.frames.length === 0 &&
             invalidTimelineReview.diagnostics.some(
               (diagnostic) => diagnostic.code === "review-evidence-stale",
             ),
@@ -1531,16 +1471,6 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
         [
           "invalidTimelineSubmissionDiagnosticsSome",
           () =>
-            legalOmissionSucceeded &&
-            validTimeline.omissions[0]?.shot === "answer" &&
-            gapFrame.result === null &&
-            gapFrame.diagnostics[0]?.message.includes(
-              "no owning video segment",
-            ) &&
-            invalidTimelineReview.frames.length === 0 &&
-            invalidTimelineReview.diagnostics.some(
-              (diagnostic) => diagnostic.code === "review-evidence-stale",
-            ) &&
             invalidTimelineSubmission.diagnostics.some(
               (diagnostic) =>
                 diagnostic.code === "review-acceptance-coverage-incomplete",
@@ -1549,20 +1479,6 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
         [
           "nonErrorTimelineReviewDiagnosticsSome",
           () =>
-            legalOmissionSucceeded &&
-            validTimeline.omissions[0]?.shot === "answer" &&
-            gapFrame.result === null &&
-            gapFrame.diagnostics[0]?.message.includes(
-              "no owning video segment",
-            ) &&
-            invalidTimelineReview.frames.length === 0 &&
-            invalidTimelineReview.diagnostics.some(
-              (diagnostic) => diagnostic.code === "review-evidence-stale",
-            ) &&
-            invalidTimelineSubmission.diagnostics.some(
-              (diagnostic) =>
-                diagnostic.code === "review-acceptance-coverage-incomplete",
-            ) &&
             nonErrorTimelineReview.diagnostics.some(
               (diagnostic) =>
                 diagnostic.code === "review-evidence-stale" &&
@@ -1572,25 +1488,6 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
         [
           "omissionReviewDiagnosticsEvery",
           () =>
-            legalOmissionSucceeded &&
-            validTimeline.omissions[0]?.shot === "answer" &&
-            gapFrame.result === null &&
-            gapFrame.diagnostics[0]?.message.includes(
-              "no owning video segment",
-            ) &&
-            invalidTimelineReview.frames.length === 0 &&
-            invalidTimelineReview.diagnostics.some(
-              (diagnostic) => diagnostic.code === "review-evidence-stale",
-            ) &&
-            invalidTimelineSubmission.diagnostics.some(
-              (diagnostic) =>
-                diagnostic.code === "review-acceptance-coverage-incomplete",
-            ) &&
-            nonErrorTimelineReview.diagnostics.some(
-              (diagnostic) =>
-                diagnostic.code === "review-evidence-stale" &&
-                diagnostic.message.includes("non-error timeline read failure"),
-            ) &&
             omissionReview.diagnostics.every(
               (diagnostic) =>
                 diagnostic.code !== "review-evidence-missing" ||
@@ -1600,30 +1497,6 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
         [
           "throwsParseAutoMovieFilmTimelineManifest",
           () =>
-            legalOmissionSucceeded &&
-            validTimeline.omissions[0]?.shot === "answer" &&
-            gapFrame.result === null &&
-            gapFrame.diagnostics[0]?.message.includes(
-              "no owning video segment",
-            ) &&
-            invalidTimelineReview.frames.length === 0 &&
-            invalidTimelineReview.diagnostics.some(
-              (diagnostic) => diagnostic.code === "review-evidence-stale",
-            ) &&
-            invalidTimelineSubmission.diagnostics.some(
-              (diagnostic) =>
-                diagnostic.code === "review-acceptance-coverage-incomplete",
-            ) &&
-            nonErrorTimelineReview.diagnostics.some(
-              (diagnostic) =>
-                diagnostic.code === "review-evidence-stale" &&
-                diagnostic.message.includes("non-error timeline read failure"),
-            ) &&
-            omissionReview.diagnostics.every(
-              (diagnostic) =>
-                diagnostic.code !== "review-evidence-missing" ||
-                diagnostic.target.startsWith("answer:") === false,
-            ) &&
             throws(() =>
               parseAutoMovieFilmTimeline({
                 manifest: null,
@@ -1635,37 +1508,6 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
         [
           "throwsParseAutoMovieFilmTimelineManifest2",
           () =>
-            legalOmissionSucceeded &&
-            validTimeline.omissions[0]?.shot === "answer" &&
-            gapFrame.result === null &&
-            gapFrame.diagnostics[0]?.message.includes(
-              "no owning video segment",
-            ) &&
-            invalidTimelineReview.frames.length === 0 &&
-            invalidTimelineReview.diagnostics.some(
-              (diagnostic) => diagnostic.code === "review-evidence-stale",
-            ) &&
-            invalidTimelineSubmission.diagnostics.some(
-              (diagnostic) =>
-                diagnostic.code === "review-acceptance-coverage-incomplete",
-            ) &&
-            nonErrorTimelineReview.diagnostics.some(
-              (diagnostic) =>
-                diagnostic.code === "review-evidence-stale" &&
-                diagnostic.message.includes("non-error timeline read failure"),
-            ) &&
-            omissionReview.diagnostics.every(
-              (diagnostic) =>
-                diagnostic.code !== "review-evidence-missing" ||
-                diagnostic.target.startsWith("answer:") === false,
-            ) &&
-            throws(() =>
-              parseAutoMovieFilmTimeline({
-                manifest: null,
-                fingerprint: legalOmission.compiler.inputFingerprint,
-                read: () => currentTimelineBytes,
-              }),
-            ) &&
             throws(() =>
               parseAutoMovieFilmTimeline({
                 manifest: currentManifest,
@@ -1677,44 +1519,6 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
         [
           "throwsParseAutoMovieFilmTimelineManifest3",
           () =>
-            legalOmissionSucceeded &&
-            validTimeline.omissions[0]?.shot === "answer" &&
-            gapFrame.result === null &&
-            gapFrame.diagnostics[0]?.message.includes(
-              "no owning video segment",
-            ) &&
-            invalidTimelineReview.frames.length === 0 &&
-            invalidTimelineReview.diagnostics.some(
-              (diagnostic) => diagnostic.code === "review-evidence-stale",
-            ) &&
-            invalidTimelineSubmission.diagnostics.some(
-              (diagnostic) =>
-                diagnostic.code === "review-acceptance-coverage-incomplete",
-            ) &&
-            nonErrorTimelineReview.diagnostics.some(
-              (diagnostic) =>
-                diagnostic.code === "review-evidence-stale" &&
-                diagnostic.message.includes("non-error timeline read failure"),
-            ) &&
-            omissionReview.diagnostics.every(
-              (diagnostic) =>
-                diagnostic.code !== "review-evidence-missing" ||
-                diagnostic.target.startsWith("answer:") === false,
-            ) &&
-            throws(() =>
-              parseAutoMovieFilmTimeline({
-                manifest: null,
-                fingerprint: legalOmission.compiler.inputFingerprint,
-                read: () => currentTimelineBytes,
-              }),
-            ) &&
-            throws(() =>
-              parseAutoMovieFilmTimeline({
-                manifest: currentManifest,
-                fingerprint: legalOmission.compiler.inputFingerprint,
-                read: () => invalidTimelineBytes,
-              }),
-            ) &&
             throws(() =>
               parseAutoMovieFilmTimeline({
                 manifest: invalidTimelineManifest,
@@ -1726,51 +1530,6 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
         [
           "throwsParseAutoMovieFilmTimelineManifest4",
           () =>
-            legalOmissionSucceeded &&
-            validTimeline.omissions[0]?.shot === "answer" &&
-            gapFrame.result === null &&
-            gapFrame.diagnostics[0]?.message.includes(
-              "no owning video segment",
-            ) &&
-            invalidTimelineReview.frames.length === 0 &&
-            invalidTimelineReview.diagnostics.some(
-              (diagnostic) => diagnostic.code === "review-evidence-stale",
-            ) &&
-            invalidTimelineSubmission.diagnostics.some(
-              (diagnostic) =>
-                diagnostic.code === "review-acceptance-coverage-incomplete",
-            ) &&
-            nonErrorTimelineReview.diagnostics.some(
-              (diagnostic) =>
-                diagnostic.code === "review-evidence-stale" &&
-                diagnostic.message.includes("non-error timeline read failure"),
-            ) &&
-            omissionReview.diagnostics.every(
-              (diagnostic) =>
-                diagnostic.code !== "review-evidence-missing" ||
-                diagnostic.target.startsWith("answer:") === false,
-            ) &&
-            throws(() =>
-              parseAutoMovieFilmTimeline({
-                manifest: null,
-                fingerprint: legalOmission.compiler.inputFingerprint,
-                read: () => currentTimelineBytes,
-              }),
-            ) &&
-            throws(() =>
-              parseAutoMovieFilmTimeline({
-                manifest: currentManifest,
-                fingerprint: legalOmission.compiler.inputFingerprint,
-                read: () => invalidTimelineBytes,
-              }),
-            ) &&
-            throws(() =>
-              parseAutoMovieFilmTimeline({
-                manifest: invalidTimelineManifest,
-                fingerprint: legalOmission.compiler.inputFingerprint,
-                read: () => invalidTimelineBytes,
-              }),
-            ) &&
             throws(() =>
               parseAutoMovieFilmTimeline({
                 manifest: staleTimelineManifest,
@@ -1959,17 +1718,6 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
         [
           "trimReviewDiagnosticsEvery",
           () =>
-            legalTrimSucceeded &&
-            trimSelection.length === 1 &&
-            trimSelection[0]?.id === "film-segment-entry" &&
-            trimSelection[0]?.index === 72 &&
-            trimSelection[0]?.time === 3 &&
-            trimSelection[0]?.passes[0] === "beauty" &&
-            trimReview.diagnostics.some(
-              (diagnostic) =>
-                diagnostic.code === "review-evidence-missing" &&
-                diagnostic.target === "opening:film-segment-entry:beauty",
-            ) &&
             trimReview.diagnostics.every(
               (diagnostic) =>
                 (diagnostic.code !== "review-evidence-missing" ||
@@ -1978,51 +1726,10 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
                   diagnostic.message.includes("film-opening-event") === false),
             ),
         ],
-        [
-          "capturedTrimEntryCaptured",
-          () =>
-            legalTrimSucceeded &&
-            trimSelection.length === 1 &&
-            trimSelection[0]?.id === "film-segment-entry" &&
-            trimSelection[0]?.index === 72 &&
-            trimSelection[0]?.time === 3 &&
-            trimSelection[0]?.passes[0] === "beauty" &&
-            trimReview.diagnostics.some(
-              (diagnostic) =>
-                diagnostic.code === "review-evidence-missing" &&
-                diagnostic.target === "opening:film-segment-entry:beauty",
-            ) &&
-            trimReview.diagnostics.every(
-              (diagnostic) =>
-                (diagnostic.code !== "review-evidence-missing" ||
-                  diagnostic.target.includes("signal-apex") === false) &&
-                (diagnostic.code !== "review-outcome-missing" ||
-                  diagnostic.message.includes("film-opening-event") === false),
-            ) &&
-            capturedTrimEntry.captured,
-        ],
+        ["capturedTrimEntryCaptured", () => capturedTrimEntry.captured],
         [
           "completeTrimReviewOutcomesSome",
           () =>
-            legalTrimSucceeded &&
-            trimSelection.length === 1 &&
-            trimSelection[0]?.id === "film-segment-entry" &&
-            trimSelection[0]?.index === 72 &&
-            trimSelection[0]?.time === 3 &&
-            trimSelection[0]?.passes[0] === "beauty" &&
-            trimReview.diagnostics.some(
-              (diagnostic) =>
-                diagnostic.code === "review-evidence-missing" &&
-                diagnostic.target === "opening:film-segment-entry:beauty",
-            ) &&
-            trimReview.diagnostics.every(
-              (diagnostic) =>
-                (diagnostic.code !== "review-evidence-missing" ||
-                  diagnostic.target.includes("signal-apex") === false) &&
-                (diagnostic.code !== "review-outcome-missing" ||
-                  diagnostic.message.includes("film-opening-event") === false),
-            ) &&
-            capturedTrimEntry.captured &&
             completeTrimReview.outcomes.some(
               (outcome) => outcome.scenario === "film-source-in-event",
             ),
@@ -2030,28 +1737,6 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
         [
           "completeTrimReviewOutcomesEvery",
           () =>
-            legalTrimSucceeded &&
-            trimSelection.length === 1 &&
-            trimSelection[0]?.id === "film-segment-entry" &&
-            trimSelection[0]?.index === 72 &&
-            trimSelection[0]?.time === 3 &&
-            trimSelection[0]?.passes[0] === "beauty" &&
-            trimReview.diagnostics.some(
-              (diagnostic) =>
-                diagnostic.code === "review-evidence-missing" &&
-                diagnostic.target === "opening:film-segment-entry:beauty",
-            ) &&
-            trimReview.diagnostics.every(
-              (diagnostic) =>
-                (diagnostic.code !== "review-evidence-missing" ||
-                  diagnostic.target.includes("signal-apex") === false) &&
-                (diagnostic.code !== "review-outcome-missing" ||
-                  diagnostic.message.includes("film-opening-event") === false),
-            ) &&
-            capturedTrimEntry.captured &&
-            completeTrimReview.outcomes.some(
-              (outcome) => outcome.scenario === "film-source-in-event",
-            ) &&
             completeTrimReview.outcomes.every(
               (outcome) =>
                 outcome.scenario !== "film-opening-event" &&
@@ -2061,104 +1746,13 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
         [
           "submittedAcceptanceJoinFilm",
           () =>
-            legalTrimSucceeded &&
-            trimSelection.length === 1 &&
-            trimSelection[0]?.id === "film-segment-entry" &&
-            trimSelection[0]?.index === 72 &&
-            trimSelection[0]?.time === 3 &&
-            trimSelection[0]?.passes[0] === "beauty" &&
-            trimReview.diagnostics.some(
-              (diagnostic) =>
-                diagnostic.code === "review-evidence-missing" &&
-                diagnostic.target === "opening:film-segment-entry:beauty",
-            ) &&
-            trimReview.diagnostics.every(
-              (diagnostic) =>
-                (diagnostic.code !== "review-evidence-missing" ||
-                  diagnostic.target.includes("signal-apex") === false) &&
-                (diagnostic.code !== "review-outcome-missing" ||
-                  diagnostic.message.includes("film-opening-event") === false),
-            ) &&
-            capturedTrimEntry.captured &&
-            completeTrimReview.outcomes.some(
-              (outcome) => outcome.scenario === "film-source-in-event",
-            ) &&
-            completeTrimReview.outcomes.every(
-              (outcome) =>
-                outcome.scenario !== "film-opening-event" &&
-                outcome.scenario !== "film-source-out-event",
-            ) &&
             submittedAcceptance?.join(",") ===
-              "film-runtime,film-source-in-event",
+            "film-runtime,film-source-in-event",
         ],
-        [
-          "trimSubmissionAccepted",
-          () =>
-            legalTrimSucceeded &&
-            trimSelection.length === 1 &&
-            trimSelection[0]?.id === "film-segment-entry" &&
-            trimSelection[0]?.index === 72 &&
-            trimSelection[0]?.time === 3 &&
-            trimSelection[0]?.passes[0] === "beauty" &&
-            trimReview.diagnostics.some(
-              (diagnostic) =>
-                diagnostic.code === "review-evidence-missing" &&
-                diagnostic.target === "opening:film-segment-entry:beauty",
-            ) &&
-            trimReview.diagnostics.every(
-              (diagnostic) =>
-                (diagnostic.code !== "review-evidence-missing" ||
-                  diagnostic.target.includes("signal-apex") === false) &&
-                (diagnostic.code !== "review-outcome-missing" ||
-                  diagnostic.message.includes("film-opening-event") === false),
-            ) &&
-            capturedTrimEntry.captured &&
-            completeTrimReview.outcomes.some(
-              (outcome) => outcome.scenario === "film-source-in-event",
-            ) &&
-            completeTrimReview.outcomes.every(
-              (outcome) =>
-                outcome.scenario !== "film-opening-event" &&
-                outcome.scenario !== "film-source-out-event",
-            ) &&
-            submittedAcceptance?.join(",") ===
-              "film-runtime,film-source-in-event" &&
-            trimSubmission.accepted,
-        ],
+        ["trimSubmissionAccepted", () => trimSubmission.accepted],
         [
           "trimSubmissionStateComplete",
-          () =>
-            legalTrimSucceeded &&
-            trimSelection.length === 1 &&
-            trimSelection[0]?.id === "film-segment-entry" &&
-            trimSelection[0]?.index === 72 &&
-            trimSelection[0]?.time === 3 &&
-            trimSelection[0]?.passes[0] === "beauty" &&
-            trimReview.diagnostics.some(
-              (diagnostic) =>
-                diagnostic.code === "review-evidence-missing" &&
-                diagnostic.target === "opening:film-segment-entry:beauty",
-            ) &&
-            trimReview.diagnostics.every(
-              (diagnostic) =>
-                (diagnostic.code !== "review-evidence-missing" ||
-                  diagnostic.target.includes("signal-apex") === false) &&
-                (diagnostic.code !== "review-outcome-missing" ||
-                  diagnostic.message.includes("film-opening-event") === false),
-            ) &&
-            capturedTrimEntry.captured &&
-            completeTrimReview.outcomes.some(
-              (outcome) => outcome.scenario === "film-source-in-event",
-            ) &&
-            completeTrimReview.outcomes.every(
-              (outcome) =>
-                outcome.scenario !== "film-opening-event" &&
-                outcome.scenario !== "film-source-out-event",
-            ) &&
-            submittedAcceptance?.join(",") ===
-              "film-runtime,film-source-in-event" &&
-            trimSubmission.accepted &&
-            trimSubmission.state === "complete",
+          () => trimSubmission.state === "complete",
         ],
       ]),
       {

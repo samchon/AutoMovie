@@ -143,7 +143,6 @@ export const test_mcp_production_realization = (): void => {
         [
           "heldOutcomeRealizationClosing",
           () =>
-            heldOutcome.realization.opening.every((item) => item.passed) &&
             heldOutcome.realization.closing.some(
               (item) => item.passed === false,
             ),
@@ -596,9 +595,6 @@ export const test_mcp_production_realization = (): void => {
         [
           "missingHeroNodeOutcomeRealizationFormations",
           () =>
-            heroModelOutcome.realization.formations.some(
-              (item) => item.id === formation.id && item.passed === false,
-            ) &&
             missingHeroNodeOutcome.realization.formations.some(
               (item) => item.id === formation.id && item.passed === false,
             ),

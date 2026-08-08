@@ -153,12 +153,7 @@ export const test_kinematics_arm_chain_fault = (): void => {
     "and that sweep really moves: 0.600000 at 0 deg down to 0.160026 at 150",
     namedFacts([
       ["ncloseSpanAtOut", () => nclose(spanAt(out, 0), 0.6, 1e-9)],
-      [
-        "ncloseSpanAtOut2",
-        () =>
-          nclose(spanAt(out, 0), 0.6, 1e-9) &&
-          nclose(spanAt(out, 150), 0.160026, 1e-6),
-      ],
+      ["ncloseSpanAtOut2", () => nclose(spanAt(out, 150), 0.160026, 1e-6)],
     ]),
     { ncloseSpanAtOut: true, ncloseSpanAtOut2: true },
   );
@@ -219,12 +214,7 @@ export const test_kinematics_arm_chain_fault = (): void => {
     "a mixed rig faults only the hanging side",
     namedFacts([
       ["armChainFaultMixedRight", () => armChainFault(mixed, "right") !== null],
-      [
-        "armChainFaultMixedLeft",
-        () =>
-          armChainFault(mixed, "right") !== null &&
-          armChainFault(mixed, "left") === null,
-      ],
+      ["armChainFaultMixedLeft", () => armChainFault(mixed, "left") === null],
     ]),
     { armChainFaultMixedRight: true, armChainFaultMixedLeft: true },
   );

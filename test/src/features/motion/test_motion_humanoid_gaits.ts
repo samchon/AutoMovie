@@ -104,7 +104,6 @@ export const test_motion_humanoid_gaits = (): void => {
       [
         "ampOfHUMANOID_GAITSRun",
         () =>
-          ampOf(HUMANOID_GAITS.walk, hip) < ampOf(HUMANOID_GAITS.run, hip) &&
           ampOf(HUMANOID_GAITS.run, hip) < ampOf(HUMANOID_GAITS.sprint, hip),
       ],
     ]),

@@ -281,9 +281,6 @@ export const test_mcp_capture_runtime_identity = (): void => {
         "parseAutoMovieCaptureRuntimeIdentityCanonicalAutoMovieCaptureRuntimeIdentityConfigured",
         () =>
           parseAutoMovieCaptureRuntimeIdentity(
-            canonicalAutoMovieCaptureRuntimeIdentity(system),
-          ).browser.source === "system-channel" &&
-          parseAutoMovieCaptureRuntimeIdentity(
             canonicalAutoMovieCaptureRuntimeIdentity(configured),
           ).browser.source === "configured-executable",
       ],

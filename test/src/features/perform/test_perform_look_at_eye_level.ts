@@ -133,10 +133,7 @@ export const test_perform_look_at_eye_level = (): void => {
     "an actor target at equal eye height needs no head tilt",
     namedFacts([
       ["ncloseLevelFlexion", () => nclose(level.flexion, 0)],
-      [
-        "ncloseLevelTwist",
-        () => nclose(level.flexion, 0) && nclose(level.twist, 0),
-      ],
+      ["ncloseLevelTwist", () => nclose(level.twist, 0)],
     ]),
     { ncloseLevelFlexion: true, ncloseLevelTwist: true },
   );

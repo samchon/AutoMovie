@@ -74,8 +74,6 @@ export const test_combat_firearm_volley = (): void => {
       [
         "firstEveryEvent",
         () =>
-          first.length === 500 &&
-          JSON.stringify(first) === JSON.stringify(second) &&
           first.every(
             (event, slot) =>
               event.slot === slot &&
@@ -83,48 +81,12 @@ export const test_combat_firearm_volley = (): void => {
               event.muzzleVelocity === 305,
           ),
       ],
-      [
-        "firstSomeEvent",
-        () =>
-          first.length === 500 &&
-          JSON.stringify(first) === JSON.stringify(second) &&
-          first.every(
-            (event, slot) =>
-              event.slot === slot &&
-              event.shooter === `ranker-${slot}` &&
-              event.muzzleVelocity === 305,
-          ) &&
-          first.some((event) => event.outcome === "hit"),
-      ],
+      ["firstSomeEvent", () => first.some((event) => event.outcome === "hit")],
       [
         "firstSomeEvent2",
-        () =>
-          first.length === 500 &&
-          JSON.stringify(first) === JSON.stringify(second) &&
-          first.every(
-            (event, slot) =>
-              event.slot === slot &&
-              event.shooter === `ranker-${slot}` &&
-              event.muzzleVelocity === 305,
-          ) &&
-          first.some((event) => event.outcome === "hit") &&
-          first.some((event) => event.outcome === "miss"),
+        () => first.some((event) => event.outcome === "miss"),
       ],
-      [
-        "deterministicSamples",
-        () =>
-          first.length === 500 &&
-          JSON.stringify(first) === JSON.stringify(second) &&
-          first.every(
-            (event, slot) =>
-              event.slot === slot &&
-              event.shooter === `ranker-${slot}` &&
-              event.muzzleVelocity === 305,
-          ) &&
-          first.some((event) => event.outcome === "hit") &&
-          first.some((event) => event.outcome === "miss") &&
-          deterministicSamples,
-      ],
+      ["deterministicSamples", () => deterministicSamples],
     ]),
     {
       firstLength: true,

@@ -176,10 +176,7 @@ export const test_perform_layer = (): void => {
     "the leg and the arm are driven at the same instant",
     namedFacts([
       ["jointsHasLeftUpperLeg", () => joints.has("leftUpperLeg")],
-      [
-        "jointsHasLeftUpperArm",
-        () => joints.has("leftUpperLeg") && joints.has("leftUpperArm"),
-      ],
+      ["jointsHasLeftUpperArm", () => joints.has("leftUpperArm")],
     ]),
     { jointsHasLeftUpperLeg: true, jointsHasLeftUpperArm: true },
   );
@@ -192,9 +189,7 @@ export const test_perform_layer = (): void => {
       ],
       [
         "ncloseJointsGet2",
-        () =>
-          nclose(joints.get("leftUpperLeg")!.flexion!, 30) &&
-          nclose(joints.get("leftUpperArm")!.flexion!, 20),
+        () => nclose(joints.get("leftUpperArm")!.flexion!, 20),
       ],
     ]),
     { ncloseJointsGet: true, ncloseJointsGet2: true },
@@ -239,11 +234,7 @@ export const test_perform_layer = (): void => {
     "a late lookAt claims nothing before it starts (causality)",
     namedFacts([
       ["boneAtHead", () => boneAt(0, "head") === undefined],
-      [
-        "boneAtHead2",
-        () =>
-          boneAt(0, "head") === undefined && boneAt(1, "head") === undefined,
-      ],
+      ["boneAtHead2", () => boneAt(1, "head") === undefined],
     ]),
     { boneAtHead: true, boneAtHead2: true },
   );
@@ -412,9 +403,7 @@ export const test_perform_layer = (): void => {
       ],
       [
         "sampleMotionPaddedEmoteExpression2",
-        () =>
-          sampleMotion(paddedEmote, 0.5).expression === null &&
-          sampleMotion(paddedEmote, 3.5).expression?.preset === "happy",
+        () => sampleMotion(paddedEmote, 3.5).expression?.preset === "happy",
       ],
     ]),
     {
@@ -500,10 +489,6 @@ export const test_perform_layer = (): void => {
       [
         "laneEndSomeEntry2",
         () =>
-          laneEnd.some(
-            (entry) =>
-              entry.bone === "leftUpperArm" && nclose(entry.flexion!, 30),
-          ) &&
           laneEnd.some(
             (entry) =>
               entry.bone === "rightUpperArm" && nclose(entry.flexion!, 40),

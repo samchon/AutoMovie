@@ -188,14 +188,7 @@ export const test_mcp_production_capability_validation = (): void => {
       ],
       [
         "runtimeProfiles0",
-        () =>
-          [
-            "design-capability-invalid",
-            "design-capability-duplicate",
-            "design-reference-missing",
-            "design-budget-exceeded",
-          ].every((code) => valid.has(code) === false) &&
-          runtime?.profiles?.[0]?.traits?.[0]?.kind === "shooter",
+        () => runtime?.profiles?.[0]?.traits?.[0]?.kind === "shooter",
       ],
     ]),
     { designCapabilityInvalid: true, runtimeProfiles0: true },

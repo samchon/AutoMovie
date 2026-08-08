@@ -343,18 +343,6 @@ export const test_benchmark_submission_seal = (): void => {
                 ...draft,
                 lane: "repaint",
                 repaint: {
-                  status: "not-produced",
-                  adapterIdentity: "nominal-capability-label",
-                },
-              }),
-            "not canonical JSON",
-          ) &&
-          throws(
-            () =>
-              sealAutoMovieBenchmarkSubmission({
-                ...draft,
-                lane: "repaint",
-                repaint: {
                   status: "verified",
                   adapterIdentity: repaintAdapterIdentity,
                   shots: [],

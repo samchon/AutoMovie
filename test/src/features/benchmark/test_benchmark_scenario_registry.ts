@@ -120,7 +120,6 @@ export const test_benchmark_scenario_registry = (): void => {
         [
           "assertAutoMovieBenchmarkCalibratedScenarioTask",
           () =>
-            scenario.task().taskId === scenario.taskId &&
             assertAutoMovieBenchmarkCalibrated(
               scenario.task(),
               scenario.anchors(),

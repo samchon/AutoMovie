@@ -82,9 +82,7 @@ export const test_mcp_convert_bezier = (): void => {
       ],
       [
         "vcloseIdentityTranslation",
-        () =>
-          qclose(identity.rotation, { x: 0, y: 0, z: 0, w: 1 }) &&
-          vclose(identity.translation, { x: 1, y: 2, z: 3 }),
+        () => vclose(identity.translation, { x: 1, y: 2, z: 3 }),
       ],
     ]),
     { qcloseIdentityRotation: true, vcloseIdentityTranslation: true },

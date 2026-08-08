@@ -66,10 +66,7 @@ export const test_physics_impact_body_velocity = (): void => {
     "finite post-impact velocities remain inelastic",
     namedFacts([
       ["ncloseImpactVelocityA", () => nclose(impact.velocityA.z, 5)],
-      [
-        "ncloseImpactVelocityB",
-        () => nclose(impact.velocityA.z, 5) && nclose(impact.velocityB.z, 5),
-      ],
+      ["ncloseImpactVelocityB", () => nclose(impact.velocityB.z, 5)],
     ]),
     { ncloseImpactVelocityA: true, ncloseImpactVelocityB: true },
   );

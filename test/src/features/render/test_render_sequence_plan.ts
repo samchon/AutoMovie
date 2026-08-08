@@ -209,9 +209,7 @@ export const test_render_sequence_plan = (): void => {
       ],
       [
         "planFfmpegArgsIncludes2",
-        () =>
-          plan.ffmpegArgs.includes("frames/seq_duel/frame_%05d.png") &&
-          plan.ffmpegArgs.includes("seq_duel.mp4"),
+        () => plan.ffmpegArgs.includes("seq_duel.mp4"),
       ],
     ]),
     { planFfmpegArgsIncludes: true, planFfmpegArgsIncludes2: true },

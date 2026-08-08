@@ -184,13 +184,6 @@ export const test_mcp_production_media_fixture_cleanup = (): void => {
       [
         "successPrimaryOnlyCleanupOnly",
         () =>
-          success.failure === undefined &&
-          primaryOnly.failure === primaryFailure &&
-          cleanupOnly.failure === cleanupFailure &&
-          aggregateContainsExactly(combined.failure, [
-            primaryFailure,
-            cleanupFailure,
-          ]) &&
           [success, primaryOnly, cleanupOnly, combined].every(
             (capture) => capture.attempts === 1,
           ),

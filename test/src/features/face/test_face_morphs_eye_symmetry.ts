@@ -32,10 +32,7 @@ export const test_face_morphs_eye_symmetry = (): void => {
         `${base} mirrors (${r}↔${l})`,
         namedFacts([
           ["absMagDR", () => Math.abs(mag(dR, r) - mag(dL, l)) < 1e-9],
-          [
-            "magDLL",
-            () => Math.abs(mag(dR, r) - mag(dL, l)) < 1e-9 && mag(dL, l) > 1e-5,
-          ],
+          ["magDLL", () => mag(dL, l) > 1e-5],
         ]),
         { absMagDR: true, magDLL: true },
       );

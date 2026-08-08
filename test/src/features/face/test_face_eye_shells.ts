@@ -21,12 +21,7 @@ export const test_face_eye_shells = (): void => {
         "ncloseRightCenter",
         () => nclose(right.center[0]!, -left.center[0]!, 1e-3),
       ],
-      [
-        "ncloseRightRadius",
-        () =>
-          nclose(right.center[0]!, -left.center[0]!, 1e-3) &&
-          nclose(right.radius, left.radius, 1e-3),
-      ],
+      ["ncloseRightRadius", () => nclose(right.radius, left.radius, 1e-3)],
     ]),
     { ncloseRightCenter: true, ncloseRightRadius: true },
   );

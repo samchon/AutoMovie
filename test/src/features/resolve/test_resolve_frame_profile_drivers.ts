@@ -164,10 +164,7 @@ export const test_resolve_frame_profile_drivers = (): void => {
     "without the profile the handle rests",
     namedFacts([
       ["ncloseBareHandleX0", () => nclose(bareHandleX[0], 1)],
-      [
-        "ncloseBareHandleX2",
-        () => nclose(bareHandleX[0], 1) && nclose(bareHandleX[2], 0),
-      ],
+      ["ncloseBareHandleX2", () => nclose(bareHandleX[2], 0)],
     ]),
     { ncloseBareHandleX0: true, ncloseBareHandleX2: true },
   );
@@ -200,10 +197,7 @@ export const test_resolve_frame_profile_drivers = (): void => {
     "direct aim applies after the profile's and wins",
     namedFacts([
       ["ncloseContestedX0", () => nclose(contestedX[0], -1)],
-      [
-        "ncloseContestedX2",
-        () => nclose(contestedX[0], -1) && nclose(contestedX[2], 0),
-      ],
+      ["ncloseContestedX2", () => nclose(contestedX[2], 0)],
     ]),
     { ncloseContestedX0: true, ncloseContestedX2: true },
   );
@@ -220,10 +214,7 @@ export const test_resolve_frame_profile_drivers = (): void => {
     "profile aim alone points at +X",
     namedFacts([
       ["ncloseProfileOnlyX0", () => nclose(profileOnlyX[0], 1)],
-      [
-        "ncloseProfileOnlyX2",
-        () => nclose(profileOnlyX[0], 1) && nclose(profileOnlyX[2], 0),
-      ],
+      ["ncloseProfileOnlyX2", () => nclose(profileOnlyX[2], 0)],
     ]),
     { ncloseProfileOnlyX0: true, ncloseProfileOnlyX2: true },
   );

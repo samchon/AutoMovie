@@ -188,9 +188,7 @@ export const test_motion_path_locomotion = (): void => {
       ],
       [
         "ncloseRootAtStraight2",
-        () =>
-          nclose(rootAt(straight.motion, 1).translation.z, -0.1) &&
-          nclose(rootAt(straight.motion, 1).translation.x, 1),
+        () => nclose(rootAt(straight.motion, 1).translation.x, 1),
       ],
     ]),
     { ncloseRootAtStraight: true, ncloseRootAtStraight2: true },

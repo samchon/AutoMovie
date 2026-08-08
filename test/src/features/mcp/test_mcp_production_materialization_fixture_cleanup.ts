@@ -306,247 +306,26 @@ export const test_mcp_production_materialization_fixture_cleanup = (): void => {
             cleanupFailure,
           ]),
       ],
-      [
-        "combinedAttempts",
-        () =>
-          success.caught === false &&
-          success.failure === undefined &&
-          success.attempts === 1 &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.attempts === 1 &&
-          standalone.caught &&
-          standalone.failure === cleanupFailure &&
-          standalone.attempts === 1 &&
-          combined.caught &&
-          aggregateContainsExactly(combined.failure, [
-            primaryFailure,
-            cleanupFailure,
-          ]) &&
-          combined.attempts === 1,
-      ],
-      [
-        "undefinedPrimaryCaught",
-        () =>
-          success.caught === false &&
-          success.failure === undefined &&
-          success.attempts === 1 &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.attempts === 1 &&
-          standalone.caught &&
-          standalone.failure === cleanupFailure &&
-          standalone.attempts === 1 &&
-          combined.caught &&
-          aggregateContainsExactly(combined.failure, [
-            primaryFailure,
-            cleanupFailure,
-          ]) &&
-          combined.attempts === 1 &&
-          undefinedPrimary.caught,
-      ],
-      [
-        "undefinedPrimaryFailure",
-        () =>
-          success.caught === false &&
-          success.failure === undefined &&
-          success.attempts === 1 &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.attempts === 1 &&
-          standalone.caught &&
-          standalone.failure === cleanupFailure &&
-          standalone.attempts === 1 &&
-          combined.caught &&
-          aggregateContainsExactly(combined.failure, [
-            primaryFailure,
-            cleanupFailure,
-          ]) &&
-          combined.attempts === 1 &&
-          undefinedPrimary.caught &&
-          undefinedPrimary.failure === undefined,
-      ],
-      [
-        "undefinedPrimaryAttempts",
-        () =>
-          success.caught === false &&
-          success.failure === undefined &&
-          success.attempts === 1 &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.attempts === 1 &&
-          standalone.caught &&
-          standalone.failure === cleanupFailure &&
-          standalone.attempts === 1 &&
-          combined.caught &&
-          aggregateContainsExactly(combined.failure, [
-            primaryFailure,
-            cleanupFailure,
-          ]) &&
-          combined.attempts === 1 &&
-          undefinedPrimary.caught &&
-          undefinedPrimary.failure === undefined &&
-          undefinedPrimary.attempts === 1,
-      ],
-      [
-        "undefinedStandaloneCaught",
-        () =>
-          success.caught === false &&
-          success.failure === undefined &&
-          success.attempts === 1 &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.attempts === 1 &&
-          standalone.caught &&
-          standalone.failure === cleanupFailure &&
-          standalone.attempts === 1 &&
-          combined.caught &&
-          aggregateContainsExactly(combined.failure, [
-            primaryFailure,
-            cleanupFailure,
-          ]) &&
-          combined.attempts === 1 &&
-          undefinedPrimary.caught &&
-          undefinedPrimary.failure === undefined &&
-          undefinedPrimary.attempts === 1 &&
-          undefinedStandalone.caught,
-      ],
+      ["combinedAttempts", () => combined.attempts === 1],
+      ["undefinedPrimaryCaught", () => undefinedPrimary.caught],
+      ["undefinedPrimaryFailure", () => undefinedPrimary.failure === undefined],
+      ["undefinedPrimaryAttempts", () => undefinedPrimary.attempts === 1],
+      ["undefinedStandaloneCaught", () => undefinedStandalone.caught],
       [
         "undefinedStandaloneFailure",
-        () =>
-          success.caught === false &&
-          success.failure === undefined &&
-          success.attempts === 1 &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.attempts === 1 &&
-          standalone.caught &&
-          standalone.failure === cleanupFailure &&
-          standalone.attempts === 1 &&
-          combined.caught &&
-          aggregateContainsExactly(combined.failure, [
-            primaryFailure,
-            cleanupFailure,
-          ]) &&
-          combined.attempts === 1 &&
-          undefinedPrimary.caught &&
-          undefinedPrimary.failure === undefined &&
-          undefinedPrimary.attempts === 1 &&
-          undefinedStandalone.caught &&
-          undefinedStandalone.failure === undefined,
+        () => undefinedStandalone.failure === undefined,
       ],
-      [
-        "undefinedStandaloneAttempts",
-        () =>
-          success.caught === false &&
-          success.failure === undefined &&
-          success.attempts === 1 &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.attempts === 1 &&
-          standalone.caught &&
-          standalone.failure === cleanupFailure &&
-          standalone.attempts === 1 &&
-          combined.caught &&
-          aggregateContainsExactly(combined.failure, [
-            primaryFailure,
-            cleanupFailure,
-          ]) &&
-          combined.attempts === 1 &&
-          undefinedPrimary.caught &&
-          undefinedPrimary.failure === undefined &&
-          undefinedPrimary.attempts === 1 &&
-          undefinedStandalone.caught &&
-          undefinedStandalone.failure === undefined &&
-          undefinedStandalone.attempts === 1,
-      ],
-      [
-        "undefinedCombinedCaught",
-        () =>
-          success.caught === false &&
-          success.failure === undefined &&
-          success.attempts === 1 &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.attempts === 1 &&
-          standalone.caught &&
-          standalone.failure === cleanupFailure &&
-          standalone.attempts === 1 &&
-          combined.caught &&
-          aggregateContainsExactly(combined.failure, [
-            primaryFailure,
-            cleanupFailure,
-          ]) &&
-          combined.attempts === 1 &&
-          undefinedPrimary.caught &&
-          undefinedPrimary.failure === undefined &&
-          undefinedPrimary.attempts === 1 &&
-          undefinedStandalone.caught &&
-          undefinedStandalone.failure === undefined &&
-          undefinedStandalone.attempts === 1 &&
-          undefinedCombined.caught,
-      ],
+      ["undefinedStandaloneAttempts", () => undefinedStandalone.attempts === 1],
+      ["undefinedCombinedCaught", () => undefinedCombined.caught],
       [
         "aggregateContainsExactlyUndefinedCombinedFailure",
         () =>
-          success.caught === false &&
-          success.failure === undefined &&
-          success.attempts === 1 &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.attempts === 1 &&
-          standalone.caught &&
-          standalone.failure === cleanupFailure &&
-          standalone.attempts === 1 &&
-          combined.caught &&
-          aggregateContainsExactly(combined.failure, [
-            primaryFailure,
-            cleanupFailure,
-          ]) &&
-          combined.attempts === 1 &&
-          undefinedPrimary.caught &&
-          undefinedPrimary.failure === undefined &&
-          undefinedPrimary.attempts === 1 &&
-          undefinedStandalone.caught &&
-          undefinedStandalone.failure === undefined &&
-          undefinedStandalone.attempts === 1 &&
-          undefinedCombined.caught &&
           aggregateContainsExactly(undefinedCombined.failure, [
             undefined,
             undefined,
           ]),
       ],
-      [
-        "undefinedCombinedAttempts",
-        () =>
-          success.caught === false &&
-          success.failure === undefined &&
-          success.attempts === 1 &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.attempts === 1 &&
-          standalone.caught &&
-          standalone.failure === cleanupFailure &&
-          standalone.attempts === 1 &&
-          combined.caught &&
-          aggregateContainsExactly(combined.failure, [
-            primaryFailure,
-            cleanupFailure,
-          ]) &&
-          combined.attempts === 1 &&
-          undefinedPrimary.caught &&
-          undefinedPrimary.failure === undefined &&
-          undefinedPrimary.attempts === 1 &&
-          undefinedStandalone.caught &&
-          undefinedStandalone.failure === undefined &&
-          undefinedStandalone.attempts === 1 &&
-          undefinedCombined.caught &&
-          aggregateContainsExactly(undefinedCombined.failure, [
-            undefined,
-            undefined,
-          ]) &&
-          undefinedCombined.attempts === 1,
-      ],
+      ["undefinedCombinedAttempts", () => undefinedCombined.attempts === 1],
     ]),
     {
       successCaught: true,
@@ -601,10 +380,10 @@ export const test_mcp_production_materialization_fixture_cleanup = (): void => {
             nestedTryStatements: 1,
             ownerParameters: [],
             prefixDigest:
-              "2f675886a0bb5ed23eeceb4463f9cbd25d79e04514109cf5ace94ab2bdef6a91",
+              "76b01d8b5d7b3d3bfd4c7dbc6792ae2d022a7aa4f410e49def1e488e28d7a03d",
             prefixStatements: 15,
             tryDigest:
-              "064451f5880f572ed7c12015b5ead4d11f3efd5e5af146243dd12e177322bfed",
+              "134a1b274f5848eaf9057d001ef8e475b28e0065c74c8fc2de22db3d081011a7",
             tryStatements: 54,
           },
         ],

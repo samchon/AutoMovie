@@ -195,228 +195,41 @@ export const test_mcp_production_project_atomic_delete_cleanup = (): void => {
           success.failure === undefined &&
           success.order.join(",") === "hook",
       ],
-      [
-        "primaryOnlyCaught",
-        () =>
-          success.caught === false &&
-          success.failure === undefined &&
-          success.order.join(",") === "hook" &&
-          primaryOnly.caught,
-      ],
+      ["primaryOnlyCaught", () => primaryOnly.caught],
       [
         "primaryOnlyFailurePrimaryFailure",
-        () =>
-          success.caught === false &&
-          success.failure === undefined &&
-          success.order.join(",") === "hook" &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure,
+        () => primaryOnly.failure === primaryFailure,
       ],
-      [
-        "primaryOnlyOrderJoin",
-        () =>
-          success.caught === false &&
-          success.failure === undefined &&
-          success.order.join(",") === "hook" &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.order.join(",") === "hook",
-      ],
-      [
-        "standaloneCaught",
-        () =>
-          success.caught === false &&
-          success.failure === undefined &&
-          success.order.join(",") === "hook" &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.order.join(",") === "hook" &&
-          standalone.caught,
-      ],
+      ["primaryOnlyOrderJoin", () => primaryOnly.order.join(",") === "hook"],
+      ["standaloneCaught", () => standalone.caught],
       [
         "standaloneFailureCleanupFailure",
-        () =>
-          success.caught === false &&
-          success.failure === undefined &&
-          success.order.join(",") === "hook" &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.order.join(",") === "hook" &&
-          standalone.caught &&
-          standalone.failure === cleanupFailure,
+        () => standalone.failure === cleanupFailure,
       ],
-      [
-        "standaloneOrderJoin",
-        () =>
-          success.caught === false &&
-          success.failure === undefined &&
-          success.order.join(",") === "hook" &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.order.join(",") === "hook" &&
-          standalone.caught &&
-          standalone.failure === cleanupFailure &&
-          standalone.order.join(",") === "hook",
-      ],
-      [
-        "combinedCaught",
-        () =>
-          success.caught === false &&
-          success.failure === undefined &&
-          success.order.join(",") === "hook" &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.order.join(",") === "hook" &&
-          standalone.caught &&
-          standalone.failure === cleanupFailure &&
-          standalone.order.join(",") === "hook" &&
-          combined.caught,
-      ],
+      ["standaloneOrderJoin", () => standalone.order.join(",") === "hook"],
+      ["combinedCaught", () => combined.caught],
       [
         "aggregateContainsExactlyCombinedFailure",
         () =>
-          success.caught === false &&
-          success.failure === undefined &&
-          success.order.join(",") === "hook" &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.order.join(",") === "hook" &&
-          standalone.caught &&
-          standalone.failure === cleanupFailure &&
-          standalone.order.join(",") === "hook" &&
-          combined.caught &&
           aggregateContainsExactly(combined.failure, [
             primaryFailure,
             cleanupFailure,
           ]),
       ],
-      [
-        "combinedOrderJoin",
-        () =>
-          success.caught === false &&
-          success.failure === undefined &&
-          success.order.join(",") === "hook" &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.order.join(",") === "hook" &&
-          standalone.caught &&
-          standalone.failure === cleanupFailure &&
-          standalone.order.join(",") === "hook" &&
-          combined.caught &&
-          aggregateContainsExactly(combined.failure, [
-            primaryFailure,
-            cleanupFailure,
-          ]) &&
-          combined.order.join(",") === "hook",
-      ],
-      [
-        "undefinedStandaloneCaught",
-        () =>
-          success.caught === false &&
-          success.failure === undefined &&
-          success.order.join(",") === "hook" &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.order.join(",") === "hook" &&
-          standalone.caught &&
-          standalone.failure === cleanupFailure &&
-          standalone.order.join(",") === "hook" &&
-          combined.caught &&
-          aggregateContainsExactly(combined.failure, [
-            primaryFailure,
-            cleanupFailure,
-          ]) &&
-          combined.order.join(",") === "hook" &&
-          undefinedStandalone.caught,
-      ],
+      ["combinedOrderJoin", () => combined.order.join(",") === "hook"],
+      ["undefinedStandaloneCaught", () => undefinedStandalone.caught],
       [
         "undefinedStandaloneFailure",
-        () =>
-          success.caught === false &&
-          success.failure === undefined &&
-          success.order.join(",") === "hook" &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.order.join(",") === "hook" &&
-          standalone.caught &&
-          standalone.failure === cleanupFailure &&
-          standalone.order.join(",") === "hook" &&
-          combined.caught &&
-          aggregateContainsExactly(combined.failure, [
-            primaryFailure,
-            cleanupFailure,
-          ]) &&
-          combined.order.join(",") === "hook" &&
-          undefinedStandalone.caught &&
-          undefinedStandalone.failure === undefined,
+        () => undefinedStandalone.failure === undefined,
       ],
       [
         "undefinedStandaloneOrderJoin",
-        () =>
-          success.caught === false &&
-          success.failure === undefined &&
-          success.order.join(",") === "hook" &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.order.join(",") === "hook" &&
-          standalone.caught &&
-          standalone.failure === cleanupFailure &&
-          standalone.order.join(",") === "hook" &&
-          combined.caught &&
-          aggregateContainsExactly(combined.failure, [
-            primaryFailure,
-            cleanupFailure,
-          ]) &&
-          combined.order.join(",") === "hook" &&
-          undefinedStandalone.caught &&
-          undefinedStandalone.failure === undefined &&
-          undefinedStandalone.order.join(",") === "hook",
+        () => undefinedStandalone.order.join(",") === "hook",
       ],
-      [
-        "undefinedCombinedCaught",
-        () =>
-          success.caught === false &&
-          success.failure === undefined &&
-          success.order.join(",") === "hook" &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.order.join(",") === "hook" &&
-          standalone.caught &&
-          standalone.failure === cleanupFailure &&
-          standalone.order.join(",") === "hook" &&
-          combined.caught &&
-          aggregateContainsExactly(combined.failure, [
-            primaryFailure,
-            cleanupFailure,
-          ]) &&
-          combined.order.join(",") === "hook" &&
-          undefinedStandalone.caught &&
-          undefinedStandalone.failure === undefined &&
-          undefinedStandalone.order.join(",") === "hook" &&
-          undefinedCombined.caught,
-      ],
+      ["undefinedCombinedCaught", () => undefinedCombined.caught],
       [
         "aggregateContainsExactlyUndefinedCombinedFailure",
         () =>
-          success.caught === false &&
-          success.failure === undefined &&
-          success.order.join(",") === "hook" &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.order.join(",") === "hook" &&
-          standalone.caught &&
-          standalone.failure === cleanupFailure &&
-          standalone.order.join(",") === "hook" &&
-          combined.caught &&
-          aggregateContainsExactly(combined.failure, [
-            primaryFailure,
-            cleanupFailure,
-          ]) &&
-          combined.order.join(",") === "hook" &&
-          undefinedStandalone.caught &&
-          undefinedStandalone.failure === undefined &&
-          undefinedStandalone.order.join(",") === "hook" &&
-          undefinedCombined.caught &&
           aggregateContainsExactly(undefinedCombined.failure, [
             undefined,
             undefined,
@@ -424,31 +237,7 @@ export const test_mcp_production_project_atomic_delete_cleanup = (): void => {
       ],
       [
         "undefinedCombinedOrderJoin",
-        () =>
-          success.caught === false &&
-          success.failure === undefined &&
-          success.order.join(",") === "hook" &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.order.join(",") === "hook" &&
-          standalone.caught &&
-          standalone.failure === cleanupFailure &&
-          standalone.order.join(",") === "hook" &&
-          combined.caught &&
-          aggregateContainsExactly(combined.failure, [
-            primaryFailure,
-            cleanupFailure,
-          ]) &&
-          combined.order.join(",") === "hook" &&
-          undefinedStandalone.caught &&
-          undefinedStandalone.failure === undefined &&
-          undefinedStandalone.order.join(",") === "hook" &&
-          undefinedCombined.caught &&
-          aggregateContainsExactly(undefinedCombined.failure, [
-            undefined,
-            undefined,
-          ]) &&
-          undefinedCombined.order.join(",") === "hook",
+        () => undefinedCombined.order.join(",") === "hook",
       ],
     ]),
     {

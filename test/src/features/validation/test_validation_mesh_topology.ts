@@ -84,12 +84,7 @@ export const test_validation_mesh_topology = (): void => {
         "refused",
         () => hasViolation(topo(openPair, true), "topology", "$input.indices"),
       ],
-      [
-        "violated",
-        () =>
-          hasViolation(topo(openPair, true), "topology", "$input.indices") &&
-          topo(openPair, true).success === false,
-      ],
+      ["violated", () => topo(openPair, true).success === false],
     ]),
     { refused: true, violated: true },
   );

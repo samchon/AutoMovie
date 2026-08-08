@@ -174,12 +174,7 @@ export const test_workspace_experimental_sandbox = (): void => {
       "the refusal names the sandbox and the escape",
       namedFacts([
         ["repeatedStderrIncludes", () => repeated.stderr.includes(NAME)],
-        [
-          "repeatedStderrIncludes2",
-          () =>
-            repeated.stderr.includes(NAME) &&
-            repeated.stderr.includes("--force"),
-        ],
+        ["repeatedStderrIncludes2", () => repeated.stderr.includes("--force")],
       ]),
       { repeatedStderrIncludes: true, repeatedStderrIncludes2: true },
     );

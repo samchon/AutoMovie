@@ -265,336 +265,91 @@ export const test_viewer_dissolve_state = (): void => {
     namedFacts([
       ["halvesOut", () => halves === "out-in"],
       ["bTargetsAt", () => halves === "out-in" && b.targets.at(-1) === prior],
-      [
-        "primaryCaughtPrimaryFailure",
-        () =>
-          halves === "out-in" &&
-          b.targets.at(-1) === prior &&
-          primaryCaught === primaryFailure,
-      ],
-      [
-        "primaryOnlyTargetsAt",
-        () =>
-          halves === "out-in" &&
-          b.targets.at(-1) === prior &&
-          primaryCaught === primaryFailure &&
-          primaryOnly.targets.at(-1) === null,
-      ],
+      ["primaryCaughtPrimaryFailure", () => primaryCaught === primaryFailure],
+      ["primaryOnlyTargetsAt", () => primaryOnly.targets.at(-1) === null],
       [
         "standaloneAutoClearCaughtAutoClearFailure",
-        () =>
-          halves === "out-in" &&
-          b.targets.at(-1) === prior &&
-          primaryCaught === primaryFailure &&
-          primaryOnly.targets.at(-1) === null &&
-          standaloneAutoClearCaught === autoClearFailure,
+        () => standaloneAutoClearCaught === autoClearFailure,
       ],
       [
         "standaloneAutoClearRestorationAttemptsAutoClear",
-        () =>
-          halves === "out-in" &&
-          b.targets.at(-1) === prior &&
-          primaryCaught === primaryFailure &&
-          primaryOnly.targets.at(-1) === null &&
-          standaloneAutoClearCaught === autoClearFailure &&
-          standaloneAutoClear.restorationAttempts.autoClear === 1,
+        () => standaloneAutoClear.restorationAttempts.autoClear === 1,
       ],
       [
         "standaloneTargetCaughtTargetFailure",
-        () =>
-          halves === "out-in" &&
-          b.targets.at(-1) === prior &&
-          primaryCaught === primaryFailure &&
-          primaryOnly.targets.at(-1) === null &&
-          standaloneAutoClearCaught === autoClearFailure &&
-          standaloneAutoClear.restorationAttempts.autoClear === 1 &&
-          standaloneTargetCaught === targetFailure,
+        () => standaloneTargetCaught === targetFailure,
       ],
       [
         "standaloneTargetRestorationAttemptsTarget",
-        () =>
-          halves === "out-in" &&
-          b.targets.at(-1) === prior &&
-          primaryCaught === primaryFailure &&
-          primaryOnly.targets.at(-1) === null &&
-          standaloneAutoClearCaught === autoClearFailure &&
-          standaloneAutoClear.restorationAttempts.autoClear === 1 &&
-          standaloneTargetCaught === targetFailure &&
-          standaloneTarget.restorationAttempts.target === 1,
+        () => standaloneTarget.restorationAttempts.target === 1,
       ],
       [
         "standaloneMultipleCaughtInstanceofAggregateError",
-        () =>
-          halves === "out-in" &&
-          b.targets.at(-1) === prior &&
-          primaryCaught === primaryFailure &&
-          primaryOnly.targets.at(-1) === null &&
-          standaloneAutoClearCaught === autoClearFailure &&
-          standaloneAutoClear.restorationAttempts.autoClear === 1 &&
-          standaloneTargetCaught === targetFailure &&
-          standaloneTarget.restorationAttempts.target === 1 &&
-          standaloneMultipleCaught instanceof AggregateError,
+        () => standaloneMultipleCaught instanceof AggregateError,
       ],
       [
         "standaloneMultipleCaughtErrorsLength",
         () =>
-          halves === "out-in" &&
-          b.targets.at(-1) === prior &&
-          primaryCaught === primaryFailure &&
-          primaryOnly.targets.at(-1) === null &&
-          standaloneAutoClearCaught === autoClearFailure &&
-          standaloneAutoClear.restorationAttempts.autoClear === 1 &&
-          standaloneTargetCaught === targetFailure &&
-          standaloneTarget.restorationAttempts.target === 1 &&
           standaloneMultipleCaught instanceof AggregateError &&
           standaloneMultipleCaught.errors.length === 2,
       ],
       [
         "standaloneMultipleCaughtErrors0",
         () =>
-          halves === "out-in" &&
-          b.targets.at(-1) === prior &&
-          primaryCaught === primaryFailure &&
-          primaryOnly.targets.at(-1) === null &&
-          standaloneAutoClearCaught === autoClearFailure &&
-          standaloneAutoClear.restorationAttempts.autoClear === 1 &&
-          standaloneTargetCaught === targetFailure &&
-          standaloneTarget.restorationAttempts.target === 1 &&
           standaloneMultipleCaught instanceof AggregateError &&
-          standaloneMultipleCaught.errors.length === 2 &&
           standaloneMultipleCaught.errors[0] === standaloneAutoClearFailure,
       ],
       [
         "standaloneMultipleCaughtErrors1",
         () =>
-          halves === "out-in" &&
-          b.targets.at(-1) === prior &&
-          primaryCaught === primaryFailure &&
-          primaryOnly.targets.at(-1) === null &&
-          standaloneAutoClearCaught === autoClearFailure &&
-          standaloneAutoClear.restorationAttempts.autoClear === 1 &&
-          standaloneTargetCaught === targetFailure &&
-          standaloneTarget.restorationAttempts.target === 1 &&
           standaloneMultipleCaught instanceof AggregateError &&
-          standaloneMultipleCaught.errors.length === 2 &&
-          standaloneMultipleCaught.errors[0] === standaloneAutoClearFailure &&
           standaloneMultipleCaught.errors[1] === standaloneTargetFailure,
       ],
       [
         "standaloneMultipleRestorationAttemptsAutoClear",
-        () =>
-          halves === "out-in" &&
-          b.targets.at(-1) === prior &&
-          primaryCaught === primaryFailure &&
-          primaryOnly.targets.at(-1) === null &&
-          standaloneAutoClearCaught === autoClearFailure &&
-          standaloneAutoClear.restorationAttempts.autoClear === 1 &&
-          standaloneTargetCaught === targetFailure &&
-          standaloneTarget.restorationAttempts.target === 1 &&
-          standaloneMultipleCaught instanceof AggregateError &&
-          standaloneMultipleCaught.errors.length === 2 &&
-          standaloneMultipleCaught.errors[0] === standaloneAutoClearFailure &&
-          standaloneMultipleCaught.errors[1] === standaloneTargetFailure &&
-          standaloneMultiple.restorationAttempts.autoClear === 1,
+        () => standaloneMultiple.restorationAttempts.autoClear === 1,
       ],
       [
         "standaloneMultipleRestorationAttemptsTarget",
-        () =>
-          halves === "out-in" &&
-          b.targets.at(-1) === prior &&
-          primaryCaught === primaryFailure &&
-          primaryOnly.targets.at(-1) === null &&
-          standaloneAutoClearCaught === autoClearFailure &&
-          standaloneAutoClear.restorationAttempts.autoClear === 1 &&
-          standaloneTargetCaught === targetFailure &&
-          standaloneTarget.restorationAttempts.target === 1 &&
-          standaloneMultipleCaught instanceof AggregateError &&
-          standaloneMultipleCaught.errors.length === 2 &&
-          standaloneMultipleCaught.errors[0] === standaloneAutoClearFailure &&
-          standaloneMultipleCaught.errors[1] === standaloneTargetFailure &&
-          standaloneMultiple.restorationAttempts.autoClear === 1 &&
-          standaloneMultiple.restorationAttempts.target === 1,
+        () => standaloneMultiple.restorationAttempts.target === 1,
       ],
       [
         "combinedCaughtInstanceofAggregateError",
-        () =>
-          halves === "out-in" &&
-          b.targets.at(-1) === prior &&
-          primaryCaught === primaryFailure &&
-          primaryOnly.targets.at(-1) === null &&
-          standaloneAutoClearCaught === autoClearFailure &&
-          standaloneAutoClear.restorationAttempts.autoClear === 1 &&
-          standaloneTargetCaught === targetFailure &&
-          standaloneTarget.restorationAttempts.target === 1 &&
-          standaloneMultipleCaught instanceof AggregateError &&
-          standaloneMultipleCaught.errors.length === 2 &&
-          standaloneMultipleCaught.errors[0] === standaloneAutoClearFailure &&
-          standaloneMultipleCaught.errors[1] === standaloneTargetFailure &&
-          standaloneMultiple.restorationAttempts.autoClear === 1 &&
-          standaloneMultiple.restorationAttempts.target === 1 &&
-          combinedCaught instanceof AggregateError,
+        () => combinedCaught instanceof AggregateError,
       ],
       [
         "combinedCaughtErrorsLength",
         () =>
-          halves === "out-in" &&
-          b.targets.at(-1) === prior &&
-          primaryCaught === primaryFailure &&
-          primaryOnly.targets.at(-1) === null &&
-          standaloneAutoClearCaught === autoClearFailure &&
-          standaloneAutoClear.restorationAttempts.autoClear === 1 &&
-          standaloneTargetCaught === targetFailure &&
-          standaloneTarget.restorationAttempts.target === 1 &&
-          standaloneMultipleCaught instanceof AggregateError &&
-          standaloneMultipleCaught.errors.length === 2 &&
-          standaloneMultipleCaught.errors[0] === standaloneAutoClearFailure &&
-          standaloneMultipleCaught.errors[1] === standaloneTargetFailure &&
-          standaloneMultiple.restorationAttempts.autoClear === 1 &&
-          standaloneMultiple.restorationAttempts.target === 1 &&
           combinedCaught instanceof AggregateError &&
           combinedCaught.errors.length === 3,
       ],
       [
         "combinedCaughtErrors0",
         () =>
-          halves === "out-in" &&
-          b.targets.at(-1) === prior &&
-          primaryCaught === primaryFailure &&
-          primaryOnly.targets.at(-1) === null &&
-          standaloneAutoClearCaught === autoClearFailure &&
-          standaloneAutoClear.restorationAttempts.autoClear === 1 &&
-          standaloneTargetCaught === targetFailure &&
-          standaloneTarget.restorationAttempts.target === 1 &&
-          standaloneMultipleCaught instanceof AggregateError &&
-          standaloneMultipleCaught.errors.length === 2 &&
-          standaloneMultipleCaught.errors[0] === standaloneAutoClearFailure &&
-          standaloneMultipleCaught.errors[1] === standaloneTargetFailure &&
-          standaloneMultiple.restorationAttempts.autoClear === 1 &&
-          standaloneMultiple.restorationAttempts.target === 1 &&
           combinedCaught instanceof AggregateError &&
-          combinedCaught.errors.length === 3 &&
           combinedCaught.errors[0] === combinedPrimaryFailure,
       ],
       [
         "combinedCaughtErrors1",
         () =>
-          halves === "out-in" &&
-          b.targets.at(-1) === prior &&
-          primaryCaught === primaryFailure &&
-          primaryOnly.targets.at(-1) === null &&
-          standaloneAutoClearCaught === autoClearFailure &&
-          standaloneAutoClear.restorationAttempts.autoClear === 1 &&
-          standaloneTargetCaught === targetFailure &&
-          standaloneTarget.restorationAttempts.target === 1 &&
-          standaloneMultipleCaught instanceof AggregateError &&
-          standaloneMultipleCaught.errors.length === 2 &&
-          standaloneMultipleCaught.errors[0] === standaloneAutoClearFailure &&
-          standaloneMultipleCaught.errors[1] === standaloneTargetFailure &&
-          standaloneMultiple.restorationAttempts.autoClear === 1 &&
-          standaloneMultiple.restorationAttempts.target === 1 &&
           combinedCaught instanceof AggregateError &&
-          combinedCaught.errors.length === 3 &&
-          combinedCaught.errors[0] === combinedPrimaryFailure &&
           combinedCaught.errors[1] === combinedAutoClearFailure,
       ],
       [
         "combinedCaughtErrors2",
         () =>
-          halves === "out-in" &&
-          b.targets.at(-1) === prior &&
-          primaryCaught === primaryFailure &&
-          primaryOnly.targets.at(-1) === null &&
-          standaloneAutoClearCaught === autoClearFailure &&
-          standaloneAutoClear.restorationAttempts.autoClear === 1 &&
-          standaloneTargetCaught === targetFailure &&
-          standaloneTarget.restorationAttempts.target === 1 &&
-          standaloneMultipleCaught instanceof AggregateError &&
-          standaloneMultipleCaught.errors.length === 2 &&
-          standaloneMultipleCaught.errors[0] === standaloneAutoClearFailure &&
-          standaloneMultipleCaught.errors[1] === standaloneTargetFailure &&
-          standaloneMultiple.restorationAttempts.autoClear === 1 &&
-          standaloneMultiple.restorationAttempts.target === 1 &&
           combinedCaught instanceof AggregateError &&
-          combinedCaught.errors.length === 3 &&
-          combinedCaught.errors[0] === combinedPrimaryFailure &&
-          combinedCaught.errors[1] === combinedAutoClearFailure &&
           combinedCaught.errors[2] === combinedTargetFailure,
       ],
       [
         "combinedRestorationAttemptsAutoClear",
-        () =>
-          halves === "out-in" &&
-          b.targets.at(-1) === prior &&
-          primaryCaught === primaryFailure &&
-          primaryOnly.targets.at(-1) === null &&
-          standaloneAutoClearCaught === autoClearFailure &&
-          standaloneAutoClear.restorationAttempts.autoClear === 1 &&
-          standaloneTargetCaught === targetFailure &&
-          standaloneTarget.restorationAttempts.target === 1 &&
-          standaloneMultipleCaught instanceof AggregateError &&
-          standaloneMultipleCaught.errors.length === 2 &&
-          standaloneMultipleCaught.errors[0] === standaloneAutoClearFailure &&
-          standaloneMultipleCaught.errors[1] === standaloneTargetFailure &&
-          standaloneMultiple.restorationAttempts.autoClear === 1 &&
-          standaloneMultiple.restorationAttempts.target === 1 &&
-          combinedCaught instanceof AggregateError &&
-          combinedCaught.errors.length === 3 &&
-          combinedCaught.errors[0] === combinedPrimaryFailure &&
-          combinedCaught.errors[1] === combinedAutoClearFailure &&
-          combinedCaught.errors[2] === combinedTargetFailure &&
-          combined.restorationAttempts.autoClear === 1,
+        () => combined.restorationAttempts.autoClear === 1,
       ],
       [
         "combinedRestorationAttemptsTarget",
-        () =>
-          halves === "out-in" &&
-          b.targets.at(-1) === prior &&
-          primaryCaught === primaryFailure &&
-          primaryOnly.targets.at(-1) === null &&
-          standaloneAutoClearCaught === autoClearFailure &&
-          standaloneAutoClear.restorationAttempts.autoClear === 1 &&
-          standaloneTargetCaught === targetFailure &&
-          standaloneTarget.restorationAttempts.target === 1 &&
-          standaloneMultipleCaught instanceof AggregateError &&
-          standaloneMultipleCaught.errors.length === 2 &&
-          standaloneMultipleCaught.errors[0] === standaloneAutoClearFailure &&
-          standaloneMultipleCaught.errors[1] === standaloneTargetFailure &&
-          standaloneMultiple.restorationAttempts.autoClear === 1 &&
-          standaloneMultiple.restorationAttempts.target === 1 &&
-          combinedCaught instanceof AggregateError &&
-          combinedCaught.errors.length === 3 &&
-          combinedCaught.errors[0] === combinedPrimaryFailure &&
-          combinedCaught.errors[1] === combinedAutoClearFailure &&
-          combinedCaught.errors[2] === combinedTargetFailure &&
-          combined.restorationAttempts.autoClear === 1 &&
-          combined.restorationAttempts.target === 1,
+        () => combined.restorationAttempts.target === 1,
       ],
-      [
-        "invalidAlpha",
-        () =>
-          halves === "out-in" &&
-          b.targets.at(-1) === prior &&
-          primaryCaught === primaryFailure &&
-          primaryOnly.targets.at(-1) === null &&
-          standaloneAutoClearCaught === autoClearFailure &&
-          standaloneAutoClear.restorationAttempts.autoClear === 1 &&
-          standaloneTargetCaught === targetFailure &&
-          standaloneTarget.restorationAttempts.target === 1 &&
-          standaloneMultipleCaught instanceof AggregateError &&
-          standaloneMultipleCaught.errors.length === 2 &&
-          standaloneMultipleCaught.errors[0] === standaloneAutoClearFailure &&
-          standaloneMultipleCaught.errors[1] === standaloneTargetFailure &&
-          standaloneMultiple.restorationAttempts.autoClear === 1 &&
-          standaloneMultiple.restorationAttempts.target === 1 &&
-          combinedCaught instanceof AggregateError &&
-          combinedCaught.errors.length === 3 &&
-          combinedCaught.errors[0] === combinedPrimaryFailure &&
-          combinedCaught.errors[1] === combinedAutoClearFailure &&
-          combinedCaught.errors[2] === combinedTargetFailure &&
-          combined.restorationAttempts.autoClear === 1 &&
-          combined.restorationAttempts.target === 1 &&
-          invalidAlpha,
-      ],
+      ["invalidAlpha", () => invalidAlpha],
     ]),
     {
       halvesOut: true,

@@ -92,15 +92,9 @@ export const test_mcp_production_content_identity = (): void => {
           fingerprintAutoMovieFields([
             { role: "a", kind: "x", payload: Buffer.from("z") },
           ]) !==
-            fingerprintAutoMovieFields([
-              { role: "b", kind: "x", payload: Buffer.from("z") },
-            ]) &&
           fingerprintAutoMovieFields([
-            { role: "a", kind: "x", payload: Buffer.from("z") },
-          ]) !==
-            fingerprintAutoMovieFields([
-              { role: "a", kind: "y", payload: Buffer.from("z") },
-            ]),
+            { role: "a", kind: "y", payload: Buffer.from("z") },
+          ]),
       ],
     ]),
     {

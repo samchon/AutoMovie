@@ -64,12 +64,7 @@ export const test_physics_impact_recoil_falloff = (): void => {
         "ncloseContactOnlyJoints",
         () => nclose(contactOnly.joints[0]!.flexion!, 10),
       ],
-      [
-        "contactOnlyJoints1",
-        () =>
-          nclose(contactOnly.joints[0]!.flexion!, 10) &&
-          contactOnly.joints[1]!.flexion === null,
-      ],
+      ["contactOnlyJoints1", () => contactOnly.joints[1]!.flexion === null],
     ]),
     { ncloseContactOnlyJoints: true, contactOnlyJoints1: true },
   );
@@ -79,12 +74,7 @@ export const test_physics_impact_recoil_falloff = (): void => {
     "falloff one preserves the push",
     namedFacts([
       ["ncloseNoLossJoints", () => nclose(noLoss.joints[0]!.flexion!, 10)],
-      [
-        "ncloseNoLossJoints2",
-        () =>
-          nclose(noLoss.joints[0]!.flexion!, 10) &&
-          nclose(noLoss.joints[1]!.flexion!, 10),
-      ],
+      ["ncloseNoLossJoints2", () => nclose(noLoss.joints[1]!.flexion!, 10)],
     ]),
     { ncloseNoLossJoints: true, ncloseNoLossJoints2: true },
   );

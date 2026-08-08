@@ -49,10 +49,7 @@ export const test_perform_body_region_bones = (): void => {
     "lowerBody has hips + a foot",
     namedFacts([
       ["lowerIncludesHips", () => lower.includes("hips")],
-      [
-        "lowerIncludesLeftFoot",
-        () => lower.includes("hips") && lower.includes("leftFoot"),
-      ],
+      ["lowerIncludesLeftFoot", () => lower.includes("leftFoot")],
     ]),
     { lowerIncludesHips: true, lowerIncludesLeftFoot: true },
   );
@@ -78,7 +75,7 @@ export const test_perform_body_region_bones = (): void => {
     "head has neck + jaw",
     namedFacts([
       ["headIncludesNeck", () => head.includes("neck")],
-      ["headIncludesJaw", () => head.includes("neck") && head.includes("jaw")],
+      ["headIncludesJaw", () => head.includes("jaw")],
     ]),
     { headIncludesNeck: true, headIncludesJaw: true },
   );

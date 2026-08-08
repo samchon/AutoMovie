@@ -57,10 +57,7 @@ export const test_rom_table_values = (): void => {
       ],
       [
         "ncloseSwingConeAngleShoulder",
-        () =>
-          swingConeAngle(shoulder.flexion!.max, shoulder.abduction!.max) <=
-            shoulder.swingDeg! &&
-          nclose(swingConeAngle(shoulder.flexion!.max, 0), 180),
+        () => nclose(swingConeAngle(shoulder.flexion!.max, 0), 180),
       ],
     ]),
     { swingConeAngleShoulderFlexion: true, ncloseSwingConeAngleShoulder: true },

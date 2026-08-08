@@ -68,10 +68,7 @@ export const test_physics_projectile = (): void => {
     "velocity after 1s",
     namedFacts([
       ["ncloseS1Velocity", () => nclose(s1.velocity.x, 5)],
-      [
-        "ncloseS1Velocity2",
-        () => nclose(s1.velocity.x, 5) && nclose(s1.velocity.y, -10),
-      ],
+      ["ncloseS1Velocity2", () => nclose(s1.velocity.y, -10)],
     ]),
     { ncloseS1Velocity: true, ncloseS1Velocity2: true },
   );

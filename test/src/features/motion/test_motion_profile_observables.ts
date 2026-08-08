@@ -140,11 +140,6 @@ export const test_motion_profile_observables = (): void => {
         "coversRangeFlexionRangeHorse2",
         () =>
           coversRange(
-            flexionRange(horse.walk!, "leftUpperArm"),
-            horseHandAuthored.walk.leftUpperArm,
-            3,
-          ) &&
-          coversRange(
             flexionRange(horse.walk!, "leftLowerArm"),
             horseHandAuthored.walk.leftLowerArm,
             2,
@@ -169,11 +164,6 @@ export const test_motion_profile_observables = (): void => {
         "coversRangeFlexionRangeHorse2",
         () =>
           coversRange(
-            flexionRange(horse.trot!, "leftUpperArm"),
-            horseHandAuthored.trot.leftUpperArm,
-            4,
-          ) &&
-          coversRange(
             flexionRange(horse.trot!, "leftLowerArm"),
             horseHandAuthored.trot.leftLowerArm,
             2,
@@ -182,18 +172,8 @@ export const test_motion_profile_observables = (): void => {
       [
         "rootYRangeHorseTrot",
         () =>
-          coversRange(
-            flexionRange(horse.trot!, "leftUpperArm"),
-            horseHandAuthored.trot.leftUpperArm,
-            4,
-          ) &&
-          coversRange(
-            flexionRange(horse.trot!, "leftLowerArm"),
-            horseHandAuthored.trot.leftLowerArm,
-            2,
-          ) &&
           rootYRange(horse.trot!).max >=
-            horseHandAuthored.trot.rootY.max - 0.005,
+          horseHandAuthored.trot.rootY.max - 0.005,
       ],
     ]),
     {
@@ -218,11 +198,6 @@ export const test_motion_profile_observables = (): void => {
         "coversRangeFlexionRangeHorse2",
         () =>
           coversRange(
-            flexionRange(horse.gallop!, "leftUpperArm"),
-            horseHandAuthored.gallop.leftUpperArm,
-            4,
-          ) &&
-          coversRange(
             flexionRange(horse.gallop!, "leftLowerArm"),
             horseHandAuthored.gallop.leftLowerArm,
             3,
@@ -231,16 +206,6 @@ export const test_motion_profile_observables = (): void => {
       [
         "closesRangeRootYRangeHorse",
         () =>
-          coversRange(
-            flexionRange(horse.gallop!, "leftUpperArm"),
-            horseHandAuthored.gallop.leftUpperArm,
-            4,
-          ) &&
-          coversRange(
-            flexionRange(horse.gallop!, "leftLowerArm"),
-            horseHandAuthored.gallop.leftLowerArm,
-            3,
-          ) &&
           closesRange(
             rootYRange(horse.gallop!),
             horseHandAuthored.gallop.rootY,
@@ -270,11 +235,6 @@ export const test_motion_profile_observables = (): void => {
         "coversRangeFlexionRangeHorse2",
         () =>
           coversRange(
-            flexionRange(horse.rear!, "leftUpperArm"),
-            horseHandAuthored.rear.leftUpperArm,
-            5,
-          ) &&
-          coversRange(
             flexionRange(horse.rear!, "leftLowerArm"),
             horseHandAuthored.rear.leftLowerArm,
             5,
@@ -283,16 +243,6 @@ export const test_motion_profile_observables = (): void => {
       [
         "coversRangeFlexionRangeHorse3",
         () =>
-          coversRange(
-            flexionRange(horse.rear!, "leftUpperArm"),
-            horseHandAuthored.rear.leftUpperArm,
-            5,
-          ) &&
-          coversRange(
-            flexionRange(horse.rear!, "leftLowerArm"),
-            horseHandAuthored.rear.leftLowerArm,
-            5,
-          ) &&
           coversRange(
             flexionRange(horse.rear!, "spine"),
             horseHandAuthored.rear.spine,
@@ -332,11 +282,6 @@ export const test_motion_profile_observables = (): void => {
         "coversRangeFlexionRangeCat2",
         () =>
           coversRange(
-            flexionRange(cat.walk!, "leftUpperArm"),
-            catHandAuthored.walk.leftUpperArm,
-            3,
-          ) &&
-          coversRange(
             flexionRange(cat.walk!, "leftLowerArm"),
             catHandAuthored.walk.leftLowerArm,
             2,
@@ -346,16 +291,6 @@ export const test_motion_profile_observables = (): void => {
         "coversRangeFlexionRangeCat3",
         () =>
           coversRange(
-            flexionRange(cat.walk!, "leftUpperArm"),
-            catHandAuthored.walk.leftUpperArm,
-            3,
-          ) &&
-          coversRange(
-            flexionRange(cat.walk!, "leftLowerArm"),
-            catHandAuthored.walk.leftLowerArm,
-            2,
-          ) &&
-          coversRange(
             flexionRange(cat.walk!, "leftUpperLeg"),
             catHandAuthored.walk.leftUpperLeg,
             3,
@@ -364,21 +299,6 @@ export const test_motion_profile_observables = (): void => {
       [
         "coversRangeFlexionRangeCat4",
         () =>
-          coversRange(
-            flexionRange(cat.walk!, "leftUpperArm"),
-            catHandAuthored.walk.leftUpperArm,
-            3,
-          ) &&
-          coversRange(
-            flexionRange(cat.walk!, "leftLowerArm"),
-            catHandAuthored.walk.leftLowerArm,
-            2,
-          ) &&
-          coversRange(
-            flexionRange(cat.walk!, "leftUpperLeg"),
-            catHandAuthored.walk.leftUpperLeg,
-            3,
-          ) &&
           coversRange(
             flexionRange(cat.walk!, "rightLowerLeg"),
             catHandAuthored.walk.rightLowerLeg,
@@ -409,11 +329,6 @@ export const test_motion_profile_observables = (): void => {
         "coversRangeFlexionRangeCat2",
         () =>
           coversRange(
-            flexionRange(cat.leap!, "leftUpperArm"),
-            catHandAuthored.leap.leftUpperArm,
-            3,
-          ) &&
-          coversRange(
             flexionRange(cat.leap!, "leftLowerArm"),
             catHandAuthored.leap.leftLowerArm,
             2,
@@ -422,16 +337,6 @@ export const test_motion_profile_observables = (): void => {
       [
         "coversRangeFlexionRangeCat3",
         () =>
-          coversRange(
-            flexionRange(cat.leap!, "leftUpperArm"),
-            catHandAuthored.leap.leftUpperArm,
-            3,
-          ) &&
-          coversRange(
-            flexionRange(cat.leap!, "leftLowerArm"),
-            catHandAuthored.leap.leftLowerArm,
-            2,
-          ) &&
           coversRange(
             flexionRange(cat.leap!, "leftUpperLeg"),
             catHandAuthored.leap.leftUpperLeg,
@@ -442,21 +347,6 @@ export const test_motion_profile_observables = (): void => {
         "coversRangeFlexionRangeCat4",
         () =>
           coversRange(
-            flexionRange(cat.leap!, "leftUpperArm"),
-            catHandAuthored.leap.leftUpperArm,
-            3,
-          ) &&
-          coversRange(
-            flexionRange(cat.leap!, "leftLowerArm"),
-            catHandAuthored.leap.leftLowerArm,
-            2,
-          ) &&
-          coversRange(
-            flexionRange(cat.leap!, "leftUpperLeg"),
-            catHandAuthored.leap.leftUpperLeg,
-            4,
-          ) &&
-          coversRange(
             flexionRange(cat.leap!, "leftLowerLeg"),
             catHandAuthored.leap.leftLowerLeg,
             3,
@@ -465,26 +355,6 @@ export const test_motion_profile_observables = (): void => {
       [
         "closesRangeRootYRangeCat",
         () =>
-          coversRange(
-            flexionRange(cat.leap!, "leftUpperArm"),
-            catHandAuthored.leap.leftUpperArm,
-            3,
-          ) &&
-          coversRange(
-            flexionRange(cat.leap!, "leftLowerArm"),
-            catHandAuthored.leap.leftLowerArm,
-            2,
-          ) &&
-          coversRange(
-            flexionRange(cat.leap!, "leftUpperLeg"),
-            catHandAuthored.leap.leftUpperLeg,
-            4,
-          ) &&
-          coversRange(
-            flexionRange(cat.leap!, "leftLowerLeg"),
-            catHandAuthored.leap.leftLowerLeg,
-            3,
-          ) &&
           closesRange(rootYRange(cat.leap!), catHandAuthored.leap.rootY, 0.02),
       ],
     ]),

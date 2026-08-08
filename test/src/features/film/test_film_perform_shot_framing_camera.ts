@@ -199,11 +199,7 @@ export const test_film_perform_shot_framing_camera = (): void => {
     "every compiled camera keyframe is finite",
     namedFacts([
       ["refused", () => clipValues(ok).length > 0],
-      [
-        "violated",
-        () =>
-          clipValues(ok).length > 0 && clipValues(ok).every(Number.isFinite),
-      ],
+      ["violated", () => clipValues(ok).every(Number.isFinite)],
     ]),
     { refused: true, violated: true },
   );

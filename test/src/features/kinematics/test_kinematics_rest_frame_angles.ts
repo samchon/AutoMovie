@@ -204,9 +204,7 @@ export const test_kinematics_rest_frame_angles = (): void => {
         ],
         [
           "vcloseHandOfReachRig",
-          () =>
-            vclose(handOf(reachClinical, HUMANOID_REST_FRAME), target, 1e-9) &&
-            vclose(handOf(reachRig, {}), target, 1e-9),
+          () => vclose(handOf(reachRig, {}), target, 1e-9),
         ],
       ]),
       { vcloseHandOfReachClinical: true, vcloseHandOfReachRig: true },

@@ -75,10 +75,7 @@ export const test_space_support_contacts = (): void => {
     "ramp contacts interpolate",
     namedFacts([
       ["ncloseOnRamp0", () => nclose(onRamp[0]!.y, 0.5)],
-      [
-        "ncloseOnRamp1",
-        () => nclose(onRamp[0]!.y, 0.5) && nclose(onRamp[1]!.y, 1.5),
-      ],
+      ["ncloseOnRamp1", () => nclose(onRamp[1]!.y, 1.5)],
     ]),
     { ncloseOnRamp0: true, ncloseOnRamp1: true },
   );

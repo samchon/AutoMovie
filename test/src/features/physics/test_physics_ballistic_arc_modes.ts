@@ -58,8 +58,6 @@ export const test_physics_ballistic_arc_modes = (): void => {
       [
         "solveBallisticLaunchOriginTarget2",
         () =>
-          solveBallisticLaunch(origin, target, 14, undefined, "direct") !==
-            null &&
           solveBallisticLaunch(origin, target, 14, undefined, "high") !== null,
       ],
     ]),

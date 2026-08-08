@@ -87,10 +87,6 @@ export const test_resolve_scene_clip_parity = (): void => {
       [
         "actorsSomeNode",
         () =>
-          actors.every(
-            (node) =>
-              performed.motions[node]!.duration <= performed.shot.duration,
-          ) &&
           actors.some(
             (node) =>
               performed.motions[node]!.duration === performed.shot.duration,

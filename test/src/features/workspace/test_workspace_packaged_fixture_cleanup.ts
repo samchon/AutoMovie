@@ -209,21 +209,7 @@ const exercisePackagedFixtureCleanup = (): void => {
             cleanupFailure,
           ]),
       ],
-      [
-        "combinedAttempts",
-        () =>
-          success.caught === undefined &&
-          success.attempts === 1 &&
-          primaryOnly.caught === primaryFailure &&
-          primaryOnly.attempts === 1 &&
-          standalone.caught === cleanupFailure &&
-          standalone.attempts === 1 &&
-          aggregateContainsExactly(combined.caught, [
-            primaryFailure,
-            cleanupFailure,
-          ]) &&
-          combined.attempts === 1,
-      ],
+      ["combinedAttempts", () => combined.attempts === 1],
     ]),
     {
       successCaught: true,

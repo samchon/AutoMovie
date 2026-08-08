@@ -215,159 +215,42 @@ export const test_mcp_production_film_source_fixture_cleanup = (): void => {
           success.caught === false &&
           success.order.join(",") === "remove-link,write-source,remove-outside",
       ],
-      [
-        "primaryOnlyCaught",
-        () =>
-          success.caught === false &&
-          success.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          primaryOnly.caught,
-      ],
+      ["primaryOnlyCaught", () => primaryOnly.caught],
       [
         "primaryOnlyFailurePrimaryFailure",
-        () =>
-          success.caught === false &&
-          success.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure,
+        () => primaryOnly.failure === primaryFailure,
       ],
       [
         "primaryOnlyOrderJoin",
         () =>
-          success.caught === false &&
-          success.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
           primaryOnly.order.join(",") ===
-            "remove-link,write-source,remove-outside",
+          "remove-link,write-source,remove-outside",
       ],
-      [
-        "dependencyFailureCaught",
-        () =>
-          success.caught === false &&
-          success.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          dependencyFailure.caught,
-      ],
+      ["dependencyFailureCaught", () => dependencyFailure.caught],
       [
         "dependencyFailureFailureLinkRemovalFailure",
-        () =>
-          success.caught === false &&
-          success.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          dependencyFailure.caught &&
-          dependencyFailure.failure === linkRemovalFailure,
+        () => dependencyFailure.failure === linkRemovalFailure,
       ],
       [
         "dependencyFailureOrderJoin",
         () =>
-          success.caught === false &&
-          success.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          dependencyFailure.caught &&
-          dependencyFailure.failure === linkRemovalFailure &&
           dependencyFailure.order.join(",") === "remove-link,remove-outside",
       ],
-      [
-        "standaloneWriteCaught",
-        () =>
-          success.caught === false &&
-          success.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          dependencyFailure.caught &&
-          dependencyFailure.failure === linkRemovalFailure &&
-          dependencyFailure.order.join(",") === "remove-link,remove-outside" &&
-          standaloneWrite.caught,
-      ],
+      ["standaloneWriteCaught", () => standaloneWrite.caught],
       [
         "standaloneWriteFailureSourceWriteFailure",
-        () =>
-          success.caught === false &&
-          success.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          dependencyFailure.caught &&
-          dependencyFailure.failure === linkRemovalFailure &&
-          dependencyFailure.order.join(",") === "remove-link,remove-outside" &&
-          standaloneWrite.caught &&
-          standaloneWrite.failure === sourceWriteFailure,
+        () => standaloneWrite.failure === sourceWriteFailure,
       ],
       [
         "standaloneWriteOrderJoin",
         () =>
-          success.caught === false &&
-          success.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          dependencyFailure.caught &&
-          dependencyFailure.failure === linkRemovalFailure &&
-          dependencyFailure.order.join(",") === "remove-link,remove-outside" &&
-          standaloneWrite.caught &&
-          standaloneWrite.failure === sourceWriteFailure &&
           standaloneWrite.order.join(",") ===
-            "remove-link,write-source,remove-outside",
+          "remove-link,write-source,remove-outside",
       ],
-      [
-        "multipleCaught",
-        () =>
-          success.caught === false &&
-          success.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          dependencyFailure.caught &&
-          dependencyFailure.failure === linkRemovalFailure &&
-          dependencyFailure.order.join(",") === "remove-link,remove-outside" &&
-          standaloneWrite.caught &&
-          standaloneWrite.failure === sourceWriteFailure &&
-          standaloneWrite.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          multiple.caught,
-      ],
+      ["multipleCaught", () => multiple.caught],
       [
         "aggregateContainsExactlyMultipleFailure",
         () =>
-          success.caught === false &&
-          success.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          dependencyFailure.caught &&
-          dependencyFailure.failure === linkRemovalFailure &&
-          dependencyFailure.order.join(",") === "remove-link,remove-outside" &&
-          standaloneWrite.caught &&
-          standaloneWrite.failure === sourceWriteFailure &&
-          standaloneWrite.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          multiple.caught &&
           aggregateContainsExactly(multiple.failure, [
             sourceWriteFailure,
             outsideRemovalFailure,
@@ -376,79 +259,13 @@ export const test_mcp_production_film_source_fixture_cleanup = (): void => {
       [
         "multipleOrderJoin",
         () =>
-          success.caught === false &&
-          success.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          dependencyFailure.caught &&
-          dependencyFailure.failure === linkRemovalFailure &&
-          dependencyFailure.order.join(",") === "remove-link,remove-outside" &&
-          standaloneWrite.caught &&
-          standaloneWrite.failure === sourceWriteFailure &&
-          standaloneWrite.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          multiple.caught &&
-          aggregateContainsExactly(multiple.failure, [
-            sourceWriteFailure,
-            outsideRemovalFailure,
-          ]) &&
           multiple.order.join(",") ===
-            "remove-link,write-source,remove-outside",
+          "remove-link,write-source,remove-outside",
       ],
-      [
-        "combinedCaught",
-        () =>
-          success.caught === false &&
-          success.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          dependencyFailure.caught &&
-          dependencyFailure.failure === linkRemovalFailure &&
-          dependencyFailure.order.join(",") === "remove-link,remove-outside" &&
-          standaloneWrite.caught &&
-          standaloneWrite.failure === sourceWriteFailure &&
-          standaloneWrite.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          multiple.caught &&
-          aggregateContainsExactly(multiple.failure, [
-            sourceWriteFailure,
-            outsideRemovalFailure,
-          ]) &&
-          multiple.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          combined.caught,
-      ],
+      ["combinedCaught", () => combined.caught],
       [
         "aggregateContainsExactlyCombinedFailure",
         () =>
-          success.caught === false &&
-          success.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          dependencyFailure.caught &&
-          dependencyFailure.failure === linkRemovalFailure &&
-          dependencyFailure.order.join(",") === "remove-link,remove-outside" &&
-          standaloneWrite.caught &&
-          standaloneWrite.failure === sourceWriteFailure &&
-          standaloneWrite.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          multiple.caught &&
-          aggregateContainsExactly(multiple.failure, [
-            sourceWriteFailure,
-            outsideRemovalFailure,
-          ]) &&
-          multiple.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          combined.caught &&
           aggregateContainsExactly(combined.failure, [
             primaryFailure,
             sourceWriteFailure,
@@ -458,342 +275,31 @@ export const test_mcp_production_film_source_fixture_cleanup = (): void => {
       [
         "combinedOrderJoin",
         () =>
-          success.caught === false &&
-          success.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          dependencyFailure.caught &&
-          dependencyFailure.failure === linkRemovalFailure &&
-          dependencyFailure.order.join(",") === "remove-link,remove-outside" &&
-          standaloneWrite.caught &&
-          standaloneWrite.failure === sourceWriteFailure &&
-          standaloneWrite.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          multiple.caught &&
-          aggregateContainsExactly(multiple.failure, [
-            sourceWriteFailure,
-            outsideRemovalFailure,
-          ]) &&
-          multiple.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          combined.caught &&
-          aggregateContainsExactly(combined.failure, [
-            primaryFailure,
-            sourceWriteFailure,
-            outsideRemovalFailure,
-          ]) &&
           combined.order.join(",") ===
-            "remove-link,write-source,remove-outside",
+          "remove-link,write-source,remove-outside",
       ],
-      [
-        "undefinedPrimaryCaught",
-        () =>
-          success.caught === false &&
-          success.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          dependencyFailure.caught &&
-          dependencyFailure.failure === linkRemovalFailure &&
-          dependencyFailure.order.join(",") === "remove-link,remove-outside" &&
-          standaloneWrite.caught &&
-          standaloneWrite.failure === sourceWriteFailure &&
-          standaloneWrite.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          multiple.caught &&
-          aggregateContainsExactly(multiple.failure, [
-            sourceWriteFailure,
-            outsideRemovalFailure,
-          ]) &&
-          multiple.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          combined.caught &&
-          aggregateContainsExactly(combined.failure, [
-            primaryFailure,
-            sourceWriteFailure,
-            outsideRemovalFailure,
-          ]) &&
-          combined.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          undefinedPrimary.caught,
-      ],
-      [
-        "undefinedPrimaryFailure",
-        () =>
-          success.caught === false &&
-          success.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          dependencyFailure.caught &&
-          dependencyFailure.failure === linkRemovalFailure &&
-          dependencyFailure.order.join(",") === "remove-link,remove-outside" &&
-          standaloneWrite.caught &&
-          standaloneWrite.failure === sourceWriteFailure &&
-          standaloneWrite.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          multiple.caught &&
-          aggregateContainsExactly(multiple.failure, [
-            sourceWriteFailure,
-            outsideRemovalFailure,
-          ]) &&
-          multiple.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          combined.caught &&
-          aggregateContainsExactly(combined.failure, [
-            primaryFailure,
-            sourceWriteFailure,
-            outsideRemovalFailure,
-          ]) &&
-          combined.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          undefinedPrimary.caught &&
-          undefinedPrimary.failure === undefined,
-      ],
+      ["undefinedPrimaryCaught", () => undefinedPrimary.caught],
+      ["undefinedPrimaryFailure", () => undefinedPrimary.failure === undefined],
       [
         "undefinedPrimaryOrderJoin",
         () =>
-          success.caught === false &&
-          success.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          dependencyFailure.caught &&
-          dependencyFailure.failure === linkRemovalFailure &&
-          dependencyFailure.order.join(",") === "remove-link,remove-outside" &&
-          standaloneWrite.caught &&
-          standaloneWrite.failure === sourceWriteFailure &&
-          standaloneWrite.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          multiple.caught &&
-          aggregateContainsExactly(multiple.failure, [
-            sourceWriteFailure,
-            outsideRemovalFailure,
-          ]) &&
-          multiple.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          combined.caught &&
-          aggregateContainsExactly(combined.failure, [
-            primaryFailure,
-            sourceWriteFailure,
-            outsideRemovalFailure,
-          ]) &&
-          combined.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          undefinedPrimary.caught &&
-          undefinedPrimary.failure === undefined &&
           undefinedPrimary.order.join(",") ===
-            "remove-link,write-source,remove-outside",
+          "remove-link,write-source,remove-outside",
       ],
-      [
-        "undefinedStandaloneCaught",
-        () =>
-          success.caught === false &&
-          success.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          dependencyFailure.caught &&
-          dependencyFailure.failure === linkRemovalFailure &&
-          dependencyFailure.order.join(",") === "remove-link,remove-outside" &&
-          standaloneWrite.caught &&
-          standaloneWrite.failure === sourceWriteFailure &&
-          standaloneWrite.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          multiple.caught &&
-          aggregateContainsExactly(multiple.failure, [
-            sourceWriteFailure,
-            outsideRemovalFailure,
-          ]) &&
-          multiple.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          combined.caught &&
-          aggregateContainsExactly(combined.failure, [
-            primaryFailure,
-            sourceWriteFailure,
-            outsideRemovalFailure,
-          ]) &&
-          combined.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          undefinedPrimary.caught &&
-          undefinedPrimary.failure === undefined &&
-          undefinedPrimary.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          undefinedStandalone.caught,
-      ],
+      ["undefinedStandaloneCaught", () => undefinedStandalone.caught],
       [
         "undefinedStandaloneFailure",
-        () =>
-          success.caught === false &&
-          success.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          dependencyFailure.caught &&
-          dependencyFailure.failure === linkRemovalFailure &&
-          dependencyFailure.order.join(",") === "remove-link,remove-outside" &&
-          standaloneWrite.caught &&
-          standaloneWrite.failure === sourceWriteFailure &&
-          standaloneWrite.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          multiple.caught &&
-          aggregateContainsExactly(multiple.failure, [
-            sourceWriteFailure,
-            outsideRemovalFailure,
-          ]) &&
-          multiple.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          combined.caught &&
-          aggregateContainsExactly(combined.failure, [
-            primaryFailure,
-            sourceWriteFailure,
-            outsideRemovalFailure,
-          ]) &&
-          combined.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          undefinedPrimary.caught &&
-          undefinedPrimary.failure === undefined &&
-          undefinedPrimary.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          undefinedStandalone.caught &&
-          undefinedStandalone.failure === undefined,
+        () => undefinedStandalone.failure === undefined,
       ],
       [
         "undefinedStandaloneOrderJoin",
         () =>
-          success.caught === false &&
-          success.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          dependencyFailure.caught &&
-          dependencyFailure.failure === linkRemovalFailure &&
-          dependencyFailure.order.join(",") === "remove-link,remove-outside" &&
-          standaloneWrite.caught &&
-          standaloneWrite.failure === sourceWriteFailure &&
-          standaloneWrite.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          multiple.caught &&
-          aggregateContainsExactly(multiple.failure, [
-            sourceWriteFailure,
-            outsideRemovalFailure,
-          ]) &&
-          multiple.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          combined.caught &&
-          aggregateContainsExactly(combined.failure, [
-            primaryFailure,
-            sourceWriteFailure,
-            outsideRemovalFailure,
-          ]) &&
-          combined.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          undefinedPrimary.caught &&
-          undefinedPrimary.failure === undefined &&
-          undefinedPrimary.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          undefinedStandalone.caught &&
-          undefinedStandalone.failure === undefined &&
           undefinedStandalone.order.join(",") === "remove-link,remove-outside",
       ],
-      [
-        "undefinedCombinedCaught",
-        () =>
-          success.caught === false &&
-          success.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          dependencyFailure.caught &&
-          dependencyFailure.failure === linkRemovalFailure &&
-          dependencyFailure.order.join(",") === "remove-link,remove-outside" &&
-          standaloneWrite.caught &&
-          standaloneWrite.failure === sourceWriteFailure &&
-          standaloneWrite.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          multiple.caught &&
-          aggregateContainsExactly(multiple.failure, [
-            sourceWriteFailure,
-            outsideRemovalFailure,
-          ]) &&
-          multiple.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          combined.caught &&
-          aggregateContainsExactly(combined.failure, [
-            primaryFailure,
-            sourceWriteFailure,
-            outsideRemovalFailure,
-          ]) &&
-          combined.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          undefinedPrimary.caught &&
-          undefinedPrimary.failure === undefined &&
-          undefinedPrimary.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          undefinedStandalone.caught &&
-          undefinedStandalone.failure === undefined &&
-          undefinedStandalone.order.join(",") ===
-            "remove-link,remove-outside" &&
-          undefinedCombined.caught,
-      ],
+      ["undefinedCombinedCaught", () => undefinedCombined.caught],
       [
         "aggregateContainsExactlyUndefinedCombinedFailure",
         () =>
-          success.caught === false &&
-          success.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          dependencyFailure.caught &&
-          dependencyFailure.failure === linkRemovalFailure &&
-          dependencyFailure.order.join(",") === "remove-link,remove-outside" &&
-          standaloneWrite.caught &&
-          standaloneWrite.failure === sourceWriteFailure &&
-          standaloneWrite.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          multiple.caught &&
-          aggregateContainsExactly(multiple.failure, [
-            sourceWriteFailure,
-            outsideRemovalFailure,
-          ]) &&
-          multiple.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          combined.caught &&
-          aggregateContainsExactly(combined.failure, [
-            primaryFailure,
-            sourceWriteFailure,
-            outsideRemovalFailure,
-          ]) &&
-          combined.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          undefinedPrimary.caught &&
-          undefinedPrimary.failure === undefined &&
-          undefinedPrimary.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          undefinedStandalone.caught &&
-          undefinedStandalone.failure === undefined &&
-          undefinedStandalone.order.join(",") ===
-            "remove-link,remove-outside" &&
-          undefinedCombined.caught &&
           aggregateContainsExactly(undefinedCombined.failure, [
             undefined,
             undefined,
@@ -802,50 +308,8 @@ export const test_mcp_production_film_source_fixture_cleanup = (): void => {
       [
         "undefinedCombinedOrderJoin",
         () =>
-          success.caught === false &&
-          success.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          primaryOnly.caught &&
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          dependencyFailure.caught &&
-          dependencyFailure.failure === linkRemovalFailure &&
-          dependencyFailure.order.join(",") === "remove-link,remove-outside" &&
-          standaloneWrite.caught &&
-          standaloneWrite.failure === sourceWriteFailure &&
-          standaloneWrite.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          multiple.caught &&
-          aggregateContainsExactly(multiple.failure, [
-            sourceWriteFailure,
-            outsideRemovalFailure,
-          ]) &&
-          multiple.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          combined.caught &&
-          aggregateContainsExactly(combined.failure, [
-            primaryFailure,
-            sourceWriteFailure,
-            outsideRemovalFailure,
-          ]) &&
-          combined.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          undefinedPrimary.caught &&
-          undefinedPrimary.failure === undefined &&
-          undefinedPrimary.order.join(",") ===
-            "remove-link,write-source,remove-outside" &&
-          undefinedStandalone.caught &&
-          undefinedStandalone.failure === undefined &&
-          undefinedStandalone.order.join(",") ===
-            "remove-link,remove-outside" &&
-          undefinedCombined.caught &&
-          aggregateContainsExactly(undefinedCombined.failure, [
-            undefined,
-            undefined,
-          ]) &&
           undefinedCombined.order.join(",") ===
-            "remove-link,write-source,remove-outside",
+          "remove-link,write-source,remove-outside",
       ],
     ]),
     {

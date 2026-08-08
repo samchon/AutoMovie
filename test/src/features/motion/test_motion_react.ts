@@ -203,11 +203,7 @@ export const test_motion_react = (): void => {
     "a 0.1 s duration scales the default peak to 0.04",
     namedFacts([
       ["ncloseQuickKeyframes", () => nclose(quick.keyframes[1]!.time, 0.04)],
-      [
-        "ncloseQuickDuration",
-        () =>
-          nclose(quick.keyframes[1]!.time, 0.04) && nclose(quick.duration, 0.1),
-      ],
+      ["ncloseQuickDuration", () => nclose(quick.duration, 0.1)],
     ]),
     { ncloseQuickKeyframes: true, ncloseQuickDuration: true },
   );

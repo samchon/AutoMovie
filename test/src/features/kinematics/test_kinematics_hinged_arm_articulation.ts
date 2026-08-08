@@ -72,12 +72,7 @@ export const test_kinematics_hinged_arm_articulation = (): void => {
       "the mid joint rotates about the hinge and nothing else",
       namedFacts([
         ["ncloseSolvedLower", () => nclose(solved.lower.x, 0, 1e-12)],
-        [
-          "ncloseSolvedLower2",
-          () =>
-            nclose(solved.lower.x, 0, 1e-12) &&
-            nclose(solved.lower.z, 0, 1e-12),
-        ],
+        ["ncloseSolvedLower2", () => nclose(solved.lower.z, 0, 1e-12)],
       ]),
       { ncloseSolvedLower: true, ncloseSolvedLower2: true },
     );

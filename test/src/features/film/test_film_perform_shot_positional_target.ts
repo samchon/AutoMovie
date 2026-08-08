@@ -558,12 +558,7 @@ export const test_film_perform_shot_positional_target = (): void => {
         "refused",
         () => says(cameraActor, "$input.draft[0].actor", "is a camera"),
       ],
-      [
-        "violated",
-        () =>
-          says(cameraActor, "$input.draft[0].actor", "is a camera") &&
-          silentAt(cameraActor, "$input.draft[0].at"),
-      ],
+      ["violated", () => silentAt(cameraActor, "$input.draft[0].at")],
     ]),
     { refused: true, violated: true },
   );

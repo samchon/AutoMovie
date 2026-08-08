@@ -85,7 +85,6 @@ export const test_mcp_production_review_design_edges = (): void => {
         [
           "reviewPrepareTarget",
           () =>
-            project.setModelRecipe(dependentModel).accepted &&
             review
               .prepare({
                 target: {
@@ -203,14 +202,6 @@ export const test_mcp_production_review_design_edges = (): void => {
         [
           "reviewPrepareTarget2",
           () =>
-            review
-              .prepare({
-                target: {
-                  kind: "design",
-                  design: { kind: "formation", id: "line" },
-                },
-              })
-              .fingerprint.startsWith("sha256:") &&
             review
               .prepare({
                 target: {
@@ -355,10 +346,6 @@ export const test_mcp_production_review_design_edges = (): void => {
           () =>
             project.eraseDesignArtifact({
               kind: "acceptance",
-              id: filmAcceptance.id,
-            }).accepted &&
-            project.eraseDesignArtifact({
-              kind: "acceptance",
               id: filmEventAcceptance.id,
             }).accepted,
         ],
@@ -495,16 +482,6 @@ export const test_mcp_production_review_design_edges = (): void => {
               .prepare({
                 target: {
                   kind: "design",
-                  design: { kind: "formation", id: "absent" },
-                },
-              })
-              .diagnostics.some(
-                (item) => item.code === "review-target-missing",
-              ) &&
-            review
-              .prepare({
-                target: {
-                  kind: "design",
                   design: { kind: "shot", id: "absent" },
                 },
               })
@@ -581,11 +558,6 @@ export const test_mcp_production_review_design_edges = (): void => {
         [
           "missingProductionDiagnosticsSome",
           () =>
-            missingWorld.diagnostics.some(
-              (item) =>
-                item.code === "review-target-missing" &&
-                item.path?.endsWith("world.json"),
-            ) &&
             missingProduction.diagnostics.some(
               (item) =>
                 item.code === "review-target-missing" &&

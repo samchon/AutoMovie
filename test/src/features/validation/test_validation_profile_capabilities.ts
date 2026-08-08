@@ -109,7 +109,6 @@ export const test_validation_profile_capabilities = (): void => {
       [
         "validateModelModelCreateModel",
         () =>
-          validateProfileCapabilities({ profiles: [valid] }).success &&
           validateModel({ model: { ...createModel(), profiles: [valid] } })
             .success,
       ],
@@ -129,9 +128,7 @@ export const test_validation_profile_capabilities = (): void => {
       ],
       [
         "failsAtProfileProfile",
-        () =>
-          failsAt([{ ...profile(), id: "", name: "" }], ".id") &&
-          failsAt([profile(), profile()], "profiles[1].id"),
+        () => failsAt([profile(), profile()], "profiles[1].id"),
       ],
     ]),
     { failsAtProfileId: true, failsAtProfileProfile: true },
@@ -170,15 +167,6 @@ export const test_validation_profile_capabilities = (): void => {
       [
         "failsAtProfileTraits2",
         () =>
-          failsAt(
-            [
-              {
-                ...profile(),
-                traits: [{ kind: "mountable", seats: 0, payloadMass: 1 }],
-              },
-            ],
-            ".seats",
-          ) &&
           failsAt(
             [
               {
@@ -226,10 +214,6 @@ export const test_validation_profile_capabilities = (): void => {
       [
         "invalidStructuredCloneProfile",
         () =>
-          failsAt(
-            [{ ...profile(), traits: [{ kind: "shooter", weapons: [] }] }],
-            ".weapons",
-          ) &&
           (() => {
             const invalid = structuredClone(profile());
             const shooter = invalid.traits![0]!;
@@ -276,21 +260,12 @@ export const test_validation_profile_capabilities = (): void => {
         "invalidFirearmWeaponIf2",
         () =>
           invalidFirearm((weapon) => {
-            if (weapon.kind === "firearm") weapon.reloadSeconds = 0;
-          }, "reloadSeconds") &&
-          invalidFirearm((weapon) => {
             if (weapon.kind === "firearm") weapon.effectiveRange = 0;
           }, "effectiveRange"),
       ],
       [
         "invalidFirearmWeaponIf3",
         () =>
-          invalidFirearm((weapon) => {
-            if (weapon.kind === "firearm") weapon.reloadSeconds = 0;
-          }, "reloadSeconds") &&
-          invalidFirearm((weapon) => {
-            if (weapon.kind === "firearm") weapon.effectiveRange = 0;
-          }, "effectiveRange") &&
           invalidFirearm((weapon) => {
             if (weapon.kind === "firearm") weapon.muzzleVelocity = 0;
           }, "muzzleVelocity"),
@@ -299,15 +274,6 @@ export const test_validation_profile_capabilities = (): void => {
         "invalidFirearmWeaponIf4",
         () =>
           invalidFirearm((weapon) => {
-            if (weapon.kind === "firearm") weapon.reloadSeconds = 0;
-          }, "reloadSeconds") &&
-          invalidFirearm((weapon) => {
-            if (weapon.kind === "firearm") weapon.effectiveRange = 0;
-          }, "effectiveRange") &&
-          invalidFirearm((weapon) => {
-            if (weapon.kind === "firearm") weapon.muzzleVelocity = 0;
-          }, "muzzleVelocity") &&
-          invalidFirearm((weapon) => {
             if (weapon.kind === "firearm") weapon.misfireProbability = 2;
           }, "misfireProbability"),
       ],
@@ -315,39 +281,12 @@ export const test_validation_profile_capabilities = (): void => {
         "invalidFirearmWeaponIf5",
         () =>
           invalidFirearm((weapon) => {
-            if (weapon.kind === "firearm") weapon.reloadSeconds = 0;
-          }, "reloadSeconds") &&
-          invalidFirearm((weapon) => {
-            if (weapon.kind === "firearm") weapon.effectiveRange = 0;
-          }, "effectiveRange") &&
-          invalidFirearm((weapon) => {
-            if (weapon.kind === "firearm") weapon.muzzleVelocity = 0;
-          }, "muzzleVelocity") &&
-          invalidFirearm((weapon) => {
-            if (weapon.kind === "firearm") weapon.misfireProbability = 2;
-          }, "misfireProbability") &&
-          invalidFirearm((weapon) => {
             if (weapon.kind === "firearm") weapon.accuracy = [];
           }, ".accuracy"),
       ],
       [
         "invalidFirearmWeaponIf6",
         () =>
-          invalidFirearm((weapon) => {
-            if (weapon.kind === "firearm") weapon.reloadSeconds = 0;
-          }, "reloadSeconds") &&
-          invalidFirearm((weapon) => {
-            if (weapon.kind === "firearm") weapon.effectiveRange = 0;
-          }, "effectiveRange") &&
-          invalidFirearm((weapon) => {
-            if (weapon.kind === "firearm") weapon.muzzleVelocity = 0;
-          }, "muzzleVelocity") &&
-          invalidFirearm((weapon) => {
-            if (weapon.kind === "firearm") weapon.misfireProbability = 2;
-          }, "misfireProbability") &&
-          invalidFirearm((weapon) => {
-            if (weapon.kind === "firearm") weapon.accuracy = [];
-          }, ".accuracy") &&
           invalidFirearm((weapon) => {
             if (weapon.kind === "firearm")
               weapon.accuracy = [
@@ -359,28 +298,6 @@ export const test_validation_profile_capabilities = (): void => {
       [
         "invalidFirearmWeaponIf7",
         () =>
-          invalidFirearm((weapon) => {
-            if (weapon.kind === "firearm") weapon.reloadSeconds = 0;
-          }, "reloadSeconds") &&
-          invalidFirearm((weapon) => {
-            if (weapon.kind === "firearm") weapon.effectiveRange = 0;
-          }, "effectiveRange") &&
-          invalidFirearm((weapon) => {
-            if (weapon.kind === "firearm") weapon.muzzleVelocity = 0;
-          }, "muzzleVelocity") &&
-          invalidFirearm((weapon) => {
-            if (weapon.kind === "firearm") weapon.misfireProbability = 2;
-          }, "misfireProbability") &&
-          invalidFirearm((weapon) => {
-            if (weapon.kind === "firearm") weapon.accuracy = [];
-          }, ".accuracy") &&
-          invalidFirearm((weapon) => {
-            if (weapon.kind === "firearm")
-              weapon.accuracy = [
-                { distance: 10, probability: 0.5 },
-                { distance: 5, probability: 0.5 },
-              ];
-          }, "accuracy[1].distance") &&
           invalidFirearm((weapon) => {
             if (weapon.kind === "firearm") weapon.accuracy[0]!.probability = 2;
           }, "accuracy[0].probability"),
@@ -435,15 +352,6 @@ export const test_validation_profile_capabilities = (): void => {
             if (shooter.kind !== "shooter") return false;
             const cannon = shooter.weapons[1]!;
             if (cannon.kind !== "cannon") return false;
-            cannon.ammunition = [];
-            return failsAt([invalid], ".ammunition");
-          })() &&
-          (() => {
-            const invalid = structuredClone(profile());
-            const shooter = invalid.traits![0]!;
-            if (shooter.kind !== "shooter") return false;
-            const cannon = shooter.weapons[1]!;
-            if (cannon.kind !== "cannon") return false;
             cannon.ammunition.push(structuredClone(cannon.ammunition[0]!));
             return failsAt([invalid], "ammunition[2].kind");
           })(),
@@ -451,24 +359,6 @@ export const test_validation_profile_capabilities = (): void => {
       [
         "massMaxRicochetsRicochetRetention",
         () =>
-          (() => {
-            const invalid = structuredClone(profile());
-            const shooter = invalid.traits![0]!;
-            if (shooter.kind !== "shooter") return false;
-            const cannon = shooter.weapons[1]!;
-            if (cannon.kind !== "cannon") return false;
-            cannon.ammunition = [];
-            return failsAt([invalid], ".ammunition");
-          })() &&
-          (() => {
-            const invalid = structuredClone(profile());
-            const shooter = invalid.traits![0]!;
-            if (shooter.kind !== "shooter") return false;
-            const cannon = shooter.weapons[1]!;
-            if (cannon.kind !== "cannon") return false;
-            cannon.ammunition.push(structuredClone(cannon.ammunition[0]!));
-            return failsAt([invalid], "ammunition[2].kind");
-          })() &&
           ["mass", "maxRicochets", "ricochetRetention"].every(
             (fragment, index) => {
               const invalid = structuredClone(profile());
@@ -488,39 +378,6 @@ export const test_validation_profile_capabilities = (): void => {
       [
         "pelletsSpreadDegreesPelletMass",
         () =>
-          (() => {
-            const invalid = structuredClone(profile());
-            const shooter = invalid.traits![0]!;
-            if (shooter.kind !== "shooter") return false;
-            const cannon = shooter.weapons[1]!;
-            if (cannon.kind !== "cannon") return false;
-            cannon.ammunition = [];
-            return failsAt([invalid], ".ammunition");
-          })() &&
-          (() => {
-            const invalid = structuredClone(profile());
-            const shooter = invalid.traits![0]!;
-            if (shooter.kind !== "shooter") return false;
-            const cannon = shooter.weapons[1]!;
-            if (cannon.kind !== "cannon") return false;
-            cannon.ammunition.push(structuredClone(cannon.ammunition[0]!));
-            return failsAt([invalid], "ammunition[2].kind");
-          })() &&
-          ["mass", "maxRicochets", "ricochetRetention"].every(
-            (fragment, index) => {
-              const invalid = structuredClone(profile());
-              const shooter = invalid.traits![0]!;
-              if (shooter.kind !== "shooter") return false;
-              const cannon = shooter.weapons[1]!;
-              if (cannon.kind !== "cannon") return false;
-              const round = cannon.ammunition[0]!;
-              if (round.kind !== "round-shot") return false;
-              if (index === 0) round.mass = 0;
-              else if (index === 1) round.maxRicochets = -1;
-              else round.ricochetRetention = 2;
-              return failsAt([invalid], fragment);
-            },
-          ) &&
           ["pellets", "spreadDegrees", "pelletMass"].every(
             (fragment, index) => {
               const invalid = structuredClone(profile());

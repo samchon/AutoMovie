@@ -103,12 +103,7 @@ export const test_resolve_scene_to_nodes_guards = (): void => {
         () =>
           defaults.some((node) => node.id === "root" && node.parent === null),
       ],
-      [
-        "defaultsSomeNode2",
-        () =>
-          defaults.some((node) => node.id === "root" && node.parent === null) &&
-          defaults.some((node) => node.id === "hips"),
-      ],
+      ["defaultsSomeNode2", () => defaults.some((node) => node.id === "hips")],
     ]),
     { defaultsSomeNode: true, defaultsSomeNode2: true },
   );

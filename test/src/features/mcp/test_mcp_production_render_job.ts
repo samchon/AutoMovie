@@ -395,11 +395,6 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
       [
         "assertProductionFeatureUsesRenditionClipsFeatureConformedRepaint",
         () =>
-          probeProductionMedia({
-            kind: "guide-pass",
-            mediaType: "video/mp4",
-            bytes: conformedRepaint,
-          }).kind === "video" &&
           (() => {
             assertProductionFeatureUsesRenditionClips({
               feature: conformedRepaint,
@@ -413,48 +408,10 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
             return true;
           })(),
       ],
-      [
-        "sampleDifferenceDetails",
-        () =>
-          probeProductionMedia({
-            kind: "guide-pass",
-            mediaType: "video/mp4",
-            bytes: conformedRepaint,
-          }).kind === "video" &&
-          (() => {
-            assertProductionFeatureUsesRenditionClips({
-              feature: conformedRepaint,
-              timeline: repaintTimeline,
-              clips: repaintClips,
-            });
-            assertProductionFeatureUsesRenditionVideo({
-              feature: conformedRepaint,
-              renditionVideo: conformedRepaint,
-            });
-            return true;
-          })() &&
-          sampleDifferenceDetails !== null,
-      ],
+      ["sampleDifferenceDetails", () => sampleDifferenceDetails !== null],
       [
         "stringifySampleDifferenceDetailsTiming",
         () =>
-          probeProductionMedia({
-            kind: "guide-pass",
-            mediaType: "video/mp4",
-            bytes: conformedRepaint,
-          }).kind === "video" &&
-          (() => {
-            assertProductionFeatureUsesRenditionClips({
-              feature: conformedRepaint,
-              timeline: repaintTimeline,
-              clips: repaintClips,
-            });
-            assertProductionFeatureUsesRenditionVideo({
-              feature: conformedRepaint,
-              renditionVideo: conformedRepaint,
-            });
-            return true;
-          })() &&
           sampleDifferenceDetails !== null &&
           JSON.stringify(sampleDifferenceDetails.timing.actual) ===
             JSON.stringify(sampleDifferenceDetails.timing.expected),
@@ -462,305 +419,61 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
       [
         "sampleDifferenceDetailsPayloadActualBytes",
         () =>
-          probeProductionMedia({
-            kind: "guide-pass",
-            mediaType: "video/mp4",
-            bytes: conformedRepaint,
-          }).kind === "video" &&
-          (() => {
-            assertProductionFeatureUsesRenditionClips({
-              feature: conformedRepaint,
-              timeline: repaintTimeline,
-              clips: repaintClips,
-            });
-            assertProductionFeatureUsesRenditionVideo({
-              feature: conformedRepaint,
-              renditionVideo: conformedRepaint,
-            });
-            return true;
-          })() &&
           sampleDifferenceDetails !== null &&
-          JSON.stringify(sampleDifferenceDetails.timing.actual) ===
-            JSON.stringify(sampleDifferenceDetails.timing.expected) &&
           sampleDifferenceDetails.payload.actualBytes > 0,
       ],
       [
         "sampleDifferenceDetailsPayloadActualBytes2",
         () =>
-          probeProductionMedia({
-            kind: "guide-pass",
-            mediaType: "video/mp4",
-            bytes: conformedRepaint,
-          }).kind === "video" &&
-          (() => {
-            assertProductionFeatureUsesRenditionClips({
-              feature: conformedRepaint,
-              timeline: repaintTimeline,
-              clips: repaintClips,
-            });
-            assertProductionFeatureUsesRenditionVideo({
-              feature: conformedRepaint,
-              renditionVideo: conformedRepaint,
-            });
-            return true;
-          })() &&
           sampleDifferenceDetails !== null &&
-          JSON.stringify(sampleDifferenceDetails.timing.actual) ===
-            JSON.stringify(sampleDifferenceDetails.timing.expected) &&
-          sampleDifferenceDetails.payload.actualBytes > 0 &&
           sampleDifferenceDetails.payload.actualBytes ===
             sampleDifferenceDetails.payload.expectedBytes,
       ],
       [
         "sampleDifferenceDetailsFlagsActual",
         () =>
-          probeProductionMedia({
-            kind: "guide-pass",
-            mediaType: "video/mp4",
-            bytes: conformedRepaint,
-          }).kind === "video" &&
-          (() => {
-            assertProductionFeatureUsesRenditionClips({
-              feature: conformedRepaint,
-              timeline: repaintTimeline,
-              clips: repaintClips,
-            });
-            assertProductionFeatureUsesRenditionVideo({
-              feature: conformedRepaint,
-              renditionVideo: conformedRepaint,
-            });
-            return true;
-          })() &&
           sampleDifferenceDetails !== null &&
-          JSON.stringify(sampleDifferenceDetails.timing.actual) ===
-            JSON.stringify(sampleDifferenceDetails.timing.expected) &&
-          sampleDifferenceDetails.payload.actualBytes > 0 &&
-          sampleDifferenceDetails.payload.actualBytes ===
-            sampleDifferenceDetails.payload.expectedBytes &&
           sampleDifferenceDetails.flags.actual.isSync === true,
       ],
       [
         "sampleDifferenceDetailsFlagsActual2",
         () =>
-          probeProductionMedia({
-            kind: "guide-pass",
-            mediaType: "video/mp4",
-            bytes: conformedRepaint,
-          }).kind === "video" &&
-          (() => {
-            assertProductionFeatureUsesRenditionClips({
-              feature: conformedRepaint,
-              timeline: repaintTimeline,
-              clips: repaintClips,
-            });
-            assertProductionFeatureUsesRenditionVideo({
-              feature: conformedRepaint,
-              renditionVideo: conformedRepaint,
-            });
-            return true;
-          })() &&
           sampleDifferenceDetails !== null &&
-          JSON.stringify(sampleDifferenceDetails.timing.actual) ===
-            JSON.stringify(sampleDifferenceDetails.timing.expected) &&
-          sampleDifferenceDetails.payload.actualBytes > 0 &&
-          sampleDifferenceDetails.payload.actualBytes ===
-            sampleDifferenceDetails.payload.expectedBytes &&
-          sampleDifferenceDetails.flags.actual.isSync === true &&
           sampleDifferenceDetails.flags.actual.dependsOn === 2,
       ],
       [
         "sampleDifferenceDetailsFlagsExpected",
         () =>
-          probeProductionMedia({
-            kind: "guide-pass",
-            mediaType: "video/mp4",
-            bytes: conformedRepaint,
-          }).kind === "video" &&
-          (() => {
-            assertProductionFeatureUsesRenditionClips({
-              feature: conformedRepaint,
-              timeline: repaintTimeline,
-              clips: repaintClips,
-            });
-            assertProductionFeatureUsesRenditionVideo({
-              feature: conformedRepaint,
-              renditionVideo: conformedRepaint,
-            });
-            return true;
-          })() &&
           sampleDifferenceDetails !== null &&
-          JSON.stringify(sampleDifferenceDetails.timing.actual) ===
-            JSON.stringify(sampleDifferenceDetails.timing.expected) &&
-          sampleDifferenceDetails.payload.actualBytes > 0 &&
-          sampleDifferenceDetails.payload.actualBytes ===
-            sampleDifferenceDetails.payload.expectedBytes &&
-          sampleDifferenceDetails.flags.actual.isSync === true &&
-          sampleDifferenceDetails.flags.actual.dependsOn === 2 &&
           sampleDifferenceDetails.flags.expected.isSync === true,
       ],
       [
         "sampleDifferenceDetailsFlagsExpected2",
         () =>
-          probeProductionMedia({
-            kind: "guide-pass",
-            mediaType: "video/mp4",
-            bytes: conformedRepaint,
-          }).kind === "video" &&
-          (() => {
-            assertProductionFeatureUsesRenditionClips({
-              feature: conformedRepaint,
-              timeline: repaintTimeline,
-              clips: repaintClips,
-            });
-            assertProductionFeatureUsesRenditionVideo({
-              feature: conformedRepaint,
-              renditionVideo: conformedRepaint,
-            });
-            return true;
-          })() &&
           sampleDifferenceDetails !== null &&
-          JSON.stringify(sampleDifferenceDetails.timing.actual) ===
-            JSON.stringify(sampleDifferenceDetails.timing.expected) &&
-          sampleDifferenceDetails.payload.actualBytes > 0 &&
-          sampleDifferenceDetails.payload.actualBytes ===
-            sampleDifferenceDetails.payload.expectedBytes &&
-          sampleDifferenceDetails.flags.actual.isSync === true &&
-          sampleDifferenceDetails.flags.actual.dependsOn === 2 &&
-          sampleDifferenceDetails.flags.expected.isSync === true &&
           sampleDifferenceDetails.flags.expected.dependsOn === 0,
       ],
       [
         "sampleDifferenceDetailsFlagsMatch",
         () =>
-          probeProductionMedia({
-            kind: "guide-pass",
-            mediaType: "video/mp4",
-            bytes: conformedRepaint,
-          }).kind === "video" &&
-          (() => {
-            assertProductionFeatureUsesRenditionClips({
-              feature: conformedRepaint,
-              timeline: repaintTimeline,
-              clips: repaintClips,
-            });
-            assertProductionFeatureUsesRenditionVideo({
-              feature: conformedRepaint,
-              renditionVideo: conformedRepaint,
-            });
-            return true;
-          })() &&
           sampleDifferenceDetails !== null &&
-          JSON.stringify(sampleDifferenceDetails.timing.actual) ===
-            JSON.stringify(sampleDifferenceDetails.timing.expected) &&
-          sampleDifferenceDetails.payload.actualBytes > 0 &&
-          sampleDifferenceDetails.payload.actualBytes ===
-            sampleDifferenceDetails.payload.expectedBytes &&
-          sampleDifferenceDetails.flags.actual.isSync === true &&
-          sampleDifferenceDetails.flags.actual.dependsOn === 2 &&
-          sampleDifferenceDetails.flags.expected.isSync === true &&
-          sampleDifferenceDetails.flags.expected.dependsOn === 0 &&
           sampleDifferenceDetails.flags.match === true,
       ],
       [
         "sampleDifferenceDetailsSampleDescriptionMatches",
         () =>
-          probeProductionMedia({
-            kind: "guide-pass",
-            mediaType: "video/mp4",
-            bytes: conformedRepaint,
-          }).kind === "video" &&
-          (() => {
-            assertProductionFeatureUsesRenditionClips({
-              feature: conformedRepaint,
-              timeline: repaintTimeline,
-              clips: repaintClips,
-            });
-            assertProductionFeatureUsesRenditionVideo({
-              feature: conformedRepaint,
-              renditionVideo: conformedRepaint,
-            });
-            return true;
-          })() &&
           sampleDifferenceDetails !== null &&
-          JSON.stringify(sampleDifferenceDetails.timing.actual) ===
-            JSON.stringify(sampleDifferenceDetails.timing.expected) &&
-          sampleDifferenceDetails.payload.actualBytes > 0 &&
-          sampleDifferenceDetails.payload.actualBytes ===
-            sampleDifferenceDetails.payload.expectedBytes &&
-          sampleDifferenceDetails.flags.actual.isSync === true &&
-          sampleDifferenceDetails.flags.actual.dependsOn === 2 &&
-          sampleDifferenceDetails.flags.expected.isSync === true &&
-          sampleDifferenceDetails.flags.expected.dependsOn === 0 &&
-          sampleDifferenceDetails.flags.match === true &&
           sampleDifferenceDetails.sampleDescriptionMatches === true,
       ],
       [
         "sampleDifferenceDetailsPayloadFirstDifferingActualByte",
         () =>
-          probeProductionMedia({
-            kind: "guide-pass",
-            mediaType: "video/mp4",
-            bytes: conformedRepaint,
-          }).kind === "video" &&
-          (() => {
-            assertProductionFeatureUsesRenditionClips({
-              feature: conformedRepaint,
-              timeline: repaintTimeline,
-              clips: repaintClips,
-            });
-            assertProductionFeatureUsesRenditionVideo({
-              feature: conformedRepaint,
-              renditionVideo: conformedRepaint,
-            });
-            return true;
-          })() &&
           sampleDifferenceDetails !== null &&
-          JSON.stringify(sampleDifferenceDetails.timing.actual) ===
-            JSON.stringify(sampleDifferenceDetails.timing.expected) &&
-          sampleDifferenceDetails.payload.actualBytes > 0 &&
-          sampleDifferenceDetails.payload.actualBytes ===
-            sampleDifferenceDetails.payload.expectedBytes &&
-          sampleDifferenceDetails.flags.actual.isSync === true &&
-          sampleDifferenceDetails.flags.actual.dependsOn === 2 &&
-          sampleDifferenceDetails.flags.expected.isSync === true &&
-          sampleDifferenceDetails.flags.expected.dependsOn === 0 &&
-          sampleDifferenceDetails.flags.match === true &&
-          sampleDifferenceDetails.sampleDescriptionMatches === true &&
           sampleDifferenceDetails.payload.firstDifferingActualByte === 0,
       ],
       [
         "throwsAssertProductionFeatureUsesRenditionVideoFeature",
         () =>
-          probeProductionMedia({
-            kind: "guide-pass",
-            mediaType: "video/mp4",
-            bytes: conformedRepaint,
-          }).kind === "video" &&
-          (() => {
-            assertProductionFeatureUsesRenditionClips({
-              feature: conformedRepaint,
-              timeline: repaintTimeline,
-              clips: repaintClips,
-            });
-            assertProductionFeatureUsesRenditionVideo({
-              feature: conformedRepaint,
-              renditionVideo: conformedRepaint,
-            });
-            return true;
-          })() &&
-          sampleDifferenceDetails !== null &&
-          JSON.stringify(sampleDifferenceDetails.timing.actual) ===
-            JSON.stringify(sampleDifferenceDetails.timing.expected) &&
-          sampleDifferenceDetails.payload.actualBytes > 0 &&
-          sampleDifferenceDetails.payload.actualBytes ===
-            sampleDifferenceDetails.payload.expectedBytes &&
-          sampleDifferenceDetails.flags.actual.isSync === true &&
-          sampleDifferenceDetails.flags.actual.dependsOn === 2 &&
-          sampleDifferenceDetails.flags.expected.isSync === true &&
-          sampleDifferenceDetails.flags.expected.dependsOn === 0 &&
-          sampleDifferenceDetails.flags.match === true &&
-          sampleDifferenceDetails.sampleDescriptionMatches === true &&
-          sampleDifferenceDetails.payload.firstDifferingActualByte === 0 &&
           throws(() =>
             assertProductionFeatureUsesRenditionVideo({
               feature: nonSyncDependencyMismatch,
@@ -771,42 +484,6 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
       [
         "throwsConformProductionRenditionVideoMp4Timeline",
         () =>
-          probeProductionMedia({
-            kind: "guide-pass",
-            mediaType: "video/mp4",
-            bytes: conformedRepaint,
-          }).kind === "video" &&
-          (() => {
-            assertProductionFeatureUsesRenditionClips({
-              feature: conformedRepaint,
-              timeline: repaintTimeline,
-              clips: repaintClips,
-            });
-            assertProductionFeatureUsesRenditionVideo({
-              feature: conformedRepaint,
-              renditionVideo: conformedRepaint,
-            });
-            return true;
-          })() &&
-          sampleDifferenceDetails !== null &&
-          JSON.stringify(sampleDifferenceDetails.timing.actual) ===
-            JSON.stringify(sampleDifferenceDetails.timing.expected) &&
-          sampleDifferenceDetails.payload.actualBytes > 0 &&
-          sampleDifferenceDetails.payload.actualBytes ===
-            sampleDifferenceDetails.payload.expectedBytes &&
-          sampleDifferenceDetails.flags.actual.isSync === true &&
-          sampleDifferenceDetails.flags.actual.dependsOn === 2 &&
-          sampleDifferenceDetails.flags.expected.isSync === true &&
-          sampleDifferenceDetails.flags.expected.dependsOn === 0 &&
-          sampleDifferenceDetails.flags.match === true &&
-          sampleDifferenceDetails.sampleDescriptionMatches === true &&
-          sampleDifferenceDetails.payload.firstDifferingActualByte === 0 &&
-          throws(() =>
-            assertProductionFeatureUsesRenditionVideo({
-              feature: nonSyncDependencyMismatch,
-              renditionVideo: nonSyncRendition,
-            }),
-          ) &&
           throws(() =>
             conformProductionRenditionVideoMp4({
               timeline: {
@@ -830,61 +507,6 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
       [
         "throwsConformProductionRenditionVideoMp4Timeline2",
         () =>
-          probeProductionMedia({
-            kind: "guide-pass",
-            mediaType: "video/mp4",
-            bytes: conformedRepaint,
-          }).kind === "video" &&
-          (() => {
-            assertProductionFeatureUsesRenditionClips({
-              feature: conformedRepaint,
-              timeline: repaintTimeline,
-              clips: repaintClips,
-            });
-            assertProductionFeatureUsesRenditionVideo({
-              feature: conformedRepaint,
-              renditionVideo: conformedRepaint,
-            });
-            return true;
-          })() &&
-          sampleDifferenceDetails !== null &&
-          JSON.stringify(sampleDifferenceDetails.timing.actual) ===
-            JSON.stringify(sampleDifferenceDetails.timing.expected) &&
-          sampleDifferenceDetails.payload.actualBytes > 0 &&
-          sampleDifferenceDetails.payload.actualBytes ===
-            sampleDifferenceDetails.payload.expectedBytes &&
-          sampleDifferenceDetails.flags.actual.isSync === true &&
-          sampleDifferenceDetails.flags.actual.dependsOn === 2 &&
-          sampleDifferenceDetails.flags.expected.isSync === true &&
-          sampleDifferenceDetails.flags.expected.dependsOn === 0 &&
-          sampleDifferenceDetails.flags.match === true &&
-          sampleDifferenceDetails.sampleDescriptionMatches === true &&
-          sampleDifferenceDetails.payload.firstDifferingActualByte === 0 &&
-          throws(() =>
-            assertProductionFeatureUsesRenditionVideo({
-              feature: nonSyncDependencyMismatch,
-              renditionVideo: nonSyncRendition,
-            }),
-          ) &&
-          throws(() =>
-            conformProductionRenditionVideoMp4({
-              timeline: {
-                ...repaintTimeline,
-                segments: repaintTimeline.segments.map((segment, index) =>
-                  index === 0
-                    ? {
-                        ...segment,
-                        transitionOut: {
-                          kind: "fade" as const,
-                          durationFrames: 1,
-                        },
-                      }
-                    : segment,
-                ),
-              },
-              clips: repaintClips,
-            }),
-          ) &&
           throws(() =>
             conformProductionRenditionVideoMp4({
               timeline: repaintTimeline,
@@ -1081,149 +703,30 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
             chunk.slot.startsWith("render-film:final:"),
           ),
       ],
-      [
-        "renderPlanTierKind",
-        () =>
-          renderPlan.version === 3 &&
-          renderPlan.productionId === "render-film" &&
-          renderPlan.chunks.every((chunk) =>
-            chunk.slot.startsWith("render-film:final:"),
-          ) &&
-          renderPlan.tier.kind === "final",
-      ],
+      ["renderPlanTierKind", () => renderPlan.tier.kind === "final"],
       [
         "renderPlanSourceFrameFormatFps",
-        () =>
-          renderPlan.version === 3 &&
-          renderPlan.productionId === "render-film" &&
-          renderPlan.chunks.every((chunk) =>
-            chunk.slot.startsWith("render-film:final:"),
-          ) &&
-          renderPlan.tier.kind === "final" &&
-          renderPlan.sourceFrameFormat.fps === 2,
+        () => renderPlan.sourceFrameFormat.fps === 2,
       ],
-      [
-        "renderPlanTotalFrames",
-        () =>
-          renderPlan.version === 3 &&
-          renderPlan.productionId === "render-film" &&
-          renderPlan.chunks.every((chunk) =>
-            chunk.slot.startsWith("render-film:final:"),
-          ) &&
-          renderPlan.tier.kind === "final" &&
-          renderPlan.sourceFrameFormat.fps === 2 &&
-          renderPlan.totalFrames === 6,
-      ],
-      [
-        "renderPlanChunksLength",
-        () =>
-          renderPlan.version === 3 &&
-          renderPlan.productionId === "render-film" &&
-          renderPlan.chunks.every((chunk) =>
-            chunk.slot.startsWith("render-film:final:"),
-          ) &&
-          renderPlan.tier.kind === "final" &&
-          renderPlan.sourceFrameFormat.fps === 2 &&
-          renderPlan.totalFrames === 6 &&
-          renderPlan.chunks.length === 6,
-      ],
-      [
-        "renderPlanChunks0",
-        () =>
-          renderPlan.version === 3 &&
-          renderPlan.productionId === "render-film" &&
-          renderPlan.chunks.every((chunk) =>
-            chunk.slot.startsWith("render-film:final:"),
-          ) &&
-          renderPlan.tier.kind === "final" &&
-          renderPlan.sourceFrameFormat.fps === 2 &&
-          renderPlan.totalFrames === 6 &&
-          renderPlan.chunks.length === 6 &&
-          renderPlan.chunks[0]?.frameStart === 0,
-      ],
+      ["renderPlanTotalFrames", () => renderPlan.totalFrames === 6],
+      ["renderPlanChunksLength", () => renderPlan.chunks.length === 6],
+      ["renderPlanChunks0", () => renderPlan.chunks[0]?.frameStart === 0],
       [
         "renderPlanChunks02",
-        () =>
-          renderPlan.version === 3 &&
-          renderPlan.productionId === "render-film" &&
-          renderPlan.chunks.every((chunk) =>
-            chunk.slot.startsWith("render-film:final:"),
-          ) &&
-          renderPlan.tier.kind === "final" &&
-          renderPlan.sourceFrameFormat.fps === 2 &&
-          renderPlan.totalFrames === 6 &&
-          renderPlan.chunks.length === 6 &&
-          renderPlan.chunks[0]?.frameStart === 0 &&
-          renderPlan.chunks[0]?.frameEndExclusive === 2,
+        () => renderPlan.chunks[0]?.frameEndExclusive === 2,
       ],
-      [
-        "renderPlanChunks1",
-        () =>
-          renderPlan.version === 3 &&
-          renderPlan.productionId === "render-film" &&
-          renderPlan.chunks.every((chunk) =>
-            chunk.slot.startsWith("render-film:final:"),
-          ) &&
-          renderPlan.tier.kind === "final" &&
-          renderPlan.sourceFrameFormat.fps === 2 &&
-          renderPlan.totalFrames === 6 &&
-          renderPlan.chunks.length === 6 &&
-          renderPlan.chunks[0]?.frameStart === 0 &&
-          renderPlan.chunks[0]?.frameEndExclusive === 2 &&
-          renderPlan.chunks[1]?.frameStart === 2,
-      ],
+      ["renderPlanChunks1", () => renderPlan.chunks[1]?.frameStart === 2],
       [
         "renderPlanChunks12",
-        () =>
-          renderPlan.version === 3 &&
-          renderPlan.productionId === "render-film" &&
-          renderPlan.chunks.every((chunk) =>
-            chunk.slot.startsWith("render-film:final:"),
-          ) &&
-          renderPlan.tier.kind === "final" &&
-          renderPlan.sourceFrameFormat.fps === 2 &&
-          renderPlan.totalFrames === 6 &&
-          renderPlan.chunks.length === 6 &&
-          renderPlan.chunks[0]?.frameStart === 0 &&
-          renderPlan.chunks[0]?.frameEndExclusive === 2 &&
-          renderPlan.chunks[1]?.frameStart === 2 &&
-          renderPlan.chunks[1]?.frames[0]?.layers.length === 2,
+        () => renderPlan.chunks[1]?.frames[0]?.layers.length === 2,
       ],
       [
         "renderPlanChunks03",
-        () =>
-          renderPlan.version === 3 &&
-          renderPlan.productionId === "render-film" &&
-          renderPlan.chunks.every((chunk) =>
-            chunk.slot.startsWith("render-film:final:"),
-          ) &&
-          renderPlan.tier.kind === "final" &&
-          renderPlan.sourceFrameFormat.fps === 2 &&
-          renderPlan.totalFrames === 6 &&
-          renderPlan.chunks.length === 6 &&
-          renderPlan.chunks[0]?.frameStart === 0 &&
-          renderPlan.chunks[0]?.frameEndExclusive === 2 &&
-          renderPlan.chunks[1]?.frameStart === 2 &&
-          renderPlan.chunks[1]?.frames[0]?.layers.length === 2 &&
-          renderPlan.chunks[0]?.id === plan().chunks[0]?.id,
+        () => renderPlan.chunks[0]?.id === plan().chunks[0]?.id,
       ],
       [
         "changedTimelineChanged",
         () =>
-          renderPlan.version === 3 &&
-          renderPlan.productionId === "render-film" &&
-          renderPlan.chunks.every((chunk) =>
-            chunk.slot.startsWith("render-film:final:"),
-          ) &&
-          renderPlan.tier.kind === "final" &&
-          renderPlan.sourceFrameFormat.fps === 2 &&
-          renderPlan.totalFrames === 6 &&
-          renderPlan.chunks.length === 6 &&
-          renderPlan.chunks[0]?.frameStart === 0 &&
-          renderPlan.chunks[0]?.frameEndExclusive === 2 &&
-          renderPlan.chunks[1]?.frameStart === 2 &&
-          renderPlan.chunks[1]?.frames[0]?.layers.length === 2 &&
-          renderPlan.chunks[0]?.id === plan().chunks[0]?.id &&
           (() => {
             const changed = timeline();
             changed.inputFingerprint = digest("6");
@@ -1255,461 +758,24 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
       ],
       [
         "renderPlanTracksAudio",
-        () =>
-          renderPlan.version === 3 &&
-          renderPlan.productionId === "render-film" &&
-          renderPlan.chunks.every((chunk) =>
-            chunk.slot.startsWith("render-film:final:"),
-          ) &&
-          renderPlan.tier.kind === "final" &&
-          renderPlan.sourceFrameFormat.fps === 2 &&
-          renderPlan.totalFrames === 6 &&
-          renderPlan.chunks.length === 6 &&
-          renderPlan.chunks[0]?.frameStart === 0 &&
-          renderPlan.chunks[0]?.frameEndExclusive === 2 &&
-          renderPlan.chunks[1]?.frameStart === 2 &&
-          renderPlan.chunks[1]?.frames[0]?.layers.length === 2 &&
-          renderPlan.chunks[0]?.id === plan().chunks[0]?.id &&
-          (() => {
-            const changed = timeline();
-            changed.inputFingerprint = digest("6");
-            return (
-              planProductionRenderJob({
-                timeline: changed,
-                audioAssets: audioAssets(),
-                sourceFingerprints: sourceFingerprints(),
-                production: {
-                  ...productionDesign({
-                    id: "render-film",
-                    targetRuntimeSeconds: 3,
-                    frameFormat: {
-                      width: 16,
-                      height: 16,
-                      fps: 2,
-                      colorSpace: "srgb",
-                    },
-                  }),
-                  deliverables: [
-                    { id: "feature", kind: "feature", required: true },
-                  ],
-                },
-                runtimeIdentity: renderPlan.runtimeIdentity,
-                chunkFrames: 2,
-              }).chunks[0]?.id === renderPlan.chunks[0]?.id
-            );
-          })() &&
-          renderPlan.tracks.audio[0]?.asset === "public/audio/silent.json",
+        () => renderPlan.tracks.audio[0]?.asset === "public/audio/silent.json",
       ],
       [
         "renderPlanTracksAudioAssets",
-        () =>
-          renderPlan.version === 3 &&
-          renderPlan.productionId === "render-film" &&
-          renderPlan.chunks.every((chunk) =>
-            chunk.slot.startsWith("render-film:final:"),
-          ) &&
-          renderPlan.tier.kind === "final" &&
-          renderPlan.sourceFrameFormat.fps === 2 &&
-          renderPlan.totalFrames === 6 &&
-          renderPlan.chunks.length === 6 &&
-          renderPlan.chunks[0]?.frameStart === 0 &&
-          renderPlan.chunks[0]?.frameEndExclusive === 2 &&
-          renderPlan.chunks[1]?.frameStart === 2 &&
-          renderPlan.chunks[1]?.frames[0]?.layers.length === 2 &&
-          renderPlan.chunks[0]?.id === plan().chunks[0]?.id &&
-          (() => {
-            const changed = timeline();
-            changed.inputFingerprint = digest("6");
-            return (
-              planProductionRenderJob({
-                timeline: changed,
-                audioAssets: audioAssets(),
-                sourceFingerprints: sourceFingerprints(),
-                production: {
-                  ...productionDesign({
-                    id: "render-film",
-                    targetRuntimeSeconds: 3,
-                    frameFormat: {
-                      width: 16,
-                      height: 16,
-                      fps: 2,
-                      colorSpace: "srgb",
-                    },
-                  }),
-                  deliverables: [
-                    { id: "feature", kind: "feature", required: true },
-                  ],
-                },
-                runtimeIdentity: renderPlan.runtimeIdentity,
-                chunkFrames: 2,
-              }).chunks[0]?.id === renderPlan.chunks[0]?.id
-            );
-          })() &&
-          renderPlan.tracks.audio[0]?.asset === "public/audio/silent.json" &&
-          renderPlan.tracks.audioAssets[0]?.digest === digest("a"),
+        () => renderPlan.tracks.audioAssets[0]?.digest === digest("a"),
       ],
-      [
-        "nonVideoPlanChunksLength",
-        () =>
-          renderPlan.version === 3 &&
-          renderPlan.productionId === "render-film" &&
-          renderPlan.chunks.every((chunk) =>
-            chunk.slot.startsWith("render-film:final:"),
-          ) &&
-          renderPlan.tier.kind === "final" &&
-          renderPlan.sourceFrameFormat.fps === 2 &&
-          renderPlan.totalFrames === 6 &&
-          renderPlan.chunks.length === 6 &&
-          renderPlan.chunks[0]?.frameStart === 0 &&
-          renderPlan.chunks[0]?.frameEndExclusive === 2 &&
-          renderPlan.chunks[1]?.frameStart === 2 &&
-          renderPlan.chunks[1]?.frames[0]?.layers.length === 2 &&
-          renderPlan.chunks[0]?.id === plan().chunks[0]?.id &&
-          (() => {
-            const changed = timeline();
-            changed.inputFingerprint = digest("6");
-            return (
-              planProductionRenderJob({
-                timeline: changed,
-                audioAssets: audioAssets(),
-                sourceFingerprints: sourceFingerprints(),
-                production: {
-                  ...productionDesign({
-                    id: "render-film",
-                    targetRuntimeSeconds: 3,
-                    frameFormat: {
-                      width: 16,
-                      height: 16,
-                      fps: 2,
-                      colorSpace: "srgb",
-                    },
-                  }),
-                  deliverables: [
-                    { id: "feature", kind: "feature", required: true },
-                  ],
-                },
-                runtimeIdentity: renderPlan.runtimeIdentity,
-                chunkFrames: 2,
-              }).chunks[0]?.id === renderPlan.chunks[0]?.id
-            );
-          })() &&
-          renderPlan.tracks.audio[0]?.asset === "public/audio/silent.json" &&
-          renderPlan.tracks.audioAssets[0]?.digest === digest("a") &&
-          nonVideoPlan.chunks.length === 0,
-      ],
-      [
-        "partialPlanChunksLength",
-        () =>
-          renderPlan.version === 3 &&
-          renderPlan.productionId === "render-film" &&
-          renderPlan.chunks.every((chunk) =>
-            chunk.slot.startsWith("render-film:final:"),
-          ) &&
-          renderPlan.tier.kind === "final" &&
-          renderPlan.sourceFrameFormat.fps === 2 &&
-          renderPlan.totalFrames === 6 &&
-          renderPlan.chunks.length === 6 &&
-          renderPlan.chunks[0]?.frameStart === 0 &&
-          renderPlan.chunks[0]?.frameEndExclusive === 2 &&
-          renderPlan.chunks[1]?.frameStart === 2 &&
-          renderPlan.chunks[1]?.frames[0]?.layers.length === 2 &&
-          renderPlan.chunks[0]?.id === plan().chunks[0]?.id &&
-          (() => {
-            const changed = timeline();
-            changed.inputFingerprint = digest("6");
-            return (
-              planProductionRenderJob({
-                timeline: changed,
-                audioAssets: audioAssets(),
-                sourceFingerprints: sourceFingerprints(),
-                production: {
-                  ...productionDesign({
-                    id: "render-film",
-                    targetRuntimeSeconds: 3,
-                    frameFormat: {
-                      width: 16,
-                      height: 16,
-                      fps: 2,
-                      colorSpace: "srgb",
-                    },
-                  }),
-                  deliverables: [
-                    { id: "feature", kind: "feature", required: true },
-                  ],
-                },
-                runtimeIdentity: renderPlan.runtimeIdentity,
-                chunkFrames: 2,
-              }).chunks[0]?.id === renderPlan.chunks[0]?.id
-            );
-          })() &&
-          renderPlan.tracks.audio[0]?.asset === "public/audio/silent.json" &&
-          renderPlan.tracks.audioAssets[0]?.digest === digest("a") &&
-          nonVideoPlan.chunks.length === 0 &&
-          partialPlan.chunks.length === 2,
-      ],
-      [
-        "partialPlanChunks1",
-        () =>
-          renderPlan.version === 3 &&
-          renderPlan.productionId === "render-film" &&
-          renderPlan.chunks.every((chunk) =>
-            chunk.slot.startsWith("render-film:final:"),
-          ) &&
-          renderPlan.tier.kind === "final" &&
-          renderPlan.sourceFrameFormat.fps === 2 &&
-          renderPlan.totalFrames === 6 &&
-          renderPlan.chunks.length === 6 &&
-          renderPlan.chunks[0]?.frameStart === 0 &&
-          renderPlan.chunks[0]?.frameEndExclusive === 2 &&
-          renderPlan.chunks[1]?.frameStart === 2 &&
-          renderPlan.chunks[1]?.frames[0]?.layers.length === 2 &&
-          renderPlan.chunks[0]?.id === plan().chunks[0]?.id &&
-          (() => {
-            const changed = timeline();
-            changed.inputFingerprint = digest("6");
-            return (
-              planProductionRenderJob({
-                timeline: changed,
-                audioAssets: audioAssets(),
-                sourceFingerprints: sourceFingerprints(),
-                production: {
-                  ...productionDesign({
-                    id: "render-film",
-                    targetRuntimeSeconds: 3,
-                    frameFormat: {
-                      width: 16,
-                      height: 16,
-                      fps: 2,
-                      colorSpace: "srgb",
-                    },
-                  }),
-                  deliverables: [
-                    { id: "feature", kind: "feature", required: true },
-                  ],
-                },
-                runtimeIdentity: renderPlan.runtimeIdentity,
-                chunkFrames: 2,
-              }).chunks[0]?.id === renderPlan.chunks[0]?.id
-            );
-          })() &&
-          renderPlan.tracks.audio[0]?.asset === "public/audio/silent.json" &&
-          renderPlan.tracks.audioAssets[0]?.digest === digest("a") &&
-          nonVideoPlan.chunks.length === 0 &&
-          partialPlan.chunks.length === 2 &&
-          partialPlan.chunks[1]?.frameStart === 4,
-      ],
+      ["nonVideoPlanChunksLength", () => nonVideoPlan.chunks.length === 0],
+      ["partialPlanChunksLength", () => partialPlan.chunks.length === 2],
+      ["partialPlanChunks1", () => partialPlan.chunks[1]?.frameStart === 4],
       [
         "partialPlanChunks12",
-        () =>
-          renderPlan.version === 3 &&
-          renderPlan.productionId === "render-film" &&
-          renderPlan.chunks.every((chunk) =>
-            chunk.slot.startsWith("render-film:final:"),
-          ) &&
-          renderPlan.tier.kind === "final" &&
-          renderPlan.sourceFrameFormat.fps === 2 &&
-          renderPlan.totalFrames === 6 &&
-          renderPlan.chunks.length === 6 &&
-          renderPlan.chunks[0]?.frameStart === 0 &&
-          renderPlan.chunks[0]?.frameEndExclusive === 2 &&
-          renderPlan.chunks[1]?.frameStart === 2 &&
-          renderPlan.chunks[1]?.frames[0]?.layers.length === 2 &&
-          renderPlan.chunks[0]?.id === plan().chunks[0]?.id &&
-          (() => {
-            const changed = timeline();
-            changed.inputFingerprint = digest("6");
-            return (
-              planProductionRenderJob({
-                timeline: changed,
-                audioAssets: audioAssets(),
-                sourceFingerprints: sourceFingerprints(),
-                production: {
-                  ...productionDesign({
-                    id: "render-film",
-                    targetRuntimeSeconds: 3,
-                    frameFormat: {
-                      width: 16,
-                      height: 16,
-                      fps: 2,
-                      colorSpace: "srgb",
-                    },
-                  }),
-                  deliverables: [
-                    { id: "feature", kind: "feature", required: true },
-                  ],
-                },
-                runtimeIdentity: renderPlan.runtimeIdentity,
-                chunkFrames: 2,
-              }).chunks[0]?.id === renderPlan.chunks[0]?.id
-            );
-          })() &&
-          renderPlan.tracks.audio[0]?.asset === "public/audio/silent.json" &&
-          renderPlan.tracks.audioAssets[0]?.digest === digest("a") &&
-          nonVideoPlan.chunks.length === 0 &&
-          partialPlan.chunks.length === 2 &&
-          partialPlan.chunks[1]?.frameStart === 4 &&
-          partialPlan.chunks[1]?.frameEndExclusive === 6,
+        () => partialPlan.chunks[1]?.frameEndExclusive === 6,
       ],
-      [
-        "explicitGuideChunksLength",
-        () =>
-          renderPlan.version === 3 &&
-          renderPlan.productionId === "render-film" &&
-          renderPlan.chunks.every((chunk) =>
-            chunk.slot.startsWith("render-film:final:"),
-          ) &&
-          renderPlan.tier.kind === "final" &&
-          renderPlan.sourceFrameFormat.fps === 2 &&
-          renderPlan.totalFrames === 6 &&
-          renderPlan.chunks.length === 6 &&
-          renderPlan.chunks[0]?.frameStart === 0 &&
-          renderPlan.chunks[0]?.frameEndExclusive === 2 &&
-          renderPlan.chunks[1]?.frameStart === 2 &&
-          renderPlan.chunks[1]?.frames[0]?.layers.length === 2 &&
-          renderPlan.chunks[0]?.id === plan().chunks[0]?.id &&
-          (() => {
-            const changed = timeline();
-            changed.inputFingerprint = digest("6");
-            return (
-              planProductionRenderJob({
-                timeline: changed,
-                audioAssets: audioAssets(),
-                sourceFingerprints: sourceFingerprints(),
-                production: {
-                  ...productionDesign({
-                    id: "render-film",
-                    targetRuntimeSeconds: 3,
-                    frameFormat: {
-                      width: 16,
-                      height: 16,
-                      fps: 2,
-                      colorSpace: "srgb",
-                    },
-                  }),
-                  deliverables: [
-                    { id: "feature", kind: "feature", required: true },
-                  ],
-                },
-                runtimeIdentity: renderPlan.runtimeIdentity,
-                chunkFrames: 2,
-              }).chunks[0]?.id === renderPlan.chunks[0]?.id
-            );
-          })() &&
-          renderPlan.tracks.audio[0]?.asset === "public/audio/silent.json" &&
-          renderPlan.tracks.audioAssets[0]?.digest === digest("a") &&
-          nonVideoPlan.chunks.length === 0 &&
-          partialPlan.chunks.length === 2 &&
-          partialPlan.chunks[1]?.frameStart === 4 &&
-          partialPlan.chunks[1]?.frameEndExclusive === 6 &&
-          explicitGuide.chunks.length === 1,
-      ],
-      [
-        "explicitGuideChunks0",
-        () =>
-          renderPlan.version === 3 &&
-          renderPlan.productionId === "render-film" &&
-          renderPlan.chunks.every((chunk) =>
-            chunk.slot.startsWith("render-film:final:"),
-          ) &&
-          renderPlan.tier.kind === "final" &&
-          renderPlan.sourceFrameFormat.fps === 2 &&
-          renderPlan.totalFrames === 6 &&
-          renderPlan.chunks.length === 6 &&
-          renderPlan.chunks[0]?.frameStart === 0 &&
-          renderPlan.chunks[0]?.frameEndExclusive === 2 &&
-          renderPlan.chunks[1]?.frameStart === 2 &&
-          renderPlan.chunks[1]?.frames[0]?.layers.length === 2 &&
-          renderPlan.chunks[0]?.id === plan().chunks[0]?.id &&
-          (() => {
-            const changed = timeline();
-            changed.inputFingerprint = digest("6");
-            return (
-              planProductionRenderJob({
-                timeline: changed,
-                audioAssets: audioAssets(),
-                sourceFingerprints: sourceFingerprints(),
-                production: {
-                  ...productionDesign({
-                    id: "render-film",
-                    targetRuntimeSeconds: 3,
-                    frameFormat: {
-                      width: 16,
-                      height: 16,
-                      fps: 2,
-                      colorSpace: "srgb",
-                    },
-                  }),
-                  deliverables: [
-                    { id: "feature", kind: "feature", required: true },
-                  ],
-                },
-                runtimeIdentity: renderPlan.runtimeIdentity,
-                chunkFrames: 2,
-              }).chunks[0]?.id === renderPlan.chunks[0]?.id
-            );
-          })() &&
-          renderPlan.tracks.audio[0]?.asset === "public/audio/silent.json" &&
-          renderPlan.tracks.audioAssets[0]?.digest === digest("a") &&
-          nonVideoPlan.chunks.length === 0 &&
-          partialPlan.chunks.length === 2 &&
-          partialPlan.chunks[1]?.frameStart === 4 &&
-          partialPlan.chunks[1]?.frameEndExclusive === 6 &&
-          explicitGuide.chunks.length === 1 &&
-          explicitGuide.chunks[0]?.pass === "mask",
-      ],
+      ["explicitGuideChunksLength", () => explicitGuide.chunks.length === 1],
+      ["explicitGuideChunks0", () => explicitGuide.chunks[0]?.pass === "mask"],
       [
         "typedGuidesChunksSome",
         () =>
-          renderPlan.version === 3 &&
-          renderPlan.productionId === "render-film" &&
-          renderPlan.chunks.every((chunk) =>
-            chunk.slot.startsWith("render-film:final:"),
-          ) &&
-          renderPlan.tier.kind === "final" &&
-          renderPlan.sourceFrameFormat.fps === 2 &&
-          renderPlan.totalFrames === 6 &&
-          renderPlan.chunks.length === 6 &&
-          renderPlan.chunks[0]?.frameStart === 0 &&
-          renderPlan.chunks[0]?.frameEndExclusive === 2 &&
-          renderPlan.chunks[1]?.frameStart === 2 &&
-          renderPlan.chunks[1]?.frames[0]?.layers.length === 2 &&
-          renderPlan.chunks[0]?.id === plan().chunks[0]?.id &&
-          (() => {
-            const changed = timeline();
-            changed.inputFingerprint = digest("6");
-            return (
-              planProductionRenderJob({
-                timeline: changed,
-                audioAssets: audioAssets(),
-                sourceFingerprints: sourceFingerprints(),
-                production: {
-                  ...productionDesign({
-                    id: "render-film",
-                    targetRuntimeSeconds: 3,
-                    frameFormat: {
-                      width: 16,
-                      height: 16,
-                      fps: 2,
-                      colorSpace: "srgb",
-                    },
-                  }),
-                  deliverables: [
-                    { id: "feature", kind: "feature", required: true },
-                  ],
-                },
-                runtimeIdentity: renderPlan.runtimeIdentity,
-                chunkFrames: 2,
-              }).chunks[0]?.id === renderPlan.chunks[0]?.id
-            );
-          })() &&
-          renderPlan.tracks.audio[0]?.asset === "public/audio/silent.json" &&
-          renderPlan.tracks.audioAssets[0]?.digest === digest("a") &&
-          nonVideoPlan.chunks.length === 0 &&
-          partialPlan.chunks.length === 2 &&
-          partialPlan.chunks[1]?.frameStart === 4 &&
-          partialPlan.chunks[1]?.frameEndExclusive === 6 &&
-          explicitGuide.chunks.length === 1 &&
-          explicitGuide.chunks[0]?.pass === "mask" &&
           typedGuides.chunks.some(
             (chunk) =>
               chunk.deliverable === "depth-guide" && chunk.pass === "depth",
@@ -1718,60 +784,6 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
       [
         "typedGuidesChunksSome2",
         () =>
-          renderPlan.version === 3 &&
-          renderPlan.productionId === "render-film" &&
-          renderPlan.chunks.every((chunk) =>
-            chunk.slot.startsWith("render-film:final:"),
-          ) &&
-          renderPlan.tier.kind === "final" &&
-          renderPlan.sourceFrameFormat.fps === 2 &&
-          renderPlan.totalFrames === 6 &&
-          renderPlan.chunks.length === 6 &&
-          renderPlan.chunks[0]?.frameStart === 0 &&
-          renderPlan.chunks[0]?.frameEndExclusive === 2 &&
-          renderPlan.chunks[1]?.frameStart === 2 &&
-          renderPlan.chunks[1]?.frames[0]?.layers.length === 2 &&
-          renderPlan.chunks[0]?.id === plan().chunks[0]?.id &&
-          (() => {
-            const changed = timeline();
-            changed.inputFingerprint = digest("6");
-            return (
-              planProductionRenderJob({
-                timeline: changed,
-                audioAssets: audioAssets(),
-                sourceFingerprints: sourceFingerprints(),
-                production: {
-                  ...productionDesign({
-                    id: "render-film",
-                    targetRuntimeSeconds: 3,
-                    frameFormat: {
-                      width: 16,
-                      height: 16,
-                      fps: 2,
-                      colorSpace: "srgb",
-                    },
-                  }),
-                  deliverables: [
-                    { id: "feature", kind: "feature", required: true },
-                  ],
-                },
-                runtimeIdentity: renderPlan.runtimeIdentity,
-                chunkFrames: 2,
-              }).chunks[0]?.id === renderPlan.chunks[0]?.id
-            );
-          })() &&
-          renderPlan.tracks.audio[0]?.asset === "public/audio/silent.json" &&
-          renderPlan.tracks.audioAssets[0]?.digest === digest("a") &&
-          nonVideoPlan.chunks.length === 0 &&
-          partialPlan.chunks.length === 2 &&
-          partialPlan.chunks[1]?.frameStart === 4 &&
-          partialPlan.chunks[1]?.frameEndExclusive === 6 &&
-          explicitGuide.chunks.length === 1 &&
-          explicitGuide.chunks[0]?.pass === "mask" &&
-          typedGuides.chunks.some(
-            (chunk) =>
-              chunk.deliverable === "depth-guide" && chunk.pass === "depth",
-          ) &&
           typedGuides.chunks.some(
             (chunk) =>
               chunk.deliverable === "normal-guide" && chunk.pass === "normal",
@@ -1779,66 +791,7 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
       ],
       [
         "booleanIdentityPlanChunksLength",
-        () =>
-          renderPlan.version === 3 &&
-          renderPlan.productionId === "render-film" &&
-          renderPlan.chunks.every((chunk) =>
-            chunk.slot.startsWith("render-film:final:"),
-          ) &&
-          renderPlan.tier.kind === "final" &&
-          renderPlan.sourceFrameFormat.fps === 2 &&
-          renderPlan.totalFrames === 6 &&
-          renderPlan.chunks.length === 6 &&
-          renderPlan.chunks[0]?.frameStart === 0 &&
-          renderPlan.chunks[0]?.frameEndExclusive === 2 &&
-          renderPlan.chunks[1]?.frameStart === 2 &&
-          renderPlan.chunks[1]?.frames[0]?.layers.length === 2 &&
-          renderPlan.chunks[0]?.id === plan().chunks[0]?.id &&
-          (() => {
-            const changed = timeline();
-            changed.inputFingerprint = digest("6");
-            return (
-              planProductionRenderJob({
-                timeline: changed,
-                audioAssets: audioAssets(),
-                sourceFingerprints: sourceFingerprints(),
-                production: {
-                  ...productionDesign({
-                    id: "render-film",
-                    targetRuntimeSeconds: 3,
-                    frameFormat: {
-                      width: 16,
-                      height: 16,
-                      fps: 2,
-                      colorSpace: "srgb",
-                    },
-                  }),
-                  deliverables: [
-                    { id: "feature", kind: "feature", required: true },
-                  ],
-                },
-                runtimeIdentity: renderPlan.runtimeIdentity,
-                chunkFrames: 2,
-              }).chunks[0]?.id === renderPlan.chunks[0]?.id
-            );
-          })() &&
-          renderPlan.tracks.audio[0]?.asset === "public/audio/silent.json" &&
-          renderPlan.tracks.audioAssets[0]?.digest === digest("a") &&
-          nonVideoPlan.chunks.length === 0 &&
-          partialPlan.chunks.length === 2 &&
-          partialPlan.chunks[1]?.frameStart === 4 &&
-          partialPlan.chunks[1]?.frameEndExclusive === 6 &&
-          explicitGuide.chunks.length === 1 &&
-          explicitGuide.chunks[0]?.pass === "mask" &&
-          typedGuides.chunks.some(
-            (chunk) =>
-              chunk.deliverable === "depth-guide" && chunk.pass === "depth",
-          ) &&
-          typedGuides.chunks.some(
-            (chunk) =>
-              chunk.deliverable === "normal-guide" && chunk.pass === "normal",
-          ) &&
-          booleanIdentityPlan.chunks.length === 1,
+        () => booleanIdentityPlan.chunks.length === 1,
       ],
     ]),
     {
@@ -1963,26 +916,6 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
       [
         "throwsPlanSourceFingerprints",
         () =>
-          [
-            { kind: "invalid", resolutionScale: 0.5, frameStep: 2 },
-            { kind: "final", resolutionScale: 0.5, frameStep: 1 },
-            { kind: "proxy", resolutionScale: 1, frameStep: 1 },
-            { kind: "proxy", resolutionScale: 0, frameStep: 2 },
-            { kind: "proxy", resolutionScale: 2, frameStep: 2 },
-            { kind: "proxy", resolutionScale: Number.NaN, frameStep: 2 },
-            { kind: "proxy", resolutionScale: 0.5, frameStep: 0 },
-            { kind: "proxy", resolutionScale: 0.5, frameStep: 1.5 },
-            { kind: "proxy", resolutionScale: 0.5, frameStep: 17 },
-          ].every((tier) =>
-            throws(() =>
-              resolveProductionRenderTierFrameFormat(
-                renderPlan.sourceFrameFormat,
-                tier as Parameters<
-                  typeof resolveProductionRenderTierFrameFormat
-                >[1],
-              ),
-            ),
-          ) &&
           throws(() =>
             plan(sourceFingerprints(), {
               kind: "proxy",
@@ -2290,10 +1223,6 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
       [
         "garbageCollectionKeepSome2",
         () =>
-          garbageCollection.keep.length === 5 &&
-          garbageCollection.keep.some(
-            (candidate) => candidate.path === retainedPointer,
-          ) &&
           garbageCollection.keep.some(
             (candidate) => candidate.path === retainedTree,
           ),
@@ -2301,13 +1230,6 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
       [
         "garbageCollectionRemoveSome",
         () =>
-          garbageCollection.keep.length === 5 &&
-          garbageCollection.keep.some(
-            (candidate) => candidate.path === retainedPointer,
-          ) &&
-          garbageCollection.keep.some(
-            (candidate) => candidate.path === retainedTree,
-          ) &&
           garbageCollection.remove.some(
             (candidate) => candidate.path === orphanTree,
           ),
@@ -2315,16 +1237,6 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
       [
         "garbageCollectionRemoveSome2",
         () =>
-          garbageCollection.keep.length === 5 &&
-          garbageCollection.keep.some(
-            (candidate) => candidate.path === retainedPointer,
-          ) &&
-          garbageCollection.keep.some(
-            (candidate) => candidate.path === retainedTree,
-          ) &&
-          garbageCollection.remove.some(
-            (candidate) => candidate.path === orphanTree,
-          ) &&
           garbageCollection.remove.some(
             (candidate) => candidate.path === stalePointer,
           ),
@@ -2332,111 +1244,19 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
       [
         "garbageCollectionRemoveSome3",
         () =>
-          garbageCollection.keep.length === 5 &&
-          garbageCollection.keep.some(
-            (candidate) => candidate.path === retainedPointer,
-          ) &&
-          garbageCollection.keep.some(
-            (candidate) => candidate.path === retainedTree,
-          ) &&
-          garbageCollection.remove.some(
-            (candidate) => candidate.path === orphanTree,
-          ) &&
-          garbageCollection.remove.some(
-            (candidate) => candidate.path === stalePointer,
-          ) &&
           garbageCollection.remove.some(
             (candidate) => candidate.path === staleTree,
           ),
       ],
       [
         "garbageCollectionReclaimableBytes",
-        () =>
-          garbageCollection.keep.length === 5 &&
-          garbageCollection.keep.some(
-            (candidate) => candidate.path === retainedPointer,
-          ) &&
-          garbageCollection.keep.some(
-            (candidate) => candidate.path === retainedTree,
-          ) &&
-          garbageCollection.remove.some(
-            (candidate) => candidate.path === orphanTree,
-          ) &&
-          garbageCollection.remove.some(
-            (candidate) => candidate.path === stalePointer,
-          ) &&
-          garbageCollection.remove.some(
-            (candidate) => candidate.path === staleTree,
-          ) &&
-          garbageCollection.reclaimableBytes === 171,
+        () => garbageCollection.reclaimableBytes === 171,
       ],
-      [
-        "rejectsRetainedChunkPaths",
-        () =>
-          garbageCollection.keep.length === 5 &&
-          garbageCollection.keep.some(
-            (candidate) => candidate.path === retainedPointer,
-          ) &&
-          garbageCollection.keep.some(
-            (candidate) => candidate.path === retainedTree,
-          ) &&
-          garbageCollection.remove.some(
-            (candidate) => candidate.path === orphanTree,
-          ) &&
-          garbageCollection.remove.some(
-            (candidate) => candidate.path === stalePointer,
-          ) &&
-          garbageCollection.remove.some(
-            (candidate) => candidate.path === staleTree,
-          ) &&
-          garbageCollection.reclaimableBytes === 171 &&
-          rejectsRetainedChunkPaths,
-      ],
-      [
-        "rejectsStaleRetainedPair",
-        () =>
-          garbageCollection.keep.length === 5 &&
-          garbageCollection.keep.some(
-            (candidate) => candidate.path === retainedPointer,
-          ) &&
-          garbageCollection.keep.some(
-            (candidate) => candidate.path === retainedTree,
-          ) &&
-          garbageCollection.remove.some(
-            (candidate) => candidate.path === orphanTree,
-          ) &&
-          garbageCollection.remove.some(
-            (candidate) => candidate.path === stalePointer,
-          ) &&
-          garbageCollection.remove.some(
-            (candidate) => candidate.path === staleTree,
-          ) &&
-          garbageCollection.reclaimableBytes === 171 &&
-          rejectsRetainedChunkPaths &&
-          rejectsStaleRetainedPair,
-      ],
+      ["rejectsRetainedChunkPaths", () => rejectsRetainedChunkPaths],
+      ["rejectsStaleRetainedPair", () => rejectsStaleRetainedPair],
       [
         "validChunkValidChunkValidChunk",
         () =>
-          garbageCollection.keep.length === 5 &&
-          garbageCollection.keep.some(
-            (candidate) => candidate.path === retainedPointer,
-          ) &&
-          garbageCollection.keep.some(
-            (candidate) => candidate.path === retainedTree,
-          ) &&
-          garbageCollection.remove.some(
-            (candidate) => candidate.path === orphanTree,
-          ) &&
-          garbageCollection.remove.some(
-            (candidate) => candidate.path === stalePointer,
-          ) &&
-          garbageCollection.remove.some(
-            (candidate) => candidate.path === staleTree,
-          ) &&
-          garbageCollection.reclaimableBytes === 171 &&
-          rejectsRetainedChunkPaths &&
-          rejectsStaleRetainedPair &&
           [
             [{ ...validChunk }, { ...validChunk }],
             [{ ...validChunk, bytes: -1 }],
@@ -3093,19 +1913,7 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
       ],
       [
         "currentFatalReasonNON_ERROR_FAILURE",
-        () =>
-          settledBeforeDrain === false &&
-          peerDrained &&
-          thirdStartedBeforeRelease === false &&
-          releaseStarted &&
-          drainingReleaseAttempts === 1 &&
-          settledBeforeRelease === false &&
-          aggregateContainsExactly(fatalReason, [
-            ATTEMPT_FAILURE,
-            FAILURE_RECORD_FAILURE,
-            RELEASE_FAILURE,
-          ]) &&
-          currentFatalReason === NON_ERROR_FAILURE,
+        () => currentFatalReason === NON_ERROR_FAILURE,
       ],
     ]),
     {
@@ -3152,41 +1960,15 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
       ],
       [
         "attemptAndFailureRecordFailureRecordAttempts",
-        () =>
-          releaseOnlyFailure.failure === RELEASE_FAILURE &&
-          releaseOnlyFailure.failureRecordAttempts === 0 &&
-          releaseOnlyFailure.releaseAttempts === 1 &&
-          aggregateContainsExactly(attemptAndFailureRecord.failure, [
-            ATTEMPT_FAILURE,
-            FAILURE_RECORD_FAILURE,
-          ]) &&
-          attemptAndFailureRecord.failureRecordAttempts === 1,
+        () => attemptAndFailureRecord.failureRecordAttempts === 1,
       ],
       [
         "attemptAndFailureRecordReleaseAttempts",
-        () =>
-          releaseOnlyFailure.failure === RELEASE_FAILURE &&
-          releaseOnlyFailure.failureRecordAttempts === 0 &&
-          releaseOnlyFailure.releaseAttempts === 1 &&
-          aggregateContainsExactly(attemptAndFailureRecord.failure, [
-            ATTEMPT_FAILURE,
-            FAILURE_RECORD_FAILURE,
-          ]) &&
-          attemptAndFailureRecord.failureRecordAttempts === 1 &&
-          attemptAndFailureRecord.releaseAttempts === 1,
+        () => attemptAndFailureRecord.releaseAttempts === 1,
       ],
       [
         "aggregateContainsExactlyAttemptAndReleaseFailure",
         () =>
-          releaseOnlyFailure.failure === RELEASE_FAILURE &&
-          releaseOnlyFailure.failureRecordAttempts === 0 &&
-          releaseOnlyFailure.releaseAttempts === 1 &&
-          aggregateContainsExactly(attemptAndFailureRecord.failure, [
-            ATTEMPT_FAILURE,
-            FAILURE_RECORD_FAILURE,
-          ]) &&
-          attemptAndFailureRecord.failureRecordAttempts === 1 &&
-          attemptAndFailureRecord.releaseAttempts === 1 &&
           aggregateContainsExactly(attemptAndRelease.failure, [
             ATTEMPT_FAILURE,
             RELEASE_FAILURE,
@@ -3194,40 +1976,11 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
       ],
       [
         "attemptAndReleaseFailureRecordAttempts",
-        () =>
-          releaseOnlyFailure.failure === RELEASE_FAILURE &&
-          releaseOnlyFailure.failureRecordAttempts === 0 &&
-          releaseOnlyFailure.releaseAttempts === 1 &&
-          aggregateContainsExactly(attemptAndFailureRecord.failure, [
-            ATTEMPT_FAILURE,
-            FAILURE_RECORD_FAILURE,
-          ]) &&
-          attemptAndFailureRecord.failureRecordAttempts === 1 &&
-          attemptAndFailureRecord.releaseAttempts === 1 &&
-          aggregateContainsExactly(attemptAndRelease.failure, [
-            ATTEMPT_FAILURE,
-            RELEASE_FAILURE,
-          ]) &&
-          attemptAndRelease.failureRecordAttempts === 1,
+        () => attemptAndRelease.failureRecordAttempts === 1,
       ],
       [
         "attemptAndReleaseReleaseAttempts",
-        () =>
-          releaseOnlyFailure.failure === RELEASE_FAILURE &&
-          releaseOnlyFailure.failureRecordAttempts === 0 &&
-          releaseOnlyFailure.releaseAttempts === 1 &&
-          aggregateContainsExactly(attemptAndFailureRecord.failure, [
-            ATTEMPT_FAILURE,
-            FAILURE_RECORD_FAILURE,
-          ]) &&
-          attemptAndFailureRecord.failureRecordAttempts === 1 &&
-          attemptAndFailureRecord.releaseAttempts === 1 &&
-          aggregateContainsExactly(attemptAndRelease.failure, [
-            ATTEMPT_FAILURE,
-            RELEASE_FAILURE,
-          ]) &&
-          attemptAndRelease.failureRecordAttempts === 1 &&
-          attemptAndRelease.releaseAttempts === 1,
+        () => attemptAndRelease.releaseAttempts === 1,
       ],
     ]),
     {
@@ -3980,17 +2733,7 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
                 }),
               ).toString("utf8") === "resident",
           ],
-          [
-            "swapped",
-            () =>
-              Buffer.from(
-                readAutoMovieProductionOwnedFile({
-                  root: ownedRoot,
-                  directory: chunk,
-                  relative: "frames/resident.png",
-                }),
-              ).toString("utf8") === "resident" && swapped === false,
-          ],
+          ["swapped", () => swapped === false],
         ]),
         { fromReadAutoMovieProductionOwnedFileRoot: true, swapped: true },
       );
@@ -4037,17 +2780,7 @@ export const test_mcp_production_render_job = async (): Promise<void> => {
                 }),
               ),
           ],
-          [
-            "replaced",
-            () =>
-              throws(() =>
-                readAutoMovieProductionOwnedFile({
-                  root: ownedRoot,
-                  directory: chunk,
-                  relative: "frames/resident.png",
-                }),
-              ) && replaced,
-          ],
+          ["replaced", () => replaced],
         ]),
         { throwsReadAutoMovieProductionOwnedFileRoot: true, replaced: true },
       );
@@ -4280,14 +3013,6 @@ const exerciseProductionOwnedDescriptorCleanup = (props: {
       [
         "aggregateContainsExactlyCombinedSourceCaught",
         () =>
-          standalone.caught === standalone.sourceCloseFailure &&
-          standaloneResident.caught ===
-            standaloneResident.residentCloseFailure &&
-          primaryOnly.caught === primaryOnly.primaryFailure &&
-          aggregateContainsExactly(combinedResident.caught, [
-            combinedResident.primaryFailure,
-            combinedResident.residentCloseFailure,
-          ]) &&
           aggregateContainsExactly(combinedSource.caught, [
             combinedSource.primaryFailure,
             combinedSource.sourceCloseFailure,
@@ -4296,18 +3021,6 @@ const exerciseProductionOwnedDescriptorCleanup = (props: {
       [
         "aggregateContainsExactlyNestedCaught",
         () =>
-          standalone.caught === standalone.sourceCloseFailure &&
-          standaloneResident.caught ===
-            standaloneResident.residentCloseFailure &&
-          primaryOnly.caught === primaryOnly.primaryFailure &&
-          aggregateContainsExactly(combinedResident.caught, [
-            combinedResident.primaryFailure,
-            combinedResident.residentCloseFailure,
-          ]) &&
-          aggregateContainsExactly(combinedSource.caught, [
-            combinedSource.primaryFailure,
-            combinedSource.sourceCloseFailure,
-          ]) &&
           aggregateContainsExactly(nested.caught, [
             nested.primaryFailure,
             nested.residentCloseFailure,

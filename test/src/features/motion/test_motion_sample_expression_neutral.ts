@@ -66,9 +66,7 @@ export const test_motion_sample_expression_neutral = (): void => {
       ],
       [
         "sampleMotionFadeOutExpression",
-        () =>
-          nclose(sampleMotion(fadeOut, 0.5).expression!.intensity, 0.5) &&
-          sampleMotion(fadeOut, 0.9).expression!.intensity < 0.2,
+        () => sampleMotion(fadeOut, 0.9).expression!.intensity < 0.2,
       ],
     ]),
     { ncloseSampleMotionFadeOut: true, sampleMotionFadeOutExpression: true },

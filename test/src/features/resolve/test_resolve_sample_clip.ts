@@ -111,9 +111,7 @@ export const test_resolve_sample_clip = (): void => {
       ["closeMultiGet", () => close(multi.get("ptr:/x")?.value ?? [], [0.5])],
       [
         "closeMultiGet2",
-        () =>
-          close(multi.get("ptr:/x")?.value ?? [], [0.5]) &&
-          close(multi.get("node:n:scale")?.value ?? [], [1.5, 1.5, 1.5]),
+        () => close(multi.get("node:n:scale")?.value ?? [], [1.5, 1.5, 1.5]),
       ],
     ]),
     { closeMultiGet: true, closeMultiGet2: true },

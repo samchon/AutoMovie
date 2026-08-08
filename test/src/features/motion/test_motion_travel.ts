@@ -202,9 +202,7 @@ export const test_motion_travel = (): void => {
       ],
       [
         "ncloseSwayFacedKeyframes2",
-        () =>
-          nclose(swayFaced.keyframes[1]!.pose.root!.translation.z, -0.1) &&
-          nclose(swayFaced.keyframes[1]!.pose.root!.translation.x, 1),
+        () => nclose(swayFaced.keyframes[1]!.pose.root!.translation.x, 1),
       ],
     ]),
     { ncloseSwayFacedKeyframes: true, ncloseSwayFacedKeyframes2: true },

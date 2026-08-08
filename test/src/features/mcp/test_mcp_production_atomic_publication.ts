@@ -467,13 +467,6 @@ export const test_mcp_production_atomic_publication = (): void => {
               project.commitProductionPublication({
                 files: new Map([[relative, first]]),
                 manifest,
-                expectedRevision: revision - 1,
-              }),
-            ) &&
-            throws(() =>
-              project.commitProductionPublication({
-                files: new Map([[relative, first]]),
-                manifest,
                 inputCurrent: () => false,
               }),
             ),
@@ -683,30 +676,15 @@ export const test_mcp_production_atomic_publication = (): void => {
         ],
         [
           "fsReadFileSyncOutputPath",
-          () =>
-            postPublicationByteRace &&
-            postPublicationLedgerRace &&
-            project.revision() === revision &&
-            fs.readFileSync(outputPath).equals(first),
+          () => fs.readFileSync(outputPath).equals(first),
         ],
         [
           "fsReadFileSyncManifestPath",
-          () =>
-            postPublicationByteRace &&
-            postPublicationLedgerRace &&
-            project.revision() === revision &&
-            fs.readFileSync(outputPath).equals(first) &&
-            fs.readFileSync(manifestPath).equals(manifestBytes),
+          () => fs.readFileSync(manifestPath).equals(manifestBytes),
         ],
         [
           "fsReadFileSyncReceiptPath",
-          () =>
-            postPublicationByteRace &&
-            postPublicationLedgerRace &&
-            project.revision() === revision &&
-            fs.readFileSync(outputPath).equals(first) &&
-            fs.readFileSync(manifestPath).equals(manifestBytes) &&
-            fs.readFileSync(receiptPath).equals(receiptBytes),
+          () => fs.readFileSync(receiptPath).equals(receiptBytes),
         ],
       ]),
       {
@@ -838,13 +816,6 @@ export const test_mcp_production_atomic_publication = (): void => {
         [
           "fsReadFileSyncPath2",
           () =>
-            incarnationSwapped &&
-            incarnationSwapRejected &&
-            fs
-              .readFileSync(
-                path.join(productionStateRoot, "render-manifest.json"),
-              )
-              .equals(replacementManifest) &&
             fs
               .readFileSync(
                 path.join(productionStateRoot, "render-manifest-receipt.json"),

@@ -120,10 +120,7 @@ export const test_motion_gait = (): void => {
     "the centered swing is 25 ± 22 (every sample positive)",
     namedFacts([
       ["kneeEveryV", () => knee.every((v) => v >= 0)],
-      [
-        "ncloseMaxKnee",
-        () => knee.every((v) => v >= 0) && nclose(Math.max(...knee), 47),
-      ],
+      ["ncloseMaxKnee", () => nclose(Math.max(...knee), 47)],
     ]),
     { kneeEveryV: true, ncloseMaxKnee: true },
   );

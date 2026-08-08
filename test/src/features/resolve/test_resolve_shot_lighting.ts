@@ -317,17 +317,6 @@ export const test_resolve_shot_lighting = (): void => {
           throwsOn(
             [
               clip(
-                "nodeTrack",
-                { kind: "node", node: "candleGlow", path: "translation" },
-                [0, 3],
-                [0, 0, 0, 1, 0, 0],
-              ),
-            ],
-            "must address /lights/<id>/<property>",
-          ) &&
-          throwsOn(
-            [
-              clip(
                 "materialTrack",
                 pointer("/materials/2/baseColor", "vec3"),
                 [0, 3],
@@ -343,28 +332,6 @@ export const test_resolve_shot_lighting = (): void => {
           throwsOn(
             [
               clip(
-                "nodeTrack",
-                { kind: "node", node: "candleGlow", path: "translation" },
-                [0, 3],
-                [0, 0, 0, 1, 0, 0],
-              ),
-            ],
-            "must address /lights/<id>/<property>",
-          ) &&
-          throwsOn(
-            [
-              clip(
-                "materialTrack",
-                pointer("/materials/2/baseColor", "vec3"),
-                [0, 3],
-                [1, 1, 1, 0, 0, 0],
-              ),
-            ],
-            "must address /lights/<id>/<property>",
-          ) &&
-          throwsOn(
-            [
-              clip(
                 "ghostTrack",
                 pointer("/lights/ghost/intensity", "scalar"),
                 [0, 3],
@@ -377,39 +344,6 @@ export const test_resolve_shot_lighting = (): void => {
       [
         "throwsOnClipSunRange",
         () =>
-          throwsOn(
-            [
-              clip(
-                "nodeTrack",
-                { kind: "node", node: "candleGlow", path: "translation" },
-                [0, 3],
-                [0, 0, 0, 1, 0, 0],
-              ),
-            ],
-            "must address /lights/<id>/<property>",
-          ) &&
-          throwsOn(
-            [
-              clip(
-                "materialTrack",
-                pointer("/materials/2/baseColor", "vec3"),
-                [0, 3],
-                [1, 1, 1, 0, 0, 0],
-              ),
-            ],
-            "must address /lights/<id>/<property>",
-          ) &&
-          throwsOn(
-            [
-              clip(
-                "ghostTrack",
-                pointer("/lights/ghost/intensity", "scalar"),
-                [0, 3],
-                [1, 0],
-              ),
-            ],
-            'addresses missing light "ghost"',
-          ) &&
           throwsOn(
             [
               clip(

@@ -116,17 +116,7 @@ export const test_mcp_legacy_fixture_construction_cleanup = (): void => {
             cleanupFailure,
           ]),
       ],
-      [
-        "combinedAttempts",
-        () =>
-          primaryOnly.failure === primaryFailure &&
-          primaryOnly.attempts === 1 &&
-          aggregateContainsExactly(combined.failure, [
-            primaryFailure,
-            cleanupFailure,
-          ]) &&
-          combined.attempts === 1,
-      ],
+      ["combinedAttempts", () => combined.attempts === 1],
     ]),
     {
       primaryOnlyFailurePrimaryFailure: true,

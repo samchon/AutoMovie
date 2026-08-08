@@ -30,12 +30,7 @@ export const test_render_screenplay_fallback = (): void => {
         () =>
           text.includes("LOGLINE: flat logline (ignored when a tree exists)"),
       ],
-      [
-        "textIncludesTHEME",
-        () =>
-          text.includes("LOGLINE: flat logline (ignored when a tree exists)") &&
-          text.includes("THEME: flat theme"),
-      ],
+      ["textIncludesTHEME", () => text.includes("THEME: flat theme")],
     ]),
     { textIncludesLOGLINE: true, textIncludesTHEME: true },
   );
@@ -48,9 +43,7 @@ export const test_render_screenplay_fallback = (): void => {
       ],
       [
         "textIncludesBEAT2",
-        () =>
-          text.includes("BEAT, The duel\nThe duel summary") &&
-          text.includes("BEAT, The aftermath\nThe aftermath summary"),
+        () => text.includes("BEAT, The aftermath\nThe aftermath summary"),
       ],
     ]),
     { textIncludesBEAT: true, textIncludesBEAT2: true },

@@ -199,12 +199,7 @@ export const test_viewer_apply_light_motion = (): void => {
     "the unresolved light is skipped, and the un-animated one returns to staged",
     namedFacts([
       ["ncloseCandleIntensity", () => nclose(candle.intensity, 0.04)],
-      [
-        "ncloseLampAngle",
-        () =>
-          nclose(candle.intensity, 0.04) &&
-          nclose(lamp.angle, (40 * Math.PI) / 180),
-      ],
+      ["ncloseLampAngle", () => nclose(lamp.angle, (40 * Math.PI) / 180)],
     ]),
     { ncloseCandleIntensity: true, ncloseLampAngle: true },
   );

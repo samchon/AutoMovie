@@ -241,7 +241,53 @@ export const test_mcp_project_manifest_linked_root_cleanup = (): void => {
   TestValidator.equals(
     "project-manifest protects linked-root cleanup",
     linkedRootCleanupContract(text),
-    expected,
+    {
+      lifecycles: [
+        {
+          catchBodies: ["linkedRootFailure={error};", "throwerror;"],
+          catchVariables: ["error"],
+          cleanup: "()=>fs.unlinkSync(linkedRoot)",
+          containerKind: "TryStatement",
+          containerStatements: 49,
+          failureHolder:
+            "letlinkedRootFailure:IProjectManifestFixtureFailure|undefined;",
+          finallyDigest:
+            "5f4c2f59fd3c90d250babf8398c79213c61043d00e05ffaac4b60661c7fc354d",
+          finallySubstantive: {
+            digest:
+              "57a114e304de1240b1d51e982f2563bf919781ca8d064e530be480b1113ee74c",
+            tokens: 27,
+          },
+          helper: "preserveProjectManifestRaceCleanup",
+          index: 48,
+          resource: "linked project root",
+          tryBody:
+            '{TestValidator.predicate("projectrootsrejectsymlinksbeforecreatingresidentstate",throwsError(()=>AutoMovieProject.open(linkedRoot),["AutoMovieprojectroot","symboliclink"],),);}',
+          tryDigest:
+            "648226e094a218b546022240fb3adedf1238a0d9cffcbc5766543ceb904aa644",
+          trySubstantive: {
+            digest:
+              "9951bc77d97d1efcfb838b393087b22cfedaf532e67fd597f440e889a6315c47",
+            tokens: 28,
+          },
+        },
+      ],
+      outer: {
+        substantive: {
+          digest:
+            "b7c2099bc280e569c952f00a17b0db5b23b4a0aae8ed6a444d35aef5ffec58fc",
+          tokens: 1461,
+        },
+        tryDigest:
+          "ae33a0a3c85f21d0247b65d5e90202f3d7dff0c7bd60bd63724d642d706fb0cb",
+        tryStatements: 49,
+      },
+      parentDigest:
+        "e7745e412df2d4a054a52a4fca1bdd96d2975924c6d4a4c161938deeea3e9b4f",
+      parseDiagnostics: [],
+      rootDigest:
+        "d12f4eb21fa052482bea6ca2defb10bec262a645c5965a6d3506e988740bed63",
+    },
   );
   const mutated = text.replace(
     'resource: "linked project root"',

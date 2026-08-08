@@ -132,10 +132,7 @@ export const test_perform_locomote_declared_duration = (): void => {
     "fitting the span does not move where the walk arrives",
     namedFacts([
       ["ncloseArrivalDeclared", () => nclose(arrival(declared), 3)],
-      [
-        "ncloseArrivalAuto",
-        () => nclose(arrival(declared), 3) && nclose(arrival(auto), 3),
-      ],
+      ["ncloseArrivalAuto", () => nclose(arrival(auto), 3)],
     ]),
     { ncloseArrivalDeclared: true, ncloseArrivalAuto: true },
   );
@@ -145,9 +142,7 @@ export const test_perform_locomote_declared_duration = (): void => {
       ["ncloseAutoGaitCycle", () => nclose(auto.gaitCycle!.period, 1)],
       [
         "ncloseDeclaredGaitCycle",
-        () =>
-          nclose(auto.gaitCycle!.period, 1) &&
-          nclose(declared.gaitCycle!.period, 2.5),
+        () => nclose(declared.gaitCycle!.period, 2.5),
       ],
     ]),
     { ncloseAutoGaitCycle: true, ncloseDeclaredGaitCycle: true },
@@ -190,9 +185,7 @@ export const test_perform_locomote_declared_duration = (): void => {
       ["ncloseSteppingDuration", () => nclose(stepping.duration, 4)],
       [
         "ncloseSynthStepInPlace",
-        () =>
-          nclose(stepping.duration, 4) &&
-          nclose(synth(stepInPlace("auto"), "hero")!.duration, 1),
+        () => nclose(synth(stepInPlace("auto"), "hero")!.duration, 1),
       ],
     ]),
     { ncloseSteppingDuration: true, ncloseSynthStepInPlace: true },
@@ -215,7 +208,6 @@ export const test_perform_locomote_declared_duration = (): void => {
       [
         "ncloseSynthStandingStill2",
         () =>
-          nclose(synth(standingStill, "hero")!.duration, 4) &&
           nclose(
             synth({ ...standingStill, duration: "auto" }, "hero")!.duration,
             1,
