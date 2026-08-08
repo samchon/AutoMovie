@@ -267,13 +267,30 @@ export const test_mcp_capture_runtime_identity = (): void => {
   const configured = structuredClone(identity);
   configured.browser.source = "configured-executable";
   configured.browser.revision = null;
-  TestValidator.predicate(
+  TestValidator.equals(
     "system and configured browser identities remain representable",
-    parseAutoMovieCaptureRuntimeIdentity(
-      canonicalAutoMovieCaptureRuntimeIdentity(system),
-    ).browser.source === "system-channel" &&
-      parseAutoMovieCaptureRuntimeIdentity(
-        canonicalAutoMovieCaptureRuntimeIdentity(configured),
-      ).browser.source === "configured-executable",
+    namedFacts([
+      [
+        "parseAutoMovieCaptureRuntimeIdentityCanonicalAutoMovieCaptureRuntimeIdentitySystem",
+        () =>
+          parseAutoMovieCaptureRuntimeIdentity(
+            canonicalAutoMovieCaptureRuntimeIdentity(system),
+          ).browser.source === "system-channel",
+      ],
+      [
+        "parseAutoMovieCaptureRuntimeIdentityCanonicalAutoMovieCaptureRuntimeIdentityConfigured",
+        () =>
+          parseAutoMovieCaptureRuntimeIdentity(
+            canonicalAutoMovieCaptureRuntimeIdentity(system),
+          ).browser.source === "system-channel" &&
+          parseAutoMovieCaptureRuntimeIdentity(
+            canonicalAutoMovieCaptureRuntimeIdentity(configured),
+          ).browser.source === "configured-executable",
+      ],
+    ]),
+    {
+      parseAutoMovieCaptureRuntimeIdentityCanonicalAutoMovieCaptureRuntimeIdentitySystem: true,
+      parseAutoMovieCaptureRuntimeIdentityCanonicalAutoMovieCaptureRuntimeIdentityConfigured: true,
+    },
   );
 };

@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import ts from "typescript-compiler";
 
+import { namedFacts } from "../internal/predicates";
 import { preserveRenderJobFixtureCleanup } from "./test_mcp_production_render_job";
 
 const compact = (node: ts.Node, source: ts.SourceFile): string =>
@@ -228,59 +229,1225 @@ export const test_mcp_production_render_job_hook_cleanup = (): void => {
     primaryFailure: { error: undefined, present: true },
   });
   const fullOrder = "cleanup-0,cleanup-1,cleanup-2";
-  TestValidator.predicate(
+  TestValidator.equals(
     "owned-descriptor harness cleanup preserves capture and restoration order",
-    success.returned &&
-      success.captured === false &&
-      success.cleanupCaught === false &&
-      success.order.join(",") === fullOrder &&
-      primaryOnly.returned &&
-      primaryOnly.captured &&
-      primaryOnly.capturedFailure === primaryFailure &&
-      primaryOnly.cleanupCaught === false &&
-      primaryOnly.order.join(",") === fullOrder &&
-      standalone.returned === false &&
-      standalone.captured === false &&
-      standalone.cleanupCaught &&
-      standalone.cleanupFailure === openFailure &&
-      standalone.order.join(",") === fullOrder &&
-      multiple.cleanupCaught &&
-      aggregateContainsExactly(multiple.cleanupFailure, [
-        openFailure,
-        closeFailure,
-      ]) &&
-      multiple.message.includes("hook-0") &&
-      multiple.message.includes("hook-2") &&
-      multiple.message.includes("hook-1") === false &&
-      multiple.order.join(",") === fullOrder &&
-      combined.captured &&
-      combined.capturedFailure === primaryFailure &&
-      combined.cleanupCaught &&
-      aggregateContainsExactly(combined.cleanupFailure, [
-        primaryFailure,
-        openFailure,
-        closeFailure,
-      ]) &&
-      combined.order.join(",") === fullOrder &&
-      undefinedPrimary.returned &&
-      undefinedPrimary.captured &&
-      undefinedPrimary.capturedFailure === undefined &&
-      undefinedPrimary.cleanupCaught === false &&
-      undefinedPrimary.order.join(",") === fullOrder &&
-      undefinedStandalone.returned === false &&
-      undefinedStandalone.captured === false &&
-      undefinedStandalone.cleanupCaught &&
-      undefinedStandalone.cleanupFailure === undefined &&
-      undefinedStandalone.order.join(",") === fullOrder &&
-      undefinedCombined.returned === false &&
-      undefinedCombined.captured &&
-      undefinedCombined.capturedFailure === undefined &&
-      undefinedCombined.cleanupCaught &&
-      aggregateContainsExactly(undefinedCombined.cleanupFailure, [
-        undefined,
-        undefined,
-      ]) &&
-      undefinedCombined.order.join(",") === fullOrder,
+    namedFacts([
+      ["successReturned", () => success.returned],
+      ["successCaptured", () => success.returned && success.captured === false],
+      [
+        "successCleanupCaught",
+        () =>
+          success.returned &&
+          success.captured === false &&
+          success.cleanupCaught === false,
+      ],
+      [
+        "successOrderJoin",
+        () =>
+          success.returned &&
+          success.captured === false &&
+          success.cleanupCaught === false &&
+          success.order.join(",") === fullOrder,
+      ],
+      [
+        "primaryOnlyReturned",
+        () =>
+          success.returned &&
+          success.captured === false &&
+          success.cleanupCaught === false &&
+          success.order.join(",") === fullOrder &&
+          primaryOnly.returned,
+      ],
+      [
+        "primaryOnlyCaptured",
+        () =>
+          success.returned &&
+          success.captured === false &&
+          success.cleanupCaught === false &&
+          success.order.join(",") === fullOrder &&
+          primaryOnly.returned &&
+          primaryOnly.captured,
+      ],
+      [
+        "primaryOnlyCapturedFailurePrimaryFailure",
+        () =>
+          success.returned &&
+          success.captured === false &&
+          success.cleanupCaught === false &&
+          success.order.join(",") === fullOrder &&
+          primaryOnly.returned &&
+          primaryOnly.captured &&
+          primaryOnly.capturedFailure === primaryFailure,
+      ],
+      [
+        "primaryOnlyCleanupCaught",
+        () =>
+          success.returned &&
+          success.captured === false &&
+          success.cleanupCaught === false &&
+          success.order.join(",") === fullOrder &&
+          primaryOnly.returned &&
+          primaryOnly.captured &&
+          primaryOnly.capturedFailure === primaryFailure &&
+          primaryOnly.cleanupCaught === false,
+      ],
+      [
+        "primaryOnlyOrderJoin",
+        () =>
+          success.returned &&
+          success.captured === false &&
+          success.cleanupCaught === false &&
+          success.order.join(",") === fullOrder &&
+          primaryOnly.returned &&
+          primaryOnly.captured &&
+          primaryOnly.capturedFailure === primaryFailure &&
+          primaryOnly.cleanupCaught === false &&
+          primaryOnly.order.join(",") === fullOrder,
+      ],
+      [
+        "standaloneReturned",
+        () =>
+          success.returned &&
+          success.captured === false &&
+          success.cleanupCaught === false &&
+          success.order.join(",") === fullOrder &&
+          primaryOnly.returned &&
+          primaryOnly.captured &&
+          primaryOnly.capturedFailure === primaryFailure &&
+          primaryOnly.cleanupCaught === false &&
+          primaryOnly.order.join(",") === fullOrder &&
+          standalone.returned === false,
+      ],
+      [
+        "standaloneCaptured",
+        () =>
+          success.returned &&
+          success.captured === false &&
+          success.cleanupCaught === false &&
+          success.order.join(",") === fullOrder &&
+          primaryOnly.returned &&
+          primaryOnly.captured &&
+          primaryOnly.capturedFailure === primaryFailure &&
+          primaryOnly.cleanupCaught === false &&
+          primaryOnly.order.join(",") === fullOrder &&
+          standalone.returned === false &&
+          standalone.captured === false,
+      ],
+      [
+        "standaloneCleanupCaught",
+        () =>
+          success.returned &&
+          success.captured === false &&
+          success.cleanupCaught === false &&
+          success.order.join(",") === fullOrder &&
+          primaryOnly.returned &&
+          primaryOnly.captured &&
+          primaryOnly.capturedFailure === primaryFailure &&
+          primaryOnly.cleanupCaught === false &&
+          primaryOnly.order.join(",") === fullOrder &&
+          standalone.returned === false &&
+          standalone.captured === false &&
+          standalone.cleanupCaught,
+      ],
+      [
+        "standaloneCleanupFailureOpenFailure",
+        () =>
+          success.returned &&
+          success.captured === false &&
+          success.cleanupCaught === false &&
+          success.order.join(",") === fullOrder &&
+          primaryOnly.returned &&
+          primaryOnly.captured &&
+          primaryOnly.capturedFailure === primaryFailure &&
+          primaryOnly.cleanupCaught === false &&
+          primaryOnly.order.join(",") === fullOrder &&
+          standalone.returned === false &&
+          standalone.captured === false &&
+          standalone.cleanupCaught &&
+          standalone.cleanupFailure === openFailure,
+      ],
+      [
+        "standaloneOrderJoin",
+        () =>
+          success.returned &&
+          success.captured === false &&
+          success.cleanupCaught === false &&
+          success.order.join(",") === fullOrder &&
+          primaryOnly.returned &&
+          primaryOnly.captured &&
+          primaryOnly.capturedFailure === primaryFailure &&
+          primaryOnly.cleanupCaught === false &&
+          primaryOnly.order.join(",") === fullOrder &&
+          standalone.returned === false &&
+          standalone.captured === false &&
+          standalone.cleanupCaught &&
+          standalone.cleanupFailure === openFailure &&
+          standalone.order.join(",") === fullOrder,
+      ],
+      [
+        "multipleCleanupCaught",
+        () =>
+          success.returned &&
+          success.captured === false &&
+          success.cleanupCaught === false &&
+          success.order.join(",") === fullOrder &&
+          primaryOnly.returned &&
+          primaryOnly.captured &&
+          primaryOnly.capturedFailure === primaryFailure &&
+          primaryOnly.cleanupCaught === false &&
+          primaryOnly.order.join(",") === fullOrder &&
+          standalone.returned === false &&
+          standalone.captured === false &&
+          standalone.cleanupCaught &&
+          standalone.cleanupFailure === openFailure &&
+          standalone.order.join(",") === fullOrder &&
+          multiple.cleanupCaught,
+      ],
+      [
+        "aggregateContainsExactlyMultipleCleanupFailure",
+        () =>
+          success.returned &&
+          success.captured === false &&
+          success.cleanupCaught === false &&
+          success.order.join(",") === fullOrder &&
+          primaryOnly.returned &&
+          primaryOnly.captured &&
+          primaryOnly.capturedFailure === primaryFailure &&
+          primaryOnly.cleanupCaught === false &&
+          primaryOnly.order.join(",") === fullOrder &&
+          standalone.returned === false &&
+          standalone.captured === false &&
+          standalone.cleanupCaught &&
+          standalone.cleanupFailure === openFailure &&
+          standalone.order.join(",") === fullOrder &&
+          multiple.cleanupCaught &&
+          aggregateContainsExactly(multiple.cleanupFailure, [
+            openFailure,
+            closeFailure,
+          ]),
+      ],
+      [
+        "multipleMessageIncludes",
+        () =>
+          success.returned &&
+          success.captured === false &&
+          success.cleanupCaught === false &&
+          success.order.join(",") === fullOrder &&
+          primaryOnly.returned &&
+          primaryOnly.captured &&
+          primaryOnly.capturedFailure === primaryFailure &&
+          primaryOnly.cleanupCaught === false &&
+          primaryOnly.order.join(",") === fullOrder &&
+          standalone.returned === false &&
+          standalone.captured === false &&
+          standalone.cleanupCaught &&
+          standalone.cleanupFailure === openFailure &&
+          standalone.order.join(",") === fullOrder &&
+          multiple.cleanupCaught &&
+          aggregateContainsExactly(multiple.cleanupFailure, [
+            openFailure,
+            closeFailure,
+          ]) &&
+          multiple.message.includes("hook-0"),
+      ],
+      [
+        "multipleMessageIncludes2",
+        () =>
+          success.returned &&
+          success.captured === false &&
+          success.cleanupCaught === false &&
+          success.order.join(",") === fullOrder &&
+          primaryOnly.returned &&
+          primaryOnly.captured &&
+          primaryOnly.capturedFailure === primaryFailure &&
+          primaryOnly.cleanupCaught === false &&
+          primaryOnly.order.join(",") === fullOrder &&
+          standalone.returned === false &&
+          standalone.captured === false &&
+          standalone.cleanupCaught &&
+          standalone.cleanupFailure === openFailure &&
+          standalone.order.join(",") === fullOrder &&
+          multiple.cleanupCaught &&
+          aggregateContainsExactly(multiple.cleanupFailure, [
+            openFailure,
+            closeFailure,
+          ]) &&
+          multiple.message.includes("hook-0") &&
+          multiple.message.includes("hook-2"),
+      ],
+      [
+        "multipleMessageIncludes3",
+        () =>
+          success.returned &&
+          success.captured === false &&
+          success.cleanupCaught === false &&
+          success.order.join(",") === fullOrder &&
+          primaryOnly.returned &&
+          primaryOnly.captured &&
+          primaryOnly.capturedFailure === primaryFailure &&
+          primaryOnly.cleanupCaught === false &&
+          primaryOnly.order.join(",") === fullOrder &&
+          standalone.returned === false &&
+          standalone.captured === false &&
+          standalone.cleanupCaught &&
+          standalone.cleanupFailure === openFailure &&
+          standalone.order.join(",") === fullOrder &&
+          multiple.cleanupCaught &&
+          aggregateContainsExactly(multiple.cleanupFailure, [
+            openFailure,
+            closeFailure,
+          ]) &&
+          multiple.message.includes("hook-0") &&
+          multiple.message.includes("hook-2") &&
+          multiple.message.includes("hook-1") === false,
+      ],
+      [
+        "multipleOrderJoin",
+        () =>
+          success.returned &&
+          success.captured === false &&
+          success.cleanupCaught === false &&
+          success.order.join(",") === fullOrder &&
+          primaryOnly.returned &&
+          primaryOnly.captured &&
+          primaryOnly.capturedFailure === primaryFailure &&
+          primaryOnly.cleanupCaught === false &&
+          primaryOnly.order.join(",") === fullOrder &&
+          standalone.returned === false &&
+          standalone.captured === false &&
+          standalone.cleanupCaught &&
+          standalone.cleanupFailure === openFailure &&
+          standalone.order.join(",") === fullOrder &&
+          multiple.cleanupCaught &&
+          aggregateContainsExactly(multiple.cleanupFailure, [
+            openFailure,
+            closeFailure,
+          ]) &&
+          multiple.message.includes("hook-0") &&
+          multiple.message.includes("hook-2") &&
+          multiple.message.includes("hook-1") === false &&
+          multiple.order.join(",") === fullOrder,
+      ],
+      [
+        "combinedCaptured",
+        () =>
+          success.returned &&
+          success.captured === false &&
+          success.cleanupCaught === false &&
+          success.order.join(",") === fullOrder &&
+          primaryOnly.returned &&
+          primaryOnly.captured &&
+          primaryOnly.capturedFailure === primaryFailure &&
+          primaryOnly.cleanupCaught === false &&
+          primaryOnly.order.join(",") === fullOrder &&
+          standalone.returned === false &&
+          standalone.captured === false &&
+          standalone.cleanupCaught &&
+          standalone.cleanupFailure === openFailure &&
+          standalone.order.join(",") === fullOrder &&
+          multiple.cleanupCaught &&
+          aggregateContainsExactly(multiple.cleanupFailure, [
+            openFailure,
+            closeFailure,
+          ]) &&
+          multiple.message.includes("hook-0") &&
+          multiple.message.includes("hook-2") &&
+          multiple.message.includes("hook-1") === false &&
+          multiple.order.join(",") === fullOrder &&
+          combined.captured,
+      ],
+      [
+        "combinedCapturedFailurePrimaryFailure",
+        () =>
+          success.returned &&
+          success.captured === false &&
+          success.cleanupCaught === false &&
+          success.order.join(",") === fullOrder &&
+          primaryOnly.returned &&
+          primaryOnly.captured &&
+          primaryOnly.capturedFailure === primaryFailure &&
+          primaryOnly.cleanupCaught === false &&
+          primaryOnly.order.join(",") === fullOrder &&
+          standalone.returned === false &&
+          standalone.captured === false &&
+          standalone.cleanupCaught &&
+          standalone.cleanupFailure === openFailure &&
+          standalone.order.join(",") === fullOrder &&
+          multiple.cleanupCaught &&
+          aggregateContainsExactly(multiple.cleanupFailure, [
+            openFailure,
+            closeFailure,
+          ]) &&
+          multiple.message.includes("hook-0") &&
+          multiple.message.includes("hook-2") &&
+          multiple.message.includes("hook-1") === false &&
+          multiple.order.join(",") === fullOrder &&
+          combined.captured &&
+          combined.capturedFailure === primaryFailure,
+      ],
+      [
+        "combinedCleanupCaught",
+        () =>
+          success.returned &&
+          success.captured === false &&
+          success.cleanupCaught === false &&
+          success.order.join(",") === fullOrder &&
+          primaryOnly.returned &&
+          primaryOnly.captured &&
+          primaryOnly.capturedFailure === primaryFailure &&
+          primaryOnly.cleanupCaught === false &&
+          primaryOnly.order.join(",") === fullOrder &&
+          standalone.returned === false &&
+          standalone.captured === false &&
+          standalone.cleanupCaught &&
+          standalone.cleanupFailure === openFailure &&
+          standalone.order.join(",") === fullOrder &&
+          multiple.cleanupCaught &&
+          aggregateContainsExactly(multiple.cleanupFailure, [
+            openFailure,
+            closeFailure,
+          ]) &&
+          multiple.message.includes("hook-0") &&
+          multiple.message.includes("hook-2") &&
+          multiple.message.includes("hook-1") === false &&
+          multiple.order.join(",") === fullOrder &&
+          combined.captured &&
+          combined.capturedFailure === primaryFailure &&
+          combined.cleanupCaught,
+      ],
+      [
+        "aggregateContainsExactlyCombinedCleanupFailure",
+        () =>
+          success.returned &&
+          success.captured === false &&
+          success.cleanupCaught === false &&
+          success.order.join(",") === fullOrder &&
+          primaryOnly.returned &&
+          primaryOnly.captured &&
+          primaryOnly.capturedFailure === primaryFailure &&
+          primaryOnly.cleanupCaught === false &&
+          primaryOnly.order.join(",") === fullOrder &&
+          standalone.returned === false &&
+          standalone.captured === false &&
+          standalone.cleanupCaught &&
+          standalone.cleanupFailure === openFailure &&
+          standalone.order.join(",") === fullOrder &&
+          multiple.cleanupCaught &&
+          aggregateContainsExactly(multiple.cleanupFailure, [
+            openFailure,
+            closeFailure,
+          ]) &&
+          multiple.message.includes("hook-0") &&
+          multiple.message.includes("hook-2") &&
+          multiple.message.includes("hook-1") === false &&
+          multiple.order.join(",") === fullOrder &&
+          combined.captured &&
+          combined.capturedFailure === primaryFailure &&
+          combined.cleanupCaught &&
+          aggregateContainsExactly(combined.cleanupFailure, [
+            primaryFailure,
+            openFailure,
+            closeFailure,
+          ]),
+      ],
+      [
+        "combinedOrderJoin",
+        () =>
+          success.returned &&
+          success.captured === false &&
+          success.cleanupCaught === false &&
+          success.order.join(",") === fullOrder &&
+          primaryOnly.returned &&
+          primaryOnly.captured &&
+          primaryOnly.capturedFailure === primaryFailure &&
+          primaryOnly.cleanupCaught === false &&
+          primaryOnly.order.join(",") === fullOrder &&
+          standalone.returned === false &&
+          standalone.captured === false &&
+          standalone.cleanupCaught &&
+          standalone.cleanupFailure === openFailure &&
+          standalone.order.join(",") === fullOrder &&
+          multiple.cleanupCaught &&
+          aggregateContainsExactly(multiple.cleanupFailure, [
+            openFailure,
+            closeFailure,
+          ]) &&
+          multiple.message.includes("hook-0") &&
+          multiple.message.includes("hook-2") &&
+          multiple.message.includes("hook-1") === false &&
+          multiple.order.join(",") === fullOrder &&
+          combined.captured &&
+          combined.capturedFailure === primaryFailure &&
+          combined.cleanupCaught &&
+          aggregateContainsExactly(combined.cleanupFailure, [
+            primaryFailure,
+            openFailure,
+            closeFailure,
+          ]) &&
+          combined.order.join(",") === fullOrder,
+      ],
+      [
+        "undefinedPrimaryReturned",
+        () =>
+          success.returned &&
+          success.captured === false &&
+          success.cleanupCaught === false &&
+          success.order.join(",") === fullOrder &&
+          primaryOnly.returned &&
+          primaryOnly.captured &&
+          primaryOnly.capturedFailure === primaryFailure &&
+          primaryOnly.cleanupCaught === false &&
+          primaryOnly.order.join(",") === fullOrder &&
+          standalone.returned === false &&
+          standalone.captured === false &&
+          standalone.cleanupCaught &&
+          standalone.cleanupFailure === openFailure &&
+          standalone.order.join(",") === fullOrder &&
+          multiple.cleanupCaught &&
+          aggregateContainsExactly(multiple.cleanupFailure, [
+            openFailure,
+            closeFailure,
+          ]) &&
+          multiple.message.includes("hook-0") &&
+          multiple.message.includes("hook-2") &&
+          multiple.message.includes("hook-1") === false &&
+          multiple.order.join(",") === fullOrder &&
+          combined.captured &&
+          combined.capturedFailure === primaryFailure &&
+          combined.cleanupCaught &&
+          aggregateContainsExactly(combined.cleanupFailure, [
+            primaryFailure,
+            openFailure,
+            closeFailure,
+          ]) &&
+          combined.order.join(",") === fullOrder &&
+          undefinedPrimary.returned,
+      ],
+      [
+        "undefinedPrimaryCaptured",
+        () =>
+          success.returned &&
+          success.captured === false &&
+          success.cleanupCaught === false &&
+          success.order.join(",") === fullOrder &&
+          primaryOnly.returned &&
+          primaryOnly.captured &&
+          primaryOnly.capturedFailure === primaryFailure &&
+          primaryOnly.cleanupCaught === false &&
+          primaryOnly.order.join(",") === fullOrder &&
+          standalone.returned === false &&
+          standalone.captured === false &&
+          standalone.cleanupCaught &&
+          standalone.cleanupFailure === openFailure &&
+          standalone.order.join(",") === fullOrder &&
+          multiple.cleanupCaught &&
+          aggregateContainsExactly(multiple.cleanupFailure, [
+            openFailure,
+            closeFailure,
+          ]) &&
+          multiple.message.includes("hook-0") &&
+          multiple.message.includes("hook-2") &&
+          multiple.message.includes("hook-1") === false &&
+          multiple.order.join(",") === fullOrder &&
+          combined.captured &&
+          combined.capturedFailure === primaryFailure &&
+          combined.cleanupCaught &&
+          aggregateContainsExactly(combined.cleanupFailure, [
+            primaryFailure,
+            openFailure,
+            closeFailure,
+          ]) &&
+          combined.order.join(",") === fullOrder &&
+          undefinedPrimary.returned &&
+          undefinedPrimary.captured,
+      ],
+      [
+        "undefinedPrimaryCapturedFailure",
+        () =>
+          success.returned &&
+          success.captured === false &&
+          success.cleanupCaught === false &&
+          success.order.join(",") === fullOrder &&
+          primaryOnly.returned &&
+          primaryOnly.captured &&
+          primaryOnly.capturedFailure === primaryFailure &&
+          primaryOnly.cleanupCaught === false &&
+          primaryOnly.order.join(",") === fullOrder &&
+          standalone.returned === false &&
+          standalone.captured === false &&
+          standalone.cleanupCaught &&
+          standalone.cleanupFailure === openFailure &&
+          standalone.order.join(",") === fullOrder &&
+          multiple.cleanupCaught &&
+          aggregateContainsExactly(multiple.cleanupFailure, [
+            openFailure,
+            closeFailure,
+          ]) &&
+          multiple.message.includes("hook-0") &&
+          multiple.message.includes("hook-2") &&
+          multiple.message.includes("hook-1") === false &&
+          multiple.order.join(",") === fullOrder &&
+          combined.captured &&
+          combined.capturedFailure === primaryFailure &&
+          combined.cleanupCaught &&
+          aggregateContainsExactly(combined.cleanupFailure, [
+            primaryFailure,
+            openFailure,
+            closeFailure,
+          ]) &&
+          combined.order.join(",") === fullOrder &&
+          undefinedPrimary.returned &&
+          undefinedPrimary.captured &&
+          undefinedPrimary.capturedFailure === undefined,
+      ],
+      [
+        "undefinedPrimaryCleanupCaught",
+        () =>
+          success.returned &&
+          success.captured === false &&
+          success.cleanupCaught === false &&
+          success.order.join(",") === fullOrder &&
+          primaryOnly.returned &&
+          primaryOnly.captured &&
+          primaryOnly.capturedFailure === primaryFailure &&
+          primaryOnly.cleanupCaught === false &&
+          primaryOnly.order.join(",") === fullOrder &&
+          standalone.returned === false &&
+          standalone.captured === false &&
+          standalone.cleanupCaught &&
+          standalone.cleanupFailure === openFailure &&
+          standalone.order.join(",") === fullOrder &&
+          multiple.cleanupCaught &&
+          aggregateContainsExactly(multiple.cleanupFailure, [
+            openFailure,
+            closeFailure,
+          ]) &&
+          multiple.message.includes("hook-0") &&
+          multiple.message.includes("hook-2") &&
+          multiple.message.includes("hook-1") === false &&
+          multiple.order.join(",") === fullOrder &&
+          combined.captured &&
+          combined.capturedFailure === primaryFailure &&
+          combined.cleanupCaught &&
+          aggregateContainsExactly(combined.cleanupFailure, [
+            primaryFailure,
+            openFailure,
+            closeFailure,
+          ]) &&
+          combined.order.join(",") === fullOrder &&
+          undefinedPrimary.returned &&
+          undefinedPrimary.captured &&
+          undefinedPrimary.capturedFailure === undefined &&
+          undefinedPrimary.cleanupCaught === false,
+      ],
+      [
+        "undefinedPrimaryOrderJoin",
+        () =>
+          success.returned &&
+          success.captured === false &&
+          success.cleanupCaught === false &&
+          success.order.join(",") === fullOrder &&
+          primaryOnly.returned &&
+          primaryOnly.captured &&
+          primaryOnly.capturedFailure === primaryFailure &&
+          primaryOnly.cleanupCaught === false &&
+          primaryOnly.order.join(",") === fullOrder &&
+          standalone.returned === false &&
+          standalone.captured === false &&
+          standalone.cleanupCaught &&
+          standalone.cleanupFailure === openFailure &&
+          standalone.order.join(",") === fullOrder &&
+          multiple.cleanupCaught &&
+          aggregateContainsExactly(multiple.cleanupFailure, [
+            openFailure,
+            closeFailure,
+          ]) &&
+          multiple.message.includes("hook-0") &&
+          multiple.message.includes("hook-2") &&
+          multiple.message.includes("hook-1") === false &&
+          multiple.order.join(",") === fullOrder &&
+          combined.captured &&
+          combined.capturedFailure === primaryFailure &&
+          combined.cleanupCaught &&
+          aggregateContainsExactly(combined.cleanupFailure, [
+            primaryFailure,
+            openFailure,
+            closeFailure,
+          ]) &&
+          combined.order.join(",") === fullOrder &&
+          undefinedPrimary.returned &&
+          undefinedPrimary.captured &&
+          undefinedPrimary.capturedFailure === undefined &&
+          undefinedPrimary.cleanupCaught === false &&
+          undefinedPrimary.order.join(",") === fullOrder,
+      ],
+      [
+        "undefinedStandaloneReturned",
+        () =>
+          success.returned &&
+          success.captured === false &&
+          success.cleanupCaught === false &&
+          success.order.join(",") === fullOrder &&
+          primaryOnly.returned &&
+          primaryOnly.captured &&
+          primaryOnly.capturedFailure === primaryFailure &&
+          primaryOnly.cleanupCaught === false &&
+          primaryOnly.order.join(",") === fullOrder &&
+          standalone.returned === false &&
+          standalone.captured === false &&
+          standalone.cleanupCaught &&
+          standalone.cleanupFailure === openFailure &&
+          standalone.order.join(",") === fullOrder &&
+          multiple.cleanupCaught &&
+          aggregateContainsExactly(multiple.cleanupFailure, [
+            openFailure,
+            closeFailure,
+          ]) &&
+          multiple.message.includes("hook-0") &&
+          multiple.message.includes("hook-2") &&
+          multiple.message.includes("hook-1") === false &&
+          multiple.order.join(",") === fullOrder &&
+          combined.captured &&
+          combined.capturedFailure === primaryFailure &&
+          combined.cleanupCaught &&
+          aggregateContainsExactly(combined.cleanupFailure, [
+            primaryFailure,
+            openFailure,
+            closeFailure,
+          ]) &&
+          combined.order.join(",") === fullOrder &&
+          undefinedPrimary.returned &&
+          undefinedPrimary.captured &&
+          undefinedPrimary.capturedFailure === undefined &&
+          undefinedPrimary.cleanupCaught === false &&
+          undefinedPrimary.order.join(",") === fullOrder &&
+          undefinedStandalone.returned === false,
+      ],
+      [
+        "undefinedStandaloneCaptured",
+        () =>
+          success.returned &&
+          success.captured === false &&
+          success.cleanupCaught === false &&
+          success.order.join(",") === fullOrder &&
+          primaryOnly.returned &&
+          primaryOnly.captured &&
+          primaryOnly.capturedFailure === primaryFailure &&
+          primaryOnly.cleanupCaught === false &&
+          primaryOnly.order.join(",") === fullOrder &&
+          standalone.returned === false &&
+          standalone.captured === false &&
+          standalone.cleanupCaught &&
+          standalone.cleanupFailure === openFailure &&
+          standalone.order.join(",") === fullOrder &&
+          multiple.cleanupCaught &&
+          aggregateContainsExactly(multiple.cleanupFailure, [
+            openFailure,
+            closeFailure,
+          ]) &&
+          multiple.message.includes("hook-0") &&
+          multiple.message.includes("hook-2") &&
+          multiple.message.includes("hook-1") === false &&
+          multiple.order.join(",") === fullOrder &&
+          combined.captured &&
+          combined.capturedFailure === primaryFailure &&
+          combined.cleanupCaught &&
+          aggregateContainsExactly(combined.cleanupFailure, [
+            primaryFailure,
+            openFailure,
+            closeFailure,
+          ]) &&
+          combined.order.join(",") === fullOrder &&
+          undefinedPrimary.returned &&
+          undefinedPrimary.captured &&
+          undefinedPrimary.capturedFailure === undefined &&
+          undefinedPrimary.cleanupCaught === false &&
+          undefinedPrimary.order.join(",") === fullOrder &&
+          undefinedStandalone.returned === false &&
+          undefinedStandalone.captured === false,
+      ],
+      [
+        "undefinedStandaloneCleanupCaught",
+        () =>
+          success.returned &&
+          success.captured === false &&
+          success.cleanupCaught === false &&
+          success.order.join(",") === fullOrder &&
+          primaryOnly.returned &&
+          primaryOnly.captured &&
+          primaryOnly.capturedFailure === primaryFailure &&
+          primaryOnly.cleanupCaught === false &&
+          primaryOnly.order.join(",") === fullOrder &&
+          standalone.returned === false &&
+          standalone.captured === false &&
+          standalone.cleanupCaught &&
+          standalone.cleanupFailure === openFailure &&
+          standalone.order.join(",") === fullOrder &&
+          multiple.cleanupCaught &&
+          aggregateContainsExactly(multiple.cleanupFailure, [
+            openFailure,
+            closeFailure,
+          ]) &&
+          multiple.message.includes("hook-0") &&
+          multiple.message.includes("hook-2") &&
+          multiple.message.includes("hook-1") === false &&
+          multiple.order.join(",") === fullOrder &&
+          combined.captured &&
+          combined.capturedFailure === primaryFailure &&
+          combined.cleanupCaught &&
+          aggregateContainsExactly(combined.cleanupFailure, [
+            primaryFailure,
+            openFailure,
+            closeFailure,
+          ]) &&
+          combined.order.join(",") === fullOrder &&
+          undefinedPrimary.returned &&
+          undefinedPrimary.captured &&
+          undefinedPrimary.capturedFailure === undefined &&
+          undefinedPrimary.cleanupCaught === false &&
+          undefinedPrimary.order.join(",") === fullOrder &&
+          undefinedStandalone.returned === false &&
+          undefinedStandalone.captured === false &&
+          undefinedStandalone.cleanupCaught,
+      ],
+      [
+        "undefinedStandaloneCleanupFailure",
+        () =>
+          success.returned &&
+          success.captured === false &&
+          success.cleanupCaught === false &&
+          success.order.join(",") === fullOrder &&
+          primaryOnly.returned &&
+          primaryOnly.captured &&
+          primaryOnly.capturedFailure === primaryFailure &&
+          primaryOnly.cleanupCaught === false &&
+          primaryOnly.order.join(",") === fullOrder &&
+          standalone.returned === false &&
+          standalone.captured === false &&
+          standalone.cleanupCaught &&
+          standalone.cleanupFailure === openFailure &&
+          standalone.order.join(",") === fullOrder &&
+          multiple.cleanupCaught &&
+          aggregateContainsExactly(multiple.cleanupFailure, [
+            openFailure,
+            closeFailure,
+          ]) &&
+          multiple.message.includes("hook-0") &&
+          multiple.message.includes("hook-2") &&
+          multiple.message.includes("hook-1") === false &&
+          multiple.order.join(",") === fullOrder &&
+          combined.captured &&
+          combined.capturedFailure === primaryFailure &&
+          combined.cleanupCaught &&
+          aggregateContainsExactly(combined.cleanupFailure, [
+            primaryFailure,
+            openFailure,
+            closeFailure,
+          ]) &&
+          combined.order.join(",") === fullOrder &&
+          undefinedPrimary.returned &&
+          undefinedPrimary.captured &&
+          undefinedPrimary.capturedFailure === undefined &&
+          undefinedPrimary.cleanupCaught === false &&
+          undefinedPrimary.order.join(",") === fullOrder &&
+          undefinedStandalone.returned === false &&
+          undefinedStandalone.captured === false &&
+          undefinedStandalone.cleanupCaught &&
+          undefinedStandalone.cleanupFailure === undefined,
+      ],
+      [
+        "undefinedStandaloneOrderJoin",
+        () =>
+          success.returned &&
+          success.captured === false &&
+          success.cleanupCaught === false &&
+          success.order.join(",") === fullOrder &&
+          primaryOnly.returned &&
+          primaryOnly.captured &&
+          primaryOnly.capturedFailure === primaryFailure &&
+          primaryOnly.cleanupCaught === false &&
+          primaryOnly.order.join(",") === fullOrder &&
+          standalone.returned === false &&
+          standalone.captured === false &&
+          standalone.cleanupCaught &&
+          standalone.cleanupFailure === openFailure &&
+          standalone.order.join(",") === fullOrder &&
+          multiple.cleanupCaught &&
+          aggregateContainsExactly(multiple.cleanupFailure, [
+            openFailure,
+            closeFailure,
+          ]) &&
+          multiple.message.includes("hook-0") &&
+          multiple.message.includes("hook-2") &&
+          multiple.message.includes("hook-1") === false &&
+          multiple.order.join(",") === fullOrder &&
+          combined.captured &&
+          combined.capturedFailure === primaryFailure &&
+          combined.cleanupCaught &&
+          aggregateContainsExactly(combined.cleanupFailure, [
+            primaryFailure,
+            openFailure,
+            closeFailure,
+          ]) &&
+          combined.order.join(",") === fullOrder &&
+          undefinedPrimary.returned &&
+          undefinedPrimary.captured &&
+          undefinedPrimary.capturedFailure === undefined &&
+          undefinedPrimary.cleanupCaught === false &&
+          undefinedPrimary.order.join(",") === fullOrder &&
+          undefinedStandalone.returned === false &&
+          undefinedStandalone.captured === false &&
+          undefinedStandalone.cleanupCaught &&
+          undefinedStandalone.cleanupFailure === undefined &&
+          undefinedStandalone.order.join(",") === fullOrder,
+      ],
+      [
+        "undefinedCombinedReturned",
+        () =>
+          success.returned &&
+          success.captured === false &&
+          success.cleanupCaught === false &&
+          success.order.join(",") === fullOrder &&
+          primaryOnly.returned &&
+          primaryOnly.captured &&
+          primaryOnly.capturedFailure === primaryFailure &&
+          primaryOnly.cleanupCaught === false &&
+          primaryOnly.order.join(",") === fullOrder &&
+          standalone.returned === false &&
+          standalone.captured === false &&
+          standalone.cleanupCaught &&
+          standalone.cleanupFailure === openFailure &&
+          standalone.order.join(",") === fullOrder &&
+          multiple.cleanupCaught &&
+          aggregateContainsExactly(multiple.cleanupFailure, [
+            openFailure,
+            closeFailure,
+          ]) &&
+          multiple.message.includes("hook-0") &&
+          multiple.message.includes("hook-2") &&
+          multiple.message.includes("hook-1") === false &&
+          multiple.order.join(",") === fullOrder &&
+          combined.captured &&
+          combined.capturedFailure === primaryFailure &&
+          combined.cleanupCaught &&
+          aggregateContainsExactly(combined.cleanupFailure, [
+            primaryFailure,
+            openFailure,
+            closeFailure,
+          ]) &&
+          combined.order.join(",") === fullOrder &&
+          undefinedPrimary.returned &&
+          undefinedPrimary.captured &&
+          undefinedPrimary.capturedFailure === undefined &&
+          undefinedPrimary.cleanupCaught === false &&
+          undefinedPrimary.order.join(",") === fullOrder &&
+          undefinedStandalone.returned === false &&
+          undefinedStandalone.captured === false &&
+          undefinedStandalone.cleanupCaught &&
+          undefinedStandalone.cleanupFailure === undefined &&
+          undefinedStandalone.order.join(",") === fullOrder &&
+          undefinedCombined.returned === false,
+      ],
+      [
+        "undefinedCombinedCaptured",
+        () =>
+          success.returned &&
+          success.captured === false &&
+          success.cleanupCaught === false &&
+          success.order.join(",") === fullOrder &&
+          primaryOnly.returned &&
+          primaryOnly.captured &&
+          primaryOnly.capturedFailure === primaryFailure &&
+          primaryOnly.cleanupCaught === false &&
+          primaryOnly.order.join(",") === fullOrder &&
+          standalone.returned === false &&
+          standalone.captured === false &&
+          standalone.cleanupCaught &&
+          standalone.cleanupFailure === openFailure &&
+          standalone.order.join(",") === fullOrder &&
+          multiple.cleanupCaught &&
+          aggregateContainsExactly(multiple.cleanupFailure, [
+            openFailure,
+            closeFailure,
+          ]) &&
+          multiple.message.includes("hook-0") &&
+          multiple.message.includes("hook-2") &&
+          multiple.message.includes("hook-1") === false &&
+          multiple.order.join(",") === fullOrder &&
+          combined.captured &&
+          combined.capturedFailure === primaryFailure &&
+          combined.cleanupCaught &&
+          aggregateContainsExactly(combined.cleanupFailure, [
+            primaryFailure,
+            openFailure,
+            closeFailure,
+          ]) &&
+          combined.order.join(",") === fullOrder &&
+          undefinedPrimary.returned &&
+          undefinedPrimary.captured &&
+          undefinedPrimary.capturedFailure === undefined &&
+          undefinedPrimary.cleanupCaught === false &&
+          undefinedPrimary.order.join(",") === fullOrder &&
+          undefinedStandalone.returned === false &&
+          undefinedStandalone.captured === false &&
+          undefinedStandalone.cleanupCaught &&
+          undefinedStandalone.cleanupFailure === undefined &&
+          undefinedStandalone.order.join(",") === fullOrder &&
+          undefinedCombined.returned === false &&
+          undefinedCombined.captured,
+      ],
+      [
+        "undefinedCombinedCapturedFailure",
+        () =>
+          success.returned &&
+          success.captured === false &&
+          success.cleanupCaught === false &&
+          success.order.join(",") === fullOrder &&
+          primaryOnly.returned &&
+          primaryOnly.captured &&
+          primaryOnly.capturedFailure === primaryFailure &&
+          primaryOnly.cleanupCaught === false &&
+          primaryOnly.order.join(",") === fullOrder &&
+          standalone.returned === false &&
+          standalone.captured === false &&
+          standalone.cleanupCaught &&
+          standalone.cleanupFailure === openFailure &&
+          standalone.order.join(",") === fullOrder &&
+          multiple.cleanupCaught &&
+          aggregateContainsExactly(multiple.cleanupFailure, [
+            openFailure,
+            closeFailure,
+          ]) &&
+          multiple.message.includes("hook-0") &&
+          multiple.message.includes("hook-2") &&
+          multiple.message.includes("hook-1") === false &&
+          multiple.order.join(",") === fullOrder &&
+          combined.captured &&
+          combined.capturedFailure === primaryFailure &&
+          combined.cleanupCaught &&
+          aggregateContainsExactly(combined.cleanupFailure, [
+            primaryFailure,
+            openFailure,
+            closeFailure,
+          ]) &&
+          combined.order.join(",") === fullOrder &&
+          undefinedPrimary.returned &&
+          undefinedPrimary.captured &&
+          undefinedPrimary.capturedFailure === undefined &&
+          undefinedPrimary.cleanupCaught === false &&
+          undefinedPrimary.order.join(",") === fullOrder &&
+          undefinedStandalone.returned === false &&
+          undefinedStandalone.captured === false &&
+          undefinedStandalone.cleanupCaught &&
+          undefinedStandalone.cleanupFailure === undefined &&
+          undefinedStandalone.order.join(",") === fullOrder &&
+          undefinedCombined.returned === false &&
+          undefinedCombined.captured &&
+          undefinedCombined.capturedFailure === undefined,
+      ],
+      [
+        "undefinedCombinedCleanupCaught",
+        () =>
+          success.returned &&
+          success.captured === false &&
+          success.cleanupCaught === false &&
+          success.order.join(",") === fullOrder &&
+          primaryOnly.returned &&
+          primaryOnly.captured &&
+          primaryOnly.capturedFailure === primaryFailure &&
+          primaryOnly.cleanupCaught === false &&
+          primaryOnly.order.join(",") === fullOrder &&
+          standalone.returned === false &&
+          standalone.captured === false &&
+          standalone.cleanupCaught &&
+          standalone.cleanupFailure === openFailure &&
+          standalone.order.join(",") === fullOrder &&
+          multiple.cleanupCaught &&
+          aggregateContainsExactly(multiple.cleanupFailure, [
+            openFailure,
+            closeFailure,
+          ]) &&
+          multiple.message.includes("hook-0") &&
+          multiple.message.includes("hook-2") &&
+          multiple.message.includes("hook-1") === false &&
+          multiple.order.join(",") === fullOrder &&
+          combined.captured &&
+          combined.capturedFailure === primaryFailure &&
+          combined.cleanupCaught &&
+          aggregateContainsExactly(combined.cleanupFailure, [
+            primaryFailure,
+            openFailure,
+            closeFailure,
+          ]) &&
+          combined.order.join(",") === fullOrder &&
+          undefinedPrimary.returned &&
+          undefinedPrimary.captured &&
+          undefinedPrimary.capturedFailure === undefined &&
+          undefinedPrimary.cleanupCaught === false &&
+          undefinedPrimary.order.join(",") === fullOrder &&
+          undefinedStandalone.returned === false &&
+          undefinedStandalone.captured === false &&
+          undefinedStandalone.cleanupCaught &&
+          undefinedStandalone.cleanupFailure === undefined &&
+          undefinedStandalone.order.join(",") === fullOrder &&
+          undefinedCombined.returned === false &&
+          undefinedCombined.captured &&
+          undefinedCombined.capturedFailure === undefined &&
+          undefinedCombined.cleanupCaught,
+      ],
+      [
+        "aggregateContainsExactlyUndefinedCombinedCleanupFailure",
+        () =>
+          success.returned &&
+          success.captured === false &&
+          success.cleanupCaught === false &&
+          success.order.join(",") === fullOrder &&
+          primaryOnly.returned &&
+          primaryOnly.captured &&
+          primaryOnly.capturedFailure === primaryFailure &&
+          primaryOnly.cleanupCaught === false &&
+          primaryOnly.order.join(",") === fullOrder &&
+          standalone.returned === false &&
+          standalone.captured === false &&
+          standalone.cleanupCaught &&
+          standalone.cleanupFailure === openFailure &&
+          standalone.order.join(",") === fullOrder &&
+          multiple.cleanupCaught &&
+          aggregateContainsExactly(multiple.cleanupFailure, [
+            openFailure,
+            closeFailure,
+          ]) &&
+          multiple.message.includes("hook-0") &&
+          multiple.message.includes("hook-2") &&
+          multiple.message.includes("hook-1") === false &&
+          multiple.order.join(",") === fullOrder &&
+          combined.captured &&
+          combined.capturedFailure === primaryFailure &&
+          combined.cleanupCaught &&
+          aggregateContainsExactly(combined.cleanupFailure, [
+            primaryFailure,
+            openFailure,
+            closeFailure,
+          ]) &&
+          combined.order.join(",") === fullOrder &&
+          undefinedPrimary.returned &&
+          undefinedPrimary.captured &&
+          undefinedPrimary.capturedFailure === undefined &&
+          undefinedPrimary.cleanupCaught === false &&
+          undefinedPrimary.order.join(",") === fullOrder &&
+          undefinedStandalone.returned === false &&
+          undefinedStandalone.captured === false &&
+          undefinedStandalone.cleanupCaught &&
+          undefinedStandalone.cleanupFailure === undefined &&
+          undefinedStandalone.order.join(",") === fullOrder &&
+          undefinedCombined.returned === false &&
+          undefinedCombined.captured &&
+          undefinedCombined.capturedFailure === undefined &&
+          undefinedCombined.cleanupCaught &&
+          aggregateContainsExactly(undefinedCombined.cleanupFailure, [
+            undefined,
+            undefined,
+          ]),
+      ],
+      [
+        "undefinedCombinedOrderJoin",
+        () =>
+          success.returned &&
+          success.captured === false &&
+          success.cleanupCaught === false &&
+          success.order.join(",") === fullOrder &&
+          primaryOnly.returned &&
+          primaryOnly.captured &&
+          primaryOnly.capturedFailure === primaryFailure &&
+          primaryOnly.cleanupCaught === false &&
+          primaryOnly.order.join(",") === fullOrder &&
+          standalone.returned === false &&
+          standalone.captured === false &&
+          standalone.cleanupCaught &&
+          standalone.cleanupFailure === openFailure &&
+          standalone.order.join(",") === fullOrder &&
+          multiple.cleanupCaught &&
+          aggregateContainsExactly(multiple.cleanupFailure, [
+            openFailure,
+            closeFailure,
+          ]) &&
+          multiple.message.includes("hook-0") &&
+          multiple.message.includes("hook-2") &&
+          multiple.message.includes("hook-1") === false &&
+          multiple.order.join(",") === fullOrder &&
+          combined.captured &&
+          combined.capturedFailure === primaryFailure &&
+          combined.cleanupCaught &&
+          aggregateContainsExactly(combined.cleanupFailure, [
+            primaryFailure,
+            openFailure,
+            closeFailure,
+          ]) &&
+          combined.order.join(",") === fullOrder &&
+          undefinedPrimary.returned &&
+          undefinedPrimary.captured &&
+          undefinedPrimary.capturedFailure === undefined &&
+          undefinedPrimary.cleanupCaught === false &&
+          undefinedPrimary.order.join(",") === fullOrder &&
+          undefinedStandalone.returned === false &&
+          undefinedStandalone.captured === false &&
+          undefinedStandalone.cleanupCaught &&
+          undefinedStandalone.cleanupFailure === undefined &&
+          undefinedStandalone.order.join(",") === fullOrder &&
+          undefinedCombined.returned === false &&
+          undefinedCombined.captured &&
+          undefinedCombined.capturedFailure === undefined &&
+          undefinedCombined.cleanupCaught &&
+          aggregateContainsExactly(undefinedCombined.cleanupFailure, [
+            undefined,
+            undefined,
+          ]) &&
+          undefinedCombined.order.join(",") === fullOrder,
+      ],
+    ]),
+    {
+      successReturned: true,
+      successCaptured: true,
+      successCleanupCaught: true,
+      successOrderJoin: true,
+      primaryOnlyReturned: true,
+      primaryOnlyCaptured: true,
+      primaryOnlyCapturedFailurePrimaryFailure: true,
+      primaryOnlyCleanupCaught: true,
+      primaryOnlyOrderJoin: true,
+      standaloneReturned: true,
+      standaloneCaptured: true,
+      standaloneCleanupCaught: true,
+      standaloneCleanupFailureOpenFailure: true,
+      standaloneOrderJoin: true,
+      multipleCleanupCaught: true,
+      aggregateContainsExactlyMultipleCleanupFailure: true,
+      multipleMessageIncludes: true,
+      multipleMessageIncludes2: true,
+      multipleMessageIncludes3: true,
+      multipleOrderJoin: true,
+      combinedCaptured: true,
+      combinedCapturedFailurePrimaryFailure: true,
+      combinedCleanupCaught: true,
+      aggregateContainsExactlyCombinedCleanupFailure: true,
+      combinedOrderJoin: true,
+      undefinedPrimaryReturned: true,
+      undefinedPrimaryCaptured: true,
+      undefinedPrimaryCapturedFailure: true,
+      undefinedPrimaryCleanupCaught: true,
+      undefinedPrimaryOrderJoin: true,
+      undefinedStandaloneReturned: true,
+      undefinedStandaloneCaptured: true,
+      undefinedStandaloneCleanupCaught: true,
+      undefinedStandaloneCleanupFailure: true,
+      undefinedStandaloneOrderJoin: true,
+      undefinedCombinedReturned: true,
+      undefinedCombinedCaptured: true,
+      undefinedCombinedCapturedFailure: true,
+      undefinedCombinedCleanupCaught: true,
+      aggregateContainsExactlyUndefinedCombinedCleanupFailure: true,
+      undefinedCombinedOrderJoin: true,
+    },
   );
   TestValidator.equals(
     "render-job descriptor capture owns its three hook restorations",

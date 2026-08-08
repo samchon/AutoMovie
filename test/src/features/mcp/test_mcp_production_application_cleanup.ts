@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import ts from "typescript-compiler";
 
+import { namedFacts } from "../internal/predicates";
 import { preserveProductionApplicationCleanup } from "./test_mcp_production_application";
 
 const compact = (node: ts.Node, source: ts.SourceFile): string =>
@@ -271,72 +272,1750 @@ export const test_mcp_production_application_cleanup =
       fixtureFailure: { error: undefined, present: true },
       primaryFailure: { error: undefined, present: true },
     });
-    TestValidator.predicate(
+    TestValidator.equals(
       "production-application cleanup preserves acquisition and failure order",
-      success.caught === false &&
-        success.failure === undefined &&
-        success.connectionAttempts.join(",") === "1,1" &&
-        success.fixtureAttempts === 1 &&
-        success.order.join(",") === "connection-0,connection-1,fixture" &&
-        fixtureOnlySetup.caught &&
-        fixtureOnlySetup.failure === primaryFailure &&
-        fixtureOnlySetup.connectionAttempts.length === 0 &&
-        fixtureOnlySetup.fixtureAttempts === 1 &&
-        fixtureOnlySetup.order.join(",") === "fixture" &&
-        partialSetup.caught &&
-        partialSetup.failure === primaryFailure &&
-        partialSetup.connectionAttempts.join(",") === "1" &&
-        partialSetup.fixtureAttempts === 1 &&
-        partialSetup.order.join(",") === "connection-0,fixture" &&
-        primaryOnly.caught &&
-        primaryOnly.failure === primaryFailure &&
-        primaryOnly.connectionAttempts.join(",") === "1,1" &&
-        primaryOnly.fixtureAttempts === 1 &&
-        clientStandalone.caught &&
-        clientStandalone.failure === clientFailure &&
-        clientStandalone.connectionAttempts.join(",") === "1,1" &&
-        clientStandalone.fixtureAttempts === 1 &&
-        serverStandalone.caught &&
-        serverStandalone.failure === serverFailure &&
-        serverStandalone.connectionAttempts.join(",") === "1,1" &&
-        serverStandalone.fixtureAttempts === 1 &&
-        fixtureStandalone.caught &&
-        fixtureStandalone.failure === fixtureFailure &&
-        fixtureStandalone.connectionAttempts.join(",") === "1,1" &&
-        fixtureStandalone.fixtureAttempts === 1 &&
-        multipleCleanup.caught &&
-        aggregateContainsExactly(multipleCleanup.failure, [
-          clientFailure,
-          serverFailure,
-          fixtureFailure,
-        ]) &&
-        multipleCleanup.connectionAttempts.join(",") === "1,1" &&
-        multipleCleanup.fixtureAttempts === 1 &&
-        combined.caught &&
-        aggregateContainsExactly(combined.failure, [
-          primaryFailure,
-          clientFailure,
-          serverFailure,
-          fixtureFailure,
-        ]) &&
-        combined.connectionAttempts.join(",") === "1,1" &&
-        combined.fixtureAttempts === 1 &&
-        undefinedPrimary.caught &&
-        undefinedPrimary.failure === undefined &&
-        undefinedPrimary.connectionAttempts.join(",") === "1,1" &&
-        undefinedPrimary.fixtureAttempts === 1 &&
-        undefinedStandalone.caught &&
-        undefinedStandalone.failure === undefined &&
-        undefinedStandalone.connectionAttempts.join(",") === "1,1" &&
-        undefinedStandalone.fixtureAttempts === 1 &&
-        undefinedCombined.caught &&
-        aggregateContainsExactly(undefinedCombined.failure, [
-          undefined,
-          undefined,
-          undefined,
-        ]) &&
-        undefinedCombined.connectionAttempts.join(",") === "1,1" &&
-        undefinedCombined.fixtureAttempts === 1,
+      namedFacts([
+        ["successCaught", () => success.caught === false],
+        [
+          "successFailure",
+          () => success.caught === false && success.failure === undefined,
+        ],
+        [
+          "successConnectionAttemptsJoin",
+          () =>
+            success.caught === false &&
+            success.failure === undefined &&
+            success.connectionAttempts.join(",") === "1,1",
+        ],
+        [
+          "successFixtureAttempts",
+          () =>
+            success.caught === false &&
+            success.failure === undefined &&
+            success.connectionAttempts.join(",") === "1,1" &&
+            success.fixtureAttempts === 1,
+        ],
+        [
+          "successOrderJoin",
+          () =>
+            success.caught === false &&
+            success.failure === undefined &&
+            success.connectionAttempts.join(",") === "1,1" &&
+            success.fixtureAttempts === 1 &&
+            success.order.join(",") === "connection-0,connection-1,fixture",
+        ],
+        [
+          "fixtureOnlySetupCaught",
+          () =>
+            success.caught === false &&
+            success.failure === undefined &&
+            success.connectionAttempts.join(",") === "1,1" &&
+            success.fixtureAttempts === 1 &&
+            success.order.join(",") === "connection-0,connection-1,fixture" &&
+            fixtureOnlySetup.caught,
+        ],
+        [
+          "fixtureOnlySetupFailurePrimaryFailure",
+          () =>
+            success.caught === false &&
+            success.failure === undefined &&
+            success.connectionAttempts.join(",") === "1,1" &&
+            success.fixtureAttempts === 1 &&
+            success.order.join(",") === "connection-0,connection-1,fixture" &&
+            fixtureOnlySetup.caught &&
+            fixtureOnlySetup.failure === primaryFailure,
+        ],
+        [
+          "fixtureOnlySetupConnectionAttemptsLength",
+          () =>
+            success.caught === false &&
+            success.failure === undefined &&
+            success.connectionAttempts.join(",") === "1,1" &&
+            success.fixtureAttempts === 1 &&
+            success.order.join(",") === "connection-0,connection-1,fixture" &&
+            fixtureOnlySetup.caught &&
+            fixtureOnlySetup.failure === primaryFailure &&
+            fixtureOnlySetup.connectionAttempts.length === 0,
+        ],
+        [
+          "fixtureOnlySetupFixtureAttempts",
+          () =>
+            success.caught === false &&
+            success.failure === undefined &&
+            success.connectionAttempts.join(",") === "1,1" &&
+            success.fixtureAttempts === 1 &&
+            success.order.join(",") === "connection-0,connection-1,fixture" &&
+            fixtureOnlySetup.caught &&
+            fixtureOnlySetup.failure === primaryFailure &&
+            fixtureOnlySetup.connectionAttempts.length === 0 &&
+            fixtureOnlySetup.fixtureAttempts === 1,
+        ],
+        [
+          "fixtureOnlySetupOrderJoin",
+          () =>
+            success.caught === false &&
+            success.failure === undefined &&
+            success.connectionAttempts.join(",") === "1,1" &&
+            success.fixtureAttempts === 1 &&
+            success.order.join(",") === "connection-0,connection-1,fixture" &&
+            fixtureOnlySetup.caught &&
+            fixtureOnlySetup.failure === primaryFailure &&
+            fixtureOnlySetup.connectionAttempts.length === 0 &&
+            fixtureOnlySetup.fixtureAttempts === 1 &&
+            fixtureOnlySetup.order.join(",") === "fixture",
+        ],
+        [
+          "partialSetupCaught",
+          () =>
+            success.caught === false &&
+            success.failure === undefined &&
+            success.connectionAttempts.join(",") === "1,1" &&
+            success.fixtureAttempts === 1 &&
+            success.order.join(",") === "connection-0,connection-1,fixture" &&
+            fixtureOnlySetup.caught &&
+            fixtureOnlySetup.failure === primaryFailure &&
+            fixtureOnlySetup.connectionAttempts.length === 0 &&
+            fixtureOnlySetup.fixtureAttempts === 1 &&
+            fixtureOnlySetup.order.join(",") === "fixture" &&
+            partialSetup.caught,
+        ],
+        [
+          "partialSetupFailurePrimaryFailure",
+          () =>
+            success.caught === false &&
+            success.failure === undefined &&
+            success.connectionAttempts.join(",") === "1,1" &&
+            success.fixtureAttempts === 1 &&
+            success.order.join(",") === "connection-0,connection-1,fixture" &&
+            fixtureOnlySetup.caught &&
+            fixtureOnlySetup.failure === primaryFailure &&
+            fixtureOnlySetup.connectionAttempts.length === 0 &&
+            fixtureOnlySetup.fixtureAttempts === 1 &&
+            fixtureOnlySetup.order.join(",") === "fixture" &&
+            partialSetup.caught &&
+            partialSetup.failure === primaryFailure,
+        ],
+        [
+          "partialSetupConnectionAttemptsJoin",
+          () =>
+            success.caught === false &&
+            success.failure === undefined &&
+            success.connectionAttempts.join(",") === "1,1" &&
+            success.fixtureAttempts === 1 &&
+            success.order.join(",") === "connection-0,connection-1,fixture" &&
+            fixtureOnlySetup.caught &&
+            fixtureOnlySetup.failure === primaryFailure &&
+            fixtureOnlySetup.connectionAttempts.length === 0 &&
+            fixtureOnlySetup.fixtureAttempts === 1 &&
+            fixtureOnlySetup.order.join(",") === "fixture" &&
+            partialSetup.caught &&
+            partialSetup.failure === primaryFailure &&
+            partialSetup.connectionAttempts.join(",") === "1",
+        ],
+        [
+          "partialSetupFixtureAttempts",
+          () =>
+            success.caught === false &&
+            success.failure === undefined &&
+            success.connectionAttempts.join(",") === "1,1" &&
+            success.fixtureAttempts === 1 &&
+            success.order.join(",") === "connection-0,connection-1,fixture" &&
+            fixtureOnlySetup.caught &&
+            fixtureOnlySetup.failure === primaryFailure &&
+            fixtureOnlySetup.connectionAttempts.length === 0 &&
+            fixtureOnlySetup.fixtureAttempts === 1 &&
+            fixtureOnlySetup.order.join(",") === "fixture" &&
+            partialSetup.caught &&
+            partialSetup.failure === primaryFailure &&
+            partialSetup.connectionAttempts.join(",") === "1" &&
+            partialSetup.fixtureAttempts === 1,
+        ],
+        [
+          "partialSetupOrderJoin",
+          () =>
+            success.caught === false &&
+            success.failure === undefined &&
+            success.connectionAttempts.join(",") === "1,1" &&
+            success.fixtureAttempts === 1 &&
+            success.order.join(",") === "connection-0,connection-1,fixture" &&
+            fixtureOnlySetup.caught &&
+            fixtureOnlySetup.failure === primaryFailure &&
+            fixtureOnlySetup.connectionAttempts.length === 0 &&
+            fixtureOnlySetup.fixtureAttempts === 1 &&
+            fixtureOnlySetup.order.join(",") === "fixture" &&
+            partialSetup.caught &&
+            partialSetup.failure === primaryFailure &&
+            partialSetup.connectionAttempts.join(",") === "1" &&
+            partialSetup.fixtureAttempts === 1 &&
+            partialSetup.order.join(",") === "connection-0,fixture",
+        ],
+        [
+          "primaryOnlyCaught",
+          () =>
+            success.caught === false &&
+            success.failure === undefined &&
+            success.connectionAttempts.join(",") === "1,1" &&
+            success.fixtureAttempts === 1 &&
+            success.order.join(",") === "connection-0,connection-1,fixture" &&
+            fixtureOnlySetup.caught &&
+            fixtureOnlySetup.failure === primaryFailure &&
+            fixtureOnlySetup.connectionAttempts.length === 0 &&
+            fixtureOnlySetup.fixtureAttempts === 1 &&
+            fixtureOnlySetup.order.join(",") === "fixture" &&
+            partialSetup.caught &&
+            partialSetup.failure === primaryFailure &&
+            partialSetup.connectionAttempts.join(",") === "1" &&
+            partialSetup.fixtureAttempts === 1 &&
+            partialSetup.order.join(",") === "connection-0,fixture" &&
+            primaryOnly.caught,
+        ],
+        [
+          "primaryOnlyFailurePrimaryFailure",
+          () =>
+            success.caught === false &&
+            success.failure === undefined &&
+            success.connectionAttempts.join(",") === "1,1" &&
+            success.fixtureAttempts === 1 &&
+            success.order.join(",") === "connection-0,connection-1,fixture" &&
+            fixtureOnlySetup.caught &&
+            fixtureOnlySetup.failure === primaryFailure &&
+            fixtureOnlySetup.connectionAttempts.length === 0 &&
+            fixtureOnlySetup.fixtureAttempts === 1 &&
+            fixtureOnlySetup.order.join(",") === "fixture" &&
+            partialSetup.caught &&
+            partialSetup.failure === primaryFailure &&
+            partialSetup.connectionAttempts.join(",") === "1" &&
+            partialSetup.fixtureAttempts === 1 &&
+            partialSetup.order.join(",") === "connection-0,fixture" &&
+            primaryOnly.caught &&
+            primaryOnly.failure === primaryFailure,
+        ],
+        [
+          "primaryOnlyConnectionAttemptsJoin",
+          () =>
+            success.caught === false &&
+            success.failure === undefined &&
+            success.connectionAttempts.join(",") === "1,1" &&
+            success.fixtureAttempts === 1 &&
+            success.order.join(",") === "connection-0,connection-1,fixture" &&
+            fixtureOnlySetup.caught &&
+            fixtureOnlySetup.failure === primaryFailure &&
+            fixtureOnlySetup.connectionAttempts.length === 0 &&
+            fixtureOnlySetup.fixtureAttempts === 1 &&
+            fixtureOnlySetup.order.join(",") === "fixture" &&
+            partialSetup.caught &&
+            partialSetup.failure === primaryFailure &&
+            partialSetup.connectionAttempts.join(",") === "1" &&
+            partialSetup.fixtureAttempts === 1 &&
+            partialSetup.order.join(",") === "connection-0,fixture" &&
+            primaryOnly.caught &&
+            primaryOnly.failure === primaryFailure &&
+            primaryOnly.connectionAttempts.join(",") === "1,1",
+        ],
+        [
+          "primaryOnlyFixtureAttempts",
+          () =>
+            success.caught === false &&
+            success.failure === undefined &&
+            success.connectionAttempts.join(",") === "1,1" &&
+            success.fixtureAttempts === 1 &&
+            success.order.join(",") === "connection-0,connection-1,fixture" &&
+            fixtureOnlySetup.caught &&
+            fixtureOnlySetup.failure === primaryFailure &&
+            fixtureOnlySetup.connectionAttempts.length === 0 &&
+            fixtureOnlySetup.fixtureAttempts === 1 &&
+            fixtureOnlySetup.order.join(",") === "fixture" &&
+            partialSetup.caught &&
+            partialSetup.failure === primaryFailure &&
+            partialSetup.connectionAttempts.join(",") === "1" &&
+            partialSetup.fixtureAttempts === 1 &&
+            partialSetup.order.join(",") === "connection-0,fixture" &&
+            primaryOnly.caught &&
+            primaryOnly.failure === primaryFailure &&
+            primaryOnly.connectionAttempts.join(",") === "1,1" &&
+            primaryOnly.fixtureAttempts === 1,
+        ],
+        [
+          "clientStandaloneCaught",
+          () =>
+            success.caught === false &&
+            success.failure === undefined &&
+            success.connectionAttempts.join(",") === "1,1" &&
+            success.fixtureAttempts === 1 &&
+            success.order.join(",") === "connection-0,connection-1,fixture" &&
+            fixtureOnlySetup.caught &&
+            fixtureOnlySetup.failure === primaryFailure &&
+            fixtureOnlySetup.connectionAttempts.length === 0 &&
+            fixtureOnlySetup.fixtureAttempts === 1 &&
+            fixtureOnlySetup.order.join(",") === "fixture" &&
+            partialSetup.caught &&
+            partialSetup.failure === primaryFailure &&
+            partialSetup.connectionAttempts.join(",") === "1" &&
+            partialSetup.fixtureAttempts === 1 &&
+            partialSetup.order.join(",") === "connection-0,fixture" &&
+            primaryOnly.caught &&
+            primaryOnly.failure === primaryFailure &&
+            primaryOnly.connectionAttempts.join(",") === "1,1" &&
+            primaryOnly.fixtureAttempts === 1 &&
+            clientStandalone.caught,
+        ],
+        [
+          "clientStandaloneFailureClientFailure",
+          () =>
+            success.caught === false &&
+            success.failure === undefined &&
+            success.connectionAttempts.join(",") === "1,1" &&
+            success.fixtureAttempts === 1 &&
+            success.order.join(",") === "connection-0,connection-1,fixture" &&
+            fixtureOnlySetup.caught &&
+            fixtureOnlySetup.failure === primaryFailure &&
+            fixtureOnlySetup.connectionAttempts.length === 0 &&
+            fixtureOnlySetup.fixtureAttempts === 1 &&
+            fixtureOnlySetup.order.join(",") === "fixture" &&
+            partialSetup.caught &&
+            partialSetup.failure === primaryFailure &&
+            partialSetup.connectionAttempts.join(",") === "1" &&
+            partialSetup.fixtureAttempts === 1 &&
+            partialSetup.order.join(",") === "connection-0,fixture" &&
+            primaryOnly.caught &&
+            primaryOnly.failure === primaryFailure &&
+            primaryOnly.connectionAttempts.join(",") === "1,1" &&
+            primaryOnly.fixtureAttempts === 1 &&
+            clientStandalone.caught &&
+            clientStandalone.failure === clientFailure,
+        ],
+        [
+          "clientStandaloneConnectionAttemptsJoin",
+          () =>
+            success.caught === false &&
+            success.failure === undefined &&
+            success.connectionAttempts.join(",") === "1,1" &&
+            success.fixtureAttempts === 1 &&
+            success.order.join(",") === "connection-0,connection-1,fixture" &&
+            fixtureOnlySetup.caught &&
+            fixtureOnlySetup.failure === primaryFailure &&
+            fixtureOnlySetup.connectionAttempts.length === 0 &&
+            fixtureOnlySetup.fixtureAttempts === 1 &&
+            fixtureOnlySetup.order.join(",") === "fixture" &&
+            partialSetup.caught &&
+            partialSetup.failure === primaryFailure &&
+            partialSetup.connectionAttempts.join(",") === "1" &&
+            partialSetup.fixtureAttempts === 1 &&
+            partialSetup.order.join(",") === "connection-0,fixture" &&
+            primaryOnly.caught &&
+            primaryOnly.failure === primaryFailure &&
+            primaryOnly.connectionAttempts.join(",") === "1,1" &&
+            primaryOnly.fixtureAttempts === 1 &&
+            clientStandalone.caught &&
+            clientStandalone.failure === clientFailure &&
+            clientStandalone.connectionAttempts.join(",") === "1,1",
+        ],
+        [
+          "clientStandaloneFixtureAttempts",
+          () =>
+            success.caught === false &&
+            success.failure === undefined &&
+            success.connectionAttempts.join(",") === "1,1" &&
+            success.fixtureAttempts === 1 &&
+            success.order.join(",") === "connection-0,connection-1,fixture" &&
+            fixtureOnlySetup.caught &&
+            fixtureOnlySetup.failure === primaryFailure &&
+            fixtureOnlySetup.connectionAttempts.length === 0 &&
+            fixtureOnlySetup.fixtureAttempts === 1 &&
+            fixtureOnlySetup.order.join(",") === "fixture" &&
+            partialSetup.caught &&
+            partialSetup.failure === primaryFailure &&
+            partialSetup.connectionAttempts.join(",") === "1" &&
+            partialSetup.fixtureAttempts === 1 &&
+            partialSetup.order.join(",") === "connection-0,fixture" &&
+            primaryOnly.caught &&
+            primaryOnly.failure === primaryFailure &&
+            primaryOnly.connectionAttempts.join(",") === "1,1" &&
+            primaryOnly.fixtureAttempts === 1 &&
+            clientStandalone.caught &&
+            clientStandalone.failure === clientFailure &&
+            clientStandalone.connectionAttempts.join(",") === "1,1" &&
+            clientStandalone.fixtureAttempts === 1,
+        ],
+        [
+          "serverStandaloneCaught",
+          () =>
+            success.caught === false &&
+            success.failure === undefined &&
+            success.connectionAttempts.join(",") === "1,1" &&
+            success.fixtureAttempts === 1 &&
+            success.order.join(",") === "connection-0,connection-1,fixture" &&
+            fixtureOnlySetup.caught &&
+            fixtureOnlySetup.failure === primaryFailure &&
+            fixtureOnlySetup.connectionAttempts.length === 0 &&
+            fixtureOnlySetup.fixtureAttempts === 1 &&
+            fixtureOnlySetup.order.join(",") === "fixture" &&
+            partialSetup.caught &&
+            partialSetup.failure === primaryFailure &&
+            partialSetup.connectionAttempts.join(",") === "1" &&
+            partialSetup.fixtureAttempts === 1 &&
+            partialSetup.order.join(",") === "connection-0,fixture" &&
+            primaryOnly.caught &&
+            primaryOnly.failure === primaryFailure &&
+            primaryOnly.connectionAttempts.join(",") === "1,1" &&
+            primaryOnly.fixtureAttempts === 1 &&
+            clientStandalone.caught &&
+            clientStandalone.failure === clientFailure &&
+            clientStandalone.connectionAttempts.join(",") === "1,1" &&
+            clientStandalone.fixtureAttempts === 1 &&
+            serverStandalone.caught,
+        ],
+        [
+          "serverStandaloneFailureServerFailure",
+          () =>
+            success.caught === false &&
+            success.failure === undefined &&
+            success.connectionAttempts.join(",") === "1,1" &&
+            success.fixtureAttempts === 1 &&
+            success.order.join(",") === "connection-0,connection-1,fixture" &&
+            fixtureOnlySetup.caught &&
+            fixtureOnlySetup.failure === primaryFailure &&
+            fixtureOnlySetup.connectionAttempts.length === 0 &&
+            fixtureOnlySetup.fixtureAttempts === 1 &&
+            fixtureOnlySetup.order.join(",") === "fixture" &&
+            partialSetup.caught &&
+            partialSetup.failure === primaryFailure &&
+            partialSetup.connectionAttempts.join(",") === "1" &&
+            partialSetup.fixtureAttempts === 1 &&
+            partialSetup.order.join(",") === "connection-0,fixture" &&
+            primaryOnly.caught &&
+            primaryOnly.failure === primaryFailure &&
+            primaryOnly.connectionAttempts.join(",") === "1,1" &&
+            primaryOnly.fixtureAttempts === 1 &&
+            clientStandalone.caught &&
+            clientStandalone.failure === clientFailure &&
+            clientStandalone.connectionAttempts.join(",") === "1,1" &&
+            clientStandalone.fixtureAttempts === 1 &&
+            serverStandalone.caught &&
+            serverStandalone.failure === serverFailure,
+        ],
+        [
+          "serverStandaloneConnectionAttemptsJoin",
+          () =>
+            success.caught === false &&
+            success.failure === undefined &&
+            success.connectionAttempts.join(",") === "1,1" &&
+            success.fixtureAttempts === 1 &&
+            success.order.join(",") === "connection-0,connection-1,fixture" &&
+            fixtureOnlySetup.caught &&
+            fixtureOnlySetup.failure === primaryFailure &&
+            fixtureOnlySetup.connectionAttempts.length === 0 &&
+            fixtureOnlySetup.fixtureAttempts === 1 &&
+            fixtureOnlySetup.order.join(",") === "fixture" &&
+            partialSetup.caught &&
+            partialSetup.failure === primaryFailure &&
+            partialSetup.connectionAttempts.join(",") === "1" &&
+            partialSetup.fixtureAttempts === 1 &&
+            partialSetup.order.join(",") === "connection-0,fixture" &&
+            primaryOnly.caught &&
+            primaryOnly.failure === primaryFailure &&
+            primaryOnly.connectionAttempts.join(",") === "1,1" &&
+            primaryOnly.fixtureAttempts === 1 &&
+            clientStandalone.caught &&
+            clientStandalone.failure === clientFailure &&
+            clientStandalone.connectionAttempts.join(",") === "1,1" &&
+            clientStandalone.fixtureAttempts === 1 &&
+            serverStandalone.caught &&
+            serverStandalone.failure === serverFailure &&
+            serverStandalone.connectionAttempts.join(",") === "1,1",
+        ],
+        [
+          "serverStandaloneFixtureAttempts",
+          () =>
+            success.caught === false &&
+            success.failure === undefined &&
+            success.connectionAttempts.join(",") === "1,1" &&
+            success.fixtureAttempts === 1 &&
+            success.order.join(",") === "connection-0,connection-1,fixture" &&
+            fixtureOnlySetup.caught &&
+            fixtureOnlySetup.failure === primaryFailure &&
+            fixtureOnlySetup.connectionAttempts.length === 0 &&
+            fixtureOnlySetup.fixtureAttempts === 1 &&
+            fixtureOnlySetup.order.join(",") === "fixture" &&
+            partialSetup.caught &&
+            partialSetup.failure === primaryFailure &&
+            partialSetup.connectionAttempts.join(",") === "1" &&
+            partialSetup.fixtureAttempts === 1 &&
+            partialSetup.order.join(",") === "connection-0,fixture" &&
+            primaryOnly.caught &&
+            primaryOnly.failure === primaryFailure &&
+            primaryOnly.connectionAttempts.join(",") === "1,1" &&
+            primaryOnly.fixtureAttempts === 1 &&
+            clientStandalone.caught &&
+            clientStandalone.failure === clientFailure &&
+            clientStandalone.connectionAttempts.join(",") === "1,1" &&
+            clientStandalone.fixtureAttempts === 1 &&
+            serverStandalone.caught &&
+            serverStandalone.failure === serverFailure &&
+            serverStandalone.connectionAttempts.join(",") === "1,1" &&
+            serverStandalone.fixtureAttempts === 1,
+        ],
+        [
+          "fixtureStandaloneCaught",
+          () =>
+            success.caught === false &&
+            success.failure === undefined &&
+            success.connectionAttempts.join(",") === "1,1" &&
+            success.fixtureAttempts === 1 &&
+            success.order.join(",") === "connection-0,connection-1,fixture" &&
+            fixtureOnlySetup.caught &&
+            fixtureOnlySetup.failure === primaryFailure &&
+            fixtureOnlySetup.connectionAttempts.length === 0 &&
+            fixtureOnlySetup.fixtureAttempts === 1 &&
+            fixtureOnlySetup.order.join(",") === "fixture" &&
+            partialSetup.caught &&
+            partialSetup.failure === primaryFailure &&
+            partialSetup.connectionAttempts.join(",") === "1" &&
+            partialSetup.fixtureAttempts === 1 &&
+            partialSetup.order.join(",") === "connection-0,fixture" &&
+            primaryOnly.caught &&
+            primaryOnly.failure === primaryFailure &&
+            primaryOnly.connectionAttempts.join(",") === "1,1" &&
+            primaryOnly.fixtureAttempts === 1 &&
+            clientStandalone.caught &&
+            clientStandalone.failure === clientFailure &&
+            clientStandalone.connectionAttempts.join(",") === "1,1" &&
+            clientStandalone.fixtureAttempts === 1 &&
+            serverStandalone.caught &&
+            serverStandalone.failure === serverFailure &&
+            serverStandalone.connectionAttempts.join(",") === "1,1" &&
+            serverStandalone.fixtureAttempts === 1 &&
+            fixtureStandalone.caught,
+        ],
+        [
+          "fixtureStandaloneFailureFixtureFailure",
+          () =>
+            success.caught === false &&
+            success.failure === undefined &&
+            success.connectionAttempts.join(",") === "1,1" &&
+            success.fixtureAttempts === 1 &&
+            success.order.join(",") === "connection-0,connection-1,fixture" &&
+            fixtureOnlySetup.caught &&
+            fixtureOnlySetup.failure === primaryFailure &&
+            fixtureOnlySetup.connectionAttempts.length === 0 &&
+            fixtureOnlySetup.fixtureAttempts === 1 &&
+            fixtureOnlySetup.order.join(",") === "fixture" &&
+            partialSetup.caught &&
+            partialSetup.failure === primaryFailure &&
+            partialSetup.connectionAttempts.join(",") === "1" &&
+            partialSetup.fixtureAttempts === 1 &&
+            partialSetup.order.join(",") === "connection-0,fixture" &&
+            primaryOnly.caught &&
+            primaryOnly.failure === primaryFailure &&
+            primaryOnly.connectionAttempts.join(",") === "1,1" &&
+            primaryOnly.fixtureAttempts === 1 &&
+            clientStandalone.caught &&
+            clientStandalone.failure === clientFailure &&
+            clientStandalone.connectionAttempts.join(",") === "1,1" &&
+            clientStandalone.fixtureAttempts === 1 &&
+            serverStandalone.caught &&
+            serverStandalone.failure === serverFailure &&
+            serverStandalone.connectionAttempts.join(",") === "1,1" &&
+            serverStandalone.fixtureAttempts === 1 &&
+            fixtureStandalone.caught &&
+            fixtureStandalone.failure === fixtureFailure,
+        ],
+        [
+          "fixtureStandaloneConnectionAttemptsJoin",
+          () =>
+            success.caught === false &&
+            success.failure === undefined &&
+            success.connectionAttempts.join(",") === "1,1" &&
+            success.fixtureAttempts === 1 &&
+            success.order.join(",") === "connection-0,connection-1,fixture" &&
+            fixtureOnlySetup.caught &&
+            fixtureOnlySetup.failure === primaryFailure &&
+            fixtureOnlySetup.connectionAttempts.length === 0 &&
+            fixtureOnlySetup.fixtureAttempts === 1 &&
+            fixtureOnlySetup.order.join(",") === "fixture" &&
+            partialSetup.caught &&
+            partialSetup.failure === primaryFailure &&
+            partialSetup.connectionAttempts.join(",") === "1" &&
+            partialSetup.fixtureAttempts === 1 &&
+            partialSetup.order.join(",") === "connection-0,fixture" &&
+            primaryOnly.caught &&
+            primaryOnly.failure === primaryFailure &&
+            primaryOnly.connectionAttempts.join(",") === "1,1" &&
+            primaryOnly.fixtureAttempts === 1 &&
+            clientStandalone.caught &&
+            clientStandalone.failure === clientFailure &&
+            clientStandalone.connectionAttempts.join(",") === "1,1" &&
+            clientStandalone.fixtureAttempts === 1 &&
+            serverStandalone.caught &&
+            serverStandalone.failure === serverFailure &&
+            serverStandalone.connectionAttempts.join(",") === "1,1" &&
+            serverStandalone.fixtureAttempts === 1 &&
+            fixtureStandalone.caught &&
+            fixtureStandalone.failure === fixtureFailure &&
+            fixtureStandalone.connectionAttempts.join(",") === "1,1",
+        ],
+        [
+          "fixtureStandaloneFixtureAttempts",
+          () =>
+            success.caught === false &&
+            success.failure === undefined &&
+            success.connectionAttempts.join(",") === "1,1" &&
+            success.fixtureAttempts === 1 &&
+            success.order.join(",") === "connection-0,connection-1,fixture" &&
+            fixtureOnlySetup.caught &&
+            fixtureOnlySetup.failure === primaryFailure &&
+            fixtureOnlySetup.connectionAttempts.length === 0 &&
+            fixtureOnlySetup.fixtureAttempts === 1 &&
+            fixtureOnlySetup.order.join(",") === "fixture" &&
+            partialSetup.caught &&
+            partialSetup.failure === primaryFailure &&
+            partialSetup.connectionAttempts.join(",") === "1" &&
+            partialSetup.fixtureAttempts === 1 &&
+            partialSetup.order.join(",") === "connection-0,fixture" &&
+            primaryOnly.caught &&
+            primaryOnly.failure === primaryFailure &&
+            primaryOnly.connectionAttempts.join(",") === "1,1" &&
+            primaryOnly.fixtureAttempts === 1 &&
+            clientStandalone.caught &&
+            clientStandalone.failure === clientFailure &&
+            clientStandalone.connectionAttempts.join(",") === "1,1" &&
+            clientStandalone.fixtureAttempts === 1 &&
+            serverStandalone.caught &&
+            serverStandalone.failure === serverFailure &&
+            serverStandalone.connectionAttempts.join(",") === "1,1" &&
+            serverStandalone.fixtureAttempts === 1 &&
+            fixtureStandalone.caught &&
+            fixtureStandalone.failure === fixtureFailure &&
+            fixtureStandalone.connectionAttempts.join(",") === "1,1" &&
+            fixtureStandalone.fixtureAttempts === 1,
+        ],
+        [
+          "multipleCleanupCaught",
+          () =>
+            success.caught === false &&
+            success.failure === undefined &&
+            success.connectionAttempts.join(",") === "1,1" &&
+            success.fixtureAttempts === 1 &&
+            success.order.join(",") === "connection-0,connection-1,fixture" &&
+            fixtureOnlySetup.caught &&
+            fixtureOnlySetup.failure === primaryFailure &&
+            fixtureOnlySetup.connectionAttempts.length === 0 &&
+            fixtureOnlySetup.fixtureAttempts === 1 &&
+            fixtureOnlySetup.order.join(",") === "fixture" &&
+            partialSetup.caught &&
+            partialSetup.failure === primaryFailure &&
+            partialSetup.connectionAttempts.join(",") === "1" &&
+            partialSetup.fixtureAttempts === 1 &&
+            partialSetup.order.join(",") === "connection-0,fixture" &&
+            primaryOnly.caught &&
+            primaryOnly.failure === primaryFailure &&
+            primaryOnly.connectionAttempts.join(",") === "1,1" &&
+            primaryOnly.fixtureAttempts === 1 &&
+            clientStandalone.caught &&
+            clientStandalone.failure === clientFailure &&
+            clientStandalone.connectionAttempts.join(",") === "1,1" &&
+            clientStandalone.fixtureAttempts === 1 &&
+            serverStandalone.caught &&
+            serverStandalone.failure === serverFailure &&
+            serverStandalone.connectionAttempts.join(",") === "1,1" &&
+            serverStandalone.fixtureAttempts === 1 &&
+            fixtureStandalone.caught &&
+            fixtureStandalone.failure === fixtureFailure &&
+            fixtureStandalone.connectionAttempts.join(",") === "1,1" &&
+            fixtureStandalone.fixtureAttempts === 1 &&
+            multipleCleanup.caught,
+        ],
+        [
+          "aggregateContainsExactlyMultipleCleanupFailure",
+          () =>
+            success.caught === false &&
+            success.failure === undefined &&
+            success.connectionAttempts.join(",") === "1,1" &&
+            success.fixtureAttempts === 1 &&
+            success.order.join(",") === "connection-0,connection-1,fixture" &&
+            fixtureOnlySetup.caught &&
+            fixtureOnlySetup.failure === primaryFailure &&
+            fixtureOnlySetup.connectionAttempts.length === 0 &&
+            fixtureOnlySetup.fixtureAttempts === 1 &&
+            fixtureOnlySetup.order.join(",") === "fixture" &&
+            partialSetup.caught &&
+            partialSetup.failure === primaryFailure &&
+            partialSetup.connectionAttempts.join(",") === "1" &&
+            partialSetup.fixtureAttempts === 1 &&
+            partialSetup.order.join(",") === "connection-0,fixture" &&
+            primaryOnly.caught &&
+            primaryOnly.failure === primaryFailure &&
+            primaryOnly.connectionAttempts.join(",") === "1,1" &&
+            primaryOnly.fixtureAttempts === 1 &&
+            clientStandalone.caught &&
+            clientStandalone.failure === clientFailure &&
+            clientStandalone.connectionAttempts.join(",") === "1,1" &&
+            clientStandalone.fixtureAttempts === 1 &&
+            serverStandalone.caught &&
+            serverStandalone.failure === serverFailure &&
+            serverStandalone.connectionAttempts.join(",") === "1,1" &&
+            serverStandalone.fixtureAttempts === 1 &&
+            fixtureStandalone.caught &&
+            fixtureStandalone.failure === fixtureFailure &&
+            fixtureStandalone.connectionAttempts.join(",") === "1,1" &&
+            fixtureStandalone.fixtureAttempts === 1 &&
+            multipleCleanup.caught &&
+            aggregateContainsExactly(multipleCleanup.failure, [
+              clientFailure,
+              serverFailure,
+              fixtureFailure,
+            ]),
+        ],
+        [
+          "multipleCleanupConnectionAttemptsJoin",
+          () =>
+            success.caught === false &&
+            success.failure === undefined &&
+            success.connectionAttempts.join(",") === "1,1" &&
+            success.fixtureAttempts === 1 &&
+            success.order.join(",") === "connection-0,connection-1,fixture" &&
+            fixtureOnlySetup.caught &&
+            fixtureOnlySetup.failure === primaryFailure &&
+            fixtureOnlySetup.connectionAttempts.length === 0 &&
+            fixtureOnlySetup.fixtureAttempts === 1 &&
+            fixtureOnlySetup.order.join(",") === "fixture" &&
+            partialSetup.caught &&
+            partialSetup.failure === primaryFailure &&
+            partialSetup.connectionAttempts.join(",") === "1" &&
+            partialSetup.fixtureAttempts === 1 &&
+            partialSetup.order.join(",") === "connection-0,fixture" &&
+            primaryOnly.caught &&
+            primaryOnly.failure === primaryFailure &&
+            primaryOnly.connectionAttempts.join(",") === "1,1" &&
+            primaryOnly.fixtureAttempts === 1 &&
+            clientStandalone.caught &&
+            clientStandalone.failure === clientFailure &&
+            clientStandalone.connectionAttempts.join(",") === "1,1" &&
+            clientStandalone.fixtureAttempts === 1 &&
+            serverStandalone.caught &&
+            serverStandalone.failure === serverFailure &&
+            serverStandalone.connectionAttempts.join(",") === "1,1" &&
+            serverStandalone.fixtureAttempts === 1 &&
+            fixtureStandalone.caught &&
+            fixtureStandalone.failure === fixtureFailure &&
+            fixtureStandalone.connectionAttempts.join(",") === "1,1" &&
+            fixtureStandalone.fixtureAttempts === 1 &&
+            multipleCleanup.caught &&
+            aggregateContainsExactly(multipleCleanup.failure, [
+              clientFailure,
+              serverFailure,
+              fixtureFailure,
+            ]) &&
+            multipleCleanup.connectionAttempts.join(",") === "1,1",
+        ],
+        [
+          "multipleCleanupFixtureAttempts",
+          () =>
+            success.caught === false &&
+            success.failure === undefined &&
+            success.connectionAttempts.join(",") === "1,1" &&
+            success.fixtureAttempts === 1 &&
+            success.order.join(",") === "connection-0,connection-1,fixture" &&
+            fixtureOnlySetup.caught &&
+            fixtureOnlySetup.failure === primaryFailure &&
+            fixtureOnlySetup.connectionAttempts.length === 0 &&
+            fixtureOnlySetup.fixtureAttempts === 1 &&
+            fixtureOnlySetup.order.join(",") === "fixture" &&
+            partialSetup.caught &&
+            partialSetup.failure === primaryFailure &&
+            partialSetup.connectionAttempts.join(",") === "1" &&
+            partialSetup.fixtureAttempts === 1 &&
+            partialSetup.order.join(",") === "connection-0,fixture" &&
+            primaryOnly.caught &&
+            primaryOnly.failure === primaryFailure &&
+            primaryOnly.connectionAttempts.join(",") === "1,1" &&
+            primaryOnly.fixtureAttempts === 1 &&
+            clientStandalone.caught &&
+            clientStandalone.failure === clientFailure &&
+            clientStandalone.connectionAttempts.join(",") === "1,1" &&
+            clientStandalone.fixtureAttempts === 1 &&
+            serverStandalone.caught &&
+            serverStandalone.failure === serverFailure &&
+            serverStandalone.connectionAttempts.join(",") === "1,1" &&
+            serverStandalone.fixtureAttempts === 1 &&
+            fixtureStandalone.caught &&
+            fixtureStandalone.failure === fixtureFailure &&
+            fixtureStandalone.connectionAttempts.join(",") === "1,1" &&
+            fixtureStandalone.fixtureAttempts === 1 &&
+            multipleCleanup.caught &&
+            aggregateContainsExactly(multipleCleanup.failure, [
+              clientFailure,
+              serverFailure,
+              fixtureFailure,
+            ]) &&
+            multipleCleanup.connectionAttempts.join(",") === "1,1" &&
+            multipleCleanup.fixtureAttempts === 1,
+        ],
+        [
+          "combinedCaught",
+          () =>
+            success.caught === false &&
+            success.failure === undefined &&
+            success.connectionAttempts.join(",") === "1,1" &&
+            success.fixtureAttempts === 1 &&
+            success.order.join(",") === "connection-0,connection-1,fixture" &&
+            fixtureOnlySetup.caught &&
+            fixtureOnlySetup.failure === primaryFailure &&
+            fixtureOnlySetup.connectionAttempts.length === 0 &&
+            fixtureOnlySetup.fixtureAttempts === 1 &&
+            fixtureOnlySetup.order.join(",") === "fixture" &&
+            partialSetup.caught &&
+            partialSetup.failure === primaryFailure &&
+            partialSetup.connectionAttempts.join(",") === "1" &&
+            partialSetup.fixtureAttempts === 1 &&
+            partialSetup.order.join(",") === "connection-0,fixture" &&
+            primaryOnly.caught &&
+            primaryOnly.failure === primaryFailure &&
+            primaryOnly.connectionAttempts.join(",") === "1,1" &&
+            primaryOnly.fixtureAttempts === 1 &&
+            clientStandalone.caught &&
+            clientStandalone.failure === clientFailure &&
+            clientStandalone.connectionAttempts.join(",") === "1,1" &&
+            clientStandalone.fixtureAttempts === 1 &&
+            serverStandalone.caught &&
+            serverStandalone.failure === serverFailure &&
+            serverStandalone.connectionAttempts.join(",") === "1,1" &&
+            serverStandalone.fixtureAttempts === 1 &&
+            fixtureStandalone.caught &&
+            fixtureStandalone.failure === fixtureFailure &&
+            fixtureStandalone.connectionAttempts.join(",") === "1,1" &&
+            fixtureStandalone.fixtureAttempts === 1 &&
+            multipleCleanup.caught &&
+            aggregateContainsExactly(multipleCleanup.failure, [
+              clientFailure,
+              serverFailure,
+              fixtureFailure,
+            ]) &&
+            multipleCleanup.connectionAttempts.join(",") === "1,1" &&
+            multipleCleanup.fixtureAttempts === 1 &&
+            combined.caught,
+        ],
+        [
+          "aggregateContainsExactlyCombinedFailure",
+          () =>
+            success.caught === false &&
+            success.failure === undefined &&
+            success.connectionAttempts.join(",") === "1,1" &&
+            success.fixtureAttempts === 1 &&
+            success.order.join(",") === "connection-0,connection-1,fixture" &&
+            fixtureOnlySetup.caught &&
+            fixtureOnlySetup.failure === primaryFailure &&
+            fixtureOnlySetup.connectionAttempts.length === 0 &&
+            fixtureOnlySetup.fixtureAttempts === 1 &&
+            fixtureOnlySetup.order.join(",") === "fixture" &&
+            partialSetup.caught &&
+            partialSetup.failure === primaryFailure &&
+            partialSetup.connectionAttempts.join(",") === "1" &&
+            partialSetup.fixtureAttempts === 1 &&
+            partialSetup.order.join(",") === "connection-0,fixture" &&
+            primaryOnly.caught &&
+            primaryOnly.failure === primaryFailure &&
+            primaryOnly.connectionAttempts.join(",") === "1,1" &&
+            primaryOnly.fixtureAttempts === 1 &&
+            clientStandalone.caught &&
+            clientStandalone.failure === clientFailure &&
+            clientStandalone.connectionAttempts.join(",") === "1,1" &&
+            clientStandalone.fixtureAttempts === 1 &&
+            serverStandalone.caught &&
+            serverStandalone.failure === serverFailure &&
+            serverStandalone.connectionAttempts.join(",") === "1,1" &&
+            serverStandalone.fixtureAttempts === 1 &&
+            fixtureStandalone.caught &&
+            fixtureStandalone.failure === fixtureFailure &&
+            fixtureStandalone.connectionAttempts.join(",") === "1,1" &&
+            fixtureStandalone.fixtureAttempts === 1 &&
+            multipleCleanup.caught &&
+            aggregateContainsExactly(multipleCleanup.failure, [
+              clientFailure,
+              serverFailure,
+              fixtureFailure,
+            ]) &&
+            multipleCleanup.connectionAttempts.join(",") === "1,1" &&
+            multipleCleanup.fixtureAttempts === 1 &&
+            combined.caught &&
+            aggregateContainsExactly(combined.failure, [
+              primaryFailure,
+              clientFailure,
+              serverFailure,
+              fixtureFailure,
+            ]),
+        ],
+        [
+          "combinedConnectionAttemptsJoin",
+          () =>
+            success.caught === false &&
+            success.failure === undefined &&
+            success.connectionAttempts.join(",") === "1,1" &&
+            success.fixtureAttempts === 1 &&
+            success.order.join(",") === "connection-0,connection-1,fixture" &&
+            fixtureOnlySetup.caught &&
+            fixtureOnlySetup.failure === primaryFailure &&
+            fixtureOnlySetup.connectionAttempts.length === 0 &&
+            fixtureOnlySetup.fixtureAttempts === 1 &&
+            fixtureOnlySetup.order.join(",") === "fixture" &&
+            partialSetup.caught &&
+            partialSetup.failure === primaryFailure &&
+            partialSetup.connectionAttempts.join(",") === "1" &&
+            partialSetup.fixtureAttempts === 1 &&
+            partialSetup.order.join(",") === "connection-0,fixture" &&
+            primaryOnly.caught &&
+            primaryOnly.failure === primaryFailure &&
+            primaryOnly.connectionAttempts.join(",") === "1,1" &&
+            primaryOnly.fixtureAttempts === 1 &&
+            clientStandalone.caught &&
+            clientStandalone.failure === clientFailure &&
+            clientStandalone.connectionAttempts.join(",") === "1,1" &&
+            clientStandalone.fixtureAttempts === 1 &&
+            serverStandalone.caught &&
+            serverStandalone.failure === serverFailure &&
+            serverStandalone.connectionAttempts.join(",") === "1,1" &&
+            serverStandalone.fixtureAttempts === 1 &&
+            fixtureStandalone.caught &&
+            fixtureStandalone.failure === fixtureFailure &&
+            fixtureStandalone.connectionAttempts.join(",") === "1,1" &&
+            fixtureStandalone.fixtureAttempts === 1 &&
+            multipleCleanup.caught &&
+            aggregateContainsExactly(multipleCleanup.failure, [
+              clientFailure,
+              serverFailure,
+              fixtureFailure,
+            ]) &&
+            multipleCleanup.connectionAttempts.join(",") === "1,1" &&
+            multipleCleanup.fixtureAttempts === 1 &&
+            combined.caught &&
+            aggregateContainsExactly(combined.failure, [
+              primaryFailure,
+              clientFailure,
+              serverFailure,
+              fixtureFailure,
+            ]) &&
+            combined.connectionAttempts.join(",") === "1,1",
+        ],
+        [
+          "combinedFixtureAttempts",
+          () =>
+            success.caught === false &&
+            success.failure === undefined &&
+            success.connectionAttempts.join(",") === "1,1" &&
+            success.fixtureAttempts === 1 &&
+            success.order.join(",") === "connection-0,connection-1,fixture" &&
+            fixtureOnlySetup.caught &&
+            fixtureOnlySetup.failure === primaryFailure &&
+            fixtureOnlySetup.connectionAttempts.length === 0 &&
+            fixtureOnlySetup.fixtureAttempts === 1 &&
+            fixtureOnlySetup.order.join(",") === "fixture" &&
+            partialSetup.caught &&
+            partialSetup.failure === primaryFailure &&
+            partialSetup.connectionAttempts.join(",") === "1" &&
+            partialSetup.fixtureAttempts === 1 &&
+            partialSetup.order.join(",") === "connection-0,fixture" &&
+            primaryOnly.caught &&
+            primaryOnly.failure === primaryFailure &&
+            primaryOnly.connectionAttempts.join(",") === "1,1" &&
+            primaryOnly.fixtureAttempts === 1 &&
+            clientStandalone.caught &&
+            clientStandalone.failure === clientFailure &&
+            clientStandalone.connectionAttempts.join(",") === "1,1" &&
+            clientStandalone.fixtureAttempts === 1 &&
+            serverStandalone.caught &&
+            serverStandalone.failure === serverFailure &&
+            serverStandalone.connectionAttempts.join(",") === "1,1" &&
+            serverStandalone.fixtureAttempts === 1 &&
+            fixtureStandalone.caught &&
+            fixtureStandalone.failure === fixtureFailure &&
+            fixtureStandalone.connectionAttempts.join(",") === "1,1" &&
+            fixtureStandalone.fixtureAttempts === 1 &&
+            multipleCleanup.caught &&
+            aggregateContainsExactly(multipleCleanup.failure, [
+              clientFailure,
+              serverFailure,
+              fixtureFailure,
+            ]) &&
+            multipleCleanup.connectionAttempts.join(",") === "1,1" &&
+            multipleCleanup.fixtureAttempts === 1 &&
+            combined.caught &&
+            aggregateContainsExactly(combined.failure, [
+              primaryFailure,
+              clientFailure,
+              serverFailure,
+              fixtureFailure,
+            ]) &&
+            combined.connectionAttempts.join(",") === "1,1" &&
+            combined.fixtureAttempts === 1,
+        ],
+        [
+          "undefinedPrimaryCaught",
+          () =>
+            success.caught === false &&
+            success.failure === undefined &&
+            success.connectionAttempts.join(",") === "1,1" &&
+            success.fixtureAttempts === 1 &&
+            success.order.join(",") === "connection-0,connection-1,fixture" &&
+            fixtureOnlySetup.caught &&
+            fixtureOnlySetup.failure === primaryFailure &&
+            fixtureOnlySetup.connectionAttempts.length === 0 &&
+            fixtureOnlySetup.fixtureAttempts === 1 &&
+            fixtureOnlySetup.order.join(",") === "fixture" &&
+            partialSetup.caught &&
+            partialSetup.failure === primaryFailure &&
+            partialSetup.connectionAttempts.join(",") === "1" &&
+            partialSetup.fixtureAttempts === 1 &&
+            partialSetup.order.join(",") === "connection-0,fixture" &&
+            primaryOnly.caught &&
+            primaryOnly.failure === primaryFailure &&
+            primaryOnly.connectionAttempts.join(",") === "1,1" &&
+            primaryOnly.fixtureAttempts === 1 &&
+            clientStandalone.caught &&
+            clientStandalone.failure === clientFailure &&
+            clientStandalone.connectionAttempts.join(",") === "1,1" &&
+            clientStandalone.fixtureAttempts === 1 &&
+            serverStandalone.caught &&
+            serverStandalone.failure === serverFailure &&
+            serverStandalone.connectionAttempts.join(",") === "1,1" &&
+            serverStandalone.fixtureAttempts === 1 &&
+            fixtureStandalone.caught &&
+            fixtureStandalone.failure === fixtureFailure &&
+            fixtureStandalone.connectionAttempts.join(",") === "1,1" &&
+            fixtureStandalone.fixtureAttempts === 1 &&
+            multipleCleanup.caught &&
+            aggregateContainsExactly(multipleCleanup.failure, [
+              clientFailure,
+              serverFailure,
+              fixtureFailure,
+            ]) &&
+            multipleCleanup.connectionAttempts.join(",") === "1,1" &&
+            multipleCleanup.fixtureAttempts === 1 &&
+            combined.caught &&
+            aggregateContainsExactly(combined.failure, [
+              primaryFailure,
+              clientFailure,
+              serverFailure,
+              fixtureFailure,
+            ]) &&
+            combined.connectionAttempts.join(",") === "1,1" &&
+            combined.fixtureAttempts === 1 &&
+            undefinedPrimary.caught,
+        ],
+        [
+          "undefinedPrimaryFailure",
+          () =>
+            success.caught === false &&
+            success.failure === undefined &&
+            success.connectionAttempts.join(",") === "1,1" &&
+            success.fixtureAttempts === 1 &&
+            success.order.join(",") === "connection-0,connection-1,fixture" &&
+            fixtureOnlySetup.caught &&
+            fixtureOnlySetup.failure === primaryFailure &&
+            fixtureOnlySetup.connectionAttempts.length === 0 &&
+            fixtureOnlySetup.fixtureAttempts === 1 &&
+            fixtureOnlySetup.order.join(",") === "fixture" &&
+            partialSetup.caught &&
+            partialSetup.failure === primaryFailure &&
+            partialSetup.connectionAttempts.join(",") === "1" &&
+            partialSetup.fixtureAttempts === 1 &&
+            partialSetup.order.join(",") === "connection-0,fixture" &&
+            primaryOnly.caught &&
+            primaryOnly.failure === primaryFailure &&
+            primaryOnly.connectionAttempts.join(",") === "1,1" &&
+            primaryOnly.fixtureAttempts === 1 &&
+            clientStandalone.caught &&
+            clientStandalone.failure === clientFailure &&
+            clientStandalone.connectionAttempts.join(",") === "1,1" &&
+            clientStandalone.fixtureAttempts === 1 &&
+            serverStandalone.caught &&
+            serverStandalone.failure === serverFailure &&
+            serverStandalone.connectionAttempts.join(",") === "1,1" &&
+            serverStandalone.fixtureAttempts === 1 &&
+            fixtureStandalone.caught &&
+            fixtureStandalone.failure === fixtureFailure &&
+            fixtureStandalone.connectionAttempts.join(",") === "1,1" &&
+            fixtureStandalone.fixtureAttempts === 1 &&
+            multipleCleanup.caught &&
+            aggregateContainsExactly(multipleCleanup.failure, [
+              clientFailure,
+              serverFailure,
+              fixtureFailure,
+            ]) &&
+            multipleCleanup.connectionAttempts.join(",") === "1,1" &&
+            multipleCleanup.fixtureAttempts === 1 &&
+            combined.caught &&
+            aggregateContainsExactly(combined.failure, [
+              primaryFailure,
+              clientFailure,
+              serverFailure,
+              fixtureFailure,
+            ]) &&
+            combined.connectionAttempts.join(",") === "1,1" &&
+            combined.fixtureAttempts === 1 &&
+            undefinedPrimary.caught &&
+            undefinedPrimary.failure === undefined,
+        ],
+        [
+          "undefinedPrimaryConnectionAttemptsJoin",
+          () =>
+            success.caught === false &&
+            success.failure === undefined &&
+            success.connectionAttempts.join(",") === "1,1" &&
+            success.fixtureAttempts === 1 &&
+            success.order.join(",") === "connection-0,connection-1,fixture" &&
+            fixtureOnlySetup.caught &&
+            fixtureOnlySetup.failure === primaryFailure &&
+            fixtureOnlySetup.connectionAttempts.length === 0 &&
+            fixtureOnlySetup.fixtureAttempts === 1 &&
+            fixtureOnlySetup.order.join(",") === "fixture" &&
+            partialSetup.caught &&
+            partialSetup.failure === primaryFailure &&
+            partialSetup.connectionAttempts.join(",") === "1" &&
+            partialSetup.fixtureAttempts === 1 &&
+            partialSetup.order.join(",") === "connection-0,fixture" &&
+            primaryOnly.caught &&
+            primaryOnly.failure === primaryFailure &&
+            primaryOnly.connectionAttempts.join(",") === "1,1" &&
+            primaryOnly.fixtureAttempts === 1 &&
+            clientStandalone.caught &&
+            clientStandalone.failure === clientFailure &&
+            clientStandalone.connectionAttempts.join(",") === "1,1" &&
+            clientStandalone.fixtureAttempts === 1 &&
+            serverStandalone.caught &&
+            serverStandalone.failure === serverFailure &&
+            serverStandalone.connectionAttempts.join(",") === "1,1" &&
+            serverStandalone.fixtureAttempts === 1 &&
+            fixtureStandalone.caught &&
+            fixtureStandalone.failure === fixtureFailure &&
+            fixtureStandalone.connectionAttempts.join(",") === "1,1" &&
+            fixtureStandalone.fixtureAttempts === 1 &&
+            multipleCleanup.caught &&
+            aggregateContainsExactly(multipleCleanup.failure, [
+              clientFailure,
+              serverFailure,
+              fixtureFailure,
+            ]) &&
+            multipleCleanup.connectionAttempts.join(",") === "1,1" &&
+            multipleCleanup.fixtureAttempts === 1 &&
+            combined.caught &&
+            aggregateContainsExactly(combined.failure, [
+              primaryFailure,
+              clientFailure,
+              serverFailure,
+              fixtureFailure,
+            ]) &&
+            combined.connectionAttempts.join(",") === "1,1" &&
+            combined.fixtureAttempts === 1 &&
+            undefinedPrimary.caught &&
+            undefinedPrimary.failure === undefined &&
+            undefinedPrimary.connectionAttempts.join(",") === "1,1",
+        ],
+        [
+          "undefinedPrimaryFixtureAttempts",
+          () =>
+            success.caught === false &&
+            success.failure === undefined &&
+            success.connectionAttempts.join(",") === "1,1" &&
+            success.fixtureAttempts === 1 &&
+            success.order.join(",") === "connection-0,connection-1,fixture" &&
+            fixtureOnlySetup.caught &&
+            fixtureOnlySetup.failure === primaryFailure &&
+            fixtureOnlySetup.connectionAttempts.length === 0 &&
+            fixtureOnlySetup.fixtureAttempts === 1 &&
+            fixtureOnlySetup.order.join(",") === "fixture" &&
+            partialSetup.caught &&
+            partialSetup.failure === primaryFailure &&
+            partialSetup.connectionAttempts.join(",") === "1" &&
+            partialSetup.fixtureAttempts === 1 &&
+            partialSetup.order.join(",") === "connection-0,fixture" &&
+            primaryOnly.caught &&
+            primaryOnly.failure === primaryFailure &&
+            primaryOnly.connectionAttempts.join(",") === "1,1" &&
+            primaryOnly.fixtureAttempts === 1 &&
+            clientStandalone.caught &&
+            clientStandalone.failure === clientFailure &&
+            clientStandalone.connectionAttempts.join(",") === "1,1" &&
+            clientStandalone.fixtureAttempts === 1 &&
+            serverStandalone.caught &&
+            serverStandalone.failure === serverFailure &&
+            serverStandalone.connectionAttempts.join(",") === "1,1" &&
+            serverStandalone.fixtureAttempts === 1 &&
+            fixtureStandalone.caught &&
+            fixtureStandalone.failure === fixtureFailure &&
+            fixtureStandalone.connectionAttempts.join(",") === "1,1" &&
+            fixtureStandalone.fixtureAttempts === 1 &&
+            multipleCleanup.caught &&
+            aggregateContainsExactly(multipleCleanup.failure, [
+              clientFailure,
+              serverFailure,
+              fixtureFailure,
+            ]) &&
+            multipleCleanup.connectionAttempts.join(",") === "1,1" &&
+            multipleCleanup.fixtureAttempts === 1 &&
+            combined.caught &&
+            aggregateContainsExactly(combined.failure, [
+              primaryFailure,
+              clientFailure,
+              serverFailure,
+              fixtureFailure,
+            ]) &&
+            combined.connectionAttempts.join(",") === "1,1" &&
+            combined.fixtureAttempts === 1 &&
+            undefinedPrimary.caught &&
+            undefinedPrimary.failure === undefined &&
+            undefinedPrimary.connectionAttempts.join(",") === "1,1" &&
+            undefinedPrimary.fixtureAttempts === 1,
+        ],
+        [
+          "undefinedStandaloneCaught",
+          () =>
+            success.caught === false &&
+            success.failure === undefined &&
+            success.connectionAttempts.join(",") === "1,1" &&
+            success.fixtureAttempts === 1 &&
+            success.order.join(",") === "connection-0,connection-1,fixture" &&
+            fixtureOnlySetup.caught &&
+            fixtureOnlySetup.failure === primaryFailure &&
+            fixtureOnlySetup.connectionAttempts.length === 0 &&
+            fixtureOnlySetup.fixtureAttempts === 1 &&
+            fixtureOnlySetup.order.join(",") === "fixture" &&
+            partialSetup.caught &&
+            partialSetup.failure === primaryFailure &&
+            partialSetup.connectionAttempts.join(",") === "1" &&
+            partialSetup.fixtureAttempts === 1 &&
+            partialSetup.order.join(",") === "connection-0,fixture" &&
+            primaryOnly.caught &&
+            primaryOnly.failure === primaryFailure &&
+            primaryOnly.connectionAttempts.join(",") === "1,1" &&
+            primaryOnly.fixtureAttempts === 1 &&
+            clientStandalone.caught &&
+            clientStandalone.failure === clientFailure &&
+            clientStandalone.connectionAttempts.join(",") === "1,1" &&
+            clientStandalone.fixtureAttempts === 1 &&
+            serverStandalone.caught &&
+            serverStandalone.failure === serverFailure &&
+            serverStandalone.connectionAttempts.join(",") === "1,1" &&
+            serverStandalone.fixtureAttempts === 1 &&
+            fixtureStandalone.caught &&
+            fixtureStandalone.failure === fixtureFailure &&
+            fixtureStandalone.connectionAttempts.join(",") === "1,1" &&
+            fixtureStandalone.fixtureAttempts === 1 &&
+            multipleCleanup.caught &&
+            aggregateContainsExactly(multipleCleanup.failure, [
+              clientFailure,
+              serverFailure,
+              fixtureFailure,
+            ]) &&
+            multipleCleanup.connectionAttempts.join(",") === "1,1" &&
+            multipleCleanup.fixtureAttempts === 1 &&
+            combined.caught &&
+            aggregateContainsExactly(combined.failure, [
+              primaryFailure,
+              clientFailure,
+              serverFailure,
+              fixtureFailure,
+            ]) &&
+            combined.connectionAttempts.join(",") === "1,1" &&
+            combined.fixtureAttempts === 1 &&
+            undefinedPrimary.caught &&
+            undefinedPrimary.failure === undefined &&
+            undefinedPrimary.connectionAttempts.join(",") === "1,1" &&
+            undefinedPrimary.fixtureAttempts === 1 &&
+            undefinedStandalone.caught,
+        ],
+        [
+          "undefinedStandaloneFailure",
+          () =>
+            success.caught === false &&
+            success.failure === undefined &&
+            success.connectionAttempts.join(",") === "1,1" &&
+            success.fixtureAttempts === 1 &&
+            success.order.join(",") === "connection-0,connection-1,fixture" &&
+            fixtureOnlySetup.caught &&
+            fixtureOnlySetup.failure === primaryFailure &&
+            fixtureOnlySetup.connectionAttempts.length === 0 &&
+            fixtureOnlySetup.fixtureAttempts === 1 &&
+            fixtureOnlySetup.order.join(",") === "fixture" &&
+            partialSetup.caught &&
+            partialSetup.failure === primaryFailure &&
+            partialSetup.connectionAttempts.join(",") === "1" &&
+            partialSetup.fixtureAttempts === 1 &&
+            partialSetup.order.join(",") === "connection-0,fixture" &&
+            primaryOnly.caught &&
+            primaryOnly.failure === primaryFailure &&
+            primaryOnly.connectionAttempts.join(",") === "1,1" &&
+            primaryOnly.fixtureAttempts === 1 &&
+            clientStandalone.caught &&
+            clientStandalone.failure === clientFailure &&
+            clientStandalone.connectionAttempts.join(",") === "1,1" &&
+            clientStandalone.fixtureAttempts === 1 &&
+            serverStandalone.caught &&
+            serverStandalone.failure === serverFailure &&
+            serverStandalone.connectionAttempts.join(",") === "1,1" &&
+            serverStandalone.fixtureAttempts === 1 &&
+            fixtureStandalone.caught &&
+            fixtureStandalone.failure === fixtureFailure &&
+            fixtureStandalone.connectionAttempts.join(",") === "1,1" &&
+            fixtureStandalone.fixtureAttempts === 1 &&
+            multipleCleanup.caught &&
+            aggregateContainsExactly(multipleCleanup.failure, [
+              clientFailure,
+              serverFailure,
+              fixtureFailure,
+            ]) &&
+            multipleCleanup.connectionAttempts.join(",") === "1,1" &&
+            multipleCleanup.fixtureAttempts === 1 &&
+            combined.caught &&
+            aggregateContainsExactly(combined.failure, [
+              primaryFailure,
+              clientFailure,
+              serverFailure,
+              fixtureFailure,
+            ]) &&
+            combined.connectionAttempts.join(",") === "1,1" &&
+            combined.fixtureAttempts === 1 &&
+            undefinedPrimary.caught &&
+            undefinedPrimary.failure === undefined &&
+            undefinedPrimary.connectionAttempts.join(",") === "1,1" &&
+            undefinedPrimary.fixtureAttempts === 1 &&
+            undefinedStandalone.caught &&
+            undefinedStandalone.failure === undefined,
+        ],
+        [
+          "undefinedStandaloneConnectionAttemptsJoin",
+          () =>
+            success.caught === false &&
+            success.failure === undefined &&
+            success.connectionAttempts.join(",") === "1,1" &&
+            success.fixtureAttempts === 1 &&
+            success.order.join(",") === "connection-0,connection-1,fixture" &&
+            fixtureOnlySetup.caught &&
+            fixtureOnlySetup.failure === primaryFailure &&
+            fixtureOnlySetup.connectionAttempts.length === 0 &&
+            fixtureOnlySetup.fixtureAttempts === 1 &&
+            fixtureOnlySetup.order.join(",") === "fixture" &&
+            partialSetup.caught &&
+            partialSetup.failure === primaryFailure &&
+            partialSetup.connectionAttempts.join(",") === "1" &&
+            partialSetup.fixtureAttempts === 1 &&
+            partialSetup.order.join(",") === "connection-0,fixture" &&
+            primaryOnly.caught &&
+            primaryOnly.failure === primaryFailure &&
+            primaryOnly.connectionAttempts.join(",") === "1,1" &&
+            primaryOnly.fixtureAttempts === 1 &&
+            clientStandalone.caught &&
+            clientStandalone.failure === clientFailure &&
+            clientStandalone.connectionAttempts.join(",") === "1,1" &&
+            clientStandalone.fixtureAttempts === 1 &&
+            serverStandalone.caught &&
+            serverStandalone.failure === serverFailure &&
+            serverStandalone.connectionAttempts.join(",") === "1,1" &&
+            serverStandalone.fixtureAttempts === 1 &&
+            fixtureStandalone.caught &&
+            fixtureStandalone.failure === fixtureFailure &&
+            fixtureStandalone.connectionAttempts.join(",") === "1,1" &&
+            fixtureStandalone.fixtureAttempts === 1 &&
+            multipleCleanup.caught &&
+            aggregateContainsExactly(multipleCleanup.failure, [
+              clientFailure,
+              serverFailure,
+              fixtureFailure,
+            ]) &&
+            multipleCleanup.connectionAttempts.join(",") === "1,1" &&
+            multipleCleanup.fixtureAttempts === 1 &&
+            combined.caught &&
+            aggregateContainsExactly(combined.failure, [
+              primaryFailure,
+              clientFailure,
+              serverFailure,
+              fixtureFailure,
+            ]) &&
+            combined.connectionAttempts.join(",") === "1,1" &&
+            combined.fixtureAttempts === 1 &&
+            undefinedPrimary.caught &&
+            undefinedPrimary.failure === undefined &&
+            undefinedPrimary.connectionAttempts.join(",") === "1,1" &&
+            undefinedPrimary.fixtureAttempts === 1 &&
+            undefinedStandalone.caught &&
+            undefinedStandalone.failure === undefined &&
+            undefinedStandalone.connectionAttempts.join(",") === "1,1",
+        ],
+        [
+          "undefinedStandaloneFixtureAttempts",
+          () =>
+            success.caught === false &&
+            success.failure === undefined &&
+            success.connectionAttempts.join(",") === "1,1" &&
+            success.fixtureAttempts === 1 &&
+            success.order.join(",") === "connection-0,connection-1,fixture" &&
+            fixtureOnlySetup.caught &&
+            fixtureOnlySetup.failure === primaryFailure &&
+            fixtureOnlySetup.connectionAttempts.length === 0 &&
+            fixtureOnlySetup.fixtureAttempts === 1 &&
+            fixtureOnlySetup.order.join(",") === "fixture" &&
+            partialSetup.caught &&
+            partialSetup.failure === primaryFailure &&
+            partialSetup.connectionAttempts.join(",") === "1" &&
+            partialSetup.fixtureAttempts === 1 &&
+            partialSetup.order.join(",") === "connection-0,fixture" &&
+            primaryOnly.caught &&
+            primaryOnly.failure === primaryFailure &&
+            primaryOnly.connectionAttempts.join(",") === "1,1" &&
+            primaryOnly.fixtureAttempts === 1 &&
+            clientStandalone.caught &&
+            clientStandalone.failure === clientFailure &&
+            clientStandalone.connectionAttempts.join(",") === "1,1" &&
+            clientStandalone.fixtureAttempts === 1 &&
+            serverStandalone.caught &&
+            serverStandalone.failure === serverFailure &&
+            serverStandalone.connectionAttempts.join(",") === "1,1" &&
+            serverStandalone.fixtureAttempts === 1 &&
+            fixtureStandalone.caught &&
+            fixtureStandalone.failure === fixtureFailure &&
+            fixtureStandalone.connectionAttempts.join(",") === "1,1" &&
+            fixtureStandalone.fixtureAttempts === 1 &&
+            multipleCleanup.caught &&
+            aggregateContainsExactly(multipleCleanup.failure, [
+              clientFailure,
+              serverFailure,
+              fixtureFailure,
+            ]) &&
+            multipleCleanup.connectionAttempts.join(",") === "1,1" &&
+            multipleCleanup.fixtureAttempts === 1 &&
+            combined.caught &&
+            aggregateContainsExactly(combined.failure, [
+              primaryFailure,
+              clientFailure,
+              serverFailure,
+              fixtureFailure,
+            ]) &&
+            combined.connectionAttempts.join(",") === "1,1" &&
+            combined.fixtureAttempts === 1 &&
+            undefinedPrimary.caught &&
+            undefinedPrimary.failure === undefined &&
+            undefinedPrimary.connectionAttempts.join(",") === "1,1" &&
+            undefinedPrimary.fixtureAttempts === 1 &&
+            undefinedStandalone.caught &&
+            undefinedStandalone.failure === undefined &&
+            undefinedStandalone.connectionAttempts.join(",") === "1,1" &&
+            undefinedStandalone.fixtureAttempts === 1,
+        ],
+        [
+          "undefinedCombinedCaught",
+          () =>
+            success.caught === false &&
+            success.failure === undefined &&
+            success.connectionAttempts.join(",") === "1,1" &&
+            success.fixtureAttempts === 1 &&
+            success.order.join(",") === "connection-0,connection-1,fixture" &&
+            fixtureOnlySetup.caught &&
+            fixtureOnlySetup.failure === primaryFailure &&
+            fixtureOnlySetup.connectionAttempts.length === 0 &&
+            fixtureOnlySetup.fixtureAttempts === 1 &&
+            fixtureOnlySetup.order.join(",") === "fixture" &&
+            partialSetup.caught &&
+            partialSetup.failure === primaryFailure &&
+            partialSetup.connectionAttempts.join(",") === "1" &&
+            partialSetup.fixtureAttempts === 1 &&
+            partialSetup.order.join(",") === "connection-0,fixture" &&
+            primaryOnly.caught &&
+            primaryOnly.failure === primaryFailure &&
+            primaryOnly.connectionAttempts.join(",") === "1,1" &&
+            primaryOnly.fixtureAttempts === 1 &&
+            clientStandalone.caught &&
+            clientStandalone.failure === clientFailure &&
+            clientStandalone.connectionAttempts.join(",") === "1,1" &&
+            clientStandalone.fixtureAttempts === 1 &&
+            serverStandalone.caught &&
+            serverStandalone.failure === serverFailure &&
+            serverStandalone.connectionAttempts.join(",") === "1,1" &&
+            serverStandalone.fixtureAttempts === 1 &&
+            fixtureStandalone.caught &&
+            fixtureStandalone.failure === fixtureFailure &&
+            fixtureStandalone.connectionAttempts.join(",") === "1,1" &&
+            fixtureStandalone.fixtureAttempts === 1 &&
+            multipleCleanup.caught &&
+            aggregateContainsExactly(multipleCleanup.failure, [
+              clientFailure,
+              serverFailure,
+              fixtureFailure,
+            ]) &&
+            multipleCleanup.connectionAttempts.join(",") === "1,1" &&
+            multipleCleanup.fixtureAttempts === 1 &&
+            combined.caught &&
+            aggregateContainsExactly(combined.failure, [
+              primaryFailure,
+              clientFailure,
+              serverFailure,
+              fixtureFailure,
+            ]) &&
+            combined.connectionAttempts.join(",") === "1,1" &&
+            combined.fixtureAttempts === 1 &&
+            undefinedPrimary.caught &&
+            undefinedPrimary.failure === undefined &&
+            undefinedPrimary.connectionAttempts.join(",") === "1,1" &&
+            undefinedPrimary.fixtureAttempts === 1 &&
+            undefinedStandalone.caught &&
+            undefinedStandalone.failure === undefined &&
+            undefinedStandalone.connectionAttempts.join(",") === "1,1" &&
+            undefinedStandalone.fixtureAttempts === 1 &&
+            undefinedCombined.caught,
+        ],
+        [
+          "aggregateContainsExactlyUndefinedCombinedFailure",
+          () =>
+            success.caught === false &&
+            success.failure === undefined &&
+            success.connectionAttempts.join(",") === "1,1" &&
+            success.fixtureAttempts === 1 &&
+            success.order.join(",") === "connection-0,connection-1,fixture" &&
+            fixtureOnlySetup.caught &&
+            fixtureOnlySetup.failure === primaryFailure &&
+            fixtureOnlySetup.connectionAttempts.length === 0 &&
+            fixtureOnlySetup.fixtureAttempts === 1 &&
+            fixtureOnlySetup.order.join(",") === "fixture" &&
+            partialSetup.caught &&
+            partialSetup.failure === primaryFailure &&
+            partialSetup.connectionAttempts.join(",") === "1" &&
+            partialSetup.fixtureAttempts === 1 &&
+            partialSetup.order.join(",") === "connection-0,fixture" &&
+            primaryOnly.caught &&
+            primaryOnly.failure === primaryFailure &&
+            primaryOnly.connectionAttempts.join(",") === "1,1" &&
+            primaryOnly.fixtureAttempts === 1 &&
+            clientStandalone.caught &&
+            clientStandalone.failure === clientFailure &&
+            clientStandalone.connectionAttempts.join(",") === "1,1" &&
+            clientStandalone.fixtureAttempts === 1 &&
+            serverStandalone.caught &&
+            serverStandalone.failure === serverFailure &&
+            serverStandalone.connectionAttempts.join(",") === "1,1" &&
+            serverStandalone.fixtureAttempts === 1 &&
+            fixtureStandalone.caught &&
+            fixtureStandalone.failure === fixtureFailure &&
+            fixtureStandalone.connectionAttempts.join(",") === "1,1" &&
+            fixtureStandalone.fixtureAttempts === 1 &&
+            multipleCleanup.caught &&
+            aggregateContainsExactly(multipleCleanup.failure, [
+              clientFailure,
+              serverFailure,
+              fixtureFailure,
+            ]) &&
+            multipleCleanup.connectionAttempts.join(",") === "1,1" &&
+            multipleCleanup.fixtureAttempts === 1 &&
+            combined.caught &&
+            aggregateContainsExactly(combined.failure, [
+              primaryFailure,
+              clientFailure,
+              serverFailure,
+              fixtureFailure,
+            ]) &&
+            combined.connectionAttempts.join(",") === "1,1" &&
+            combined.fixtureAttempts === 1 &&
+            undefinedPrimary.caught &&
+            undefinedPrimary.failure === undefined &&
+            undefinedPrimary.connectionAttempts.join(",") === "1,1" &&
+            undefinedPrimary.fixtureAttempts === 1 &&
+            undefinedStandalone.caught &&
+            undefinedStandalone.failure === undefined &&
+            undefinedStandalone.connectionAttempts.join(",") === "1,1" &&
+            undefinedStandalone.fixtureAttempts === 1 &&
+            undefinedCombined.caught &&
+            aggregateContainsExactly(undefinedCombined.failure, [
+              undefined,
+              undefined,
+              undefined,
+            ]),
+        ],
+        [
+          "undefinedCombinedConnectionAttemptsJoin",
+          () =>
+            success.caught === false &&
+            success.failure === undefined &&
+            success.connectionAttempts.join(",") === "1,1" &&
+            success.fixtureAttempts === 1 &&
+            success.order.join(",") === "connection-0,connection-1,fixture" &&
+            fixtureOnlySetup.caught &&
+            fixtureOnlySetup.failure === primaryFailure &&
+            fixtureOnlySetup.connectionAttempts.length === 0 &&
+            fixtureOnlySetup.fixtureAttempts === 1 &&
+            fixtureOnlySetup.order.join(",") === "fixture" &&
+            partialSetup.caught &&
+            partialSetup.failure === primaryFailure &&
+            partialSetup.connectionAttempts.join(",") === "1" &&
+            partialSetup.fixtureAttempts === 1 &&
+            partialSetup.order.join(",") === "connection-0,fixture" &&
+            primaryOnly.caught &&
+            primaryOnly.failure === primaryFailure &&
+            primaryOnly.connectionAttempts.join(",") === "1,1" &&
+            primaryOnly.fixtureAttempts === 1 &&
+            clientStandalone.caught &&
+            clientStandalone.failure === clientFailure &&
+            clientStandalone.connectionAttempts.join(",") === "1,1" &&
+            clientStandalone.fixtureAttempts === 1 &&
+            serverStandalone.caught &&
+            serverStandalone.failure === serverFailure &&
+            serverStandalone.connectionAttempts.join(",") === "1,1" &&
+            serverStandalone.fixtureAttempts === 1 &&
+            fixtureStandalone.caught &&
+            fixtureStandalone.failure === fixtureFailure &&
+            fixtureStandalone.connectionAttempts.join(",") === "1,1" &&
+            fixtureStandalone.fixtureAttempts === 1 &&
+            multipleCleanup.caught &&
+            aggregateContainsExactly(multipleCleanup.failure, [
+              clientFailure,
+              serverFailure,
+              fixtureFailure,
+            ]) &&
+            multipleCleanup.connectionAttempts.join(",") === "1,1" &&
+            multipleCleanup.fixtureAttempts === 1 &&
+            combined.caught &&
+            aggregateContainsExactly(combined.failure, [
+              primaryFailure,
+              clientFailure,
+              serverFailure,
+              fixtureFailure,
+            ]) &&
+            combined.connectionAttempts.join(",") === "1,1" &&
+            combined.fixtureAttempts === 1 &&
+            undefinedPrimary.caught &&
+            undefinedPrimary.failure === undefined &&
+            undefinedPrimary.connectionAttempts.join(",") === "1,1" &&
+            undefinedPrimary.fixtureAttempts === 1 &&
+            undefinedStandalone.caught &&
+            undefinedStandalone.failure === undefined &&
+            undefinedStandalone.connectionAttempts.join(",") === "1,1" &&
+            undefinedStandalone.fixtureAttempts === 1 &&
+            undefinedCombined.caught &&
+            aggregateContainsExactly(undefinedCombined.failure, [
+              undefined,
+              undefined,
+              undefined,
+            ]) &&
+            undefinedCombined.connectionAttempts.join(",") === "1,1",
+        ],
+        [
+          "undefinedCombinedFixtureAttempts",
+          () =>
+            success.caught === false &&
+            success.failure === undefined &&
+            success.connectionAttempts.join(",") === "1,1" &&
+            success.fixtureAttempts === 1 &&
+            success.order.join(",") === "connection-0,connection-1,fixture" &&
+            fixtureOnlySetup.caught &&
+            fixtureOnlySetup.failure === primaryFailure &&
+            fixtureOnlySetup.connectionAttempts.length === 0 &&
+            fixtureOnlySetup.fixtureAttempts === 1 &&
+            fixtureOnlySetup.order.join(",") === "fixture" &&
+            partialSetup.caught &&
+            partialSetup.failure === primaryFailure &&
+            partialSetup.connectionAttempts.join(",") === "1" &&
+            partialSetup.fixtureAttempts === 1 &&
+            partialSetup.order.join(",") === "connection-0,fixture" &&
+            primaryOnly.caught &&
+            primaryOnly.failure === primaryFailure &&
+            primaryOnly.connectionAttempts.join(",") === "1,1" &&
+            primaryOnly.fixtureAttempts === 1 &&
+            clientStandalone.caught &&
+            clientStandalone.failure === clientFailure &&
+            clientStandalone.connectionAttempts.join(",") === "1,1" &&
+            clientStandalone.fixtureAttempts === 1 &&
+            serverStandalone.caught &&
+            serverStandalone.failure === serverFailure &&
+            serverStandalone.connectionAttempts.join(",") === "1,1" &&
+            serverStandalone.fixtureAttempts === 1 &&
+            fixtureStandalone.caught &&
+            fixtureStandalone.failure === fixtureFailure &&
+            fixtureStandalone.connectionAttempts.join(",") === "1,1" &&
+            fixtureStandalone.fixtureAttempts === 1 &&
+            multipleCleanup.caught &&
+            aggregateContainsExactly(multipleCleanup.failure, [
+              clientFailure,
+              serverFailure,
+              fixtureFailure,
+            ]) &&
+            multipleCleanup.connectionAttempts.join(",") === "1,1" &&
+            multipleCleanup.fixtureAttempts === 1 &&
+            combined.caught &&
+            aggregateContainsExactly(combined.failure, [
+              primaryFailure,
+              clientFailure,
+              serverFailure,
+              fixtureFailure,
+            ]) &&
+            combined.connectionAttempts.join(",") === "1,1" &&
+            combined.fixtureAttempts === 1 &&
+            undefinedPrimary.caught &&
+            undefinedPrimary.failure === undefined &&
+            undefinedPrimary.connectionAttempts.join(",") === "1,1" &&
+            undefinedPrimary.fixtureAttempts === 1 &&
+            undefinedStandalone.caught &&
+            undefinedStandalone.failure === undefined &&
+            undefinedStandalone.connectionAttempts.join(",") === "1,1" &&
+            undefinedStandalone.fixtureAttempts === 1 &&
+            undefinedCombined.caught &&
+            aggregateContainsExactly(undefinedCombined.failure, [
+              undefined,
+              undefined,
+              undefined,
+            ]) &&
+            undefinedCombined.connectionAttempts.join(",") === "1,1" &&
+            undefinedCombined.fixtureAttempts === 1,
+        ],
+      ]),
+      {
+        successCaught: true,
+        successFailure: true,
+        successConnectionAttemptsJoin: true,
+        successFixtureAttempts: true,
+        successOrderJoin: true,
+        fixtureOnlySetupCaught: true,
+        fixtureOnlySetupFailurePrimaryFailure: true,
+        fixtureOnlySetupConnectionAttemptsLength: true,
+        fixtureOnlySetupFixtureAttempts: true,
+        fixtureOnlySetupOrderJoin: true,
+        partialSetupCaught: true,
+        partialSetupFailurePrimaryFailure: true,
+        partialSetupConnectionAttemptsJoin: true,
+        partialSetupFixtureAttempts: true,
+        partialSetupOrderJoin: true,
+        primaryOnlyCaught: true,
+        primaryOnlyFailurePrimaryFailure: true,
+        primaryOnlyConnectionAttemptsJoin: true,
+        primaryOnlyFixtureAttempts: true,
+        clientStandaloneCaught: true,
+        clientStandaloneFailureClientFailure: true,
+        clientStandaloneConnectionAttemptsJoin: true,
+        clientStandaloneFixtureAttempts: true,
+        serverStandaloneCaught: true,
+        serverStandaloneFailureServerFailure: true,
+        serverStandaloneConnectionAttemptsJoin: true,
+        serverStandaloneFixtureAttempts: true,
+        fixtureStandaloneCaught: true,
+        fixtureStandaloneFailureFixtureFailure: true,
+        fixtureStandaloneConnectionAttemptsJoin: true,
+        fixtureStandaloneFixtureAttempts: true,
+        multipleCleanupCaught: true,
+        aggregateContainsExactlyMultipleCleanupFailure: true,
+        multipleCleanupConnectionAttemptsJoin: true,
+        multipleCleanupFixtureAttempts: true,
+        combinedCaught: true,
+        aggregateContainsExactlyCombinedFailure: true,
+        combinedConnectionAttemptsJoin: true,
+        combinedFixtureAttempts: true,
+        undefinedPrimaryCaught: true,
+        undefinedPrimaryFailure: true,
+        undefinedPrimaryConnectionAttemptsJoin: true,
+        undefinedPrimaryFixtureAttempts: true,
+        undefinedStandaloneCaught: true,
+        undefinedStandaloneFailure: true,
+        undefinedStandaloneConnectionAttemptsJoin: true,
+        undefinedStandaloneFixtureAttempts: true,
+        undefinedCombinedCaught: true,
+        aggregateContainsExactlyUndefinedCombinedFailure: true,
+        undefinedCombinedConnectionAttemptsJoin: true,
+        undefinedCombinedFixtureAttempts: true,
+      },
     );
     TestValidator.equals(
       "production-application test owns every acquired cleanup phase",

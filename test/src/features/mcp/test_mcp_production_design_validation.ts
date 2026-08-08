@@ -324,58 +324,85 @@ export const test_mcp_production_design_validation = (): void => {
     ],
   };
   const crossFormationMessage = "belongs to participating formations";
-  TestValidator.predicate(
+  TestValidator.equals(
     "one shot cannot assign the same hero actor to two formations",
-    validateAutoMovieProductionGraph({
-      ...valid,
-      formations: new Map([
-        [firstHeroFormation.id, firstHeroFormation],
-        [secondHeroFormation.id, secondHeroFormation],
-      ]),
-      shots: new Map([[sharedHeroShot.id, sharedHeroShot]]),
-      acceptance: new Map(),
-    }).some(
-      (diagnostic) =>
-        diagnostic.code === "design-duplicate-id" &&
-        diagnostic.message.includes(crossFormationMessage),
-    ) &&
-      validateAutoMovieProductionGraph({
-        ...valid,
-        formations: new Map([
-          [firstHeroFormation.id, firstHeroFormation],
-          [secondHeroFormation.id, secondHeroFormation],
-        ]),
-        shots: new Map([
-          [
-            "first-shot",
-            {
-              ...shotContract(),
-              id: "first-shot",
-              participants: [
-                { kind: "formation" as const, id: firstHeroFormation.id },
+    namedFacts([
+      [
+        "validateAutoMovieProductionGraphValidFormations",
+        () =>
+          validateAutoMovieProductionGraph({
+            ...valid,
+            formations: new Map([
+              [firstHeroFormation.id, firstHeroFormation],
+              [secondHeroFormation.id, secondHeroFormation],
+            ]),
+            shots: new Map([[sharedHeroShot.id, sharedHeroShot]]),
+            acceptance: new Map(),
+          }).some(
+            (diagnostic) =>
+              diagnostic.code === "design-duplicate-id" &&
+              diagnostic.message.includes(crossFormationMessage),
+          ),
+      ],
+      [
+        "validateAutoMovieProductionGraphValidFormations2",
+        () =>
+          validateAutoMovieProductionGraph({
+            ...valid,
+            formations: new Map([
+              [firstHeroFormation.id, firstHeroFormation],
+              [secondHeroFormation.id, secondHeroFormation],
+            ]),
+            shots: new Map([[sharedHeroShot.id, sharedHeroShot]]),
+            acceptance: new Map(),
+          }).some(
+            (diagnostic) =>
+              diagnostic.code === "design-duplicate-id" &&
+              diagnostic.message.includes(crossFormationMessage),
+          ) &&
+          validateAutoMovieProductionGraph({
+            ...valid,
+            formations: new Map([
+              [firstHeroFormation.id, firstHeroFormation],
+              [secondHeroFormation.id, secondHeroFormation],
+            ]),
+            shots: new Map([
+              [
+                "first-shot",
+                {
+                  ...shotContract(),
+                  id: "first-shot",
+                  participants: [
+                    { kind: "formation" as const, id: firstHeroFormation.id },
+                  ],
+                },
               ],
-            },
-          ],
-          [
-            "second-shot",
-            {
-              ...shotContract(),
-              id: "second-shot",
-              source: {
-                ...shotContract().source,
-                module: "src/shots/second.ts",
-              },
-              participants: [
-                { kind: "formation" as const, id: secondHeroFormation.id },
+              [
+                "second-shot",
+                {
+                  ...shotContract(),
+                  id: "second-shot",
+                  source: {
+                    ...shotContract().source,
+                    module: "src/shots/second.ts",
+                  },
+                  participants: [
+                    { kind: "formation" as const, id: secondHeroFormation.id },
+                  ],
+                },
               ],
-            },
-          ],
-        ]),
-        acceptance: new Map(),
-      }).every(
-        (diagnostic) =>
-          diagnostic.message.includes(crossFormationMessage) === false,
-      ),
+            ]),
+            acceptance: new Map(),
+          }).every(
+            (diagnostic) =>
+              diagnostic.message.includes(crossFormationMessage) === false,
+          ),
+      ],
+    ]),
+    {
+      validateAutoMovieProductionGraphValidFormations: true,
+      validateAutoMovieProductionGraphValidFormations2: true,
+    },
   );
   const maximumRaster = {
     ...productionDesign(),
@@ -786,20 +813,28 @@ export const test_mcp_production_design_validation = (): void => {
   };
   const diagnostics = validateAutoMovieProductionGraph(invalid);
   const codes = new Set(diagnostics.map((item) => item.code));
-  TestValidator.predicate(
+  TestValidator.equals(
     "invalid mega-graph exercises every diagnostic family",
-    diagnostics.length > 50 &&
+    namedFacts([
+      ["diagnosticsLength", () => diagnostics.length > 50],
       [
-        "design-identity-mismatch",
-        "design-range-invalid",
-        "design-enum-invalid",
-        "design-duplicate-id",
-        "design-collection-empty",
-        "design-text-empty",
-        "design-reference-missing",
-        "model-parameter-unsupported",
-        "model-parameter-invalid",
-      ].every((code) => codes.has(code)),
+        "designIdentityMismatch",
+        () =>
+          diagnostics.length > 50 &&
+          [
+            "design-identity-mismatch",
+            "design-range-invalid",
+            "design-enum-invalid",
+            "design-duplicate-id",
+            "design-collection-empty",
+            "design-text-empty",
+            "design-reference-missing",
+            "model-parameter-unsupported",
+            "model-parameter-invalid",
+          ].every((code) => codes.has(code)),
+      ],
+    ]),
+    { diagnosticsLength: true, designIdentityMismatch: true },
   );
   const expensiveEffectRecipe = {
     ...worldDesign().effectRecipes[0]!,
@@ -954,25 +989,47 @@ export const test_mcp_production_design_validation = (): void => {
   };
   const offClockDuration = shotContract();
   offClockDuration.durationSeconds = 6.01;
-  TestValidator.predicate(
+  TestValidator.equals(
     "production and shot runtimes must be exactly renderable on the frame clock",
-    validateAutoMovieProductionGraph({
-      ...valid,
-      production: offClockProduction,
-    }).some(
-      (diagnostic) =>
-        diagnostic.code === "design-frame-clock-invalid" &&
-        diagnostic.target === "production",
-    ) &&
-      validateAutoMovieProductionGraph({
-        ...valid,
-        shots: new Map([[offClockDuration.id, offClockDuration]]),
-        acceptance: new Map(),
-      }).some(
-        (diagnostic) =>
-          diagnostic.code === "design-frame-clock-invalid" &&
-          diagnostic.target === "shot:opening",
-      ),
+    namedFacts([
+      [
+        "validateAutoMovieProductionGraphValidProduction",
+        () =>
+          validateAutoMovieProductionGraph({
+            ...valid,
+            production: offClockProduction,
+          }).some(
+            (diagnostic) =>
+              diagnostic.code === "design-frame-clock-invalid" &&
+              diagnostic.target === "production",
+          ),
+      ],
+      [
+        "validateAutoMovieProductionGraphValidShots",
+        () =>
+          validateAutoMovieProductionGraph({
+            ...valid,
+            production: offClockProduction,
+          }).some(
+            (diagnostic) =>
+              diagnostic.code === "design-frame-clock-invalid" &&
+              diagnostic.target === "production",
+          ) &&
+          validateAutoMovieProductionGraph({
+            ...valid,
+            shots: new Map([[offClockDuration.id, offClockDuration]]),
+            acceptance: new Map(),
+          }).some(
+            (diagnostic) =>
+              diagnostic.code === "design-frame-clock-invalid" &&
+              diagnostic.target === "shot:opening",
+          ),
+      ],
+    ]),
+    {
+      validateAutoMovieProductionGraphValidProduction: true,
+      validateAutoMovieProductionGraphValidShots: true,
+    },
   );
   const longClockShot = shotContract();
   longClockShot.durationSeconds = 50_000;
@@ -1171,18 +1228,37 @@ export const test_mcp_production_design_validation = (): void => {
         diagnostic.message.includes('"rigged"'),
     ),
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "stickman sockets and palette entries cannot claim discarded runtime data",
-    modelContractDiagnostics.some(
-      (diagnostic) =>
-        diagnostic.code === "design-attachment-unsupported" &&
-        diagnostic.message.includes("rightFoot"),
-    ) &&
-      modelContractDiagnostics.some(
-        (diagnostic) =>
-          diagnostic.code === "design-collection-cardinality-invalid" &&
-          diagnostic.target === "model:multiple-palette-materials",
-      ),
+    namedFacts([
+      [
+        "modelContractDiagnosticsSomeDiagnostic",
+        () =>
+          modelContractDiagnostics.some(
+            (diagnostic) =>
+              diagnostic.code === "design-attachment-unsupported" &&
+              diagnostic.message.includes("rightFoot"),
+          ),
+      ],
+      [
+        "modelContractDiagnosticsSomeDiagnostic2",
+        () =>
+          modelContractDiagnostics.some(
+            (diagnostic) =>
+              diagnostic.code === "design-attachment-unsupported" &&
+              diagnostic.message.includes("rightFoot"),
+          ) &&
+          modelContractDiagnostics.some(
+            (diagnostic) =>
+              diagnostic.code === "design-collection-cardinality-invalid" &&
+              diagnostic.target === "model:multiple-palette-materials",
+          ),
+      ],
+    ]),
+    {
+      modelContractDiagnosticsSomeDiagnostic: true,
+      modelContractDiagnosticsSomeDiagnostic2: true,
+    },
   );
   const validFilmFrame: IAutoMovieAcceptanceScenario = {
     ...acceptanceScenarios()[0]!,
@@ -1244,14 +1320,31 @@ export const test_mcp_production_design_validation = (): void => {
       [mismatchedShot.id, mismatchedShot],
     ]),
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "ambiguous, absent and mismatched acceptance shot scopes are refused with blank expectations",
-    scopedCriteriaDiagnostics.filter(
-      (diagnostic) => diagnostic.code === "design-reference-missing",
-    ).length === 3 &&
-      scopedCriteriaDiagnostics.some(
-        (diagnostic) => diagnostic.code === "design-text-empty",
-      ),
+    namedFacts([
+      [
+        "scopedCriteriaDiagnosticsFilterDiagnostic",
+        () =>
+          scopedCriteriaDiagnostics.filter(
+            (diagnostic) => diagnostic.code === "design-reference-missing",
+          ).length === 3,
+      ],
+      [
+        "scopedCriteriaDiagnosticsSomeDiagnostic",
+        () =>
+          scopedCriteriaDiagnostics.filter(
+            (diagnostic) => diagnostic.code === "design-reference-missing",
+          ).length === 3 &&
+          scopedCriteriaDiagnostics.some(
+            (diagnostic) => diagnostic.code === "design-text-empty",
+          ),
+      ],
+    ]),
+    {
+      scopedCriteriaDiagnosticsFilterDiagnostic: true,
+      scopedCriteriaDiagnosticsSomeDiagnostic: true,
+    },
   );
   const predicateShot: IAutoMovieShotContract = {
     ...shotContract(),

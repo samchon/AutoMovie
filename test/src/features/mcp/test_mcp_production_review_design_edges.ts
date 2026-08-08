@@ -75,17 +75,28 @@ export const test_mcp_production_review_design_edges = (): void => {
         },
       ],
     };
-    TestValidator.predicate(
+    TestValidator.equals(
       "model review fingerprints include referenced LOD recipes",
-      project.setModelRecipe(dependentModel).accepted &&
-        review
-          .prepare({
-            target: {
-              kind: "design",
-              design: { kind: "model", id: dependentModel.id },
-            },
-          })
-          .fingerprint.startsWith("sha256:"),
+      namedFacts([
+        [
+          "projectSetModelRecipeDependentModel",
+          () => project.setModelRecipe(dependentModel).accepted,
+        ],
+        [
+          "reviewPrepareTarget",
+          () =>
+            project.setModelRecipe(dependentModel).accepted &&
+            review
+              .prepare({
+                target: {
+                  kind: "design",
+                  design: { kind: "model", id: dependentModel.id },
+                },
+              })
+              .fingerprint.startsWith("sha256:"),
+        ],
+      ]),
+      { projectSetModelRecipeDependentModel: true, reviewPrepareTarget: true },
     );
     const cyclicSentinel = {
       ...modelRecipe(),
@@ -174,24 +185,43 @@ export const test_mcp_production_review_design_edges = (): void => {
       ...shotContract(),
       participants: [{ kind: "formation", id: "line" }],
     });
-    TestValidator.predicate(
+    TestValidator.equals(
       "formation and shot fingerprints include design dependencies",
-      review
-        .prepare({
-          target: {
-            kind: "design",
-            design: { kind: "formation", id: "line" },
-          },
-        })
-        .fingerprint.startsWith("sha256:") &&
-        review
-          .prepare({
-            target: {
-              kind: "design",
-              design: { kind: "shot", id: "opening" },
-            },
-          })
-          .fingerprint.startsWith("sha256:"),
+      namedFacts([
+        [
+          "reviewPrepareTarget",
+          () =>
+            review
+              .prepare({
+                target: {
+                  kind: "design",
+                  design: { kind: "formation", id: "line" },
+                },
+              })
+              .fingerprint.startsWith("sha256:"),
+        ],
+        [
+          "reviewPrepareTarget2",
+          () =>
+            review
+              .prepare({
+                target: {
+                  kind: "design",
+                  design: { kind: "formation", id: "line" },
+                },
+              })
+              .fingerprint.startsWith("sha256:") &&
+            review
+              .prepare({
+                target: {
+                  kind: "design",
+                  design: { kind: "shot", id: "opening" },
+                },
+              })
+              .fingerprint.startsWith("sha256:"),
+        ],
+      ]),
+      { reviewPrepareTarget: true, reviewPrepareTarget2: true },
     );
     const shotDesignTarget = {
       kind: "design" as const,
@@ -214,10 +244,24 @@ export const test_mcp_production_review_design_edges = (): void => {
       target: shotDesignTarget,
     }).fingerprint;
     project.setModelRecipe(modelRecipe());
-    TestValidator.predicate(
+    TestValidator.equals(
       "shot-design review identity includes world and transitive formation-model dependencies",
-      baselineShotFingerprint !== worldChangedFingerprint &&
-        baselineShotFingerprint !== modelChangedFingerprint,
+      namedFacts([
+        [
+          "baselineShotFingerprintWorldChangedFingerprint",
+          () => baselineShotFingerprint !== worldChangedFingerprint,
+        ],
+        [
+          "baselineShotFingerprintModelChangedFingerprint",
+          () =>
+            baselineShotFingerprint !== worldChangedFingerprint &&
+            baselineShotFingerprint !== modelChangedFingerprint,
+        ],
+      ]),
+      {
+        baselineShotFingerprintWorldChangedFingerprint: true,
+        baselineShotFingerprintModelChangedFingerprint: true,
+      },
     );
     const filmAcceptance = {
       id: "film-opening-beauty",
@@ -295,16 +339,34 @@ export const test_mcp_production_review_design_edges = (): void => {
         reviewPrepareTarget3: true,
       },
     );
-    TestValidator.predicate(
+    TestValidator.equals(
       "film acceptance erasure uses the same tracked path as its setter",
-      project.eraseDesignArtifact({
-        kind: "acceptance",
-        id: filmAcceptance.id,
-      }).accepted &&
-        project.eraseDesignArtifact({
-          kind: "acceptance",
-          id: filmEventAcceptance.id,
-        }).accepted,
+      namedFacts([
+        [
+          "projectEraseDesignArtifactKind",
+          () =>
+            project.eraseDesignArtifact({
+              kind: "acceptance",
+              id: filmAcceptance.id,
+            }).accepted,
+        ],
+        [
+          "projectEraseDesignArtifactKind2",
+          () =>
+            project.eraseDesignArtifact({
+              kind: "acceptance",
+              id: filmAcceptance.id,
+            }).accepted &&
+            project.eraseDesignArtifact({
+              kind: "acceptance",
+              id: filmEventAcceptance.id,
+            }).accepted,
+        ],
+      ]),
+      {
+        projectEraseDesignArtifactKind: true,
+        projectEraseDesignArtifactKind2: true,
+      },
     );
     project.setShotContract({
       ...shotContract(),
@@ -409,24 +471,49 @@ export const test_mcp_production_review_design_edges = (): void => {
         missingAcceptanceDependenciesFingerprintStartsWith: true,
       },
     );
-    TestValidator.predicate(
+    TestValidator.equals(
       "absent formation and shot design targets remain fingerprintable",
-      review
-        .prepare({
-          target: {
-            kind: "design",
-            design: { kind: "formation", id: "absent" },
-          },
-        })
-        .diagnostics.some((item) => item.code === "review-target-missing") &&
-        review
-          .prepare({
-            target: {
-              kind: "design",
-              design: { kind: "shot", id: "absent" },
-            },
-          })
-          .diagnostics.some((item) => item.code === "review-target-missing"),
+      namedFacts([
+        [
+          "reviewPrepareTarget",
+          () =>
+            review
+              .prepare({
+                target: {
+                  kind: "design",
+                  design: { kind: "formation", id: "absent" },
+                },
+              })
+              .diagnostics.some(
+                (item) => item.code === "review-target-missing",
+              ),
+        ],
+        [
+          "reviewPrepareTarget2",
+          () =>
+            review
+              .prepare({
+                target: {
+                  kind: "design",
+                  design: { kind: "formation", id: "absent" },
+                },
+              })
+              .diagnostics.some(
+                (item) => item.code === "review-target-missing",
+              ) &&
+            review
+              .prepare({
+                target: {
+                  kind: "design",
+                  design: { kind: "shot", id: "absent" },
+                },
+              })
+              .diagnostics.some(
+                (item) => item.code === "review-target-missing",
+              ),
+        ],
+      ]),
+      { reviewPrepareTarget: true, reviewPrepareTarget2: true },
     );
 
     const sourceFile = path.join(fixture.root, "src/shots/opening.ts");
@@ -479,18 +566,37 @@ export const test_mcp_production_review_design_edges = (): void => {
     const missingProduction = review.prepare({
       target: { kind: "design", design: { kind: "production" } },
     });
-    TestValidator.predicate(
+    TestValidator.equals(
       "singleton design targets have explicit missing paths",
-      missingWorld.diagnostics.some(
-        (item) =>
-          item.code === "review-target-missing" &&
-          item.path?.endsWith("world.json"),
-      ) &&
-        missingProduction.diagnostics.some(
-          (item) =>
-            item.code === "review-target-missing" &&
-            item.path?.endsWith("production.json"),
-        ),
+      namedFacts([
+        [
+          "missingWorldDiagnosticsSome",
+          () =>
+            missingWorld.diagnostics.some(
+              (item) =>
+                item.code === "review-target-missing" &&
+                item.path?.endsWith("world.json"),
+            ),
+        ],
+        [
+          "missingProductionDiagnosticsSome",
+          () =>
+            missingWorld.diagnostics.some(
+              (item) =>
+                item.code === "review-target-missing" &&
+                item.path?.endsWith("world.json"),
+            ) &&
+            missingProduction.diagnostics.some(
+              (item) =>
+                item.code === "review-target-missing" &&
+                item.path?.endsWith("production.json"),
+            ),
+        ],
+      ]),
+      {
+        missingWorldDiagnosticsSome: true,
+        missingProductionDiagnosticsSome: true,
+      },
     );
   } catch (error) {
     productionReviewDesignFailure = { error };

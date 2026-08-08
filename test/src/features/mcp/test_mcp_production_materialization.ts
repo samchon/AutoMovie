@@ -275,10 +275,28 @@ export const test_mcp_production_materialization = (): void => {
     },
     new Map([[invalidProjectionRecipe.id, invalidProjectionRecipe]]),
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "every runtime recipe derives a finite projection proxy with a safe malformed fallback",
-    projectionRadii.every((radius) => Number.isFinite(radius) && radius > 0) &&
-      boundedInvalidProjection.projectionRadius === 0.5,
+    namedFacts([
+      [
+        "projectionRadiiEveryRadius",
+        () =>
+          projectionRadii.every(
+            (radius) => Number.isFinite(radius) && radius > 0,
+          ),
+      ],
+      [
+        "boundedInvalidProjectionProjectionRadius",
+        () =>
+          projectionRadii.every(
+            (radius) => Number.isFinite(radius) && radius > 0,
+          ) && boundedInvalidProjection.projectionRadius === 0.5,
+      ],
+    ]),
+    {
+      projectionRadiiEveryRadius: true,
+      boundedInvalidProjectionProjectionRadius: true,
+    },
   );
 
   const layouts = [
@@ -554,22 +572,30 @@ export const test_mcp_production_materialization = (): void => {
         ]),
       ),
     ];
-    TestValidator.predicate(
+    TestValidator.equals(
       "formation motion validation accepts bounded cues and rejects every unsafe class",
-      validCueDiagnostics.length === 0 &&
+      namedFacts([
+        ["validCueDiagnosticsLength", () => validCueDiagnostics.length === 0],
         [
-          "at most 256",
-          "unique inside the shot",
-          "participating compiled formation",
-          "positive interval",
-          "translation inside +/-1000000000m",
-          "0.25..4",
-          "must not overlap",
-        ].every((message) =>
-          invalidCueDiagnostics.some((diagnostic) =>
-            diagnostic.message.includes(message),
-          ),
-        ),
+          "atMostUnique",
+          () =>
+            validCueDiagnostics.length === 0 &&
+            [
+              "at most 256",
+              "unique inside the shot",
+              "participating compiled formation",
+              "positive interval",
+              "translation inside +/-1000000000m",
+              "0.25..4",
+              "must not overlap",
+            ].every((message) =>
+              invalidCueDiagnostics.some((diagnostic) =>
+                diagnostic.message.includes(message),
+              ),
+            ),
+        ],
+      ]),
+      { validCueDiagnosticsLength: true, atMostUnique: true },
     );
     const collisionSource = structuredClone(source);
     collisionSource.scene.nodes.push({
@@ -726,29 +752,151 @@ export const test_mcp_production_materialization = (): void => {
       { ...highCount },
       0,
     );
-    TestValidator.predicate(
+    TestValidator.equals(
       "high counts stay compact across stable chunk boundaries and exact slot regeneration",
-      compact.count === AUTOMOVIE_FORMATION_CHUNK_SIZE * 2 + 1 &&
-        compact.chunks.length === 3 &&
-        compact.chunks[0]?.count === AUTOMOVIE_FORMATION_CHUNK_SIZE &&
-        compact.chunks[1]?.start === AUTOMOVIE_FORMATION_CHUNK_SIZE &&
-        compact.chunks[1]?.anonymousCount ===
-          AUTOMOVIE_FORMATION_CHUNK_SIZE - 1 &&
-        compact.chunks[2]?.count === 1 &&
-        compact.heroes[0]?.slot === AUTOMOVIE_FORMATION_CHUNK_SIZE &&
-        compact.digest === compactAgain.digest &&
-        materializeFormationSlot(highCount, AUTOMOVIE_FORMATION_CHUNK_SIZE)
-          .actor === "boundary-hero" &&
-        firstRegeneratedSlot.motionPhase ===
-          repeatedRegeneratedSlot.motionPhase &&
-        (() => {
-          try {
-            materializeFormationSlot(highCount, highCount.count);
-            return false;
-          } catch {
-            return true;
-          }
-        })(),
+      namedFacts([
+        [
+          "compactCountAUTOMOVIE_FORMATION_CHUNK_SIZE",
+          () => compact.count === AUTOMOVIE_FORMATION_CHUNK_SIZE * 2 + 1,
+        ],
+        [
+          "compactChunksLength",
+          () =>
+            compact.count === AUTOMOVIE_FORMATION_CHUNK_SIZE * 2 + 1 &&
+            compact.chunks.length === 3,
+        ],
+        [
+          "compactChunks0",
+          () =>
+            compact.count === AUTOMOVIE_FORMATION_CHUNK_SIZE * 2 + 1 &&
+            compact.chunks.length === 3 &&
+            compact.chunks[0]?.count === AUTOMOVIE_FORMATION_CHUNK_SIZE,
+        ],
+        [
+          "compactChunks1",
+          () =>
+            compact.count === AUTOMOVIE_FORMATION_CHUNK_SIZE * 2 + 1 &&
+            compact.chunks.length === 3 &&
+            compact.chunks[0]?.count === AUTOMOVIE_FORMATION_CHUNK_SIZE &&
+            compact.chunks[1]?.start === AUTOMOVIE_FORMATION_CHUNK_SIZE,
+        ],
+        [
+          "compactChunks12",
+          () =>
+            compact.count === AUTOMOVIE_FORMATION_CHUNK_SIZE * 2 + 1 &&
+            compact.chunks.length === 3 &&
+            compact.chunks[0]?.count === AUTOMOVIE_FORMATION_CHUNK_SIZE &&
+            compact.chunks[1]?.start === AUTOMOVIE_FORMATION_CHUNK_SIZE &&
+            compact.chunks[1]?.anonymousCount ===
+              AUTOMOVIE_FORMATION_CHUNK_SIZE - 1,
+        ],
+        [
+          "compactChunks2",
+          () =>
+            compact.count === AUTOMOVIE_FORMATION_CHUNK_SIZE * 2 + 1 &&
+            compact.chunks.length === 3 &&
+            compact.chunks[0]?.count === AUTOMOVIE_FORMATION_CHUNK_SIZE &&
+            compact.chunks[1]?.start === AUTOMOVIE_FORMATION_CHUNK_SIZE &&
+            compact.chunks[1]?.anonymousCount ===
+              AUTOMOVIE_FORMATION_CHUNK_SIZE - 1 &&
+            compact.chunks[2]?.count === 1,
+        ],
+        [
+          "compactHeroes0",
+          () =>
+            compact.count === AUTOMOVIE_FORMATION_CHUNK_SIZE * 2 + 1 &&
+            compact.chunks.length === 3 &&
+            compact.chunks[0]?.count === AUTOMOVIE_FORMATION_CHUNK_SIZE &&
+            compact.chunks[1]?.start === AUTOMOVIE_FORMATION_CHUNK_SIZE &&
+            compact.chunks[1]?.anonymousCount ===
+              AUTOMOVIE_FORMATION_CHUNK_SIZE - 1 &&
+            compact.chunks[2]?.count === 1 &&
+            compact.heroes[0]?.slot === AUTOMOVIE_FORMATION_CHUNK_SIZE,
+        ],
+        [
+          "compactDigestCompactAgain",
+          () =>
+            compact.count === AUTOMOVIE_FORMATION_CHUNK_SIZE * 2 + 1 &&
+            compact.chunks.length === 3 &&
+            compact.chunks[0]?.count === AUTOMOVIE_FORMATION_CHUNK_SIZE &&
+            compact.chunks[1]?.start === AUTOMOVIE_FORMATION_CHUNK_SIZE &&
+            compact.chunks[1]?.anonymousCount ===
+              AUTOMOVIE_FORMATION_CHUNK_SIZE - 1 &&
+            compact.chunks[2]?.count === 1 &&
+            compact.heroes[0]?.slot === AUTOMOVIE_FORMATION_CHUNK_SIZE &&
+            compact.digest === compactAgain.digest,
+        ],
+        [
+          "materializeFormationSlotHighCountAUTOMOVIE_FORMATION_CHUNK_SIZE",
+          () =>
+            compact.count === AUTOMOVIE_FORMATION_CHUNK_SIZE * 2 + 1 &&
+            compact.chunks.length === 3 &&
+            compact.chunks[0]?.count === AUTOMOVIE_FORMATION_CHUNK_SIZE &&
+            compact.chunks[1]?.start === AUTOMOVIE_FORMATION_CHUNK_SIZE &&
+            compact.chunks[1]?.anonymousCount ===
+              AUTOMOVIE_FORMATION_CHUNK_SIZE - 1 &&
+            compact.chunks[2]?.count === 1 &&
+            compact.heroes[0]?.slot === AUTOMOVIE_FORMATION_CHUNK_SIZE &&
+            compact.digest === compactAgain.digest &&
+            materializeFormationSlot(highCount, AUTOMOVIE_FORMATION_CHUNK_SIZE)
+              .actor === "boundary-hero",
+        ],
+        [
+          "firstRegeneratedSlotMotionPhaseRepeatedRegeneratedSlot",
+          () =>
+            compact.count === AUTOMOVIE_FORMATION_CHUNK_SIZE * 2 + 1 &&
+            compact.chunks.length === 3 &&
+            compact.chunks[0]?.count === AUTOMOVIE_FORMATION_CHUNK_SIZE &&
+            compact.chunks[1]?.start === AUTOMOVIE_FORMATION_CHUNK_SIZE &&
+            compact.chunks[1]?.anonymousCount ===
+              AUTOMOVIE_FORMATION_CHUNK_SIZE - 1 &&
+            compact.chunks[2]?.count === 1 &&
+            compact.heroes[0]?.slot === AUTOMOVIE_FORMATION_CHUNK_SIZE &&
+            compact.digest === compactAgain.digest &&
+            materializeFormationSlot(highCount, AUTOMOVIE_FORMATION_CHUNK_SIZE)
+              .actor === "boundary-hero" &&
+            firstRegeneratedSlot.motionPhase ===
+              repeatedRegeneratedSlot.motionPhase,
+        ],
+        [
+          "tryMaterializeFormationSlotHighCount",
+          () =>
+            compact.count === AUTOMOVIE_FORMATION_CHUNK_SIZE * 2 + 1 &&
+            compact.chunks.length === 3 &&
+            compact.chunks[0]?.count === AUTOMOVIE_FORMATION_CHUNK_SIZE &&
+            compact.chunks[1]?.start === AUTOMOVIE_FORMATION_CHUNK_SIZE &&
+            compact.chunks[1]?.anonymousCount ===
+              AUTOMOVIE_FORMATION_CHUNK_SIZE - 1 &&
+            compact.chunks[2]?.count === 1 &&
+            compact.heroes[0]?.slot === AUTOMOVIE_FORMATION_CHUNK_SIZE &&
+            compact.digest === compactAgain.digest &&
+            materializeFormationSlot(highCount, AUTOMOVIE_FORMATION_CHUNK_SIZE)
+              .actor === "boundary-hero" &&
+            firstRegeneratedSlot.motionPhase ===
+              repeatedRegeneratedSlot.motionPhase &&
+            (() => {
+              try {
+                materializeFormationSlot(highCount, highCount.count);
+                return false;
+              } catch {
+                return true;
+              }
+            })(),
+        ],
+      ]),
+      {
+        compactCountAUTOMOVIE_FORMATION_CHUNK_SIZE: true,
+        compactChunksLength: true,
+        compactChunks0: true,
+        compactChunks1: true,
+        compactChunks12: true,
+        compactChunks2: true,
+        compactHeroes0: true,
+        compactDigestCompactAgain: true,
+        materializeFormationSlotHighCountAUTOMOVIE_FORMATION_CHUNK_SIZE: true,
+        firstRegeneratedSlotMotionPhaseRepeatedRegeneratedSlot: true,
+        tryMaterializeFormationSlotHighCount: true,
+      },
     );
     project.setFormationDesign(highCount);
     setProductionFixtureShotContract(project, {
@@ -795,26 +943,168 @@ export const test_mcp_production_materialization = (): void => {
         time: 3,
       },
     });
-    TestValidator.predicate(
+    TestValidator.equals(
       "shot sandbox regenerates a high slot and preserves one compact formation motion",
-      highCountCompileSucceeded &&
-        highCountShot?.formations[0]?.count === highCount.count &&
-        highCountShot.scene.nodes.every(
-          (node) =>
-            node.id !==
-            `formation:${highCount.id}:slot:${String(highCount.count - 1).padStart(6, "0")}`,
-        ) &&
-        highCountShot.formationMotions[0]?.formation === highCount.id &&
-        highCountShot.formationMotions[0]?.action === "advance" &&
-        highCountSummary.result?.kind === "measurement" &&
-        highCountSummary.result.values.motionOffsetZ === -1 &&
-        highCountSummary.result.values.motionFacingOffsetDeg === 2 &&
-        highCountSummary.result.values.lateralSpacingScale === 1.025 &&
-        Number(highCountSummary.result.values.minimumProjectedPixels) > 0 &&
-        Number(highCountSummary.result.values.nearVisible) +
-          Number(highCountSummary.result.values.farVisible) +
-          Number(highCountSummary.result.values.culled) ===
-          highCount.count - highCount.heroOverrides.length,
+      namedFacts([
+        ["highCountCompileSucceeded", () => highCountCompileSucceeded],
+        [
+          "highCountShotFormations0",
+          () =>
+            highCountCompileSucceeded &&
+            highCountShot?.formations[0]?.count === highCount.count,
+        ],
+        [
+          "highCountShotSceneNodes",
+          () =>
+            highCountCompileSucceeded &&
+            highCountShot?.formations[0]?.count === highCount.count &&
+            highCountShot.scene.nodes.every(
+              (node) =>
+                node.id !==
+                `formation:${highCount.id}:slot:${String(highCount.count - 1).padStart(6, "0")}`,
+            ),
+        ],
+        [
+          "highCountShotFormationMotions0",
+          () =>
+            highCountCompileSucceeded &&
+            highCountShot?.formations[0]?.count === highCount.count &&
+            highCountShot.scene.nodes.every(
+              (node) =>
+                node.id !==
+                `formation:${highCount.id}:slot:${String(highCount.count - 1).padStart(6, "0")}`,
+            ) &&
+            highCountShot.formationMotions[0]?.formation === highCount.id,
+        ],
+        [
+          "highCountShotFormationMotions02",
+          () =>
+            highCountCompileSucceeded &&
+            highCountShot?.formations[0]?.count === highCount.count &&
+            highCountShot.scene.nodes.every(
+              (node) =>
+                node.id !==
+                `formation:${highCount.id}:slot:${String(highCount.count - 1).padStart(6, "0")}`,
+            ) &&
+            highCountShot.formationMotions[0]?.formation === highCount.id &&
+            highCountShot.formationMotions[0]?.action === "advance",
+        ],
+        [
+          "highCountSummaryResultKind",
+          () =>
+            highCountCompileSucceeded &&
+            highCountShot?.formations[0]?.count === highCount.count &&
+            highCountShot.scene.nodes.every(
+              (node) =>
+                node.id !==
+                `formation:${highCount.id}:slot:${String(highCount.count - 1).padStart(6, "0")}`,
+            ) &&
+            highCountShot.formationMotions[0]?.formation === highCount.id &&
+            highCountShot.formationMotions[0]?.action === "advance" &&
+            highCountSummary.result?.kind === "measurement",
+        ],
+        [
+          "highCountSummaryResultValues",
+          () =>
+            highCountCompileSucceeded &&
+            highCountShot?.formations[0]?.count === highCount.count &&
+            highCountShot.scene.nodes.every(
+              (node) =>
+                node.id !==
+                `formation:${highCount.id}:slot:${String(highCount.count - 1).padStart(6, "0")}`,
+            ) &&
+            highCountShot.formationMotions[0]?.formation === highCount.id &&
+            highCountShot.formationMotions[0]?.action === "advance" &&
+            highCountSummary.result?.kind === "measurement" &&
+            highCountSummary.result.values.motionOffsetZ === -1,
+        ],
+        [
+          "highCountSummaryResultValues2",
+          () =>
+            highCountCompileSucceeded &&
+            highCountShot?.formations[0]?.count === highCount.count &&
+            highCountShot.scene.nodes.every(
+              (node) =>
+                node.id !==
+                `formation:${highCount.id}:slot:${String(highCount.count - 1).padStart(6, "0")}`,
+            ) &&
+            highCountShot.formationMotions[0]?.formation === highCount.id &&
+            highCountShot.formationMotions[0]?.action === "advance" &&
+            highCountSummary.result?.kind === "measurement" &&
+            highCountSummary.result.values.motionOffsetZ === -1 &&
+            highCountSummary.result.values.motionFacingOffsetDeg === 2,
+        ],
+        [
+          "highCountSummaryResultValues3",
+          () =>
+            highCountCompileSucceeded &&
+            highCountShot?.formations[0]?.count === highCount.count &&
+            highCountShot.scene.nodes.every(
+              (node) =>
+                node.id !==
+                `formation:${highCount.id}:slot:${String(highCount.count - 1).padStart(6, "0")}`,
+            ) &&
+            highCountShot.formationMotions[0]?.formation === highCount.id &&
+            highCountShot.formationMotions[0]?.action === "advance" &&
+            highCountSummary.result?.kind === "measurement" &&
+            highCountSummary.result.values.motionOffsetZ === -1 &&
+            highCountSummary.result.values.motionFacingOffsetDeg === 2 &&
+            highCountSummary.result.values.lateralSpacingScale === 1.025,
+        ],
+        [
+          "highCountSummaryResultValues4",
+          () =>
+            highCountCompileSucceeded &&
+            highCountShot?.formations[0]?.count === highCount.count &&
+            highCountShot.scene.nodes.every(
+              (node) =>
+                node.id !==
+                `formation:${highCount.id}:slot:${String(highCount.count - 1).padStart(6, "0")}`,
+            ) &&
+            highCountShot.formationMotions[0]?.formation === highCount.id &&
+            highCountShot.formationMotions[0]?.action === "advance" &&
+            highCountSummary.result?.kind === "measurement" &&
+            highCountSummary.result.values.motionOffsetZ === -1 &&
+            highCountSummary.result.values.motionFacingOffsetDeg === 2 &&
+            highCountSummary.result.values.lateralSpacingScale === 1.025 &&
+            Number(highCountSummary.result.values.minimumProjectedPixels) > 0,
+        ],
+        [
+          "highCountSummaryResultValues5",
+          () =>
+            highCountCompileSucceeded &&
+            highCountShot?.formations[0]?.count === highCount.count &&
+            highCountShot.scene.nodes.every(
+              (node) =>
+                node.id !==
+                `formation:${highCount.id}:slot:${String(highCount.count - 1).padStart(6, "0")}`,
+            ) &&
+            highCountShot.formationMotions[0]?.formation === highCount.id &&
+            highCountShot.formationMotions[0]?.action === "advance" &&
+            highCountSummary.result?.kind === "measurement" &&
+            highCountSummary.result.values.motionOffsetZ === -1 &&
+            highCountSummary.result.values.motionFacingOffsetDeg === 2 &&
+            highCountSummary.result.values.lateralSpacingScale === 1.025 &&
+            Number(highCountSummary.result.values.minimumProjectedPixels) > 0 &&
+            Number(highCountSummary.result.values.nearVisible) +
+              Number(highCountSummary.result.values.farVisible) +
+              Number(highCountSummary.result.values.culled) ===
+              highCount.count - highCount.heroOverrides.length,
+        ],
+      ]),
+      {
+        highCountCompileSucceeded: true,
+        highCountShotFormations0: true,
+        highCountShotSceneNodes: true,
+        highCountShotFormationMotions0: true,
+        highCountShotFormationMotions02: true,
+        highCountSummaryResultKind: true,
+        highCountSummaryResultValues: true,
+        highCountSummaryResultValues2: true,
+        highCountSummaryResultValues3: true,
+        highCountSummaryResultValues4: true,
+        highCountSummaryResultValues5: true,
+      },
     );
   } catch (error) {
     productionMaterializationFailure = { error };

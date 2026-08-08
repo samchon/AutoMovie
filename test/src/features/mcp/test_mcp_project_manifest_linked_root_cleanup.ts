@@ -4,6 +4,8 @@ import fs from "node:fs";
 import path from "node:path";
 import ts from "typescript-compiler";
 
+import { namedFacts } from "../internal/predicates";
+
 const compact = (node: ts.Node, source: ts.SourceFile): string =>
   node.getText(source).replace(/\s+/g, "");
 
@@ -245,10 +247,18 @@ export const test_mcp_project_manifest_linked_root_cleanup = (): void => {
     'resource: "linked project root"',
     'resource: "linked project root mutated"',
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "project-manifest linked-root contract rejects its label mutation",
-    mutated !== text &&
-      JSON.stringify(linkedRootCleanupContract(mutated)) !==
-        JSON.stringify(expected),
+    namedFacts([
+      ["mutatedText", () => mutated !== text],
+      [
+        "stringifyLinkedRootCleanupContractMutated",
+        () =>
+          mutated !== text &&
+          JSON.stringify(linkedRootCleanupContract(mutated)) !==
+            JSON.stringify(expected),
+      ],
+    ]),
+    { mutatedText: true, stringifyLinkedRootCleanupContractMutated: true },
   );
 };

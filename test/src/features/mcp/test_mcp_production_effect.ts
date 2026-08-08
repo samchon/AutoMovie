@@ -142,29 +142,288 @@ export const test_mcp_production_effect = (): void => {
         time: 2,
       },
     });
-    TestValidator.predicate(
+    TestValidator.equals(
       "source cue becomes one current deterministic effect stream and oracle summary",
-      compileSucceeded &&
-        compiled?.effects.length === 1 &&
-        compiled.effects[0]?.kind === "smoke" &&
-        compiled.effects[0]?.event === "signal-raised" &&
-        summary.result?.kind === "measurement" &&
-        summary.result.values.active === true &&
-        Number(summary.result.values.particleCount) > 0 &&
-        Number(summary.result.values.particleCount) <=
-          Number(summary.result.values.particleCap) &&
-        Number(summary.result.values.visibilityRisk) >= 0 &&
-        summary.result.values.effectDigest === compiled.effects[0]?.digest &&
-        inactive.result?.kind === "measurement" &&
-        inactive.result.values.active === false &&
-        unsafeSubjects.result === null &&
-        unsafeSubjects.diagnostics[0]?.message.includes("256 unique") &&
-        missingZone.result === null &&
-        invalidTimes.every((output) => output.result === null) &&
-        missingCompiledShot.result === null &&
-        missingCompiledShot.diagnostics[0]?.message.includes(
-          "no current compiled source",
-        ),
+      namedFacts([
+        ["compileSucceeded", () => compileSucceeded],
+        [
+          "compiledEffectsLength",
+          () => compileSucceeded && compiled?.effects.length === 1,
+        ],
+        [
+          "compiledEffects0",
+          () =>
+            compileSucceeded &&
+            compiled?.effects.length === 1 &&
+            compiled.effects[0]?.kind === "smoke",
+        ],
+        [
+          "compiledEffects02",
+          () =>
+            compileSucceeded &&
+            compiled?.effects.length === 1 &&
+            compiled.effects[0]?.kind === "smoke" &&
+            compiled.effects[0]?.event === "signal-raised",
+        ],
+        [
+          "summaryResultKind",
+          () =>
+            compileSucceeded &&
+            compiled?.effects.length === 1 &&
+            compiled.effects[0]?.kind === "smoke" &&
+            compiled.effects[0]?.event === "signal-raised" &&
+            summary.result?.kind === "measurement",
+        ],
+        [
+          "summaryResultValues",
+          () =>
+            compileSucceeded &&
+            compiled?.effects.length === 1 &&
+            compiled.effects[0]?.kind === "smoke" &&
+            compiled.effects[0]?.event === "signal-raised" &&
+            summary.result?.kind === "measurement" &&
+            summary.result.values.active === true,
+        ],
+        [
+          "summaryResultValues2",
+          () =>
+            compileSucceeded &&
+            compiled?.effects.length === 1 &&
+            compiled.effects[0]?.kind === "smoke" &&
+            compiled.effects[0]?.event === "signal-raised" &&
+            summary.result?.kind === "measurement" &&
+            summary.result.values.active === true &&
+            Number(summary.result.values.particleCount) > 0,
+        ],
+        [
+          "summaryResultValues3",
+          () =>
+            compileSucceeded &&
+            compiled?.effects.length === 1 &&
+            compiled.effects[0]?.kind === "smoke" &&
+            compiled.effects[0]?.event === "signal-raised" &&
+            summary.result?.kind === "measurement" &&
+            summary.result.values.active === true &&
+            Number(summary.result.values.particleCount) > 0 &&
+            Number(summary.result.values.particleCount) <=
+              Number(summary.result.values.particleCap),
+        ],
+        [
+          "summaryResultValues4",
+          () =>
+            compileSucceeded &&
+            compiled?.effects.length === 1 &&
+            compiled.effects[0]?.kind === "smoke" &&
+            compiled.effects[0]?.event === "signal-raised" &&
+            summary.result?.kind === "measurement" &&
+            summary.result.values.active === true &&
+            Number(summary.result.values.particleCount) > 0 &&
+            Number(summary.result.values.particleCount) <=
+              Number(summary.result.values.particleCap) &&
+            Number(summary.result.values.visibilityRisk) >= 0,
+        ],
+        [
+          "summaryResultValues5",
+          () =>
+            compileSucceeded &&
+            compiled?.effects.length === 1 &&
+            compiled.effects[0]?.kind === "smoke" &&
+            compiled.effects[0]?.event === "signal-raised" &&
+            summary.result?.kind === "measurement" &&
+            summary.result.values.active === true &&
+            Number(summary.result.values.particleCount) > 0 &&
+            Number(summary.result.values.particleCount) <=
+              Number(summary.result.values.particleCap) &&
+            Number(summary.result.values.visibilityRisk) >= 0 &&
+            summary.result.values.effectDigest === compiled.effects[0]?.digest,
+        ],
+        [
+          "inactiveResultKind",
+          () =>
+            compileSucceeded &&
+            compiled?.effects.length === 1 &&
+            compiled.effects[0]?.kind === "smoke" &&
+            compiled.effects[0]?.event === "signal-raised" &&
+            summary.result?.kind === "measurement" &&
+            summary.result.values.active === true &&
+            Number(summary.result.values.particleCount) > 0 &&
+            Number(summary.result.values.particleCount) <=
+              Number(summary.result.values.particleCap) &&
+            Number(summary.result.values.visibilityRisk) >= 0 &&
+            summary.result.values.effectDigest ===
+              compiled.effects[0]?.digest &&
+            inactive.result?.kind === "measurement",
+        ],
+        [
+          "inactiveResultValues",
+          () =>
+            compileSucceeded &&
+            compiled?.effects.length === 1 &&
+            compiled.effects[0]?.kind === "smoke" &&
+            compiled.effects[0]?.event === "signal-raised" &&
+            summary.result?.kind === "measurement" &&
+            summary.result.values.active === true &&
+            Number(summary.result.values.particleCount) > 0 &&
+            Number(summary.result.values.particleCount) <=
+              Number(summary.result.values.particleCap) &&
+            Number(summary.result.values.visibilityRisk) >= 0 &&
+            summary.result.values.effectDigest ===
+              compiled.effects[0]?.digest &&
+            inactive.result?.kind === "measurement" &&
+            inactive.result.values.active === false,
+        ],
+        [
+          "unsafeSubjectsResult",
+          () =>
+            compileSucceeded &&
+            compiled?.effects.length === 1 &&
+            compiled.effects[0]?.kind === "smoke" &&
+            compiled.effects[0]?.event === "signal-raised" &&
+            summary.result?.kind === "measurement" &&
+            summary.result.values.active === true &&
+            Number(summary.result.values.particleCount) > 0 &&
+            Number(summary.result.values.particleCount) <=
+              Number(summary.result.values.particleCap) &&
+            Number(summary.result.values.visibilityRisk) >= 0 &&
+            summary.result.values.effectDigest ===
+              compiled.effects[0]?.digest &&
+            inactive.result?.kind === "measurement" &&
+            inactive.result.values.active === false &&
+            unsafeSubjects.result === null,
+        ],
+        [
+          "unsafeSubjectsDiagnostics0",
+          () =>
+            compileSucceeded &&
+            compiled?.effects.length === 1 &&
+            compiled.effects[0]?.kind === "smoke" &&
+            compiled.effects[0]?.event === "signal-raised" &&
+            summary.result?.kind === "measurement" &&
+            summary.result.values.active === true &&
+            Number(summary.result.values.particleCount) > 0 &&
+            Number(summary.result.values.particleCount) <=
+              Number(summary.result.values.particleCap) &&
+            Number(summary.result.values.visibilityRisk) >= 0 &&
+            summary.result.values.effectDigest ===
+              compiled.effects[0]?.digest &&
+            inactive.result?.kind === "measurement" &&
+            inactive.result.values.active === false &&
+            unsafeSubjects.result === null &&
+            unsafeSubjects.diagnostics[0]?.message.includes("256 unique"),
+        ],
+        [
+          "missingZoneResult",
+          () =>
+            compileSucceeded &&
+            compiled?.effects.length === 1 &&
+            compiled.effects[0]?.kind === "smoke" &&
+            compiled.effects[0]?.event === "signal-raised" &&
+            summary.result?.kind === "measurement" &&
+            summary.result.values.active === true &&
+            Number(summary.result.values.particleCount) > 0 &&
+            Number(summary.result.values.particleCount) <=
+              Number(summary.result.values.particleCap) &&
+            Number(summary.result.values.visibilityRisk) >= 0 &&
+            summary.result.values.effectDigest ===
+              compiled.effects[0]?.digest &&
+            inactive.result?.kind === "measurement" &&
+            inactive.result.values.active === false &&
+            unsafeSubjects.result === null &&
+            unsafeSubjects.diagnostics[0]?.message.includes("256 unique") &&
+            missingZone.result === null,
+        ],
+        [
+          "invalidTimesEveryOutput",
+          () =>
+            compileSucceeded &&
+            compiled?.effects.length === 1 &&
+            compiled.effects[0]?.kind === "smoke" &&
+            compiled.effects[0]?.event === "signal-raised" &&
+            summary.result?.kind === "measurement" &&
+            summary.result.values.active === true &&
+            Number(summary.result.values.particleCount) > 0 &&
+            Number(summary.result.values.particleCount) <=
+              Number(summary.result.values.particleCap) &&
+            Number(summary.result.values.visibilityRisk) >= 0 &&
+            summary.result.values.effectDigest ===
+              compiled.effects[0]?.digest &&
+            inactive.result?.kind === "measurement" &&
+            inactive.result.values.active === false &&
+            unsafeSubjects.result === null &&
+            unsafeSubjects.diagnostics[0]?.message.includes("256 unique") &&
+            missingZone.result === null &&
+            invalidTimes.every((output) => output.result === null),
+        ],
+        [
+          "missingCompiledShotResult",
+          () =>
+            compileSucceeded &&
+            compiled?.effects.length === 1 &&
+            compiled.effects[0]?.kind === "smoke" &&
+            compiled.effects[0]?.event === "signal-raised" &&
+            summary.result?.kind === "measurement" &&
+            summary.result.values.active === true &&
+            Number(summary.result.values.particleCount) > 0 &&
+            Number(summary.result.values.particleCount) <=
+              Number(summary.result.values.particleCap) &&
+            Number(summary.result.values.visibilityRisk) >= 0 &&
+            summary.result.values.effectDigest ===
+              compiled.effects[0]?.digest &&
+            inactive.result?.kind === "measurement" &&
+            inactive.result.values.active === false &&
+            unsafeSubjects.result === null &&
+            unsafeSubjects.diagnostics[0]?.message.includes("256 unique") &&
+            missingZone.result === null &&
+            invalidTimes.every((output) => output.result === null) &&
+            missingCompiledShot.result === null,
+        ],
+        [
+          "missingCompiledShotDiagnostics0",
+          () =>
+            compileSucceeded &&
+            compiled?.effects.length === 1 &&
+            compiled.effects[0]?.kind === "smoke" &&
+            compiled.effects[0]?.event === "signal-raised" &&
+            summary.result?.kind === "measurement" &&
+            summary.result.values.active === true &&
+            Number(summary.result.values.particleCount) > 0 &&
+            Number(summary.result.values.particleCount) <=
+              Number(summary.result.values.particleCap) &&
+            Number(summary.result.values.visibilityRisk) >= 0 &&
+            summary.result.values.effectDigest ===
+              compiled.effects[0]?.digest &&
+            inactive.result?.kind === "measurement" &&
+            inactive.result.values.active === false &&
+            unsafeSubjects.result === null &&
+            unsafeSubjects.diagnostics[0]?.message.includes("256 unique") &&
+            missingZone.result === null &&
+            invalidTimes.every((output) => output.result === null) &&
+            missingCompiledShot.result === null &&
+            missingCompiledShot.diagnostics[0]?.message.includes(
+              "no current compiled source",
+            ),
+        ],
+      ]),
+      {
+        compileSucceeded: true,
+        compiledEffectsLength: true,
+        compiledEffects0: true,
+        compiledEffects02: true,
+        summaryResultKind: true,
+        summaryResultValues: true,
+        summaryResultValues2: true,
+        summaryResultValues3: true,
+        summaryResultValues4: true,
+        summaryResultValues5: true,
+        inactiveResultKind: true,
+        inactiveResultValues: true,
+        unsafeSubjectsResult: true,
+        unsafeSubjectsDiagnostics0: true,
+        missingZoneResult: true,
+        invalidTimesEveryOutput: true,
+        missingCompiledShotResult: true,
+        missingCompiledShotDiagnostics0: true,
+      },
     );
 
     const cue = compiled!.effectCues![0]!;

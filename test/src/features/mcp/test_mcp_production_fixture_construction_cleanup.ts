@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import ts from "typescript-compiler";
 
+import { namedFacts } from "../internal/predicates";
 import { throwProductionFixtureConstructionFailure } from "./productionFixtures";
 
 const compact = (node: ts.Node, source: ts.SourceFile): string =>
@@ -193,15 +194,46 @@ export const test_mcp_production_fixture_construction_cleanup = (): void => {
   const cleanupFailure = { phase: "partial-root removal" };
   const primaryOnly = captureConstructionFailure(primaryFailure);
   const combined = captureConstructionFailure(primaryFailure, cleanupFailure);
-  TestValidator.predicate(
+  TestValidator.equals(
     "production fixture construction cleanup preserves failure identity and order",
-    primaryOnly.failure === primaryFailure &&
-      primaryOnly.attempts === 1 &&
-      aggregateContainsExactly(combined.failure, [
-        primaryFailure,
-        cleanupFailure,
-      ]) &&
-      combined.attempts === 1,
+    namedFacts([
+      [
+        "primaryOnlyFailurePrimaryFailure",
+        () => primaryOnly.failure === primaryFailure,
+      ],
+      [
+        "primaryOnlyAttempts",
+        () =>
+          primaryOnly.failure === primaryFailure && primaryOnly.attempts === 1,
+      ],
+      [
+        "aggregateContainsExactlyCombinedFailure",
+        () =>
+          primaryOnly.failure === primaryFailure &&
+          primaryOnly.attempts === 1 &&
+          aggregateContainsExactly(combined.failure, [
+            primaryFailure,
+            cleanupFailure,
+          ]),
+      ],
+      [
+        "combinedAttempts",
+        () =>
+          primaryOnly.failure === primaryFailure &&
+          primaryOnly.attempts === 1 &&
+          aggregateContainsExactly(combined.failure, [
+            primaryFailure,
+            cleanupFailure,
+          ]) &&
+          combined.attempts === 1,
+      ],
+    ]),
+    {
+      primaryOnlyFailurePrimaryFailure: true,
+      primaryOnlyAttempts: true,
+      aggregateContainsExactlyCombinedFailure: true,
+      combinedAttempts: true,
+    },
   );
   TestValidator.equals(
     "production fixture owns its temporary root from creation through handoff",

@@ -185,9 +185,16 @@ export const test_mcp_project_manifest = (): void => {
         },
       ]);
     }
-    TestValidator.predicate(
+    TestValidator.equals(
       "manifest reads reject replacement between first observation and descriptor open",
-      manifestSwapBoundary === "lstat" && manifestSwapRejected,
+      namedFacts([
+        ["manifestSwapBoundaryLstat", () => manifestSwapBoundary === "lstat"],
+        [
+          "manifestSwapRejected",
+          () => manifestSwapBoundary === "lstat" && manifestSwapRejected,
+        ],
+      ]),
+      { manifestSwapBoundaryLstat: true, manifestSwapRejected: true },
     );
     const project = AutoMovieProject.open(root);
     TestValidator.equals(

@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import ts from "typescript-compiler";
 
+import { namedFacts } from "../internal/predicates";
 import { preserveProductionProjectFixtureCleanup } from "./test_mcp_production_project";
 
 const compact = (node: ts.Node, source: ts.SourceFile): string =>
@@ -172,17 +173,87 @@ export const test_mcp_production_project_combined_recovery_cleanup =
         { error: lastFailure, present: true },
       ],
     });
-    TestValidator.predicate(
+    TestValidator.equals(
       "a failed restoration never skips the rest of the lifecycle",
-      success.caught === false &&
-        success.order.join(",") === "cleanup-0,cleanup-1,cleanup-2" &&
-        leading.caught &&
-        // One standalone restoration failure travels unchanged.
-        leading.failure === firstFailure &&
-        leading.order.join(",") === "cleanup-0,cleanup-1,cleanup-2" &&
-        both.caught &&
-        aggregateContainsExactly(both.failure, [firstFailure, lastFailure]) &&
-        both.order.join(",") === "cleanup-0,cleanup-1,cleanup-2",
+      namedFacts([
+        ["successCaught", () => success.caught === false],
+        [
+          "successOrderJoin",
+          () =>
+            success.caught === false &&
+            success.order.join(",") === "cleanup-0,cleanup-1,cleanup-2",
+        ],
+        [
+          "leadingCaught",
+          () =>
+            success.caught === false &&
+            success.order.join(",") === "cleanup-0,cleanup-1,cleanup-2" &&
+            leading.caught,
+        ],
+        [
+          "leadingFailureFirstFailure",
+          () =>
+            success.caught === false &&
+            success.order.join(",") === "cleanup-0,cleanup-1,cleanup-2" &&
+            leading.caught &&
+            leading.failure === firstFailure,
+        ],
+        [
+          "leadingOrderJoin",
+          () =>
+            success.caught === false &&
+            success.order.join(",") === "cleanup-0,cleanup-1,cleanup-2" &&
+            leading.caught &&
+            leading.failure === firstFailure &&
+            leading.order.join(",") === "cleanup-0,cleanup-1,cleanup-2",
+        ],
+        [
+          "bothCaught",
+          () =>
+            success.caught === false &&
+            success.order.join(",") === "cleanup-0,cleanup-1,cleanup-2" &&
+            leading.caught &&
+            leading.failure === firstFailure &&
+            leading.order.join(",") === "cleanup-0,cleanup-1,cleanup-2" &&
+            both.caught,
+        ],
+        [
+          "aggregateContainsExactlyBothFailure",
+          () =>
+            success.caught === false &&
+            success.order.join(",") === "cleanup-0,cleanup-1,cleanup-2" &&
+            leading.caught &&
+            leading.failure === firstFailure &&
+            leading.order.join(",") === "cleanup-0,cleanup-1,cleanup-2" &&
+            both.caught &&
+            aggregateContainsExactly(both.failure, [firstFailure, lastFailure]),
+        ],
+        [
+          "bothOrderJoin",
+          () =>
+            success.caught === false &&
+            success.order.join(",") === "cleanup-0,cleanup-1,cleanup-2" &&
+            leading.caught &&
+            leading.failure === firstFailure &&
+            leading.order.join(",") === "cleanup-0,cleanup-1,cleanup-2" &&
+            both.caught &&
+            aggregateContainsExactly(both.failure, [
+              firstFailure,
+              lastFailure,
+            ]) &&
+            both.order.join(",") === "cleanup-0,cleanup-1,cleanup-2",
+        ],
+      ]),
+      {
+        successCaught: true,
+        successOrderJoin: true,
+        leadingCaught: true,
+        leadingFailureFirstFailure: true,
+        leadingOrderJoin: true,
+        bothCaught: true,
+        aggregateContainsExactlyBothFailure: true,
+        bothOrderJoin: true,
+      },
     );
     TestValidator.equals(
       "the atomic-recovery harness restores every hook through the policy",

@@ -300,10 +300,21 @@ export const test_mcp_production_namespaces = (): void => {
         existsSyncFixtureRoot: true,
       },
     );
-    TestValidator.predicate(
+    TestValidator.equals(
       "shared model is visible to both productions",
-      alpha.design({ kind: "model", id: "sentinel" }) !== null &&
-        beta.design({ kind: "model", id: "sentinel" }) !== null,
+      namedFacts([
+        [
+          "alphaDesignKind",
+          () => alpha.design({ kind: "model", id: "sentinel" }) !== null,
+        ],
+        [
+          "betaDesignKind",
+          () =>
+            alpha.design({ kind: "model", id: "sentinel" }) !== null &&
+            beta.design({ kind: "model", id: "sentinel" }) !== null,
+        ],
+      ]),
+      { alphaDesignKind: true, betaDesignKind: true },
     );
     TestValidator.predicate(
       "second production design binds its namespace",
@@ -378,10 +389,21 @@ export const test_mcp_production_namespaces = (): void => {
       beta.renderRoot(),
       "deliverables/namespace-proof/frame.bin",
     );
-    TestValidator.predicate(
+    TestValidator.equals(
       "both productions render without byte contamination",
-      fs.readFileSync(alphaRender, "utf8") === "alpha" &&
-        fs.readFileSync(betaRender, "utf8") === "beta",
+      namedFacts([
+        [
+          "fsReadFileSyncAlphaRender",
+          () => fs.readFileSync(alphaRender, "utf8") === "alpha",
+        ],
+        [
+          "fsReadFileSyncBetaRender",
+          () =>
+            fs.readFileSync(alphaRender, "utf8") === "alpha" &&
+            fs.readFileSync(betaRender, "utf8") === "beta",
+        ],
+      ]),
+      { fsReadFileSyncAlphaRender: true, fsReadFileSyncBetaRender: true },
     );
 
     const reviewTarget = {
@@ -565,15 +587,33 @@ export const test_mcp_production_namespaces = (): void => {
       betaDesignRoot,
       process.platform === "win32" ? "junction" : "dir",
     );
-    TestValidator.predicate(
+    TestValidator.equals(
       "an internal namespace alias is refused before registration",
-      throws(
-        () => AutoMovieProductionProject.open(aliasFixture.root, "beta"),
-        "not a physical directory",
-      ) &&
-        AutoMovieProductionProject.open(aliasFixture.root, "fixture-film")
-          .productionIds()
-          .includes("beta") === false,
+      namedFacts([
+        [
+          "throwsAutoMovieProductionProjectOpen",
+          () =>
+            throws(
+              () => AutoMovieProductionProject.open(aliasFixture.root, "beta"),
+              "not a physical directory",
+            ),
+        ],
+        [
+          "autoMovieProductionProjectOpenAliasFixture",
+          () =>
+            throws(
+              () => AutoMovieProductionProject.open(aliasFixture.root, "beta"),
+              "not a physical directory",
+            ) &&
+            AutoMovieProductionProject.open(aliasFixture.root, "fixture-film")
+              .productionIds()
+              .includes("beta") === false,
+        ],
+      ]),
+      {
+        throwsAutoMovieProductionProjectOpen: true,
+        autoMovieProductionProjectOpenAliasFixture: true,
+      },
     );
   } catch (error) {
     aliasFixtureFailure = { error };
@@ -686,11 +726,32 @@ export const test_mcp_production_namespaces = (): void => {
       protoFixture.root,
       "__proto__",
     );
-    TestValidator.predicate(
+    TestValidator.equals(
       "prototype-named production receives an own ABA incarnation",
-      Object.hasOwn(registryBefore.incarnations, "__proto__") &&
-        recreated.summary().productionId === "__proto__" &&
-        throws(() => stale.generatedRoot(), "deleted or recreated"),
+      namedFacts([
+        [
+          "hasOwnRegistryBeforeIncarnations",
+          () => Object.hasOwn(registryBefore.incarnations, "__proto__"),
+        ],
+        [
+          "recreatedSummaryProductionId",
+          () =>
+            Object.hasOwn(registryBefore.incarnations, "__proto__") &&
+            recreated.summary().productionId === "__proto__",
+        ],
+        [
+          "throwsStaleGeneratedRoot",
+          () =>
+            Object.hasOwn(registryBefore.incarnations, "__proto__") &&
+            recreated.summary().productionId === "__proto__" &&
+            throws(() => stale.generatedRoot(), "deleted or recreated"),
+        ],
+      ]),
+      {
+        hasOwnRegistryBeforeIncarnations: true,
+        recreatedSummaryProductionId: true,
+        throwsStaleGeneratedRoot: true,
+      },
     );
   } catch (error) {
     protoFixtureFailure = { error };
@@ -726,12 +787,27 @@ export const test_mcp_production_namespaces = (): void => {
         betaDesignRoot,
         process.platform === "win32" ? "junction" : "dir",
       );
-      TestValidator.predicate(
+      TestValidator.equals(
         "an opened handle rejects a later internal namespace alias",
-        throws(
-          () => beta.design({ kind: "production" }),
-          "changed physical identity",
-        ) && alpha.summary().productionId === "fixture-film",
+        namedFacts([
+          [
+            "throwsBetaDesign",
+            () =>
+              throws(
+                () => beta.design({ kind: "production" }),
+                "changed physical identity",
+              ),
+          ],
+          [
+            "alphaSummaryProductionId",
+            () =>
+              throws(
+                () => beta.design({ kind: "production" }),
+                "changed physical identity",
+              ) && alpha.summary().productionId === "fixture-film",
+          ],
+        ]),
+        { throwsBetaDesign: true, alphaSummaryProductionId: true },
       );
     } catch (error) {
       replacementAliasFailure = { error };

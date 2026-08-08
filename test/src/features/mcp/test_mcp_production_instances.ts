@@ -299,15 +299,51 @@ export const test_mcp_production_instances = (): void => {
         "utf8",
       ),
     ) as IAutoMovieCompiledShotSource;
-    TestValidator.predicate(
+    TestValidator.equals(
       "compiler and sandbox oracle publish compact world instance runtimes",
-      outputSucceeded &&
-        compiled.instanceSets.length === 3 &&
-        compiled.instanceSets.find((item) => item.id === "civilians")?.count ===
-          100 &&
-        compiled.instanceSets.find((item) => item.id === "trees")?.count ===
-          1_000 &&
-        compiled.models.some((model) => model.id.endsWith(":sentinel")),
+      namedFacts([
+        ["outputSucceeded", () => outputSucceeded],
+        [
+          "compiledInstanceSetsLength",
+          () => outputSucceeded && compiled.instanceSets.length === 3,
+        ],
+        [
+          "compiledInstanceSetsFind",
+          () =>
+            outputSucceeded &&
+            compiled.instanceSets.length === 3 &&
+            compiled.instanceSets.find((item) => item.id === "civilians")
+              ?.count === 100,
+        ],
+        [
+          "compiledInstanceSetsFind2",
+          () =>
+            outputSucceeded &&
+            compiled.instanceSets.length === 3 &&
+            compiled.instanceSets.find((item) => item.id === "civilians")
+              ?.count === 100 &&
+            compiled.instanceSets.find((item) => item.id === "trees")?.count ===
+              1_000,
+        ],
+        [
+          "compiledModelsSome",
+          () =>
+            outputSucceeded &&
+            compiled.instanceSets.length === 3 &&
+            compiled.instanceSets.find((item) => item.id === "civilians")
+              ?.count === 100 &&
+            compiled.instanceSets.find((item) => item.id === "trees")?.count ===
+              1_000 &&
+            compiled.models.some((model) => model.id.endsWith(":sentinel")),
+        ],
+      ]),
+      {
+        outputSucceeded: true,
+        compiledInstanceSetsLength: true,
+        compiledInstanceSetsFind: true,
+        compiledInstanceSetsFind2: true,
+        compiledModelsSome: true,
+      },
     );
   } catch (error) {
     productionInstancesFailure = { error };

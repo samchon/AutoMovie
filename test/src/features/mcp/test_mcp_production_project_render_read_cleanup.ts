@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import ts from "typescript-compiler";
 
+import { namedFacts } from "../internal/predicates";
 import { preserveProductionProjectFixtureCleanup } from "./test_mcp_production_project";
 
 const compact = (node: ts.Node, source: ts.SourceFile): string =>
@@ -255,55 +256,849 @@ export const test_mcp_production_project_render_read_cleanup = (): void => {
     cleanupFailures: [{ error: undefined, present: true }],
     primaryFailure: { error: undefined, present: true },
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "render-read cleanup preserves failure and recovery order",
-    success.caught === false &&
-      success.failure === undefined &&
-      success.order.join(",") === "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
-      primaryOnly.caught &&
-      primaryOnly.failure === primaryFailure &&
-      primaryOnly.order.join(",") ===
-        "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
-      standalone.caught &&
-      standalone.failure === hookFailure &&
-      standalone.order.join(",") ===
-        "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
-      multiple.caught &&
-      aggregateContainsExactly(multiple.failure, [
-        hookFailure,
-        activeFailure,
-        parkedFailure,
-        directoryFailure,
-      ]) &&
-      multiple.order.join(",") === "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
-      combined.caught &&
-      aggregateContainsExactly(combined.failure, [
-        primaryFailure,
-        hookFailure,
-        activeFailure,
-        parkedFailure,
-        directoryFailure,
-      ]) &&
-      combined.order.join(",") === "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
-      partialSetup.caught &&
-      partialSetup.failure === primaryFailure &&
-      partialSetup.order.join(",") === "cleanup-0" &&
-      noSwap.failure === primaryFailure &&
-      noSwap.order.join(",") === "hook,directory" &&
-      parkedWithoutActive.failure === primaryFailure &&
-      parkedWithoutActive.order.join(",") ===
-        "hook,active-check,parked-restore,directory" &&
-      undefinedStandalone.caught &&
-      undefinedStandalone.failure === undefined &&
-      undefinedStandalone.order.join(",") ===
-        "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
-      undefinedCombined.caught &&
-      aggregateContainsExactly(undefinedCombined.failure, [
-        undefined,
-        undefined,
-      ]) &&
-      undefinedCombined.order.join(",") ===
-        "cleanup-0,cleanup-1,cleanup-2,cleanup-3",
+    namedFacts([
+      ["successCaught", () => success.caught === false],
+      [
+        "successFailure",
+        () => success.caught === false && success.failure === undefined,
+      ],
+      [
+        "successOrderJoin",
+        () =>
+          success.caught === false &&
+          success.failure === undefined &&
+          success.order.join(",") === "cleanup-0,cleanup-1,cleanup-2,cleanup-3",
+      ],
+      [
+        "primaryOnlyCaught",
+        () =>
+          success.caught === false &&
+          success.failure === undefined &&
+          success.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          primaryOnly.caught,
+      ],
+      [
+        "primaryOnlyFailurePrimaryFailure",
+        () =>
+          success.caught === false &&
+          success.failure === undefined &&
+          success.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          primaryOnly.caught &&
+          primaryOnly.failure === primaryFailure,
+      ],
+      [
+        "primaryOnlyOrderJoin",
+        () =>
+          success.caught === false &&
+          success.failure === undefined &&
+          success.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          primaryOnly.caught &&
+          primaryOnly.failure === primaryFailure &&
+          primaryOnly.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3",
+      ],
+      [
+        "standaloneCaught",
+        () =>
+          success.caught === false &&
+          success.failure === undefined &&
+          success.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          primaryOnly.caught &&
+          primaryOnly.failure === primaryFailure &&
+          primaryOnly.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          standalone.caught,
+      ],
+      [
+        "standaloneFailureHookFailure",
+        () =>
+          success.caught === false &&
+          success.failure === undefined &&
+          success.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          primaryOnly.caught &&
+          primaryOnly.failure === primaryFailure &&
+          primaryOnly.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          standalone.caught &&
+          standalone.failure === hookFailure,
+      ],
+      [
+        "standaloneOrderJoin",
+        () =>
+          success.caught === false &&
+          success.failure === undefined &&
+          success.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          primaryOnly.caught &&
+          primaryOnly.failure === primaryFailure &&
+          primaryOnly.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          standalone.caught &&
+          standalone.failure === hookFailure &&
+          standalone.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3",
+      ],
+      [
+        "multipleCaught",
+        () =>
+          success.caught === false &&
+          success.failure === undefined &&
+          success.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          primaryOnly.caught &&
+          primaryOnly.failure === primaryFailure &&
+          primaryOnly.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          standalone.caught &&
+          standalone.failure === hookFailure &&
+          standalone.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          multiple.caught,
+      ],
+      [
+        "aggregateContainsExactlyMultipleFailure",
+        () =>
+          success.caught === false &&
+          success.failure === undefined &&
+          success.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          primaryOnly.caught &&
+          primaryOnly.failure === primaryFailure &&
+          primaryOnly.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          standalone.caught &&
+          standalone.failure === hookFailure &&
+          standalone.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          multiple.caught &&
+          aggregateContainsExactly(multiple.failure, [
+            hookFailure,
+            activeFailure,
+            parkedFailure,
+            directoryFailure,
+          ]),
+      ],
+      [
+        "multipleOrderJoin",
+        () =>
+          success.caught === false &&
+          success.failure === undefined &&
+          success.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          primaryOnly.caught &&
+          primaryOnly.failure === primaryFailure &&
+          primaryOnly.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          standalone.caught &&
+          standalone.failure === hookFailure &&
+          standalone.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          multiple.caught &&
+          aggregateContainsExactly(multiple.failure, [
+            hookFailure,
+            activeFailure,
+            parkedFailure,
+            directoryFailure,
+          ]) &&
+          multiple.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3",
+      ],
+      [
+        "combinedCaught",
+        () =>
+          success.caught === false &&
+          success.failure === undefined &&
+          success.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          primaryOnly.caught &&
+          primaryOnly.failure === primaryFailure &&
+          primaryOnly.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          standalone.caught &&
+          standalone.failure === hookFailure &&
+          standalone.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          multiple.caught &&
+          aggregateContainsExactly(multiple.failure, [
+            hookFailure,
+            activeFailure,
+            parkedFailure,
+            directoryFailure,
+          ]) &&
+          multiple.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          combined.caught,
+      ],
+      [
+        "aggregateContainsExactlyCombinedFailure",
+        () =>
+          success.caught === false &&
+          success.failure === undefined &&
+          success.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          primaryOnly.caught &&
+          primaryOnly.failure === primaryFailure &&
+          primaryOnly.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          standalone.caught &&
+          standalone.failure === hookFailure &&
+          standalone.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          multiple.caught &&
+          aggregateContainsExactly(multiple.failure, [
+            hookFailure,
+            activeFailure,
+            parkedFailure,
+            directoryFailure,
+          ]) &&
+          multiple.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          combined.caught &&
+          aggregateContainsExactly(combined.failure, [
+            primaryFailure,
+            hookFailure,
+            activeFailure,
+            parkedFailure,
+            directoryFailure,
+          ]),
+      ],
+      [
+        "combinedOrderJoin",
+        () =>
+          success.caught === false &&
+          success.failure === undefined &&
+          success.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          primaryOnly.caught &&
+          primaryOnly.failure === primaryFailure &&
+          primaryOnly.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          standalone.caught &&
+          standalone.failure === hookFailure &&
+          standalone.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          multiple.caught &&
+          aggregateContainsExactly(multiple.failure, [
+            hookFailure,
+            activeFailure,
+            parkedFailure,
+            directoryFailure,
+          ]) &&
+          multiple.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          combined.caught &&
+          aggregateContainsExactly(combined.failure, [
+            primaryFailure,
+            hookFailure,
+            activeFailure,
+            parkedFailure,
+            directoryFailure,
+          ]) &&
+          combined.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3",
+      ],
+      [
+        "partialSetupCaught",
+        () =>
+          success.caught === false &&
+          success.failure === undefined &&
+          success.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          primaryOnly.caught &&
+          primaryOnly.failure === primaryFailure &&
+          primaryOnly.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          standalone.caught &&
+          standalone.failure === hookFailure &&
+          standalone.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          multiple.caught &&
+          aggregateContainsExactly(multiple.failure, [
+            hookFailure,
+            activeFailure,
+            parkedFailure,
+            directoryFailure,
+          ]) &&
+          multiple.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          combined.caught &&
+          aggregateContainsExactly(combined.failure, [
+            primaryFailure,
+            hookFailure,
+            activeFailure,
+            parkedFailure,
+            directoryFailure,
+          ]) &&
+          combined.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          partialSetup.caught,
+      ],
+      [
+        "partialSetupFailurePrimaryFailure",
+        () =>
+          success.caught === false &&
+          success.failure === undefined &&
+          success.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          primaryOnly.caught &&
+          primaryOnly.failure === primaryFailure &&
+          primaryOnly.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          standalone.caught &&
+          standalone.failure === hookFailure &&
+          standalone.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          multiple.caught &&
+          aggregateContainsExactly(multiple.failure, [
+            hookFailure,
+            activeFailure,
+            parkedFailure,
+            directoryFailure,
+          ]) &&
+          multiple.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          combined.caught &&
+          aggregateContainsExactly(combined.failure, [
+            primaryFailure,
+            hookFailure,
+            activeFailure,
+            parkedFailure,
+            directoryFailure,
+          ]) &&
+          combined.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          partialSetup.caught &&
+          partialSetup.failure === primaryFailure,
+      ],
+      [
+        "partialSetupOrderJoin",
+        () =>
+          success.caught === false &&
+          success.failure === undefined &&
+          success.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          primaryOnly.caught &&
+          primaryOnly.failure === primaryFailure &&
+          primaryOnly.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          standalone.caught &&
+          standalone.failure === hookFailure &&
+          standalone.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          multiple.caught &&
+          aggregateContainsExactly(multiple.failure, [
+            hookFailure,
+            activeFailure,
+            parkedFailure,
+            directoryFailure,
+          ]) &&
+          multiple.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          combined.caught &&
+          aggregateContainsExactly(combined.failure, [
+            primaryFailure,
+            hookFailure,
+            activeFailure,
+            parkedFailure,
+            directoryFailure,
+          ]) &&
+          combined.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          partialSetup.caught &&
+          partialSetup.failure === primaryFailure &&
+          partialSetup.order.join(",") === "cleanup-0",
+      ],
+      [
+        "noSwapFailurePrimaryFailure",
+        () =>
+          success.caught === false &&
+          success.failure === undefined &&
+          success.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          primaryOnly.caught &&
+          primaryOnly.failure === primaryFailure &&
+          primaryOnly.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          standalone.caught &&
+          standalone.failure === hookFailure &&
+          standalone.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          multiple.caught &&
+          aggregateContainsExactly(multiple.failure, [
+            hookFailure,
+            activeFailure,
+            parkedFailure,
+            directoryFailure,
+          ]) &&
+          multiple.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          combined.caught &&
+          aggregateContainsExactly(combined.failure, [
+            primaryFailure,
+            hookFailure,
+            activeFailure,
+            parkedFailure,
+            directoryFailure,
+          ]) &&
+          combined.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          partialSetup.caught &&
+          partialSetup.failure === primaryFailure &&
+          partialSetup.order.join(",") === "cleanup-0" &&
+          noSwap.failure === primaryFailure,
+      ],
+      [
+        "noSwapOrderJoin",
+        () =>
+          success.caught === false &&
+          success.failure === undefined &&
+          success.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          primaryOnly.caught &&
+          primaryOnly.failure === primaryFailure &&
+          primaryOnly.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          standalone.caught &&
+          standalone.failure === hookFailure &&
+          standalone.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          multiple.caught &&
+          aggregateContainsExactly(multiple.failure, [
+            hookFailure,
+            activeFailure,
+            parkedFailure,
+            directoryFailure,
+          ]) &&
+          multiple.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          combined.caught &&
+          aggregateContainsExactly(combined.failure, [
+            primaryFailure,
+            hookFailure,
+            activeFailure,
+            parkedFailure,
+            directoryFailure,
+          ]) &&
+          combined.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          partialSetup.caught &&
+          partialSetup.failure === primaryFailure &&
+          partialSetup.order.join(",") === "cleanup-0" &&
+          noSwap.failure === primaryFailure &&
+          noSwap.order.join(",") === "hook,directory",
+      ],
+      [
+        "parkedWithoutActiveFailurePrimaryFailure",
+        () =>
+          success.caught === false &&
+          success.failure === undefined &&
+          success.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          primaryOnly.caught &&
+          primaryOnly.failure === primaryFailure &&
+          primaryOnly.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          standalone.caught &&
+          standalone.failure === hookFailure &&
+          standalone.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          multiple.caught &&
+          aggregateContainsExactly(multiple.failure, [
+            hookFailure,
+            activeFailure,
+            parkedFailure,
+            directoryFailure,
+          ]) &&
+          multiple.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          combined.caught &&
+          aggregateContainsExactly(combined.failure, [
+            primaryFailure,
+            hookFailure,
+            activeFailure,
+            parkedFailure,
+            directoryFailure,
+          ]) &&
+          combined.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          partialSetup.caught &&
+          partialSetup.failure === primaryFailure &&
+          partialSetup.order.join(",") === "cleanup-0" &&
+          noSwap.failure === primaryFailure &&
+          noSwap.order.join(",") === "hook,directory" &&
+          parkedWithoutActive.failure === primaryFailure,
+      ],
+      [
+        "parkedWithoutActiveOrderJoin",
+        () =>
+          success.caught === false &&
+          success.failure === undefined &&
+          success.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          primaryOnly.caught &&
+          primaryOnly.failure === primaryFailure &&
+          primaryOnly.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          standalone.caught &&
+          standalone.failure === hookFailure &&
+          standalone.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          multiple.caught &&
+          aggregateContainsExactly(multiple.failure, [
+            hookFailure,
+            activeFailure,
+            parkedFailure,
+            directoryFailure,
+          ]) &&
+          multiple.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          combined.caught &&
+          aggregateContainsExactly(combined.failure, [
+            primaryFailure,
+            hookFailure,
+            activeFailure,
+            parkedFailure,
+            directoryFailure,
+          ]) &&
+          combined.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          partialSetup.caught &&
+          partialSetup.failure === primaryFailure &&
+          partialSetup.order.join(",") === "cleanup-0" &&
+          noSwap.failure === primaryFailure &&
+          noSwap.order.join(",") === "hook,directory" &&
+          parkedWithoutActive.failure === primaryFailure &&
+          parkedWithoutActive.order.join(",") ===
+            "hook,active-check,parked-restore,directory",
+      ],
+      [
+        "undefinedStandaloneCaught",
+        () =>
+          success.caught === false &&
+          success.failure === undefined &&
+          success.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          primaryOnly.caught &&
+          primaryOnly.failure === primaryFailure &&
+          primaryOnly.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          standalone.caught &&
+          standalone.failure === hookFailure &&
+          standalone.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          multiple.caught &&
+          aggregateContainsExactly(multiple.failure, [
+            hookFailure,
+            activeFailure,
+            parkedFailure,
+            directoryFailure,
+          ]) &&
+          multiple.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          combined.caught &&
+          aggregateContainsExactly(combined.failure, [
+            primaryFailure,
+            hookFailure,
+            activeFailure,
+            parkedFailure,
+            directoryFailure,
+          ]) &&
+          combined.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          partialSetup.caught &&
+          partialSetup.failure === primaryFailure &&
+          partialSetup.order.join(",") === "cleanup-0" &&
+          noSwap.failure === primaryFailure &&
+          noSwap.order.join(",") === "hook,directory" &&
+          parkedWithoutActive.failure === primaryFailure &&
+          parkedWithoutActive.order.join(",") ===
+            "hook,active-check,parked-restore,directory" &&
+          undefinedStandalone.caught,
+      ],
+      [
+        "undefinedStandaloneFailure",
+        () =>
+          success.caught === false &&
+          success.failure === undefined &&
+          success.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          primaryOnly.caught &&
+          primaryOnly.failure === primaryFailure &&
+          primaryOnly.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          standalone.caught &&
+          standalone.failure === hookFailure &&
+          standalone.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          multiple.caught &&
+          aggregateContainsExactly(multiple.failure, [
+            hookFailure,
+            activeFailure,
+            parkedFailure,
+            directoryFailure,
+          ]) &&
+          multiple.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          combined.caught &&
+          aggregateContainsExactly(combined.failure, [
+            primaryFailure,
+            hookFailure,
+            activeFailure,
+            parkedFailure,
+            directoryFailure,
+          ]) &&
+          combined.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          partialSetup.caught &&
+          partialSetup.failure === primaryFailure &&
+          partialSetup.order.join(",") === "cleanup-0" &&
+          noSwap.failure === primaryFailure &&
+          noSwap.order.join(",") === "hook,directory" &&
+          parkedWithoutActive.failure === primaryFailure &&
+          parkedWithoutActive.order.join(",") ===
+            "hook,active-check,parked-restore,directory" &&
+          undefinedStandalone.caught &&
+          undefinedStandalone.failure === undefined,
+      ],
+      [
+        "undefinedStandaloneOrderJoin",
+        () =>
+          success.caught === false &&
+          success.failure === undefined &&
+          success.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          primaryOnly.caught &&
+          primaryOnly.failure === primaryFailure &&
+          primaryOnly.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          standalone.caught &&
+          standalone.failure === hookFailure &&
+          standalone.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          multiple.caught &&
+          aggregateContainsExactly(multiple.failure, [
+            hookFailure,
+            activeFailure,
+            parkedFailure,
+            directoryFailure,
+          ]) &&
+          multiple.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          combined.caught &&
+          aggregateContainsExactly(combined.failure, [
+            primaryFailure,
+            hookFailure,
+            activeFailure,
+            parkedFailure,
+            directoryFailure,
+          ]) &&
+          combined.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          partialSetup.caught &&
+          partialSetup.failure === primaryFailure &&
+          partialSetup.order.join(",") === "cleanup-0" &&
+          noSwap.failure === primaryFailure &&
+          noSwap.order.join(",") === "hook,directory" &&
+          parkedWithoutActive.failure === primaryFailure &&
+          parkedWithoutActive.order.join(",") ===
+            "hook,active-check,parked-restore,directory" &&
+          undefinedStandalone.caught &&
+          undefinedStandalone.failure === undefined &&
+          undefinedStandalone.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3",
+      ],
+      [
+        "undefinedCombinedCaught",
+        () =>
+          success.caught === false &&
+          success.failure === undefined &&
+          success.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          primaryOnly.caught &&
+          primaryOnly.failure === primaryFailure &&
+          primaryOnly.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          standalone.caught &&
+          standalone.failure === hookFailure &&
+          standalone.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          multiple.caught &&
+          aggregateContainsExactly(multiple.failure, [
+            hookFailure,
+            activeFailure,
+            parkedFailure,
+            directoryFailure,
+          ]) &&
+          multiple.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          combined.caught &&
+          aggregateContainsExactly(combined.failure, [
+            primaryFailure,
+            hookFailure,
+            activeFailure,
+            parkedFailure,
+            directoryFailure,
+          ]) &&
+          combined.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          partialSetup.caught &&
+          partialSetup.failure === primaryFailure &&
+          partialSetup.order.join(",") === "cleanup-0" &&
+          noSwap.failure === primaryFailure &&
+          noSwap.order.join(",") === "hook,directory" &&
+          parkedWithoutActive.failure === primaryFailure &&
+          parkedWithoutActive.order.join(",") ===
+            "hook,active-check,parked-restore,directory" &&
+          undefinedStandalone.caught &&
+          undefinedStandalone.failure === undefined &&
+          undefinedStandalone.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          undefinedCombined.caught,
+      ],
+      [
+        "aggregateContainsExactlyUndefinedCombinedFailure",
+        () =>
+          success.caught === false &&
+          success.failure === undefined &&
+          success.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          primaryOnly.caught &&
+          primaryOnly.failure === primaryFailure &&
+          primaryOnly.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          standalone.caught &&
+          standalone.failure === hookFailure &&
+          standalone.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          multiple.caught &&
+          aggregateContainsExactly(multiple.failure, [
+            hookFailure,
+            activeFailure,
+            parkedFailure,
+            directoryFailure,
+          ]) &&
+          multiple.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          combined.caught &&
+          aggregateContainsExactly(combined.failure, [
+            primaryFailure,
+            hookFailure,
+            activeFailure,
+            parkedFailure,
+            directoryFailure,
+          ]) &&
+          combined.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          partialSetup.caught &&
+          partialSetup.failure === primaryFailure &&
+          partialSetup.order.join(",") === "cleanup-0" &&
+          noSwap.failure === primaryFailure &&
+          noSwap.order.join(",") === "hook,directory" &&
+          parkedWithoutActive.failure === primaryFailure &&
+          parkedWithoutActive.order.join(",") ===
+            "hook,active-check,parked-restore,directory" &&
+          undefinedStandalone.caught &&
+          undefinedStandalone.failure === undefined &&
+          undefinedStandalone.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          undefinedCombined.caught &&
+          aggregateContainsExactly(undefinedCombined.failure, [
+            undefined,
+            undefined,
+          ]),
+      ],
+      [
+        "undefinedCombinedOrderJoin",
+        () =>
+          success.caught === false &&
+          success.failure === undefined &&
+          success.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          primaryOnly.caught &&
+          primaryOnly.failure === primaryFailure &&
+          primaryOnly.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          standalone.caught &&
+          standalone.failure === hookFailure &&
+          standalone.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          multiple.caught &&
+          aggregateContainsExactly(multiple.failure, [
+            hookFailure,
+            activeFailure,
+            parkedFailure,
+            directoryFailure,
+          ]) &&
+          multiple.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          combined.caught &&
+          aggregateContainsExactly(combined.failure, [
+            primaryFailure,
+            hookFailure,
+            activeFailure,
+            parkedFailure,
+            directoryFailure,
+          ]) &&
+          combined.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          partialSetup.caught &&
+          partialSetup.failure === primaryFailure &&
+          partialSetup.order.join(",") === "cleanup-0" &&
+          noSwap.failure === primaryFailure &&
+          noSwap.order.join(",") === "hook,directory" &&
+          parkedWithoutActive.failure === primaryFailure &&
+          parkedWithoutActive.order.join(",") ===
+            "hook,active-check,parked-restore,directory" &&
+          undefinedStandalone.caught &&
+          undefinedStandalone.failure === undefined &&
+          undefinedStandalone.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3" &&
+          undefinedCombined.caught &&
+          aggregateContainsExactly(undefinedCombined.failure, [
+            undefined,
+            undefined,
+          ]) &&
+          undefinedCombined.order.join(",") ===
+            "cleanup-0,cleanup-1,cleanup-2,cleanup-3",
+      ],
+    ]),
+    {
+      successCaught: true,
+      successFailure: true,
+      successOrderJoin: true,
+      primaryOnlyCaught: true,
+      primaryOnlyFailurePrimaryFailure: true,
+      primaryOnlyOrderJoin: true,
+      standaloneCaught: true,
+      standaloneFailureHookFailure: true,
+      standaloneOrderJoin: true,
+      multipleCaught: true,
+      aggregateContainsExactlyMultipleFailure: true,
+      multipleOrderJoin: true,
+      combinedCaught: true,
+      aggregateContainsExactlyCombinedFailure: true,
+      combinedOrderJoin: true,
+      partialSetupCaught: true,
+      partialSetupFailurePrimaryFailure: true,
+      partialSetupOrderJoin: true,
+      noSwapFailurePrimaryFailure: true,
+      noSwapOrderJoin: true,
+      parkedWithoutActiveFailurePrimaryFailure: true,
+      parkedWithoutActiveOrderJoin: true,
+      undefinedStandaloneCaught: true,
+      undefinedStandaloneFailure: true,
+      undefinedStandaloneOrderJoin: true,
+      undefinedCombinedCaught: true,
+      aggregateContainsExactlyUndefinedCombinedFailure: true,
+      undefinedCombinedOrderJoin: true,
+    },
   );
   TestValidator.equals(
     "production-project test owns five render-read cleanup lifecycles",

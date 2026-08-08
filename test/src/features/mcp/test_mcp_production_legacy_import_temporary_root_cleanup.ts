@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import ts from "typescript-compiler";
 
+import { namedFacts } from "../internal/predicates";
 import { preserveLegacyImportFixtureCleanup } from "./test_mcp_production_legacy_import";
 
 const compact = (node: ts.Node, source: ts.SourceFile): string =>
@@ -171,26 +172,216 @@ export const test_mcp_production_legacy_import_temporary_root_cleanup =
     const undefinedPrimary = captureCleanup({
       primaryFailure: { error: undefined, present: true },
     });
-    TestValidator.predicate(
+    TestValidator.equals(
       "single legacy-import removal preserves the guarded failure first",
-      success.caught === false &&
-        success.failure === undefined &&
-        success.order.join(",") === "cleanup-0" &&
-        primaryOnly.caught &&
-        primaryOnly.failure === primaryFailure &&
-        primaryOnly.order.join(",") === "cleanup-0" &&
-        standalone.caught &&
-        standalone.failure === removalFailure &&
-        standalone.order.join(",") === "cleanup-0" &&
-        combined.caught &&
-        aggregateContainsExactly(combined.failure, [
-          primaryFailure,
-          removalFailure,
-        ]) &&
-        combined.order.join(",") === "cleanup-0" &&
-        undefinedPrimary.caught &&
-        undefinedPrimary.failure === undefined &&
-        undefinedPrimary.order.join(",") === "cleanup-0",
+      namedFacts([
+        ["successCaught", () => success.caught === false],
+        [
+          "successFailure",
+          () => success.caught === false && success.failure === undefined,
+        ],
+        [
+          "successOrderJoin",
+          () =>
+            success.caught === false &&
+            success.failure === undefined &&
+            success.order.join(",") === "cleanup-0",
+        ],
+        [
+          "primaryOnlyCaught",
+          () =>
+            success.caught === false &&
+            success.failure === undefined &&
+            success.order.join(",") === "cleanup-0" &&
+            primaryOnly.caught,
+        ],
+        [
+          "primaryOnlyFailurePrimaryFailure",
+          () =>
+            success.caught === false &&
+            success.failure === undefined &&
+            success.order.join(",") === "cleanup-0" &&
+            primaryOnly.caught &&
+            primaryOnly.failure === primaryFailure,
+        ],
+        [
+          "primaryOnlyOrderJoin",
+          () =>
+            success.caught === false &&
+            success.failure === undefined &&
+            success.order.join(",") === "cleanup-0" &&
+            primaryOnly.caught &&
+            primaryOnly.failure === primaryFailure &&
+            primaryOnly.order.join(",") === "cleanup-0",
+        ],
+        [
+          "standaloneCaught",
+          () =>
+            success.caught === false &&
+            success.failure === undefined &&
+            success.order.join(",") === "cleanup-0" &&
+            primaryOnly.caught &&
+            primaryOnly.failure === primaryFailure &&
+            primaryOnly.order.join(",") === "cleanup-0" &&
+            standalone.caught,
+        ],
+        [
+          "standaloneFailureRemovalFailure",
+          () =>
+            success.caught === false &&
+            success.failure === undefined &&
+            success.order.join(",") === "cleanup-0" &&
+            primaryOnly.caught &&
+            primaryOnly.failure === primaryFailure &&
+            primaryOnly.order.join(",") === "cleanup-0" &&
+            standalone.caught &&
+            standalone.failure === removalFailure,
+        ],
+        [
+          "standaloneOrderJoin",
+          () =>
+            success.caught === false &&
+            success.failure === undefined &&
+            success.order.join(",") === "cleanup-0" &&
+            primaryOnly.caught &&
+            primaryOnly.failure === primaryFailure &&
+            primaryOnly.order.join(",") === "cleanup-0" &&
+            standalone.caught &&
+            standalone.failure === removalFailure &&
+            standalone.order.join(",") === "cleanup-0",
+        ],
+        [
+          "combinedCaught",
+          () =>
+            success.caught === false &&
+            success.failure === undefined &&
+            success.order.join(",") === "cleanup-0" &&
+            primaryOnly.caught &&
+            primaryOnly.failure === primaryFailure &&
+            primaryOnly.order.join(",") === "cleanup-0" &&
+            standalone.caught &&
+            standalone.failure === removalFailure &&
+            standalone.order.join(",") === "cleanup-0" &&
+            combined.caught,
+        ],
+        [
+          "aggregateContainsExactlyCombinedFailure",
+          () =>
+            success.caught === false &&
+            success.failure === undefined &&
+            success.order.join(",") === "cleanup-0" &&
+            primaryOnly.caught &&
+            primaryOnly.failure === primaryFailure &&
+            primaryOnly.order.join(",") === "cleanup-0" &&
+            standalone.caught &&
+            standalone.failure === removalFailure &&
+            standalone.order.join(",") === "cleanup-0" &&
+            combined.caught &&
+            aggregateContainsExactly(combined.failure, [
+              primaryFailure,
+              removalFailure,
+            ]),
+        ],
+        [
+          "combinedOrderJoin",
+          () =>
+            success.caught === false &&
+            success.failure === undefined &&
+            success.order.join(",") === "cleanup-0" &&
+            primaryOnly.caught &&
+            primaryOnly.failure === primaryFailure &&
+            primaryOnly.order.join(",") === "cleanup-0" &&
+            standalone.caught &&
+            standalone.failure === removalFailure &&
+            standalone.order.join(",") === "cleanup-0" &&
+            combined.caught &&
+            aggregateContainsExactly(combined.failure, [
+              primaryFailure,
+              removalFailure,
+            ]) &&
+            combined.order.join(",") === "cleanup-0",
+        ],
+        [
+          "undefinedPrimaryCaught",
+          () =>
+            success.caught === false &&
+            success.failure === undefined &&
+            success.order.join(",") === "cleanup-0" &&
+            primaryOnly.caught &&
+            primaryOnly.failure === primaryFailure &&
+            primaryOnly.order.join(",") === "cleanup-0" &&
+            standalone.caught &&
+            standalone.failure === removalFailure &&
+            standalone.order.join(",") === "cleanup-0" &&
+            combined.caught &&
+            aggregateContainsExactly(combined.failure, [
+              primaryFailure,
+              removalFailure,
+            ]) &&
+            combined.order.join(",") === "cleanup-0" &&
+            undefinedPrimary.caught,
+        ],
+        [
+          "undefinedPrimaryFailure",
+          () =>
+            success.caught === false &&
+            success.failure === undefined &&
+            success.order.join(",") === "cleanup-0" &&
+            primaryOnly.caught &&
+            primaryOnly.failure === primaryFailure &&
+            primaryOnly.order.join(",") === "cleanup-0" &&
+            standalone.caught &&
+            standalone.failure === removalFailure &&
+            standalone.order.join(",") === "cleanup-0" &&
+            combined.caught &&
+            aggregateContainsExactly(combined.failure, [
+              primaryFailure,
+              removalFailure,
+            ]) &&
+            combined.order.join(",") === "cleanup-0" &&
+            undefinedPrimary.caught &&
+            undefinedPrimary.failure === undefined,
+        ],
+        [
+          "undefinedPrimaryOrderJoin",
+          () =>
+            success.caught === false &&
+            success.failure === undefined &&
+            success.order.join(",") === "cleanup-0" &&
+            primaryOnly.caught &&
+            primaryOnly.failure === primaryFailure &&
+            primaryOnly.order.join(",") === "cleanup-0" &&
+            standalone.caught &&
+            standalone.failure === removalFailure &&
+            standalone.order.join(",") === "cleanup-0" &&
+            combined.caught &&
+            aggregateContainsExactly(combined.failure, [
+              primaryFailure,
+              removalFailure,
+            ]) &&
+            combined.order.join(",") === "cleanup-0" &&
+            undefinedPrimary.caught &&
+            undefinedPrimary.failure === undefined &&
+            undefinedPrimary.order.join(",") === "cleanup-0",
+        ],
+      ]),
+      {
+        successCaught: true,
+        successFailure: true,
+        successOrderJoin: true,
+        primaryOnlyCaught: true,
+        primaryOnlyFailurePrimaryFailure: true,
+        primaryOnlyOrderJoin: true,
+        standaloneCaught: true,
+        standaloneFailureRemovalFailure: true,
+        standaloneOrderJoin: true,
+        combinedCaught: true,
+        aggregateContainsExactlyCombinedFailure: true,
+        combinedOrderJoin: true,
+        undefinedPrimaryCaught: true,
+        undefinedPrimaryFailure: true,
+        undefinedPrimaryOrderJoin: true,
+      },
     );
     TestValidator.equals(
       "legacy-import regression protects every raw temporary-root removal",

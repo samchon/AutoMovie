@@ -171,13 +171,31 @@ export const test_mcp_production_source_link = (): void => {
       "\n",
     ),
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "a cycle is refused and names the path around it",
-    cyclic.failures.length === 1 &&
-      cyclic.failures[0]!.path === "src/units/a.ts" &&
-      cyclic.failures[0]!.reason.includes(
-        "src/units/a.ts -> src/units/b.ts -> src/units/a.ts",
-      ),
+    namedFacts([
+      ["cyclicFailuresLength", () => cyclic.failures.length === 1],
+      [
+        "cyclicFailures0",
+        () =>
+          cyclic.failures.length === 1 &&
+          cyclic.failures[0]!.path === "src/units/a.ts",
+      ],
+      [
+        "cyclicFailures02",
+        () =>
+          cyclic.failures.length === 1 &&
+          cyclic.failures[0]!.path === "src/units/a.ts" &&
+          cyclic.failures[0]!.reason.includes(
+            "src/units/a.ts -> src/units/b.ts -> src/units/a.ts",
+          ),
+      ],
+    ]),
+    {
+      cyclicFailuresLength: true,
+      cyclicFailures0: true,
+      cyclicFailures02: true,
+    },
   );
 
   const climbing = link(
@@ -190,10 +208,20 @@ export const test_mcp_production_source_link = (): void => {
     },
     "one.ts",
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "a specifier above the project root is refused as such",
-    climbing.failures.length === 1 &&
-      climbing.failures[0]!.reason.includes("climbs above the project root"),
+    namedFacts([
+      ["climbingFailuresLength", () => climbing.failures.length === 1],
+      [
+        "climbingFailures0",
+        () =>
+          climbing.failures.length === 1 &&
+          climbing.failures[0]!.reason.includes(
+            "climbs above the project root",
+          ),
+      ],
+    ]),
+    { climbingFailuresLength: true, climbingFailures0: true },
   );
 
   const absent = link({
@@ -202,12 +230,20 @@ export const test_mcp_production_source_link = (): void => {
       "export const one = { build: () => gone };",
     ].join("\n"),
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "an unreadable import carries the reader's own refusal",
-    absent.failures.length === 1 &&
-      absent.failures[0]!.reason.includes(
-        'Source "src/units/gone.ts" does not exist.',
-      ),
+    namedFacts([
+      ["absentFailuresLength", () => absent.failures.length === 1],
+      [
+        "absentFailures0",
+        () =>
+          absent.failures.length === 1 &&
+          absent.failures[0]!.reason.includes(
+            'Source "src/units/gone.ts" does not exist.',
+          ),
+      ],
+    ]),
+    { absentFailuresLength: true, absentFailures0: true },
   );
 
   // The sandbox reimplements the merge rather than loading it, so the two are

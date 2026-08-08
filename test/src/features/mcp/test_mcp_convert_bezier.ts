@@ -8,7 +8,7 @@ import {
 import { TestValidator } from "@nestia/e2e";
 
 import { joint, keyframe, makeMotion, makePose } from "../internal/fixtures";
-import { qclose, vclose } from "../internal/predicates";
+import { namedFacts, qclose, vclose } from "../internal/predicates";
 
 /**
  * The MCP ⇄ engine conversion bridge is public API (#1040): the LLM JSON schema
@@ -73,10 +73,21 @@ export const test_mcp_convert_bezier = (): void => {
     rotation: null,
     scale: { x: 1, y: 1, z: 1 },
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "a null placement rotation lowers to the identity quaternion",
-    qclose(identity.rotation, { x: 0, y: 0, z: 0, w: 1 }) &&
-      vclose(identity.translation, { x: 1, y: 2, z: 3 }),
+    namedFacts([
+      [
+        "qcloseIdentityRotation",
+        () => qclose(identity.rotation, { x: 0, y: 0, z: 0, w: 1 }),
+      ],
+      [
+        "vcloseIdentityTranslation",
+        () =>
+          qclose(identity.rotation, { x: 0, y: 0, z: 0, w: 1 }) &&
+          vclose(identity.translation, { x: 1, y: 2, z: 3 }),
+      ],
+    ]),
+    { qcloseIdentityRotation: true, vcloseIdentityTranslation: true },
   );
   const s = Math.SQRT1_2;
   const turned = toEngineTransform({

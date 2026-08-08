@@ -446,22 +446,43 @@ export const test_mcp_production_atomic_publication = (): void => {
       },
     );
 
-    TestValidator.predicate(
+    TestValidator.equals(
       "terminal publication rejects stale revision and pre-write input race",
-      throws(() =>
-        project.commitProductionPublication({
-          files: new Map([[relative, first]]),
-          manifest,
-          expectedRevision: revision - 1,
-        }),
-      ) &&
-        throws(() =>
-          project.commitProductionPublication({
-            files: new Map([[relative, first]]),
-            manifest,
-            inputCurrent: () => false,
-          }),
-        ),
+      namedFacts([
+        [
+          "throwsProjectCommitProductionPublication",
+          () =>
+            throws(() =>
+              project.commitProductionPublication({
+                files: new Map([[relative, first]]),
+                manifest,
+                expectedRevision: revision - 1,
+              }),
+            ),
+        ],
+        [
+          "throwsProjectCommitProductionPublication2",
+          () =>
+            throws(() =>
+              project.commitProductionPublication({
+                files: new Map([[relative, first]]),
+                manifest,
+                expectedRevision: revision - 1,
+              }),
+            ) &&
+            throws(() =>
+              project.commitProductionPublication({
+                files: new Map([[relative, first]]),
+                manifest,
+                inputCurrent: () => false,
+              }),
+            ),
+        ],
+      ]),
+      {
+        throwsProjectCommitProductionPublication: true,
+        throwsProjectCommitProductionPublication2: true,
+      },
     );
 
     const second = image(64);
@@ -645,14 +666,57 @@ export const test_mcp_production_atomic_publication = (): void => {
       "manifest or receipt changed",
     );
     project.readTrackedStateFile = readTrackedStateFile;
-    TestValidator.predicate(
+    TestValidator.equals(
       "post-publication byte and ledger races restore the prior valid publication",
-      postPublicationByteRace &&
-        postPublicationLedgerRace &&
-        project.revision() === revision &&
-        fs.readFileSync(outputPath).equals(first) &&
-        fs.readFileSync(manifestPath).equals(manifestBytes) &&
-        fs.readFileSync(receiptPath).equals(receiptBytes),
+      namedFacts([
+        ["postPublicationByteRace", () => postPublicationByteRace],
+        [
+          "postPublicationLedgerRace",
+          () => postPublicationByteRace && postPublicationLedgerRace,
+        ],
+        [
+          "projectRevisionRevision",
+          () =>
+            postPublicationByteRace &&
+            postPublicationLedgerRace &&
+            project.revision() === revision,
+        ],
+        [
+          "fsReadFileSyncOutputPath",
+          () =>
+            postPublicationByteRace &&
+            postPublicationLedgerRace &&
+            project.revision() === revision &&
+            fs.readFileSync(outputPath).equals(first),
+        ],
+        [
+          "fsReadFileSyncManifestPath",
+          () =>
+            postPublicationByteRace &&
+            postPublicationLedgerRace &&
+            project.revision() === revision &&
+            fs.readFileSync(outputPath).equals(first) &&
+            fs.readFileSync(manifestPath).equals(manifestBytes),
+        ],
+        [
+          "fsReadFileSyncReceiptPath",
+          () =>
+            postPublicationByteRace &&
+            postPublicationLedgerRace &&
+            project.revision() === revision &&
+            fs.readFileSync(outputPath).equals(first) &&
+            fs.readFileSync(manifestPath).equals(manifestBytes) &&
+            fs.readFileSync(receiptPath).equals(receiptBytes),
+        ],
+      ]),
+      {
+        postPublicationByteRace: true,
+        postPublicationLedgerRace: true,
+        projectRevisionRevision: true,
+        fsReadFileSyncOutputPath: true,
+        fsReadFileSyncManifestPath: true,
+        fsReadFileSyncReceiptPath: true,
+      },
     );
     let terminalObservations = 0;
     TestValidator.equals(
@@ -752,18 +816,48 @@ export const test_mcp_production_atomic_publication = (): void => {
         }),
       "production state incarnation changed",
     );
-    TestValidator.predicate(
+    TestValidator.equals(
       "state incarnation replacement refuses stale ledger rollback",
-      incarnationSwapped &&
-        incarnationSwapRejected &&
-        fs
-          .readFileSync(path.join(productionStateRoot, "render-manifest.json"))
-          .equals(replacementManifest) &&
-        fs
-          .readFileSync(
-            path.join(productionStateRoot, "render-manifest-receipt.json"),
-          )
-          .equals(replacementReceipt),
+      namedFacts([
+        ["incarnationSwapped", () => incarnationSwapped],
+        [
+          "incarnationSwapRejected",
+          () => incarnationSwapped && incarnationSwapRejected,
+        ],
+        [
+          "fsReadFileSyncPath",
+          () =>
+            incarnationSwapped &&
+            incarnationSwapRejected &&
+            fs
+              .readFileSync(
+                path.join(productionStateRoot, "render-manifest.json"),
+              )
+              .equals(replacementManifest),
+        ],
+        [
+          "fsReadFileSyncPath2",
+          () =>
+            incarnationSwapped &&
+            incarnationSwapRejected &&
+            fs
+              .readFileSync(
+                path.join(productionStateRoot, "render-manifest.json"),
+              )
+              .equals(replacementManifest) &&
+            fs
+              .readFileSync(
+                path.join(productionStateRoot, "render-manifest-receipt.json"),
+              )
+              .equals(replacementReceipt),
+        ],
+      ]),
+      {
+        incarnationSwapped: true,
+        incarnationSwapRejected: true,
+        fsReadFileSyncPath: true,
+        fsReadFileSyncPath2: true,
+      },
     );
 
     const lockRaceProject = AutoMovieProductionProject.open(fixture.root);
@@ -856,11 +950,19 @@ export const test_mcp_production_atomic_publication = (): void => {
       "state root identity changed",
     );
     fs.renameSync(missingStateParked, stateRoot);
-    TestValidator.predicate(
+    TestValidator.equals(
       "an absent opened state root is rejected before lock acquisition",
-      missingStateRejected &&
-        fs.existsSync(path.join(productionStateRoot, "revision.lock")) ===
-          false,
+      namedFacts([
+        ["missingStateRejected", () => missingStateRejected],
+        [
+          "fsExistsSyncPath",
+          () =>
+            missingStateRejected &&
+            fs.existsSync(path.join(productionStateRoot, "revision.lock")) ===
+              false,
+        ],
+      ]),
+      { missingStateRejected: true, fsExistsSyncPath: true },
     );
 
     const rollbackRaceProject = AutoMovieProductionProject.open(fixture.root);
