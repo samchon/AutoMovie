@@ -182,6 +182,27 @@ export class Army extends AutoMovieSubjectGroup<
   }
 
   /**
+   * How far the unit reaches from the world origin, along either axis.
+   *
+   * The footprint says how big the unit is; this says where it ends, which is
+   * the question a place has to answer. Depth is measured from the anchor
+   * outward rather than centred, because a line forms up behind its anchor
+   * rather than around it, and the sign of the facing cannot make it reach less
+   * far.
+   *
+   * @evidence docs/characters/army.md States the unit reads by its edges,
+   *   which is what this measures against the ground it stands on.
+   */
+  public reach(): number {
+    const footprint = this.footprint();
+    const anchor = this.design().anchor;
+    return Math.max(
+      Math.abs(anchor.x) + footprint.width / 2,
+      Math.abs(anchor.z) + footprint.depth,
+    );
+  }
+
+  /**
    * The unit standing as designed, contributing no cue of its own.
    *
    * A shot that wants the unit to move calls {@link advance} or {@link break} and

@@ -1598,6 +1598,38 @@ if (
       "unchanged world.json",
     ],
   );
+  // The field must contain the unit standing on it, which is the relation its
+  // own specification states and which two independently authored numbers got
+  // wrong. Reading it from the emitted records checks the shipped starter
+  // rather than the source that produced it.
+  {
+    const world = JSON.parse(
+      readFileSync(
+        join(starterDir, ".automovie", "design", "world.json"),
+        "utf8",
+      ),
+    );
+    const formation = JSON.parse(
+      readFileSync(
+        join(starterDir, ".automovie", "design", "formations", "army.json"),
+        "utf8",
+      ),
+    );
+    const ground = world.surfaces.find((surface) => surface.id === "ground");
+    const half = Math.max(...ground.polygon.map((point) => Math.abs(point.x)));
+    const width =
+      (formation.layout.files - 1) * formation.layout.spacing.lateral;
+    const depth = (formation.layout.ranks - 1) * formation.layout.spacing.depth;
+    const reach = Math.max(
+      Math.abs(formation.anchor.x) + width / 2,
+      Math.abs(formation.anchor.z) + depth,
+    );
+    if (half < reach)
+      throw new Error(
+        `packaged starter ground half-extent ${half} does not contain an army reaching ${reach}.`,
+      );
+    console.log("✓ packaged starter field contains its army");
+  }
   run("test packaged starter", "npm test", starterDir);
   // First publication acquires the pinned Kokoro model, runs CPU ONNX
   // synthesis, encodes Opus and muxes the proxy on an otherwise cold runner.

@@ -9,6 +9,8 @@ import type {
   IAutoMovieWorldDesign,
 } from "@automovie/interface";
 
+import { army } from "../formations/army";
+
 /**
  * A piece of the world: a surface, a landmark, a region where something
  * happens.
@@ -45,18 +47,24 @@ export abstract class WorldPiece extends AutoMovieSubject<IAutoMovieSubjectContr
 export class SignalGround extends WorldPiece {
   public readonly id = "ground";
 
+  /** Clear ground kept beyond the farthest member, in metres. */
+  public readonly margin = 1;
+
   /**
    * Half-extent of the square field, in metres.
    *
-   * Authored rather than derived from the unit's footprint. The specification
-   * states the requirement as a relation — the ranks must end inside frame —
-   * and `army.footprint()` now makes that relation checkable, which is a
-   * separate question from what this starter ships.
+   * Derived from the unit that stands on it rather than authored beside it. The
+   * specification states its requirement as a relation — the ranks must end
+   * inside the place — and two independently authored numbers is how this field
+   * came to be a third the size of its own army. Deriving makes the relation
+   * true by construction, so a change to the unit carries the ground with it.
    */
-  public readonly halfExtent = 10;
+  public halfExtent(): number {
+    return army.reach() + this.margin;
+  }
 
   public place(): IAutoMovieSubjectContribution {
-    const half = this.halfExtent;
+    const half = this.halfExtent();
     return {
       surfaces: [
         {
