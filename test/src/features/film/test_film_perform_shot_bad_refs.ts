@@ -8,7 +8,7 @@ import {
   validSynthesizer,
 } from "../internal/filmFixtures";
 import { createSkeleton } from "../internal/fixtures";
-import { hasViolation } from "../internal/predicates";
+import { hasViolation, namedFacts } from "../internal/predicates";
 
 /**
  * Pins the referential and range gates of the PERFORMANCE consumer, all raised
@@ -74,25 +74,43 @@ export const test_film_perform_shot_bad_refs = (): void => {
     skeleton: () => createSkeleton(),
   });
   TestValidator.equals("fails", performed.success, false);
-  TestValidator.predicate(
+  TestValidator.equals(
     "unknown beat",
-    performed.success === false &&
-      hasViolation(performed, "type", "$input.beat"),
+    namedFacts([
+      ["refused", () => performed.success === false],
+      ["violated", () => hasViolation(performed, "type", "$input.beat")],
+    ]),
+    { refused: true, violated: true },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "zero duration",
-    performed.success === false &&
-      hasViolation(performed, "range", "$input.duration"),
+    namedFacts([
+      ["refused", () => performed.success === false],
+      ["violated", () => hasViolation(performed, "range", "$input.duration")],
+    ]),
+    { refused: true, violated: true },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "unstaged actor",
-    performed.success === false &&
-      hasViolation(performed, "type", "$input.draft[0].actor"),
+    namedFacts([
+      ["refused", () => performed.success === false],
+      [
+        "violated",
+        () => hasViolation(performed, "type", "$input.draft[0].actor"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "start out of shot",
-    performed.success === false &&
-      hasViolation(performed, "range", "$input.draft[0].start"),
+    namedFacts([
+      ["refused", () => performed.success === false],
+      [
+        "violated",
+        () => hasViolation(performed, "range", "$input.draft[0].start"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 
   const zeroActionDuration = performShot({
@@ -113,10 +131,17 @@ export const test_film_perform_shot_bad_refs = (): void => {
     synthesize: validSynthesizer,
     skeleton: () => createSkeleton(),
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "zero action duration rejected",
-    zeroActionDuration.success === false &&
-      hasViolation(zeroActionDuration, "range", "$input.draft[0].duration"),
+    namedFacts([
+      ["refused", () => zeroActionDuration.success === false],
+      [
+        "violated",
+        () =>
+          hasViolation(zeroActionDuration, "range", "$input.draft[0].duration"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 
   const overrunActionDuration = performShot({
@@ -137,10 +162,21 @@ export const test_film_perform_shot_bad_refs = (): void => {
     synthesize: validSynthesizer,
     skeleton: () => createSkeleton(),
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "overrun action duration rejected",
-    overrunActionDuration.success === false &&
-      hasViolation(overrunActionDuration, "range", "$input.draft[0].duration"),
+    namedFacts([
+      ["refused", () => overrunActionDuration.success === false],
+      [
+        "violated",
+        () =>
+          hasViolation(
+            overrunActionDuration,
+            "range",
+            "$input.draft[0].duration",
+          ),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 
   const zeroRepeat = performShot({
@@ -162,10 +198,16 @@ export const test_film_perform_shot_bad_refs = (): void => {
     synthesize: validSynthesizer,
     skeleton: () => createSkeleton(),
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "zero repeat rejected",
-    zeroRepeat.success === false &&
-      hasViolation(zeroRepeat, "range", "$input.draft[0].repeat"),
+    namedFacts([
+      ["refused", () => zeroRepeat.success === false],
+      [
+        "violated",
+        () => hasViolation(zeroRepeat, "range", "$input.draft[0].repeat"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 
   const fractionalRepeat = performShot({
@@ -187,10 +229,16 @@ export const test_film_perform_shot_bad_refs = (): void => {
     synthesize: validSynthesizer,
     skeleton: () => createSkeleton(),
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "fractional repeat rejected",
-    fractionalRepeat.success === false &&
-      hasViolation(fractionalRepeat, "range", "$input.draft[0].repeat"),
+    namedFacts([
+      ["refused", () => fractionalRepeat.success === false],
+      [
+        "violated",
+        () => hasViolation(fractionalRepeat, "range", "$input.draft[0].repeat"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 
   const emptyActorList = performShot({
@@ -211,10 +259,16 @@ export const test_film_perform_shot_bad_refs = (): void => {
     synthesize: validSynthesizer,
     skeleton: () => createSkeleton(),
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "empty actor list rejected",
-    emptyActorList.success === false &&
-      hasViolation(emptyActorList, "type", "$input.draft[0].actor"),
+    namedFacts([
+      ["refused", () => emptyActorList.success === false],
+      [
+        "violated",
+        () => hasViolation(emptyActorList, "type", "$input.draft[0].actor"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 
   const duplicateActor = performShot({
@@ -235,10 +289,16 @@ export const test_film_perform_shot_bad_refs = (): void => {
     synthesize: validSynthesizer,
     skeleton: () => createSkeleton(),
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "duplicate actor list entry rejected",
-    duplicateActor.success === false &&
-      hasViolation(duplicateActor, "type", "$input.draft[0].actor[1]"),
+    namedFacts([
+      ["refused", () => duplicateActor.success === false],
+      [
+        "violated",
+        () => hasViolation(duplicateActor, "type", "$input.draft[0].actor[1]"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 
   const oversizedReact = performShot({
@@ -260,10 +320,16 @@ export const test_film_perform_shot_bad_refs = (): void => {
     synthesize: validSynthesizer,
     skeleton: () => createSkeleton(),
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "oversized react force rejected",
-    oversizedReact.success === false &&
-      hasViolation(oversizedReact, "range", "$input.draft[0].force"),
+    namedFacts([
+      ["refused", () => oversizedReact.success === false],
+      [
+        "violated",
+        () => hasViolation(oversizedReact, "range", "$input.draft[0].force"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 
   const oversizedEmote = performShot({
@@ -285,10 +351,17 @@ export const test_film_perform_shot_bad_refs = (): void => {
     synthesize: validSynthesizer,
     skeleton: () => createSkeleton(),
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "oversized emote intensity rejected",
-    oversizedEmote.success === false &&
-      hasViolation(oversizedEmote, "range", "$input.draft[0].intensity"),
+    namedFacts([
+      ["refused", () => oversizedEmote.success === false],
+      [
+        "violated",
+        () =>
+          hasViolation(oversizedEmote, "range", "$input.draft[0].intensity"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 
   const relativeReach = performShot({
@@ -310,10 +383,16 @@ export const test_film_perform_shot_bad_refs = (): void => {
     synthesize: validSynthesizer,
     skeleton: () => createSkeleton(),
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "relative reach target rejected",
-    relativeReach.success === false &&
-      hasViolation(relativeReach, "type", "$input.draft[0].to"),
+    namedFacts([
+      ["refused", () => relativeReach.success === false],
+      [
+        "violated",
+        () => hasViolation(relativeReach, "type", "$input.draft[0].to"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 
   const relativeLook = performShot({
@@ -334,10 +413,16 @@ export const test_film_perform_shot_bad_refs = (): void => {
     synthesize: validSynthesizer,
     skeleton: () => createSkeleton(),
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "relative lookAt target rejected",
-    relativeLook.success === false &&
-      hasViolation(relativeLook, "type", "$input.draft[0].to"),
+    namedFacts([
+      ["refused", () => relativeLook.success === false],
+      [
+        "violated",
+        () => hasViolation(relativeLook, "type", "$input.draft[0].to"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 
   const untargetedPoint = performShot({
@@ -358,10 +443,16 @@ export const test_film_perform_shot_bad_refs = (): void => {
     synthesize: validSynthesizer,
     skeleton: () => createSkeleton(),
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "untargeted point gesture rejected",
-    untargetedPoint.success === false &&
-      hasViolation(untargetedPoint, "type", "$input.draft[0].at"),
+    namedFacts([
+      ["refused", () => untargetedPoint.success === false],
+      [
+        "violated",
+        () => hasViolation(untargetedPoint, "type", "$input.draft[0].at"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 
   const relativeStrike = performShot({
@@ -383,10 +474,16 @@ export const test_film_perform_shot_bad_refs = (): void => {
     synthesize: validSynthesizer,
     skeleton: () => createSkeleton(),
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "relative strike target rejected",
-    relativeStrike.success === false &&
-      hasViolation(relativeStrike, "type", "$input.draft[0].at"),
+    namedFacts([
+      ["refused", () => relativeStrike.success === false],
+      [
+        "violated",
+        () => hasViolation(relativeStrike, "type", "$input.draft[0].at"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 
   const cameraGesture = performShot({
@@ -407,10 +504,16 @@ export const test_film_perform_shot_bad_refs = (): void => {
     synthesize: validSynthesizer,
     skeleton: () => createSkeleton(),
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "non-frame camera actor rejected",
-    cameraGesture.success === false &&
-      hasViolation(cameraGesture, "type", "$input.draft[0].actor"),
+    namedFacts([
+      ["refused", () => cameraGesture.success === false],
+      [
+        "violated",
+        () => hasViolation(cameraGesture, "type", "$input.draft[0].actor"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 
   const objectActor = performShot({
@@ -432,10 +535,16 @@ export const test_film_perform_shot_bad_refs = (): void => {
     synthesize: validSynthesizer,
     skeleton: () => createSkeleton(),
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "object actor rejected",
-    objectActor.success === false &&
-      hasViolation(objectActor, "type", "$input.draft[0].actor"),
+    namedFacts([
+      ["refused", () => objectActor.success === false],
+      [
+        "violated",
+        () => hasViolation(objectActor, "type", "$input.draft[0].actor"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 
   const nonStringActorEntry = performShot({
@@ -456,9 +565,16 @@ export const test_film_perform_shot_bad_refs = (): void => {
     synthesize: validSynthesizer,
     skeleton: () => createSkeleton(),
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "non-string actor entry rejected",
-    nonStringActorEntry.success === false &&
-      hasViolation(nonStringActorEntry, "type", "$input.draft[0].actor[0]"),
+    namedFacts([
+      ["refused", () => nonStringActorEntry.success === false],
+      [
+        "violated",
+        () =>
+          hasViolation(nonStringActorEntry, "type", "$input.draft[0].actor[0]"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 };
