@@ -22,13 +22,53 @@ A class owns four things, and the reason it is a class rather than a factory ret
 - **`render(context)`** returns what this subject puts into a shot: its actors, its clips, its cues, its world geometry. Never a whole shot program — a shot is assembled from many subjects, and each one returns only the part it owns.
 
 ```ts
+import {
+  AutoMovieSubject,
+  type IAutoMovieSubjectContribution,
+} from "@automovie/engine";
+import type {
+  IAutoMovieModelRecipe,
+  IAutoMovieShotBuildContext,
+} from "@automovie/interface";
+
 export class Sentinel extends AutoMovieSubject<IAutoMovieModelRecipe> {
   public readonly id = "sentinel";
-  public readonly height = 1.8;          // a fact another subject measures against
-  public eyeHeight(): number { return this.height * 0.9; }   // derived, never restated
-  public signal(context, props): IAutoMovieMotion { ... }    // the capability, callable
-  public design(): IAutoMovieModelRecipe { ... }             // the record on the wire
-  public render(context): IAutoMovieSubjectContribution { ... }
+
+  /** A fact other subjects measure themselves against. */
+  public readonly height = 1.8;
+
+  /** Derived, so a change to the scale cannot leave this behind. */
+  public eyeHeight(): number {
+    return this.height * 0.9;
+  }
+
+  public design(): IAutoMovieModelRecipe {
+    return {
+      id: this.id,
+      role: "performer",
+      archetype: "stickman",
+      parameters: { height: this.height, headRadius: 0.16, limbRadius: 0.06 },
+      palette: { body: "#d7b56d" },
+      lod: [{ tier: "hero", maxDistance: null, recipe: this.id }],
+      capabilities: ["signal"],
+      attachments: [],
+    };
+  }
+
+  public render(
+    context: IAutoMovieShotBuildContext,
+  ): IAutoMovieSubjectContribution {
+    return {
+      actors: [
+        {
+          node: this.id,
+          model: this.id,
+          speed: 1.2,
+          eyeHeight: this.eyeHeight(),
+        },
+      ],
+    };
+  }
 }
 ```
 
