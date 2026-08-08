@@ -196,6 +196,12 @@ export class SignalField extends AutoMovieSubjectGroup<
       routes: [...(placed.routes ?? [])],
       effectRecipes: [...(placed.effectRecipes ?? [])],
       effectZones: [...(placed.effectZones ?? [])],
+      // A piece that places a population — a forest, a field of rubble — must
+      // reach the record. Omitting the key would drop what the piece placed
+      // without saying so, which is worse than refusing it.
+      ...(placed.instanceSets === undefined
+        ? {}
+        : { instanceSets: [...placed.instanceSets] }),
     };
   }
 }

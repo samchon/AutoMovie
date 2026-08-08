@@ -200,6 +200,40 @@ const run = (label, command, cwd, timeout = 300_000) => {
   console.log(`✓ ${label}`);
 };
 
+/**
+ * Run a command and require its output to contain an exact phrase.
+ *
+ * A command that succeeds is not the same as a command that did the thing: `npm
+ * run design` exits zero whether it wrote a record or left one alone, and only
+ * the second answers whether the typed source still derives what ships.
+ */
+const runExpectedOutput = (
+  label,
+  command,
+  cwd,
+  expected,
+  timeout = 300_000,
+) => {
+  console.log(`> ${label}`);
+  const result = spawnSync(command, {
+    cwd,
+    shell: true,
+    encoding: "utf8",
+    maxBuffer: 64 * 1024 * 1024,
+    stdio: ["ignore", "pipe", "pipe"],
+    timeout,
+  });
+  if (commandSucceeded(result) === false) failCommand(label, result, timeout);
+  const output = `${result.stdout ?? ""}${result.stderr ?? ""}`;
+  for (const phrase of expected)
+    if (output.includes(phrase) === false)
+      throw new Error(
+        `${label}: expected output to contain ${JSON.stringify(phrase)}.
+${output}`,
+      );
+  console.log(`✓ ${label}`);
+};
+
 const runExpectedFailure = (
   label,
   command,
@@ -1548,6 +1582,21 @@ if (
     starterDir,
     "Review state is missing",
     900_000,
+  );
+  // The design records are derived from the typed subjects rather than
+  // transcribed beside them, and nothing else checks that the derivation still
+  // produces what the starter ships. A record reported as written rather than
+  // unchanged means the classes and the JSON have drifted apart.
+  runExpectedOutput(
+    "packaged starter design records still derive from their subjects",
+    "npm run design",
+    starterDir,
+    [
+      "unchanged models/sentinel.json",
+      "unchanged models/army-hero.json",
+      "unchanged formations/army.json",
+      "unchanged world.json",
+    ],
   );
   run("test packaged starter", "npm test", starterDir);
   // First publication acquires the pinned Kokoro model, runs CPU ONNX
