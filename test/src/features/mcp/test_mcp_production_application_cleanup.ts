@@ -94,7 +94,7 @@ const productionApplicationCleanupContract = (text: string): unknown => {
       )
         continue;
       const substantive = lifecycle.tryBlock.statements.filter(
-        (_, statement) => statement !== 156 && statement !== 158,
+        (_, statement) => statement !== 157 && statement !== 159,
       );
       lifecycles.push({
         acquisition: compact(body.statements[2]!, source),
@@ -119,7 +119,7 @@ const productionApplicationCleanupContract = (text: string): unknown => {
         ownerParameters: owner.arrow.parameters.map((parameter) =>
           compact(parameter, source),
         ),
-        registrations: [156, 158].map((statement) =>
+        registrations: [157, 159].map((statement) =>
           compact(lifecycle.tryBlock.statements[statement]!, source),
         ),
         substantiveStatements: substantive.length,
@@ -372,12 +372,12 @@ export const test_mcp_production_application_cleanup =
                 'connectionCleanups.push({resource:"MCPserver",cleanup:()=>server.close(),});',
                 'connectionCleanups.unshift({resource:"MCPclient",cleanup:()=>client.close(),});',
               ],
-              substantiveStatements: 164,
+              substantiveStatements: 165,
               substantiveTokenDigest:
-                "fe1aa2374ee398aae7dbc386ead589871e4fd97d10561717ff9afdad65204be2",
+                "e174a8db2777c22b0cf210d233c508c5fbb393f1e3f92f731a2eced8b8b01a58",
               tryDigest:
-                "2705bfcf8a6a43bac0e0852032a88f1eed4612696271c2e9a922a7abfadb7cc9",
-              tryStatements: 166,
+                "d6ecb159035d733f586e669d050a26b81f14511f4b5fba8dd4cdbeea7cc38b06",
+              tryStatements: 167,
             },
           ],
         },

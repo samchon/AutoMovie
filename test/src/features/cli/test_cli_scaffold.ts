@@ -1882,13 +1882,6 @@ export const test_cli_scaffold = async (): Promise<void> => {
           ),
       ],
       [
-        "pkgAutomovie3",
-        () =>
-          pkg.includes(
-            `"@automovie/lint": "${AUTOMOVIE_TEMPLATE_VERSIONS.lint}"`,
-          ),
-      ],
-      [
         "pkgAutomovie4",
         () =>
           pkg.includes(
@@ -1986,7 +1979,6 @@ export const test_cli_scaffold = async (): Promise<void> => {
     {
       pkgAutomovie: true,
       pkgAutomovie2: true,
-      pkgAutomovie3: true,
       pkgAutomovie4: true,
       pkgAutomovie5: true,
       pkgHuggingface: true,
@@ -3918,20 +3910,13 @@ export const test_cli_scaffold = async (): Promise<void> => {
         () => files["lint.config.ts"]!.includes('"typescript/no-explicit-any"'),
       ],
       [
-        "filesLint4",
-        () =>
-          files["lint.config.ts"]!.includes(
-            '"automovie/template-sentinel": "error"',
-          ),
-      ],
-      [
-        // The compiler owns asset provenance end to end, from manifest order
-        // and canonical paths through byte digests to reasoned uses, so the
-        // scaffold must not re-declare it as a lint rule.
+        // The compiler is the only automovie gate. `@ttsc/lint` stays for
+        // generic TypeScript correctness, which is not automovie's domain, and
+        // `evidence` stays because citation is upstream of all of it; a project
+        // rule in the `automovie` namespace would be a second enforcer of a
+        // contract the compiler already owns.
         "filesLint5",
-        () =>
-          files["lint.config.ts"]!.includes("automovie/asset-provenance") ===
-          false,
+        () => files["lint.config.ts"]!.includes('"automovie/') === false,
       ],
       [
         "filesAutomovie",
@@ -3954,43 +3939,15 @@ export const test_cli_scaffold = async (): Promise<void> => {
             '"digest": "sha256:f7c7178b601f4b029ba3c56ab05f2bb5ab57f9d0da21fa35cd9292656c2c48aa"',
           ),
       ],
-      [
-        "filesLint6",
-        () =>
-          files["lint.config.ts"]!.includes(
-            '"automovie/screenplay-contract": [',
-          ),
-      ],
-      [
-        "filesLint7",
-        () =>
-          files["lint.config.ts"]!.includes('".automovie/reviews/film/*.json"'),
-      ],
-      [
-        "filesLint8",
-        () =>
-          files["lint.config.ts"]!.includes(
-            '".automovie/reviews/*/film/*.json"',
-          ),
-      ],
-      [
-        "filesLint9",
-        () => files["lint.config.ts"]!.includes("/films/") === false,
-      ],
     ]),
     {
       filesLint: true,
       filesLint2: true,
       filesLint3: true,
-      filesLint4: true,
       filesLint5: true,
       filesAutomovie: true,
       filesAutomovie2: true,
       filesAutomovie3: true,
-      filesLint6: true,
-      filesLint7: true,
-      filesLint8: true,
-      filesLint9: true,
     },
   );
   TestValidator.predicate(

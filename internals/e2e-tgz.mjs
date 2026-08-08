@@ -44,7 +44,6 @@ const PACKAGES = [
   "ingest",
   "mcp",
   "benchmark-runner",
-  "lint",
   "cli",
   "create-automovie",
 ];
@@ -1534,143 +1533,20 @@ if (
     "node verify-packaged-state-reader.mjs",
     starterDir,
   );
-  const packagedSentinelPath = join(
-    starterDir,
-    "src",
-    "packaged-lint-sentinel.ts",
-  );
-  writeFileSync(
-    packagedSentinelPath,
-    'export const status = "AUTOMOVIE_IMPLEMENT_ME";\n',
-  );
-  let packagedSentinelFailure;
-  try {
-    runExpectedFailure(
-      "fire packaged template-sentinel contributor",
-      "npm run lint:source",
-      starterDir,
-      "Template sentinel 'AUTOMOVIE_IMPLEMENT_ME' remains in compiled source.",
-      900_000,
-    );
-  } catch (error) {
-    packagedSentinelFailure = { error };
-    throw error;
-  } finally {
-    preservePackagedE2eCleanup(
-      packagedSentinelFailure,
-      "packaged lint sentinel",
-      () => rmSync(packagedSentinelPath, { force: true }),
-    );
-  }
-  const packagedPresenceProject = join(starterDir, "lint-presence-probe");
-  const packagedPresenceRoot = join(packagedPresenceProject, ".automovie");
-  mkdirSync(join(packagedPresenceProject, "src"), { recursive: true });
-  mkdirSync(packagedPresenceRoot);
-  writeFileSync(
-    join(packagedPresenceProject, "package.json"),
-    `${JSON.stringify({ private: true, type: "module" }, null, 2)}\n`,
-  );
-  writeFileSync(
-    join(packagedPresenceProject, "tsconfig.json"),
-    `${JSON.stringify(
-      {
-        compilerOptions: {
-          module: "nodenext",
-          moduleResolution: "nodenext",
-          noEmit: true,
-          plugins: [{ transform: "@ttsc/lint" }],
-          skipLibCheck: true,
-          strict: true,
-          target: "esnext",
-        },
-        include: ["src", "lint.config.ts"],
-      },
-      null,
-      2,
-    )}\n`,
-  );
-  writeFileSync(
-    join(packagedPresenceProject, "lint.config.ts"),
-    `import { automovie } from "@automovie/lint";
-
-export default {
-  plugins: { automovie },
-  rules: {
-    "automovie/state-presence": [
-      "error",
-      {
-        slots: [
-          {
-            name: "upstream",
-            files: [".automovie/upstream.json"],
-            requires: [],
-          },
-          {
-            name: "downstream",
-            files: [".automovie/downstream.json"],
-            requires: ["upstream"],
-          },
-        ],
-      },
-    ],
-  },
-};
-`,
-  );
-  writeFileSync(
-    join(packagedPresenceProject, "src", "index.ts"),
-    "export {};\n",
-  );
-  writeFileSync(join(packagedPresenceRoot, "downstream.json"), "[]\n");
-  const packagedTtsc = join(
-    starterDir,
-    "node_modules",
-    "ttsc",
-    "lib",
-    "launcher",
-    "ttsc.js",
-  );
-  const packagedPresenceCommand = `"${process.execPath}" "${packagedTtsc}" check -p tsconfig.json`;
-  let packagedPresenceFailure;
-  try {
-    runExpectedFailure(
-      "fire packaged state-presence contributor",
-      packagedPresenceCommand,
-      packagedPresenceProject,
-      "State slot 'downstream' is present while required upstream slot 'upstream' is absent.",
-      900_000,
-    );
-    writeFileSync(join(packagedPresenceRoot, "upstream.json"), "[]\n");
-    run(
-      "silence packaged state-presence contributor with resident upstream",
-      packagedPresenceCommand,
-      packagedPresenceProject,
-      900_000,
-    );
-  } catch (error) {
-    packagedPresenceFailure = { error };
-    throw error;
-  } finally {
-    preservePackagedE2eCleanup(
-      packagedPresenceFailure,
-      "packaged state-presence fixture",
-      () =>
-        rmSync(packagedPresenceProject, {
-          force: true,
-          maxRetries: 3,
-          recursive: true,
-          retryDelay: 100,
-        }),
-    );
-  }
   // A fresh @ttsc/lint install builds its source plugin with Go once per
   // cache key. Cold Windows and CI caches can legitimately exceed the ordinary
   // five-minute command fence before TypeScript linting itself begins.
+  //
+  // `npm run lint` runs the compiler at review scope, so this is the compiler's
+  // own refusal rather than a project rule's. The starter authors required
+  // acceptance scenarios for both scenes, so what it lacks is the reviews that
+  // discharge them; `screenplay-scene-unobserved` covers the other half, a
+  // scene no required scenario cites at all.
   runExpectedFailure(
-    "enforce packaged starter lint review gate",
+    "enforce packaged starter review-scope gate",
     "npm run lint",
     starterDir,
-    "has no citing acceptance scenario passed by a shot/film review",
+    "Review state is missing",
     900_000,
   );
   run("test packaged starter", "npm test", starterDir);

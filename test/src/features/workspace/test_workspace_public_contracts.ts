@@ -2762,9 +2762,6 @@ export const test_workspace_public_contracts = (): void => {
     bin: Record<string, string>;
     publishConfig: { bin: Record<string, string> };
   };
-  const lintPackage = JSON.parse(
-    readPackageFile("packages", "lint", "package.json"),
-  ) as PackageMetadata;
   // Every workspace manifest, so a retired claim cannot reappear in one this
   // contract does not name individually. The registry and every package
   // manager read these before anyone reads a README (#1444, #1792).
@@ -2994,10 +2991,6 @@ export const test_workspace_public_contracts = (): void => {
         description: mcpPackage.description,
         keywords: mcpPackage.keywords,
       },
-      lint: {
-        description: lintPackage.description,
-        keywords: lintPackage.keywords,
-      },
       manifestsClaimingRetiredProducts,
     },
     {
@@ -3033,10 +3026,6 @@ export const test_workspace_public_contracts = (): void => {
           "review",
           "filmmaking",
         ],
-      },
-      lint: {
-        description: "AutoMovie project-contract rules for @ttsc/lint.",
-        keywords: ["automovie", "ttsc", "lint"],
       },
       manifestsClaimingRetiredProducts: [],
     },

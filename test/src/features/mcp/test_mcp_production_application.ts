@@ -35,6 +35,7 @@ import {
   productionFixture,
   shotContract,
   testCaptureRuntimeIdentity,
+  writeProductionScreenplay,
 } from "./productionFixtures";
 import { productionH264Mp4 } from "./productionMediaFixtures";
 
@@ -256,6 +257,12 @@ export const test_mcp_production_application = async (): Promise<void> => {
       fixture.root,
       "second-film",
     );
+    // Scene numbers are production-scoped, so this production's shots cannot
+    // join to the first one's ledger and need one of their own.
+    writeProductionScreenplay({
+      root: fixture.root,
+      productionId: "second-film",
+    });
     TestValidator.predicate(
       "a second production binds the same source registry independently",
       secondProject.setProductionDesign(

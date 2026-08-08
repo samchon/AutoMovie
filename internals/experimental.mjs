@@ -63,7 +63,6 @@ const PACKAGES = Object.freeze([
   "ingest",
   "viewer",
   "mcp",
-  "lint",
   "cli",
 ]);
 

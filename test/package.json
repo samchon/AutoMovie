@@ -22,7 +22,6 @@
     "@automovie/face": "workspace:^",
     "@automovie/ingest": "workspace:^",
     "@automovie/interface": "workspace:^",
-    "@automovie/lint": "workspace:^",
     "@automovie/mcp": "workspace:^",
     "@automovie/render": "workspace:^",
     "@automovie/viewer": "workspace:^",

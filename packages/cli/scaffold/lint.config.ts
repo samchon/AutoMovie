@@ -1,17 +1,6 @@
 /// <reference types="node" />
-import type {} from "@automovie/lint";
 import { type ITtscEvidenceGraphConfig, evidence } from "@ttsc/evidence";
-import type { ITtscLintConfig, ITtscLintPlugin } from "@ttsc/lint";
-import { createRequire } from "node:module";
-import path from "node:path";
-
-const require = createRequire(import.meta.url);
-const automovie = {
-  source: path.join(
-    path.dirname(require.resolve("@automovie/lint/package.json")),
-    "native",
-  ),
-} satisfies ITtscLintPlugin;
+import type { ITtscLintConfig } from "@ttsc/lint";
 
 /**
  * The production's obligation graph, expressed as its folder layout.
@@ -166,7 +155,6 @@ const config = {
     jsDoc: true,
   },
   plugins: {
-    automovie,
     evidence,
   },
   rules: {
@@ -176,73 +164,6 @@ const config = {
     // A remaining `@todo` is an obligation the author wrote down and did not
     // pay. It fails with its own text rather than being counted as done.
     "evidence/todo": "error",
-    "automovie/screenplay-contract": [
-      "error",
-      {
-        indexes: [
-          ".automovie/design/screenplay/index.json",
-          ".automovie/design/*/screenplay/index.json",
-        ],
-        documents: ["docs/**/*.md"],
-        shots: [
-          ".automovie/design/shots/*.json",
-          ".automovie/design/*/shots/*.json",
-        ],
-        acceptance: [
-          ".automovie/design/acceptance/*.json",
-          ".automovie/design/*/acceptance/*.json",
-        ],
-        models: [
-          ".automovie/design/models/*.json",
-          ".automovie/design/*/models/*.json",
-          ".automovie/design/shared/models/*.json",
-        ],
-        formations: [
-          ".automovie/design/formations/*.json",
-          ".automovie/design/*/formations/*.json",
-          ".automovie/design/shared/formations/*.json",
-        ],
-        worlds: [
-          ".automovie/design/world.json",
-          ".automovie/design/*/world.json",
-          ".automovie/design/shared/world.json",
-        ],
-        realizations: [
-          "generated/realizations/*.json",
-          "generated/*/realizations/*.json",
-        ],
-        reviews: [
-          ".automovie/reviews/shots/*.json",
-          ".automovie/reviews/film/*.json",
-          ".automovie/reviews/*/shots/*.json",
-          ".automovie/reviews/*/film/*.json",
-        ],
-      },
-    ],
-    "automovie/state-presence": [
-      "error",
-      {
-        slots: [
-          {
-            name: "screenplay-index",
-            files: [
-              ".automovie/design/screenplay/index.json",
-              ".automovie/design/*/screenplay/index.json",
-            ],
-            requires: [],
-          },
-          {
-            name: "shot-contracts",
-            files: [
-              ".automovie/design/shots/*.json",
-              ".automovie/design/*/shots/*.json",
-            ],
-            requires: ["screenplay-index"],
-          },
-        ],
-      },
-    ],
-    "automovie/template-sentinel": "error",
     eqeqeq: "error",
     "no-debugger": "error",
     "no-duplicate-imports": "error",

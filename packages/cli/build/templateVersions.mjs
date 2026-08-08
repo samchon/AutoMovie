@@ -78,7 +78,6 @@ export const resolveTemplateVersions = () => ({
   cli: packageVersion("packages/cli"),
   engine: packageVersion("packages/engine"),
   interface: packageVersion("packages/interface"),
-  lint: packageVersion("packages/lint"),
   mcp: packageVersion("packages/mcp"),
   viewer: packageVersion("packages/viewer"),
   huggingFaceTransformers: exactCatalogVersion(
@@ -114,7 +113,6 @@ export const WORKSPACE_TEMPLATE_VERSION_KEYS = Object.freeze([
   "cli",
   "engine",
   "interface",
-  "lint",
   "mcp",
   "viewer",
 ]);
