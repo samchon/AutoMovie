@@ -10,15 +10,43 @@ Hand-author while a production has a handful of shots. The starter's two shots a
 
 Compose at the moment you copy a shot module and change its names. That copy is the signal, not the fortieth one. The cost of hand-authoring is linear in runtime and invisible until the runtime is large, so the decision has to be made from the repetition you can see rather than from the pain you have felt.
 
-## Model the subject before the shot
+## Every subject is a class
 
-Underneath a repeated subject is a small vocabulary: what one member is, what a group of them is, and what that group does. Give each a typed owner.
+A soldier, a horse, a tree, a wall, a hill, a river, a field, the map: each is a subject, and a subject is a class extending `AutoMovieSubject`. Nothing is special about performers here. A thing that stands still and is never touched is still the owner of its own measurements and its own place in a frame.
 
-- **Members** carry capability facts: dimensions, profiles, weapons, gaits, instruments, whatever the domain measures. One module, cited by every group that uses them.
-- **Groups** arrange members: the layout, the anchor, the facing, the count, the seed. A group is a design record, not a list of nodes.
-- **Actions** are what a group performs: advance, wheel, volley, disperse, bow, turn about. One function per action, taking the group and its timing, returning cues.
+A class owns four things, and the reason it is a class rather than a factory returning a record is that these four belong together:
 
-A shot then names a group and an action. When a shot module restates a member's dimensions or re-derives a layout, the vocabulary is missing and the shot has absorbed work that belongs a layer down.
+- **Constraints** are fields, validated where the subject is built. A measured fact — a reference height, a rated capacity, an interval that must not close — is a field so that another subject can be checked against it and so that the field itself can cite the document that measured it. A number restated in two places is two numbers.
+- **Motions** are methods. A `capabilities: ["advance"]` array names an action without owning it; a method is the action. If a caller cannot invoke it, the source never did the work the array claims.
+- **Utilities** are methods that answer questions about the subject: its extent, its footprint, whether a point is inside it, the ground height at a place, where member *n* stands. Delegate to the engine function that already computes the answer. Recomputing it in the class produces a second answer that can disagree with the first, and disagreement is worse than either answer alone.
+- **`render(context)`** returns what this subject puts into a shot: its actors, its clips, its cues, its world geometry. Never a whole shot program — a shot is assembled from many subjects, and each one returns only the part it owns.
+
+```ts
+export class Sentinel extends AutoMovieSubject<IAutoMovieModelRecipe> {
+  public readonly id = "sentinel";
+  public readonly height = 1.8;          // a fact another subject measures against
+  public eyeHeight(): number { return this.height * 0.9; }   // derived, never restated
+  public signal(context, props): IAutoMovieMotion { ... }    // the capability, callable
+  public design(): IAutoMovieModelRecipe { ... }             // the record on the wire
+  public render(context): IAutoMovieSubjectContribution { ... }
+}
+```
+
+`design()` is the wire. A class is an authoring surface and never reaches the compile sandbox as itself; everything the compiler stores and validates leaves through that one method as the plain record it already understands. Two constructions with the same inputs must emit byte-identical records, which is what keeps one design compiling to one film.
+
+## A group of subjects is a subject
+
+A squadron holds soldiers, a regiment holds squadrons, a village holds buildings, a forest holds trees, a world holds terrain and everything standing on it. The shape is identical at every level, which is what makes a line battle authorable: a regiment advancing is one call, not two thousand.
+
+Extend `AutoMovieSubjectGroup`, state `members()`, and `render` composes them for you. Override it only to add something the group owns that no member does — a banner, a shared route, a dust cue — and merge with `super.render(context)` rather than replacing what the members said.
+
+Keep populations compact. A formation materializes its members from count, layout, anchor, facing, and seed, and the compiler stores bounded chunks rather than scene nodes, so a member's own `render` usually contributes nothing and the group's cue is what a shot stages. A member that rendered itself individually is the first step toward ten thousand nodes.
+
+## A shot names subjects and asks them to render
+
+A shot module imports the subjects it stages and merges what they return. When a shot restates a member's dimensions, re-derives a layout, or rebuilds a motion, the vocabulary is missing and the shot has absorbed work that belongs a layer down.
+
+Project source is linked, so a shot may import other modules under your source roots. Every linked module is held to the same rules as the shot itself: no clock, no network, no filesystem, no unseeded randomness, and a diagnostic names the file that broke one. Import cycles are refused, because a subject reading its own half-built exports is a defect better heard at compile time than met as a missing method mid-render.
 
 ## Let the engine carry the repetition
 

@@ -43,6 +43,6 @@ const emit = (relative: string, value: unknown): void => {
 };
 
 emit("models/sentinel.json", sentinel.design());
-emit("models/army-hero.json", armyHero());
-emit("formations/army.json", army());
-emit("world.json", signalField());
+emit("models/army-hero.json", armyHero.design());
+emit("formations/army.json", army.design());
+emit("world.json", signalField.design());
