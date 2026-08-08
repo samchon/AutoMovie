@@ -1602,33 +1602,53 @@ if (
   );
   // The field must contain the unit standing on it, which is the relation its
   // own specification states and which two independently authored numbers got
-  // wrong. Reading it back through the packaged project reader checks the
-  // shipped starter rather than the source that produced it, and asks the
-  // owner of the design layout where each record lives instead of restating it.
+  // wrong. The ground that decides the picture is the one a shot stages: the
+  // scene keeps it verbatim and the viewer builds its meshes from it, so this
+  // reads the compiled shot rather than the world record beside it.
+  //
+  // Every number comes from compiler output and the containment question goes
+  // to the engine that owns it. Recomputing the layout here would put a second
+  // answer beside the compiler's, which is the shape of the defect this gate
+  // exists to catch.
   const fieldProbePath = join(starterDir, "verify-packaged-field.mjs");
   writeFileSync(
     fieldProbePath,
-    `import { AutoMovieProductionProject } from "@automovie/mcp";
+    `import {
+  loadAutoMovieProjectState,
+  requireCurrentAutoMovieProjectState,
+} from "@automovie/cli";
+import { isWalkable } from "@automovie/engine";
 
-const project = AutoMovieProductionProject.openReadOnly(process.cwd());
-const world = project.design({ kind: "world" });
-const formation = project.design({ kind: "formation", id: "army" });
-const ground = world.surfaces.find((surface) => surface.id === "ground");
-const half = Math.max(...ground.polygon.map((point) => Math.abs(point.x)));
-const width = (formation.layout.files - 1) * formation.layout.spacing.lateral;
-const depth = (formation.layout.ranks - 1) * formation.layout.spacing.depth;
-const reach = Math.max(
-  Math.abs(formation.anchor.x) + width / 2,
-  Math.abs(formation.anchor.z) + depth,
+const state = requireCurrentAutoMovieProjectState(
+  loadAutoMovieProjectState({ root: process.cwd() }),
 );
-if (half < reach)
+let checked = 0;
+for (const [id, shot] of state.generated.shots) {
+  const space = shot.scene.space;
+  if (space === null) continue;
+  for (const formation of shot.formations) {
+    const { min, max } = formation.bounds;
+    for (const corner of [
+      { x: min.x, z: min.z },
+      { x: max.x, z: min.z },
+      { x: max.x, z: max.z },
+      { x: min.x, z: max.z },
+    ])
+      if (isWalkable(space, corner.x, corner.z) === false)
+        throw new Error(
+          \`shot "\${id}" stages formation "\${formation.id}" reaching (\${corner.x}, \${corner.z}), which the ground it staged does not carry.\`,
+        );
+    checked++;
+  }
+}
+if (checked === 0)
   throw new Error(
-    \`packaged starter ground half-extent \${half} does not contain an army reaching \${reach}.\`,
+    "no staged formation was measured against its ground, so this proved nothing.",
   );
 `,
   );
   run(
-    "packaged starter field contains its army",
+    "packaged starter draws a field that contains its army",
     "node verify-packaged-field.mjs",
     starterDir,
   );
