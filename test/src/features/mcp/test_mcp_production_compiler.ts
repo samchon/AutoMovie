@@ -2178,9 +2178,13 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
         "source-execution-timeout",
       ),
     );
+    // The actor is authored by the subject class rather than spelled in the
+    // shot, so the mutation retargets the returned program instead of the
+    // literal. What the case pins is unchanged: a staged actor naming a model
+    // the compiler did not build is refused.
     fs.writeFileSync(
       sourcePath,
-      mutate(original, 'model: "sentinel",', 'model: "absent-model",'),
+      mutateSourceOutput('  output.actors[0].model = "absent-model";'),
     );
     TestValidator.predicate(
       "compiled scenes cannot reference an absent model",
@@ -2239,11 +2243,10 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
 
     fs.writeFileSync(
       sourcePath,
-      mutate(
-        original,
-        "    skeleton: model.skeleton.id,\n    duration:",
-        '    skeleton: "missing-skeleton",\n    duration:',
-      ),
+      // The clip is authored by the subject class, so the mutation retargets
+      // the returned program. What the case pins is unchanged: a motion naming
+      // a skeleton the compiler did not build is refused.
+      mutateSourceOutput('  output.clips[0].skeleton = "missing-skeleton";'),
     );
     const missingSkeleton = compiler.compile({ scope: "source" });
     const missingSkeletonIsRejected = missingSkeleton.diagnostics.some(

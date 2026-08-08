@@ -74,6 +74,11 @@ import {
 } from "./contentIdentity";
 import { readAutoMovieFilmTimeline } from "./filmTimeline";
 import {
+  AUTOMOVIE_SANDBOX_ENGINE_EXPORTS,
+  isProjectSourceSpecifier,
+  linkProductionSource,
+} from "./linkProductionSource";
+import {
   IAutoMovieExternalModelRuntimeBinding,
   materializeCompiledFormationInventory,
   materializeCompiledInstanceSetInventory,
@@ -340,6 +345,10 @@ export class AutoMovieProductionCompiler {
             path: entry.contract.source.module,
             exportName: entry.contract.source.export,
             source: Buffer.from(normalized).toString("utf8"),
+            readSource: (relative) =>
+              Buffer.from(
+                normalizeAutoMovieSource(this.project.readSource(relative)),
+              ).toString("utf8"),
             context: {
               contract: entry.contract,
               models: Object.fromEntries(graph.models),
@@ -780,6 +789,8 @@ interface ICompileShotSourceProps {
   path: string;
   exportName: string;
   source: string;
+  /** Reader for project source this shot imports. */
+  readSource: (relativePath: string) => string;
   context: {
     contract: IAutoMovieShotContract;
     models: IAutoMovieShotBuildContext["models"];
@@ -894,6 +905,13 @@ interface ICompileDeterministicSourceProps<T> {
   exportName: string;
   source: string;
   context: unknown;
+  /**
+   * Reader for project source this module imports, when linking is allowed.
+   *
+   * Absent means the module stands alone, which is what the film edit and every
+   * pre-linking caller expect.
+   */
+  readSource?: (relativePath: string) => string;
   /** Expected source-owned defineShot registration, for one shot module. */
   registration?: {
     id: string;
@@ -980,19 +998,124 @@ const SANDBOX_BOOTSTRAP = `
   };
   const defineShot = (id, definition) =>
     freeze({ id, ...definition });
-  const sourceModules = freeze({
-    "@automovie/engine": freeze({ defineShot: Object.freeze(defineShot) }),
-  });
+  // The subject vocabulary is reimplemented here rather than loaded from the
+  // package, exactly as defineShot already is. A deterministic build may not
+  // reach outside its sandbox for behavior, so the sandbox owns a stand-in for
+  // every engine name a source module is allowed to import.
+  class AutoMovieSubject {
+    design() {
+      throw new Error("A subject must implement design().");
+    }
+    render() {
+      throw new Error("A subject must implement render().");
+    }
+  }
+  const CONTRIBUTION_KEYS = [
+    "actors",
+    "clips",
+    "formationMotions",
+    "effectCues",
+    "stageActors",
+    "setPieces",
+    "landmarks",
+    "surfaces",
+    "routes",
+    "effectRecipes",
+    "effectZones",
+    "instanceSets",
+  ];
+  const mergeAutoMovieSubjectContributions = (contributions) => {
+    const merged = {};
+    for (const contribution of contributions)
+      for (const key of CONTRIBUTION_KEYS) {
+        const values = contribution?.[key];
+        if (values === undefined || values.length === 0) continue;
+        if (merged[key] === undefined) merged[key] = [];
+        for (const value of values) merged[key].push(value);
+      }
+    return merged;
+  };
+  class AutoMovieSubjectGroup extends AutoMovieSubject {
+    members() {
+      throw new Error("A subject group must implement members().");
+    }
+    render(context) {
+      return mergeAutoMovieSubjectContributions(
+        this.members().map((member) => member.render(context)),
+      );
+    }
+  }
+  const sourceModules = {
+    "@automovie/engine": freeze({
+      defineShot: Object.freeze(defineShot),
+      AutoMovieSubject: Object.freeze(AutoMovieSubject),
+      AutoMovieSubjectGroup: Object.freeze(AutoMovieSubjectGroup),
+      mergeAutoMovieSubjectContributions: Object.freeze(
+        mergeAutoMovieSubjectContributions,
+      ),
+    }),
+  };
+  // A relative specifier means the same module however it is spelled, so it
+  // resolves against the module that wrote it before the registry is consulted.
+  // The registry is keyed by project-relative path; two spellings of one module
+  // must not become two entries.
+  const resolveSpecifier = (from, specifier) => {
+    const stack = from.split("/").slice(0, -1);
+    for (const part of specifier.split("/")) {
+      if (part === "" || part === ".") continue;
+      if (part === "..") {
+        if (stack.length === 0) return null;
+        stack.pop();
+        continue;
+      }
+      stack.push(part);
+    }
+    if (stack.length === 0) return null;
+    const joined = stack.join("/");
+    return joined.slice(-3) === ".ts" ? joined : joined + ".ts";
+  };
+  const makeRequire = (from) => (specifier) => {
+    const relative =
+      specifier.slice(0, 2) === "./" || specifier.slice(0, 3) === "../";
+    const key = relative ? resolveSpecifier(from, specifier) : specifier;
+    const selected = key === null ? undefined : sourceModules[key];
+    if (selected === undefined)
+      throw new Error(
+        'Runtime module "' +
+          specifier +
+          '" is unavailable; a deterministic source module may import the engine surface and other project source only.',
+      );
+    return selected;
+  };
+  let entryPath = "";
   Object.defineProperty(globalThis, "require", {
-    value: (specifier) => {
-      const selected = sourceModules[specifier];
-      if (selected === undefined)
+    value: (specifier) => makeRequire(entryPath)(specifier),
+    writable: false,
+    configurable: false,
+  });
+  // One-shot, so the entry module's own relative imports resolve against it.
+  Object.defineProperty(globalThis, "__automovieSetEntry", {
+    value: (path) => {
+      if (entryPath !== "")
+        throw new Error("The sandbox entry module is already set.");
+      entryPath = path;
+    },
+    writable: false,
+    configurable: false,
+  });
+  // One loader, used by the compiler to register each linked project module in
+  // dependency order. Registration is one-shot: a specifier that is already
+  // present cannot be replaced, so a linked module can never shadow the engine
+  // surface or redefine a sibling that has already been evaluated.
+  Object.defineProperty(globalThis, "__automovieDefine", {
+    value: (specifier, factory) => {
+      if (Object.prototype.hasOwnProperty.call(sourceModules, specifier))
         throw new Error(
-          'Runtime module "' +
-            specifier +
-            '" is unavailable; deterministic shot source may import only defineShot from @automovie/engine.',
+          'Runtime module "' + specifier + '" is already registered.',
         );
-      return selected;
+      const linked = { exports: {} };
+      factory(linked, linked.exports, makeRequire(specifier));
+      sourceModules[specifier] = freeze(linked.exports);
     },
     writable: false,
     configurable: false,
@@ -1525,10 +1648,82 @@ const actorRuntimeOf = (
   return { actors, nodes, models, diagnostics };
 };
 
+const transpileDeterministicSource = (props: {
+  target: string;
+  path: string;
+  source: string;
+}): { output: string | null; diagnostics: IAutoMovieDiagnostic[] } => {
+  const diagnostics: IAutoMovieDiagnostic[] = [];
+  const transpiled = ts.transpileModule(props.source, {
+    compilerOptions: {
+      target: ts.ScriptTarget.ES2022,
+      module: ts.ModuleKind.CommonJS,
+      esModuleInterop: true,
+      isolatedModules: true,
+    },
+    fileName: props.path,
+    reportDiagnostics: true,
+  });
+  for (const diagnostic of transpiled.diagnostics!)
+    if (diagnostic.category === ts.DiagnosticCategory.Error)
+      diagnostics.push({
+        code: "source-transpile-failed",
+        category: "error",
+        phase: "source",
+        target: props.target,
+        path: props.path,
+        message: `${ts.flattenDiagnosticMessageText(diagnostic.messageText, " ")} Fix ${props.path} before running the compiler.`,
+      });
+  return {
+    output: diagnostics.length === 0 ? transpiled.outputText : null,
+    diagnostics,
+  };
+};
+
 const compileDeterministicSource = <T>(
   props: ICompileDeterministicSourceProps<T>,
 ): ICompileDeterministicSourceResult<T> => {
   const diagnostics = inspectSource(props.target, props.path, props.source);
+  // Imported project source is inspected and transpiled exactly as the entry
+  // is. A determinism rule that applied only to the module a shot happens to
+  // live in would be no rule at all once the work moved one import away.
+  const linked =
+    props.readSource === undefined
+      ? { modules: [], failures: [] }
+      : linkProductionSource({
+          entryPath: props.path,
+          entrySource: props.source,
+          read: props.readSource,
+        });
+  for (const failure of linked.failures)
+    diagnostics.push({
+      code: "source-import-unresolved",
+      category: "error",
+      phase: "source",
+      target: props.target,
+      path: failure.path,
+      message: failure.reason,
+    });
+  const imported = linked.modules.filter(
+    (module) => module.path !== props.path,
+  );
+  for (const module of imported)
+    diagnostics.push(
+      ...inspectSource(props.target, module.path, module.source),
+    );
+  if (diagnostics.some((diagnostic) => diagnostic.category === "error"))
+    return { value: null, diagnostics };
+  const transpiledImports: Array<{ path: string; output: string }> = [];
+  for (const module of imported) {
+    const result = transpileDeterministicSource({
+      target: props.target,
+      path: module.path,
+      source: module.source,
+    });
+    diagnostics.push(...result.diagnostics);
+    if (result.output !== null)
+      transpiledImports.push({ path: module.path, output: result.output });
+  }
   if (diagnostics.some((diagnostic) => diagnostic.category === "error"))
     return { value: null, diagnostics };
   const transpiled = ts.transpileModule(props.source, {
@@ -1566,6 +1761,12 @@ const compileDeterministicSource = <T>(
     new vm.Script(SANDBOX_BOOTSTRAP, {
       filename: `${props.path}#sandbox`,
     }).runInContext(sandbox, { timeout: 1_000 });
+    sandbox.__automovieSetEntry(props.path);
+    for (const module of transpiledImports)
+      new vm.Script(
+        `__automovieDefine(${JSON.stringify(module.path)}, (module, exports, require) => {\n${module.output}\n});`,
+        { filename: module.path },
+      ).runInContext(sandbox, { timeout: 1_000 });
     new vm.Script(transpiled.outputText, {
       filename: props.path,
     }).runInContext(sandbox, { timeout: 1_000 });
@@ -2459,7 +2660,7 @@ const inspectSource = (
     if (
       ts.isImportDeclaration(node) &&
       importDeclarationHasRuntimeBinding(node) &&
-      isDefineShotImport(node) === false
+      isLinkableImport(node) === false
     )
       report("source-import-unsupported", "runtime import");
     if (
@@ -2522,12 +2723,23 @@ const importDeclarationHasRuntimeBinding = (
 };
 
 /** The one deterministic runtime import exposed by the source VM. */
-const isDefineShotImport = (declaration: ts.ImportDeclaration): boolean => {
-  if (
-    ts.isStringLiteralLike(declaration.moduleSpecifier) === false ||
-    declaration.moduleSpecifier.text !== "@automovie/engine"
-  )
+/**
+ * Whether a runtime import is one the sandbox can actually satisfy.
+ *
+ * Two kinds resolve. The engine surface is reimplemented inside the sandbox, so
+ * a name absent from that stand-in must be refused here rather than fail at
+ * execution with a message about a missing property. Project-relative source is
+ * linked from the project's own reader, which keeps path escape and symlinks
+ * refused exactly as they are for an entry module.
+ *
+ * A default or namespace import is refused for both. The sandbox registry hands
+ * out a frozen exports object, and binding it as a whole hides which names a
+ * module actually depends on from the link graph that has to resolve them.
+ */
+const isLinkableImport = (declaration: ts.ImportDeclaration): boolean => {
+  if (ts.isStringLiteralLike(declaration.moduleSpecifier) === false)
     return false;
+  const specifier = declaration.moduleSpecifier.text;
   const clause = declaration.importClause;
   if (
     clause === undefined ||
@@ -2540,9 +2752,13 @@ const isDefineShotImport = (declaration: ts.ImportDeclaration): boolean => {
   const runtime = clause.namedBindings.elements.filter(
     (element) => element.isTypeOnly === false,
   );
-  if (runtime.length !== 1) return false;
-  return (
-    (runtime[0]!.propertyName?.text ?? runtime[0]!.name.text) === "defineShot"
+  if (runtime.length === 0) return false;
+  if (isProjectSourceSpecifier(specifier)) return true;
+  if (specifier !== "@automovie/engine") return false;
+  return runtime.every((element) =>
+    AUTOMOVIE_SANDBOX_ENGINE_EXPORTS.has(
+      element.propertyName?.text ?? element.name.text,
+    ),
   );
 };
 
