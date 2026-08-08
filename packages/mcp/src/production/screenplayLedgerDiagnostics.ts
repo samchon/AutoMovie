@@ -191,9 +191,10 @@ export const screenplayLedgerDiagnostics = (props: {
           `Lock ledger retains scene id "${id}", but the current index removed it. Renumbering or deletion would orphan every downstream join that cites it. Restore it as active or as an OMITTED tombstone, then compile again.`,
         );
     }
-    for (const id of [...scenes.keys()].sort((left, right) =>
-      left < right ? -1 : left > right ? 1 : 0,
-    ))
+    // Insertion order, which is the index's own scene order: a ledger the
+    // author reads top to bottom should be reported the same way, and a
+    // comparator here would only be a second ordering nobody asked for.
+    for (const id of scenes.keys())
       if (ledger.has(id) === false && INSERTED_SCENE_ID.test(id) === false)
         refuse(
           "screenplay-lock-renumbered",

@@ -228,6 +228,51 @@ export const test_mcp_production_screenplay_prose = (): void => {
       },
       { softWrapAccepted: true, fencedHeadingIgnored: true },
     );
+
+    // The whole-file layout, which per-unit paths were added beside rather
+    // than in place of. Dropping every unit path leaves the index-level
+    // documents as the only addresses, and a production that never split its
+    // prose must stay green.
+    const whole = after(() => {
+      const value = JSON.parse(originalIndex) as IAutoMovieScreenplayIndex;
+      for (const sequence of value.treatment.sequences) delete sequence.path;
+      for (const entry of value.screenplay.scenes) delete entry.path;
+      // One document now has to carry every scene, and the index-level path
+      // already names the first scene's file.
+      const merged = value.screenplay.scenes
+        .map((entry) =>
+          fs.readFileSync(
+            path.join(
+              fixture.root,
+              `${scenePath.slice(0, scenePath.lastIndexOf("/"))}/${entry.id}.md`,
+            ),
+            "utf8",
+          ),
+        )
+        .join("\n");
+      write(sceneFile, originalScene, merged);
+      const treatmentDir = treatmentPath.slice(
+        0,
+        treatmentPath.lastIndexOf("/"),
+      );
+      write(
+        treatmentFile,
+        originalTreatment,
+        value.treatment.sequences
+          .map((sequence) =>
+            fs.readFileSync(
+              path.join(fixture.root, `${treatmentDir}/${sequence.id}.md`),
+              "utf8",
+            ),
+          )
+          .join("\n"),
+      );
+      write(indexFile, originalIndex, `${JSON.stringify(value, null, 2)}\n`);
+    });
+    TestValidator.predicate(
+      "a production that never split its prose stays green",
+      [...whole].some((code) => code.startsWith("screenplay-")) === false,
+    );
   } catch (error) {
     failure = { error };
     throw error;
