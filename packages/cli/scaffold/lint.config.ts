@@ -93,8 +93,8 @@ const graph: ITtscEvidenceGraphConfig = {
       },
     },
     // There is no population for actions. An action belongs to the
-    // subject that performs it — `Army.advance` is a method on the class the
-    // specification describes — and a choreography spanning subjects that
+    // subject that performs it: `Army.advance` is a method on the class the
+    // specification describes. A choreography spanning subjects that
     // belongs to none of them is a shot, which cites its scene instead.
     // A shot realizes a scene. This is the join that stops a film from
     // accumulating footage nothing asked for.

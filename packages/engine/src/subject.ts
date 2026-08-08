@@ -138,7 +138,7 @@ export abstract class AutoMovieSubject<TDesign> {
  *
  * `render` composes its members by default, so a group states what it holds and
  * how it is arranged, not how to draw it. A group that needs to add something
- * of its own — a banner, a dust cue, a shared route — overrides `render` and
+ * of its own (a banner, a dust cue, a shared route) overrides `render` and
  * merges its own contribution with `super.render`, rather than replacing what
  * its members said.
  */

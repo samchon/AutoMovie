@@ -54,8 +54,8 @@ export class SignalGround extends WorldPiece {
    * Half-extent of the square field, in metres.
    *
    * Derived from the unit that stands on it rather than authored beside it. The
-   * specification states its requirement as a relation — the ranks must end
-   * inside the place — and two independently authored numbers is how this field
+   * specification states its requirement as a relation, that the ranks must end
+   * inside the place, and two independently authored numbers is how this field
    * came to be a third the size of its own army. Deriving makes the relation
    * true by construction, so a change to the unit carries the ground with it.
    */
@@ -204,7 +204,7 @@ export class SignalField extends AutoMovieSubjectGroup<
       routes: [...(placed.routes ?? [])],
       effectRecipes: [...(placed.effectRecipes ?? [])],
       effectZones: [...(placed.effectZones ?? [])],
-      // A piece that places a population — a forest, a field of rubble — must
+      // A piece that places a population (a forest, a field of rubble) must
       // reach the record. Omitting the key would drop what the piece placed
       // without saying so, which is worse than refusing it.
       ...(placed.instanceSets === undefined

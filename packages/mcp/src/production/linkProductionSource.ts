@@ -25,6 +25,15 @@ export interface IAutoMovieSourceLinkResult {
    * everything it requires already registered.
    */
   modules: IAutoMovieLinkedSourceModule[];
+  /**
+   * The entry module's own resolved specifiers.
+   *
+   * Stated rather than searched for. The entry is always linked, so a consumer
+   * that looked it up in {@link modules} would need a fallback for a case that
+   * cannot happen, and a branch nothing can reach is a branch nothing can
+   * test.
+   */
+  entryImports: Record<string, string>;
   /** Refusals, each naming the file that caused it. */
   failures: Array<{ path: string; reason: string }>;
 }
@@ -139,6 +148,7 @@ export const linkProductionSource = (props: {
   const failures: Array<{ path: string; reason: string }> = [];
   const done = new Set<string>();
   const active: string[] = [];
+  let entryImports: Record<string, string> = {};
 
   const visit = (path: string, source: string): void => {
     if (done.has(path)) return;
@@ -176,9 +186,10 @@ export const linkProductionSource = (props: {
     }
     active.pop();
     done.add(path);
+    if (path === props.entryPath) entryImports = imports;
     modules.push({ path, source, imports });
   };
 
   visit(props.entryPath, props.entrySource);
-  return { modules, failures };
+  return { modules, entryImports, failures };
 };

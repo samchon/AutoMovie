@@ -16,10 +16,10 @@ A soldier, a horse, a tree, a wall, a hill, a river, a field, the map: each is a
 
 A class owns four things, and the reason it is a class rather than a factory returning a record is that these four belong together:
 
-- **Constraints** are fields, validated where the subject is built. A measured fact — a reference height, a rated capacity, an interval that must not close — is a field so that another subject can be checked against it and so that the field itself can cite the document that measured it. A number restated in two places is two numbers.
+- **Constraints** are fields, validated where the subject is built. A measured fact (a reference height, a rated capacity, an interval that must not close) is a field so that another subject can be checked against it and so that the field itself can cite the document that measured it. A number restated in two places is two numbers.
 - **Motions** are methods. A `capabilities: ["advance"]` array names an action without owning it; a method is the action. If a caller cannot invoke it, the source never did the work the array claims.
 - **Utilities** are methods that answer questions about the subject: its extent, its footprint, whether a point is inside it, the ground height at a place, where member *n* stands. Delegate to the engine function that already computes the answer. Recomputing it in the class produces a second answer that can disagree with the first, and disagreement is worse than either answer alone.
-- **`render(context)`** returns what this subject puts into a shot: its actors, its clips, its cues, its world geometry. Never a whole shot program — a shot is assembled from many subjects, and each one returns only the part it owns.
+- **`render(context)`** returns what this subject puts into a shot: its actors, its clips, its cues, its world geometry. Never a whole shot program: a shot is assembled from many subjects, and each one returns only the part it owns.
 
 ```ts
 import {
@@ -78,7 +78,7 @@ export class Sentinel extends AutoMovieSubject<IAutoMovieModelRecipe> {
 
 A squadron holds soldiers, a regiment holds squadrons, a village holds buildings, a forest holds trees, a world holds terrain and everything standing on it. The shape is identical at every level, which is what makes a line battle authorable: a regiment advancing is one call, not two thousand.
 
-Extend `AutoMovieSubjectGroup`, state `members()`, and `render` composes them for you. Override it only to add something the group owns that no member does — a banner, a shared route, a dust cue — and merge with `super.render(context)` rather than replacing what the members said.
+Extend `AutoMovieSubjectGroup`, state `members()`, and `render` composes them for you. Override it only to add something the group owns that no member does (a banner, a shared route, a dust cue), and merge with `super.render(context)` rather than replacing what the members said.
 
 Keep populations compact. A formation materializes its members from count, layout, anchor, facing, and seed, and the compiler stores bounded chunks rather than scene nodes, so a member's own `render` usually contributes nothing and the group's cue is what a shot stages. A member that rendered itself individually is the first step toward ten thousand nodes.
 

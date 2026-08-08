@@ -2198,6 +2198,58 @@ ${original}`,
     );
     fs.writeFileSync(sourcePath, original);
 
+    // The film edit is the same kind of deterministic source as a shot, and
+    // `SOURCE_COMPOSITION.md` tells an author to assemble it by walking the
+    // same table its shots derive from. It therefore links the same way: a
+    // missing import is refused at compile time by the rule that owns imports,
+    // not met as an unavailable module once the sandbox is already running.
+    const filmSourcePath = path.join(fixture.root, "src/film.ts");
+    const linkedFilmSource = fs.readFileSync(filmSourcePath, "utf8");
+    fs.writeFileSync(
+      filmSourcePath,
+      `import { headHandleFrames } from "./editTable";
+${linkedFilmSource}`,
+    );
+    TestValidator.predicate(
+      "a film edit importing a module that does not exist is refused",
+      diagnosticCodes(compiler.compile({ scope: "source" })).has(
+        "source-import-unresolved",
+      ),
+    );
+    const editTablePath = path.join(fixture.root, "src/editTable.ts");
+    fs.writeFileSync(editTablePath, "export const headHandleFrames = 0;\n");
+    fs.writeFileSync(
+      filmSourcePath,
+      `import { headHandleFrames } from "./editTable";
+${mutate(
+  linkedFilmSource,
+  "head: { frame: 0 }",
+  "head: { frame: headHandleFrames }",
+)}`,
+    );
+    TestValidator.equals(
+      "a film edit reads the table module it imports",
+      namedFacts([
+        [
+          "sourceImportUnresolved",
+          () =>
+            diagnosticCodes(compiler.compile({ scope: "source" })).has(
+              "source-import-unresolved",
+            ) === false,
+        ],
+        [
+          "sourceExecutionFailed",
+          () =>
+            diagnosticCodes(compiler.compile({ scope: "source" })).has(
+              "source-execution-failed",
+            ) === false,
+        ],
+      ]),
+      { sourceImportUnresolved: true, sourceExecutionFailed: true },
+    );
+    fs.rmSync(editTablePath);
+    fs.writeFileSync(filmSourcePath, linkedFilmSource);
+
     fs.writeFileSync(sourcePath, getterSource);
     TestValidator.predicate(
       "returned getters are snapshotted inside the VM timeout",

@@ -85,7 +85,7 @@ const context = {} as IAutoMovieShotBuildContext;
  *
  * Merging deliberately does not deduplicate. Two subjects claiming one id is a
  * defect the compiler's own uniqueness checks report, and collapsing it here
- * would hide the collision from the gate that owns it — the same "one
+ * would hide the collision from the gate that owns it, the same "one
  * obligation, one owner" rule the rest of the pipeline is built on.
  *
  * Scenarios:

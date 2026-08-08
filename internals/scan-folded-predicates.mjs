@@ -68,8 +68,12 @@ for (const file of files(ROOT)) {
 const byFile = new Map();
 for (const entry of found)
   byFile.set(entry.file, (byFile.get(entry.file) ?? 0) + 1);
+// Code-unit order, not localeCompare: this walk is the reproducible measure of
+// how many folded assertions are left, and a tie broken by the host's locale
+// and ICU build would report a different order on a different machine.
+const byCodeUnits = (left, right) => (left < right ? -1 : left > right ? 1 : 0);
 for (const [file, count] of [...byFile].sort((left, right) =>
-  right[1] === left[1] ? left[0].localeCompare(right[0]) : right[1] - left[1],
+  right[1] === left[1] ? byCodeUnits(left[0], right[0]) : right[1] - left[1],
 ))
   process.stdout.write(`${String(count).padStart(4)}  ${file}\n`);
 process.stdout.write(

@@ -173,6 +173,14 @@ export class AutoMovieProductionCompiler {
     const designReady = diagnostics.every(
       (diagnostic) => diagnostic.category !== "error",
     );
+    // One reader for every deterministic module the linker follows. A shot and
+    // the film edit are the same kind of source, so they must reach project
+    // source through the same owned-source read and the same normalization; two
+    // readers is two chances for one of them to widen what may be opened.
+    const readLinkedSource = (relative: string): string =>
+      Buffer.from(
+        normalizeAutoMovieSource(this.project.readSource(relative)),
+      ).toString("utf8");
     const sourceFields: IAutoMovieFingerprintField[] = [];
     const contentFields: IAutoMovieFingerprintField[] = [];
     let contentInputs: IAutoMovieProductionContentInput[] | undefined;
@@ -317,6 +325,7 @@ export class AutoMovieProductionCompiler {
       };
       filmEditSource = compileFilmEditSource({
         source: Buffer.from(filmSource).toString("utf8"),
+        readSource: readLinkedSource,
         context: filmContext,
       });
     }
@@ -345,10 +354,7 @@ export class AutoMovieProductionCompiler {
             path: entry.contract.source.module,
             exportName: entry.contract.source.export,
             source: Buffer.from(normalized).toString("utf8"),
-            readSource: (relative) =>
-              Buffer.from(
-                normalizeAutoMovieSource(this.project.readSource(relative)),
-              ).toString("utf8"),
+            readSource: readLinkedSource,
             context: {
               contract: entry.contract,
               models: Object.fromEntries(graph.models),
@@ -905,13 +911,8 @@ interface ICompileDeterministicSourceProps<T> {
   exportName: string;
   source: string;
   context: unknown;
-  /**
-   * Reader for project source this module imports, when linking is allowed.
-   *
-   * Absent means the module stands alone, which is what the film edit and every
-   * pre-linking caller expect.
-   */
-  readSource?: (relativePath: string) => string;
+  /** Reader for project source this module imports. */
+  readSource: (relativePath: string) => string;
   /** Expected source-owned defineShot registration, for one shot module. */
   registration?: {
     id: string;
@@ -1672,14 +1673,11 @@ const compileDeterministicSource = <T>(
   // Imported project source is inspected and transpiled exactly as the entry
   // is. A determinism rule that applied only to the module a shot happens to
   // live in would be no rule at all once the work moved one import away.
-  const linked =
-    props.readSource === undefined
-      ? { modules: [], failures: [] }
-      : linkProductionSource({
-          entryPath: props.path,
-          entrySource: props.source,
-          read: props.readSource,
-        });
+  const linked = linkProductionSource({
+    entryPath: props.path,
+    entrySource: props.source,
+    read: props.readSource,
+  });
   for (const failure of linked.failures)
     diagnostics.push({
       code: "source-import-unresolved",
@@ -1741,10 +1739,7 @@ const compileDeterministicSource = <T>(
     new vm.Script(SANDBOX_BOOTSTRAP, {
       filename: `${props.path}#sandbox`,
     }).runInContext(sandbox, { timeout: 1_000 });
-    sandbox.__automovieSetEntry(
-      linked.modules.find((module) => module.path === props.path)?.imports ??
-        {},
-    );
+    sandbox.__automovieSetEntry(linked.entryImports);
     for (const module of transpiledImports)
       new vm.Script(
         `__automovieDefine(${JSON.stringify(module.path)}, ${JSON.stringify(module.imports)}, (module, exports, require) => {\n${module.output}\n});`,
@@ -1918,9 +1913,17 @@ interface ICompileFilmSourceProps {
   scope: IAutoMovieCompileProjectInput["scope"];
 }
 
-/** Evaluate the deterministic film module once, before ordered shot compile. */
+/**
+ * Evaluate the deterministic film module once, before ordered shot compile.
+ *
+ * The edit links project source exactly as a shot does. `SOURCE_COMPOSITION.md`
+ * tells an author to assemble the edit by walking the same table its shots are
+ * derived from, and an edit that could not import that table would have to
+ * restate the order it already holds.
+ */
 const compileFilmEditSource = (props: {
   source: string;
+  readSource: (relativePath: string) => string;
   context: IAutoMovieFilmBuildContext;
 }): ICompileDeterministicSourceResult<IAutoMovieFilmEdit> =>
   compileDeterministicSource<IAutoMovieFilmEdit>({
@@ -1929,6 +1932,7 @@ const compileFilmEditSource = (props: {
     path: FILM_SOURCE_PATH,
     exportName: FILM_SOURCE_EXPORT,
     source: props.source,
+    readSource: props.readSource,
     context: props.context,
     validate: (input) => typia.validateEquals<IAutoMovieFilmEdit>(input),
   });
