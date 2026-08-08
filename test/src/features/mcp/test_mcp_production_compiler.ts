@@ -2171,6 +2171,33 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
         "  });",
       ].join("\n"),
     );
+    // Linking widened what a shot may import, so the refusals that bound it
+    // have to be exercised through the compiler rather than only through the
+    // linker: a rule the compiler never applies is not a rule.
+    fs.writeFileSync(
+      sourcePath,
+      `import { missing } from "../units/missing";
+${original}`,
+    );
+    TestValidator.predicate(
+      "a shot importing a module that does not exist is refused",
+      diagnosticCodes(compiler.compile({ scope: "source" })).has(
+        "source-import-unresolved",
+      ),
+    );
+    fs.writeFileSync(
+      sourcePath,
+      `import { readFileSync } from "node:fs";
+${original}`,
+    );
+    TestValidator.predicate(
+      "a shot importing outside the project is still refused",
+      diagnosticCodes(compiler.compile({ scope: "source" })).has(
+        "source-import-unsupported",
+      ),
+    );
+    fs.writeFileSync(sourcePath, original);
+
     fs.writeFileSync(sourcePath, getterSource);
     TestValidator.predicate(
       "returned getters are snapshotted inside the VM timeout",

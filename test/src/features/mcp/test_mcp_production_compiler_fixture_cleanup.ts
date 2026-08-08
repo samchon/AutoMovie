@@ -95,7 +95,7 @@ const productionCompilerFixtureContract = (text: string): unknown => {
     if (outer === undefined || ts.isTryStatement(outer) === false) return [];
     const statements = outer.tryBlock.statements;
     const unmanifested = statements[104];
-    const noDesign = statements[596];
+    const noDesign = statements[601];
     if (
       unmanifested === undefined ||
       ts.isTryStatement(unmanifested) === false ||
@@ -104,7 +104,7 @@ const productionCompilerFixtureContract = (text: string): unknown => {
     )
       return [];
     const substantive = statements.filter(
-      (_, index) => ![102, 104, 594, 596].includes(index),
+      (_, index) => ![102, 104, 599, 601].includes(index),
     );
     return [
       {
@@ -135,10 +135,10 @@ const productionCompilerFixtureContract = (text: string): unknown => {
         ...lifecycleContract(unmanifested, source),
       },
       {
-        acquisition: compact(statements[595]!, source),
+        acquisition: compact(statements[600]!, source),
         bodyStatements: statements.length,
-        failureHolder: compact(statements[594]!, source),
-        index: 596,
+        failureHolder: compact(statements[599]!, source),
+        index: 601,
         kind: "no-design",
         ownerParameters: [],
         substantiveStatements: noDesign.tryBlock.statements.length,
@@ -299,16 +299,16 @@ export const test_mcp_production_compiler_fixture_cleanup = (): void => {
             index: 2,
             kind: "main",
             ownerParameters: [],
-            substantiveStatements: 593,
+            substantiveStatements: 598,
             substantiveTokenDigest:
-              "7413212ecf2c42291684b42e73f9fa7b44ebe29d6b1b34e6b6a15af4c0226847",
+              "435261682e4ac0446e1014be5b188395ce4891201dd70b73b3efa8bcd5e3e5f2",
             tryDigest:
-              "0446ca5cd6122c2bcd474a5d3e9b63eb45b6d97e0c227626d85ed1e9f2b44018",
-            tryStatements: 597,
+              "f12f6c6ee3f3fa997fbfbf229e2a2240319946299157d1a88195179138a7a808",
+            tryStatements: 602,
           },
           {
             acquisition: "constunmanifestedFixture=productionFixture();",
-            bodyStatements: 597,
+            bodyStatements: 602,
             catchBodies: ["unmanifestedFixtureFailure={error};", "throwerror;"],
             catchVariables: ["error"],
             failureHolder:
@@ -329,7 +329,7 @@ export const test_mcp_production_compiler_fixture_cleanup = (): void => {
           {
             acquisition:
               'constnoDesignRoot=fs.mkdtempSync(path.join(os.tmpdir(),"automovie-production-empty-"),);',
-            bodyStatements: 597,
+            bodyStatements: 602,
             catchBodies: ["noDesignFailure={error};", "throwerror;"],
             catchVariables: ["error"],
             failureHolder:
@@ -337,7 +337,7 @@ export const test_mcp_production_compiler_fixture_cleanup = (): void => {
             finallyBodies: [
               "preserveProductionCompilerFixtureCleanup(noDesignFailure,()=>fs.rmSync(noDesignRoot,{force:true,recursive:true}),);",
             ],
-            index: 596,
+            index: 601,
             kind: "no-design",
             ownerParameters: [],
             substantiveStatements: 2,
