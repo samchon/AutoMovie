@@ -64,11 +64,23 @@ const graph: ITtscEvidenceGraphConfig = {
         symbol: "file",
       },
     },
-    // Implementation answers for its specification. A unit, prop, or place in
-    // source with no spec is a decision nobody wrote down.
+    // Implementation answers for its specification. A unit, prop, place, or
+    // formation in source with no spec is a decision nobody wrote down.
+    //
+    // Formations belong here rather than in a population of their own. A
+    // claim's reference is a whole population, so `src/formations/*.ts`
+    // referencing `docs/characters/*.md` would require every character to be
+    // formed up by something, including a lone figure the story never puts in
+    // ranks. Grouped into this claim, a formation cites the character it
+    // groups and nothing is owed that the story does not ask for.
     {
       type: "typescript",
-      files: ["src/units/*.ts", "src/objects/*.ts", "src/world/*.ts"],
+      files: [
+        "src/units/*.ts",
+        "src/objects/*.ts",
+        "src/world/*.ts",
+        "src/formations/*.ts",
+      ],
       // A subject is a class, its measured facts are fields, and its
       // behaviors are methods. All three answer for the document that
       // specifies them: the class for the subject, a field for the value
@@ -80,25 +92,10 @@ const graph: ITtscEvidenceGraphConfig = {
         symbol: "file",
       },
     },
-    // A formation groups a subject that must already be specified. The
-    // reference is every character spec, not the one this formation happens to
-    // group, so a character nothing ever forms up is still an unpaid
-    // obligation somewhere in the graph rather than a silent orphan.
-    //
-    // There is no separate population for actions. An action belongs to the
+    // There is no population for actions. An action belongs to the
     // subject that performs it — `Army.advance` is a method on the class the
     // specification describes — and a choreography spanning subjects that
     // belongs to none of them is a shot, which cites its scene instead.
-    {
-      type: "typescript",
-      files: ["src/formations/*.ts"],
-      symbol: ["type", "property", "function"],
-      reference: {
-        type: "markdown",
-        files: ["docs/characters/*.md"],
-        symbol: "file",
-      },
-    },
     // A shot realizes a scene. This is the join that stops a film from
     // accumulating footage nothing asked for.
     {
