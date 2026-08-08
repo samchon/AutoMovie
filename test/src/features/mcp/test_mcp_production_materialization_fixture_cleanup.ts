@@ -383,8 +383,8 @@ export const test_mcp_production_materialization_fixture_cleanup = (): void => {
               "76b01d8b5d7b3d3bfd4c7dbc6792ae2d022a7aa4f410e49def1e488e28d7a03d",
             prefixStatements: 15,
             tryDigest:
-              "7203b715cebc565ab28c9b81709278063c07a6bba41d9e65f0c7c4f1208b143f",
-            tryStatements: 55,
+              "47346bad568b45c5a7dadefa25d2c80dee05bcf22b394d9029354eb8296e5b8d",
+            tryStatements: 57,
           },
         ],
       },
