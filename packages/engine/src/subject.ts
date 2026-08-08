@@ -22,9 +22,9 @@ import type {
  *
  * Every field is optional because most subjects fill one or two. A prop
  * standing in the background contributes world geometry and nothing else; a
- * performer contributes an actor and its clips; a formation contributes
- * compact cues that the engine expands from count, layout, anchor, facing, and
- * seed rather than into per-member nodes.
+ * performer contributes an actor and its clips; a formation contributes compact
+ * cues that the engine expands from count, layout, anchor, facing, and seed
+ * rather than into per-member nodes.
  */
 export interface IAutoMovieSubjectContribution {
   /** Articulated performers this subject stages. */
@@ -101,8 +101,8 @@ export const mergeAutoMovieSubjectContributions = (
  * `design` is the wire. A class is an authoring surface and never reaches the
  * compile sandbox, so everything the compiler stores and validates leaves
  * through this one method as the plain record it already understands. Two
- * constructions with the same inputs must produce byte-identical records,
- * which is what keeps the same design compiling to the same frames.
+ * constructions with the same inputs must produce byte-identical records, which
+ * is what keeps the same design compiling to the same frames.
  *
  * Utilities delegate to the engine functions that already compute their
  * answers. Reimplementing that arithmetic here would produce a second answer
@@ -136,11 +136,11 @@ export abstract class AutoMovieSubject<TDesign> {
  * every level, which is what makes a line battle authorable: a regiment
  * advancing is one call rather than two thousand.
  *
- * `render` composes its members by default, so a group states what it holds
- * and how it is arranged, not how to draw it. A group that needs to add
- * something of its own — a banner, a dust cue, a shared route — overrides
- * `render` and merges its own contribution with `super.render`, rather than
- * replacing what its members said.
+ * `render` composes its members by default, so a group states what it holds and
+ * how it is arranged, not how to draw it. A group that needs to add something
+ * of its own — a banner, a dust cue, a shared route — overrides `render` and
+ * merges its own contribution with `super.render`, rather than replacing what
+ * its members said.
  */
 export abstract class AutoMovieSubjectGroup<
   TDesign,
