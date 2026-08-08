@@ -150,6 +150,8 @@ The film's shot order is data the table already holds. Build the edit by walking
 
 Placement timing, transitions, and edge states still belong to the edit's own rules. Deriving the order does not license deriving a continuity claim: an edge state asserts a measured fact about two specific shots, and a factory cannot know it.
 
-## Read the shipped example
+## Read the shipped examples
 
-`src/examples/lineBattle.ts` in the scaffold is the worked example of this boundary. Typed capability facts and seeded engine outcomes feed agent-owned drill code, while large non-formation populations use compact instance sets instead of scene nodes. Read it before designing your own layer.
+The starter's own vocabulary is the worked example of the subject layer. `src/units/sentinel.ts` is a leaf subject whose measured facts are fields and whose one capability is a method; `src/units/armyHero.ts` derives its scale from the sentinel rather than restating it; `src/formations/army.ts` is a group that states arrangement and answers questions about its own extent; `src/world/signalField.ts` is a group of places whose record is the merge of what its pieces put down.
+
+`src/examples/lineBattle.ts` is the worked example of a different boundary, the one between engine-owned facts and agent-owned drill code. Typed capability facts and seeded engine outcomes feed the drill, while large non-formation populations use compact instance sets instead of scene nodes. Read both before designing your own layer.

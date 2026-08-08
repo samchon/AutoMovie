@@ -53,6 +53,9 @@ const paths = (result: ReturnType<typeof link>): string[] =>
  * 8. The engine surface the sandbox reimplements is exactly the surface a source
  *    module may import; a name on one side and not the other would be either an
  *    unreachable stand-in or an import that fails at execution.
+ * 9. The entry's own resolved specifiers are stated on the result, since the
+ *    sandbox needs them before any module runs and searching the module list
+ *    for an entry that is always there would need a branch nothing can reach.
  */
 export const test_mcp_production_source_link = (): void => {
   const chain = link({
@@ -71,6 +74,11 @@ export const test_mcp_production_source_link = (): void => {
     "modules arrive in dependency order with the entry last",
     paths(chain),
     ["src/units/member.ts", "src/formations/army.ts", "src/shots/one.ts"],
+  );
+  TestValidator.equals(
+    "the entry's own specifiers are stated rather than searched for",
+    chain.entryImports,
+    { "../formations/army": "src/formations/army.ts" },
   );
 
   const diamond = link({
