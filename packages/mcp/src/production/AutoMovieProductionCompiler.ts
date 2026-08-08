@@ -2835,6 +2835,12 @@ const validateCompiledShot = (
  * A shot that stages no space is not measured. The engine then falls back to
  * the scalar ground plane it assumed before spaces existed, and there is no
  * authored extent for a unit to leave.
+ *
+ * This measures the unit where it was staged, not where a cue takes it. A
+ * formation motion translates and rescales the whole unit, so one that advances
+ * off the staged ground is the same defect and is not caught here; the bounds
+ * under a sampled cue are `transformFormationBounds`, which is private to the
+ * oracle service today and has to gain one owner before this can ask it.
  */
 export const validateAutoMovieFormationGround = (
   contract: Pick<IAutoMovieShotContract, "id">,
