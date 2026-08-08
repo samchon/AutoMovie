@@ -200,40 +200,6 @@ const run = (label, command, cwd, timeout = 300_000) => {
   console.log(`✓ ${label}`);
 };
 
-/**
- * Run a command and require its output to contain an exact phrase.
- *
- * A command that succeeds is not the same as a command that did the thing: `npm
- * run design` exits zero whether it wrote a record or left one alone, and only
- * the second answers whether the typed source still derives what ships.
- */
-const runExpectedOutput = (
-  label,
-  command,
-  cwd,
-  expected,
-  timeout = 300_000,
-) => {
-  console.log(`> ${label}`);
-  const result = spawnSync(command, {
-    cwd,
-    shell: true,
-    encoding: "utf8",
-    maxBuffer: 64 * 1024 * 1024,
-    stdio: ["ignore", "pipe", "pipe"],
-    timeout,
-  });
-  if (commandSucceeded(result) === false) failCommand(label, result, timeout);
-  const output = `${result.stdout ?? ""}${result.stderr ?? ""}`;
-  for (const phrase of expected)
-    if (output.includes(phrase) === false)
-      throw new Error(
-        `${label}: expected output to contain ${JSON.stringify(phrase)}.
-${output}`,
-      );
-  console.log(`✓ ${label}`);
-};
-
 const runExpectedFailure = (
   label,
   command,
@@ -304,6 +270,40 @@ const runJson = (label, executable, args, cwd) => {
     appendFileSync(tracePath, `${new Date().toISOString()} PASS ${label}\n`);
   console.log(`PASS ${label}`);
   return output;
+};
+
+/**
+ * Run a command and require its output to contain an exact phrase.
+ *
+ * A command that succeeds is not the same as a command that did the thing: `npm
+ * run design` exits zero whether it wrote a record or left one alone, and only
+ * the second answers whether the typed source still derives what ships.
+ */
+const runExpectedOutput = (
+  label,
+  command,
+  cwd,
+  expected,
+  timeout = 300_000,
+) => {
+  console.log(`> ${label}`);
+  const result = spawnSync(command, {
+    cwd,
+    shell: true,
+    encoding: "utf8",
+    maxBuffer: 64 * 1024 * 1024,
+    stdio: ["ignore", "pipe", "pipe"],
+    timeout,
+  });
+  if (commandSucceeded(result) === false) failCommand(label, result, timeout);
+  const output = `${result.stdout ?? ""}${result.stderr ?? ""}`;
+  for (const phrase of expected)
+    if (output.includes(phrase) === false)
+      throw new Error(
+        `${label}: expected output to contain ${JSON.stringify(phrase)}.
+${output}`,
+      );
+  console.log(`✓ ${label}`);
 };
 
 const CLIENT_SOURCE = `

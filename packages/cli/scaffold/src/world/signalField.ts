@@ -1,7 +1,7 @@
-import type { IAutoMovieSubjectContribution } from "@automovie/engine";
 import {
   AutoMovieSubject,
   AutoMovieSubjectGroup,
+  type IAutoMovieSubjectContribution,
   mergeAutoMovieSubjectContributions,
 } from "@automovie/engine";
 import type {

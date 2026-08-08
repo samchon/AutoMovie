@@ -1,5 +1,7 @@
-import type { IAutoMovieSubjectContribution } from "@automovie/engine";
-import { AutoMovieSubjectGroup } from "@automovie/engine";
+import {
+  AutoMovieSubjectGroup,
+  type IAutoMovieSubjectContribution,
+} from "@automovie/engine";
 import type {
   IAutoMovieFormationDesign,
   IAutoMovieFormationMotion,

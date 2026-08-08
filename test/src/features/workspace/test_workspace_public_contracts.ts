@@ -2740,6 +2740,10 @@ export const test_workspace_public_contracts = (): void => {
   );
   const runJsonSource = sourceSection(
     "const runJson =",
+    "\nconst runExpectedOutput =",
+  );
+  const expectedOutputSource = sourceSection(
+    "const runExpectedOutput =",
     "\nconst CLIENT_SOURCE =",
   );
   const clientSpawnSource = sourceSection(
@@ -3213,6 +3217,16 @@ export const test_workspace_public_contracts = (): void => {
             null,
         },
         {
+          site: "runExpectedOutput",
+          spawned:
+            expectedOutputSource.match(/const (\w+) = spawnSync\(/)?.[1] ??
+            null,
+          routed:
+            expectedOutputSource.match(
+              /failCommand\(label, (\w+), timeout\)/,
+            )?.[1] ?? null,
+        },
+        {
           site: "stdioClient",
           spawned:
             clientSpawnSource.match(/const (\w+) = spawnSync\(/)?.[1] ?? null,
@@ -3225,7 +3239,7 @@ export const test_workspace_public_contracts = (): void => {
       retiredFallbacks: tgzE2e.match(/status \?\? "signal"/g) ?? [],
     },
     {
-      counts: { spawned: 4, routed: 4 },
+      counts: { spawned: 5, routed: 5 },
       sites: [
         { site: "run", spawned: "result", routed: "result" },
         {
@@ -3234,6 +3248,7 @@ export const test_workspace_public_contracts = (): void => {
           routed: "result",
         },
         { site: "runJson", spawned: "result", routed: "result" },
+        { site: "runExpectedOutput", spawned: "result", routed: "result" },
         { site: "stdioClient", spawned: "client", routed: "client" },
       ],
       retiredFallbacks: [],
