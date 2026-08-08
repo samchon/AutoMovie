@@ -65,7 +65,11 @@ export const preserveScreenplayProseFixtureCleanup = (
  *    document that merely illustrates the format is not mistaken for one that
  *    declares the scene.
  * 6. An index addressing a document that does not exist is refused rather than
- *    crashing, since one authoring mistake must not become a stack trace.
+ *    crashing, since one authoring mistake must not become a stack trace, and
+ *    the unreadable treatment stops there rather than going on to judge beats
+ *    against prose it never got.
+ * 7. The whole-file layout per-unit paths were added beside, with no unit
+ *    addressing a document of its own, stays green.
  */
 export const test_mcp_production_screenplay_prose = (): void => {
   let failure: IScreenplayProseFixtureFailure | undefined;
@@ -170,6 +174,20 @@ export const test_mcp_production_screenplay_prose = (): void => {
           value.screenplay.scenes[0]!.path = "docs/nowhere/SCN-001.md";
         }),
       ).has("screenplay-document-absent"),
+      // The treatment half of the same mistake. It must report the unreadable
+      // document and stop there rather than go on to judge beats against prose
+      // it never got, which would blame the author twice for one typo.
+      treatmentDocumentAbsent: (() => {
+        const codes = after(() =>
+          editIndex((value) => {
+            value.treatment.sequences[0]!.path = "docs/nowhere/SEQ-SIGNAL.md";
+          }),
+        );
+        return (
+          codes.has("screenplay-document-absent") &&
+          codes.has("screenplay-beat-unwritten") === false
+        );
+      })(),
     };
     TestValidator.equals(
       "every prose obligation refuses the document that breaks it",
@@ -181,6 +199,7 @@ export const test_mcp_production_screenplay_prose = (): void => {
         headingRepeated: true,
         headingRetitled: true,
         documentAbsent: true,
+        treatmentDocumentAbsent: true,
       },
     );
 
