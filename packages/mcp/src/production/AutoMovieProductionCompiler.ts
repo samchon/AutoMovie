@@ -5,6 +5,8 @@ import {
   isWalkable,
   makeActorSynthesizer,
   realizeShotContract,
+  sampleFormationMotion,
+  transformFormationBounds,
   validateModel,
   validateMotion,
   validateShotArtifact,
@@ -28,6 +30,7 @@ import {
   IAutoMovieFilmBuildContext,
   IAutoMovieFilmEdit,
   IAutoMovieFilmTimeline,
+  IAutoMovieFormationMotion,
   IAutoMovieGeneratedCollisionProxy,
   IAutoMovieGeneratedFile,
   IAutoMovieGeneratedManifest,
@@ -2836,38 +2839,73 @@ const validateCompiledShot = (
  * the scalar ground plane it assumed before spaces existed, and there is no
  * authored extent for a unit to leave.
  *
- * This measures the unit where it was staged, not where a cue takes it. A
- * formation motion translates and rescales the whole unit, so one that advances
- * off the staged ground is the same defect and is not caught here; the bounds
- * under a sampled cue are `transformFormationBounds`, which is private to the
- * oracle service today and has to gain one owner before this can ask it.
+ * A unit is measured where it stands and at each end of every cue that moves
+ * it. Translation and spacing scale interpolate linearly, so their extremes are
+ * the endpoints; a facing offset turning between two angles can swing the box
+ * past both, which this does not see. Every time it does sample is a state the
+ * unit really occupies, so the gate never refuses a shot that was correct.
  */
 export const validateAutoMovieFormationGround = (
   contract: Pick<IAutoMovieShotContract, "id">,
   value: {
     scene: Pick<IAutoMovieScene, "space">;
     formations: ReadonlyArray<
-      Pick<IAutoMovieCompiledFormation, "id" | "bounds">
+      Pick<
+        IAutoMovieCompiledFormation,
+        "id" | "bounds" | "anchor" | "facingDeg"
+      >
     >;
+    formationMotions?: readonly IAutoMovieFormationMotion[];
   },
 ): IAutoMovieDiagnostic[] => {
   const space = value.scene.space;
   if (space === undefined || space === null) return [];
+  const cues = value.formationMotions ?? [];
   const diagnostics: IAutoMovieDiagnostic[] = [];
   for (const formation of value.formations) {
-    const { min, max } = formation.bounds;
-    const outside = [
-      { x: min.x, z: min.z },
-      { x: max.x, z: min.z },
-      { x: max.x, z: max.z },
-      { x: min.x, z: max.z },
-    ].find((corner) => isWalkable(space, corner.x, corner.z) === false);
-    if (outside === undefined) continue;
+    const own = cues.filter((cue) => cue.formation === formation.id);
+    const times = [...new Set(own.flatMap((cue) => [cue.start, cue.end]))].sort(
+      (left, right) => left - right,
+    );
+    // Where it was staged is measured only when the unit is ever there: with no
+    // cue it never moves, and with a cue starting after zero it stands still
+    // until then. A cue starting at zero means the unit begins somewhere its
+    // design bounds never describe, and measuring those would refuse a shot for
+    // a position it never holds.
+    const resting = own.length === 0 || (times[0] ?? 0) > 0;
+    const escape = [...(resting ? [null] : []), ...times]
+      .map((time) => ({
+        time,
+        bounds:
+          time === null
+            ? formation.bounds
+            : transformFormationBounds(
+                formation.bounds,
+                formation.anchor,
+                sampleFormationMotion(cues, formation.id, time),
+                formation.facingDeg,
+              ),
+      }))
+      .flatMap(({ time, bounds }) =>
+        [
+          { x: bounds.min.x, z: bounds.min.z },
+          { x: bounds.max.x, z: bounds.min.z },
+          { x: bounds.max.x, z: bounds.max.z },
+          { x: bounds.min.x, z: bounds.max.z },
+        ]
+          .filter((corner) => isWalkable(space, corner.x, corner.z) === false)
+          .map((corner) => ({ time, corner })),
+      )[0];
+    if (escape === undefined) continue;
     diagnostics.push(
       engineDiagnostic(
         contract.id,
         `formation:${formation.id}.bounds`,
-        `must stand on the space this shot staged, but the unit reaches (${outside.x}, ${outside.z}) where no walkable surface carries it`,
+        `must stand on the space this shot staged, but ${
+          escape.time === null
+            ? "the unit reaches"
+            : `at ${escape.time}s its cue takes the unit to`
+        } (${escape.corner.x}, ${escape.corner.z}) where no walkable surface carries it`,
       ),
     );
   }

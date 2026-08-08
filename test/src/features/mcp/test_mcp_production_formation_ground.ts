@@ -1,5 +1,6 @@
 import type {
   IAutoMovieCompiledFormation,
+  IAutoMovieFormationMotion,
   IAutoMovieSpace,
 } from "@automovie/interface";
 import { validateAutoMovieFormationGround } from "@automovie/mcp";
@@ -27,26 +28,56 @@ const field = (half: number): IAutoMovieSpace => ({
   walkable: ["ground"],
 });
 
+type IUnit = Pick<
+  IAutoMovieCompiledFormation,
+  "id" | "bounds" | "anchor" | "facingDeg"
+>;
+
 /** One compiled unit reaching a stated distance from the origin. */
-const unit = (
-  reach: number,
-): Pick<IAutoMovieCompiledFormation, "id" | "bounds"> => ({
-  id: "army",
+const unit = (reach: number, id = "army"): IUnit => ({
+  id,
   bounds: {
     min: { x: -reach, y: 0, z: -reach },
     max: { x: reach, y: 0, z: reach },
   },
+  anchor: { x: 0, y: 0, z: 0 },
+  facingDeg: 0,
+});
+
+/** One cue carrying a unit a stated distance along +z between two times. */
+const march = (
+  metres: number,
+  formation = "army",
+): IAutoMovieFormationMotion => ({
+  id: `${formation}-advance`,
+  formation,
+  action: "advance",
+  start: 1,
+  end: 3,
+  from: {
+    translation: { x: 0, y: 0, z: 0 },
+    facingOffsetDeg: 0,
+    spacingScale: { lateral: 1, depth: 1 },
+  },
+  to: {
+    translation: { x: 0, y: 0, z: metres },
+    facingOffsetDeg: 0,
+    spacingScale: { lateral: 1, depth: 1 },
+  },
+  easing: "easeInOut",
 });
 
 const codes = (
   space: IAutoMovieSpace | null,
-  formations: ReadonlyArray<Pick<IAutoMovieCompiledFormation, "id" | "bounds">>,
+  formations: readonly IUnit[],
+  formationMotions?: readonly IAutoMovieFormationMotion[],
 ): string[] =>
   validateAutoMovieFormationGround(
     { id: "opening" },
     {
       scene: { space },
       formations,
+      formationMotions,
     },
   ).map((diagnostic) => diagnostic.code);
 
@@ -75,6 +106,14 @@ const codes = (
  *    falls back to the scalar ground plane and there is no extent to leave.
  * 5. Every staged unit answers for itself: one contained and one escaping report
  *    exactly one refusal, so a passing sibling cannot hide a failing one.
+ * 6. A unit that fits where it stands and marches off the floor is refused, naming
+ *    the time its cue took it out, because a unit walking over a void is the
+ *    defect this gate exists for and not a different one.
+ * 7. A unit whose cue keeps it on the floor is accepted, and a cue belonging to
+ *    another unit does not move this one.
+ * 8. A unit whose cue starts at zero is never at its design bounds, so those are
+ *    not measured: every sampled time is a position the unit really holds, and
+ *    a gate that refused one it never held would be worse than none.
  */
 export const test_mcp_production_formation_ground = (): void => {
   TestValidator.equals(
@@ -133,5 +172,79 @@ export const test_mcp_production_formation_ground = (): void => {
     "one contained unit does not answer for an escaping one",
     codes(field(5), [unit(2), unit(9)]),
     ["engine-validation-failed"],
+  );
+
+  TestValidator.equals(
+    "a unit that fits at rest and marches off the floor is refused",
+    codes(field(10), [unit(4)], [march(20)]),
+    ["engine-validation-failed"],
+  );
+
+  TestValidator.equals(
+    "the refusal names the time its cue took the unit out",
+    validateAutoMovieFormationGround(
+      { id: "opening" },
+      {
+        scene: { space: field(10) },
+        formations: [unit(4)],
+        formationMotions: [march(20)],
+      },
+    )[0]!.message.includes("at 3s its cue takes the unit to"),
+    true,
+  );
+
+  TestValidator.equals(
+    "a unit that marches and stays on the floor is accepted",
+    codes(field(20), [unit(4)], [march(10)]),
+    [],
+  );
+
+  TestValidator.equals(
+    "a cue belonging to another unit does not move this one",
+    codes(field(10), [unit(4)], [march(20, "cavalry")]),
+    [],
+  );
+
+  // A cue starting at zero means the unit is never at its design bounds, so
+  // measuring them would refuse a shot for a position it never holds. Here the
+  // unit begins carried 40 m onto a floor that reaches 60, and only its design
+  // box, sitting at the origin, would be off a floor that starts at 30.
+  const carried: IAutoMovieFormationMotion = {
+    ...march(0),
+    start: 0,
+    end: 2,
+    from: {
+      translation: { x: 0, y: 0, z: 40 },
+      facingOffsetDeg: 0,
+      spacingScale: { lateral: 1, depth: 1 },
+    },
+    to: {
+      translation: { x: 0, y: 0, z: 45 },
+      facingOffsetDeg: 0,
+      spacingScale: { lateral: 1, depth: 1 },
+    },
+  };
+  const offsetFloor: IAutoMovieSpace = {
+    id: "far-field",
+    surfaces: [
+      {
+        id: "ground",
+        kind: "floor",
+        polygon: [
+          { x: -10, y: 0, z: 30 },
+          { x: 10, y: 0, z: 30 },
+          { x: 10, y: 0, z: 60 },
+          { x: -10, y: 0, z: 60 },
+        ],
+        anchor: { x: 0, y: 0, z: 30 },
+        rampTo: null,
+      },
+    ],
+    walkable: ["ground"],
+  };
+  TestValidator.equals(
+    "a unit whose cue starts at zero is not judged where it never stands",
+    codes(offsetFloor, [unit(4)], [carried]),
+    [],
   );
 };
