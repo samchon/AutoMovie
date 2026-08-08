@@ -69,7 +69,11 @@ const graph: ITtscEvidenceGraphConfig = {
     {
       type: "typescript",
       files: ["src/units/*.ts", "src/objects/*.ts", "src/world/*.ts"],
-      symbol: "function",
+      // A subject is a class, its measured facts are fields, and its
+      // behaviors are methods. All three answer for the document that
+      // specifies them: the class for the subject, a field for the value
+      // measuring it, a method for the behavior it performs.
+      symbol: ["type", "property", "function"],
       reference: {
         type: "markdown",
         files: ["docs/characters/*.md", "docs/objects/*.md", "docs/world/*.md"],
@@ -80,16 +84,28 @@ const graph: ITtscEvidenceGraphConfig = {
     // reference is every character spec, not the one this formation happens to
     // group, so a character nothing ever forms up is still an unpaid
     // obligation somewhere in the graph rather than a silent orphan.
+    {
+      type: "typescript",
+      files: ["src/formations/*.ts"],
+      symbol: ["type", "property", "function"],
+      reference: {
+        type: "markdown",
+        files: ["docs/characters/*.md"],
+        symbol: "file",
+      },
+    },
     // Source grounds source: an action cites the vocabulary it moves, so a
     // drill cannot outlive the unit it was written for.
     {
       type: "typescript",
       files: ["src/drills/*.ts"],
-      symbol: "function",
+      symbol: ["type", "property", "function"],
       reference: {
+        // A drill cites the subject it moves, which is now a class rather
+        // than a factory function.
         type: "typescript",
         files: ["src/units/*.ts", "src/formations/*.ts"],
-        symbol: "function",
+        symbol: "type",
       },
     },
     // A shot realizes a scene. This is the join that stops a film from
