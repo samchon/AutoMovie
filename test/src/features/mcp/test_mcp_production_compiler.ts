@@ -2250,6 +2250,76 @@ ${mutate(
     fs.rmSync(editTablePath);
     fs.writeFileSync(filmSourcePath, linkedFilmSource);
 
+    // The sandbox reimplements the subject vocabulary rather than loading it,
+    // so a group whose `render` composes its members only works if the
+    // stand-in composes them the same way the engine does. Nothing else
+    // executes that stand-in: the starter's shot stages one performer, not a
+    // group. Here the shot's actor and its clip both arrive through a group,
+    // so a stand-in that dropped either key would leave the clip the
+    // performance references unbuilt and the compile would say so.
+    const beforeEnsemble = [
+      ...diagnosticCodes(compiler.compile({ scope: "source" })),
+    ].sort(compareCodeUnits);
+    const ensemblePath = path.join(fixture.root, "src/units/ensemble.ts");
+    fs.writeFileSync(
+      ensemblePath,
+      `import {
+  AutoMovieSubject,
+  AutoMovieSubjectGroup,
+  type IAutoMovieSubjectContribution,
+} from "@automovie/engine";
+import type { IAutoMovieShotBuildContext } from "@automovie/interface";
+
+import { sentinel } from "./sentinel";
+
+class Staged extends AutoMovieSubject<null> {
+  public readonly id = "staged";
+
+  public design(): null {
+    return null;
+  }
+
+  public render(
+    context: IAutoMovieShotBuildContext,
+  ): IAutoMovieSubjectContribution {
+    return sentinel.render(context, { from: 0 });
+  }
+}
+
+export class Ensemble extends AutoMovieSubjectGroup<null, Staged> {
+  public readonly id = "ensemble";
+
+  public design(): null {
+    return null;
+  }
+
+  public members(): readonly Staged[] {
+    return [new Staged()];
+  }
+}
+
+export const ensemble = new Ensemble();
+`,
+    );
+    fs.writeFileSync(
+      sourcePath,
+      mutate(
+        `import { ensemble } from "../units/ensemble";
+${original}`,
+        "const performer = sentinel.render(context, { from: openingAbduction });",
+        "const performer = ensemble.render(context);",
+      ),
+    );
+    TestValidator.equals(
+      "a shot stages what a subject group composes from its members",
+      [...diagnosticCodes(compiler.compile({ scope: "source" }))].sort(
+        compareCodeUnits,
+      ),
+      beforeEnsemble,
+    );
+    fs.rmSync(ensemblePath);
+    fs.writeFileSync(sourcePath, original);
+
     fs.writeFileSync(sourcePath, getterSource);
     TestValidator.predicate(
       "returned getters are snapshotted inside the VM timeout",
