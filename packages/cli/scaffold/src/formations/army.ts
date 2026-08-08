@@ -62,9 +62,9 @@ export class Army extends AutoMovieSubjectGroup<
    * place it stands on has to be large enough to hold the advance and a field
    * sized to a number no shot agreed to is a field the unit walks off.
    *
-   * @evidence docs/characters/army.md States the ranks advance while holding
-   *   their order, which is a movement of the whole unit rather than of its
-   *   members.
+   * Like every measured fact here it carries no citation of its own, because
+   * `@ttsc/evidence` does not yet select a class field as a unit
+   * (samchon/ttsc#1121). The instance's tag answers for it until then.
    */
   public readonly advanceMetres = 2;
 
