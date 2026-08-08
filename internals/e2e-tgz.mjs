@@ -1625,7 +1625,7 @@ const state = requireCurrentAutoMovieProjectState(
 let checked = 0;
 for (const [id, shot] of state.generated.shots) {
   const space = shot.scene.space;
-  if (space === null) continue;
+  if (space === undefined || space === null) continue;
   for (const formation of shot.formations) {
     const { min, max } = formation.bounds;
     for (const corner of [
