@@ -204,14 +204,22 @@ export const test_motion_plant_feet_edge = (): void => {
     legs: [LEG],
     sampleRate: 8,
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "branched pseudo-chain stays unchanged",
-    branched.plants.length === 1 &&
-      branched.motion.keyframes.every((keyframe) =>
-        keyframe.pose.joints.every(
-          (joint) => joint.bone !== LEG.upper && joint.bone !== LEG.lower,
-        ),
-      ),
+    namedFacts([
+      ["branchedPlantsLength", () => branched.plants.length === 1],
+      [
+        "branchedMotionKeyframes",
+        () =>
+          branched.plants.length === 1 &&
+          branched.motion.keyframes.every((keyframe) =>
+            keyframe.pose.joints.every(
+              (joint) => joint.bone !== LEG.upper && joint.bone !== LEG.lower,
+            ),
+          ),
+      ],
+    ]),
+    { branchedPlantsLength: true, branchedMotionKeyframes: true },
   );
   const split = plantStanceFeet({
     skeleton: splitLeg,

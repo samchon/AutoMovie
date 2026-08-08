@@ -199,9 +199,17 @@ export const test_motion_react = (): void => {
     ["spine"],
     0.1,
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "a 0.1 s duration scales the default peak to 0.04",
-    nclose(quick.keyframes[1]!.time, 0.04) && nclose(quick.duration, 0.1),
+    namedFacts([
+      ["ncloseQuickKeyframes", () => nclose(quick.keyframes[1]!.time, 0.04)],
+      [
+        "ncloseQuickDuration",
+        () =>
+          nclose(quick.keyframes[1]!.time, 0.04) && nclose(quick.duration, 0.1),
+      ],
+    ]),
+    { ncloseQuickKeyframes: true, ncloseQuickDuration: true },
   );
   const long = reactMotion("long", skeleton, { flexion: -10 }, ["spine"], 0.5);
   TestValidator.predicate(

@@ -9,7 +9,7 @@ import {
   makeMotion,
   makePose,
 } from "../internal/fixtures";
-import { nclose } from "../internal/predicates";
+import { namedFacts, nclose } from "../internal/predicates";
 
 const shift = (x: number): IAutoMovieTransform => ({
   translation: { x, y: 0, z: 0 },
@@ -70,9 +70,16 @@ export const test_motion_sample_asymmetric = (): void => {
     nclose(fj.abduction ?? NaN, 5),
   );
   TestValidator.predicate("twist 5→absent → 2.5", nclose(fj.twist ?? NaN, 2.5));
-  TestValidator.predicate(
+  TestValidator.equals(
     "root absent→present → 0.5",
-    f.pose.root !== null && nclose(f.pose.root.translation.x, 0.5),
+    namedFacts([
+      ["fPoseRoot", () => f.pose.root !== null],
+      [
+        "ncloseFPose",
+        () => f.pose.root !== null && nclose(f.pose.root.translation.x, 0.5),
+      ],
+    ]),
+    { fPoseRoot: true, ncloseFPose: true },
   );
   TestValidator.equals(
     "expression present→absent carries first",
@@ -98,9 +105,16 @@ export const test_motion_sample_asymmetric = (): void => {
     1,
   );
   const r = sampleMotion(reversed, 0.5);
-  TestValidator.predicate(
+  TestValidator.equals(
     "root present→absent → 1.0",
-    r.pose.root !== null && nclose(r.pose.root.translation.x, 1),
+    namedFacts([
+      ["rPoseRoot", () => r.pose.root !== null],
+      [
+        "ncloseRPose",
+        () => r.pose.root !== null && nclose(r.pose.root.translation.x, 1),
+      ],
+    ]),
+    { rPoseRoot: true, ncloseRPose: true },
   );
   TestValidator.equals(
     "expression absent→present carries second",
@@ -126,9 +140,16 @@ export const test_motion_sample_asymmetric = (): void => {
     1,
   );
   const b = sampleMotion(bothRoots, 0.5);
-  TestValidator.predicate(
+  TestValidator.equals(
     "both roots present → midpoint 1.0",
-    b.pose.root !== null && nclose(b.pose.root.translation.x, 1),
+    namedFacts([
+      ["bPoseRoot", () => b.pose.root !== null],
+      [
+        "ncloseBPose",
+        () => b.pose.root !== null && nclose(b.pose.root.translation.x, 1),
+      ],
+    ]),
+    { bPoseRoot: true, ncloseBPose: true },
   );
 
   // axes present on opposite keyframes: abduction only at the start, twist only

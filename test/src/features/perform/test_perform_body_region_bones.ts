@@ -45,9 +45,16 @@ export const test_perform_body_region_bones = (): void => {
 
   // 1. membership
   TestValidator.equals("lowerBody owns 9 bones", lower.length, 9);
-  TestValidator.predicate(
+  TestValidator.equals(
     "lowerBody has hips + a foot",
-    lower.includes("hips") && lower.includes("leftFoot"),
+    namedFacts([
+      ["lowerIncludesHips", () => lower.includes("hips")],
+      [
+        "lowerIncludesLeftFoot",
+        () => lower.includes("hips") && lower.includes("leftFoot"),
+      ],
+    ]),
+    { lowerIncludesHips: true, lowerIncludesLeftFoot: true },
   );
   TestValidator.equals("upperBody owns 41 bones", upper.length, 41);
   TestValidator.equals(
@@ -67,9 +74,13 @@ export const test_perform_body_region_bones = (): void => {
     },
   );
   TestValidator.equals("head owns 5 bones", head.length, 5);
-  TestValidator.predicate(
+  TestValidator.equals(
     "head has neck + jaw",
-    head.includes("neck") && head.includes("jaw"),
+    namedFacts([
+      ["headIncludesNeck", () => head.includes("neck")],
+      ["headIncludesJaw", () => head.includes("neck") && head.includes("jaw")],
+    ]),
+    { headIncludesNeck: true, headIncludesJaw: true },
   );
   TestValidator.equals("face owns no bones", face.length, 0);
 

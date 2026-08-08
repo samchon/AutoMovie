@@ -198,9 +198,13 @@ const plantAndAssert = (turnWindow: number, label: string): void => {
     3,
   );
   const straddle = planted.plants[1]!;
-  TestValidator.predicate(
+  TestValidator.equals(
     `${label}: the middle run straddles the corner at t=1`,
-    straddle.start < 1 && straddle.end > 1,
+    namedFacts([
+      ["straddleStart", () => straddle.start < 1],
+      ["straddleEnd", () => straddle.start < 1 && straddle.end > 1],
+    ]),
+    { straddleStart: true, straddleEnd: true },
   );
 
   for (const run of planted.plants) {

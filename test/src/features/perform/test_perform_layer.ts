@@ -172,22 +172,54 @@ export const test_perform_layer = (): void => {
 
   const end = frameAt(perf, 1);
   const joints = new Map(end.pose.joints.map((j) => [j.bone, j]));
-  TestValidator.predicate(
+  TestValidator.equals(
     "the leg and the arm are driven at the same instant",
-    joints.has("leftUpperLeg") && joints.has("leftUpperArm"),
+    namedFacts([
+      ["jointsHasLeftUpperLeg", () => joints.has("leftUpperLeg")],
+      [
+        "jointsHasLeftUpperArm",
+        () => joints.has("leftUpperLeg") && joints.has("leftUpperArm"),
+      ],
+    ]),
+    { jointsHasLeftUpperLeg: true, jointsHasLeftUpperArm: true },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "out-of-region joints are stripped before layering",
-    nclose(joints.get("leftUpperLeg")!.flexion!, 30) &&
-      nclose(joints.get("leftUpperArm")!.flexion!, 20),
+    namedFacts([
+      [
+        "ncloseJointsGet",
+        () => nclose(joints.get("leftUpperLeg")!.flexion!, 30),
+      ],
+      [
+        "ncloseJointsGet2",
+        () =>
+          nclose(joints.get("leftUpperLeg")!.flexion!, 30) &&
+          nclose(joints.get("leftUpperArm")!.flexion!, 20),
+      ],
+    ]),
+    { ncloseJointsGet: true, ncloseJointsGet2: true },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "upper-body root leakage cannot override locomotion root",
-    end.pose.root !== null && nclose(end.pose.root.translation.x, 1),
+    namedFacts([
+      ["endPoseRoot", () => end.pose.root !== null],
+      [
+        "ncloseEndPose",
+        () => end.pose.root !== null && nclose(end.pose.root.translation.x, 1),
+      ],
+    ]),
+    { endPoseRoot: true, ncloseEndPose: true },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "the face's expression rides along",
-    end.expression !== null && end.expression.preset === "happy",
+    namedFacts([
+      ["endExpression", () => end.expression !== null],
+      [
+        "endExpressionPreset",
+        () => end.expression !== null && end.expression.preset === "happy",
+      ],
+    ]),
+    { endExpression: true, endExpressionPreset: true },
   );
 
   // 2. the layering envelope (#1003): a region claims its bones only from its
@@ -203,9 +235,17 @@ export const test_perform_layer = (): void => {
     .hero!;
   const boneAt = (time: number, bone: AutoMovieHumanoidBone) =>
     frameAt(late, time).pose.joints.find((j) => j.bone === bone);
-  TestValidator.predicate(
+  TestValidator.equals(
     "a late lookAt claims nothing before it starts (causality)",
-    boneAt(0, "head") === undefined && boneAt(1, "head") === undefined,
+    namedFacts([
+      ["boneAtHead", () => boneAt(0, "head") === undefined],
+      [
+        "boneAtHead2",
+        () =>
+          boneAt(0, "head") === undefined && boneAt(1, "head") === undefined,
+      ],
+    ]),
+    { boneAtHead: true, boneAtHead2: true },
   );
   const at3 = frameAt(late, 3);
   TestValidator.equals(
@@ -316,9 +356,18 @@ export const test_perform_layer = (): void => {
     "off-grid: a finished locomote releases its joints mid-segment",
     offGrid.pose.joints.every((j) => j.bone !== "leftUpperLeg"),
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "off-grid: the walk's destination root still persists",
-    offGrid.pose.root !== null && nclose(offGrid.pose.root.translation.x, 1),
+    namedFacts([
+      ["offGridPoseRoot", () => offGrid.pose.root !== null],
+      [
+        "ncloseOffGridPose",
+        () =>
+          offGrid.pose.root !== null &&
+          nclose(offGrid.pose.root.translation.x, 1),
+      ],
+    ]),
+    { offGridPoseRoot: true, ncloseOffGridPose: true },
   );
 
   const lateEmote: IAutoMovieActionCall = {
@@ -354,10 +403,24 @@ export const test_perform_layer = (): void => {
     },
   );
   const paddedEmote = compilePerformance([lateEmote], synth).performances.hero!;
-  TestValidator.predicate(
+  TestValidator.equals(
     "the lead-in pad holds a null expression until the authored start",
-    sampleMotion(paddedEmote, 0.5).expression === null &&
-      sampleMotion(paddedEmote, 3.5).expression?.preset === "happy",
+    namedFacts([
+      [
+        "sampleMotionPaddedEmoteExpression",
+        () => sampleMotion(paddedEmote, 0.5).expression === null,
+      ],
+      [
+        "sampleMotionPaddedEmoteExpression2",
+        () =>
+          sampleMotion(paddedEmote, 0.5).expression === null &&
+          sampleMotion(paddedEmote, 3.5).expression?.preset === "happy",
+      ],
+    ]),
+    {
+      sampleMotionPaddedEmoteExpression: true,
+      sampleMotionPaddedEmoteExpression2: true,
+    },
   );
 
   // a start inside the boundary width (0 < first ≤ ε) gets only the t=0 pad:
@@ -423,13 +486,30 @@ export const test_perform_layer = (): void => {
   const sameRegionLanes = compilePerformance([leftLane, rightLane], laneSynth)
     .performances.hero!;
   const laneEnd = sampleMotion(sameRegionLanes, 1).pose.joints;
-  TestValidator.predicate(
+  TestValidator.equals(
     "content-disjoint same-region overlaps survive on separate lanes",
-    laneEnd.some(
-      (entry) => entry.bone === "leftUpperArm" && nclose(entry.flexion!, 30),
-    ) &&
-      laneEnd.some(
-        (entry) => entry.bone === "rightUpperArm" && nclose(entry.flexion!, 40),
-      ),
+    namedFacts([
+      [
+        "laneEndSomeEntry",
+        () =>
+          laneEnd.some(
+            (entry) =>
+              entry.bone === "leftUpperArm" && nclose(entry.flexion!, 30),
+          ),
+      ],
+      [
+        "laneEndSomeEntry2",
+        () =>
+          laneEnd.some(
+            (entry) =>
+              entry.bone === "leftUpperArm" && nclose(entry.flexion!, 30),
+          ) &&
+          laneEnd.some(
+            (entry) =>
+              entry.bone === "rightUpperArm" && nclose(entry.flexion!, 40),
+          ),
+      ],
+    ]),
+    { laneEndSomeEntry: true, laneEndSomeEntry2: true },
   );
 };

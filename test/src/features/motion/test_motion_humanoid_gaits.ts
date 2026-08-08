@@ -94,10 +94,21 @@ export const test_motion_humanoid_gaits = (): void => {
 
   const hip: AutoMovieHumanoidBone = "leftUpperLeg";
   const knee: AutoMovieHumanoidBone = "leftLowerLeg";
-  TestValidator.predicate(
+  TestValidator.equals(
     "hip swing grows walk < run < sprint",
-    ampOf(HUMANOID_GAITS.walk, hip) < ampOf(HUMANOID_GAITS.run, hip) &&
-      ampOf(HUMANOID_GAITS.run, hip) < ampOf(HUMANOID_GAITS.sprint, hip),
+    namedFacts([
+      [
+        "ampOfHUMANOID_GAITSWalk",
+        () => ampOf(HUMANOID_GAITS.walk, hip) < ampOf(HUMANOID_GAITS.run, hip),
+      ],
+      [
+        "ampOfHUMANOID_GAITSRun",
+        () =>
+          ampOf(HUMANOID_GAITS.walk, hip) < ampOf(HUMANOID_GAITS.run, hip) &&
+          ampOf(HUMANOID_GAITS.run, hip) < ampOf(HUMANOID_GAITS.sprint, hip),
+      ],
+    ]),
+    { ampOfHUMANOID_GAITSWalk: true, ampOfHUMANOID_GAITSRun: true },
   );
   TestValidator.predicate(
     "sprint bends the knee hardest of the five",

@@ -10,7 +10,7 @@ import {
 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { nclose } from "../internal/predicates";
+import { namedFacts, nclose } from "../internal/predicates";
 
 // Every bone validates against the default anatomical table, including the
 // arms, now that gestures are authored in **clinical** space (abduction 180
@@ -159,18 +159,33 @@ export const test_motion_gesture = (): void => {
       (kf) => kf.pose.joints.find((jj) => jj.bone === "rightLowerLeg")?.flexion,
     )
     .filter((v): v is number => v !== undefined);
-  TestValidator.predicate(
+  TestValidator.equals(
     "kick chambers then snaps the knee (folded → near-straight)",
-    Math.max(...kneeFlex) > 60 && Math.min(...kneeFlex) < 15,
+    namedFacts([
+      ["maxKneeFlex", () => Math.max(...kneeFlex) > 60],
+      [
+        "minKneeFlex",
+        () => Math.max(...kneeFlex) > 60 && Math.min(...kneeFlex) < 15,
+      ],
+    ]),
+    { maxKneeFlex: true, minKneeFlex: true },
   );
 
   // stagger, the trunk lurches off balance: the spine leans (abduction) and
   // a leg braces.
   const stagger = gestureMotion("st", RIG.id, "stagger", 1)!;
-  TestValidator.predicate(
+  TestValidator.equals(
     "stagger leans the trunk (spine abduction) and braces a leg",
-    maxAbs(stagger, "spine", "abduction") > 15 &&
-      maxAbs(stagger, "rightUpperLeg", "flexion") > 15,
+    namedFacts([
+      ["maxAbsStaggerSpine", () => maxAbs(stagger, "spine", "abduction") > 15],
+      [
+        "maxAbsStaggerRightUpperLeg",
+        () =>
+          maxAbs(stagger, "spine", "abduction") > 15 &&
+          maxAbs(stagger, "rightUpperLeg", "flexion") > 15,
+      ],
+    ]),
+    { maxAbsStaggerSpine: true, maxAbsStaggerRightUpperLeg: true },
   );
 
   // The clinical raise is a positive abduction on either side (a rig-space
@@ -199,22 +214,44 @@ export const test_motion_gesture = (): void => {
   // celebrate: both arms thrown up by clinical abduction, the SAME positive
   // angle on each side (no per-side mirror; the rest frame reads it up).
   const celebrate = gestureMotion("c2", RIG.id, "celebrate", 1)!;
-  TestValidator.predicate(
+  TestValidator.equals(
     "celebrate throws both arms up with the same positive clinical abduction",
-    peakAbd(celebrate, "leftUpperArm") > 120 &&
-      nclose(
-        peakAbd(celebrate, "leftUpperArm"),
-        peakAbd(celebrate, "rightUpperArm"),
-      ),
+    namedFacts([
+      [
+        "peakAbdCelebrateLeftUpperArm",
+        () => peakAbd(celebrate, "leftUpperArm") > 120,
+      ],
+      [
+        "nclosePeakAbdCelebrate",
+        () =>
+          peakAbd(celebrate, "leftUpperArm") > 120 &&
+          nclose(
+            peakAbd(celebrate, "leftUpperArm"),
+            peakAbd(celebrate, "rightUpperArm"),
+          ),
+      ],
+    ]),
+    { peakAbdCelebrateLeftUpperArm: true, nclosePeakAbdCelebrate: true },
   );
 
   // draw: the bow arm reaches forward (left-arm flexion) and the string hand
   // folds back to the cheek (right forearm flexion).
   const draw = gestureMotion("d", RIG.id, "draw", 1)!;
-  TestValidator.predicate(
+  TestValidator.equals(
     "draw reaches the bow arm forward and folds the string arm",
-    maxAbs(draw, "leftUpperArm", "flexion") > 60 &&
-      maxAbs(draw, "rightLowerArm", "flexion") > 90,
+    namedFacts([
+      [
+        "maxAbsDrawLeftUpperArm",
+        () => maxAbs(draw, "leftUpperArm", "flexion") > 60,
+      ],
+      [
+        "maxAbsDrawRightLowerArm",
+        () =>
+          maxAbs(draw, "leftUpperArm", "flexion") > 60 &&
+          maxAbs(draw, "rightLowerArm", "flexion") > 90,
+      ],
+    ]),
+    { maxAbsDrawLeftUpperArm: true, maxAbsDrawRightLowerArm: true },
   );
 
   // throw: the right arm cocks back (negative upper-arm flexion) then whips
@@ -224,9 +261,16 @@ export const test_motion_gesture = (): void => {
     (k) =>
       k.pose.joints.find((jj) => jj.bone === "rightUpperArm")?.flexion ?? 0,
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "throw winds the arm back then whips it forward",
-    Math.min(...throwArmFlex) < -20 && Math.max(...throwArmFlex) > 40,
+    namedFacts([
+      ["minThrowArmFlex", () => Math.min(...throwArmFlex) < -20],
+      [
+        "maxThrowArmFlex",
+        () => Math.min(...throwArmFlex) < -20 && Math.max(...throwArmFlex) > 40,
+      ],
+    ]),
+    { minThrowArmFlex: true, maxThrowArmFlex: true },
   );
   TestValidator.predicate(
     "throw coils the trunk on its twist",
@@ -255,9 +299,16 @@ export const test_motion_gesture = (): void => {
     maxAbs(jump, "leftLowerLeg", "flexion") > 30,
   );
   const rootYs = jump.keyframes.map((k) => k.pose.root?.translation.y ?? 0);
-  TestValidator.predicate(
+  TestValidator.equals(
     "jump opens and closes grounded (root y = 0)",
-    nclose(rootYs[0]!, 0) && nclose(rootYs[rootYs.length - 1]!, 0),
+    namedFacts([
+      ["ncloseRootYs0", () => nclose(rootYs[0]!, 0)],
+      [
+        "ncloseRootYsRootYs",
+        () => nclose(rootYs[0]!, 0) && nclose(rootYs[rootYs.length - 1]!, 0),
+      ],
+    ]),
+    { ncloseRootYs0: true, ncloseRootYsRootYs: true },
   );
   TestValidator.predicate(
     "jump arcs the root up to a positive apex",

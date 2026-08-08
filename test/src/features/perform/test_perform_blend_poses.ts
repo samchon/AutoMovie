@@ -6,7 +6,7 @@ import {
 import { TestValidator } from "@nestia/e2e";
 
 import { joint, makePose } from "../internal/fixtures";
-import { nclose, throwsError } from "../internal/predicates";
+import { namedFacts, nclose, throwsError } from "../internal/predicates";
 
 const rootAt = (x: number): IAutoMovieTransform => ({
   translation: { x, y: 0, z: 0 },
@@ -123,9 +123,16 @@ export const test_perform_blend_poses = (): void => {
     "arm survives",
     nclose(axis(disjoint, "leftUpperArm", "flexion")!, 30),
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "root from the rooted layer",
-    disjoint.root !== null && nclose(disjoint.root.translation.x, 5),
+    namedFacts([
+      ["disjointRoot", () => disjoint.root !== null],
+      [
+        "ncloseDisjointRoot",
+        () => disjoint.root !== null && nclose(disjoint.root.translation.x, 5),
+      ],
+    ]),
+    { disjointRoot: true, ncloseDisjointRoot: true },
   );
   TestValidator.equals(
     "skeleton from the first layer",
@@ -138,9 +145,16 @@ export const test_perform_blend_poses = (): void => {
     { pose: makePose([joint("hips")], rootAt(2)), weight: 1, ownsRoot: true },
     { pose: makePose([joint("chest")], rootAt(9)), weight: 1 },
   ]);
-  TestValidator.predicate(
+  TestValidator.equals(
     "owning layer's root wins",
-    owned.root !== null && nclose(owned.root.translation.x, 2),
+    namedFacts([
+      ["ownedRoot", () => owned.root !== null],
+      [
+        "ncloseOwnedRoot",
+        () => owned.root !== null && nclose(owned.root.translation.x, 2),
+      ],
+    ]),
+    { ownedRoot: true, ncloseOwnedRoot: true },
   );
 
   // 6. no owning layer → last non-null root (null-first does not clear it)
@@ -148,9 +162,16 @@ export const test_perform_blend_poses = (): void => {
     { pose: makePose([joint("hips")]), weight: 1 },
     { pose: makePose([joint("chest")], rootAt(7)), weight: 1 },
   ]);
-  TestValidator.predicate(
+  TestValidator.equals(
     "last non-null root wins",
-    lastRoot.root !== null && nclose(lastRoot.root.translation.x, 7),
+    namedFacts([
+      ["lastRootRoot", () => lastRoot.root !== null],
+      [
+        "ncloseLastRootRoot",
+        () => lastRoot.root !== null && nclose(lastRoot.root.translation.x, 7),
+      ],
+    ]),
+    { lastRootRoot: true, ncloseLastRootRoot: true },
   );
 
   // 7. empty rejected

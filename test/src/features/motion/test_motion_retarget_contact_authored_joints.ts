@@ -3,7 +3,7 @@ import { AutoMovieHumanoidBone } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { joint } from "../internal/fixtures";
-import { nclose, vclose } from "../internal/predicates";
+import { namedFacts, nclose, vclose } from "../internal/predicates";
 import {
   keyframeWorld,
   mapped,
@@ -85,9 +85,16 @@ export const test_motion_retarget_contact_authored_joints = (): void => {
 
   // 3. the pinned limb's authored angles are superseded.
   const knee = joints.find((j) => j.bone === "leftLowerLeg")!;
-  TestValidator.predicate(
+  TestValidator.equals(
     "the solved knee is not the authored 12 degrees",
-    knee.flexion !== null && nclose(knee.flexion, 12, 1e-3) === false,
+    namedFacts([
+      ["kneeFlexion", () => knee.flexion !== null],
+      [
+        "ncloseKneeFlexion",
+        () => knee.flexion !== null && nclose(knee.flexion, 12, 1e-3) === false,
+      ],
+    ]),
+    { kneeFlexion: true, ncloseKneeFlexion: true },
   );
 
   // 4. and the foot lands on the mapped source contact.

@@ -172,9 +172,16 @@ export const test_perform_look_at_gaze_chain = (): void => {
   );
   const head = boneOf(steep, "head")!;
   const neck = boneOf(steep, "neck")!;
-  TestValidator.predicate(
+  TestValidator.equals(
     "the head takes its declared maximum and the neck takes the rest",
-    nclose(head.flexion!, 30) && nclose(neck.flexion!, required - 30),
+    namedFacts([
+      ["ncloseHeadFlexion", () => nclose(head.flexion!, 30)],
+      [
+        "ncloseNeckFlexion",
+        () => nclose(head.flexion!, 30) && nclose(neck.flexion!, required - 30),
+      ],
+    ]),
+    { ncloseHeadFlexion: true, ncloseNeckFlexion: true },
   );
   TestValidator.predicate(
     "the chain aims exactly where the single bone was aiming",
@@ -357,9 +364,17 @@ export const test_perform_look_at_gaze_chain = (): void => {
     posed.joints.map((entry) => entry.bone),
     ["head"],
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "a rig declaring no neck keeps the single-bone aim",
-    nclose(posed.joints[0]!.flexion!, required) &&
-      nclose(posed.joints[0]!.twist!, 0),
+    namedFacts([
+      ["nclosePosedJoints", () => nclose(posed.joints[0]!.flexion!, required)],
+      [
+        "nclosePosedJoints2",
+        () =>
+          nclose(posed.joints[0]!.flexion!, required) &&
+          nclose(posed.joints[0]!.twist!, 0),
+      ],
+    ]),
+    { nclosePosedJoints: true, nclosePosedJoints2: true },
   );
 };

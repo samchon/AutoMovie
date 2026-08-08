@@ -152,10 +152,18 @@ export const test_perform_gesture_region_content = (): void => {
   const jump = compilePerformance([gesture("jump"), emote], synth).performances
     .hero!;
   const apex = jointsAt(jump, 0.58);
-  TestValidator.predicate(
+  TestValidator.equals(
     "a layered jump keeps its ballistic root at the apex",
-    apex.frame.pose.root !== null &&
-      nclose(apex.frame.pose.root.translation.y, 0.34),
+    namedFacts([
+      ["apexFramePose", () => apex.frame.pose.root !== null],
+      [
+        "ncloseApexFrame",
+        () =>
+          apex.frame.pose.root !== null &&
+          nclose(apex.frame.pose.root.translation.y, 0.34),
+      ],
+    ]),
+    { apexFramePose: true, ncloseApexFrame: true },
   );
 
   const nodAndWave = compilePerformance(
@@ -163,16 +171,31 @@ export const test_perform_gesture_region_content = (): void => {
     synth,
   ).performances.hero!;
   const both = jointsAt(nodAndWave, 0.25);
-  TestValidator.predicate(
+  TestValidator.equals(
     "a nod and a wave layer on disjoint regions",
-    both.map.has("head") && both.map.has("rightUpperArm"),
+    namedFacts([
+      ["bothMapHas", () => both.map.has("head")],
+      [
+        "bothMapHas2",
+        () => both.map.has("head") && both.map.has("rightUpperArm"),
+      ],
+    ]),
+    { bothMapHas: true, bothMapHas2: true },
   );
 
   const maskedKick = compilePerformance([gesture("kick", "upperBody")], synth)
     .performances.hero!;
   const maskedStop = jointsAt(maskedKick, 0.22);
-  TestValidator.predicate(
+  TestValidator.equals(
     "an explicit narrower region still masks the clip to its bones",
-    maskedStop.map.has("spine") && !maskedStop.map.has("rightUpperLeg"),
+    namedFacts([
+      ["maskedStopMapHas", () => maskedStop.map.has("spine")],
+      [
+        "maskedStopMapHas2",
+        () =>
+          maskedStop.map.has("spine") && !maskedStop.map.has("rightUpperLeg"),
+      ],
+    ]),
+    { maskedStopMapHas: true, maskedStopMapHas2: true },
   );
 };

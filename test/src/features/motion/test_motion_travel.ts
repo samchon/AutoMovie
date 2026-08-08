@@ -3,7 +3,7 @@ import { IAutoMovieTransform } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
 import { joint, keyframe, makeMotion, makePose } from "../internal/fixtures";
-import { nclose } from "../internal/predicates";
+import { namedFacts, nclose } from "../internal/predicates";
 
 const throws = (task: () => void): boolean => {
   try {
@@ -193,10 +193,21 @@ export const test_motion_travel = (): void => {
     { x: 1, y: 0, z: 0 },
     yaw90b,
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "model X sway lands on world −Z under a 90° facing",
-    nclose(swayFaced.keyframes[1]!.pose.root!.translation.z, -0.1) &&
-      nclose(swayFaced.keyframes[1]!.pose.root!.translation.x, 1),
+    namedFacts([
+      [
+        "ncloseSwayFacedKeyframes",
+        () => nclose(swayFaced.keyframes[1]!.pose.root!.translation.z, -0.1),
+      ],
+      [
+        "ncloseSwayFacedKeyframes2",
+        () =>
+          nclose(swayFaced.keyframes[1]!.pose.root!.translation.z, -0.1) &&
+          nclose(swayFaced.keyframes[1]!.pose.root!.translation.x, 1),
+      ],
+    ]),
+    { ncloseSwayFacedKeyframes: true, ncloseSwayFacedKeyframes2: true },
   );
 
   // 6. the seam keyframe carries the incoming cycle's first-segment easing

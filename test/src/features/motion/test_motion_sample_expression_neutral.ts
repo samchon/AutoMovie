@@ -57,10 +57,21 @@ export const test_motion_sample_expression_neutral = (): void => {
     ],
     1,
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "the intensity fades toward neutral",
-    nclose(sampleMotion(fadeOut, 0.5).expression!.intensity, 0.5) &&
-      sampleMotion(fadeOut, 0.9).expression!.intensity < 0.2,
+    namedFacts([
+      [
+        "ncloseSampleMotionFadeOut",
+        () => nclose(sampleMotion(fadeOut, 0.5).expression!.intensity, 0.5),
+      ],
+      [
+        "sampleMotionFadeOutExpression",
+        () =>
+          nclose(sampleMotion(fadeOut, 0.5).expression!.intensity, 0.5) &&
+          sampleMotion(fadeOut, 0.9).expression!.intensity < 0.2,
+      ],
+    ]),
+    { ncloseSampleMotionFadeOut: true, sampleMotionFadeOutExpression: true },
   );
 
   // 3. neither side authored → no expression

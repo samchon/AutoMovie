@@ -11,7 +11,7 @@ import {
 import { TestValidator } from "@nestia/e2e";
 
 import { joint, makePose } from "../internal/fixtures";
-import { nclose } from "../internal/predicates";
+import { namedFacts, nclose } from "../internal/predicates";
 
 const WALK: IAutoMovieGait = {
   name: "walk",
@@ -115,9 +115,16 @@ export const test_perform_scene = (): void => {
 
   // HERO: legs (gait) + head (look-at) layered, with the smile carried
   const heroBones = bonesOf(perf.hero!);
-  TestValidator.predicate(
+  TestValidator.equals(
     "hero layers the walking legs and the turned head at once",
-    heroBones.has("leftUpperLeg") && heroBones.has("head"),
+    namedFacts([
+      ["heroBonesHasLeftUpperLeg", () => heroBones.has("leftUpperLeg")],
+      [
+        "heroBonesHasHead",
+        () => heroBones.has("leftUpperLeg") && heroBones.has("head"),
+      ],
+    ]),
+    { heroBonesHasLeftUpperLeg: true, heroBonesHasHead: true },
   );
   TestValidator.predicate(
     "hero carries an expression",

@@ -13,7 +13,7 @@ import {
 } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { nclose } from "../internal/predicates";
+import { namedFacts, nclose } from "../internal/predicates";
 
 const range = (min: number, max: number) => ({ min, max });
 const con = (
@@ -143,15 +143,40 @@ export const test_motion_cat_gaits = (): void => {
     limbOf(CAT_GAITS.walk, "rightUpperArm").phase,
     limbOf(CAT_GAITS.walk, "leftUpperLeg").phase,
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "leap is springier and taller than walk",
-    CAT_GAITS.leap.style!.springiness! > CAT_GAITS.walk.style!.springiness! &&
-      CAT_GAITS.leap.rootBob!.amplitude > CAT_GAITS.walk.rootBob!.amplitude,
+    namedFacts([
+      [
+        "cAT_GAITSLeapStyle",
+        () =>
+          CAT_GAITS.leap.style!.springiness! >
+          CAT_GAITS.walk.style!.springiness!,
+      ],
+      [
+        "cAT_GAITSLeapRootBob",
+        () =>
+          CAT_GAITS.leap.style!.springiness! >
+            CAT_GAITS.walk.style!.springiness! &&
+          CAT_GAITS.leap.rootBob!.amplitude > CAT_GAITS.walk.rootBob!.amplitude,
+      ],
+    ]),
+    { cAT_GAITSLeapStyle: true, cAT_GAITSLeapRootBob: true },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "stalk is slower and lower than walk",
-    CAT_GAITS.stalk.period > CAT_GAITS.walk.period &&
-      CAT_GAITS.stalk.rootBob!.center < CAT_GAITS.walk.rootBob!.center,
+    namedFacts([
+      [
+        "cAT_GAITSStalkPeriod",
+        () => CAT_GAITS.stalk.period > CAT_GAITS.walk.period,
+      ],
+      [
+        "cAT_GAITSStalkRootBob",
+        () =>
+          CAT_GAITS.stalk.period > CAT_GAITS.walk.period &&
+          CAT_GAITS.stalk.rootBob!.center < CAT_GAITS.walk.rootBob!.center,
+      ],
+    ]),
+    { cAT_GAITSStalkPeriod: true, cAT_GAITSStalkRootBob: true },
   );
 
   const bound = bindProfileGaits(CAT_PROFILE, RIG.id, 24);
