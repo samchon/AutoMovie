@@ -6,6 +6,14 @@ export interface IAutoMovieLinkedSourceModule {
   path: string;
   /** Normalized source text. */
   source: string;
+  /**
+   * Every project specifier this module writes, mapped to the module it means.
+   *
+   * Resolution happens once, here. The sandbox looks a specifier up rather than
+   * resolving it again, so there is no second implementation of this arithmetic
+   * that could disagree about which module a spelling names.
+   */
+  imports: Record<string, string>;
 }
 
 /** What a link attempt produced, or why it could not finish. */
@@ -142,6 +150,7 @@ export const linkProductionSource = (props: {
       return;
     }
     active.push(path);
+    const imports: Record<string, string> = {};
     for (const specifier of runtimeSpecifiers(path, source)) {
       if (isProjectSourceSpecifier(specifier) === false) continue;
       const resolved = resolveProjectSourceSpecifier(path, specifier);
@@ -162,11 +171,12 @@ export const linkProductionSource = (props: {
         });
         continue;
       }
+      imports[specifier] = resolved;
       visit(resolved, imported);
     }
     active.pop();
     done.add(path);
-    modules.push({ path, source });
+    modules.push({ path, source, imports });
   };
 
   visit(props.entryPath, props.entrySource);

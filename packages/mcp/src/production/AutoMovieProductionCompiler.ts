@@ -1010,13 +1010,15 @@ const SANDBOX_BOOTSTRAP = `
       throw new Error("A subject must implement render().");
     }
   }
+  // Exactly the keys of IAutoMovieSubjectContribution. The stand-in and the
+  // engine are two spellings of one contract, and a key here that the type
+  // does not declare is a merge that silently carries a field nothing else
+  // knows about.
   const CONTRIBUTION_KEYS = [
     "actors",
     "clips",
     "formationMotions",
     "effectCues",
-    "stageActors",
-    "setPieces",
     "landmarks",
     "surfaces",
     "routes",
@@ -1055,30 +1057,13 @@ const SANDBOX_BOOTSTRAP = `
       ),
     }),
   };
-  // A relative specifier means the same module however it is spelled, so it
-  // resolves against the module that wrote it before the registry is consulted.
-  // The registry is keyed by project-relative path; two spellings of one module
-  // must not become two entries.
-  const resolveSpecifier = (from, specifier) => {
-    const stack = from.split("/").slice(0, -1);
-    for (const part of specifier.split("/")) {
-      if (part === "" || part === ".") continue;
-      if (part === "..") {
-        if (stack.length === 0) return null;
-        stack.pop();
-        continue;
-      }
-      stack.push(part);
-    }
-    if (stack.length === 0) return null;
-    const joined = stack.join("/");
-    return joined.slice(-3) === ".ts" ? joined : joined + ".ts";
-  };
-  const makeRequire = (from) => (specifier) => {
-    const relative =
-      specifier.slice(0, 2) === "./" || specifier.slice(0, 3) === "../";
-    const key = relative ? resolveSpecifier(from, specifier) : specifier;
-    const selected = key === null ? undefined : sourceModules[key];
+  // A module's own import map, resolved once by the compiler and handed in.
+  // The sandbox looks a specifier up rather than resolving it a second time,
+  // so there is no arithmetic here that could disagree with the linker about
+  // which module a spelling names.
+  const makeRequire = (imports) => (specifier) => {
+    const key = imports[specifier] ?? specifier;
+    const selected = sourceModules[key];
     if (selected === undefined)
       throw new Error(
         'Runtime module "' +
@@ -1087,18 +1072,18 @@ const SANDBOX_BOOTSTRAP = `
       );
     return selected;
   };
-  let entryPath = "";
+  let entryImports = null;
   Object.defineProperty(globalThis, "require", {
-    value: (specifier) => makeRequire(entryPath)(specifier),
+    value: (specifier) => makeRequire(entryImports ?? {})(specifier),
     writable: false,
     configurable: false,
   });
-  // One-shot, so the entry module's own relative imports resolve against it.
+  // One-shot, so the entry module resolves through its own map.
   Object.defineProperty(globalThis, "__automovieSetEntry", {
-    value: (path) => {
-      if (entryPath !== "")
+    value: (imports) => {
+      if (entryImports !== null)
         throw new Error("The sandbox entry module is already set.");
-      entryPath = path;
+      entryImports = freeze({ ...imports });
     },
     writable: false,
     configurable: false,
@@ -1108,13 +1093,13 @@ const SANDBOX_BOOTSTRAP = `
   // present cannot be replaced, so a linked module can never shadow the engine
   // surface or redefine a sibling that has already been evaluated.
   Object.defineProperty(globalThis, "__automovieDefine", {
-    value: (specifier, factory) => {
+    value: (specifier, imports, factory) => {
       if (Object.prototype.hasOwnProperty.call(sourceModules, specifier))
         throw new Error(
           'Runtime module "' + specifier + '" is already registered.',
         );
       const linked = { exports: {} };
-      factory(linked, linked.exports, makeRequire(specifier));
+      factory(linked, linked.exports, makeRequire(imports));
       sourceModules[specifier] = freeze(linked.exports);
     },
     writable: false,
@@ -1713,7 +1698,11 @@ const compileDeterministicSource = <T>(
     );
   if (diagnostics.some((diagnostic) => diagnostic.category === "error"))
     return { value: null, diagnostics };
-  const transpiledImports: Array<{ path: string; output: string }> = [];
+  const transpiledImports: Array<{
+    path: string;
+    imports: Record<string, string>;
+    output: string;
+  }> = [];
   for (const module of imported) {
     const result = transpileDeterministicSource({
       target: props.target,
@@ -1722,32 +1711,23 @@ const compileDeterministicSource = <T>(
     });
     diagnostics.push(...result.diagnostics);
     if (result.output !== null)
-      transpiledImports.push({ path: module.path, output: result.output });
+      transpiledImports.push({
+        path: module.path,
+        imports: module.imports,
+        output: result.output,
+      });
   }
   if (diagnostics.some((diagnostic) => diagnostic.category === "error"))
     return { value: null, diagnostics };
-  const transpiled = ts.transpileModule(props.source, {
-    compilerOptions: {
-      target: ts.ScriptTarget.ES2022,
-      module: ts.ModuleKind.CommonJS,
-      esModuleInterop: true,
-      isolatedModules: true,
-    },
-    fileName: props.path,
-    reportDiagnostics: true,
+  // The entry transpiles through the same helper its imports do, so an option
+  // that changes for one cannot fail to change for the other.
+  const transpiled = transpileDeterministicSource({
+    target: props.target,
+    path: props.path,
+    source: props.source,
   });
-  for (const diagnostic of transpiled.diagnostics!)
-    if (diagnostic.category === ts.DiagnosticCategory.Error)
-      diagnostics.push({
-        code: "source-transpile-failed",
-        category: "error",
-        phase: "source",
-        target: props.target,
-        path: props.path,
-        message: `${ts.flattenDiagnosticMessageText(diagnostic.messageText, " ")} Fix ${props.path} before running the compiler.`,
-      });
-  if (diagnostics.some((diagnostic) => diagnostic.category === "error"))
-    return { value: null, diagnostics };
+  diagnostics.push(...transpiled.diagnostics);
+  if (transpiled.output === null) return { value: null, diagnostics };
   const sandbox = vm.createContext(
     {},
     {
@@ -1761,13 +1741,16 @@ const compileDeterministicSource = <T>(
     new vm.Script(SANDBOX_BOOTSTRAP, {
       filename: `${props.path}#sandbox`,
     }).runInContext(sandbox, { timeout: 1_000 });
-    sandbox.__automovieSetEntry(props.path);
+    sandbox.__automovieSetEntry(
+      linked.modules.find((module) => module.path === props.path)?.imports ??
+        {},
+    );
     for (const module of transpiledImports)
       new vm.Script(
-        `__automovieDefine(${JSON.stringify(module.path)}, (module, exports, require) => {\n${module.output}\n});`,
+        `__automovieDefine(${JSON.stringify(module.path)}, ${JSON.stringify(module.imports)}, (module, exports, require) => {\n${module.output}\n});`,
         { filename: module.path },
       ).runInContext(sandbox, { timeout: 1_000 });
-    new vm.Script(transpiled.outputText, {
+    new vm.Script(transpiled.output, {
       filename: props.path,
     }).runInContext(sandbox, { timeout: 1_000 });
     sandbox.__automovieExportName = props.exportName;

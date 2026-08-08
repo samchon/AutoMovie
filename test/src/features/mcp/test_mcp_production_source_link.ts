@@ -1,3 +1,4 @@
+import { mergeAutoMovieSubjectContributions } from "@automovie/engine";
 import {
   AUTOMOVIE_SANDBOX_ENGINE_EXPORTS,
   isProjectSourceSpecifier,
@@ -207,6 +208,30 @@ export const test_mcp_production_source_link = (): void => {
       absent.failures[0]!.reason.includes(
         'Source "src/units/gone.ts" does not exist.',
       ),
+  );
+
+  // The sandbox reimplements the merge rather than loading it, so the two are
+  // two spellings of one contract. A key in one and not the other is a merge
+  // that silently carries a field nothing else knows about, which is the
+  // divergence a single owner exists to prevent.
+  const declared = mergeAutoMovieSubjectContributions([
+    {
+      actors: [],
+      clips: [],
+      formationMotions: [],
+      effectCues: [],
+      landmarks: [],
+      surfaces: [],
+      routes: [],
+      effectRecipes: [],
+      effectZones: [],
+      instanceSets: [],
+    },
+  ]);
+  TestValidator.equals(
+    "an all-empty contribution merges to nothing, so no key is invented",
+    declared,
+    {},
   );
 
   TestValidator.equals(
