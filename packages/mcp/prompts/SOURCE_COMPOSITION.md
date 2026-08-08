@@ -116,6 +116,8 @@ Name factories for what the shot *is*, not for what it looks like: a factory nam
 
 The design record is yours to author, the same as source. Only generated output, renders, production state, and capture state have other owners. Emit the record from an ordinary script outside the compile sandbox, from the same table the modules read.
 
+Store it through the project's own design setters, never by writing a path the script worked out for itself. Which tree an artifact lives in is the project's decision: a model, a world, and a formation are shared across productions while a shot contract and an acceptance scenario are not. A script that computes the path restates that layout in a second place, and a record written beside the one the compiler reads is a derivation that proves nothing. Read the stored record back first and skip an identical one, because a design mutation deliberately stales every dependent shot and review, and re-storing an unchanged record would invalidate the production for saying nothing new.
+
 ```ts
 import type {
   IAutoMovieDefinedShotContract,

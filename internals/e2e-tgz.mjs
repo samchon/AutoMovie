@@ -1585,13 +1585,12 @@ if (
   );
   // The design records are derived from the typed subjects rather than
   // transcribed beside them, and nothing else checks that the derivation
-  // settles. The first run relocates the shipped records under the production
-  // segment, so it legitimately writes; the second must report every record
-  // unchanged, which is what says the subjects derive exactly what is now on
-  // disk rather than something new each time.
-  run("emit packaged starter design records", "npm run design", starterDir);
+  // settles. The compile above already migrated the shipped records into the
+  // trees the compiler reads, so the first run here must report every record
+  // unchanged: the subjects derive exactly what the compiler just consumed
+  // rather than something new each time.
   runExpectedOutput(
-    "packaged starter design records still derive from their subjects",
+    "packaged starter design records derive from their subjects",
     "npm run design",
     starterDir,
     [
@@ -1603,36 +1602,36 @@ if (
   );
   // The field must contain the unit standing on it, which is the relation its
   // own specification states and which two independently authored numbers got
-  // wrong. Reading it from the emitted records checks the shipped starter
-  // rather than the source that produced it.
-  {
-    const world = JSON.parse(
-      readFileSync(
-        join(starterDir, ".automovie", "design", "world.json"),
-        "utf8",
-      ),
-    );
-    const formation = JSON.parse(
-      readFileSync(
-        join(starterDir, ".automovie", "design", "formations", "army.json"),
-        "utf8",
-      ),
-    );
-    const ground = world.surfaces.find((surface) => surface.id === "ground");
-    const half = Math.max(...ground.polygon.map((point) => Math.abs(point.x)));
-    const width =
-      (formation.layout.files - 1) * formation.layout.spacing.lateral;
-    const depth = (formation.layout.ranks - 1) * formation.layout.spacing.depth;
-    const reach = Math.max(
-      Math.abs(formation.anchor.x) + width / 2,
-      Math.abs(formation.anchor.z) + depth,
-    );
-    if (half < reach)
-      throw new Error(
-        `packaged starter ground half-extent ${half} does not contain an army reaching ${reach}.`,
-      );
-    console.log("✓ packaged starter field contains its army");
-  }
+  // wrong. Reading it back through the packaged project reader checks the
+  // shipped starter rather than the source that produced it, and asks the
+  // owner of the design layout where each record lives instead of restating it.
+  const fieldProbePath = join(starterDir, "verify-packaged-field.mjs");
+  writeFileSync(
+    fieldProbePath,
+    `import { AutoMovieProductionProject } from "@automovie/mcp";
+
+const project = AutoMovieProductionProject.openReadOnly(process.cwd());
+const world = project.design({ kind: "world" });
+const formation = project.design({ kind: "formation", id: "army" });
+const ground = world.surfaces.find((surface) => surface.id === "ground");
+const half = Math.max(...ground.polygon.map((point) => Math.abs(point.x)));
+const width = (formation.layout.files - 1) * formation.layout.spacing.lateral;
+const depth = (formation.layout.ranks - 1) * formation.layout.spacing.depth;
+const reach = Math.max(
+  Math.abs(formation.anchor.x) + width / 2,
+  Math.abs(formation.anchor.z) + depth,
+);
+if (half < reach)
+  throw new Error(
+    \`packaged starter ground half-extent \${half} does not contain an army reaching \${reach}.\`,
+  );
+`,
+  );
+  run(
+    "packaged starter field contains its army",
+    "node verify-packaged-field.mjs",
+    starterDir,
+  );
   run("test packaged starter", "npm test", starterDir);
   // First publication acquires the pinned Kokoro model, runs CPU ONNX
   // synthesis, encodes Opus and muxes the proxy on an otherwise cold runner.
