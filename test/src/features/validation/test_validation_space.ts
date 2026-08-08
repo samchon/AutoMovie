@@ -178,9 +178,16 @@ export const test_validation_space = (): void => {
     "non-finite rampTo caught",
     hasViolation(junkRamp, "range", ".rampTo.x"),
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "non-finite rampTo skips the degeneracy math",
-    junkRamp.success === false && junkRamp.violations.length === 1,
+    namedFacts([
+      ["refused", () => junkRamp.success === false],
+      [
+        "violated",
+        () => junkRamp.success === false && junkRamp.violations.length === 1,
+      ],
+    ]),
+    { refused: true, violated: true },
   );
   const junkRampZ = validateSpace({
     space: withSurface({ rampTo: { x: 8, y: 2, z: Number.NaN } }),

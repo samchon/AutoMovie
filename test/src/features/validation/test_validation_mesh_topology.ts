@@ -77,10 +77,21 @@ export const test_validation_mesh_topology = (): void => {
   TestValidator.equals("a consistent open pair passes", topo(openPair), {
     success: true,
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "under expectClosed, an open edge is a topology error",
-    hasViolation(topo(openPair, true), "topology", "$input.indices") &&
-      topo(openPair, true).success === false,
+    namedFacts([
+      [
+        "refused",
+        () => hasViolation(topo(openPair, true), "topology", "$input.indices"),
+      ],
+      [
+        "violated",
+        () =>
+          hasViolation(topo(openPair, true), "topology", "$input.indices") &&
+          topo(openPair, true).success === false,
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 
   // 2. a fin: three triangles share edge 0–1 → non-manifold.
@@ -113,10 +124,18 @@ export const test_validation_mesh_topology = (): void => {
   // 3. two triangles winding edge 0–1 the same way → flipped.
   const flipped = mesh(P.slice(0, 12), [0, 1, 2, 0, 1, 3]);
   const flippedResult = topo(flipped);
-  TestValidator.predicate(
+  TestValidator.equals(
     "two triangles winding a shared edge alike is a winding error",
-    flippedResult.success === false &&
-      flippedResult.violations.some((v) => v.expected.includes("flipped")),
+    namedFacts([
+      ["refused", () => flippedResult.success === false],
+      [
+        "violated",
+        () =>
+          flippedResult.success === false &&
+          flippedResult.violations.some((v) => v.expected.includes("flipped")),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 
   // 4. a degenerate triangle (v3 repeated) carries no surface: skipped.

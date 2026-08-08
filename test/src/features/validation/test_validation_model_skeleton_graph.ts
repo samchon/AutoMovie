@@ -54,14 +54,22 @@ export const test_validation_model_skeleton_graph = (): void => {
     },
   });
   TestValidator.equals("two roots fail", twoRoots.success, false);
-  TestValidator.predicate(
+  TestValidator.equals(
     "root count violation",
-    twoRoots.success === false &&
-      twoRoots.violations.some(
-        (v) =>
-          v.path.endsWith("$input.skeleton.bones") &&
-          String(v.expected).includes("exactly one root"),
-      ),
+    namedFacts([
+      ["refused", () => twoRoots.success === false],
+      [
+        "violated",
+        () =>
+          twoRoots.success === false &&
+          twoRoots.violations.some(
+            (v) =>
+              v.path.endsWith("$input.skeleton.bones") &&
+              String(v.expected).includes("exactly one root"),
+          ),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 
   const detachedCycle = validateModel({

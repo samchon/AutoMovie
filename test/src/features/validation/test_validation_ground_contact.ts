@@ -10,6 +10,7 @@ import { TestValidator } from "@nestia/e2e";
 import { makeMotion } from "../internal/fixtures";
 import {
   hasViolation,
+  namedFacts,
   nclose,
   validationHasNoWarnings,
   validationHasWarning,
@@ -102,9 +103,16 @@ export const test_validation_ground_contact = (): void => {
     rejected.success === true
       ? (rejected.warnings ?? []).find((v) => v.path.includes("samples[2]"))
       : null;
-  TestValidator.predicate(
+  TestValidator.equals(
     "penetration overshoot",
-    mid?.kind === "physics" && nclose(mid.overshoot ?? -1, 0.2),
+    namedFacts([
+      ["refused", () => mid?.kind === "physics"],
+      [
+        "violated",
+        () => mid?.kind === "physics" && nclose(mid.overshoot ?? -1, 0.2),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 
   // physicsIntent (a phasing ghost) suppresses the penetration warnings.
@@ -163,9 +171,18 @@ export const test_validation_ground_contact = (): void => {
       skeleton: SKELETON,
       sampleRate: badRate,
     });
-    TestValidator.predicate(
+    TestValidator.equals(
       `sampleRate ${badRate} is a range error, not a silent skip`,
-      result.success === false && hasViolation(result, "range", ".sampleRate"),
+      namedFacts([
+        ["refused", () => result.success === false],
+        [
+          "violated",
+          () =>
+            result.success === false &&
+            hasViolation(result, "range", ".sampleRate"),
+        ],
+      ]),
+      { refused: true, violated: true },
     );
   }
   const badTolerance = validateGroundContact({
@@ -174,9 +191,17 @@ export const test_validation_ground_contact = (): void => {
     sampleRate: 4,
     tolerance: Number.NaN,
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "non-finite tolerance is a range error",
-    badTolerance.success === false &&
-      hasViolation(badTolerance, "range", ".tolerance"),
+    namedFacts([
+      ["refused", () => badTolerance.success === false],
+      [
+        "violated",
+        () =>
+          badTolerance.success === false &&
+          hasViolation(badTolerance, "range", ".tolerance"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 };
