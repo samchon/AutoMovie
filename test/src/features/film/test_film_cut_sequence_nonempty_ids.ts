@@ -2,7 +2,7 @@ import { cutSequence } from "@automovie/engine";
 import { IAutoMovieShot } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { hasViolation } from "../internal/predicates";
+import { hasViolation, namedFacts } from "../internal/predicates";
 
 const shot = (id: string): IAutoMovieShot => ({
   id,
@@ -36,13 +36,30 @@ export const test_film_cut_sequence_nonempty_ids = (): void => {
   );
 
   TestValidator.equals("blank cut ids fail", cut.success, false);
-  TestValidator.predicate(
+  TestValidator.equals(
     "sequence id violation",
-    cut.success === false && hasViolation(cut, "type", "$input.sequence.id"),
+    namedFacts([
+      ["refused", () => cut.success === false],
+      [
+        "violated",
+        () =>
+          cut.success === false &&
+          hasViolation(cut, "type", "$input.sequence.id"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "entry shot id violation",
-    cut.success === false &&
-      hasViolation(cut, "type", "$input.entries[0].shot"),
+    namedFacts([
+      ["refused", () => cut.success === false],
+      [
+        "violated",
+        () =>
+          cut.success === false &&
+          hasViolation(cut, "type", "$input.entries[0].shot"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 };

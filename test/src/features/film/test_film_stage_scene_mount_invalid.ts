@@ -37,10 +37,18 @@ export const test_film_stage_scene_mount_invalid = (): void => {
     }),
   );
   TestValidator.equals("fails", staged.success, false);
-  TestValidator.predicate(
+  TestValidator.equals(
     "self-mount rejected",
-    staged.success === false &&
-      hasViolation(staged, "type", "$input.actors[0].attach.parent"),
+    namedFacts([
+      ["refused", () => staged.success === false],
+      [
+        "violated",
+        () =>
+          staged.success === false &&
+          hasViolation(staged, "type", "$input.actors[0].attach.parent"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
   TestValidator.equals(
     "dangling parent rejected",

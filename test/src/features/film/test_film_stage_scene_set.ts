@@ -59,9 +59,13 @@ export const test_film_stage_scene_set = (): void => {
     floor.transform.rotation,
     { x: 0, y: 0, z: 0, w: 1 },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "a set piece is static scenery",
-    floor.motion === null && floor.pose === null,
+    namedFacts([
+      ["refused", () => floor.motion === null],
+      ["violated", () => floor.motion === null && floor.pose === null],
+    ]),
+    { refused: true, violated: true },
   );
   // facingDeg 90 turns +Z onto +X: the same encoding actors use.
   TestValidator.predicate(

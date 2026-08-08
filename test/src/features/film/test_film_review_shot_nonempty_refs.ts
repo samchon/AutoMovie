@@ -2,7 +2,7 @@ import { reviewShot } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import { makeScriptWrite } from "../internal/filmFixtures";
-import { hasViolation } from "../internal/predicates";
+import { hasViolation, namedFacts } from "../internal/predicates";
 
 /**
  * `reviewShot()` consumes script and review writes directly. A matching blank
@@ -39,13 +39,30 @@ export const test_film_review_shot_nonempty_refs = (): void => {
   });
 
   TestValidator.equals("blank review refs fail", reviewed.success, false);
-  TestValidator.predicate(
+  TestValidator.equals(
     "blank review beat violation",
-    reviewed.success === false && hasViolation(reviewed, "type", "$input.beat"),
+    namedFacts([
+      ["refused", () => reviewed.success === false],
+      [
+        "violated",
+        () =>
+          reviewed.success === false &&
+          hasViolation(reviewed, "type", "$input.beat"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "blank note beat violation",
-    reviewed.success === false &&
-      hasViolation(reviewed, "type", "$input.notes[0].beat"),
+    namedFacts([
+      ["refused", () => reviewed.success === false],
+      [
+        "violated",
+        () =>
+          reviewed.success === false &&
+          hasViolation(reviewed, "type", "$input.notes[0].beat"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 };

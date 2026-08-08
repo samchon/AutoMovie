@@ -6,7 +6,7 @@ import {
   makeScriptWrite,
   makeStagingWrite,
 } from "../internal/filmFixtures";
-import { hasViolation } from "../internal/predicates";
+import { hasViolation, namedFacts } from "../internal/predicates";
 
 /**
  * Blocking targets one script beat by id. Duplicate script beat ids make the
@@ -42,9 +42,17 @@ export const test_film_block_beat_duplicate_script_beats = (): void => {
     blocked.success,
     false,
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "duplicate script beat id violation",
-    blocked.success === false &&
-      hasViolation(blocked, "type", "$script.beats[1].id"),
+    namedFacts([
+      ["refused", () => blocked.success === false],
+      [
+        "violated",
+        () =>
+          blocked.success === false &&
+          hasViolation(blocked, "type", "$script.beats[1].id"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 };

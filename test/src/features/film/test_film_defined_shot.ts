@@ -277,15 +277,23 @@ export const test_film_defined_shot = (): void => {
       frameFormat: { width: 1920, height: 1080 },
     },
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "registration mismatch is an actionable diagnostic, not a throw",
-    mismatched.success === false &&
-      mismatched.diagnostics.some(
-        (diagnostic) =>
-          diagnostic.code === "contract-mismatch" &&
-          diagnostic.path === "$program.stage.scene.id" &&
-          diagnostic.recovery.includes("defineShot"),
-      ),
+    namedFacts([
+      ["refused", () => mismatched.success === false],
+      [
+        "violated",
+        () =>
+          mismatched.success === false &&
+          mismatched.diagnostics.some(
+            (diagnostic) =>
+              diagnostic.code === "contract-mismatch" &&
+              diagnostic.path === "$program.stage.scene.id" &&
+              diagnostic.recovery.includes("defineShot"),
+          ),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 
   const unrealized = compileDefinedShot({
@@ -364,17 +372,25 @@ export const test_film_defined_shot = (): void => {
       frameFormat: { width: 1920, height: 1080 },
     },
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "runtime exceptions remain structured at the public authoring boundary",
-    runtimeFailure.success === false &&
-      runtimeFailure.diagnostics.some(
-        (diagnostic) =>
-          diagnostic.code === "pipeline-failed" &&
-          diagnostic.phase === "performance" &&
-          diagnostic.fact.includes("synthesizer fixture failed") &&
-          diagnostic.impact.length !== 0 &&
-          diagnostic.recovery.length !== 0,
-      ),
+    namedFacts([
+      ["refused", () => runtimeFailure.success === false],
+      [
+        "violated",
+        () =>
+          runtimeFailure.success === false &&
+          runtimeFailure.diagnostics.some(
+            (diagnostic) =>
+              diagnostic.code === "pipeline-failed" &&
+              diagnostic.phase === "performance" &&
+              diagnostic.fact.includes("synthesizer fixture failed") &&
+              diagnostic.impact.length !== 0 &&
+              diagnostic.recovery.length !== 0,
+          ),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 
   const continuityFailure = compileDefinedShot({
@@ -390,14 +406,22 @@ export const test_film_defined_shot = (): void => {
       ],
     },
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "continuity exceptions remain structured at the public boundary",
-    continuityFailure.success === false &&
-      continuityFailure.diagnostics.some(
-        (diagnostic) =>
-          diagnostic.code === "pipeline-failed" &&
-          diagnostic.phase === "continuity" &&
-          diagnostic.fact.includes("duplicated"),
-      ),
+    namedFacts([
+      ["refused", () => continuityFailure.success === false],
+      [
+        "violated",
+        () =>
+          continuityFailure.success === false &&
+          continuityFailure.diagnostics.some(
+            (diagnostic) =>
+              diagnostic.code === "pipeline-failed" &&
+              diagnostic.phase === "continuity" &&
+              diagnostic.fact.includes("duplicated"),
+          ),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 };

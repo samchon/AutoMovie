@@ -9,7 +9,7 @@ import {
   validSynthesizer,
 } from "../internal/filmFixtures";
 import { createSkeleton } from "../internal/fixtures";
-import { vclose } from "../internal/predicates";
+import { namedFacts, vclose } from "../internal/predicates";
 
 const staged = (() => {
   const result = stageScene(makeScriptWrite(), makeStagingWrite());
@@ -107,27 +107,51 @@ export const test_film_camera_intent = (): void => {
   const ghost = perform(
     frameAction({ focus: { kind: "node", node: "ghost" } }),
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "an unstaged focus node is a type violation",
-    ghost.success === false &&
-      ghost.violations.some(
-        (v) => v.kind === "type" && v.path.includes(".focus"),
-      ),
+    namedFacts([
+      ["refused", () => ghost.success === false],
+      [
+        "violated",
+        () =>
+          ghost.success === false &&
+          ghost.violations.some(
+            (v) => v.kind === "type" && v.path.includes(".focus"),
+          ),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
   const zeroLens = perform(frameAction({ focalLength: 0 }));
-  TestValidator.predicate(
+  TestValidator.equals(
     "a zero focal length is a range violation",
-    zeroLens.success === false &&
-      zeroLens.violations.some(
-        (v) => v.kind === "range" && v.path.includes(".focalLength"),
-      ),
+    namedFacts([
+      ["refused", () => zeroLens.success === false],
+      [
+        "violated",
+        () =>
+          zeroLens.success === false &&
+          zeroLens.violations.some(
+            (v) => v.kind === "range" && v.path.includes(".focalLength"),
+          ),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
   const nanLens = perform(frameAction({ focalLength: Number.NaN }));
-  TestValidator.predicate(
+  TestValidator.equals(
     "a non-finite focal length is a range violation",
-    nanLens.success === false &&
-      nanLens.violations.some(
-        (v) => v.kind === "range" && v.path.includes(".focalLength"),
-      ),
+    namedFacts([
+      ["refused", () => nanLens.success === false],
+      [
+        "violated",
+        () =>
+          nanLens.success === false &&
+          nanLens.violations.some(
+            (v) => v.kind === "range" && v.path.includes(".focalLength"),
+          ),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 };

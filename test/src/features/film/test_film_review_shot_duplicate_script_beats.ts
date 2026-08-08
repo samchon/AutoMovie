@@ -2,7 +2,7 @@ import { reviewShot } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import { makeScriptWrite } from "../internal/filmFixtures";
-import { hasViolation } from "../internal/predicates";
+import { hasViolation, namedFacts } from "../internal/predicates";
 
 /**
  * Reviews key the verdict and correction backlog by script beat id. Duplicate
@@ -40,9 +40,17 @@ export const test_film_review_shot_duplicate_script_beats = (): void => {
     reviewed.success,
     false,
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "duplicate script beat id violation",
-    reviewed.success === false &&
-      hasViolation(reviewed, "type", "$script.beats[1].id"),
+    namedFacts([
+      ["refused", () => reviewed.success === false],
+      [
+        "violated",
+        () =>
+          reviewed.success === false &&
+          hasViolation(reviewed, "type", "$script.beats[1].id"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 };

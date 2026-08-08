@@ -12,7 +12,7 @@ import {
   validSynthesizer,
 } from "../internal/filmFixtures";
 import { createSkeleton } from "../internal/fixtures";
-import { hasViolation } from "../internal/predicates";
+import { hasViolation, namedFacts } from "../internal/predicates";
 
 const gesture = (
   partial: Partial<IAutoMovieActionCall & { verb: "gesture" }> = {},
@@ -59,20 +59,36 @@ export const test_film_perform_shot_non_finite_timing = (): void => {
     infiniteShotDuration.success,
     false,
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "infinite shot duration rejected",
-    infiniteShotDuration.success === false &&
-      hasViolation(infiniteShotDuration, "range", "$input.duration"),
+    namedFacts([
+      ["refused", () => infiniteShotDuration.success === false],
+      [
+        "violated",
+        () =>
+          infiniteShotDuration.success === false &&
+          hasViolation(infiniteShotDuration, "range", "$input.duration"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 
   const nanStart = run({
     draft: [gesture({ start: Number.NaN })],
   });
   TestValidator.equals("nan start fails", nanStart.success, false);
-  TestValidator.predicate(
+  TestValidator.equals(
     "nan start rejected",
-    nanStart.success === false &&
-      hasViolation(nanStart, "range", "$input.draft[0].start"),
+    namedFacts([
+      ["refused", () => nanStart.success === false],
+      [
+        "violated",
+        () =>
+          nanStart.success === false &&
+          hasViolation(nanStart, "range", "$input.draft[0].start"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 
   const infiniteActionDuration = run({
@@ -84,9 +100,21 @@ export const test_film_perform_shot_non_finite_timing = (): void => {
     infiniteActionDuration.success,
     false,
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "infinite action duration rejected",
-    infiniteActionDuration.success === false &&
-      hasViolation(infiniteActionDuration, "range", "$input.draft[0].duration"),
+    namedFacts([
+      ["refused", () => infiniteActionDuration.success === false],
+      [
+        "violated",
+        () =>
+          infiniteActionDuration.success === false &&
+          hasViolation(
+            infiniteActionDuration,
+            "range",
+            "$input.draft[0].duration",
+          ),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 };

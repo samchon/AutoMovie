@@ -2,7 +2,7 @@ import { stageScene } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import { makeScriptWrite, makeStagingWrite } from "../internal/filmFixtures";
-import { hasViolation } from "../internal/predicates";
+import { hasViolation, namedFacts } from "../internal/predicates";
 
 /**
  * Staging creates the scene artifact and its scene-wide entity ids. Blank ids
@@ -39,23 +39,56 @@ export const test_film_stage_scene_nonempty_ids = (): void => {
   );
 
   TestValidator.equals("blank staging ids fail", staged.success, false);
-  TestValidator.predicate(
+  TestValidator.equals(
     "scene id violation",
-    staged.success === false && hasViolation(staged, "type", "$input.scene.id"),
+    namedFacts([
+      ["refused", () => staged.success === false],
+      [
+        "violated",
+        () =>
+          staged.success === false &&
+          hasViolation(staged, "type", "$input.scene.id"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "actor node violation",
-    staged.success === false &&
-      hasViolation(staged, "type", "$input.actors[0].node"),
+    namedFacts([
+      ["refused", () => staged.success === false],
+      [
+        "violated",
+        () =>
+          staged.success === false &&
+          hasViolation(staged, "type", "$input.actors[0].node"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "camera node violation",
-    staged.success === false &&
-      hasViolation(staged, "type", "$input.cameras[0].node"),
+    namedFacts([
+      ["refused", () => staged.success === false],
+      [
+        "violated",
+        () =>
+          staged.success === false &&
+          hasViolation(staged, "type", "$input.cameras[0].node"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "light node violation",
-    staged.success === false &&
-      hasViolation(staged, "type", "$input.lights[0].node"),
+    namedFacts([
+      ["refused", () => staged.success === false],
+      [
+        "violated",
+        () =>
+          staged.success === false &&
+          hasViolation(staged, "type", "$input.lights[0].node"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 };

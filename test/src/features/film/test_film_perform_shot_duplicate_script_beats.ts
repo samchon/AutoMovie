@@ -8,7 +8,7 @@ import {
   validSynthesizer,
 } from "../internal/filmFixtures";
 import { createSkeleton } from "../internal/fixtures";
-import { hasViolation } from "../internal/predicates";
+import { hasViolation, namedFacts } from "../internal/predicates";
 
 /**
  * Performance emits shot ids, camera clip ids, and review/slate keys from the
@@ -46,9 +46,17 @@ export const test_film_perform_shot_duplicate_script_beats = (): void => {
     performed.success,
     false,
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "duplicate script beat id violation",
-    performed.success === false &&
-      hasViolation(performed, "type", "$script.beats[1].id"),
+    namedFacts([
+      ["refused", () => performed.success === false],
+      [
+        "violated",
+        () =>
+          performed.success === false &&
+          hasViolation(performed, "type", "$script.beats[1].id"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 };

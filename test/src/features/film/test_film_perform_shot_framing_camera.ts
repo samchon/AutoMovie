@@ -18,6 +18,7 @@ import {
   validSynthesizer,
 } from "../internal/filmFixtures";
 import { createSkeleton } from "../internal/fixtures";
+import { namedFacts } from "../internal/predicates";
 
 type ICoverage = IAutoMovieBlockingCoverage;
 
@@ -194,9 +195,17 @@ export const test_film_perform_shot_framing_camera = (): void => {
   // 1. the positive floor, and the invariant itself.
   const ok = perform(staged, [frame("cam-main")]);
   TestValidator.equals("a valid framing camera compiles", ok.success, true);
-  TestValidator.predicate(
+  TestValidator.equals(
     "every compiled camera keyframe is finite",
-    clipValues(ok).length > 0 && clipValues(ok).every(Number.isFinite),
+    namedFacts([
+      ["refused", () => clipValues(ok).length > 0],
+      [
+        "violated",
+        () =>
+          clipValues(ok).length > 0 && clipValues(ok).every(Number.isFinite),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 
   // 2. the elected camera, one case per condition.

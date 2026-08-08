@@ -2,7 +2,7 @@ import { forgeCast } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import { forgeEntry, makeScriptWrite } from "../internal/filmFixtures";
-import { hasViolation } from "../internal/predicates";
+import { hasViolation, namedFacts } from "../internal/predicates";
 
 /**
  * Pins the rig-contract side of the FORGE consumer: a boneless stand-in cannot
@@ -24,14 +24,34 @@ export const test_film_forge_cast_boneless = (): void => {
     entries: [entry],
   });
   TestValidator.equals("fails", forged.success, false);
-  TestValidator.predicate(
+  TestValidator.equals(
     "boneless performer rejected",
-    forged.success === false &&
-      hasViolation(forged, "type", "$input.entries[0].model.skeleton"),
+    namedFacts([
+      ["refused", () => forged.success === false],
+      [
+        "violated",
+        () =>
+          forged.success === false &&
+          hasViolation(forged, "type", "$input.entries[0].model.skeleton"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "validateModel finding remapped onto the entry",
-    forged.success === false &&
-      hasViolation(forged, "type", "$input.entries[0].model.parts[0].material"),
+    namedFacts([
+      ["refused", () => forged.success === false],
+      [
+        "violated",
+        () =>
+          forged.success === false &&
+          hasViolation(
+            forged,
+            "type",
+            "$input.entries[0].model.parts[0].material",
+          ),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 };

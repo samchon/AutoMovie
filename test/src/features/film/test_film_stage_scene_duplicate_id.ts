@@ -2,7 +2,7 @@ import { stageScene } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import { makeScriptWrite, makeStagingWrite } from "../internal/filmFixtures";
-import { hasViolation } from "../internal/predicates";
+import { hasViolation, namedFacts } from "../internal/predicates";
 
 /**
  * Pins scene-wide id uniqueness: actors, cameras, and lights share one id
@@ -23,9 +23,17 @@ export const test_film_stage_scene_duplicate_id = (): void => {
     }),
   );
   TestValidator.equals("fails", staged.success, false);
-  TestValidator.predicate(
+  TestValidator.equals(
     "collision reported on the camera",
-    staged.success === false &&
-      hasViolation(staged, "type", "$input.cameras[0].node"),
+    namedFacts([
+      ["refused", () => staged.success === false],
+      [
+        "violated",
+        () =>
+          staged.success === false &&
+          hasViolation(staged, "type", "$input.cameras[0].node"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 };

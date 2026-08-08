@@ -2,7 +2,7 @@ import { stageScene } from "@automovie/engine";
 import { TestValidator } from "@nestia/e2e";
 
 import { makeScriptWrite, makeStagingWrite } from "../internal/filmFixtures";
-import { hasViolation } from "../internal/predicates";
+import { hasViolation, namedFacts } from "../internal/predicates";
 
 /**
  * Pins the light gates: intensity is physical (non-negative) and a directional
@@ -49,24 +49,56 @@ export const test_film_stage_scene_light_invalid = (): void => {
     }),
   );
   TestValidator.equals("fails", staged.success, false);
-  TestValidator.predicate(
+  TestValidator.equals(
     "negative intensity rejected",
-    staged.success === false &&
-      hasViolation(staged, "range", "$input.lights[0].intensity"),
+    namedFacts([
+      ["refused", () => staged.success === false],
+      [
+        "violated",
+        () =>
+          staged.success === false &&
+          hasViolation(staged, "range", "$input.lights[0].intensity"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "zero direction rejected",
-    staged.success === false &&
-      hasViolation(staged, "range", "$input.lights[1].direction"),
+    namedFacts([
+      ["refused", () => staged.success === false],
+      [
+        "violated",
+        () =>
+          staged.success === false &&
+          hasViolation(staged, "range", "$input.lights[1].direction"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "infinite intensity rejected",
-    staged.success === false &&
-      hasViolation(staged, "range", "$input.lights[2].intensity"),
+    namedFacts([
+      ["refused", () => staged.success === false],
+      [
+        "violated",
+        () =>
+          staged.success === false &&
+          hasViolation(staged, "range", "$input.lights[2].intensity"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "non-finite direction rejected",
-    staged.success === false &&
-      hasViolation(staged, "range", "$input.lights[3].direction"),
+    namedFacts([
+      ["refused", () => staged.success === false],
+      [
+        "violated",
+        () =>
+          staged.success === false &&
+          hasViolation(staged, "range", "$input.lights[3].direction"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 };

@@ -2,7 +2,7 @@ import { cutSequence } from "@automovie/engine";
 import { IAutoMovieShot } from "@automovie/interface";
 import { TestValidator } from "@nestia/e2e";
 
-import { hasViolation } from "../internal/predicates";
+import { hasViolation, namedFacts } from "../internal/predicates";
 
 const shot = (id: string, duration: number): IAutoMovieShot => ({
   id,
@@ -53,16 +53,43 @@ export const test_film_cut_sequence_shot_duration_gate = (): void => {
     cut.success,
     false,
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "non-finite source shot duration rejected",
-    cut.success === false && hasViolation(cut, "range", "$shots[0].duration"),
+    namedFacts([
+      ["refused", () => cut.success === false],
+      [
+        "violated",
+        () =>
+          cut.success === false &&
+          hasViolation(cut, "range", "$shots[0].duration"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "non-positive source shot duration rejected",
-    cut.success === false && hasViolation(cut, "range", "$shots[1].duration"),
+    namedFacts([
+      ["refused", () => cut.success === false],
+      [
+        "violated",
+        () =>
+          cut.success === false &&
+          hasViolation(cut, "range", "$shots[1].duration"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "trimmed non-finite source shot duration rejected",
-    cut.success === false && hasViolation(cut, "range", "$shots[2].duration"),
+    namedFacts([
+      ["refused", () => cut.success === false],
+      [
+        "violated",
+        () =>
+          cut.success === false &&
+          hasViolation(cut, "range", "$shots[2].duration"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 };

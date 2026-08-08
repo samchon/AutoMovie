@@ -22,7 +22,7 @@ import {
   makeMotion,
   makePose,
 } from "../internal/fixtures";
-import { hasViolation } from "../internal/predicates";
+import { hasViolation, namedFacts } from "../internal/predicates";
 
 const locomote: IAutoMovieActionCall = {
   verb: "locomote",
@@ -106,10 +106,18 @@ export const test_film_perform_shot_region_gates = (): void => {
     overlapping.success,
     false,
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "shared-arm overlap is reported on the later action start",
-    overlapping.success === false &&
-      hasViolation(overlapping, "range", "$input.draft[1].start"),
+    namedFacts([
+      ["refused", () => overlapping.success === false],
+      [
+        "violated",
+        () =>
+          overlapping.success === false &&
+          hasViolation(overlapping, "range", "$input.draft[1].start"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 
   const adjacent = performShot({
@@ -153,10 +161,18 @@ export const test_film_perform_shot_region_gates = (): void => {
     sameRegion.success,
     false,
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "same-region overlap is reported on the later action start",
-    sameRegion.success === false &&
-      hasViolation(sameRegion, "range", "$input.draft[1].start"),
+    namedFacts([
+      ["refused", () => sameRegion.success === false],
+      [
+        "violated",
+        () =>
+          sameRegion.success === false &&
+          hasViolation(sameRegion, "range", "$input.draft[1].start"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 
   const rootSynth: IAutoMovieActionSynthesizer = () =>
@@ -191,14 +207,22 @@ export const test_film_perform_shot_region_gates = (): void => {
     synthesize: rootSynth,
     skeleton: () => createSkeleton(),
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "two overlapping root motions conflict on root",
-    sharedRoot.success === false &&
-      sharedRoot.violations.some(
-        (violation) =>
-          violation.path === "$input.draft[1].start" &&
-          violation.expected.includes("root"),
-      ),
+    namedFacts([
+      ["refused", () => sharedRoot.success === false],
+      [
+        "violated",
+        () =>
+          sharedRoot.success === false &&
+          sharedRoot.violations.some(
+            (violation) =>
+              violation.path === "$input.draft[1].start" &&
+              violation.expected.includes("root"),
+          ),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 
   const expressionSynth: IAutoMovieActionSynthesizer = () =>
@@ -227,14 +251,22 @@ export const test_film_perform_shot_region_gates = (): void => {
     synthesize: expressionSynth,
     skeleton: () => createSkeleton(),
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "two overlapping face clips conflict on expression",
-    sharedExpression.success === false &&
-      sharedExpression.violations.some(
-        (violation) =>
-          violation.path === "$input.draft[1].start" &&
-          violation.expected.includes("expression"),
-      ),
+    namedFacts([
+      ["refused", () => sharedExpression.success === false],
+      [
+        "violated",
+        () =>
+          sharedExpression.success === false &&
+          sharedExpression.violations.some(
+            (violation) =>
+              violation.path === "$input.draft[1].start" &&
+              violation.expected.includes("expression"),
+          ),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 
   let synthesisCalls = 0;
@@ -305,9 +337,17 @@ export const test_film_perform_shot_region_gates = (): void => {
     synthesize: headSynth,
     skeleton: () => createSkeleton(),
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "a fullBody clip and head action sharing head still gate",
-    sharedHead.success === false &&
-      hasViolation(sharedHead, "range", "$input.draft[1].start"),
+    namedFacts([
+      ["refused", () => sharedHead.success === false],
+      [
+        "violated",
+        () =>
+          sharedHead.success === false &&
+          hasViolation(sharedHead, "range", "$input.draft[1].start"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 };

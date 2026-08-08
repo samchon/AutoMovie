@@ -8,7 +8,7 @@ import {
   validSynthesizer,
 } from "../internal/filmFixtures";
 import { createSkeleton } from "../internal/fixtures";
-import { hasViolation } from "../internal/predicates";
+import { hasViolation, namedFacts } from "../internal/predicates";
 
 /**
  * Pins the live-camera fallback: a shot with no `frame` call defaults to the
@@ -85,10 +85,18 @@ export const test_film_perform_shot_camera_fallback = (): void => {
     synthesize: validSynthesizer,
     skeleton: () => createSkeleton(),
   });
-  TestValidator.predicate(
+  TestValidator.equals(
     "an empty fallback camera id is refused",
-    emptyFirst.success === false &&
-      hasViolation(emptyFirst, "type", "$staged.scene.cameras[0].id"),
+    namedFacts([
+      ["refused", () => emptyFirst.success === false],
+      [
+        "violated",
+        () =>
+          emptyFirst.success === false &&
+          hasViolation(emptyFirst, "type", "$staged.scene.cameras[0].id"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
   TestValidator.equals(
     "an empty id the fallback does not pick still performs",
@@ -112,8 +120,17 @@ export const test_film_perform_shot_camera_fallback = (): void => {
     skeleton: () => createSkeleton(),
   });
   TestValidator.equals("no camera fails", unframed.success, false);
-  TestValidator.predicate(
+  TestValidator.equals(
     "unframeable take reported",
-    unframed.success === false && hasViolation(unframed, "type", "$input"),
+    namedFacts([
+      ["refused", () => unframed.success === false],
+      [
+        "violated",
+        () =>
+          unframed.success === false &&
+          hasViolation(unframed, "type", "$input"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 };

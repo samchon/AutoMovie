@@ -1584,9 +1584,12 @@ if (
     900_000,
   );
   // The design records are derived from the typed subjects rather than
-  // transcribed beside them, and nothing else checks that the derivation still
-  // produces what the starter ships. A record reported as written rather than
-  // unchanged means the classes and the JSON have drifted apart.
+  // transcribed beside them, and nothing else checks that the derivation
+  // settles. The first run relocates the shipped records under the production
+  // segment, so it legitimately writes; the second must report every record
+  // unchanged, which is what says the subjects derive exactly what is now on
+  // disk rather than something new each time.
+  run("emit packaged starter design records", "npm run design", starterDir);
   runExpectedOutput(
     "packaged starter design records still derive from their subjects",
     "npm run design",

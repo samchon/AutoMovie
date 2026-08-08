@@ -12,7 +12,7 @@ import {
   validSynthesizer,
 } from "../internal/filmFixtures";
 import { createSkeleton } from "../internal/fixtures";
-import { hasViolation } from "../internal/predicates";
+import { hasViolation, namedFacts } from "../internal/predicates";
 
 const synth: IAutoMovieActionSynthesizer = (action, actor) =>
   action.verb === "launch" || action.verb === "attachTo"
@@ -131,34 +131,82 @@ export const test_film_perform_shot_secondary_nonempty_refs = (): void => {
     performed.success,
     false,
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "blank projectile violation",
-    performed.success === false &&
-      hasViolation(performed, "type", "$input.draft[0].projectile"),
+    namedFacts([
+      ["refused", () => performed.success === false],
+      [
+        "violated",
+        () =>
+          performed.success === false &&
+          hasViolation(performed, "type", "$input.draft[0].projectile"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "blank launch node target violation",
-    performed.success === false &&
-      hasViolation(performed, "type", "$input.draft[1].at.node"),
+    namedFacts([
+      ["refused", () => performed.success === false],
+      [
+        "violated",
+        () =>
+          performed.success === false &&
+          hasViolation(performed, "type", "$input.draft[1].at.node"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "blank lookAt node target violation",
-    performed.success === false &&
-      hasViolation(performed, "type", "$input.draft[2].to.node"),
+    namedFacts([
+      ["refused", () => performed.success === false],
+      [
+        "violated",
+        () =>
+          performed.success === false &&
+          hasViolation(performed, "type", "$input.draft[2].to.node"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "blank reach group target violation",
-    performed.success === false &&
-      hasViolation(performed, "type", "$input.draft[3].to.nodes[0]"),
+    namedFacts([
+      ["refused", () => performed.success === false],
+      [
+        "violated",
+        () =>
+          performed.success === false &&
+          hasViolation(performed, "type", "$input.draft[3].to.nodes[0]"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "blank gesture node target violation",
-    performed.success === false &&
-      hasViolation(performed, "type", "$input.draft[4].at.node"),
+    namedFacts([
+      ["refused", () => performed.success === false],
+      [
+        "violated",
+        () =>
+          performed.success === false &&
+          hasViolation(performed, "type", "$input.draft[4].at.node"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
-  TestValidator.predicate(
+  TestValidator.equals(
     "blank attach parent violation",
-    performed.success === false &&
-      hasViolation(performed, "type", "$input.draft[5].parent"),
+    namedFacts([
+      ["refused", () => performed.success === false],
+      [
+        "violated",
+        () =>
+          performed.success === false &&
+          hasViolation(performed, "type", "$input.draft[5].parent"),
+      ],
+    ]),
+    { refused: true, violated: true },
   );
 };
