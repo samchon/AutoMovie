@@ -151,6 +151,12 @@ export class Army extends AutoMovieSubjectGroup<
    * separate method with an explicit scale rather than an option on
    * {@link advance}: a caller has to say it meant to break the unit.
    *
+   * Unlike {@link advanceMetres}, the scale is the caller's, so the place is not
+   * sized for it in advance: a field cannot pre-hold every loosening a story
+   * might author. A break that pushes the ranks past the ground the shot staged
+   * is refused at compile time, naming the corner, and widening the place is
+   * the answer.
+   *
    * @evidence docs/characters/army.md States any loosening is a dramatic event
    *   and must be authored as one, never left to chance.
    */
