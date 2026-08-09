@@ -92,14 +92,14 @@ export interface IAutoMovieHeightSurface {
  * all ended up: every one of them reaches this. A second implementation that
  * agrees today is exactly how a named performer and the crowd behind it came to
  * stand on two different grounds — the world's terrain rose and the scene's
- * patch stayed a plane — so there is one, and both records state their ground in
- * terms it reads.
+ * patch stayed a plane — so there is one, and both records state their ground
+ * in terms it reads.
  *
  * A stated {@link IAutoMovieHeightRule} is authoritative: `constant` is a level,
- * `plane` is `originHeight + slopeX·x + slopeZ·z`, and `heightfield` is bilinear
- * across the lattice cell the point falls in, clamped to the edge samples
- * outside it so a query off the lattice reads terrain that was authored rather
- * than extrapolated.
+ * `plane` is `originHeight + slopeX·x + slopeZ·z`, and `heightfield` is
+ * bilinear across the lattice cell the point falls in, clamped to the edge
+ * samples outside it so a query off the lattice reads terrain that was authored
+ * rather than extrapolated.
  *
  * Without one, the two-anchor spelling answers, unchanged: a flat patch is
  * `anchor.y` everywhere; a sloped patch interpolates linearly along the `anchor

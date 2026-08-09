@@ -1,4 +1,7 @@
-import { gaitMotion } from "@automovie/engine";
+import {
+  IAutoMovieFormationCadenceSegment,
+  gaitMotion,
+} from "@automovie/engine";
 import { IAutoMovieGait, IAutoMovieModel } from "@automovie/interface";
 import * as THREE from "three";
 
@@ -12,47 +15,55 @@ import { IAutoMovieModelObject } from "./buildModel";
  * follows the part count rather than the mesh: doubling the samples of a
  * thirteen-bone figure costs tens of kilobytes once per LOD tier and nothing
  * per member. Thirty-two steps put a full cycle inside a frame budget of about
- * 30 ms per step at the widest compiled period, and the shader mixes the two
+ * 30 ms per step at a walking cadence, and the shader mixes the two
  * neighbouring steps, so the sampling rate bounds interpolation error rather
  * than the visible frame rate.
  */
 export const AUTOMOVIE_FORMATION_CYCLE_SAMPLES = 32;
 
-/** Uniform cells shared by every material drawing one baked cycle. */
+/** Uniform cells shared by every material drawing one unit's cycles. */
 export interface IAutoMovieFormationCycleUniforms {
-  /** Baked part-matrix table. */
+  /** Baked part-matrix table of the take playing now. */
   automovieCycleTexture: { value: THREE.DataTexture };
   /** Columns in the table: samples across one cycle. */
   automovieCycleSamples: { value: number };
   /** Rows in the table: three per part. */
   automovieCycleRows: { value: number };
-  /** Seconds one cycle takes. */
-  automovieCyclePeriod: { value: number };
-  /** Current shot-local time, the one cell an update writes. */
-  automovieCycleTime: { value: number };
+  /** Cycles the unit's own travel has turned over by the current time. */
+  automovieCycleAdvance: { value: number };
+  /** Cycles per meter of member radius the unit's turning has turned over. */
+  automovieCycleTurn: { value: number };
 }
 
 /**
- * One figure's cycle, baked once and replayed by every member that wears it.
+ * One gait of a figure's repertoire, baked into a rigid part-matrix table.
  *
- * An anonymous member is not a scene node: it has no skeleton to pose and no
- * player to drive it, only a 64-byte instance matrix and a phase scalar. What
- * it can still do is carry a table that says where each of its rigid parts sits
- * at every point of one cycle, and let the vertex stage look that table up at
- * `phase + time`. The table is per LOD tier, so ten members and a hundred
- * thousand members cost the same bake.
- *
- * Members differ only in where they are in the cycle, never in the cycle
- * itself, which is exactly the shape a crowd has: one figure, many phases.
+ * A take carries the two numbers that decide how fast it is played as well as
+ * the table that says what it looks like, because those numbers are properties
+ * of the cycle itself: how far one turn of it carries a body, and how long one
+ * turn of it lasts when nothing carries the body at all.
  */
-export interface IAutoMovieFormationCycle {
-  /** Name of the gait the cycle was baked from. */
+export interface IAutoMovieFormationCycleTake {
+  /** Name of the gait this take was baked from. */
   gait: string;
-  /** Even samples across one cycle; sample `samples` wraps to sample zero. */
-  samples: number;
-  /** Rigid part names in the order the `automoviePart` attribute indexes them. */
-  names: readonly string[];
-  /** Seconds one cycle takes, from the compiled formation phase contract. */
+  /**
+   * Ground meters one turn of this cycle carries a member.
+   *
+   * Measured from the bake rather than authored, so no field can drift out of
+   * step with the motion it describes: the part that reaches lowest through the
+   * cycle is the one that meets the ground, and the ground moves under it at
+   * exactly the speed the body travels. Its horizontal path over one closed
+   * cycle is twice the sweep it makes, and the fraction of the cycle it spends
+   * in the lower half of its own rise is the fraction of the cycle it is
+   * planted for, so the sweep divided by that fraction is what one whole cycle
+   * carries the body.
+   *
+   * Zero when the cycle carries a body nowhere: an idle, a salute, a figure
+   * with nothing to plant. Such a take is played on {@link periodSeconds}
+   * instead, which is the only honest reading of a cycle no ground drives.
+   */
+  strideMeters: number;
+  /** Seconds one turn takes when no ground drives it: the gait's own period. */
   periodSeconds: number;
   /**
    * Part matrices exactly as the texture stores them.
@@ -64,7 +75,35 @@ export interface IAutoMovieFormationCycle {
   matrices: Float32Array;
   /** GPU-side view of {@link matrices}. */
   texture: THREE.DataTexture;
-  /** Uniform cells shared by every material drawing this cycle. */
+}
+
+/**
+ * One figure's repertoire, baked once and replayed by every member that wears
+ * it.
+ *
+ * An anonymous member is not a scene node: it has no skeleton to pose and no
+ * player to drive it, only a 64-byte instance matrix and a phase scalar. What
+ * it can still do is carry tables that say where each of its rigid parts sits
+ * at every point of a cycle, and let the vertex stage look the playing one up
+ * at the position its unit's cues have reached. The tables are per LOD tier, so
+ * ten members and a hundred thousand members cost the same bake.
+ *
+ * Members differ only in where they are in the cycle, never in the cycle
+ * itself, which is exactly the shape a crowd has: one figure, many phases. What
+ * they perform, and how fast, belongs to the unit and changes with its cues.
+ */
+export interface IAutoMovieFormationCycle {
+  /** Even samples across one cycle; sample `samples` wraps to sample zero. */
+  samples: number;
+  /** Rigid part names in the order the `automoviePart` attribute indexes them. */
+  names: readonly string[];
+  /** Every gait this figure declares, by name. */
+  takes: ReadonlyMap<string, IAutoMovieFormationCycleTake>;
+  /** Take performed where a cue calls for no gait this figure declares. */
+  fallback: IAutoMovieFormationCycleTake;
+  /** Take the last written frame selected. */
+  active: IAutoMovieFormationCycleTake;
+  /** Uniform cells shared by every material drawing this figure. */
   uniforms: IAutoMovieFormationCycleUniforms;
 }
 
@@ -85,27 +124,42 @@ export const instancedModelParts = (root: THREE.Object3D): THREE.Mesh[] => {
 };
 
 /**
- * The cycle a runtime model performs, or null when it performs none.
+ * The gaits a runtime model can perform, in the order its recipe declares them.
+ *
+ * The first profile that declares any owns the repertoire, which keeps the
+ * choice in the recipe, where an author already orders them, instead of in a
+ * viewer that would have to guess what a crowd is doing. Every one of them is
+ * baked, because which one a member performs is decided by a cue at a time the
+ * bake has long finished, and a repertoire of five costs a hundred kilobytes
+ * once per tier against an instance budget measured in megabytes.
+ */
+export const formationCycleGaits = (
+  model: IAutoMovieModel,
+): readonly IAutoMovieGait[] => {
+  for (const profile of model.profiles ?? []) {
+    const gaits = profile.gaits ?? [];
+    if (gaits.length !== 0) return gaits;
+  }
+  return [];
+};
+
+/**
+ * The cycle a runtime model performs by default, or null when it performs none.
  *
  * A gait is declarative profile data ({@link IAutoMovieGait}): per-limb phase,
  * duty and amplitude, the same rows the engine synthesises a named performer's
- * locomotion from. Taking the first declared gait of the first profile that
- * declares one keeps the choice in the recipe, where an author already orders
- * them, instead of in a viewer that would have to guess what a crowd is doing.
+ * locomotion from. The first declared one is what a unit performs until a cue
+ * calls for another.
  *
  * A model with no skeleton, or with no profile that locomotes, has no cycle at
  * all and keeps standing exactly as it did before.
  */
 export const formationCycleGait = (
   model: IAutoMovieModel,
-): IAutoMovieGait | null => {
-  for (const profile of model.profiles ?? [])
-    for (const gait of profile.gaits ?? []) return gait;
-  return null;
-};
+): IAutoMovieGait | null => formationCycleGaits(model)[0] ?? null;
 
 /**
- * Bake one runtime model's cycle into a rigid part-matrix table.
+ * Bake one runtime model's whole repertoire into rigid part-matrix tables.
  *
  * `built` must already be at rest with its world matrices current, because the
  * merged instance geometry was baked from exactly those rest matrices: what is
@@ -125,77 +179,203 @@ export const bakeFormationCycle = (input: {
   built: IAutoMovieModelObject;
   /** Rigid parts from {@link instancedModelParts}. */
   parts: readonly THREE.Mesh[];
-  /** Positive seconds one cycle takes. */
-  periodSeconds: number;
   /** Even samples across the cycle. */
   samples?: number;
 }): IAutoMovieFormationCycle | null => {
   const skeleton = input.model.skeleton;
-  const gait = formationCycleGait(input.model);
-  if (skeleton === null || gait === null) return null;
-  if (
-    Number.isFinite(input.periodSeconds) === false ||
-    input.periodSeconds <= 0
-  )
-    throw new RangeError(
-      `Runtime model "${input.model.id}" cannot animate on a cycle period of ${input.periodSeconds} seconds.`,
-    );
+  const gaits = formationCycleGaits(input.model);
+  if (skeleton === null || gaits.length === 0) return null;
   const samples = input.samples ?? AUTOMOVIE_FORMATION_CYCLE_SAMPLES;
   const rest = input.parts.map((part) => part.matrixWorld.clone().invert());
-  const clip = gaitMotion(
-    `${input.model.id}:${gait.name}`,
-    skeleton.id,
-    gait,
-    samples,
-  );
-  const matrices = new Float32Array(input.parts.length * 3 * samples * 4);
-  const posed = new THREE.Matrix4();
-  for (let sample = 0; sample < samples; ++sample) {
-    applyPose(input.built, clip.keyframes[sample]!.pose, skeleton);
-    input.built.object.updateMatrixWorld(true);
-    input.parts.forEach((part, index) => {
-      const elements = posed.multiplyMatrices(
-        part.matrixWorld,
-        rest[index]!,
-      ).elements;
-      for (let row = 0; row < 3; ++row)
-        for (let column = 0; column < 4; ++column)
-          matrices[((index * 3 + row) * samples + sample) * 4 + column] =
-            elements[column * 4 + row]!;
-    });
-  }
-  const texture = new THREE.DataTexture(
-    matrices,
-    samples,
-    input.parts.length * 3,
-    THREE.RGBAFormat,
-    THREE.FloatType,
-  );
-  // Nearest sampling on purpose: linear filtering of 32-bit float textures is
-  // an optional extension, and the two-step blend the shader performs itself is
-  // the same arithmetic with none of the capability risk.
-  texture.minFilter = THREE.NearestFilter;
-  texture.magFilter = THREE.NearestFilter;
-  texture.wrapS = THREE.ClampToEdgeWrapping;
-  texture.wrapT = THREE.ClampToEdgeWrapping;
-  texture.generateMipmaps = false;
-  texture.colorSpace = THREE.NoColorSpace;
-  texture.needsUpdate = true;
+  // The point of a part that can meet the ground: the bottom of its own box,
+  // in its own space, so the bake follows the surface a foot stands on rather
+  // than the pivot it swings about.
+  const soles = input.parts.map((part) => {
+    part.geometry.computeBoundingBox();
+    const box = part.geometry.boundingBox!;
+    return new THREE.Vector3(
+      (box.min.x + box.max.x) / 2,
+      box.min.y,
+      (box.min.z + box.max.z) / 2,
+    );
+  });
+  const takes = gaits.map((gait) => {
+    const clip = gaitMotion(
+      `${input.model.id}:${gait.name}`,
+      skeleton.id,
+      gait,
+      samples,
+    );
+    const matrices = new Float32Array(input.parts.length * 3 * samples * 4);
+    const tracks = input.parts.map(() => [] as THREE.Vector3[]);
+    const posed = new THREE.Matrix4();
+    for (let sample = 0; sample < samples; ++sample) {
+      applyPose(input.built, clip.keyframes[sample]!.pose, skeleton);
+      input.built.object.updateMatrixWorld(true);
+      input.parts.forEach((part, index) => {
+        const elements = posed.multiplyMatrices(
+          part.matrixWorld,
+          rest[index]!,
+        ).elements;
+        for (let row = 0; row < 3; ++row)
+          for (let column = 0; column < 4; ++column)
+            matrices[((index * 3 + row) * samples + sample) * 4 + column] =
+              elements[column * 4 + row]!;
+        tracks[index]!.push(
+          soles[index]!.clone().applyMatrix4(part.matrixWorld),
+        );
+      });
+    }
+    const texture = new THREE.DataTexture(
+      matrices,
+      samples,
+      input.parts.length * 3,
+      THREE.RGBAFormat,
+      THREE.FloatType,
+    );
+    // Nearest sampling on purpose: linear filtering of 32-bit float textures is
+    // an optional extension, and the two-step blend the shader performs itself
+    // is the same arithmetic with none of the capability risk.
+    texture.minFilter = THREE.NearestFilter;
+    texture.magFilter = THREE.NearestFilter;
+    texture.wrapS = THREE.ClampToEdgeWrapping;
+    texture.wrapT = THREE.ClampToEdgeWrapping;
+    texture.generateMipmaps = false;
+    texture.colorSpace = THREE.NoColorSpace;
+    texture.needsUpdate = true;
+    return {
+      gait: gait.name,
+      strideMeters: formationCycleStride(tracks),
+      periodSeconds: gait.period,
+      matrices,
+      texture,
+    };
+  });
+  const fallback = takes[0]!;
   return {
-    gait: gait.name,
     samples,
     names: input.parts.map((part) => part.name),
-    periodSeconds: input.periodSeconds,
-    matrices,
-    texture,
+    takes: new Map(takes.map((take) => [take.gait, take] as const)),
+    fallback,
+    active: fallback,
     uniforms: {
-      automovieCycleTexture: { value: texture },
+      automovieCycleTexture: { value: fallback.texture },
       automovieCycleSamples: { value: samples },
       automovieCycleRows: { value: input.parts.length * 3 },
-      automovieCyclePeriod: { value: input.periodSeconds },
-      automovieCycleTime: { value: 0 },
+      automovieCycleAdvance: { value: 0 },
+      automovieCycleTurn: { value: 0 },
     },
   };
+};
+
+/**
+ * Ground meters one baked cycle carries a body, measured from the bake itself.
+ *
+ * The part that reaches lowest through the cycle is the one that meets the
+ * ground: a foot, a hoof, a paw, whatever the figure happens to stand on. While
+ * that part is planted the ground runs backwards under it at exactly the speed
+ * the body runs forwards, so the sweep it makes is the ground the body covers
+ * over the part of the cycle it is planted for, and the whole cycle covers that
+ * sweep divided by that fraction.
+ *
+ * Both quantities come out of the track rather than out of a declaration. The
+ * closed horizontal path is twice the sweep, since the part returns to where it
+ * started. The planted fraction is how much of the cycle the part spends in the
+ * lower half of its own rise, which is a statement about a figure standing on
+ * the ground rather than about any rig's axis convention or joint sign.
+ *
+ * A track that never moves horizontally returns zero, and a figure with no
+ * parts returns zero: nothing is carried anywhere, and the caller plays such a
+ * cycle on its own declared period.
+ */
+export const formationCycleStride = (
+  tracks: ReadonlyArray<readonly THREE.Vector3[]>,
+): number => {
+  let planted: readonly THREE.Vector3[] | null = null;
+  let lowest = Number.POSITIVE_INFINITY;
+  for (const track of tracks) {
+    const bottom = Math.min(...track.map((point) => point.y));
+    if (bottom >= lowest) continue;
+    lowest = bottom;
+    planted = track;
+  }
+  if (planted === null) return 0;
+  const path = planted.reduce((sum, point, index) => {
+    const next = planted![(index + 1) % planted!.length]!;
+    return sum + Math.hypot(next.x - point.x, next.z - point.z);
+  }, 0);
+  if (path === 0) return 0;
+  const heights = planted.map((point) => point.y);
+  const middle = (Math.min(...heights) + Math.max(...heights)) / 2;
+  const grounded =
+    heights.filter((height) => height <= middle).length / heights.length;
+  return path / 2 / grounded;
+};
+
+/** Cycles one unit has turned over, and the take it is performing now. */
+export interface IAutoMovieFormationCadence {
+  /** Take playing at the sampled time. */
+  take: IAutoMovieFormationCycleTake;
+  /** Cycles every member has turned over by the unit's own travel. */
+  advance: number;
+  /** Cycles per meter of member radius turned over by the unit's turning. */
+  turn: number;
+}
+
+/**
+ * Fold one unit's cue segments into the cycles its members have turned over.
+ *
+ * The two accumulators are what a member needs and all it needs: everyone in a
+ * unit covers the unit's travel, while a turn carries a member over ground
+ * proportional to its own distance from the pivot, so the outer file of a
+ * wheeling unit steps as many times as the ground under it requires and the
+ * inner file steps fewer. A member composes them from its own radius.
+ *
+ * Segments are folded rather than sampled because stride belongs to the take:
+ * where a unit walks one cue and runs the next, the second cue's ground is
+ * counted in the second cue's strides. That is also what keeps a change of
+ * action from jumping the cycle, since everything already turned over stays
+ * turned over.
+ *
+ * A take that carries a body nowhere is played on its own period instead, which
+ * is the difference between a crowd standing at ease and a crowd frozen.
+ */
+export const formationCycleCadence = (
+  cycle: IAutoMovieFormationCycle,
+  segments: readonly IAutoMovieFormationCadenceSegment[],
+): IAutoMovieFormationCadence => {
+  let take = cycle.fallback;
+  let advance = 0;
+  let turn = 0;
+  for (const segment of segments) {
+    take =
+      (segment.gait === null ? undefined : cycle.takes.get(segment.gait)) ??
+      cycle.fallback;
+    if (take.strideMeters > 0) {
+      advance += segment.distance / take.strideMeters;
+      turn += segment.turn / take.strideMeters;
+    } else advance += segment.seconds / take.periodSeconds;
+  }
+  return { take, advance, turn };
+};
+
+/**
+ * Write one unit's current cadence into the cells its materials read.
+ *
+ * The whole per-frame cost of an animated crowd: two floats and a texture
+ * handle, once per tier. Nothing is written per member, and nothing carries
+ * over from the previous frame, so the same time always draws the same frame.
+ */
+export const applyFormationCycleCadence = (
+  cycle: IAutoMovieFormationCycle,
+  segments: readonly IAutoMovieFormationCadenceSegment[],
+): IAutoMovieFormationCadence => {
+  const cadence = formationCycleCadence(cycle, segments);
+  cycle.active = cadence.take;
+  cycle.uniforms.automovieCycleTexture.value = cadence.take.texture;
+  cycle.uniforms.automovieCycleAdvance.value = cadence.advance;
+  cycle.uniforms.automovieCycleTurn.value = cadence.turn;
+  return cadence;
 };
 
 /**
@@ -203,16 +383,18 @@ export const bakeFormationCycle = (input: {
  *
  * Phase is the slot's compiled `motionPhase`, derived from the formation seed
  * and the slot index, so the member that leads the stride leads it on every
- * machine and in every run. Time is shot-local clip time. No clock is read, and
- * nothing accumulates between frames: the same time always resolves to the same
+ * machine and in every run. What is added to it is the ground its unit has
+ * covered, expressed in cycles. No clock is read, and nothing accumulates
+ * between frames: the same cues at the same time always resolve to the same
  * point of the cycle, which is what makes a re-render byte-identical.
  */
 export const formationCyclePosition = (
-  cycle: Pick<IAutoMovieFormationCycle, "periodSeconds">,
+  cadence: Pick<IAutoMovieFormationCadence, "advance" | "turn">,
   phase: number,
-  time: number,
+  /** The member's distance from its unit's origin, in meters. */
+  radius = 0,
 ): number => {
-  const raw = time / cycle.periodSeconds + phase;
+  const raw = phase + cadence.advance + radius * cadence.turn;
   return raw - Math.floor(raw);
 };
 
@@ -228,6 +410,7 @@ export const sampleFormationCycleMatrix = (
   cycle: IAutoMovieFormationCycle,
   part: number,
   position: number,
+  take: IAutoMovieFormationCycleTake = cycle.active,
 ): THREE.Matrix4 => {
   if (
     Number.isSafeInteger(part) === false ||
@@ -243,7 +426,7 @@ export const sampleFormationCycleMatrix = (
   const blend = scaled - first;
   const second = (first + 1) % cycle.samples;
   const read = (sample: number, row: number, column: number): number =>
-    cycle.matrices[((part * 3 + row) * cycle.samples + sample) * 4 + column]!;
+    take.matrices[((part * 3 + row) * cycle.samples + sample) * 4 + column]!;
   const mix = (row: number, column: number): number =>
     read(first, row, column) * (1 - blend) + read(second, row, column) * blend;
   return new THREE.Matrix4().set(
@@ -275,7 +458,7 @@ export const formationCycleOf = (
     | undefined) ?? null;
 
 /**
- * Teach one material to place its vertices at each member's own cycle phase.
+ * Teach one material to place its vertices at each member's own cycle position.
  *
  * Injection rather than a bespoke material, because a formation is drawn by
  * more than one material over a shot's life: the lit beauty material, and the
@@ -314,12 +497,17 @@ export const applyFormationCycleMaterial = (
 
 const CYCLE_PROGRAM_KEY = "automovie-formation-cycle";
 
+// A member's own radius comes out of the instance matrix it already carries,
+// which is stated relative to the unit's origin: the pivot a turning cue turns
+// the unit about. So the ground a turn covers is per member without a byte of
+// per-member storage. A material drawn outside an instanced batch has no
+// member to be, and stands at the pivot.
 const CYCLE_PARS = `
 uniform sampler2D automovieCycleTexture;
 uniform float automovieCycleSamples;
 uniform float automovieCycleRows;
-uniform float automovieCyclePeriod;
-uniform float automovieCycleTime;
+uniform float automovieCycleAdvance;
+uniform float automovieCycleTurn;
 attribute float automoviePhase;
 attribute float automoviePart;
 
@@ -337,10 +525,21 @@ mat4 automovieCycleSampleAt(const in float column, const in float part) {
   );
 }
 
+float automovieCycleRadius() {
+  #ifdef USE_INSTANCING
+    return length(instanceMatrix[3].xz);
+  #else
+    return 0.0;
+  #endif
+}
+
 mat4 automovieCycleMatrix() {
   float scaled =
-    fract(automovieCycleTime / automovieCyclePeriod + automoviePhase) *
-    automovieCycleSamples;
+    fract(
+      automoviePhase +
+      automovieCycleAdvance +
+      automovieCycleRadius() * automovieCycleTurn
+    ) * automovieCycleSamples;
   float first = floor(scaled);
   float blend = scaled - first;
   return automovieCycleSampleAt(first, automoviePart) * (1.0 - blend) +

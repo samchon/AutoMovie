@@ -252,9 +252,11 @@ export const materializeCompiledFormation = (
         };
       }),
     lod,
+    // Phase only. A cycle length compiled here would be a number nothing in the
+    // unit produced: cadence is the ground a unit's cues cover, and a seeded
+    // period made a halted crowd march in place and a marching one skate.
     phase: {
       seed: mixSeed(formation.seed, 0x70686173),
-      periodSeconds: 0.8 + seededValue(formation.seed, 0x70657269) * 0.8,
     },
   };
   return {

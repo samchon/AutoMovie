@@ -47,8 +47,8 @@ const RISE = 0.2;
  * A lattice rather than a slope on purpose: a plane is the shape the scene's
  * two-anchor spelling can already say, so it could never show whether the
  * staged patch learned the world's rule. Bilinear interpolation reproduces a
- * function linear in X exactly, which is what lets a hand oracle read `RISE * x`
- * off both records.
+ * function linear in X exactly, which is what lets a hand oracle read `RISE *
+ * x` off both records.
  */
 const terrain = (): IAutoMovieWorldSurface =>
   worldHeightfield({
@@ -88,7 +88,12 @@ const rank = (
 ): IAutoMovieFormationPlacement => ({
   id: "rank",
   count: 5,
-  layout: { kind: "line", ranks: 1, files: 5, spacing: { lateral: 2, depth: 1 } },
+  layout: {
+    kind: "line",
+    ranks: 1,
+    files: 5,
+    spacing: { lateral: 2, depth: 1 },
+  },
   anchor: { x: 0, y: anchorHeight, z: 0 },
   facingDeg: 0,
   seed: 5,
@@ -116,6 +121,21 @@ const anchoredSpace = (): IAutoMovieSpace => ({
   ],
   walkable: ["floor", "ramp"],
 });
+
+/** A level patch whose ramp anchor is simply absent, not written as `null`. */
+const sill: IAutoMovieSurface = {
+  id: "sill",
+  kind: "floor",
+  polygon: [v(-1, -1), v(1, -1), v(1, 1)],
+  anchor: v(0, 0, 3),
+};
+
+/** A patch that states no ground at all: what `validateSpace` refuses. */
+const stateless: IAutoMovieSurface = {
+  id: "void",
+  kind: "floor",
+  polygon: [v(-1, -1), v(1, -1), v(1, 1)],
+};
 
 // The bent-rest leg of the plant-feet suites: foot on the ground with reach
 // slack, so the pin can hold while the root climbs the relief.
@@ -200,17 +220,19 @@ const standsWith = (
  * Scenarios:
  *
  * 1. Both records answer the same number, bit for bit, at lattice points, inside
- *    cells, and off the lattice edge: not close, identical, because one function
- *    answers.
+ *    cells, and off the lattice edge: not close, identical, because one
+ *    function answers.
  * 2. A crowd member placed on the terrain and a performer standing at that
  *    member's exact point read one height. Five members abreast across the
  *    slope, each compared with the ground query the foot planter uses.
  * 3. A foot plant on relieved ground lands on it: the raw path bake skates,
  *    `plantStanceFeet` against the staged relief corrects it, and the corrected
  *    clip passes `validateGroundContact` judged against that same relief.
- * 4. A staged space that declares no relief is unchanged: the two-anchor
- *    spelling answers exactly the heights it always answered, and `stageScene`
- *    composes it byte for byte, with no field it did not carry before.
+ * 4. A staged space that declares no relief is unchanged: the two-anchor spelling
+ *    answers exactly the heights it always answered, an absent ramp anchor is
+ *    the flat patch an explicit `null` is, a patch stating no ground at all
+ *    reads the scalar zero plane instead of throwing, and `stageScene` composes
+ *    the space byte for byte with no field it did not carry before.
  */
 export const test_space_relief_ground = (): void => {
   const world = terrain();
@@ -365,6 +387,13 @@ export const test_space_relief_ground = (): void => {
       ["rampFoot", () => surfaceHeightAt(flat.surfaces[1]!, 2, 0) === 0],
       ["rampMid", () => surfaceHeightAt(flat.surfaces[1]!, 4, 0.5) === 1],
       ["rampHead", () => surfaceHeightAt(flat.surfaces[1]!, 6, -0.5) === 2],
+      // An omitted `rampTo` is the flat patch an explicit `null` is, so the
+      // field being optional cannot turn a floor into a ramp through a throw.
+      ["omittedRampTo", () => surfaceHeightAt(sill, 9, -9) === 3],
+      // A patch stating no ground at all reads the scalar zero plane rather
+      // than throwing. `validateSpace` refuses one; a renderer handed one by
+      // hand still draws something a reader can recognize as wrong.
+      ["statesNothing", () => surfaceHeightAt(stateless, 3, 4) === 0],
       ["staged", () => staged.success === true],
       [
         "verbatim",
@@ -378,6 +407,8 @@ export const test_space_relief_ground = (): void => {
       rampFoot: true,
       rampMid: true,
       rampHead: true,
+      omittedRampTo: true,
+      statesNothing: true,
       staged: true,
       verbatim: true,
     },

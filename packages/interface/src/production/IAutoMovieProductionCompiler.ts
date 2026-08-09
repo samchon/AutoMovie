@@ -713,12 +713,18 @@ export interface IAutoMovieCompiledFormation {
   heroes: IAutoMovieCompiledFormationHero[];
   /** Ordered automatic LOD representations. */
   lod: IAutoMovieCompiledFormationLod[];
-  /** Deterministic per-slot phase generator contract. */
+  /**
+   * Deterministic per-slot phase generator contract.
+   *
+   * Phase is where in its cycle one member stands, never how fast that cycle
+   * runs: cadence follows the ground a member's own unit covers under its cues,
+   * so a compiled cycle length would be a second answer to a question the cue
+   * already answers, and a seeded one would be unrelated to what the unit
+   * does.
+   */
   phase: {
     /** Domain-separated safe-integer seed. */
     seed: number;
-    /** Positive cycle length used by bounded formation animation. */
-    periodSeconds: number;
   };
   /** Digest of every field above except this digest. */
   digest: AutoMovieContentDigest;
@@ -827,6 +833,21 @@ export interface IAutoMovieFormationMotion {
   formation: string;
   /** Review-facing action expressed by this exact cue. */
   action: AutoMovieFormationCapability;
+  /**
+   * Which of the unit figure's declared gaits its members perform here.
+   *
+   * A cue says where a unit goes; this says what its members are doing while
+   * they go there, and it is the whole of how one group holds, then moves, then
+   * holds again inside a single shot. The name is the figure's own
+   * (`IAutoMovieGait.name`), so the vocabulary belongs to whoever authored the
+   * recipe rather than to a fixed list: a cycle a crowd can perform is a cycle
+   * a cue can call for.
+   *
+   * Omitted, the cue's `action` label is tried as a gait name, and the figure's
+   * first declared gait performs when nothing carries that name. A named gait
+   * no figure of the unit declares is refused rather than silently replaced.
+   */
+  gait?: string;
   /** Inclusive shot-local cue start. */
   start: number;
   /** Exclusive shot-local cue end. */

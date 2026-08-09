@@ -253,10 +253,8 @@ export const readFilmGrammar = (
  * Separated by a character no declared intent carries, so two distinct claims
  * cannot collide however a shot happens to be named.
  */
-const claimKey = (
-  shot: string,
-  intent: AutoMovieGrammarStyleIntent,
-): string => `${shot}|${intent}`;
+const claimKey = (shot: string, intent: AutoMovieGrammarStyleIntent): string =>
+  `${shot}|${intent}`;
 
 /** Adapt grammar diagnostics into the existing visual-review backlog socket. */
 export const grammarDiagnosticsToReviewNotes = (props: {

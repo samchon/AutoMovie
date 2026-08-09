@@ -83,6 +83,7 @@ import {
   fingerprintAutoMovieFields,
   normalizeAutoMovieSource,
 } from "./contentIdentity";
+import { filmGrammarDiagnostics } from "./filmGrammarDiagnostics";
 import { readAutoMovieFilmTimeline } from "./filmTimeline";
 import {
   AUTOMOVIE_SANDBOX_ENGINE_EXPORTS,
@@ -2325,6 +2326,23 @@ const compileFilmSource = (
     totalFrames,
     diagnostics,
   );
+  // The mechanical read of the assembled edit, once the edit is known to hold
+  // together. The analyzer's preconditions — one unique shot per placement, a
+  // positive edited duration, a compiled shot behind each one — are exactly
+  // what the checks above establish, and an edit that fails them publishes no
+  // artifact for anyone to read a grammar out of.
+  if (diagnostics.every((diagnostic) => diagnostic.category !== "error"))
+    diagnostics.push(
+      ...filmGrammarDiagnostics({
+        segments,
+        fps,
+        aspect:
+          props.context.production.frameFormat.width /
+          props.context.production.frameFormat.height,
+        contracts: props.contracts,
+        compiled: props.compiled,
+      }),
+    );
   return {
     value: diagnostics.some((diagnostic) => diagnostic.category === "error")
       ? null

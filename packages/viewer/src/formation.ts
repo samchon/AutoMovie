@@ -1,5 +1,6 @@
 import {
   composeFormationHeroTransform,
+  formationCadenceSegments,
   formationSlotPosition,
   intersectsPerspectiveFrustumSphere,
   rotateFormationLocalOffset,
@@ -23,6 +24,7 @@ import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js
 import { buildModel } from "./buildModel";
 import {
   IAutoMovieFormationCycle,
+  applyFormationCycleCadence,
   applyFormationCycleMaterial,
   bakeFormationCycle,
   instancedModelParts,
@@ -119,12 +121,15 @@ interface ISlotException {
  * 64-byte instance matrix and one 4-byte phase scalar per anonymous slot and
  * tier.
  *
- * Flat does not mean frozen. When the tier's runtime model declares a gait, its
- * cycle is baked once into a part-matrix table and every member of every chunk
- * reads that table at its own seeded phase, so a crowd walks instead of sliding
- * across the ground in one shared attitude. Nothing about that is per member:
- * the instance buffers are the same size they were, and a frame advances the
- * whole unit by writing a single time uniform.
+ * Flat does not mean frozen. When the tier's runtime model declares gaits, each
+ * is baked once into a part-matrix table and every member of every chunk reads
+ * the playing table at its own seeded phase, so a crowd walks instead of
+ * sliding across the ground in one shared attitude. What it performs, and how
+ * fast, comes from the unit's own cues: a unit that covers ground steps as many
+ * times as that ground requires, one that holds does not step at all, and one
+ * that changes action changes table. Nothing about that is per member: the
+ * instance buffers are the same size they were, and a frame advances the whole
+ * unit by writing two floats.
  */
 export const buildInstancedFormation = (input: {
   formation: IAutoMovieCompiledFormation;
@@ -156,7 +161,7 @@ export const buildInstancedFormation = (input: {
         flattenInstancedModel(
           model,
           `Formation "${input.formation.id}" LOD "${lod.tier}"`,
-          { periodSeconds: input.formation.phase.periodSeconds },
+          {},
         ),
       ] as const;
     }),

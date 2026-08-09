@@ -1,5 +1,6 @@
 import { defineShot } from "@automovie/engine";
 import type {
+  IAutoMovieAcceptanceScenario,
   IAutoMovieDefinedShotContract,
   IAutoMovieProductionShotProgram,
   IAutoMovieShotBuildContext,
