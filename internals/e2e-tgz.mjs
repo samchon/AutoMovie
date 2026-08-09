@@ -1615,10 +1615,10 @@ if (
   // compile` above, including the interior of every cue that moves a unit. This
   // reads it back where the unit stands and at each end of its cues, which is
   // what a packaged consumer can ask without the compiler's own sampling
-  // policy. What
-  // it uniquely proves is that the shipped artifacts carry a staged space and a
-  // staged unit at all, so the gate had something to measure, and that the
-  // engine's placement and containment answers are reachable from an install.
+  // policy. What it uniquely proves is that the shipped artifacts carry a
+  // staged space and a staged unit at all, so the gate had something to
+  // measure, and that the engine's placement and containment answers are
+  // reachable from an install.
   const fieldProbePath = join(starterDir, "verify-packaged-field.mjs");
   writeFileSync(
     fieldProbePath,
@@ -1644,9 +1644,9 @@ for (const [id, shot] of state.generated.shots) {
     const own = cues.filter((cue) => cue.formation === formation.id);
     const times = [...new Set(own.flatMap((cue) => [cue.start, cue.end]))];
     const resting = own.length === 0 || Math.min(...times) > 0;
-    // The unit's own four ground corners, the same shape the compiler judges.
-    // A turned unit has a bigger axis-aligned box than itself, so measuring
-    // that box would report a point the unit does not occupy.
+    // The four ground corners of the compiled bounds, the same shape the
+    // compiler judges: carried as points rather than re-fitted into a box that
+    // would be bigger than the unit once it is turned.
     const { min, max } = formation.bounds;
     const corners = [
       { x: min.x, y: min.y, z: min.z },

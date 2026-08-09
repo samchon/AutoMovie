@@ -2951,10 +2951,17 @@ const formationGroundSampleTimes = (
  * question go to the engine that owns them, so this compares answers that
  * already exist rather than deriving a third that could disagree with both.
  *
- * What is measured is the unit's own four ground corners, not the corners of
- * its axis-aligned box. A turned box has a bigger box than itself, and refusing
- * a unit for a point it does not occupy is the one thing this gate must never
- * do.
+ * What is measured is the four ground corners of the compiled bounds, carried
+ * through a cue as points rather than re-fitted into a new box at each sample.
+ * A box fitted around a turned box is bigger than the unit, so measuring that
+ * would refuse a unit standing at an angle that every member of it clears.
+ *
+ * Those corners are the box around the members, not members. A full `line` or
+ * `column` grid puts a slot at each of them; a `wedge`, an `arc` and a
+ * `scatter` do not, so this can still refuse a formation every member of which
+ * is carried. Asking the engine where the members are instead is #1822. Until
+ * then the gate is sound about the box and conservative about the unit, and
+ * says so rather than promising otherwise.
  *
  * A shot that stages no space is not measured. The engine then falls back to
  * the scalar ground plane it assumed before spaces existed, and there is no
@@ -2987,11 +2994,10 @@ export const validateAutoMovieFormationGround = (
   const diagnostics: IAutoMovieDiagnostic[] = [];
   for (const formation of value.formations) {
     const own = cues.filter((cue) => cue.formation === formation.id);
-    // The unit's own four ground corners, not its bounding box's. A turned box
-    // has a bigger axis-aligned box than itself, so measuring that box would
-    // refuse a unit whose every corner is on the ground for standing at an
-    // angle. Each corner goes through the same point transform the runtime
-    // places members with.
+    // The four ground corners of the compiled bounds, carried as points. Fitting
+    // a new axis-aligned box around them at each sample would be bigger than the
+    // unit and would refuse it for standing at an angle. Each corner goes
+    // through the same point transform the runtime places members with.
     const design = formation.bounds;
     const corners = [
       { x: design.min.x, y: design.min.y, z: design.min.z },

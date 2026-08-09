@@ -244,9 +244,11 @@ const sampledTime = (diagnostics: readonly IAutoMovieDiagnostic[]): string =>
  *    see. The refusal names one time inside the cue's own ends, stated to the
  *    millisecond rather than to the last digit a sample happens to carry, and a
  *    turn that never leaves is still accepted.
- * 10. A unit is judged by its own four corners rather than the box around them,
- *     which a diamond floor separates: turned, the box reaches past ground
- *     every corner of the unit is still standing on.
+ * 10. A unit is judged by the corners of its compiled bounds carried as points, not
+ *     by a box re-fitted around them once turned, which a diamond floor
+ *     separates: the re-fitted box reaches past ground every corner of the
+ *     bounds still stands on. Those corners are the box around the members and
+ *     not members themselves, which is #1822 and not what this pins.
  * 11. The same unit and turn over a floor between the two numbers is refused,
  *     because the corner partway through the turn clears neither end's floor.
  *     With the case above it brackets where the unit is really widest, which is
@@ -469,10 +471,10 @@ export const test_mcp_production_formation_ground = (): void => {
     [],
   );
 
-  // The box around a turned unit is bigger than the unit, and on a square floor
-  // the two agree: the box's half-extents are exactly the unit's widest corners
-  // in each axis. A diamond separates them, where `|x| + |z|` is what a floor
-  // bounds. Through this quarter of a right angle the unit's furthest corner
+  // A box re-fitted around a turned box is bigger than it, and on a square floor
+  // the two agree: the re-fitted half-extents are exactly the widest carried
+  // corners in each axis. A diamond separates them, where `|x| + |z|` is what a
+  // floor bounds. Through this quarter of a right angle the unit's furthest corner
   // reaches 12.81, at 38.7 degrees rather than at either end, while the box
   // around it reaches 14.14; a floor reaching 13.5 carries the one and not the
   // other. The interior is where the unit is widest, so an end-reading of this
