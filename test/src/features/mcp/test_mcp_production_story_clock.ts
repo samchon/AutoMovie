@@ -285,6 +285,35 @@ export const test_mcp_production_story_clock = (): void => {
     },
   );
 
+  /**
+   * True when one broken field is reported once, at the field, and the
+   * cross-shot claim adds no verdict derived from it.
+   */
+  const derivedOnce = (
+    pin?: { rate?: number },
+    window?: { from: number; to: number },
+  ): boolean => {
+    const diagnostics = validateAutoMovieProductionGraph({
+      ...pinned,
+      shots: new Map([
+        ...pinned.shots,
+        [
+          "answer",
+          coverage({
+            id: "answer",
+            export: "answer",
+            event: "mark-b",
+            storyTime: { originSeconds: 0, ...pin },
+            ...(window === undefined ? {} : { window }),
+          }),
+        ],
+      ]),
+    });
+    return (
+      codes(diagnostics).has("design-range-invalid") &&
+      codes(diagnostics).has("design-story-sync-unsatisfiable") === false
+    );
+  };
   TestValidator.equals(
     "an unaddressable cross-shot claim is refused at the field that made it unaddressable",
     namedFacts([

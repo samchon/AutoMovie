@@ -107,8 +107,16 @@ import {
   validateAutoMovieProductionGraph,
 } from "./validateProductionDesign";
 
-/** Production compiler protocol embedded in generated manifests. */
-export const AUTOMOVIE_PRODUCTION_COMPILER_PROTOCOL = "automovie.compiler.v7";
+/**
+ * Production compiler protocol embedded in generated manifests.
+ *
+ * Bumped whenever the shape of a generated artifact changes, so an older
+ * generated tree is recognised as older rather than silently misread as
+ * current. This revision added a per-member cue channel, a ground sample per
+ * member, and a story clock; each of those is a field a v7 reader would not
+ * find where it expects one.
+ */
+export const AUTOMOVIE_PRODUCTION_COMPILER_PROTOCOL = "automovie.compiler.v8";
 
 const FILM_SOURCE_PATH = "src/film.ts";
 const FILM_SOURCE_EXPORT = "film";
