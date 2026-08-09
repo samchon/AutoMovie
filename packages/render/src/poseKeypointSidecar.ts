@@ -12,6 +12,26 @@ export interface IAutoMoviePoseKeypointActor {
 
   /** The actor's named joints, projected to the frame. */
   keypoints: IAutoMoviePoseKeypoint[];
+
+  /**
+   * How much of this actor's own color survives the scene's atmosphere at its
+   * camera depth: {@link sceneFogTransmittance} over the scene's
+   * {@link IAutoMovieFog}, one at the lens and falling toward zero with
+   * distance.
+   *
+   * This is the offline half of the fog contract. A pose-conditioned host
+   * reading this sidecar drives generation from screen coordinates alone, and
+   * screen coordinates say nothing about whether the subject standing there is
+   * fully visible or a shape barely separable from the haze. The number is the
+   * SAME derivation the viewer's shader applies to the same declaration, not a
+   * renderer-local estimate of it, so the sidecar and the encoded frame agree
+   * about the film.
+   *
+   * Present only when the scene declares fog. A scene that declares none omits
+   * the field entirely, so its sidecar is byte-identical to one written before
+   * atmosphere existed.
+   */
+  atmosphere?: number;
 }
 
 /**

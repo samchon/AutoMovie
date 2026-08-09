@@ -97,6 +97,7 @@ import {
   materializeProductionModels,
 } from "./materializeProduction";
 import { assertProductionFeatureUsesRenditionClips } from "./muxProductionFeatureMp4";
+import { AutoMovieModelArchetypeRegistry } from "./productionArchetypes";
 import { probeProductionMedia } from "./probeProductionMedia";
 import { screenplayLedgerDiagnostics } from "./screenplayLedgerDiagnostics";
 import { screenplayProseDiagnostics } from "./screenplayProseDiagnostics";
@@ -216,6 +217,7 @@ export class AutoMovieProductionCompiler {
           contentInputs,
           graph.production?.id ?? this.project.productionId,
           graph,
+          archetypes,
         );
         diagnostics.push(...assetInventory.diagnostics);
         declaredAssets = assetInventory.assets;
@@ -255,18 +257,20 @@ export class AutoMovieProductionCompiler {
     let filmSourceDigest: AutoMovieContentDigest | null = null;
     if (input.scope !== "design" && designReady) {
       runtimeModels = new Map(
-        materializeProductionModels(graph.models, externalModels),
+        materializeProductionModels(graph.models, externalModels, archetypes),
       );
       formationRuntime = materializeCompiledFormationInventory(
         graph.formations,
         graph.models,
         externalModels,
         graph.world!.surfaces,
+        archetypes,
       );
       instanceSetRuntime = materializeCompiledInstanceSetInventory(
         graph.world!,
         graph.models,
         externalModels,
+        archetypes,
       );
     }
     const shotSources = new Map<string, Uint8Array>();
@@ -397,6 +401,7 @@ export class AutoMovieProductionCompiler {
               world: graph.world!,
               fps: graph.production!.frameFormat.fps,
               source: result.value,
+              archetypes,
             });
             const realized = realizeShotContract({
               contract: entry.contract,
@@ -3877,6 +3882,7 @@ const compilerAssetInventory = (
   inputs: readonly IAutoMovieProductionContentInput[],
   productionId: string,
   graph: IAutoMovieProductionDesignGraph,
+  archetypes: AutoMovieModelArchetypeRegistry,
 ): {
   assets: string[];
   records: IAutoMovieAssetProvenance[];
@@ -4283,7 +4289,8 @@ const compilerAssetInventory = (
               },
             ];
       });
-      const generatedHasSkeleton = model.archetype === "stickman";
+      const recipeBones = requiredRecipeBones(model, archetypes);
+      const generatedHasSkeleton = recipeBones.length !== 0;
       const levelProfiles = new Set(levels.map((level) => level.profile));
       if (
         levels.length !== record.model.lod.length ||
@@ -4304,7 +4311,7 @@ const compilerAssetInventory = (
       else if (
         generatedHasSkeleton &&
         levels.some((level) =>
-          requiredRecipeBones(model).some(
+          recipeBones.some(
             (bone) =>
               level.humanoidBones.some(
                 (mapping) => mapping.bone === bone && mapping.weighted,
@@ -4573,26 +4580,18 @@ const hasActiveAssetUse = (
       use.consumer.id === owner,
   ) === true;
 
+/**
+ * Bones an imported appearance must weight to stand in for a generated one.
+ *
+ * The archetype's builder decides them: an empty list is exactly a recipe whose
+ * runtime has no skeleton, which is what binds a static asset instead of a
+ * humanoid one.
+ */
 const requiredRecipeBones = (
   model: IAutoMovieModelRecipe,
-): AutoMovieHumanoidBone[] =>
-  model.archetype === "stickman"
-    ? [
-        "hips",
-        "spine",
-        "head",
-        "leftUpperArm",
-        "leftLowerArm",
-        "leftHand",
-        "rightUpperArm",
-        "rightLowerArm",
-        "rightHand",
-        "leftUpperLeg",
-        "leftLowerLeg",
-        "rightUpperLeg",
-        "rightLowerLeg",
-      ]
-    : [];
+  archetypes: AutoMovieModelArchetypeRegistry,
+): readonly AutoMovieHumanoidBone[] =>
+  archetypes.get(model.archetype)?.bones ?? [];
 
 const refuseUnsupportedExternalInstancing = (
   graph: IAutoMovieProductionDesignGraph,

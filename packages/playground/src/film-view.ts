@@ -30,6 +30,7 @@ import {
   applyObjectMotions,
   applyPose,
   applyRenderMode,
+  applySceneFog,
   buildLight,
   buildModel,
   buildSpaceObject,
@@ -388,6 +389,11 @@ scene.background = new THREE.Color(0xf2f4f8);
 // structural guide pass hides (#1226), so depth/mask/outline saw no ground at
 // all. A mesh floor is collected by the passes like any other geometry.
 scene.add(buildSpaceObject(staged.scene.space!));
+// The staged ATMOSPHERE, through the viewer's one call. This page is what the
+// offline renderer captures, so a fog declared on the scene and honoured only
+// by `buildScene` would be honoured everywhere except in the frames that get
+// encoded. A staging that declares none clears it, which is exactly today.
+applySceneFog(scene, staged.scene.fog);
 // Ambient fill stays a page decision (staging models no sky), but the KEY light
 // is the staged one, built through the viewer. A hardcoded sun stood here and
 // `staged.scene.lights` went unused, so every capture proved the page's own

@@ -59,7 +59,7 @@ const firstActor = (action: IAutoMovieLaunchAction): string | null =>
  * `target` at `action.speed`, {@link projectileTrajectory bakes the flight} into
  * the projectile node's clip, and, when the launch carries an `onHit`, emits
  * the target's `react` at the detected contact time. This is the reactive event
- * the schema promises ("shoot him off his horse" without hand-timing the fall):
+ * the schema promises ("knock him off the ledge" without hand-timing the fall):
  * the contact time is a computed output, so the reaction is scheduled, not
  * authored. Returns `null` when the target is out of range at that speed
  * (nothing to fly, nothing to hit).

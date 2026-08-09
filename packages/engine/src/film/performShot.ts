@@ -226,6 +226,17 @@ export namespace IAutoMoviePerformedShot {
  * (`cameraMotion: null`); a scene with no cameras at all cannot be framed and
  * fails.
  *
+ * A group subject is measured as the BOX its members occupy, not as a point
+ * with a figure's height: each staged member contributes its placement raised
+ * by its own measured extent, and each formation the group names contributes
+ * its whole transformed footprint under the cue playing at that instant. The
+ * solve then fits that box both ways, so a mass wider than it is tall is framed
+ * from the distance its width demands. This is the only subject that may name a
+ * formation, and it must name one this shot compiled: a formation is a mass a
+ * camera frames, never one body an actor can aim at, so the same group named on
+ * a `lookAt`, `reach`, gesture aim or `launch` aim is refused rather than
+ * silently aimed at the middle of a crowd.
+ *
  * The blocking's `coverage` intents (#1187) are the plural half of that rule.
  * They never join the election; each compiles into its own alternate take on
  * `shot.coverage` through {@link compileCameraCoverage}, playing its single
