@@ -1054,6 +1054,16 @@ const SANDBOX_BOOTSTRAP = `
       );
     }
   }
+  // A terrain subject answers height at a point by asking the engine rather
+  // than reading the record itself, which is right for a level patch and wrong
+  // the day it slopes. The arithmetic is pure and takes the record it is given,
+  // so the sandbox can carry it exactly as it carries the subject vocabulary.
+  const worldSurfaceHeight = (surface, point) =>
+    surface.height.kind === "constant"
+      ? surface.height.value
+      : surface.height.originHeight +
+        surface.height.slopeX * point.x +
+        surface.height.slopeZ * point.z;
   const sourceModules = {
     "@automovie/engine": freeze({
       defineShot: Object.freeze(defineShot),
@@ -1062,6 +1072,7 @@ const SANDBOX_BOOTSTRAP = `
       mergeAutoMovieSubjectContributions: Object.freeze(
         mergeAutoMovieSubjectContributions,
       ),
+      worldSurfaceHeight: Object.freeze(worldSurfaceHeight),
     }),
   };
   // A module's own import map, resolved once by the compiler and handed in.

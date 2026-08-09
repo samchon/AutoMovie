@@ -288,6 +288,7 @@ export const test_mcp_production_source_link = (): void => {
       "AutoMovieSubjectGroup",
       "defineShot",
       "mergeAutoMovieSubjectContributions",
+      "worldSurfaceHeight",
     ],
   );
 };

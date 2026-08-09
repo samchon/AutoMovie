@@ -2320,6 +2320,31 @@ ${original}`,
     fs.rmSync(ensemblePath);
     fs.writeFileSync(sourcePath, original);
 
+    // The sandbox reimplements every engine name a source module may import,
+    // so a name registered but never invoked is a stand-in nothing has run.
+    // The starter's terrain subject asks the engine for its own height rather
+    // than reading the record, and this is what makes that call happen inside
+    // the sandbox: a stand-in that returned the wrong number, or that was not
+    // there at all, stops the compile rather than passing quietly.
+    fs.writeFileSync(
+      sourcePath,
+      mutate(
+        original,
+        "  const performer = sentinel.render(context, { from: openingAbduction });",
+        `  if (signalField.ground.heightAt({ x: 0, z: 0 }) !== 0)
+    throw new Error("level ground must answer zero through the engine");
+  const performer = sentinel.render(context, { from: openingAbduction });`,
+      ),
+    );
+    TestValidator.equals(
+      "a subject reaches the engine's own answer from inside the sandbox",
+      [...diagnosticCodes(compiler.compile({ scope: "source" }))].sort(
+        compareCodeUnits,
+      ),
+      beforeEnsemble,
+    );
+    fs.writeFileSync(sourcePath, original);
+
     fs.writeFileSync(sourcePath, getterSource);
     TestValidator.predicate(
       "returned getters are snapshotted inside the VM timeout",
