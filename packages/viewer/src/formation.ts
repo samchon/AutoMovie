@@ -46,8 +46,9 @@ export interface IAutoMovieFormationViewerStats {
    * `near` and `far` count anonymous instance slots. `hero` counts promoted
    * hero objects still inside the frustum instead, because an anonymous slot
    * can never select that tier: the compiler drops the hero tier from the
-   * anonymous LOD list. Anonymous accounting is therefore `near + far + culled
-   * + removed`, and the hero count belongs beside it rather than inside it.
+   * anonymous LOD list. Anonymous accounting is therefore the sum of `near`,
+   * `far`, `culled` and `removed`, and the hero count belongs beside it rather
+   * than inside it.
    */
   visible: Record<IAutoMovieCompiledFormationLod["tier"], number>;
   /** Anonymous slots rejected by camera-frustum chunk culling. */
@@ -57,8 +58,7 @@ export interface IAutoMovieFormationViewerStats {
    *
    * Counted apart from `culled`, because the two are different claims: a culled
    * member is off camera and would be drawn if the camera turned, while a
-   * removed one is not in the shot at all. Anonymous accounting is therefore
-   * `near + far + culled + removed`.
+   * removed one is not in the shot at all.
    */
   removed: number;
   /** Named heroes kept outside instance batches. */

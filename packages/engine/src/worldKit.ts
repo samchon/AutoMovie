@@ -30,10 +30,10 @@ export interface IAutoMovieWorldBlock {
 /**
  * Build one box-proxy wall or building from a grounded base and size.
  *
- * The emitted recipe names an archetype the production must have registered.
- * It defaults to the shipped `primitive-prop` builder and its `box` shape,
- * because that is what this helper's parameters describe; a production whose
- * catalogue spells the same static primitive differently passes its own id.
+ * The emitted recipe names an archetype the production must have registered. It
+ * defaults to the shipped `primitive-prop` builder and its `box` shape, because
+ * that is what this helper's parameters describe; a production whose catalogue
+ * spells the same static primitive differently passes its own id.
  */
 export const worldBlock = (input: {
   id: string;
@@ -389,9 +389,9 @@ export const worldSurfaceHeight = (
  * the edge of a floor is still floor and a strict reading would drop the
  * outermost rank of a unit sized to its own ground.
  *
- * The height that goes with it is {@link worldSurfaceHeight} of the same
- * record. Both answers come from here so a placement, a gate and an oracle
- * cannot each pick a different surface.
+ * The height that goes with it is {@link worldSurfaceHeight} of the same record.
+ * Both answers come from here so a placement, a gate and an oracle cannot each
+ * pick a different surface.
  */
 export const worldGroundSurface = (
   surfaces: readonly IAutoMovieWorldSurface[],

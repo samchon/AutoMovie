@@ -46,9 +46,9 @@ export interface IAutoMovieProductionLighting {
    *
    * These are ordinary scene lights, deliberately: a production-level source is
    * the SAME thing a scene stages, declared in a wider scope, so everything
-   * that already reads, validates, renders or exports an
-   * {@link IAutoMovieLight} reads this one too, and a source can be promoted
-   * from a scene to the production or demoted back without changing shape.
+   * that already reads, validates, renders or exports an {@link IAutoMovieLight}
+   * reads this one too, and a source can be promoted from a scene to the
+   * production or demoted back without changing shape.
    */
   lights: IAutoMovieLight[];
 

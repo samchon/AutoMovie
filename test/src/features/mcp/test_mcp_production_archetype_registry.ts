@@ -67,17 +67,17 @@ const graphOf = (
  *
  * Scenarios:
  *
- * 1. A catalogue closes into one lookup per non-blank id, and refuses a blank
- *    or repeated one at registration rather than at the recipe that reached
- *    two builders.
+ * 1. A catalogue closes into one lookup per non-blank id, and refuses a blank or
+ *    repeated one at registration rather than at the recipe that reached two
+ *    builders.
  * 2. A recipe naming nothing registered is one design diagnostic that lists the
  *    registered names, and no parameter, capability, or attachment verdict is
  *    invented for a contract that does not exist.
- * 3. A production that registers its own definition compiles against it, while
- *    the definitions it did not register are refused for that production.
- * 4. Materialization builds through the registry, throws a diagnostic-shaped
- *    error rather than guessing when nothing answers, and lets compact
- *    selection fall back to its declared radius instead of a poisoned bound.
+ * 3. A production that registers its own definition compiles against it, while the
+ *    definitions it did not register are refused for that production.
+ * 4. Materialization builds through the registry, throws a diagnostic-shaped error
+ *    rather than guessing when nothing answers, and lets compact selection fall
+ *    back to its declared radius instead of a poisoned bound.
  */
 export const test_mcp_production_archetype_registry = (): void => {
   TestValidator.equals(
@@ -120,11 +120,17 @@ export const test_mcp_production_archetype_registry = (): void => {
     },
   );
 
-  const unregistered = recipeOf("unregistered", "no-such-archetype", {
-    height: 1.8,
-    headRadius: 0.16,
-    limbRadius: 0.06,
-  });
+  // Capabilities and an attachment ride along so the gate is asked for every
+  // verdict the archetype would have owned, not only the parameter one.
+  const unregistered: IAutoMovieModelRecipe = {
+    ...recipeOf("unregistered", "no-such-archetype", {
+      height: 1.8,
+      headRadius: 0.16,
+      limbRadius: 0.06,
+    }),
+    capabilities: ["signal"],
+    attachments: [{ id: "socket", bone: "hips" }],
+  };
   const unregisteredDiagnostics = validateAutoMovieProductionGraph(
     graphOf(unregistered),
   );
@@ -146,12 +152,13 @@ export const test_mcp_production_archetype_registry = (): void => {
           ),
       ],
       [
-        "inventsNoParameterVerdict",
+        "inventsNoContractVerdict",
         () =>
           unregisteredDiagnostics.every(
             (diagnostic) =>
               diagnostic.code.startsWith("model-parameter-") === false &&
-              diagnostic.code !== "design-capability-unsupported",
+              diagnostic.code !== "design-capability-unsupported" &&
+              diagnostic.code !== "design-attachment-unsupported",
           ),
       ],
       [
@@ -169,7 +176,7 @@ export const test_mcp_production_archetype_registry = (): void => {
     {
       oneUnregisteredDiagnostic: true,
       namesRegisteredArchetypes: true,
-      inventsNoParameterVerdict: true,
+      inventsNoContractVerdict: true,
       emptyRegistrySaysSo: true,
     },
   );
@@ -231,10 +238,7 @@ export const test_mcp_production_archetype_registry = (): void => {
             "is not registered with this compiler",
           ),
       ],
-      [
-        "compactSelectionFallsBack",
-        () => compact.projectionRadius === 0.5,
-      ],
+      ["compactSelectionFallsBack", () => compact.projectionRadius === 0.5],
     ]),
     {
       registeredRecipeAccepted: true,

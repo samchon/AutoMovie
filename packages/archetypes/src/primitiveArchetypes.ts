@@ -1,8 +1,8 @@
+import { IAutoMovieModelArchetype } from "./IAutoMovieModelArchetype";
 import {
   AutoMovieModelArchetypeRegistry,
   createAutoMovieArchetypeRegistry,
 } from "./archetypeRegistry";
-import { IAutoMovieModelArchetype } from "./IAutoMovieModelArchetype";
 import { PRIMITIVE_PROP_ARCHETYPE } from "./primitivePropArchetype";
 import { STICKMAN_ARCHETYPE } from "./stickmanArchetype";
 

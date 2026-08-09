@@ -510,7 +510,9 @@ export const materializeCompiledShot = (props: {
         formation,
         props.modelRecipes,
         undefined,
-        undefined,
+        // The terrain a member stands on, so a unit compiled here rather than
+        // taken from the shared inventory is the same unit either way.
+        props.world?.surfaces,
         props.archetypes,
       );
     const runtimeModel = props.runtimeModels.get(formation.modelRecipe);

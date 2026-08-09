@@ -9,9 +9,9 @@ import config from "../automovie.config";
 /**
  * The archetypes this production builds from.
  *
- * The compiler resolves every `archetype` in `.automovie/design/models`
- * against this registry and refuses a recipe naming anything outside it, so
- * this is where a production adds its own builder or drops one it never uses.
+ * The compiler resolves every `archetype` in `.automovie/design/models` against
+ * this registry and refuses a recipe naming anything outside it, so this is
+ * where a production adds its own builder or drops one it never uses.
  */
 const archetypes = createAutoMovieArchetypeRegistry(
   AUTOMOVIE_PRIMITIVE_ARCHETYPES,

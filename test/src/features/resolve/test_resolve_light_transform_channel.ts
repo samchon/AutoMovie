@@ -10,7 +10,12 @@ import {
 import { TestValidator } from "@nestia/e2e";
 
 import { IDENTITY_TRANSFORM } from "../internal/fixtures";
-import { namedFacts, nclose, throwsError, vclose } from "../internal/predicates";
+import {
+  namedFacts,
+  nclose,
+  throwsError,
+  vclose,
+} from "../internal/predicates";
 
 /** A lamp standing away from the origin, so a move is visible as a move. */
 const lamp: IAutoMovieLight = {
@@ -127,17 +132,16 @@ const SWING = clip(
  *
  * Scenarios:
  *
- * 1. The declared amount, at two times. A lamp keyed from 0° to 90° about Y
- *    faces `(0, 0, -1)` at the start and `(-1, 0, 0)` at the end — 90° apart,
- *    the amount declared — and passes through exactly 45° at the midpoint.
- * 2. Position travels, and everything the track did not address is left alone:
- *    the lamp keeps the scale it was staged with (a punctual light has no
- *    extent, so scale is deliberately not an axis) and keeps its staged
- *    rotation, while a light whose intensity alone is keyed keeps its staged
- *    transform BY IDENTITY, so nothing downstream can read a re-boxed copy as a
- *    move.
- * 3. Position and rotation accumulate onto one light together with the older
- *    axes, since they are entries in the same table and not a second pass.
+ * 1. The declared amount, at two times. A lamp keyed from 0° to 90° about Y faces
+ *    `(0, 0, -1)` at the start and `(-1, 0, 0)` at the end — 90° apart, the
+ *    amount declared — and passes through exactly 45° at the midpoint.
+ * 2. Position travels, and everything the track did not address is left alone: the
+ *    lamp keeps the scale it was staged with (a punctual light has no extent,
+ *    so scale is deliberately not an axis) and keeps its staged rotation, while
+ *    a light whose intensity alone is keyed keeps its staged transform BY
+ *    IDENTITY, so nothing downstream can read a re-boxed copy as a move.
+ * 3. Position and rotation accumulate onto one light together with the older axes,
+ *    since they are entries in the same table and not a second pass.
  * 4. The kind split, refused loudly in both directions: a directional light is
  *    infinitely distant and carries no `position`, a point light radiates every
  *    way and carries no `rotation`. Each throws rather than resolving to
@@ -163,7 +167,10 @@ export const test_resolve_light_transform_channel = (): void => {
       ],
       ["endsFacingMinusX", () => vclose(end, { x: -1, y: 0, z: 0 })],
       ["turnsNinetyDegreesInAll", () => nclose(angleBetween(start, end), 90)],
-      ["turnsFortyFiveByTheMidpoint", () => nclose(angleBetween(start, middle), 45)],
+      [
+        "turnsFortyFiveByTheMidpoint",
+        () => nclose(angleBetween(start, middle), 45),
+      ],
     ]),
     {
       startsFacingMinusZ: true,
@@ -213,7 +220,10 @@ export const test_resolve_light_transform_channel = (): void => {
         () => vclose(walked.transform.scale, { x: 1, y: 1, z: 1 }),
       ],
       ["dimmedIsANewLight", () => dimmed !== lamp],
-      ["dimmedKeepsTransformByIdentity", () => dimmed.transform === lamp.transform],
+      [
+        "dimmedKeepsTransformByIdentity",
+        () => dimmed.transform === lamp.transform,
+      ],
     ]),
     {
       travelsToTheMidpoint: true,

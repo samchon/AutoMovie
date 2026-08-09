@@ -167,9 +167,12 @@ export interface IAutoMovieModelRecipe {
    */
   asset?: string;
   /**
-   * Exact archetype-specific parameter map. Read `MODEL_RECIPE`: required keys,
-   * value kinds and ranges vary by archetype, and unsupported keys are
-   * refused.
+   * Exact archetype-specific parameter map.
+   *
+   * The registered archetype owns this contract: which keys are required, which
+   * are accepted at all, and the value kind and range of each. Read
+   * `MODEL_RECIPE`, then the definition itself; an unsupported key is refused
+   * rather than stored.
    */
   parameters: Record<string, number | string | boolean>;
   /**
@@ -184,15 +187,19 @@ export interface IAutoMovieModelRecipe {
    */
   lod: IAutoMovieModelLodRecipe[];
   /**
-   * Supported semantic abilities visible to source and review. Currently only
-   * `stickman` may declare `signal`; source still authors the actual signaling
-   * motion, and every other archetype must use an empty list.
+   * Semantic abilities visible to source and review, unique within the recipe.
+   *
+   * The registered archetype decides which labels are meaningful and the
+   * compiler refuses any other; declaring one it does implement still leaves
+   * source to author the motion that earns it.
    */
   capabilities: string[];
   /**
-   * Unique semantic bone sockets. Only `stickman` may declare a bone that
-   * actually exists on its compiler-owned foundation skeleton; the materializer
-   * does not create attached scene nodes automatically.
+   * Unique semantic bone sockets.
+   *
+   * A bone is accepted only when the registered archetype's builder actually
+   * materializes it, so an archetype without a compiler-owned skeleton accepts
+   * none. The materializer does not create attached scene nodes automatically.
    */
   attachments: Array<{
     /** Non-blank attachment id, unique within the recipe. */

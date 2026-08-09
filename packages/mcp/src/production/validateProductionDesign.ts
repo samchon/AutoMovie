@@ -358,7 +358,10 @@ export const validateAutoMovieProductionGraph = (
       "capabilities",
     );
     for (const capability of model.capabilities)
-      if (archetype !== undefined && archetype.capabilities.includes(capability) === false)
+      if (
+        archetype !== undefined &&
+        archetype.capabilities.includes(capability) === false
+      )
         invalid(
           diagnostics,
           "design-capability-unsupported",
@@ -492,8 +495,20 @@ export const validateAutoMovieProductionGraph = (
         );
       } else {
         const lattice = surface.height;
-        finite(diagnostics, lattice.originX, "world", file, "surface.height.originX");
-        finite(diagnostics, lattice.originZ, "world", file, "surface.height.originZ");
+        finite(
+          diagnostics,
+          lattice.originX,
+          "world",
+          file,
+          "surface.height.originX",
+        );
+        finite(
+          diagnostics,
+          lattice.originZ,
+          "world",
+          file,
+          "surface.height.originZ",
+        );
         positive(
           diagnostics,
           lattice.spacingX,
@@ -1079,7 +1094,10 @@ export const validateAutoMovieProductionGraph = (
         `Shot "${id}" durationSeconds is off the ${graph.production.frameFormat.fps}fps production clock. Choose an exact integer frame count divided by fps in the tracked shot contract record.`,
       );
     if (shot.storyTime !== undefined) {
-      if (graph.production !== null && graph.production.storyClock === undefined)
+      if (
+        graph.production !== null &&
+        graph.production.storyClock === undefined
+      )
         invalid(
           diagnostics,
           "design-story-clock-absent",
@@ -1725,7 +1743,10 @@ const validateModelParameters = (
   const accepted = plan.accepted === null ? null : new Set(plan.accepted);
   for (const [key, value] of Object.entries(model.parameters)) {
     const rule = archetype.parameters[key];
-    if (rule === undefined || (accepted !== null && accepted.has(key) === false)) {
+    if (
+      rule === undefined ||
+      (accepted !== null && accepted.has(key) === false)
+    ) {
       invalid(
         diagnostics,
         "model-parameter-unsupported",
@@ -2118,11 +2139,17 @@ const validateInstanceSets = (
  *
  * Which interval depends on the layout, because each states its own. A lattice
  * states two spacings and each tolerance answers to the one it moves along, the
- * other only carrying a member further away. An arc states none, so the interval
- * is the chord between neighbouring slots that its radius, covered angle and
- * count fix together; deviation there is drawn on both axes at once, so what has
- * to survive the chord is twice the tolerance's diagonal. An arc of one member
- * has no neighbour and so no interval to keep.
+ * other only carrying a member further away. An arc states none, so the
+ * interval is the chord between neighbouring slots that its radius, covered
+ * angle and count fix together, and the tolerance measured against it is the
+ * smaller of the two: a chord runs in a direction the layout chose and no
+ * tolerance is certain to close it by more than its narrower side. An arc of
+ * one member has no neighbour and so no interval to keep.
+ *
+ * This refuses a tolerance that has stopped being one, and nothing finer. Where
+ * members really end up standing once a tolerance is applied is a question
+ * about placement, and the compiler answers it against the real dressed
+ * positions.
  */
 const validateFormationDressing = (
   diagnostics: IAutoMovieDiagnostic[],
@@ -2164,13 +2191,13 @@ const validateFormationDressing = (
           Math.sin(
             (layout.arcDegrees * Math.PI) / 180 / (2 * (formation.count - 1)),
           );
-    if (2 * Math.hypot(dressing.lateral, dressing.depth) >= chord)
+    if (2 * Math.min(dressing.lateral, dressing.depth) >= chord)
       invalid(
         diagnostics,
         "design-range-invalid",
         target,
         file,
-        `Dressing can move two neighbouring members of this arc onto one another, because twice its diagonal tolerance reaches the whole chord between adjacent slots. Reduce layout.dressing, or widen layout.radius or layout.arcDegrees, in the tracked formation design record.`,
+        `Dressing can move two neighbouring members of this arc onto one another, because twice its narrower tolerance reaches the whole chord between adjacent slots whichever way that chord runs. Reduce layout.dressing, or widen layout.radius or layout.arcDegrees, in the tracked formation design record.`,
       );
     return;
   }
@@ -2195,10 +2222,11 @@ const validateFormationDressing = (
 /**
  * Refuse one tolerance that reaches the whole interval it is drawn across.
  *
- * Silent when either number is not a real measurement: an unmeasurable
- * tolerance or spacing is already refused as a range, and stating a second time
- * that it closes an interval nobody can measure would be noise rather than a
- * correction.
+ * Stated as the comparison that has to hold rather than as a guard around it,
+ * so a tolerance or a spacing that is not a real measurement declines on its
+ * own: no comparison against one is ever true. Those are already refused as
+ * ranges, and saying a second time that a number nobody can read closes an
+ * interval nobody can read would be noise rather than a correction.
  */
 const dressedInterval = (
   diagnostics: IAutoMovieDiagnostic[],
@@ -2208,24 +2236,15 @@ const dressedInterval = (
   target: string,
   file: string,
 ): void => {
-  if (
-    measurable(tolerance) === false ||
-    measurable(spacing) === false ||
-    2 * tolerance < spacing
-  )
-    return;
-  invalid(
-    diagnostics,
-    "design-range-invalid",
-    target,
-    file,
-    `Dressing tolerance ${tolerance} m reaches half the ${spacing} m ${axis} interval it perturbs, so two neighbouring members can stand in one place. Keep twice layout.dressing.${axis} below layout.spacing.${axis} in the tracked formation design record.`,
-  );
+  if (2 * tolerance >= spacing)
+    invalid(
+      diagnostics,
+      "design-range-invalid",
+      target,
+      file,
+      `Dressing tolerance ${tolerance} m reaches half the ${spacing} m ${axis} interval it perturbs, so two neighbouring members can stand in one place. Keep twice layout.dressing.${axis} below layout.spacing.${axis} in the tracked formation design record.`,
+    );
 };
-
-/** True when one number is a real, positive-or-zero measurement in metres. */
-const measurable = (value: number): boolean =>
-  Number.isFinite(value) && value >= 0;
 
 const validateFormationLayout = (
   diagnostics: IAutoMovieDiagnostic[],

@@ -121,8 +121,8 @@ const sharedMoment = (
  *
  * Scenarios:
  *
- * 1. The two-shot fixture compiles unchanged while the production states no
- *    story time at all.
+ * 1. The two-shot fixture compiles unchanged while the production states no story
+ *    time at all.
  * 2. Pinning the second coverage so its realized event lands on the first one's
  *    story second compiles clean, and the prepared film review carries the
  *    passing compiler-derived story-clock outcome for a reviewer to cite.
@@ -274,7 +274,8 @@ export const test_mcp_production_story_sync_compile = (): void => {
       namedFacts([
         [
           "compiled",
-          () => productionCompileSucceeded("optional story-sync claim", optional),
+          () =>
+            productionCompileSucceeded("optional story-sync claim", optional),
         ],
         [
           "warned",

@@ -12,8 +12,8 @@ import { autoMovieStoryTime } from "./storyClock";
  * shot reads its state at the shot's own story moment.
  *
  * The engine already had light-over-time, but only ever over a SHOT's clock, so
- * the longest thing a film could say about its light was a few seconds long.
- * A production that runs across a stretch of story — however long, whatever the
+ * the longest thing a film could say about its light was a few seconds long. A
+ * production that runs across a stretch of story — however long, whatever the
  * subject — could not state that the light travelled over it, and each shot
  * restaged its lighting independently with nothing relating one to the next.
  *
@@ -30,9 +30,9 @@ import { autoMovieStoryTime } from "./storyClock";
  * The production's lights at one STORY-clock instant.
  *
  * Deliberately {@link resolveShotLighting} rather than a resolver of its own: a
- * production source is an ordinary light addressed by an ordinary pointer track,
- * so it is sampled, bounds-checked, accumulated per light and folded back by
- * exactly the code a shot's `lightMotions` runs through. A second
+ * production source is an ordinary light addressed by an ordinary pointer
+ * track, so it is sampled, bounds-checked, accumulated per light and folded
+ * back by exactly the code a shot's `lightMotions` runs through. A second
  * implementation is a second set of rounding, a second clamp policy at the ends
  * of a clip, and eventually a second answer to the same question — the split
  * the light-channel table exists to prevent. A source no clip touches comes
@@ -64,14 +64,13 @@ export const resolveProductionLighting = (props: {
  *
  * The merge is by ID and its order is fixed:
  *
- * - A staged light whose id a production source shares is REPLACED, in place.
- *   The production owns that source; the scene declaring it says which of the
+ * - A staged light whose id a production source shares is REPLACED, in place. The
+ *   production owns that source; the scene declaring it says which of the
  *   production's lights this scene stands under, and the values it declares are
  *   the ones the production overrides. That is precisely "inherit rather than
  *   restage".
- * - A production source no staged light names is APPENDED, in declaration
- *   order, so a film states its source once instead of every scene re-declaring
- *   it.
+ * - A production source no staged light names is APPENDED, in declaration order,
+ *   so a film states its source once instead of every scene re-declaring it.
  *
  * Appending moves one downstream index and it is worth naming: the viewer adds
  * lights as top-level scene children between the nodes and the space group, and
@@ -82,10 +81,11 @@ export const resolveProductionLighting = (props: {
  * comparing two productions was never comparing colours across scenes anyway.
  *
  * This composes with, rather than replaces, a shot's own `lightMotions`: hand
- * the result to the applier that plays those clips and the shot's local statement
- * (a lamp switched on inside this beat) lands on top of the inherited state (the
- * light the production is under at this moment). Both are the same pointer
- * grammar over the same table, so the composition needs no rules of its own.
+ * the result to the applier that plays those clips and the shot's local
+ * statement (a lamp switched on inside this beat) lands on top of the inherited
+ * state (the light the production is under at this moment). Both are the same
+ * pointer grammar over the same table, so the composition needs no rules of its
+ * own.
  */
 export const inheritProductionLighting = (props: {
   /** The production's declared sources, or `null` when it declares none. */

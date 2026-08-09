@@ -140,7 +140,7 @@ export const test_viewer_formation_cycle = (): void => {
       [
         "phasePerMember",
         () =>
-          marching.every(
+          meshes.every(
             (mesh) =>
               mesh.geometry.getAttribute("automoviePhase")?.count ===
               mesh.count,

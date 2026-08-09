@@ -29,8 +29,9 @@ AI가 만든 `@automovie/interface` 모델, 포즈, 모션, 표정을 화면에 
 | `applyLightState` / `applyLightMotion` | 조명의 시간 변화(색·세기·방향 등)를 three light에 반영한다. |
 | `renderCrossDissolve` / `disposeCrossDissolve` | 두 샷을 겹쳐 그리는 크로스 디졸브 패스를 만들고 자원을 되돌린다. |
 | `applyCaptureCanvasSize` | 캡처용 캔버스 크기를 렌더러·카메라와 함께 맞춘다. |
-| `applyRenderMode` / `maskColor` / `IAutoMovieRenderModeHandle` | depth/mask/normal/outline 구조 가이드 패스로 씬을 전환하고 되돌린다. |
+| `applyRenderMode` / `maskColor` / `IAutoMovieRenderModeHandle` | depth/mask/normal/outline 구조 가이드 패스로 씬을 전환하고 되돌린다. 교체되는 머티리얼에는 그 메시가 지닌 formation 사이클이 그대로 실리므로, 행군하는 군중은 리뷰 프레임에서도 beauty와 같은 자세로 움직인다. |
 | `buildInstancedFormation` / `regenerateFormationSlot` | 컴파일된 formation 청크를 LOD tier별 `InstancedMesh`로 올리고, 카메라 갱신마다 청크 컬링·LOD 히스테리시스를 적용한다. hero 슬롯은 인스턴스 버퍼에서 빠지고 host가 넘긴 pre-formation 소스 스냅샷 위에 formation 모션을 합성한다. `slotMotions`로 지목된 소수의 멤버만 매 프레임 자기 상태로 다시 써서, 한 명이 이탈·정지하거나 아예 그려지지 않게 한다. 비용은 예외 수에 비례하며 군중 크기와 무관하고, 사라진 멤버는 `stats.removed`로 따로 센다(`near + far + culled + removed = anonymousCount`). |
+| `bakeFormationCycle` / `formationCyclePosition` / `sampleFormationCycleMatrix` / `applyFormationCycleMaterial` | LOD tier의 런타임 모델이 gait를 선언하면 한 사이클을 rigid part 행렬 표로 한 번 굽고, 각 멤버가 자기 `motionPhase`에서 그 표를 정점 단계에서 읽게 한다. 표는 tier당 하나라 멤버가 열 명이든 십만 명이든 인스턴스 버퍼는 그대로이고, 한 프레임이 갱신하는 것은 시간 uniform 하나뿐이다. gait가 없는 모델은 표를 갖지 않고 예전처럼 정지한 채 남는다. |
 | `buildInstancedEffect` | 컴파일된 fog/smoke/dust 볼륨을 고정 스텝으로 샘플링해 인스턴스 파티클로 그리고, 파티클 상한과 LOD 거리 컬링을 강제한다. |
 | `mountViewer(canvas, scene, camera, onFrame)` | 브라우저 RAF와 `WebGLRenderer`를 붙인다. |
 | `captureViewerSnapshot(renderer, scene, camera)` | headless-friendly renderer 표면으로 한 프레임을 data URL로 읽는다. |

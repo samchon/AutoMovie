@@ -37,9 +37,9 @@ export interface IAutoMovieFormationCycleUniforms {
  *
  * An anonymous member is not a scene node: it has no skeleton to pose and no
  * player to drive it, only a 64-byte instance matrix and a phase scalar. What
- * it can still do is carry a table that says where each of its rigid parts
- * sits at every point of one cycle, and let the vertex stage look that table up
- * at `phase + time`. The table is per LOD tier, so ten members and a hundred
+ * it can still do is carry a table that says where each of its rigid parts sits
+ * at every point of one cycle, and let the vertex stage look that table up at
+ * `phase + time`. The table is per LOD tier, so ten members and a hundred
  * thousand members cost the same bake.
  *
  * Members differ only in where they are in the cycle, never in the cycle
@@ -78,7 +78,8 @@ export interface IAutoMovieFormationCycle {
 export const instancedModelParts = (root: THREE.Object3D): THREE.Mesh[] => {
   const parts: THREE.Mesh[] = [];
   root.traverse((object) => {
-    if ((object as THREE.Mesh).isMesh === true) parts.push(object as THREE.Mesh);
+    if ((object as THREE.Mesh).isMesh === true)
+      parts.push(object as THREE.Mesh);
   });
   return parts;
 };
@@ -108,14 +109,14 @@ export const formationCycleGait = (
  *
  * `built` must already be at rest with its world matrices current, because the
  * merged instance geometry was baked from exactly those rest matrices: what is
- * stored per sample is `posed * rest⁻¹`, the transform that carries a rest-space
- * vertex to where the cycle puts it. The object is left at the last sampled
- * pose; callers extract geometry before baking, never after.
+ * stored per sample is `posed * rest⁻¹`, the transform that carries a
+ * rest-space vertex to where the cycle puts it. The object is left at the last
+ * sampled pose; callers extract geometry before baking, never after.
  *
  * The pose comes from {@link gaitMotion}, whose keyframe `i` of `samples` sits
  * exactly at cycle position `i / samples`, and is applied through the same
- * {@link applyPose} a named performer goes through, so an anonymous member and
- * a promoted one at the same phase strike the same attitude.
+ * {@link applyPose} a named performer goes through, so an anonymous member and a
+ * promoted one at the same phase strike the same attitude.
  */
 export const bakeFormationCycle = (input: {
   /** Runtime model the parts belong to. */
@@ -132,7 +133,10 @@ export const bakeFormationCycle = (input: {
   const skeleton = input.model.skeleton;
   const gait = formationCycleGait(input.model);
   if (skeleton === null || gait === null) return null;
-  if (Number.isFinite(input.periodSeconds) === false || input.periodSeconds <= 0)
+  if (
+    Number.isFinite(input.periodSeconds) === false ||
+    input.periodSeconds <= 0
+  )
     throw new RangeError(
       `Runtime model "${input.model.id}" cannot animate on a cycle period of ${input.periodSeconds} seconds.`,
     );
@@ -199,9 +203,9 @@ export const bakeFormationCycle = (input: {
  *
  * Phase is the slot's compiled `motionPhase`, derived from the formation seed
  * and the slot index, so the member that leads the stride leads it on every
- * machine and in every run. Time is shot-local clip time. No clock is read,
- * and nothing accumulates between frames: the same time always resolves to the
- * same point of the cycle, which is what makes a re-render byte-identical.
+ * machine and in every run. Time is shot-local clip time. No clock is read, and
+ * nothing accumulates between frames: the same time always resolves to the same
+ * point of the cycle, which is what makes a re-render byte-identical.
  */
 export const formationCyclePosition = (
   cycle: Pick<IAutoMovieFormationCycle, "periodSeconds">,

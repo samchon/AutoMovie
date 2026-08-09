@@ -935,9 +935,9 @@ const lightValueWidth = (property: AutoMovieLightProperty): number =>
   })!;
 
 /**
- * The whole-value rule of one light property ({@link
- * IAutoMovieLightChannelProperty.valueFault}), applied to every keyframe of one
- * track.
+ * The whole-value rule of one light property
+ * ({@link IAutoMovieLightChannelProperty.valueFault}), applied to every keyframe
+ * of one track.
  *
  * Separate from the per-component pass because it reads a keyframe as a unit: a
  * light `rotation` is unit-length or it is not, and that question cannot be

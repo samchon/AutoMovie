@@ -13,7 +13,8 @@ export const storySyncCriterionOf = (
 ): Extract<
   IAutoMovieAcceptanceScenario["criterion"],
   { kind: "story-sync" }
-> | null => (scenario.criterion.kind === "story-sync" ? scenario.criterion : null);
+> | null =>
+  scenario.criterion.kind === "story-sync" ? scenario.criterion : null;
 
 /**
  * Measure one simultaneity claim against the shots' current realizations.

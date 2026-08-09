@@ -53,8 +53,8 @@ const sync = (
  *
  * Scenarios:
  *
- * 1. A pin maps shot-local seconds onto the clock, honouring an explicit rate,
- *    and reports the story interval a whole shot occupies.
+ * 1. A pin maps shot-local seconds onto the clock, honouring an explicit rate, and
+ *    reports the story interval a whole shot occupies.
  * 2. Two shots pinned to the same story moment are judged simultaneous from
  *    different local times, and the verdict names both events.
  * 3. Two shots that are not are judged apart, and the failure names the gap it
@@ -68,7 +68,10 @@ export const test_film_story_clock = (): void => {
   TestValidator.equals(
     "a pin maps shot-local time onto the story clock",
     namedFacts([
-      ["defaultRate", () => autoMovieStoryTime({ originSeconds: 10 }, 4) === 14],
+      [
+        "defaultRate",
+        () => autoMovieStoryTime({ originSeconds: 10 }, 4) === 14,
+      ],
       [
         "explicitRate",
         () => autoMovieStoryTime({ originSeconds: 10, rate: 0.5 }, 4) === 12,

@@ -20,7 +20,8 @@ export {
  * `archetype` through a registry they are handed; they never name a member. A
  * host that ships a different catalogue registers it here or passes its own
  * registry to `AutoMovieProductionProject.open`, and every recipe naming
- * something outside it is refused with a diagnostic rather than silently built.
+ * something outside it is refused with a diagnostic rather than silently
+ * built.
  */
 export const AUTOMOVIE_REGISTERED_ARCHETYPES: AutoMovieModelArchetypeRegistry =
   createAutoMovieArchetypeRegistry(AUTOMOVIE_PRIMITIVE_ARCHETYPES);

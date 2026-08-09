@@ -12,6 +12,7 @@ import {
   findAutoMovieProjectRoot,
   openAutoMovieProduction,
 } from "./openAutoMovieProduction";
+import type { AutoMovieModelArchetypeRegistry } from "./productionArchetypes";
 
 /** Active services for one resident production repository. */
 export interface IAutoMovieProductionServices {
@@ -37,6 +38,8 @@ export class AutoMovieProductionContext {
     private readonly capture?: AutoMovieProductionFrameCapture,
     projectRoot?: string,
     private readonly defaultProductionId?: string,
+    /** Archetype catalogue every production opened here is judged against. */
+    private readonly archetypes?: AutoMovieModelArchetypeRegistry,
   ) {
     validateProductionId(defaultProductionId);
     this.root = findAutoMovieProjectRoot(projectRoot);
@@ -78,6 +81,7 @@ export class AutoMovieProductionContext {
       projectRoot: this.root,
       productionId: selected,
       capture: this.capture,
+      archetypes: this.archetypes,
     });
     this.services.set(opened.project.productionId, opened);
     return opened;

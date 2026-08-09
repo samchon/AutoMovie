@@ -102,19 +102,19 @@ export const buildScene = (
  * nothing is declared.
  *
  * `FogExp2` is the exact law {@link IAutoMovieFog} documents and
- * {@link sceneFogTransmittance} reproduces on the CPU: the shader's
- * `1 - exp(-(density * depth)^2)` mix toward `color`. Nothing is converted on
- * the way in. `density` is handed over verbatim, and the color is written with
+ * {@link sceneFogTransmittance} reproduces on the CPU: the shader's `1 -
+ * exp(-(density * depth)^2)` mix toward `color`. Nothing is converted on the
+ * way in. `density` is handed over verbatim, and the color is written with
  * `setRGB` on the working (linear) color space, the same call
- * {@link applyLightState} makes for a light, because `IAutoMovieColor` is
- * linear by contract and a second convention here would make the fog and the
- * key light disagree about what `0.5` means.
+ * {@link applyLightState} makes for a light, because `IAutoMovieColor` is linear
+ * by contract and a second convention here would make the fog and the key light
+ * disagree about what `0.5` means.
  *
  * Exported, and separate from {@link buildScene}, for the reason `buildLight`
  * is: a host that assembles its own scene graph (the playground's film page,
- * which is what the offline renderer captures) must apply the FILM's
- * atmosphere through this one call rather than decorating its page with fog of
- * its own. A page that fogs itself proves nothing about the production.
+ * which is what the offline renderer captures) must apply the FILM's atmosphere
+ * through this one call rather than decorating its page with fog of its own. A
+ * page that fogs itself proves nothing about the production.
  *
  * Absent or `null` clears `scene.fog`, which is `three.js`'s own "no fog":
  * every material compiles without `USE_FOG` and the frame is byte-identical to
@@ -145,8 +145,8 @@ const buildCamera = (cam: IAutoMovieCamera): THREE.PerspectiveCamera => {
  * placement is written by {@link applyLightState}, the same call a shot's
  * `lightMotions` uses each frame, so placing a light and animating it cannot
  * map `range`, `coneAngle` or the transform two different ways; the two aimed
- * kinds then get their target ({@link aimLight}), which is the half of a
- * light's placement `three.js` does not read off a quaternion.
+ * kinds then get their target ({@link aimLight}), which is the half of a light's
+ * placement `three.js` does not read off a quaternion.
  *
  * The placement is deliberately NOT applied a second time here. It used to be,
  * back when `applyLightState` wrote everything except the transform; now that

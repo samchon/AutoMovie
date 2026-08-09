@@ -55,9 +55,9 @@ const propRecipe = (id: string, size: number): IAutoMovieModelRecipe => ({
  *    instance mesh.
  */
 export const test_viewer_formation = (): void => {
-  const hero = propRecipe("army-hero", 0.6);
-  const near = propRecipe("army-near", 0.4);
-  const far = propRecipe("army-far", 0.2);
+  const hero = propRecipe("chorus-hero", 0.6);
+  const near = propRecipe("chorus-near", 0.4);
+  const far = propRecipe("chorus-far", 0.2);
   hero.lod = [
     { tier: "hero", maxDistance: 10, recipe: hero.id },
     { tier: "near", maxDistance: 50, recipe: near.id },
@@ -73,7 +73,7 @@ export const test_viewer_formation = (): void => {
       files: 1_024,
       spacing: { lateral: 0.8, depth: 0.9 },
     }),
-    id: "army",
+    id: "chorus",
     modelRecipe: hero.id,
     count: 2_049,
     // Central slots on two ranks. A promoted hero on the outer file of a
@@ -81,8 +81,8 @@ export const test_viewer_formation = (): void => {
     // no camera aimed at the anchor can see it, and the culling half of this
     // scenario needs heroes that are actually in frame.
     heroOverrides: [
-      { slot: 511, actor: "marshal" },
-      { slot: 1_535, actor: "captain" },
+      { slot: 511, actor: "lead" },
+      { slot: 1_535, actor: "second" },
     ],
   };
   const formation = materializeCompiledFormation(design, recipes);
@@ -122,7 +122,7 @@ export const test_viewer_formation = (): void => {
     }),
   );
   const motion = {
-    id: "army-advance",
+    id: "chorus-advance",
     formation: formation.id,
     action: "advance" as const,
     start: 0,
@@ -408,16 +408,16 @@ export const test_viewer_formation = (): void => {
   const camera = new THREE.PerspectiveCamera(45, 16 / 9, 0.1, 2_000);
   camera.position.set(0, 5, 20);
   camera.lookAt(0, 0, 0);
-  heroObjects.get("marshal")!.position.add(new THREE.Vector3(1, 0, 2));
+  heroObjects.get("lead")!.position.add(new THREE.Vector3(1, 0, 2));
   heroObjects
-    .get("marshal")!
+    .get("lead")!
     .quaternion.multiply(
       new THREE.Quaternion().setFromAxisAngle(
         new THREE.Vector3(0, 1, 0),
         THREE.MathUtils.degToRad(15),
       ),
     );
-  heroVisualObjects.get("marshal")!.position.x = 100;
+  heroVisualObjects.get("lead")!.position.x = 100;
   const sourceTransforms = new Map(
     [...heroObjects].map(
       ([actor, object]) =>
@@ -433,30 +433,30 @@ export const test_viewer_formation = (): void => {
   );
   built.update(camera, 1_080, 3, sourceTransforms);
   const firstHeroUpdate = {
-    position: heroObjects.get("marshal")!.position.clone(),
-    rotation: heroObjects.get("marshal")!.quaternion.clone(),
+    position: heroObjects.get("lead")!.position.clone(),
+    rotation: heroObjects.get("lead")!.quaternion.clone(),
   };
   built.update(camera, 1_080, 3, sourceTransforms);
   const sameSourceStable =
-    heroObjects.get("marshal")!.position.equals(firstHeroUpdate.position) &&
+    heroObjects.get("lead")!.position.equals(firstHeroUpdate.position) &&
     Math.abs(
-      heroObjects.get("marshal")!.quaternion.dot(firstHeroUpdate.rotation),
+      heroObjects.get("lead")!.quaternion.dot(firstHeroUpdate.rotation),
     ) >
       1 - 1e-12;
   const collidingSources = new Map(sourceTransforms);
-  collidingSources.set("marshal", {
+  collidingSources.set("lead", {
     translation: point(firstHeroUpdate.position),
     rotation: rotation(firstHeroUpdate.rotation),
-    scale: point(heroObjects.get("marshal")!.scale),
+    scale: point(heroObjects.get("lead")!.scale),
   });
   built.update(camera, 1_080, 3, collidingSources);
   const collidingSourceUpdate = {
-    position: heroObjects.get("marshal")!.position.clone(),
-    rotation: heroObjects.get("marshal")!.quaternion.clone(),
+    position: heroObjects.get("lead")!.position.clone(),
+    rotation: heroObjects.get("lead")!.quaternion.clone(),
   };
   built.update(camera, 1_080, 3, collidingSources);
   const unscaledHeroCenter = new THREE.Vector3();
-  heroVisualObjects.get("captain")!.getWorldPosition(unscaledHeroCenter);
+  heroVisualObjects.get("second")!.getWorldPosition(unscaledHeroCenter);
   const cameraSpaceHero = unscaledHeroCenter
     .clone()
     .applyMatrix4(camera.matrixWorldInverse);
@@ -472,12 +472,12 @@ export const test_viewer_formation = (): void => {
     Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) * camera.aspect,
   );
   const scaledSources = new Map(collidingSources);
-  scaledSources.set("captain", {
-    ...scaledSources.get("captain")!,
+  scaledSources.set("second", {
+    ...scaledSources.get("second")!,
     translation: {
-      ...scaledSources.get("captain")!.translation,
+      ...scaledSources.get("second")!.translation,
       x:
-        scaledSources.get("captain")!.translation.x +
+        scaledSources.get("second")!.translation.x +
         halfWidthAtHero +
         ((authoredRadius + decomposedRadius) / 2) *
           horizontalPlaneNormalization -
@@ -486,7 +486,7 @@ export const test_viewer_formation = (): void => {
     scale: { x: 12, y: 1, z: 1 },
   });
   heroVisualObjects
-    .get("captain")!
+    .get("second")!
     .quaternion.setFromAxisAngle(
       new THREE.Vector3(0, 1, 0),
       THREE.MathUtils.degToRad(45),
@@ -502,8 +502,8 @@ export const test_viewer_formation = (): void => {
   );
   const scaledHeroCenter = new THREE.Vector3();
   const scaledHeroScale = new THREE.Vector3();
-  heroVisualObjects.get("captain")!.getWorldPosition(scaledHeroCenter);
-  heroVisualObjects.get("captain")!.getWorldScale(scaledHeroScale);
+  heroVisualObjects.get("second")!.getWorldPosition(scaledHeroCenter);
+  heroVisualObjects.get("second")!.getWorldScale(scaledHeroScale);
   const scaledHeroBoundary =
     scaledFrustum.intersectsSphere(
       new THREE.Sphere(
@@ -521,9 +521,9 @@ export const test_viewer_formation = (): void => {
         scaledHeroCenter,
         formation.projectionRadius *
           Math.max(
-            Math.abs(scaledSources.get("captain")!.scale.x),
-            Math.abs(scaledSources.get("captain")!.scale.y),
-            Math.abs(scaledSources.get("captain")!.scale.z),
+            Math.abs(scaledSources.get("second")!.scale.x),
+            Math.abs(scaledSources.get("second")!.scale.y),
+            Math.abs(scaledSources.get("second")!.scale.z),
           ),
       ),
     );
@@ -563,7 +563,7 @@ export const test_viewer_formation = (): void => {
   );
   const delayedMotion = {
     ...motion,
-    id: "army-delayed",
+    id: "chorus-delayed",
     start: 8,
     end: 10,
     from: motion.to,
@@ -635,20 +635,20 @@ export const test_viewer_formation = (): void => {
     THREE.MathUtils.radToDeg(
       new THREE.Euler().setFromQuaternion(rotation, "YXZ").y,
     );
-  const marshal = heroObjects.get("marshal")!;
+  const lead = heroObjects.get("lead")!;
   // A promoted hero renders at its formation-transformed slot plus whatever the
   // source authored as an offset from that slot, so the expected world position
   // is composed from the same law rather than written down.
-  const marshalSlot = formation.heroes.find((hero) => hero.actor === "marshal")!
+  const leadSlot = formation.heroes.find((hero) => hero.actor === "lead")!
     .transform.translation;
-  const composedMarshalZ = (sourceZ: number): number =>
+  const composedLeadZ = (sourceZ: number): number =>
     transformFormationPoint(
-      marshalSlot,
+      leadSlot,
       formation.anchor,
       sampledMotion,
       formation.facingDeg,
     ).z +
-    (sourceZ - marshalSlot.z);
+    (sourceZ - leadSlot.z);
   // Named rather than folded into one conjunction: this scenario pins thirty
   // separate facts, and a bare predicate reports only that one of them broke.
   TestValidator.equals(
@@ -665,15 +665,15 @@ export const test_viewer_formation = (): void => {
       firstHeroPositionZ: firstHeroUpdate.position.z,
       firstHeroYaw: nclose(yawDegrees(firstHeroUpdate.rotation), 25, 1e-9),
       repeatedUpdatesKeepSource: sameSourceStable,
-      marshalPositionZ: marshal.position.z,
-      marshalYaw: nclose(yawDegrees(marshal.quaternion), 35, 1e-9),
-      marshalTracksCollidingSource:
-        marshal.position.equals(collidingSourceUpdate.position) &&
-        Math.abs(marshal.quaternion.dot(collidingSourceUpdate.rotation)) >
+      leadPositionZ: lead.position.z,
+      leadYaw: nclose(yawDegrees(lead.quaternion), 35, 1e-9),
+      leadTracksCollidingSource:
+        lead.position.equals(collidingSourceUpdate.position) &&
+        Math.abs(lead.quaternion.dot(collidingSourceUpdate.rotation)) >
           1 - 1e-12,
       visibleHeroes: built.stats.visible.hero,
-      marshalVisible: marshal.visible,
-      captainVisible: heroObjects.get("captain")!.visible,
+      leadVisible: lead.visible,
+      secondVisible: heroObjects.get("second")!.visible,
       shearedHeroBoundsStayVisible: scaledHeroBoundary,
       rootScaleX: built.object.scale.x,
       scaledSlotMatchesTranslation: nclose(
@@ -708,19 +708,19 @@ export const test_viewer_formation = (): void => {
       motionFacingOffsetDeg: 10,
       motionLateralScale: 1.1,
       rootPositionZ: formation.anchor.z - 3,
-      firstHeroPositionZ: composedMarshalZ(
-        sourceTransforms.get("marshal")!.translation.z,
+      firstHeroPositionZ: composedLeadZ(
+        sourceTransforms.get("lead")!.translation.z,
       ),
       firstHeroYaw: true,
       repeatedUpdatesKeepSource: true,
-      marshalPositionZ: composedMarshalZ(
-        collidingSources.get("marshal")!.translation.z,
+      leadPositionZ: composedLeadZ(
+        collidingSources.get("lead")!.translation.z,
       ),
-      marshalYaw: true,
-      marshalTracksCollidingSource: true,
+      leadYaw: true,
+      leadTracksCollidingSource: true,
       visibleHeroes: 1,
-      marshalVisible: false,
-      captainVisible: true,
+      leadVisible: false,
+      secondVisible: true,
       shearedHeroBoundsStayVisible: true,
       rootScaleX: 1,
       scaledSlotMatchesTranslation: true,

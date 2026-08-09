@@ -101,8 +101,9 @@ const resolvedAt = (seconds: number): IAutoMovieLight =>
  * `three.js` does not shine an aimed light along its quaternion; it shines from
  * its position toward its `target`, so the rendered direction is measured the
  * way the renderer actually computes it, from world positions, and compared
- * against the artifact's own local −Z carried by the resolved rotation. Anything
- * that agreed on the quaternion but disagreed on the aim would still be caught.
+ * against the artifact's own local −Z carried by the resolved rotation.
+ * Anything that agreed on the quaternion but disagreed on the aim would still
+ * be caught.
  *
  * Scenarios:
  *
@@ -131,7 +132,10 @@ export const test_viewer_light_transform_parity = (): void => {
     applyLightMotion(scene.lights, [swing], seconds, (id) =>
       built.lights.get(id),
     );
-    return vclose(renderedDirection(lamp), declaredDirection(resolvedAt(seconds)));
+    return vclose(
+      renderedDirection(lamp),
+      declaredDirection(resolvedAt(seconds)),
+    );
   };
   TestValidator.equals(
     "the rendered direction equals the resolved direction at every instant",
@@ -147,6 +151,9 @@ export const test_viewer_light_transform_parity = (): void => {
   applyLightMotion(scene.lights, [swing], 2, (id) => built.lights.get(id));
   TestValidator.predicate(
     "a light built from a resolved state and one animated to it shine the same way",
-    vclose(renderedDirection(buildLight(resolvedAt(2))), renderedDirection(lamp)),
+    vclose(
+      renderedDirection(buildLight(resolvedAt(2))),
+      renderedDirection(lamp),
+    ),
   );
 };

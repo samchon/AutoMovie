@@ -59,7 +59,9 @@ export const evaluateAutoMovieStorySync = (props: {
   const entries = props.events.map((entry) => {
     const realized = props.realized(entry.shot, entry.event);
     const localSeconds =
-      realized === null || Number.isFinite(realized) === false ? null : realized;
+      realized === null || Number.isFinite(realized) === false
+        ? null
+        : realized;
     const pin = props.pin(entry.shot);
     const mapped =
       localSeconds === null || pin === null

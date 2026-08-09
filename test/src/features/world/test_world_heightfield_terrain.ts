@@ -82,8 +82,8 @@ const hillHeight = (point: { x: number; z: number }): number =>
  *    terraced square states its steps in the order it wants them read, and a
  *    point on a footprint edge is on that surface rather than off it.
  * 7. A point over no surface at all has no ground, which is a different answer
- *    from ground at zero and has to stay one: a formation over nothing keeps the
- *    height it was staged at instead of being dropped to the world origin.
+ *    from ground at zero and has to stay one: a formation over nothing keeps
+ *    the height it was staged at instead of being dropped to the world origin.
  * 8. The builder refuses what it cannot sample deterministically: a degenerate
  *    pitch, a lattice too small to interpolate across, a blank id, and a
  *    sampler that answers with a non-finite height.
@@ -98,7 +98,11 @@ export const test_world_heightfield_terrain = (): void => {
     "every lattice point reads back its own authored height",
     lattice.every((z) =>
       lattice.every((x) =>
-        nclose(worldSurfaceHeight(field, { x, z }), hillHeight({ x, z }), 1e-12),
+        nclose(
+          worldSurfaceHeight(field, { x, z }),
+          hillHeight({ x, z }),
+          1e-12,
+        ),
       ),
     ),
   );
@@ -270,7 +274,8 @@ export const test_world_heightfield_terrain = (): void => {
     namedFacts([
       [
         "stepFirst",
-        () => worldGroundSurface([step, terrace], { x: 0, z: 0 })?.id === "step",
+        () =>
+          worldGroundSurface([step, terrace], { x: 0, z: 0 })?.id === "step",
       ],
       [
         "terraceFirst",
@@ -389,7 +394,8 @@ export const test_world_heightfield_terrain = (): void => {
       ["missing", () => worldSurfaceHeight(malformed, { x: 1, z: 1 }) === 0],
       [
         "blended",
-        () => nclose(worldSurfaceHeight(malformed, { x: 0.5, z: 0 }), 1.5, 1e-12),
+        () =>
+          nclose(worldSurfaceHeight(malformed, { x: 0.5, z: 0 }), 1.5, 1e-12),
       ],
     ]),
     { stored: true, missing: true, blended: true },

@@ -60,10 +60,48 @@ by id and never by index.
 `LIGHT_CHANNEL_PROPERTIES` is the single table both halves read.
 `validateShotArtifact` admits a pointer only when the table has an entry whose
 `carries` accepts the staged light's kind, and holds every keyframe to that
-entry's `bounds` (the same range the scene gate enforces on the staged value);
-the applier writes through the same entry. Adding a property to
-`AutoMovieLightProperty` without giving it that pair does not compile, so the
-admitted set and the applied set cannot drift.
+entry's `bounds` (the same range the scene gate enforces on the staged value)
+and to its `valueFault`, the rule a whole keyframe value carries when the
+components are not the whole story; the applier writes through the same entry.
+Adding a property to `AutoMovieLightProperty` without giving it that pair does
+not compile, so the admitted set and the applied set cannot drift.
+
+A light's PLACEMENT is in that table too: `position` (`vec3`) and `rotation`
+(`quaternion`) key a light's direction and location like any other value. glTF
+gets a moving light by hanging it on a node and animating the node, but
+automovie stages lights outside `nodes`, so without these a light's direction
+would be fixed for the whole film. The kind split follows the physics: a
+directional light is infinitely distant and carries no `position`, a point light
+radiates every way and carries no `rotation`, a spot carries both. `scale` is
+deliberately not an axis — a punctual light has no extent for it to mean
+anything about. `rotation` is a `quaternion` rather than a `vec4` so the sampler
+slerps it, and its keyframes are held to unit length, the same rule the scene
+gate holds a staged transform to.
+
+## Light over a production
+
+`shot.lightMotions` runs on a shot's clock, which is seconds long. A production
+whose length is part of its subject states its sources once, on the STORY clock,
+through `IAutoMovieProductionLighting`, and every shot inherits their state at
+its own story moment:
+
+```ts
+inheritProductionLighting({ lighting, lights: scene.lights, pin, seconds });
+```
+
+`pin` is the shot's existing `IAutoMovieShotStoryTime`, so no second clock is
+introduced: `autoMovieStoryTime` maps the shot-local second onto the story
+second, and `resolveProductionLighting` answers with the same
+`resolveShotLighting` pass the per-shot axis uses. Two shots pinned an hour apart
+in the story inherit an hour apart however the edit cuts them, and a shot with a
+`rate` carries the source at its own pace.
+
+It is purely additive. No production lighting, or a shot with no story pin,
+returns the staged lights element by element unchanged. Otherwise the merge is by
+id: a staged light the production names is replaced in place, one it does not
+name comes back by identity, and a source no scene staged is appended after them.
+Hand the result to the applier that plays `shot.lightMotions` and the shot's own
+statement lands on top of the inherited one.
 
 The transform clips are unchanged: `cameraMotion`, `objectMotions`, and a
 coverage take still refuse every pointer channel, because `applyObjectMotion`

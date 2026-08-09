@@ -124,12 +124,13 @@ const placed = (
  *
  * Scenarios:
  *
- * 1. A flat floor places every member exactly where a formation with no terrain
- *    at all places it, at any floor height. This is the negative twin and the
+ * 1. A flat floor places every member exactly where a formation with no terrain at
+ *    all places it, at any floor height. This is the negative twin and the
  *    compatibility claim in one: sampling ground changed nothing about level
  *    ground.
  * 2. On a slope every member sits on the slope: its height is the terrain's own
- *    height at its own position, member by member, not one height for the unit.
+ *    height at its own position, member by member, not one height for the
+ *    unit.
  * 3. Two members standing on different ground stand at different heights, and the
  *    difference is the terrain's. A unit four ranks deep on a slope is four
  *    heights, which is the thing that could not be expressed before.
@@ -141,13 +142,13 @@ const placed = (
  *    the ground overrides.
  * 6. Terrain that does not reach a member leaves that member at the staged height
  *    rather than dropping it to the world origin, and terrain that does not
- *    reach the anchor leaves the whole unit at the staged height, because relief
- *    without a datum is not a rise but a guess.
+ *    reach the anchor leaves the whole unit at the staged height, because
+ *    relief without a datum is not a rise but a guess.
  * 7. The full slot, not only the position, carries the relief, so a consumer
  *    reading a member's whole record sees the same height as one reading only
  *    where it stands.
- * 8. The same design places the same army twice, because relief is arithmetic
- *    over stored numbers and nothing about the machine can reach it.
+ * 8. The same design places the same army twice, because relief is arithmetic over
+ *    stored numbers and nothing about the machine can reach it.
  */
 export const test_world_formation_ground = (): void => {
   const bare = placed();
@@ -216,16 +217,12 @@ export const test_world_formation_ground = (): void => {
       [
         "fourHeights",
         () =>
-          new Set(
-            climbed.map((point) => Math.round(point.y * 1e6) / 1e6),
-          ).size === RANKS,
+          new Set(climbed.map((point) => Math.round(point.y * 1e6) / 1e6))
+            .size === RANKS,
       ],
       // Across a rank the slope is level, so the files share a height and the
       // difference above really is the terrain rather than slot index noise.
-      [
-        "acrossARank",
-        () => nclose(climbed[0]!.y, climbed[FILES - 1]!.y, 1e-9),
-      ],
+      ["acrossARank", () => nclose(climbed[0]!.y, climbed[FILES - 1]!.y, 1e-9)],
     ]),
     { differ: true, byTheTerrain: true, fourHeights: true, acrossARank: true },
   );
@@ -367,11 +364,7 @@ export const test_world_formation_ground = (): void => {
   TestValidator.predicate(
     "the whole slot carries the relief, not only the position query",
     Array.from({ length: COUNT }, (_unused, slot) => slot).every((slot) =>
-      nclose(
-        formationSlot(design, slot).position.y,
-        climbed[slot]!.y,
-        1e-12,
-      ),
+      nclose(formationSlot(design, slot).position.y, climbed[slot]!.y, 1e-12),
     ),
   );
 

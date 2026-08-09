@@ -151,15 +151,15 @@ const refusals = (
  *
  * Scenarios:
  *
- * 1. The compiled record keeps the terrain reaching its footprint, in the order
- *    it was declared, and drops terrain that reaches none of it: a shipped
- *    record carries what its members stand on and not the whole world.
+ * 1. The compiled record keeps the terrain reaching its footprint, in the order it
+ *    was declared, and drops terrain that reaches none of it: a shipped record
+ *    carries what its members stand on and not the whole world.
  * 2. On a bank the compiled bounds and centroid carry the relief, so every
  *    consumer reading a unit's extent — culling, framing, subject extent —
  *    reads a unit that has height rather than a flat slab.
  * 3. The viewer regenerates exactly the placement the compiler materialized, slot
- *    for slot. Two answers to where a member stands is how a gate and a renderer
- *    come to disagree, and the drawn one would be the second.
+ *    for slot. Two answers to where a member stands is how a gate and a
+ *    renderer come to disagree, and the drawn one would be the second.
  * 4. A promoted hero's compiler-owned transform carries the relief too, so the
  *    named member of a unit stands with the anonymous ones rather than at the
  *    group's height.
@@ -287,8 +287,7 @@ export const test_mcp_production_formation_relief = (): void => {
       // that was correct.
       [
         "withinTolerance",
-        () =>
-          refusals(flatSpace(2), staged({ height: 2 - 5e-4 })).length === 0,
+        () => refusals(flatSpace(2), staged({ height: 2 - 5e-4 })).length === 0,
       ],
     ]),
     { on: true, above: true, withinTolerance: true },

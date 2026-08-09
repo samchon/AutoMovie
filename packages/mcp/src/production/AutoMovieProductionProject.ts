@@ -44,6 +44,10 @@ import {
   probeProductionMedia,
   probeProductionVideoMp4,
 } from "./probeProductionMedia";
+import {
+  AUTOMOVIE_REGISTERED_ARCHETYPES,
+  AutoMovieModelArchetypeRegistry,
+} from "./productionArchetypes";
 import { readAutoMovieProductionOwnedFile } from "./productionRenderJob";
 import {
   canonicalAutoMovieRepaintRuntimeIdentity,
@@ -60,10 +64,6 @@ import {
   assertProductionRootNamespaceLease,
   releaseProductionRootNamespace,
 } from "./rootNamespaceLock";
-import {
-  AUTOMOVIE_REGISTERED_ARCHETYPES,
-  AutoMovieModelArchetypeRegistry,
-} from "./productionArchetypes";
 import {
   IAutoMovieProductionDesignGraph,
   validateAutoMovieProductionGraph,

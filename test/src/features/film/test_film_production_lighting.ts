@@ -71,10 +71,12 @@ const lighting = (
   name: null,
   lights: [daylight],
   motions: [
-    storyClip("daylightTurns", pointer("/lights/daylight/rotation", "quaternion"), [0, SPAN], [
-      ...keyed(aboutY(0)),
-      ...keyed(aboutY(90)),
-    ]),
+    storyClip(
+      "daylightTurns",
+      pointer("/lights/daylight/rotation", "quaternion"),
+      [0, SPAN],
+      [...keyed(aboutY(0)), ...keyed(aboutY(90))],
+    ),
     storyClip(
       "daylightFades",
       pointer("/lights/daylight/intensity", "scalar"),
@@ -132,24 +134,24 @@ const lightOf = (lights: IAutoMovieLight[], id: string): IAutoMovieLight =>
  *
  * Scenarios:
  *
- * 1. Two shots at different story times inherit DIFFERENT states from one
- *    source: shots pinned at the start, the middle and the end of the span read
- *    0°/3, 45°/1.75 and 90°/0.5. One declaration, three lightings, and nothing
- *    in any shot restating it.
- * 2. A shot's `rate` carries the same source at the shot's own pace: a two
- *    second shot pinned at 900 story seconds per shot second covers the whole
- *    span from within, so a film may run a long stretch of story inside a short
- *    take and the light crosses it correctly.
- * 3. The additivity promise, in both of its forms. A production that declares
- *    no lighting leaves the staged lights untouched, ELEMENT BY ELEMENT, and so
+ * 1. Two shots at different story times inherit DIFFERENT states from one source:
+ *    shots pinned at the start, the middle and the end of the span read 0°/3,
+ *    45°/1.75 and 90°/0.5. One declaration, three lightings, and nothing in any
+ *    shot restating it.
+ * 2. A shot's `rate` carries the same source at the shot's own pace: a two second
+ *    shot pinned at 900 story seconds per shot second covers the whole span
+ *    from within, so a film may run a long stretch of story inside a short take
+ *    and the light crosses it correctly.
+ * 3. The additivity promise, in both of its forms. A production that declares no
+ *    lighting leaves the staged lights untouched, ELEMENT BY ELEMENT, and so
  *    does a shot carrying no story pin — an unpinned shot claims no story
  *    moment, so there is none at which to read a story-clock source, and
  *    assuming one would put every unpinned shot under the same light and call
  *    it a fact.
- * 4. The merge, by id and in a fixed order: a staged light the production names
- *    is replaced in place by the inherited state, a staged light it does not
- *    name comes back by identity, and a source the scene never staged is
- *    appended after them in declaration order.
+ * 4. The merge, by id and in a fixed order: a staged light the production names is
+ *    replaced in place by the inherited state, a staged light it does not name
+ *    comes back by identity, and a source the scene never staged is appended
+ *    after them in declaration order.
  */
 export const test_film_production_lighting = (): void => {
   const staged: IAutoMovieLight[] = [practical, stagedDaylight];
@@ -171,7 +173,10 @@ export const test_film_production_lighting = (): void => {
   TestValidator.equals(
     "shots pinned at different story times inherit different states from one source",
     namedFacts([
-      ["opensFacingMinusZ", () => vclose(directionOf(opening), { x: 0, y: 0, z: -1 })],
+      [
+        "opensFacingMinusZ",
+        () => vclose(directionOf(opening), { x: 0, y: 0, z: -1 }),
+      ],
       ["opensAtFullIntensity", () => nclose(opening.intensity, 3)],
       [
         "turnsHalfwayByMidSpan",
@@ -183,7 +188,10 @@ export const test_film_production_lighting = (): void => {
           }),
       ],
       ["fadesHalfwayByMidSpan", () => nclose(midday.intensity, 1.75)],
-      ["endsFacingMinusX", () => vclose(directionOf(closing), { x: -1, y: 0, z: 0 })],
+      [
+        "endsFacingMinusX",
+        () => vclose(directionOf(closing), { x: -1, y: 0, z: 0 }),
+      ],
       ["endsDim", () => nclose(closing.intensity, 0.5)],
     ]),
     {

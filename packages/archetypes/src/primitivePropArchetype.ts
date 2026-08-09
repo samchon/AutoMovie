@@ -27,8 +27,8 @@ const DIMENSIONS: Readonly<Record<string, readonly string[]>> = {
  *
  * `shape` discriminates the parameter map, so the plan below narrows both the
  * required and the accepted keys to the ones that shape actually consumes. A
- * dimension the selected shape ignores is refused rather than stored, because
- * a stored value nothing reads is a claim the render never honours.
+ * dimension the selected shape ignores is refused rather than stored, because a
+ * stored value nothing reads is a claim the render never honours.
  */
 export const PRIMITIVE_PROP_ARCHETYPE: IAutoMovieModelArchetype = {
   id: "primitive-prop",
@@ -70,7 +70,8 @@ const projectionRadius = (parameters: AutoMovieArchetypeParameters): number => {
   if (shape === "capsule") return number("radius") + number("height") / 2;
   if (shape === "cylinder" || shape === "cone")
     return Math.hypot(number("radius"), number("height") / 2);
-  if (shape === "plane") return Math.hypot(number("width"), number("depth")) / 2;
+  if (shape === "plane")
+    return Math.hypot(number("width"), number("depth")) / 2;
   return Math.hypot(number("width"), number("height"), number("depth")) / 2;
 };
 
@@ -84,7 +85,10 @@ const build = (
       name: "primitive",
       geometry: {
         type: "primitive",
-        shape: shapeOf(input.parameters, stringParameter(input.parameters, "shape")),
+        shape: shapeOf(
+          input.parameters,
+          stringParameter(input.parameters, "shape"),
+        ),
       },
       material: input.material,
       attachedBone: null,
@@ -96,10 +100,7 @@ const build = (
 const shapeOf = (
   parameters: AutoMovieArchetypeParameters,
   shape: string,
-): Extract<
-  IAutoMovieModelPart["geometry"],
-  { type: "primitive" }
->["shape"] => {
+): Extract<IAutoMovieModelPart["geometry"], { type: "primitive" }>["shape"] => {
   if (shape === "box")
     return {
       type: "box",

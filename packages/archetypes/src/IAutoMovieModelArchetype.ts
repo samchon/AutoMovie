@@ -27,8 +27,8 @@ export interface IAutoMovieArchetypeRefusal {
  *
  * A plan is computed from the parameters themselves because an archetype may
  * take a discriminating parameter whose value decides which other keys are
- * meaningful. The design gate owns the diagnostics; the archetype owns only
- * the facts they are derived from.
+ * meaningful. The design gate owns the diagnostics; the archetype owns only the
+ * facts they are derived from.
  */
 export interface IAutoMovieArchetypeParameterPlan {
   /** Keys that must be present. */

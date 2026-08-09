@@ -3542,7 +3542,16 @@ const axialBoneHeights = (
   return heights;
 };
 
-/** The column one part fills on its model's axis, or `null` when it fills none. */
+/**
+ * The column one part fills on its model's axis, or `null` when it fills none.
+ *
+ * A part's own scale is applied rather than refused, because a scaled part is
+ * still a solid: the disc inside an ellipse is the disc of its narrower
+ * half-axis, and a mirrored one occupies exactly what its unmirrored twin did.
+ * That is also what makes one reading at the end enough — a dimension that was
+ * never real, and a scale that erases one, both arrive here as a column with
+ * nothing inside it.
+ */
 const axialPartColumn = (
   part: IAutoMovieModel["parts"][number],
   heights: ReadonlyMap<AutoMovieHumanoidBone, number>,
@@ -3550,14 +3559,18 @@ const axialPartColumn = (
   const solid = columnOfShape(part.geometry);
   if (solid === null) return null;
   const base = axialPartHeight(part, heights);
-  return base === null
-    ? null
-    : {
-        radius: solid.radius,
-        bottom: base + solid.centre - solid.half,
-        top: base + solid.centre + solid.half,
-      };
+  if (base === null) return null;
+  const scale = part.transform === null ? UNIT_SCALE : part.transform.scale;
+  const radius = solid.radius * Math.min(Math.abs(scale.x), Math.abs(scale.z));
+  const centre = base + solid.centre * scale.y;
+  const half = solid.half * Math.abs(scale.y);
+  return finitePositive(radius) && finitePositive(half)
+    ? { radius, bottom: centre - half, top: centre + half }
+    : null;
 };
+
+/** The scale a part with no transform of its own is drawn at. */
+const UNIT_SCALE: IAutoMovieVector3 = { x: 1, y: 1, z: 1 };
 
 /**
  * Height above the model's origin at which one part rides, or `null` off-axis.
@@ -3575,16 +3588,21 @@ const axialPartHeight = (
   if (bone === undefined) return null;
   const local = part.transform;
   if (local === null) return bone;
-  return local.translation.x === 0 &&
-    local.translation.z === 0 &&
-    local.rotation.x === 0 &&
-    local.rotation.z === 0 &&
-    local.scale.x === 1 &&
-    local.scale.y === 1 &&
-    local.scale.z === 1
+  return vertical(local.translation) && vertical(local.rotation)
     ? bone + local.translation.y
     : null;
 };
+
+/**
+ * True when one displacement or turn leaves the model's vertical axis alone.
+ *
+ * A quaternion with no `x` and no `z` part turns about the vertical and nothing
+ * else, which is exactly the turn a column of circular section does not notice.
+ * A displacement with neither is a move straight up or down the axis it already
+ * stood on.
+ */
+const vertical = (value: { x: number; z: number }): boolean =>
+  value.x === 0 && value.z === 0;
 
 /**
  * The disc one primitive shape certainly fills, and the height it fills it
@@ -3602,35 +3620,26 @@ const columnOfShape = (
   if (geometry.type !== "primitive") return null;
   const shape = geometry.shape;
   if (shape.type === "sphere")
-    return solidColumn(shape.radius, 0, shape.radius);
+    return { radius: shape.radius, centre: 0, half: shape.radius };
   if (shape.type === "capsule" || shape.type === "cylinder")
-    return solidColumn(shape.radius, 0, shape.height / 2);
+    return { radius: shape.radius, centre: 0, half: shape.height / 2 };
   if (shape.type === "cone")
-    return solidColumn(shape.radius / 2, shape.height / 4, shape.height / 4);
+    return {
+      radius: shape.radius / 2,
+      centre: shape.height / 4,
+      half: shape.height / 4,
+    };
   if (shape.type === "box")
-    return solidColumn(
-      Math.min(shape.width, shape.depth) / 2,
-      0,
-      shape.height / 2,
-    );
+    return {
+      radius: Math.min(shape.width, shape.depth) / 2,
+      centre: 0,
+      half: shape.height / 2,
+    };
   return null;
 };
 
-/**
- * One measured disc, or `null` when the dimensions it was read from are not
- * real.
- */
-const solidColumn = (
-  radius: number,
-  centre: number,
-  half: number,
-): { radius: number; centre: number; half: number } | null =>
-  finiteAbove(radius, 0) && finiteAbove(half, 0)
-    ? { radius, centre, half }
-    : null;
-
-const finiteAbove = (value: number, floor: number): boolean =>
-  Number.isFinite(value) && value > floor;
+const finitePositive = (value: number): boolean =>
+  Number.isFinite(value) && value > 0;
 
 /** One unit the overlap gate measures, with everything it is measured by. */
 interface IFormationOverlapUnit {

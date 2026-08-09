@@ -27,7 +27,8 @@ import {
 
 const STORY_CLOCK = {
   units: "second",
-  epoch: "Story time zero is the instant the production's first tracked action begins.",
+  epoch:
+    "Story time zero is the instant the production's first tracked action begins.",
 } as const;
 
 /**
@@ -86,19 +87,34 @@ const storySync = (
 const codes = (diagnostics: readonly IAutoMovieDiagnostic[]): Set<string> =>
   new Set(diagnostics.map((diagnostic) => diagnostic.code));
 
+/** The one compiled fact a cross-shot claim reads: when an event realized. */
+const realizationOf = (
+  shot: string,
+  event: string,
+  time: number,
+): IAutoMovieCompiledContractRealization => ({
+  version: 1,
+  shot,
+  opening: [],
+  closing: [],
+  events: [{ id: event, time, predicates: [], passed: true }],
+  camera: [],
+  formations: [],
+});
+
 /**
  * The story clock is optional, and a cross-shot claim on it is refusable.
  *
  * Scenarios:
  *
- * 1. A production that states no story time validates exactly as it does
- *    without one, and so does a pinned production that keeps the clock.
+ * 1. A production that states no story time validates exactly as it does without
+ *    one, and so does a pinned production that keeps the clock.
  * 2. A pin without a declared clock, a blank epoch, a non-finite origin, and a
  *    non-positive rate are each refused at their own field.
  * 3. A cross-shot claim must target the film, name at least two distinct
  *    shot-and-event pairs that exist, and address only pinned shots.
- * 4. A claim whose declared windows can never fall inside its tolerance is
- *    refused before anything is compiled, because no source could satisfy it.
+ * 4. A claim whose declared windows can never fall inside its tolerance is refused
+ *    before anything is compiled, because no source could satisfy it.
  */
 export const test_mcp_production_story_clock = (): void => {
   const starter: IAutoMovieProductionDesignGraph = {
@@ -390,6 +406,27 @@ export const test_mcp_production_story_clock = (): void => {
             }),
           ).has("design-range-invalid"),
       ],
+      // A field the author has yet to fix is diagnosed once, where it lives. A
+      // reachability verdict derived from it would be a second complaint about
+      // the same unfixed number, so the cross-shot check stands down until the
+      // pin and the window can answer.
+      ["unusableRateIsNotRestated", () => derivedOnce({ rate: Number.NaN })],
+      [
+        "openWindowIsNotRestated",
+        () => derivedOnce(undefined, { from: Number.NaN, to: 3 }),
+      ],
+      [
+        "unboundedWindowIsNotRestated",
+        () =>
+          derivedOnce(undefined, {
+            from: 1.5,
+            to: Number.POSITIVE_INFINITY,
+          }),
+      ],
+      [
+        "reversedWindowIsNotRestated",
+        () => derivedOnce(undefined, { from: 3, to: 1.5 }),
+      ],
     ]),
     {
       shotTarget: true,
@@ -399,6 +436,10 @@ export const test_mcp_production_story_clock = (): void => {
       absentEvent: true,
       unpinnedShot: true,
       unusableTolerance: true,
+      unusableRateIsNotRestated: true,
+      openWindowIsNotRestated: true,
+      unboundedWindowIsNotRestated: true,
+      reversedWindowIsNotRestated: true,
     },
   );
 
@@ -493,8 +534,23 @@ export const test_mcp_production_story_clock = (): void => {
           acceptanceCriterionShots(storySync()).join(",") === "opening,answer",
       ],
       [
-        "frameCriterionReadsItsOwningShot",
-        () => acceptanceCriterionShots(acceptanceScenarios()[0]!).length <= 1,
+        "shotLocalFrameCriterionReadsNoCriterionShot",
+        () => acceptanceCriterionShots(acceptanceScenarios()[0]!).length === 0,
+      ],
+      [
+        "filmLevelEventCriterionReadsItsOwningShot",
+        () =>
+          acceptanceCriterionShots({
+            id: "film-event",
+            target: { kind: "film", id: "fixture-film" },
+            criterion: {
+              kind: "event",
+              shot: "opening",
+              event: "mark-a",
+              expectation: "The compiled event remains inside the edit.",
+            },
+            required: true,
+          }).join(",") === "opening",
       ],
       [
         "metricCriterionReadsNoShot",
@@ -526,7 +582,8 @@ export const test_mcp_production_story_clock = (): void => {
       refusesUnrealizedEvent: true,
       refusesAbsentRealization: true,
       crossShotCriterionReadsEveryNamedShot: true,
-      frameCriterionReadsItsOwningShot: true,
+      shotLocalFrameCriterionReadsNoCriterionShot: true,
+      filmLevelEventCriterionReadsItsOwningShot: true,
       metricCriterionReadsNoShot: true,
       crossShotClaimAddressesEachNamedShot: true,
     },
