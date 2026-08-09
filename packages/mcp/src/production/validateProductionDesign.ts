@@ -1,4 +1,7 @@
-import { validateProfileCapabilities } from "@automovie/engine";
+import {
+  autoMovieStoryTime,
+  validateProfileCapabilities,
+} from "@automovie/engine";
 import {
   IAutoMovieAcceptanceScenario,
   IAutoMovieDiagnostic,
@@ -16,6 +19,11 @@ import {
   compareCodeUnits,
   encodeAutoMoviePathSegment,
 } from "./contentIdentity";
+import {
+  AUTOMOVIE_REGISTERED_ARCHETYPES,
+  AutoMovieModelArchetypeRegistry,
+  IAutoMovieModelArchetype,
+} from "./productionArchetypes";
 
 /** In-memory design graph used for cross-reference validation. */
 export interface IAutoMovieProductionDesignGraph {
@@ -32,30 +40,6 @@ export interface IAutoMovieProductionDesignGraph {
   /** Acceptance scenarios keyed by id. */
   acceptance: ReadonlyMap<string, IAutoMovieAcceptanceScenario>;
 }
-
-const SUPPORTED_MODEL_CAPABILITIES: Record<
-  IAutoMovieModelRecipe["archetype"],
-  ReadonlySet<string>
-> = {
-  stickman: new Set(["signal"]),
-  "primitive-prop": new Set(),
-};
-
-const SUPPORTED_STICKMAN_ATTACHMENT_BONES = new Set([
-  "hips",
-  "spine",
-  "head",
-  "leftUpperArm",
-  "leftLowerArm",
-  "leftHand",
-  "rightUpperArm",
-  "rightLowerArm",
-  "rightHand",
-  "leftUpperLeg",
-  "leftLowerLeg",
-  "rightUpperLeg",
-  "rightLowerLeg",
-]);
 
 /** Maximum exact production raster accepted by design and frame review. */
 export const AUTOMOVIE_MAX_FRAME_PIXELS = 16_777_216;
@@ -88,6 +72,7 @@ export const AUTOMOVIE_GENERAL_INSTANCE_BUFFER_BUDGET_BYTES = 32 * 1024 * 1024;
 export const validateAutoMovieProductionGraph = (
   graph: IAutoMovieProductionDesignGraph,
   productionId: string = graph.production?.id ?? "unbound-production",
+  archetypes: AutoMovieModelArchetypeRegistry = AUTOMOVIE_REGISTERED_ARCHETYPES,
 ): IAutoMovieDiagnostic[] => {
   const diagnostics: IAutoMovieDiagnostic[] = [];
   const productionRoot = `.automovie/design/${encodeAutoMoviePathSegment(
@@ -118,6 +103,14 @@ export const validateAutoMovieProductionGraph = (
         target,
         file,
         'visualDelivery must be either "deterministic" or "repainted". Choose the final visual delivery layer in the tracked production design record.',
+      );
+    if (graph.production.storyClock !== undefined)
+      text(
+        diagnostics,
+        graph.production.storyClock.epoch,
+        target,
+        file,
+        "storyClock.epoch",
       );
     integer(
       diagnostics,
@@ -1022,6 +1015,31 @@ export const validateAutoMovieProductionGraph = (
         file,
         `Shot "${id}" durationSeconds is off the ${graph.production.frameFormat.fps}fps production clock. Choose an exact integer frame count divided by fps in the tracked shot contract record.`,
       );
+    if (shot.storyTime !== undefined) {
+      if (graph.production !== null && graph.production.storyClock === undefined)
+        invalid(
+          diagnostics,
+          "design-story-clock-absent",
+          target,
+          file,
+          `Shot "${id}" is pinned to a story clock the production does not keep. Add storyClock to the tracked production design record, or remove ${id}.storyTime.`,
+        );
+      finite(
+        diagnostics,
+        shot.storyTime.originSeconds,
+        target,
+        file,
+        "storyTime.originSeconds",
+      );
+      if (shot.storyTime.rate !== undefined)
+        positive(
+          diagnostics,
+          shot.storyTime.rate,
+          target,
+          file,
+          "storyTime.rate",
+        );
+    }
     const participantIds = new Set<string>();
     for (const participant of shot.participants) {
       text(diagnostics, participant.id, target, file, "participants.id");
@@ -1218,13 +1236,22 @@ export const validateAutoMovieProductionGraph = (
         `Acceptance file identity is "${id}" but value id is "${acceptance.id}". Rewrite it as a tracked acceptance record using one matching id.`,
       );
     const criterion = acceptance.criterion;
-    if (criterion.kind === "frame" || criterion.kind === "event")
+    if (criterion.kind !== "metric")
       text(
         diagnostics,
         criterion.expectation,
         target,
         file,
         "criterion.expectation",
+      );
+    if (criterion.kind === "story-sync")
+      validateStorySyncCriterion(
+        diagnostics,
+        graph,
+        acceptance,
+        criterion,
+        target,
+        file,
       );
     if (acceptance.target.kind === "shot") {
       const shot = graph.shots.get(acceptance.target.id);
@@ -1444,6 +1471,146 @@ const validateAcceptanceCriterionAgainstShot = (
       file,
       `event "${criterion.event}"`,
       `add that event to ${shot.id}.events or change ${acceptanceId}.criterion`,
+    );
+};
+
+/**
+ * Validate one cross-shot simultaneity claim before anything is compiled.
+ *
+ * Two checks live here that compilation cannot make cheaper. The first is
+ * addressability: every named shot must exist, own the named event, and carry a
+ * story-clock pin, because an unpinned shot has no story time and the claim
+ * would be unmeasurable rather than false. The second is satisfiability: the
+ * declared event windows already bound where each realized time can land, so
+ * mapping those windows through their pins says whether any realization could
+ * ever satisfy the tolerance. A claim no source could discharge is refused now
+ * instead of after a compile that was never going to work.
+ */
+const validateStorySyncCriterion = (
+  diagnostics: IAutoMovieDiagnostic[],
+  graph: IAutoMovieProductionDesignGraph,
+  acceptance: IAutoMovieAcceptanceScenario,
+  criterion: Extract<
+    IAutoMovieAcceptanceScenario["criterion"],
+    { kind: "story-sync" }
+  >,
+  target: string,
+  file: string,
+): void => {
+  const id = acceptance.id;
+  if (acceptance.target.kind !== "film")
+    invalid(
+      diagnostics,
+      "design-target-invalid",
+      target,
+      file,
+      `Acceptance "${id}" compares events across shots, so no single shot owns it. Change ${id}.target to the film, or state a shot-local event criterion instead.`,
+    );
+  if (graph.production !== null && graph.production.storyClock === undefined)
+    invalid(
+      diagnostics,
+      "design-story-clock-absent",
+      target,
+      file,
+      `Acceptance "${id}" measures story time the production does not keep. Add storyClock to the tracked production design record, or remove ${id}.`,
+    );
+  const toleranceUsable =
+    Number.isFinite(criterion.toleranceSeconds) &&
+    criterion.toleranceSeconds >= 0;
+  if (toleranceUsable === false)
+    invalid(
+      diagnostics,
+      "design-range-invalid",
+      target,
+      file,
+      `criterion.toleranceSeconds must be a finite value of zero or above. Fix ${id}.criterion in the tracked acceptance record.`,
+    );
+  if (criterion.events.length < 2) {
+    invalid(
+      diagnostics,
+      "design-collection-cardinality-invalid",
+      target,
+      file,
+      `Acceptance "${id}" must name at least two events; nothing is simultaneous on its own. Fix ${id}.criterion.events in the tracked acceptance record.`,
+    );
+    return;
+  }
+  const seen = new Set<string>();
+  const windows: Array<{ from: number; to: number }> = [];
+  for (const entry of criterion.events) {
+    const key = `${entry.shot}\u0000${entry.event}`;
+    if (seen.has(key))
+      invalid(
+        diagnostics,
+        "design-duplicate-id",
+        target,
+        file,
+        `Event "${entry.event}" of shot "${entry.shot}" appears twice in ${id}.criterion.events. An event is always simultaneous with itself; name each addressed event once.`,
+      );
+    seen.add(key);
+    const shot = graph.shots.get(entry.shot);
+    if (shot === undefined) {
+      missing(
+        diagnostics,
+        target,
+        file,
+        `shot "${entry.shot}"`,
+        `Create or correct the shot contract record for "${entry.shot}" or change ${id}.criterion.events`,
+      );
+      continue;
+    }
+    const event = shot.events.find((candidate) => candidate.id === entry.event);
+    if (event === undefined) {
+      missing(
+        diagnostics,
+        target,
+        file,
+        `event "${entry.event}" in shot "${entry.shot}"`,
+        `add that event to ${entry.shot}.events or change ${id}.criterion.events`,
+      );
+      continue;
+    }
+    const pin = shot.storyTime;
+    if (pin === undefined) {
+      invalid(
+        diagnostics,
+        "design-story-pin-missing",
+        target,
+        file,
+        `Shot "${entry.shot}" carries no story-clock pin, so event "${entry.event}" has no story time to compare. Add storyTime to the tracked shot contract record for "${entry.shot}", or drop it from ${id}.criterion.events.`,
+      );
+      continue;
+    }
+    windows.push({
+      from: autoMovieStoryTime(pin, event.window.from),
+      to: autoMovieStoryTime(pin, event.window.to),
+    });
+  }
+  if (
+    toleranceUsable === false ||
+    windows.length !== criterion.events.length ||
+    windows.some(
+      (window) =>
+        Number.isFinite(window.from) === false ||
+        Number.isFinite(window.to) === false ||
+        window.from > window.to,
+    )
+  )
+    return;
+  // Every realized time is confined to its own mapped window, so the closest
+  // the events can possibly be placed is the latest window opening minus the
+  // earliest window closing. Nothing below zero: overlapping windows can always
+  // coincide exactly.
+  const latestOpening = Math.max(...windows.map((window) => window.from));
+  const earliestClosing = Math.min(...windows.map((window) => window.to));
+  const closest = Math.max(0, latestOpening - earliestClosing);
+  if (closest > criterion.toleranceSeconds)
+    invalid(
+      diagnostics,
+      "design-story-sync-unsatisfiable",
+      target,
+      file,
+      `Acceptance "${id}" claims simultaneity within ${criterion.toleranceSeconds}s, but the declared event windows cannot come closer than ${closest}s on the story clock, so no source could ever satisfy it. Widen the windows, repin a shot, or raise ${id}.criterion.toleranceSeconds.`,
     );
 };
 

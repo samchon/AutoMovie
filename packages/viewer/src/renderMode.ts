@@ -1,6 +1,12 @@
 import { AutoMovieGuidePass } from "@automovie/interface";
 import * as THREE from "three";
 
+import {
+  IAutoMovieFormationCycle,
+  applyFormationCycleMaterial,
+  formationCycleOf,
+} from "./formationCycle";
+
 /**
  * A reversible render-mode override. `restore()` puts every touched material,
  * visibility flag, background, and overlay back exactly as it was, so the same
@@ -84,6 +90,12 @@ const hideNonMeshRenderables = (scene: THREE.Scene): (() => void) => {
  *   post-processing.
  * - `pose`: meshes hidden, and a line-segment overlay of every bone→child bone
  *   connection drawn over a black background: the skeleton pose pass.
+ *
+ * Every pass that swaps a material carries a formation's baked cycle onto the
+ * replacement, so a marching crowd marches in `depth`, `normal`, `mask` and
+ * `outline` exactly as it does in `beauty`. `pose` is the standing exception:
+ * an anonymous member has no bones in the scene for the overlay to draw, which
+ * is the same gap it had before the crowd could move at all.
  *
  * An unknown mode is a caller bug and throws.
  *
@@ -286,7 +298,14 @@ const applyEdgeMode = (
 ): IAutoMovieRenderModeHandle => {
   const background = scene.background;
   scene.background = new THREE.Color(0x000000);
-  const shellMaterial = makeEdgeShellMaterial(edgeWidth);
+  // One shell material per cycle (and one for everything static), because the
+  // cycle is injected into the material and a formation tier's members deform
+  // by a table of their own. Keyed rather than per mesh so a hundred chunks of
+  // one tier still compile one shell program.
+  const shellMaterials = new Map<
+    IAutoMovieFormationCycle | null,
+    THREE.ShaderMaterial
+  >();
   const fill = overrideMaterials(
     scene,
     "outline",
@@ -297,6 +316,13 @@ const applyEdgeMode = (
   // under the mesh's own parent, grouped by name for a recognizable scene.
   const shells: THREE.Object3D[] = [];
   for (const mesh of collectMeshes(scene)) {
+    const cycle = formationCycleOf(mesh);
+    let shellMaterial = shellMaterials.get(cycle);
+    if (shellMaterial === undefined) {
+      shellMaterial = makeEdgeShellMaterial(edgeWidth);
+      if (cycle !== null) applyFormationCycleMaterial(shellMaterial, cycle);
+      shellMaterials.set(cycle, shellMaterial);
+    }
     const shell = mesh.clone(false) as MeshLike;
     shell.name = EDGE_SHELL_NAME;
     shell.material = shellMaterial;
@@ -307,7 +333,8 @@ const applyEdgeMode = (
     mode: "outline",
     restore: once(() => {
       for (const shell of shells) shell.parent!.remove(shell);
-      shellMaterial.dispose();
+      for (const shellMaterial of shellMaterials.values())
+        shellMaterial.dispose();
       fill.restore();
       scene.background = background;
     }),
@@ -324,6 +351,10 @@ const isMeshLike = (object: THREE.Object3D): object is MeshLike =>
 /**
  * Swap every mesh material for `make()`'s, restoring the originals and
  * disposing the created overrides.
+ *
+ * A formation's animated instance meshes carry their cycle on themselves, and
+ * the override inherits it: a guide pass that kept the rest pose while the
+ * beauty pass marched would describe a film nobody is going to see.
  */
 const overrideMaterials = (
   scene: THREE.Scene,
@@ -333,6 +364,8 @@ const overrideMaterials = (
   const swaps = collectMeshes(scene).map((mesh) => {
     const original = mesh.material;
     const override = make();
+    const cycle = formationCycleOf(mesh);
+    if (cycle !== null) applyFormationCycleMaterial(override, cycle);
     mesh.material = override;
     return { mesh, original, override };
   });
@@ -362,9 +395,23 @@ const applyMaskMode = (scene: THREE.Scene): IAutoMovieRenderModeHandle => {
     // an unassigned material); the palette index stays the CHILD index, so the
     // deterministic node→color mapping is unchanged.
     if (meshes.length === 0) return;
-    const material = new THREE.MeshBasicMaterial({ color: maskColor(index) });
-    created.push(material);
+    // One child can hold several formation tiers, each deforming by its own
+    // baked table, so the flat color is shared by cycle rather than by child.
+    // The color is still the child's: a segmentation pass keeps naming nodes,
+    // and only the vertex stage differs between the materials under one node.
+    const materials = new Map<
+      IAutoMovieFormationCycle | null,
+      THREE.Material
+    >();
     for (const mesh of meshes) {
+      const cycle = formationCycleOf(mesh);
+      let material = materials.get(cycle);
+      if (material === undefined) {
+        material = new THREE.MeshBasicMaterial({ color: maskColor(index) });
+        if (cycle !== null) applyFormationCycleMaterial(material, cycle);
+        materials.set(cycle, material);
+        created.push(material);
+      }
       originals.push({ mesh, material: mesh.material });
       mesh.material = material;
     }

@@ -138,6 +138,135 @@ export const intersectsPerspectiveFrustumSegment = (props: {
   return true;
 };
 
+/** The eight world corners of a perspective frustum, near plane first. */
+const frustumCorners = (props: {
+  camera: IAutoMovieResolvedCamera;
+  near: number;
+  far: number;
+  halfY: number;
+  aspect: number;
+}): IAutoMovieVector3[] => {
+  const halfX = props.halfY * props.aspect;
+  return [props.near, props.far].flatMap((depth) =>
+    [-1, 1].flatMap((sx) =>
+      [-1, 1].map((sy) =>
+        Vector3.add(
+          props.camera.position,
+          Quaternion.rotateVector(props.camera.rotation, {
+            x: sx * depth * halfX,
+            y: sy * depth * props.halfY,
+            z: -depth,
+          }),
+        ),
+      ),
+    ),
+  );
+};
+
+/**
+ * The twelve edges of any eight-corner box, as index pairs.
+ *
+ * Both corner lists below are built by nesting three two-valued choices, so a
+ * corner's index is those three choices read as bits and an edge is a pair
+ * differing in exactly one of them. The same twelve pairs therefore name the
+ * box's edges and the frustum's.
+ */
+const BOX_EDGES: ReadonlyArray<readonly [number, number]> = [
+  [0, 1],
+  [0, 2],
+  [0, 4],
+  [1, 3],
+  [1, 5],
+  [2, 3],
+  [2, 6],
+  [3, 7],
+  [4, 5],
+  [4, 6],
+  [5, 7],
+  [6, 7],
+];
+
+/** Whether a world-space segment meets an axis-aligned box (slab clipping). */
+const segmentMeetsBox = (
+  from: IAutoMovieVector3,
+  to: IAutoMovieVector3,
+  min: IAutoMovieVector3,
+  max: IAutoMovieVector3,
+): boolean => {
+  let lower = 0;
+  let upper = 1;
+  for (const axis of ["x", "y", "z"] as const) {
+    const start = from[axis];
+    const slope = to[axis] - start;
+    // Parallel to this pair of slabs: the whole segment shares one coordinate,
+    // so the slab decides it outright and there is no crossing to narrow with.
+    if (slope === 0) {
+      if (start < min[axis] || start > max[axis]) return false;
+      continue;
+    }
+    const first = (min[axis] - start) / slope;
+    const second = (max[axis] - start) / slope;
+    lower = Math.max(lower, Math.min(first, second));
+    upper = Math.min(upper, Math.max(first, second));
+    if (lower > upper) return false;
+  }
+  return true;
+};
+
+/**
+ * Whether a world-space axis-aligned box intersects an exact perspective-camera
+ * frustum.
+ *
+ * Both bodies are convex, and two convex polyhedra meet exactly when an edge of
+ * one meets the other: every vertex of the intersection is a vertex of one body
+ * lying inside the other, or a crossing of one body's edge with the other's
+ * face, and each of those puts some edge of one body inside the other. So the
+ * twelve box edges are clipped against the frustum's six half-spaces, and the
+ * twelve frustum edges against the box's three slabs. Neither half alone is the
+ * answer: a box small enough to sit inside the frame is found only by the
+ * first, and a frustum that pierces a mass far wider than itself — a camera
+ * standing inside a crowd, or above one — only by the second.
+ *
+ * This is what a required subject with a real extent is judged against. A
+ * segment through one point cannot answer for a mass: it reports a crowd absent
+ * whenever the frame holds its flank instead of its middle, and present
+ * whenever that one point is on screen no matter where the rest of the unit
+ * stands.
+ */
+export const intersectsPerspectiveFrustumBox = (props: {
+  camera: IAutoMovieResolvedCamera;
+  min: IAutoMovieVector3;
+  max: IAutoMovieVector3;
+  near: number;
+  far: number;
+  halfY: number;
+  aspect: number;
+}): boolean => {
+  const corners = [props.min.x, props.max.x].flatMap((x) =>
+    [props.min.y, props.max.y].flatMap((y) =>
+      [props.min.z, props.max.z].map((z) => ({ x, y, z })),
+    ),
+  );
+  for (const [from, to] of BOX_EDGES)
+    if (
+      intersectsPerspectiveFrustumSegment({
+        camera: props.camera,
+        from: corners[from]!,
+        to: corners[to]!,
+        near: props.near,
+        far: props.far,
+        halfY: props.halfY,
+        aspect: props.aspect,
+      })
+    )
+      return true;
+  const lens = frustumCorners(props);
+  for (const [from, to] of BOX_EDGES)
+    if (segmentMeetsBox(lens[from]!, lens[to]!, props.min, props.max))
+      return true;
+  return false;
+};
+
 /**
  * Whether a world-space sphere intersects an exact perspective-camera frustum.
  * Side-plane distances include plane normalization, so callers must not

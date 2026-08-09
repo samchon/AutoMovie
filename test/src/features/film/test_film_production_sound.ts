@@ -39,18 +39,18 @@ const transform = (x: number, y: number, z: number) => ({
 
 const contract = (): IAutoMovieShotContract =>
   ({
-    id: "volley-shot",
+    id: "sound-shot",
     events: [
       ["contact", "actor"],
       ["arrival", "formation"],
-      ["volley", "instances"],
+      ["impact", "instances"],
       ["break", "actor"],
       ["reveal", "formation"],
       ["transition", "actor"],
       ["trimmed", "actor"],
     ].map(([id, subject], index) => ({
       id,
-      kind: id === "trimmed" ? "transition" : id,
+      kind: id === "trimmed" ? "transition" : id === "impact" ? "contact" : id,
       window: { from: index * 0.25, to: index * 0.25 + 0.2 },
       subjects: id === "transition" ? ["actor", "formation"] : [subject],
       predicates: [{}],
@@ -62,7 +62,7 @@ const compiled = (): IAutoMovieCompiledShotSource =>
     eventSamples: [
       { id: "contact", time: 0.2 },
       { id: "arrival", time: 0.45 },
-      { id: "volley", time: 0.7 },
+      { id: "impact", time: 0.7 },
       { id: "break", time: 0.95 },
       { id: "reveal", time: 1.2 },
       { id: "transition", time: 1.45 },
@@ -114,7 +114,7 @@ const compiled = (): IAutoMovieCompiledShotSource =>
     ],
     effectCues: [],
     shot: {
-      id: "volley-shot",
+      id: "sound-shot",
       name: null,
       scene: "scene",
       duration: 3,
@@ -207,7 +207,7 @@ const timeline = (): IAutoMovieFilmTimeline =>
     totalFrames: 60,
     segments: [
       {
-        shot: "volley-shot",
+        shot: "sound-shot",
         sourceInFrame: 0,
         sourceOutFrame: 40,
         startFrame: 0,
@@ -253,8 +253,8 @@ export const test_film_production_sound = (): void => {
   const source = compiled();
   const plan = deriveProductionSoundPlan({
     timeline: timeline(),
-    contracts: new Map([["volley-shot", contract()]]),
-    compiled: new Map([["volley-shot", source]]),
+    contracts: new Map([["sound-shot", contract()]]),
+    compiled: new Map([["sound-shot", source]]),
   });
   TestValidator.equals(
     "trimmed events are omitted while every audible event stays frame-bound",
@@ -316,8 +316,8 @@ export const test_film_production_sound = (): void => {
   offsetTimeline.tracks.audio[0]!.sourceOffsetFrame = 5;
   const offsetPlan = deriveProductionSoundPlan({
     timeline: offsetTimeline,
-    contracts: new Map([["volley-shot", contract()]]),
-    compiled: new Map([["volley-shot", source]]),
+    contracts: new Map([["sound-shot", contract()]]),
+    compiled: new Map([["sound-shot", source]]),
   });
   TestValidator.equals(
     "authored cue source offsets survive planning and change source-clock phase",
@@ -592,10 +592,10 @@ export const test_film_production_sound = (): void => {
             () =>
               deriveProductionSoundPlan({
                 timeline: timeline(),
-                contracts: new Map([["volley-shot", contract()]]),
+                contracts: new Map([["sound-shot", contract()]]),
                 compiled: new Map([
                   [
-                    "volley-shot",
+                    "sound-shot",
                     {
                       ...source,
                       scene: { ...source.scene, cameras: [] },
@@ -614,9 +614,9 @@ export const test_film_production_sound = (): void => {
               deriveProductionSoundPlan({
                 timeline: timeline(),
                 contracts: new Map([
-                  ["volley-shot", { ...contract(), events: [] }],
+                  ["sound-shot", { ...contract(), events: [] }],
                 ]),
-                compiled: new Map([["volley-shot", source]]),
+                compiled: new Map([["sound-shot", source]]),
               }),
             "sampled undeclared",
           ),
@@ -630,7 +630,7 @@ export const test_film_production_sound = (): void => {
                 timeline: timeline(),
                 contracts: new Map([
                   [
-                    "volley-shot",
+                    "sound-shot",
                     {
                       ...contract(),
                       events: contract().events.map((event) => ({
@@ -640,7 +640,7 @@ export const test_film_production_sound = (): void => {
                     },
                   ],
                 ]),
-                compiled: new Map([["volley-shot", source]]),
+                compiled: new Map([["sound-shot", source]]),
               }),
             "no spatially resolved subject",
           ),

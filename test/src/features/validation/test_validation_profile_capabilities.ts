@@ -45,8 +45,8 @@ const failsAt = (
  *
  * Scenarios:
  *
- * 1. A complete mountable/destructible profile passes both the focused
- *    validator and `validateModel`.
+ * 1. A complete mountable/destructible profile passes both the focused validator
+ *    and `validateModel`.
  * 2. Profile identities are non-blank and unique, and trait kinds are unique.
  * 3. Each mountable and destructible scalar family is independently rejected at
  *    its exact path.

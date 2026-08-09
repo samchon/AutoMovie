@@ -4,6 +4,7 @@ import {
   Vector3,
   composeFormationHeroTransform,
   intersectsPerspectiveFrustumSphere,
+  placeFormationSlot,
   projectToNdc,
   reachPose,
   resolveCameraAt,
@@ -11,6 +12,7 @@ import {
   sampleClipSequence,
   sampleCompiledEffect,
   sampleFormationMotion,
+  sampleFormationSlotMotion,
   sampleMotion,
   selectFormationLod,
   transformFormationBounds,
@@ -272,14 +274,29 @@ export class AutoMovieProductionOracleService {
               ]),
             ),
           ];
+          // A member the shot has taken out of this unit is standing nowhere, so
+          // reporting it as a unit standing over a void would be a lie about a
+          // member nobody can see. A member displaced by its own cue is reported
+          // where its cue really put it, which is the same reason.
           const groundViolations = representative.filter((slot) => {
-            const point = transformPoint(
-              materializeFormationSlot(formation, slot).position,
-            );
-            const sample = groundSample(graph.world, point);
+            const placed = placeFormationSlot({
+              position: materializeFormationSlot(formation, slot).position,
+              facingDeg: runtime.facingDeg,
+              anchor: runtime.anchor,
+              baseFacingDeg: runtime.facingDeg,
+              unit: sampledMotion,
+              member: sampleFormationSlotMotion(
+                compiled.formationSlotMotions,
+                formation.id,
+                slot,
+                sampledTime,
+              ),
+            });
+            if (placed.present === false) return false;
+            const sample = groundSample(graph.world, placed.position);
             return (
               sample.walkable === false ||
-              Math.abs(sample.height - point.y) > 1e-6
+              Math.abs(sample.height - placed.position.y) > 1e-6
             );
           });
           const bounds = transformFormationBounds(
@@ -1449,23 +1466,28 @@ const toModelPoint = (
   };
 };
 
+/**
+ * What the world's terrain is under one XZ point.
+ *
+ * Both halves come from the engine: which surface is under the point and how
+ * high that surface is there. A private reading here would be a second answer
+ * beside the one a placement and a gate already use, and it would go on
+ * reporting a plane for terrain that had learned to rise. Over nothing the
+ * height is the scalar plane the engine assumed before terrain existed, which
+ * is what an oracle answering a point off the world has always reported.
+ */
 const groundSample = (
   world: IAutoMovieWorldDesign | null,
   point: { x: number; z: number },
 ): { height: number; surface: string | null; walkable: boolean } => {
-  for (const surface of world?.surfaces ?? [])
-    if (insidePolygon(point, surface.polygon))
-      return {
-        height:
-          surface.height.kind === "constant"
-            ? surface.height.value
-            : surface.height.originHeight +
-              surface.height.slopeX * point.x +
-              surface.height.slopeZ * point.z,
+  const surface = worldGroundSurface(world?.surfaces ?? [], point);
+  return surface === null
+    ? { height: 0, surface: null, walkable: false }
+    : {
+        height: worldSurfaceHeight(surface, point),
         surface: surface.id,
         walkable: surface.walkable,
       };
-  return { height: 0, surface: null, walkable: false };
 };
 
 const verifiedRetainedFrames = (

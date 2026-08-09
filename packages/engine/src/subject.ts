@@ -1,6 +1,7 @@
 import type {
   IAutoMovieEffectRecipe,
   IAutoMovieFormationMotion,
+  IAutoMovieFormationSlotMotion,
   IAutoMovieInstanceSetDesign,
   IAutoMovieMotion,
   IAutoMovieShotActorProgram,
@@ -17,8 +18,8 @@ import type {
  *
  * A shot program is assembled from many subjects, so no subject returns one.
  * Each returns only the parts it owns, and the shot merges them. That is what
- * lets a regiment be its squadrons and a village be its buildings without any
- * of them knowing they were composed.
+ * lets a group be its clusters and a village be its buildings without any of
+ * them knowing they were composed.
  *
  * Every field is optional because most subjects fill one or two. A prop
  * standing in the background contributes world geometry and nothing else; a
@@ -33,6 +34,8 @@ export interface IAutoMovieSubjectContribution {
   clips?: readonly IAutoMovieMotion[];
   /** Compact formation-level cues. */
   formationMotions?: readonly IAutoMovieFormationMotion[];
+  /** Sparse per-member exceptions inside the formations this subject stages. */
+  formationSlotMotions?: readonly IAutoMovieFormationSlotMotion[];
   /** Bounded shot-local deterministic effect cues. */
   effectCues?: readonly IAutoMovieShotEffectCue[];
   /** Named points this subject contributes to the world. */
@@ -53,6 +56,7 @@ const CONTRIBUTION_KEYS = [
   "actors",
   "clips",
   "formationMotions",
+  "formationSlotMotions",
   "effectCues",
   "landmarks",
   "surfaces",
@@ -131,10 +135,10 @@ export abstract class AutoMovieSubject<TDesign> {
 /**
  * A subject that is a collection of subjects.
  *
- * A squadron holds soldiers, a regiment holds squadrons, a village holds
- * buildings, a map holds everything standing on it. The shape is the same at
- * every level, which is what makes a line battle authorable: a regiment
- * advancing is one call rather than two thousand.
+ * A cluster holds figures, a group holds clusters, a village holds buildings, a
+ * map holds everything standing on it. The shape is the same at every level,
+ * which is what makes a line battle authorable: a group advancing is one call
+ * rather than two thousand.
  *
  * `render` composes its members by default, so a group states what it holds and
  * how it is arranged, not how to draw it. A group that needs to add something

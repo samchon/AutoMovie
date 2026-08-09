@@ -27,6 +27,10 @@ import path from "node:path";
 import typia, { IValidation } from "typia";
 
 import { acquireCommitLock, releaseCommitLock } from "../project/commitLock";
+import {
+  acceptanceAddressesShot,
+  acceptanceCriterionShots,
+} from "./acceptanceScope";
 import { parseAutoMovieCaptureRuntimeIdentity } from "./captureRuntimeIdentity";
 import {
   canonicalAutoMovieJsonBytes,
@@ -3653,13 +3657,7 @@ const referencesTo = (
         references.push(`shot:${id}`);
   } else if (target.kind === "shot") {
     for (const [id, acceptance] of graph.acceptance)
-      if (
-        (acceptance.target.kind === "shot" &&
-          acceptance.target.id === target.id) ||
-        ((acceptance.criterion.kind === "frame" ||
-          acceptance.criterion.kind === "event") &&
-          acceptance.criterion.shot === target.id)
-      )
+      if (acceptanceAddressesShot(acceptance, target.id))
         references.push(`acceptance:${id}`);
   } else if (target.kind === "world") {
     for (const [id, shot] of graph.shots)
@@ -3747,13 +3745,7 @@ const consequencesOf = (
     const source = graph.shots.get(target.id)?.source.module;
     if (source !== undefined) addReview({ kind: "source", path: source });
     for (const [id, acceptance] of graph.acceptance)
-      if (
-        (acceptance.target.kind === "shot" &&
-          acceptance.target.id === target.id) ||
-        ((acceptance.criterion.kind === "frame" ||
-          acceptance.criterion.kind === "event") &&
-          acceptance.criterion.shot === target.id)
-      )
+      if (acceptanceAddressesShot(acceptance, target.id))
         addReview({
           kind: "design",
           design: { kind: "acceptance", id },
@@ -3763,13 +3755,9 @@ const consequencesOf = (
     const acceptance = graph.acceptance.get(target.id);
     if (acceptance?.target.kind === "shot")
       affectedShots.add(acceptance.target.id);
-    if (
-      acceptance !== undefined &&
-      (acceptance.criterion.kind === "frame" ||
-        acceptance.criterion.kind === "event") &&
-      acceptance.criterion.shot !== undefined
-    )
-      affectedShots.add(acceptance.criterion.shot);
+    if (acceptance !== undefined)
+      for (const shot of acceptanceCriterionShots(acceptance))
+        affectedShots.add(shot);
   }
   if (target.kind === "production")
     for (const [id, acceptance] of graph.acceptance)

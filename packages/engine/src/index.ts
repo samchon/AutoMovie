@@ -10,6 +10,7 @@ export * from "./physics";
 export * from "./resolve";
 export * from "./geometry";
 export * from "./formation";
+export * from "./formationSlot";
 export * from "./subject";
 export * from "./effect";
 export * from "./worldKit";

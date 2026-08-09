@@ -25,6 +25,45 @@ export interface IAutoMovieProductionDeliverable {
   required: boolean;
 }
 
+/**
+ * The timeline a production asserts its events happened on.
+ *
+ * The edit is presentation, not chronology: a cut list can only place shots one
+ * after another, so two groups acting at the same moment are merely adjacent in
+ * it and nothing can check the claim. The story clock is the second timeline,
+ * independent of the cut, on which each pinned shot occupies a real interval.
+ * Two shots may overlap on it, and a shot may carry an earlier story time than
+ * the one it is cut after.
+ *
+ * Declaring the clock is what makes shot pins and cross-shot criteria legal. A
+ * production that asserts nothing about story time omits it and is unaffected.
+ */
+export interface IAutoMovieStoryClock {
+  /** Story-clock unit. */
+  units: "second";
+  /** Non-blank statement of what story time zero denotes. */
+  epoch: string;
+}
+
+/** Where one shot sits on the production story clock. */
+export interface IAutoMovieShotStoryTime {
+  /**
+   * Finite story-clock time in seconds at shot-local time zero.
+   *
+   * Two shots sharing an origin open on the same story moment however far apart
+   * the cut places them, and a shot cut later may carry the smaller origin.
+   */
+  originSeconds: number;
+  /**
+   * Story seconds elapsed per shot-local second; finite and strictly above
+   * zero. Omitted means one, so shot time and story time run together.
+   *
+   * A shot that stretches or compresses time still maps onto the clock: the
+   * story time of shot-local `t` is `originSeconds + t * rate`.
+   */
+  rate?: number;
+}
+
 /** Global frame and art-direction invariants for one production. */
 export interface IAutoMovieProductionDesign {
   /** Non-blank stable production id; film-level acceptance targets use it. */
@@ -47,6 +86,13 @@ export interface IAutoMovieProductionDesign {
    * shot.
    */
   visualDelivery: "deterministic" | "repainted";
+  /**
+   * Story clock every pinned shot and cross-shot criterion is measured on.
+   *
+   * Omitted means the production asserts nothing about story time; shots may
+   * then carry no pin and no cross-shot criterion is admissible.
+   */
+  storyClock?: IAutoMovieStoryClock;
   /** Deterministic frame clock and raster format. */
   frameFormat: {
     /**
@@ -105,8 +151,15 @@ export interface IAutoMovieModelRecipe {
   id: string;
   /** Production role. */
   role: "performer" | "mount" | "prop" | "set";
-  /** Supported primitive archetype. */
-  archetype: "stickman" | "primitive-prop";
+  /**
+   * Non-blank id of the registered archetype that builds this recipe.
+   *
+   * The compiler resolves this identifier against the archetype catalogue the
+   * production registers and refuses a recipe naming nothing registered. It is
+   * opaque here on purpose: which archetypes exist is a decision of that
+   * catalogue, not of this contract.
+   */
+  archetype: string;
   /**
    * Registered external appearance asset, or omitted for compiler-generated
    * primitive geometry. The active production asset ledger must carry one
@@ -149,7 +202,8 @@ export interface IAutoMovieModelRecipe {
   }>;
   /**
    * Declarative capability profiles copied onto the compiler-owned runtime
-   * model. Omitted means that engine verbs such as shooting are unavailable.
+   * model. Omitted means that trait-gated engine verbs such as mounting are
+   * unavailable.
    */
   profiles?: IAutoMovieProfile[];
 }
@@ -247,6 +301,53 @@ export type IAutoMovieHeightRule =
       slopeX: number;
       /** Height gained per positive Z meter. */
       slopeZ: number;
+    }
+  | {
+      /**
+       * Sampled relief: a regular XZ grid of heights over the surface.
+       *
+       * `constant` is one number and `plane` is a single tilt, so neither can
+       * express a rise: a hill, a terraced square, a riverbank, a stepped
+       * approach. This is the smallest rule that can. The grid is a lattice of
+       * stored heights and the surface height between them is interpolated, so
+       * relief costs `columns * rows` numbers rather than a mesh.
+       *
+       * **Bounds.** The grid is a sampling lattice, not an extent: the
+       * `polygon` still says where the surface exists, exactly as it does for
+       * `constant` and `plane`. A query outside the lattice clamps to the
+       * nearest edge sample rather than extrapolating, because extrapolating a
+       * sampled relief invents terrain nobody authored, and a lattice that
+       * covers its polygon never reaches this at all.
+       *
+       * **Interpolation.** Bilinear between the four surrounding samples. The
+       * result is continuous across cell boundaries and reproduces a stored
+       * sample exactly at its own lattice point, so a member standing on a
+       * sample stands at the authored height.
+       *
+       * **Determinism.** Pure arithmetic over the stored samples: the same
+       * design answers the same height on every machine and every run. Nothing
+       * is sampled from an image, a noise function, or a seed here; a generator
+       * that wants relief bakes its samples into this array, where the compiler
+       * digests them with the rest of the design.
+       */
+      kind: "heightfield";
+      /** World X of sample column zero, in meters. */
+      originX: number;
+      /** World Z of sample row zero, in meters. */
+      originZ: number;
+      /** Finite column pitch along +X in meters, strictly above zero. */
+      spacingX: number;
+      /** Finite row pitch along +Z in meters, strictly above zero. */
+      spacingZ: number;
+      /** Sample columns along +X; at least two. */
+      columns: number;
+      /** Sample rows along +Z; at least two. */
+      rows: number;
+      /**
+       * Finite sample heights in meters, row-major: index `row * columns +
+       * column`. Exactly `columns * rows` entries.
+       */
+      samples: number[];
     };
 
 /** A bounded horizontal polygon with a deterministic height function. */
@@ -728,6 +829,16 @@ export interface IAutoMovieShotContract {
    */
   durationSeconds: number;
   /**
+   * Where this shot's local time zero lands on the production story clock.
+   *
+   * Omitted means the shot asserts nothing about story time, which is the
+   * default. A pin is legal only once the production declares `storyClock`, and
+   * a cross-shot criterion may only compare events in pinned shots. Pinning is
+   * independent of the edit: the pin says when the shot happened, never where
+   * it is cut.
+   */
+  storyTime?: IAutoMovieShotStoryTime;
+  /**
    * Unique deliberate film-grammar exceptions. Each value suppresses only its
    * corresponding heuristic diagnostic; unrelated facts remain visible.
    */
@@ -800,6 +911,38 @@ export type IAutoMovieAcceptanceCriterion =
       operator: "<=" | ">=" | "==";
       /** Finite threshold value, in seconds for `runtime-seconds`. */
       value: number;
+    }
+  | {
+      /**
+       * Cross-shot simultaneity criterion measured on the production story
+       * clock.
+       *
+       * Adjacency in the cut proves nothing about chronology, so this is the
+       * only way a production can state that separate shots show one moment.
+       * Each named event is realized by its own shot, mapped through that
+       * shot's pin, and the widest resulting gap is compared against the
+       * tolerance. The claim is refusable: an unpinned shot, an absent
+       * realization, declared windows that cannot possibly land inside the
+       * tolerance, or realized times that in fact land outside it all fail it.
+       */
+      kind: "story-sync";
+      /**
+       * Two or more realized events, each named with the shot that owns it.
+       * Every shot must be pinned; each shot-and-event pair appears once.
+       */
+      events: Array<{
+        /** Owning shot id. */
+        shot: string;
+        /** Event id declared by that shot. */
+        event: string;
+      }>;
+      /**
+       * Finite non-negative tolerance in story seconds. The claim holds when
+       * the earliest and latest realized story times differ by no more.
+       */
+      toleranceSeconds: number;
+      /** Non-blank observable expectation for the asserted shared moment. */
+      expectation: string;
     };
 
 /** A required or optional acceptance scenario for a shot or film. */

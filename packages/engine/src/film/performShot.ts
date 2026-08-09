@@ -9,7 +9,10 @@ import {
   IAutoMovieCamera,
   IAutoMovieCameraAction,
   IAutoMovieClip,
+  IAutoMovieCompiledFormation,
   IAutoMovieConstraintViolation,
+  IAutoMovieFormationMotion,
+  IAutoMovieGroupTarget,
   IAutoMovieInteractionEvent,
   IAutoMovieModel,
   IAutoMovieMotion,
@@ -22,6 +25,7 @@ import {
   IAutoMovieVector3,
 } from "@automovie/interface";
 
+import { sampleFormationMotion, transformFormationPoint } from "../formation";
 import { armChainFault } from "../kinematics/armChainFault";
 import { IAutoMovieJointAxes } from "../kinematics/jointToQuaternion";
 import { Quaternion } from "../math/Quaternion";
@@ -60,6 +64,14 @@ import { compileLaunch } from "./compileLaunch";
 import { coupleObjects } from "./coupleObjects";
 import { bakedTransformFromClipsAt } from "./followClip";
 import { IAutoMovieStagedSet } from "./stageScene";
+import {
+  IAutoMovieSubjectBox,
+  formationMemberExtent,
+  formationSubjectBox,
+  framedBoxOf,
+  pointSubjectBox,
+  unionSubjectBoxes,
+} from "./subjectExtent";
 
 /**
  * A node's animated **world** position over shot time: its staged `base` plus
@@ -292,6 +304,27 @@ export const performShot = (props: {
    * the documented fallback.
    */
   models?: readonly IAutoMovieModel[];
+  /**
+   * Compiler-owned compact formations present in this shot, so a camera can
+   * frame a mass. A group target naming a formation this list does not carry is
+   * a violation rather than a silently smaller frame: the alternative is a shot
+   * that succeeds having framed a crowd as one figure standing at its centroid.
+   */
+  formations?: readonly IAutoMovieCompiledFormation[];
+  /**
+   * The shot's compact formation cues, so a framed unit is measured where the
+   * cue playing at the framed instant has actually put it. Omitted, every
+   * formation is framed at rest, which is exactly what an uncued unit does.
+   */
+  formationMotions?: readonly IAutoMovieFormationMotion[];
+  /**
+   * Delivery raster, for the horizontal half of the framing fit. A camera
+   * states only its vertical field of view, so nothing else knows how wide the
+   * frame is; omitted, a subject with horizontal extent is fitted to a square
+   * frame, which pulls back far enough for any raster of that height rather
+   * than cropping a mass the solve could not measure.
+   */
+  frameFormat?: { width: number; height: number };
   hasActorContext?: (node: string) => boolean;
   jointAxes?: (
     node: string,
@@ -352,6 +385,24 @@ export const performShot = (props: {
   const shotId = props.shotId ?? `shot:${performance.beat}`;
   const cameraClipScope = props.shotId ?? performance.beat;
   const out = new ViolationCollector();
+  // The masses this shot can frame, and the cues that move them. Both are
+  // read-only inputs, so they are bound once here and every framing question
+  // below asks these two rather than re-deriving a unit's geometry.
+  const formationById = new Map(
+    (props.formations ?? []).map((formation) => [formation.id, formation]),
+  );
+  const formationMotions = props.formationMotions ?? [];
+  /**
+   * Frame width over height, or undefined when no raster was supplied. Only the
+   * horizontal half of the framing fit reads it, so a caller without one still
+   * frames every single-body subject exactly as before.
+   */
+  const frameAspect =
+    props.frameFormat === undefined ||
+    !(props.frameFormat.width > 0) ||
+    !(props.frameFormat.height > 0)
+      ? undefined
+      : props.frameFormat.width / props.frameFormat.height;
   const synthesisCache = new WeakMap<
     IAutoMovieActionCall,
     Map<string, IAutoMovieMotion | null>
@@ -470,6 +521,43 @@ export const performShot = (props: {
           `${label} group node id`,
         ),
       );
+      if (target.formations !== undefined) {
+        if (!Array.isArray(target.formations)) {
+          out.push(
+            "type",
+            `${path}.formations`,
+            `${label} group formations must be an array`,
+            target.formations,
+          );
+          return false;
+        }
+        // A formation id must name a unit this shot actually compiled. Left
+        // ungated it would resolve to nothing, the group would fall back to
+        // whatever nodes it also listed, and the shot would come back
+        // successful having framed a captain instead of his army.
+        target.formations.forEach((formation, j) => {
+          validateNonEmptyId(
+            formation,
+            `${path}.formations[${j}]`,
+            `${label} group formation id`,
+          );
+          if (
+            typeof formation === "string" &&
+            formation.trim().length > 0 &&
+            !formationById.has(formation)
+          )
+            out.push(
+              "type",
+              `${path}.formations[${j}]`,
+              `${label} group formation "${formation}" is not one of this shot's compiled formations (${
+                formationById.size === 0
+                  ? "none were supplied"
+                  : [...formationById.keys()].join(", ")
+              })`,
+              formation,
+            );
+        });
+      }
       return true;
     }
     return true;
@@ -506,6 +594,22 @@ export const performShot = (props: {
   const nodeRotations = new Map(
     staged.scene.nodes.map((n) => [n.id, n.transform.rotation]),
   );
+  /**
+   * Where each compiled formation stands at the shot's opening, one entry per
+   * unit. The compiled centroid goes through the same cue transform the ground
+   * gate and the oracle use, so the mass has one place and not one per reader.
+   */
+  const formationPoints = new Map(
+    [...formationById].map(([id, formation]) => [
+      id,
+      transformFormationPoint(
+        formation.centroid,
+        formation.anchor,
+        sampleFormationMotion(formationMotions, id, 0),
+        formation.facingDeg,
+      ),
+    ]),
+  );
 
   const resolvePositionalTarget = (
     target: unknown,
@@ -513,11 +617,35 @@ export const performShot = (props: {
     label: string,
     subject: string,
     seconds = 0,
+    /**
+     * Whether this target may name formations. Only a camera may: a `frame`
+     * subject, its focus, and a coverage angle's subject each ask where to
+     * point a lens, which a mass answers. Every other positional target asks
+     * one body for one point — where to look, where to reach, what to throw at
+     * — and a crowd has no such point. Refusing it here is the difference
+     * between a correction round the author can act on and a shot that succeeds
+     * having aimed an actor at the middle of an army.
+     */
+    formationsFramed = false,
   ): IAutoMovieVector3 | null => {
     if (!validateTargetNodeIds(target, path, label)) return null;
+    if (formationsFramed === false && isRecord(target)) {
+      const named = Array.isArray(target.formations) ? target.formations : [];
+      if (named.length > 0) {
+        out.push(
+          "type",
+          path,
+          `${subject} must resolve to a point (${POSITIONAL_TARGET_SHAPE}), but its group names formation ${named
+            .map((formation) => `"${String(formation)}"`)
+            .join(", ")}: a formation is a mass a camera frames, not one body with one point to aim at; name the staged nodes to aim at instead`,
+          target,
+        );
+        return null;
+      }
+    }
     const point =
       resolveLiveTarget?.(target, seconds) ??
-      resolveTargetPoint(target, nodePositions);
+      resolveTargetPoint(target, nodePositions, formationPoints);
     if (
       point === null ||
       point === undefined ||
@@ -732,6 +860,8 @@ export const performShot = (props: {
         `${base}[${i}].on`,
         "frame target",
         "a frame subject",
+        0,
+        true,
       );
       // The two lens INTENTS (#1187): validated like any target/scalar, but
       // never consumed by the camera solve, they ride to shot.cameraIntent.
@@ -741,6 +871,8 @@ export const performShot = (props: {
           `${base}[${i}].focus`,
           "focus target",
           "a focus subject",
+          0,
+          true,
         );
       if (
         action.focalLength !== undefined &&
@@ -1300,6 +1432,8 @@ export const performShot = (props: {
       `${path}.on`,
       "coverage target",
       "a coverage subject",
+      0,
+      true,
     );
     if (
       camera !== undefined &&
@@ -1632,6 +1766,69 @@ export const performShot = (props: {
     measuredExtents.set(node, extent);
     return extent;
   };
+  /**
+   * A staged node's framed vertical extent, relative to its placement: the
+   * geometry the renderer draws when a model was supplied, the rig's joint span
+   * as the documented fallback, and the stand-in height when neither measures
+   * anything. Stated once because a node is framed both on its own and as one
+   * member of a group, and two answers to "how tall is he" is how a two-shot
+   * comes to disagree with the singles cut beside it.
+   */
+  const nodeVerticalExtent = (node: string): { min: number; max: number } => {
+    const extent = modelExtentOf(node);
+    const rig = extent === null ? skeleton(node) : null;
+    const measured =
+      extent === null
+        ? rig === null
+          ? 0
+          : computeRestHeight(rig)
+        : extent.max - extent.min;
+    const floor = extent === null ? 0 : extent.min;
+    return {
+      min: floor,
+      max: floor + (measured >= 0.1 ? measured : DEFAULT_SUBJECT_HEIGHT),
+    };
+  };
+  /**
+   * The world box a group target occupies at a shot-local instant, or null when
+   * none of its members resolve.
+   *
+   * Every member contributes what it actually occupies: a staged node its
+   * placement raised by its own measured extent, a formation its whole
+   * transformed footprint under the cue playing at that instant. The union is
+   * the thing the camera has to hold, which is the datum a centroid destroyed —
+   * two thousand figures and one figure have the same centroid, and only one of
+   * them fits in a frame solved for a person.
+   *
+   * Node members are read at their staged placements rather than at their
+   * animated bases, which is what a group subject has always been; a formation
+   * is read at `seconds` because its cue is the only thing that moves a mass.
+   */
+  const groupSubjectBox = (
+    on: IAutoMovieGroupTarget,
+    seconds: number,
+  ): IAutoMovieSubjectBox | null =>
+    unionSubjectBoxes([
+      ...on.nodes.flatMap((node) => {
+        const placement = nodePositions.get(node);
+        return placement === undefined
+          ? []
+          : [pointSubjectBox(placement, nodeVerticalExtent(node))];
+      }),
+      ...(on.formations ?? []).flatMap((id) => {
+        const formation = formationById.get(id);
+        return formation === undefined
+          ? []
+          : [
+              formationSubjectBox({
+                formation,
+                motions: formationMotions,
+                member: formationMemberExtent(formation, props.models),
+                seconds,
+              }),
+            ];
+      }),
+    ]);
   // What a camera entry frames, resolved once for every take: the hero's frame
   // spans and each coverage angle read the SAME subject, so an alternate camera
   // frames the beat's subject exactly as the hero does, only from its own
@@ -1648,23 +1845,49 @@ export const performShot = (props: {
   const framedSubject = (
     on: IAutoMovieActionTarget,
   ): IAutoMovieFramedSubject => {
+    // A group is the one subject with an extent of its own, so it is measured
+    // as a box rather than collapsed to a point and given a figure's height.
+    // The live resolver is not consulted for it: it answers with ONE point,
+    // which is exactly the datum that cannot describe a mass.
+    if (on.kind === "group") {
+      const box = groupSubjectBox(on, 0);
+      if (box !== null) {
+        const framed = framedBoxOf(box);
+        // A cue is the only thing that moves a unit, so a group carrying one is
+        // the only group a `follow` can track; without one the mass holds still
+        // and `at: null` states that, the same as every group before it.
+        const cued = (on.formations ?? []).some((id) =>
+          formationMotions.some((cue) => cue.formation === id),
+        );
+        return {
+          base: framed.base,
+          height:
+            framed.height >= 0.1 ? framed.height : DEFAULT_SUBJECT_HEIGHT,
+          radius: framed.radius,
+          at:
+            cued === false
+              ? null
+              : (seconds) => {
+                  const moved = groupSubjectBox(on, seconds);
+                  return moved === null ? framed.base : framedBoxOf(moved).base;
+                },
+        };
+      }
+    }
     const point =
       resolveLiveTarget?.(on, 0) ??
-      (resolveTargetPoint(on, nodePositions) as IAutoMovieVector3);
+      (resolveTargetPoint(on, nodePositions, formationPoints) as IAutoMovieVector3);
     const node = on.kind === "node" ? on.node : null;
-    const rig = node === null ? null : skeleton(node);
     // Measure the figure, not the rig. The extent is model-space, so its floor
     // is where the geometry actually starts: shifting the framed base by it
     // keeps `base` meaning "the bottom of what the camera sees", which is what
     // the framing grammar's aim fractions are written against.
-    const extent = node === null ? null : modelExtentOf(node);
-    const measured =
-      extent === null
-        ? rig === null
-          ? 0
-          : computeRestHeight(rig)
-        : extent.max - extent.min;
-    const floor = extent === null ? 0 : extent.min;
+    const vertical =
+      node === null
+        ? { min: 0, max: DEFAULT_SUBJECT_HEIGHT }
+        : nodeVerticalExtent(node);
+    const floor = vertical.min;
+    const measured = vertical.max - vertical.min;
     const onFloor = (value: IAutoMovieVector3): IAutoMovieVector3 =>
       floor === 0 ? value : { x: value.x, y: value.y + floor, z: value.z };
     const motion = node === null ? undefined : motions[node];
@@ -1712,6 +1935,7 @@ export const performShot = (props: {
     camera: cameraObject,
     entries,
     shotDuration: performance.duration,
+    aspect: frameAspect,
   });
 
   // One alternate take per validated coverage intent (#1187). A blocking's
@@ -1750,6 +1974,7 @@ export const performShot = (props: {
           },
         ],
         shotDuration: performance.duration,
+        aspect: frameAspect,
       }),
   );
 
@@ -1780,6 +2005,7 @@ export const performShot = (props: {
             (resolveTargetPoint(
               action.focus,
               nodePositions,
+              formationPoints,
             ) as IAutoMovieVector3)),
       focalLength: action.focalLength ?? null,
     })),

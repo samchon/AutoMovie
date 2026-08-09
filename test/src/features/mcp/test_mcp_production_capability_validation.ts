@@ -129,13 +129,12 @@ export const test_mcp_production_capability_validation = (): void => {
     model.id,
   );
   TestValidator.equals(
-    "valid firearm, cannon, melee, mountable, destructible and three instance layouts pass",
+    "valid mountable, destructible and three instance layouts pass",
     namedFacts([
       [
-        "designCapabilityInvalid",
+        "designCapabilityClean",
         () =>
           [
-            "design-capability-invalid",
             "design-capability-duplicate",
             "design-reference-missing",
             "design-budget-exceeded",
@@ -143,10 +142,10 @@ export const test_mcp_production_capability_validation = (): void => {
       ],
       [
         "runtimeProfiles0",
-        () => runtime?.profiles?.[0]?.traits?.[0]?.kind === "shooter",
+        () => runtime?.profiles?.[0]?.traits?.[0]?.kind === "mountable",
       ],
     ]),
-    { designCapabilityInvalid: true, runtimeProfiles0: true },
+    { designCapabilityClean: true, runtimeProfiles0: true },
   );
 
   const invalidProfile: IAutoMovieProfile = {
@@ -165,39 +164,7 @@ export const test_mcp_production_capability_validation = (): void => {
           penetrability: 0,
         },
       },
-      { kind: "shooter", weapons: [] },
-      {
-        kind: "shooter",
-        weapons: [
-          {
-            kind: "firearm",
-            id: "",
-            reloadSeconds: 0,
-            effectiveRange: 0,
-            muzzleVelocity: 0,
-            misfireProbability: 2,
-            accuracy: [
-              { distance: 10, probability: 2 },
-              { distance: 5, probability: -1 },
-            ],
-          },
-          {
-            kind: "cannon",
-            id: "bad-cannon",
-            reloadSeconds: 0,
-            effectiveRange: 0,
-            muzzleVelocity: 0,
-            ammunition: [],
-          },
-          {
-            kind: "melee",
-            id: "bad-melee",
-            reach: 0,
-            recoverySeconds: 0,
-            impact: 0,
-          },
-        ],
-      },
+      { kind: "mountable", seats: 0, payloadMass: 0 },
     ],
   };
   const invalidCapability = codes(
@@ -212,14 +179,10 @@ export const test_mcp_production_capability_validation = (): void => {
       ],
       [
         "invalidCapabilityHasDesign2",
-        () => invalidCapability.has("design-capability-invalid"),
-      ],
-      [
-        "invalidCapabilityHasDesign3",
         () => invalidCapability.has("design-capability-duplicate"),
       ],
       [
-        "invalidCapabilityHasDesign4",
+        "invalidCapabilityHasDesign3",
         () => invalidCapability.has("design-range-invalid"),
       ],
     ]),
@@ -227,7 +190,6 @@ export const test_mcp_production_capability_validation = (): void => {
       invalidCapabilityHasDesign: true,
       invalidCapabilityHasDesign2: true,
       invalidCapabilityHasDesign3: true,
-      invalidCapabilityHasDesign4: true,
     },
   );
 

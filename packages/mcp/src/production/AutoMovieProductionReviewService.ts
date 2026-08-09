@@ -39,6 +39,10 @@ import {
   AutoMovieProductionInputRaceError,
   AutoMovieProductionProject,
 } from "./AutoMovieProductionProject";
+import {
+  acceptanceAddressesShot,
+  acceptanceCriterionShots,
+} from "./acceptanceScope";
 import { parseAutoMovieCaptureRuntimeIdentity } from "./captureRuntimeIdentity";
 import {
   AUTOMOVIE_REVIEW_FINGERPRINT_PROTOCOL,
@@ -57,6 +61,7 @@ import {
 } from "./filmTimeline";
 import { assertProductionRenditionTimelineDelivery } from "./muxProductionFeatureMp4";
 import { productionRenderTargetFingerprint } from "./renderIdentity";
+import { autoMovieStorySyncOutcome } from "./storySyncDiagnostics";
 import { isProductionFrameTime } from "./validateProductionDesign";
 
 type AutoMovieReviewWorksheet = Omit<
@@ -884,7 +889,9 @@ const validateAcceptanceCoverage = (
           scenario.id,
           criterion.kind === "event"
             ? `cite the passing compiler-derived outcome for event "${criterion.event}". The acceptance contract itself is not event evidence.`
-            : `cite the passing compiler-derived "${criterion.metric}" outcome. The acceptance threshold itself is not a measured result.`,
+            : criterion.kind === "story-sync"
+              ? `cite the passing compiler-derived story-clock outcome for ${criterion.events.map((entry) => `"${entry.event}" of shot "${entry.shot}"`).join(" and ")}. Adjacency in the edit is not evidence that these events share a moment.`
+              : `cite the passing compiler-derived "${criterion.metric}" outcome. The acceptance threshold itself is not a measured result.`,
         );
     }
   }
@@ -1231,16 +1238,12 @@ const reviewFingerprint = (
         );
       else if (acceptance?.target.kind === "film")
         addJson("dependency:production", graph.production);
-      if (
-        acceptance !== undefined &&
-        (acceptance.criterion.kind === "frame" ||
-          acceptance.criterion.kind === "event") &&
-        acceptance.criterion.shot !== undefined
-      )
-        addJson(
-          `dependency:criterion-shot:${acceptance.criterion.shot}`,
-          graph.shots.get(acceptance.criterion.shot) ?? null,
-        );
+      if (acceptance !== undefined)
+        for (const shot of acceptanceCriterionShots(acceptance))
+          addJson(
+            `dependency:criterion-shot:${shot}`,
+            graph.shots.get(shot) ?? null,
+          );
     }
   } else if (target.kind === "source") {
     addSourceField(fields, project, target.path);
@@ -1591,15 +1594,6 @@ const sequenceShotIds = (
     .sort(compareCodeUnits);
 };
 
-const acceptanceAddressesShot = (
-  acceptance: IAutoMovieAcceptanceScenario,
-  shot: string,
-): boolean =>
-  (acceptance.target.kind === "shot" && acceptance.target.id === shot) ||
-  ((acceptance.criterion.kind === "frame" ||
-    acceptance.criterion.kind === "event") &&
-    acceptance.criterion.shot === shot);
-
 const currentAcceptanceOutcomes = (
   project: AutoMovieProductionProject,
   target: IAutoMovieReviewTarget,
@@ -1761,6 +1755,22 @@ const currentAcceptanceOutcomes = (
         event: criterion.event,
         realization: event,
         passed: event.passed,
+      });
+      continue;
+    }
+    if (criterion.kind === "story-sync") {
+      // The claim spans shots, so it is measured over the realizations the
+      // per-shot event outcomes already read. A missing realization leaves the
+      // outcome unresolved rather than absent, which keeps the reviewer looking
+      // at the failure instead of at nothing.
+      outcomes.push({
+        kind: "story-sync",
+        scenario: scenario.id,
+        ...autoMovieStorySyncOutcome({
+          criterion,
+          contracts: graph.shots,
+          realization: readRealization,
+        }),
       });
       continue;
     }

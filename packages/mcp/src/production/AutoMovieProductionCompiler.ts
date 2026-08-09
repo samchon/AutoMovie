@@ -4,11 +4,12 @@ import {
   compileDefinedShot,
   defineShot,
   formationSlotPosition,
-  isWalkable,
+  heightAt,
   makeActorSynthesizer,
+  placeFormationSlot,
   realizeShotContract,
   sampleFormationMotion,
-  transformFormationPoint,
+  sampleFormationSlotMotion,
   validateModel,
   validateMotion,
   validateShotArtifact,
@@ -25,6 +26,7 @@ import {
   IAutoMovieCompileProjectOutput,
   IAutoMovieCompiledContractRealization,
   IAutoMovieCompiledFilmEdit,
+  IAutoMovieCompiledFormation,
   IAutoMovieCompiledShotSource,
   IAutoMovieDefinedShotContract,
   IAutoMovieDiagnostic,
@@ -32,6 +34,7 @@ import {
   IAutoMovieFilmEdit,
   IAutoMovieFilmTimeline,
   IAutoMovieFormationMotion,
+  IAutoMovieFormationSlotMotion,
   IAutoMovieGeneratedCollisionProxy,
   IAutoMovieGeneratedFile,
   IAutoMovieGeneratedManifest,
@@ -52,6 +55,7 @@ import {
   IAutoMovieShotBuildContext,
   IAutoMovieShotContract,
   IAutoMovieShotSourceOutput,
+  IAutoMovieSpace,
   IAutoMovieVector3,
   IAutoMovieVideoEdit,
   IAutoMovieWorldDesign,
@@ -96,6 +100,7 @@ import { assertProductionFeatureUsesRenditionClips } from "./muxProductionFeatur
 import { probeProductionMedia } from "./probeProductionMedia";
 import { screenplayLedgerDiagnostics } from "./screenplayLedgerDiagnostics";
 import { screenplayProseDiagnostics } from "./screenplayProseDiagnostics";
+import { storySyncDiagnostics } from "./storySyncDiagnostics";
 import {
   IAutoMovieProductionDesignGraph,
   validateAutoMovieProductionGraph,
@@ -251,6 +256,7 @@ export class AutoMovieProductionCompiler {
         graph.formations,
         graph.models,
         externalModels,
+        graph.world!.surfaces,
       );
       instanceSetRuntime = materializeCompiledInstanceSetInventory(
         graph.world!,
@@ -418,6 +424,17 @@ export class AutoMovieProductionCompiler {
             closing,
           };
       }
+      // Every shot has now been realized, so a claim spanning several of them
+      // can finally be measured. It is deliberately checked before the film is
+      // assembled: simultaneity is an assertion about the story, and it stands
+      // or falls whatever order the edit later puts these shots in.
+      diagnostics.push(
+        ...storySyncDiagnostics({
+          acceptance: graph.acceptance,
+          contracts: graph.shots,
+          realizations,
+        }),
+      );
     }
 
     let compiledFilm: ICompiledFilmDraft | null = null;
@@ -1026,6 +1043,7 @@ const SANDBOX_BOOTSTRAP = `
     "actors",
     "clips",
     "formationMotions",
+    "formationSlotMotions",
     "effectCues",
     "landmarks",
     "surfaces",
@@ -1059,12 +1077,95 @@ const SANDBOX_BOOTSTRAP = `
   // than reading the record itself, which is right for a level patch and wrong
   // the day it slopes. The arithmetic is pure and takes the record it is given,
   // so the sandbox can carry it exactly as it carries the subject vocabulary.
-  const worldSurfaceHeight = (surface, point) =>
-    surface.height.kind === "constant"
-      ? surface.height.value
-      : surface.height.originHeight +
-        surface.height.slopeX * point.x +
-        surface.height.slopeZ * point.z;
+  // Every height rule the interface declares is answered here: a rule the
+  // sandbox did not know would read a rise as a plain plane and stage a crowd
+  // through the hill it stands on.
+  const heightfieldCell = (coordinate, count) => {
+    const last = Math.max(0, count - 2);
+    const clamped = Math.min(Math.max(coordinate, 0), Math.max(0, count - 1));
+    const index = Math.min(Math.floor(clamped), last);
+    return { index, fraction: clamped - index };
+  };
+  const heightfieldSample = (rule, column, row) => {
+    const sample =
+      rule.samples[
+        Math.min(Math.max(row, 0), rule.rows - 1) * rule.columns +
+          Math.min(Math.max(column, 0), rule.columns - 1)
+      ];
+    return sample === undefined ? 0 : sample;
+  };
+  const mix = (from, to, progress) => from + (to - from) * progress;
+  const worldSurfaceHeight = (surface, point) => {
+    const rule = surface.height;
+    if (rule.kind === "constant") return rule.value;
+    if (rule.kind === "plane")
+      return rule.originHeight + rule.slopeX * point.x + rule.slopeZ * point.z;
+    const column = heightfieldCell(
+      (point.x - rule.originX) / rule.spacingX,
+      rule.columns,
+    );
+    const row = heightfieldCell(
+      (point.z - rule.originZ) / rule.spacingZ,
+      rule.rows,
+    );
+    return mix(
+      mix(
+        heightfieldSample(rule, column.index, row.index),
+        heightfieldSample(rule, column.index + 1, row.index),
+        column.fraction,
+      ),
+      mix(
+        heightfieldSample(rule, column.index, row.index + 1),
+        heightfieldSample(rule, column.index + 1, row.index + 1),
+        column.fraction,
+      ),
+      row.fraction,
+    );
+  };
+  const pointSegmentDistance = (point, from, to) => {
+    const dx = to.x - from.x;
+    const dz = to.z - from.z;
+    const lengthSquared = dx * dx + dz * dz;
+    const ratio =
+      lengthSquared === 0
+        ? 0
+        : Math.max(
+            0,
+            Math.min(
+              1,
+              ((point.x - from.x) * dx + (point.z - from.z) * dz) /
+                lengthSquared,
+            ),
+          );
+    return Math.hypot(
+      point.x - (from.x + dx * ratio),
+      point.z - (from.z + dz * ratio),
+    );
+  };
+  // Where the terrain applies, beside what it says. The first declared surface
+  // containing a point wins and a point on a footprint edge is on it, exactly
+  // as the engine reads it; a second reading here is how a source and a
+  // compiler come to place the same member on two different heights.
+  const worldGroundSurface = (surfaces, point) => {
+    for (const surface of surfaces)
+      if (
+        surface.polygon.some(
+          (vertex, index) =>
+            pointSegmentDistance(
+              point,
+              vertex,
+              surface.polygon[(index + 1) % surface.polygon.length],
+            ) <= 1e-9,
+        ) ||
+        insidePolygon(point, surface.polygon)
+      )
+        return surface;
+    return null;
+  };
+  const worldGroundHeight = (surfaces, point) => {
+    const surface = worldGroundSurface(surfaces, point);
+    return surface === null ? null : worldSurfaceHeight(surface, point);
+  };
   const sourceModules = {
     "@automovie/engine": freeze({
       defineShot: Object.freeze(defineShot),
@@ -1189,10 +1290,40 @@ const SANDBOX_BOOTSTRAP = `
       x = Math.cos(angle) * radius;
       z = Math.sin(angle) * radius;
     }
+    // A formed layout may be dressed to a tolerance, and a member the compiler
+    // drew off its slot has to be off it here too. A scatter is already seeded
+    // and carries no tolerance, which is why the engine dresses the formed
+    // layouts only and this reads the same way.
+    const dressing =
+      layout.kind === "scatter" ? undefined : layout.dressing;
+    if (dressing !== undefined) {
+      x +=
+        dressing.lateral === 0
+          ? 0
+          : (seededValue(formation.seed, slot, 0x64726573) * 2 - 1) *
+            dressing.lateral;
+      z +=
+        dressing.depth === 0
+          ? 0
+          : (seededValue(formation.seed, slot, 0x73646570) * 2 - 1) *
+            dressing.depth;
+    }
     const radians = (formation.facingDeg * Math.PI) / 180;
     const cosine = Math.cos(radians);
     const sine = Math.sin(radians);
     const hero = formation.heroes.find((item) => item.slot === slot);
+    const placedX = formation.anchor.x + x * cosine + z * sine;
+    const placedZ = formation.anchor.z - x * sine + z * cosine;
+    // A member stands on the ground under itself, measured against the ground
+    // under the anchor so the height the unit was staged at keeps its meaning.
+    const ground = formation.ground;
+    let relief = 0;
+    if (ground !== undefined && ground.length !== 0) {
+      const here = worldGroundHeight(ground, { x: placedX, z: placedZ });
+      const datum =
+        here === null ? null : worldGroundHeight(ground, formation.anchor);
+      if (here !== null && datum !== null) relief = here - datum;
+    }
     return freeze({
       slot,
       node:
@@ -1204,9 +1335,9 @@ const SANDBOX_BOOTSTRAP = `
       actor: hero?.actor ?? null,
       modelRecipe: formation.modelRecipe,
       position: {
-        x: formation.anchor.x + x * cosine + z * sine,
-        y: formation.anchor.y,
-        z: formation.anchor.z - x * sine + z * cosine,
+        x: placedX,
+        y: formation.anchor.y + relief,
+        z: placedZ,
       },
       facingDeg: formation.facingDeg,
       motionPhase: seededValue(formation.seed, slot, 0x70686173),
@@ -1371,16 +1502,11 @@ const SANDBOX_BOOTSTRAP = `
     const engine = Object.freeze({
       distance: (left, right) =>
         hypot(left.x - right.x, left.y - right.y, left.z - right.z),
-      groundHeight: (point) => {
-        for (const surface of data.world.surfaces)
-          if (insidePolygon(point, surface.polygon))
-            return surface.height.kind === "constant"
-              ? surface.height.value
-              : surface.height.originHeight +
-                  surface.height.slopeX * point.x +
-                  surface.height.slopeZ * point.z;
-        return 0;
-      },
+      // Asked of the one reading, so a source placing a prop on the ground and
+      // a compiler placing a member on it get the same number. Over nothing it
+      // is the scalar plane the engine assumed before terrain existed.
+      groundHeight: (point) =>
+        worldGroundHeight(data.world.surfaces, point) ?? 0,
       formationSlot: (formation, slot) =>
         formationSlot(data, formation, slot),
       instanceSlot: (instanceSet, slot) =>
@@ -1508,6 +1634,9 @@ const compileShotSource = (
     value: {
       ...compiled.source,
       formationMotions: structuredClone(program.value.formationMotions ?? []),
+      formationSlotMotions: structuredClone(
+        program.value.formationSlotMotions ?? [],
+      ),
       effectCues: structuredClone(program.value.effectCues ?? []),
     },
     closing: compiled.continuity.closing,
@@ -2806,6 +2935,7 @@ const validateCompiledShot = (
     validateShotArtifact(value.shot, value.scene, motionIds),
   );
   diagnostics.push(...validateAutoMovieFormationMotions(contract, value));
+  diagnostics.push(...validateAutoMovieFormationSlotMotions(contract, value));
   diagnostics.push(...validateAutoMovieFormationGround(contract, value));
   diagnostics.push(...validateAutoMovieEffects(contract, value));
   for (const model of value.models)
@@ -2867,8 +2997,23 @@ const FORMATION_GROUND_SUPPORT_DIRECTIONS = 16;
  */
 const formationGroundMemberCache = new WeakMap<
   IAutoMovieFormationPlacement,
-  IAutoMovieVector3[]
+  IFormationGroundMember[]
 >();
+
+/**
+ * One member the ground gate measures, kept with the slot that produced it.
+ *
+ * The point alone was enough while every member of a unit did the same thing.
+ * A member with its own cue does not, so the slot has to travel with the point:
+ * a member removed at four seconds must stop being measured, and a member that
+ * stepped off its place must be measured where it stepped to.
+ */
+interface IFormationGroundMember {
+  /** Zero-based slot this point belongs to. */
+  slot: number;
+  /** Designed world-space position of that slot at rest. */
+  point: IAutoMovieVector3;
+}
 
 /**
  * The members a formation is judged by: its outermost in each asked direction.
@@ -2886,7 +3031,7 @@ const formationGroundMemberCache = new WeakMap<
  */
 const formationGroundMembers = (
   formation: IAutoMovieFormationPlacement,
-): IAutoMovieVector3[] => {
+): IFormationGroundMember[] => {
   const remembered = formationGroundMemberCache.get(formation);
   if (remembered !== undefined) return remembered;
   const looks = Array.from(
@@ -2898,22 +3043,22 @@ const formationGroundMembers = (
     },
   );
   const furthest = looks.map(() => Number.NEGATIVE_INFINITY);
-  const outermost = looks.map((): IAutoMovieVector3 | null => null);
-  // The point itself is kept rather than the slot that produced it, so a
-  // formation of a hundred thousand members is asked for each of them once.
-  // A member outermost in several directions is the same object in each, which
-  // is what the set below dedupes on.
+  const outermost = looks.map((): IFormationGroundMember | null => null);
+  // One record per slot rather than per direction, so a formation of a hundred
+  // thousand members is asked for each of them once. A member outermost in
+  // several directions is the same object in each, which is what the set below
+  // dedupes on.
   for (let slot = 0; slot < formation.count; ++slot) {
-    const point = formationSlotPosition(formation, slot);
+    const member = { slot, point: formationSlotPosition(formation, slot) };
     for (let index = 0; index < looks.length; ++index) {
       const look = looks[index]!;
-      const reach = point.x * look.x + point.z * look.z;
+      const reach = member.point.x * look.x + member.point.z * look.z;
       if (reach <= furthest[index]!) continue;
       furthest[index] = reach;
-      outermost[index] = point;
+      outermost[index] = member;
     }
   }
-  const members = [...new Set(outermost.filter((point) => point !== null))];
+  const members = [...new Set(outermost.filter((member) => member !== null))];
   formationGroundMemberCache.set(formation, members);
   return members;
 };
@@ -3012,6 +3157,81 @@ const formationGroundSampleTimes = (
 };
 
 /**
+ * When inside one member's own cue that member is worth measuring.
+ *
+ * The same argument as {@link formationGroundSampleTimes} and the same bound: a
+ * member's cue displaces it along a straight segment, ground is not convex, and
+ * both ends can stand on floor the middle does not. What the member travels is
+ * the length of that displacement, so the step count follows from it rather than
+ * from a guess, and the same cap keeps a member carried absurdly far measured
+ * coarsely instead of endlessly.
+ *
+ * A turn of the member alone sweeps nothing, because a member is a point to this
+ * gate: the ground under it does not move when it faces another way.
+ */
+const formationSlotGroundSampleTimes = (
+  cue: IAutoMovieFormationSlotMotion,
+): number[] => {
+  const reach = Math.hypot(
+    cue.to.offset.x - cue.from.offset.x,
+    cue.to.offset.z - cue.from.offset.z,
+  );
+  const steps = Math.min(
+    FORMATION_GROUND_SAMPLE_LIMIT,
+    Math.ceil((2 * reach) / FORMATION_GROUND_SAMPLE_METRES),
+  );
+  const span = cue.end - cue.start;
+  return [
+    cue.start,
+    ...Array.from(
+      { length: Math.max(0, steps - 1) },
+      (_, index) => cue.start + (span * (index + 1)) / steps,
+    ),
+    cue.end,
+  ];
+};
+
+/**
+ * How far under a surface a member may read before it is inside the ground.
+ *
+ * A millimetre, which is what the refusal states its metres to. Terrain height
+ * is interpolated — along a ramp axis, across a heightfield cell — and a member
+ * placed from one record and judged against another accumulates the last bits
+ * of two such interpolations. Refusing at those bits would refuse a unit
+ * standing exactly on its ground, and this gate's whole discipline is that it
+ * never refuses a shot that was correct.
+ */
+const FORMATION_GROUND_SINK_TOLERANCE_METRES = 1e-3;
+
+/**
+ * Why one placed member is off the ground a shot staged, or `null` when it is
+ * not off it at all.
+ *
+ * Two ways to leave a floor, and the second is as broken as the first: standing
+ * where nothing carries you, and standing under what does. `carried` names
+ * which — `null` for the void, the surface's own height for the sinking — so
+ * the refusal can say what an author has to correct rather than the same
+ * sentence twice.
+ *
+ * Standing *above* the surface is not refused. `anchor.y` is the height a unit
+ * was staged at and always has been, and a shot deliberately holding a unit
+ * over the space it staged — a rank on structure the space does not model, a
+ * unit whose terrain record and staged space are two readings of one place — is
+ * a composition, not a mistake. Under the surface admits no such reading: the
+ * member is inside the ground and nothing can see it.
+ */
+const formationGroundEscape = (
+  space: IAutoMovieSpace,
+  place: IAutoMovieVector3,
+): { carried: number | null } | null => {
+  const carried = heightAt(space, place.x, place.z);
+  if (carried === null) return { carried: null };
+  return place.y < carried - FORMATION_GROUND_SINK_TOLERANCE_METRES
+    ? { carried }
+    : null;
+};
+
+/**
  * Refuse a staged unit the ground it was staged on does not carry.
  *
  * A shot's space is what the scene keeps and what the viewer turns into real
@@ -3031,6 +3251,13 @@ const formationGroundSampleTimes = (
  * refusal is always sound; a member not asked about is the honest gap, stated
  * the same way the time resolution is.
  *
+ * Each measured member is judged in height as well as in plan, by
+ * {@link formationGroundEscape}: standing under the surface that carries you is
+ * as broken as standing where nothing does, and a gate that refused only the
+ * second would pass a whole unit buried in the hill it was staged on. The same
+ * measured set answers both questions, so the height reading inherits its
+ * honest gap: a member not asked about in plan is not asked about in height.
+ *
  * A shot that stages no space is not measured. The engine then falls back to
  * the scalar ground plane it assumed before spaces existed, and there is no
  * authored extent for a unit to leave.
@@ -3042,6 +3269,14 @@ const formationGroundSampleTimes = (
  * between them. Every sampled time is a state the unit really occupies, so the
  * gate never refuses a shot that was correct, and it samples rather than solves
  * because where a unit leaves authored ground has no closed form.
+ *
+ * A member with its own cue is measured too, and measured as itself. Every slot
+ * a per-member cue names is added to the set above — the channel is sparse, so
+ * that costs the exceptions and not the crowd — and each measured member is
+ * carried through its own cue as well as its unit's. A member the shot has
+ * removed is not measured at all while it is absent: refusing a shot because
+ * something nobody can see stands over a void is exactly the false refusal this
+ * gate is built never to make.
  */
 export const validateAutoMovieFormationGround = (
   contract: Pick<IAutoMovieShotContract, "id">,
@@ -3049,30 +3284,54 @@ export const validateAutoMovieFormationGround = (
     scene: Pick<IAutoMovieScene, "space">;
     formations: readonly IAutoMovieFormationPlacement[];
     formationMotions?: readonly IAutoMovieFormationMotion[];
+    formationSlotMotions?: readonly IAutoMovieFormationSlotMotion[];
   },
 ): IAutoMovieDiagnostic[] => {
   const space = value.scene.space;
   if (space === undefined || space === null) return [];
   const cues = value.formationMotions ?? [];
+  const slotCues = value.formationSlotMotions ?? [];
   const diagnostics: IAutoMovieDiagnostic[] = [];
   for (const formation of value.formations) {
     const own = cues.filter((cue) => cue.formation === formation.id);
+    const ownSlots = slotCues.filter((cue) => cue.formation === formation.id);
     // The outermost members, carried as points through the same transform the
-    // runtime places them with.
-    const members = formationGroundMembers(formation);
+    // runtime places them with, plus every member a cue singles out. The
+    // outermost set is keyed by slot so a member that is both is measured once,
+    // and measured with its own cue rather than without it.
+    const members = new Map(
+      formationGroundMembers(formation).map((member) => [member.slot, member]),
+    );
+    for (const cue of ownSlots)
+      for (const slot of cue.slots) {
+        if (
+          members.has(slot) ||
+          Number.isSafeInteger(slot) === false ||
+          slot < 0 ||
+          slot >= formation.count
+        )
+          continue;
+        members.set(slot, {
+          slot,
+          point: formationSlotPosition(formation, slot),
+        });
+      }
     // How far out the furthest measured member sits, which is what turns an
     // angle a cue sweeps into the metres that member travels.
     const radius = Math.max(
       0,
-      ...members.map((member) =>
+      ...[...members.values()].map((member) =>
         Math.hypot(
-          member.x - formation.anchor.x,
-          member.z - formation.anchor.z,
+          member.point.x - formation.anchor.x,
+          member.point.z - formation.anchor.z,
         ),
       ),
     );
     const times = [
-      ...new Set(own.flatMap((cue) => formationGroundSampleTimes(cue, radius))),
+      ...new Set([
+        ...own.flatMap((cue) => formationGroundSampleTimes(cue, radius)),
+        ...ownSlots.flatMap(formationSlotGroundSampleTimes),
+      ]),
     ].sort((left, right) => left - right);
     // Where it was staged is measured only when the unit is ever there: with no
     // cue it never moves, and with a cue starting after zero it stands still
@@ -3090,22 +3349,44 @@ export const validateAutoMovieFormationGround = (
     // sampled up to the cap, so gathering every member at every sampled time
     // before taking the first would measure a unit hundreds of times over to
     // report the moment it already found.
-    let escape: { time: number | null; place: IAutoMovieVector3 } | null = null;
+    let escape: {
+      time: number | null;
+      place: IAutoMovieVector3;
+      carried: number | null;
+    } | null = null;
     for (const time of [...(resting ? [null] : []), ...times]) {
       const motion =
         time === null ? null : sampleFormationMotion(own, formation.id, time);
-      for (const member of members) {
-        const placed =
-          motion === null
-            ? member
-            : transformFormationPoint(
-                member,
-                formation.anchor,
-                motion,
-                formation.facingDeg,
-              );
-        if (isWalkable(space, placed.x, placed.z)) continue;
-        escape = { time, place: placed };
+      for (const member of members.values()) {
+        // At rest no cue of either kind has begun, so the member is exactly
+        // where its design put it and is read as the designed point rather than
+        // through an identity transform that would only round it.
+        if (motion === null) {
+          const off = formationGroundEscape(space, member.point);
+          if (off === null) continue;
+          escape = { time, place: member.point, ...off };
+          break;
+        }
+        const placed = placeFormationSlot({
+          position: member.point,
+          facingDeg: formation.facingDeg,
+          anchor: formation.anchor,
+          baseFacingDeg: formation.facingDeg,
+          unit: motion,
+          member: sampleFormationSlotMotion(
+            ownSlots,
+            formation.id,
+            member.slot,
+            time,
+          ),
+        });
+        // A member the shot has taken out is standing nowhere, so no surface
+        // has to carry it. Refusing a shot for a member nobody can see is the
+        // false refusal this gate exists never to make.
+        if (placed.present === false) continue;
+        const off = formationGroundEscape(space, placed.position);
+        if (off === null) continue;
+        escape = { time, place: placed.position, ...off };
         break;
       }
       if (escape !== null) break;
@@ -3123,7 +3404,11 @@ export const validateAutoMovieFormationGround = (
           escape.time === null
             ? "a member of it stands at"
             : `at ${round(escape.time)}s its cue takes a member of it to`
-        } (${round(escape.place.x)}, ${round(escape.place.z)}) where no walkable surface carries it`,
+        } (${round(escape.place.x)}, ${round(escape.place.z)}) ${
+          escape.carried === null
+            ? "where no walkable surface carries it"
+            : `at ${round(escape.place.y)}m, below the ${round(escape.carried)}m the surface there stands at`
+        }`,
       ),
     );
   }
@@ -3221,6 +3506,155 @@ export const validateAutoMovieFormationMotions = (
         `must not overlap prior cue "${prior.id}" ending at ${prior.end}s`,
       );
     priorByFormation.set(cue.formation, cue);
+  }
+  return diagnostics;
+};
+
+/**
+ * Members one shot may single out of its crowds, in total.
+ *
+ * The channel's whole promise is that a crowd of a hundred thousand does not pay
+ * for the three members something happens to, and a promise nothing enforces is
+ * a comment. Past this the answer is the other mechanism: a member that needs a
+ * shot's full attention is promoted to a named actor, which exists and is capped
+ * for the same reason. This is the cheaper thing and must not become that.
+ */
+const FORMATION_SLOT_EXCEPTION_LIMIT = 1_024;
+
+/**
+ * Validate sparse per-member exceptions against one compiled shot.
+ *
+ * Narrowed to what it reads, like the ground gate beside it: the unit's own
+ * count and hero inventory decide which slots exist and which already belong to
+ * an actor, and nothing else about a compiled shot bears on the question.
+ */
+export const validateAutoMovieFormationSlotMotions = (
+  contract: Pick<
+    IAutoMovieShotContract,
+    "id" | "participants" | "durationSeconds"
+  >,
+  value: {
+    formations: readonly Pick<
+      IAutoMovieCompiledFormation,
+      "id" | "count" | "heroes"
+    >[];
+    formationSlotMotions: readonly IAutoMovieFormationSlotMotion[];
+  },
+): IAutoMovieDiagnostic[] => {
+  const diagnostics: IAutoMovieDiagnostic[] = [];
+  const fail = (field: string, expectation: string): void => {
+    diagnostics.push(engineDiagnostic(contract.id, field, expectation));
+  };
+  const cues = value.formationSlotMotions;
+  if (cues.length > 256)
+    fail(
+      "formationSlotMotions",
+      "must contain at most 256 sparse per-member cues",
+    );
+  const named = cues.reduce((sum, cue) => sum + cue.slots.length, 0);
+  if (named > FORMATION_SLOT_EXCEPTION_LIMIT)
+    fail(
+      "formationSlotMotions",
+      `must single out at most ${FORMATION_SLOT_EXCEPTION_LIMIT} members in one shot rather than author a curve per member`,
+    );
+  const ids = new Set<string>();
+  const participating = new Set(
+    contract.participants.flatMap((participant) =>
+      participant.kind === "formation" ? [participant.id] : [],
+    ),
+  );
+  const compiledById = new Map(
+    value.formations.map((formation) => [formation.id, formation]),
+  );
+  // Keyed by formation and slot rather than by formation alone, because two
+  // members of one crowd doing different things at the same second is the whole
+  // point of the channel. One member doing two things at once is not.
+  const priorBySlot = new Map<string, IAutoMovieFormationSlotMotion>();
+  for (const cue of [...cues].sort(
+    (left, right) =>
+      compareCodeUnits(left.formation, right.formation) ||
+      left.start - right.start ||
+      compareCodeUnits(left.id, right.id),
+  )) {
+    if (cue.id.trim().length === 0 || ids.has(cue.id))
+      fail(
+        `formationSlotMotion:${cue.id || "(blank)"}`,
+        "must have one non-blank id unique inside the shot",
+      );
+    ids.add(cue.id);
+    const compiled = compiledById.get(cue.formation);
+    if (participating.has(cue.formation) === false || compiled === undefined)
+      fail(
+        `formationSlotMotion:${cue.id}.formation`,
+        `must reference participating compiled formation "${cue.formation}"`,
+      );
+    if (
+      Number.isFinite(cue.start) === false ||
+      Number.isFinite(cue.end) === false ||
+      cue.start < 0 ||
+      cue.end <= cue.start ||
+      cue.end > contract.durationSeconds
+    )
+      fail(
+        `formationSlotMotion:${cue.id}.time`,
+        `must be one positive interval inside 0..${contract.durationSeconds}s`,
+      );
+    if (
+      cue.slots.length === 0 ||
+      new Set(cue.slots).size !== cue.slots.length ||
+      cue.slots.some(
+        (slot) =>
+          Number.isSafeInteger(slot) === false ||
+          slot < 0 ||
+          (compiled !== undefined && slot >= compiled.count),
+      )
+    )
+      fail(
+        `formationSlotMotion:${cue.id}.slots`,
+        `must name at least one unique slot inside 0..${(compiled?.count ?? 0) - 1}`,
+      );
+    // A promoted hero is already an explicit scene node with a full authoring
+    // surface of its own. Letting this channel move one too would give a member
+    // two owners writing the same transform, and the frame would show whichever
+    // wrote last.
+    const heroes = (compiled?.heroes ?? []).filter((hero) =>
+      cue.slots.includes(hero.slot),
+    );
+    if (heroes.length !== 0)
+      fail(
+        `formationSlotMotion:${cue.id}.slots`,
+        `must not name slots promoted to named actors (${heroes
+          .map((hero) => `${hero.slot} is "${hero.actor}"`)
+          .join(", ")}); author those on the actor instead`,
+      );
+    for (const [name, state] of [
+      ["from", cue.from],
+      ["to", cue.to],
+    ] as const) {
+      if (
+        [state.offset.x, state.offset.y, state.offset.z].some(
+          (number) =>
+            Number.isFinite(number) === false ||
+            Math.abs(number) > 1_000_000_000,
+        ) ||
+        Number.isFinite(state.facingOffsetDeg) === false ||
+        Math.abs(state.facingOffsetDeg) > 360_000
+      )
+        fail(
+          `formationSlotMotion:${cue.id}.${name}`,
+          "must keep offset inside +/-1000000000m and facing inside +/-360000 degrees",
+        );
+    }
+    for (const slot of cue.slots) {
+      const key = `${cue.formation} ${slot}`;
+      const prior = priorBySlot.get(key);
+      if (prior !== undefined && cue.start < prior.end)
+        fail(
+          `formationSlotMotion:${cue.id}.start`,
+          `must not overlap prior cue "${prior.id}" on slot ${slot} ending at ${prior.end}s`,
+        );
+      priorBySlot.set(key, cue);
+    }
   }
   return diagnostics;
 };
