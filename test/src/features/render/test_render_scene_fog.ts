@@ -58,7 +58,13 @@ const sceneOf = (fog: IAutoMovieScene["fog"]): IAutoMovieScene => ({
   id: "scene-1",
   name: null,
   nodes: [
-    { id: "hero", model: "m", transform: t3(0, 0, 0), motion: null, pose: null },
+    {
+      id: "hero",
+      model: "m",
+      transform: t3(0, 0, 0),
+      motion: null,
+      pose: null,
+    },
   ],
   cameras: [
     { id: "cam", transform: t3(0, 0, 0), fovY: 60, near: 0.1, far: 200 },
@@ -112,18 +118,18 @@ const actorOn = (fog: IAutoMovieScene["fog"], frame: number) =>
  *
  * Scenarios (camera at the origin looking down −Z, one actor receding):
  *
- * 1. A scene declaring no fog omits the field entirely, so its serialized
- *    sidecar is byte-identical to one written before atmospheres existed: the
- *    key does not appear in the JSON at all.
+ * 1. A scene declaring no fog omits the field entirely, so its serialized sidecar
+ *    is byte-identical to one written before atmospheres existed: the key does
+ *    not appear in the JSON at all.
  * 2. A declared fog attenuates the far frame more than the near one, and by the
  *    engine's exact law at each depth.
  * 3. Viewer and renderer agree: the `FogExp2` the viewer builds from this same
  *    scene, evaluated through the shader's own expression at the actor's depth,
  *    is the number the sidecar carries.
- * 4. The depth is the actor's live world root, not its staged placement: the
- *    node sits at the origin for the whole shot and the clip carries all the
- *    travel, so a sidecar keyed to the staged transform would report one
- *    atmosphere for both frames.
+ * 4. The depth is the actor's live world root, not its staged placement: the node
+ *    sits at the origin for the whole shot and the clip carries all the travel,
+ *    so a sidecar keyed to the staged transform would report one atmosphere for
+ *    both frames.
  */
 export const test_render_scene_fog = (): void => {
   // 1. no declaration, no field, no byte.
@@ -139,10 +145,7 @@ export const test_render_scene_fog = (): void => {
         "bytesUnchanged",
         () => renderPoseKeypointSidecar(clear).includes("atmosphere") === false,
       ],
-      [
-        "nullIsAbsentToo",
-        () => !("atmosphere" in actorOn(null, 0)),
-      ],
+      ["nullIsAbsentToo", () => !("atmosphere" in actorOn(null, 0))],
     ]),
     { fieldAbsent: true, bytesUnchanged: true, nullIsAbsentToo: true },
   );

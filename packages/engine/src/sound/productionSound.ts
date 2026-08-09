@@ -358,17 +358,15 @@ interface IAutoMovieSoundMass {
  * The combined spread follows by the parallel-axis identity, which makes it
  * exact rather than approximate:
  *
- * ```
- * variance = sum_i n_i * (variance_i + |centroid_i - centroid|^2) / sum_i n_i
- * ```
+ *     variance = sum_i n_i * (variance_i + |centroid_i - centroid|^2) / sum_i n_i
  *
  * ## A group's own radius
  *
  * The compiled runtime publishes a member count and an axis-aligned box, so the
  * members are taken as uniformly distributed over that box, the only
- * distribution its two facts support. For a uniform box with half-extents
- * `h`, the mean squared distance from the center is `(hx^2 + hy^2 + hz^2)/3`,
- * one third of the squared half-diagonal.
+ * distribution its two facts support. For a uniform box with half-extents `h`,
+ * the mean squared distance from the center is `(hx^2 + hy^2 + hz^2)/3`, one
+ * third of the squared half-diagonal.
  *
  * A formation's box is transformed by its live cue first
  * ({@link transformFormationBounds}), because a cue that rescales spacing

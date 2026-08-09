@@ -62,15 +62,13 @@ const shaderTransmittance = (fog: THREE.FogExp2, depth: number): number =>
  *    The engine agrees, returning a transmittance of exactly one.
  * 2. A declared fog reaches the renderer verbatim: the density is the authored
  *    number and the color is the authored linear triple, unconverted.
- * 3. Viewer and engine derive the same value from the same declaration, at
- *    every depth and to the shader's own formula, and the half-visibility
- *    distance is where `IAutoMovieFog` says it is.
- * 4. Distance is what fog reads: a subject twice as far keeps far less than
- *    half as much of itself, monotonically, which is the whole point of having
- *    it.
- * 5. Structural guide passes suspend it and put it back: a mask must not tint
- *    its palette with distance, and the beauty pass, which IS the film, keeps
- *    it.
+ * 3. Viewer and engine derive the same value from the same declaration, at every
+ *    depth and to the shader's own formula, and the half-visibility distance is
+ *    where `IAutoMovieFog` says it is.
+ * 4. Distance is what fog reads: a subject twice as far keeps far less than half
+ *    as much of itself, monotonically, which is the whole point of having it.
+ * 5. Structural guide passes suspend it and put it back: a mask must not tint its
+ *    palette with distance, and the beauty pass, which IS the film, keeps it.
  */
 export const test_viewer_scene_fog = (): void => {
   // 1. absent is absent.

@@ -197,7 +197,10 @@ export const validateSceneArtifact = (
   // out-of-range color leaves the horizon a color no light in the scene can
   // produce. Density is unbounded above on purpose; a wall of cloud is a look.
   const fog = scene.fog ?? null;
-  if (fog !== null && validateObjectArtifact(fog, "$input.fog", "fog", violations)) {
+  if (
+    fog !== null &&
+    validateObjectArtifact(fog, "$input.fog", "fog", violations)
+  ) {
     validateRange(
       fog.density,
       "$input.fog.density",

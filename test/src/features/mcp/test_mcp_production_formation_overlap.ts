@@ -319,15 +319,21 @@ export const test_mcp_production_formation_overlap = (): void => {
     { one: true, unit: true, other: true, apart: true, place: true },
   );
 
-  // One unit stands still; the other is carried from five metres out to five
-  // metres past it. Both ends of that cue are clear, and the middle is not.
+  // One unit stands at the origin; the other is staged five metres out and
+  // carried ten metres across it. Both ends of that cue are clear, the place it
+  // waits before the cue begins is clear, and the middle is not.
   const passed = judge({
     models: [wide],
     formations: [
       row({ id: "still", count: 1, spacing: 1 }),
-      row({ id: "walker", count: 1, spacing: 1 }),
+      row({
+        id: "walker",
+        count: 1,
+        spacing: 1,
+        anchor: { x: -5, y: 0, z: 0 },
+      }),
     ],
-    formationMotions: [carry({ formation: "walker", from: -5, to: 5 })],
+    formationMotions: [carry({ formation: "walker", from: 0, to: 10 })],
   });
   const passedAt = Number(sampledTime(passed));
   TestValidator.equals(
@@ -704,8 +710,8 @@ export const test_mcp_production_formation_overlap = (): void => {
           nclose(chained[1]!.bottom, 1.9) &&
           nclose(chained[1]!.top, 2.1),
       ],
-      // A box of 2 by 1 across, scaled by 3 and 4, holds the disc of its
-      // narrower scaled side: 1 times 4 is 4, against 2 times 3. Mirrored
+      // A box 2 m across and 1 m deep, scaled by 3 and 4, is 6 m across and 4 m
+      // deep, and the disc inside it is half the narrower of those. Mirrored
       // vertically it fills exactly what its unmirrored twin did, one metre up.
       [
         "scaled",

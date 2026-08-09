@@ -248,10 +248,10 @@ const validateLightColor = (
  * engine accepts. Density has no upper bound on purpose: `1 /m` is a wall of
  * cloud, which is a look, not a mistake.
  *
- * Total over an untyped payload for the same reason
- * {@link validateLightColor} is: `stage` is reachable in-process without the
- * transport's structural gate, and a `null` fog must become a located violation
- * rather than a `TypeError` two rungs later.
+ * Total over an untyped payload for the same reason {@link validateLightColor}
+ * is: `stage` is reachable in-process without the transport's structural gate,
+ * and a `null` fog must become a located violation rather than a `TypeError`
+ * two rungs later.
  */
 const validateFogPlacement = (
   fog: unknown,

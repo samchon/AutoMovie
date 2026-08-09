@@ -9,8 +9,8 @@ import { IAutoMovieColor } from "../color/IAutoMovieColor";
  * the same object at the same remove, and the only way to suggest depth is to
  * spend the particle budget on alpha billboards standing in for haze. Fog is
  * the cheap, exact, camera-independent alternative: it costs no particles, it
- * applies to every drawn surface, and it is one declaration for the whole
- * scene rather than a volume per region.
+ * applies to every drawn surface, and it is one declaration for the whole scene
+ * rather than a volume per region.
  *
  * ## The law
  *
@@ -18,36 +18,32 @@ import { IAutoMovieColor } from "../color/IAutoMovieColor";
  * subject's own color, its **transmittance**, and takes the rest from the
  * medium:
  *
- * ```
- * T(d)     = exp(-(density * d)^2)
- * rendered = subject * T(d) + color * (1 - T(d))
- * ```
+ *     T(d)     = exp(-(density * d)^2)
+ *     rendered = subject * T(d) + color * (1 - T(d))
  *
- * where `d` is the camera-space **depth** of the shaded point (its distance
+ * Where `d` is the camera-space **depth** of the shaded point (its distance
  * along the camera's forward axis, not its radial distance).
  *
  * The squared exponent is not a choice. It is exactly what the renderer's fog
- * shader computes, `fogFactor = 1.0 - exp(-fogDensity * fogDensity *
- * vFogDepth * vFogDepth)` in `three.js`'s `fog_fragment.glsl` under `FOG_EXP2`,
- * with `vFogDepth = -mvPosition.z` from `fog_vertex.glsl`. A physically pure
+ * shader computes, `fogFactor = 1.0 - exp(-fogDensity * fogDensity * vFogDepth
+ * * vFogDepth)` in `three.js`'s `fog_fragment.glsl` under `FOG_EXP2`, with
+ * `vFogDepth = -mvPosition.z` from `fog_vertex.glsl`. A physically pure
  * Beer-Lambert medium would extinguish as `exp(-density * d)`; adopting the
  * shader's own law instead means the number an offline consumer derives on the
  * CPU is the number the GPU actually painted, rather than an approximation of
  * it that drifts with distance. {@link sceneFogTransmittance} is that single
  * shared derivation.
  *
- * Because the law is even in `d`, a point behind the camera attenuates like
- * one the same distance in front. That too is the shader's behavior; a caller
- * that cares reads the sign of the depth itself.
+ * Because the law is even in `d`, a point behind the camera attenuates like one
+ * the same distance in front. That too is the shader's behavior; a caller that
+ * cares reads the sign of the depth itself.
  *
  * ## Choosing a density
  *
  * `density` is per meter and its readable anchor is the **half-visibility
  * distance**, where a subject keeps half its own color:
  *
- * ```
- * d(T = 1/2) = sqrt(ln 2) / density ~= 0.8326 / density
- * ```
+ *     d(T = 1/2) = sqrt(ln 2) / density ~= 0.8326 / density
  *
  * So `0.01 /m` is a clear day with a soft horizon (half at ~83 m, 2% left at
  * 200 m); `0.05 /m` is heavy weather (half at ~17 m); `0.002 /m` is the barely
@@ -58,8 +54,8 @@ import { IAutoMovieColor } from "../color/IAutoMovieColor";
  */
 export interface IAutoMovieFog {
   /**
-   * Extinction coefficient per meter, `>= 0`. Half-visibility sits at
-   * `0.8326 / density` meters; `0` is a vacuum.
+   * Extinction coefficient per meter, `>= 0`. Half-visibility sits at `0.8326 /
+   * density` meters; `0` is a vacuum.
    */
   density: number;
 

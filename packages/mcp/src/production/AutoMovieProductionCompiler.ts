@@ -3559,11 +3559,11 @@ const axialBoneHeights = (
  * The column one part fills on its model's axis, or `null` when it fills none.
  *
  * A part's own scale is applied rather than refused, because a scaled part is
- * still a solid: the disc inside an ellipse is the disc of its narrower
- * half-axis, and a mirrored one occupies exactly what its unmirrored twin did.
- * That is also what makes one reading at the end enough — a dimension that was
- * never real, and a scale that erases one, both arrive here as a column with
- * nothing inside it.
+ * still a solid: each horizontal reach is stretched by its own factor and the
+ * disc inside the result is the narrower of the two, while a mirrored part
+ * occupies exactly what its unmirrored twin did. That is also what makes one
+ * reading at the end enough — a dimension that was never real, and a scale that
+ * erases one, both arrive here as a column with nothing inside it.
  */
 const axialPartColumn = (
   part: IAutoMovieModel["parts"][number],
@@ -3574,7 +3574,10 @@ const axialPartColumn = (
   const base = axialPartHeight(part, heights);
   if (base === null) return null;
   const scale = part.transform === null ? UNIT_SCALE : part.transform.scale;
-  const radius = solid.radius * Math.min(Math.abs(scale.x), Math.abs(scale.z));
+  const radius = Math.min(
+    solid.across * Math.abs(scale.x),
+    solid.deep * Math.abs(scale.z),
+  );
   const centre = base + solid.centre * scale.y;
   const half = solid.half * Math.abs(scale.y);
   return finitePositive(radius) && finitePositive(half)
@@ -3618,33 +3621,46 @@ const vertical = (value: { x: number; z: number }): boolean =>
   value.x === 0 && value.z === 0;
 
 /**
- * The disc one primitive shape certainly fills, and the height it fills it
- * over.
+ * The solid one primitive shape certainly holds, as half-extents about its own
+ * centre.
  *
- * Inscribed rather than circumscribed, every time. A box holds a disc of its
- * narrower side however it is turned; a cone tapers, so only its wider half
- * holds a disc of half its base radius; a plane has no thickness, so nothing is
- * ever inside one. A mesh states no dimensions here and is left to the parts
- * that do.
+ * Read as two horizontal reaches and a height rather than as a finished disc,
+ * because the part's scale stretches the two reaches by different factors and
+ * the disc inside the result is the narrower of them. A cone tapers, so what it
+ * certainly holds is half its base reach over its wider half; a plane has no
+ * thickness, so nothing is ever inside one; a mesh states no dimensions here and
+ * is left to the parts that do.
  */
 const columnOfShape = (
   geometry: IAutoMovieModel["parts"][number]["geometry"],
-): { radius: number; centre: number; half: number } | null => {
+): { across: number; deep: number; centre: number; half: number } | null => {
   if (geometry.type !== "primitive") return null;
   const shape = geometry.shape;
   if (shape.type === "sphere")
-    return { radius: shape.radius, centre: 0, half: shape.radius };
+    return {
+      across: shape.radius,
+      deep: shape.radius,
+      centre: 0,
+      half: shape.radius,
+    };
   if (shape.type === "capsule" || shape.type === "cylinder")
-    return { radius: shape.radius, centre: 0, half: shape.height / 2 };
+    return {
+      across: shape.radius,
+      deep: shape.radius,
+      centre: 0,
+      half: shape.height / 2,
+    };
   if (shape.type === "cone")
     return {
-      radius: shape.radius / 2,
+      across: shape.radius / 2,
+      deep: shape.radius / 2,
       centre: shape.height / 4,
       half: shape.height / 4,
     };
   if (shape.type === "box")
     return {
-      radius: Math.min(shape.width, shape.depth) / 2,
+      across: shape.width / 2,
+      deep: shape.depth / 2,
       centre: 0,
       half: shape.height / 2,
     };

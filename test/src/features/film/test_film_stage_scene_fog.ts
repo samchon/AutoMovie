@@ -12,7 +12,10 @@ const FOG: IAutoMovieFog = {
 
 /** Stage the standard set with `fog` replaced by whatever a case submits. */
 const stagedWith = (fog: unknown): IAutoMovieStagedSet =>
-  stageScene(makeScriptWrite(), makeStagingWrite({ fog: fog as IAutoMovieFog }));
+  stageScene(
+    makeScriptWrite(),
+    makeStagingWrite({ fog: fog as IAutoMovieFog }),
+  );
 
 /** True when submitting `fog` is refused with a violation at `path`. */
 const refusedAt = (
@@ -46,8 +49,8 @@ const refusedAt = (
  * 3. Each gate fires at the submitted field: a fog that is not an object, a
  *    negative density, a non-finite density, a density that is not a number, a
  *    color that is not an object, and a color component outside `[0, 1]`.
- * 4. The negative twin: a zero density is a vacuum and an enormous one is a
- *    wall of cloud. Both are looks, and neither is refused.
+ * 4. The negative twin: a zero density is a vacuum and an enormous one is a wall
+ *    of cloud. Both are looks, and neither is refused.
  */
 export const test_film_stage_scene_fog = (): void => {
   // 1. lowered verbatim.
@@ -79,11 +82,7 @@ export const test_film_stage_scene_fog = (): void => {
       [
         "negativeDensity",
         () =>
-          refusedAt(
-            { ...FOG, density: -0.01 },
-            "range",
-            "$input.fog.density",
-          ),
+          refusedAt({ ...FOG, density: -0.01 }, "range", "$input.fog.density"),
       ],
       [
         "nonFiniteDensity",
@@ -97,7 +96,11 @@ export const test_film_stage_scene_fog = (): void => {
       [
         "densityNotANumber",
         () =>
-          refusedAt({ ...FOG, density: "thick" }, "range", "$input.fog.density"),
+          refusedAt(
+            { ...FOG, density: "thick" },
+            "range",
+            "$input.fog.density",
+          ),
       ],
       [
         "colorNotAnObject",

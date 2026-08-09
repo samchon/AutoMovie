@@ -65,7 +65,7 @@ export class Soloist extends AutoMovieSubject<IAutoMovieModelRecipe> {
       },
       palette: { body: "#d7b56d" },
       lod: [{ tier: "hero", maxDistance: null, recipe: this.id }],
-      capabilities: ["cue"],
+      capabilities: ["signal"],
       attachments: [],
     };
   }

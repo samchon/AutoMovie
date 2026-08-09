@@ -35,10 +35,11 @@ import {
  * still covers every output frame.
  *
  * When the scene declares an atmosphere, each actor also carries the fog
- * transmittance at its own depth ({@link IAutoMoviePoseKeypointActor.atmosphere}),
- * derived through the engine's {@link sceneFogTransmittance}: the identical law
- * the viewer hands the GPU, so the sidecar and the captured frame state the
- * same film. A scene without fog omits the field and the sidecar is unchanged.
+ * transmittance at its own depth
+ * ({@link IAutoMoviePoseKeypointActor.atmosphere}), derived through the engine's
+ * {@link sceneFogTransmittance}: the identical law the viewer hands the GPU, so
+ * the sidecar and the captured frame state the same film. A scene without fog
+ * omits the field and the sidecar is unchanged.
  *
  * Planning only: the host writes the file ({@link renderPoseKeypointSidecar}).
  *

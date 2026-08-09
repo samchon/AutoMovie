@@ -100,7 +100,7 @@ export class ChorusMember extends AutoMovieSubject<IAutoMovieModelRecipe> {
         { tier: "near", maxDistance: 12, recipe: "chorus-near" },
         { tier: "far", maxDistance: null, recipe: "chorus-far" },
       ],
-      capabilities: ["cue"],
+      capabilities: ["signal"],
       attachments: [],
     };
   }
