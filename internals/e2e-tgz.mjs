@@ -1610,6 +1610,15 @@ if (
   // to the engine that owns it. Recomputing the layout here would put a second
   // answer beside the compiler's, which is the shape of the defect this gate
   // exists to catch.
+  //
+  // The compiler owns the whole relation and refuses it during `npm run
+  // compile` above, including the interior of every cue that moves a unit. This
+  // reads it back where the unit stands and at each end of its cues, which is
+  // what a packaged consumer can ask without the compiler's own sampling
+  // policy. What it uniquely proves is that the shipped artifacts carry a
+  // staged space and a staged unit at all, so the gate had something to
+  // measure, and that the engine's placement and containment answers are
+  // reachable from an install.
   const fieldProbePath = join(starterDir, "verify-packaged-field.mjs");
   writeFileSync(
     fieldProbePath,
@@ -1620,7 +1629,7 @@ if (
 import {
   isWalkable,
   sampleFormationMotion,
-  transformFormationBounds,
+  transformFormationPoint,
 } from "@automovie/engine";
 
 const state = requireCurrentAutoMovieProjectState(
@@ -1635,22 +1644,32 @@ for (const [id, shot] of state.generated.shots) {
     const own = cues.filter((cue) => cue.formation === formation.id);
     const times = [...new Set(own.flatMap((cue) => [cue.start, cue.end]))];
     const resting = own.length === 0 || Math.min(...times) > 0;
+    // The four ground corners of the compiled bounds, the same shape the
+    // compiler judges: carried as points rather than re-fitted into a box that
+    // would be bigger than the unit once it is turned.
+    const { min, max } = formation.bounds;
+    const corners = [
+      { x: min.x, y: min.y, z: min.z },
+      { x: max.x, y: min.y, z: min.z },
+      { x: max.x, y: min.y, z: max.z },
+      { x: min.x, y: min.y, z: max.z },
+    ];
     for (const time of [...(resting ? [null] : []), ...times]) {
-      const bounds =
-        time === null
-          ? formation.bounds
-          : transformFormationBounds(
-              formation.bounds,
+      // One sampled state per time, not one per corner: the four corners of a
+      // unit are read at the same instant, and asking the engine four times for
+      // that one instant would be four chances to read it differently.
+      const motion =
+        time === null ? null : sampleFormationMotion(own, formation.id, time);
+      for (const corner of corners.map((point) =>
+        motion === null
+          ? point
+          : transformFormationPoint(
+              point,
               formation.anchor,
-              sampleFormationMotion(cues, formation.id, time),
+              motion,
               formation.facingDeg,
-            );
-      for (const corner of [
-        { x: bounds.min.x, z: bounds.min.z },
-        { x: bounds.max.x, z: bounds.min.z },
-        { x: bounds.max.x, z: bounds.max.z },
-        { x: bounds.min.x, z: bounds.max.z },
-      ])
+            ),
+      ))
         if (isWalkable(space, corner.x, corner.z) === false)
           throw new Error(
             \`shot "\${id}" puts formation "\${formation.id}" at (\${corner.x}, \${corner.z})\` +
@@ -1667,7 +1686,7 @@ if (checked === 0)
 `,
   );
   run(
-    "packaged starter draws a field that contains its army",
+    "packaged starter reads its staged unit back onto its staged ground",
     "node verify-packaged-field.mjs",
     starterDir,
   );

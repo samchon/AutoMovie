@@ -6,7 +6,7 @@ import {
   makeActorSynthesizer,
   realizeShotContract,
   sampleFormationMotion,
-  transformFormationBounds,
+  transformFormationPoint,
   validateModel,
   validateMotion,
   validateShotArtifact,
@@ -2833,6 +2833,111 @@ const validateCompiledShot = (
 };
 
 /**
+ * Metres a corner may travel between neighbouring samples inside one cue.
+ *
+ * Ground is judged in metres, so the resolution is stated in metres too. What
+ * it buys is exactly this: no corner moves further than half a metre between
+ * one sample and the next, so a stretch of void wider than that has a sample in
+ * it. A narrower one can still be stepped over. Nothing requires an authored
+ * surface to be wide, so that is a limit of the gate and not a claim about
+ * spaces.
+ */
+const FORMATION_GROUND_SAMPLE_METRES = 0.5;
+
+/**
+ * Samples one cue may take, however far it carries a unit.
+ *
+ * A cue's turn and travel are plain unbounded numbers, and holding the
+ * resolution over a turn of a thousand revolutions would cost a unit of
+ * ordinary size hundreds of thousands of samples. Past this the walk stays
+ * bounded and the resolution coarsens in proportion, which is the trade a gate
+ * that samples has to make somewhere and had better say out loud.
+ */
+const FORMATION_GROUND_SAMPLE_LIMIT = 360;
+
+/**
+ * One reading as a reader wants it: three decimals, so a metre is stated to the
+ * millimetre and a second to the millisecond.
+ */
+const round = (value: number): number => Math.round(value * 1_000) / 1_000;
+
+/**
+ * When inside one cue a staged unit is worth measuring against its ground.
+ *
+ * Reading only the ends of a cue would be enough if ground were convex, because
+ * every part of a cue interpolates monotonically and a corner therefore travels
+ * a bounded path between two ends. Ground is not convex: a space is a union of
+ * authored surfaces, so a unit can stand on one, end on another, and cross what
+ * is between them. That is true of a turn, which swings a corner through an arc
+ * neither end holds, and just as true of a straight walk between two roads.
+ *
+ * So the interior is walked, at a resolution stated in the same metres the
+ * ground is. How far a corner can travel in one cue is bounded by what the cue
+ * does to it: the anchor's own travel, the arc a turn sweeps it through at its
+ * radius, and the reach a spacing change adds. The interior is walked in even
+ * time steps rather than even distance steps, because the state at a time is
+ * the engine's answer and inverting an easing to land on an exact distance
+ * would be a second one. Every easing this engine has moves at most twice the
+ * average rate, so `n` even steps hold a corner's travel between neighbours
+ * below `2 * reach / n`, and the step count is chosen from that bound rather
+ * than guessed. The bound holds until {@link FORMATION_GROUND_SAMPLE_LIMIT}
+ * clamps the count; a cue that carries a unit far enough to reach it is
+ * measured more coarsely, in proportion.
+ *
+ * This samples; it does not solve. The set of times a unit is off its ground
+ * has no closed form — it depends on the authored polygons as much as on the
+ * cue — so a resolution is stated instead of a guarantee. Every sampled time is
+ * a state the unit really occupies, which is what keeps the gate from ever
+ * refusing a shot that was correct.
+ *
+ * A `step` cue holds its start state until its end, so its interior samples all
+ * repeat that one state. They cost a little and answer correctly, which is the
+ * trade taken rather than a branch here for the one easing that does not move.
+ */
+const formationGroundSampleTimes = (
+  cue: IAutoMovieFormationMotion,
+  radius: number,
+): number[] => {
+  // How many times its design reach a spacing change ever holds a corner out
+  // at, so the arc a turn sweeps it through is measured at the radius it really
+  // turns on. Read as a magnitude: a negative scale mirrors a unit rather than
+  // shrinking it past nothing, and a mirrored corner travels just as far.
+  const spread = Math.max(
+    Math.abs(cue.from.spacingScale.lateral),
+    Math.abs(cue.to.spacingScale.lateral),
+    Math.abs(cue.from.spacingScale.depth),
+    Math.abs(cue.to.spacingScale.depth),
+  );
+  const reach =
+    Math.hypot(
+      cue.to.translation.x - cue.from.translation.x,
+      cue.to.translation.z - cue.from.translation.z,
+    ) +
+    ((Math.abs(cue.to.facingOffsetDeg - cue.from.facingOffsetDeg) * Math.PI) /
+      180) *
+      radius *
+      spread +
+    Math.max(
+      Math.abs(cue.to.spacingScale.lateral - cue.from.spacingScale.lateral),
+      Math.abs(cue.to.spacingScale.depth - cue.from.spacingScale.depth),
+    ) *
+      radius;
+  const steps = Math.min(
+    FORMATION_GROUND_SAMPLE_LIMIT,
+    Math.ceil((2 * reach) / FORMATION_GROUND_SAMPLE_METRES),
+  );
+  const span = cue.end - cue.start;
+  return [
+    cue.start,
+    ...Array.from(
+      { length: Math.max(0, steps - 1) },
+      (_, index) => cue.start + (span * (index + 1)) / steps,
+    ),
+    cue.end,
+  ];
+};
+
+/**
  * Refuse a staged unit the ground it was staged on does not carry.
  *
  * A shot's space is what the scene keeps and what the viewer turns into real
@@ -2842,19 +2947,33 @@ const validateCompiledShot = (
  * corrected in one went on drawing a floor a third the size of its unit in the
  * other.
  *
- * The bounds are the compiler's own and the containment question goes to the
- * engine that owns it, so this compares two existing answers rather than
- * deriving a third that could disagree with both.
+ * The bounds are the compiler's own and both the placement and the containment
+ * question go to the engine that owns them, so this compares answers that
+ * already exist rather than deriving a third that could disagree with both.
+ *
+ * What is measured is the four ground corners of the compiled bounds, carried
+ * through a cue as points rather than re-fitted into a new box at each sample.
+ * A box fitted around a turned box is bigger than the unit, so measuring that
+ * would refuse a unit standing at an angle that every member of it clears.
+ *
+ * Those corners are the box around the members, not members. A full `line` or
+ * `column` grid puts a slot at each of them; a `wedge`, an `arc` and a
+ * `scatter` do not, so this can still refuse a formation every member of which
+ * is carried. Asking the engine where the members are instead is #1822. Until
+ * then the gate is sound about the box and conservative about the unit, and
+ * says so rather than promising otherwise.
  *
  * A shot that stages no space is not measured. The engine then falls back to
  * the scalar ground plane it assumed before spaces existed, and there is no
  * authored extent for a unit to leave.
  *
- * A unit is measured where it stands and at each end of every cue that moves
- * it. Translation and spacing scale interpolate linearly, so their extremes are
- * the endpoints; a facing offset turning between two angles can swing the box
- * past both, which this does not see. Every time it does sample is a state the
- * unit really occupies, so the gate never refuses a shot that was correct.
+ * A unit is measured where it stands and along every cue that moves it, at the
+ * times {@link formationGroundSampleTimes} picks: the ends always, and the
+ * interior at a resolution stated in metres. The interior is walked because
+ * ground is not convex — two ends a unit stands on say nothing about what lies
+ * between them. Every sampled time is a state the unit really occupies, so the
+ * gate never refuses a shot that was correct, and it samples rather than solves
+ * because where a unit leaves authored ground has no closed form.
  */
 export const validateAutoMovieFormationGround = (
   contract: Pick<IAutoMovieShotContract, "id">,
@@ -2875,48 +2994,81 @@ export const validateAutoMovieFormationGround = (
   const diagnostics: IAutoMovieDiagnostic[] = [];
   for (const formation of value.formations) {
     const own = cues.filter((cue) => cue.formation === formation.id);
-    const times = [...new Set(own.flatMap((cue) => [cue.start, cue.end]))].sort(
-      (left, right) => left - right,
+    // The four ground corners of the compiled bounds, carried as points. Fitting
+    // a new axis-aligned box around them at each sample would be bigger than the
+    // unit and would refuse it for standing at an angle. Each corner goes
+    // through the same point transform the runtime places members with.
+    const design = formation.bounds;
+    const corners = [
+      { x: design.min.x, y: design.min.y, z: design.min.z },
+      { x: design.max.x, y: design.min.y, z: design.min.z },
+      { x: design.max.x, y: design.min.y, z: design.max.z },
+      { x: design.min.x, y: design.min.y, z: design.max.z },
+    ];
+    // How far out the furthest measured corner sits, which is what turns an
+    // angle a cue sweeps into the metres that corner travels.
+    const radius = Math.max(
+      ...corners.map((corner) =>
+        Math.hypot(
+          corner.x - formation.anchor.x,
+          corner.z - formation.anchor.z,
+        ),
+      ),
     );
+    const times = [
+      ...new Set(own.flatMap((cue) => formationGroundSampleTimes(cue, radius))),
+    ].sort((left, right) => left - right);
     // Where it was staged is measured only when the unit is ever there: with no
     // cue it never moves, and with a cue starting after zero it stands still
     // until then. A cue starting at zero means the unit begins somewhere its
     // design bounds never describe, and measuring those would refuse a shot for
     // a position it never holds.
-    const resting = own.length === 0 || (times[0] ?? 0) > 0;
-    const escape = [...(resting ? [null] : []), ...times]
-      .map((time) => ({
-        time,
-        bounds:
-          time === null
-            ? formation.bounds
-            : transformFormationBounds(
-                formation.bounds,
+    //
+    // Asked of the earliest sampled time itself. A unit with no cue has none,
+    // which is the same answer as a cue that starts later, and reading it once
+    // spares a fallback for a `times` that cannot be empty when `own` is not:
+    // a branch nothing can reach is a branch nothing can test.
+    const first = times[0];
+    const resting = first === undefined || first > 0;
+    // Walked rather than collected, and stopped at the first escape. A cue is
+    // sampled up to the cap, so gathering every corner at every sampled time
+    // before taking the first would measure a unit hundreds of times over to
+    // report the moment it already found.
+    let escape: { time: number | null; corner: IAutoMovieVector3 } | null =
+      null;
+    for (const time of [...(resting ? [null] : []), ...times]) {
+      const motion =
+        time === null ? null : sampleFormationMotion(own, formation.id, time);
+      for (const corner of corners) {
+        const placed =
+          motion === null
+            ? corner
+            : transformFormationPoint(
+                corner,
                 formation.anchor,
-                sampleFormationMotion(cues, formation.id, time),
+                motion,
                 formation.facingDeg,
-              ),
-      }))
-      .flatMap(({ time, bounds }) =>
-        [
-          { x: bounds.min.x, z: bounds.min.z },
-          { x: bounds.max.x, z: bounds.min.z },
-          { x: bounds.max.x, z: bounds.max.z },
-          { x: bounds.min.x, z: bounds.max.z },
-        ]
-          .filter((corner) => isWalkable(space, corner.x, corner.z) === false)
-          .map((corner) => ({ time, corner })),
-      )[0];
-    if (escape === undefined) continue;
+              );
+        if (isWalkable(space, placed.x, placed.z)) continue;
+        escape = { time, corner: placed };
+        break;
+      }
+      if (escape !== null) break;
+    }
+    if (escape === null) continue;
     diagnostics.push(
       engineDiagnostic(
         contract.id,
         `formation:${formation.id}.bounds`,
+        // Reported to the millimetre and the millisecond. A sampled interior
+        // time and a turned corner are both long fractions, and a diagnostic an
+        // author reads to find a place on a field gains nothing from the digits
+        // below that. Only the reading is rounded; the comparison above is not.
         `must stand on the space this shot staged, but ${
           escape.time === null
             ? "the unit reaches"
-            : `at ${escape.time}s its cue takes the unit to`
-        } (${escape.corner.x}, ${escape.corner.z}) where no walkable surface carries it`,
+            : `at ${round(escape.time)}s its cue takes the unit to`
+        } (${round(escape.corner.x)}, ${round(escape.corner.z)}) where no walkable surface carries it`,
       ),
     );
   }
