@@ -79,10 +79,21 @@ export class Army extends AutoMovieSubjectGroup<
    * while the signal is given and still ordered after it, so a deviation here
    * would be a dramatic event nobody authored.
    *
+   * The constraint is checked here rather than in a constructor. A subclass
+   * that overrides a measurement sets its own fields after the base constructor
+   * has already run, so a constructor would validate numbers the subject no
+   * longer has. `design()` is where the record leaves the class, which makes it
+   * the one place every construction has to pass through.
+   *
    * @evidence docs/characters/army.md States the ranks stay ordered and that
    *   any loosening must be authored as a dramatic event.
    */
   public design(): IAutoMovieFormationDesign {
+    const slots = this.ranks * this.files;
+    if (this.count <= slots - this.files || this.count > slots)
+      throw new Error(
+        `docs/characters/army.md requires ranks and files legible as ranks and files, so a count of ${this.count} cannot stand in ${this.ranks} ranks of ${this.files}: that leaves ${this.count > slots ? `${this.count - slots} with no slot` : "the last rank empty"}. Choose a count above ${slots - this.files} and at most ${slots}.`,
+      );
     return {
       id: this.id,
       modelRecipe: armyHero.id,

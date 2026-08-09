@@ -102,6 +102,9 @@ const context = {} as IAutoMovieShotBuildContext;
  *    what makes a regiment of squadrons the same shape as a squadron.
  * 6. A group that adds something of its own keeps what its members said, because
  *    overriding `render` to replace them would make composition a lie.
+ * 7. A population reaches the record as one compact entry however large its count,
+ *    since composing is not where ten thousand members become ten thousand
+ *    nodes.
  */
 export const test_world_subject_contribution = (): void => {
   TestValidator.equals(
@@ -175,6 +178,32 @@ export const test_world_subject_contribution = (): void => {
     "a group that adds its own keeps what its members said",
     bannered.render(context),
     { actors: [actor("left")], landmarks: [landmark("banner")] },
+  );
+
+  // A population is one compact record whatever its count, and composing it
+  // must not be the step that expands it. The engine materializes members from
+  // count, layout, anchor, facing and seed, so a merge that turned ten thousand
+  // into ten thousand entries would put the nodes back that the whole compact
+  // representation exists to avoid.
+  const forest = new Leaf("forest", {
+    instanceSets: [
+      {
+        id: "forest",
+        modelRecipe: "tree",
+        count: 10_000,
+        layout: { kind: "scatter", radius: 40, jitter: 1 },
+        anchor: { x: 0, y: 0, z: 0 },
+        facingDeg: 0,
+        seed: 7,
+      },
+    ] as never,
+  });
+  TestValidator.equals(
+    "a population reaches the record as one compact entry, not ten thousand",
+    (new Plain("wood", [forest]).render(context).instanceSets ?? []).map(
+      (set) => ({ id: set.id, count: set.count }),
+    ),
+    [{ id: "forest", count: 10_000 }],
   );
 
   TestValidator.equals(
