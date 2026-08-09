@@ -713,9 +713,7 @@ export const test_viewer_formation = (): void => {
       ),
       firstHeroYaw: true,
       repeatedUpdatesKeepSource: true,
-      leadPositionZ: composedLeadZ(
-        collidingSources.get("lead")!.translation.z,
-      ),
+      leadPositionZ: composedLeadZ(collidingSources.get("lead")!.translation.z),
       leadYaw: true,
       leadTracksCollidingSource: true,
       visibleHeroes: 1,

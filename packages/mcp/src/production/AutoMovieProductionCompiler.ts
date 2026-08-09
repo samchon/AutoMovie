@@ -3462,9 +3462,14 @@ const FORMATION_OVERLAP_SAMPLE_LIMIT = 16;
  * member stands on, over the height that part covers. Two members standing
  * closer than the sum of two such radii, at heights whose intervals meet, are
  * two bodies in one place, and that is what lets a refusal be sound. Everything
- * the measure leaves out — an arm reaching outside the column, a limb a motion
- * swings, a part hung off the axis — costs the gate an overlap it does not
- * find, and can never make it invent one.
+ * the measure leaves out — an arm reaching outside the column, a part hung off
+ * the axis — costs the gate an overlap it does not find, and can never make it
+ * invent one.
+ *
+ * This is the model as it rests, which is the shape a unit is staged in and the
+ * shape a crowd holds. What one member's own performance does to one of its
+ * parts is not read here, in either direction: a gate that tried to would be
+ * measuring a solver's output rather than a design's arrangement.
  */
 export interface IAutoMovieModelColumn {
   /** Radius of the disc the model fills, in metres. */

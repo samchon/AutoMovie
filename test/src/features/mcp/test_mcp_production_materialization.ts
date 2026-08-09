@@ -885,7 +885,10 @@ ${anchor}`,
     // rather than a string this fixture could rename in the shot. Renaming the
     // subject is what keeps the participant, the design record and the cue
     // speaking about one formation.
-    const chorusSourcePath = path.join(fixture.root, "src/formations/chorus.ts");
+    const chorusSourcePath = path.join(
+      fixture.root,
+      "src/formations/chorus.ts",
+    );
     fs.writeFileSync(
       chorusSourcePath,
       rewriteSource(

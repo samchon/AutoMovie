@@ -421,7 +421,8 @@ export const fixtureWorldDesign = (): IAutoMovieWorldDesign => ({
  * production services under test have a small deterministic graph. The
  * in-memory contract has to describe that same slice, or every consumer that
  * pairs it with a fixture project resolves a formation the project does not
- * own. Tests that want the shipped instanced group drive the scaffold directly.
+ * own. Tests that want the shipped instanced group drive the scaffold
+ * directly.
  */
 export const shotContract = (): IAutoMovieShotContract => {
   const contract = scaffoldJson<IAutoMovieShotContract>(
