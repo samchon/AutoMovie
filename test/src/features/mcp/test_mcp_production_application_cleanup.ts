@@ -539,15 +539,15 @@ export const test_mcp_production_application_cleanup =
               index: 3,
               ownerParameters: [],
               registrations: [
-                'connectionCleanups.push({resource:"MCPserver",cleanup:()=>server.close(),});',
-                'connectionCleanups.unshift({resource:"MCPclient",cleanup:()=>client.close(),});',
+                'constclient=newClient({name:"five-tool-schema-test",version:"0.0.0",});',
+                "const[clientTransport,serverTransport]=InMemoryTransport.createLinkedPair();",
               ],
-              substantiveStatements: 165,
+              substantiveStatements: 164,
               substantiveTokenDigest:
-                "dd8a4d202020837fb43b4169bfcf23d2198e08f08718f450002c42b6c6c1f4a9",
+                "c3df72275492bf106a4efbbe82ac7affc8d41fd22e86ad0973f65e30eac1158b",
               tryDigest:
-                "063345772f014d20bc638c16de449a6737edd5369a77aaefdbb5e9af710ecd07",
-              tryStatements: 167,
+                "b3a603099954553f83324aa3b1cde0eb62fa6a765803416fa3cb0f28fb6cea49",
+              tryStatements: 166,
             },
           ],
         },

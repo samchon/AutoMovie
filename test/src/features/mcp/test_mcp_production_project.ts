@@ -4380,11 +4380,14 @@ export const test_mcp_production_project = (): void => {
       file: fs.PathOrFileDescriptor,
       ...args: unknown[]
     ): void => {
+      // Every write into the parent, not one basename. Root namespace locks
+      // live under the home directory, so a hook that only refused a sibling
+      // named after the project could never fire, and the fact below was true
+      // because nothing was tried rather than because nothing was needed.
       if (
         typeof file !== "number" &&
         path.dirname(path.resolve(file.toString())) ===
-          fs.realpathSync(invalidRoot) &&
-        path.basename(file.toString()).includes("fresh.automovie-root")
+          fs.realpathSync(invalidRoot)
       ) {
         attemptedParentSiblingLock = true;
         const error = new Error("parent is intentionally not writable");

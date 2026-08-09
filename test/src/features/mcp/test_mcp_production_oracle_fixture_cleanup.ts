@@ -410,14 +410,14 @@ export const test_mcp_production_oracle_fixture_cleanup = (): void => {
             ownerParameters: [],
             substantiveStatements: 284,
             substantiveTokenDigest:
-              "07f8e24b058371b8e4c1e7012e3556ffd0a187d90c3a19d6abdae41dbaa2b266",
+              "cad9cbf618ade58854bcd85ce7ac5bf24cfbd489121314aeb7460c04035994c6",
             catchBodies: ["productionOracleFailure={error};", "throwerror;"],
             catchVariables: ["error"],
             finallyBodies: [
               "preserveProductionOracleFixtureCleanup(productionOracleFailure,()=>fixture.dispose(),);",
             ],
             tryDigest:
-              "12fd3896538920740faa2bae507dbb997e012a36e71d20adb1bbe5e2924412f8",
+              "a7bf70b26adf2685f7b1bba050c62299748a7adfae10e69f33fe1b330a4757a3",
             tryStatements: 281,
           },
           {

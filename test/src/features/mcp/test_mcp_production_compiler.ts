@@ -1542,11 +1542,26 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
         designRevisionRaced: true,
       },
     );
+    // Measured, not written down. Armed at a hardcoded sixth read, the racer
+    // waited for a read the assertion below simultaneously forbade, so the
+    // mutation flag read false because nothing ran rather than because a fence
+    // held. The two cases above measure their budget for exactly this reason.
+    const countDesignRevisionReads = (): number => {
+      let reads = 0;
+      project.revision = (() => {
+        ++reads;
+        return residentRevision.call(project);
+      }) as typeof project.revision;
+      compiler.compile({ scope: "design" });
+      project.revision = residentRevision;
+      return reads;
+    };
+    const designReadBudget = countDesignRevisionReads();
     let postFenceDesignReads = 0;
     let postFenceDesignMutation = false;
     project.revision = (() => {
       ++postFenceDesignReads;
-      if (postFenceDesignReads === 6) {
+      if (postFenceDesignReads === designReadBudget + 1) {
         designRevisionRacer.setWorldDesign(worldDesign());
         postFenceDesignMutation = true;
       }
@@ -1565,7 +1580,10 @@ export const test_mcp_production_compiler = async (): Promise<void> => {
               stableDesignOnly,
             ),
         ],
-        ["postFenceDesignReads", () => postFenceDesignReads === 5],
+        [
+          "postFenceDesignReads",
+          () => postFenceDesignReads === designReadBudget,
+        ],
         ["postFenceDesignMutation", () => postFenceDesignMutation === false],
       ]),
       {

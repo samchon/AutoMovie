@@ -1234,6 +1234,15 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
           "rightOnlyMeasured",
           () => rightOnlyReach.result?.kind === "measurement",
         ],
+        // The surviving side is the half the title calls preserved. Reading
+        // only the missing side passes just as well for a regression that made
+        // every side unmeasurable.
+        [
+          "rightOnlyKeepsRight",
+          () =>
+            rightOnlyReach.result?.kind === "measurement" &&
+            rightOnlyReach.result.values.rightMeasurable === true,
+        ],
         [
           "rightOnlyLacksLeft",
           () =>
@@ -1243,6 +1252,12 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         [
           "leftOnlyMeasured",
           () => leftOnlyReach.result?.kind === "measurement",
+        ],
+        [
+          "leftOnlyKeepsLeft",
+          () =>
+            leftOnlyReach.result?.kind === "measurement" &&
+            leftOnlyReach.result.values.leftMeasurable === true,
         ],
         [
           "leftOnlyLacksRight",
@@ -1296,8 +1311,10 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
       {
         corruptRigsRefused: true,
         rightOnlyMeasured: true,
+        rightOnlyKeepsRight: true,
         rightOnlyLacksLeft: true,
         leftOnlyMeasured: true,
+        leftOnlyKeepsLeft: true,
         leftOnlyLacksRight: true,
         rootedReachMeasured: true,
         rootedDistanceMeasured: true,
