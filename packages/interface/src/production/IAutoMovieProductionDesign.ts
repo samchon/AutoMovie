@@ -387,7 +387,6 @@ export type AutoMovieFormationCapability =
   | "advance"
   | "wheel"
   | "charge"
-  | "fire-volley"
   | "break"
   | "retreat";
 
@@ -665,7 +664,7 @@ export interface IAutoMovieShotEventContract {
   /** Stable event id. */
   id: string;
   /** Event family. */
-  kind: "contact" | "arrival" | "volley" | "break" | "reveal" | "transition";
+  kind: "contact" | "arrival" | "break" | "reveal" | "transition";
   /** Inclusive finite event window inside the owning shot's duration. */
   window: {
     /** Earliest valid time. */

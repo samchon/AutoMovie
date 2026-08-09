@@ -17,15 +17,10 @@ Each marker suppresses exactly one matching diagnostic; for example,
 review backlog. The edit-list layer supplies shot order; human or VLM aesthetic
 judgment remains outside this mechanical analyzer.
 
-## Capability-gated combat and world kit
-
-`resolveFirearmVolley` requires an exact model profile, `shooter` trait, and
-typed firearm before it returns one deterministic event per shooter. Reload,
-misfire, accuracy interpolation, effective range, and seeded hit sampling stay
-separate so agent-owned behavior code can react to returned data.
+## Seeded primitives and world kit
 
 `seededValue` and `mixSeed` are the shared domain-separated PRNG primitives for
-effects, combat, formations, and general instances. The world kit constructs
+effects, formations, and general instances. The world kit constructs
 terrain/ramp surfaces, visible wall/building box proxies, and grid/scatter/
 route instance designs. `assertWorldPlacements` throws on overlapping or
 floating blocks, blocked routes, and unreachable landmarks.

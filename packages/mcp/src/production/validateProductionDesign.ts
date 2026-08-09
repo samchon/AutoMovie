@@ -1586,9 +1586,7 @@ const validateModelProfiles = (
           ? "design-range-invalid"
           : violation.expected.includes("unique")
             ? "design-capability-duplicate"
-            : violation.expected.includes("non-blank")
-              ? "design-text-empty"
-              : "design-capability-invalid",
+            : "design-text-empty",
         target,
         file,
         `${violation.path}: ${violation.expected}. Correct the typed profile data before writing the model recipe record.`,
@@ -1629,228 +1627,43 @@ const validateModelProfiles = (
         );
         continue;
       }
-      if (trait.kind === "destructible") {
-        positive(
-          diagnostics,
-          trait.durability,
-          target,
-          file,
-          `profiles.${profile.id}.destructible.durability`,
-        );
-        positive(
-          diagnostics,
-          trait.impactBody.mass,
-          target,
-          file,
-          `profiles.${profile.id}.destructible.impactBody.mass`,
-        );
-        bounded(
-          diagnostics,
-          trait.impactBody.restitution,
-          0,
-          1,
-          target,
-          file,
-          `profiles.${profile.id}.destructible.impactBody.restitution`,
-        );
-        positive(
-          diagnostics,
-          trait.impactBody.hardness,
-          target,
-          file,
-          `profiles.${profile.id}.destructible.impactBody.hardness`,
-        );
-        positive(
-          diagnostics,
-          trait.impactBody.penetrability,
-          target,
-          file,
-          `profiles.${profile.id}.destructible.impactBody.penetrability`,
-        );
-        continue;
-      }
-      if (trait.weapons.length === 0)
-        invalid(
-          diagnostics,
-          "design-capability-invalid",
-          target,
-          file,
-          `Profile "${profile.id}" shooter must declare at least one typed weapon.`,
-        );
-      const weaponIds = new Set<string>();
-      for (const weapon of trait.weapons) {
-        unique(
-          diagnostics,
-          weaponIds,
-          weapon.id,
-          target,
-          file,
-          `profiles.${profile.id}.shooter.weapons`,
-        );
-        if (weapon.kind === "melee") {
-          positive(
-            diagnostics,
-            weapon.reach,
-            target,
-            file,
-            `profiles.${profile.id}.${weapon.id}.reach`,
-          );
-          positive(
-            diagnostics,
-            weapon.recoverySeconds,
-            target,
-            file,
-            `profiles.${profile.id}.${weapon.id}.recoverySeconds`,
-          );
-          positive(
-            diagnostics,
-            weapon.impact,
-            target,
-            file,
-            `profiles.${profile.id}.${weapon.id}.impact`,
-          );
-          continue;
-        }
-        positive(
-          diagnostics,
-          weapon.reloadSeconds,
-          target,
-          file,
-          `profiles.${profile.id}.${weapon.id}.reloadSeconds`,
-        );
-        positive(
-          diagnostics,
-          weapon.effectiveRange,
-          target,
-          file,
-          `profiles.${profile.id}.${weapon.id}.effectiveRange`,
-        );
-        positive(
-          diagnostics,
-          weapon.muzzleVelocity,
-          target,
-          file,
-          `profiles.${profile.id}.${weapon.id}.muzzleVelocity`,
-        );
-        if (weapon.kind === "firearm") {
-          bounded(
-            diagnostics,
-            weapon.misfireProbability,
-            0,
-            1,
-            target,
-            file,
-            `profiles.${profile.id}.${weapon.id}.misfireProbability`,
-          );
-          if (weapon.accuracy.length === 0)
-            invalid(
-              diagnostics,
-              "design-capability-invalid",
-              target,
-              file,
-              `Firearm "${weapon.id}" requires at least one distance/accuracy point.`,
-            );
-          let priorDistance = -1;
-          for (const point of weapon.accuracy) {
-            if (
-              Number.isFinite(point.distance) === false ||
-              point.distance < 0 ||
-              point.distance <= priorDistance
-            )
-              invalid(
-                diagnostics,
-                "design-capability-invalid",
-                target,
-                file,
-                `Firearm "${weapon.id}" accuracy distances must be finite, non-negative, and strictly increasing.`,
-              );
-            bounded(
-              diagnostics,
-              point.probability,
-              0,
-              1,
-              target,
-              file,
-              `profiles.${profile.id}.${weapon.id}.accuracy.probability`,
-            );
-            priorDistance = point.distance;
-          }
-          continue;
-        }
-        if (weapon.ammunition.length === 0)
-          invalid(
-            diagnostics,
-            "design-capability-invalid",
-            target,
-            file,
-            `Cannon "${weapon.id}" requires at least one typed ammunition payload.`,
-          );
-        const ammunitionKinds = new Set<string>();
-        for (const ammunition of weapon.ammunition) {
-          if (ammunitionKinds.has(ammunition.kind))
-            invalid(
-              diagnostics,
-              "design-capability-duplicate",
-              target,
-              file,
-              `Cannon "${weapon.id}" repeats ${ammunition.kind}. Keep one explicit payload of each kind.`,
-            );
-          ammunitionKinds.add(ammunition.kind);
-          if (ammunition.kind === "round-shot") {
-            positive(
-              diagnostics,
-              ammunition.mass,
-              target,
-              file,
-              `profiles.${profile.id}.${weapon.id}.roundShot.mass`,
-            );
-            integer(
-              diagnostics,
-              ammunition.maxRicochets,
-              0,
-              64,
-              target,
-              file,
-              `profiles.${profile.id}.${weapon.id}.roundShot.maxRicochets`,
-            );
-            bounded(
-              diagnostics,
-              ammunition.ricochetRetention,
-              0,
-              1,
-              target,
-              file,
-              `profiles.${profile.id}.${weapon.id}.roundShot.ricochetRetention`,
-            );
-          } else {
-            integer(
-              diagnostics,
-              ammunition.pellets,
-              1,
-              100_000,
-              target,
-              file,
-              `profiles.${profile.id}.${weapon.id}.canister.pellets`,
-            );
-            bounded(
-              diagnostics,
-              ammunition.spreadDegrees,
-              Number.EPSILON,
-              180,
-              target,
-              file,
-              `profiles.${profile.id}.${weapon.id}.canister.spreadDegrees`,
-            );
-            positive(
-              diagnostics,
-              ammunition.pelletMass,
-              target,
-              file,
-              `profiles.${profile.id}.${weapon.id}.canister.pelletMass`,
-            );
-          }
-        }
-      }
+      positive(
+        diagnostics,
+        trait.durability,
+        target,
+        file,
+        `profiles.${profile.id}.destructible.durability`,
+      );
+      positive(
+        diagnostics,
+        trait.impactBody.mass,
+        target,
+        file,
+        `profiles.${profile.id}.destructible.impactBody.mass`,
+      );
+      bounded(
+        diagnostics,
+        trait.impactBody.restitution,
+        0,
+        1,
+        target,
+        file,
+        `profiles.${profile.id}.destructible.impactBody.restitution`,
+      );
+      positive(
+        diagnostics,
+        trait.impactBody.hardness,
+        target,
+        file,
+        `profiles.${profile.id}.destructible.impactBody.hardness`,
+      );
+      positive(
+        diagnostics,
+        trait.impactBody.penetrability,
+        target,
+        file,
+        `profiles.${profile.id}.destructible.impactBody.penetrability`,
+      );
     }
   }
 };
