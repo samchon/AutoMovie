@@ -41,17 +41,17 @@ And a shot cites a scene, which is the join that stops a production from
 accumulating footage nothing asked for.
 
 There is no population for actions. An action belongs to the subject that
-performs it -- `Army.advance` is a method on the class its specification
-describes. A choreography that spans subjects and belongs to none of them is a
-shot, and cites its scene.
+performs it, as a method on the class its specification describes. A
+choreography that spans subjects and belongs to none of them is a shot, and
+cites its scene.
 
 ## Subjects are classes
 
 `packages/engine/src/subject.ts` carries the layer: a subject contributes an
 `IAutoMovieSubjectContribution`, and `mergeAutoMovieSubjectContributions` folds
-a group's leaves into one contribution. The scaffold is written that way --
-`Sentinel` and `ArmyMember` extend `AutoMovieSubject`, `Army` and `SignalField`
-extend `AutoMovieSubjectGroup`, and `WorldPiece` is the abstract world leaf.
+a group's leaves into one contribution. A single subject extends
+`AutoMovieSubject`; a subject that is made of others extends
+`AutoMovieSubjectGroup`; a place extends the abstract world leaf.
 
 The evidence graph selects `["type", "property", "function"]` over those files,
 which is one obligation per grain: the class answers for the subject, a field
@@ -59,8 +59,8 @@ for the measured value, a method for the behavior. A measurement its
 specification does not state is refused at authorship, by the class, naming the
 document it contradicts -- not discovered in a frame nobody looks at.
 
-Nest the same way for scale. A regiment of squadrons of men, or a village of
-buildings, is a group of groups, and each class owns its own constraints,
+Nest the same way for scale. A group whose members are themselves groups is
+still one contribution, and each class owns its own constraints,
 motion, utilities and render rather than leaving them scattered across whichever
 shot happens to stage it.
 
@@ -84,8 +84,8 @@ a design record is a way of writing something no document answers for.
 State these to whoever is authoring rather than letting them discover it.
 
 - **`docs/objects/` and `src/objects/` ship empty.** The prop slot has never had
-  an inhabitant, because the shipped screenplay calls for no prop. A production
-  that wants artillery, colours or a drum is the first to exercise that path.
+  an inhabitant, because the shipped screenplay calls for no prop. The first production
+  that needs a prop at all is the one that walks that path first.
 - **`docs/research/` is outside the ladder**, as are `docs/art-direction.md` and
   `docs/historical-notes.md`. They cite nothing and nothing cites them, so
   sourced research is currently unowned by the obligation graph. A production

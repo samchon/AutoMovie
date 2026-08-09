@@ -18,7 +18,7 @@
 // transform already applied, the host starts in seconds, and the sandbox
 // exercises the same resolution a real user's project does.
 //
-// `sandboxManifest` then pins every workspace package to its tarball, and
+// `sandboxManifest` then pins every packed package to its tarball, and
 // `claudeSettings` approves the project's own MCP server so a non-interactive
 // session can reach it.
 import { spawnSync } from "node:child_process";
@@ -50,11 +50,15 @@ Options:
 /**
  * The workspace packages a sandbox installs, dependencies before consumers.
  *
- * This is the scaffold's six (`WORKSPACE_TEMPLATE_VERSION_KEYS`) closed under
- * `@automovie/*` dependencies, which adds `ingest` and `render` through `mcp`.
- * The closure matters because `pnpm pack` rewrites a `workspace:^` range to a
- * plain semver one: any member left unpacked would be resolved from the public
- * registry at a version this monorepo has never published.
+ * This is what the scaffold names (`WORKSPACE_TEMPLATE_VERSION_KEYS`) closed
+ * under `@automovie/*` dependencies, which today reaches `ingest` and `render`
+ * through `mcp`. The closure matters because `pnpm pack` rewrites a
+ * `workspace:^` range to a plain semver one: any member left unpacked would be
+ * resolved from the public registry at a version this monorepo has never
+ * published. `assertClosure` holds the list to that rule rather than trusting
+ * this sentence to stay true. A workspace package outside the closure is
+ * deliberately absent, since packing one costs a full build and buys the
+ * sandbox nothing.
  */
 const PACKAGES = Object.freeze([
   "interface",
@@ -65,6 +69,42 @@ const PACKAGES = Object.freeze([
   "mcp",
   "cli",
 ]);
+
+/**
+ * Refuse to pack a `PACKAGES` that is no longer closed, naming what to add.
+ *
+ * Drift here is silent until it is expensive: an unlisted member is never
+ * packed, so the semver range `pnpm pack` left behind resolves from the public
+ * registry and the install dies partway through on `ERR_PNPM_FETCH_404`, after
+ * every other package has already been built. The manifests are the authority
+ * on the graph, so read them rather than restating it in a comment that rots
+ * the next time a package is added, renamed, or removed.
+ */
+const assertClosure = () => {
+  const missing = new Set(
+    WORKSPACE_TEMPLATE_VERSION_KEYS.filter(
+      (key) => PACKAGES.includes(key) === false,
+    ),
+  );
+  for (const name of PACKAGES) {
+    const manifest = JSON.parse(
+      fs.readFileSync(
+        path.join(ROOT, "packages", name, "package.json"),
+        "utf8",
+      ),
+    );
+    for (const table of [manifest.dependencies, manifest.peerDependencies])
+      for (const dependency of Object.keys(table ?? {}))
+        if (dependency.startsWith("@automovie/")) {
+          const member = dependency.slice("@automovie/".length);
+          if (PACKAGES.includes(member) === false) missing.add(member);
+        }
+  }
+  if (missing.size !== 0)
+    throw new Error(
+      `PACKAGES must also carry ${[...missing].sort().join(", ")}: add each one to internals/experimental.mjs, dependencies before consumers`,
+    );
+};
 
 /**
  * Files the scaffold ships without a leading dot, because npm strips a real
@@ -121,8 +161,8 @@ const assertPortableName = (name) => {
 const TARBALL_DIR = ".tarballs";
 
 /**
- * Pack every workspace package into `experimental/<name>/.tarballs`, returning
- * each package's `file:` specifier.
+ * Pack every member of `PACKAGES` into `experimental/<name>/.tarballs`,
+ * returning each package's `file:` specifier.
  *
  * Packing rather than linking is the whole design. `pnpm pack` runs each
  * package's `prepack` build and applies `publishConfig`, so the tarball's
@@ -145,9 +185,10 @@ const TARBALL_DIR = ".tarballs";
  * The digest in each filename is not decoration. `file:` specifiers are keyed
  * by path, so a rebuilt package under an unchanged name and version would leave
  * an existing sandbox installed against stale bytes; changing the specifier is
- * what forces pnpm to resolve the new tarball.
+ * what forces the installer to resolve the new tarball.
  */
 const packWorkspace = (target) => {
+  assertClosure();
   const directory = path.join(target, TARBALL_DIR);
   fs.rmSync(directory, { recursive: true, force: true });
   fs.mkdirSync(directory, { recursive: true });
@@ -187,8 +228,12 @@ const packWorkspace = (target) => {
 };
 
 /**
- * The scaffold rendered for a sandbox: the published version tokens, with every
- * package this monorepo publishes replaced by its working-tree tarball.
+ * The scaffold rendered for a sandbox: the published version tokens, with each
+ * `@automovie/*` token the scaffold carries replaced by its working-tree
+ * tarball.
+ *
+ * Only `WORKSPACE_TEMPLATE_VERSION_KEYS` has a token to replace, so the rest of
+ * the pack reaches the sandbox through `sandboxManifest` instead.
  *
  * `specifiers` is empty on a render that skips the install, which leaves the
  * published ranges in place so the output is still inspectable.
@@ -227,8 +272,8 @@ const renderSandbox = (name, specifiers) => {
  *
  * A `.mcp.json` server starts life unapproved, and `claude mcp list` reports it
  * as `Pending approval (run \`claude` to approve)`. Approval is interactive and
- * per-project, and `--dangerously-skip-permissions`does not grant it, so a
- * headless`claude -p` session against a fresh sandbox sees no automovie tools
+ * per-project, and `--dangerously-skip-permissions` does not grant it, so a
+ * headless `claude -p` session against a fresh sandbox sees no automovie tools
  * at all and cannot be told to wait for any. Since the whole point of a sandbox
  * is to be driven by an agent, the generator grants that approval up front.
  *
@@ -246,40 +291,23 @@ const claudeSettings = (rendered) => {
 };
 
 /**
- * The sandbox's manifest: the scaffold's, plus the two settings the root
- * workspace used to supply.
+ * The sandbox's manifest: the scaffold's, with every packed package pinned to
+ * its sibling tarball.
  *
- * The scaffold is an npm project, so its Sharp stub is an npm-style top-level
- * `overrides` block. pnpm reads `pnpm.overrides` instead and ignores that one,
- * and a standalone install therefore pulls real Sharp in past the capability
- * wall the stub exists to hold. Mirroring it under `pnpm` restores the stub
- * without disturbing the npm form a published project still needs.
- *
- * `onlyBuiltDependencies` is not cosmetic. pnpm 10 refuses to run any
- * dependency lifecycle script that a project has not allowed, and reports the
- * refusal as `ERR_PNPM_IGNORED_BUILDS` with a **non-zero exit**, which the
- * generator would otherwise read as a failed install. The listed three are the
- * builds this dependency graph genuinely needs; Sharp is absent because the
- * override above replaces it with the stub, which has nothing to build.
- */
-/**
- * The sandbox's manifest: the scaffold's, with every workspace package pinned
- * to its sibling tarball.
- *
- * Every one of the eight is pinned directly, including `ingest` and `render`
- * which the scaffold never names. `pnpm pack` rewrites each packed package's
- * own `workspace:^` ranges into plain semver, so an unpinned member is fetched
- * from the public registry at a version this monorepo has never published, and
- * the install dies on `ERR_PNPM_FETCH_404 .../@automovie%2Fengine`. A direct
- * entry makes npm satisfy those transitive ranges from the siblings instead,
- * which is the same technique `internals/e2e-tgz.mjs` relies on.
+ * Every member of `PACKAGES` gets a direct entry, including the ones the
+ * scaffold never names. `pnpm pack` rewrites each packed package's own
+ * `workspace:^` ranges into plain semver, so an unpinned member is fetched from
+ * the public registry at a version this monorepo has never published, and the
+ * install dies on `ERR_PNPM_FETCH_404 .../@automovie%2Fengine`. A direct entry
+ * makes npm satisfy those transitive ranges from the siblings instead, which is
+ * the same technique `internals/e2e-tgz.mjs` relies on.
  *
  * Pnpm was tried first and its `overrides` do not reach a transitive range from
  * inside a packed tarball; the same 404 surfaced one package later. Installing
- * with npm also restores what the pnpm-specific manifest block used to
- * compensate for: the scaffold's npm-style top-level `overrides` supplies the
- * Sharp stub on its own, and pnpm 10's lifecycle-script allowlist, whose
- * refusal exits non-zero, is not npm's rule.
+ * with npm also removes what a pnpm-specific manifest block had to compensate
+ * for: the scaffold's npm-style top-level `overrides` supplies the Sharp stub
+ * on its own, and pnpm 10's lifecycle-script allowlist, whose refusal exits
+ * non-zero, is not npm's rule.
  */
 const sandboxManifest = (rendered, specifiers) => {
   const manifest = JSON.parse(rendered);
@@ -307,7 +335,24 @@ const main = () => {
   }
   try {
     assertPortableName(name);
+    const refresh = args.includes("--refresh");
+    const install = args.includes("--no-install") === false;
+    // `--refresh` does not render and `--no-install` does not pack, so together
+    // they leave nothing to do while still reporting success. Say so instead.
+    if (refresh && install === false)
+      throw new Error(
+        "--refresh and --no-install cancel out: --refresh only repacks and reinstalls.",
+      );
     const target = path.join(ROOT, "experimental", name);
+    const manifest = path.join(target, "package.json");
+    // Every precondition is settled before the pack, which runs each package's
+    // build and costs minutes. Refusing afterwards would charge the operator
+    // that whole wait for a mistake stated in the arguments, and would leave a
+    // half-made `.tarballs` directory where no sandbox existed.
+    if (refresh && fs.existsSync(manifest) === false)
+      throw new Error(
+        `experimental/${name} has no package.json to refresh. Create it first.`,
+      );
     // Refuse a non-empty directory, not merely an existing one, matching the
     // CLI's own `--force` semantics. Deleting a sandbox on Windows routinely
     // leaves the directory behind once its `node_modules` links are gone, and
@@ -316,14 +361,13 @@ const main = () => {
       fs.existsSync(target) &&
       fs.readdirSync(target).length !== 0 &&
       args.includes("--force") === false &&
-      args.includes("--refresh") === false
+      refresh === false
     )
       throw new Error(
         `experimental/${name} is not empty. Pass --force to render over it, or remove it first.`,
       );
 
     // Packing writes into the target, so it precedes the render that fills it.
-    const install = args.includes("--no-install") === false;
     const specifiers = install ? packWorkspace(target) : {};
 
     // `--refresh` repacks and reinstalls without re-rendering the scaffold, so
@@ -331,12 +375,7 @@ const main = () => {
     // it the only way to pick up a change is `--force`, which writes the
     // starter's design, screenplay, and source back over the film in progress
     // and destroys exactly the work the experiment exists to produce.
-    if (args.includes("--refresh")) {
-      const manifest = path.join(target, "package.json");
-      if (fs.existsSync(manifest) === false)
-        throw new Error(
-          `experimental/${name} has no package.json to refresh. Create it first.`,
-        );
+    if (refresh) {
       fs.writeFileSync(
         manifest,
         sandboxManifest(fs.readFileSync(manifest, "utf8"), specifiers),
@@ -379,17 +418,26 @@ const main = () => {
         );
     }
 
+    // Codex stores an absolute command in its own configuration and may launch
+    // it from any directory, so name the sandbox's own `tsx` the way the
+    // rendered `.mcp.json` does rather than leaving the interpreter to `npx`,
+    // which would resolve against whatever directory Codex happens to run in.
     process.stdout.write(
-      `\nDrive it with Claude Code:\n` +
-        `  cd experimental/${name}\n` +
-        `  claude\n\n` +
-        `Drive it with Codex (its MCP servers come from its own config, not .mcp.json):\n` +
-        `  codex mcp add automovie -- npx tsx ${path.join(target, "scripts", "mcp.ts")}\n` +
-        `  cd experimental/${name} && codex\n\n` +
-        `The sandbox installs packed working-tree tarballs, so after changing a\n` +
-        `package under packages/ rerun this command with --refresh, which repacks\n` +
-        `and reinstalls without writing the starter back over work in progress.\n` +
-        `experimental/ is gitignored: delete the directory when the experiment is done.\n`,
+      install
+        ? `\nDrive it with Claude Code:\n` +
+            `  cd experimental/${name}\n` +
+            `  claude\n\n` +
+            `Drive it with Codex (its MCP servers come from its own config, not .mcp.json):\n` +
+            `  codex mcp add automovie -- node ${path.join(target, "node_modules", "tsx", "dist", "cli.mjs")} ${path.join(target, "scripts", "mcp.ts")}\n` +
+            `  cd experimental/${name} && codex\n\n` +
+            `The sandbox installs packed working-tree tarballs, so after changing a\n` +
+            `package under packages/ rerun this command with --refresh, which repacks\n` +
+            `and reinstalls without writing the starter back over work in progress.\n` +
+            `experimental/ is gitignored: delete the directory when the experiment is done.\n`
+        : `\nexperimental/${name} was rendered but not packed or installed, so it\n` +
+            `has no dependencies and cannot be driven yet. Re-run without\n` +
+            `--no-install to pack the working tree and install it.\n` +
+            `experimental/ is gitignored: delete the directory when the experiment is done.\n`,
     );
     return 0;
   } catch (error) {

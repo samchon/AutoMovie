@@ -49,7 +49,6 @@ Read only the route that matches the next owned decision. Contract guides define
 - `OBJECT_RIGGING`: silhouette-first object design, axes, pivots, skeletons, profiles, traits, and retargeting.
 - `WORLD_BUILDING`: procedural layout, semantic anchors, scale, traversal, and environmental storytelling.
 - `MOTION`: action verbs, clip construction, contact, weight, expression, and continuity.
-- `BATTLE_SIM`: historical evidence, formations, immutable engine facts, reaction hints, and authored performance.
 - `SOUND_DESIGN`: event-derived sound, dialogue, ambience, spatialization, and mix hierarchy.
 - `ASSET_SOURCING`: license, provenance, digest, conversion, and consumer restrictions.
 - `DIFFUSION_ENHANCE`: current-model research, reference locking, structural controls, repaint review, and reroll discipline.

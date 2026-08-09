@@ -20,57 +20,12 @@ import {
 } from "./productionFixtures";
 
 const capabilityProfile = (): IAutoMovieProfile => ({
-  id: "battle-object",
-  name: "Typed battle object",
+  id: "typed-object",
+  name: "Typed object",
   controls: [],
   drivers: [],
   limits: [],
   traits: [
-    {
-      kind: "shooter",
-      weapons: [
-        {
-          kind: "firearm",
-          id: "musket",
-          reloadSeconds: 20,
-          effectiveRange: 300,
-          accuracy: [
-            { distance: 0, probability: 0.5 },
-            { distance: 100, probability: 0.1 },
-          ],
-          misfireProbability: 0.05,
-          muzzleVelocity: 305,
-        },
-        {
-          kind: "cannon",
-          id: "twelve-pounder",
-          reloadSeconds: 45,
-          effectiveRange: 1_200,
-          muzzleVelocity: 440,
-          ammunition: [
-            {
-              kind: "round-shot",
-              mass: 5.44,
-              maxRicochets: 3,
-              ricochetRetention: 0.65,
-            },
-            {
-              kind: "canister",
-              pellets: 42,
-              spreadDegrees: 12,
-              pelletMass: 0.184,
-            },
-          ],
-        },
-        {
-          kind: "melee",
-          id: "bayonet",
-          reach: 1.8,
-          recoverySeconds: 1.2,
-          impact: 1,
-        },
-      ],
-    },
     {
       kind: "mountable",
       seats: 1,
@@ -174,7 +129,7 @@ export const test_mcp_production_capability_validation = (): void => {
     model.id,
   );
   TestValidator.equals(
-    "valid firearm, cannon, melee, mountable, destructible and three instance layouts pass",
+    "valid mountable, destructible and three instance layouts pass",
     namedFacts([
       [
         "designCapabilityInvalid",
@@ -188,7 +143,7 @@ export const test_mcp_production_capability_validation = (): void => {
       ],
       [
         "runtimeProfiles0",
-        () => runtime?.profiles?.[0]?.traits?.[0]?.kind === "shooter",
+        () => runtime?.profiles?.[0]?.traits?.[0]?.kind === "mountable",
       ],
     ]),
     { designCapabilityInvalid: true, runtimeProfiles0: true },
@@ -210,39 +165,7 @@ export const test_mcp_production_capability_validation = (): void => {
           penetrability: 0,
         },
       },
-      { kind: "shooter", weapons: [] },
-      {
-        kind: "shooter",
-        weapons: [
-          {
-            kind: "firearm",
-            id: "",
-            reloadSeconds: 0,
-            effectiveRange: 0,
-            muzzleVelocity: 0,
-            misfireProbability: 2,
-            accuracy: [
-              { distance: 10, probability: 2 },
-              { distance: 5, probability: -1 },
-            ],
-          },
-          {
-            kind: "cannon",
-            id: "bad-cannon",
-            reloadSeconds: 0,
-            effectiveRange: 0,
-            muzzleVelocity: 0,
-            ammunition: [],
-          },
-          {
-            kind: "melee",
-            id: "bad-melee",
-            reach: 0,
-            recoverySeconds: 0,
-            impact: 0,
-          },
-        ],
-      },
+      { kind: "mountable", seats: 0, payloadMass: 0 },
     ],
   };
   const invalidCapability = codes(
@@ -256,10 +179,6 @@ export const test_mcp_production_capability_validation = (): void => {
         () => invalidCapability.has("design-text-empty"),
       ],
       [
-        "invalidCapabilityHasDesign2",
-        () => invalidCapability.has("design-capability-invalid"),
-      ],
-      [
         "invalidCapabilityHasDesign3",
         () => invalidCapability.has("design-capability-duplicate"),
       ],
@@ -270,7 +189,6 @@ export const test_mcp_production_capability_validation = (): void => {
     ]),
     {
       invalidCapabilityHasDesign: true,
-      invalidCapabilityHasDesign2: true,
       invalidCapabilityHasDesign3: true,
       invalidCapabilityHasDesign4: true,
     },

@@ -345,6 +345,13 @@ const localFormationPoint = (
       z: row * layout.spacing.depth,
     });
   }
+  if (layout.kind === "square") {
+    const cell = squarePerimeterCell(layout.ranks, layout.files, slot);
+    return dressedFormationPoint(formation, slot, {
+      x: (cell.file - (layout.files - 1) / 2) * layout.spacing.lateral,
+      z: cell.rank * layout.spacing.depth,
+    });
+  }
   if (layout.kind === "arc") {
     const ratio = formation.count === 1 ? 0.5 : slot / (formation.count - 1);
     const degrees = (ratio - 0.5) * layout.arcDegrees;
@@ -361,6 +368,75 @@ const localFormationPoint = (
   return {
     x: Math.cos(angle) * radius,
     z: Math.sin(angle) * radius,
+  };
+};
+
+/**
+ * Which lattice cell one slot of a hollow rectangular arrangement stands on.
+ *
+ * The members enclose an empty interior instead of filling one, which is the
+ * arrangement a ring around an object, a clearing, or a stage is: the shape is
+ * a rectangle rather than a circle, so its two side lengths are independent and
+ * every member stands on an outward-facing edge.
+ *
+ * The wall grows from the outside in. The outermost ring is walked first, then
+ * the ring one member inside it, and so on, so slot N is always the same member
+ * and consecutive slots are neighbours. One ring is walked as a closed circuit:
+ * its near edge left to right, its right edge near to far, its far edge right
+ * to left, then its left edge back to near, each edge dropping the corner the
+ * previous edge already placed.
+ *
+ * Three shapes are degenerate and none of them throws or leaves a slot without
+ * a place:
+ *
+ * - A ring one member wide or one member deep encloses nothing, so it is a solid
+ *   strip rather than a circuit and is filled in reading order. A rectangle
+ *   with a side of one is exactly that strip at its outermost ring.
+ * - A count below the ring it describes stops the walk part way, which leaves the
+ *   circuit open at its last edge rather than redistributing members: the
+ *   members that were declared stand where they would have stood.
+ * - A count above the whole rectangle keeps working inward until the rectangle is
+ *   solid, then adds ranks beyond the far edge the way `line` does, so the
+ *   arrangement thickens rather than putting two members on one spot.
+ */
+const squarePerimeterCell = (
+  ranks: number,
+  files: number,
+  slot: number,
+): { rank: number; file: number } => {
+  let remaining = slot;
+  for (let ring = 0; ring * 2 < ranks && ring * 2 < files; ++ring) {
+    const width = files - ring * 2;
+    const depth = ranks - ring * 2;
+    if (width === 1 || depth === 1) {
+      if (remaining < width * depth)
+        return {
+          rank: ring + Math.floor(remaining / width),
+          file: ring + (remaining % width),
+        };
+      remaining -= width * depth;
+      break;
+    }
+    const circuit = (width + depth - 2) * 2;
+    if (remaining < circuit) {
+      if (remaining < width) return { rank: ring, file: ring + remaining };
+      if (remaining < width + depth - 1)
+        return { rank: ring + 1 + remaining - width, file: files - 1 - ring };
+      if (remaining < width * 2 + depth - 2)
+        return {
+          rank: ranks - 1 - ring,
+          file: files - ring - 2 - (remaining - width - depth + 1),
+        };
+      return {
+        rank: ranks - 2 - ring - (remaining - width * 2 - depth + 2),
+        file: ring,
+      };
+    }
+    remaining -= circuit;
+  }
+  return {
+    rank: ranks + Math.floor(remaining / files),
+    file: remaining % files,
   };
 };
 

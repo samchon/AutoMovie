@@ -159,18 +159,6 @@ export const test_mcp_guide_corpus = (): void => {
             ),
       ],
       [
-        "documentsGetBATTLESIM",
-        () => documents.get("BATTLE_SIM")!.includes("Fact"),
-      ],
-      [
-        "documentsGetBATTLESIM2",
-        () => documents.get("BATTLE_SIM")!.includes("Hint"),
-      ],
-      [
-        "documentsGetBATTLESIM3",
-        () => documents.get("BATTLE_SIM")!.includes("Authored response"),
-      ],
-      [
         "documentsGetDIFFUSIONENHANCE",
         () =>
           documents
@@ -194,9 +182,6 @@ export const test_mcp_guide_corpus = (): void => {
     ]),
     {
       documentsGetCINEMATOGRAPHY: true,
-      documentsGetBATTLESIM: true,
-      documentsGetBATTLESIM2: true,
-      documentsGetBATTLESIM3: true,
       documentsGetDIFFUSIONENHANCE: true,
       documentsGetDIFFUSIONENHANCE2: true,
       documentsGetREPAINTSHOT: true,
@@ -204,6 +189,7 @@ export const test_mcp_guide_corpus = (): void => {
   );
 
   for (const retired of [
+    "BATTLE_SIM",
     "BLOCKING",
     "FORGE",
     "PERFORMANCE",

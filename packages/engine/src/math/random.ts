@@ -2,8 +2,8 @@
  * Fold one full safe-integer seed into a domain-separated 32-bit state.
  *
  * Both 32-bit words participate, so values separated by 2^32 remain distinct.
- * The function is pure and stable across effect, combat, formation, and
- * instance-set runtimes.
+ * The function is pure and stable across effect, formation, and instance-set
+ * runtimes.
  */
 export const mixSeed = (seed: number, salt: number): number => {
   const integer = Math.trunc(seed);
@@ -19,7 +19,7 @@ export const mixSeed = (seed: number, salt: number): number => {
  * Return one deterministic half-open [0, 1) sample from ordered seed parts.
  *
  * Callers must include a stable domain constant when the same identities feed
- * independent decisions such as misfire, hit, scale, or palette.
+ * independent decisions such as scale, palette, or timing offset.
  */
 export const seededValue = (...values: number[]): number => {
   let state = 0x9e3779b9;

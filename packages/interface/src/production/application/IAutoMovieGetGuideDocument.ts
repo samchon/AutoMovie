@@ -23,7 +23,6 @@ export type AutoMovieProductionGuideName =
   | "OBJECT_RIGGING"
   | "WORLD_BUILDING"
   | "MOTION"
-  | "BATTLE_SIM"
   | "SOUND_DESIGN"
   | "ASSET_SOURCING"
   | "DIFFUSION_ENHANCE"

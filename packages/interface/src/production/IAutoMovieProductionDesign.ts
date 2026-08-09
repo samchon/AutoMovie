@@ -497,6 +497,43 @@ export type IAutoMovieFormationLayout =
       };
     }
   | {
+      /**
+       * Hollow rectangle: members fill the outer perimeter and then work
+       * inward, so count sets how thick the enclosing wall is and whatever it
+       * never reaches stays empty.
+       */
+      kind: "square";
+      /** Integer ranks from 1 through count. */
+      ranks: number;
+      /** Integer files from 1 through count; ranks times files covers count. */
+      files: number;
+      /** Finite inter-slot spacing in meters, strictly above zero. */
+      spacing: {
+        /** Left-to-right spacing between files. */
+        lateral: number;
+        /** Front-to-back spacing between ranks. */
+        depth: number;
+      };
+      /**
+       * How far a member may stand off its exact slot, in meters.
+       *
+       * Formed troops are dressed to a tolerance, not to a lattice, and that
+       * tolerance is what makes a unit read as many people holding a line
+       * rather than one figure repeated on a grid. Omit it, or leave both
+       * numbers at zero, for exact geometry.
+       *
+       * The deviation is derived from the formation seed and the slot index, so
+       * it costs no storage, regenerates identically everywhere, and the same
+       * design always compiles to the same army.
+       */
+      dressing?: {
+        /** Maximum left-to-right deviation in meters, zero or above. */
+        lateral: number;
+        /** Maximum front-to-back deviation in meters, zero or above. */
+        depth: number;
+      };
+    }
+  | {
       /** Arc layout. */
       kind: "arc";
       /** Finite arc radius in meters, strictly above zero. */
@@ -545,8 +582,8 @@ export interface IAutoMovieFormationDesign {
   count: number;
   /**
    * Compact layout with only the parameters its algorithm consumes. Line,
-   * column and wedge own explicit spacing; arc separation follows radius and
-   * angle, while scatter density follows count and radius.
+   * column, wedge and square own explicit spacing; arc separation follows
+   * radius and angle, while scatter density follows count and radius.
    */
   layout: IAutoMovieFormationLayout;
   /** Formation origin in world space. */
