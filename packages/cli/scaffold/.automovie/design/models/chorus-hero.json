@@ -1,5 +1,5 @@
 {
-  "id": "army-hero",
+  "id": "chorus-hero",
   "role": "performer",
   "archetype": "stickman",
   "parameters": {
@@ -14,19 +14,21 @@
     {
       "tier": "hero",
       "maxDistance": 5,
-      "recipe": "army-hero"
+      "recipe": "chorus-hero"
     },
     {
       "tier": "near",
       "maxDistance": 12,
-      "recipe": "army-near"
+      "recipe": "chorus-near"
     },
     {
       "tier": "far",
       "maxDistance": null,
-      "recipe": "army-far"
+      "recipe": "chorus-far"
     }
   ],
-  "capabilities": ["signal"],
+  "capabilities": [
+    "signal"
+  ],
   "attachments": []
 }

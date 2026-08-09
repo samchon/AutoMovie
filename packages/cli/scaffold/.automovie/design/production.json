@@ -1,7 +1,7 @@
 {
   "id": "{{name}}",
   "title": "{{name}}",
-  "logline": "A primitive sentinel raises and answers a signal before a deterministic instanced army.",
+  "logline": "A soloist raises a hand, and a chorus standing in rows answers it.",
   "targetRuntimeSeconds": 11.5,
   "visualDelivery": "deterministic",
   "frameFormat": {
@@ -13,8 +13,8 @@
   "artDirection": {
     "style": "primitive-3d",
     "palette": ["#182235", "#d7b56d", "#b13f36"],
-    "silhouettePriority": "The sentinel and raised arm remain distinct from the ground and background.",
-    "scaleGrammar": "A named sentinel and promoted formation heroes remain readable against simultaneous near and far anonymous ranks."
+    "silhouettePriority": "The soloist and the raised hand remain distinct from the ground and background.",
+    "scaleGrammar": "A named soloist and the promoted formation heroes remain readable against simultaneous near and far anonymous rows."
   },
   "deliverables": [
     {

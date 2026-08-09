@@ -9,7 +9,7 @@
   "target": { "kind": "shot", "id": "answer" },
   "criterion": {
     "kind": "frame",
-    "frame": "signal-answer",
+    "frame": "cue-answer",
     "pass": "pose",
     "expectation": "The second shot carries its own current hips-to-head and raised-arm pose evidence."
   },

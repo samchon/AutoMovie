@@ -1,5 +1,5 @@
 {
-  "id": "sentinel",
+  "id": "soloist",
   "role": "performer",
   "archetype": "stickman",
   "parameters": {
@@ -14,9 +14,11 @@
     {
       "tier": "hero",
       "maxDistance": null,
-      "recipe": "sentinel"
+      "recipe": "soloist"
     }
   ],
-  "capabilities": ["signal"],
+  "capabilities": [
+    "signal"
+  ],
   "attachments": []
 }

@@ -1,30 +1,30 @@
 {
   "id": "opening",
-  "beat": "signal",
+  "beat": "cue",
   "source": {
     "module": "src/shots/opening.ts",
     "export": "opening"
   },
   "evidence": [
     {
-      "reason": "This shot realizes the screenplay's visible signal action.",
+      "reason": "This shot realizes the screenplay's visible cue action.",
       "scene": "SCN-001",
-      "claim": "signal-arm-readable"
+      "claim": "cue-arm-readable"
     }
   ],
   "durationSeconds": 6,
   "participants": [
-    { "kind": "actor", "id": "sentinel" },
-    { "kind": "formation", "id": "army" }
+    { "kind": "actor", "id": "soloist" },
+    { "kind": "formation", "id": "chorus" }
   ],
   "opening": [
     {
       "id": "arm-lowered",
-      "description": "The sentinel begins in a readable neutral stance.",
+      "description": "The soloist begins in a readable neutral stance.",
       "predicates": [
         {
           "kind": "joint-angle",
-          "actor": "sentinel",
+          "actor": "soloist",
           "bone": "leftUpperArm",
           "axis": "abduction",
           "operator": "==",
@@ -36,12 +36,12 @@
   ],
   "closing": [
     {
-      "id": "signal-held",
-      "description": "The raised arm holds the signal at the final frame.",
+      "id": "cue-held",
+      "description": "The raised hand holds the cue at the final frame.",
       "predicates": [
         {
           "kind": "joint-angle",
-          "actor": "sentinel",
+          "actor": "soloist",
           "bone": "leftUpperArm",
           "axis": "abduction",
           "operator": ">=",
@@ -53,19 +53,19 @@
   ],
   "camera": {
     "intent": "A full-body three-quarter view proves silhouette and pose-pass wiring.",
-    "requiredSubjects": ["sentinel"],
+    "requiredSubjects": ["soloist"],
     "maxOcclusionRatio": 0.05
   },
   "events": [
     {
-      "id": "signal-raised",
+      "id": "cue-raised",
       "kind": "reveal",
       "window": { "from": 1.5, "to": 3 },
-      "subjects": ["sentinel"],
+      "subjects": ["soloist"],
       "predicates": [
         {
           "kind": "joint-angle",
-          "actor": "sentinel",
+          "actor": "soloist",
           "bone": "leftUpperArm",
           "axis": "abduction",
           "operator": ">=",
@@ -77,7 +77,7 @@
   ],
   "reviewFrames": [
     {
-      "id": "signal-apex",
+      "id": "cue-apex",
       "time": 2,
       "passes": ["beauty", "mask", "pose"]
     }

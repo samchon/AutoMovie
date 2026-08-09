@@ -21,6 +21,6 @@ For repainted delivery, call `prepareReview` again with `kind:"rendition"` after
 
 ## Submit
 
-Call `submitReview` only from the fresh worksheet. Quote exact selectors and frame/outcome identities supplied by `prepareReview`. Cover every criterion exactly once and name beat fidelity and representability in a true completion basis. Put corrections before the final boolean; `complete:true` requires none.
+Call `submitReview` only from the fresh worksheet. Quote exact selectors and frame/outcome identities supplied by `prepareReview`. Cover every criterion exactly once, and carry the criterion ids `beat-fidelity` and `representability` verbatim in a true completion basis, because the gate looks for those exact strings and prose naming the same ideas is refused. Put corrections before the final boolean; `complete:true` requires none.
 
 Design and source dependency targets currently exposed by the schema use `REVIEW_DEPENDENCY`, not this visual checklist.

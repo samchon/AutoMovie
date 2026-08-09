@@ -18,4 +18,4 @@ Scrub every cut in both directions. A locally good outgoing frame can still make
 
 ## Submit
 
-Call `submitReview` with the unchanged prepared fingerprint. Cover each returned criterion once with current evidence. A true completion basis explicitly names cross-shot continuity and spatial-model maintenance, explains any intentional discontinuity, and leaves no correction.
+Call `submitReview` with the unchanged prepared fingerprint. Cover each returned criterion once with current evidence. A true completion basis carries the criterion ids `cross-shot-continuity` and `spatial-model-maintenance` verbatim -- the gate looks for those exact strings, so prose naming the same ideas is refused -- explains any intentional discontinuity, and leaves no correction.

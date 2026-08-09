@@ -17,4 +17,4 @@ Judge start and end, pacing over the entire runtime, audiovisual synchronization
 
 ## Submit
 
-Call `submitReview` with the exact prepared fingerprint and every criterion once. A true completion basis explicitly names narrative completion and delivery readiness with current evidence. Any rerender, remix, recut, source edit, repaint reroll, or receipt change requires a fresh worksheet.
+Call `submitReview` with the exact prepared fingerprint and every criterion once. A true completion basis carries the criterion ids `narrative-completion` and `delivery-readiness` verbatim, because the gate looks for those exact strings and prose naming the same ideas is refused, with current evidence for each. Any rerender, remix, recut, source edit, repaint reroll, or receipt change requires a fresh worksheet.

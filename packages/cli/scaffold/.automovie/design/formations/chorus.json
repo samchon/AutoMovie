@@ -1,6 +1,6 @@
 {
-  "id": "army",
-  "modelRecipe": "army-hero",
+  "id": "chorus",
+  "modelRecipe": "chorus-hero",
   "count": 2049,
   "layout": {
     "kind": "line",
@@ -18,15 +18,18 @@
   },
   "facingDeg": 180,
   "seed": 1415,
-  "capabilities": ["advance", "break"],
+  "capabilities": [
+    "advance",
+    "break"
+  ],
   "heroOverrides": [
     {
       "slot": 31,
-      "actor": "captain"
+      "actor": "lead"
     },
     {
       "slot": 1055,
-      "actor": "lieutenant"
+      "actor": "second"
     }
   ]
 }

@@ -13,7 +13,7 @@ import {
 
 import config from "../automovie.config";
 import { chorus } from "../src/formations/chorus";
-import { chorusHero } from "../src/units/chorusHero";
+import { chorusFar, chorusHero, chorusNear } from "../src/units/chorusHero";
 import { soloist } from "../src/units/soloist";
 import { plaza } from "../src/world/plaza";
 
@@ -83,6 +83,25 @@ emit(
   { kind: "model", id: soloistRecipe.id },
   soloistRecipe,
   () => project.setModelRecipe(soloistRecipe),
+);
+
+// The coarse tiers are stored before the recipe whose ladder names them. A
+// model recipe is refused while a tier it references has no record, so emitting
+// the hero first would fail on a project that has never been compiled.
+const chorusNearRecipe = chorusNear.design();
+emit(
+  "models/chorus-near.json",
+  { kind: "model", id: chorusNearRecipe.id },
+  chorusNearRecipe,
+  () => project.setModelRecipe(chorusNearRecipe),
+);
+
+const chorusFarRecipe = chorusFar.design();
+emit(
+  "models/chorus-far.json",
+  { kind: "model", id: chorusFarRecipe.id },
+  chorusFarRecipe,
+  () => project.setModelRecipe(chorusFarRecipe),
 );
 
 const chorusHeroRecipe = chorusHero.design();
