@@ -2833,10 +2833,13 @@ const validateCompiledShot = (
 };
 
 /** Degrees of turn between neighbouring samples inside one cue. */
-const AUTOMOVIE_FORMATION_TURN_SAMPLE_DEGREES = 5;
+const FORMATION_TURN_SAMPLE_DEGREES = 5;
 
-/** One measurement as a reader wants it: to the millimetre, without a tail. */
-const round = (value: number): number => Math.round(value * 1000) / 1000;
+/**
+ * One reading as a reader wants it: three decimals, so a metre is stated to the
+ * millimetre and a second to the millisecond.
+ */
+const round = (value: number): number => Math.round(value * 1_000) / 1_000;
 
 /**
  * Samples one cue may take, however far it turns.
@@ -2846,7 +2849,7 @@ const round = (value: number): number => Math.round(value * 1000) / 1000;
  * stays bounded and the resolution coarsens in proportion, which is the trade a
  * gate that samples has to make somewhere and had better say out loud.
  */
-const AUTOMOVIE_FORMATION_TURN_SAMPLE_LIMIT = 360;
+const FORMATION_TURN_SAMPLE_LIMIT = 360;
 
 /**
  * When inside one cue a staged unit is worth measuring against its ground.
@@ -2861,9 +2864,9 @@ const AUTOMOVIE_FORMATION_TURN_SAMPLE_LIMIT = 360;
  * hit an exact angle would be a second one. Every easing this engine has moves
  * at most twice the average rate, so `n` even steps hold the turn between
  * neighbours below `2 * turn / n`, and the step count is chosen from that bound
- * rather than guessed. The bound holds until
- * {@link AUTOMOVIE_FORMATION_TURN_SAMPLE_LIMIT} clamps the count; a cue turning
- * far enough to reach it is measured more coarsely, in proportion.
+ * rather than guessed. The bound holds until {@link FORMATION_TURN_SAMPLE_LIMIT}
+ * clamps the count; a cue turning far enough to reach it is measured more
+ * coarsely, in proportion.
  *
  * This samples; it does not solve. Once a cue translates and rescales as well
  * as turns, the extreme is the root of a transcendental equation and no closed
@@ -2876,8 +2879,8 @@ const formationGroundSampleTimes = (
 ): number[] => {
   const turn = Math.abs(cue.to.facingOffsetDeg - cue.from.facingOffsetDeg);
   const steps = Math.min(
-    AUTOMOVIE_FORMATION_TURN_SAMPLE_LIMIT,
-    Math.ceil((2 * turn) / AUTOMOVIE_FORMATION_TURN_SAMPLE_DEGREES),
+    FORMATION_TURN_SAMPLE_LIMIT,
+    Math.ceil((2 * turn) / FORMATION_TURN_SAMPLE_DEGREES),
   );
   const span = cue.end - cue.start;
   return [

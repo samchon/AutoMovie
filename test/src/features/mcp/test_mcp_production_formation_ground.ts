@@ -360,41 +360,23 @@ export const test_mcp_production_formation_ground = (): void => {
     ["engine-validation-failed"],
   );
 
+  const turnedOff = Number(
+    /at ([0-9.]+)s/u.exec(
+      validateAutoMovieFormationGround(
+        { id: "opening" },
+        {
+          scene: { space: crossroads(10, 1.5) },
+          formations: [lance(9, 1)],
+          formationMotions: [turn(90)],
+        },
+      )[0]!.message,
+    )![1],
+  );
   TestValidator.equals(
     "the mid-turn refusal names a time between the cue's own ends",
     namedFacts([
-      [
-        "afterStart",
-        () =>
-          Number(
-            /at ([0-9.]+)s/u.exec(
-              validateAutoMovieFormationGround(
-                { id: "opening" },
-                {
-                  scene: { space: crossroads(10, 1.5) },
-                  formations: [lance(9, 1)],
-                  formationMotions: [turn(90)],
-                },
-              )[0]!.message,
-            )![1],
-          ) > 1,
-      ],
-      [
-        "beforeEnd",
-        () =>
-          Number(
-            /at ([0-9.]+)s/u.exec(
-              validateAutoMovieFormationGround(
-                { id: "opening" },
-                {
-                  scene: { space: crossroads(10, 1.5) },
-                  formations: [lance(9, 1)],
-                  formationMotions: [turn(90)],
-                },
-              )[0]!.message,
-            )![1],
-          ) < 3,
-      ],
+      ["afterStart", () => turnedOff > 1],
+      ["beforeEnd", () => turnedOff < 3],
     ]),
     { afterStart: true, beforeEnd: true },
   );
