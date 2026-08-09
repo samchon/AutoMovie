@@ -37,3 +37,5 @@ packages/cli/scaffold/src/**/*.js
 packages/cli/scaffold/src/**/*.js.map
 packages/cli/scaffold/scripts/**/*.js
 packages/cli/scaffold/scripts/**/*.js.map
+packages/cli/scaffold/*.js
+packages/cli/scaffold/*.js.map

@@ -73,10 +73,10 @@ export const productionFixture = (): {
       ".automovie/design/acceptance/answer-beauty.json",
       ".automovie/design/acceptance/answer-pose.json",
       ".automovie/design/acceptance/opening-effect-mask.json",
-      ".automovie/design/formations/army.json",
-      ".automovie/design/models/army-far.json",
-      ".automovie/design/models/army-hero.json",
-      ".automovie/design/models/army-near.json",
+      ".automovie/design/formations/chorus.json",
+      ".automovie/design/models/chorus-far.json",
+      ".automovie/design/models/chorus-hero.json",
+      ".automovie/design/models/chorus-near.json",
       ".automovie/design/shots/answer.json",
     ])
       delete files[file];
@@ -392,7 +392,7 @@ const oneShotProduction = (
 
 /** Starter primitive model recipe. */
 export const modelRecipe = (): IAutoMovieModelRecipe =>
-  scaffoldJson(".automovie/design/models/sentinel.json");
+  scaffoldJson(".automovie/design/models/soloist.json");
 
 /** Starter world design. */
 export const worldDesign = (): IAutoMovieWorldDesign =>
@@ -452,7 +452,7 @@ export const formationDesign = (
   },
 ): IAutoMovieFormationDesign => ({
   id: "line",
-  modelRecipe: "sentinel",
+  modelRecipe: "soloist",
   count: 6,
   layout,
   anchor: { x: 0, y: 0, z: 0 },

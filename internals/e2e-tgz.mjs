@@ -754,6 +754,12 @@ const effectSummary = services.oracle.query({
   },
 });
 const effectAcceptance = graph.acceptance.get("opening-effect-mask");
+// Read from the shot rather than written down. A review frame is named by
+// the production, and a literal here strands the whole packaged run on the
+// day a name changes -- which is exactly what it did.
+const openingReviewFrame = graph.shots
+  .get("opening")
+  ?.reviewFrames.find((frame) => frame.pass === "mask")?.id;
 assert(
   "starter-effect-beauty-mask-frame",
   effectSummary.result?.kind === "measurement" &&
@@ -771,7 +777,7 @@ assert(
     ) &&
     effectAcceptance?.required === true &&
     effectAcceptance.criterion.kind === "frame" &&
-    effectAcceptance.criterion.frame === "signal-apex" &&
+    effectAcceptance.criterion.frame === openingReviewFrame &&
     effectAcceptance.criterion.pass === "mask",
   JSON.stringify(effectSummary),
 );

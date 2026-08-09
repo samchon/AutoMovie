@@ -352,8 +352,8 @@ interface IAutoMovieSoundMass {
  * Each member is one equal, mutually uncorrelated source, so the group's
  * acoustic center is the member-count-weighted mean of the subject centroids,
  * not their arithmetic mean. The unweighted mean was the second half of the
- * scale defect: an event naming one soldier and the army behind him emitted
- * from the empty midpoint between them, as though the army were one person.
+ * scale defect: an event naming one figure and the crowd behind it emitted from
+ * the empty midpoint between them, as though the crowd were one person.
  *
  * The combined spread follows by the parallel-axis identity, which makes it
  * exact rather than approximate:

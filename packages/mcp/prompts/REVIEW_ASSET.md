@@ -6,6 +6,8 @@ Read this guide before `prepareReview` or `submitReview` with target kind `asset
 
 Call `prepareReview` for the exact registry model id. Treat its fingerprint as the worksheet identity. Resolve every error diagnostic before submission. Inspect the supplied rest and range-of-motion views across required angles and passes; a single front beauty frame cannot prove the back, silhouette, joint pivots, or deformation.
 
+The required views are fixed and there are six of them. `turntable-front`, `turntable-right`, `turntable-back`, and `turntable-left` are rest-pose beauty frames at azimuth 0, 90, 180, and 270 degrees, each at 15 degrees elevation. `top-outline` is a rest-pose outline frame at azimuth 0 and 65 degrees elevation. `rig-rom-extremes` is a beauty frame at the front angle in the `rom-extremes` pose, required whenever the compiled model carries a skeleton and unavailable when it does not. Capture them with `angleDeg` in `[0, 360)` and `elevationDeg` in `[-85, 85]`; a turntable's time is `angleDeg / 30` on a fixed twelve-second clock, so each required azimuth is one exact frame index rather than a nearby one.
+
 The canonical criteria are:
 
 - `silhouette-and-proportion`: the identity reads at thumbnail size and all views preserve intended mass, scale, negative space, and profile.

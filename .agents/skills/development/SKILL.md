@@ -61,7 +61,7 @@ Run with `pnpm --filter @automovie/test start`; type-check with `pnpm --filter @
 
 ## Coverage is always 100%
 
-Coverage is held at **100% on statements, branches, functions, and lines** at all times, across the whole measured set: `engine`, `face`, `ingest`, `render`, and `mcp` (see the `--src` list in the `coverage` script). Measure with `pnpm --filter @automovie/test coverage` (c8 writes only under `node_modules/.cache/`; an absolute `/tmp` path silently measured nothing on Windows. Never leave `coverage/` or `.nyc_output/` in the tree, and never paper over them with `.gitignore`). The `test` CI workflow gates this: a drop fails the build.
+Coverage is held at **100% on statements, branches, functions, and lines** at all times, across the whole measured set: `archetypes`, `engine`, `face`, `ingest`, `render`, `viewer`, and `mcp` (see the `--src` list in the `coverage` script; it runs with `--all`, so a source no test imports is reported rather than silently absent). Measure with `pnpm --filter @automovie/test coverage` (c8 writes only under `node_modules/.cache/`; an absolute `/tmp` path silently measured nothing on Windows. Never leave `coverage/` or `.nyc_output/` in the tree, and never paper over them with `.gitignore`). The `test` CI workflow measures and reports it beside the suite but deliberately does not fail on it -- `test.yml` says why, and `internals/report-coverage-gaps.mjs` prints the exact uncovered statements, branches and functions on every run. So the gate is the author reading that output, not the build going red, and a gap that ships is a gap somebody chose.
 
 **100% is earned by testing, not by hiding code.** A suite of happy paths that reaches every line is not 100% correctness:
 
