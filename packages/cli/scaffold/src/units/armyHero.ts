@@ -39,6 +39,15 @@ export class ArmyMember extends AutoMovieSubject<IAutoMovieModelRecipe> {
   public static readonly SPECIFIED_HEIGHT: number = 1.7;
 
   /**
+   * How far a derived scale may land from the stated one, in metres.
+   *
+   * A nanometre. Small enough that no scale a document could state slips
+   * through, large enough that a subtraction of two authored metres is not
+   * mistaken for one.
+   */
+  public static readonly SCALE_TOLERANCE: number = 1e-9;
+
+  /**
    * Member height in metres, stated against the production's reference scale.
    *
    * "A head shorter than the sentinel" is the specification's own phrasing, so
@@ -65,7 +74,14 @@ export class ArmyMember extends AutoMovieSubject<IAutoMovieModelRecipe> {
    *   at every distance, which is what the tier ladder answers for.
    */
   public design(): IAutoMovieModelRecipe {
-    if (this.height !== ArmyMember.SPECIFIED_HEIGHT)
+    // Compared within a tolerance, not exactly. The height is a difference of
+    // two authored metres, and a subtraction that lands a billionth away is the
+    // float representation rather than a scale the document did not state:
+    // refusing 1.75 less 0.05 would be refusing arithmetic.
+    if (
+      Math.abs(this.height - ArmyMember.SPECIFIED_HEIGHT) >
+      ArmyMember.SCALE_TOLERANCE
+    )
       throw new Error(
         `docs/characters/army.md states a member is ${ArmyMember.SPECIFIED_HEIGHT} m, a head shorter than the sentinel, but this one is ${this.height} m. Correct the reference scale or the head, not this record.`,
       );

@@ -48,6 +48,17 @@ assert.throws(
   /docs\/characters\/army\.md/,
   "A member taller than the specification states must be refused.",
 );
+// The scale is compared within a tolerance because it is a difference of two
+// authored metres: a sentinel of 1.85 less a head of 0.15 lands a billionth
+// above 1.7, and refusing that would be refusing arithmetic rather than a scale
+// the document did not state.
+assert.doesNotThrow(
+  () =>
+    new (class extends ArmyMember {
+      public override readonly height = 1.85 - 0.15;
+    })().design(),
+  "A derived scale that only drifts by float representation must be accepted.",
+);
 process.stdout.write(
   "subject constraints refuse what the spec does not state: ok\n",
 );
