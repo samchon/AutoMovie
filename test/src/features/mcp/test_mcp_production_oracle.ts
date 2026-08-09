@@ -272,7 +272,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         query: "reach",
         actor: "soloist",
         shot: "opening",
-        target: { kind: "landmark", landmark: "signal-ground" },
+        target: { kind: "landmark", landmark: "plaza-center" },
         time: 2,
       },
     });
@@ -312,7 +312,7 @@ export const test_mcp_production_oracle = async (): Promise<void> => {
         request: {
           query: "reach",
           actor: "soloist",
-          target: { kind: "landmark", landmark: "signal-ground" },
+          target: { kind: "landmark", landmark: "plaza-center" },
         },
       }).result?.kind === "measurement",
     );

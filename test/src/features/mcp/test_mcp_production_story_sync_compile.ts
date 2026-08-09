@@ -100,8 +100,8 @@ const sharedMoment = (
   criterion: {
     kind: "story-sync",
     events: [
-      { shot: "opening", event: "signal-raised" },
-      { shot: "answer", event: "signal-answered" },
+      { shot: "opening", event: "cue-raised" },
+      { shot: "answer", event: "cue-answered" },
     ],
     toleranceSeconds,
     expectation:
@@ -162,8 +162,8 @@ export const test_mcp_production_story_sync_compile = (): void => {
       unpinnedSucceeded,
     );
 
-    const openingTime = realizedEventTime(project, "opening", "signal-raised");
-    const answerTime = realizedEventTime(project, "answer", "signal-answered");
+    const openingTime = realizedEventTime(project, "opening", "cue-raised");
+    const answerTime = realizedEventTime(project, "answer", "cue-answered");
     project.setProductionDesign(
       productionDesign({ targetRuntimeSeconds: 12, storyClock: STORY_CLOCK }),
     );

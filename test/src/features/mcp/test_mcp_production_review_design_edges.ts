@@ -272,7 +272,7 @@ export const test_mcp_production_review_design_edges = (): void => {
       criterion: {
         kind: "event" as const,
         shot: "opening",
-        event: "signal-raised",
+        event: "cue-raised",
         expectation: "The film preserves the opening signal event.",
       },
       required: true,

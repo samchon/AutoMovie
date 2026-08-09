@@ -174,6 +174,15 @@ export const test_mcp_production_formation_overlap_compile = (): void => {
               ],
             }).accepted,
         ],
+        // Registered before the contract names it: a contract naming a unit the
+        // design graph does not carry is refused, and the refusal would read
+        // here as the participant not being accepted.
+        [
+          "unit",
+          () =>
+            project.setFormationDesign(unit({ lateral: OPEN, depth: TIGHT }))
+              .accepted,
+        ],
         [
           "participant",
           () =>
@@ -186,7 +195,7 @@ export const test_mcp_production_formation_overlap_compile = (): void => {
             }).accepted,
         ],
       ]),
-      { near: true, far: true, tiers: true, participant: true },
+      { near: true, far: true, tiers: true, unit: true, participant: true },
     );
 
     // 1. the accepted baseline: open in width, and lifted apart in depth.

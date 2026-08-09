@@ -169,7 +169,7 @@ export const test_cli_project_state = (): void => {
       runtime.facingDeg,
     );
     const landmark = current.generated.design.world.landmarks.find(
-      (candidate) => candidate.id === "signal-ground",
+      (candidate) => candidate.id === "plaza-center",
     )!.position;
     const meters = Vector3.length(Vector3.subtract(moved, landmark));
     const actor = shot.scene.nodes.find(

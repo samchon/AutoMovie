@@ -384,11 +384,11 @@ export const test_mcp_production_realization_fixture_cleanup = (): void => {
             ownerParameters: [],
             substantive: {
               digest:
-                "15d9b0166affce0d02eeca3e2c7121f4b99b0e4a95e3a11faef251e71916083a",
+                "3254870255f9e2390620227dbd135cf87c68e48ae4dc48d45877ae10d70c7e1b",
               tokens: 3749,
             },
             tryDigest:
-              "a7a12e2331adb06869a4cd5aed6006e1dabb805f010c1f8e97afe502c262c654",
+              "ca3aa5e6fa810a7d8ebf26e7955f80a620156896e1e2f1a04df2a860f9ff74cd",
             tryStatements: 62,
           },
         ],

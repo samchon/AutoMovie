@@ -226,7 +226,7 @@ export const test_mcp_production_realization = (): void => {
             },
             {
               kind: "position",
-              subject: { kind: "landmark", id: "signal-ground" },
+              subject: { kind: "landmark", id: "plaza-center" },
               axis: "z",
               operator: ">=",
               value: 0,
@@ -243,7 +243,7 @@ export const test_mcp_production_realization = (): void => {
             {
               kind: "distance",
               from: { kind: "node", id: "prop" },
-              to: { kind: "landmark", id: "signal-ground" },
+              to: { kind: "landmark", id: "plaza-center" },
               operator: "==",
               value: 2,
               tolerance: 0,

@@ -432,12 +432,10 @@ export const test_workspace_packaged_mcp_cleanup = (): void => {
       topLevelActions: [
         "import:146aca25f8fefba3dc0add7c11afe9642bbe350c19aaecbc10a8bcfeebfcdf2c",
         "import:d4f65b36dc05602cc272da7fe08ee18f5e6ad8f46df1a2c8269e45bc64af386c",
-        "import:d0ed8992267287340c00326091e38536e8827845e7a0508b742a21163c171d0d",
         "import:aeb00d3edaa58b3361f84b46bcd11583ba116e491f02256d1290913a5609ebd4",
         "import:20b8866d1619b7f6d554f405f647027b3d9d56cad176beb9bbb4ca6b9da3235a",
         "variable:efcf3cd0925f41dd4bbc9dee5266a0fcb0fcb2590943b497da0d2040c9d4875b",
         "variable:57fb28085acc21e27732b5db55d44d5b06711bea21bb2de5009c4e96f43076c4",
-        "expression:01b4e95f57e543d664539a7fffc99066793f5be4e5dba98bedc2ad78fd00e167",
         "variable:f9b2ab0b39a6383149755a6466f7f3231c23d7177a211d9297a8afb22f2e0f3a",
         "variable:00c6db51054a2f53cb008385ad28bd570584c734209eb29daa7c5ca5e67b9238",
         "expression:e53c35d0ccf1d1aeb266c822ec604547c17ee7fa1c2885091ef723883b7f39b6",

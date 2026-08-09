@@ -109,7 +109,7 @@ export const test_viewer_effect = (): void => {
       start: 1,
       end: 5,
       intensity: { from: 0.4, to: 0.8 },
-      event: "signal-raised",
+      event: "cue-raised",
     },
   ];
   const [effect] = materializeCompiledEffects({

@@ -387,7 +387,7 @@ export const test_mcp_production_review = async (): Promise<void> => {
       criterion: {
         kind: "event" as const,
         shot: "opening",
-        event: "signal-raised",
+        event: "cue-raised",
         expectation: "The signal raise remains present in the compiled event.",
       },
       required: true,
@@ -441,7 +441,7 @@ export const test_mcp_production_review = async (): Promise<void> => {
       target: { kind: "shot" as const, id: "opening" },
       criterion: {
         kind: "event" as const,
-        event: "signal-raised",
+        event: "cue-raised",
         expectation:
           "A shot-scoped event resolves its owner from the review target.",
       },
@@ -1020,7 +1020,7 @@ export const test_mcp_production_review = async (): Promise<void> => {
         target: { kind: "film", id: "fixture-film" },
         criterion: {
           kind: "event",
-          event: "signal-raised",
+          event: "cue-raised",
           expectation: "An owning shot is deliberately absent.",
         },
         required: true,

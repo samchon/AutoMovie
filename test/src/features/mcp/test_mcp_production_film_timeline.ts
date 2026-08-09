@@ -1078,7 +1078,7 @@ export const test_mcp_production_film_timeline = async (): Promise<void> => {
       criterion: {
         kind: "event",
         shot: "opening",
-        event: "signal-raised",
+        event: "cue-raised",
         expectation:
           "The actual compiled signal sample remains inside the finished edit.",
       },

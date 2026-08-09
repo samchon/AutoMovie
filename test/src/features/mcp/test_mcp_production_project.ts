@@ -1285,7 +1285,7 @@ export const test_mcp_production_project = (): void => {
       criterion: {
         kind: "event" as const,
         shot: "opening",
-        event: "signal-raised",
+        event: "cue-raised",
         expectation: "The opening signal event remains in the film.",
       },
       required: true,
@@ -1360,7 +1360,7 @@ export const test_mcp_production_project = (): void => {
     const landmarkShot = shotContract();
     landmarkShot.opening[0]!.predicates.push({
       kind: "position",
-      subject: { kind: "landmark", id: "signal-ground" },
+      subject: { kind: "landmark", id: "plaza-center" },
       axis: "x",
       operator: "==",
       value: 0,
@@ -1387,7 +1387,7 @@ export const test_mcp_production_project = (): void => {
       {
         kind: "distance",
         from: { kind: "point", position: { x: 0, y: 0, z: 0 } },
-        to: { kind: "landmark", id: "signal-ground" },
+        to: { kind: "landmark", id: "plaza-center" },
         operator: "==",
         value: 0,
         tolerance: 0,
@@ -1400,7 +1400,7 @@ export const test_mcp_production_project = (): void => {
     landmarkShot.opening[0]!.predicates = [
       {
         kind: "distance",
-        from: { kind: "landmark", id: "signal-ground" },
+        from: { kind: "landmark", id: "plaza-center" },
         to: { kind: "point", position: { x: 0, y: 0, z: 0 } },
         operator: "==",
         value: 0,

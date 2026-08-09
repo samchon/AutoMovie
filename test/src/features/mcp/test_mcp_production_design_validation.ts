@@ -1286,7 +1286,7 @@ export const test_mcp_production_design_validation = (): void => {
     target: { kind: "film", id: "fixture-film" },
     criterion: {
       kind: "event",
-      event: "signal-raised",
+      event: "cue-raised",
       expectation: "",
     },
   };
