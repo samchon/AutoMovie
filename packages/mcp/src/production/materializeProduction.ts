@@ -980,26 +980,23 @@ const materializeGeneratedModel = (
       ],
     };
   }
-  const staticPart = (
-    id: string,
-    shape: Extract<
-      IAutoMovieModelPart["geometry"],
-      { type: "primitive" }
-    >["shape"],
-    local: IAutoMovieTransform | null = null,
-  ): IAutoMovieModelPart => ({
-    id,
-    name: id,
-    geometry: { type: "primitive", shape },
-    material: material.id,
-    attachedBone: null,
-    transform: local,
-  });
   const shape = stringParameter(recipe, "shape");
   return {
     ...base,
     skeleton: null,
-    parts: [staticPart("primitive", primitivePropShape(recipe, shape))],
+    parts: [
+      {
+        id: "primitive",
+        name: "primitive",
+        geometry: {
+          type: "primitive",
+          shape: primitivePropShape(recipe, shape),
+        },
+        material: material.id,
+        attachedBone: null,
+        transform: null,
+      },
+    ],
   };
 };
 
